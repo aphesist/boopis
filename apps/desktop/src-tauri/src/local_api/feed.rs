@@ -13,8 +13,8 @@ use tokio::sync::{broadcast, watch};
 use super::approvals::{Delivery, Inbox, Refusal};
 use super::audit::{Audit, Line};
 use super::model::{
-    Answered, Approval, ApprovalState, BotRow, Event, NoteKind, Notification, Origin, Presence, RoomRow, Source,
-    Stamped, State, now_ms,
+    Answered, Approval, ApprovalState, BotRow, Event, NoteKind, Notification, Origin, Presence,
+    RoomRow, Source, Stamped, State, now_ms,
 };
 use super::presence::{Live, Table};
 use super::roster::{self, Entry};
@@ -63,7 +63,11 @@ pub struct Consumer {
 
 impl Drop for Consumer {
     fn drop(&mut self) {
-        let n = self.feed.listeners.fetch_sub(1, Ordering::SeqCst).saturating_sub(1);
+        let n = self
+            .feed
+            .listeners
+            .fetch_sub(1, Ordering::SeqCst)
+            .saturating_sub(1);
         self.feed.wanted.send_replace(n);
     }
 }
@@ -85,7 +89,10 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 fn str_of(v: &Value, key: &str) -> String {
-    v.get(key).and_then(Value::as_str).unwrap_or_default().to_owned()
+    v.get(key)
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned()
 }
 
 impl Feed {
@@ -163,12 +170,21 @@ impl Feed {
             ),
             None => (Vec::new(), false),
         };
-        Subscription { backlog, gap, rx, consumer }
+        Subscription {
+            backlog,
+            gap,
+            rx,
+            consumer,
+        }
     }
 
     fn emit(&self, inner: &mut Inner, event: Event) -> Arc<Stamped> {
         inner.seq += 1;
-        let stamped = Arc::new(Stamped { id: inner.seq, at: now_ms(), event });
+        let stamped = Arc::new(Stamped {
+            id: inner.seq,
+            at: now_ms(),
+            event,
+        });
         inner.ring.push_back(stamped.clone());
         while inner.ring.len() > self.limits.ring {
             inner.ring.pop_front();
@@ -208,7 +224,11 @@ impl Feed {
     /// The names of the bots the feed knows.
     #[must_use]
     pub fn bot_names(&self) -> Vec<String> {
-        lock(&self.inner).roster.iter().map(|e| e.name.clone()).collect()
+        lock(&self.inner)
+            .roster
+            .iter()
+            .map(|e| e.name.clone())
+            .collect()
     }
 
     /// The rooms, as the engine lists them.
@@ -258,7 +278,14 @@ impl Feed {
     // ───────────────────────── sessions the feed was told of ─────────────────────────
 
     /// A session boopis made for a client, or one it learned the client of: its source and label.
-    pub fn note_session(&self, profile: &str, session_id: &str, source: Source, client: Option<&str>, model: Option<&str>) {
+    pub fn note_session(
+        &self,
+        profile: &str,
+        session_id: &str,
+        source: Source,
+        client: Option<&str>,
+        model: Option<&str>,
+    ) {
         let mut inner = lock(&self.inner);
         if inner.meta.len() >= 512 {
             inner.meta.clear();
@@ -276,14 +303,18 @@ impl Feed {
     /// What is known of a session's client, so the poller asks the engine once per session.
     #[must_use]
     pub fn client_known(&self, profile: &str, session_id: &str) -> bool {
-        lock(&self.inner).meta.contains_key(&(profile.to_owned(), session_id.to_owned()))
+        lock(&self.inner)
+            .meta
+            .contains_key(&(profile.to_owned(), session_id.to_owned()))
     }
 
     fn origin(inner: &Inner, profile: &str, session_id: &str) -> (Source, Option<String>) {
         inner
             .meta
             .get(&(profile.to_owned(), session_id.to_owned()))
-            .map_or((Source::Gui, None), |m| (m.source.unwrap_or(Source::Gui), m.client.clone()))
+            .map_or((Source::Gui, None), |m| {
+                (m.source.unwrap_or(Source::Gui), m.client.clone())
+            })
     }
 
     // ───────────────────────── notifications ─────────────────────────
@@ -302,7 +333,11 @@ impl Feed {
         urgent: bool,
     ) {
         let now = now_ms();
-        let key = (profile.to_owned(), session_id.unwrap_or_default().to_owned(), kind as u8);
+        let key = (
+            profile.to_owned(),
+            session_id.unwrap_or_default().to_owned(),
+            kind as u8,
+        );
         if inner.last_note.get(&key).is_some_and(|t| now - t < 3_000) {
             return;
         }
@@ -334,7 +369,12 @@ impl Feed {
     #[must_use]
     pub fn notifications(&self, after: Option<u64>, limit: usize) -> Vec<Notification> {
         let inner = lock(&self.inner);
-        let mut rows: Vec<Notification> = inner.notes.iter().filter(|n| after.is_none_or(|a| n.id > a)).cloned().collect();
+        let mut rows: Vec<Notification> = inner
+            .notes
+            .iter()
+            .filter(|n| after.is_none_or(|a| n.id > a))
+            .cloned()
+            .collect();
         let drop = rows.len().saturating_sub(limit);
         rows.drain(..drop);
         rows
@@ -364,9 +404,14 @@ impl Feed {
         let payload = f.payload.clone().unwrap_or(Value::Null);
         if f.direction == Direction::Out {
             if f.name == "approval.respond" {
-                let key = (str_of(&payload, "session_id"), str_of(&payload, "prompt_id"));
+                let key = (
+                    str_of(&payload, "session_id"),
+                    str_of(&payload, "prompt_id"),
+                );
                 if !key.1.is_empty() {
-                    inner.gui_answers.insert(key, (str_of(&payload, "choice"), now));
+                    inner
+                        .gui_answers
+                        .insert(key, (str_of(&payload, "choice"), now));
                     if inner.gui_answers.len() > 128 {
                         inner.gui_answers.clear();
                     }
@@ -378,73 +423,160 @@ impl Feed {
             self.poke.store(true, Ordering::SeqCst);
             return;
         }
-        let Some(sid) = f.session_id.as_deref() else { return };
+        let Some(sid) = f.session_id.as_deref() else {
+            return;
+        };
         let origin = Self::origin(&inner, profile, sid);
         match f.name.as_str() {
-            "approval.request" => self.approval_asked(&mut inner, profile, sid, f, &payload, origin.0, now),
+            "approval.request" => {
+                self.approval_asked(&mut inner, profile, sid, f, &payload, origin.0, now);
+            }
             "approval.settled" | "approval.cancelled" => {
                 let prompt = str_of(&payload, "prompt_id");
-                let by = inner.gui_answers.remove(&(sid.to_owned(), prompt.clone())).map(|(choice, at)| Answered {
-                    client: "boopis".into(),
-                    surface: "gui".into(),
-                    choice: Some(choice),
-                    at,
-                });
+                let by = inner
+                    .gui_answers
+                    .remove(&(sid.to_owned(), prompt.clone()))
+                    .map(|(choice, at)| Answered {
+                        client: "boopis".into(),
+                        surface: "gui".into(),
+                        choice: Some(choice),
+                        at,
+                    });
                 if let Some(row) = inner.inbox.settled_elsewhere(profile, &prompt, by.clone()) {
                     self.audit_gui(profile, &row, by.as_ref());
                     self.emit(&mut inner, Event::Approvals(row));
                 }
-                let changed = inner.presence.on_event(profile, sid, &f.name, None, false, &origin, now);
+                let changed = inner
+                    .presence
+                    .on_event(profile, sid, &f.name, None, false, &origin, now);
                 self.publish(&mut inner, changed);
             }
             "tool.start" | "tool.generating" | "tool.progress" => {
-                let tool = ["name", "tool_name", "tool"].iter().map(|k| str_of(&payload, k)).find(|s| !s.is_empty());
+                let tool = ["name", "tool_name", "tool"]
+                    .iter()
+                    .map(|k| str_of(&payload, k))
+                    .find(|s| !s.is_empty());
                 let tool = tool.map(|t| self.clip(&t));
-                let changed = inner.presence.on_event(profile, sid, &f.name, tool.as_deref(), false, &origin, now);
+                let changed = inner.presence.on_event(
+                    profile,
+                    sid,
+                    &f.name,
+                    tool.as_deref(),
+                    false,
+                    &origin,
+                    now,
+                );
                 self.publish(&mut inner, changed);
             }
             "message.complete" => {
                 let outcome = str_of(&payload, "outcome");
                 let failed = matches!(outcome.as_str(), "failed" | "error");
-                let changed = inner.presence.on_event(profile, sid, &f.name, None, failed, &origin, now);
+                let changed = inner
+                    .presence
+                    .on_event(profile, sid, &f.name, None, failed, &origin, now);
                 self.publish(&mut inner, changed);
                 let who = Self::display(&inner, profile);
                 if failed {
-                    self.notify(&mut inner, NoteKind::Error, profile, Some(sid), origin.0, format!("{who} hit an error"), String::new(), false);
+                    self.notify(
+                        &mut inner,
+                        NoteKind::Error,
+                        profile,
+                        Some(sid),
+                        origin.0,
+                        format!("{who} hit an error"),
+                        String::new(),
+                        false,
+                    );
                 } else if origin.0 != Source::Island {
                     let text = self.clip(&str_of(&payload, "text"));
-                    self.notify(&mut inner, NoteKind::Reply, profile, Some(sid), origin.0, format!("{who} replied"), text, false);
+                    self.notify(
+                        &mut inner,
+                        NoteKind::Reply,
+                        profile,
+                        Some(sid),
+                        origin.0,
+                        format!("{who} replied"),
+                        text,
+                        false,
+                    );
                 }
             }
             "error" | "turn.failed" => {
-                let changed = inner.presence.on_event(profile, sid, &f.name, None, true, &origin, now);
+                let changed = inner
+                    .presence
+                    .on_event(profile, sid, &f.name, None, true, &origin, now);
                 self.publish(&mut inner, changed);
                 let who = Self::display(&inner, profile);
-                let why = self.clip(&["message", "error", "reason"].iter().map(|k| str_of(&payload, k)).find(|s| !s.is_empty()).unwrap_or_default());
-                self.notify(&mut inner, NoteKind::Error, profile, Some(sid), origin.0, format!("{who} hit an error"), why, false);
+                let why = self.clip(
+                    &["message", "error", "reason"]
+                        .iter()
+                        .map(|k| str_of(&payload, k))
+                        .find(|s| !s.is_empty())
+                        .unwrap_or_default(),
+                );
+                self.notify(
+                    &mut inner,
+                    NoteKind::Error,
+                    profile,
+                    Some(sid),
+                    origin.0,
+                    format!("{who} hit an error"),
+                    why,
+                    false,
+                );
             }
             _ => {
-                let changed = inner.presence.on_event(profile, sid, &f.name, None, false, &origin, now);
+                let changed = inner
+                    .presence
+                    .on_event(profile, sid, &f.name, None, false, &origin, now);
                 self.publish(&mut inner, changed);
             }
         }
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn approval_asked(&self, inner: &mut Inner, profile: &str, sid: &str, f: &FeedFrame, payload: &Value, source: Source, now: i64) {
-        let prompt = ["prompt_id", "request_id"].iter().map(|k| str_of(payload, k)).find(|s| !s.is_empty());
-        let generation = f.generation.or_else(|| payload.get("execution_generation").and_then(Value::as_u64));
+    fn approval_asked(
+        &self,
+        inner: &mut Inner,
+        profile: &str,
+        sid: &str,
+        f: &FeedFrame,
+        payload: &Value,
+        source: Source,
+        now: i64,
+    ) {
+        let prompt = ["prompt_id", "request_id"]
+            .iter()
+            .map(|k| str_of(payload, k))
+            .find(|s| !s.is_empty());
+        let generation = f
+            .generation
+            .or_else(|| payload.get("execution_generation").and_then(Value::as_u64));
         let (Some(prompt), Some(generation)) = (prompt, generation) else {
-            tracing::debug!("an approval request named no prompt or generation; it cannot be answered from outside");
+            tracing::debug!(
+                "an approval request named no prompt or generation; it cannot be answered from outside"
+            );
             return;
         };
         let choices: Vec<String> = payload
             .get("choices")
             .and_then(Value::as_array)
-            .map(|a| a.iter().filter_map(Value::as_str).map(str::to_owned).collect())
+            .map(|a| {
+                a.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned)
+                    .collect()
+            })
             .unwrap_or_default();
-        let model = inner.meta.get(&(profile.to_owned(), sid.to_owned())).and_then(|m| m.model.clone());
-        let governed = inner.roster.iter().find(|e| e.name == profile).is_some_and(|e| e.governed);
+        let model = inner
+            .meta
+            .get(&(profile.to_owned(), sid.to_owned()))
+            .and_then(|m| m.model.clone());
+        let governed = inner
+            .roster
+            .iter()
+            .find(|e| e.name == profile)
+            .is_some_and(|e| e.governed);
         let row = Approval {
             id: prompt.clone(),
             profile: profile.to_owned(),
@@ -458,7 +590,9 @@ impl Feed {
             timeout_s: payload.get("timeout_s").and_then(Value::as_u64),
             origin: Origin {
                 model,
-                tool: Some(str_of(payload, "tool_name")).filter(|t| !t.is_empty()).map(|t| self.clip(&t)),
+                tool: Some(str_of(payload, "tool_name"))
+                    .filter(|t| !t.is_empty())
+                    .map(|t| self.clip(&t)),
             },
             governed,
             state: ApprovalState::Pending,
@@ -467,17 +601,33 @@ impl Feed {
         };
         self.add_approval(inner, row, source, now);
         let origin = Self::origin(inner, profile, sid);
-        let changed = inner.presence.on_event(profile, sid, "approval.request", None, false, &origin, now);
+        let changed =
+            inner
+                .presence
+                .on_event(profile, sid, "approval.request", None, false, &origin, now);
         self.publish(inner, changed);
     }
 
     fn add_approval(&self, inner: &mut Inner, row: Approval, source: Source, _now: i64) {
         let (profile, sid) = (row.profile.clone(), row.session_id.clone());
-        let what = if row.command.is_empty() { row.description.clone() } else { row.command.clone() };
+        let what = if row.command.is_empty() {
+            row.description.clone()
+        } else {
+            row.command.clone()
+        };
         if let Some(shown) = inner.inbox.upsert(row) {
             let who = Self::display(inner, &profile);
             self.emit(inner, Event::Approvals(shown));
-            self.notify(inner, NoteKind::Approval, &profile, Some(&sid), source, format!("{who} needs your approval"), what, true);
+            self.notify(
+                inner,
+                NoteKind::Approval,
+                &profile,
+                Some(&sid),
+                source,
+                format!("{who} needs your approval"),
+                what,
+                true,
+            );
         }
     }
 
@@ -504,34 +654,57 @@ impl Feed {
         let mut inner = lock(&self.inner);
         let previous: HashMap<String, State> = rows
             .iter()
-            .filter_map(|r| inner.presence.session_state(profile, &r.session_id).map(|s| (r.session_id.clone(), s)))
+            .filter_map(|r| {
+                inner
+                    .presence
+                    .session_state(profile, &r.session_id)
+                    .map(|s| (r.session_id.clone(), s))
+            })
             .collect();
         let rows: Vec<Live> = rows
             .iter()
             .map(|r| {
                 let meta = inner.meta.get(&(profile.to_owned(), r.session_id.clone()));
                 Live {
-                    client: r.client.clone().or_else(|| meta.and_then(|m| m.client.clone())),
+                    client: r
+                        .client
+                        .clone()
+                        .or_else(|| meta.and_then(|m| m.client.clone())),
                     ..r.clone()
                 }
             })
             .collect();
         for r in &rows {
             if let Some(model) = models.get(&r.session_id) {
-                let m = inner.meta.entry((profile.to_owned(), r.session_id.clone())).or_default();
+                let m = inner
+                    .meta
+                    .entry((profile.to_owned(), r.session_id.clone()))
+                    .or_default();
                 m.model = Some(model.clone());
             }
         }
-        let waiting: Vec<String> = rows.iter().filter(|r| r.status == super::presence::Status::Waiting).map(|r| r.session_id.clone()).collect();
-        let inbox_waits: Vec<String> = waiting.iter().filter(|s| inner.inbox.session_waits(profile, s)).cloned().collect();
-        let changed = inner.presence.on_poll(profile, &rows, &|s| inbox_waits.iter().any(|w| w == s), now);
+        let waiting: Vec<String> = rows
+            .iter()
+            .filter(|r| r.status == super::presence::Status::Waiting)
+            .map(|r| r.session_id.clone())
+            .collect();
+        let inbox_waits: Vec<String> = waiting
+            .iter()
+            .filter(|s| inner.inbox.session_waits(profile, s))
+            .cloned()
+            .collect();
+        let changed =
+            inner
+                .presence
+                .on_poll(profile, &rows, &|s| inbox_waits.iter().any(|w| w == s), now);
         self.publish(&mut inner, changed);
         // A turn that ran and is now idle, in a session another surface runs: someone may want to know.
         let who = Self::display(&inner, profile);
         for r in &rows {
             let was = previous.get(&r.session_id).copied();
             let now_state = inner.presence.session_state(profile, &r.session_id);
-            let finished = was.is_some_and(State::busy) && matches!(now_state, Some(State::Idle) | None);
+            let finished =
+                was.is_some_and(State::busy) && matches!(now_state, Some(State::Idle) | None);
             let source = super::model::source_of(&r.source, r.client.as_deref());
             if finished && source != Source::Island && source != Source::Gui {
                 let (kind, title) = if source == Source::Cron {
@@ -539,7 +712,16 @@ impl Feed {
                 } else {
                     (NoteKind::Reply, format!("{who} finished a turn"))
                 };
-                self.notify(&mut inner, kind, profile, Some(&r.session_id), source, title, String::new(), false);
+                self.notify(
+                    &mut inner,
+                    kind,
+                    profile,
+                    Some(&r.session_id),
+                    source,
+                    title,
+                    String::new(),
+                    false,
+                );
             }
         }
         // A session the poll no longer lists has ended: a turn that was busy in it was finished or cut off.
@@ -553,12 +735,20 @@ impl Feed {
         let mut inner = lock(&self.inner);
         let held: Vec<String> = rows.iter().map(|r| r.id.clone()).collect();
         let origin = Self::origin(&inner, profile, session_id);
-        let governed = inner.roster.iter().find(|e| e.name == profile).is_some_and(|e| e.governed);
-        let model = inner.meta.get(&(profile.to_owned(), session_id.to_owned())).and_then(|m| m.model.clone());
+        let governed = inner
+            .roster
+            .iter()
+            .find(|e| e.name == profile)
+            .is_some_and(|e| e.governed);
+        let model = inner
+            .meta
+            .get(&(profile.to_owned(), session_id.to_owned()))
+            .and_then(|m| m.model.clone());
         for mut row in rows {
             row.governed = governed;
             row.command = self.clip(&row.command);
             row.description = self.clip(&row.description);
+            row.origin.tool = row.origin.tool.take().map(|t| self.clip(&t));
             if row.origin.model.is_none() {
                 row.origin.model.clone_from(&model);
             }
@@ -570,6 +760,11 @@ impl Feed {
         for closed in inner.inbox.retain_held(profile, session_id, &held) {
             self.emit(&mut inner, Event::Approvals(closed));
         }
+        let waits = inner.inbox.session_waits(profile, session_id);
+        let changed = inner
+            .presence
+            .set_attention(profile, session_id, waits, now_ms());
+        self.publish(&mut inner, changed);
     }
 
     /// Whether the inbox already knows an approval (so the poller does not look its generation up again).
@@ -595,7 +790,11 @@ impl Feed {
     #[must_use]
     pub fn approvals(&self, all: bool) -> Vec<Approval> {
         let inner = lock(&self.inner);
-        if all { inner.inbox.all() } else { inner.inbox.waiting() }
+        if all {
+            inner.inbox.all()
+        } else {
+            inner.inbox.waiting()
+        }
     }
 
     /// The profile and session of an approval by its id.
@@ -609,13 +808,22 @@ impl Feed {
     ///
     /// # Errors
     /// The refusal; it is recorded in the audit file with the client that asked.
-    pub fn begin_answer(&self, id: &str, choice: &str, generation: Option<u64>, by: Answered) -> Result<Approval, Refusal> {
+    pub fn begin_answer(
+        &self,
+        id: &str,
+        choice: &str,
+        generation: Option<u64>,
+        by: Answered,
+    ) -> Result<Approval, Refusal> {
         let mut inner = lock(&self.inner);
         let Some(row) = inner.inbox.find(id).cloned() else {
             return Err(Refusal::Unknown);
         };
         let now = now_ms();
-        match inner.inbox.begin(&row.profile, id, choice, generation, by.clone(), now) {
+        match inner
+            .inbox
+            .begin(&row.profile, id, choice, generation, by.clone(), now)
+        {
             Ok(taken) => {
                 self.emit(&mut inner, Event::Approvals(taken.clone()));
                 Ok(taken)
@@ -640,14 +848,19 @@ impl Feed {
     pub fn finish_answer(&self, row: &Approval, delivery: &Delivery) {
         let now = now_ms();
         let mut inner = lock(&self.inner);
-        let Some(done) = inner.inbox.finish(&row.profile, &row.id, delivery, now) else { return };
+        let Some(done) = inner.inbox.finish(&row.profile, &row.id, delivery, now) else {
+            return;
+        };
         let by = row.answered_by.clone();
         self.audit.record(&Line {
             at: now,
             profile: row.profile.clone(),
             session_id: row.session_id.clone(),
             prompt_id: row.prompt_id.clone(),
-            choice: by.as_ref().and_then(|b| b.choice.clone()).unwrap_or_default(),
+            choice: by
+                .as_ref()
+                .and_then(|b| b.choice.clone())
+                .unwrap_or_default(),
             outcome: match delivery {
                 Delivery::Delivered => "delivered",
                 Delivery::Failed => "failed",
@@ -685,7 +898,13 @@ mod tests {
     }
 
     fn frame(name: &str, sid: &str, payload: Option<Value>, generation: Option<u64>) -> FeedFrame {
-        FeedFrame { direction: Direction::In, name: name.into(), session_id: Some(sid.into()), generation, payload }
+        FeedFrame {
+            direction: Direction::In,
+            name: name.into(),
+            session_id: Some(sid.into()),
+            generation,
+            payload,
+        }
     }
 
     fn drain(rx: &mut broadcast::Receiver<Arc<Stamped>>) -> Vec<Arc<Stamped>> {
@@ -709,7 +928,12 @@ mod tests {
     }
 
     fn who(c: &str) -> Answered {
-        Answered { client: c.into(), surface: "endpoint".into(), choice: None, at: 0 }
+        Answered {
+            client: c.into(),
+            surface: "endpoint".into(),
+            choice: None,
+            at: 0,
+        }
     }
 
     #[tokio::test]
@@ -717,7 +941,15 @@ mod tests {
         let (f, _d) = feed();
         let sub = f.subscribe(None);
         let mut rx = sub.rx;
-        for (e, p) in [("message.start", None), ("tool.start", Some(json!({"name": "read_file"}))), ("message.delta", None), ("message.complete", Some(json!({"text": "hello", "outcome": "completed"})))] {
+        for (e, p) in [
+            ("message.start", None),
+            ("tool.start", Some(json!({"name": "read_file"}))),
+            ("message.delta", None),
+            (
+                "message.complete",
+                Some(json!({"text": "hello", "outcome": "completed"})),
+            ),
+        ] {
             f.on_frame("kai", &frame(e, "s1", p, None));
         }
         let events = drain(&mut rx);
@@ -730,7 +962,12 @@ mod tests {
             .collect();
         assert_eq!(
             states,
-            [(State::Thinking, String::new()), (State::Working, "read_file".into()), (State::Speaking, String::new()), (State::Done, String::new())]
+            [
+                (State::Thinking, String::new()),
+                (State::Working, "read_file".into()),
+                (State::Speaking, String::new()),
+                (State::Done, String::new())
+            ]
         );
         let ids: Vec<u64> = events.iter().map(|e| e.id).collect();
         assert!(ids.windows(2).all(|w| w[1] == w[0] + 1), "{ids:?}");
@@ -745,7 +982,14 @@ mod tests {
         let rows = f.approvals(false);
         assert_eq!(rows.len(), 1);
         let r = &rows[0];
-        assert_eq!((r.profile.as_str(), r.session_id.as_str(), r.execution_generation), ("kai", "s1", 5));
+        assert_eq!(
+            (
+                r.profile.as_str(),
+                r.session_id.as_str(),
+                r.execution_generation
+            ),
+            ("kai", "s1", 5)
+        );
         assert!(r.governed, "Kai runs governed");
         assert_eq!(r.answerable_with, ["once", "deny"]);
         assert_eq!(r.origin.tool.as_deref(), Some("terminal"));
@@ -759,15 +1003,24 @@ mod tests {
     async fn two_clients_answer_at_once_and_exactly_one_is_delivered() {
         let (f, dir) = feed();
         ask(&f, "p1");
-        let first = f.begin_answer("p1", "once", Some(5), who("panacea-island")).unwrap();
-        let second = f.begin_answer("p1", "deny", None, who("boopis-cli")).unwrap_err();
-        assert!(matches!(second, Refusal::AlreadyAnswered(Some(ref a)) if a.client == "panacea-island"));
+        let first = f
+            .begin_answer("p1", "once", Some(5), who("panacea-island"))
+            .unwrap();
+        let second = f
+            .begin_answer("p1", "deny", None, who("boopis-cli"))
+            .unwrap_err();
+        assert!(
+            matches!(second, Refusal::AlreadyAnswered(Some(ref a)) if a.client == "panacea-island")
+        );
         f.finish_answer(&first, &Delivery::Delivered);
         let after = f.approval("p1").unwrap();
         assert_eq!(after.state, ApprovalState::Settled);
         assert_eq!(after.answered_by.unwrap().client, "panacea-island");
         let lines = std::fs::read_to_string(Audit::under(dir.path()).path()).unwrap();
-        let rows: Vec<Value> = lines.lines().map(|l| serde_json::from_str(l).unwrap()).collect();
+        let rows: Vec<Value> = lines
+            .lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect();
         assert_eq!(rows.len(), 2);
         assert_eq!(rows[0]["outcome"], "refused:already_answered");
         assert_eq!(rows[0]["client"], "boopis-cli");
@@ -790,20 +1043,39 @@ mod tests {
                 payload: Some(json!({"session_id": "s1", "prompt_id": "p1", "choice": "once", "execution_generation": 5})),
             },
         );
-        f.on_frame("kai", &frame("approval.settled", "s1", Some(json!({"prompt_id": "p1"})), None));
+        f.on_frame(
+            "kai",
+            &frame(
+                "approval.settled",
+                "s1",
+                Some(json!({"prompt_id": "p1"})),
+                None,
+            ),
+        );
         let row = f.approval("p1").unwrap();
         assert_eq!(row.state, ApprovalState::Settled);
         let by = row.answered_by.unwrap();
         assert_eq!((by.client.as_str(), by.surface.as_str()), ("boopis", "gui"));
         let text = std::fs::read_to_string(Audit::under(dir.path()).path()).unwrap();
         assert!(text.contains("\"surface\":\"gui\""));
-        assert!(f.begin_answer("p1", "once", None, who("x")).is_err(), "a settled approval takes no answer");
+        assert!(
+            f.begin_answer("p1", "once", None, who("x")).is_err(),
+            "a settled approval takes no answer"
+        );
     }
 
     #[tokio::test]
     async fn a_request_with_no_generation_is_never_offered_for_answer() {
         let (f, _d) = feed();
-        f.on_frame("kai", &frame("approval.request", "s1", Some(json!({"prompt_id": "p9", "choices": ["once", "deny"]})), None));
+        f.on_frame(
+            "kai",
+            &frame(
+                "approval.request",
+                "s1",
+                Some(json!({"prompt_id": "p9", "choices": ["once", "deny"]})),
+                None,
+            ),
+        );
         assert!(f.approvals(false).is_empty());
     }
 
@@ -821,7 +1093,17 @@ mod tests {
                 Some(1),
             ),
         );
-        let all = format!("{:?}{}", f.approvals(true), serde_json::to_string(&drain(&mut rx).iter().map(|e| (**e).clone()).collect::<Vec<_>>()).unwrap());
+        let all = format!(
+            "{:?}{}",
+            f.approvals(true),
+            serde_json::to_string(
+                &drain(&mut rx)
+                    .iter()
+                    .map(|e| (**e).clone())
+                    .collect::<Vec<_>>()
+            )
+            .unwrap()
+        );
         for secret in ["abcDEF1234567890", "f00dfeedbeef1234cafe", "hunter2"] {
             assert!(!all.contains(secret), "{secret} leaked: {all}");
         }
@@ -833,14 +1115,38 @@ mod tests {
         f.on_frame("kai", &frame("message.start", "s1", None, None));
         let mark = f.last_id();
         f.on_frame("kai", &frame("message.delta", "s1", None, None));
-        f.on_frame("kai", &frame("message.complete", "s1", Some(json!({"text": "x"})), None));
+        f.on_frame(
+            "kai",
+            &frame("message.complete", "s1", Some(json!({"text": "x"})), None),
+        );
         let sub = f.subscribe(Some(mark));
         assert!(sub.backlog.iter().all(|e| e.id > mark) && !sub.backlog.is_empty() && !sub.gap);
-        let small = Feed::new(Audit::under(tempfile::tempdir().unwrap().path()), ApiLimits { ring: 16, ..ApiLimits::default() });
+        let small = Feed::new(
+            Audit::under(tempfile::tempdir().unwrap().path()),
+            ApiLimits {
+                ring: 16,
+                ..ApiLimits::default()
+            },
+        );
         for i in 0..40 {
-            small.on_frame("kai", &frame(if i % 2 == 0 { "message.delta" } else { "tool.start" }, "s1", Some(json!({"name": format!("t{i}")})), None));
+            small.on_frame(
+                "kai",
+                &frame(
+                    if i % 2 == 0 {
+                        "message.delta"
+                    } else {
+                        "tool.start"
+                    },
+                    "s1",
+                    Some(json!({"name": format!("t{i}")})),
+                    None,
+                ),
+            );
         }
-        assert!(small.subscribe(Some(1)).gap, "the ring no longer holds event 2");
+        assert!(
+            small.subscribe(Some(1)).gap,
+            "the ring no longer holds event 2"
+        );
     }
 
     #[tokio::test]
@@ -859,28 +1165,71 @@ mod tests {
     #[tokio::test]
     async fn a_poll_of_the_islands_session_gives_presence_and_a_waiting_session_gives_needs() {
         let (f, _d) = feed();
-        f.set_roster(vec![
-            Entry { name: "nina".into(), display_name: "Nina".into(), role: String::new(), model: None, provider: None, look: look_for("Nina"), known_to_boopis: false, governed: false },
-        ]);
+        f.set_roster(vec![Entry {
+            name: "nina".into(),
+            display_name: "Nina".into(),
+            role: String::new(),
+            model: None,
+            provider: None,
+            look: look_for("Nina"),
+            known_to_boopis: false,
+            governed: false,
+        }]);
         let none = HashMap::new();
-        let live = |status| Live { session_id: "i1".into(), status, source: "cli".into(), client: Some("panacea-island".into()) };
-        f.on_poll("nina", &[live(crate::local_api::presence::Status::Working)], &none);
+        let live = |status| Live {
+            session_id: "i1".into(),
+            status,
+            source: "cli".into(),
+            client: Some("panacea-island".into()),
+        };
+        f.on_poll(
+            "nina",
+            &[live(crate::local_api::presence::Status::Working)],
+            &none,
+        );
         let p = &f.presence()[0];
         assert_eq!((p.state, p.source), (State::Working, Source::Island));
-        f.on_poll("nina", &[live(crate::local_api::presence::Status::Waiting)], &none);
+        f.on_poll(
+            "nina",
+            &[live(crate::local_api::presence::Status::Waiting)],
+            &none,
+        );
         assert_eq!(f.presence()[0].state, State::Needs);
-        assert_eq!(f.presence()[0].attention.as_deref(), Some("input"), "no approval is known, so it is a question");
+        assert_eq!(
+            f.presence()[0].attention.as_deref(),
+            Some("input"),
+            "no approval is known, so it is a question"
+        );
     }
 
     #[tokio::test]
     async fn a_cron_run_that_finishes_is_a_notification_and_the_islands_own_turn_is_not() {
+        use crate::local_api::presence::Status::{Idle, Working};
         let (f, _d) = feed();
         let mut rx = f.subscribe(None).rx;
         let none = HashMap::new();
-        let live = |sid: &str, status, source: &str, client: Option<&str>| Live { session_id: sid.into(), status, source: source.into(), client: client.map(str::to_owned) };
-        use crate::local_api::presence::Status::{Idle, Working};
-        f.on_poll("kai", &[live("c1", Working, "cron", None), live("i1", Working, "cli", Some("panacea-island"))], &none);
-        f.on_poll("kai", &[live("c1", Idle, "cron", None), live("i1", Idle, "cli", Some("panacea-island"))], &none);
+        let live = |sid: &str, status, source: &str, client: Option<&str>| Live {
+            session_id: sid.into(),
+            status,
+            source: source.into(),
+            client: client.map(str::to_owned),
+        };
+        f.on_poll(
+            "kai",
+            &[
+                live("c1", Working, "cron", None),
+                live("i1", Working, "cli", Some("panacea-island")),
+            ],
+            &none,
+        );
+        f.on_poll(
+            "kai",
+            &[
+                live("c1", Idle, "cron", None),
+                live("i1", Idle, "cli", Some("panacea-island")),
+            ],
+            &none,
+        );
         let notes: Vec<Notification> = drain(&mut rx)
             .iter()
             .filter_map(|e| match &e.event {
@@ -889,7 +1238,10 @@ mod tests {
             })
             .collect();
         assert_eq!(notes.len(), 1, "{notes:?}");
-        assert_eq!((notes[0].kind, notes[0].source), (NoteKind::Cron, Source::Cron));
+        assert_eq!(
+            (notes[0].kind, notes[0].source),
+            (NoteKind::Cron, Source::Cron)
+        );
         assert_eq!(notes[0].session_id.as_deref(), Some("c1"));
     }
 
@@ -897,7 +1249,16 @@ mod tests {
     async fn a_look_or_a_model_that_changes_is_a_bots_changed_event() {
         let (f, _d) = feed();
         let mut rx = f.subscribe(None).rx;
-        let mut e = Entry { name: "kai".into(), display_name: "Kai".into(), role: String::new(), model: Some("sonnet".into()), provider: None, look: look_for("Kai"), known_to_boopis: true, governed: true };
+        let mut e = Entry {
+            name: "kai".into(),
+            display_name: "Kai".into(),
+            role: String::new(),
+            model: Some("sonnet".into()),
+            provider: None,
+            look: look_for("Kai"),
+            known_to_boopis: true,
+            governed: true,
+        };
         f.set_roster(vec![e.clone()]);
         e.look.color = "#f23b5a".into();
         f.set_roster(vec![e]);
@@ -908,6 +1269,7 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(moved, [vec!["kai".to_owned()], vec!["kai".to_owned()]]);
+        // The first roster is the baseline a snapshot reads, not a change; the new colour is the one event.
+        assert_eq!(moved, [vec!["kai".to_owned()]]);
     }
 }

@@ -42,7 +42,9 @@ impl Audit {
     /// The record under `dir` (the app's data folder).
     #[must_use]
     pub fn under(dir: &Path) -> Self {
-        Self { path: dir.join("audit").join("client-answers.jsonl") }
+        Self {
+            path: dir.join("audit").join("client-answers.jsonl"),
+        }
     }
 
     /// The file's path.
@@ -104,7 +106,10 @@ mod tests {
         audit.record(&line(1));
         audit.record(&line(2));
         let text = std::fs::read_to_string(audit.path()).unwrap();
-        let rows: Vec<serde_json::Value> = text.lines().map(|l| serde_json::from_str(l).unwrap()).collect();
+        let rows: Vec<serde_json::Value> = text
+            .lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect();
         assert_eq!(rows.len(), 2);
         assert_eq!(rows[0]["client"], "panacea-island");
         assert_eq!(rows[0]["surface"], "endpoint");
@@ -118,7 +123,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let audit = Audit::under(dir.path());
         audit.record(&line(1));
-        let mode = std::fs::metadata(audit.path()).unwrap().permissions().mode();
+        let mode = std::fs::metadata(audit.path())
+            .unwrap()
+            .permissions()
+            .mode();
         assert_eq!(mode & 0o077, 0, "mode {mode:o}");
     }
 
@@ -127,7 +135,11 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let audit = Audit::under(dir.path());
         std::fs::create_dir_all(audit.path().parent().unwrap()).unwrap();
-        std::fs::write(audit.path(), vec![b'x'; usize::try_from(MAX_BYTES).unwrap()]).unwrap();
+        std::fs::write(
+            audit.path(),
+            vec![b'x'; usize::try_from(MAX_BYTES).unwrap()],
+        )
+        .unwrap();
         audit.record(&line(1));
         assert!(audit.path().with_extension("jsonl.1").exists());
         assert!(std::fs::metadata(audit.path()).unwrap().len() < 1024);

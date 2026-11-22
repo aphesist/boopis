@@ -1609,7 +1609,11 @@ pub async fn local_api_set_enabled(
     state: State<'_, AppState>,
     enabled: bool,
 ) -> std::result::Result<crate::local_api::LocalApiStatus, HostError> {
-    state.local_api.set_enabled(enabled).await.map_err(|e| Error::Os(e).into())
+    state
+        .local_api
+        .set_enabled(enabled)
+        .await
+        .map_err(|e| Error::Os(e).into())
 }
 
 /// Replace the endpoint's token: the old one stops working at once and every open stream ends. The new one is in the token
@@ -1621,7 +1625,11 @@ pub async fn local_api_set_enabled(
 pub async fn local_api_rotate_token(
     state: State<'_, AppState>,
 ) -> std::result::Result<crate::local_api::LocalApiStatus, HostError> {
-    state.local_api.rotate().await.map_err(|e| Error::Os(e).into())
+    state
+        .local_api
+        .rotate()
+        .await
+        .map_err(|e| Error::Os(e).into())
 }
 
 /// What preparing a bot did: whether anything changed, and each step that could not be done, in plain words.

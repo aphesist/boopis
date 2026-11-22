@@ -59,15 +59,25 @@ pub mod scripted {
 
     impl Scripted {
         /// An engine that answers with `respond(profile, method, params)`.
-        pub fn new(respond: impl Fn(&str, &str, &Value) -> Result<Value> + Send + Sync + 'static) -> Self {
-            Self { calls: Mutex::new(Vec::new()), respond: Box::new(respond) }
+        pub fn new(
+            respond: impl Fn(&str, &str, &Value) -> Result<Value> + Send + Sync + 'static,
+        ) -> Self {
+            Self {
+                calls: Mutex::new(Vec::new()),
+                respond: Box::new(respond),
+            }
         }
 
         /// The calls of one method.
         pub fn of(&self, method: &str) -> Vec<(String, Value)> {
             self.calls
                 .lock()
-                .map(|c| c.iter().filter(|(_, m, _)| m == method).map(|(p, _, v)| (p.clone(), v.clone())).collect())
+                .map(|c| {
+                    c.iter()
+                        .filter(|(_, m, _)| m == method)
+                        .map(|(p, _, v)| (p.clone(), v.clone()))
+                        .collect()
+                })
                 .unwrap_or_default()
         }
     }

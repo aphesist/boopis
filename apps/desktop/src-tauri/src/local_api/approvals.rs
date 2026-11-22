@@ -59,7 +59,9 @@ impl Refusal {
     #[must_use]
     pub fn message(&self) -> String {
         match self {
-            Self::Unknown => "There is no such approval. It may have been answered or have expired.".into(),
+            Self::Unknown => {
+                "There is no such approval. It may have been answered or have expired.".into()
+            }
             Self::AlreadyAnswered(Some(by)) => format!(
                 "Already answered by {} ({}). The first answer stands.",
                 by.client, by.surface
@@ -123,7 +125,9 @@ impl Inbox {
                     && let Some(oldest) = self
                         .rows
                         .iter()
-                        .filter(|(_, r)| r.state == ApprovalState::Settled || r.state == ApprovalState::Expired)
+                        .filter(|(_, r)| {
+                            r.state == ApprovalState::Settled || r.state == ApprovalState::Expired
+                        })
                         .min_by_key(|(_, r)| r.asked_at)
                         .map(|(k, _)| k.clone())
                 {
@@ -185,7 +189,12 @@ impl Inbox {
     ///
     /// # Errors
     /// The refusal, in the order a client should fix them.
-    pub fn check(row: &Approval, choice: &str, generation: Option<u64>, now: i64) -> Result<(), Refusal> {
+    pub fn check(
+        row: &Approval,
+        choice: &str,
+        generation: Option<u64>,
+        now: i64,
+    ) -> Result<(), Refusal> {
         match row.state {
             ApprovalState::Settled | ApprovalState::Answering => {
                 return Err(Refusal::AlreadyAnswered(row.answered_by.clone()));
@@ -193,7 +202,9 @@ impl Inbox {
             ApprovalState::Expired => return Err(Refusal::Expired),
             ApprovalState::Pending => {}
         }
-        if row.timeout_s.is_some_and(|t| now > row.asked_at + i64::try_from(t).unwrap_or(i64::MAX).saturating_mul(1000)) {
+        if row.timeout_s.is_some_and(|t| {
+            now > row.asked_at + i64::try_from(t).unwrap_or(i64::MAX).saturating_mul(1000)
+        }) {
             return Err(Refusal::Expired);
         }
         if !REMOTE_CHOICES.contains(&choice) {
@@ -205,7 +216,9 @@ impl Inbox {
         if let Some(g) = generation
             && g != row.execution_generation
         {
-            return Err(Refusal::Generation { expected: row.execution_generation });
+            return Err(Refusal::Generation {
+                expected: row.execution_generation,
+            });
         }
         Ok(())
     }
@@ -224,15 +237,27 @@ impl Inbox {
         by: Answered,
         now: i64,
     ) -> Result<Approval, Refusal> {
-        let row = self.rows.get_mut(&key(profile, id)).ok_or(Refusal::Unknown)?;
+        let row = self
+            .rows
+            .get_mut(&key(profile, id))
+            .ok_or(Refusal::Unknown)?;
         Self::check(row, choice, generation, now)?;
         row.state = ApprovalState::Answering;
-        row.answered_by = Some(Answered { choice: Some(choice.to_owned()), ..by });
+        row.answered_by = Some(Answered {
+            choice: Some(choice.to_owned()),
+            ..by
+        });
         Ok(row.clone())
     }
 
     /// The last step: the delivery's outcome. Returns the row as it now stands.
-    pub fn finish(&mut self, profile: &str, id: &str, delivery: &Delivery, now: i64) -> Option<Approval> {
+    pub fn finish(
+        &mut self,
+        profile: &str,
+        id: &str,
+        delivery: &Delivery,
+        now: i64,
+    ) -> Option<Approval> {
         let row = self.rows.get_mut(&key(profile, id))?;
         if row.state != ApprovalState::Answering {
             return None;
@@ -258,11 +283,16 @@ impl Inbox {
 
     /// The engine settled an approval (an `approval.settled` event, or the boopis window's own answer seen on the
     /// proxy). `by` names who when it is known. Returns the row when it changed.
-    pub fn settled_elsewhere(&mut self, profile: &str, id: &str, by: Option<Answered>) -> Option<Approval> {
+    pub fn settled_elsewhere(
+        &mut self,
+        profile: &str,
+        id: &str,
+        by: Option<Answered>,
+    ) -> Option<Approval> {
         let row = self.rows.get_mut(&key(profile, id))?;
         match row.state {
-            ApprovalState::Settled | ApprovalState::Expired => None,
-            ApprovalState::Answering => None, // our own delivery's `finish` closes it
+            // An answering row is closed by our own delivery's `finish`.
+            ApprovalState::Settled | ApprovalState::Expired | ApprovalState::Answering => None,
             ApprovalState::Pending => {
                 row.state = ApprovalState::Settled;
                 row.answered_by = by;
@@ -272,13 +302,18 @@ impl Inbox {
     }
 
     /// The poll of one session says which approvals the engine still holds: a pending row it no longer holds is closed.
-    pub fn retain_held(&mut self, profile: &str, session_id: &str, held: &[String]) -> Vec<Approval> {
+    pub fn retain_held(
+        &mut self,
+        profile: &str,
+        session_id: &str,
+        held: &[String],
+    ) -> Vec<Approval> {
         let mut closed = Vec::new();
         for row in self.rows.values_mut() {
             if row.profile == profile
                 && row.session_id == session_id
                 && row.state == ApprovalState::Pending
-                && !held.iter().any(|h| *h == row.id)
+                && !held.contains(&row.id)
             {
                 row.state = ApprovalState::Expired;
                 closed.push(row.clone());
@@ -291,16 +326,17 @@ impl Inbox {
     pub fn sweep(&mut self, now: i64) -> Vec<Approval> {
         let mut closed = Vec::new();
         for row in self.rows.values_mut() {
-            let due = row
-                .timeout_s
-                .is_some_and(|t| now > row.asked_at + i64::try_from(t).unwrap_or(i64::MAX).saturating_mul(1000));
+            let due = row.timeout_s.is_some_and(|t| {
+                now > row.asked_at + i64::try_from(t).unwrap_or(i64::MAX).saturating_mul(1000)
+            });
             if row.state == ApprovalState::Pending && due {
                 row.state = ApprovalState::Expired;
                 closed.push(row.clone());
             }
         }
         self.rows.retain(|_, r| {
-            matches!(r.state, ApprovalState::Pending | ApprovalState::Answering) || r.asked_at + KEEP_MS > now
+            matches!(r.state, ApprovalState::Pending | ApprovalState::Answering)
+                || r.asked_at + KEEP_MS > now
         });
         closed
     }
@@ -320,10 +356,18 @@ mod tests {
             execution_generation: 4,
             command: "rm -rf build".into(),
             description: "delete the build folder".into(),
-            choices: vec!["once".into(), "session".into(), "always".into(), "deny".into()],
+            choices: vec![
+                "once".into(),
+                "session".into(),
+                "always".into(),
+                "deny".into(),
+            ],
             answerable_with: vec![],
             timeout_s: Some(60),
-            origin: Origin { model: Some("opus".into()), tool: Some("terminal".into()) },
+            origin: Origin {
+                model: Some("opus".into()),
+                tool: Some("terminal".into()),
+            },
             governed: false,
             state: ApprovalState::Pending,
             answered_by: None,
@@ -332,19 +376,36 @@ mod tests {
     }
 
     fn who(client: &str) -> Answered {
-        Answered { client: client.into(), surface: "endpoint".into(), choice: None, at: 2_000 }
+        Answered {
+            client: client.into(),
+            surface: "endpoint".into(),
+            choice: None,
+            at: 2_000,
+        }
     }
 
     #[test]
     fn the_first_answer_wins_and_the_second_is_told_who() {
         let mut inbox = Inbox::new();
         inbox.upsert(row("p1"));
-        inbox.begin("kai", "p1", "once", None, who("panacea-island"), 2_000).unwrap();
-        let second = inbox.begin("kai", "p1", "deny", None, who("boopis-cli"), 2_001).unwrap_err();
+        inbox
+            .begin("kai", "p1", "once", None, who("panacea-island"), 2_000)
+            .unwrap();
+        let second = inbox
+            .begin("kai", "p1", "deny", None, who("boopis-cli"), 2_001)
+            .unwrap_err();
         assert_eq!(second.code(), "already_answered");
-        assert!(second.message().contains("panacea-island"), "{}", second.message());
-        inbox.finish("kai", "p1", &Delivery::Delivered, 2_002).unwrap();
-        let third = inbox.begin("kai", "p1", "once", None, who("x"), 2_003).unwrap_err();
+        assert!(
+            second.message().contains("panacea-island"),
+            "{}",
+            second.message()
+        );
+        inbox
+            .finish("kai", "p1", &Delivery::Delivered, 2_002)
+            .unwrap();
+        let third = inbox
+            .begin("kai", "p1", "once", None, who("x"), 2_003)
+            .unwrap_err();
         assert!(matches!(third, Refusal::AlreadyAnswered(Some(a)) if a.client == "panacea-island"));
     }
 
@@ -352,18 +413,29 @@ mod tests {
     fn a_failed_delivery_gives_the_row_back_to_the_next_client() {
         let mut inbox = Inbox::new();
         inbox.upsert(row("p1"));
-        inbox.begin("kai", "p1", "once", None, who("a"), 2_000).unwrap();
+        inbox
+            .begin("kai", "p1", "once", None, who("a"), 2_000)
+            .unwrap();
         let back = inbox.finish("kai", "p1", &Delivery::Failed, 2_001).unwrap();
-        assert_eq!((back.state, back.answered_by), (ApprovalState::Pending, None));
-        inbox.begin("kai", "p1", "deny", None, who("b"), 2_002).unwrap();
+        assert_eq!(
+            (back.state, back.answered_by),
+            (ApprovalState::Pending, None)
+        );
+        inbox
+            .begin("kai", "p1", "deny", None, who("b"), 2_002)
+            .unwrap();
     }
 
     #[test]
     fn the_engine_saying_it_was_settled_closes_the_row_as_someone_elses() {
         let mut inbox = Inbox::new();
         inbox.upsert(row("p1"));
-        inbox.begin("kai", "p1", "once", None, who("a"), 2_000).unwrap();
-        let done = inbox.finish("kai", "p1", &Delivery::AlreadySettled, 2_001).unwrap();
+        inbox
+            .begin("kai", "p1", "once", None, who("a"), 2_000)
+            .unwrap();
+        let done = inbox
+            .finish("kai", "p1", &Delivery::AlreadySettled, 2_001)
+            .unwrap();
         assert_eq!(done.state, ApprovalState::Settled);
         assert_eq!(done.answered_by.unwrap().client, "another client");
     }
@@ -373,10 +445,16 @@ mod tests {
         let mut inbox = Inbox::new();
         inbox.upsert(row("p1"));
         for choice in ["session", "always", "yes", "approve", "", "ONCE"] {
-            let e = inbox.begin("kai", "p1", choice, None, who("a"), 2_000).unwrap_err();
+            let e = inbox
+                .begin("kai", "p1", choice, None, who("a"), 2_000)
+                .unwrap_err();
             assert_eq!(e.code(), "policy_refused", "{choice:?}");
         }
-        assert_eq!(inbox.get("kai", "p1").unwrap().state, ApprovalState::Pending, "a refusal takes nothing");
+        assert_eq!(
+            inbox.get("kai", "p1").unwrap().state,
+            ApprovalState::Pending,
+            "a refusal takes nothing"
+        );
     }
 
     #[test]
@@ -385,11 +463,31 @@ mod tests {
         let mut only_deny = row("p1");
         only_deny.choices = vec!["deny".into()];
         inbox.upsert(only_deny);
-        assert_eq!(inbox.begin("kai", "p1", "once", None, who("a"), 2_000).unwrap_err().code(), "choice_not_offered");
+        assert_eq!(
+            inbox
+                .begin("kai", "p1", "once", None, who("a"), 2_000)
+                .unwrap_err()
+                .code(),
+            "choice_not_offered"
+        );
         inbox.upsert(row("p2"));
-        assert_eq!(inbox.begin("kai", "p2", "once", Some(3), who("a"), 2_000).unwrap_err().code(), "stale_generation");
-        inbox.begin("kai", "p2", "once", Some(4), who("a"), 2_000).unwrap();
-        assert_eq!(inbox.begin("kai", "zz", "once", None, who("a"), 2_000).unwrap_err().code(), "not_found");
+        assert_eq!(
+            inbox
+                .begin("kai", "p2", "once", Some(3), who("a"), 2_000)
+                .unwrap_err()
+                .code(),
+            "stale_generation"
+        );
+        inbox
+            .begin("kai", "p2", "once", Some(4), who("a"), 2_000)
+            .unwrap();
+        assert_eq!(
+            inbox
+                .begin("kai", "zz", "once", None, who("a"), 2_000)
+                .unwrap_err()
+                .code(),
+            "not_found"
+        );
     }
 
     #[test]
@@ -406,7 +504,9 @@ mod tests {
     fn time_never_approves_it_expires() {
         let mut inbox = Inbox::new();
         inbox.upsert(row("p1"));
-        let e = inbox.begin("kai", "p1", "once", None, who("a"), 1_000 + 61_000).unwrap_err();
+        let e = inbox
+            .begin("kai", "p1", "once", None, who("a"), 1_000 + 61_000)
+            .unwrap_err();
         assert_eq!(e, Refusal::Expired);
         let closed = inbox.sweep(1_000 + 61_000);
         assert_eq!(closed[0].state, ApprovalState::Expired);
@@ -419,10 +519,24 @@ mod tests {
     fn the_windows_own_answer_and_the_engines_settle_close_a_row() {
         let mut inbox = Inbox::new();
         inbox.upsert(row("p1"));
-        let by = Answered { client: "boopis".into(), surface: "gui".into(), choice: Some("once".into()), at: 3_000 };
-        assert_eq!(inbox.settled_elsewhere("kai", "p1", Some(by)).unwrap().state, ApprovalState::Settled);
+        let by = Answered {
+            client: "boopis".into(),
+            surface: "gui".into(),
+            choice: Some("once".into()),
+            at: 3_000,
+        };
+        assert_eq!(
+            inbox
+                .settled_elsewhere("kai", "p1", Some(by))
+                .unwrap()
+                .state,
+            ApprovalState::Settled
+        );
         assert!(inbox.settled_elsewhere("kai", "p1", None).is_none());
-        assert!(inbox.upsert(row("p1")).is_none(), "an answered row stays answered");
+        assert!(
+            inbox.upsert(row("p1")).is_none(),
+            "an answered row stays answered"
+        );
     }
 
     #[test]

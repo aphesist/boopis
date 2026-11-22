@@ -9,14 +9,40 @@ pub const MASK: &str = "[removed]";
 
 /// Words whose value, the next word, is removed (`token=abc`, `password: abc`, `Authorization: Bearer abc`).
 const KEYWORDS: [&str; 16] = [
-    "token", "secret", "password", "passwd", "pwd", "apikey", "api_key", "api-key", "authorization",
-    "bearer", "credential", "credentials", "ticket", "private_key", "access_key", "auth",
+    "token",
+    "secret",
+    "password",
+    "passwd",
+    "pwd",
+    "apikey",
+    "api_key",
+    "api-key",
+    "authorization",
+    "bearer",
+    "credential",
+    "credentials",
+    "ticket",
+    "private_key",
+    "access_key",
+    "auth",
 ];
 
 /// Prefixes of well-known key shapes.
 const PREFIXES: [&str; 14] = [
-    "sk-", "sk_", "ghp_", "gho_", "ghs_", "ghu_", "github_pat_", "xox", "akia", "aiza", "eyj",
-    "hermes-gateway-ticket", "pk_live", "rk_live",
+    "sk-",
+    "sk_",
+    "ghp_",
+    "gho_",
+    "ghs_",
+    "ghu_",
+    "github_pat_",
+    "xox",
+    "akia",
+    "aiza",
+    "eyj",
+    "hermes-gateway-ticket",
+    "pk_live",
+    "rk_live",
 ];
 
 fn is_word_char(c: char) -> bool {
@@ -38,7 +64,7 @@ fn opaque(word: &str) -> bool {
     let digits = word.bytes().any(|b| b.is_ascii_digit());
     let lowers = word.bytes().any(|b| b.is_ascii_lowercase());
     let uppers = word.bytes().any(|b| b.is_ascii_uppercase());
-    digits && (lowers || uppers) && (lowers as u8 + uppers as u8 + digits as u8) >= 2
+    digits && (lowers || uppers) && (u8::from(lowers) + u8::from(uppers) + u8::from(digits)) >= 2
 }
 
 /// The text with every secret-shaped value removed.
@@ -76,6 +102,14 @@ pub fn scrub(text: &str, exact: &[&str]) -> String {
             continue;
         }
         if mask_next && word.len() >= 4 {
+            // `Authorization: Bearer <token>`: the scheme word is not the secret, the word after it is.
+            if ["bearer", "basic", "token"]
+                .iter()
+                .any(|s| word.eq_ignore_ascii_case(s))
+            {
+                out.push_str(word);
+                continue;
+            }
             out.push_str(MASK);
             mask_next = false;
             continue;
@@ -98,7 +132,9 @@ fn next_is_colon(rest: &str) -> bool {
 
 fn keyword(word: &str) -> bool {
     let lower = word.to_ascii_lowercase();
-    KEYWORDS.iter().any(|k| lower == *k || lower.ends_with(&format!("_{k}")) || lower.ends_with(&format!("-{k}")))
+    KEYWORDS.iter().any(|k| {
+        lower == *k || lower.ends_with(&format!("_{k}")) || lower.ends_with(&format!("-{k}"))
+    })
 }
 
 /// The text scrubbed and cut to `max` characters (an ellipsis marks a cut).
@@ -148,7 +184,10 @@ mod tests {
     fn plain_text_and_a_git_sha_are_left_alone() {
         let plain = "run `git log -1 4e1243bd22c66e76c2ba9eddc1f91394e57f9f83` in /home/x/project and then ls -la";
         assert_eq!(scrub(plain, &[]), plain);
-        assert_eq!(scrub("rm -rf build/ && cargo test", &[]), "rm -rf build/ && cargo test");
+        assert_eq!(
+            scrub("rm -rf build/ && cargo test", &[]),
+            "rm -rf build/ && cargo test"
+        );
     }
 
     #[test]

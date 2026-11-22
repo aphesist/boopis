@@ -21,7 +21,11 @@ pub struct Reject {
 }
 
 const fn reject(status: u16, code: &'static str, message: &'static str) -> Reject {
-    Reject { status, code, message }
+    Reject {
+        status,
+        code,
+        message,
+    }
 }
 
 /// The methods the endpoint serves.
@@ -50,7 +54,10 @@ impl Head {
     /// The value of a header (the first of that name).
     #[must_use]
     pub fn header(&self, name: &str) -> Option<&str> {
-        self.headers.iter().find(|(k, _)| k == name).map(|(_, v)| v.as_str())
+        self.headers
+            .iter()
+            .find(|(k, _)| k == name)
+            .map(|(_, v)| v.as_str())
     }
 
     fn count(&self, name: &str) -> usize {
@@ -60,7 +67,10 @@ impl Head {
     /// A query value.
     #[must_use]
     pub fn param(&self, name: &str) -> Option<&str> {
-        self.query.iter().find(|(k, _)| k == name).map(|(_, v)| v.as_str())
+        self.query
+            .iter()
+            .find(|(k, _)| k == name)
+            .map(|(_, v)| v.as_str())
     }
 }
 
@@ -71,7 +81,9 @@ pub fn head_end(buf: &[u8]) -> Option<usize> {
 }
 
 fn token_chars(s: &str) -> bool {
-    !s.is_empty() && s.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b':'))
+    !s.is_empty()
+        && s.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b':'))
 }
 
 /// Read a request head.
@@ -80,7 +92,11 @@ fn token_chars(s: &str) -> bool {
 /// A refusal for anything that is not a well-formed, plain HTTP/1.1 request within the caps.
 pub fn parse_head(raw: &[u8], limits: &ApiLimits) -> Result<Head, Reject> {
     if raw.len() > limits.max_head {
-        return Err(reject(431, "head_too_large", "The request's headers are too large."));
+        return Err(reject(
+            431,
+            "head_too_large",
+            "The request's headers are too large.",
+        ));
     }
     let Ok(text) = std::str::from_utf8(raw) else {
         return Err(reject(400, "bad_request", "The request is not valid text."));
@@ -88,41 +104,78 @@ pub fn parse_head(raw: &[u8], limits: &ApiLimits) -> Result<Head, Reject> {
     let mut lines = text.trim_end_matches("\r\n\r\n").split("\r\n");
     let first = lines.next().unwrap_or_default();
     let mut words = first.split(' ');
-    let (Some(method), Some(target), Some(version), None) = (words.next(), words.next(), words.next(), words.next()) else {
-        return Err(reject(400, "bad_request", "The request line is not well formed."));
+    let (Some(method), Some(target), Some(version), None) =
+        (words.next(), words.next(), words.next(), words.next())
+    else {
+        return Err(reject(
+            400,
+            "bad_request",
+            "The request line is not well formed.",
+        ));
     };
     if version != "HTTP/1.1" {
         return Err(reject(505, "http_version", "Use HTTP/1.1."));
     }
     if target.len() > limits.max_target {
-        return Err(reject(414, "target_too_long", "The request address is too long."));
+        return Err(reject(
+            414,
+            "target_too_long",
+            "The request address is too long.",
+        ));
     }
     let method = match method {
         "GET" => Method::Get,
         "POST" => Method::Post,
-        _ => return Err(reject(405, "method_not_allowed", "Only GET and POST are served.")),
+        _ => {
+            return Err(reject(
+                405,
+                "method_not_allowed",
+                "Only GET and POST are served.",
+            ));
+        }
     };
-    if !target.starts_with('/') || target.starts_with("//") || target.bytes().any(|b| b <= b' ' || b == b'%' || b == b'#' || b == b'\\') {
-        return Err(reject(400, "bad_target", "The request address is not accepted."));
+    if !target.starts_with('/')
+        || target.starts_with("//")
+        || target
+            .bytes()
+            .any(|b| b <= b' ' || b == b'%' || b == b'#' || b == b'\\')
+    {
+        return Err(reject(
+            400,
+            "bad_target",
+            "The request address is not accepted.",
+        ));
     }
     let (path, query_text) = target.split_once('?').unwrap_or((target, ""));
     let mut query = Vec::new();
     for pair in query_text.split('&').filter(|p| !p.is_empty()) {
         let (k, v) = pair.split_once('=').unwrap_or((pair, ""));
         if !token_chars(k) || (!v.is_empty() && !token_chars(v)) || query.len() >= 8 {
-            return Err(reject(400, "bad_query", "The request's query is not accepted."));
+            return Err(reject(
+                400,
+                "bad_query",
+                "The request's query is not accepted.",
+            ));
         }
         query.push((k.to_owned(), v.to_owned()));
     }
     let mut headers = Vec::new();
     for line in lines {
         if headers.len() >= limits.max_headers {
-            return Err(reject(431, "too_many_headers", "The request has too many headers."));
+            return Err(reject(
+                431,
+                "too_many_headers",
+                "The request has too many headers.",
+            ));
         }
         let Some((name, value)) = line.split_once(':') else {
             return Err(reject(400, "bad_header", "A header is not well formed."));
         };
-        if name.is_empty() || name.bytes().any(|b| !(b.is_ascii_alphanumeric() || b == b'-')) {
+        if name.is_empty()
+            || name
+                .bytes()
+                .any(|b| !(b.is_ascii_alphanumeric() || b == b'-'))
+        {
             return Err(reject(400, "bad_header", "A header is not well formed."));
         }
         let value = value.trim();
@@ -131,7 +184,12 @@ pub fn parse_head(raw: &[u8], limits: &ApiLimits) -> Result<Head, Reject> {
         }
         headers.push((name.to_ascii_lowercase(), value.to_owned()));
     }
-    Ok(Head { method, path: path.to_owned(), query, headers })
+    Ok(Head {
+        method,
+        path: path.to_owned(),
+        query,
+        headers,
+    })
 }
 
 /// The checks that come before the token: the `Host` and the `Origin` of a browser, and the shape of the body.
@@ -145,18 +203,39 @@ pub fn check_origin(head: &Head, port: u16) -> Result<(), Reject> {
     }
     let host = head.header("host").unwrap_or_default().to_ascii_lowercase();
     if host != format!("127.0.0.1:{port}") && host != format!("localhost:{port}") {
-        return Err(reject(403, "bad_host", "This address is not accepted. Use 127.0.0.1."));
+        return Err(reject(
+            403,
+            "bad_host",
+            "This address is not accepted. Use 127.0.0.1.",
+        ));
     }
     // This is not a web API: a browser always sends `Origin` on a cross-site request and `Sec-Fetch-*` on every one.
-    if head.header("origin").is_some() || head.headers.iter().any(|(k, _)| k.starts_with("sec-fetch-")) {
-        return Err(reject(403, "browser_refused", "Browsers may not call this endpoint."));
+    if head.header("origin").is_some()
+        || head
+            .headers
+            .iter()
+            .any(|(k, _)| k.starts_with("sec-fetch-"))
+    {
+        return Err(reject(
+            403,
+            "browser_refused",
+            "Browsers may not call this endpoint.",
+        ));
     }
     if head.header("access-control-request-method").is_some() {
-        return Err(reject(403, "browser_refused", "Browsers may not call this endpoint."));
+        return Err(reject(
+            403,
+            "browser_refused",
+            "Browsers may not call this endpoint.",
+        ));
     }
     for banned in ["transfer-encoding", "expect", "upgrade", "te", "trailer"] {
         if head.header(banned).is_some() {
-            return Err(reject(400, "unsupported", "That header is not supported here."));
+            return Err(reject(
+                400,
+                "unsupported",
+                "That header is not supported here.",
+            ));
         }
     }
     Ok(())
@@ -168,12 +247,24 @@ pub fn check_origin(head: &Head, port: u16) -> Result<(), Reject> {
 /// The refusal.
 pub fn body_length(head: &Head, limits: &ApiLimits) -> Result<usize, Reject> {
     if head.count("content-length") > 1 {
-        return Err(reject(400, "bad_length", "The request's length is not accepted."));
+        return Err(reject(
+            400,
+            "bad_length",
+            "The request's length is not accepted.",
+        ));
     }
     let declared = match head.header("content-length") {
         None => None,
-        Some(v) if !v.is_empty() && v.len() <= 8 && v.bytes().all(|b| b.is_ascii_digit()) => v.parse::<usize>().ok(),
-        Some(_) => return Err(reject(400, "bad_length", "The request's length is not accepted.")),
+        Some(v) if !v.is_empty() && v.len() <= 8 && v.bytes().all(|b| b.is_ascii_digit()) => {
+            v.parse::<usize>().ok()
+        }
+        Some(_) => {
+            return Err(reject(
+                400,
+                "bad_length",
+                "The request's length is not accepted.",
+            ));
+        }
     };
     match head.method {
         Method::Get => match declared {
@@ -181,14 +272,26 @@ pub fn body_length(head: &Head, limits: &ApiLimits) -> Result<usize, Reject> {
             Some(_) => Err(reject(400, "unexpected_body", "A read takes no body.")),
         },
         Method::Post => {
-            let n = declared.ok_or_else(|| reject(411, "length_required", "A write needs a Content-Length."))?;
+            let n = declared
+                .ok_or_else(|| reject(411, "length_required", "A write needs a Content-Length."))?;
             if n > limits.max_body {
-                return Err(reject(413, "body_too_large", "The request's body is too large."));
+                return Err(reject(
+                    413,
+                    "body_too_large",
+                    "The request's body is too large.",
+                ));
             }
-            let kind = head.header("content-type").unwrap_or_default().to_ascii_lowercase();
+            let kind = head
+                .header("content-type")
+                .unwrap_or_default()
+                .to_ascii_lowercase();
             let kind = kind.split(';').next().unwrap_or_default().trim().to_owned();
             if kind != "application/json" {
-                return Err(reject(415, "content_type", "Send the body as application/json."));
+                return Err(reject(
+                    415,
+                    "content_type",
+                    "Send the body as application/json.",
+                ));
             }
             Ok(n)
         }
@@ -202,14 +305,17 @@ pub fn authorized(head: &Head, token: &Token) -> bool {
         return false;
     }
     let value = head.header("authorization").unwrap_or_default();
-    let presented = value.strip_prefix("Bearer ").or_else(|| value.strip_prefix("bearer "));
+    let presented = value
+        .strip_prefix("Bearer ")
+        .or_else(|| value.strip_prefix("bearer "));
     presented.is_some_and(|p| token.matches(p.trim()))
 }
 
 /// The label a client gave itself (`X-Boopis-Client`), when it is a valid one.
 #[must_use]
 pub fn client_label(head: &Head) -> Option<&str> {
-    head.header("x-boopis-client").filter(|l| super::model::valid_client_name(l))
+    head.header("x-boopis-client")
+        .filter(|l| super::model::valid_client_name(l))
 }
 
 /// A token bucket.
@@ -225,7 +331,12 @@ impl Bucket {
     /// A full bucket of `burst`, refilled `per_second` a second.
     #[must_use]
     pub fn new((per_second, burst): (u32, u32), now: Instant) -> Self {
-        Self { tokens: f64::from(burst), rate: f64::from(per_second), burst: f64::from(burst), last: now }
+        Self {
+            tokens: f64::from(burst),
+            rate: f64::from(per_second),
+            burst: f64::from(burst),
+            last: now,
+        }
     }
 
     /// Take one; false when the bucket is empty.
@@ -259,7 +370,11 @@ impl DoorGuard {
     /// A wrong token. Returns true when this one shut the door.
     pub fn failed(&mut self, now: Instant, limits: &ApiLimits) -> bool {
         self.failures.push_back(now);
-        while self.failures.front().is_some_and(|t| now.saturating_duration_since(*t) > limits.auth_window) {
+        while self
+            .failures
+            .front()
+            .is_some_and(|t| now.saturating_duration_since(*t) > limits.auth_window)
+        {
             self.failures.pop_front();
         }
         if self.failures.len() >= usize::try_from(limits.auth_failures).unwrap_or(usize::MAX) {
@@ -278,7 +393,8 @@ impl DoorGuard {
     /// How long until the door opens again.
     #[must_use]
     pub fn wait(&self, now: Instant) -> Duration {
-        self.shut_until.map_or(Duration::ZERO, |t| t.saturating_duration_since(now))
+        self.shut_until
+            .map_or(Duration::ZERO, |t| t.saturating_duration_since(now))
     }
 }
 
@@ -299,16 +415,34 @@ mod tests {
     }
 
     fn ok_head(extra: &[&str]) -> Head {
-        let mut lines = vec!["GET /v1/bots HTTP/1.1", "Host: 127.0.0.1:47821", "Authorization: Bearer abc"];
+        let mut lines = vec![
+            "GET /v1/bots HTTP/1.1",
+            "Host: 127.0.0.1:47821",
+            "Authorization: Bearer abc",
+        ];
         lines.extend_from_slice(extra);
         parse_head(&req(&lines), &limits()).unwrap()
     }
 
     #[test]
     fn a_plain_request_is_read() {
-        let h = parse_head(&req(&["GET /v1/notifications?after=3&limit=10 HTTP/1.1", "Host: 127.0.0.1:47821", "X-Boopis-Client: panacea-island"]), &limits()).unwrap();
-        assert_eq!((h.method, h.path.as_str()), (Method::Get, "/v1/notifications"));
-        assert_eq!((h.param("after"), h.param("limit")), (Some("3"), Some("10")));
+        let h = parse_head(
+            &req(&[
+                "GET /v1/notifications?after=3&limit=10 HTTP/1.1",
+                "Host: 127.0.0.1:47821",
+                "X-Boopis-Client: panacea-island",
+            ]),
+            &limits(),
+        )
+        .unwrap();
+        assert_eq!(
+            (h.method, h.path.as_str()),
+            (Method::Get, "/v1/notifications")
+        );
+        assert_eq!(
+            (h.param("after"), h.param("limit")),
+            (Some("3"), Some("10"))
+        );
         assert_eq!(client_label(&h), Some("panacea-island"));
         assert!(check_origin(&h, PORT).is_ok());
     }
@@ -337,7 +471,12 @@ mod tests {
     #[test]
     fn the_caps_hold() {
         let long = format!("GET /{} HTTP/1.1", "a".repeat(600));
-        assert_eq!(parse_head(&req(&[&long, "Host: x"]), &limits()).unwrap_err().status, 414);
+        assert_eq!(
+            parse_head(&req(&[&long, "Host: x"]), &limits())
+                .unwrap_err()
+                .status,
+            414
+        );
         let many: Vec<String> = (0..40).map(|i| format!("X-H{i}: v")).collect();
         let mut lines = vec!["GET /v1 HTTP/1.1".to_owned()];
         lines.extend(many);
@@ -351,34 +490,91 @@ mod tests {
 
     #[test]
     fn dns_rebinding_is_refused_by_the_host_header() {
-        for host in ["evil.example:47821", "evil.example", "127.0.0.1", "127.0.0.1:1", "127.0.0.1:47821.evil.example", "[::1]:47821", "0.0.0.0:47821", ""] {
-            let h = parse_head(&req(&["GET /v1/bots HTTP/1.1", &format!("Host: {host}")]), &limits()).unwrap();
+        for host in [
+            "evil.example:47821",
+            "evil.example",
+            "127.0.0.1",
+            "127.0.0.1:1",
+            "127.0.0.1:47821.evil.example",
+            "[::1]:47821",
+            "0.0.0.0:47821",
+            "",
+        ] {
+            let h = parse_head(
+                &req(&["GET /v1/bots HTTP/1.1", &format!("Host: {host}")]),
+                &limits(),
+            )
+            .unwrap();
             let e = check_origin(&h, PORT).unwrap_err();
             assert_eq!(e.code, "bad_host", "{host:?}");
         }
         for host in ["127.0.0.1:47821", "localhost:47821", "LOCALHOST:47821"] {
-            let h = parse_head(&req(&["GET /v1/bots HTTP/1.1", &format!("Host: {host}")]), &limits()).unwrap();
+            let h = parse_head(
+                &req(&["GET /v1/bots HTTP/1.1", &format!("Host: {host}")]),
+                &limits(),
+            )
+            .unwrap();
             assert!(check_origin(&h, PORT).is_ok(), "{host}");
         }
         let none = parse_head(&req(&["GET /v1/bots HTTP/1.1"]), &limits()).unwrap();
         assert_eq!(check_origin(&none, PORT).unwrap_err().code, "bad_host");
-        let two = parse_head(&req(&["GET /v1/bots HTTP/1.1", "Host: 127.0.0.1:47821", "Host: evil.example"]), &limits()).unwrap();
+        let two = parse_head(
+            &req(&[
+                "GET /v1/bots HTTP/1.1",
+                "Host: 127.0.0.1:47821",
+                "Host: evil.example",
+            ]),
+            &limits(),
+        )
+        .unwrap();
         assert_eq!(check_origin(&two, PORT).unwrap_err().code, "bad_host");
     }
 
     #[test]
     fn a_browser_is_refused_by_its_origin_and_fetch_metadata_and_there_is_no_cors() {
-        for extra in ["Origin: https://evil.example", "Origin: null", "Origin: http://127.0.0.1:47821", "Sec-Fetch-Site: cross-site", "Sec-Fetch-Mode: cors", "Access-Control-Request-Method: POST"] {
+        for extra in [
+            "Origin: https://evil.example",
+            "Origin: null",
+            "Origin: http://127.0.0.1:47821",
+            "Sec-Fetch-Site: cross-site",
+            "Sec-Fetch-Mode: cors",
+            "Access-Control-Request-Method: POST",
+        ] {
             let h = ok_head(&[extra]);
-            assert_eq!(check_origin(&h, PORT).unwrap_err().code, "browser_refused", "{extra}");
+            assert_eq!(
+                check_origin(&h, PORT).unwrap_err().code,
+                "browser_refused",
+                "{extra}"
+            );
         }
-        assert_eq!(parse_head(&req(&["OPTIONS /v1/bots HTTP/1.1", "Host: 127.0.0.1:47821", "Origin: https://evil.example"]), &limits()).unwrap_err().status, 405);
+        assert_eq!(
+            parse_head(
+                &req(&[
+                    "OPTIONS /v1/bots HTTP/1.1",
+                    "Host: 127.0.0.1:47821",
+                    "Origin: https://evil.example"
+                ]),
+                &limits()
+            )
+            .unwrap_err()
+            .status,
+            405
+        );
     }
 
     #[test]
     fn smuggling_shapes_are_refused() {
-        for extra in ["Transfer-Encoding: chunked", "Expect: 100-continue", "Upgrade: websocket", "TE: trailers"] {
-            assert_eq!(check_origin(&ok_head(&[extra]), PORT).unwrap_err().code, "unsupported", "{extra}");
+        for extra in [
+            "Transfer-Encoding: chunked",
+            "Expect: 100-continue",
+            "Upgrade: websocket",
+            "TE: trailers",
+        ] {
+            assert_eq!(
+                check_origin(&ok_head(&[extra]), PORT).unwrap_err().code,
+                "unsupported",
+                "{extra}"
+            );
         }
         let two = ok_head(&["Content-Length: 1", "Content-Length: 2"]);
         assert_eq!(body_length(&two, &limits()).unwrap_err().code, "bad_length");
@@ -391,42 +587,130 @@ mod tests {
             lines.extend_from_slice(extra);
             parse_head(&req(&lines), &limits()).unwrap()
         };
-        assert_eq!(body_length(&post(&["Content-Type: application/json", "Content-Length: 12"]), &limits()), Ok(12));
-        assert_eq!(body_length(&post(&["Content-Type: application/json; charset=utf-8", "Content-Length: 0"]), &limits()), Ok(0));
+        assert_eq!(
+            body_length(
+                &post(&["Content-Type: application/json", "Content-Length: 12"]),
+                &limits()
+            ),
+            Ok(12)
+        );
+        assert_eq!(
+            body_length(
+                &post(&[
+                    "Content-Type: application/json; charset=utf-8",
+                    "Content-Length: 0"
+                ]),
+                &limits()
+            ),
+            Ok(0)
+        );
         for (extra, code) in [
             (vec!["Content-Type: application/json"], "length_required"),
-            (vec!["Content-Type: text/plain", "Content-Length: 3"], "content_type"),
+            (
+                vec!["Content-Type: text/plain", "Content-Length: 3"],
+                "content_type",
+            ),
             (vec!["Content-Length: 3"], "content_type"),
-            (vec!["Content-Type: application/json", "Content-Length: 99999999"], "body_too_large"),
-            (vec!["Content-Type: application/json", "Content-Length: 999999999"], "bad_length"),
-            (vec!["Content-Type: application/json", "Content-Length: 70000"], "body_too_large"),
-            (vec!["Content-Type: application/json", "Content-Length: -1"], "bad_length"),
-            (vec!["Content-Type: application/json", "Content-Length: 1e3"], "bad_length"),
+            (
+                vec!["Content-Type: application/json", "Content-Length: 99999999"],
+                "body_too_large",
+            ),
+            (
+                vec![
+                    "Content-Type: application/json",
+                    "Content-Length: 999999999",
+                ],
+                "bad_length",
+            ),
+            (
+                vec!["Content-Type: application/json", "Content-Length: 70000"],
+                "body_too_large",
+            ),
+            (
+                vec!["Content-Type: application/json", "Content-Length: -1"],
+                "bad_length",
+            ),
+            (
+                vec!["Content-Type: application/json", "Content-Length: 1e3"],
+                "bad_length",
+            ),
         ] {
-            assert_eq!(body_length(&post(&extra), &limits()).unwrap_err().code, code, "{extra:?}");
+            assert_eq!(
+                body_length(&post(&extra), &limits()).unwrap_err().code,
+                code,
+                "{extra:?}"
+            );
         }
-        assert_eq!(body_length(&ok_head(&["Content-Length: 4"]), &limits()).unwrap_err().code, "unexpected_body");
+        assert_eq!(
+            body_length(&ok_head(&["Content-Length: 4"]), &limits())
+                .unwrap_err()
+                .code,
+            "unexpected_body"
+        );
     }
 
     #[test]
     fn only_the_exact_bearer_token_passes_and_never_by_the_address() {
         let token = Token::from_text("s3cr3t-token".into());
-        let with = |value: &str| parse_head(&req(&["GET /v1/bots HTTP/1.1", "Host: 127.0.0.1:47821", &format!("Authorization: {value}")]), &limits()).unwrap();
+        let with = |value: &str| {
+            parse_head(
+                &req(&[
+                    "GET /v1/bots HTTP/1.1",
+                    "Host: 127.0.0.1:47821",
+                    &format!("Authorization: {value}"),
+                ]),
+                &limits(),
+            )
+            .unwrap()
+        };
         assert!(authorized(&with("Bearer s3cr3t-token"), &token));
-        for bad in ["Bearer s3cr3t-toke", "Bearer s3cr3t-token2", "Bearer ", "s3cr3t-token", "Basic s3cr3t-token", "Bearer S3CR3T-TOKEN"] {
+        for bad in [
+            "Bearer s3cr3t-toke",
+            "Bearer s3cr3t-token2",
+            "Bearer ",
+            "s3cr3t-token",
+            "Basic s3cr3t-token",
+            "Bearer S3CR3T-TOKEN",
+        ] {
             assert!(!authorized(&with(bad), &token), "{bad}");
         }
-        let none = parse_head(&req(&["GET /v1/bots HTTP/1.1", "Host: 127.0.0.1:47821"]), &limits()).unwrap();
+        let none = parse_head(
+            &req(&["GET /v1/bots HTTP/1.1", "Host: 127.0.0.1:47821"]),
+            &limits(),
+        )
+        .unwrap();
         assert!(!authorized(&none, &token));
-        let query = parse_head(&req(&["GET /v1/bots?token=s3cr3t-token HTTP/1.1", "Host: 127.0.0.1:47821"]), &limits()).unwrap();
-        assert!(!authorized(&query, &token), "a token in the address is never read");
-        let two = parse_head(&req(&["GET /v1/bots HTTP/1.1", "Host: 127.0.0.1:47821", "Authorization: Bearer s3cr3t-token", "Authorization: Bearer x"]), &limits()).unwrap();
+        let query = parse_head(
+            &req(&[
+                "GET /v1/bots?token=s3cr3t-token HTTP/1.1",
+                "Host: 127.0.0.1:47821",
+            ]),
+            &limits(),
+        )
+        .unwrap();
+        assert!(
+            !authorized(&query, &token),
+            "a token in the address is never read"
+        );
+        let two = parse_head(
+            &req(&[
+                "GET /v1/bots HTTP/1.1",
+                "Host: 127.0.0.1:47821",
+                "Authorization: Bearer s3cr3t-token",
+                "Authorization: Bearer x",
+            ]),
+            &limits(),
+        )
+        .unwrap();
         assert!(!authorized(&two, &token));
     }
 
     #[test]
     fn a_label_is_taken_only_when_it_is_valid() {
-        assert_eq!(client_label(&ok_head(&["X-Boopis-Client: Evil Name"])), None);
+        assert_eq!(
+            client_label(&ok_head(&["X-Boopis-Client: Evil Name"])),
+            None
+        );
         assert_eq!(client_label(&ok_head(&[])), None);
     }
 
@@ -439,7 +723,13 @@ mod tests {
         assert!(!b.take(t0 + Duration::from_millis(400)));
         assert!(b.take(t0 + Duration::from_millis(600)));
         let mut full = Bucket::new((2, 6), t0);
-        assert!((0..10).filter(|_| full.take(t0 + Duration::from_secs(3600))).count() <= 6, "never more than the burst");
+        assert!(
+            (0..10)
+                .filter(|_| full.take(t0 + Duration::from_hours(1)))
+                .count()
+                <= 6,
+            "never more than the burst"
+        );
     }
 
     #[test]
@@ -456,7 +746,10 @@ mod tests {
         assert!(!g.shut(t0 + Duration::from_secs(15)));
         let mut slow = DoorGuard::default();
         for i in 0..10 {
-            assert!(!slow.failed(t0 + Duration::from_secs(i * 11), &limits()), "slow guessing is not a flood");
+            assert!(
+                !slow.failed(t0 + Duration::from_secs(i * 11), &limits()),
+                "slow guessing is not a flood"
+            );
         }
     }
 }

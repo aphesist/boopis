@@ -286,6 +286,26 @@ export const commands = {
 	 */
 	providerSigninStatus: (way: string, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize>("provider_signin_status", { way }, options),
 	/**
+	 *  The local API's state, as Settings shows it: the owner's switch, whether the endpoint listens, its address, the path of
+	 *  the token file (never the token), and how many streams are open.
+	 */
+	localApiStatus: (options?: InvokeOptions) => __TAURI_INVOKE<LocalApiStatus_Serialize>("local_api_status", undefined, options),
+	/**
+	 *  The owner's switch for the loopback endpoint. Off by default. Turning it on mints a token and writes
+	 *  `<app data>/client-token` (mode 0600); turning it off closes the endpoint and deletes the file.
+	 * 
+	 *  Errors: `hx.config.invalid` with the reason in words (the token file could not be made private, the address could not
+	 *  be opened).
+	 */
+	localApiSetEnabled: (enabled: boolean, options?: InvokeOptions) => __TAURI_INVOKE<LocalApiStatus_Serialize>("local_api_set_enabled", { enabled }, options),
+	/**
+	 *  Replace the endpoint's token: the old one stops working at once and every open stream ends. The new one is in the token
+	 *  file only; no command returns it.
+	 * 
+	 *  Errors: `hx.config.invalid` when the endpoint is off.
+	 */
+	localApiRotateToken: (options?: InvokeOptions) => __TAURI_INVOKE<LocalApiStatus_Serialize>("local_api_rotate_token", undefined, options),
+	/**
 	 *  Give the bot `name` what its home needs (ADR-0042): the plugins boopis manages, its configuration (the Governed switch of
 	 *  its record among it) and its seat in groups. `fresh` is a bot made just now (its skills for another OS are switched off).
 	 *  The UI calls it after it makes, restores or changes a bot.
@@ -1770,6 +1790,45 @@ export type LadderTier = {
 	name: string,
 	/**  The model it runs, `provider/id`. */
 	model: string,
+};
+
+/**  What Settings shows. */
+export type LocalApiStatus = LocalApiStatus_Serialize | LocalApiStatus_Deserialize;
+
+/**  What Settings shows. */
+export type LocalApiStatus_Deserialize = {
+	/**  The owner's switch. */
+	enabled: boolean,
+	/**  Whether the endpoint is listening now. */
+	running: boolean,
+	/**  Its address (`http://127.0.0.1:<port>`), when it is. */
+	url?: string | null,
+	/**  The token file's path (the path, never the token), when the endpoint is on. */
+	token_file?: string | null,
+	/**  How many event streams are open. */
+	streams: number,
+	/**  The contract's version. */
+	version: number,
+	/**  Why the endpoint is off though the switch is on, in words. */
+	problem?: string | null,
+};
+
+/**  What Settings shows. */
+export type LocalApiStatus_Serialize = {
+	/**  The owner's switch. */
+	enabled: boolean,
+	/**  Whether the endpoint is listening now. */
+	running: boolean,
+	/**  Its address (`http://127.0.0.1:<port>`), when it is. */
+	url: string | null,
+	/**  The token file's path (the path, never the token), when the endpoint is on. */
+	token_file: string | null,
+	/**  How many event streams are open. */
+	streams: number,
+	/**  The contract's version. */
+	version: number,
+	/**  Why the endpoint is off though the switch is on, in words. */
+	problem: string | null,
 };
 
 /**  What Settings > Models shows of the configuration (read-only). */

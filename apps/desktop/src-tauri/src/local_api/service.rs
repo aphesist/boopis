@@ -34,7 +34,11 @@ pub struct ApiError {
 
 impl ApiError {
     fn new(status: u16, code: &'static str, message: &str) -> Self {
-        Self { status, code, message: message.to_owned() }
+        Self {
+            status,
+            code,
+            message: message.to_owned(),
+        }
     }
 }
 
@@ -46,7 +50,11 @@ impl From<Refusal> for ApiError {
             Refusal::Policy(_) => 403,
             Refusal::NotOffered(_) => 400,
         };
-        Self { status, code: r.code(), message: r.message() }
+        Self {
+            status,
+            code: r.code(),
+            message: r.message(),
+        }
     }
 }
 
@@ -72,7 +80,9 @@ impl Pick {
             Some("new") => Ok(Self::New),
             Some(id)
                 if id.len() <= 128
-                    && id.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'.' | b':' | b'-')) =>
+                    && id.bytes().all(|b| {
+                        b.is_ascii_alphanumeric() || matches!(b, b'_' | b'.' | b':' | b'-')
+                    }) =>
             {
                 Ok(Self::Id(id.to_owned()))
             }
@@ -109,7 +119,10 @@ impl Caller {
     /// A caller by the label it sent (`X-Boopis-Client`): a bad or missing label is `unknown`.
     #[must_use]
     pub fn labelled(label: Option<&str>, surface: &'static str) -> Self {
-        let client = label.filter(|l| valid_client_name(l)).unwrap_or("unknown").to_owned();
+        let client = label
+            .filter(|l| valid_client_name(l))
+            .unwrap_or("unknown")
+            .to_owned();
         Self { client, surface }
     }
 }
@@ -123,7 +136,10 @@ pub struct Service<E: Engine> {
 }
 
 fn text(v: &Value, key: &str) -> String {
-    v.get(key).and_then(Value::as_str).unwrap_or_default().to_owned()
+    v.get(key)
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned()
 }
 
 fn failed(what: &str, e: &Error) -> ApiError {
@@ -138,7 +154,12 @@ fn failed(what: &str, e: &Error) -> ApiError {
 impl<E: Engine> Service<E> {
     /// A service over `engine` that feeds `feed`.
     pub fn new(feed: Arc<Feed>, engine: Arc<E>, limits: ApiLimits) -> Arc<Self> {
-        Arc::new(Self { feed, engine, limits, described: tokio::sync::Mutex::new(HashMap::new()) })
+        Arc::new(Self {
+            feed,
+            engine,
+            limits,
+            described: tokio::sync::Mutex::new(HashMap::new()),
+        })
     }
 
     /// The feed.
@@ -151,26 +172,46 @@ impl<E: Engine> Service<E> {
 
     /// Read the roster and the rooms.
     pub async fn refresh_roster(&self) {
-        let profiles = self.engine.request(ROOT, "profiles.list", json!({"include_sessions": false})).await;
+        let profiles = self
+            .engine
+            .request(ROOT, "profiles.list", json!({"include_sessions": false}))
+            .await;
         let Ok(profiles) = profiles else {
             return;
         };
-        let plugin = self.engine.request(ROOT, "plugin.boopis.bots.read", json!({})).await.ok();
+        let plugin = self
+            .engine
+            .request(ROOT, "plugin.boopis.bots.read", json!({}))
+            .await
+            .ok();
         let mut described = self.described.lock().await;
         for name in roster::needs_describe(&profiles).into_iter().take(16) {
             if described.contains_key(&name) {
                 continue;
             }
-            if let Ok(d) = self.engine.request(ROOT, "profiles.describe", json!({"name": name})).await {
-                let has_model = d.get("model").and_then(|m| m.get("default")).and_then(Value::as_str).is_some_and(|s| !s.is_empty());
+            if let Ok(d) = self
+                .engine
+                .request(ROOT, "profiles.describe", json!({"name": name}))
+                .await
+            {
+                let has_model = d
+                    .get("model")
+                    .and_then(|m| m.get("default"))
+                    .and_then(Value::as_str)
+                    .is_some_and(|s| !s.is_empty());
                 if has_model {
                     described.insert(name, d);
                 }
             }
         }
-        self.feed.set_roster(roster::build(&profiles, plugin.as_ref(), &described));
+        self.feed
+            .set_roster(roster::build(&profiles, plugin.as_ref(), &described));
         drop(described);
-        if let Ok(rooms) = self.engine.request(ROOT, "groups.list", json!({"limit": 500})).await {
+        if let Ok(rooms) = self
+            .engine
+            .request(ROOT, "groups.list", json!({"limit": 500}))
+            .await
+        {
             self.feed.set_rooms(rooms_from(&rooms));
         }
     }
@@ -188,10 +229,18 @@ impl<E: Engine> Service<E> {
     }
 
     async fn poll_profile(&self, profile: &str) {
-        let Ok(list) = self.engine.request(profile, "session.active_list", json!({})).await else {
+        let Ok(list) = self
+            .engine
+            .request(profile, "session.active_list", json!({}))
+            .await
+        else {
             return;
         };
-        let rows = list.get("sessions").and_then(Value::as_array).cloned().unwrap_or_default();
+        let rows = list
+            .get("sessions")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
         let mut live = Vec::new();
         let mut models = HashMap::new();
         let mut waiting = Vec::new();
@@ -212,7 +261,12 @@ impl<E: Engine> Service<E> {
             if !model.is_empty() {
                 models.insert(sid.clone(), model);
             }
-            live.push(Live { session_id: sid, status, source: text(row, "source"), client });
+            live.push(Live {
+                session_id: sid,
+                status,
+                source: text(row, "source"),
+                client,
+            });
         }
         self.feed.on_poll(profile, &live, &models);
         for sid in waiting {
@@ -222,7 +276,11 @@ impl<E: Engine> Service<E> {
 
     /// The client label of a live session the feed has not seen: `session.info` once, then remembered.
     async fn learn_session(&self, profile: &str, sid: &str, row: &Value) -> Option<String> {
-        let info = self.engine.request(profile, "session.info", json!({"session_id": sid})).await.ok();
+        let info = self
+            .engine
+            .request(profile, "session.info", json!({"session_id": sid}))
+            .await
+            .ok();
         let client = info
             .as_ref()
             .and_then(|i| i.get("client"))
@@ -232,16 +290,25 @@ impl<E: Engine> Service<E> {
             .map(str::to_owned);
         let source = super::model::source_of(&text(row, "source"), client.as_deref());
         let model = Some(text(row, "model")).filter(|m| !m.is_empty());
-        self.feed.note_session(profile, sid, source, client.as_deref(), model.as_deref());
+        self.feed
+            .note_session(profile, sid, source, client.as_deref(), model.as_deref());
         client
     }
 
     /// `approval.pending` for a waiting session, with each new approval's generation read off the session's ring.
     async fn read_pending(&self, profile: &str, sid: &str) {
-        let Ok(pending) = self.engine.request(profile, "approval.pending", json!({"session_id": sid})).await else {
+        let Ok(pending) = self
+            .engine
+            .request(profile, "approval.pending", json!({"session_id": sid}))
+            .await
+        else {
             return;
         };
-        let rows = pending.get("approvals").and_then(Value::as_array).cloned().unwrap_or_default();
+        let rows = pending
+            .get("approvals")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
         let mut found = Vec::new();
         let mut ring: Option<Vec<Value>> = None;
         for row in &rows {
@@ -254,21 +321,40 @@ impl<E: Engine> Service<E> {
                 continue;
             }
             if ring.is_none() {
-                let since = self.engine.request(profile, "session.events.since", json!({"session_id": sid, "last_seen": 0})).await.ok();
-                ring = Some(since.and_then(|s| s.get("events").and_then(Value::as_array).cloned()).unwrap_or_default());
+                let since = self
+                    .engine
+                    .request(
+                        profile,
+                        "session.events.since",
+                        json!({"session_id": sid, "last_seen": 0}),
+                    )
+                    .await
+                    .ok();
+                ring = Some(
+                    since
+                        .and_then(|s| s.get("events").and_then(Value::as_array).cloned())
+                        .unwrap_or_default(),
+                );
             }
-            let ask = ring
-                .iter()
-                .flatten()
-                .rev()
-                .find(|e| text(e, "type") == "approval.request" && e.get("payload").is_some_and(|p| text(p, "prompt_id") == id || text(p, "request_id") == id));
+            let ask = ring.iter().flatten().rev().find(|e| {
+                text(e, "type") == "approval.request"
+                    && e.get("payload")
+                        .is_some_and(|p| text(p, "prompt_id") == id || text(p, "request_id") == id)
+            });
             let Some(ask) = ask else { continue };
-            let Some(generation) = ask.get("execution_generation").and_then(Value::as_u64) else { continue };
+            let Some(generation) = ask.get("execution_generation").and_then(Value::as_u64) else {
+                continue;
+            };
             let payload = ask.get("payload").cloned().unwrap_or(Value::Null);
             let choices: Vec<String> = row
                 .get("choices")
                 .and_then(Value::as_array)
-                .map(|a| a.iter().filter_map(Value::as_str).map(str::to_owned).collect())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(Value::as_str)
+                        .map(str::to_owned)
+                        .collect()
+                })
                 .unwrap_or_default();
             found.push(Some(Approval {
                 id: id.clone(),
@@ -281,7 +367,12 @@ impl<E: Engine> Service<E> {
                 choices,
                 answerable_with: Vec::new(),
                 timeout_s: payload.get("timeout_s").and_then(Value::as_u64),
-                origin: Origin { model: None, tool: Some(text(row, "tool_name")).filter(|t| !t.is_empty()) },
+                origin: Origin {
+                    model: None,
+                    tool: Some(text(&payload, "tool_name"))
+                        .filter(|t| !t.is_empty())
+                        .or_else(|| Some(text(row, "tool_name")).filter(|t| !t.is_empty())),
+                },
                 governed: false,
                 state: ApprovalState::Pending,
                 answered_by: None,
@@ -302,18 +393,41 @@ impl<E: Engine> Service<E> {
     ///
     /// # Errors
     /// A refusal in words, or the engine's failure.
-    pub async fn say(&self, profile: &str, message: &str, pick: &Pick, by: &Caller) -> Result<Said, ApiError> {
+    #[allow(clippy::too_many_lines)] // one call: check, pick the conversation, start it, send
+    pub async fn say(
+        &self,
+        profile: &str,
+        message: &str,
+        pick: &Pick,
+        by: &Caller,
+    ) -> Result<Said, ApiError> {
         let message = message.trim();
         if message.is_empty() {
-            return Err(ApiError::new(400, "empty_text", "There is nothing to say: text is empty."));
+            return Err(ApiError::new(
+                400,
+                "empty_text",
+                "There is nothing to say: text is empty.",
+            ));
         }
         if message.len() > self.limits.max_say || message.contains('\0') {
-            return Err(ApiError::new(413, "text_too_long", "The text is too long to send in one message."));
+            return Err(ApiError::new(
+                413,
+                "text_too_long",
+                "The text is too long to send in one message.",
+            ));
         }
         if !self.feed.has_bot(profile) && profile != ROOT {
-            return Err(ApiError::new(404, "no_such_bot", "There is no bot with that name."));
+            return Err(ApiError::new(
+                404,
+                "no_such_bot",
+                "There is no bot with that name.",
+            ));
         }
-        let label = if by.client == "unknown" { "boopis-api" } else { by.client.as_str() };
+        let label = if by.client == "unknown" {
+            "boopis-api"
+        } else {
+            by.client.as_str()
+        };
         let stored = match pick {
             Pick::New => None,
             Pick::Id(id) => Some(id.clone()),
@@ -322,13 +436,23 @@ impl<E: Engine> Service<E> {
         let create = || async {
             let res = self
                 .engine
-                .request(profile, "session.create", json!({"source": "gui", "client": {"name": label}}))
+                .request(
+                    profile,
+                    "session.create",
+                    json!({"source": "gui", "client": {"name": label}}),
+                )
                 .await
                 .map_err(|e| failed("start a conversation", &e))?;
             let live = text(&res, "session_id");
-            let kept = Some(text(&res, "stored_session_id")).filter(|s| !s.is_empty()).unwrap_or_else(|| live.clone());
+            let kept = Some(text(&res, "stored_session_id"))
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| live.clone());
             if live.is_empty() {
-                return Err(ApiError::new(502, "engine_unavailable", "The engine started no conversation. Try again."));
+                return Err(ApiError::new(
+                    502,
+                    "engine_unavailable",
+                    "The engine started no conversation. Try again.",
+                ));
             }
             Ok::<_, ApiError>((live, kept, true))
         };
@@ -337,7 +461,11 @@ impl<E: Engine> Service<E> {
             Some(id) => {
                 let res = self
                     .engine
-                    .request(profile, "session.resume", json!({"session_id": id, "omit_messages": true}))
+                    .request(
+                        profile,
+                        "session.resume",
+                        json!({"session_id": id, "omit_messages": true}),
+                    )
                     .await
                     .map_err(|e| failed("open that conversation", &e))?;
                 if res.get("running").and_then(Value::as_bool) == Some(true) {
@@ -349,13 +477,22 @@ impl<E: Engine> Service<E> {
                 }
                 let live = text(&res, "session_id");
                 if live.is_empty() {
-                    return Err(ApiError::new(404, "no_such_session", "That conversation could not be opened."));
+                    return Err(ApiError::new(
+                        404,
+                        "no_such_session",
+                        "That conversation could not be opened.",
+                    ));
                 }
                 (live, id, false)
             }
         };
-        let source = if label.starts_with("panacea-") { Source::Island } else { Source::Other };
-        self.feed.note_session(profile, &live, source, Some(label), None);
+        let source = if label.starts_with("panacea-") {
+            Source::Island
+        } else {
+            Source::Other
+        };
+        self.feed
+            .note_session(profile, &live, source, Some(label), None);
         self.engine
             .request(
                 profile,
@@ -374,15 +511,29 @@ impl<E: Engine> Service<E> {
                 payload: None,
             },
         );
-        Ok(Said { profile: profile.to_owned(), session_id: kept, created })
+        Ok(Said {
+            profile: profile.to_owned(),
+            session_id: kept,
+            created,
+        })
     }
 
     async fn latest_of(&self, profile: &str) -> Option<String> {
-        let list = self.engine.request(ROOT, "profiles.list", json!({"include_sessions": true})).await.ok()?;
-        let row = list.get("profiles")?.as_array()?.iter().find(|r| text(r, "name") == profile)?;
+        let list = self
+            .engine
+            .request(ROOT, "profiles.list", json!({"include_sessions": true}))
+            .await
+            .ok()?;
+        let row = list
+            .get("profiles")?
+            .as_array()?
+            .iter()
+            .find(|r| text(r, "name") == profile)?;
         ["canonical_session", "last_session"].iter().find_map(|k| {
             let s = row.get(*k)?;
-            Some(text(s, "resolved_id")).filter(|x| !x.is_empty()).or_else(|| Some(text(s, "id")).filter(|x| !x.is_empty()))
+            Some(text(s, "resolved_id"))
+                .filter(|x| !x.is_empty())
+                .or_else(|| Some(text(s, "id")).filter(|x| !x.is_empty()))
         })
     }
 
@@ -393,13 +544,25 @@ impl<E: Engine> Service<E> {
     pub async fn say_room(&self, room: &str, message: &str, by: &Caller) -> Result<(), ApiError> {
         let message = message.trim();
         if message.is_empty() {
-            return Err(ApiError::new(400, "empty_text", "There is nothing to say: text is empty."));
+            return Err(ApiError::new(
+                400,
+                "empty_text",
+                "There is nothing to say: text is empty.",
+            ));
         }
         if message.len() > self.limits.max_say || message.contains('\0') {
-            return Err(ApiError::new(413, "text_too_long", "The text is too long to send in one message."));
+            return Err(ApiError::new(
+                413,
+                "text_too_long",
+                "The text is too long to send in one message.",
+            ));
         }
         if !self.feed.rooms().iter().any(|r| r.id == room) {
-            return Err(ApiError::new(404, "no_such_room", "There is no room with that id."));
+            return Err(ApiError::new(
+                404,
+                "no_such_room",
+                "There is no room with that id.",
+            ));
         }
         let _ = by;
         self.engine
@@ -417,8 +580,19 @@ impl<E: Engine> Service<E> {
     ///
     /// # Errors
     /// The refusal (first answer wins; once and deny only), or the engine's failure.
-    pub async fn answer(&self, id: &str, choice: &str, generation: Option<u64>, by: &Caller) -> Result<Approval, ApiError> {
-        let who = Answered { client: by.client.clone(), surface: by.surface.to_owned(), choice: None, at: super::model::now_ms() };
+    pub async fn answer(
+        &self,
+        id: &str,
+        choice: &str,
+        generation: Option<u64>,
+        by: &Caller,
+    ) -> Result<Approval, ApiError> {
+        let who = Answered {
+            client: by.client.clone(),
+            surface: by.surface.to_owned(),
+            choice: None,
+            at: super::model::now_ms(),
+        };
         let row = self.feed.begin_answer(id, choice, generation, who)?;
         let result = self
             .engine
@@ -429,11 +603,17 @@ impl<E: Engine> Service<E> {
             )
             .await;
         let delivery = match &result {
-            Ok(v) if v.get("resolved").and_then(Value::as_u64) == Some(0) => Delivery::AlreadySettled,
+            Ok(v) if v.get("resolved").and_then(Value::as_u64) == Some(0) => {
+                Delivery::AlreadySettled
+            }
             Ok(_) => Delivery::Delivered,
             Err(e) => {
                 let t = e.to_string().to_ascii_lowercase();
-                if t.contains("already") || t.contains("settled") || t.contains("not pending") || t.contains("unknown prompt") {
+                if t.contains("already")
+                    || t.contains("settled")
+                    || t.contains("not pending")
+                    || t.contains("unknown prompt")
+                {
                     Delivery::AlreadySettled
                 } else {
                     Delivery::Failed
@@ -442,10 +622,19 @@ impl<E: Engine> Service<E> {
         };
         self.feed.finish_answer(&row, &delivery);
         match delivery {
-            Delivery::Delivered => self.feed.approval(id).ok_or_else(|| ApiError::new(404, "not_found", "The approval is gone.")),
+            Delivery::Delivered => self
+                .feed
+                .approval(id)
+                .ok_or_else(|| ApiError::new(404, "not_found", "The approval is gone.")),
             Delivery::AlreadySettled => Err(Refusal::AlreadyAnswered(None).into()),
             Delivery::Failed => Err(result.err().map_or_else(
-                || ApiError::new(502, "engine_unavailable", "The engine did not take the answer. Try again."),
+                || {
+                    ApiError::new(
+                        502,
+                        "engine_unavailable",
+                        "The engine did not take the answer. Try again.",
+                    )
+                },
                 |e| failed("deliver the answer", &e),
             )),
         }
@@ -496,11 +685,18 @@ fn rooms_from(v: &Value) -> Vec<RoomRow> {
                 .filter_map(|r| {
                     let id = text(r, "room_id");
                     (!id.is_empty()).then(|| RoomRow {
-                        name: Some(text(r, "name")).filter(|n| !n.is_empty()).unwrap_or_else(|| id.clone()),
+                        name: Some(text(r, "name"))
+                            .filter(|n| !n.is_empty())
+                            .unwrap_or_else(|| id.clone()),
                         members: r
                             .get("members")
                             .and_then(Value::as_array)
-                            .map(|m| m.iter().map(|x| text(x, "profile")).filter(|p| !p.is_empty()).collect())
+                            .map(|m| {
+                                m.iter()
+                                    .map(|x| text(x, "profile"))
+                                    .filter(|p| !p.is_empty())
+                                    .collect()
+                            })
                             .unwrap_or_default(),
                         id,
                     })
@@ -525,7 +721,11 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let feed = Feed::new(Audit::under(dir.path()), ApiLimits::default());
         let engine = Arc::new(Scripted::new(respond));
-        (Service::new(feed, engine.clone(), ApiLimits::default()), engine, dir)
+        (
+            Service::new(feed, engine.clone(), ApiLimits::default()),
+            engine,
+            dir,
+        )
     }
 
     fn roster_answer(method: &str) -> Option<Value> {
@@ -536,7 +736,9 @@ mod tests {
                  "last_session": {"id": "stored-1"}},
                 {"name": "nina", "model": "sonnet", "provider": "p", "display_name": "", "description": ""}
             ]})),
-            "plugin.boopis.bots.read" => Some(json!({"bots": [{"name": "kai", "record": {"look": {"shape": "star", "color": "#f23b5a"}}, "archived": null}]})),
+            "plugin.boopis.bots.read" => Some(
+                json!({"bots": [{"name": "kai", "record": {"look": {"shape": "star", "color": "#f23b5a"}}, "archived": null}]}),
+            ),
             "profiles.describe" => Some(json!({"model": {"provider": "p", "default": "haiku"}})),
             "groups.list" => Some(json!({"rooms": [
                 {"room_id": "g-paper", "name": "paper past", "members": [{"profile": "kai"}, {"profile": "nina"}]},
@@ -548,13 +750,21 @@ mod tests {
 
     #[tokio::test]
     async fn the_roster_has_the_look_the_model_the_rooms_and_nothing_archived() {
-        let (s, _e, _d) = service(|_, m, _| roster_answer(m).ok_or_else(|| Error::Unavailable("no".into())));
+        let (s, _e, _d) =
+            service(|_, m, _| roster_answer(m).ok_or_else(|| Error::Unavailable("no".into())));
         s.refresh_roster().await;
         let bots = s.feed().bots();
-        assert_eq!(bots.iter().map(|b| b.name.as_str()).collect::<Vec<_>>(), ["default", "kai", "nina"]);
+        assert_eq!(
+            bots.iter().map(|b| b.name.as_str()).collect::<Vec<_>>(),
+            ["default", "kai", "nina"]
+        );
         let kai = &bots[1];
         assert_eq!(kai.look.shape, "star");
-        assert_eq!(kai.model.as_deref(), Some("p/haiku"), "B10: the model comes from the description");
+        assert_eq!(
+            kai.model.as_deref(),
+            Some("p/haiku"),
+            "B10: the model comes from the description"
+        );
         assert_eq!(kai.display_name, "Kai");
         let rooms = s.feed().rooms();
         assert_eq!(rooms.len(), 1);
@@ -572,7 +782,9 @@ mod tests {
                     {"id": "cron-1", "status": "working", "source": "cron", "model": "opus"}
                 ]})),
                 (_, "session.active_list") => Ok(json!({"sessions": []})),
-                ("kai", "session.info") if params["session_id"] == "isl-1" => Ok(json!({"client": {"name": "panacea-island", "version": "0.1"}, "source": "cli"})),
+                ("kai", "session.info") if params["session_id"] == "isl-1" => Ok(
+                    json!({"client": {"name": "panacea-island", "version": "0.1"}, "source": "cli"}),
+                ),
                 ("kai", "session.info") => Ok(json!({"source": "cron"})),
                 ("kai", "approval.pending") => Ok(json!({"approvals": [
                     {"request_id": "pp1", "command": "rm -rf build", "description": "clean", "choices": ["once", "deny", "always"]}
@@ -591,25 +803,61 @@ mod tests {
         let (s, e, _d) = service(poll_engine());
         s.refresh_roster().await;
         s.poll_once().await;
-        let kai = s.feed().presence().into_iter().find(|p| p.profile == "kai").unwrap();
-        assert_eq!((kai.state, kai.source), (State::Needs, Source::Island), "needs outranks the cron run");
+        let kai = s
+            .feed()
+            .presence()
+            .into_iter()
+            .find(|p| p.profile == "kai")
+            .unwrap();
+        assert_eq!(
+            (kai.state, kai.source),
+            (State::Needs, Source::Island),
+            "needs outranks the cron run"
+        );
         assert_eq!(kai.client.as_deref(), Some("panacea-island"));
         let rows = s.feed().approvals(false);
         assert_eq!(rows.len(), 1);
-        assert_eq!((rows[0].execution_generation, rows[0].timeout_s), (3, Some(90)));
+        assert_eq!(
+            (rows[0].execution_generation, rows[0].timeout_s),
+            (3, Some(90))
+        );
         assert_eq!(rows[0].answerable_with, ["once", "deny"]);
         assert_eq!(rows[0].origin.tool.as_deref(), Some("terminal"));
-        assert_eq!(s.feed().presence().into_iter().find(|p| p.profile == "kai").unwrap().attention.as_deref(), Some("approval"));
+        assert_eq!(
+            s.feed()
+                .presence()
+                .into_iter()
+                .find(|p| p.profile == "kai")
+                .unwrap()
+                .attention
+                .as_deref(),
+            Some("approval")
+        );
         s.poll_once().await;
-        assert_eq!(e.of("session.info").len(), 2, "a session's client is asked once");
-        assert_eq!(e.of("session.events.since").len(), 1, "a known approval is not looked up again");
+        assert_eq!(
+            e.of("session.info").len(),
+            2,
+            "a session's client is asked once"
+        );
+        assert_eq!(
+            e.of("session.events.since").len(),
+            1,
+            "a known approval is not looked up again"
+        );
     }
 
     #[tokio::test]
     async fn an_answer_from_another_client_reaches_the_engine_with_the_rows_own_generation() {
         let (s, e, dir) = service(|p, m, params| {
             if m == "approval.respond" {
-                assert_eq!((p, params["session_id"].as_str(), params["execution_generation"].as_u64()), ("kai", Some("isl-1"), Some(3)));
+                assert_eq!(
+                    (
+                        p,
+                        params["session_id"].as_str(),
+                        params["execution_generation"].as_u64()
+                    ),
+                    ("kai", Some("isl-1"), Some(3))
+                );
                 return Ok(json!({"resolved": 1}));
             }
             poll_engine()(p, m, params)
@@ -623,9 +871,21 @@ mod tests {
         let sent = e.of("approval.respond");
         assert_eq!(sent.len(), 1);
         assert_eq!(sent[0].1["choice"], "once");
-        let again = s.answer("pp1", "deny", None, &Caller::labelled(Some("boopis-cli"), "cli")).await.unwrap_err();
+        let again = s
+            .answer(
+                "pp1",
+                "deny",
+                None,
+                &Caller::labelled(Some("boopis-cli"), "cli"),
+            )
+            .await
+            .unwrap_err();
         assert_eq!((again.status, again.code), (409, "already_answered"));
-        assert_eq!(e.of("approval.respond").len(), 1, "the second answer never reached the engine");
+        assert_eq!(
+            e.of("approval.respond").len(),
+            1,
+            "the second answer never reached the engine"
+        );
         let audit = std::fs::read_to_string(Audit::under(dir.path()).path()).unwrap();
         assert!(audit.contains("panacea-island") && audit.contains("refused:already_answered"));
     }
@@ -636,8 +896,20 @@ mod tests {
         s.refresh_roster().await;
         s.poll_once().await;
         for choice in ["always", "session", "yes", ""] {
-            let err = s.answer("pp1", choice, None, &Caller::labelled(Some("x"), "endpoint")).await.unwrap_err();
-            assert_eq!((err.status, err.code), (403, "policy_refused"), "{choice:?}");
+            let err = s
+                .answer(
+                    "pp1",
+                    choice,
+                    None,
+                    &Caller::labelled(Some("x"), "endpoint"),
+                )
+                .await
+                .unwrap_err();
+            assert_eq!(
+                (err.status, err.code),
+                (403, "policy_refused"),
+                "{choice:?}"
+            );
         }
         assert!(e.of("approval.respond").is_empty());
         assert_eq!(s.feed().approvals(false)[0].state, ApprovalState::Pending);
@@ -647,16 +919,30 @@ mod tests {
     async fn an_engine_that_fails_gives_the_approval_back_and_says_so_plainly() {
         let (s, _e, _d) = service(|p, m, params| {
             if m == "approval.respond" {
-                return Err(Error::Unavailable("approval.respond: {'code': 5004, 'message': 'boom with /home/x/secret'}".into()));
+                return Err(Error::Unavailable(
+                    "approval.respond: {'code': 5004, 'message': 'boom with /home/x/secret'}"
+                        .into(),
+                ));
             }
             poll_engine()(p, m, params)
         });
         s.refresh_roster().await;
         s.poll_once().await;
-        let err = s.answer("pp1", "once", None, &Caller::labelled(None, "endpoint")).await.unwrap_err();
+        let err = s
+            .answer("pp1", "once", None, &Caller::labelled(None, "endpoint"))
+            .await
+            .unwrap_err();
         assert_eq!((err.status, err.code), (502, "engine_unavailable"));
-        assert!(!err.message.contains("secret") && !err.message.contains("5004"), "{}", err.message);
-        assert_eq!(s.feed().approvals(false)[0].state, ApprovalState::Pending, "another client may answer");
+        assert!(
+            !err.message.contains("secret") && !err.message.contains("5004"),
+            "{}",
+            err.message
+        );
+        assert_eq!(
+            s.feed().approvals(false)[0].state,
+            ApprovalState::Pending,
+            "another client may answer"
+        );
     }
 
     #[tokio::test]
@@ -669,22 +955,40 @@ mod tests {
         });
         s.refresh_roster().await;
         s.poll_once().await;
-        let err = s.answer("pp1", "once", None, &Caller::labelled(Some("a"), "endpoint")).await.unwrap_err();
+        let err = s
+            .answer(
+                "pp1",
+                "once",
+                None,
+                &Caller::labelled(Some("a"), "endpoint"),
+            )
+            .await
+            .unwrap_err();
         assert_eq!(err.code, "already_answered");
-        assert_eq!(s.feed().approval("pp1").unwrap().state, ApprovalState::Settled);
+        assert_eq!(
+            s.feed().approval("pp1").unwrap().state,
+            ApprovalState::Settled
+        );
     }
 
-    fn say_engine(running: bool) -> impl Fn(&str, &str, &Value) -> crate::error::Result<Value> + Send + Sync {
+    fn say_engine(
+        running: bool,
+    ) -> impl Fn(&str, &str, &Value) -> crate::error::Result<Value> + Send + Sync {
         move |p, m, params| {
             if let Some(v) = roster_answer(m) {
                 return Ok(v);
             }
             match m {
                 "session.create" => {
-                    assert_eq!(params["client"]["name"], "panacea-island", "the engine keeps the caller's label");
+                    assert_eq!(
+                        params["client"]["name"], "panacea-island",
+                        "the engine keeps the caller's label"
+                    );
                     Ok(json!({"session_id": "live-new", "stored_session_id": "stored-new"}))
                 }
-                "session.resume" => Ok(json!({"session_id": "live-1", "stored_session_id": params["session_id"], "running": running})),
+                "session.resume" => Ok(
+                    json!({"session_id": "live-1", "stored_session_id": params["session_id"], "running": running}),
+                ),
                 "prompt.submit" => Ok(json!({"status": "started"})),
                 _ => Err(Error::Unavailable(format!("unscripted {p} {m}"))),
             }
@@ -695,29 +999,69 @@ mod tests {
     async fn saying_to_a_bot_continues_its_latest_session_when_asked_for_latest() {
         let (s, e, _d) = service(say_engine(false));
         s.refresh_roster().await;
-        let said = s.say("kai", "  hello kai  ", &Pick::Latest, &Caller::labelled(Some("panacea-island"), "endpoint")).await.unwrap();
-        assert_eq!((said.session_id.as_str(), said.created), ("stored-1", false));
+        let said = s
+            .say(
+                "kai",
+                "  hello kai  ",
+                &Pick::Latest,
+                &Caller::labelled(Some("panacea-island"), "endpoint"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            (said.session_id.as_str(), said.created),
+            ("stored-1", false)
+        );
         let resume = e.of("session.resume");
         assert_eq!(resume[0].0, "kai");
         assert_eq!(resume[0].1["session_id"], "stored-1");
         let submit = e.of("prompt.submit");
         assert_eq!(submit[0].1["session_id"], "live-1");
         assert_eq!(submit[0].1["text"], "hello kai", "trimmed");
-        assert!(submit[0].1["submission_id"].as_str().unwrap().starts_with("api-"));
-        assert_eq!(s.feed().presence().into_iter().find(|p| p.profile == "kai").unwrap().state, State::Listening);
+        assert!(
+            submit[0].1["submission_id"]
+                .as_str()
+                .unwrap()
+                .starts_with("api-")
+        );
+        assert_eq!(
+            s.feed()
+                .presence()
+                .into_iter()
+                .find(|p| p.profile == "kai")
+                .unwrap()
+                .state,
+            State::Listening
+        );
     }
 
     #[tokio::test]
     async fn saying_in_a_new_session_labels_it_with_the_caller() {
         let (s, e, _d) = service(say_engine(false));
         s.refresh_roster().await;
-        let said = s.say("nina", "hi", &Pick::New, &Caller::labelled(Some("panacea-island"), "endpoint")).await.unwrap();
+        let said = s
+            .say(
+                "nina",
+                "hi",
+                &Pick::New,
+                &Caller::labelled(Some("panacea-island"), "endpoint"),
+            )
+            .await
+            .unwrap();
         assert!(said.created);
         assert_eq!(said.session_id, "stored-new");
         assert!(e.of("session.resume").is_empty());
         assert_eq!(e.of("prompt.submit")[0].1["session_id"], "live-new");
-        let p = s.feed().presence().into_iter().find(|p| p.profile == "nina").unwrap();
-        assert_eq!((p.source, p.client.as_deref()), (Source::Island, Some("panacea-island")));
+        let p = s
+            .feed()
+            .presence()
+            .into_iter()
+            .find(|p| p.profile == "nina")
+            .unwrap();
+        assert_eq!(
+            (p.source, p.client.as_deref()),
+            (Source::Island, Some("panacea-island"))
+        );
     }
 
     #[tokio::test]
@@ -725,14 +1069,31 @@ mod tests {
         let (s, e, _d) = service(say_engine(true));
         s.refresh_roster().await;
         let island = Caller::labelled(Some("panacea-island"), "endpoint");
-        let busy = s.say("kai", "hi", &Pick::Latest, &island).await.unwrap_err();
+        let busy = s
+            .say("kai", "hi", &Pick::Latest, &island)
+            .await
+            .unwrap_err();
         assert_eq!((busy.status, busy.code), (409, "bot_busy"));
         assert!(e.of("prompt.submit").is_empty());
-        for (bot, text, code) in [("kai", "   ", "empty_text"), ("nobody", "hi", "no_such_bot"), ("kai", &"x".repeat(40_000), "text_too_long"), ("kai", "a\0b", "text_too_long")] {
-            assert_eq!(s.say(bot, text, &Pick::New, &island).await.unwrap_err().code, code);
+        for (bot, text, code) in [
+            ("kai", "   ", "empty_text"),
+            ("nobody", "hi", "no_such_bot"),
+            ("kai", &"x".repeat(40_000), "text_too_long"),
+            ("kai", "a\0b", "text_too_long"),
+        ] {
+            assert_eq!(
+                s.say(bot, text, &Pick::New, &island)
+                    .await
+                    .unwrap_err()
+                    .code,
+                code
+            );
         }
         assert!(Pick::parse(Some("../../x")).is_err());
-        assert_eq!(Pick::parse(Some("20261122_abc")).unwrap(), Pick::Id("20261122_abc".into()));
+        assert_eq!(
+            Pick::parse(Some("20261122_abc")).unwrap(),
+            Pick::Id("20261122_abc".into())
+        );
         assert_eq!(Pick::parse(None).unwrap(), Pick::Latest);
     }
 
@@ -747,9 +1108,17 @@ mod tests {
             Ok(json!({"accepted": true}))
         });
         s.refresh_roster().await;
-        s.say_room("g-paper", "go", &Caller::labelled(None, "endpoint")).await.unwrap();
+        s.say_room("g-paper", "go", &Caller::labelled(None, "endpoint"))
+            .await
+            .unwrap();
         assert_eq!(e.of("groups.send").len(), 1);
-        assert_eq!(s.say_room("g-nope", "go", &Caller::labelled(None, "endpoint")).await.unwrap_err().code, "no_such_room");
+        assert_eq!(
+            s.say_room("g-nope", "go", &Caller::labelled(None, "endpoint"))
+                .await
+                .unwrap_err()
+                .code,
+            "no_such_room"
+        );
         let _ = Calls::default();
     }
 }

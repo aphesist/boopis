@@ -29,8 +29,9 @@ import platform
 import stat
 import sys
 import urllib.parse
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 LABEL = "boopis-reference"
 IDENTIFIER = "dev.aphesist.boopis"
@@ -42,7 +43,10 @@ def data_dir() -> Path:
     if system == "Darwin":
         return Path.home() / "Library" / "Application Support" / IDENTIFIER
     if system == "Windows":
-        return Path(os.environ.get("APPDATA", str(Path.home() / "AppData" / "Roaming"))) / IDENTIFIER
+        return (
+            Path(os.environ.get("APPDATA", str(Path.home() / "AppData" / "Roaming")))
+            / IDENTIFIER
+        )
     base = os.environ.get("XDG_DATA_HOME")
     return (Path(base) if base else Path.home() / ".local" / "share") / IDENTIFIER
 
@@ -60,14 +64,20 @@ class Client:
 
     def __init__(self, url: str, token: str, label: str = LABEL) -> None:
         parts = urllib.parse.urlsplit(url)
-        if parts.scheme != "http" or parts.hostname not in ("127.0.0.1", "localhost") or not parts.port:
+        if (
+            parts.scheme != "http"
+            or parts.hostname not in ("127.0.0.1", "localhost")
+            or not parts.port
+        ):
             raise ValueError("the endpoint must be http://127.0.0.1:<port>")
         self.host, self.port = parts.hostname, parts.port
         self._token = token
         self.label = label
 
     @classmethod
-    def from_files(cls, endpoint_file: Path | None = None, token_file: Path | None = None) -> "Client":
+    def from_files(
+        cls, endpoint_file: Path | None = None, token_file: Path | None = None
+    ) -> Client:
         folder = data_dir()
         endpoint_file = endpoint_file or folder / "client-endpoint"
         token_file = token_file or folder / "client-token"
@@ -75,7 +85,9 @@ class Client:
             url = json.loads(endpoint_file.read_text())["url"]
             mode = token_file.stat().st_mode
             if os.name == "posix" and mode & (stat.S_IRWXG | stat.S_IRWXO):
-                raise PermissionError(f"{token_file} can be read by other users (mode {mode & 0o777:o}); not using it")
+                raise PermissionError(
+                    f"{token_file} can be read by other users (mode {mode & 0o777:o}); not using it"
+                )
             token = token_file.read_text().strip()
         except FileNotFoundError as e:
             raise FileNotFoundError(
@@ -87,26 +99,40 @@ class Client:
         return http.client.HTTPConnection(self.host, self.port, timeout=10)
 
     def _headers(self, body: bool) -> dict[str, str]:
-        headers = {"Authorization": f"Bearer {self._token}", "X-Boopis-Client": self.label, "Connection": "close"}
+        headers = {
+            "Authorization": f"Bearer {self._token}",
+            "X-Boopis-Client": self.label,
+            "Connection": "close",
+        }
         if body:
             headers["Content-Type"] = "application/json"
         return headers
 
-    def call(self, method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+    def call(
+        self, method: str, path: str, body: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         conn = self._connection()
         try:
             data = json.dumps(body).encode() if body is not None else None
-            conn.request(method, path, body=data, headers=self._headers(data is not None))
+            conn.request(
+                method, path, body=data, headers=self._headers(data is not None)
+            )
             response = conn.getresponse()
             payload = json.loads(response.read() or b"{}")
         finally:
             conn.close()
         if response.status >= 400:
             error = payload.get("error", {})
-            raise Refused(response.status, error.get("code", "error"), error.get("message", "the endpoint refused"))
+            raise Refused(
+                response.status,
+                error.get("code", "error"),
+                error.get("message", "the endpoint refused"),
+            )
         return payload
 
-    def events(self, last_event_id: int | None = None) -> Iterator[tuple[str, int | None, dict[str, Any]]]:
+    def events(
+        self, last_event_id: int | None = None
+    ) -> Iterator[tuple[str, int | None, dict[str, Any]]]:
         """Follow the event stream: (event name, id, data). Ends when the endpoint closes it (a rotated token ends it)."""
         conn = http.client.HTTPConnection(self.host, self.port, timeout=60)
         headers = self._headers(False)
@@ -117,7 +143,11 @@ class Client:
         if response.status != 200:
             payload = json.loads(response.read() or b"{}")
             error = payload.get("error", {})
-            raise Refused(response.status, error.get("code", "error"), error.get("message", "the endpoint refused"))
+            raise Refused(
+                response.status,
+                error.get("code", "error"),
+                error.get("message", "the endpoint refused"),
+            )
         name, ident, data = "message", None, []
         for raw in response:
             line = raw.decode().rstrip("\r\n")
@@ -125,7 +155,7 @@ class Client:
                 if data:
                     yield name, ident, json.loads("\n".join(data))
                 name, data = "message", []
-            elif line.startswith(":") or line.startswith("retry:"):
+            elif line.startswith((":", "retry:")):
                 continue
             elif line.startswith("event:"):
                 name = line[6:].strip()
@@ -137,7 +167,7 @@ class Client:
 
 
 def show(value: Any) -> None:
-    print(json.dumps(value, ensure_ascii=False))
+    print(json.dumps(value, ensure_ascii=False), flush=True)
 
 
 def follow(client: Client, approve: bool, ask=input) -> None:
@@ -146,16 +176,27 @@ def follow(client: Client, approve: bool, ask=input) -> None:
     for name, ident, data in client.events():
         if ident is not None:
             last = ident
-        show({"event": name, "id": ident, **({"data": data.get("data")} if "data" in data else data)})
+        show(
+            {
+                "event": name,
+                "id": ident,
+                **({"data": data.get("data")} if "data" in data else data),
+            }
+        )
         if approve and name == "approvals.changed":
             row = data["data"]
             if row["state"] != "pending":
                 continue
-            print(f"\n{row['profile']} wants to run: {row['command'] or row['description']}", file=sys.stderr)
+            print(
+                f"\n{row['profile']} wants to run: {row['command'] or row['description']}",
+                file=sys.stderr,
+            )
             choice = ask("once, deny or skip? ").strip().lower()
             if choice in ("once", "deny"):
                 try:
-                    client.call("POST", f"/v1/approvals/{row['id']}", {"choice": choice})
+                    client.call(
+                        "POST", f"/v1/approvals/{row['id']}", {"choice": choice}
+                    )
                     print(f"answered {choice}", file=sys.stderr)
                 except Refused as e:
                     print(f"not answered: {e.message}", file=sys.stderr)
@@ -163,7 +204,9 @@ def follow(client: Client, approve: bool, ask=input) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--endpoint-file", type=Path)
     parser.add_argument("--token-file", type=Path)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -192,15 +235,31 @@ def main(argv: list[str] | None = None) -> int:
             case "presence":
                 show(client.call("GET", "/v1/presence"))
             case "approvals":
-                show(client.call("GET", "/v1/approvals" + ("?all=1" if args.all else "")))
+                show(
+                    client.call("GET", "/v1/approvals" + ("?all=1" if args.all else ""))
+                )
             case "rooms":
                 show(client.call("GET", "/v1/rooms"))
             case "answer":
-                show(client.call("POST", f"/v1/approvals/{args.id}", {"choice": args.choice}))
+                show(
+                    client.call(
+                        "POST", f"/v1/approvals/{args.id}", {"choice": args.choice}
+                    )
+                )
             case "say":
-                show(client.call("POST", f"/v1/bots/{args.bot}/say", {"text": args.text, "session": args.session}))
+                show(
+                    client.call(
+                        "POST",
+                        f"/v1/bots/{args.bot}/say",
+                        {"text": args.text, "session": args.session},
+                    )
+                )
             case "say-room":
-                show(client.call("POST", f"/v1/rooms/{args.room}/say", {"text": args.text}))
+                show(
+                    client.call(
+                        "POST", f"/v1/rooms/{args.room}/say", {"text": args.text}
+                    )
+                )
             case "events":
                 follow(client, args.approve)
     except Refused as e:

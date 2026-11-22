@@ -73,7 +73,9 @@ impl Files {
     /// The files under `dir` (the app's data folder).
     #[must_use]
     pub fn under(dir: &Path) -> Self {
-        Self { dir: dir.to_path_buf() }
+        Self {
+            dir: dir.to_path_buf(),
+        }
     }
 
     /// The token file's path.
@@ -137,6 +139,7 @@ impl Files {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt as _;
+            #[allow(clippy::verbose_bit_mask)] // "no bit of group or other" is what the mask means
             std::fs::metadata(self.token_path()).is_ok_and(|m| m.permissions().mode() & 0o077 == 0)
         }
         #[cfg(not(unix))]
@@ -183,7 +186,10 @@ mod tests {
         let files = Files::under(dir.path());
         let first = Token::mint().unwrap();
         files.write_token(&first).unwrap();
-        let mode = std::fs::metadata(files.token_path()).unwrap().permissions().mode();
+        let mode = std::fs::metadata(files.token_path())
+            .unwrap()
+            .permissions()
+            .mode();
         assert_eq!(mode & 0o777, 0o600, "mode {mode:o}");
         assert!(files.token_is_private());
         let second = Token::mint().unwrap();
@@ -205,7 +211,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let files = Files::under(dir.path());
         std::fs::write(files.token_path(), "old\n").unwrap();
-        std::fs::set_permissions(files.token_path(), std::fs::Permissions::from_mode(0o644)).unwrap();
+        std::fs::set_permissions(files.token_path(), std::fs::Permissions::from_mode(0o644))
+            .unwrap();
         assert!(!files.token_is_private());
         files.write_token(&Token::mint().unwrap()).unwrap();
         assert!(files.token_is_private());

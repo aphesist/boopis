@@ -170,7 +170,10 @@ const FEED_EVENTS: [(&str, bool); 17] = [
 ];
 
 fn feed_wants(event: &str) -> Option<bool> {
-    FEED_EVENTS.iter().find(|(n, _)| *n == event).map(|(_, p)| *p)
+    FEED_EVENTS
+        .iter()
+        .find(|(n, _)| *n == event)
+        .map(|(_, p)| *p)
 }
 
 pub(super) struct Shared {

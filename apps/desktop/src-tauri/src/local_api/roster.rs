@@ -34,7 +34,11 @@ pub struct Entry {
 }
 
 fn text(v: &Value, key: &str) -> String {
-    v.get(key).and_then(Value::as_str).map(str::trim).unwrap_or_default().to_owned()
+    v.get(key)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .unwrap_or_default()
+        .to_owned()
 }
 
 fn model_label(provider: &str, model: &str) -> Option<String> {
@@ -42,7 +46,11 @@ fn model_label(provider: &str, model: &str) -> Option<String> {
     if m.is_empty() {
         return None;
     }
-    Some(if p.is_empty() { m.to_owned() } else { format!("{p}/{m}") })
+    Some(if p.is_empty() {
+        m.to_owned()
+    } else {
+        format!("{p}/{m}")
+    })
 }
 
 /// The profiles whose row lacks a model: the ones `profiles.describe` should be asked about.
@@ -64,7 +72,11 @@ pub fn needs_describe(profiles: &Value) -> Vec<String> {
 /// Build the roster from `profiles.list`'s answer, the plugin's `bots.read` answer (when it answered) and the
 /// `profiles.describe` answers by name. Archived teammates are left out.
 #[must_use]
-pub fn build(profiles: &Value, plugin: Option<&Value>, described: &HashMap<String, Value>) -> Vec<Entry> {
+pub fn build(
+    profiles: &Value,
+    plugin: Option<&Value>,
+    described: &HashMap<String, Value, impl std::hash::BuildHasher>,
+) -> Vec<Entry> {
     let mut records: HashMap<String, (&Value, bool)> = HashMap::new();
     if let Some(bots) = plugin.and_then(|p| p.get("bots")).and_then(Value::as_array) {
         for b in bots {
@@ -111,7 +123,11 @@ pub fn build(profiles: &Value, plugin: Option<&Value>, described: &HashMap<Strin
             role: text(row, "description"),
             model: model_label(&provider, &model),
             provider: (!provider.is_empty()).then_some(provider),
-            known_to_boopis: record.is_some_and(|r| ["look", "settings", "approvals"].iter().any(|k| r.get(*k).is_some())),
+            known_to_boopis: record.is_some_and(|r| {
+                ["look", "settings", "approvals"]
+                    .iter()
+                    .any(|k| r.get(*k).is_some())
+            }),
             governed: record
                 .and_then(|r| r.get("settings"))
                 .and_then(|s| s.get("gov"))
@@ -169,15 +185,25 @@ mod tests {
     fn the_look_the_owner_chose_is_in_the_row_and_the_default_fills_the_rest() {
         let rows = build(&profiles(), Some(&plugin()), &HashMap::new());
         let names: Vec<&str> = rows.iter().map(|r| r.name.as_str()).collect();
-        assert_eq!(names, ["default", "kai", "nina"], "archived teammates and prefixed profiles are left out");
+        assert_eq!(
+            names,
+            ["default", "kai", "nina"],
+            "archived teammates and prefixed profiles are left out"
+        );
         let kai = &rows[1];
-        assert_eq!((kai.look.shape.as_str(), kai.look.color.as_str()), ("hexagon", "#a6a6ab"));
+        assert_eq!(
+            (kai.look.shape.as_str(), kai.look.color.as_str()),
+            ("hexagon", "#a6a6ab")
+        );
         assert_eq!(kai.display_name, "Kai");
         assert_eq!(kai.role, "the editor");
         assert!(kai.known_to_boopis);
         let nina = &rows[2];
         assert_eq!(nina.look, look::look_for("nina"));
-        assert!(!nina.known_to_boopis, "a bot made outside boopis has no record");
+        assert!(
+            !nina.known_to_boopis,
+            "a bot made outside boopis has no record"
+        );
     }
 
     #[test]
@@ -188,8 +214,14 @@ mod tests {
             json!({"model": {"provider": "claude-subscription-directsdk-experimental", "default": "opus"}}),
         );
         let rows = build(&profiles(), Some(&plugin()), &described);
-        assert_eq!(rows[1].model.as_deref(), Some("claude-subscription-directsdk-experimental/opus"));
-        assert_eq!(rows[1].provider.as_deref(), Some("claude-subscription-directsdk-experimental"));
+        assert_eq!(
+            rows[1].model.as_deref(),
+            Some("claude-subscription-directsdk-experimental/opus")
+        );
+        assert_eq!(
+            rows[1].provider.as_deref(),
+            Some("claude-subscription-directsdk-experimental")
+        );
         assert_eq!(rows[2].model, None, "nobody said");
         assert_eq!(rows[0].model.as_deref(), Some("claude-subscription/opus"));
     }
@@ -202,7 +234,11 @@ mod tests {
     #[test]
     fn a_plugin_that_did_not_answer_leaves_defaults_and_marks_nothing() {
         let rows = build(&profiles(), None, &HashMap::new());
-        assert_eq!(rows.len(), 4, "without the plugin an archived record cannot be known; only the prefix is");
+        assert_eq!(
+            rows.len(),
+            4,
+            "without the plugin an archived record cannot be known; only the prefix is"
+        );
         assert!(rows.iter().all(|r| !r.known_to_boopis));
         assert_eq!(rows[1].look, look::look_for("Kai"));
     }

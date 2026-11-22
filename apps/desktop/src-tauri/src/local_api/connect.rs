@@ -19,6 +19,7 @@ use crate::hermes::{Environment, Supervisor};
 use crate::runtime;
 
 /// What the arguments ask for.
+#[allow(clippy::struct_excessive_bools)] // one flag per option of the command
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Options {
     /// The profile whose link to describe; `default` is the root.
@@ -38,7 +39,10 @@ pub struct Options {
 /// # Errors
 /// A sentence for anything that is not an option of `connect`.
 pub fn parse(args: &[String]) -> Result<Options, String> {
-    let mut o = Options { profile: "default".into(), ..Options::default() };
+    let mut o = Options {
+        profile: "default".into(),
+        ..Options::default()
+    };
     let mut it = args.iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -49,16 +53,23 @@ pub fn parse(args: &[String]) -> Result<Options, String> {
             "--profile" => {
                 o.profile = it.next().cloned().ok_or("--profile needs a name")?;
             }
-            other if other.starts_with("--profile=") => o.profile = other["--profile=".len()..].to_owned(),
+            other if other.starts_with("--profile=") => {
+                other["--profile=".len()..].clone_into(&mut o.profile);
+            }
             other => return Err(format!("{other} is not an option of connect")),
         }
     }
     let ok = o.profile == "default"
         || (!o.profile.is_empty()
             && o.profile.len() <= 64
-            && o.profile.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_'));
+            && o.profile
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_'));
     if !ok {
-        return Err(format!("{:?} is not a profile name ([a-z0-9_-], up to 64)", o.profile));
+        return Err(format!(
+            "{:?} is not a profile name ([a-z0-9_-], up to 64)",
+            o.profile
+        ));
     }
     Ok(o)
 }
@@ -94,11 +105,10 @@ pub fn report(o: &Options, f: &Facts) -> Value {
         .iter()
         .map(|p| p.home.clone().unwrap_or_else(|| p.profile_id.clone()))
         .collect();
-    let in_root = f.profile_home == f.root
-        || served.iter().any(|h| Path::new(h) == f.profile_home)
-        || (f.root_identity.served_profiles.len() == 1 && f.profile_home == f.root);
+    let in_root = f.profile_home == f.root || served.iter().any(|h| Path::new(h) == f.profile_home);
     let own = f.own_identity.as_ref().is_some_and(|i| {
-        i.endpoint.instance_id.is_some() && i.endpoint.instance_id != f.root_identity.endpoint.instance_id
+        i.endpoint.instance_id.is_some()
+            && i.endpoint.instance_id != f.root_identity.endpoint.instance_id
     });
     let url = f
         .root_identity
@@ -148,9 +158,18 @@ pub fn with_ticket(mut report: Value, ticket: &attach::Ticket) -> Value {
 pub fn plain(report: &Value) -> Vec<String> {
     let g = &report["gateway"];
     let mut lines = vec![
-        format!("profile   {}", report["profile"].as_str().unwrap_or("default")),
-        format!("url       {}", report["url"].as_str().unwrap_or("(no gateway is running)")),
-        format!("protocol  {}", report["protocols"][0].as_str().unwrap_or(PROTOCOL)),
+        format!(
+            "profile   {}",
+            report["profile"].as_str().unwrap_or("default")
+        ),
+        format!(
+            "url       {}",
+            report["url"].as_str().unwrap_or("(no gateway is running)")
+        ),
+        format!(
+            "protocol  {}",
+            report["protocols"][0].as_str().unwrap_or(PROTOCOL)
+        ),
         format!("gateway   {}", g["state"].as_str().unwrap_or("unknown")),
         format!(
             "homes     {}",
@@ -176,7 +195,11 @@ pub fn plain(report: &Value) -> Vec<String> {
 fn supervisor(resource_dir: Option<&Path>) -> Supervisor {
     let data = dirs::data_dir().map(|d| d.join(crate::gpu::APP_IDENTIFIER));
     let source = runtime::Source::from_process();
-    let (plan, _) = runtime::plan_for(source, resource_dir, data.ok_or_else(|| "no data folder".to_owned()));
+    let (plan, _) = runtime::plan_for(
+        source,
+        resource_dir,
+        data.ok_or_else(|| "no data folder".to_owned()),
+    );
     let mut env = Environment::from_process();
     if let Some(plan) = &plan {
         env = env.with_bundled(plan.bundled());
@@ -187,9 +210,13 @@ fn supervisor(resource_dir: Option<&Path>) -> Supervisor {
 async fn gather(sup: &Supervisor, o: &Options) -> Result<(Facts, Option<attach::Ticket>), String> {
     let env = sup.environment();
     let root = env.hermes_root();
-    let profile_home = env.profile_home(Some(&o.profile)).map_err(|e| e.to_string())?;
+    let profile_home = env
+        .profile_home(Some(&o.profile))
+        .map_err(|e| e.to_string())?;
     if o.start {
-        sup.ensure_if_needed(&root).await.map_err(|e| e.to_string())?;
+        sup.ensure_if_needed(&root)
+            .await
+            .map_err(|e| e.to_string())?;
     }
     let root_identity = control::identify(&root)
         .await
@@ -197,21 +224,39 @@ async fn gather(sup: &Supervisor, o: &Options) -> Result<(Facts, Option<attach::
     if root_identity.state != "ready" {
         return Err(format!("The engine is {}, not ready.", root_identity.state));
     }
-    let own_identity = if profile_home == root { None } else { control::identify(&profile_home).await.ok() };
+    let own_identity = if profile_home == root {
+        None
+    } else {
+        control::identify(&profile_home).await.ok()
+    };
     let ticket = if o.ticket {
-        let home = if own_identity.is_some() { &profile_home } else { &root };
+        let home = if own_identity.is_some() {
+            &profile_home
+        } else {
+            &root
+        };
         let identity = own_identity.as_ref().unwrap_or(&root_identity);
         let id = identity
             .profile_id_for(&profile_home)
             .or_else(|| identity.profile_id_for(home))
             .ok_or_else(|| "The gateway does not serve that profile.".to_owned())?
             .to_owned();
-        let raw = control::session_ticket(home, identity, &id).await.map_err(|e| e.to_string())?;
+        let raw = control::session_ticket(home, identity, &id)
+            .await
+            .map_err(|e| e.to_string())?;
         Some(attach::Ticket::new(&raw).map_err(|e| e.to_string())?)
     } else {
         None
     };
-    Ok((Facts { root, profile_home, root_identity, own_identity }, ticket))
+    Ok((
+        Facts {
+            root,
+            profile_home,
+            root_identity,
+            own_identity,
+        },
+        ticket,
+    ))
 }
 
 /// Run `boopis connect`. Returns the exit code.
@@ -227,7 +272,10 @@ pub fn run(args: &[String], resource_dir: &dyn Fn() -> Option<PathBuf>) -> i32 {
         println!("{}", usage());
         return 0;
     }
-    let Ok(rt) = tokio::runtime::Builder::new_current_thread().enable_all().build() else {
+    let Ok(rt) = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    else {
         eprintln!("boopis connect: could not start.");
         return 1;
     };
@@ -247,7 +295,10 @@ pub fn run(args: &[String], resource_dir: &dyn Fn() -> Option<PathBuf>) -> i32 {
         }
         Err(e) => {
             if o.json {
-                println!("{}", json!({"error": {"code": "engine_unavailable", "message": e}}));
+                println!(
+                    "{}",
+                    json!({"error": {"code": "engine_unavailable", "message": e}})
+                );
             } else {
                 eprintln!("boopis connect: {e}");
             }
@@ -270,7 +321,12 @@ mod tests {
         assert_eq!((o.json, o.ticket, o.profile.as_str()), (true, true, "kai"));
         assert_eq!(opts(&[]).unwrap().profile, "default");
         assert_eq!(opts(&["--profile=nina"]).unwrap().profile, "nina");
-        for bad in [vec!["--nope"], vec!["--profile"], vec!["--profile", "../x"], vec!["--profile", "A b"]] {
+        for bad in [
+            vec!["--nope"],
+            vec!["--profile"],
+            vec!["--profile", "../x"],
+            vec!["--profile", "A b"],
+        ] {
             assert!(opts(&bad).is_err(), "{bad:?}");
         }
     }
@@ -282,7 +338,11 @@ mod tests {
     fn facts(profile: &str, own: Option<Identify>) -> Facts {
         let root = PathBuf::from("/data/engine");
         Facts {
-            profile_home: if profile == "default" { root.clone() } else { root.join("profiles").join(profile) },
+            profile_home: if profile == "default" {
+                root.clone()
+            } else {
+                root.join("profiles").join(profile)
+            },
             root,
             root_identity: identity(
                 r#"{"state":"ready","api_origin":"http://127.0.0.1:56079","instance_id":"i-root","capabilities":["event-replay-v1"],"served_profiles":[{"profile_id":"/data/engine","home":"/data/engine"},{"profile_id":"/data/engine/profiles/kai","home":"/data/engine/profiles/kai"}]}"#,
@@ -292,17 +352,26 @@ mod tests {
     }
 
     #[test]
-    fn the_report_has_the_address_the_protocol_and_which_gateway_serves_which_home_and_no_credential() {
+    fn the_report_has_the_address_the_protocol_and_which_gateway_serves_which_home_and_no_credential()
+     {
         let o = opts(&["--json", "--profile", "kai"]).unwrap();
         let r = report(&o, &facts("kai", None));
         assert_eq!(r["url"], "ws://127.0.0.1:56079/api/ws");
         assert_eq!(r["protocols"], json!([PROTOCOL]));
-        assert_eq!(r["gateway"]["this_profile_is_served_by_the_root_gateway"], true);
+        assert_eq!(
+            r["gateway"]["this_profile_is_served_by_the_root_gateway"],
+            true
+        );
         assert_eq!(r["gateway"]["this_profile_has_its_own_gateway"], false);
         assert!(r["ticket"].is_null());
         let text = r.to_string();
-        assert!(!text.contains("hermes-gateway-ticket"), "no ticket unless it was asked for");
-        let own = identity(r#"{"state":"ready","instance_id":"i-kai","api_origin":"http://127.0.0.1:56080"}"#);
+        assert!(
+            !text.contains("hermes-gateway-ticket"),
+            "no ticket unless it was asked for"
+        );
+        let own = identity(
+            r#"{"state":"ready","instance_id":"i-kai","api_origin":"http://127.0.0.1:56080"}"#,
+        );
         let r = report(&o, &facts("kai", Some(own)));
         assert_eq!(r["gateway"]["this_profile_has_its_own_gateway"], true);
     }
@@ -318,6 +387,9 @@ mod tests {
         let lines = plain(&r).join("\n");
         assert!(lines.contains("hermes-gateway-ticket."), "{lines}");
         let none = plain(&report(&o, &facts("default", None))).join("\n");
-        assert!(!none.contains("hermes-gateway-ticket") && none.contains("--ticket"), "{none}");
+        assert!(
+            !none.contains("hermes-gateway-ticket") && none.contains("--ticket"),
+            "{none}"
+        );
     }
 }

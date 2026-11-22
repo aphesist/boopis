@@ -80,11 +80,19 @@ pub struct Table {
 }
 
 /// A tool whose work is code running.
+#[allow(clippy::case_sensitive_file_extension_comparisons)] // a tool's name, lowercased here: not a file
 fn is_compute(tool: &str) -> bool {
     let t = tool.to_ascii_lowercase();
     matches!(
         t.as_str(),
-        "exec" | "execute_code" | "terminal" | "bash" | "shell" | "run_command" | "python" | "code_execution"
+        "exec"
+            | "execute_code"
+            | "terminal"
+            | "bash"
+            | "shell"
+            | "run_command"
+            | "python"
+            | "code_execution"
     ) || t.ends_with(".exec")
 }
 
@@ -103,6 +111,7 @@ impl Table {
 
     /// An event on a link of the host. `tool` is the tool's name for a tool event, `failed` is true for a completion that
     /// failed. Returns the presences that changed.
+    #[allow(clippy::too_many_arguments)] // one event's facts, read by one caller
     pub fn on_event(
         &mut self,
         profile: &str,
@@ -129,12 +138,18 @@ impl Table {
         s.client.clone_from(&origin.1);
         let (state, activity, attention) = match event {
             "host.prompt" => (State::Listening, String::new(), None),
-            "message.start" | "thinking.delta" | "reasoning.delta" | "reasoning.available" | "tool.complete" => {
-                (State::Thinking, String::new(), None)
-            }
+            "message.start"
+            | "thinking.delta"
+            | "reasoning.delta"
+            | "reasoning.available"
+            | "tool.complete" => (State::Thinking, String::new(), None),
             "tool.start" | "tool.generating" | "tool.progress" => {
                 let name = tool.unwrap_or_default().to_owned();
-                let state = if is_compute(&name) { State::Compute } else { State::Working };
+                let state = if is_compute(&name) {
+                    State::Compute
+                } else {
+                    State::Working
+                };
                 (state, name, None)
             }
             "message.delta" | "message.interim" => (State::Speaking, String::new(), None),
@@ -145,7 +160,16 @@ impl Table {
             "approval.settled" | "approval.cancelled" => (State::Working, String::new(), None),
             _ => return Vec::new(),
         };
-        if s.state == State::Needs && !matches!(event, "approval.settled" | "approval.cancelled" | "message.complete" | "error" | "turn.failed") {
+        if s.state == State::Needs
+            && !matches!(
+                event,
+                "approval.settled"
+                    | "approval.cancelled"
+                    | "message.complete"
+                    | "error"
+                    | "turn.failed"
+            )
+        {
             // A bot that waits for the owner keeps waiting until the question is settled, whatever else streams.
             return Vec::new();
         }
@@ -201,9 +225,23 @@ impl Table {
             let (state, attention) = match row.status {
                 Status::Waiting => (
                     State::Needs,
-                    Some(if approvals(&row.session_id) { "approval" } else { "input" }.to_owned()),
+                    Some(
+                        if approvals(&row.session_id) {
+                            "approval"
+                        } else {
+                            "input"
+                        }
+                        .to_owned(),
+                    ),
                 ),
-                Status::Working => (if s.state.busy() { s.state } else { State::Working }, None),
+                Status::Working => (
+                    if s.state.busy() {
+                        s.state
+                    } else {
+                        State::Working
+                    },
+                    None,
+                ),
                 Status::Starting => (State::Thinking, None),
                 Status::Idle => (State::Idle, None),
             };
@@ -220,11 +258,35 @@ impl Table {
         self.changed(&[profile.to_owned()], now)
     }
 
+    /// A waiting session's approval became known (or went away) after the poll that found it waiting: say which it is.
+    pub fn set_attention(
+        &mut self,
+        profile: &str,
+        session_id: &str,
+        approval: bool,
+        now: i64,
+    ) -> Vec<Presence> {
+        let Some(s) = self
+            .sessions
+            .get_mut(&(profile.to_owned(), session_id.to_owned()))
+        else {
+            return Vec::new();
+        };
+        if s.state != State::Needs {
+            return Vec::new();
+        }
+        s.attention = Some(if approval { "approval" } else { "input" }.to_owned());
+        self.changed(&[profile.to_owned()], now)
+    }
+
     /// Let time pass: a `done` that was shown long enough becomes idle again.
     pub fn tick(&mut self, now: i64) -> Vec<Presence> {
         let mut touched = Vec::new();
         for ((profile, _), s) in &mut self.sessions {
-            if matches!(s.state, State::Done | State::Error) && s.hold_until != 0 && s.hold_until <= now {
+            if matches!(s.state, State::Done | State::Error)
+                && s.hold_until != 0
+                && s.hold_until <= now
+            {
                 s.state = State::Idle;
                 s.activity.clear();
                 s.hold_until = 0;
@@ -234,7 +296,8 @@ impl Table {
         }
         touched.sort();
         touched.dedup();
-        self.sessions.retain(|_, s| s.state != State::Idle || s.fine_until > now);
+        self.sessions
+            .retain(|_, s| s.state != State::Idle || s.fine_until > now);
         self.changed(&touched, now)
     }
 
@@ -260,7 +323,11 @@ impl Table {
                 if self.sleeping.get(profile).copied().unwrap_or(false) {
                     idle.state = State::Sleeping;
                 }
-                if let Some(old) = self.published.get(profile).filter(|o| o.state == idle.state) {
+                if let Some(old) = self
+                    .published
+                    .get(profile)
+                    .filter(|o| o.state == idle.state)
+                {
                     idle.at = old.at; // the same rest, since when it began
                 }
                 idle
@@ -297,7 +364,9 @@ impl Table {
     /// A session's last known state, for the notification rules.
     #[must_use]
     pub fn session_state(&self, profile: &str, session_id: &str) -> Option<State> {
-        self.sessions.get(&(profile.to_owned(), session_id.to_owned())).map(|s| s.state)
+        self.sessions
+            .get(&(profile.to_owned(), session_id.to_owned()))
+            .map(|s| s.state)
     }
 
     /// Forget a bot that is gone.
@@ -337,7 +406,16 @@ mod tests {
         let states: Vec<State> = seen.iter().map(|(s, _)| *s).collect();
         assert_eq!(
             states,
-            [State::Listening, State::Thinking, State::Working, State::Thinking, State::Compute, State::Thinking, State::Speaking, State::Done]
+            [
+                State::Listening,
+                State::Thinking,
+                State::Working,
+                State::Thinking,
+                State::Compute,
+                State::Thinking,
+                State::Speaking,
+                State::Done
+            ]
         );
         assert_eq!(seen[2].1, "read_file");
         assert_eq!(seen[4].1, "exec");
@@ -348,7 +426,10 @@ mod tests {
         let mut t = Table::new();
         assert_eq!(ev(&mut t, "message.delta", None, 0).len(), 1);
         for at in 1..50 {
-            assert!(ev(&mut t, "message.delta", None, at).is_empty(), "a delta stream is one event");
+            assert!(
+                ev(&mut t, "message.delta", None, at).is_empty(),
+                "a delta stream is one event"
+            );
         }
     }
 
@@ -359,7 +440,10 @@ mod tests {
         let p = ev(&mut t, "approval.request", None, 10);
         assert_eq!(p[0].state, State::Needs);
         assert_eq!(p[0].attention.as_deref(), Some("approval"));
-        assert!(ev(&mut t, "message.delta", None, 20).is_empty(), "streaming does not hide the question");
+        assert!(
+            ev(&mut t, "message.delta", None, 20).is_empty(),
+            "streaming does not hide the question"
+        );
         let p = ev(&mut t, "approval.settled", None, 30);
         assert_eq!(p[0].state, State::Working);
         assert_eq!(p[0].attention, None);
@@ -368,7 +452,15 @@ mod tests {
     #[test]
     fn a_failure_shows_as_an_error_and_a_finished_turn_rests_after_its_time() {
         let mut t = Table::new();
-        let p = t.on_event("kai", "s1", "message.complete", None, true, &(Source::Gui, None), 0);
+        let p = t.on_event(
+            "kai",
+            "s1",
+            "message.complete",
+            None,
+            true,
+            &(Source::Gui, None),
+            0,
+        );
         assert_eq!(p[0].state, State::Error);
         assert!(t.tick(ERROR_HOLD_MS - 1).is_empty());
         let p = t.tick(ERROR_HOLD_MS + 1);
@@ -380,25 +472,57 @@ mod tests {
     }
 
     fn live(id: &str, status: Status, source: &str, client: Option<&str>) -> Live {
-        Live { session_id: id.into(), status, source: source.into(), client: client.map(str::to_owned) }
+        Live {
+            session_id: id.into(),
+            status,
+            source: source.into(),
+            client: client.map(str::to_owned),
+        }
     }
 
     #[test]
     fn a_poll_sees_the_islands_session_and_a_cron_run_at_the_engines_grain() {
         let mut t = Table::new();
         let none = |_: &str| false;
-        let p = t.on_poll("nina", &[live("i1", Status::Working, "cli", Some("panacea-island"))], &none, 0);
+        let p = t.on_poll(
+            "nina",
+            &[live("i1", Status::Working, "cli", Some("panacea-island"))],
+            &none,
+            0,
+        );
         assert_eq!((p[0].state, p[0].source), (State::Working, Source::Island));
         assert_eq!(p[0].client.as_deref(), Some("panacea-island"));
-        let p = t.on_poll("moss", &[live("c1", Status::Working, "cron", None)], &none, 0);
+        let p = t.on_poll(
+            "moss",
+            &[live("c1", Status::Working, "cron", None)],
+            &none,
+            0,
+        );
         assert_eq!(p[0].source, Source::Cron);
-        let p = t.on_poll("nina", &[live("i1", Status::Waiting, "cli", Some("panacea-island"))], &|s| s == "i1", 1);
-        assert_eq!((p[0].state, p[0].attention.as_deref()), (State::Needs, Some("approval")));
-        let p = t.on_poll("nina", &[live("i1", Status::Waiting, "cli", Some("panacea-island"))], &none, 2);
+        let p = t.on_poll(
+            "nina",
+            &[live("i1", Status::Waiting, "cli", Some("panacea-island"))],
+            &|s| s == "i1",
+            1,
+        );
+        assert_eq!(
+            (p[0].state, p[0].attention.as_deref()),
+            (State::Needs, Some("approval"))
+        );
+        let p = t.on_poll(
+            "nina",
+            &[live("i1", Status::Waiting, "cli", Some("panacea-island"))],
+            &none,
+            2,
+        );
         assert!(p.is_empty() || p[0].attention.as_deref() == Some("input"));
         assert_eq!(t.presence("nina", 2).attention.as_deref(), Some("input"));
         let p = t.on_poll("nina", &[], &none, 3);
-        assert_eq!(p[0].state, State::Idle, "a session that is no longer listed has ended");
+        assert_eq!(
+            p[0].state,
+            State::Idle,
+            "a session that is no longer listed has ended"
+        );
     }
 
     #[test]
@@ -407,29 +531,54 @@ mod tests {
         let none = |_: &str| false;
         ev(&mut t, "message.delta", None, 0);
         let row = [live("s1", Status::Working, "gui", None)];
-        assert!(t.on_poll("kai", &row, &none, 1_000).is_empty(), "speaking is finer than working");
+        assert!(
+            t.on_poll("kai", &row, &none, 1_000).is_empty(),
+            "speaking is finer than working"
+        );
         assert_eq!(t.presence("kai", 1_000).state, State::Speaking);
         t.on_poll("kai", &row, &none, FINE_HOLD_MS + 10);
-        assert_eq!(t.presence("kai", FINE_HOLD_MS + 10).state, State::Speaking, "a busy word stays while the engine says working");
+        assert_eq!(
+            t.presence("kai", FINE_HOLD_MS + 10).state,
+            State::Speaking,
+            "a busy word stays while the engine says working"
+        );
         let idle = [live("s1", Status::Idle, "gui", None)];
         let p = t.on_poll("kai", &idle, &none, FINE_HOLD_MS + 20);
-        assert_eq!(p[0].state, State::Idle, "the engine's idle ends a state its events never closed");
+        assert_eq!(
+            p[0].state,
+            State::Idle,
+            "the engine's idle ends a state its events never closed"
+        );
     }
 
     #[test]
     fn the_busiest_session_is_the_bots_and_needs_beats_all() {
         let mut t = Table::new();
         let none = |_: &str| false;
-        t.on_poll("kai", &[live("a", Status::Working, "gui", None), live("b", Status::Waiting, "cron", None)], &none, 0);
+        t.on_poll(
+            "kai",
+            &[
+                live("a", Status::Working, "gui", None),
+                live("b", Status::Waiting, "cron", None),
+            ],
+            &none,
+            0,
+        );
         let p = t.presence("kai", 0);
-        assert_eq!((p.state, p.session_id.as_deref(), p.source), (State::Needs, Some("b"), Source::Cron));
+        assert_eq!(
+            (p.state, p.session_id.as_deref(), p.source),
+            (State::Needs, Some("b"), Source::Cron)
+        );
     }
 
     #[test]
     fn a_paused_bot_sleeps_only_while_it_is_otherwise_idle() {
         let mut t = Table::new();
         assert_eq!(t.set_sleeping("kai", true, 0)[0].state, State::Sleeping);
-        assert_eq!(ev(&mut t, "message.start", None, 1)[0].state, State::Thinking);
+        assert_eq!(
+            ev(&mut t, "message.start", None, 1)[0].state,
+            State::Thinking
+        );
         t.forget("kai");
         assert_eq!(t.presence("kai", 5).state, State::Idle);
     }

@@ -84,11 +84,13 @@ pub enum Source {
 #[must_use]
 pub fn valid_client_name(name: &str) -> bool {
     let mut chars = name.chars();
-    chars.next().is_some_and(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+    chars
+        .next()
+        .is_some_and(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
         && name.len() <= 64
-        && name.chars().all(|c| {
-            c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '.' | '_' | '-')
-        })
+        && name
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '.' | '_' | '-'))
 }
 
 /// The island's own label.
@@ -290,6 +292,7 @@ pub struct Approval {
 }
 
 /// The events of the feed. Each is stamped by the feed with a counter and the time.
+#[allow(clippy::large_enum_variant)] // an event is built once and shared behind an `Arc`; boxing buys nothing
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
 pub enum Event {
@@ -366,15 +369,40 @@ mod tests {
     #[test]
     fn states_use_the_design_systems_words() {
         let words: Vec<String> = [
-            State::Idle, State::Listening, State::Thinking, State::Working, State::Compute,
-            State::Speaking, State::Needs, State::Done, State::Error, State::Sleeping,
+            State::Idle,
+            State::Listening,
+            State::Thinking,
+            State::Working,
+            State::Compute,
+            State::Speaking,
+            State::Needs,
+            State::Done,
+            State::Error,
+            State::Sleeping,
         ]
         .iter()
-        .map(|s| serde_json::to_value(s).unwrap().as_str().unwrap().to_owned())
+        .map(|s| {
+            serde_json::to_value(s)
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_owned()
+        })
         .collect();
         assert_eq!(
             words,
-            ["idle", "listening", "thinking", "working", "compute", "speaking", "needs", "done", "error", "sleeping"]
+            [
+                "idle",
+                "listening",
+                "thinking",
+                "working",
+                "compute",
+                "speaking",
+                "needs",
+                "done",
+                "error",
+                "sleeping"
+            ]
         );
     }
 
@@ -397,7 +425,11 @@ mod tests {
 
     #[test]
     fn client_names_follow_the_engines_rule() {
-        assert!(valid_client_name("panacea-island") && valid_client_name("a") && valid_client_name("x.y_z-1"));
+        assert!(
+            valid_client_name("panacea-island")
+                && valid_client_name("a")
+                && valid_client_name("x.y_z-1")
+        );
         for bad in ["", "-x", "Panacea", "has space", "a/b", &"a".repeat(65)] {
             assert!(!valid_client_name(bad), "{bad}");
         }
@@ -408,7 +440,9 @@ mod tests {
         let s = Stamped {
             id: 7,
             at: 1,
-            event: Event::BotsChanged { names: vec!["kai".into()] },
+            event: Event::BotsChanged {
+                names: vec!["kai".into()],
+            },
         };
         let v = serde_json::to_value(&s).unwrap();
         assert_eq!(v["id"], 7);

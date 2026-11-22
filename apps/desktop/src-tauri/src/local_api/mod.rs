@@ -11,9 +11,9 @@
 pub mod approvals;
 pub mod audit;
 pub mod connect;
-pub mod engine;
 #[cfg(test)]
 mod endpoint_tests;
+pub mod engine;
 pub mod feed;
 pub mod http;
 pub mod look;
@@ -127,7 +127,10 @@ impl LocalApi {
         if read_switch(&self.dir) {
             if let Err(e) = self.listen().await {
                 tracing::warn!(error = %e, "the local API did not start");
-                *self.problem.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(e);
+                *self
+                    .problem
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(e);
             }
         } else {
             // A token file left by a crash of a run that had it on is not left lying about.
@@ -141,12 +144,18 @@ impl LocalApi {
         if running.is_some() {
             return Ok(());
         }
-        let tok = token::Token::mint().map_err(|e| format!("boopis could not make a token: {e}"))?;
+        let tok =
+            token::Token::mint().map_err(|e| format!("boopis could not make a token: {e}"))?;
         let files = token::Files::under(&self.dir);
-        files.write_token(&tok).map_err(|e| format!("boopis could not write the token file: {e}"))?;
+        files
+            .write_token(&tok)
+            .map_err(|e| format!("boopis could not write the token file: {e}"))?;
         if !files.token_is_private() {
             files.remove();
-            return Err("The token file would be readable by other users, so the endpoint stays off.".to_owned());
+            return Err(
+                "The token file would be readable by other users, so the endpoint stays off."
+                    .to_owned(),
+            );
         }
         self.feed.never_say(vec![tok.expose().to_owned()]);
         let server = Server::start(self.service.clone(), tok, self.limits.clone())
@@ -162,7 +171,10 @@ impl LocalApi {
         }
         tracing::info!(addr = %server.addr(), "the local API is listening");
         *running = Some(Running { server });
-        *self.problem.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = None;
+        *self
+            .problem
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = None;
         Ok(())
     }
 
@@ -173,11 +185,21 @@ impl LocalApi {
         LocalApiStatus {
             enabled: read_switch(&self.dir),
             running: running.is_some(),
-            url: running.as_ref().map(|r| format!("http://{}", r.server.addr())),
-            token_file: running.as_ref().map(|_| files.token_path().display().to_string()),
-            streams: running.as_ref().map_or(0, |r| u32::try_from(r.server.streams()).unwrap_or(u32::MAX)),
+            url: running
+                .as_ref()
+                .map(|r| format!("http://{}", r.server.addr())),
+            token_file: running
+                .as_ref()
+                .map(|_| files.token_path().display().to_string()),
+            streams: running
+                .as_ref()
+                .map_or(0, |r| u32::try_from(r.server.streams()).unwrap_or(u32::MAX)),
             version: model::API_VERSION,
-            problem: self.problem.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone(),
+            problem: self
+                .problem
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .clone(),
         }
     }
 
@@ -186,10 +208,14 @@ impl LocalApi {
     /// # Errors
     /// The words that say why the endpoint did not start.
     pub async fn set_enabled(&self, enabled: bool) -> Result<LocalApiStatus, String> {
-        write_switch(&self.dir, enabled).map_err(|e| format!("boopis could not save the setting: {e}"))?;
+        write_switch(&self.dir, enabled)
+            .map_err(|e| format!("boopis could not save the setting: {e}"))?;
         if enabled {
             if let Err(e) = self.listen().await {
-                *self.problem.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(e.clone());
+                *self
+                    .problem
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(e.clone());
                 return Err(e);
             }
         } else {
@@ -199,7 +225,10 @@ impl LocalApi {
             }
             token::Files::under(&self.dir).remove();
             self.feed.never_say(Vec::new());
-            *self.problem.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = None;
+            *self
+                .problem
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner) = None;
         }
         Ok(self.status().await)
     }
@@ -214,9 +243,12 @@ impl LocalApi {
             let Some(r) = running.as_ref() else {
                 return Err("The endpoint is off; there is no token to rotate.".to_owned());
             };
-            let tok = token::Token::mint().map_err(|e| format!("boopis could not make a token: {e}"))?;
+            let tok =
+                token::Token::mint().map_err(|e| format!("boopis could not make a token: {e}"))?;
             let files = token::Files::under(&self.dir);
-            files.write_token(&tok).map_err(|e| format!("boopis could not write the token file: {e}"))?;
+            files
+                .write_token(&tok)
+                .map_err(|e| format!("boopis could not write the token file: {e}"))?;
             self.feed.never_say(vec![tok.expose().to_owned()]);
             r.server.rotate(tok);
         }
@@ -260,4 +292,59 @@ pub fn forward(feed: &Arc<Feed>, profile: &str, hub: &Arc<Hub>) {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_endpoint_is_off_when_nothing_says_otherwise() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(!read_switch(dir.path()), "no setting file: off");
+        assert!(!read_switch(&dir.path().join("missing")), "no folder: off");
+        std::fs::write(dir.path().join(SWITCH_FILE), "not json").unwrap();
+        assert!(
+            !read_switch(dir.path()),
+            "a setting that cannot be read is off, never on"
+        );
+        std::fs::write(dir.path().join(SWITCH_FILE), "{}").unwrap();
+        assert!(!read_switch(dir.path()), "a setting with no switch is off");
+        std::fs::write(dir.path().join(SWITCH_FILE), r#"{"enabled": "yes"}"#).unwrap();
+        assert!(!read_switch(dir.path()), "only a real true turns it on");
+    }
+
+    #[test]
+    fn the_owners_switch_is_kept_and_turned_off_again() {
+        let dir = tempfile::tempdir().unwrap();
+        write_switch(dir.path(), true).unwrap();
+        assert!(read_switch(dir.path()));
+        write_switch(dir.path(), false).unwrap();
+        assert!(!read_switch(dir.path()));
+    }
+
+    #[test]
+    fn the_status_never_has_a_field_for_the_token() {
+        let status = LocalApiStatus {
+            enabled: true,
+            running: true,
+            url: Some("http://127.0.0.1:47821".into()),
+            token_file: Some("/data/client-token".into()),
+            streams: 1,
+            version: model::API_VERSION,
+            problem: None,
+        };
+        let json = serde_json::to_value(&status).unwrap();
+        let keys: Vec<&str> = json
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        assert!(
+            keys.iter()
+                .all(|k| !k.contains("token") || *k == "token_file"),
+            "{keys:?}"
+        );
+    }
 }

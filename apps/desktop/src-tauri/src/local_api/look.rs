@@ -86,7 +86,11 @@ mod tests {
         let record = serde_json::json!({"look": {"shape": "hexagon", "color": ""}});
         let got = resolve("kai", Some(&record));
         assert_eq!(got.shape, "hexagon");
-        assert_eq!(got.color, look_for("kai").color, "an empty colour is the default's");
+        assert_eq!(
+            got.color,
+            look_for("kai").color,
+            "an empty colour is the default's"
+        );
         assert_eq!(resolve("kai", None), look_for("kai"));
         let junk = serde_json::json!({"look": {"shape": 3}});
         assert_eq!(resolve("kai", Some(&junk)), look_for("kai"));

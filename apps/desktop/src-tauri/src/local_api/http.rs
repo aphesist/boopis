@@ -2,6 +2,7 @@
 //! dependency; the ChatGPT callback is the precedent). One request per connection, except the event stream. Every rule of
 //! `wire` is applied here in the order that model fixes; routing starts only after the token has passed.
 
+use std::fmt::Write as _;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::{Arc, Mutex, PoisonError, RwLock};
 use std::time::Instant;
@@ -33,7 +34,7 @@ struct Shared<E: Engine> {
     epoch: watch::Sender<u64>,
     limits: ApiLimits,
     limiters: Mutex<Limiters>,
-    connections: Semaphore,
+    connections: Arc<Semaphore>,
     streams: Semaphore,
     port: u16,
 }
@@ -50,7 +51,11 @@ impl<E: Engine> Server<E> {
     ///
     /// # Errors
     /// The I/O error when no port can be had.
-    pub async fn start(service: Arc<Service<E>>, token: Token, limits: ApiLimits) -> std::io::Result<Self> {
+    pub async fn start(
+        service: Arc<Service<E>>,
+        token: Token,
+        limits: ApiLimits,
+    ) -> std::io::Result<Self> {
         let listener = match TcpListener::bind((Ipv4Addr::LOCALHOST, limits.preferred_port)).await {
             Ok(l) => l,
             Err(_) => TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await?,
@@ -62,7 +67,12 @@ impl<E: Engine> Server<E> {
     ///
     /// # Errors
     /// The I/O error of reading the listener's address.
-    pub fn serve(listener: TcpListener, service: Arc<Service<E>>, token: Token, limits: ApiLimits) -> std::io::Result<Self> {
+    pub fn serve(
+        listener: TcpListener,
+        service: Arc<Service<E>>,
+        token: Token,
+        limits: ApiLimits,
+    ) -> std::io::Result<Self> {
         let addr = listener.local_addr()?;
         let now = Instant::now();
         let shared = Arc::new(Shared {
@@ -74,14 +84,18 @@ impl<E: Engine> Server<E> {
                 writes: Bucket::new(limits.write_rate, now),
                 door: DoorGuard::default(),
             }),
-            connections: Semaphore::new(limits.max_connections),
+            connections: Arc::new(Semaphore::new(limits.max_connections)),
             streams: Semaphore::new(limits.max_streams),
             limits,
             port: addr.port(),
         });
         let cancel = CancellationToken::new();
         tokio::spawn(accept_loop(listener, shared.clone(), cancel.clone()));
-        Ok(Self { shared, addr, cancel })
+        Ok(Self {
+            shared,
+            addr,
+            cancel,
+        })
     }
 
     /// Where it listens.
@@ -92,7 +106,11 @@ impl<E: Engine> Server<E> {
 
     /// Replace the token: the old one stops working at once and every open stream ends.
     pub fn rotate(&self, token: Token) {
-        *self.shared.token.write().unwrap_or_else(PoisonError::into_inner) = token;
+        *self
+            .shared
+            .token
+            .write()
+            .unwrap_or_else(PoisonError::into_inner) = token;
         self.shared.epoch.send_modify(|e| *e += 1);
     }
 
@@ -114,18 +132,30 @@ impl<E: Engine> Drop for Server<E> {
     }
 }
 
-async fn accept_loop<E: Engine>(listener: TcpListener, shared: Arc<Shared<E>>, cancel: CancellationToken) {
+async fn accept_loop<E: Engine>(
+    listener: TcpListener,
+    shared: Arc<Shared<E>>,
+    cancel: CancellationToken,
+) {
     loop {
         let accepted = tokio::select! {
             () = cancel.cancelled() => return,
             a = listener.accept() => a,
         };
-        let Ok((mut stream, peer)) = accepted else { continue };
+        let Ok((mut stream, peer)) = accepted else {
+            continue;
+        };
         if peer.ip() != IpAddr::V4(Ipv4Addr::LOCALHOST) {
             continue; // the listener is loopback only; this is belt and braces
         }
         let Ok(permit) = shared.connections.clone().try_acquire_owned() else {
-            let _ = write_json(&mut stream, 503, &error_body("busy", "Too many connections. Try again in a moment."), &[]).await;
+            let _ = write_json(
+                &mut stream,
+                503,
+                &error_body("busy", "Too many connections. Try again in a moment."),
+                &[],
+            )
+            .await;
             continue;
         };
         let (shared, cancel) = (shared.clone(), cancel.clone());
@@ -164,7 +194,12 @@ fn reason(status: u16) -> &'static str {
 
 const COMMON: &str = "Cache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: default-src 'none'\r\nConnection: close\r\n";
 
-async fn write_json(stream: &mut TcpStream, status: u16, body: &Value, extra: &[(&str, String)]) -> std::io::Result<()> {
+async fn write_json(
+    stream: &mut TcpStream,
+    status: u16,
+    body: &Value,
+    extra: &[(&str, String)],
+) -> std::io::Result<()> {
     let text = body.to_string();
     let mut head = format!(
         "HTTP/1.1 {status} {}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\n{COMMON}",
@@ -172,7 +207,7 @@ async fn write_json(stream: &mut TcpStream, status: u16, body: &Value, extra: &[
         text.len()
     );
     for (k, v) in extra {
-        head.push_str(&format!("{k}: {v}\r\n"));
+        let _ = write!(head, "{k}: {v}\r\n");
     }
     head.push_str("\r\n");
     stream.write_all(head.as_bytes()).await?;
@@ -192,9 +227,16 @@ async fn refuse(stream: &mut TcpStream, r: &Reject) {
 }
 
 /// Read the head, and the body the head declares.
-async fn read_request<E: Engine>(stream: &mut TcpStream, shared: &Shared<E>) -> Result<(Head, Vec<u8>), Reject> {
+async fn read_request<E: Engine>(
+    stream: &mut TcpStream,
+    shared: &Shared<E>,
+) -> Result<(Head, Vec<u8>), Reject> {
     let limits = &shared.limits;
-    let slow = Reject { status: 400, code: "timeout", message: "The request took too long to arrive." };
+    let slow = Reject {
+        status: 400,
+        code: "timeout",
+        message: "The request took too long to arrive.",
+    };
     let mut buf: Vec<u8> = Vec::with_capacity(1024);
     let deadline = tokio::time::Instant::now() + limits.read_timeout;
     let end = loop {
@@ -202,12 +244,22 @@ async fn read_request<E: Engine>(stream: &mut TcpStream, shared: &Shared<E>) -> 
             break end;
         }
         if buf.len() > limits.max_head {
-            return Err(Reject { status: 431, code: "head_too_large", message: "The request's headers are too large." });
+            return Err(Reject {
+                status: 431,
+                code: "head_too_large",
+                message: "The request's headers are too large.",
+            });
         }
         let mut chunk = [0u8; 1024];
         let n = match tokio::time::timeout_at(deadline, stream.read(&mut chunk)).await {
             Ok(Ok(n)) if n > 0 => n,
-            Ok(_) => return Err(Reject { status: 400, code: "bad_request", message: "The request ended too soon." }),
+            Ok(_) => {
+                return Err(Reject {
+                    status: 400,
+                    code: "bad_request",
+                    message: "The request ended too soon.",
+                });
+            }
             Err(_) => return Err(slow),
         };
         buf.extend_from_slice(&chunk[..n]);
@@ -226,7 +278,13 @@ async fn read_request<E: Engine>(stream: &mut TcpStream, shared: &Shared<E>) -> 
         let mut chunk = [0u8; 4096];
         let n = match tokio::time::timeout_at(deadline, stream.read(&mut chunk)).await {
             Ok(Ok(n)) if n > 0 => n,
-            Ok(_) => return Err(Reject { status: 400, code: "bad_request", message: "The request ended too soon." }),
+            Ok(_) => {
+                return Err(Reject {
+                    status: 400,
+                    code: "bad_request",
+                    message: "The request ended too soon.",
+                });
+            }
             Err(_) => return Err(slow),
         };
         body.extend_from_slice(&chunk[..n.min(want - body.len())]);
@@ -236,24 +294,50 @@ async fn read_request<E: Engine>(stream: &mut TcpStream, shared: &Shared<E>) -> 
 
 fn authenticate<E: Engine>(head: &Head, shared: &Shared<E>) -> Result<(), Reject> {
     let now = Instant::now();
-    let mut lim = shared.limiters.lock().unwrap_or_else(PoisonError::into_inner);
+    let mut lim = shared
+        .limiters
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
     if lim.door.shut(now) {
-        return Err(Reject { status: 429, code: "too_many_failures", message: "Too many wrong tokens. Wait a few seconds and try again." });
+        return Err(Reject {
+            status: 429,
+            code: "too_many_failures",
+            message: "Too many wrong tokens. Wait a few seconds and try again.",
+        });
     }
-    let good = wire::authorized(head, &shared.token.read().unwrap_or_else(PoisonError::into_inner));
+    let good = wire::authorized(
+        head,
+        &shared.token.read().unwrap_or_else(PoisonError::into_inner),
+    );
     if !good {
         lim.door.failed(now, &shared.limits);
-        return Err(Reject { status: 401, code: "unauthorized", message: "A valid token is needed: send the contents of the client-token file as a Bearer token." });
+        return Err(Reject {
+            status: 401,
+            code: "unauthorized",
+            message: "A valid token is needed: send the contents of the client-token file as a Bearer token.",
+        });
     }
     lim.door.succeeded();
-    let bucket = if head.method == Method::Post { &mut lim.writes } else { &mut lim.reads };
+    let bucket = if head.method == Method::Post {
+        &mut lim.writes
+    } else {
+        &mut lim.reads
+    };
     if !bucket.take(now) {
-        return Err(Reject { status: 429, code: "rate_limited", message: "Too many requests. Slow down." });
+        return Err(Reject {
+            status: 429,
+            code: "rate_limited",
+            message: "Too many requests. Slow down.",
+        });
     }
     Ok(())
 }
 
-async fn serve_one<E: Engine>(mut stream: TcpStream, shared: &Arc<Shared<E>>, cancel: &CancellationToken) {
+async fn serve_one<E: Engine>(
+    mut stream: TcpStream,
+    shared: &Arc<Shared<E>>,
+    cancel: &CancellationToken,
+) {
     let (head, body) = match read_request(&mut stream, shared).await {
         Ok(r) => r,
         Err(r) => {
@@ -275,15 +359,26 @@ async fn serve_one<E: Engine>(mut stream: TcpStream, shared: &Arc<Shared<E>>, ca
 }
 
 fn segment_ok(s: &str) -> bool {
-    !s.is_empty() && s.len() <= 128 && s.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b':'))
+    !s.is_empty()
+        && s.len() <= 128
+        && s.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b':'))
 }
 
 fn not_found() -> ApiError {
-    ApiError { status: 404, code: "not_found", message: "There is nothing at that address.".into() }
+    ApiError {
+        status: 404,
+        code: "not_found",
+        message: "There is nothing at that address.".into(),
+    }
 }
 
 fn bad_json() -> ApiError {
-    ApiError { status: 400, code: "bad_json", message: "The body must be a JSON object with the fields the call names.".into() }
+    ApiError {
+        status: 400,
+        code: "bad_json",
+        message: "The body must be a JSON object with the fields the call names.".into(),
+    }
 }
 
 fn object(body: &[u8]) -> Result<serde_json::Map<String, Value>, ApiError> {
@@ -293,34 +388,59 @@ fn object(body: &[u8]) -> Result<serde_json::Map<String, Value>, ApiError> {
     }
 }
 
-async fn route<E: Engine>(shared: &Shared<E>, head: &Head, body: &[u8], caller: &Caller) -> Result<Value, ApiError> {
+async fn route<E: Engine>(
+    shared: &Shared<E>,
+    head: &Head,
+    body: &[u8],
+    caller: &Caller,
+) -> Result<Value, ApiError> {
     let feed = shared.service.feed();
     let parts: Vec<&str> = head.path.trim_start_matches('/').split('/').collect();
-    let method_not_allowed = || ApiError { status: 405, code: "method_not_allowed", message: "That address does not take this method.".into() };
+    let method_not_allowed = || ApiError {
+        status: 405,
+        code: "method_not_allowed",
+        message: "That address does not take this method.".into(),
+    };
     match (head.method, parts.as_slice()) {
         (Method::Get, ["v1"]) => Ok(json!({
             "name": "boopis", "api": API_VERSION,
             "endpoints": ["GET /v1/bots", "GET /v1/presence", "GET /v1/notifications", "GET /v1/approvals", "POST /v1/approvals/<id>",
                           "POST /v1/bots/<name>/say", "GET /v1/rooms", "POST /v1/rooms/<id>/say", "GET /v1/events"]
         })),
-        (Method::Get, ["v1", "bots"]) => Ok(json!({"bots": feed.bots(), "last_event_id": feed.last_id()})),
-        (Method::Get, ["v1", "presence"]) => Ok(json!({"presence": feed.presence(), "last_event_id": feed.last_id()})),
+        (Method::Get, ["v1", "bots"]) => {
+            Ok(json!({"bots": feed.bots(), "last_event_id": feed.last_id()}))
+        }
+        (Method::Get, ["v1", "presence"]) => {
+            Ok(json!({"presence": feed.presence(), "last_event_id": feed.last_id()}))
+        }
         (Method::Get, ["v1", "notifications"]) => {
             let after = head.param("after").and_then(|a| a.parse::<u64>().ok());
-            let limit = head.param("limit").and_then(|a| a.parse::<usize>().ok()).unwrap_or(50).clamp(1, 200);
+            let limit = head
+                .param("limit")
+                .and_then(|a| a.parse::<usize>().ok())
+                .unwrap_or(50)
+                .clamp(1, 200);
             Ok(json!({"notifications": feed.notifications(after, limit)}))
         }
-        (Method::Get, ["v1", "approvals"]) => Ok(json!({"approvals": feed.approvals(head.param("all").is_some_and(|v| v == "1" || v == "true"))})),
+        (Method::Get, ["v1", "approvals"]) => Ok(
+            json!({"approvals": feed.approvals(head.param("all").is_some_and(|v| v == "1" || v == "true"))}),
+        ),
         (Method::Get, ["v1", "rooms"]) => Ok(json!({"rooms": feed.rooms()})),
         (Method::Post, ["v1", "approvals", id]) if segment_ok(id) => {
             let m = object(body)?;
-            let choice = m.get("choice").and_then(Value::as_str).ok_or_else(|| ApiError {
-                status: 400,
-                code: "choice_required",
-                message: "Say what to do: choice is once or deny. There is no default.".into(),
-            })?;
+            let choice = m
+                .get("choice")
+                .and_then(Value::as_str)
+                .ok_or_else(|| ApiError {
+                    status: 400,
+                    code: "choice_required",
+                    message: "Say what to do: choice is once or deny. There is no default.".into(),
+                })?;
             let generation = m.get("execution_generation").and_then(Value::as_u64);
-            let row = shared.service.answer(id, choice, generation, caller).await?;
+            let row = shared
+                .service
+                .answer(id, choice, generation, caller)
+                .await?;
             Ok(json!({"approval": row}))
         }
         (Method::Post, ["v1", "bots", name, "say"]) if segment_ok(name) => {
@@ -336,15 +456,26 @@ async fn route<E: Engine>(shared: &Shared<E>, head: &Head, body: &[u8], caller: 
             shared.service.say_room(id, text, caller).await?;
             Ok(json!({"ok": true}))
         }
-        (Method::Get, ["v1", "approvals", _] | ["v1", "bots", _, "say"] | ["v1", "rooms", _, "say"])
-        | (Method::Post, ["v1"] | ["v1", "bots" | "presence" | "notifications" | "approvals" | "rooms" | "events"]) => Err(method_not_allowed()),
+        (Method::Get, ["v1", "approvals", _] | ["v1", "bots" | "rooms", _, "say"])
+        | (
+            Method::Post,
+            ["v1"]
+            | [
+                "v1",
+                "bots" | "presence" | "notifications" | "approvals" | "rooms" | "events",
+            ],
+        ) => Err(method_not_allowed()),
         _ => Err(not_found()),
     }
 }
 
 fn sse(stamped: &Stamped) -> String {
     let data = serde_json::to_string(stamped).unwrap_or_default();
-    format!("id: {}\nevent: {}\ndata: {data}\n\n", stamped.id, stamped.event.name())
+    format!(
+        "id: {}\nevent: {}\ndata: {data}\n\n",
+        stamped.id,
+        stamped.event.name()
+    )
 }
 
 fn sse_plain(event: &str, data: &Value) -> String {
@@ -353,28 +484,53 @@ fn sse_plain(event: &str, data: &Value) -> String {
 
 /// Write to a stream within the write limit; false when the client is gone or too slow (the stream then ends).
 async fn put(stream: &mut TcpStream, text: &str, limit: std::time::Duration) -> bool {
-    matches!(tokio::time::timeout(limit, stream.write_all(text.as_bytes())).await, Ok(Ok(())))
+    matches!(
+        tokio::time::timeout(limit, stream.write_all(text.as_bytes())).await,
+        Ok(Ok(()))
+    )
 }
 
-async fn events<E: Engine>(mut stream: TcpStream, shared: &Arc<Shared<E>>, head: &Head, cancel: &CancellationToken) {
+async fn events<E: Engine>(
+    mut stream: TcpStream,
+    shared: &Arc<Shared<E>>,
+    head: &Head,
+    cancel: &CancellationToken,
+) {
     let Ok(_permit) = shared.streams.try_acquire() else {
-        let _ = write_json(&mut stream, 503, &error_body("too_many_streams", "Too many event streams are open. Close one first."), &[]).await;
+        let _ = write_json(
+            &mut stream,
+            503,
+            &error_body(
+                "too_many_streams",
+                "Too many event streams are open. Close one first.",
+            ),
+            &[],
+        )
+        .await;
         return;
     };
     let limit = shared.limits.read_timeout;
-    let since = head.header("last-event-id").and_then(|v| v.trim().parse::<u64>().ok());
+    let since = head
+        .header("last-event-id")
+        .and_then(|v| v.trim().parse::<u64>().ok());
     let sub = shared.service.feed().subscribe(since);
     let mut epoch = shared.epoch.subscribe();
     epoch.borrow_and_update();
     let preamble = format!(
         "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream; charset=utf-8\r\nX-Accel-Buffering: no\r\n{COMMON}\r\nretry: 3000\n\n"
     );
-    let hello = sse_plain("hello", &json!({"version": API_VERSION, "last_event_id": shared.service.feed().last_id()}));
+    let hello = sse_plain(
+        "hello",
+        &json!({"version": API_VERSION, "last_event_id": shared.service.feed().last_id()}),
+    );
     if !put(&mut stream, &preamble, limit).await || !put(&mut stream, &hello, limit).await {
         return;
     }
     if sub.gap {
-        let gap = sse_plain("lagged", &json!({"skipped": 0, "reason": "the last id the stream sent is older than the events kept"}));
+        let gap = sse_plain(
+            "lagged",
+            &json!({"skipped": 0, "reason": "the last id the stream sent is older than the events kept"}),
+        );
         if !put(&mut stream, &gap, limit).await {
             return;
         }
@@ -384,7 +540,9 @@ async fn events<E: Engine>(mut stream: TcpStream, shared: &Arc<Shared<E>>, head:
             return;
         }
     }
-    let Subscription { mut rx, consumer, .. } = sub;
+    let Subscription {
+        mut rx, consumer, ..
+    } = sub;
     let _consumer = consumer; // the feed polls the engine for as long as this stream lives
     let mut beat = tokio::time::interval(shared.limits.keepalive);
     beat.tick().await;
