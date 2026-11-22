@@ -265,3 +265,5 @@ orb-avatar.is-live { cursor: pointer; }
 /* the messages a group holds back while its members work (group-queue.ts): the kit's group and rows, above the composer */
 .bt-queue { margin: 0 0 var(--sp-2); }
 .bt-queue[hidden] { display: none; }
+.bt-outside { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-1); }
+.bt-outside__row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); margin: 0; font: 400 var(--fs-xs)/var(--lh-small) var(--sans); color: var(--text-quiet); }

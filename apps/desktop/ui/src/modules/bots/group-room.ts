@@ -68,7 +68,16 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
   c.input.setAttribute('data-hx-focus', 'composer');
   c.addEventListener('ui:send', (e) => { send((e as CustomEvent<{ text: string }>).detail.text); });
   c.addEventListener('ui:stop', () => { stopTalk(); });
-  const showHint = (): void => { const g = group(S.groupSel); const t = g ? outsideHint(g, c.value) : ''; hint.textContent = t; hint.hidden = !t; };
+  const showHint = (): void => {
+    const g = group(S.groupSel); const t = g ? outsideHint(g, c.value) : '';
+    hint.textContent = t; hint.hidden = !t;
+    if (!g || !t) return;
+    for (const b of ui.markdown.outsiders(c.value, g.members, outsiders(g))) {
+      const go = ui.button({ label: 'Send to ' + b.name, size: 's', variant: 'ghost' });
+      go.addEventListener('click', () => { const draft = c.value.trim(); c.setValue(''); showHint(); sendToBot(b, draft); });
+      hint.append(' ', go);
+    }
+  };
   c.input.addEventListener('input', showHint);
   c.addEventListener('ui:send', () => { window.setTimeout(showHint, 0); });
   G.composer = c;
@@ -161,10 +170,31 @@ const mdBot = (m: GroupMember): MdBot => { const b = bot(m.profile); return { ..
 /** the bots that exist and are not in the room: a mention of one is a muted chip, and the composer says so before sending */
 const outsiders = (g: Group): Array<MdBot & { handle: string }> => S.bots.filter((b) => !g.members.some((m) => m.profile === b.id)).map((b) => ({ ...b, id: b.id, name: b.name, handle: b.id }));
 const ctxOf = (g: Group): MarkdownCtx => mentionCtx(g.members.map(mdBot), { everyone: true, outside: outsiders(g) });
-/** the quiet hint under a draft that names a bot that is not here: "nimbus isn't in this room: add them, or send without them" */
+/** the quiet hint under a draft that names a bot that is not here: "nimbus isn't in this room: send it to their chat, or send without them" */
 export function outsideHint(g: Group, text: string): string {
   const out = ui.markdown.outsiders(text, g.members, outsiders(g));
-  return out.length ? listWords(out.map((b) => b.name)) + (out.length === 1 ? " isn't" : " aren't") + ' in this room: add them, or send without them' : '';
+  return out.length ? listWords(out.map((b) => b.name)) + (out.length === 1 ? " isn't" : " aren't") + ' in this room: send it to ' + (out.length === 1 ? 'their' : 'their own') + ' chat, or send without them' : '';
+}
+/** a message of this room opened in a bot's own chat, as a draft the owner sends (nothing is forwarded by itself; rosters are frozen, so the bot cannot join) */
+export function sendToBot(bot: { id: string }, text: string): void {
+  emit('hx:bot-select', { id: bot.id, from: 'group' });
+  const c = S.composer; if (!c) return;
+  c.setValue(text); c.focus();
+}
+/** under a member's message that names a bot that is not in the room: it says so, and offers the message in that bot's own chat */
+function outsideNote(g: Group, m: GroupText): HTMLElement | null {
+  const out = ui.markdown.outsiders(m.text, g.members, outsiders(g));
+  if (!out.length) return null;
+  const note = el('div', { class: 'bt-outside', role: 'status' });
+  for (const b of out) {
+    const row = el('p', { class: 'bt-outside__row' });
+    row.append(el('span', { text: b.name + " isn't in this room" }));
+    const go = ui.button({ label: 'Send to ' + b.name, size: 's', variant: 'ghost' });
+    go.addEventListener('click', () => { sendToBot(b, 'From ' + (memberOf(g, m.who)?.name ?? m.who) + ' in ' + g.name + ':\n' + m.text.split('\n').map((l) => '> ' + l).join('\n') + '\n\n'); });
+    row.append(go);
+    note.append(row);
+  }
+  return note;
 }
 /** other parts of the room's composer can hold a message back (a running turn it would cancel): a guard returns false to stop the send */
 const GUARDS: Array<(g: Group, text: string) => boolean> = [];
@@ -248,9 +278,10 @@ function renderMsg(g: Group, m: GroupMessage, prev: GroupMessage | null, prevEnt
   if (you) { node = frag(ui.html.request('')); node.innerHTML = ui.markdown.plain(m.text, ctx); }
   else node = ui.markdown(m.text, ctx);
   NODE.set(m.id, node);
+  const away = you ? null : outsideNote(g, m);
   const info = prevEntry ? ENTRY.get(prevEntry) : undefined;
   if (prev && prev.kind === 'text' && prev.who === m.who && prevEntry && prevEntry.isConnected && info && info.to === toKey) {
-    $('.ui-entry__body', prevEntry).append(node);
+    $('.ui-entry__body', prevEntry).append(node, ...(away ? [away] : []));
     info.msgs.push(m);
     if (!you) void resolvePaths(node, rootsOf(g, m.who));
     return prevEntry;
@@ -259,7 +290,7 @@ function renderMsg(g: Group, m: GroupMessage, prev: GroupMessage | null, prevEnt
   const who = member ? orbHTML(memberBot(member), 20, { state: 'idle' }) + '<span class="bt-who-name">' + esc(member.name) + '</span>' : esc(you ? 'You' : m.who);
   const name = you ? 'You' : (member?.name ?? m.who);
   const entry = frag(ui.html.entry({ kind: you ? 'user' : 'bot', who, callno: m.t ? [m.t] : [], label: name + (to.length ? ', to ' + listWords(to) : '') + (m.t ? ', ' + m.t : '') }));
-  $('.ui-entry__body', entry).append(node);
+  $('.ui-entry__body', entry).append(node, ...(away ? [away] : []));
   placeToLine(entry, toLine(to));
   entry.setAttribute('data-hx-turn', ''); entry.tabIndex = -1;
   ENTRY.set(entry, { msgs: [m], who: m.who, to: toKey });

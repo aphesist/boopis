@@ -58,6 +58,33 @@ describe('groups in the list', () => {
   });
 });
 
+describe('a bot that is not in the room, named in it', () => {
+  beforeEach(async () => {
+    (Range.prototype as unknown as { getBoundingClientRect: () => DOMRect }).getBoundingClientRect = () => ({ x: 0, y: 0, width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0, toJSON: () => ({}) }); mount(withGroups()); q('.bt-groups .ui-row').click(); await flush(); });
+  it('says so under a member’s message and offers it in that bot’s own chat, without sending it anywhere', async () => {
+    const { onGroupsEvent } = await import('./group-room');
+    const g = provider.groups.snapshot().groups[0]!;
+    onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'text', id: 'x1', who: g.members[0]!.id, t: '10:05', text: '@sol please confirm the tag. Thanks @kai.', round: 1, to: [] } });
+    const note = q('.bt-group .bt-outside');
+    expect(note.textContent).toContain("sol isn't in this room");
+    expect(note.textContent).not.toContain('kai');
+    q<HTMLButtonElement>('.bt-group .bt-outside button').click();
+    expect(S.view).toBe('bot');
+    expect(S.sel).toBe('sol');
+    expect(S.composer!.value).toContain('> @sol please confirm the tag.');
+    expect(calls.some((c) => c.fn === 'send')).toBe(false);
+  });
+  it('hints under the owner’s draft, with the same action', () => {
+    const c = q('.bt-group .ui-composer');
+    (c as unknown as { setValue(t: string): void }).setValue('@sol are you there');
+    c.querySelector<HTMLElement>('[contenteditable], .ui-composer__input')?.dispatchEvent(new Event('input', { bubbles: true }));
+    const hint = q('.bt-group .bt-hint');
+    expect(hint.hidden).toBe(false);
+    expect(hint.textContent).toContain("sol isn't in this room");
+    expect(hint.querySelector('button')?.textContent).toBe('Send to sol');
+  });
+});
+
 describe('a group’s thread', () => {
   beforeEach(() => { mount(withGroups()); q('.bt-groups .ui-row').click(); });
   it('opens in the room, reads its messages, and names the members under its name', async () => {
