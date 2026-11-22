@@ -571,6 +571,31 @@ fn audience_has(v: &Value, client_id: &str) -> bool {
     }
 }
 
+/// OpenAI's published RSA signing keys (`/.well-known/jwks.json`), fetched now.
+///
+/// # Errors
+/// `hx.signin.unreachable` when they cannot be fetched, `hx.signin.failed` for an answer that is not 200.
+pub fn signing_keys(transport: &dyn Transport, ep: &Endpoints) -> Result<Vec<Value>> {
+    let published = fetch(transport, &ep.jwks())?;
+    if published.status != 200 {
+        return Err(failed(
+            "hx.signin.failed",
+            format!(
+                "OpenAI's signing keys could not be read (HTTP {})",
+                published.status
+            ),
+        ));
+    }
+    let keys: Value = serde_json::from_str(&published.body).unwrap_or(Value::Null);
+    Ok(keys["keys"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|jwk| jwk["kty"].as_str() == Some("RSA"))
+        .cloned()
+        .collect())
+}
+
 /// Check `id_token` as the program asks: an RS256 signature against OpenAI's published keys (fetched now), the issuer, the
 /// audience (the issued client id), the times and the nonce.
 ///
@@ -598,22 +623,9 @@ pub fn verify_id_token(
         return Err(bad_id("it is not signed with RS256"));
     }
     let kid = header["kid"].as_str();
-    let published = fetch(transport, &ep.jwks())?;
-    if published.status != 200 {
-        return Err(failed(
-            "hx.signin.failed",
-            format!(
-                "OpenAI's signing keys could not be read (HTTP {})",
-                published.status
-            ),
-        ));
-    }
-    let keys: Value = serde_json::from_str(&published.body).unwrap_or(Value::Null);
-    let key = keys["keys"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter(|jwk| jwk["kty"].as_str() == Some("RSA"))
+    let keys = signing_keys(transport, ep)?;
+    let key = keys
+        .iter()
         .find(|jwk| kid.is_none() || jwk["kid"].as_str() == kid)
         .ok_or_else(|| bad_id("no published key matches it"))?;
     let (Some(modulus), Some(exponent)) = (

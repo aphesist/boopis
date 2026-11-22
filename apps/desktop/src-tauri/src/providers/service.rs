@@ -308,24 +308,11 @@ impl Providers {
     }
 
     /// The model listing that checks a key: the way's own address, never another.
-    async fn verify(&self, way: &Way, key: &str) -> std::result::Result<KeyCheck, Error> {
-        let Some(base) = way.base_url.as_ref().and_then(|b| b.default.clone()) else {
-            return Ok(KeyCheck::Unverified(0));
-        };
-        let mode = way.api_mode.unwrap_or(ApiMode::ChatCompletions);
-        let address = Address::parse(&base)?;
-        let url = listing_url(&address, mode);
+    async fn verify(&self, way: &'static Way, key: &str) -> std::result::Result<KeyCheck, Error> {
         let (t, key) = (self.transport.clone(), key.to_owned());
-        let found = tokio::task::spawn_blocking(move || {
-            check_key(t.as_ref(), &address, &url.0, mode, &key).map(|c| (c, url.1))
-        })
-        .await
-        .map_err(|e| Error::Io(e.to_string()))??;
-        Ok(match found {
-            // a listing that is public (OpenRouter's) cannot tell a bad key; its key check answers 200 with no list
-            (KeyCheck::Unverified(s), true) if (200..300).contains(&s) => KeyCheck::Accepted(0),
-            (c, _) => c,
-        })
+        tokio::task::spawn_blocking(move || check_way_key(t.as_ref(), way, &key))
+            .await
+            .map_err(|e| Error::Io(e.to_string()))?
     }
 
     /// Restart the engine so it reads the key, when no turn is running; otherwise remember that it has to. The sentence to show,
@@ -652,6 +639,26 @@ impl Providers {
 
 /// Where a key's listing is asked, and whether that listing is the provider's authenticated key check (`/key`) instead of its
 /// model list. `OpenRouter`'s model list is public, so it cannot tell a bad key; its key endpoint can.
+/// Check a key for a key way with one model listing at the way's own address, never another. Blocking: run it on `spawn_blocking`.
+/// Saves nothing; the live probe (`tests/live_signins.rs`) calls it with a key no provider accepts.
+///
+/// # Errors
+/// `hx.provider.endpoint_invalid` for an address in the catalogue that is not one (never expected), `hx.provider.endpoint_blocked`
+/// for a redirect to another origin.
+pub fn check_way_key(t: &dyn Transport, way: &Way, key: &str) -> Result<KeyCheck> {
+    let Some(base) = way.base_url.as_ref().and_then(|b| b.default.clone()) else {
+        return Ok(KeyCheck::Unverified(0));
+    };
+    let mode = way.api_mode.unwrap_or(ApiMode::ChatCompletions);
+    let address = Address::parse(&base)?;
+    let (url, key_route) = listing_url(&address, mode);
+    Ok(match check_key(t, &address, &url, mode, key)? {
+        // a listing that is public (OpenRouter's) cannot tell a bad key; its key check answers 200 with no list
+        KeyCheck::Unverified(s) if key_route && (200..300).contains(&s) => KeyCheck::Accepted(0),
+        c => c,
+    })
+}
+
 fn listing_url(base: &Address, mode: ApiMode) -> (String, bool) {
     let text = base.text();
     if text.contains("//openrouter.ai/") {
@@ -691,7 +698,9 @@ fn claude_state(entry: &Entry, way: &Way, p: &claude::Probe) -> ProviderState {
     s
 }
 
-fn key_state(
+/// What a key way shows after its check: connected (with what the listing said) or an error with its code and plain words.
+#[must_use]
+pub fn key_state(
     entry: &Entry,
     way: &Way,
     found: &std::result::Result<KeyCheck, Error>,
