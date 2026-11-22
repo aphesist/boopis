@@ -21,6 +21,7 @@ pub mod frontier;
 pub mod gateway;
 pub mod gpu;
 pub mod hermes;
+pub mod kanban;
 pub mod local;
 pub mod migrate;
 pub mod os;
@@ -89,6 +90,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::connector_signin,
             commands::connector_signin_cancel,
             commands::connector_login,
+            commands::kanban_boards,
+            commands::kanban_view,
             commands::app_restart,
             commands::chatgpt_status,
             commands::chatgpt_signin_start,

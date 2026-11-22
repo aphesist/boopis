@@ -6,7 +6,12 @@ import type { Bot, BotInfo, DataProvider, ThreadMessage } from '../data';
 const info = (b: Bot): BotInfo => ({
   profile: b.id, path: '/home/you/.local/share/boopis/engine/profiles/' + b.id, model: 'anthropic/claude-sonnet-4.6', provider: 'anthropic',
   skills: [{ name: 'git', label: 'git', enabled: true }, { name: 'web', label: 'web', enabled: true }], toolsets: [{ name: 'terminal', label: 'Terminal', enabled: true }], mcpServers: [],
-  jobs: [{ id: 'j1', name: 'morning', schedule: '0 9 * * 1-5', prompt: 'Review what changed', enabled: true, next: 'in 2 h', last: null }],
+  jobs: [
+    { id: 'j1', name: 'morning', schedule: '0 9 * * 1-5', prompt: 'Review what changed', enabled: true, next: 'in 2 h', last: null, deliver: 'room:room-release@' + b.id },
+    { id: 'j2', name: 'notes', schedule: 'every 2h', prompt: 'Keep the notes tidy', enabled: true, next: 'in 1 h', last: null, deliver: 'local' },
+    { id: 'j3', name: 'digest', schedule: '0 18 * * *', prompt: 'Send the day\'s digest', enabled: false, next: '', last: 'ok', deliver: 'room:g-gone-1@' + b.id },
+    { id: 'j4', name: 'ping', schedule: '30m', prompt: 'Say hello', enabled: true, next: 'in 30 min', last: null, deliver: '' }
+  ],
   sessions: [
     { id: 's1', title: 'review the billing migration', when: '5m', messages: 14, source: 'gui' },
     { id: 's2', title: 'weekly dependency sweep', when: 'yesterday', messages: 6, source: 'cron' },

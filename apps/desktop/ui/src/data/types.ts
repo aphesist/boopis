@@ -55,6 +55,8 @@ export interface BotJob {
   next: string;
   /** how the last run ended, as Hermes says ('ok', 'error'), null when it has not run */
   last: string | null;
+  /** where its result goes, as Hermes keeps it (`local`, `origin`, `room:<room id>[@<profile>]`, a platform); '' when it names none */
+  deliver: string;
 }
 /** a session of a bot's profile (a thread: a chat, a routine's run, a delegated job) */
 export interface BotSession { id: string; title: string; when: string; messages: number | null; source: string }

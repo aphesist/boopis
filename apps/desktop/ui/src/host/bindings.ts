@@ -118,6 +118,10 @@ export const commands = {
 	 *  An id outside the table is refused. Reports the exit status and the end of the output.
 	 */
 	connectorLogin: (provider: string, connector: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ConnectorLogin_Serialize>("connector_login", { provider, connector }, options),
+	/**  The engine's Kanban boards, read only (`kanban.rs`). A board is shared by every profile. */
+	kanbanBoards: (options?: InvokeOptions) => __TAURI_INVOKE<KanbanBoard[]>("kanban_boards", undefined, options),
+	/**  One board with its tasks, read only. */
+	kanbanView: (slug: string, options?: InvokeOptions) => __TAURI_INVOKE<KanbanView_Serialize>("kanban_view", { slug }, options),
 	/**
 	 *  Restart the app, so the choices read at startup (the GPU, `BOOPIS_FPS`, the renderer) apply. The webview's GPU is
 	 *  fixed when the process starts; this is the only way to change it.
@@ -1678,6 +1682,84 @@ export type InstallRequest_Serialize = {
 
 /**  Any JSON value, typed `unknown` on the TypeScript side (the UI narrows it with the generated gateway contract). */
 export type Json = unknown;
+
+/**  One board. */
+export type KanbanBoard = {
+	/**  Its slug, the name the engine's command takes. */
+	slug: string,
+	/**  What the board is called. */
+	name: string,
+	/**  It was put away. */
+	archived: boolean,
+	/**  Tasks by state. */
+	counts: { [key in string]: number },
+};
+
+/**  One task as the board shows it. */
+export type KanbanTask = KanbanTask_Serialize | KanbanTask_Deserialize;
+
+/**  One task as the board shows it. */
+export type KanbanTask_Deserialize = {
+	/**  Its id. */
+	id: string,
+	/**  Its title. */
+	title: string,
+	/**  The column it is in: `triage`, `todo`, `scheduled`, `ready`, `running`, `blocked`, `review`, `done`. */
+	status: string,
+	/**  The profile it is assigned to; `None` when nobody is. */
+	assignee?: string | null,
+	/**  Higher goes first. */
+	priority: number,
+	/**  Seconds since the Unix epoch; `None` when the engine has none. */
+	created_at?: number | null,
+	/**  When it was claimed. */
+	started_at?: number | null,
+	/**  When it was completed. */
+	completed_at?: number | null,
+	/**  Why it stopped, when the engine says. */
+	problem?: string | null,
+};
+
+/**  One task as the board shows it. */
+export type KanbanTask_Serialize = {
+	/**  Its id. */
+	id: string,
+	/**  Its title. */
+	title: string,
+	/**  The column it is in: `triage`, `todo`, `scheduled`, `ready`, `running`, `blocked`, `review`, `done`. */
+	status: string,
+	/**  The profile it is assigned to; `None` when nobody is. */
+	assignee: string | null,
+	/**  Higher goes first. */
+	priority: number,
+	/**  Seconds since the Unix epoch; `None` when the engine has none. */
+	created_at: number | null,
+	/**  When it was claimed. */
+	started_at: number | null,
+	/**  When it was completed. */
+	completed_at: number | null,
+	/**  Why it stopped, when the engine says. */
+	problem: string | null,
+};
+
+/**  A board and its tasks. */
+export type KanbanView = KanbanView_Serialize | KanbanView_Deserialize;
+
+/**  A board and its tasks. */
+export type KanbanView_Deserialize = {
+	/**  The board. */
+	board: KanbanBoard,
+	/**  Its tasks, newest first. */
+	tasks: KanbanTask_Deserialize[],
+};
+
+/**  A board and its tasks. */
+export type KanbanView_Serialize = {
+	/**  The board. */
+	board: KanbanBoard,
+	/**  Its tasks, newest first. */
+	tasks: KanbanTask_Serialize[],
+};
 
 /**  Where the ladder stands in the configuration. */
 export type LadderState = 

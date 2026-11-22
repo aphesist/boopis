@@ -324,3 +324,77 @@ describe('adding', () => {
     expect(panel.querySelector('#hx-conn-installed-h')?.closest('section')?.hidden).toBe(false);
   });
 });
+
+describe('connectors for one bot', () => {
+  async function mountFor(main: Fake, bots: Record<string, Fake>): Promise<{ panel: HTMLElement; asked: string[] }> {
+    const panel = document.createElement('div');
+    document.body.append(panel);
+    const asked: string[] = [];
+    await mountConnectors(panel, {
+      bridge: main, toast: () => { /* not read here */ }, settle: 0,
+      bots: () => Object.keys(bots).map((id) => ({ id, name: id[0]?.toUpperCase() + id.slice(1) })),
+      bridgeFor: (bot) => { asked.push(bot); return bots[bot] as Fake; }
+    });
+    return { panel, asked };
+  }
+  const choose = async (panel: HTMLElement, value: string): Promise<void> => {
+    const sel = panel.querySelector('#hx-conn-for') as HTMLElement;
+    sel.dispatchEvent(new CustomEvent('ui:change', { detail: { value }, bubbles: true }));
+    await tick(4);
+  };
+
+  it('draws no choice when there is no bot to choose', async () => {
+    const { panel } = await mount(fake());
+    expect(panel.querySelector('#hx-conn-for')).toBeNull();
+  });
+
+  it('lists, tests, switches and removes the chosen bot\'s own connectors and leaves the main profile\'s alone', async () => {
+    const main = fake([info({ name: 'mainmcp' })]);
+    const kai = fake([info({ name: 'kaimcp' })]);
+    const { panel, asked } = await mountFor(main, { kai });
+    expect(panel.textContent).toContain('mainmcp');
+    await choose(panel, 'kai');
+    expect(asked).toContain('kai');
+    expect(panel.textContent).toContain('kaimcp');
+    expect(panel.textContent).not.toContain('mainmcp');
+    expect(panel.textContent).toContain('Only Kai has these');
+    click(panel, '[data-conn-test="kaimcp"]');
+    await tick();
+    const sw = panel.querySelector<HTMLInputElement>('input[role=switch]') as HTMLInputElement;
+    sw.checked = false;
+    sw.dispatchEvent(new Event('change', { bubbles: true }));
+    await tick();
+    expect(kai.calls).toEqual(expect.arrayContaining(['test:kaimcp', 'enable:kaimcp:false']));
+    expect(main.calls.filter((c) => c.startsWith('test:') || c.startsWith('enable:'))).toEqual([]);
+    await choose(panel, '');
+    expect(panel.textContent).toContain('mainmcp');
+  });
+
+  it('sends an add to the chosen bot and to no one else', async () => {
+    const main = fake();
+    const kai = fake();
+    const { panel } = await mountFor(main, { kai });
+    await choose(panel, 'kai');
+    click(panel, '[data-add-command]');
+    await tick();
+    fill(panel, 'name', 'notes');
+    click(panel, '[data-action="submit"]');
+    await tick(6);
+    expect(kai.reviews.map((r) => r.values['name'])).toEqual(['notes']);
+    expect(main.reviews).toEqual([]);
+  });
+
+  it('falls back to the main profile when the chosen bot is no longer there', async () => {
+    const main = fake([info({ name: 'mainmcp' })]);
+    const kai = fake([info({ name: 'kaimcp' })]);
+    const bots: Record<string, Fake> = { kai };
+    const panel = document.createElement('div');
+    document.body.append(panel);
+    const m = await mountConnectors(panel, { bridge: main, toast: () => { /* unused */ }, settle: 0, bots: () => Object.keys(bots).map((id) => ({ id, name: id })), bridgeFor: (b) => bots[b] as Fake });
+    await choose(panel, 'kai');
+    expect(panel.textContent).toContain('kaimcp');
+    delete bots['kai'];
+    await m.refresh();
+    expect(panel.textContent).toContain('mainmcp');
+  });
+});

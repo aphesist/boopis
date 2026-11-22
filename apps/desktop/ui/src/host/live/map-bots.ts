@@ -71,7 +71,7 @@ export function jobFrom(row: CronJobRow, now: Date): BotJob {
   return {
     id: row.job_id, name: (row.name ?? '').trim(), schedule: (row.schedule ?? '').trim(), prompt: (row.prompt_preview ?? '').trim(),
     enabled: row.enabled !== false && state !== 'paused', next: untilLabel(row.next_run_at, now),
-    last: row.last_status ?? null
+    last: row.last_status ?? null, deliver: (row.deliver ?? '').trim()
   };
 }
 /** the jobs of a profile, those that run first */

@@ -892,6 +892,25 @@ pub async fn connector_signin(
         .await?)
 }
 
+/// The engine's Kanban boards, read only (`kanban.rs`). A board is shared by every profile.
+#[tauri::command]
+#[specta::specta]
+pub async fn kanban_boards(
+    state: State<'_, AppState>,
+) -> std::result::Result<Vec<crate::kanban::Board>, HostError> {
+    Ok(crate::kanban::boards(&state.supervisor).await?)
+}
+
+/// One board with its tasks, read only.
+#[tauri::command]
+#[specta::specta]
+pub async fn kanban_view(
+    state: State<'_, AppState>,
+    slug: String,
+) -> std::result::Result<crate::kanban::View, HostError> {
+    Ok(crate::kanban::view(&state.supervisor, &slug).await?)
+}
+
 /// Cancel an open sign-in to `name`.
 #[tauri::command]
 #[specta::specta]

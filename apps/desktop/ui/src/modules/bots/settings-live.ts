@@ -11,6 +11,8 @@ import { data, NeedsConfirmation } from '../../data';
 import type { Bot, BotConfig, BotsAdmin, BotPatch, RoutineDraft } from '../../data';
 import { diffWell } from '../cards/parts';
 import { cronValid, CRON_PRESETS, scheduleWords } from './cron';
+import { deliveryParts } from '../../data/delivery';
+import { openGroup } from './group-room';
 import { inventoryLine } from './glance';
 import { bot, S } from './model';
 import { orbButton } from './orbs';
@@ -66,6 +68,22 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const routines = el('ul', { class: 'bt-routines', 'aria-label': 'Routines' });
   const routineErr = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: true });
   const jobsKnown = info.jobs !== null;
+  /* where a routine's result goes, in words, with a link to the room when it posts to one of the groups */
+  function deliveryLine(deliver: string): Node {
+    const rooms = data().groups.snapshot().groups;
+    const parts = deliveryParts(deliver, rooms, (p) => bot(p)?.name ?? p);
+    const line = el('p', { class: 'ui-field__hint bt-routine-to' });
+    if (!parts.length) return line;
+    line.append(el('span', { text: cap1(parts.map((p) => p.text).join('')) }));
+    for (const id of new Set(parts.flatMap((p) => (p.room ? [p.room] : [])))) {
+      const name = rooms.find((g) => g.id === id)?.name ?? id;
+      const open = ui.button({ label: 'Open ' + name, size: 's', variant: 'ghost' });
+      open.classList.add('bt-routine-open');
+      open.addEventListener('click', () => { openGroup(id); });
+      line.append(open);
+    }
+    return line;
+  }
   function paintRoutines(): void {
     routines.textContent = '';
     if (!jobsKnown) { routines.append(el('li', { class: 'bt-routine-note', text: 'Unknown. ' + (info.notes.jobs ?? 'boopis could not read its schedule.') })); return; }
@@ -84,7 +102,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
       });
       const del = ui.iconButton({ icon: going ? 'check' : 'close', label: (going ? 'Keep routine ' : 'Remove routine ') + label, size: 's' });
       del.addEventListener('click', () => { if (going) pend.remove.delete(j.id); else pend.remove.add(j.id); paintRoutines(); paintDirty(); del.focus(); });
-      const li = el('li', { class: 'bt-routine' + (going ? ' is-going' : '') }, [row, del]);
+      const li = el('li', { class: 'bt-routine' + (going ? ' is-going' : '') }, [el('div', { class: 'bt-routine-main' }, [row, deliveryLine(j.deliver)]), del]);
       routines.append(li);
     }
     pend.add.forEach((a, i) => {
