@@ -67,6 +67,28 @@
 [data-margin="off"] .bt-empty { margin-left: 0; }
 .bt-ideas { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
 
+/* ───────── the ledger (ledger.ts): whom a message is for, a member at work, unread, the actions in the margin ───────── */
+.bt-log > [data-hx-turn], .bt-log > .bt-pending-entry { --r-outer: var(--r-s); --pad: var(--sp-1); --corner-size: 24px; }   /* a corner container: the actions in the margin sit in its corner (R-corner-3) */
+.bt-log > [data-hx-turn]:has(.bt-acts) { min-height: calc(var(--ctl-s) + var(--sp-6) + var(--sp-4)); }   /* the margin holds the name, the time and the actions: a one-line reply is as tall as that */
+.bt-log > [data-hx-turn] .ui-entry__body { padding: var(--sp-1) var(--sp-1) var(--sp-1) 0; box-sizing: border-box; }   /* what sits at the body's edge keeps its focus ring inside the entry */
+.bt-log > [data-hx-turn] .ui-callno:has(.bt-acts) { align-self: stretch; }
+.bt-to b { font-weight: 400; color: var(--text-dim); }
+.bt-to.is-you b { color: var(--text-strong); }
+.bt-elapsed { font-variant-numeric: tabular-nums; }
+.bt-pending { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); min-height: 22px; margin: 0; font: 400 var(--fs-xs)/var(--lh-small) var(--sans); color: var(--text-quiet); }
+.bt-pending__word { font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); letter-spacing: var(--track-mono); color: var(--text-dim); }
+.bt-pending__act:empty { display: none; }
+.bt-pending-entry.is-queued .bt-pending__word { color: var(--text-quiet); }
+.bt-unread { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-5) 0 0; font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); }
+.bt-unread::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.bt-unread + [data-hx-turn] { margin-top: var(--sp-3); }
+.bt-jump { position: absolute; left: 50%; bottom: calc(100% + var(--sp-3)); transform: translateX(-50%); }
+.bt-jump[hidden] { display: none; }
+.bt-acts { display: flex; gap: 0; margin: auto 0 var(--corner-inset, 0px) var(--corner-inset, 0px); opacity: 0; transition: opacity var(--dur-1) var(--ease); }
+.bt-log > [data-hx-turn]:is(:hover, :focus-within) .bt-acts { opacity: 1; }
+.bt-acts .ui-ib:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }
+[data-margin="off"] .bt-acts { margin: 0 0 0 auto; }
+
 /* the composer (the library's) sits on centerX, above the dock */
 .bt-composer-zone {
   position: absolute; z-index: 3;

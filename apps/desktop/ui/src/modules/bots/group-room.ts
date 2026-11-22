@@ -7,9 +7,9 @@ import { emit } from '../../core/bus';
 import { $, el, esc, frag, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
 import { ui } from '@boopis/ui';
-import type { BotLike } from '@boopis/ui';
+import type { BotLike, MarkdownCtx, MdBot } from '@boopis/ui';
 import { data } from '../../data';
-import type { Group, GroupMember, GroupMessage, GroupsEvent } from '../../data';
+import type { Group, GroupMember, GroupMessage, GroupText, GroupsEvent, MemberActivity } from '../../data';
 import { lookFor } from '../../data/looks';
 import { namesText, originVisual } from '../cards/parts';
 import { bot, group, groupThread, initGroups, S } from './model';
@@ -18,6 +18,8 @@ import { markSelected, drawGroups } from './list';
 import { checkClips } from './clips';
 import { closeSettings } from './settings';
 import { openNewGroup } from './new-group';
+import { arrival, atEnd, dropPending, entryActs, glanceAt, jumpButton, listWords, pendingEntry, placeToLine, setJump, toLine, unreadDivider, updatePending } from './ledger';
+import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 
 const groups = () => data().groups;
 const toast = (t: string, o?: Parameters<typeof ui.toast>[1]): void => { ui.toast(t, o); };
@@ -32,7 +34,6 @@ export function stackOf(members: readonly GroupMember[], size: number, still?: b
   return ids.length ? originVisual({ kind: 'teammate', ids, via: null }, size, 4, still) : '';
 }
 export const namesOf = (members: readonly GroupMember[]): string => namesText(members.map((m) => m.name));
-const quietName = (g: Group, id: string): GroupMember | undefined => g.members.find((m) => m.id === id);
 
 /* ───────── view ───────── */
 export function mountGroupPane(root: HTMLElement): HTMLElement {
@@ -45,7 +46,13 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
   scroll.append(col);
   const zone = el('div', { class: 'bt-composer-zone' });
   const working = el('p', { class: 'bt-working', role: 'status', 'aria-live': 'polite' });
-  zone.append(working);
+  U.jump = jumpButton(() => { jumpToLatest(); });
+  zone.append(U.jump, working);
+  scroll.addEventListener('scroll', () => { const g = group(S.groupSel); if (g && !pane.hidden) markSeen(g); }, { passive: true });
+  wireRefs(log, {
+    bot: (id) => { const b = bot(id); const g = group(S.groupSel); const m = g ? memberOf(g, id) : undefined; if (!b && !m) return null; return { bot: b ? { ...b, id: b.id, name: b.name } : mdBot(m as GroupMember), state: b?.state ?? 'idle', model: b?.info?.model ?? null, where: g?.name ?? null }; },
+    ask: (id) => { const g = group(S.groupSel); if (g) { const m = memberOf(g, id); if (m) replyTo(g, m.id); } }
+  });
   pane.append(scroll, zone);
   root.append(pane);
   S.groupPane = pane;
@@ -78,7 +85,6 @@ export function openGroup(id: string | null): void {
   renderHead(g);
   renderLog(g);
   renderComposer(g);
-  paintWorking(g);
   emit('hx:title', { tab: 'bots', title: g.name });
   /* the room's messages are read as it opens; a thread that arrives is drawn in place */
   void groups().open(g.id).catch((e: unknown) => { toast('This group could not be read: ' + sentence(e)); });
@@ -128,56 +134,184 @@ function archiveGroup(g: Group): void {
   }).catch((e: unknown) => { toast('It was not archived: ' + sentence(e)); });
 }
 
-/* ───────── thread ───────── */
-const paras = (t: string): string => '<div class="ui-prose">' + String(t || '').split(/\n{2,}/).map((p) => '<p>' + ui.html.inline(p) + '</p>').join('') + '</div>';
+/* ───────── thread ─────────
+   Each message is a call-number entry (orb, name, "to" line, time in the margin) with what the member wrote drawn by the kit's
+   markdown renderer; its mentions open the bot's chat, its paths open on this computer (refs.ts). While members work, each has a
+   pending entry where its message will land (ledger.ts); the message takes that place when it arrives. */
+const ENTRY = new WeakMap<HTMLElement, { msgs: GroupText[]; who: string; to: string }>();
+const PENDING = new Map<string, HTMLElement>();
+/** the last message the user has seen in each group (this run), and how many arrived below the fold since */
+const SEEN = new Map<string, string>();
+const U = { unread: 0, divider: null as HTMLElement | null, jump: null as HTMLButtonElement | null };
+
+const mdBot = (m: GroupMember): MdBot => { const b = bot(m.profile); return { ...memberBot(m), id: m.profile || m.id, name: m.name, handle: m.handle, ...(b?.role ? { role: b.role } : {}) }; };
+const ctxOf = (g: Group): MarkdownCtx => mentionCtx(g.members.map(mdBot), { everyone: true });
+const memberOf = (g: Group, idOrProfile: string): GroupMember | undefined => g.members.find((m) => m.id === idOrProfile || m.profile === idOrProfile);
+/** the folders a member's paths resolve in: the folder the engine said its bot works in (none known: absolute paths only) */
+const rootsOf = (g: Group, who: string): string[] => { const m = memberOf(g, who); const ws = m ? data().bots.workspace?.(m.profile) : null; return ws ? [ws] : []; };
+/** whom a message is for, in words: round 0 answers the user; a later round goes to the members the room names, or its mentions name */
+function recipients(g: Group, m: GroupText): string[] {
+  if (m.who === 'you') return [];
+  if (m.round === 0) return ['you'];
+  const ids = m.to?.length ? m.to : ui.markdown.resolve(m.text, g.members).members.map((x) => x.id);
+  return ids.filter((id) => id !== m.who).map((id) => memberOf(g, id)?.name ?? id);
+}
+function replyTo(g: Group, who: string): void {
+  const m = memberOf(g, who), c = G.composer; if (!m || !c) return;
+  const v = c.value; c.insert((v && !/\s$/.test(v) ? ' ' : '') + '@' + m.handle + ' '); c.focus();
+}
 function renderLog(g: Group): void {
   const log = G.log as HTMLElement; log.textContent = '';
-  NODE.clear();
+  NODE.clear(); PENDING.clear();
+  U.divider = null; U.unread = 0; setJump(U.jump, 0);
   const msgs = groupThread(g.id);
   if (!msgs.length) {
     const e = ui.empty({ title: 'Nothing here yet', text: groups().nature });
     e.classList.add('bt-empty');
     log.append(e);
   } else {
+    const seen = SEEN.get(g.id);
+    const at = seen ? msgs.findIndex((x) => x.id === seen) : -1;
+    const firstNew = at >= 0 ? msgs.slice(at + 1).find((x) => !(x.kind === 'text' && x.who === 'you')) : undefined;
     let prev: GroupMessage | null = null, entry: HTMLElement | null = null;
-    for (const m of msgs) { entry = renderMsg(g, m, prev, entry); prev = m; }
+    for (const m of msgs) {
+      if (firstNew && m.id === firstNew.id) { U.divider = unreadDivider(); log.append(U.divider); prev = null; entry = null; }
+      entry = renderMsg(g, m, prev, entry); prev = m;
+    }
   }
-  requestAnimationFrame(() => { if (G.scroll) G.scroll.scrollTop = G.scroll.scrollHeight; });
+  paintPending(g);
+  requestAnimationFrame(() => {
+    const sc = G.scroll; if (!sc) return;
+    if (U.divider) U.divider.scrollIntoView({ block: 'center' }); else sc.scrollTop = sc.scrollHeight;
+    markSeen(g);
+  });
 }
+/** the entry a message joins: the previous one, when the same member wrote it to the same people */
 function renderMsg(g: Group, m: GroupMessage, prev: GroupMessage | null, prevEntry: HTMLElement | null): HTMLElement | null {
   const log = G.log as HTMLElement;
+  const before = log.querySelector<HTMLElement>(':scope > .bt-pending-entry');
+  const place = (n: HTMLElement): void => { if (before) before.before(n); else log.append(n); };
   if (m.kind === 'note') {
     const p = el('p', { class: 'bt-note', role: 'status', text: m.text });
     if (m.more) { const more = m.more; const b = ui.button({ label: 'Let them continue', size: 's' }); b.addEventListener('click', () => { b.disabled = true; groups().continueTalk(g.id, more).catch((e: unknown) => { b.disabled = false; toast('It could not go on: ' + sentence(e)); }); }); p.append(' ', b); }
     NODE.set(m.id, p);
-    log.append(p);
+    place(p);
     return null;
   }
-  const node = m.who === 'you' ? frag(ui.html.request(m.text)) : frag(paras(m.text));
+  const ctx = ctxOf(g);
+  const you = m.who === 'you';
+  const to = recipients(g, m), toKey = to.join(',');
+  let node: HTMLElement;
+  if (you) { node = frag(ui.html.request('')); node.innerHTML = ui.markdown.plain(m.text, ctx); }
+  else node = ui.markdown(m.text, ctx);
   NODE.set(m.id, node);
-  if (prev && prev.kind === 'text' && prev.who === m.who && prevEntry && prevEntry.isConnected) { $('.ui-entry__body', prevEntry).append(node); return prevEntry; }
-  const you = m.who === 'you', member = you ? undefined : quietName(g, m.who);
+  const info = prevEntry ? ENTRY.get(prevEntry) : undefined;
+  if (prev && prev.kind === 'text' && prev.who === m.who && prevEntry && prevEntry.isConnected && info && info.to === toKey) {
+    $('.ui-entry__body', prevEntry).append(node);
+    info.msgs.push(m);
+    if (!you) void resolvePaths(node, rootsOf(g, m.who));
+    return prevEntry;
+  }
+  const member = you ? undefined : memberOf(g, m.who);
   const who = member ? orbHTML(memberBot(member), 20, { state: 'idle' }) + '<span class="bt-who-name">' + esc(member.name) + '</span>' : esc(you ? 'You' : m.who);
-  const entry = frag(ui.html.entry({ kind: you ? 'user' : 'bot', who: you ? esc('You') : who, callno: m.t ? [m.t] : [], label: (you ? 'You' : (member?.name ?? m.who)) + (m.t ? ', ' + m.t : '') }));
+  const name = you ? 'You' : (member?.name ?? m.who);
+  const entry = frag(ui.html.entry({ kind: you ? 'user' : 'bot', who, callno: m.t ? [m.t] : [], label: name + (to.length ? ', to ' + listWords(to) : '') + (m.t ? ', ' + m.t : '') }));
   $('.ui-entry__body', entry).append(node);
+  placeToLine(entry, toLine(to));
   entry.setAttribute('data-hx-turn', ''); entry.tabIndex = -1;
+  ENTRY.set(entry, { msgs: [m], who: m.who, to: toKey });
+  entryActs(entry, {
+    name,
+    copy: () => (ENTRY.get(entry)?.msgs ?? []).map((x) => x.text).join('\n\n'),
+    ...(member ? { reply: () => { replyTo(g, m.who); }, open: () => { emit('hx:bot-select', { id: member.profile, from: 'group' }); } } : {})
+  });
   livenIn(entry);
-  log.append(entry);
+  place(entry);
+  if (!you) void resolvePaths(node, rootsOf(g, m.who));
   checkClips();
   return entry;
 }
 function appendMsg(g: Group, m: GroupMessage): void {
-  const list = groupThread(g.id), prev = list[list.length - 1] ?? null;
+  const list = groupThread(g.id);
   if (list.some((x) => x.id === m.id)) return;
+  const prev = [...list].reverse().find((x) => x.kind === 'text' || x.kind === 'note') ?? null;
   list.push(m);
   if (g.id !== S.groupSel || S.view !== 'group') return;
-  const log = G.log as HTMLElement;
+  const log = G.log as HTMLElement, sc = G.scroll as HTMLElement;
+  const follow = atEnd(sc);
   log.querySelector('.bt-empty')?.remove();
-  const last = log.lastElementChild && log.lastElementChild.matches('[data-hx-turn]') ? (log.lastElementChild as HTMLElement) : null;
-  renderMsg(g, m, prev, last);
-  const node = NODE.get(m.id);
-  if (!reduced() && node) node.animate([{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
-  G.scroll?.scrollTo({ top: G.scroll.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' });
+  const turnsNow = [...log.querySelectorAll<HTMLElement>(':scope > [data-hx-turn]')];
+  const last = turnsNow[turnsNow.length - 1] ?? null;
+  const lastIsLast = !!last && !last.nextElementSibling?.matches('.bt-note, .bt-unread');
+  const pend = m.kind === 'text' ? PENDING.get(m.who) : undefined;
+  const entry = renderMsg(g, m, pend ? null : prev, pend || !lastIsLast ? null : last);
+  const node = NODE.get(m.id) ?? null;
+  if (pend && entry && entry !== pend) { pend.replaceWith(entry); PENDING.delete(m.kind === 'text' ? m.who : ''); }
+  if (entry && m.kind === 'text') arrival(entry, m.who === 'you' ? null : node);
+  else if (node && !reduced()) node.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  if (follow || (m.kind === 'text' && m.who === 'you')) { sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); markSeen(g); }
+  else if (m.kind === 'text' && m.who !== 'you') {
+    if (!U.divider && node) { U.divider = unreadDivider(); (entry && entry.contains(node) && $('.ui-entry__body', entry).firstElementChild === node ? entry : node).before(U.divider); }
+    U.unread++; setJump(U.jump, U.unread);
+  }
+}
+/** the user has seen the end of the thread: remember its last message, and the jump goes */
+function markSeen(g: Group): void {
+  const sc = G.scroll; if (!sc || !atEnd(sc)) return;
+  const msgs = groupThread(g.id), last = msgs[msgs.length - 1];
+  if (last) SEEN.set(g.id, last.id);
+  U.unread = 0; setJump(U.jump, 0);
+}
+function jumpToLatest(): void {
+  const sc = G.scroll; if (!sc) return;
+  sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' });
+  const g = group(S.groupSel); if (g) { const msgs = groupThread(g.id), last = msgs[msgs.length - 1]; if (last) SEEN.set(g.id, last.id); }
+  U.unread = 0; setJump(U.jump, 0);
+  (G.composer as NonNullable<typeof G.composer>).focus();
+}
+
+/* ───────── who is at work: a pending entry each (the first three), the rest in one line above the composer ───────── */
+const SHOWN = 3;
+function activityOf(g: Group): MemberActivity[] {
+  if (g.activity?.length) return [...g.activity];
+  return g.working.map((id) => ({ member: id, status: 'running' as const, round: null, startedAt: null, tool: null }));
+}
+/** who asked a member: the author of the latest message that was for it (by the room's word or a mention) */
+function askedBy(g: Group, member: GroupMember): string | null {
+  const msgs = groupThread(g.id);
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i]; if (!m || m.kind !== 'text' || m.who === member.id) continue;
+    const named = m.to?.length ? m.to.includes(member.id) : ui.markdown.resolve(m.text, [member]).members.length > 0;
+    if (named) return m.who === 'you' ? 'you' : (memberOf(g, m.who)?.name ?? null);
+  }
+  return null;
+}
+function paintPending(g: Group): void {
+  const log = G.log as HTMLElement;
+  if (groups().note()) { for (const e of PENDING.values()) e.remove(); PENDING.clear(); return; }
+  const acts = activityOf(g).filter((a) => memberOf(g, a.member));
+  const shown = acts.slice(0, SHOWN), ids = new Set(shown.map((a) => a.member));
+  for (const [id, e] of PENDING) if (!ids.has(id)) { PENDING.delete(id); dropPending(e); }
+  const follow = G.scroll ? atEnd(G.scroll) : false;
+  let added: HTMLElement | null = null;
+  for (const a of shown) {
+    const m = memberOf(g, a.member) as GroupMember;
+    const o = { bot: { ...mdBot(m), id: m.id }, status: a.status, tool: a.tool, by: askedBy(g, m), startedAt: a.startedAt };
+    const had = PENDING.get(a.member);
+    if (had) { updatePending(had, o); continue; }
+    const e = pendingEntry(o);
+    PENDING.set(a.member, e);
+    log.querySelector('.bt-empty')?.remove();
+    log.append(e);
+    if (!reduced()) e.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    added ??= e;
+  }
+  if (added) {
+    const turnsNow = [...log.querySelectorAll<HTMLElement>(':scope > [data-hx-turn]')];
+    glanceAt(turnsNow[turnsNow.length - 1], added);
+    if (follow && G.scroll) G.scroll.scrollTo({ top: G.scroll.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' });
+  }
+  paintWorking(g, acts.slice(SHOWN));
 }
 
 /* ───────── composer and who is replying ───────── */
@@ -195,16 +329,17 @@ function renderComposer(g: Group): void {
   (G.working as HTMLElement).dataset['note'] = why ? '1' : '';
   c.setRunning(g.working.length > 0);
 }
-function paintWorking(g: Group): void {
+/** the line above the composer: why group chat cannot run, or the members at work past the three drawn in the thread */
+function paintWorking(g: Group, more: readonly MemberActivity[] = []): void {
   const w = G.working as HTMLElement;
   const why = groups().note();
-  const busy = g.members.filter((m) => g.working.includes(m.id));
   w.textContent = '';
   if (why) { w.className = 'bt-working bt-working--note'; w.textContent = why; return; }
   w.className = 'bt-working';
+  const busy = more.map((a) => memberOf(g, a.member)).filter((m): m is GroupMember => !!m);
   if (!busy.length) return;
   w.insertAdjacentHTML('beforeend', '<span class="bt-working-orbs" aria-hidden="true">' + stackOf(busy, 16, true) + '</span>');
-  w.append(el('span', { text: namesOf(busy) + (busy.length === 1 ? ' is replying' : ' are replying') }));
+  w.append(el('span', { text: namesOf(busy) + (busy.length === 1 ? ' is next' : ' are next') }));
   livenIn(w);
 }
 function send(text: string): void {
@@ -228,7 +363,7 @@ export function onGroupsEvent(ev: GroupsEvent): void {
       drawGroups();
       if (g.id === S.groupSel && S.view === 'group') {
         if ((renamed || members) && !G.renaming) { renderHead(g); emit('hx:title', { tab: 'bots', title: g.name }); }
-        renderComposer(g); paintWorking(g);
+        renderComposer(g); paintPending(g);
       }
       break;
     }

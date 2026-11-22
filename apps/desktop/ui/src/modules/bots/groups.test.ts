@@ -86,7 +86,7 @@ describe('a group’s thread', () => {
     q('.bt-group .ui-composer').dispatchEvent(new CustomEvent('ui:send', { detail: { text: '@nina what is left?' } }));
     expect(calls.find((c) => c.fn === 'send')!.args).toEqual(['room-release', '@nina what is left?']);
   });
-  it('shows who is replying, and says so to the screen reader', async () => {
+  it('shows who is replying in the thread, and says so to the screen reader', async () => {
     const g = provider.groups;
     const first = g.snapshot().groups[0]!;
     (provider.groups as unknown as { _ev?: unknown })._ev = undefined;
@@ -95,7 +95,11 @@ describe('a group’s thread', () => {
     S.groups[0]!.working = [first.members[0]!.id, first.members[1]!.id];
     const { onGroupsEvent } = await import('./group-room');
     onGroupsEvent({ type: 'group', group: { ...first, working: [first.members[0]!.id, first.members[1]!.id] } });
-    expect(q('.bt-working').textContent).toMatch(/are replying/);
+    /* each member at work has a pending entry where its message will land, and says so to the screen reader */
+    const pend = [...document.querySelectorAll<HTMLElement>('.bt-group [data-pending]')];
+    expect(pend).toHaveLength(2);
+    expect(pend[0]!.getAttribute('aria-label')).toMatch(/thinking/);
+    expect(pend[0]!.querySelector('[role="status"]')).not.toBeNull();
     expect(q('.bt-working').getAttribute('aria-live')).toBe('polite');
   });
   it('renames in place with Enter, and Esc leaves it as it was', async () => {

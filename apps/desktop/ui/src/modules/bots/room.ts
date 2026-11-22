@@ -5,7 +5,7 @@ import { emit } from '../../core/bus';
 import { $, el, esc, frag, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
 import { ui } from '@boopis/ui';
-import type { MenuItem } from '@boopis/ui';
+import type { MarkdownCtx, MenuItem } from '@boopis/ui';
 import { data } from '../../data';
 import type { ApprovalMessage, Bot, BotsEvent, ThreadMessage } from '../../data';
 import { cronValid, cronWords, scheduleWords } from './cron';
@@ -19,6 +19,8 @@ import { openSettings, toggleSettings } from './settings';
 import { checkClips, watchClips } from './clips';
 import { renderGlance } from './glance';
 import { outsideDescription, outsideRoomMark } from './outside';
+import { arrival, atEnd, dropPending, entryActs, pendingEntry, updatePending } from './ledger';
+import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 
 const bots = () => data().bots;
 const NODE = new Map<string, HTMLElement>();
@@ -69,6 +71,7 @@ function buildRoom(): void {
   (S.room as HTMLElement).append(scroll, zone);
   S.scroll = scroll; S.presenceEl = presence; S.log = log; S.zone = zone;
   log.addEventListener('keydown', turnKeys);
+  wireRefs(log, { bot: (id) => { const x = bot(id); return x ? { bot: { ...x, id: x.id, name: x.name }, state: x.state, model: x.info?.model ?? null } : null; } });
   log.addEventListener('focusin', (e) => { const t = (e.target as Element).closest<HTMLElement>('[data-hx-turn]'); if (t) rove(t); });
   buildComposer(zone);
   /* a live bot cannot be messaged yet: no composer, rather than one that sends nowhere */
@@ -142,7 +145,7 @@ export function refreshPresence(): void {
 /* ───────── thread ───────── */
 function renderThread(b: Bot): void {
   const log = S.log as HTMLElement; log.textContent = '';
-  NODE.clear();
+  NODE.clear(); PEND.el = null; PEND.for = null;
   const msgs = thread(b.id);
   if (!msgs.length && b.info) log.append(renderGlance(b, openSession));
   else if (!msgs.length) {
@@ -158,14 +161,19 @@ function renderThread(b: Bot): void {
     for (const m of msgs) { entry = renderMsg(b, m, prev, entry); prev = m; }
   }
   syncTurns();
+  paintPending(b.id);
   requestAnimationFrame(() => { if (S.scroll) S.scroll.scrollTop = S.scroll.scrollHeight; });
 }
-const paras = (t: string): string => '<div class="ui-prose">' + String(t || '').split(/\n{2,}/).map((p) => '<p>' + ui.html.inline(p) + '</p>').join('') + '</div>';
+/* what the bot writes: the kit's markdown; its mentions of teammates open their chats, its paths open where the bot works */
+const ctx = (): MarkdownCtx => mentionCtx(S.bots.map((x) => ({ ...x, id: x.id, name: x.name })));
+const rootsOf = (id: string): string[] => { const w = data().bots.workspace?.(id); return w ? [w] : []; };
 function msgContent(b: Bot, m: ThreadMessage): HTMLElement {
   if (m.kind === 'note') return el('p', { class: 'bt-note', role: 'status', text: m.text });
   if (m.kind === 'approval') return renderCard(b, m);
-  if (m.who === 'you') return frag(ui.html.request(m.text));
-  return frag(paras(m.text));
+  if (m.who === 'you') { const r = frag(ui.html.request('')); r.innerHTML = ui.markdown.plain(m.text, ctx()); return r; }
+  const md = ui.markdown(m.text, ctx());
+  void resolvePaths(md, rootsOf(m.who === 'you' ? b.id : (bot(m.who)?.id ?? b.id)));
+  return md;
 }
 function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEntry: HTMLElement | null): HTMLElement | null {
   const node = msgContent(b, m);
@@ -186,6 +194,7 @@ function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEnt
   $('.ui-entry__body', entry).append(node);
   entry.setAttribute('data-hx-turn', ''); entry.tabIndex = -1;
   ENTRY.set(entry, { msgs: [m], who: m.who });
+  if (!you) entryActs(entry, { name: (who as Bot).name, copy: () => turnText(entry) });
   livenIn(entry);
   (S.log as HTMLElement).append(entry);
   checkClips();
@@ -198,15 +207,41 @@ function appendMsg(id: string, m: ThreadMessage, streaming: boolean): void {
   paintNewSession();
   const log = S.log as HTMLElement;
   log.querySelector('.bt-empty')?.remove();
-  const lastEntry = log.lastElementChild && log.lastElementChild.matches('[data-hx-turn]') ? (log.lastElementChild as HTMLElement) : null;
-  renderMsg(bot(id) as Bot, m, prev, lastEntry);
+  const follow = S.scroll ? atEnd(S.scroll) : true;
+  const pend = m.who !== 'you' && m.kind !== 'note' ? PEND.el : null;
+  if (pend) { PEND.el = null; }
+  const lastEntry = !pend && log.lastElementChild && log.lastElementChild.matches('[data-hx-turn]') ? (log.lastElementChild as HTMLElement) : null;
+  const entry = renderMsg(bot(id) as Bot, m, pend ? null : prev, lastEntry);
+  if (pend) { if (entry) pend.replaceWith(entry); else pend.remove(); }
+  else if (PEND.el && PEND.el.isConnected) log.append(PEND.el);   /* the pending entry stays last */
   syncTurns();
   const node = NODE.get(m.id);
   if (streaming) log.setAttribute('aria-busy', 'true');
   if (node && S.follow && !S.typing) requestAnimationFrame(() => { const r = node.getBoundingClientRect(); S.follow?.glance(r.left + Math.min(r.width, 160) / 2, r.top + 12, 1200); });
-  if (!reduced() && node) node.animate([{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
-  S.scroll?.scrollTo({ top: S.scroll.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' });
+  if (entry && m.kind === 'text') arrival(entry, m.who === 'you' ? null : node ?? null);
+  else if (!reduced() && node) node.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  if (follow || m.who === 'you') S.scroll?.scrollTo({ top: S.scroll.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' });
 }
+/* ───────── the bot at work: a pending entry where its reply will land, until the reply's first words arrive ───────── */
+const PEND = { el: null as HTMLElement | null, for: null as string | null, since: 0 };
+function paintPending(id: string): void {
+  const b = bot(id); const log = S.log;
+  const list = thread(id), last = list[list.length - 1];
+  const replying = !!last && last.who !== 'you' && last.kind === 'text' && log?.getAttribute('aria-busy') === 'true';
+  const want = !!b && !!log && S.runs.has(id) && !replying;
+  if (!want) { if (PEND.el) { const e = PEND.el; PEND.el = null; PEND.for = null; dropPending(e); } return; }
+  if (PEND.for !== id || !PEND.el?.isConnected) { PEND.el?.remove(); PEND.el = null; PEND.since = Date.now(); }
+  const s = stateOf(b, null);
+  const o = { bot: b, status: 'running' as const, tool: s.key === 'compute' ? 'terminal' : s.key === 'working' ? 'work' : null, activity: b.activity || null, startedAt: PEND.since };
+  if (PEND.el) { updatePending(PEND.el, o); return; }
+  const e = pendingEntry(o);
+  PEND.el = e; PEND.for = id;
+  log.querySelector('.bt-empty')?.remove();
+  log.append(e);
+  if (!reduced()) e.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  if (S.scroll && atEnd(S.scroll)) S.scroll.scrollTo({ top: S.scroll.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' });
+}
+
 /* roving tabindex across turns: the focused (or latest) turn is the one tab stop */
 const turns = (): HTMLElement[] => (S.log ? [...S.log.querySelectorAll<HTMLElement>('[data-hx-turn]')] : []);
 function syncTurns(): void {
@@ -395,7 +430,7 @@ export function onBotsEvent(ev: BotsEvent, handlers: { announce: () => void }): 
       Object.assign(b, { ...ev.bot, cfg: b.cfg });
       Object.assign(b.cfg, ev.bot.cfg, { channels: { ...ev.bot.cfg.channels }, approvals: { ...ev.bot.cfg.approvals } });
       updateRow(b.id);
-      if (b.id === S.sel) { refreshPresence(); if (b.info && S.view === 'bot' && !thread(b.id).length && S.log) S.log.replaceChildren(renderGlance(b, openSession)); }
+      if (b.id === S.sel) { refreshPresence(); if (S.view === 'bot') paintPending(b.id); if (b.info && S.view === 'bot' && !thread(b.id).length && S.log) S.log.replaceChildren(renderGlance(b, openSession)); }
       if (hadAttn !== !!b.attention) handlers.announce();
       break;
     }
@@ -410,7 +445,15 @@ export function onBotsEvent(ev: BotsEvent, handlers: { announce: () => void }): 
       if (!m || m.kind !== 'text') return;
       list[i] = { ...m, text: ev.text };
       const node = NODE.get(ev.messageId);
-      if (node && node.isConnected) node.innerHTML = frag(paras(ev.text)).innerHTML;
+      if (node && node.isConnected) {
+        /* block by block: finished blocks stay as they are, the open one is redrawn, a new one fades in */
+        const follow = S.scroll ? atEnd(S.scroll) : false;
+        const drawn = ui.markdown.stream(node, ev.text, ctx());
+        const roots = rootsOf(m.who === 'you' ? ev.botId : (bot(m.who)?.id ?? ev.botId));
+        if (ev.type === 'message-end') void resolvePaths(node, roots);
+        else for (const d of drawn.slice(0, -1)) void resolvePaths(d, roots);
+        if (follow) S.scroll?.scrollTo({ top: S.scroll.scrollHeight });
+      }
       if (ev.type === 'message-end' && ev.botId === S.sel) S.log?.removeAttribute('aria-busy');
       break;
     }
@@ -431,6 +474,7 @@ export function onBotsEvent(ev: BotsEvent, handlers: { announce: () => void }): 
     case 'run': {
       if (ev.running) S.runs.add(ev.botId); else S.runs.delete(ev.botId);
       if (ev.botId === S.sel && S.composer) S.composer.setRunning(ev.running);
+      if (ev.botId === S.sel && S.view === 'bot') paintPending(ev.botId);
       break;
     }
     default: break;
