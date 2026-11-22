@@ -29,7 +29,7 @@ export const memberBot = (m: GroupMember): BotLike => bot(m.profile) ?? { id: m.
     one overlap step, the members in the group's order (the first underneath), "+N" the last member. One orb size per place:
     STACK says which. The members that are bots of the user; `still` for an aria-hidden slot (a row's lead), where nothing takes
     focus. */
-export const STACK = { row: { size: 16, max: 4 }, rail: { size: 20, max: 2 }, head: { size: 32, max: 4 }, working: { size: 16, max: 4 } } as const;
+export const STACK = { row: { size: 16, max: 4 }, rail: { size: 16, max: 2 }, head: { size: 32, max: 4 }, working: { size: 16, max: 4 } } as const;
 export function stackOf(members: readonly GroupMember[], place: keyof typeof STACK, still?: boolean): string {
   const ids = members.map((m) => m.profile).filter((id) => bot(id));
   if (!ids.length) return '';
