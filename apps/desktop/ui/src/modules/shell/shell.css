@@ -151,7 +151,10 @@ body {
 /* in the rail every orb stays on the x = 28 axis, so the list scrolls without a bar or a gutter (the bar would push the axis) */
 .hx[data-left="rail"] .hx-list { overflow-y: auto; --scroll-gutter: 0px; }
 .hx[data-left="rail"] .hx-list::-webkit-scrollbar { display: none; }
-.hx[data-left="rail"] .hx-me { flex: none; }
+/* in the rail the account button is its avatar: the name takes no width (it still fades, and the button's aria-label and
+   tooltip keep the name), so the button is --pad + 24 + --pad wide and centred on the x = 28 axis like every rail item */
+.hx[data-left="rail"] .hx-me { flex: none; gap: 0; }
+.hx[data-left="rail"] .hx-me__name { max-width: 0; }
 
 /* concave corners where the ground meets the cabinet */
 .hx-corner {

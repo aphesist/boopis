@@ -23,7 +23,7 @@ import { holdOutsideDock, releaseOutsideDock } from '@boopis/ui';
 import { springAt, springElapsed, springKeyframes } from '../../core/spring';
 import type { Channel, SpringParams } from '../../core/spring';
 import { fillCards, relocateLive, renderView, viewKey } from './views';
-import { syncRoving } from './roving';
+import { keepInView, syncRoving } from './roving';
 import { PAGE_NAME } from './ctx';
 
 /* ───────── springs and the dock's moving parts ───────── */
@@ -37,7 +37,7 @@ export const E = {
   anims: new Map<string, Flip>(), slides: new Map<string, Spring>(), slideAn: new Map<string, Flip>(), raf: 0, lastT: 0,
   pending: [] as Array<{ el: HTMLElement; i: number; t0: number; needH: number; needW: number }>,
   drag: { x: 0, on: false, timer: 0, lock: 0, pid: null as number | null, sx: 0, sy: 0, axis: null as 'x' | 'y' | null, hist: [] as Array<[number, number]> },
-  cameFrom: null as Element | null
+  cameFrom: null as Element | null, capped: false
 };
 type Leaving = HTMLElement & { _leave?: Animation | null };
 /** the views fading out as the slab moves (counted here, so the frame never queries the DOM for them) */
@@ -338,6 +338,9 @@ function ghostOf(view: HTMLElement, a: { x: number; y: number }): { g: HTMLEleme
   g.inert = true;
   const rect = relRect(view, a);
   view.parentElement?.insertBefore(g, view);
+  /* a clone starts unscrolled: the leaving roster keeps the rows it showed */
+  const from = view.querySelector('.dk-roster'), to = g.querySelector('.dk-roster');
+  if (from && to) to.scrollTop = from.scrollTop;
   return { g, rect };
 }
 interface FlipOpts { stagger?: number }
@@ -405,6 +408,9 @@ export function morph(apply: () => void, opts: MorphOpts = {}): void {
   X.curView = nv;
   relocateLive();
   setOrbLife();
+  /* the roster scrolls (an inner scroller): its current row is put in view before the after-measure, so the morph lands where it shows */
+  const cur = nv && nv.dataset['view'] === 'bots:exp' ? nv.querySelector<HTMLElement>('.dk-roster .ui-row[tabindex="0"]') : null;
+  if (cur) keepInView(cur);
   const last = snapKeys(a, true);
   if (ghost) leave(ghost.g, ghost.rect, last);
   if (oldView && oldView !== nv) leave(oldView, oldRect, last);
@@ -461,6 +467,11 @@ export function retarget(snap: boolean): void {
   if (v !== watched && viewRO) { if (watched) viewRO.unobserve(watched); if (v) viewRO.observe(v); watched = v; }
   E.baseW = v ? slabWidth(v) : 0;
   E.baseH = v ? v.offsetHeight : 0;
+  /* the expanded roster is capped by the window and scrolls inside it (dock.css): the slab then fills the window's height, and
+     the room the shell keeps for it is the whole window, so the composer rides out of sight above it instead of showing a
+     strip under the title bar */
+  const ros = v && S.mode === 'expanded' ? v.querySelector<HTMLElement>(':scope > .dk-roster') : null;
+  E.capped = !!ros && ros.scrollHeight > ros.clientHeight;
   E.sinkS.t = S.mode === 'off' ? E.baseH + 14 : 0;
   cacheMag();
   syncFoot();
@@ -484,7 +495,7 @@ function headroom(): number {
     foot is inside it) plus the hover headroom. Sent whenever it changes: after a morph, a resize, a font load, the view's own
     size changing, or the grow setting changing. */
 export function emitDock(): void {
-  const h = S.mode === 'off' ? 0 : Math.ceil(E.baseH + headroom());
+  const h = S.mode === 'off' ? 0 : E.capped ? innerHeight : Math.ceil(E.baseH + headroom());
   /* The shell reads `mode: 'off'` as the user switching the dock off, and stores that. A dock that is only empty (no bot, no
      session: presence.ts) keeps room for nothing but is not off by choice, so it reports the mode it will come back in. */
   const mode = S.mode === 'off' && flags.setting ? (S.restore === 'minimal' ? 'minimal' : 'normal') : S.mode;

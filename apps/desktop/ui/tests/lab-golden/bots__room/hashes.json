@@ -1,26 +1,26 @@
 {
  "a-long-name@bone": {
-  "sha": "fd29fee3a386672776c0d079ce026cf88f804c03",
+  "sha": "14f8c242c0c489d97afb7bc1e231e3dd183d6422",
   "w": 1196,
   "h": 872
  },
  "a-long-name@catalog": {
-  "sha": "41cb76d541337e2b77c9c07170633a2717d6b0f4",
+  "sha": "3c7ccb14d646ad3aadb11e834addeaa0095e84cc",
   "w": 1196,
   "h": 872
  },
  "a-long-name@graphite": {
-  "sha": "3fa4e62cc17d889f053b50d34a474e1d27edbe48",
+  "sha": "c1e5542dd81cc70e7e060702ce55e083116fa246",
   "w": 1196,
   "h": 872
  },
  "a-long-name@typewriter": {
-  "sha": "7c7e784beb2a9d801ef232ebbfda61b0715d2681",
+  "sha": "d0f8ca261e53f8e8f0af856291fcf02da80d10ce",
   "w": 1196,
   "h": 872
  },
  "atlas-a-thread@bone": {
-  "sha": "82faf7cfb14e4aeca439c87dcd6f1dfc29597de7",
+  "sha": "b713bb8b9dbc74105e2d9aec740883305a492c98",
   "w": 1196,
   "h": 872
  },
@@ -40,7 +40,7 @@
   "h": 872
  },
  "composer-attach-tooltip@bone": {
-  "sha": "4efb6f2f29562a5c6213750189804cd5ce330e1e",
+  "sha": "eeb48750026c0dcd24e568b2197696d6080cbfab",
   "w": 1196,
   "h": 872
  },
@@ -50,27 +50,27 @@
   "h": 872
  },
  "composer-attach-tooltip@graphite": {
-  "sha": "add083843a203244efdb81040c58fde7d4f369be",
+  "sha": "6360bde55571997211897282991e4dc33e289639",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@typewriter": {
-  "sha": "b27993045c7cba28eeb8931f427ac92b20a7fca5",
+  "sha": "257fd5ccf168386d0d91739d29be49b8fe6a2988",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@bone": {
-  "sha": "b713bb8b9dbc74105e2d9aec740883305a492c98",
+  "sha": "404651db036ce65221a650daff0683df4f7b470b",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@catalog": {
-  "sha": "57d921d54d38f789e93792e5bdab9267dd9c51cd",
+  "sha": "d41d6e1a875a01a0fb93247fee4d2fd80bfacb70",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@graphite": {
-  "sha": "7c2fe232ba9e4df714db1828cc3a85886f6a44b1",
+  "sha": "667f47da3db50069315e851882c2a4a4f9bbd3f2",
   "w": 1196,
   "h": 872
  },
@@ -79,38 +79,18 @@
   "w": 1196,
   "h": 872
  },
- "kai-its-record-read-after-the-roster@bone": {
-  "sha": "5e173ed7e136dbb58afcbfba983dbd61eb15ada8",
-  "w": 1196,
-  "h": 872
- },
- "kai-its-record-read-after-the-roster@catalog": {
-  "sha": "3c02a50edc582553f43dc41e8e5f59632af57ac9",
-  "w": 1196,
-  "h": 872
- },
- "kai-its-record-read-after-the-roster@graphite": {
-  "sha": "8e85a09abbb93e3736592e6c8b93793b1c6b922a",
-  "w": 1196,
-  "h": 872
- },
- "kai-its-record-read-after-the-roster@typewriter": {
-  "sha": "735ee9e8752168d93c7c4d18786e2658623b63b3",
-  "w": 1196,
-  "h": 872
- },
  "kai-no-thread-yet@bone": {
-  "sha": "16dc5e77b3b5010d39b9d38e09efedea005fe06c",
+  "sha": "06f1886a312c4de4799b2deb0af4b7c97ab1c15f",
   "w": 1196,
   "h": 872
  },
  "kai-no-thread-yet@catalog": {
-  "sha": "f5c3fc6f04c2f588249efefd68037cdd962ae502",
+  "sha": "22f6fd087ba239e3a7a31169112e6b89243cc2a5",
   "w": 1196,
   "h": 872
  },
  "kai-no-thread-yet@graphite": {
-  "sha": "3fd08d6e4296821b5540a8bcc8ef1ec6c595583f",
+  "sha": "4e4d85f342e627e4aa61c9483c7051446d2dbc56",
   "w": 1196,
   "h": 872
  },
@@ -120,37 +100,37 @@
   "h": 872
  },
  "live-bot-a-long-name@bone": {
-  "sha": "ce145329029d579449b9514a6d800b2cc99fd2cd",
+  "sha": "71e4a2be670012ac67771d082b1fc56c23143817",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-long-name@catalog": {
-  "sha": "ef5b67167a992f5186348f4ab676c00025c43d97",
+  "sha": "d486d9cfb4585e792dc526e89083c3da512c938f",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-long-name@graphite": {
-  "sha": "a5c75ca5acb6d631aea877c8ca68c591df4bb2e8",
+  "sha": "38d3a054bf82dc1a297d3c0d0b0995355e288bfe",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-long-name@typewriter": {
-  "sha": "d35c20eecda16b3eb9588587b81eac0777e48ebb",
+  "sha": "b02674cd3696ef9677cbfa9d7181338070ae8c0e",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-session-open-with-a-line-the-app-says@bone": {
-  "sha": "b79ec504ab53ae8d60d4b4de269f28047cb7ae9f",
+  "sha": "d63cb6af7352c5816129aee6aa3037b629d251d8",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-session-open-with-a-line-the-app-says@catalog": {
-  "sha": "6a02f6bc968c7fc15fe6f162e90b731c6ca988a2",
+  "sha": "c12dccbef3595aba5767a6fffd92087a74073434",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-session-open-with-a-line-the-app-says@graphite": {
-  "sha": "7747f1924a8f915c1a703079aa258cfe79fdf8d6",
+  "sha": "05a2f15c0e6fec068c28f0cc318495009785d232",
   "w": 1196,
   "h": 872
  },
@@ -160,12 +140,12 @@
   "h": 872
  },
  "live-bot-recent-sessions-and-a-live-composer@bone": {
-  "sha": "fbc63819d31d1f9ee420ead60460e0beea9061a1",
+  "sha": "e700655c3b130889e48d8e8d74a65073ea9fa11a",
   "w": 1196,
   "h": 872
  },
  "live-bot-recent-sessions-and-a-live-composer@catalog": {
-  "sha": "79299d36e5765dc4d13b2f7416791c5de837443b",
+  "sha": "ff6fe24985f50d6a169e7300dac8da2d49ff2163",
   "w": 1196,
   "h": 872
  },
@@ -180,22 +160,22 @@
   "h": 872
  },
  "made-outside-boopis@bone": {
-  "sha": "520b021a76918163bc5266f01fba1289d02929d2",
+  "sha": "9e2365996c80737b8dc611a2832ba79426efe647",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@catalog": {
-  "sha": "e523204476dbd52a06c9121fcc069a9615a4b339",
+  "sha": "3147d216689fd784255c7e289298e1fa1300b536",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@graphite": {
-  "sha": "e33cdcc7d3d7a5719e856f4a34968c20aada7dcc",
+  "sha": "71853fbab46ee7741cf649dc118d3c2613b5f99b",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@typewriter": {
-  "sha": "b5a19665cc377e4c923f898e7e62f4ddcfd9304b",
+  "sha": "f4a8325d897e478ccab45b85c2d1b087468e1fd2",
   "w": 1196,
   "h": 872
  },
@@ -205,7 +185,7 @@
   "h": 872
  },
  "nina-an-approval@catalog": {
-  "sha": "c1a6be17bbcfc9d92bd3e035a01e49351f5cf415",
+  "sha": "baf17548e616933aaa9003e44ed2dca7dd311071",
   "w": 1196,
   "h": 872
  },
@@ -230,7 +210,7 @@
   "h": 872
  },
  "no-bots-at-all@graphite": {
-  "sha": "0b5230ee93d2d0f7cc1e5cdc864192fc2f6d6386",
+  "sha": "8609bf0f8efe172db1727e09e9bd8bcc27055a37",
   "w": 1196,
   "h": 872
  },

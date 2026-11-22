@@ -6,12 +6,12 @@ import { $$, } from '../../core/dom';
 import { lookOf, ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, ThreadMessage, Wait } from '../../data';
-import { LOG_N, PAGE_NAME, S, X, attCount, botById, clock, ctxPct, motion, rendered } from './ctx';
+import { LOG_N, PAGE_NAME, S, X, attCount, botById, clock, ctxPct, motion, rendered, rowNow, fitIn } from './ctx';
 import type { DockBot } from './ctx';
 import { patchHTML } from './reconcile';
 import { setOrbLife } from './orbs';
 import { emitDock, retarget } from './engine';
-import { syncRoving } from './roving';
+import { rowItemOf, syncRoving } from './roving';
 
 const MOD = isMac ? 'Meta' : 'Control';
 const IC: Record<string, string> = { plus: 'plus', close: 'close', stop: 'stop', sliders: 'sliders', down: 'chevron-down', left: 'back', right: 'forward' };
@@ -146,13 +146,21 @@ function tileHTML(p: { id: string; on: boolean }, i: number): string {
 export const V: Record<string, () => string> = {
   'bots:min': () => {
     const n = attCount();
-    return `${pillBtn('Show the dock' + (n ? ', ' + needLabel(n) : ''))}<span class="dk-mini" aria-hidden="true">${S.bots.map((b) => slot(b)).join('')}</span>${preview('bots')}${pillAtt()}`;
+    /* the pill carries the bots the row shows (never more: it would run past the window as the row did) */
+    return `${pillBtn('Show the dock' + (n ? ', ' + needLabel(n) : ''))}<span class="dk-mini" aria-hidden="true">${S.bots.slice(0, rowNow().shown).map((b) => slot(b)).join('')}</span>${preview('bots')}${pillAtt()}`;
   },
-  'bots:norm': () => `<div class="dk-row" role="toolbar" aria-label="Bots" aria-orientation="horizontal">${preview('bots')}${S.bots.map((b, i) => { const s = st(b); return (
-    `<button class="dk-bot" data-act="session" data-id="${b.id}" data-bot-label="${b.id}" aria-label="${esc(botLabel(b))}" aria-describedby="dk-bot-hint" aria-keyshortcuts="Enter ${MOD}+Enter" tabindex="${i === S.rowIdx ? 0 : -1}"` +
+  /* the row shows as many bots as its room holds (geometry.ts rowFit); when some are left out, "All bots" follows them and
+     opens the expanded roster, which holds every bot */
+  'bots:norm': () => {
+    const n = S.bots.length, { shown, more } = rowNow(), at = rowItemOf(S.rowIdx, n, shown, more);
+    fitIn.drawn = shown;
+    return `<div class="dk-row" role="toolbar" aria-label="Bots" aria-orientation="horizontal">${preview('bots')}${S.bots.slice(0, shown).map((b, i) => { const s = st(b); return (
+    `<button class="dk-bot" data-act="session" data-id="${b.id}" data-bot-label="${b.id}" aria-label="${esc(botLabel(b))}" aria-describedby="dk-bot-hint" aria-keyshortcuts="Enter ${MOD}+Enter" tabindex="${i === at ? 0 : -1}"` +
     ` data-tip="${esc(tipOf(b))}"${s.key === 'idle' ? '' : ` data-tip-state="${esc(s.word)}"`}${s.attention ? ' data-tip-tone="attention"' : ''} data-kbd="enter" data-tip-pos="top">${slot(b)}</button>`); }).join('')}` +
-    `<button class="dk-add" data-act="new-bot" aria-label="New bot" data-tip="New bot" data-tip-pos="top" tabindex="${S.rowIdx === S.bots.length ? 0 : -1}"><span data-k="add">${icon('plus')}</span></button></div>`,
-  'bots:exp': () => `${preview('bots')}<ul class="dk-roster" aria-label="All bots">${S.bots.map((b, i) => ui.html.row({ title: b.name, sub: phrase(b), lead: slot(b), tabindex: i === S.rowIdx ? '0' : '-1',
+    (more ? `<button class="dk-add dk-more" data-act="more" aria-label="All ${n} bots, ${n - shown} more" data-tip="All bots" data-tip-pos="top" tabindex="${at === shown ? 0 : -1}"><span data-k="more">${icon('more')}</span></button>` : '') +
+    `<button class="dk-add" data-act="new-bot" aria-label="New bot" data-tip="New bot" data-tip-pos="top" tabindex="${at === shown + (more ? 1 : 0) ? 0 : -1}"><span data-k="add">${icon('plus')}</span></button></div>`;
+  },
+  'bots:exp': () => `${preview('bots')}<ul class="dk-roster ui-scroll ui-scroll--stable" aria-label="All bots">${S.bots.map((b, i) => ui.html.row({ title: b.name, sub: phrase(b), lead: slot(b), tabindex: i === S.rowIdx ? '0' : '-1',
       attrs: { 'data-act': 'session', 'data-id': b.id, 'data-bot-row': b.id, 'aria-label': rowLabel(b), 'aria-describedby': 'dk-bot-hint' } })).join('')}` +
     ui.html.row({ title: 'New bot', sub: 'Set one up', tabindex: S.rowIdx === S.bots.length ? '0' : '-1', lead: `<span class="dk-add-ring"><span class="dk-add-ring-o" data-e></span><span data-k="add">${icon('plus')}</span></span>`, attrs: { 'data-act': 'new-bot' } }) + '</ul>',
   /* the bot's session: its last messages, its open cards, the library composer, and the other bots to switch to */
