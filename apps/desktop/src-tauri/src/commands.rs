@@ -347,7 +347,7 @@ pub async fn secret_set(
     let store = state.secrets.clone();
     tokio::task::spawn_blocking(move || store.set(&service, &account, &value))
         .await
-        .map_err(|e| Error::Secrets(e.to_string()))??;
+        .map_err(|e| crate::error::joined(&e))??;
     Ok(())
 }
 
@@ -363,7 +363,7 @@ pub async fn secret_delete(
     let store = state.secrets.clone();
     tokio::task::spawn_blocking(move || store.delete(&service, &account))
         .await
-        .map_err(|e| Error::Secrets(e.to_string()))??;
+        .map_err(|e| crate::error::joined(&e))??;
     Ok(())
 }
 
@@ -379,7 +379,7 @@ pub async fn secret_exists(
     let store = state.secrets.clone();
     let found = tokio::task::spawn_blocking(move || store.get(&service, &account))
         .await
-        .map_err(|e| Error::Secrets(e.to_string()))??;
+        .map_err(|e| crate::error::joined(&e))??;
     Ok(found.is_some())
 }
 

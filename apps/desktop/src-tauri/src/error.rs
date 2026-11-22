@@ -49,10 +49,10 @@ pub enum Error {
     #[error("{0} needs the user's consent")]
     ConsentRequired(&'static str),
     /// No secret store is running (on Linux: no Secret Service).
-    #[error("no secret store is available: {0}")]
+    #[error("{0}")]
     SecretsUnavailable(String),
     /// The secret store refused or failed.
-    #[error("secret store: {0}")]
+    #[error("{0}")]
     Secrets(String),
     /// The secret does not exist.
     #[error("no such secret")]

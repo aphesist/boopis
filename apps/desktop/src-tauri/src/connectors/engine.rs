@@ -273,7 +273,7 @@ impl Engine {
         let store = self.secrets.clone();
         tokio::task::spawn_blocking(move || op(store.as_ref()))
             .await
-            .map_err(|e| Error::Secrets(e.to_string()))?
+            .map_err(|e| crate::error::joined(&e))?
     }
 
     /// Install what the review showed. `plan_hash` is the review's; `secrets` are the key fields' values, which go to the
