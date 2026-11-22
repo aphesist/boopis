@@ -840,7 +840,7 @@ pub fn assess_facts(f: &Facts<'_>) -> Probe {
         return no(
             State::SignedOut,
             format!(
-                "{with_version} is installed but not signed in. Choose Sign in to Claude (boopis runs Claude Code's own `{LOGIN_COMMAND}`), then Check again."
+                "{with_version} is installed but not signed in. Choose Sign in: boopis runs Claude Code's own `{LOGIN_COMMAND}`, which opens your browser to sign in with your Claude account."
             ),
             None,
         );
@@ -850,7 +850,7 @@ pub fn assess_facts(f: &Facts<'_>) -> Probe {
         return no(
             State::Metered,
             format!(
-                "{with_version} is signed in with {how}, which bills API usage instead of your Claude subscription. Choose Sign in to Claude to sign in with your Claude account (boopis runs Claude Code's own `{LOGIN_COMMAND}`), then Check again."
+                "{with_version} is signed in with {how}, which bills API usage instead of your Claude subscription. Choose Sign in to sign in with your Claude account instead (boopis runs Claude Code's own `{LOGIN_COMMAND}`)."
             ),
             None,
         );

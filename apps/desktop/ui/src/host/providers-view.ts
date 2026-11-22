@@ -388,7 +388,7 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
     btn.disabled = true;
     deps.toast('Finish signing in to Claude in your browser.');
     login(id).then((r) => {
-      if (!r.ok) deps.toast(r.timed_out ? 'The Claude sign-in took too long and was stopped.' : 'The Claude sign-in did not finish.');
+      if (!r.ok) deps.toast(r.timed_out ? 'The Claude sign-in took too long and was stopped. Choose Sign in to try again.' : 'The Claude sign-in did not finish. Choose Sign in to try again.');
       return read(false);
     }, (e: unknown) => { deps.toast(message(e)); btn.disabled = false; });
   };

@@ -115,4 +115,37 @@ describe('the Settings row of the Claude subscription', () => {
     el.querySelector<HTMLButtonElement>('[data-do="guide"][data-way="anthropic.signin"]')?.click();
     expect(opened).toEqual(['https://code.claude.com/docs/en/setup']);
   });
+  it('shows a command in the host\'s words as code, not as raw backticks', async () => {
+    const el = document.createElement('section');
+    document.body.append(el);
+    const view = mountProviders(el, { bridge: bridge([STATES.old]), toast: () => undefined });
+    await view.ready;
+    const hint = el.querySelector('.ui-set__label small');
+    expect(hint?.innerHTML).toContain('<code class="ui-code">claude update</code>');
+    expect(hint?.textContent).not.toContain('`');
+  });
+  it('Sign in runs Claude Code\'s own sign-in, keeps the button off while it is open, and reads the state again after', async () => {
+    const el = document.createElement('section');
+    document.body.append(el);
+    const ran: string[] = [];
+    const toasts: string[] = [];
+    let finish: (ok: boolean) => void = () => undefined;
+    let reads = 0;
+    const b = bridge([STATES.out]);
+    const view = mountProviders(el, {
+      bridge: { ...b, list: () => { reads += 1; return b.list(); } }, toast: (t) => { toasts.push(t); },
+      login: (id) => { ran.push(id); return new Promise((ok) => { finish = (o) => { ok({ command_line: 'claude auth login --claudeai', ok: o, code: o ? 0 : 1, timed_out: false, output: [] }); }; }); }
+    });
+    await view.ready;
+    const btn = el.querySelector<HTMLButtonElement>('[data-do="signin"][data-way="anthropic.signin"]');
+    btn?.click();
+    expect(ran).toEqual(['claude-code']);
+    expect(btn?.disabled).toBe(true);
+    expect(toasts).toEqual(['Finish signing in to Claude in your browser.']);
+    const before = reads;
+    finish(false);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(toasts.at(-1)).toBe('The Claude sign-in did not finish. Choose Sign in to try again.');
+    expect(reads).toBe(before + 1);
+  });
 });

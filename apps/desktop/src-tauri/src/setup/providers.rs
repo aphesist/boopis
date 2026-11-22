@@ -1436,10 +1436,9 @@ fn claude_form(probe: &Probe) -> Form {
         steps.push((what.into(), format!("`{}`", hint.command)));
         steps.push(("Where".into(), hint.shell.clone()));
         steps.push(("Anthropic's guide".into(), hint.page.clone()));
-        "Paste the command into a new window, run it, then choose Check again."
-    } else if sign_in {
-        "Choose Sign in to Claude: Claude Code opens your browser to sign in with your Claude account."
+        "Paste the command into a new window, run it, then choose Check again. "
     } else {
+        // signed out or billed per use: the probe's own words already say to choose Sign in and what it runs
         ""
     };
     let mut form = Form::new(
@@ -1447,7 +1446,7 @@ fn claude_form(probe: &Probe) -> Form {
         "setup",
         title,
         &format!(
-            "{}\n\n{tail} Claude Code is Anthropic's own program: it does the signing in and keeps your login. boopis never sees, reads or stores it; it only asks Claude Code whether it is signed in.",
+            "{}\n\n{tail}Claude Code is Anthropic's own program: it does the signing in and keeps your login. boopis never sees, reads or stores it; it only asks Claude Code whether it is signed in.",
             probe.detail
         ),
         json!({"type": "object", "properties": {}}),
