@@ -202,7 +202,12 @@ function paintWorking(g: Group): void {
   w.textContent = '';
   if (why) { w.className = 'bt-working bt-working--note'; w.textContent = why; return; }
   w.className = 'bt-working';
-  if (!busy.length) return;
+  if (!busy.length) {
+    /* a room that routes through a lead: who answers first, and that an @name brings a member in at once (the engine's rule) */
+    const lead = g.lead ? g.members.find((m) => m.id === g.lead) : undefined;
+    if (lead) { w.className = 'bt-working bt-working--note'; w.textContent = lead.name + ' answers first. An @name brings that bot in now.'; }
+    return;
+  }
   w.insertAdjacentHTML('beforeend', '<span class="bt-working-orbs" aria-hidden="true">' + stackOf(busy, 16, true) + '</span>');
   w.append(el('span', { text: namesOf(busy) + (busy.length === 1 ? ' is replying' : ' are replying') }));
   livenIn(w);
