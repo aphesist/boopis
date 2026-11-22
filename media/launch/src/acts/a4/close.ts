@@ -56,7 +56,6 @@ function endCard(ctx: ActCtx): Promise<{ kf: HTMLElement; box: LogoBox }> {
 export async function b17(ctx: ActCtx): Promise<void> {
   if (!ctx.has('B17')) return;
   const { film, g, cam, stage } = ctx;
-  const V = ctx.variant === 'vertical';
   const w = ctx.win('B17'), b = (n: number): number => w.start + g.beats(n);
   film.mark('B17', w.start);
   const desk = await deskSet(ctx);
@@ -149,7 +148,6 @@ export async function b17(ctx: ActCtx): Promise<void> {
   const line = kf.querySelector('.film-line') as HTMLElement;
   softRise(film, lineUnits(line), b(1));
   lineExit(film, line, b(4.25));
-  void V;
 }
 
 /* ───────── B18: the eyes become the wordmark ───────── */

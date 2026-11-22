@@ -168,8 +168,3 @@ export function screenCursor(film: Film, layer: HTMLElement, src: HTMLElement, c
   };
   return c;
 }
-
-/** the screen point of a world point at time t (as the camera's timeline puts it) */
-export function screenOf(cam: Camera, x: number, y: number, t: number): [number, number] {
-  return cam.project(x, y, 1, cam.stateAt(t));
-}

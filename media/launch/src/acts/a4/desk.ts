@@ -41,7 +41,19 @@ export interface DeskSet {
   cursor: ScreenCursor;
   /** the medium shot after the smash cut (B16 to B17): the camera there */
   medium: { x: number; y: number; zoom: number };
-  hideFrom: number[];               /* set by B18: when the desktop has left the frame */
+  /** the moving parts the beats animate */
+  _: Parts;
+}
+interface DockOrb { name: string; orb: FilmOrb; hold: HTMLElement }
+interface Parts {
+  kf14: HTMLElement;
+  head: Row; rB1: Row; rB2: Row; rYou: Row; rReply: Row; rCard: Row; rComp: Row;
+  aOld: Row[]; aYou: Row; aReply: Row; aNeeds: Row;
+  open: { v: number }; carry: { v: number }; hide: { v: number }; ybK: { v: number };
+  dockOrbs: DockOrb[]; ninaDock: DockOrb; plus: HTMLElement; flag: HTMLElement | null;
+  typed: HTMLElement; fieldBox: { x: number; y: number; w: number; h: number };
+  holdEl: HTMLElement; card: HTMLElement; reply: HTMLElement; aReplyEl: HTMLElement; aNeedsEl: HTMLElement;
+  slotDX: number; dockH: number; Yb14: number; cx: number;
 }
 
 const sets = new WeakMap<ActCtx, Promise<DeskSet>>();
@@ -63,7 +75,7 @@ const row = (child: HTMLElement): Row => {
 const kOf = (r: Row): number => r.grow.v * (1 - r.file.v);
 
 async function buildSet(ctx: ActCtx): Promise<DeskSet> {
-  const { film, stage, g } = ctx;
+  const { film, stage } = ctx;
   const V = ctx.variant === 'vertical';
   const DX = V ? 60 : 760, DY = V ? 2000 : 1180;
   const kf14 = await ctx.keyFrame('b14', { x: DX, y: DY, swapOrbs: false });
@@ -101,8 +113,6 @@ async function buildSet(ctx: ActCtx): Promise<DeskSet> {
   const headC = rel(headOrb.holder, slab);
   const holdEl = card!.querySelector<HTMLElement>('.ui-hold')!;
   const holdIn = rel(holdEl, rCard.el);
-  const denyEl = card!.querySelector<HTMLElement>('.ui-btn:not(.ui-hold)');
-  void denyEl;
 
   /* ── the other app: b15's plate, b14's older messages (bars) moved in at the top ── */
   const app = kf15.querySelector<HTMLElement>('.app2')!;
@@ -215,8 +225,7 @@ async function buildSet(ctx: ActCtx): Promise<DeskSet> {
   const vOpen15 = SCALE * (PAD * 2 + rHead.h + GAP + rYou.h + GAP + rReply.h + GAP + rCard.h);
   const top15 = Yb15 - vOpen15;
   const cardTop15 = top15 + SCALE * (PAD + rHead.h + GAP + rYou.h + GAP + rReply.h + GAP);
-  const hold = { x: DX + leftOpen + holdIn.x - (slabBox.x - leftOpen), y: DY + cardTop15 + holdIn.y, w: holdIn.w, h: holdIn.h };
-  hold.x = DX + rel(holdEl, kf15).x;      /* x does not depend on the column */
+  const hold = { x: DX + rel(holdEl, kf15).x, y: DY + cardTop15 + holdIn.y, w: holdIn.w, h: holdIn.h };   /* x does not depend on the column */
   const headW = { x: DX + leftOpen + headC.x + headC.w / 2, y: DY + top15 + headC.y + headC.h / 2, size: headC.w };
 
   /* the cursor: the art director's arrow from b14, in the frame's own layer, off frame at first */
@@ -224,15 +233,11 @@ async function buildSet(ctx: ActCtx): Promise<DeskSet> {
   const cur = screenCursor(film, scr.el, kf14.querySelector<HTMLElement>('.cursor')!, ctx.cam, V ? [1180, 2100] : [2060, 1260]);
   const medium = V ? { x: DX + 540, y: DY + 1000, zoom: 1.04 } : { x: DX + 900, y: DY + 600, zoom: 1.06 };
 
-  const set: DeskSet & { _: Record<string, unknown> } = {
-    DX, DY, box: kf15, slab, headOrb, hold, head: headW, cursor: cur, medium, hideFrom: [],
-    _: { kf14, rows, aRows, rB1, rB2, rYou, rReply, rCard, rComp, aOld, aYou, aReply, aNeeds, open, carry, hide, ybK, dockOrbs, ninaDock, plus, flag, typed, field, fieldBox, holdEl, card, reply, aReplyEl, aNeedsEl, head: rHead, slotDX, dockH, Yb14, cx }
+  return {
+    DX, DY, box: kf15, slab, headOrb, hold, head: headW, cursor: cur, medium,
+    _: { kf14, rB1, rB2, rYou, rReply, rCard, rComp, aOld, aYou, aReply, aNeeds, open, carry, hide, ybK, dockOrbs, ninaDock, plus, flag, typed, fieldBox, holdEl, card: card!, reply: reply!, aReplyEl, aNeedsEl, head: rHead, slotDX, dockH, Yb14, cx }
   };
-  void g;
-  return set;
 }
-
-type Priv = DeskSet & { _: Record<string, any> };   // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /* ───────── B14: same thread, from your other apps ───────── */
 export async function b14(ctx: ActCtx): Promise<void> {
@@ -240,7 +245,7 @@ export async function b14(ctx: ActCtx): Promise<void> {
   const { film, g, cam } = ctx;
   const V = ctx.variant === 'vertical';
   const w = ctx.win('B14'), b = (n: number): number => w.start + g.beats(n);
-  const s = (await deskSet(ctx)) as Priv;
+  const s = await deskSet(ctx);
   const _ = s._;
   film.mark('B14', w.start);
 
@@ -272,7 +277,7 @@ export async function b14(ctx: ActCtx): Promise<void> {
   const click = b(2);
   s.cursor.move({ world: ninaAim }, { at: b(1.5) - g.f(14), dur: click - g.f(10) - (b(1.5) - g.f(14)), arc: 0.1 });
   s.cursor.press(click - g.f(4));
-  const fb = _.fieldBox as { x: number; y: number; w: number; h: number };
+  const fb = _.fieldBox;
   const fieldAim: [number, number] = [s.DX + fb.x + fb.w * 0.84, s.DY + fb.y + fb.h * 0.42];
   s.cursor.move({ world: fieldAim }, { at: b(2.5), dur: g.f(20), arc: 0.14 });
   s.cursor.press(b(3.125) - g.f(4));
@@ -285,15 +290,15 @@ export async function b14(ctx: ActCtx): Promise<void> {
   film.tl.fromTo(_.carry, { v: 0 }, { v: 1, duration: dockDur, ease: springEase(DOCK), data: { role: 'ui' } }, click + g.f(2));
   onlyIn(film, _.ninaDock.hold, -Infinity, click + g.f(2) + dockDur);
   onlyIn(film, s.headOrb.holder, click + g.f(2) + dockDur, Infinity);
-  for (const d of _.dockOrbs as { name: string; hold: HTMLElement; orb: FilmOrb }[]) {
+  for (const d of _.dockOrbs) {
     if (d.name === 'nina') continue;
     film.tl.fromTo(d.hold, { opacity: 1, scale: 1 }, { opacity: 0, scale: 0.8, duration: 0.12, ease: uiEase, immediateRender: false, data: { role: 'ui' } }, click);
   }
   film.tl.fromTo(_.plus, { opacity: 0.7, scale: 1 }, { opacity: 0, scale: 0.8, duration: 0.12, ease: uiEase, immediateRender: false, data: { role: 'ui' } }, click);
   /* the roster turns to the cursor as it comes in (the product's dock looks toward the pointer, clamped) */
-  (_.dockOrbs as { orb: FilmOrb }[]).forEach((d, i) => glance(film, d.orb, b(1.5) - g.f(10) + i * g.f(2), 16 - i * 4, -8));
+  _.dockOrbs.forEach((d, i) => glance(film, d.orb, b(1.5) - g.f(10) + i * g.f(2), 16 - i * 4, -8));
   /* the session's own content enters (220 ms, the product's entrance), the head's words first */
-  const nameEl = (_.head.body as HTMLElement).lastElementChild as HTMLElement;
+  const nameEl = _.head.body.lastElementChild as HTMLElement;
   const enter = (el: HTMLElement, at: number): void => { film.tl.fromTo(el, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.22, ease: uiEase, data: { role: 'ui' } }, at); };
   enter(nameEl, click + g.f(9));      /* her name as her orb comes home (the spring is 80% there), so it never passes over it */
   enter(_.rB1.body, click + g.f(5)); enter(_.rB2.body, click + g.f(7)); enter(_.rComp.body, click + g.f(9));
@@ -313,7 +318,7 @@ export async function b15(ctx: ActCtx): Promise<void> {
   const { film, g } = ctx;
   const V = ctx.variant === 'vertical';
   const w = ctx.win('B15'), b = (n: number): number => w.start + g.beats(n);
-  const s = (await deskSet(ctx)) as Priv;
+  const s = await deskSet(ctx);
   const _ = s._;
   film.mark('B15', w.start);
   const grow = (r: Row, at: number, dur = 0.22): void => { film.tl.fromTo(r.grow, { v: 0 }, { v: 1, duration: dur, ease: uiEase, data: { role: 'ui' } }, at); };
@@ -324,14 +329,14 @@ export async function b15(ctx: ActCtx): Promise<void> {
   grow(_.rYou, b(0)); grow(_.aYou, b(0));
   file(_.rB1, b(0));
   /* nina's reply streams in both places, the same words in sync (a bot's own chat streams) */
-  const replyP = _.reply as HTMLElement, appReply = _.aReplyEl as HTMLElement;
+  const replyP = _.reply, appReply = _.aReplyEl;
   grow(_.rReply, b(0.5), 0.18); grow(_.aReply, b(0.5), 0.18);
   file(_.rB2, b(0.5));
   const cps = 'Ready. Deploying needs your approval.'.length / g.beats(1.25);
   typeOn(film, replyP, { at: b(0.5), cps });
   typeOn(film, appReply, { at: b(0.5), cps });
-  if (V) { file(_.aOld[0], b(0)); file(_.aYou, b(0.5)); file(_.aReply, b(2)); }
-  else for (const r of _.aOld as Row[]) file(r, b(2));
+  if (V) { if (_.aOld[0]) file(_.aOld[0], b(0)); file(_.aYou, b(0.5)); file(_.aReply, b(2)); }
+  else for (const r of _.aOld) file(r, b(2));
   /* her approval card rises (--dur-3 on --ease); the composer goes below the frame; her face turns to needs; the flag */
   grow(_.rCard, b(2), 0.3);
   film.tl.fromTo(_.hide, { v: 0 }, { v: 1, duration: 0.3, ease: uiEase, data: { role: 'ui' } }, b(2));
@@ -358,7 +363,7 @@ export async function b16(ctx: ActCtx): Promise<void> {
   const { film, g, cam } = ctx;
   const V = ctx.variant === 'vertical';
   const w = ctx.win('B16'), b = (n: number): number => w.start + g.beats(n);
-  const s = (await deskSet(ctx)) as Priv;
+  const s = await deskSet(ctx);
   const _ = s._;
   film.mark('B16', w.start);
   const h = s.hold, hc = { x: h.x + h.w / 2, y: h.y + h.h / 2 };
@@ -376,7 +381,7 @@ export async function b16(ctx: ActCtx): Promise<void> {
 
   /* the product's own fill: holdEase over exactly 60 frames, the ordered dot field at the leading edge fusing into the
      bone fill, the label inverting where the fill has passed (components/hold.ts draw()) */
-  const btn = _.holdEl as HTMLElement;
+  const btn = _.holdEl;
   const fx = btn.querySelector<HTMLCanvasElement>('canvas.ui-hold__fx')!;
   const solid = btn.querySelector<HTMLElement>('.ui-hold__solid')!, onLabel = btn.querySelector<HTMLElement>('.ui-hold__label--on')!;
   const Wr = h.w / SCALE, Hr = h.h / SCALE;            /* the button at its real size */
@@ -413,7 +418,7 @@ export async function b16(ctx: ActCtx): Promise<void> {
   film.cut(full);
   cam.to({ x: s.medium.x, y: s.medium.y, zoom: s.medium.zoom }, { at: full - 1 / 600, dur: 1 / 600, ease: travel, blur: false });
   cam.drift({ x: s.medium.x + 14, y: s.medium.y - 6, zoom: s.medium.zoom * 1.03 }, { at: full, dur: ctx.win('B17').start - full });
-  const card = _.card as HTMLElement;
+  const card = _.card;
   const foot = card.querySelector<HTMLElement>('[data-r="foot"]')!;
   const liveFoot = foot.firstElementChild as HTMLElement;
   const receipt = document.createElement('div');
@@ -422,7 +427,7 @@ export async function b16(ctx: ActCtx): Promise<void> {
   receipt.style.display = 'none';
   foot.appendChild(receipt);
   const stamp = card.querySelector<HTMLElement>('.ui-stamp, [class*="stamp"]');
-  const needs = _.aNeedsEl as HTMLElement, needsText = needs.textContent ?? '';
+  const needs = _.aNeedsEl, needsText = needs.textContent ?? '';
   let was: boolean | null = null;
   film.onRender((t) => {
     const done = t >= full - 1e-9;

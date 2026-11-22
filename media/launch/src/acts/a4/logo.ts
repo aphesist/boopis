@@ -7,10 +7,10 @@
                                         opaque shape each at every frame
      her body shrinks behind them       her outline, opaque, scaling down toward the point between the eyes
      the letters play in                letters="play": each letter is a piece with its pivot on the baseline, driven by
-                                        the element's own springs and gravity (HOP_MAX, PLAY_G, the 48 ms stagger, squash
-                                        and stretch that keeps the area, the tittle's own bounce), integrated once at
-                                        build time at 600 Hz, so a frame is a table lookup. They grow out from behind the
-                                        eyes (their parent), never from nothing.
+                                        the element's own springs and gravity (the 48 ms stagger, squash and stretch that
+                                        keeps the area, the tittle's own bounce), integrated once at build time at 600 Hz,
+                                        so a frame is a table lookup. They spring up in the logo's own wave from under the
+                                        line they land on (a mask), never from nothing.
      live eyes                          a glance (the pair travels along the line, TRAVEL) and a blink (the orb's
                                         envelope into the logo's wide capsule), with still letters (look.md 6) */
 import type { Film } from '../../engine/film';
