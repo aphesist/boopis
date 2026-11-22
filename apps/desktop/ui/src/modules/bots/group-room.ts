@@ -20,6 +20,8 @@ import { closeSettings } from './settings';
 import { openNewGroup } from './new-group';
 import { arrival, atEnd, dropPending, entryActs, glanceAt, jumpButton, listWords, pendingEntry, placeToLine, setJump, toLine, unreadDivider, updatePending } from './ledger';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
+import { foldHuddles, huddleEntry, huddleRuns, isBetween, liveAt } from './huddle';
+import type { HuddleDeps } from './huddle';
 
 const groups = () => data().groups;
 const toast = (t: string, o?: Parameters<typeof ui.toast>[1]): void => { ui.toast(t, o); };
@@ -160,6 +162,16 @@ function replyTo(g: Group, who: string): void {
   const m = memberOf(g, who), c = G.composer; if (!m || !c) return;
   const v = c.value; c.insert((v && !/\s$/.test(v) ? ' ' : '') + '@' + m.handle + ' '); c.focus();
 }
+/** what a huddle needs of the room: its members, orbs and words */
+function huddleDeps(g: Group): HuddleDeps {
+  return {
+    member: (id) => memberOf(g, id),
+    orb: (m, size) => orbHTML(memberBot(m), size, { state: 'idle' }),
+    to: (m) => recipients(g, m),
+    ctx: ctxOf(g),
+    drawn: (m, node) => { NODE.set(m.id, node); void resolvePaths(node, rootsOf(g, m.who)); }
+  };
+}
 function renderLog(g: Group): void {
   const log = G.log as HTMLElement; log.textContent = '';
   NODE.clear(); PENDING.clear();
@@ -174,7 +186,17 @@ function renderLog(g: Group): void {
     const at = seen ? msgs.findIndex((x) => x.id === seen) : -1;
     const firstNew = at >= 0 ? msgs.slice(at + 1).find((x) => !(x.kind === 'text' && x.who === 'you')) : undefined;
     let prev: GroupMessage | null = null, entry: HTMLElement | null = null;
-    for (const m of msgs) {
+    const runs = huddleRuns(msgs);
+    for (let i = 0; i < msgs.length; i++) {
+      const m = msgs[i] as GroupMessage;
+      const run = runs.find((r) => r[0] === i);
+      if (run) {
+        const part = msgs.slice(run[0], run[1]) as GroupText[];
+        const inside = firstNew && part.some((x) => x.id === firstNew.id);
+        const h = huddleEntry(part, huddleDeps(g), { open: liveAt(msgs, run[1]), unreadBefore: inside ? firstNew.id : undefined });
+        if (inside) U.divider = h.querySelector<HTMLElement>('.bt-unread');
+        log.append(h); prev = null; entry = null; i = run[1] - 1; continue;
+      }
       if (firstNew && m.id === firstNew.id) { U.divider = unreadDivider(); log.append(U.divider); prev = null; entry = null; }
       entry = renderMsg(g, m, prev, entry); prev = m;
     }
@@ -243,6 +265,13 @@ function appendMsg(g: Group, m: GroupMessage): void {
   const turnsNow = [...log.querySelectorAll<HTMLElement>(':scope > [data-hx-turn]')];
   const last = turnsNow[turnsNow.length - 1] ?? null;
   const lastIsLast = !!last && !last.nextElementSibling?.matches('.bt-note, .bt-unread');
+  if (m.kind === 'text' && m.who === 'you') foldHuddles(log);
+  /* a member's message among the members: two or more in a row fold into one huddle, which stays open while the talk is live */
+  if (isBetween(m)) {
+    const run: GroupText[] = [];
+    for (let i = list.length - 1; i >= 0; i--) { const x = list[i] as GroupMessage; if (isBetween(x)) run.unshift(x); else break; }
+    if (run.length >= 2) { paintHuddle(g, run, m); if (follow) { sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); markSeen(g); } else { U.unread++; setJump(U.jump, U.unread); } return; }
+  }
   const pend = m.kind === 'text' ? PENDING.get(m.who) : undefined;
   const entry = renderMsg(g, m, pend ? null : prev, pend || !lastIsLast ? null : last);
   const node = NODE.get(m.id) ?? null;
@@ -254,6 +283,24 @@ function appendMsg(g: Group, m: GroupMessage): void {
     if (!U.divider && node) { U.divider = unreadDivider(); (entry && entry.contains(node) && $('.ui-entry__body', entry).firstElementChild === node ? entry : node).before(U.divider); }
     U.unread++; setJump(U.jump, U.unread);
   }
+}
+/** the run's earlier messages leave the log (their entries, or the huddle they were in) and the whole run is drawn as one huddle, with the arriving message fading up */
+function paintHuddle(g: Group, run: readonly GroupText[], arriving: GroupText): void {
+  const log = G.log as HTMLElement;
+  const gone = new Set<HTMLElement>();
+  for (const x of run) if (x !== arriving) { const e = NODE.get(x.id)?.closest<HTMLElement>('[data-hx-turn]'); if (e) gone.add(e); }
+  const old = [...gone][0];
+  const kept = [...gone].find((e) => e.classList.contains('bt-huddle-entry'));
+  const open = kept ? kept.querySelector('.ui-disclosure')?.getAttribute('aria-expanded') === 'true' : true;
+  const h = huddleEntry(run, huddleDeps(g), { open });
+  if (kept?.dataset['user']) h.dataset['user'] = kept.dataset['user'];
+  const pend = PENDING.get(arriving.who);
+  if (pend) { PENDING.delete(arriving.who); pend.remove(); }
+  const tail = log.querySelector(':scope > .bt-pending-entry');
+  if (old) old.before(h); else if (tail) tail.before(h); else log.append(h);
+  for (const e of gone) e.remove();
+  const node = NODE.get(arriving.id);
+  if (node && open) ui.markdown.arrive(node);
 }
 /** the user has seen the end of the thread: remember its last message, and the jump goes */
 function markSeen(g: Group): void {
