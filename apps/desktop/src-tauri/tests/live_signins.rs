@@ -476,12 +476,19 @@ fn keys(p: &mut Probe) {
                 if let Some(f) = plain_or_fail(&detail) {
                     return f;
                 }
+                let route = way.key.as_ref().and_then(|k| k.check.as_ref());
                 match (&found, state.status, state.code.as_deref()) {
                     (
                         Ok(KeyCheck::Rejected),
                         ProviderStatus::Error,
                         Some("hx.provider.key_rejected"),
-                    ) => (Verdict::Pass, detail),
+                    ) => (
+                        Verdict::Pass,
+                        match route {
+                            Some(r) => format!("{detail} (its key route, {})", r.url),
+                            None => detail,
+                        },
+                    ),
                     // a list open to anyone cannot tell a wrong key: the card must say so, not call the key accepted
                     (Ok(KeyCheck::Public), ProviderStatus::Connected, None)
                         if state.models_count.is_none() && detail.contains("anyone") =>

@@ -1,5 +1,6 @@
-//! The one outbound read the provider commands make: a `GET` of a model listing (`/models`), for the check that follows a saved key
-//! and for the Test step of an endpoint (ADR-0039). The same shape as the ChatGPT sign-in's wire (`chatgpt/oauth.rs`): each call is
+//! The outbound requests the provider commands make: a `GET` of a model listing (`/models`), for the check that follows a saved key
+//! and for the Test step of an endpoint (ADR-0039), and a provider's own key route (`key.check` in the data: a `GET`, or a `POST`
+//! of an empty JSON object) when its list cannot tell a wrong key (ADR-0041). The same shape as the ChatGPT sign-in's wire (`chatgpt/oauth.rs`): each call is
 //! one blocking request through [`Transport`], run on `spawn_blocking` by the caller; nothing here stores anything, and no header
 //! value (a key) is ever logged, put in an error or kept.
 //!
@@ -39,6 +40,17 @@ pub trait Transport: Send + Sync + 'static {
     /// # Errors
     /// The message of the failure.
     fn get(&self, url: &str, headers: &[(String, String)]) -> std::result::Result<Reply, String>;
+
+    /// `POST url` with these headers and a JSON `body`, following no redirect. The same errors as [`Transport::get`].
+    ///
+    /// # Errors
+    /// The message of the failure.
+    fn post(
+        &self,
+        url: &str,
+        headers: &[(String, String)],
+        body: &str,
+    ) -> std::result::Result<Reply, String>;
 }
 
 /// The real transport: `ureq` over rustls with the operating system's trust store, a whole-request timeout, a cap on the body and no
@@ -72,37 +84,66 @@ impl Https {
     }
 }
 
-impl Transport for Https {
-    fn get(&self, url: &str, headers: &[(String, String)]) -> std::result::Result<Reply, String> {
-        let loopback = Url::parse(url).is_ok_and(|u| is_loopback(&u));
-        let agent = if loopback {
+impl Https {
+    fn agent_for(&self, url: &str) -> &ureq::Agent {
+        if Url::parse(url).is_ok_and(|u| is_loopback(&u)) {
             &self.direct
         } else {
             &self.proxied
-        };
-        let mut req = agent.get(url).header("Accept", "application/json");
+        }
+    }
+}
+
+impl Transport for Https {
+    fn get(&self, url: &str, headers: &[(String, String)]) -> std::result::Result<Reply, String> {
+        let mut req = self
+            .agent_for(url)
+            .get(url)
+            .header("Accept", "application/json");
         for (k, v) in headers {
             req = req.header(k.as_str(), v.as_str());
         }
-        let mut resp = req.call().map_err(|e| e.to_string())?;
-        let status = resp.status().as_u16();
-        let location = resp
-            .headers()
-            .get("location")
-            .and_then(|v| v.to_str().ok())
-            .map(str::to_owned);
-        let body = resp
-            .body_mut()
-            .with_config()
-            .limit(MAX_BODY)
-            .read_to_string()
-            .unwrap_or_default();
-        Ok(Reply {
-            status,
-            body,
-            location,
-        })
+        read(req.call().map_err(|e| e.to_string())?)
     }
+
+    fn post(
+        &self,
+        url: &str,
+        headers: &[(String, String)],
+        body: &str,
+    ) -> std::result::Result<Reply, String> {
+        let mut req = self
+            .agent_for(url)
+            .post(url)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json");
+        for (k, v) in headers {
+            req = req.header(k.as_str(), v.as_str());
+        }
+        read(req.send(body).map_err(|e| e.to_string())?)
+    }
+}
+
+/// The status, the redirect's target and the body (up to [`MAX_BODY`]) of an answer.
+#[allow(clippy::unnecessary_wraps)] // the transport's result type
+fn read(mut resp: ureq::http::Response<ureq::Body>) -> std::result::Result<Reply, String> {
+    let status = resp.status().as_u16();
+    let location = resp
+        .headers()
+        .get("location")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+    let body = resp
+        .body_mut()
+        .with_config()
+        .limit(MAX_BODY)
+        .read_to_string()
+        .unwrap_or_default();
+    Ok(Reply {
+        status,
+        body,
+        location,
+    })
 }
 
 /// Whether a parsed address is on this computer: `127.0.0.1`, `localhost` or `[::1]`.
@@ -297,6 +338,14 @@ mod tests {
     struct Script(std::sync::Mutex<Vec<std::result::Result<Reply, String>>>);
     impl Transport for Script {
         fn get(&self, _: &str, _: &[(String, String)]) -> std::result::Result<Reply, String> {
+            self.0.lock().unwrap().remove(0)
+        }
+        fn post(
+            &self,
+            _: &str,
+            _: &[(String, String)],
+            _: &str,
+        ) -> std::result::Result<Reply, String> {
             self.0.lock().unwrap().remove(0)
         }
     }

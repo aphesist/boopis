@@ -310,6 +310,27 @@ pub fn check_key(
     })
 }
 
+/// Ask a provider's route that checks the key before it reads the request (`key.check` with `POST`): it is sent an empty JSON object,
+/// so a working key is turned down only for the empty request (2xx, 400 or 422) and nothing runs, and a wrong one is refused (401,
+/// 403, or a 400 about the key). Any other answer (a 404, a 5xx, a redirect, which is not followed) is `Unverified`: the route said
+/// nothing about the key.
+#[must_use]
+pub fn post_check(t: &dyn Transport, url: &str, mode: ApiMode, key: &str) -> KeyCheck {
+    let host = url::Url::parse(url)
+        .ok()
+        .and_then(|u| u.host_str().map(str::to_owned))
+        .unwrap_or_default();
+    match t.post(url, &auth_headers(mode, Some(key), &host), "{}") {
+        Err(e) => {
+            crate::error::keep("hx.provider.unreachable", &format!("{url}: {e}"));
+            KeyCheck::Unreachable
+        }
+        Ok(r) if refuses_key(&r) => KeyCheck::Rejected,
+        Ok(r) if matches!(r.status, 200..=299 | 400 | 422) => KeyCheck::Accepted(0),
+        Ok(r) => KeyCheck::Unverified(r.status),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

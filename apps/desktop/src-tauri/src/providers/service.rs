@@ -11,12 +11,15 @@ use std::sync::{Arc, Mutex};
 
 use serde_json::Value;
 
-use super::check::{KeyCheck, check_key, timeout};
+use super::check::{KeyCheck, check_key, post_check, timeout};
 use super::endpoint::EndpointRequest;
 use super::endpoints::{check, clean_key, models_value, reserved, slug_for};
 use super::http::{Address, Transport};
 use super::signin::Signins;
-use super::{ApiMode, Config, Entry, ProviderState, ProviderStatus, Way, WayKind, catalogue};
+use super::{
+    ApiMode, Config, Entry, KeyRoute, ProviderState, ProviderStatus, RouteMethod, Way, WayKind,
+    catalogue,
+};
 use crate::claude::{self, ClaudeCli};
 use crate::error::{Error, Result};
 use crate::secrets::SecretStore;
@@ -637,10 +640,10 @@ impl Providers {
     }
 }
 
-/// Where a key's listing is asked, and whether that listing is the provider's authenticated key check (`/key`) instead of its
-/// model list. `OpenRouter`'s model list is public, so it cannot tell a bad key; its key endpoint can.
-/// Check a key for a key way with one model listing at the way's own address, never another. Blocking: run it on `spawn_blocking`.
-/// Saves nothing; the live probe (`tests/live_signins.rs`) calls it with a key no provider accepts.
+/// Check a key for a key way: at the provider's own key route when the data names one (`key.check`), else (or when the route said
+/// nothing about the key) with the model listing at the way's own address. The key goes to those two addresses and nowhere else.
+/// Blocking: run it on `spawn_blocking`. Saves nothing; the live probe (`tests/live_signins.rs`) calls it with a key no provider
+/// accepts.
 ///
 /// # Errors
 /// `hx.provider.endpoint_invalid` for an address in the catalogue that is not one (never expected), `hx.provider.endpoint_blocked`
@@ -651,12 +654,20 @@ pub fn check_way_key(t: &dyn Transport, way: &Way, key: &str) -> Result<KeyCheck
     };
     let mode = way.api_mode.unwrap_or(ApiMode::ChatCompletions);
     let address = Address::parse(&base)?;
-    let (url, key_route) = listing_url(&address, mode);
+    // the provider's own key route, when its list cannot tell a wrong key; an answer that says nothing falls back to the list
+    if let Some(route) = way.key.as_ref().and_then(|k| k.check.as_ref()) {
+        match ask_key_route(t, route, mode, key)? {
+            KeyCheck::Unverified(_) => {}
+            said => return Ok(said),
+        }
+    }
+    let url = match mode {
+        ApiMode::AnthropicMessages => address.join("/v1/models"),
+        _ => address.join("/models"),
+    };
     Ok(match check_key(t, &address, &url, mode, key)? {
-        // OpenRouter's listing is public, so its key has its own route, which answers 200 with no list
-        KeyCheck::Unverified(s) if key_route && (200..300).contains(&s) => KeyCheck::Accepted(0),
         // a listing that lists models for any key may be open to anyone: asked once more with no key, it says which
-        KeyCheck::Accepted(n) if !key_route => match check_key(t, &address, &url, mode, "")? {
+        KeyCheck::Accepted(n) => match check_key(t, &address, &url, mode, "")? {
             KeyCheck::Accepted(m) if m > 0 => KeyCheck::Public,
             _ => KeyCheck::Accepted(n),
         },
@@ -664,15 +675,24 @@ pub fn check_way_key(t: &dyn Transport, way: &Way, key: &str) -> Result<KeyCheck
     })
 }
 
-fn listing_url(base: &Address, mode: ApiMode) -> (String, bool) {
-    let text = base.text();
-    if text.contains("//openrouter.ai/") {
-        return (base.join("/key"), true);
-    }
-    match mode {
-        ApiMode::AnthropicMessages => (base.join("/v1/models"), false),
-        _ => (base.join("/models"), false),
-    }
+/// What a provider's key route (`key.check`) says: `Rejected`, `Unreachable`, `Accepted` (a working key; a route lists no models,
+/// so usually with no count), or `Unverified` when it said nothing about the key.
+fn ask_key_route(
+    t: &dyn Transport,
+    route: &KeyRoute,
+    mode: ApiMode,
+    key: &str,
+) -> Result<KeyCheck> {
+    Ok(match route.method {
+        RouteMethod::Get => {
+            match check_key(t, &Address::parse(&route.url)?, &route.url, mode, key)? {
+                // an account or key page: 2xx is a working key, whatever it holds
+                KeyCheck::Unverified(s) if (200..300).contains(&s) => KeyCheck::Accepted(0),
+                c => c,
+            }
+        }
+        RouteMethod::Post => post_check(t, &route.url, mode, key),
+    })
 }
 
 /// The local way `way_id` names, when the engine has its own provider for it (`config: builtin`: LM Studio).

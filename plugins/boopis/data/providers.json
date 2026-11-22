@@ -351,7 +351,11 @@
             "wire_var": "OPENROUTER_API_KEY",
             "url": "https://openrouter.ai/keys",
             "required": true,
-            "refuse_prefixes": []
+            "refuse_prefixes": [],
+            "check": {
+              "url": "https://openrouter.ai/api/v1/key",
+              "method": "GET"
+            }
           },
           "base_url": {
             "default": "https://openrouter.ai/api/v1",
@@ -1820,7 +1824,11 @@
             "wire_var": "HF_TOKEN",
             "url": "https://huggingface.co/settings/tokens",
             "required": true,
-            "refuse_prefixes": []
+            "refuse_prefixes": [],
+            "check": {
+              "url": "https://huggingface.co/api/whoami-v2",
+              "method": "GET"
+            }
           },
           "base_url": {
             "default": "https://router.huggingface.co/v1",
@@ -2123,7 +2131,11 @@
             "wire_var": "KILOCODE_API_KEY",
             "url": null,
             "required": true,
-            "refuse_prefixes": []
+            "refuse_prefixes": [],
+            "check": {
+              "url": "https://api.kilo.ai/api/profile",
+              "method": "GET"
+            }
           },
           "base_url": {
             "default": "https://api.kilo.ai/api/gateway",
@@ -2176,7 +2188,11 @@
             "wire_var": "OLLAMA_API_KEY",
             "url": "https://ollama.com/settings",
             "required": true,
-            "refuse_prefixes": []
+            "refuse_prefixes": [],
+            "check": {
+              "url": "https://ollama.com/api/chat",
+              "method": "POST"
+            }
           },
           "base_url": {
             "default": "https://ollama.com/v1",
@@ -2282,7 +2298,11 @@
             "wire_var": "NOVITA_API_KEY",
             "url": "https://novita.ai/settings/key-management",
             "required": true,
-            "refuse_prefixes": []
+            "refuse_prefixes": [],
+            "check": {
+              "url": "https://api.novita.ai/openai/v1/chat/completions",
+              "method": "POST"
+            }
           },
           "base_url": {
             "default": "https://api.novita.ai/openai/v1",
