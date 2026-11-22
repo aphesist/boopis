@@ -282,6 +282,7 @@
   --scroll-thumb-color: var(--bg-4);           /* at rest (the v6 thumb) */
   --scroll-thumb-color-active: var(--mark-off); /* hovered or dragged: 3:1, like every non-text mark */
   --scroll-fade: 16px;        /* the edge fade: where more lies beyond a scroller's edge, its content fades out over this (R-scroll-9) */
+  --mask-solid: #000;         /* a mask's opaque stop: a mask reads only alpha, so this is no colour anyone sees */
 
   /* elevation (DESIGN-SYSTEM.md §9, R-elev-2): depth is tone; only what floats has a shadow */
   --elev-0: none;             /* the frame and the ground */

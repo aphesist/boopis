@@ -715,7 +715,8 @@
   function matchesBase(e, base) { try { return base === '*' || e.matches(base) || (base.endsWith(' *') && e.matches(base)); } catch { return false; } }
 
   /* ───────── stability ───────── */
-  const VOLATILE = /^(id|style|aria-describedby|aria-controls|aria-labelledby|aria-activedescendant|aria-expanded|for|data-sq-on|data-lab-\w+|tabindex|data-glance|width|height|static|d|data-countdown)$/;
+  /* runtime state, not structure: the edge-fade flags follow the scroll position (scroll-edges.ts), which a render does not fix */
+  const VOLATILE = /^(id|style|aria-describedby|aria-controls|aria-labelledby|aria-activedescendant|aria-expanded|for|data-sq-on|data-lab-\w+|tabindex|data-glance|width|height|static|d|data-countdown|data-more-(top|bottom|left|right))$/;
   function signature(root) {
     root = root || (window.__lab && window.__lab.scope && window.__lab.scope()) || document.body;
     const lines = [];

@@ -141,23 +141,23 @@
 .ui-scroll[data-more-left] { --fade-l: var(--scroll-fade); }
 .ui-scroll[data-more-right] { --fade-r: var(--scroll-fade); }
 .ui-scroll:not(.ui-scroll--ground):is([data-more-top], [data-more-bottom]) {
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-t), #000 calc(100% - var(--fade-b)), transparent), linear-gradient(#000, #000);
-  mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-t), #000 calc(100% - var(--fade-b)), transparent), linear-gradient(#000, #000);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, var(--mask-solid) var(--fade-t), var(--mask-solid) calc(100% - var(--fade-b)), transparent), linear-gradient(var(--mask-solid), var(--mask-solid));
+  mask-image: linear-gradient(to bottom, transparent, var(--mask-solid) var(--fade-t), var(--mask-solid) calc(100% - var(--fade-b)), transparent), linear-gradient(var(--mask-solid), var(--mask-solid));
   -webkit-mask-size: 100% 100%, var(--scroll-size) 100%; mask-size: 100% 100%, var(--scroll-size) 100%;
   -webkit-mask-position: 0 0, 100% 0; mask-position: 0 0, 100% 0;
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
 }
 .ui-scroll:not(.ui-scroll--ground):is([data-more-left], [data-more-right]) {
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent), linear-gradient(#000, #000);
-  mask-image: linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent), linear-gradient(#000, #000);
+  -webkit-mask-image: linear-gradient(to right, transparent, var(--mask-solid) var(--fade-l), var(--mask-solid) calc(100% - var(--fade-r)), transparent), linear-gradient(var(--mask-solid), var(--mask-solid));
+  mask-image: linear-gradient(to right, transparent, var(--mask-solid) var(--fade-l), var(--mask-solid) calc(100% - var(--fade-r)), transparent), linear-gradient(var(--mask-solid), var(--mask-solid));
   -webkit-mask-size: 100% 100%, 100% var(--scroll-size); mask-size: 100% 100%, 100% var(--scroll-size);
   -webkit-mask-position: 0 0, 0 100%; mask-position: 0 0, 0 100%;
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
 }
 /* a block that scrolls both ways and has more on both axes: both fades, intersected (the bars keep their columns) */
 .ui-scroll--both:not(.ui-scroll--ground):is([data-more-top], [data-more-bottom]):is([data-more-left], [data-more-right]) {
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-t), #000 calc(100% - var(--fade-b)), transparent), linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent);
-  mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-t), #000 calc(100% - var(--fade-b)), transparent), linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, var(--mask-solid) var(--fade-t), var(--mask-solid) calc(100% - var(--fade-b)), transparent), linear-gradient(to right, transparent, var(--mask-solid) var(--fade-l), var(--mask-solid) calc(100% - var(--fade-r)), transparent);
+  mask-image: linear-gradient(to bottom, transparent, var(--mask-solid) var(--fade-t), var(--mask-solid) calc(100% - var(--fade-b)), transparent), linear-gradient(to right, transparent, var(--mask-solid) var(--fade-l), var(--mask-solid) calc(100% - var(--fade-r)), transparent);
   -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-position: 0 0; mask-position: 0 0;
   -webkit-mask-composite: source-in; mask-composite: intersect;
 }
