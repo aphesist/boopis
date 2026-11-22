@@ -5,6 +5,7 @@
 import { Channel } from '@tauri-apps/api/core';
 import { commands } from './bindings';
 import type { Frame } from './bindings';
+import { keepDetail, sentenceFor } from './errors';
 
 export interface Connected {
   connectionId: number;
@@ -42,7 +43,11 @@ export function asHostError(e: unknown): HostError {
     const { code, message } = e as { code: unknown; message: unknown };
     return new HostError(String(code), String(message));
   }
-  return new HostError('hx.host.unknown', e instanceof Error ? e.message : String(e));
+  /* not the host's: a script error or a cut-off call. Its words are raw, so the person reads the catalog's sentence and
+     Diagnostics keeps them */
+  const raw = e instanceof Error ? e.message : String(e);
+  keepDetail('hx.host.unknown', raw);
+  return new HostError('hx.host.unknown', sentenceFor('hx.host.unknown'));
 }
 
 async function call<T>(p: Promise<T>): Promise<T> {

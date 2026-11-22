@@ -86,7 +86,15 @@
         "wire_var": { "oneOf": [{ "$ref": "#/$defs/envVar" }, { "type": "null" }], "description": "The variable boopis binds to the keychain secret. One of `vars`; null for an endpoint, whose key goes by a generated name." },
         "url": { "oneOf": [{ "type": "string", "format": "uri" }, { "type": "null" }], "description": "Where a person makes a key." },
         "required": { "type": "boolean", "description": "False: works without a key (a server on this computer)." },
-        "refuse_prefixes": { "type": "array", "items": { "type": "string" }, "description": "A key that starts with one of these is turned down with `hx.provider.key_invalid` (a plan key that is not for boopis)." }
+        "refuse_prefixes": { "type": "array", "items": { "type": "string" }, "description": "A key that starts with one of these is turned down with `hx.provider.key_invalid` (a plan key that is not for boopis)." },
+        "check": {
+          "type": "object", "additionalProperties": false, "required": ["url", "method"],
+          "properties": {
+            "url": { "type": "string", "pattern": "^https://", "description": "On the provider's own domain. The key goes there in the wire's usual header, and to nowhere else." },
+            "method": { "enum": ["GET", "POST"], "description": "`GET`: a route that answers 2xx for a working key (an account or key page). `POST`: a route that checks the key before it reads the request; it is sent an empty JSON object, so a working key is turned down only for the empty request (2xx, 400 or 422) and nothing runs." }
+          },
+          "description": "The provider's own route that refuses a wrong key with 401 or 403, asked before the model list when the list cannot tell a wrong key (it is open to anyone, or it is not a list). An answer that says neither (a 404, a 5xx) falls back to the model list."
+        }
       }
     },
     "baseUrl": {

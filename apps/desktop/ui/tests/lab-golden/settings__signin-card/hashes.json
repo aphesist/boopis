@@ -1,4 +1,24 @@
 {
+ "chatgpt-a-failure-inside-boopis@bone": {
+  "sha": "68ab7b3ef6c93b442c6d661870fda537a722f658",
+  "w": 1416,
+  "h": 102
+ },
+ "chatgpt-a-failure-inside-boopis@catalog": {
+  "sha": "c5857c212851d58ad9fe5af75e660a88599d41cb",
+  "w": 1416,
+  "h": 102
+ },
+ "chatgpt-a-failure-inside-boopis@graphite": {
+  "sha": "9cdba10edbbb5f58bb2702102df84ec97944befb",
+  "w": 1416,
+  "h": 102
+ },
+ "chatgpt-a-failure-inside-boopis@typewriter": {
+  "sha": "63d14004679148f2518065022fabea5fc88b5398",
+  "w": 1416,
+  "h": 102
+ },
  "chatgpt-a-long-address@bone": {
   "sha": "dbcd2bac84694af75f5346580131b90b871112d3",
   "w": 1416,
@@ -79,23 +99,43 @@
   "w": 1416,
   "h": 84
  },
- "chatgpt-could-not-start@bone": {
-  "sha": "88fbec108cb076ea146a104f37a9ca1b95bf2ca4",
+ "chatgpt-could-not-reach-openai@bone": {
+  "sha": "8838bb534b5e392681b59544ccfd884f21b6bbd9",
   "w": 1416,
-  "h": 84
+  "h": 102
+ },
+ "chatgpt-could-not-reach-openai@catalog": {
+  "sha": "83c113a1175cc02153b1d79734608b2cef8a29fd",
+  "w": 1416,
+  "h": 102
+ },
+ "chatgpt-could-not-reach-openai@graphite": {
+  "sha": "bebf3e78e8bbd4613dcff489fd8727723391a5d1",
+  "w": 1416,
+  "h": 102
+ },
+ "chatgpt-could-not-reach-openai@typewriter": {
+  "sha": "016dba86d05dffdd29b5626309b16155bca925fc",
+  "w": 1416,
+  "h": 102
+ },
+ "chatgpt-could-not-start@bone": {
+  "sha": "8741d0a94fcf8165881938b064a9a0c22ddc0cb9",
+  "w": 1416,
+  "h": 102
  },
  "chatgpt-could-not-start@catalog": {
-  "sha": "fd64476d39564576ed6bb3809068def1106b4349",
+  "sha": "aab489761a3fbbe723d51eadf4ee23a14aa16593",
   "w": 1416,
-  "h": 84
+  "h": 102
  },
  "chatgpt-could-not-start@graphite": {
-  "sha": "642e68021ac7657d634b80fbbded9100bd5932ee",
+  "sha": "96bbd088c3cdcfc85c231e6b90b322ff8e7ce344",
   "w": 1416,
-  "h": 84
+  "h": 102
  },
  "chatgpt-could-not-start@typewriter": {
-  "sha": "06438ec92e636e0c4de1deb82babb409ae4ee340",
+  "sha": "4d9ef8a78040abd286d2c84973278a4db6a767c6",
   "w": 1416,
   "h": 102
  },
@@ -199,25 +239,45 @@
   "w": 1416,
   "h": 62
  },
- "chatgpt-timed-out@bone": {
-  "sha": "8f8c76a55ec70ecc1d0fca3a3934236def09e1be",
+ "chatgpt-the-computer-s-clock-is-wrong@bone": {
+  "sha": "11779a6df7dba34432416123998fe58bcb8e87c8",
   "w": 1416,
-  "h": 84
+  "h": 102
+ },
+ "chatgpt-the-computer-s-clock-is-wrong@catalog": {
+  "sha": "4922897576dc3b31db3bc809a8781ae7dcec9f17",
+  "w": 1416,
+  "h": 102
+ },
+ "chatgpt-the-computer-s-clock-is-wrong@graphite": {
+  "sha": "218530697bf4d8cc204e93a532ff1495410e4b71",
+  "w": 1416,
+  "h": 102
+ },
+ "chatgpt-the-computer-s-clock-is-wrong@typewriter": {
+  "sha": "599533e10356a04cf20b7b9fe1f5aa5d1114b067",
+  "w": 1416,
+  "h": 119
+ },
+ "chatgpt-timed-out@bone": {
+  "sha": "9a560f5fc17e651e41c749a85c4271690ca84948",
+  "w": 1416,
+  "h": 102
  },
  "chatgpt-timed-out@catalog": {
-  "sha": "344fddc2c73def43dcadaae19de5862943ecf189",
+  "sha": "b966939242f9037f5d57ccf03068f23519792ff0",
   "w": 1416,
-  "h": 84
+  "h": 102
  },
  "chatgpt-timed-out@graphite": {
-  "sha": "7a1de6aa14f8eb82d7f89dc0385b03c5f6d620d4",
+  "sha": "62dae7fb530d8997bd438f3e9c4c81e509b98205",
   "w": 1416,
-  "h": 84
+  "h": 102
  },
  "chatgpt-timed-out@typewriter": {
-  "sha": "473d975859dd9378716a47ded974d031cad8fdcc",
+  "sha": "d5eee495f1d4522b6018ce6366fdf4de0c573846",
   "w": 1416,
-  "h": 84
+  "h": 102
  },
  "chatgpt-waiting-on-openai-s-page@bone": {
   "sha": "cdc758a1fb77f40ffa2bed0aa51ddaa345e25b42",
@@ -438,6 +498,26 @@
   "sha": "c2a513ac73047d9d60aedf90b472923592e80e23",
   "w": 1416,
   "h": 42
+ },
+ "copilot-the-network-answered-instead@bone": {
+  "sha": "6b1a129910cf318c1fc0177a9944670c760355eb",
+  "w": 1416,
+  "h": 102
+ },
+ "copilot-the-network-answered-instead@catalog": {
+  "sha": "d15fa929f3ce6986b0ac821a9ef7fc5bb8b793fe",
+  "w": 1416,
+  "h": 102
+ },
+ "copilot-the-network-answered-instead@graphite": {
+  "sha": "6870a11158e3cdb467a3040a6ef962a40a2368ac",
+  "w": 1416,
+  "h": 102
+ },
+ "copilot-the-network-answered-instead@typewriter": {
+  "sha": "9b5b286b5b73722fc00bbecd2689a992be5c41e3",
+  "w": 1416,
+  "h": 119
  },
  "copilot-waiting-with-the-code@bone": {
   "sha": "9d077de75c7218498a54af5bf0c2a18f875e65dc",

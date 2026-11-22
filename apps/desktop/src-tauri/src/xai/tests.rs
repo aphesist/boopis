@@ -282,11 +282,29 @@ async fn refusals_end_the_sign_in_with_words_and_store_nothing() {
         svc.start().await.unwrap_err().code(),
         "hx.provider.signin_failed"
     );
-    assert_eq!(
-        svc.start().await.unwrap_err().code(),
-        "hx.provider.unreachable"
+    let e = svc.start().await.unwrap_err();
+    assert_eq!(e.code(), "hx.provider.unreachable");
+    assert!(
+        !e.to_string().contains("connection refused"),
+        "the transport's words stay in Diagnostics: {e}"
     );
     assert_eq!(svc.status().await.unwrap().state, State::SignedOut);
+
+    // a bot check's page at 403 is the network answering, not xAI refusing an account (no account is known yet)
+    let script = Arc::new(Script::default());
+    script.replies.lock().unwrap().push_back((
+        "/oauth2/device/code".to_owned(),
+        Ok(Reply {
+            status: 403,
+            body: "<!DOCTYPE html><html><title>Attention Required! | Cloudflare</title></html>"
+                .into(),
+        }),
+    ));
+    let (svc, _) = service(&script, &store);
+    let e = svc.start().await.unwrap_err();
+    assert_eq!(e.code(), "hx.provider.signin_blocked");
+    assert!(e.to_string().contains("Something on your network"), "{e}");
+    assert!(!e.to_string().contains("403"), "{e}");
 
     // the user declines on xAI's page
     let script = Arc::new(Script::default());

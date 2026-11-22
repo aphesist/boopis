@@ -60,10 +60,12 @@ tar = { version = "0.4", default-features = false }
 # deflate, read by the store's own bounded zip reader. Already in the tree (through the HTTP stack); MIT or Apache-2.0.
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
 zstd = { version = "0.13", default-features = false }
-# The ChatGPT sign-in (ADR-0030): HTTPS to OpenAI's sign-in service, blocking (run on `spawn_blocking`). rustls with ring and
-# the operating system's trust store (no bundled root list), so a company's own certificate authority works. MIT or
+# Every HTTPS request of the host (the sign-ins, the provider checks, the store), blocking (run on `spawn_blocking`). rustls with
+# ring, which every agent names (src/tls.rs: with `rustls-no-provider` an agent that names none panics), and the operating
+# system's trust store (no bundled root list), so a company's own certificate authority works. On Windows the system's proxy
+# setting is read too (`win-system-proxy`: the Internet Options proxy, as the environment's HTTPS_PROXY is everywhere). MIT or
 # Apache-2.0; ring is Apache-2.0 and ISC.
-ureq = { version = "3.4", default-features = false, features = ["rustls-no-provider", "platform-verifier"] }
+ureq = { version = "3.4", default-features = false, features = ["rustls-no-provider", "platform-verifier", "win-system-proxy"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 # Checking the signature of OpenAI's ID token (RS256) against its published keys (the Sign in with ChatGPT program asks for
 # it). Already in the tree through rustls; Apache-2.0 and ISC.

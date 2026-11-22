@@ -65,11 +65,11 @@ export function measureFrames(ms = 5000): Promise<FrameStats> {
 const GPU_LABELS: Record<GpuPolicy, string> = { auto: 'Automatic', integrated: 'Integrated', dedicated: 'Dedicated' };
 export const gpuLabel = (p: GpuPolicy): string => GPU_LABELS[p];
 
-/** the engine's own words behind the error sentences of this run (ADR-0031): Diagnostics is the one place they are shown */
+/** the raw words behind the error sentences of this run (the engine's, ADR-0031, and a failed request's): Diagnostics is the one place they are shown */
 export function errorLines(host: readonly { code: string; detail: string; at: number | null }[], ui: readonly { code: string; detail: string; at: number }[]): string[] {
   const all = [...host.map((e) => ({ ...e, at: (e.at ?? 0) * 1000 })), ...ui].sort((a, b) => a.at - b.at);
   if (!all.length) return ['errors behind the messages shown: none this run'];
-  return ['errors behind the messages shown (the engine\'s own words):', ...all.map((e) => `  ${new Date(e.at).toISOString()}  ${e.code}  ${e.detail}`)];
+  return ['errors behind the messages shown (the raw words, kept here only):', ...all.map((e) => `  ${new Date(e.at).toISOString()}  ${e.code}  ${e.detail}`)];
 }
 
 /** the report as plain text, one fact a line, for a message */

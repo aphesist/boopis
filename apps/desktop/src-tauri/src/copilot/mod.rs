@@ -202,7 +202,7 @@ impl Copilot {
         let (store, transport) = (self.store.clone(), self.transport.clone());
         tokio::task::spawn_blocking(move || f(store.as_ref(), transport.as_ref()))
             .await
-            .map_err(|e| Error::Io(e.to_string()))?
+            .map_err(|e| crate::error::joined(&e))?
     }
 
     fn waiting(&self) -> Option<CodeView> {
@@ -343,7 +343,7 @@ impl Copilot {
                     every += Duration::from_secs(oauth::SLOW_DOWN_SECS);
                     continue;
                 }
-                Err(e) => return ("failed", e.to_string()),
+                Err(e) => return ("failed", crate::error::shown(e)),
             };
             if cancel.is_cancelled() {
                 return ("cancelled", "The sign-in was cancelled.".into());
@@ -355,7 +355,7 @@ impl Copilot {
             return match saved {
                 Ok(None) => ("signed_in", String::new()),
                 Ok(Some(message)) => ("failed", message),
-                Err(e) => ("failed", e.to_string()),
+                Err(e) => ("failed", crate::error::shown(e)),
             };
         }
     }

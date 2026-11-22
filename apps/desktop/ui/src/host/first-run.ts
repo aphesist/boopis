@@ -511,7 +511,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       async cancel(id) {
         if (id === 'setup.lab' || id === 'setup.local') { goTo({ kind: 'way' }); return; }
         const formId = id === 'setup.way' ? 'setup.ladder' : id;
-        try { draw(await bridge.advance({ form_id: formId, cancelled: true, values: {}, secrets: {} }, false), ''); } catch (e) { const err = asHostError(e); draw(null, err.code + ': ' + err.message); }
+        try { draw(await bridge.advance({ form_id: formId, cancelled: true, values: {}, secrets: {} }, false), ''); } catch (e) { const err = asHostError(e); log.warn('setup step failed', err.code); draw(null, err.message); }
       },
       signin: () => Promise.reject(new Error('Signing in is not part of setup.')),
       can: { signin: false, upload: false, folder: false }, pickerItems: () => [], pickFolder: () => Promise.resolve(null)
@@ -554,7 +554,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       } catch (e) {
         const err = asHostError(e);
         log.warn('setup step failed', err.code);
-        draw(null, err.code + ': ' + err.message);
+        draw(null, err.message);
       } finally {
         stop();
         busy = false;
@@ -571,7 +571,7 @@ function steps(status: SetupStatus, retry: () => void): HTMLElement {
     const item = el('li', { 'data-state': s.state, class: 'fr-step' },
       el('span', { class: 'fr-step__title' }, s.title), el('span', { class: 'fr-step__state' }, STATE_WORD[s.state] ?? s.state));
     /* a stopped step says what failed in boopis's words, its stable code, and the way out (the host's one error mapper) */
-    if (s.detail) item.append(el('span', { class: 'fr-step__detail' }, s.detail + (s.state === 'blocked' && s.code ? ' (' + s.code + ')' : '')));
+    if (s.detail) item.append(el('span', { class: 'fr-step__detail' }, s.detail));
     /* a stopped step can be run again without restarting the app: setup recomputes every step from reality, so what is done
        stays done and the stopped one runs once more. A missing engine has its own "Check again". */
     if (s.state === 'blocked' && !status.install_command) {

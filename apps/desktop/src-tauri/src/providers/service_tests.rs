@@ -148,10 +148,11 @@ impl HermesOps for Fake {
 
 type Seen = Arc<Mutex<Vec<(String, Vec<(String, String)>)>>>;
 
-/// A transport that answers each request with the next scripted reply and keeps what was asked.
+/// A transport that answers each request with the next scripted reply and keeps what was asked (a `POST` also with its body).
 struct Script {
     replies: Mutex<Vec<std::result::Result<Reply, String>>>,
     seen: Seen,
+    posted: Arc<Mutex<Vec<(String, String)>>>,
 }
 
 impl Transport for Script {
@@ -166,6 +167,19 @@ impl Transport for Script {
         } else {
             r.remove(0)
         }
+    }
+
+    fn post(
+        &self,
+        url: &str,
+        headers: &[(String, String)],
+        body: &str,
+    ) -> std::result::Result<Reply, String> {
+        self.posted
+            .lock()
+            .unwrap()
+            .push((url.to_owned(), body.to_owned()));
+        self.get(url, headers)
     }
 }
 
@@ -188,6 +202,7 @@ struct Rig {
     fake: Arc<Fake>,
     store: Arc<MemoryStore>,
     seen: Seen,
+    posted: Arc<Mutex<Vec<(String, String)>>>,
     svc: Providers,
 }
 
@@ -197,9 +212,11 @@ fn rig(replies: Vec<std::result::Result<Reply, String>>) -> Rig {
     std::fs::create_dir_all(&fake.home).unwrap();
     let store = Arc::new(MemoryStore::default());
     let seen: Seen = Arc::default();
+    let posted: Arc<Mutex<Vec<(String, String)>>> = Arc::default();
     let t = Arc::new(Script {
         replies: Mutex::new(replies),
         seen: seen.clone(),
+        posted: posted.clone(),
     });
     let svc = Providers::new(fake.clone(), store.clone(), t);
     Rig {
@@ -207,6 +224,7 @@ fn rig(replies: Vec<std::result::Result<Reply, String>>) -> Rig {
         fake,
         store,
         seen,
+        posted,
         svc,
     }
 }
@@ -230,11 +248,17 @@ fn key_ways() -> Vec<&'static super::Way> {
 #[tokio::test]
 async fn each_key_way_writes_exactly_its_config_keys_and_its_secret() {
     for way in key_ways() {
+        let route = way.key.as_ref().and_then(|k| k.check.as_ref());
         let r = rig(vec![listing(&["m1", "m2"])]);
         let s = r.svc.set_key(&way.id, KEY).await.unwrap();
         assert_eq!(s.status, ProviderStatus::Connected, "{}", way.id);
         assert!(s.is_consistent());
-        assert_eq!(s.models_count, Some(2), "{}", way.id);
+        // a key route that answers is the check: a `POST` route lists no models, a `GET` one is read like a listing
+        let want = match route.map(|c| c.method) {
+            Some(super::RouteMethod::Post) => None,
+            _ => Some(2),
+        };
+        assert_eq!(s.models_count, want, "{}", way.id);
 
         // the secret is where the data says, and nowhere else
         let engine = way.engine.as_deref().unwrap();
@@ -266,17 +290,26 @@ async fn each_key_way_writes_exactly_its_config_keys_and_its_secret() {
             way.id
         );
 
-        // the check asked the way's own address, once, and nothing else
+        // the check asked the way's own address (or its key route) and nothing else: once with the key, and (a list came back)
+        // once without it, which tells a list open to anyone from one the key opened
         let seen = r.seen.lock().unwrap().clone();
-        assert_eq!(seen.len(), 1, "{}", way.id);
+        assert!((1..=2).contains(&seen.len()), "{}", way.id);
         let base = way.base_url.as_ref().unwrap().default.clone().unwrap();
-        let host = url::Url::parse(&base).unwrap();
-        assert_eq!(
-            url::Url::parse(&seen[0].0).unwrap().host_str(),
-            host.host_str(),
-            "{}",
-            way.id
-        );
+        let hosts: Vec<String> = std::iter::once(base)
+            .chain(route.map(|c| c.url.clone()))
+            .map(|u| url::Url::parse(&u).unwrap().host_str().unwrap().to_owned())
+            .collect();
+        for (url, _) in &seen {
+            let host = url::Url::parse(url).unwrap().host_str().unwrap().to_owned();
+            assert!(hosts.contains(&host), "{}: {host}", way.id);
+        }
+        if let Some((_, headers)) = seen.get(1) {
+            assert!(
+                !headers.iter().any(|(_, v)| v.contains(KEY)),
+                "{}: the second ask carries no key",
+                way.id
+            );
+        }
 
         // running it again with the same key changes nothing in the configuration
         let before = r.fake.sets().len();
@@ -458,6 +491,52 @@ async fn the_check_says_what_the_provider_said_and_the_key_stays_saved() {
     }
 }
 
+/// What the live probe found (`tests/live_signins.rs`): xAI answers a wrong key with 400 and "Incorrect API key provided", and six
+/// providers list their models for any key at all. A wrong key is refused in plain words, and a list open to anyone is not taken
+/// for an accepted key.
+#[tokio::test]
+async fn a_400_about_the_key_refuses_it_and_an_open_list_is_not_an_accepted_key() {
+    let r = rig(vec![answer(
+        400,
+        r#"{"code":"invalid-argument","error":"Incorrect API key provided. You can obtain an API key from https://console.x.ai."}"#,
+    )]);
+    let s = r.svc.set_key("xai.key", KEY).await.unwrap();
+    assert_eq!(s.status, ProviderStatus::Error);
+    assert_eq!(s.code.as_deref(), Some("hx.provider.key_rejected"));
+    assert!(!s.detail.as_deref().unwrap().contains("console.x.ai"));
+    // a 400 about something else is not a refused key
+    let r = rig(vec![answer(400, r#"{"error":"model field is required"}"#)]);
+    let s = r.svc.set_key("deepseek.key", KEY).await.unwrap();
+    assert_eq!(s.status, ProviderStatus::Connected);
+
+    // the same list with no key at all: open to anyone, so the key is saved and not called accepted
+    let r = rig(vec![listing(&["a", "b"]), listing(&["a", "b"])]);
+    let s = r.svc.set_key("nvidia.key", KEY).await.unwrap();
+    assert_eq!(s.status, ProviderStatus::Connected);
+    assert_eq!(s.models_count, None, "no count that suggests the key works");
+    assert!(
+        s.detail
+            .as_deref()
+            .unwrap()
+            .contains("shows its models to anyone"),
+        "{:?}",
+        s.detail
+    );
+    let seen = r.seen.lock().unwrap().clone();
+    assert_eq!(seen.len(), 2);
+    assert!(
+        !seen[1]
+            .1
+            .iter()
+            .any(|(k, _)| k.eq_ignore_ascii_case("authorization")),
+        "the second ask carries no key"
+    );
+    // a list that needs the key: the second ask is refused, and the key is accepted with its count
+    let r = rig(vec![listing(&["a", "b"]), answer(401, "{}")]);
+    let s = r.svc.set_key("nvidia.key", KEY).await.unwrap();
+    assert_eq!(s.models_count, Some(2));
+}
+
 #[tokio::test]
 async fn the_key_goes_as_each_wire_says_and_only_to_its_own_host() {
     let header = |way: &str| {
@@ -500,6 +579,97 @@ async fn the_key_goes_as_each_wire_says_and_only_to_its_own_host() {
             .as_deref(),
         Some("hx.provider.key_rejected")
     );
+}
+
+/// What the live probe found next: six providers list their models for any key, so the list cannot tell a wrong key. Those with a
+/// route of their own that refuses a wrong key name it in the data (`key.check`), and the check asks it first.
+#[tokio::test]
+async fn a_key_route_tells_a_wrong_key_where_the_model_list_cannot() {
+    let bearer = ("Authorization".to_owned(), format!("Bearer {KEY}"));
+    // Hugging Face: its account page, read with the key; a 401 is a wrong key, and no model list is asked
+    let r = rig(vec![answer(
+        401,
+        r#"{"error":"Invalid username or password."}"#,
+    )]);
+    let s = r.svc.set_key("huggingface.key", KEY).await.unwrap();
+    assert_eq!(s.code.as_deref(), Some("hx.provider.key_rejected"));
+    let seen = r.seen.lock().unwrap().clone();
+    assert_eq!(seen.len(), 1);
+    assert_eq!(seen[0].0, "https://huggingface.co/api/whoami-v2");
+    assert!(seen[0].1.contains(&bearer));
+    // ... and a 200 there is a working key: connected, not "shows its models to anyone"
+    let r = rig(vec![answer(200, r#"{"type":"user","name":"someone"}"#)]);
+    let s = r.svc.set_key("huggingface.key", KEY).await.unwrap();
+    assert_eq!(s.status, ProviderStatus::Connected);
+    assert!(s.code.is_none());
+    assert!(!s.detail.as_deref().unwrap_or("").contains("anyone"));
+    assert_eq!(r.seen.lock().unwrap().len(), 1);
+
+    // Ollama Cloud: an empty request to its chat route, which checks the key first, so nothing runs
+    let r = rig(vec![answer(401, r#"{"error":"Unauthorized"}"#)]);
+    let s = r.svc.set_key("ollama-cloud.key", KEY).await.unwrap();
+    assert_eq!(s.code.as_deref(), Some("hx.provider.key_rejected"));
+    assert_eq!(
+        r.posted.lock().unwrap().clone(),
+        vec![("https://ollama.com/api/chat".to_owned(), "{}".to_owned())]
+    );
+    assert!(r.seen.lock().unwrap()[0].1.contains(&bearer));
+    // ... a working key is turned down only for the empty request
+    let r = rig(vec![answer(400, r#"{"error":"model is required"}"#)]);
+    let s = r.svc.set_key("ollama-cloud.key", KEY).await.unwrap();
+    assert_eq!(s.status, ProviderStatus::Connected);
+    assert!(!s.detail.as_deref().unwrap_or("").contains("anyone"));
+    // NovitaAI's chat route the same
+    let r = rig(vec![answer(
+        401,
+        r#"{"code":401,"reason":"FAILED_TO_AUTH","message":"failed to authenticate API key"}"#,
+    )]);
+    let s = r.svc.set_key("novita.key", KEY).await.unwrap();
+    assert_eq!(s.code.as_deref(), Some("hx.provider.key_rejected"));
+
+    // a route that says nothing about the key (gone, busy) falls back to the model list, which says what it can
+    let r = rig(vec![
+        answer(404, "not found"),
+        listing(&["a"]),
+        listing(&["a"]),
+    ]);
+    let s = r.svc.set_key("kilo.key", KEY).await.unwrap();
+    assert!(
+        s.detail
+            .as_deref()
+            .unwrap()
+            .contains("shows its models to anyone")
+    );
+    let seen = r.seen.lock().unwrap().clone();
+    assert_eq!(seen[0].0, "https://api.kilo.ai/api/profile");
+    assert_eq!(seen[1].0, "https://api.kilo.ai/api/gateway/models");
+    // a route that cannot be reached is the provider not reached: the key is saved, and the card says so
+    let r = rig(vec![Err("connection refused".into())]);
+    let s = r.svc.set_key("kilo.key", KEY).await.unwrap();
+    assert_eq!(s.code.as_deref(), Some("hx.provider.unreachable"));
+    assert_eq!(kept(&r.store, "provider.kilocode").as_deref(), Some(KEY));
+}
+
+/// Every key route in the data is https, on a key way, and on the provider's own domain (its address's last two host labels).
+#[test]
+fn every_key_route_is_https_on_the_providers_own_domain() {
+    let domain = |u: &str| {
+        let host = url::Url::parse(u).unwrap().host_str().unwrap().to_owned();
+        let labels: Vec<&str> = host.rsplitn(3, '.').collect();
+        format!("{}.{}", labels[1], labels[0])
+    };
+    let mut routes = 0;
+    for (_, way) in catalogue().ways() {
+        let Some(route) = way.key.as_ref().and_then(|k| k.check.as_ref()) else {
+            continue;
+        };
+        routes += 1;
+        assert!(route.url.starts_with("https://"), "{}", way.id);
+        assert_eq!(way.kind, WayKind::Key, "{}", way.id);
+        let base = way.base_url.as_ref().unwrap().default.clone().unwrap();
+        assert_eq!(domain(&route.url), domain(&base), "{}", way.id);
+    }
+    assert!(routes >= 5, "{routes}");
 }
 
 #[tokio::test]
@@ -1185,6 +1355,7 @@ fn the_check_enum_is_what_the_state_reads() {
         KeyCheck::Unverified(404),
         KeyCheck::Rejected,
         KeyCheck::Unreachable,
+        KeyCheck::Public,
     ] {
         let _ = format!("{c:?}");
     }
@@ -1339,6 +1510,7 @@ async fn the_list_shows_every_sign_in_way_with_its_real_state_and_the_program_on
         Arc::new(Script {
             replies: Mutex::new(vec![]),
             seen: Arc::default(),
+            posted: Arc::default(),
         }),
     )
     .with_signins(Arc::new(signins(&r.store)));

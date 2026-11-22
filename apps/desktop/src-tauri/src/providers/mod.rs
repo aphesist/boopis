@@ -120,6 +120,30 @@ pub struct Key {
     pub required: bool,
     /// A key that starts with one of these is turned down.
     pub refuse_prefixes: Vec<String>,
+    /// The provider's own route that tells a wrong key, for a model list that cannot (open to anyone, or not a list).
+    #[serde(default)]
+    pub check: Option<KeyRoute>,
+}
+
+/// A provider's own route that refuses a wrong key with 401 or 403 (`key.check`).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct KeyRoute {
+    /// On the provider's own domain; the key goes there and nowhere else.
+    pub url: String,
+    /// How it is asked.
+    pub method: RouteMethod,
+}
+
+/// How a key route is asked.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub enum RouteMethod {
+    /// Read it: it answers 2xx for a working key.
+    #[serde(rename = "GET")]
+    Get,
+    /// Send it an empty JSON object: it checks the key before the request, so a working key is turned down only for the request.
+    #[serde(rename = "POST")]
+    Post,
 }
 
 /// A way's address rules.

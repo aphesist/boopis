@@ -71,8 +71,13 @@ const story: Story = {
     'chatgpt, a long address': S(['long'], chatgpt({ page: { url: LONG_PAGE, code: '', expiresAt: FAR() } })),
     'chatgpt, cancelled': S(['disabled'], chatgpt({ end: { outcome: 'cancelled', message: 'The sign-in was cancelled.' } })),
     'chatgpt, declined plan use': S(['error'], chatgpt({ end: { outcome: 'failed', message: 'You did not allow boopis to use your ChatGPT plan, so nothing was signed in.' } })),
-    'chatgpt, timed out': S(['expired'], chatgpt({ end: { outcome: 'timed_out', message: 'The sign-in did not finish in time. Start again.' } })),
-    'chatgpt, could not start': S(['error'], chatgpt({ page: 'none', rejects: 'boopis could not listen on this computer for OpenAI’s answer (address in use).' })),
+    'chatgpt, timed out': S(['expired'], chatgpt({ end: { outcome: 'timed_out', message: 'Your browser did not come back to boopis in time, so nothing was signed in. Start again, and finish signing in on OpenAI’s page.' } })),
+    'chatgpt, could not start': S(['error'], chatgpt({ page: 'none', rejects: 'boopis could not open the page your browser comes back to after signing in. Restart boopis and try again.' })),
+    /* the host's plain words for a failure (wave 24): a network that does not reach OpenAI, and a failure inside boopis (the panic
+       the owner saw on Windows, now one sentence; its text is in Settings, General, Diagnostics) */
+    'chatgpt, could not reach OpenAI': S(['error'], chatgpt({ end: { outcome: 'failed', message: 'boopis could not reach OpenAI to sign you in. Check your internet connection or proxy, then try again. Nothing was saved.' } })),
+    'chatgpt, a failure inside boopis': S(['error'], chatgpt({ end: { outcome: 'failed', message: 'Something went wrong inside boopis, and nothing was changed. Try again; if it happens again, the details are in Settings, General, Diagnostics.' } })),
+    'chatgpt, the computer’s clock is wrong': S(['error', 'long'], chatgpt({ end: { outcome: 'failed', message: 'Your computer’s clock looks wrong, so boopis could not check OpenAI’s answer. Set the date and time to update automatically, then try again. Nothing was saved.' } })),
     'chatgpt, signed in': S(['success'], chatgpt({ end: { outcome: 'signed_in', message: '' } })),
     'chatgpt, open button hover': S(['hover'], chatgpt(), { force: force('[data-act="open"]', 'hover') }),
     'chatgpt, cancel focus': S(['focus'], chatgpt(), { force: force('[data-act="cancel"]', 'focus') }),
@@ -87,6 +92,7 @@ const story: Story = {
     'copilot, declined on GitHub': S(['disabled'], copilot({ end: { outcome: 'cancelled', message: 'You declined the sign-in on GitHub.' } })),
     'copilot, rate limited': S(['error'], copilot({ page: 'none', rejects: 'GitHub is limiting sign-in requests right now. Wait a minute and try again.' })),
     'copilot, no Copilot plan (a long reason)': S(['error', 'long'], copilot({ end: { outcome: 'failed', message: LONG_REASON } })),
+    'copilot, the network answered instead': S(['error'], copilot({ page: 'none', rejects: 'Something on your network answered in place of the sign-in service (a firewall, a proxy or a security check). Check your proxy settings, or try again on another network. Nothing was saved.' })),
     'copilot, signed in': S(['success'], copilot({ end: { outcome: 'signed_in', message: '' } }))
   }
 };

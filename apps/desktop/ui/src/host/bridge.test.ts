@@ -7,6 +7,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 import { asHostError, HostError, inTauri, tauriBridge } from './bridge';
+import { engineDetails } from './errors';
 
 beforeEach(() => { invoke.mockReset(); });
 
@@ -39,9 +40,12 @@ describe('the typed bridge', () => {
     expect((err as HostError).code).toBe('hx.engine.incompatible');
   });
 
-  it('normalises other failures', () => {
+  it('normalises other failures into plain words, and keeps the raw ones for Diagnostics', () => {
     expect(asHostError(new Error('boom')).code).toBe('hx.host.unknown');
-    expect(asHostError('text').message).toBe('text');
+    const plain = asHostError('TypeError: undefined is not a function');
+    expect(plain.message).not.toContain('TypeError');
+    expect(plain.message).toContain('Try again');
+    expect(engineDetails().some((d) => d.detail.includes('TypeError'))).toBe(true);
     const e = new HostError('hx.x', 'm');
     expect(asHostError(e)).toBe(e);
   });

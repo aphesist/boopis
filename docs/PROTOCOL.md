@@ -245,11 +245,11 @@ Stable string codes in `data.code`, listed in `crates/hx-proto/errors.json` (sha
 - `hx.ledger.chain_broken`, `hx.ledger.invalid_transition`;
 - `hx.budget.blocked`;
 - `hx.engine.incompatible`, `hx.engine.unavailable`;
-- `hx.host.*` (the host's own: `consent_required`, `unauthorized`, `invalid_frame`, `unknown_connection`, `no_ui`, `os`);
+- `hx.host.*` (the host's own: `consent_required`, `unauthorized`, `invalid_frame`, `unknown_connection`, `no_ui`, `os`, `task_failed`; and `unknown`, which only the UI uses, for a failure that carries no code of the host's);
 - `hx.secrets.*` (`unavailable`, `failed`, `not_found`, `invalid_ref`);
 - `hx.connectors.*` (`exists`, `not_found`, `rejected`, `plan_changed`, `secret_missing`, `plugin_owned`, `restart_choice`, `busy`, `unknown_login`, `not_oauth`, `signin_failed`, `signin_cancelled`, `signin_timeout`, `command_failed`, `failed`);
 - `hx.store.*` (`unpinned`, `digest_mismatch`, `plan_changed`, `source_unreachable`, `too_large`, `unsafe_archive`, `dangerous_verdict`, `kind_unsupported`, `governed_refused`, `not_installed`, `offline`, `not_found`, `already_installed`, `removed`, `invalid_source`, `invalid_manifest`, `stage_missing`, `no_previous`, `rate_limited`, `install_failed`);
 - `hx.setup.*` (`hermes_missing`, `no_bundle`, `plugin_install_failed`, `subscription_unavailable`, `config_failed`, `declined`, `invalid_answer`, `state_invalid`, `verify_failed`);
-- `hx.provider.*` (`unknown`, `unsupported`, `key_invalid`, `key_rejected`, `unreachable`, `no_models`, `not_a_model_server`, `endpoint_invalid`, `endpoint_blocked`, `endpoint_exists`, `not_found`, `not_installed`, `needs_update`, `metered`);
+- `hx.provider.*` (`unknown`, `unsupported`, `key_invalid`, `key_rejected`, `unreachable`, `no_models`, `not_a_model_server`, `endpoint_invalid`, `endpoint_blocked`, `endpoint_exists`, `not_found`, `not_installed`, `needs_update`, `metered`, `signin_blocked` (something on the network answered in place of a host-run sign-in's service));
 - `hx.form.*` (`invalid_schema`, `invalid_values`, `not_found`, `resolved`, `timeout`, `secret_missing`, `unsupported`, `limit`);
 - `hx.mods.*` (`unavailable`, `load_failed`, `not_a_mod`, `already_loaded`, `no_session`, `worker_failed`, `crashed`, `no_host`, `host_timeout`, `host_failed`, `unsupported`).

@@ -226,12 +226,13 @@ describe('first run', () => {
     } finally { vi.useRealTimers(); }
   });
 
-  it('shows a host error with its code and offers to try again', async () => {
+  it('shows a host error in its plain words, without the code, and offers to try again', async () => {
     const bridge = new Fake([new HostError('hx.setup.state_invalid', 'setup.json is not valid'), status({ done: true })]);
     void runFirstRun(bridge);
     await tick();
     await click('Set up');
-    expect(document.querySelector('[role=alert]')?.textContent).toContain('hx.setup.state_invalid');
+    expect(document.querySelector('[role=alert]')?.textContent).toContain('setup.json is not valid');
+    expect(document.querySelector('[role=alert]')?.textContent).not.toContain('hx.setup.state_invalid');
     await click('Set up');
     expect(document.body.textContent).toContain('You are set');
   });

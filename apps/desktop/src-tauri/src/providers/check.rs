@@ -94,10 +94,38 @@ enum Attempt {
     Silent,
 }
 
+/// Whether an answer refuses the key: 401 or 403, or a 400 whose error is about the key. A listing is a bare `GET` whose only
+/// variable is the key, and some providers (xAI) answer a wrong one with 400 and "Incorrect API key provided"; the words stay here.
+#[must_use]
+pub fn refuses_key(reply: &Reply) -> bool {
+    match reply.status {
+        401 | 403 => true,
+        400 => {
+            let lower = reply
+                .body
+                .chars()
+                .take(2048)
+                .collect::<String>()
+                .to_ascii_lowercase();
+            [
+                "api key",
+                "api_key",
+                "apikey",
+                "authenticat",
+                "unauthorized",
+                "credential",
+            ]
+            .iter()
+            .any(|w| lower.contains(w))
+        }
+        _ => false,
+    }
+}
+
 fn classify(reply: &Reply, max: usize, max_chars: usize) -> Attempt {
     let status = reply.status;
     let outcome_models = match status {
-        401 | 403 => (EndpointOutcome::NeedsKey, Vec::new()),
+        _ if refuses_key(reply) => (EndpointOutcome::NeedsKey, Vec::new()),
         200..=299 => match parse_listing(&reply.body, max, max_chars) {
             Listing::Models(m) if m.is_empty() => (EndpointOutcome::Empty, m),
             Listing::Models(m) => (EndpointOutcome::Listed, m),
@@ -159,7 +187,10 @@ pub fn test_endpoint(
         let url = address.join(&path);
         let attempt = match get(t, address, &url, &headers)? {
             Ok(reply) => classify(&reply, max, max_chars),
-            Err(_) => Attempt::Silent,
+            Err(e) => {
+                crate::error::keep("hx.provider.unreachable", &format!("{url}: {e}"));
+                Attempt::Silent
+            }
         };
         let done = matches!(
             attempt,
@@ -185,7 +216,11 @@ fn result_of(last: Option<(Attempt, String)>, loopback: bool) -> EndpointTestRes
         status: None,
         loopback,
         code: Some("hx.provider.unreachable".into()),
-        detail: Some("Nothing answered. Check the address, and that the server is running.".into()),
+        detail: Some(if loopback {
+            "Nothing answered. Check the address, and that the server is running.".into()
+        } else {
+            "Nothing answered. Check the address, and your internet connection or proxy.".into()
+        }),
     };
     let Some((Attempt::Answered(outcome, models, status), url)) = last else {
         return r;
@@ -211,7 +246,9 @@ fn result_of(last: Option<(Attempt, String)>, loopback: bool) -> EndpointTestRes
         }
         EndpointOutcome::NeedsKey => {
             r.code = Some("hx.provider.key_rejected".into());
-            r.detail = Some("The server wants a key, or did not accept the one given.".into());
+            r.detail = Some(
+                "The server wants a key, or did not accept the one given. Add its key, or check the one you gave.".into(),
+            );
         }
         EndpointOutcome::NotAModelServer => {
             r.code = Some("hx.provider.not_a_model_server".into());
@@ -230,10 +267,13 @@ pub enum KeyCheck {
     Accepted(u32),
     /// The provider answered (this status), but not with a listing the check can read: the key is saved and not verified.
     Unverified(u16),
-    /// 401 or 403.
+    /// 401 or 403 (or a 400 about the key: [`refuses_key`]).
     Rejected,
     /// No answer.
     Unreachable,
+    /// The listing is open to anyone: it listed models without the key too, so it cannot tell a wrong key from a right one. The key
+    /// is saved and checked when it is first used.
+    Public,
 }
 
 /// Check a key with one model listing at `listing_url` (a fixed address from the data, https), following no redirect to another origin.
@@ -254,7 +294,10 @@ pub fn check_key(
         .unwrap_or_default();
     let headers = auth_headers(mode, Some(key), &host);
     Ok(match get(t, address, listing_url, &headers)? {
-        Err(_) => KeyCheck::Unreachable,
+        Err(e) => {
+            crate::error::keep("hx.provider.unreachable", &format!("{listing_url}: {e}"));
+            KeyCheck::Unreachable
+        }
         Ok(reply) => match classify(&reply, max, max_chars) {
             Attempt::Answered(EndpointOutcome::NeedsKey, ..) => KeyCheck::Rejected,
             Attempt::Answered(EndpointOutcome::Listed, m, _) => {
@@ -265,6 +308,27 @@ pub fn check_key(
             Attempt::Silent => KeyCheck::Unreachable,
         },
     })
+}
+
+/// Ask a provider's route that checks the key before it reads the request (`key.check` with `POST`): it is sent an empty JSON object,
+/// so a working key is turned down only for the empty request (2xx, 400 or 422) and nothing runs, and a wrong one is refused (401,
+/// 403, or a 400 about the key). Any other answer (a 404, a 5xx, a redirect, which is not followed) is `Unverified`: the route said
+/// nothing about the key.
+#[must_use]
+pub fn post_check(t: &dyn Transport, url: &str, mode: ApiMode, key: &str) -> KeyCheck {
+    let host = url::Url::parse(url)
+        .ok()
+        .and_then(|u| u.host_str().map(str::to_owned))
+        .unwrap_or_default();
+    match t.post(url, &auth_headers(mode, Some(key), &host), "{}") {
+        Err(e) => {
+            crate::error::keep("hx.provider.unreachable", &format!("{url}: {e}"));
+            KeyCheck::Unreachable
+        }
+        Ok(r) if refuses_key(&r) => KeyCheck::Rejected,
+        Ok(r) if matches!(r.status, 200..=299 | 400 | 422) => KeyCheck::Accepted(0),
+        Ok(r) => KeyCheck::Unverified(r.status),
+    }
 }
 
 #[cfg(test)]

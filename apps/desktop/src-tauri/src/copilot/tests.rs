@@ -301,10 +301,25 @@ async fn refusals_end_the_sign_in_with_words_and_store_nothing() {
     let script = Arc::new(Script::default());
     script.fail("/login/device/code");
     let (svc, _) = service(&script, &store);
-    assert_eq!(
-        svc.start().await.unwrap_err().code(),
-        "hx.provider.unreachable"
+    let e = svc.start().await.unwrap_err();
+    assert_eq!(e.code(), "hx.provider.unreachable");
+    assert!(
+        e.to_string().contains("internet connection or proxy"),
+        "{e}"
     );
+
+    // an answer boopis cannot use (here, a status GitHub never documents for this step) is plain words, not the status
+    let script = Arc::new(Script::default());
+    script.post(
+        "/login/device/code",
+        415,
+        &json!({"message": "Unsupported Media Type"}),
+    );
+    let (svc, _) = service(&script, &store);
+    let e = svc.start().await.unwrap_err();
+    assert_eq!(e.code(), "hx.provider.signin_failed");
+    assert!(!e.to_string().contains("415"), "{e}");
+    assert!(e.to_string().contains("Try again"), "{e}");
 
     // an account with no Copilot, and a token of a kind the Copilot API does not take
     for (token, check, want) in [

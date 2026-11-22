@@ -11,7 +11,9 @@ export type WayKind = 'signin' | 'key' | 'local' | 'custom';
 export type ApiMode = 'chat_completions' | 'codex_responses' | 'anthropic_messages';
 export type Shown = 'default' | 'more';
 export interface Note { id: string; kind: 'terms' | 'limit' | 'info'; where: 'row' | 'detail'; text: string; source?: string }
-export interface KeyRule { vars: readonly string[]; wire_var: string | null; url: string | null; required: boolean; refuse_prefixes: readonly string[] }
+/** `check`: the provider's own route that refuses a wrong key, asked by the host's key check (ADR-0041); the UI never calls it */
+export interface KeyRoute { url: string; method: 'GET' | 'POST' }
+export interface KeyRule { vars: readonly string[]; wire_var: string | null; url: string | null; required: boolean; refuse_prefixes: readonly string[]; check?: KeyRoute }
 export interface BaseUrlRule { default: string | null; env: string | null; editable: boolean; pin: boolean; pin_reason: string | null }
 export interface Discovery { method: 'engine_options' | 'get_models' | 'probe' | 'none'; host?: string; port?: number; path?: string; fallback_path?: string | null; shape?: string; timeout_ms?: number }
 export interface Way {
