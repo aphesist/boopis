@@ -378,7 +378,15 @@ build();
 rmSync(REPORT, { recursive: true, force: true });
 for (const d of ['crops', 'mock', 'diffs']) mkdirSync(join(REPORT, d), { recursive: true });
 const srv = await serve();
-const browser = await chromium.launch();
+/* a long run can lose its browser (it closed itself at state 1043 of a local run, and the whole report went with it): the
+   next state relaunches it, and the run still ends in a report */
+let browser = await chromium.launch();
+let relaunching = null;
+const liveBrowser = async () => {
+  if (browser.isConnected()) return browser;
+  relaunching ??= chromium.launch().then((b) => { browser = b; relaunching = null; console.warn('lab: the browser closed; relaunched it'); return b; });
+  return relaunching;
+};
 let rows;
 {
   const ctx = await browser.newContext();
@@ -400,8 +408,12 @@ const queue = [...rows];
 await Promise.all(Array.from({ length: Math.max(1, JOBS) }, async () => {
   while (queue.length) {
     const row = queue.shift();
-    try { await checkRow(browser, srv.origin, row, log); }
-    catch (e) { record(row, { check: 'errors', msg: 'the checker failed on this state: ' + String(e.message).split('\n')[0], key: 'errors|harness' }, 'harness'); log(row, 0); }
+    const b = await liveBrowser();
+    try { await checkRow(b, srv.origin, row, log); }
+    catch (e) {
+      if (!b.isConnected() && !row.retried) { row.retried = true; queue.push(row); continue; }   /* the browser died under this state: checked once more in the new one */
+      record(row, { check: 'errors', msg: 'the checker failed on this state: ' + String(e.message).split('\n')[0], key: 'errors|harness' }, 'harness'); log(row, 0);
+    }
   }
 }));
 
@@ -411,9 +423,9 @@ const staticFindings = STORY || STATE ? [] : scan().filter((f) => !AREA || AREA.
 const list = [...findings.values()].map(({ isNew, ...x }) => x).filter((x) => !AREA || AREA.includes(x.area));
 const failing = list.filter((x) => x.severity !== 'warn');
 const mocks = [...new Map(failing.filter((x) => x.mock).map((x) => [x.mock.url + '|' + (x.mock.crop ?? ''), x.mock])).values()];
-const mockFiles = await mockShots(browser, srv.origin, mocks);
+const mockFiles = await mockShots(await liveBrowser(), srv.origin, mocks).catch((e) => { console.warn('lab: the mock counterparts could not be taken: ' + String(e.message).split('\n')[0]); return {}; });
 for (const x of list) if (x.mock) x.mockShot = mockFiles[x.mock.url + '|' + (x.mock.crop ?? '')] ?? null;
-await browser.close();
+await browser.close().catch(() => {});
 await srv.close();
 
 const RULES_MD = join(UI_ROOT, '..', '..', '..', 'design', 'v6', 'design-system', 'RULES.md');
