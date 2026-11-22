@@ -54,11 +54,20 @@ const MIXED = baseline({
 const OLLAMA = found('ollama.local', 'http://127.0.0.1:11434/v1', 3, 'llama3.2:latest, qwen3:8b and 1 more');
 const ALL_LOCAL = [OLLAMA, found('lm-studio.local', 'http://127.0.0.1:1234/v1', 1, 'qwen/qwen3-4b'), found('llama-cpp.local', 'http://127.0.0.1:8080/v1', 1, 'Qwen3-8B-Q4.gguf'), found('vllm.local', 'http://127.0.0.1:8000/v1', 2, 'meta/llama, mistral')];
 const EVERY = baseline({
-  'anthropic.signin': { status: 'error', code: 'hx.provider.not_installed', detail: 'Claude Code is not installed. Install it, then sign in by running `claude auth login`.' },
+  'anthropic.signin': { status: 'needs_install', detail: 'Claude Code, Anthropic’s command-line tool, is not installed yet. boopis runs your Claude plan through it: install it, then choose Check again.', install: { kind: 'install', command: 'irm https://claude.ai/install.ps1 | iex', shell: 'PowerShell', page: 'https://code.claude.com/docs/en/setup' } },
   'anthropic.key': { status: 'connected', plan: null, models_count: 6 }, 'openai.signin': { status: 'signing_in' }, 'openai.key': { status: 'error', code: 'hx.provider.unreachable', detail: 'OpenAI could not be reached.' },
   'google.key': { status: 'error', code: 'hx.provider.key_rejected', detail: 'Google refused the key.' }, 'xai.signin': { status: 'connected', plan: 'SuperGrok' },
   'ollama.local': { status: 'not_found', checked_at: 1 }, 'vllm.local': { status: 'error', code: 'hx.provider.unreachable', detail: 'Something is listening on 127.0.0.1:8000 but did not answer in time.', checked_at: 1 }
 });
+
+/* the Claude subscription's row in each state the host reports besides those above (claude.rs, ADR-0029 as amended on 22 November 2026) */
+const claudeRow = (over: Partial<ProviderState>): Opts => ({ list: baseline({ 'anthropic.signin': over }), after: (el) => { pick(el, 'signin'); } });
+const CLAUDE_ROWS = {
+  missing: claudeRow({ status: 'needs_install', detail: 'Claude Code, Anthropic’s command-line tool, is not installed yet. boopis runs your Claude plan through it: install it, then choose Check again.', install: { kind: 'install', command: 'curl -fsSL https://claude.ai/install.sh | bash', shell: 'a terminal', page: 'https://code.claude.com/docs/en/setup' } }),
+  broken: claudeRow({ status: 'error', code: 'hx.provider.cli_failed', detail: 'Claude Code is installed (/home/ana/.npm-global/bin/claude), but it did not answer within 20 seconds. Install it again with Anthropic’s installer, then choose Check again.', install: { kind: 'install', command: 'curl -fsSL https://claude.ai/install.sh | bash', shell: 'a terminal', page: 'https://code.claude.com/docs/en/setup' } }),
+  old: claudeRow({ status: 'error', code: 'hx.provider.needs_update', detail: 'Claude Code 2.1.200 is older than the oldest one that serves a Claude model here (2.1.280). Update it with `claude update`, then choose Check again.', install: { kind: 'update', command: 'claude update', shell: 'Terminal', page: 'https://code.claude.com/docs/en/setup#update-claude-code' } }),
+  metered: claudeRow({ status: 'error', code: 'hx.provider.metered', detail: 'Claude Code 2.1.328 is signed in with an Anthropic API key, which bills API usage instead of your Claude subscription.' })
+};
 
 const providers: Story = {
   id: 'settings/providers', title: 'Settings: Providers', area: 'settings', kind: 'surface', covers: ['surface:settings-providers'],
@@ -66,6 +75,10 @@ const providers: Story = {
     typical: st(['typical'], { list: MIXED, probe: [OLLAMA] }),
     'nothing set up': st(['empty'], {}),
     'every state in words': st(['variant', 'error'], { list: EVERY }),
+    'Claude: not installed, with the installer': st(['variant'], CLAUDE_ROWS.missing),
+    'Claude: did not start': st(['error'], CLAUDE_ROWS.broken),
+    'Claude: too old': st(['variant'], CLAUDE_ROWS.old),
+    'Claude: billed per use': st(['variant'], CLAUDE_ROWS.metered),
     'found on this computer': st(['variant'], { probe: ALL_LOCAL }),
     'more providers, open': st(['open'], {}, { render: draw({ list: MIXED, after: (el) => { press(el, '#hx-prov-more'); } }) }),
     'search: a lab in the tail': st(['variant'], {}, { render: draw({ after: (el) => { type(el, 'meta'); } }) }),

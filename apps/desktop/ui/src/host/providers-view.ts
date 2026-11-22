@@ -20,7 +20,8 @@ import type { ProviderState, ProvidersBridge } from './providers-bridge';
 import { mountChatgptSignin } from './chatgpt-signin';
 import type { ChatgptBridge } from './chatgpt-signin';
 import { localUseNote, useLocalRuntime } from './local-runtime';
-import type { ConnectorLogin } from './bindings';
+import { commands } from './bindings';
+import type { ConnectorLogin, InstallHint } from './bindings';
 import { brandOf } from './signin-brands';
 
 export type Filter = 'all' | 'connected' | 'signin' | 'key' | 'local' | 'custom';
@@ -30,7 +31,7 @@ export const FILTERS: ReadonlyArray<{ value: Filter; label: string }> = [
 ];
 
 /** what a row's button does */
-export type Do = 'key' | 'remove' | 'signin' | 'signout' | 'continue' | 'recheck' | 'use' | 'endpoint';
+export type Do = 'key' | 'remove' | 'signin' | 'signout' | 'continue' | 'recheck' | 'use' | 'endpoint' | 'copy' | 'guide';
 export interface Action { do: Do; label: string; primary?: boolean; ghost?: boolean }
 
 /** A sign-in card a stream other than this one draws (xAI, Copilot): mounted in place of the list for its way. */
@@ -55,6 +56,10 @@ export interface ProvidersDeps {
   layout?: ProvidersLayout;
   /** told after every read with what the host said (the hub counts what is connected) */
   onStates?: (states: ReadonlyMap<string, ProviderState>) => void;
+  /** open a page in the system browser (the program's install guide); the host's opener when absent */
+  open?: (url: string) => Promise<void>;
+  /** put text on the clipboard (the install command); the browser's clipboard when absent */
+  copy?: (text: string) => Promise<void>;
 }
 
 /** How the list is arranged: the heading, the markup of a plan, and the words of the way back from a form card. */
@@ -70,9 +75,24 @@ export interface ProvidersLayout {
 
 /* ───────── what to say and what to offer: pure, tested ───────── */
 const CODE_WORDS: Readonly<Record<string, string>> = {
-  'hx.provider.not_installed': 'Not installed', 'hx.provider.needs_update': 'Needs an update', 'hx.provider.metered': 'Not your subscription',
+  'hx.provider.not_installed': 'Not installed', 'hx.provider.cli_failed': 'Did not start', 'hx.provider.needs_update': 'Needs an update', 'hx.provider.metered': 'Not your subscription',
   'hx.provider.key_rejected': 'Key refused', 'hx.provider.unreachable': 'Not reachable'
 };
+
+/** Problems a person fixes with an ordinary step (update the program, sign in with the right account): said calmly, never as a
+    failure. Everything else in `error` is a real failure. */
+export const CALM_CODES: ReadonlySet<string> = new Set(['hx.provider.needs_update', 'hx.provider.metered']);
+/** whether a state is a real failure (drawn as one), not a calm step to take */
+export const failed = (state: ProviderState | null | undefined): boolean => state?.status === 'error' && !CALM_CODES.has(state.code ?? '');
+
+/** the two buttons an install or update hint adds: copy its command, open the maker's guide */
+export const installActions = (hint: InstallHint): Action[] => [
+  { do: 'copy', label: 'Copy command' }, { do: 'guide', label: hint.kind === 'update' ? 'Update guide' : 'Install guide', ghost: true }
+];
+/** the command line under a row or on a plate: where to paste it, then the command as the kit's code (on a line of its own where
+    the column is narrow, so it wraps at its spaces and not after the first word) */
+export const installLineHtml = (hint: InstallHint, cls: string, ownLine = false): string =>
+  `<p class="${cls}" data-install>In ${esc(hint.shell)}: ${ownLine ? '<br>' : ''}${ui.html.code(hint.command)}</p>`;
 
 /** the word a way's state gets (text, never colour alone) */
 export function statusWord(state: ProviderState | null | undefined): string {
@@ -109,6 +129,7 @@ export function actionsFor(way: Way, state: ProviderState | null | undefined, ca
       if (flow === 'cli') {
         const out: Action[] = [];
         if (s === 'signed_out' || state.code === 'hx.provider.metered') out.push({ do: 'signin', label: 'Sign in', primary: true });
+        if (state.install) out.push(...installActions(state.install));
         out.push({ do: 'recheck', label: 'Check again' });
         return out;
       }
@@ -197,7 +218,8 @@ export function rowHtml(r: Row, canSignin: (w: Way) => boolean, calm = false): s
   const word = r.way.kind === 'custom' ? '' : `<span class="ui-set__value" data-status="${esc(r.state?.status ?? 'unread')}">${esc(statusWord(r.state))}</span>`;
   const control = `<span style="display:inline-flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;justify-content:flex-end">${word}${actions.map((a) => button(a, r.way.id, r.way.label, calm)).join('')}</span>`;
   const notes = r.way.notes.filter(rowNote).map((n) => `<p class="ui-field__hint" data-note="${esc(n.id)}">${esc(n.text)}</p>`).join('');
-  return ui.html.setRow({ label: r.way.label, hint: hintOf(r.way, r.state), control }) + notes;
+  const install = r.state?.install ? installLineHtml(r.state.install, 'ui-field__hint') : '';
+  return ui.html.setRow({ label: r.way.label, hint: hintOf(r.way, r.state), control }) + install + notes;
 }
 function endpointRowHtml(s: ProviderState, calm = false): string {
   const slug = s.way.slice('custom.'.length);
@@ -256,6 +278,8 @@ export interface ProvidersView { refresh: (opts?: { probe?: boolean }) => Promis
 export function mountProviders(host: HTMLElement, deps: ProvidersDeps): ProvidersView {
   const { bridge } = deps;
   const settle = deps.settle ?? 700;
+  const openPage = deps.open ?? (async (url: string): Promise<void> => { await commands.openExternal(url); });
+  const copyText = deps.copy ?? ((text: string): Promise<void> => navigator.clipboard.writeText(text));
   let filter: Filter = 'all';
   let query = '';
   let tailOpen = false;
@@ -396,6 +420,12 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
       case 'signin': case 'continue': if (r?.way.signin?.flow === 'cli') claudeSignin(t, r.way); else if (r) signinFlow(r.way); break;
       case 'signout': bridge.signOut(wayId).then(() => read(false), (e: unknown) => { deps.toast(message(e)); }); break;
       case 'recheck': void read(true); break;
+      case 'copy': {
+        const hint = r?.state?.install;
+        if (hint) copyText(hint.command).then(() => { deps.toast(`Copied. Paste it into ${hint.shell} and run it, then choose Check again.`); }, () => { deps.toast('Could not copy: select the command and copy it.'); });
+        break;
+      }
+      case 'guide': { const hint = r?.state?.install; if (hint) openPage(hint.page).catch((e: unknown) => { deps.toast(message(e)); }); break; }
       case 'use': if (r) void useLocal(r); break;
       case 'remove': {
         if (r) removeFlow(wayId, r.way.label, 'Its key leaves your keychain. A ladder tier that names it stays as it is, and governed mode says why it cannot run.');
