@@ -59,6 +59,7 @@ function cause(check, msg, el) {
     case 'geometry.target': return 'a target smaller than `--hit-min` with a neighbour inside its 24px circle; give it a 24px hit area (R-a11y-2)';
     case 'geometry.clip': return 'a fixed width or height with overflow hidden and no `text-overflow: ellipsis` (R-overflow-1)';
     case 'geometry.center': return 'aligned by padding, a baseline or a fixed line height instead of flex centring with line height 1 (R-type-11)';
+    case 'geometry.overlap': return 'two boxes of text share the same pixels: a strip or label positioned over content that has neither its own surface nor its own space (give the lower content room, or the upper one a surface from the system)';
     case 'geometry.hscroll': return 'content wider than its box at this width: a fixed width, a long unbroken string without `overflow-wrap: anywhere`, or a row that does not wrap';
     case 'axe': return 'axe: ' + msg.split(':')[0];
     case 'stability.render': return 'the state draws differently on a second render: timing (a feed still arriving) or a random choice';
