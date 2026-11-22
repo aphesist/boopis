@@ -436,9 +436,27 @@ async fn refresh_reads_every_source_and_search_finds_across_them() {
         .map(|i| i.id.clone())
         .collect();
     assert_eq!(
-        rec,
-        curated[..rec.len()],
+        rec, curated,
         "the front page leads with boopis's own list, most popular first"
+    );
+    // Browse > Connectors, before any search: boopis's list first, most popular first, then the other sources' connectors
+    let conn = r
+        .store
+        .browse(
+            None,
+            &StoreFilter {
+                kind: Some(ItemKind::Connector),
+                ..StoreFilter::default()
+            },
+            None,
+            Some(100),
+        )
+        .unwrap();
+    let ids: Vec<String> = conn.items.iter().map(|i| i.id.clone()).collect();
+    assert_eq!(ids[..curated.len()], curated[..]);
+    assert!(
+        ids.len() > curated.len(),
+        "the registry's connectors follow"
     );
     assert!(front.total > 30 && !front.stale && !front.offline);
     assert!(front.refreshed_at.is_some());

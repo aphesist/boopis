@@ -41,6 +41,9 @@ const ANTHROPIC: &[(&str, &str, Option<&str>)] = &[
     ("anthropics", "skills", None),
 ];
 
+/// How many of boopis's own items the front page leads with, most popular first.
+pub const FRONT_PAGE: usize = 24;
+
 /// Items boopis took down itself, `(id, reason)`. Empty today; the list exists so a bad entry can be stopped without an update
 /// of any source.
 pub const BOOPIS_KILL_LIST: &[(&str, &str)] = &[];
@@ -306,17 +309,19 @@ impl Store {
                         .is_none_or(|want| installed.contains(&i.id) == want)
             })
             .collect();
-        let ranked = search::rank(kept.into_iter(), query.unwrap_or(""));
+        let order = self.curated_order();
+        let place = |i: &StoreItem| order.get(i.id.as_str()).copied();
+        let ranked = search::rank(kept.into_iter(), query.unwrap_or(""), &place);
         let total = u32::try_from(ranked.len()).unwrap_or(u32::MAX);
         let (page, next_cursor) = search::page(&ranked, cursor, limit);
         let front = cursor.is_none() && query.is_none() && *filter == StoreFilter::default();
         let recommended = front.then(|| {
-            items
+            let mut rec: Vec<&StoreItem> = items
                 .iter()
                 .filter(|i| i.tier == Tier::Recommended && i.removed.is_none())
-                .take(12)
-                .cloned()
-                .collect()
+                .collect();
+            rec.sort_by_key(|i| place(i).unwrap_or(usize::MAX));
+            rec.into_iter().take(FRONT_PAGE).cloned().collect()
         });
         let user = self.user();
         let (mut newest, mut stale, mut offline) = (None::<String>, false, false);
@@ -343,6 +348,17 @@ impl Store {
             stale,
             offline,
         })
+    }
+
+    /// boopis's own list in its order (`connectors.json` is ordered by a cited popularity signal, most popular first): an item's
+    /// place, for ordering browse and the front page. Items of other sources have none and follow in their own order.
+    fn curated_order(&self) -> BTreeMap<String, usize> {
+        self.source_cache("boopis")
+            .entries
+            .iter()
+            .enumerate()
+            .map(|(n, e)| (e.item.id.clone(), n))
+            .collect()
     }
 
     // ------------------------------------------------------------ refresh
