@@ -98,7 +98,7 @@ def _stereo(c: Cue, x: np.ndarray) -> np.ndarray:
         # one thread in two places: the note in the terminal (left) and in the room (right), decorrelated
         y = V.mallet(hz(c.p["m"] + 0.03), 1.0, c.p.get("bright", 1.0), seed=_seed(c) + 1) if c.kind == "mallet" else x
         y = y[: len(x)] if len(y) >= len(x) else np.pad(y, (0, len(x) - len(y)))
-        return pan(x, -0.32) * 0.75 + pan(y, 0.32) * 0.75
+        return pan(x, -0.32) * 0.6 + pan(y, 0.32) * 0.6   # two coherent copies: 0.6 keeps the peak of one centred cue
     return pan(x, float(c.pan))
 
 
@@ -153,7 +153,7 @@ def master(music: np.ndarray, sfx: np.ndarray, end_fade: float = 0.25) -> dict:
     mix = m + s
     n = mix.shape[1]
     G = db(TARGET_LUFS - lufs(mix))
-    glue = compressor_gain(mix * G, threshold_db=-17.0, ratio=1.8, attack=0.015, release=0.22)
+    glue = compressor_gain(mix * G, threshold_db=-11.0, ratio=1.5, attack=0.015, release=0.22)  # peaks only: keep the arc
     fade = np.ones(n)
     k = n_of(end_fade)
     fade[n - k:] = np.cos(np.linspace(0, np.pi / 2, k)) ** 2

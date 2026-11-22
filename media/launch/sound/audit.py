@@ -106,12 +106,21 @@ def audit_cues(placed: list, master: np.ndarray, sfx: np.ndarray, gain: np.ndarr
         row = {"id": c.id, "beat": c.beat, "label": c.label, "group": c.group, "kind": c.kind, "measure": how,
                "frame": c.frame, "t": c.t, "src": c.src, "tier": c.tier}
         if how in ("onset", "span"):
-            e = _env(_hp(solo, fc), 0.001)
-            d = e[n_of(0.001):] - e[:-n_of(0.001)]
-            lim = int(np.nonzero(e >= 0.5 * e.max())[0][0]) + n_of(0.002)   # the attack, not a later swell
-            row["solo"] = (i0 + int(np.argmax(d[:max(1, lim)])) + n_of(0.0005)) / SR
-            row["master"] = blind_onset(mono, c.t, fc=fc)
-            row["stem"] = blind_onset(smono, c.t, fc=fc)
+            # solo onset: the first moment the cue's 2 ms envelope reaches -12 dB of its attack's maximum (60 ms)
+            e = _env(_hp(solo, fc), 0.002)
+            att = e[: n_of(0.06)]
+            row["solo"] = (i0 + int(np.nonzero(att >= 10 ** (-12 / 20) * att.max())[0][0])) / SR
+            # a blind reading counts only where the cue stands 3 dB over everything else in its band (first 10 ms)
+            w0, w1 = n_of(c.t - 0.002), n_of(c.t + 0.010)
+            full = np.zeros(n)
+            full[a:b] = solo[a - i0:b - i0]
+            pad = n_of(0.05)
+            lo, hi = max(0, w0 - pad), min(n, w1 + pad)
+            cue_e = np.sum(_hp(full[lo:hi], fc)[w0 - lo:w1 - lo] ** 2)
+            for key, sig in (("master", mono), ("stem", smono)):
+                other = np.sum(_hp(sig[lo:hi] - full[lo:hi], fc)[w0 - lo:w1 - lo] ** 2)
+                snr = 10 * np.log10((cue_e + 1e-20) / (other + 1e-20))
+                row[key] = blind_onset(sig, c.t, fc=fc) if snr >= 3.0 else None
         else:
             row["solo"] = (i0 + intrinsic(np.stack([solo, solo]), how)) / SR
             row["master"] = row["stem"] = None

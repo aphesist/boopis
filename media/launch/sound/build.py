@@ -73,11 +73,13 @@ def audit_md(results: list, aac: dict | None) -> str:
             "How it is measured (`media/launch/sound/audit.py`): three blind onset measurements per hit, each the "
             "steepest rise of the 1 ms envelope in the cue's own band (zero-phase high-pass at 0.4x its spectral "
             "centroid), searched within one frame either side of the cue's frame:", "",
-            "- **master**: in the delivered master itself. No answer (—) where two rises compete inside the window "
-            "(a neighbour within a frame, a louder bed) or the best rise sits on the window's edge.",
-            "- **effects stem**: the same detector on the delivered effects stem.",
+            "- **master**: in the delivered master itself. No answer (—) where the cue is masked there (less than "
+            "3 dB over everything else in its band during its first 10 ms), where two rises compete inside the "
+            "window (a neighbour within a frame), or where the best rise sits on the window's edge.",
+            "- **effects stem**: the same detector, with the same guards, on the delivered effects stem.",
             "- **solo through the chain**: the cue's own samples alone, multiplied by the master's own gain curve "
-            "(glue, loudness, limiter), so its real attack is measured even where the mix masks it.",
+            "(glue, loudness, limiter), so its real attack is measured even where the mix masks it: the first "
+            "moment its 2 ms envelope reaches -12 dB of its attack's maximum.",
             "- A hit passes when every measurement that answers is within one frame (16.7 ms); the hold's tone "
             "must also last 60 frames +-1. Moves (air) are measured at their peak and textures (the streaming "
             "grains, the inhale) at their onset; neither is judged as a hit.",
@@ -150,7 +152,7 @@ Worst hit across the three cuts: `{worst['id']}` at {worst['err_ms']:+.1f} ms. F
 ## What the timing rests on (check when the animation lands)
 
 - Every cue is timed from the approved script, storyboard and cut-downs, not yet from animated picture (the animatic
-  does not exist yet). The cue sheet is `media/launch/sound/timeline.py`: one line per cue with its frame and its
+  in SC/renders holds each beat's key frame for its window; no move is animated yet). The cue sheet is `media/launch/sound/timeline.py`: one line per cue with its frame and its
   source; when a scene lands on other frames, change the frame there and rebuild.
 - Interpretations made where the script leaves room: typing follows the motion library's K2 (`typeOn`, character i
   at start + i/cps, sounding on its first visible frame) with spaces counted as keystrokes, as the script's end times

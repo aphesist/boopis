@@ -126,7 +126,7 @@ def film_arr() -> Arr:
     for t in beats_between("4.3", "13.1", 1.0, 0.5, only=(2.5, 4.5)):
         A.stabs.append((t, chord_at(t), 0.22))
     for t in beats_between("15.1", "17.4", 1.0, 0.5):
-        A.stabs.append((t, chord_at(t), 0.30))
+        A.stabs.append((t, chord_at(t), 0.25))
     # bass: sustained under the promise and the cast, then walking eighths through the proofs
     A.bass = [(at("2.2"), 38, at("3.1") - at("2.2"), 0.55, 0.3, 0.4), (at("3.1"), 34, at("4.3") - at("3.1"), 0.55, 0.3, 0.2)]
     walk = {
@@ -147,7 +147,7 @@ def film_arr() -> Arr:
     for t in beats_between("15.1", "17.4"):
         bar = int(t / BAR) + 1
         sub, hi = roots[bar]
-        A.bass.append((t, sub, BEAT * 0.9, 0.95, 0.004, 0.05))
+        A.bass.append((t, sub, BEAT * 0.9, 0.8, 0.004, 0.05))
         for k, v in ((1, 0.45), (2, 0.75), (3, 0.5)):
             A.pulse.append((t + k * BEAT / 4, hi, v))
     A.bass.append((at("17.4"), 36, F(2244) - STOP - at("17.4"), 0.85, 0.35, 0.03))   # the pedal, cut on the press
@@ -157,7 +157,7 @@ def film_arr() -> Arr:
     A.hats = [(t, 0.7, 0.045) for t in beats_between("10.1", "13.1", 1.0, 0.5)]
     for t in beats_between("15.1", "17.4", 0.25):
         pos = round((t / BEAT) % 1, 3) % 1.0
-        A.hats.append((t, {0.0: 0.32, 0.25: 0.42, 0.5: 0.8, 0.75: 0.45}[pos], 0.05 if pos == 0.5 else 0.024))
+        A.hats.append((t, {0.0: 0.32, 0.25: 0.42, 0.5: 0.65, 0.75: 0.45}[pos], 0.05 if pos == 0.5 else 0.024))
     A.fc = [(0, 2250), (at("2.2"), 1950), (at("3.1"), 2250), (5.867, 2250), (6.1, 3900), (at("4.3"), 3150),
             (16.0, 3150), (16.1, 3750), (at("10.1"), 3600), (at("10.1") + 0.12, 1875), (at("12.1"), 1950),
             (at("12.1") + 0.15, 2550), (at("12.3"), 2700), (at("12.3") + 0.1, 3300), (at("13.1"), 3300),
@@ -165,7 +165,7 @@ def film_arr() -> Arr:
             (at("19.1"), 4800), (at("20.4"), 3600), (FILM, 3600)]
     A.lfo = [(0, 0.18), (at("13.1"), 0.18), (at("13.1") + 0.1, 0.0), (at("15.1"), 0.0), (at("15.1") + 0.1, 0.12),
              (FILM, 0.15)]
-    A.arc = [(0, 0.0), (at("13.1"), -1.5), (at("15.1") - 0.3, 0.5), (at("15.1"), 1.0), (FILM, 1.0)]
+    A.arc = [(0, 0.0), (at("13.1"), -3.0), (at("15.1") - 0.3, 0.0), (at("15.1"), 1.5), (at("17.4"), 1.5), (at("19.1"), 0.5), (FILM, 0.5)]
     A.fade_end = (45.9, 46.85)
     A.markers = [
         ("m-groove", at("4.3"), "the room: the groove enters (felt kick, walking sub)", "onset"),
@@ -293,7 +293,7 @@ def render(cut: str) -> dict:
         x = sub_bass(hz(m), BEAT / 4 * 0.7, vel, 0.003, 0.03, seed=900 + k)
         i = n_of(t + PRE)
         j = min(n, i + len(x))
-        pulse[i:j] += x[: j - i] * 0.22
+        pulse[i:j] += x[: j - i] * 0.16
     pulse = butter(pulse, "lowpass", 1800.0, 2)
     # drums
     kicks = np.zeros(n)

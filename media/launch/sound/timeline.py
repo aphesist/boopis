@@ -225,15 +225,15 @@ def film_cues() -> list[Cue]:
     A(Cue("b12-enter", F(1792), "enter_key", -13, "B12", "Enter, on the downbeat: the drop",
           "B12: 29.867 (15.1) Enter is the drop", {}, -0.25, {"room": -12.0}, 1))
     # B13 the run, live in the open room: terminal and room share one sound (wide)
-    A(bot("b13-kai", F(1808), "kai", -12, "B13", "kai's block and entry", "B13: 15.1.5", "wide"))
-    A(bot("b13-vox", F(1840), "vox", -13, "B13", "vox's block and entry", "B13: 15.2.5", "wide"))
-    A(bot("b13-kai2", F(1856), "kai", -12.5, "B13", "kai's block and entry", "B13: 15.3", "wide"))
+    A(bot("b13-kai", F(1808), "kai", -10.5, "B13", "kai's block and entry", "B13: 15.1.5", "wide"))
+    A(bot("b13-vox", F(1840), "vox", -11.5, "B13", "vox's block and entry", "B13: 15.2.5", "wide"))
+    A(bot("b13-kai2", F(1856), "kai", -11, "B13", "kai's block and entry", "B13: 15.3", "wide"))
     A(Cue("b13-gather", F(1856), "gather", -30, "B13", "vox and kai gather into a huddle", "B13: 15.3", {}, 0.25,
           S_UI, 3))
     A(Cue("b13-done", F(1872), "wood", -28, "B13", "the done line; the prompt returns", "B13: 15.3.5",
           {"f": hz(74), "decay": 0.014}, -0.25, S_UI, 3))
     # B14 same thread, from your other apps
-    A(Cue("b14-poke", F(1984), "rubber_poke", -7, "B14", "click on nina's orb in the dock: the poke (boop)",
+    A(Cue("b14-poke", F(1984), "rubber_poke", -5, "B14", "click on nina's orb in the dock: the poke (boop)",
           "B14: 33.067 (16.3) the dock poke, a soft rubbery tick", {"m": NINA}, 0.0, S_BOOP, 1))
     A(Cue("b14-slab", F(1984), "slab_rise", -30, "B14", "the slab morphs up on its springs", "B14: 33.067",
           {}, 0.0, {"hall": -18.0}, 3, "texture"))
