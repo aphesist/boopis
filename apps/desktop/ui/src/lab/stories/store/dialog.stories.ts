@@ -57,7 +57,13 @@ function manyItems(now: number): StoreItem[] {
 /** the app on a store with these options: the clock is the real one (so "read just now" stays true), and forty more items */
 const withStore = (o: MockStoreOptions = {}) => (p: DataProvider): DataProvider => ({ ...p, store: createMockStore({ now: () => Date.now(), extraItems: manyItems(Date.now()), ...o }) });
 
-const open = async (c: AppCtx): Promise<void> => { document.body.focus(); await c.key('S', { ctrlKey: true, shiftKey: true }); await c.wait(600); };
+/** waits until `ok` holds (the store's view is imported the first time it opens, so a fixed wait races it on a busy machine) */
+const until = async (c: AppCtx, ok: () => boolean, ms = 5000): Promise<void> => { for (let t = 0; t < ms && !ok(); t += 50) await c.wait(50); };
+const open = async (c: AppCtx): Promise<void> => {
+  document.body.focus(); await c.key('S', { ctrlKey: true, shiftKey: true });
+  await until(c, () => !!document.querySelector('#hx-store [data-store-status]') && !!document.querySelector('#hx-store [data-store-open], #hx-store .ui-empty'));
+  await c.wait(400);
+};
 const tab = async (c: AppCtx, value: 'browse' | 'installed' | 'sources'): Promise<void> => {
   await c.click(`#hx-store [role=tab][data-value="${value}"], #hx-store .ui-seg__opt[data-value="${value}"]`); await c.wait(400);
 };
@@ -77,7 +83,11 @@ const dialog: Story = {
   id: 'store/dialog', title: 'Store: the dialog', area: 'store', kind: 'surface', covers: ['surface:store-dialog'], scope: '#hx-store', mock: MOCK,
   states: {
     'browse (the front page)': st(['typical'], null, open),
-    'browse, many items': st(['many', 'scroll'], null, async (c) => { await open(c); const body = c.$('#hx-store-body'); body.scrollTop = body.scrollHeight; await c.wait(300); }),
+    'browse, many items': st(['many', 'scroll'], null, async (c) => {
+      await open(c);
+      await until(c, () => [...document.querySelectorAll('#hx-store .hx-store__list button')].some((b) => b.textContent === 'Show more'));
+      const body = c.$('#hx-store-body'); body.scrollTop = body.scrollHeight; await c.wait(300);
+    }),
     'browse, connectors': st(['variant'], null, async (c) => { await open(c); await c.click('#hx-store [role=radio][data-value="connector"]'); await c.wait(400); }),
     'browse, long names': st(['long'], null, async (c) => {
       await open(c);
