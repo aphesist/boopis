@@ -187,7 +187,10 @@ pub fn test_endpoint(
         let url = address.join(&path);
         let attempt = match get(t, address, &url, &headers)? {
             Ok(reply) => classify(&reply, max, max_chars),
-            Err(_) => Attempt::Silent,
+            Err(e) => {
+                crate::error::keep("hx.provider.unreachable", &format!("{url}: {e}"));
+                Attempt::Silent
+            }
         };
         let done = matches!(
             attempt,
@@ -213,7 +216,11 @@ fn result_of(last: Option<(Attempt, String)>, loopback: bool) -> EndpointTestRes
         status: None,
         loopback,
         code: Some("hx.provider.unreachable".into()),
-        detail: Some("Nothing answered. Check the address, and that the server is running.".into()),
+        detail: Some(if loopback {
+            "Nothing answered. Check the address, and that the server is running.".into()
+        } else {
+            "Nothing answered. Check the address, and your internet connection or proxy.".into()
+        }),
     };
     let Some((Attempt::Answered(outcome, models, status), url)) = last else {
         return r;
@@ -239,7 +246,9 @@ fn result_of(last: Option<(Attempt, String)>, loopback: bool) -> EndpointTestRes
         }
         EndpointOutcome::NeedsKey => {
             r.code = Some("hx.provider.key_rejected".into());
-            r.detail = Some("The server wants a key, or did not accept the one given.".into());
+            r.detail = Some(
+                "The server wants a key, or did not accept the one given. Add its key, or check the one you gave.".into(),
+            );
         }
         EndpointOutcome::NotAModelServer => {
             r.code = Some("hx.provider.not_a_model_server".into());
@@ -285,7 +294,10 @@ pub fn check_key(
         .unwrap_or_default();
     let headers = auth_headers(mode, Some(key), &host);
     Ok(match get(t, address, listing_url, &headers)? {
-        Err(_) => KeyCheck::Unreachable,
+        Err(e) => {
+            crate::error::keep("hx.provider.unreachable", &format!("{listing_url}: {e}"));
+            KeyCheck::Unreachable
+        }
         Ok(reply) => match classify(&reply, max, max_chars) {
             Attempt::Answered(EndpointOutcome::NeedsKey, ..) => KeyCheck::Rejected,
             Attempt::Answered(EndpointOutcome::Listed, m, _) => {
