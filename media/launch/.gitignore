@@ -1,0 +1,4 @@
+# the film's build and render outputs (renders go to the shared scratch folder, never into git)
+dist/
+out/
+.film-render/
