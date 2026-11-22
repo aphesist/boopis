@@ -262,21 +262,7 @@
         const er = e.getBoundingClientRect(), cr = c.getBoundingClientRect();
         const eRad = radiiOf(ecs), cRad = radiiOf(ccs);
         const ring = ringOf(ecs);
-        if (clipper && scrolls(cs.get(clipper) || getComputedStyle(clipper))) {
-          /* a scroller hides what it scrolls, on the axis it scrolls. A box that shows in part past a side it does not scroll
-             (a column that scrolls down with overflow-x hidden, so its switches and buttons are cut at the right edge, as the
-             store's were) is cut, and nobody can scroll to the rest */
-          const kcs = cs.get(clipper) || getComputedStyle(clipper), kr = clipper.getBoundingClientRect();
-          const meets = er.left < kr.right && er.right > kr.left && er.top < kr.bottom && er.bottom > kr.top;
-          const past = [];
-          if (!/auto|scroll/.test(kcs.overflowX)) { if (er.right > kr.right + 1) past.push(['right', er.right - kr.right]); if (er.left < kr.left - 1) past.push(['left', kr.left - er.left]); }
-          if (!/auto|scroll/.test(kcs.overflowY)) { if (er.bottom > kr.bottom + 1) past.push(['bottom', er.bottom - kr.bottom]); if (er.top < kr.top - 1) past.push(['top', kr.top - er.top]); }
-          if (want.has('geometry.contain') && meets && past.length && !e.matches(OVERHANG_OK)) {
-            const [side, by] = past.reduce((a, b) => (b[1] > a[1] ? b : a));
-            add('geometry.contain', e, 'cut by ' + describe(clipper) + ', which does not scroll that way: ' + r1(by) + 'px past its ' + side + ' edge [' + why.join(',') + ']', { container: rectOf(clipper) });
-          }
-          continue;
-        }
+        if (clipper && scrolls(cs.get(clipper) || getComputedStyle(clipper))) continue;
         const selfClip = clipper === c || (ccs.clipPath && ccs.clipPath !== 'none');   /* the container clips to its own shape: nothing shows past it */
         if (e.matches(OVERHANG_OK)) continue;
         const inside = shapeTest(c, cr, cRad);
@@ -336,6 +322,40 @@
           const off = (kr.top + kr.bottom) / 2 - mid;
           if (Math.abs(off) > 1) { add('geometry.center', k, 'sits ' + r1(Math.abs(off)) + 'px ' + (off > 0 ? 'below' : 'above') + ' the centre of its row ' + describe(e)); }
         }
+      }
+    }
+
+    /* geometry.contain, cut: a control that shows in part because a box above it cuts it on a side that box does not scroll.
+       The owner's Store dialog cut its switches, search field and Details buttons at the right edge, and the lab passed: its
+       scroller was wider than the dialog's card, so the switch sat whole inside the nearest clipper, and the card (overflow
+       hidden, not a scroller) cut it. Every clipping box from the control up is followed, keeping what stays visible: a part a
+       box scrolls away is hidden by scrolling (fine), a part a box that does not scroll that way cuts off, while some of the
+       control still shows, is reported. A control wholly out of view (a closed drawer) is not. */
+    if (want.has('geometry.contain')) {
+      const CONTROL = 'button, a[href], input, textarea, select, [role="button"], [role="switch"], [role="checkbox"], [role="radio"], [role="tab"], [role="slider"], [role="combobox"], [role="menuitem"], [role="option"], [tabindex]:not([tabindex="-1"])';
+      for (const e of els) {
+        if (!e.matches(CONTROL) || e.matches(OVERHANG_OK)) continue;
+        const r0 = e.getBoundingClientRect();
+        let v = { l: r0.left, r: r0.right, t: r0.top, b: r0.bottom };
+        let worst = null;
+        for (let a = e.parentElement; a && a !== document.body && a !== document.documentElement; a = a.parentElement) {
+          const acs = cs.get(a) || getComputedStyle(a);
+          if (!clipsContent(acs)) continue;
+          const ar = a.getBoundingClientRect();
+          const axes = [['x', 'l', 'r', ar.left, ar.right, acs.overflowX], ['y', 't', 'b', ar.top, ar.bottom, acs.overflowY]];
+          for (const [, lo, hi, alo, ahi, ov] of axes) {
+            if (v[lo] >= alo - 1 && v[hi] <= ahi + 1) continue;
+            const shows = v[lo] < ahi && v[hi] > alo;
+            if (shows && !/auto|scroll/.test(ov)) {
+              const pastHi = v[hi] - ahi, pastLo = alo - v[lo];
+              const [side, by] = pastHi >= pastLo ? [lo === 'l' ? 'right' : 'bottom', pastHi] : [lo === 'l' ? 'left' : 'top', pastLo];
+              if (by > 1 && (!worst || by > worst.by)) worst = { a, side, by };
+            }
+            v[lo] = Math.max(v[lo], alo); v[hi] = Math.min(v[hi], ahi);
+          }
+          if (v.l >= v.r || v.t >= v.b) { worst = null; break; }   /* wholly out of view */
+        }
+        if (worst) add('geometry.contain', e, 'cut by ' + describe(worst.a) + ', which does not scroll that way: ' + r1(worst.by) + 'px past its ' + worst.side + ' edge', { container: rectOf(worst.a) });
       }
     }
 
