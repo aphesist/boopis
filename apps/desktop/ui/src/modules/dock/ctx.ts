@@ -3,7 +3,7 @@
    (min, norm, exp, card, edit) anchored to the slab's bottom centre; an element that exists in two views carries the
    same data-k key in both, and on any state change the dock measures every keyed element before and after and
    springs it from where it was to where it belongs (FLIP with springs that keep their velocity when interrupted).
-   Live <orb-avatar> elements are re-parented into the visible slot, never re-created. */
+   Live <orb-avatar> elements are connected once, in the orb layer (layer.ts), and follow their slots, never re-created or moved. */
 import { clamp, onReducedChange, reduced as rm } from '../../core/dom';
 import type { Bot, RunSnapshot, Schedule, ThreadMessage, Wait } from '../../data';
 import type { DockMode } from '../../core/bus';

@@ -10,13 +10,15 @@ const dockState = (tags: State['tags'], provider: ProviderSpec, setup?: (c: AppC
 const mode = (m: string) => async (c: AppCtx): Promise<void> => { c.hx.dock()?.setMode(m); await c.wait(900); };
 const page = (id: string) => async (c: AppCtx): Promise<void> => { c.hx.dock()?.setMode('expanded'); await c.wait(600); c.hx.dock()?.goPage(id); await c.wait(700); };
 
-/** what the owner saw flicker: hovering along the row, opening and closing a bot's session, expanding and collapsing */
-const HOVER_ROW: Interaction = { name: 'hover along the row', watch: SCOPE, steps: [{ do: 'hover', sel: '#hx-dock .dk-bot >> nth=0', ms: 250 }, { do: 'hover', sel: '#hx-dock .dk-bot >> nth=2', ms: 250 }, { do: 'hover', sel: '#hx-dock .dk-bot >> nth=4', ms: 250 }, { do: 'move-away', ms: 300 }], sample: 900 };
-const OPEN_CLOSE: Interaction = { name: 'open a bot, close it', watch: SCOPE, steps: [{ do: 'click', sel: '#hx-dock .dk-bot >> nth=1', ms: 900 }, { do: 'press', key: 'Escape', ms: 200 }], sample: 1100 };
-const EXPAND: Interaction = { name: 'expand and collapse', watch: SCOPE, steps: [{ do: 'call', js: '__lab.hx.dock().setMode("expanded")', ms: 900 }, { do: 'call', js: '__lab.hx.dock().setMode("normal")' }], sample: 1100 };
-const MINIMISE: Interaction = { name: 'minimise and restore', watch: SCOPE, steps: [{ do: 'call', js: '__lab.hx.dock().setMode("minimal")', ms: 900 }, { do: 'call', js: '__lab.hx.dock().setMode("normal")' }], sample: 1100 };
-const PAGES: Interaction = { name: 'switch pages', watch: SCOPE, steps: [{ do: 'call', js: '__lab.hx.dock().goPage("run")', ms: 700 }, { do: 'call', js: '__lab.hx.dock().goPage("bots")' }], sample: 1000 };
-const HOVER_EMPTY: Interaction = { name: 'hover the empty dock', watch: SCOPE, steps: [{ do: 'hover', sel: '#hx-dock .dk', ms: 400 }, { do: 'move-away', ms: 300 }], sample: 900 };
+/** what the owner saw flicker: hovering along the row, opening and closing a bot's session, expanding and collapsing.
+    No orb may be taken out of the page and put back, or drawn anew, in any of them (`orbs: 'stay'`): the orbs are connected once,
+    in the dock's orb layer, and follow their slots (modules/dock/layer.ts), because a worker's canvas is empty until it paints again */
+const HOVER_ROW: Interaction = { name: 'hover along the row', watch: SCOPE, orbs: 'stay', steps: [{ do: 'hover', sel: '#hx-dock .dk-bot >> nth=0', ms: 250 }, { do: 'hover', sel: '#hx-dock .dk-bot >> nth=2', ms: 250 }, { do: 'hover', sel: '#hx-dock .dk-bot >> nth=4', ms: 250 }, { do: 'move-away', ms: 300 }], sample: 900 };
+const OPEN_CLOSE: Interaction = { name: 'open a bot, close it', watch: SCOPE, orbs: 'stay', steps: [{ do: 'click', sel: '#hx-dock .dk-bot >> nth=1', ms: 900 }, { do: 'press', key: 'Escape', ms: 200 }], sample: 1100 };
+const EXPAND: Interaction = { name: 'expand and collapse', watch: SCOPE, orbs: 'stay', steps: [{ do: 'call', js: '__lab.hx.dock().setMode("expanded")', ms: 900 }, { do: 'call', js: '__lab.hx.dock().setMode("normal")' }], sample: 1100 };
+const MINIMISE: Interaction = { name: 'minimise and restore', watch: SCOPE, orbs: 'stay', steps: [{ do: 'call', js: '__lab.hx.dock().setMode("minimal")', ms: 900 }, { do: 'call', js: '__lab.hx.dock().setMode("normal")' }], sample: 1100 };
+const PAGES: Interaction = { name: 'switch pages', watch: SCOPE, orbs: 'stay', steps: [{ do: 'call', js: '__lab.hx.dock().goPage("run")', ms: 700 }, { do: 'call', js: '__lab.hx.dock().goPage("bots")' }], sample: 1000 };
+const HOVER_EMPTY: Interaction = { name: 'hover the empty dock', watch: SCOPE, orbs: 'stay', steps: [{ do: 'hover', sel: '#hx-dock .dk', ms: 400 }, { do: 'move-away', ms: 300 }], sample: 900 };
 
 const dock: Story = {
   id: 'dock/dock', title: 'Dock', area: 'dock', kind: 'surface', covers: ['surface:dock'], scope: SCOPE,

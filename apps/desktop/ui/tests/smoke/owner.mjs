@@ -50,7 +50,8 @@ export async function ownerDecisions(env) {
   await ev(() => __hx.emit('hx:new-bot', { from: 'test' })); await page.waitForTimeout(400);
   await page.fill('.bt-name', 'rex'); await page.keyboard.press('Enter'); await page.waitForTimeout(1500);
   const after = await ev(() => [...document.querySelectorAll('#hx-dock .dk-bot')].map((b) => b.dataset.id));
-  const orbIn = await ev(() => !!document.querySelector('#hx-dock .dk-bot[data-id="rex"] orb-avatar'));
+  /* the live orb is in the dock's orb layer, not in the button: it is drawn, and it sits over the bot's button */
+  const orbIn = await ev(() => { const b = document.querySelector('#hx-dock .dk-bot[data-id="rex"]'), o = document.querySelector('#hx-dock .dk-orbs .ui-orb[data-bot="rex"]'); if (!b || !o || !o.querySelector('orb-avatar') || o.closest('[data-away]')) return false; const r = b.getBoundingClientRect(), q = o.getBoundingClientRect(); return Math.abs(r.left + r.width / 2 - (q.left + q.width / 2)) < 3 && Math.abs(r.top + r.height / 2 - (q.top + q.height / 2)) < 3; });
   check('owner', 'a bot created in the Bots tab appears last in the dock, with its orb, no reload', after.length === before.length + 1 && after.at(-1) === 'rex' && orbIn && before.every((id, i) => after[i] === id), { before: before.length, after: after.slice(-2) });
 
   /* a click outside returns the dock to rest; the pill stays a pill */

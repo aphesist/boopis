@@ -43,7 +43,8 @@ export interface Interaction {
   /** what to watch (defaults to the story's scope) */
   watch?: string;
   /** `stay`: no `<orb-avatar>` under the watched element may be taken out of the page and put back, or drawn anew (an update writes
-      the orb's attributes). A live update of a bot is such an interaction; a mode change that moves orbs between containers is not */
+      the orb's attributes). A live update of a bot is such an interaction, and so is every move of the dock: its orbs stay in one layer
+      and follow their slots */
   orbs?: 'stay';
 }
 

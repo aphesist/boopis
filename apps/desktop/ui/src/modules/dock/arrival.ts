@@ -8,7 +8,8 @@ import { setOn } from './controller';
 import { fitRow } from './input';
 import { setOrbLife } from './orbs';
 import { pageOf } from './presence';
-import { fillCards, relocateLive, renderAll, viewKey } from './views';
+import { fillCards, renderAll, viewKey } from './views';
+import { placeOrbs } from './layer';
 import { syncRoving } from './roving';
 
 /** which parts the dock has, for the stylesheet and the tests */
@@ -41,7 +42,7 @@ export function appear(): void {
   markParts();
   renderDots(); renderAll(); fitRow();
   X.curView = showView(viewKey());
-  fillCards(X.curView); syncRoving(); relocateLive(); setOrbLife();
+  fillCards(X.curView); syncRoving(); placeOrbs(); setOrbLife();
   retarget(false);
   if (motion.reduce) X.root.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, easing: 'linear' });
   else {

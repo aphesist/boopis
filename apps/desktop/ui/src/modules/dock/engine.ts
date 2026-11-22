@@ -22,20 +22,22 @@ import { setOrbLife } from './orbs';
 import { holdOutsideDock, releaseOutsideDock } from '@boopis/ui';
 import { springAt, springElapsed, springKeyframes } from '../../core/spring';
 import type { Channel, SpringParams } from '../../core/spring';
-import { fillCards, relocateLive, renderView, viewKey } from './views';
+import { fillCards, renderView, viewKey } from './views';
+import { magClear, magOrb, orbPose, orbsIn, placeIfDirty, placeOrbs, slotBot } from './layer';
 import { keepInView, syncRoving } from './roving';
 import { PAGE_NAME } from './ctx';
 
 /* ───────── springs and the dock's moving parts ───────── */
 /** a spring played as a Web Animation: what it started from (so its state at any time is known without reading the page) */
-export interface Flip { el: HTMLElement; an: Animation; delay: number; p: SpringParams; ch: readonly Channel[]; target?: number }
+/** `twin`: the same spring played on a slot's live orb (layer.ts), which is not inside the slot */
+export interface Flip { el: HTMLElement; an: Animation; delay: number; p: SpringParams; ch: readonly Channel[]; target?: number; twin?: Animation }
 export interface FlipState { x: number; y: number; s: number; vx: number; vy: number; vs: number }
-interface MagItem { el: HTMLElement; c: number; w: number; hgt: number; max: number; m: number; g: number; off: number }
+interface MagItem { el: HTMLElement; bot: string | null; c: number; w: number; hgt: number; max: number; m: number; g: number; off: number }
 export const E = {
   slabW: spring(0, K_SLAB, 1, 0.05), slabH: spring(0, K_SLAB, 1, 0.05), sinkS: spring(0, K_SINK, 1, 0.05), dotS: spring(0, K_DOT, 1, 0.05),
   baseW: 0, baseH: 0, magE: 0, magLift: 0, magItems: [] as MagItem[], magPX: null as number | null, magOn: false, lastItem: null as HTMLElement | null,
   anims: new Map<string, Flip>(), slides: new Map<string, Spring>(), slideAn: new Map<string, Flip>(), raf: 0, lastT: 0,
-  pending: [] as Array<{ el: HTMLElement; i: number; t0: number; needH: number; needW: number }>,
+  pending: [] as Array<{ el: HTMLElement; i: number; t0: number; needH: number; needW: number; orbs: HTMLElement[] }>,
   drag: { x: 0, on: false, timer: 0, lock: 0, pid: null as number | null, sx: 0, sy: 0, axis: null as 'x' | 'y' | null, hist: [] as Array<[number, number]> },
   cameFrom: null as Element | null, capped: false
 };
@@ -97,12 +99,16 @@ const SLIDE_P: SpringParams = { k: K_SLIDE };
 const px = (n: number): string => n.toFixed(2);
 const tf = ([x = 0, y = 0, s = 0]: number[]): Keyframe => ({ transform: `translate(${px(x)}px,${px(y)}px) scale(${(s + 1).toFixed(4)})` });
 /** play a sampled spring on `el`. `fill: backwards` holds the first pose through a delay (a stagger). */
-function playSpring(el: HTMLElement, p: SpringParams, ch: readonly Channel[], make: (v: number[]) => Keyframe, delay: number): Animation | null {
+function playSpring(el: HTMLElement, p: SpringParams, ch: readonly Channel[], make: (v: number[]) => Keyframe, delay: number, twin?: HTMLElement): { an: Animation; twin?: Animation } | null {
   const play = springKeyframes(p, ch, make);
   if (play.duration <= 0) return null;
-  const an = el.animate(play.keyframes, { duration: play.duration, delay, easing: 'linear', fill: 'backwards' });
-  if (motion.timeScale !== 1) an.playbackRate = motion.timeScale;
-  return an;
+  const play1 = (x: HTMLElement): Animation => {
+    const an = x.animate(play.keyframes, { duration: play.duration, delay, easing: 'linear', fill: 'backwards' });
+    if (motion.timeScale !== 1) an.playbackRate = motion.timeScale;
+    return an;
+  };
+  /* the twin plays the keyframes already sampled: the spring is not worked out twice */
+  return twin ? { an: play1(el), twin: play1(twin) } : { an: play1(el) };
 }
 /** the state of a running spring now, from its closed form: no layout read, no style read */
 export function flipState(f: Flip): FlipState {
@@ -113,12 +119,15 @@ export function flipState(f: Flip): FlipState {
 }
 /** the velocities of every running keyed animation, taken before they are cancelled for the next measurement */
 function carryOf(): Map<string, FlipState> { const m = new Map<string, FlipState>(); for (const [k, f] of E.anims) m.set(k, flipState(f)); return m; }
-function endFlip(k: string, f: Flip): void { if (E.anims.get(k) === f) E.anims.delete(k); try { f.an.cancel(); } catch { /* gone */ } }
+function endFlip(k: string, f: Flip): void { if (E.anims.get(k) === f) E.anims.delete(k); try { f.an.cancel(); f.twin?.cancel(); } catch { /* gone */ } }
 export function cancelFlips(): void { for (const [k, f] of [...E.anims]) endFlip(k, f); }
 function startFlip(k: string, el: HTMLElement, p: SpringParams, ch: readonly Channel[], delay: number): void {
-  const an = playSpring(el, p, ch, tf, delay);
-  if (!an) return;
-  const f: Flip = { el, an, delay, p, ch };
+  /* a slot's orb is in the layer, not in the slot: it plays the slot's spring beside it, with the same keyframes */
+  const id = k.startsWith('orb:') ? k.slice(4) : '', pose = id ? orbPose(id) : undefined;
+  const played = playSpring(el, p, ch, tf, delay, pose && pose.slot === el ? pose.orb : undefined);
+  if (!played) return;
+  const an = played.an;
+  const f: Flip = { el, an, delay, p, ch, ...(played.twin ? { twin: played.twin } : {}) };
   E.anims.set(k, f);
   const done = (): void => { if (E.anims.get(k) === f) { E.anims.delete(k); kick(); } };
   an.onfinish = done; an.oncancel = done;
@@ -179,8 +188,13 @@ export function paint(): void {
   if (clip !== stageClip) { stageClip = clip; X.stageEl.style.clip = clip; }
   paintMag();
 }
+/** place the orbs where their slots are, unless a FLIP is running (then when it has settled) */
+export const placeNow = (): void => placeOrbs(orbFlips());
+/** whether a slot's FLIP is running: its rect is then not where the slot is */
+const orbFlips = (): boolean => { for (const k of E.anims.keys()) if (k.startsWith('orb:')) return true; return false; };
 function settled(): void {
   releaseOutsideDock();
+  placeIfDirty(orbFlips());
   tidy();
   if (S.mode === 'off' && !X.root.classList.contains('is-gone')) {
     X.root.classList.add('is-gone');
@@ -199,13 +213,13 @@ export function runAfterOut(): void {
 /* ───────── magnification (macOS-style) ───────── */
 export function cacheMag(): void {
   const keep = new Map(E.magItems.map((it) => [it.el, it.m])), keepG = new Map(E.magItems.map((it) => [it.el, it.g]));
-  for (const it of E.magItems) it.el.style.transform = '';
+  for (const it of E.magItems) { it.el.style.transform = ''; magClear(it.bot); }
   E.magItems = [];
   const cv = X.curView;
   if (cv && cv.dataset['view'] === 'bots:norm' && S.mode === 'normal') {
     const vw = cv.offsetWidth;
     for (const el of $$('.dk-bot, .dk-add', cv)) {
-      E.magItems.push({ el, c: -vw / 2 + el.offsetLeft + el.offsetWidth / 2, w: el.offsetWidth, hgt: el.offsetHeight, max: el.classList.contains('dk-add') ? MAG_ADD : MAG, m: keep.get(el) ?? 1, g: keepG.get(el) ?? 1, off: 0 });
+      E.magItems.push({ el, bot: slotBot(el), c: -vw / 2 + el.offsetLeft + el.offsetWidth / 2, w: el.offsetWidth, hgt: el.offsetHeight, max: el.classList.contains('dk-add') ? MAG_ADD : MAG, m: keep.get(el) ?? 1, g: keepG.get(el) ?? 1, off: 0 });
     }
   }
 }
@@ -240,11 +254,12 @@ function paintMag(): void {
     acc += e; it.off = off;
     const sc = Math.max(it.m, it.g);         /* a lone grow scales in place and never moves a neighbour */
     it.el.style.transform = (sc === 1 && Math.abs(off) < 0.01) ? '' : `translate3d(${off.toFixed(2)}px,0,0) scale(${sc.toFixed(4)})`;
+    magOrb(it.bot, off, sc, it.hgt);      /* the orb is not inside its button: it takes the same pose from here */
   }
 }
 export function resetMag(): void {
   E.magOn = false; E.magPX = null; X.root.removeAttribute('data-mag');
-  for (const it of E.magItems) { it.m = 1; it.g = 1; it.off = 0; it.el.style.transform = ''; }
+  for (const it of E.magItems) { it.m = 1; it.g = 1; it.off = 0; it.el.style.transform = ''; magClear(it.bot); }
   E.magE = 0; E.magLift = 0;
 }
 
@@ -361,11 +376,14 @@ function playFlip(first: Map<string, KeyRect>, last: Map<string, KeyRect>, opts:
 function enter(list: HTMLElement[], a: { x: number; y: number }): void {
   const now = performance.now();
   list.forEach((el, i) => {
-    if (motion.reduce) { el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, easing: 'linear', fill: 'backwards' }); return; }
+    /* the live orbs of the slots in `el` are in the layer, so they enter with it, beside it */
+    const orbs = orbsIn(el);
+    if (motion.reduce) { for (const x of [el, ...orbs]) x.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, easing: 'linear', fill: 'backwards' }); return; }
     const r = el.getBoundingClientRect();
-    const old = E.pending.findIndex((q) => q.el === el); if (old >= 0) E.pending.splice(old, 1);
+    const old = E.pending.findIndex((q) => q.el === el); if (old >= 0) { for (const x of E.pending[old]?.orbs ?? []) x.style.opacity = ''; E.pending.splice(old, 1); }
     el.style.opacity = '0';
-    E.pending.push({ el, i, t0: now, needH: a.y - r.top - 2, needW: 2 * Math.max(Math.abs(r.left - a.x), Math.abs(r.right - a.x)) - 4 });
+    for (const x of orbs) x.style.opacity = '0';
+    E.pending.push({ el, i, t0: now, needH: a.y - r.top - 2, needW: 2 * Math.max(Math.abs(r.left - a.x), Math.abs(r.right - a.x)) - 4, orbs });
   });
   kick();
 }
@@ -376,10 +394,12 @@ function flushEnter(now: number): boolean {
     const okW = E.slabW.x >= q.needW || atRest(E.slabW);
     if (!(okH && okW) && now - q.t0 < 700 / motion.timeScale) continue;
     E.pending.splice(j, 1);
-    if (!q.el.isConnected) continue;
-    const an = q.el.animate([{ opacity: 0, translate: '0 4px' }, { opacity: 1, translate: '0 0' }], { duration: 200, delay: Math.min(q.i * 12, 72), easing: EASE, fill: 'backwards' });
-    an.playbackRate = motion.timeScale;
-    q.el.style.opacity = '';
+    if (!q.el.isConnected) { for (const x of q.orbs) x.style.opacity = ''; continue; }
+    for (const x of [q.el, ...q.orbs]) {
+      const an = x.animate([{ opacity: 0, translate: '0 4px' }, { opacity: 1, translate: '0 0' }], { duration: 200, delay: Math.min(q.i * 12, 72), easing: EASE, fill: 'backwards' });
+      an.playbackRate = motion.timeScale;
+      x.style.opacity = '';
+    }
   }
   return E.pending.length > 0;
 }
@@ -406,12 +426,15 @@ export function morph(apply: () => void, opts: MorphOpts = {}): void {
   fillCards(nv);
   syncRoving();
   X.curView = nv;
-  relocateLive();
-  setOrbLife();
   /* the roster scrolls (an inner scroller): its current row is put in view before the after-measure, so the morph lands where it shows */
   const cur = nv && nv.dataset['view'] === 'bots:exp' ? nv.querySelector<HTMLElement>('.dk-roster .ui-row[tabindex="0"]') : null;
   if (cur) keepInView(cur);
   const last = snapKeys(a, true);
+  /* the slots are at rest now (the keyed elements' transforms are cleared and the springs cancelled): the orbs go where they are,
+     and the FLIP below plays on them as it plays on the slots */
+  placeOrbs();
+  placed = true;
+  setOrbLife();
   if (ghost) leave(ghost.g, ghost.rect, last);
   if (oldView && oldView !== nv) leave(oldView, oldRect, last);
   playFlip(first, last, opts, carry);
@@ -462,8 +485,11 @@ function footWidth(): number {
 function slabWidth(v: HTMLElement): number {
   return slabWidthFor(S.mode, v.offsetWidth, S.mode === 'normal' || S.mode === 'expanded' ? footWidth() : 0);
 }
+let placed = false;
 export function retarget(snap: boolean): void {
   const v = X.curView;
+  /* a slot can move without a morph (the card grows, the row's gap changes with the window); a morph has just placed them */
+  if (placed) placed = false; else placeOrbs(orbFlips());
   if (v !== watched && viewRO) { if (watched) viewRO.unobserve(watched); if (v) viewRO.observe(v); watched = v; }
   E.baseW = v ? slabWidth(v) : 0;
   E.baseH = v ? v.offsetHeight : 0;
