@@ -1,6 +1,8 @@
 //! Local search and paging over the cached catalogue (`docs/STORE.md` 5.3). No query leaves the machine. Every word of the query
 //! must match somewhere in the item (its title, name, publisher, summary, tags or kind); the score says where. Ties go to the
-//! higher tier, then the title, so the order is stable.
+//! higher tier, then the item's place in boopis's own list (ordered by a cited popularity signal, most popular first; an item of
+//! another source has none and comes after), then the title, so the order is stable. With no query, the same order without
+//! the score: the most popular of boopis's own list first.
 
 use super::types::{StoreFilter, StoreItem, Tier};
 
@@ -83,9 +85,14 @@ pub fn words(query: &str) -> Vec<String> {
         .collect()
 }
 
-/// Rank `items` for `query`. An empty query keeps every item, best tier first.
+/// Rank `items` for `query`: relevance first, then the tier, then `place` (an item's place in boopis's popularity order, lower is
+/// more popular), then the title. An empty query keeps every item in the same order without relevance.
 #[must_use]
-pub fn rank<'a>(items: impl Iterator<Item = &'a StoreItem>, query: &str) -> Vec<&'a StoreItem> {
+pub fn rank<'a>(
+    items: impl Iterator<Item = &'a StoreItem>,
+    query: &str,
+    place: &dyn Fn(&StoreItem) -> Option<usize>,
+) -> Vec<&'a StoreItem> {
     let w = words(query);
     let mut scored: Vec<(u32, &StoreItem)> = items
         .filter_map(|i| {
@@ -96,9 +103,11 @@ pub fn rank<'a>(items: impl Iterator<Item = &'a StoreItem>, query: &str) -> Vec<
             }
         })
         .collect();
+    let at = |i: &StoreItem| place(i).unwrap_or(usize::MAX);
     scored.sort_by(|a, b| {
         b.0.cmp(&a.0)
             .then(tier_rank(a.1.tier).cmp(&tier_rank(b.1.tier)))
+            .then(at(a.1).cmp(&at(b.1)))
             .then(a.1.title.to_lowercase().cmp(&b.1.title.to_lowercase()))
             .then(a.1.id.cmp(&b.1.id))
     });
@@ -130,6 +139,10 @@ mod tests {
     use super::*;
     use crate::store::types::{Bundle, ItemKind};
 
+    fn none(_: &StoreItem) -> Option<usize> {
+        None
+    }
+
     fn items() -> Vec<StoreItem> {
         serde_json::from_str::<Bundle>(include_str!("../../../../shared/data/store.fixtures.json"))
             .unwrap()
@@ -140,13 +153,13 @@ mod tests {
     #[test]
     fn a_word_must_match_and_the_title_beats_the_summary() {
         let all = items();
-        let hit = rank(all.iter(), "metrics");
+        let hit = rank(all.iter(), "metrics", &none);
         assert_eq!(hit[0].id, "engine-plugins:example-metrics");
-        assert!(rank(all.iter(), "zzzzqqq").is_empty());
-        let both = rank(all.iter(), "sql review");
+        assert!(rank(all.iter(), "zzzzqqq", &none).is_empty());
+        let both = rank(all.iter(), "sql review", &none);
         assert_eq!(both[0].id, "skills-hub:example-org/sql-review");
         assert!(
-            rank(all.iter(), "sql zzzz").is_empty(),
+            rank(all.iter(), "sql zzzz", &none).is_empty(),
             "every word must match"
         );
     }
@@ -154,12 +167,62 @@ mod tests {
     #[test]
     fn an_empty_query_orders_by_tier_then_title() {
         let all = items();
-        let r = rank(all.iter(), "  ");
+        let r = rank(all.iter(), "  ", &none);
         assert_eq!(r.len(), all.len());
         assert!(
             r.windows(2)
                 .all(|w| tier_rank(w[0].tier) <= tier_rank(w[1].tier))
         );
+    }
+
+    #[test]
+    fn the_most_popular_lead_without_a_query_and_relevance_leads_within_one() {
+        let mut all = items();
+        // three items of boopis's own list, placed by popularity: "zeta" is the most popular, "alpha" the least
+        for (n, (id, title)) in [
+            ("boopis:zeta", "Zeta"),
+            ("boopis:mid", "Mid"),
+            ("boopis:alpha", "Alpha web"),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let mut i = all[0].clone();
+            i.id = id.into();
+            i.title = title.into();
+            i.summary = format!("The {n} most popular, for the web.");
+            i.tier = Tier::Recommended;
+            all.push(i);
+        }
+        let order = ["boopis:zeta", "boopis:mid", "boopis:alpha"];
+        let place = |i: &StoreItem| order.iter().position(|o| *o == i.id);
+        let r = rank(all.iter(), "", &place);
+        let mine: Vec<&str> = r
+            .iter()
+            .map(|i| i.id.as_str())
+            .filter(|id| order.contains(id))
+            .collect();
+        assert_eq!(mine, order, "popularity, not the alphabet");
+        assert!(
+            r.iter().position(|i| i.id == "boopis:alpha").unwrap()
+                < r.iter().position(|i| i.tier != Tier::Recommended).unwrap(),
+            "boopis's own list leads the rest"
+        );
+        // within a search, the better match wins over popularity
+        let s = rank(all.iter(), "alpha", &place);
+        assert_eq!(s[0].id, "boopis:alpha");
+        // and among equal matches, popularity decides
+        let s = rank(all.iter(), "web", &place);
+        let mine: Vec<&str> = s
+            .iter()
+            .map(|i| i.id.as_str())
+            .filter(|id| order.contains(id))
+            .collect();
+        assert_eq!(
+            mine[0], "boopis:alpha",
+            "a title match beats a summary match"
+        );
+        assert_eq!(&mine[1..], ["boopis:zeta", "boopis:mid"]);
     }
 
     #[test]

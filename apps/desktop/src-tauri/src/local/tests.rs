@@ -191,6 +191,37 @@ async fn nothing_listening_is_not_found() {
     assert_eq!(s.detail, None);
 }
 
+/// Windows does not refuse a connection to a closed loopback port at once: it retries for about two seconds. A connect that does
+/// not finish in time is nothing listening, never "something is listening". A listener whose queue is full drops the next
+/// connection attempt the same way, which this reproduces on Linux.
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn a_connect_that_never_finishes_is_nothing_listening() {
+    let socket = tokio::net::TcpSocket::new_v4().unwrap();
+    socket.bind("127.0.0.1:0".parse().unwrap()).unwrap();
+    let listener = socket.listen(0).unwrap();
+    let addr = listener.local_addr().unwrap();
+    // fill the accept queue (never accepted), so the kernel drops the probe's connection attempt and it hangs
+    let mut held = Vec::new();
+    for _ in 0..4 {
+        if let Ok(Ok(c)) = tokio::time::timeout(
+            Duration::from_millis(200),
+            tokio::net::TcpStream::connect(addr),
+        )
+        .await
+        {
+            held.push(c);
+        }
+    }
+    let began = std::time::Instant::now();
+    let outcome = ask(&quick("ollama.local"), addr).await;
+    assert!(began.elapsed() < Duration::from_secs(2));
+    assert_eq!(outcome, Outcome::Nothing);
+    let s = state_for("ollama", &quick("ollama.local"), addr, outcome);
+    assert_eq!(s.status, ProviderStatus::NotFound);
+    drop((held, listener));
+}
+
 #[tokio::test]
 async fn only_loopback_is_ever_dialled() {
     for ip in [

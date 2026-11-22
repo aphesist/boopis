@@ -484,9 +484,9 @@ async fn a_new_bot_gets_everything_and_its_seat() {
     assert_eq!(done.skills_off, vec!["findmy".to_owned()]);
     assert_eq!(
         fake.get(&home.root, "hosted_rooms.profiles.iris2"),
-        Some(json!(
-            std::fs::canonicalize(&bot).unwrap().display().to_string()
-        ))
+        Some(json!(super::plain(
+            &std::fs::canonicalize(&bot).unwrap().display().to_string()
+        )))
     );
     // the settings and the secrets come before the enable, so the gateway loads the plugin with them
     let log = fake.writes();
@@ -718,4 +718,59 @@ fn the_notice_names_the_bots_plainly() {
         "{many}"
     );
     assert!(!crate::error::names_engine(&many));
+}
+
+#[test]
+fn a_room_entry_has_no_windows_verbatim_prefix() {
+    assert_eq!(
+        super::plain(r"\\?\C:\Users\me\engine\profiles\kai"),
+        r"C:\Users\me\engine\profiles\kai"
+    );
+    assert_eq!(
+        super::plain(r"\\?\UNC\server\share\profiles\kai"),
+        r"\\server\share\profiles\kai"
+    );
+    assert_eq!(
+        super::plain("/home/me/engine/profiles/kai"),
+        "/home/me/engine/profiles/kai"
+    );
+}
+
+#[tokio::test]
+async fn bots_that_appear_together_share_one_restart() {
+    let mut fake = Fake::new();
+    fake.reload_works = false;
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    repair(&fake, &layout).await.unwrap();
+    fake.clear();
+    // two bots made elsewhere while the app runs, boopis enabled by hand but not linked: only a restart loads it
+    for name in ["iris", "sol"] {
+        let bot = home.bot(name);
+        std::fs::create_dir_all(&bot).unwrap();
+        std::fs::write(bot.join("config.yaml"), "").unwrap();
+        fake.seed(
+            &bot,
+            json!({"model": {"provider": SUB, "default": "sonnet"}, "plugins": {"enabled": ["boopis"]}}),
+        );
+    }
+    let fake = std::sync::Arc::new(fake);
+    let service = std::sync::Arc::new(
+        engine::Service::with_engine(fake.clone())
+            .with_quiet(std::time::Duration::from_millis(100)),
+    );
+    for name in ["iris", "sol"] {
+        let done = service.prepare(&layout, name, true).await.unwrap();
+        assert!(done.needs_restart, "{name}");
+    }
+    let restarts = || fake.writes().iter().filter(|d| **d == Did::Restart).count();
+    assert_eq!(restarts(), 0, "the restart waits for the batch");
+    for _ in 0..50 {
+        if restarts() > 0 {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    assert_eq!(restarts(), 1);
 }

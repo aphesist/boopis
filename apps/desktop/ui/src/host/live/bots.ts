@@ -98,6 +98,10 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
   let profileNames = new Set<string>();
   let ownRecords: Map<string, PluginBot> = new Map();
   let rosterNote: string | null = null;
+  /** the roster has been read once: the bots it had then were given what they need by the host's repair at start */
+  let rosterSeen = false;
+  /** bots this module makes or restores itself, which it prepares in that flow */
+  const preparing = new Set<string>();
   const pending = new Set<Promise<unknown>>();
   const track = <T>(p: Promise<T>): Promise<T> => { pending.add(p); const done = (): void => { pending.delete(p); }; p.then(done, done); return p; };
 
@@ -191,6 +195,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
     const mine = rows.filter((r) => !r.is_default && r.name !== 'default');
     const live = mine.filter((r) => !isArchived(r.name, ownRecords.get(r.name)));
     const gone = new Set([...recs.keys()].filter((id) => !live.some((r) => r.name === id)));
+    const hadBefore = new Set(recs.keys());
     for (const row of live) {
       const plugin = ownRecords.get(row.name);
       const had = recs.get(row.name);
@@ -203,7 +208,13 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       recs.set(row.name, r);
       if (r.loaded) emitFor(before, toBot(r)); else if (!had) { events.emit({ type: 'bot-created', bot: toBot(r) }); void track(loadDetail(row.name)); }
     }
+    /* a bot that appears while the app runs, made anywhere else (the engine's own CLI, another client): given what its
+       home needs once, like one made here (ADR-0042); one after another, so the host restarts the gateway once at most */
+    const appeared = rosterSeen ? live.filter((row) => !hadBefore.has(row.name) && !preparing.has(row.name)).map((row) => row.name) : [];
+    rosterSeen = true;
+    if (appeared.length) void track((async () => { for (const id of appeared) await prepare(id, true); })());
     for (const id of gone) { recs.delete(id); chat.forget(id); events.emit({ type: 'bot-archived', id }); void closeLink(id); }
+    if (ownRecords.size) for (const row of live) giveHandoffs(row.name);
     const t = now();
     archivedNow.set(mine.filter((r) => isArchived(r.name, ownRecords.get(r.name))).map((r): ArchivedBot => {
       const p = ownRecords.get(r.name);
@@ -211,6 +222,15 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       return { id: r.name, name: botName(r), was: p?.archived?.name ?? r.name.replace(/^archived--/, ''), at, when: at ? whenLabel(Date.parse(at) / 1000, t) : '' };
     }).sort((a, b) => (b.at > a.at ? 1 : b.at < a.at ? -1 : 0)));   /* the newest first; an archive with no date goes last */
     rebuildSchedules();
+  }
+  /** Every teammate is given the hand-off skill once per run of boopis (`plugin.boopis.bots.guide`, idempotent): the engine tells a
+   *  room member nothing about the kanban board, so a cut-off turn files the same cards again and ordered cards run in parallel.
+   *  A plugin that has no such method (an older one) is left alone. */
+  const guided = new Set<string>();
+  function giveHandoffs(name: string): void {
+    if (guided.has(name)) return;
+    guided.add(name);
+    void track(client.requestRaw('plugin.boopis.bots.guide', { name }).then(() => undefined, (e: unknown) => { (isUnknownMethod(e) ? log.info : log.warn)('the hand-off skill was not given to ' + name, e); }));
   }
   /** a session row of the roster, for a teammate whose own link is not open (or not yet): the newest one Hermes names */
   function fromRow(row: ProfileRow): BotSession[] {
@@ -358,14 +378,14 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       const params: Record<string, unknown> = { name: plan.profile, description: draft.role.trim(), no_alias: true };
       if (draft.instructions.trim()) params['soul'] = draft.instructions.trim() + '\n';
       if (opts.model) Object.assign(params, resolveModel(opts.model));
-      const made = await client.requestRaw('profiles.create', params) as { path?: string; warnings?: string[]; model_set?: boolean };
+      preparing.add(plan.profile);
+      const made = await client.requestRaw('profiles.create', params).catch((e: unknown) => { preparing.delete(plan.profile); throw e; }) as { path?: string; warnings?: string[]; model_set?: boolean };
       try {
         /* a bot is ungoverned until the owner turns Governed on in its settings (ADR-0042) */
         await plug('bots.write', { name: plan.profile, look: { shape: draft.shape, color: draft.color }, settings: { gov: 'ungoverned', cap: '0.60', workspace: 'worktree' }, approvals: Object.fromEntries(APPROVALS.map((a) => [a.id, true])) });
       } catch (e) { log.warn('the new teammate’s own record was not saved', e); }
       if (made.warnings?.length) log.warn('Hermes warned while making ' + plan.profile + ': ' + made.warnings.join(' '));
-      await refreshRoster();
-      await prepare(plan.profile, true);
+      try { await refreshRoster(); await prepare(plan.profile, true); } finally { preparing.delete(plan.profile); }
       const r = need(plan.profile);
       await loadDetail(plan.profile);
       return toBot(r);
@@ -492,9 +512,12 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
   async function restoreArchived(name: string): Promise<void> {
     const was = archivedNow.get().find((a) => a.id === name)?.was;
     if (was && (profileNames.has(was) || recs.has(was))) throw new Error('there is a teammate called ' + was + ' already; archive or delete it, then restore');
-    const back = await plug<{ name: string; paused_jobs: string[] }>('bots.restore', { name });
-    await refreshRoster();
-    await prepare(back.name, false);
+    const coming = was ?? name.replace(/^archived--/, '');
+    preparing.add(coming);   /* before it reappears, so a roster read meanwhile leaves it to this flow */
+    let back: { name: string; paused_jobs: string[] };
+    try { back = await plug<{ name: string; paused_jobs: string[] }>('bots.restore', { name }); } finally { preparing.delete(coming); }
+    preparing.add(back.name);
+    try { await refreshRoster(); await prepare(back.name, false); } finally { preparing.delete(back.name); }
     await resumeJobs(back.name, back.paused_jobs);
   }
   async function resumeJobs(id: string, jobs: readonly string[]): Promise<void> {
@@ -525,12 +548,14 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       chat.send(id, text, via);
     },
     stop: (id) => chat.stop(id),
+    workspace: (id) => chat.workspace(id),
     decide: (id, messageId, decision) => { chat.decide(id, messageId, decision); },
     update(id, patch) {
       if (patch.role !== undefined) admin.save(id, { role: patch.role }).catch((e: unknown) => { log.error('the role was not saved', e); });
       const { gov, cap, workspace, approvals } = patch.cfg ?? {};
       const own = { ...(gov ? { gov } : {}), ...(cap !== undefined ? { cap } : {}), ...(workspace ? { workspace } : {}) };
       if (Object.keys(own).length || approvals) admin.saveOwn(id, { cfg: { ...own, ...(approvals ? { approvals } : {}) } }).catch((e: unknown) => { log.error('the setting was not saved', e); });
+      if (patch.look) admin.saveOwn(id, { look: patch.look }).catch((e: unknown) => { log.error('the look was not saved', e); });
     },
     create() { throw new Error('a bot is a folder of its own and is made with `admin.create`'); },
     archive(id) { admin.archive(id).catch((e: unknown) => { log.error('the bot was not archived', e); }); },

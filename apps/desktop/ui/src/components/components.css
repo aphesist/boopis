@@ -32,7 +32,7 @@
    (radius, size, ring); a row along an edge that holds corner controls at its ends: .ui-corners (the inset). Never set a
    radius or an inset in a corner by hand. A squircle-drawn container also exposes its drawn radius as --r-outer when it
    declared none (squircle.ts), so its children nest the same way. */
-:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-composer__box, .ui-file, .ui-child, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m,
+:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-codeblock, .ui-composer__box, .ui-file, .ui-child, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m,
   hx-card[data-size="inline"], hx-card[data-size="compact"], hx-card[data-size="popover"]) {
   --corner-size: var(--ctl-s);
   --r-in: min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))));
@@ -607,6 +607,31 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-orb-btn { appearance: none; display: inline-grid; place-items: center; padding: 0; margin: 0; border: 0; border-radius: var(--r-pill); background: transparent; cursor: pointer; }
 .ui-orb-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 .ui-orb-btn[aria-pressed="true"], .ui-orb-btn[aria-current="true"] { box-shadow: 0 0 0 1.5px var(--brass); }
+/* stack: several bots as overlapped orbs (stack.ts). One step (a third of an orb), the first member underneath and each next one
+   on top, "+N" the last member on a disc of the same size. Each sits on a disc of the ground with a 2px ring of it so the overlap
+   reads: --stack-ground is the surface under the stack, --stack-fill a translucent fill over it (a row passes its own: --sq-bg).
+   The 2px padding holds the first and last rings inside the stack's box (R-corner-4); the stack is a row, not a surface.
+   The discs paint first and the orbs over them in their order (an orb's wrapper is positioned), so an orb overlaps the one
+   before it body on body; "+N" is positioned too, so it lies on the last orb like one more member, never under it. */
+.ui-stack { --s: 20px; --places: 3; --stack-step: calc(var(--s) / -3); box-sizing: content-box; --stack-ground: var(--bg-2); --stack-fill: transparent; display: inline-flex; align-items: center; flex: none; padding: 2px; line-height: 0; vertical-align: middle; }
+.ui-stack[hidden] { display: none; }
+.ui-stack__one, .ui-stack__more {
+  flex: none; box-sizing: border-box; height: var(--s); margin-left: var(--stack-step); border-radius: var(--r-pill);
+  background: linear-gradient(var(--stack-fill), var(--stack-fill)) var(--stack-ground); box-shadow: 0 0 0 2px var(--stack-fill), 0 0 0 2px var(--stack-ground);
+}
+.ui-stack > :first-child { margin-left: 0; }
+.ui-stack__one { display: inline-grid; place-items: center; width: var(--s); }
+.ui-stack__more {
+  position: relative; display: inline-grid; place-items: center; min-width: var(--s); padding: 0 2px;
+  background: linear-gradient(var(--stack-fill), var(--stack-fill)) var(--bg-3); color: var(--text-dim);
+  font: 500 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); font-variant-numeric: tabular-nums;
+}
+.ui-stack__more::before { content: attr(data-more); }
+.ui-stack[tabindex]:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-offset); border-radius: var(--r-pill); }
+/* in a row (a group's lead) the stack has a slot of its own: the lead grows to hold it, so it never covers the row's text; its
+   rings take the row's fill (rest, hover, current) over the list's ground, and the first orb keeps the row's orb axis */
+.ui-row__lead:has(> .ui-stack) { width: auto; }
+.ui-row__lead > .ui-stack { --stack-fill: var(--sq-bg); margin-left: -2px; min-width: calc(var(--s) + (var(--places) - 1) * (var(--s) + var(--stack-step))); }
 .ui-state { font: 400 var(--fs-2xs)/1.45 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); white-space: nowrap; }
 .ui-state[data-tone="attention"] { color: var(--red-text); }
 .ui-state[data-tone="busy"] { color: var(--text-dim); }
@@ -632,6 +657,99 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-prose li { margin-bottom: 4px; }
 .ui-prose li::marker { color: var(--text-quiet); }
 .ui-prose > :last-child { margin-bottom: 0; }
+
+/* ───────────── markdown (markdown.ts): what bots and agents write, one renderer for every conversation ─────────────
+   The prose above, plus the styles the subset adds. Bold is 600 in --text-strong, italics are the bundled italic faces (fonts.ts),
+   struck text steps back; one heading size (14/600); quotes are a 2px rule and --text-dim; a hairline for ---. Links are words in
+   --text-strong over a --line-strong underline (never brass, never an arrow: R-copy-4). */
+.ui-md { width: 100%; min-width: 0; }
+.ui-md p { text-wrap: pretty; }
+.ui-md strong { font-weight: 600; color: var(--text-strong); }
+.ui-md em { font-style: italic; }
+.ui-md del { color: var(--text-dim); text-decoration-color: var(--line-strong); }
+.ui-md li > ul, .ui-md li > ol { margin: var(--sp-1) 0 0; }
+.ui-md__lists { margin: 0 0 var(--sp-3); }
+.ui-md__lists > :last-child { margin-bottom: 0; }
+.ui-md__h { margin: var(--sp-4) 0 var(--sp-2); font: 600 var(--fs-m)/var(--lh-tight) var(--sans); color: var(--text-strong); text-wrap: balance; }
+.ui-md > .ui-md__h:first-child { margin-top: 0; }
+.ui-md__quote { margin: 0 0 var(--sp-3); padding: 0 0 0 var(--sp-3); border-left: 2px solid var(--line-strong); color: var(--text-dim); }
+.ui-md__quote p { margin: 0 0 var(--sp-1); }
+.ui-md__quote p:last-child { margin-bottom: 0; }
+.ui-md__quote strong { color: var(--text); }
+.ui-md__hr { height: 1px; margin: var(--sp-4) 0; border: 0; background: var(--hair); }
+.ui-md__table { max-width: 100%; margin: 0 0 var(--sp-3); }
+.ui-md__table:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-offset); }
+.ui-md__table table { border-collapse: collapse; font: 400 var(--fs-s)/var(--lh-ui) var(--sans); }
+.ui-md__table th, .ui-md__table td { padding: var(--sp-1) var(--sp-3) var(--sp-1) 0; border-bottom: 1px solid var(--hair); text-align: left; vertical-align: top; }
+.ui-md__table th { font-weight: 500; color: var(--text-strong); border-bottom-color: var(--line); }
+.ui-md__table [data-align="right"] { text-align: right; }
+.ui-md__table [data-align="center"] { text-align: center; }
+.ui-md__image-link { display: inline-flex; vertical-align: middle; border-radius: var(--r-pill); }
+.ui-md__image-link:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-offset); }
+.ui-md .ui-file { vertical-align: middle; }
+.ui-link { color: var(--text-strong); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: var(--line-strong); border-radius: var(--r-xs); transition: text-decoration-color var(--dur-out) var(--ease); }
+@media (hover: hover) and (pointer: fine) { .ui-link:hover { text-decoration-color: var(--text-dim); transition-duration: var(--dur-1); } }
+.ui-link:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: 1px; }
+
+/* a mention: the bot's still 16px orb and its name (13/500) in a 20px capsule on --current; never the bot's colour as text (R-colour-8).
+   A button set into the sentence (2.5.8's inline exception): it opens the bot's chat, its card on hover or focus, a menu on the menu key. */
+.ui-mention {
+  display: inline-flex; align-items: center; gap: var(--sp-1); height: 20px; max-width: 100%; box-sizing: border-box; margin: 0 1px; padding: 0 var(--sp-2) 0 var(--pad-seg);
+  border: 0; border-radius: var(--r-pill); background: var(--current); color: var(--text-strong); font: 500 var(--fs-s)/1 var(--sans); letter-spacing: 0;
+  vertical-align: -4px; cursor: pointer; white-space: nowrap; transition: background-color var(--dur-out) var(--ease), box-shadow var(--dur-out) var(--ease);
+}
+.ui-md { overflow-wrap: anywhere; }   /* a long link or name breaks inside the column, never past it */
+.ui-mention--out { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--text-dim); font-weight: 400; cursor: default; }
+.ui-mention--out .ui-orb, .ui-mention--out orb-avatar { opacity: .6; }
+.ui-mention--out:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: 1px; }
+.ui-mention__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ui-mention__stack { display: inline-flex; align-items: center; }
+.ui-mention__stack > .ui-orb + .ui-orb { margin-left: calc(var(--sp-1) * -1); }
+@media (hover: hover) and (pointer: fine) { .ui-mention:hover { box-shadow: inset 0 0 0 1px var(--line-strong); transition-duration: var(--dur-1); } }
+.ui-mention:focus-visible, .ui-mention[aria-expanded="true"] { outline: var(--focus-w) solid var(--focus); outline-offset: 1px; }
+.ui-mention:active { background: var(--bg-4); }
+
+/* a path the host resolved: the code chip as a button, one line, its folders cut from the left so the file's name always shows; the
+   whole path is its tooltip and its accessible name */
+.ui-path {
+  display: inline-flex; align-items: center; max-width: 100%; box-sizing: border-box; margin: 0; border: 0; vertical-align: -3px;
+  white-space: nowrap; overflow-wrap: normal; text-align: left; line-height: var(--lh-small); cursor: pointer; transition: box-shadow var(--dur-out) var(--ease);
+}
+.ui-path .ui-icon { flex: none; width: var(--ic-xs); height: var(--ic-xs); margin-right: var(--sp-1); color: var(--text-quiet); }
+.ui-path__dir { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; color: var(--text-dim); }
+.ui-path__dir > span { direction: ltr; unicode-bidi: isolate; }
+.ui-path__base { flex: none; }
+@media (hover: hover) and (pointer: fine) { .ui-path:hover { box-shadow: inset 0 0 0 1px var(--line-strong); transition-duration: var(--dur-1); } }
+.ui-path:focus-visible, .ui-path[aria-expanded="true"] { outline: var(--focus-w) solid var(--focus); outline-offset: 1px; }
+
+/* a code block: the well (--bg-0, mono 11/1.6), its language and line count, Wrap, Copy concentric in its top corner (.ui-corner),
+   sideways scroll by default, folded past 14 lines to 12 with "Show N more lines" (no fade mask), diffs in the add and del tints */
+.ui-codeblock { position: relative; --r-outer: var(--r-m); --pad: var(--pad-menu); width: 100%; min-width: 0; box-sizing: border-box; margin: 0 0 var(--sp-3); border-radius: var(--r-outer); --sq-bg: var(--bg-0); background: var(--sq-bg); }
+.ui-codeblock__head {
+  display: flex; align-items: center; gap: var(--sp-3); min-height: calc(var(--corner-inset) * 2 + var(--corner-size)); box-sizing: border-box;
+  font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums;
+}
+.ui-codeblock__lang { color: var(--text-dim); margin-left: var(--sp-3); }
+.ui-codeblock__wrap { margin-left: auto; }
+.ui-codeblock__wrap[aria-pressed="true"] { color: var(--text-strong); background: var(--current); }
+.ui-codeblock__pre {
+  margin: 0; padding: 0 var(--sp-4) var(--sp-4); overflow-x: auto; overscroll-behavior: contain; border-radius: 0 0 var(--r-outer) var(--r-outer);
+  font: 400 var(--fs-2xs)/1.6 var(--mono); letter-spacing: var(--track-mono); color: var(--text); white-space: pre; tab-size: 2;
+}
+.ui-codeblock[data-folded] .ui-codeblock__pre, .ui-codeblock:has(.ui-codeblock__foot) .ui-codeblock__pre { padding-bottom: var(--sp-2); }
+.ui-codeblock__pre:focus-visible { outline: none; }
+.ui-codeblock:has(.ui-codeblock__pre:focus-visible) { outline: var(--focus-w) solid var(--focus); outline-offset: var(--corner-ring); }
+.ui-codeblock__pre > code { display: block; min-width: fit-content; font: inherit; letter-spacing: inherit; }
+.ui-codeblock[data-wrap] .ui-codeblock__pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ui-codeblock[data-wrap] .ui-codeblock__pre > code { min-width: 0; }
+.ui-codeblock__l { display: block; min-height: 1.6em; }
+.ui-codeblock__rest[hidden] { display: none; }
+.ui-codeblock__rest:not([hidden]) { display: block; }
+.ui-codeblock__l[data-d] { margin: 0 calc(var(--sp-4) * -1); padding: 0 var(--sp-4); }
+.ui-codeblock__l[data-d="add"] { background: color-mix(in srgb, var(--add) 10%, transparent); }
+.ui-codeblock__l[data-d="del"] { background: color-mix(in srgb, var(--del) 10%, transparent); }
+.ui-codeblock__l[data-d="hunk"] { color: var(--text-quiet); }
+.ui-codeblock__foot { padding: 0 var(--sp-2) var(--sp-2); }
 .ui-disclosure {
   appearance: none; display: inline-flex; align-items: center; gap: 4px; min-height: var(--hit-min); margin: 0; padding: 0 var(--sp-2) 0 var(--sp-1); border: 0; border-radius: var(--r-xs);
   background: transparent; font: inherit; color: var(--text-quiet); cursor: pointer; text-transform: var(--ui-case);
@@ -673,12 +791,15 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
    group sits on the text's line, in the bottom-right corner, and stays on the last line as the text grows. */
 .ui-composer { display: flex; flex-direction: column; width: 100%; font: 400 var(--fs-m)/var(--lh) var(--sans); color: var(--text); }
 .ui-composer__hint {
+  display: flex; align-items: baseline; min-width: 0;   /* a row: when it runs out of width the assumptions shrink, each to its own ellipsis, and none is cut at the edge */
   margin-bottom: 8px; padding: 0 14px; font: 400 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet);   /* the text inset of the field below (14px), so the hint starts where the typing does */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: var(--ui-case);
   opacity: 0; translate: 0 3px; transition: opacity var(--dur-2) var(--ease), translate var(--dur-2) var(--ease);
 }
 .ui-composer[data-hinting] .ui-composer__hint { opacity: 1; translate: 0 0; }
+.ui-composer__hint > * { flex: none; }
 .ui-composer__hint-label { margin-right: 4px; text-transform: var(--ui-case); }
+.ui-composer__hint > .ui-assume { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ui-assume { appearance: none; border: 0; margin: 0; padding: 0 2px; background: none; font: inherit; color: inherit; cursor: pointer; border-radius: var(--r-xs); transition: color var(--dur-1) var(--ease); }
 @media (hover: hover) and (pointer: fine) { .ui-assume:hover { color: var(--text); } }
 .ui-assume:focus-visible { color: var(--text); outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }

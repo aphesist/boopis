@@ -1,0 +1,92 @@
+name: live-signins
+# The live probe (apps/desktop/src-tauri/tests/live_signins.rs): every sign-in and key check of the host against the real
+# services, up to the step that needs a person, on Linux, Windows and macOS, through the app's own code. It is not part of the
+# gate, because it calls real services: it runs on demand, every Monday, and when the probe, the TLS setup, the keychain or this
+# file changes. No secret is used: no account signs in, every key it sends is one no provider issued, and the keychain row saves
+# and deletes one made-up token.
+# The table (service, step, result per platform) is the `table` job's summary; scripts/live-table.py builds it.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 1"
+  push:
+    paths:
+      - .github/workflows/live-signins.yml
+      - apps/desktop/src-tauri/tests/live_signins.rs
+      - apps/desktop/src-tauri/src/tls.rs
+      - apps/desktop/src-tauri/src/secrets/store.rs
+      - scripts/live-table.py
+permissions:
+  contents: read
+concurrency:
+  group: live-signins-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUSTUP_TOOLCHAIN: "1.97.0"
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-22.04, platform: linux }
+          # Windows minutes count twice and macOS ten times; the probe is one test binary, built once a run
+          - { os: windows-latest, platform: windows }
+          - { os: macos-latest, platform: macos }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tauri's Linux prerequisites (the probe links the host library)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
+          # a Secret Service for the keychain row (GNOME Keyring, started unlocked in the probe's own session bus)
+          sudo apt-get install -y gnome-keyring dbus
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: live-signins-${{ matrix.platform }}
+      - name: the live probe
+        env:
+          HX_LIVE_PLATFORM: ${{ matrix.platform }}
+          HX_LIVE_REPORT: ${{ runner.temp }}/live-${{ matrix.platform }}.jsonl
+        run: |
+          probe="cargo test -p boopis-host --test live_signins -- --ignored --nocapture"
+          if [ "$RUNNER_OS" = Linux ]; then
+            dbus-run-session -- bash -c "printf '' | gnome-keyring-daemon --unlock --components=secrets >/dev/null && $probe"
+          else
+            $probe
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-signins-${{ matrix.platform }}
+          path: ${{ runner.temp }}/live-${{ matrix.platform }}.jsonl
+          if-no-files-found: warn
+          retention-days: 30
+
+  table:
+    needs: probe
+    if: always()
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: live-signins-*
+          path: live
+          merge-multiple: true
+      - name: one table, every platform
+        run: |
+          shopt -s nullglob
+          files=(live/*.jsonl)
+          [ ${#files[@]} -gt 0 ] || { echo "no platform wrote a report" | tee -a "$GITHUB_STEP_SUMMARY"; exit 1; }
+          python3 scripts/live-table.py "${files[@]}" | tee -a "$GITHUB_STEP_SUMMARY"

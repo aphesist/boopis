@@ -160,10 +160,12 @@ export interface BotsSource extends Feed<BotsSnapshot, BotsEvent> {
   send(botId: string, text: string, via: 'bots' | 'dock'): void;
   /** stops the bot's reply; false when it was not replying */
   stop(botId: string): boolean;
+  /** the folder the bot works in, as the engine said (paths in its messages resolve there); null while unknown */
+  workspace?(botId: string): string | null;
   /** decide an approval card in a thread (the dock decides through `waits`) */
   decide(botId: string, messageId: string, decision: 'approved' | 'denied'): void;
-  /** changes the role or the settings; the change comes back as a `bot` event */
-  update(id: string, patch: { role?: string; cfg?: Partial<BotConfig> }): void;
+  /** changes the role, the settings or the look (shape and colour, never the eyes); the change comes back as a `bot` event */
+  update(id: string, patch: { role?: string; cfg?: Partial<BotConfig>; look?: { shape?: string; color?: string } }): void;
   create(draft: BotDraft & { instructions: string }): Bot;
   archive(id: string): void;
   /** archived teammates (profiles renamed out of the way, newest first): `id` is the profile's name now, `was` the name it returns to */
@@ -203,8 +205,15 @@ export interface GroupsSource extends Feed<GroupsSnapshot, GroupsEvent> {
   note(): string | null;
   /** reads the group's messages as it opens (the live provider reads a room's log when it is first shown); resolves when they are in */
   open(groupId: string): Promise<void>;
-  /** the message reaches the members; an `@name` in it addresses that member alone. The replies arrive as `message` events */
-  send(groupId: string, text: string): void;
+  /** The message reaches the members; an `@name` in it addresses that member alone. The replies arrive as `message` events.
+   *  `'when-done'` (the default) never interrupts: while the room is busy the message is held (`Group.queued`) and sent when the
+   *  running turns have finished. `'now'` stops the running turns first, because the engine drops a running member's answer when a
+   *  newer message arrives. Resolves with what happened. */
+  send(groupId: string, text: string, how?: 'when-done' | 'now'): Promise<'sent' | 'queued'>;
+  /** takes a held message back; resolves with its words (null when it was already sent) so the composer can show them again */
+  unqueue(groupId: string, queuedId: string): string | null;
+  /** sends a held message now, stopping the running turns first */
+  sendNow(groupId: string, queuedId: string): Promise<void>;
   /** stops the members' replies; false when none was running */
   stop(groupId: string): boolean;
   /** lets a conversation that paused at its limit run on (`GroupNote.more` names what) */
@@ -337,6 +346,21 @@ export interface FilesSource {
   drops?: { subscribe(fn: (e: FileDrag) => void): Unsubscribe };
   /** completions of the `@` word being typed, for the session the composer belongs to */
   complete(word: string, sessionId: string | null): Promise<FileCompletions>;
+  /** paths a message names, opened on this computer (the desktop app's host; absent where nothing can be opened) */
+  paths?: PathsSource;
+}
+/** a path a message names, as the host found it: only inside one of the given workspaces, or an absolute path that exists */
+export interface ResolvedPath { path: string; abs: string; kind: 'file' | 'folder'; /** the path inside the workspace it was found in */ rel: string | null }
+/** an editor the host found on this computer, to open a file in */
+export interface PathEditor { id: string; name: string }
+export interface PathsSource {
+  /** which of `paths` exist, relative to one of `roots` (the session's or room's workspaces) or absolute; null for the others */
+  resolve(paths: readonly string[], roots: readonly string[]): Promise<ReadonlyArray<ResolvedPath | null>>;
+  /** open a resolved path with the system's default app, or in one of `editors()` */
+  open(abs: string, editor?: string | null): Promise<void>;
+  /** show it in the file manager */
+  reveal(abs: string): Promise<void>;
+  editors(): Promise<readonly PathEditor[]>;
 }
 
 export interface DataProvider {

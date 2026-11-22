@@ -32,6 +32,8 @@ import type { ConnectorCatalogEntry, ModelsView } from './bindings';
 import type { ProvidersBridge } from './providers-bridge';
 import { inTauri } from './bridge';
 import { asHostError } from './bridge';
+import { windowBar } from './window-controls';
+import type { WindowControls } from './window-controls';
 import { esc, reduced } from '../core/dom';
 import { logger } from '../core/log';
 
@@ -135,6 +137,8 @@ export interface FirstRunOptions {
   signins?: SetupSignins;
   /** the provider commands, for "Use a model on this computer" (the host's own when in the app; without them that way is not offered) */
   providers?: ProvidersBridge;
+  /** the window's controls for the layer's title bar; the page's own controller when absent */
+  windowControls?: WindowControls;
 }
 
 /** The sign-in and the pages a setup form offers, drawn under its card. `next` runs setup again once a sign-in finished
@@ -182,10 +186,13 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
   if (!check.needed) return;
   const intro = introText(await bridge.source().catch(() => null));
   const root = el('div', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'fr-title', class: 'hx-first-run', 'data-layer-host': '' });
+  /* the layer covers the whole window, title bar included, so it carries the window's own: its controls and a drag area, laid
+     out like the shell's (the window is undecorated: without them there is no way to move, shrink or close it during setup) */
+  const titleBar = windowBar(opts.windowControls);
   const scroller = el('div', { class: 'fr-scroll ui-scroll' });
   const shell = el('div', { class: 'fr-shell' });
   scroller.append(shell);
-  root.append(scroller);
+  root.append(titleBar.node, scroller);
   /* the welcome is a big moment: the logo's hero, once, above whatever step is drawn (it is not redrawn with the card); it steps
      aside once the welcome is over, so the steps that need room have it */
   const logo = welcomeLogo();
@@ -221,7 +228,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       const { ids, names } = ladderChoices(form);
       return stepsFor(ids, names, providers !== null);
     };
-    const leave = (): void => { hub?.destroy(); hub = null; extras(); extras = () => undefined; useFormsHost(null); foot?.remove(); root.remove(); opts.onExit?.({ open: exitOpen }); resolve(); };
+    const leave = (): void => { hub?.destroy(); hub = null; extras(); extras = () => undefined; useFormsHost(null); foot?.remove(); titleBar.detach(); root.remove(); opts.onExit?.({ open: exitOpen }); resolve(); };
 
     /* ───────── the frame every step shares: where you are, and the card ───────── */
     const progress = (id: PhaseId): HTMLElement => {
@@ -342,7 +349,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       cont.addEventListener('click', () => { answer('connected'); });
       skip.addEventListener('click', () => { answer(ladderChoices(form).ids.includes('later') ? 'later' : 'free'); });
       const prov = mountProviders(section, {
-        bridge: providers as ProvidersBridge, login: (p) => deps().login(p), chatgpt: deps().chatgpt, toast: (t) => { ui.toast(t); }, layout: HUB_LAYOUT,
+        bridge: providers as ProvidersBridge, login: (p) => deps().login(p), chatgpt: deps().chatgpt, open: (u) => deps().open(u), toast: (t) => { ui.toast(t); }, layout: HUB_LAYOUT,
         onStates: (st) => {
           states = st;
           const list = connectedList(st, offered);
@@ -504,7 +511,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       async cancel(id) {
         if (id === 'setup.lab' || id === 'setup.local') { goTo({ kind: 'way' }); return; }
         const formId = id === 'setup.way' ? 'setup.ladder' : id;
-        try { draw(await bridge.advance({ form_id: formId, cancelled: true, values: {}, secrets: {} }, false), ''); } catch (e) { const err = asHostError(e); draw(null, err.code + ': ' + err.message); }
+        try { draw(await bridge.advance({ form_id: formId, cancelled: true, values: {}, secrets: {} }, false), ''); } catch (e) { const err = asHostError(e); log.warn('setup step failed', err.code); draw(null, err.message); }
       },
       signin: () => Promise.reject(new Error('Signing in is not part of setup.')),
       can: { signin: false, upload: false, folder: false }, pickerItems: () => [], pickFolder: () => Promise.resolve(null)
@@ -547,7 +554,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       } catch (e) {
         const err = asHostError(e);
         log.warn('setup step failed', err.code);
-        draw(null, err.code + ': ' + err.message);
+        draw(null, err.message);
       } finally {
         stop();
         busy = false;
@@ -564,7 +571,7 @@ function steps(status: SetupStatus, retry: () => void): HTMLElement {
     const item = el('li', { 'data-state': s.state, class: 'fr-step' },
       el('span', { class: 'fr-step__title' }, s.title), el('span', { class: 'fr-step__state' }, STATE_WORD[s.state] ?? s.state));
     /* a stopped step says what failed in boopis's words, its stable code, and the way out (the host's one error mapper) */
-    if (s.detail) item.append(el('span', { class: 'fr-step__detail' }, s.detail + (s.state === 'blocked' && s.code ? ' (' + s.code + ')' : '')));
+    if (s.detail) item.append(el('span', { class: 'fr-step__detail' }, s.detail));
     /* a stopped step can be run again without restarting the app: setup recomputes every step from reality, so what is done
        stays done and the stopped one runs once more. A missing engine has its own "Check again". */
     if (s.state === 'blocked' && !status.install_command) {

@@ -57,3 +57,13 @@ export function tauriWindowHost(): WindowHost {
     onState: (cb) => events.windowStateEvent.listen((e) => { cb(e.payload); })
   };
 }
+
+/** zoom the web view (the interface size): the page is laid out again at 1/factor of its width and everything is drawn
+    `factor` times larger, text and canvases at the device's own resolution, so nothing is scaled from a smaller picture.
+    The host's own call (`Webview::set_zoom`, WebKitGTK's page zoom); the capability is `core:webview:allow-set-webview-zoom`. */
+export async function setWebviewZoom(factor: number): Promise<void> {
+  try {
+    const { getCurrentWebview } = await import('@tauri-apps/api/webview');
+    await getCurrentWebview().setZoom(factor);
+  } catch (e) { throw asHostError(e); }
+}

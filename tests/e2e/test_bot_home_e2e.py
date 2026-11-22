@@ -28,19 +28,13 @@ BOT = "kai"
 
 
 @pytest.fixture(scope="module")
-def stack(
-    hermes_install: HermesInstall, stack_root: Path, fake_model: FakeModelServer
-) -> Iterator[HermesStack]:
+def stack(hermes_install: HermesInstall, stack_root: Path, fake_model: FakeModelServer) -> Iterator[HermesStack]:
     # the root is governed, so a bot's copy that reports "ungoverned" can only have read the bot's own settings
-    yield from run_stack(
-        hermes_install, stack_root, fake_model.url, {"mode": "governed"}
-    )
+    yield from run_stack(hermes_install, stack_root, fake_model.url, {"mode": "governed"})
 
 
 def connect(stack: HermesStack, profile: str | None = None) -> GatewayClient:
-    gw = GatewayClient(
-        hermes_bin=str(stack.install.hermes), env=stack.env, profile=profile
-    )
+    gw = GatewayClient(hermes_bin=str(stack.install.hermes), env=stack.env, profile=profile)
     gw.connect()
     gw.handshake()
     return gw
@@ -49,9 +43,7 @@ def connect(stack: HermesStack, profile: str | None = None) -> GatewayClient:
 def seatable(stack: HermesStack) -> list[str]:
     gw = connect(stack)
     try:
-        got: list[str] = gw.result("groups.capabilities", {}, timeout=60).get(
-            "seatable_profiles", []
-        )
+        got: list[str] = gw.result("groups.capabilities", {}, timeout=60).get("seatable_profiles", [])
         return got
     finally:
         gw.close()
@@ -165,9 +157,7 @@ def test_a_bot_made_by_profiles_create_lacks_everything_then_prepare_gives_it(
             },
         )
         _, done = bot.wait_event(
-            lambda e: (
-                e.get("type") == "message.complete" and e.get("session_id") == sid
-            ),
+            lambda e: e.get("type") == "message.complete" and e.get("session_id") == sid,
             120,
             start,
         )
@@ -177,10 +167,7 @@ def test_a_bot_made_by_profiles_create_lacks_everything_then_prepare_gives_it(
     # the root's copy keeps the root's settings
     root = connect(stack)
     try:
-        assert (
-            root.result("plugin.boopis.describe", {}, timeout=60)["config"]["mode"]
-            == "governed"
-        )
+        assert root.result("plugin.boopis.describe", {}, timeout=60)["config"]["mode"] == "governed"
     finally:
         root.close()
     assert BOT in seatable(stack)
@@ -194,10 +181,7 @@ def test_two_prepared_bots_answer_in_a_room(stack: HermesStack) -> None:
     assert {"moss", "nina"} <= set(seatable(stack))
     root = connect(stack)
     try:
-        members = [
-            {"member_id": n, "profile": n, "handle": n, "display_name": n}
-            for n in ("moss", "nina")
-        ]
+        members = [{"member_id": n, "profile": n, "handle": n, "display_name": n} for n in ("moss", "nina")]
         room = root.result(
             "groups.create",
             {"room_id": "g-e2e-1", "name": "e2e", "members": members},
@@ -234,3 +218,25 @@ def test_two_prepared_bots_answer_in_a_room(stack: HermesStack) -> None:
         assert (replies[0].get("payload") or {}).get("member_id") == "moss", replies[0]
     finally:
         root.close()
+
+
+def test_a_bot_prepared_while_the_gateway_runs_loads_the_plugin_without_a_restart(
+    stack: HermesStack,
+) -> None:
+    """What the app does for a bot that appears while it runs: prepare, no restart when `plugins enable` loaded it."""
+    make_bot(stack, "iris")
+    prepare(stack, "iris")
+    deadline = time.monotonic() + 30
+    while True:
+        bot = connect(stack, "iris")
+        try:
+            described = bot.result("plugin.boopis.describe", {}, timeout=60)
+            break
+        except RpcError:
+            if time.monotonic() > deadline:
+                raise
+        finally:
+            bot.close()
+        time.sleep(2)
+    assert described["config"]["mode"] == "ungoverned"
+    assert "iris" in seatable(stack)

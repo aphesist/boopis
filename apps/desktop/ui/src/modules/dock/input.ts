@@ -5,12 +5,13 @@ import { $$, isMac } from '../../core/dom';
 import { getLayout, setState } from '../../core/state';
 import { emit } from '../../core/bus';
 import { ui } from '@boopis/ui';
-import { S, X, flags, geomR, motion, rendered, shownPages, spring, K_SLIDE } from './ctx';
+import { MAG, MAG_ADD, S, SIG, X, fitIn, flags, geomR, motion, rendered, rowNow, shownPages, spring, K_SLIDE } from './ctx';
 import type { Spring } from './ctx';
 import { E, cxNow, hideTip, kick, resetMag, retarget, shellVar, returnFocus, markFocus, slideNow, stopSlide } from './engine';
 import { listenOrb, lookRow, pokeBot, setOrbLife } from './orbs';
-import { relocateLive } from './views';
-import { columnsOf, gridTarget, rove, stepIndex } from './roving';
+import { relocateLive, renderView } from './views';
+import { columnsOf, gridTarget, rowIdxOf, rove, stepIndex } from './roving';
+import { rowFit } from './geometry';
 import {
   closeCard, curFocusTarget, dragTile, down, focusBot, goPage, movePage, openBotInTab, openCard, schedAction, setMode, stepPage, stopRun, togglePage, up
 } from './controller';
@@ -62,6 +63,8 @@ export function onClick(e: MouseEvent): void {
     case 'customise': setMode('edit', { focus: '[data-act="done"]' }); break;
     case 'done': setMode('normal', { focus: kbd ? '[data-act="customise"]' : null }); break;
     case 'expand': setMode('expanded', { focus: kbd ? 'default' : null }); break;
+    /* "All bots": the roster, at the first bot the row leaves out */
+    case 'more': S.rowIdx = rowNow().shown; setMode('expanded', { focus: kbd ? 'default' : null }); break;
     case 'dot': goPage(id); break;
     case 'stop': stopRun(); break;
     case 'sched-run': case 'sched-pause': schedAction(act, id); break;
@@ -121,7 +124,8 @@ export function onKey(e: KeyboardEvent): void {
     if (e.key === 'ArrowUp') { up(true); return; }
     if (e.key === 'ArrowDown') { down(true); return; }
     const items = $$('.dk-bot, .dk-add', inRow), i = items.indexOf(near('.dk-bot, .dk-add') as HTMLElement);
-    S.rowIdx = rove(items, i, stepIndex(e.key, i, items.length));
+    const { shown, more } = rowNow();
+    S.rowIdx = rowIdxOf(rove(items, i, stepIndex(e.key, i, items.length)), S.bots.length, shown, more);
     markFocus(); kick();
     return;
   }
@@ -217,7 +221,15 @@ function nudge(dir: number): void {
   const s = pageSpring(S.page);
   s.v = -dir * 520; s.t = 0; kick();
 }
+/** the expanded roster when it overflows: an inner scroller, so a vertical wheel or swipe over it scrolls it instead of
+    collapsing the dock (a roster that fits keeps the gesture) */
+function scrollsRoster(t: EventTarget | null): boolean {
+  const box = t instanceof Element ? t.closest<HTMLElement>('.dk-roster') : null;
+  return !!box && box.scrollHeight > box.clientHeight;
+}
+let touchScroll = false;
 function onTouchDown(e: PointerEvent): void {
+  touchScroll = scrollsRoster(e.target);
   if (e.pointerType === 'mouse' || !canDrag() || (e.target as Element).closest('[data-ui="hold"], hx-card, .dk-tile')) return;
   E.drag.pid = e.pointerId; E.drag.sx = e.clientX; E.drag.sy = e.clientY; E.drag.axis = null; E.drag.hist = [[performance.now(), 0]];
 }
@@ -236,13 +248,14 @@ export function onTouchUp(e: PointerEvent): void {
   if (E.drag.axis === 'x') {
     const a = E.drag.hist[0], b = E.drag.hist[E.drag.hist.length - 1];
     dragRelease(b && a && b[0] > a[0] ? (b[1] - a[1]) / (b[0] - a[0]) : 0);
-  } else if (E.drag.axis === 'y' && Math.abs(dy) > 30) { if (dy < 0) up(); else down(); }
+  } else if (E.drag.axis === 'y' && Math.abs(dy) > 30 && !touchScroll) { if (dy < 0) up(); else down(); }
   E.drag.pid = null; E.drag.axis = null;
 }
 let wheelY = 0, wheelT = 0, wheelLock = 0;
 export function onWheel(e: WheelEvent): void {
   if (S.mode === 'off') return;
   if ((e.target as Element).closest && (e.target as Element).closest('.dk-sess-log, .ui-composer__input')) return;   /* they scroll themselves */
+  if (scrollsRoster(e.target)) return;
   const now = performance.now();
   if (now - wheelT > 220) { E.drag.x = 0; wheelY = 0; }
   wheelT = now;
@@ -339,30 +352,37 @@ export function onPointerDown(e: PointerEvent): void {
 }
 
 /* ───────── fitting the column ───────── */
-/** the bot row keeps 40px orbs at a 54px pitch (LAYOUT.md section 6) while the column allows it, then shrinks */
+/** The bot row keeps 40px orbs at a 54px pitch (LAYOUT.md section 6) while its room allows, then shrinks to `--hit-min`,
+    then shows as many bots as fit followed by "All bots" (geometry.ts rowFit). Its room is the column and the window's
+    room around the centre line, less the slab's flares and the most magnification widens it, so the slab stays in the
+    window at every width. One style read (the tokens), then writes. */
 let lastOrb = 0;
 export function fitRow(): void {
   const vw = innerWidth;
   const avail = Math.min(S.colWidth || vw, vw) - 24;
   const n = S.bots.length, pad = vw <= 520 ? 10 : 16;
-  const gapOf = (o: number): number => Math.max(6, Math.round(o * 14 / 40));
-  let o = 40;
-  /* never below --hit-min: an orb is a pointer target (R-a11y-2); a crowd past the column overflows, it does not shrink the targets */
-  const floor = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hit-min')) || 24;
-  while (o > floor && 2 * pad + n * o + n * gapOf(o) + 28 > avail) o--;
-  const orbChanged = o !== lastOrb; lastOrb = o;
-  X.root.style.setProperty('--dock-orb', String(o));
-  X.root.style.setProperty('--dock-gap', gapOf(o) + 'px');
-  X.root.style.setProperty('--dock-maxw', Math.max(300, avail) + 'px');
+  const cs = getComputedStyle(document.documentElement);
+  /* never below --hit-min: an orb is a pointer target (R-a11y-2) */
+  const floor = parseFloat(cs.getPropertyValue('--hit-min')) || 24;
+  const ctl = parseFloat(cs.getPropertyValue('--ctl-s')) || 28;
   /* the room around the centre line: a view never grows past the ground on either side (flares included), so on a
      phone, where the centre line sits left of the window's middle (the details strip), nothing runs off the edge */
   const L = getLayout(), cx = L ? L.centerX : cxNow();
   const left = L ? L.viewLeft : 0, right = L ? L.viewRight : vw;
   const room = Math.floor(2 * (Math.min(cx - left, right - cx) - geomR.FLARE - 2));
+  fitIn.room = { room: room > 0 ? Math.min(avail, room) : avail, floor, ctl, pad, mag: MAG, magCtl: MAG_ADD, sig: SIG };
+  const f = rowFit(n, fitIn.room), o = f.orb;
+  const orbChanged = o !== lastOrb; lastOrb = o;
+  X.root.style.setProperty('--dock-orb', String(o));
+  X.root.style.setProperty('--dock-gap', f.gap + 'px');
+  X.root.style.setProperty('--dock-maxw', Math.max(300, avail) + 'px');
   if (room > 0) X.root.style.setProperty('--dock-room', room + 'px');
+  /* the row holds another number of bots than it was drawn with: draw it again (its buttons are kept: patchHTML) */
+  const shownChanged = f.shown !== fitIn.drawn;
+  if (shownChanged) renderView('bots:norm');
   /* the live orbs carry their own --o (set when they move into a slot): re-read it, or an orb sized while the window was small
      stays small in a full-size slot (a frame that mounts small and then grows) */
-  if (flags.mounted && orbChanged) relocateLive();   /* (it reads layout for every bot: only when the row's orb size moved) */
+  if (flags.mounted && (orbChanged || shownChanged)) relocateLive();   /* (it reads layout for every bot: only when the row moved) */
 }
 export function onLayout(d: { centerX?: number; colWidth?: number; animate?: boolean; resized?: boolean }): void {
   flags.useVar = shellVar();

@@ -20,7 +20,7 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y xvfb webkit2gtk-driver libfuse2 libwebkit2gtk-4.1-0 libgtk-3-0
+        sudo apt-get install -y xvfb xdotool webkit2gtk-driver libfuse2 libwebkit2gtk-4.1-0 libgtk-3-0
     - name: the AppImage starts (it extracts and every shared library resolves), and carries hx
       shell: bash
       env:

@@ -1,0 +1,155 @@
+name: claude-cli
+# Claude Code installed for real, the way a person installs it, and what boopis finds of it (ADR-0029, amended 22 November
+# 2026): Anthropic's native installer and npm, on Windows and Linux (macOS on request), each with its folder on PATH and off
+# it. For every case, scripts/claude-cli-check.py runs the host's own lookup and probe (examples/claude_probe.rs: the version,
+# Claude Code's own `auth status`, the card's state and installer) and then the Claude subscription plugin's own `_resolve`, at
+# the commit the engine's catalogue pins, in the environment the engine gets, and checks that both run the same file. Where it
+# says so (`--signin`), it also starts what the card's "Sign in to Claude" starts, `claude auth login --claudeai` from the file
+# boopis found, and checks that Claude Code names Claude's own sign-in page and that the page answers; the step after that
+# needs a person.
+# Not part of every push: it downloads Claude Code from claude.ai and npm. It runs when a push changes the lookup itself (on
+# any branch: GitHub dispatches a workflow only once it has seen it run), weekly on main, since Anthropic's
+# installers change on their own schedule, and on demand.
+on:
+  push:
+    paths:
+      - apps/desktop/src-tauri/src/claude.rs
+      - apps/desktop/src-tauri/examples/claude_probe.rs
+      - scripts/claude-cli-check.py
+      - .github/workflows/claude-cli.yml
+  workflow_dispatch:
+    inputs:
+      macos:
+        description: also run on macOS (its minutes count ten times)
+        type: boolean
+        default: false
+  schedule:
+    - cron: "41 5 * * 1"
+permissions:
+  contents: read
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUSTUP_TOOLCHAIN: "1.97.0"
+  # the engine this build bundles, whose plugin catalogue pins the Claude subscription plugin (scripts/build-runtime.sh)
+  HERMES_TAG: v0.23.2
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: claude-cli-windows }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.14" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: build the host's probe (examples/claude_probe.rs)
+        run: cargo build -p boopis-host --example claude_probe
+      - name: the Claude subscription plugin at the commit the engine's catalogue pins
+        shell: bash
+        run: |
+          sha=$(curl -fsSL "https://raw.githubusercontent.com/NousResearch/hermes-agent/$HERMES_TAG/plugin-catalog/claude-subscription-directsdk.yaml" | sed -n 's/^sha: *//p' | tr -d '\r')
+          echo "pinned: $sha"
+          git init -q "$RUNNER_TEMP/plugin"
+          git -C "$RUNNER_TEMP/plugin" fetch -q --depth 1 https://github.com/NousResearch/hermes-official-plugins "$sha"
+          git -C "$RUNNER_TEMP/plugin" checkout -q FETCH_HEAD
+          test -f "$RUNNER_TEMP/plugin/claude-subscription-directsdk/directsdk_setup.py"
+      - name: nothing installed yet, the card offers Anthropic's installer for PowerShell
+        run: |
+          python scripts/claude-cli-check.py target/debug/examples/claude_probe.exe "$env:RUNNER_TEMP/plugin/claude-subscription-directsdk" none `
+            --expect-state not_installed
+      - name: Anthropic's native installer (irm https://claude.ai/install.ps1 | iex)
+        run: |
+          irm https://claude.ai/install.ps1 | iex
+          if (-not (Test-Path "$env:USERPROFILE\.local\bin\claude.exe")) { throw 'the installer left no claude.exe in .local\bin' }
+      - name: native install, its folder off PATH (as the installer leaves it), and Sign in to Claude starts from it
+        run: |
+          python scripts/claude-cli-check.py target/debug/examples/claude_probe.exe "$env:RUNNER_TEMP/plugin/claude-subscription-directsdk" native-off-path `
+            --expect-state signed_out --expect-found '.local\bin\claude.exe' --expect-override no --signin
+      - name: native install, its folder on Path
+        run: |
+          python scripts/claude-cli-check.py target/debug/examples/claude_probe.exe "$env:RUNNER_TEMP/plugin/claude-subscription-directsdk" native-on-path `
+            --dir "$env:USERPROFILE\.local\bin" --expect-state signed_out --expect-found '.local\bin\claude.exe' --expect-override no
+      - name: set the native install aside, and install with npm into npm's default folder (%APPDATA%\npm)
+        run: |
+          Rename-Item "$env:USERPROFILE\.local\bin\claude.exe" claude.exe.aside
+          npm install -g --prefix "$env:APPDATA\npm" @anthropic-ai/claude-code@latest
+          Get-ChildItem "$env:APPDATA\npm" -Filter 'claude*' | Select-Object -ExpandProperty Name
+      - name: npm, its folder on Path (spelled Path, as Windows spells it)
+        run: |
+          python scripts/claude-cli-check.py target/debug/examples/claude_probe.exe "$env:RUNNER_TEMP/plugin/claude-subscription-directsdk" npm-on-path `
+            --dir "$env:APPDATA\npm" --expect-state signed_out --expect-found 'npm\claude.cmd' --expect-override no
+      - name: npm, its folder off Path (boopis finds it and hands it to the engine), and Sign in to Claude starts from it
+        run: |
+          python scripts/claude-cli-check.py target/debug/examples/claude_probe.exe "$env:RUNNER_TEMP/plugin/claude-subscription-directsdk" npm-off-path `
+            --expect-state signed_out --expect-found 'npm\claude.cmd' --expect-override yes --signin
+
+  unix:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-latest]
+        exclude:
+          - os: ${{ (github.event_name == 'workflow_dispatch' && inputs.macos) && 'none' || 'macos-latest' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tauri's Linux prerequisites (the host links WebKitGTK)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: claude-cli-${{ matrix.os }}
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.14" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: build the host's probe (examples/claude_probe.rs)
+        run: cargo build -p boopis-host --example claude_probe
+      - name: the Claude subscription plugin at the commit the engine's catalogue pins
+        run: |
+          sha=$(curl -fsSL "https://raw.githubusercontent.com/NousResearch/hermes-agent/$HERMES_TAG/plugin-catalog/claude-subscription-directsdk.yaml" | sed -n 's/^sha: *//p')
+          echo "pinned: $sha"
+          git init -q "$RUNNER_TEMP/plugin"
+          git -C "$RUNNER_TEMP/plugin" fetch -q --depth 1 https://github.com/NousResearch/hermes-official-plugins "$sha"
+          git -C "$RUNNER_TEMP/plugin" checkout -q FETCH_HEAD
+          echo "PLUGIN=$RUNNER_TEMP/plugin/claude-subscription-directsdk" >> "$GITHUB_ENV"
+      - name: nothing installed yet, the card offers Anthropic's installer
+        run: python3 scripts/claude-cli-check.py target/debug/examples/claude_probe "$PLUGIN" none --expect-state not_installed
+      - name: Anthropic's native installer (curl -fsSL https://claude.ai/install.sh | bash)
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          ls -la ~/.local/bin/claude
+      - name: native install, its folder off PATH (a program started from the desktop does not read the shell's profile), and Sign in to Claude starts from it
+        run: |
+          python3 scripts/claude-cli-check.py target/debug/examples/claude_probe "$PLUGIN" native-off-path \
+            --expect-state signed_out --expect-found .local/bin/claude --expect-override no --signin
+      - name: native install, its folder on PATH
+        run: |
+          python3 scripts/claude-cli-check.py target/debug/examples/claude_probe "$PLUGIN" native-on-path \
+            --dir "$HOME/.local/bin" --expect-state signed_out --expect-found .local/bin/claude --expect-override no
+      - name: set the native install aside, and install with npm under a prefix of the person's own (npm config set prefix)
+        run: |
+          mv ~/.local/bin/claude ~/.local/bin/claude.aside
+          npm config set prefix "$HOME/.npm-packages"
+          npm install -g @anthropic-ai/claude-code@latest
+          ls -la ~/.npm-packages/bin/
+      - name: npm, its folder on PATH
+        run: |
+          python3 scripts/claude-cli-check.py target/debug/examples/claude_probe "$PLUGIN" npm-on-path \
+            --dir "$HOME/.npm-packages/bin" --expect-state signed_out --expect-found .npm-packages/bin/claude --expect-override no
+      - name: npm, its folder off PATH (boopis reads ~/.npmrc and hands the path to the engine), and Sign in to Claude starts from it
+        run: |
+          python3 scripts/claude-cli-check.py target/debug/examples/claude_probe "$PLUGIN" npm-off-path \
+            --expect-state signed_out --expect-found .npm-packages/bin/claude --expect-override yes --signin

@@ -34,6 +34,8 @@ struct Inner {
     closed: bool,
     too_slow: bool,
     coalesced: u64,
+    batched: u64,
+    peak: usize,
 }
 
 /// A bounded frame queue for one consumer.
@@ -85,6 +87,7 @@ impl Outbox {
             text,
             delta_of: delta_session.map(str::to_owned),
         });
+        g.peak = g.peak.max(g.q.len());
         drop(g);
         self.ready.notify_one();
         Push::Queued
@@ -105,6 +108,63 @@ impl Outbox {
             }
             notified.await;
         }
+    }
+
+    /// The next frames, at most `max_frames` of them and about `max_bytes` (a single larger frame still goes alone);
+    /// waits when empty. Adjacent `message.delta` frames of one session are merged on the way (text concatenated, the
+    /// later `seq` kept), so a consumer that fell behind gets one frame per run of text instead of one per chunk.
+    /// `None` once the queue is closed and drained.
+    pub async fn pop_batch(&self, max_frames: usize, max_bytes: usize) -> Option<Vec<Arc<str>>> {
+        loop {
+            let notified = self.ready.notified();
+            {
+                let mut g = self.inner.lock().ok()?;
+                if !g.q.is_empty() {
+                    let mut out: Vec<Queued> = Vec::new();
+                    let mut bytes = 0usize;
+                    let mut merged = 0u64;
+                    while let Some(next) = g.q.front() {
+                        if let (Some(last), Some(sess)) = (out.last_mut(), next.delta_of.as_deref())
+                            && last.delta_of.as_deref() == Some(sess)
+                            && let Some(joined) = merge_runs(&last.text, &next.text)
+                        {
+                            bytes = bytes + joined.len() - last.text.len();
+                            last.text = joined.into();
+                            merged += 1;
+                            g.q.pop_front();
+                            continue;
+                        }
+                        if out.len() >= max_frames
+                            || (!out.is_empty() && bytes + next.text.len() > max_bytes)
+                        {
+                            break;
+                        }
+                        bytes += next.text.len();
+                        if let Some(q) = g.q.pop_front() {
+                            out.push(q);
+                        }
+                    }
+                    g.batched += merged;
+                    return Some(out.into_iter().map(|q| q.text).collect());
+                }
+                if g.closed {
+                    return None;
+                }
+            }
+            notified.await;
+        }
+    }
+
+    /// How many deltas were merged into a run while a batch was assembled (not an overflow).
+    #[must_use]
+    pub fn batched(&self) -> u64 {
+        self.inner.lock().map_or(0, |g| g.batched)
+    }
+
+    /// The most frames this queue has held at once.
+    #[must_use]
+    pub fn peak(&self) -> usize {
+        self.inner.lock().map_or(0, |g| g.peak)
     }
 
     /// Close the queue. Frames already queued are still delivered.
@@ -156,6 +216,29 @@ fn merge_deltas(first: &str, second: &str) -> Option<String> {
         params.insert("seq".into(), seq.clone());
     }
     serde_json::to_string(&a).ok()
+}
+
+/// Merge two deltas of one session only when nothing but the text would differ: both carry text (a `null` text is a
+/// segment boundary the reader needs), neither carries a `rendered` form, and they belong to the same turn and segment.
+/// Used for every batch, where the soft cap's looser `merge_deltas` is only for a queue that overflowed.
+fn merge_runs(first: &str, second: &str) -> Option<String> {
+    let a: serde_json::Value = serde_json::from_str(first).ok()?;
+    let b: serde_json::Value = serde_json::from_str(second).ok()?;
+    let (pa, pb) = (
+        a.get("params")?.get("payload")?,
+        b.get("params")?.get("payload")?,
+    );
+    let same = |k: &str| pa.get(k) == pb.get(k);
+    if !pa.get("text")?.is_string()
+        || !pb.get("text")?.is_string()
+        || pa.get("rendered").is_some()
+        || pb.get("rendered").is_some()
+        || !same("turn_id")
+        || !same("segment")
+    {
+        return None;
+    }
+    merge_deltas(first, second)
 }
 
 fn text_of(frame: &serde_json::Value) -> Option<&str> {
@@ -269,5 +352,83 @@ mod tests {
         q.push(response(1), None);
         q.close();
         assert_eq!(waiter.await.unwrap(), (true, true));
+    }
+
+    #[tokio::test]
+    async fn a_batch_merges_runs_of_text_and_keeps_everything_else_in_order() {
+        let q = Outbox::new(100, 200);
+        q.push(delta("s", "a", 1), Some("s"));
+        q.push(delta("s", "b", 2), Some("s"));
+        q.push(response(7), None);
+        q.push(delta("s", "c", 3), Some("s"));
+        q.push(delta("t", "x", 1), Some("t"));
+        q.push(delta("t", "y", 2), Some("t"));
+        let null: Arc<str> = serde_json::json!({"jsonrpc":"2.0","method":"event","params":{"type":"message.delta","session_id":"t","payload":{"text":null},"seq":3}}).to_string().into();
+        q.push(null, Some("t"));
+        q.push(delta("t", "z", 4), Some("t"));
+        assert_eq!(q.peak(), 8);
+        let got: Vec<serde_json::Value> = q
+            .pop_batch(64, 1 << 20)
+            .await
+            .unwrap()
+            .iter()
+            .map(|t| serde_json::from_str(t).unwrap())
+            .collect();
+        let texts: Vec<serde_json::Value> = got
+            .iter()
+            .map(|f| f["params"]["payload"]["text"].clone())
+            .collect();
+        assert_eq!(
+            texts,
+            [
+                serde_json::json!("ab"),
+                serde_json::Value::Null,
+                serde_json::json!("c"),
+                serde_json::json!("xy"),
+                serde_json::Value::Null,
+                serde_json::json!("z")
+            ]
+        );
+        assert_eq!(
+            got[0]["params"]["seq"], 2,
+            "the merged frame carries the later seq"
+        );
+        assert_eq!(got[1]["id"], 7, "a response keeps its place");
+        assert_eq!(q.batched(), 2);
+        assert_eq!(q.coalesced(), 0, "merging a run is not an overflow");
+        assert!(q.is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_batch_is_bounded_by_frames_and_bytes_but_never_empty() {
+        let q = Outbox::new(100, 200);
+        for i in 0..10 {
+            q.push(response(i), None);
+        }
+        assert_eq!(q.pop_batch(4, 1 << 20).await.unwrap().len(), 4);
+        assert_eq!(
+            q.pop_batch(64, 1).await.unwrap().len(),
+            1,
+            "one frame past the byte bound still goes"
+        );
+        assert_eq!(q.pop_batch(64, 1 << 20).await.unwrap().len(), 5);
+        q.close();
+        assert!(q.pop_batch(64, 1 << 20).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn deltas_of_another_turn_or_with_a_rendered_form_stay_apart() {
+        let q = Outbox::new(100, 200);
+        let mk = |text: &str, turn: &str, rendered: bool| -> Arc<str> {
+            let mut p = serde_json::json!({"text": text, "turn_id": turn});
+            if rendered {
+                p["rendered"] = serde_json::json!("<b>x</b>");
+            }
+            serde_json::json!({"jsonrpc":"2.0","method":"event","params":{"type":"message.delta","session_id":"s","payload":p}}).to_string().into()
+        };
+        q.push(mk("a", "1", false), Some("s"));
+        q.push(mk("b", "2", false), Some("s"));
+        q.push(mk("c", "2", true), Some("s"));
+        assert_eq!(q.pop_batch(64, 1 << 20).await.unwrap().len(), 3);
     }
 }

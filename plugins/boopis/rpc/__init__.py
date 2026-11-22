@@ -47,6 +47,7 @@ CAPABILITIES = (
     "mod.install.confirm",
     "bots.read",
     "bots.write",
+    "bots.guide",
     "bots.inspect",
     "bots.archive",
     "bots.restore",

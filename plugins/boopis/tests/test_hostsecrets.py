@@ -217,7 +217,9 @@ def test_every_copy_of_the_plugin_reaches_the_host_the_first_one_captured(monkey
     assert first is not None and channel_mod.TOKEN_ENV not in os.environ
     spec = importlib.util.find_spec("boopis.hostsecrets.channel")
     assert spec is not None and spec.loader is not None
-    copy = importlib.util.module_from_spec(spec)  # what `hermes_plugins.boopis__home_<digest>` is: the same file, new globals
+    copy = importlib.util.module_from_spec(
+        spec
+    )  # what `hermes_plugins.boopis__home_<digest>` is: the same file, new globals
     monkeypatch.setitem(sys.modules, "boopis_bot_copy_channel", copy)
     spec.loader.exec_module(copy)
     assert copy._captured is None, "a fresh copy starts with nothing of its own"

@@ -1,9 +1,9 @@
 //! What setup and Settings > Models show of each way: [`ProviderState`], one per way (`provider_list`,
 //! `provider_probe_local`, and the answer of every command that changes a way).
 //!
-//! The UI draws a word from `status` (Connected, No key, Not signed in, Running on this computer, Not found, Problem) and a
-//! button from `status` and `kind`; `detail` is one plain line (a plan, a count, the reason). Nothing here is a secret: a
-//! key is never echoed, not even its tail.
+//! The UI draws a word from `status` (Connected, No key, Not signed in, Not installed, Running on this computer, Not found,
+//! Problem) and a button from `status` and `kind`; `detail` is one plain line (a plan, a count, the reason). Nothing here is a
+//! secret: a key is never echoed, not even its tail.
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -32,6 +32,9 @@ pub enum ProviderStatus {
     NeedsKey,
     /// A sign-in way not signed in.
     SignedOut,
+    /// A sign-in way whose program is not on this computer (Claude Code for the Claude subscription). Nothing failed: `install`
+    /// says how to get it, and the person checks again after.
+    NeedsInstall,
     /// A sign-in is waiting for the person (`signin` holds the page and the code).
     SigningIn,
     /// A runtime on this computer answered the last probe.
@@ -54,6 +57,30 @@ pub struct SigninCode {
     /// When the code lapses, in milliseconds since the Unix epoch.
     #[specta(type = f64)]
     pub expires_at: u64,
+}
+
+/// Whether a program is to be installed or brought up to date.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum InstallKind {
+    /// It is not on this computer, or it is there and does not start: the installer puts it (back) in place.
+    Install,
+    /// It is there and too old: the command updates it.
+    Update,
+}
+
+/// How to get the program a way runs on, from the program's maker: the one command for this computer's system, where to paste
+/// it, and the maker's page about it. The person runs it themselves; boopis never runs an installer.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+pub struct InstallHint {
+    /// Install or update.
+    pub kind: InstallKind,
+    /// The command, exactly as the maker publishes it (`irm https://claude.ai/install.ps1 | iex`).
+    pub command: String,
+    /// Where to paste it, as a person names it: `PowerShell`, `Terminal`, `a terminal`.
+    pub shell: String,
+    /// The maker's own page about installing or updating it.
+    pub page: String,
 }
 
 /// How a sign-in ended, pushed to every window (`ProviderSigninEvent`), mirroring `ChatgptSigninEvent`.
@@ -93,6 +120,9 @@ pub struct ProviderState {
     /// When it was last checked, in milliseconds since the Unix epoch; `None` when never.
     #[specta(type = f64)]
     pub checked_at: Option<u64>,
+    /// How to install or update the program the way runs on, when that is what stands in the way (`needs_install`, or an
+    /// error that installing or updating fixes).
+    pub install: Option<InstallHint>,
 }
 
 impl ProviderState {
@@ -109,6 +139,7 @@ impl ProviderState {
             base_url: None,
             signin: None,
             checked_at: None,
+            install: None,
         }
     }
 
@@ -128,6 +159,15 @@ impl ProviderState {
     #[must_use]
     pub fn signed_out(provider: &str, way: &str) -> Self {
         Self::base(provider, way, WayKind::Signin, ProviderStatus::SignedOut)
+    }
+
+    /// A sign-in way whose program is not installed, with how to install it.
+    #[must_use]
+    pub fn needs_install(provider: &str, way: &str, detail: &str, install: InstallHint) -> Self {
+        let mut s = Self::base(provider, way, WayKind::Signin, ProviderStatus::NeedsInstall);
+        s.detail = Some(detail.to_owned());
+        s.install = Some(install);
+        s
     }
 
     /// A sign-in that waits for the person.
@@ -194,6 +234,17 @@ mod tests {
             ),
             ProviderState::found_local("ollama", "ollama.local", "http://127.0.0.1:11434/v1", 3),
             ProviderState::not_found("vllm", "vllm.local"),
+            ProviderState::needs_install(
+                "anthropic",
+                "anthropic.signin",
+                "Claude Code is not installed yet.",
+                InstallHint {
+                    kind: InstallKind::Install,
+                    command: "curl -fsSL https://claude.ai/install.sh | bash".into(),
+                    shell: "a terminal".into(),
+                    page: "https://code.claude.com/docs/en/setup".into(),
+                },
+            ),
             ProviderState::error(
                 "zai",
                 "zai.key",
@@ -203,7 +254,7 @@ mod tests {
             ),
         ];
         assert!(all.iter().all(ProviderState::is_consistent));
-        let mut bad = all[6].clone();
+        let mut bad = all[7].clone();
         bad.code = None;
         assert!(!bad.is_consistent());
         let mut bad = all[0].clone();
@@ -222,5 +273,10 @@ mod tests {
             serde_json::to_value(ProviderStatus::FoundLocal).unwrap(),
             "found_local"
         );
+        assert_eq!(
+            serde_json::to_value(ProviderStatus::NeedsInstall).unwrap(),
+            "needs_install"
+        );
+        assert_eq!(v["install"], serde_json::Value::Null);
     }
 }

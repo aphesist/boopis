@@ -118,12 +118,17 @@ fn dechunk(mut body: &[u8]) -> Vec<u8> {
 }
 
 /// One `GET` on a loopback address, inside `timeout` as a whole (connect, send and read).
+///
+/// A connect that does not finish in time is nothing listening, not a slow runtime: Windows does not refuse a connection to a
+/// closed loopback port at once, it retries for about two seconds (the live probe saw every port "listening" on Windows before
+/// this). Only a server that accepted the connection and then said nothing is [`Outcome::Slow`].
 async fn get(addr: SocketAddr, path: &str, timeout: Duration) -> Result<(u16, Vec<u8>), Outcome> {
+    let deadline = tokio::time::Instant::now() + timeout;
+    let mut stream = match tokio::time::timeout_at(deadline, dial(addr)).await {
+        Err(_) | Ok(Err(_) | Ok(Err(_))) => return Err(Outcome::Nothing),
+        Ok(Ok(Ok(s))) => s,
+    };
     let run = async {
-        let mut stream = match dial(addr).await {
-            Err(_) | Ok(Err(_)) => return Err(Outcome::Nothing),
-            Ok(Ok(s)) => s,
-        };
         // HTTP/1.0 and `Connection: close`: the answer is the bytes until the server closes, and a server may not chunk it
         let request = format!(
             "GET {path} HTTP/1.0\r\nHost: {addr}\r\nAccept: application/json\r\nUser-Agent: boopis\r\nConnection: close\r\n\r\n"
@@ -140,8 +145,8 @@ async fn get(addr: SocketAddr, path: &str, timeout: Duration) -> Result<(u16, Ve
             .map_err(|_| Outcome::Other)?;
         parse_response(&raw).ok_or(Outcome::Other)
     };
-    // a connect to loopback is refused at once, so a timeout means something accepted and then said nothing
-    tokio::time::timeout(timeout, run)
+    // connected: a timeout now means something accepted and then said nothing
+    tokio::time::timeout_at(deadline, run)
         .await
         .unwrap_or(Err(Outcome::Slow))
 }
@@ -294,7 +299,9 @@ pub fn state_for(entry_id: &str, way: &Way, addr: SocketAddr, outcome: Outcome) 
             &way.id,
             WayKind::Local,
             "hx.provider.unreachable",
-            &format!("Something is listening on {addr} but did not answer in time."),
+            &format!(
+                "Something is listening on {addr} but did not answer in time. If it is still starting, wait a moment and choose Check again."
+            ),
         ),
     };
     state.checked_at = Some(now_ms());

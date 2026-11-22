@@ -364,6 +364,10 @@ pub struct RendererReport {
     /// The engine's own words behind the errors the UI showed as boopis sentences this run (ADR-0031), oldest first.
     /// Filled when the report is asked for; Diagnostics is the one place they are shown.
     pub errors: Vec<crate::error::RecentError>,
+    /// The web view's health (`webview_health`): web-process terminations and why, unresponsive periods, recoveries,
+    /// the page's longest stall and the outbox peak, for this run and the one before. Filled when the report is asked
+    /// for; `None` from `boopis doctor` (it prints the previous run's file itself).
+    pub health: Option<crate::webview_health::Report>,
 }
 
 /// The switches that make `WebKitGTK` paint on the CPU (no accelerated compositing, so no compositor-thread animation).
@@ -435,6 +439,7 @@ pub fn report(inputs: &Inputs, decision: &Decision, gpu: gpu::Report) -> Rendere
         note: note(inputs, decision),
         gpu,
         errors: Vec::new(),
+        health: None,
         choices: [
             ("default", "nothing: WebKitGTK's own choice"),
             (

@@ -15,8 +15,37 @@ pub const CATALOG_JSON: &str = include_str!("../../../../shared/data/connectors.
 /// The whole collection.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Catalog {
-    /// The connectors.
+    /// How the array is ordered: the signal, when it was read and by which run.
+    #[serde(default)]
+    pub popularity: Option<PopularityRead>,
+    /// The connectors, most popular first.
     pub connectors: Vec<Connector>,
+}
+
+/// The read of the popularity signal the collection is ordered by (`docs/CONNECTORS.md`, "The order").
+#[derive(Debug, Clone, Deserialize)]
+pub struct PopularityRead {
+    /// `github-stars`.
+    pub signal: String,
+    /// The date of the read.
+    pub read: String,
+    /// The run that read it.
+    pub evidence: String,
+}
+
+/// One connector's place in the order.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Popularity {
+    /// `github-stars`.
+    pub signal: String,
+    /// The publisher's official repository, `owner/name`.
+    pub repo: String,
+    /// Its stars on the date of the read.
+    #[serde(default)]
+    pub stars: Option<u64>,
+    /// The repository holds many servers: its count is the collection's, not this server's.
+    #[serde(default)]
+    pub shared: bool,
 }
 
 /// One connector.
@@ -41,6 +70,9 @@ pub struct Connector {
     pub verified: Verified,
     /// The ways to run it.
     pub variants: Vec<Variant>,
+    /// Its place in the order.
+    #[serde(default)]
+    pub popularity: Option<Popularity>,
 }
 
 /// What was checked.
@@ -388,6 +420,50 @@ mod tests {
                     super::super::validate::header_name(&alt.header).unwrap();
                 }
             }
+        }
+    }
+
+    #[test]
+    fn the_list_is_ordered_by_its_cited_popularity() {
+        // Every entry names the publisher's own repository (its `source`) as its signal. Once the stars are recorded, with the
+        // date and the run that read them, the entries with a repository of their own come first, most stars first, and the
+        // ones that share a repository of many servers follow, since that count is the collection's.
+        let cat = load().unwrap();
+        let mut stars = Vec::new();
+        for c in &cat.connectors {
+            let p = c
+                .popularity
+                .as_ref()
+                .unwrap_or_else(|| panic!("{}: popularity", c.id));
+            assert_eq!(p.signal, "github-stars", "{}", c.id);
+            assert!(
+                c.source == format!("https://github.com/{}", p.repo)
+                    || c.source
+                        .starts_with(&format!("https://github.com/{}/", p.repo)),
+                "{}: the signal is the publisher's own repository, {}",
+                c.id,
+                c.source
+            );
+            stars.push((p.shared, p.stars));
+        }
+        if let Some(read) = &cat.popularity {
+            assert_eq!(read.signal, "github-stars");
+            assert!(
+                read.evidence.starts_with("https://github.com/"),
+                "{}",
+                read.evidence
+            );
+            assert!(crate::store::time::parse(&format!("{}T00:00:00Z", read.read)).is_some());
+            let key: Vec<(bool, std::cmp::Reverse<u64>)> = stars
+                .iter()
+                .map(|(shared, n)| {
+                    (
+                        *shared,
+                        std::cmp::Reverse(n.expect("a count for every entry")),
+                    )
+                })
+                .collect();
+            assert!(key.windows(2).all(|w| w[0] <= w[1]), "{key:?}");
         }
     }
 

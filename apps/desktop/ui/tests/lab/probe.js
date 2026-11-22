@@ -4,6 +4,7 @@
      { check, msg, el, rect: {x, y, w, h} (page coordinates), key (stable, for de-duplication) }
    The checks (docs/UI-LAB.md):
      geometry.contain   a shaped child's box (and its rounded corners) stays inside its shaped container's rounded rect
+                        (and is not cut part-way by a scroller on a side it does not scroll)
      geometry.center    items of a control row are vertically centred within 1 px
      geometry.clip      text is not clipped unless it ends in an ellipsis
      geometry.hscroll   no horizontal scroll (the page, or a scroller that is not code)
@@ -20,7 +21,7 @@
      scrollbar          every scroller has the system's scrollbar: a ::-webkit-scrollbar rule (WebKitGTK ignores
                         scrollbar-width) no wider than 8 px and a thumb in --bg-4
    And two helpers for the stability check: `signature(root)` (the DOM's structure, for render-twice) and
-   `sampler(root)` (frames of opacity, visibility and boxes during an interaction, plus nodes replaced). */
+   `sampler(root, {orbs})` (frames of opacity, visibility and boxes during an interaction, plus nodes replaced). */
 (() => {
   const SKIP_INSIDE = 'orb-avatar, boopis-logo, svg, canvas, .hx-probe, script, style, template';
   /* visually hidden text (the screen reader's) is not drawn: no geometry, no tokens */
@@ -324,6 +325,40 @@
       }
     }
 
+    /* geometry.contain, cut: a control that shows in part because a box above it cuts it on a side that box does not scroll.
+       The owner's Store dialog cut its switches, search field and Details buttons at the right edge, and the lab passed: its
+       scroller was wider than the dialog's card, so the switch sat whole inside the nearest clipper, and the card (overflow
+       hidden, not a scroller) cut it. Every clipping box from the control up is followed, keeping what stays visible: a part a
+       box scrolls away is hidden by scrolling (fine), a part a box that does not scroll that way cuts off, while some of the
+       control still shows, is reported. A control wholly out of view (a closed drawer) is not. */
+    if (want.has('geometry.contain')) {
+      const CONTROL = 'button, a[href], input, textarea, select, [role="button"], [role="switch"], [role="checkbox"], [role="radio"], [role="tab"], [role="slider"], [role="combobox"], [role="menuitem"], [role="option"], [tabindex]:not([tabindex="-1"])';
+      for (const e of els) {
+        if (!e.matches(CONTROL) || e.matches(OVERHANG_OK)) continue;
+        const r0 = e.getBoundingClientRect();
+        let v = { l: r0.left, r: r0.right, t: r0.top, b: r0.bottom };
+        let worst = null;
+        for (let a = e.parentElement; a && a !== document.body && a !== document.documentElement; a = a.parentElement) {
+          const acs = cs.get(a) || getComputedStyle(a);
+          if (!clipsContent(acs)) continue;
+          const ar = a.getBoundingClientRect();
+          const axes = [['x', 'l', 'r', ar.left, ar.right, acs.overflowX], ['y', 't', 'b', ar.top, ar.bottom, acs.overflowY]];
+          for (const [, lo, hi, alo, ahi, ov] of axes) {
+            if (v[lo] >= alo - 1 && v[hi] <= ahi + 1) continue;
+            const shows = v[lo] < ahi && v[hi] > alo;
+            if (shows && !/auto|scroll/.test(ov)) {
+              const pastHi = v[hi] - ahi, pastLo = alo - v[lo];
+              const [side, by] = pastHi >= pastLo ? [lo === 'l' ? 'right' : 'bottom', pastHi] : [lo === 'l' ? 'left' : 'top', pastLo];
+              if (by > 1 && (!worst || by > worst.by)) worst = { a, side, by };
+            }
+            v[lo] = Math.max(v[lo], alo); v[hi] = Math.min(v[hi], ahi);
+          }
+          if (v.l >= v.r || v.t >= v.b) { worst = null; break; }   /* wholly out of view */
+        }
+        if (worst) add('geometry.contain', e, 'cut by ' + describe(worst.a) + ', which does not scroll that way: ' + r1(worst.by) + 'px past its ' + worst.side + ' edge', { container: rectOf(worst.a) });
+      }
+    }
+
     /* geometry.clip: text cut without an ellipsis */
     if (want.has('geometry.clip')) {
       for (const e of els) {
@@ -578,6 +613,9 @@
         const hasText = [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
         if (hasText && ckey(s.color) === T.roles['--brass'] && !e.closest('[role="menuitemradio"], [aria-current], .ui-ladder')) add('roles', e, 'text in --brass: brass marks position and choice, never text (R-colour-3)');
         const bg = ckey(s.backgroundColor);
+        /* a stack's discs are the ground itself, cut out under the next orb (components.css, stack): not a surface, so not inset
+           on inset; on the dock every ground role is the dock's black, and the disc rightly paints the same as what it sits on */
+        if (e.parentElement?.classList.contains('ui-stack')) continue;
         if (bg === T.roles['--bg-0'] || bg === T.roles['--bg-3']) {
           for (let p = e.parentElement; p && p !== document.documentElement; p = p.parentElement) {
             let pb = getComputedStyle(p).backgroundColor;
@@ -685,7 +723,8 @@
   }
 
   /** frames of every visible element's opacity, visibility and box under `root`, plus nodes removed and added */
-  function sampler(rootSel) {
+  function sampler(rootSel, opts) {
+    const orbsStay = !!(opts && opts.orbs);
     const root = (rootSel && document.querySelector(rootSel)) || (window.__lab && window.__lab.scope && window.__lab.scope()) || document.body;
     const keyOf = (e) => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (e.getAttribute('data-k') ? '[k=' + e.getAttribute('data-k') + ']' : e.getAttribute('data-id') ? '[id=' + e.getAttribute('data-id') + ']' : e.getAttribute('data-slot') ? '[slot=' + e.getAttribute('data-slot') + ']' : '') + '.' + [...e.classList].filter((c) => !/^is-/.test(c)).slice(0, 2).join('.');
     const tracked = new Map(); let n = 0;
@@ -693,10 +732,20 @@
     const pick = () => { for (const e of root.querySelectorAll('*')) { if (e.matches('svg *, script, style')) continue; track(e); } track(root); };
     pick();
     const removed = [], added = [];
+    /* the orbs: an orb taken out of the page, and the orbs put in (R-motion-5). An orb's canvas belongs to a worker; a node that is
+       detached and attached again, or drawn anew, shows nothing until the worker draws and commits once more. */
+    const orbsOf = (n) => (n.matches('orb-avatar') ? [n] : [...n.querySelectorAll('orb-avatar')]);
+    const orbOut = new Map(), orbIn = [];
     const mo = new MutationObserver((list) => {
       for (const m of list) {
-        for (const r of m.removedNodes) if (r.nodeType === 1 && !r.matches('.ui-tip, #__lab_probe') && r.isConnected === false) removed.push({ key: keyOf(r), t: performance.now() });
-        for (const a of m.addedNodes) if (a.nodeType === 1 && !a.matches('.ui-tip, #__lab_probe')) { added.push({ key: keyOf(a), t: performance.now() }); track(a); }
+        for (const r of m.removedNodes) if (r.nodeType === 1 && !r.matches('.ui-tip, #__lab_probe')) {
+          if (r.isConnected === false) removed.push({ key: keyOf(r), t: performance.now() });
+          for (const o of orbsOf(r)) orbOut.set(o, { label: o.getAttribute('label') || '', t: performance.now() });
+        }
+        for (const a of m.addedNodes) if (a.nodeType === 1 && !a.matches('.ui-tip, #__lab_probe')) {
+          added.push({ key: keyOf(a), t: performance.now() }); track(a);
+          for (const o of orbsOf(a)) orbIn.push({ el: o, label: o.getAttribute('label') || '', t: performance.now() });
+        }
       }
     });
     mo.observe(root, { childList: true, subtree: true });
@@ -715,7 +764,13 @@
     return {
       stop() {
         on = false; cancelAnimationFrame(raf); mo.disconnect();
-        return analyse(tracked, removed, added);
+        const issues = analyse(tracked, removed, added);
+        if (orbsStay) for (const [o, out] of orbOut) {
+          const key = 'orb-avatar[label=' + out.label + ']';
+          if (o.isConnected) issues.push({ kind: 'orb-moved', key, msg: key + ' was taken out of the page and put back (its canvas is painted empty until the worker draws again: update the node in place)' });
+          else if (orbIn.some((i) => i.el !== o && i.label === out.label && i.t >= out.t - 50 && i.t - out.t <= 1000)) issues.push({ kind: 'orb-replaced', key, msg: key + ' was removed and drawn anew (a new canvas is empty until the worker draws it: keep the node and update its attributes)' });
+        }
+        return issues;
       }
     };
   }

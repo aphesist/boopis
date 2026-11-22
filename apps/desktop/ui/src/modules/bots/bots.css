@@ -67,12 +67,42 @@
 [data-margin="off"] .bt-empty { margin-left: 0; }
 .bt-ideas { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
 
+/* ───────── the ledger (ledger.ts): whom a message is for, a member at work, unread, the actions in the margin ───────── */
+.bt-log > [data-hx-turn], .bt-log > .bt-pending-entry { --r-outer: var(--r-s); --pad: var(--sp-1); --corner-size: 24px; }   /* a corner container: the actions in the margin sit in its corner (R-corner-3) */
+.bt-log > [data-hx-turn]:has(.bt-acts) { min-height: calc(var(--ctl-s) + var(--sp-6) + var(--sp-4)); }   /* the margin holds the name, the time and the actions: a one-line reply is as tall as that */
+.bt-log > [data-hx-turn] .ui-entry__body:not(:has(.bt-cardslot)) { padding: var(--sp-1) var(--sp-1) var(--sp-1) 0; box-sizing: border-box; }   /* what sits at the body's edge keeps its focus ring inside the entry */
+.bt-log > [data-hx-turn] .ui-callno:has(.bt-acts) { align-self: stretch; }
+.bt-to b { font-weight: 400; color: var(--text-dim); }
+.bt-to.is-you b { color: var(--text-strong); }
+.bt-elapsed { font-variant-numeric: tabular-nums; }
+.bt-pending { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); min-height: 22px; margin: 0; font: 400 var(--fs-xs)/var(--lh-small) var(--sans); color: var(--text-quiet); }
+.bt-pending__word { font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); letter-spacing: var(--track-mono); color: var(--text-dim); }
+.bt-pending__act:empty { display: none; }
+.bt-pending-entry.is-queued .bt-pending__word { color: var(--text-quiet); }
+.bt-unread { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-5) 0 0; font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); }
+.bt-unread::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.bt-unread + [data-hx-turn] { margin-top: var(--sp-3); }
+.bt-jump { position: absolute; left: 50%; bottom: calc(100% + var(--sp-3)); transform: translateX(-50%); }
+.bt-jump[hidden] { display: none; }
+.bt-acts { display: flex; gap: 0; margin: auto 0 var(--corner-inset, 0px) var(--corner-inset, 0px); opacity: 0; transition: opacity var(--dur-1) var(--ease); }
+.bt-log > [data-hx-turn]:is(:hover, :focus-within) .bt-acts { opacity: 1; }
+.bt-acts .ui-ib:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }
+[data-margin="off"] .bt-acts { margin: var(--corner-inset, 0px) var(--corner-inset, 0px) var(--corner-inset, 0px) auto; }
+[data-margin="off"] .bt-log > [data-hx-turn] .ui-entry__body:not(:has(.bt-cardslot)) { padding-left: var(--sp-1); }
+.bt-log > [data-hx-turn]:has(.bt-cardslot) { --pad: 0px; }   /* a card sits flush in the entry's bottom corners (see .bt-cardslot) */
+
 /* the composer (the library's) sits on centerX, above the dock */
 .bt-composer-zone {
   position: absolute; z-index: 3;
   left: calc(var(--hx-center-x, 50vw) - var(--hx-view-left, 0px)); width: var(--hx-col-w, var(--col-w)); max-width: calc(100% - 2 * var(--gutter));
   bottom: calc(var(--hx-dock-space, 0px) + var(--composer-gap));
   transform: translateX(-50%);
+}
+/* the lines above the composer (the hint, who works next, the held messages) are bare text: the view's ground lies under the whole
+   zone, faded in above it, so a conversation scrolled behind never shows through them */
+.bt-composer-zone::before {
+  content: ''; position: absolute; z-index: -1; inset: calc(var(--sp-5) * -1) 0 0; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--bg-2) var(--sp-5));
 }
 
 /* ================================================================ new bot (bots' own form) */
@@ -96,6 +126,13 @@
 .bt-name:focus { border-bottom-color: var(--brass); }
 .bt-name:focus-visible { outline: none; }
 .bt-appearance { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); width: 100%; margin-bottom: var(--sp-6); }
+/* in a bot's settings (the look editor) the picker sits in a section: flush with its fields, the dice at the end of the tabs' line */
+.bt-appearance--sheet { align-items: stretch; margin-bottom: 0; }
+.bt-appearance--sheet .bt-pick { justify-content: flex-start; }
+.bt-appearance--sheet .bt-opts { justify-content: flex-start; }
+.bt-appearance-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.bt-look-dice { color: var(--text-quiet); }
+.bt-look-dice:hover, .bt-look-dice:focus-visible { color: var(--text); }
 .bt-pick { width: 100%; min-height: calc(var(--ctl) + 6px); display: flex; justify-content: center; }
 .bt-opts { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }
 .bt-opt { width: calc(var(--ctl) + 6px); height: calc(var(--ctl) + 6px); border-radius: var(--r-pill);   /* a pill: the colour circle in it stays a circle at --sp-2 (R-corner-9) */ display: grid; place-items: center; transition: background-color var(--dur-out) var(--ease); --sq-bg: transparent; background: var(--sq-bg); }
@@ -200,6 +237,10 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-groups { margin-top: var(--sp-3); }
 .bt-groups-h { margin: 0 0 var(--sp-1); }
 .bt-list.is-rail .bt-groups-h { display: none; }
+/* a group's members (the kit's stack) sit on the sidebar's frame; in the rail the stack is the row's one item, centred like an orb */
+.bt-list { --stack-ground: var(--bg-1); }
+.bt-list.is-rail .ui-row__lead:has(> .ui-stack) { width: auto; }
+.bt-list.is-rail .ui-row__lead > .ui-stack { margin-left: 0; min-width: 0; }
 .bt-group-add { display: inline-grid; place-items: center; width: 20px; height: 20px; color: var(--icon); }
 .bt-group-add .ui-icon { width: 16px; height: 16px; }
 .bt-ghead .bt-p-orb { width: auto; min-width: 40px; }
@@ -222,3 +263,25 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-new-col .bt-name-note { text-align: left; margin-inline: 0; }
 .bt-new-col .bt-go-row { margin-top: var(--sp-4); }
 .bt-new-col > .bt-p-name { margin: 0 0 var(--sp-2); }
+
+/* ───────── the huddle (huddle.ts): the members' own rounds, folded into one entry with compact messages on a spine ───────── */
+.bt-stack { display: inline-flex; align-items: center; }
+.bt-stack > * + * { margin-left: calc(var(--sp-1) * -1); }
+.bt-huddle-entry .ui-callno__who { gap: 0; }
+.bt-huddle-entry .ui-disclosure { align-self: flex-start; max-width: 100%; }
+.bt-huddle__body { display: flex; flex-direction: column; gap: var(--sp-5); width: 100%; min-width: 0; padding-top: var(--sp-2); }
+.bt-huddle__body[hidden] { display: none; }
+.bt-hmsg { position: relative; min-width: 0; }
+.bt-hmsg:not(:last-child)::after { content: ''; position: absolute; left: var(--sp-2); top: calc(var(--sp-5) + var(--sp-1)); bottom: calc(var(--sp-5) * -1); width: 1px; background: var(--line); }
+.bt-hmsg__head { display: flex; align-items: center; gap: var(--sp-1); min-height: 20px; font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
+.bt-hmsg__name { font: 500 var(--fs-s)/1 var(--sans); letter-spacing: 0; color: var(--text-strong); }
+.bt-hmsg__to b { font-weight: 400; color: var(--text-dim); }
+.bt-hmsg > .ui-md { margin-top: var(--sp-1); padding-left: var(--sp-5); box-sizing: border-box; }
+.bt-huddle__body > .bt-unread { margin: 0; }
+.bt-hint { margin: 0 0 var(--sp-2); text-align: center; font: 400 var(--fs-xs)/var(--lh-small) var(--sans); color: var(--text-quiet); }
+.bt-hint[hidden] { display: none; }
+/* the messages a group holds back while its members work (group-queue.ts): the kit's group and rows, above the composer */
+.bt-queue { margin: 0 0 var(--sp-2); }
+.bt-queue[hidden] { display: none; }
+.bt-outside { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-1); }
+.bt-outside__row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); margin: 0; font: 400 var(--fs-xs)/var(--lh-small) var(--sans); color: var(--text-quiet); }

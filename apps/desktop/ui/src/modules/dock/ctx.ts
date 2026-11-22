@@ -10,6 +10,8 @@ import type { DockMode } from '../../core/bus';
 import type { ComposerEl } from '@boopis/ui';
 import type { CardLike } from '@boopis/ui';
 import { pagesFor, presenceOf } from './presence';
+import { rowFit } from './geometry';
+import type { RowRoom } from './geometry';
 import type { Presence } from './presence';
 
 /* springs: near-critical damping (no visible overshoot); interrupted springs keep their velocity */
@@ -97,4 +99,16 @@ export const geomR = { R_TOP: 14, FLARE: 14 };
 export function readRadius(): void {
   const r = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--r-l'));
   if (r > 0) { geomR.R_TOP = r; geomR.FLARE = r; }
+}
+
+/** the bot row's room, measured on each layout (input.ts fitRow); null until the first one */
+export const fitIn = { room: null as RowRoom | null, drawn: -1 };
+let rowMemo: { n: number; room: RowRoom | null; shown: number; more: boolean } | null = null;
+/** how many bots the row shows now, and whether "All bots" follows them (geometry.ts rowFit) */
+export function rowNow(): { shown: number; more: boolean } {
+  const n = S.bots.length, room = fitIn.room;
+  if (rowMemo && rowMemo.n === n && rowMemo.room === room) return rowMemo;
+  const f = room ? rowFit(n, room) : { shown: n, more: false };
+  rowMemo = { n, room, shown: f.shown, more: f.more };
+  return rowMemo;
 }

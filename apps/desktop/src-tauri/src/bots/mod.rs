@@ -428,12 +428,27 @@ pub fn is_enabled(section: Option<&Value>, name: &str) -> bool {
 }
 
 /// The resolved spelling of a bot's home, which is what the engine accepts as a room entry (`must be an absolute, resolved
-/// home`).
+/// home`: it refuses a value that differs from Python's `Path(value).resolve()`).
 fn resolved(home: &Path) -> String {
-    std::fs::canonicalize(home)
-        .unwrap_or_else(|_| home.to_path_buf())
-        .display()
-        .to_string()
+    plain(
+        &std::fs::canonicalize(home)
+            .unwrap_or_else(|_| home.to_path_buf())
+            .display()
+            .to_string(),
+    )
+}
+
+/// A path without Windows' verbatim prefix, the spelling Python's `resolve()` gives: Rust's `canonicalize` answers
+/// `\\?\C:\...` (and `\\?\UNC\server\share`), which the engine would refuse as not resolved. Other paths are kept.
+#[must_use]
+pub fn plain(path: &str) -> String {
+    if let Some(rest) = path.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{rest}")
+    } else if let Some(rest) = path.strip_prefix(r"\\?\") {
+        rest.to_owned()
+    } else {
+        path.to_owned()
+    }
 }
 
 /// Step 1 of `prepare`: every plugin boopis manages into the bot's folder. True when one was placed now.
@@ -651,8 +666,7 @@ pub async fn release(engine: &dyn Engine, root: &Path, name: &str) -> Result<boo
 #[must_use]
 pub fn stale_entries(layout: &Layout, rooms: &BTreeMap<String, Value>) -> Vec<String> {
     let live = layout.bots();
-    let profiles = std::fs::canonicalize(layout.root.join("profiles"))
-        .unwrap_or_else(|_| layout.root.join("profiles"));
+    let profiles = PathBuf::from(resolved(&layout.root.join("profiles")));
     let raw_profiles = layout.root.join("profiles");
     rooms
         .iter()

@@ -8,10 +8,11 @@ from the process environment**, so no child the gateway starts later (a terminal
 inherits it, whatever Hermes's own scrub does. The host also checks, from the kernel, that the connecting process is the
 gateway and not a child of it, which holds even for a process that read the token another way.
 
-The engine imports a plugin once per profile home (a bot's home gets a copy of its own, ``hermes_plugins.boopis__home_<digest>``),
-and every copy runs in the same gateway process. The first copy to load takes the token out of the environment, so the
-credentials are kept in one process-wide slot (``SLOT``, a module of its own outside the engine's plugin namespace, in memory
-only) that every later copy reads: a bot's copy reaches the same host as the root's (ADR-0042).
+The engine imports a plugin once per profile home (a bot's home gets a copy of its own,
+``hermes_plugins.boopis__home_<digest>``), and every copy runs in the same gateway process. The first copy to load takes
+the token out of the environment, so the credentials are kept in one process-wide slot (``SLOT``, a module of its own
+outside the engine's plugin namespace, in memory only) that every later copy reads: a bot's copy reaches the same host
+as the root's (ADR-0042).
 
 A missing variable, a refused connection or a missing socket is "no host". The client can ask whether a secret exists
 (``has``) and read it (``get``); the protocol has no write and no list. Neither the token nor a value is ever put in an
@@ -71,16 +72,16 @@ class Credentials:
 
 _lock = threading.Lock()
 _captured: Credentials | None = None
-#: the process-wide slot every copy of the plugin shares (one per gateway process): ``(socket, token)`` once captured. A plain
-#: tuple, never this copy's ``Credentials``, because each copy has its own class
+#: the process-wide slot every copy of the plugin shares (one per gateway process): ``(socket, token)`` once captured. A
+#: plain tuple, never this copy's ``Credentials``, because each copy has its own class
 SLOT = "_boopis_host_channel"
 
 
 def _slot() -> types.ModuleType:
-    """The shared slot, made by the first copy that asks. ``sys.modules.setdefault`` keeps one even when two copies race."""
+    """The shared slot, made by the first copy that asks: ``sys.modules.setdefault`` keeps one when two copies race."""
     found = sys.modules.get(SLOT)
     if found is None:
-        made = types.ModuleType(SLOT, "boopis's host channel, shared by every profile's copy of the plugin (memory only)")
+        made = types.ModuleType(SLOT, "boopis's host channel, shared by every copy of the plugin (memory only)")
         made.held = None  # type: ignore[attr-defined]
         made.lock = threading.Lock()  # type: ignore[attr-defined]
         found = sys.modules.setdefault(SLOT, made)
@@ -91,9 +92,9 @@ def capture_environment() -> Credentials | None:
     """Take the host's socket and token from the process environment, once, and remove the token from it.
 
     Called first thing when the plugin loads, before anything can start a child process, so the token lives only in this
-    process's memory from then on. A later copy of the plugin (another profile's home in the same gateway) finds it in the
-    shared slot. Until a host has handed one over this looks again each time it is called (nothing is removed, because
-    nothing was there). Returns ``None`` when there is no host to talk to.
+    process's memory from then on. A later copy of the plugin (another profile's home in the same gateway) finds it in
+    the shared slot. Until a host has handed one over this looks again each time it is called (nothing is removed,
+    because nothing was there). Returns ``None`` when there is no host to talk to.
     """
     global _captured
     with _lock:
@@ -103,7 +104,8 @@ def capture_environment() -> Credentials | None:
         with slot.lock:  # pyright: ignore[reportAttributeAccessIssue]
             held: tuple[str, str] | None = slot.held  # pyright: ignore[reportAttributeAccessIssue]
             if held is None:
-                token = os.environ.pop(TOKEN_ENV, None)  # removed even when the socket is missing: it must not stay behind
+                # removed even when the socket is missing: it must not stay behind
+                token = os.environ.pop(TOKEN_ENV, None)
                 path = os.environ.get(SOCKET_ENV)
                 if sys.platform == "win32" or not token or not path:
                     return None
