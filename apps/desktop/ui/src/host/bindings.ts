@@ -264,6 +264,16 @@ export const commands = {
 	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.secrets.*`.
 	 */
 	providerSigninStatus: (way: string, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize>("provider_signin_status", { way }, options),
+	/**
+	 *  Give the bot `name` what its home needs (ADR-0042): the plugins boopis manages, its configuration (the Governed switch of
+	 *  its record among it) and its seat in groups. `fresh` is a bot made just now (its skills for another OS are switched off).
+	 *  The UI calls it after it makes, restores or changes a bot.
+	 */
+	botsPrepare: (name: string, fresh: boolean, options?: InvokeOptions) => __TAURI_INVOKE<BotPrepared>("bots_prepare", { name, fresh }, options),
+	/**  Take the bot `name` out of the root's groups (its `hosted_rooms.profiles` entry): after it is archived or deleted. */
+	botsRelease: (name: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("bots_release", { name }, options),
+	/**  The one notice the bots' repair left (the governance change), taken: the app shows it once. `None` when there is none. */
+	botsNotice: (options?: InvokeOptions) => __TAURI_INVOKE<string | null>("bots_notice", undefined, options),
 };
 
 /** Events */
@@ -366,6 +376,14 @@ export type Attachment_Serialize = {
 	kind: AttachmentKind,
 	/**  The size of a file in bytes; unknown for a folder. */
 	bytes: number | null,
+};
+
+/**  What preparing a bot did: whether anything changed, and each step that could not be done, in plain words. */
+export type BotPrepared = {
+	/**  Its home changed (a plugin placed, a setting written, its seat in groups). */
+	changed: boolean,
+	/**  What could not be done; the other steps were. */
+	problems: string[],
 };
 
 /**  Where to go, and (for a flow that has one) the code to type. */

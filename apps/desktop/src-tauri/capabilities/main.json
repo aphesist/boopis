@@ -79,6 +79,9 @@
     "allow-provider-signin-start",
     "allow-provider-signin-cancel",
     "allow-provider-sign-out",
-    "allow-provider-signin-status"
+    "allow-provider-signin-status",
+    "allow-bots-prepare",
+    "allow-bots-release",
+    "allow-bots-notice"
   ]
 }
