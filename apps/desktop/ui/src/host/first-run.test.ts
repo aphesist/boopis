@@ -6,6 +6,8 @@ import { HostError } from './bridge';
 import { choiceFor, stepsFor } from './first-run-ways';
 import { way as catalogueWay } from '../data/providers';
 import type { EndpointRequest, ProviderState, ProvidersBridge } from './providers-bridge';
+import { createWindowControls } from './window-controls';
+import type { WindowAction } from './bindings';
 
 const step = (id: string, state: SetupStatus['steps'][number]['state'], detail = '', code: string | null = null) => ({ id, title: id, state, detail, code });
 const form = (id: string, kind: string, schema: unknown, extra: Partial<NonNullable<SetupStatus['form']>> = {}): NonNullable<SetupStatus['form']> => ({
@@ -99,6 +101,41 @@ describe('first run', () => {
       expect(finished).toBe(true);
       expect(document.querySelector('.hx-first-run')).toBeNull();
     } finally { vi.useRealTimers(); }
+  });
+
+  it('keeps the window\'s own controls and a drag area over the whole window, laid out like the shell\'s, and lets them go when it leaves', async () => {
+    /* the window is undecorated and the layer covers the shell's title bar: without its own bar there is no way to move, shrink or close the window */
+    const calls: WindowAction[] = [];
+    const host = { info: () => Promise.resolve({ platform: 'windows' as const, desktop: 'Windows', tiling: false, maximized: false, fullscreen: false }), control: (a: WindowAction) => { calls.push(a); return Promise.resolve(); }, onState: () => Promise.resolve(() => undefined) };
+    const controls = createWindowControls({ host, toast: () => undefined });
+    const bridge = new Fake([status({ steps: [step('config', 'done')], done: true, receipt: { lines: [] } })]);
+    let finished = false;
+    void runFirstRun(bridge, document.body, { windowControls: controls }).then(() => { finished = true; });
+    await tick();
+    const root = document.querySelector('.hx-first-run');
+    const bar = root?.firstElementChild as HTMLElement | null;
+    expect(bar?.classList.contains('hx-bar')).toBe(true);
+    expect(bar?.getAttribute('data-tauri-drag-region')).toBe('deep');
+    const buttons = [...(bar?.querySelectorAll<HTMLButtonElement>('.hx-win button') ?? [])];
+    expect(buttons.filter((b) => !b.hidden).map((b) => b.getAttribute('aria-label'))).toEqual(['Minimize', 'Maximize', 'Close window']);
+    buttons[0]?.click();
+    expect(calls).toEqual(['minimize']);
+    /* the same bar stays through every step */
+    await click('Set up');
+    await new Promise((r) => setTimeout(r, 800));
+    expect(root?.firstElementChild).toBe(bar);
+    await click('Open boopis');
+    expect(finished).toBe(true);
+    buttons[2]?.click();
+    expect(calls, 'a layer that left lets its controls go').toEqual(['minimize']);
+  });
+
+  it('on a tiling desktop the layer\'s bar shows close alone, as the shell\'s does', async () => {
+    const host = { info: () => Promise.resolve({ platform: 'linux' as const, desktop: 'Hyprland', tiling: true, maximized: false, fullscreen: false }), control: () => Promise.resolve(), onState: () => Promise.resolve(() => undefined) };
+    void runFirstRun(new Fake([]), document.body, { windowControls: createWindowControls({ host, toast: () => undefined }) });
+    await tick(); await tick();
+    const shown = [...document.querySelectorAll<HTMLButtonElement>('.hx-first-run .hx-win button')].filter((b) => !b.hidden);
+    expect(shown.map((b) => b.getAttribute('aria-label'))).toEqual(['Close window']);
   });
 
   it('sends a choice, and a secret only in the secrets part, then clears the field', async () => {

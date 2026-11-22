@@ -9,7 +9,7 @@
 <body>
 <div id="hx-app" class="hx ui-root is-booting" data-tab="session" data-left="open" data-right="closed" data-dock="on">
 
-  <header class="hx-bar" data-tauri-drag-region>
+  <header class="hx-bar" data-tauri-drag-region="deep">
     <div class="hx-bar__lead">
       <span class="hx-mark"><boopis-logo mark still label="boopis"></boopis-logo></span>
       <button class="ui-ib" id="hx-btn-left" type="button" aria-controls="hx-side" aria-expanded="true" data-tip="Hide sidebar" data-kbd="mod+B"><span data-icon="sidebar-left"></span></button>
@@ -22,9 +22,9 @@
     <div class="hx-bar__end">
       <button class="ui-ib" id="hx-btn-right" type="button" aria-controls="hx-right-shell" aria-expanded="false" data-tip="Show session details" data-kbd="mod+I"><span data-icon="sidebar-right"></span></button>
       <div class="hx-win" role="group" aria-label="Window">
-        <button class="ui-ib ui-ib--window" id="hx-btn-min" type="button" aria-label="Minimize" data-tip="Minimize"><span data-icon="minimize"></span></button>
-        <button class="ui-ib ui-ib--window" id="hx-btn-max" type="button" aria-label="Full screen" data-tip="Full screen"><span data-icon="maximize"></span></button>
-        <button class="ui-ib ui-ib--window" id="hx-btn-close" type="button" aria-label="Close window" data-tip="Close window"><span data-icon="close"></span></button>
+        <button class="ui-ib ui-ib--window" id="hx-btn-min" type="button" data-win="min" aria-label="Minimize" data-tip="Minimize"><span data-icon="minimize"></span></button>
+        <button class="ui-ib ui-ib--window" id="hx-btn-max" type="button" data-win="max" aria-label="Full screen" data-tip="Full screen"><span data-icon="maximize"></span></button>
+        <button class="ui-ib ui-ib--window" id="hx-btn-close" type="button" data-win="close" aria-label="Close window" data-tip="Close window"><span data-icon="close"></span></button>
       </div>
     </div>
   </header>
