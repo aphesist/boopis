@@ -4,8 +4,8 @@
                                    (all of them, or those the text names with `@handle`), each answers as its own profile,
                                    and the others read the answers in the next round (at most 3 rounds, 10 messages)
      the thread                    the room's log, `groups.log` read from a cursor: `message.user` and `message.member` are the
-                                   messages, each member's by its member id; `turn.failed`, `member.unavailable` and a discussion
-                                   paused at its cap (`room.activity` bounded) are lines the app says
+                                   messages, each member's by its member id; `turn.failed` (in boopis's words, `./turn-failed.ts`),
+                                   `member.unavailable` and a discussion paused at its cap (`room.activity` bounded) are lines the app says
      who is replying               `groups.state` (`driver_status.member_activity`)
      rename                        `groups.rename`; stop `groups.stop`; continue after the cap `groups.continue`
    The engine moves a room's log with `groups.changed`; a slow poll is only the backstop. A room's roster is frozen when it is
@@ -22,6 +22,7 @@ import type { GroupsListResult, GroupsLogResult, GroupsStateResult, Room, RoomEv
 import type { GatewayClient } from '../gateway';
 import { clock } from '../map';
 import { isUnknownMethod } from './wire';
+import { turnFailedWords } from './turn-failed';
 
 const log = logger('live-groups');
 const POLL_MS = 8_000;
@@ -47,6 +48,8 @@ interface Rec {
   loaded: boolean;
   working: string[];
   watching: boolean;
+  /** the member who answers a new conversation first, when the room routes through a lead (`groups.state` context) */
+  lead: string | null;
 }
 const why = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 const uid = (): string => crypto.randomUUID().replace(/-/g, '').slice(0, 12);
@@ -69,7 +72,7 @@ export function createLiveGroups(deps: GroupsDeps) {
   const pending = new Set<Promise<unknown>>();
   const track = <T>(p: Promise<T>): Promise<T> => { pending.add(p); const done = (): void => { pending.delete(p); }; p.then(done, done); return p; };
 
-  const toGroup = (r: Rec): Group => ({ id: r.room.room_id, name: r.room.name, members: r.room.members.map(memberFrom), working: [...r.working] });
+  const toGroup = (r: Rec): Group => ({ id: r.room.room_id, name: r.room.name, members: r.room.members.map(memberFrom), working: [...r.working], ...(r.lead ? { lead: r.lead } : {}) });
   const nameOf = (r: Rec, id: string): string => r.room.members.map(memberFrom).find((m) => m.id === id)?.name ?? id;
   const live = (): Rec[] => [...recs.values()].filter((r) => !archivedIds.has(r.room.room_id));
 
@@ -81,7 +84,7 @@ export function createLiveGroups(deps: GroupsDeps) {
     switch (e.kind) {
       case 'message.user': return text ? { kind: 'text', id: e.event_id, who: 'you', t, text } : null;
       case 'message.member': return text ? { kind: 'text', id: e.event_id, who: String(p['member_id'] ?? e.actor?.id ?? ''), t, text } : null;
-      case 'turn.failed': return { kind: 'note', id: e.event_id, t, text: nameOf(r, String(p['member_id'] ?? '')) + ' could not reply.' };
+      case 'turn.failed': return { kind: 'note', id: e.event_id, t, text: turnFailedWords(nameOf(r, String(p['member_id'] ?? '')), typeof p['error'] === 'string' ? p['error'] : '', typeof p['reason_code'] === 'string' ? p['reason_code'] : null) };
       case 'member.unavailable': return { kind: 'note', id: e.event_id, t, text: nameOf(r, String(p['member_id'] ?? '')) + ' is not available.' };
       case 'room.stop_requested': return { kind: 'note', id: e.event_id, t, text: 'Stopped.' };
       case 'room.activity': return p['status'] === 'bounded' && typeof p['discussion_event_id'] === 'string' ? { kind: 'note', id: e.event_id, t, text: 'The conversation paused at its limit.', more: p['discussion_event_id'] } : null;
@@ -116,9 +119,13 @@ export function createLiveGroups(deps: GroupsDeps) {
     r.room = { ...r.room, ...st.room };
     const d = st.driver_status;
     const active = d?.working ? (d.member_activity ?? []).map((a) => a.member_id) : [];
-    const was = r.working.join(',');
+    const was = r.working.join(',') + '|' + (r.lead ?? '');
     r.working = active;
-    if (was !== active.join(',')) events.emit({ type: 'group', group: toGroup(r) });
+    /* the engine routes a new conversation through the lead only when the message names nobody; an @name brings that member in at
+       once (gateway/hosted_room_lead.py `routes_through_lead`), which the room says */
+    const ctx = st.context;
+    r.lead = ctx?.routing === 'lead' && ctx.lead_member_id ? ctx.lead_member_id : null;
+    if (was !== active.join(',') + '|' + (r.lead ?? '')) events.emit({ type: 'group', group: toGroup(r) });
     return !!d?.working;
   }
   /** follows a room while its members work: the log and who is replying, until two reads in a row find it idle */
@@ -155,7 +162,7 @@ export function createLiveGroups(deps: GroupsDeps) {
         for (const room of rooms) {
           const had = recs.get(room.room_id);
           if (!had) {
-            const r: Rec = { room, thread: [], seen: new Set(), cursor: 0, loaded: false, working: [], watching: false };
+            const r: Rec = { room, thread: [], seen: new Set(), cursor: 0, loaded: false, working: [], watching: false, lead: null };
             recs.set(room.room_id, r);
             if (!archivedIds.has(room.room_id)) events.emit({ type: 'group-created', group: toGroup(r) });
           } else if (had.room.name !== room.name || had.room.revision !== room.revision) {

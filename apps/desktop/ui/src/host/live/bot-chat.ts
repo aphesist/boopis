@@ -17,6 +17,7 @@ import type { ApprovalMessage, NoteMessage, TextMessage, ThreadMessage } from '.
 import type { TranscriptMessage } from '../../vendor/hermes-shared/gateway-contract.generated';
 import type { GatewayClient, GatewayEvent } from '../gateway';
 import { clock } from '../map';
+import { turnFailedWords } from './turn-failed';
 
 const log = logger('bot-chat');
 
@@ -174,11 +175,23 @@ export function createBotChat(deps: ChatDeps) {
         const r = start();
         const text = typeof p['text'] === 'string' ? p['text'] : r.text;
         const outcome = typeof p['outcome'] === 'string' ? p['outcome'] : 'completed';
-        patch(botId, c, r.id, text);
         c.running = null;
-        deps.emit({ type: 'message-end', botId, messageId: r.id, text });
         deps.emit({ type: 'run', botId, running: false });
         deps.live(botId, null);
+        if (p['status'] === 'error') {
+          /* a failed turn: the engine's own sentence never shows (ADR-0031). What the bot said before it failed stays; a reply that
+             is only the engine's error text goes, and the failure is said in boopis's words */
+          const raw = str(p['error']) || str(p['failure_reason']) || text;
+          const own = text.trim() && text.trim() !== raw.trim() && !text.trim().startsWith('⚠');
+          if (own) { patch(botId, c, r.id, text); deps.emit({ type: 'message-end', botId, messageId: r.id, text }); }
+          else c.thread = c.thread.filter((m) => m.id !== r.id);
+          c.thread.push({ kind: 'note', id: nextId('n'), who: 'app', t: t(), text: turnFailedWords(botId, raw, str(p['failure_reason']) || null) });
+          deps.emit({ type: 'thread', botId, messages: [...c.thread] });
+          deps.changed(botId);
+          break;
+        }
+        patch(botId, c, r.id, text);
+        deps.emit({ type: 'message-end', botId, messageId: r.id, text });
         if (outcome !== 'completed' && !text.trim()) note(botId, c, 'The reply was stopped.');
         deps.changed(botId);
         break;
