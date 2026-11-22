@@ -1,5 +1,5 @@
 /* Presence (presence.ts): who is at work, in one entry at the tail of the thread. The orbs sit in a live stack (the group stack's
-   look: one overlap step, discs with a ring of the ground, "+N" the last place) whose places are transforms, so an orb that joins,
+   look: one overlap step, each orb drawn whole with nothing cut, "+N" the last place) whose places are transforms, so an orb that joins,
    leaves or moves between one line and rows travels on the compositor and is never redrawn (R-motion-2, R-motion-5). Every
    duration is a token, so reduced motion (1ms) makes every step instant; the dot is the running dot, which stops (R-motion-6). */
 .ui-presence { --presence-row: calc(var(--s) + var(--sp-1)); transition: opacity var(--dur-2) var(--ease), transform var(--dur-2) var(--ease); }

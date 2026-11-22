@@ -8,9 +8,9 @@
        groups line up whatever each has (a "+N" too wide for a disc widens its own row only);
      - "+N" is the last member: a disc the size of an orb (a capsule only when N needs more room), overlapped by the same
        step, never colliding with the orb before it;
-     - each member sits on a disc of the ground under the stack with a 2px ring of it, so the overlap reads on every
-       ground: `--stack-ground` names that surface (the conversation's ground by default), and a translucent fill over it
-       (a row's hover or current, which rows pass through `--sq-bg`) is layered on the disc and the ring.
+     - nothing is cut or masked (the owner, 22 November 2026: "styled on top of one another, but still fully visible. i
+       don't want this cutting/masking thing"): each orb is drawn whole, with no disc or ring under it, and the next lies
+       over it; only "+N" has a disc, which is its own body.
    The stack is one image to assistive technology: role img, named by the members ("atlas, nina and kai"), the same words
    on hover; `focusable` gives it a tab stop when some names are folded into "+N" (where it is not inside a control).
    "+N" is drawn, not written (`data-more`, shown by CSS): it is part of the picture, whose words are the members' names.

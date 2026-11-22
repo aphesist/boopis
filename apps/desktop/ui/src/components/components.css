@@ -641,17 +641,15 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-orb-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 .ui-orb-btn[aria-pressed="true"], .ui-orb-btn[aria-current="true"] { box-shadow: 0 0 0 1.5px var(--brass); }
 /* stack: several bots as overlapped orbs (stack.ts). One step (a third of an orb), the first member underneath and each next one
-   on top, "+N" the last member on a disc of the same size. Each sits on a disc of the ground with a 2px ring of it so the overlap
-   reads: --stack-ground is the surface under the stack, --stack-fill a translucent fill over it (a row passes its own: --sq-bg).
-   The 2px padding holds the first and last rings inside the stack's box (R-corner-4); the stack is a row, not a surface.
-   The discs paint first and the orbs over them in their order (an orb's wrapper is positioned), so an orb overlaps the one
-   before it body on body; "+N" is positioned too, so it lies on the last orb like one more member, never under it. */
-.ui-stack { --s: 20px; --places: 3; --stack-step: calc(var(--s) / -3); box-sizing: content-box; --stack-ground: var(--bg-2); --stack-fill: transparent; display: inline-flex; align-items: center; flex: none; padding: 2px; line-height: 0; vertical-align: middle; }
+   on top, "+N" the last member on a disc of the same size. Nothing is cut or masked (the owner, 22 November 2026: "styled on top
+   of one another, but still fully visible. i don't want this cutting/masking thing"): an orb is drawn whole, with no disc and no
+   ring under it, and the next simply lies over it, so a round disc never bites into the bot beneath a triangle. "+N" is a disc
+   of --bg-3 (with a row's fill, --stack-fill, over it), its own body, with no ring either. The 2px padding gives the stack's focus
+   ring its room; the stack is a row, not a surface. An orb's wrapper is positioned, so each orb lies over the one before it, and
+   "+N" is positioned too, so it lies on the last orb like one more member, never under it. */
+.ui-stack { --s: 20px; --places: 3; --stack-step: calc(var(--s) / -3); box-sizing: content-box; --stack-fill: transparent; display: inline-flex; align-items: center; flex: none; padding: 2px; line-height: 0; vertical-align: middle; }
 .ui-stack[hidden] { display: none; }
-.ui-stack__one, .ui-stack__more {
-  flex: none; box-sizing: border-box; height: var(--s); margin-left: var(--stack-step); border-radius: var(--r-pill);
-  background: linear-gradient(var(--stack-fill), var(--stack-fill)) var(--stack-ground); box-shadow: 0 0 0 2px var(--stack-fill), 0 0 0 2px var(--stack-ground);
-}
+.ui-stack__one, .ui-stack__more { flex: none; box-sizing: border-box; height: var(--s); margin-left: var(--stack-step); border-radius: var(--r-pill); }
 .ui-stack > :first-child { margin-left: 0; }
 .ui-stack__one { display: inline-grid; place-items: center; width: var(--s); }
 .ui-stack__more {
@@ -661,8 +659,8 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 }
 .ui-stack__more::before { content: attr(data-more); }
 .ui-stack[tabindex]:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-offset); border-radius: var(--r-pill); }
-/* in a row (a group's lead) the stack has a slot of its own: the lead grows to hold it, so it never covers the row's text; its
-   rings take the row's fill (rest, hover, current) over the list's ground, and the first orb keeps the row's orb axis */
+/* in a row (a group's lead) the stack has a slot of its own: the lead grows to hold it, so it never covers the row's text; "+N"
+   takes the row's fill (rest, hover, current), and the first orb keeps the row's orb axis */
 .ui-row__lead:has(> .ui-stack) { width: auto; }
 .ui-row__lead > .ui-stack { --stack-fill: var(--sq-bg); margin-left: -2px; min-width: calc(var(--s) + (var(--places) - 1) * (var(--s) + var(--stack-step))); }
 .ui-state { font: 400 var(--fs-2xs)/1.45 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); white-space: nowrap; }

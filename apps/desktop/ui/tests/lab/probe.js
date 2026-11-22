@@ -616,9 +616,6 @@
         const hasText = [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
         if (hasText && ckey(s.color) === T.roles['--brass'] && !e.closest('[role="menuitemradio"], [aria-current], .ui-ladder')) add('roles', e, 'text in --brass: brass marks position and choice, never text (R-colour-3)');
         const bg = ckey(s.backgroundColor);
-        /* a stack's discs are the ground itself, cut out under the next orb (components.css, stack): not a surface, so not inset
-           on inset; on the dock every ground role is the dock's black, and the disc rightly paints the same as what it sits on */
-        if (e.parentElement?.classList.contains('ui-stack')) continue;
         if (bg === T.roles['--bg-0'] || bg === T.roles['--bg-3']) {
           for (let p = e.parentElement; p && p !== document.documentElement; p = p.parentElement) {
             let pb = getComputedStyle(p).backgroundColor;
