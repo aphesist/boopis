@@ -127,7 +127,11 @@ impl Service {
         let _one = self.lock.lock().await;
         let records = self
             .engine
-            .call(&layout.root, "plugin.boopis.bots.read", serde_json::json!({}))
+            .call(
+                &layout.root,
+                "plugin.boopis.bots.read",
+                serde_json::json!({}),
+            )
             .await?;
         let governed = super::governed_of(&records)
             .get(name)

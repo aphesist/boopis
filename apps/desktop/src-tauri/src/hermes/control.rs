@@ -364,9 +364,15 @@ mod tests {
                 let req: serde_json::Value = serde_json::from_str(&line).unwrap();
                 assert_eq!(req["verb"], "reload-plugins");
                 assert_eq!(req["params"]["home"], want);
-                w.write_all(format!("{}\n", serde_json::json!({"ok":true,"protocol":1,"result":answer,"id":1})).as_bytes())
-                    .await
-                    .unwrap();
+                w.write_all(
+                    format!(
+                        "{}\n",
+                        serde_json::json!({"ok":true,"protocol":1,"result":answer,"id":1})
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
             }
         });
         let loaded = reload_plugins(dir.path(), &bot).await.unwrap();

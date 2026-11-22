@@ -64,9 +64,7 @@ fn drop_key(v: &mut Value, key: &str) {
     let target = if parent.is_empty() {
         Some(v)
     } else {
-        parent
-            .split('.')
-            .try_fold(v, |at, k| at.get_mut(k))
+        parent.split('.').try_fold(v, |at, k| at.get_mut(k))
     };
     if let Some(Value::Object(m)) = target {
         m.remove(last);
@@ -84,7 +82,10 @@ impl Fake {
         }
     }
     fn seed(&self, home: &Path, config: Value) {
-        self.config.lock().unwrap().insert(home.to_path_buf(), config);
+        self.config
+            .lock()
+            .unwrap()
+            .insert(home.to_path_buf(), config);
     }
     fn get(&self, home: &Path, key: &str) -> Option<Value> {
         self.config
@@ -114,9 +115,14 @@ impl Engine for Fake {
     }
     async fn config_set(&self, home: &Path, key: &str, value: &str) -> Result<()> {
         // the engine's coercion: JSON where it parses, text otherwise
-        let parsed = serde_json::from_str(value).unwrap_or_else(|_| Value::String(value.to_owned()));
+        let parsed =
+            serde_json::from_str(value).unwrap_or_else(|_| Value::String(value.to_owned()));
         let mut all = self.config.lock().unwrap();
-        put(all.entry(home.to_path_buf()).or_insert_with(|| json!({})), key, parsed);
+        put(
+            all.entry(home.to_path_buf()).or_insert_with(|| json!({})),
+            key,
+            parsed,
+        );
         self.log.lock().unwrap().push(Did::Set(
             home.display().to_string(),
             key.to_owned(),
@@ -157,7 +163,9 @@ impl Engine for Fake {
         self.log.lock().unwrap().push(Did::Call(method.to_owned()));
         let mut records = self.records.lock().unwrap();
         match method {
-            "plugin.boopis.bots.read" => Ok(json!({"bots": records.iter().map(|(n, r)| json!({"name": n, "record": r})).collect::<Vec<_>>()})),
+            "plugin.boopis.bots.read" => Ok(
+                json!({"bots": records.iter().map(|(n, r)| json!({"name": n, "record": r})).collect::<Vec<_>>()}),
+            ),
             "plugin.boopis.bots.write" => {
                 let name = params["name"].as_str().unwrap().to_owned();
                 let r = records.entry(name).or_insert_with(|| json!({}));
@@ -192,7 +200,10 @@ fn plugin(dir: &Path, version: &str) {
     std::fs::create_dir_all(dir).unwrap();
     std::fs::write(
         dir.join("plugin.yaml"),
-        format!("name: {}\nversion: {version}\n", dir.file_name().unwrap().to_string_lossy()),
+        format!(
+            "name: {}\nversion: {version}\n",
+            dir.file_name().unwrap().to_string_lossy()
+        ),
     )
     .unwrap();
     std::fs::write(dir.join("__init__.py"), "").unwrap();
@@ -221,7 +232,14 @@ fn owners_home(fake: &Fake) -> Home {
     let mut rooms = serde_json::Map::new();
     for (name, model) in TEAM {
         let home = root.join("profiles").join(name);
-        for f in ["config.yaml", "SOUL.md", "profile.yaml", "state.db", ".env", "gateway.lock"] {
+        for f in [
+            "config.yaml",
+            "SOUL.md",
+            "profile.yaml",
+            "state.db",
+            ".env",
+            "gateway.lock",
+        ] {
             std::fs::create_dir_all(&home).unwrap();
             std::fs::write(home.join(f), "").unwrap();
         }
@@ -229,14 +247,26 @@ fn owners_home(fake: &Fake) -> Home {
             std::fs::create_dir_all(home.join(d)).unwrap();
         }
         // the engine's bundled skills, the mac ones among them
-        for (skill, fm) in [("apple/apple-notes", "platforms: [macos]"), ("apple/imessage", "platforms: [macos]"), ("research/arxiv", "name: arxiv")] {
+        for (skill, fm) in [
+            ("apple/apple-notes", "platforms: [macos]"),
+            ("apple/imessage", "platforms: [macos]"),
+            ("research/arxiv", "name: arxiv"),
+        ] {
             std::fs::create_dir_all(home.join("skills").join(skill)).unwrap();
-            std::fs::write(home.join("skills").join(skill).join("SKILL.md"), format!("---\n{fm}\n---\n")).unwrap();
+            std::fs::write(
+                home.join("skills").join(skill).join("SKILL.md"),
+                format!("---\n{fm}\n---\n"),
+            )
+            .unwrap();
         }
         // the owner's workaround: an absolute link to the subscription plugin
         std::fs::create_dir_all(home.join("plugins")).unwrap();
         #[cfg(unix)]
-        std::os::unix::fs::symlink(root.join("plugins").join(SUB), home.join("plugins").join(SUB)).unwrap();
+        std::os::unix::fs::symlink(
+            root.join("plugins").join(SUB),
+            home.join("plugins").join(SUB),
+        )
+        .unwrap();
         #[cfg(not(unix))]
         plugin(&home.join("plugins").join(SUB), "1.0.0");
         let mut cfg = json!({
@@ -292,7 +322,10 @@ async fn the_owners_home_is_repaired_once_and_their_fixes_are_kept() {
     let notice = take_notice(&home.root).unwrap().unwrap();
     for (name, _) in TEAM {
         assert!(notice.contains(name), "{notice}");
-        assert_eq!(fake.records.lock().unwrap()[*name]["settings"]["gov"], "ungoverned");
+        assert_eq!(
+            fake.records.lock().unwrap()[*name]["settings"]["gov"],
+            "ungoverned"
+        );
         let bot = home.bot(name);
         assert_eq!(
             fake.get(&bot, "plugins.entries.boopis.settings.mode"),
@@ -305,7 +338,10 @@ async fn the_owners_home_is_repaired_once_and_their_fixes_are_kept() {
             Some(json!(layout.hx().display().to_string()))
         );
         assert_eq!(fake.get(&bot, "delegation.backend"), Some(json!("boopis")));
-        assert_eq!(fake.get(&bot, "tools.tool_search.enabled"), Some(json!("off")));
+        assert_eq!(
+            fake.get(&bot, "tools.tool_search.enabled"),
+            Some(json!("off"))
+        );
         // every plugin the root has reaches the bot; the owner's own link is the one it had
         for p in std::iter::once(&BOOPIS).chain(CARRIED) {
             assert_eq!(
@@ -360,7 +396,11 @@ async fn the_owners_home_is_repaired_once_and_their_fixes_are_kept() {
     let again = repair(&fake, &layout).await.unwrap();
     assert!(again.bots.is_empty(), "{:?}", again.bots);
     assert!(fake.writes().is_empty(), "{:?}", fake.writes());
-    assert_eq!(take_notice(&home.root).unwrap(), None, "the notice is shown once");
+    assert_eq!(
+        take_notice(&home.root).unwrap(),
+        None,
+        "the notice is shown once"
+    );
 }
 
 #[tokio::test]
@@ -372,14 +412,37 @@ async fn a_governed_bot_turned_on_later_stays_governed() {
     // the owner turns Governed on for kai (opus) in its settings; the app then prepares it
     fake.records.lock().unwrap().get_mut("kai").unwrap()["settings"]["gov"] = json!("governed");
     let mut view = RootView::read(&fake, &home.root).await.unwrap();
-    let done = prepare(&fake, &layout, &mut view, "kai", Ask { governed: true, fresh: false }).await.unwrap();
-    assert_eq!(done.written, vec!["plugins.entries.boopis.settings.mode".to_owned()]);
-    assert_eq!(fake.get(&home.bot("kai"), "plugins.entries.boopis.settings.mode"), Some(json!("governed")));
+    let done = prepare(
+        &fake,
+        &layout,
+        &mut view,
+        "kai",
+        Ask {
+            governed: true,
+            fresh: false,
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        done.written,
+        vec!["plugins.entries.boopis.settings.mode".to_owned()]
+    );
+    assert_eq!(
+        fake.get(&home.bot("kai"), "plugins.entries.boopis.settings.mode"),
+        Some(json!("governed"))
+    );
     // the next start does not undo it: the one-time change is done
     let next = repair(&fake, &layout).await.unwrap();
     assert!(next.ungoverned.is_empty());
-    assert_eq!(fake.records.lock().unwrap()["kai"]["settings"]["gov"], "governed");
-    assert_eq!(fake.get(&home.bot("kai"), "plugins.entries.boopis.settings.mode"), Some(json!("governed")));
+    assert_eq!(
+        fake.records.lock().unwrap()["kai"]["settings"]["gov"],
+        "governed"
+    );
+    assert_eq!(
+        fake.get(&home.bot("kai"), "plugins.entries.boopis.settings.mode"),
+        Some(json!("governed"))
+    );
 }
 
 #[tokio::test]
@@ -392,28 +455,57 @@ async fn a_new_bot_gets_everything_and_its_seat() {
     // what profiles.create leaves: a fresh home with the model pinned and nothing of boopis's
     let bot = home.bot("iris2");
     std::fs::create_dir_all(bot.join("skills/apple/findmy")).unwrap();
-    std::fs::write(bot.join("skills/apple/findmy/SKILL.md"), "---\nplatforms: [macos]\n---\n").unwrap();
+    std::fs::write(
+        bot.join("skills/apple/findmy/SKILL.md"),
+        "---\nplatforms: [macos]\n---\n",
+    )
+    .unwrap();
     std::fs::write(bot.join("config.yaml"), "").unwrap();
-    fake.seed(&bot, json!({"model": {"provider": SUB, "default": "sonnet"}}));
+    fake.seed(
+        &bot,
+        json!({"model": {"provider": SUB, "default": "sonnet"}}),
+    );
     let mut view = RootView::read(&fake, &home.root).await.unwrap();
-    let done = prepare(&fake, &layout, &mut view, "iris2", Ask { governed: false, fresh: true }).await.unwrap();
+    let done = prepare(
+        &fake,
+        &layout,
+        &mut view,
+        "iris2",
+        Ask {
+            governed: false,
+            fresh: true,
+        },
+    )
+    .await
+    .unwrap();
     assert!(done.problems.is_empty(), "{:?}", done.problems);
     assert_eq!(done.placed.len(), 4);
     assert!(done.enabled && done.seated);
     assert_eq!(done.skills_off, vec!["findmy".to_owned()]);
     assert_eq!(
         fake.get(&home.root, "hosted_rooms.profiles.iris2"),
-        Some(json!(std::fs::canonicalize(&bot).unwrap().display().to_string()))
+        Some(json!(
+            std::fs::canonicalize(&bot).unwrap().display().to_string()
+        ))
     );
     // the settings and the secrets come before the enable, so the gateway loads the plugin with them
     let log = fake.writes();
-    let enable = log.iter().position(|d| matches!(d, Did::Enable(..))).unwrap();
-    let last_bot_set = log.iter().rposition(|d| matches!(d, Did::Set(h, ..) if *h == bot.display().to_string())).unwrap();
+    let enable = log
+        .iter()
+        .position(|d| matches!(d, Did::Enable(..)))
+        .unwrap();
+    let last_bot_set = log
+        .iter()
+        .rposition(|d| matches!(d, Did::Set(h, ..) if *h == bot.display().to_string()))
+        .unwrap();
     assert!(last_bot_set < enable, "{log:?}");
     // archived: it leaves the groups, and nothing else goes
     assert!(release(&fake, &home.root, "iris2").await.unwrap());
     assert_eq!(fake.get(&home.root, "hosted_rooms.profiles.iris2"), None);
-    assert!(!release(&fake, &home.root, "iris2").await.unwrap(), "nothing to do twice");
+    assert!(
+        !release(&fake, &home.root, "iris2").await.unwrap(),
+        "nothing to do twice"
+    );
     assert!(fake.get(&home.root, "hosted_rooms.profiles.kai").is_some());
 }
 
@@ -426,18 +518,33 @@ async fn the_roots_key_wiring_reaches_every_bot_and_a_reload_loads_it() {
     fake.clear();
     // the user adds an API key in Settings: the root's secret source now names it
     let mut root_cfg = fake.config.lock().unwrap()[&home.root].clone();
-    put(&mut root_cfg, "secrets.boopis_host", json!({"enabled": true, "env": {"ANTHROPIC_API_KEY": "secret://provider.anthropic/api_key"}}));
+    put(
+        &mut root_cfg,
+        "secrets.boopis_host",
+        json!({"enabled": true, "env": {"ANTHROPIC_API_KEY": "secret://provider.anthropic/api_key"}}),
+    );
     fake.seed(&home.root, root_cfg);
     let done = repair(&fake, &layout).await.unwrap();
-    assert_eq!(done.bots.len(), 6, "the root changed, so every bot is looked at again");
+    assert_eq!(
+        done.bots.len(),
+        6,
+        "the root changed, so every bot is looked at again"
+    );
     for (name, _) in TEAM {
         let bot = home.bot(name);
-        assert_eq!(fake.get(&bot, "secrets.boopis_host.enabled"), Some(json!(true)));
+        assert_eq!(
+            fake.get(&bot, "secrets.boopis_host.enabled"),
+            Some(json!(true))
+        );
         assert_eq!(
             fake.get(&bot, "secrets.boopis_host.env.ANTHROPIC_API_KEY"),
             Some(json!("secret://provider.anthropic/api_key"))
         );
-        assert!(fake.writes().contains(&Did::Reload(bot.display().to_string())), "{name}");
+        assert!(
+            fake.writes()
+                .contains(&Did::Reload(bot.display().to_string())),
+            "{name}"
+        );
     }
     assert!(!done.restarted);
 }
@@ -456,7 +563,10 @@ async fn without_a_reload_the_gateway_restarts_once_and_never_on_live_work() {
     }
     let done = repair(&fake, &layout).await.unwrap();
     assert!(done.restarted);
-    assert_eq!(fake.writes().iter().filter(|d| **d == Did::Restart).count(), 1);
+    assert_eq!(
+        fake.writes().iter().filter(|d| **d == Did::Restart).count(),
+        1
+    );
     // with work running nothing is restarted, and the next start looks again
     let mut busy = Fake::new();
     busy.reload_works = false;
@@ -480,8 +590,16 @@ async fn a_gone_bots_seat_is_removed_and_a_foreign_one_stays() {
     let home = owners_home(&fake);
     let layout = layout_of(&home, Strategy::here());
     let mut cfg = fake.config.lock().unwrap()[&home.root].clone();
-    put(&mut cfg, "hosted_rooms.profiles.ghost", json!(home.bot("ghost").display().to_string()));
-    put(&mut cfg, "hosted_rooms.profiles.away", json!("/somewhere/else/profiles/away"));
+    put(
+        &mut cfg,
+        "hosted_rooms.profiles.ghost",
+        json!(home.bot("ghost").display().to_string()),
+    );
+    put(
+        &mut cfg,
+        "hosted_rooms.profiles.away",
+        json!("/somewhere/else/profiles/away"),
+    );
     fake.seed(&home.root, cfg);
     // an archived bot keeps its folder under its new name and loses its seat
     std::fs::rename(home.bot("nimbus"), home.bot("archived--nimbus")).unwrap();
@@ -501,12 +619,19 @@ async fn on_windows_the_plugins_are_copies_and_follow_the_root() {
     repair(&fake, &layout).await.unwrap();
     let bot = home.bot("moss");
     let copy = bot.join("plugins").join(BOOPIS);
-    assert!(!std::fs::symlink_metadata(&copy).unwrap().file_type().is_symlink());
+    assert!(
+        !std::fs::symlink_metadata(&copy)
+            .unwrap()
+            .file_type()
+            .is_symlink()
+    );
     assert_eq!(links::version_in(&bot, BOOPIS).as_deref(), Some("1.0.0"));
     // an app update replaces the root's copy: the next start replaces each bot's
     plugin(&home.root.join("plugins").join(BOOPIS), "1.1.0");
     let mut view = RootView::read(&fake, &home.root).await.unwrap();
-    let done = prepare(&fake, &layout, &mut view, "moss", Ask::default()).await.unwrap();
+    let done = prepare(&fake, &layout, &mut view, "moss", Ask::default())
+        .await
+        .unwrap();
     assert_eq!(done.placed, vec![BOOPIS.to_owned()]);
     assert_eq!(links::version_in(&bot, BOOPIS).as_deref(), Some("1.1.0"));
 }
@@ -528,8 +653,14 @@ fn names_are_checked_and_the_default_profile_is_no_bot() {
     assert!(check_name("kai").is_ok() && check_name("archived--kai").is_ok());
     let tmp = tempfile::tempdir().unwrap();
     let layout = Layout::new(tmp.path().to_path_buf(), &[]);
-    assert!(layout.home("archived--kai").is_err(), "an archived bot is restored first");
-    assert_eq!(layout.home("nobody").unwrap_err().code(), "hx.bots.not_found");
+    assert!(
+        layout.home("archived--kai").is_err(),
+        "an archived bot is restored first"
+    );
+    assert_eq!(
+        layout.home("nobody").unwrap_err().code(),
+        "hx.bots.not_found"
+    );
 }
 
 #[test]
@@ -537,7 +668,13 @@ fn the_settings_follow_the_switch_and_the_model() {
     let opus = (SUB.to_owned(), "opus".to_owned());
     let haiku = (SUB.to_owned(), "haiku".to_owned());
     let w = settings_writes(None, None, false, &haiku);
-    assert_eq!(w, vec![("plugins.entries.boopis.settings.mode".to_owned(), json!("ungoverned"))]);
+    assert_eq!(
+        w,
+        vec![(
+            "plugins.entries.boopis.settings.mode".to_owned(),
+            json!("ungoverned")
+        )]
+    );
     let w = settings_writes(Some(&json!({"mode": "governed"})), None, true, &opus);
     assert_eq!(w.len(), 1, "the ladder only: {w:?}");
     assert_eq!(w[0].1["tiers"][0]["model"], format!("{SUB}/opus"));
@@ -550,13 +687,25 @@ fn the_roots_secrets_and_providers_are_copied_leaf_by_leaf_without_inline_keys()
     let bot = json!({"enabled": true, "env": {"A": "secret://x/a", "MINE": "secret://y/m"}});
     assert_eq!(
         secrets_writes(Some(&root), Some(&bot)),
-        vec![("secrets.boopis_host.env.B".to_owned(), json!("secret://x/b"))]
+        vec![(
+            "secrets.boopis_host.env.B".to_owned(),
+            json!("secret://x/b")
+        )]
     );
     let mut providers = BTreeMap::new();
-    providers.insert("custom-lab".to_owned(), json!({"base_url": "https://lab.example/v1", "key_env": "BOOPIS_LAB"}));
-    providers.insert("inline".to_owned(), json!({"base_url": "https://x", "api_key": "sk-123"}));
+    providers.insert(
+        "custom-lab".to_owned(),
+        json!({"base_url": "https://lab.example/v1", "key_env": "BOOPIS_LAB"}),
+    );
+    providers.insert(
+        "inline".to_owned(),
+        json!({"base_url": "https://x", "api_key": "sk-123"}),
+    );
     assert_eq!(provider_writes(&providers, "custom-lab", None).len(), 2);
-    assert!(provider_writes(&providers, "inline", None).is_empty(), "a key in the text is never copied");
+    assert!(
+        provider_writes(&providers, "inline", None).is_empty(),
+        "a key in the text is never copied"
+    );
 }
 
 #[test]
@@ -564,6 +713,9 @@ fn the_notice_names_the_bots_plainly() {
     let one = governance_notice(&["kai".to_owned()]);
     assert!(one.contains("kai stays ungoverned, as it ran"));
     let many = governance_notice(&["kai".into(), "nina".into(), "moss".into()]);
-    assert!(many.contains("kai, nina and moss stay ungoverned, as they ran"), "{many}");
+    assert!(
+        many.contains("kai, nina and moss stay ungoverned, as they ran"),
+        "{many}"
+    );
     assert!(!crate::error::names_engine(&many));
 }

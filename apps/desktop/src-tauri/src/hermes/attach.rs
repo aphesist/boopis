@@ -41,7 +41,9 @@ pub fn redact_tickets(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     loop {
-        let at_proto = rest.find(TICKET_PREFIX).map(|i| (i, i + TICKET_PREFIX.len()));
+        let at_proto = rest
+            .find(TICKET_PREFIX)
+            .map(|i| (i, i + TICKET_PREFIX.len()));
         let at_member = rest.find("\"ticket\"").and_then(|i| {
             let after = &rest[i + 8..];
             let colon = after.find(|c: char| !c.is_whitespace())?;
@@ -62,7 +64,9 @@ pub fn redact_tickets(text: &str) -> String {
             return out;
         };
         out.push_str(&rest[..value_at]);
-        let len = rest[value_at..].find(|c: char| !token(c)).unwrap_or(rest.len() - value_at);
+        let len = rest[value_at..]
+            .find(|c: char| !token(c))
+            .unwrap_or(rest.len() - value_at);
         if len > 0 {
             out.push_str("<redacted>");
         }

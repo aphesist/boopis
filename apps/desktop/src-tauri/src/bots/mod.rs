@@ -133,8 +133,12 @@ impl Layout {
         }
         let parent = self.root.join("profiles");
         let path = parent.join(name);
-        let meta = std::fs::symlink_metadata(&path)
-            .map_err(|_| Error::Bots("hx.bots.not_found", format!("there is no bot called {name}")))?;
+        let meta = std::fs::symlink_metadata(&path).map_err(|_| {
+            Error::Bots(
+                "hx.bots.not_found",
+                format!("there is no bot called {name}"),
+            )
+        })?;
         let inside = std::fs::canonicalize(&path)
             .ok()
             .zip(std::fs::canonicalize(&parent).ok())
@@ -432,12 +436,104 @@ fn resolved(home: &Path) -> String {
         .to_string()
 }
 
+/// Step 1 of `prepare`: every plugin boopis manages into the bot's folder. True when one was placed now.
+fn place_plugins(layout: &Layout, home: &Path, done: &mut Prepared) -> bool {
+    let mut placed = false;
+    for plugin in &layout.plugins {
+        let source = layout.root.join("plugins").join(plugin);
+        match links::place(&source, home, plugin, layout.strategy) {
+            Ok(p) if p.changed() => {
+                placed = true;
+                done.placed.push(plugin.clone());
+            }
+            Ok(_) => {}
+            Err(e) => done
+                .problems
+                .push(done_problem(&format!("the {plugin} plugin"), &e)),
+        }
+    }
+    placed
+}
+
+/// What the bot's home is read for once: its `plugins` section, its model and its secret-source section.
+struct BotConfig {
+    plugins: Option<Value>,
+    model: (String, String),
+    secrets: Option<Value>,
+}
+
+/// Step 2 of `prepare`: the keys the bot's home lacks, the root's first (secrets, consent, its named provider), then the
+/// plugin's settings. The second value says whether any of the root's changed (the gateway must then reload the bot).
+async fn config_writes(
+    engine: &dyn Engine,
+    home: &Path,
+    view: &RootView,
+    have: &BotConfig,
+    hx: Option<&Path>,
+    governed: bool,
+    done: &mut Prepared,
+) -> (Vec<(String, Value)>, bool) {
+    let mut writes = secrets_writes(view.secrets.as_ref(), have.secrets.as_ref());
+    for (key, value) in &view.consented {
+        match engine.config_get(home, key).await {
+            Ok(got) if got.as_ref() == Some(value) => {}
+            Ok(_) => writes.push((key.clone(), value.clone())),
+            Err(e) => done.problems.push(done_problem(key, &e)),
+        }
+    }
+    let provider = &have.model.0;
+    if !provider.is_empty() && view.providers.contains_key(provider) {
+        let mine = engine
+            .config_get(home, &format!("providers.{provider}"))
+            .await
+            .unwrap_or(None);
+        writes.extend(provider_writes(&view.providers, provider, mine.as_ref()));
+    }
+    let roots = !writes.is_empty();
+    let settings = have
+        .plugins
+        .as_ref()
+        .and_then(|p| p.get("entries"))
+        .and_then(|e| e.get(BOOPIS))
+        .and_then(|b| b.get("settings"));
+    writes.extend(settings_writes(settings, hx, governed, &have.model));
+    (writes, roots)
+}
+
+/// The skills of the bot made for another OS that its `skills.disabled` does not list yet, and the list with them.
+async fn skills_write(
+    engine: &dyn Engine,
+    home: &Path,
+    system: &str,
+) -> Option<(Vec<String>, Value)> {
+    let off = skills::for_other_systems(home, system);
+    if off.is_empty() {
+        return None;
+    }
+    let mut list: Vec<String> = engine
+        .config_get(home, "skills.disabled")
+        .await
+        .ok()
+        .flatten()
+        .and_then(|v| v.as_array().cloned())
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|v| v.as_str().map(str::to_owned))
+        .collect();
+    let new: Vec<String> = off.into_iter().filter(|s| !list.contains(s)).collect();
+    if new.is_empty() {
+        return None;
+    }
+    list.extend(new.iter().cloned());
+    Some((new, json!(list)))
+}
+
 /// Give the bot `name` what it needs (the module's list). `view` is the root as `RootView::read` gave it; the root's room
 /// entry is updated in it too, so a repair across many bots reads the root once.
 ///
 /// # Errors
-/// `InvalidInput` or `hx.bots.not_found` for a name that is not a live bot. Anything that fails after that is a `problems` line, and
-/// the other steps still run.
+/// `InvalidInput` or `hx.bots.not_found` for a name that is not a live bot. Anything that fails after that is a `problems`
+/// line, and the other steps still run.
 pub async fn prepare(
     engine: &dyn Engine,
     layout: &Layout,
@@ -450,83 +546,42 @@ pub async fn prepare(
         name: name.to_owned(),
         ..Prepared::default()
     };
-    let fail = done_problem;
     // 1. the plugins
-    let mut reload = false;
-    for plugin in &layout.plugins {
-        let source = layout.root.join("plugins").join(plugin);
-        match links::place(&source, &home, plugin, layout.strategy) {
-            Ok(p) if p.changed() => {
-                reload = true;
-                done.placed.push(plugin.clone());
-            }
-            Ok(_) => {}
-            Err(e) => done.problems.push(fail(&format!("the {plugin} plugin"), &e)),
-        }
-    }
+    let placed = place_plugins(layout, &home, &mut done);
     // 2. its configuration
-    let read = |key: &'static str| engine.config_get(&home, key);
-    let plugins = read("plugins").await;
-    let model = read("model").await;
-    let secrets = read("secrets.boopis_host").await;
-    let (plugins, model, secrets) = match (plugins, model, secrets) {
-        (Ok(p), Ok(m), Ok(s)) => (p, m, s),
+    let read = (
+        engine.config_get(&home, "plugins").await,
+        engine.config_get(&home, "model").await,
+        engine.config_get(&home, "secrets.boopis_host").await,
+    );
+    let have = match read {
+        (Ok(plugins), Ok(model), Ok(secrets)) => BotConfig {
+            plugins,
+            model: model_of(model.as_ref()),
+            secrets,
+        },
         (Err(e), ..) | (_, Err(e), _) | (.., Err(e)) => {
             done.problems
-                .push(fail("its configuration could not be read", &e));
+                .push(done_problem("its configuration could not be read", &e));
             return Ok(done);
         }
     };
-    let model = model_of(model.as_ref());
-    let settings = plugins
-        .as_ref()
-        .and_then(|p| p.get("entries"))
-        .and_then(|e| e.get(BOOPIS))
-        .and_then(|b| b.get("settings"));
     let hx = layout.hx();
-    let mut writes: Vec<(String, Value)> = Vec::new();
-    writes.extend(secrets_writes(view.secrets.as_ref(), secrets.as_ref()));
-    for (key, value) in &view.consented {
-        match engine.config_get(&home, key).await {
-            Ok(have) if have.as_ref() == Some(value) => {}
-            Ok(_) => writes.push((key.clone(), value.clone())),
-            Err(e) => done.problems.push(fail(key, &e)),
-        }
-    }
-    if !model.0.is_empty() && view.providers.contains_key(&model.0) {
-        let mine = engine
-            .config_get(&home, &format!("providers.{}", model.0))
-            .await
-            .unwrap_or(None);
-        writes.extend(provider_writes(&view.providers, &model.0, mine.as_ref()));
-    }
-    let config_changes = !writes.is_empty();
-    writes.extend(settings_writes(
-        settings,
+    let (mut writes, roots) = config_writes(
+        engine,
+        &home,
+        view,
+        &have,
         hx.is_file().then_some(hx.as_path()),
         ask.governed,
-        &model,
-    ));
-    if ask.fresh {
-        let off = skills::for_other_systems(&home, &layout.system);
-        if !off.is_empty() {
-            let mut list: Vec<String> = engine
-                .config_get(&home, "skills.disabled")
-                .await
-                .ok()
-                .flatten()
-                .and_then(|v| v.as_array().cloned())
-                .unwrap_or_default()
-                .iter()
-                .filter_map(|v| v.as_str().map(str::to_owned))
-                .collect();
-            let new: Vec<String> = off.into_iter().filter(|s| !list.contains(s)).collect();
-            if !new.is_empty() {
-                list.extend(new.iter().cloned());
-                writes.push(("skills.disabled".to_owned(), json!(list)));
-                done.skills_off = new;
-            }
-        }
+        &mut done,
+    )
+    .await;
+    if ask.fresh
+        && let Some((new, list)) = skills_write(engine, &home, &layout.system).await
+    {
+        writes.push(("skills.disabled".to_owned(), list));
+        done.skills_off = new;
     }
     for (key, value) in writes {
         match engine.config_set(&home, &key, &as_text(&value)).await {
@@ -535,19 +590,19 @@ pub async fn prepare(
                 if key == "skills.disabled" {
                     done.skills_off.clear();
                 }
-                done.problems.push(fail(&key, &e));
+                done.problems.push(done_problem(&key, &e));
             }
         }
     }
     // 3. the plugin itself, enabled after its settings so the gateway loads it with them
-    if is_enabled(plugins.as_ref(), BOOPIS) {
-        if reload || config_changes {
+    if is_enabled(have.plugins.as_ref(), BOOPIS) {
+        if placed || roots {
             done.needs_restart = engine.reload_plugins(&layout.root, &home).await.is_err();
         }
     } else {
         match engine.enable_plugin(&home, BOOPIS).await {
             Ok(()) => done.enabled = true,
-            Err(e) => done.problems.push(fail("enabling boopis", &e)),
+            Err(e) => done.problems.push(done_problem("enabling boopis", &e)),
         }
     }
     // 4. its seat in the root's groups
@@ -561,14 +616,17 @@ pub async fn prepare(
                 view.rooms.insert(name.to_owned(), want);
                 done.seated = true;
             }
-            Err(e) => done.problems.push(fail("its place in groups", &e)),
+            Err(e) => done.problems.push(done_problem("its place in groups", &e)),
         }
     }
     Ok(done)
 }
 
 fn done_problem(what: &str, e: &Error) -> String {
-    format!("{what}: {}", crate::error::user_message(e.code(), &e.to_string()))
+    format!(
+        "{what}: {}",
+        crate::error::user_message(e.code(), &e.to_string())
+    )
 }
 
 /// Take the bot `name` out of the root's groups (archived or deleted): its `hosted_rooms.profiles` entry goes. Nothing to do
@@ -582,7 +640,9 @@ pub async fn release(engine: &dyn Engine, root: &Path, name: &str) -> Result<boo
     if rooms.as_ref().and_then(|r| r.get(name)).is_none() {
         return Ok(false);
     }
-    engine.config_unset(root, &format!("{ROOMS}.{name}")).await?;
+    engine
+        .config_unset(root, &format!("{ROOMS}.{name}"))
+        .await?;
     Ok(true)
 }
 
@@ -744,6 +804,63 @@ pub struct Repaired {
     pub problems: Vec<String>,
 }
 
+/// Once per install: every bot whose record says governed (the old default, which never applied) is made ungoverned through
+/// the plugin's own `bots.write`, and the notice names them. Done when every write went through.
+async fn opt_in_governance(
+    engine: &dyn Engine,
+    layout: &Layout,
+    bots: &[String],
+    governed: &mut BTreeMap<String, bool>,
+    marker: &mut Marker,
+    out: &mut Repaired,
+) {
+    for name in bots {
+        if !governed.get(name).copied().unwrap_or(false) {
+            continue;
+        }
+        let wrote = engine
+            .call(
+                &layout.root,
+                "plugin.boopis.bots.write",
+                json!({"name": name, "settings": {"gov": "ungoverned"}}),
+            )
+            .await;
+        match wrote {
+            Ok(_) => {
+                governed.insert(name.clone(), false);
+                out.ungoverned.push(name.clone());
+            }
+            Err(e) => out
+                .problems
+                .push(done_problem(&format!("{name}'s governance"), &e)),
+        }
+    }
+    if out.problems.is_empty() {
+        marker.governance_opt_in = true;
+        if !out.ungoverned.is_empty() {
+            marker.notice = Some(governance_notice(&out.ungoverned));
+        }
+    }
+}
+
+/// Whether a bot already has everything its fingerprint says it was given: its plugins in place and its seat in groups.
+fn still_prepared(
+    layout: &Layout,
+    view: &RootView,
+    marker: &Marker,
+    name: &str,
+    print: &str,
+) -> bool {
+    let home = layout.root.join("profiles").join(name);
+    let placed = layout.plugins.iter().all(|p| {
+        let source = layout.root.join("plugins").join(p);
+        !links::is_plugin(&source) || links::is_plugin(&home.join("plugins").join(p))
+    });
+    placed
+        && view.rooms.get(name) == Some(&Value::String(resolved(&home)))
+        && marker.prepared.get(name).map(String::as_str) == Some(print)
+}
+
 /// Give every bot what it needs (see the module's comment). Safe to run at every start: a bot that already has everything
 /// costs a look at its folder.
 ///
@@ -761,34 +878,8 @@ pub async fn repair(engine: &dyn Engine, layout: &Layout) -> Result<Repaired> {
         .await?;
     let mut governed = governed_of(&records);
     let bots = layout.bots();
-    // Once per install: governance becomes opt-in, and every bot made before is ungoverned, as it ran (ADR-0042).
     if !marker.governance_opt_in {
-        for name in &bots {
-            if governed.get(name).copied().unwrap_or(false) {
-                let wrote = engine
-                    .call(
-                        &layout.root,
-                        "plugin.boopis.bots.write",
-                        json!({"name": name, "settings": {"gov": "ungoverned"}}),
-                    )
-                    .await;
-                match wrote {
-                    Ok(_) => {
-                        governed.insert(name.clone(), false);
-                        out.ungoverned.push(name.clone());
-                    }
-                    Err(e) => out
-                        .problems
-                        .push(done_problem(&format!("{name}'s governance"), &e)),
-                }
-            }
-        }
-        if out.problems.is_empty() {
-            marker.governance_opt_in = true;
-            if !out.ungoverned.is_empty() {
-                marker.notice = Some(governance_notice(&out.ungoverned));
-            }
-        }
+        opt_in_governance(engine, layout, &bots, &mut governed, &mut marker, &mut out).await;
     }
     let mut view = RootView::read(engine, &layout.root).await?;
     let skills_once = !marker.other_os_skills;
@@ -796,27 +887,14 @@ pub async fn repair(engine: &dyn Engine, layout: &Layout) -> Result<Repaired> {
     for name in &bots {
         let gov = governed.get(name).copied().unwrap_or(false);
         let print = fingerprint(&view, gov);
-        let home = layout.root.join("profiles").join(name);
-        let placed = layout.plugins.iter().all(|p| {
-            let source = layout.root.join("plugins").join(p);
-            !links::is_plugin(&source) || links::is_plugin(&home.join("plugins").join(p))
-        });
-        let seated = view.rooms.get(name) == Some(&Value::String(resolved(&home)));
-        if !skills_once && placed && seated && marker.prepared.get(name) == Some(&print) {
+        if !skills_once && still_prepared(layout, &view, &marker, name, &print) {
             continue;
         }
-        match prepare(
-            engine,
-            layout,
-            &mut view,
-            name,
-            Ask {
-                governed: gov,
-                fresh: skills_once,
-            },
-        )
-        .await
-        {
+        let ask = Ask {
+            governed: gov,
+            fresh: skills_once,
+        };
+        match prepare(engine, layout, &mut view, name, ask).await {
             Ok(done) => {
                 needs_restart |= done.needs_restart;
                 if done.problems.is_empty() {
@@ -849,10 +927,8 @@ pub async fn repair(engine: &dyn Engine, layout: &Layout) -> Result<Repaired> {
         }
         if !out.restarted {
             // Work was running: the bots whose plugins could not be reloaded are looked at again next start.
-            for b in &out.bots {
-                if b.needs_restart {
-                    marker.prepared.remove(&b.name);
-                }
+            for b in out.bots.iter().filter(|b| b.needs_restart) {
+                marker.prepared.remove(&b.name);
             }
         }
     }

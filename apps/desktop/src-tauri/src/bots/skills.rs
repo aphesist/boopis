@@ -7,7 +7,11 @@
 use std::path::Path;
 
 /// The engine's names for the systems (`agent/skill_utils.py` `PLATFORM_MAP`), and this build's.
-const NAMES: &[(&str, &str)] = &[("macos", "darwin"), ("linux", "linux"), ("windows", "win32")];
+const NAMES: &[(&str, &str)] = &[
+    ("macos", "darwin"),
+    ("linux", "linux"),
+    ("windows", "win32"),
+];
 
 /// This system as the engine names it (`sys.platform`).
 #[must_use]
@@ -51,7 +55,13 @@ pub fn platforms(skill_md: &str) -> Option<Vec<String>> {
             if rest.is_empty() {
                 in_block = true;
             } else if let Some(inner) = rest.strip_prefix('[').and_then(|r| r.strip_suffix(']')) {
-                found = Some(inner.split(',').map(clean).filter(|s| !s.is_empty()).collect());
+                found = Some(
+                    inner
+                        .split(',')
+                        .map(clean)
+                        .filter(|s| !s.is_empty())
+                        .collect(),
+                );
             } else {
                 found = Some(vec![clean(rest)]);
             }
@@ -162,7 +172,11 @@ mod tests {
             ("linux-only", "platforms: [linux]"),
         ] {
             std::fs::create_dir_all(skills.join(dir)).unwrap();
-            std::fs::write(skills.join(dir).join("SKILL.md"), format!("---\n{fm}\n---\n")).unwrap();
+            std::fs::write(
+                skills.join(dir).join("SKILL.md"),
+                format!("---\n{fm}\n---\n"),
+            )
+            .unwrap();
         }
         assert_eq!(
             for_other_systems(tmp.path(), "linux"),

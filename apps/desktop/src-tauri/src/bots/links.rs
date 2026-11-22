@@ -24,7 +24,11 @@ impl Strategy {
     /// The way of this OS.
     #[must_use]
     pub const fn here() -> Self {
-        if cfg!(windows) { Self::Copy } else { Self::Link }
+        if cfg!(windows) {
+            Self::Copy
+        } else {
+            Self::Link
+        }
     }
 }
 

@@ -326,7 +326,10 @@ mod tests {
     fn the_tool_store_notice_never_reaches_what_the_host_reads() {
         let stderr = "⚠ install out of sync (ffmpeg: not installed or outdated; node: not installed or outdated) — this desktop-app-managed install must rebuild the artifact to fix\nConfig key not set\n";
         assert_eq!(super::without_sync_notice(stderr), "Config key not set\n");
-        assert_eq!(super::without_sync_notice("a real error\n"), "a real error\n");
+        assert_eq!(
+            super::without_sync_notice("a real error\n"),
+            "a real error\n"
+        );
         assert_eq!(super::without_sync_notice(""), "");
     }
 
