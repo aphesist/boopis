@@ -13,7 +13,11 @@ import { CHROME_ARGS } from './build.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const job = JSON.parse(process.argv[2]);
-const send = (m) => { if (process.send && process.connected) process.send(m); };
+const send = (m) => { try { if (process.send && process.connected) process.send(m); } catch { /* the parent is gone */ } };
+let finished = false;
+/* the renderer stopped (another worker failed): stop too. (This listener keeps the IPC channel open, so a finished
+   worker disconnects itself, below.) */
+process.on('disconnect', () => process.exit(finished ? 0 : 1));
 
 
 /* sRGB <-> linear light */
@@ -50,7 +54,8 @@ async function main() {
   const { url, f0, f1, width, height, scale, fps, samples, shutter, codec, out, preview, crf, hashes, still } = job;
   const W = Math.round(width * scale), H = Math.round(height * scale);
   const browser = await chromium.launch({ args: CHROME_ARGS });
-  /* 4K is the same layout at deviceScaleFactor 2; a preview below 1 is captured with a scaled clip */
+  /* 4K is the same layout at deviceScaleFactor 2. Through CDP the capture's size is the clip's scale (without it a
+     capture at deviceScaleFactor 2 comes back at 1080p), so any scale but 1 passes one; a preview below 1 too */
   const dsf = scale >= 1 ? scale : 1;
   const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: dsf, reducedMotion: 'no-preference', colorScheme: 'dark' });
   await context.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());   /* nothing leaves loopback */
@@ -65,7 +70,7 @@ async function main() {
   const addGrain = meta.grain ? grainer(meta.grain, scale) : null;
   const cdp = await context.newCDPSession(page);
   const capture = async () => {
-    const r = await cdp.send('Page.captureScreenshot', { format: 'png', optimizeForSpeed: true, fromSurface: true, captureBeyondViewport: false, ...(scale < 1 ? { clip: { x: 0, y: 0, width, height, scale } } : {}) });
+    const r = await cdp.send('Page.captureScreenshot', { format: 'png', optimizeForSpeed: true, fromSurface: true, captureBeyondViewport: false, ...(scale !== 1 ? { clip: { x: 0, y: 0, width, height, scale } } : {}) });
     const img = decodePNG(Buffer.from(r.data, 'base64'));
     if (img.width !== W || img.height !== H) throw new Error('capture is ' + img.width + 'x' + img.height + ', expected ' + W + 'x' + H);
     return img.rgb;
@@ -112,6 +117,8 @@ async function main() {
   await enc.end();
   await browser.close();
   send({ type: 'done', frames: f1 - f0, renders, ms: Date.now() - t0, hashes: hashList, errors });
+  finished = true;
+  if (process.connected) process.disconnect();
 }
 
 main().catch((e) => { send({ type: 'error', message: e.stack || String(e) }); process.exitCode = 1; setTimeout(() => process.exit(1), 100); });

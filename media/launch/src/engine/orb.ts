@@ -16,7 +16,7 @@
      colorMix   0..1 from look.color to pose.colorTo (an opaque fill changing colour, never an opacity)
 
    Size: `size` is the kit's orb size (the element's box). orb2 draws the body at 0.96 of it; so does this.
-   orb2 is MIT (c) 2026 Enzo Vasconcelos (apps/desktop/ui/vendor/orb-avatar.LICENSE); `mixBody` below follows its body
+   orb2 is MIT licensed (apps/desktop/ui/vendor/orb-avatar.LICENSE, its notice kept there); `mixBody` below follows its body
    interpolation. */
 import type { OrbAvatar } from '@ui/vendor/orb-avatar';
 import { lookAttrs } from '@boopis/ui';
