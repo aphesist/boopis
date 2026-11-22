@@ -22,7 +22,7 @@ import type { BoardView } from './group-board';
 import { arrival, atEnd, dropPending, entryActs, glanceAt, jumpButton, listWords, pendingEntry, placeToLine, setJump, toLine, unreadDivider, updatePending } from './ledger';
 import { followZone } from '../chat/follow-zone';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
-import { foldHuddles, huddleEntry, huddleOn, huddleRuns, isBetween, liveAt } from './huddle';
+import { foldHuddles, huddleEntry, huddleRuns, isBetween, liveAt } from './huddle';
 import type { HuddleDeps } from './huddle';
 import { mountGroupQueue } from './group-queue';
 import type { GroupQueue } from './group-queue';
@@ -363,7 +363,7 @@ function appendMsg(g: Group, m: GroupMessage): void {
   const lastIsLast = !!last && !last.nextElementSibling?.matches('.bt-note, .bt-unread');
   if (m.kind === 'text' && m.who === 'you') foldHuddles(log);
   /* a member's message among the members: two or more in a row fold into one huddle, which stays open while the talk is live */
-  if (huddleOn() && isBetween(m)) {
+  if (isBetween(m)) {
     const run: GroupText[] = [];
     for (let i = list.length - 1; i >= 0; i--) { const x = list[i] as GroupMessage; if (isBetween(x)) run.unshift(x); else break; }
     if (run.length >= 2) { paintHuddle(g, run, m); if (follow) { sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); markSeen(g); } else { U.unread++; setJump(U.jump, U.unread); } return; }

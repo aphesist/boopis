@@ -1,7 +1,7 @@
 /* Provider patches for the bots stories: the mock's bots shaped as the live provider's (what Hermes reports about each, a
    live composer, its recent sessions), and groups with members at work. The live provider itself is checked over fake
    frames in `host/live/*.test.ts`; the lab draws what it shows. */
-import type { Bot, BotInfo, BotsEvent, DataProvider, Group, GroupMember, GroupsEvent, ThreadMessage } from '../data';
+import type { Bot, BotInfo, BotsEvent, DataProvider, Group, GroupMember, GroupMessage, GroupsEvent, ThreadMessage } from '../data';
 import { emitter } from '../data/store';
 import { lookFor } from '@boopis/ui';
 import { TEAM_SIX } from './fixtures';
@@ -52,6 +52,12 @@ export function withWorking(p: DataProvider, count = 2): DataProvider {
 export function withQueue(p: DataProvider, texts: readonly string[], count = 1): DataProvider {
   const snap = p.groups.snapshot;
   return { ...p, groups: { ...p.groups, snapshot: () => { const s = snap(); return { ...s, groups: s.groups.map((g) => ({ ...g, working: g.members.slice(0, count).map((m) => m.id), busy: true, queued: texts.map((text, i) => ({ id: 'q' + i, text, t: '10:0' + i })) })) }; } } };
+}
+
+/** every group's thread, rewritten (the huddle's stories cut the sample thread short or lengthen a round) */
+export function withGroupThread(p: DataProvider, edit: (thread: readonly GroupMessage[]) => readonly GroupMessage[]): DataProvider {
+  const snap = p.groups.snapshot;
+  return { ...p, groups: { ...p.groups, snapshot: () => { const s = snap(); return { ...s, threads: Object.fromEntries(Object.entries(s.threads).map(([k, v]) => [k, edit(v)])) }; } } };
 }
 
 /** the first `count` bots are also running a kanban card (the engine's worker session of the same profile) */
@@ -167,6 +173,8 @@ export function drivable(p: DataProvider): DataProvider {
   const groups = new Map(p.groups.snapshot().groups.map((g) => [g.id, g] as const));
   (window as unknown as Record<string, unknown>)['__labDrive'] = {
     bot(id: string, patch: Partial<Bot>): void { const b = bots.get(id); if (!b) return; const next = { ...b, ...patch }; bots.set(id, next); for (const f of botFns) f({ type: 'bot', bot: next }); },
+    /** a message arrives in a room, as the engine publishes one */
+    message(groupId: string, message: GroupMessage): void { for (const f of groupFns) f({ type: 'message', groupId, message }); },
     group(id: string, patch: Partial<Group>): void { const g = groups.get(id); if (!g) return; const next = { ...g, ...patch }; groups.set(id, next); for (const f of groupFns) f({ type: 'group', group: next }); }
   };
   return {

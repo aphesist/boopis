@@ -1,17 +1,14 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import type { GroupMessage, GroupText } from '../../data';
-import { foldHuddles, huddleOn, huddleRuns, isBetween, liveAt, setHuddle } from './huddle';
+import type { GroupMember } from '../../data';
+import { foldHuddles, huddleEntry, huddleMessage, huddleRuns, isBetween, liveAt } from './huddle';
+import type { HuddleDeps } from './huddle';
 
 const t = (id: string, who: string, round?: number): GroupText => ({ kind: 'text', id, who, t: '09:0' + id.length, text: 'hello', ...(round === undefined ? {} : { round }) });
 const thread: GroupMessage[] = [t('a', 'you'), t('b', 'kai', 0), t('cc', 'nina', 1), t('ddd', 'kai', 2), t('eeee', 'moss', 3), t('f', 'you'), t('gg', 'kai', 0)];
 
 describe('the huddle', () => {
-  it('draws nothing until it is switched on (held back for 0.1.9)', () => {
-    expect(huddleOn()).toBe(false);
-    expect(huddleRuns(thread)).toEqual([]);
-    setHuddle(true);
-  });
   it('folds only what the members say among themselves, two or more in a row', () => {
     expect(thread.filter(isBetween).map((m) => m.id)).toEqual(['cc', 'ddd', 'eeee']);
     expect(huddleRuns(thread)).toEqual([[2, 5]]);
@@ -28,5 +25,30 @@ describe('the huddle', () => {
     expect(a!.querySelector('.ui-disclosure')!.getAttribute('aria-expanded')).toBe('false');
     expect((a!.querySelector('.bt-huddle__body') as HTMLElement).hidden).toBe(true);
     expect(b!.querySelector('.ui-disclosure')!.getAttribute('aria-expanded')).toBe('true');
+  });
+  it('folds a run into one entry that says who and how many, and keeps every message', () => {
+    const mem = (id: string): GroupMember => ({ id, profile: id, handle: id, name: id });
+    const members = [mem('kai'), mem('nina')];
+    const drawn: string[] = [];
+    const deps: HuddleDeps = {
+      member: (id) => members.find((m) => m.id === id),
+      orb: (m) => '<span class="orb">' + m.id + '</span>',
+      to: (m) => (m.who === 'kai' ? ['nina'] : []),
+      ctx: { members } as unknown as HuddleDeps['ctx'],
+      drawn: (m) => { drawn.push(m.id); }
+    };
+    const run = [t('cc', 'nina', 1), t('ddd', 'kai', 2), t('eeee', 'nina', 3)];
+    const e = huddleEntry(run, deps, { open: false, unreadBefore: 'ddd' });
+    expect(e.dataset['huddle']).toBe('3');
+    expect(e.textContent).toContain('nina and kai worked it out, 3 messages');
+    const head = e.querySelector('.ui-disclosure')!, body = e.querySelector<HTMLElement>('.bt-huddle__body')!;
+    expect(head.getAttribute('aria-expanded')).toBe('false');
+    expect(body.hidden).toBe(true);
+    expect(head.getAttribute('aria-controls')).toBe(body.id);
+    expect([...body.children].map((c) => c.className.split(' ')[0])).toEqual(['bt-hmsg', 'bt-unread', 'bt-hmsg', 'bt-hmsg']);
+    expect(drawn).toEqual(['cc', 'ddd', 'eeee']);
+    const one = huddleMessage(run[1] as GroupText, deps);
+    expect(one.getAttribute('aria-label')).toBe('kai, to nina, ' + (run[1] as GroupText).t);
+    expect(one.querySelector('.bt-hmsg__to')?.textContent).toBe('to nina');
   });
 });
