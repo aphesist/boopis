@@ -16,6 +16,8 @@ export interface Measures {
   card: Box[]; orb: Box[]; text: Box[]; mark: Box[];
   /** B04: the stack's slots, the plate */
   slot: Box[]; plate?: Box;
+  /** B03: the top of the film line's box */
+  line3?: number;
 }
 export interface A1State {
   kf: Partial<Record<KfId, HTMLElement>>;
@@ -60,6 +62,8 @@ export async function a1state(ctx: ActCtx): Promise<A1State> {
     }
   }
   if (s.kf.b03) {
+    const l3 = s.kf.b03.querySelector<HTMLElement>('.film-line');
+    if (l3) m.line3 = boxOf(l3, st).y;
     for (const c of s.kf.b03.querySelectorAll<HTMLElement>('.castcard')) {
       m.card.push(boxOf(c, st));
       m.orb.push(boxOf(c.querySelector('.orb')!, st));

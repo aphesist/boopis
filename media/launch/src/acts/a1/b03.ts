@@ -235,12 +235,15 @@ export async function b03(ctx: ActCtx): Promise<void> {
   if (s.ground && s.pool.b02 && s.pool.b03) poolTo(film, s.ground, s.pool.b02, s.pool.b03, T.start, d(0.8));
   /* the camera moves on with the cards (from the old line's exit to the cards at rest), then holds while they wake */
   const W = ctx.stage.width, H = ctx.stage.height;
+  /* the camera's height at a zoom that keeps the line clear of the frame's top (7.5% of it), as the key frame has it */
+  const lineTop = s.m.line3 ?? 96;
+  const camY = (z: number): number => Math.min(H / 2, lineTop + (0.425 * H) / z);
   const camFrom = Math.max(s.camFree ?? 0, T.start), camTo = T.start + MORPH + d(f(12));
-  cam.to({ zoom: 1.095, y: H / 2 }, { at: camFrom, dur: camTo - camFrom, ease: arrive });
+  cam.to({ zoom: 1.075, y: camY(1.075) }, { at: camFrom, dur: camTo - camFrom, ease: arrive });
   /* it leans toward the faces as they wake, and again with their ripple: short moves that follow the subject */
   const faceX = m.orb[0] ? W / 2 + (centre(m.orb[0])[0] - W / 2) * 0.12 : W / 2;
-  cam.to({ x: faceX, zoom: 1.115 }, { at: wakeAt[0]!, dur: d(f(22)), ease: arrive });
-  cam.to({ x: (faceX + W / 2) / 2, zoom: 1.12 }, { at: t(6.4), dur: d(f(18)), ease: arrive });
+  cam.to({ x: faceX, zoom: 1.08, y: camY(1.08) }, { at: wakeAt[0]!, dur: d(f(22)), ease: arrive });
+  cam.to({ x: (faceX + W / 2) / 2, zoom: 1.085, y: camY(1.085) }, { at: t(6.4), dur: d(f(18)), ease: arrive });
   s.camFree = s.flightStart ?? T.end;
   void ui;
 }
