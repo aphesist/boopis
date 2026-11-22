@@ -131,6 +131,7 @@ export async function b05(ctx: ActCtx): Promise<void> {
   if (room.cursor) {
     s.cursor = kfCursor(film, room.cursor, t0);
     s.cursor.move(v ? 160 : 260, v ? 520 : 300, t0 + F(10), F(24), { ease: depart, arc: 0.1 });
+    film.motion(t0 + F(20), t0 + F(34), 24);
   }
 
   /* ── the hold breathes: a slow push while the line and the presence stand ── */
@@ -223,6 +224,7 @@ export async function b06(ctx: ActCtx): Promise<void> {
   const flyN = F(22);
   fly(ctx, { look: ninaBot, size, src: p2Nina, srcEl: holderOf(p2Nina), dst: ninaOrb, dstEl: holderOf(ninaOrb),
     from: thread.pointAt('pres', m.p2Nina[0], m.p2Nina[1], tn), to: thread.pointAt('hud', m.ninaOrb[0], m.ninaOrb[1], tn + flyN), at: tn, dur: flyN, arc: -0.2 }, va);
+  film.motion(tn, tn + flyN, 16);
   const nBlocks = qa(nina, '.ui-entry__body .ui-md > *, .ui-entry__body > p'), nMeta = qa(nina, '.ui-callno > :not(.ui-callno__who)'), nName = qa(nina, '.bt-who-name');
   nName.forEach((e) => riseIn(film, e, tn + flyN - F(8)));
   nBlocks.forEach((e, i) => riseIn(film, e, tn + F(10) + i * 0.04));
@@ -261,6 +263,8 @@ export async function b06(ctx: ActCtx): Promise<void> {
   const flip = (el: HTMLElement, from: { x: number; y: number }, to: { x: number; y: number }, at: number, dur: number): void => {
     film.tl.fromTo(el, { x: (from.x - to.x) / X, y: (from.y - to.y) / X }, { x: 0, y: 0, duration: dur, ease: uiSpring, immediateRender: false, data: { role: 'ui' } }, at);
   };
+  film.motion(tg, tg + F(12), 24);
+  film.motion(tg + F(12), tg + F(28), 16);
   const m2 = msgs2[0]!;
   flip(m2.querySelector<HTMLElement>('.bt-hmsg__to')!, m.ninaTo, m.h2To, tg, F(22));
   flip(m2.querySelector<HTMLElement>('.bt-hmsg__t')!, m.ninaT, m.h2T, tg + F(2), F(22));
@@ -300,6 +304,7 @@ export async function b06(ctx: ActCtx): Promise<void> {
   const fK = F(24);
   fly(ctx, { look: kaiBot, size, src: p4Kai, srcEl: holderOf(p4Kai), dst: h3KaiOrb, dstEl: holderOf(h3KaiOrb),
     from: thread.pointAt('pres', m.p4Kai[0], m.p4Kai[1], tk), to: thread.pointAt('hud', m.h3KaiOrb[0], m.h3KaiOrb[1], tk + fK), at: tk, dur: fK, arc: -0.18 }, va);
+  film.motion(tk, tk + fK, 16);
   const m3c = msgs3[2]!;
   for (const e of [m3c.querySelector<HTMLElement>('.bt-hmsg__name'), m3c.querySelector<HTMLElement>('.bt-hmsg__to'), m3c.querySelector<HTMLElement>('.bt-hmsg__t')]) if (e) riseIn(film, e, tk + fK - F(10));
   riseIn(film, m3c.querySelector<HTMLElement>('.ui-md')!, tk + fK - F(6));
@@ -353,6 +358,7 @@ export async function b07(ctx: ActCtx): Promise<void> {
   const cur = s.cursor;
   if (cur) {
     cur.move(click.x - tip.x, click.y - tip.y, tm.t(14.3), F(32), { arc: 0.12 });
+    film.motion(tm.t(14.3) + F(6), tm.t(14.3) + F(28), 24);
     cur.press(tClick);
   }
   /* the typed line, laid out where the field's text starts (the field's own font), its chip the markdown's own */
@@ -393,9 +399,12 @@ export async function b07(ctx: ActCtx): Promise<void> {
   /* the cursor goes to send and presses it on the beat */
   const sendC = { x: sendB.x + sendB.w * 0.5, y: sendB.y + sendB.h * 0.55 };
   if (cur) {
-    cur.move(sendC.x - tip.x, sendC.y - tip.y, Math.min(typedEnd - F(6), tSend - F(4) - F(16)), F(15), { arc: -0.1 });
+    const toSend = Math.min(typedEnd - F(6), tSend - F(4) - F(16));
+    cur.move(sendC.x - tip.x, sendC.y - tip.y, toSend, F(15), { arc: -0.1 });
+    film.motion(toSend, toSend + F(15), 32);
     cur.press(tSend - F(4));
     cur.move(sendC.x - tip.x + 140, sendC.y - tip.y + 260, tSend + F(10), F(30), { ease: depart, arc: 0.1 });
+    film.motion(tSend + F(24), tSend + F(40), 24);
   }
   film.tl.fromTo(send, { scale: 1 }, { scale: 0.96, duration: DUR.press, ease: ui, immediateRender: false, data: { role: 'ui' } }, tSend - F(2));
   film.tl.fromTo(send, { scale: 0.96 }, { scale: 1, duration: DUR.press * 2, ease: ui, immediateRender: false, data: { role: 'ui' } }, tSend - F(2) + DUR.press);
@@ -434,6 +443,7 @@ export async function b07(ctx: ActCtx): Promise<void> {
   stand.appendChild(standIn);
   ctx.world.appendChild(stand);
   const liftDur = F(24), tLand = tSend + liftDur;
+  film.motion(tSend, tSend + F(12), 24);
   const lift = { k: 0, __name: 'a2-lift' };
   film.tl.fromTo(lift, { k: 0 }, { k: 1, duration: liftDur, ease: uiSpring, immediateRender: false, data: { role: 'ui' } }, tSend);
   const landAt = thread.pointAt('req2', bubB.x, bubB.y, tLand);

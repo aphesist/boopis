@@ -54,8 +54,11 @@ export async function b08(ctx: ActCtx): Promise<void> {
 
   /* ── the camera: pull back, breathe toward the pill, push into the composer and come to rest on the seam ── */
   cam.to(camWin, { at: t8, dur: tPull, ease: travel });
+  /* the pull and the push move the whole frame fast at their middle; the cursor's arc is the fastest small thing */
+  film.motion(t8 + F(6), t8 + tPull - F(6), 16);
   cam.drift({ x: camWin.x - 54 / zWin, y: camWin.y - 16 / zWin, zoom: zWin * 1.06 }, { at: tWin, dur: tPush - tWin, ease: drift });
   cam.to({ x: W / 2, y: H / 2, zoom: 1 }, { at: tPush, dur: tEnd - tPush, ease: travel });
+  film.motion(tPush + F(6), tEnd - F(6), 16);
 
   /* ── the room settles into the window: its own map from film scale to the window's, on the camera's curve ── */
   const pull = { k: 0, __name: 'a2-pull' }, push = { k: 0, __name: 'a2-push' };
@@ -151,6 +154,7 @@ export async function b08(ctx: ActCtx): Promise<void> {
   if (cur8) {
     const c = kfCursor(film, cur8, t8, { x: 1500, y: 1000 });
     c.move(v ? -180 : -24, v ? -12 : -10, tWin - F(2), tClick - F(4) - (tWin - F(2)), { arc: 0.16 });
+    film.motion(tWin + F(4), tClick - F(8), 32);
     c.press(tClick - F(4));
     c.move(v ? 120 : 90, 90, tClick + F(12), F(30), { arc: 0.1 });
   }
