@@ -18,6 +18,9 @@ export interface FilmConfig {
   fps?: number;
   /** the music's tempo; the craft bible's grid is 112.5 BPM (32 frames a beat at 60 fps) */
   bpm?: number;
+  /** where this clip starts on the film's absolute clock: an act rendered alone writes at the script's absolute times,
+      and its frame 0 is `offset` (seek(t) shows absolute time offset + t) */
+  offset?: number;
 }
 export type Renderer = (t: number) => void;
 /** white: white at alpha u x alpha (the engine's ground); look: the art director's grain, mid-grey noise of +-amp in
@@ -36,6 +39,8 @@ export interface TweenInfo {
 export class Film {
   readonly name: string;
   readonly duration: number;
+  /** the clip's start on the absolute clock (FilmConfig.offset); the timeline and renderers always see absolute time */
+  readonly offset: number;
   readonly fps: number;
   readonly bpm: number;
   readonly variant: Variant;
@@ -59,6 +64,7 @@ export class Film {
   constructor(cfg: FilmConfig, variant: Variant) {
     this.name = cfg.name;
     this.duration = cfg.duration;
+    this.offset = cfg.offset ?? 0;
     this.fps = cfg.fps ?? 60;
     this.bpm = cfg.bpm ?? 112.5;
     this.variant = variant;
@@ -78,7 +84,7 @@ export class Film {
   /** a scene boundary: where one idea hands off to the next (a beat of the script) */
   mark(name: string, t: number): void { this.marks.push({ name, t }); this.marks.sort((a, b) => a.t - b.t); }
   /** a hard cut at t: motion blur never mixes samples across it */
-  cut(t: number): void { this.cuts.push(t); this.cuts.sort((a, b) => a - b); }
+  cut(t: number): void { if (this.cuts.some((c) => Math.abs(c - t) < 1e-6)) return; this.cuts.push(t); this.cuts.sort((a, b) => a - b); }
   /** motion that GSAP does not know about (a renderer that moves things between t0 and t1); `samples` as in TweenData */
   motion(t0: number, t1: number, samples = 0): void { this.extraMotion.push([t0, t1, samples]); }
 
@@ -100,7 +106,7 @@ export class Film {
   finalize(): void {
     if (this.finalized) return;
     this.finalized = true;
-    if (this.tl.duration() < this.duration) this.tl.set({}, {}, this.duration);
+    if (this.tl.duration() < this.offset + this.duration) this.tl.set({}, {}, this.offset + this.duration);
     /* sweep: render the whole timeline forward and back once, so every tween records its start values in time order
        (GSAP records a tween's start the first time it renders; without the sweep a worker that seeks straight to the
        middle could record different ones) */
@@ -116,10 +122,11 @@ export class Film {
     gsap.ticker.sleep();
   }
 
-  /** does anything that needs motion blur move between t0 and t1? (the renderer skips extra samples when not) */
+  /** does anything that needs motion blur move between t0 and t1 (clip time)? (the renderer skips samples when not) */
   moving(t0: number, t1: number): boolean { return this.samples(t0, t1) !== 0; }
-  /** the sub-frames motion in (t0, t1) asks for: 0 = nothing moves, -1 = the renderer's default, n = at least n */
-  samples(t0: number, t1: number): number {
+  /** the sub-frames motion in (t0, t1) (clip time) asks for: 0 = nothing moves, -1 = the default, n = at least n */
+  samples(c0: number, c1: number): number {
+    const t0 = c0 + this.offset, t1 = c1 + this.offset;
     let n = 0;
     for (const [a, b, k] of this.motionSpans) {
       if (a >= t1) break;
@@ -128,18 +135,23 @@ export class Film {
     return n;
   }
 
-  /** put the film at t and draw it; resolves once fonts and images are ready and the frame is painted */
+  /** put the film at clip time t (absolute offset + t) and draw it; resolves once fonts and images are ready and the
+      frame is painted */
   async seek(t: number, o: { paint?: boolean } = {}): Promise<void> {
     if (!this.finalized) this.finalize();
     const time = Math.max(0, Math.min(this.duration, t));
     this.time = time;
-    this.tl.time(time, true);
-    for (const r of this.renderers) r.fn(time);
+    const abs = this.offset + time;
+    this.tl.time(abs, true);
+    for (const r of this.renderers) r.fn(abs);
     cancelScriptAnimations();
     await this.ready;
     if (o.paint !== false) await new Promise<void>((r) => requestAnimationFrame(() => r()));
   }
+  /** clip time of the last seek */
   get now(): number { return this.time; }
+  /** hard cuts in clip time */
+  clipCuts(): number[] { return this.cuts.map((c) => c - this.offset).filter((c) => c > 0 && c < this.duration); }
 
   /** fonts and images, once, before the first frame */
   async load(root: ParentNode): Promise<void> {

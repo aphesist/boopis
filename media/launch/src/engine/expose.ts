@@ -18,6 +18,8 @@ export interface FilmApi {
   grain: Film['grain'];
   warnings: string[];
   marks: { name: string; t: number }[];
+  /** the clip's start on the film's absolute clock (an act alone); everything else here is clip time */
+  offset: number;
   seek(t: number, o?: { paint?: boolean }): Promise<void>;
   moving(t0: number, t1: number): boolean;
   samples(t0: number, t1: number): number;
@@ -30,11 +32,12 @@ declare global { interface Window { __film?: FilmApi } }
 export function expose(film: Film, stage: Stage): FilmApi {
   const api: FilmApi = {
     name: film.name, duration: film.duration, fps: film.fps, width: film.width, height: film.height, variant: film.variant,
-    frames: Math.round(film.duration * film.fps), bpm: film.bpm, cuts: film.cuts, grain: film.grain, marks: film.marks, warnings: film.warnings,
+    frames: Math.round(film.duration * film.fps), bpm: film.bpm, cuts: film.clipCuts(), grain: film.grain,
+    marks: film.marks.map((m) => ({ name: m.name, t: m.t - film.offset })).filter((m) => m.t >= -1e-9 && m.t < film.duration), warnings: film.warnings, offset: film.offset,
     seek: (t, o) => film.seek(t, o),
     moving: (a, b) => film.moving(a, b),
     samples: (a, b) => film.samples(a, b),
-    tweens: () => film.tweenInfo(),
+    tweens: () => film.tweenInfo().map((t) => ({ ...t, start: t.start - film.offset, end: t.end - film.offset })).filter((t) => t.end > 0 && t.start < film.duration),
     text: () => visibleText(stage),
     fades: () => fades(film, stage)
   };
@@ -115,9 +118,11 @@ async function fades(film: Film, stage: Stage): Promise<FadeInfo[]> {
   const out: FadeInfo[] = [];
   const now = film.now;
   const k = hostScale(stage), area = stage.width * stage.height;
-  for (const { tween, start, end } of film.tweens()) {
+  for (const { tween, start: s0, end: e0 } of film.tweens()) {
     const v = tween.vars as Record<string, unknown>;
     if (!('opacity' in v) && !('autoAlpha' in v)) continue;
+    const start = s0 - film.offset, end = e0 - film.offset;
+    if (end <= 0 || start >= film.duration || end - start <= 0) continue;
     await film.seek((start + end) / 2, { paint: false });
     for (const t of tween.targets() as unknown[]) {
       if (!(t instanceof Element)) continue;

@@ -24,7 +24,8 @@ export function hud(film: Film, host: HTMLElement): void {
     frame = Math.max(0, Math.min(frames, f));
     range.value = String(frame);
     const t = frame / film.fps;
-    out.textContent = t.toFixed(3) + ' s  f' + frame + '  beat ' + Math.floor(t / beat + 1e-9) + '  bar ' + Math.floor(t / beat / 4 + 1e-9);
+    const abs = film.offset + t;
+    out.textContent = t.toFixed(3) + ' s  f' + frame + (film.offset ? '  (film ' + abs.toFixed(3) + ' s)' : '') + '  beat ' + Math.floor(abs / beat + 1e-9) + '  bar.beat ' + (Math.floor(abs / beat / 4 + 1e-9) + 1) + '.' + (Math.floor(abs / beat + 1e-9) % 4 + 1);
     busy = true;
     await film.seek(t);
     busy = false;

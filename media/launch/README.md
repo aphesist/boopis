@@ -138,6 +138,38 @@ blink(film, orbs.get('vox')!.orb, at);                    // ... and the timelin
   as the style frames have it). The engine's own default ground (`engine/ground.ts`, `--film-*` variables) is for
   scenes that do not use the look.
 
+## The film skeleton: four acts on one timeline
+
+`?scene=film` builds the whole 46.933 s film on one stage and one timeline by running four act builders in order on
+one shared context (`src/acts/`): A1 `a1.ts` (B01 to B04, 0 to 9.600 s), A2 `a2.ts` (B05 to B08, to 20.000 s), A3
+`a3.ts` (B09 to B13, to 32.000 s), A4 `a4.ts` (B14 to B19 with the owner's end card (b), to 46.933 s). The contract at
+the three boundaries is **`SEAMS.md`** (its numbers in `src/acts/seams.ts`).
+
+- An act is one builder per beat (`beats: { B05: ..., B06: ... }`) plus `seamIn` / `seamOut`. A beat builder writes
+  at `ctx.win('B05')` times: in the master those are the script's absolute times (`beat('B05')`); in a cut-down the
+  edit's own window for that beat, so the same builder serves both.
+- The context (`src/acts/context.ts`): the camera (`ctx.cam`), the grid (`ctx.g`), the layers (`ctx.world`,
+  `ctx.front`), the art director's key frames (`await ctx.keyFrame('b05')`, built once, hidden until shown), the
+  carried elements (`ctx.carry`, taken with `ctx.take()`), and `ctx.showDuring(el, t0, t1)`.
+- Today every beat is a **placeholder**: its key frame held for its window (`hold('B05')`). Replace one beat at a time.
+
+**Preview an act:**
+
+```sh
+pnpm dev                                         # then http://127.0.0.1:5280/index.html?scene=a2
+                                                 # (frame 0 is 9.600 s; the HUD shows clip and film time and bar.beat)
+node tools/render.mjs --scene a2 --preview       # SC/renders/a2-landscape-960x540-preview.mp4
+node tools/render.mjs --scene a2 --variant vertical --preview
+node tools/render.mjs --scene film --preview --out SC/renders/animatic.mp4   # the whole film
+node tools/render.mjs --scene a2 --from 2 --to 4                             # a range of the act (clip seconds)
+node tools/qa/qa.mjs SC/renders/a2-landscape-1920x1080.mp4 --scene a2        # the checker, act alone
+```
+
+An act scene (`a1` to `a4`) runs only that act at the script's absolute times with its clip offset to the act's
+start (`FilmConfig.offset`); its incoming seam state is built by the act itself (`seamIn` with `ctx.take`).
+`?scene=cut15` and `?scene=bumper6` run the beat builders under the cut-downs' edits (`src/acts/edit.ts`, from
+`SC/script/cutdowns.md`, end card (b), no address anywhere).
+
 ## Add a scene
 
 1. Write `src/scenes/<name>.ts`:
@@ -299,6 +331,11 @@ Calibration on the first trailer (`SC/trailer/boopis-trailer.mp4`) against the p
   sets the attribute the kit's CSS reads, as `test.ts` does for the composer's placeholder and send button).
 - Fast moves: `snap` on the camera asks for 32 sub-frames; tag any other very fast tween `data: { samples: 24 }`.
 - Before calling a scene done: a preview, a contact sheet of its frames, the checker on the render and the page.
+- Engine limits: a 1080p60 render with blur runs at about 2.5 to 3 frames a second on this machine and 4K at about
+  0.7, so work in previews and ranges. A key frame is static DOM: its kit orbs are frozen until swapped for film orbs
+  (`swapOrbs`; reactions map to resting eye shapes, `engine/look.ts`), and a kit component's own transitions are off
+  (drive its state from a renderer). One key-frame instance can be shown by one `showDuring` window. `cam.stateAt()`
+  and `carryOrb(..., { camera })` read only the camera moves defined before them. A seam is never a `film.cut()`.
 
 ## Measured (22 November 2026, this machine: 4 cores, no GPU, Chromium 1243 headless shell)
 
