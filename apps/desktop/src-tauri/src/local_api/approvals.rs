@@ -63,8 +63,12 @@ impl Refusal {
                 "There is no such approval. It may have been answered or have expired.".into()
             }
             Self::AlreadyAnswered(Some(by)) => format!(
-                "Already answered by {} ({}). The first answer stands.",
-                by.client, by.surface
+                "Already answered {}. The first answer stands.",
+                match by.surface.as_str() {
+                    "gui" => "in the boopis app",
+                    "endpoint" => "through the local API",
+                    _ => "elsewhere",
+                }
             ),
             Self::AlreadyAnswered(None) => "Already answered. The first answer stands.".into(),
             Self::Expired => "This approval has expired. Ask the bot to try again.".into(),
@@ -271,7 +275,6 @@ impl Inbox {
             Delivery::AlreadySettled => {
                 row.state = ApprovalState::Settled;
                 row.answered_by = Some(Answered {
-                    client: "another client".into(),
                     surface: "unknown".into(),
                     choice: None,
                     at: now,
@@ -375,28 +378,27 @@ mod tests {
         }
     }
 
-    fn who(client: &str) -> Answered {
+    fn who(surface: &str) -> Answered {
         Answered {
-            client: client.into(),
-            surface: "endpoint".into(),
+            surface: surface.into(),
             choice: None,
             at: 2_000,
         }
     }
 
     #[test]
-    fn the_first_answer_wins_and_the_second_is_told_who() {
+    fn the_first_answer_wins_and_the_second_is_told_where_it_came_from() {
         let mut inbox = Inbox::new();
         inbox.upsert(row("p1"));
         inbox
-            .begin("kai", "p1", "once", None, who("panacea-island"), 2_000)
+            .begin("kai", "p1", "once", None, who("endpoint"), 2_000)
             .unwrap();
         let second = inbox
-            .begin("kai", "p1", "deny", None, who("boopis-cli"), 2_001)
+            .begin("kai", "p1", "deny", None, who("gui"), 2_001)
             .unwrap_err();
         assert_eq!(second.code(), "already_answered");
         assert!(
-            second.message().contains("panacea-island"),
+            second.message().contains("through the local API"),
             "{}",
             second.message()
         );
@@ -404,9 +406,9 @@ mod tests {
             .finish("kai", "p1", &Delivery::Delivered, 2_002)
             .unwrap();
         let third = inbox
-            .begin("kai", "p1", "once", None, who("x"), 2_003)
+            .begin("kai", "p1", "once", None, who("endpoint"), 2_003)
             .unwrap_err();
-        assert!(matches!(third, Refusal::AlreadyAnswered(Some(a)) if a.client == "panacea-island"));
+        assert!(matches!(third, Refusal::AlreadyAnswered(Some(a)) if a.surface == "endpoint"));
     }
 
     #[test]
@@ -437,7 +439,7 @@ mod tests {
             .finish("kai", "p1", &Delivery::AlreadySettled, 2_001)
             .unwrap();
         assert_eq!(done.state, ApprovalState::Settled);
-        assert_eq!(done.answered_by.unwrap().client, "another client");
+        assert_eq!(done.answered_by.unwrap().surface, "unknown");
     }
 
     #[test]
@@ -520,7 +522,6 @@ mod tests {
         let mut inbox = Inbox::new();
         inbox.upsert(row("p1"));
         let by = Answered {
-            client: "boopis".into(),
             surface: "gui".into(),
             choice: Some("once".into()),
             at: 3_000,

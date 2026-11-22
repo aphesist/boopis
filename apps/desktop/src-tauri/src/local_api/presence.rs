@@ -36,9 +36,9 @@ impl Status {
     #[must_use]
     pub fn parse(word: &str) -> Self {
         match word {
-            "working" | "running" => Self::Working,
+            "working" | "running" | "streaming" => Self::Working,
             "waiting" => Self::Waiting,
-            "starting" => Self::Starting,
+            "starting" | "resuming" => Self::Starting,
             _ => Self::Idle,
         }
     }
@@ -53,8 +53,6 @@ pub struct Live {
     pub status: Status,
     /// The engine's `source`.
     pub source: String,
-    /// The creating client's label, when known.
-    pub client: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -63,7 +61,6 @@ struct Session {
     activity: String,
     attention: Option<String>,
     source: Source,
-    client: Option<String>,
     since: i64,
     /// Until when a state that came from an event stands against the poll.
     fine_until: i64,
@@ -119,7 +116,7 @@ impl Table {
         event: &str,
         tool: Option<&str>,
         failed: bool,
-        origin: &(Source, Option<String>),
+        source: Source,
         now: i64,
     ) -> Vec<Presence> {
         let key = (profile.to_owned(), session_id.to_owned());
@@ -127,15 +124,13 @@ impl Table {
             state: State::Idle,
             activity: String::new(),
             attention: None,
-            source: origin.0,
-            client: origin.1.clone(),
+            source,
             since: now,
             fine_until: 0,
             hold_until: 0,
         };
         let s = self.sessions.entry(key).or_insert_with(fresh);
-        s.source = origin.0;
-        s.client.clone_from(&origin.1);
+        s.source = source;
         let (state, activity, attention) = match event {
             "host.prompt" => (State::Listening, String::new(), None),
             "message.start"
@@ -203,19 +198,17 @@ impl Table {
         });
         for row in rows {
             let key = (profile.to_owned(), row.session_id.clone());
-            let source = super::model::source_of(&row.source, row.client.as_deref());
+            let source = super::model::source_of(&row.source);
             let s = self.sessions.entry(key).or_insert_with(|| Session {
                 state: State::Idle,
                 activity: String::new(),
                 attention: None,
                 source,
-                client: row.client.clone(),
                 since: now,
                 fine_until: 0,
                 hold_until: 0,
             });
             s.source = source;
-            s.client.clone_from(&row.client);
             if s.fine_until > now && s.state != State::Idle && row.status != Status::Idle {
                 continue; // a fine word from an event stands for a moment
             }
@@ -315,7 +308,6 @@ impl Table {
                 attention: s.attention.clone(),
                 session_id: Some(sid.clone()),
                 source: s.source,
-                client: s.client.clone(),
                 at: s.since,
             },
             _ => {
@@ -345,7 +337,6 @@ impl Table {
                     && old.attention == now_row.attention
                     && old.session_id == now_row.session_id
                     && old.source == now_row.source
-                    && old.client == now_row.client
             });
             if !same {
                 self.published.insert(p.clone(), now_row.clone());
@@ -382,7 +373,7 @@ mod tests {
     use super::*;
 
     fn ev(t: &mut Table, e: &str, tool: Option<&str>, now: i64) -> Vec<Presence> {
-        t.on_event("kai", "s1", e, tool, false, &(Source::Gui, None), now)
+        t.on_event("kai", "s1", e, tool, false, Source::Gui, now)
     }
 
     #[test]
@@ -452,15 +443,7 @@ mod tests {
     #[test]
     fn a_failure_shows_as_an_error_and_a_finished_turn_rests_after_its_time() {
         let mut t = Table::new();
-        let p = t.on_event(
-            "kai",
-            "s1",
-            "message.complete",
-            None,
-            true,
-            &(Source::Gui, None),
-            0,
-        );
+        let p = t.on_event("kai", "s1", "message.complete", None, true, Source::Gui, 0);
         assert_eq!(p[0].state, State::Error);
         assert!(t.tick(ERROR_HOLD_MS - 1).is_empty());
         let p = t.tick(ERROR_HOLD_MS + 1);
@@ -471,37 +454,25 @@ mod tests {
         assert_eq!(t.tick(DONE_HOLD_MS + 1)[0].state, State::Idle);
     }
 
-    fn live(id: &str, status: Status, source: &str, client: Option<&str>) -> Live {
+    fn live(id: &str, status: Status, source: &str) -> Live {
         Live {
             session_id: id.into(),
             status,
             source: source.into(),
-            client: client.map(str::to_owned),
         }
     }
 
     #[test]
-    fn a_poll_sees_the_islands_session_and_a_cron_run_at_the_engines_grain() {
+    fn a_poll_sees_another_programs_session_and_a_cron_run_at_the_engines_grain() {
         let mut t = Table::new();
         let none = |_: &str| false;
-        let p = t.on_poll(
-            "nina",
-            &[live("i1", Status::Working, "cli", Some("panacea-island"))],
-            &none,
-            0,
-        );
-        assert_eq!((p[0].state, p[0].source), (State::Working, Source::Island));
-        assert_eq!(p[0].client.as_deref(), Some("panacea-island"));
-        let p = t.on_poll(
-            "moss",
-            &[live("c1", Status::Working, "cron", None)],
-            &none,
-            0,
-        );
+        let p = t.on_poll("nina", &[live("i1", Status::Working, "cli")], &none, 0);
+        assert_eq!((p[0].state, p[0].source), (State::Working, Source::Other));
+        let p = t.on_poll("moss", &[live("c1", Status::Working, "cron")], &none, 0);
         assert_eq!(p[0].source, Source::Cron);
         let p = t.on_poll(
             "nina",
-            &[live("i1", Status::Waiting, "cli", Some("panacea-island"))],
+            &[live("i1", Status::Waiting, "cli")],
             &|s| s == "i1",
             1,
         );
@@ -509,12 +480,7 @@ mod tests {
             (p[0].state, p[0].attention.as_deref()),
             (State::Needs, Some("approval"))
         );
-        let p = t.on_poll(
-            "nina",
-            &[live("i1", Status::Waiting, "cli", Some("panacea-island"))],
-            &none,
-            2,
-        );
+        let p = t.on_poll("nina", &[live("i1", Status::Waiting, "cli")], &none, 2);
         assert!(p.is_empty() || p[0].attention.as_deref() == Some("input"));
         assert_eq!(t.presence("nina", 2).attention.as_deref(), Some("input"));
         let p = t.on_poll("nina", &[], &none, 3);
@@ -530,7 +496,7 @@ mod tests {
         let mut t = Table::new();
         let none = |_: &str| false;
         ev(&mut t, "message.delta", None, 0);
-        let row = [live("s1", Status::Working, "gui", None)];
+        let row = [live("s1", Status::Working, "gui")];
         assert!(
             t.on_poll("kai", &row, &none, 1_000).is_empty(),
             "speaking is finer than working"
@@ -542,7 +508,7 @@ mod tests {
             State::Speaking,
             "a busy word stays while the engine says working"
         );
-        let idle = [live("s1", Status::Idle, "gui", None)];
+        let idle = [live("s1", Status::Idle, "gui")];
         let p = t.on_poll("kai", &idle, &none, FINE_HOLD_MS + 20);
         assert_eq!(
             p[0].state,
@@ -558,8 +524,8 @@ mod tests {
         t.on_poll(
             "kai",
             &[
-                live("a", Status::Working, "gui", None),
-                live("b", Status::Waiting, "cron", None),
+                live("a", Status::Working, "gui"),
+                live("b", Status::Waiting, "cron"),
             ],
             &none,
             0,

@@ -135,9 +135,9 @@ pub fn report(o: &Options, f: &Facts) -> Value {
             "this_profile_is_served_by_the_root_gateway": in_root,
             "this_profile_has_its_own_gateway": own,
         },
-        "client": {
-            "label_session_with": {"client": {"name": "<your-client-name>", "version": "<optional>"}},
-            "note": "session.create takes client {name, version}; the engine keeps it and boopis shows it. `source` is a closed list.",
+        "conversations": {
+            "create_like_the_app": {"source": "gui"},
+            "note": "Start a conversation with session.create {source: \"gui\"}, exactly as the boopis app does, so the app shows it. Where a conversation was started is never told apart.",
         },
         "docs": "docs/LOCAL-API.md",
     })

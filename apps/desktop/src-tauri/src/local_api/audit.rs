@@ -1,7 +1,7 @@
 //! The record of who answered what: one line per answer in `<app data>/audit/client-answers.jsonl`, append-only, mode
 //! `0600`, kept to a bounded size (the old file is renamed to `.1` when it passes the cap). A line holds the time, the
-//! bot, the session, the prompt, the choice, the outcome and the client's label and surface: never the command text, and
-//! never a token. A failure to write is logged and never blocks an answer.
+//! bot, the session, the prompt, the choice, the outcome and the surface it came through (`gui` for the app's own window, `endpoint`
+//! for this API): never a name, never the command text, and never a token. It is a security record and is never shown. A failure to write is logged and never blocks an answer.
 
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
@@ -26,9 +26,7 @@ pub struct Line {
     pub choice: String,
     /// `delivered`, `refused:<code>`, `failed` or `already_settled`.
     pub outcome: String,
-    /// The client's label.
-    pub client: String,
-    /// `gui`, `endpoint` or `cli`.
+    /// `gui` (the app's own window) or `endpoint` (the local API).
     pub surface: String,
 }
 
@@ -94,13 +92,12 @@ mod tests {
             prompt_id: "p1".into(),
             choice: "once".into(),
             outcome: "delivered".into(),
-            client: "panacea-island".into(),
             surface: "endpoint".into(),
         }
     }
 
     #[test]
-    fn a_line_says_who_and_never_what_was_run() {
+    fn a_line_says_how_it_was_answered_and_never_what_was_run() {
         let dir = tempfile::tempdir().unwrap();
         let audit = Audit::under(dir.path());
         audit.record(&line(1));
@@ -111,7 +108,7 @@ mod tests {
             .map(|l| serde_json::from_str(l).unwrap())
             .collect();
         assert_eq!(rows.len(), 2);
-        assert_eq!(rows[0]["client"], "panacea-island");
+        assert!(rows[0].get("client").is_none(), "a line holds no name");
         assert_eq!(rows[0]["surface"], "endpoint");
         assert!(rows[0].get("command").is_none() && rows[0].get("description").is_none());
     }

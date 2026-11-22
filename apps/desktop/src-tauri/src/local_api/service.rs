@@ -12,7 +12,10 @@ use tokio_util::sync::CancellationToken;
 use super::approvals::{Delivery, Refusal};
 use super::engine::Engine;
 use super::feed::Feed;
-use super::model::{Answered, Approval, ApprovalState, Origin, RoomRow, Source, valid_client_name};
+use super::model::{
+    Answered, Approval, ApprovalState, Conversation, Message, MessageState, Origin, Role, RoomRow,
+    Source,
+};
 use super::presence::{Live, Status};
 use super::roster;
 use crate::config::ApiLimits;
@@ -106,24 +109,19 @@ pub struct Said {
     pub created: bool,
 }
 
-/// Who is asking: the label the client declared and the surface it came through.
+/// Where a call came from. Never who: the contract does not tell clients apart, so this is only the surface the call came
+/// through, for the security record.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Caller {
-    /// The client's label (a valid client name; `unknown` when it declared none).
-    pub client: String,
-    /// `endpoint`, `cli` or `gui`.
+    /// `endpoint` (the local API) or `gui`.
     pub surface: &'static str,
 }
 
 impl Caller {
-    /// A caller by the label it sent (`X-Boopis-Client`): a bad or missing label is `unknown`.
+    /// A call through `surface`.
     #[must_use]
-    pub fn labelled(label: Option<&str>, surface: &'static str) -> Self {
-        let client = label
-            .filter(|l| valid_client_name(l))
-            .unwrap_or("unknown")
-            .to_owned();
-        Self { client, surface }
+    pub const fn through(surface: &'static str) -> Self {
+        Self { surface }
     }
 }
 
@@ -249,9 +247,15 @@ impl<E: Engine> Service<E> {
             if sid.is_empty() {
                 continue;
             }
-            let mut client = None;
-            if !self.feed.client_known(profile, &sid) {
-                client = self.learn_session(profile, &sid, row).await;
+            if !self.feed.session_known(profile, &sid) {
+                let model = Some(text(row, "model")).filter(|m| !m.is_empty());
+                self.feed.note_session(
+                    profile,
+                    &sid,
+                    super::model::source_of(&text(row, "source")),
+                    Some(text(row, "session_key")).as_deref(),
+                    model.as_deref(),
+                );
             }
             let status = Status::parse(&text(row, "status"));
             if status == Status::Waiting {
@@ -265,34 +269,12 @@ impl<E: Engine> Service<E> {
                 session_id: sid,
                 status,
                 source: text(row, "source"),
-                client,
             });
         }
         self.feed.on_poll(profile, &live, &models);
         for sid in waiting {
             self.read_pending(profile, &sid).await;
         }
-    }
-
-    /// The client label of a live session the feed has not seen: `session.info` once, then remembered.
-    async fn learn_session(&self, profile: &str, sid: &str, row: &Value) -> Option<String> {
-        let info = self
-            .engine
-            .request(profile, "session.info", json!({"session_id": sid}))
-            .await
-            .ok();
-        let client = info
-            .as_ref()
-            .and_then(|i| i.get("client"))
-            .and_then(|c| c.get("name"))
-            .and_then(Value::as_str)
-            .filter(|n| valid_client_name(n))
-            .map(str::to_owned);
-        let source = super::model::source_of(&text(row, "source"), client.as_deref());
-        let model = Some(text(row, "model")).filter(|m| !m.is_empty());
-        self.feed
-            .note_session(profile, sid, source, client.as_deref(), model.as_deref());
-        client
     }
 
     /// `approval.pending` for a waiting session, with each new approval's generation read off the session's ring.
@@ -423,11 +405,7 @@ impl<E: Engine> Service<E> {
                 "There is no bot with that name.",
             ));
         }
-        let label = if by.client == "unknown" {
-            "boopis-api"
-        } else {
-            by.client.as_str()
-        };
+        let _ = by;
         let stored = match pick {
             Pick::New => None,
             Pick::Id(id) => Some(id.clone()),
@@ -436,11 +414,7 @@ impl<E: Engine> Service<E> {
         let create = || async {
             let res = self
                 .engine
-                .request(
-                    profile,
-                    "session.create",
-                    json!({"source": "gui", "client": {"name": label}}),
-                )
+                .request(profile, "session.create", json!({"source": "gui"}))
                 .await
                 .map_err(|e| failed("start a conversation", &e))?;
             let live = text(&res, "session_id");
@@ -486,13 +460,8 @@ impl<E: Engine> Service<E> {
                 (live, id, false)
             }
         };
-        let source = if label.starts_with("panacea-") {
-            Source::Island
-        } else {
-            Source::Other
-        };
         self.feed
-            .note_session(profile, &live, source, Some(label), None);
+            .note_session(profile, &live, Source::Gui, Some(&kept), None);
         self.engine
             .request(
                 profile,
@@ -501,6 +470,7 @@ impl<E: Engine> Service<E> {
             )
             .await
             .map_err(|e| failed("deliver the message", &e))?;
+        self.feed.on_user_message(profile, &live, message);
         self.feed.on_frame(
             profile,
             &crate::gateway::FeedFrame {
@@ -515,6 +485,122 @@ impl<E: Engine> Service<E> {
             profile: profile.to_owned(),
             session_id: kept,
             created,
+        })
+    }
+
+    /// Read a conversation: the words the app shows for a stored session of `profile`, oldest first. It is the engine's own
+    /// stored transcript, read without attaching to the session, so what the owner typed in the app is in it and what a
+    /// client said is too.
+    ///
+    /// # Errors
+    /// A refusal in words (no such bot, no conversation, a `new` pick), or the engine's failure.
+    pub async fn conversation(
+        &self,
+        profile: &str,
+        pick: &Pick,
+        limit: usize,
+    ) -> Result<Conversation, ApiError> {
+        if !self.feed.has_bot(profile) && profile != ROOT {
+            return Err(ApiError::new(
+                404,
+                "no_such_bot",
+                "There is no bot with that name.",
+            ));
+        }
+        let stored = match pick {
+            Pick::New => {
+                return Err(ApiError::new(
+                    400,
+                    "bad_session",
+                    "session is latest or the id of one of the bot's sessions; there is nothing to read in a new one.",
+                ));
+            }
+            Pick::Id(id) => id.clone(),
+            Pick::Latest => self.latest_of(profile).await.ok_or_else(|| {
+                ApiError::new(404, "no_conversation", "That bot has no conversation yet.")
+            })?,
+        };
+        let rows = limit.clamp(1, self.limits.conversation_rows);
+        let last_event_id = self.feed.last_id();
+        let page = self
+            .engine
+            .request(
+                profile,
+                "session.transcript",
+                json!({"session_id": stored, "limit": rows, "order": "latest"}),
+            )
+            .await
+            .map_err(|e| {
+                let said = e.to_string().to_ascii_lowercase();
+                if said.contains("not_found") || said.contains("not found") {
+                    ApiError::new(404, "no_such_session", "That conversation does not exist.")
+                } else {
+                    failed("read that conversation", &e)
+                }
+            })?;
+        let mut found: Vec<&Value> = page
+            .get("rows")
+            .and_then(Value::as_array)
+            .map(|r| r.iter().collect())
+            .unwrap_or_default();
+        // The page's order is the engine's; the row ids say which came first.
+        if found
+            .iter()
+            .all(|r| r.get("row_id").and_then(Value::as_i64).is_some())
+        {
+            found.sort_by_key(|r| r.get("row_id").and_then(Value::as_i64));
+        }
+        let messages = found
+            .iter()
+            .enumerate()
+            .filter_map(|(i, row)| self.stored_message(row, i))
+            .collect();
+        Ok(Conversation {
+            profile: profile.to_owned(),
+            session_id: stored,
+            messages,
+            older: page.get("next_cursor").is_some_and(|c| !c.is_null()),
+            last_event_id,
+        })
+    }
+
+    /// One stored row as the app's thread draws it: the user's and the bot's words, no tool row, nothing hidden.
+    fn stored_message(&self, row: &Value, index: usize) -> Option<Message> {
+        let role = match text(row, "role").as_str() {
+            "user" => Role::User,
+            "assistant" => Role::Assistant,
+            _ => return None,
+        };
+        if text(row, "display_kind") == "hidden" || text(row, "row_kind") == "compaction" {
+            return None;
+        }
+        let words = Some(text(row, "text"))
+            .filter(|t| !t.trim().is_empty())
+            .or_else(|| {
+                row.get("content")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned)
+            })?;
+        if words.trim().is_empty() {
+            return None;
+        }
+        let (words, truncated) = self.feed.message_text(&words);
+        let id = row
+            .get("row_id")
+            .and_then(Value::as_i64)
+            .map_or_else(|| format!("i{index}"), |n| format!("r{n}"));
+        #[allow(clippy::cast_possible_truncation)] // a time in seconds, read as milliseconds
+        let at = row
+            .get("timestamp")
+            .and_then(Value::as_f64)
+            .map_or(0, |t| (t * 1000.0) as i64);
+        Some(Message {
+            id,
+            role,
+            text: words,
+            truncated,
+            at,
+            state: MessageState::Done,
         })
     }
 
@@ -588,7 +674,6 @@ impl<E: Engine> Service<E> {
         by: &Caller,
     ) -> Result<Approval, ApiError> {
         let who = Answered {
-            client: by.client.clone(),
             surface: by.surface.to_owned(),
             choice: None,
             at: super::model::now_ms(),
@@ -772,7 +857,7 @@ mod tests {
     }
 
     fn poll_engine() -> impl Fn(&str, &str, &Value) -> crate::error::Result<Value> + Send + Sync {
-        |profile, method, params| {
+        |profile, method, _params| {
             if let Some(v) = roster_answer(method) {
                 return Ok(v);
             }
@@ -782,10 +867,6 @@ mod tests {
                     {"id": "cron-1", "status": "working", "source": "cron", "model": "opus"}
                 ]})),
                 (_, "session.active_list") => Ok(json!({"sessions": []})),
-                ("kai", "session.info") if params["session_id"] == "isl-1" => Ok(
-                    json!({"client": {"name": "panacea-island", "version": "0.1"}, "source": "cli"}),
-                ),
-                ("kai", "session.info") => Ok(json!({"source": "cron"})),
                 ("kai", "approval.pending") => Ok(json!({"approvals": [
                     {"request_id": "pp1", "command": "rm -rf build", "description": "clean", "choices": ["once", "deny", "always"]}
                 ]})),
@@ -799,7 +880,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_poll_finds_the_islands_waiting_session_its_approval_and_a_cron_run() {
+    async fn a_poll_finds_a_waiting_session_its_approval_and_a_cron_run() {
         let (s, e, _d) = service(poll_engine());
         s.refresh_roster().await;
         s.poll_once().await;
@@ -811,10 +892,9 @@ mod tests {
             .unwrap();
         assert_eq!(
             (kai.state, kai.source),
-            (State::Needs, Source::Island),
+            (State::Needs, Source::Other),
             "needs outranks the cron run"
         );
-        assert_eq!(kai.client.as_deref(), Some("panacea-island"));
         let rows = s.feed().approvals(false);
         assert_eq!(rows.len(), 1);
         assert_eq!(
@@ -834,10 +914,9 @@ mod tests {
             Some("approval")
         );
         s.poll_once().await;
-        assert_eq!(
-            e.of("session.info").len(),
-            2,
-            "a session's client is asked once"
+        assert!(
+            e.of("session.info").is_empty(),
+            "no session is asked who made it: the contract does not tell clients apart"
         );
         assert_eq!(
             e.of("session.events.since").len(),
@@ -847,7 +926,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn an_answer_from_another_client_reaches_the_engine_with_the_rows_own_generation() {
+    async fn an_answer_through_the_api_reaches_the_engine_with_the_rows_own_generation() {
         let (s, e, dir) = service(|p, m, params| {
             if m == "approval.respond" {
                 assert_eq!(
@@ -864,20 +943,15 @@ mod tests {
         });
         s.refresh_roster().await;
         s.poll_once().await;
-        let island = Caller::labelled(Some("panacea-island"), "endpoint");
-        let done = s.answer("pp1", "once", None, &island).await.unwrap();
+        let by = Caller::through("endpoint");
+        let done = s.answer("pp1", "once", None, &by).await.unwrap();
         assert_eq!(done.state, ApprovalState::Settled);
-        assert_eq!(done.answered_by.unwrap().client, "panacea-island");
+        assert_eq!(done.answered_by.unwrap().surface, "endpoint");
         let sent = e.of("approval.respond");
         assert_eq!(sent.len(), 1);
         assert_eq!(sent[0].1["choice"], "once");
         let again = s
-            .answer(
-                "pp1",
-                "deny",
-                None,
-                &Caller::labelled(Some("boopis-cli"), "cli"),
-            )
+            .answer("pp1", "deny", None, &Caller::through("gui"))
             .await
             .unwrap_err();
         assert_eq!((again.status, again.code), (409, "already_answered"));
@@ -887,7 +961,8 @@ mod tests {
             "the second answer never reached the engine"
         );
         let audit = std::fs::read_to_string(Audit::under(dir.path()).path()).unwrap();
-        assert!(audit.contains("panacea-island") && audit.contains("refused:already_answered"));
+        assert!(audit.contains("endpoint") && audit.contains("refused:already_answered"));
+        assert!(!audit.contains("\"client\""), "a line holds no name");
     }
 
     #[tokio::test]
@@ -897,12 +972,7 @@ mod tests {
         s.poll_once().await;
         for choice in ["always", "session", "yes", ""] {
             let err = s
-                .answer(
-                    "pp1",
-                    choice,
-                    None,
-                    &Caller::labelled(Some("x"), "endpoint"),
-                )
+                .answer("pp1", choice, None, &Caller::through("endpoint"))
                 .await
                 .unwrap_err();
             assert_eq!(
@@ -929,7 +999,7 @@ mod tests {
         s.refresh_roster().await;
         s.poll_once().await;
         let err = s
-            .answer("pp1", "once", None, &Caller::labelled(None, "endpoint"))
+            .answer("pp1", "once", None, &Caller::through("endpoint"))
             .await
             .unwrap_err();
         assert_eq!((err.status, err.code), (502, "engine_unavailable"));
@@ -956,12 +1026,7 @@ mod tests {
         s.refresh_roster().await;
         s.poll_once().await;
         let err = s
-            .answer(
-                "pp1",
-                "once",
-                None,
-                &Caller::labelled(Some("a"), "endpoint"),
-            )
+            .answer("pp1", "once", None, &Caller::through("endpoint"))
             .await
             .unwrap_err();
         assert_eq!(err.code, "already_answered");
@@ -981,8 +1046,9 @@ mod tests {
             match m {
                 "session.create" => {
                     assert_eq!(
-                        params["client"]["name"], "panacea-island",
-                        "the engine keeps the caller's label"
+                        params,
+                        &json!({"source": "gui"}),
+                        "a conversation is started exactly as the app starts one"
                     );
                     Ok(json!({"session_id": "live-new", "stored_session_id": "stored-new"}))
                 }
@@ -1004,7 +1070,7 @@ mod tests {
                 "kai",
                 "  hello kai  ",
                 &Pick::Latest,
-                &Caller::labelled(Some("panacea-island"), "endpoint"),
+                &Caller::through("endpoint"),
             )
             .await
             .unwrap();
@@ -1036,16 +1102,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn saying_in_a_new_session_labels_it_with_the_caller() {
+    async fn saying_in_a_new_session_starts_it_as_the_app_does() {
         let (s, e, _d) = service(say_engine(false));
         s.refresh_roster().await;
         let said = s
-            .say(
-                "nina",
-                "hi",
-                &Pick::New,
-                &Caller::labelled(Some("panacea-island"), "endpoint"),
-            )
+            .say("nina", "hi", &Pick::New, &Caller::through("endpoint"))
             .await
             .unwrap();
         assert!(said.created);
@@ -1058,21 +1119,15 @@ mod tests {
             .into_iter()
             .find(|p| p.profile == "nina")
             .unwrap();
-        assert_eq!(
-            (p.source, p.client.as_deref()),
-            (Source::Island, Some("panacea-island"))
-        );
+        assert_eq!(p.source, Source::Gui);
     }
 
     #[tokio::test]
     async fn a_busy_bot_is_not_talked_over_and_bad_input_is_refused_in_words() {
         let (s, e, _d) = service(say_engine(true));
         s.refresh_roster().await;
-        let island = Caller::labelled(Some("panacea-island"), "endpoint");
-        let busy = s
-            .say("kai", "hi", &Pick::Latest, &island)
-            .await
-            .unwrap_err();
+        let by = Caller::through("endpoint");
+        let busy = s.say("kai", "hi", &Pick::Latest, &by).await.unwrap_err();
         assert_eq!((busy.status, busy.code), (409, "bot_busy"));
         assert!(e.of("prompt.submit").is_empty());
         for (bot, text, code) in [
@@ -1082,10 +1137,7 @@ mod tests {
             ("kai", "a\0b", "text_too_long"),
         ] {
             assert_eq!(
-                s.say(bot, text, &Pick::New, &island)
-                    .await
-                    .unwrap_err()
-                    .code,
+                s.say(bot, text, &Pick::New, &by).await.unwrap_err().code,
                 code
             );
         }
@@ -1108,12 +1160,12 @@ mod tests {
             Ok(json!({"accepted": true}))
         });
         s.refresh_roster().await;
-        s.say_room("g-paper", "go", &Caller::labelled(None, "endpoint"))
+        s.say_room("g-paper", "go", &Caller::through("endpoint"))
             .await
             .unwrap();
         assert_eq!(e.of("groups.send").len(), 1);
         assert_eq!(
-            s.say_room("g-nope", "go", &Caller::labelled(None, "endpoint"))
+            s.say_room("g-nope", "go", &Caller::through("endpoint"))
                 .await
                 .unwrap_err()
                 .code,

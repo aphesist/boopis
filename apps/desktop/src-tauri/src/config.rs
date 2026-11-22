@@ -116,6 +116,14 @@ pub struct ApiLimits {
     pub notes_kept: usize,
     /// The longest text a notification or an approval carries.
     pub text_cap: usize,
+    /// The longest text one conversation message carries (longer is cut, and says so).
+    pub message_cap: usize,
+    /// Rows of a conversation one read asks the engine for, at most (the call's `limit` is held to it).
+    pub conversation_rows: usize,
+    /// Bots one event stream may narrow its conversation events to.
+    pub follow_bots: usize,
+    /// How often a streaming reply is sent again while it grows.
+    pub stream_every: std::time::Duration,
 }
 
 impl Default for ApiLimits {
@@ -143,6 +151,10 @@ impl Default for ApiLimits {
             engine_wait: Duration::from_secs(8),
             notes_kept: 200,
             text_cap: 400,
+            message_cap: 16 * 1024,
+            conversation_rows: 200,
+            follow_bots: 6,
+            stream_every: Duration::from_millis(250),
         }
     }
 }

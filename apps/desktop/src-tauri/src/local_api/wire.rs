@@ -311,13 +311,6 @@ pub fn authorized(head: &Head, token: &Token) -> bool {
     presented.is_some_and(|p| token.matches(p.trim()))
 }
 
-/// The label a client gave itself (`X-Boopis-Client`), when it is a valid one.
-#[must_use]
-pub fn client_label(head: &Head) -> Option<&str> {
-    head.header("x-boopis-client")
-        .filter(|l| super::model::valid_client_name(l))
-}
-
 /// A token bucket.
 #[derive(Debug, Clone)]
 pub struct Bucket {
@@ -430,7 +423,6 @@ mod tests {
             &req(&[
                 "GET /v1/notifications?after=3&limit=10 HTTP/1.1",
                 "Host: 127.0.0.1:47821",
-                "X-Boopis-Client: panacea-island",
             ]),
             &limits(),
         )
@@ -443,7 +435,6 @@ mod tests {
             (h.param("after"), h.param("limit")),
             (Some("3"), Some("10"))
         );
-        assert_eq!(client_label(&h), Some("panacea-island"));
         assert!(check_origin(&h, PORT).is_ok());
     }
 
@@ -703,15 +694,6 @@ mod tests {
         )
         .unwrap();
         assert!(!authorized(&two, &token));
-    }
-
-    #[test]
-    fn a_label_is_taken_only_when_it_is_valid() {
-        assert_eq!(
-            client_label(&ok_head(&["X-Boopis-Client: Evil Name"])),
-            None
-        );
-        assert_eq!(client_label(&ok_head(&[])), None);
     }
 
     #[test]

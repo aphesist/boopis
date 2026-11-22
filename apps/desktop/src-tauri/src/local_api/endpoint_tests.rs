@@ -25,8 +25,14 @@ const CANARIES: [&str; 4] = [
     "password: CANARYpassword1234",
 ];
 
-fn engine() -> Arc<Scripted> {
-    Arc::new(Scripted::new(|profile, method, params| match method {
+/// The engine's stored transcript of a conversation, as the scripted engine keeps it: what `session.transcript` reads and
+/// what `prompt.submit` adds to, the way the real engine's store is the one place the app and a client both write.
+type Store = Arc<std::sync::Mutex<Vec<Value>>>;
+
+fn engine() -> (Arc<Scripted>, Store) {
+    let store: Store = Arc::default();
+    let rows = store.clone();
+    let scripted = Arc::new(Scripted::new(move |profile, method, params| match method {
         "profiles.list" => Ok(json!({"profiles": [
             {"name": "kai", "model": "opus", "provider": "p", "display_name": "Kai", "description": "editor"},
             {"name": "nina", "model": "", "provider": "", "display_name": "", "description": ""}
@@ -39,7 +45,23 @@ fn engine() -> Arc<Scripted> {
         "session.create" => {
             Ok(json!({"session_id": "live-new", "stored_session_id": "stored-new"}))
         }
-        "prompt.submit" => Ok(json!({"status": "started"})),
+        "prompt.submit" => {
+            let mut rows = rows.lock().unwrap();
+            let n = i64::try_from(rows.len()).unwrap() + 1;
+            rows.push(json!({"role": "user", "text": params["text"], "row_id": n, "timestamp": 1000 + n, "row_kind": "message"}));
+            Ok(json!({"status": "started"}))
+        }
+        "session.transcript" => {
+            if params["session_id"] == "nope" {
+                return Err(Error::Unavailable("session.transcript: not_found".into()));
+            }
+            // newest first, the way a `latest` page comes
+            let mut page: Vec<Value> = rows.lock().unwrap().clone();
+            page.reverse();
+            Ok(
+                json!({"session_id": params["session_id"], "rows": page, "next_cursor": null, "reset": false}),
+            )
+        }
         "groups.send" => Ok(json!({"accepted": true})),
         "approval.respond" => {
             assert_eq!(profile, "kai");
@@ -47,13 +69,15 @@ fn engine() -> Arc<Scripted> {
             Ok(json!({"resolved": 1}))
         }
         _ => Err(Error::Unavailable(format!("unscripted {method}"))),
-    }))
+    }));
+    (scripted, store)
 }
 
 struct Rig {
     server: Server<Scripted>,
     service: Arc<Service<Scripted>>,
     scripted: Arc<Scripted>,
+    store: Store,
     _dir: tempfile::TempDir,
 }
 
@@ -68,7 +92,7 @@ fn limits() -> ApiLimits {
 async fn rig_with(limits: ApiLimits) -> Rig {
     let dir = tempfile::tempdir().unwrap();
     let feed = Feed::new(Audit::under(dir.path()), limits.clone());
-    let scripted = engine();
+    let (scripted, store) = engine();
     let service = Service::new(feed, scripted.clone(), limits.clone());
     service.refresh_roster().await;
     let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
@@ -84,6 +108,7 @@ async fn rig_with(limits: ApiLimits) -> Rig {
         server,
         service,
         scripted,
+        store,
         _dir: dir,
     }
 }
@@ -343,17 +368,9 @@ async fn writes_are_rate_limited_more_strictly_than_reads() {
     let mut statuses = Vec::new();
     for _ in 0..4 {
         statuses.push(
-            raw(
-                r.server.addr(),
-                &post(
-                    &r,
-                    "/v1/bots/kai/say",
-                    &body,
-                    "X-Boopis-Client: panacea-island\r\n",
-                ),
-            )
-            .await
-            .0,
+            raw(r.server.addr(), &post(&r, "/v1/bots/kai/say", &body, ""))
+                .await
+                .0,
         );
     }
     assert_eq!(statuses, [200, 200, 429, 429]);
@@ -365,7 +382,7 @@ async fn writes_are_rate_limited_more_strictly_than_reads() {
 }
 
 #[tokio::test]
-async fn saying_to_a_bot_reaches_the_engine_with_the_callers_label() {
+async fn saying_to_a_bot_reaches_the_engine_as_the_app_would_start_the_conversation() {
     let r = rig().await;
     let body = json!({"text": "hello", "session": "new"}).to_string();
     let (status, _, resp) = raw(
@@ -374,6 +391,7 @@ async fn saying_to_a_bot_reaches_the_engine_with_the_callers_label() {
             &r,
             "/v1/bots/nina/say",
             &body,
+            // an old script's label is ignored: nothing in the contract reads it
             "X-Boopis-Client: panacea-island\r\n",
         ),
     )
@@ -382,7 +400,11 @@ async fn saying_to_a_bot_reaches_the_engine_with_the_callers_label() {
     assert_eq!(json_of(&resp)["said"]["session_id"], "stored-new");
     let created = r.scripted.of("session.create");
     assert_eq!(created[0].0, "nina");
-    assert_eq!(created[0].1["client"]["name"], "panacea-island");
+    assert_eq!(
+        created[0].1,
+        json!({"source": "gui"}),
+        "a conversation is started exactly as the app starts one"
+    );
     let (status, _, _) = raw(r.server.addr(), &post(&r, "/v1/bots/nobody/say", &body, "")).await;
     assert_eq!(status, 404);
     let (status, _, _) = raw(
@@ -425,18 +447,8 @@ async fn two_clients_answer_at_once_and_exactly_one_wins() {
     ask(&r, "p1", "rm -rf build");
     let body = json!({"choice": "once"}).to_string();
     let (req_a, req_b) = (
-        post(
-            &r,
-            "/v1/approvals/p1",
-            &body,
-            "X-Boopis-Client: panacea-island\r\n",
-        ),
-        post(
-            &r,
-            "/v1/approvals/p1",
-            &body,
-            "X-Boopis-Client: boopis-cli\r\n",
-        ),
+        post(&r, "/v1/approvals/p1", &body, ""),
+        post(&r, "/v1/approvals/p1", &body, ""),
     );
     let (a, b) = (raw(r.server.addr(), &req_a), raw(r.server.addr(), &req_b));
     let (a, b) = tokio::join!(a, b);
@@ -449,8 +461,16 @@ async fn two_clients_answer_at_once_and_exactly_one_wins() {
     let (_, _, list) = raw(r.server.addr(), &get(&r, "/v1/approvals?all=1", "")).await;
     let row = &json_of(&list)["approvals"][0];
     assert_eq!(row["state"], "settled");
+    assert_eq!(row["answered_by"]["surface"], "endpoint");
     assert!(
-        ["panacea-island", "boopis-cli"].contains(&row["answered_by"]["client"].as_str().unwrap())
+        row["answered_by"].get("client").is_none(),
+        "no name is kept or shown"
+    );
+    assert!(
+        json_of(&loser.2)["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("through the local API")
     );
 }
 
@@ -813,8 +833,8 @@ async fn the_reference_client_reads_the_roster_follows_events_and_answers_an_app
     assert_eq!(r.scripted.of("approval.respond").len(), 1);
     let (_, _, list) = raw(r.server.addr(), &get(&r, "/v1/approvals?all=1", "")).await;
     assert_eq!(
-        json_of(&list)["approvals"][0]["answered_by"]["client"],
-        "boopis-reference"
+        json_of(&list)["approvals"][0]["answered_by"]["surface"],
+        "endpoint"
     );
 }
 
@@ -837,15 +857,7 @@ async fn the_documented_curl_commands_work_and_an_expect_header_is_refused() {
     let auth = format!("Authorization: Bearer {TOKEN}");
     let curl = |extra: &[&str]| {
         let mut c = Command::new("curl");
-        c.args([
-            "-s",
-            "--max-time",
-            "5",
-            "-H",
-            &auth,
-            "-H",
-            "X-Boopis-Client: panacea-island",
-        ]);
+        c.args(["-s", "--max-time", "5", "-H", &auth]);
         c.args(extra).kill_on_drop(true);
         c
     };
@@ -866,10 +878,14 @@ async fn the_documented_curl_commands_work_and_an_expect_header_is_refused() {
     .unwrap();
     let answered = json_of(&String::from_utf8_lossy(&out.stdout));
     assert_eq!(answered["approval"]["state"], "settled", "{answered}");
-    assert_eq!(
-        answered["approval"]["answered_by"]["client"],
-        "panacea-island"
-    );
+    assert_eq!(answered["approval"]["answered_by"]["surface"], "endpoint");
+    // the documented read of a conversation
+    let out = curl(&[&format!("{url}/v1/bots/kai/conversation?session=stored-1")])
+        .output()
+        .await
+        .unwrap();
+    let read = json_of(&String::from_utf8_lossy(&out.stdout));
+    assert!(read["messages"].is_array(), "{read}");
     // a long message goes through as it is; a client that sends `Expect: 100-continue` (older curl did for any body over
     // 1 KiB) is refused with a sentence, and `-H 'Expect:'` is the way round
     let long = json!({"text": "x".repeat(2000), "session": "new"}).to_string();
@@ -895,4 +911,328 @@ async fn the_documented_curl_commands_work_and_an_expect_header_is_refused() {
     );
     let said = say("Expect:").await;
     assert!(said.ends_with("200"), "{said}");
+}
+
+fn seed(r: &Rig, rows: &[Value]) {
+    *r.store.lock().unwrap() = rows.to_vec();
+}
+
+fn row(id: i64, role: &str, text: &str) -> Value {
+    json!({"role": role, "text": text, "row_id": id, "timestamp": 1000 + id, "row_kind": "message"})
+}
+
+#[tokio::test]
+async fn a_conversation_is_read_as_the_app_shows_it() {
+    let r = rig_with(ApiLimits {
+        message_cap: 40,
+        ..limits()
+    })
+    .await;
+    seed(
+        &r,
+        &[
+            row(1, "user", "how is the build?"),
+            json!({"role": "tool", "name": "terminal", "row_id": 2, "row_kind": "message"}),
+            row(
+                3,
+                "assistant",
+                &format!("green\nand the key is {}", CANARIES[0]),
+            ),
+            json!({"role": "assistant", "text": "(hidden)", "display_kind": "hidden", "row_id": 4, "row_kind": "message"}),
+            json!({"role": "system", "text": "a summary", "row_id": 5, "row_kind": "compaction"}),
+            row(6, "user", &"long ".repeat(30)),
+        ],
+    );
+    let (status, _, body) = raw(
+        r.server.addr(),
+        &get(
+            &r,
+            "/v1/bots/kai/conversation?session=stored-1&limit=999",
+            "",
+        ),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    let v = json_of(&body);
+    assert_eq!(
+        (v["profile"].as_str(), v["session_id"].as_str()),
+        (Some("kai"), Some("stored-1"))
+    );
+    let msgs = v["messages"].as_array().unwrap();
+    let ids: Vec<&str> = msgs.iter().map(|m| m["id"].as_str().unwrap()).collect();
+    assert_eq!(
+        ids,
+        ["r1", "r3", "r6"],
+        "oldest first; tools, hidden rows and summaries are not the thread"
+    );
+    assert_eq!(msgs[0]["role"], "user");
+    assert_eq!(msgs[1]["role"], "assistant");
+    assert!(
+        msgs[1]["text"].as_str().unwrap().contains("green\nand"),
+        "line breaks are kept"
+    );
+    assert!(!body.contains("CANARY"), "{body}");
+    assert_eq!(
+        msgs[2]["truncated"], true,
+        "a long message is cut and says so"
+    );
+    assert!(msgs[2]["text"].as_str().unwrap().chars().count() <= 40);
+    assert_eq!(msgs[0]["state"], "done");
+    assert_eq!(
+        v["last_event_id"].as_u64(),
+        Some(r.service.feed().last_id())
+    );
+    let asked = r.scripted.of("session.transcript");
+    assert_eq!(
+        asked[0].1["limit"], 200,
+        "the engine is asked for no more rows than the cap"
+    );
+    assert_eq!(asked[0].1["order"], "latest");
+    assert!(
+        r.scripted.of("session.resume").is_empty(),
+        "reading never attaches to the session"
+    );
+}
+
+#[tokio::test]
+async fn reading_a_conversation_refuses_in_words() {
+    let r = rig().await;
+    for (path, status, code) in [
+        ("/v1/bots/kai/conversation?session=new", 400, "bad_session"),
+        ("/v1/bots/kai/conversation?session=a:b/c", 400, "bad_query"),
+        (
+            "/v1/bots/nobody/conversation?session=s1",
+            404,
+            "no_such_bot",
+        ),
+        (
+            "/v1/bots/kai/conversation?session=nope",
+            404,
+            "no_such_session",
+        ),
+        ("/v1/bots/kai/conversation", 404, "no_conversation"),
+    ] {
+        let (got, _, body) = raw(r.server.addr(), &get(&r, path, "")).await;
+        assert_eq!(got, status, "{path} {body}");
+        assert_eq!(json_of(&body)["error"]["code"], code, "{path}");
+    }
+    let body = json!({}).to_string();
+    let (status, _, _) = raw(
+        r.server.addr(),
+        &post(&r, "/v1/bots/kai/conversation", &body, ""),
+    )
+    .await;
+    assert_eq!(status, 405, "a conversation is read, never written, here");
+    let no_token = format!(
+        "GET /v1/bots/kai/conversation?session=s1 HTTP/1.1\r\nHost: 127.0.0.1:{}\r\n\r\n",
+        r.server.addr().port()
+    );
+    let (status, _, body) = raw(r.server.addr(), &no_token).await;
+    assert_eq!(status, 401);
+    assert!(
+        !body.contains("kai"),
+        "an unauthorised read says nothing of the conversation"
+    );
+}
+
+#[tokio::test]
+async fn a_message_said_by_a_client_is_in_the_apps_transcript() {
+    let r = rig().await;
+    let body = json!({"text": "from the island", "session": "new"}).to_string();
+    let (status, _, said) = raw(r.server.addr(), &post(&r, "/v1/bots/kai/say", &body, "")).await;
+    assert_eq!(status, 200, "{said}");
+    let stored = json_of(&said)["said"]["session_id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    // what the app reads for that conversation is the engine's transcript: the message is in it, as the owner's own
+    let (_, _, read) = raw(
+        r.server.addr(),
+        &get(
+            &r,
+            &format!("/v1/bots/kai/conversation?session={stored}"),
+            "",
+        ),
+    )
+    .await;
+    let msgs = json_of(&read)["messages"].clone();
+    assert_eq!(msgs[0]["role"], "user");
+    assert_eq!(msgs[0]["text"], "from the island");
+    let created = r.scripted.of("session.create");
+    assert_eq!(
+        created[0].1,
+        json!({"source": "gui"}),
+        "started exactly as the app starts a conversation"
+    );
+    let rows = r.store.lock().unwrap().clone();
+    assert_eq!(rows.len(), 1);
+    assert!(
+        rows[0].get("client").is_none(),
+        "the message carries no name"
+    );
+}
+
+async fn follow(r: &Rig, query: &str) -> TcpStream {
+    let mut s = TcpStream::connect(r.server.addr()).await.unwrap();
+    s.write_all(get(r, &format!("/v1/events{query}"), "").as_bytes())
+        .await
+        .unwrap();
+    let first = read_stream(&mut s, "event: hello", Duration::from_secs(2)).await;
+    assert!(first.starts_with("HTTP/1.1 200"), "{first}");
+    s
+}
+
+fn from_the_app(r: &Rig, bot: &str, session: &str, reply: &[&str]) {
+    use crate::gateway::{Direction, FeedFrame};
+    let frame = |direction, name: &str, payload: Option<Value>| FeedFrame {
+        direction,
+        name: name.into(),
+        session_id: Some(session.into()),
+        generation: None,
+        payload,
+    };
+    let feed = r.service.feed();
+    feed.on_frame(
+        bot,
+        &frame(
+            Direction::Out,
+            "prompt.submit",
+            Some(json!({"session_id": session, "text": "typed in the app", "submission_id": "sub-1"})),
+        ),
+    );
+    feed.on_frame(bot, &frame(Direction::In, "message.start", None));
+    for piece in reply {
+        feed.on_frame(
+            bot,
+            &frame(Direction::In, "message.delta", Some(json!({"text": piece}))),
+        );
+    }
+    let whole: String = reply.concat();
+    feed.on_frame(
+        bot,
+        &frame(
+            Direction::In,
+            "message.complete",
+            Some(json!({"text": whole, "outcome": "completed"})),
+        ),
+    );
+}
+
+#[tokio::test]
+async fn what_the_owner_types_in_the_app_and_the_reply_streams_reach_a_following_client() {
+    let r = rig_with(ApiLimits {
+        stream_every: Duration::ZERO,
+        ..limits()
+    })
+    .await;
+    let mut s = follow(&r, "?conversations=1&bot=kai").await;
+    assert_eq!(
+        *r.service.feed().text_wanted().borrow(),
+        1,
+        "the links copy words only while someone follows"
+    );
+    from_the_app(
+        &r,
+        "kai",
+        "live-9",
+        &["Hello, ", "the key is ", CANARIES[0]],
+    );
+    let got = read_stream(&mut s, "\"state\":\"done\"", Duration::from_secs(3)).await;
+    assert!(got.contains("event: conversation.message"), "{got}");
+    assert!(
+        got.contains("typed in the app"),
+        "the app's own message reaches the client: {got}"
+    );
+    assert!(got.contains("\"role\":\"user\""), "{got}");
+    assert!(
+        got.contains("\"state\":\"streaming\""),
+        "the reply streams: {got}"
+    );
+    assert!(
+        got.contains("Hello, the key is"),
+        "the text so far grows: {got}"
+    );
+    assert!(
+        !got.contains("CANARY"),
+        "the scrubber runs on streamed text too: {got}"
+    );
+    // the reply is one message that finished, under the id it streamed with
+    let ids: Vec<&str> = got
+        .lines()
+        .filter(|l| l.starts_with("data: ") && l.contains("\"role\":\"assistant\""))
+        .filter_map(|l| l.split("\"id\":\"").nth(1)?.split('"').next())
+        .collect();
+    assert!(
+        ids.len() >= 2 && ids.iter().all(|i| *i == ids[0]),
+        "{ids:?}"
+    );
+    drop(s);
+    // the server notices the closed connection at its next write (the keepalive)
+    let mut wanted = r.service.feed().text_wanted();
+    let _ = tokio::time::timeout(Duration::from_secs(3), wanted.wait_for(|n| *n == 0)).await;
+    assert_eq!(
+        *wanted.borrow(),
+        0,
+        "nobody follows: the links stop copying words"
+    );
+}
+
+#[tokio::test]
+async fn a_message_a_client_says_reaches_every_following_client() {
+    let r = rig().await;
+    let mut a = follow(&r, "?conversations=1").await;
+    let mut b = follow(&r, "?conversations=1&bot=nina").await;
+    let mut c = follow(&r, "").await;
+    let body = json!({"text": "hello from the island", "session": "new"}).to_string();
+    let (status, _, _) = raw(r.server.addr(), &post(&r, "/v1/bots/kai/say", &body, "")).await;
+    assert_eq!(status, 200);
+    let got = read_stream(&mut a, "hello from the island", Duration::from_secs(2)).await;
+    assert!(
+        got.contains("event: conversation.message") && got.contains("\"role\":\"user\""),
+        "{got}"
+    );
+    assert!(
+        got.contains("\"profile\":\"kai\"") && got.contains("stored-new"),
+        "{got}"
+    );
+    let other = read_stream(&mut b, "hello from the island", Duration::from_millis(500)).await;
+    assert!(
+        !other.contains("hello from the island"),
+        "a stream narrowed to nina does not get kai's words: {other}"
+    );
+    let none = read_stream(&mut c, "hello from the island", Duration::from_millis(500)).await;
+    assert!(
+        !none.contains("conversation.message"),
+        "a stream that did not ask gets no words: {none}"
+    );
+}
+
+#[tokio::test]
+async fn nothing_of_a_conversation_is_copied_when_nobody_follows() {
+    let r = rig().await;
+    let mut s = follow(&r, "").await;
+    from_the_app(&r, "kai", "live-9", &["secret words"]);
+    let got = read_stream(&mut s, "\"state\":\"done\"", Duration::from_secs(1)).await;
+    assert!(
+        !got.contains("secret words") && !got.contains("typed in the app"),
+        "{got}"
+    );
+}
+
+#[tokio::test]
+async fn following_conversations_refuses_what_it_does_not_understand() {
+    let r = rig().await;
+    for (query, code) in [
+        ("?bot=kai", "bot_without_conversations"),
+        (
+            "?conversations=1&bot=a&bot=b&bot=c&bot=d&bot=e&bot=f&bot=g",
+            "bad_bot",
+        ),
+        ("?conversations=1&bot=a:b/c", "bad_query"),
+    ] {
+        let (status, _, body) =
+            raw(r.server.addr(), &get(&r, &format!("/v1/events{query}"), "")).await;
+        assert_eq!(status, 400, "{query} {body}");
+        assert_eq!(json_of(&body)["error"]["code"], code, "{query}");
+    }
 }

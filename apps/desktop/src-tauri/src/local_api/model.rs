@@ -73,35 +73,14 @@ pub enum Source {
     Cron,
     /// A turn in a team room.
     Room,
-    /// The owner's island.
-    Island,
-    /// Another client (the command line, another extension).
+    /// Anything else the engine runs (the command line, another program).
     Other,
 }
 
-/// A client's self-declared name: lowercase letters, digits, `.`, `_`, `-`, starting with a letter or digit, at most 64
-/// characters (the engine's own rule for a session's `client`). A label, never an identity.
+/// The kind of a session from what the engine says of it: its `source`. A session started through this API is the app's
+/// own kind (`gui`): where a conversation was started is never told apart.
 #[must_use]
-pub fn valid_client_name(name: &str) -> bool {
-    let mut chars = name.chars();
-    chars
-        .next()
-        .is_some_and(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
-        && name.len() <= 64
-        && name
-            .chars()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '.' | '_' | '-'))
-}
-
-/// The island's own label.
-pub const ISLAND_CLIENT: &str = "panacea-island";
-
-/// The source word of a session from what the engine says of it: its `source` and the creating client's label.
-#[must_use]
-pub fn source_of(engine_source: &str, client: Option<&str>) -> Source {
-    if client.is_some_and(|c| c == ISLAND_CLIENT || c.starts_with("panacea-")) {
-        return Source::Island;
-    }
+pub fn source_of(engine_source: &str) -> Source {
     match engine_source.trim().to_ascii_lowercase().as_str() {
         "gui" | "desktop" => Source::Gui,
         "cron" | "scheduled" => Source::Cron,
@@ -125,8 +104,6 @@ pub struct Presence {
     pub session_id: Option<String>,
     /// Where that session came from.
     pub source: Source,
-    /// The creating client's label, when it declared one.
-    pub client: Option<String>,
     /// When the state began, in milliseconds since the epoch.
     pub at: i64,
 }
@@ -142,7 +119,6 @@ impl Presence {
             attention: None,
             session_id: None,
             source: Source::Gui,
-            client: None,
             at,
         }
     }
@@ -212,7 +188,7 @@ pub struct Notification {
     pub session_id: Option<String>,
     /// The room it belongs to, when there is one.
     pub room_id: Option<String>,
-    /// Where the session came from, so a client can leave out what it already shows.
+    /// The kind of session it came from.
     pub source: Source,
     /// When, in milliseconds since the epoch.
     pub at: i64,
@@ -234,12 +210,10 @@ pub enum ApprovalState {
     Expired,
 }
 
-/// Who gave an answer: a label and the surface it came through.
+/// Where an answer came from: the surface it came through. Never a name: the contract does not tell clients apart.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Answered {
-    /// The client's self-declared label (`boopis` for the window).
-    pub client: String,
-    /// `gui`, `endpoint` or `cli`.
+    /// `gui` (the app's own window) or `endpoint` (this API).
     pub surface: String,
     /// What was chosen, when known (`once`, `deny`).
     pub choice: Option<String>,
@@ -291,6 +265,70 @@ pub struct Approval {
     pub asked_at: i64,
 }
 
+/// Who said a message of a conversation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Role {
+    /// The owner, from the app or through this API: never told apart.
+    User,
+    /// The bot.
+    Assistant,
+}
+
+/// Whether a message may still grow.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MessageState {
+    /// The reply is being written: `text` is what there is so far.
+    Streaming,
+    /// Finished.
+    Done,
+}
+
+/// One message of a conversation: the words the app shows, and nothing else (no tool row, no reasoning).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Message {
+    /// Stable for the message in an event stream (`l<n>`); `r<row>` for a stored one.
+    pub id: String,
+    /// Who said it.
+    pub role: Role,
+    /// The text, scrubbed and cut to the message cap; line breaks are kept.
+    pub text: String,
+    /// Whether the text was cut.
+    pub truncated: bool,
+    /// When, in milliseconds since the epoch (0 when the engine gave no time).
+    pub at: i64,
+    /// Whether it may still grow.
+    pub state: MessageState,
+}
+
+/// A message was added to a conversation, or a reply grew or finished.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConversationMessage {
+    /// The bot.
+    pub profile: String,
+    /// The conversation: the stored id (what `say` returns) once the host has seen the session listed, else the engine's
+    /// live id.
+    pub session_id: String,
+    /// The message; an id seen again replaces the earlier text.
+    pub message: Message,
+}
+
+/// A conversation as the app shows it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Conversation {
+    /// The bot.
+    pub profile: String,
+    /// The stored session's id.
+    pub session_id: String,
+    /// Oldest first: the user's and the bot's words.
+    pub messages: Vec<Message>,
+    /// Whether the conversation holds older rows than these.
+    pub older: bool,
+    /// The feed's last event id before the read, to follow from.
+    pub last_event_id: u64,
+}
+
 /// The events of the feed. Each is stamped by the feed with a counter and the time.
 #[allow(clippy::large_enum_variant)] // an event is built once and shared behind an `Arc`; boxing buys nothing
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -317,6 +355,9 @@ pub enum Event {
     /// An approval appeared or moved.
     #[serde(rename = "approvals.changed")]
     Approvals(Approval),
+    /// A message was added to a conversation, or a reply grew or finished. Only to streams that asked for conversations.
+    #[serde(rename = "conversation.message")]
+    Conversation(ConversationMessage),
     /// The stream fell behind and events were dropped: read the snapshots again.
     #[serde(rename = "lagged")]
     Lagged {
@@ -335,6 +376,7 @@ impl Event {
             Self::Presence(_) => "bots.presence",
             Self::Notification(_) => "notifications.new",
             Self::Approvals(_) => "approvals.changed",
+            Self::Conversation(_) => "conversation.message",
             Self::Lagged { .. } => "lagged",
         }
     }
@@ -415,24 +457,12 @@ mod tests {
     }
 
     #[test]
-    fn a_session_is_told_apart_by_its_client_before_its_source() {
-        assert_eq!(source_of("cli", Some("panacea-island")), Source::Island);
-        assert_eq!(source_of("gui", None), Source::Gui);
-        assert_eq!(source_of("cron", None), Source::Cron);
-        assert_eq!(source_of("bot_room", None), Source::Room);
-        assert_eq!(source_of("acp", Some("some-tool")), Source::Other);
-    }
-
-    #[test]
-    fn client_names_follow_the_engines_rule() {
-        assert!(
-            valid_client_name("panacea-island")
-                && valid_client_name("a")
-                && valid_client_name("x.y_z-1")
-        );
-        for bad in ["", "-x", "Panacea", "has space", "a/b", &"a".repeat(65)] {
-            assert!(!valid_client_name(bad), "{bad}");
-        }
+    fn a_session_is_told_by_its_engine_source_alone() {
+        assert_eq!(source_of("gui"), Source::Gui);
+        assert_eq!(source_of("cron"), Source::Cron);
+        assert_eq!(source_of("bot_room"), Source::Room);
+        assert_eq!(source_of("cli"), Source::Other);
+        assert_eq!(source_of("acp"), Source::Other);
     }
 
     #[test]

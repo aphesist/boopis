@@ -181,6 +181,8 @@ pub(super) struct Shared {
     pub declare: Declare,
     pub taps: broadcast::Sender<TapEvent>,
     pub feed: broadcast::Sender<FeedFrame>,
+    /// Whether a feed reader follows conversations: then a delta and a window's `prompt.submit` carry their text.
+    pub feed_text: AtomicBool,
     pub endpoint: Arc<dyn Endpoint>,
     pub state: Mutex<State>,
     pub metrics: Metrics,
@@ -219,9 +221,15 @@ impl Shared {
         if self.feed.receiver_count() == 0 {
             return;
         }
-        let Some(with_payload) = feed_wants(event) else {
+        let Some(mut with_payload) = feed_wants(event) else {
             return;
         };
+        // A reply's words are copied only while a reader follows conversations; otherwise a delta is never parsed.
+        if matches!(event, "message.delta" | "message.interim")
+            && self.feed_text.load(Ordering::Relaxed)
+        {
+            with_payload = true;
+        }
         let (mut generation, mut payload) = (None, None);
         if with_payload && let Ok(v) = serde_json::from_str::<Value>(text) {
             let params = &v["params"];
@@ -323,6 +331,7 @@ impl Hub {
             declare,
             taps: broadcast::channel(64).0,
             feed: broadcast::channel(1024).0,
+            feed_text: AtomicBool::new(false),
             endpoint,
             state: Mutex::new(State {
                 phase: Phase::Connecting,
@@ -506,6 +515,23 @@ impl Hub {
                             payload: Some(params),
                         });
                     }
+                    if method == "prompt.submit"
+                        && shared.feed_text.load(Ordering::Relaxed)
+                        && shared.feed.receiver_count() > 0
+                    {
+                        // A message the owner typed in a window: a client that follows the conversation reads it.
+                        let params = out.value.get("params").cloned().unwrap_or(Value::Null);
+                        let _ = shared.feed.send(FeedFrame {
+                            direction: Direction::Out,
+                            name: method.clone(),
+                            session_id: params
+                                .get("session_id")
+                                .and_then(Value::as_str)
+                                .map(str::to_owned),
+                            generation: None,
+                            payload: Some(params),
+                        });
+                    }
                     let host_id = out
                         .value
                         .get("id")
@@ -553,6 +579,11 @@ impl Hub {
     #[must_use]
     pub fn feed(&self) -> broadcast::Receiver<FeedFrame> {
         self.shared.feed.subscribe()
+    }
+
+    /// Whether the feed should carry the words of replies and of the owner's messages (a reader follows conversations).
+    pub fn set_feed_text(&self, on: bool) {
+        self.shared.feed_text.store(on, Ordering::Relaxed);
     }
 
     /// Start the link when nothing has yet (a request the host makes itself needs no window) and wait until it is ready.

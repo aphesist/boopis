@@ -346,7 +346,7 @@ async fn serve_one<E: Engine>(
             return;
         }
     };
-    let caller = Caller::labelled(wire::client_label(&head), "endpoint");
+    let caller = Caller::through("endpoint");
     if head.method == Method::Get && head.path == "/v1/events" {
         events(stream, shared, &head, cancel).await;
         return;
@@ -405,7 +405,7 @@ async fn route<E: Engine>(
         (Method::Get, ["v1"]) => Ok(json!({
             "name": "boopis", "api": API_VERSION,
             "endpoints": ["GET /v1/bots", "GET /v1/presence", "GET /v1/notifications", "GET /v1/approvals", "POST /v1/approvals/<id>",
-                          "POST /v1/bots/<name>/say", "GET /v1/rooms", "POST /v1/rooms/<id>/say", "GET /v1/events"]
+                          "POST /v1/bots/<name>/say", "GET /v1/bots/<name>/conversation", "GET /v1/rooms", "POST /v1/rooms/<id>/say", "GET /v1/events"]
         })),
         (Method::Get, ["v1", "bots"]) => {
             Ok(json!({"bots": feed.bots(), "last_event_id": feed.last_id()}))
@@ -443,6 +443,15 @@ async fn route<E: Engine>(
                 .await?;
             Ok(json!({"approval": row}))
         }
+        (Method::Get, ["v1", "bots", name, "conversation"]) if segment_ok(name) => {
+            let pick = Pick::parse(head.param("session"))?;
+            let limit = head
+                .param("limit")
+                .and_then(|a| a.parse::<usize>().ok())
+                .unwrap_or(100);
+            let read = shared.service.conversation(name, &pick, limit).await?;
+            Ok(serde_json::to_value(read).unwrap_or(Value::Null))
+        }
         (Method::Post, ["v1", "bots", name, "say"]) if segment_ok(name) => {
             let m = object(body)?;
             let text = m.get("text").and_then(Value::as_str).ok_or_else(bad_json)?;
@@ -463,9 +472,56 @@ async fn route<E: Engine>(
             | [
                 "v1",
                 "bots" | "presence" | "notifications" | "approvals" | "rooms" | "events",
-            ],
+            ]
+            | ["v1", "bots", _, "conversation"],
         ) => Err(method_not_allowed()),
         _ => Err(not_found()),
+    }
+}
+
+/// Which conversations a stream follows: none unless it asks (`conversations=1`), then every bot's, or only the bots it
+/// names (`bot=<name>`, a few at most).
+struct Follow {
+    on: bool,
+    bots: Vec<String>,
+}
+
+impl Follow {
+    fn from_query(head: &Head, max_bots: usize) -> Result<Self, ApiError> {
+        let on = head
+            .param("conversations")
+            .is_some_and(|v| v == "1" || v == "true");
+        let bots: Vec<String> = head
+            .query
+            .iter()
+            .filter(|(k, _)| k == "bot")
+            .map(|(_, v)| v.clone())
+            .collect();
+        if !bots.is_empty() && !on {
+            return Err(ApiError {
+                status: 400,
+                code: "bot_without_conversations",
+                message: "bot narrows the conversations a stream follows: ask for conversations=1 as well.".into(),
+            });
+        }
+        if bots.len() > max_bots || bots.iter().any(|b| !segment_ok(b)) {
+            return Err(ApiError {
+                status: 400,
+                code: "bad_bot",
+                message: format!("Name at most {max_bots} bots, each by its profile name."),
+            });
+        }
+        Ok(Self { on, bots })
+    }
+
+    /// Whether an event is for this stream: every event but a conversation's goes to every stream.
+    fn wants(&self, stamped: &Stamped) -> bool {
+        match &stamped.event {
+            Event::Conversation(c) => {
+                self.on && (self.bots.is_empty() || self.bots.contains(&c.profile))
+            }
+            _ => true,
+        }
     }
 }
 
@@ -510,10 +566,18 @@ async fn events<E: Engine>(
         return;
     };
     let limit = shared.limits.read_timeout;
+    let follow = match Follow::from_query(head, shared.limits.follow_bots) {
+        Ok(f) => f,
+        Err(e) => {
+            let _ = write_json(&mut stream, e.status, &error_body(e.code, &e.message), &[]).await;
+            return;
+        }
+    };
     let since = head
         .header("last-event-id")
         .and_then(|v| v.trim().parse::<u64>().ok());
     let sub = shared.service.feed().subscribe(since);
+    let _follower = follow.on.then(|| shared.service.feed().follower());
     let mut epoch = shared.epoch.subscribe();
     epoch.borrow_and_update();
     let preamble = format!(
@@ -535,7 +599,7 @@ async fn events<E: Engine>(
             return;
         }
     }
-    for e in &sub.backlog {
+    for e in sub.backlog.iter().filter(|e| follow.wants(e)) {
         if !put(&mut stream, &sse(e), limit).await {
             return;
         }
@@ -555,7 +619,7 @@ async fn events<E: Engine>(
             }
             got = rx.recv() => match got {
                 Ok(e) => {
-                    if !put(&mut stream, &sse(&e), limit).await { return; }
+                    if follow.wants(&e) && !put(&mut stream, &sse(&e), limit).await { return; }
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     let lagged = Event::Lagged { skipped: n };

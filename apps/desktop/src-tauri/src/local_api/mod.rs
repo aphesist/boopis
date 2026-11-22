@@ -268,6 +268,17 @@ impl LocalApi {
 /// Forward what a link carries to the feed, while somebody listens (nothing is copied from a link otherwise).
 pub fn forward(feed: &Arc<Feed>, profile: &str, hub: &Arc<Hub>) {
     let (feed, profile, hub) = (feed.clone(), profile.to_owned(), hub.clone());
+    // The words of replies and of the owner's messages are copied off the link only while a reader follows conversations.
+    let (text_feed, text_hub) = (feed.clone(), hub.clone());
+    tokio::spawn(async move {
+        let mut text = text_feed.text_wanted();
+        loop {
+            text_hub.set_feed_text(*text.borrow_and_update() > 0);
+            if text.changed().await.is_err() {
+                return;
+            }
+        }
+    });
     tokio::spawn(async move {
         let mut wanted = feed.wanted();
         loop {
