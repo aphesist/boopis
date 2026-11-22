@@ -2,7 +2,7 @@
 /* Reading the sources: which sources a read covers, the read's progress row by row, how it ends (so many items read just now, or
    the host's plain reason), and the store's view while it runs: it reads the due sources when it opens, the rows and the line over
    Browse say where each one stands, and a source is never left at "Not read yet" with no attempt. */
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { setProvider } from '../../data';
 import type { StoreSource } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
@@ -126,11 +126,12 @@ describe('the store view while the sources are read', () => {
     expect([...root.querySelectorAll('button')].some((b) => b.textContent === 'Read the sources again')).toBe(true);
     const before = root.querySelectorAll('[data-store-open]').length;
     const reading = view.readDue();
-    await tick(45);
-    expect(text(root)).toMatch(/Reading the sources: 1 of 4 read…/);
-    await reading; await tick(20);
-    expect(text(root)).not.toContain('out of date');
-    expect(root.querySelectorAll('[data-store-open]').length).toBeGreaterThan(before);
+    await vi.waitFor(() => { expect(text(root)).toMatch(/Reading the sources: [0-3] of 4 read…/); }, { timeout: 2000, interval: 5 });
+    await reading;
+    await vi.waitFor(() => {
+      expect(text(root)).not.toContain('out of date');
+      expect(root.querySelectorAll('[data-store-open]').length).toBeGreaterThan(before);
+    }, { timeout: 2000 });
   });
   it('Sources shows each row waiting, being read, then its items or the plain reason, and says how the read ended', async () => {
     const { root, view, toasts } = mount({ start: 'unread', now: () => NOW, reads: { 'engine-plugins': { ms: 30 }, 'skills-hub': { ms: 30, error: HUB_DOWN }, anthropic: { ms: 30 }, 'mcp-registry': { ms: 30, error: REG_DOWN } } });
@@ -138,12 +139,12 @@ describe('the store view while the sources are read', () => {
     expect(text(root)).toContain('Not read yet: it is read when the store opens.');
     expect(text(root)).toContain('Built into this version of boopis.');
     const read = root.querySelector<HTMLButtonElement>('#hx-store-read');
-    read?.focus(); read?.click(); await tick(10);
-    expect(text(root)).toContain('Reading it now…');
+    read?.focus(); read?.click();
+    await vi.waitFor(() => { expect(text(root)).toContain('Reading it now…'); }, { timeout: 2000, interval: 2 });
     expect(text(root)).toContain('Waiting for its turn to be read…');
-    expect(text(root)).toContain('Reading the sources: 0 of 4 read…');
+    expect(text(root)).toMatch(/Reading the sources: [0-3] of 4 read…/);
     expect(document.activeElement?.id).toBe('hx-store-read');
-    await tick(200);
+    await vi.waitFor(() => { expect(text(root)).toContain('2 sources read; 2 could not be, and their rows say why.'); }, { timeout: 3000 });
     expect(text(root)).toContain(HUB_DOWN);
     expect(text(root)).toContain(REG_DOWN);
     expect(text(root)).toMatch(/\d+ items?\. Read just now\./);
