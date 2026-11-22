@@ -378,7 +378,7 @@ jobs:
           cache-dependency-path: apps/desktop/ui/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
-      - run: pnpm test
+      # Chromium comes before the unit tests: src/lab/overlap.test.ts runs the lab's probe in a real browser.
       - name: Chromium (cached by Playwright's version)
         id: pw-version
         run: echo "v=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
@@ -391,6 +391,7 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit != 'true'
       - run: pnpm exec playwright install-deps chromium
         if: steps.pw-cache.outputs.cache-hit == 'true'
+      - run: pnpm test
       - run: pnpm test:smoke
       # The engine Tauri uses on Linux is WebKitGTK, and Chromium does not show what it gets wrong: the dock's content vanished
       # in it while the slab moved. This drives the e2e build the smoke just made in a real WebKitGTK (WebKitWebDriver under
