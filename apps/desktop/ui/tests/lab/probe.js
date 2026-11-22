@@ -693,10 +693,20 @@
     const pick = () => { for (const e of root.querySelectorAll('*')) { if (e.matches('svg *, script, style')) continue; track(e); } track(root); };
     pick();
     const removed = [], added = [];
+    /* the orbs: an orb taken out of the page, and the orbs put in (R-motion-5). An orb's canvas belongs to a worker; a node that is
+       detached and attached again, or drawn anew, shows nothing until the worker draws and commits once more. */
+    const orbsOf = (n) => (n.matches('orb-avatar') ? [n] : [...n.querySelectorAll('orb-avatar')]);
+    const orbOut = new Map(), orbIn = [];
     const mo = new MutationObserver((list) => {
       for (const m of list) {
-        for (const r of m.removedNodes) if (r.nodeType === 1 && !r.matches('.ui-tip, #__lab_probe') && r.isConnected === false) removed.push({ key: keyOf(r), t: performance.now() });
-        for (const a of m.addedNodes) if (a.nodeType === 1 && !a.matches('.ui-tip, #__lab_probe')) { added.push({ key: keyOf(a), t: performance.now() }); track(a); }
+        for (const r of m.removedNodes) if (r.nodeType === 1 && !r.matches('.ui-tip, #__lab_probe')) {
+          if (r.isConnected === false) removed.push({ key: keyOf(r), t: performance.now() });
+          for (const o of orbsOf(r)) orbOut.set(o, { label: o.getAttribute('label') || '', t: performance.now() });
+        }
+        for (const a of m.addedNodes) if (a.nodeType === 1 && !a.matches('.ui-tip, #__lab_probe')) {
+          added.push({ key: keyOf(a), t: performance.now() }); track(a);
+          for (const o of orbsOf(a)) orbIn.push({ el: o, label: o.getAttribute('label') || '', t: performance.now() });
+        }
       }
     });
     mo.observe(root, { childList: true, subtree: true });
@@ -715,7 +725,13 @@
     return {
       stop() {
         on = false; cancelAnimationFrame(raf); mo.disconnect();
-        return analyse(tracked, removed, added);
+        const issues = analyse(tracked, removed, added);
+        for (const [o, out] of orbOut) {
+          const key = 'orb-avatar[label=' + out.label + ']';
+          if (o.isConnected) issues.push({ kind: 'orb-moved', key, msg: key + ' was taken out of the page and put back (its canvas is painted empty until the worker draws again: update the node in place)' });
+          else if (orbIn.some((i) => i.el !== o && i.label === out.label && i.t >= out.t - 50 && i.t - out.t <= 1000)) issues.push({ kind: 'orb-replaced', key, msg: key + ' was removed and drawn anew (a new canvas is empty until the worker draws it: keep the node and update its attributes)' });
+        }
+        return issues;
       }
     };
   }

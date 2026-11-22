@@ -1,7 +1,7 @@
 /* Provider patches for the bots stories: the mock's bots shaped as the live provider's (what Hermes reports about each, a
    live composer, its recent sessions), and groups with members at work. The live provider itself is checked over fake
    frames in `host/live/*.test.ts`; the lab draws what it shows. */
-import type { Bot, BotInfo, DataProvider, ThreadMessage } from '../data';
+import type { Bot, BotInfo, BotsEvent, DataProvider, Group, GroupsEvent, ThreadMessage } from '../data';
 
 const info = (b: Bot): BotInfo => ({
   profile: b.id, path: '/home/you/.local/share/boopis/engine/profiles/' + b.id, model: 'anthropic/claude-sonnet-4.6', provider: 'anthropic',
@@ -38,4 +38,22 @@ export function liveShaped(p: DataProvider, withThread = false): DataProvider {
 export function withWorking(p: DataProvider, count = 2): DataProvider {
   const snap = p.groups.snapshot;
   return { ...p, groups: { ...p.groups, snapshot: () => { const s = snap(); return { ...s, groups: s.groups.map((g) => ({ ...g, working: g.members.slice(0, count).map((m) => m.id) })) }; } } };
+}
+
+/** what a state's interaction can push into the running app, as the engine's live updates do: a bot changes state, a group's
+    members start or stop replying. `window.__labDrive.bot(id, patch)` and `.group(id, patch)` reach every subscriber, the
+    sidebar and the dock alike; the stability check samples what the page does with them (an orb must stay the same node). */
+export function drivable(p: DataProvider): DataProvider {
+  const botFns = new Set<(e: BotsEvent) => void>(), groupFns = new Set<(e: GroupsEvent) => void>();
+  const bots = new Map(p.bots.snapshot().bots.map((b) => [b.id, b] as const));
+  const groups = new Map(p.groups.snapshot().groups.map((g) => [g.id, g] as const));
+  (window as unknown as Record<string, unknown>)['__labDrive'] = {
+    bot(id: string, patch: Partial<Bot>): void { const b = bots.get(id); if (!b) return; const next = { ...b, ...patch }; bots.set(id, next); for (const f of botFns) f({ type: 'bot', bot: next }); },
+    group(id: string, patch: Partial<Group>): void { const g = groups.get(id); if (!g) return; const next = { ...g, ...patch }; groups.set(id, next); for (const f of groupFns) f({ type: 'group', group: next }); }
+  };
+  return {
+    ...p,
+    bots: { ...p.bots, subscribe: (fn) => { botFns.add(fn); const off = p.bots.subscribe(fn); return () => { botFns.delete(fn); off(); }; } },
+    groups: { ...p.groups, subscribe: (fn) => { groupFns.add(fn); const off = p.groups.subscribe(fn); return () => { groupFns.delete(fn); off(); }; } }
+  };
 }
