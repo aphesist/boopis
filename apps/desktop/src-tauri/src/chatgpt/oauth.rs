@@ -143,12 +143,8 @@ impl Https {
     /// An agent whose every request ends within `timeout`.
     #[must_use]
     pub fn new(timeout: std::time::Duration) -> Self {
-        let tls = ureq::tls::TlsConfig::builder()
-            .provider(ureq::tls::TlsProvider::Rustls)
-            .root_certs(ureq::tls::RootCerts::PlatformVerifier)
-            .build();
         let agent = ureq::Agent::config_builder()
-            .tls_config(tls)
+            .tls_config(crate::tls::config())
             .http_status_as_error(false)
             .max_redirects(0)
             .timeout_global(Some(timeout))

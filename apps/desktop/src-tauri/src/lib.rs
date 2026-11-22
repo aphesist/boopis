@@ -33,6 +33,7 @@ pub mod settings;
 pub mod setup;
 pub mod state;
 pub mod store;
+pub mod tls;
 pub mod webkit;
 pub mod window;
 pub mod xai;
@@ -262,6 +263,8 @@ fn window_events(window: &tauri::Window, event: &tauri::WindowEvent) {
 /// Run the app, or one of the command-line commands (`boopis --version`, `boopis doctor`) when the arguments ask.
 #[allow(clippy::too_many_lines)] // one linear start-up: decide the GPU and renderer, then build the app
 pub fn run() {
+    // rustls's process default, for anything that asks for one without naming it (every agent of ours names ring: tls.rs)
+    tls::install_default();
     let context = tauri::generate_context!();
     // Before anything else: a command-line command prints and exits, and starts no window, thread or logger.
     let args: Vec<String> = std::env::args().skip(1).collect();

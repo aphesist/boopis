@@ -49,12 +49,8 @@ pub struct Https {
 }
 
 fn agent(timeout: Duration, direct: bool) -> ureq::Agent {
-    let tls = ureq::tls::TlsConfig::builder()
-        .provider(ureq::tls::TlsProvider::Rustls)
-        .root_certs(ureq::tls::RootCerts::PlatformVerifier)
-        .build();
     let mut b = ureq::Agent::config_builder()
-        .tls_config(tls)
+        .tls_config(crate::tls::config())
         .http_status_as_error(false)
         .max_redirects(0)
         .timeout_global(Some(timeout))
