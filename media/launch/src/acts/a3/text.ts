@@ -107,7 +107,8 @@ export function lineIn(film: Film, line: Line, at: number, o: { stagger?: number
     reach past the glyphs, travel with their word) */
 export function lineOut(film: Film, line: Line, at: number, o: { dur?: number } = {}): number {
   const dur = (o.dur ?? 12) / film.fps;
-  film.tl.fromTo(line.words, { yPercent: 0, clipPath: 'inset(-30% -25% -30% -25%)' }, { yPercent: -100, clipPath: 'inset(100% -25% -30% -25%)', duration: dur, ease: depart, immediateRender: false, data: { role: 'type' } }, at);
+  film.tl.fromTo(line.words, { yPercent: 0, clipPath: 'inset(-30% -25% -30% -25%)' }, { yPercent: -100, clipPath: 'inset(100% -25% 0% -25%)', duration: dur, ease: depart, immediateRender: false, data: { role: 'type' } }, at);
+  film.tl.set(line.words, { immediateRender: false, visibility: 'hidden' }, at + dur);
   return at + dur;
 }
 
