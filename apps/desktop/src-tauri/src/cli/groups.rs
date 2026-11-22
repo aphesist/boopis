@@ -88,7 +88,9 @@ pub async fn groups(args: &[String], ctx: &mut Ctx<'_>) -> i32 {
         "send" => send(rest, ctx).await,
         "log" => log(rest, ctx).await,
         "set" => set(rest, ctx).await,
-        other => Err(Fail::Usage(format!("groups {other} is not a command. {USAGE_GROUPS}"))),
+        other => Err(Fail::Usage(format!(
+            "groups {other} is not a command. {USAGE_GROUPS}"
+        ))),
     };
     finish(outcome, ctx)
 }
@@ -126,6 +128,7 @@ fn finish(outcome: std::result::Result<i32, Fail>, ctx: &mut Ctx<'_>) -> i32 {
     }
 }
 
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a time of day from a positive timestamp
 fn clock(at: f64) -> String {
     let s = at as u64 % 86_400;
     format!("{:02}:{:02}:{:02}", s / 3600, (s / 60) % 60, s % 60)
@@ -142,14 +145,25 @@ async fn list(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fa
         let rows: Vec<Value> = rooms.iter().map(|r| room_json(r, &kept)).collect();
         json_line(ctx, &Value::Array(rows));
     } else if rooms.is_empty() {
-        say(ctx, "no groups yet. `boopis groups create \"name\" bot bot` makes one.");
+        say(
+            ctx,
+            "no groups yet. `boopis groups create \"name\" bot bot` makes one.",
+        );
     } else {
         for r in &rooms {
             let cap = kept
                 .max_rounds(&r.id)
                 .map_or(String::new(), |n| format!("  max {n} rounds"));
             let gone = if r.disbanded { "  (disbanded)" } else { "" };
-            say(ctx, &format!("{}  {}  {}{cap}{gone}", r.id, r.name, r.member_ids().join(",")));
+            say(
+                ctx,
+                &format!(
+                    "{}  {}  {}{cap}{gone}",
+                    r.id,
+                    r.name,
+                    r.member_ids().join(",")
+                ),
+            );
         }
     }
     Ok(0)
@@ -179,7 +193,10 @@ async fn create(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, 
     let Some((name, bots)) = a.plain.split_first() else {
         return Err(Fail::Usage("groups create needs a name and the bots: boopis groups create \"paper past\" kai nina --lead kai".into()));
     };
-    let max = a.number("max-rounds")?.map(settings::check_rounds).transpose()?;
+    let max = a
+        .number("max-rounds")?
+        .map(settings::check_rounds)
+        .transpose()?;
     let purpose = a.value("purpose").map(read_file).transpose()?;
     let new = NewRoom {
         id: None,
@@ -204,14 +221,25 @@ async fn create(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, 
         let kept = RoomSettings::load(ctx.settings).unwrap_or_default();
         json_line(ctx, &room_json(&room, &kept));
     } else {
-        say(ctx, &format!("made {} ({}) with {}", room.name, room.id, room.member_ids().join(", ")));
+        say(
+            ctx,
+            &format!(
+                "made {} ({}) with {}",
+                room.name,
+                room.id,
+                room.member_ids().join(", ")
+            ),
+        );
     }
     Ok(0)
 }
 
 fn print_message(ctx: &mut Ctx<'_>, json: bool, at: f64, who: &str, text: &str, seq: u64) {
     if json {
-        json_line(ctx, &json!({"type": "message", "seq": seq, "at": at, "who": who, "text": text}));
+        json_line(
+            ctx,
+            &json!({"type": "message", "seq": seq, "at": at, "who": who, "text": text}),
+        );
     } else {
         say(ctx, &format!("[{}] {who}", clock(at)));
         for line in text.lines() {
@@ -235,10 +263,17 @@ fn text_of(a: &Args, from: usize, ctx: &Ctx<'_>) -> Result<String> {
 async fn send(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fail> {
     let a = Args::read(
         rest,
-        &[("wait", Kind::Switch), ("json", Kind::Switch), ("file", Kind::Value)],
+        &[
+            ("wait", Kind::Switch),
+            ("json", Kind::Switch),
+            ("file", Kind::Value),
+        ],
     )?;
     let Some(key) = a.plain.first() else {
-        return Err(Fail::Usage("groups send needs a group and the text: boopis groups send \"paper past\" \"hello\"".into()));
+        return Err(Fail::Usage(
+            "groups send needs a group and the text: boopis groups send \"paper past\" \"hello\""
+                .into(),
+        ));
     };
     let text = text_of(&a, 1, ctx)?;
     let room = rooms::resolve(ctx.rpc, key).await?;
@@ -246,7 +281,10 @@ async fn send(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fa
     if !a.has("wait") {
         let ev = rooms::send(ctx.rpc, &room.id, &text).await?;
         if json {
-            json_line(ctx, &json!({"type": "sent", "group": room.id, "event": ev.id, "seq": ev.seq}));
+            json_line(
+                ctx,
+                &json!({"type": "sent", "group": room.id, "event": ev.id, "seq": ev.seq}),
+            );
         } else {
             say(ctx, &format!("sent to {} ({})", room.name, ev.id));
         }
@@ -287,7 +325,10 @@ fn show(out: &mut dyn Write, json: bool, p: &Progress) {
         }
         Progress::Message { seq, who, text, at } => {
             if json {
-                put(json!({"type": "message", "seq": seq, "at": at, "who": who, "text": text}).to_string());
+                put(
+                    json!({"type": "message", "seq": seq, "at": at, "who": who, "text": text})
+                        .to_string(),
+                );
             } else {
                 put(format!("[{}] {who}", clock(*at)));
                 for line in text.lines() {
@@ -299,7 +340,9 @@ fn show(out: &mut dyn Write, json: bool, p: &Progress) {
             if json {
                 put(json!({"type": "continued", "count": count, "rounds": rounds}).to_string());
             } else {
-                put(format!("-- the engine paused; going on ({count} so far, up to {rounds} rounds)"));
+                put(format!(
+                    "-- the engine paused; going on ({count} so far, up to {rounds} rounds)"
+                ));
             }
         }
         Progress::Note(n) => {
@@ -321,12 +364,17 @@ async fn finish_run(
     hand_off: Option<(&str, &str)>,
 ) -> Result<i32> {
     let why = match &out.stop {
-        Stop::Done => format!("done: the bots stopped handing off after {} rounds", out.rounds),
+        Stop::Done => format!(
+            "done: the bots stopped handing off after {} rounds",
+            out.rounds
+        ),
         Stop::CapReached => format!(
             "stopped at the cap of {} rounds. The group is paused; raise the cap with --max-rounds, or hand the rest to a board with --to-board",
             out.rounds
         ),
-        Stop::Paused => "paused at the engine's limit. `boopis run --group` goes on from here".to_owned(),
+        Stop::Paused => {
+            "paused at the engine's limit. `boopis run --group` goes on from here".to_owned()
+        }
         Stop::NeedsOwner(w) => format!("a bot needs you: {w}"),
         Stop::Failed(w) => format!("stopped: {w}"),
         Stop::TimedOut => "stopped: the time limit passed (the group keeps its place)".to_owned(),
@@ -343,9 +391,12 @@ async fn finish_run(
                     "Continue this task. It was started in the group \"{}\" ({}) and the group stopped after {} rounds before it was finished. Read the group's log, finish what is left, and say what you did.\n\nThe task:\n{task}",
                     room.name, room.id, out.rounds
                 );
-                b.hand_off(board, assignee, &title, &body, &out.discussion).await
+                b.hand_off(board, assignee, &title, &body, &out.discussion)
+                    .await
             }
-            None => Err(Error::Unavailable("no kanban is reachable from here".into())),
+            None => Err(Error::Unavailable(
+                "no kanban is reachable from here".into(),
+            )),
         });
     }
     if json {
@@ -361,12 +412,19 @@ async fn finish_run(
         say(ctx, &format!("-- {why}"));
         match &handed {
             Some(Ok(id)) => say(ctx, &format!("-- handed on to the board as task {id}")),
-            Some(Err(e)) => fail(ctx, &format!("could not hand the rest to the board: {}", words(e))),
+            Some(Err(e)) => fail(
+                ctx,
+                &format!("could not hand the rest to the board: {}", words(e)),
+            ),
             None => {}
         }
     }
     let code = out.stop.exit_code();
-    Ok(if matches!(handed, Some(Err(_))) && code == 3 { 1 } else { code })
+    Ok(if matches!(handed, Some(Err(_))) && code == 3 {
+        1
+    } else {
+        code
+    })
 }
 
 fn log_line(ctx: &mut Ctx<'_>, room: &Room, e: &Event, json: bool) {
@@ -374,23 +432,36 @@ fn log_line(ctx: &mut Ctx<'_>, room: &Room, e: &Event, json: bool) {
         "message.user" => Some(("you".to_owned(), e.text("text").unwrap_or("").to_owned())),
         "message.member" => {
             let id = e.text("member_id").unwrap_or(&e.actor);
-            Some((room.name_of(id).to_owned(), e.text("text").unwrap_or("").to_owned()))
+            Some((
+                room.name_of(id).to_owned(),
+                e.text("text").unwrap_or("").to_owned(),
+            ))
         }
         "turn.failed" => {
             let id = e.text("member_id").unwrap_or("a bot");
             Some((
                 "--".to_owned(),
-                run::turn_failed_words(room.name_of(id), e.text("error").unwrap_or(""), e.text("reason_code")),
+                run::turn_failed_words(
+                    room.name_of(id),
+                    e.text("error").unwrap_or(""),
+                    e.text("reason_code"),
+                ),
             ))
         }
         "member.unavailable" => Some((
             "--".to_owned(),
-            format!("{} is not available.", room.name_of(e.text("member_id").unwrap_or("a bot"))),
+            format!(
+                "{} is not available.",
+                room.name_of(e.text("member_id").unwrap_or("a bot"))
+            ),
         )),
         "room.stop_requested" => Some(("--".to_owned(), "stopped".to_owned())),
         "room.activity" => match e.text("status") {
             Some("bounded") => Some(("--".to_owned(), "paused at the engine's limit".to_owned())),
-            Some("settled") => Some(("--".to_owned(), "settled: the bots stopped handing off".to_owned())),
+            Some("settled") => Some((
+                "--".to_owned(),
+                "settled: the bots stopped handing off".to_owned(),
+            )),
             _ => None,
         },
         _ => None,
@@ -400,7 +471,10 @@ fn log_line(ctx: &mut Ctx<'_>, room: &Room, e: &Event, json: bool) {
         return;
     }
     if json {
-        json_line(ctx, &json!({"type": e.kind, "seq": e.seq, "at": e.at, "who": who, "text": text}));
+        json_line(
+            ctx,
+            &json!({"type": e.kind, "seq": e.seq, "at": e.at, "who": who, "text": text}),
+        );
     } else if who == "--" {
         say(ctx, &format!("[{}] -- {text}", clock(e.at)));
     } else {
@@ -420,7 +494,9 @@ async fn log(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fai
         ],
     )?;
     let [key] = a.plain.as_slice() else {
-        return Err(Fail::Usage("groups log takes one group: boopis groups log \"paper past\"".into()));
+        return Err(Fail::Usage(
+            "groups log takes one group: boopis groups log \"paper past\"".into(),
+        ));
     };
     let room = rooms::resolve(ctx.rpc, key).await?;
     let json = a.has("json");
@@ -434,7 +510,11 @@ async fn log(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fai
             .filter(|(_, e)| matches!(e.kind.as_str(), "message.user" | "message.member"))
             .map(|(i, _)| i)
             .collect();
-        if let Some(&first) = messages.len().checked_sub(n as usize).and_then(|k| messages.get(k)) {
+        if let Some(&first) = messages
+            .len()
+            .checked_sub(n as usize)
+            .and_then(|k| messages.get(k))
+        {
             events.drain(..first);
         }
     }
@@ -465,7 +545,9 @@ async fn log(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fai
 async fn set(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fail> {
     let a = Args::read(rest, &[("max-rounds", Kind::Value), ("json", Kind::Switch)])?;
     let [key] = a.plain.as_slice() else {
-        return Err(Fail::Usage("groups set takes one group: boopis groups set \"paper past\" --max-rounds 12".into()));
+        return Err(Fail::Usage(
+            "groups set takes one group: boopis groups set \"paper past\" --max-rounds 12".into(),
+        ));
     };
     let room = rooms::resolve(ctx.rpc, key).await?;
     let mut kept = RoomSettings::load(ctx.settings)?;
@@ -483,11 +565,21 @@ async fn set(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fai
     }
     let now = kept.max_rounds(&room.id);
     if a.has("json") {
-        json_line(ctx, &json!({"id": room.id, "max_rounds": now, "default": settings::DEFAULT_MAX_ROUNDS}));
+        json_line(
+            ctx,
+            &json!({"id": room.id, "max_rounds": now, "default": settings::DEFAULT_MAX_ROUNDS}),
+        );
     } else {
         match now {
             Some(n) => say(ctx, &format!("{}: runs stop at {n} rounds", room.name)),
-            None => say(ctx, &format!("{}: runs stop at the default, {} rounds", room.name, settings::DEFAULT_MAX_ROUNDS)),
+            None => say(
+                ctx,
+                &format!(
+                    "{}: runs stop at the default, {} rounds",
+                    room.name,
+                    settings::DEFAULT_MAX_ROUNDS
+                ),
+            ),
         }
     }
     Ok(0)
@@ -512,16 +604,22 @@ async fn run_inner(args: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i3
         ],
     )?;
     let Some(key) = a.value("group") else {
-        return Err(Fail::Usage("run needs a group: boopis run --group \"paper past\" \"the task\"".into()));
+        return Err(Fail::Usage(
+            "run needs a group: boopis run --group \"paper past\" \"the task\"".into(),
+        ));
     };
     let task = text_of(&a, 0, ctx)?;
     if task.trim().is_empty() {
-        return Err(Fail::Usage("run needs the task: boopis run --group \"paper past\" \"the task\"".into()));
+        return Err(Fail::Usage(
+            "run needs the task: boopis run --group \"paper past\" \"the task\"".into(),
+        ));
     }
     let room = rooms::resolve(ctx.rpc, key).await?;
     let kept = RoomSettings::load(ctx.settings)?;
     let cap = settings::effective(
-        a.number("max-rounds")?.map(settings::check_rounds).transpose()?,
+        a.number("max-rounds")?
+            .map(settings::check_rounds)
+            .transpose()?,
         kept.max_rounds(&room.id),
     );
     let minutes = a.number("timeout")?.unwrap_or(60).max(1);
@@ -533,7 +631,10 @@ async fn run_inner(args: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i3
     };
     let lead = rooms::state(ctx.rpc, &room.id).await?.context.lead;
     let assignee = if lead.is_empty() {
-        room.members.first().map(|m| m.id.clone()).unwrap_or_default()
+        room.members
+            .first()
+            .map(|m| m.id.clone())
+            .unwrap_or_default()
     } else {
         lead
     };

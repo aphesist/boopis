@@ -3,6 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Bot, GroupsEvent } from '../../data';
 import type { GatewayClient, GatewayEvent } from '../gateway';
+import type { RoomsBridge } from '../rooms-bridge';
 import { createLiveGroups } from './groups';
 
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -402,7 +403,7 @@ describe('boopis’s own cap on rounds for a group', () => {
     expect(await g.source.setRoundLimit('r1', 12)).toEqual({ rounds: 12, fallback: 30 });
     expect(await g.source.roundLimit('r1')).toEqual({ rounds: 12, fallback: 30 });
     expect(await g.source.setRoundLimit('r1', null)).toEqual({ rounds: null, fallback: 30 });
-    expect(e.calls.some((c) => /max_rounds|limit/.test(JSON.stringify(c)))).toBe(false);
+    expect(e.calls.some((c) => /max_rounds|max_messages|config\.set/.test(JSON.stringify(c)))).toBe(false);
   });
   it('says so where there is no host to keep it, and for a group that is not there', async () => {
     const { g } = await open((x) => { x.rooms.push(room('r1', 'release crew', ['atlas', 'nina'])); });

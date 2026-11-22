@@ -295,6 +295,18 @@ export const commands = {
 	botsRelease: (name: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("bots_release", { name }, options),
 	/**  The one notice the bots' repair left (the governance change), taken: the app shows it once. `None` when there is none. */
 	botsNotice: (options?: InvokeOptions) => __TAURI_INVOKE<string | null>("bots_notice", undefined, options),
+	/**
+	 *  What boopis keeps for the group `room_id`.
+	 * 
+	 *  Errors: `hx.invalid_params` for a bad id, `hx.host.config` for a file this build cannot read.
+	 */
+	roomSettingsGet: (roomId: string, options?: InvokeOptions) => __TAURI_INVOKE<RoomSettingsView_Serialize>("room_settings_get", { roomId }, options),
+	/**
+	 *  Keep the cap on rounds for the group `room_id` (`None`: the default again).
+	 * 
+	 *  Errors: `hx.invalid_params` for a bad id or a cap outside 1 to 1000.
+	 */
+	roomSettingsSet: (roomId: string, maxRounds: number | null, options?: InvokeOptions) => __TAURI_INVOKE<RoomSettingsView_Serialize>("room_settings_set", { roomId, maxRounds }, options),
 };
 
 /** Events */
@@ -2271,6 +2283,34 @@ export type ResolvedPath_Serialize = {
 	kind: string,
 	/**  The path inside the workspace it was found in, `/`-separated; none for an absolute path outside every workspace. */
 	rel: string | null,
+};
+
+/**
+ *  boopis's own settings for one group (`rooms/settings.rs`): the most rounds `boopis run --group` lets a discussion take.
+ *  The engine has one pair of limits for every room and no per-room value, so this is boopis's, kept in the app's data folder.
+ */
+export type RoomSettingsView = RoomSettingsView_Serialize | RoomSettingsView_Deserialize;
+
+/**
+ *  boopis's own settings for one group (`rooms/settings.rs`): the most rounds `boopis run --group` lets a discussion take.
+ *  The engine has one pair of limits for every room and no per-room value, so this is boopis's, kept in the app's data folder.
+ */
+export type RoomSettingsView_Deserialize = {
+	/**  The cap kept for the group, or none (the default applies). */
+	max_rounds?: number | null,
+	/**  The cap a group without its own has. */
+	default_max_rounds: number,
+};
+
+/**
+ *  boopis's own settings for one group (`rooms/settings.rs`): the most rounds `boopis run --group` lets a discussion take.
+ *  The engine has one pair of limits for every room and no per-room value, so this is boopis's, kept in the app's data folder.
+ */
+export type RoomSettingsView_Serialize = {
+	/**  The cap kept for the group, or none (the default applies). */
+	max_rounds: number | null,
+	/**  The cap a group without its own has. */
+	default_max_rounds: number,
 };
 
 /**  Why the decision came out as it did (stable names: they go in the log and in the diagnostics). */

@@ -126,7 +126,10 @@ fn cron_of(bot: &str, j: &JobNow, names: &BTreeMap<String, String>) -> Cron {
         ..Cron::default()
     };
     // `room:<id>@<bot>` for a room of this file is written as the room's name; anything else stays as the engine wrote it.
-    let parsed = j.deliver.strip_prefix("room:").and_then(|r| r.rsplit_once('@'));
+    let parsed = j
+        .deliver
+        .strip_prefix("room:")
+        .and_then(|r| r.rsplit_once('@'));
     match parsed {
         Some((id, who)) if names.contains_key(id) => {
             c.room = names.get(id).cloned();

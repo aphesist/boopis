@@ -115,17 +115,13 @@ impl RoomSettings {
     /// `InvalidInput` for a bad id or cap.
     pub fn set_max_rounds(&mut self, room_id: &str, rounds: Option<u32>) -> Result<()> {
         check_id(room_id)?;
-        match rounds {
-            Some(n) => {
-                self.rooms.entry(room_id.to_owned()).or_default().max_rounds =
-                    Some(check_rounds(n)?);
+        if let Some(n) = rounds {
+            self.rooms.entry(room_id.to_owned()).or_default().max_rounds = Some(check_rounds(n)?);
+        } else {
+            if let Some(r) = self.rooms.get_mut(room_id) {
+                r.max_rounds = None;
             }
-            None => {
-                if let Some(r) = self.rooms.get_mut(room_id) {
-                    r.max_rounds = None;
-                }
-                self.rooms.retain(|_, r| *r != One::default());
-            }
+            self.rooms.retain(|_, r| *r != One::default());
         }
         Ok(())
     }

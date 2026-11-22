@@ -167,10 +167,10 @@ impl Rpc for GatewayRpc {
         let mut slot = self.link.lock().await;
         // A link that broke since the last call is replaced once; a refusal from the gateway is its answer, not a break.
         for attempt in 0..2 {
-            if slot.is_none() {
-                *slot = Some(self.open().await?);
-            }
-            let link = slot.as_mut().expect("opened above");
+            let link = match slot.as_mut() {
+                Some(l) => l,
+                None => slot.insert(self.open().await?),
+            };
             match link.call_rpc(method, &params).await {
                 Ok(Ok(v)) => return Ok(v),
                 Ok(Err(refused)) => return Err(Error::Unavailable(refused.message)),

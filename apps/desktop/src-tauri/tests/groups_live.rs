@@ -61,7 +61,7 @@ fn s(v: &Value) -> String {
     v.as_str().unwrap_or_default().to_owned()
 }
 
-/// The root gateway, one short link per call (the command line keeps one link; the test does not need to).
+/// The gw gateway, one short link per call (the command line keeps one link; the test does not need to).
 struct Root {
     sup: Arc<Supervisor>,
     home: PathBuf,
@@ -76,7 +76,7 @@ impl Rpc for Root {
             &endpoint,
             false,
             limits.max_inbound_frame,
-            Duration::from_secs(120),
+            Duration::from_mins(2),
         )
         .await?;
         match link.call_rpc(method, &params).await? {
@@ -90,7 +90,7 @@ async fn hermes(sup: &Supervisor, home: &std::path::Path, args: &[&str]) -> Stri
     let info = sup.info().await.expect("hermes is found");
     let out = sup
         .cli()
-        .run(&info.binary, home, args, Duration::from_secs(180))
+        .run(&info.binary, home, args, Duration::from_mins(3))
         .await
         .expect("the engine's command runs");
     assert_eq!(out.code, 0, "hermes {args:?}: {}{}", out.stdout, out.stderr);
@@ -100,7 +100,9 @@ async fn hermes(sup: &Supervisor, home: &std::path::Path, args: &[&str]) -> Stri
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_task_runs_through_a_group_past_the_engines_pause_to_boopis_cap() {
     let Some(stack) = start_stack() else {
-        eprintln!("skipped: set HX_E2E_HERMES_ENV to the spike install to run against a real gateway");
+        eprintln!(
+            "skipped: set HX_E2E_HERMES_ENV to the spike install to run against a real gateway"
+        );
         return;
     };
     let i = &stack.info;
@@ -116,7 +118,7 @@ async fn a_task_runs_through_a_group_past_the_engines_pause_to_boopis_cap() {
         .map(|m| m.iter().map(|(k, v)| (k.clone(), s(v))).collect())
         .unwrap_or_default();
     let sup = Arc::new(Supervisor::new(env, Limits::default()).with_child_env(extra));
-    let root = Root {
+    let gw = Root {
         sup: sup.clone(),
         home: home.clone(),
     };
@@ -124,7 +126,7 @@ async fn a_task_runs_through_a_group_past_the_engines_pause_to_boopis_cap() {
     // Two bots, made and prepared the way the app makes them (what `tests/e2e/test_bot_home_e2e.py` does step by step).
     let providers_main = hermes(&sup, &home, &["config", "get", "--json", "providers.main"]).await;
     for name in ["moss", "nina"] {
-        root.call(
+        gw.call(
             "profiles.create",
             json!({"name": name, "soul": "You pass work on.", "model": "claude-opus-5-5", "provider": "main", "no_alias": true}),
         )
@@ -138,20 +140,50 @@ async fn a_task_runs_through_a_group_past_the_engines_pause_to_boopis_cap() {
             bot_home.join("plugins").join("boopis"),
         )
         .unwrap();
-        hermes(&sup, &bot_home, &["config", "set", "providers.main", providers_main.trim()]).await;
-        hermes(&sup, &bot_home, &["config", "set", "plugins.entries.boopis.settings.mode", "ungoverned"]).await;
+        hermes(
+            &sup,
+            &bot_home,
+            &["config", "set", "providers.main", providers_main.trim()],
+        )
+        .await;
+        hermes(
+            &sup,
+            &bot_home,
+            &[
+                "config",
+                "set",
+                "plugins.entries.boopis.settings.mode",
+                "ungoverned",
+            ],
+        )
+        .await;
         hermes(&sup, &bot_home, &["plugins", "enable", "boopis"]).await;
-        hermes(&sup, &home, &["config", "set", &format!("hosted_rooms.profiles.{name}"), &bot_home.canonicalize().unwrap().display().to_string()]).await;
+        hermes(
+            &sup,
+            &home,
+            &[
+                "config",
+                "set",
+                &format!("hosted_rooms.profiles.{name}"),
+                &bot_home.canonicalize().unwrap().display().to_string(),
+            ],
+        )
+        .await;
     }
-    sup.restart(&home, true).await.expect("the gateway restarts");
+    sup.restart(&home, true)
+        .await
+        .expect("the gateway restarts");
 
     // The command line's own steps.
     let room = rooms::create(
-        &root,
+        &gw,
         &NewRoom {
             name: "e2e".into(),
             seats: ["moss", "nina"]
-                .map(|b| Seat { bot: b.into(), display: b.into() })
+                .map(|b| Seat {
+                    bot: b.into(),
+                    display: b.into(),
+                })
                 .to_vec(),
             ..NewRoom::default()
         },
@@ -159,35 +191,50 @@ async fn a_task_runs_through_a_group_past_the_engines_pause_to_boopis_cap() {
     .await
     .expect("a group is made");
     assert_eq!(room.member_ids(), ["moss", "nina"]);
-    assert!(rooms::list(&root, false).await.unwrap().iter().any(|r| r.id == room.id));
-    assert_eq!(rooms::resolve(&root, "e2e").await.unwrap().id, room.id);
+    assert!(
+        rooms::list(&gw, false)
+            .await
+            .unwrap()
+            .iter()
+            .any(|r| r.id == room.id)
+    );
+    assert_eq!(rooms::resolve(&gw, "e2e").await.unwrap().id, room.id);
 
     // Every reply cites both bots, so they keep handing off until the engine's limit pauses the discussion.
     let task = "@moss @nina start @@reply @moss @nina over to you@@";
     let opts = Opts {
         max_rounds: 6,
         poll: Duration::from_secs(1),
-        timeout: Duration::from_secs(480),
+        timeout: Duration::from_mins(8),
         quiet_polls: 30,
         ..Opts::default()
     };
     let mut seen = Vec::new();
-    let out = rooms::run::run(&root, &room, task, &opts, &mut |p| seen.push(p))
+    let out = rooms::run::run(&gw, &room, task, &opts, &mut |p| seen.push(p))
         .await
         .expect("the run reads the room");
-    eprintln!("stop {:?}, rounds {}, continues {}, messages {}", out.stop, out.rounds, out.continues, out.messages);
-    let said: Vec<&Progress> = seen.iter().filter(|p| matches!(p, Progress::Message { .. })).collect();
+    eprintln!(
+        "stop {:?}, rounds {}, continues {}, messages {}",
+        out.stop, out.rounds, out.continues, out.messages
+    );
+    let said: Vec<&Progress> = seen
+        .iter()
+        .filter(|p| matches!(p, Progress::Message { .. }))
+        .collect();
     assert!(!said.is_empty(), "the bots answered: {seen:?}");
     match out.stop {
         Stop::CapReached => {
-            assert!(out.continues >= 1, "the run continued the engine's pause before it reached its own cap");
+            assert!(
+                out.continues >= 1,
+                "the run continued the engine's pause before it reached its own cap"
+            );
             assert_eq!(out.rounds, 6);
         }
         Stop::Done => eprintln!("the bots settled by themselves; the cap was not needed"),
         other => panic!("the run should finish or reach its cap, not {other:?}: {seen:?}"),
     }
     // the log shows the conversation the run printed
-    let log = rooms::log_since(&root, &room.id, 0).await.unwrap();
+    let log = rooms::log_since(&gw, &room.id, 0).await.unwrap();
     assert!(log.iter().any(|e| e.kind == "message.user"));
     assert!(log.iter().filter(|e| e.kind == "message.member").count() >= said.len());
 }

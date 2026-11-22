@@ -62,19 +62,18 @@ impl Args {
                     }
                     String::new()
                 }
-                Kind::Value | Kind::Many => match inline {
-                    Some(v) => v,
-                    None => {
+                Kind::Value | Kind::Many => {
+                    if let Some(v) = inline {
+                        v
+                    } else {
                         let next = args.get(i).filter(|n| !n.starts_with("--") || n.len() == 2);
-                        match next {
-                            Some(v) => {
-                                i += 1;
-                                v.clone()
-                            }
-                            None => return Err(Usage(format!("--{name} needs a value"))),
-                        }
+                        let Some(v) = next else {
+                            return Err(Usage(format!("--{name} needs a value")));
+                        };
+                        i += 1;
+                        v.clone()
                     }
-                },
+                }
             };
             let slot = out.values.entry(name.to_owned()).or_default();
             if *kind != Kind::Many && !slot.is_empty() {
@@ -102,6 +101,7 @@ impl Args {
 
     /// Every value of a repeatable option.
     #[must_use]
+    #[allow(dead_code)] // no command takes a repeatable option yet; its test keeps the reader whole
     pub fn all(&self, name: &str) -> &[String] {
         self.values.get(name).map_or(&[], Vec::as_slice)
     }
@@ -135,7 +135,21 @@ mod tests {
 
     #[test]
     fn options_and_plain_arguments_are_told_apart() {
-        let r = Args::read(&a(&["paper", "kai", "--lead", "kai", "--json", "nina", "--skills=a", "--skills", "b"]), KNOWN).unwrap();
+        let r = Args::read(
+            &a(&[
+                "paper",
+                "kai",
+                "--lead",
+                "kai",
+                "--json",
+                "nina",
+                "--skills=a",
+                "--skills",
+                "b",
+            ]),
+            KNOWN,
+        )
+        .unwrap();
         assert_eq!(r.plain, ["paper", "kai", "nina"]);
         assert_eq!(r.value("lead"), Some("kai"));
         assert!(r.has("json"));
@@ -156,6 +170,11 @@ mod tests {
         assert!(Args::read(&a(&["--lead", "--json"]), KNOWN).is_err());
         assert!(Args::read(&a(&["--lead", "a", "--lead", "b"]), KNOWN).is_err());
         assert!(Args::read(&a(&["--json=1"]), KNOWN).is_err());
-        assert!(Args::read(&a(&["--lead", "x"]), KNOWN).unwrap().number("lead").is_err());
+        assert!(
+            Args::read(&a(&["--lead", "x"]), KNOWN)
+                .unwrap()
+                .number("lead")
+                .is_err()
+        );
     }
 }

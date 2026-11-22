@@ -12,8 +12,8 @@ pub const VERSION: u32 = 1;
 
 /// The shapes a bot's orb can have (the app's `SHAPES`, `ui/src/data/looks.ts`; a test keeps the two lists one).
 pub const SHAPES: &[&str] = &[
-    "circle", "squircle", "soft", "wide", "tall", "bean", "drop", "ghost", "triangle", "hexagon", "diamond", "cloud",
-    "clover", "flower", "star",
+    "circle", "squircle", "soft", "wide", "tall", "bean", "drop", "ghost", "triangle", "hexagon",
+    "diamond", "cloud", "clover", "flower", "star",
 ];
 
 /// A whole team.
@@ -227,10 +227,14 @@ impl Team {
 
     /// The problems with what is written (not with the files).
     #[must_use]
+    #[allow(clippy::too_many_lines)] // one check per field of the file
     pub fn check(&self) -> Vec<String> {
         let mut p = Vec::new();
         if self.version != VERSION {
-            p.push(format!("version: this build reads version {VERSION}, the file says {}", self.version));
+            p.push(format!(
+                "version: this build reads version {VERSION}, the file says {}",
+                self.version
+            ));
         }
         for (n, b) in &self.bots {
             if crate::bots::check_name(n).is_err() {
@@ -238,10 +242,17 @@ impl Team {
             }
             if let Some(l) = &b.look {
                 if !SHAPES.contains(&l.shape.as_str()) {
-                    p.push(format!("bots.{n}.look.shape: {:?} is not a shape (one of {})", l.shape, SHAPES.join(", ")));
+                    p.push(format!(
+                        "bots.{n}.look.shape: {:?} is not a shape (one of {})",
+                        l.shape,
+                        SHAPES.join(", ")
+                    ));
                 }
                 if !is_color(&l.color) {
-                    p.push(format!("bots.{n}.look.color: {:?} is not a colour like #4fc9a8", l.color));
+                    p.push(format!(
+                        "bots.{n}.look.color: {:?} is not a colour like #4fc9a8",
+                        l.color
+                    ));
                 }
             }
             if b.model.as_ref().is_some_and(|m| m.trim().is_empty()) {
@@ -250,17 +261,31 @@ impl Team {
             let mut seen = BTreeSet::new();
             for (i, c) in b.connectors.iter().enumerate() {
                 let at = format!("bots.{n}.connectors[{i}]");
-                if c.name.is_empty() || !c.name.chars().all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-' || ch == '_') {
-                    p.push(format!("{at}.name: lower case letters, digits, '-' and '_'"));
+                if c.name.is_empty()
+                    || !c.name.chars().all(|ch| {
+                        ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-' || ch == '_'
+                    })
+                {
+                    p.push(format!(
+                        "{at}.name: lower case letters, digits, '-' and '_'"
+                    ));
                 }
                 if !seen.insert(&c.name) {
                     p.push(format!("{at}.name: {:?} is listed twice", c.name));
                 }
                 match (&c.command, &c.url) {
-                    (Some(_), Some(_)) => p.push(format!("{at}: give a command or a url, not both")),
+                    (Some(_), Some(_)) => {
+                        p.push(format!("{at}: give a command or a url, not both"));
+                    }
                     (None, None) => p.push(format!("{at}: give a command or a url")),
-                    (Some(cmd), None) if cmd.trim().is_empty() => p.push(format!("{at}.command: empty")),
-                    (None, Some(u)) if !(u.starts_with("https://") || u.starts_with("http://127.0.0.1") || u.starts_with("http://localhost")) => {
+                    (Some(cmd), None) if cmd.trim().is_empty() => {
+                        p.push(format!("{at}.command: empty"));
+                    }
+                    (None, Some(u))
+                        if !(u.starts_with("https://")
+                            || u.starts_with("http://127.0.0.1")
+                            || u.starts_with("http://localhost")) =>
+                    {
                         p.push(format!("{at}.url: use https (or a local address)"));
                     }
                     _ => {}
@@ -276,7 +301,12 @@ impl Team {
                 p.push("rooms: a room needs a name".to_owned());
             }
             if !(crate::rooms::MIN_MEMBERS..=crate::rooms::MAX_MEMBERS).contains(&r.members.len()) {
-                p.push(format!("{at}.members: {} to {} bots, not {}", crate::rooms::MIN_MEMBERS, crate::rooms::MAX_MEMBERS, r.members.len()));
+                p.push(format!(
+                    "{at}.members: {} to {} bots, not {}",
+                    crate::rooms::MIN_MEMBERS,
+                    crate::rooms::MAX_MEMBERS,
+                    r.members.len()
+                ));
             }
             let mut seen = BTreeSet::new();
             for m in &r.members {
@@ -292,10 +322,15 @@ impl Team {
             if let Some(n) = r.max_rounds
                 && crate::rooms::settings::check_rounds(n).is_err()
             {
-                p.push(format!("{at}.max_rounds: 1 to {}", crate::rooms::settings::LIMIT_MAX_ROUNDS));
+                p.push(format!(
+                    "{at}.max_rounds: 1 to {}",
+                    crate::rooms::settings::LIMIT_MAX_ROUNDS
+                ));
             }
             if let Some(id) = &r.id
-                && !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+                && !id
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
             {
                 p.push(format!("{at}.id: letters, digits, '-' and '_'"));
             }
@@ -304,14 +339,20 @@ impl Team {
             let ok = !slug.is_empty()
                 && slug.len() <= 63
                 && slug.starts_with(|c: char| c.is_ascii_lowercase() || c.is_ascii_digit())
-                && slug.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+                && slug
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
             if !ok {
-                p.push(format!("boards.{slug}: a slug is lower case letters, digits and '-'"));
+                p.push(format!(
+                    "boards.{slug}: a slug is lower case letters, digits and '-'"
+                ));
             }
             if let Some(w) = &b.workdir
                 && !(w.starts_with('/') || w.starts_with("~/") || w == "~" || is_windows_path(w))
             {
-                p.push(format!("boards.{slug}.workdir: an absolute path, or one starting with ~/"));
+                p.push(format!(
+                    "boards.{slug}.workdir: an absolute path, or one starting with ~/"
+                ));
             }
         }
         let mut jobs = BTreeSet::new();
@@ -324,7 +365,10 @@ impl Team {
                 p.push(format!("{at}.name: empty"));
             }
             if !jobs.insert((&c.bot, c.name.trim())) {
-                p.push(format!("{at}.name: {} already has a job called {:?}", c.bot, c.name));
+                p.push(format!(
+                    "{at}.name: {} already has a job called {:?}",
+                    c.bot, c.name
+                ));
             }
             if c.schedule.trim().is_empty() {
                 p.push(format!("{at}.schedule: empty"));
@@ -365,7 +409,9 @@ fn is_windows_path(w: &str) -> bool {
     b.len() > 2 && b[0].is_ascii_alphabetic() && b[1] == b':' && (b[2] == b'\\' || b[2] == b'/')
 }
 
-fn is_color(c: &str) -> bool {
+/// Whether `c` is a `#rrggbb` colour.
+#[must_use]
+pub fn is_color(c: &str) -> bool {
     c.len() == 7 && c.starts_with('#') && c[1..].chars().all(|h| h.is_ascii_hexdigit())
 }
 
@@ -373,8 +419,13 @@ fn is_color(c: &str) -> bool {
 /// file shared from elsewhere cannot make `apply` read an arbitrary file into a bot's instructions.
 fn read_inside(base: &Path, rel: &str) -> Result<String, String> {
     let p = Path::new(rel);
-    if p.is_absolute() || p.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
-        return Err(format!("{rel:?} must be a path inside the team file's folder"));
+    if p.is_absolute()
+        || p.components()
+            .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
+        return Err(format!(
+            "{rel:?} must be a path inside the team file's folder"
+        ));
     }
     let full = base.join(p);
     let meta = std::fs::metadata(&full).map_err(|e| format!("{rel}: {e}"))?;

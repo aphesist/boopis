@@ -41,6 +41,7 @@ pub struct Fake {
     inner: Mutex<Inner>,
 }
 
+#[allow(clippy::struct_excessive_bools)] // independent switches of one scripted discussion
 struct Inner {
     script: Script,
     rooms: Vec<Value>,
@@ -69,7 +70,9 @@ impl Fake {
         Self {
             inner: Mutex::new(Inner {
                 script,
-                rooms: vec![json!({"room_id": "g-paper-past-", "name": "paper past", "members": members})],
+                rooms: vec![
+                    json!({"room_id": "g-paper-past-", "name": "paper past", "members": members}),
+                ],
                 events: Vec::new(),
                 capabilities: json!({"seatable_profiles": ["kai", "nina", "moss"]}),
                 discussion: None,
@@ -86,6 +89,9 @@ impl Fake {
     }
 
     /// The calls made so far.
+    ///
+    /// # Panics
+    /// When the lock was poisoned by another test thread.
     #[must_use]
     pub fn calls(&self) -> Vec<(String, Value)> {
         self.inner.lock().unwrap().calls.clone()
@@ -100,7 +106,7 @@ impl Fake {
 
 fn event(seq: usize, kind: &str, actor: &str, payload: &Value) -> Value {
     json!({"room_id": "g-paper-past-", "seq": seq, "event_id": format!("e{seq}"), "kind": kind,
-           "actor": {"kind": "member", "id": actor}, "payload": payload, "created_at": 1_000.0 + seq as f64})
+           "actor": {"kind": "member", "id": actor}, "payload": payload, "created_at": 1_000.0 + f64::from(u32::try_from(seq).unwrap_or(u32::MAX))})
 }
 
 impl Inner {
@@ -127,7 +133,7 @@ impl Inner {
             self.push(
                 "turn.failed",
                 "nina",
-                &json!({"member_id": "nina", "discussion_event_id": d, "round_index": round, "error": "Unknown provider 'x'. Check 'hermes model'.", "reason_code": "unknown"}),
+                &json!({"member_id": "nina", "discussion_event_id": d, "round_index": round, "error": "The model x is not set up.", "reason_code": "model_unavailable"}),
             );
             self.finished = true;
             return;
@@ -141,7 +147,11 @@ impl Inner {
             self.finished = true;
             return;
         }
-        let who = if round % 2 == 0 { "kai" } else { "nina" };
+        let who = if round.is_multiple_of(2) {
+            "kai"
+        } else {
+            "nina"
+        };
         self.push(
             "message.member",
             who,
@@ -187,7 +197,12 @@ impl Rpc for Fake {
                 } else {
                     json!([])
                 };
-                let working = g.discussion.is_some() && !g.paused && !g.finished && !g.stopped && !g.script.silent && !g.pending;
+                let working = g.discussion.is_some()
+                    && !g.paused
+                    && !g.finished
+                    && !g.stopped
+                    && !g.script.silent
+                    && !g.pending;
                 Ok(json!({"room": g.rooms[0], "context": g.context,
                     "driver_status": {"running": true, "working": working, "blocked": g.pending, "counts": {},
                         "pending_actions": pending, "max_rounds": g.script.per_budget}}))
@@ -216,7 +231,9 @@ impl Rpc for Fake {
                     .filter(|e| e["seq"].as_u64().unwrap_or(0) > since)
                     .cloned()
                     .collect();
-                Ok(json!({"events": events, "cursor": g.events.len(), "latest_seq": g.events.len(), "has_more": false}))
+                Ok(
+                    json!({"events": events, "cursor": g.events.len(), "latest_seq": g.events.len(), "has_more": false}),
+                )
             }
             "groups.continue" => {
                 if !g.paused {

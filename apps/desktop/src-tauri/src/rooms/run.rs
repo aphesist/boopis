@@ -38,7 +38,7 @@ impl Default for Opts {
             max_rounds: super::settings::DEFAULT_MAX_ROUNDS,
             auto_continue: true,
             poll: Duration::from_secs(2),
-            timeout: Duration::from_secs(60 * 60),
+            timeout: Duration::from_hours(1),
             quiet_polls: 5,
         }
     }
@@ -139,14 +139,29 @@ pub fn turn_failed_words(name: &str, raw: &str, reason: Option<&str>) -> String 
         reason,
         Some("provider_auth_or_access" | "missing_config" | "model_unavailable")
     ) || (reason.is_none_or(|r| r == "unknown")
-        && ["unknown provider", "api key", "not signed in", "unauthorized", "credential", "forbidden", "no such model"]
-            .iter()
-            .any(|w| lower.contains(w)));
+        && [
+            "unknown provider",
+            "api key",
+            "not signed in",
+            "unauthorized",
+            "credential",
+            "forbidden",
+            "no such model",
+        ]
+        .iter()
+        .any(|w| lower.contains(w)));
     let limited = matches!(reason, Some("provider_quota_limit" | "provider_rate_limit"))
         || (reason.is_none_or(|r| r == "unknown")
-            && ["rate limit", "rate-limit", "429", "too many requests", "usage limit", "quota"]
-                .iter()
-                .any(|w| lower.contains(w)));
+            && [
+                "rate limit",
+                "rate-limit",
+                "429",
+                "too many requests",
+                "usage limit",
+                "quota",
+            ]
+            .iter()
+            .any(|w| lower.contains(w)));
     if reaching {
         format!(
             "{name} can't reach its model. {}",
@@ -211,7 +226,9 @@ pub async fn follow(
         let progressed = !events.is_empty();
         for e in &events {
             out.last_seq = out.last_seq.max(e.seq);
-            if let Some(stop) = read_event(rpc, room, e, discussion, per_budget, opts, &mut out, on).await? {
+            if let Some(stop) =
+                read_event(rpc, room, e, discussion, per_budget, opts, &mut out, on).await?
+            {
                 out.stop = stop;
                 return Ok(out);
             }
@@ -228,9 +245,7 @@ pub async fn follow(
             if quiet >= opts.quiet_polls {
                 let why = state.last_error.map_or_else(
                     || "the group went quiet before the bots finished".to_owned(),
-                    |e| {
-                        crate::error::unless_engine("hx.bots.turn_failed", &e)
-                    },
+                    |e| crate::error::unless_engine("hx.bots.turn_failed", &e),
                 );
                 // Nothing is running, so there is nothing to stop; say so and leave the room as it is.
                 out.stop = Stop::Failed(why);
@@ -276,7 +291,10 @@ async fn read_event(
     out: &mut Outcome,
     on: &mut dyn FnMut(Progress),
 ) -> Result<Option<Stop>> {
-    let ours = |e: &Event| e.text("discussion_event_id").is_none_or(|d| d == discussion);
+    let ours = |e: &Event| {
+        e.text("discussion_event_id")
+            .is_none_or(|d| d == discussion)
+    };
     match e.kind.as_str() {
         "message.member" if ours(e) => {
             out.messages += 1;
@@ -293,7 +311,10 @@ async fn read_event(
         }
         "member.unavailable" => {
             let id = e.text("member_id").unwrap_or("a bot");
-            on(Progress::Note(format!("{} is not available.", room.name_of(id))));
+            on(Progress::Note(format!(
+                "{} is not available.",
+                room.name_of(id)
+            )));
         }
         "turn.failed" if ours(e) => {
             let id = e.text("member_id").unwrap_or("a bot");

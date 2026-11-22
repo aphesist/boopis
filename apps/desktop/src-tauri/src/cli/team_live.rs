@@ -47,12 +47,19 @@ impl<'a> Live<'a> {
     }
 
     fn mcp(&self, bot: &str) -> Result<GatewayMcp> {
-        let home = self.host.supervisor().environment().profile_home(Some(bot))?;
+        let home = self
+            .host
+            .supervisor()
+            .environment()
+            .profile_home(Some(bot))?;
         Ok(GatewayMcp::new(self.host.supervisor().clone(), home))
     }
 
     async fn describe(&self, name: &str) -> Result<Value> {
-        self.host.rpc().call("profiles.describe", json!({"name": name})).await
+        self.host
+            .rpc()
+            .call("profiles.describe", json!({"name": name}))
+            .await
     }
 
     /// A model as the file names it, as the provider and model the engine takes.
@@ -64,7 +71,11 @@ impl<'a> Live<'a> {
     }
 
     async fn default_provider(&self) -> String {
-        match self.host.engine_cli(&["config", "get", "--json", "model.provider"]).await {
+        match self
+            .host
+            .engine_cli(&["config", "get", "--json", "model.provider"])
+            .await
+        {
             Ok(o) if o.code == 0 => serde_json::from_str::<Value>(o.stdout.trim())
                 .ok()
                 .and_then(|v| v.as_str().map(str::to_owned))
@@ -74,7 +85,10 @@ impl<'a> Live<'a> {
     }
 
     async fn plugin(&self, method: &str, params: Value) -> Result<Value> {
-        self.host.rpc().call(&format!("plugin.boopis.{method}"), params).await
+        self.host
+            .rpc()
+            .call(&format!("plugin.boopis.{method}"), params)
+            .await
     }
 
     async fn kanban(&self, args: &[&str]) -> Result<String> {
@@ -82,19 +96,37 @@ impl<'a> Live<'a> {
         full.extend_from_slice(args);
         let out = self.host.engine_cli(&full).await?;
         if out.code != 0 {
-            let why = out.stderr.lines().chain(out.stdout.lines()).rfind(|l| !l.trim().is_empty()).unwrap_or("it failed");
-            return Err(Error::Unavailable(format!("the board command failed: {why}")));
+            let why = out
+                .stderr
+                .lines()
+                .chain(out.stdout.lines())
+                .rfind(|l| !l.trim().is_empty())
+                .unwrap_or("it failed");
+            return Err(Error::Unavailable(format!(
+                "the board command failed: {why}"
+            )));
         }
         Ok(out.stdout)
     }
 
     async fn jobs_of(&self, bot: &str) -> Result<Vec<JobNow>> {
         let rpc = self.host.rpc_for(bot)?;
-        let res = rpc.call("cron.manage", json!({"action": "list", "include_disabled": true})).await?;
+        let res = rpc
+            .call(
+                "cron.manage",
+                json!({"action": "list", "include_disabled": true}),
+            )
+            .await?;
         if let Some(e) = res.get("error").and_then(Value::as_str) {
             return Err(Error::Unavailable(e.to_owned()));
         }
-        let whole = whole_prompts(&self.host.supervisor().environment().profile_home(Some(bot))?);
+        let whole = whole_prompts(
+            &self
+                .host
+                .supervisor()
+                .environment()
+                .profile_home(Some(bot))?,
+        );
         Ok(res
             .get("jobs")
             .and_then(Value::as_array)
@@ -108,7 +140,11 @@ impl<'a> Live<'a> {
                             schedule: text(j, "schedule"),
                             prompt: full.cloned().unwrap_or_else(|| text(j, "prompt_preview")),
                             prompt_whole: full.is_some(),
-                            deliver: j.get("deliver").and_then(Value::as_str).unwrap_or("local").to_owned(),
+                            deliver: j
+                                .get("deliver")
+                                .and_then(Value::as_str)
+                                .unwrap_or("local")
+                                .to_owned(),
                             paused: j.get("enabled").and_then(Value::as_bool) == Some(false),
                             id,
                         }
@@ -135,7 +171,12 @@ impl<'a> Live<'a> {
         }
     }
 
-    async fn set_bot_record(&self, name: &str, look: Option<&Look>, governed: Option<bool>) -> Result<()> {
+    async fn set_bot_record(
+        &self,
+        name: &str,
+        look: Option<&Look>,
+        governed: Option<bool>,
+    ) -> Result<()> {
         let mut body = json!({"name": name});
         if let Some(l) = look {
             body["look"] = json!({"shape": l.shape, "color": l.color});
@@ -151,7 +192,10 @@ impl<'a> Live<'a> {
         if done.problems.is_empty() {
             Ok(())
         } else {
-            Err(Error::Bots("hx.bots.prepare_failed", done.problems.join("; ")))
+            Err(Error::Bots(
+                "hx.bots.prepare_failed",
+                done.problems.join("; "),
+            ))
         }
     }
 }
@@ -169,10 +213,18 @@ fn whole_prompts(home: &std::path::Path) -> BTreeMap<String, String> {
     let Ok(v) = serde_json::from_str::<Value>(&raw) else {
         return BTreeMap::new();
     };
-    let rows = v.get("jobs").and_then(Value::as_array).or_else(|| v.as_array());
+    let rows = v
+        .get("jobs")
+        .and_then(Value::as_array)
+        .or_else(|| v.as_array());
     rows.map(|rows| {
         rows.iter()
-            .filter_map(|j| Some((j.get("id")?.as_str()?.to_owned(), j.get("prompt")?.as_str()?.to_owned())))
+            .filter_map(|j| {
+                Some((
+                    j.get("id")?.as_str()?.to_owned(),
+                    j.get("prompt")?.as_str()?.to_owned(),
+                ))
+            })
             .collect()
     })
     .unwrap_or_default()
@@ -203,7 +255,10 @@ impl Backend for Live<'_> {
             default_provider: self.default_provider().await,
             ..Current::default()
         };
-        let records = self.plugin("bots.read", json!({})).await.unwrap_or(Value::Null);
+        let records = self
+            .plugin("bots.read", json!({}))
+            .await
+            .unwrap_or(Value::Null);
         let record_of = |name: &str| -> Option<Value> {
             records
                 .get("bots")
@@ -233,7 +288,12 @@ impl Backend for Live<'_> {
                 .and_then(Value::as_array)
                 .map(|s| {
                     s.iter()
-                        .map(|e| (text(e, "name"), e.get("enabled").and_then(Value::as_bool) != Some(false)))
+                        .map(|e| {
+                            (
+                                text(e, "name"),
+                                e.get("enabled").and_then(Value::as_bool) != Some(false),
+                            )
+                        })
                         .collect()
                 })
                 .unwrap_or_default();
@@ -241,7 +301,13 @@ impl Backend for Live<'_> {
                 Ok(list) => list
                     .into_iter()
                     .filter(|c| c.plugin.is_none())
-                    .map(|c| ConnectorNow { name: c.name, command: c.command, args: c.args, url: c.url, env: c.env })
+                    .map(|c| ConnectorNow {
+                        name: c.name,
+                        command: c.command,
+                        args: c.args,
+                        url: c.url,
+                        env: c.env,
+                    })
                     .collect(),
                 Err(e) => {
                     tracing::debug!(error = %e, bot = %name, "a bot's connectors could not be read");
@@ -250,9 +316,19 @@ impl Backend for Live<'_> {
             };
             now.bots.insert(
                 name.clone(),
-                BotNow { role: text(&d, "description"), soul: text(&d, "soul"), provider, model, look, governed, skills, connectors },
+                BotNow {
+                    role: text(&d, "description"),
+                    soul: text(&d, "soul"),
+                    provider,
+                    model,
+                    look,
+                    governed,
+                    skills,
+                    connectors,
+                },
             );
-            now.jobs.insert(name.clone(), self.jobs_of(&name).await.unwrap_or_default());
+            now.jobs
+                .insert(name.clone(), self.jobs_of(&name).await.unwrap_or_default());
         }
         now.baseline_skills = self.describe("default").await.ok().and_then(|d| {
             d.get("skills")
@@ -264,14 +340,21 @@ impl Backend for Live<'_> {
             let state = rooms::state(&self.host.rpc(), &r.id).await?;
             now.rooms.push(RoomNow {
                 members: r.members.iter().map(|m| m.id.clone()).collect(),
-                lead: if state.context.routing == "lead" { state.context.lead } else { String::new() },
+                lead: if state.context.routing == "lead" {
+                    state.context.lead
+                } else {
+                    String::new()
+                },
                 purpose: state.context.purpose,
                 max_rounds: kept.max_rounds(&r.id),
                 id: r.id,
                 name: r.name,
             });
         }
-        let boards = self.kanban(&["boards", "list", "--json"]).await.unwrap_or_default();
+        let boards = self
+            .kanban(&["boards", "list", "--json"])
+            .await
+            .unwrap_or_default();
         if let Ok(Value::Array(rows)) = serde_json::from_str::<Value>(boards.trim()) {
             for b in rows {
                 let slug = text(&b, "slug");
@@ -282,7 +365,11 @@ impl Backend for Live<'_> {
                     slug,
                     BoardNow {
                         name: text(&b, "name"),
-                        workdir: b.get("default_workdir").and_then(Value::as_str).filter(|w| !w.is_empty()).map(contract),
+                        workdir: b
+                            .get("default_workdir")
+                            .and_then(Value::as_str)
+                            .filter(|w| !w.is_empty())
+                            .map(contract),
                     },
                 );
             }
@@ -310,7 +397,12 @@ impl Backend for Live<'_> {
                 self.host.rpc().call("profiles.create", params).await?;
                 let gov = bot.governed == Some(true);
                 if gov && !crate::frontier::is_frontier(&provider, &model) {
-                    return Err(Error::Bots("hx.bots.not_governable", format!("{name} was made, but governed mode runs on a frontier model and {model:?} is not one, so it stays ungoverned")));
+                    return Err(Error::Bots(
+                        "hx.bots.not_governable",
+                        format!(
+                            "{name} was made, but governed mode runs on a frontier model and {model:?} is not one, so it stays ungoverned"
+                        ),
+                    ));
                 }
                 let mut body = json!({"name": name, "settings": {"gov": if gov { "governed" } else { "ungoverned" }, "cap": "0.60", "workspace": "worktree"},
                     "approvals": APPROVALS.iter().map(|a| ((*a).to_owned(), json!(true))).collect::<serde_json::Map<_, _>>()});
@@ -320,7 +412,14 @@ impl Backend for Live<'_> {
                 self.plugin("bots.write", body).await?;
                 self.prepare(name, true).await
             }
-            Op::UpdateBot { name, role, soul, model, look, governed } => {
+            Op::UpdateBot {
+                name,
+                role,
+                soul,
+                model,
+                look,
+                governed,
+            } => {
                 let mut params = json!({"name": name});
                 if let Some(r) = role {
                     params["description"] = json!(r);
@@ -341,13 +440,19 @@ impl Backend for Live<'_> {
                         None => bots::model_of(self.describe(name).await?.get("model")),
                     };
                     if !crate::frontier::is_frontier(&p, &m) {
-                        return Err(Error::Bots("hx.bots.not_governable", format!("governed mode runs on a frontier model, and {m:?} is not one")));
+                        return Err(Error::Bots(
+                            "hx.bots.not_governable",
+                            format!("governed mode runs on a frontier model, and {m:?} is not one"),
+                        ));
                     }
                 }
                 if params.as_object().is_some_and(|o| o.len() > 1) {
                     let res = self.host.rpc().call("profiles.configure", params).await?;
                     if res.get("confirm_required").and_then(Value::as_bool) == Some(true) {
-                        return Err(Error::Unavailable(format!("the model {} needs your confirmation: change it in the app's Bots page once", model.clone().unwrap_or_default())));
+                        return Err(Error::Unavailable(format!(
+                            "the model {} needs your confirmation: change it in the app's Bots page once",
+                            model.clone().unwrap_or_default()
+                        )));
                     }
                 }
                 if look.is_some() || governed.is_some() {
@@ -371,27 +476,46 @@ impl Backend for Live<'_> {
                             .collect()
                     })
                     .unwrap_or_default();
-                self.host.rpc().call("profiles.configure", json!({"name": bot, "disabled_skills": off})).await.map(|_| ())
+                self.host
+                    .rpc()
+                    .call(
+                        "profiles.configure",
+                        json!({"name": bot, "disabled_skills": off}),
+                    )
+                    .await
+                    .map(|_| ())
             }
             Op::AddConnector { bot, connector } => {
-                let config = match &connector.url {
-                    Some(u) => json!({"url": u}),
-                    None => {
-                        let mut c = json!({"command": connector.command, "args": connector.args});
-                        if !connector.env.is_empty() {
-                            c["env"] = json!(connector.env);
-                        }
-                        c
+                let config = if let Some(u) = &connector.url {
+                    json!({"url": u})
+                } else {
+                    let mut c = json!({"command": connector.command, "args": connector.args});
+                    if !connector.env.is_empty() {
+                        c["env"] = json!(connector.env);
                     }
+                    c
                 };
                 self.mcp(bot)?.add(&connector.name, &config).await
             }
             Op::RemoveConnector { bot, name } => self.mcp(bot)?.remove(name).await,
-            Op::CreateRoom { name, id, members, lead, purpose, max_rounds } => {
+            Op::CreateRoom {
+                name,
+                id,
+                members,
+                lead,
+                purpose,
+                max_rounds,
+            } => {
                 let new = NewRoom {
                     id: Some(id.clone()),
                     name: name.clone(),
-                    seats: members.iter().map(|b| Seat { bot: b.clone(), display: b.clone() }).collect(),
+                    seats: members
+                        .iter()
+                        .map(|b| Seat {
+                            bot: b.clone(),
+                            display: b.clone(),
+                        })
+                        .collect(),
                     lead: lead.clone(),
                     purpose: purpose.clone(),
                 };
@@ -408,7 +532,7 @@ impl Backend for Live<'_> {
                 let mut ctx = rooms::state(&rpc, id).await?.context;
                 ctx.purpose.clone_from(purpose);
                 ctx.lead.clone_from(lead);
-                ctx.routing = if lead.is_empty() { "everyone" } else { "lead" }.to_owned();
+                if lead.is_empty() { "everyone" } else { "lead" }.clone_into(&mut ctx.routing);
                 rooms::set_context(&rpc, id, &ctx).await
             }
             Op::SetMaxRounds { id, max_rounds } => {
@@ -416,7 +540,11 @@ impl Backend for Live<'_> {
                 kept.set_max_rounds(id, *max_rounds)?;
                 kept.save(&self.settings)
             }
-            Op::CreateBoard { slug, name, workdir } => {
+            Op::CreateBoard {
+                slug,
+                name,
+                workdir,
+            } => {
                 let mut args = vec!["boards", "create", slug.as_str()];
                 if let Some(n) = name {
                     args.extend(["--name", n.as_str()]);
@@ -427,12 +555,17 @@ impl Backend for Live<'_> {
                 }
                 self.kanban(&args).await.map(|_| ())
             }
-            Op::UpdateBoard { slug, name, workdir } => {
+            Op::UpdateBoard {
+                slug,
+                name,
+                workdir,
+            } => {
                 if let Some(n) = name {
                     self.kanban(&["boards", "rename", slug, n]).await?;
                 }
                 if let Some(w) = workdir {
-                    self.kanban(&["boards", "set-default-workdir", slug, &expand(w)]).await?;
+                    self.kanban(&["boards", "set-default-workdir", slug, &expand(w)])
+                        .await?;
                 }
                 Ok(())
             }
@@ -443,20 +576,44 @@ impl Backend for Live<'_> {
                 }
                 self.cron(bot, p).await
             }
-            Op::RemoveJob { bot, id } => self.cron(bot, json!({"action": "remove", "name": id})).await,
+            Op::RemoveJob { bot, id } => {
+                self.cron(bot, json!({"action": "remove", "name": id}))
+                    .await
+            }
             Op::SetJobPaused { bot, name, paused } => {
                 let id = self.job_id(bot, name).await?;
-                self.cron(bot, json!({"action": if *paused { "pause" } else { "resume" }, "name": id})).await
+                self.cron(
+                    bot,
+                    json!({"action": if *paused { "pause" } else { "resume" }, "name": id}),
+                )
+                .await
             }
             Op::ArchiveBot { name } => {
-                let running: Vec<String> = self.jobs_of(name).await.unwrap_or_default().into_iter().filter(|j| !j.paused).map(|j| j.id).collect();
-                self.plugin("bots.archive", json!({"name": name, "paused_jobs": running})).await?;
-                self.service.release(self.host.root(), name).await.map(|_| ())
+                let running: Vec<String> = self
+                    .jobs_of(name)
+                    .await
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter(|j| !j.paused)
+                    .map(|j| j.id)
+                    .collect();
+                self.plugin(
+                    "bots.archive",
+                    json!({"name": name, "paused_jobs": running}),
+                )
+                .await?;
+                self.service
+                    .release(self.host.root(), name)
+                    .await
+                    .map(|_| ())
             }
             Op::DisbandRoom { id } => self
                 .host
                 .rpc()
-                .call("groups.disband", json!({"room_id": id, "cancel_id": rooms::new_event_id("disband")}))
+                .call(
+                    "groups.disband",
+                    json!({"room_id": id, "cancel_id": rooms::new_event_id("disband")}),
+                )
                 .await
                 .map(|_| ()),
             Op::ArchiveBoard { slug } => self.kanban(&["boards", "rm", slug]).await.map(|_| ()),
@@ -465,7 +622,15 @@ impl Backend for Live<'_> {
 
     async fn missing_skills(&self, bot: &str, wanted: &[String]) -> Result<Vec<String>> {
         let d = self.describe(bot).await?;
-        let have: Vec<String> = d.get("skills").and_then(Value::as_array).map(|s| s.iter().map(|e| text(e, "name")).collect()).unwrap_or_default();
-        Ok(wanted.iter().filter(|w| !have.contains(w)).cloned().collect())
+        let have: Vec<String> = d
+            .get("skills")
+            .and_then(Value::as_array)
+            .map(|s| s.iter().map(|e| text(e, "name")).collect())
+            .unwrap_or_default();
+        Ok(wanted
+            .iter()
+            .filter(|w| !have.contains(w))
+            .cloned()
+            .collect())
     }
 }

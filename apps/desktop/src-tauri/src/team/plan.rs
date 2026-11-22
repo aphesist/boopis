@@ -296,7 +296,11 @@ fn same_model(want: &str, provider: &str, model: &str) -> bool {
 
 fn find_room<'a>(now: &'a Current, name: &str, id: Option<&str>) -> Option<&'a RoomNow> {
     id.and_then(|i| now.rooms.iter().find(|r| r.id == i))
-        .or_else(|| now.rooms.iter().find(|r| r.name.trim().eq_ignore_ascii_case(name.trim())))
+        .or_else(|| {
+            now.rooms
+                .iter()
+                .find(|r| r.name.trim().eq_ignore_ascii_case(name.trim()))
+        })
 }
 
 /// Compare `team` with `now`. With `prune`, what is there and not in the file is removed (bots and boards archived, rooms
@@ -321,9 +325,27 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
                 }
                 w.join(", ")
             };
-            out.actions.push(Action { mark: '+', target: tgt.clone(), what, needs: None, op: Op::CreateBot { name: name.clone(), bot: want.clone() } });
+            out.actions.push(Action {
+                mark: '+',
+                target: tgt.clone(),
+                what,
+                needs: None,
+                op: Op::CreateBot {
+                    name: name.clone(),
+                    bot: want.clone(),
+                },
+            });
             for c in &want.connectors {
-                out.actions.push(Action { mark: '+', target: tgt.clone(), what: format!("connector {}", c.name), needs: Some(name.clone()), op: Op::AddConnector { bot: name.clone(), connector: c.clone() } });
+                out.actions.push(Action {
+                    mark: '+',
+                    target: tgt.clone(),
+                    what: format!("connector {}", c.name),
+                    needs: Some(name.clone()),
+                    op: Op::AddConnector {
+                        bot: name.clone(),
+                        connector: c.clone(),
+                    },
+                });
             }
             if !want.skills.is_empty() {
                 // Skills are checked once the bot exists: a new bot starts with the bundled ones.
@@ -332,19 +354,35 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
             continue;
         };
         let mut what = Vec::new();
-        let role = want.role.as_ref().map(|r| r.trim().to_owned()).filter(|r| *r != have.role.trim());
+        let role = want
+            .role
+            .as_ref()
+            .map(|r| r.trim().to_owned())
+            .filter(|r| *r != have.role.trim());
         if role.is_some() {
             what.push("role");
         }
-        let soul = want.soul_text.as_ref().map(|s| s.trim().to_owned()).filter(|s| *s != have.soul.trim());
+        let soul = want
+            .soul_text
+            .as_ref()
+            .map(|s| s.trim().to_owned())
+            .filter(|s| *s != have.soul.trim());
         if soul.is_some() {
             what.push("instructions");
         }
-        let model = want.model.as_ref().filter(|m| !same_model(m, &have.provider, &have.model)).cloned();
+        let model = want
+            .model
+            .as_ref()
+            .filter(|m| !same_model(m, &have.provider, &have.model))
+            .cloned();
         if model.is_some() {
             what.push("model");
         }
-        let look = want.look.as_ref().filter(|l| have.look.as_ref() != Some(*l)).cloned();
+        let look = want
+            .look
+            .as_ref()
+            .filter(|l| have.look.as_ref() != Some(*l))
+            .cloned();
         if look.is_some() {
             what.push("look");
         }
@@ -353,7 +391,20 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
             what.push("governed switch");
         }
         if !what.is_empty() {
-            out.actions.push(Action { mark: '~', target: tgt.clone(), what: what.join(", "), needs: None, op: Op::UpdateBot { name: name.clone(), role, soul, model, look, governed } });
+            out.actions.push(Action {
+                mark: '~',
+                target: tgt.clone(),
+                what: what.join(", "),
+                needs: None,
+                op: Op::UpdateBot {
+                    name: name.clone(),
+                    role,
+                    soul,
+                    model,
+                    look,
+                    governed,
+                },
+            });
         }
         let mut off = Vec::new();
         for s in &want.skills {
@@ -364,13 +415,33 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
             }
         }
         if !off.is_empty() {
-            out.actions.push(Action { mark: '~', target: tgt.clone(), what: format!("switch on skill {}", off.join(", ")), needs: None, op: Op::EnableSkills { bot: name.clone(), skills: off } });
+            out.actions.push(Action {
+                mark: '~',
+                target: tgt.clone(),
+                what: format!("switch on skill {}", off.join(", ")),
+                needs: None,
+                op: Op::EnableSkills {
+                    bot: name.clone(),
+                    skills: off,
+                },
+            });
         }
         for c in &want.connectors {
             match have.connectors.iter().find(|h| h.name == c.name) {
-                None => out.actions.push(Action { mark: '+', target: tgt.clone(), what: format!("connector {}", c.name), needs: None, op: Op::AddConnector { bot: name.clone(), connector: c.clone() } }),
+                None => out.actions.push(Action {
+                    mark: '+',
+                    target: tgt.clone(),
+                    what: format!("connector {}", c.name),
+                    needs: None,
+                    op: Op::AddConnector {
+                        bot: name.clone(),
+                        connector: c.clone(),
+                    },
+                }),
                 Some(h) => {
-                    let differs = h.command != c.command || h.url != c.url || (c.command.is_some() && h.args != c.args);
+                    let differs = h.command != c.command
+                        || h.url != c.url
+                        || (c.command.is_some() && h.args != c.args);
                     if differs {
                         out.notes.push(format!("bot {name}: the connector {} is there with another command; it is left as it is (change it in Settings > Connectors)", c.name));
                     }
@@ -380,7 +451,16 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
         if prune {
             for h in &have.connectors {
                 if !want.connectors.iter().any(|c| c.name == h.name) {
-                    out.actions.push(Action { mark: '-', target: tgt.clone(), what: format!("connector {}", h.name), needs: None, op: Op::RemoveConnector { bot: name.clone(), name: h.name.clone() } });
+                    out.actions.push(Action {
+                        mark: '-',
+                        target: tgt.clone(),
+                        what: format!("connector {}", h.name),
+                        needs: None,
+                        op: Op::RemoveConnector {
+                            bot: name.clone(),
+                            name: h.name.clone(),
+                        },
+                    });
                 }
             }
         }
@@ -392,22 +472,46 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
         let tgt = format!("room {name}");
         for m in &want.members {
             if !known(m) {
-                out.problems.push(format!("room {name}: {m} is not a bot in the file or on this computer"));
+                out.problems.push(format!(
+                    "room {name}: {m} is not a bot in the file or on this computer"
+                ));
             }
         }
         let lead = want.lead.clone().unwrap_or_default();
         let purpose = want.purpose.clone().unwrap_or_default();
         match find_room(now, name, want.id.as_deref()) {
             None => {
-                let id = want.id.clone().unwrap_or_else(|| format!("g-{}", crate::rooms::slug(name)));
+                let id = want
+                    .id
+                    .clone()
+                    .unwrap_or_else(|| format!("g-{}", crate::rooms::slug(name)));
                 room_ids.insert(name.clone(), id.clone());
-                let needs = want.members.iter().find(|m| !now.bots.contains_key(*m)).cloned();
+                let needs = want
+                    .members
+                    .iter()
+                    .find(|m| !now.bots.contains_key(*m))
+                    .cloned();
                 out.actions.push(Action {
                     mark: '+',
                     target: tgt,
-                    what: format!("{} bots{}", want.members.len(), if lead.is_empty() { String::new() } else { format!(", lead {lead}") }),
+                    what: format!(
+                        "{} bots{}",
+                        want.members.len(),
+                        if lead.is_empty() {
+                            String::new()
+                        } else {
+                            format!(", lead {lead}")
+                        }
+                    ),
                     needs,
-                    op: Op::CreateRoom { name: name.clone(), id, members: want.members.clone(), lead: want.lead.clone(), purpose: want.purpose.clone(), max_rounds: want.max_rounds },
+                    op: Op::CreateRoom {
+                        name: name.clone(),
+                        id,
+                        members: want.members.clone(),
+                        lead: want.lead.clone(),
+                        purpose: want.purpose.clone(),
+                        max_rounds: want.max_rounds,
+                    },
                 });
             }
             Some(have) => {
@@ -416,7 +520,8 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
                     out.notes.push(format!("room {name}: its members are {} and the file says {}. A room's members cannot be changed once it is made; make a room with another name to have them", have.members.join(", "), want.members.join(", ")));
                 }
                 let lead_differs = want.lead.is_some() && lead != have.lead;
-                let purpose_differs = want.purpose.is_some() && purpose.trim() != have.purpose.trim();
+                let purpose_differs =
+                    want.purpose.is_some() && purpose.trim() != have.purpose.trim();
                 if lead_differs || purpose_differs {
                     let mut w = Vec::new();
                     if lead_differs {
@@ -432,13 +537,30 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
                         needs: None,
                         op: Op::SetRoomContext {
                             id: have.id.clone(),
-                            lead: if want.lead.is_some() { lead } else { have.lead.clone() },
-                            purpose: if want.purpose.is_some() { purpose } else { have.purpose.clone() },
+                            lead: if want.lead.is_some() {
+                                lead
+                            } else {
+                                have.lead.clone()
+                            },
+                            purpose: if want.purpose.is_some() {
+                                purpose
+                            } else {
+                                have.purpose.clone()
+                            },
                         },
                     });
                 }
                 if want.max_rounds.is_some() && want.max_rounds != have.max_rounds {
-                    out.actions.push(Action { mark: '~', target: tgt, what: format!("max rounds {}", want.max_rounds.unwrap_or(0)), needs: None, op: Op::SetMaxRounds { id: have.id.clone(), max_rounds: want.max_rounds } });
+                    out.actions.push(Action {
+                        mark: '~',
+                        target: tgt,
+                        what: format!("max rounds {}", want.max_rounds.unwrap_or(0)),
+                        needs: None,
+                        op: Op::SetMaxRounds {
+                            id: have.id.clone(),
+                            max_rounds: want.max_rounds,
+                        },
+                    });
                 }
             }
         }
@@ -448,13 +570,43 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
     for (slug, want) in &team.boards {
         let tgt = format!("board {slug}");
         match now.boards.get(slug) {
-            None => out.actions.push(Action { mark: '+', target: tgt, what: want.workdir.clone().unwrap_or_else(|| "new".to_owned()), needs: None, op: Op::CreateBoard { slug: slug.clone(), name: want.name.clone(), workdir: want.workdir.clone() } }),
+            None => out.actions.push(Action {
+                mark: '+',
+                target: tgt,
+                what: want.workdir.clone().unwrap_or_else(|| "new".to_owned()),
+                needs: None,
+                op: Op::CreateBoard {
+                    slug: slug.clone(),
+                    name: want.name.clone(),
+                    workdir: want.workdir.clone(),
+                },
+            }),
             Some(have) => {
                 let name = want.name.clone().filter(|n| *n != have.name);
-                let workdir = want.workdir.clone().filter(|w| have.workdir.as_deref() != Some(w.as_str()));
+                let workdir = want
+                    .workdir
+                    .clone()
+                    .filter(|w| have.workdir.as_deref() != Some(w.as_str()));
                 if name.is_some() || workdir.is_some() {
-                    let what = [name.as_ref().map(|_| "name"), workdir.as_ref().map(|_| "folder")].into_iter().flatten().collect::<Vec<_>>().join(", ");
-                    out.actions.push(Action { mark: '~', target: tgt, what, needs: None, op: Op::UpdateBoard { slug: slug.clone(), name, workdir } });
+                    let what = [
+                        name.as_ref().map(|_| "name"),
+                        workdir.as_ref().map(|_| "folder"),
+                    ]
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                    out.actions.push(Action {
+                        mark: '~',
+                        target: tgt,
+                        what,
+                        needs: None,
+                        op: Op::UpdateBoard {
+                            slug: slug.clone(),
+                            name,
+                            workdir,
+                        },
+                    });
                 }
             }
         }
@@ -464,46 +616,124 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
     for job in &team.cron {
         let tgt = format!("job {} of {}", job.name, job.bot);
         if !known(&job.bot) {
-            out.problems.push(format!("{tgt}: {} is not a bot in the file or on this computer", job.bot));
+            out.problems.push(format!(
+                "{tgt}: {} is not a bot in the file or on this computer",
+                job.bot
+            ));
             continue;
         }
         if let Some(r) = &job.room
             && !room_ids.contains_key(r)
         {
-            match find_room(now, r, None) {
-                Some(h) => {
-                    room_ids.insert(r.clone(), h.id.clone());
-                }
-                None => {
-                    out.problems.push(format!("{tgt}: the room {r:?} is not in the file or on this computer"));
-                    continue;
-                }
+            if let Some(h) = find_room(now, r, None) {
+                room_ids.insert(r.clone(), h.id.clone());
+            } else {
+                out.problems.push(format!(
+                    "{tgt}: the room {r:?} is not in the file or on this computer"
+                ));
+                continue;
             }
         }
         let deliver = deliver_for(job, &room_ids);
         let needs = (!now.bots.contains_key(&job.bot)).then(|| job.bot.clone());
-        let have = now.jobs.get(&job.bot).and_then(|j| j.iter().find(|j| j.name.trim() == job.name.trim()));
+        let have = now
+            .jobs
+            .get(&job.bot)
+            .and_then(|j| j.iter().find(|j| j.name.trim() == job.name.trim()));
         let prompt = job.prompt.clone().unwrap_or_default();
         match have {
             None => {
-                out.actions.push(Action { mark: '+', target: tgt.clone(), what: job.schedule.clone(), needs: needs.clone(), op: Op::AddJob { bot: job.bot.clone(), job: job.clone(), deliver } });
+                out.actions.push(Action {
+                    mark: '+',
+                    target: tgt.clone(),
+                    what: job.schedule.clone(),
+                    needs: needs.clone(),
+                    op: Op::AddJob {
+                        bot: job.bot.clone(),
+                        job: job.clone(),
+                        deliver,
+                    },
+                });
                 if job.paused {
-                    out.actions.push(Action { mark: '+', target: tgt, what: "paused".to_owned(), needs, op: Op::SetJobPaused { bot: job.bot.clone(), name: job.name.clone(), paused: true } });
+                    out.actions.push(Action {
+                        mark: '+',
+                        target: tgt,
+                        what: "paused".to_owned(),
+                        needs,
+                        op: Op::SetJobPaused {
+                            bot: job.bot.clone(),
+                            name: job.name.clone(),
+                            paused: true,
+                        },
+                    });
                 }
             }
             Some(h) => {
-                let prompt_differs = if h.prompt_whole { h.prompt.trim() != prompt.trim() } else { !prompt.trim().starts_with(h.prompt.trim().trim_end_matches("...")) };
+                let prompt_differs = if h.prompt_whole {
+                    h.prompt.trim() != prompt.trim()
+                } else {
+                    !prompt
+                        .trim()
+                        .starts_with(h.prompt.trim().trim_end_matches("..."))
+                };
                 let deliver_differs = deliver.as_ref().is_some_and(|d| *d != h.deliver);
                 let schedule_differs = h.schedule.trim() != job.schedule.trim();
                 if prompt_differs || deliver_differs || schedule_differs {
-                    let what = [schedule_differs.then_some("schedule"), prompt_differs.then_some("prompt"), deliver_differs.then_some("delivery")].into_iter().flatten().collect::<Vec<_>>().join(", ");
-                    out.actions.push(Action { mark: '~', target: tgt.clone(), what: format!("{what} (the job is made again, so it gets a new id)"), needs: None, op: Op::RemoveJob { bot: job.bot.clone(), id: h.id.clone() } });
-                    out.actions.push(Action { mark: '~', target: tgt.clone(), what: job.schedule.clone(), needs: None, op: Op::AddJob { bot: job.bot.clone(), job: job.clone(), deliver } });
+                    let what = [
+                        schedule_differs.then_some("schedule"),
+                        prompt_differs.then_some("prompt"),
+                        deliver_differs.then_some("delivery"),
+                    ]
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                    out.actions.push(Action {
+                        mark: '~',
+                        target: tgt.clone(),
+                        what: format!("{what} (the job is made again, so it gets a new id)"),
+                        needs: None,
+                        op: Op::RemoveJob {
+                            bot: job.bot.clone(),
+                            id: h.id.clone(),
+                        },
+                    });
+                    out.actions.push(Action {
+                        mark: '~',
+                        target: tgt.clone(),
+                        what: job.schedule.clone(),
+                        needs: None,
+                        op: Op::AddJob {
+                            bot: job.bot.clone(),
+                            job: job.clone(),
+                            deliver,
+                        },
+                    });
                     if job.paused {
-                        out.actions.push(Action { mark: '~', target: tgt, what: "paused".to_owned(), needs: None, op: Op::SetJobPaused { bot: job.bot.clone(), name: job.name.clone(), paused: true } });
+                        out.actions.push(Action {
+                            mark: '~',
+                            target: tgt,
+                            what: "paused".to_owned(),
+                            needs: None,
+                            op: Op::SetJobPaused {
+                                bot: job.bot.clone(),
+                                name: job.name.clone(),
+                                paused: true,
+                            },
+                        });
                     }
                 } else if h.paused != job.paused {
-                    out.actions.push(Action { mark: '~', target: tgt, what: if job.paused { "pause" } else { "resume" }.to_owned(), needs: None, op: Op::SetJobPaused { bot: job.bot.clone(), name: job.name.clone(), paused: job.paused } });
+                    out.actions.push(Action {
+                        mark: '~',
+                        target: tgt,
+                        what: if job.paused { "pause" } else { "resume" }.to_owned(),
+                        needs: None,
+                        op: Op::SetJobPaused {
+                            bot: job.bot.clone(),
+                            name: job.name.clone(),
+                            paused: job.paused,
+                        },
+                    });
                 }
             }
         }
@@ -515,25 +745,59 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
                 continue;
             }
             for j in jobs {
-                if !team.cron.iter().any(|c| c.bot == *bot && c.name.trim() == j.name.trim()) {
-                    out.actions.push(Action { mark: '-', target: format!("job {} of {bot}", j.name), what: "not in the file".to_owned(), needs: None, op: Op::RemoveJob { bot: bot.clone(), id: j.id.clone() } });
+                if !team
+                    .cron
+                    .iter()
+                    .any(|c| c.bot == *bot && c.name.trim() == j.name.trim())
+                {
+                    out.actions.push(Action {
+                        mark: '-',
+                        target: format!("job {} of {bot}", j.name),
+                        what: "not in the file".to_owned(),
+                        needs: None,
+                        op: Op::RemoveJob {
+                            bot: bot.clone(),
+                            id: j.id.clone(),
+                        },
+                    });
                 }
             }
         }
         for r in &now.rooms {
-            let wanted = team.rooms.iter().any(|(n, w)| w.id.as_deref() == Some(r.id.as_str()) || n.trim().eq_ignore_ascii_case(r.name.trim()));
+            let wanted = team.rooms.iter().any(|(n, w)| {
+                w.id.as_deref() == Some(r.id.as_str())
+                    || n.trim().eq_ignore_ascii_case(r.name.trim())
+            });
             if !wanted {
-                out.actions.push(Action { mark: '-', target: format!("room {}", r.name), what: "disband (permanent)".to_owned(), needs: None, op: Op::DisbandRoom { id: r.id.clone() } });
+                out.actions.push(Action {
+                    mark: '-',
+                    target: format!("room {}", r.name),
+                    what: "disband (permanent)".to_owned(),
+                    needs: None,
+                    op: Op::DisbandRoom { id: r.id.clone() },
+                });
             }
         }
         for slug in now.boards.keys() {
             if slug != "default" && !team.boards.contains_key(slug) {
-                out.actions.push(Action { mark: '-', target: format!("board {slug}"), what: "archive".to_owned(), needs: None, op: Op::ArchiveBoard { slug: slug.clone() } });
+                out.actions.push(Action {
+                    mark: '-',
+                    target: format!("board {slug}"),
+                    what: "archive".to_owned(),
+                    needs: None,
+                    op: Op::ArchiveBoard { slug: slug.clone() },
+                });
             }
         }
         for name in now.bots.keys() {
             if !team.bots.contains_key(name) {
-                out.actions.push(Action { mark: '-', target: format!("bot {name}"), what: "archive (it can be restored)".to_owned(), needs: None, op: Op::ArchiveBot { name: name.clone() } });
+                out.actions.push(Action {
+                    mark: '-',
+                    target: format!("bot {name}"),
+                    what: "archive (it can be restored)".to_owned(),
+                    needs: None,
+                    op: Op::ArchiveBot { name: name.clone() },
+                });
             }
         }
     }

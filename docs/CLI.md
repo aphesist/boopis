@@ -8,12 +8,13 @@ where a script wants it (one JSON object per line), and the same exit codes ever
 | `boopis --version`, `boopis doctor` | The version, and a report on this machine (`docs/ENGINE.md`). |
 | `boopis groups list\|create\|send\|log\|set` | Group chats from a terminal. |
 | `boopis run --group <group> "<task>"` | Run a task through a group to its end, past the engine's round cap. |
+| `boopis bots list\|create\|set` | One bot: its role, instructions, model, look and Governed switch. |
 | `boopis team check\|apply\|export` | A whole team as one file. |
 
 Exit codes: `0` done, `1` failed or timed out (or a plan with problems), `2` a usage mistake, `3` stopped at a cap (boopis's or
 the engine's), `4` a bot needs you.
 
-The commands that talk to the engine (`groups`, `run`, `team apply|export`) reach it the way the app does: the same engine
+The commands that talk to the engine (`groups`, `run`, `bots`, `team apply|export`) reach it the way the app does: the same engine
 plan, the same control socket and ticket, the same short link to the gateway (`gateway::oneshot::Link`), and the same
 `groups.*`, `profiles.*`, `cron.manage` and `mcp.servers.*` calls the app makes. If the app is running they attach to its
 gateway. If nothing is running they start one the way the app would, and serve the plugin's keychain channel for as long as
@@ -75,6 +76,20 @@ discussion's id as the task's idempotency key so a second try does not make a se
 The engine's kanban cannot take "the remaining steps" as separate tasks: what is left is the bots' own words in a log, not a
 list, and no command turns it into one. One task for the lead to split is what can be done truthfully. A board that does not
 exist is refused (`boopis team apply` can make it).
+
+## Bots
+
+```
+boopis bots list [--json]
+boopis bots create <name> [--role TEXT] [--soul-file FILE|-] [--model MODEL] [--shape SHAPE --color #rrggbb] [--governed] [--json]
+boopis bots set <name> [--role TEXT] [--soul-file FILE|-] [--model MODEL] [--shape SHAPE] [--color #rrggbb] [--governed|--ungoverned] [--json]
+```
+
+Made and changed by the same operations the Bots form and `team apply` use, so a bot made here is the same bot (its home, its
+plugin, its approvals). A new bot is ungoverned unless you say `--governed`, and governed needs a frontier model. `set` sends
+only what differs: setting a bot to what it already is does nothing (exit 0). `create` refuses a name that exists and `set`
+one that does not (exit 1). Because they go through the gateway, they attach to the running app's, which is where the secret
+channel is.
 
 ## Teams
 

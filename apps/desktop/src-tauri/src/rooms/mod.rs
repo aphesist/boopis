@@ -45,7 +45,13 @@ pub struct Member {
 
 impl Member {
     fn from_value(v: &Value) -> Self {
-        let text = |k: &str| v.get(k).and_then(Value::as_str).unwrap_or("").trim().to_owned();
+        let text = |k: &str| {
+            v.get(k)
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .trim()
+                .to_owned()
+        };
         let profile = text("profile");
         let id = if text("member_id").is_empty() {
             profile.clone()
@@ -144,7 +150,11 @@ pub fn slug(name: &str) -> String {
     }
     out.truncate(40);
     let out = out.trim_end_matches('-').to_owned();
-    if out.is_empty() { "group".to_owned() } else { out }
+    if out.is_empty() {
+        "group".to_owned()
+    } else {
+        out
+    }
 }
 
 /// Twelve random hex characters (the tail of a v7 id is random).
@@ -204,7 +214,10 @@ pub fn find<'a>(rooms: &'a [Room], key: &str) -> Result<&'a Room> {
         many => Err(Error::InvalidInput(format!(
             "{} groups are called {key:?}: use an id ({}).",
             many.len(),
-            many.iter().map(|r| r.id.as_str()).collect::<Vec<_>>().join(", ")
+            many.iter()
+                .map(|r| r.id.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
         ))),
     }
 }
@@ -269,7 +282,9 @@ pub struct State {
 /// # Errors
 /// The gateway's.
 pub async fn state(rpc: &dyn Rpc, room_id: &str) -> Result<State> {
-    let res = rpc.call("groups.state", json!({"room_id": room_id})).await?;
+    let res = rpc
+        .call("groups.state", json!({"room_id": room_id}))
+        .await?;
     let d = res.get("driver_status").filter(|d| !d.is_null());
     Ok(State {
         context: res
@@ -409,7 +424,12 @@ pub async fn create(rpc: &dyn Rpc, new: &NewRoom) -> Result<Room> {
         let ctx = Context {
             purpose: new.purpose.clone().unwrap_or_default(),
             notes: String::new(),
-            routing: if new.lead.is_some() { "lead" } else { "everyone" }.to_owned(),
+            routing: if new.lead.is_some() {
+                "lead"
+            } else {
+                "everyone"
+            }
+            .to_owned(),
             lead: new.lead.clone().unwrap_or_default(),
         };
         set_context(rpc, &room.id, &ctx).await?;
@@ -461,7 +481,11 @@ impl Event {
                 .and_then(Value::as_str)
                 .unwrap_or("")
                 .to_owned(),
-            kind: v.get("kind").and_then(Value::as_str).unwrap_or("").to_owned(),
+            kind: v
+                .get("kind")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_owned(),
             actor: v
                 .get("actor")
                 .and_then(|a| a.get("id"))

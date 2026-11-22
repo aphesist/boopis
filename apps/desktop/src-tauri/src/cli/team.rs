@@ -34,11 +34,20 @@ fn fail(ctx: &mut Ctx<'_>, line: &str) {
 
 fn load(ctx: &Ctx<'_>, file: &str) -> Result<Team, String> {
     let (text, base) = if file == "-" {
-        ((ctx.stdin)().map_err(|e| e.to_string())?, std::env::current_dir().unwrap_or_default())
+        (
+            (ctx.stdin)().map_err(|e| e.to_string())?,
+            std::env::current_dir().unwrap_or_default(),
+        )
     } else {
         let p = Path::new(file);
         let text = std::fs::read_to_string(p).map_err(|e| format!("{file}: {e}"))?;
-        (text, p.parent().map(Path::to_path_buf).filter(|b| !b.as_os_str().is_empty()).unwrap_or_else(|| ".".into()))
+        (
+            text,
+            p.parent()
+                .map(Path::to_path_buf)
+                .filter(|b| !b.as_os_str().is_empty())
+                .unwrap_or_else(|| ".".into()),
+        )
     };
     Team::parse(&text, &base).map_err(|e| format!("{file} is not a usable team:\n{e}"))
 }
@@ -75,9 +84,20 @@ fn check(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
     match load(ctx, file) {
         Ok(t) => {
             let _ = if a.has("json") {
-                writeln!(ctx.out, "{}", json!({"ok": true, "bots": t.bots.len(), "rooms": t.rooms.len(), "boards": t.boards.len(), "cron": t.cron.len()}))
+                writeln!(
+                    ctx.out,
+                    "{}",
+                    json!({"ok": true, "bots": t.bots.len(), "rooms": t.rooms.len(), "boards": t.boards.len(), "cron": t.cron.len()})
+                )
             } else {
-                writeln!(ctx.out, "{file} is a team of {} bots, {} rooms, {} boards and {} jobs", t.bots.len(), t.rooms.len(), t.boards.len(), t.cron.len())
+                writeln!(
+                    ctx.out,
+                    "{file} is a team of {} bots, {} rooms, {} boards and {} jobs",
+                    t.bots.len(),
+                    t.rooms.len(),
+                    t.boards.len(),
+                    t.cron.len()
+                )
             };
             0
         }
@@ -108,7 +128,14 @@ fn print_plan(ctx: &mut Ctx<'_>, p: &Plan, json: bool) {
 }
 
 async fn apply_cmd(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
-    let a = match Args::read(rest, &[("dry-run", Kind::Switch), ("prune", Kind::Switch), ("json", Kind::Switch)]) {
+    let a = match Args::read(
+        rest,
+        &[
+            ("dry-run", Kind::Switch),
+            ("prune", Kind::Switch),
+            ("json", Kind::Switch),
+        ],
+    ) {
         Ok(a) => a,
         Err(u) => {
             fail(ctx, &u.0);
@@ -129,7 +156,13 @@ async fn apply_cmd(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
     let now = match ctx.backend.read().await {
         Ok(n) => n,
         Err(e) => {
-            fail(ctx, &format!("could not read what is there: {}", crate::error::unless_engine("hx.engine.refused", &e.to_string())));
+            fail(
+                ctx,
+                &format!(
+                    "could not read what is there: {}",
+                    crate::error::unless_engine("hx.engine.refused", &e.to_string())
+                ),
+            );
             return 1;
         }
     };
@@ -137,12 +170,19 @@ async fn apply_cmd(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
     let json = a.has("json");
     print_plan(ctx, &p, json);
     if !p.problems.is_empty() {
-        fail(ctx, "nothing was changed: fix the problems above and run it again");
+        fail(
+            ctx,
+            "nothing was changed: fix the problems above and run it again",
+        );
         return 1;
     }
     if a.has("dry-run") {
         if !json {
-            let _ = writeln!(ctx.out, "dry run: nothing was changed ({} to do)", p.actions.len());
+            let _ = writeln!(
+                ctx.out,
+                "dry run: nothing was changed ({} to do)",
+                p.actions.len()
+            );
         }
         return 0;
     }
@@ -164,7 +204,11 @@ async fn apply_cmd(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
     } else {
         for d in &report.done {
             let tail = d.error.as_ref().map_or(String::new(), |e| format!(": {e}"));
-            let _ = writeln!(ctx.out, "{} {} {}  {}{tail}", d.result, d.mark, d.target, d.what);
+            let _ = writeln!(
+                ctx.out,
+                "{} {} {}  {}{tail}",
+                d.result, d.mark, d.target, d.what
+            );
         }
         for w in &report.warnings {
             let _ = writeln!(ctx.out, "note: {w}");
@@ -176,7 +220,14 @@ async fn apply_cmd(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
 }
 
 async fn export_cmd(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
-    let a = match Args::read(rest, &[("output", Kind::Value), ("force", Kind::Switch), ("json", Kind::Switch)]) {
+    let a = match Args::read(
+        rest,
+        &[
+            ("output", Kind::Value),
+            ("force", Kind::Switch),
+            ("json", Kind::Switch),
+        ],
+    ) {
         Ok(a) => a,
         Err(u) => {
             fail(ctx, &u.0);
@@ -190,7 +241,13 @@ async fn export_cmd(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
     let now = match ctx.backend.read().await {
         Ok(n) => n,
         Err(e) => {
-            fail(ctx, &format!("could not read what is there: {}", crate::error::unless_engine("hx.engine.refused", &e.to_string())));
+            fail(
+                ctx,
+                &format!(
+                    "could not read what is there: {}",
+                    crate::error::unless_engine("hx.engine.refused", &e.to_string())
+                ),
+            );
             return 1;
         }
     };

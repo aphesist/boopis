@@ -167,8 +167,10 @@ describe('a group’s thread', () => {
     expect(calls.filter((c) => c.fn === 'setRoundLimit').map((c) => c.args)).toEqual([[expect.any(String), 12]]);
     q('.bt-group [aria-label^="Rounds a run may take"]').click();
     await flush();
-    expect(document.querySelector('.ui-menu__item[aria-checked="true"]')?.textContent?.trim()).toBe('12');
-    document.querySelectorAll<HTMLElement>('.ui-menu__item')[0]!.click();
+    // the first menu is still leaving (animations are off here), so read the newest one
+    const open = [...document.querySelectorAll('.ui-menu')].at(-1)!;
+    expect(open.querySelector('.ui-menu__item[aria-checked="true"]')?.textContent?.trim()).toBe('12');
+    open.querySelectorAll<HTMLElement>('.ui-menu__item')[0]!.click();
     await flush();
     expect(calls.filter((c) => c.fn === 'setRoundLimit').at(-1)!.args[1]).toBeNull();
   });

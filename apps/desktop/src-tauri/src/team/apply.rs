@@ -68,7 +68,9 @@ pub async fn apply(
     for a in &plan.actions {
         let blocked = a.needs.as_ref().filter(|n| failed.contains(n));
         if let Some(n) = blocked {
-            report.done.push(done(a, "skipped", Some(format!("{n} could not be made"))));
+            report
+                .done
+                .push(done(a, "skipped", Some(format!("{n} could not be made"))));
             continue;
         }
         match backend.run(&a.op).await {
@@ -95,7 +97,14 @@ pub async fn apply(
                 if let Op::CreateRoom { name, .. } = &a.op {
                     failed.push(name.clone());
                 }
-                report.done.push(done(a, "failed", Some(crate::error::unless_engine("hx.engine.refused", &e.to_string()))));
+                report.done.push(done(
+                    a,
+                    "failed",
+                    Some(crate::error::unless_engine(
+                        "hx.engine.refused",
+                        &e.to_string(),
+                    )),
+                ));
             }
         }
     }
@@ -103,5 +112,11 @@ pub async fn apply(
 }
 
 fn done(a: &Action, result: &'static str, error: Option<String>) -> Done {
-    Done { mark: a.mark, target: a.target.clone(), what: a.what.clone(), result, error }
+    Done {
+        mark: a.mark,
+        target: a.target.clone(),
+        what: a.what.clone(),
+        result,
+        error,
+    }
 }
