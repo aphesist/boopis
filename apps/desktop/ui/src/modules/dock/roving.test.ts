@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { S, X } from './ctx';
 import type { DockBot } from './ctx';
 import { onKey } from './input';
-import { columnsOf, gridTarget, rove, stepIndex, syncRoving } from './roving';
+import { columnsOf, gridTarget, rove, rowIdxOf, rowItemOf, stepIndex, syncRoving } from './roving';
 import { clip, tipOf } from './views';
 
 const bots = (n: number): DockBot[] => Array.from({ length: n }, (_, i) => ({ id: 'b' + i, name: 'bot' + i, role: 'r' }) as unknown as DockBot);
@@ -137,5 +137,24 @@ describe('long bot names in the dock', () => {
     expect(tipOf({ name: 'atlas', role: 'reviewer' })).toBe('atlas, reviewer');
     expect(tipOf({ name: 'cassiopeia-staging-deploy-guardian', role: 'watches every staging deploy' })).toBe('cassiopeia-stagin…');
     expect(tipOf({ name: 'nina', role: 'watches every staging deploy and rolls back' })).toBe('nina, watches every stagi…');
+  });
+});
+
+describe('a row that leaves bots out (120 bots, 17 shown, then "All bots", then "+")', () => {
+  it('a bot in the row is its own item; a bot left out is "All bots"; "+" is last', () => {
+    expect(rowItemOf(3, 120, 17, true)).toBe(3);
+    expect(rowItemOf(17, 120, 17, true)).toBe(17);
+    expect(rowItemOf(90, 120, 17, true)).toBe(17);
+    expect(rowItemOf(120, 120, 17, true)).toBe(18);
+  });
+  it('"All bots" stands for the first bot left out, so Up lands on it in the grid; "+" for "+"', () => {
+    expect(rowIdxOf(16, 120, 17, true)).toBe(16);
+    expect(rowIdxOf(17, 120, 17, true)).toBe(17);
+    expect(rowIdxOf(18, 120, 17, true)).toBe(120);
+  });
+  it('a row that holds every bot is the plain index', () => {
+    expect(rowItemOf(4, 11, 11, false)).toBe(4);
+    expect(rowItemOf(11, 11, 11, false)).toBe(11);
+    expect(rowIdxOf(11, 11, 11, false)).toBe(11);
   });
 });

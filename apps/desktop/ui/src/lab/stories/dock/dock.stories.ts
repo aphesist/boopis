@@ -29,6 +29,12 @@ const dock: Story = {
     'one bot, expanded': dockState(['single', 'owner'], { bots: 'one' }, mode('expanded')),
     '120 bots': dockState(['many', 'owner'], { bots: 120 }, undefined, { interact: [HOVER_ROW] }),
     '120 bots, expanded': dockState(['many', 'owner', 'scroll'], { bots: 120 }, mode('expanded')),
+    /* the roster scrolls inside the window: its last bots and "New bot" are reachable */
+    '120 bots, expanded, scrolled to the end': dockState(['many', 'scroll'], { bots: 120 }, async (c) => {
+      c.hx.dock()?.setMode('expanded'); await c.wait(900);
+      const r = document.querySelector<HTMLElement>('#hx-dock .dk-roster'); if (r) r.scrollTop = r.scrollHeight;
+      await c.wait(100);
+    }),
     'a long-named bot': dockState(['long'], { fixtures: ['long'] }),
     'a long-named bot, its session': dockState(['long'], { fixtures: ['long'] }, async (c) => { c.hx.dock()?.openSession('cassiopeia-staging-deploy-guardian'); await c.wait(900); }),
     expanded: dockState(['open'], {}, mode('expanded')),
