@@ -59,6 +59,26 @@
   "w": 280,
   "h": 872
  },
+ "live-updates-of-several-bots@bone": {
+  "sha": "ecf11e04dc5680c98e043fd2dbf6c69c5a388b8e",
+  "w": 280,
+  "h": 872
+ },
+ "live-updates-of-several-bots@catalog": {
+  "sha": "f3c8eed70cb829ec242e2b167fd7dc4dcf24d71d",
+  "w": 280,
+  "h": 872
+ },
+ "live-updates-of-several-bots@graphite": {
+  "sha": "7998516591dc4038037b56309af7e185164b87e3",
+  "w": 280,
+  "h": 872
+ },
+ "live-updates-of-several-bots@typewriter": {
+  "sha": "6d7ae7781b2f51644a41e15caa0f565895292900",
+  "w": 280,
+  "h": 872
+ },
  "no-bots@bone": {
   "sha": "821cfd15efef6f9dcd67eb2160765c02398f102f",
   "w": 280,

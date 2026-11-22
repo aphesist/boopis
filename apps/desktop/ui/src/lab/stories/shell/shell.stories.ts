@@ -98,8 +98,8 @@ const sizes: Story = {
     'session, larger (112%)': st(['typical', 'size'], undefined, {}, { zoom: 1.12 }),
     'session, largest (125%)': st(['variant', 'size'], undefined, {}, { zoom: 1.25 }),
     'bots, larger (112%)': st(['variant', 'size'], bots, {}, { zoom: 1.12 }),
-    'bots, largest (125%)': st(['variant', 'size'], bots, {}, { zoom: 1.25 }),
-    'bots with a group, largest (125%)': st(['variant', 'size'], bots, { fixtures: ['groups'] }, { zoom: 1.25 }),
+    'bots, largest (125%)': st(['variant', 'size'], bots, {}, { zoom: 1.25, allow: { 'tokens.spacing': { el: 'dk-row', reason: 'the dock fits its row to the window and writes the gap in JavaScript (`--dock-gap`, `dock/input.ts` gapOf, the dock-fit work, not this branch): in a 1200 px wide window at 125% the page is 960 x 720 and the fit comes out 13 px, which is not a token' } } }),
+    'bots with a group, largest (125%)': st(['variant', 'size'], bots, { fixtures: ['groups'] }, { zoom: 1.25, allow: { 'tokens.spacing': { el: 'dk-row', reason: 'the dock fits its row to the window and writes the gap in JavaScript (`--dock-gap`, `dock/input.ts` gapOf, the dock-fit work, not this branch): in a 1200 px wide window at 125% the page is 960 x 720 and the fit comes out 13 px, which is not a token' } } }),
     'rail, largest (125%)': st(['variant', 'size'], async (c) => { await bots(c); c.hx.setState({ left: 'rail' }); await c.wait(500); }, {}, { zoom: 1.25 })
   }
 };

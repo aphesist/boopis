@@ -15,7 +15,7 @@ const MOCK = { url: '/v6/__index.html', note: 'the mock opens on the session; it
 /** live updates of several bots (and a group's members) while the app is watched: no orb may be detached, put back or drawn
     anew, because a worker's canvas is empty until it is painted again (the sidebar's blink, 22 November 2026) */
 const LIVE_UPDATES = {
-  name: 'bots change state live', watch: '#hx-side', sample: 1200,
+  name: 'bots change state live', watch: '#hx-side', orbs: 'stay', sample: 1200,
   steps: [{ do: 'call', js: `(async () => { const d = window.__labDrive, w = (ms) => new Promise((r) => setTimeout(r, ms));
     d.bot('atlas', { state: 'working', activity: 'reading the diff' }); await w(160);
     d.bot('iris', { state: 'speaking' }); await w(160);

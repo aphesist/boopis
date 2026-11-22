@@ -91,11 +91,13 @@ const ROW_ATTRS = ['aria-label', 'aria-describedby', 'data-tip', 'data-tip-pos',
 /** a row's text and state word follow `next`'s, and its attributes; its lead (the orb) is not touched */
 function patchRow(btn: HTMLElement, nextBtn: HTMLElement): void {
   mirror(btn, nextBtn, ROW_ATTRS);
-  /* the text and the state word hold no orb: they are swapped for the new ones */
-  const text = btn.querySelector('.ui-row__text'), nextText = nextBtn.querySelector('.ui-row__text');
-  if (text && nextText && text.innerHTML !== nextText.innerHTML) text.replaceWith(nextText);
+  /* the title, the role and the state word are written into the nodes they are in: no element is swapped, so nothing moves */
+  for (const sel of ['.ui-row__title', '.ui-row__sub']) {
+    const at = btn.querySelector(sel), to = nextBtn.querySelector(sel);
+    if (at && to) { if (at.innerHTML !== to.innerHTML) at.innerHTML = to.innerHTML; } else if (at) at.remove(); else if (to) btn.querySelector('.ui-row__text')?.append(' ', to);
+  }
   const end = btn.querySelector('.ui-row__end'), nextEnd = nextBtn.querySelector('.ui-row__end');
-  if (end && nextEnd) { if (end.outerHTML !== nextEnd.outerHTML) end.replaceWith(nextEnd); }
+  if (end && nextEnd) { if (end.innerHTML !== nextEnd.innerHTML) end.innerHTML = nextEnd.innerHTML; mirror(end, nextEnd, ['data-tone']); }
   else if (end) end.remove();
   else if (nextEnd) btn.append(' ', nextEnd);
 }

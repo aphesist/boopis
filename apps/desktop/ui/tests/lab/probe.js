@@ -20,7 +20,7 @@
      scrollbar          every scroller has the system's scrollbar: a ::-webkit-scrollbar rule (WebKitGTK ignores
                         scrollbar-width) no wider than 8 px and a thumb in --bg-4
    And two helpers for the stability check: `signature(root)` (the DOM's structure, for render-twice) and
-   `sampler(root)` (frames of opacity, visibility and boxes during an interaction, plus nodes replaced). */
+   `sampler(root, {orbs})` (frames of opacity, visibility and boxes during an interaction, plus nodes replaced). */
 (() => {
   const SKIP_INSIDE = 'orb-avatar, boopis-logo, svg, canvas, .hx-probe, script, style, template';
   /* visually hidden text (the screen reader's) is not drawn: no geometry, no tokens */
@@ -685,7 +685,8 @@
   }
 
   /** frames of every visible element's opacity, visibility and box under `root`, plus nodes removed and added */
-  function sampler(rootSel) {
+  function sampler(rootSel, opts) {
+    const orbsStay = !!(opts && opts.orbs);
     const root = (rootSel && document.querySelector(rootSel)) || (window.__lab && window.__lab.scope && window.__lab.scope()) || document.body;
     const keyOf = (e) => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (e.getAttribute('data-k') ? '[k=' + e.getAttribute('data-k') + ']' : e.getAttribute('data-id') ? '[id=' + e.getAttribute('data-id') + ']' : e.getAttribute('data-slot') ? '[slot=' + e.getAttribute('data-slot') + ']' : '') + '.' + [...e.classList].filter((c) => !/^is-/.test(c)).slice(0, 2).join('.');
     const tracked = new Map(); let n = 0;
@@ -726,7 +727,7 @@
       stop() {
         on = false; cancelAnimationFrame(raf); mo.disconnect();
         const issues = analyse(tracked, removed, added);
-        for (const [o, out] of orbOut) {
+        if (orbsStay) for (const [o, out] of orbOut) {
           const key = 'orb-avatar[label=' + out.label + ']';
           if (o.isConnected) issues.push({ kind: 'orb-moved', key, msg: key + ' was taken out of the page and put back (its canvas is painted empty until the worker draws again: update the node in place)' });
           else if (orbIn.some((i) => i.el !== o && i.label === out.label && i.t >= out.t - 50 && i.t - out.t <= 1000)) issues.push({ kind: 'orb-replaced', key, msg: key + ' was removed and drawn anew (a new canvas is empty until the worker draws it: keep the node and update its attributes)' });

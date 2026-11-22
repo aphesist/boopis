@@ -323,7 +323,7 @@ async function checkRow(browser, origin, row, log) {
         const list = await second.page.evaluate(() => window.__lab.interact);
         for (const it of list) {
           const p = second.page;
-          await p.evaluate((w) => { window.__labSampler = window.__labProbe.sampler(w || null); }, it.watch ?? null);
+          await p.evaluate((o) => { window.__labSampler = window.__labProbe.sampler(o.watch || null, { orbs: o.orbs }); }, { watch: it.watch ?? null, orbs: it.orbs === 'stay' });
           for (const s of it.steps) {
             if (s.do === 'hover') await p.hover(s.sel, { timeout: 4000 }).catch(() => {});
             else if (s.do === 'click') await p.click(s.sel, { timeout: 4000 }).catch(() => {});

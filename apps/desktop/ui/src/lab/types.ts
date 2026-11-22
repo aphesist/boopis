@@ -42,6 +42,9 @@ export interface Interaction {
   sample?: number;
   /** what to watch (defaults to the story's scope) */
   watch?: string;
+  /** `stay`: no `<orb-avatar>` under the watched element may be taken out of the page and put back, or drawn anew (an update writes
+      the orb's attributes). A live update of a bot is such an interaction; a mode change that moves orbs between containers is not */
+  orbs?: 'stay';
 }
 
 export type Render = (ctx: StageCtx) => void | Promise<void>;
