@@ -462,6 +462,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       chat.send(id, text, via);
     },
     stop: (id) => chat.stop(id),
+    workspace: (id) => chat.workspace(id),
     decide: (id, messageId, decision) => { chat.decide(id, messageId, decision); },
     update(id, patch) {
       if (patch.role !== undefined) admin.save(id, { role: patch.role }).catch((e: unknown) => { log.error('the role was not saved', e); });

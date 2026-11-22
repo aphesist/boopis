@@ -43,6 +43,8 @@ interface Chat {
   /** while a session is being made or opened: a second message waits for it */
   busy: Promise<unknown> | null;
   approvals: Map<string, { prompt: string; generation: number }>;
+  /** the folder the session works in, as the engine said when it made or opened it (paths in its replies resolve there) */
+  cwd: string | null;
 }
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
@@ -68,7 +70,7 @@ export function createBotChat(deps: ChatDeps) {
   const nextId = (p: string): string => p + (++counter).toString(36);
   const chat = (botId: string): Chat => {
     let c = chats.get(botId);
-    if (!c) { c = { gw: null, stored: null, thread: [], running: null, generation: 0, busy: null, approvals: new Map() }; chats.set(botId, c); }
+    if (!c) { c = { gw: null, stored: null, thread: [], running: null, generation: 0, busy: null, approvals: new Map(), cwd: null }; chats.set(botId, c); }
     return c;
   };
   const t = (): string => clock(deps.now());
@@ -82,8 +84,9 @@ export function createBotChat(deps: ChatDeps) {
     const link = await deps.link(botId);
     /* a second message sent while the session is being made finds it made */
     if (c.gw) return c.gw;
-    const res = await link.requestRaw('session.create', { source: 'gui' }) as { session_id: string; stored_session_id?: string };
+    const res = await link.requestRaw('session.create', { source: 'gui' }) as { session_id: string; stored_session_id?: string; info?: { cwd?: unknown } };
     bind(botId, c, res.session_id, res.stored_session_id ?? null);
+    if (typeof res.info?.cwd === 'string' && res.info.cwd) c.cwd = res.info.cwd;
     return res.session_id;
   }
 
@@ -217,7 +220,8 @@ export function createBotChat(deps: ChatDeps) {
     const c = chat(botId);
     if (c.running || c.busy) throw new Error('Wait for ' + botId + ' to finish its reply, or stop it, before opening another session.');
     const link = await deps.link(botId);
-    const res = await link.requestRaw('session.resume', { session_id: sessionId }) as { session_id: string; stored_session_id?: string | null; messages?: TranscriptMessage[] };
+    const res = await link.requestRaw('session.resume', { session_id: sessionId }) as { session_id: string; stored_session_id?: string | null; messages?: TranscriptMessage[]; info?: { cwd?: unknown } };
+    if (typeof res.info?.cwd === 'string' && res.info.cwd) chat(botId).cwd = res.info.cwd;
     bind(botId, c, res.session_id, res.stored_session_id ?? sessionId);
     c.approvals.clear();
     c.thread = threadFrom(res.messages ?? [], botId, 'h' + sessionId.slice(-6) + ':');
@@ -236,6 +240,8 @@ export function createBotChat(deps: ChatDeps) {
     current: (botId: string): string | null => chats.get(botId)?.stored ?? null,
     thread: (botId: string): readonly ThreadMessage[] => chats.get(botId)?.thread ?? [],
     running: (botId: string): boolean => !!chats.get(botId)?.running,
+    /** the folder the bot's session works in, when the engine has said */
+    workspace: (botId: string): string | null => chats.get(botId)?.cwd ?? null,
     /** a bot that went (archived, deleted): nothing of it is kept */
     forget(botId: string): void { const c = chats.get(botId); if (c?.gw) byGw.delete(c.gw); chats.delete(botId); }
   };

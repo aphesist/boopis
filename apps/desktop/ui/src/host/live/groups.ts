@@ -17,7 +17,7 @@ import { logger } from '../../core/log';
 import { GROUP_NATURE } from '../../data/mock-groups';
 import type { GroupsEvent, GroupsSnapshot, GroupsSource } from '../../data/provider';
 import { emitter, feed, store } from '../../data/store';
-import type { ArchivedGroup, Bot, Group, GroupMember, GroupMessage } from '../../data/types';
+import type { ArchivedGroup, Bot, Group, GroupMember, GroupMessage, GroupText, MemberActivity } from '../../data/types';
 import type { GroupsListResult, GroupsLogResult, GroupsStateResult, Room, RoomEvent } from '../../vendor/hermes-shared/gateway-contract.generated';
 import type { GatewayClient } from '../gateway';
 import { clock } from '../map';
@@ -46,8 +46,16 @@ interface Rec {
   cursor: number;
   loaded: boolean;
   working: string[];
+  /** what each member at work is doing (`member_activity`) */
+  activity: MemberActivity[];
   watching: boolean;
 }
+/** one row of `member_activity` as the app reads it: the status the room names (anything else is running), the round, when it started, the tool */
+export function activityOf(a: { member_id: string; status: string; round_index?: number | null; started_at?: number | null; tool?: string | null }): MemberActivity {
+  const status = a.status === 'queued' || a.status === 'stopping' ? a.status : 'running';
+  return { member: a.member_id, status, round: typeof a.round_index === 'number' ? a.round_index : null, startedAt: typeof a.started_at === 'number' ? a.started_at * 1000 : null, tool: typeof a.tool === 'string' && a.tool ? a.tool : null };
+}
+const listWords = (n: readonly string[]): string => (n.length < 2 ? n.join('') : n.slice(0, -1).join(', ') + ' and ' + (n[n.length - 1] ?? ''));
 const why = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 const uid = (): string => crypto.randomUUID().replace(/-/g, '').slice(0, 12);
 const slug = (name: string): string => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'group';
@@ -69,20 +77,37 @@ export function createLiveGroups(deps: GroupsDeps) {
   const pending = new Set<Promise<unknown>>();
   const track = <T>(p: Promise<T>): Promise<T> => { pending.add(p); const done = (): void => { pending.delete(p); }; p.then(done, done); return p; };
 
-  const toGroup = (r: Rec): Group => ({ id: r.room.room_id, name: r.room.name, members: r.room.members.map(memberFrom), working: [...r.working] });
+  const toGroup = (r: Rec): Group => ({ id: r.room.room_id, name: r.room.name, members: r.room.members.map(memberFrom), working: [...r.working], ...(r.activity.length ? { activity: [...r.activity] } : {}) });
   const nameOf = (r: Rec, id: string): string => r.room.members.map(memberFrom).find((m) => m.id === id)?.name ?? id;
   const live = (): Rec[] => [...recs.values()].filter((r) => !archivedIds.has(r.room.room_id));
 
   /* ───────── a room's log as the thread ───────── */
+  /** a member's message: the round it answers in (0 is the answer to the user) and the members it was sent to, as the room says */
+  function roundOf(p: Record<string, unknown>): Pick<GroupText, 'round' | 'to'> {
+    const round = typeof p['round_index'] === 'number' && Number.isInteger(p['round_index']) && p['round_index'] >= 0 ? p['round_index'] : null;
+    const to = Array.isArray(p['recipient_member_ids']) ? p['recipient_member_ids'].filter((x): x is string => typeof x === 'string' && !!x) : [];
+    return { ...(round !== null ? { round } : {}), ...(to.length ? { to } : {}) };
+  }
+  /** the room's lead passing a message on (`room.assignment`): a quiet line, "kai gave this to nina and moss" */
+  function assignmentNote(r: Rec, e: RoomEvent, t: string): GroupMessage | null {
+    const p = e.payload ?? {};
+    const lead = typeof p['lead_member_id'] === 'string' ? p['lead_member_id'] : '';
+    const ids = Array.isArray(p['member_ids']) ? p['member_ids'].filter((x): x is string => typeof x === 'string') : [];
+    if (!lead) return null;
+    const others = ids.filter((x) => x !== lead).map((x) => nameOf(r, x));
+    const text = p['fallback'] === true || !others.length ? nameOf(r, lead) + ' is answering this one.' : nameOf(r, lead) + ' gave this to ' + listWords(others) + '.';
+    return { kind: 'note', id: e.event_id, t, text };
+  }
   function messageOf(r: Rec, e: RoomEvent): GroupMessage | null {
     const p = e.payload ?? {};
     const t = clock(new Date((e.created_at ?? now().getTime() / 1000) * 1000));
     const text = typeof p['text'] === 'string' ? p['text'].trim() : '';
     switch (e.kind) {
       case 'message.user': return text ? { kind: 'text', id: e.event_id, who: 'you', t, text } : null;
-      case 'message.member': return text ? { kind: 'text', id: e.event_id, who: String(p['member_id'] ?? e.actor?.id ?? ''), t, text } : null;
+      case 'message.member': return text ? { kind: 'text', id: e.event_id, who: String(p['member_id'] ?? e.actor?.id ?? ''), t, text, ...roundOf(p) } : null;
       case 'turn.failed': return { kind: 'note', id: e.event_id, t, text: nameOf(r, String(p['member_id'] ?? '')) + ' could not reply.' };
       case 'member.unavailable': return { kind: 'note', id: e.event_id, t, text: nameOf(r, String(p['member_id'] ?? '')) + ' is not available.' };
+      case 'room.assignment': return assignmentNote(r, e, t);
       case 'room.stop_requested': return { kind: 'note', id: e.event_id, t, text: 'Stopped.' };
       case 'room.activity': return p['status'] === 'bounded' && typeof p['discussion_event_id'] === 'string' ? { kind: 'note', id: e.event_id, t, text: 'The conversation paused at its limit.', more: p['discussion_event_id'] } : null;
       default: return null;
@@ -115,10 +140,12 @@ export function createLiveGroups(deps: GroupsDeps) {
     const st = await client.request('groups.state', { room_id: r.room.room_id }) as GroupsStateResult;
     r.room = { ...r.room, ...st.room };
     const d = st.driver_status;
-    const active = d?.working ? (d.member_activity ?? []).map((a) => a.member_id) : [];
-    const was = r.working.join(',');
+    const acts = d?.working ? (d.member_activity ?? []) : [];
+    const active = acts.map((a) => a.member_id);
+    const was = r.working.join(',') + '|' + JSON.stringify(r.activity);
     r.working = active;
-    if (was !== active.join(',')) events.emit({ type: 'group', group: toGroup(r) });
+    r.activity = acts.map(activityOf);
+    if (was !== active.join(',') + '|' + JSON.stringify(r.activity)) events.emit({ type: 'group', group: toGroup(r) });
     return !!d?.working;
   }
   /** follows a room while its members work: the log and who is replying, until two reads in a row find it idle */
@@ -135,7 +162,7 @@ export function createLiveGroups(deps: GroupsDeps) {
           idle = busy ? 0 : idle + 1;
         }
       } catch (e) { log.warn('a room could not be followed', e); }
-      finally { r.watching = false; if (r.working.length) { r.working = []; events.emit({ type: 'group', group: toGroup(r) }); } }
+      finally { r.watching = false; if (r.working.length) { r.working = []; r.activity = []; events.emit({ type: 'group', group: toGroup(r) }); } }
     })());
   }
 
@@ -155,7 +182,7 @@ export function createLiveGroups(deps: GroupsDeps) {
         for (const room of rooms) {
           const had = recs.get(room.room_id);
           if (!had) {
-            const r: Rec = { room, thread: [], seen: new Set(), cursor: 0, loaded: false, working: [], watching: false };
+            const r: Rec = { room, thread: [], seen: new Set(), cursor: 0, loaded: false, working: [], activity: [], watching: false };
             recs.set(room.room_id, r);
             if (!archivedIds.has(room.room_id)) events.emit({ type: 'group-created', group: toGroup(r) });
           } else if (had.room.name !== room.name || had.room.revision !== room.revision) {

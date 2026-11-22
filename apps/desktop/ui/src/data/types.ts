@@ -113,11 +113,18 @@ export interface Group {
   members: readonly GroupMember[];
   /** the ids of the members working on a reply now */
   working: readonly string[];
+  /** what each member at work is doing, in the order the room took them (absent when the room does not say) */
+  activity?: readonly MemberActivity[];
 }
+/** one member at work in a room: queued (next), running, or stopping; the round it answers in (0 answers the user), when it
+    started (ms since the epoch) and the tool it is in now, when the room says */
+export interface MemberActivity { member: string; status: 'queued' | 'running' | 'stopping'; round: number | null; startedAt: number | null; tool: string | null }
 /** a group put away: kept, with its messages, until it is restored */
 export interface ArchivedGroup { id: string; name: string; members: readonly GroupMember[] }
-/** a message in a group's thread: `who` is 'you' or a member's id */
-export interface GroupText { kind: 'text'; id: string; who: string; t: string; text: string }
+/** a message in a group's thread: `who` is 'you' or a member's id. `round` 0 is a member's answer to the user, a later round the
+    members among themselves (absent for the user's own and where the room does not say); `to` the members it was sent to, when
+    the room names them */
+export interface GroupText { kind: 'text'; id: string; who: string; t: string; text: string; round?: number | null; to?: readonly string[] }
 /** a line the app says in the thread: a member that could not reply, a conversation paused at its limit (`more` then names what Continue lets run) */
 export interface GroupNote { kind: 'note'; id: string; t: string; text: string; more?: string }
 export type GroupMessage = GroupText | GroupNote;

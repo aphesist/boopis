@@ -31,6 +31,7 @@ import { inTauri } from './bridge';
 import type { FormEntry } from './live/forms';
 import { tauriSecrets } from './secrets';
 import { dropsFromHost, pickAttachments } from './attach';
+import { hostPaths } from './paths';
 import { stageAttachments, withRefs } from './live/attachments';
 import type { SecretsBridge } from './secrets';
 import type { GatewayClient, GatewayEvent } from './gateway';
@@ -561,7 +562,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable },
     ready, sessions, waits, user, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
     details: details.source, run: details.run, mods: modsHost.source, store: liveStore,
-    council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id) },
+    council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id), paths: hostPaths() },
     dictation: { start: () => () => undefined }, // nothing hears you yet: the mock's transcript is invented text
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },
     settled: async () => { await liveStore.settled(); await details.settled(); await liveBots.settled(); await liveGroups.settled(); },
