@@ -141,7 +141,7 @@ export async function b08(ctx: ActCtx): Promise<void> {
   const hud = s.huddle!;
   const toneOf = (e: HTMLElement): 'q' | 's' | '' => (e.closest('.ui-callno__who, .bt-who-name, .bt-hmsg__name') ? 's' : e.closest('.ui-callno, .bt-hmsg__head') ? 'q' : '');
   const roots = [room.head, room.thread, s.kaiReply?.el, hud.h3.el, room.scroller.querySelector<HTMLElement>('.a2-req'), room.composer].filter((e): e is HTMLElement => !!e);
-  const runs = roots.flatMap((r) => runsOf(stage, r, { skip: '.ui-presence .ui-entry__body, .bt-huddle__body, .a2-type, .a2-bar', tone: toneOf, placeholder: true }));
+  const runs = roots.flatMap((r) => runsOf(stage, r, { skip: '.ui-presence .ui-entry__body, .bt-huddle__body, .a2-type, .a2-bar, .a1-typed', tone: toneOf, placeholder: true }));
   bars(film, runs, 'text').to('bar', t8 + F(1), { dur: F(7), stagger: F(3) / Math.max(1, runs.length) });
 
   /* ── the cursor (the key frame's own) arcs in to the tabs pill and clicks Session on 10.1 ── */
