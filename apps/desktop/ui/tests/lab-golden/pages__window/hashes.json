@@ -60,22 +60,22 @@
   "h": 900
  },
  "bots-with-120-bots@bone": {
-  "sha": "9c6794d7ba2a5326035ff00f0c91430a876edffb",
+  "sha": "e97adbcb2ad991c7b515f78ef68816e93fe0db06",
   "w": 1440,
   "h": 900
  },
  "bots-with-120-bots@catalog": {
-  "sha": "7a56cebcd1d1c3524b29c799cbb86b60b5887a63",
+  "sha": "4f944113e65aa4c8328461fa1e5bfa265664bc6e",
   "w": 1440,
   "h": 900
  },
  "bots-with-120-bots@graphite": {
-  "sha": "5212ccafe9d1cee48e90b99215bddc517bb1f61d",
+  "sha": "51e5776a75a63968b036a5477f155d935d0f87d4",
   "w": 1440,
   "h": 900
  },
  "bots-with-120-bots@typewriter": {
-  "sha": "99c43f0049f4706fcf22f1f76607cd935695da3d",
+  "sha": "5c8df20cc7dd0c0169c665366490b60bbcaa9069",
   "w": 1440,
   "h": 900
  },
@@ -100,22 +100,22 @@
   "h": 900
  },
  "details-panel-open@bone": {
-  "sha": "300bb122bc1f33be223b716c2d74816e504669fd",
+  "sha": "dfe37258f03fd1ffc4dd243829bb62404a8ecec1",
   "w": 1440,
   "h": 900
  },
  "details-panel-open@catalog": {
-  "sha": "9f11edeae7eaa9705f138c644e6793d1177f351e",
+  "sha": "9a9ea353c13d59fb94a0c04d3869c84dc0eab54d",
   "w": 1440,
   "h": 900
  },
  "details-panel-open@graphite": {
-  "sha": "4973872b6d09d247bf70ea122a6b88ff9df52dec",
+  "sha": "c4aa0c37822eb4fa775852b1239e94e5af27137f",
   "w": 1440,
   "h": 900
  },
  "details-panel-open@typewriter": {
-  "sha": "b2ff6118bc737954dd51cc0eef910c9a58b0ec6d",
+  "sha": "e99e3a1eb914eca8cf746d140065c5f35c23c46a",
   "w": 1440,
   "h": 900
  },
@@ -140,24 +140,24 @@
   "h": 900
  },
  "first-run@bone": {
-  "sha": "b2b62e0619d8a049ae12a013f76f2f676495802b",
-  "w": 1416,
-  "h": 24
+  "sha": "454eee0e51b60122d077dd251bee6ee66c1c2943",
+  "w": 1440,
+  "h": 900
  },
  "first-run@catalog": {
-  "sha": "b551b10325ea90863b9382d4f2dc1045c2787400",
-  "w": 1416,
-  "h": 24
+  "sha": "898e56d6d11592746748402ae507d3114660e724",
+  "w": 1440,
+  "h": 900
  },
  "first-run@graphite": {
-  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
-  "w": 1416,
-  "h": 24
+  "sha": "926bbd0ce226cb66c47c48b5662c025033b62959",
+  "w": 1440,
+  "h": 900
  },
  "first-run@typewriter": {
-  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
-  "w": 1416,
-  "h": 24
+  "sha": "0551dc6a211cbbcaeb96d175345d6860306116a1",
+  "w": 1440,
+  "h": 900
  },
  "long-names-everywhere@bone": {
   "sha": "df93960e885c22011fbedcbe7ab82cdc6e58144b",

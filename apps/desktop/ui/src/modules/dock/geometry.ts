@@ -22,7 +22,9 @@ export function slabCorner(w: number, h: number, rTop: number, flare: number): {
     `pad` the row's side padding, `mag` and `magCtl` how much an orb and the "+" grow under the pointer. */
 export interface RowRoom { room: number; floor: number; ctl: number; pad: number; mag: number; magCtl: number; sig: number }
 export interface RowFit { orb: number; gap: number; shown: number; more: boolean }
-export const rowGap = (o: number): number => Math.max(6, Math.round(o * 14 / 40));
+/** the row's gap, always a value the design system names: the dock's own 14px (R-space-2) while the orbs are near full size,
+    then --sp-3 and --sp-2 as they shrink */
+export const rowGap = (o: number): number => (o >= 36 ? 14 : o >= 28 ? 12 : 8);
 /** the row's width: `k` orbs, then "All bots" when some are left out, then "+" (the flex gap between each) */
 export const rowWidth = (o: number, k: number, more: boolean, r: Pick<RowRoom, 'ctl' | 'pad'>): number =>
   2 * r.pad + k * o + (more ? 2 : 1) * r.ctl + (k + (more ? 1 : 0)) * rowGap(o);
