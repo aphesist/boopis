@@ -213,3 +213,40 @@ describe('a live bot’s room has a live composer', () => {
     expect(l.fresh).toEqual([id]);
   });
 });
+
+describe('a group’s kanban board', () => {
+  const kanban = (): NonNullable<DataProvider['kanban']> => ({
+    boards: () => Promise.resolve([{ slug: 'release-crew', name: 'Release crew', archived: false, counts: { running: 1 } }]),
+    view: () => Promise.resolve({ board: { slug: 'release-crew', name: 'Release crew', archived: false, counts: { running: 1 } }, tasks: [{ id: 't1', title: 'Cut the tag', status: 'running', assignee: 'atlas', priority: 0, createdAt: null, startedAt: null, completedAt: null, problem: null }] })
+  });
+  beforeEach(() => { mount({ ...withGroups(), kanban: kanban() }); q('.bt-groups .ui-row').click(); });
+  const board = (): HTMLButtonElement => [...document.querySelectorAll<HTMLButtonElement>('.bt-ghead button')].find((b) => /^(Board|Back to the thread)$/.test(b.textContent ?? ''))!;
+
+  it('is reached from the room\'s header, takes the thread\'s place and gives it back', async () => {
+    expect(board().textContent).toBe('Board');
+    expect(q<HTMLElement>('.bt-board').hidden).toBe(true);
+    board().click();
+    await flush();
+    expect(q<HTMLElement>('.bt-board').hidden).toBe(false);
+    expect(q<HTMLElement>('.bt-group .bt-log').hidden).toBe(true);
+    expect(q<HTMLElement>('.bt-group .bt-composer-zone').hidden).toBe(true);
+    expect(q('.bt-board').textContent).toContain('Cut the tag');
+    expect(board().textContent).toBe('Back to the thread');
+    expect(board().getAttribute('aria-pressed')).toBe('true');
+    board().click();
+    expect(q<HTMLElement>('.bt-board').hidden).toBe(true);
+    expect(q<HTMLElement>('.bt-group .bt-log').hidden).toBe(false);
+  });
+  it('is never a part of the message list', async () => {
+    board().click();
+    await flush();
+    expect(document.querySelector('.bt-log .bt-board, .bt-log [data-task]')).toBeNull();
+  });
+  it('says there is no board where the build cannot read one', async () => {
+    mount({ ...withGroups() });
+    q('.bt-groups .ui-row').click();
+    board().click();
+    await flush();
+    expect(q('.bt-board').textContent).toContain('No board here');
+  });
+});

@@ -214,6 +214,8 @@ One hash-chained JSONL per session at `<profile home>/boopis/ledger/<session_id>
   - a group is a room of two to six bots; the thread is the room's log; `@name` is the engine's own mention;
   - a conversation with one bot is a session of its own profile on its own link;
   - bot relay (`bot_relay.*`) is not used; agent-to-agent forwarding (`a2a.forward`) and the shared Kanban board (`kanban.db`) stay for durable hand-offs;
+  - **a group's kanban board** (read only) is reached from the group room's header ("Board"), never from the message list. The gateway has no method that lists a board, so the host (`kanban.rs`, `kanban_boards` and `kanban_view`) runs the engine's own `kanban boards list --json` and `kanban --board <slug> list --json` in the root home (a board is shared by every profile) and the view reads what they print; it never opens a board file and has no call that moves a task. The engine does not link a board to a room, so the board that belongs to a group is the one whose slug is the group's name as a slug (`paper past` is `paper-past`); another can be chosen and the choice is remembered for the group. An open board is read again every few seconds and drawn again only when something changed;
+  - a cron job's delivery (`deliver`, `room:<room id>[@<profile>]`, where the profile is the one whose gateway hosts the room) is said in words in a bot's schedule, with a link to the room when it is one of the groups, and shown as written when it is not (`data/delivery.ts`);
   - a room's roster is frozen and a room cannot be archived, so changing members makes a new room and archiving is boopis's own mark (ADR-0033).
 - **Attribution at a glance:** every card and message carries an **origin**:
   - one teammate (its orb, name and colour);

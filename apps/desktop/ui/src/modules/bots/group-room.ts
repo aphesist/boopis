@@ -18,6 +18,8 @@ import { markSelected, drawGroups } from './list';
 import { checkClips } from './clips';
 import { closeSettings } from './settings';
 import { openNewGroup } from './new-group';
+import { mountBoard } from './group-board';
+import type { BoardView } from './group-board';
 
 const groups = () => data().groups;
 const toast = (t: string, o?: Parameters<typeof ui.toast>[1]): void => { ui.toast(t, o); };
@@ -41,7 +43,8 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
   const col = el('div', { class: 'bt-col' });
   const head = el('header', { class: 'bt-presence bt-ghead' });
   const log = el('div', { class: 'bt-log', role: 'log', 'aria-label': 'Group messages' });
-  col.append(head, log);
+  const boardEl = el('section', { class: 'bt-board', 'aria-label': 'Kanban board', hidden: true });
+  col.append(head, log, boardEl);
   scroll.append(col);
   const zone = el('div', { class: 'bt-composer-zone' });
   const working = el('p', { class: 'bt-working', role: 'status', 'aria-live': 'polite' });
@@ -49,6 +52,7 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
   pane.append(scroll, zone);
   root.append(pane);
   S.groupPane = pane;
+  G.boardEl = boardEl; G.board = mountBoard(boardEl, { source: () => data().kanban });
   G.scroll = scroll; G.head = head; G.log = log; G.zone = zone; G.working = working;
   const c = ui.composer({ placeholder: 'Message the group', label: 'Message the group', attach: false });
   c.classList.add('bt-composer');
@@ -61,7 +65,7 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
   new ResizeObserver(measure).observe(zone);
   return pane;
 }
-const G = { scroll: null as HTMLElement | null, head: null as HTMLElement | null, log: null as HTMLElement | null, zone: null as HTMLElement | null, working: null as HTMLElement | null, composer: null as import('../../components').ComposerEl | null, renaming: false };
+const G = { scroll: null as HTMLElement | null, head: null as HTMLElement | null, log: null as HTMLElement | null, zone: null as HTMLElement | null, working: null as HTMLElement | null, composer: null as import('../../components').ComposerEl | null, renaming: false, boardEl: null as HTMLElement | null, board: null as BoardView | null, boardOpen: false };
 
 export function openGroup(id: string | null): void {
   initGroups();
@@ -75,6 +79,7 @@ export function openGroup(id: string | null): void {
   if (S.groupPane) S.groupPane.hidden = false;
   markSelected();
   G.renaming = false;
+  showBoard(false);
   renderHead(g);
   renderLog(g);
   renderComposer(g);
@@ -89,16 +94,29 @@ function renderHead(g: Group): void {
   const name = el('h1', { class: 'bt-p-name', text: g.name });
   const line = el('p', { class: 'bt-p-line' }, el('span', { class: 'bt-p-role', text: namesOf(g.members) }));
   const acts = el('div', { class: 'bt-p-actions' });
+  const board = ui.button({ label: G.boardOpen ? 'Back to the thread' : 'Board', size: 's', variant: 'ghost' });
+  board.setAttribute('aria-pressed', String(G.boardOpen));
+  board.addEventListener('click', () => { showBoard(!G.boardOpen, g); renderHead(g); board.focus(); });
   const rename = ui.iconButton({ icon: 'pen', label: 'Rename ' + g.name, tip: 'Rename' });
   rename.addEventListener('click', () => { startRename(g, name, rename); });
   const members = ui.iconButton({ icon: 'bots', label: 'Change the members of ' + g.name, tip: 'Members' });
   members.addEventListener('click', () => { openNewGroup({ edit: g.id }); });
   const archive = ui.iconButton({ icon: 'archive', label: 'Archive ' + g.name, tip: 'Archive' });
   archive.addEventListener('click', () => { archiveGroup(g); });
-  acts.append(rename, members, archive);
+  acts.append(board, rename, members, archive);
   h.append(el('div', { class: 'bt-p-orb', html: stackOf(g.members, 32) }), el('div', { class: 'bt-p-text' }, [name, line]), acts);
   livenIn(h);
   checkClips();
+}
+/** the group's kanban board takes the thread's place in the column (and the composer's), or gives it back */
+function showBoard(open: boolean, g?: Group): void {
+  if (open === G.boardOpen && !(open && g)) return;
+  G.boardOpen = open;
+  if (G.log) G.log.hidden = open;
+  if (G.zone) G.zone.hidden = open;
+  if (G.boardEl) G.boardEl.hidden = !open;
+  if (open && g) G.board?.show({ id: g.id, name: g.name });
+  else G.board?.stop();
 }
 function startRename(g: Group, nameEl: HTMLElement, btn: HTMLElement): void {
   if (G.renaming) return;

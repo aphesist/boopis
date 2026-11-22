@@ -22,7 +22,7 @@ export const SURFACES: readonly string[] = [
   'dock', 'composer', 'sidebar', 'title-bar', 'palette', 'menus', 'popover', 'toasts', 'details-panel', 'keys-sheet',
   'settings', 'settings-general', 'settings-models', 'settings-providers', 'settings-connectors', 'settings-appearance', 'settings-keys', 'first-run',
   'store', 'store-detail', 'store-review', 'store-installed', 'store-sources',
-  'council', 'bots-roster', 'bots-room', 'bots-sheet', 'bots-new', 'bots-group', 'bots-new-group'
+  'council', 'bots-roster', 'bots-room', 'bots-sheet', 'bots-new', 'bots-group', 'bots-kanban', 'bots-new-group'
 ];
 /** where a mod draws (docs/MODS.md section 3) */
 export const MOD_SURFACES: readonly string[] = ['band', 'status', 'pane', 'toast', 'theme-card', 'placed-row', 'log'];

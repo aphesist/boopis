@@ -8,7 +8,7 @@
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type {
   ArchivedBot, Turn, Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment, ArchivedGroup,
-  Attached, DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome, ModelChoice, CouncilSource, Group, GroupMessage,
+  Attached, KanbanBoardInfo, KanbanView, DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome, ModelChoice, CouncilSource, Group, GroupMessage,
   InstallPlan, InstallReceipt, InstallRequest, ProjectPolicy, StageResult, StoreBrowse, StoreDetail, StoreFilter, StoreScope, StoreSource, UninstallResult, UpdateDiff
 } from './types';
 
@@ -326,6 +326,14 @@ export interface FilesSource {
   complete(word: string, sessionId: string | null): Promise<FileCompletions>;
 }
 
+/** the engine's kanban boards, read only: no call moves or changes a task */
+export interface KanbanSource {
+  /** every board; rejects with a sentence when the engine cannot be asked */
+  boards(): Promise<readonly KanbanBoardInfo[]>;
+  /** one board and its tasks; rejects with a sentence */
+  view(slug: string): Promise<KanbanView>;
+}
+
 export interface DataProvider {
   info: ProviderInfo;
   /** resolves when the first snapshot of everything is in: the app boots after it */
@@ -347,4 +355,6 @@ export interface DataProvider {
   council: CouncilSource;
   /** the store: everything installable in one place (ADR-0038) */
   store: StoreProvider;
+  /** the kanban boards behind a group (the live provider's; the mock has none, so a group's board view says so) */
+  kanban?: KanbanSource;
 }

@@ -578,3 +578,17 @@ export interface UninstallResult { item_id: string; removed: readonly string[]; 
 export interface ProjectPolicy { project: string; governed: boolean; explicit: boolean | null; effective: boolean }
 /** a rejection of a store call: the stable code (`hx.store.*`, `hx.connectors.*`) and a sentence the UI shows */
 export interface StoreError { code: string; message: string }
+
+/* ───────── the engine's kanban boards, read only (a group's board view) ───────── */
+export interface KanbanBoardInfo { slug: string; name: string; archived: boolean; counts: Readonly<Record<string, number>> }
+/** one task of a board: `status` is its column (`triage`, `todo`, `scheduled`, `ready`, `running`, `blocked`, `review`, `done`, or one the engine adds); times are Unix seconds, null when the engine has none */
+export interface KanbanTask {
+  id: string; title: string; status: string;
+  /** the profile it is assigned to, null when nobody is */
+  assignee: string | null;
+  priority: number;
+  createdAt: number | null; startedAt: number | null; completedAt: number | null;
+  /** why it stopped, in the engine's words, when it says */
+  problem: string | null;
+}
+export interface KanbanView { board: KanbanBoardInfo; tasks: readonly KanbanTask[] }

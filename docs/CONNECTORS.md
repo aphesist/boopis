@@ -33,6 +33,25 @@ Open sessions keep the tools they started with. Hermes can reload MCP into them 
 ### Where it lives
 Settings > Connectors: the servers Hermes has (a switch, Test, Remove, and Sign in where one is owed), then a row for each collection variant, then "From a URL" and "From a command". The v6 design system has no connectors view (its mock has the session details panel's switch rows and the `connector` and `signin` cards), so the tab is **composed from those patterns for the owner's review** (settings rows, the form cards, no new component). The details panel's Connectors section now works too: its switch and Sign in go through the same host commands.
 
+### Connectors per bot
+Each bot is a profile with its own home and its own `mcp_servers`, so a connector is the bot's, not the app's. Settings > Connectors has a **Connectors for** choice at the top (a select from the kit: the main profile, or a bot). Picking a bot sends every list, switch, test, sign-in, add and removal to that bot's own link (the host's connector commands already took a `profile`); the main profile and the other bots are not touched. The choice is not remembered: the tab opens on the main profile.
+
+From a terminal, the same engine runs without a window and without a question (`apps/desktop/src-tauri/src/cli/connectors.rs`):
+
+```text
+boopis connectors list [--bot NAME] [--json]
+boopis connectors add NAME --command PROGRAM [--args ARG...] [--env K=V]... [--bot NAME] [--yes] [--json]
+boopis connectors test NAME [--bot NAME] [--json]
+boopis connectors remove NAME [--bot NAME] [--keep-keys] --yes [--json]
+```
+
+- **It never drives the engine's own `mcp add`**, which cancels without a terminal. It builds the same request as the "From a command" form and runs the same review, hash and install, over the gateway's `mcp.servers.*` on the bot's link.
+- **Nothing asks.** `add` and `remove` print what they would do (the command, the arguments, the config keys) and stop with exit code 3 until `--yes` is given. Exit codes: 0 done, 1 failed (the reason on standard error, in boopis's words), 2 not understood, 3 waiting for `--yes`.
+- **`--args` takes every value up to the next flag of the command**, so `--args -y some-mcp@1.2.3` is two arguments; `--args=VALUE` and a repeated `--args` add one each, and a lone `--` makes the rest arguments.
+- **A key is never a literal.** The same validators apply as in the form: a value in `--env` that reads as a key is refused. Keys that belong in the keychain are given in the app, in the connector's review form.
+- **A bot that does not exist** is said so before anything is asked of the engine.
+- A sign-in (OAuth) is finished in the app: the CLI has no browser to open.
+
 ### What the host refuses (before Hermes sees anything)
 - **Names**: `a-z`, `0-9`, `-`, `_`, up to 48. They become a config key and part of every tool name.
 - **URLs**: `https` only; plain `http` only for `127.0.0.1`, `localhost` or `::1` (a server being developed); no user name or password; no `#` fragment; no credential in the query (`token=`, `api_key=`, `key=`, ...). The reason says where the key goes instead.

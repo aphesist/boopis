@@ -67,6 +67,12 @@
 [data-margin="off"] .bt-empty { margin-left: 0; }
 .bt-ideas { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
 
+/* a group's kanban board takes the thread's place: the board's chooser and its state line, then a section of rows for each column */
+.bt-board { display: grid; gap: var(--sp-3); padding-bottom: var(--sp-6); }
+.bt-board-bar { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.bt-board-status { margin: 0; }
+.bt-board-body { display: grid; gap: var(--sp-3); }
+
 /* the composer (the library's) sits on centerX, above the dock */
 .bt-composer-zone {
   position: absolute; z-index: 3;
