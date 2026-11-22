@@ -121,13 +121,30 @@ describe('a group’s thread', () => {
     const ev = emitter<never>(); void ev;
     S.groups[0]!.working = [first.members[0]!.id, first.members[1]!.id];
     const { onGroupsEvent } = await import('./group-room');
+    const second = S.bots.find((b) => b.id === first.members[1]!.profile)!, owed = second.attention;
+    second.attention = null;   /* the mock's nina waits for an approval: first, two who only think */
     onGroupsEvent({ type: 'group', group: { ...first, working: [first.members[0]!.id, first.members[1]!.id] } });
-    /* each member at work has a pending entry where its message will land, and says so to the screen reader */
-    const pend = [...document.querySelectorAll<HTMLElement>('.bt-group [data-pending]')];
-    expect(pend).toHaveLength(2);
-    expect(pend[0]!.getAttribute('aria-label')).toMatch(/thinking/);
-    expect(pend[0]!.querySelector('[role="status"]')).not.toBeNull();
+    /* the members at work share one presence entry where their messages will land: their orbs side by side, one sentence */
+    const pres = [...document.querySelectorAll<HTMLElement>('.bt-group .bt-log > .ui-presence')];
+    expect(pres).toHaveLength(1);
+    const names = [first.members[0]!.name, first.members[1]!.name];
+    expect(pres[0]!.querySelectorAll('.ui-presence__slot orb-avatar')).toHaveLength(2);
+    expect(pres[0]!.querySelector('.ui-presence__words')!.textContent).toBe(names[0] + ' and ' + names[1] + ' are thinking');
+    expect(pres[0]!.getAttribute('aria-label')).toBe(names[0] + ' and ' + names[1] + ' are thinking');
+    /* it is not read on every change (the log would): the coarse changes go through the polite region */
+    expect(pres[0]!.getAttribute('aria-live')).toBe('off');
     expect(q('.bt-working').getAttribute('aria-live')).toBe('polite');
+    /* one of them finishes: the same entry, the other orb kept, one name left */
+    const kept = pres[0]!.querySelector('.ui-presence__slot:last-child orb-avatar');
+    onGroupsEvent({ type: 'group', group: { ...first, working: [first.members[1]!.id] } });
+    expect(document.querySelectorAll('.bt-group .bt-log > .ui-presence:not([data-leave])')).toHaveLength(1);
+    expect(pres[0]!.querySelector('.ui-presence__slot:not([data-leave]) orb-avatar')).toBe(kept);
+    /* both again, and the second owes an approval: attention leaves the sentence for a row of its own, in red */
+    second.attention = owed ?? 'approval';
+    onGroupsEvent({ type: 'group', group: { ...first, working: [first.members[0]!.id, first.members[1]!.id] } });
+    expect(pres[0]!.dataset['mode']).toBe('rows');
+    expect(pres[0]!.querySelector('.ui-state[data-tone="attention"]')!.textContent).toBe('needs you');
+    second.attention = owed;
   });
   it('says that a member is also running a kanban task, which is a second session of the same bot', async () => {
     const { repaintWorking } = await import('./group-room');

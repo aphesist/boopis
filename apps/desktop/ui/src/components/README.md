@@ -69,6 +69,7 @@ Each row: what it is for, its variants (the options `variants.ts` lists for the 
 | `composer` | every composer (session, Bots tab, dock) | `running`; mic in each | §14.10 |
 | `orb`, `modelMark`, `icon`, `logo` | bots, provider marks, icons, the mark | `orb.size`, `still`; `modelMark.color: mono, brand` | §10, §12, §13 |
 | `stack` | several bots as overlapped orbs: a group's members, teammates who ask together | `size` (one per place), `max` places ("+N" is the last), `label`, `focusable`, `still` | R-orb-*, R-corner-4 |
+| `presence` (`presence.pill`) | who is at work in a conversation: one entry where the replies land (one bot named with its orb; several side by side in one sentence; rows for what differs or needs the owner; a count with Details past four rows), and the jump button's pill while the end is out of view | `actors[]` (`status: thinking, tool, replying, next, stopping, needs, failed`; `doing`, `compute`, `since`, `by`), `max` places, `rows`, `onOrb`; `update(actors, {arrived})`, `leave()`, `open` | R-orb-*, R-motion-2 to 7, R-load-1, R-a11y-7, R-copy-3 |
 | `child` | a task a session handed to another model: mark and name, goal, what it does now, how it ended; open and stop | `status: queued, running, done, failed, stopped`; `canOpen`, `canStop`; `time`, `now`, `tools`, `summary` | §8 containers, R-corner-3, R-state-* |
 | `modView` | a mod's element tree, drawn with the kit | `limits`, `colors` | §14.29 |
 | `squircle`, `shape` | continuous corners; nested corners fit | `frame`, `clip`, `surface` modes | R-corner-1 to 9 |

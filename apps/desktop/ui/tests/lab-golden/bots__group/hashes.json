@@ -140,22 +140,22 @@
   "h": 872
  },
  "a-message-waiting-for-a-member@bone": {
-  "sha": "21d945a0071712d6f93e5da465a826aa1ae335d9",
+  "sha": "17cfcfe3ac4d31079af79af611244e6d27600f5e",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@catalog": {
-  "sha": "667556c5659033c1502def816a1f0519762f1411",
+  "sha": "e707e11af041cc69bfd64681657a452857e8b90d",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@graphite": {
-  "sha": "57605a15656fa61ebbbd1a80778ab392a05c97e5",
+  "sha": "abd4dcec201f2399fd231b7a8b445f4f3443e954",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@typewriter": {
-  "sha": "7f46ef3e12851d43f99d893879eb6b65da166a6a",
+  "sha": "4ef9b013aef2a8afd3e5551574cbcf81e38c8e81",
   "w": 1196,
   "h": 872
  },
@@ -179,23 +179,23 @@
   "w": 1196,
   "h": 872
  },
- "five-at-work-the-rest-in-one-line-above-the-composer@bone": {
-  "sha": "c331329da3df03e06009f701e639470f8fb60daf",
+ "five-at-work-one-presence-entry@bone": {
+  "sha": "eedc6d488307ad2e7af40b60cd7b9b8c592ed715",
   "w": 1196,
   "h": 872
  },
- "five-at-work-the-rest-in-one-line-above-the-composer@catalog": {
-  "sha": "4199d9399b47095802b510397e4d1841c5100d4c",
+ "five-at-work-one-presence-entry@catalog": {
+  "sha": "f9988a83f25709c89b5dcb8a0d44491d1f4c431a",
   "w": 1196,
   "h": 872
  },
- "five-at-work-the-rest-in-one-line-above-the-composer@graphite": {
-  "sha": "6a320d0442169dbc204618df4adc4f3c558234ec",
+ "five-at-work-one-presence-entry@graphite": {
+  "sha": "bcc85d5944bdbab3e8210a21720b928d309d92c0",
   "w": 1196,
   "h": 872
  },
- "five-at-work-the-rest-in-one-line-above-the-composer@typewriter": {
-  "sha": "5c08e52082d85b186fc32c2bf678a282d2989c41",
+ "five-at-work-one-presence-entry@typewriter": {
+  "sha": "1fe019c17f89d5408cc4bc6541d7d1d8912453f1",
   "w": 1196,
   "h": 872
  },
@@ -280,22 +280,22 @@
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@bone": {
-  "sha": "9d01966dca30024c644d6ed4d800635f16631b49",
+  "sha": "08fe0150ee0a6ebe13e52b6574d58e68d7c47194",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@catalog": {
-  "sha": "24bdb0faccd32b307b74830e4f97968603640b1e",
+  "sha": "8c07fc46503ccf50cb607d98f05cf54c08275e77",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@graphite": {
-  "sha": "e5d1c2df9d58601e820d9d2e8bb4ac52ce7b251f",
+  "sha": "1bbb92656f97cddaf88f135ef6857f1905c5c952",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@typewriter": {
-  "sha": "3dbe6d08c335c6d9aee0b9bd4fd3cc5b19474ba6",
+  "sha": "9116d8b561358776caff3f595e151a030ddc861a",
   "w": 1196,
   "h": 872
  },
@@ -320,22 +320,22 @@
   "h": 872
  },
  "two-messages-waiting@bone": {
-  "sha": "64a8930e07c9aa3f6df38feb7a2b7f81e183fb8b",
+  "sha": "66fa3758a3f1b519e87377f6767b35623d7be163",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@catalog": {
-  "sha": "d7540fb6311db737a13eba10dbd00ac896845400",
+  "sha": "0a74f07687087a20480bab554de4535b8a9b4676",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@graphite": {
-  "sha": "67775d01d014c30e194bc7ce96baaa6098622176",
+  "sha": "5a22c3d0bf79a211e3014478b26a01e14d77fe4b",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@typewriter": {
-  "sha": "0a65af88c13a5ee685aa63ec4e9c8a05f71b4436",
+  "sha": "9eb41f60c0bc0fc846304c0b9656b0298b9b5368",
   "w": 1196,
   "h": 872
  }

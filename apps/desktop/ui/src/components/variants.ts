@@ -3,6 +3,7 @@
    (hover, focus, pressed, disabled) are the design system's (§14.35) and are drawn by the lab with the element's own attributes.
    Pure data: no DOM, no globals. */
 import { CHILD_STATUSES } from './child';
+import { PRESENCE_STATUSES } from './presence';
 import { keysVariants } from './kbd';
 import { scrollVariants } from './scroll';
 import { searchVariants } from './search';
@@ -33,6 +34,7 @@ export const variants = {
   setSection: {},
   row: { sub: [false, true], current: [false, true], archived: [false, true], acts: [false, true] },
   child: { status: CHILD_STATUSES, canOpen: [false, true], canStop: [false, true] },
+  presence: { status: PRESENCE_STATUSES, count: [1, 2, 3, 6] },
   group: { collapsible: [false, true], expanded: [false, true] },
   section: { open: [false, true] },
   scroll: scrollVariants,

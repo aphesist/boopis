@@ -277,6 +277,7 @@ Motion runs at the display's full rate, so what moves must not wait for the main
 | Hold to approve | rAF canvas draw and `clip-path` | canvas, `clip-path` | main thread, while held |
 | Hover, press, focus colours | CSS | colour, background, `box-shadow` | main thread, small areas |
 | Running dot | CSS | `opacity` | compositor |
+| Who is at work (`ui.presence`): an orb joining, leaving, travelling between one line and rows; the entry's rise and fade; words cross-fading | CSS transitions from the tokens (places are `--col`/`--row` in a `transform`) | `transform`, `opacity` | compositor |
 | Orbs | orb2's own loop | canvas 2D | worker where supported, else main thread |
 
 ## Names and long names

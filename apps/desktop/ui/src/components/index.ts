@@ -40,6 +40,7 @@ import { scrollClass } from './scroll';
 import { codeHTML, everyoneHTML, inlineHTML, plainHTML, markdownHTML, mentionHandles, mentionHTML, mentionOutsideHTML, mentionsOutside, pathCandidate, pathCandidates, pathHTML, resolveMentions, splitBlocks, upgradePaths } from './markdown';
 import { arrive, codeOf, markdown as markdownEl, streamMarkdown, wireMarkdown } from './md-view';
 import { copyText } from './clipboard';
+import { presence as presenceEl, presencePill, presenceWords, presenceLayout } from './presence';
 import type { SegElement } from './wire';
 
 export const version = '1.0.0';
@@ -88,6 +89,8 @@ const markdown = Object.assign(markdownEl, {
   mention: mentionHTML, outside: mentionOutsideHTML, outsiders: mentionsOutside, everyone: everyoneHTML, handles: mentionHandles, resolve: resolveMentions,
   path: pathHTML, pathCandidate, candidates: pathCandidates, upgradePaths
 });
+/** `ui.presence({actors})` is who is at work in a conversation, one entry where their replies land (presence.ts); `.pill` is the same, small, for the jump button */
+const presence = Object.assign(presenceEl, { pill: presencePill, words: presenceWords, layout: presenceLayout });
 const legend = (parts: readonly MeasurePart[], fmt?: (n: number) => string): HTMLElement => frag(html.legend(parts, fmt));
 const keys = (k: string): HTMLElement => frag(html.keys(k));
 const inline = (text: string): HTMLSpanElement => { const s = document.createElement('span'); s.innerHTML = html.inline(text); return s; };
@@ -100,7 +103,7 @@ const modelRoute = (text: string, o?: ModelOpts): HTMLElement => frag(routeHTML(
 export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
   ...factories, legend, keys, inline, scrollClass,
-  markdown, copyText,
+  markdown, copyText, presence,
   hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, composer, card,
   hold: Object.assign(holdElement, { wire: wireHold }),
   /** a Claude Code mod's element tree, drawn with the library (MODS.md section 2) */
@@ -132,6 +135,8 @@ export { welcomeLogo } from './logo';
 export { SIGNIN_BRANDS, signinLabel, signinLogo, signinMark } from './signin-button';
 export type { SigninBrand, SigninButtonOpts } from './signin-button';
 export { progressDots, setProgress } from './progress';
+export { elapsedWords, presenceFace, presenceLabel, presenceClauses, PRESENCE_STATUSES, HOLD_MS } from './presence';
+export type { PresenceActor, PresenceElement, PresenceLayout, PresenceMode, PresenceOpts, PresencePill, PresenceRow, PresenceStatus, PresenceUpdate } from './presence';
 export { kbd, keys as keyChips, combo, comboKbds, keysVariants } from './kbd';
 export type { KeysOpts } from './kbd';
 /* every component's variants, for the UI lab's stories (variants.ts) */

@@ -67,18 +67,13 @@
 [data-margin="off"] .bt-empty { margin-left: 0; }
 .bt-ideas { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
 
-/* ───────── the ledger (ledger.ts): whom a message is for, a member at work, unread, the actions in the margin ───────── */
-.bt-log > [data-hx-turn], .bt-log > .bt-pending-entry { --r-outer: var(--r-s); --pad: var(--sp-1); --corner-size: 24px; }   /* a corner container: the actions in the margin sit in its corner (R-corner-3) */
+/* ───────── the ledger (ledger.ts): whom a message is for, unread, the actions in the margin (who is at work: presence.css) ───────── */
+.bt-log > [data-hx-turn] { --r-outer: var(--r-s); --pad: var(--sp-1); --corner-size: 24px; }   /* a corner container: the actions in the margin sit in its corner (R-corner-3) */
 .bt-log > [data-hx-turn]:has(.bt-acts) { min-height: calc(var(--ctl-s) + var(--sp-6) + var(--sp-4)); }   /* the margin holds the name, the time and the actions: a one-line reply is as tall as that */
 .bt-log > [data-hx-turn] .ui-entry__body:not(:has(.bt-cardslot)) { padding: var(--sp-1) var(--sp-1) var(--sp-1) 0; box-sizing: border-box; }   /* what sits at the body's edge keeps its focus ring inside the entry */
 .bt-log > [data-hx-turn] .ui-callno:has(.bt-acts) { align-self: stretch; }
 .bt-to b { font-weight: 400; color: var(--text-dim); }
 .bt-to.is-you b { color: var(--text-strong); }
-.bt-elapsed { font-variant-numeric: tabular-nums; }
-.bt-pending { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); min-height: 22px; margin: 0; font: 400 var(--fs-xs)/var(--lh-small) var(--sans); color: var(--text-quiet); }
-.bt-pending__word { font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); letter-spacing: var(--track-mono); color: var(--text-dim); }
-.bt-pending__act:empty { display: none; }
-.bt-pending-entry.is-queued .bt-pending__word { color: var(--text-quiet); }
 .bt-unread { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-5) 0 0; font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); }
 .bt-unread::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .bt-unread + [data-hx-turn] { margin-top: var(--sp-3); }
@@ -248,7 +243,6 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-working { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-2); min-height: calc(var(--fs-xs) * 1.5); font-size: var(--fs-xs); line-height: 1.5; color: var(--text-dim); }
 .bt-working:empty { display: none; }
 .bt-working--note { color: var(--text-quiet); }
-.bt-working-orbs { display: inline-flex; }
 .bt-members { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); margin-top: var(--sp-4); width: 100%; }
 [data-margin="off"] .bt-members { grid-template-columns: minmax(0, 1fr); }
 .bt-member {

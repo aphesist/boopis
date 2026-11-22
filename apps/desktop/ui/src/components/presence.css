@@ -1,0 +1,55 @@
+/* Presence (presence.ts): who is at work, in one entry at the tail of the thread. The orbs sit in a live stack (the group stack's
+   look: one overlap step, discs with a ring of the ground, "+N" the last place) whose places are transforms, so an orb that joins,
+   leaves or moves between one line and rows travels on the compositor and is never redrawn (R-motion-2, R-motion-5). Every
+   duration is a token, so reduced motion (1ms) makes every step instant; the dot is the running dot, which stops (R-motion-6). */
+.ui-presence { --presence-row: calc(var(--s) + var(--sp-1)); transition: opacity var(--dur-2) var(--ease), transform var(--dur-2) var(--ease); }
+.ui-presence[data-enter] { opacity: 0; transform: translateY(6px); }   /* an entrance: a fade with a 6px rise (R-motion-4) */
+.ui-presence[data-leave] { opacity: 0; transition-duration: var(--dur-out); }
+
+/* the margin: the orbs, the name of one bot, who asked it, the clock */
+.ui-presence .ui-callno__who { max-width: 100%; }
+.ui-presence__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-presence__name[hidden], .ui-presence__by[hidden], .ui-presence__clock:empty { display: none; }
+
+/* the live stack: as wide as its widest row, as tall as its rows; -2px keeps the first orb on the call number's orb axis */
+.ui-stack--live {
+  position: relative; display: inline-block; vertical-align: top; margin: -2px 0 -2px -2px;
+  width: calc(var(--s) + (var(--cols, 1) - 1) * (var(--s) + var(--stack-step)));
+  height: calc(var(--s) + (var(--rows, 1) - 1) * var(--presence-row, var(--s)));
+}
+.ui-stack--live > .ui-presence__slot {
+  position: absolute; left: 2px; top: 2px; margin: 0;
+  transform: translate(calc(var(--col, 0) * (var(--s) + var(--stack-step))), calc(var(--row, 0) * var(--presence-row, var(--s))));
+  transition: transform var(--dur-3) var(--spring) var(--delay, 0ms), opacity var(--dur-2) var(--ease) var(--delay, 0ms);
+}
+.ui-presence__pop { display: inline-grid; place-items: center; transition: transform var(--dur-2) var(--ease) var(--delay, 0ms); }
+.ui-stack--live > [data-enter] { opacity: 0; }
+.ui-stack--live > [data-enter] > .ui-presence__pop { transform: scale(.6); }
+.ui-stack--live > [data-leave] { opacity: 0; transition-duration: var(--dur-3), var(--dur-out); transition-delay: 0ms; }
+.ui-stack--live > [data-leave] > .ui-presence__pop { transform: scale(.6); transition-duration: var(--dur-out); transition-delay: 0ms; }
+
+/* the words: one row per line of the layout; a line may wrap, rows hold one line each (cut, with the whole row as its tooltip) */
+.ui-presence .ui-entry__body { position: relative; gap: 0; }
+.ui-presence__words { align-self: stretch; min-width: 0; margin-top: 1px; transition: opacity var(--dur-2) var(--ease); }   /* 1px: a row's middle on the first orb's middle (the call number sits 3px down) */
+.ui-presence__words[data-enter] { opacity: 0; }
+.ui-presence__words[data-leave] { position: absolute; top: 0; left: 0; right: 0; opacity: 0; pointer-events: none; transition-duration: var(--dur-out); }
+.ui-presence__row { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--presence-row); margin: 0; font: 400 var(--fs-xs)/var(--lh-small) var(--sans); color: var(--text-quiet); }
+.ui-presence__words[data-fixed] > .ui-presence__row { height: var(--presence-row); }
+.ui-presence__mark { display: inline-grid; place-items: center; flex: none; width: 6px; align-self: flex-start; height: var(--presence-row); }
+.ui-presence__text { min-width: 0; }
+.ui-presence__words[data-fixed] .ui-presence__text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-presence__who { font-weight: 400; color: var(--text-dim); }
+.ui-presence__doing { color: var(--text-dim); }
+.ui-presence__row .ui-state { vertical-align: baseline; }
+.ui-presence__row > .ui-disclosure { flex: none; margin-left: var(--sp-1); }
+.ui-presence__row > .ui-disclosure[hidden] { display: none; }
+
+/* a narrow window folds every entry's margin above it (DESIGN-SYSTEM §14.5); the presence keeps a margin as wide as its orbs, so
+   each row's orbs stay beside its words */
+[data-margin="off"] .ui-presence.ui-entry { grid-template-columns: auto minmax(0, 1fr); }
+[data-margin="off"] .ui-presence .ui-callno { flex-direction: column; align-items: flex-start; gap: 2px; padding: 3px 12px 0 0; }
+
+/* the pill: the room's jump button when the end is out of view, with the bots at work in front of its words */
+.ui-presence-pill { max-width: min(100%, var(--measure)); padding-left: calc((var(--ctl-s) - var(--s)) / 2 - 2px); }   /* the first orb sits in the pill's round end, as far from its start as from its top (R-corner-3; 2px: the stack's ring) */
+.ui-presence-pill__stack[hidden] { display: none; }
+.ui-presence-pill__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
