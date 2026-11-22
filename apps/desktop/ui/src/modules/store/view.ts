@@ -12,9 +12,10 @@ import '../cards';
 import { useFormsHost } from '../cards/forms-host';
 import {
   errorCode, ENGINE_PLUGIN_NOTE, REMOTE_WORDS, isRemote, KIND_FILTERS, KIND_LABEL, STATE_WORDS, TIER_TIPS, TIER_WORDS, ageWords, countsWords, errorText, filterOf, freshness, hostsWords, isFront, licenseWords, pinWords, plural,
-  reviewSpec, scanWords, sourceState, stateOf
+  readingWords, reviewSpec, scanWords, sourceState, stateOf
 } from './model';
 import { projectSwitch } from './policy';
+import { readerFor } from './reading';
 
 export type StoreScreen = 'browse' | 'installed' | 'sources';
 export interface StoreDeps {
@@ -28,7 +29,12 @@ export interface StoreDeps {
   /** false: a card appears at once, without its entrance (the lab's checks measure a settled card) */
   enter?: boolean;
 }
-export interface StoreView { show(screen: StoreScreen, itemId?: string): void; refresh(): Promise<void> }
+export interface StoreView {
+  show(screen: StoreScreen, itemId?: string): void;
+  refresh(): Promise<void>;
+  /** read the sources that are due (never read, failed last time, or old): the store calls it each time it is opened */
+  readDue(): Promise<void>;
+}
 
 const SCREENS: ReadonlyArray<readonly [StoreScreen, string]> = [['browse', 'Browse'], ['installed', 'Installed'], ['sources', 'Sources']];
 
@@ -55,6 +61,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
   root.replaceChildren(head, main);
   let screen: StoreScreen = 'browse';
   let gen = 0;   // a screen drawn for an older request is dropped
+  const reader = readerFor(store);
 
   const release = (): void => { useFormsHost(null); };
   const card = (spec: FormSpec, sink: FormsSource): HTMLElement => {
@@ -106,14 +113,36 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     const pick = ui.select({ id: 'hx-store-source', label: 'Source', entries: [{ value: 'any', label: 'All sources' }, ...sources.map((s) => ({ value: s.id, label: s.label }))], value: B.source });
     const strip = el('div', { class: 'hx-store__filters' }, seg, pick);
     const status = el('p', { class: 'ui-field__hint', role: 'status', 'aria-live': 'polite', 'data-store-status': '' });
+    const again = ui.button({ label: 'Read the sources again', size: 's' });
+    again.addEventListener('click', () => { void reader.read(true); });
+    const note = el('div', { class: 'hx-store__note' }, status);
     const list = el('div', { class: 'hx-store__list' });
-    place(board(search, strip, status, list));
+    place(board(search, strip, note, list));
+    let page0: StoreBrowse | null = null;
+    /* the line over the list: a read in progress, else why the list is out of date with the way to fix it */
+    const sayFresh = (): void => {
+      const r = reader.state.get();
+      const text = r.running ? readingWords(r) + ' What they list shows here as each one is read.' : page0 ? freshness(page0, now(), store.sources.get()) ?? '' : '';
+      status.textContent = text;
+      /* offered while the list is out of date and while a read runs (a second press joins it); never taken away from under the
+         focus, so a keyboard user who pressed it stays on it */
+      const offer = r.running || (!!page0 && (page0.stale || page0.offline));
+      if (offer && !again.isConnected) note.append(again); else if (!offer && again.isConnected && !again.contains(document.activeElement)) again.remove();
+    };
     const input = search.querySelector<HTMLInputElement>('input');
     let timer = 0;
     input?.addEventListener('input', () => { window.clearTimeout(timer); timer = window.setTimeout(() => { B.query = input.value; void load(false); }, 150); });
     seg.addEventListener('ui:change', (e) => { B.kind = (e as CustomEvent<{ value: string }>).detail.value as typeof B.kind; void load(false); });
     pick.addEventListener('ui:change', (e) => { B.source = (e as CustomEvent<{ value: string }>).detail.value; void load(false); });
     if (keep?.focus) main.querySelector<HTMLElement>(keep.focus)?.focus();
+    /* while the sources are read, the line says how far it is, and each source that finishes brings its items into the list
+       (unless the list holds the focus: a keyboard user is not moved) */
+    let doneSeen = reader.state.get().done;
+    const off = reader.state.subscribe((r) => {
+      if (mine !== gen || !list.isConnected) { off(); return; }
+      sayFresh();
+      if (r.done !== doneSeen || !r.running) { doneSeen = r.done; if (!list.contains(document.activeElement)) void load(false); }
+    });
 
     async function load(more: boolean): Promise<void> {
       const filter = filterOf(B.kind, B.source);
@@ -129,7 +158,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
       }
     }
     function paint(page: StoreBrowse): void {
-      status.textContent = freshness(page, now()) ?? '';
+      page0 = page; sayFresh();
       const front = isFront(filterOf(B.kind, B.source), B.query);
       const rec = front ? (page.recommended ?? []) : [];
       const recIds = new Set(rec.map((i) => i.id));
@@ -333,10 +362,11 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
   /* ───────── sources ───────── */
   async function drawSources(): Promise<void> {
     const list: readonly StoreSource[] = store.sources.get();
-    const status = el('p', { class: 'ui-field__hint', role: 'status', 'aria-live': 'polite', 'data-store-status': '' });
+    const reading = reader.state.get();
+    const status = el('p', { class: 'ui-field__hint', role: 'status', 'aria-live': 'polite', 'data-store-status': '', id: 'hx-store-read-status' }, readingWords(reading));
     const rows = list.map((s) => {
       const id = 'hx-store-src-' + s.id.replace(/[^a-z0-9_-]/gi, '_');
-      const state = sourceState(s, now());
+      const state = sourceState(s, now(), reading.states.get(s.id));
       const controls = ui.html.switch({ id, name: s.id, checked: s.enabled !== false, label: s.label + (s.enabled === false ? ' is off' : ' is on') }) +
         (s.user_added ? ui.html.button({ label: 'Remove', size: 's', variant: 'ghost', attrs: { 'data-store-src-remove': s.id, 'aria-label': 'Remove ' + s.label } }) : '');
       return storeItem(ui.html.setRow({ label: s.label, hint: `${s.description ? s.description + ' ' : ''}${state.word === 'off' ? 'Off. ' : ''}${state.text}`.trim(), for: id, control: '<span class="ui-set__actions">' + controls + '</span>' }));
@@ -345,8 +375,9 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
       label: 'A marketplace, repository or folder', hint: 'A marketplace address, a git repository, a GitHub address or a folder on this computer. Items from it start as not reviewed.',
       control: ui.html.button({ label: 'Add', size: 's', attrs: { 'data-store-src-add': '', 'aria-label': 'Add a source' } })
     }));
-    const refresh = ui.button({ label: 'Read the sources again', size: 's' });
-    refresh.addEventListener('click', () => { status.textContent = 'Reading the sources…'; store.refresh().then(() => { say('The sources were read again.'); return drawSources(); }).catch((e: unknown) => { say(errorText(e)); }); });
+    /* not disabled while a read runs (the focus would be lost as the rows redraw): a second press joins the read in progress */
+    const refresh = ui.button({ label: 'Read the sources again', size: 's', attrs: { id: 'hx-store-read', 'aria-describedby': 'hx-store-read-status' } });
+    refresh.addEventListener('click', () => { void reader.read(true).then(() => { deps.toast(readingWords(reader.state.get())); }); });
     place(board(el('div', { class: 'ui-set__actions' }, refresh), status, list.length ? section('hx-store-src', 'Where items come from', rows.join('')) : notice('No sources', 'boopis has no sources to read right now.'), add));
     ui.hydrate(main);
     for (const sw of main.querySelectorAll<HTMLInputElement>('input[role=switch][name]')) sw.addEventListener('change', () => {
@@ -387,6 +418,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
   const keep = (fn: () => void) => (): void => { if (root.isConnected && main.querySelector('[data-store-status]') && !main.querySelector('.cd-form')) fn(); };
   store.installed.subscribe(keep(() => { if (screen === 'installed') void drawInstalled(); }));
   store.sources.subscribe(keep(() => { if (screen === 'sources') void drawSources(); }));
+  reader.state.subscribe(keep(() => { if (screen === 'sources') void drawSources(); }));
   show('browse');
-  return { show, refresh: async () => { show(screen); } };
+  return { show, refresh: async () => { show(screen); }, readDue: () => reader.read(false) };
 }

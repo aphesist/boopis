@@ -88,7 +88,9 @@ export function createLiveStore(opts: LiveStoreOptions): StoreProvider & { settl
       return r;
     },
     async refresh(source) {
-      const list = await run((b) => b.refresh(source));
+      /* a read that failed still changed the sources: the host recorded why with each one, so the rows show it */
+      let list: StoreSource[];
+      try { list = await run((b) => b.refresh(source)); } catch (e) { await loadSources(); throw e; }
       sources.set(list);
       return list;
     },

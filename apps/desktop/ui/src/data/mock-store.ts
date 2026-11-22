@@ -36,12 +36,33 @@ export interface MockStoreOptions {
   empty?: boolean;
   /** pretend the network is down: the cache is served, `offline` is set, refreshes reject with `hx.store.offline` */
   offline?: boolean;
+  /** more items, after the fixture's (the lab's long lists) */
+  extraItems?: readonly StoreItem[];
+  /** the sources as the host reports them at start: every one read (`read`, the default), or none read yet (`unread`: a first
+      start, before the store has opened) */
+  start?: 'read' | 'unread';
+  /** how a source answers a read, by id, as the host would: after `ms` (Infinity: it never answers, for a read in progress),
+      with the host's plain reason it could not be read (`error`), or with `items` */
+  reads?: Readonly<Record<string, { ms?: number; error?: string; items?: number }>>;
+  /** what "now" is for the times the sources report (the lab passes the real clock, so "read just now" stays true) */
+  now?: () => number;
 }
 
+/** the two built-in places that hold nothing until the user adds one, and the fetches a read does not reach (as the host says) */
+const NOT_READ = new Set(['compiled-in', 'github-api']);
+const refreshableOf = (s: StoreSource): boolean => !NOT_READ.has(s.fetch) && !(!s.user_added && (s.id === 'marketplace-url' || s.id === 'local'));
+
 export function createMockStore(opts: MockStoreOptions = {}): StoreProvider {
-  const items = FX.items.map(clone);
+  const items = [...FX.items.map(clone), ...(opts.extraItems ?? []).map(clone)];
   const byId = (id: string): StoreItem | undefined => items.find((i) => i.id === id);
-  const sources = store<readonly StoreSource[]>(SRC.map((s) => ({ ...clone(s), enabled: s.default_on, refreshed_at: FETCHED, items: items.filter((i) => i.source === s.id).length, error: null })));
+  const stamp = (): string => (opts.now ? new Date(opts.now()).toISOString() : FETCHED);
+  const count = (id: string): number => items.filter((i) => i.source === id).length;
+  const unread = opts.start === 'unread';
+  const sources = store<readonly StoreSource[]>(SRC.map((s) => {
+    const refreshable = refreshableOf(s);
+    const read = !unread || !refreshable;
+    return { ...clone(s), enabled: s.default_on, refreshed_at: read ? stamp() : null, items: read ? count(s.id) : 0, error: null, refreshable, stale: !read && s.default_on };
+  }));
   const installed = store<readonly InstallReceipt[]>(opts.empty ? [] : FX.receipts.map(clone));
   const updates = store<readonly UpdateDiff[]>([]);
   const staged = new Map<string, InstallPlan>();
@@ -50,7 +71,8 @@ export function createMockStore(opts: MockStoreOptions = {}): StoreProvider {
   let nextStage = 0;
 
   const searched = (filter: StoreFilter | undefined): StoreItem[] => {
-    const on = new Set(sources.get().filter((s) => s.enabled).map((s) => s.id));
+    /* a source holds items once it was read: before its first read the host has no copy of it */
+    const on = new Set(sources.get().filter((s) => s.enabled && s.refreshed_at).map((s) => s.id));
     const have = new Set(installed.get().map((r) => r.item_id));
     return items.filter((i) => on.has(i.source)
       && (!filter?.kind || i.kind === filter.kind) && (!filter?.tier || i.tier === filter.tier) && (!filter?.source || i.source === filter.source)
@@ -63,7 +85,7 @@ export function createMockStore(opts: MockStoreOptions = {}): StoreProvider {
     return {
       items: slice.map(clone), total: list.length, next_cursor: at + PAGE < list.length ? String(at + PAGE) : null,
       ...(recommended && at === 0 ? { recommended: list.filter((i) => i.tier === 'recommended').map(clone) } : {}),
-      refreshed_at: opts.offline ? '2026-11-20T09:30:00Z' : FETCHED, stale: !!opts.offline, offline: !!opts.offline
+      refreshed_at: opts.offline ? '2026-11-20T09:30:00Z' : FETCHED, stale: !!opts.offline || sources.get().some((s) => s.enabled && s.stale), offline: !!opts.offline
     };
   };
   const rank = (i: StoreItem, words: readonly string[]): number => {
@@ -209,10 +231,18 @@ export function createMockStore(opts: MockStoreOptions = {}): StoreProvider {
       const keys = byId(id)?.secrets.map((s) => s.id) ?? [];
       return Promise.resolve({ item_id: id, removed: [...have.files], kept_secrets: o?.deleteSecrets ? [] : keys, notes: [] });
     },
-    refresh(source) {
+    async refresh(source) {
       if (opts.offline) return reject('hx.store.offline', 'You are offline, so boopis cannot do that now. Browsing still works from the last copy it saved.');
-      sources.update((l) => l.map((s) => (!source || s.id === source ? { ...s, refreshed_at: FETCHED } : s)));
-      return Promise.resolve(sources.get());
+      const ids = sources.get().filter((s) => (source ? s.id === source : s.enabled && s.refreshable)).map((s) => s.id);
+      let failed: string | null = null;
+      for (const id of ids) {
+        const how = opts.reads?.[id] ?? {};
+        if (how.ms) await new Promise((r) => { if (Number.isFinite(how.ms)) setTimeout(r, how.ms); });
+        if (how.error) failed = how.error;
+        sources.update((l) => l.map((s) => (s.id !== id ? s : how.error ? { ...s, error: how.error, stale: true } : { ...s, refreshed_at: stamp(), items: how.items ?? count(id), error: null, stale: false })));
+      }
+      if (failed && source) return reject('hx.store.source_unreachable', failed);
+      return sources.get();
     },
     setSourceEnabled(id, enabled) {
       if (!sources.get().some((s) => s.id === id)) return reject('hx.store.invalid_source', 'That is not a source boopis knows.');
