@@ -348,8 +348,10 @@ order gives the same pixels, and so does seeking with or without the paint wait.
 | render | wall time | output | captures |
 |---|---|---|---|
 | preview, 960x540 30 fps, no blur | 11.6 s | 19 fps | 224 |
-| 1920x1080 60 fps, 8 sub-frames at 180 deg, CRF 14 slow | 177 s | 2.5 fps | 1,624 (9.2 a second) |
-| 3840x2160 60 fps, same | 646 s | 0.69 fps | 1,564 (2.4 a second) |
+| 1920x1080 60 fps, 8 sub-frames at 180 deg, CRF 14 slow | 156 s | 2.9 fps | 1,634 (10.5 a second) |
+| 1080x1920 60 fps, same | 169 s | 2.6 fps | 1,556 |
+| 3840x2160 60 fps, same | 626 s | 0.72 fps | 1,586 (2.5 a second) |
+| the animatic: the whole film, 960x540 30 fps, placeholders | 66 s | 21 fps | 1,408 |
 
 One 1080p capture costs about 5 ms to seek, 86 ms to capture (Chrome's fast PNG) and 28 ms to decode; a frame where
 nothing moves is one capture. Budget for the 46.9 s film with blur on 4 workers: roughly 15 to 25 minutes at
@@ -372,7 +374,12 @@ nothing moves is one capture. Budget for the 46.9 s film with blur on 4 workers:
 
 The extra pure-black dip the checker finds is at 81.55 s, inside a dark stretch where a small element comes and goes.
 
-**The checker on the test scene** (`SC/renders/test-landscape-1920x1080.mp4` and its page): no dip, no cross-fade, no
-hold over 1.5 s (longest 1.25 s), first words at 0.33 s, smallest text 36.3 px, no linear or unspecified ease in 51
-tweens, no large opacity tween. Its still share is 0.57 (a warning: typing, glances and a slow drift change little of a
-dark frame), which the film's denser scenes should bring toward the corpus's 0.19.
+**The checker on the test scene** (`SC/renders/test-landscape-1920x1080.mp4`, `test-vertical-1080x1920.mp4` and their
+pages): every rule passes in both formats: no dip, no cross-fade, longest hold 0.83 s (9:16: 0.92 s), first words at
+0.33 s, smallest text 37.8 px, no linear or unspecified ease, no large opacity tween. The still share warns (0.58;
+9:16 0.55): typing, glances and slow camera moves change little of a dark frame on a 160x90 thumbnail; the film's
+denser scenes should bring it toward the corpus's 0.19. The first version of the 9:16 layout held for 2.3 s after the
+typing; the checker caught it and the camera now keeps leaning to the last frame.
+
+**The animatic** (`SC/renders/animatic.mp4`, every beat its key frame held): fails stillness as expected (0.97 still,
+3.1 s hold); no dip, no cross-fade, no text under 28 px.
