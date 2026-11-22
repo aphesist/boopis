@@ -1,7 +1,8 @@
 name: live-store
 # The store's sources, read live (apps/desktop/src-tauri/tests/live_store.rs): the host's own store code reads every source a read
 # reaches, on Linux and Windows, and Browse lists what each one holds. And the popularity signal of boopis's own connector list
-# (GitHub stars of each official repository, apps/shared/data/connectors.json), read again and compared with the recorded order.
+# (GitHub stars of each official repository, apps/shared/data/connectors.json) and of its recommended skills and plugins (installs on
+# skills.sh and in Anthropic's plugin directory, apps/shared/data/recommended.json), read again and compared with the recorded order.
 # It is not part of the gate, because it reads real services: it runs on demand, every Monday, and when the store's network code,
 # the curated list or this file changes. No secret is used beyond the run's own read-only token (for the stars).
 on:
@@ -15,6 +16,8 @@ on:
       - apps/desktop/src-tauri/src/store/net.rs
       - apps/desktop/src-tauri/src/store/reasons.rs
       - apps/shared/data/connectors.json
+      - apps/shared/data/recommended.json
+      - scripts/read-recommended-popularity.py
 permissions:
   contents: read
 concurrency:
@@ -90,3 +93,5 @@ jobs:
                 "By today's stars the order would be: " + ", ".join(ranked) +
                 ". Read the list again from its sources before reordering it (docs/CONNECTORS.md, The order).")
           EOF
+      - name: Installs of the recommended skills and plugins, against the recorded order
+        run: python3 scripts/read-recommended-popularity.py | tee -a "$GITHUB_STEP_SUMMARY"

@@ -208,10 +208,16 @@ impl Store {
 
     fn refresh_compiled(&self) -> Result<()> {
         let catalog = crate::connectors::catalog::load()?;
+        let list = super::recommended::load()?;
         let now = time::now();
+        let (skills, plugins) = normalize::boopis_skills_and_plugins(list, &now);
         let c = SourceCache {
             fetched_at: Some(now.clone()),
-            entries: normalize::boopis_connectors(catalog, &now),
+            entries: normalize::weave(vec![
+                normalize::boopis_connectors(catalog, &now),
+                plugins,
+                skills,
+            ]),
             ..SourceCache::default()
         };
         self.put_cache("boopis", c)

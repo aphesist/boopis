@@ -289,7 +289,19 @@ pub fn boopis_connectors(
             d.proof = NamespaceProof::Curated;
             d.source_url.clone_from(&c.source);
             d.last_updated = Some(c.verified.date.clone());
-            d.source_tier = Some("curated by boopis".into());
+            d.source_tier = Some(curated_words(
+                match (&c.popularity, &catalog.popularity) {
+                    (Some(p), Some(read)) => p.stars.map(|n| {
+                        format!(
+                            "{} GitHub stars on {}, read {}",
+                            group_thousands(n),
+                            p.repo,
+                            date_words(&read.read)
+                        )
+                    }),
+                    _ => None,
+                },
+            ));
             let item = d.build(fetched_at);
             Entry {
                 raw: serde_json::json!({"connector": c.id}),
@@ -297,6 +309,158 @@ pub fn boopis_connectors(
             }
         })
         .collect()
+}
+
+/// `1234567` as `1,234,567`.
+fn group_thousands(n: u64) -> String {
+    let s = n.to_string();
+    let mut out = String::new();
+    for (i, c) in s.chars().enumerate() {
+        if i > 0 && (s.len() - i).is_multiple_of(3) {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// `2026-11-22` as `22 November 2026`; a date that does not parse stays as written.
+fn date_words(d: &str) -> String {
+    const MONTHS: [&str; 12] = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ];
+    let parts: Vec<&str> = d.split('-').collect();
+    match parts.as_slice() {
+        [y, m, day] => match (m.parse::<usize>(), day.parse::<u32>()) {
+            (Ok(m @ 1..=12), Ok(day)) => format!("{day} {} {y}", MONTHS[m - 1]),
+            _ => d.to_owned(),
+        },
+        _ => d.to_owned(),
+    }
+}
+
+/// What the item's page says about why boopis's own list holds it and why it sits where it does: the signal that orders it, as
+/// the count it showed on the date it was read. Said after "which calls it", so it begins with what boopis does.
+fn curated_words(signal: Option<String>) -> String {
+    signal.map_or_else(
+        || "curated by boopis".to_owned(),
+        |s| format!("checked by boopis and placed by its popularity: {s}"),
+    )
+}
+
+/// boopis's own skills and plugins (`apps/shared/data/recommended.json`) as items, each kind in the file's order (most used first).
+/// They are `recommended` for the same reason the connectors are: a person read each against its publisher's own repository at
+/// the commit it pins, and the pin is that commit. The `raw` record has the shape a marketplace entry's has, so the ordinary
+/// install fetches, stages, hashes and plans it.
+#[must_use]
+pub fn boopis_skills_and_plugins(
+    list: &super::recommended::Recommended,
+    fetched_at: &str,
+) -> (Vec<Entry>, Vec<Entry>) {
+    let build = |kind: ItemKind, e: &super::recommended::Entry, read: &super::recommended::Read| {
+        let (dir, tree) = match kind {
+            ItemKind::Skill => ("skills", true),
+            _ => ("plugins", false),
+        };
+        let mut d = Draft::new("boopis", &format!("{dir}/{}", e.id), kind);
+        d.title.clone_from(&e.name);
+        d.publisher.clone_from(&e.publisher);
+        d.summary.clone_from(&e.description);
+        d.license = Some(e.license.clone());
+        d.version.clone_from(&e.version);
+        d.homepage = Some(match &e.subdir {
+            Some(sub) => format!("{}/tree/{}/{sub}", e.repo, e.commit),
+            None => format!("{}/tree/{}", e.repo, e.commit),
+        });
+        d.pinned = Some(Pin {
+            kind: PinKind::Commit,
+            value: e.commit.clone(),
+            repo: Some(e.repo.clone()),
+        });
+        d.components = if tree {
+            ComponentCounts {
+                known: true,
+                skills: 1,
+                ..no_components()
+            }
+        } else {
+            no_components()
+        };
+        d.tier = Tier::Recommended;
+        d.verified = Some(e.verified.date.clone());
+        d.tags.clone_from(&e.categories);
+        d.proof = NamespaceProof::Github;
+        d.source_url = d.homepage.clone().unwrap_or_default();
+        d.last_updated = Some(e.verified.date.clone());
+        let counted = if read.signal == "skills-sh-installs" {
+            format!("{} installs on skills.sh", e.popularity.shown)
+        } else {
+            format!("{} installs in Anthropic's plugin directory", e.popularity.shown)
+        };
+        d.source_tier = Some(curated_words(Some(format!(
+            "{counted}, read {}",
+            date_words(&read.read)
+        ))));
+        let raw = if tree {
+            serde_json::json!({
+                "kind": "skill", "repo": e.repo, "subdir": e.subdir, "sha": e.commit, "marketplace": "boopis"
+            })
+        } else {
+            let source = match &e.subdir {
+                Some(sub) => serde_json::json!({"source": "git-subdir", "url": e.repo, "path": sub, "sha": e.commit}),
+                None => serde_json::json!({"source": "url", "url": e.repo, "sha": e.commit}),
+            };
+            serde_json::json!({
+                "kind": "plugin",
+                "entry": {"name": e.id, "source": source},
+                "marketplace": "boopis", "base_commit": e.commit, "base_repo": e.repo
+            })
+        };
+        Entry {
+            item: d.build(fetched_at),
+            raw,
+        }
+    };
+    (
+        list.skills
+            .iter()
+            .map(|e| build(ItemKind::Skill, e, &list.popularity.skills))
+            .collect(),
+        list.plugins
+            .iter()
+            .map(|e| build(ItemKind::Plugin, e, &list.popularity.plugins))
+            .collect(),
+    )
+}
+
+/// The kinds of boopis's own list woven into one order: each kind keeps its own (most used first), and the kinds take turns, so
+/// the front page and Browse show the most used of every kind before the second most used of any. The signals have no common
+/// scale (stars, skills.sh installs, directory installs), so no single ranking across them would be honest.
+#[must_use]
+pub fn weave(kinds: Vec<Vec<Entry>>) -> Vec<Entry> {
+    let longest = kinds.iter().map(Vec::len).max().unwrap_or(0);
+    let mut iters: Vec<std::vec::IntoIter<Entry>> =
+        kinds.into_iter().map(IntoIterator::into_iter).collect();
+    let mut out = Vec::new();
+    for _ in 0..longest {
+        for it in &mut iters {
+            if let Some(e) = it.next() {
+                out.push(e);
+            }
+        }
+    }
+    out
 }
 
 // ---------------------------------------------------------------- what the user pointed at
@@ -1348,6 +1512,122 @@ mod tests {
             assert_eq!(e.item.tier, Tier::Recommended, "{}", e.item.id);
             assert!(e.item.pinned.is_some(), "{}: pinned or refused", e.item.id);
         }
+    }
+
+    #[test]
+    fn boopis_skills_and_plugins_are_recommended_pinned_and_say_what_placed_them() {
+        let list = crate::store::recommended::load().unwrap();
+        let (skills, plugins) = boopis_skills_and_plugins(list, NOW);
+        assert_eq!(skills.len(), list.skills.len());
+        assert_eq!(plugins.len(), list.plugins.len());
+        for e in skills.iter().chain(&plugins) {
+            assert_eq!(e.item.tier, Tier::Recommended, "{}", e.item.id);
+            let pin = e.item.pinned.as_ref().unwrap();
+            assert_eq!(pin.kind, PinKind::Commit, "{}", e.item.id);
+            assert_eq!(pin.value.len(), 40, "{}", e.item.id);
+            assert!(e.item.verified.is_some(), "{}", e.item.id);
+            let why = e.item.provenance.source_tier.as_deref().unwrap();
+            assert!(why.contains("installs") && why.contains("2026"), "{why}");
+        }
+        let fd = by_id(&skills, "boopis:skills/frontend-design");
+        assert_eq!(fd.kind, ItemKind::Skill);
+        assert_eq!(fd.license, "Apache-2.0");
+        assert!(
+            fd.provenance.source_tier.as_deref().unwrap().contains(
+                "1.2M installs on skills.sh, read 22 November 2026"
+            )
+        );
+        let sp = by_id(&plugins, "boopis:plugins/superpowers");
+        assert_eq!(sp.kind, ItemKind::Plugin);
+        assert!(
+            sp.provenance.source_tier.as_deref().unwrap().contains(
+                "1,009,371 installs in Anthropic's plugin directory"
+            )
+        );
+        // a skill and a plugin of the same name do not collide
+        assert_ne!(
+            by_id(&plugins, "boopis:plugins/frontend-design").id,
+            fd.id
+        );
+    }
+
+    #[test]
+    fn a_recommended_entry_installs_through_the_ordinary_marketplace_path() {
+        // The `raw` records have the shapes `install.rs` reads for a marketplace skill and a marketplace plugin.
+        let list = crate::store::recommended::load().unwrap();
+        let (skills, plugins) = boopis_skills_and_plugins(list, NOW);
+        let sk = skills
+            .iter()
+            .find(|e| e.item.id == "boopis:skills/pdf")
+            .unwrap();
+        assert_eq!(sk.raw["kind"], "skill");
+        assert_eq!(sk.raw["subdir"], "skills/pdf");
+        assert_eq!(sk.raw["sha"], sk.item.pinned.as_ref().unwrap().value);
+        let base = MarketBase {
+            repo: sk.raw["repo"].as_str().map(str::to_owned),
+            commit: None,
+            root_license: None,
+        };
+        let inside = plugins
+            .iter()
+            .find(|e| e.item.id == "boopis:plugins/code-review")
+            .unwrap();
+        match plugin_source(&inside.raw["entry"], &base).unwrap() {
+            PluginSource::Git { repo, subdir, sha } => {
+                assert_eq!(repo, "https://github.com/anthropics/claude-plugins-official");
+                assert_eq!(subdir.as_deref(), Some("plugins/code-review"));
+                assert_eq!(sha.as_deref(), Some(inside.item.pinned.as_ref().unwrap().value.as_str()));
+            }
+            other => panic!("{other:?}"),
+        }
+        let own = plugins
+            .iter()
+            .find(|e| e.item.id == "boopis:plugins/superpowers")
+            .unwrap();
+        assert!(matches!(
+            plugin_source(&own.raw["entry"], &base).unwrap(),
+            PluginSource::Git { subdir: None, sha: Some(_), .. }
+        ));
+    }
+
+    #[test]
+    fn the_kinds_of_boopis_list_take_turns_each_in_its_own_order() {
+        let cat = crate::connectors::catalog::load().unwrap();
+        let list = crate::store::recommended::load().unwrap();
+        let (skills, plugins) = boopis_skills_and_plugins(list, NOW);
+        let ids = |v: &[Entry]| v.iter().map(|e| e.item.id.clone()).collect::<Vec<_>>();
+        let (c, p, s) = (boopis_connectors(cat, NOW), plugins, skills);
+        let woven = weave(vec![c.clone(), p.clone(), s.clone()]);
+        let w = ids(&woven);
+        assert_eq!(w.len(), c.len() + p.len() + s.len());
+        // the first of each kind come first, in that turn order
+        assert_eq!(&w[..3], &[ids(&c)[0].clone(), ids(&p)[0].clone(), ids(&s)[0].clone()]);
+        // and each kind keeps its own order
+        for kind in [ids(&c), ids(&p), ids(&s)] {
+            let at: Vec<usize> = kind
+                .iter()
+                .map(|i| w.iter().position(|x| x == i).unwrap())
+                .collect();
+            assert!(at.windows(2).all(|x| x[0] < x[1]), "{kind:?}");
+        }
+        // a connector's page says which stars placed it
+        let ctx = by_id(&c, "boopis:context7");
+        assert!(
+            ctx.provenance.source_tier.as_deref().unwrap().contains(
+                "65,246 GitHub stars on upstash/context7, read 22 November 2026"
+            ),
+            "{:?}",
+            ctx.provenance.source_tier
+        );
+    }
+
+    #[test]
+    fn counts_and_dates_are_said_in_words() {
+        assert_eq!(group_thousands(65_246), "65,246");
+        assert_eq!(group_thousands(1_134_112), "1,134,112");
+        assert_eq!(group_thousands(92), "92");
+        assert_eq!(date_words("2026-11-22"), "22 November 2026");
+        assert_eq!(date_words("later"), "later");
     }
 
     #[test]

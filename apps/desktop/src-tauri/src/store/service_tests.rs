@@ -422,12 +422,31 @@ async fn refresh_reads_every_source_and_search_finds_across_them() {
         .store
         .browse(None, &StoreFilter::default(), None, Some(5))
         .unwrap();
-    let curated: Vec<String> = crate::connectors::catalog::load()
+    let connectors: Vec<String> = crate::connectors::catalog::load()
         .unwrap()
         .connectors
         .iter()
         .map(|c| format!("boopis:{}", c.id))
         .collect();
+    // boopis's list: each kind most used first, the kinds taking turns (connector, plugin, skill, ...), cut at the front page's size
+    let list = crate::store::recommended::load().unwrap();
+    let plugins: Vec<String> = list
+        .plugins
+        .iter()
+        .map(|e| format!("boopis:plugins/{}", e.id))
+        .collect();
+    let skills: Vec<String> = list
+        .skills
+        .iter()
+        .map(|e| format!("boopis:skills/{}", e.id))
+        .collect();
+    let mut curated: Vec<String> = Vec::new();
+    for n in 0..connectors.len().max(plugins.len()).max(skills.len()) {
+        for kind in [&connectors, &plugins, &skills] {
+            curated.extend(kind.get(n).cloned());
+        }
+    }
+    curated.truncate(super::service::FRONT_PAGE);
     let rec: Vec<String> = front
         .recommended
         .as_ref()
@@ -453,11 +472,28 @@ async fn refresh_reads_every_source_and_search_finds_across_them() {
         )
         .unwrap();
     let ids: Vec<String> = conn.items.iter().map(|i| i.id.clone()).collect();
-    assert_eq!(ids[..curated.len()], curated[..]);
+    assert_eq!(ids[..connectors.len()], connectors[..]);
     assert!(
-        ids.len() > curated.len(),
+        ids.len() > connectors.len(),
         "the registry's connectors follow"
     );
+    // Browse > Skills and > Plugins: boopis's own, each in its own most used first, before the other sources'
+    for (kind, mine) in [(ItemKind::Skill, &skills), (ItemKind::Plugin, &plugins)] {
+        let page = r
+            .store
+            .browse(
+                None,
+                &StoreFilter {
+                    kind: Some(kind),
+                    ..StoreFilter::default()
+                },
+                None,
+                Some(100),
+            )
+            .unwrap();
+        let ids: Vec<String> = page.items.iter().map(|i| i.id.clone()).collect();
+        assert_eq!(ids[..mine.len()], mine[..], "{kind:?}: most used first");
+    }
     assert!(front.total > 30 && !front.stale && !front.offline);
     assert!(front.refreshed_at.is_some());
     let hit = r
@@ -539,7 +575,15 @@ async fn an_unreachable_source_keeps_its_last_copy_and_says_so() {
     assert!(s.error.is_some());
     let page = r
         .store
-        .browse(None, &StoreFilter::default(), None, None)
+        .browse(
+            None,
+            &StoreFilter {
+                source: Some("mcp-registry".into()),
+                ..StoreFilter::default()
+            },
+            None,
+            None,
+        )
         .unwrap();
     assert!(page.stale && page.offline);
     assert!(page.items.iter().any(|i| i.source == "mcp-registry"));

@@ -1,0 +1,652 @@
+{
+  "$schema": "./recommended.schema.json",
+  "schema_version": 1,
+  "description": "boopis's own list of skills and plugins (ADR-0038, docs/STORE.md, docs/RECOMMENDED.md): each one read against its publisher's own repository at the pinned commit, and ordered by a cited popularity signal, most used first. Connectors have their own file (connectors.json). The two signals have no common scale, so each kind is ordered by its own and the store alternates the kinds on its front page.",
+  "popularity": {
+    "skills": {
+      "signal": "skills-sh-installs",
+      "read": "2026-11-22",
+      "evidence": "https://skills.sh",
+      "note": "The all-time install count the open skills directory (skills.sh) shows for each skill's own page, as it shows it: rounded to a tenth of a thousand or million. It counts installs made with the `skills` command-line tool, so it is a count of use, not of review."
+    },
+    "plugins": {
+      "signal": "claude-directory-installs",
+      "read": "2026-11-22",
+      "evidence": "https://claude.com/plugins",
+      "note": "The Installs figure on each plugin's page in Anthropic's plugin directory (claude.com/plugins), exact as shown on the date."
+    }
+  },
+  "skills": [
+    {
+      "id": "frontend-design",
+      "name": "Frontend Design",
+      "publisher": "Anthropic",
+      "description": "Guidance for distinctive, intentional visual design when building or reshaping a user interface.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/skills",
+      "subdir": "skills/frontend-design",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "categories": [
+        "design",
+        "frontend"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "skills/frontend-design/SKILL.md",
+          "name": "frontend-design",
+          "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+        },
+        "sources": [
+          "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/frontend-design"
+        ]
+      },
+      "popularity": {
+        "signal": "skills-sh-installs",
+        "shown": "1.2M",
+        "installs": 1200000,
+        "url": "https://skills.sh/anthropics/skills/frontend-design"
+      }
+    },
+    {
+      "id": "vercel-react-best-practices",
+      "name": "React Best Practices",
+      "publisher": "Vercel",
+      "description": "React and Next.js performance guidelines from Vercel Engineering, for writing and reviewing components.",
+      "license": "MIT",
+      "repo": "https://github.com/vercel-labs/agent-skills",
+      "subdir": "skills/react-best-practices",
+      "commit": "5a37a6329fbad3666c3207392a6a7c0110e92efb",
+      "categories": [
+        "frontend",
+        "react"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "skills/react-best-practices/SKILL.md",
+          "name": "vercel-react-best-practices",
+          "sha256": "71ed7794962fa6e803ee83030517b5b93a9f70fbfeb431ec4535c5480a8d8355"
+        },
+        "sources": [
+          "https://github.com/vercel-labs/agent-skills/tree/5a37a6329fbad3666c3207392a6a7c0110e92efb/skills/react-best-practices"
+        ],
+        "license_note": "MIT in the skill's own frontmatter and in the repository README (the repository has no LICENSE file)."
+      },
+      "popularity": {
+        "signal": "skills-sh-installs",
+        "shown": "921.7K",
+        "installs": 921700,
+        "url": "https://skills.sh/vercel-labs/agent-skills/vercel-react-best-practices"
+      }
+    },
+    {
+      "id": "code-review",
+      "name": "Code Review",
+      "publisher": "Matt Pocock",
+      "description": "Reviews the changes since a fixed point against the repository's standards and the spec, in parallel sub-agents.",
+      "license": "MIT",
+      "repo": "https://github.com/mattpocock/skills",
+      "subdir": "skills/engineering/code-review",
+      "commit": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "categories": [
+        "code",
+        "review"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "skills/engineering/code-review/SKILL.md",
+          "name": "code-review",
+          "sha256": "9c921a8d88138a41401d8897ca1bb852088ab1b7b605cdd04edc13e3e8aab6dd"
+        },
+        "sources": [
+          "https://github.com/mattpocock/skills/tree/abeeaf95660ba9e8b7c753eb38f441ca707a8823/skills/engineering/code-review"
+        ]
+      },
+      "popularity": {
+        "signal": "skills-sh-installs",
+        "shown": "920.9K",
+        "installs": 920900,
+        "url": "https://skills.sh/mattpocock/skills/code-review"
+      }
+    },
+    {
+      "id": "supabase-postgres-best-practices",
+      "name": "Postgres Best Practices",
+      "publisher": "Supabase",
+      "description": "Postgres rules for schemas, migrations, row-level security, indexes and slow queries, kept by Supabase.",
+      "license": "MIT",
+      "repo": "https://github.com/supabase/agent-skills",
+      "subdir": "skills/supabase-postgres-best-practices",
+      "commit": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+      "categories": [
+        "database",
+        "postgres"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "skills/supabase-postgres-best-practices/SKILL.md",
+          "name": "supabase-postgres-best-practices",
+          "sha256": "ad65e776f45e761bafc609d3f506c77c1032225aa65e0c4c02f241b8071e5855"
+        },
+        "sources": [
+          "https://github.com/supabase/agent-skills/tree/c9be0e931b7930f7d02126d04774d904c381e7d7/skills/supabase-postgres-best-practices"
+        ]
+      },
+      "popularity": {
+        "signal": "skills-sh-installs",
+        "shown": "494.2K",
+        "installs": 494200,
+        "url": "https://skills.sh/supabase/agent-skills/supabase-postgres-best-practices"
+      }
+    },
+    {
+      "id": "skill-creator",
+      "name": "Skill Creator",
+      "publisher": "Anthropic",
+      "description": "Create a skill from scratch, improve one, and measure how well it triggers.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/skills",
+      "subdir": "skills/skill-creator",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "categories": [
+        "skills"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "skills/skill-creator/SKILL.md",
+          "name": "skill-creator",
+          "sha256": "dcd4803e61e913e6fc27294184cd3a71f09f5e924ff20c8a9a20173e7b3c2bcf"
+        },
+        "sources": [
+          "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/skill-creator"
+        ]
+      },
+      "popularity": {
+        "signal": "skills-sh-installs",
+        "shown": "439.1K",
+        "installs": 439100,
+        "url": "https://skills.sh/anthropics/skills/skill-creator"
+      }
+    },
+    {
+      "id": "pptx",
+      "name": "PowerPoint decks",
+      "publisher": "Anthropic",
+      "description": "Create, read and edit PowerPoint (.pptx) files and templates.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/skills",
+      "subdir": "skills/pptx",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "categories": [
+        "documents"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "skills/pptx/SKILL.md",
+          "name": "pptx",
+          "sha256": "598c981d93f2173b251f86a4bc94e9fb4e4f5ddaa314ba2dd4eca24b7a07808e"
+        },
+        "sources": [
+          "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/pptx"
+        ]
+      },
+      "popularity": {
+        "signal": "skills-sh-installs",
+        "shown": "261.0K",
+        "installs": 261000,
+        "url": "https://skills.sh/anthropics/skills/pptx"
+      }
+    },
+    {
+      "id": "pdf",
+      "name": "PDF files",
+      "publisher": "Anthropic",
+      "description": "Read, merge, split, fill, watermark and create PDF files, and OCR scanned ones.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/skills",
+      "subdir": "skills/pdf",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "categories": [
+        "documents"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "skills/pdf/SKILL.md",
+          "name": "pdf",
+          "sha256": "d1c7caf5f35eb7d37877dd7fc33a095037be2b34fb5d2f7f4d43bde3165bb4ee"
+        },
+        "sources": [
+          "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/pdf"
+        ]
+      },
+      "popularity": {
+        "signal": "skills-sh-installs",
+        "shown": "234.8K",
+        "installs": 234800,
+        "url": "https://skills.sh/anthropics/skills/pdf"
+      }
+    },
+    {
+      "id": "docx",
+      "name": "Word documents",
+      "publisher": "Anthropic",
+      "description": "Create, read and edit Word (.docx) documents and templates, with tracked changes and comments.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/skills",
+      "subdir": "skills/docx",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "categories": [
+        "documents"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "skills/docx/SKILL.md",
+          "name": "docx",
+          "sha256": "895d5aa6c4cd98e4aed4c995d846f056f3549086e79bcd6617afea6014f82288"
+        },
+        "sources": [
+          "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/docx"
+        ]
+      },
+      "popularity": {
+        "signal": "skills-sh-installs",
+        "shown": "223.6K",
+        "installs": 223600,
+        "url": "https://skills.sh/anthropics/skills/docx"
+      }
+    },
+    {
+      "id": "webapp-testing",
+      "name": "Web app testing",
+      "publisher": "Anthropic",
+      "description": "Test a local web app with Playwright: check its behaviour, take screenshots and read its browser logs.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/skills",
+      "subdir": "skills/webapp-testing",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "categories": [
+        "testing",
+        "frontend"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "skills/webapp-testing/SKILL.md",
+          "name": "webapp-testing",
+          "sha256": "51b7349e77ec63b7744a6f63647e7566a0b4d2e301121cc10e8c2113af6556a2"
+        },
+        "sources": [
+          "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/webapp-testing"
+        ]
+      },
+      "popularity": {
+        "signal": "skills-sh-installs",
+        "shown": "211.3K",
+        "installs": 211300,
+        "url": "https://skills.sh/anthropics/skills/webapp-testing"
+      }
+    },
+    {
+      "id": "xlsx",
+      "name": "Spreadsheets",
+      "publisher": "Anthropic",
+      "description": "Create, read and edit spreadsheet files (.xlsx, .csv), with formulas and formatting.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/skills",
+      "subdir": "skills/xlsx",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "categories": [
+        "documents"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "skills/xlsx/SKILL.md",
+          "name": "xlsx",
+          "sha256": "f32b1c2b5d5d31e02964df110d6489613d9345f86830c118cfe24159d8448ce6"
+        },
+        "sources": [
+          "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/xlsx"
+        ]
+      },
+      "popularity": {
+        "signal": "skills-sh-installs",
+        "shown": "203.6K",
+        "installs": 203600,
+        "url": "https://skills.sh/anthropics/skills/xlsx"
+      }
+    },
+    {
+      "id": "mcp-builder",
+      "name": "MCP server builder",
+      "publisher": "Anthropic",
+      "description": "A guide to building well-designed MCP servers in Python or TypeScript.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/skills",
+      "subdir": "skills/mcp-builder",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "categories": [
+        "mcp",
+        "code"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "skills/mcp-builder/SKILL.md",
+          "name": "mcp-builder",
+          "sha256": "b483b56d6673134497e45489c317f26ae0f1429c194db0297e43073e17e6748c"
+        },
+        "sources": [
+          "https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/mcp-builder"
+        ]
+      },
+      "popularity": {
+        "signal": "skills-sh-installs",
+        "shown": "145.9K",
+        "installs": 145900,
+        "url": "https://skills.sh/anthropics/skills/mcp-builder"
+      }
+    }
+  ],
+  "plugins": [
+    {
+      "id": "frontend-design",
+      "name": "Frontend Design",
+      "publisher": "Anthropic",
+      "description": "A frontend design skill: distinctive, production-grade interfaces instead of generic ones.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/claude-plugins-official",
+      "subdir": "plugins/frontend-design",
+      "commit": "73c8cf3ea7e296057b467990f2f5d61b4c922260",
+      "version": "1.1.1",
+      "categories": [
+        "design",
+        "frontend"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "plugins/frontend-design/.claude-plugin/plugin.json",
+          "name": "frontend-design",
+          "sha256": "d45be5b9f5e729dd8dd545d97b46800f50c2791cb053c480495d1195ce2052be"
+        },
+        "sources": [
+          "https://github.com/anthropics/claude-plugins-official/tree/73c8cf3ea7e296057b467990f2f5d61b4c922260/plugins/frontend-design",
+          "https://github.com/anthropics/claude-plugins-official/blob/73c8cf3ea7e296057b467990f2f5d61b4c922260/.claude-plugin/marketplace.json"
+        ]
+      },
+      "popularity": {
+        "signal": "claude-directory-installs",
+        "shown": "1,134,112",
+        "installs": 1134112,
+        "url": "https://claude.com/plugins/frontend-design"
+      }
+    },
+    {
+      "id": "superpowers",
+      "name": "Superpowers",
+      "publisher": "Jesse Vincent",
+      "description": "A skills library for Claude Code: test-driven development, debugging, planning and collaboration habits.",
+      "license": "MIT",
+      "repo": "https://github.com/obra/superpowers",
+      "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
+      "version": "7.0.2",
+      "categories": [
+        "workflow",
+        "code"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": ".claude-plugin/plugin.json",
+          "name": "superpowers",
+          "sha256": "6728b554d1aaf9235f7981c7838a32f50c191297284af97f4c2a808155f7c399"
+        },
+        "sources": [
+          "https://github.com/obra/superpowers/tree/22f0b463e7a5e579904dd6211a520321035526f7",
+          "https://github.com/anthropics/claude-plugins-official/blob/73c8cf3ea7e296057b467990f2f5d61b4c922260/.claude-plugin/marketplace.json"
+        ]
+      },
+      "popularity": {
+        "signal": "claude-directory-installs",
+        "shown": "1,009,371",
+        "installs": 1009371,
+        "url": "https://claude.com/plugins/superpowers"
+      }
+    },
+    {
+      "id": "code-review",
+      "name": "Code Review",
+      "publisher": "Anthropic",
+      "description": "Reviews a pull request with several agents that score how sure they are of each finding.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/claude-plugins-official",
+      "subdir": "plugins/code-review",
+      "commit": "73c8cf3ea7e296057b467990f2f5d61b4c922260",
+      "version": "1.0.1",
+      "categories": [
+        "code",
+        "review"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "plugins/code-review/.claude-plugin/plugin.json",
+          "name": "code-review",
+          "sha256": "0c5d2784bc1ab85b14e578132c141e9e0bb52dbc041f8a9094f8564cd370ffce"
+        },
+        "sources": [
+          "https://github.com/anthropics/claude-plugins-official/tree/73c8cf3ea7e296057b467990f2f5d61b4c922260/plugins/code-review",
+          "https://github.com/anthropics/claude-plugins-official/blob/73c8cf3ea7e296057b467990f2f5d61b4c922260/.claude-plugin/marketplace.json"
+        ]
+      },
+      "popularity": {
+        "signal": "claude-directory-installs",
+        "shown": "438,525",
+        "installs": 438525,
+        "url": "https://claude.com/plugins/code-review"
+      }
+    },
+    {
+      "id": "code-simplifier",
+      "name": "Code Simplifier",
+      "publisher": "Anthropic",
+      "description": "An agent that simplifies code for clarity and consistency without changing what it does.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/claude-plugins-official",
+      "subdir": "plugins/code-simplifier",
+      "commit": "73c8cf3ea7e296057b467990f2f5d61b4c922260",
+      "version": "1.0.0",
+      "categories": [
+        "code"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "plugins/code-simplifier/.claude-plugin/plugin.json",
+          "name": "code-simplifier",
+          "sha256": "f18fb26b2f03e95ad165a4333c73ecd292da18e74d2b89d89bd9848839f8d0e7"
+        },
+        "sources": [
+          "https://github.com/anthropics/claude-plugins-official/tree/73c8cf3ea7e296057b467990f2f5d61b4c922260/plugins/code-simplifier",
+          "https://github.com/anthropics/claude-plugins-official/blob/73c8cf3ea7e296057b467990f2f5d61b4c922260/.claude-plugin/marketplace.json"
+        ]
+      },
+      "popularity": {
+        "signal": "claude-directory-installs",
+        "shown": "346,763",
+        "installs": 346763,
+        "url": "https://claude.com/plugins/code-simplifier"
+      }
+    },
+    {
+      "id": "claude-md-management",
+      "name": "CLAUDE.md Management",
+      "publisher": "Anthropic",
+      "description": "Audit CLAUDE.md files, capture what a session learned, and keep project memory current.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/claude-plugins-official",
+      "subdir": "plugins/claude-md-management",
+      "commit": "73c8cf3ea7e296057b467990f2f5d61b4c922260",
+      "version": "1.0.0",
+      "categories": [
+        "productivity"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "plugins/claude-md-management/.claude-plugin/plugin.json",
+          "name": "claude-md-management",
+          "sha256": "4617ec581bdf3f6d0e9879e8d9338a1fd46602b93bb6007d3ec5c1a18f8af66f"
+        },
+        "sources": [
+          "https://github.com/anthropics/claude-plugins-official/tree/73c8cf3ea7e296057b467990f2f5d61b4c922260/plugins/claude-md-management",
+          "https://github.com/anthropics/claude-plugins-official/blob/73c8cf3ea7e296057b467990f2f5d61b4c922260/.claude-plugin/marketplace.json"
+        ]
+      },
+      "popularity": {
+        "signal": "claude-directory-installs",
+        "shown": "287,247",
+        "installs": 287247,
+        "url": "https://claude.com/plugins/claude-md-management"
+      }
+    },
+    {
+      "id": "feature-dev",
+      "name": "Feature Development",
+      "publisher": "Anthropic",
+      "description": "A feature workflow with agents that explore the codebase, design the architecture and review the result.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/claude-plugins-official",
+      "subdir": "plugins/feature-dev",
+      "commit": "73c8cf3ea7e296057b467990f2f5d61b4c922260",
+      "version": "1.0.1",
+      "categories": [
+        "code",
+        "workflow"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "plugins/feature-dev/.claude-plugin/plugin.json",
+          "name": "feature-dev",
+          "sha256": "f89c71879d479ddcce5427f7ce4b462329b030d02c06d8d42d3b6002e1fd1b18"
+        },
+        "sources": [
+          "https://github.com/anthropics/claude-plugins-official/tree/73c8cf3ea7e296057b467990f2f5d61b4c922260/plugins/feature-dev",
+          "https://github.com/anthropics/claude-plugins-official/blob/73c8cf3ea7e296057b467990f2f5d61b4c922260/.claude-plugin/marketplace.json"
+        ]
+      },
+      "popularity": {
+        "signal": "claude-directory-installs",
+        "shown": "256,017",
+        "installs": 256017,
+        "url": "https://claude.com/plugins/feature-dev"
+      }
+    },
+    {
+      "id": "claude-code-setup",
+      "name": "Claude Code Setup",
+      "publisher": "Anthropic",
+      "description": "Reads a codebase and recommends hooks, skills, MCP servers and subagents that suit it.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/claude-plugins-official",
+      "subdir": "plugins/claude-code-setup",
+      "commit": "73c8cf3ea7e296057b467990f2f5d61b4c922260",
+      "version": "1.0.0",
+      "categories": [
+        "productivity"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "plugins/claude-code-setup/.claude-plugin/plugin.json",
+          "name": "claude-code-setup",
+          "sha256": "f5cc68a308d6a781596325a635272639e823dfaad6aa66494338715306d53fe6"
+        },
+        "sources": [
+          "https://github.com/anthropics/claude-plugins-official/tree/73c8cf3ea7e296057b467990f2f5d61b4c922260/plugins/claude-code-setup",
+          "https://github.com/anthropics/claude-plugins-official/blob/73c8cf3ea7e296057b467990f2f5d61b4c922260/.claude-plugin/marketplace.json"
+        ]
+      },
+      "popularity": {
+        "signal": "claude-directory-installs",
+        "shown": "195,067",
+        "installs": 195067,
+        "url": "https://claude.com/plugins/claude-code-setup"
+      }
+    },
+    {
+      "id": "commit-commands",
+      "name": "Commit Commands",
+      "publisher": "Anthropic",
+      "description": "Commands for committing, pushing, opening a pull request and cleaning up gone branches.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/claude-plugins-official",
+      "subdir": "plugins/commit-commands",
+      "commit": "73c8cf3ea7e296057b467990f2f5d61b4c922260",
+      "version": "1.0.1",
+      "categories": [
+        "git"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "plugins/commit-commands/.claude-plugin/plugin.json",
+          "name": "commit-commands",
+          "sha256": "f6a1e96abeb500db2198fee0ced38ea94eee00b472ca4c84b5a7a523d32e8573"
+        },
+        "sources": [
+          "https://github.com/anthropics/claude-plugins-official/tree/73c8cf3ea7e296057b467990f2f5d61b4c922260/plugins/commit-commands",
+          "https://github.com/anthropics/claude-plugins-official/blob/73c8cf3ea7e296057b467990f2f5d61b4c922260/.claude-plugin/marketplace.json"
+        ]
+      },
+      "popularity": {
+        "signal": "claude-directory-installs",
+        "shown": "171,244",
+        "installs": 171244,
+        "url": "https://claude.com/plugins/commit-commands"
+      }
+    },
+    {
+      "id": "pr-review-toolkit",
+      "name": "PR Review Toolkit",
+      "publisher": "Anthropic",
+      "description": "Review agents for comments, tests, error handling, type design and code quality in a pull request.",
+      "license": "Apache-2.0",
+      "repo": "https://github.com/anthropics/claude-plugins-official",
+      "subdir": "plugins/pr-review-toolkit",
+      "commit": "73c8cf3ea7e296057b467990f2f5d61b4c922260",
+      "version": "1.0.1",
+      "categories": [
+        "code",
+        "review"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "manifest": {
+          "path": "plugins/pr-review-toolkit/.claude-plugin/plugin.json",
+          "name": "pr-review-toolkit",
+          "sha256": "59239b506df0a629cb3cbe42e5617c37599dc07a0a14dcf54f895885e010b51f"
+        },
+        "sources": [
+          "https://github.com/anthropics/claude-plugins-official/tree/73c8cf3ea7e296057b467990f2f5d61b4c922260/plugins/pr-review-toolkit",
+          "https://github.com/anthropics/claude-plugins-official/blob/73c8cf3ea7e296057b467990f2f5d61b4c922260/.claude-plugin/marketplace.json"
+        ]
+      },
+      "popularity": {
+        "signal": "claude-directory-installs",
+        "shown": "114,856",
+        "installs": 114856,
+        "url": "https://claude.com/plugins/pr-review-toolkit"
+      }
+    }
+  ]
+}

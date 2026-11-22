@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aphesist/boopis/apps/shared/data/recommended.schema.json",
+  "title": "boopis recommended skills and plugins",
+  "description": "boopis's own list of skills and plugins (docs/RECOMMENDED.md): each entry read against its publisher's own repository at the pinned commit, each kind ordered by a cited popularity signal, most used first. The host compiles the file in (apps/desktop/src-tauri/src/store/recommended.rs) and its unit tests hold it to this shape and to the order.",
+  "type": "object",
+  "required": ["schema_version", "popularity", "skills", "plugins"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": 1 },
+    "description": { "type": "string" },
+    "popularity": {
+      "type": "object",
+      "required": ["skills", "plugins"],
+      "additionalProperties": false,
+      "properties": {
+        "skills": { "$ref": "#/$defs/read" },
+        "plugins": { "$ref": "#/$defs/read" }
+      }
+    },
+    "skills": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/entry" } },
+    "plugins": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/entry" } }
+  },
+  "$defs": {
+    "read": {
+      "description": "One signal: its name, the date it was read, the page it was read from and what it counts.",
+      "type": "object",
+      "required": ["signal", "read", "evidence", "note"],
+      "additionalProperties": false,
+      "properties": {
+        "signal": { "enum": ["skills-sh-installs", "claude-directory-installs"] },
+        "read": { "type": "string", "format": "date" },
+        "evidence": { "type": "string", "format": "uri" },
+        "note": { "type": "string" }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "required": ["id", "name", "publisher", "description", "license", "repo", "commit", "verified", "popularity"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "name": { "type": "string" },
+        "publisher": { "type": "string" },
+        "description": { "type": "string", "maxLength": 140 },
+        "license": { "type": "string", "minLength": 1 },
+        "repo": { "type": "string", "pattern": "^https://github\\.com/[^/]+/[^/]+$" },
+        "subdir": { "type": "string" },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "version": { "type": "string" },
+        "categories": { "type": "array", "items": { "type": "string" } },
+        "verified": {
+          "type": "object",
+          "required": ["date", "manifest", "sources"],
+          "additionalProperties": false,
+          "properties": {
+            "date": { "type": "string", "format": "date" },
+            "manifest": {
+              "description": "The file read at the commit to confirm the name, and its hash.",
+              "type": "object",
+              "required": ["path", "name", "sha256"],
+              "additionalProperties": false,
+              "properties": {
+                "path": { "type": "string" },
+                "name": { "type": "string" },
+                "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+              }
+            },
+            "sources": { "type": "array", "minItems": 1, "items": { "type": "string", "format": "uri" } },
+            "license_note": { "type": "string" }
+          }
+        },
+        "popularity": {
+          "type": "object",
+          "required": ["signal", "shown", "installs", "url"],
+          "additionalProperties": false,
+          "properties": {
+            "signal": { "enum": ["skills-sh-installs", "claude-directory-installs"] },
+            "shown": { "type": "string" },
+            "installs": { "type": "integer", "minimum": 1 },
+            "url": { "type": "string", "format": "uri" }
+          }
+        }
+      }
+    }
+  }
+}
