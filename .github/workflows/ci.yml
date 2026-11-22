@@ -71,6 +71,33 @@ jobs:
           $p = Start-Process pwsh -ArgumentList '-NoProfile', '-File', 'scripts/install.ps1', '-Yes' -Wait -PassThru -NoNewWindow
           if ($p.ExitCode -ne 1) { throw "expected exit code 1, got $($p.ExitCode)" }
           Write-Output 'both exit 1'
+      - name: with only pre-releases, both shells pick the newest one alone
+        # The repository has only pre-releases, so releases/latest is 404 and the installer falls back to the list. Windows
+        # PowerShell 5.1 once read every tag of that list as one ("v0.1.7 v0.1.6 ..."). The fake API serves two; the
+        # downloads are 404, so the installer stops there and names the release it chose.
+        shell: pwsh
+        env:
+          BOOPIS_API_URL: http://127.0.0.1:8765
+          BOOPIS_BASE_URL: http://127.0.0.1:8765
+        run: |
+          $server = Start-Process python -ArgumentList 'tests/installer/fake_release_api.py', '8765' -PassThru -NoNewWindow
+          try {
+            $deadline = (Get-Date).AddSeconds(30)
+            while ($true) {
+              try { Invoke-RestMethod http://127.0.0.1:8765/repos/x/y/releases | Out-Null; break }
+              catch { if ((Get-Date) -gt $deadline) { throw 'the fake API did not start' }; Start-Sleep -Milliseconds 200 }
+            }
+            foreach ($shell in 'powershell', 'pwsh') {
+              $log = Join-Path $env:RUNNER_TEMP "$shell-prerelease.txt"
+              $argv = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'scripts/install.ps1', '-Yes')
+              Start-Process $shell -ArgumentList $argv -Wait -NoNewWindow -RedirectStandardOutput $log -RedirectStandardError "$log.err" | Out-Null
+              $out = "$(Get-Content -Raw $log) $(Get-Content -Raw "$log.err")" -replace '\s+', ' '
+              Write-Output "---- $shell"; Write-Output $out
+              if ($out -notmatch 'from release v0\.9\.2\.') { throw "$shell did not name v0.9.2 alone as the release" }
+              if ($out -match 'v0\.9\.1') { throw "$shell named the older release too" }
+            }
+          }
+          finally { Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue }
 
   installer:
     # The installers and the art they carry (ADR-0026): shellcheck, the brand goldens (with the embedded blocks current),
