@@ -244,6 +244,13 @@ export function createMockStore(opts: MockStoreOptions = {}): StoreProvider {
       if (failed && source) return reject('hx.store.source_unreachable', failed);
       return sources.get();
     },
+    reloadSources() {
+      /* the host's rule: a source is due when it was never read, failed last time, or is older than its period (an hour for the registry, six for the rest) */
+      const t = opts.now ? opts.now() : Date.parse(FETCHED);
+      const period = (s: StoreSource): number => (s.fetch === 'registry-api' ? 1 : 6) * 3600_000;
+      sources.update((l) => l.map((s) => ({ ...s, stale: !!s.enabled && !!s.refreshable && (!!s.error || !s.refreshed_at || t - Date.parse(s.refreshed_at) > period(s)) })));
+      return Promise.resolve();
+    },
     setSourceEnabled(id, enabled) {
       if (!sources.get().some((s) => s.id === id)) return reject('hx.store.invalid_source', 'That is not a source boopis knows.');
       sources.update((l) => l.map((s) => (s.id === id ? { ...s, enabled } : s)));

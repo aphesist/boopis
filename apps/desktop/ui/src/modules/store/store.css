@@ -17,3 +17,7 @@
 .hx-store .ui-set__label { overflow-wrap: anywhere; }
 .hx-store .ui-set__actions { flex: 0 1 auto; max-width: 100%; }
 .hx-store__sheet, .hx-store__sheet .ui-set__head, .hx-store__sheet .ui-field__hint { overflow-wrap: anywhere; min-width: 0; }
+/* the progress of a read: the section's own rows (a source, what it is doing, a badge); the dots sit at the start of the line */
+.hx-store__reading { min-width: 0; }
+.hx-store__reading:empty { display: none; }
+.hx-store__note > .ui-progress { flex: none; }

@@ -29,8 +29,9 @@ use boopis_host::connectors::Engine;
 use boopis_host::error::{Error, Result};
 use boopis_host::store::Store;
 use boopis_host::store::backend::{Backend, Host};
-use boopis_host::store::net::Https;
+use boopis_host::store::net::{Ask, Fetcher, Hosts, Https};
 use boopis_host::store::types::{StoreFilter, Tier};
+use sha2::{Digest, Sha256};
 
 /// The host with no engine: what a person has before the engine has started.
 struct NoEngine;
@@ -172,6 +173,85 @@ async fn every_source_a_read_reaches_loads_and_browse_lists_it() {
             failures.push(format!("{id}: read, but Browse lists nothing from it"));
         }
         writeln!(table, "\nBrowse, {id}: {} items listed.", src.total).unwrap();
+    }
+    println!("{table}");
+    if let Ok(path) = std::env::var("GITHUB_STEP_SUMMARY") {
+        let mut old = std::fs::read_to_string(&path).unwrap_or_default();
+        old.push_str(&table);
+        std::fs::write(&path, old).unwrap();
+    }
+    assert!(failures.is_empty(), "{failures:#?}");
+}
+
+/// boopis's own skills and plugins (`apps/shared/data/recommended.json`) are what a person read: each pinned commit is still there
+/// in its publisher's own repository, and the manifest read at it (`SKILL.md`, `plugin.json`) has the bytes whose hash was
+/// recorded. A commit a publisher removed, or a manifest that is not the one read, is a failure; a refusal by something between this
+/// machine and GitHub is shown as blocked.
+#[tokio::test]
+#[ignore = "reads GitHub"]
+async fn every_recommended_entry_is_still_what_was_read() {
+    let limits = Limits::default();
+    let fetcher = Arc::new(Https::new(&limits.store));
+    let list = boopis_host::store::recommended::load().expect("the list parses");
+    let max = limits.store.max_catalogue_bytes;
+    let mut table = String::from(
+        "### boopis's recommended skills and plugins, read at their pinned commits\n\n| entry | result |\n|---|---|\n",
+    );
+    let mut failures = Vec::new();
+    for (kind, entries) in [("skill", &list.skills), ("plugin", &list.plugins)] {
+        for e in entries {
+            let path = e.repo.trim_start_matches("https://github.com/");
+            let (owner, name) = path.split_once('/').expect("owner/name");
+            let url = boopis_host::store::github::raw_url(
+                owner,
+                name,
+                &e.commit,
+                &e.verified.manifest.path,
+            );
+            let (f, u) = (fetcher.clone(), url.clone());
+            let got = tokio::task::spawn_blocking(move || {
+                f.get(
+                    &u,
+                    &Hosts::new(&[]),
+                    &Ask {
+                        max_bytes: max,
+                        etag: None,
+                        accept: None,
+                    },
+                )
+            })
+            .await
+            .unwrap();
+            let verdict = match got {
+                Ok(r) => {
+                    let sum = Sha256::digest(&r.body)
+                        .iter()
+                        .fold(String::new(), |mut acc, b| {
+                            let _ = write!(acc, "{b:02x}");
+                            acc
+                        });
+                    if sum == e.verified.manifest.sha256 {
+                        "pass".to_owned()
+                    } else {
+                        failures.push(format!(
+                            "{kind} {}: {} is not the file that was read ({sum})",
+                            e.id, e.verified.manifest.path
+                        ));
+                        "fail: the manifest differs".to_owned()
+                    }
+                }
+                Err(err) => {
+                    let said = err.to_string();
+                    if blocked(&said) {
+                        "blocked".to_owned()
+                    } else {
+                        failures.push(format!("{kind} {}: {said}", e.id));
+                        format!("fail: {said}")
+                    }
+                }
+            };
+            writeln!(table, "| {kind} {} | {verdict} |", e.id).unwrap();
+        }
     }
     println!("{table}");
     if let Ok(path) = std::env::var("GITHUB_STEP_SUMMARY") {

@@ -297,6 +297,9 @@ export interface StoreProvider {
   uninstall(id: string, opts?: { deleteSecrets?: boolean }): Promise<UninstallResult>;
   /** read the sources again (all, or one) */
   refresh(source?: string): Promise<readonly StoreSource[]>;
+  /** ask the host for each source's state again without reading any of them: how old each copy is moves on with time, so what is due
+      now is not what was due when the list was loaded. Optional: a provider whose sources never age leaves it out. */
+  reloadSources?(): Promise<void>;
   setSourceEnabled(id: string, enabled: boolean): Promise<void>;
   /** add a marketplace address, a git repository or a local folder or file as a source */
   addSource(input: { url?: string; path?: string; label?: string }): Promise<StoreSource>;

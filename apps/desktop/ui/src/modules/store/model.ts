@@ -4,7 +4,7 @@
 import type {
   FormSpec, InstallPlan, InstallReceipt, StoreBrowse, StoreCodeRun, StoreComponent, StoreError, StoreFilter, StoreHosts, StoreItem, StoreKind, StorePin, StoreScanVerdict, StoreSource, StoreTier, UpdateDiff
 } from '../../data';
-import { isRefreshable } from './reading';
+import { isRefreshable, isStale } from './reading';
 import type { ReadState, Reading } from './reading';
 
 export const TIER_WORDS: Readonly<Record<StoreTier, string>> = { recommended: 'Recommended by boopis', verified: 'Verified by its source', 'not-reviewed': 'Not reviewed' };
@@ -118,22 +118,53 @@ export function filterOf(kind: 'all' | StoreKind, source: string): StoreFilter {
   return { ...(kind !== 'all' ? { kind } : {}), ...(source !== 'any' ? { source } : {}) };
 }
 export const isFront = (f: StoreFilter, query: string): boolean => !query.trim() && Object.keys(f).length === 0;
-/** what a browse page says when the catalogue is old, and why: the sources that could not be read (with the reason when there is
-    one), the ones not read yet, or the age of the newest copy. Null when it is current. `sources` are the store's sources. */
-export function freshness(b: Pick<StoreBrowse, 'offline' | 'stale' | 'refreshed_at'>, now: number = Date.now(), sources: readonly StoreSource[] = []): string | null {
-  if (b.offline) return `You are offline. This is the last copy boopis saved${b.refreshed_at ? ', from ' + ageWords(b.refreshed_at, now) : ''}.`;
+/** why a list is out of date, and what puts it right */
+export interface OutOfDate {
+  /** the sentence over Browse: what is old, and why (the host's own reason when a source could not be read) */
+  text: string;
+  /** the cause: you are offline; a source could not be read; a source was never read; a source is older than its period */
+  why: 'offline' | 'failed' | 'unread' | 'old' | 'unknown';
+  /** how many sources could not be read: Sources says why for each, so the line offers to show it */
+  failed: number;
+}
+/** `a`, `a and b`, `a, b and c`, `a, b and 2 more` */
+export function listWords(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  if (names.length === 2) return `${names[0] ?? ''} and ${names[1] ?? ''}`;
+  if (names.length === 3) return `${names[0] ?? ''}, ${names[1] ?? ''} and ${names[2] ?? ''}`;
+  return `${names[0] ?? ''}, ${names[1] ?? ''} and ${String(names.length - 2)} more`;
+}
+/** what a browse page says when the catalogue is old, and why: you are offline, the sources that could not be read (with the
+    reason when there is one), the ones not read yet, or the ones older than their period and how old. Null when it is current.
+    `sources` are the store's sources. */
+export function outOfDate(b: Pick<StoreBrowse, 'offline' | 'stale' | 'refreshed_at'>, now: number = Date.now(), sources: readonly StoreSource[] = []): OutOfDate | null {
+  if (b.offline) return { why: 'offline', failed: 0, text: `You are offline. This is the last copy boopis saved${b.refreshed_at ? ', from ' + ageWords(b.refreshed_at, now) : ''}. Read the sources again when you are back online.` };
   if (!b.stale) return null;
   const on = sources.filter((s) => s.enabled !== false && isRefreshable(s));
   const failed = on.filter((s) => s.error);
   const unread = on.filter((s) => !s.error && !s.refreshed_at);
+  const old = on.filter((s) => !s.error && s.refreshed_at && isStale(s));
   const one = failed[0];
-  if (failed.length === 1 && one) return `This list is out of date: ${one.label} could not be read. ${one.error ?? ''}`.trim();
-  if (failed.length > 1) return `This list is out of date: ${failed.length} sources could not be read. Sources says why for each.`;
+  if (failed.length === 1 && one) return { why: 'failed', failed: 1, text: `This list is out of date: ${one.label} could not be read. ${one.error ?? ''}`.trim() };
+  if (failed.length > 1) return { why: 'failed', failed: failed.length, text: `This list is out of date: ${listWords(failed.map((s) => s.label))} could not be read. Sources gives the reason for each.` };
   const first = unread[0];
-  if (unread.length === 1 && first) return `This list is out of date: ${first.label} has not been read yet.`;
-  if (unread.length > 1) return `This list is out of date: ${unread.length} sources have not been read yet.`;
-  return `This list is out of date${b.refreshed_at ? ': it was read ' + ageWords(b.refreshed_at, now) : ''}.`;
+  if (unread.length === 1 && first) return { why: 'unread', failed: 0, text: `This list is out of date: ${first.label} has not been read yet.` };
+  if (unread.length > 1) return { why: 'unread', failed: 0, text: `This list is out of date: ${listWords(unread.map((s) => s.label))} have not been read yet.` };
+  const oldest = old.reduce<StoreSource | null>((a, s) => (!a || Date.parse(s.refreshed_at ?? '') < Date.parse(a.refreshed_at ?? '') ? s : a), null);
+  if (old.length === 1 && oldest) return { why: 'old', failed: 0, text: `This list is out of date: ${oldest.label} was last read ${ageWords(oldest.refreshed_at, now)}.` };
+  if (old.length > 1 && oldest) return { why: 'old', failed: 0, text: `This list is out of date: ${listWords(old.map((s) => s.label))} are due a read; the oldest was read ${ageWords(oldest.refreshed_at, now)}.` };
+  return { why: 'unknown', failed: 0, text: `This list is out of date${b.refreshed_at ? ': it was read ' + ageWords(b.refreshed_at, now) : ''}.` };
 }
+export const freshness = (b: Pick<StoreBrowse, 'offline' | 'stale' | 'refreshed_at'>, now: number = Date.now(), sources: readonly StoreSource[] = []): string | null => outOfDate(b, now, sources)?.text ?? null;
+
+/** the line after a read, once it has put the list right: the check that the fix worked */
+export function upToDateWords(r: Pick<Reading, 'last'>): string {
+  const n = r.last?.total ?? 0;
+  if (!n) return '';
+  return `The list is up to date: ${n === 1 ? 'the source was' : `the ${String(n)} sources were`} read just now.`;
+}
+/** the words on a source's badge in the progress of a read */
+export const READ_BADGE = { waiting: 'Waiting', reading: 'Reading', done: 'Read', failed: 'Could not read' } as const;
 
 /* ───────── the review card ───────── */
 export interface ReviewOpts {

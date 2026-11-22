@@ -4,18 +4,19 @@
    on the front page, search, a kind filter, a source filter), a detail sheet, the review card, Installed (switches, Update with
    its diff, Roll back, Remove, kill-list banners) and Sources. The view never fetches: it reads and writes through
    `StoreProvider` and shows each failure as the host's own sentence. An item's own text is marked `data-store-item`. */
-import { ui } from '@boopis/ui';
+import { progressDots, setProgress, ui } from '@boopis/ui';
 import { storeItem } from '../../core/engine-words';
 import { reduced } from '../../core/dom';
 import type { FormOutcome, FormSpec, FormsSource, InstallPlan, InstallReceipt, StageResult, StoreBrowse, StoreDetail, StoreItem, StoreKind, StoreProvider, StoreScope, StoreSource, UpdateDiff } from '../../data';
 import '../cards';
 import { useFormsHost } from '../cards/forms-host';
 import {
-  errorCode, ENGINE_PLUGIN_NOTE, REMOTE_WORDS, isRemote, KIND_FILTERS, KIND_LABEL, STATE_WORDS, TIER_TIPS, TIER_WORDS, ageWords, countsWords, errorText, filterOf, freshness, hostsWords, isFront, licenseWords, pinWords, plural,
-  readingWords, reviewSpec, scanWords, sourceState, stateOf
+  errorCode, ENGINE_PLUGIN_NOTE, REMOTE_WORDS, isRemote, KIND_FILTERS, KIND_LABEL, STATE_WORDS, TIER_TIPS, TIER_WORDS, ageWords, countsWords, errorText, filterOf, hostsWords, isFront, licenseWords, pinWords, plural,
+  outOfDate, READ_BADGE, readingWords, reviewSpec, scanWords, sourceState, stateOf, upToDateWords
 } from './model';
 import { projectSwitch } from './policy';
-import { readerFor } from './reading';
+import { keepFresh, readerFor } from './reading';
+import type { Reading } from './reading';
 
 export type StoreScreen = 'browse' | 'installed' | 'sources';
 export interface StoreDeps {
@@ -26,6 +27,8 @@ export interface StoreDeps {
   /** the delay before the next card replaces one that just answered, so its receipt shows (0 in tests) */
   settle?: number;
   now?: () => number;
+  /** how often, while the store is open, to look at which sources have fallen due and read them (ms; default a minute) */
+  every?: number;
   /** false: a card appears at once, without its entrance (the lab's checks measure a settled card) */
   enter?: boolean;
 }
@@ -34,6 +37,8 @@ export interface StoreView {
   refresh(): Promise<void>;
   /** read the sources that are due (never read, failed last time, or old): the store calls it each time it is opened */
   readDue(): Promise<void>;
+  /** stop reading by itself (the view is going away) */
+  stop(): void;
 }
 
 const SCREENS: ReadonlyArray<readonly [StoreScreen, string]> = [['browse', 'Browse'], ['installed', 'Installed'], ['sources', 'Sources']];
@@ -115,19 +120,49 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     const status = el('p', { class: 'ui-field__hint', role: 'status', 'aria-live': 'polite', 'data-store-status': '' });
     const again = ui.button({ label: 'Read the sources again', size: 's' });
     again.addEventListener('click', () => { void reader.read(true); });
+    const why = ui.button({ label: 'Show why', size: 's', variant: 'ghost', attrs: { 'aria-label': 'Show why the sources could not be read' } });
+    why.addEventListener('click', () => { show('sources'); });
+    const dots = progressDots({ value: 0, label: 'Reading the sources', dots: 8 });
     const note = el('div', { class: 'hx-store__note' }, status);
+    /* the progress of a read, source by source: each says waiting, being read, or what came of it, and the items each brings
+       show in the list below as it finishes */
+    const reading = el('div', { class: 'hx-store__reading' });
     const list = el('div', { class: 'hx-store__list' });
-    place(board(search, strip, note, list));
+    place(board(search, strip, note, reading, list));
     let page0: StoreBrowse | null = null;
-    /* the line over the list: a read in progress, else why the list is out of date with the way to fix it */
+    let sawRead = false;   // a read ran while this page was showing: when it ends the line says whether the list is now current
+    const drawReading = (r: Reading): void => {
+      if (!r.running) { reading.replaceChildren(); return; }
+      const byId = new Map(store.sources.get().map((s) => [s.id, s]));
+      const rows = r.order.map((id) => {
+        const s = byId.get(id);
+        if (!s) return '';
+        const mode = r.states.get(id);
+        const word = mode ?? (s.error ? 'failed' : 'done');
+        const badge = ui.html.badge({ label: READ_BADGE[word] });
+        return storeItem(ui.html.setRow({ label: s.label, hint: sourceState(s, now(), mode).text, control: '<span class="ui-set__actions">' + badge + '</span>' }));
+      });
+      const sec = section('hx-store-reading', 'Reading the sources', rows.join(''));
+      setProgress(dots, r.total ? Math.round((r.done / r.total) * 100) : 0);
+      reading.replaceChildren(sec);
+    };
+    /* the line over the list: a read in progress, else why the list is out of date with the way to fix it, else (after a read
+       that put it right) that it is current */
     const sayFresh = (): void => {
       const r = reader.state.get();
-      const text = r.running ? readingWords(r) + ' What they list shows here as each one is read.' : page0 ? freshness(page0, now(), store.sources.get()) ?? '' : '';
+      const od = !r.running && page0 ? outOfDate(page0, now(), store.sources.get()) : null;
+      if (r.running) sawRead = true;
+      const text = r.running ? readingWords(r) + ' What they list shows here as each one is read.' : od ? od.text : sawRead && page0 ? upToDateWords(r) : '';
       status.textContent = text;
-      /* offered while the list is out of date and while a read runs (a second press joins it); never taken away from under the
-         focus, so a keyboard user who pressed it stays on it */
-      const offer = r.running || (!!page0 && (page0.stale || page0.offline));
+      drawReading(r);
+      /* the fix is offered while the list is out of date and while a read runs (a second press joins it); never taken away from
+         under the focus, so a keyboard user who pressed it stays on it. Where sources could not be read, the line also offers
+         their reasons. */
+      const offer = r.running || !!od;
+      const wantWhy = !r.running && !!od && od.failed > 0;
+      if (r.running && !dots.isConnected) note.insertBefore(dots, status); else if (!r.running && dots.isConnected) dots.remove();
       if (offer && !again.isConnected) note.append(again); else if (!offer && again.isConnected && !again.contains(document.activeElement)) again.remove();
+      if (wantWhy && !why.isConnected) note.append(why); else if (!wantWhy && why.isConnected && !why.contains(document.activeElement)) why.remove();
     };
     const input = search.querySelector<HTMLInputElement>('input');
     let timer = 0;
@@ -206,7 +241,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     if (warn.length) sec('notes', 'Read first', warn.join(''));
     sec('adds', 'What it adds', R('Contents', countsWords(it.components)) + R('Tools and context', d.cost.tools == null ? 'Not known. Every tool it adds is loaded in every session.' : `${plural(d.cost.tools, 'tool')}${d.cost.context_tokens == null ? '' : ', about ' + String(d.cost.context_tokens) + ' tokens of context'}. Every tool is loaded in every session.`));
     sec('reach', 'Where it reaches and what it needs', R('Hosts', hostsWords(it.hosts, it.verified)) + R('Keys', it.secrets.length ? it.secrets.map((s) => s.title + (s.optional ? ' (optional)' : '')).join('; ') : 'None.'));
-    sec('prov', 'Where it comes from', R('Source', `${srcLabel}${prov.source_tier ? ', which calls it ' + prov.source_tier : ''}`) + R('Publisher', it.publisher + (prov.namespace_proof === 'none' ? ' (not proved)' : '')) +
+    sec('prov', 'Where it comes from', R('Source', `${srcLabel}${prov.source_tier && it.source !== 'boopis' ? ', which calls it ' + prov.source_tier : ''}`) + (it.source === 'boopis' && prov.source_tier ? R('Why it is listed here', prov.source_tier.charAt(0).toUpperCase() + prov.source_tier.slice(1)) : '') + R('Publisher', it.publisher + (prov.namespace_proof === 'none' ? ' (not proved)' : '')) +
       R('Pinned to', pinWords(it.pinned)) + R('Folder hash', prov.tree_sha256 ?? 'Not known until it is downloaded.') + R('Check', scanWords(prov.scan.verdict) + (prov.scan.findings.length ? ': ' + prov.scan.findings.map((f) => f.text).join('; ') : '')) +
       R('Last updated', prov.last_updated ? ageWords(prov.last_updated, now()) : 'Not known') + R('Licence', licenseWords(it.license)) + R('Checked by boopis', it.verified ?? 'Nobody has checked it') + (it.homepage ? R('Home page', it.homepage) : ''));
     sec('gov', 'In governed sessions', R('Governed mode', d.governed.text));
@@ -420,5 +455,9 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
   store.sources.subscribe(keep(() => { if (screen === 'sources') void drawSources(); }));
   reader.state.subscribe(keep(() => { if (screen === 'sources') void drawSources(); }));
   show('browse');
-  return { show, refresh: async () => { show(screen); }, readDue: () => reader.read(false) };
+  /* while the store stays open, the sources that fall due are read again: a copy ages whether or not anyone presses anything. A
+     closed store (its dialog shut, or the view gone) reads nothing. */
+  const isOpen = (): boolean => { if (!root.isConnected) return false; const d = root.closest('dialog'); return !d || d.open; };
+  const stopFresh = keepFresh(store, { open: isOpen, now, ...(deps.every ? { every: deps.every } : {}) });
+  return { show, refresh: async () => { show(screen); }, readDue: () => reader.readDue(), stop: stopFresh };
 }
