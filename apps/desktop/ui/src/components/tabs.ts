@@ -5,6 +5,7 @@
    12px inset it is 18px, which on a 28px tab is a capsule, the same as the close button beside it; on a surface that declares no
    nesting it is --r-s. Wired by `hydrate()` (`data-ui="tabs"`): one tab stop, Left/Right, Home/End, a cancelable `ui:change` {value}. */
 import { attrs, cx, esc } from '../core/dom';
+import { update } from './scroll-edges';
 
 type U<T> = T | undefined;
 
@@ -39,13 +40,13 @@ export function tabs(o: TabsOpts): string {
     }).join('') + '</div>';
 }
 
-/** keep the open tab of a scrolling strip in view and fade the edge that cuts the rest (read, then write: one frame) */
+/** keep the open tab of a scrolling strip in view; the edge that cuts the rest fades with every scroller's (scroll-edges.ts) */
 export function fitTabs(bar: HTMLElement): void {
   if (!bar.classList.contains('ui-tabs--scroll')) return;
   const t = bar.querySelector<HTMLElement>('[aria-selected="true"]');
-  const sl = bar.scrollLeft, cw = bar.clientWidth, sw = bar.scrollWidth;
+  const sl = bar.scrollLeft, cw = bar.clientWidth;
   const l = t ? t.offsetLeft - bar.offsetLeft : 0, w = t ? t.offsetWidth : 0;
   const to = t && l + w > sl + cw ? l + w - cw + 12 : sl;
   if (to !== sl) bar.scrollLeft = to;
-  bar.toggleAttribute('data-more', to + cw < sw - 2);
+  update(bar);   /* the edge fade's flags now, not a frame later: the strip was just scrolled to its open tab */
 }

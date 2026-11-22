@@ -50,7 +50,11 @@ body {
   transition: --hx-center-x var(--dur-3) var(--spring), --hx-col-w var(--dur-3) var(--spring), --hx-dock-space var(--dur-3) var(--spring); }
 .ss-col { --hx-col-w: var(--hx-col-w-to); transition: --hx-dock-space var(--dur-3) var(--spring), --hx-col-w var(--dur-3) var(--spring); }
 .hx-stub-composer { --hx-dock-space: var(--hx-dock-space-to); transition: --hx-dock-space var(--dur-3) var(--spring); }
+/* the conversations' ground strips under the composer (bots.css, session.css) are pseudo-elements: a registered property is not
+   inherited, so each strip animates its own copy of the dock's lift, like every other user of it */
+:is(.bt-room, .ss-view)::after { --hx-dock-space: var(--hx-dock-space-to); transition: --hx-dock-space var(--dur-3) var(--spring); }
 .hx.is-booting, .hx.is-booting *, .hx.is-resizing, .hx.is-resizing * { transition: none !important; }
+.hx:is(.is-booting, .is-resizing) :is(.bt-room, .ss-view)::after { transition: none !important; }
 :where(.hx) button { font: inherit; color: inherit; }
 /* base rules at zero specificity, so a module's own styling always wins */
 

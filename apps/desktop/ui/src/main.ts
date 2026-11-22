@@ -25,6 +25,7 @@ const log = logger('main');
 const orbs = setupOrbs();
 /* the continuous corners: observe the document before anything is drawn (each module binds its own surfaces at import) */
 ui.squircle.start();
+ui.scrollEdges.start();
 
 /** where first run's optional steps asked to land once the app is up (`connectors`, `store`) */
 let landing: 'connectors' | 'store' | null = null;

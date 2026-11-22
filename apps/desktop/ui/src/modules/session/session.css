@@ -10,16 +10,19 @@
 .ss-view { min-height: 0; overflow: hidden; background: var(--bg-2); font: 400 var(--fs-m)/var(--lh) var(--sans); color: var(--text); }
 .ss-view *, .ss-view *::before, .ss-view *::after, .ssr * { box-sizing: border-box; }
 .ss-scroll { position: absolute; inset: 0; }   /* a scroll area (.ui-scroll) */
-/* The conversation fades out above the composer. It used to be a `mask-image` on the scroller: a mask over the whole
-   reading area, whose edge moves with every frame of the dock's lift (`--hx-dock-space`), made the browser rebuild the
+/* The conversation's edges (R-scroll-9; .ui-scroll--ground). It used to be a `mask-image` on the scroller: a mask over the
+   whole reading area, whose edge moves with every frame of the dock's lift (`--hx-dock-space`), made the browser rebuild the
    masked layer each time, the single most expensive thing in a dock morph on WebKitGTK (it measured at twice the frame
-   time). The scroller sits on the solid reading-room ground, so the same fade is a strip of that ground fading in over it,
-   which repaints only the strip. Same edge, same 28px ramp, the strip at 12px below the composer's top edge. */
+   time). The scroller sits on the solid reading-room ground, so the fade is a strip of that ground fading in over it, which
+   repaints only the strip: from the composer's top to the window's foot, faded in over --scroll-fade above it, so nothing shows
+   behind the composer or the dock. The top edge fades the same way once the conversation is scrolled. */
 .ss-view::after {
   content: ""; position: absolute; z-index: 1; left: 0; right: 0; bottom: 0; pointer-events: none;
-  height: calc(var(--ss-comp-h, 120px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--sp-5) - 12px);
-  background: linear-gradient(to bottom, transparent, var(--bg-2) 28px);
+  height: calc(var(--ss-comp-h, 120px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--scroll-fade));
+  background: linear-gradient(to bottom, transparent, var(--bg-2) var(--scroll-fade));
 }
+.ss-view::before { content: ""; position: absolute; z-index: 1; left: 0; right: 0; top: 0; height: var(--scroll-fade); pointer-events: none; background: linear-gradient(var(--bg-2), transparent); opacity: 0; }
+.ss-view:has(> .ss-scroll[data-more-top])::before { opacity: 1; }
 .ss-col { width: var(--hx-col-w, min(var(--col-w), calc(100vw - 64px))); margin: 0 auto; padding: var(--sp-6) 0 calc(var(--ss-comp-h, 120px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--sp-5)); }
 /* the room the composer and the dock take at the foot of the thread: a spacer, not a padding, since it is the composer's measured height (R-layout-5) */
 

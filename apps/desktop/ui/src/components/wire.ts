@@ -90,7 +90,6 @@ const WIRE: Record<string, Wire> = {
   tabs: (el) => {
     wireSeg(el);
     if (!el.classList.contains('ui-tabs--scroll')) return;
-    el.addEventListener('scroll', () => { el.toggleAttribute('data-more', el.scrollLeft + el.clientWidth < el.scrollWidth - 2); }, { passive: true });
     el.addEventListener('ui:change', () => { requestAnimationFrame(() => fitTabs(el)); });
     requestAnimationFrame(() => fitTabs(el));
     /* the fade follows the strip's width and its tabs' widths: a resized window, or the web font arriving after the first

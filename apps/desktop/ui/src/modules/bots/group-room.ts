@@ -17,7 +17,8 @@ import { markSelected, drawGroups } from './list';
 import { checkClips } from './clips';
 import { closeSettings } from './settings';
 import { openNewGroup } from './new-group';
-import { arrival, atEnd, dropPending, entryActs, followZone, glanceAt, jumpButton, listWords, pendingEntry, placeToLine, setJump, toLine, unreadDivider, updatePending } from './ledger';
+import { arrival, atEnd, dropPending, entryActs, glanceAt, jumpButton, listWords, pendingEntry, placeToLine, setJump, toLine, unreadDivider, updatePending } from './ledger';
+import { followZone } from '../chat/follow-zone';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 import { foldHuddles, huddleEntry, huddleOn, huddleRuns, isBetween, liveAt } from './huddle';
 import type { HuddleDeps } from './huddle';
@@ -49,7 +50,7 @@ export const namesOf = (members: readonly GroupMember[]): string => namesText(me
 /* ───────── view ───────── */
 export function mountGroupPane(root: HTMLElement): HTMLElement {
   const pane = el('section', { class: 'bt-room bt-group', 'aria-label': 'Group conversation', hidden: true });
-  const scroll = el('div', { class: 'bt-scroll ui-scroll' });
+  const scroll = el('div', { class: 'bt-scroll ' + ui.scrollClass({ ground: true }) });
   const col = el('div', { class: 'bt-col' });
   const head = el('header', { class: 'bt-presence bt-ghead' });
   const log = el('div', { class: 'bt-log', role: 'log', 'aria-label': 'Group messages' });
@@ -93,7 +94,7 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
     sendNow: (gid, qid) => { groups().sendNow(gid, qid).catch((e: unknown) => { toast('It was not sent: ' + sentence(e)); }); },
     takeBack: (gid, qid) => { const t = groups().unqueue(gid, qid); if (t) { c.setValue(c.value ? t + '\n' + c.value : t); c.focus(); } }
   });
-  followZone(zone, () => G.scroll, () => S.viewRoot);
+  followZone(zone, () => G.scroll, () => S.viewRoot, '--bt-composer-h');
   return pane;
 }
 const G = { scroll: null as HTMLElement | null, head: null as HTMLElement | null, log: null as HTMLElement | null, zone: null as HTMLElement | null, working: null as HTMLElement | null, composer: null as import('../../components').ComposerEl | null, queue: null as GroupQueue | null, renaming: false };

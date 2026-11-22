@@ -120,6 +120,7 @@ export async function startFrame(): Promise<void> {
   if (zoom !== 1) (document.documentElement.style as unknown as Record<string, string>)['zoom'] = String(zoom);
   await setupOrbs();
   ui.squircle.start();
+  ui.scrollEdges.start();
   try {
     if (st.app) await drawApp(st); else await drawStage(st);
   } catch (e) { fail('The state failed to draw: ' + String((e as Error).stack ?? e)); return; }

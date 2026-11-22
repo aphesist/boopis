@@ -129,6 +129,39 @@
 .ui-scroll--inset-end::-webkit-scrollbar-track { margin-block-end: var(--r-outer, 0px); }
 .ui-scroll--inset-both::-webkit-scrollbar-track { margin-block: var(--r-outer, 0px); }
 .ui-scroll--stable { overflow-y: scroll; --scroll-gutter: var(--scroll-size); }
+/* the edge fade (R-scroll-9): a scroller never cuts its content with a straight edge. Where more lies beyond an edge the content
+   fades out over --scroll-fade (16px) at that edge; at its start and at its end nothing lies beyond, so nothing fades. The flags
+   are scroll-edges.ts's (data-more-top, -bottom, -left, -right). It is a mask, so it works on every ground with no colour to
+   match; the bar's own column stays out of it (the second layer), so the thumb never fades. The conversations are the one
+   exception: their foot lies under the composer and the dock, so they fade with a strip of their ground instead
+   (.ui-scroll--ground, session.css and bots.css), which also hides what scrolls behind the composer. */
+.ui-scroll { --fade-t: 0px; --fade-b: 0px; --fade-l: 0px; --fade-r: 0px; }
+.ui-scroll[data-more-top] { --fade-t: var(--scroll-fade); }
+.ui-scroll[data-more-bottom] { --fade-b: var(--scroll-fade); }
+.ui-scroll[data-more-left] { --fade-l: var(--scroll-fade); }
+.ui-scroll[data-more-right] { --fade-r: var(--scroll-fade); }
+.ui-scroll:not(.ui-scroll--ground):is([data-more-top], [data-more-bottom]) {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-t), #000 calc(100% - var(--fade-b)), transparent), linear-gradient(#000, #000);
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-t), #000 calc(100% - var(--fade-b)), transparent), linear-gradient(#000, #000);
+  -webkit-mask-size: 100% 100%, var(--scroll-size) 100%; mask-size: 100% 100%, var(--scroll-size) 100%;
+  -webkit-mask-position: 0 0, 100% 0; mask-position: 0 0, 100% 0;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+}
+.ui-scroll:not(.ui-scroll--ground):is([data-more-left], [data-more-right]) {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent), linear-gradient(#000, #000);
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent), linear-gradient(#000, #000);
+  -webkit-mask-size: 100% 100%, 100% var(--scroll-size); mask-size: 100% 100%, 100% var(--scroll-size);
+  -webkit-mask-position: 0 0, 0 100%; mask-position: 0 0, 0 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+}
+/* a block that scrolls both ways and has more on both axes: both fades, intersected (the bars keep their columns) */
+.ui-scroll--both:not(.ui-scroll--ground):is([data-more-top], [data-more-bottom]):is([data-more-left], [data-more-right]) {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-t), #000 calc(100% - var(--fade-b)), transparent), linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--fade-t), #000 calc(100% - var(--fade-b)), transparent), linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent);
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-position: 0 0; mask-position: 0 0;
+  -webkit-mask-composite: source-in; mask-composite: intersect;
+}
+.ui-scroll--bare:not(.ui-scroll--ground):is([data-more-top], [data-more-bottom], [data-more-left], [data-more-right]) { -webkit-mask-size: 100% 100%, 0 0; mask-size: 100% 100%, 0 0; }   /* no bar: no column to keep */
 .ui-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .ui-mono { font-family: var(--mono); letter-spacing: var(--track-mono); font-variant-numeric: tabular-nums; }
 .ui-case { text-transform: var(--ui-case); }
@@ -283,7 +316,7 @@
 .ui-tab[aria-selected="true"] { --sq-bg: var(--current); background: var(--sq-bg); color: var(--text-strong); }
 .ui-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .ui-tab[data-sq-on]:focus-visible { outline: none; }   /* the drawn corner draws the ring */
-.ui-tabs--scroll[data-more] { -webkit-mask-image: linear-gradient(to right, var(--text) calc(100% - 28px), transparent); mask-image: linear-gradient(to right, var(--text) calc(100% - 28px), transparent); }
+/* a scrolling strip fades the edge that cuts its tabs with every scroller's edge fade (.ui-scroll, R-scroll-9) */
 @media (prefers-reduced-motion: reduce) { .ui-tab { transition: none; } }
 
 /* ───────────── search field: the title bar's command centre (a button) and the palette's field (an input) ─────────────

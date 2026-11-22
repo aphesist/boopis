@@ -1,4 +1,5 @@
-/* The scroll area: every scroller in the app is one, so every scrollbar is the design system's (components.css, "scroll area").
+/* The scroll area: every scroller in the app is one, so every scrollbar and every cut edge is the design system's (components.css,
+   "scroll area"): where more lies beyond an edge, the content fades out over --scroll-fade (scroll-edges.ts keeps the flags).
    A module puts `scrollClass(o)` (or the template) on its scroller and declares no overflow or scrollbar of its own; the guard
    (`kit.guard.test.ts`) fails on a module stylesheet that does. */
 import { attrs, cx, esc } from '../core/dom';
@@ -15,6 +16,9 @@ export interface ScrollOpts {
   bare?: U<boolean>;
   /** the scroller ends at a curved corner of its container: the track stops short of the curve by the container's --r-outer */
   inset?: U<'end' | 'both'>;
+  /** its edges fade with strips of its ground that its view draws, not with the kit's mask: a conversation, whose foot lies under
+   *  the composer and the dock (R-scroll-9) */
+  ground?: U<boolean>;
 }
 export interface ScrollHtmlOpts extends ScrollOpts {
   body?: U<string>; class?: U<string>; tag?: U<string>;
@@ -24,7 +28,7 @@ export interface ScrollHtmlOpts extends ScrollOpts {
 /** the variants the UI lab draws */
 export const scrollVariants = { axis: SCROLL_AXES, bare: [false, true], inset: [undefined, 'end', 'both'] } as const;
 
-export const scrollClass = (o: ScrollOpts = {}): string => cx('ui-scroll', o.axis && o.axis !== 'y' && 'ui-scroll--' + o.axis, o.bare && 'ui-scroll--bare', o.inset && 'ui-scroll--inset-' + o.inset);
+export const scrollClass = (o: ScrollOpts = {}): string => cx('ui-scroll', o.axis && o.axis !== 'y' && 'ui-scroll--' + o.axis, o.bare && 'ui-scroll--bare', o.inset && 'ui-scroll--inset-' + o.inset, o.ground && 'ui-scroll--ground');
 
 export function scroll(o: ScrollHtmlOpts = {}): string {
   const tag = o.tag ?? 'div';

@@ -1,6 +1,7 @@
 /* the session view: the conversation column and its composer. Turns come from the provider's conversation feed
    (a snapshot, then events: a turn added, a step added, a turn finished, the blank answered). A turn is the library's
    entry, marked for the keyboard (KEYMAP section 3.2): data-hx-turn, roving tabindex, an accessible name. */
+import { followZone } from '../chat/follow-zone';
 import { emit, on } from '../../core/bus';
 import { $, el, frag, isMac, reduced } from '../../core/dom';
 import { provide } from '../../core/registry';
@@ -390,7 +391,7 @@ export function toConversation(): void { const t = turnsEls().find((x) => x.tabI
 export function mountView(root: HTMLElement): void {
   VIEW.root = root;
   root.classList.add('ss-view');
-  VIEW.scroll = el('div', { class: 'ss-scroll ui-scroll' });
+  VIEW.scroll = el('div', { class: 'ss-scroll ' + ui.scrollClass({ ground: true }) });
   VIEW.findAnchor = el('span', { class: 'ss-find-anchor', 'aria-hidden': 'true' });
   VIEW.col = el('div', { class: 'ss-col', role: 'feed', 'aria-label': 'Conversation' });
   VIEW.scroll.append(VIEW.col);
@@ -419,7 +420,7 @@ export function mountView(root: HTMLElement): void {
     const users = turnsEls().filter((t) => TURN.get(t)?.kind === 'user'), u = users.pop();
     if (u) { e.preventDefault(); c.setValue(TURN.get(u)?.text ?? ''); c.focus(); }
   });
-  new ResizeObserver(() => root.style.setProperty('--ss-comp-h', host.offsetHeight + 'px')).observe(host);
+  followZone(host, () => VIEW.scroll, () => root, '--ss-comp-h')();
   requestAnimationFrame(() => c.focus());
   provide('stop', (d) => { if (d.tab !== 'session' || !VIEW.running) return false; sessions().stop(VIEW.current); return true; });
   provide('find', (d) => (d.tab === 'session' ? openFind() : false));

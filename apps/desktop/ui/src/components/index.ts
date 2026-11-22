@@ -37,6 +37,7 @@ import type { StackOpts } from './stack';
 import { tooltip } from './tooltip';
 import { hydrate, hydrateOne } from './wire';
 import { scrollClass } from './scroll';
+import { scrollEdges } from './scroll-edges';
 import { codeHTML, everyoneHTML, inlineHTML, plainHTML, markdownHTML, mentionHandles, mentionHTML, mentionOutsideHTML, mentionsOutside, pathCandidate, pathCandidates, pathHTML, resolveMentions, splitBlocks, upgradePaths } from './markdown';
 import { arrive, codeOf, markdown as markdownEl, streamMarkdown, wireMarkdown } from './md-view';
 import { copyText } from './clipboard';
@@ -99,7 +100,7 @@ const modelRoute = (text: string, o?: ModelOpts): HTMLElement => frag(routeHTML(
 
 export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
-  ...factories, legend, keys, inline, scrollClass,
+  ...factories, legend, keys, inline, scrollClass, scrollEdges,
   markdown, copyText,
   hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, composer, card,
   hold: Object.assign(holdElement, { wire: wireHold }),

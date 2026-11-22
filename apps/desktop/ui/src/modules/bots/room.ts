@@ -19,7 +19,8 @@ import { openSettings, toggleSettings } from './settings';
 import { checkClips, watchClips } from './clips';
 import { renderGlance } from './glance';
 import { outsideDescription, outsideRoomMark } from './outside';
-import { arrival, atEnd, dropPending, entryActs, followZone, pendingEntry, updatePending } from './ledger';
+import { arrival, atEnd, dropPending, entryActs, pendingEntry, updatePending } from './ledger';
+import { followZone } from '../chat/follow-zone';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 
 const bots = () => data().bots;
@@ -60,7 +61,7 @@ export function mountView(root: HTMLElement): void {
   nb.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.bots.length && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); openBot(S.sel); focusConversation(); } });
 }
 function buildRoom(): void {
-  const scroll = el('div', { class: 'bt-scroll ui-scroll' });
+  const scroll = el('div', { class: 'bt-scroll ' + ui.scrollClass({ ground: true }) });
   const col = el('div', { class: 'bt-col' });
   const presence = el('header', { class: 'bt-presence' });
   const log = el('div', { class: 'bt-log', role: 'log', 'aria-label': 'Messages' });
@@ -76,7 +77,7 @@ function buildRoom(): void {
   buildComposer(zone);
   /* a live bot cannot be messaged yet: no composer, rather than one that sends nowhere */
   zone.hidden = !!data().info.unavailable['bots.send'];
-  followZone(zone, () => S.scroll, () => S.viewRoot)();
+  followZone(zone, () => S.scroll, () => S.viewRoot, '--bt-composer-h')();
   S.follow = gentleFollow(() => S.presence, 0.45);
 }
 

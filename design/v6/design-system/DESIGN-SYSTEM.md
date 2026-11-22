@@ -710,13 +710,23 @@ under the pointer.
   wells, diffs and terminal output (sideways). Never on the window, a card, a row, a tooltip or a toast. No scroller
   inside another on the same axis.
 - **R-scroll-7** A horizontal scroller is only code, a diff, terminal output, a wide table or a tab strip. A tab strip
-  hides its bar (`scrollbar-width: none` and `::-webkit-scrollbar { display: none }`) and shows a 28px fade at the edge
-  that has more (`mods.css .mod-tabs[data-more]`).
+  hides its bar (`scrollbar-width: none` and `::-webkit-scrollbar { display: none }`) and fades the edge that has more,
+  like every scroller (R-scroll-9).
 - **R-scroll-8** Every inner scroller sets `overscroll-behavior: contain`. A scroller with no focusable child is a tab
   stop with a label, so the keyboard can scroll it (the dock's log does this). Programmatic scrolling is instant under
   reduced motion.
-- **R-scroll-9** Two edge cues only: the ground strip that fades in above the composer, and a tab strip's 28px fade. A
-  fixed head is separated from its scroller by its hairline at all times, never by a shadow that appears on scroll.
+- **R-scroll-9** A scroller never cuts its content with a straight edge (Owner decision, 22 November 2026: "a straight up
+  cut should never happen", amending "two edge cues only"). Where more lies beyond an edge, the content fades out over
+  `--scroll-fade` (16px) at that edge; at its start and at its end nothing lies beyond, so nothing fades. It belongs to the
+  scroll area, so every scroller has it with nothing to opt into: `.ui-scroll` is masked by the flags `scroll-edges.ts`
+  keeps (`data-more-top`, `-bottom`, `-left`, `-right`), on any ground, with the bar's own column left out of the mask so
+  the thumb never fades. The conversations are the one variant (`.ui-scroll--ground`, `scrollClass({ ground: true })`):
+  their foot lies under the composer and the dock, so a strip of their ground lies over everything from the composer's top
+  to the window's foot, faded in over `--scroll-fade` above it (nothing ever shows behind the composer or the dock), and a
+  head pinned inside the scroller fades what passes under it the same way once it is scrolled. A strip, not a mask, there:
+  a mask whose edge moves with the dock's lift is the most expensive thing in a dock morph on WebKitGTK. Still no scroll
+  shadows: a fixed head is separated from its scroller by its hairline or this fade, never by a shadow that appears on
+  scroll.
 
 ## 8. Shape
 

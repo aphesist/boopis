@@ -19,7 +19,8 @@
      native             no unthemed native control (select, date, colour, range, file, number, checkbox and radio drawn
                         by the engine, progress, meter)
      scrollbar          every scroller has the system's scrollbar: a ::-webkit-scrollbar rule (WebKitGTK ignores
-                        scrollbar-width) no wider than 8 px and a thumb in --bg-4
+                        scrollbar-width) no wider than 8 px and a thumb in --bg-4; and fades an edge it is scrolled off
+                        (R-scroll-9): the edge flags match its position and it is masked (or a conversation's ground)
    And two helpers for the stability check: `signature(root)` (the DOM's structure, for render-twice) and
    `sampler(root, {orbs})` (frames of opacity, visibility and boxes during an interaction, plus nodes replaced). */
 (() => {
@@ -656,6 +657,17 @@
         const overflowY = isRoot ? e.scrollHeight > innerHeight + 1 : /auto|scroll/.test(s.overflowY) && e.scrollHeight > e.clientHeight + 1;
         const overflowX = isRoot ? false : /auto|scroll/.test(s.overflowX) && e.scrollWidth > e.clientWidth + 1;
         if (!overflowY && !overflowX) continue;
+        /* the edge fade (R-scroll-9): a scroller scrolled off an edge fades that edge. The flags are scroll-edges.ts's and the
+           mask the kit's; a conversation (.ui-scroll--ground) fades with strips of its ground instead (session.css, bots.css) */
+        if (!isRoot && e.classList.contains('ui-scroll')) {
+          const more = { top: overflowY && e.scrollTop > 1, bottom: overflowY && e.scrollTop + e.clientHeight < e.scrollHeight - 1, left: overflowX && e.scrollLeft > 1, right: overflowX && e.scrollLeft + e.clientWidth < e.scrollWidth - 1 };
+          const wrong = Object.entries(more).filter(([k, v]) => v !== e.hasAttribute('data-more-' + k)).map(([k]) => k);
+          if (wrong.length) add('scrollbar', e, 'its edge-fade flags do not match where it is scrolled (' + wrong.join(', ') + '): scroll-edges.ts did not see it (R-scroll-9)');
+          else if (Object.values(more).some(Boolean) && !e.classList.contains('ui-scroll--ground')) {
+            const m = s.maskImage || s.webkitMaskImage || '';
+            if (!m || m === 'none') add('scrollbar', e, 'more lies beyond an edge, and the edge is a straight cut: no fade (R-scroll-9)');
+          }
+        }
         const bar = rules.bar.filter((r) => matchesBase(e, r.base));
         const thumb = rules.thumb.filter((r) => matchesBase(e, r.base));
         const hidden = bar.some((r) => r.display === 'none' || r.width === '0px');

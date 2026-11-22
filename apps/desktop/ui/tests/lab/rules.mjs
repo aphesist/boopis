@@ -14,7 +14,7 @@ export const CHECKS = {
   'tokens.spacing':    { title: 'Spacing is on the scale', ds: '7', rule: 'R-space-1', severity: 'fail', how: 'computed padding and gap against --sp-*, --pad-*, --gutter, --composer-* and the values of R-space-2\'s named exceptions' },
   'tokens.static':     { title: 'No hard-coded values in the source', ds: '3 ("tokens, never literals")', rule: 'R-colour-1', severity: 'fail', how: 'literal colours, font sizes and radii in CSS and TS outside the token files' },
   'native':            { title: 'No unthemed native controls', ds: '14.25, 14.21', rule: 'R-native-1', severity: 'fail', how: 'select, date, colour, range, file and number inputs, engine-drawn checkboxes and radios, progress, meter' },
-  'scrollbar':         { title: 'Scrollers use the system\'s scrollbar', ds: '4.1 (--bg-4 is the thumb), components.css', rule: 'R-scroll-1', severity: 'fail', how: 'a ::-webkit-scrollbar rule no wider than 8px and a --bg-4 thumb on every scroller (WebKitGTK ignores scrollbar-width)' },
+  'scrollbar':         { title: 'Scrollers use the system\'s scrollbar', ds: '4.1 (--bg-4 is the thumb), components.css', rule: 'R-scroll-1', severity: 'fail', how: 'a ::-webkit-scrollbar rule no wider than 8px and a --bg-4 thumb on every scroller (WebKitGTK ignores scrollbar-width), and a fade on every edge it is scrolled off' },
   'brand':             { title: 'The app never names its engine', ds: 'owner rule (19 November 2026), ADR-0031', rule: 'R-copy-8', severity: 'fail', how: 'rendered text, aria-label, aria-description, title, placeholder and tooltips name the engine (any case), outside a plugin store item (BRAND_ALLOW)' },
   'copy':              { title: 'No engine values in the interface', ds: '2', rule: 'R-copy-9', severity: 'fail', how: 'rendered text with undefined, NaN, [object Object], a stack trace, an hx.* code or JSON (code and output wells excluded)' },
   'roles':             { title: 'Colour roles', ds: '4.3, 9.1', rule: 'R-colour-3', severity: 'fail', how: 'no text in --brass; no --bg-0 on --bg-0 and no --bg-3 on --bg-3' },
@@ -26,7 +26,7 @@ export const CHECKS = {
 /** every rule a check covers, beyond its main one */
 export const ALSO = {
   'geometry.contain': ['R-corner-4', 'R-corner-8'], concentric: ['R-corner-3', 'R-corner-5', 'R-corner-9', 'R-kbd-2'], overlay: ['R-float-1', 'R-float-3', 'R-elev-6', 'R-copy-7', 'R-tip-2', 'R-tip-4'],
-  'tokens.computed': ['R-colour-1', 'R-type-1', 'R-type-2', 'R-type-4', 'R-corner-1', 'R-copy-1'], copy: ['R-copy-9', 'R-copy-6'], roles: ['R-colour-3', 'R-colour-4'], scrollbar: ['R-scroll-1', 'R-scroll-2', 'R-scroll-3', 'R-scroll-6', 'R-scroll-8'], 'geometry.hscroll': ['R-overflow-4', 'R-scroll-7', 'R-a11y-6'],
+  'tokens.computed': ['R-colour-1', 'R-type-1', 'R-type-2', 'R-type-4', 'R-corner-1', 'R-copy-1'], copy: ['R-copy-9', 'R-copy-6'], roles: ['R-colour-3', 'R-colour-4'], scrollbar: ['R-scroll-1', 'R-scroll-2', 'R-scroll-3', 'R-scroll-6', 'R-scroll-8', 'R-scroll-9'], 'geometry.hscroll': ['R-overflow-4', 'R-scroll-7', 'R-a11y-6'],
   native: ['R-native-1', 'R-native-3', 'R-field-4', 'R-select-1'], 'geometry.target': ['R-a11y-2'], brand: ['R-copy-8'], axe: ['R-a11y-1', 'R-a11y-3', 'R-a11y-8'], 'geometry.center': ['R-type-11'], 'tokens.spacing': ['R-space-1', 'R-space-2'], 'geometry.clip': ['R-overflow-1'], 'stability.interact': ['R-motion-5', 'R-motion-8']
 };
 for (const [k, v] of Object.entries(ALSO)) CHECKS[k].rules = v;

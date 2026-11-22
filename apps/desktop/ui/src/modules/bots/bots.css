@@ -98,12 +98,18 @@
   bottom: calc(var(--hx-dock-space, 0px) + var(--composer-gap));
   transform: translateX(-50%);
 }
-/* the lines above the composer (the hint, who works next, the held messages) are bare text: the view's ground lies under the whole
-   zone, faded in above it, so a conversation scrolled behind never shows through them */
-.bt-composer-zone::before {
-  content: ''; position: absolute; z-index: -1; inset: calc(var(--sp-5) * -1) 0 0; pointer-events: none;
-  background: linear-gradient(to bottom, transparent, var(--bg-2) var(--sp-5));
+/* the conversation's edges (R-scroll-9; .ui-scroll--ground). Its foot lies under the composer and the dock, so a strip of the
+   room's ground lies over everything from the top of the composer's zone (the hint, who works next, the held messages, the
+   composer) to the window's foot, faded in over --scroll-fade above it: nothing shows behind the composer, its lines or the dock,
+   and an entry read to the end sits --sp-5 above the zone however the zone grows (followZone, ledger.ts). The head pinned at the
+   top fades what passes under it the same way, once the room is scrolled. */
+.bt-room::after {
+  content: ''; position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; pointer-events: none;
+  height: calc(var(--bt-composer-h, 96px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--scroll-fade));
+  background: linear-gradient(to bottom, transparent, var(--bg-2) var(--scroll-fade));
 }
+.bt-presence::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: var(--scroll-fade); background: linear-gradient(var(--bg-2), transparent); pointer-events: none; opacity: 0; }
+.bt-scroll[data-more-top] .bt-presence::after { opacity: 1; }
 
 /* ================================================================ new bot (bots' own form) */
 .bt-new-scroll { padding-bottom: calc(var(--hx-dock-space, 0px) + var(--sp-6)); }

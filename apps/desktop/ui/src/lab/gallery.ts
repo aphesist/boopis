@@ -76,6 +76,7 @@ export function startGallery(): void {
   document.body.style.margin = '0';
   document.body.append(root);
   ui.squircle.start();
+  ui.scrollEdges.start();
   ui.tooltip.enable();
 
   const set = (patch: Partial<View>): void => { v = { ...v, ...patch }; writeView(v); draw(); };
