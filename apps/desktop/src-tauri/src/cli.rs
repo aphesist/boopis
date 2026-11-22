@@ -14,6 +14,8 @@ use crate::brand::{Art, Caps, ColorLevel, Ink, Tone};
 use crate::renderer::{self, Gpu, RendererReport, Session};
 use crate::{frame_rate, gpu, runtime, startup, webkit};
 
+pub mod connectors;
+
 /// The name people type.
 pub const PRODUCT: &str = "boopis";
 
@@ -44,6 +46,8 @@ pub enum Command {
     Version,
     /// `doctor`.
     Doctor,
+    /// `connectors ...`: the arguments after the word.
+    Connectors(Vec<String>),
     /// `--help`.
     Help,
     /// An option or command that does not exist, or one that takes no more arguments.
@@ -61,6 +65,7 @@ pub fn parse(args: &[String]) -> Command {
     match first.as_str() {
         "--version" | "-V" | "version" if rest_ok => Command::Version,
         "doctor" if rest_ok => Command::Doctor,
+        "connectors" => Command::Connectors(args[1..].to_vec()),
         "--help" | "-h" | "help" if rest_ok => Command::Help,
         "--version" | "-V" | "version" | "doctor" | "--help" | "-h" | "help" => {
             Command::Unknown(args[1].clone())
@@ -129,6 +134,9 @@ pub fn dispatch(args: &[String], resource_dir: &dyn Fn() -> Option<PathBuf>) -> 
         Command::Version => version_lines(&out, version, &facts(resource_dir().as_deref())),
         Command::Doctor => doctor_lines(&out, version, &gather(resource_dir().as_deref())),
         Command::Help => help_lines(&out, version),
+        Command::Connectors(rest) => {
+            return Some(connectors::run(&rest, resource_dir().as_deref()));
+        }
         Command::Unknown(what) => {
             eprintln!(
                 "{PRODUCT}: {what} is not something {PRODUCT} understands. Try {PRODUCT} --help for what it does."
@@ -296,6 +304,9 @@ fn help_lines(out: &Out, version: &str) -> Vec<String> {
         ),
         format!("  {PRODUCT} --version  print the version and what the app carries"),
     ]
+    .into_iter()
+    .chain(connectors::usage(PRODUCT))
+    .collect()
 }
 
 /// What `--version` shows beside the version.
