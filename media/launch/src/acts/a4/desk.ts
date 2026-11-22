@@ -253,7 +253,7 @@ export async function b14(ctx: ActCtx): Promise<void> {
   /* the camera: half a beat at rest, then it glides right and down to the dock and the app (camera spring) */
   const C = { x: s.DX + (V ? 540 : 960), y: s.DY + (V ? 960 : 540) };
   const glide = springDuration('camera');
-  cam.to({ x: C.x, y: C.y, zoom: 1 }, { at: b(1.5) - glide, dur: glide, ease: springEase('camera') });
+  cam.to({ x: C.x, y: C.y, zoom: 1 }, { at: b(0.5), dur: glide, ease: springEase('camera') });   /* 97% there by +1.5 */
   /* as the cursor goes to the other app, the camera leans in on it for the typing; on send it settles back, so the
      message is seen landing in boopis (camera spring). No slow drift: over this much type it crawls the frame sub-pixel,
      which reads as a dissolve */
@@ -364,8 +364,8 @@ export async function b16(ctx: ActCtx): Promise<void> {
   const h = s.hold, hc = { x: h.x + h.w / 2, y: h.y + h.h / 2 };
   /* the push: Hold to approve fills ~60% of the frame (90% in 9:16), on the camera spring */
   const Z = (V ? 0.9 * 1080 : 0.6 * 1920) / h.w;
-  const push = g.beats(1);
-  cam.to({ x: hc.x, y: hc.y, zoom: Z }, { at: b(0), dur: push, ease: springEase('camera', push) });
+  const push = springDuration('camera');              /* the whole spring: 97% in by +1 beat, never a jump at its end */
+  cam.to({ x: hc.x, y: hc.y, zoom: Z }, { at: b(0), dur: push, ease: springEase('camera') });
   const full = b(3);                                   /* 19.1: complete, and the cut */
   const press = full - 1;                              /* exactly 60 frames of fill before it */
   cam.drift({ x: hc.x + h.w * 0.06, zoom: Z * 1.035 }, { at: b(0) + push, dur: full - b(0) - push });

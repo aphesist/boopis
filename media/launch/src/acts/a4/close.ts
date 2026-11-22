@@ -211,7 +211,7 @@ export async function b18(ctx: ActCtx): Promise<void> {
     const Zp = target / r.s;
     const fy = box.y + 477 * box.s + 0.1 * target;   /* her eyes about on the wordmark's line */
     const push = hook ? 0.45 : 0.55;
-    cam.to({ x: nx, y: ny - (fy - stage.height / 2) / Zp, zoom: Zp }, { at: w.start, dur: push, ease: springEase('camera', push) });
+    cam.to({ x: nx, y: ny - (fy - stage.height / 2) / Zp, zoom: Zp }, { at: w.start, dur: push, ease: travel });
     if (pk) {
       onlyIn(film, pk, w.start, Infinity, { from: w.start });
       for (const l of pk.querySelectorAll<HTMLElement>('.film-line')) lineExit(film, l, w.start + g.f(hook ? 8 : 2));
