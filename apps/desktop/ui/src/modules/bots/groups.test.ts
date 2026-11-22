@@ -74,7 +74,7 @@ describe('a group’s thread', () => {
     expect(entries.slice(1).map((e) => e.querySelector('.bt-who-name')?.textContent)).toEqual(['atlas', 'nina', 'kai'].map((n) => provider.bots.snapshot().bots.find((b) => b.id === n)!.name));
   });
   it('draws the members as stacked orbs in the header', () => {
-    expect(document.querySelector('.bt-group .bt-ghead .cd-stack')).not.toBeNull();
+    expect(document.querySelector('.bt-group .bt-ghead .ui-stack')).not.toBeNull();
   });
   it('sends what is written to the group, and each member can be addressed with a chip', async () => {
     const chip = [...document.querySelectorAll<HTMLElement>('.bt-group .ui-chip')][1]!;

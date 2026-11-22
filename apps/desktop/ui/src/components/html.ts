@@ -14,6 +14,7 @@ import { signinButton } from './signin-button';
 import { arrowHTML, isKnownModel, markHTML, modelHTML, routeHTML } from './model-mark';
 import type { ModelRef } from './model-mark';
 import { orbHtml } from './orb';
+import { stack } from './stack';
 import { modelEntries, selectHTML, toEntries } from './select-html';
 import type { SelectEntry } from './select-html';
 import { scroll } from './scroll';
@@ -315,5 +316,5 @@ function child(o: ChildOpts): string {
 export const html = {
   icon, keys, kbd, combo, comboKbds, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
   orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, select: selectHTML, setRow, setHead, setSection, empty, toast, tip, mod,
-  scroll, tabs, search, tipBody, badge, input, child, signinButton
+  scroll, tabs, search, tipBody, badge, input, child, signinButton, stack
 };

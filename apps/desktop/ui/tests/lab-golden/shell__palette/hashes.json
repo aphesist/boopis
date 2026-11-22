@@ -55,7 +55,7 @@
   "h": 544
  },
  "many-results-scrolling@typewriter": {
-  "sha": "48ee6f22a854b85bbcaabcafcb2da6f78174f1d3",
+  "sha": "6773f3c34cd6437d6524b8361be7cb1de9d1acb0",
   "w": 624,
   "h": 544
  },
@@ -85,7 +85,7 @@
   "h": 544
  },
  "open@catalog": {
-  "sha": "8496810dd17fb6bd10fb205315d7d6ffa89aac68",
+  "sha": "9faacb2405df6f9b3e0ad2c9baec5325acaf236c",
   "w": 624,
   "h": 544
  },
@@ -100,7 +100,7 @@
   "h": 544
  },
  "row-hover@bone": {
-  "sha": "344a6241ac05f070ac3b7ed780e179e5c1320b03",
+  "sha": "d90a6893aabeba28570d6996b9ea5ce36e1de560",
   "w": 624,
   "h": 544
  },
@@ -115,17 +115,17 @@
   "h": 544
  },
  "row-hover@typewriter": {
-  "sha": "5ee7588fd4b5c4f07eaebff27ab4de3185202a32",
+  "sha": "f3578228ed65ad6563cd8aa4e751958d0cfec0a5",
   "w": 624,
   "h": 544
  },
  "typed-query@bone": {
-  "sha": "c47a8397f593719c960a762ba05e79aca0335c40",
+  "sha": "6b70b5a5aead5aa88f2c5506f581038bc6ba243e",
   "w": 624,
   "h": 244
  },
  "typed-query@catalog": {
-  "sha": "d0316c7fffb91272d0e71a811f9398d1d5f280a0",
+  "sha": "b032a0277374ab4912f7ab7920c7277f64aa1548",
   "w": 624,
   "h": 244
  },
@@ -135,7 +135,7 @@
   "h": 244
  },
  "typed-query@typewriter": {
-  "sha": "1e5042af28627bff89eb3b450e54e359981f0a45",
+  "sha": "4535367fba2ecbd95d3f492ad56533731123f6c4",
   "w": 624,
   "h": 244
  }

@@ -4,7 +4,7 @@
 import { emit } from '../../core/bus';
 import { $, el, esc, frag, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { ui } from '@boopis/ui';
+import { lookOf, repaintLook, ui } from '@boopis/ui';
 import type { MenuItem } from '@boopis/ui';
 import { data } from '../../data';
 import type { ApprovalMessage, Bot, BotsEvent, ThreadMessage } from '../../data';
@@ -394,6 +394,10 @@ export function onBotsEvent(ev: BotsEvent, handlers: { announce: () => void }): 
       if (!ev.bot.madeOutside) delete b.madeOutside;   /* a key that is absent from the event is gone, not unchanged: the store exists now */
       Object.assign(b, { ...ev.bot, cfg: b.cfg });
       Object.assign(b.cfg, ev.bot.cfg, { channels: { ...ev.bot.cfg.channels }, approvals: { ...ev.bot.cfg.approvals } });
+      /* its look may have changed (the plugin's record read after the first roster, a look saved in the editor, a profile
+         re-looked outside boopis): every orb of it already drawn, here, in the dock, a card or a group's stack, takes it
+         now. Only what differs is written, so an unchanged look costs nothing and a new one morphs. */
+      repaintLook(document, b.id, lookOf(b));
       updateRow(b.id);
       if (b.id === S.sel) { refreshPresence(); if (b.info && S.view === 'bot' && !thread(b.id).length && S.log) S.log.replaceChildren(renderGlance(b, openSession)); }
       if (hadAttn !== !!b.attention) handlers.announce();

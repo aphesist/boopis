@@ -20,42 +20,42 @@
   "h": 872
  },
  "group-chat-is-off@bone": {
-  "sha": "47ae914c55ab671e0f134d701a576b5b28b1b037",
+  "sha": "c8af9a40948d279c5f4a32001392b7b8729743f4",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@catalog": {
-  "sha": "c80cfa49b4850f4278aa5f9828cf6ed2972bd90c",
+  "sha": "23766cac94119ee6d1fb361016e324962112c365",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@graphite": {
-  "sha": "872dabae0e621ab2e95ca41d1a383e1386113324",
+  "sha": "207f489e3102ec5e389d4c98cd28afdcc59fa191",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@typewriter": {
-  "sha": "a60eeeafda622a30d03e7e993a258246a90ed6bc",
+  "sha": "a4ab77385cf853dad8c95856bd5df82b1029ff5b",
   "w": 1196,
   "h": 872
  },
  "members-picked@bone": {
-  "sha": "b36923f5022c1629dd7fb40dea46edabdfdc0957",
+  "sha": "3556e4189ba5c25b50c3d6ff4b8a5eaf9c11b735",
   "w": 1196,
   "h": 872
  },
  "members-picked@catalog": {
-  "sha": "a541bf1e781212a3e0ba285d770af49eb76346b6",
+  "sha": "cf66909d2260470ca590f74ed2035f153e6dbc74",
   "w": 1196,
   "h": 872
  },
  "members-picked@graphite": {
-  "sha": "0105f3599c5b3d1c97a5321d33144f9bb311e77f",
+  "sha": "6a4b46adcb584c393321db72c843d6549c749757",
   "w": 1196,
   "h": 872
  },
  "members-picked@typewriter": {
-  "sha": "489c624aa8c9a2834122be595cb0e19fd812175b",
+  "sha": "c2b8d365f3a266a9417e9a6f118e2d2d975fa1da",
   "w": 1196,
   "h": 872
  },
@@ -80,22 +80,22 @@
   "h": 872
  },
  "typical@bone": {
-  "sha": "8385f3f17a6aac2c1dccbcc8811167a8a977d414",
+  "sha": "05cfd03d8a3d752f81dd7459e083812a1bdff928",
   "w": 1196,
   "h": 872
  },
  "typical@catalog": {
-  "sha": "63f2e9aed73fefba86ccf7088ca261896f0f1caa",
+  "sha": "570e39d3e60ca45a2cb863d9edc4a9154c31b9f8",
   "w": 1196,
   "h": 872
  },
  "typical@graphite": {
-  "sha": "df8cda35d82fa7fc292bc448d994e8e045d98706",
+  "sha": "d518189b567ced4d1bd4104ac1207ef710ff527e",
   "w": 1196,
   "h": 872
  },
  "typical@typewriter": {
-  "sha": "c04a68a3373a38c0e71687a56e4bb84b39c813b4",
+  "sha": "b51b70a6680300cd9b1c0e7ecb05c48bf4298dc1",
   "w": 1196,
   "h": 872
  }

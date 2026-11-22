@@ -3,7 +3,7 @@
    not answer is `null` or empty and is shown as unknown: nothing here invents a model, a schedule or a session. */
 import type { CronJobRow, ProfileRow, ProfilesDescribeResult, SessionListRow } from '../../vendor/hermes-shared/gateway-contract.generated';
 import { OWN_SETTINGS } from '../../data/bot-catalog';
-import { lookFor } from '../../data/looks';
+import { lookOf } from '@boopis/ui';
 import type { Bot, BotCapability, BotConfig, BotInfo, BotJob, BotSession } from '../../data/types';
 import { whenLabel } from '../map';
 
@@ -14,7 +14,7 @@ export const ACTIVE_SECONDS = 90;
 
 /** a teammate's own record as the plugin reads it (`plugin.boopis.bots.read`) */
 export interface OwnRecord {
-  look?: { shape?: string; color?: string; eyes?: unknown };
+  look?: { shape?: unknown; color?: unknown; eyes?: unknown };   /* as written: by boopis, or by hand for a profile made outside it */
   settings?: { gov?: string; cap?: string; workspace?: string };
   approvals?: Record<string, boolean>;
 }
@@ -113,10 +113,9 @@ export function botFrom(k: Known, nowSeconds: number): Bot {
   const { row, plugin, detail } = k;
   const name = botName(row);
   const own = plugin?.record ?? null;
-  /* the stored `eyes` is left in the record and ignored here: eyes follow the bot's state, never a stored look */
-  const own_ = own?.look ?? {};
-  const base = lookFor(name);
-  const look = { shape: own_.shape ?? base.shape, color: own_.color ?? base.color };
+  /* the one resolver (`lookOf`): the record's shape and colour where they are valid, else the name's. The stored `eyes` is left in
+     the record and ignored: eyes follow the bot's state, never a stored look */
+  const look = lookOf({ name, shape: own?.look?.shape, color: own?.look?.color });
   const model = detail ? modelLabel(detail.provider, detail.model) : modelLabel(row.provider, row.model);
   const running = runningFrom(row, nowSeconds);
   const jobs = k.jobs;

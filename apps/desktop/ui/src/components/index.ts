@@ -33,6 +33,7 @@ import { shape } from './shape';
 import { squircle } from './squircle';
 import { toast } from './toast';
 import type { SigninButtonOpts } from './signin-button';
+import type { StackOpts } from './stack';
 import { tooltip } from './tooltip';
 import { hydrate, hydrateOne } from './wire';
 import { scrollClass } from './scroll';
@@ -75,7 +76,8 @@ const factories = {
   row: make<RowOpts, HTMLLIElement>(html.row),
   group: make<Parameters<typeof html.group>[0]>(html.group),
   child: make<ChildOpts, HTMLElement>(html.child),
-  signinButton: make<SigninButtonOpts, HTMLButtonElement>(html.signinButton)
+  signinButton: make<SigninButtonOpts, HTMLButtonElement>(html.signinButton),
+  stack: make<StackOpts>(html.stack)
 };
 const legend = (parts: readonly MeasurePart[], fmt?: (n: number) => string): HTMLElement => frag(html.legend(parts, fmt));
 const keys = (k: string): HTMLElement => frag(html.keys(k));
@@ -100,8 +102,13 @@ export type { SegElement } from './wire';
 export { fileChip } from './composer';
 export type { FileChipOpts } from './composer';
 /* runtime pieces the app's modules and host wire (the orbs' engine, the card layer's factory, the first run's moments) */
-export { oc, startGlance } from './orb';
+export { oc, startGlance, paintLook, repaintLook } from './orb';
 export type { OrbOpts } from './orb';
+/* a bot's look: the one resolver every orb is drawn through, the name's default, the picker's palettes and the dice */
+export { lookOf, lookFor, lookAttrs, sameLook, shapeOf, colourOf, colourName, rollLook, SWATCHES, SHAPES, DRAFT_COLOR } from './look';
+export type { Look, LookSource, RollOpts } from './look';
+export { namesList, stackSplit } from './stack';
+export type { StackOpts } from './stack';
 export { holdOutsideDock, releaseOutsideDock } from './orb-runtime';
 export { orbState, setupOrbs } from './orb-worker/host';
 export { setCardFactory } from './card-registry';

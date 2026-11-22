@@ -10,7 +10,7 @@
   "h": 872
  },
  "a-long-name@graphite": {
-  "sha": "8348f79a95d328bca88fd523d1bf0f7039bdd94f",
+  "sha": "3fa4e62cc17d889f053b50d34a474e1d27edbe48",
   "w": 1196,
   "h": 872
  },
@@ -20,7 +20,7 @@
   "h": 872
  },
  "atlas-a-thread@bone": {
-  "sha": "b713bb8b9dbc74105e2d9aec740883305a492c98",
+  "sha": "82faf7cfb14e4aeca439c87dcd6f1dfc29597de7",
   "w": 1196,
   "h": 872
  },
@@ -40,7 +40,7 @@
   "h": 872
  },
  "composer-attach-tooltip@bone": {
-  "sha": "eeb48750026c0dcd24e568b2197696d6080cbfab",
+  "sha": "4efb6f2f29562a5c6213750189804cd5ce330e1e",
   "w": 1196,
   "h": 872
  },
@@ -50,27 +50,27 @@
   "h": 872
  },
  "composer-attach-tooltip@graphite": {
-  "sha": "6360bde55571997211897282991e4dc33e289639",
+  "sha": "add083843a203244efdb81040c58fde7d4f369be",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@typewriter": {
-  "sha": "257fd5ccf168386d0d91739d29be49b8fe6a2988",
+  "sha": "b27993045c7cba28eeb8931f427ac92b20a7fca5",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@bone": {
-  "sha": "404651db036ce65221a650daff0683df4f7b470b",
+  "sha": "b713bb8b9dbc74105e2d9aec740883305a492c98",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@catalog": {
-  "sha": "d41d6e1a875a01a0fb93247fee4d2fd80bfacb70",
+  "sha": "57d921d54d38f789e93792e5bdab9267dd9c51cd",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@graphite": {
-  "sha": "667f47da3db50069315e851882c2a4a4f9bbd3f2",
+  "sha": "7c2fe232ba9e4df714db1828cc3a85886f6a44b1",
   "w": 1196,
   "h": 872
  },
@@ -79,18 +79,38 @@
   "w": 1196,
   "h": 872
  },
+ "kai-its-record-read-after-the-roster@bone": {
+  "sha": "5e173ed7e136dbb58afcbfba983dbd61eb15ada8",
+  "w": 1196,
+  "h": 872
+ },
+ "kai-its-record-read-after-the-roster@catalog": {
+  "sha": "3c02a50edc582553f43dc41e8e5f59632af57ac9",
+  "w": 1196,
+  "h": 872
+ },
+ "kai-its-record-read-after-the-roster@graphite": {
+  "sha": "8e85a09abbb93e3736592e6c8b93793b1c6b922a",
+  "w": 1196,
+  "h": 872
+ },
+ "kai-its-record-read-after-the-roster@typewriter": {
+  "sha": "735ee9e8752168d93c7c4d18786e2658623b63b3",
+  "w": 1196,
+  "h": 872
+ },
  "kai-no-thread-yet@bone": {
-  "sha": "06f1886a312c4de4799b2deb0af4b7c97ab1c15f",
+  "sha": "16dc5e77b3b5010d39b9d38e09efedea005fe06c",
   "w": 1196,
   "h": 872
  },
  "kai-no-thread-yet@catalog": {
-  "sha": "22f6fd087ba239e3a7a31169112e6b89243cc2a5",
+  "sha": "f5c3fc6f04c2f588249efefd68037cdd962ae502",
   "w": 1196,
   "h": 872
  },
  "kai-no-thread-yet@graphite": {
-  "sha": "4e4d85f342e627e4aa61c9483c7051446d2dbc56",
+  "sha": "3fd08d6e4296821b5540a8bcc8ef1ec6c595583f",
   "w": 1196,
   "h": 872
  },
@@ -100,12 +120,12 @@
   "h": 872
  },
  "live-bot-a-long-name@bone": {
-  "sha": "077db350abb67a7f55c0c5da960ef75ae8b00b53",
+  "sha": "ce145329029d579449b9514a6d800b2cc99fd2cd",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-long-name@catalog": {
-  "sha": "4cc6b4df06ae8cab1ecca6012d57db0ada4fdf37",
+  "sha": "ef5b67167a992f5186348f4ab676c00025c43d97",
   "w": 1196,
   "h": 872
  },
@@ -115,22 +135,22 @@
   "h": 872
  },
  "live-bot-a-long-name@typewriter": {
-  "sha": "8a1ea38bc620e0f1fe624bd13e6acd24f4b98817",
+  "sha": "d35c20eecda16b3eb9588587b81eac0777e48ebb",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-session-open-with-a-line-the-app-says@bone": {
-  "sha": "d63cb6af7352c5816129aee6aa3037b629d251d8",
+  "sha": "b79ec504ab53ae8d60d4b4de269f28047cb7ae9f",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-session-open-with-a-line-the-app-says@catalog": {
-  "sha": "c12dccbef3595aba5767a6fffd92087a74073434",
+  "sha": "6a02f6bc968c7fc15fe6f162e90b731c6ca988a2",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-session-open-with-a-line-the-app-says@graphite": {
-  "sha": "05a2f15c0e6fec068c28f0cc318495009785d232",
+  "sha": "7747f1924a8f915c1a703079aa258cfe79fdf8d6",
   "w": 1196,
   "h": 872
  },
@@ -140,12 +160,12 @@
   "h": 872
  },
  "live-bot-recent-sessions-and-a-live-composer@bone": {
-  "sha": "e700655c3b130889e48d8e8d74a65073ea9fa11a",
+  "sha": "fbc63819d31d1f9ee420ead60460e0beea9061a1",
   "w": 1196,
   "h": 872
  },
  "live-bot-recent-sessions-and-a-live-composer@catalog": {
-  "sha": "ff6fe24985f50d6a169e7300dac8da2d49ff2163",
+  "sha": "79299d36e5765dc4d13b2f7416791c5de837443b",
   "w": 1196,
   "h": 872
  },
@@ -160,22 +180,22 @@
   "h": 872
  },
  "made-outside-boopis@bone": {
-  "sha": "65253517b25d5cef0dfc0020db6167dd40855d43",
+  "sha": "520b021a76918163bc5266f01fba1289d02929d2",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@catalog": {
-  "sha": "666030de132b04d5e42eab2b0bce5bb104c4b556",
+  "sha": "e523204476dbd52a06c9121fcc069a9615a4b339",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@graphite": {
-  "sha": "834a3a80e7a5c7c262542df2f268263468bf3e8a",
+  "sha": "e33cdcc7d3d7a5719e856f4a34968c20aada7dcc",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@typewriter": {
-  "sha": "864c48e8e703935dce59b6a554dc1decdb7bd934",
+  "sha": "b5a19665cc377e4c923f898e7e62f4ddcfd9304b",
   "w": 1196,
   "h": 872
  },
@@ -185,7 +205,7 @@
   "h": 872
  },
  "nina-an-approval@catalog": {
-  "sha": "baf17548e616933aaa9003e44ed2dca7dd311071",
+  "sha": "c1a6be17bbcfc9d92bd3e035a01e49351f5cf415",
   "w": 1196,
   "h": 872
  },
@@ -210,7 +230,7 @@
   "h": 872
  },
  "no-bots-at-all@graphite": {
-  "sha": "8609bf0f8efe172db1727e09e9bd8bcc27055a37",
+  "sha": "0b5230ee93d2d0f7cc1e5cdc864192fc2f6d6386",
   "w": 1196,
   "h": 872
  },

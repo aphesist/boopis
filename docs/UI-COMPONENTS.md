@@ -138,6 +138,13 @@ changed most is that it is now the kit's component, one markup for both fields a
 - **Fixed:** Settings > Keyboard laid the keymap's groups in a two-column grid meant for bare `dt`/`dd` and drew each
   row's line twice; it now lists the groups as the shortcut sheet does.
 
+### Orbs and member stacks — one each
+- `orb` draws every bot, through the one look resolver (`lookOf` in `components/look.ts`): the saved look, else the
+  name's. `stack` draws several bots overlapped (a group's members in the sidebar's row, the group room's header and
+  who is replying; a card's origin when teammates ask together).
+- **Fixed:** the card layer's own `.cd-stack` and the group code's call into it are the kit's `stack` now; the group
+  row's stack overflowed its 16px lead over the group's name, and "+N" lay under the last orb.
+
 ### Dialogs and sheets — one look, shell-owned
 - Settings, the shortcut sheet (`.hx-dialog`), the palette, the bot settings sheet (`.ui-panel` with a concave corner),
   popovers (`ui.popover`). R-dialog-1 to 6 hold. The dialog markup is the page's own (`index.html`); its body is a

@@ -544,6 +544,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       const { gov, cap, workspace, approvals } = patch.cfg ?? {};
       const own = { ...(gov ? { gov } : {}), ...(cap !== undefined ? { cap } : {}), ...(workspace ? { workspace } : {}) };
       if (Object.keys(own).length || approvals) admin.saveOwn(id, { cfg: { ...own, ...(approvals ? { approvals } : {}) } }).catch((e: unknown) => { log.error('the setting was not saved', e); });
+      if (patch.look) admin.saveOwn(id, { look: patch.look }).catch((e: unknown) => { log.error('the look was not saved', e); });
     },
     create() { throw new Error('a bot is a folder of its own and is made with `admin.create`'); },
     archive(id) { admin.archive(id).catch((e: unknown) => { log.error('the bot was not archived', e); }); },

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { BotsEvent } from '../../data';
 import type { GatewayClient, GatewayEvent } from '../gateway';
 import { NeedsConfirmation } from '../../data/confirm';
-import { lookFor } from '../../data/looks';
+import { lookFor } from '@boopis/ui';
 import { createLiveBots } from './bots';
 import { madeOutside } from './map-bots';
 import type { LiveBots } from './bots';
@@ -305,6 +305,18 @@ describe('the settings sheet edits the real profile, and shows the diff first', 
     // a governed bot is not moved to a model governed mode will not run
     await expect(fresh.bots.source.admin!.save('atlas', { model: 'main/fake-b' })).rejects.toThrow(/Governed mode needs a frontier model/);
     expect(h.main.calls.some((c) => c.method === 'profiles.configure')).toBe(false);
+  });
+  it('a look changed in the editor is written with bots.write, shape and colour only, and a profile made outside gets its store', async () => {
+    const { h, bots, events } = await open();
+    expect(botOf(bots, 'nina')).toMatchObject({ ...lookFor('Nina'), madeOutside: true });   /* no record: the name's look */
+    events.length = 0;
+    bots.source.update('nina', { look: { shape: 'cloud', color: '#9b5cf6' } });
+    await bots.settled(); await new Promise((r) => setTimeout(r, 0));
+    expect(h.main.calls.at(-1)).toEqual({ method: 'plugin.boopis.bots.write', params: { name: 'nina', look: { shape: 'cloud', color: '#9b5cf6' } } });
+    expect(h.own['nina']).toEqual({ look: { shape: 'cloud', color: '#9b5cf6' } });
+    const ev = events.find((e) => e.type === 'bot') as { bot: { id: string; shape: string; color: string; madeOutside?: true } };
+    expect(ev.bot).toMatchObject({ id: 'nina', shape: 'cloud', color: '#9b5cf6' });
+    expect('madeOutside' in ev.bot).toBe(false);
   });
 });
 

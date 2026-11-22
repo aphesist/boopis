@@ -189,6 +189,13 @@ describe('the mock’s archived bots (the design without Hermes)', () => {
     expect(createMockProvider({ simulate: false }).bots.snapshot().bots.some((b) => b.madeOutside)).toBe(false);
     expect(createMockProvider({ simulate: false, fixtures: ['outside'] }).bots.snapshot().bots.filter((b) => b.madeOutside).map((b) => b.id)).toEqual(['sage']);
   });
+  it('a look changed in the editor comes back as the bot with that shape and colour, and a bot made outside loses its mark', () => {
+    const p = createMockProvider({ simulate: false, fixtures: ['outside'] });
+    const seen: unknown[] = [];
+    p.bots.subscribe((e) => { if (e.type === 'bot') seen.push({ id: e.bot.id, shape: e.bot.shape, color: e.bot.color, outside: !!e.bot.madeOutside }); });
+    p.bots.update('sage', { look: { shape: 'flower', color: '#3b82f6' } });
+    expect(seen).toEqual([{ id: 'sage', shape: 'flower', color: '#3b82f6', outside: false }]);
+  });
 });
 
 describe('the empty roster fixture', () => {

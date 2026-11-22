@@ -3,7 +3,7 @@
 import { esc, isMac } from '../../core/dom';
 import { kbdLabel } from '../../core/keys';
 import { $$, } from '../../core/dom';
-import { ui } from '@boopis/ui';
+import { lookOf, ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, ThreadMessage, Wait } from '../../data';
 import { LOG_N, PAGE_NAME, S, X, attCount, botById, clock, ctxPct, motion, rendered } from './ctx';
@@ -131,7 +131,7 @@ function tileHTML(p: { id: string; on: boolean }, i: number): string {
   const name = PAGE_NAME[p.id] ?? p.id, first = i === 0, last = i === S.pages.length - 1;
   const onCount = S.pages.filter((x) => x.on).length;   /* the arrangement's own count: a page whose part is absent is still arranged */
   let glyph = '';
-  if (p.id === 'bots') glyph = S.bots.slice(0, 6).map((b) => `<i style="background:${esc(b.color)}"></i>`).join('');
+  if (p.id === 'bots') glyph = S.bots.slice(0, 6).map((b) => `<i style="background:${esc(lookOf(b).color)}"></i>`).join('');
   if (p.id === 'run') glyph = ui.html.ladder({ stations: run().ladder, current: run().current, ground: 'var(--dock-bg)' });
   if (p.id === 'wait') glyph = (S.waits.length ? ui.html.dot('attention') : '') + `<span class="dk-tile-sub">${S.waits.length}</span>`;
   if (p.id === 'sched') glyph = `<span class="dk-tile-sub">${S.sched.length} runs</span>`;
