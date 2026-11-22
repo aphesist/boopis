@@ -14,7 +14,9 @@ mod route;
 pub mod ws;
 
 pub use call::RpcFailure;
-pub use hub::{ConnectionId, Declare, FrameSink, Hub, LinkStatus, Opened, TapEvent};
+pub use hub::{
+    ConnectionId, Declare, Direction, FeedFrame, FrameSink, Hub, LinkStatus, Opened, TapEvent,
+};
 pub use metrics::ProxyStats;
 
 #[cfg(test)]

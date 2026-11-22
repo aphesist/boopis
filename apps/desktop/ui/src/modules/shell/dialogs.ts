@@ -16,6 +16,8 @@ import { logger } from '../../core/log';
 import type { WindowControlsPref } from '../../core/settings';
 import { describeDesktop } from '../../host/window';
 import { onWindowChange, setWindowPref, windowInfo, windowPref } from './window';
+import { mountLocalApi } from './local-api';
+import { tauriLocalApiBridge } from '../../host/local-api';
 
 const log = logger('settings');
 
@@ -41,7 +43,7 @@ function showSettingsSection(section?: string): void {
   const sec = SETTINGS_SECTIONS.some(([v]) => v === section) ? (section as string) : 'general';
   $<SegElement>('.hx-dtabs', d).select(sec);
   for (const p of $$('.hx-dpanel', d)) p.hidden = p.id !== 'hx-dpanel-' + sec;
-  if (sec === 'general') { mountWindowControls(); mountDiagnostics(); }
+  if (sec === 'general') { mountWindowControls(); mountDiagnostics(); mountLocalApiSection(); }
   if (sec === 'models') showModels();
   if (sec === 'connectors') showConnectors();
   if (sec === 'appearance' && !themeMounted) { mountThemePanel($('#hx-dpanel-appearance')); themeMounted = true; mountOrbGrow(); }
@@ -103,6 +105,12 @@ function mountWindowControls(): void {
   say();
   onWindowChange(say);
   seg.addEventListener('ui:change', (e) => { setWindowPref((e as CustomEvent<{ value: string }>).detail.value as WindowControlsPref); });
+}
+/* Settings > General > Local API (ADR-0045), in the desktop app only: the switch, the address, the token file's path and Rotate. */
+function mountLocalApiSection(): void {
+  if (!inTauri()) return;
+  const panel = $('#hx-dpanel-general'); if (!panel) return;
+  mountLocalApi(panel, tauriLocalApiBridge());
 }
 /* Settings > General > Diagnostics, in the desktop app only (the page has no host to ask): the renderer report to copy and
    WebKitGTK's own GPU page. Nothing in the main chrome; the report is read when a button is pressed. */

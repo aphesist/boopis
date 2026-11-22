@@ -115,6 +115,11 @@ pub fn dispatch(args: &[String], resource_dir: &dyn Fn() -> Option<PathBuf>) -> 
         }
     };
     let args = args.as_slice();
+    // `boopis connect` (docs/LOCAL-API.md): how to dial the engine's gateway, for a client of the owner's.
+    if args.first().map(String::as_str) == Some("connect") {
+        console::attach_to_parent();
+        return Some(crate::local_api::connect::run(&args[1..], resource_dir));
+    }
     let command = parse(args);
     if !needs_console(&command) {
         return None;
@@ -293,6 +298,9 @@ fn help_lines(out: &Out, version: &str) -> Vec<String> {
         format!("  {PRODUCT}            start the app"),
         format!(
             "  {PRODUCT} doctor     check this machine: session, GPUs, renderer, WebKitGTK, runtime and folders"
+        ),
+        format!(
+            "  {PRODUCT} connect    say how to dial the engine's gateway, for another client of yours (--json, --ticket)"
         ),
         format!("  {PRODUCT} --version  print the version and what the app carries"),
     ]

@@ -74,6 +74,9 @@ const COMMANDS: &[&str] = &[
     "provider_signin_cancel",
     "provider_sign_out",
     "provider_signin_status",
+    "local_api_status",
+    "local_api_set_enabled",
+    "local_api_rotate_token",
 ];
 
 fn main() {

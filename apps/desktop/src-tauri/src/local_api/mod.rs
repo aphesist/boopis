@@ -1,0 +1,263 @@
+//! The local API for other clients (`ADR-0045`, `docs/LOCAL-API.md`): presence, notifications and approvals across every bot
+//! and every client, a way to say something to a bot or a room, and an opt-in loopback endpoint that serves them to the
+//! owner's own tools. The host computes all of it from what the engine already says; nothing in the engine or the plugin
+//! changes, and nothing that is a secret has a place in any type here.
+//!
+//! - [`model`]: the contract's values; [`presence`], [`approvals`], [`roster`], [`feed`]: the rules, pure and tested;
+//! - [`service`]: asks the engine (through [`engine`]) and acts for clients;
+//! - [`wire`], [`http`], [`token`]: the endpoint, its checks and its token file;
+//! - [`audit`], [`scrub`], [`look`]: the record of who answered, the secret scrubber, the default look.
+
+pub mod approvals;
+pub mod audit;
+pub mod connect;
+pub mod engine;
+#[cfg(test)]
+mod endpoint_tests;
+pub mod feed;
+pub mod http;
+pub mod look;
+pub mod model;
+pub mod presence;
+pub mod roster;
+pub mod scrub;
+pub mod service;
+pub mod token;
+pub mod wire;
+
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
+use serde::{Deserialize, Serialize};
+use specta::Type;
+use tokio_util::sync::CancellationToken;
+
+use self::engine::Hubbed;
+use self::feed::Feed;
+use self::http::Server;
+use self::service::Service;
+use crate::config::ApiLimits;
+use crate::gateway::Hub;
+
+/// The file that remembers the owner's switch. Off until the owner turns it on.
+const SWITCH_FILE: &str = "local-api.json";
+
+#[derive(Serialize, Deserialize, Default)]
+struct Switch {
+    #[serde(default)]
+    enabled: bool,
+}
+
+/// What Settings shows.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+pub struct LocalApiStatus {
+    /// The owner's switch.
+    pub enabled: bool,
+    /// Whether the endpoint is listening now.
+    pub running: bool,
+    /// Its address (`http://127.0.0.1:<port>`), when it is.
+    pub url: Option<String>,
+    /// The token file's path (the path, never the token), when the endpoint is on.
+    pub token_file: Option<String>,
+    /// How many event streams are open.
+    pub streams: u32,
+    /// The contract's version.
+    pub version: u32,
+    /// Why the endpoint is off though the switch is on, in words.
+    pub problem: Option<String>,
+}
+
+struct Running {
+    server: Server<Hubbed>,
+}
+
+/// The local API of this app run.
+pub struct LocalApi {
+    feed: Arc<Feed>,
+    service: Arc<Service<Hubbed>>,
+    dir: PathBuf,
+    limits: ApiLimits,
+    running: tokio::sync::Mutex<Option<Running>>,
+    problem: std::sync::Mutex<Option<String>>,
+    cancel: CancellationToken,
+}
+
+/// Read the owner's switch.
+fn read_switch(dir: &Path) -> bool {
+    std::fs::read_to_string(dir.join(SWITCH_FILE))
+        .ok()
+        .and_then(|t| serde_json::from_str::<Switch>(&t).ok())
+        .is_some_and(|s| s.enabled)
+}
+
+fn write_switch(dir: &Path, enabled: bool) -> std::io::Result<()> {
+    std::fs::create_dir_all(dir)?;
+    let text = serde_json::to_string(&Switch { enabled }).map_err(std::io::Error::other)?;
+    std::fs::write(dir.join(SWITCH_FILE), text)
+}
+
+impl LocalApi {
+    /// The local API over the app's engine links. Nothing listens and nothing is polled until the owner turns it on or a
+    /// reader of the feed exists.
+    #[must_use]
+    pub fn new(handle: tauri::AppHandle, dir: PathBuf, limits: &ApiLimits) -> Arc<Self> {
+        let feed = Feed::new(audit::Audit::under(&dir), limits.clone());
+        let engine = Arc::new(Hubbed::new(handle, limits.engine_wait));
+        let service = Service::new(feed.clone(), engine, limits.clone());
+        Arc::new(Self {
+            feed,
+            service,
+            dir,
+            limits: limits.clone(),
+            running: tokio::sync::Mutex::new(None),
+            problem: std::sync::Mutex::new(None),
+            cancel: CancellationToken::new(),
+        })
+    }
+
+    /// The feed (the app's own readers and the hubs' forwarders use it).
+    #[must_use]
+    pub fn feed(&self) -> &Arc<Feed> {
+        &self.feed
+    }
+
+    /// Start the service's loop, and the endpoint when the owner's switch is on. Called once, at start.
+    pub async fn start(self: &Arc<Self>) {
+        tokio::spawn(self.service.clone().run(self.cancel.clone()));
+        if read_switch(&self.dir) {
+            if let Err(e) = self.listen().await {
+                tracing::warn!(error = %e, "the local API did not start");
+                *self.problem.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(e);
+            }
+        } else {
+            // A token file left by a crash of a run that had it on is not left lying about.
+            token::Files::under(&self.dir).remove();
+        }
+    }
+
+    /// Listen with a fresh token and write the files that tell a local client where and how.
+    async fn listen(&self) -> Result<(), String> {
+        let mut running = self.running.lock().await;
+        if running.is_some() {
+            return Ok(());
+        }
+        let tok = token::Token::mint().map_err(|e| format!("boopis could not make a token: {e}"))?;
+        let files = token::Files::under(&self.dir);
+        files.write_token(&tok).map_err(|e| format!("boopis could not write the token file: {e}"))?;
+        if !files.token_is_private() {
+            files.remove();
+            return Err("The token file would be readable by other users, so the endpoint stays off.".to_owned());
+        }
+        self.feed.never_say(vec![tok.expose().to_owned()]);
+        let server = Server::start(self.service.clone(), tok, self.limits.clone())
+            .await
+            .map_err(|e| {
+                files.remove();
+                format!("boopis could not open the endpoint: {e}")
+            })?;
+        if let Err(e) = files.write_endpoint(&server.addr().to_string(), model::API_VERSION) {
+            server.stop();
+            files.remove();
+            return Err(format!("boopis could not write the endpoint file: {e}"));
+        }
+        tracing::info!(addr = %server.addr(), "the local API is listening");
+        *running = Some(Running { server });
+        *self.problem.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = None;
+        Ok(())
+    }
+
+    /// The status, as Settings shows it.
+    pub async fn status(&self) -> LocalApiStatus {
+        let running = self.running.lock().await;
+        let files = token::Files::under(&self.dir);
+        LocalApiStatus {
+            enabled: read_switch(&self.dir),
+            running: running.is_some(),
+            url: running.as_ref().map(|r| format!("http://{}", r.server.addr())),
+            token_file: running.as_ref().map(|_| files.token_path().display().to_string()),
+            streams: running.as_ref().map_or(0, |r| u32::try_from(r.server.streams()).unwrap_or(u32::MAX)),
+            version: model::API_VERSION,
+            problem: self.problem.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone(),
+        }
+    }
+
+    /// The owner's switch.
+    ///
+    /// # Errors
+    /// The words that say why the endpoint did not start.
+    pub async fn set_enabled(&self, enabled: bool) -> Result<LocalApiStatus, String> {
+        write_switch(&self.dir, enabled).map_err(|e| format!("boopis could not save the setting: {e}"))?;
+        if enabled {
+            if let Err(e) = self.listen().await {
+                *self.problem.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(e.clone());
+                return Err(e);
+            }
+        } else {
+            let mut running = self.running.lock().await;
+            if let Some(r) = running.take() {
+                r.server.stop();
+            }
+            token::Files::under(&self.dir).remove();
+            self.feed.never_say(Vec::new());
+            *self.problem.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = None;
+        }
+        Ok(self.status().await)
+    }
+
+    /// Replace the token: the old one stops working at once, and every open stream ends.
+    ///
+    /// # Errors
+    /// The endpoint is off, or the file could not be written.
+    pub async fn rotate(&self) -> Result<LocalApiStatus, String> {
+        {
+            let running = self.running.lock().await;
+            let Some(r) = running.as_ref() else {
+                return Err("The endpoint is off; there is no token to rotate.".to_owned());
+            };
+            let tok = token::Token::mint().map_err(|e| format!("boopis could not make a token: {e}"))?;
+            let files = token::Files::under(&self.dir);
+            files.write_token(&tok).map_err(|e| format!("boopis could not write the token file: {e}"))?;
+            self.feed.never_say(vec![tok.expose().to_owned()]);
+            r.server.rotate(tok);
+        }
+        Ok(self.status().await)
+    }
+
+    /// Stop everything (the app is closing).
+    pub async fn shutdown(&self) {
+        self.cancel.cancel();
+        if let Some(r) = self.running.lock().await.take() {
+            r.server.stop();
+        }
+        token::Files::under(&self.dir).remove();
+    }
+}
+
+/// Forward what a link carries to the feed, while somebody listens (nothing is copied from a link otherwise).
+pub fn forward(feed: &Arc<Feed>, profile: &str, hub: &Arc<Hub>) {
+    let (feed, profile, hub) = (feed.clone(), profile.to_owned(), hub.clone());
+    tokio::spawn(async move {
+        let mut wanted = feed.wanted();
+        loop {
+            while *wanted.borrow_and_update() == 0 {
+                if wanted.changed().await.is_err() {
+                    return;
+                }
+            }
+            let mut rx = hub.feed();
+            loop {
+                tokio::select! {
+                    got = rx.recv() => match got {
+                        Ok(frame) => feed.on_frame(&profile, &frame),
+                        Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {}
+                        Err(tokio::sync::broadcast::error::RecvError::Closed) => return,
+                    },
+                    changed = wanted.changed() => {
+                        if changed.is_err() { return; }
+                        if *wanted.borrow() == 0 { break; }
+                    }
+                }
+            }
+        }
+    });
+}

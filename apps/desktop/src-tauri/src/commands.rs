@@ -49,6 +49,8 @@ pub struct Json(#[specta(type = specta_typescript::Unknown)] pub serde_json::Val
 
 /// What the host holds for the commands.
 pub struct AppState {
+    /// The local API for other clients (`ADR-0045`): presence, approvals, notifications and the opt-in endpoint.
+    pub local_api: Arc<crate::local_api::LocalApi>,
     /// Hermes discovery and lifecycle.
     pub supervisor: Arc<Supervisor>,
     /// The gateway proxies.
@@ -1421,4 +1423,40 @@ pub async fn provider_signin_status(
     way: String,
 ) -> std::result::Result<crate::providers::ProviderState, HostError> {
     Ok(signins(&state).status(&way).await?)
+}
+
+/// The local API's state, as Settings shows it: the owner's switch, whether the endpoint listens, its address, the path of
+/// the token file (never the token), and how many streams are open.
+#[tauri::command]
+#[specta::specta]
+pub async fn local_api_status(
+    state: State<'_, AppState>,
+) -> std::result::Result<crate::local_api::LocalApiStatus, HostError> {
+    Ok(state.local_api.status().await)
+}
+
+/// The owner's switch for the loopback endpoint. Off by default. Turning it on mints a token and writes
+/// `<app data>/client-token` (mode 0600); turning it off closes the endpoint and deletes the file.
+///
+/// Errors: `hx.config.invalid` with the reason in words (the token file could not be made private, the address could not
+/// be opened).
+#[tauri::command]
+#[specta::specta]
+pub async fn local_api_set_enabled(
+    state: State<'_, AppState>,
+    enabled: bool,
+) -> std::result::Result<crate::local_api::LocalApiStatus, HostError> {
+    state.local_api.set_enabled(enabled).await.map_err(|e| Error::Os(e).into())
+}
+
+/// Replace the endpoint's token: the old one stops working at once and every open stream ends. The new one is in the token
+/// file only; no command returns it.
+///
+/// Errors: `hx.config.invalid` when the endpoint is off.
+#[tauri::command]
+#[specta::specta]
+pub async fn local_api_rotate_token(
+    state: State<'_, AppState>,
+) -> std::result::Result<crate::local_api::LocalApiStatus, HostError> {
+    state.local_api.rotate().await.map_err(|e| Error::Os(e).into())
 }
