@@ -11,10 +11,10 @@ import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Wait } from '../../data';
 import { PAGE_NAME, S, X, botById, flags, motion, presence, shownPages, rowNow, EASE, clamp } from './ctx';
-import { cancelOut, flipDots, hideTip, markFocus, morph, renderDots, resetMag, retarget, showView, slideNow, slideTo, stopSlide, syncFoot, emitDock, updateDots } from './engine';
+import { cancelOut, flipDots, hideTip, markFocus, morph, placeNow, renderDots, resetMag, retarget, showView, slideNow, slideTo, stopSlide, syncFoot, emitDock, updateDots } from './engine';
 import type { MorphOpts } from './engine';
 import { lookRow, setOrbLife } from './orbs';
-import { fillCards, refreshBot, renderMins, renderView, viewKey, relocateLive } from './views';
+import { fillCards, refreshBot, renderMins, renderView, viewKey } from './views';
 import { rove, syncRoving } from './roving';
 
 const announce = (m: string): void => { try { ui.announce(m); } catch { /* the library is required at mount */ } };
@@ -90,7 +90,7 @@ export function goPage(id: string, opts: { dir?: number; focusDot?: boolean; foc
   fillCards(nv);
   syncRoving();
   X.curView = nv;
-  relocateLive();
+  placeNow();
   setOrbLife();
   const wIn = inSec.offsetWidth;
   outSec.hidden = false;

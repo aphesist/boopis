@@ -17,10 +17,11 @@ import {
   K_DOT, K_SINK, K_SLAB, PAGE_IDS, S, X, botById, flags, motion, presence, readRadius, rendered, shownPages, snapS, spring
 } from './ctx';
 import type { DockBot } from './ctx';
+import { initLayer, adoptOrb, dropOrb, placeOrbs } from './layer';
 import { E, cancelFlips, cxNow, emitDock, focusDock, kick, morph, paint, renderDots, resetMag, retarget, shellVar, showView, stopSlide } from './engine';
 import { lookRow, setOrbLife } from './orbs';
 import { patchHTML } from './reconcile';
-import { makeOrb, paintSession, refreshBot, relocateLive, renderAll, renderMins, renderView, viewKey, costHTML, fmtDur, meterHTML } from './views';
+import { makeOrb, paintSession, refreshBot, renderAll, renderMins, renderView, viewKey, costHTML, fmtDur, meterHTML } from './views';
 import { closeCard, goPage, onCardAction, onCardState, onWaitAdded, onWaitResolved, openCard, setMode, setOn, toggleSetting } from './controller';
 import { appear, followSetting, leaveEmpty, markParts, settleParts } from './arrival';
 import { changeOf, pageOf, presenceOf, sessionStarted } from './presence';
@@ -111,7 +112,7 @@ function wireData(): void {
       const b: DockBot = { ...ev.bot, paused: false };
       S.bots.push(b);
       S.threads[b.id] ??= [];
-      X.orbs.set(b.id, makeOrb(b));
+      addOrb(b);
       const after = presence(), how = changeOf(before, after);
       if (how === 'appear') { appear(); return; }          /* the first bot: the dock rises in with it */
       morph(() => { if (before.bots !== after.bots) settleParts(); renderAll(); }, { render: [] });
@@ -124,7 +125,7 @@ function wireData(): void {
       S.bots.splice(i, 1);
       S.sched = S.sched.filter((x) => x.bot !== ev.id);
       S.rowIdx = Math.min(S.rowIdx, S.bots.length);
-      const drop = (): void => { X.orbs.get(ev.id)?.remove(); X.orbs.delete(ev.id); };
+      const drop = (): void => { dropOrb(ev.id); X.orbs.delete(ev.id); };
       if (how === 'leave') {
         /* the last bot, and no session: the dock leaves with what it shows, and the bot's orb goes once it is out of sight */
         leaveEmpty(() => { S.card = null; drop(); settleParts(); renderAll(); fitRow(); });
@@ -137,7 +138,7 @@ function wireData(): void {
       const b = botById(ev.bot.id); if (!b) return;
       b.state = ev.bot.state; b.attention = ev.bot.attention; b.activity = ev.bot.activity; b.role = ev.bot.role;
       /* the look too (the plugin's record read late, a look saved in the editor): the dock's copy follows, and its live orb
-         (kept in X.orbs, in a slot or not) and every copy of it on the row take it at once */
+         (kept in X.orbs and the orb layer, on a slot or not) and every copy of it on the row take it at once */
       const look = lookOf(ev.bot);
       b.shape = look.shape; b.color = look.color;
       repaintLook(X.orbs.get(b.id), b.id, look); repaintLook(X.root, b.id, look);
@@ -183,7 +184,7 @@ function build(slotEl: HTMLElement): void {
     `<div class="dk-view ${VIEW_CLASS[k]}" data-view="${k}"${k === 'bots:card' ? ' role="group" aria-labelledby="dk-card-name"' : ''} hidden></div>`).join('');
   root.innerHTML = `<svg class="dk-shape" aria-hidden="true" focusable="false"><path/></svg>
     <div class="dk-stage">
-      ${PAGE_IDS.map((p) => `<section class="dk-page" id="dk-p-${p}" data-page="${p}" role="tabpanel" aria-labelledby="dk-tab-${p}" hidden>${views(p)}</section>`).join('')}
+      ${PAGE_IDS.map((p) => `<section class="dk-page" id="dk-p-${p}" data-page="${p}" role="tabpanel" aria-labelledby="dk-tab-${p}" hidden>${views(p)}${p === 'bots' ? '<div class="dk-orbs" aria-hidden="true"></div>' : ''}</section>`).join('')}
       <section class="dk-page" id="dk-p-edit" data-page="edit" role="group" aria-labelledby="dk-edit-h" hidden>${views('edit')}</section>
       <div class="dk-foot">
         <span class="dk-foot-ctl">${ui.html.iconButton({ icon: 'sliders', label: 'Arrange dock pages', tip: 'Arrange pages', size: 's', tipPos: 'top', class: 'dk-foot-btn', attrs: { 'data-act': 'customise' } })}</span>
@@ -200,8 +201,11 @@ function build(slotEl: HTMLElement): void {
   X.dotsEl = root.querySelector('.dk-dots') as HTMLElement;
   X.downBtn = root.querySelector('.dk-down') as HTMLElement;
   for (const p of [...PAGE_IDS, 'edit']) X.pageEls[p] = root.querySelector(`#dk-p-${p}`) as HTMLElement;
-  for (const b of S.bots) X.orbs.set(b.id, makeOrb(b));
+  initLayer(root.querySelector('.dk-orbs') as HTMLElement);
+  for (const b of S.bots) addOrb(b);
 }
+/** the bot's live orb: made once, connected once, in the orb layer (layer.ts) */
+function addOrb(b: DockBot): void { const w = makeOrb(b); X.orbs.set(b.id, w); adoptOrb(b.id, w); }
 
 function readGrow(): void {
   const on = appState.orbGrow !== false;
@@ -238,7 +242,7 @@ function mount(slotEl: HTMLElement): void {
   fitRow();
   X.curView = showView(viewKey());
   flags.mounted = true;
-  relocateLive();
+  placeOrbs();
   setOrbLife();
   retarget(true);
   if (startOff) { snapS(E.sinkS); }

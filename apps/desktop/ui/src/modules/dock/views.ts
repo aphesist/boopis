@@ -6,7 +6,7 @@ import { $$, } from '../../core/dom';
 import { lookOf, ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, ThreadMessage, Wait } from '../../data';
-import { LOG_N, PAGE_NAME, S, X, attCount, botById, clock, ctxPct, motion, rendered, rowNow, fitIn } from './ctx';
+import { LOG_N, PAGE_NAME, S, X, attCount, botById, clock, ctxPct, motion, rowNow, fitIn } from './ctx';
 import type { DockBot } from './ctx';
 import { patchHTML } from './reconcile';
 import { setOrbLife } from './orbs';
@@ -23,22 +23,13 @@ const phrase = (b: Bot): string => st(b).word;
 export const botLabel = (b: Bot): string => ui.botLabel(b);
 /** a roster row shows the name and the state word only (no role), so its name holds exactly the visible text, in order (R-a11y-3) */
 const rowLabel = (b: Bot): string => `${b.name}, ${st(b).word}`;
-/** one library orb per bot; it renders at 80 so magnification stays crisp; the wrapper is what travels */
+/** one library orb per bot; it renders at 80 so magnification stays crisp. It is connected once, in the orb layer (layer.ts), and follows its slot */
 export const makeOrb = (b: Bot): HTMLElement => ui.orb(b, { size: 40, render: 80, flag: true });
 export const av = (id: string): (HTMLElement & Record<string, unknown>) | null => { const w = X.orbs.get(id); return w ? (w.querySelector('orb-avatar') as (HTMLElement & Record<string, unknown>) | null) : null; };
 const miniOrb = (b: Bot, size: number): string => ui.html.orb(b, { size, render: size * 2 });
+/** a slot is empty: the orb is in the layer, and sits where its slot is */
 const slot = (b: Bot): string => `<span class="dk-orb" data-k="orb:${b.id}" data-slot="orb:${b.id}"></span>`;
 
-export function relocateLive(): void {
-  for (const b of S.bots) {
-    const w = X.orbs.get(b.id); if (!w) continue;
-    const target = $$(`[data-slot="orb:${b.id}"]`, X.root).find((x) => !x.closest('.is-leaving') && rendered(x));
-    if (!target) continue;
-    if (w.parentNode !== target) target.prepend(w);
-    const o = parseFloat(getComputedStyle(target).getPropertyValue('--o'));
-    if (o > 0) w.style.setProperty('--o', String(o));
-  }
-}
 export function refreshBot(b: DockBot): void {
   const s = st(b), w = X.orbs.get(b.id), orb = av(b.id);
   const talking = X.composerEls.has(b.id) && X.composerEls.get(b.id)?.listening;   /* while you talk to it, it listens */
@@ -238,15 +229,17 @@ export function finish(el: HTMLElement, key: string): void {
   fillCards(el);
   syncRoving();
 }
-/* a card element is shared by the views that show it (the compact approval sits in nina's card and in the expanded
-   needs-you view), so every view that becomes visible takes its cards back */
-export function cardFor(w: Wait, size: string): HTMLElement {
-  const k = w.id + ':' + size;
+/* A card has one element for each place that shows it (the compact approval in nina's session is not the one in the expanded
+   needs-you view; they share a key, so the morph still carries one to the other). A card that moved between views was taken out
+   of the page and put back, and the orb inside it (its origin) is a worker's canvas, empty until the worker draws it again. A
+   card answered in one place is answered in the other by the provider (`removeWait`, `onWaitResolved`). */
+export function cardFor(w: Wait, size: string, at: 'list' | 'ask' = 'list'): HTMLElement {
+  const k = w.id + ':' + size + ':' + at;
   let el = X.cardEls.get(k);
   if (!el) {
     el = ui.card(w.kind, w.data as unknown as Record<string, unknown>, { size: size as 'compact' | 'mini', ground: 'dock' });
     el.dataset['wait'] = w.id;
-    el.dataset['k'] = 'card:' + k;
+    el.dataset['k'] = 'card:' + w.id + ':' + size;
     X.cardEls.set(k, el);
   }
   return el;
@@ -259,7 +252,8 @@ export function fillCards(el: HTMLElement | null): void {
   }
   for (const slotEl of $$('[data-card]', el)) {
     const w = S.waits.find((x) => x.id === slotEl.dataset['card']);
-    if (w && slotEl.firstElementChild !== cardFor(w, slotEl.dataset['size'] ?? 'compact')) slotEl.replaceChildren(cardFor(w, slotEl.dataset['size'] ?? 'compact'));
+    const c = w && cardFor(w, slotEl.dataset['size'] ?? 'compact', 'ask');
+    if (w && c && slotEl.firstElementChild !== c) slotEl.replaceChildren(c);
   }
   for (const slotEl of $$('[data-composer]', el)) {
     const c = composerFor(slotEl.dataset['composer'] ?? '');

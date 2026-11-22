@@ -4,17 +4,20 @@
 import { $$ } from '../../core/dom';
 import { LOOK_X, LOOK_Y, S, X, botById, motion, rendered } from './ctx';
 import { av, st } from './views';
+import { onCull, orbShows } from './layer';
 
 type OrbEl = HTMLElement & { lookAt?: (x?: number, y?: number) => void; poke?: (f?: number) => void; blink?: () => void };
+/** one bot's orb draws only while it is on a visible slot of the page showing (and in view of the roster that scrolls it) */
+function lifeOf(id: string): void {
+  const orb = av(id) as OrbEl | null; if (!orb) return;
+  const live = S.mode !== 'off' && S.mode !== 'minimal' && S.page === 'bots' && orbShows(id);
+  if (orb.hasAttribute('static') === live) { if (live) orb.removeAttribute('static'); else orb.setAttribute('static', ''); }
+  if (orb.getAttribute('mode') !== 'drift') orb.setAttribute('mode', 'drift');
+  if (!live && typeof orb.lookAt === 'function') orb.lookAt();
+}
+onCull(lifeOf);
 export function setOrbLife(): void {
-  for (const b of S.bots) {
-    const w = X.orbs.get(b.id), orb = av(b.id) as OrbEl | null; if (!orb || !w) continue;
-    const slotEl = w.parentElement;
-    const live = S.mode !== 'off' && S.mode !== 'minimal' && S.page === 'bots' && !!slotEl && rendered(slotEl) && !slotEl.closest('.is-leaving');
-    if (orb.hasAttribute('static') === live) { if (live) orb.removeAttribute('static'); else orb.setAttribute('static', ''); }
-    if (orb.getAttribute('mode') !== 'drift') orb.setAttribute('mode', 'drift');
-    if (!live && typeof orb.lookAt === 'function') orb.lookAt();
-  }
+  for (const b of S.bots) lifeOf(b.id);
   for (const o of $$('.dk-mini-orb orb-avatar[data-glance]', X.root)) {
     const vis = S.mode !== 'off' && rendered(o) && !o.closest('.is-leaving');
     if (o.hasAttribute('static') === vis) { if (vis) o.removeAttribute('static'); else o.setAttribute('static', ''); }

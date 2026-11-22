@@ -83,9 +83,22 @@
 /* the dots stay 10px to look at; each answers a pointer over the foot's full 24px height */
 .dk-dots .ui-pages__dot::after { content: ""; position: absolute; left: 0; right: 0; top: -7px; bottom: -7px; }
 
-/* ---------- orbs: a slot per view; the live library orb (.ui-orb) travels into the visible one ---------- */
+/* ---------- orbs: a slot per view (empty, sized by --o); the live library orb (.ui-orb) is in the orb layer and follows it ----------
+   The layer is a 0x0 point at the Bots page's bottom centre (the stage's origin), so a page that slides or fades takes its orbs
+   along. Each orb sits in a .dk-op, a 0x0 point at its centre that layer.ts moves by `translate` and `scale` (the slot's place, the
+   row's magnification, the roster's scroll); the orb itself is only played the slot's FLIP and entrance (`transform`, `opacity`).
+   Nothing in it takes the pointer: the slot's button under it does. */
 .dk-orb { position: relative; display: block; flex: none; width: calc(var(--o, 40) * 1px); height: calc(var(--o, 40) * 1px); }
-.dk-orb > .ui-orb { position: absolute; left: 0; top: 0; }
+.dk-orbs { position: absolute; left: 50%; bottom: 0; width: 0; height: 0; pointer-events: none; contain: layout; }
+.dk-op { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
+.dk-op[data-away] { visibility: hidden; }
+.dk-op > .ui-orb { position: absolute; left: calc(var(--o) * -.5px); top: calc(var(--o) * -.5px); margin: 0; pointer-events: none; }
+/* what the slot's place used to decide for the orb inside it */
+.dk-op > .ui-orb[data-in="min"] .ui-dot--flag { display: none; }   /* one attention dot for the pill, not one per 10px orb */
+.dk-op > .ui-orb:is([data-in="exp"], [data-in="strip"]) .ui-dot--flag { width: 6px; height: 6px; }
+/* the switcher's orb grows under the pointer or the keys (layer.ts sets data-hot: the button it sits on is not its parent) */
+.dk[data-grow] .dk-op > .ui-orb[data-in="strip"] { transition: scale var(--dur-1) var(--ease); }
+.dk[data-grow] .dk-op > .ui-orb[data-in="strip"][data-hot] { scale: 1.22; }
 .dk-mini-orb { display: block; flex: none; line-height: 0; cursor: pointer; }
 .dk-sub { color: var(--text-quiet); font-size: var(--fs-xs); }
 .dk-dim { color: var(--text-dim); }
@@ -98,6 +111,7 @@
 .dk-bot:focus-visible { outline-offset: 3px; }
 /* while the pointer is over the row the orbs are scaled every frame from script (magnification): each gets its own layer for exactly that long */
 .dk[data-mag] :is(.dk-bot, .dk-add) { will-change: transform; }
+.dk[data-mag] .dk-op { will-change: translate, scale; }
 .dk-add { align-self: flex-end; flex: none; width: var(--ctl-s); height: calc(var(--dock-orb) * 1px); display: grid; place-items: center; color: var(--text-strong); border-radius: var(--r-s); transform-origin: 50% 100%; transition: background-color var(--dur-1) var(--ease); --sq-bg: transparent; background: var(--sq-bg); }
 .dk-add:hover { --sq-bg: var(--hover); background: var(--sq-bg); }
 
@@ -105,7 +119,6 @@
 .dk-v-min { height: var(--ctl-s); padding: 0 var(--sp-2); display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); line-height: 1; white-space: nowrap; }
 .dk-v-min .dk-pillbtn { position: absolute; inset: 0; border-radius: calc(var(--ctl-s) / 2) calc(var(--ctl-s) / 2) 0 0; z-index: 1; }   /* the pill restores, and only that; R = h / 2 */
 .dk-mini { display: flex; align-items: center; gap: 5px; --o: 10; }
-.dk-mini .ui-dot--flag { display: none; }   /* one attention dot for the pill, not one per 10px orb */
 .dk-att { display: inline-flex; }
 .dk-v-min .dk-ladder .ui-ladder { --st: 4px; gap: 5px; }
 .dk-v-min .dk-time { min-width: 0; }
@@ -119,7 +132,6 @@
 .dk-v-bots-exp { padding: var(--sp-4) calc(var(--dock-pad-x) - var(--scroll-size)) var(--dock-band-x) var(--dock-pad-x); width: 640px; display: flex; flex-direction: column; max-height: calc(100vh - var(--chrome-h) - var(--sp-5)); }
 .dk-roster { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-1) var(--sp-2); --o: 26; }
 .dk-v-bots-exp .dk-roster { flex: 0 1 auto; min-height: 0; align-content: start; padding: var(--sp-1); margin: calc(-1 * var(--sp-1)); touch-action: pan-y; }
-.dk-roster .dk-orb .ui-dot--flag { width: 6px; height: 6px; }
 /* the library lead is a 16px column for 20px orbs; these are 26px, so the column takes the orb's width and the row's
    8px gap sits between orb and label, as in the bots list. orb2 paints up to a quarter of its size past its box
    (6.5px here) and that stays inside the gap. */
@@ -154,7 +166,6 @@
 /* the divider is a line, not a container: drawn apart from the strip's box so a focus ring on an end orb is not "outside" a shape (R-corner-4) */
 .dk-strip::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--hair); }
 .dk-strip-bot { position: relative; width: 24px; height: 24px; }
-.dk-strip-bot .ui-dot--flag { width: 6px; height: 6px; }
 /* grow on (HX.state.orbGrow): in the switcher a hovered or focused orb grows, and the open session's orb stays grown
    as its selection mark instead of the ring. A transform: the row never reflows (under reduced motion it is instant) */
 .dk[data-grow] .dk-strip-bot .ui-orb { transition: transform var(--dur-1) var(--ease); }

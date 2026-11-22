@@ -7,9 +7,9 @@ import { emit } from '../../core/bus';
 import { ui } from '@boopis/ui';
 import { MAG, MAG_ADD, S, SIG, X, fitIn, flags, geomR, motion, rendered, rowNow, shownPages, spring, K_SLIDE } from './ctx';
 import type { Spring } from './ctx';
-import { E, cxNow, hideTip, kick, resetMag, retarget, shellVar, returnFocus, markFocus, slideNow, stopSlide } from './engine';
+import { E, cxNow, hideTip, kick, placeNow, resetMag, retarget, shellVar, returnFocus, markFocus, slideNow, stopSlide } from './engine';
 import { listenOrb, lookRow, pokeBot, setOrbLife } from './orbs';
-import { relocateLive, renderView } from './views';
+import { renderView } from './views';
 import { columnsOf, gridTarget, rowIdxOf, rove, stepIndex } from './roving';
 import { rowFit } from './geometry';
 import {
@@ -382,7 +382,7 @@ export function fitRow(): void {
   if (shownChanged) renderView('bots:norm');
   /* the live orbs carry their own --o (set when they move into a slot): re-read it, or an orb sized while the window was small
      stays small in a full-size slot (a frame that mounts small and then grows) */
-  if (flags.mounted && (orbChanged || shownChanged)) relocateLive();   /* (it reads layout for every bot: only when the row moved) */
+  if (flags.mounted && (orbChanged || shownChanged)) placeNow();   /* (it reads layout for every bot: only when the row moved) */
 }
 export function onLayout(d: { centerX?: number; colWidth?: number; animate?: boolean; resized?: boolean }): void {
   flags.useVar = shellVar();
