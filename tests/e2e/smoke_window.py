@@ -11,8 +11,9 @@ run shows its welcome) and checks, in the real webview:
   (``--expect``; by default all three, or close alone with ``--tiling``), visible at the top of the window;
 - the drag region's double click is allowed (``plugin:window|internal_toggle_maximize``, the drag script's call);
 - on Windows, through the Win32 API: the window keeps the styles Snap, the taskbar and the system menu need, its left,
-  right and bottom edges and the top strip answer as resize borders, Maximize and a double click on the bar maximise and
-  restore it, Minimize minimises it, Win+Left snaps it to the left edge (reported instead when the desktop takes no
+  right and bottom edges and the top strip answer as resize borders, pressing the bar and moving the real mouse drags
+  it, Maximize and a double click on the bar (dispatched, then with the real mouse) maximise it to exactly the work area
+  and restore it, Minimize minimises it, Win+Left snaps it to the left edge (reported instead when the desktop takes no
   synthetic keys), and Close closes it and quits the app;
 - elsewhere, Close closes the app.
 
@@ -149,6 +150,25 @@ bar.dispatchEvent(new MouseEvent('mouseup', at));
 return true;
 """
 
+# Every press the web view receives, kept in the page (the real mouse's checks read them back): whether it came from the
+# system (isTrusted) and the click count Tauri's drag script reads.
+PRESS_LOG_SCRIPT = """
+if (!window.__hxPresses) {
+  window.__hxPresses = [];
+  document.addEventListener('mousedown', (e) => {
+    const p = { trusted: e.isTrusted, detail: e.detail, x: Math.round(e.clientX), y: Math.round(e.clientY) };
+    window.__hxPresses.push(p);
+  }, true);
+}
+return window.__hxPresses.length;
+"""
+
+# An empty spot of the first-run bar (its buttons sit at its end), in CSS pixels, and the scale to the screen's.
+BAR_SPOT_SCRIPT = """
+const r = document.querySelector('.hx-first-run > .hx-bar').getBoundingClientRect();
+return { x: r.left + 120, y: r.top + r.height / 2, dpr: devicePixelRatio };
+"""
+
 
 def win32_checks(d: Driver) -> None:
     """The undecorated window as Windows sees it: styles, resize borders, maximise, minimise, Snap, close."""
@@ -212,9 +232,111 @@ def win32_checks(d: Driver) -> None:
         check(got == want, f"the {name} resizes", f"hit test {got}, want {want}")
     print(f"     window {left},{top} to {right},{bottom}; client origin {origin.x},{origin.y}")
 
+    # The real mouse, injected into the system's input stream (absolute moves, so they keep their order with the
+    # presses). A desktop that takes no synthetic mouse input never delivers a press to the web view: that is reported,
+    # not failed.
+    screen_w, screen_h = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)  # SM_CXSCREEN, SM_CYSCREEN
+
+    def move_to(x: int, y: int) -> None:  # MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE
+        user32.mouse_event(
+            0x8001, round(x * 65535 / max(screen_w - 1, 1)), round(y * 65535 / max(screen_h - 1, 1)), 0, 0
+        )
+
+    def button(down: bool) -> None:  # MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP
+        user32.mouse_event(0x0002 if down else 0x0004, 0, 0, 0, 0)
+
+    def bar_point() -> tuple[int, int]:
+        spot = d.js(BAR_SPOT_SCRIPT)
+        assert isinstance(spot, dict)
+        o = wintypes.POINT(0, 0)
+        user32.ClientToScreen(hwnd, ctypes.byref(o))
+        return o.x + round(spot["x"] * spot["dpr"]), o.y + round(spot["y"] * spot["dpr"])
+
+    def presses_since(n: int) -> list:
+        got = d.js("return (window.__hxPresses || []).slice(arguments[0])", n)
+        return got if isinstance(got, list) else []
+
+    def real_double_click() -> int:
+        n = int(d.js(PRESS_LOG_SCRIPT) or 0)
+        x, y = bar_point()
+        user32.SetForegroundWindow(hwnd)
+        move_to(x, y)
+        time.sleep(0.3)
+        for _ in range(2):  # well inside the system's double-click time (500 ms by default)
+            button(True)
+            time.sleep(0.03)
+            button(False)
+            time.sleep(0.08)
+        return n
+
+    def fills_work_area(what: str) -> None:
+        """Maximised, the client area is the monitor's work area: nothing cut off at its edges, the taskbar shown."""
+
+        class MONITORINFO(ctypes.Structure):
+            _fields_ = [
+                ("cbSize", wintypes.DWORD),
+                ("rcMonitor", wintypes.RECT),
+                ("rcWork", wintypes.RECT),
+                ("dwFlags", wintypes.DWORD),
+            ]
+
+        user32.MonitorFromWindow.restype = wintypes.HMONITOR
+        mi = MONITORINFO()
+        mi.cbSize = ctypes.sizeof(MONITORINFO)
+        user32.GetMonitorInfoW(user32.MonitorFromWindow(hwnd, 2), ctypes.byref(mi))  # MONITOR_DEFAULTTONEAREST
+        c = wintypes.RECT()
+        user32.GetClientRect(hwnd, ctypes.byref(c))
+        o = wintypes.POINT(0, 0)
+        user32.ClientToScreen(hwnd, ctypes.byref(o))
+        client = (o.x, o.y, o.x + c.right, o.y + c.bottom)
+        w = mi.rcWork
+        work = (w.left, w.top, w.right, w.bottom)
+        check(
+            all(abs(a - b) <= 1 for a, b in zip(client, work, strict=True)),
+            f"{what}, the window fills the work area and leaves the taskbar uncovered",
+            f"client {client}, work area {work}",
+        )
+
+    # A press on an empty part of the bar and a move: the drag script's start_dragging hands the mouse to the system's
+    # move loop, and the window follows it.
+    n = int(d.js(PRESS_LOG_SCRIPT) or 0)
+    user32.SetForegroundWindow(hwnd)
+    time.sleep(0.3)
+    before_drag = rect(hwnd)
+    x0, y0 = bar_point()
+    move_to(x0, y0)
+    time.sleep(0.3)
+    button(True)
+    time.sleep(0.5)  # start_dragging reaches the host and the move loop takes the mouse
+    for i in range(1, 11):
+        move_to(x0 + 10 * i, y0 + 6 * i)
+        time.sleep(0.04)
+    time.sleep(0.3)
+    button(False)
+    time.sleep(0.6)
+    after_drag = rect(hwnd)
+    got = presses_since(n)
+    shift = (after_drag[0] - before_drag[0], after_drag[1] - before_drag[1])
+    same_size = (after_drag[2] - after_drag[0], after_drag[3] - after_drag[1]) == (
+        before_drag[2] - before_drag[0],
+        before_drag[3] - before_drag[1],
+    )
+    where = f"presses {got}, window {before_drag} to {after_drag}"
+    real_mouse = any(p.get("trusted") for p in got if isinstance(p, dict))
+    if not real_mouse:
+        print(f"info the real mouse did not reach the web view (this desktop took no synthetic mouse input): {where}")
+    else:
+        check(
+            abs(shift[0] - 100) <= 3 and abs(shift[1] - 60) <= 3 and same_size,
+            "pressing the bar and moving drags the window",
+            where,
+        )
+
     max_label = "return document.querySelector('.hx-first-run [data-win=max]').getAttribute('aria-label')"
     d.s("POST", f"/element/{d.find('.hx-first-run [data-win=max]')}/click", {})
     check(soon(lambda: facts().get("maximized")), "Maximize maximises the window", facts())
+    time.sleep(0.5)
+    fills_work_area("maximised")
     check(soon(lambda: d.js(max_label) == "Restore", 5), "the button then says Restore", d.js(max_label))
     d.s("POST", f"/element/{d.find('.hx-first-run [data-win=max]')}/click", {})
     check(soon(lambda: facts().get("maximized") is False, 10), "Restore restores it")
@@ -223,6 +345,25 @@ def win32_checks(d: Driver) -> None:
     check(soon(lambda: facts().get("maximized"), 10), "a double click on the bar maximises")
     d.js(DBLCLICK_SCRIPT)
     check(soon(lambda: facts().get("maximized") is False, 10), "a second double click restores")
+
+    # The same with the real mouse: two presses on the bar, as a person double-clicks it. The first press starts the
+    # move loop, so the second must still reach the web view with its click count of 2.
+    if real_mouse:
+        time.sleep(0.6)
+        n = real_double_click()
+        maxed = soon(lambda: facts().get("maximized"), 5)
+        check(maxed, "a real double click on the bar maximises", presses_since(n))
+        if maxed:
+            time.sleep(0.5)
+            fills_work_area("maximised by a double click")
+            time.sleep(0.6)
+            n = real_double_click()
+            check(
+                soon(lambda: facts().get("maximized") is False, 5),
+                "a second real double click restores",
+                presses_since(n),
+            )
+        time.sleep(0.5)
 
     d.s("POST", f"/element/{d.find('.hx-first-run [data-win=min]')}/click", {})
     check(soon(lambda: user32.IsIconic(hwnd), 10), "Minimize minimises the window")
