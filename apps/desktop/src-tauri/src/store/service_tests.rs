@@ -422,9 +422,23 @@ async fn refresh_reads_every_source_and_search_finds_across_them() {
         .store
         .browse(None, &StoreFilter::default(), None, Some(5))
         .unwrap();
+    let curated: Vec<String> = crate::connectors::catalog::load()
+        .unwrap()
+        .connectors
+        .iter()
+        .map(|c| format!("boopis:{}", c.id))
+        .collect();
+    let rec: Vec<String> = front
+        .recommended
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(|i| i.id.clone())
+        .collect();
     assert_eq!(
-        front.recommended.as_ref().unwrap()[0].id,
-        "boopis:firecrawl"
+        rec,
+        curated[..rec.len()],
+        "the front page leads with boopis's own list, most popular first"
     );
     assert!(front.total > 30 && !front.stale && !front.offline);
     assert!(front.refreshed_at.is_some());
