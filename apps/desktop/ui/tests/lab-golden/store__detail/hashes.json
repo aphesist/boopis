@@ -20,24 +20,24 @@
   "h": 1600
  },
  "a-recommended-connector@bone": {
-  "sha": "7f022b317009f87360dc354ada3bad8fa3ab8f6e",
+  "sha": "93d10663b941eb8a986fb98f1e1ba8017edaa5c3",
   "w": 1416,
-  "h": 1536
+  "h": 1596
  },
  "a-recommended-connector@catalog": {
-  "sha": "00c9f1258fef64459474441eac4efcd4c01e65cb",
+  "sha": "1d511366afc5769bea20456388c584ad69534887",
   "w": 1416,
-  "h": 1536
+  "h": 1596
  },
  "a-recommended-connector@graphite": {
-  "sha": "f11a48df5f00bbf0fdae64c33cc72b5e068dc13b",
+  "sha": "d9295c3a2e3d6760ea9157c550691e7c92b1a61d",
   "w": 1416,
-  "h": 1536
+  "h": 1596
  },
  "a-recommended-connector@typewriter": {
-  "sha": "a0f5f5fcc997c799712d98476a547096cc45cc21",
+  "sha": "4d94771be68bf451588ed93b1e04077257121cf6",
   "w": 1416,
-  "h": 1571
+  "h": 1600
  },
  "an-engine-plugin-runs-inside-the-engine@bone": {
   "sha": "16d956dc1c6bcf3bceb871a78f546ee0f4d7789e",
@@ -80,44 +80,44 @@
   "h": 226
  },
  "installed-with-an-update@bone": {
-  "sha": "65a5d9b9657145d703f639151af12f796a1bd566",
+  "sha": "78d421fa978f4c656a9405486468910fdba671b6",
   "w": 1416,
   "h": 1600
  },
  "installed-with-an-update@catalog": {
-  "sha": "48a9e32eac4da861d26e51368c52516f9c8f9097",
+  "sha": "6a3a2ef77582e86490ee81e0d42bf7669f44d054",
   "w": 1416,
   "h": 1600
  },
  "installed-with-an-update@graphite": {
-  "sha": "8554cec524f00029d00a73b75494c1da966b3cfb",
+  "sha": "6f89f5b0d0c1668e116cfc37b8fcdaf66b090fad",
   "w": 1416,
   "h": 1600
  },
  "installed-with-an-update@typewriter": {
-  "sha": "b95e24d1dc56150f6027fd6d3157c9b3ea12876f",
+  "sha": "10b2f03ecbae7a29eacbbae67f15ac6501a44806",
   "w": 1416,
   "h": 1600
  },
  "long-name@bone": {
-  "sha": "a2165e96a7a89f865ea553286fcd3b336024a09c",
+  "sha": "b92021061781a04a75b029fc9af32fea73d4a3d2",
   "w": 1416,
-  "h": 1536
+  "h": 1596
  },
  "long-name@catalog": {
-  "sha": "251df8cab8111f1aef8377143316f1a465e86170",
+  "sha": "94933f1da5f1bb11cb973f1b7a3f88c8f082232c",
   "w": 1416,
-  "h": 1536
+  "h": 1596
  },
  "long-name@graphite": {
-  "sha": "5cdc8a2466a8668025b8298cc9db76c6550aff1d",
+  "sha": "9d0c7322b190190c878939a6f4268c27df3b754b",
   "w": 1416,
-  "h": 1536
+  "h": 1596
  },
  "long-name@typewriter": {
-  "sha": "a8a75ff6321a0e9e48106094db74b997cf5c77be",
+  "sha": "7de089ceb1e4f07e9b5af0bd2704bdd4a5cbf7bc",
   "w": 1416,
-  "h": 1571
+  "h": 1600
  },
  "not-pinned-cannot-be-installed@bone": {
   "sha": "bf98a3bf85320caebf77be0ba2d4ccd735bd1e97",
