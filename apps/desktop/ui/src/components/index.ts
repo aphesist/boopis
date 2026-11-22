@@ -36,6 +36,9 @@ import type { SigninButtonOpts } from './signin-button';
 import { tooltip } from './tooltip';
 import { hydrate, hydrateOne } from './wire';
 import { scrollClass } from './scroll';
+import { codeHTML, everyoneHTML, inlineHTML, plainHTML, markdownHTML, mentionHandles, mentionHTML, pathCandidate, pathCandidates, pathHTML, resolveMentions, splitBlocks, upgradePaths } from './markdown';
+import { arrive, codeOf, markdown as markdownEl, streamMarkdown, wireMarkdown } from './md-view';
+import { copyText } from './clipboard';
 import type { SegElement } from './wire';
 
 export const version = '1.0.0';
@@ -77,6 +80,12 @@ const factories = {
   child: make<ChildOpts, HTMLElement>(html.child),
   signinButton: make<SigninButtonOpts, HTMLButtonElement>(html.signinButton)
 };
+/** `ui.markdown(text, ctx)` draws what a bot or an agent wrote (markdown.ts); its properties are the parts the surfaces use */
+const markdown = Object.assign(markdownEl, {
+  html: markdownHTML, inline: inlineHTML, plain: plainHTML, code: codeHTML, blocks: splitBlocks, stream: streamMarkdown, arrive, wire: wireMarkdown, codeOf,
+  mention: mentionHTML, everyone: everyoneHTML, handles: mentionHandles, resolve: resolveMentions,
+  path: pathHTML, pathCandidate, candidates: pathCandidates, upgradePaths
+});
 const legend = (parts: readonly MeasurePart[], fmt?: (n: number) => string): HTMLElement => frag(html.legend(parts, fmt));
 const keys = (k: string): HTMLElement => frag(html.keys(k));
 const inline = (text: string): HTMLSpanElement => { const s = document.createElement('span'); s.innerHTML = html.inline(text); return s; };
@@ -89,6 +98,7 @@ const modelRoute = (text: string, o?: ModelOpts): HTMLElement => frag(routeHTML(
 export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
   ...factories, legend, keys, inline, scrollClass,
+  markdown, copyText,
   hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, composer, card,
   hold: Object.assign(holdElement, { wire: wireHold }),
   /** a Claude Code mod's element tree, drawn with the library (MODS.md section 2) */
@@ -135,4 +145,6 @@ export type { ComposerEl, ComposerOpts, DecisionDetail, AssumptionDetail, Dictat
 export type { PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
 export type { ModelRef, ModelOpts, MarkOpts, ModelFamily } from './model-mark';
 export type { BotLike } from './bot-state';
+export type { MarkdownCtx, MdBot, PathTarget, Block as MarkdownBlock } from './markdown';
+export { MENTION_SOURCE } from './markdown';
 export type { CardKind, CardOpts, CardLike, CardData } from './card-registry';
