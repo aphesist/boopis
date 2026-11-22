@@ -8,7 +8,7 @@
    disconnected is never blank (the sidebar's rows keep their orbs the same way: modules/bots/list.ts).
 
    Each orb is two elements, so no two motions write the same property:
-     .dk-op        (a 0x0 point at the orb's centre)  `translate` and `scale`: where the slot is at rest, plus the row's
+     .dk-op        (a 0x0 point at the orb's centre)  `transform`: where the slot is at rest, plus the row's
                    magnification and the roster's scroll. Written by script, from what the engine already knows, with no
                    layout read in a frame.
      .ui-orb       (the live orb)  `transform` and `opacity`: the slot's own FLIP and entrance, played again as Web
@@ -39,7 +39,7 @@ export interface Pose {
   culled: boolean;
   fade: Animation | null;
   /** what the element's style holds now */
-  wrote: { t: string; s: string; c: string };
+  wrote: { t: string; c: string };
 }
 const poses = new Map<string, Pose>();
 let layer: HTMLElement | null = null;
@@ -66,7 +66,7 @@ export function adoptOrb(id: string, orb: HTMLElement): void {
   pos.setAttribute('data-away', '');
   pos.append(orb);
   layer.append(pos);
-  poses.set(id, { id, pos, orb, slot: null, bx: 0, by: 0, o: 0, mx: 0, my: 0, ms: 1, scroller: null, s0: 0, sy: 0, clip: null, culled: false, fade: null, wrote: { t: '', s: '', c: '' } });
+  poses.set(id, { id, pos, orb, slot: null, bx: 0, by: 0, o: 0, mx: 0, my: 0, ms: 1, scroller: null, s0: 0, sy: 0, clip: null, culled: false, fade: null, wrote: { t: '', c: '' } });
 }
 /** the bot is gone: its orb leaves with it (the only time an orb leaves the layer) */
 export function dropOrb(id: string): void {
@@ -91,11 +91,10 @@ export function orbsIn(el: HTMLElement): HTMLElement[] {
 /** write the pose (only what changed: a frame of magnification rewrites every orb, and most do not move) */
 const apply = (p: Pose): void => {
   const x = p.bx + p.mx, y = p.by + p.my + p.sy;
-  const t = `${x.toFixed(2)}px ${y.toFixed(2)}px`, sc = p.ms === 1 ? '' : p.ms.toFixed(4);
+  const t = p.ms === 1 ? `translate(${x.toFixed(2)}px,${y.toFixed(2)}px)` : `translate(${x.toFixed(2)}px,${y.toFixed(2)}px) scale(${p.ms.toFixed(4)})`;
   const cl = p.clip ? `rect(${(p.clip[1] - y).toFixed(1)}px, ${(p.clip[2] - x).toFixed(1)}px, ${(p.clip[3] - y).toFixed(1)}px, ${(p.clip[0] - x).toFixed(1)}px)` : '';
   const w = p.wrote;
-  if (w.t !== t) { w.t = t; p.pos.style.translate = t; }
-  if (w.s !== sc) { w.s = sc; p.pos.style.scale = sc; }
+  if (w.t !== t) { w.t = t; p.pos.style.transform = t; }
   if (w.c !== cl) { w.c = cl; p.pos.style.clip = cl; }
 };
 const KIND: Record<string, string> = { 'bots:min': 'min', 'bots:norm': 'norm', 'bots:exp': 'exp', 'bots:card': 'card' };

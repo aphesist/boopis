@@ -13,8 +13,10 @@ const at = (el: HTMLElement, b: Box): void => {
 };
 const orbEl = (id: string): HTMLElement => { const w = document.createElement('span'); w.className = 'ui-orb'; w.dataset['bot'] = id; w.innerHTML = '<orb-avatar></orb-avatar>'; return w; };
 
-/** an element's `translate` as numbers (the style serialises 60.00px as 60px) */
-const xy = (el: HTMLElement | null): number[] => (el?.style.translate ?? '').split(' ').map(parseFloat);
+/** an element's translation as numbers (the style serialises 60.00px as 60px) */
+const xy = (el: HTMLElement | null): number[] => (/translate\(([-\d.]+)(?:px)?,\s*([-\d.]+)/.exec(el?.style.transform ?? '') ?? []).slice(1).map(parseFloat);
+/** its scale, 1 when it has none */
+const scale = (el: HTMLElement | null): number => parseFloat(/scale\(([-\d.]+)\)/.exec(el?.style.transform ?? '')?.[1] ?? '1');
 
 let layer: HTMLElement, view: HTMLElement;
 const slot = (id: string, host: HTMLElement, b: Box): HTMLElement => { const s = document.createElement('span'); s.className = 'dk-orb'; s.setAttribute('data-slot', 'orb:' + id); host.append(s); at(s, b); return s; };
@@ -81,10 +83,10 @@ describe('the orb layer', () => {
     const pos = o.parentElement as HTMLElement;
     magOrb('a', 10, 1.5, 40);          /* the button grows 1.5 about its bottom edge and shifts 10 to the right */
     expect(xy(pos)).toEqual([70, -40]);          /* up by (1.5 - 1) * 40 / 2 */
-    expect(pos.style.scale).toBe('1.5');
+    expect(scale(pos)).toBe(1.5);
     magClear('a');
     expect(xy(pos)).toEqual([60, -30]);
-    expect(pos.style.scale).toBe('');
+    expect(scale(pos)).toBe(1);
   });
 
   it('placing the orbs while the row is magnified finds the place the slot is at rest', () => {

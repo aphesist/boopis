@@ -85,7 +85,7 @@
 
 /* ---------- orbs: a slot per view (empty, sized by --o); the live library orb (.ui-orb) is in the orb layer and follows it ----------
    The layer is a 0x0 point at the Bots page's bottom centre (the stage's origin), so a page that slides or fades takes its orbs
-   along. Each orb sits in a .dk-op, a 0x0 point at its centre that layer.ts moves by `translate` and `scale` (the slot's place, the
+   along. Each orb sits in a .dk-op, a 0x0 point at its centre that layer.ts moves by `transform` (the slot's place, the
    row's magnification, the roster's scroll); the orb itself is only played the slot's FLIP and entrance (`transform`, `opacity`).
    Nothing in it takes the pointer: the slot's button under it does. */
 .dk-orb { position: relative; display: block; flex: none; width: calc(var(--o, 40) * 1px); height: calc(var(--o, 40) * 1px); }
@@ -111,7 +111,7 @@
 .dk-bot:focus-visible { outline-offset: 3px; }
 /* while the pointer is over the row the orbs are scaled every frame from script (magnification): each gets its own layer for exactly that long */
 .dk[data-mag] :is(.dk-bot, .dk-add) { will-change: transform; }
-.dk[data-mag] .dk-op { will-change: translate, scale; }
+.dk[data-mag] .dk-op { will-change: transform; }
 .dk-add { align-self: flex-end; flex: none; width: var(--ctl-s); height: calc(var(--dock-orb) * 1px); display: grid; place-items: center; color: var(--text-strong); border-radius: var(--r-s); transform-origin: 50% 100%; transition: background-color var(--dur-1) var(--ease); --sq-bg: transparent; background: var(--sq-bg); }
 .dk-add:hover { --sq-bg: var(--hover); background: var(--sq-bg); }
 
