@@ -9,6 +9,8 @@ sample is computed with numpy and scipy, so the licensing is clean.
 ```sh
 python3 media/launch/sound/build.py               # about 40 s, one process
 python3 media/launch/sound/build.py --no-preview  # skip the two preview mp4s
+python3 media/launch/sound/build.py --act-checks  # also mux the master's span of acts 1 and 4 under their renders
+                                                  # (SC/renders/a1-sound.mp4, a4-sound.mp4), as short sync checks
 ```
 
 It writes to `$FILM_SC/sound` (`FILM_SC` defaults to the team's shared folder, as for the renderer):
@@ -52,10 +54,14 @@ last chord ringing out under the end card. `score.py`'s docstring has the bar-by
 
 ### When the picture changes
 
-Cue times come from the approved script, storyboard and cut-downs. When a scene is animated and an event lands on a
-different frame, change that cue's frame in `timeline.py` (the music's grid events are in `score.py`) and rebuild:
-the audit then measures the new mix against the new frames. A natural next step is for each beat builder to mark its
-sound moments on the film's timeline so `timeline.py` can read them from the page.
+Acts 1 and 4 are timed to the animation: the act builders (`src/acts/a1/`, `a4/`, the source of truth) checked frame
+by frame on their renders; each of those cues keeps its old frame (`was`) and how its frame was found (`check`), and
+`sync-audit.md` lists them. Acts 2 and 3 are still timed from the approved script and storyboard. When a scene is
+animated, read its event times from its builder (presses bottom out on a frame, moves arrive on a frame, anything that
+starts from nothing shows on the next frame), check the ones that matter on its render, change those cues' frames in
+`timeline.py` (the music's grid events are in `score.py`) and rebuild: the audit then measures the new mix against the
+new frames. A natural next step is for each beat builder to mark its sound moments on the film's timeline so
+`timeline.py` can read them from the page.
 
 ### Rules the code keeps
 

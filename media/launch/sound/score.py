@@ -6,7 +6,8 @@ room harmonises. F is "the team together": the fold, the drop and the release al
 
 The master's shape, section by section (bar.beat):
   1.1   the hook: a warm open Fmaj9 already sounding at frame 0 (pad and electric piano, pre-rolled), kai and nina
-  2.2   the promise: Dm9 under the thump, a low sustained bass; 3.1 Bb lydian, the pad lifts as the eyes open
+  2.2   the promise: Dm9 under the thump (the keys strike it with the thump, as the dive lands on frame 155, five
+        frames before the beat), a low sustained bass; 3.1 Bb lydian, the pad lifts as the eyes open
   4.3   the room: the felt kick on 1 and 3, the clean sub walking in eighths, a soft off-beat pulse
   8.3   the fold: C9sus4 resolves to F on the fold's frame
   10.1  the turn at the governed beat: D minor, the bass insistent on its root, the hats enter on the off-beats;
@@ -113,7 +114,7 @@ def film_arr() -> Arr:
         (at("20.4"), at("21.1") - STOP, "F", 0.3, 0.03, -4.0),
     ]
     A.keys = [
-        (-0.3, "Fopen", 0.55, 2.6), (at("2.2"), "Dm", 0.42, 1.6), (at("3.1"), "Bb", 0.40, 3.0),
+        (-0.3, "Fopen", 0.55, 2.6), (F(155), "Dm", 0.42, 1.68), (at("3.1"), "Bb", 0.40, 3.0),
         (at("4.3"), "F", 0.36, 1.0), (at("6.1"), "Dm", 0.33, 1.9), (at("7.1"), "Bb", 0.33, 1.9),
         (at("8.1"), "Csus", 0.33, 1.0), (at("8.3"), "F", 0.46, 2.0), (at("10.1"), "Dm", 0.42, 1.9),
         (at("11.1"), "Gm", 0.36, 1.5), (at("12.1"), "Bb", 0.38, 1.0), (at("12.3"), "C69", 0.42, 1.0),
@@ -191,7 +192,7 @@ def cut15_arr() -> Arr:
         (at("4.3"), fold, "C69", 0.15, 0.4, -4.0), (fold, at("6.1"), "F", 0.06, 0.5, -3.0),
         (at("6.1"), at("6.3"), "BbF", 0.3, 0.6, -3.0), (at("6.3"), at("6.4") - STOP, "F", 0.3, 0.03, -4.0),
     ]
-    A.keys = [(-0.3, "Fopen", 0.55, 2.6), (at("2.2"), "Dm", 0.42, 1.6), (at("3.1"), "Bb", 0.40, 2.0),
+    A.keys = [(-0.3, "Fopen", 0.55, 2.6), (F(155), "Dm", 0.42, 1.68), (at("3.1"), "Bb", 0.40, 2.0),
               (at("4.1"), "F", 0.38, 1.0), (at("4.3"), "C69", 0.36, 1.4), (fold, "F", 0.46, 1.8),
               (at("6.1"), "BbF", 0.42, 1.0), (at("6.3"), "Fopen", 0.50, 2.4)]
     chord_at = lambda t: next((ch for t0, t1, ch, *_ in A.pads if t0 <= t < t1), "F")

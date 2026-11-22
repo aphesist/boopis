@@ -116,6 +116,27 @@ def mux(video: str, wav: str, out: str) -> None:
                    check=True, cwd=ENGINE, capture_output=True)
 
 
+ACTS = {"a1": (0.0, 9.6), "a4": (32.0, FILM)}   # the acts timed to the animation; a2, a3 join once they are
+
+
+def act_checks(sc: str, master: str, acts=ACTS) -> list[dict]:
+    """Short checks: the master's span of each act under that act's render (SC/renders/<act>-1080.mp4), muxed with
+    the engine's step into SC/renders/<act>-sound.mp4."""
+    out = []
+    for act, (t0, t1) in acts.items():
+        video = os.path.join(sc, "renders", f"{act}-1080.mp4")
+        if not os.path.exists(video):
+            continue
+        dest = os.path.join(sc, "renders", f"{act}-sound.mp4")
+        with tempfile.TemporaryDirectory(dir=os.path.dirname(master)) as tmp:
+            span = os.path.join(tmp, f"{act}.wav")
+            subprocess.run([FFMPEG, "-v", "error", "-y", "-i", master, "-ss", f"{t0:.6f}", "-t", f"{t1 - t0:.6f}",
+                            "-c:a", "pcm_s24le", span], check=True)
+            mux(video, span, dest)
+        out.append({"act": act, "span": (t0, t1), "video": video, "out": dest})
+    return out
+
+
 def make(sc: str, outdir: str, rows: list, beats_path: str) -> dict:
     """preview-cues.mp4: the board-o-matic with every cue marked (always). preview.mp4: the master under the newest
     full-length film render, or the board-o-matic when there is none yet."""

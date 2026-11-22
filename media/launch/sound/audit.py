@@ -20,7 +20,7 @@ import numpy as np
 from scipy import ndimage, signal
 
 from .lib.dsp import SR, n_of
-from .timeline import FPS, FRAME
+from .timeline import FPS, FRAME, TYPING_WAS
 
 TOL = FRAME  # 16.7 ms
 
@@ -104,7 +104,7 @@ def audit_cues(placed: list, master: np.ndarray, sfx: np.ndarray, gain: np.ndarr
         k_in = intrinsic(x, how if how in ("peak", "move", "end") else "onset")
         fc = _band(solo[max(0, k_in - n_of(0.01)): k_in + n_of(0.1)])
         row = {"id": c.id, "beat": c.beat, "label": c.label, "group": c.group, "kind": c.kind, "measure": how,
-               "frame": c.frame, "t": c.t, "src": c.src, "tier": c.tier}
+               "frame": c.frame, "t": c.t, "src": c.src, "tier": c.tier, "was": c.was, "check": c.check}
         if how in ("onset", "span"):
             # solo onset: the first moment the cue's 2 ms envelope reaches -12 dB of its attack's maximum (60 ms)
             e = _env(_hp(solo, fc), 0.002)
@@ -202,6 +202,33 @@ def md_table(rows: list, music_rows: list, cut: str, length: float, chain: dict 
         lines += ["", f"The master is the stems' sum: residual {chain['residual_db']:.0f} dB under the master (dither), "
                       f"alignment {chain['lags']} samples."]
     f = lambda v, t: "—" if v is None else f"{(v - t) * 1000:+.1f}"
+    re = [r for r in rows if r.get("check")]
+    if re:
+        lines += ["", "### Re-timed to the animation (acts 1 and 4)", "",
+                  "Old frame (timed from the script) against the frame the animated act gives the cue, with the cue's "
+                  "measured error in the new master (the worst of the three measurements) and how its frame was found "
+                  "(the act builder's code, its render, or both). Typed lines are one row each.", "",
+                  "| cue | beat | event | was | now | shift (f) | error (ms) | found by |",
+                  "|---|---|---|---:|---:|---:|---:|---|"]
+        done = set()
+        for r in re:
+            if r["group"]:
+                if r["group"] in done:
+                    continue
+                done.add(r["group"])
+                g = [q for q in re if q["group"] == r["group"]]
+                w = TYPING_WAS.get(f"{r['beat']}:{r['group']}")
+                was = f"{w[0]} keys, {w[1]} to {w[2]}" if w else "—"
+                worst = max(g, key=lambda q: abs(q["err_ms"]))["err_ms"]
+                lines.append(f"| typing | {r['beat']} | {r['group']} | {was} | {len(g)} keys, {g[0]['frame']} to "
+                             f"{g[-1]['frame']} | — | {worst:+.1f} | {r['check']} |")
+                continue
+            was = "new" if r["was"] is None else f"{r['was']} ({r['was'] / FPS:.3f} s)"
+            shift = "—" if r["was"] is None else f"{r['frame'] - r['was']:+d}"
+            err = f"{r['err_ms']:+.1f}" if r["hit"] else ("move, its peak" if r["measure"] == "move" else "texture")
+            lines.append(f"| `{r['id']}` | {r['beat']} | {r['label']} | {was} | {r['frame']} ({r['t']:.3f} s) | "
+                         f"{shift} | {err} | {r['check']} |")
+    lines += ["", "### Every cue", ""]
     lines += ["", "| cue | beat | what the picture does | frame | time (s) | master (ms) | effects stem (ms) | "
               "solo through the chain (ms) | ok |", "|---|---|---|---:|---:|---:|---:|---:|:-:|"]
     for r in rows:
