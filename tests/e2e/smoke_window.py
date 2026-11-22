@@ -252,6 +252,26 @@ def win32_checks(d: Driver) -> None:
     check(bool(wait_for(lambda: not user32.IsWindow(hwnd), "the window to close", 15)), "Close closes the window")
 
 
+def diagnose(driver_log: Path) -> None:
+    """What a session that did not start leaves behind: the driver's log, and on Windows the web view's processes."""
+    with contextlib.suppress(OSError):
+        print(
+            "--- the web driver's log (last 6000 bytes)",
+            driver_log.read_bytes()[-6000:].decode(errors="replace"),
+            sep="\n",
+        )
+    if WINDOWS:
+        ps = (
+            "Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'msedgewebview2|boopis' } | "
+            "ForEach-Object { '{0} {1}: {2}' -f $_.ProcessId, $_.Name, $_.CommandLine }"
+        )
+        with contextlib.suppress(Exception):
+            out = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True, timeout=60, check=False
+            )
+            print("--- the app's and its web view's processes", out.stdout[-6000:], sep="\n")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=(__doc__ or "").split("\n", 1)[0])
     ap.add_argument("app")
@@ -261,6 +281,9 @@ def main() -> int:
         "--tiling", action="store_true", help="look like Hyprland (Linux): the host detects a tiling desktop"
     )
     ap.add_argument("--native-driver", default=os.environ.get("MSEDGEDRIVER"), help="msedgedriver.exe (Windows)")
+    ap.add_argument(
+        "--tauri-driver", action="store_true", help="go through tauri-driver (Windows) instead of msedgedriver"
+    )
     a = ap.parse_args()
     app = str(Path(a.app).resolve())
     expect = a.expect or ("close" if a.tiling else "mac" if sys.platform == "darwin" else "all")
@@ -272,13 +295,25 @@ def main() -> int:
     }
     env.pop("DESKTOP_SESSION", None)
     env.update({"BOOPIS_HERMES": "existing", "HERMES_HOME": str(profile / "engine"), "RUST_LOG": "info"})
+    driver_log = profile / "webdriver.log"
     if WINDOWS:
-        driver_bin = shutil.which("tauri-driver")
-        if not driver_bin or not a.native_driver or not Path(a.native_driver).exists():
-            print("needs tauri-driver on PATH and msedgedriver (--native-driver or MSEDGEDRIVER)", file=sys.stderr)
+        if not a.native_driver or not Path(a.native_driver).exists():
+            print("needs msedgedriver (--native-driver or MSEDGEDRIVER)", file=sys.stderr)
             return 3
-        cmd = [driver_bin, "--port", str(PORT), "--native-driver", a.native_driver]
-        caps = {"capabilities": {"alwaysMatch": {"tauri:options": {"application": app}}}}
+        # msedgedriver itself, with the capabilities tauri-driver would hand it for `tauri:options` (its server.rs on
+        # Windows: browserName webview2, ms:edgeOptions.binary), so its own log can say why a session did not start
+        env["TAURI_WEBVIEW_AUTOMATION"] = "true"
+        cmd = [a.native_driver, f"--port={PORT}", "--verbose", f"--log-path={driver_log}"]
+        if shutil.which("tauri-driver") and a.tauri_driver:
+            cmd = [str(shutil.which("tauri-driver")), "--port", str(PORT), "--native-driver", a.native_driver]
+        options = {"binary": app, "args": []}
+        caps = {
+            "capabilities": {
+                "alwaysMatch": {"browserName": "webview2", "ms:edgeChromium": True, "ms:edgeOptions": options}
+            }
+        }
+        if a.tauri_driver:
+            caps = {"capabilities": {"alwaysMatch": {"tauri:options": {"application": app}}}}
     else:
         if not shutil.which("xvfb-run") or not shutil.which("WebKitWebDriver"):
             print("needs xvfb-run and WebKitWebDriver", file=sys.stderr)
@@ -315,7 +350,11 @@ def main() -> int:
     d = Driver(PORT)
     try:
         wait_for(lambda: d.call("GET", "/status").get("value", {}).get("ready") is not None, "the web driver")
-        d.sid = d.call("POST", "/session", caps, timeout=120)["value"]["sessionId"]
+        try:
+            d.sid = d.call("POST", "/session", caps, timeout=120)["value"]["sessionId"]
+        except RuntimeError:
+            diagnose(driver_log)
+            raise
 
         def drawn() -> bool:
             got = d.js(BAR_SCRIPT)
