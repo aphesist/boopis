@@ -298,9 +298,10 @@ function wire(): void {
     const W = app.clientWidth, wasW = lastW;
     lastW = W; lastH = app.clientHeight;
     followWindowWidth(W, wasW);
-    app.classList.add('is-resizing');
     markResized();
     queueLayout(false);
+    if (!wasW) return;   /* the first call is the observer starting at boot, not a resize: transitions stay on (boot has its own guard) */
+    app.classList.add('is-resizing');
     clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => app.classList.remove('is-resizing'), 160);
   }).observe(app);
