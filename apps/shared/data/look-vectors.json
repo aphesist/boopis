@@ -1,0 +1,85 @@
+{
+ "_about": "The look a bot has until it is given one: lookFor(name) of apps/desktop/ui/src/data/looks.ts, computed by that function. The host (src-tauri/src/local_api/look.rs) and the UI test read this file, so the two cannot drift.",
+ "vectors": [
+  {
+   "name": "kai",
+   "shape": "star",
+   "color": "#3b82f6"
+  },
+  {
+   "name": "nina",
+   "shape": "cloud",
+   "color": "#f5a337"
+  },
+  {
+   "name": "moss",
+   "shape": "hexagon",
+   "color": "#f472b6"
+  },
+  {
+   "name": "iris",
+   "shape": "soft",
+   "color": "#2fd26a"
+  },
+  {
+   "name": "hex",
+   "shape": "drop",
+   "color": "#1c1c24"
+  },
+  {
+   "name": "nimbus",
+   "shape": "tall",
+   "color": "#f472b6"
+  },
+  {
+   "name": "default",
+   "shape": "clover",
+   "color": "#2fd26a"
+  },
+  {
+   "name": "Kai Lee",
+   "shape": "circle",
+   "color": "#9b5cf6"
+  },
+  {
+   "name": "ça",
+   "shape": "ghost",
+   "color": "#a6a6ab"
+  },
+  {
+   "name": "a",
+   "shape": "cloud",
+   "color": "#f23b5a"
+  },
+  {
+   "name": "Ünï",
+   "shape": "diamond",
+   "color": "#efece6"
+  },
+  {
+   "name": "日本",
+   "shape": "clover",
+   "color": "#3b82f6"
+  },
+  {
+   "name": "bot-1",
+   "shape": "circle",
+   "color": "#efece6"
+  },
+  {
+   "name": "x_y",
+   "shape": "soft",
+   "color": "#4fc9a8"
+  },
+  {
+   "name": "😀",
+   "shape": "flower",
+   "color": "#3b82f6"
+  },
+  {
+   "name": "abcdefghijklmnopqrstuvwxyz",
+   "shape": "squircle",
+   "color": "#1c1c24"
+  }
+ ]
+}

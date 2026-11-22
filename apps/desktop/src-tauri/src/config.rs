@@ -67,6 +67,96 @@ pub struct Limits {
     pub chatgpt_refresh_every: std::time::Duration,
     /// The store's caps and timings (`docs/STORE.md` 5.3), as data.
     pub store: StoreLimits,
+    /// The local API's caps and timings (`ADR-0045`).
+    pub api: ApiLimits,
+}
+
+/// The local API's caps and timings: what the feed keeps, how often it asks the engine, and what the endpoint accepts.
+#[derive(Debug, Clone)]
+pub struct ApiLimits {
+    /// The port the endpoint tries first; any free port on `127.0.0.1` when it is taken.
+    pub preferred_port: u16,
+    /// The largest request head (the request line and the headers).
+    pub max_head: usize,
+    /// Headers in a request, at most.
+    pub max_headers: usize,
+    /// The longest request target.
+    pub max_target: usize,
+    /// The largest request body.
+    pub max_body: usize,
+    /// The longest text sent to a bot or a room.
+    pub max_say: usize,
+    /// How long a client may take to send its head and its body.
+    pub read_timeout: std::time::Duration,
+    /// Connections served at once.
+    pub max_connections: usize,
+    /// Event streams open at once.
+    pub max_streams: usize,
+    /// Requests a second, and the burst, for reads.
+    pub read_rate: (u32, u32),
+    /// Requests a second, and the burst, for writes (a message, an answer).
+    pub write_rate: (u32, u32),
+    /// Wrong tokens that close the door, within `auth_window`.
+    pub auth_failures: u32,
+    /// The window those are counted in.
+    pub auth_window: std::time::Duration,
+    /// How long the door stays closed.
+    pub auth_lockout: std::time::Duration,
+    /// Events kept for a stream that resumes after `Last-Event-ID`, and the room a live stream has before it is told it lagged.
+    pub ring: usize,
+    /// How often a quiet stream is sent a comment so a dead client is noticed.
+    pub keepalive: std::time::Duration,
+    /// How often the live sessions of every bot are asked about while somebody listens.
+    pub poll_every: std::time::Duration,
+    /// How often the roster is read again while somebody listens.
+    pub roster_every: std::time::Duration,
+    /// How long one request to the engine may wait.
+    pub engine_wait: std::time::Duration,
+    /// Notifications kept.
+    pub notes_kept: usize,
+    /// The longest text a notification or an approval carries.
+    pub text_cap: usize,
+    /// The longest text one conversation message carries (longer is cut, and says so).
+    pub message_cap: usize,
+    /// Rows of a conversation one read asks the engine for, at most (the call's `limit` is held to it).
+    pub conversation_rows: usize,
+    /// Bots one event stream may narrow its conversation events to.
+    pub follow_bots: usize,
+    /// How often a streaming reply is sent again while it grows.
+    pub stream_every: std::time::Duration,
+}
+
+impl Default for ApiLimits {
+    fn default() -> Self {
+        use std::time::Duration;
+        Self {
+            preferred_port: 47_821,
+            max_head: 8 * 1024,
+            max_headers: 32,
+            max_target: 512,
+            max_body: 64 * 1024,
+            max_say: 32 * 1024,
+            read_timeout: Duration::from_secs(5),
+            max_connections: 16,
+            max_streams: 8,
+            read_rate: (20, 40),
+            write_rate: (2, 6),
+            auth_failures: 5,
+            auth_window: Duration::from_secs(10),
+            auth_lockout: Duration::from_secs(10),
+            ring: 512,
+            keepalive: Duration::from_secs(15),
+            poll_every: Duration::from_secs(2),
+            roster_every: Duration::from_secs(10),
+            engine_wait: Duration::from_secs(8),
+            notes_kept: 200,
+            text_cap: 400,
+            message_cap: 16 * 1024,
+            conversation_rows: 200,
+            follow_bots: 6,
+            stream_every: Duration::from_millis(250),
+        }
+    }
 }
 
 /// The caps and timings of the store: what the host accepts from a source, and for how long it keeps what it fetched.
@@ -154,6 +244,7 @@ impl Default for Limits {
             chatgpt_refresh_ahead: Duration::from_mins(30),
             chatgpt_refresh_every: Duration::from_mins(5),
             store: StoreLimits::default(),
+            api: ApiLimits::default(),
         }
     }
 }

@@ -23,6 +23,7 @@ pub mod gateway;
 pub mod gpu;
 pub mod hermes;
 pub mod local;
+pub mod local_api;
 pub mod migrate;
 pub mod os;
 pub mod paths;
@@ -132,6 +133,9 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::provider_signin_cancel,
             commands::provider_sign_out,
             commands::provider_signin_status,
+            commands::local_api_status,
+            commands::local_api_set_enabled,
+            commands::local_api_rotate_token,
             commands::bots_prepare,
             commands::bots_release,
             commands::bots_notice,
@@ -560,11 +564,18 @@ pub fn run() {
                 })),
             );
             tauri::async_runtime::spawn(xai.clone().run_refresher());
+            // The local API (`ADR-0045`): presence, notifications and approvals for other clients, and the opt-in endpoint.
+            let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
+            let local_api = local_api::LocalApi::new(app.handle().clone(), app_data, &limits.api);
+            let api_feed = local_api.feed().clone();
             app.manage(AppState {
+                local_api: local_api.clone(),
                 chatgpt,
                 copilot,
                 xai,
-                hubs: state::Hubs::new(supervisor.clone(), limits.clone(), emitter).with_observer(observer),
+                hubs: state::Hubs::new(supervisor.clone(), limits.clone(), emitter)
+                    .with_observer(observer)
+                    .with_created(Arc::new(move |profile, hub| local_api::forward(&api_feed, profile, hub))),
                 supervisor: supervisor.clone(),
                 secrets: secrets.clone(),
                 limits,
@@ -580,6 +591,7 @@ pub fn run() {
                     exe.as_deref().and_then(std::path::Path::parent),
                 ),
             });
+            tauri::async_runtime::spawn(async move { local_api.start().await });
             // The plugin's door to the keychain. A failure (no socket support, another host running) is logged and
             // shown nowhere else: the app works, only the plugin's secret source stays empty.
             if let Some(auth) = channel_auth {
@@ -602,6 +614,7 @@ pub fn run() {
             if let tauri::RunEvent::Exit = event
                 && let Some(state) = handle.try_state::<AppState>()
             {
+                tauri::async_runtime::block_on(state.local_api.shutdown());
                 state.hubs.shutdown();
             }
         }),

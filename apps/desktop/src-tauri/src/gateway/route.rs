@@ -126,6 +126,9 @@ impl Shared {
                 payload: v["params"]["payload"].clone(),
             });
         }
+        if let Some(kind) = meta.event_type.as_deref() {
+            self.feed_event(&text, kind, meta.session_id.as_deref());
+        }
         let delta = (meta.event_type.as_deref() == Some("message.delta"))
             .then(|| meta.session_id.clone().unwrap_or_default());
         let text: Arc<str> = text.into();

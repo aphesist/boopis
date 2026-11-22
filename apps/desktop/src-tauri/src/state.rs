@@ -16,9 +16,14 @@ pub type StatusEmitter = Arc<dyn Fn(&str, &LinkStatus) + Send + Sync>;
 /// Called once for each proxy when it is created, with the proxy and the question "does this profile use the free tier?".
 pub type HubObserver = Arc<dyn Fn(&Arc<Hub>, Declare) + Send + Sync>;
 
+/// Called once for each proxy when it is created, with the profile's key and the proxy: the local API listens to every
+/// link from here (`ADR-0045`).
+pub type HubCreated = Arc<dyn Fn(&str, &Arc<Hub>) + Send + Sync>;
+
 /// The proxies and the connection index.
 pub struct Hubs {
     observer: Option<HubObserver>,
+    created: Option<HubCreated>,
     supervisor: Arc<Supervisor>,
     limits: Limits,
     emitter: StatusEmitter,
@@ -33,6 +38,7 @@ impl Hubs {
     pub fn new(supervisor: Arc<Supervisor>, limits: Limits, emitter: StatusEmitter) -> Self {
         Self {
             observer: None,
+            created: None,
             supervisor,
             limits,
             emitter,
@@ -46,6 +52,13 @@ impl Hubs {
     #[must_use]
     pub fn with_observer(mut self, observer: HubObserver) -> Self {
         self.observer = Some(observer);
+        self
+    }
+
+    /// Tell `created` about every proxy made from now on, with its profile's key.
+    #[must_use]
+    pub fn with_created(mut self, created: HubCreated) -> Self {
+        self.created = Some(created);
         self
     }
 
@@ -83,6 +96,9 @@ impl Hubs {
         ));
         if let Some(observe) = &self.observer {
             observe(&hub, declare);
+        }
+        if let Some(created) = &self.created {
+            created(&key, &hub);
         }
         let (emit, name, mut rx) = (self.emitter.clone(), key.clone(), hub.watch());
         tokio::spawn(async move {

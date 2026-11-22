@@ -123,10 +123,66 @@ pub struct TapEvent {
 /// The event types the host copies out of the stream: those starting with this.
 pub(super) const TAPPED_PREFIX: &str = "free_tier.";
 
+/// Which way a frame of the feed went.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Direction {
+    /// A gateway event, on its way to the windows.
+    In,
+    /// A request a window sent (only `approval.respond`), on its way to the gateway.
+    Out,
+}
+
+/// What the local API (`ADR-0045`) reads off a link: a copy of a frame's meaning, never of the frame. Cut from the stream
+/// only while somebody listens, and for the few event types that carry a state; a delta carries no payload at all.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FeedFrame {
+    /// Which way it went.
+    pub direction: Direction,
+    /// The event type (`message.delta`, `tool.start`, ...) or, for [`Direction::Out`], the method.
+    pub name: String,
+    /// The session it belongs to.
+    pub session_id: Option<String>,
+    /// The execution generation of the envelope, when the frame was read in full.
+    pub generation: Option<u64>,
+    /// The event's `payload` (a request's `params`), when the type carries a state; `None` for a delta.
+    pub payload: Option<Value>,
+}
+
+/// The event types a feed reader wants, and whether it needs their payload.
+const FEED_EVENTS: [(&str, bool); 17] = [
+    ("message.start", false),
+    ("message.delta", false),
+    ("message.interim", false),
+    ("message.complete", true),
+    ("thinking.delta", false),
+    ("reasoning.delta", false),
+    ("reasoning.available", false),
+    ("tool.start", true),
+    ("tool.generating", true),
+    ("tool.progress", true),
+    ("tool.complete", false),
+    ("approval.request", true),
+    ("approval.settled", true),
+    ("approval.cancelled", true),
+    ("error", true),
+    ("turn.failed", true),
+    ("sessions.changed", false),
+];
+
+fn feed_wants(event: &str) -> Option<bool> {
+    FEED_EVENTS
+        .iter()
+        .find(|(n, _)| *n == event)
+        .map(|(_, p)| *p)
+}
+
 pub(super) struct Shared {
     pub limits: Limits,
     pub declare: Declare,
     pub taps: broadcast::Sender<TapEvent>,
+    pub feed: broadcast::Sender<FeedFrame>,
+    /// Whether a feed reader follows conversations: then a delta and a window's `prompt.submit` carry their text.
+    pub feed_text: AtomicBool,
     pub endpoint: Arc<dyn Endpoint>,
     pub state: Mutex<State>,
     pub metrics: Metrics,
@@ -157,6 +213,36 @@ impl Shared {
         for id in slow {
             self.drop_slow(st, id);
         }
+    }
+
+    /// Copy an event's meaning to the feed, when somebody listens. Reads the envelope the caller already read and, for the
+    /// few types that carry a state, the frame once more; a delta is never parsed.
+    pub(super) fn feed_event(&self, text: &str, event: &str, session_id: Option<&str>) {
+        if self.feed.receiver_count() == 0 {
+            return;
+        }
+        let Some(mut with_payload) = feed_wants(event) else {
+            return;
+        };
+        // A reply's words are copied only while a reader follows conversations; otherwise a delta is never parsed.
+        if matches!(event, "message.delta" | "message.interim")
+            && self.feed_text.load(Ordering::Relaxed)
+        {
+            with_payload = true;
+        }
+        let (mut generation, mut payload) = (None, None);
+        if with_payload && let Ok(v) = serde_json::from_str::<Value>(text) {
+            let params = &v["params"];
+            generation = params.get("execution_generation").and_then(Value::as_u64);
+            payload = params.get("payload").cloned();
+        }
+        let _ = self.feed.send(FeedFrame {
+            direction: Direction::In,
+            name: event.to_owned(),
+            session_id: session_id.map(str::to_owned),
+            generation,
+            payload,
+        });
     }
 
     /// Queue a frame for one connection.
@@ -244,6 +330,8 @@ impl Hub {
             limits,
             declare,
             taps: broadcast::channel(64).0,
+            feed: broadcast::channel(1024).0,
+            feed_text: AtomicBool::new(false),
             endpoint,
             state: Mutex::new(State {
                 phase: Phase::Connecting,
@@ -413,6 +501,37 @@ impl Hub {
                         shared.fail_ui(&mut st, id, &orig, &err);
                         return Ok(());
                     }
+                    if method == "approval.respond" && shared.feed.receiver_count() > 0 {
+                        // The window's own answer: the inbox learns who answered, from the request and never from the answer.
+                        let params = out.value.get("params").cloned().unwrap_or(Value::Null);
+                        let _ = shared.feed.send(FeedFrame {
+                            direction: Direction::Out,
+                            name: method.clone(),
+                            session_id: params
+                                .get("session_id")
+                                .and_then(Value::as_str)
+                                .map(str::to_owned),
+                            generation: None,
+                            payload: Some(params),
+                        });
+                    }
+                    if method == "prompt.submit"
+                        && shared.feed_text.load(Ordering::Relaxed)
+                        && shared.feed.receiver_count() > 0
+                    {
+                        // A message the owner typed in a window: a client that follows the conversation reads it.
+                        let params = out.value.get("params").cloned().unwrap_or(Value::Null);
+                        let _ = shared.feed.send(FeedFrame {
+                            direction: Direction::Out,
+                            name: method.clone(),
+                            session_id: params
+                                .get("session_id")
+                                .and_then(Value::as_str)
+                                .map(str::to_owned),
+                            generation: None,
+                            payload: Some(params),
+                        });
+                    }
                     let host_id = out
                         .value
                         .get("id")
@@ -453,6 +572,30 @@ impl Hub {
     #[must_use]
     pub fn events(&self) -> broadcast::Receiver<TapEvent> {
         self.shared.taps.subscribe()
+    }
+
+    /// What the local API reads off this link (`FeedFrame`): events that carry a state, and a window's `approval.respond`.
+    /// Nothing is copied while nobody holds a receiver. A receiver that falls behind skips the oldest.
+    #[must_use]
+    pub fn feed(&self) -> broadcast::Receiver<FeedFrame> {
+        self.shared.feed.subscribe()
+    }
+
+    /// Whether the feed should carry the words of replies and of the owner's messages (a reader follows conversations).
+    pub fn set_feed_text(&self, on: bool) {
+        self.shared.feed_text.store(on, Ordering::Relaxed);
+    }
+
+    /// Start the link when nothing has yet (a request the host makes itself needs no window) and wait until it is ready.
+    ///
+    /// # Errors
+    /// The link's failure when it is fatal or keeps failing; `Timeout` after `wait`.
+    pub async fn ensure_ready(&self, wait: Duration) -> Result<()> {
+        if self.status().phase == Phase::Incompatible {
+            self.retry();
+        }
+        self.ensure_started();
+        self.wait_ready(wait).await.map(|_| ())
     }
 
     /// Ask the gateway something as the host (no UI connection involved) and wait for the answer.

@@ -936,3 +936,61 @@ async fn an_acknowledging_page_gets_batches_only_while_it_has_credit_and_a_stuck
     .unwrap();
     assert_eq!(v["params"]["payload"]["n"], 99, "the other window goes on");
 }
+
+#[tokio::test]
+async fn the_feed_copies_the_words_of_a_reply_and_of_a_typed_message_only_while_a_reader_follows_conversations()
+ {
+    use super::Direction;
+    let mut r = rig();
+    let mut feed = r.hub.feed();
+    let (mut ui, gw) = r.open(1).await;
+    let mut gw = gw.unwrap();
+    let _ = ui.next_data().await; // gateway.ready
+    let delta = |n: u64, text: &str| json!({"jsonrpc":"2.0","method":"event","params":{"type":"message.delta","session_id":"s1","payload":{"text":text},"seq":n,"replay_epoch":"e1"}});
+    let typed = |id: u64| json!({"jsonrpc":"2.0","id":id,"method":"prompt.submit","params":{"session_id":"s1","text":"typed in the app","submission_id":"sub"}});
+    // nobody follows: a delta is seen as an event with no words, a typed message is not copied at all
+    gw.send(&delta(2, "secret"));
+    r.hub.send(ui.id, typed(1)).await.unwrap();
+    let first = gw.recv().await;
+    assert_eq!(
+        first["method"], "prompt.submit",
+        "the message still goes through"
+    );
+    let seen = tokio::time::timeout(WAIT, feed.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        (seen.name.as_str(), seen.payload.clone()),
+        ("message.delta", None)
+    );
+    assert!(feed.try_recv().is_err(), "the typed message was not copied");
+    // a reader follows: both carry their words
+    r.hub.set_feed_text(true);
+    gw.send(&delta(3, "hello"));
+    r.hub.send(ui.id, typed(2)).await.unwrap();
+    let _ = gw.recv().await;
+    let mut seen = Vec::new();
+    for _ in 0..2 {
+        seen.push(
+            tokio::time::timeout(WAIT, feed.recv())
+                .await
+                .unwrap()
+                .unwrap(),
+        );
+    }
+    let words = seen.iter().find(|f| f.name == "message.delta").unwrap();
+    assert_eq!(words.payload.as_ref().unwrap()["text"], "hello");
+    let said = seen.iter().find(|f| f.name == "prompt.submit").unwrap();
+    assert_eq!(said.direction, Direction::Out);
+    assert_eq!(said.payload.as_ref().unwrap()["text"], "typed in the app");
+    assert_eq!(said.session_id.as_deref(), Some("s1"));
+    // the reader leaves: back to no words
+    r.hub.set_feed_text(false);
+    gw.send(&delta(4, "again"));
+    let last = tokio::time::timeout(WAIT, feed.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(last.payload, None);
+}

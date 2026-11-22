@@ -87,6 +87,9 @@
     "allow-provider-signin-cancel",
     "allow-provider-sign-out",
     "allow-provider-signin-status",
+    "allow-local-api-status",
+    "allow-local-api-set-enabled",
+    "allow-local-api-rotate-token",
     "allow-bots-prepare",
     "allow-bots-release",
     "allow-bots-notice"
