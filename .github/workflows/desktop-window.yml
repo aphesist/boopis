@@ -1,17 +1,13 @@
 name: desktop-window
 # The built app's own window, on a fresh profile (tests/e2e/smoke_window.py): first run shows the window's controls laid out
 # for the desktop, the drag region's double click is allowed, and Close quits. On Windows it also checks the undecorated
-# window through the Win32 API (Snap's styles, the resize edges, Maximize, a double click on the bar, Minimize, Win+Left,
-# Close); on Linux it runs again as a tiling desktop (close alone). The app is a debug build with the UI embedded; no engine
+# window through the Win32 API (Snap's styles, the resize edges, a drag and a double click with the real mouse, Maximize to the
+# work area, Minimize, Win+Left, Close); on Linux it runs again as a tiling desktop (close alone). The app is a debug build with the UI embedded; no engine
 # is installed, so first run stays on its welcome. macOS is left out: WebDriver cannot drive a WKWebView app.
 # Runs as part of ci.yml's gate, and alone on any branch: `gh workflow run desktop-window.yml --ref <branch>`.
 on:
   workflow_dispatch:
   workflow_call:
-  # TEMPORARY: a workflow GitHub has not seen on the default branch cannot be dispatched, so this branch runs it on push
-  # while its new checks are proven. Removed before the merge.
-  push:
-    branches: [w24/first-run-window]
 permissions:
   contents: read
 env:
