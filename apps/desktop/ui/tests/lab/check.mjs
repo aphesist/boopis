@@ -86,6 +86,7 @@ function serve() {
 
 /* ───────── results ───────── */
 const findings = new Map();   // key -> finding (with every place it showed)
+const overlapCost = { n: 0, sum: 0, max: 0 };   // geometry.overlap's time per state drawn (ms), printed at the end
 let crops = 0;
 const slug = (s) => s.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
 function record(row, f, where) {
@@ -267,6 +268,7 @@ async function checkRow(browser, origin, row, log) {
         await setWidth(page, row, w);
         const where = preset + '/' + w;
         const rest = await probe(page, null, row.overlayDecl);
+        if (rest.overlapMs != null) { overlapCost.n++; overlapCost.sum += rest.overlapMs; overlapCost.max = Math.max(overlapCost.max, rest.overlapMs); }
         for (const f of rest.findings || []) { if (skip(f.check, f)) continue; const x = record(row, f, where); await cropFor(page, x, f); }
         if (w === 1440 || (w === 390 && preset === 'catalog')) {
           for (const fs of FORCES) {
@@ -438,5 +440,6 @@ const summary = writeReport(REPORT, {
 console.log(`\nlab: ${summary.failures} failures, ${summary.warnings} warnings in ${rows.length} states (${summary.seconds} s)`);
 for (const [a, n] of Object.entries(summary.byArea)) console.log('  ' + a.padEnd(11) + n);
 if (rules) console.log(`rules: ${rules.covered.length} of ${rules.total} RULES.md rules have a lab check (${rules.machine} are machine-checkable)`);
+if (overlapCost.n) console.log(`geometry.overlap: ${(overlapCost.sum / overlapCost.n).toFixed(1)} ms per state on average, ${overlapCost.max} ms at most (${overlapCost.n} runs)`);
 console.log('report: ' + join(REPORT, 'index.html'));
 process.exit(flag('strict') && summary.failures ? 1 : 0);

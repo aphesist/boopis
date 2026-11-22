@@ -9,6 +9,8 @@
      geometry.clip      text is not clipped unless it ends in an ellipsis
      geometry.hscroll   no horizontal scroll (the page, or a scroller that is not code)
      geometry.target    hit targets are at least 24 px (WCAG 2.5.8, DESIGN-SYSTEM.md section 15), or spaced as 2.5.8 allows
+     geometry.overlap   text painted over other text: two visible text runs in different subtrees whose boxes meet, with nothing opaque
+                        above the lower one and neither clipped away (overlays are meant to sit over text and are left out)
      concentric         a shape in a container's corner has equal insets, radius = outer - inset (the preset's --r-floor) or a pill, and
                         never crosses the container's edge, focus ring and hover fill included (section 8.2, 14.10)
      overlay            tooltips, menus and popovers sit outside their anchor with the system's gap, inside the window,
@@ -239,7 +241,7 @@
     for (const a of document.getAnimations()) if (a instanceof CSSTransition && /color|background|shadow|outline|fill|stroke|radius/.test(a.transitionProperty)) { try { a.finish(); } catch { /* an animation that cannot finish is left */ } }
     const scope = o.scope ? document.querySelector(o.scope) : (window.__lab && window.__lab.scope && window.__lab.scope()) || document.body;
     if (!scope) return { error: 'no scope', findings: [] };
-    const want = new Set(o.checks || ['geometry.contain', 'geometry.center', 'geometry.clip', 'geometry.hscroll', 'geometry.target', 'concentric', 'overlay', 'tokens.computed', 'tokens.spacing', 'native', 'scrollbar', 'brand', 'copy', 'roles']);
+    const want = new Set(o.checks || ['geometry.contain', 'geometry.center', 'geometry.clip', 'geometry.hscroll', 'geometry.target', 'geometry.overlap', 'concentric', 'overlay', 'tokens.computed', 'tokens.spacing', 'native', 'scrollbar', 'brand', 'copy', 'roles']);
     const els = elements(scope).filter((e) => shown(e));
     const cs = new Map(els.map((e) => [e, getComputedStyle(e)]));
     const shapes = new Map();
@@ -687,7 +689,94 @@
         }
       }
     }
-    return { findings: out, count: els.length };
+
+    /* geometry.overlap: text painted over other text. The range rects of every visible text node go in a grid; two runs in different
+       subtrees whose rects meet are a finding when, at a point of the meeting, both are painted (document.elementsFromPoint lists
+       an element only where it is not clipped by an ancestor's overflow) and no opaque surface sits above the lower one. Pointer
+       events are switched on for the look, so a strip with pointer-events: none is seen. Overlays (tooltips, menus, popovers, toasts,
+       the lab's declared layer) are meant to sit over text and are left out. */
+    let overlapMs = 0;
+    if (want.has('geometry.overlap')) {
+      const t0 = performance.now();
+      const OVERLAY = '.ui-tip, .ui-menu, .ui-pop, .ui-toast, .ui-listbox, .ui-dialog, .hx-palette, [role="tooltip"], [role="menu"], [role="listbox"], [role="dialog"]';
+      const ov = o.overlay || (window.__lab && window.__lab.overlay);
+      const declared = ov && ov.layer ? [...document.querySelectorAll(ov.layer)] : [];
+      const inOverlay = (e) => !!e.closest(OVERLAY) || declared.some((l) => l.contains(e));
+      const runs = [];
+      const range = document.createRange();
+      for (const e of els) {
+        if (e.matches('textarea, option, select, input, style, script')) continue;
+        const s = cs.get(e);
+        if ((rgba(s.color) || [0, 0, 0, 1])[3] < 0.05 || (rgba(s.webkitTextFillColor) || [0, 0, 0, 1])[3] < 0.05) continue;
+        for (const n of e.childNodes) {
+          if (n.nodeType !== 3 || !n.textContent.trim()) continue;
+          range.selectNodeContents(n);
+          for (const r of range.getClientRects()) {
+            if (r.width < 2 || r.height < 4) continue;
+            /* the middle of the line box: neighbouring lines of one paragraph may touch at the edges of their content areas */
+            const cut = r.height * 0.15;
+            runs.push({ el: e, full: n.textContent.trim().replace(/\s+/g, ' '), text: n.textContent.trim().replace(/\s+/g, ' ').slice(0, 28), l: r.left, t: r.top + cut, r: r.right, b: r.bottom - cut, h: r.height });
+          }
+        }
+      }
+      const CELL = 64, grid = new Map();
+      runs.forEach((q, i) => { for (let gx = Math.floor(q.l / CELL); gx <= Math.floor(q.r / CELL); gx++) for (let gy = Math.floor(q.t / CELL); gy <= Math.floor(q.b / CELL); gy++) { const k = gx + ',' + gy; (grid.get(k) || grid.set(k, []).get(k)).push(i); } });
+      const seen = new Set(), pairs = [];
+      for (const list of grid.values()) for (let a = 0; a < list.length; a++) for (let b = a + 1; b < list.length; b++) {
+        const i = list[a], j = list[b], k = i < j ? i + '|' + j : j + '|' + i;
+        if (seen.has(k)) continue; seen.add(k);
+        const A = runs[i], B = runs[j];
+        const l = Math.max(A.l, B.l), t = Math.max(A.t, B.t), r = Math.min(A.r, B.r), bt = Math.min(A.b, B.b);
+        if (r - l < 1.5 || bt - t < 1.5 || A.el === B.el) continue;
+        /* one inside the other and in the flow of it (an inline child, a nested block) is one paragraph's own business */
+        const [outer, inner] = A.el.contains(B.el) ? [A.el, B.el] : B.el.contains(A.el) ? [B.el, A.el] : [null, null];
+        if (outer) { let flow = true; for (let p = inner; p && p !== outer; p = p.parentElement) { const ps = cs.get(p) || getComputedStyle(p); if (ps.position === 'absolute' || ps.position === 'fixed') { flow = false; break; } } if (flow) continue; }
+        if (inOverlay(A.el) || inOverlay(B.el)) continue;
+        /* a drawn copy of the same words, hidden from assistive technology, is the reveal layer of a control (the hold button's inverted label), not other text */
+        if (A.full === B.full && (A.el.closest('[aria-hidden="true"]') || B.el.closest('[aria-hidden="true"]'))) continue;
+        pairs.push([A, B, l, t, r, bt]);
+      }
+      if (pairs.length) {
+        const st = document.createElement('style'); st.textContent = '* { pointer-events: auto !important }'; document.head.appendChild(st);
+        const opacityOf = (e) => { let a = 1; for (let p = e; p && p.nodeType === 1; p = p.parentElement) a *= parseFloat(getComputedStyle(p).opacity); return a; };
+        const alphaOf = (c) => { const v = rgba(c); return v ? v[3] : 0; };
+        const opaqueCache = new Map();
+        /* an element paints an opaque surface: a solid fill, or a gradient whose stops are all solid, or a pseudo-element that does and fills it */
+        const opaque = (e) => {
+          if (opaqueCache.has(e)) return opaqueCache.get(e);
+          const surface = (s, pseudo) => {
+            if (pseudo && (s.content === 'none' || s.content === 'normal' || s.display === 'none' || s.position === 'static')) return false;
+            let a = alphaOf(s.backgroundColor);
+            if (s.backgroundImage && s.backgroundImage !== 'none' && /gradient/.test(s.backgroundImage)) { const al = [...s.backgroundImage.matchAll(/rgba?\([^)]*\)/g)].map((m) => alphaOf(m[0])); if (al.length) a = Math.max(a, Math.min(...al)); }
+            return a >= 0.9;
+          };
+          const ok = (surface(getComputedStyle(e)) || surface(getComputedStyle(e, '::before'), true) || surface(getComputedStyle(e, '::after'), true)) && opacityOf(e) >= 0.9;
+          opaqueCache.set(e, ok);
+          return ok;
+        };
+        const done = new Set();
+        try {
+          for (const [A, B, l, t, r, bt] of pairs) {
+            const w = r - l, h = bt - t;
+            for (const [fx, fy] of [[0.5, 0.5], [0.15, 0.5], [0.85, 0.5], [0.5, 0.15], [0.5, 0.85]]) {
+              const x = l + w * fx, y = t + h * fy;
+              if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+              const stack = document.elementsFromPoint(x, y);
+              const ia = stack.indexOf(A.el), ib = stack.indexOf(B.el);
+              if (ia < 0 || ib < 0) continue;   /* one is clipped away at this point */
+              const [hi, lo, ilo] = ia < ib ? [A, B, ib] : [B, A, ia];
+              if (stack.slice(0, ilo).some((e) => !e.contains(lo.el) && opaque(e))) continue;   /* an opaque surface sits above the lower text */
+              const dk = describe(hi.el) + '|' + describe(lo.el);
+              if (done.has(dk)) break; done.add(dk);
+              add('geometry.overlap', hi.el, 'text "' + hi.text + '" is painted over the text "' + lo.text + '" of ' + describe(lo.el) + ', ' + r1(w) + ' x ' + r1(h) + 'px of it, with no opaque surface between', { rect: { x: r1(l + scrollX), y: r1(t + scrollY), w: r1(w), h: r1(h) }, container: rectOf(lo.el) });
+              break;
+            }
+          }
+        } finally { st.remove(); }
+      }
+      overlapMs = r1(performance.now() - t0);
+    }
+    return { findings: out, count: els.length, overlapMs };
   }
 
   let sbCache = null;

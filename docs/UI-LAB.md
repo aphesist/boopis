@@ -54,6 +54,7 @@ rules have a check and which do not.
 | `geometry.center` | R-type-11 | an item of a control row (a flex row up to 64px tall) is more than 1px off the row's centre |
 | `geometry.clip` | R-overflow-1 | text is cut without an ellipsis |
 | `geometry.hscroll` | R-overflow-4, R-scroll-7, R-a11y-6 | the window, or a scroller that is not code, scrolls sideways |
+| `geometry.overlap` | | text painted over other text: two visible text runs in different subtrees whose boxes meet, neither clipped away by an ancestor's overflow, with no opaque surface above the lower one (`document.elementsFromPoint` at the meeting). Tooltips, menus, popovers, toasts and the declared overlay are left out. The checker's own proof is `src/lab/overlap.test.ts` |
 | `geometry.target` | R-a11y-2 | a target under 24 x 24 px whose 24px circle meets another target (WCAG 2.5.8) |
 | `concentric` | R-corner-3, R-corner-5, R-corner-9, R-kbd-2 | a shape in a container's corner: unequal insets, a radius that is not outer − inset (floor 8) or a pill, in rest, hover, focus and pressed (section 8.2, 14.10) |
 | `overlay` | R-float-1, R-float-3, R-elev-6, R-tip-2, R-tip-4, R-copy-7 | a tooltip, menu or popover covers its anchor, sits off the system's gap (8px; 10px for a tooltip to the right), leaves the window's 8px margin, is not aligned (tooltips centred, menus at the anchor's start inset 8, end or centre), opens above when it should open below, or covers the text field of its anchor's container |
