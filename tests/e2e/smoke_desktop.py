@@ -243,7 +243,8 @@ def hide_and_return(s: str, display_file: Path, agent_text) -> None:
     if not windows:
         raise SystemExit("could not find the app's window to hide")
     before = webprocs()
-    long_reply = "Hidden " + ("streaming while the window is away. " * 900)
+    # about 700 deltas: the engine streams them at its own pace (tens to hundreds a second on a runner)
+    long_reply = "Hidden " + ("streaming while the window is away. " * 240)
     marker = "window-came-back"
     prompt = "@@reply " + long_reply + marker + "@@"
     # the first turn has ended (the send button is not Stop), then the long prompt goes in and Enter sends it
@@ -282,7 +283,24 @@ def hide_and_return(s: str, display_file: Path, agent_text) -> None:
     print(f"shown again: a script answered after {answered:.2f} s, a frame was drawn after {drew:.2f} s")
     if drew > budget:
         raise SystemExit(f"the window took {drew:.1f} s to come back (budget {budget:.0f} s)")
-    wait_for(lambda: marker in agent_text(), "the reply streamed while hidden", 90)
+    try:
+        wait_for(lambda: marker in agent_text(), "the reply streamed while hidden", 180)
+    except SystemExit:
+        with contextlib.suppress(Exception):
+            tail = agent_text()
+            print(f"--- the conversation's prose ({len(tail)} characters), its end:", tail[-400:], sep="\n")
+        with contextlib.suppress(Exception):
+            print(
+                "--- the proxy:",
+                json.dumps(
+                    ajs(
+                        "const done = arguments[arguments.length - 1];"
+                        "window.__TAURI_INTERNALS__.invoke('gateway_stats', {profile: null})"
+                        ".then(done, (e) => done(String(e)));"
+                    )
+                ),
+            )
+        raise
     stats = ajs(
         "const done = arguments[arguments.length - 1];"
         "window.__TAURI_INTERNALS__.invoke('gateway_stats', {profile: null})"
