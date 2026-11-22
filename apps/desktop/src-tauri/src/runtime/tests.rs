@@ -52,6 +52,7 @@ pub(crate) fn manifest_for(version: &str, sha256: String, size: u64) -> Manifest
         },
         unpacked_size: 1_000_000,
         entries: 0,
+        plugins: Vec::new(),
     }
 }
 

@@ -19,6 +19,7 @@ import { councilBlock, drawCouncil } from './council';
 import { setAttention, changed } from './state';
 import { surface } from '../mods/surfaces';
 import { UNKNOWN_MODEL, markAnswered, stampUngoverned, syncDividers } from './attribution';
+import { resolvePaths, wireRefs } from '../chat/refs';
 
 /** per-turn data the keyboard and the clipboard need */
 interface TurnInfo { md(): string; kind: 'user' | 'agent'; text?: string | undefined }
@@ -76,10 +77,12 @@ function setModelLines(t: HTMLElement, model: string, why?: string): void {
   for (const c of [...callno.children]) { if (c === time) break; if (!c.classList.contains('ui-callno__who')) c.remove(); }
   fresh.forEach((n) => callno.insertBefore(n, time));
 }
+/* an answer is markdown, drawn by the kit (one renderer for every conversation); its paths open in the session's folder */
+const proseText = (paras: readonly string[], bullets?: readonly string[]): string => [...paras, ...(bullets?.length ? [bullets.map((b) => '- ' + b).join('\n')] : [])].join('\n\n');
+const roots = (): string[] => { const c = data().details.environment.get().cwd; return c ? [c] : []; };
 function prose(paras: readonly string[], bullets?: readonly string[]): HTMLElement {
-  const p = el('div', { class: 'ui-prose' });
-  paras.forEach((t) => p.append(el('p', { html: ui.html.inline(t) })));
-  if (bullets && bullets.length) p.append(el('ul', {}, bullets.map((b) => el('li', { html: ui.html.inline(b) }))));
+  const p = ui.markdown(proseText(paras, bullets));
+  void resolvePaths(p, roots());
   return p;
 }
 
@@ -282,9 +285,9 @@ function onConversationEvent(ev: ConversationEvent): void {
   } else if (ev.type === 'turn-text') {
     const L = live.get(ev.turnId); if (!L) return;
     const stick = !VIEW.scroll || VIEW.scroll.scrollHeight - VIEW.scroll.scrollTop - VIEW.scroll.clientHeight < 80;
-    const p = prose(ev.paragraphs);
-    if (L.prose) L.prose.replaceWith(p); else if (L.blankEl) L.blankEl.before(p); else placeProse(L.t, p);
-    L.prose = p;
+    /* block by block: what is finished stays, the block being written is redrawn */
+    if (L.prose) { for (const d of ui.markdown.stream(L.prose, proseText(ev.paragraphs)).slice(0, -1)) void resolvePaths(d, roots()); }
+    else { const p = prose(ev.paragraphs); if (L.blankEl) L.blankEl.before(p); else placeProse(L.t, p); L.prose = p; }
     if (stick && VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
   } else if (ev.type === 'reset') renderConversation();
   else if (ev.type === 'blank-opened') {
@@ -393,6 +396,7 @@ export function mountView(root: HTMLElement): void {
   VIEW.scroll.append(VIEW.col);
   root.replaceChildren(VIEW.findAnchor, VIEW.scroll);
   VIEW.col.addEventListener('keydown', onTurnKey);
+  wireRefs(VIEW.col, { bot: () => null });
   VIEW.col.addEventListener('focusin', (e) => { const t = (e.target as Element).closest<HTMLElement>('[data-hx-turn]'); if (t && e.target === t) rove(t); });
   const first = sessions().list.get()[0];
   if (first) VIEW.current = first.id;

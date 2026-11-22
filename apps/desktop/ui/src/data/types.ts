@@ -61,6 +61,8 @@ export interface BotSession { id: string; title: string; when: string; messages:
 export interface BotCapability { name: string; label: string; enabled: boolean }
 /** What Hermes reports about a teammate. A field Hermes has not answered (yet) is `null` and the UI shows it as unknown;
  *  `notes` says why, in words. Never filled with a guess. */
+/** the kanban card a bot's worker is on, as the worker's session names it ('' when it has no title) */
+export interface BotWorker { title: string }
 export interface BotInfo {
   /** the Hermes profile's name and folder */
   profile: string; path: string;
@@ -75,7 +77,10 @@ export interface BotInfo {
   soul: string | null;
   /** Hermes's own "active now" rule: it wrote within the last 90 seconds, or a worker of it did. null: unknown */
   running: boolean | null;
-  notes: Readonly<Partial<Record<'detail' | 'jobs' | 'sessions' | 'store', string>>>;
+  /** a kanban worker of this bot wrote within the last 90 seconds: the bot is doing a card as well as whatever it does in rooms
+   *  and chats (the engine runs that worker as a second session of the same profile and does not tie the two together) */
+  worker?: BotWorker | null;
+  notes: Readonly<Partial<Record<'detail' | 'jobs' | 'sessions' | 'store' | 'setup', string>>>;
 }
 /** an archived teammate: a profile renamed out of the way (nothing was deleted). `id` is the profile's name now, `was` the name it
  *  returns to, `at` when it was archived (ISO, '' when unknown) and `when` the same as the list says it ("5m", "yesterday", "mon") */
@@ -113,11 +118,29 @@ export interface Group {
   members: readonly GroupMember[];
   /** the ids of the members working on a reply now */
   working: readonly string[];
+  /** the member who answers a new conversation first when the room routes through a lead; an @name brings a member in at once */
+  lead?: string;
+
+  /** what each member at work is doing, in the order the room took them (absent when the room does not say) */
+  activity?: readonly MemberActivity[];
+
+  /** a conversation is running in the room: members are replying, or the next round is about to start. A message written now
+   *  would stop that work (the engine drops a running member's answer when a newer message arrives), so it waits in `queued` */
+  busy: boolean;
+  /** the messages held back until the members have finished, oldest first; the user can take each back or send it at once */
+  queued: readonly GroupQueued[];
 }
+/** a message written while the room was busy: kept in boopis, not yet in the room */
+export interface GroupQueued { id: string; text: string; t: string }
+/** one member at work in a room: queued (next), running, or stopping; the round it answers in (0 answers the user), when it
+    started (ms since the epoch) and the tool it is in now, when the room says */
+export interface MemberActivity { member: string; status: 'queued' | 'running' | 'stopping'; round: number | null; startedAt: number | null; tool: string | null }
 /** a group put away: kept, with its messages, until it is restored */
 export interface ArchivedGroup { id: string; name: string; members: readonly GroupMember[] }
-/** a message in a group's thread: `who` is 'you' or a member's id */
-export interface GroupText { kind: 'text'; id: string; who: string; t: string; text: string }
+/** a message in a group's thread: `who` is 'you' or a member's id. `round` 0 is a member's answer to the user, a later round the
+    members among themselves (absent for the user's own and where the room does not say); `to` the members it was sent to, when
+    the room names them */
+export interface GroupText { kind: 'text'; id: string; who: string; t: string; text: string; round?: number | null; to?: readonly string[] }
 /** a line the app says in the thread: a member that could not reply, a conversation paused at its limit (`more` then names what Continue lets run) */
 export interface GroupNote { kind: 'note'; id: string; t: string; text: string; more?: string }
 export type GroupMessage = GroupText | GroupNote;
@@ -491,7 +514,7 @@ export interface StoreItem {
   provenance: Provenance;
 }
 export type StoreSourceFetch = 'compiled-in' | 'engine-gateway' | 'git-marketplace' | 'git-repo' | 'http-json' | 'registry-api' | 'github-api' | 'local';
-/** a place items come from; the last five members are the host's state and are absent in the data file */
+/** a place items come from; the last seven members are the host's state and are absent in the data file */
 export interface StoreSource {
   id: StoreSourceId; label: string; description?: string; kinds: readonly StoreKind[]; fetch: StoreSourceFetch;
   default_tier: StoreTier; default_on: boolean; user_added: boolean;
@@ -499,6 +522,10 @@ export interface StoreSource {
   engine_origin: boolean;
   url?: string; path?: string; terms?: 'own' | 'checked' | 'unverified' | 'not-applicable'; note?: string;
   enabled?: boolean; refreshed_at?: string | null; items?: number | null; error?: string | null;
+  /** reading the sources again reads this one (false: boopis's own built-in list, GitHub, and the places that hold nothing until you add one) */
+  refreshable?: boolean;
+  /** due a read: on, refreshable, and never read, failed last time, or older than its period; the store reads these when it opens */
+  stale?: boolean;
 }
 /** which layer installs it: the host's connector engine, boopis's plugin (Claude plugins and mods) or the engine's own manager */
 export type StoreLayer = 'connector' | 'plugin' | 'engine';

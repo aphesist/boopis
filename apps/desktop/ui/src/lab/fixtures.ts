@@ -33,6 +33,16 @@ export function manyBots(n: number, seed: readonly Bot[]): Bot[] {
   }
   return out;
 }
+/** the owner's six teammates as their saved records draw them (`<profile>/boopis/bot.json`, 22 November 2026): the looks every
+    place must agree on (bot data, not interface colour) */
+export const TEAM_SIX = [
+  { id: 'kai', name: 'kai', shape: 'circle', color: '#4fc9a8', state: 'idle' },
+  { id: 'nina', name: 'nina', shape: 'triangle', color: '#f23b5a', state: 'idle' },
+  { id: 'moss', name: 'moss', shape: 'squircle', color: '#2fd26a', state: 'idle' },
+  { id: 'iris', name: 'iris', shape: 'flower', color: '#3b82f6', state: 'idle' },
+  { id: 'hex', name: 'hex', shape: 'hexagon', color: '#a6a6ab', state: 'idle' },
+  { id: 'nimbus', name: 'nimbus', shape: 'cloud', color: '#9b5cf6', state: 'idle' }
+] as const;
 export const BOT_LIKE = { id: 'nina', name: 'nina', shape: 'triangle', color: '#f23b5a', eyes: 'pill', state: 'needs', attention: 'approval' } as const;
 export const BOT_LONG = { id: LONG_NAME, name: LONG_NAME, shape: 'star', color: '#e8b04a', eyes: 'pill', state: 'working', attention: null } as const;
 

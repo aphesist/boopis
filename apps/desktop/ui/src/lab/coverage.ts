@@ -20,8 +20,8 @@ export const HTML_ONLY_EXCUSED: Readonly<Record<string, string>> = {
 /** surfaces: the app's places that are more than one component */
 export const SURFACES: readonly string[] = [
   'dock', 'composer', 'sidebar', 'title-bar', 'palette', 'menus', 'popover', 'toasts', 'details-panel', 'keys-sheet',
-  'settings', 'settings-general', 'settings-models', 'settings-providers', 'settings-connectors', 'settings-appearance', 'settings-keys', 'first-run',
-  'store', 'store-detail', 'store-review', 'store-installed', 'store-sources',
+  'settings', 'settings-general', 'settings-models', 'settings-providers', 'settings-connectors', 'settings-appearance', 'settings-keys', 'first-run', 'startup-notice',
+  'store', 'store-detail', 'store-review', 'store-installed', 'store-sources', 'store-dialog',
   'council', 'bots-roster', 'bots-room', 'bots-sheet', 'bots-new', 'bots-group', 'bots-new-group'
 ];
 /** where a mod draws (docs/MODS.md section 3) */

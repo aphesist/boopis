@@ -3,12 +3,16 @@
 import { html, ui } from '@boopis/ui';
 import { line, put, stage } from '../../story';
 import type { Story } from '../../types';
-import { BOT_LIKE, BOT_LONG, LONG_TITLE, RTL, UNBROKEN } from '../../fixtures';
+import { BOT_LIKE, BOT_LONG, LONG_NAME, LONG_TITLE, RTL, TEAM_SIX, UNBROKEN, manyBots } from '../../fixtures';
+import type { Bot } from '../../../data/types';
 import { GOVERNANCE, CONTEXT } from '../../../data/mock-data';
 
 const PAGES_HIT = "the page dots are the parts of one tab strip, each with a 24px hit area around it (::after in components.css); R-a11y-2: a mark smaller than --hit-min gets a hit area of 24 around it (page dots). The check measures each dot's own box, not its hit area";
 const MARKS = { url: '/v6/design-system/index.html#c-marks', crop: '#c-marks' };
 const MEASURES = { url: '/v6/design-system/index.html#c-measures', crop: '#c-measures' };
+const MANY = manyBots(120, TEAM_SIX.map((b) => ({ ...b }) as unknown as Bot));
+const stackTypical = stage(['typical', 'size'], ({ root }) => { for (const size of [16, 20, 32]) line(root, ui.stack({ members: TEAM_SIX.slice(0, 3), size, still: true })); }, { note: 'one step (a third of an orb), the first member underneath and each next one on top' });
+const stackFocus = stage(['focus'], ({ root }) => { line(root, ui.stack({ members: TEAM_SIX, size: 20, max: 4, focusable: true, still: true })); }, { force: [{ sel: '.ui-stack[tabindex]', state: 'focus' }], note: 'with names folded into "+N" the stack takes a tab stop, so every name is reachable in its tooltip' });
 const cmp = (id: string, title: string, covers: string[], mock: Story['mock'], states: Story['states']): Story => ({ id: 'components/' + id, title, area: 'components', kind: 'component', covers, ...(mock ? { mock } : {}), states });
 
 export default [
@@ -73,6 +77,15 @@ export default [
     'with a flag': stage(['variant'], ({ root }) => { line(root, ui.orb(BOT_LIKE, { size: 40, flag: true, still: true }), ui.orb(BOT_LONG, { size: 40, flag: true, still: true })); }),
     long: stage(['long'], ({ root }) => { line(root, ui.orb(BOT_LONG, { size: 28, still: true })); }, { note: 'an orb shows no name' }),
     'on the dock': stage(['variant'], ({ root }) => { line(root, ...[28, 40].map((size) => ui.orb(BOT_LIKE, { size, still: true }))); }, { ground: 'dock' })
+  }),
+  cmp('stack', 'Stack', ['ui.stack', 'html.stack'], undefined, {
+    typical: stackTypical,
+    'focused, with +N': stackFocus,
+    'four places and +N': stage(['variant', 'many'], ({ root }) => { for (const size of [16, 20, 32]) line(root, ui.stack({ members: TEAM_SIX, size, max: 4, still: true })); }, { note: 'six members in four places: three orbs and "+3", the chip overlapped by the same step as an orb' }),
+    'one and two': stage(['single'], ({ root }) => { line(root, ui.stack({ members: TEAM_SIX.slice(0, 1), size: 16, still: true }), ui.stack({ members: TEAM_SIX.slice(0, 2), size: 16, still: true }), ui.stack({ members: TEAM_SIX.slice(0, 2), size: 32, still: true })); }),
+    'a hundred and twenty': stage(['many'], ({ root }) => { line(root, ui.stack({ members: MANY, size: 16, max: 4, still: true }), ui.stack({ members: MANY, size: 32, max: 4, still: true })); }, { note: 'a "+N" too wide for a disc becomes a capsule, overlapped the same way' }),
+    long: stage(['long'], ({ root }) => { line(root, ui.stack({ members: [BOT_LONG, ...TEAM_SIX.slice(0, 2)], size: 20, still: true }), ui.stack({ members: [BOT_LONG, ...TEAM_SIX], size: 20, max: 4, label: LONG_NAME + ', ' + LONG_TITLE, still: true })); }, { note: 'a stack shows no names: they are its accessible name and its tooltip' }),
+    'on the dock': stage(['variant'], ({ root }) => { line(root, ui.stack({ members: TEAM_SIX, size: 20, max: 4, still: true })); }, { ground: 'dock' })
   }),
   cmp('empty', 'Empty state', ['ui.empty'], { url: '/v6/design-system/index.html#c-shell', crop: '#c-shell' }, {
     typical: stage(['typical'], ({ root }) => { put(root, ui.empty({ title: 'No sessions yet', text: 'Start one with New session, or press mod+shift+O.', mark: true })); }, { width: 480 }),

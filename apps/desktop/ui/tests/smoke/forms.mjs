@@ -43,7 +43,7 @@ export async function formCards(env) {
     }, [SPECS, STATES]);
     check('forms', 'every kind draws in every state on every size, named and not empty', drawn.every((d) => d.label && d.text && d.state === d.st), drawn.filter((d) => !(d.label && d.text && d.state === d.st)).slice(0, 5));
     const origin = await page.evaluate(() => ({
-      stack: document.querySelectorAll('hx-card [data-origin="joint"] .cd-stack__more').length,
+      stack: document.querySelectorAll('hx-card [data-origin="joint"] .ui-stack__more').length,
       more: [...document.querySelectorAll('hx-card [data-origin="joint"] .ui-sr')].some((n) => /atlas/.test(n.textContent)),
       relay: [...document.querySelectorAll('hx-card [data-origin="relay"] .cd-names__via')].some((n) => /via atlas/.test(n.textContent)),
       agent: !!document.querySelector('hx-card [data-origin="agent"] svg.ui-mm[data-family="claude"]'),

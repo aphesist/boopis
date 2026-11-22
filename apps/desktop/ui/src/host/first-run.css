@@ -2,8 +2,9 @@
    hub, Concept A "Marquee" (providers-hub.ts): a page of plates and tiles over a pinned footer. Built from the kit's own components
    (buttons, the form card, the model mark, the sign-in button, the ladder's station dots) and the tokens: spacing from --sp-*, corners
    from --r-*, type from --fs-*, colour from the preset. Nothing here redefines a kit class; surfaces take the corner engine
-   (`data-sq`, with --sq-bg and --sq-line) like every card of the app. */
-.hx-first-run { position: fixed; inset: 0; z-index: var(--z-palette); display: grid; grid-template-rows: minmax(0, 1fr) auto; background: var(--bg-2); color: var(--text); font: var(--fs-m)/var(--lh) var(--sans); }
+   (`data-sq`, with --sq-bg and --sq-line) like every card of the app. The layer covers the whole window, so its first row is the
+   shell's title bar (`.hx-bar--layer`): the window's controls and drag area, the same as over the app. */
+.hx-first-run { position: fixed; inset: 0; z-index: var(--z-palette); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: var(--bg-2); color: var(--text); font: var(--fs-m)/var(--lh) var(--sans); }
 .fr-scroll { display: grid; min-height: 0; }
 .fr-shell { margin: auto; display: grid; gap: var(--sp-5); justify-items: center; width: 100%; box-sizing: border-box; padding: var(--sp-6) var(--sp-4); }
 .fr-shell > .ui-logo--welcome { margin-bottom: var(--sp-3); }
@@ -161,3 +162,11 @@
 :root[data-hx-theme="light"] .fr-tile[data-state="connected"] .ui-sso__ink[data-ink="black"], :root:not([data-hx-theme="light"]) .fr-tile[data-state="connected"] .ui-sso__ink[data-ink="white"] { display: none; }
 :root[data-hx-theme="light"] .fr-tile[data-state="connected"] .ui-sso__ink[data-ink="white"], :root:not([data-hx-theme="light"]) .fr-tile[data-state="connected"] .ui-sso__ink[data-ink="black"] { display: block; }
 .fr-tile__mark { display: inline-flex; flex: none; width: var(--sp-5); height: var(--sp-5); }
+
+/* ───────── the startup notice (host/notice.ts): when the app cannot start, a layer of the same kind, with the same title bar ───────── */
+.hx-notice { position: fixed; inset: 0; z-index: var(--z-palette); display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--bg-2); color: var(--text); font: var(--fs-m)/var(--lh) var(--sans); }
+.hx-notice__body { display: grid; align-content: center; justify-items: center; gap: var(--sp-3); padding: var(--sp-6) var(--sp-4); text-align: center; min-width: 0; }
+.hx-notice__title { margin: 0; color: var(--text-strong); font: 600 var(--fs-xl)/var(--lh-tight) var(--sans); text-wrap: balance; }
+.hx-notice__msg { margin: 0; color: var(--text-dim); max-width: var(--measure); overflow-wrap: anywhere; text-wrap: pretty; }
+.hx-notice__body .ui-code { max-width: 100%; overflow-wrap: anywhere; }
+.hx-notice__body .ui-btn { margin-top: var(--sp-2); }

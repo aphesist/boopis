@@ -44,6 +44,7 @@ def clean_channel_state(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(channel_mod.SOCKET_ENV, raising=False)
     monkeypatch.delenv(channel_mod.TOKEN_ENV, raising=False)
     monkeypatch.setattr(channel_mod, "_captured", None)
+    monkeypatch.delitem(sys.modules, channel_mod.SLOT, raising=False)
 
 
 @pytest.fixture
@@ -142,6 +143,7 @@ def test_no_host_is_no_host(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     assert refused.value.kind == "no_host"
     assert channel_mod.TOKEN_ENV not in os.environ
     monkeypatch.setattr(channel_mod, "_captured", None)
+    monkeypatch.delitem(sys.modules, channel_mod.SLOT, raising=False)
     monkeypatch.delenv(channel_mod.SOCKET_ENV)
     monkeypatch.setenv(channel_mod.TOKEN_ENV, "t")
     assert capture_environment() is None
@@ -202,3 +204,33 @@ def test_register_adds_the_source_where_hermes_has_the_api() -> None:
     boopis.register(ctx)
     assert ctx.sources[0].name == "boopis_host"
     assert sys.platform  # the source needs no hx and no network at registration
+
+
+def test_every_copy_of_the_plugin_reaches_the_host_the_first_one_captured(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The engine imports the plugin once per profile home, all in one gateway process: the root's copy takes the token out of
+    the environment, and a bot's copy (a module of its own, with its own globals) must still reach the same host."""
+    import importlib.util
+
+    monkeypatch.setenv(channel_mod.SOCKET_ENV, "/run/boopis/host.sock")
+    monkeypatch.setenv(channel_mod.TOKEN_ENV, "a" * 64)
+    first = capture_environment()
+    assert first is not None and channel_mod.TOKEN_ENV not in os.environ
+    spec = importlib.util.find_spec("boopis.hostsecrets.channel")
+    assert spec is not None and spec.loader is not None
+    copy = importlib.util.module_from_spec(
+        spec
+    )  # what `hermes_plugins.boopis__home_<digest>` is: the same file, new globals
+    monkeypatch.setitem(sys.modules, "boopis_bot_copy_channel", copy)
+    spec.loader.exec_module(copy)
+    assert copy._captured is None, "a fresh copy starts with nothing of its own"
+    again = copy.capture_environment()
+    assert again is not None and (again.socket, again.token) == (first.socket, first.token)
+    assert "a" * 64 not in repr(again) and channel_mod.TOKEN_ENV not in os.environ
+
+
+def test_the_shared_slot_holds_nothing_until_a_host_hands_a_token_over(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert capture_environment() is None
+    assert getattr(sys.modules.get(channel_mod.SLOT), "held", None) is None
+    monkeypatch.setenv(channel_mod.SOCKET_ENV, "/run/boopis/host.sock")
+    monkeypatch.setenv(channel_mod.TOKEN_ENV, "b" * 64)
+    assert capture_environment() is not None, "a host that hands one over later is still taken"

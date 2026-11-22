@@ -120,13 +120,15 @@ export async function ownerDecisions(env) {
   for (const reduced of [false, true]) {
     page = await s.fresh({ reduced });
     const orbs = await ev(() => { const o = [...document.querySelectorAll('orb-avatar')]; const live = o.filter((x) => !x.hasAttribute('static')); return { total: o.length, live: live.length, jelly12: live.filter((x) => x.getAttribute('jelly') === '.12' || x.jelly === 0.12).length }; });
+    const before = await ev(() => ({ booting: document.getElementById('hx-app').classList.contains('is-booting'), tab: __hx.state.tab, op: getComputedStyle(document.getElementById('hx-view-bots')).opacity, cls: document.getElementById('hx-view-bots').className }));
     await page.keyboard.press('Alt+2'); await page.waitForTimeout(100);
     const mid = await ev(() => getComputedStyle(document.getElementById('hx-view-bots')).opacity);
+    const after = await ev(() => ({ tab: __hx.state.tab, cls: document.getElementById('hx-view-bots').className, tr: getComputedStyle(document.getElementById('hx-view-bots')).transition.slice(0, 80) }));
     await page.waitForTimeout(700);
     const dur = await ev(() => getComputedStyle(document.querySelector('.hx-view')).transitionDuration.split(',').map((x) => parseFloat(x) * (x.includes('ms') ? 1 : 1000)).reduce((a, b) => Math.max(a, b), 0));
     const settled = await ev(() => +getComputedStyle(document.getElementById('hx-view-bots')).opacity);
     check('owner', 'reduced motion ' + (reduced ? 'on: reduces, orbs stay live' : 'off: the shell animates'),
-      reduced ? dur <= 2 && settled === 1 && orbs.live > 0 && orbs.jelly12 === orbs.live : dur >= 150 && +mid < 1 && orbs.jelly12 === 0, { viewTransitionMs: dur, midOpacity: +mid, settled, orbs });
+      reduced ? dur <= 2 && settled === 1 && orbs.live > 0 && orbs.jelly12 === orbs.live : dur >= 150 && +mid < 1 && orbs.jelly12 === 0, { viewTransitionMs: dur, midOpacity: +mid, settled, orbs, before, after });
   }
 
   /* archived bots: a collapsed group under the roster, with a count; open, each shows its name, when it was archived and Restore */

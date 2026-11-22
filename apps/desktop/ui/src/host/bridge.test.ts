@@ -7,6 +7,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 import { asHostError, HostError, inTauri, tauriBridge } from './bridge';
+import { engineDetails } from './errors';
 
 beforeEach(() => { invoke.mockReset(); });
 
@@ -21,6 +22,44 @@ describe('the typed bridge', () => {
     expect(args.profile).toBe('nina');
     args.frames.onmessage({ jsonrpc: '2.0', method: 'event' }); // a frame arriving on the Channel reaches the callback untouched
     expect(got).toEqual([{ jsonrpc: '2.0', method: 'event' }]);
+  });
+
+  it('hands each frame of a batch on in order, then acknowledges the batch once', async () => {
+    invoke.mockResolvedValue({ connection_id: 9, describe: {} });
+    const got: unknown[] = [];
+    const reload = vi.fn();
+    await tauriBridge(reload).connect(null, (f) => { got.push(f); if ((f as { bad?: boolean }).bad) throw new Error('bad'); });
+    const frames = (invoke.mock.calls[0] as [string, { frames: { onmessage: (m: unknown) => void } }])[1].frames;
+    invoke.mockClear();
+    frames.onmessage([{ n: 1 }, { n: 2, bad: true }, { n: 3 }]);
+    expect(got).toEqual([{ n: 1 }, { n: 2, bad: true }, { n: 3 }]);   /* a frame that throws costs nothing of the rest */
+    expect(invoke.mock.calls.filter(([c]) => c === 'gateway_ack')).toEqual([['gateway_ack', { connectionId: 9 }, undefined]]);
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('acknowledges what arrived before the connection id was known, once it is', async () => {
+    let resolve: (v: unknown) => void = () => undefined;
+    invoke.mockImplementationOnce(() => new Promise((r) => { resolve = r; }));
+    const pending = tauriBridge(vi.fn()).connect(null, () => undefined);
+    const frames = (invoke.mock.calls[0] as [string, { frames: { onmessage: (m: unknown) => void } }])[1].frames;
+    frames.onmessage({ jsonrpc: '2.0', method: 'event', params: { type: 'connection.state', payload: { state: 'ready' } } });
+    frames.onmessage([{ a: 1 }, { b: 2 }]);
+    expect(invoke.mock.calls.filter(([c]) => c === 'gateway_ack')).toHaveLength(0);
+    invoke.mockResolvedValue(null);
+    resolve({ connection_id: 4, describe: {} });
+    await pending;
+    expect(invoke.mock.calls.filter(([c]) => c === 'gateway_ack')).toHaveLength(2);
+  });
+
+  it('reloads the page when the host dropped the connection as too slow', async () => {
+    invoke.mockResolvedValue({ connection_id: 2, describe: {} });
+    const reload = vi.fn();
+    await tauriBridge(reload).connect(null, () => undefined);
+    const frames = (invoke.mock.calls[0] as [string, { frames: { onmessage: (m: unknown) => void } }])[1].frames;
+    frames.onmessage({ jsonrpc: '2.0', method: 'event', params: { type: 'connection.state', payload: { state: 'degraded', reason: 'lost' } } });
+    expect(reload).not.toHaveBeenCalled();
+    frames.onmessage({ jsonrpc: '2.0', method: 'event', params: { type: 'connection.state', payload: { state: 'degraded', reason: 'slow_consumer' } } });
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it('sends a frame as it is and disconnects by id', async () => {
@@ -39,9 +78,12 @@ describe('the typed bridge', () => {
     expect((err as HostError).code).toBe('hx.engine.incompatible');
   });
 
-  it('normalises other failures', () => {
+  it('normalises other failures into plain words, and keeps the raw ones for Diagnostics', () => {
     expect(asHostError(new Error('boom')).code).toBe('hx.host.unknown');
-    expect(asHostError('text').message).toBe('text');
+    const plain = asHostError('TypeError: undefined is not a function');
+    expect(plain.message).not.toContain('TypeError');
+    expect(plain.message).toContain('Try again');
+    expect(engineDetails().some((d) => d.detail.includes('TypeError'))).toBe(true);
     const e = new HostError('hx.x', 'm');
     expect(asHostError(e)).toBe(e);
   });

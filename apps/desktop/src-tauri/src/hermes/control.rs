@@ -116,11 +116,55 @@ pub async fn session_ticket(home: &Path, identity: &Identify, profile_id: &str) 
         .ok_or_else(|| Error::Unavailable("the gateway minted no ticket".into()))
 }
 
+/// How long `reload-plugins` may take: the engine's own caller waits 30 s (discovery, then the plugin's MCP servers).
+const RELOAD_WAIT: std::time::Duration = std::time::Duration::from_secs(30);
+
+/// Ask the gateway serving `root` to discover the plugins of `home` again (`reload-plugins`, the verb the engine's own
+/// `plugins enable` uses): a plugin linked into a bot's home, or a secret source configured there, takes effect without a
+/// restart. `home` is the root itself or a profile the gateway serves. The answer names the plugins it now has loaded.
+///
+/// # Errors
+/// `Unavailable` when no gateway answers, it refuses the home, or on a platform with no socket support (Windows: the caller
+/// restarts the gateway instead).
+pub async fn reload_plugins(root: &Path, home: &Path) -> Result<Vec<String>> {
+    let req = serde_json::json!({"protocol": 1, "id": 1, "verb": "reload-plugins",
+        "params": {"home": home.display().to_string()}});
+    let (result, _) = query_within(root, &req, RELOAD_WAIT).await?;
+    if result.get("reloaded").and_then(serde_json::Value::as_bool) != Some(true) {
+        let why = result
+            .get("error")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("refused");
+        return Err(Error::Unavailable(format!(
+            "the gateway did not reload the plugins: {why}"
+        )));
+    }
+    Ok(result
+        .get("plugins")
+        .and_then(serde_json::Value::as_array)
+        .map(|a| {
+            a.iter()
+                .filter_map(serde_json::Value::as_str)
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default())
+}
+
 /// One round trip: the answer's `result`, and the pid the kernel reports for the process that answered.
-#[cfg(unix)]
 async fn query(
     home: &Path,
     request: &serde_json::Value,
+) -> Result<(serde_json::Value, Option<u32>)> {
+    query_within(home, request, std::time::Duration::from_secs(2)).await
+}
+
+/// [`query`] with its own time limit.
+#[cfg(unix)]
+async fn query_within(
+    home: &Path,
+    request: &serde_json::Value,
+    wait: std::time::Duration,
 ) -> Result<(serde_json::Value, Option<u32>)> {
     use std::os::unix::fs::MetadataExt;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -146,7 +190,7 @@ async fn query(
         (&mut stream).take(LIMIT).read_to_end(&mut buf).await?;
         Ok((buf, peer.pid().and_then(|p| u32::try_from(p).ok())))
     };
-    let (buf, pid) = tokio::time::timeout(std::time::Duration::from_secs(2), work)
+    let (buf, pid) = tokio::time::timeout(wait, work)
         .await
         .map_err(|_| Error::Timeout("the gateway control socket"))?
         .map_err(|e| Error::Unavailable(format!("gateway control socket: {e}")))?;
@@ -188,9 +232,10 @@ async fn socket_path(home: &Path) -> std::path::PathBuf {
     clippy::unused_async,
     reason = "keeps the signature the same as on Unix, where the socket is read asynchronously"
 )]
-async fn query(
+async fn query_within(
     _home: &Path,
     _request: &serde_json::Value,
+    _wait: std::time::Duration,
 ) -> Result<(serde_json::Value, Option<u32>)> {
     Err(Error::Unavailable(
         "the gateway control socket is a named pipe here; the host uses the CLI".into(),
@@ -293,6 +338,47 @@ mod tests {
         assert_eq!(t, "abc_DEF-123");
         let d = super::super::attach::Dial::from_control(id.endpoint, &t).unwrap();
         assert_eq!(d.url.as_str(), "ws://127.0.0.1:7/api/ws");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn reload_plugins_names_the_home_and_reads_what_loaded() {
+        use std::os::unix::fs::PermissionsExt;
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+        let listener = tokio::net::UnixListener::bind(dir.path().join("gateway.sock")).unwrap();
+        let bot = dir.path().join("profiles").join("kai");
+        let want = bot.display().to_string();
+        tokio::spawn(async move {
+            for answer in [
+                serde_json::json!({"reloaded": true, "home": want, "plugins": ["boopis", "claude-subscription-directsdk-experimental"]}),
+                serde_json::json!({"reloaded": false, "error": "home is not served by this gateway"}),
+            ] {
+                let Ok((s, _)) = listener.accept().await else {
+                    return;
+                };
+                let (r, mut w) = s.into_split();
+                let mut line = String::new();
+                BufReader::new(r).read_line(&mut line).await.unwrap();
+                let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+                assert_eq!(req["verb"], "reload-plugins");
+                assert_eq!(req["params"]["home"], want);
+                w.write_all(
+                    format!(
+                        "{}\n",
+                        serde_json::json!({"ok":true,"protocol":1,"result":answer,"id":1})
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
+            }
+        });
+        let loaded = reload_plugins(dir.path(), &bot).await.unwrap();
+        assert!(loaded.iter().any(|p| p == "boopis"));
+        let refused = reload_plugins(dir.path(), &bot).await.unwrap_err();
+        assert!(refused.to_string().contains("not served"));
     }
 
     #[cfg(unix)]

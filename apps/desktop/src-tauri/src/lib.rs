@@ -3,6 +3,7 @@
 //! It owns the Hermes lifecycle, the gateway connection (a validating, multiplexing proxy), the OS keychain, windows
 //! and notifications. The UI owns the experience and the backend (Hermes plus the plugin) owns the work.
 
+pub mod bots;
 pub mod brand;
 pub mod chatgpt;
 pub mod claude;
@@ -25,6 +26,7 @@ pub mod local;
 pub mod local_api;
 pub mod migrate;
 pub mod os;
+pub mod paths;
 pub mod providers;
 pub mod renderer;
 pub mod resources;
@@ -34,7 +36,9 @@ pub mod settings;
 pub mod setup;
 pub mod state;
 pub mod store;
+pub mod tls;
 pub mod webkit;
+pub mod webview_health;
 pub mod window;
 pub mod xai;
 
@@ -66,6 +70,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::gateway_send,
             commands::gateway_disconnect,
             commands::gateway_stats,
+            commands::gateway_ack,
+            commands::webview_heartbeat,
             commands::secret_set,
             commands::secret_delete,
             commands::secret_exists,
@@ -74,6 +80,10 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::notify,
             commands::pick_folder,
             commands::open_external,
+            commands::path_resolve,
+            commands::path_open,
+            commands::path_reveal,
+            commands::path_editors,
             commands::window_facts,
             commands::window_control,
             commands::pick_attachments,
@@ -126,6 +136,9 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::local_api_status,
             commands::local_api_set_enabled,
             commands::local_api_rotate_token,
+            commands::bots_prepare,
+            commands::bots_release,
+            commands::bots_notice,
         ])
         .events(collect_events![
             ConnectionStateEvent,
@@ -266,6 +279,8 @@ fn window_events(window: &tauri::Window, event: &tauri::WindowEvent) {
 /// Run the app, or one of the command-line commands (`boopis --version`, `boopis doctor`) when the arguments ask.
 #[allow(clippy::too_many_lines)] // one linear start-up: decide the GPU and renderer, then build the app
 pub fn run() {
+    // rustls's process default, for anything that asks for one without naming it (every agent of ours names ring: tls.rs)
+    tls::install_default();
     let context = tauri::generate_context!();
     // Before anything else: a command-line command prints and exits, and starts no window, thread or logger.
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -344,6 +359,22 @@ pub fn run() {
                 let _ = frame_rate::refresh(window.app_handle(), &state);
             }
         })
+        .on_page_load(|webview, payload| {
+            // The main page is loading again (a reload, or the watchdog's recovery): the old page's connections have
+            // no reader any more. The new page connects afresh and reads its state from the engine.
+            if webview.label() != "main" || payload.event() != tauri::webview::PageLoadEvent::Started {
+                return;
+            }
+            if let Some(health) = webview.try_state::<Arc<webview_health::Health>>() {
+                health.signal(health.now_ms(), webview_health::Signal::Loading);
+            }
+            if let Some(state) = webview.try_state::<AppState>() {
+                let closed = state.hubs.close_all_connections();
+                if closed > 0 {
+                    tracing::info!(closed, "the page is loading again; closed its old connections");
+                }
+            }
+        })
         .setup(move |app| {
             builder.mount_events(app);
             app.manage(commands::RendererState(renderer_report));
@@ -361,6 +392,20 @@ pub fn run() {
             let fps = frame_rate::State::new(frame_rate::Policy::from_env());
             app.manage(fps.clone());
             let _ = frame_rate::refresh(app.handle(), &fps);
+            // The web view's watchdog (webview_health.rs): a dead or stuck page is reloaded instead of left grey, and
+            // what happened is kept for Diagnostics and `boopis doctor`, this run's and the previous one's.
+            let health = webview_health::Health::new(
+                app.path().app_data_dir().ok().map(|d| webview_health::file_in(&d)),
+                &app.package_info().version.to_string(),
+                webview_health::Policy::default(),
+            );
+            if let Some(last) = &health.report().last_run
+                && (last.recoveries > 0 || !last.events.is_empty())
+            {
+                tracing::info!(recoveries = last.recoveries, events = last.events.len(), longest_stall_ms = last.longest_stall_ms, outbox_peak = last.outbox_peak, "the previous run's web view record");
+            }
+            webview_health::watch(app.handle(), health.clone());
+            app.manage(health);
             let limits = config::Limits::default();
             // Which engine: the one this build carries, unpacked into the app's own folder (ADR-0023), unless
             // `boopis --engine existing` or `BOOPIS_HERMES=existing` asks for the one on this machine. The app itself
@@ -539,6 +584,7 @@ pub fn run() {
                 source,
                 carries_runtime,
                 connectors: std::sync::Mutex::default(),
+                bots: Arc::new(bots::engine::Service::new(supervisor.clone())),
                 store,
                 bundle: setup::install::Bundle::locate(
                     resource_dir.as_deref(),

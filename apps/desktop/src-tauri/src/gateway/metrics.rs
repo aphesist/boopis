@@ -74,6 +74,12 @@ pub struct Metrics {
     pub slow_closed: AtomicU32,
     /// The last attach, in milliseconds (`u32::MAX` when none yet).
     pub attach_ms: AtomicU32,
+    /// The deepest any UI connection's queue went.
+    pub outbox_peak: AtomicU32,
+    /// Deliveries to the UI (each one script run in the web view, holding one or more frames).
+    pub batches: AtomicU32,
+    /// Frames delivered to the UI, after merging.
+    pub frames_to_ui: AtomicU32,
 }
 
 fn us(d: Option<Duration>) -> Option<u32> {
@@ -101,6 +107,12 @@ pub struct ProxyStats {
     pub sink_p95_us: Option<u32>,
     /// p95 of writing a frame to the gateway socket, in microseconds.
     pub write_p95_us: Option<u32>,
+    /// The deepest any UI connection's queue went, in frames.
+    pub outbox_peak: u32,
+    /// Deliveries to the UI.
+    pub batches: u32,
+    /// Frames delivered to the UI, after merging.
+    pub frames_to_ui: u32,
 }
 
 impl Metrics {
@@ -118,6 +130,9 @@ impl Metrics {
             route_out_p95_us: us(self.route_out.percentile(95)),
             sink_p95_us: us(self.sink.percentile(95)),
             write_p95_us: us(self.write.percentile(95)),
+            outbox_peak: self.outbox_peak.load(Ordering::Relaxed),
+            batches: self.batches.load(Ordering::Relaxed),
+            frames_to_ui: self.frames_to_ui.load(Ordering::Relaxed),
         }
     }
 

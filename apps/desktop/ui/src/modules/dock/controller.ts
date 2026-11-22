@@ -10,7 +10,7 @@ import { writeJSON, KEYS } from '../../core/settings';
 import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Wait } from '../../data';
-import { PAGE_NAME, S, X, botById, flags, motion, presence, shownPages, EASE, clamp } from './ctx';
+import { PAGE_NAME, S, X, botById, flags, motion, presence, shownPages, rowNow, EASE, clamp } from './ctx';
 import { cancelOut, flipDots, hideTip, markFocus, morph, renderDots, resetMag, retarget, showView, slideNow, slideTo, stopSlide, syncFoot, emitDock, updateDots } from './engine';
 import type { MorphOpts } from './engine';
 import { lookRow, setOrbLife } from './orbs';
@@ -330,6 +330,8 @@ export function focusBot(n: number): void {
     if (to) { S.rowIdx = rove(items, j, j); markFocus(); return; }
   }
   if (S.page !== 'bots') goPage('bots');
+  /* a bot the row leaves out (geometry.ts rowFit) is in the roster: open it there, on that bot */
+  if (n - 1 >= rowNow().shown) { S.rowIdx = n - 1; setMode('expanded', { focus: 'default' }); return; }
   if (S.mode !== 'normal') setMode('normal');
   go();
 }

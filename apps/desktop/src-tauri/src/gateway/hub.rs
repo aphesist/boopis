@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use serde::Serialize;
 use serde_json::Value;
 use specta::Type;
-use tokio::sync::{Notify, broadcast, mpsc, oneshot, watch};
+use tokio::sync::{Notify, Semaphore, broadcast, mpsc, oneshot, watch};
 use tokio_util::sync::CancellationToken;
 
 use super::frame::{self, Id, Kind};
@@ -30,6 +30,20 @@ pub trait FrameSink: Send + Sync + 'static {
     /// # Errors
     /// An error when the UI is gone; the connection is then closed.
     fn send(&self, frame: &str) -> Result<()>;
+
+    /// Deliver several frames at once, in order. The default sends them one by one.
+    ///
+    /// # Errors
+    /// An error when the UI is gone.
+    fn send_batch(&self, frames: &[Arc<str>]) -> Result<()> {
+        frames.iter().try_for_each(|f| self.send(f))
+    }
+
+    /// Whether the UI acknowledges each delivery (`Hub::ack`). A sink that does gets at most `Limits::ui_credit`
+    /// deliveries ahead of the page; one that does not (tests, a collector) is never held back.
+    fn acks(&self) -> bool {
+        false
+    }
 }
 
 /// Who a response belongs to.
@@ -53,6 +67,8 @@ pub(super) struct Pending {
 pub(super) struct ConnEntry {
     pub outbox: Arc<Outbox>,
     pub order: u64,
+    /// Deliveries the page may still take before it acknowledges one; closed with the connection.
+    pub credit: Arc<Semaphore>,
 }
 
 pub(super) struct Cursor {
@@ -229,10 +245,17 @@ impl Shared {
     fn drop_slow(&self, st: &mut State, id: ConnectionId) {
         tracing::warn!(
             connection = id,
-            "a UI connection fell too far behind; closing it (it reconnects and replays)"
+            "a UI connection fell too far behind; closing it (its page reloads)"
         );
         self.metrics.slow_closed.fetch_add(1, Ordering::Relaxed);
-        st.conns.remove(&id);
+        if let Some(c) = st.conns.remove(&id) {
+            self.metrics.outbox_peak.fetch_max(
+                u32::try_from(c.outbox.peak()).unwrap_or(u32::MAX),
+                Ordering::Relaxed,
+            );
+            // Wakes a drain that waits for the page's acknowledgement, so it says goodbye and ends.
+            c.credit.close();
+        }
     }
 
     /// Answer a UI request with an error.
@@ -357,6 +380,7 @@ impl Hub {
             self.shared.limits.queue_soft_cap,
             self.shared.limits.queue_hard_cap,
         ));
+        let credit = Arc::new(Semaphore::new(self.shared.limits.ui_credit.max(1)));
         {
             let mut st = self.shared.lock();
             st.order += 1;
@@ -366,6 +390,7 @@ impl Hub {
                 ConnEntry {
                     outbox: outbox.clone(),
                     order,
+                    credit: credit.clone(),
                 },
             );
             let status = self.shared.status.borrow().clone();
@@ -379,7 +404,7 @@ impl Hub {
                 self.shared.deliver(&mut st, id, ready);
             }
         }
-        tokio::spawn(drain(self.shared.clone(), id, outbox, sink));
+        tokio::spawn(drain(self.shared.clone(), id, outbox, credit, sink));
         self.ensure_started();
         match self.wait_ready(wait).await {
             Ok(describe) => Ok(Opened { describe }),
@@ -586,9 +611,20 @@ impl Hub {
         let mut st = self.shared.lock();
         if let Some(c) = st.conns.remove(&id) {
             c.outbox.close();
+            c.credit.close();
         }
         st.pending
             .retain(|_, p| !matches!(&p.owner, Owner::Ui { conn, .. } if *conn == id));
+    }
+
+    /// The page took one delivery of connection `id`: it may have another. Never more than `Limits::ui_credit` ahead.
+    pub fn ack(&self, id: ConnectionId) {
+        let st = self.shared.lock();
+        if let Some(c) = st.conns.get(&id)
+            && c.credit.available_permits() < self.shared.limits.ui_credit.max(1)
+        {
+            c.credit.add_permits(1);
+        }
     }
 
     /// How many UI connections are open.
@@ -645,6 +681,7 @@ impl Hub {
         let mut st = self.shared.lock();
         for c in st.conns.values() {
             c.outbox.close();
+            c.credit.close();
         }
         st.conns.clear();
     }
@@ -656,24 +693,54 @@ impl Drop for Hub {
     }
 }
 
-/// Deliver a connection's queue to its sink, report overflow, and say goodbye when it was too slow.
+/// Deliver a connection's queue to its sink in batches, report overflow, and say goodbye when it was too slow.
+///
+/// A sink that acknowledges (the web view) gets a batch only while it holds credit: a page that is busy, hidden or
+/// stuck stops taking frames, and they wait here, bounded, where adjacent deltas merge, instead of piling up as
+/// scripts queued inside `WebKit` (the Tauri channel runs one script per message and never pushes back).
 async fn drain(
     shared: Arc<Shared>,
     id: ConnectionId,
     outbox: Arc<Outbox>,
+    credit: Arc<Semaphore>,
     sink: Arc<dyn FrameSink>,
 ) {
     let mut reported = 0u64;
     let mut last_report = Instant::now();
-    while let Some(text) = outbox.pop().await {
+    let acks = sink.acks();
+    let (max_frames, max_bytes) = (
+        shared.limits.batch_frames.max(1),
+        shared.limits.batch_bytes.max(1),
+    );
+    loop {
+        if acks {
+            match credit.acquire().await {
+                Ok(permit) => permit.forget(),
+                Err(_) => break, // the connection was closed (or dropped as too slow)
+            }
+        }
+        let Some(batch) = outbox.pop_batch(max_frames, max_bytes).await else {
+            break;
+        };
         let t = Instant::now();
-        if sink.send(&text).is_err() {
+        if sink.send_batch(&batch).is_err() {
             let mut st = shared.lock();
-            st.conns.remove(&id);
+            if let Some(c) = st.conns.remove(&id) {
+                c.credit.close();
+            }
             outbox.close();
             return;
         }
         shared.metrics.sink.record(t.elapsed());
+        shared.metrics.batches.fetch_add(1, Ordering::Relaxed);
+        shared.metrics.frames_to_ui.fetch_add(
+            u32::try_from(batch.len()).unwrap_or(u32::MAX),
+            Ordering::Relaxed,
+        );
+        shared.metrics.outbox_peak.fetch_max(
+            u32::try_from(outbox.peak()).unwrap_or(u32::MAX),
+            Ordering::Relaxed,
+        );
         let merged = outbox.coalesced();
         if merged > reported && last_report.elapsed() >= Duration::from_secs(1) {
             reported = merged;

@@ -22,8 +22,8 @@
 
 use serde_json::Value;
 
-use crate::chatgpt::oauth::{Reply, Transport};
-use crate::error::{Error, Result};
+use crate::chatgpt::oauth::{BLOCKED, Reply, Transport, answered_by_network};
+use crate::error::{Error, Result, kept};
 
 /// GitHub's web host (the device flow).
 pub const GITHUB: &str = "https://github.com";
@@ -146,16 +146,42 @@ fn failed(code: &'static str, message: impl Into<String>) -> Error {
     Error::Setup(code, message.into())
 }
 
-fn unreachable_error(e: &str) -> Error {
-    Error::Provider(
-        "hx.provider.unreachable",
-        format!("could not reach GitHub ({e}); check your internet connection"),
+fn unreachable_error(url: &str, e: &str) -> Error {
+    kept(
+        Error::Provider(
+            "hx.provider.unreachable",
+            "boopis could not reach GitHub. Check your internet connection or proxy, then try again.".into(),
+        ),
+        format!("{url}: {e}"),
     )
 }
 
 fn send(t: &dyn Transport, url: &str, body: &str) -> Result<Reply> {
     t.post(url, "application/x-www-form-urlencoded", body)
-        .map_err(|e| unreachable_error(&e))
+        .map_err(|e| unreachable_error(url, &e))
+}
+
+/// An answer that is not the one the step expects, in plain words; what GitHub actually sent goes to Diagnostics.
+fn unexpected(r: &Reply, step: &str) -> Error {
+    let raw = format!(
+        "GitHub, {step}: HTTP {}: {}",
+        r.status,
+        r.body.chars().take(300).collect::<String>()
+    );
+    let e = if answered_by_network(r) {
+        Error::Provider("hx.provider.signin_blocked", BLOCKED.to_owned())
+    } else if r.status >= 500 {
+        failed(
+            "hx.provider.signin_failed",
+            "GitHub is having trouble right now. Try again in a few minutes. Nothing was saved.",
+        )
+    } else {
+        failed(
+            "hx.provider.signin_failed",
+            "GitHub sent an answer boopis could not use. Try again; if it happens again, the details are in Settings, General, Diagnostics. Nothing was saved.",
+        )
+    };
+    kept(e, raw)
 }
 
 fn form(pairs: &[(&str, &str)]) -> String {
@@ -193,24 +219,21 @@ pub fn request_code(t: &dyn Transport, ep: &Endpoints) -> Result<DeviceCode> {
     }
     let v = json(&r);
     if r.status != 200 || v["error"].is_string() {
-        let why = match str_field(&v, "error").as_deref() {
-            Some("device_flow_disabled") => {
-                "GitHub says the device sign-in is turned off for this app".to_owned()
-            }
-            Some(e) if e.chars().all(|c| c.is_ascii_lowercase() || c == '_') => {
-                format!("GitHub refused to start the sign-in ({e})")
-            }
-            _ => format!("GitHub answered {} when asked for a code", r.status),
-        };
-        return Err(failed("hx.provider.signin_failed", why));
+        return Err(match str_field(&v, "error").as_deref() {
+            Some("device_flow_disabled") => kept(
+                failed(
+                    "hx.provider.signin_failed",
+                    "GitHub has turned off this kind of sign-in for boopis, so it cannot start. Try again later.",
+                ),
+                "GitHub: device_flow_disabled",
+            ),
+            _ => unexpected(&r, "asking for a code"),
+        });
     }
     let (Some(user_code), Some(device_code)) =
         (str_field(&v, "user_code"), str_field(&v, "device_code"))
     else {
-        return Err(failed(
-            "hx.provider.signin_failed",
-            "GitHub did not send a code",
-        ));
+        return Err(unexpected(&r, "asking for a code (no code in the answer)"));
     };
     Ok(DeviceCode {
         verification_url: str_field(&v, "verification_uri").unwrap_or_else(|| ep.verification()),
@@ -268,10 +291,7 @@ pub fn poll(t: &dyn Transport, ep: &Endpoints, code: &DeviceCode, interval: u64)
         )),
         Some("access_denied") => Ok(Poll::Denied),
         Some("expired_token") => Ok(Poll::Expired),
-        _ => Err(failed(
-            "hx.provider.signin_failed",
-            format!("GitHub answered {} while waiting for you", r.status),
-        )),
+        _ => Err(unexpected(&r, "waiting for you")),
     }
 }
 
@@ -299,17 +319,16 @@ fn headers(token: &str) -> [(&str, &str); 4] {
 /// `hx.provider.unreachable`, or `hx.provider.signin_failed` for a 5xx or an answer that is none of the documented ones.
 pub fn entitlement(t: &dyn Transport, ep: &Endpoints, token: &str) -> Result<Entitlement> {
     let auth = format!("token {token}");
+    let url = ep.copilot_token();
     let r = t
-        .get(&ep.copilot_token(), &headers(&auth))
-        .map_err(|e| unreachable_error(&e))?;
+        .get(&url, &headers(&auth))
+        .map_err(|e| unreachable_error(&url, &e))?;
     match r.status {
+        _ if answered_by_network(&r) => Err(unexpected(&r, "checking for Copilot")),
         200 => Ok(Entitlement::Has),
         401 | 403 | 404 => Ok(Entitlement::No),
         429 => Err(rate_limited("")),
-        s => Err(failed(
-            "hx.provider.signin_failed",
-            format!("GitHub answered {s} when checking for Copilot"),
-        )),
+        _ => Err(unexpected(&r, "checking for Copilot")),
     }
 }
 

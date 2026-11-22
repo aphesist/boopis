@@ -17,7 +17,7 @@
      Button   the library's button (variant and role become its variants). A `hotkey` that collides with the app's keys is
               dropped, never stolen; one that does not works while focus is inside the view.
      Input    the field of FORMS.md (.ui-input). Select: the library's select (a listbox).
-     Markdown paragraphs, lists, inline code, bold, italic and https links, through the library's prose.
+     Markdown the kit's markdown renderer (markdown.ts): the same subset every conversation draws, at the mod's size.
      Code     the session's well (mono 11, --bg-0), with a line gutter, a path line and a diff format.
      Link     https: only; anything else is plain text.
      Svg      sanitised (no script, no foreignObject, no external references), colours through the same map as Text.
@@ -25,7 +25,7 @@
               the determinate form (dots filled in proportion, the library's measure row), a missing or null `progress` the
               indeterminate one (one dot travelling along the row). `dots` sets the count (default 10, 3 to 20). */
 import { on } from '../core/bus';
-import { esc, isMac } from '../core/dom';
+import { isMac } from '../core/dom';
 import { logger } from '../core/log';
 import { html } from './html';
 import { iconNames } from './icons';
@@ -37,6 +37,7 @@ import { LIMITS, handlerId, textOf, validateTree } from './mod-tree';
 import type { ModChild, ModElement } from './mod-tree';
 import { hydrateOne } from './wire';
 import { frag } from '../core/dom';
+import { markdown as markdownEl } from './md-view';
 
 const log = logger('mod-view');
 
@@ -77,38 +78,8 @@ const LIVE = new Set<ModRoot>();
 const retint = (): void => { for (const r of LIVE) { if (!r.isConnected) { LIVE.delete(r); continue; } for (const l of r._mv?.lits ?? []) l.apply(); } };
 on('hx:theme', retint);
 
-/* ───────────── Markdown (the session's prose) ───────────── */
-function inlineMd(t: string): string {
-  let s = esc(t);
-  s = s.replace(/`([^`]+)`/g, '<code class="ui-code">$1</code>');
-  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/(^|[\s(])\*([^*\s][^*]*)\*(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>');
-  s = s.replace(/\[([^\]]+)\]\((https:\/\/[^\s)]+)\)/g, (_m, label: string, href: string) => '<a class="mv-link" href="' + href + '" target="_blank" rel="noopener noreferrer">' + label + '</a>');
-  return s;
-}
-function markdown(text: string): HTMLElement {
-  const root = el('div', 'ui-prose mv-md');
-  const lines = String(text).replace(/\r/g, '').split('\n');
-  let para: string[] = [], list: { ord: boolean; el: HTMLElement } | null = null;
-  const flush = (): void => {
-    if (para.length) { const p = el('p'); p.innerHTML = inlineMd(para.join(' ')); root.append(p); para = []; }
-    if (list) { root.append(list.el); list = null; }
-  };
-  for (const raw of lines) {
-    const line = raw.trimEnd();
-    let m: RegExpExecArray | null;
-    if (!line.trim()) { flush(); continue; }
-    if ((m = /^(#{1,3})\s+(.*)$/.exec(line))) { flush(); const h = el('p', 'mv-md__h'); h.innerHTML = inlineMd(m[2] ?? ''); root.append(h); continue; }
-    if ((m = /^\s*([-*]|\d+\.)\s+(.*)$/.exec(line))) {
-      const ord = /\d/.test(m[1] ?? '');
-      if (!list || list.ord !== ord) { flush(); list = { ord, el: el(ord ? 'ol' : 'ul') }; }
-      const li = el('li'); li.innerHTML = inlineMd(m[2] ?? ''); list.el.append(li); continue;
-    }
-    if (list) flush();
-    para.push(line.trim());
-  }
-  flush();
-  return root;
-}
+/* ───────────── Markdown: the kit's one renderer (markdown.ts), at the mod's 13px ───────────── */
+const markdown = (text: string): HTMLElement => markdownEl(String(text), { httpsOnly: true }, { class: 'mv-md' });
 
 /* ───────────── builders ───────────── */
 const SIZE_VAR: Readonly<Record<string, string>> = { xs: '--fs-2xs', s: '--fs-xs', m: '--fs-s', l: '--fs-m', xl: '--fs-l', small: '--fs-xs', large: '--fs-m', '2xs': '--fs-2xs' };

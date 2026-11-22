@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { BotsEvent } from '../../data';
 import type { GatewayClient, GatewayEvent } from '../gateway';
 import { NeedsConfirmation } from '../../data/confirm';
-import { lookFor } from '../../data/looks';
+import { lookFor } from '@boopis/ui';
 import { createLiveBots } from './bots';
 import { madeOutside } from './map-bots';
 import type { LiveBots } from './bots';
@@ -44,6 +44,9 @@ class FakeHermes {
   failProfilesList = false;
   /** the plugin's read answers nothing, or reports a store it could not read */
   failOwn = false;
+  /** the hand-off skill, given to each live teammate; a plugin without the method refuses */
+  guided: string[] = [];
+  failGuide = false;
   problems: Record<string, string> = {};
   failLink = false;
   main = new FakeLink((m, p) => this.mainCall(m, p));
@@ -78,6 +81,7 @@ class FakeHermes {
       }
       case 'plugin.boopis.bots.read': if (this.failOwn) throw new Error('the plugin is not there'); return { root: HOME, bots: this.profiles.filter((x) => !x['is_default']).map((x) => ({ name: x['name'], path: x['path'], record: this.own[x['name']] ?? null, problem: this.problems[x['name']] ?? null, archived: this.archived[x['name']] ?? null })) };
       case 'plugin.boopis.bots.write': { this.own[p['name']] = { ...(this.own[p['name']] ?? {}), ...(p['look'] ? { look: p['look'] } : {}), ...(p['settings'] ? { settings: { ...(this.own[p['name']]?.['settings'] ?? {}), ...p['settings'] } } : {}), ...(p['approvals'] ? { approvals: p['approvals'] } : {}) }; return { record: this.own[p['name']] }; }
+      case 'plugin.boopis.bots.guide': if (this.failGuide) throw new Error('unknown method'); this.guided.push(p['name']); return { skill: 'boopis-handoffs', version: 1, written: true };
       case 'plugin.boopis.bots.inspect': return { path: HOME + '/profiles/' + p['name'], bytes: 3 * 1024 * 1024, files: 240, truncated: false, has_sessions: true, memory_files: 2, skills: 9, boopis_bytes: 300 };
       case 'plugin.boopis.bots.archive': {
         const to = 'archived--' + p['name'];
@@ -110,6 +114,7 @@ class FakeHermes {
         const ev = (type: string, payload: Json): void => link.emit({ type, session_id: p['session_id'], payload });
         ev('message.start', {});
         if (p['text'] === 'deploy') ev('approval.request', { prompt_id: 'a1', command: 'make deploy', description: 'ships it', execution_generation: 3 });
+        else if (p['text'] === 'fail') { const raw = "⚠️ Unknown provider 'claude-subscription-directsdk-experimental'. Check 'hermes model' for available providers."; ev('message.delta', { text: raw }); ev('message.complete', { text: raw, status: 'error', error: raw }); }
         else { ev('tool.start', { name: 'git' }); ev('message.delta', { text: 'On ' }); ev('message.delta', { text: 'it.' }); ev('message.complete', { text: 'On it.' }); }
       });
       return { ok: true };
@@ -236,7 +241,7 @@ describe('making a bot is Hermes’s profiles.create, then the look in boopis’
     const made = await bots.source.admin!.create({ name: 'kai', role: 'docs and changelog', shape: 'drop', color: '#4fc9a8', instructions: 'You write docs.' }, { model: 'nous/hermes-4' });
     const call = h.main.calls.find((c) => c.method === 'profiles.create')!;
     expect(call.params).toEqual({ name: 'kai', description: 'docs and changelog', no_alias: true, soul: 'You write docs.\n', provider: 'nous', model: 'hermes-4' });
-    expect(h.own['kai']).toMatchObject({ look: { shape: 'drop', color: '#4fc9a8' }, settings: { gov: 'governed' } });
+    expect(h.own['kai']).toMatchObject({ look: { shape: 'drop', color: '#4fc9a8' }, settings: { gov: 'ungoverned' } });   // governance is opt-in (ADR-0042)
     expect(made).toMatchObject({ id: 'kai', shape: 'drop' });
     expect(made.info?.model).toBe('nous/hermes-4');
     expect(events.map((e) => e.type)).toContain('bot-created');
@@ -286,10 +291,36 @@ describe('the settings sheet edits the real profile, and shows the diff first', 
   });
   it('saves boopis’s own settings in the plugin’s store, never through a Hermes config method', async () => {
     const { h, bots } = await open();
-    await bots.source.admin!.saveOwn('atlas', { cfg: { gov: 'governed', cap: '1.00', approvals: { push: false } }, look: { shape: 'star' } });
-    expect(h.main.calls.at(-1)).toMatchObject({ method: 'plugin.boopis.bots.write', params: { name: 'atlas', look: { shape: 'star' }, settings: { gov: 'governed', cap: '1.00' }, approvals: { push: false } } });
+    await bots.source.admin!.saveOwn('atlas', { cfg: { gov: 'ungoverned', cap: '1.00', approvals: { push: false } }, look: { shape: 'star' } });
+    expect(h.main.calls.at(-1)).toMatchObject({ method: 'plugin.boopis.bots.write', params: { name: 'atlas', look: { shape: 'star' }, settings: { gov: 'ungoverned', cap: '1.00' }, approvals: { push: false } } });
     expect(h.main.calls.some((c) => c.method === 'profiles.configure')).toBe(false);
-    expect(botOf(bots, 'atlas')).toMatchObject({ shape: 'star', cfg: { gov: 'governed', cap: '1.00' } });
+    expect(botOf(bots, 'atlas')).toMatchObject({ shape: 'star', cfg: { gov: 'ungoverned', cap: '1.00' } });
+  });
+  it('turns Governed on only on a frontier model, and says why it will not otherwise', async () => {
+    const { h, bots } = await open();
+    await expect(bots.source.admin!.saveOwn('atlas', { cfg: { gov: 'governed' } })).rejects.toThrow('atlas runs on fake-a. Governed mode needs a frontier model.');
+    expect(h.main.calls.some((c) => c.method === 'plugin.boopis.bots.write')).toBe(false);   // nothing was saved
+    h.describes['atlas']!['model'] = { provider: 'claude-subscription-directsdk-experimental', default: 'opus' };
+    await bots.source.admin!.open('atlas');
+    const fresh = await open(h);
+    await fresh.bots.source.admin!.open('atlas');
+    await fresh.bots.source.admin!.saveOwn('atlas', { cfg: { gov: 'governed' } });
+    expect(h.own['atlas']).toMatchObject({ settings: { gov: 'governed' } });
+    // a governed bot is not moved to a model governed mode will not run
+    await expect(fresh.bots.source.admin!.save('atlas', { model: 'main/fake-b' })).rejects.toThrow(/Governed mode needs a frontier model/);
+    expect(h.main.calls.some((c) => c.method === 'profiles.configure')).toBe(false);
+  });
+  it('a look changed in the editor is written with bots.write, shape and colour only, and a profile made outside gets its store', async () => {
+    const { h, bots, events } = await open();
+    expect(botOf(bots, 'nina')).toMatchObject({ ...lookFor('Nina'), madeOutside: true });   /* no record: the name's look */
+    events.length = 0;
+    bots.source.update('nina', { look: { shape: 'cloud', color: '#9b5cf6' } });
+    await bots.settled(); await new Promise((r) => setTimeout(r, 0));
+    expect(h.main.calls.at(-1)).toEqual({ method: 'plugin.boopis.bots.write', params: { name: 'nina', look: { shape: 'cloud', color: '#9b5cf6' } } });
+    expect(h.own['nina']).toEqual({ look: { shape: 'cloud', color: '#9b5cf6' } });
+    const ev = events.find((e) => e.type === 'bot') as { bot: { id: string; shape: string; color: string; madeOutside?: true } };
+    expect(ev.bot).toMatchObject({ id: 'nina', shape: 'cloud', color: '#9b5cf6' });
+    expect('madeOutside' in ev.bot).toBe(false);
   });
 });
 
@@ -450,6 +481,19 @@ describe('a conversation with a teammate is a session of its own profile', () =>
     expect(events.filter((e) => e.type === 'run').pop()).toMatchObject({ running: false });
     expect(bots.source.snapshot().threads['atlas']!.map((m) => m.kind === 'text' ? m.text : '')).toEqual(['hello', 'On it.']);
   });
+  it('says a failed turn in boopis’s words, never the engine’s', async () => {
+    const { bots, events } = await open();
+    events.length = 0;
+    bots.source.send('atlas', 'fail', 'bots');
+    await tickAll();
+    const thread = bots.source.snapshot().threads['atlas']!;
+    expect(thread.map((m) => m.kind)).toEqual(['text', 'note']);   // the engine's sentence is gone, the note says it
+    const note = thread[1]!;
+    expect(note.kind === 'note' && note.text).toMatch(/^atlas can’t reach its model\. Check that you are signed in in Settings, Models/);
+    expect(JSON.stringify(thread)).not.toMatch(/hermes|Unknown provider/i);
+    expect(events.some((e) => e.type === 'thread')).toBe(true);
+    expect(events.filter((e) => e.type === 'run').pop()).toMatchObject({ running: false });
+  });
   it('shows the bot working while it runs a tool, and idle again after', async () => {
     const { bots, events } = await open();
     events.length = 0;
@@ -531,5 +575,113 @@ describe('what a teammate cannot do yet is not pretended', () => {
     const { bots } = await open();
     expect(bots.source.catalog().channels).toEqual([{ id: 'app', name: 'This app', hint: 'always on' }]);
     expect(bots.source.catalog().reserved).toEqual(['default']);
+  });
+});
+
+
+describe('what a bot’s home needs is the host’s (ADR-0042)', () => {
+  function bridged(h = new FakeHermes()) {
+    const calls: string[] = [];
+    const shown: string[] = [];
+    let notice: string | null = 'Governed mode now really applies to a bot when you turn it on.';
+    const bridge = {
+      prepare: (name: string, fresh: boolean) => { calls.push('prepare ' + name + (fresh ? ' fresh' : '')); return Promise.resolve({ changed: true, problems: name === 'nina' ? ['its place in groups: boopis could not finish'] : [] }); },
+      release: (name: string) => { calls.push('release ' + name); return Promise.resolve(); },
+      notice: () => { const n = notice; notice = null; return Promise.resolve(n); }
+    };
+    const bots = createLiveBots({ client: h.main as unknown as GatewayClient, linkTo: h.linkTo, now: () => NOW, pollMs: null, bridge, notify: (t) => shown.push(t) });
+    return { h, bots, calls, shown };
+  }
+  it('prepares a bot it makes, restores or switches, releases one it archives or deletes, and shows the host’s notice once', async () => {
+    const { h, bots, calls, shown } = bridged();
+    await bots.ready; await bots.settled();
+    expect(shown).toEqual(['Governed mode now really applies to a bot when you turn it on.']);
+    await bots.source.admin!.create({ name: 'kai', role: '', shape: 'drop', color: '#4fc9a8', instructions: '' }, { model: 'nous/hermes-4' });
+    expect(calls).toContain('prepare kai fresh');
+    await bots.source.admin!.save('kai', { model: 'main/fake-b' });
+    expect(calls.at(-1)).toBe('prepare kai');   // its ladder follows its model
+    const { undo } = await bots.source.admin!.archive('atlas');
+    expect(calls.at(-1)).toBe('release atlas');
+    await undo();
+    expect(calls.at(-1)).toBe('prepare atlas');
+    await bots.source.admin!.remove('kai', 'kai');
+    expect(calls.at(-1)).toBe('release kai');
+    await bots.source.admin!.saveOwn('nina', { cfg: { gov: 'ungoverned' } });
+    expect(calls.at(-1)).toBe('prepare nina');
+    // what the host could not do is a note on the bot, never a failed save
+    expect(botOf(bots, 'nina')!.info!.notes.setup).toMatch(/boopis could not finish setting it up/);
+    expect(h.own['nina']).toMatchObject({ settings: { gov: 'ungoverned' } });
+    // each flow prepares its bot once: the roster reads in between leave it to the flow
+    expect(calls.filter((c) => c.startsWith('prepare kai')).length).toBe(2);
+    expect(calls.filter((c) => c === 'prepare atlas' || c === 'prepare atlas fresh')).toEqual(['prepare atlas']);
+  });
+  it('prepares a bot that appears while the app runs, made anywhere else, once, and not the ones it had at start', async () => {
+    const { h, bots, calls } = bridged();
+    await bots.ready; await bots.settled();
+    expect(calls.filter((c) => c.startsWith('prepare'))).toEqual([]);   // the bots at start are the host's repair's
+    // the engine's own CLI (or another client) makes two bots while the app runs
+    h.profiles.push({ name: 'iris', path: HOME + '/profiles/iris', description: '' }, { name: 'moss', path: HOME + '/profiles/moss', description: '' });
+    (h.main as FakeLink).emit({ type: 'profiles.changed' });
+    await new Promise((r) => setTimeout(r, 450));
+    await bots.settled();
+    expect(calls.filter((c) => c.startsWith('prepare'))).toEqual(['prepare iris fresh', 'prepare moss fresh']);
+    // the next read finds them known: nothing more
+    (h.main as FakeLink).emit({ type: 'profiles.changed' });
+    await new Promise((r) => setTimeout(r, 450));
+    await bots.settled();
+    expect(calls.filter((c) => c.startsWith('prepare')).length).toBe(2);
+  });
+});
+
+/* The engine runs a bot's kanban card as a second session of the same profile and does not tie it to the bot's room turn
+   (`tools/kanban_tools.py`, `hermes_cli/kanban_db_dispatch.py` `_default_spawn`, `HERMES_SESSION_SOURCE=kanban`), so boopis says so. */
+describe('a bot that is also running a kanban card', () => {
+  const NOW = 1_800_000_000;
+  const row = (worker: Record<string, unknown> | null, extra: Record<string, unknown> = {}) => ({ name: 'mira', path: '/h/profiles/mira', worker_session: worker, last_session: null, ...extra }) as never;
+  it('is named when the newest worker session is a kanban one that wrote lately', async () => {
+    const { workerFrom } = await import('./map-bots');
+    expect(workerFrom(row({ id: 's', source: 'kanban', title: 'review the render', last_active: NOW - 10 }), NOW)).toEqual({ title: 'review the render' });
+    expect(workerFrom(row({ id: 's', source: 'Kanban', title: '', last_active: NOW - 90 }), NOW)).toEqual({ title: '' });
+  });
+  it('is not named for a stale one, another kind of worker, or none', async () => {
+    const { workerFrom } = await import('./map-bots');
+    expect(workerFrom(row({ id: 's', source: 'kanban', title: 'x', last_active: NOW - 91 }), NOW)).toBeNull();
+    expect(workerFrom(row({ id: 's', source: 'tool', title: 'x', last_active: NOW }), NOW)).toBeNull();
+    expect(workerFrom(row({ id: 's', source: 'kanban', title: 'x' }), NOW)).toBeNull();
+    expect(workerFrom(row(null), NOW)).toBeNull();
+  });
+  it('says what it is doing as a kanban task, on the bot and in its state', async () => {
+    const { botFrom } = await import('./map-bots');
+    const bot = botFrom({ row: row({ id: 's', source: 'kanban', title: 'review the render', last_active: NOW - 5 }), plugin: undefined, detail: null, jobs: null, sessions: null, notes: {} }, NOW);
+    expect(bot.info?.worker).toEqual({ title: 'review the render' });
+    expect(bot.state).toBe('working');
+    expect(bot.activity).toBe('kanban task: review the render');
+  });
+});
+
+describe('every teammate is given the hand-off skill, once', () => {
+  it('asks the plugin for each live bot after the first read, and not again on the next', async () => {
+    const { h, bots } = await open();
+    expect(h.guided.sort()).toEqual(['atlas', 'nina']);
+    h.main.emit({ type: 'profiles.changed', payload: {} } as never);
+    await new Promise((r) => setTimeout(r, 600)); await bots.settled();
+    expect(h.main.calls.filter((c) => c.method === 'profiles.list').length).toBeGreaterThan(1);
+    expect(h.guided).toHaveLength(2);
+  });
+  it('does not ask for an archived bot, and does not fail when the plugin has no such method', async () => {
+    const h = new FakeHermes();
+    h.profiles.push({ name: 'archived--old', path: HOME + '/profiles/archived--old', description: '' });
+    h.archived['archived--old'] = { name: 'old', at: '2026-11-19T10:00:00+00:00', paused_jobs: [] };
+    const { h: g, bots } = await open(h);
+    expect(g.guided).not.toContain('archived--old');
+    const none = new FakeHermes(); none.failGuide = true;
+    const again = await open(none);
+    expect(again.bots.source.snapshot().bots.map((b) => b.id).sort()).toEqual(['atlas', 'nina']);
+    void bots;
+  });
+  it('says nothing to a plugin that did not answer the read', async () => {
+    const none = new FakeHermes(); none.failOwn = true;
+    const { h } = await open(none);
+    expect(h.guided).toEqual([]);
   });
 });

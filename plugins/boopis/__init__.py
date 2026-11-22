@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from importlib import import_module
+from pathlib import Path
 from typing import Any
 
 HOOKS = (
@@ -52,6 +53,7 @@ RPC_METHODS = (
     "mod.install.confirm",
     "bots.read",
     "bots.write",
+    "bots.guide",
     "bots.inspect",
     "bots.archive",
     "bots.restore",
@@ -173,16 +175,31 @@ def _start_signins() -> None:
     """Hand the desktop host's sign-ins to the runtime, now and every few minutes: ChatGPT's (``signins/chatgpt.py``,
     ADR-0030), GitHub Copilot's (``signins/copilot.py``, ADR-0039) and SuperGrok's (``signins/xai.py``, ADR-0039, every
     minute: its tokens are short-lived). Each runs on a daemon thread in a copy of this context (the same profile home).
-    Only in a gateway the desktop host started: with no secret channel there is no sign-in to hand over."""
+    Only in a gateway the desktop host started: with no secret channel there is no sign-in to hand over. And only in the
+    root home: a bot's copy of the plugin (``profiles/<name>``) has no ``auth.json`` of its own and reads the root's
+    logins through the engine's own fallback, so a second writer there would only fork the pool (ADR-0042)."""
     from .hostsecrets.channel import capture_environment
 
-    if capture_environment() is None:
+    if capture_environment() is None or not _in_root_home():
         return
     from .signins import chatgpt, copilot, xai
 
     chatgpt.start()
     copilot.start()
     xai.start()
+
+
+def _in_root_home() -> bool:
+    """Whether this copy of the plugin loaded in the root home, not in a bot's (``profiles/<name>``). When the engine
+    cannot say (a test double, an older engine), the answer is yes: that is how the plugin behaved before bots loaded
+    it."""
+    try:
+        from .bots.homes import default_root
+        from .hermes_api import hermes_home
+
+        return Path(hermes_home()).resolve() == default_root().resolve()
+    except Exception:  # noqa: BLE001 - an engine that cannot name its homes keeps the old behaviour
+        return True
 
 
 def _start_recovery() -> None:

@@ -65,11 +65,31 @@ export function measureFrames(ms = 5000): Promise<FrameStats> {
 const GPU_LABELS: Record<GpuPolicy, string> = { auto: 'Automatic', integrated: 'Integrated', dedicated: 'Dedicated' };
 export const gpuLabel = (p: GpuPolicy): string => GPU_LABELS[p];
 
-/** the engine's own words behind the error sentences of this run (ADR-0031): Diagnostics is the one place they are shown */
+/** the raw words behind the error sentences of this run (the engine's, ADR-0031, and a failed request's): Diagnostics is the one place they are shown */
 export function errorLines(host: readonly { code: string; detail: string; at: number | null }[], ui: readonly { code: string; detail: string; at: number }[]): string[] {
   const all = [...host.map((e) => ({ ...e, at: (e.at ?? 0) * 1000 })), ...ui].sort((a, b) => a.at - b.at);
   if (!all.length) return ['errors behind the messages shown: none this run'];
-  return ['errors behind the messages shown (the engine\'s own words):', ...all.map((e) => `  ${new Date(e.at).toISOString()}  ${e.code}  ${e.detail}`)];
+  return ['errors behind the messages shown (the raw words, kept here only):', ...all.map((e) => `  ${new Date(e.at).toISOString()}  ${e.code}  ${e.detail}`)];
+}
+
+type Health = NonNullable<RendererReport['health']>;
+type Run = Health['this_run'];
+const when = (secs: number): string => new Date(secs * 1000).toISOString().replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
+function runLines(label: string, r: Run): string[] {
+  const head = `${label}: boopis ${r.version}, started ${when(r.started)}; ${r.recoveries} ${r.recoveries === 1 ? 'recovery' : 'recoveries'}; longest page stall ${r.longest_stall_ms} ms; outbox peak ${r.outbox_peak} frames`;
+  const beat = r.last_heartbeat != null ? [`  last page heartbeat ${when(r.last_heartbeat)} (${r.last_visible === false ? 'hidden' : r.last_visible ? 'visible' : 'visibility unknown'})`] : [];
+  const events = r.events.map((e) => `  ${when(e.at)}  ${e.kind}${e.detail ? ` (${e.detail})` : ''}${e.value != null ? ` ${e.value}` : ''}`);
+  return [head, ...beat, ...(events.length ? events : ['  no web view events'])];
+}
+/** the web view's health (src-tauri/src/webview_health.rs): web-process ends and why, unresponsive periods, recoveries, the
+    page's longest stall and the outbox peak, this run and the last */
+export function healthLines(h: RendererReport['health']): string[] {
+  if (!h) return [];
+  return [
+    `window watchdog: ${h.watching ? 'watching the web process' : 'not watching (no web view signals here)'}`,
+    ...runLines('this run', h.this_run),
+    ...(h.last_run ? runLines('last run', h.last_run) : ['last run: no record'])
+  ];
 }
 
 /** the report as plain text, one fact a line, for a message */
@@ -108,6 +128,7 @@ export function reportText(r: Report, d: DisplayFacts, f?: FrameStats | null): s
     `user agent: ${d.userAgent}`,
     'choices: ' + r.choices.map(([k, v]) => `${k} = ${v}`).join('; '),
     ...(r.plan ? planLines(r.plan) : []),
+    ...healthLines(r.health),
     ...(f ? [`frames over ${f.seconds} s: ${describeFrames(f, rate)} (p50 ${f.p50} ms, p95 ${f.p95} ms, max ${f.max} ms, ${f.over33} over 33 ms, ${f.frames} frames)`] : []),
     ...errorLines(r.errors ?? [], engineDetails())
   ].join('\n');

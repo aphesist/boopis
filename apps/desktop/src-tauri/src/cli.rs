@@ -372,6 +372,8 @@ pub struct Gathered {
     pub runtime: RuntimeStatus,
     /// The folders the app keeps things in, and whether each exists.
     pub folders: Vec<(&'static str, PathBuf, bool)>,
+    /// What the web view's watchdog kept from the last run the app made (`webview_health`), when there is a record.
+    pub last_webview: Option<crate::webview_health::Run>,
 }
 
 /// The state of the Hermes the app runs.
@@ -462,12 +464,16 @@ pub fn gather(resource_dir: Option<&Path>) -> Gathered {
         platform_profile: platform_profile.clone(),
         ..frame_rate::Report::pending(fps_policy)
     };
+    let last_webview = data
+        .as_deref()
+        .and_then(|d| crate::webview_health::read_run(&crate::webview_health::file_in(d)));
     Gathered {
         report,
         fps_policy,
         platform_profile,
         runtime: runtime_status,
         folders,
+        last_webview,
     }
 }
 
@@ -784,6 +790,38 @@ pub fn doctor_lines(out: &Out, version: &str, gathered: &Gathered) -> Vec<String
             lines.push(out.row(Some(Mark::Fail), "status", &shown));
             lines.push(out.note("Reinstall boopis to restore the runtime."));
         }
+    }
+
+    // What the web view went through the last time the app ran (webview_health.rs): the record a grey or frozen window
+    // leaves, written as it happens, so a run that had to be killed still says what it saw.
+    lines.extend(out.heading("window (last run)"));
+    match &gathered.last_webview {
+        Some(run) => {
+            let bad = run.recoveries > 0
+                || run
+                    .events
+                    .iter()
+                    .any(|e| e.kind == "terminated" || e.kind == "unresponsive");
+            for (i, l) in crate::webview_health::doctor_lines(run)
+                .into_iter()
+                .enumerate()
+            {
+                if i == 0 {
+                    lines.push(out.row(
+                        Some(if bad { Mark::Warn } else { Mark::Ok }),
+                        "record",
+                        &l,
+                    ));
+                } else {
+                    lines.push(out.note(l.trim_start()));
+                }
+            }
+        }
+        None => lines.push(out.row(
+            None,
+            "record",
+            "none yet (the app keeps one once its window has opened)",
+        )),
     }
 
     lines.extend(out.heading("folders"));

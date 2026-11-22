@@ -1,0 +1,10 @@
+/* What a message points at (refs.ts): a mention's card, inside the kit's popover. Tokens only. */
+.ch-card { display: grid; gap: var(--sp-3); min-width: 0; }
+.ch-card__top { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--sp-3); }
+.ch-card__who { min-width: 0; }
+.ch-card__name { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 var(--fs-l)/var(--lh-tight) var(--sans); color: var(--text-strong); }
+.ch-card__role { margin: var(--sp-1) 0 0; font: 400 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); }
+.ch-card__line { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); margin: 0; font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); }
+.ch-card__state { display: inline-flex; align-items: center; gap: var(--sp-1); color: var(--text-dim); }
+.ch-card__model { display: inline-flex; align-items: center; }
+.ch-card__acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); }

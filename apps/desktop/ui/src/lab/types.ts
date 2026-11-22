@@ -42,6 +42,9 @@ export interface Interaction {
   sample?: number;
   /** what to watch (defaults to the story's scope) */
   watch?: string;
+  /** `stay`: no `<orb-avatar>` under the watched element may be taken out of the page and put back, or drawn anew (an update writes
+      the orb's attributes). A live update of a bot is such an interaction; a mode change that moves orbs between containers is not */
+  orbs?: 'stay';
 }
 
 export type Render = (ctx: StageCtx) => void | Promise<void>;
@@ -95,6 +98,10 @@ export interface State {
   app?: { provider?: ProviderSpec; setup?(ctx: AppCtx): void | Promise<void> };
   /** the stage cell's width in px (else the window less the stage padding) */
   width?: number;
+  /** the window's zoom, as the desktop app's interface size makes it (1.12, 1.25): the checker lays the page out at 1/zoom of the
+      window's width and draws it `zoom` times larger (the device pixel ratio times it), which is what a web view's page zoom does.
+      Widths under 900 are not checked: no desktop window is that narrow */
+  zoom?: number;
   /** the stage's ground: the conversation's (default), the frame's, or the dock's black */
   ground?: 'ground' | 'frame' | 'dock' | 'raised';
   /** pseudo-states forced on part of the state */

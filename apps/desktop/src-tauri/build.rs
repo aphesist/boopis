@@ -17,6 +17,8 @@ const COMMANDS: &[&str] = &[
     "gateway_send",
     "gateway_disconnect",
     "gateway_stats",
+    "gateway_ack",
+    "webview_heartbeat",
     "secret_set",
     "secret_delete",
     "secret_exists",
@@ -25,6 +27,10 @@ const COMMANDS: &[&str] = &[
     "notify",
     "pick_folder",
     "open_external",
+    "path_resolve",
+    "path_open",
+    "path_reveal",
+    "path_editors",
     "window_facts",
     "window_control",
     "pick_attachments",
@@ -77,6 +83,9 @@ const COMMANDS: &[&str] = &[
     "local_api_status",
     "local_api_set_enabled",
     "local_api_rotate_token",
+    "bots_prepare",
+    "bots_release",
+    "bots_notice",
 ];
 
 fn main() {

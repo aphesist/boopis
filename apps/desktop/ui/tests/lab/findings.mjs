@@ -64,6 +64,7 @@ function cause(check, msg, el) {
     case 'stability.render': return 'the state draws differently on a second render: timing (a feed still arriving) or a random choice';
     case 'stability.interact':
       if (m.includes('removed and drawn again')) return 'the interaction redraws the node (innerHTML) instead of updating it';
+      if (m.includes('taken out of the page') || m.includes('drawn anew')) return 'a live update detaches an orb or draws a new one: its canvas is empty until the worker paints it (the sidebar flicker); keep the node and write its attributes';
       if (m.includes('blinked')) return 'a node is hidden and shown again within a few frames during the morph: the flicker the owner saw';
       return 'a box jumps away and back during the interaction: a layout read or a style applied a frame late';
     case 'brand': return 'user-facing text names the engine; say it in boopis\'s words (ADR-0031, R-copy-8)';

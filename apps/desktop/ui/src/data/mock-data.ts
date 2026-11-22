@@ -258,3 +258,7 @@ export const DECISIONS: readonly DecisionKind[] = [
 
 /** the paths the mock offers when you mention a file */
 export const FILE_PATHS: readonly string[] = ['src/billing/money.ts', 'src/billing/prorate.ts', 'src/billing/invoice.ts', 'src/billing/prorate.test.ts'];
+/** what the sample workspaces hold (the mock's paths resolve against these): the billing code, and the episode a group works on */
+export const WORKSPACE_FILES: readonly string[] = [...FILE_PATHS, 'CHANGELOG.md', 'migrations/0142_cents.sql',
+  'episodes/2026-11-22-cooking-pot/episode.json', 'episodes/2026-11-22-cooking-pot/research.md', 'episodes/2026-11-22-cooking-pot/factcheck.md',
+  'queue/pending.md', 'out/2026-11-22-cooking-pot/contact-sheets/beat-05-caldeirao-pt.png'];

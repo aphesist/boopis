@@ -41,6 +41,9 @@ const ANTHROPIC: &[(&str, &str, Option<&str>)] = &[
     ("anthropics", "skills", None),
 ];
 
+/// How many of boopis's own items the front page leads with, most popular first.
+pub const FRONT_PAGE: usize = 24;
+
 /// Items boopis took down itself, `(id, reason)`. Empty today; the list exists so a bad entry can be stopped without an update
 /// of any source.
 pub const BOOPIS_KILL_LIST: &[(&str, &str)] = &[];
@@ -73,12 +76,18 @@ pub(super) async fn blocking<T: Send + 'static>(
 ) -> Result<T> {
     tokio::task::spawn_blocking(f)
         .await
-        .map_err(|e| Error::Io(e.to_string()))?
+        .map_err(|e| crate::error::joined(&e))?
 }
 
 /// The two built-in sources that hold nothing until the user adds one.
 fn is_placeholder(s: &StoreSource) -> bool {
     !s.user_added && matches!(s.id.as_str(), "marketplace-url" | "local")
+}
+
+/// Whether reading the sources again reads `s`: not boopis's own list (built in), not GitHub (its lists are part of boopis's index
+/// and live search needs a sign-in), not the two placeholders.
+fn refreshable(s: &StoreSource) -> bool {
+    !matches!(s.fetch, SourceFetch::CompiledIn | SourceFetch::GithubApi) && !is_placeholder(s)
 }
 
 fn added_id(key: &str) -> String {
@@ -132,6 +141,22 @@ impl Store {
         user.enabled.get(&s.id).copied().unwrap_or(s.default_on)
     }
 
+    /// Whether a source's copy is due a read: never read, its last read failed, or older than its period (the registry's is
+    /// shorter).
+    fn is_stale(&self, s: &StoreSource, c: &SourceCache) -> bool {
+        let every = if s.fetch == SourceFetch::RegistryApi {
+            self.limits.store.registry_refresh_every
+        } else {
+            self.limits.store.refresh_every
+        };
+        let age = c
+            .fetched_at
+            .as_deref()
+            .and_then(time::parse)
+            .map(|t| time::now_secs().saturating_sub(t));
+        c.error.is_some() || age.is_none_or(|a| a > every.as_secs())
+    }
+
     /// Every source with its state: whether it is on, when it was read, how many items it holds, and why its last read failed.
     #[must_use]
     pub fn sources(&self) -> Vec<StoreSource> {
@@ -140,10 +165,14 @@ impl Store {
             .into_iter()
             .map(|mut s| {
                 let c = self.source_cache(&s.id);
-                s.enabled = Some(self.is_enabled(&s, &user));
+                let on = self.is_enabled(&s, &user);
+                let readable = refreshable(&s);
+                s.enabled = Some(on);
                 s.refreshed_at.clone_from(&c.fetched_at);
                 s.items = Some(u32::try_from(c.entries.len()).unwrap_or(u32::MAX));
                 s.error.clone_from(&c.error);
+                s.refreshable = Some(readable);
+                s.stale = Some(on && readable && self.is_stale(&s, &c));
                 s
             })
             .collect()
@@ -280,37 +309,29 @@ impl Store {
                         .is_none_or(|want| installed.contains(&i.id) == want)
             })
             .collect();
-        let ranked = search::rank(kept.into_iter(), query.unwrap_or(""));
+        let order = self.curated_order();
+        let place = |i: &StoreItem| order.get(i.id.as_str()).copied();
+        let ranked = search::rank(kept.into_iter(), query.unwrap_or(""), &place);
         let total = u32::try_from(ranked.len()).unwrap_or(u32::MAX);
         let (page, next_cursor) = search::page(&ranked, cursor, limit);
         let front = cursor.is_none() && query.is_none() && *filter == StoreFilter::default();
         let recommended = front.then(|| {
-            items
+            let mut rec: Vec<&StoreItem> = items
                 .iter()
                 .filter(|i| i.tier == Tier::Recommended && i.removed.is_none())
-                .take(12)
-                .cloned()
-                .collect()
+                .collect();
+            rec.sort_by_key(|i| place(i).unwrap_or(usize::MAX));
+            rec.into_iter().take(FRONT_PAGE).cloned().collect()
         });
         let user = self.user();
         let (mut newest, mut stale, mut offline) = (None::<String>, false, false);
-        for s in self.all_sources().iter().filter(|s| {
-            self.is_enabled(s, &user)
-                && !matches!(s.fetch, SourceFetch::CompiledIn | SourceFetch::GithubApi)
-                && !is_placeholder(s)
-        }) {
+        for s in self
+            .all_sources()
+            .iter()
+            .filter(|s| self.is_enabled(s, &user) && refreshable(s))
+        {
             let c = self.source_cache(&s.id);
-            let every = if s.fetch == SourceFetch::RegistryApi {
-                self.limits.store.registry_refresh_every
-            } else {
-                self.limits.store.refresh_every
-            };
-            let age = c
-                .fetched_at
-                .as_deref()
-                .and_then(time::parse)
-                .map(|t| time::now_secs().saturating_sub(t));
-            stale |= c.error.is_some() || age.is_none_or(|a| a > every.as_secs());
+            stale |= self.is_stale(s, &c);
             offline |= c.offline;
             if let Some(t) = &c.fetched_at
                 && newest.as_ref().is_none_or(|n| t > n)
@@ -327,6 +348,17 @@ impl Store {
             stale,
             offline,
         })
+    }
+
+    /// boopis's own list in its order (`connectors.json` is ordered by a cited popularity signal, most popular first): an item's
+    /// place, for ordering browse and the front page. Items of other sources have none and follow in their own order.
+    fn curated_order(&self) -> BTreeMap<String, usize> {
+        self.source_cache("boopis")
+            .entries
+            .iter()
+            .enumerate()
+            .map(|(n, e)| (e.item.id.clone(), n))
+            .collect()
     }
 
     // ------------------------------------------------------------ refresh
@@ -387,7 +419,7 @@ impl Store {
                 Err(e) => {
                     failed += 1;
                     let mut c = (*prev).clone();
-                    c.error = Some(crate::error::user_message(e.code(), &e.to_string()));
+                    c.error = Some(super::reasons::reason(s, &e));
                     c.offline = e.code() == "hx.store.source_unreachable";
                     self.put_cache(&s.id, c)?;
                     last = Some(e);
@@ -744,6 +776,8 @@ impl Store {
             refreshed_at: None,
             items: None,
             error: None,
+            refreshable: None,
+            stale: None,
         };
         let entries = self.read_user_source(&src).await?;
         if entries.is_empty() {
