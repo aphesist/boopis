@@ -59,6 +59,166 @@
   "w": 544,
   "h": 1600
  },
+ "claude-billed-per-use@bone": {
+  "sha": "a40fd283df6a5d3895755e83997ae412b6463204",
+  "w": 544,
+  "h": 861
+ },
+ "claude-billed-per-use@catalog": {
+  "sha": "bcc6295e560f8e50fe4d906b4cee6208dbc89783",
+  "w": 544,
+  "h": 861
+ },
+ "claude-billed-per-use@graphite": {
+  "sha": "4adc4f60b4b54c791343de16ff87b2518f829db6",
+  "w": 544,
+  "h": 861
+ },
+ "claude-billed-per-use@typewriter": {
+  "sha": "2c765d83955d9b13e19807eae025085773fec12a",
+  "w": 544,
+  "h": 991
+ },
+ "claude-did-not-start@bone": {
+  "sha": "5938f451518d25d2c06a0d37dd9a0eccd2550544",
+  "w": 544,
+  "h": 897
+ },
+ "claude-did-not-start@catalog": {
+  "sha": "b70a04d2c0c68da06156835fe1f819266a2e6901",
+  "w": 544,
+  "h": 897
+ },
+ "claude-did-not-start@graphite": {
+  "sha": "f1455ee8da5c4c008ea4f7400555217159d51420",
+  "w": 544,
+  "h": 897
+ },
+ "claude-did-not-start@typewriter": {
+  "sha": "4ea16250f945911d0d5e24073ab5fd0f95643d81",
+  "w": 544,
+  "h": 1027
+ },
+ "claude-not-installed-narrow@bone": {
+  "sha": "93e6ad3af48b3ba95f2e9d61c1d5367b5f644bfc",
+  "w": 364,
+  "h": 1340
+ },
+ "claude-not-installed-narrow@catalog": {
+  "sha": "bf0aa1fa7c2a4eac1358571664fa0c41e1b9a496",
+  "w": 364,
+  "h": 1340
+ },
+ "claude-not-installed-narrow@graphite": {
+  "sha": "d7b836e229a39a5d373e290b80e865ac0ad94cea",
+  "w": 364,
+  "h": 1340
+ },
+ "claude-not-installed-narrow@typewriter": {
+  "sha": "de288706688a7b9fec96e20a3ac3b8eaa9a9dca4",
+  "w": 364,
+  "h": 1600
+ },
+ "claude-not-installed-with-the-installer@bone": {
+  "sha": "0e5054363e339c22fb8b61f74f899a501ecf6bc4",
+  "w": 544,
+  "h": 879
+ },
+ "claude-not-installed-with-the-installer@catalog": {
+  "sha": "e75a73e9be4c46fefd091c67c66be70daf56375a",
+  "w": 544,
+  "h": 879
+ },
+ "claude-not-installed-with-the-installer@graphite": {
+  "sha": "2ceaca76e9f28dccc8594f2586c9ad806d536499",
+  "w": 544,
+  "h": 879
+ },
+ "claude-not-installed-with-the-installer@typewriter": {
+  "sha": "ad8648f181738263d25fdbee7b36d69caa7181c4",
+  "w": 544,
+  "h": 991
+ },
+ "claude-only-the-desktop-app-s-copy@bone": {
+  "sha": "b16fc19d2c59992279123b7ac71b130c4ee05405",
+  "w": 544,
+  "h": 897
+ },
+ "claude-only-the-desktop-app-s-copy@catalog": {
+  "sha": "b8f8e71c7fcc1cc8a425ccc820f5868df6492161",
+  "w": 544,
+  "h": 897
+ },
+ "claude-only-the-desktop-app-s-copy@graphite": {
+  "sha": "530bec850a10d48e2f3a9afd64caa1b10d2ea073",
+  "w": 544,
+  "h": 897
+ },
+ "claude-only-the-desktop-app-s-copy@typewriter": {
+  "sha": "2ab711ab4731d469a839cd12c8f1580bf1949b73",
+  "w": 544,
+  "h": 1027
+ },
+ "claude-signed-out-in-the-host-s-words@bone": {
+  "sha": "2333bec00aa408c05bd1e235e1afa9d217c5e045",
+  "w": 544,
+  "h": 879
+ },
+ "claude-signed-out-in-the-host-s-words@catalog": {
+  "sha": "000499ff5cd7e2753784d55bd3754e0a533ea755",
+  "w": 544,
+  "h": 879
+ },
+ "claude-signed-out-in-the-host-s-words@graphite": {
+  "sha": "a9ff917ca39366af31a3a4a3e0e5b2298a040d3e",
+  "w": 544,
+  "h": 879
+ },
+ "claude-signed-out-in-the-host-s-words@typewriter": {
+  "sha": "41c4e681027d3e6f80deab566189681b599ec5a4",
+  "w": 544,
+  "h": 1027
+ },
+ "claude-signing-in-claude-code-s-own-sign-in-is-open@bone": {
+  "sha": "17808319ad09f4374202fac1f129eefa794fc1a9",
+  "w": 544,
+  "h": 879
+ },
+ "claude-signing-in-claude-code-s-own-sign-in-is-open@catalog": {
+  "sha": "fec99c57fc6a81606dab34eadcdcd2d9276e2482",
+  "w": 544,
+  "h": 879
+ },
+ "claude-signing-in-claude-code-s-own-sign-in-is-open@graphite": {
+  "sha": "a5e72059ab0162db52572de5a25ca8083b4a4ff1",
+  "w": 544,
+  "h": 879
+ },
+ "claude-signing-in-claude-code-s-own-sign-in-is-open@typewriter": {
+  "sha": "8508963435dccc4d8ef1a5e75e572d26ebf23399",
+  "w": 544,
+  "h": 1027
+ },
+ "claude-too-old@bone": {
+  "sha": "35d16cedd590e476bf6aef58e9fa767329faeb87",
+  "w": 544,
+  "h": 879
+ },
+ "claude-too-old@catalog": {
+  "sha": "59f14699f7f708764a190c368c2bd60b884b6ba4",
+  "w": 544,
+  "h": 879
+ },
+ "claude-too-old@graphite": {
+  "sha": "f6ad5b910a4e41e29e11d655e875ee97f71dab0b",
+  "w": 544,
+  "h": 879
+ },
+ "claude-too-old@typewriter": {
+  "sha": "733a43f1b7bd1459f186eb46ed15f93a3bca98d1",
+  "w": 544,
+  "h": 1009
+ },
  "could-not-read@bone": {
   "sha": "4131963b2576e5cd590cbb83dedb2b5833ac2eb7",
   "w": 544,
@@ -80,22 +240,22 @@
   "h": 167
  },
  "every-state-in-words@bone": {
-  "sha": "a71f118c1721e74b51ab3f9dd4e29e4332c4d684",
+  "sha": "af2417ac60a6d810b928c6afd08a2e3d8b87903c",
   "w": 544,
   "h": 1600
  },
  "every-state-in-words@catalog": {
-  "sha": "185cf83ab7056468a5580446a07a3ab7540d3427",
+  "sha": "a0c28401f1218125f3461d0c578e9ef21789be1b",
   "w": 544,
   "h": 1600
  },
  "every-state-in-words@graphite": {
-  "sha": "cf75378a54b154aca9270f76fca77e077687c3c8",
+  "sha": "ec52df96252514211e596cbb60a5433c1af512b0",
   "w": 544,
   "h": 1600
  },
  "every-state-in-words@typewriter": {
-  "sha": "9a636762bc7d1b06f88d707caa60948a1f81ee06",
+  "sha": "4b45a30fc1d4d49614080c2c9b1c0b7557f6b111",
   "w": 544,
   "h": 1600
  },

@@ -8,7 +8,7 @@ import { signinLogo, ui } from '@boopis/ui';
 import type { SigninBrand } from '@boopis/ui';
 import { esc } from '../core/dom';
 import type { Way } from '../data/providers';
-import { actionsFor, hintOf } from './providers-view';
+import { actionsFor, failed, hintOf, installLineHtml } from './providers-view';
 import type { Plan, ProvidersLayout, Row } from './providers-view';
 import { brandOf } from './signin-brands';
 
@@ -38,18 +38,22 @@ const rank = (list: readonly string[], id: string): number => { const i = list.i
 const isAccount = (r: Row): boolean => r.way.kind === 'signin' && brandOf(r.way.id) !== null;
 const connected = (r: Row | { state: { status: string } | null }): boolean => r.state?.status === 'connected';
 
-/** one state, in words, with a glyph or a dot beside it */
+/** the calm words of a problem the person fixes with an ordinary step; any other error is a failure, said as one */
+const CALM_WORDS: Readonly<Record<string, string>> = { 'hx.provider.needs_update': 'update needed', 'hx.provider.metered': 'not your plan' };
+/** one state, in words, with a glyph or a dot beside it; red only for a real failure */
 const stateWord = (r: Row): string => {
   const st = r.state?.status ?? 'unread';
   const glyph = st === 'connected' ? ui.html.icon('check', { size: 's' }) : st === 'signing_in' ? ui.html.dot('run') : '';
-  const word = st === 'signing_in' ? 'connecting' : st === 'error' ? 'failed' : st === 'connected' ? 'connected' : 'not connected';
-  return `<span class="fr-st" data-status="${esc(st)}" data-tone="${st === 'error' ? 'red' : ''}">${glyph}<span>${esc(word)}</span></span>`;
+  const word = st === 'signing_in' ? 'connecting' : st === 'needs_install' ? 'not installed' : st === 'connected' ? 'connected'
+    : st === 'error' ? (failed(r.state) ? 'failed' : CALM_WORDS[r.state?.code ?? ''] ?? 'not connected') : 'not connected';
+  return `<span class="fr-st" data-status="${esc(st)}" data-tone="${failed(r.state) ? 'red' : ''}">${glyph}<span>${esc(word)}</span></span>`;
 };
 
 const smallButton = (label: string, doing: string, way: string, aria: string, ghost = true): string =>
   ui.html.button({ label, size: 's', ...(ghost ? { variant: 'ghost' as const } : {}), attrs: { 'data-do': doing, 'data-way': way, 'aria-label': `${label}, ${aria}` } });
 
-/** an account: the lab's name and where it stands, what it is, and its branded button, or a receipt once it is connected or on its way */
+/** an account: the lab's name and where it stands, what it is, and its branded button, or a receipt once it is connected or on its way.
+    Each plate has one outlined action: its sign-in, or, when the program it runs on is missing, Copy command. */
 export function plateHtml(r: Row, canSignin: (w: Way) => boolean): string {
   const copy = PLATE_COPY[r.way.id] ?? { title: r.entry.label, line: r.way.hint };
   const acts = actionsFor(r.way, r.state, canSignin(r.way));
@@ -65,11 +69,13 @@ export function plateHtml(r: Row, canSignin: (w: Way) => boolean): string {
   } else {
     action = acts.map((a) => (a.do === 'signin' && brand
       ? ui.html.signinButton({ brand, attrs: { 'data-do': a.do, 'data-way': r.way.id } })
-      : smallButton(a.label, a.do, r.way.id, copy.title, a.do !== 'signin'))).join('');
+      : smallButton(a.label, a.do, r.way.id, copy.title, a.do !== 'signin' && a.do !== 'copy'))).join('');
   }
-  return `<article class="fr-plate" data-sq data-way="${esc(r.way.id)}" data-state="${st === 'connected' ? 'connected' : st === 'signing_in' ? 'connecting' : st === 'error' ? 'failed' : 'off'}" aria-label="${esc(copy.title)}">` +
+  /* the program a sign-in runs on, when it is missing or old: where to paste the maker's command, and the command (copied by its button) */
+  const install = r.state?.install ? installLineHtml(r.state.install, 'fr-plate__note', true) : '';
+  return `<article class="fr-plate" data-sq data-way="${esc(r.way.id)}" data-state="${st === 'connected' ? 'connected' : st === 'signing_in' ? 'connecting' : failed(r.state) ? 'failed' : 'off'}" aria-label="${esc(copy.title)}">` +
     `<header class="fr-plate__h"><h3 class="fr-plate__t"><span class="fr-plate__mark" aria-hidden="true">${labMark(r.entry.id, 20)}</span>${esc(copy.title)}</h3>${stateWord(r)}</header>` +
-    `<p class="fr-plate__p">${esc(copy.line)}</p>${note ? `<p class="fr-plate__note" data-note>${esc(note)}</p>` : ''}<div class="fr-plate__act">${action}</div></article>`;
+    `<p class="fr-plate__p">${esc(copy.line)}</p>${note ? `<p class="fr-plate__note" data-note>${ui.html.inline(note)}</p>` : ''}${install}<div class="fr-plate__act">${action}</div></article>`;
 }
 
 /** a key tile: the lab's mark and state, its name, and what to do; the whole tile is the button that opens the key form. A connected

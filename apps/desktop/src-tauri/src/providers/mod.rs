@@ -23,7 +23,10 @@ use std::sync::LazyLock;
 use serde::Deserialize;
 use serde_json::Value;
 
-pub use state::{ProviderSigninEvent, ProviderState, ProviderStatus, SigninCode, WayKind};
+pub use state::{
+    InstallHint, InstallKind, ProviderSigninEvent, ProviderState, ProviderStatus, SigninCode,
+    WayKind,
+};
 
 /// The shared file.
 pub const PROVIDERS_JSON: &str = include_str!("../../../../shared/data/providers.json");
@@ -957,6 +960,7 @@ mod tests {
             plan: None,
             detail: String::new(),
             aliases: vec![],
+            install: None,
         };
         let choices = heavy_choices(LadderState::Default, &[], &probe, &Keys::default());
         assert_eq!(choices.len(), catalogue().heavy_switches.len());

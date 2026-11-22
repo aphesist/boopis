@@ -349,7 +349,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       cont.addEventListener('click', () => { answer('connected'); });
       skip.addEventListener('click', () => { answer(ladderChoices(form).ids.includes('later') ? 'later' : 'free'); });
       const prov = mountProviders(section, {
-        bridge: providers as ProvidersBridge, login: (p) => deps().login(p), chatgpt: deps().chatgpt, toast: (t) => { ui.toast(t); }, layout: HUB_LAYOUT,
+        bridge: providers as ProvidersBridge, login: (p) => deps().login(p), chatgpt: deps().chatgpt, open: (u) => deps().open(u), toast: (t) => { ui.toast(t); }, layout: HUB_LAYOUT,
         onStates: (st) => {
           states = st;
           const list = connectedList(st, offered);

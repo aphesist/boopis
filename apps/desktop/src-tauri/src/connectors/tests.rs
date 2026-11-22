@@ -10,7 +10,9 @@ use std::time::Duration;
 use async_trait::async_trait;
 use serde_json::{Value, json};
 
-use super::engine::{Engine, Opener, RestartDone, RestartWhen, clean_line, login_env, scrub};
+use super::engine::{
+    Engine, Opener, RestartDone, RestartWhen, claude_signin_failed, clean_line, login_env, scrub,
+};
 use super::ops::{Installed, McpOps, OAuthPoll, OAuthStart, TestReport, ToolInfo};
 use super::plan::{Request, SourceKind};
 use crate::config::Limits;
@@ -1671,4 +1673,21 @@ async fn a_server_that_is_not_installed_here_is_not_granted() {
         .unwrap();
     r.engine.revoke_governed("never-installed").await.unwrap();
     assert_eq!(governed_list(&r), ["alpha"]);
+}
+
+#[test]
+fn a_claude_sign_in_that_cannot_start_is_said_plainly_with_the_installer() {
+    let os = crate::error::Error::Connector(
+        "hx.connectors.command_failed",
+        "cannot run C:\\Users\\ana\\AppData\\Roaming\\npm\\claude.cmd: Access is denied. (os error 5)".into(),
+    );
+    let e = claude_signin_failed(r"C:\Users\ana\AppData\Roaming\npm\claude.cmd", &os);
+    assert_eq!(e.code(), "hx.connectors.command_failed");
+    let said = e.to_string();
+    assert!(said.contains("Claude Code is installed"), "{said}");
+    assert!(said.contains(crate::claude::install_command()), "{said}");
+    assert!(said.contains("choose Sign in again"), "{said}");
+    for raw in ["os error", "Access is denied", "cannot run", "PATH"] {
+        assert!(!said.contains(raw), "{raw} in {said}");
+    }
 }

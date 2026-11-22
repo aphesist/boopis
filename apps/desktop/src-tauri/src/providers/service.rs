@@ -712,10 +712,18 @@ fn claude_state(entry: &Entry, way: &Way, p: &claude::Probe) -> ProviderState {
     let mut s = match p.state {
         claude::State::SignedIn => ProviderState::connected(id.0, id.1, WayKind::Signin),
         claude::State::SignedOut => ProviderState::signed_out(id.0, id.1),
-        claude::State::NotInstalled => err("hx.provider.not_installed"),
+        // not a failure: the person installs Claude Code with Anthropic's installer and checks again
+        claude::State::NotInstalled => match &p.install {
+            Some(hint) => ProviderState::needs_install(id.0, id.1, &p.detail, hint.clone()),
+            None => err("hx.provider.not_installed"),
+        },
+        claude::State::Failed => err("hx.provider.cli_failed"),
         claude::State::OldVersion => err("hx.provider.needs_update"),
         claude::State::Metered => err("hx.provider.metered"),
     };
+    if s.install.is_none() {
+        s.install.clone_from(&p.install);
+    }
     if p.state == claude::State::SignedIn {
         s.plan.clone_from(&p.plan);
     }

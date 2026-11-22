@@ -108,6 +108,7 @@ export const STATUS_WORDS: Readonly<Record<ProviderStatus, string>> = {
   connected: 'Connected',
   needs_key: 'No key',
   signed_out: 'Not signed in',
+  needs_install: 'Not installed',
   signing_in: 'Signing in',
   found_local: 'Running on this computer',
   not_found: 'Not found',

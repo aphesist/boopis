@@ -1537,6 +1537,28 @@ export type HostError = {
 	message: string,
 };
 
+/**
+ *  How to get the program a way runs on, from the program's maker: the one command for this computer's system, where to paste
+ *  it, and the maker's page about it. The person runs it themselves; boopis never runs an installer.
+ */
+export type InstallHint = {
+	/**  Install or update. */
+	kind: InstallKind,
+	/**  The command, exactly as the maker publishes it (`irm https://claude.ai/install.ps1 | iex`). */
+	command: string,
+	/**  Where to paste it, as a person names it: `PowerShell`, `Terminal`, `a terminal`. */
+	shell: string,
+	/**  The maker's own page about installing or updating it. */
+	page: string,
+};
+
+/**  Whether a program is to be installed or brought up to date. */
+export type InstallKind = 
+/**  It is not on this computer, or it is there and does not start: the installer puts it (back) in place. */
+"install" | 
+/**  It is there and too old: the command updates it. */
+"update";
+
 /**  What an install would do, exactly: the review card's data. */
 export type InstallPlan = InstallPlan_Serialize | InstallPlan_Deserialize;
 
@@ -1846,6 +1868,8 @@ export type Probe_Deserialize = {
 	detail: string,
 	/**  The model aliases its version serves, cheapest first. Empty unless the version was read. */
 	aliases: string[],
+	/**  How to install it (not installed, or it did not start) or update it (too old), for this computer's system. */
+	install?: InstallHint | null,
 };
 
 /**  What a look at the CLI found. Nothing here is a credential. */
@@ -1860,6 +1884,8 @@ export type Probe_Serialize = {
 	detail: string,
 	/**  The model aliases its version serves, cheapest first. Empty unless the version was read. */
 	aliases: string[],
+	/**  How to install it (not installed, or it did not start) or update it (too old), for this computer's system. */
+	install: InstallHint | null,
 };
 
 /**  Where an item came from and how far that can be checked. */
@@ -1930,6 +1956,11 @@ export type ProviderState_Deserialize = {
 	signin?: SigninCode | null,
 	/**  When it was last checked, in milliseconds since the Unix epoch; `None` when never. */
 	checked_at?: number | null,
+	/**
+	 *  How to install or update the program the way runs on, when that is what stands in the way (`needs_install`, or an
+	 *  error that installing or updating fixes).
+	 */
+	install?: InstallHint | null,
 };
 
 /**  One way's state. */
@@ -1956,6 +1987,11 @@ export type ProviderState_Serialize = {
 	signin: SigninCode | null,
 	/**  When it was last checked, in milliseconds since the Unix epoch; `None` when never. */
 	checked_at: number | null,
+	/**
+	 *  How to install or update the program the way runs on, when that is what stands in the way (`needs_install`, or an
+	 *  error that installing or updating fixes).
+	 */
+	install: InstallHint | null,
 };
 
 /**  Where a way stands. */
@@ -1966,6 +2002,11 @@ export type ProviderStatus =
 "needs_key" | 
 /**  A sign-in way not signed in. */
 "signed_out" | 
+/**
+ *  A sign-in way whose program is not on this computer (Claude Code for the Claude subscription). Nothing failed: `install`
+ *  says how to get it, and the person checks again after.
+ */
+"needs_install" | 
 /**  A sign-in is waiting for the person (`signin` holds the page and the code). */
 "signing_in" | 
 /**  A runtime on this computer answered the last probe. */
@@ -2243,8 +2284,13 @@ export type StageResult_Serialize = {
 
 /**  Where the CLI stands, in the words a person needs. */
 export type State = 
-/**  No `claude` was found. */
+/**  No `claude` was found. Not a failure: the person installs it and checks again. */
 "not_installed" | 
+/**
+ *  A `claude` was found, but it did not start when boopis ran it (Windows could not run the file, it hung, it was removed
+ *  while boopis looked). A real failure: reinstalling fixes it.
+ */
+"failed" | 
 /**  Installed, and it says it is not signed in. */
 "signed_out" | 
 /**  Installed and signed in, but with a key or a cloud login that bills API usage, not the subscription. */

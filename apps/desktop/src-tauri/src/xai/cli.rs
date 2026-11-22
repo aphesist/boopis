@@ -214,8 +214,7 @@ pub fn child_env_from(vars: impl IntoIterator<Item = (String, String)>) -> HashM
 #[allow(clippy::implicit_hasher)] // the host builds these maps itself
 pub fn install_dirs(env: &HashMap<String, String>) -> Vec<PathBuf> {
     let home_key = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-    let mut dirs: Vec<PathBuf> = env
-        .get(home_key)
+    let mut dirs: Vec<PathBuf> = crate::claude::var(env, home_key, crate::claude::Os::HERE)
         .map(PathBuf::from)
         .filter(|h| h.is_absolute())
         .map(|h| {
@@ -244,10 +243,11 @@ pub fn resolve(env: &HashMap<String, String>) -> Option<PathBuf> {
     if given.is_absolute() {
         return runnable(given).then(|| given.to_owned());
     }
-    let on_path: Vec<PathBuf> = env
-        .get("PATH")
-        .map(|p| std::env::split_paths(p).collect())
-        .unwrap_or_default();
+    // Windows spells the variable `Path`: read it without case there, as the plugin's Python does
+    let on_path: Vec<PathBuf> = crate::claude::path_dirs(env, crate::claude::Os::HERE)
+        .into_iter()
+        .map(PathBuf::from)
+        .collect();
     if let Some(found) = find_in(&on_path, command) {
         return Some(found);
     }

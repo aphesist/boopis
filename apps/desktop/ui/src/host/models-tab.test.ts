@@ -265,7 +265,7 @@ describe('Settings > Models: the heavy models\' switches (ADR-0037)', () => {
 /* ───────── Providers (ADR-0039) ───────── */
 const state = (way: string, status: ProviderState['status'], extra: Partial<ProviderState> = {}): ProviderState => {
   const kind = (way.endsWith('.local') ? 'local' : way.endsWith('.key') || way.includes('.key-') || way.startsWith('opencode.') ? 'key' : way === 'custom.endpoint' || way.startsWith('custom.') ? 'custom' : 'signin') as ProviderState['kind'];
-  return { provider: way.split('.')[0] ?? way, way, kind, status, code: null, detail: null, plan: null, models_count: null, base_url: null, signin: null, checked_at: null, ...extra };
+  return { provider: way.split('.')[0] ?? way, way, kind, status, code: null, detail: null, plan: null, models_count: null, base_url: null, signin: null, checked_at: null, install: null, ...extra };
 };
 /** the host's answer for every way of the catalogue: keys missing, sign-ins out, runtimes not found (never probed) */
 const baseline = (): ProviderState[] => entries().flatMap((e) => e.ways.filter((w) => !w.hidden).map((w) => state(w.id, w.kind === 'key' ? 'needs_key' : w.kind === 'signin' ? 'signed_out' : w.kind === 'local' ? 'not_found' : 'connected')))

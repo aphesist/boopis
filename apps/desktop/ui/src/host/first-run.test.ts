@@ -474,7 +474,7 @@ describe('first run: the models question in two steps (ADR-0039)', () => {
   });
 
   describe('a model on this computer', () => {
-    const found = (way: string, extra: Partial<ProviderState> = {}): ProviderState => ({ provider: way.split('.')[0] ?? way, way, kind: 'local', status: 'found_local', code: null, detail: null, plan: null, models_count: 2, base_url: catalogueWay(way)?.way.base_url?.default ?? null, signin: null, checked_at: 1, ...extra });
+    const found = (way: string, extra: Partial<ProviderState> = {}): ProviderState => ({ provider: way.split('.')[0] ?? way, way, kind: 'local', status: 'found_local', code: null, detail: null, plan: null, models_count: 2, base_url: catalogueWay(way)?.way.base_url?.default ?? null, signin: null, checked_at: 1, install: null, ...extra });
     const providers = (probe: ProviderState[]): ProvidersBridge & { added: EndpointRequest[]; used: string[]; probes: number } => {
       const b = { added: [] as EndpointRequest[], used: [] as string[], probes: 0,
         probe: () => { b.probes += 1; return Promise.resolve(probe); },

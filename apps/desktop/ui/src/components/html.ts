@@ -245,8 +245,9 @@ function field(o: FieldOpts): string {
   return '<div class="ui-field">' + (o.label ? (picker ? '<span class="ui-field__label" id="' + id + '-l">' + esc(o.label) + '</span>' : '<label class="ui-field__label" for="' + id + '">' + esc(o.label) + '</label>') : '') + control +
     (o.error || o.hint ? '<p class="ui-field__hint" id="' + hid + '"' + (o.error ? ' data-tone="attention"' : '') + '>' + esc(o.error || o.hint) + '</p>' : '') + '</div>';
 }
+/** a settings row: its label, a hint under it (a command in backticks shows as code, as the host writes its sentences), its control */
 const setRow = (o: { label: string; hint?: U<string | null>; for?: U<string | null>; /** the label's own id, for a control named by aria-labelledby (a select) */ labelId?: U<string>; control?: U<string> }): string =>
-  '<div class="ui-set__row"><' + (o.for ? 'label for="' + esc(o.for) + '"' : 'span') + attrs({ id: o.labelId }) + ' class="ui-set__label"><span>' + esc(o.label) + '</span>' + (o.hint ? '<small>' + esc(o.hint) + '</small>' : '') + '</' + (o.for ? 'label' : 'span') + '>' + (o.control ?? '') + '</div>';
+  '<div class="ui-set__row"><' + (o.for ? 'label for="' + esc(o.for) + '"' : 'span') + attrs({ id: o.labelId }) + ' class="ui-set__label"><span>' + esc(o.label) + '</span>' + (o.hint ? '<small>' + inline(o.hint) + '</small>' : '') + '</' + (o.for ? 'label' : 'span') + '>' + (o.control ?? '') + '</div>';
 export interface BadgeOpts {
   label: string;
   /** the sentence behind the short words: its tooltip (and, with `describedBy`, its accessible description) */
