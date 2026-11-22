@@ -93,7 +93,7 @@ export function capabilitiesFrom(d: ProfilesDescribeResult): Pick<BotInfo, 'skil
 export function ownConfig(record: OwnRecord | null | undefined): Pick<BotConfig, 'gov' | 'cap' | 'workspace' | 'approvals'> {
   const s = record?.settings ?? {};
   return {
-    gov: s.gov === 'ungoverned' ? 'ungoverned' : OWN_SETTINGS.gov,
+    gov: s.gov === 'governed' ? 'governed' : OWN_SETTINGS.gov,   /* opt-in: governed only when the owner turned it on (ADR-0042) */
     cap: s.cap ?? OWN_SETTINGS.cap,
     workspace: s.workspace === 'sandbox' ? 'sandbox' : OWN_SETTINGS.workspace,
     approvals: { ...OWN_SETTINGS.approvals, ...(record?.approvals ?? {}) }

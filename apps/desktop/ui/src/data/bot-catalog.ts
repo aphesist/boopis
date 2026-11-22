@@ -12,7 +12,8 @@ export const APPROVALS: readonly Choice[] = [
   { id: 'deploys', name: 'Deploying anywhere' }, { id: 'push', name: 'Pushing to protected branches' }, { id: 'network', name: 'Reaching the network' },
   { id: 'spend', name: 'Spending past the run cap' }, { id: 'people', name: 'Messaging people' }, { id: 'outside', name: 'Writing outside its workspace' }
 ];
-/** a new teammate's own settings: governed, the plugin's usual cap, a worktree, and asking before every kind of thing */
+/** a new teammate's own settings: ungoverned until the owner turns Governed on (ADR-0042), the plugin's usual cap, a worktree, and asking
+    before every kind of thing */
 export const OWN_SETTINGS: Pick<BotConfig, 'gov' | 'cap' | 'workspace'> & { approvals: Readonly<Record<string, boolean>> } = {
-  gov: 'governed', cap: '0.60', workspace: 'worktree', approvals: Object.fromEntries(APPROVALS.map((a) => [a.id, true]))
+  gov: 'ungoverned', cap: '0.60', workspace: 'worktree', approvals: Object.fromEntries(APPROVALS.map((a) => [a.id, true]))
 };

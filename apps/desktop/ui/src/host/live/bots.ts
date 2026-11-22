@@ -5,10 +5,14 @@
      the models to pick from                                     `model.options` of the profile boopis is attached to, whose keys a new profile copies
      its look and boopis's own settings                          the plugin's store in the profile's `boopis/` folder (`plugin.boopis.bots.*`)
      archive, restore, delete                                    the plugin, through Hermes's `profile rename` and `profile delete`
+     what its home needs beyond the profile                      the host (`../bots-bridge.ts`, ADR-0042): the plugins boopis manages, its
+                                                                  boopis settings and Governed switch, the root's key wiring, its seat in groups
    a conversation with it                                     a session of its own profile on its own link (`./bot-chat.ts`)
    Nothing is written to a Hermes file here, and nothing is invented: what Hermes did not answer is null and says why in
    `info.notes`. */
-import { unlessEngine } from '../errors';
+import { sentenceFor, unlessEngine } from '../errors';
+import type { BotsBridge } from '../bots-bridge';
+import { isFrontier } from '../../data/frontier';
 import { logger } from '../../core/log';
 import { NeedsConfirmation } from '../../data/confirm';
 import { botIdBase, numbered } from '../../data/bot-id';
@@ -36,6 +40,10 @@ export interface BotsDeps {
   now?: () => Date;
   /** how often the roster is read again while the window is visible; null: never (tests) */
   pollMs?: number | null;
+  /** the host's bot commands (the desktop app's); without them a bot is the bare profile the engine made */
+  bridge?: BotsBridge | null;
+  /** shows the one notice the host's repair left (a toast in the app) */
+  notify?: (text: string) => void;
 }
 export interface LiveBots {
   source: BotsSource;
@@ -67,6 +75,15 @@ interface Rec {
 }
 const why = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 const asJson = <T>(v: unknown): T => v as T;
+/** how many roster reads after the start look for the host's notice (its repair runs in the background after the first link) */
+const NOTICE_TRIES = 8;
+
+/** why a bot cannot be governed on `provider`/`model` (governed mode runs only on frontier models, ADR-0037), null when it can */
+export function governedRefusal(name: string, provider: string | null | undefined, model: string | null | undefined): string | null {
+  const m = (model ?? '').trim();
+  if (m && isFrontier(provider ?? '', m)) return null;
+  return (m ? name + ' runs on ' + m + '. ' : name + ' has no model yet. ') + sentenceFor('hx.bots.governed_needs_frontier');
+}
 
 export function createLiveBots(deps: BotsDeps): LiveBots {
   const { client } = deps;
@@ -153,6 +170,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
     if (refreshing) { again = true; return refreshing; }
     refreshing = (async () => {
       try { do { again = false; await readRoster(); } while (again); } finally { refreshing = null; }
+      void lookForNotice();
     })();
     return track(refreshing);
   }
@@ -252,6 +270,35 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
     rebuildSchedules();
   }
   const need = (id: string): Rec => { const r = recs.get(id); if (!r) throw new Error('there is no teammate called ' + id); return r; };
+  const governed = (r: Rec): boolean => r.plugin?.record?.settings?.gov === 'governed';
+
+  /* ───────── what its home needs: the host's (ADR-0042) ───────── */
+  /** gives the bot what its home needs; what could not be done is a note on the bot, never a failed save */
+  async function prepare(id: string, fresh: boolean): Promise<void> {
+    if (!deps.bridge) return;
+    let problems: readonly string[];
+    try { problems = (await deps.bridge.prepare(id, fresh)).problems; }
+    catch (e) { problems = [why(e)]; }
+    const r = recs.get(id);
+    if (problems.length) {
+      log.warn('a bot was not given everything its home needs: ' + id, problems);
+      if (r) r.notes['setup'] = 'boopis could not finish setting it up: ' + problems.join('; ');
+    } else if (r) delete r.notes['setup'];
+    if (r) events.emit({ type: 'bot', bot: toBot(r) });
+  }
+  async function release(id: string): Promise<void> {
+    if (!deps.bridge) return;
+    try { await deps.bridge.release(id); } catch (e) { log.warn('a bot kept its seat in groups: ' + id, e); }
+  }
+  let noticeTries = NOTICE_TRIES;
+  async function lookForNotice(): Promise<void> {
+    if (!deps.bridge || noticeTries <= 0) return;
+    noticeTries--;
+    try {
+      const text = await deps.bridge.notice();
+      if (text) { noticeTries = 0; deps.notify?.(text); }
+    } catch (e) { log.info('the host had no notice to give', e); }
+  }
 
   /* ───────── the models to pick from ───────── */
   async function readModels(): Promise<void> {
@@ -313,10 +360,12 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       if (opts.model) Object.assign(params, resolveModel(opts.model));
       const made = await client.requestRaw('profiles.create', params) as { path?: string; warnings?: string[]; model_set?: boolean };
       try {
-        await plug('bots.write', { name: plan.profile, look: { shape: draft.shape, color: draft.color }, settings: { gov: 'governed', cap: '0.60', workspace: 'worktree' }, approvals: Object.fromEntries(APPROVALS.map((a) => [a.id, true])) });
+        /* a bot is ungoverned until the owner turns Governed on in its settings (ADR-0042) */
+        await plug('bots.write', { name: plan.profile, look: { shape: draft.shape, color: draft.color }, settings: { gov: 'ungoverned', cap: '0.60', workspace: 'worktree' }, approvals: Object.fromEntries(APPROVALS.map((a) => [a.id, true])) });
       } catch (e) { log.warn('the new teammate’s own record was not saved', e); }
       if (made.warnings?.length) log.warn('Hermes warned while making ' + plan.profile + ': ' + made.warnings.join(' '));
       await refreshRoster();
+      await prepare(plan.profile, true);
       const r = need(plan.profile);
       await loadDetail(plan.profile);
       return toBot(r);
@@ -339,7 +388,12 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       const params: Record<string, unknown> = { name: id };
       if (patch.role !== undefined) params['description'] = patch.role.trim();
       if (patch.instructions !== undefined) params['soul'] = patch.instructions;
-      if (patch.model !== undefined) Object.assign(params, resolveModel(patch.model), opts?.confirmModel ? { confirm_expensive_model: true } : {});
+      if (patch.model !== undefined) {
+        const next = resolveModel(patch.model);
+        const refused = governed(r) ? governedRefusal(botName(r.row), next.provider, next.model) : null;
+        if (refused) throw new Error(refused);
+        Object.assign(params, next, opts?.confirmModel ? { confirm_expensive_model: true } : {});
+      }
       if (Object.keys(params).length > 1) {
         const res = await client.request('profiles.configure', params) as { ok?: boolean; applied?: Record<string, boolean | null>; confirm_required?: boolean | null; confirm_message?: string | null };
         if (res.confirm_required) { r.loaded = false; await loadDetail(id); throw new NeedsConfirmation(unlessEngine('hx.engine.refused', res.confirm_message || 'Confirm this model before it is saved.')); }
@@ -361,6 +415,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       r.loaded = false;
       await loadDetail(id);
       await refreshRoster();
+      if (patch.model !== undefined) await prepare(id, false);   /* its ladder follows its model */
       if (failures.length) throw new Error(failures.join(', ') + ' could not be saved. The rest was saved.');
     },
     async setRoutinePaused(id, jobId, paused) {
@@ -376,12 +431,17 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       if (patch.look) body['look'] = patch.look;
       if (patch.cfg) {
         const { approvals, ...settings } = patch.cfg;
+        if (settings.gov === 'governed') {
+          const refused = governedRefusal(botName(r.row), r.detail?.provider, r.detail?.model);
+          if (refused) throw new Error(refused);
+        }
         if (Object.keys(settings).length) body['settings'] = settings;
         if (approvals) body['approvals'] = approvals;
       }
       const res = await plug<{ record: PluginBot['record'] }>('bots.write', body);
       r.plugin = { ...(r.plugin ?? { name: id, path: r.row.path, problem: null, archived: null }), record: res.record };
       events.emit({ type: 'bot', bot: toBot(r) });
+      if (patch.cfg?.gov) await prepare(id, false);   /* the Governed switch is the bot's plugin mode */
     },
     async removal(id): Promise<RemovalNote> {
       const r = need(id);
@@ -415,6 +475,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
         await resumeJobs(id, paused);
         throw e;
       }
+      await release(id);
       await refreshRoster();
       return { undo: () => restoreArchived(done.name) };
     },
@@ -422,6 +483,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       need(id);
       await closeLink(id);
       await plug('bots.delete', { name: id, confirm });
+      await release(id);
       await refreshRoster();
     },
     note: () => rosterNote
@@ -432,6 +494,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
     if (was && (profileNames.has(was) || recs.has(was))) throw new Error('there is a teammate called ' + was + ' already; archive or delete it, then restore');
     const back = await plug<{ name: string; paused_jobs: string[] }>('bots.restore', { name });
     await refreshRoster();
+    await prepare(back.name, false);
     await resumeJobs(back.name, back.paused_jobs);
   }
   async function resumeJobs(id: string, jobs: readonly string[]): Promise<void> {
