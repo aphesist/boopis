@@ -231,7 +231,10 @@ async fn every_recommended_entry_is_still_what_was_read() {
                     if sum == e.verified.manifest.sha256 {
                         "pass".to_owned()
                     } else {
-                        failures.push(format!("{kind} {}: {} is not the file that was read ({sum})", e.id, e.verified.manifest.path));
+                        failures.push(format!(
+                            "{kind} {}: {} is not the file that was read ({sum})",
+                            e.id, e.verified.manifest.path
+                        ));
                         "fail: the manifest differs".to_owned()
                     }
                 }

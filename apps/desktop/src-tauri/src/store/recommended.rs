@@ -158,7 +158,10 @@ mod tests {
                 assert_eq!(e.popularity.signal, read.signal, "{id}");
                 assert!(e.popularity.installs > 0, "{id}: a count, not a guess");
                 assert!(e.popularity.url.starts_with("https://"), "{id}");
-                assert!(!e.verified.sources.is_empty(), "{id}: its publisher's pages");
+                assert!(
+                    !e.verified.sources.is_empty(),
+                    "{id}: its publisher's pages"
+                );
                 assert!(
                     e.verified.sources.iter().all(|s| s.starts_with("https://")),
                     "{id}"

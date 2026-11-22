@@ -289,19 +289,17 @@ pub fn boopis_connectors(
             d.proof = NamespaceProof::Curated;
             d.source_url.clone_from(&c.source);
             d.last_updated = Some(c.verified.date.clone());
-            d.source_tier = Some(curated_words(
-                match (&c.popularity, &catalog.popularity) {
-                    (Some(p), Some(read)) => p.stars.map(|n| {
-                        format!(
-                            "{} GitHub stars on {}, read {}",
-                            group_thousands(n),
-                            p.repo,
-                            date_words(&read.read)
-                        )
-                    }),
-                    _ => None,
-                },
-            ));
+            d.source_tier = Some(curated_words(match (&c.popularity, &catalog.popularity) {
+                (Some(p), Some(read)) => p.stars.map(|n| {
+                    format!(
+                        "{} GitHub stars on {}, read {}",
+                        group_thousands(n),
+                        p.repo,
+                        date_words(&read.read)
+                    )
+                }),
+                _ => None,
+            }));
             let item = d.build(fetched_at);
             Entry {
                 raw: serde_json::json!({"connector": c.id}),
@@ -406,7 +404,10 @@ pub fn boopis_skills_and_plugins(
         let counted = if read.signal == "skills-sh-installs" {
             format!("{} installs on skills.sh", e.popularity.shown)
         } else {
-            format!("{} installs in Anthropic's plugin directory", e.popularity.shown)
+            format!(
+                "{} installs in Anthropic's plugin directory",
+                e.popularity.shown
+            )
         };
         d.source_tier = Some(curated_words(Some(format!(
             "{counted}, read {}",
@@ -418,7 +419,9 @@ pub fn boopis_skills_and_plugins(
             })
         } else {
             let source = match &e.subdir {
-                Some(sub) => serde_json::json!({"source": "git-subdir", "url": e.repo, "path": sub, "sha": e.commit}),
+                Some(sub) => {
+                    serde_json::json!({"source": "git-subdir", "url": e.repo, "path": sub, "sha": e.commit})
+                }
                 None => serde_json::json!({"source": "url", "url": e.repo, "sha": e.commit}),
             };
             serde_json::json!({
@@ -1533,22 +1536,23 @@ mod tests {
         assert_eq!(fd.kind, ItemKind::Skill);
         assert_eq!(fd.license, "Apache-2.0");
         assert!(
-            fd.provenance.source_tier.as_deref().unwrap().contains(
-                "1.2M installs on skills.sh, read 22 November 2026"
-            )
+            fd.provenance
+                .source_tier
+                .as_deref()
+                .unwrap()
+                .contains("1.2M installs on skills.sh, read 22 November 2026")
         );
         let sp = by_id(&plugins, "boopis:plugins/superpowers");
         assert_eq!(sp.kind, ItemKind::Plugin);
         assert!(
-            sp.provenance.source_tier.as_deref().unwrap().contains(
-                "1,009,371 installs in Anthropic's plugin directory"
-            )
+            sp.provenance
+                .source_tier
+                .as_deref()
+                .unwrap()
+                .contains("1,009,371 installs in Anthropic's plugin directory")
         );
         // a skill and a plugin of the same name do not collide
-        assert_ne!(
-            by_id(&plugins, "boopis:plugins/frontend-design").id,
-            fd.id
-        );
+        assert_ne!(by_id(&plugins, "boopis:plugins/frontend-design").id, fd.id);
     }
 
     #[test]
@@ -1574,9 +1578,15 @@ mod tests {
             .unwrap();
         match plugin_source(&inside.raw["entry"], &base).unwrap() {
             PluginSource::Git { repo, subdir, sha } => {
-                assert_eq!(repo, "https://github.com/anthropics/claude-plugins-official");
+                assert_eq!(
+                    repo,
+                    "https://github.com/anthropics/claude-plugins-official"
+                );
                 assert_eq!(subdir.as_deref(), Some("plugins/code-review"));
-                assert_eq!(sha.as_deref(), Some(inside.item.pinned.as_ref().unwrap().value.as_str()));
+                assert_eq!(
+                    sha.as_deref(),
+                    Some(inside.item.pinned.as_ref().unwrap().value.as_str())
+                );
             }
             other => panic!("{other:?}"),
         }
@@ -1586,7 +1596,11 @@ mod tests {
             .unwrap();
         assert!(matches!(
             plugin_source(&own.raw["entry"], &base).unwrap(),
-            PluginSource::Git { subdir: None, sha: Some(_), .. }
+            PluginSource::Git {
+                subdir: None,
+                sha: Some(_),
+                ..
+            }
         ));
     }
 
@@ -1601,7 +1615,10 @@ mod tests {
         let w = ids(&woven);
         assert_eq!(w.len(), c.len() + p.len() + s.len());
         // the first of each kind come first, in that turn order
-        assert_eq!(&w[..3], &[ids(&c)[0].clone(), ids(&p)[0].clone(), ids(&s)[0].clone()]);
+        assert_eq!(
+            &w[..3],
+            &[ids(&c)[0].clone(), ids(&p)[0].clone(), ids(&s)[0].clone()]
+        );
         // and each kind keeps its own order
         for kind in [ids(&c), ids(&p), ids(&s)] {
             let at: Vec<usize> = kind
@@ -1613,9 +1630,11 @@ mod tests {
         // a connector's page says which stars placed it
         let ctx = by_id(&c, "boopis:context7");
         assert!(
-            ctx.provenance.source_tier.as_deref().unwrap().contains(
-                "65,246 GitHub stars on upstash/context7, read 22 November 2026"
-            ),
+            ctx.provenance
+                .source_tier
+                .as_deref()
+                .unwrap()
+                .contains("65,246 GitHub stars on upstash/context7, read 22 November 2026"),
             "{:?}",
             ctx.provenance.source_tier
         );
