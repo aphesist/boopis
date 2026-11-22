@@ -12,8 +12,8 @@ run shows its welcome) and checks, in the real webview:
 - the drag region's double click is allowed (``plugin:window|internal_toggle_maximize``, the drag script's call);
 - on Windows, through the Win32 API: the window keeps the styles Snap, the taskbar and the system menu need, its left,
   right and bottom edges and the top strip answer as resize borders, Maximize and a double click on the bar maximise and
-  restore it, Minimize minimises it, Win+Left snaps it (reported, not required: a runner's desktop may refuse synthetic
-  keys), and Close closes it;
+  restore it, Minimize minimises it, Win+Left snaps it to the left edge (reported instead when the desktop takes no
+  synthetic keys), and Close closes it and quits the app;
 - elsewhere, Close closes the app.
 
 Linux: ``WebKitWebDriver`` under ``xvfb-run`` (Debian/Ubuntu: ``webkit2gtk-driver``, ``xvfb``), with no window manager,
@@ -106,6 +106,17 @@ def wait_for(fn, what: str, timeout: float = 60.0):
 FAILED: list[str] = []
 
 
+def soon(fn, timeout: float = 10.0) -> bool:
+    """Whether `fn` comes true within `timeout` seconds (a check that may fail without stopping the rest)."""
+    end = time.time() + timeout
+    while time.time() < end:
+        with contextlib.suppress(Exception):
+            if fn():
+                return True
+        time.sleep(0.3)
+    return False
+
+
 def check(ok: bool, what: str, detail: object = "") -> None:
     print(("ok   " if ok else "FAIL ") + what + (f": {detail}" if detail != "" else ""))
     if not ok:
@@ -176,6 +187,11 @@ def win32_checks(d: Driver) -> None:
     def hit(h: int, x: int, y: int) -> int:
         return user32.SendMessageW(h, 0x0084, 0, (y & 0xFFFF) << 16 | (x & 0xFFFF))  # WM_NCHITTEST
 
+    def facts() -> dict:
+        return d.invoke("window_facts").get("ok") or {}
+
+    # the window as a person meets it: restored (the earlier check maximised it and back)
+    check(soon(lambda: facts().get("maximized") is False), "the window starts restored", facts())
     left, top, right, bottom = rect(hwnd)
     origin = wintypes.POINT(0, 0)
     user32.ClientToScreen(hwnd, ctypes.byref(origin))
@@ -196,34 +212,27 @@ def win32_checks(d: Driver) -> None:
         check(got == want, f"the {name} resizes", f"hit test {got}, want {want}")
     print(f"     window {left},{top} to {right},{bottom}; client origin {origin.x},{origin.y}")
 
-    def facts() -> dict:
-        return d.invoke("window_facts").get("ok") or {}
-
+    max_label = "return document.querySelector('.hx-first-run [data-win=max]').getAttribute('aria-label')"
     d.s("POST", f"/element/{d.find('.hx-first-run [data-win=max]')}/click", {})
-    check(
-        bool(wait_for(lambda: facts().get("maximized"), "maximised after Maximize", 10)),
-        "Maximize maximises the window",
-    )
-    label = d.js("return document.querySelector('.hx-first-run [data-win=max]').getAttribute('aria-label')")
-    check(label == "Restore", "the button then says Restore", label)
+    check(soon(lambda: facts().get("maximized")), "Maximize maximises the window", facts())
+    check(soon(lambda: d.js(max_label) == "Restore", 5), "the button then says Restore", d.js(max_label))
     d.s("POST", f"/element/{d.find('.hx-first-run [data-win=max]')}/click", {})
-    check(bool(wait_for(lambda: facts().get("maximized") is False, "restored", 10)), "Restore restores it")
+    check(soon(lambda: facts().get("maximized") is False, 10), "Restore restores it")
 
     d.js(DBLCLICK_SCRIPT)
-    check(
-        bool(wait_for(lambda: facts().get("maximized"), "maximised after a double click", 10)),
-        "a double click on the bar maximises",
-    )
+    check(soon(lambda: facts().get("maximized"), 10), "a double click on the bar maximises")
     d.js(DBLCLICK_SCRIPT)
-    check(bool(wait_for(lambda: facts().get("maximized") is False, "restored", 10)), "a second double click restores")
+    check(soon(lambda: facts().get("maximized") is False, 10), "a second double click restores")
 
     d.s("POST", f"/element/{d.find('.hx-first-run [data-win=min]')}/click", {})
-    check(bool(wait_for(lambda: user32.IsIconic(hwnd), "minimised", 10)), "Minimize minimises the window")
+    check(soon(lambda: user32.IsIconic(hwnd), 10), "Minimize minimises the window")
     user32.ShowWindow(hwnd, 9)  # SW_RESTORE
     wait_for(lambda: not user32.IsIconic(hwnd), "restored from the taskbar", 10)
     time.sleep(0.5)
 
-    # Win+Left, as a person presses it: reported, since a runner's desktop may not take synthetic keys
+    # Win+Left, as a person presses it. Snap docks the window at the work area's left edge, full height (half the width
+    # when the window's minimum allows it: on a 1024-wide runner screen its 960 does not). A desktop that takes no
+    # synthetic keys leaves the window where it was: that is reported, not failed.
     user32.SetForegroundWindow(hwnd)
     time.sleep(0.3)
     before = rect(hwnd)
@@ -234,13 +243,18 @@ def win32_checks(d: Driver) -> None:
     work = wintypes.RECT()
     user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(work), 0)  # SPI_GETWORKAREA
     after = rect(hwnd)
-    snapped = (
-        after != before and abs((after[0] + after[2]) / 2 - (work.left + work.right) / 4) < (work.right - work.left) / 8
-    )
-    print(
-        f"info Win+Left snapped to the left half: {'yes' if snapped else 'no'} (before {before}, after {after}, "
-        f"work area {work.left},{work.top} to {work.right},{work.bottom})"
-    )
+    frame = 8  # the shadow's invisible frame sits outside the work area by a few pixels
+    where = f"before {before}, after {after}, work area {work.left},{work.top} to {work.right},{work.bottom}"
+    if after == before:
+        print(f"info Win+Left did not reach the window (this desktop took no synthetic keys): {where}")
+    else:
+        docked = (
+            abs(after[0] - work.left) <= frame
+            and abs(after[1] - work.top) <= frame
+            and abs(after[3] - work.bottom) <= frame
+            and after[2] < work.right
+        )
+        check(docked, "Win+Left snaps the window to the left edge, full height", where)
     if after != before:
         user32.SetForegroundWindow(hwnd)
         for vk, up in ((0x5B, 0), (0x27, 0), (0x27, 2), (0x5B, 2)):  # Win+Right puts it back
@@ -252,7 +266,7 @@ def win32_checks(d: Driver) -> None:
         d.s("POST", f"/element/{d.find('.hx-first-run [data-win=close]')}/click", {})
     except RuntimeError as e:  # the app quit before the driver could answer the click
         print("     the click's answer:", str(e)[-120:])
-    check(bool(wait_for(lambda: not user32.IsWindow(hwnd), "the window to close", 15)), "Close closes the window")
+    check(soon(lambda: not user32.IsWindow(hwnd), 15), "Close closes the window")
 
 
 def cdp_version() -> dict | None:
@@ -442,7 +456,7 @@ def main() -> int:
                     return True
                 return False
 
-            check(bool(wait_for(gone, "the app to quit", 15)), "Close closes the app")
+            check(soon(gone, 15), "Close closes the app")
         print("FAILED: " + "; ".join(FAILED) if FAILED else "every check passed")
         return 1 if FAILED else 0
     finally:
