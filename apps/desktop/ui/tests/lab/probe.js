@@ -4,6 +4,7 @@
      { check, msg, el, rect: {x, y, w, h} (page coordinates), key (stable, for de-duplication) }
    The checks (docs/UI-LAB.md):
      geometry.contain   a shaped child's box (and its rounded corners) stays inside its shaped container's rounded rect
+                        (and is not cut part-way by a scroller on a side it does not scroll)
      geometry.center    items of a control row are vertically centred within 1 px
      geometry.clip      text is not clipped unless it ends in an ellipsis
      geometry.hscroll   no horizontal scroll (the page, or a scroller that is not code)
@@ -261,7 +262,21 @@
         const er = e.getBoundingClientRect(), cr = c.getBoundingClientRect();
         const eRad = radiiOf(ecs), cRad = radiiOf(ccs);
         const ring = ringOf(ecs);
-        if (clipper && scrolls(cs.get(clipper) || getComputedStyle(clipper))) continue;
+        if (clipper && scrolls(cs.get(clipper) || getComputedStyle(clipper))) {
+          /* a scroller hides what it scrolls, on the axis it scrolls. A box that shows in part past a side it does not scroll
+             (a column that scrolls down with overflow-x hidden, so its switches and buttons are cut at the right edge, as the
+             store's were) is cut, and nobody can scroll to the rest */
+          const kcs = cs.get(clipper) || getComputedStyle(clipper), kr = clipper.getBoundingClientRect();
+          const meets = er.left < kr.right && er.right > kr.left && er.top < kr.bottom && er.bottom > kr.top;
+          const past = [];
+          if (!/auto|scroll/.test(kcs.overflowX)) { if (er.right > kr.right + 1) past.push(['right', er.right - kr.right]); if (er.left < kr.left - 1) past.push(['left', kr.left - er.left]); }
+          if (!/auto|scroll/.test(kcs.overflowY)) { if (er.bottom > kr.bottom + 1) past.push(['bottom', er.bottom - kr.bottom]); if (er.top < kr.top - 1) past.push(['top', kr.top - er.top]); }
+          if (want.has('geometry.contain') && meets && past.length && !e.matches(OVERHANG_OK)) {
+            const [side, by] = past.reduce((a, b) => (b[1] > a[1] ? b : a));
+            add('geometry.contain', e, 'cut by ' + describe(clipper) + ', which does not scroll that way: ' + r1(by) + 'px past its ' + side + ' edge [' + why.join(',') + ']', { container: rectOf(clipper) });
+          }
+          continue;
+        }
         const selfClip = clipper === c || (ccs.clipPath && ccs.clipPath !== 'none');   /* the container clips to its own shape: nothing shows past it */
         if (e.matches(OVERHANG_OK)) continue;
         const inside = shapeTest(c, cr, cRad);
