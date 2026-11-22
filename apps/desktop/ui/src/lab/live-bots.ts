@@ -45,3 +45,9 @@ export function withQueue(p: DataProvider, texts: readonly string[], count = 1):
   const snap = p.groups.snapshot;
   return { ...p, groups: { ...p.groups, snapshot: () => { const s = snap(); return { ...s, groups: s.groups.map((g) => ({ ...g, working: g.members.slice(0, count).map((m) => m.id), busy: true, queued: texts.map((text, i) => ({ id: 'q' + i, text, t: '10:0' + i })) })) }; } } };
 }
+
+/** the first `count` bots are also running a kanban card (the engine's worker session of the same profile) */
+export function withKanbanWorker(p: DataProvider, title: string, count = 1): DataProvider {
+  const snap = p.bots.snapshot;
+  return { ...p, bots: { ...p.bots, snapshot: () => { const s = snap(); return { ...s, bots: s.bots.map((b, i): Bot => (i < count && b.info ? { ...b, state: 'working', activity: 'kanban task: ' + title, info: { ...b.info, running: true, worker: { title } } } : b)) }; } } };
+}

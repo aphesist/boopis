@@ -44,6 +44,9 @@ class FakeHermes {
   failProfilesList = false;
   /** the plugin's read answers nothing, or reports a store it could not read */
   failOwn = false;
+  /** the hand-off skill, given to each live teammate; a plugin without the method refuses */
+  guided: string[] = [];
+  failGuide = false;
   problems: Record<string, string> = {};
   failLink = false;
   main = new FakeLink((m, p) => this.mainCall(m, p));
@@ -78,6 +81,7 @@ class FakeHermes {
       }
       case 'plugin.boopis.bots.read': if (this.failOwn) throw new Error('the plugin is not there'); return { root: HOME, bots: this.profiles.filter((x) => !x['is_default']).map((x) => ({ name: x['name'], path: x['path'], record: this.own[x['name']] ?? null, problem: this.problems[x['name']] ?? null, archived: this.archived[x['name']] ?? null })) };
       case 'plugin.boopis.bots.write': { this.own[p['name']] = { ...(this.own[p['name']] ?? {}), ...(p['look'] ? { look: p['look'] } : {}), ...(p['settings'] ? { settings: { ...(this.own[p['name']]?.['settings'] ?? {}), ...p['settings'] } } : {}), ...(p['approvals'] ? { approvals: p['approvals'] } : {}) }; return { record: this.own[p['name']] }; }
+      case 'plugin.boopis.bots.guide': if (this.failGuide) throw new Error('unknown method'); this.guided.push(p['name']); return { skill: 'boopis-handoffs', version: 1, written: true };
       case 'plugin.boopis.bots.inspect': return { path: HOME + '/profiles/' + p['name'], bytes: 3 * 1024 * 1024, files: 240, truncated: false, has_sessions: true, memory_files: 2, skills: 9, boopis_bytes: 300 };
       case 'plugin.boopis.bots.archive': {
         const to = 'archived--' + p['name'];
@@ -531,5 +535,58 @@ describe('what a teammate cannot do yet is not pretended', () => {
     const { bots } = await open();
     expect(bots.source.catalog().channels).toEqual([{ id: 'app', name: 'This app', hint: 'always on' }]);
     expect(bots.source.catalog().reserved).toEqual(['default']);
+  });
+});
+
+/* The engine runs a bot's kanban card as a second session of the same profile and does not tie it to the bot's room turn
+   (`tools/kanban_tools.py`, `hermes_cli/kanban_db_dispatch.py` `_default_spawn`, `HERMES_SESSION_SOURCE=kanban`), so boopis says so. */
+describe('a bot that is also running a kanban card', () => {
+  const NOW = 1_800_000_000;
+  const row = (worker: Record<string, unknown> | null, extra: Record<string, unknown> = {}) => ({ name: 'mira', path: '/h/profiles/mira', worker_session: worker, last_session: null, ...extra }) as never;
+  it('is named when the newest worker session is a kanban one that wrote lately', async () => {
+    const { workerFrom } = await import('./map-bots');
+    expect(workerFrom(row({ id: 's', source: 'kanban', title: 'review the render', last_active: NOW - 10 }), NOW)).toEqual({ title: 'review the render' });
+    expect(workerFrom(row({ id: 's', source: 'Kanban', title: '', last_active: NOW - 90 }), NOW)).toEqual({ title: '' });
+  });
+  it('is not named for a stale one, another kind of worker, or none', async () => {
+    const { workerFrom } = await import('./map-bots');
+    expect(workerFrom(row({ id: 's', source: 'kanban', title: 'x', last_active: NOW - 91 }), NOW)).toBeNull();
+    expect(workerFrom(row({ id: 's', source: 'tool', title: 'x', last_active: NOW }), NOW)).toBeNull();
+    expect(workerFrom(row({ id: 's', source: 'kanban', title: 'x' }), NOW)).toBeNull();
+    expect(workerFrom(row(null), NOW)).toBeNull();
+  });
+  it('says what it is doing as a kanban task, on the bot and in its state', async () => {
+    const { botFrom } = await import('./map-bots');
+    const bot = botFrom({ row: row({ id: 's', source: 'kanban', title: 'review the render', last_active: NOW - 5 }), plugin: undefined, detail: null, jobs: null, sessions: null, notes: {} }, NOW);
+    expect(bot.info?.worker).toEqual({ title: 'review the render' });
+    expect(bot.state).toBe('working');
+    expect(bot.activity).toBe('kanban task: review the render');
+  });
+});
+
+describe('every teammate is given the hand-off skill, once', () => {
+  it('asks the plugin for each live bot after the first read, and not again on the next', async () => {
+    const { h, bots } = await open();
+    expect(h.guided.sort()).toEqual(['atlas', 'nina']);
+    h.main.emit({ type: 'profiles.changed', payload: {} } as never);
+    await new Promise((r) => setTimeout(r, 600)); await bots.settled();
+    expect(h.main.calls.filter((c) => c.method === 'profiles.list').length).toBeGreaterThan(1);
+    expect(h.guided).toHaveLength(2);
+  });
+  it('does not ask for an archived bot, and does not fail when the plugin has no such method', async () => {
+    const h = new FakeHermes();
+    h.profiles.push({ name: 'archived--old', path: HOME + '/profiles/archived--old', description: '' });
+    h.archived['archived--old'] = { name: 'old', at: '2026-11-19T10:00:00+00:00', paused_jobs: [] };
+    const { h: g, bots } = await open(h);
+    expect(g.guided).not.toContain('archived--old');
+    const none = new FakeHermes(); none.failGuide = true;
+    const again = await open(none);
+    expect(again.bots.source.snapshot().bots.map((b) => b.id).sort()).toEqual(['atlas', 'nina']);
+    void bots;
+  });
+  it('says nothing to a plugin that did not answer the read', async () => {
+    const none = new FakeHermes(); none.failOwn = true;
+    const { h } = await open(none);
+    expect(h.guided).toEqual([]);
   });
 });

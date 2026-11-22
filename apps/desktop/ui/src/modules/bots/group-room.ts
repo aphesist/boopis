@@ -207,14 +207,20 @@ function paintWorking(g: Group): void {
   const w = G.working as HTMLElement;
   const why = groups().note();
   const busy = g.members.filter((m) => g.working.includes(m.id));
+  /* a member that is also running a kanban card is two sessions at once: the engine does not tie them together, so the room says it */
+  const onBoard = g.members.filter((m) => !!bot(m.profile)?.info?.worker);
   w.textContent = '';
   if (why) { w.className = 'bt-working bt-working--note'; w.textContent = why; return; }
   w.className = 'bt-working';
-  if (!busy.length) return;
-  w.insertAdjacentHTML('beforeend', '<span class="bt-working-orbs" aria-hidden="true">' + stackOf(busy, 16, true) + '</span>');
-  w.append(el('span', { text: namesOf(busy) + (busy.length === 1 ? ' is replying' : ' are replying') }));
+  if (busy.length) {
+    w.insertAdjacentHTML('beforeend', '<span class="bt-working-orbs" aria-hidden="true">' + stackOf(busy, 16, true) + '</span>');
+    w.append(el('span', { text: namesOf(busy) + (busy.length === 1 ? ' is replying' : ' are replying') }));
+  }
+  if (onBoard.length) w.append(el('span', { class: 'bt-working-board', text: (busy.length ? '. ' : '') + namesOf(onBoard) + (onBoard.length === 1 ? ' is also running a kanban task' : ' are also running kanban tasks') }));
   livenIn(w);
 }
+/** the roster moved (a bot started or finished a kanban card): the open group says it */
+export function repaintWorking(): void { const g = group(S.groupSel); if (g && S.view === 'group') paintWorking(g); }
 /** a message while members are working is held and sent when they are done (it never stops them); "Send now" in the strip stops them */
 function send(text: string): void {
   const g = group(S.groupSel); if (!g || !text.trim()) return;

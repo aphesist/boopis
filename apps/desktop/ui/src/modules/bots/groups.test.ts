@@ -98,6 +98,18 @@ describe('a group’s thread', () => {
     expect(q('.bt-working').textContent).toMatch(/are replying/);
     expect(q('.bt-working').getAttribute('aria-live')).toBe('polite');
   });
+  it('says that a member is also running a kanban task, which is a second session of the same bot', async () => {
+    const { repaintWorking } = await import('./group-room');
+    const g = provider.groups.snapshot().groups[0]!;
+    const member = S.bots.find((b) => b.id === g.members[0]!.profile)!;
+    expect(q('.bt-working').textContent).toBe('');
+    member.info = { profile: member.id, path: '', model: null, provider: null, skills: null, toolsets: null, mcpServers: null, jobs: null, sessions: null, soul: null, running: true, worker: { title: 'review the render' }, notes: {} };
+    repaintWorking();
+    expect(q('.bt-working').textContent).toMatch(new RegExp(member.name + ' is also running a kanban task'));
+    member.info = { ...member.info, worker: null };
+    repaintWorking();
+    expect(q('.bt-working').textContent).toBe('');
+  });
   it('renames in place with Enter, and Esc leaves it as it was', async () => {
     q('.bt-ghead [aria-label^="Rename"]').click();
     const input = q<HTMLInputElement>('.bt-gname');

@@ -61,6 +61,8 @@ export interface BotSession { id: string; title: string; when: string; messages:
 export interface BotCapability { name: string; label: string; enabled: boolean }
 /** What Hermes reports about a teammate. A field Hermes has not answered (yet) is `null` and the UI shows it as unknown;
  *  `notes` says why, in words. Never filled with a guess. */
+/** the kanban card a bot's worker is on, as the worker's session names it ('' when it has no title) */
+export interface BotWorker { title: string }
 export interface BotInfo {
   /** the Hermes profile's name and folder */
   profile: string; path: string;
@@ -75,6 +77,9 @@ export interface BotInfo {
   soul: string | null;
   /** Hermes's own "active now" rule: it wrote within the last 90 seconds, or a worker of it did. null: unknown */
   running: boolean | null;
+  /** a kanban worker of this bot wrote within the last 90 seconds: the bot is doing a card as well as whatever it does in rooms
+   *  and chats (the engine runs that worker as a second session of the same profile and does not tie the two together) */
+  worker?: BotWorker | null;
   notes: Readonly<Partial<Record<'detail' | 'jobs' | 'sessions' | 'store', string>>>;
 }
 /** an archived teammate: a profile renamed out of the way (nothing was deleted). `id` is the profile's name now, `was` the name it

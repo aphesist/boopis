@@ -19,6 +19,26 @@
   "w": 1196,
   "h": 872
  },
+ "a-member-also-running-a-kanban-task@bone": {
+  "sha": "fcc8b4a8d30db2b83561f9f87350f2564631fd18",
+  "w": 1196,
+  "h": 872
+ },
+ "a-member-also-running-a-kanban-task@catalog": {
+  "sha": "67aa3caee3d95fb41252c2d928240d085a948c4c",
+  "w": 1196,
+  "h": 872
+ },
+ "a-member-also-running-a-kanban-task@graphite": {
+  "sha": "969ef20ee22545abe853fe4db774e87af8262376",
+  "w": 1196,
+  "h": 872
+ },
+ "a-member-also-running-a-kanban-task@typewriter": {
+  "sha": "f0057043fd7098c553988a3c5eb5c8bbf5756293",
+  "w": 1196,
+  "h": 872
+ },
  "a-member-chip-hover@bone": {
   "sha": "701a6a3014b3a1643a6a9bdccbfd61431c3cecfb",
   "w": 1196,
