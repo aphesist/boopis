@@ -19,6 +19,8 @@
 //!   (one row per line: `platform`, `service`, `step`, `result`, `note`), which `scripts/live-table.py` merges across platforms.
 //! - The Claude subscription runs on the Claude Code program, not on a host sign-in: it has no row here.
 
+#![allow(clippy::expect_used, clippy::too_many_lines)] // a test: failing loudly is the point
+
 use std::fmt::Write as _;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::time::Duration;
@@ -75,7 +77,10 @@ impl Probe {
             Ok(v) => v,
             Err(p) => (
                 Verdict::Fail,
-                format!("panicked: {}", panic_text(p.as_ref()).lines().next().unwrap_or("")),
+                format!(
+                    "panicked: {}",
+                    panic_text(p.as_ref()).lines().next().unwrap_or("")
+                ),
             ),
         };
         println!("{:<8} {service} | {step} | {note}", verdict.word());
@@ -147,7 +152,9 @@ fn shown(e: boopis_host::error::Error) -> (String, String) {
 /// from the service itself.
 fn blocked_by(status: u16, body: &str) -> Option<String> {
     let lower = body.to_ascii_lowercase();
-    if matches!(status, 403 | 429 | 503) && (lower.contains("cloudflare") || lower.contains("cf-chl")) {
+    if matches!(status, 403 | 429 | 503)
+        && (lower.contains("cloudflare") || lower.contains("cf-chl"))
+    {
         return Some(format!(
             "a Cloudflare check answered {status} (this network is challenged)"
         ));
@@ -250,12 +257,8 @@ fn chatgpt_flow(p: &mut Probe) {
         boopis_host::chatgpt::callback::PREFERRED_PORT,
         chatgpt::CALLBACK_PATH
     );
-    let attempt = chatgpt::Attempt::new(
-        redirect,
-        chatgpt::new_host_id().expect("a host id"),
-        None,
-    )
-    .expect("an attempt");
+    let attempt = chatgpt::Attempt::new(redirect, chatgpt::new_host_id().expect("a host id"), None)
+        .expect("an attempt");
     let t = chatgpt::Https::new(TIMEOUT);
     p.check("ChatGPT", "authorize page (first registration)", || {
         let url = chatgpt::authorize_url(&ep, &attempt, false);
@@ -300,19 +303,20 @@ fn chatgpt_flow(p: &mut Probe) {
             }
         }
     });
-    p.check("ChatGPT", "signing keys (ID token check)", || {
-        match chatgpt::signing_keys(&t, &ep) {
-            Ok(keys) if !keys.is_empty() => (
-                Verdict::Pass,
-                format!("{} RSA keys published", keys.len()),
-            ),
+    p.check(
+        "ChatGPT",
+        "signing keys (ID token check)",
+        || match chatgpt::signing_keys(&t, &ep) {
+            Ok(keys) if !keys.is_empty() => {
+                (Verdict::Pass, format!("{} RSA keys published", keys.len()))
+            }
             Ok(_) => (Verdict::Fail, "OpenAI published no RSA key".into()),
             Err(e) => {
                 let (code, message) = shown(e);
                 (Verdict::Fail, format!("{code}: {message}"))
             }
-        }
-    });
+        },
+    );
 }
 
 // ---------------------------------------------------------------- GitHub Copilot (ADR-0039)
@@ -321,8 +325,10 @@ fn copilot_flow(p: &mut Probe) {
     let ep = copilot::Endpoints::github();
     let t = chatgpt::Https::new(TIMEOUT);
     let mut issued = None;
-    p.check("GitHub Copilot", "device code for boopis's client id", || {
-        match copilot::request_code(&t, &ep) {
+    p.check(
+        "GitHub Copilot",
+        "device code for boopis's client id",
+        || match copilot::request_code(&t, &ep) {
             Ok(code) => {
                 let note = format!(
                     "code issued ({} characters), page {}",
@@ -334,16 +340,23 @@ fn copilot_flow(p: &mut Probe) {
             }
             Err(e) => {
                 let (code, message) = shown(e);
-                if let Some(b) = diagnose(&t, "https://github.com/login/device/code", Some("client_id=x")) {
+                if let Some(b) = diagnose(
+                    &t,
+                    "https://github.com/login/device/code",
+                    Some("client_id=x"),
+                ) {
                     return (Verdict::Blocked, b);
                 }
                 plain_or_fail(&message).unwrap_or((Verdict::Fail, format!("{code}: {message}")))
             }
-        }
-    });
+        },
+    );
     p.check("GitHub Copilot", "waiting for approval (one poll)", || {
         let Some(code) = issued.as_ref() else {
-            return (Verdict::Blocked, "no code to poll with (the step before did not pass)".into());
+            return (
+                Verdict::Blocked,
+                "no code to poll with (the step before did not pass)".into(),
+            );
         };
         std::thread::sleep(Duration::from_secs(code.interval));
         match copilot::poll(&t, &ep, code, code.interval) {
@@ -357,12 +370,13 @@ fn copilot_flow(p: &mut Probe) {
             }
         }
     });
-    p.check("GitHub Copilot", "plan check with a token GitHub never issued", || {
-        match copilot::entitlement(&t, &ep, "gho_boopisliveprobe000000000000000000000") {
-            Ok(copilot::Entitlement::No) => (
-                Verdict::Pass,
-                "reachable; refused the made-up token".into(),
-            ),
+    p.check(
+        "GitHub Copilot",
+        "plan check with a token GitHub never issued",
+        || match copilot::entitlement(&t, &ep, "gho_boopisliveprobe000000000000000000000") {
+            Ok(copilot::Entitlement::No) => {
+                (Verdict::Pass, "reachable; refused the made-up token".into())
+            }
             Ok(copilot::Entitlement::Has) => {
                 (Verdict::Fail, "granted Copilot to a made-up token".into())
             }
@@ -370,8 +384,8 @@ fn copilot_flow(p: &mut Probe) {
                 let (code, message) = shown(e);
                 (Verdict::Fail, format!("{code}: {message}"))
             }
-        }
-    });
+        },
+    );
 }
 
 // ---------------------------------------------------------------- xAI SuperGrok (ADR-0039)
@@ -396,7 +410,11 @@ fn xai_flow(p: &mut Probe) {
             }
             Err(e) => {
                 let (code, message) = shown(e);
-                if let Some(b) = diagnose(&t, &format!("{}/oauth2/device/code", xai::ISSUER), Some("client_id=x")) {
+                if let Some(b) = diagnose(
+                    &t,
+                    &format!("{}/oauth2/device/code", xai::ISSUER),
+                    Some("client_id=x"),
+                ) {
                     // the person still gets plain words for it
                     return match plain_or_fail(&message) {
                         Some(f) => f,
@@ -409,14 +427,19 @@ fn xai_flow(p: &mut Probe) {
     });
     p.check("xAI", "waiting for approval (one poll)", || {
         let Some(code) = issued.as_ref() else {
-            return (Verdict::Blocked, "no code to poll with (the step before did not pass)".into());
+            return (
+                Verdict::Blocked,
+                "no code to poll with (the step before did not pass)".into(),
+            );
         };
         std::thread::sleep(Duration::from_secs(code.interval));
         match xai::poll(&t, &ep, code) {
             Ok(xai::Poll::Pending | xai::Poll::SlowDown) => {
                 (Verdict::Pass, "xAI is waiting for the person".into())
             }
-            Ok(xai::Poll::Approved(_)) => (Verdict::Fail, "xAI approved a code nobody typed".into()),
+            Ok(xai::Poll::Approved(_)) => {
+                (Verdict::Fail, "xAI approved a code nobody typed".into())
+            }
             Err(e) => {
                 let (code, message) = shown(e);
                 (Verdict::Fail, format!("{code}: {message}"))
@@ -512,9 +535,21 @@ fn endpoints(p: &mut Probe) {
     use boopis_host::providers::check::test_endpoint;
     let t = http::Https::new(TIMEOUT);
     let cases: [(&str, &str, &[EndpointOutcome]); 3] = [
-        ("a public model list", "https://openrouter.ai/api/v1", &[EndpointOutcome::Listed]),
-        ("a server that needs a key", "https://api.openai.com/v1", &[EndpointOutcome::NeedsKey]),
-        ("nothing listening", "http://127.0.0.1:9/v1", &[EndpointOutcome::Unreachable]),
+        (
+            "a public model list",
+            "https://openrouter.ai/api/v1",
+            &[EndpointOutcome::Listed],
+        ),
+        (
+            "a server that needs a key",
+            "https://api.openai.com/v1",
+            &[EndpointOutcome::NeedsKey],
+        ),
+        (
+            "nothing listening",
+            "http://127.0.0.1:9/v1",
+            &[EndpointOutcome::Unreachable],
+        ),
     ];
     for (what, address, want) in cases {
         p.check("Custom endpoint", &format!("Test: {what}"), || {
@@ -647,7 +682,12 @@ fn every_signin_and_key_check_against_the_real_services() {
         .filter(|r| r.verdict == Verdict::Fail)
         .map(|r| format!("{} | {}: {}", r.service, r.step, r.note))
         .collect();
-    assert!(failed.is_empty(), "{} failed:\n{}", failed.len(), failed.join("\n"));
+    assert!(
+        failed.is_empty(),
+        "{} failed:\n{}",
+        failed.len(),
+        failed.join("\n")
+    );
 }
 
 #[test]
