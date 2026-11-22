@@ -224,10 +224,12 @@ async fn every_recommended_entry_is_still_what_was_read() {
             .unwrap();
             let verdict = match got {
                 Ok(r) => {
-                    let sum: String = Sha256::digest(&r.body)
+                    let sum = Sha256::digest(&r.body)
                         .iter()
-                        .map(|b| format!("{b:02x}"))
-                        .collect();
+                        .fold(String::new(), |mut acc, b| {
+                            let _ = write!(acc, "{b:02x}");
+                            acc
+                        });
                     if sum == e.verified.manifest.sha256 {
                         "pass".to_owned()
                     } else {
