@@ -48,6 +48,10 @@ pub enum Signal {
     Terminated(Ended),
     /// `WebKit`'s `is-web-process-responsive` changed.
     Responsive(bool),
+    /// The page's heartbeat arrived; whether the page said it was visible.
+    Heartbeat(bool),
+    /// The page started loading again (a reload): its heartbeat starts over.
+    Loading,
     /// The clock: time passed.
     Tick,
 }
@@ -60,7 +64,7 @@ pub enum Why {
     Crashed,
     /// The web process ran out of memory.
     OutOfMemory,
-    /// The web process stopped answering for `Policy::unresponsive_after`.
+    /// The web process stopped answering for `Policy::unresponsive_after_ms`, or the page's heartbeat stopped.
     Unresponsive,
     /// The web process ended for a reason this build does not know.
     Ended,
@@ -102,6 +106,13 @@ pub struct Policy {
     /// after about 3 s without an answer; a long synchronous burst of work on return can take several seconds, so the
     /// host waits well past that before it decides the page is stuck.
     pub unresponsive_after_ms: u64,
+    /// How long the page's heartbeat (every 10 s) may be missing while the page last said it was visible, before the
+    /// page counts as stuck. `WebKit`'s own flag is only raised when the UI process waits on the web process (input,
+    /// a load), so an idle window whose web process hung never shows it: measured under Xvfb with the web process
+    /// stopped for two minutes, the flag never changed. The heartbeat is what notices that case.
+    pub silent_visible_ms: u64,
+    /// The same while the page last said it was hidden (`WebKit` may throttle a hidden page's timers).
+    pub silent_hidden_ms: u64,
     /// The window over which recent recoveries count towards the back-off.
     pub window_ms: u64,
 }
@@ -110,6 +121,8 @@ impl Default for Policy {
     fn default() -> Self {
         Self {
             unresponsive_after_ms: 20_000,
+            silent_visible_ms: 35_000,
+            silent_hidden_ms: 180_000,
             window_ms: 10 * 60_000,
         }
     }
@@ -129,6 +142,8 @@ pub struct Watchdog {
     /// The page is dead and a recovery waits for the back-off.
     owed: Option<Why>,
     recoveries: VecDeque<u64>,
+    /// The last heartbeat and whether the page was visible then; none until the page's first one after a load.
+    beat: Option<(u64, bool)>,
 }
 
 impl Watchdog {
@@ -139,6 +154,19 @@ impl Watchdog {
             policy,
             ..Self::default()
         }
+    }
+
+    /// Whether the page's heartbeat is overdue (it beat at least once since its load).
+    #[must_use]
+    pub fn silent(&self, now: u64) -> bool {
+        self.beat.is_some_and(|(at, visible)| {
+            let limit = if visible {
+                self.policy.silent_visible_ms
+            } else {
+                self.policy.silent_hidden_ms
+            };
+            now.saturating_sub(at) >= limit
+        })
     }
 
     /// Since when the web process has been unresponsive, if it is.
@@ -159,6 +187,7 @@ impl Watchdog {
                     Ended::ByHost | Ended::Unknown => Why::Ended,
                 };
                 self.terminating = false;
+                self.beat = None;
                 self.owed = Some(why);
                 self.try_recover(now)
             }
@@ -172,13 +201,22 @@ impl Watchdog {
                 }
                 Action::Nothing
             }
+            Signal::Heartbeat(visible) => {
+                self.beat = Some((now, visible));
+                Action::Nothing
+            }
+            Signal::Loading => {
+                self.beat = None;
+                Action::Nothing
+            }
             Signal::Tick => {
                 if self.owed.is_some() {
                     return self.try_recover(now);
                 }
-                let stuck = self.unresponsive_since.is_some_and(|since| {
+                let flagged = self.unresponsive_since.is_some_and(|since| {
                     now.saturating_sub(since) >= self.policy.unresponsive_after_ms
                 });
+                let stuck = flagged || self.silent(now);
                 if stuck && !self.terminating && self.may_recover(now) {
                     self.terminating = true;
                     Action::Terminate
@@ -278,6 +316,7 @@ pub const MAX_EVENTS: usize = 40;
 pub struct Health {
     inner: Mutex<Inner>,
     file: Option<PathBuf>,
+    clock: std::time::Instant,
 }
 
 #[derive(Debug)]
@@ -329,6 +368,7 @@ impl Health {
                 notice: None,
             }),
             file,
+            clock: std::time::Instant::now(),
         };
         health.save();
         Arc::new(health)
@@ -368,6 +408,12 @@ impl Health {
         }
     }
 
+    /// Milliseconds since this record was made: the watchdog's clock.
+    #[must_use]
+    pub fn now_ms(&self) -> u64 {
+        u64::try_from(self.clock.elapsed().as_millis()).unwrap_or(u64::MAX)
+    }
+
     /// Mark the web view as watched.
     pub fn set_watching(&self) {
         self.lock().report.watching = true;
@@ -380,6 +426,7 @@ impl Health {
         {
             let mut g = self.lock();
             let before = g.dog.unresponsive_since();
+            let was_silent = g.dog.silent(now);
             action = g.dog.on(now, signal);
             match signal {
                 Signal::Terminated(ended) => {
@@ -421,8 +468,16 @@ impl Health {
                     changed = true;
                 }
                 Action::Terminate => {
-                    tracing::warn!("ending the web view's stuck process to recover the window");
-                    Self::push(&mut g, "ending", "unresponsive", None);
+                    let why = if was_silent {
+                        "no heartbeat"
+                    } else {
+                        "unresponsive"
+                    };
+                    tracing::warn!(
+                        why,
+                        "ending the web view's stuck process to recover the window"
+                    );
+                    Self::push(&mut g, "ending", why, None);
                     changed = true;
                 }
                 Action::Nothing => {}
@@ -437,6 +492,7 @@ impl Health {
     /// The page's heartbeat: whether it is visible, and the longest main-thread stall it measured since the last one
     /// (milliseconds). Returns the notice to show once after a recovery.
     pub fn heartbeat(&self, visible: bool, stall_ms: u32, outbox_peak: u32) -> Option<Why> {
+        self.signal(self.now_ms(), Signal::Heartbeat(visible));
         let mut save = false;
         let notice = {
             let mut g = self.lock();
@@ -564,8 +620,6 @@ pub fn watch(app: &tauri::AppHandle, health: Arc<Health>) {
     };
     let result = window.with_webview(move |platform| {
         let view = platform.inner();
-        let clock = std::time::Instant::now();
-        let now = move || u64::try_from(clock.elapsed().as_millis()).unwrap_or(u64::MAX);
         let act = |view: &webkit2gtk::WebView, action: Action| match action {
             Action::Reload(_) => view.reload(),
             Action::Terminate => view.terminate_web_process(),
@@ -579,13 +633,16 @@ pub fn watch(app: &tauri::AppHandle, health: Arc<Health>) {
                 WebProcessTerminationReason::TerminatedByApi => Ended::ByHost,
                 _ => Ended::Unknown,
             };
-            act(view, h.signal(now(), Signal::Terminated(ended)));
+            act(view, h.signal(h.now_ms(), Signal::Terminated(ended)));
         });
         let h = health.clone();
         view.connect_is_web_process_responsive_notify(move |view| {
             act(
                 view,
-                h.signal(now(), Signal::Responsive(view.is_web_process_responsive())),
+                h.signal(
+                    h.now_ms(),
+                    Signal::Responsive(view.is_web_process_responsive()),
+                ),
             );
         });
         let h = health.clone();
@@ -594,7 +651,7 @@ pub fn watch(app: &tauri::AppHandle, health: Arc<Health>) {
             let Some(view) = weak.upgrade() else {
                 return webkit2gtk::glib::ControlFlow::Break;
             };
-            act(&view, h.signal(now(), Signal::Tick));
+            act(&view, h.signal(h.now_ms(), Signal::Tick));
             webkit2gtk::glib::ControlFlow::Continue
         });
         health.set_watching();
@@ -666,6 +723,49 @@ mod tests {
             Action::Reload(Why::Unresponsive)
         );
         assert_eq!(d.unresponsive_since(), None);
+    }
+
+    #[test]
+    fn a_page_whose_heartbeat_stops_is_ended_and_reloaded() {
+        let mut d = dog();
+        assert_eq!(d.on(0, Signal::Tick), Action::Nothing);
+        assert_eq!(
+            d.on(600_000, Signal::Tick),
+            Action::Nothing,
+            "no heartbeat yet: the page is still loading"
+        );
+        d.on(600_000, Signal::Heartbeat(true));
+        assert_eq!(d.on(634_999, Signal::Tick), Action::Nothing);
+        assert_eq!(
+            d.on(635_000, Signal::Tick),
+            Action::Terminate,
+            "visible and silent for 35 s"
+        );
+        assert_eq!(
+            d.on(636_000, Signal::Terminated(Ended::ByHost)),
+            Action::Reload(Why::Unresponsive)
+        );
+        assert_eq!(
+            d.on(900_000, Signal::Tick),
+            Action::Nothing,
+            "the new page has not beaten yet"
+        );
+    }
+
+    #[test]
+    fn a_hidden_page_gets_longer_before_its_silence_counts() {
+        let mut d = dog();
+        d.on(0, Signal::Heartbeat(false));
+        assert_eq!(d.on(100_000, Signal::Tick), Action::Nothing);
+        assert_eq!(d.on(180_000, Signal::Tick), Action::Terminate);
+        let mut d = dog();
+        d.on(0, Signal::Heartbeat(true));
+        d.on(10_000, Signal::Loading);
+        assert_eq!(
+            d.on(100_000, Signal::Tick),
+            Action::Nothing,
+            "a reload starts the heartbeat over"
+        );
     }
 
     #[test]

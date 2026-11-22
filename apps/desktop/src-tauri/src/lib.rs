@@ -346,10 +346,13 @@ pub fn run() {
         .on_page_load(|webview, payload| {
             // The main page is loading again (a reload, or the watchdog's recovery): the old page's connections have
             // no reader any more. The new page connects afresh and reads its state from the engine.
-            if webview.label() == "main"
-                && payload.event() == tauri::webview::PageLoadEvent::Started
-                && let Some(state) = webview.try_state::<AppState>()
-            {
+            if webview.label() != "main" || payload.event() != tauri::webview::PageLoadEvent::Started {
+                return;
+            }
+            if let Some(health) = webview.try_state::<Arc<webview_health::Health>>() {
+                health.signal(health.now_ms(), webview_health::Signal::Loading);
+            }
+            if let Some(state) = webview.try_state::<AppState>() {
                 let closed = state.hubs.close_all_connections();
                 if closed > 0 {
                     tracing::info!(closed, "the page is loading again; closed its old connections");
