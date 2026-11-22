@@ -8,6 +8,10 @@ name: desktop-window
 on:
   workflow_dispatch:
   workflow_call:
+  # TEMPORARY: a workflow GitHub has not seen on the default branch cannot be dispatched, so this branch runs it on push
+  # until it is merged. Removed before the merge.
+  push:
+    branches: [w24/first-run-window]
 permissions:
   contents: read
 env:
