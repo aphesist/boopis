@@ -16,7 +16,7 @@ import { travel, type Ease } from './ease';
 
 export interface CameraState { x: number; y: number; zoom: number; roll: number }
 interface CamProxy { x: number; y: number; lz: number; roll: number; __name: string }
-export interface CameraMove { at: number; dur: number; ease?: Ease; blur?: boolean }
+export interface CameraMove { at: number; dur: number; ease?: Ease; blur?: boolean; samples?: number }
 
 export interface Camera {
   readonly state: CamProxy;
@@ -26,8 +26,12 @@ export interface Camera {
   drift(target: Partial<CameraState>, m: Omit<CameraMove, 'blur'>): Camera;
   /** depth of field: layers `blurPerDepth` px blurred per unit of depth away from `depth` (0 turns it off) */
   focus(depth: number, blurPerDepth: number): Camera;
-  /** the screen position of a world point on a layer at depth d, at the current state */
-  project(x: number, y: number, depth?: number): [number, number];
+  /** the screen position of a world point on a layer at depth d, at the current state (or a given one) */
+  project(x: number, y: number, depth?: number, state?: CameraState): [number, number];
+  /** the world point on a layer at depth d under a screen point (the inverse of project) */
+  unproject(sx: number, sy: number, depth?: number, state?: CameraState): [number, number];
+  /** the camera's state at time t, as the timeline built so far puts it (seeks the timeline and puts it back) */
+  stateAt(t: number): CameraState;
   /** the transform a layer at depth d gets now */
   transformFor(depth: number): string;
 }
@@ -59,18 +63,35 @@ export function camera(film: Film, stage: Stage, init: Partial<CameraState> = {}
     if (target.y != null) v['y'] = target.y;
     if (target.zoom != null) v['lz'] = Math.log(target.zoom);
     if (target.roll != null) v['roll'] = target.roll;
-    film.tl.to(s, { ...v, duration: m.dur, ease: m.ease ?? travel, immediateRender: false, data: { blur: blur && m.blur !== false, role: 'camera' } }, m.at);
+    /* a snap (whip, zoom-through) streaks across the frame: ask for 32 sub-frames so the blur never steps */
+    const samples = m.samples ?? (m.ease?.easeName === 'snap' ? 32 : 0);
+    film.tl.to(s, { ...v, duration: m.dur, ease: m.ease ?? travel, immediateRender: false, data: { blur: blur && m.blur !== false, role: 'camera', samples } }, m.at);
   };
   const cam: Camera = {
     state: s,
     to(target, m) { tweenTo(target, m, true); return cam; },
     drift(target, m) { tweenTo(target, { ...m, ease: m.ease ?? travel }, false); return cam; },
     focus(depth, per) { focusDepth = depth; blurPer = per; return cam; },
-    project(x, y, d = 1) {
-      const z = Math.exp(s.lz * d), r = (s.roll * Math.PI) / 180;
-      const ox = rest.x + (s.x - rest.x) * d, oy = rest.y + (s.y - rest.y) * d;
+    project(x, y, d = 1, st) {
+      const S = st ?? { x: s.x, y: s.y, zoom: Math.exp(s.lz), roll: s.roll };
+      const z = Math.pow(S.zoom, d), r = (S.roll * Math.PI) / 180;
+      const ox = rest.x + (S.x - rest.x) * d, oy = rest.y + (S.y - rest.y) * d;
       const dx = (x - ox) * z, dy = (y - oy) * z;
       return [W / 2 + dx * Math.cos(r) - dy * Math.sin(r), H / 2 + dx * Math.sin(r) + dy * Math.cos(r)];
+    },
+    unproject(sx, sy, d = 1, st) {
+      const S = st ?? { x: s.x, y: s.y, zoom: Math.exp(s.lz), roll: s.roll };
+      const z = Math.pow(S.zoom, d), r = (-S.roll * Math.PI) / 180;
+      const ox = rest.x + (S.x - rest.x) * d, oy = rest.y + (S.y - rest.y) * d;
+      const dx = sx - W / 2, dy = sy - H / 2;
+      return [ox + (dx * Math.cos(r) - dy * Math.sin(r)) / z, oy + (dx * Math.sin(r) + dy * Math.cos(r)) / z];
+    },
+    stateAt(t) {
+      const prev = film.tl.time();
+      film.tl.time(t, true);
+      const out = { x: s.x, y: s.y, zoom: Math.exp(s.lz), roll: s.roll };
+      film.tl.time(prev, true);
+      return out;
     },
     transformFor
   };

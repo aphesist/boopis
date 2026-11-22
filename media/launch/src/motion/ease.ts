@@ -50,12 +50,6 @@ export const uiSpring = cubicBezier(0.22, 1, 0.36, 1, 'ui-spring');
 /** constant motion only (never on something that starts or stops on screen); tweens using it must say `data: { linear: true }` */
 export const linear = named('linear', (p) => p);
 
-/** orb2's blink curve over the blink's 0.155 s: closed at the middle (pow(sin(pi p), 0.82)); it starts and ends at 0 */
-export const blinkCurve: Ease = (() => {
-  const e = ((p: number): number => (p <= 0 || p >= 1 ? 0 : Math.pow(Math.sin(p * Math.PI), 0.82))) as Ease;
-  e.easeName = 'orb-blink';
-  return e;
-})();
 
 export const EASES = { arrive, travel, snap, depart, ui, uiSpring, linear } as const;
 export type EaseName = keyof typeof EASES;

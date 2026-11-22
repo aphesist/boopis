@@ -1,0 +1,385 @@
+[
+  {
+    "id": "B01",
+    "start_s": 0.0,
+    "end_s": 2.667,
+    "bar": "1.1-2.2",
+    "picture": "Frame 0 already set (thumbnail). Line 1 centred y330, 96px, lab marks inline at cap height (unrecoloured sign-in marks: Claude #D97757, ChatGPT white). Two orbs 260px, centres y700: kai (teal circle #4fc9a8) x760 under 'Claude', nina (red triangle #f23b5a) x1160 under 'GPT', facing each other, calm life. 0.533: line 2 rises (K1), brass word 'Same', lands ~1.0. 1.067: kai speaking reaction toward nina. 1.6: nina speaks back. 2.133: both gaze to camera (capped .30/.20 rad). Camera push 2%/s.",
+    "words": [
+      "Claude and GPT",
+      "Same group chat"
+    ],
+    "carry_out": "T2 zoom-through into kai's left eye, 2.267-2.667 (24f snap, motion blur): the dark eye's interior fills the frame and becomes the ground; swap lands on 2.2. The eye's centre is B02's origin.",
+    "sound": "Warm open chord already sounding at frame 0; kai's pluck at 1.3, nina's at 1.4 (call and response); whoosh peaking 2.47; soft low thump 2.667.",
+    "truth_rows": [
+      "5",
+      "6"
+    ]
+  },
+  {
+    "id": "B02",
+    "start_s": 2.667,
+    "end_s": 5.067,
+    "bar": "2.2-3.2.5",
+    "picture": "Four real sign-in buttons (ui.signinButton, dark preset, 2.4x: 96px tall, all 760px wide, logo 48px, label 34px/500) fan out of the eye's point into a centred column y440-900 (U4: from the point at 60% scale, travel 24f, 3f stagger, settle spring), app order ChatGPT, GitHub, Claude, xAI, marks unrecoloured. 2.667: film line rises above at y300, brass word 'already'; lands 3.40, holds to 4.93, exits 4.93-5.13. Camera drift.",
+    "words": [
+      "Bring the plans you already pay for",
+      "Sign in with ChatGPT",
+      "Sign in with GitHub",
+      "Sign in with Claude",
+      "Sign in with xAI"
+    ],
+    "carry_out": "T8: each button shell becomes a bot card (B03); the lab marks ride across untouched (never morphed or recoloured).",
+    "sound": "Four soft wood ticks as the buttons settle, rising; pad.",
+    "truth_rows": [
+      "1"
+    ]
+  },
+  {
+    "id": "B03",
+    "start_s": 5.067,
+    "end_s": 7.467,
+    "bar": "3.2.5-4.3",
+    "picture": "5.067-5.6: shells resize to cards (760x96 -> 880x150, r-s to r-m, bg-3, travel 32f, 4f stagger). Label slides left and blurs out; the mark slides right into the card's 3rd line; a circular mask opens in its old slot to uncover the bot's orb (96px, asleep face). Name 38px/600, role 29px quiet, plan line mark + mono 29px rise 4f after: nina/deploys/ChatGPT subscription; moss/flaky test hunter/GitHub Copilot subscription; kai/docs and changelog/Claude subscription; vox/release notes/SuperGrok subscription. 5.133: film line swaps, brass word 'bot', lands 5.87, holds to 7.27, exits 7.27-7.47. 5.867-6.133: eyes open card by card on sixteenths (asleep to idle, character spring), each orb glancing at the next. 6.4: vox blinks. 6.933-7.467: cards collapse into their orbs (text slides under the orb, masked).",
+    "words": [
+      "Make each one a bot in boopis",
+      "nina",
+      "deploys",
+      "ChatGPT subscription",
+      "moss",
+      "flaky test hunter",
+      "GitHub Copilot subscription",
+      "kai",
+      "docs and changelog",
+      "Claude subscription",
+      "vox",
+      "release notes",
+      "SuperGrok subscription"
+    ],
+    "carry_out": "T1 shared elements: the four orbs arc up-left (travel 30f, 3f stagger) into the room header's kit stack (one overlap step, order kai, nina, moss, vox; orb 32 at 2.4x = 77px), landing 4.3. Orbs never redrawn.",
+    "sound": "Four plucks as eyes open, each bot's own note, together one chord; pad lifts.",
+    "truth_rows": [
+      "1",
+      "4",
+      "5"
+    ]
+  },
+  {
+    "id": "B04",
+    "start_s": 7.467,
+    "end_s": 9.6,
+    "bar": "4.3-5.3",
+    "picture": "Group room 'release' at 2.2x assembles around the stack: name rises beside it; the library composer rises from the bottom edge (arrive 30f) with member chips @kai @nina @moss @vox and the bone send button; no empty thread plate. 7.733: cursor (48px) arcs in from lower right, clicks the composer on 4.4 (8.0). 8.0-8.9: K2 typing 28cps; '@kai' turns into a mention chip. 9.067 (5.2): send (button .96 for 4f), the line lifts into the thread as your request card, call number 'You' / '14:02'. 9.067-9.6: presence entry rises at the tail (dur-2, 6px): kai's orb 48px and name in the margin (clock drawn as a grey bar, no digits), body: running dot + 'thinking' (mono, busy).",
+    "words": [
+      "release",
+      "@kai",
+      "@nina",
+      "@moss",
+      "@vox",
+      "@kai is it ready to cut?",
+      "You",
+      "14:02",
+      "kai",
+      "thinking"
+    ],
+    "carry_out": "kai's reply takes the presence entry's place (the room's own rule when the replier was the only one at work).",
+    "sound": "Key ticks at the typing cadence, under the music; soft tonal click on send; breath tick as presence rises; kick on 1 and 3, bass walking eighths.",
+    "truth_rows": [
+      "6",
+      "8"
+    ]
+  },
+  {
+    "id": "B05",
+    "start_s": 9.6,
+    "end_s": 12.267,
+    "bar": "5.3-6.4",
+    "picture": "9.6: kai's reply lands whole (blocks rise 6px in turn; orb speaks then settles): call number orb, 'kai', 'to moss and nina', '14:02'; body 33px with @moss and @nina as mention chips. 10.133 (5.4): film line rises in the ground above kai's entry, left-aligned to the measure (camera followed the thread down), brass word 'hand'; lands 10.80, holds to 12.0, exits 12.0-12.2. 10.667 (6.1): presence entry returns: moss's orb, then nina's 60ms later growing in beside it (one overlap step, moss glances at her), one sentence under them. Camera follows focus on the camera spring, 5f lag.",
+    "words": [
+      "Almost. @moss is the suite stable? @nina is staging free?",
+      "to moss and nina",
+      "They hand work to each other",
+      "moss is in the terminal, nina is reading a file"
+    ],
+    "carry_out": "The presence entry stays put in the log; the film line swaps in place.",
+    "sound": "kai's note on the landing; moss's and nina's notes, quiet, as their orbs join.",
+    "truth_rows": [
+      "6",
+      "8"
+    ]
+  },
+  {
+    "id": "B06",
+    "start_s": 12.267,
+    "end_s": 14.933,
+    "bar": "6.4-8.1",
+    "picture": "12.267: film line rises, brass word 'work', lands 12.80, holds to 16.0. 12.8 (7.1): nina's reply lands above the presence entry (orb, 'nina', 'to kai', '14:03'); presence becomes one actor: moss's orb + name in the margin, body 'in the terminal'. 13.867 (7.3): moss's reply lands and nina's + moss's messages gather into one huddle entry, open while live (container resize dur-3 on --ease: stacked orbs, head label, 'between themselves', compact messages on a spine); presence: kai, 'thinking'. 14.4 (7.4): kai's compact message lands inside the huddle; the label updates in place. 14.667: presence entry fades and shrinks out (dur-out).",
+    "words": [
+      "They work it out",
+      "Staging is free and matches production.",
+      "to kai",
+      "14:03",
+      "in the terminal",
+      "Green on every run since Monday.",
+      "nina and moss worked it out, 2 messages",
+      "between themselves",
+      "thinking",
+      "Then it's ready to cut.",
+      "nina, moss and kai worked it out, 3 messages"
+    ],
+    "carry_out": "The huddle's head line becomes B07's hero.",
+    "sound": "nina's, moss's and kai's notes on each landing; together they complete the chord at 7.4.",
+    "truth_rows": [
+      "6",
+      "7",
+      "8"
+    ]
+  },
+  {
+    "id": "B07",
+    "start_s": 14.933,
+    "end_s": 17.867,
+    "bar": "8.1-9.2.5",
+    "picture": "14.933: cursor in the composer; K2 typing, '@nina' becomes a mention chip. 16.0 (8.3): send: your request card lands under the huddle ('You', '14:05') and on the same frame the huddle folds (app rule: folds when you write again): disclosure closes, body height to 0 at dur-3 on --ease, compact messages slide up under the head and are masked. One entry remains: three stacked orbs (nina, moss, kai), the label, '14:03 to 14:05', 'between themselves'. Film line exits. 16.0-16.533: camera pushes in (camera spring, 27f) until the label is 44px tall in the central third. 16.533-17.867: hold with drift 2%/s; the stack's 16px orbs stay still (the app draws every orb of 16px or less still).",
+    "words": [
+      "@nina stage it next",
+      "You",
+      "14:05",
+      "nina, moss and kai worked it out, 3 messages",
+      "14:03 to 14:05",
+      "between themselves"
+    ],
+    "carry_out": "The window: camera pulls back from the folded entry to the whole boopis window.",
+    "sound": "A soft two-note fall on the fold; a low warm hit at 16.0 (the first proof lands).",
+    "truth_rows": [
+      "7"
+    ]
+  },
+  {
+    "id": "B08",
+    "start_s": 17.867,
+    "end_s": 20.0,
+    "bar": "9.2.5-10.2.5",
+    "picture": "17.867-18.4: pull back (travel 32f) to the whole boopis window at 86% frame width (plate shadow y32 blur80 40%, 1px top highlight). The app's own chrome, never macOS: two-eye mark top-left, sidebar toggle, back/forward, search pill 'Bots / release', three window glyphs (minimise, maximise, close) top-right. Sidebar: tabs pill 'Session | Bots' (Bots selected), New bot, four bot rows, group 'release'; the foot's user row a grey disc and bar (no name). Dock at the bottom: black slab, four orbs, '+'. Establishing beat, not for reading. 18.4-19.2: cursor arcs to the tabs pill, clicks Session on 10.1: thumb slides (dur-slide, --spring), the room slides 48px out left as the session slides in; the composer stays in place: member chips fold into the bar, the Governed chip (ladder glyph, brass, pressed) arrives (T1, dur-3). Session sidebar lists only billing-api sessions ('proration drift in src/billing', the rest as bars). 19.467-20.0: camera pushes into the composer (2.4x).",
+    "words": [
+      "Session",
+      "Bots",
+      "Governed"
+    ],
+    "carry_out": "The composer, carried across the tab change.",
+    "sound": "A soft tick as the pill's thumb lands; air.",
+    "truth_rows": [
+      "11"
+    ]
+  },
+  {
+    "id": "B09",
+    "start_s": 20.0,
+    "end_s": 22.933,
+    "bar": "10.2.5-11.4",
+    "picture": "20.0-21.3: K2 typing 30cps, no underlines (feedforward off). 21.333 (11.1): send -> request card ('You', '14:06'). 21.333-21.6: the answer entry starts: call number (mono 29px) line 1 = OpenAI mark + 'GPT-6.2 Sol'; elapsed and cost left out. Same beat: the right panel's Governance section slides in at the right edge (open right panel cropped to that section): the real list ladder (ui.ladder, list variant), two stations top to bottom 'GPT-6.2 Sol', 'GPT-6.2 Astra' with OpenAI marks, Sol current in brass; section head flashes --brass-soft once; no spend, cap or station subtitles. 21.6 / 21.867: steps disclosure open, rows rise (U3, 8px, 3f apart). 21.867 (11.2): film line rises, anchored directly above the ladder (within 24px), brass word 'cheaper'; lands 22.47, holds to 25.067.",
+    "words": [
+      "fix the proration drift in src/billing",
+      "You",
+      "14:06",
+      "GPT-6.2 Sol",
+      "Read the files in src/billing",
+      "Moved the proration helpers to integer cents",
+      "GPT-6.2 Sol",
+      "GPT-6.2 Astra",
+      "The cheaper one tries first"
+    ],
+    "carry_out": "The step list keeps growing (B10).",
+    "sound": "Key ticks; soft tick per row; hats only on the off-beats.",
+    "truth_rows": [
+      "11"
+    ]
+  },
+  {
+    "id": "B10",
+    "start_s": 22.933,
+    "end_s": 25.6,
+    "bar": "11.4-13.1",
+    "picture": "22.933 (11.4): row 'npm test' (mono), meta 'failed' in --red-text then 'invoice.test.ts' quiet; leading mark red (the only red in the section). 23.467 (12.1): row 'Rolled back invoice.ts and escalated to GPT-6.2 Astra', meta 'Governance, after a failed gate'; beneath it a thin strip of invoice.ts's added lines (bars) folds back into the original lines in 12f. 23.733 (12.1.5): the ladder's brass current marker travels down from Sol to Astra (travel 16f): the climb; same frame, the call number's 2nd line '-> GPT-6.2 Astra' slides out from under the 1st. 24.0 (12.2): row 'Rounded once per invoice'. 24.533 (12.3): row 'npm test', meta 'passed' in --ok green. 25.067: film line exits.",
+    "words": [
+      "npm test",
+      "failed",
+      "invoice.test.ts",
+      "Rolled back invoice.ts and escalated to GPT-6.2 Astra",
+      "Governance, after a failed gate",
+      "→ GPT-6.2 Astra",
+      "Rounded once per invoice",
+      "npm test",
+      "passed"
+    ],
+    "carry_out": "The window: the slow pull back begins.",
+    "sound": "Dull muted note on 'failed' (no alarm); rising two-note step on the climb; one bright pluck on 'passed'.",
+    "truth_rows": [
+      "11",
+      "13"
+    ]
+  },
+  {
+    "id": "B11",
+    "start_s": 25.6,
+    "end_s": 27.733,
+    "bar": "13.1-14.1",
+    "picture": "The film's one slow move: 4 beats on travel, no cut. 25.6-26.133: pull back from the answer to the whole window. 26.133 (13.2): cursor clicks Bots in the tabs pill; thumb slides back; the room returns (folded huddle, your '@nina stage it next', nina's reply that landed meanwhile). 26.133-27.733: the pull back continues past the window's edges; the window becomes one of three plates on the ground: a terminal plate left and behind (dark, thin header strip, no buttons, no OS name); the boopis window centre-right; a small nameless app lower right in front, overlapping boopis's corner (plain dark rounded plate, no title/icon/logo/name, a short message list and one field; not a pill, not at top centre). Ground at 0.3x camera (parallax). Light pool cools from brass toward white.",
+    "words": [
+      "Will do. I'll ask before anything deploys."
+    ],
+    "carry_out": "The camera's drift ends leaning toward the terminal; B12 continues the move.",
+    "sound": "Band thins to pad and bass; a filter opens slowly under the move, into the drop.",
+    "truth_rows": []
+  },
+  {
+    "id": "B12",
+    "start_s": 27.733,
+    "end_s": 29.867,
+    "bar": "14.1-15.1",
+    "picture": "27.733: camera eases toward the terminal (camera spring) until it fills the left 55% of frame, mono 30px; film line rises top centre over the desktop, brass word 'whole'; lands 28.40, holds to 29.6, exits 29.6-29.8. 27.867-29.43: K2 typing the command at the prompt (30cps), caret only at rest. 29.867 (15.1): Enter, on the downbeat.",
+    "words": [
+      "The whole team, from a terminal",
+      "$ boopis run --group release \"write the release notes\""
+    ],
+    "carry_out": "The sent command; its replies drive B13.",
+    "sound": "Key ticks; Enter is the drop: kick, double-time hats, the bass doubles.",
+    "truth_rows": [
+      "18"
+    ]
+  },
+  {
+    "id": "B13",
+    "start_s": 29.867,
+    "end_s": 32.0,
+    "bar": "15.1-16.1",
+    "picture": "29.867: camera widens (travel 24f) to frame the terminal (left 45%) and the boopis window's room (right 55%). Output prints in blocks on half-beats in the CLI's plain format; on the same frame each message lands whole in the room. 15.1: room shows your 'write the release notes' as yours. 15.1.5 (30.133): kai block; kai's entry in the room. 15.2.5 (30.667): vox block. 15.3 (30.933): kai block; in the room vox's and kai's messages gather into a live huddle. 15.3.5 (31.2): the done line; the prompt returns. Clock stamps advance between blocks (compressed time, shown as compressed). Room entries read by orbs and names at this scale; the words are read in the terminal.",
+    "words": [
+      "[14:07:41] kai",
+      "  @vox draft them from the merged changes.",
+      "[14:07:58] vox",
+      "  The draft is in CHANGELOG.md.",
+      "[14:08:16] kai",
+      "  Read it. Tightened the fixes section.",
+      "-- done: the bots stopped handing off after 3 rounds",
+      "vox and kai worked it out, 2 messages"
+    ],
+    "carry_out": "Camera glides right and down to boopis's dock.",
+    "sound": "Double-time hats; each reply plays its bot's note once (terminal and room share one sound: one thread).",
+    "truth_rows": [
+      "18"
+    ]
+  },
+  {
+    "id": "B14",
+    "start_s": 32.0,
+    "end_s": 34.667,
+    "bar": "16.1-17.2",
+    "picture": "32.267-32.8: camera glides (camera spring) to frame the lower half of the boopis window (its dock) and the nameless app at right. 32.8 (16.2.5): film line rises at the top, brass word 'Same'; lands 33.47, holds to 34.67, exits 35.5-35.7 (clear of B15's line). 33.067 (16.3): one click on nina's orb in the dock: the orb pokes (small squash), the slab outline morphs up on critically damped springs, nina's orb travels to the session head (40), her own chat's last few messages appear (older ones, drawn as grey bars: the dock session shows her own chat, not the room), a compact composer below. 33.4-33.67: cursor to the nameless app's field, click. 33.67-34.57: K2 typing in the other app. 34.667 (17.2): send.",
+    "words": [
+      "Same thread, from your other apps",
+      "nina, go ahead with staging"
+    ],
+    "carry_out": "The message itself: it leaves the other app and appears in boopis (B15).",
+    "sound": "Dock poke (soft rubbery tick); key ticks.",
+    "truth_rows": [
+      "9",
+      "21"
+    ]
+  },
+  {
+    "id": "B15",
+    "start_s": 34.667,
+    "end_s": 36.8,
+    "bar": "17.2-18.2",
+    "picture": "34.667, same frame: the message shows in boopis's dock session as yours (request bubble, 'You', '14:09') and in the other app's list. 34.933-35.6: nina's reply streams in both places at once, the same words growing in sync (a bot's own chat streams; room replies do not). 35.733 (17.4): the dock session's compact approval card rises (height at dur-3): red hairline, 'needs you' stamp, title, well (mono), foot with Deny and Hold to approve; no expiry or cost line. nina's head orb turns to the needs face with the 8px red flag. In the other app a row appears. 35.733: film line swaps, brass word 'hold'; lands 36.33, holds through the hold to 38.4. A faint red cast enters the light around the card (the film's only red light).",
+    "words": [
+      "You",
+      "14:09",
+      "Ready. Deploying needs your approval.",
+      "needs you",
+      "nina wants to deploy to staging",
+      "staging",
+      "invoices-api",
+      "Deny",
+      "Hold to approve",
+      "nina needs your approval",
+      "Nothing ships until you hold"
+    ],
+    "carry_out": "The Hold to approve button.",
+    "sound": "Soft granular texture under the streaming reply; one low attention tone at 17.4 (no alarm); music falls away to a bass pedal.",
+    "truth_rows": [
+      "21",
+      "22",
+      "4",
+      "23"
+    ]
+  },
+  {
+    "id": "B16",
+    "start_s": 36.8,
+    "end_s": 39.467,
+    "bar": "18.2-19.3",
+    "picture": "36.8-37.333: camera pushes in (camera spring) until the hold button fills ~60% of frame width (vector, at final size). 37.2: cursor arrives, dips 4f, presses at 37.4 (18.3 + 4f). 37.4-38.4, exactly 60f: the hold's own fill (an ordered 4x4 dot field gathering at the leading edge and fusing into the bone fill behind it; the label inverts as the fill passes). 38.4 (19.1): complete, label 'Approved'; smash cut on the downbeat (T3) to a medium: the dock card receded (title and well dimmed), its foot now the receipt; nina's orb turns happy (arcs); the other app's row reads 'Approved' on the same frame; film line exits. 38.4-39.467: hold 2 beats with drift.",
+    "words": [
+      "Hold to approve",
+      "Approved",
+      "Approved at 14:09",
+      "Approved"
+    ],
+    "carry_out": "nina's happy eyes.",
+    "sound": "Silence but one tone rising for exactly 60f; on 19.1 the full chord lands with a low hit.",
+    "truth_rows": [
+      "23",
+      "22"
+    ]
+  },
+  {
+    "id": "B17",
+    "start_s": 39.467,
+    "end_s": 42.133,
+    "bar": "19.3-20.4",
+    "picture": "39.467-40.0: T7 focus pull: everything but nina's orb blurs 0-24px and darkens 10% while the camera pushes into her (orb 360px, centre, lower third); the blurred desktop becomes the ground. 40.0 (19.4): tagline rises above her, 96px, brass word 'team'; lands 40.67, holds to 41.87, exits 41.87-42.07. nina keeps her happy face and glances up at the line.",
+    "words": [
+      "Your AI plans, on one team"
+    ],
+    "carry_out": "nina's eyes.",
+    "sound": "The chord's tail; the bots' four notes restated slowly, one per beat.",
+    "truth_rows": [
+      "1",
+      "4"
+    ]
+  },
+  {
+    "id": "B18",
+    "start_s": 42.133,
+    "end_s": 43.733,
+    "bar": "20.4-21.3",
+    "picture": "42.133-42.533: nina's triangle body shrinks away toward the centre behind her eyes (an opaque shape scaling down, never an opacity ramp) while her eyes morph from the happy arcs to the logo's two ovals (the logo's own 0.38s morph) and turn from dark eye ink to light ink #ffffff. 42.4-42.933: letters b, p, i, s arrive around the eyes with letters=\"play\" (springs, a squash before each hop, 48ms stagger, the i's dot with its own bounce): wordmark 'boopis', type size 200px (~34% of frame width), centred y500, settled by 21.2 (43.2).",
+    "words": [
+      "boopis (wordmark, <boopis-logo letters=\"play\">)"
+    ],
+    "carry_out": "The wordmark stays; the call to action arrives under it.",
+    "sound": "Music stops at 21.1 (42.667), the chord tail rings; the letters' soft wooden taps.",
+    "truth_rows": [
+      "DESIGN-SYSTEM 12"
+    ]
+  },
+  {
+    "id": "B19",
+    "start_s": 43.733,
+    "end_s": 46.933,
+    "bar": "21.3-23.1",
+    "picture": "43.733: two lines rise below the wordmark, clear of its protection area (0.28 x type size = 56px): URL in IBM Plex Mono 500 44px --text-strong; platforms in Libre Franklin 400 40px quiet; land 44.4. 44.4-46.933: hold with drift 1.5%/s; the logo's live eyes glance once (45.333) and blink once (46.4).",
+    "words": [
+      "github.com/aphesist/boopis",
+      "For Linux, and early on Windows"
+    ],
+    "carry_out": "End. The autoplay loop cuts back to frame 0 (same composition family: a centred pair of eyes/faces and one line of type).",
+    "sound": "Chord decays; a tiny tick on the blink; silence.",
+    "truth_rows": [
+      "README Install",
+      "README Platforms and status"
+    ]
+  }
+]

@@ -3,6 +3,7 @@
      duration, fps, width, height, variant, frames, bpm, cuts
      seek(t)                 async; resolves once the frame at t is painted, fonts and images ready
      moving(t0, t1)          does anything that needs motion blur move in (t0, t1]?
+     samples(t0, t1)         0 = nothing moves, -1 = the default sub-frames, n = a fast move asks for at least n
      tweens()                every tween with its global times, ease, properties and targets
      text()                  the text visible now: each run's words, its size on screen in px, its opacity
      fades()                 opacity tweens on large elements (a full-layer cross-fade is never allowed) */
@@ -14,8 +15,10 @@ export interface FadeInfo { start: number; end: number; target: string; area: nu
 
 export interface FilmApi {
   name: string; duration: number; fps: number; width: number; height: number; variant: string; frames: number; bpm: number; cuts: number[];
+  grain: { seed: number; alpha: number } | null;
   seek(t: number, o?: { paint?: boolean }): Promise<void>;
   moving(t0: number, t1: number): boolean;
+  samples(t0: number, t1: number): number;
   tweens(): ReturnType<Film['tweenInfo']>;
   text(): TextRun[];
   fades(): Promise<FadeInfo[]>;
@@ -25,9 +28,10 @@ declare global { interface Window { __film?: FilmApi } }
 export function expose(film: Film, stage: Stage): FilmApi {
   const api: FilmApi = {
     name: film.name, duration: film.duration, fps: film.fps, width: film.width, height: film.height, variant: film.variant,
-    frames: Math.round(film.duration * film.fps), bpm: film.bpm, cuts: film.cuts,
+    frames: Math.round(film.duration * film.fps), bpm: film.bpm, cuts: film.cuts, grain: film.grain,
     seek: (t, o) => film.seek(t, o),
     moving: (a, b) => film.moving(a, b),
+    samples: (a, b) => film.samples(a, b),
     tweens: () => film.tweenInfo(),
     text: () => visibleText(stage),
     fades: () => fades(film, stage)

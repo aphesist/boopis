@@ -3,13 +3,14 @@
    gradients so the 8-bit encode does not band). The art director's look (look/) decides the final ground; these are
    the engine's defaults, every value a CSS custom property on .film-stage:
 
-     --ground          the base (default: the product's --bg-0)
-     --pool            the light's colour (default: the product's --bg-4, a warm lift; never a flat colour field)
+     --ground, --ground-edge   the centre and the edges (default: the product's --bg-2 falling to --bg-0, as the script)
+     --pool, --pool-strength   the light (default: --brass at 9%; never a flat colour field)
      --pool-x/-y       where the light sits (% of the frame)
-     --grain-alpha     the grain's strength (default 0.035: 2 to 3% luminance)
+     --grain-alpha     the grain's strength (default 0.025: the script's 2.5%)
 
    Speed: the light is a CSS gradient on its own layer moved by transform (no repaint), and the grain is six small
-   pre-drawn tiles picked by frame number (no full-frame canvas fill per frame: the trap the scout measured). */
+   pre-drawn tiles picked by frame number (no full-frame canvas fill per frame: the trap the scout measured). In a
+   render the page draws no grain (?nograin) and the renderer adds the same tiles to each finished frame. */
 import type { Film } from './film';
 import type { Stage } from './stage';
 import { rng } from './rng';
@@ -27,7 +28,12 @@ export function ground(film: Film, stage: Stage, o: GroundOpts = {}): void {
     const p = t / 10;
     pool.style.translate = (Math.sin(p * Math.PI * 0.9) * dx * stage.width).toFixed(2) + 'px ' + (Math.sin(p * Math.PI * 0.7 + 1) * dy * stage.height).toFixed(2) + 'px';
   });
-  if (o.grain !== false && !new URLSearchParams(location.search).has('nograin')) grain(film, stage, o.seed ?? 7);
+  if (o.grain === false) return;
+  const seed = o.seed ?? 7, alpha = Number(getComputedStyle(stage.root).getPropertyValue('--grain-alpha')) || 0.025;
+  /* the renderer adds the grain itself, after the capture (tools/lib/grain.mjs, the same tiles from the same seed): a
+     page without grain captures and compresses about twice as fast. The page draws it for previews and style frames. */
+  film.grain = { seed, alpha };
+  if (!new URLSearchParams(location.search).has('nograin')) grain(film, stage, seed);
 }
 
 /** six seeded 256 px tiles; frame n shows tile n mod 6 at an offset from the same seed (deterministic) */

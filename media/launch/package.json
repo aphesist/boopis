@@ -9,7 +9,8 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "render": "node tools/render.mjs",
-    "qa": "node tools/qa/qa.mjs"
+    "qa": "node tools/qa/qa.mjs",
+    "beats:sync": "node -e \"require('fs').copyFileSync((process.env.FILM_SC||'/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/launch-video')+'/script/beats.json','script/beats.json')\""
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "5.3.0",

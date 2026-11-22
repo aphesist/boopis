@@ -7,22 +7,26 @@ body { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; 
 .film-host { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 
 .film-stage {
-  --ground: var(--bg-0);
-  --pool: var(--bg-4);
+  /* the script's ground (script.md section 0): the product's warm dark #181715 falling to #0c0b0a at the edges, one brass
+     light pool, grain at 2.5%. The art director's look (look/) may restyle any of these. */
+  --ground: var(--bg-2);
+  --ground-edge: var(--bg-0);
+  --pool: var(--brass);
+  --pool-strength: 9%;
   --pool-x: 50%;
-  --pool-y: 55%;
-  --grain-alpha: .035;
+  --pool-y: 52%;
+  --grain-alpha: .025;
   position: relative; overflow: hidden; isolation: isolate; contain: strict;
-  background: var(--ground);
+  background: var(--ground-edge);
   font-family: var(--sans); color: var(--text-strong);
   font-variant-numeric: tabular-nums;
 }
 .film-ground, .film-world, .film-screen { position: absolute; inset: 0; transform-origin: 0 0; }
 .film-ground { pointer-events: none; }
-.film-ground__base { position: absolute; inset: -40%; background: var(--ground); }
+.film-ground__base { position: absolute; inset: -40%; background: radial-gradient(70% 70% at 50% 50%, var(--ground) 0%, var(--ground) 30%, var(--ground-edge) 100%); }
 .film-ground__pool {
   position: absolute; inset: -40%;
-  background: radial-gradient(42% 46% at var(--pool-x) var(--pool-y), color-mix(in srgb, var(--pool) 78%, var(--ground)) 0%, color-mix(in srgb, var(--pool) 30%, var(--ground)) 45%, var(--ground) 100%);
+  background: radial-gradient(32% 36% at var(--pool-x) var(--pool-y), color-mix(in srgb, var(--pool) var(--pool-strength), transparent) 0%, color-mix(in srgb, var(--pool) calc(var(--pool-strength) * .4), transparent) 45%, transparent 100%);
 }
 .film-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; }
 .film-screen { pointer-events: none; z-index: 10; }

@@ -18,7 +18,8 @@
     "resolveJsonModule": true,
     "paths": {
       "@boopis/ui": ["../../apps/desktop/ui/src/components/index.ts"],
-      "@ui/*": ["../../apps/desktop/ui/*"]
+      "@ui/*": ["../../apps/desktop/ui/*"],
+      "@script/beats.json": ["./script/beats.json"]
     }
   },
   "include": ["src", "vite.config.ts", "../../apps/desktop/ui/vendor/orb-avatar.d.ts", "../../apps/desktop/ui/vendor/boopis-logo.d.ts"]

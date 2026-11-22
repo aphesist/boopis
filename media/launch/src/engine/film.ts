@@ -21,8 +21,9 @@ export interface FilmConfig {
 }
 export type Renderer = (t: number) => void;
 
-/** a tween or timeline tagged `data: { blur: false }` is motion that needs no motion blur (a slow drift, the grain) */
-export interface TweenData { blur?: boolean; linear?: boolean; role?: string }
+/** a tween tagged `data: { blur: false }` is motion that needs no motion blur (a slow drift, typing); `samples` asks for
+    more sub-frames than the default 8 while it runs (a whip or a zoom-through: 24 to 32, so the streak does not step) */
+export interface TweenData { blur?: boolean; linear?: boolean; role?: string; samples?: number }
 
 export interface TweenInfo {
   start: number; end: number; ease: string; linear: boolean; linearOk: boolean; blur: boolean;
@@ -39,12 +40,14 @@ export class Film {
   readonly height: number;
   readonly tl: gsap.core.Timeline;
   readonly cuts: number[] = [];
-  private readonly renderers: Renderer[] = [];
-  private readonly extraMotion: [number, number][] = [];
-  private motionSpans: [number, number][] = [];
+  private readonly renderers: { fn: Renderer; priority: number; order: number }[] = [];
+  private readonly extraMotion: [number, number, number][] = [];
+  private motionSpans: [number, number, number][] = [];
   private finalized = false;
   private time = -1;
   ready: Promise<void> = Promise.resolve();
+  /** the ground's grain, which the renderer adds to finished frames (engine/ground.ts) */
+  grain: { seed: number; alpha: number } | null = null;
 
   constructor(cfg: FilmConfig, variant: Variant) {
     this.name = cfg.name;
@@ -59,12 +62,16 @@ export class Film {
     this.tl = gsap.timeline({ paused: true, defaults: { immediateRender: true, overwrite: false } });
   }
 
-  /** draw something that GSAP does not set directly, on every seek: it must be a pure function of t */
-  onRender(fn: Renderer): void { this.renderers.push(fn); }
+  /** draw something that GSAP does not set directly, on every seek: it must be a pure function of t. Lower priorities
+      run first (-10: decide what is shown; 0: draw; 10: the camera) */
+  onRender(fn: Renderer, priority = 0): void {
+    this.renderers.push({ fn, priority, order: this.renderers.length });
+    this.renderers.sort((a, b) => a.priority - b.priority || a.order - b.order);
+  }
   /** a hard cut at t: motion blur never mixes samples across it */
   cut(t: number): void { this.cuts.push(t); this.cuts.sort((a, b) => a - b); }
-  /** motion that GSAP does not know about (a renderer that moves things between t0 and t1) */
-  motion(t0: number, t1: number): void { this.extraMotion.push([t0, t1]); }
+  /** motion that GSAP does not know about (a renderer that moves things between t0 and t1); `samples` as in TweenData */
+  motion(t0: number, t1: number, samples = 0): void { this.extraMotion.push([t0, t1, samples]); }
 
   /** every tween in the master timeline, with its global times */
   tweens(): { tween: gsap.core.Tween; start: number; end: number }[] {
@@ -89,26 +96,27 @@ export class Film {
        (GSAP records a tween's start the first time it renders; without the sweep a worker that seeks straight to the
        middle could record different ones) */
     this.tl.progress(1, true).progress(0, true);
-    const spans: [number, number][] = [...this.extraMotion];
+    const spans: [number, number, number][] = [...this.extraMotion];
     for (const { tween, start, end } of this.tweens()) {
       const d = (tween.data ?? {}) as TweenData;
       if (d.blur === false || end - start <= 0) continue;
-      spans.push([start, end]);
+      spans.push([start, end, d.samples ?? 0]);
     }
     spans.sort((a, b) => a[0] - b[0]);
-    const merged: [number, number][] = [];
-    for (const s of spans) {
-      const last = merged[merged.length - 1];
-      if (last && s[0] <= last[1]) last[1] = Math.max(last[1], s[1]); else merged.push([s[0], s[1]]);
-    }
-    this.motionSpans = merged;
+    this.motionSpans = spans;
     gsap.ticker.sleep();
   }
 
   /** does anything that needs motion blur move between t0 and t1? (the renderer skips extra samples when not) */
-  moving(t0: number, t1: number): boolean {
-    for (const [a, b] of this.motionSpans) { if (a < t1 && b > t0) return true; if (a >= t1) break; }
-    return false;
+  moving(t0: number, t1: number): boolean { return this.samples(t0, t1) !== 0; }
+  /** the sub-frames motion in (t0, t1) asks for: 0 = nothing moves, -1 = the renderer's default, n = at least n */
+  samples(t0: number, t1: number): number {
+    let n = 0;
+    for (const [a, b, k] of this.motionSpans) {
+      if (a >= t1) break;
+      if (b > t0) n = k > 0 ? Math.max(n, k) : n === 0 ? -1 : n;
+    }
+    return n;
   }
 
   /** put the film at t and draw it; resolves once fonts and images are ready and the frame is painted */
@@ -117,7 +125,7 @@ export class Film {
     const time = Math.max(0, Math.min(this.duration, t));
     this.time = time;
     this.tl.time(time, true);
-    for (const r of this.renderers) r(time);
+    for (const r of this.renderers) r.fn(time);
     cancelScriptAnimations();
     await this.ready;
     if (o.paint !== false) await new Promise<void>((r) => requestAnimationFrame(() => r()));
