@@ -28,12 +28,14 @@ pub mod os;
 pub mod providers;
 pub mod renderer;
 pub mod resources;
+pub mod rooms;
 pub mod runtime;
 pub mod secrets;
 pub mod settings;
 pub mod setup;
 pub mod state;
 pub mod store;
+pub mod team;
 pub mod webkit;
 pub mod window;
 pub mod xai;
@@ -126,6 +128,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::bots_prepare,
             commands::bots_release,
             commands::bots_notice,
+            commands::room_settings_get,
+            commands::room_settings_set,
         ])
         .events(collect_events![
             ConnectionStateEvent,

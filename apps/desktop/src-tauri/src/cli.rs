@@ -14,6 +14,13 @@ use crate::brand::{Art, Caps, ColorLevel, Ink, Tone};
 use crate::renderer::{self, Gpu, RendererReport, Session};
 use crate::{frame_rate, gpu, runtime, startup, webkit};
 
+mod args;
+mod groups;
+mod headless;
+mod remote;
+mod team;
+mod team_live;
+
 /// The name people type.
 pub const PRODUCT: &str = "boopis";
 
@@ -46,6 +53,12 @@ pub enum Command {
     Doctor,
     /// `--help`.
     Help,
+    /// `groups ...`, with what follows it (group chats from a terminal).
+    Groups(Vec<String>),
+    /// `run ...` (a task through a group, to its end).
+    Run(Vec<String>),
+    /// `team ...` (a whole team as one file).
+    Team(Vec<String>),
     /// An option or command that does not exist, or one that takes no more arguments.
     Unknown(String),
 }
@@ -61,6 +74,9 @@ pub fn parse(args: &[String]) -> Command {
     match first.as_str() {
         "--version" | "-V" | "version" if rest_ok => Command::Version,
         "doctor" if rest_ok => Command::Doctor,
+        "groups" => Command::Groups(args[1..].to_vec()),
+        "run" => Command::Run(args[1..].to_vec()),
+        "team" => Command::Team(args[1..].to_vec()),
         "--help" | "-h" | "help" if rest_ok => Command::Help,
         "--version" | "-V" | "version" | "doctor" | "--help" | "-h" | "help" => {
             Command::Unknown(args[1].clone())
@@ -126,6 +142,9 @@ pub fn dispatch(args: &[String], resource_dir: &dyn Fn() -> Option<PathBuf>) -> 
     let version = env!("CARGO_PKG_VERSION");
     let text = match command {
         Command::Launch => return None,
+        Command::Groups(rest) => return Some(remote::run(remote::Kind::Groups, &rest, resource_dir())),
+        Command::Run(rest) => return Some(remote::run(remote::Kind::Run, &rest, resource_dir())),
+        Command::Team(rest) => return Some(remote::run(remote::Kind::Team, &rest, resource_dir())),
         Command::Version => version_lines(&out, version, &facts(resource_dir().as_deref())),
         Command::Doctor => doctor_lines(&out, version, &gather(resource_dir().as_deref())),
         Command::Help => help_lines(&out, version),
@@ -295,6 +314,12 @@ fn help_lines(out: &Out, version: &str) -> Vec<String> {
             "  {PRODUCT} doctor     check this machine: session, GPUs, renderer, WebKitGTK, runtime and folders"
         ),
         format!("  {PRODUCT} --version  print the version and what the app carries"),
+        format!("  {PRODUCT} groups     list, create, send to and read the log of group chats"),
+        format!("  {PRODUCT} run --group <group> \"<task>\"   run a task through a group to its end"),
+        format!("  {PRODUCT} team       apply or export a whole team as one file"),
+        String::new(),
+        format!("The three that talk to the engine are described in docs/CLI.md. Exit codes: 0 done, 1 failed,"),
+        format!("2 a usage mistake, 3 stopped at a cap, 4 a bot needs you."),
     ]
 }
 

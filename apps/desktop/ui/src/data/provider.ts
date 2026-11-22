@@ -185,6 +185,15 @@ export type GroupsEvent =
   /** the whole thread is drawn again (a room read from the start) */
   | { type: 'thread'; groupId: string; messages: readonly GroupMessage[] };
 export interface GroupsSnapshot { groups: readonly Group[]; threads: Readonly<Record<string, readonly GroupMessage[]>> }
+/** boopis's own cap on the rounds `boopis run --group` lets a discussion take in one group: the engine has one pair of limits for every
+ *  room and none per room, so the cap is boopis's (kept in the app's data folder, read by the command line too) */
+export interface RoundLimit {
+  /** the cap kept for this group, null when it has none and the default applies */
+  rounds: number | null;
+  /** the cap a group without its own has */
+  fallback: number;
+}
+
 export interface GroupsSource extends Feed<GroupsSnapshot, GroupsEvent> {
   /** what a group chat is in this build, in a sentence the room says: who answers, and what the members see of each other */
   nature: string;
@@ -203,6 +212,10 @@ export interface GroupsSource extends Feed<GroupsSnapshot, GroupsEvent> {
   /** makes a group of bots (profile names); rejects with a sentence for the user */
   create(draft: { name: string; bots: readonly string[] }): Promise<Group>;
   rename(id: string, name: string): Promise<void>;
+  /** the group's cap on rounds for a run from the command line; rejects with a sentence when it cannot be read */
+  roundLimit(id: string): Promise<RoundLimit>;
+  /** keeps (or, with null, forgets) the group's cap, 1 to 1000; resolves with what is kept */
+  setRoundLimit(id: string, rounds: number | null): Promise<RoundLimit>;
   /** A room's members are fixed when it is made: a different set is a new room with the same name, and the old one is archived.
    *  Resolves with the new group. */
   setMembers(id: string, bots: readonly string[]): Promise<Group>;

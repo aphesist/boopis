@@ -82,6 +82,8 @@
     "allow-provider-signin-status",
     "allow-bots-prepare",
     "allow-bots-release",
-    "allow-bots-notice"
+    "allow-bots-notice",
+    "allow-room-settings-get",
+    "allow-room-settings-set"
   ]
 }

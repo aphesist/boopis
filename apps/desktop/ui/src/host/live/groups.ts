@@ -14,12 +14,13 @@
    whole, not word by word: the engine publishes a member's message when the member has finished it. */
 import { loadBots, saveBots } from '../../core/settings';
 import { logger } from '../../core/log';
-import { GROUP_NATURE } from '../../data/mock-groups';
+import { GROUP_NATURE, ROUND_LIMIT_DEFAULT } from '../../data/mock-groups';
 import type { GroupsEvent, GroupsSnapshot, GroupsSource } from '../../data/provider';
 import { emitter, feed, store } from '../../data/store';
 import type { ArchivedGroup, Bot, Group, GroupMember, GroupMessage } from '../../data/types';
 import type { GroupsListResult, GroupsLogResult, GroupsStateResult, Room, RoomEvent } from '../../vendor/hermes-shared/gateway-contract.generated';
 import type { GatewayClient } from '../gateway';
+import type { RoomsBridge } from '../rooms-bridge';
 import { clock } from '../map';
 import { isUnknownMethod } from './wire';
 import { turnFailedWords } from './turn-failed';
@@ -37,6 +38,8 @@ export interface GroupsDeps {
   /** the bots the user has, for names when a group is made */
   bots(): readonly Bot[];
   now?: () => Date;
+  /** the host's room settings (the cap on rounds for a run); null outside the desktop app */
+  bridge?: RoomsBridge | null;
   /** how often the rooms are read again while the window is visible; null: never (tests) */
   pollMs?: number | null;
 }
@@ -241,6 +244,16 @@ export function createLiveGroups(deps: GroupsDeps) {
     },
     async continueTalk(id, more) { const r = need(id); await client.request('groups.continue', { room_id: id, discussion_event_id: more }); watch(r); },
     create,
+    async roundLimit(id) {
+      need(id);
+      if (!deps.bridge) return { rounds: null, fallback: ROUND_LIMIT_DEFAULT };
+      return deps.bridge.get(id);
+    },
+    async setRoundLimit(id, rounds) {
+      need(id);
+      if (!deps.bridge) throw new Error('The limit can be set in the desktop app.');
+      return deps.bridge.set(id, rounds);
+    },
     async rename(id, name) {
       const r = need(id);
       const n = name.trim();

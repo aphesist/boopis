@@ -1,0 +1,70 @@
+# The Paper Past team: six bots in one group room, a kanban board for durable hand-offs, and a daily episode job.
+# Apply it with:   boopis team apply paper-past.yaml --dry-run     (then again without --dry-run)
+# Nothing is deleted unless you add --prune. Running it twice changes nothing the second time.
+version: 1
+name: Paper Past
+
+bots:
+  kai:
+    role: "showrunner: picks the topic, makes the folder, files the kanban tasks, fact-checks, does the final QA and tells the owner"
+    soul: souls/kai.SOUL.md          # a file next to this one; `boopis team export` writes the text itself as soul_text
+    model: opus
+    look: {shape: circle, color: "#14b8a6"}
+    connectors:
+      - name: fetch
+        command: uvx
+        args: ["mcp-server-fetch==2026.11.18"]
+  nina:
+    role: "research (with sources) and the English script: research.md and episode.json"
+    soul: souls/nina.SOUL.md
+    model: sonnet
+    look: {shape: triangle, color: "#ef4444"}
+    connectors:
+      - name: fetch
+        command: uvx
+        args: ["mcp-server-fetch==2026.11.18"]
+  moss:
+    role: "Portuguese (Brazil) and Spanish localization inside episode.json"
+    soul: souls/moss.SOUL.md
+    model: sonnet
+    look: {shape: squircle, color: "#22c55e"}
+  iris:
+    role: "the papercraft scene for each episode (three.js)"
+    soul: souls/iris.SOUL.md
+    model: sonnet
+    look: {shape: flower, color: "#3b82f6"}
+    skills: [papercraft]
+  hex:
+    role: "voice, render, captions and the TikTok cut, with `uv run shorts.py`"
+    soul: souls/hex.SOUL.md
+    model: haiku
+    look: {shape: hexagon, color: "#9ca3af"}
+    skills: [papercraft]
+  nimbus:
+    role: "titles, descriptions, hashtags and schedule for each platform and language; keeps the approval queue"
+    soul: souls/nimbus.SOUL.md
+    model: haiku
+    look: {shape: cloud, color: "#8b5cf6"}
+
+rooms:
+  paper past:
+    id: g-paper-past-                # the id the room already has; leave it out and a new room gets g-paper-past
+    members: [kai, nina, moss, iris, hex, nimbus]
+    lead: kai                        # answers a message that names nobody
+    purpose: |
+      Make one short episode a day, from topic to a post that waits for the owner's approval.
+      Nothing is posted by any bot: the owner moves a line to queue/approved.md.
+    max_rounds: 30                   # boopis's own cap for `boopis run --group "paper past"`
+
+boards:
+  paper-past:
+    name: Paper Past
+    workdir: ~/repos/paper-shorts
+
+cron:
+  - bot: kai
+    name: daily episode
+    schedule: "0 9 * * *"
+    prompt: "Pick the next topic from topics.md, tick it off, and start the episode: ask nina for research.md and episode.json."
+    room: paper past                 # posts to the room, as kai (the engine writes it room:g-paper-past-@kai)
+    paused: true                     # until shorts.py exists
