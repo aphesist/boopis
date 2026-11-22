@@ -1,6 +1,12 @@
 {
   "schema_version": 1,
-  "description": "The curated connector collection: MCP servers boopis knows how to install, configure and trust. Every entry is pinned to an exact version (a hosted one to its address) and was checked against its publisher's own sources on the date in `verified`. The array is ordered by `popularity`: the GitHub stars of each publisher's official repository, read through the GitHub API on the date in `read` (the run in `evidence`), most first; servers that share a repository share its count. See docs/CONNECTORS.md and docs/STORE.md.",
+  "description": "The curated connector collection: MCP servers boopis knows how to install, configure and trust. Every entry is pinned to an exact version (a hosted one to its address) and was checked against its publisher's own sources on the date in `verified`. The array is ordered by `popularity` (the top-level object says how): the GitHub stars of each publisher's official repository, read through the GitHub API on the date in `popularity.read` by the run in `popularity.evidence`, most first; servers that share one repository of many servers follow, since its count is the collection's. See docs/CONNECTORS.md and docs/STORE.md.",
+  "popularity": {
+    "signal": "github-stars",
+    "read": "2026-11-22",
+    "evidence": "https://github.com/aphesist/boopis/actions/runs/44982090776/job/137084587857",
+    "order": "A repository of its own before one shared by many servers, then most stars first (docs/CONNECTORS.md, The order)."
+  },
   "connectors": [
     {
       "id": "context7",
@@ -26,7 +32,8 @@
       },
       "popularity": {
         "signal": "github-stars",
-        "repo": "upstash/context7"
+        "repo": "upstash/context7",
+        "stars": 65246
       },
       "variants": [
         {
@@ -87,6 +94,115 @@
       ]
     },
     {
+      "id": "chrome-devtools",
+      "name": "Chrome DevTools",
+      "publisher": "Google (Chrome DevTools)",
+      "description": "Control and inspect a live Chrome: performance traces, network requests, console and screenshots.",
+      "homepage": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+      "source": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+      "license": "Apache-2.0",
+      "categories": [
+        "browser",
+        "debugging"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "package": "chrome-devtools-mcp",
+        "version": "1.13.0",
+        "sources": [
+          "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+          "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.ChromeDevTools%2Fchrome-devtools-mcp/versions/latest",
+          "https://registry.npmjs.org/chrome-devtools-mcp/1.13.0"
+        ]
+      },
+      "popularity": {
+        "signal": "github-stars",
+        "repo": "ChromeDevTools/chrome-devtools-mcp",
+        "stars": 58713
+      },
+      "variants": [
+        {
+          "id": "local",
+          "label": "Local",
+          "default": true,
+          "summary": "The npm package on your machine, with Google's usage statistics turned off (the flag its README documents).",
+          "transport": "stdio",
+          "command": "npx",
+          "args": [
+            "-y",
+            "chrome-devtools-mcp@1.13.0",
+            "--no-usage-statistics"
+          ],
+          "requires": [
+            {
+              "kind": "program",
+              "name": "Google Chrome",
+              "source": "https://www.google.com/chrome/",
+              "note": "It supports Google Chrome and Chrome for Testing only."
+            }
+          ],
+          "credentials": [],
+          "network": {
+            "egress": "any"
+          }
+        }
+      ]
+    },
+    {
+      "id": "playwright",
+      "name": "Playwright",
+      "publisher": "Microsoft",
+      "description": "Drive a real browser: open pages, click, type and read them through the accessibility tree.",
+      "homepage": "https://github.com/microsoft/playwright-mcp",
+      "source": "https://github.com/microsoft/playwright-mcp",
+      "license": "Apache-2.0",
+      "categories": [
+        "browser",
+        "testing"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "package": "@playwright/mcp",
+        "version": "0.0.86",
+        "sources": [
+          "https://github.com/microsoft/playwright-mcp",
+          "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.microsoft%2Fplaywright-mcp/versions/latest",
+          "https://registry.npmjs.org/@playwright/mcp/0.0.86"
+        ]
+      },
+      "popularity": {
+        "signal": "github-stars",
+        "repo": "microsoft/playwright-mcp",
+        "stars": 39982
+      },
+      "variants": [
+        {
+          "id": "local",
+          "label": "Local",
+          "default": true,
+          "summary": "Microsoft's npm package on your machine. It opens a browser here and goes wherever the assistant asks.",
+          "transport": "stdio",
+          "command": "npx",
+          "args": [
+            "-y",
+            "@playwright/mcp@0.0.86"
+          ],
+          "requires": [
+            {
+              "kind": "program",
+              "name": "A browser Playwright can drive",
+              "source": "https://github.com/microsoft/playwright-mcp",
+              "note": "Google Chrome by default; the README says how to use another."
+            }
+          ],
+          "credentials": [],
+          "network": {
+            "egress": "any"
+          }
+        }
+      ]
+    },
+    {
       "id": "github",
       "name": "GitHub",
       "publisher": "GitHub",
@@ -110,7 +226,8 @@
       },
       "popularity": {
         "signal": "github-stars",
-        "repo": "github/github-mcp-server"
+        "repo": "github/github-mcp-server",
+        "stars": 34660
       },
       "variants": [
         {
@@ -150,113 +267,6 @@
               "api.github.com",
               "ghcr.io"
             ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "playwright",
-      "name": "Playwright",
-      "publisher": "Microsoft",
-      "description": "Drive a real browser: open pages, click, type and read them through the accessibility tree.",
-      "homepage": "https://github.com/microsoft/playwright-mcp",
-      "source": "https://github.com/microsoft/playwright-mcp",
-      "license": "Apache-2.0",
-      "categories": [
-        "browser",
-        "testing"
-      ],
-      "verified": {
-        "date": "2026-11-22",
-        "package": "@playwright/mcp",
-        "version": "0.0.86",
-        "sources": [
-          "https://github.com/microsoft/playwright-mcp",
-          "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.microsoft%2Fplaywright-mcp/versions/latest",
-          "https://registry.npmjs.org/@playwright/mcp/0.0.86"
-        ]
-      },
-      "popularity": {
-        "signal": "github-stars",
-        "repo": "microsoft/playwright-mcp"
-      },
-      "variants": [
-        {
-          "id": "local",
-          "label": "Local",
-          "default": true,
-          "summary": "Microsoft's npm package on your machine. It opens a browser here and goes wherever the assistant asks.",
-          "transport": "stdio",
-          "command": "npx",
-          "args": [
-            "-y",
-            "@playwright/mcp@0.0.86"
-          ],
-          "requires": [
-            {
-              "kind": "program",
-              "name": "A browser Playwright can drive",
-              "source": "https://github.com/microsoft/playwright-mcp",
-              "note": "Google Chrome by default; the README says how to use another."
-            }
-          ],
-          "credentials": [],
-          "network": {
-            "egress": "any"
-          }
-        }
-      ]
-    },
-    {
-      "id": "chrome-devtools",
-      "name": "Chrome DevTools",
-      "publisher": "Google (Chrome DevTools)",
-      "description": "Control and inspect a live Chrome: performance traces, network requests, console and screenshots.",
-      "homepage": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
-      "source": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
-      "license": "Apache-2.0",
-      "categories": [
-        "browser",
-        "debugging"
-      ],
-      "verified": {
-        "date": "2026-11-22",
-        "package": "chrome-devtools-mcp",
-        "version": "1.13.0",
-        "sources": [
-          "https://github.com/ChromeDevTools/chrome-devtools-mcp",
-          "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.ChromeDevTools%2Fchrome-devtools-mcp/versions/latest",
-          "https://registry.npmjs.org/chrome-devtools-mcp/1.13.0"
-        ]
-      },
-      "popularity": {
-        "signal": "github-stars",
-        "repo": "ChromeDevTools/chrome-devtools-mcp"
-      },
-      "variants": [
-        {
-          "id": "local",
-          "label": "Local",
-          "default": true,
-          "summary": "The npm package on your machine, with Google's usage statistics turned off (the flag its README documents).",
-          "transport": "stdio",
-          "command": "npx",
-          "args": [
-            "-y",
-            "chrome-devtools-mcp@1.13.0",
-            "--no-usage-statistics"
-          ],
-          "requires": [
-            {
-              "kind": "program",
-              "name": "Google Chrome",
-              "source": "https://www.google.com/chrome/",
-              "note": "It supports Google Chrome and Chrome for Testing only."
-            }
-          ],
-          "credentials": [],
-          "network": {
-            "egress": "any"
           }
         }
       ]
@@ -374,282 +384,9 @@
       ],
       "popularity": {
         "signal": "github-stars",
-        "repo": "firecrawl/firecrawl-mcp-server"
+        "repo": "firecrawl/firecrawl-mcp-server",
+        "stars": 7877
       }
-    },
-    {
-      "id": "notion",
-      "name": "Notion",
-      "publisher": "Notion",
-      "description": "Search, read and edit your Notion pages and databases.",
-      "homepage": "https://developers.notion.com/docs/mcp",
-      "source": "https://github.com/makenotion/notion-mcp-server",
-      "license": "MIT",
-      "categories": [
-        "docs",
-        "productivity"
-      ],
-      "verified": {
-        "date": "2026-11-22",
-        "sources": [
-          "https://github.com/makenotion/notion-mcp-server",
-          "https://registry.modelcontextprotocol.io/v0.1/servers/com.notion%2Fmcp/versions/latest"
-        ],
-        "version": "1.0.1"
-      },
-      "popularity": {
-        "signal": "github-stars",
-        "repo": "makenotion/notion-mcp-server"
-      },
-      "variants": [
-        {
-          "id": "hosted",
-          "label": "Hosted, sign in",
-          "default": true,
-          "summary": "Notion's hosted MCP server. You sign in to Notion in your browser; boopis keeps the tokens in its own store.",
-          "transport": "streamable-http",
-          "url": "https://mcp.notion.com/mcp",
-          "auth": {
-            "kind": "oauth"
-          },
-          "credentials": [],
-          "network": {
-            "egress": [
-              "mcp.notion.com"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "sentry",
-      "name": "Sentry",
-      "publisher": "Sentry",
-      "description": "Look into errors, issues and traces in your Sentry projects.",
-      "homepage": "https://mcp.sentry.dev",
-      "source": "https://github.com/getsentry/sentry-mcp",
-      "license": "FSL-1.1-ALv2",
-      "categories": [
-        "debugging",
-        "devops"
-      ],
-      "verified": {
-        "date": "2026-11-22",
-        "sources": [
-          "https://github.com/getsentry/sentry-mcp",
-          "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.getsentry%2Fsentry-mcp/versions/latest"
-        ],
-        "version": "0.50.0"
-      },
-      "popularity": {
-        "signal": "github-stars",
-        "repo": "getsentry/sentry-mcp"
-      },
-      "variants": [
-        {
-          "id": "hosted",
-          "label": "Hosted, sign in",
-          "default": true,
-          "summary": "Sentry's hosted MCP server. You sign in to Sentry in your browser; boopis keeps the tokens in its own store.",
-          "transport": "streamable-http",
-          "url": "https://mcp.sentry.dev/mcp",
-          "auth": {
-            "kind": "oauth"
-          },
-          "credentials": [],
-          "network": {
-            "egress": [
-              "mcp.sentry.dev"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "supabase",
-      "name": "Supabase",
-      "publisher": "Supabase",
-      "description": "Manage Supabase projects: tables, SQL, migrations, edge functions and logs.",
-      "homepage": "https://supabase.com/docs/guides/getting-started/mcp",
-      "source": "https://github.com/supabase-community/supabase-mcp",
-      "license": "Apache-2.0",
-      "categories": [
-        "database",
-        "devops"
-      ],
-      "verified": {
-        "date": "2026-11-22",
-        "sources": [
-          "https://github.com/supabase-community/supabase-mcp",
-          "https://registry.modelcontextprotocol.io/v0.1/servers/com.supabase%2Fmcp/versions/latest"
-        ],
-        "version": "0.19.0"
-      },
-      "popularity": {
-        "signal": "github-stars",
-        "repo": "supabase-community/supabase-mcp"
-      },
-      "variants": [
-        {
-          "id": "hosted",
-          "label": "Hosted, sign in",
-          "default": true,
-          "summary": "Supabase's hosted MCP server. You sign in to Supabase in your browser; boopis keeps the tokens in its own store.",
-          "transport": "streamable-http",
-          "url": "https://mcp.supabase.com/mcp",
-          "auth": {
-            "kind": "oauth"
-          },
-          "credentials": [],
-          "network": {
-            "egress": [
-              "mcp.supabase.com"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "atlassian",
-      "name": "Atlassian (Jira and Confluence)",
-      "publisher": "Atlassian",
-      "description": "Jira issues and Confluence pages, through Atlassian's Rovo MCP server.",
-      "homepage": "https://github.com/atlassian/atlassian-mcp-server",
-      "source": "https://github.com/atlassian/atlassian-mcp-server",
-      "license": "Apache-2.0",
-      "categories": [
-        "productivity",
-        "docs"
-      ],
-      "verified": {
-        "date": "2026-11-22",
-        "sources": [
-          "https://github.com/atlassian/atlassian-mcp-server",
-          "https://registry.modelcontextprotocol.io/v0.1/servers/com.atlassian%2Fatlassian-mcp-server/versions/latest"
-        ],
-        "version": "2.0.0"
-      },
-      "popularity": {
-        "signal": "github-stars",
-        "repo": "atlassian/atlassian-mcp-server"
-      },
-      "variants": [
-        {
-          "id": "hosted",
-          "label": "Hosted, sign in",
-          "default": true,
-          "summary": "Atlassian's hosted MCP server. You sign in to Atlassian in your browser; boopis keeps the tokens in its own store.",
-          "transport": "streamable-http",
-          "url": "https://mcp.atlassian.com/v2/mcp",
-          "auth": {
-            "kind": "oauth"
-          },
-          "credentials": [],
-          "network": {
-            "egress": [
-              "mcp.atlassian.com"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "neon",
-      "name": "Neon",
-      "publisher": "Neon",
-      "description": "Create and query Neon Postgres databases, branches and migrations.",
-      "homepage": "https://neon.com/docs/ai/neon-mcp-server",
-      "source": "https://github.com/neondatabase/mcp-server-neon",
-      "license": "MIT",
-      "categories": [
-        "database"
-      ],
-      "verified": {
-        "date": "2026-11-22",
-        "sources": [
-          "https://github.com/neondatabase/mcp-server-neon",
-          "https://registry.modelcontextprotocol.io/v0.1/servers/com.neon%2Fmcp/versions/latest"
-        ],
-        "version": "2.0.0"
-      },
-      "popularity": {
-        "signal": "github-stars",
-        "repo": "neondatabase/mcp-server-neon"
-      },
-      "variants": [
-        {
-          "id": "hosted",
-          "label": "Hosted, sign in",
-          "default": true,
-          "summary": "Neon's hosted MCP server. You sign in to Neon in your browser; boopis keeps the tokens in its own store.",
-          "transport": "streamable-http",
-          "url": "https://mcp.neon.tech/mcp",
-          "auth": {
-            "kind": "oauth"
-          },
-          "credentials": [],
-          "network": {
-            "egress": [
-              "mcp.neon.tech"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "brave-search",
-      "name": "Brave Search",
-      "publisher": "Brave",
-      "description": "Web, news, image and video search through Brave's own index, with your API key.",
-      "homepage": "https://brave.com/search/api/",
-      "source": "https://github.com/brave/brave-search-mcp-server",
-      "license": "MIT",
-      "categories": [
-        "web",
-        "research"
-      ],
-      "verified": {
-        "date": "2026-11-22",
-        "package": "@brave/brave-search-mcp-server",
-        "version": "2.2.0",
-        "sources": [
-          "https://github.com/brave/brave-search-mcp-server",
-          "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.brave%2Fbrave-search-mcp-server/versions/latest",
-          "https://registry.npmjs.org/@brave/brave-search-mcp-server/2.2.0"
-        ]
-      },
-      "popularity": {
-        "signal": "github-stars",
-        "repo": "brave/brave-search-mcp-server"
-      },
-      "variants": [
-        {
-          "id": "local",
-          "label": "Local, with an API key",
-          "default": true,
-          "summary": "Brave's npm package on your machine, calling the Brave Search API with your key.",
-          "transport": "stdio",
-          "command": "npx",
-          "args": [
-            "-y",
-            "@brave/brave-search-mcp-server@2.2.0"
-          ],
-          "credentials": [
-            {
-              "id": "brave_api_key",
-              "title": "Brave Search API key",
-              "env": "BRAVE_API_KEY",
-              "host": "api.search.brave.com",
-              "optional": false
-            }
-          ],
-          "network": {
-            "egress": [
-              "api.search.brave.com"
-            ]
-          }
-        }
-      ]
     },
     {
       "id": "exa",
@@ -673,7 +410,8 @@
       },
       "popularity": {
         "signal": "github-stars",
-        "repo": "exa-labs/exa-mcp-server"
+        "repo": "exa-labs/exa-mcp-server",
+        "stars": 5254
       },
       "variants": [
         {
@@ -709,6 +447,197 @@
       ]
     },
     {
+      "id": "notion",
+      "name": "Notion",
+      "publisher": "Notion",
+      "description": "Search, read and edit your Notion pages and databases.",
+      "homepage": "https://developers.notion.com/docs/mcp",
+      "source": "https://github.com/makenotion/notion-mcp-server",
+      "license": "MIT",
+      "categories": [
+        "docs",
+        "productivity"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "sources": [
+          "https://github.com/makenotion/notion-mcp-server",
+          "https://registry.modelcontextprotocol.io/v0.1/servers/com.notion%2Fmcp/versions/latest"
+        ],
+        "version": "1.0.1"
+      },
+      "popularity": {
+        "signal": "github-stars",
+        "repo": "makenotion/notion-mcp-server",
+        "stars": 4721
+      },
+      "variants": [
+        {
+          "id": "hosted",
+          "label": "Hosted, sign in",
+          "default": true,
+          "summary": "Notion's hosted MCP server. You sign in to Notion in your browser; boopis keeps the tokens in its own store.",
+          "transport": "streamable-http",
+          "url": "https://mcp.notion.com/mcp",
+          "auth": {
+            "kind": "oauth"
+          },
+          "credentials": [],
+          "network": {
+            "egress": [
+              "mcp.notion.com"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "supabase",
+      "name": "Supabase",
+      "publisher": "Supabase",
+      "description": "Manage Supabase projects: tables, SQL, migrations, edge functions and logs.",
+      "homepage": "https://supabase.com/docs/guides/getting-started/mcp",
+      "source": "https://github.com/supabase-community/supabase-mcp",
+      "license": "Apache-2.0",
+      "categories": [
+        "database",
+        "devops"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "sources": [
+          "https://github.com/supabase-community/supabase-mcp",
+          "https://registry.modelcontextprotocol.io/v0.1/servers/com.supabase%2Fmcp/versions/latest"
+        ],
+        "version": "0.19.0"
+      },
+      "popularity": {
+        "signal": "github-stars",
+        "repo": "supabase-community/supabase-mcp",
+        "stars": 3022
+      },
+      "variants": [
+        {
+          "id": "hosted",
+          "label": "Hosted, sign in",
+          "default": true,
+          "summary": "Supabase's hosted MCP server. You sign in to Supabase in your browser; boopis keeps the tokens in its own store.",
+          "transport": "streamable-http",
+          "url": "https://mcp.supabase.com/mcp",
+          "auth": {
+            "kind": "oauth"
+          },
+          "credentials": [],
+          "network": {
+            "egress": [
+              "mcp.supabase.com"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "brave-search",
+      "name": "Brave Search",
+      "publisher": "Brave",
+      "description": "Web, news, image and video search through Brave's own index, with your API key.",
+      "homepage": "https://brave.com/search/api/",
+      "source": "https://github.com/brave/brave-search-mcp-server",
+      "license": "MIT",
+      "categories": [
+        "web",
+        "research"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "package": "@brave/brave-search-mcp-server",
+        "version": "2.2.0",
+        "sources": [
+          "https://github.com/brave/brave-search-mcp-server",
+          "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.brave%2Fbrave-search-mcp-server/versions/latest",
+          "https://registry.npmjs.org/@brave/brave-search-mcp-server/2.2.0"
+        ]
+      },
+      "popularity": {
+        "signal": "github-stars",
+        "repo": "brave/brave-search-mcp-server",
+        "stars": 1585
+      },
+      "variants": [
+        {
+          "id": "local",
+          "label": "Local, with an API key",
+          "default": true,
+          "summary": "Brave's npm package on your machine, calling the Brave Search API with your key.",
+          "transport": "stdio",
+          "command": "npx",
+          "args": [
+            "-y",
+            "@brave/brave-search-mcp-server@2.2.0"
+          ],
+          "credentials": [
+            {
+              "id": "brave_api_key",
+              "title": "Brave Search API key",
+              "env": "BRAVE_API_KEY",
+              "host": "api.search.brave.com",
+              "optional": false
+            }
+          ],
+          "network": {
+            "egress": [
+              "api.search.brave.com"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "atlassian",
+      "name": "Atlassian (Jira and Confluence)",
+      "publisher": "Atlassian",
+      "description": "Jira issues and Confluence pages, through Atlassian's Rovo MCP server.",
+      "homepage": "https://github.com/atlassian/atlassian-mcp-server",
+      "source": "https://github.com/atlassian/atlassian-mcp-server",
+      "license": "Apache-2.0",
+      "categories": [
+        "productivity",
+        "docs"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "sources": [
+          "https://github.com/atlassian/atlassian-mcp-server",
+          "https://registry.modelcontextprotocol.io/v0.1/servers/com.atlassian%2Fatlassian-mcp-server/versions/latest"
+        ],
+        "version": "2.0.0"
+      },
+      "popularity": {
+        "signal": "github-stars",
+        "repo": "atlassian/atlassian-mcp-server",
+        "stars": 1185
+      },
+      "variants": [
+        {
+          "id": "hosted",
+          "label": "Hosted, sign in",
+          "default": true,
+          "summary": "Atlassian's hosted MCP server. You sign in to Atlassian in your browser; boopis keeps the tokens in its own store.",
+          "transport": "streamable-http",
+          "url": "https://mcp.atlassian.com/v2/mcp",
+          "auth": {
+            "kind": "oauth"
+          },
+          "credentials": [],
+          "network": {
+            "egress": [
+              "mcp.atlassian.com"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": "mongodb",
       "name": "MongoDB",
       "publisher": "MongoDB",
@@ -731,7 +660,8 @@
       },
       "popularity": {
         "signal": "github-stars",
-        "repo": "mongodb-js/mongodb-mcp-server"
+        "repo": "mongodb-js/mongodb-mcp-server",
+        "stars": 1163
       },
       "variants": [
         {
@@ -761,6 +691,95 @@
       ]
     },
     {
+      "id": "sentry",
+      "name": "Sentry",
+      "publisher": "Sentry",
+      "description": "Look into errors, issues and traces in your Sentry projects.",
+      "homepage": "https://mcp.sentry.dev",
+      "source": "https://github.com/getsentry/sentry-mcp",
+      "license": "FSL-1.1-ALv2",
+      "categories": [
+        "debugging",
+        "devops"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "sources": [
+          "https://github.com/getsentry/sentry-mcp",
+          "https://registry.modelcontextprotocol.io/v0.1/servers/io.github.getsentry%2Fsentry-mcp/versions/latest"
+        ],
+        "version": "0.50.0"
+      },
+      "popularity": {
+        "signal": "github-stars",
+        "repo": "getsentry/sentry-mcp",
+        "stars": 973
+      },
+      "variants": [
+        {
+          "id": "hosted",
+          "label": "Hosted, sign in",
+          "default": true,
+          "summary": "Sentry's hosted MCP server. You sign in to Sentry in your browser; boopis keeps the tokens in its own store.",
+          "transport": "streamable-http",
+          "url": "https://mcp.sentry.dev/mcp",
+          "auth": {
+            "kind": "oauth"
+          },
+          "credentials": [],
+          "network": {
+            "egress": [
+              "mcp.sentry.dev"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "neon",
+      "name": "Neon",
+      "publisher": "Neon",
+      "description": "Create and query Neon Postgres databases, branches and migrations.",
+      "homepage": "https://neon.com/docs/ai/neon-mcp-server",
+      "source": "https://github.com/neondatabase/mcp-server-neon",
+      "license": "MIT",
+      "categories": [
+        "database"
+      ],
+      "verified": {
+        "date": "2026-11-22",
+        "sources": [
+          "https://github.com/neondatabase/mcp-server-neon",
+          "https://registry.modelcontextprotocol.io/v0.1/servers/com.neon%2Fmcp/versions/latest"
+        ],
+        "version": "2.0.0"
+      },
+      "popularity": {
+        "signal": "github-stars",
+        "repo": "neondatabase/mcp-server-neon",
+        "stars": 667
+      },
+      "variants": [
+        {
+          "id": "hosted",
+          "label": "Hosted, sign in",
+          "default": true,
+          "summary": "Neon's hosted MCP server. You sign in to Neon in your browser; boopis keeps the tokens in its own store.",
+          "transport": "streamable-http",
+          "url": "https://mcp.neon.tech/mcp",
+          "auth": {
+            "kind": "oauth"
+          },
+          "credentials": [],
+          "network": {
+            "egress": [
+              "mcp.neon.tech"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": "sequential-thinking",
       "name": "Sequential Thinking",
       "publisher": "Model Context Protocol (reference servers)",
@@ -784,7 +803,8 @@
       "popularity": {
         "signal": "github-stars",
         "repo": "modelcontextprotocol/servers",
-        "shared": true
+        "shared": true,
+        "stars": 92150
       },
       "variants": [
         {
@@ -829,7 +849,8 @@
       "popularity": {
         "signal": "github-stars",
         "repo": "modelcontextprotocol/servers",
-        "shared": true
+        "shared": true,
+        "stars": 92150
       },
       "variants": [
         {

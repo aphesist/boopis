@@ -72,25 +72,27 @@ whose official repository is archived, or that runs only inside one vendor's des
 steps above.
 
 ## Entries
-In the file's order. "Needs" is what the person gives at install; a hosted server signs in with OAuth through the engine's flow.
+In the file's order, with the stars read on 22 November 2026 by the `popularity` job of
+[this run](https://github.com/aphesist/boopis/actions/runs/44982090776/job/137084587857). "Needs" is what the person gives at
+install; a hosted server signs in with OAuth through the engine's flow.
 
-| Connector | Publisher | Variants (default first) | Pinned to | Needs | Licence |
-|---|---|---|---|---|---|
-| Context7 | Upstash | **local** (npx), hosted (OAuth or a key) | `@upstash/context7-mcp@4.7.3` | nothing; a key raises its limits | MIT |
-| GitHub | GitHub | **Docker** with a personal access token | `ghcr.io/github/github-mcp-server@sha256:040c4e99…` (release 2.2.0) | Docker, a GitHub token | MIT |
-| Playwright | Microsoft | **local** (npx) | `@playwright/mcp@0.0.86` | a browser Playwright can drive | Apache-2.0 |
-| Chrome DevTools | Google (Chrome DevTools) | **local** (npx) | `chrome-devtools-mcp@1.13.0` | Google Chrome | Apache-2.0 |
-| Firecrawl | Firecrawl | **local** (Firecrawl Local), hosted (OAuth or a key), package with a key | `firecrawl-mcp@3.40.0` | Firecrawl Local, or a key | MIT |
-| Notion | Notion | **hosted** | `remote:https://mcp.notion.com/mcp` (1.0.1) | a Notion sign-in | MIT |
-| Sentry | Sentry | **hosted** | `remote:https://mcp.sentry.dev/mcp` (0.50.0) | a Sentry sign-in | FSL-1.1-ALv2 |
-| Supabase | Supabase | **hosted** | `remote:https://mcp.supabase.com/mcp` (0.19.0) | a Supabase sign-in | Apache-2.0 |
-| Atlassian | Atlassian | **hosted** | `remote:https://mcp.atlassian.com/v2/mcp` (2.0.0) | an Atlassian sign-in | Apache-2.0 |
-| Neon | Neon | **hosted** | `remote:https://mcp.neon.tech/mcp` (2.0.0) | a Neon sign-in | MIT |
-| Brave Search | Brave | **local** (npx) | `@brave/brave-search-mcp-server@2.2.0` | a Brave Search API key | MIT |
-| Exa | Exa | **hosted** | `remote:https://mcp.exa.ai/mcp` (3.5.1) | a sign-in, or a key | MIT |
-| MongoDB | MongoDB | **local** (npx) | `mongodb-mcp-server@3.3.0` | a connection string | Apache-2.0 |
-| Sequential Thinking | MCP reference servers | **local** (npx) | `@modelcontextprotocol/server-sequential-thinking@2.2.0` | nothing | Apache-2.0 and MIT |
-| Memory | MCP reference servers | **local** (npx) | `@modelcontextprotocol/server-memory@2.2.1` | nothing | Apache-2.0 and MIT |
+| Connector | Publisher | Variants (default first) | Pinned to | Needs | Licence | Stars, 22 November 2026 |
+|---|---|---|---|---|---|---|
+| Context7 | Upstash | **local** (npx), hosted (OAuth or a key) | `@upstash/context7-mcp@4.7.3` | nothing; a key raises its limits | MIT | `upstash/context7`, 65,246 |
+| Chrome DevTools | Google (Chrome DevTools) | **local** (npx) | `chrome-devtools-mcp@1.13.0` | Google Chrome | Apache-2.0 | `ChromeDevTools/chrome-devtools-mcp`, 58,713 |
+| Playwright | Microsoft | **local** (npx) | `@playwright/mcp@0.0.86` | a browser Playwright can drive | Apache-2.0 | `microsoft/playwright-mcp`, 39,982 |
+| GitHub | GitHub | **Docker** with a personal access token | `ghcr.io/github/github-mcp-server@sha256:040c4e99…` (release 2.2.0) | Docker, a GitHub token | MIT | `github/github-mcp-server`, 34,660 |
+| Firecrawl | Firecrawl | **local** (Firecrawl Local), hosted (OAuth or a key), package with a key | `firecrawl-mcp@3.40.0` | Firecrawl Local, or a key | MIT | `firecrawl/firecrawl-mcp-server`, 7,877 |
+| Exa | Exa | **hosted** | `remote:https://mcp.exa.ai/mcp` (3.5.1) | a sign-in, or a key | MIT | `exa-labs/exa-mcp-server`, 5,254 |
+| Notion | Notion | **hosted** | `remote:https://mcp.notion.com/mcp` (1.0.1) | a Notion sign-in | MIT | `makenotion/notion-mcp-server`, 4,721 |
+| Supabase | Supabase | **hosted** | `remote:https://mcp.supabase.com/mcp` (0.19.0) | a Supabase sign-in | Apache-2.0 | `supabase-community/supabase-mcp`, 3,022 |
+| Brave Search | Brave | **local** (npx) | `@brave/brave-search-mcp-server@2.2.0` | a Brave Search API key | MIT | `brave/brave-search-mcp-server`, 1,585 |
+| Atlassian | Atlassian | **hosted** | `remote:https://mcp.atlassian.com/v2/mcp` (2.0.0) | an Atlassian sign-in | Apache-2.0 | `atlassian/atlassian-mcp-server`, 1,185 |
+| MongoDB | MongoDB | **local** (npx) | `mongodb-mcp-server@3.3.0` | a connection string | Apache-2.0 | `mongodb-js/mongodb-mcp-server`, 1,163 |
+| Sentry | Sentry | **hosted** | `remote:https://mcp.sentry.dev/mcp` (0.50.0) | a Sentry sign-in | FSL-1.1-ALv2 | `getsentry/sentry-mcp`, 973 |
+| Neon | Neon | **hosted** | `remote:https://mcp.neon.tech/mcp` (2.0.0) | a Neon sign-in | MIT | `neondatabase/mcp-server-neon`, 667 |
+| Sequential Thinking | MCP reference servers | **local** (npx) | `@modelcontextprotocol/server-sequential-thinking@2.2.0` | nothing | Apache-2.0 and MIT | `modelcontextprotocol/servers`, 92,150 (shared) |
+| Memory | MCP reference servers | **local** (npx) | `@modelcontextprotocol/server-memory@2.2.1` | nothing | Apache-2.0 and MIT | `modelcontextprotocol/servers`, 92,150 (shared) |
 
 Firecrawl Local (announced 2026-11-18) runs scrape, crawl and map as Rust primitives on the user's machine; the MCP server talks
 to it through `FIRECRAWL_API_URL`. The engine's own web tools also use Firecrawl, and pointing them at the same local instance
