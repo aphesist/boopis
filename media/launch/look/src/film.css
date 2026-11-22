@@ -1,0 +1,136 @@
+/* The film's look, on top of the product's tokens (apps/desktop/ui/src/styles/tokens.css, loaded through the kit's kit.css).
+   Every colour below is a token or a color-mix() of one (R-colour-7). The film adds no colour of its own: it adds a light,
+   a grain, a depth system and a type scale for 1080p, each justified in SC/storyboard/look.md.
+
+   Units are 1080p pixels: a 16:9 frame is 1920x1080, a 9:16 frame 1080x1920. Nothing on screen is set under 28px. */
+
+:root {
+  /* ── the type scale at 1080p (look.md, Type) ── */
+  --f-hero: 400px;       /* one word, K3, at most twice in the film */
+  --f-display: 120px;    /* the hook and the end line */
+  --f-head: 88px;        /* a claim */
+  --f-second: 52px;      /* the line under a claim, a cast label's name */
+  --f-label: 40px;       /* a label anchored to its object */
+  --f-meta: 34px;        /* mono meta: times, state words, lab names (the product's 11px at 3x is 33) */
+  --f-min: 28px;         /* the floor; nothing smaller is drawn as text */
+
+  /* ── the UI scale: the product's own components at 3x, 4x for a close-up (look.md, Rebuilding the UI) ── */
+  --ui-x: 3;
+
+  /* ── the ground: the reading room after hours. One warm light pool, the card stock's own tone, never brass ── */
+  --pool-x: 50%;
+  --pool-y: 58%;
+  --pool-w: 62%;
+  --pool-h: 72%;
+  --pool: var(--bg-4);                 /* the lit centre of the table */
+  --pool-mid: var(--bg-2);             /* the reading room */
+  --pool-edge: var(--bg-1);            /* the cabinet */
+  --pool-far: var(--bg-0);             /* the drawer: the frame's corners */
+  --pool-tint: var(--pool);            /* a section may tint the light (red only where something is owed) */
+
+  /* ── depth: plates, shadows, focus (look.md, Ground and depth) ── */
+  --plate: var(--bg-3);
+  --plate-edge: color-mix(in srgb, var(--text) 9%, transparent);         /* the 1px top light on a plate */
+  --plate-shadow: 0 36px 90px rgba(0, 0, 0, .46), 0 3px 9px rgba(0, 0, 0, .40);   /* the product's --shadow-pop, at the film's 2.25x */
+  --contact: rgba(0, 0, 0, .62);       /* the soft shadow an orb casts on the table */
+  --far-blur: 10px;                    /* one layer away from focus */
+  --farther-blur: 18px;                /* two layers away */
+
+  /* ── motion, in words and numbers: craft-bible part 3 (the film) and DESIGN-SYSTEM 11 (the product, shown faithfully) ── */
+  --arrive: cubic-bezier(.16, 1, .3, 1);
+  --travel: cubic-bezier(.83, 0, .17, 1);
+  --snap: cubic-bezier(.87, 0, .13, 1);
+  --depart: cubic-bezier(.5, 0, .75, 0);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg-0); }
+body { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; font-kerning: normal; }
+::selection { background: var(--brass-soft); }
+
+/* ── the stage: one frame ── */
+.stage {
+  position: relative; overflow: hidden; isolation: isolate;
+  width: 1920px; height: 1080px;
+  font-family: var(--sans); color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.stage[data-format="vertical"] { width: 1080px; height: 1920px; }
+
+/* the ground: a light pool on the table, falling off to the cabinet and the drawer in the corners */
+.ground {
+  position: absolute; inset: 0; z-index: -2;
+  background:
+    radial-gradient(var(--pool-w) var(--pool-h) at var(--pool-x) var(--pool-y),
+      var(--pool-tint) 0%, color-mix(in oklab, var(--pool-tint) 55%, var(--pool-mid)) 22%, var(--pool-mid) 46%, var(--pool-edge) 74%, var(--pool-far) 100%),
+    var(--pool-far);
+}
+/* the grain: monochrome, 1px, about 3%. It lights the ground and dithers the gradient so the 8-bit encode does not band */
+.grain { position: absolute; inset: 0; z-index: 50; pointer-events: none; mix-blend-mode: soft-light; opacity: .55; }
+
+/* layers of depth: the ground moves at .3x the camera, the stage at 1x, the foreground at 1.3x (look.md) */
+.layer { position: absolute; inset: 0; }
+.layer--far { filter: blur(var(--farther-blur)); }
+.layer--near { filter: blur(var(--far-blur)); }
+
+/* ── type ── */
+.t { margin: 0; font-family: var(--sans); color: var(--text-strong); font-kerning: normal; text-wrap: balance; }
+.t--hero { font: 600 var(--f-hero)/.86 var(--sans); letter-spacing: -.045em; }
+.t--display { font: 600 var(--f-display)/1 var(--sans); letter-spacing: -.032em; }
+.t--head { font: 600 var(--f-head)/1.04 var(--sans); letter-spacing: -.026em; }
+.t--second { font: 500 var(--f-second)/1.16 var(--sans); letter-spacing: -.012em; color: var(--text-dim); }
+.t--label { font: 500 var(--f-label)/1.2 var(--sans); letter-spacing: -.006em; color: var(--text-dim); }
+.t--name { font: 600 var(--f-second)/1.1 var(--sans); letter-spacing: -.018em; color: var(--text-strong); }
+.t--meta { font: 400 var(--f-meta)/1.3 var(--mono); letter-spacing: 0; color: var(--text-quiet); }
+.t--quiet { color: var(--text-dim); }
+
+/* the accent: one word a line, held in the product's own text selection (--brass-soft) with the brass caret after it.
+   Brass is never text (R-colour-3); it is where you are. The word stays --text-strong. */
+.sel { position: relative; z-index: 0; white-space: nowrap; }
+.sel::before { content: ''; position: absolute; z-index: -1; left: -.07em; right: -.07em; top: .13em; bottom: -.03em; border-radius: .06em; background: var(--brass-soft); }
+.sel[data-caret]::after { content: ''; position: absolute; right: -.1em; top: .13em; bottom: -.03em; width: max(4px, .04em); border-radius: 2px; background: var(--brass); }
+
+/* a lab's mark set inside a line of type: cap height, on the baseline, in the text's ink (boopis draws the labs' marks mono) */
+.mark-inline { display: inline-block; width: .74em; height: .74em; vertical-align: -.04em; margin-right: .16em; color: currentColor; }
+.mark-inline svg, .lab svg { display: block; width: 100%; height: 100%; }
+.lab { display: inline-flex; align-items: center; gap: .36em; font: 400 var(--f-meta)/1 var(--mono); color: var(--text-dim); white-space: nowrap; }
+.lab__mark { display: inline-block; width: 1em; height: 1em; color: var(--text); }
+
+/* ── orbs on the table ── */
+.orb { position: absolute; display: grid; place-items: center; }
+.orb orb-avatar { display: block; }
+/* the contact shadow: an ellipse under the orb, sized from it; the light is overhead and a little in front */
+.orb[data-shadow]::after { content: ''; position: absolute; z-index: -1; left: 50%; bottom: calc(var(--o) * -.15); width: calc(var(--o) * .78); height: calc(var(--o) * .13);
+  transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, var(--contact), transparent); filter: blur(calc(var(--o) * .025)); }
+/* the attention flag at hero scale: the product's 8px dot with a 2px ring of the surface, scaled with the orb (R-orb-5) */
+/* the ring is a true cut: the orb is masked where the ring falls, so the ground itself shows through (the product draws the
+   ring in the surface's colour; on a lit, graded ground only a cut matches it) */
+/* --fx, --fy: the flag's centre from the box's top-right corner, in orb widths. The product sets it in the box's corner
+   (.105); on a triangle that corner is empty air at hero scale, so the flag moves in onto the shoulder, still top-right */
+.orb { --fx: .105; --fy: .105; }
+.orb[data-shape="triangle"] { --fx: .25; --fy: .3; }
+.orb[data-flag] orb-avatar { -webkit-mask: radial-gradient(circle calc(var(--o) * .09) at calc(100% - var(--o) * var(--fx)) calc(var(--o) * var(--fy)), transparent 98%, #000 100%);
+  mask: radial-gradient(circle calc(var(--o) * .09) at calc(100% - var(--o) * var(--fx)) calc(var(--o) * var(--fy)), transparent 98%, #000 100%); }
+.orb[data-flag] .flag { box-shadow: none; }
+.flag { position: absolute; width: calc(var(--o) * .12); height: calc(var(--o) * .12); border-radius: 50%; background: var(--red);
+  box-shadow: 0 0 0 calc(var(--o) * .03) var(--ring, var(--bg-2)); top: calc(var(--o) * (var(--fy) - .06)); right: calc(var(--o) * (var(--fx) - .06)); }
+
+/* ── plates: the product's surfaces, redrawn large ── */
+.plate { position: absolute; background: var(--plate); border-radius: 30px; box-shadow: inset 0 1px 0 var(--plate-edge), var(--plate-shadow); }
+.plate--ground { background: var(--bg-2); }
+.plate--frame { background: var(--bg-1); }
+.plate--dock { background: var(--dock-bg); }
+
+/* a line nobody needs to read: a rounded bar at the line's length and the text's x-height */
+.bar { display: block; height: .5em; border-radius: .25em; background: var(--bg-4); }
+.bar--dim { background: color-mix(in srgb, var(--text) 10%, transparent); }
+
+/* the product's own UI, drawn at film scale: zoom lays it out and rasterises it at its final size (no scaled bitmap) */
+.ui-film { zoom: var(--ui-x); font-family: var(--sans); color: var(--text); }
+
+/* the composer keeps its mic, as the product draws every composer (owner decision); it is never pressed and never the subject
+   of a shot, because dictation does not hear yet (truth.md, "must not claim") */
+
+/* the cursor: oversized, bone with an ink edge, a soft shadow; a click leaves a brass ring (you are here) */
+.cursor { position: absolute; width: 52px; height: 52px; filter: drop-shadow(0 4px 12px rgba(0, 0, 0, .35)); }
+.ring { position: absolute; border-radius: 50%; box-shadow: 0 0 0 3px var(--brass); }

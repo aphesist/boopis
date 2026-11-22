@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@boopis/ui": ["../../../apps/desktop/ui/src/components/index.ts"],
+      "@ui/*": ["../../../apps/desktop/ui/*"]
+    }
+  },
+  "include": ["src", "../../../apps/desktop/ui/node_modules/vite/client.d.ts", "../../../apps/desktop/ui/src/env.d.ts", "../../../apps/desktop/ui/vendor/orb-avatar.d.ts", "../../../apps/desktop/ui/vendor/boopis-logo.d.ts"]
+}

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Film style frames</title>
+<script type="module">
+  import '@fontsource/libre-franklin/latin-400.css';
+  import '@fontsource/libre-franklin/latin-600.css';
+  import '@fontsource/ibm-plex-mono/latin-400.css';
+  import '/src/tokens.ts';
+</script>
+<style>
+  body { margin: 0; padding: 48px 40px 64px; background: var(--bg-1); color: var(--text); font: 400 15px/1.5 var(--sans); }
+  h1 { margin: 0 0 6px; font: 600 20px/1.2 var(--sans); color: var(--text-strong); }
+  p { margin: 0 0 28px; color: var(--text-dim); max-width: 64ch; }
+  ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+  a { display: block; padding: 14px 16px; border-radius: 10px; background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--hair); color: var(--text); text-decoration: none; }
+  a:hover { background: var(--bg-3); }
+  a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .board li { display: flex; gap: 8px; } .board a:first-child { flex: 1; } a.v { display: grid; place-items: center; padding: 0 14px; font: 500 12px/1 var(--mono); color: var(--text-dim); }
+  b { display: block; font: 500 12px/1.4 var(--mono); color: var(--text-quiet); margin-bottom: 4px; }
+</style>
+</head>
+<body>
+  <h1>The launch film's style frames</h1>
+  <p>Each page is one frame at 1080p, drawn with the product's tokens and kit. The look is written up in the storyboard
+     folder (look.md); render them with render.mjs.</p>
+  <ol>
+    <li><a href="frames/01-hook.html"><b>01</b>The hook</a></li>
+    <li><a href="frames/01-hook-vertical.html"><b>01, 9:16</b>The hook, vertical</a></li>
+    <li><a href="frames/02-cast.html"><b>02</b>The cast</a></li>
+    <li><a href="frames/03-room.html"><b>03</b>A group chat at work</a></li>
+    <li><a href="frames/03-room-vertical.html"><b>03, 9:16</b>A group chat at work, vertical</a></li>
+    <li><a href="frames/04-huddle.html"><b>04</b>The huddle folds</a></li>
+    <li><a href="frames/05-needs.html"><b>05</b>Needs you</a></li>
+    <li><a href="frames/06-pill.html"><b>06</b>Close-up: the presence pill</a></li>
+    <li><a href="frames/07-governed.html"><b>07</b>Close-up: governed</a></li>
+    <li><a href="frames/08-end.html"><b>08</b>The end card</a></li>
+  </ol>
+  <h1 style="margin-top:48px">The storyboard's key frames</h1>
+  <p>One page per beat of the script, 16:9 and 9:16 (render.mjs --dir board).</p>
+  <ol class="board">
+    <li><a href="board/b01.html"><b>B01</b>Hook</a> <a class="v" href="board/b01-vertical.html">9:16</a></li>
+    <li><a href="board/b02.html"><b>B02</b>Promise</a> <a class="v" href="board/b02-vertical.html">9:16</a></li>
+    <li><a href="board/b03.html"><b>B03</b>The cast</a> <a class="v" href="board/b03-vertical.html">9:16</a></li>
+    <li><a href="board/b04.html"><b>B04</b>You ask once</a> <a class="v" href="board/b04-vertical.html">9:16</a></li>
+    <li><a href="board/b05.html"><b>B05</b>They hand work on</a> <a class="v" href="board/b05-vertical.html">9:16</a></li>
+    <li><a href="board/b06.html"><b>B06</b>They work it out</a> <a class="v" href="board/b06-vertical.html">9:16</a></li>
+    <li><a href="board/b07.html"><b>B07</b>The fold</a> <a class="v" href="board/b07-vertical.html">9:16</a></li>
+    <li><a href="board/b08.html"><b>B08</b>Your own session</a> <a class="v" href="board/b08-vertical.html">9:16</a></li>
+    <li><a href="board/b09.html"><b>B09</b>The cheaper one tries first</a> <a class="v" href="board/b09-vertical.html">9:16</a></li>
+    <li><a href="board/b10.html"><b>B10</b>A failed test buys the next rung</a> <a class="v" href="board/b10-vertical.html">9:16</a></li>
+    <li><a href="board/b11.html"><b>B11</b>The breath</a> <a class="v" href="board/b11-vertical.html">9:16</a></li>
+    <li><a href="board/b12.html"><b>B12</b>From a terminal</a> <a class="v" href="board/b12-vertical.html">9:16</a></li>
+    <li><a href="board/b13.html"><b>B13</b>Live in the open room</a> <a class="v" href="board/b13-vertical.html">9:16</a></li>
+    <li><a href="board/b14.html"><b>B14</b>From your other apps</a> <a class="v" href="board/b14-vertical.html">9:16</a></li>
+    <li><a href="board/b15.html"><b>B15</b>Until you hold</a> <a class="v" href="board/b15-vertical.html">9:16</a></li>
+    <li><a href="board/b16.html"><b>B16</b>The hold</a> <a class="v" href="board/b16-vertical.html">9:16</a></li>
+    <li><a href="board/b17.html"><b>B17</b>The tagline</a> <a class="v" href="board/b17-vertical.html">9:16</a></li>
+    <li><a href="board/b18.html"><b>B18</b>The eyes become the wordmark</a> <a class="v" href="board/b18-vertical.html">9:16</a></li>
+    <li><a href="board/b19a.html"><b>B19A</b>End card, with the address</a> <a class="v" href="board/b19a-vertical.html">9:16</a></li>
+    <li><a href="board/b19b.html"><b>B19B</b>End card, without the address</a> <a class="v" href="board/b19b-vertical.html">9:16</a></li>
+  </ol>
+</body>
+</html>

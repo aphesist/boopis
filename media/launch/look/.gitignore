@@ -1,0 +1,4 @@
+# vite cache, builds and check renders stay out of git (the owner-facing PNGs live in the shared storyboard folder)
+.vite/
+.build/
+.renders/
