@@ -434,6 +434,12 @@ The decision of every `$` call is `policy.check` with the mod as principal; the 
 - The perf harness measures at the owner's geometry, and its numbers gate motion changes.
 - A machine stuck on the CPU renderer or WebKit's fixed 60 Hz timer gets a smooth 60, said plainly in Diagnostics, never a stutter at an unreachable 120.
 
+**Addendum (the dock's orbs stay in one layer, `w26/dock-orbs`).**
+- An `<orb-avatar>` in the worker draws on an OffscreenCanvas the worker owns. WebKitGTK drops the picture of such a canvas that is taken out of the page and put back until the worker's next commit (4 of 40 shots blank in a real WebKitGTK under Xvfb; forcing a redraw on reconnect does not help, and WebKitGTK has no `moveBefore`). The dock moved each live orb into the slot of the view showing (`relocateLive()`), so its orbs blinked empty whenever they changed place: opening a bot, expanding, minimising.
+- Now every live orb is connected once, in one `.dk-orbs` layer inside the Bots page (`modules/dock/layer.ts`), and follows its slot by transform. A view holds an empty slot. The orb is two elements so no two motions write one property: a `.dk-op` point (`translate`, `scale`: the slot's place at rest, the row's magnification, the roster's scroll, written from what the engine already knows, with no layout read in a frame) and the live orb itself (`transform`, `opacity`: the slot's FLIP and entrance, played again as Web Animations with the same keyframes). The layer is inside the page's section, so a page that slides or fades takes its orbs along, and the stage's sink and clip apply to them. Motion stays transform and opacity only.
+- A card that moved between two views took its origin orb with it, so a wait's compact card now has one element per place that shows it (the key `card:<id>:<size>` is shared, so the morph still carries one to the other).
+- Guards: the lab's `orbs: 'stay'` is on for every dock interaction, and `tests/e2e/dock_webkit.py` looks for lit pixels over each orb in a real WebKitGTK.
+
 ## ADR-0026 The terminal art is data, with one renderer per language that cannot link the others
 **Context.**
 - boopis has three terminal faces: the installers (`install.sh` for Linux and macOS, `install.ps1` for Windows), the app's own binary (`boopis --version`, `boopis doctor`) and the Arch package's install script. All three show the logo and the bots.
