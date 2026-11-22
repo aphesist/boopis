@@ -89,7 +89,17 @@ pub struct Service {
     engine: Arc<dyn super::Engine>,
     lock: tokio::sync::Mutex<()>,
     repaired: std::sync::atomic::AtomicBool,
+    /// A restart is waiting for the bots being prepared one after another to be done (`restart_after_batch`).
+    restart_pending: std::sync::atomic::AtomicBool,
+    /// When the last bot was prepared, so the restart waits for a quiet moment.
+    last_prepared: std::sync::Mutex<std::time::Instant>,
+    /// How long nothing is prepared before the restart runs.
+    quiet: std::time::Duration,
 }
+
+/// How long the bots' preparation is quiet before a restart it needs runs: the app prepares several new bots one after
+/// another, and they share one restart.
+pub const RESTART_QUIET: std::time::Duration = std::time::Duration::from_secs(3);
 
 impl Service {
     /// The service over the supervisor's engine.
@@ -105,7 +115,17 @@ impl Service {
             engine,
             lock: tokio::sync::Mutex::new(()),
             repaired: std::sync::atomic::AtomicBool::new(false),
+            restart_pending: std::sync::atomic::AtomicBool::new(false),
+            last_prepared: std::sync::Mutex::new(std::time::Instant::now()),
+            quiet: RESTART_QUIET,
         }
+    }
+
+    /// The same, with another quiet time before a batch's restart (tests).
+    #[must_use]
+    pub fn with_quiet(mut self, quiet: std::time::Duration) -> Self {
+        self.quiet = quiet;
+        self
     }
 
     /// The engine it runs.
@@ -119,7 +139,7 @@ impl Service {
     /// # Errors
     /// As [`super::prepare`], and when the records or the root cannot be read.
     pub async fn prepare(
-        &self,
+        self: &Arc<Self>,
         layout: &super::Layout,
         name: &str,
         fresh: bool,
@@ -146,10 +166,43 @@ impl Service {
             super::Ask { governed, fresh },
         )
         .await?;
-        if done.needs_restart && self.engine.restart_when_idle(&layout.root).await? {
-            tracing::info!(bot = name, "restarted the engine to load the bot's plugins");
+        if let Ok(mut at) = self.last_prepared.lock() {
+            *at = std::time::Instant::now();
+        }
+        if done.needs_restart {
+            self.restart_after_batch(layout.root.clone());
         }
         Ok(done)
+    }
+
+    /// One gateway restart for the bots prepared one after another (bots that appeared together, made elsewhere): it runs
+    /// once nothing has been prepared for the quiet time, and never while work runs (`restart_when_idle`).
+    fn restart_after_batch(self: &Arc<Self>, root: std::path::PathBuf) {
+        use std::sync::atomic::Ordering;
+        if self.restart_pending.swap(true, Ordering::SeqCst) {
+            return;
+        }
+        let me = self.clone();
+        tauri::async_runtime::spawn(async move {
+            loop {
+                let since = me.last_prepared.lock().map_or(me.quiet, |at| at.elapsed());
+                match me.quiet.checked_sub(since) {
+                    Some(left) if !left.is_zero() => tokio::time::sleep(left).await,
+                    _ => break,
+                }
+            }
+            let _one = me.lock.lock().await;
+            me.restart_pending.store(false, Ordering::SeqCst);
+            match me.engine.restart_when_idle(&root).await {
+                Ok(true) => tracing::info!("restarted the engine to load the new bots' plugins"),
+                Ok(false) => {
+                    tracing::info!("work is running: the new bots' plugins load at the next start");
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, "the engine could not be restarted for the new bots");
+                }
+            }
+        });
     }
 
     /// Take the bot `name` out of the root's groups.

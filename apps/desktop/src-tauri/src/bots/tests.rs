@@ -735,3 +735,42 @@ fn a_room_entry_has_no_windows_verbatim_prefix() {
         "/home/me/engine/profiles/kai"
     );
 }
+
+#[tokio::test]
+async fn bots_that_appear_together_share_one_restart() {
+    let mut fake = Fake::new();
+    fake.reload_works = false;
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    repair(&fake, &layout).await.unwrap();
+    fake.clear();
+    // two bots made elsewhere while the app runs, boopis enabled by hand but not linked: only a restart loads it
+    for name in ["iris", "sol"] {
+        let bot = home.bot(name);
+        std::fs::create_dir_all(&bot).unwrap();
+        std::fs::write(bot.join("config.yaml"), "").unwrap();
+        fake.seed(
+            &bot,
+            json!({"model": {"provider": SUB, "default": "sonnet"}, "plugins": {"enabled": ["boopis"]}}),
+        );
+    }
+    let fake = std::sync::Arc::new(fake);
+    let service = std::sync::Arc::new(
+        engine::Service::with_engine(fake.clone())
+            .with_quiet(std::time::Duration::from_millis(100)),
+    );
+    for name in ["iris", "sol"] {
+        let done = service.prepare(&layout, name, true).await.unwrap();
+        assert!(done.needs_restart, "{name}");
+    }
+    let restarts = || fake.writes().iter().filter(|d| **d == Did::Restart).count();
+    assert_eq!(restarts(), 0, "the restart waits for the batch");
+    for _ in 0..50 {
+        if restarts() > 0 {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    assert_eq!(restarts(), 1);
+}

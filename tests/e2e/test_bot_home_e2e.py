@@ -234,3 +234,25 @@ def test_two_prepared_bots_answer_in_a_room(stack: HermesStack) -> None:
         assert (replies[0].get("payload") or {}).get("member_id") == "moss", replies[0]
     finally:
         root.close()
+
+
+def test_a_bot_prepared_while_the_gateway_runs_loads_the_plugin_without_a_restart(
+    stack: HermesStack,
+) -> None:
+    """What the app does for a bot that appears while it runs: prepare, and no restart when `plugins enable` loaded it."""
+    make_bot(stack, "iris")
+    prepare(stack, "iris")
+    deadline = time.monotonic() + 30
+    while True:
+        bot = connect(stack, "iris")
+        try:
+            described = bot.result("plugin.boopis.describe", {}, timeout=60)
+            break
+        except RpcError:
+            if time.monotonic() > deadline:
+                raise
+        finally:
+            bot.close()
+        time.sleep(2)
+    assert described["config"]["mode"] == "ungoverned"
+    assert "iris" in seatable(stack)

@@ -595,5 +595,24 @@ describe('what a bot’s home needs is the host’s (ADR-0042)', () => {
     // what the host could not do is a note on the bot, never a failed save
     expect(botOf(bots, 'nina')!.info!.notes.setup).toMatch(/boopis could not finish setting it up/);
     expect(h.own['nina']).toMatchObject({ settings: { gov: 'ungoverned' } });
+    // each flow prepares its bot once: the roster reads in between leave it to the flow
+    expect(calls.filter((c) => c.startsWith('prepare kai')).length).toBe(2);
+    expect(calls.filter((c) => c === 'prepare atlas' || c === 'prepare atlas fresh')).toEqual(['prepare atlas']);
+  });
+  it('prepares a bot that appears while the app runs, made anywhere else, once, and not the ones it had at start', async () => {
+    const { h, bots, calls } = bridged();
+    await bots.ready; await bots.settled();
+    expect(calls.filter((c) => c.startsWith('prepare'))).toEqual([]);   // the bots at start are the host's repair's
+    // the engine's own CLI (or another client) makes two bots while the app runs
+    h.profiles.push({ name: 'iris', path: HOME + '/profiles/iris', description: '' }, { name: 'moss', path: HOME + '/profiles/moss', description: '' });
+    (h.main as FakeLink).emit({ type: 'profiles.changed' });
+    await new Promise((r) => setTimeout(r, 450));
+    await bots.settled();
+    expect(calls.filter((c) => c.startsWith('prepare'))).toEqual(['prepare iris fresh', 'prepare moss fresh']);
+    // the next read finds them known: nothing more
+    (h.main as FakeLink).emit({ type: 'profiles.changed' });
+    await new Promise((r) => setTimeout(r, 450));
+    await bots.settled();
+    expect(calls.filter((c) => c.startsWith('prepare')).length).toBe(2);
   });
 });
