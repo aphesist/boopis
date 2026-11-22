@@ -178,7 +178,7 @@
 .dk-ladder { display: inline-flex; align-items: center; }
 .dk-run-open { display: flex; flex-direction: column; align-items: flex-start; text-align: left; min-width: 0; border-radius: var(--r-s); }
 .dk-run-title { font-size: var(--fs-s); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.dk-run-model { font-size: var(--fs-xs); color: var(--text-quiet); white-space: nowrap; }
+.dk-run-model { font-size: var(--fs-xs); color: var(--text-quiet); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }   /* cut, like the title above it: a long model line never runs under the time beside it */
 .dk-run-model .dk-mono { font-size: var(--fs-2xs); color: var(--text-dim); }
 .dk-run-open:hover .dk-run-title { color: var(--text-strong); }
 .dk-time { font-size: var(--fs-2xs); color: var(--text); min-width: 7ch; text-align: right; white-space: nowrap; }
