@@ -56,13 +56,28 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev \
             build-essential pkg-config xvfb webkit2gtk-driver
       - name: build the app (a debug build with the UI embedded)
+        if: runner.os == 'Linux'
         working-directory: apps/desktop/src-tauri
         run: pnpm dlx @tauri-apps/cli@2 build --debug --no-bundle
-      - name: tauri-driver, and the msedgedriver of the WebView2 runtime on this runner
+      # WebView2 ignores the debugging switch WebDriver passes in WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS once an app names its
+      # own browser arguments, as every Tauri app does, so this test build names it: tauri.conf.json's main window, as it
+      # is, plus `additionalBrowserArgs` (wry's default arguments and the port). What ships is built without it.
+      - name: build the app (a debug build with the UI embedded and the web view's debugging port)
+        if: runner.os == 'Windows'
+        working-directory: apps/desktop/src-tauri
+        run: |
+          python - <<'PY'
+          import json, os
+          conf = json.load(open("tauri.conf.json"))
+          main = dict(conf["app"]["windows"][0])
+          main["additionalBrowserArgs"] = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --remote-debugging-port=9222"
+          json.dump({"app": {"windows": [main]}}, open(os.path.join(os.environ["RUNNER_TEMP"], "debug-port.json"), "w"))
+          PY
+          pnpm dlx @tauri-apps/cli@2 build --debug --no-bundle --config "$RUNNER_TEMP/debug-port.json"
+      - name: the msedgedriver of the WebView2 runtime on this runner
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          cargo install tauri-driver --version 2.1.0 --locked
           $id = '{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
           $ver = $null
           foreach ($k in "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\$id", "HKLM:\SOFTWARE\Microsoft\EdgeUpdate\Clients\$id", "HKCU:\Software\Microsoft\EdgeUpdate\Clients\$id") {
@@ -83,11 +98,10 @@ jobs:
       - name: first run's window on Windows (the controls, the Win32 checks)
         if: runner.os == 'Windows'
         run: python tests/e2e/smoke_window.py target/debug/boopis.exe --shot "$RUNNER_TEMP/window-windows.png"
-      - name: when the Windows smoke fails, the web view without a driver (its processes, its debugging port, its folders)
+      - name: when the Windows smoke fails, the app without a driver (its web view's processes, debugging port and folders)
         if: failure() && runner.os == 'Windows'
         shell: pwsh
         run: |
-          $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'
           $env:BOOPIS_HERMES = 'existing'
           $p = Start-Process -FilePath target\debug\boopis.exe -PassThru
           Start-Sleep -Seconds 45

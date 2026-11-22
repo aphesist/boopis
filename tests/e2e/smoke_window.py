@@ -17,10 +17,12 @@ run shows its welcome) and checks, in the real webview:
 - elsewhere, Close closes the app.
 
 Linux: ``WebKitWebDriver`` under ``xvfb-run`` (Debian/Ubuntu: ``webkit2gtk-driver``, ``xvfb``), with no window manager,
-so maximise and minimise are not checked there. Windows: ``tauri-driver`` with ``msedgedriver`` matching the WebView2
-runtime (``--native-driver`` or ``MSEDGEDRIVER``). ``--tiling`` sets Hyprland's variable, so the host detects a tiling
-desktop (Linux only). Exit 0 on success, 1 on a failed check, 3 when a prerequisite is missing. Everything it starts is
-stopped.
+so maximise and minimise are not checked there. Windows: the app is started here and ``msedgedriver`` (matching the
+WebView2 runtime: ``--native-driver`` or ``MSEDGEDRIVER``) attaches to its web view's debugging port, 9222, which only
+a test build has (``desktop-window.yml`` adds it to the window's ``additionalBrowserArgs``): tauri-driver passes the
+switch in an environment variable that WebView2 ignores once an app names its own browser arguments, as every Tauri app
+does. ``--tiling`` sets Hyprland's variable, so the host detects a tiling desktop (Linux only). Exit 0 on success, 1 on
+a failed check, 3 when a prerequisite is missing. Everything it starts is stopped.
 """
 
 from __future__ import annotations
@@ -40,6 +42,7 @@ import urllib.request
 from pathlib import Path
 
 PORT = 4466
+CDP_PORT = 9222  # the web view's debugging port in the Windows test build (desktop-window.yml)
 WINDOWS = sys.platform == "win32"
 LABELS = {"min": "Minimize", "max": "Maximize", "close": "Close window"}
 
@@ -252,6 +255,15 @@ def win32_checks(d: Driver) -> None:
     check(bool(wait_for(lambda: not user32.IsWindow(hwnd), "the window to close", 15)), "Close closes the window")
 
 
+def cdp_version() -> dict | None:
+    """What the web view's debugging port says about itself, or None while it is not up."""
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=5) as r:
+            return json.loads(r.read())
+    except (OSError, ValueError):
+        return None
+
+
 def diagnose(driver_log: Path) -> None:
     """What a session that did not start leaves behind: the driver's log, and on Windows the web view's processes."""
     with contextlib.suppress(OSError):
@@ -281,9 +293,6 @@ def main() -> int:
         "--tiling", action="store_true", help="look like Hyprland (Linux): the host detects a tiling desktop"
     )
     ap.add_argument("--native-driver", default=os.environ.get("MSEDGEDRIVER"), help="msedgedriver.exe (Windows)")
-    ap.add_argument(
-        "--tauri-driver", action="store_true", help="go through tauri-driver (Windows) instead of msedgedriver"
-    )
     a = ap.parse_args()
     app = str(Path(a.app).resolve())
     expect = a.expect or ("close" if a.tiling else "mac" if sys.platform == "darwin" else "all")
@@ -296,24 +305,19 @@ def main() -> int:
     env.pop("DESKTOP_SESSION", None)
     env.update({"BOOPIS_HERMES": "existing", "HERMES_HOME": str(profile / "engine"), "RUST_LOG": "info"})
     driver_log = profile / "webdriver.log"
+    app_proc: subprocess.Popen[bytes] | None = None
     if WINDOWS:
         if not a.native_driver or not Path(a.native_driver).exists():
             print("needs msedgedriver (--native-driver or MSEDGEDRIVER)", file=sys.stderr)
             return 3
-        # msedgedriver itself, with the capabilities tauri-driver would hand it for `tauri:options` (its server.rs on
-        # Windows: browserName webview2, ms:edgeOptions.binary), so its own log can say why a session did not start
-        env["TAURI_WEBVIEW_AUTOMATION"] = "true"
+        # tauri-driver (and msedgedriver launching the app) hand the web view its debugging switch through
+        # WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS, which WebView2 ignores when the app names its own browser arguments, as
+        # every Tauri app does. So the app under test is built with the switch in its window's `additionalBrowserArgs`
+        # (desktop-window.yml), started here, and msedgedriver attaches to it.
+        app_proc = subprocess.Popen([app], env=env)
         cmd = [a.native_driver, f"--port={PORT}", "--verbose", f"--log-path={driver_log}"]
-        if shutil.which("tauri-driver") and a.tauri_driver:
-            cmd = [str(shutil.which("tauri-driver")), "--port", str(PORT), "--native-driver", a.native_driver]
-        options = {"binary": app, "args": []}
-        caps = {
-            "capabilities": {
-                "alwaysMatch": {"browserName": "webview2", "ms:edgeChromium": True, "ms:edgeOptions": options}
-            }
-        }
-        if a.tauri_driver:
-            caps = {"capabilities": {"alwaysMatch": {"tauri:options": {"application": app}}}}
+        options = {"debuggerAddress": f"127.0.0.1:{CDP_PORT}"}
+        caps = {"capabilities": {"alwaysMatch": {"browserName": "webview2", "ms:edgeOptions": options}}}
     else:
         if not shutil.which("xvfb-run") or not shutil.which("WebKitWebDriver"):
             print("needs xvfb-run and WebKitWebDriver", file=sys.stderr)
@@ -349,12 +353,22 @@ def main() -> int:
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=None)
     d = Driver(PORT)
     try:
+        if app_proc:
+            print("web view:", json.dumps(wait_for(cdp_version, f"the web view's debugging port {CDP_PORT}", 90)))
         wait_for(lambda: d.call("GET", "/status").get("value", {}).get("ready") is not None, "the web driver")
         try:
             d.sid = d.call("POST", "/session", caps, timeout=120)["value"]["sessionId"]
-        except RuntimeError:
-            diagnose(driver_log)
-            raise
+        except RuntimeError as e:
+            if not WINDOWS:
+                diagnose(driver_log)
+                raise
+            print("     attaching as webview2 failed, trying again as plain Edge:", str(e)[:200])
+            caps["capabilities"]["alwaysMatch"].pop("browserName", None)
+            try:
+                d.sid = d.call("POST", "/session", caps, timeout=120)["value"]["sessionId"]
+            except RuntimeError:
+                diagnose(driver_log)
+                raise
 
         def drawn() -> bool:
             got = d.js(BAR_SCRIPT)
@@ -408,6 +422,12 @@ def main() -> int:
 
         if WINDOWS:
             win32_checks(d)
+            if app_proc:
+                try:
+                    code = app_proc.wait(20)
+                except subprocess.TimeoutExpired:
+                    code = None
+                check(code is not None, "the app quits with its window", f"exit code {code}")
         else:
             close = d.find(".hx-first-run [data-win=close]")
             try:
@@ -428,11 +448,13 @@ def main() -> int:
     finally:
         with contextlib.suppress(Exception):
             d.call("DELETE", f"/session/{d.sid}", timeout=15)
-        proc.terminate()
-        try:
-            proc.wait(10)
-        except subprocess.TimeoutExpired:
-            proc.kill()
+        for p in (proc, app_proc):
+            if p and p.poll() is None:
+                p.terminate()
+                try:
+                    p.wait(10)
+                except subprocess.TimeoutExpired:
+                    p.kill()
         shutil.rmtree(profile, ignore_errors=True)
 
 
