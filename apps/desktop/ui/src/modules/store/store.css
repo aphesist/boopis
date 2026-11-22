@@ -1,7 +1,7 @@
 /* The store's placement: the view is the Settings dialog's body, wider; every control in it is the kit's (rows, the card layer's
    form card, segmented controls, the search field and the themed select). Only layout lives here. */
 .hx-store-dialog { width: min(920px, calc(100% - 32px)); height: min(760px, calc(100% - 64px)); }
-.hx-store { display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; gap: var(--sp-4); align-content: start; }
+.hx-store { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--sp-4); align-content: start; }
 .hx-store__head { display: flex; justify-content: flex-start; }
 .hx-store__main { min-width: 0; }
 .hx-store__stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); align-content: start; min-width: 0; }
