@@ -1743,6 +1743,49 @@ pub fn room_settings_set(
     })
 }
 
+/// A bot's own cap on turns for `boopis run --bot` (`bots/limit.rs`): the engine's goal budget, `goals.max_turns`, kept in the
+/// bot's own configuration where the engine reads it.
+#[derive(Debug, Clone, Serialize, Type)]
+pub struct BotRunLimitView {
+    /// The cap the bot keeps, or none (the default applies).
+    pub max_turns: Option<u32>,
+    /// The cap a bot without its own has.
+    pub default_max_turns: u32,
+}
+
+/// What the bot `name` keeps.
+///
+/// Errors: `hx.bots.not_found` for a bot that is not there, `hx.host.config` for a configuration that cannot be read.
+#[tauri::command]
+#[specta::specta]
+pub fn bot_run_limit_get(
+    state: State<'_, AppState>,
+    name: String,
+) -> std::result::Result<BotRunLimitView, HostError> {
+    Ok(BotRunLimitView {
+        max_turns: state.bots.run_limit(&bots_layout(&state), &name)?,
+        default_max_turns: crate::bots::limit::DEFAULT_MAX_TURNS,
+    })
+}
+
+/// Keep the cap on turns for the bot `name` (`None`: the default again).
+///
+/// Errors: `hx.invalid_params` for a cap outside 1 to 1000, `hx.bots.not_found` for a bot that is not there.
+#[tauri::command]
+#[specta::specta]
+pub async fn bot_run_limit_set(
+    state: State<'_, AppState>,
+    name: String,
+    max_turns: Option<u32>,
+) -> std::result::Result<BotRunLimitView, HostError> {
+    let layout = bots_layout(&state);
+    state.bots.set_run_limit(&layout, &name, max_turns).await?;
+    Ok(BotRunLimitView {
+        max_turns: state.bots.run_limit(&layout, &name)?,
+        default_max_turns: crate::bots::limit::DEFAULT_MAX_TURNS,
+    })
+}
+
 /// The one notice the bots' repair left (the governance change), taken: the app shows it once. `None` when there is none.
 #[tauri::command]
 #[specta::specta]

@@ -154,6 +154,14 @@ export interface BotSessions {
   /** the id of the session the thread is, null before the first message */
   current(botId: string): string | null;
 }
+/** A bot's own cap on the turns `boopis run --bot` lets one task take: the engine's goal budget, kept in the bot's own configuration
+ *  where the engine reads it, so the command line and the app see the same number */
+export interface TurnLimit {
+  /** the cap this bot keeps, null when it has none and the default applies */
+  turns: number | null;
+  /** the cap a bot without its own has */
+  fallback: number;
+}
 export interface BotsSource extends Feed<BotsSnapshot, BotsEvent> {
   catalog(): BotCatalog;
   /* commands */
@@ -172,6 +180,10 @@ export interface BotsSource extends Feed<BotsSnapshot, BotsEvent> {
   archived: Watch<readonly ArchivedBot[]>;
   /** brings an archived teammate back under its old name (it arrives as `bot-created`); rejects, with a sentence for the user, when that name is taken again */
   restore(id: string): Promise<void>;
+  /** the bot's cap on turns for a run from the command line; rejects with a sentence when it cannot be read */
+  runLimit(id: string): Promise<TurnLimit>;
+  /** keeps (or, with null, forgets) the bot's cap, 1 to 1000; resolves with what is kept */
+  setRunLimit(id: string, turns: number | null): Promise<TurnLimit>;
   /** the live provider's: real profiles (see `BotsAdmin`); absent on the mock */
   admin?: BotsAdmin;
   /** the live provider's: the bot's sessions as conversations; absent on the mock, whose threads are its own */

@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 
 use super::spec::{Bot, Connector, Cron, Look, Team};
+use crate::bots::limit::Cap;
 
 /// A bot as it is now.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -22,6 +23,8 @@ pub struct BotNow {
     pub look: Option<Look>,
     /// Its Governed switch.
     pub governed: bool,
+    /// Its cap on turns for `boopis run --bot`, when it keeps one.
+    pub max_turns: Option<u32>,
     /// Its skills, `(name, enabled)`.
     pub skills: Vec<(String, bool)>,
     /// Its MCP servers by name, with their program and arguments.
@@ -130,6 +133,8 @@ pub enum Op {
         look: Option<Look>,
         /// The Governed switch, when it changes.
         governed: Option<bool>,
+        /// The cap on turns for `boopis run --bot`, when it changes (a number, or the default again).
+        max_turns: Option<Cap>,
     },
     /// Switch skills on.
     EnableSkills {
@@ -323,6 +328,9 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
                 if want.governed == Some(true) {
                     w.push("governed".to_owned());
                 }
+                if let Some(n) = want.max_turns {
+                    w.push(format!("max turns {n}"));
+                }
                 w.join(", ")
             };
             out.actions.push(Action {
@@ -390,6 +398,13 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
         if governed.is_some() {
             what.push("governed switch");
         }
+        let max_turns = want
+            .max_turns
+            .filter(|n| have.max_turns != Some(*n))
+            .map(Cap::Turns);
+        if max_turns.is_some() {
+            what.push("max turns");
+        }
         if !what.is_empty() {
             out.actions.push(Action {
                 mark: '~',
@@ -403,6 +418,7 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
                     model,
                     look,
                     governed,
+                    max_turns,
                 },
             });
         }

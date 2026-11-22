@@ -90,6 +90,8 @@ const COMMANDS: &[&str] = &[
     "bots_notice",
     "room_settings_get",
     "room_settings_set",
+    "bot_run_limit_get",
+    "bot_run_limit_set",
 ];
 
 fn main() {

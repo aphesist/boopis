@@ -146,6 +146,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::bots_notice,
             commands::room_settings_get,
             commands::room_settings_set,
+            commands::bot_run_limit_get,
+            commands::bot_run_limit_set,
         ])
         .events(collect_events![
             ConnectionStateEvent,

@@ -68,6 +68,10 @@ pub struct Bot {
     /// Its Governed switch (off when not said, for a new bot).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub governed: Option<bool>,
+    /// The most turns `boopis run --bot` lets one task take with this bot: the engine's goal budget (`goals.max_turns`) in the
+    /// bot's own configuration. Not said: left as it is (a new bot has none, so the default applies).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_turns: Option<u32>,
 }
 
 /// An orb.
@@ -257,6 +261,14 @@ impl Team {
             }
             if b.model.as_ref().is_some_and(|m| m.trim().is_empty()) {
                 p.push(format!("bots.{n}.model: empty"));
+            }
+            if let Some(t) = b.max_turns
+                && crate::bots::limit::check_turns(t).is_err()
+            {
+                p.push(format!(
+                    "bots.{n}.max_turns: 1 to {}",
+                    crate::bots::limit::LIMIT_MAX_TURNS
+                ));
             }
             let mut seen = BTreeSet::new();
             for (i, c) in b.connectors.iter().enumerate() {

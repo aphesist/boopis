@@ -17,6 +17,7 @@ import { logger } from '../../core/log';
 import { NeedsConfirmation } from '../../data/confirm';
 import { botIdBase, numbered } from '../../data/bot-id';
 import { APPROVALS, SUGGESTIONS } from '../../data/bot-catalog';
+import { TURN_LIMIT_DEFAULT } from '../../data/mock-groups';
 import { scheduleWords } from '../../data/cron';
 import { lineDiff, valueDiff } from '../../data/diff';
 import type { BotPatch, BotSessions, BotsAdmin, BotsEvent, BotsSource, BotsSnapshot, CreatePlan, PlannedWrite, RemovalNote, SchedulesSource } from '../../data/provider';
@@ -561,6 +562,16 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
     archive(id) { admin.archive(id).catch((e: unknown) => { log.error('the bot was not archived', e); }); },
     archived: archivedNow,
     restore: restoreArchived,
+    async runLimit(id) {
+      need(id);
+      if (!deps.bridge) return { turns: null, fallback: TURN_LIMIT_DEFAULT };
+      return deps.bridge.runLimit(id);
+    },
+    async setRunLimit(id, turns) {
+      need(id);
+      if (!deps.bridge) throw new Error('The limit can be set in the desktop app.');
+      return deps.bridge.setRunLimit(id, turns);
+    },
     admin,
     sessions: sessionsOf
   };

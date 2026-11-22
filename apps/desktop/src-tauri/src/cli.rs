@@ -20,6 +20,7 @@ pub mod connectors;
 mod groups;
 mod headless;
 mod remote;
+mod run_bot;
 mod team;
 mod team_live;
 
@@ -361,6 +362,9 @@ fn help_lines(out: &Out, version: &str) -> Vec<String> {
         format!("  {PRODUCT} groups     list, create, send to and read the log of group chats"),
         format!(
             "  {PRODUCT} run --group <group> \"<task>\"   run a task through a group to its end"
+        ),
+        format!(
+            "  {PRODUCT} run --bot <bot> \"<task>\"       run a task with one bot to its end"
         ),
         format!("  {PRODUCT} team       apply or export a whole team as one file"),
         format!("  {PRODUCT} bots       list, create and change bots"),

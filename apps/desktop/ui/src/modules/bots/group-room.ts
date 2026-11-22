@@ -17,6 +17,7 @@ import { markSelected, drawGroups } from './list';
 import { checkClips } from './clips';
 import { closeSettings } from './settings';
 import { openNewGroup } from './new-group';
+import { openLimitMenu } from './run-limit';
 import { mountBoard } from './group-board';
 import type { BoardView } from './group-board';
 import { arrival, atEnd, entryActs, glanceAt, jumpButton, listWords, placeToLine, setJump, toLine, unreadDivider } from './ledger';
@@ -150,18 +151,11 @@ function renderHead(g: Group): void {
 }
 /** The most rounds `boopis run --group` lets one discussion take in this group. The engine pauses a discussion at its own limit and has
  *  none per room, so this is boopis's cap, kept by the host and read by the command line; the app's own Continue button is unchanged. */
-const ROUND_CHOICES = [5, 20, 30, 60, 100];
 function openRoundLimit(g: Group, anchor: HTMLElement): void {
   groups().roundLimit(g.id).then((cur) => {
-    const choices = cur.rounds !== null && !ROUND_CHOICES.includes(cur.rounds) ? [...ROUND_CHOICES, cur.rounds].sort((a, b) => a - b) : ROUND_CHOICES;
-    const items = [
-      { title: 'Most rounds a run may take' },
-      { label: 'Default (' + cur.fallback + ')', value: 'default', checked: cur.rounds === null },
-      ...choices.map((n) => ({ label: String(n), value: String(n), mono: true, checked: cur.rounds === n }))
-    ];
-    ui.menu.open(anchor, items, {
-      align: 'end', label: 'Rounds a run may take in ' + g.name,
-      onSelect: (v) => { groups().setRoundLimit(g.id, v === 'default' ? null : Number(v)).then((now) => { toast(now.rounds === null ? g.name + ' runs for up to ' + now.fallback + ' rounds.' : g.name + ' runs for up to ' + now.rounds + ' rounds.'); }).catch((e: unknown) => { toast('The limit was not saved: ' + sentence(e)); }); }
+    openLimitMenu(anchor, {
+      title: 'Most rounds a run may take', label: 'Rounds a run may take in ' + g.name, kept: cur.rounds, fallback: cur.fallback,
+      onPick: (v) => { groups().setRoundLimit(g.id, v).then((now) => { toast(now.rounds === null ? g.name + ' runs for up to ' + now.fallback + ' rounds.' : g.name + ' runs for up to ' + now.rounds + ' rounds.'); }).catch((e: unknown) => { toast('The limit was not saved: ' + sentence(e)); }); }
     });
   }).catch((e: unknown) => { toast('The limit could not be read: ' + sentence(e)); });
 }

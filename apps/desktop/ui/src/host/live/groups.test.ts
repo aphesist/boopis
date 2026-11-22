@@ -407,7 +407,7 @@ describe('boopis’s own cap on rounds for a group', () => {
   });
   it('says so where there is no host to keep it, and for a group that is not there', async () => {
     const { g } = await open((x) => { x.rooms.push(room('r1', 'release crew', ['atlas', 'nina'])); });
-    expect(await g.source.roundLimit('r1')).toEqual({ rounds: null, fallback: 30 });
+    expect(await g.source.roundLimit('r1')).toEqual({ rounds: null, fallback: 10 });
     await expect(g.source.setRoundLimit('r1', 12)).rejects.toThrow(/desktop app/);
     await expect(g.source.roundLimit('nope')).rejects.toThrow();
   });

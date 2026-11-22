@@ -10,6 +10,8 @@ const gid = (p: string): string => p + (++n).toString(36);
 
 /** the cap a group without its own has (`rooms/settings.rs`) */
 export const ROUND_LIMIT_DEFAULT = 10;
+/** the cap on turns a bot without its own has for `boopis run --bot` (the host's `bots/limit.rs`) */
+export const TURN_LIMIT_DEFAULT = 10;
 export const GROUP_NATURE = 'Each member reads what you write and what the others said, and answers in its own words. Write @name to ask one of them.';
 export const memberOf = (b: Pick<Bot, 'id' | 'name'>): GroupMember => ({ id: b.id, profile: b.id, handle: b.id, name: b.name });
 

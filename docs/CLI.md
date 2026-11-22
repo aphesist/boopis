@@ -77,12 +77,49 @@ The engine's kanban cannot take "the remaining steps" as separate tasks: what is
 list, and no command turns it into one. One task for the lead to split is what can be done truthfully. A board that does not
 exist is refused (`boopis team apply` can make it).
 
+## Run a task with one bot
+
+```
+boopis run --bot <bot> "<task>" [--max-turns N] [--timeout MINUTES] [--file FILE] [--json]
+```
+
+A single bot has no rounds. The engine has a goal mode for this: a task is kept as a goal, and after every turn the engine's judge
+decides whether it is done; if it is not, the bot is taken through another turn, until the judge says done, the turn budget is spent,
+or the goal is paused. `run --bot` starts that goal in a new session of the bot (the bot's own: its instructions, memory, skills and
+model), keeps the bot working, prints each answer as it arrives and ends with one line that says why it stopped, with the same
+exit codes as a group's run:
+
+| Why | Exit | What it means |
+|---|---|---|
+| done | 0 | The judge says the task is done. |
+| cap reached | 3 | The turn budget is spent and the task is not done. The goal is paused where it is. |
+| a bot needs you | 4 | An approval waits in the bot's session (`run` never answers one for you: answer it in the app, in the bot's recent sessions, then run again), or the judge ruled the task blocked on something only you can give. |
+| error | 1 | A turn failed or was stopped (said in boopis's words, with what to do), the bot ended a turn with no answer, or the judge could not run. |
+| timed out | 1 | `--timeout` (60 minutes by default) passed. |
+
+When a run ends for anything but done or the cap, the goal is paused, so the bot does not go on unattended after the command is gone.
+The session is the bot's own, so the app lists it in the bot's recent sessions (`--json` prints its id as `session`). A goal the judge parks (it waits for a process or a delay) is waited out and judged again,
+within the time limit.
+
+**The cap.** It is the number of turns in all, the task's own first. The order is the flag `--max-turns`, then the bot's own
+cap, then 10. A bot's cap is set with `boopis bots set <bot> --max-turns N` (and `default` to go back), with `boopis bots create
+... --max-turns N`, with `max_turns` for the bot in a team file, or in the app, in the bot's settings sheet (the Run limit row,
+which offers the default, 5, 20, 30, 60 and 100). Unlike a group's cap it is the engine's own number, `goals.max_turns` in the bot's
+configuration, which `run` passes to the goal as its budget; a bot that has none runs for ten turns, and the engine's own default
+(20) is not used.
+
+**How it is driven.** The run does what the engine's own command-line client does with a goal (`session.automation`): it sets the
+goal with the budget, submits each turn, and after it asks the engine's judge for its verdict and the goal's new state. Nothing
+about done is inferred here: done, paused at the budget and blocked are the engine's own statuses, and a turn's failure is its
+receipt's. With `--json` the lines are `started` (the session), `message` (`turn`, `who`, `text`), `continued` (`used`, `of`),
+`parked` and a last `end` object (`stop` as for a group, with `session`, `turns`, `max_turns`, `messages`).
+
 ## Bots
 
 ```
 boopis bots list [--json]
-boopis bots create <name> [--role TEXT] [--soul-file FILE|-] [--model MODEL] [--shape SHAPE --color #rrggbb] [--governed] [--json]
-boopis bots set <name> [--role TEXT] [--soul-file FILE|-] [--model MODEL] [--shape SHAPE] [--color #rrggbb] [--governed|--ungoverned] [--json]
+boopis bots create <name> [--role TEXT] [--soul-file FILE|-] [--model MODEL] [--shape SHAPE --color #rrggbb] [--governed] [--max-turns N] [--json]
+boopis bots set <name> [--role TEXT] [--soul-file FILE|-] [--model MODEL] [--shape SHAPE] [--color #rrggbb] [--governed|--ungoverned] [--max-turns N|default] [--json]
 ```
 
 Made and changed by the same operations the Bots form and `team apply` use, so a bot made here is the same bot (its home, its
@@ -90,6 +127,11 @@ plugin, its approvals). A new bot is ungoverned unless you say `--governed`, and
 only what differs: setting a bot to what it already is does nothing (exit 0). `create` refuses a name that exists and `set`
 one that does not (exit 1). Because they go through the gateway, they attach to the running app's, which is where the secret
 channel is.
+
+`--max-turns N` (1 to 1000) is the bot's own cap for `boopis run --bot`, and `--max-turns default` takes the bot back to the default
+of 10. It is written where the engine reads a goal's budget: `goals.max_turns` in the bot's own configuration, by the engine's own
+`config set` (and `config unset` for the way back), so the number is the bot's wherever it is run. `bots list --json` shows it as
+`max_turns` (`null` when the bot has none) beside `default_max_turns`.
 
 ## Teams
 
@@ -99,7 +141,7 @@ boopis team apply <file> [--dry-run] [--prune] [--json]
 boopis team export [--output FILE [--force]] [--json]
 ```
 
-A team file holds a whole team: bots (role, instructions, model, look, skills, connectors, the Governed switch), rooms
+A team file holds a whole team: bots (role, instructions, model, look, skills, connectors, the Governed switch, `max_turns`), rooms
 (members, lead, purpose, max rounds), kanban boards (name, folder) and cron jobs (schedule, prompt, where the result goes,
 paused). The format is [`team.schema.json`](team.schema.json); a complete example, the Paper Past team, is in
 [`team-example/`](team-example/paper-past.yaml). A file with a mistake is refused whole: every problem is listed with where
@@ -115,7 +157,7 @@ What each part does:
 
 - **Bots**, by name. A new bot is made the way the Bots form makes it: its profile, boopis's record (look, Governed switch),
   and everything a bot needs to run (plugins, its seat in groups, the model's provider). An existing bot is compared field by
-  field (role, instructions, model, look, Governed switch); only what is written in the file is compared, and only what
+  field (role, instructions, model, look, Governed switch, `max_turns`); only what is written in the file is compared, and only what
   differs is changed. A model is `opus` (the provider the app uses) or `provider/model`. Governed mode runs on a frontier
   model only, so asking for it on another is refused. `skills` are checked: a skill the bot does not have is reported (the
   store installs skills), one that is switched off is switched on. `connectors` are added when missing; one that is there
@@ -139,7 +181,7 @@ environment values (the engine does not list them). Exporting and applying the r
 
 ## For scripts
 
-`--json` prints one object per line. `run` and `groups send --wait` print `sent`, `message`, `continued`, `note` and a last
+`--json` prints one object per line. `run --group` and `groups send --wait` print `sent`, `message`, `continued`, `note` and a last
 `end` object (`stop` is one of `done`, `cap_reached`, `paused`, `needs_owner`, `error`, `timed_out`, with `rounds`,
-`continues` and `messages`). `team apply --json` prints a `plan` object and then an `applied` object. The exit code is the
+`continues` and `messages`); `run --bot` prints its own, as said above. `team apply --json` prints a `plan` object and then an `applied` object. The exit code is the
 same as without `--json`.

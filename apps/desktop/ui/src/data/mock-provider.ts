@@ -13,7 +13,7 @@ import type {
   CouncilSource, AgentTurn, ApprovalMessage, ArchivedBot, Bot, BotConfig, ContextUsage, ConversationEvent, DiffFile, RunSnapshot, SessionSummary, TextMessage, ThreadMessage, Turn, Wait
 } from './types';
 import * as M from './mock-data';
-import { createMockGroups } from './mock-groups';
+import { createMockGroups, TURN_LIMIT_DEFAULT } from './mock-groups';
 import { createMockStore } from './mock-store';
 
 let nextId = 0;
@@ -68,6 +68,8 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
     if (f) { bots.push(M.fixtureBot(f.bot)); seedThread(f.bot.id, f.thread); }
   }
   const botsEv = emitter<BotsEvent>();
+  /** each bot's own cap on turns for a run from the command line (the host keeps it in the bot's configuration) */
+  const turnLimits = new Map<string, number>();
   const archivedSeeds = M.ARCHIVED_SEEDS.map((a) => ({ id: 'archived--' + a.bot.id, name: 'archived--' + a.bot.id, was: a.bot.id, at: a.at, when: a.when, seed: a.bot }));
   const archivedBots = store<readonly ArchivedBot[]>(archivedSeeds.map(({ seed: _seed, ...row }) => row));
   const botById = (id: string): Bot | undefined => bots.find((b) => b.id === id);
@@ -236,6 +238,14 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       botsEv.emit({ type: 'bot-archived', id });
     },
     archived: archivedBots,
+    runLimit: (id) => (botById(id) ? Promise.resolve({ turns: turnLimits.get(id) ?? null, fallback: TURN_LIMIT_DEFAULT }) : Promise.reject(new Error('there is no teammate called ' + id))),
+    setRunLimit(id, turns) {
+      if (!botById(id)) return Promise.reject(new Error('there is no teammate called ' + id));
+      if (turns === null) turnLimits.delete(id);
+      else if (Number.isInteger(turns) && turns >= 1 && turns <= 1000) turnLimits.set(id, turns);
+      else return Promise.reject(new Error('A bot runs for 1 to 1000 turns.'));
+      return Promise.resolve({ turns: turnLimits.get(id) ?? null, fallback: TURN_LIMIT_DEFAULT });
+    },
     restore(id) {
       const a = archivedSeeds.find((x) => x.id === id);
       if (!a) return Promise.reject(new Error(id + ' is not archived'));

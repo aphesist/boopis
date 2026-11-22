@@ -10,6 +10,7 @@ use std::path::Path;
 use serde_json::json;
 
 use super::args::{Args, Kind};
+use crate::bots::limit::{self, Cap};
 use crate::team::apply::Backend;
 use crate::team::plan::{Current, Op};
 use crate::team::spec::{Bot, Look, SHAPES, is_color};
@@ -24,7 +25,7 @@ pub struct Ctx<'a> {
     pub err: &'a mut dyn Write,
 }
 
-const USAGE: &str = "usage: boopis bots list [--json] | create <name> [--role <text>] [--soul-file <file>] [--model <model>] [--shape <shape> --color <#rrggbb>] [--governed] | set <name> [--role <text>] [--soul-file <file>] [--model <model>] [--shape <shape>] [--color <#rrggbb>] [--governed|--ungoverned]";
+const USAGE: &str = "usage: boopis bots list [--json] | create <name> [--role <text>] [--soul-file <file>] [--model <model>] [--shape <shape> --color <#rrggbb>] [--governed] [--max-turns <n>] | set <name> [--role <text>] [--soul-file <file>] [--model <model>] [--shape <shape>] [--color <#rrggbb>] [--governed|--ungoverned] [--max-turns <n>|default]";
 
 fn fail(ctx: &mut Ctx<'_>, line: &str) {
     let _ = writeln!(ctx.err, "boopis: {line}");
@@ -85,7 +86,7 @@ async fn list(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
             .iter()
             .map(|(name, b)| {
                 json!({"name": name, "role": b.role, "provider": b.provider, "model": b.model, "look": b.look,
-                       "governed": b.governed})
+                       "governed": b.governed, "max_turns": b.max_turns, "default_max_turns": limit::DEFAULT_MAX_TURNS})
             })
             .collect();
         let _ = writeln!(ctx.out, "{}", json!({"bots": rows}));
@@ -118,6 +119,7 @@ const EDIT: &[(&str, Kind)] = &[
     ("color", Kind::Value),
     ("governed", Kind::Switch),
     ("ungoverned", Kind::Switch),
+    ("max-turns", Kind::Value),
     ("json", Kind::Switch),
 ];
 
@@ -173,6 +175,22 @@ fn governed_of(a: &Args) -> Result<Option<bool>, String> {
     }
 }
 
+/// `--max-turns N`, or `default` to forget the bot's own cap.
+fn cap_of(a: &Args) -> Result<Option<Cap>, String> {
+    let Some(v) = a.value("max-turns") else {
+        return Ok(None);
+    };
+    if matches!(v, "default" | "none") {
+        return Ok(Some(Cap::Default));
+    }
+    let n = v
+        .parse::<u32>()
+        .map_err(|_| format!("--max-turns takes a whole number or \"default\", not {v:?}"))?;
+    limit::check_turns(n)
+        .map(|n| Some(Cap::Turns(n)))
+        .map_err(|e| e.to_string())
+}
+
 async fn run_op(ctx: &mut Ctx<'_>, op: &Op, json: bool, name: &str, what: &str) -> i32 {
     match ctx.backend.run(op).await {
         Ok(()) => {
@@ -214,8 +232,15 @@ async fn create(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
         fail(ctx, &e.to_string());
         return 2;
     }
-    let made = (|| Ok::<_, String>((look_of(&a, None)?, soul_of(&a)?, governed_of(&a)?)))();
-    let (look, soul_text, governed) = match made {
+    let made = (|| {
+        Ok::<_, String>((
+            look_of(&a, None)?,
+            soul_of(&a)?,
+            governed_of(&a)?,
+            cap_of(&a)?,
+        ))
+    })();
+    let (look, soul_text, governed, cap) = match made {
         Ok(x) => x,
         Err(e) => {
             fail(ctx, &e);
@@ -239,6 +264,7 @@ async fn create(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
         model: a.value("model").map(str::to_owned),
         look,
         governed,
+        max_turns: cap.and_then(Cap::kept),
         ..Bot::default()
     };
     run_op(
@@ -254,6 +280,7 @@ async fn create(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
     .await
 }
 
+#[allow(clippy::too_many_lines)] // one pass: read, check, compare each field, send
 async fn set(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
     let a = match Args::read(rest, EDIT) {
         Ok(a) => a,
@@ -274,6 +301,7 @@ async fn set(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
         "color",
         "governed",
         "ungoverned",
+        "max-turns",
     ]
     .iter()
     .any(|o| a.has(o));
@@ -300,9 +328,10 @@ async fn set(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
             look_of(&a, have.look.as_ref())?,
             soul_of(&a)?,
             governed_of(&a)?,
+            cap_of(&a)?,
         ))
     })();
-    let (look, soul, governed) = match made {
+    let (look, soul, governed, cap) = match made {
         Ok(x) => x,
         Err(e) => {
             fail(ctx, &e);
@@ -326,7 +355,14 @@ async fn set(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
         .map(str::to_owned);
     let look = look.filter(|l| have.look.as_ref() != Some(l));
     let governed = governed.filter(|g| *g != have.governed);
-    if role.is_none() && soul.is_none() && model.is_none() && look.is_none() && governed.is_none() {
+    let max_turns = cap.filter(|c| c.kept() != have.max_turns);
+    if role.is_none()
+        && soul.is_none()
+        && model.is_none()
+        && look.is_none()
+        && governed.is_none()
+        && max_turns.is_none()
+    {
         let _ = writeln!(ctx.out, "nothing to change: {name} is as asked");
         return 0;
     }
@@ -339,6 +375,7 @@ async fn set(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
             model,
             look,
             governed,
+            max_turns,
         },
         a.has("json"),
         name,

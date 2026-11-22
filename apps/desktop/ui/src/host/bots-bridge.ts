@@ -4,17 +4,21 @@
    engine's own CLI in that home:
      prepare   after a bot is made (`fresh`), restored, or its model or Governed switch changed
      release   after a bot is archived or deleted: it leaves the groups
-     notice    the one notice the host's repair at start left (bots made before governance was opt-in), taken once */
+     notice    the one notice the host's repair at start left (bots made before governance was opt-in), taken once
+     runLimit  the bot's cap on turns for a run from the command line (`goals.max_turns` in its own home), read and kept */
 import { commands } from './bindings';
 import { asHostError } from './bridge';
 
-export type BotsCommands = Pick<typeof commands, 'botsPrepare' | 'botsRelease' | 'botsNotice'>;
+export type BotsCommands = Pick<typeof commands, 'botsPrepare' | 'botsRelease' | 'botsNotice' | 'botRunLimitGet' | 'botRunLimitSet'>;
 
 export interface BotsBridge {
   /** give the bot what its home needs; `problems` are plain sentences, one per step that could not be done */
   prepare(name: string, fresh: boolean): Promise<{ changed: boolean; problems: readonly string[] }>;
   release(name: string): Promise<void>;
   notice(): Promise<string | null>;
+  /** the bot's cap on turns for `boopis run --bot`, kept in its own configuration where the engine reads it */
+  runLimit(name: string): Promise<{ turns: number | null; fallback: number }>;
+  setRunLimit(name: string, turns: number | null): Promise<{ turns: number | null; fallback: number }>;
 }
 
 async function call<T>(p: Promise<T>): Promise<T> {
@@ -22,9 +26,12 @@ async function call<T>(p: Promise<T>): Promise<T> {
 }
 
 export function tauriBotsBridge(api: BotsCommands = commands): BotsBridge {
+  const view = (v: { max_turns: number | null; default_max_turns: number }): { turns: number | null; fallback: number } => ({ turns: v.max_turns, fallback: v.default_max_turns });
   return {
     prepare: (name, fresh) => call(api.botsPrepare(name, fresh)),
     release: async (name) => { await call(api.botsRelease(name)); },
-    notice: () => call(api.botsNotice())
+    notice: () => call(api.botsNotice()),
+    runLimit: async (name) => view(await call(api.botRunLimitGet(name))),
+    setRunLimit: async (name, turns) => view(await call(api.botRunLimitSet(name, turns)))
   };
 }

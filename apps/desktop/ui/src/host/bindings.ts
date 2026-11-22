@@ -331,6 +331,18 @@ export const commands = {
 	 *  Errors: `hx.invalid_params` for a bad id or a cap outside 1 to 1000.
 	 */
 	roomSettingsSet: (roomId: string, maxRounds: number | null, options?: InvokeOptions) => __TAURI_INVOKE<RoomSettingsView_Serialize>("room_settings_set", { roomId, maxRounds }, options),
+	/**
+	 *  What the bot `name` keeps.
+	 * 
+	 *  Errors: `hx.bots.not_found` for a bot that is not there, `hx.host.config` for a configuration that cannot be read.
+	 */
+	botRunLimitGet: (name: string, options?: InvokeOptions) => __TAURI_INVOKE<BotRunLimitView_Serialize>("bot_run_limit_get", { name }, options),
+	/**
+	 *  Keep the cap on turns for the bot `name` (`None`: the default again).
+	 * 
+	 *  Errors: `hx.invalid_params` for a cap outside 1 to 1000, `hx.bots.not_found` for a bot that is not there.
+	 */
+	botRunLimitSet: (name: string, maxTurns: number | null, options?: InvokeOptions) => __TAURI_INVOKE<BotRunLimitView_Serialize>("bot_run_limit_set", { name, maxTurns }, options),
 };
 
 /** Events */
@@ -441,6 +453,34 @@ export type BotPrepared = {
 	changed: boolean,
 	/**  What could not be done; the other steps were. */
 	problems: string[],
+};
+
+/**
+ *  A bot's own cap on turns for `boopis run --bot` (`bots/limit.rs`): the engine's goal budget, `goals.max_turns`, kept in the
+ *  bot's own configuration where the engine reads it.
+ */
+export type BotRunLimitView = BotRunLimitView_Serialize | BotRunLimitView_Deserialize;
+
+/**
+ *  A bot's own cap on turns for `boopis run --bot` (`bots/limit.rs`): the engine's goal budget, `goals.max_turns`, kept in the
+ *  bot's own configuration where the engine reads it.
+ */
+export type BotRunLimitView_Deserialize = {
+	/**  The cap the bot keeps, or none (the default applies). */
+	max_turns?: number | null,
+	/**  The cap a bot without its own has. */
+	default_max_turns: number,
+};
+
+/**
+ *  A bot's own cap on turns for `boopis run --bot` (`bots/limit.rs`): the engine's goal budget, `goals.max_turns`, kept in the
+ *  bot's own configuration where the engine reads it.
+ */
+export type BotRunLimitView_Serialize = {
+	/**  The cap the bot keeps, or none (the default applies). */
+	max_turns: number | null,
+	/**  The cap a bot without its own has. */
+	default_max_turns: number,
 };
 
 /**  Where to go, and (for a flow that has one) the code to type. */

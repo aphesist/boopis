@@ -129,7 +129,7 @@ fn finish(outcome: std::result::Result<i32, Fail>, ctx: &mut Ctx<'_>) -> i32 {
 }
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a time of day from a positive timestamp
-fn clock(at: f64) -> String {
+pub(super) fn clock(at: f64) -> String {
     let s = at as u64 % 86_400;
     format!("{:02}:{:02}:{:02}", s / 3600, (s / 60) % 60, s % 60)
 }
@@ -605,7 +605,7 @@ async fn run_inner(args: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i3
     )?;
     let Some(key) = a.value("group") else {
         return Err(Fail::Usage(
-            "run needs a group: boopis run --group \"paper past\" \"the task\"".into(),
+            "run needs a group or a bot: boopis run --group \"paper past\" \"the task\" or boopis run --bot kai \"the task\"".into(),
         ));
     };
     let task = text_of(&a, 0, ctx)?;

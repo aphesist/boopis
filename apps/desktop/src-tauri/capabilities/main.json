@@ -96,6 +96,8 @@
     "allow-bots-release",
     "allow-bots-notice",
     "allow-room-settings-get",
-    "allow-room-settings-set"
+    "allow-room-settings-set",
+    "allow-bot-run-limit-get",
+    "allow-bot-run-limit-set"
   ]
 }

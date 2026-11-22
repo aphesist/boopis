@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bot-run-limit-get"
+description = "Enables the bot_run_limit_get command without any pre-configured scope."
+commands.allow = ["bot_run_limit_get"]
+
+[[permission]]
+identifier = "deny-bot-run-limit-get"
+description = "Denies the bot_run_limit_get command without any pre-configured scope."
+commands.deny = ["bot_run_limit_get"]

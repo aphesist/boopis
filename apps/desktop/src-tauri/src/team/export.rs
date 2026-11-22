@@ -66,6 +66,7 @@ pub fn export(now: &Current) -> Exported {
                     })
                     .collect(),
                 governed: Some(b.governed),
+                max_turns: b.max_turns,
             },
         );
     }

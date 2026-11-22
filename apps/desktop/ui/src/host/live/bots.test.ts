@@ -582,12 +582,15 @@ describe('what a teammate cannot do yet is not pretended', () => {
 describe('what a bot’s home needs is the host’s (ADR-0042)', () => {
   function bridged(h = new FakeHermes()) {
     const calls: string[] = [];
+    const kept = new Map<string, number>();
     const shown: string[] = [];
     let notice: string | null = 'Governed mode now really applies to a bot when you turn it on.';
     const bridge = {
       prepare: (name: string, fresh: boolean) => { calls.push('prepare ' + name + (fresh ? ' fresh' : '')); return Promise.resolve({ changed: true, problems: name === 'nina' ? ['its place in groups: boopis could not finish'] : [] }); },
       release: (name: string) => { calls.push('release ' + name); return Promise.resolve(); },
-      notice: () => { const n = notice; notice = null; return Promise.resolve(n); }
+      notice: () => { const n = notice; notice = null; return Promise.resolve(n); },
+      runLimit: (name: string) => { calls.push('runLimit ' + name); return Promise.resolve({ turns: kept.get(name) ?? null, fallback: 10 }); },
+      setRunLimit: (name: string, turns: number | null) => { calls.push('setRunLimit ' + name + ' ' + turns); if (turns === null) kept.delete(name); else kept.set(name, turns); return Promise.resolve({ turns: kept.get(name) ?? null, fallback: 10 }); }
     };
     const bots = createLiveBots({ client: h.main as unknown as GatewayClient, linkTo: h.linkTo, now: () => NOW, pollMs: null, bridge, notify: (t) => shown.push(t) });
     return { h, bots, calls, shown };
@@ -614,6 +617,20 @@ describe('what a bot’s home needs is the host’s (ADR-0042)', () => {
     // each flow prepares its bot once: the roster reads in between leave it to the flow
     expect(calls.filter((c) => c.startsWith('prepare kai')).length).toBe(2);
     expect(calls.filter((c) => c === 'prepare atlas' || c === 'prepare atlas fresh')).toEqual(['prepare atlas']);
+  });
+  it('reads and keeps a bot’s cap on turns through the host, and says so where there is no host', async () => {
+    const { bots, calls } = bridged();
+    await bots.ready; await bots.settled();
+    expect(await bots.source.runLimit('atlas')).toEqual({ turns: null, fallback: 10 });
+    expect(await bots.source.setRunLimit('atlas', 30)).toEqual({ turns: 30, fallback: 10 });
+    expect(await bots.source.runLimit('atlas')).toEqual({ turns: 30, fallback: 10 });
+    expect(await bots.source.setRunLimit('atlas', null)).toEqual({ turns: null, fallback: 10 });
+    expect(calls.filter((c) => c.includes('Limit'))).toEqual(['runLimit atlas', 'setRunLimit atlas 30', 'runLimit atlas', 'setRunLimit atlas null']);
+    await expect(bots.source.runLimit('nobody')).rejects.toThrow(/no teammate/);
+    const bare = createLiveBots({ client: new FakeHermes().main as unknown as GatewayClient, now: () => NOW, pollMs: null });
+    await bare.ready; await bare.settled();
+    expect(await bare.source.runLimit('atlas')).toEqual({ turns: null, fallback: 10 });
+    await expect(bare.source.setRunLimit('atlas', 30)).rejects.toThrow(/desktop app/);
   });
   it('prepares a bot that appears while the app runs, made anywhere else, once, and not the ones it had at start', async () => {
     const { h, bots, calls } = bridged();

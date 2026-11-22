@@ -17,7 +17,7 @@ import { inventoryLine } from './glance';
 import { bot, S } from './model';
 import { orbButton } from './orbs';
 import { checkClips } from './clips';
-import { closeSettings, hintOf, lookSection, openSettings, sectionOf, wireSectionKeys } from './settings';
+import { closeSettings, hintOf, lookSection, openSettings, runLimitRow, sectionOf, wireSectionKeys } from './settings';
 import { focusConversation, openBot, refreshPresence } from './room';
 import { openNew } from './new-bot';
 import { updateRow } from './list';
@@ -178,7 +178,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     sec('model', 'Model', info.model ?? 'not set', [modelF]),
     sec('schedule', 'Schedule', jobsMeta, [hint('What it does when you have not asked. Each is a job in this bot’s own schedule.'), routines, routineErr, promptF, presets, cronF, el('div', { class: 'bt-add-row' }, addBtn)]),
     sec('capabilities', 'What it can use', null, [hint('The tools and skills this bot has. boopis shows them here; changing them is not offered here yet.'), caps]),
-    sec('rules', 'Rules', null, [hint('Saved with the bot, in its boopis folder. Governed applies from its next session and needs a frontier model; the workspace and what it asks first do not apply yet.'), gov, capRow, ws, appr, ownErr])
+    sec('rules', 'Rules', null, [hint('Saved with the bot, in its boopis folder. Governed applies from its next session and needs a frontier model; the workspace and what it asks first do not apply yet.'), gov, capRow, ws, appr, ownErr, el('div', { class: 'ui-set' }, runLimitRow(b))])
   );
   paintRoutines();
   const heads = wireSectionKeys(body);
