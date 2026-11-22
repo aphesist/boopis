@@ -182,7 +182,12 @@ async function shot(page, row) {
   const clip = await page.evaluate((app) => {
       const scope = window.__lab.scope();
       if (app && (!scope || scope.id === 'hx-app' || scope === document.body)) return null;
-      const els = [app ? scope : document.querySelector('.lab-cell'), ...document.querySelectorAll('.ui-tip.is-in, .ui-menu:not([data-static]), .ui-pop, .ui-listbox, .ui-toast.is-in')].filter(Boolean);
+      /* a stage state is cropped to its cell, joined with the scope it names: the first-run layer is drawn inside the cell
+         but fixed over the whole window, so the cell alone was a 24 px strip and its screenshot compared nothing. A scope
+         that holds the cell (the default, the stage) changes nothing; one inside the cell's box changes nothing either */
+      const cell = document.querySelector('.lab-cell');
+      const apart = !app && scope && cell && scope !== document.body && !scope.contains(cell) ? scope : null;
+      const els = [app ? scope : cell, apart, ...document.querySelectorAll('.ui-tip.is-in, .ui-menu:not([data-static]), .ui-pop, .ui-listbox, .ui-toast.is-in')].filter(Boolean);
       let x0 = Infinity, y0 = Infinity, x1 = 0, y1 = 0;
       for (const e of els) { const r = e.getBoundingClientRect(); if (!r.width) continue; x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); }
       const pad = 12;
