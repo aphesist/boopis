@@ -32,6 +32,8 @@ import type { ConnectorCatalogEntry, ModelsView } from './bindings';
 import type { ProvidersBridge } from './providers-bridge';
 import { inTauri } from './bridge';
 import { asHostError } from './bridge';
+import { windowBar } from './window-controls';
+import type { WindowControls } from './window-controls';
 import { esc, reduced } from '../core/dom';
 import { logger } from '../core/log';
 
@@ -135,6 +137,8 @@ export interface FirstRunOptions {
   signins?: SetupSignins;
   /** the provider commands, for "Use a model on this computer" (the host's own when in the app; without them that way is not offered) */
   providers?: ProvidersBridge;
+  /** the window's controls for the layer's title bar; the page's own controller when absent */
+  windowControls?: WindowControls;
 }
 
 /** The sign-in and the pages a setup form offers, drawn under its card. `next` runs setup again once a sign-in finished
@@ -182,10 +186,13 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
   if (!check.needed) return;
   const intro = introText(await bridge.source().catch(() => null));
   const root = el('div', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'fr-title', class: 'hx-first-run', 'data-layer-host': '' });
+  /* the layer covers the whole window, title bar included, so it carries the window's own: its controls and a drag area, laid
+     out like the shell's (the window is undecorated: without them there is no way to move, shrink or close it during setup) */
+  const titleBar = windowBar(opts.windowControls);
   const scroller = el('div', { class: 'fr-scroll ui-scroll' });
   const shell = el('div', { class: 'fr-shell' });
   scroller.append(shell);
-  root.append(scroller);
+  root.append(titleBar.node, scroller);
   /* the welcome is a big moment: the logo's hero, once, above whatever step is drawn (it is not redrawn with the card); it steps
      aside once the welcome is over, so the steps that need room have it */
   const logo = welcomeLogo();
@@ -221,7 +228,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       const { ids, names } = ladderChoices(form);
       return stepsFor(ids, names, providers !== null);
     };
-    const leave = (): void => { hub?.destroy(); hub = null; extras(); extras = () => undefined; useFormsHost(null); foot?.remove(); root.remove(); opts.onExit?.({ open: exitOpen }); resolve(); };
+    const leave = (): void => { hub?.destroy(); hub = null; extras(); extras = () => undefined; useFormsHost(null); foot?.remove(); titleBar.detach(); root.remove(); opts.onExit?.({ open: exitOpen }); resolve(); };
 
     /* ───────── the frame every step shares: where you are, and the card ───────── */
     const progress = (id: PhaseId): HTMLElement => {

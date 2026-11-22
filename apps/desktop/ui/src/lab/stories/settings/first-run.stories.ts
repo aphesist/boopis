@@ -2,7 +2,9 @@
    setup bridge and a fake host (the host is not in the lab): the welcome, the engine unpacking and its steps, the consent, the
    models hub (empty, partly and fully connected, each sign-in in progress, an error, a form in place), "do it later", the summary,
    the optional steps and the end. The hub's states drive it through its own data attributes (`data-do`, `data-way`), so the
-   stories hold when the arrangement changes. */
+   stories hold when the arrangement changes. Every step draws the layer's own title bar with the window's controls (the layer
+   covers the shell's bar; the window is undecorated); the lab has no host, so all three show unless a state draws another
+   layout (close alone on a tiling desktop, macOS's order), as the shell's title bar story does. */
 import { entries } from '../../../data/providers';
 import { runFirstRun } from '../../../host/first-run';
 import type { ExtrasSource } from '../../../host/first-run';
@@ -15,6 +17,9 @@ import type { ProviderState, ProvidersBridge } from '../../../host/providers-bri
 import type { SetupBridge, SetupProgress, SetupStatus } from '../../../host/setup-bridge';
 import type { ModelsView } from '../../../host/bindings';
 import { mountXaiSignin, XAI_WAY } from '../../../host/xai-signin';
+import { showStartupFailure } from '../../../host/notice';
+import type { ControlsLayout } from '../../../host/window';
+import { emit } from '../../../core/bus';
 import { frames } from '../../story';
 import type { Render, State, Story } from '../../types';
 
@@ -96,13 +101,14 @@ const EXTRAS: ExtrasSource = {
   store: () => Promise.resolve([{ name: 'Repo reader', line: 'Reads a repository before it edits it.' }, { name: 'Release notes', line: 'Writes release notes from merged work.' }])
 };
 
-interface Run { script: SetupStatus[]; model?: ModelsView | null; list?: ProviderState[]; probe?: ProviderState[]; hang?: boolean; extras?: ExtrasSource; onWelcome?: boolean; after?: (root: HTMLElement) => Promise<void> | void; noProviders?: boolean }
+interface Run { script: SetupStatus[]; model?: ModelsView | null; list?: ProviderState[]; probe?: ProviderState[]; hang?: boolean; extras?: ExtrasSource; onWelcome?: boolean; after?: (root: HTMLElement) => Promise<void> | void; noProviders?: boolean; /** the title bar's layout, as the host's facts would give it */ layout?: ControlsLayout }
 const draw = (r: Run): Render => async ({ root }) => {
   /* the shared cards for xAI and Copilot, with a host that has a page ready (the real ones reach the host) */
   registerSigninCard(XAI_WAY, (host, done) => mountXaiSignin(host, waiting({ url: 'https://auth.x.ai/device', code: 'LMNP-4821', expiresAt: FAR() }), { onSignedIn: done }));
   registerSigninCard(COPILOT_WAY, (host, done) => mountSigninCard(host, waiting({ url: 'https://github.com/login/device', code: 'WDJB-MJHT', expiresAt: FAR() }), COPILOT_COPY, { onSignedIn: done }));
   void runFirstRun(new Fake(r.script, r.model ?? null, r.hang), root, { signins, extras: r.extras ?? EXTRAS, ...(r.noProviders ? {} : { providers: providersBridge(r.list ?? baseline(), r.probe ?? []) }) });
   await wait(300);
+  if (r.layout) { emit('hx:window-controls', { layout: r.layout }); await frames(2); }
   if (r.onWelcome) return;
   pressText(root, 'Set up');
   await wait(r.hang ? 300 : 900);
@@ -117,6 +123,10 @@ const first: Story = {
   id: 'settings/first-run', title: 'First run', area: 'settings', kind: 'surface', covers: ['surface:first-run'], mock: { url: '/v6/__index.html', note: 'the mock has no first run' },
   states: {
     welcome: FR(['typical'], { script: [AT_MODELS], onWelcome: true }),
+    'welcome, close only (a tiling desktop)': FR(['variant'], { script: [AT_MODELS], onWelcome: true, layout: 'close' }),
+    'welcome, close, minimize, zoom (macOS)': FR(['variant'], { script: [AT_MODELS], onWelcome: true, layout: 'mac' }),
+    'title bar, close hovered': FR(['hover'], { script: [AT_MODELS], onWelcome: true }, { force: [{ sel: '.hx-first-run [data-win="close"]', state: 'hover' }] }),
+    'title bar, maximize focused': FR(['focus'], { script: [AT_MODELS], onWelcome: true }, { force: [{ sel: '.hx-first-run [data-win="max"]', state: 'focus' }] }),
     'unpacking the engine': FR(['loading'], { script: [AT_MODELS], hang: true }),
     'steps running': FR(['variant'], { script: [status({ steps: STEPS({ runtime: 'done', plugin: 'done', hx: 'pending' }) })] }),
     'consent: the three settings': FR(['variant'], { script: [status({ steps: STEPS({ runtime: 'done', plugin: 'done', hx: 'done', config: 'needs_input' }), form: CONSENT as never })] }),
@@ -125,6 +135,8 @@ const first: Story = {
     blocked: FR(['error'], { script: [status({ steps: STEPS({ runtime: 'blocked' }, { runtime: 'The engine could not be unpacked: the disk is full.' }) })] }),
     'blocked, no engine': FR(['error'], { script: [status({ steps: STEPS({ runtime: 'blocked' }, { runtime: 'No engine was found on this computer.' }), install_command: 'curl -fsSL https://example.invalid/install.sh | sh' })] }),
     'models hub, nothing connected': FR(['empty'], hub(baseline())),
+    'models hub, close only (a tiling desktop)': FR(['variant'], hub(baseline(), { layout: 'close' })),
+    'models hub, close, minimize, zoom (macOS)': FR(['variant'], hub(SOME, { layout: 'mac' })),
     'models hub, partly connected': FR(['variant'], hub(SOME)),
     'models hub, everything connected': FR(['many'], hub(EVERYTHING, { probe: [OLLAMA] })),
     'models hub, a runtime found on this computer': FR(['variant'], hub(baseline(), { probe: [OLLAMA] })),
@@ -151,4 +163,23 @@ const first: Story = {
   }
 };
 
-export default first;
+/* The startup notice (host/notice.ts): when the app cannot start, a layer of the same kind as first run, with the same title bar. */
+const notice = (message: string, code: string, layout?: ControlsLayout): Render => async ({ root, wait: pause }) => {
+  showStartupFailure(Object.assign(new Error(message), code ? { code } : {}), { mount: root, retry: () => undefined });
+  if (layout) emit('hx:window-controls', { layout });
+  await pause(150);
+};
+const NS = (tags: State['tags'], render: Render, extra: Partial<State> = {}): State => ({ tags, render, scope: '.hx-notice', ...extra });
+const startup: Story = {
+  id: 'settings/startup-notice', title: 'Startup notice', area: 'settings', kind: 'surface', covers: ['surface:startup-notice'], mock: { url: '/v6/__index.html', note: 'the mock has no startup notice' },
+  states: {
+    'the engine did not answer': NS(['typical'], notice('The engine did not answer within 30 seconds. Check that nothing else is using boopis\'s folder, then try again.', 'hx.gateway.unreachable')),
+    'without a code': NS(['variant'], notice('The window could not load its settings.', '')),
+    'a long reason': NS(['long'], notice('src/billing/integrations/stripe/webhooks/handlers/invoice_payment_succeeded_idempotency_guard_v2_final.ts could not be read: permission denied (EACCES) while the engine started, and the second attempt stopped at the same file', 'hx.setup.runtime_unpack')),
+    'close only (a tiling desktop)': NS(['variant'], notice('The engine did not answer within 30 seconds.', 'hx.gateway.unreachable', 'close')),
+    'close, minimize, zoom (macOS)': NS(['variant'], notice('The engine did not answer within 30 seconds.', 'hx.gateway.unreachable', 'mac')),
+    'title bar, close hovered': NS(['hover'], notice('The engine did not answer within 30 seconds.', 'hx.gateway.unreachable'), { force: [{ sel: '.hx-notice [data-win="close"]', state: 'hover' }] })
+  }
+};
+
+export default [first, startup];
