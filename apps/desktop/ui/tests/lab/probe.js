@@ -758,6 +758,16 @@
           opaqueCache.set(e, ok);
           return ok;
         };
+        /* an SVG shape paints an opaque surface where its fill is solid and the point lies inside the fill itself (the dock's slab is a
+           path filled with --dock-bg, not a box with a background): hit-testing also returns a shape on its stroke, so test the fill */
+        const svgFillAt = (e, x, y) => {
+          if (!(e instanceof SVGGeometryElement)) return false;
+          const s = getComputedStyle(e);
+          if (alphaOf(s.fill) * parseFloat(s.fillOpacity) < 0.9 || opacityOf(e) < 0.9) return false;
+          const m = e.getScreenCTM();
+          if (!m) return false;
+          return e.isPointInFill(new DOMPoint(x, y).matrixTransform(m.inverse()));
+        };
         /* a strip drawn by an ancestor's positioned ::before or ::after (a conversation's ground under its composer, .ui-scroll--ground)
            covers what lies under it, but hit-testing never returns a pseudo-element: read its box from its resolved offsets, and count
            the point covered when it lies below the strip's fade, where its gradient is solid */
@@ -794,7 +804,7 @@
               const ia = stack.indexOf(A.el), ib = stack.indexOf(B.el);
               if (ia < 0 || ib < 0) continue;   /* one is clipped away at this point */
               const [hi, lo, ilo] = ia < ib ? [A, B, ib] : [B, A, ia];
-              if (stack.slice(0, ilo).some((e) => !e.contains(lo.el) && opaque(e))) continue;   /* an opaque surface sits above the lower text */
+              if (stack.slice(0, ilo).some((e) => !e.contains(lo.el) && (opaque(e) || svgFillAt(e, x, y)))) continue;   /* an opaque surface sits above the lower text */
               const strip = hi.el.contains(lo.el) ? null : pseudoCover(lo, x, y);
               if (strip && raisedOver(hi.el, strip.p, strip.z)) continue;   /* a drawn strip covers the lower text, and the upper is raised over it */
               const dk = describe(hi.el) + '|' + describe(lo.el);

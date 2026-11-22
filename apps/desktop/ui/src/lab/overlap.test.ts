@@ -46,6 +46,15 @@ describe('geometry.overlap', () => {
   it('passes the strip once it has an opaque surface of its own', async () => {
     expect(await overlaps(room(LOG + STRIP('height:40px;line-height:40px;background:#202020')))).toEqual([]);
   });
+  it('passes the strip over an opaque SVG shape (the dock\'s slab is a filled path), and flags it when the fill is see-through', async () => {
+    const slab = (fill: string) => `<svg style="position:absolute;left:0;bottom:0" width="320" height="48" viewBox="0 0 320 48"><path d="M0 0 H320 V48 H0 Z" fill="${fill}"/></svg>`;
+    expect(await overlaps(room(LOG + slab('#000') + STRIP('height:40px;line-height:40px')))).toEqual([]);
+    expect(await overlaps(room(LOG + slab('rgba(0,0,0,.4)') + STRIP('height:40px;line-height:40px')))).toHaveLength(1);
+  });
+  it('flags text past the end of an opaque SVG shape, where its fill does not reach', async () => {
+    const corner = '<svg style="position:absolute;left:0;bottom:0" width="320" height="48" viewBox="0 0 320 48"><path d="M0 48 L320 48 L320 0 Z" fill="#000"/></svg>';
+    expect(await overlaps(room(LOG + corner + STRIP('height:40px;line-height:40px;right:auto;width:150px')))).toHaveLength(1);
+  });
   it('passes the strip once the conversation ends above it', async () => {
     expect(await overlaps(room(LOG.replace('height:200px', 'height:150px') + STRIP('height:40px;line-height:40px;bottom:0')))).toEqual([]);
   });
