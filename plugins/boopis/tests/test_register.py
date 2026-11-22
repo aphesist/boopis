@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import subprocess
 import sys
@@ -168,3 +169,27 @@ def test_the_module_layout_loads_as_a_package_without_the_test_path() -> None:
     spec = importlib.util.find_spec("boopis")
     assert spec is not None
     assert spec.submodule_search_locations is not None
+
+
+def test_only_the_root_homes_copy_hands_the_sign_ins_over(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A bot's home has no ``auth.json`` of its own and reads the root's logins through the engine's fallback, so its copy
+    of the plugin must not keep pool rows of its own (ADR-0042); the root's copy does."""
+    import boopis
+    from boopis import hermes_api
+    from boopis.bots import homes
+    from boopis.hostsecrets import channel
+
+    started: list[str] = []
+    monkeypatch.setattr(channel, "capture_environment", lambda: object())
+    for name in ("chatgpt", "copilot", "xai"):
+        module = importlib.import_module(f"boopis.signins.{name}")
+        monkeypatch.setattr(module, "start", lambda name=name: started.append(name))
+    root = tmp_path / "engine"
+    (root / "profiles" / "kai").mkdir(parents=True)
+    monkeypatch.setattr(homes, "default_root", lambda: root)
+    monkeypatch.setattr(hermes_api, "hermes_home", lambda: str(root / "profiles" / "kai"))
+    boopis._start_signins()
+    assert started == [], "a bot's copy keeps no pool rows"
+    monkeypatch.setattr(hermes_api, "hermes_home", lambda: str(root))
+    boopis._start_signins()
+    assert started == ["chatgpt", "copilot", "xai"]

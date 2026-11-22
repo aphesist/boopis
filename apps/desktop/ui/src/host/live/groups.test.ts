@@ -10,6 +10,7 @@ const bot = (id: string, name = id): Bot => ({ id, name, role: '', shape: 'circl
 const BOTS = [bot('atlas'), bot('nina', 'Nina'), bot('kai')];
 
 class FakeEngine {
+  context: Record<string, unknown> | null = null;
   calls: { method: string; params: Json }[] = [];
   rooms: Json[] = [];
   logs: Record<string, Json[]> = {};
@@ -45,7 +46,7 @@ class FakeEngine {
         const all = (this.logs[p['room_id']] ?? []).filter((e) => e['seq'] > p['since_seq']);
         return { events: all, cursor: all.at(-1)?.['seq'] ?? p['since_seq'], latest_seq: all.at(-1)?.['seq'] ?? 0, has_more: false, authority: { gateway_id: 'g', epoch: 1 } };
       }
-      case 'groups.state': return { room: this.rooms.find((x) => x['room_id'] === p['room_id']), driver_status: { working: this.working, member_activity: this.activity } };
+      case 'groups.state': return { room: this.rooms.find((x) => x['room_id'] === p['room_id']), driver_status: { working: this.working, member_activity: this.activity }, ...(this.context ? { context: this.context } : {}) };
       case 'groups.stop': case 'groups.continue': return { cancelled: 1 };
       default: throw new Error('unknown method ' + method);
     }
@@ -130,13 +131,21 @@ describe('talking to a group', () => {
       expect(g.source.snapshot().groups[0]!.working).toEqual([]);
     } finally { vi.useRealTimers(); }
   });
+  it('knows when a room routes through a lead, which the room says', async () => {
+    const { g } = await open((x) => { x.rooms.push(room('r1', 'paper past', ['kai', 'nina'])); x.context = { purpose: '', notes: '', routing: 'lead', lead_member_id: 'kai' }; });
+    await g.source.open('r1');
+    expect(g.source.snapshot().groups[0]).toMatchObject({ lead: 'kai' });
+    const everyone = await open((x) => { x.rooms.push(room('r1', 'paper past', ['kai', 'nina'])); x.context = { purpose: '', notes: '', routing: 'everyone', lead_member_id: 'kai' }; });
+    await everyone.g.source.open('r1');
+    expect(everyone.g.source.snapshot().groups[0]!.lead).toBeUndefined();
+  });
   it('says in the thread when a member could not reply, and offers to continue a conversation that paused at its limit', async () => {
     const { e, g } = await open((x) => { x.rooms.push(room('r1', 'crew', ['atlas', 'nina'])); });
     e.push('r1', 'turn.failed', { member_id: 'nina', error: 'Traceback boom' });
     e.push('r1', 'room.activity', { status: 'bounded', discussion_event_id: 'd1', thread_id: 'main', reason_code: 'x' });
     await g.source.open('r1');
     const notes = g.source.snapshot().threads['r1']!;
-    expect(notes).toMatchObject([{ kind: 'note', text: 'Nina could not reply.' }, { kind: 'note', more: 'd1' }]);
+    expect(notes).toMatchObject([{ kind: 'note', text: 'Nina could not reply. Try again. If it keeps failing, the details are in Settings, General, Diagnostics.' }, { kind: 'note', more: 'd1' }]);
     expect(JSON.stringify(notes)).not.toMatch(/Traceback/);   // the engine's words stay out of the thread
     await g.source.continueTalk('r1', 'd1');
     expect(e.calls.find((c) => c.method === 'groups.continue')!.params).toEqual({ room_id: 'r1', discussion_event_id: 'd1' });

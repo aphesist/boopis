@@ -78,6 +78,26 @@ pub struct AppState {
     pub xai: Arc<crate::xai::Xai>,
     /// The connector engine of each profile home, kept so a sign-in started by one command can be cancelled by another.
     pub connectors: std::sync::Mutex<std::collections::HashMap<std::path::PathBuf, Arc<Engine>>>,
+    /// The bots: what each one's home needs, and the repair once per run (ADR-0042).
+    pub bots: Arc<crate::bots::engine::Service>,
+}
+
+/// Where the bots live and what each gets: the root home, and boopis plus the plugins the bundled runtime carries.
+#[must_use]
+pub fn bots_layout(state: &AppState) -> crate::bots::Layout {
+    let carried: Vec<String> = state
+        .runtime
+        .as_ref()
+        .map(|p| {
+            p.runtime
+                .manifest()
+                .plugins
+                .iter()
+                .map(|c| c.name.clone())
+                .collect()
+        })
+        .unwrap_or_default();
+    crate::bots::Layout::new(state.supervisor.environment().hermes_root(), &carried)
 }
 
 struct ChannelSink(Channel<Frame>);
@@ -284,10 +304,17 @@ pub async fn gateway_connect(
     state.hubs.register(id, key);
     let wait = state.limits.ensure_timeout + state.limits.cli_timeout;
     match hub.open(id, Arc::new(ChannelSink(frames)), wait).await {
-        Ok(opened) => Ok(Connected {
-            connection_id: id,
-            describe: Json(opened.describe),
-        }),
+        Ok(opened) => {
+            // The first link of a run to the root's gateway: every bot is given what its home needs (ADR-0042), in the
+            // background, once.
+            if matches!(profile.as_deref(), None | Some("" | "default")) {
+                state.bots.repair_once(bots_layout(&state));
+            }
+            Ok(Connected {
+                connection_id: id,
+                describe: Json(opened.describe),
+            })
+        }
         Err(e) => {
             state.hubs.forget(id);
             Err(e.into())
@@ -1421,4 +1448,51 @@ pub async fn provider_signin_status(
     way: String,
 ) -> std::result::Result<crate::providers::ProviderState, HostError> {
     Ok(signins(&state).status(&way).await?)
+}
+
+/// What preparing a bot did: whether anything changed, and each step that could not be done, in plain words.
+#[derive(Debug, Clone, Serialize, Type)]
+pub struct BotPrepared {
+    /// Its home changed (a plugin placed, a setting written, its seat in groups).
+    pub changed: bool,
+    /// What could not be done; the other steps were.
+    pub problems: Vec<String>,
+}
+
+/// Give the bot `name` what its home needs (ADR-0042): the plugins boopis manages, its configuration (the Governed switch of
+/// its record among it) and its seat in groups. `fresh` is a bot made just now (its skills for another OS are switched off).
+/// The UI calls it after it makes, restores or changes a bot.
+#[tauri::command]
+#[specta::specta]
+pub async fn bots_prepare(
+    state: State<'_, AppState>,
+    name: String,
+    fresh: bool,
+) -> std::result::Result<BotPrepared, HostError> {
+    let layout = bots_layout(&state);
+    let done = state.bots.prepare(&layout, &name, fresh).await?;
+    Ok(BotPrepared {
+        changed: done.changed(),
+        problems: done.problems,
+    })
+}
+
+/// Take the bot `name` out of the root's groups (its `hosted_rooms.profiles` entry): after it is archived or deleted.
+#[tauri::command]
+#[specta::specta]
+pub async fn bots_release(
+    state: State<'_, AppState>,
+    name: String,
+) -> std::result::Result<(), HostError> {
+    let root = state.supervisor.environment().hermes_root();
+    state.bots.release(&root, &name).await?;
+    Ok(())
+}
+
+/// The one notice the bots' repair left (the governance change), taken: the app shows it once. `None` when there is none.
+#[tauri::command]
+#[specta::specta]
+pub fn bots_notice(state: State<'_, AppState>) -> std::result::Result<Option<String>, HostError> {
+    let root = state.supervisor.environment().hermes_root();
+    Ok(crate::bots::take_notice(&root)?)
 }

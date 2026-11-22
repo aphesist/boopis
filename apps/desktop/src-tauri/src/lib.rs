@@ -3,6 +3,7 @@
 //! It owns the Hermes lifecycle, the gateway connection (a validating, multiplexing proxy), the OS keychain, windows
 //! and notifications. The UI owns the experience and the backend (Hermes plus the plugin) owns the work.
 
+pub mod bots;
 pub mod brand;
 pub mod chatgpt;
 pub mod claude;
@@ -123,6 +124,9 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::provider_signin_cancel,
             commands::provider_sign_out,
             commands::provider_signin_status,
+            commands::bots_prepare,
+            commands::bots_release,
+            commands::bots_notice,
         ])
         .events(collect_events![
             ConnectionStateEvent,
@@ -531,6 +535,7 @@ pub fn run() {
                 source,
                 carries_runtime,
                 connectors: std::sync::Mutex::default(),
+                bots: Arc::new(bots::engine::Service::new(supervisor.clone())),
                 store,
                 bundle: setup::install::Bundle::locate(
                     resource_dir.as_deref(),

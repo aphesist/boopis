@@ -75,7 +75,7 @@ export interface BotInfo {
   soul: string | null;
   /** Hermes's own "active now" rule: it wrote within the last 90 seconds, or a worker of it did. null: unknown */
   running: boolean | null;
-  notes: Readonly<Partial<Record<'detail' | 'jobs' | 'sessions' | 'store', string>>>;
+  notes: Readonly<Partial<Record<'detail' | 'jobs' | 'sessions' | 'store' | 'setup', string>>>;
 }
 /** an archived teammate: a profile renamed out of the way (nothing was deleted). `id` is the profile's name now, `was` the name it
  *  returns to, `at` when it was archived (ISO, '' when unknown) and `when` the same as the list says it ("5m", "yesterday", "mon") */
@@ -113,6 +113,8 @@ export interface Group {
   members: readonly GroupMember[];
   /** the ids of the members working on a reply now */
   working: readonly string[];
+  /** the member who answers a new conversation first when the room routes through a lead; an @name brings a member in at once */
+  lead?: string;
 }
 /** a group put away: kept, with its messages, until it is restored */
 export interface ArchivedGroup { id: string; name: string; members: readonly GroupMember[] }

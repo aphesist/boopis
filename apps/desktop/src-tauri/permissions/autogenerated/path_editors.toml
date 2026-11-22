@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-path-editors"
+description = "Enables the path_editors command without any pre-configured scope."
+commands.allow = ["path_editors"]
+
+[[permission]]
+identifier = "deny-path-editors"
+description = "Denies the path_editors command without any pre-configured scope."
+commands.deny = ["path_editors"]

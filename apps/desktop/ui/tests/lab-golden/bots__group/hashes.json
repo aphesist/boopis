@@ -1,4 +1,24 @@
 {
+ "a-lead-answers-first@bone": {
+  "sha": "41d740ad850a2c465f7d3ceb484c6b77e6fad1a4",
+  "w": 1196,
+  "h": 872
+ },
+ "a-lead-answers-first@catalog": {
+  "sha": "518035b341796f0dc933666d12694008d00c5ab9",
+  "w": 1196,
+  "h": 872
+ },
+ "a-lead-answers-first@graphite": {
+  "sha": "10e1e608f3ceeb4d833ddc0852a5110db495ce87",
+  "w": 1196,
+  "h": 872
+ },
+ "a-lead-answers-first@typewriter": {
+  "sha": "d2ab2b87e4d07e54801adf0ba2c88fc4e8772e07",
+  "w": 1196,
+  "h": 872
+ },
  "a-long-name@bone": {
   "sha": "bb4975d3942e309dedc6192de363d0e87801fe5b",
   "w": 1196,
