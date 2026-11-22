@@ -245,10 +245,28 @@ def hide_and_return(s: str, display_file: Path, agent_text) -> None:
     before = webprocs()
     long_reply = "Hidden " + ("streaming while the window is away. " * 900)
     marker = "window-came-back"
+    prompt = "@@reply " + long_reply + marker + "@@"
+    # the first turn has ended (the send button is not Stop), then the long prompt goes in and Enter sends it
+    wait_for(
+        lambda: js(
+            "const b = document.querySelector('.ui-send'); return !!b && b.getAttribute('aria-label') === 'Send'"
+        ),
+        "the first turn to end",
+        60,
+    )
     js(
         "const c = document.querySelector('.ui-composer__input'); c.focus();"
-        f"document.execCommand('insertText', false, {json.dumps('@@reply ' + long_reply + marker + '@@')});"
-        "c.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true, cancelable: true})); return true;"
+        f"document.execCommand('insertText', false, {json.dumps(prompt)}); return true;"
+    )
+    composer = call("POST", f"{s}/element", {"using": "css selector", "value": ".ui-composer__input"})["value"]
+    call("POST", f"{s}/element/{next(iter(composer.values()))}/value", {"text": "\ue007"})
+    wait_for(
+        lambda: (
+            js("return document.querySelector('.ui-send')?.getAttribute('aria-label') === 'Stop'")
+            or marker in agent_text()
+        ),
+        "the long prompt to start a turn",
+        30,
     )
     for w in windows:
         subprocess.run(["xdotool", "windowunmap", w], env=xenv, check=False)
