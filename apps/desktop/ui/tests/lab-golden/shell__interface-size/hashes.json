@@ -1,0 +1,122 @@
+{
+ "bots-larger-112@bone": {
+  "sha": "83a22601cabac95b261fd998abb19fe806f7cd8b",
+  "w": 1440,
+  "h": 900
+ },
+ "bots-larger-112@catalog": {
+  "sha": "fb59b39518cdd6820b8d6cc3a67d4f323bdeab70",
+  "w": 1440,
+  "h": 900
+ },
+ "bots-larger-112@graphite": {
+  "sha": "230f1b7eff55162eec97b3bea8c95d9abde71b91",
+  "w": 1440,
+  "h": 900
+ },
+ "bots-larger-112@typewriter": {
+  "sha": "f227586e4dc1aef2ef8fc856339523a288cb19f6",
+  "w": 1440,
+  "h": 900
+ },
+ "bots-largest-125@bone": {
+  "sha": "6fe7e5f176c7039f5ccba64256b0439ff833f6aa",
+  "w": 1440,
+  "h": 900
+ },
+ "bots-largest-125@catalog": {
+  "sha": "8ddc82e5025a87b3a79842ab0a1c23bc5291a0ff",
+  "w": 1440,
+  "h": 900
+ },
+ "bots-largest-125@graphite": {
+  "sha": "a0e5ddd4687acad0e62f4d3824b5e553d25b11ef",
+  "w": 1440,
+  "h": 900
+ },
+ "bots-largest-125@typewriter": {
+  "sha": "4f9cd3ff59299e77a9bc52cc50f6fe9aea8e3b56",
+  "w": 1440,
+  "h": 900
+ },
+ "bots-with-a-group-largest-125@bone": {
+  "sha": "3033446f914419a2c17cc53b8a840a963356b713",
+  "w": 1440,
+  "h": 900
+ },
+ "bots-with-a-group-largest-125@catalog": {
+  "sha": "5c236ce48f77dbfecc6994f881aaef655953a2f6",
+  "w": 1440,
+  "h": 900
+ },
+ "bots-with-a-group-largest-125@graphite": {
+  "sha": "fcfd15b0122bf436156b492ea6ad2acf6a013d56",
+  "w": 1440,
+  "h": 900
+ },
+ "bots-with-a-group-largest-125@typewriter": {
+  "sha": "6da7b548ef07d8d57e3eecf86e765b075b9ccdaa",
+  "w": 1440,
+  "h": 900
+ },
+ "rail-largest-125@bone": {
+  "sha": "e23dcccde7f9511f65972a7896361c434cfd0cd6",
+  "w": 1440,
+  "h": 900
+ },
+ "rail-largest-125@catalog": {
+  "sha": "1be5f578e203436cd94e9edd9ebfa8f0141685be",
+  "w": 1440,
+  "h": 900
+ },
+ "rail-largest-125@graphite": {
+  "sha": "1c9098dee1a73cc99d34fb3cf8bd357fab4cc294",
+  "w": 1440,
+  "h": 900
+ },
+ "rail-largest-125@typewriter": {
+  "sha": "6d3d960fad5cfac1635f87507c4c5a65ba0a2c57",
+  "w": 1440,
+  "h": 900
+ },
+ "session-larger-112@bone": {
+  "sha": "202088069c8ddf558dc4611bb7a8c4e34896693f",
+  "w": 1440,
+  "h": 900
+ },
+ "session-larger-112@catalog": {
+  "sha": "341f16900ce59a83aafee17bef9d91954cead6f6",
+  "w": 1440,
+  "h": 900
+ },
+ "session-larger-112@graphite": {
+  "sha": "7e1887a465b2a69ee6c5cddd365f81baab9f5dce",
+  "w": 1440,
+  "h": 900
+ },
+ "session-larger-112@typewriter": {
+  "sha": "1efc63945655b05f154957d6f1ad022ef3945d02",
+  "w": 1440,
+  "h": 900
+ },
+ "session-largest-125@bone": {
+  "sha": "e782d447ab8e5792b20cf6e1ebfd5e10f44f444e",
+  "w": 1440,
+  "h": 900
+ },
+ "session-largest-125@catalog": {
+  "sha": "b5850f939e37c0d8443cdb70ad6dbcbb25e6d6b3",
+  "w": 1440,
+  "h": 900
+ },
+ "session-largest-125@graphite": {
+  "sha": "91568d3f9152a5850c31ca85bd86436605028a5c",
+  "w": 1440,
+  "h": 900
+ },
+ "session-largest-125@typewriter": {
+  "sha": "b9c2a7bace6275b5b965999fa7c88d5375cb2647",
+  "w": 1440,
+  "h": 900
+ }
+}

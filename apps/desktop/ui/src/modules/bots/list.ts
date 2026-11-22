@@ -8,7 +8,7 @@ import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import { lookOf, oc, paintLook } from '@boopis/ui';
 import { DRAFT_COLOR, paintOrb } from './paint';
-import { livenIn, orbHTML } from './orbs';
+import { livenIn, orbHTML, setReact } from './orbs';
 import { bot, group, initGroups, initModel, railOn, S } from './model';
 import type { ArchivedBot, ArchivedGroup, Bot, Group } from '../../data';
 import { loadBots, saveBots } from '../../core/settings';
@@ -80,31 +80,49 @@ export function makeRow(b: Bot): HTMLElement {
   checkClips();
   return li;
 }
-/** rows are re-rendered from the library on change; the live orb is carried over so it never restarts */
+/** copy an attribute from `from` onto `to`: written only when it differs, removed when `from` has none */
+function mirror(to: Element, from: Element, names: readonly string[]): void {
+  for (const n of names) {
+    const v = from.getAttribute(n);
+    if (v === null) { if (to.hasAttribute(n)) to.removeAttribute(n); } else if (to.getAttribute(n) !== v) to.setAttribute(n, v);
+  }
+}
+const ROW_ATTRS = ['aria-label', 'aria-describedby', 'data-tip', 'data-tip-pos', 'data-tip-state', 'data-tip-tone'] as const;
+/** a row's text and state word follow `next`'s, and its attributes; its lead (the orb) is not touched */
+function patchRow(btn: HTMLElement, nextBtn: HTMLElement): void {
+  mirror(btn, nextBtn, ROW_ATTRS);
+  /* the title, the role and the state word are written into the nodes they are in: no element is swapped, so nothing moves */
+  for (const sel of ['.ui-row__title', '.ui-row__sub']) {
+    const at = btn.querySelector(sel), to = nextBtn.querySelector(sel);
+    if (at && to) { if (at.innerHTML !== to.innerHTML) at.innerHTML = to.innerHTML; } else if (at) at.remove(); else if (to) btn.querySelector('.ui-row__text')?.append(' ', to);
+  }
+  const end = btn.querySelector('.ui-row__end'), nextEnd = nextBtn.querySelector('.ui-row__end');
+  if (end && nextEnd) { if (end.innerHTML !== nextEnd.innerHTML) end.innerHTML = nextEnd.innerHTML; mirror(end, nextEnd, ['data-tone']); }
+  else if (end) end.remove();
+  else if (nextEnd) btn.append(' ', nextEnd);
+}
+/** a row follows its bot in place. The `<li>`, the button and the live orb stay the same nodes, so the orb is never taken out of
+    the page and put back (a canvas that is detached and attached again is painted empty until its worker draws once more:
+    the sidebar's orbs blinked whenever a bot changed state). Only the text, the state word and the attributes are written. */
 export function updateRow(id: string): void {
   const b = bot(id), r = S.rows.get(id); if (!b || !r) return;
-  const oldOrb = r.li.querySelector<HTMLElement>('orb-avatar');
-  const focused = r.li.contains(document.activeElement);
-  const li = frag(rowHTML(b));
-  const newWrap = li.querySelector<HTMLElement>('.ui-orb'), oldWrap = r.li.querySelector<HTMLElement>('.ui-orb');
-  if (oldOrb && newWrap && oldWrap) {
-    const flag = newWrap.querySelector('.ui-dot--flag');
-    oldWrap.replaceChildren(oldOrb); if (flag) oldWrap.append(flag);
-    oldWrap.setAttribute('style', newWrap.getAttribute('style') ?? '');
-    newWrap.replaceWith(oldWrap);
-    paintLook(oldOrb, lookOf(b));   /* the live orb is kept so it never restarts, but it wears the bot's look now, not the one it was drawn in */
-    const orbReaction = ui.botState(b).reaction;
-    oldOrb.dataset['base'] = orbReaction;
-    if (!(oldOrb as HTMLElement & { _hover?: boolean })._hover && oldOrb.getAttribute('reaction') !== orbReaction) oldOrb.setAttribute('reaction', orbReaction);
-    const size = newWrap.querySelector('orb-avatar')?.getAttribute('size') ?? ''; if (oldOrb.getAttribute('size') !== size) oldOrb.setAttribute('size', size);
-  } else livenIn(li);
-  const btn = $('.ui-row', li);
-  btn.tabIndex = r.btn.tabIndex;
-  btn.addEventListener('pointerenter', () => { if (!reduced()) oc(btn.querySelector('orb-avatar'), 'blink'); });
-  r.li.replaceWith(li);
-  S.rows.set(id, { li, btn });
+  const next = frag(rowHTML(b)), nextBtn = $('.ui-row', next);
+  const btn = r.btn;
+  patchRow(btn, nextBtn);
+  /* the orb: its wrapper's size and flag, its size and its state (a hovered orb takes the state when the pointer leaves) */
+  const oldWrap = btn.querySelector<HTMLElement>('.ui-orb'), newWrap = nextBtn.querySelector<HTMLElement>('.ui-orb');
+  const orb = btn.querySelector<HTMLElement>('orb-avatar'), nextOrb = nextBtn.querySelector<HTMLElement>('orb-avatar');
+  if (oldWrap && newWrap && orb && nextOrb) {
+    const style = newWrap.getAttribute('style') ?? '';
+    if (oldWrap.getAttribute('style') !== style) oldWrap.setAttribute('style', style);
+    mirror(oldWrap, newWrap, ['data-size']);
+    const flag = oldWrap.querySelector('.ui-dot--flag'), nextFlag = newWrap.querySelector('.ui-dot--flag');
+    if (nextFlag && !flag) oldWrap.append(nextFlag); else if (flag && !nextFlag) flag.remove();
+    mirror(orb, nextOrb, ['size']);
+    paintLook(orb, lookOf(b));   /* the live orb stays, but it wears the bot's look now, not the one it was drawn in */
+    setReact(orb, ui.botState(b).reaction);
+  }
   checkClips();
-  if (focused) btn.focus({ preventScroll: true });
 }
 export function showDraftRow(on: boolean): void {
   if (!S.rowsEl) return;
@@ -222,7 +240,7 @@ async function restoreArchivedBot(id: string, button: HTMLElement): Promise<void
 
 /* ───────── the Groups under the roster (team chat) ─────────
    A row for each group (its members as stacked orbs, its name, who is in it) and, last, "New group" beside the roster's own
-   "New bot". The block is drawn again on every change: a row is small and its orbs are still. */
+   "New bot". The block follows the groups in place (`drawGroups`), so a live update never blanks a stack's orbs. */
 function groupRow(g: Group): string {
   const busy = g.working.length > 0;
   return ui.html.row({
@@ -231,20 +249,10 @@ function groupRow(g: Group): string {
     attrs: { 'aria-label': g.name + ', ' + namesOf(g.members) + (busy ? ', replying' : ''), 'data-gid': g.id, 'data-tip': railOn() ? g.name : null, 'data-tip-pos': 'right' }
   });
 }
-export function drawGroups(): void {
-  const host = S.groupsEl; if (!host) return;
-  const focusId = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('[data-gid],[data-new-group]')?.dataset['gid'] ?? ((document.activeElement as HTMLElement | null)?.closest('[data-new-group]') ? '__new' : null);
-  host.replaceChildren();
+/** the stack of orbs a group row wears: it is drawn again only when who is in it (or its size) changes */
+const stackSig = (g: Group): string => g.members.map((m) => m.profile).filter((id) => bot(id)).join() + '@' + (railOn() ? 20 : 16);
+function groupsSkeleton(host: HTMLElement): HTMLElement {
   const ul = el('ul', { class: 'ui-rows bt-group-rows', 'data-ui': 'rows', 'aria-label': 'Groups' });
-  S.groupRows.clear();
-  for (const g of S.groups) {
-    const li = frag(groupRow(g));
-    ul.append(li);
-    S.groupRows.set(g.id, { li, btn: $('.ui-row', li) });
-  }
-  const nl = frag(ui.html.row({ title: 'New group', sub: 'Bots talking together', value: '__new-group', lead: '<span class="bt-group-add">' + ui.icon('plus') + '</span>', attrs: { 'data-new-group': '', 'data-tip': railOn() ? 'New group' : null, 'data-tip-pos': 'right', 'aria-label': 'New group, bots talking together' } }));
-  nl.querySelector('.ui-row')?.setAttribute('data-new-group', '');
-  ul.append(nl);
   host.append(el('h2', { class: 'ui-group__head bt-groups-h', text: 'Groups' }), ul);
   ui.hydrate(ul);
   ul.addEventListener('keydown', listKeys);
@@ -254,6 +262,36 @@ export function drawGroups(): void {
     if (id === '__new-group') { openNewGroup(); return; }
     if (id && group(id)) openGroup(id);
   });
+  return ul;
+}
+const newGroupRow = (lead: string): string => ui.html.row({ title: 'New group', sub: 'Bots talking together', value: '__new-group', lead, attrs: { 'data-new-group': '', 'data-tip': railOn() ? 'New group' : null, 'data-tip-pos': 'right', 'aria-label': 'New group, bots talking together' } });
+/** the block follows the groups in place: a row whose members did not change keeps its orbs (a group that starts or stops
+    replying must not blank every group's orbs), a new group adds a row, an archived one removes its own */
+export function drawGroups(): void {
+  const host = S.groupsEl; if (!host) return;
+  const active = document.activeElement as HTMLElement | null;
+  const focusId = active?.closest<HTMLElement>('[data-gid],[data-new-group]')?.dataset['gid'] ?? (active?.closest('[data-new-group]') ? '__new' : null);
+  const ul = host.querySelector<HTMLElement>('.bt-group-rows') ?? groupsSkeleton(host);
+  const want: HTMLElement[] = [], keep = new Set<string>();
+  for (const g of S.groups) {
+    keep.add(g.id);
+    const li = frag(groupRow(g)), btn = $('.ui-row', li), sig = stackSig(g), had = S.groupRows.get(g.id);
+    if (had && had.li.dataset['stack'] === sig && had.li.isConnected) { patchRow(had.btn, btn); want.push(had.li); continue; }
+    had?.li.remove();
+    li.dataset['stack'] = sig;
+    S.groupRows.set(g.id, { li, btn });
+    want.push(li);
+  }
+  for (const id of [...S.groupRows.keys()]) if (!keep.has(id)) { S.groupRows.get(id)?.li.remove(); S.groupRows.delete(id); }
+  const addBtn = ul.querySelector<HTMLElement>('[data-new-group]');
+  if (addBtn) { mirror(addBtn, $('.ui-row', frag(newGroupRow(''))), ['data-tip', 'data-tip-pos']); want.push(addBtn.closest('li') as HTMLElement); }
+  else {
+    const nl = frag(newGroupRow('<span class="bt-group-add">' + ui.icon('plus') + '</span>'));
+    nl.querySelector('.ui-row')?.setAttribute('data-new-group', '');
+    want.push(nl);
+  }
+  /* put the rows in order, moving only a row that is out of place */
+  want.forEach((li, i) => { if (ul.children[i] !== li) ul.insertBefore(li, ul.children[i] ?? null); });
   markSelected();
   checkClips();
   if (focusId) (focusId === '__new' ? host.querySelector<HTMLElement>('[data-new-group]') : host.querySelector<HTMLElement>('[data-gid="' + focusId + '"]'))?.focus({ preventScroll: true });

@@ -21,7 +21,7 @@
      scrollbar          every scroller has the system's scrollbar: a ::-webkit-scrollbar rule (WebKitGTK ignores
                         scrollbar-width) no wider than 8 px and a thumb in --bg-4
    And two helpers for the stability check: `signature(root)` (the DOM's structure, for render-twice) and
-   `sampler(root)` (frames of opacity, visibility and boxes during an interaction, plus nodes replaced). */
+   `sampler(root, {orbs})` (frames of opacity, visibility and boxes during an interaction, plus nodes replaced). */
 (() => {
   const SKIP_INSIDE = 'orb-avatar, boopis-logo, svg, canvas, .hx-probe, script, style, template';
   /* visually hidden text (the screen reader's) is not drawn: no geometry, no tokens */
@@ -720,7 +720,8 @@
   }
 
   /** frames of every visible element's opacity, visibility and box under `root`, plus nodes removed and added */
-  function sampler(rootSel) {
+  function sampler(rootSel, opts) {
+    const orbsStay = !!(opts && opts.orbs);
     const root = (rootSel && document.querySelector(rootSel)) || (window.__lab && window.__lab.scope && window.__lab.scope()) || document.body;
     const keyOf = (e) => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (e.getAttribute('data-k') ? '[k=' + e.getAttribute('data-k') + ']' : e.getAttribute('data-id') ? '[id=' + e.getAttribute('data-id') + ']' : e.getAttribute('data-slot') ? '[slot=' + e.getAttribute('data-slot') + ']' : '') + '.' + [...e.classList].filter((c) => !/^is-/.test(c)).slice(0, 2).join('.');
     const tracked = new Map(); let n = 0;
@@ -728,10 +729,20 @@
     const pick = () => { for (const e of root.querySelectorAll('*')) { if (e.matches('svg *, script, style')) continue; track(e); } track(root); };
     pick();
     const removed = [], added = [];
+    /* the orbs: an orb taken out of the page, and the orbs put in (R-motion-5). An orb's canvas belongs to a worker; a node that is
+       detached and attached again, or drawn anew, shows nothing until the worker draws and commits once more. */
+    const orbsOf = (n) => (n.matches('orb-avatar') ? [n] : [...n.querySelectorAll('orb-avatar')]);
+    const orbOut = new Map(), orbIn = [];
     const mo = new MutationObserver((list) => {
       for (const m of list) {
-        for (const r of m.removedNodes) if (r.nodeType === 1 && !r.matches('.ui-tip, #__lab_probe') && r.isConnected === false) removed.push({ key: keyOf(r), t: performance.now() });
-        for (const a of m.addedNodes) if (a.nodeType === 1 && !a.matches('.ui-tip, #__lab_probe')) { added.push({ key: keyOf(a), t: performance.now() }); track(a); }
+        for (const r of m.removedNodes) if (r.nodeType === 1 && !r.matches('.ui-tip, #__lab_probe')) {
+          if (r.isConnected === false) removed.push({ key: keyOf(r), t: performance.now() });
+          for (const o of orbsOf(r)) orbOut.set(o, { label: o.getAttribute('label') || '', t: performance.now() });
+        }
+        for (const a of m.addedNodes) if (a.nodeType === 1 && !a.matches('.ui-tip, #__lab_probe')) {
+          added.push({ key: keyOf(a), t: performance.now() }); track(a);
+          for (const o of orbsOf(a)) orbIn.push({ el: o, label: o.getAttribute('label') || '', t: performance.now() });
+        }
       }
     });
     mo.observe(root, { childList: true, subtree: true });
@@ -750,7 +761,13 @@
     return {
       stop() {
         on = false; cancelAnimationFrame(raf); mo.disconnect();
-        return analyse(tracked, removed, added);
+        const issues = analyse(tracked, removed, added);
+        if (orbsStay) for (const [o, out] of orbOut) {
+          const key = 'orb-avatar[label=' + out.label + ']';
+          if (o.isConnected) issues.push({ kind: 'orb-moved', key, msg: key + ' was taken out of the page and put back (its canvas is painted empty until the worker draws again: update the node in place)' });
+          else if (orbIn.some((i) => i.el !== o && i.label === out.label && i.t >= out.t - 50 && i.t - out.t <= 1000)) issues.push({ kind: 'orb-replaced', key, msg: key + ' was removed and drawn anew (a new canvas is empty until the worker draws it: keep the node and update its attributes)' });
+        }
+        return issues;
       }
     };
   }

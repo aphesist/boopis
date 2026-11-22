@@ -18,6 +18,8 @@ const settings: Story = {
     models: st(['variant'], tab('models')),
     connectors: st(['variant'], tab('connectors')),
     appearance: st(['variant'], tab('appearance'), { scope: '#hx-settings, .hxt, [class*="hxt-"]' }),
+    'appearance, a larger interface chosen': st(['variant'], async (c) => { await tab('appearance')(c); await c.click('[data-name="hx-ui-size"] .ui-seg__opt:nth-of-type(2)'); await c.wait(300); }, { scope: '#hx-settings, .hxt, [class*="hxt-"]' }),
+    'interface size focus': st(['focus'], tab('appearance'), { force: [{ sel: '[data-name="hx-ui-size"] .ui-seg__opt[aria-checked="true"]', state: 'focus' }] }),
     'appearance, scrolled': st(['scroll'], async (c) => { await tab('appearance')(c); await scrollEnd(c); }),
     keyboard: st(['variant', 'scroll'], tab('keys')),
     'tab bar hover': st(['hover', 'owner'], open, { force: [{ sel: '#hx-settings .hx-dtab:nth-of-type(2)', state: 'hover' }] }),

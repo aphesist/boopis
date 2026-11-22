@@ -2,7 +2,7 @@
    never user-settable, they belong to states; the dice agent, w11/dice, fixes), the Archived group and the "made outside
    boopis" mark, with no bots, one, many and long names. */
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
-import { groupRowOverlaps, liveShaped, lookMismatches, recordsArrive, teamBeforeRecords, teamGroups, withWorking } from '../../live-bots';
+import { drivable, groupRowOverlaps, liveShaped, lookMismatches, recordsArrive, teamBeforeRecords, teamGroups, withWorking } from '../../live-bots';
 
 const bots = async (c: AppCtx): Promise<void> => { c.hx.setState({ tab: 'bots' }); await c.wait(500); };
 const pick = (id: string) => async (c: AppCtx): Promise<void> => { await bots(c); c.hx.emit('hx:bot-select', { id, from: 'lab' }); await c.wait(500); };
@@ -23,6 +23,20 @@ const groupsLaidOut = async (c: AppCtx): Promise<void> => { await bots(c); const
 const openSheet = (id: string) => async (c: AppCtx): Promise<void> => { await pick(id)(c); await c.key('i', { ctrlKey: true }); await c.wait(500); };
 const lookTab = (name: string) => async (): Promise<void> => { const t = [...document.querySelectorAll<HTMLElement>('#hx-view-bots [data-name="look"] [role="tab"]')].find((x) => x.textContent === name); t?.click(); await new Promise((r) => setTimeout(r, 300)); };
 
+/** live updates of several bots (and a group's members) while the app is watched: no orb may be detached, put back or drawn
+    anew, because a worker's canvas is empty until it is painted again (the sidebar's blink, 22 November 2026) */
+const LIVE_UPDATES = {
+  name: 'bots change state live', watch: '#hx-side', orbs: 'stay', sample: 1200,
+  steps: [{ do: 'call', js: `(async () => { const d = window.__labDrive, w = (ms) => new Promise((r) => setTimeout(r, ms));
+    d.bot('atlas', { state: 'working', activity: 'reading the diff' }); await w(160);
+    d.bot('iris', { state: 'speaking' }); await w(160);
+    d.bot('sol', { state: 'thinking' }); d.bot('hex', { state: 'idle' }); await w(160);
+    d.group('room-release', { working: ['atlas', 'kai'] }); await w(160);
+    d.bot('nina', { state: 'working', attention: null }); await w(160);
+    d.bot('atlas', { state: 'idle', activity: '' }); d.bot('iris', { state: 'idle' }); d.group('room-release', { working: [] }); await w(160);
+    d.bot('nina', { state: 'needs', attention: 'approval' }); })()`, ms: 1400 }]
+} as const;
+
 const roster: Story = {
   id: 'bots/roster', title: 'Bots roster', area: 'bots', kind: 'surface', covers: ['surface:bots-roster'], scope: '#hx-side', mock: MOCK,
   states: {
@@ -40,6 +54,7 @@ const roster: Story = {
     'those groups, a row hovered': st(['hover'], { patch: teamGroups }, groupsLaidOut, { force: [{ sel: '.bt-groups .ui-row[data-gid="g-paper-past-"]', state: 'hover' }] }),
     'those groups, the current one': st(['variant'], { patch: teamGroups }, async (c) => { await groupsLaidOut(c); await c.click('.bt-groups .ui-row[data-gid="g-paper-past-"]'); await c.wait(500); const bad = groupRowOverlaps(); if (bad.length) throw new Error(bad.join('; ')); }),
     'the owner\'s six, their records read after the roster': st(['owner', 'variant'], team, recordsRead, { note: 'the six were drawn with the looks their names give, then their saved records arrived: every row wears the saved look (the setup fails if any orb does not)' }),
+    'live updates of several bots': st(['variant'], { fixtures: ['groups'], patch: drivable }, bots, { interact: [LIVE_UPDATES] }),
     'row hover': st(['hover'], {}, bots, { force: [{ sel: '#hx-list-bots li:nth-of-type(2) .ui-row', state: 'hover' }] }),
     'row focus': st(['focus'], {}, bots, { force: [{ sel: '#hx-list-bots .ui-row', state: 'focus' }] })
   }

@@ -67,7 +67,7 @@ rules have a check and which do not.
 | `roles` | R-colour-3, R-colour-4 | text in `--brass`; `--bg-0` on `--bg-0`, `--bg-3` on `--bg-3` |
 | `axe` | R-a11y-1, R-a11y-3, R-a11y-8 | an axe-core violation (every rule but page landmarks) |
 | `stability.render` | | the state drawn twice (a fresh cell, or a reload) has a different DOM structure |
-| `stability.interact` | R-motion-5, R-motion-8 | while an interaction plays (with full motion), a node is removed and drawn again, an element goes invisible and comes back, or a box jumps away for a frame or two and comes back |
+| `stability.interact` | R-motion-5, R-motion-8 | while an interaction plays (with full motion), a node is removed and drawn again, an `<orb-avatar>` is taken out and put back or drawn anew (its canvas is empty until the worker paints it), an element goes invisible and comes back, or a box jumps away for a frame or two and comes back |
 | `visual` | | the screenshot differs from its golden |
 
 **The matrix.** Each state loads once at 1440 x 900 with reduced motion. For each preset (catalog, graphite, bone,
@@ -129,7 +129,7 @@ export default {
 - Tag every state (`typical`, `empty`, `long`, `many`, `single`, `error`, `loading`, `disabled`, `expired`, `success`,
   `variant`, `size`, `rtl`, `owner`, `scroll`, `hover`, `focus`, `active`, `tooltip`, `open`).
 - `force` forces a pseudo-state on part of the state; `overlay: { anchor, layer }` names an overlay that should be open
-  (the overlay check reads it); `interact` lists interactions the stability check samples; `allow` excuses a check for
+  (the overlay check reads it); `interact` lists interactions the stability check samples; `zoom` lays the state out as a web view's page zoom does (1/zoom of the window, the pixel ratio times zoom: the desktop's interface size); `allow` excuses a check for
   that state, with the reason (the report shows it). Give it `{ el, reason }` instead of a bare reason to excuse only the
   findings whose element description contains `el` (for axe, the target and the rule's id), so one element's excuse
   never silences the rest of the state. An excuse that holds in every state, because the rule itself leaves the element out, is

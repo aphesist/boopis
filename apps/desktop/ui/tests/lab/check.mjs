@@ -119,7 +119,8 @@ async function cropFor(page, x, f) {
 
 /* ───────── the in-page work ───────── */
 async function openState(browser, origin, row, o = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: o.dpr ?? DPR, reducedMotion: o.motion ? 'no-preference' : 'reduce' });
+  const z = row.zoom || 1;   /* a zoomed window: laid out at 1/z of its width, drawn z times larger (the desktop's interface size) */
+  const ctx = await browser.newContext({ viewport: { width: Math.round(1440 / z), height: Math.round(900 / z) }, deviceScaleFactor: (o.dpr ?? DPR) * z, reducedMotion: o.motion ? 'no-preference' : 'reduce' });
   const page = await ctx.newPage();
   page.errorsSeen = [];
   page.on('console', (m) => { if (m.type() === 'error') page.errorsSeen.push('console: ' + m.text().slice(0, 300)); });
@@ -139,7 +140,8 @@ const settle = async (page, ms) => {
   await page.evaluate(() => (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))).catch(() => {});
 };
 async function setWidth(page, row, w) {
-  const size = { width: w, height: w <= 390 ? 844 : 900 };
+  const z = row.zoom || 1;
+  const size = { width: Math.round(w / z), height: Math.round((w <= 390 ? 844 : 900) / z) };
   const cur = page.viewportSize();
   if (cur && cur.width === size.width && cur.height === size.height) return;
   await page.setViewportSize(size);
@@ -260,6 +262,7 @@ async function checkRow(browser, origin, row, log) {
       await page.evaluate((p) => window.__lab.preset(p), preset);
       await settle(page, 80);
       for (const w of WIDTHS) {
+        if (row.zoom && w < 900) continue;   /* a zoomed window is a desktop window: not 390 wide */
         if (!row.app && row.width && row.width + 48 > w) continue;   /* a fixed-width cell wider than this window: not meaningful */
         await setWidth(page, row, w);
         const where = preset + '/' + w;
@@ -325,7 +328,7 @@ async function checkRow(browser, origin, row, log) {
         const list = await second.page.evaluate(() => window.__lab.interact);
         for (const it of list) {
           const p = second.page;
-          await p.evaluate((w) => { window.__labSampler = window.__labProbe.sampler(w || null); }, it.watch ?? null);
+          await p.evaluate((o) => { window.__labSampler = window.__labProbe.sampler(o.watch || null, { orbs: o.orbs }); }, { watch: it.watch ?? null, orbs: it.orbs === 'stay' });
           for (const s of it.steps) {
             if (s.do === 'hover') await p.hover(s.sel, { timeout: 4000 }).catch(() => {});
             else if (s.do === 'click') await p.click(s.sel, { timeout: 4000 }).catch(() => {});
