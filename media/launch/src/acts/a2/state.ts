@@ -7,6 +7,7 @@ import { takeRoom, type Layout, type Room } from './room';
 import { Thread } from './thread';
 import type { Line } from './lines';
 import type { KfCursor } from './cursor';
+import { actEnd } from './util';
 
 export interface Placed { el: HTMLElement; orbs: Map<string, SwappedOrb>; h: number }
 export interface A2State {
@@ -45,7 +46,7 @@ export async function a2state(ctx: ActCtx): Promise<A2State> {
     lines.style.transform = 'translate(' + (s.x - W / (2 * z)).toFixed(3) + 'px,' + (s.y - H / (2 * z)).toFixed(3) + 'px) scale(' + (1 / z).toFixed(6) + ')';
   });
   /* the act's last frame in this edit (S2 in the master): nothing of act 2 is drawn after it */
-  const end = Math.max(...['B05', 'B06', 'B07', 'B08'].filter((b) => ctx.has(b)).map((b) => ctx.win(b).end));
+  const end = actEnd(ctx);
   const st: A2State = { room, lay, thread, lines, end };
   states.set(ctx, st);
   return st;

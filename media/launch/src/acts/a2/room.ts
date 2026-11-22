@@ -7,7 +7,7 @@ import type { ActCtx } from '../context';
 import { swapOrbs, type SwappedOrb } from '../../engine/look';
 import { FilmOrb } from '../../engine/orb';
 import { filmUI, h } from '../../../look/src/stage';
-import { S1 as S1_, a2css, box, styleFrom, visFrom } from './util';
+import { S1 as S1_, a2css, actEnd, box, styleFrom, visFrom } from './util';
 import type { Box } from '../../motion/carry';
 
 export interface Layout {
@@ -99,7 +99,7 @@ export async function takeRoom(ctx: ActCtx): Promise<Room> {
     styleFrom(film, plate, 'background-color', S1, () => 'var(--bg-2)');
   }
   /* the room is act 2's from S1: drawn, and never clipped by the key frame's box (the camera moves past it) */
-  const end = Math.max(...['B05', 'B06', 'B07', 'B08'].filter((b) => ctx.has(b)).map((b) => ctx.win(b).end));
+  const end = actEnd(ctx);
   visFrom(film, kfBox, S1, (t) => t <= end + 1e-9);
   for (const e of [scope, wrap, head, thread, presence, composer]) if (e !== kfBox) visFrom(film, e, S1, () => true);
   if (kfBox.classList.contains('stage')) styleFrom(film, kfBox, 'overflow', S1, () => 'visible');

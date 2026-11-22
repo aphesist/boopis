@@ -30,6 +30,12 @@ export { arrive, depart, travel };
 export const drift = cubicBezier(0.37, 0, 0.63, 1, 'drift');
 export type { Ease };
 
+/** the last frame act 2 draws in this edit: S2 in the master (act 3 takes over); in a cut-down that ends the act on B07,
+    the edit's end (the next beat pushes into the folded stack B07 leaves) */
+export function actEnd(ctx: ActCtx): number {
+  return ctx.has('B08') ? ctx.win('B08').end : ctx.edit.duration;
+}
+
 /* ───────── time: a beat's builder writes master times; a cut-down plays the beat in its own window ───────── */
 export interface Tm {
   /** a master (script) time inside the beat, on this edit's clock */

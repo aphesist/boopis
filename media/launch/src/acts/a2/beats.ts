@@ -503,6 +503,12 @@ export async function b07(ctx: ActCtx): Promise<void> {
   /* the orbs that just spoke look at your request as it lands */
   glance(film, room.kai, tSend + F(6), 4, -16);
 
+  /* a cut-down that ends the act here pushes on into nina's orb in the folded stack: it is hers to take */
+  if (!ctx.has('B08')) {
+    const so = [...h3.orbs.values()].find((o) => o.name.startsWith('nina') && !!o.holder.closest('.bt-stack'));
+    if (so) { const m = new Map(ctx.carry.orbs ?? []); m.set('nina', so); ctx.carry.orbs = m; }
+  }
+
   /* ── the hold breathes ── */
   const holdAt = tSend + pushDur;
   ctx.cam.drift(v ? { x: pushX + 22, y: pushY - 60, zoom: pushZ * 1.05 } : { x: pushX + 34, y: pushY - 20, zoom: pushZ * 1.065 }, { at: holdAt, dur: tm.t(17.867) - holdAt, ease: drift });
