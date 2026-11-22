@@ -16,7 +16,7 @@ import { swapOrbs } from '../../engine/look';
 import { a2state } from './state';
 import { runsOf, bars } from './bars';
 import { kfCursor } from './cursor';
-import { DUR, S2, arrive, box, depart, riseIn, styleFrom, tmap, travel, ui, vis, visFrom, within, drift } from './util';
+import { DUR, depart, riseIn, styleFrom, tmap, travel, ui, vis, visFrom, within, drift } from './util';
 
 const F = (n: number): number => n / 60;
 type R = [number, number, number, number];
@@ -253,5 +253,4 @@ export async function b08(ctx: ActCtx): Promise<void> {
 
   /* the hand-off at S2: the composer is ours, and the plate it sits on */
   s.out = { el: sComp, session: plate };
-  void S2; void arrive; void box;
 }

@@ -1,6 +1,6 @@
 /* Act 2's beats. Each builder writes master times through `tm` (a cut-down replays it in its own window). */
 import type { ActCtx } from '../context';
-import { BOTS, filmUI, h, sharpenOrbs } from '../../../look/src/stage';
+import { BOTS, h, sharpenOrbs } from '../../../look/src/stage';
 import { T, botEntry, huddle, mdCtx, youEntry } from '../../../look/src/scenes/parts';
 import { ui as ui_ } from '@boopis/ui';
 import { swapOrbs } from '../../engine/look';
@@ -14,7 +14,7 @@ import { exit, line, rise, split, swap } from './lines';
 import { linear } from '../../motion/ease';
 import { fly } from './fly';
 import { kfCursor } from './cursor';
-import { CAM, DUR, S1, arrive, attrFrom, box, camSpring, depart, leaveOut, riseIn, tmap, travel, ui, uiSpring, vis, within, drift } from './util';
+import { CAM, DUR, arrive, attrFrom, box, camSpring, depart, leaveOut, riseIn, tmap, travel, ui, uiSpring, vis, within, drift } from './util';
 
 const F = (n: number): number => n / 60;
 
@@ -135,7 +135,6 @@ export async function b05(ctx: ActCtx): Promise<void> {
 
   /* ── the hold breathes: a slow push while the line and the presence stand ── */
   ctx.cam.drift(v ? { zoom: 1.05, y: camY + 64, x: 540 - 12 } : { zoom: 1.055, y: camY + 44, x: 960 - 32 }, { at: follow + CAM, dur: tm.t(12.0) - follow - CAM, ease: drift });
-  void travel; void arrive; void filmUI;
 }
 
 /* ═════════ B06 They work it out · 12.267 to 14.933 ═════════
@@ -316,7 +315,6 @@ export async function b06(ctx: ActCtx): Promise<void> {
   for (const e of qa(pres.p4, '.ui-presence__name, .ui-presence__words, .ui-presence__clock')) leaveOut(film, e, tl, { y: 4 });
   thread.open('pres', tl, DUR.d3, uiSpring, 0);
   vis(film, pres.box, (t) => t < tl + DUR.d3);
-  void depart; void arrive;
 }
 /* ═════════ B07 The fold (the moment) · 14.933 to 17.867 ═════════
    The camera comes back down to the composer; the cursor clicks into it and the line types (K2), "@nina" becoming a
@@ -514,4 +512,3 @@ export async function b07(ctx: ActCtx): Promise<void> {
   ctx.cam.drift(v ? { x: pushX + 22, y: pushY - 60, zoom: pushZ * 1.05 } : { x: pushX + 34, y: pushY - 20, zoom: pushZ * 1.065 }, { at: holdAt, dur: tm.t(17.867) - holdAt, ease: drift });
 }
 export { b08 } from './window';
-void S1;
