@@ -164,7 +164,8 @@ export function b09(ctx: ActCtx, S: Stage3, P: Prep): void {
   if (S.v) D.to(w.start, send, { dx: -30, dy: -60, z: 1.05 }, travel);
   else D.to(w.start, send, { dx: -60, dy: -24, z: 1.05 }, travel);
   D.to(send, send + cam, { dx: S.v ? 0 : 10, dy: S.v ? 30 : 30, z: 1.0 }, springEase('camera', cam));
-  D.to(send + cam, ctx.win('B10').start, { dx: S.v ? 0 : -50, dy: S.v ? 0 : 24, z: S.v ? 1.03 : 1.05 }, travel);
+  /* (9:16 holds here: its line is a third of the band, and a slow drift under that much type reads as a dissolve) */
+  if (!S.v) D.to(send + cam, ctx.win('B10').start, { dx: -50, dy: 24, z: 1.05 }, travel);
   /* the lamp moves onto the session (B09's pool: the card stock's tone, a little left of centre) */
   S.rig.light.to(w.start, send + 0.4, S.v ? { x: 0.5, y: 0.5, w: 0.9, h: 0.96, inherit: 0 } : { x: 0.4, y: 0.5, w: 0.9, h: 0.96, inherit: 0 }, travel);
 }

@@ -265,7 +265,10 @@ export function b13(ctx: ActCtx, S: Stage3, D: DeskPrep): void {
   /* every plate move of the act asks the renderer for motion blur (the rig draws them, so the timeline cannot tell it) */
   declareMotion(film, S.gw.view.spans(), S.gt.view.spans(), S.ga.view.spans(), S.gw.lens.spans(), R.ground.spans());
   /* then the act camera's last drift: on to rest, landing on the seam */
-  drift.to(landed, w.end, { z: 1, dx: 0, dy: 0 }, travel);
+  /* 16:9 keeps widening to rest on the seam; 9:16, its column of type denser, settles inside the snap and holds while
+     the blocks print (a slow drift under that much type reads as a dissolve) */
+  if (S.v) drift.to(enter, landed, { z: 1, dx: 0, dy: 0 }, snap);
+  else drift.to(landed, w.end, { z: 1, dx: 0, dy: 0 }, travel);
   R.ground.to(enter, w.end, { s: 1, dx: 0, dy: 0 }, travel);
   /* B13's lamp, cool and centred: exactly the light A4 sets on the seam frame (a4.ts lampsOf, B14 +0) */
   R.light.to(enter, w.end, { x: 0.5, y: 0.5, w: 0.9, h: 0.96, cool: 1 }, travel);
