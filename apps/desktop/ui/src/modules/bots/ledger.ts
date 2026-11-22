@@ -163,6 +163,21 @@ export function setJump(b: HTMLButtonElement | null, n: number): void {
 /** whether a scroller shows its end (within a line) */
 export const atEnd = (s: HTMLElement): boolean => s.scrollHeight - s.scrollTop - s.clientHeight < 48;
 
+/** The composer's zone floats over the conversation, and the conversation's bottom padding follows its height (--bt-composer-h).
+ *  When the zone grows (a held message, the hint, the working line), a conversation read to its end stays at its end, so the last
+ *  entry never sits under the zone. A hidden pane's zone measures 0 and is skipped: the pane on screen owns the value. */
+export function followZone(zone: HTMLElement, scroll: () => HTMLElement | null, root: () => HTMLElement | null): () => void {
+  const measure = (): void => {
+    const pane = zone.parentElement;
+    if (!pane || pane.offsetParent === null) return;
+    const sc = scroll(), pin = !!sc && atEnd(sc);
+    root()?.style.setProperty('--bt-composer-h', zone.offsetHeight + 'px');
+    if (pin && sc) sc.scrollTop = sc.scrollHeight;
+  };
+  new ResizeObserver(measure).observe(zone);
+  return measure;
+}
+
 /* ───────── hover actions ───────── */
 export interface ActsOpts { name: string; copy: () => string; reply?: (() => void) | undefined; open?: (() => void) | undefined }
 /** copy, reply and open the bot's chat, in the margin under the time; shown on hover or focus */

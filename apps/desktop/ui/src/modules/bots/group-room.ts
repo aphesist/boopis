@@ -17,7 +17,7 @@ import { markSelected, drawGroups } from './list';
 import { checkClips } from './clips';
 import { closeSettings } from './settings';
 import { openNewGroup } from './new-group';
-import { arrival, atEnd, dropPending, entryActs, glanceAt, jumpButton, listWords, pendingEntry, placeToLine, setJump, toLine, unreadDivider, updatePending } from './ledger';
+import { arrival, atEnd, dropPending, entryActs, followZone, glanceAt, jumpButton, listWords, pendingEntry, placeToLine, setJump, toLine, unreadDivider, updatePending } from './ledger';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 import { foldHuddles, huddleEntry, huddleOn, huddleRuns, isBetween, liveAt } from './huddle';
 import type { HuddleDeps } from './huddle';
@@ -93,8 +93,7 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
     sendNow: (gid, qid) => { groups().sendNow(gid, qid).catch((e: unknown) => { toast('It was not sent: ' + sentence(e)); }); },
     takeBack: (gid, qid) => { const t = groups().unqueue(gid, qid); if (t) { c.setValue(c.value ? t + '\n' + c.value : t); c.focus(); } }
   });
-  const measure = (): void => { S.viewRoot?.style.setProperty('--bt-composer-h', zone.offsetHeight + 'px'); };
-  new ResizeObserver(measure).observe(zone);
+  followZone(zone, () => G.scroll, () => S.viewRoot);
   return pane;
 }
 const G = { scroll: null as HTMLElement | null, head: null as HTMLElement | null, log: null as HTMLElement | null, zone: null as HTMLElement | null, working: null as HTMLElement | null, composer: null as import('../../components').ComposerEl | null, queue: null as GroupQueue | null, renaming: false };

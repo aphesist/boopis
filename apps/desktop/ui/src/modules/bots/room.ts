@@ -19,7 +19,7 @@ import { openSettings, toggleSettings } from './settings';
 import { checkClips, watchClips } from './clips';
 import { renderGlance } from './glance';
 import { outsideDescription, outsideRoomMark } from './outside';
-import { arrival, atEnd, dropPending, entryActs, pendingEntry, updatePending } from './ledger';
+import { arrival, atEnd, dropPending, entryActs, followZone, pendingEntry, updatePending } from './ledger';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 
 const bots = () => data().bots;
@@ -76,9 +76,7 @@ function buildRoom(): void {
   buildComposer(zone);
   /* a live bot cannot be messaged yet: no composer, rather than one that sends nowhere */
   zone.hidden = !!data().info.unavailable['bots.send'];
-  const measure = (): void => { S.viewRoot?.style.setProperty('--bt-composer-h', zone.offsetHeight + 'px'); };
-  new ResizeObserver(measure).observe(zone);
-  measure();
+  followZone(zone, () => S.scroll, () => S.viewRoot)();
   S.follow = gentleFollow(() => S.presence, 0.45);
 }
 

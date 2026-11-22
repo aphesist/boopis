@@ -98,6 +98,12 @@
   bottom: calc(var(--hx-dock-space, 0px) + var(--composer-gap));
   transform: translateX(-50%);
 }
+/* the lines above the composer (the hint, who works next, the held messages) are bare text: the view's ground lies under the whole
+   zone, faded in above it, so a conversation scrolled behind never shows through them */
+.bt-composer-zone::before {
+  content: ''; position: absolute; z-index: -1; inset: calc(var(--sp-5) * -1) 0 0; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--bg-2) var(--sp-5));
+}
 
 /* ================================================================ new bot (bots' own form) */
 .bt-new-scroll { padding-bottom: calc(var(--hx-dock-space, 0px) + var(--sp-6)); }
