@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rollLook, SHAPES, SWATCHES } from './look';
+import { lookAttrs, lookFor, lookOf, rollLook, sameLook, SHAPES, SWATCHES } from './look';
 
 const colours = SWATCHES.map(([c]) => c);
 /** a seeded generator (mulberry32): the same seed, the same rolls */
@@ -37,5 +37,27 @@ describe('rollLook', () => {
     const a = Array.from({ length: 10 }, ((r) => () => rollLook({ random: r }))(seeded(7)));
     const b = Array.from({ length: 10 }, ((r) => () => rollLook({ random: r }))(seeded(7)));
     expect(a).toEqual(b);
+  });
+});
+
+describe('lookOf: the one look of a bot', () => {
+  it('is the saved shape and colour when the record has them (the owner\'s kai and nina)', () => {
+    expect(lookOf({ name: 'kai', shape: 'circle', color: '#4fc9a8' })).toEqual({ shape: 'circle', color: '#4fc9a8' });
+    expect(lookOf({ name: 'nina', shape: 'triangle', color: '#F23B5A' })).toEqual({ shape: 'triangle', color: '#f23b5a' });
+  });
+  it('is the look the name gives when there is no record (a profile made outside boopis)', () => {
+    expect(lookOf({ name: 'kai' })).toEqual(lookFor('kai'));
+    expect(lookOf({ id: 'vox' })).toEqual(lookFor('vox'));
+  });
+  it('takes each valid part of a record written by hand, and the name\'s for the rest', () => {
+    expect(lookOf({ name: 'moss', shape: 'squircle' })).toEqual({ shape: 'squircle', color: lookFor('moss').color });
+    expect(lookOf({ name: 'moss', shape: 'blob', color: '#2fd26a' })).toEqual({ shape: lookFor('moss').shape, color: '#2fd26a' });
+    expect(lookOf({ name: 'moss', shape: 'squircle', color: 'green' })).toEqual({ shape: 'squircle', color: lookFor('moss').color });
+  });
+  it('draws an orb with it, with the light eyes of a dark body and never an eye shape', () => {
+    expect(lookAttrs({ shape: 'circle', color: '#1c1c24' })['eye-color']).toBe('var(--ink-on-dock)');
+    expect(lookAttrs({ shape: 'circle', color: '#4fc9a8' })['eye-color']).toBeNull();
+    expect(Object.keys(lookAttrs(lookOf({ name: 'hex', shape: 'hexagon', color: '#a6a6ab' })))).not.toContain('eye-shape');
+    expect(sameLook({ name: 'kai' }, lookFor('kai'))).toBe(true);
   });
 });
