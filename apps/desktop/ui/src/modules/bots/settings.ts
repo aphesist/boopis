@@ -14,6 +14,7 @@ import { focusConversation, openBot, paintToolbar, refreshPresence } from './roo
 import { checkClips } from './clips';
 import { openLiveSheet } from './settings-live';
 import { lookEditor } from './look-edit';
+import { limitWords, openLimitMenu } from './run-limit';
 
 /** a section of the sheet: the library's, open, with its kids in its body */
 export function sectionOf(name: string, label: string, meta: string | null, kids: Array<Node | null>): HTMLElement {
@@ -29,6 +30,26 @@ export function lookSection(b: Bot): HTMLElement {
   const s = sectionOf('look', 'Look', ed.meta, ed.kids);
   meta = s.querySelector<HTMLElement>('.ui-sec__meta');
   return s;
+}
+/** The Run limit row, the same in the mock's sheet and a live bot's: the most turns `boopis run --bot` lets one task take with this bot.
+ *  The engine keeps a goal's budget in the bot's own configuration and the host writes it there, so the command line and this row
+ *  read one number. Its menu is the group header's (`run-limit.ts`). */
+export function runLimitRow(b: Bot): HTMLElement {
+  const row = frag(ui.html.setRow({ label: 'Run limit', hint: 'The most turns a run may take with ' + b.name + '.', control: ui.html.button({ label: 'Reading…', size: 's', attrs: { 'aria-haspopup': 'menu', 'aria-label': 'Turns a run may take with ' + b.name + ': Reading…' } }) }));
+  const btn = $<HTMLButtonElement>('button', row), word = $('span', btn), hint = $('small', row);
+  let cur: { turns: number | null; fallback: number } | null = null;
+  const name = (words: string): string => 'Turns a run may take with ' + b.name + ': ' + words;   /* the visible words are part of the name */
+  const show = (now: { turns: number | null; fallback: number }): void => { cur = now; word.textContent = limitWords(now.turns, now.fallback); btn.setAttribute('aria-label', name(word.textContent)); };
+  const said = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+  data().bots.runLimit(b.id).then(show).catch((e: unknown) => { btn.disabled = true; word.textContent = 'Unknown'; btn.setAttribute('aria-label', name('Unknown')); hint.textContent = 'It could not be read: ' + said(e); });
+  btn.addEventListener('click', () => {
+    if (!cur) return;
+    openLimitMenu(btn, {
+      title: 'Most turns a run may take', label: 'Turns a run may take with ' + b.name, kept: cur.turns, fallback: cur.fallback,
+      onPick: (v) => { data().bots.setRunLimit(b.id, v).then((now) => { show(now); ui.toast(now.turns === null ? b.name + ' runs for up to ' + now.fallback + ' turns.' : b.name + ' runs for up to ' + now.turns + ' turns.'); }).catch((e: unknown) => { ui.toast('The limit was not saved: ' + said(e)); }); }
+    });
+  });
+  return row;
 }
 /** the headers are the sheet's tab stops: up and down move between them, home and end jump (KEYMAP section 9) */
 export function wireSectionKeys(body: HTMLElement): HTMLElement[] {
@@ -143,7 +164,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
     who,
     lookSection(b),
     sec('role', 'Role and instructions', null, [roleF, instrF]),
-    sec('model', 'Model', c.gov === 'governed' ? 'governed' : c.model, [hint('Governed starts cheap and climbs the ladder only when a step fails.'), gov, modelBox]),
+    sec('model', 'Model', c.gov === 'governed' ? 'governed' : c.model, [hint('Governed starts cheap and climbs the ladder only when a step fails.'), gov, modelBox, el('div', { class: 'ui-set' }, runLimitRow(b))]),
     sec('schedule', 'Schedule', c.cron ? (cronValid(c.cron) ? cronWords(c.cron) : 'incomplete') : null, [hint('When it runs without being asked.'), presets, cronF]),
     sec('channels', 'Channels', null, [hint('Where you can reach it, and where it reports.'), chans]),
     sec('approvals', 'Ask me before', null, [hint('It pauses and sends you an approval card.'), appr]),

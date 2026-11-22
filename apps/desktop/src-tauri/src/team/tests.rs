@@ -136,6 +136,14 @@ impl Model {
             installed: vec!["papercraft".into()],
         }
     }
+    pub(crate) fn read_turns(&self, bot: &str) -> Option<u32> {
+        self.now
+            .lock()
+            .unwrap()
+            .bots
+            .get(bot)
+            .and_then(|b| b.max_turns)
+    }
     pub(crate) fn ran(&self) -> Vec<String> {
         self.ran.lock().unwrap().clone()
     }
@@ -198,6 +206,7 @@ impl Backend for Model {
                         model: m,
                         look: bot.look.clone(),
                         governed: bot.governed == Some(true),
+                        max_turns: bot.max_turns,
                         skills,
                         connectors: Vec::new(),
                     },
@@ -210,6 +219,7 @@ impl Backend for Model {
                 model,
                 look,
                 governed,
+                max_turns,
             } => {
                 let b = n.bots.get_mut(name).unwrap();
                 if let Some(r) = role {
@@ -226,6 +236,9 @@ impl Backend for Model {
                 }
                 if let Some(g) = governed {
                     b.governed = *g;
+                }
+                if let Some(c) = max_turns {
+                    b.max_turns = c.kept();
                 }
             }
             Op::EnableSkills { bot, skills } => {
@@ -713,4 +726,52 @@ fn a_delivery_target_is_written_the_way_the_engine_reads_it() {
         ..job
     };
     assert_eq!(deliver_for(&job, &ids).as_deref(), Some("local"));
+}
+
+#[test]
+fn a_bots_cap_on_turns_is_checked_planned_applied_and_exported() {
+    // the file's mistakes
+    let e = parse("version: 1\nbots:\n  kai: {max_turns: 0}\n  nina: {max_turns: 5000}\n")
+        .unwrap_err()
+        .to_string();
+    assert!(e.contains("bots.kai.max_turns: 1 to 1000"), "{e}");
+    assert!(e.contains("bots.nina.max_turns: 1 to 1000"), "{e}");
+    let team = parse("version: 1\nbots:\n  kai: {max_turns: 30}\n").unwrap();
+    // a new bot is made with it
+    let now = base();
+    let p = plan(&team, &now, false);
+    assert_eq!(p.actions[0].what, "new, max turns 30");
+    // an existing one is changed only when the number differs, and only when the file says one
+    let mut now = base();
+    now.bots.insert("kai".into(), BotNow::default());
+    let p = plan(&team, &now, false);
+    assert_eq!(p.actions.len(), 1);
+    assert_eq!(p.actions[0].what, "max turns");
+    now.bots.get_mut("kai").unwrap().max_turns = Some(30);
+    assert!(plan(&team, &now, false).is_empty());
+    let silent = parse("version: 1\nbots:\n  kai: {}\n").unwrap();
+    assert!(plan(&silent, &now, false).is_empty());
+}
+
+#[tokio::test]
+async fn a_cap_on_turns_applies_once_and_exports_back_to_an_empty_plan() {
+    let team = parse("version: 1\nbots:\n  kai: {max_turns: 30}\n  nina: {}\n").unwrap();
+    let model = Model::new(base());
+    let p = plan(&team, &model.read().await.unwrap(), false);
+    let report = apply(&model, &p, &BTreeMap::new()).await.unwrap();
+    assert!(report.all_ok());
+    let now = model.read().await.unwrap();
+    assert_eq!(now.bots["kai"].max_turns, Some(30));
+    assert_eq!(now.bots["nina"].max_turns, None);
+    assert!(plan(&team, &now, false).is_empty());
+    // the export writes it, and only for the bot that keeps one
+    let e = export(&now);
+    assert_eq!(e.team.bots["kai"].max_turns, Some(30));
+    assert_eq!(e.team.bots["nina"].max_turns, None);
+    assert!(plan(&e.team, &now, false).is_empty());
+    // changed in the file, it is changed once
+    let more = parse("version: 1\nbots:\n  kai: {max_turns: 12}\n").unwrap();
+    let p = plan(&more, &now, false);
+    apply(&model, &p, &BTreeMap::new()).await.unwrap();
+    assert_eq!(model.read().await.unwrap().bots["kai"].max_turns, Some(12));
 }

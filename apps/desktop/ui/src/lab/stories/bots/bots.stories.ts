@@ -107,6 +107,8 @@ const sheet: Story = {
     'look: a live bot made outside boopis': st(['variant'], { fixtures: ['outside'], simulate: false, patch: (p) => liveShaped(p) }, openSheet('sage')),
     'look: dice hover': st(['hover'], {}, openSheet('nina'), { force: [{ sel: '#hx-view-bots .bt-look-dice', state: 'hover' }] }),
     'look: a swatch focused': st(['focus'], {}, openSheet('nina'), { force: [{ sel: '#hx-view-bots [data-name="look"] .bt-opt[aria-checked="true"]', state: 'focus' }] }),
+    'run limit: the row, in the model section': st(['variant'], {}, async (c) => { await openSheet('nina')(c); document.querySelector('#hx-view-bots [aria-label^="Turns a run may take"]')?.scrollIntoView({ block: 'center' }); await c.wait(200); }),
+    'run limit menu, the bot has its own': st(['open', 'variant'], { patch: (p) => ({ ...p, bots: { ...p.bots, runLimit: () => Promise.resolve({ turns: 45, fallback: 10 }) } }) }, async (c) => { await openSheet('nina')(c); document.querySelector('#hx-view-bots [aria-label^="Turns a run may take"]')?.scrollIntoView({ block: 'center' }); await c.wait(200); await c.click('#hx-view-bots [aria-label^="Turns a run may take"]'); await c.wait(400); }, { overlay: { anchor: '#hx-view-bots [aria-label^="Turns a run may take"]', layer: '.ui-menu' } }),
     'scrolled to the end': st(['scroll'], {}, async (c) => { await pick('nina')(c); await c.key('i', { ctrlKey: true }); await c.wait(500); for (const n of document.querySelectorAll<HTMLElement>('#hx-view-bots [class*="sheet"] *')) if (n.scrollHeight > n.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(n).overflowY)) n.scrollTop = n.scrollHeight; await c.wait(200); })
   }
 };

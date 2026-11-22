@@ -323,6 +323,10 @@ impl Backend for Live<'_> {
                     model,
                     look,
                     governed,
+                    max_turns: self.service.run_limit(&self.layout, &name).unwrap_or_else(|e| {
+                        tracing::debug!(error = %e, bot = %name, "a bot's cap on turns could not be read");
+                        None
+                    }),
                     skills,
                     connectors,
                 },
@@ -410,7 +414,13 @@ impl Backend for Live<'_> {
                     body["look"] = json!({"shape": l.shape, "color": l.color});
                 }
                 self.plugin("bots.write", body).await?;
-                self.prepare(name, true).await
+                self.prepare(name, true).await?;
+                if let Some(n) = bot.max_turns {
+                    self.service
+                        .set_run_limit(&self.layout, name, Some(n))
+                        .await?;
+                }
+                Ok(())
             }
             Op::UpdateBot {
                 name,
@@ -419,6 +429,7 @@ impl Backend for Live<'_> {
                 model,
                 look,
                 governed,
+                max_turns,
             } => {
                 let mut params = json!({"name": name});
                 if let Some(r) = role {
@@ -460,6 +471,11 @@ impl Backend for Live<'_> {
                 }
                 if model.is_some() || governed.is_some() {
                     self.prepare(name, false).await?;
+                }
+                if let Some(cap) = max_turns {
+                    self.service
+                        .set_run_limit(&self.layout, name, cap.kept())
+                        .await?;
                 }
                 Ok(())
             }

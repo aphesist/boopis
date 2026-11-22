@@ -10,9 +10,12 @@ use async_trait::async_trait;
 use super::bots as bots_cmd;
 use super::groups::{self, Board};
 use super::headless::Host;
+use super::run_bot::{self, Bots};
 use super::team::{self, Ctx as TeamCtx};
 use super::team_live::Live;
+use crate::bots::Layout;
 use crate::error::{Error, Result};
+use crate::rooms::Rpc;
 
 /// Which of the three.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -93,6 +96,31 @@ impl Board for Kanban<'_> {
     }
 }
 
+/// The bots of this machine: each one's own link to the gateway, and the cap in its own home.
+struct LiveBots<'a> {
+    host: &'a Host,
+    layout: Layout,
+}
+
+#[async_trait]
+impl Bots for LiveBots<'_> {
+    async fn link(&self, bot: &str) -> Result<Box<dyn Rpc>> {
+        self.layout.home(bot)?;
+        Ok(Box::new(self.host.rpc_for(bot)?))
+    }
+
+    async fn cap(&self, bot: &str) -> Result<Option<u32>> {
+        crate::bots::limit::read(&self.layout.home(bot)?)
+    }
+}
+
+/// Whether the arguments of `run` name a bot (`--bot`), not a group.
+fn wants_bot(args: &[String]) -> bool {
+    args.iter()
+        .take_while(|a| *a != "--")
+        .any(|a| a == "--bot" || a.starts_with("--bot="))
+}
+
 /// Run one of the engine commands. Returns the exit code.
 pub fn run(kind: Kind, args: &[String], resource_dir: Option<&Path>) -> i32 {
     let rt = match tokio::runtime::Builder::new_multi_thread()
@@ -128,6 +156,20 @@ async fn run_async(kind: Kind, args: &[String], resource_dir: Option<&Path>) -> 
     let mut out = std::io::stdout().lock();
     let mut err = std::io::stderr().lock();
     match kind {
+        Kind::Run if wants_bot(args) => {
+            let bots = LiveBots {
+                host: &host,
+                layout: Layout::new(host.root().to_path_buf(), &[]),
+            };
+            let mut ctx = run_bot::Ctx {
+                bots: &bots,
+                out: &mut out,
+                err: &mut err,
+                stdin: &stdin,
+                poll: Duration::from_secs(2),
+            };
+            run_bot::run_bot(args, &mut ctx).await
+        }
         Kind::Groups | Kind::Run => {
             let rpc = host.rpc();
             let settings = host.data_dir().join(crate::rooms::settings::FILE);

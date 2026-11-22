@@ -205,6 +205,30 @@ impl Service {
         });
     }
 
+    /// The cap the bot `name` keeps for `boopis run --bot`, `None` when it keeps none ([`super::limit`]).
+    ///
+    /// # Errors
+    /// `hx.bots.not_found` for a bot that is not there; `Config` or `Io` for a configuration that cannot be read.
+    pub fn run_limit(&self, layout: &super::Layout, name: &str) -> Result<Option<u32>> {
+        super::limit::read(&layout.home(name)?)
+    }
+
+    /// Keep (or, with `None`, forget) the cap of the bot `name`, in the bot's own configuration where the engine reads it, one
+    /// operation at a time with the others on that home. Returns whether anything was written.
+    ///
+    /// # Errors
+    /// `hx.bots.not_found` for a bot that is not there, `InvalidInput` for a cap outside 1 to 1000, the engine's otherwise.
+    pub async fn set_run_limit(
+        &self,
+        layout: &super::Layout,
+        name: &str,
+        turns: Option<u32>,
+    ) -> Result<bool> {
+        let home = layout.home(name)?;
+        let _one = self.lock.lock().await;
+        super::limit::write(self.engine.as_ref(), &home, turns).await
+    }
+
     /// Take the bot `name` out of the root's groups.
     ///
     /// # Errors

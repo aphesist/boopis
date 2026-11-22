@@ -35,13 +35,13 @@ const atlas = (): Bot => ({
   cfg: { instructions: 'You review.\n', gov: 'governed', model: 'main/fake-a', cap: '0.60', cron: '0 9 * * 1-5', channels: { app: true }, approvals: { deploys: true }, workspace: 'worktree' }, info: INFO
 });
 
-interface Fake { provider: DataProvider; calls: { fn: string; args: unknown[] }[]; events: ReturnType<typeof emitter<BotsEvent>>; bots: Bot[]; admin: BotsAdmin; failCreate: string | null; saveError: unknown }
+interface Fake { provider: DataProvider; calls: { fn: string; args: unknown[] }[]; events: ReturnType<typeof emitter<BotsEvent>>; bots: Bot[]; admin: BotsAdmin; failCreate: string | null; saveError: unknown; kept: Map<string, number> }
 function fake(bots: Bot[]): Fake {
   const mock = createMockProvider({ simulate: false });
   const events = emitter<BotsEvent>();
   const calls: Fake['calls'] = [];
   const rec = <T>(fn: string, out: T) => (...args: unknown[]): T => { calls.push({ fn, args }); return out; };
-  const f = { calls, events, bots, failCreate: null as string | null, saveError: null as unknown } as Fake;
+  const f = { calls, events, bots, failCreate: null as string | null, saveError: null as unknown, kept: new Map<string, number>() } as Fake;
   const admin: BotsAdmin = {
     models: () => ['main/fake-a', 'nous/hermes-4'],
     open: (id) => { calls.push({ fn: 'open', args: [id] }); return Promise.resolve(INFO); },
@@ -74,6 +74,8 @@ function fake(bots: Bot[]): Fake {
     subscribe: (fn) => events.subscribe(fn),
     catalog: () => ({ models: admin.models(), channels: [{ id: 'app', name: 'This app' }], approvals: [{ id: 'deploys', name: 'Deploying anywhere' }], suggestions: [], reserved: ['default'] }),
     send: rec('send', undefined), stop: () => false, decide: () => undefined, update: () => undefined,
+    runLimit: (id) => { calls.push({ fn: 'runLimit', args: [id] }); return Promise.resolve({ turns: f.kept.get(id) ?? null, fallback: 10 }); },
+    setRunLimit: (id, turns) => { calls.push({ fn: 'setRunLimit', args: [id, turns] }); if (turns === null) f.kept.delete(id); else f.kept.set(id, turns); return Promise.resolve({ turns: f.kept.get(id) ?? null, fallback: 10 }); },
     create: () => { throw new Error('use admin'); }, archive: () => undefined, archived: store<readonly ArchivedBot[]>([]), restore: (id) => { calls.push({ fn: 'restore', args: [id] }); return Promise.resolve(); }, admin
   };
   f.admin = admin;
@@ -248,6 +250,27 @@ describe('the settings sheet edits the profile and shows each file’s diff firs
     const un = [...document.querySelectorAll<HTMLElement>('.bt-sheet [role="radio"]')].find((x) => x.textContent === 'Ungoverned')!;
     un.click(); await flush();
     expect(f.calls.find((c) => c.fn === 'saveOwn')!.args).toEqual(['atlas', { cfg: { gov: 'ungoverned' } }]);
+  });
+  it('has a Run limit row whose menu is the group header’s: the default, then 5, 20, 30, 60 and 100, the one kept checked', async () => {
+    const btn = q<HTMLButtonElement>('.bt-sheet [aria-label^="Turns a run may take with atlas"]');
+    expect(btn.closest('.ui-set__row')?.textContent).toContain('Run limit');
+    expect(btn.textContent).toBe('Default (10)');
+    btn.click(); await flush();
+    expect(document.querySelector('.ui-menu__title')?.textContent).toBe('Most turns a run may take');
+    const items = [...document.querySelectorAll<HTMLElement>('.ui-menu__item')];
+    expect(items.map((i) => i.textContent?.trim())).toEqual(['Default (10)', '5', '20', '30', '60', '100']);
+    expect(items[0]!.getAttribute('aria-checked')).toBe('true');
+    items[3]!.click(); await flush();
+    expect(f.calls.filter((c) => c.fn === 'setRunLimit').map((c) => c.args)).toEqual([['atlas', 30]]);
+    expect(btn.textContent).toBe('30');
+    expect(btn.getAttribute('aria-label')).toBe('Turns a run may take with atlas: 30');
+    expect(q('.ui-toast').textContent).toContain('atlas runs for up to 30 turns.');
+    btn.click(); await flush();
+    const open = [...document.querySelectorAll('.ui-menu')].at(-1)!;
+    expect(open.querySelector('.ui-menu__item[aria-checked="true"]')?.textContent?.trim()).toBe('30');
+    open.querySelectorAll<HTMLElement>('.ui-menu__item')[0]!.click(); await flush();
+    expect(f.calls.filter((c) => c.fn === 'setRunLimit').at(-1)!.args[1]).toBeNull();
+    expect(btn.textContent).toBe('Default (10)');
   });
   it('lists what it has as Hermes reports it, read only', () => {
     const t = q('.bt-caps').textContent ?? '';

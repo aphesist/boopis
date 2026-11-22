@@ -21,7 +21,9 @@
 //! plugin's own `bots.*` methods (ADR-0014).
 
 pub mod engine;
+pub mod limit;
 pub mod links;
+pub mod run;
 pub mod skills;
 #[cfg(test)]
 mod tests;

@@ -10,6 +10,7 @@ bots:
     soul: souls/kai.SOUL.md          # a file next to this one; `boopis team export` writes the text itself as soul_text
     model: opus
     look: {shape: circle, color: "#14b8a6"}
+    max_turns: 30                    # the most turns `boopis run --bot kai "..."` lets one task take (the default is 10)
     connectors:
       - name: fetch
         command: uvx

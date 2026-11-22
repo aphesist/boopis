@@ -1,221 +1,261 @@
 {
  "a-long-name@bone": {
-  "sha": "a83920c28b08ffc77a054c40e72470275f586e29",
+  "sha": "201669d3892476cca320f9b9794b13ba13de1b21",
   "w": 1196,
   "h": 872
  },
  "a-long-name@catalog": {
-  "sha": "538347fb610d0ab354ea9af14b299f3c3736b9f2",
+  "sha": "e8ed00cd4594dba6cd76de6a22e00a50a1d3d625",
   "w": 1196,
   "h": 872
  },
  "a-long-name@graphite": {
-  "sha": "629846a3b2e7e90522bb17375b392a1ce59d2fff",
+  "sha": "3c321e78f86a935d3a1dcc372b7d7676755eed65",
   "w": 1196,
   "h": 872
  },
  "a-long-name@typewriter": {
-  "sha": "0b092f797de4b8e551c8841de4ffe83f77df770b",
+  "sha": "66e232e150c31b7259c7a4077ede3e500d54ab9b",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-routine-posting-to-a-long-group-name@bone": {
-  "sha": "50e8d34c4a8a33d1439efdaaefd57393b0c7a917",
+  "sha": "cf7f1d034c834e045701dbd2bfce72ebbc379e06",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-routine-posting-to-a-long-group-name@catalog": {
-  "sha": "ba21e86e972a6fc692850bf2f3f503864bb00079",
+  "sha": "0d2d1cda0bd9dd2e960891f4700a363f7dc1dd30",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-routine-posting-to-a-long-group-name@graphite": {
-  "sha": "82a005d8d393d417918798e93046f4288cc13963",
+  "sha": "d9af98c937c38909dc26fdffb315e21703720f23",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-routine-posting-to-a-long-group-name@typewriter": {
-  "sha": "a3f0ef8ecbfd3c63bf706cacfee1b35606ccaded",
+  "sha": "1e06d0203409ee69d9a59df431393b2511a2d6c1",
   "w": 1196,
   "h": 872
  },
  "live-bot-the-room-link-focused@bone": {
-  "sha": "0b64dd8a4c9a6e7850cc446ff6e806c96a5962a2",
+  "sha": "3c2227b322c1cd3e846709412de9cbd3e256d673",
   "w": 1196,
   "h": 872
  },
  "live-bot-the-room-link-focused@catalog": {
-  "sha": "62e4553fe947bdb4d102268a8c6ab0c60ff0c57c",
+  "sha": "0fcb6d9bb30dde846117a9fbe22f7788b09ba22a",
   "w": 1196,
   "h": 872
  },
  "live-bot-the-room-link-focused@graphite": {
-  "sha": "c0212be1a3d079681a0a4ad1a2e1eba4dbc5f96d",
+  "sha": "d9af98c937c38909dc26fdffb315e21703720f23",
   "w": 1196,
   "h": 872
  },
  "live-bot-the-room-link-focused@typewriter": {
-  "sha": "ba681b5b9bac36bbb3fa1c0186cf4be5e5724e2e",
+  "sha": "fb9376e5b993adbdca36b869e9c5f63cc65bc0c7",
   "w": 1196,
   "h": 872
  },
  "live-bot-where-each-routine-posts@bone": {
-  "sha": "9d174d8193b73e1f8f95d31874bbe62ebf03aafe",
+  "sha": "3c2227b322c1cd3e846709412de9cbd3e256d673",
   "w": 1196,
   "h": 872
  },
  "live-bot-where-each-routine-posts@catalog": {
-  "sha": "95407eb7bfc8d659ee0086c10d91977d664aaec6",
+  "sha": "0fcb6d9bb30dde846117a9fbe22f7788b09ba22a",
   "w": 1196,
   "h": 872
  },
  "live-bot-where-each-routine-posts@graphite": {
-  "sha": "144a944475bd3cbf89a58d48210c84ae2a619c2a",
+  "sha": "c42c9bc9b5337f7d73bb2c3256ff56a618e6702a",
   "w": 1196,
   "h": 872
  },
  "live-bot-where-each-routine-posts@typewriter": {
-  "sha": "924c8a33707d78f884a3fc8ed296e9f8b15175d0",
+  "sha": "6345c32b0bcf785e65d2c8b520a148941c626fe8",
   "w": 1196,
   "h": 872
  },
  "look-a-live-bot-made-outside-boopis@bone": {
-  "sha": "1943acd8ab8130a7d54007fede4c12db2f87ee23",
+  "sha": "5c9f2cb6124cefa94f9131ccf73a8f80459bd4d5",
   "w": 1196,
   "h": 872
  },
  "look-a-live-bot-made-outside-boopis@catalog": {
-  "sha": "dc2082490c79a848b82fbec48a4ada9cbfbce3ea",
+  "sha": "e003364598dd817c729c9a1a29b6a51c84408115",
   "w": 1196,
   "h": 872
  },
  "look-a-live-bot-made-outside-boopis@graphite": {
-  "sha": "12a7c8d54850923b22e09ed953d0923eec8fe089",
+  "sha": "0ffcdee05afc7ba5a103c5e55c033172e98d15a5",
   "w": 1196,
   "h": 872
  },
  "look-a-live-bot-made-outside-boopis@typewriter": {
-  "sha": "bd2510c6aa8687a341c25ad2a54ba2d4f8345ff6",
+  "sha": "2b473e2e7944e1f7fba77f8b63860311fd4f53a8",
   "w": 1196,
   "h": 872
  },
  "look-a-new-shape-on-every-orb-at-once@bone": {
-  "sha": "cd4a1220ef8442c2023ee13e99c7d10436c245fb",
+  "sha": "0d8ad77a00679eca53ed57fc90e65e92b37cc7d7",
   "w": 1196,
   "h": 872
  },
  "look-a-new-shape-on-every-orb-at-once@catalog": {
-  "sha": "f82c48dfe5087b258fecdf2e334ba1bcdd207727",
+  "sha": "403e0edeb932819dc8aa40b37c31b3a8565d36c0",
   "w": 1196,
   "h": 872
  },
  "look-a-new-shape-on-every-orb-at-once@graphite": {
-  "sha": "14eaeb2f855ae85eb0d3c8f5aabf465912eb8adb",
+  "sha": "49cf946ec8edbd99297219e271b039b946fa788f",
   "w": 1196,
   "h": 872
  },
  "look-a-new-shape-on-every-orb-at-once@typewriter": {
-  "sha": "4219e77442f6b0e0323c2a5ce3c46b8b4f645fcd",
+  "sha": "41ba227ea49e601d690abf5133d58857c8bf215f",
   "w": 1196,
   "h": 872
  },
  "look-a-swatch-focused@bone": {
-  "sha": "94e1d2f48e8b1632e59b12cd5d430b06ef961ec7",
+  "sha": "b1b6648b811450b148c75d56f40aa70b665bbd47",
   "w": 1196,
   "h": 872
  },
  "look-a-swatch-focused@catalog": {
-  "sha": "6376d95c862d91c76a91388ee38678f698333cda",
+  "sha": "670fb35820ad18a338d309768a99e1a0c9a0a301",
   "w": 1196,
   "h": 872
  },
  "look-a-swatch-focused@graphite": {
-  "sha": "723f03883a75ea8a22133a1aed7863f40bfa6bb1",
+  "sha": "05b38d127c08434aedd6d75cc38d65d31ae9db90",
   "w": 1196,
   "h": 872
  },
  "look-a-swatch-focused@typewriter": {
-  "sha": "61982610dbcc8fcee4150ac47e7a4dcb230bca46",
+  "sha": "03009eb1c36ee7b4b280493a275408e1a2eff822",
   "w": 1196,
   "h": 872
  },
  "look-dice-hover@bone": {
-  "sha": "910735af9fa1186becf535d038c870ff3201c167",
+  "sha": "39ed3bcf1a9e23d005472a923fdd107e6f66160c",
   "w": 1196,
   "h": 872
  },
  "look-dice-hover@catalog": {
-  "sha": "dc8bc5265908cd13d97e7b2720cc61358e187bb7",
+  "sha": "2b538b9ce921c2e55b729960c71e334881c59b5b",
   "w": 1196,
   "h": 872
  },
  "look-dice-hover@graphite": {
-  "sha": "d0c35bcbf1479e7c18af19ef626f80f02c0d549b",
+  "sha": "e9a9a9195a321c8b55deebc0d658be3187292aa4",
   "w": 1196,
   "h": 872
  },
  "look-dice-hover@typewriter": {
-  "sha": "91ad74ef03c79fe2f4f0bc2c4ebec3cb70e193d4",
+  "sha": "0965838822f5f3afc6a9008fc3ae49737be15b2d",
   "w": 1196,
   "h": 872
  },
  "look-the-shape-tab@bone": {
-  "sha": "5c6ecf412854f73e10ea105d22d064e69053a030",
+  "sha": "b0a52d5f3cd159bc7e3950ffbf327f1972d4bfe6",
   "w": 1196,
   "h": 872
  },
  "look-the-shape-tab@catalog": {
-  "sha": "9e2721055b4a7a70f2c4243e7f92d8060c472340",
+  "sha": "053ae2d456be21562c241eb680dddeba09c834a6",
   "w": 1196,
   "h": 872
  },
  "look-the-shape-tab@graphite": {
-  "sha": "8cf1ccab9628607c04e2f7b0036af7e76fca274f",
+  "sha": "e9628aa51d6b51b444c9f42f905a85a84e5df318",
   "w": 1196,
   "h": 872
  },
  "look-the-shape-tab@typewriter": {
-  "sha": "3b5d0c222c9ede667e9d5cb0a12aa58e3a4e6feb",
+  "sha": "c6aa417b19f5f4dbf758c1e731f706da22ac0730",
   "w": 1196,
   "h": 872
  },
  "nina@bone": {
-  "sha": "9531aee575da82b5007482997fac2f32baa636e3",
+  "sha": "9e763058d469d28b08f2a0a8bc5ad92dceaa939e",
   "w": 1196,
   "h": 872
  },
  "nina@catalog": {
-  "sha": "8a76759151b306a37b31bdd133acf094203533b3",
+  "sha": "7319dca4c3f3a478782248482a853c44b2ecaaff",
   "w": 1196,
   "h": 872
  },
  "nina@graphite": {
-  "sha": "e9b3535c5749d6fa40612154f5eededae5c4d28f",
+  "sha": "50d8bd3aaccee85d3d1bbc236d8514a2e2968d55",
   "w": 1196,
   "h": 872
  },
  "nina@typewriter": {
-  "sha": "c83a32deb6dc11565c69d9bc460f2a08b39fdbb6",
+  "sha": "75862432a8e36743370621543b921d12acc52e91",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-menu-the-bot-has-its-own@bone": {
+  "sha": "1a253fb962a704019bf4939e01d044ddd95f3b69",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-menu-the-bot-has-its-own@catalog": {
+  "sha": "9e409fb8a5dc8d69580fce7011eeabafc4b01e4a",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-menu-the-bot-has-its-own@graphite": {
+  "sha": "f657467c40014221eaa937e04c8b0f423bb02966",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-menu-the-bot-has-its-own@typewriter": {
+  "sha": "775446ab1a708b6865709276780105d7edacee9e",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-the-row-in-the-model-section@bone": {
+  "sha": "54515c04a47d9b23760d7f43bb963751a3f99e56",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-the-row-in-the-model-section@catalog": {
+  "sha": "17301edce2386507f629469af7e2e8ec6521ba44",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-the-row-in-the-model-section@graphite": {
+  "sha": "c9bdea8c808b8f67ff5ab4ea0fd558ea6d2f968b",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-the-row-in-the-model-section@typewriter": {
+  "sha": "058b32e98465319b6330c2ac18a54b7dd38f6290",
   "w": 1196,
   "h": 872
  },
  "scrolled-to-the-end@bone": {
-  "sha": "0f714427dbd2cbd793647c84f64501cb3005ec9a",
+  "sha": "0187494028b2a56b035612d6f5bde78bdb811125",
   "w": 1196,
   "h": 872
  },
  "scrolled-to-the-end@catalog": {
-  "sha": "0dfdbb2b8be440dc2f1442a3f3b876d1b145660e",
+  "sha": "11082c73b63ab087b913bcf885762f4b5866dbdb",
   "w": 1196,
   "h": 872
  },
  "scrolled-to-the-end@graphite": {
-  "sha": "749324acea6e76b7de115ff4c96bcdfc270a6bd8",
+  "sha": "c38f96d9b411636090b5f828f4997d5cddefd016",
   "w": 1196,
   "h": 872
  },
  "scrolled-to-the-end@typewriter": {
-  "sha": "90991b8c595d5297acbc6122adc8605b9a0d4659",
+  "sha": "6073ca913cc2916b83a5088c94ebdf8b1fecc22a",
   "w": 1196,
   "h": 872
  }
