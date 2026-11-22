@@ -21,11 +21,13 @@ checked and released.
 | `w24/grey-window` | The window going grey and unresponsive after switching workspaces: the cause, and a watchdog that recovers the page instead of leaving it grey, with diagnostics. | in progress |
 | `w25/dock-fit` | The dock row and the expanded dock fit the window with many bots, and the rail's account button fits the rail. | in progress |
 | `w24/orbs-size` | Orbs never blink empty when a bot changes state, and an interface size setting in Settings > Appearance. | in progress |
-| `w24/rooms` | The owner's round 2 (seven bots, two rooms). B16: a new message in a room must never silently cancel a running bot's turn ("Send when done" by default, "Send now" says it stops the turn). Classify and mitigate B17 (a cancelled turn's kanban tasks created twice), B18 (dependent tasks without parent links), B19 and B21 (one bot running in a room and a kanban worker at once). Engine-only parts become upstream drafts. | in progress |
+| `w24/rooms` | The owner's round 2 (seven bots, two rooms). B16: a room message is held while bots work and sent when they finish; "Send now" stops their turns first (the engine drops a running turn's answer when a newer message arrives, and has no queue). A `boopis-handoffs` skill tells kanban bots to list before creating, use an idempotency key and `parents`, and archive `todo` duplicates (B17, B18, B21). A bot that is also running a kanban task says so (B19). Known limit: held messages are lost if boopis closes first. Goes in through `w24/chat`, which merges it. | done (ec5f04a1, 1922c709, 2a22269e) |
 
 Round 2 also covers B13 (every new bot needs the plugin and room fixes, including bots made outside boopis: `w24/team`) and
 B20 (a mention of a bot that isn't in the room: `w24/chat`). B14 (a SOUL that includes a project file and flags dead paths)
-and B15 (steering a bot mid-turn without stopping it, unless the engine already offers it) are 0.1.9.
+and B15 (steering a bot mid-turn without stopping it) are 0.1.9; B15 needs the engine (a `groups.steer`), drafted upstream.
+`boopis bots create|set|list` (A1, A2) was not finished in `w24/team` and moves to 0.1.9 with `w25/team-cli`: it needs a
+CLI that attaches to the app's running gateway (so the secret channel is there); `bots::prepare` is ready to reuse.
 
 Already released from this round (on `main`): the Windows installer picks the newest pre-release alone in Windows
 PowerShell 5.1; the Arch menu entry names its icon by absolute path; CI runs the desktop smoke.
