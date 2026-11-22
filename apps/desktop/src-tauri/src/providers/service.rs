@@ -192,7 +192,7 @@ impl Providers {
                 .collect()
         })
         .await
-        .map_err(|e| Error::Io(e.to_string()))
+        .map_err(|e| crate::error::joined(&e))
     }
 
     /// A sign-in way the host or Claude Code owns: its state, read from its owner. A way that is offered only while the entry's
@@ -261,7 +261,7 @@ impl Providers {
                 .collect()
         })
         .await
-        .map_err(|e| Error::Io(e.to_string()))
+        .map_err(|e| crate::error::joined(&e))
     }
 
     // ------------------------------------------------------------------ keys
@@ -312,7 +312,7 @@ impl Providers {
         let (t, key) = (self.transport.clone(), key.to_owned());
         tokio::task::spawn_blocking(move || check_way_key(t.as_ref(), way, &key))
             .await
-            .map_err(|e| Error::Io(e.to_string()))?
+            .map_err(|e| crate::error::joined(&e))?
     }
 
     /// Restart the engine so it reads the key, when no turn is running; otherwise remember that it has to. The sentence to show,
@@ -846,7 +846,7 @@ pub async fn test_endpoint(
         )
     })
     .await
-    .map_err(|e| Error::Io(e.to_string()))?
+    .map_err(|e| crate::error::joined(&e))?
 }
 
 /// A transport for the commands: real https with the catalogue's timeout.

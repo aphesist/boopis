@@ -708,7 +708,102 @@ async fn unreachable_and_rate_limited_services_fail_with_words_and_keep_nothing(
         "{}",
         e.message
     );
+    assert!(
+        !e.message.contains("connection refused"),
+        "the transport's words stay in Diagnostics: {}",
+        e.message
+    );
+    assert!(
+        crate::error::recent()
+            .iter()
+            .any(|r| r.code == "hx.signin.unreachable" && r.detail.contains("connection refused"))
+    );
     assert_eq!(kept(&r.store, ACCESS), None);
+
+    // a server error, and a web page in place of OpenAI's JSON (a firewall's, a bot check's): plain words for each, no status
+    for (status, body, words) in [
+        (503, json!({"error": "unavailable"}), "having trouble"),
+        (
+            403,
+            json!("<!DOCTYPE html><title>Attention Required! | Cloudflare</title>"),
+            "Something on your network",
+        ),
+    ] {
+        let r = rig();
+        r.svc.start().await.unwrap();
+        let q = query(&r.browser.last().unwrap());
+        let reply = match body {
+            Value::String(page) => Reply { status, body: page },
+            other => Reply {
+                status,
+                body: other.to_string(),
+            },
+        };
+        r.script.replies.lock().unwrap().push_back(Reply1::Post(
+            "/api/accounts/oauth/token".to_owned(),
+            Ok(reply),
+        ));
+        browse(
+            &q["redirect_uri"],
+            &[
+                ("code", "c"),
+                ("state", &q["state"]),
+                ("client_id", "oaiapp_1"),
+            ],
+        )
+        .await;
+        let e = ended(&r.events).await;
+        assert!(e.message.contains(words), "{status}: {}", e.message);
+        assert!(!e.message.contains(&status.to_string()), "{}", e.message);
+    }
+}
+
+/// The owner's Windows screen (22 November 2026): the HTTPS client panicked inside the blocking task ("No `CryptoProvider` for
+/// Rustls"), and the task's raw text reached the card. A transport that panics the same way now ends the sign-in in plain words.
+#[tokio::test]
+async fn a_transport_that_panics_ends_the_sign_in_in_plain_words() {
+    struct Panics;
+    impl Transport for Panics {
+        fn post(&self, _: &str, _: &str, _: &str) -> std::result::Result<Reply, String> {
+            panic!(
+                "No CryptoProvider for Rustls. Either enable feature `rustls`, or set process\n default using CryptoProvider::set_default()"
+            )
+        }
+    }
+    let store = Arc::new(MemoryStore::default());
+    let events: Events = Arc::default();
+    let sink = events.clone();
+    let browser = Arc::new(Recorder::default());
+    let svc = Arc::new(
+        ChatGpt::new(store.clone(), Arc::new(Panics), timing())
+            .with_port(0)
+            .with_browser(browser.clone())
+            .with_sink(Arc::new(move |e| sink.lock().unwrap().push(e))),
+    );
+    svc.start().await.unwrap();
+    let q = query(&browser.last().unwrap());
+    browse(
+        &q["redirect_uri"],
+        &[
+            ("code", "c"),
+            ("state", &q["state"]),
+            ("client_id", "oaiapp_1"),
+        ],
+    )
+    .await;
+    let e = ended(&events).await;
+    assert_eq!(e.outcome, "failed");
+    for raw in ["panicked", "CryptoProvider", "i/o", "task"] {
+        assert!(!e.message.contains(raw), "{raw}: {}", e.message);
+    }
+    assert!(e.message.contains("Try again"), "{}", e.message);
+    assert!(
+        crate::error::recent()
+            .iter()
+            .any(|r| r.code == "hx.host.task_failed" && r.detail.contains("panicked")),
+        "the panic's text is kept for Diagnostics"
+    );
+    assert_eq!(kept(&store, ACCESS), None);
 }
 
 // ---------------------------------------------------------------- the refresh
@@ -1147,7 +1242,17 @@ fn the_real_transport_sends_the_program_s_requests_to_the_issuer_and_follows_no_
         now(),
     )
     .unwrap_err();
-    assert!(refused.to_string().contains("another issuer"), "{refused}");
+    assert_eq!(refused.code(), "hx.signin.failed");
+    assert!(
+        refused.to_string().contains("could not confirm"),
+        "plain words: {refused}"
+    );
+    assert!(
+        crate::error::recent()
+            .iter()
+            .any(|r| r.detail.contains("another issuer")),
+        "the reason is kept for Diagnostics"
+    );
     let oauth::Refreshed::Tokens(next) = oauth::refresh(&t, &ep, "oaiapp_1", "r", None).unwrap()
     else {
         panic!("renewed");

@@ -26,7 +26,7 @@
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-use crate::error::{Error, Result};
+use crate::error::{Error, Result, kept};
 
 /// OpenAI's sign-in service.
 pub const ISSUER: &str = "https://auth.openai.com";
@@ -213,26 +213,64 @@ fn failed(code: &'static str, message: impl Into<String>) -> Error {
     Error::Setup(code, message.into())
 }
 
+/// What the card says when OpenAI could not be reached; the transport's own words go to Diagnostics.
+pub const UNREACHABLE: &str = "boopis could not reach OpenAI to sign you in. Check your internet connection or proxy, then try again. Nothing was saved.";
+/// What the card says when OpenAI's sign-in service answered with a server error.
+const TROUBLE: &str = "OpenAI's sign-in service is having trouble right now. Try again in a few minutes. Nothing was saved.";
+/// What the card says for an answer boopis could not use (an unexpected status, a missing field).
+const UNUSABLE: &str = "OpenAI's sign-in service sent an answer boopis could not use. Try again; if it happens again, the details are in Settings, General, Diagnostics. Nothing was saved.";
+
 fn send(t: &dyn Transport, url: &str, content_type: &str, body: &str) -> Result<Reply> {
-    t.post(url, content_type, body).map_err(|e| {
-        failed(
-            "hx.signin.unreachable",
-            format!(
-                "could not reach OpenAI's sign-in service ({e}); check your internet connection"
-            ),
-        )
-    })
+    t.post(url, content_type, body)
+        .map_err(|e| unreachable(url, &e))
 }
 
 fn fetch(t: &dyn Transport, url: &str) -> Result<Reply> {
-    t.get(url, &[]).map_err(|e| {
-        failed(
-            "hx.signin.unreachable",
-            format!(
-                "could not reach OpenAI's sign-in service ({e}); check your internet connection"
-            ),
-        )
-    })
+    t.get(url, &[]).map_err(|e| unreachable(url, &e))
+}
+
+fn unreachable(url: &str, e: &str) -> Error {
+    kept(
+        failed("hx.signin.unreachable", UNREACHABLE),
+        format!("{url}: {e}"),
+    )
+}
+
+/// An answer that is not the one the step expects, in plain words: something on the network answered in OpenAI's place (a web
+/// page where JSON belongs, or a proxy's refusal), a server error, or anything else. What OpenAI actually sent is kept for
+/// Diagnostics, never shown.
+fn unexpected(r: &Reply, step: &str) -> Error {
+    let raw = format!(
+        "{step}: HTTP {}: {}",
+        r.status,
+        r.body.chars().take(300).collect::<String>()
+    );
+    let e = if answered_by_network(r) {
+        Error::Provider("hx.provider.signin_blocked", BLOCKED.to_owned())
+    } else if r.status >= 500 {
+        failed("hx.signin.failed", TROUBLE)
+    } else {
+        failed("hx.signin.failed", UNUSABLE)
+    };
+    kept(e, raw)
+}
+
+/// What the card says when something on the network answered in place of the sign-in service.
+pub const BLOCKED: &str = "Something on your network answered in place of the sign-in service (a firewall, a proxy or a security check). Check your proxy settings, or try again on another network. Nothing was saved.";
+
+/// Whether an answer came from something on the network rather than the sign-in service: these services answer JSON, so a web
+/// page (a firewall's, a captive portal's, a bot check's) or a proxy's refusal (407) is not theirs. Shared by every host-run
+/// sign-in (`copilot/`, `xai/`).
+#[must_use]
+pub fn answered_by_network(r: &Reply) -> bool {
+    let head = r
+        .body
+        .trim_start()
+        .get(..256)
+        .unwrap_or(r.body.trim_start());
+    let lower = head.to_ascii_lowercase();
+    r.status == 407
+        || (r.status >= 400 && (lower.starts_with("<!doctype html") || lower.starts_with("<html")))
 }
 
 fn form(pairs: &[(&str, &str)]) -> String {
@@ -308,10 +346,13 @@ pub fn b64url_decode(input: &str) -> Option<Vec<u8>> {
 /// `hx.signin.failed` when the system has no randomness (never expected).
 pub fn random_bytes<const N: usize>() -> Result<[u8; N]> {
     let mut buf = [0u8; N];
-    getrandom::fill(&mut buf).map_err(|_| {
-        failed(
-            "hx.signin.failed",
-            "the system could not make a random value for the sign-in",
+    getrandom::fill(&mut buf).map_err(|e| {
+        kept(
+            failed(
+                "hx.signin.failed",
+                "boopis could not start the sign-in on this computer. Restart boopis and try again.",
+            ),
+            format!("the system's random source failed: {e}"),
         )
     })?;
     Ok(buf)
@@ -474,16 +515,16 @@ fn scopes_of(v: &Value, access: &str) -> Vec<String> {
 
 fn tokens_of(v: &Value, previous_refresh: Option<&str>, what: &str) -> Result<Tokens> {
     let Some(access) = str_field(v, "access_token") else {
-        return Err(failed(
-            "hx.signin.failed",
+        return Err(kept(
+            failed("hx.signin.failed", UNUSABLE),
             format!("OpenAI's {what} answer carried no access token"),
         ));
     };
     let Some(refresh) =
         str_field(v, "refresh_token").or_else(|| previous_refresh.map(str::to_owned))
     else {
-        return Err(failed(
-            "hx.signin.failed",
+        return Err(kept(
+            failed("hx.signin.failed", UNUSABLE),
             format!("OpenAI's {what} answer carried no refresh token"),
         ));
     };
@@ -530,10 +571,7 @@ pub fn exchange(
         {
             Ok(Exchange::Rejected)
         }
-        s => Err(failed(
-            "hx.signin.failed",
-            format!("OpenAI's sign-in service answered {s} when finishing the sign-in"),
-        )),
+        _ => Err(unexpected(&r, "finishing the sign-in")),
     }
 }
 
@@ -557,8 +595,22 @@ impl std::fmt::Debug for Identity {
 }
 
 fn bad_id(why: &str) -> Error {
-    failed(
-        "hx.signin.failed",
+    kept(
+        failed(
+            "hx.signin.failed",
+            "boopis could not confirm that the answer came from OpenAI, so nothing was saved. Try again; if it happens again, a proxy or security program may be changing the connection.",
+        ),
+        format!("OpenAI's ID token was not accepted: {why}"),
+    )
+}
+
+/// An ID token whose times are off: almost always this computer's clock.
+fn bad_clock(why: &str) -> Error {
+    kept(
+        failed(
+            "hx.signin.failed",
+            "Your computer's clock looks wrong, so boopis could not check OpenAI's answer. Set the date and time to update automatically, then try again. Nothing was saved.",
+        ),
         format!("OpenAI's ID token was not accepted: {why}"),
     )
 }
@@ -578,13 +630,7 @@ fn audience_has(v: &Value, client_id: &str) -> bool {
 pub fn signing_keys(transport: &dyn Transport, ep: &Endpoints) -> Result<Vec<Value>> {
     let published = fetch(transport, &ep.jwks())?;
     if published.status != 200 {
-        return Err(failed(
-            "hx.signin.failed",
-            format!(
-                "OpenAI's signing keys could not be read (HTTP {})",
-                published.status
-            ),
-        ));
+        return Err(unexpected(&published, "reading OpenAI's signing keys"));
     }
     let keys: Value = serde_json::from_str(&published.body).unwrap_or(Value::Null);
     Ok(keys["keys"]
@@ -660,13 +706,13 @@ pub fn verify_id_token(
         .as_u64()
         .ok_or_else(|| bad_id("it has no expiry"))?;
     if exp.saturating_add(CLOCK_SKEW_SECS) < at {
-        return Err(bad_id("it has expired"));
+        return Err(bad_clock("it has expired"));
     }
     if body["iat"]
         .as_u64()
         .is_some_and(|iat| iat > at.saturating_add(CLOCK_SKEW_SECS))
     {
-        return Err(bad_id("it is dated in the future"));
+        return Err(bad_clock("it is dated in the future"));
     }
     let seen = body["nonce"].as_str().unwrap_or_default();
     if seen.is_empty() || !bool::from(seen.as_bytes().ct_eq(nonce.as_bytes())) {
@@ -735,10 +781,7 @@ fn refreshed(r: &Reply, refresh_token: &str, previous_id: Option<&str>) -> Resul
         } else {
             Refreshed::Revoked
         }),
-        s => Err(failed(
-            "hx.signin.failed",
-            format!("OpenAI's sign-in service answered {s} when renewing the sign-in"),
-        )),
+        _ => Err(unexpected(r, "renewing the sign-in")),
     }
 }
 
@@ -762,8 +805,8 @@ pub fn revoke(
     let r = send(t, &ep.revoke(), "application/x-www-form-urlencoded", &body)?;
     match r.status {
         200 => Ok(true),
-        s if s >= 500 || s == 429 => Err(failed(
-            "hx.signin.failed",
+        s if s >= 500 || s == 429 => Err(kept(
+            failed("hx.signin.failed", TROUBLE),
             format!("OpenAI's sign-in service answered {s} when ending the sign-in"),
         )),
         _ => Ok(false),

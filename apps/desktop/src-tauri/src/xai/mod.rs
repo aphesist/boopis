@@ -239,7 +239,7 @@ impl Xai {
         let (store, transport) = (self.store.clone(), self.transport.clone());
         tokio::task::spawn_blocking(move || f(store.as_ref(), transport.as_ref()))
             .await
-            .map_err(|e| Error::Io(e.to_string()))?
+            .map_err(|e| crate::error::joined(&e))?
     }
 
     fn get(store: &dyn SecretStore, name: &str) -> Result<Option<String>> {
@@ -459,7 +459,7 @@ impl Xai {
                             error: true,
                         }));
                     }
-                    return ("failed", e.to_string());
+                    return ("failed", crate::error::shown(e));
                 }
             };
             if cancel.is_cancelled() {
@@ -468,7 +468,7 @@ impl Xai {
             let saved = self.blocking(move |s, _| Self::save(s, &tokens)).await;
             return match saved {
                 Ok(()) => ("signed_in", String::new()),
-                Err(e) => ("failed", e.to_string()),
+                Err(e) => ("failed", crate::error::shown(e)),
             };
         }
     }
