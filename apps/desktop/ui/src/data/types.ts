@@ -113,7 +113,14 @@ export interface Group {
   members: readonly GroupMember[];
   /** the ids of the members working on a reply now */
   working: readonly string[];
+  /** a conversation is running in the room: members are replying, or the next round is about to start. A message written now
+   *  would stop that work (the engine drops a running member's answer when a newer message arrives), so it waits in `queued` */
+  busy: boolean;
+  /** the messages held back until the members have finished, oldest first; the user can take each back or send it at once */
+  queued: readonly GroupQueued[];
 }
+/** a message written while the room was busy: kept in boopis, not yet in the room */
+export interface GroupQueued { id: string; text: string; t: string }
 /** a group put away: kept, with its messages, until it is restored */
 export interface ArchivedGroup { id: string; name: string; members: readonly GroupMember[] }
 /** a message in a group's thread: `who` is 'you' or a member's id */

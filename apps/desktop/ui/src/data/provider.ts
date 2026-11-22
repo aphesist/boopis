@@ -194,8 +194,15 @@ export interface GroupsSource extends Feed<GroupsSnapshot, GroupsEvent> {
   note(): string | null;
   /** reads the group's messages as it opens (the live provider reads a room's log when it is first shown); resolves when they are in */
   open(groupId: string): Promise<void>;
-  /** the message reaches the members; an `@name` in it addresses that member alone. The replies arrive as `message` events */
-  send(groupId: string, text: string): void;
+  /** The message reaches the members; an `@name` in it addresses that member alone. The replies arrive as `message` events.
+   *  `'when-done'` (the default) never interrupts: while the room is busy the message is held (`Group.queued`) and sent when the
+   *  running turns have finished. `'now'` stops the running turns first, because the engine drops a running member's answer when a
+   *  newer message arrives. Resolves with what happened. */
+  send(groupId: string, text: string, how?: 'when-done' | 'now'): Promise<'sent' | 'queued'>;
+  /** takes a held message back; resolves with its words (null when it was already sent) so the composer can show them again */
+  unqueue(groupId: string, queuedId: string): string | null;
+  /** sends a held message now, stopping the running turns first */
+  sendNow(groupId: string, queuedId: string): Promise<void>;
   /** stops the members' replies; false when none was running */
   stop(groupId: string): boolean;
   /** lets a conversation that paused at its limit run on (`GroupNote.more` names what) */

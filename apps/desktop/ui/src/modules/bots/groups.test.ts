@@ -3,7 +3,7 @@
    is asked of the provider, never how the engine answers (that is `host/live/groups.test.ts` and `bots.test.ts`). */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setProvider } from '../../data';
-import type { Bot, BotInfo, BotsEvent, DataProvider, GroupsSource } from '../../data';
+import type { Bot, BotInfo, BotsEvent, DataProvider, Group, GroupsSource } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
 import { emitter } from '../../data/store';
 import '../cards';
@@ -19,7 +19,7 @@ let provider: DataProvider;
 const calls: { fn: string; args: unknown[] }[] = [];
 function spyGroups(g: GroupsSource): GroupsSource {
   const rec = <A extends unknown[], R>(fn: string, f: (...a: A) => R) => (...args: A): R => { calls.push({ fn, args }); return f(...args); };
-  return { ...g, send: rec('send', g.send), stop: rec('stop', g.stop), create: rec('create', g.create), rename: rec('rename', g.rename), setMembers: rec('setMembers', g.setMembers), archive: rec('archive', g.archive), restore: rec('restore', g.restore), open: rec('open', g.open) };
+  return { ...g, send: rec('send', g.send), unqueue: rec('unqueue', g.unqueue), sendNow: rec('sendNow', g.sendNow), stop: rec('stop', g.stop), create: rec('create', g.create), rename: rec('rename', g.rename), setMembers: rec('setMembers', g.setMembers), archive: rec('archive', g.archive), restore: rec('restore', g.restore), open: rec('open', g.open) };
 }
 function mount(p: DataProvider): void {
   provider = p; setProvider(p);
@@ -84,7 +84,7 @@ describe('a group’s thread', () => {
     chip.click();
     expect(inserted.join('')).toBe((chip.textContent ?? '') + ' ');
     q('.bt-group .ui-composer').dispatchEvent(new CustomEvent('ui:send', { detail: { text: '@nina what is left?' } }));
-    expect(calls.find((c) => c.fn === 'send')!.args).toEqual(['room-release', '@nina what is left?']);
+    expect(calls.find((c) => c.fn === 'send')!.args).toEqual(['room-release', '@nina what is left?', 'when-done']);
   });
   it('shows who is replying, and says so to the screen reader', async () => {
     const g = provider.groups;
@@ -118,6 +118,86 @@ describe('a group’s thread', () => {
     expect(document.querySelectorAll('.bt-groups .ui-row')).toHaveLength(1);
     expect(q('.bt-archived').textContent).toContain('release crew');
     expect(q('.ui-toast').textContent).toContain('Undo');
+  });
+});
+
+describe('a message written while the members are working', () => {
+  const first = (): Group => provider.groups.snapshot().groups[0]!;
+  const busyWith = async (queued: readonly { id: string; text: string; t: string }[] = []): Promise<void> => {
+    const { onGroupsEvent } = await import('./group-room');
+    const g = first();
+    const working = [g.members[0]!.id];
+    Object.assign(S.groups[0]!, { working, busy: true, queued });
+    onGroupsEvent({ type: 'group', group: { ...g, working, busy: true, queued } });
+  };
+  const type = (t: string): void => {
+    const c = q<HTMLElement & { setValue(t: string): void }>('.bt-group .ui-composer');
+    c.setValue(t);
+    c.querySelector('.ui-composer__input')?.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+  beforeEach(() => { mount(withGroups()); q('.bt-groups .ui-row').click(); });
+
+  it('shows Stop with nothing typed, and Send when done once something is', async () => {
+    await busyWith();
+    const send = q<HTMLButtonElement>('.bt-group .ui-send');
+    expect(send.getAttribute('aria-label')).toBe('Stop');
+    type('and the changelog?');
+    expect(send.getAttribute('aria-label')).toBe('Send when done');
+    expect(send.disabled).toBe(false);
+    type('');
+    expect(send.getAttribute('aria-label')).toBe('Stop');
+  });
+  it('sends it as "when done", never as a stop: the provider is asked to hold it, and nothing is stopped', async () => {
+    await busyWith();
+    type('and the changelog?');
+    q('.bt-group .ui-send').click();
+    await flush();
+    expect(calls.filter((c) => c.fn === 'send').map((c) => c.args)).toEqual([['room-release', 'and the changelog?', 'when-done']]);
+    expect(calls.some((c) => c.fn === 'stop')).toBe(false);
+  });
+  it('Stop, with nothing typed, stops the room', async () => {
+    await busyWith();
+    q('.bt-group .ui-send').click();
+    expect(calls.some((c) => c.fn === 'stop')).toBe(true);
+  });
+  it('shows a held message above the composer, and says what Send now does before it is pressed', async () => {
+    expect(q('.bt-group .bt-queue').hidden).toBe(true);
+    await busyWith([{ id: 'q1', text: 'and the changelog?', t: '10:02' }]);
+    const strip = q('.bt-group .bt-queue');
+    expect(strip.hidden).toBe(false);
+    expect(strip.textContent).toContain('and the changelog?');
+    expect(strip.textContent).toMatch(/Waiting for atlas to finish\. Send now stops that turn\./);
+    expect(strip.nextElementSibling).toBe(q('.bt-group .ui-composer'));
+  });
+  it('sends a held message now: that is the one thing that stops the turns, and it is asked of the provider by the message', async () => {
+    await busyWith([{ id: 'q1', text: 'and the changelog?', t: '10:02' }]);
+    q('.bt-group .bt-queue [data-act="now"]').click();
+    await flush();
+    expect(calls.filter((c) => c.fn === 'sendNow').map((c) => c.args)).toEqual([['room-release', 'q1']]);
+    expect(calls.some((c) => c.fn === 'send')).toBe(false);
+  });
+  it('takes a held message back: its words return to the composer and it is no longer held', async () => {
+    const m = createMockProvider({ simulate: true, fixtures: ['groups'] });
+    mount({ ...m, groups: spyGroups(m.groups) });
+    q('.bt-groups .ui-row').click();
+    const composer = q<HTMLElement & { value: string }>('.bt-group .ui-composer');
+    composer.dispatchEvent(new CustomEvent('ui:send', { detail: { text: 'first' } }));
+    await flush();
+    composer.dispatchEvent(new CustomEvent('ui:send', { detail: { text: 'and the changelog?' } }));
+    await flush();
+    expect(q('.bt-group .bt-queue').textContent).toContain('and the changelog?');
+    q('.bt-group .bt-queue [data-act="back"]').click();
+    expect(calls.filter((c) => c.fn === 'unqueue')).toHaveLength(1);
+    expect(composer.value).toBe('and the changelog?');
+    expect(q('.bt-group .bt-queue').hidden).toBe(true);
+  });
+  it('hides the strip when the held message goes out', async () => {
+    await busyWith([{ id: 'q1', text: 'x', t: '10:02' }]);
+    const { onGroupsEvent } = await import('./group-room');
+    const g = first();
+    onGroupsEvent({ type: 'group', group: { ...g, working: [], busy: false, queued: [] } });
+    expect(q('.bt-group .bt-queue').hidden).toBe(true);
+    expect(q('.bt-group .ui-send').getAttribute('aria-label')).not.toBe('Stop');
   });
 });
 

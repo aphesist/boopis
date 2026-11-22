@@ -18,6 +18,8 @@ import { markSelected, drawGroups } from './list';
 import { checkClips } from './clips';
 import { closeSettings } from './settings';
 import { openNewGroup } from './new-group';
+import { mountGroupQueue } from './group-queue';
+import type { GroupQueue } from './group-queue';
 
 const groups = () => data().groups;
 const toast = (t: string, o?: Parameters<typeof ui.toast>[1]): void => { ui.toast(t, o); };
@@ -50,18 +52,23 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
   root.append(pane);
   S.groupPane = pane;
   G.scroll = scroll; G.head = head; G.log = log; G.zone = zone; G.working = working;
-  const c = ui.composer({ placeholder: 'Message the group', label: 'Message the group', attach: false });
+  const c = ui.composer({ placeholder: 'Message the group', label: 'Message the group', attach: false, queue: true });
   c.classList.add('bt-composer');
   zone.append(c);
   c.input.setAttribute('data-hx-focus', 'composer');
   c.addEventListener('ui:send', (e) => { send((e as CustomEvent<{ text: string }>).detail.text); });
   c.addEventListener('ui:stop', () => { stopTalk(); });
   G.composer = c;
+  /* the messages held back while members work (`Group.queued`): the strip sits above the composer */
+  G.queue = mountGroupQueue(zone, c, {
+    sendNow: (gid, qid) => { groups().sendNow(gid, qid).catch((e: unknown) => { toast('It was not sent: ' + sentence(e)); }); },
+    takeBack: (gid, qid) => { const t = groups().unqueue(gid, qid); if (t) { c.setValue(c.value ? t + '\n' + c.value : t); c.focus(); } }
+  });
   const measure = (): void => { S.viewRoot?.style.setProperty('--bt-composer-h', zone.offsetHeight + 'px'); };
   new ResizeObserver(measure).observe(zone);
   return pane;
 }
-const G = { scroll: null as HTMLElement | null, head: null as HTMLElement | null, log: null as HTMLElement | null, zone: null as HTMLElement | null, working: null as HTMLElement | null, composer: null as import('../../components').ComposerEl | null, renaming: false };
+const G = { scroll: null as HTMLElement | null, head: null as HTMLElement | null, log: null as HTMLElement | null, zone: null as HTMLElement | null, working: null as HTMLElement | null, composer: null as import('../../components').ComposerEl | null, queue: null as GroupQueue | null, renaming: false };
 
 export function openGroup(id: string | null): void {
   initGroups();
@@ -193,7 +200,8 @@ function renderComposer(g: Group): void {
   c.chips.replaceChildren(...chips);
   const why = groups().note();
   (G.working as HTMLElement).dataset['note'] = why ? '1' : '';
-  c.setRunning(g.working.length > 0);
+  c.setRunning(g.busy);
+  G.queue?.paint(g, g.working);
 }
 function paintWorking(g: Group): void {
   const w = G.working as HTMLElement;
@@ -207,14 +215,16 @@ function paintWorking(g: Group): void {
   w.append(el('span', { text: namesOf(busy) + (busy.length === 1 ? ' is replying' : ' are replying') }));
   livenIn(w);
 }
+/** a message while members are working is held and sent when they are done (it never stops them); "Send now" in the strip stops them */
 function send(text: string): void {
   const g = group(S.groupSel); if (!g || !text.trim()) return;
-  groups().send(g.id, text.trim());
+  void groups().send(g.id, text.trim(), 'when-done').then((how) => { if (how === 'queued') ui.announce('Message held until the group has finished'); });
 }
 export function stopTalk(): boolean {
   const g = group(S.groupSel); if (!g) return false;
+  const held = g.queued.length;
   const was = groups().stop(g.id);
-  if (was) toast('Stopped ' + g.name);
+  if (was) toast('Stopped ' + g.name + (held ? '. The message waiting goes out now.' : ''));
   return was;
 }
 

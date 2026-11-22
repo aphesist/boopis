@@ -222,3 +222,6 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-new-col .bt-name-note { text-align: left; margin-inline: 0; }
 .bt-new-col .bt-go-row { margin-top: var(--sp-4); }
 .bt-new-col > .bt-p-name { margin: 0 0 var(--sp-2); }
+/* the messages a group holds back while its members work (group-queue.ts): the kit's group and rows, above the composer */
+.bt-queue { margin: 0 0 var(--sp-2); }
+.bt-queue[hidden] { display: none; }

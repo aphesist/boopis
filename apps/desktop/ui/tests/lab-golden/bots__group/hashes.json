@@ -39,6 +39,26 @@
   "w": 1196,
   "h": 872
  },
+ "a-message-waiting-for-a-member@bone": {
+  "sha": "76fead6791618c43f8073b2a19c7980fd3f99ea3",
+  "w": 1196,
+  "h": 872
+ },
+ "a-message-waiting-for-a-member@catalog": {
+  "sha": "20ff62fe51f69e095fca3ed428d5051f80a455ed",
+  "w": 1196,
+  "h": 872
+ },
+ "a-message-waiting-for-a-member@graphite": {
+  "sha": "155c05142d179617a866f795b00f789c7145e102",
+  "w": 1196,
+  "h": 872
+ },
+ "a-message-waiting-for-a-member@typewriter": {
+  "sha": "2ac44b38b9bd13aabcac91680d772e86bff0ce28",
+  "w": 1196,
+  "h": 872
+ },
  "group-chat-is-off@bone": {
   "sha": "99dd3b185bc043e2c1ae1b5275ee006e42a4d5cc",
   "w": 1196,
@@ -136,6 +156,26 @@
  },
  "two-members-replying@typewriter": {
   "sha": "c0caf8707e7330e2dc2b7f8ebb83d720ff211793",
+  "w": 1196,
+  "h": 872
+ },
+ "two-messages-waiting@bone": {
+  "sha": "f75a328bb9f2eedeb28c9a8a13a262bf99b39844",
+  "w": 1196,
+  "h": 872
+ },
+ "two-messages-waiting@catalog": {
+  "sha": "8c62a1d0b791e00b60b9fec16b187c0217a6a26d",
+  "w": 1196,
+  "h": 872
+ },
+ "two-messages-waiting@graphite": {
+  "sha": "c6af215aa10530d09039b30fe4e037b77df775fe",
+  "w": 1196,
+  "h": 872
+ },
+ "two-messages-waiting@typewriter": {
+  "sha": "ca08530a4d440ee44a699ea9eebd6ed802988975",
   "w": 1196,
   "h": 872
  }

@@ -2,7 +2,7 @@
    never user-settable, they belong to states; the dice agent, w11/dice, fixes), the Archived group and the "made outside
    boopis" mark, with no bots, one, many and long names. */
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
-import { liveShaped, withWorking } from '../../live-bots';
+import { liveShaped, withQueue, withWorking } from '../../live-bots';
 
 const bots = async (c: AppCtx): Promise<void> => { c.hx.setState({ tab: 'bots' }); await c.wait(500); };
 const pick = (id: string) => async (c: AppCtx): Promise<void> => { await bots(c); c.hx.emit('hx:bot-select', { id, from: 'lab' }); await c.wait(500); };
@@ -69,6 +69,8 @@ const groupRoom: Story = {
   states: {
     'several members answered': st(['typical', 'owner'], grp, openGroup),
     'two members replying': st(['loading'], { ...grp, patch: (p) => withWorking(p) }, openGroup),
+    'a message waiting for a member': st(['variant'], { ...grp, patch: (p) => withQueue(p, ['and could you add the changelog to the notes?']) }, openGroup),
+    'two messages waiting': st(['variant'], { ...grp, patch: (p) => withQueue(p, ['and could you add the changelog to the notes?', '@nina what did staging say about the migration on the copy of production, and how long did it take to run end to end?'], 2) }, openGroup),
     'no messages yet': st(['empty'], { fixtures: ['groups'], simulate: false, patch: (p) => ({ ...p, groups: { ...p.groups, snapshot: () => ({ groups: p.groups.snapshot().groups, threads: {} }) } }) }, openGroup),
     'group chat is off': st(['error'], { ...grp, patch: (p) => ({ ...p, groups: { ...p.groups, note: () => 'Group chat is not running in the engine. Restart boopis and try again.' } }) }, openGroup),
     'renaming': st(['variant'], grp, async (c) => { await openGroup(c); await c.click('#hx-view-bots [aria-label^="Rename"]'); await c.wait(300); }),

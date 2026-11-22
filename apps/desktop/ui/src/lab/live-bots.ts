@@ -37,5 +37,11 @@ export function liveShaped(p: DataProvider, withThread = false): DataProvider {
 /** two members of every group are replying */
 export function withWorking(p: DataProvider, count = 2): DataProvider {
   const snap = p.groups.snapshot;
-  return { ...p, groups: { ...p.groups, snapshot: () => { const s = snap(); return { ...s, groups: s.groups.map((g) => ({ ...g, working: g.members.slice(0, count).map((m) => m.id) })) }; } } };
+  return { ...p, groups: { ...p.groups, snapshot: () => { const s = snap(); return { ...s, groups: s.groups.map((g) => ({ ...g, working: g.members.slice(0, count).map((m) => m.id), busy: true })) }; } } };
+}
+
+/** two members of every group are replying, and these messages wait for them (`Group.queued`) */
+export function withQueue(p: DataProvider, texts: readonly string[], count = 1): DataProvider {
+  const snap = p.groups.snapshot;
+  return { ...p, groups: { ...p.groups, snapshot: () => { const s = snap(); return { ...s, groups: s.groups.map((g) => ({ ...g, working: g.members.slice(0, count).map((m) => m.id), busy: true, queued: texts.map((text, i) => ({ id: 'q' + i, text, t: '10:0' + i })) })) }; } } };
 }
