@@ -2,6 +2,7 @@
    the mock, a live conversation over recorded gateway frames (real data), the Bots tab, Settings open, first run. */
 import { runFirstRun } from '../../../host/first-run';
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
+import { lookMismatches, recordsArrive, teamBeforeRecords } from '../../live-bots';
 
 const page = (tags: State['tags'], provider: ProviderSpec = {}, setup?: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State => ({ tags, app: { provider, ...(setup ? { setup } : {}) }, ...extra });
 const LIVE = { 'stability.render': 'the recording replays with live timing' } as const;
@@ -19,6 +20,12 @@ const pages: Story = {
     'sidebar as a rail': page(['variant'], {}, async (c) => { c.hx.setState({ left: 'rail' }); await c.wait(600); }),
     'sidebar closed, dock off': page(['variant'], {}, async (c) => { c.hx.setState({ left: 'closed' }); c.hx.dock()?.setOn(false); await c.wait(700); }),
     Bots: page(['typical'], {}, async (c) => { c.hx.setState({ tab: 'bots' }); await c.wait(500); c.hx.emit('hx:bot-select', { id: 'nina', from: 'lab' }); await c.wait(500); }),
+    'Bots: the owner\'s six, their records read after the roster': page(['owner', 'variant'], { simulate: false, patch: teamBeforeRecords }, async (c) => {
+      c.hx.setState({ tab: 'bots' }); await c.wait(500); recordsArrive(); await c.wait(400);
+      c.hx.emit('hx:bot-select', { id: 'kai', from: 'lab' }); await c.wait(500);
+      const bad = lookMismatches();
+      if (bad.length) throw new Error('a bot is drawn in a look that is not its own: ' + bad.join('; '));
+    }, { note: 'the roster, kai\'s room and the dock all draw each of the six as its saved record says (kai a teal circle, nina a red triangle, moss a green squircle, iris a blue flower, hex a grey hexagon, nimbus a purple cloud)' }),
     'Bots with 120 bots': page(['many'], { bots: 120 }, async (c) => { c.hx.setState({ tab: 'bots' }); await c.wait(700); }, { allow: { axe: { el: 'label-content-name-mismatch', reason: 'axe-core reports label-content-name-mismatch (WCAG 2.5.3, R-a11y-1) only for the row that straddles the window\'s bottom edge (bot-017 at 1440 x 900, then bot-034 once scrolled); the same row, with the same name "bot-017, generated teammate 17, needs you" and the same visible words, passes when moved 100 px up, so it is the checker\'s clipping of a half-visible row and not the name, which holds every visible word in order (botLabel, R-a11y-1); every other axe rule still runs on this state (the same state as the Bots story\'s "120 bots, scrolling", drawn in the whole window)' } } }),
     'Settings open': page(['open'], {}, async (c) => { document.body.focus(); await c.key(',', { ctrlKey: true }); await c.wait(500); }),
     'palette open': page(['open'], {}, async (c) => { document.body.focus(); await c.key('k', { ctrlKey: true }); await c.wait(450); }),
