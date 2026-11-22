@@ -1,0 +1,92 @@
+name: live-store
+# The store's sources, read live (apps/desktop/src-tauri/tests/live_store.rs): the host's own store code reads every source a read
+# reaches, on Linux and Windows, and Browse lists what each one holds. And the popularity signal of boopis's own connector list
+# (GitHub stars of each official repository, apps/shared/data/connectors.json), read again and compared with the recorded order.
+# It is not part of the gate, because it reads real services: it runs on demand, every Monday, and when the store's network code,
+# the curated list or this file changes. No secret is used beyond the run's own read-only token (for the stars).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 5 * * 1"
+  push:
+    paths:
+      - .github/workflows/live-store.yml
+      - apps/desktop/src-tauri/tests/live_store.rs
+      - apps/desktop/src-tauri/src/store/net.rs
+      - apps/desktop/src-tauri/src/store/reasons.rs
+      - apps/shared/data/connectors.json
+permissions:
+  contents: read
+concurrency:
+  group: live-store-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUSTUP_TOOLCHAIN: "1.97.0"
+
+jobs:
+  sources:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-22.04, platform: linux }
+          # Windows minutes count twice; the test is one binary, built once a run
+          - { os: windows-latest, platform: windows }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tauri's Linux prerequisites (the test links the host library)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: live-store-${{ matrix.platform }}
+      - name: every source, read live
+        env:
+          HX_LIVE_PLATFORM: ${{ matrix.platform }}
+        run: cargo test -p boopis-host --test live_store -- --ignored --nocapture
+
+  popularity:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: GitHub stars of each curated connector's official repository, against the recorded order
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'EOF' | tee -a "$GITHUB_STEP_SUMMARY"
+          import json, subprocess, datetime
+          data = json.load(open("apps/shared/data/connectors.json"))
+          today = datetime.date.today().isoformat()
+          print(f"### Popularity of boopis's connector list, read {today}\n")
+          print("| place | connector | repository | stars recorded | stars now |")
+          print("|---|---|---|---|---|")
+          now = {}
+          for n, c in enumerate(data["connectors"], 1):
+              p = c.get("popularity") or {}
+              repo = p.get("repo", "")
+              r = subprocess.run(["gh", "api", f"repos/{repo}", "--jq", ".stargazers_count"], capture_output=True, text=True)
+              stars = int(r.stdout) if r.returncode == 0 and r.stdout.strip().isdigit() else None
+              now[c["id"]] = (bool(p.get("shared")), stars)
+              shown = stars if stars is not None else "could not read: " + r.stderr.strip()[:80]
+              print(f"| {n} | {c['name']} | {repo}{' (shared)' if p.get('shared') else ''} | {p.get('stars', '')} | {shown} |")
+          # the rule of docs/CONNECTORS.md, "The order": a repository of its own before a shared one, then most stars first
+          ranked = sorted(now, key=lambda i: (now[i][0], -(now[i][1] or 0)))
+          recorded = [c["id"] for c in data["connectors"]]
+          print()
+          print("Counts as JSON: `" + json.dumps({i: s for i, (_, s) in now.items()}) + "`")
+          print()
+          print("The recorded order still follows the signal." if ranked == recorded else
+                "By today's stars the order would be: " + ", ".join(ranked) +
+                ". Read the list again from its sources before reordering it (docs/CONNECTORS.md, The order).")
+          EOF
