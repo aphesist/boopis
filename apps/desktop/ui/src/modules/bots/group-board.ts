@@ -6,6 +6,7 @@
    convention, not a link: a board whose name is the group's name, said as a slug (`paper past` is `paper-past`); another can be chosen,
    and the choice is remembered for the group. */
 import { el, esc } from '../../core/dom';
+import { loadBoardChoice, saveBoardChoice } from '../../core/settings';
 import { ui } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
 import type { KanbanBoardInfo, KanbanSource, KanbanTask, KanbanView } from '../../data';
@@ -66,9 +67,6 @@ export function timeline(t: KanbanTask, now: Date): string {
 /** the look an assignee's orb has: the bot it is when the user has it, else the look its name gives */
 const assigneeBot = (profile: string): BotLike => bot(profile) ?? { id: profile, name: profile, ...lookFor(profile), state: 'idle' };
 
-const KEY = 'hx.board.';
-const remembered = (group: string): string | null => { try { return localStorage.getItem(KEY + group); } catch { return null; } };
-const remember = (group: string, slug: string): void => { try { localStorage.setItem(KEY + group, slug); } catch { /* a convenience only */ } };
 
 export interface BoardDeps {
   /** asked each time the board reads, so a provider that changes is followed */
@@ -111,7 +109,7 @@ export function mountBoard(host: HTMLElement, deps: BoardDeps): BoardView {
     pick.addEventListener('ui:change', (e) => {
       const v = (e as CustomEvent<{ value: string }>).detail.value;
       if (!v || v === slug || !group) return;
-      slug = v; remember(group.id, v); last = ''; drawBar(); void read(true);
+      slug = v; saveBoardChoice(group.id, v); last = ''; drawBar(); void read(true);
     });
     bar.append(pick);
   };
@@ -148,7 +146,7 @@ export function mountBoard(host: HTMLElement, deps: BoardDeps): BoardView {
         boards = all; drawBar();
       }
       if (!group) return;
-      if (slug === null || !boards.some((b) => b.slug === slug)) slug = boardFor(group.name, boards, remembered(group.id));
+      if (slug === null || !boards.some((b) => b.slug === slug)) slug = boardFor(group.name, boards, loadBoardChoice(group.id));
       if (slug === null) {
         const text = boards.length ? 'None of the engine’s boards is named like ' + group.name + '. Choose one above to see it here.' : 'The engine has no kanban board yet. When a board named ' + (slugOf(group.name) || 'like this group') + ' is made, it shows here.';
         empty(boards.length ? 'No board chosen' : 'No board yet', text); note(''); return;

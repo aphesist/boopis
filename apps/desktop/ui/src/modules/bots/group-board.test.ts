@@ -5,6 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setProvider } from '../../data';
 import type { KanbanBoardInfo, KanbanSource, KanbanTask, KanbanView } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
+import { loadBoardChoice } from '../../core/settings';
 import { ago, boardFor, columnsOf, mountBoard, slugOf, timeline } from './group-board';
 
 const NOW = new Date('2026-11-22T12:00:00Z');
@@ -111,7 +112,7 @@ describe('the board view', () => {
     host.querySelector('#hx-board-pick')?.dispatchEvent(new CustomEvent('ui:change', { detail: { value: 'other' }, bubbles: true }));
     await view.settled(); await tick();
     expect(host.textContent).toContain('Other task');
-    expect(localStorage.getItem('hx.board.g9')).toBe('other');
+    expect(loadBoardChoice('g9')).toBe('other');
     const again = mount(src);
     again.view.show({ id: 'g9', name: 'zzz' }); await again.view.settled(); await tick();
     expect(again.host.textContent).toContain('Other task');

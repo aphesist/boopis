@@ -42,6 +42,8 @@ const COMMANDS: &[&str] = &[
     "connector_signin",
     "connector_signin_cancel",
     "connector_login",
+    "kanban_boards",
+    "kanban_view",
     "chatgpt_status",
     "chatgpt_signin_start",
     "chatgpt_signin_cancel",
