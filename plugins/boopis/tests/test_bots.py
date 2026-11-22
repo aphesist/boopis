@@ -300,6 +300,46 @@ def test_an_archived_teammate_is_read_only(root: Path, svc: BotService) -> None:
         svc.write("archived--atlas", look={"shape": "drop"})
 
 
+# ───────── the hand-off skill ─────────
+def test_guide_puts_the_hand_off_skill_in_the_teammate_s_skills_and_only_once(root: Path, svc: BotService) -> None:
+    from boopis.bots import guides
+
+    path = make_profile(root, "atlas")
+    first = svc.guide("atlas")
+    target = path / "skills" / guides.NAME / "SKILL.md"
+    assert first == {"skill": guides.NAME, "version": guides.VERSION, "written": True}
+    text = target.read_text("utf-8")
+    assert text.startswith("---\nname: boopis-handoffs\n")
+    assert "environments: [kanban]" in text  # the engine offers it only to a profile that has the kanban toolset
+    for word in ("kanban_list", "idempotency_key", "parents", "kanban_link", "archived, not blocked"):
+        assert word in text
+    assert svc.guide("atlas")["written"] is False
+    assert target.read_text("utf-8") == text
+
+
+def test_guide_rewrites_an_older_version_and_leaves_the_user_s_own_file(root: Path, svc: BotService) -> None:
+    from boopis.bots import guides
+
+    path = make_profile(root, "atlas")
+    target = path / "skills" / guides.NAME / "SKILL.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("---\nname: boopis-handoffs\n---\n<!-- boopis-managed: 0 -->\nold\n", "utf-8")
+    assert svc.guide("atlas")["written"] is True
+    assert guides.installed_version(target) == guides.VERSION
+    target.write_text("my own words\n", "utf-8")  # no marker: not ours
+    assert svc.guide("atlas")["written"] is False
+    assert target.read_text("utf-8") == "my own words\n"
+
+
+def test_guide_refuses_an_archived_teammate_and_the_default(root: Path, svc: BotService) -> None:
+    make_profile(root, "atlas")
+    svc.archive("atlas")
+    with pytest.raises(BotRefusedError):
+        svc.guide("archived--atlas")
+    with pytest.raises(BotRefusedError):
+        svc.guide("default")
+
+
 # ───────── delete ─────────
 def test_delete_needs_the_name_as_confirmation_and_goes_through_hermes(
     root: Path, svc: BotService, hermes: FakeHermes
@@ -351,6 +391,7 @@ def test_the_rpc_validates_and_reaches_the_service(
     assert [b["name"] for b in h["bots.read"]({})["bots"]] == ["atlas"]
     assert h["bots.write"]({"name": "atlas", "look": {"shape": "drop"}})["record"]["look"] == {"shape": "drop"}
     assert h["bots.inspect"]({"name": "atlas"})["path"].endswith("atlas")
+    assert h["bots.guide"]({"name": "atlas"})["written"] is True
     with pytest.raises(InvalidParamsError):
         h["bots.archive"]({"name": "atlas", "paused_jobs": "j1"})
     with pytest.raises(InvalidParamsError):

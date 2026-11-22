@@ -25,6 +25,7 @@ pub mod hermes;
 pub mod local;
 pub mod migrate;
 pub mod os;
+pub mod paths;
 pub mod providers;
 pub mod renderer;
 pub mod resources;
@@ -78,6 +79,10 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::notify,
             commands::pick_folder,
             commands::open_external,
+            commands::path_resolve,
+            commands::path_open,
+            commands::path_reveal,
+            commands::path_editors,
             commands::window_facts,
             commands::window_control,
             commands::pick_attachments,

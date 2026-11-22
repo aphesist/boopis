@@ -84,7 +84,7 @@ class FakeEngine {
   }
 }
 
-const PAPER_PAST: Group = { id: 'g-paper-past-', name: 'paper past', members: TEAM.map((id) => ({ id, profile: id, handle: id, name: id })), working: [] };
+const PAPER_PAST: Group = { id: 'g-paper-past-', name: 'paper past', members: TEAM.map((id) => ({ id, profile: id, handle: id, name: id })), working: [], busy: false, queued: [] };
 const tick = async (): Promise<void> => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
 const flush = async (ms = 20): Promise<void> => { await vi.advanceTimersByTimeAsync(ms); await tick(); };
 

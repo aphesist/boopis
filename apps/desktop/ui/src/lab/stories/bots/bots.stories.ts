@@ -2,13 +2,15 @@
    never user-settable, they belong to states; the dice agent, w11/dice, fixes), the Archived group and the "made outside
    boopis" mark, with no bots, one, many and long names. */
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
-import { drivable, groupRowOverlaps, liveShaped, lookMismatches, recordsArrive, teamBeforeRecords, teamGroups, withWorking } from '../../live-bots';
+import { drivable, groupRowOverlaps, liveShaped, lookMismatches, recordsArrive, teamBeforeRecords, teamGroups, withActivity, withKanbanWorker, withMarkdownThread, withQueue, withRun, withWorking } from '../../live-bots';
 
 const bots = async (c: AppCtx): Promise<void> => { c.hx.setState({ tab: 'bots' }); await c.wait(500); };
 const pick = (id: string) => async (c: AppCtx): Promise<void> => { await bots(c); c.hx.emit('hx:bot-select', { id, from: 'lab' }); await c.wait(500); };
 const st = (tags: State['tags'], provider: ProviderSpec, setup: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State => ({ tags, app: { provider, setup }, ...extra });
 const live = (withThread = false): ProviderSpec => ({ simulate: false, patch: (p) => liveShaped(p, withThread) });
 const grp: ProviderSpec = { fixtures: ['groups'] };
+const paper: ProviderSpec = { fixtures: ['groups', 'paper-past'] };
+const openPaper = async (c: AppCtx): Promise<void> => { await bots(c); await c.click('.bt-groups li:nth-of-type(2) .ui-row'); await c.wait(500); };
 const openGroup = async (c: AppCtx): Promise<void> => { await bots(c); await c.click('.bt-groups .ui-row'); await c.wait(500); };
 const MOCK = { url: '/v6/__index.html', note: 'the mock opens on the session; its Bots tab is alt+2' };
 /** the owner's sequence: the six drawn before their records, then the records read; every orb must wear the saved look */
@@ -69,9 +71,12 @@ const room: Story = {
     'a long name': st(['long'], { fixtures: ['long'] }, pick('cassiopeia-staging-deploy-guardian')),
     'made outside boopis': st(['variant'], { fixtures: ['outside'] }, pick('sage')),
     'kai, its record read after the roster': st(['owner', 'variant'], team, async (c) => { await recordsRead(c); c.hx.emit('hx:bot-select', { id: 'kai', from: 'lab' }); await c.wait(500); const bad = lookMismatches(); if (bad.length) throw new Error('a bot is drawn in a look that is not its own: ' + bad.join('; ')); }, { note: 'the room\'s header, the roster and the dock all draw kai as its record says: a teal circle' }),
+    'also running a kanban task': st(['variant', 'loading'], { simulate: false, patch: (p) => withKanbanWorker(liveShaped(p), 'review the render') }, pick('atlas')),
     'live bot: recent sessions and a live composer': st(['typical', 'owner'], live(), pick('atlas')),
     'live bot: a session open, with a line the app says': st(['variant', 'owner'], live(true), pick('atlas')),
     'live bot: a long name': st(['long'], { fixtures: ['long'], simulate: false, patch: (p) => liveShaped(p) }, pick('cassiopeia-staging-deploy-guardian')),
+    'a reply in markdown: lists, a quote, code, a path, a mention': st(['typical', 'owner'], { simulate: false, patch: (p) => withMarkdownThread(p, 'atlas') }, pick('atlas')),
+    'a reply under way: the pending entry': st(['loading', 'owner'], { simulate: false, patch: (p) => withRun(p, 'atlas') }, pick('atlas'), { allow: { 'stability.render': 'the pending entry counts the seconds the reply has taken (a clock, text only), so two draws a moment apart differ in that one number' } }),
     'no bots at all': st(['empty', 'owner'], { bots: 'none' }, bots),
     'composer send hover': st(['hover', 'owner'], {}, pick('atlas'), { force: [{ sel: '#hx-view-bots .ui-send', state: 'hover' }] }),
     'composer attach tooltip': st(['tooltip', 'owner'], {}, async (c) => { await pick('atlas')(c); const b = document.querySelector<HTMLElement>('#hx-view-bots .ui-composer__attach, #hx-view-bots .ui-composer__mic'); if (b) { b.focus(); c.hx.ui.tooltip.show(b); } await c.wait(250); }, { overlay: { anchor: '#hx-view-bots .ui-composer__attach, #hx-view-bots .ui-composer__mic', layer: '.ui-tip' } })
@@ -106,6 +111,21 @@ const groupRoom: Story = {
   states: {
     'several members answered': st(['typical', 'owner'], grp, openGroup),
     'two members replying': st(['loading'], { ...grp, patch: (p) => withWorking(p) }, openGroup),
+    'a team across rounds: to-lines, mentions, paths, code': st(['typical', 'owner'], paper, openPaper),
+    'three members at work, each in a tool': st(['loading', 'owner'], { ...paper, patch: (p) => withActivity(p, [{ at: 0, status: 'running', tool: 'read_file' }, { at: 1, status: 'running', tool: 'terminal' }, { at: 2, status: 'queued' }]) }, openPaper),
+    'five at work: the rest in one line above the composer': st(['many', 'loading'], { ...paper, patch: (p) => withActivity(p, [0, 1, 2, 3, 4].map((at) => ({ at, status: at < 2 ? 'running' as const : 'queued' as const }))) }, openPaper),
+    'a mention hovered': st(['hover', 'owner'], paper, async (c) => { await openPaper(c); const m = document.querySelector<HTMLElement>('#hx-view-bots .ui-mention'); if (m) { m.focus(); } await c.wait(700); }),
+    'a mention of a bot that is not in the room: the chip and the hint': st(['variant', 'owner'], { fixtures: ['groups'], simulate: false }, async (c) => {
+      await openGroup(c);
+      const comp = document.querySelector<HTMLElement & { insert(t: string): void; focus(): void }>('#hx-view-bots .bt-group .ui-composer');
+      comp?.dispatchEvent(new CustomEvent('ui:send', { detail: { text: '@sol can you look at this? @nimbus. and @kai' } }));
+      await c.wait(300);
+      comp?.focus(); comp?.insert('@sol are you there'); await c.wait(400);
+    }),
+    'a message waiting for a member': st(['variant'], { ...grp, patch: (p) => withQueue(p, ['and could you add the changelog to the notes?']) }, openGroup),
+    'two messages waiting': st(['variant'], { ...grp, patch: (p) => withQueue(p, ['and could you add the changelog to the notes?', '@nina what did staging say about the migration on the copy of production, and how long did it take to run end to end?'], 2) }, openGroup),
+    'a member also running a kanban task': st(['variant'], { ...grp, patch: (p) => withKanbanWorker(liveShaped(p), 'review the render') }, openGroup),
+    'a member names a bot that is not in the room: the note and Send to': st(['variant', 'owner'], { fixtures: ['groups'], simulate: false, patch: (p) => ({ ...p, groups: { ...p.groups, snapshot: () => { const s = p.groups.snapshot(); return { ...s, threads: Object.fromEntries(Object.entries(s.threads).map(([k, v]) => [k, [...v, { kind: 'text' as const, id: 'out1', who: 'kai', t: '06:14', text: '@sol please confirm the tag before we cut it.', round: 1 }]])) }; } } }) }, openGroup),
     'no messages yet': st(['empty'], { fixtures: ['groups'], simulate: false, patch: (p) => ({ ...p, groups: { ...p.groups, snapshot: () => ({ groups: p.groups.snapshot().groups, threads: {} }) } }) }, openGroup),
     'group chat is off': st(['error'], { ...grp, patch: (p) => ({ ...p, groups: { ...p.groups, note: () => 'Group chat is not running in the engine. Restart boopis and try again.' } }) }, openGroup),
     'renaming': st(['variant'], grp, async (c) => { await openGroup(c); await c.click('#hx-view-bots [aria-label^="Rename"]'); await c.wait(300); }),

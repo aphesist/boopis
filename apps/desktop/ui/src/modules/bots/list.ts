@@ -242,7 +242,7 @@ async function restoreArchivedBot(id: string, button: HTMLElement): Promise<void
    A row for each group (its members as stacked orbs, its name, who is in it) and, last, "New group" beside the roster's own
    "New bot". The block follows the groups in place (`drawGroups`), so a live update never blanks a stack's orbs. */
 function groupRow(g: Group): string {
-  const busy = g.working.length > 0;
+  const busy = g.busy;
   return ui.html.row({
     title: g.name, sub: namesOf(g.members), value: g.id, lead: stackOf(g.members, railOn() ? 'rail' : 'row', true),
     end: busy ? ui.html.dot('run') : '', current: S.view === 'group' && g.id === S.groupSel,

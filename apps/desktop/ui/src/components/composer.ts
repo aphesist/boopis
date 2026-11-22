@@ -32,6 +32,9 @@ export interface ComposerOpts {
   bot?: BotLike | null;
   orbs?: () => Array<Element | null | undefined>;
   compact?: boolean;
+  /** While `setRunning(true)`, a typed message can still be sent: the button is Stop when nothing is typed and "Send when done"
+   *  when something is, and Enter fires `ui:send`. What a send then does is the owner's: the composer never sends anything itself. */
+  queue?: boolean;
   hint?: (text: string) => string | HintItem[];
   feedforward?: (text: string) => FeedforwardMark[];
 }
@@ -133,11 +136,11 @@ export function composer(opts: ComposerOpts = {}): ComposerEl {
       if (input.innerHTML !== out) { input.innerHTML = out; if (off != null) setCaret(off); }
     }
     input.dataset['empty'] = String(!t);
-    send.disabled = !running && !t.trim();
+    paintSend();
     if (o.hint) paintHint(o.hint(t));
   }
   const assumeBtns = (): HTMLElement[] => (hintEl ? [...hintEl.querySelectorAll<HTMLElement>('.ui-assume')] : []);
-  input.addEventListener('input', () => { typed = true; clearTimeout(typingT); typingT = window.setTimeout(() => render(true), 250); input.dataset['empty'] = String(!text()); send.disabled = !running && !text().trim(); });
+  input.addEventListener('input', () => { typed = true; clearTimeout(typingT); typingT = window.setTimeout(() => render(true), 250); input.dataset['empty'] = String(!text()); paintSend(); });
   root.addEventListener('focusin', syncHint);
   root.addEventListener('focusout', () => setTimeout(() => { if (!root.contains(document.activeElement)) typed = false; syncHint(); }, 0));
   input.addEventListener('paste', (e) => { e.preventDefault(); const t = e.clipboardData?.getData('text/plain') ?? ''; document.execCommand('insertText', false, t); });
@@ -171,7 +174,8 @@ export function composer(opts: ComposerOpts = {}): ComposerEl {
   if (hintEl) hintEl.addEventListener('click', (e) => { const b = (e.target as Element).closest<HTMLElement>('.ui-assume'); if (b) fire<AssumptionDetail>(root, 'ui:assumption', { index: +(b.dataset['i'] ?? 0), item: items[+(b.dataset['i'] ?? 0)], el: b }); });
   input.addEventListener('click', (e) => { const m = (e.target as Element).closest<HTMLElement>('.ui-ff'); if (m && getSelection()?.isCollapsed) fire<DecisionDetail>(root, 'ui:decision', { kind: m.dataset['kind'], text: m.textContent ?? '', el: m }); });
   box.addEventListener('pointerdown', (e) => { if (e.target === box) { e.preventDefault(); api.focus(); } });
-  send.addEventListener('click', () => (running ? fire(root, 'ui:stop', {}) : doSend()));
+  const stopping = (): boolean => running && !(o.queue && text().trim());
+  send.addEventListener('click', () => (stopping() ? fire(root, 'ui:stop', {}) : doSend()));
   /* the mic: a click toggles; a press held 400ms or more talks while held; Alt+V the same from the keyboard */
   const mic = q<HTMLButtonElement>('.ui-composer__mic');
   let listening = false, listenMode: 'toggle' | 'hold' | null = null, pressAt = 0, pressStarted = false, keyAt = 0, placeholderWas: string | null = null;
@@ -230,7 +234,7 @@ export function composer(opts: ComposerOpts = {}): ComposerEl {
   mic.addEventListener('pointerup', release);
   mic.addEventListener('pointercancel', release);
   mic.addEventListener('click', (e) => { if (e.detail === 0) setListening(!listening, 'toggle'); });   /* Enter or Space on the focused mic */
-  function doSend(): void { const t = text().trim(); if (!t || running) return; if (fire<SendDetail>(root, 'ui:send', { text: t }, true)) { typed = false; api.setValue(''); if (listening) setListening(false); } }
+  function doSend(): void { const t = text().trim(); if (!t || (running && !o.queue)) return; if (fire<SendDetail>(root, 'ui:send', { text: t }, true)) { typed = false; api.setValue(''); if (listening) setListening(false); } }
 
   const api = root as ComposerEl;
   Object.defineProperties(api, {
@@ -256,13 +260,20 @@ export function composer(opts: ComposerOpts = {}): ComposerEl {
     const f = fileChip(name, { ...o, onRemove: () => { o?.onRemove?.(); input.focus(); } });
     files.appendChild(f);
   };
-  api.setRunning = (v) => {
-    running = !!v;
-    const s = frag(html.send({ running }));
-    send.replaceChildren(...s.childNodes);
-    for (const a of ['aria-label', 'data-tip', 'data-kbd', 'aria-keyshortcuts']) { if (s.hasAttribute(a)) send.setAttribute(a, s.getAttribute(a) ?? ''); else send.removeAttribute(a); }
-    send.disabled = !running && !text().trim();
-  };
+  /* the send button: Send; Stop while running; and, with `queue`, Send when done once something is typed during a run */
+  let drawn = 'send';
+  function paintSend(): void {
+    const stop = stopping(), mode = stop ? 'stop' : running ? 'queue' : 'send';
+    if (mode !== drawn) {
+      drawn = mode;
+      const s = frag(html.send({ running: stop }));
+      send.replaceChildren(...s.childNodes);
+      for (const a of ['aria-label', 'data-tip', 'data-kbd', 'aria-keyshortcuts']) { if (s.hasAttribute(a)) send.setAttribute(a, s.getAttribute(a) ?? ''); else send.removeAttribute(a); }
+      if (mode === 'queue') { send.setAttribute('aria-label', 'Send when done'); send.setAttribute('data-tip', 'Send when done'); }
+    }
+    send.disabled = !stop && !text().trim();
+  }
+  api.setRunning = (v) => { running = !!v; paintSend(); };
   api.setSpend = (spent, cap) => { const c = root.querySelector('.ui-capacity'); if (c) c.outerHTML = cap ? html.capacity(spent, cap) : '<span class="ui-capacity" role="img" aria-label="' + esc(spent + ' spent') + '"><b>' + esc(spent) + '</b></span>'; };
   api.setHint = (h) => paintHint(h);
   api.setValue(o.value);

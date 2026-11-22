@@ -72,6 +72,20 @@ export const commands = {
 	pickFolder: (options?: InvokeOptions) => __TAURI_INVOKE<PickedFolder | null>("pick_folder", undefined, options),
 	/**  Open an `http` or `https` link in the user's browser. */
 	openExternal: (url: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("open_external", { url }, options),
+	/**
+	 *  Which of the paths a message names exist: inside one of `roots` (the session's or the bot's workspace) or absolute and
+	 *  there. Nothing is guessed (`paths.rs`).
+	 */
+	pathResolve: (candidates: string[], roots: string[], options?: InvokeOptions) => __TAURI_INVOKE<(ResolvedPath_Serialize | null)[]>("path_resolve", { candidates, roots }, options),
+	/**
+	 *  Open a path with the system's default app, or with one of the editors `path_editors` found (`editor`: its id). The
+	 *  default app never runs a program: a file that would run is refused (Show in folder and an editor still work).
+	 */
+	pathOpen: (path: string, editor: string | null, options?: InvokeOptions) => __TAURI_INVOKE<null>("path_open", { path, editor }, options),
+	/**  Show a path in the file manager, selected. */
+	pathReveal: (path: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("path_reveal", { path }, options),
+	/**  The editors found on this computer, to open a file in. */
+	pathEditors: (options?: InvokeOptions) => __TAURI_INVOKE<PathEditor[]>("path_editors", undefined, options),
 	/**  The desktop's kind and the window's state. */
 	windowFacts: (options?: InvokeOptions) => __TAURI_INVOKE<WindowFacts_Serialize>("window_facts", undefined, options),
 	/**  Minimise, maximise or restore, full screen, or close the main window. */
@@ -1823,6 +1837,14 @@ export type Pass =
 /**  Extracting into the temporary directory. */
 "unpack";
 
+/**  An editor found on this computer. */
+export type PathEditor = {
+	/**  Stable id, what `path_open` takes. */
+	id: string,
+	/**  Its name as people know it. */
+	name: string,
+};
+
 /**  Where the link to the gateway is. */
 export type Phase = 
 /**  Dialling, or waiting for the handshake. */
@@ -2222,6 +2244,33 @@ export type RendererReport_Serialize = {
 	 *  for; `None` from `boopis doctor` (it prints the previous run's file itself).
 	 */
 	health: WebviewHealthReport_Serialize | null,
+};
+
+/**  What a path a message names turned out to be. */
+export type ResolvedPath = ResolvedPath_Serialize | ResolvedPath_Deserialize;
+
+/**  What a path a message names turned out to be. */
+export type ResolvedPath_Deserialize = {
+	/**  The path as the message wrote it. */
+	path: string,
+	/**  Where it is: absolute and canonical. */
+	abs: string,
+	/**  `file` or `folder`. */
+	kind: string,
+	/**  The path inside the workspace it was found in, `/`-separated; none for an absolute path outside every workspace. */
+	rel?: string | null,
+};
+
+/**  What a path a message names turned out to be. */
+export type ResolvedPath_Serialize = {
+	/**  The path as the message wrote it. */
+	path: string,
+	/**  Where it is: absolute and canonical. */
+	abs: string,
+	/**  `file` or `folder`. */
+	kind: string,
+	/**  The path inside the workspace it was found in, `/`-separated; none for an absolute path outside every workspace. */
+	rel: string | null,
 };
 
 /**  Why the decision came out as it did (stable names: they go in the log and in the diagnostics). */

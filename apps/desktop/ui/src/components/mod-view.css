@@ -62,7 +62,6 @@
 /* Markdown: the library's prose, tighter */
 .mv-md { font-size: var(--fs-s); line-height: var(--lh-ui); color: var(--text); }
 .mv-md p, .mv-md ul, .mv-md ol { margin-bottom: var(--sp-2); }
-.mv-md__h { font-weight: 600; color: var(--text-strong); }
 
 /* the mod, as a name: its glyph and its name (origin slots, tabs, band rows, toasts, placed rows) */
 .mv-by { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }   /* a long mod name is cut by its ellipsis, never wider than its line (R-overflow-4) */

@@ -98,13 +98,13 @@ describe('a group starts and stops replying', () => {
     const row = S.groupRows.get(S.groups[0]!.id)!, stack = row.li.querySelector('.ui-stack')!, orbs = [...row.li.querySelectorAll('orb-avatar')];
     expect(orbs.length).toBeGreaterThan(1);
     const w = watchOrbs();
-    pushGroup({ working: ['atlas'] });
+    pushGroup({ working: ['atlas'], busy: true });
     expect(S.groupRows.get(S.groups[0]!.id)!.li).toBe(row.li);
     expect(row.li.querySelector('.ui-stack')).toBe(stack);
     expect([...row.li.querySelectorAll('orb-avatar')]).toEqual(orbs);
     expect(row.btn.getAttribute('aria-label')).toMatch(/replying$/);
     expect(row.li.querySelector('.ui-row__end')).not.toBeNull();
-    pushGroup({ working: [] });
+    pushGroup({ working: [], busy: false });
     expect(row.li.querySelector('.ui-row__end')).toBeNull();
     expect(row.li.querySelector('.ui-stack')).toBe(stack);
     expect(w.gone()).toEqual([]);
@@ -118,7 +118,7 @@ describe('a group starts and stops replying', () => {
     expect(document.querySelectorAll('.bt-group-rows .ui-row')).toHaveLength(2);
   });
   it('a group row sits before New group, and the list keeps one of each', () => {
-    pushGroup({ working: ['atlas'] });
+    pushGroup({ working: ['atlas'], busy: true });
     const rows = [...document.querySelectorAll('.bt-group-rows .ui-row')];
     expect(rows.map((r) => r.hasAttribute('data-new-group'))).toEqual([false, true]);
   });
