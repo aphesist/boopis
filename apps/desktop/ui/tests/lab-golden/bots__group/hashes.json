@@ -1,221 +1,321 @@
 {
+ "a-huddle-grows-as-messages-arrive-then-folds-when-you-write@bone": {
+  "sha": "d3f8dd479281f649b19c71bcfa2d31f590d399f7",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-grows-as-messages-arrive-then-folds-when-you-write@catalog": {
+  "sha": "538f1b95311638ada7cd4298592dbb4bdba34119",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-grows-as-messages-arrive-then-folds-when-you-write@graphite": {
+  "sha": "06df8cd4623d0195321479f664f042ba6d9ed117",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-grows-as-messages-arrive-then-folds-when-you-write@typewriter": {
+  "sha": "650fcffbae76bb32d1d528cfe4c026e2ad8b287c",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-opened@bone": {
+  "sha": "4e0e91009885e13471bafac7ae57969a3d0fa7c7",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-opened@catalog": {
+  "sha": "87e813a54f89597864eca376d322d2b0ff997c1c",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-opened@graphite": {
+  "sha": "6bcea6e30d8b34f5d6e54f1ddfb740fae56b283d",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-opened@typewriter": {
+  "sha": "e46cc6f0a3c51accca052b861b285998480a7b8d",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-under-way-open-while-the-talk-is-live@bone": {
+  "sha": "e16a8c53f231575889ba7ffcb01386efffbc9096",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-under-way-open-while-the-talk-is-live@catalog": {
+  "sha": "01fd54a14dfc670934e847bb75a114146b9b4b59",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-under-way-open-while-the-talk-is-live@graphite": {
+  "sha": "a738eb8b7752181ce4a9df979eab7f55527b7e9e",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-under-way-open-while-the-talk-is-live@typewriter": {
+  "sha": "51f7ebe3cc19a9fac08dc16be007e81185f56368",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-with-a-mention-chip-hovered-inside@bone": {
+  "sha": "11b2d8267c57280339af00a3443353107d9030fe",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-with-a-mention-chip-hovered-inside@catalog": {
+  "sha": "7391d1986ba6f20cbc32c769c8901f4ef084ccf1",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-with-a-mention-chip-hovered-inside@graphite": {
+  "sha": "1bd6f99c87a32f360c77c0a46828349be692c4a4",
+  "w": 1196,
+  "h": 872
+ },
+ "a-huddle-with-a-mention-chip-hovered-inside@typewriter": {
+  "sha": "987755260b53b03095fb366b4970068915ecf92e",
+  "w": 1196,
+  "h": 872
+ },
  "a-lead-answers-first@bone": {
-  "sha": "b67ef8032e9908855f2d880450f414a7c25e349d",
+  "sha": "3171921b846fe7895659e0434000310e70c5eb7d",
   "w": 1196,
   "h": 872
  },
  "a-lead-answers-first@catalog": {
-  "sha": "2dab29cc15aa2cd7663c972bafa1c3b91c145d6b",
+  "sha": "ff45585d5c01f575ef792e89a65aa9b3a968ebe1",
   "w": 1196,
   "h": 872
  },
  "a-lead-answers-first@graphite": {
-  "sha": "cd2468e71a092c316a1d34a4e7ce8666667599dc",
+  "sha": "bc1310e7578e8c8c396a6e648c670c2ce20126f2",
   "w": 1196,
   "h": 872
  },
  "a-lead-answers-first@typewriter": {
-  "sha": "69ee7aeaf623ae8a2706a367b0b3e8fa33cf9fb5",
+  "sha": "f4158fdcf9d5975867bb847c60ca7d0f2880a318",
+  "w": 1196,
+  "h": 872
+ },
+ "a-long-huddle-opened@bone": {
+  "sha": "40389a6bd42b90005f9006bb6d62b27324151242",
+  "w": 1196,
+  "h": 872
+ },
+ "a-long-huddle-opened@catalog": {
+  "sha": "22c38c8dc2a28dd7ab2acae3e3738a7633265213",
+  "w": 1196,
+  "h": 872
+ },
+ "a-long-huddle-opened@graphite": {
+  "sha": "7949087c3af8377a9a1b838f949e896f66bf5164",
+  "w": 1196,
+  "h": 872
+ },
+ "a-long-huddle-opened@typewriter": {
+  "sha": "d7026c27a96a720ed36d01814324de359ea7a26d",
   "w": 1196,
   "h": 872
  },
  "a-long-name@bone": {
-  "sha": "14d38c254952c906af15d2d0502dbd73ad2109be",
+  "sha": "c046bb8b9bac7372d24c13cf35b5019fe767e800",
   "w": 1196,
   "h": 872
  },
  "a-long-name@catalog": {
-  "sha": "0722bbbc6b395de50cbf0f2d3e490dbcca64b418",
+  "sha": "46dd70fde080bb3b780bde87c51da43a18e6acf3",
   "w": 1196,
   "h": 872
  },
  "a-long-name@graphite": {
-  "sha": "6a9284f38170d0b5edc7f707e51d835091e265c1",
+  "sha": "a44b2d88497cfe3081e93b8be8eadc25d36629d3",
   "w": 1196,
   "h": 872
  },
  "a-long-name@typewriter": {
-  "sha": "855c9448f27e9ffe6eab919c216ec52307d9629c",
+  "sha": "b11aa1e30fc0d92db26a43f695a9ae4015a95b06",
   "w": 1196,
   "h": 872
  },
  "a-member-also-running-a-kanban-task@bone": {
-  "sha": "311abb0732e986181fbf0d345c241ae61e152cc5",
+  "sha": "33f63154b2cff6a5c8daccbdf142329348e755da",
   "w": 1196,
   "h": 872
  },
  "a-member-also-running-a-kanban-task@catalog": {
-  "sha": "3502920e5474e1898779ce6e70d971df1e81837d",
+  "sha": "5d18fc35f8f8a9c4eab631843c7c50eafcd3c45a",
   "w": 1196,
   "h": 872
  },
  "a-member-also-running-a-kanban-task@graphite": {
-  "sha": "53739e3a37dbd3e01b396f90aff932bee09fb46a",
+  "sha": "297a5f9cd4e975c5a525133c8916a829900a30b4",
   "w": 1196,
   "h": 872
  },
  "a-member-also-running-a-kanban-task@typewriter": {
-  "sha": "f15f0b1029a3a38baae9d799f729a4e87adec9d6",
+  "sha": "20be8fbab786564ef17280767be5c194b22bc1db",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@bone": {
-  "sha": "59d3e42a105a96c8d6fb55179e842d32b0c846ed",
+  "sha": "459e31e9b54dc7bf70b9244c0a4c4bbb4efdee09",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@catalog": {
-  "sha": "3ffeabdf6cf1c5d361e5db9b8f6d227cbbccc7ac",
+  "sha": "da9c447cdcb68e9eacdccf1e0ea8f0856ea2acbe",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@graphite": {
-  "sha": "6ad74a5fdc35a3b9276348f4756d14a45902613d",
+  "sha": "8af5c1aa7178afea69582a387bb2a8eceeb656dc",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@typewriter": {
-  "sha": "5d66b0482c5f3553e97383fc2465cad586896a96",
+  "sha": "87799a3d728b675cdcae5259a3af1df46e41f51d",
   "w": 1196,
   "h": 872
  },
  "a-member-names-a-bot-that-is-not-in-the-room-the-note-and-send-to@bone": {
-  "sha": "ab0b068aec0c999103784a1444ee52fa4e33afc0",
+  "sha": "71b473be85528a92f91c1ff65adfa67e284168c4",
   "w": 1196,
   "h": 872
  },
  "a-member-names-a-bot-that-is-not-in-the-room-the-note-and-send-to@catalog": {
-  "sha": "3a00b485e849008205dc2ff3651ad15cb45f8ad2",
+  "sha": "0f8848c08497877ada3df1579d3b38084f87b97c",
   "w": 1196,
   "h": 872
  },
  "a-member-names-a-bot-that-is-not-in-the-room-the-note-and-send-to@graphite": {
-  "sha": "e0cdf0d2d2974203880ad8f6eee8002c68aed5e9",
+  "sha": "f7c76f98bc96cf34006172c2148f38f774789aa8",
   "w": 1196,
   "h": 872
  },
  "a-member-names-a-bot-that-is-not-in-the-room-the-note-and-send-to@typewriter": {
-  "sha": "3969683cfd42f5bfc0487f3829cf16e36123624e",
+  "sha": "5fef4506bf263f1a5218b0293f32a9d2492beb98",
   "w": 1196,
   "h": 872
  },
  "a-mention-hovered@bone": {
-  "sha": "85951ca2326f6d42f92977c451a12fdc63243558",
+  "sha": "cd284ec0ecae9ebdf67f0fcf15ebfc0c8bfc38f4",
   "w": 1196,
   "h": 872
  },
  "a-mention-hovered@catalog": {
-  "sha": "e8f9362e6f1cf7cc0eedbdbbb85cedde69b21962",
+  "sha": "2a749b7d855dae56dc10a61ea37ca67011ae9536",
   "w": 1196,
   "h": 872
  },
  "a-mention-hovered@graphite": {
-  "sha": "573375c4e48ec8f0cf3097fe2439b2feb073b17a",
+  "sha": "ba909cf27566563cac39bb4cb1a5d42b858a90d8",
   "w": 1196,
   "h": 872
  },
  "a-mention-hovered@typewriter": {
-  "sha": "fa940de7733e727625a15cf1914d0f1c74cd7991",
+  "sha": "aa58447af84a2f8e13f2170b0b04aee5ee6fe2a5",
   "w": 1196,
   "h": 872
  },
  "a-mention-of-a-bot-that-is-not-in-the-room-the-chip-and-the-hint@bone": {
-  "sha": "c3a68af4becbe94c803b4545edf6a372422be60d",
+  "sha": "8991e8096f619f19a4a2d1009cbd126c0ab186d8",
   "w": 1196,
   "h": 872
  },
  "a-mention-of-a-bot-that-is-not-in-the-room-the-chip-and-the-hint@catalog": {
-  "sha": "28f8c6ebfbcce19ed35183ecba5e86bff4f901c5",
+  "sha": "fda1079c7185415cbd0f9451d6a64353f265d9d6",
   "w": 1196,
   "h": 872
  },
  "a-mention-of-a-bot-that-is-not-in-the-room-the-chip-and-the-hint@graphite": {
-  "sha": "af799a853860d5ca897546a8319c0b60e3cec8b6",
+  "sha": "3425f3007b49667534cdd1c498ac176dc9adbcd9",
   "w": 1196,
   "h": 872
  },
  "a-mention-of-a-bot-that-is-not-in-the-room-the-chip-and-the-hint@typewriter": {
-  "sha": "5ea2f3175582c107e31e3b9faf55a8fe0d7b5002",
+  "sha": "fcf6d89608535df3adcc28f4459f76629ec79c3c",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@bone": {
-  "sha": "21d945a0071712d6f93e5da465a826aa1ae335d9",
+  "sha": "eec7b051ea0d73ab78db23873c9f5a41cb3c7daa",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@catalog": {
-  "sha": "667556c5659033c1502def816a1f0519762f1411",
+  "sha": "96a03135227d041f77deb325af3a89744d8e39de",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@graphite": {
-  "sha": "57605a15656fa61ebbbd1a80778ab392a05c97e5",
+  "sha": "9608c63c1ead9cfd7bdb966f7d3071a7f496fbf1",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@typewriter": {
-  "sha": "7f46ef3e12851d43f99d893879eb6b65da166a6a",
+  "sha": "4259b6c7ab0b247cac1bbd7ad31b5490b80cd7a9",
   "w": 1196,
   "h": 872
  },
  "a-team-across-rounds-to-lines-mentions-paths-code@bone": {
-  "sha": "1f52538f4b51db8891c676ae9766f4e3748fc2c2",
+  "sha": "0e2b9ee560955f955f335ec20bae9037cf58b5cd",
   "w": 1196,
   "h": 872
  },
  "a-team-across-rounds-to-lines-mentions-paths-code@catalog": {
-  "sha": "2706267e1ad92215dcabfb63f482a92198f417a0",
+  "sha": "652b590c15ef17aaf2be4f95227db8a5922b44ce",
   "w": 1196,
   "h": 872
  },
  "a-team-across-rounds-to-lines-mentions-paths-code@graphite": {
-  "sha": "5d0ecd12d3b3bd24120dd052beac2fefd0781afc",
+  "sha": "217422212a29c0d54f9d7d1a4a9ccc87f158ca6a",
   "w": 1196,
   "h": 872
  },
  "a-team-across-rounds-to-lines-mentions-paths-code@typewriter": {
-  "sha": "1f4f109a0044418ac0fe1e1e61a2ad723da0fe70",
+  "sha": "f435f2e95df45e7271faa212a02ee6a3f9d9cc6a",
   "w": 1196,
   "h": 872
  },
  "five-at-work-the-rest-in-one-line-above-the-composer@bone": {
-  "sha": "c331329da3df03e06009f701e639470f8fb60daf",
+  "sha": "6ca099f0ef19bd6d82b81e7ee81fb021fef9847d",
   "w": 1196,
   "h": 872
  },
  "five-at-work-the-rest-in-one-line-above-the-composer@catalog": {
-  "sha": "4199d9399b47095802b510397e4d1841c5100d4c",
+  "sha": "d8361efe3ac086ecd87ba8bf394e54f9be80b15f",
   "w": 1196,
   "h": 872
  },
  "five-at-work-the-rest-in-one-line-above-the-composer@graphite": {
-  "sha": "6a320d0442169dbc204618df4adc4f3c558234ec",
+  "sha": "ac904e9a90a161285d2eb7393bc89754f8bfafcb",
   "w": 1196,
   "h": 872
  },
  "five-at-work-the-rest-in-one-line-above-the-composer@typewriter": {
-  "sha": "5c08e52082d85b186fc32c2bf678a282d2989c41",
+  "sha": "c2e9663f467a32c4ab994304517e801189ee9149",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@bone": {
-  "sha": "ed1eb21e3752e59445cf1912f296ccf5c53f628c",
+  "sha": "8ca7c694f94d3cab2ce6e2388032bb69f3162253",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@catalog": {
-  "sha": "6c83155f7821260bfa22c639be9a40b98f70966a",
+  "sha": "9932495ef76e614ef0761d915aa490168ab9c1f1",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@graphite": {
-  "sha": "d1ed16e1003d962b66f77c05a1eda5b95c0d4ca9",
+  "sha": "3591497cdf2c02137ff2090b20192b6b88423b61",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@typewriter": {
-  "sha": "1cfaff12b73884198110132eb76b36f9bbc1051a",
+  "sha": "d63bb60f01143af38113296e7e82aedf7f74b402",
   "w": 1196,
   "h": 872
  },
@@ -225,7 +325,7 @@
   "h": 872
  },
  "no-messages-yet@catalog": {
-  "sha": "9637ef4c2ee490655f9ae3b6d98f54ff94d51fa2",
+  "sha": "c63faf0c9fb6791c29e5075146ac0b350b0dfdce",
   "w": 1196,
   "h": 872
  },
@@ -235,107 +335,107 @@
   "h": 872
  },
  "no-messages-yet@typewriter": {
-  "sha": "fb269763d35dd7375154a175da8c9d659d359f26",
+  "sha": "94691769b6332787d23edf31672bf90e272c060d",
   "w": 1196,
   "h": 872
  },
  "renaming@bone": {
-  "sha": "c145b66afa4bec3cfba469fcb0fb60ccf20dc0ca",
+  "sha": "18c0d152d2158ada744657f55bb86067586b39bf",
   "w": 1196,
   "h": 872
  },
  "renaming@catalog": {
-  "sha": "cc4b5545afb426781358e7b58817333e509d834a",
+  "sha": "bb22153fa75c7883ef09befec57b24e214a9ee72",
   "w": 1196,
   "h": 872
  },
  "renaming@graphite": {
-  "sha": "3bb906564179ff51cb930fb7c7cb0e6eabec7422",
+  "sha": "5364ac272900ae0da00ce128d5686e811c94c52a",
   "w": 1196,
   "h": 872
  },
  "renaming@typewriter": {
-  "sha": "317ea8421f2b2f3115a8da0d3d42dadfc2cd2676",
+  "sha": "294f7485975f1e15141809754844e57dfe821318",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@bone": {
-  "sha": "e295dfa6f456cebc1f25107abc390b7e6da3cdc7",
+  "sha": "3f9e2428105f4bec28094836c08dd04e59cbd430",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@catalog": {
-  "sha": "f9b6d54c395d49bc63fdbc25db1c8da86b49ac0d",
+  "sha": "3007e2b95516c84ba92e04023f4dcd06b67579c2",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@graphite": {
-  "sha": "9a261e8157120bf269f02aeb979054c17d55d81a",
+  "sha": "9e2b61c5a05d6b09a6aab5e10f6374334be5c6fe",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@typewriter": {
-  "sha": "758e1b7834e5b6e1a641380b3408d1cc26ddf91c",
+  "sha": "91c566243cd76bc273dbf11c3ad0d153ade13333",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@bone": {
-  "sha": "9d01966dca30024c644d6ed4d800635f16631b49",
+  "sha": "dd4efee84f9e3f22a74aaab8bb9fad4a9bcd9f7d",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@catalog": {
-  "sha": "24bdb0faccd32b307b74830e4f97968603640b1e",
+  "sha": "3bb841dc85fdec58591b063b68b4ee1e91920d11",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@graphite": {
-  "sha": "e5d1c2df9d58601e820d9d2e8bb4ac52ce7b251f",
+  "sha": "8f81be064e0523edb4ece52b48d9177a53a1a60a",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@typewriter": {
-  "sha": "3dbe6d08c335c6d9aee0b9bd4fd3cc5b19474ba6",
+  "sha": "b502dde7aa1e5d5096878309ab71798abcca83b0",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@bone": {
-  "sha": "45d11638cf22637fdd2d448fd2ded4b3d33d6adf",
+  "sha": "8bf699411dd56085a7a5fe795c57ea9a0bc4cc6a",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@catalog": {
-  "sha": "d2c59fd0eb2bcd5a0e0b493a9f27d28c0b8ce91d",
+  "sha": "cfe58daa3910f203dc79fa5e8e69c49bda2e7d49",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@graphite": {
-  "sha": "1aa42aaa03ec81622b8be45707abae145b6571dc",
+  "sha": "46567ce7598beab6ba56b3372500a896cae6b1d2",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@typewriter": {
-  "sha": "fe9be785ca7c4d07e6dc0e3a894067b4da13b9d9",
+  "sha": "1817bca9f6aca5bba8528f00932bea750d007e11",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@bone": {
-  "sha": "64a8930e07c9aa3f6df38feb7a2b7f81e183fb8b",
+  "sha": "3c0e4d1ad5e6175f9a09b1ab8d767879956c3cb1",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@catalog": {
-  "sha": "d7540fb6311db737a13eba10dbd00ac896845400",
+  "sha": "d165e22b2659f6bfe71171144e989cfad289b686",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@graphite": {
-  "sha": "67775d01d014c30e194bc7ce96baaa6098622176",
+  "sha": "b7f43b963b7a22479afc31c0cac16acdeb4b3d08",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@typewriter": {
-  "sha": "0a65af88c13a5ee685aa63ec4e9c8a05f71b4436",
+  "sha": "74a4eb0dcd3a4c279514364ecf587e04e9b94db2",
   "w": 1196,
   "h": 872
  }

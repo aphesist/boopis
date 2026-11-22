@@ -2,7 +2,8 @@
    never user-settable, they belong to states; the dice agent, w11/dice, fixes), the Archived group and the "made outside
    boopis" mark, with no bots, one, many and long names. */
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
-import { drivable, groupRowOverlaps, liveShaped, lookMismatches, recordsArrive, teamBeforeRecords, teamGroups, withActivity, withKanbanWorker, withMarkdownThread, withQueue, withRun, withWorking } from '../../live-bots';
+import type { GroupMessage } from '../../../data';
+import { drivable, groupRowOverlaps, liveShaped, lookMismatches, recordsArrive, teamBeforeRecords, teamGroups, withActivity, withGroupThread, withKanbanWorker, withMarkdownThread, withQueue, withRun, withWorking } from '../../live-bots';
 
 const bots = async (c: AppCtx): Promise<void> => { c.hx.setState({ tab: 'bots' }); await c.wait(500); };
 const pick = (id: string) => async (c: AppCtx): Promise<void> => { await bots(c); c.hx.emit('hx:bot-select', { id, from: 'lab' }); await c.wait(500); };
@@ -11,6 +12,14 @@ const live = (withThread = false): ProviderSpec => ({ simulate: false, patch: (p
 const grp: ProviderSpec = { fixtures: ['groups'] };
 const paper: ProviderSpec = { fixtures: ['groups', 'paper-past'] };
 const openPaper = async (c: AppCtx): Promise<void> => { await bots(c); await c.click('.bt-groups li:nth-of-type(2) .ui-row'); await c.wait(500); };
+/** the sample thread cut after the huddle (the last of the bots' own rounds), so the talk is live; `extra` more rounds are added */
+const huddleLive = (extra = 0): ProviderSpec => ({ ...paper, patch: (p) => withGroupThread(p, (t) => {
+  const end = t.findIndex((m) => m.kind === 'text' && m.who === 'you' && m.id !== t[0]?.id);
+  const cut = (end < 0 ? [...t] : t.slice(0, end)) as GroupMessage[];
+  const more: GroupMessage[] = ['nina', 'kai', 'moss', 'hex', 'iris'].slice(0, extra).map((who, i) => ({ kind: 'text', id: 'hx' + i, who, t: '09:' + String(8 + i).padStart(2, '0'), round: 5 + i, to: [], text: i % 2 ? 'Checked again: nothing changed since the last round, so I am leaving `' + 'episodes/2026-11-22-cooking-pot/episode.json' + '` as it is.' : 'One more pass over the captions: the third line of beat 2 runs to 41 characters in PT-BR, so I cut *quase* and it fits. @' + (['kai', 'moss', 'hex', 'iris', 'nina'][i] ?? 'kai') + ' please look.' }));
+  return [...cut, ...more];
+}) });
+const openHuddle = async (c: AppCtx): Promise<void> => { await openPaper(c); await c.click('#hx-view-bots .bt-huddle-entry .ui-disclosure'); await c.wait(400); };
 const openGroup = async (c: AppCtx): Promise<void> => { await bots(c); await c.click('.bt-groups .ui-row'); await c.wait(500); };
 const MOCK = { url: '/v6/__index.html', note: 'the mock opens on the session; its Bots tab is alt+2' };
 /** the owner's sequence: the six drawn before their records, then the records read; every orb must wear the saved look */
@@ -114,6 +123,24 @@ const groupRoom: Story = {
     'a team across rounds: to-lines, mentions, paths, code': st(['typical', 'owner'], paper, openPaper),
     'three members at work, each in a tool': st(['loading', 'owner'], { ...paper, patch: (p) => withActivity(p, [{ at: 0, status: 'running', tool: 'read_file' }, { at: 1, status: 'running', tool: 'terminal' }, { at: 2, status: 'queued' }]) }, openPaper),
     'five at work: the rest in one line above the composer': st(['many', 'loading'], { ...paper, patch: (p) => withActivity(p, [0, 1, 2, 3, 4].map((at) => ({ at, status: at < 2 ? 'running' as const : 'queued' as const }))) }, openPaper),
+    'a huddle opened': st(['open', 'owner'], paper, openHuddle),
+    'a long huddle, opened': st(['long', 'owner'], huddleLive(5), openPaper),
+    'a huddle under way: open while the talk is live': st(['loading', 'owner'], huddleLive(), openPaper),
+    'a huddle with a mention chip hovered inside': st(['hover', 'owner'], paper, async (c) => { await openHuddle(c); const m = document.querySelector<HTMLElement>('#hx-view-bots .bt-huddle__body .ui-mention'); if (m) m.focus(); await c.wait(700); }),
+    'a huddle grows as messages arrive, then folds when you write': st(['variant', 'owner'], { ...paper, patch: (p) => withGroupThread(drivable(p), (t) => { const end = t.findIndex((m) => m.kind === 'text' && m.who === 'you' && m.id !== t[0]?.id); return end < 0 ? t : t.slice(0, end); }) }, async (c) => {
+      await openPaper(c);
+      const drive = (window as unknown as { __labDrive: { message(g: string, m: GroupMessage): void } }).__labDrive;
+      const huddle = (): HTMLElement | null => document.querySelector<HTMLElement>('#hx-view-bots .bt-huddle-entry');
+      const say = (id: string, who: string, round: number, text: string): GroupMessage => ({ kind: 'text', id, who, t: '09:' + (8 + round), round, text });
+      const g = 'room-paper', n0 = huddle()?.dataset['huddle'];
+      drive.message(g, say('lv1', 'nina', 5, 'One more look at beat 2: it fits in three lines now.')); await c.wait(350);
+      drive.message(g, say('lv2', 'kai', 6, 'Good. @moss ship the captions as they are.')); await c.wait(350);
+      const grown = document.querySelectorAll('#hx-view-bots .bt-huddle-entry');
+      if (n0 !== '4' || grown.length !== 1 || huddle()?.dataset['huddle'] !== '6') throw new Error('the huddle did not take the arriving messages in: ' + n0 + ' then ' + [...grown].map((e) => (e as HTMLElement).dataset['huddle']).join(','));
+      if (huddle()?.querySelector('.ui-disclosure')?.getAttribute('aria-expanded') !== 'true') throw new Error('a huddle under way folded while the talk was live');
+      drive.message(g, { kind: 'text', id: 'lv3', who: 'you', t: '09:15', text: 'Thanks, ship it.' }); await c.wait(350);
+      if (huddle()?.querySelector('.ui-disclosure')?.getAttribute('aria-expanded') !== 'false') throw new Error('the huddle stayed open after the user wrote');
+    }),
     'a mention hovered': st(['hover', 'owner'], paper, async (c) => { await openPaper(c); const m = document.querySelector<HTMLElement>('#hx-view-bots .ui-mention'); if (m) { m.focus(); } await c.wait(700); }),
     'a mention of a bot that is not in the room: the chip and the hint': st(['variant', 'owner'], { fixtures: ['groups'], simulate: false }, async (c) => {
       await openGroup(c);
