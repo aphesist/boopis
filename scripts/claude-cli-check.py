@@ -12,7 +12,10 @@ per scenario. Each call:
 2. runs the plugin's own `_resolve(None, os.environ)` (`directsdk_setup.py` at the commit the engine's catalogue pins) in a
    Python started with exactly the environment the engine gets (`engine_env`), as the gateway would;
 3. checks the expectations: the state, a version that serves at least one model, where `claude` was found, whether the
-   engine was handed the path, and that the plugin resolves the very file boopis found.
+   engine was handed the path, and that the plugin resolves the very file boopis found;
+4. with `--signin`, starts what the card's "Sign in to Claude" starts (`claude_probe signin`: the host's own sign-in process,
+   `claude auth login --claudeai` from the `claude` boopis found), and checks that Claude Code sends the person to Claude's
+   own sign-in page from that very file, and that the page answers. It stops there: the next step needs a person.
 
 Standard library only. Prints what it saw, and exits 1 on the first expectation that does not hold.
 """
@@ -24,6 +27,9 @@ import json
 import os
 import subprocess
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 
 WINDOWS = os.name == "nt"
 
@@ -36,11 +42,11 @@ def system_dirs() -> list[str]:
     return ["/usr/bin", "/bin", "/usr/sbin", "/sbin"]
 
 
-def probe(binary: str, dirs: list[str]) -> dict:
+def probe(binary: str, dirs: list[str], *args: str) -> dict:
     env = {k: v for k, v in os.environ.items() if k.upper() != "PATH"}
     # Windows spells it `Path`; a lookup that asks for `PATH` by exact name misses it
     env["Path" if WINDOWS else "PATH"] = os.pathsep.join(dirs)
-    run = subprocess.run([binary], env=env, capture_output=True, text=True, encoding="utf-8", timeout=180)
+    run = subprocess.run([binary, *args], env=env, capture_output=True, text=True, encoding="utf-8", timeout=180)
     if run.returncode != 0:
         sys.exit(f"claude_probe failed ({run.returncode}): {run.stderr}")
     return json.loads(run.stdout)
@@ -71,6 +77,44 @@ def same_file(a: str | None, b: str | None) -> bool:
     return os.path.realpath(a) == os.path.realpath(b)
 
 
+# where Claude Code's own sign-in sends a person (claude.ai for a Claude plan; the others are Anthropic's own sign-in hosts)
+SIGNIN_HOSTS = {"claude.ai", "claude.com", "platform.claude.com", "console.anthropic.com"}
+
+
+def answers(url: str) -> str:
+    """How the page answers a plain request: any HTTP answer below 500 means it is online (Cloudflare may ask a script, not a
+    browser, to prove itself first); no answer or a server error does not."""
+    req = urllib.request.Request(url, headers={"User-Agent": "boopis-ci (claude-cli check)"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return f"HTTP {r.status}"
+    except urllib.error.HTTPError as e:
+        if e.code >= 500:
+            raise
+        challenge = " (Cloudflare's browser check, which a browser passes)" if e.headers.get("cf-mitigated") == "challenge" else ""
+        return f"HTTP {e.code}{challenge}"
+
+
+def check_signin(binary: str, dirs: list[str], found: str, fail) -> None:
+    s = probe(binary, dirs, "signin")
+    print(f"Sign in to Claude runs: {s['command_line']} (as {s['program']})")
+    for line in s["said"]:
+        print(f"  claude said: {line}")
+    if not same_file(s["program"], found):
+        fail(f"the sign-in runs {s['program']}, boopis found {found}")
+    if s["ended_first"]:
+        fail("Claude Code's sign-in ended before it named a page")
+    page = s["page"] or ""
+    u = urllib.parse.urlsplit(page)
+    if u.scheme != "https" or u.hostname not in SIGNIN_HOSTS or "/oauth/" not in u.path:
+        fail(f"the sign-in named no page of Claude's own sign-in ({page!r})")
+    try:
+        how = answers(page)
+    except (urllib.error.URLError, OSError) as e:
+        fail(f"{u.scheme}://{u.hostname}{u.path} did not answer: {e}")
+    print(f"ok: Sign in to Claude opens {u.scheme}://{u.hostname}{u.path}, which answers: {how}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("binary")
@@ -80,6 +124,7 @@ def main() -> None:
     ap.add_argument("--expect-state", required=True)
     ap.add_argument("--expect-found", help="the end of the path boopis finds (folder and file name)")
     ap.add_argument("--expect-override", choices=["yes", "no"], default="no")
+    ap.add_argument("--signin", action="store_true", help="also start Sign in to Claude, up to the page that needs a person")
     a = ap.parse_args()
 
     dirs = system_dirs() + [os.path.expandvars(os.path.expanduser(d)) for d in a.dir]
@@ -118,6 +163,8 @@ def main() -> None:
     if not same_file(resolved, out["found"]):
         fail(f"the plugin would run {resolved}, boopis found {out['found']}")
     print(f"ok: {p['state']}, Claude Code {p['version']} at {out['found']}, and the plugin runs the same file")
+    if a.signin:
+        check_signin(a.binary, dirs, out["found"], fail)
 
 
 if __name__ == "__main__":

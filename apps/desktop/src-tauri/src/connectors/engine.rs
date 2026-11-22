@@ -1012,13 +1012,11 @@ pub fn clean_line(line: &str) -> String {
     out
 }
 
-/// Run a program the host chose (from the table), never one a form named. `env` is added on top of the allowlist.
-async fn run_login(
-    command: &str,
-    args: &[String],
-    env: &[(String, String)],
-    limits: &Limits,
-) -> Result<LoginReport> {
+/// The process a sign-in command runs as: exactly `command` and `args`, no shell, the login allowlist ([`login_env`]) plus `env`,
+/// stdin closed, output captured, no console window on Windows, killed when dropped. [`Engine::login`] runs it; the CI probe
+/// (`examples/claude_probe.rs`) starts the same process to prove "Sign in to Claude" reaches Claude's sign-in page.
+#[must_use]
+pub fn login_command(command: &str, args: &[String], env: &[(String, String)]) -> Command {
     let mut cmd = Command::new(command);
     cmd.args(args)
         .env_clear()
@@ -1030,6 +1028,17 @@ async fn run_login(
         .kill_on_drop(true);
     #[cfg(windows)]
     cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    cmd
+}
+
+/// Run a program the host chose (from the table), never one a form named. `env` is added on top of the allowlist.
+async fn run_login(
+    command: &str,
+    args: &[String],
+    env: &[(String, String)],
+    limits: &Limits,
+) -> Result<LoginReport> {
+    let mut cmd = login_command(command, args, env);
     let command_line = validate::display_command(command, args);
     let mut child = cmd.spawn().map_err(|e| {
         Error::Connector(

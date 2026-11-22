@@ -3,7 +3,10 @@ name: claude-cli
 # 2026): Anthropic's native installer and npm, on Windows and Linux (macOS on request), each with its folder on PATH and off
 # it. For every case, scripts/claude-cli-check.py runs the host's own lookup and probe (examples/claude_probe.rs: the version,
 # Claude Code's own `auth status`, the card's state and installer) and then the Claude subscription plugin's own `_resolve`, at
-# the commit the engine's catalogue pins, in the environment the engine gets, and checks that both run the same file.
+# the commit the engine's catalogue pins, in the environment the engine gets, and checks that both run the same file. Where it
+# says so (`--signin`), it also starts what the card's "Sign in to Claude" starts, `claude auth login --claudeai` from the file
+# boopis found, and checks that Claude Code names Claude's own sign-in page and that the page answers; the step after that
+# needs a person.
 # Not part of every push: it downloads Claude Code from claude.ai and npm. It runs when a push changes the lookup itself (on
 # any branch: a workflow that is not yet on the default branch cannot be dispatched), weekly on main, since Anthropic's
 # installers change on their own schedule, and on demand.
@@ -66,10 +69,10 @@ jobs:
         run: |
           irm https://claude.ai/install.ps1 | iex
           if (-not (Test-Path "$env:USERPROFILE\.local\bin\claude.exe")) { throw 'the installer left no claude.exe in .local\bin' }
-      - name: native install, its folder off PATH (as the installer leaves it)
+      - name: native install, its folder off PATH (as the installer leaves it), and Sign in to Claude starts from it
         run: |
           python scripts/claude-cli-check.py target/debug/examples/claude_probe.exe "$env:RUNNER_TEMP/plugin/claude-subscription-directsdk" native-off-path `
-            --expect-state signed_out --expect-found '.local\bin\claude.exe' --expect-override no
+            --expect-state signed_out --expect-found '.local\bin\claude.exe' --expect-override no --signin
       - name: native install, its folder on Path
         run: |
           python scripts/claude-cli-check.py target/debug/examples/claude_probe.exe "$env:RUNNER_TEMP/plugin/claude-subscription-directsdk" native-on-path `
@@ -83,10 +86,10 @@ jobs:
         run: |
           python scripts/claude-cli-check.py target/debug/examples/claude_probe.exe "$env:RUNNER_TEMP/plugin/claude-subscription-directsdk" npm-on-path `
             --dir "$env:APPDATA\npm" --expect-state signed_out --expect-found 'npm\claude.cmd' --expect-override no
-      - name: npm, its folder off Path (boopis finds it and hands it to the engine)
+      - name: npm, its folder off Path (boopis finds it and hands it to the engine), and Sign in to Claude starts from it
         run: |
           python scripts/claude-cli-check.py target/debug/examples/claude_probe.exe "$env:RUNNER_TEMP/plugin/claude-subscription-directsdk" npm-off-path `
-            --expect-state signed_out --expect-found 'npm\claude.cmd' --expect-override yes
+            --expect-state signed_out --expect-found 'npm\claude.cmd' --expect-override yes --signin
 
   unix:
     strategy:
@@ -128,10 +131,10 @@ jobs:
         run: |
           curl -fsSL https://claude.ai/install.sh | bash
           ls -la ~/.local/bin/claude
-      - name: native install, its folder off PATH (a program started from the desktop does not read the shell's profile)
+      - name: native install, its folder off PATH (a program started from the desktop does not read the shell's profile), and Sign in to Claude starts from it
         run: |
           python3 scripts/claude-cli-check.py target/debug/examples/claude_probe "$PLUGIN" native-off-path \
-            --expect-state signed_out --expect-found .local/bin/claude --expect-override no
+            --expect-state signed_out --expect-found .local/bin/claude --expect-override no --signin
       - name: native install, its folder on PATH
         run: |
           python3 scripts/claude-cli-check.py target/debug/examples/claude_probe "$PLUGIN" native-on-path \
@@ -146,7 +149,7 @@ jobs:
         run: |
           python3 scripts/claude-cli-check.py target/debug/examples/claude_probe "$PLUGIN" npm-on-path \
             --dir "$HOME/.npm-packages/bin" --expect-state signed_out --expect-found .npm-packages/bin/claude --expect-override no
-      - name: npm, its folder off PATH (boopis reads ~/.npmrc and hands the path to the engine)
+      - name: npm, its folder off PATH (boopis reads ~/.npmrc and hands the path to the engine), and Sign in to Claude starts from it
         run: |
           python3 scripts/claude-cli-check.py target/debug/examples/claude_probe "$PLUGIN" npm-off-path \
-            --expect-state signed_out --expect-found .npm-packages/bin/claude --expect-override yes
+            --expect-state signed_out --expect-found .npm-packages/bin/claude --expect-override yes --signin
