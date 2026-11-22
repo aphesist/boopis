@@ -1685,7 +1685,8 @@ async fn signed_out_offers_sign_in_to_claude_through_claude_code_s_own_login() {
         "no command to copy into a terminal"
     );
     assert!(
-        form.body.contains("Choose Sign in: boopis runs Claude Code's own `claude auth login`")
+        form.body
+            .contains("Choose Sign in: boopis runs Claude Code's own `claude auth login`")
             && form.body.contains("opens your browser")
             && form.body.matches("Choose Sign in").count() == 1
             && form.body.contains("never sees, reads or stores it"),
