@@ -16,6 +16,7 @@
                        --audio <file.wav>        mux a wav under the picture (AAC 320k in mp4, PCM in mov/mkv)
    Still               --still <frame> | --at <s>    one frame to PNG (boards, reviews); add --samples 1 for no blur
    Mux only            --mux <video> --audio <wav> --out <file>
+   Page                --query "beat=b03"        extra page parameters (the board scene's beat)
    Checks              --hashes <file.json>      the md5 of every frame's pixels (determinism)
    Speed               --workers 4               parallel browsers (one per core is right on this machine)
                        --no-build                serve the existing dist/ */
@@ -53,6 +54,7 @@ const o = {
   mux: opt('--mux', null),
   hashes: opt('--hashes', null),
   workers: Number(opt('--workers', '4')),
+  query: opt('--query', ''),
   quiet: flag('--quiet')
 };
 if (argv.length) { console.error('unknown arguments: ' + argv.join(' ')); process.exit(2); }
@@ -75,7 +77,7 @@ async function main() {
   if (!existsSync(join(ROOT, 'dist/index.html'))) throw new Error('no dist/: run without --no-build');
   const srv = await serve(join(ROOT, 'dist'));
   try {
-    const url = srv.url + 'index.html?render=1&scene=' + encodeURIComponent(o.scene) + (o.variant === 'vertical' ? '&variant=vertical' : '');
+    const url = srv.url + 'index.html?render=1&scene=' + encodeURIComponent(o.scene) + (o.variant === 'vertical' ? '&variant=vertical' : '') + (o.query ? '&' + o.query.replace(/^[?&]/, '') : '');
     const meta = await readMeta(url);
     const total = Math.round(meta.duration * fps);
     let f0 = 0, f1 = total;
@@ -85,7 +87,7 @@ async function main() {
     f0 = Math.max(0, Math.min(total, f0)); f1 = Math.max(f0 + 1, Math.min(total + (still ? 1 : 0), f1));
     const W = Math.round(meta.width * o.scale), H = Math.round(meta.height * o.scale);
     const size = W + 'x' + H;
-    const out = resolve(o.out ?? join(SC, 'renders', o.scene + '-' + meta.variant + '-' + (still ? 'f' + f0 + '-' : '') + size + (o.preview ? '-preview' : '') + EXT[codec]));
+    const out = resolve(o.out ?? join(SC, 'renders', o.scene + (o.query ? '-' + o.query.replace(/[^a-z0-9]+/gi, '-') : '') + '-' + meta.variant + '-' + (still ? 'f' + f0 + '-' : '') + size + (o.preview ? '-preview' : '') + EXT[codec]));
     await mkdir(dirname(out), { recursive: true });
     const nWorkers = still ? 1 : Math.max(1, Math.min(o.workers, Math.ceil((f1 - f0) / 30)));
     log('render ' + o.scene + ' (' + meta.variant + ') frames ' + f0 + '..' + (f1 - 1) + ' of ' + total + ' at ' + fps + ' fps, ' + size + ', ' +
@@ -111,7 +113,7 @@ async function main() {
     const kids = [];
     const results = await Promise.all(chunks.map((c, i) => new Promise((ok, fail) => {
       const job = { url, f0: c.a, f1: c.b, width: meta.width, height: meta.height, scale: o.scale, fps, samples, shutter: o.shutter, codec, out: c.seg,
-        preview: o.preview, crf: o.crf, hashes: !!o.hashes, still, threads: Math.max(1, Math.floor(4 / nWorkers)) };
+        preview: o.preview, crf: o.crf, hashes: !!o.hashes, still, threads: 4 };
       const w = fork(join(HERE, 'lib/worker.mjs'), [JSON.stringify(job)], { stdio: ['ignore', 'inherit', 'inherit', 'ipc'] });
       kids.push(w);
       let result = null;

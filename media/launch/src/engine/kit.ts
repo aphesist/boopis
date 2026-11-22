@@ -49,8 +49,14 @@ export function cancelScriptAnimations(): void {
   for (const a of document.getAnimations()) { try { a.cancel(); } catch { /* already gone */ } }
 }
 
+/* The text floor is 28 px at 1080p (craft bible rule 5). The kit's smallest text a frame may need to read is its 11 px
+   mono meta: 11 x 2.6 = 28.6 px, so 2.6 is the default zoom (the art director's minimum where 11 px text is read). */
+export const TEXT_FLOOR = 28;
+export const DEFAULT_ZOOM = 2.6;
+const mounted: { el: HTMLElement; zoom: number }[] = [];
+
 export interface MountOpts {
-  /** the kit's real size times this, laid out at that size (CSS zoom: text and corners stay vectors, never a scaled bitmap) */
+  /** the kit's real size times this (default 2.6), laid out at that size (CSS zoom: text and corners stay vectors) */
   zoom?: number;
   /** a theme preset of the product's tokens (catalog, graphite, typewriter, bone); default the app's own */
   preset?: string;
@@ -67,12 +73,37 @@ export function mount(component: HTMLElement, o: MountOpts = {}): HTMLElement {
   if (o.preset) wrap.dataset['hxPreset'] = o.preset;
   const inner = document.createElement('div');
   inner.className = 'film-ui__zoom';
-  if (o.zoom && o.zoom !== 1) inner.style.setProperty('zoom', String(o.zoom));
+  const zoom = o.zoom ?? DEFAULT_ZOOM;
+  if (zoom !== 1) inner.style.setProperty('zoom', String(zoom));
+  mounted.push({ el: wrap, zoom });
   if (o.width) inner.style.width = o.width + 'px';
   inner.appendChild(component);
   wrap.appendChild(inner);
   neutralise(wrap);
   return wrap;
+}
+
+/** every mounted component whose smallest text lands under the floor at its zoom (measured once it is laid out: 1em
+    of each run through every zoom, before the camera moves anything); main.ts reports them as warnings */
+export function textFloorWarnings(hostScale = 1): string[] {
+  const out: string[] = [];
+  for (const { el, zoom } of mounted) {
+    if (!el.isConnected) continue;
+    let min = Infinity, sample = '';
+    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      const p = n.parentElement, text = (n.textContent ?? '').trim();
+      if (!p || !text || getComputedStyle(p).display === 'none') continue;
+      const probe = document.createElement('span');
+      probe.style.cssText = 'display:inline-block;width:0;height:1em;vertical-align:baseline;padding:0;margin:0;border:0';
+      p.appendChild(probe);
+      const em = probe.getBoundingClientRect().height / hostScale;
+      probe.remove();
+      if (em > 0 && em < min) { min = em; sample = text.slice(0, 40); }
+    }
+    if (min < TEXT_FLOOR) out.push('mount(zoom ' + zoom + '): "' + sample + '" is ' + min.toFixed(1) + ' px, under the ' + TEXT_FLOOR + ' px floor; zoom ' + (Math.ceil((zoom * TEXT_FLOOR / min) * 10) / 10) + ' or more draws it at the floor (or draw that text as a grey bar)');
+  }
+  return out;
 }
 
 /** every declared font face loaded now, so no frame is ever drawn in a fallback face (a face used only later in the

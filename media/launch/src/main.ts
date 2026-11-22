@@ -3,7 +3,7 @@
    Builds the scene on a stage, then exposes `window.__film` for the renderer and the checker. Without `render=1` it
    shows the preview HUD: a scrubber, play/pause (space), frame steps (arrows, shift = 1 s). Playback in the HUD is the
    only place a clock exists on this page, and it only calls the same `seek(t)` a render calls. */
-import './engine/kit';
+import { textFloorWarnings } from './engine/kit';
 import './film.css';
 import { Film, type Variant } from './engine/film';
 import { createStage } from './engine/stage';
@@ -27,6 +27,8 @@ async function start(): Promise<void> {
   await film.load(document);      /* fonts first: scenes measure text while they build */
   await scene.build(film, stage);
   await film.load(document);
+  /* a mounted component whose text would land under 28 px: said now, listed by the checker */
+  for (const w of textFloorWarnings(stage.root.getBoundingClientRect().width / film.width)) { film.warnings.push(w); console.warn('[film] ' + w); }
   film.finalize();
   expose(film, stage);
   await film.seek(Number(q.get('t') ?? 0));

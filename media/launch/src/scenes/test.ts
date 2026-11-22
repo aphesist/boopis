@@ -7,8 +7,9 @@
    beat 6-7   a whip pan to the right (18 f, snap, motion blur); the orb is the shared element: it flies from the middle
               of scene A into its place beside scene B's composer, shrinking from 300 to 104 px, landing 8 f after the
               camera (follow-through). No cross-fade: scene A leaves by the camera's move, the orb carries across
-   beat 7-14  the real composer (@boopis/ui) types a request (K2), the camera pushes in on it (4 beats, travel) and keeps
-              drifting; the orb reads along, its eyes turn happy; a cursor arrives on an arc and presses send
+   beat 7-14  the real composer (@boopis/ui) types a request (K2), the camera pushes in on it (3 beats, travel) and keeps
+              leaning toward the send button; the orb reads along, its eyes turn happy; a cursor arrives on an arc, the
+              orb watches it, and it presses send
 
    Landscape and vertical are two layouts of the same timeline. */
 import { mount, ui } from '../engine/kit';
@@ -28,6 +29,11 @@ interface Layout {
   /** scene B is laid out one frame to the right */
   composer: { x: number; y: number; zoom: number; width: number };
   push: { x: number; y: number; zoom: number };
+  /** the push's length in beats, then how far the camera keeps leaning toward the send button (x, y, zoom factor) */
+  pushBeats: number;
+  lean: number;
+  leanY: number;
+  leanZoom: number;
 }
 
 const LANDSCAPE: Layout = {
@@ -35,16 +41,18 @@ const LANDSCAPE: Layout = {
   headline: { x: 960, y: 330, size: 96, width: 1600 },
   orb: { x: 960, y: 690, size: 300 },
   markWidth: 330,
-  composer: { x: 1920 + 1010, y: 640, zoom: 2.5, width: 540 },
-  push: { x: 1920 + 1010, y: 600, zoom: 1.3 }
+  composer: { x: 1920 + 1010, y: 640, zoom: 2.6, width: 520 },
+  push: { x: 1920 + 1010, y: 600, zoom: 1.24 },
+  pushBeats: 3, lean: 40, leanY: 0, leanZoom: 1.04
 };
 const VERTICAL: Layout = {
   W: 1080, H: 1920,
   headline: { x: 540, y: 640, size: 104, width: 900 },
   orb: { x: 540, y: 1180, size: 340 },
   markWidth: 380,
-  composer: { x: 1080 + 540, y: 1080, zoom: 2.25, width: 390 },
-  push: { x: 1080 + 540, y: 1030, zoom: 1.08 }
+  composer: { x: 1080 + 540, y: 1080, zoom: 2.6, width: 320 },
+  push: { x: 1080 + 540, y: 1010, zoom: 1.1 },
+  pushBeats: 2, lean: 15, leanY: 70, leanZoom: 1.08
 };
 
 const KAI = { shape: 'circle', color: '#4fc9a8' };   /* the house bot "kai" (the app's demo data) */
@@ -97,8 +105,15 @@ const scene: Scene = {
     cam.drift({ zoom: 1.03 }, { at: 0, dur: g.land(whipLand, 18) });
     cam.to({ x: L.W + L.W / 2 }, { at: g.land(whipLand, 18), dur: g.f(18), ease: snap });
     /* then the push into scene B (every camera move is defined before the carry, which reads the camera): 4 beats on travel, then a slow drift (holds keep moving) */
-    cam.to({ x: L.push.x, y: L.push.y, zoom: L.push.zoom }, { at: whipLand + g.f(6), dur: g.beats(4), ease: travel });
-    cam.drift({ zoom: L.push.zoom * 1.025 }, { at: whipLand + g.f(6) + g.beats(4), dur: film.duration - (whipLand + g.f(6) + g.beats(4)) });
+    const pushAt = whipLand + g.f(6);
+    const lean = { x: L.push.x + L.lean, y: L.push.y + L.leanY, zoom: L.push.zoom * L.leanZoom };
+    cam.to({ x: L.push.x, y: L.push.y, zoom: L.push.zoom }, { at: pushAt, dur: g.beats(L.pushBeats), ease: travel });
+    /* then it keeps leaning toward the send button in two slow moves (one beat-and-a-half, then to the end), so a
+       frame that is mostly ground never holds */
+    const leanAt = pushAt + g.beats(L.pushBeats), mid = leanAt + g.beats(1.5);
+    const half = { x: (L.push.x + lean.x) / 2, y: (L.push.y + lean.y) / 2, zoom: Math.sqrt(L.push.zoom * lean.zoom) };
+    cam.drift(half, { at: leanAt, dur: mid - leanAt });
+    cam.drift(lean, { at: mid, dur: film.duration - mid });
 
     /* ── scene B: the real composer ── */
     const composer = ui.composer({ placeholder: 'Message kai', chips: [], attach: true, label: 'Message' });
@@ -118,6 +133,7 @@ const scene: Scene = {
     /* the composer's own state follows the typing: its placeholder until the first character, then the send button wakes */
     film.onRender((t) => { send.disabled = t < typeAt; input.dataset['empty'] = t < typeAt ? 'true' : 'false'; });
     glance(film, orb, whipLand + g.f(14), 26, -10);   /* reads the words as they come */
+    glance(film, orb, typeAt + 0.5, 20, -12);       /* follows the typing along the line */
     glance(film, orb, typed + g.f(4), 14, -4);
     eyes(film, orb, typed + g.f(10), 'arc', { dur: 0.38 });
     blink(film, orb, g.beat(12) + g.f(10));
@@ -132,7 +148,8 @@ const scene: Scene = {
     const [px, py] = cam.project(bx, by, 1, camAt);
     const [cx, cy] = cam.unproject(px, py, 1.25, camAt);
     const c = cursor(film, front, { x: cx + 520, y: cy + 460 }, { size: 56 });
-    c.move(cx, cy, { at: pressAt - g.f(40), dur: g.f(34), arc: 0.14 });
+    c.move(cx, cy, { at: pressAt - g.f(66), dur: g.f(60), arc: 0.14 });
+    glance(film, orb, pressAt - g.f(40), 32, -16);   /* the orb watches the cursor come in */
     const hit = c.press(pressAt);
     film.tl.fromTo(send, { scale: 1 }, { scale: 0.96, duration: g.f(4), ease: arrive, immediateRender: false, data: { role: 'ui' } }, hit - g.f(4));
     film.tl.to(send, { scale: 1, duration: g.f(16), ease: arrive, immediateRender: false, data: { role: 'ui' } }, hit);

@@ -67,7 +67,7 @@ async function main() {
   const err = await page.evaluate(() => window.__filmError || null);
   if (err) throw new Error('page failed: ' + err);
   const meta = await page.evaluate(() => ({ duration: window.__film.duration, cuts: window.__film.cuts, grain: window.__film.grain }));
-  const addGrain = meta.grain ? grainer(meta.grain, scale) : null;
+  const addGrain = meta.grain ? grainer(meta.grain, scale, W, H) : null;
   const cdp = await context.newCDPSession(page);
   const capture = async () => {
     const r = await cdp.send('Page.captureScreenshot', { format: 'png', optimizeForSpeed: true, fromSurface: true, captureBeyondViewport: false, ...(scale !== 1 ? { clip: { x: 0, y: 0, width, height, scale } } : {}) });

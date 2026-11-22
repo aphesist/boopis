@@ -39,7 +39,7 @@ export function lids(film: Film, stage: Stage, o: { at: number; close?: number; 
   const mk = (top: boolean): HTMLElement => {
     const d = document.createElement('div');
     d.className = 'film-lid';
-    d.style.cssText = 'position:absolute;left:-2%;width:104%;height:52%;background:' + (o.color ?? 'var(--ground)') + ';' + (top ? 'top:0;border-radius:0 0 50% 50% / 0 0 18% 18%' : 'bottom:0;border-radius:50% 50% 0 0 / 18% 18% 0 0');
+    d.style.cssText = 'position:absolute;left:-2%;width:104%;height:52%;background:' + (o.color ?? 'var(--film-ground, var(--bg-0))') + ';' + (top ? 'top:0;border-radius:0 0 50% 50% / 0 0 18% 18%' : 'bottom:0;border-radius:50% 50% 0 0 / 18% 18% 0 0');
     stage.screen.appendChild(d);
     return d;
   };

@@ -4,5 +4,6 @@ import type { Scene } from './types';
 
 export const SCENES: Record<string, () => Promise<{ default: Scene }>> = {
   test: () => import('./test'),
-  kit: () => import('./kit-sheet')
+  kit: () => import('./kit-sheet'),
+  board: () => import('./board')
 };

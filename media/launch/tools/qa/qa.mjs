@@ -22,7 +22,7 @@ import { buildFilm, ROOT } from '../lib/build.mjs';
 const argv = process.argv.slice(2);
 const opt = (k, d) => { const i = argv.indexOf(k); if (i < 0) return d; const v = argv[i + 1]; argv.splice(i, 2); return v; };
 const flag = (k) => { const i = argv.indexOf(k); if (i < 0) return false; argv.splice(i, 1); return true; };
-const scene = opt('--scene', null), variant = opt('--variant', 'landscape'), jsonOut = opt('--json', null), noBuild = flag('--no-build');
+const scene = opt('--scene', null), variant = opt('--variant', 'landscape'), jsonOut = opt('--json', null), noBuild = flag('--no-build'), query = opt('--query', '');
 const file = argv[0] ? resolve(argv[0]) : null;
 if (!file && !scene) { console.error('usage: qa.mjs <video> [--scene name] [--variant vertical] [--json out.json]'); process.exit(2); }
 
@@ -64,9 +64,10 @@ if (scene) {
   if (!noBuild) await buildFilm();
   const srv = await serve(resolve(ROOT, 'dist'));
   try {
-    const pg = await pageChecks(srv.url + 'index.html?render=1&scene=' + encodeURIComponent(scene) + (variant === 'vertical' ? '&variant=vertical' : ''), { vertical: variant === 'vertical' });
+    const pg = await pageChecks(srv.url + 'index.html?render=1&scene=' + encodeURIComponent(scene) + (variant === 'vertical' ? '&variant=vertical' : '') + (query ? '&' + query.replace(/^[?&]/, '') : ''), { vertical: variant === 'vertical' });
     report.page = pg;
     rule('page: text under 28 px', pg.text.under28.length ? pg.text.under28.map((s) => '"' + s.text.slice(0, 40) + '" ' + s.px + ' px at ' + round(s.from, 2) + '-' + round(s.to, 2) + ' s').join('; ') : 'none (smallest ' + pg.text.smallest + ' px)', pg.text.under28.length === 0, 'at least 28 px at 1080p');
+    rule('page: mounted UI under the floor', pg.warnings.length ? pg.warnings.join('; ') : 'none', pg.warnings.length ? 'warn' : true, 'mount() zoom so the smallest text is 28 px or more');
     rule('page: first claim', pg.firstClaim == null ? 'none' : pg.firstClaim + ' s ("' + (pg.claimText ?? '').slice(0, 40) + '")', pg.firstClaim != null && pg.firstClaim <= 1.5, 'words on screen by 1.5 s');
     rule('page: linear easing', pg.linear.length ? pg.linear.map((l) => l.target + ' ' + l.props + ' at ' + l.at + ' s').join('; ') : 'none (' + pg.tweens + ' tweens)', pg.linear.length === 0, 'no linear ease on anything that starts or stops');
     rule('page: unspecified eases', pg.unspecified, pg.unspecified === 0, 'every tween names a curve');

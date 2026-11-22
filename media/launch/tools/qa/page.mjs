@@ -15,7 +15,7 @@ import { round } from './video.mjs';
 export async function pageChecks(url, o = {}) {
   const { browser, context, page } = await openFilm(url + '&nograin', o.vertical ? { width: 1080, height: 1920 } : {});
   try {
-    const meta = await page.evaluate(() => { const f = window.__film; return { duration: f.duration, fps: f.fps, width: f.width, height: f.height, marks: f.marks ?? [], cuts: f.cuts }; });
+    const meta = await page.evaluate(() => { const f = window.__film; return { duration: f.duration, fps: f.fps, width: f.width, height: f.height, marks: f.marks ?? [], cuts: f.cuts, warnings: f.warnings ?? [] }; });
     /* text sizes, sampled */
     const small = new Map(), seen = [];
     for (let t = 0; t <= meta.duration + 1e-9; t += 0.25) {
@@ -64,7 +64,7 @@ export async function pageChecks(url, o = {}) {
     let longest = 0, run = 0, at = 0, longestAt = 0;
     still.forEach((s, i) => { if (s) { if (!run) at = (i + 1) / 12; run++; if (run > longest) { longest = run; longestAt = at; } } else run = 0; });
     return {
-      duration: meta.duration, marks: meta.marks,
+      duration: meta.duration, marks: meta.marks, warnings: meta.warnings,
       text: { sampled: seen.length, smallest: seen.length ? Math.min(...seen) : null, under28: [...small.values()] },
       firstClaim, claimText,
       linear: linear.map((t) => ({ at: round(t.start, 3), ease: t.ease, props: t.props.join(','), target: t.targets.join(',') })),

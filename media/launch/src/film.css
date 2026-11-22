@@ -9,28 +9,28 @@ body { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; 
 .film-stage {
   /* the script's ground (script.md section 0): the product's warm dark #181715 falling to #0c0b0a at the edges, one brass
      light pool, grain at 2.5%. The art director's look (look/) may restyle any of these. */
-  --ground: var(--bg-2);
-  --ground-edge: var(--bg-0);
-  --pool: var(--brass);
-  --pool-strength: 9%;
-  --pool-x: 50%;
-  --pool-y: 52%;
-  --grain-alpha: .025;
+  --film-ground: var(--bg-2);
+  --film-ground-edge: var(--bg-0);
+  --film-pool: var(--brass);
+  --film-pool-strength: 9%;
+  --film-pool-x: 50%;
+  --film-pool-y: 52%;
+  --film-grain-alpha: .025;
   position: relative; overflow: hidden; isolation: isolate; contain: strict;
-  background: var(--ground-edge);
+  background: var(--film-ground-edge);
   font-family: var(--sans); color: var(--text-strong);
   font-variant-numeric: tabular-nums;
 }
 .film-ground, .film-world, .film-screen { position: absolute; inset: 0; transform-origin: 0 0; }
 .film-ground { pointer-events: none; }
-.film-ground__base { position: absolute; inset: -40%; background: radial-gradient(70% 70% at 50% 50%, var(--ground) 0%, var(--ground) 30%, var(--ground-edge) 100%); }
+.film-ground__base { position: absolute; inset: -40%; background: radial-gradient(70% 70% at 50% 50%, var(--film-ground) 0%, var(--film-ground) 30%, var(--film-ground-edge) 100%); }
 .film-ground__pool {
   position: absolute; inset: -40%;
-  background: radial-gradient(32% 36% at var(--pool-x) var(--pool-y), color-mix(in srgb, var(--pool) var(--pool-strength), transparent) 0%, color-mix(in srgb, var(--pool) calc(var(--pool-strength) * .4), transparent) 45%, transparent 100%);
+  background: radial-gradient(32% 36% at var(--film-pool-x) var(--film-pool-y), color-mix(in srgb, var(--film-pool) var(--film-pool-strength), transparent) 0%, color-mix(in srgb, var(--film-pool) calc(var(--film-pool-strength) * .4), transparent) 45%, transparent 100%);
 }
 .film-layer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; }
 .film-screen { pointer-events: none; z-index: 10; }
-.film-grain { position: absolute; inset: 0; opacity: var(--grain-alpha); background-repeat: repeat; image-rendering: pixelated; }
+.film-grain { position: absolute; inset: 0; opacity: var(--film-grain-alpha); background-repeat: repeat; image-rendering: pixelated; }
 
 /* the kit at film scale: a wrapper with CSS zoom (engine/kit.ts mount) */
 .film-ui { position: absolute; color: var(--text); font-family: var(--sans); }

@@ -18,13 +18,13 @@ Chromium comes from the pre-installed Playwright; never run `playwright install`
 
 | Path | What |
 |---|---|
-| `src/engine/` | the film runtime: `film.ts` (the clock: one paused GSAP timeline, renderers, `seek`), `stage.ts` (frame, layers), `kit.ts` (the product on stage, neutralised), `orb.ts` (orbs drawn from a pose), `logo.ts` (the mark's real geometry), `ground.ts` (ground, light, grain), `expose.ts` (`window.__film`), `hud.ts` (preview only) |
+| `src/engine/` | the film runtime: `film.ts` (the clock: one paused GSAP timeline, renderers, `seek`), `stage.ts` (frame, layers), `kit.ts` (the product on stage, neutralised; `mount()`), `orb.ts` (orbs drawn from a pose), `logo.ts` (the mark's real geometry), `look.ts` (the art director's look and key frames on the engine), `ground.ts` (the engine's default ground), `expose.ts` (`window.__film`), `hud.ts` (preview only) |
 | `src/motion/` | the motion library (below); `beats.ts` reads the script's `beats.json` |
-| `src/scenes/` | scenes; `index.ts` is the registry (`?scene=<name>`); `test.ts` is the engine's test scene, `kit-sheet.ts` a still sheet of the kit |
+| `src/scenes/` | scenes; `index.ts` is the registry (`?scene=<name>`); `test.ts` is the engine's test scene, `board.ts` any storyboard key frame on the engine (`?scene=board&beat=b03`), `kit-sheet.ts` a still sheet of the kit |
 | `script/beats.json` | the committed snapshot of `SC/script/beats.json` (`pnpm beats:sync` refreshes it) |
 | `tools/render.mjs`, `tools/lib/` | the renderer: workers, PNG decoding, motion blur, grain, ffmpeg |
 | `tools/qa/` | the craft checker |
-| `look/` | the art director's style frames (their own config; not part of this build) |
+| `look/` | the art director's look (`src/stage.ts`, `src/film.css`, `src/tokens.ts`), style frames and the storyboard's key-frame builders (`src/scenes/`, one per beat); `engine/look.ts` imports them as they are |
 
 ## Deterministic time (the rules every scene keeps)
 
@@ -68,17 +68,20 @@ import { place, el } from '../engine/stage';
 const composer = ui.composer({ placeholder: 'Message kai', chips: [] });
 composer.setValue('plan the launch with nina');
 
-// 2. at film scale: mount() wraps it in a box with CSS zoom (2.5 = the product's real size x 2.5). Text and corners are
-//    laid out at that size, so they stay vectors (never a scaled bitmap). `width` is the real (unzoomed) width.
-const box = mount(composer, { zoom: 2.5, width: 540 });
+// 2. at film scale: mount() wraps it in a box with CSS zoom (default 2.6: the product's real size x 2.6). Text and
+//    corners are laid out at that size, so they stay vectors (never a scaled bitmap). `width` is the real width.
+const box = mount(composer, { width: 540 });
 
 // 3. place the wrapper in 1080p px (centred on x, y by default; { anchor: 'topleft' } for a corner)
 stage.layer('stage').appendChild(place(box, 960, 760));
 ```
 
-- Zoom: the kit's text is 11 to 14 px at real size; the floor for text that must be read is **28 px at 1080p**, so a
-  component whose words matter is mounted at 2.25x or more (14 px x 2.5 = 35 px). The checker reports every run
-  under 28 px.
+- Zoom: the kit's text is 11 to 14 px at real size and the floor for text that must be read is **28 px at 1080p**. The
+  default zoom is **2.6**, so the kit's smallest text, its 11 px mono meta, lands at 28.6 px (the art director's
+  minimum wherever 11 px text is read). A smaller zoom is allowed for a component whose small text is not meant to be
+  read, but the page then warns at load (`[film] mount(zoom 2.25): "14:02" is 24.8 px ...`, with the zoom that would
+  fix it), the checker lists the warning, and its text check fails any visible run under 28 px on the page a render
+  came from.
 - A theme preset: `mount(c, { preset: 'graphite' })` (the product's `data-hx-preset`).
 - Measure a mounted component (to carry it, to aim the camera at it) during the build, before the first seek: the
   camera has not transformed the layers yet, so `getBoundingClientRect()` gives world px (`boxOf(el, stage)`).
@@ -110,20 +113,45 @@ also be tweened directly: `film.tl.to(kai.pose, { yaw: 12, ... })`. `size` is th
 body at 0.96 of it). `markGeometry(width)` is the boopis mark's two eyes sampled from the logo's own `BoopisLogo.svg()`;
 `logoSVG()` the mark or wordmark as one colour.
 
+## The art director's look and key frames
+
+The look (`look/src/stage.ts`, `look/src/film.css`, `look/src/tokens.ts`) and the storyboard's beat builders
+(`look/src/scenes/`, one per beat, `SC/storyboard/storyboard.md`) are imported as they are by `src/engine/look.ts`;
+scenes build on them rather than on a parallel version:
+
+```ts
+import { keyFrame, lookGround, swapOrbs, BOTS, ROOM } from '../engine/look';
+
+lookGround(film, stage);                                  // the look's ground behind the camera (its grain, per frame)
+const kf = await keyFrame(film, stage, 'b03', { x: 0 });  // the art director's builder draws B03's key frame into a
+                                                          // 1920x1080 box (1080x1920 in the vertical variant) at x, y
+const orbs = swapOrbs(film, kf);                          // its kit orbs become film orbs in the same look and place
+blink(film, orbs.get('vox')!.orb, at);                    // ... and the timeline animates from the key frame
+```
+
+- `keyFrame` gives the builder the stage contract the look's own `frame()` gives it (a `.stage` box with its `.ground`,
+  which stays hidden unless `ownGround`, because the film's ground lives behind the camera) and freezes its kit orbs.
+- Two key frames can sit side by side in the world (`x: 1920`) for a camera move or a carry between them.
+- `?scene=board&beat=b03` shows any key frame on the engine (`&variant=vertical`); `render.mjs --scene board --query
+  beat=b16 --still 30` renders one; all twenty build on the engine.
+- The look's stylesheets load only with the scenes that import `engine/look.ts` (they set `box-sizing` on everything,
+  as the style frames have it). The engine's own default ground (`engine/ground.ts`, `--film-*` variables) is for
+  scenes that do not use the look.
+
 ## Add a scene
 
 1. Write `src/scenes/<name>.ts`:
 
    ```ts
    import type { Scene } from './types';
-   import { ground } from '../engine/ground';
+   import { lookGround, keyFrame } from '../engine/look';
    import { camera, grid, beat, rise, setType, split, arrive } from '../motion';
 
    const scene: Scene = {
      config: { name: 'b03', duration: beat('B03').dur, fps: 60, bpm: 112.5 },
      build(film, stage) {
        const g = grid(film);
-       ground(film, stage);                       // the script's ground: warm dark, brass pool, grain 2.5%
+       lookGround(film, stage);                   // the art director's ground (or ground(film, stage): the engine's)
        const world = stage.layer('stage', 1);     // depth 1; 'ground' 0.25 is built in; 'front' 1.25 for cursors
        const cam = camera(film, stage);
        film.mark('B03', 0);                        // scene boundaries, for the checker
@@ -221,8 +249,10 @@ the default (8 sub-frames centred on the frame's time, averaged in linear light)
 whose shutter's two ends barely differ (a slow glance) keeps those two and skips the rest. Sub-frames never cross a
 hard cut (`film.cut(t)`). Tag a slow drift `data: { blur: false }` (the camera's `drift()` does).
 
-**Grain** is added by the renderer to each finished frame (the same seeded tiles the page draws in previews): a page
-without grain captures about twice as fast, and the grain is never averaged by the motion blur.
+**Grain** is added by the renderer to each finished frame, changing every frame: the look's own grain (mid-grey noise
+in soft-light at 55%, generated from the look's seed exactly as `look/src/stage.ts` draws it) for scenes on the look,
+the engine's white grain otherwise. A page without grain captures about twice as fast, and the grain is never averaged
+by the motion blur. Previews show the page's own grain.
 
 Speeds (this machine: 4 cores, no GPU, 4 workers; the test scene, 448 frames of which most move):
 see "Measured" at the end.
@@ -256,6 +286,8 @@ Calibration on the first trailer (`SC/trailer/boopis-trailer.mp4`) against the p
 
 ## What a scene animator must know
 
+- Build each beat from the art director's key frame (`keyFrame(film, stage, 'b07')`), never a parallel drawing of it:
+  its parts are real DOM (kit components, film lines, orbs once swapped) for the timeline to move.
 - One paused timeline; renderers are pure functions of time. Never read a clock, never use `Math.random`.
 - Landings on the grid: `g.land(beat, frames)`. The script's times come from `beat('Bxx')`, never typed by hand.
 - Define every camera move before a `carryOrb(..., { camera })` or a `cam.stateAt()` that reads it.
@@ -267,3 +299,43 @@ Calibration on the first trailer (`SC/trailer/boopis-trailer.mp4`) against the p
   sets the attribute the kit's CSS reads, as `test.ts` does for the composer's placeholder and send button).
 - Fast moves: `snap` on the camera asks for 32 sub-frames; tag any other very fast tween `data: { samples: 24 }`.
 - Before calling a scene done: a preview, a contact sheet of its frames, the checker on the render and the page.
+
+## Measured (22 November 2026, this machine: 4 cores, no GPU, Chromium 1243 headless shell)
+
+**Determinism.** The test scene rendered twice at 1080p60 with motion blur, once on 4 workers and once on 3 (so every
+worker started from a different frame): all 448 frames' pixel hashes identical. Seeking the same frames in reverse
+order gives the same pixels, and so does seeking with or without the paint wait.
+
+**Speed** (the test scene, 7.47 s, 448 frames; most frames move; the whip asks for 32 sub-frames):
+
+| render | wall time | output | captures |
+|---|---|---|---|
+| preview, 960x540 30 fps, no blur | 11.6 s | 19 fps | 224 |
+| 1920x1080 60 fps, 8 sub-frames at 180 deg, CRF 14 slow | 177 s | 2.5 fps | 1,624 (9.2 a second) |
+| 3840x2160 60 fps, same | 646 s | 0.69 fps | 1,564 (2.4 a second) |
+
+One 1080p capture costs about 5 ms to seek, 86 ms to capture (Chrome's fast PNG) and 28 ms to decode; a frame where
+nothing moves is one capture. Budget for the 46.9 s film with blur on 4 workers: roughly 15 to 25 minutes at
+1080p60 and 60 to 75 at 4K60; render previews and ranges while working, the 4K master last.
+
+**The checker on the first trailer** (`SC/trailer/boopis-trailer.mp4`), next to the postmortem:
+
+| | checker | postmortem |
+|---|---|---|
+| length | 101.8 s | 101.8 s |
+| still share | 0.647 | 0.65 |
+| longest hold | 3.92 s (at 26.9 s) | 3.9 s |
+| holds of 1 s or more | 22 | 22 |
+| motion index | 1.056 | 1.06 |
+| dips to pure black | 16 (2.47 s in all) | 15 (3.1 s in all, fades included) |
+| dips through near black | 20 | "about 20" |
+| full-frame cross-fades | 2: the ghosted eyes at 4.9 to 5.13 s (11% of the frame), a menu panel fading over the composer at 31.9 s (16%) | the eyes at 4.8 s |
+| element fades (under 8%) | 17 (words fading grey to white, panels) | "fades everywhere" |
+| first words | 7.33 s (heuristic, 6 fps) | 7.2 s |
+
+The extra pure-black dip the checker finds is at 81.55 s, inside a dark stretch where a small element comes and goes.
+
+**The checker on the test scene** (`SC/renders/test-landscape-1920x1080.mp4` and its page): no dip, no cross-fade, no
+hold over 1.5 s (longest 1.25 s), first words at 0.33 s, smallest text 36.3 px, no linear or unspecified ease in 51
+tweens, no large opacity tween. Its still share is 0.57 (a warning: typing, glances and a slow drift change little of a
+dark frame), which the film's denser scenes should bring toward the corpus's 0.19.

@@ -20,6 +20,9 @@ export interface FilmConfig {
   bpm?: number;
 }
 export type Renderer = (t: number) => void;
+/** white: white at alpha u x alpha (the engine's ground); look: the art director's grain, mid-grey noise of +-amp in
+    soft-light at `opacity` (look/src/stage.ts) */
+export interface GrainSpec { kind?: 'white' | 'look'; seed: number; alpha?: number; opacity?: number; amp?: number }
 
 /** a tween tagged `data: { blur: false }` is motion that needs no motion blur (a slow drift, typing); `samples` asks for
     more sub-frames than the default 8 while it runs (a whip or a zoom-through: 24 to 32, so the streak does not step) */
@@ -48,8 +51,10 @@ export class Film {
   private finalized = false;
   private time = -1;
   ready: Promise<void> = Promise.resolve();
-  /** the ground's grain, which the renderer adds to finished frames (engine/ground.ts) */
-  grain: { seed: number; alpha: number } | null = null;
+  /** the ground's grain, which the renderer adds to finished frames (engine/ground.ts, engine/look.ts) */
+  grain: GrainSpec | null = null;
+  /** build-time warnings (a mounted component whose text lands under the 28 px floor); the checker lists them */
+  readonly warnings: string[] = [];
 
   constructor(cfg: FilmConfig, variant: Variant) {
     this.name = cfg.name;

@@ -15,7 +15,8 @@ export interface FadeInfo { start: number; end: number; target: string; area: nu
 
 export interface FilmApi {
   name: string; duration: number; fps: number; width: number; height: number; variant: string; frames: number; bpm: number; cuts: number[];
-  grain: { seed: number; alpha: number } | null;
+  grain: Film['grain'];
+  warnings: string[];
   marks: { name: string; t: number }[];
   seek(t: number, o?: { paint?: boolean }): Promise<void>;
   moving(t0: number, t1: number): boolean;
@@ -29,7 +30,7 @@ declare global { interface Window { __film?: FilmApi } }
 export function expose(film: Film, stage: Stage): FilmApi {
   const api: FilmApi = {
     name: film.name, duration: film.duration, fps: film.fps, width: film.width, height: film.height, variant: film.variant,
-    frames: Math.round(film.duration * film.fps), bpm: film.bpm, cuts: film.cuts, grain: film.grain, marks: film.marks,
+    frames: Math.round(film.duration * film.fps), bpm: film.bpm, cuts: film.cuts, grain: film.grain, marks: film.marks, warnings: film.warnings,
     seek: (t, o) => film.seek(t, o),
     moving: (a, b) => film.moving(a, b),
     samples: (a, b) => film.samples(a, b),

@@ -22,10 +22,12 @@ const LIVE_BEATS = SC + '/script/beats.json';
 const BEATS = process.env['FILM_BEATS'] ?? (existsSync(LIVE_BEATS) ? LIVE_BEATS : here('./script/beats.json'));
 
 /** drop `@import url("https://fonts.googleapis.com/...")` from any stylesheet: the film loads its fonts from @fontsource */
-const REMOTE_FONTS = /@import\s+(?:url\(\s*["']?https:\/\/fonts\.googleapis\.com[^)]*\)|"https:\/\/fonts\.googleapis\.com[^"]*"|'https:\/\/fonts\.googleapis\.com[^']*')[^;]*;?/g;
+const REMOTE_FONTS = /@import\s+(?:url\(\s*\\?["']?https:\/\/fonts\.googleapis\.com[^)]*\)|\\?"https:\/\/fonts\.googleapis\.com[^"]*"|'https:\/\/fonts\.googleapis\.com[^']*')[^;]*;?/g;
+/* vite inlines a CSS @import from disk, past the plugins' transform of the imported file, so the line is stripped after
+   the CSS is compiled (post: the dev server's CSS module) and from the built asset (generateBundle) */
 const selfHostedFonts = (): Plugin => ({
   name: 'film-self-hosted-fonts',
-  enforce: 'pre',
+  enforce: 'post',
   transform(code) {
     if (!code.includes('fonts.googleapis.com')) return null;
     return { code: code.replace(REMOTE_FONTS, ''), map: null };
