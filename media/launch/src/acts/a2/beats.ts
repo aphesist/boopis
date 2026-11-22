@@ -415,6 +415,11 @@ export async function b07(ctx: ActCtx): Promise<void> {
   const pushDur = F(44);
   ctx.cam.to({ x: pushX, y: pushY, zoom: pushZ }, { at: tSend, dur: pushDur, ease: travel });
   thread.open('req2', tSend, DUR.d3, uiSpring);
+  /* the huddle's card goes to its folded height at --dur-3 (the product's card height change) */
+  thread.height('hud', hud.Hf, tSend, DUR.d3, uiSpring);
+  /* the log scrolls your card to its end above the composer (the product's follow), the huddle's head dropping into view
+     as its body collapses; then the push frames the head */
+  thread.pin('req2', tSend, { world: room.at.comp.y - (v ? 24 : 16) - req.h, dur: DUR.d3, ease: uiSpring });
   thread.pin('hud', tSend, { screen: v ? 690 : 293, dur: pushDur, ease: travel });
   vis(film, req.el, within(tSend));
   const bubble = req.el.querySelector<HTMLElement>('.ui-request')!;
@@ -443,7 +448,10 @@ export async function b07(ctx: ActCtx): Promise<void> {
   vis(film, stand, within(tSend, tLand));
   vis(film, bubble, (t) => t >= tLand - 1e-9);
   for (const e of req.el.querySelectorAll<HTMLElement>('.ui-callno > *')) riseIn(film, e, tSend + F(8));
-  film.tl.fromTo(thread.band, { e: v ? 440 : 192 }, { e: v ? 640 : 236, duration: pushDur, ease: travel, immediateRender: false, data: { role: 'camera' } }, tSend);
+  /* the scroll edge follows the line's exit down to where the close-up needs it (9:16: with the fold, which drops the
+     huddle further there) */
+  if (v) film.tl.fromTo(thread.band, { e: 440 }, { e: 610, duration: DUR.d3, ease: uiSpring, immediateRender: false, data: { role: 'ui' } }, tSend);
+  else film.tl.fromTo(thread.band, { e: 192 }, { e: 236, duration: pushDur, ease: travel, immediateRender: false, data: { role: 'camera' } }, tSend);
   exit(film, s.lineB!, tSend, F(14));
 
   /* ── the fold: the head stays; the messages become cards and file up under it ── */
@@ -456,9 +464,11 @@ export async function b07(ctx: ActCtx): Promise<void> {
   const H3 = h3.h, Hf = hud.Hf, full = ys[ys.length - 1]! + hs[hs.length - 1]!;
   const o = 9 * X, nC = cards.length;
   const k = { v: 0, __name: 'a2-fold' };
-  const foldDur = F(30);
+  const foldDur = F(24);
   /* a progress driver (each phase below is eased on travel): constant motion of a number, tagged as such */
   film.tl.fromTo(k, { v: 0 }, { v: 1, duration: foldDur, ease: linear, immediateRender: false, data: { role: 'ui', linear: true } }, tSend);
+  /* the body is masked from below as the card closes */
+  const bodyH = body.offsetHeight;
   const pad = { x: 14 * X, y: 10 * X };
   const backs = cards.map((c) => {
     c.style.isolation = 'isolate';
@@ -477,8 +487,7 @@ export async function b07(ctx: ActCtx): Promise<void> {
       if (body.style.clipPath) body.style.clipPath = '';
       return;
     }
-    const kv = k.v, p1 = sm(kv / 0.62), p2 = sm((kv - 0.34) / 0.66);
-    let bottom = 0;
+    const kv = k.v, p1 = sm(kv / 0.58), p2 = sm((kv - 0.3) / 0.7);
     cards.forEach((c, i) => {
       const P1 = (i - (nC - 1)) * o, P2 = -(hs[i]! + nC * o + 12 * X);
       const top = ys[i]! + (P1 - ys[i]!) * p1 + (P2 - P1) * p2;
@@ -486,13 +495,12 @@ export async function b07(ctx: ActCtx): Promise<void> {
       c.style.translate = '0px ' + ((top - ys[i]!) / X).toFixed(3) + 'px';
       c.style.scale = sc.toFixed(4);
       c.style.setProperty('--a2-sp', String(1 - p1));
-      bottom = Math.max(bottom, top + hs[i]!);
     });
-    body.style.clipPath = 'inset(0px -80px -80px -80px)';
-    /* the card's height follows its lowest card (the request card below moves up with it) */
-    const it = thread.item('hud');
-    it.h.v = Hf + (H3 - Hf) * Math.max(0, Math.min(1, bottom / full));
+    /* masked under the head above, and by the closing card below */
+    const open = Math.max(0, Math.min(bodyH, (thread.item('hud').h.v - Hf) / X));
+    body.style.clipPath = 'inset(0px -80px ' + (bodyH - open).toFixed(2) + 'px -80px)';
   }, -8);
+  void H3; void full;
   backs.forEach((b) => film.tl.fromTo(b, { backgroundColor: 'rgba(35, 33, 30, 0)', boxShadow: '0 0px 0px rgba(0,0,0,0)' }, { backgroundColor: 'rgb(35, 33, 30)', boxShadow: '0 10px 28px rgba(0,0,0,.38)', duration: F(10), ease: ui, immediateRender: false, data: { role: 'ui' } }, tSend));
   film.tl.fromTo(lip, { opacity: 0, y: -6 }, { opacity: 1, y: 0, duration: F(8), ease: ui, immediateRender: false, data: { role: 'ui' } }, tSend + F(2));
   film.tl.fromTo(lip, { opacity: 1, y: 0 }, { opacity: 0, y: -6, duration: F(10), ease: ui, immediateRender: false, data: { role: 'ui' } }, tSend + foldDur - F(4));
