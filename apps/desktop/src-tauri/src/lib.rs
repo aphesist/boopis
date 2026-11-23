@@ -459,6 +459,8 @@ pub fn run() {
                 Some(auth) => secrets::PeerPolicy::new().holding(auth.token_entry()),
                 None => secrets::PeerPolicy::new(),
             });
+            // The engine's root home: the plugin reads there where to push what a bot is doing (B45).
+            let engine_root = environment.hermes_root();
             let mut supervisor = hermes::Supervisor::new(environment, limits.clone());
             if let Some(auth) = &channel_auth {
                 supervisor = supervisor.with_secret_channel(auth.launch_env(), peers.clone());
@@ -581,7 +583,13 @@ pub fn run() {
             tauri::async_runtime::spawn(xai.clone().run_refresher());
             // The local API (`ADR-0045`): presence, notifications and approvals for other clients, and the opt-in endpoint.
             let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
-            let local_api = local_api::LocalApi::new(app.handle().clone(), app_data, &limits.api, &limits.rooms);
+            let local_api = local_api::LocalApi::new(
+                app.handle().clone(),
+                app_data,
+                &limits.api,
+                &limits.rooms,
+                Some(engine_root),
+            );
             let api_feed = local_api.feed().clone();
             app.manage(AppState {
                 local_api: local_api.clone(),

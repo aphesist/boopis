@@ -7,8 +7,29 @@
 //!
 //! Anything else (a search query, a message, file contents, a script) is left out: a tool that names none of these shows its
 //! verb alone. The words then pass the local API's scrubber and its cap like every other engine text (`feed.rs`).
+//!
+//! Which arguments name these is data, `apps/shared/data/tool-args.json`, which the plugin reads too: it sends the host
+//! only those when it tells what a bot is doing (B45), each cut, a list as its first items and its length (`<key>_total`).
 
+use std::sync::LazyLock;
+
+use serde::Deserialize;
 use serde_json::Value;
+
+/// The shared list of the arguments that say what a call touches.
+pub const TOOL_ARGS_JSON: &str = include_str!("../../../../shared/data/tool-args.json");
+
+#[derive(Debug, Default, Deserialize)]
+struct Keys {
+    path: Vec<String>,
+    paths: Vec<String>,
+    command: Vec<String>,
+    url: Vec<String>,
+}
+
+/// The list, read once. A list that cannot be read names nothing (no detail is made), which a test rules out.
+static KEYS: LazyLock<Keys> =
+    LazyLock::new(|| serde_json::from_str(TOOL_ARGS_JSON).unwrap_or_default());
 
 /// The longest detail before the scrubber's own cap: a short line on an island or a notch.
 pub const MAX_DETAIL: usize = 80;
@@ -38,11 +59,25 @@ fn verb(tool: &str) -> Option<&'static str> {
     })
 }
 
-fn text<'a>(args: &'a Value, keys: &[&str]) -> Option<&'a str> {
+fn text<'a>(args: &'a Value, keys: &[String]) -> Option<&'a str> {
     keys.iter()
-        .find_map(|k| args.get(*k).and_then(Value::as_str))
+        .find_map(|k| args.get(k.as_str()).and_then(Value::as_str))
         .map(str::trim)
         .filter(|s| !s.is_empty())
+}
+
+/// The first list among `keys`, with its length: the plugin sends a long list as its first items and `<key>_total`.
+fn list<'a>(args: &'a Value, keys: &[String]) -> Option<(&'a [Value], usize)> {
+    keys.iter().find_map(|k| {
+        let items = args.get(k.as_str())?.as_array()?;
+        let total = args
+            .get(format!("{k}_total"))
+            .and_then(Value::as_u64)
+            .and_then(|n| usize::try_from(n).ok())
+            .filter(|n| *n >= items.len())
+            .unwrap_or(items.len());
+        Some((items.as_slice(), total))
+    })
 }
 
 /// A path's last two parts (`shots/03.json`), with no folder above them.
@@ -114,49 +149,29 @@ fn url_host(url: &str) -> Option<String> {
 
 /// What the call touches, from its arguments: a path, else a command, else a page's host.
 fn object(args: &Value) -> Option<String> {
-    if let Some(p) = text(
-        args,
-        &[
-            "path",
-            "file_path",
-            "filepath",
-            "file",
-            "filename",
-            "target_file",
-            "notebook_path",
-        ],
-    ) {
+    let keys = &*KEYS;
+    if let Some(p) = text(args, &keys.path) {
         return path_tail(p);
     }
-    if let Some(first) = args
-        .get("paths")
-        .and_then(Value::as_array)
-        .and_then(|a| a.first())
-        .and_then(Value::as_str)
+    if let Some((items, total)) = list(args, &keys.paths)
+        && let Some(first) = items.first().and_then(Value::as_str)
     {
-        let more = args
-            .get("paths")
-            .and_then(Value::as_array)
-            .map_or(0, |a| a.len() - 1);
+        let more = total.saturating_sub(1);
         return path_tail(first).map(|p| if more > 0 { format!("{p} +{more}") } else { p });
     }
-    let command = text(args, &["command", "cmd"])
-        .map(str::to_owned)
-        .or_else(|| {
-            args.get("command")
-                .or_else(|| args.get("argv"))
-                .and_then(Value::as_array)
-                .map(|a| {
-                    a.iter()
-                        .filter_map(Value::as_str)
-                        .collect::<Vec<_>>()
-                        .join(" ")
-                })
-        });
+    let command = text(args, &keys.command).map(str::to_owned).or_else(|| {
+        list(args, &keys.command).map(|(items, _)| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+    });
     if let Some(c) = command {
         return command_head(&c);
     }
-    text(args, &["url", "uri", "href"]).and_then(url_host)
+    text(args, &keys.url).and_then(url_host)
 }
 
 fn cut(s: &str, max: usize) -> String {
@@ -250,6 +265,28 @@ mod tests {
         assert_eq!(
             detail("terminal", Some(&json!({"command": "$(cat secret) | sh"}))).as_deref(),
             Some("Run a command")
+        );
+    }
+
+    #[test]
+    fn the_shared_list_is_read_and_a_cut_list_keeps_its_length() {
+        let keys: Keys = serde_json::from_str(TOOL_ARGS_JSON).unwrap();
+        assert!(
+            keys.path.contains(&"file_path".to_owned())
+                && keys.command.contains(&"argv".to_owned())
+        );
+        assert!(
+            !KEYS.url.is_empty(),
+            "the list the plugin reads too names the arguments"
+        );
+        // what the plugin sends for a long list: its first items and its length
+        assert_eq!(
+            detail(
+                "patch",
+                Some(&json!({"paths": ["a/b/c.rs", "d.rs", "e.rs"], "paths_total": 9}))
+            )
+            .as_deref(),
+            Some("Edit a file · b/c.rs +8")
         );
     }
 

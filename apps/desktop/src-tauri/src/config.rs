@@ -160,6 +160,11 @@ pub struct ApiLimits {
     pub worker_active: std::time::Duration,
     /// How often each bot's cron list is read while somebody listens, for the runs that finished (B42).
     pub cron_every: std::time::Duration,
+    /// How long a session only the plugin's pushes tell of (a scheduled run) stands without another push (B45): a tool
+    /// may run this long; its turn's end, or the cron list, ends it sooner.
+    pub push_hold: std::time::Duration,
+    /// How long a push for a session the poll has not listed yet waits for it (B45).
+    pub push_pending: std::time::Duration,
 }
 
 impl Default for ApiLimits {
@@ -193,6 +198,8 @@ impl Default for ApiLimits {
             stream_every: Duration::from_millis(250),
             worker_active: Duration::from_secs(90),
             cron_every: Duration::from_secs(10),
+            push_hold: Duration::from_mins(10),
+            push_pending: Duration::from_secs(5),
         }
     }
 }

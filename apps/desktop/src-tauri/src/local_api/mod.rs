@@ -8,8 +8,10 @@
 //!   window and this API send through it, and its pump); [`room_log`]: rooms' logs read and followed, and stops;
 //!   [`workers`]: kanban workers; [`cron`]: scheduled runs' results;
 //! - [`wire`], [`http`], [`token`]: the endpoint, its checks and its token file;
+//! - [`activity`]: what the plugin pushes from the engine's tool hooks (B45);
 //! - [`audit`], [`scrub`], [`look`]: the record of who answered, the secret scrubber, the default look.
 
+pub mod activity;
 pub mod approvals;
 pub mod audit;
 pub mod connect;
@@ -87,6 +89,11 @@ pub struct LocalApi {
     running: tokio::sync::Mutex<Option<Running>>,
     problem: std::sync::Mutex<Option<String>>,
     cancel: CancellationToken,
+    /// The engine's root home, where the plugin reads where the activity socket is (B45); `None` when unknown.
+    engine_root: Option<PathBuf>,
+    /// The socket the plugin pushes to, while the app runs (B45).
+    #[cfg(unix)]
+    activity: std::sync::Mutex<Option<activity::Listener>>,
 }
 
 /// Read the owner's switch.
@@ -112,6 +119,7 @@ impl LocalApi {
         dir: PathBuf,
         limits: &ApiLimits,
         rooms: &RoomLimits,
+        engine_root: Option<PathBuf>,
     ) -> Arc<Self> {
         let feed = Feed::new(audit::Audit::under(&dir), limits.clone());
         let engine = Arc::new(Hubbed::new(handle, limits.engine_wait));
@@ -130,6 +138,9 @@ impl LocalApi {
             running: tokio::sync::Mutex::new(None),
             problem: std::sync::Mutex::new(None),
             cancel: CancellationToken::new(),
+            engine_root,
+            #[cfg(unix)]
+            activity: std::sync::Mutex::new(None),
         })
     }
 
@@ -144,6 +155,7 @@ impl LocalApi {
     pub async fn start(self: &Arc<Self>) {
         tokio::spawn(self.service.clone().run(self.cancel.clone()));
         tokio::spawn(self.service.clone().run_holds(self.cancel.clone()));
+        self.listen_for_activity();
         if read_switch(&self.dir) {
             if let Err(e) = self.listen().await {
                 tracing::warn!(error = %e, "the local API did not start");
@@ -275,9 +287,40 @@ impl LocalApi {
         Ok(self.status().await)
     }
 
+    /// Bind the socket the plugin pushes what a bot is doing to (B45), in the host's private socket folder. Without it the
+    /// presence of the turns the host's links do not run comes from the poll alone, as before.
+    fn listen_for_activity(&self) {
+        #[cfg(unix)]
+        {
+            let (Some(root), Some(dir)) = (
+                self.engine_root.as_deref(),
+                crate::secrets::channel::default_socket_dir(),
+            ) else {
+                return;
+            };
+            match activity::Listener::start(self.feed.clone(), &dir, root) {
+                Ok(l) => {
+                    *self
+                        .activity
+                        .lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(l);
+                }
+                Err(e) => tracing::warn!(
+                    error = %e,
+                    "the activity socket did not start; room turns, scheduled runs and kanban workers show at the poll's grain"
+                ),
+            }
+        }
+    }
+
     /// Stop everything (the app is closing).
     pub async fn shutdown(&self) {
         self.cancel.cancel();
+        #[cfg(unix)]
+        self.activity
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take();
         if let Some(r) = self.running.lock().await.take() {
             r.server.stop();
         }

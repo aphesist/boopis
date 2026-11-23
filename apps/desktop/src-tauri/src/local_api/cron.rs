@@ -192,7 +192,15 @@ impl<E: Engine> Service<E> {
 
     async fn cron_finished(&self, profile: &str, job: &Job, before: Option<&str>) {
         let status = job.last_status.clone().unwrap_or_else(|| "ok".to_owned());
-        let session = self.run_session(profile, job, before).await;
+        // the session the plugin pushed for this job (B45) ends here if its own end never came, and stands in when the list
+        // names no session
+        let pushed = self
+            .feed
+            .cron_run_ended(profile, &job.job_id, status == "error");
+        let session = match self.run_session(profile, job, before).await {
+            Some(found) => Some(found),
+            None => pushed,
+        };
         let words = match &session {
             Some(sid) => self.last_reply(profile, sid).await,
             None => None,

@@ -30,6 +30,19 @@ struct Meta {
     /// The stored session id (what `say` returns), when known.
     stored: Option<String>,
     model: Option<String>,
+    /// Whether the host's own link carries the session's events (then a push of the plugin's adds nothing).
+    linked: bool,
+}
+
+/// A push for a session the poll has not listed yet (B45): applied when it does, if it is still fresh.
+#[derive(Debug, Clone)]
+struct PendingPush {
+    event: &'static str,
+    tool: Option<String>,
+    detail: Option<String>,
+    call: Option<String>,
+    failed: bool,
+    at: i64,
 }
 
 /// A reply that is being written, as the app's own conversation shows it.
@@ -57,6 +70,10 @@ struct Inner {
     last_note: HashMap<(String, String, u8), i64>,
     /// Who was last said to be at work in each room (a `room.state` goes out when it changes).
     room_working: HashMap<String, Vec<String>>,
+    /// Pushes for sessions the poll has not listed yet (B45).
+    pending: HashMap<(String, String), PendingPush>,
+    /// The session the plugin last pushed for each scheduled job, by `(profile, job id)` (B45).
+    cron_runs: HashMap<(String, String), String>,
 }
 
 /// Where a notification belongs: a session, or a room's message.
@@ -200,6 +217,8 @@ impl Feed {
                 gui_answers: HashMap::new(),
                 last_note: HashMap::new(),
                 room_working: HashMap::new(),
+                pending: HashMap::new(),
+                cron_runs: HashMap::new(),
             }),
             tx,
             wanted: watch::channel(0).0,
@@ -415,14 +434,14 @@ impl Feed {
         if inner.meta.len() >= 512 {
             inner.meta.clear();
         }
-        inner.meta.insert(
-            (profile.to_owned(), session_id.to_owned()),
-            Meta {
-                source: Some(source),
-                stored: stored.filter(|s| !s.is_empty()).map(str::to_owned),
-                model: model.map(str::to_owned),
-            },
-        );
+        // whether the host's own link carries it is the link's to say, so it is kept
+        let m = inner
+            .meta
+            .entry((profile.to_owned(), session_id.to_owned()))
+            .or_default();
+        m.source = Some(source);
+        m.stored = stored.filter(|s| !s.is_empty()).map(str::to_owned);
+        m.model = model.map(str::to_owned);
     }
 
     /// Whether the feed already knows a session's stored id, so the poller notes it once.
@@ -776,12 +795,12 @@ impl Feed {
         if inner.meta.len() >= 512 {
             inner.meta.clear();
         }
-        inner
+        let m = inner
             .meta
             .entry((profile.to_owned(), sid.to_owned()))
-            .or_default()
-            .source
-            .get_or_insert(Source::Gui);
+            .or_default();
+        m.source.get_or_insert(Source::Gui);
+        m.linked = true;
         let origin = Self::origin(&inner, profile, sid);
         let held_reply = inner
             .replies
@@ -839,7 +858,7 @@ impl Feed {
                     tool: tool.as_deref(),
                     detail: detail.as_deref(),
                     progress: progress.as_ref(),
-                    failed: false,
+                    ..Facts::default()
                 };
                 let changed = inner
                     .presence
@@ -1129,6 +1148,7 @@ impl Feed {
                 .presence
                 .on_poll(profile, rows, &|s| inbox_waits.iter().any(|w| w == s), now);
         self.publish(&mut inner, changed);
+        self.apply_pending(&mut inner, profile, rows, now);
         let mut finished = Vec::new();
         for r in rows {
             let was = previous.get(&r.session_id).copied();
@@ -1147,6 +1167,147 @@ impl Feed {
         let ended = inner.presence.tick(now);
         self.publish(&mut inner, ended);
         finished
+    }
+
+    /// What the plugin pushed from the engine's tool hooks (B45, `activity.rs`): a tool's start or end, or a turn's end, for
+    /// a session the host's own link does not run. Kept only while someone listens, for a bot of the roster. A scheduled
+    /// run's session (no poll lists one) is taken at once and stands on its pushes; any other session the table does not
+    /// hold yet waits for the poll to list it (it is asked at once), so a delegated child or a stray id never shows.
+    pub fn on_push(&self, p: &super::activity::Pushed) {
+        use super::activity::Kind;
+        if self.listeners.load(Ordering::SeqCst) == 0 {
+            return;
+        }
+        let now = now_ms();
+        let tool = Some(p.tool.trim())
+            .filter(|t| !t.is_empty())
+            .map(|t| self.clip(t));
+        // What the call touches, in the one set of safe words (B40), then scrubbed like every engine text.
+        let detail = (p.kind == Kind::ToolStart)
+            .then(|| super::toolwords::detail(tool.as_deref().unwrap_or_default(), p.args.as_ref()))
+            .flatten()
+            .map(|d| self.clip(&d));
+        let event = match p.kind {
+            Kind::ToolStart => "tool.start",
+            Kind::ToolEnd => "tool.complete",
+            Kind::TurnEnd => "message.complete",
+        };
+        let mut inner = lock(&self.inner);
+        if p.profile != "default" && !inner.roster.iter().any(|e| e.name == p.profile) {
+            return;
+        }
+        let key = (p.profile.clone(), p.session_id.clone());
+        if inner.meta.get(&key).is_some_and(|m| m.linked) {
+            return;
+        }
+        if let Some(job) = &p.cron {
+            if inner.cron_runs.len() >= 128 {
+                inner.cron_runs.clear();
+            }
+            inner
+                .cron_runs
+                .insert((p.profile.clone(), job.clone()), p.session_id.clone());
+            if inner.meta.len() >= 512 {
+                inner.meta.clear();
+            }
+            inner
+                .meta
+                .entry(key.clone())
+                .or_default()
+                .source
+                .get_or_insert(Source::Cron);
+        }
+        // the kind a session started with stands (B25): what the table holds, then what the feed was told
+        let source = inner
+            .presence
+            .source_of(&p.profile, &p.session_id)
+            .or_else(|| inner.meta.get(&key).and_then(|m| m.source))
+            .unwrap_or(if is_cron_id(&p.session_id) {
+                Source::Cron
+            } else {
+                Source::Other
+            });
+        let call = Some(p.call.as_str()).filter(|c| !c.is_empty());
+        if source != Source::Cron && !inner.presence.knows(&p.profile, &p.session_id) {
+            let grace = i64::try_from(self.limits.push_pending.as_millis()).unwrap_or(i64::MAX);
+            inner.pending.retain(|_, w| now - w.at <= grace);
+            if inner.pending.len() >= 64 {
+                inner.pending.clear();
+            }
+            inner.pending.insert(
+                key,
+                PendingPush {
+                    event,
+                    tool,
+                    detail,
+                    call: call.map(str::to_owned),
+                    failed: p.failed,
+                    at: now,
+                },
+            );
+            self.poke.store(true, Ordering::SeqCst);
+            return;
+        }
+        let facts = Facts {
+            tool: tool.as_deref(),
+            detail: detail.as_deref(),
+            call,
+            failed: p.failed,
+            progress: None,
+        };
+        let alive = (source == Source::Cron).then(|| {
+            now.saturating_add(i64::try_from(self.limits.push_hold.as_millis()).unwrap_or(i64::MAX))
+        });
+        let changed =
+            inner
+                .presence
+                .on_push(&p.profile, &p.session_id, event, &facts, source, alive, now);
+        self.publish(&mut inner, changed);
+    }
+
+    /// The pushes that waited for the poll to list their session: applied to a session it lists busy, while fresh.
+    fn apply_pending(&self, inner: &mut Inner, profile: &str, rows: &[Live], now: i64) {
+        let grace = i64::try_from(self.limits.push_pending.as_millis()).unwrap_or(i64::MAX);
+        for r in rows {
+            let Some(w) = inner
+                .pending
+                .remove(&(profile.to_owned(), r.session_id.clone()))
+            else {
+                continue;
+            };
+            if now - w.at > grace || r.status == super::presence::Status::Idle {
+                continue;
+            }
+            let facts = Facts {
+                tool: w.tool.as_deref(),
+                detail: w.detail.as_deref(),
+                call: w.call.as_deref(),
+                failed: w.failed,
+                progress: None,
+            };
+            let changed = inner.presence.on_push(
+                profile,
+                &r.session_id,
+                w.event,
+                &facts,
+                r.source,
+                None,
+                now,
+            );
+            self.publish(inner, changed);
+        }
+    }
+
+    /// A scheduled job's run ended, as its cron list says (B42): the session the plugin pushed for it, if any, shows as done
+    /// (or failed) when its own end never came, and its id is handed back (the run's session, when the list names none).
+    pub fn cron_run_ended(&self, profile: &str, job: &str, failed: bool) -> Option<String> {
+        let mut inner = lock(&self.inner);
+        let sid = inner
+            .cron_runs
+            .remove(&(profile.to_owned(), job.to_owned()))?;
+        let changed = inner.presence.end_push(profile, &sid, failed, now_ms());
+        self.publish(&mut inner, changed);
+        Some(sid)
     }
 
     /// A finished turn's notification, with the words its session ended on (`body`; empty when none could be read). A
@@ -1649,6 +1810,131 @@ mod tests {
         );
         f.on_frame("kai", &frame("tool.complete", "s1", None, None));
         assert_eq!(kai(&f).progress, None);
+    }
+
+    fn push(kind: &str, profile: &str, sid: &str, extra: &Value) -> super::super::activity::Pushed {
+        let mut v = json!({"v": 1, "kind": kind, "profile": profile, "session_id": sid, "tool": "read_file", "call": "c1"});
+        for (k, x) in extra.as_object().unwrap() {
+            v[k] = x.clone();
+        }
+        super::super::activity::parse(v.to_string().as_bytes()).unwrap()
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)] // one story, every source in turn
+    async fn the_plugins_pushes_move_presence_for_turns_the_hosts_links_never_see() {
+        // B45
+        use crate::local_api::presence::Status::Working;
+        let (f, _d) = feed();
+        let kai = |f: &Feed| {
+            f.presence()
+                .into_iter()
+                .find(|p| p.profile == "kai")
+                .unwrap()
+        };
+        let path = json!({"args": {"path": "/x/ghp_ABCDEFGHIJKLMNOPQRSTUV0123456789/secret.txt"}});
+        f.on_push(&push("tool.start", "kai", "r1", &path));
+        assert_eq!(
+            kai(&f).state,
+            State::Idle,
+            "nobody listens: nothing is kept"
+        );
+        let _reader = f.consumer();
+        let room = Live {
+            session_id: "r1".into(),
+            status: Working,
+            source: Source::Room,
+            summary: None,
+        };
+        f.on_poll("kai", std::slice::from_ref(&room), &HashMap::new());
+        f.on_push(&push("tool.start", "kai", "r1", &path));
+        let p = kai(&f);
+        assert_eq!(
+            (p.state, p.activity.as_str(), p.source),
+            (State::Working, "read_file", Some(Source::Room))
+        );
+        let d = p.detail.unwrap();
+        assert!(
+            !d.contains("ghp_") && d.ends_with("/secret.txt"),
+            "the one set of words, scrubbed: {d}"
+        );
+        assert_eq!(p.steps, None, "a push counts no steps");
+        f.on_push(&push("tool.end", "kai", "r1", &json!({})));
+        assert_eq!(kai(&f).state, State::Thinking);
+        f.on_push(&push("turn.end", "kai", "r1", &json!({"tool": ""})));
+        assert_eq!(kai(&f).state, State::Done);
+        // a session the poll has not listed waits for it; then the push stands
+        f.on_push(&push(
+            "tool.start",
+            "kai",
+            "r2",
+            &json!({"tool": "terminal", "args": {"command": "cargo test"}}),
+        ));
+        assert!(f.take_poke(), "the poll is asked to list it");
+        assert_ne!(
+            kai(&f).activity,
+            "terminal",
+            "not shown before the poll lists it"
+        );
+        let r1_done = Live {
+            status: crate::local_api::presence::Status::Idle,
+            ..room.clone()
+        };
+        let r2 = Live {
+            session_id: "r2".into(),
+            ..room.clone()
+        };
+        f.on_poll("kai", &[r1_done, r2], &HashMap::new());
+        let p = kai(&f);
+        assert_eq!(
+            (p.detail.as_deref(), p.source),
+            (Some("Run a command · cargo test"), Some(Source::Room)),
+            "the poll's kind stands"
+        );
+        f.on_push(&push("turn.end", "kai", "r2", &json!({"tool": ""})));
+        // a scheduled run no poll lists stands on its pushes
+        f.on_push(&push(
+            "tool.start",
+            "kai",
+            "local-9f",
+            &json!({"cron": "a1b2c3"}),
+        ));
+        let p = kai(&f);
+        assert_eq!((p.state, p.source), (State::Working, Some(Source::Cron)));
+        f.on_poll("kai", &[], &HashMap::new());
+        assert_eq!(
+            kai(&f).source,
+            Some(Source::Cron),
+            "no poll lists it, and it stands"
+        );
+        assert_eq!(
+            f.cron_run_ended("kai", "a1b2c3", false).as_deref(),
+            Some("local-9f")
+        );
+        assert_eq!(
+            kai(&f).state,
+            State::Done,
+            "its run is over, as the cron list says"
+        );
+        assert_eq!(
+            f.cron_run_ended("kai", "a1b2c3", false),
+            None,
+            "handed back once"
+        );
+        // the host's own link says it finer; a bot not on the roster says nothing
+        f.on_frame("kai", &frame("message.start", "s1", None, None));
+        f.on_push(&push(
+            "tool.start",
+            "kai",
+            "s1",
+            &json!({"tool": "web_fetch"}),
+        ));
+        f.on_push(&push("tool.start", "stranger", "x1", &json!({"cron": "j"})));
+        assert!(
+            f.presence()
+                .iter()
+                .all(|p| p.activity != "web_fetch" && p.profile != "stranger")
+        );
     }
 
     #[tokio::test]
