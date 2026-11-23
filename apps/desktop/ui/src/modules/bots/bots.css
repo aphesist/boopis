@@ -10,7 +10,7 @@
 
 /* ================================================================ sidebar list: the rail keeps its own row rule */
 .bt-list { padding: 0 0 var(--sp-3); }
-.bt-list.is-rail .ui-row { height: calc(var(--row-h-2) - 4px); padding: 0; justify-content: center; }
+.bt-list.is-rail .ui-row { height: var(--rail-row); padding: 0; justify-content: center; }   /* the rail's pitch (shell.css), "+" included */
 .bt-list.is-rail .ui-row__lead { width: 24px; height: 24px; }
 .bt-list.is-rail .ui-row__lead > .ui-orb { margin: 0; }
 .bt-list.is-rail :is(.ui-row__text, .ui-row__end) { display: none; }
