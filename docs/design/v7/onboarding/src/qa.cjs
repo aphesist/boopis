@@ -81,6 +81,12 @@ const PAGE = () => {
       if (m.classList.contains('gap') || m.closest('.composer, .b, .qcard, .hov')) continue;
       out.push(['mark', `shown at rest (${st}) outside feedforward or a blank: ` + name(m)]);
     }
+    // stills: no status phrase frozen mid-sweep (the shimmer's gradient clipped to text) and no breath frozen mid-cycle
+    for (const el of root.querySelectorAll('.shimmer, .mk.pulse, .dot.run')) {
+      if (!vis(el)) continue; const cs = getComputedStyle(el);
+      if (el.matches('.shimmer') && cs.backgroundImage !== 'none' && (cs.webkitBackgroundClip === 'text' || cs.backgroundClip === 'text')) out.push(['sweep', 'a status phrase frozen mid-sweep: ' + name(el)]);
+      if (el.matches('.mk.pulse, .dot.run') && cs.animationName !== 'none') out.push(['sweep', 'a breath frozen mid-cycle: ' + name(el)]);
+    }
     // R-inline-1
     const probe = () => { const s = document.createElement('span'); s.textContent = 'x'; s.style.cssText = 'display:inline-block;width:0;height:0;overflow:hidden;vertical-align:baseline'; return s; };
     for (const chip of root.querySelectorAll('.you, .mention, .refchip, .b code, .mk2:not(.gap), .blank-count, .badge2')) {

@@ -32,14 +32,14 @@
 .ob-rcpt { align-self: flex-start; margin: 6px 0 0 4px; font-size: var(--fs-xs); color: var(--text-dim); display: flex; gap: 6px; align-items: center; }
 .ob-rcpt svg { color: var(--ok-text); }
 .qcard.ob-w { width: min(100%, var(--bubble-max)); }
-.qcard .ob-opts { display: flex; flex-direction: column; gap: 2px; margin: 0 -4px; padding-left: 0; }
-.qcard .optrow { border-radius: calc(var(--r-block) - var(--pad-block)); padding: 8px 10px; align-items: center; }
+.qcard .ob-opts { display: flex; flex-direction: column; gap: 2px; margin: 0; padding-left: 0; }
+.qcard .optrow { border-radius: calc(var(--r-block) - var(--pad-block)); padding: 8px 4px; align-items: center; }
 .qcard .optrow .m { white-space: nowrap; }
 .qcard .optrow .grow { min-width: 0; }
-.qcard .ob-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: nowrap; }
+.ob-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: nowrap; }
 .qcard .ob-foot .grow { padding-left: 0; }
 .qcard .ob-sub { font-size: var(--fs-xs); color: var(--text-dim); line-height: var(--lh-xs); margin: -4px 0 8px; }
-.ob-rule { display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 4px 0 10px; border-radius: calc(var(--r-block) - var(--pad-block)); font-size: var(--fs-s); color: var(--text); }
+.ob-rule { display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 4px; border-radius: calc(var(--r-block) - var(--pad-block)); font-size: var(--fs-s); color: var(--text); }
 .ob-rule .t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ob-rule .ib.s { background: transparent; box-shadow: none; width: 28px; height: 28px; }
 .ob-rule.hov { background: var(--hover); }
@@ -77,3 +77,33 @@
 .fl-fk > .fl-a { width: 14px; } .fl-fk > .fl-a::after { display: none; }
 .fl-br { width: 2px; background: #3a3a3a; flex: none; }
 .fl-fk .fl-fork .fl-row > .fl-a:first-child { width: 14px; }
+/* stills: live text at rest (the sweep and the breath only exist in motion: the clips and the motion strips) */
+.still .shimmer { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--text-dim); }
+.still .mk.pulse, .still .dot.run { animation: none; opacity: 1; transform: none; }
+/* AskCard, choices (kit): lettered rows of one line; the description truncates (R-row-1) */
+.ob-ch { padding: 8px; }
+.ob-ch > .ob-qh { padding: 2px 8px 6px; }
+.ob-ch .opt { gap: 10px; padding: 0 8px; min-width: 0; }
+.ob-ch .opt .lt { flex: none; }
+.ob-ch .opt .lt svg { width: 12px; height: 12px; }
+.ob-ch .opt .nm { flex: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; }
+.ob-ch .opt .nm svg { color: var(--icon-quiet); }
+.ob-ch .opt .ds { flex: 0 1 auto; min-width: 0; margin-left: 2px; font-size: var(--fs-s); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ob-ch > .ob-foot { padding: 0 4px 0 8px; margin-top: 6px; }
+.ob-ch > .ob-foot .grow { padding-left: 0; }
+.qcard .ob-rule .nm { font-size: var(--fs-s); }
+.qcard .sr .lb small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* O03 B only (not recommended): the AskCard tiles variant */
+.ob-tiles { padding: 8px; }
+.ob-tg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding-left: 0 !important; }
+.ob-tile { height: 72px; border-radius: calc(var(--r-block) - var(--pad-block)); --sq-bg: var(--fill-2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: var(--fs-s); color: var(--text); text-align: center; }
+.ob-tile svg { color: var(--icon-quiet); }
+.ob-tile.on { --sq-line: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+.ob-tiles > .ob-foot { margin-top: 8px; padding: 0 4px 0 8px; }
+/* the rules list: the queue's geometry (21: rows 36, radius 18 on the Block's 4 inset, buttons 28 on 4) */
+.qcard .ob-opts.ob-q4 { margin: 0 -4px; gap: 0; }
+.ob-q4 .ob-rule { min-height: 36px; border-radius: calc(var(--r-block) - 4px); padding: 0 4px 0 8px; }
+/* a choices or tiles card's foot: its 28 px buttons sit on the Block's 8 inset on both sides (R-corner-10); a text-only foot keeps text's 12 */
+.ob-ch > .ob-foot, .ob-tiles > .ob-foot { padding: 0 !important; }
+.ob-ch > .ob-foot > .grow.xs { padding-left: 4px !important; }
+.ob-spec .mono { white-space: nowrap; }

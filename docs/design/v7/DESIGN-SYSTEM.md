@@ -656,3 +656,7 @@ Tokens (`tokens.v7.json`); the three-step type and alpha hierarchy; R-corner-1 t
 | well, Terminal | Well | none |
 | composer line items, launch row, settings select | SelectorItem | none |
 | orb, brand tile, OrbStack | Avatar | none |
+
+## 22. Onboarding and setup (pointer)
+
+The onboarding and setup proposal lives in `onboarding/ONBOARDING.md`: the structure choice (board O01: one hybrid onboarding recommended, against a double onboarding and a just-in-time one), the flow screen by screen (O01 to O24: the shared intro and setup, the Session and Bots branches, skip, resume, Settings, errors, returning users), the other open choices (O02 to O04), the motion spec and its clips. It uses only this kit's components plus two compositions for approval (the Page's intro variant and the Scene, board C01) and one proposed motion token, `--dur-hero` (600 ms). The new-session mark is A, as specified in 20.1.

@@ -90,11 +90,11 @@
     const phase = o.phase || 'open';
     const ship = phase === 'chosen' || phase === 'ask' ? m('ship it', 'chosen') : m('ship it', phase === 'open' ? 'open' : 'shown');
     const typed = `refactor ${m('the billing helpers', 'shown')} and ${ship}`;
-    const menu = phase === 'open' ? `<div class="menu sq" style="position:absolute;left:596px;bottom:86px;width:268px;z-index:6"><div class="mt">I read “ship it” as</div><div class="mi sq hov">${I('check')}Open a pull request</div><div class="mi sq"><span style="width:16px"></span>Merge it into main</div><div class="mi sq"><span style="width:16px"></span>Commit, don’t push</div><div class="sepr"></div><div class="mi sq"><span style="width:16px"></span>Something else…</div></div>` : '';
+    const menu = phase === 'open' ? `<div class="menu sq" style="position:absolute;left:596px;bottom:${rec ? 156 : 104}px;width:268px;z-index:6"><div class="mt">I read “ship it” as</div><div class="mi sq hov">${I('check')}Open a pull request</div><div class="mi sq"><span style="width:16px"></span>Merge it into main</div><div class="mi sq"><span style="width:16px"></span>Commit, don’t push</div><div class="sepr"></div><div class="mi sq"><span style="width:16px"></span>Something else…</div></div>` : '';
     const ask = phase === 'ask' ? `<div class="qcard sq ob-w"><div class="row xs dim" style="gap:6px;margin-bottom:4px">${logo(9, ' still')}Reading your drafts<span class="grow"></span><span class="word">on</span></div>
       <div class="m" style="margin-bottom:4px">Keep reading my drafts?</div><div class="ob-sub ell">Reads with Claude Haiku, the cheapest model you have. Each read is on the ledger.</div>
       <div class="row" style="gap:6px"><span class="chip on">Keep it on</span><span class="chip">Turn it off</span></div></div>` : '';
-    const sent = phase !== 'open' ? rcpt('Sent with your message: “ship it” means open a pull request (your choice)') : '';
+    const sent = phase === 'chosen' || phase === 'ask' ? rcpt('Sent with your message: “ship it” means open a pull request (your choice)') : '';
     const recNote = rec ? `<div class="notice sq" style="margin-bottom:8px">${I('clock')}<span class="grow">Recorded example. Connect a model and boopis reads your own drafts.</span></div>` : '';
     const body = `<div class="sep">Today 09:41</div>${you('Use Claude')}${rcpt('Connected: Claude, your subscription. Starts on Claude Opus.')}
       ${say('One thing boopis does differently: I read what you write before you send it, and mark what I’d otherwise ask you later.', false, ' style="margin-top:16px"')}${say(rec ? 'Here’s a recorded example. Open a mark to answer it.' : 'Watch the composer. Open a mark to answer it.', true)}${sent}${ask}`;
