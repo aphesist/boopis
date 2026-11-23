@@ -74,6 +74,10 @@ async function findJump(measure, a, b, d, scale) {
     a declared cut, and the jump is reported. */
 export async function plan(page, T, o) {
   const { fps, duration, cuts, scale, shutter, spacing, maxSamples, fixed } = o;
+  /* a step that will not shrink as the sub-frames get denser, up to two stage px (two output px at 1080p, four at
+     4K), is the page quantising: layout snapping to the pixel grid, or orb2's four-decimal geometry under a deep zoom.
+     It is no copy (the same offset a 1080p frame accepts) and it is accepted, never fenced */
+  const snap = 2 * spacing * Math.max(1, scale);
   const measure = async (times) => page.evaluate((ts) => window.__film.probe(ts), times);
   const jumps = [];
   let fence = [-Infinity, Infinity];                 /* the shutter stays inside: the jumps found so far */
@@ -90,7 +94,7 @@ export async function plan(page, T, o) {
     const sorted = [...steps].sort((a, b) => a - b), typical = sorted[Math.floor(sorted.length / 2)] ?? 0;
     let fenced = false;
     for (let i = 0; i < steps.length && !fenced; i++) {
-      if (steps[i] <= Math.max(2 * spacing, 2.5 * typical)) continue;
+      if (steps[i] <= Math.max(snap, 2.5 * typical)) continue;
       const j = await findJump(measure, ts[i], ts[i + 1], steps[i], scale);
       if (!j) continue;
       jumps.push({ t: Math.round(((j.lo + j.hi) / 2) * 1e6) / 1e6, size: Math.round(j.size * 10) / 10, what: first.fastest });
@@ -109,18 +113,24 @@ export async function plan(page, T, o) {
     let n = Math.ceil(moved / spacing - 1e-9), angle = shutter;
     if (n <= 1) return still(moved, first.fastest);
     if (n > maxSamples) { angle = shutter * (maxSamples * spacing) / moved; n = maxSamples; [lo, hi] = win(angle); }
-    let times = sampleTimes(lo, hi, n), worst = 0;
+    let times = sampleTimes(lo, hi, n), worst = 0, prev = null;
     for (let pass = 0; pass < 5; pass++) {
       const v = await measure(times), vs = v.steps.map((x) => x * scale);
       worst = Math.max(0, ...vs);
       if (worst <= spacing * 1.05) break;
+      /* denser sub-frames (or a closed-down shutter) that did not bring the worst step down are quantisation steps:
+         keep the plan before them, never shorten the shutter for steps that do not shrink */
+      if (prev && worst <= snap && worst > prev.worst * 0.8) { ({ times, n, angle, worst } = prev); [lo, hi] = win(angle); break; }
+      prev = { times, n, angle, worst };
       /* a neighbouring pair still too far apart: a jump between them, or uneven motion inside the shutter (a step under
-         two spacings that will not shrink is layout snapping to the pixel grid: not a copy, accepted) */
-      const at = vs.indexOf(worst), j = worst > 2 * spacing ? await findJump(measure, times[at], times[at + 1], worst, scale) : null;
+         `snap` that will not shrink is quantisation: not a copy, accepted) */
+      const at = vs.indexOf(worst), j = worst > snap ? await findJump(measure, times[at], times[at + 1], worst, scale) : null;
       if (j) { jumps.push({ t: Math.round(((j.lo + j.hi) / 2) * 1e6) / 1e6, size: Math.round(j.size * 10) / 10, what: v.fastest }); if (j.hi <= T) fence = [Math.max(fence[0], j.hi), fence[1]]; else fence = [fence[0], Math.min(fence[1], j.lo)]; break; }
-      if (worst <= 2 * spacing && pass > 0) break;
+      if (worst <= snap && pass > 0) break;
       const want = Math.ceil(n * worst / spacing);
-      if (want <= maxSamples) n = want; else { angle = angle * (maxSamples / want); n = maxSamples; [lo, hi] = win(angle); }
+      if (want <= maxSamples) n = want;
+      else if (worst <= snap) { if (n === maxSamples) break; n = maxSamples; }   /* never close the shutter for a step that may be quantisation */
+      else { angle = angle * (maxSamples / want); n = maxSamples; [lo, hi] = win(angle); }
       times = sampleTimes(lo, hi, n);
     }
     if (jumps.length && worst > spacing * 1.05 && attempt < 3) continue;   /* a jump was fenced off: plan again */

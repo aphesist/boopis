@@ -26,6 +26,9 @@
    Page                --query "beat=b03"        extra page parameters (the board scene's beat)
    Checks              --hashes <file.json>      the md5 of every frame's pixels (determinism)
    Speed               --workers 4               parallel browsers (one per core is right on this machine)
+                       --chunk 48                frames per job; workers take the next job as they finish, so a
+                                                 heavy stretch (a dive asking for 96 sub-frames) is shared out
+                                                 (default: a quarter of each worker's share, 30 frames or more)
                        --no-build                serve the existing build
                        --dist <dir>              build into and serve this folder instead of dist/ (also FILM_DIST) */
 import { fork } from 'node:child_process';
@@ -68,6 +71,7 @@ const o = {
   mux: opt('--mux', null),
   hashes: opt('--hashes', null),
   workers: Number(opt('--workers', '4')),
+  chunk: Number(opt('--chunk', '0')),
   query: opt('--query', ''),
   quiet: flag('--quiet')
 };
@@ -110,11 +114,11 @@ async function main() {
       (samples > 1 ? 'motion blur at ' + o.shutter + ' deg, sub-frames at most ' + o.spacing + ' px apart (up to ' + o.maxSamples + ')' + (o.fixedSamples ? ', FORCED to ' + o.fixedSamples : '') : 'no motion blur') + ', ' + (o.plan ? 'plan only' : codec) + ', ' + nWorkers + ' workers');
     const tmp = join(dirname(out), '.film-render-' + process.pid);
     await mkdir(tmp, { recursive: true });
+    /* jobs smaller than a worker's share, taken from a queue: frames cost very different amounts (one capture for a
+       still frame, 96 for a fast one), and a worker given a fixed contiguous share could be left alone with the dive */
     const chunks = [];
-    for (let i = 0; i < nWorkers; i++) {
-      const a = f0 + Math.floor(((f1 - f0) * i) / nWorkers), b = f0 + Math.floor(((f1 - f0) * (i + 1)) / nWorkers);
-      if (b > a) chunks.push({ a, b, seg: still ? out : join(tmp, 'seg' + String(i).padStart(3, '0') + EXT[codec]) });
-    }
+    const per = still ? f1 - f0 : o.chunk > 0 ? o.chunk : Math.max(30, Math.ceil((f1 - f0) / (nWorkers * 4)));
+    for (let a = f0, i = 0; a < f1; a += per, i++) chunks.push({ a, b: Math.min(f1, a + per), seg: still ? out : join(tmp, 'seg' + String(i).padStart(4, '0') + EXT[codec]) });
     const t0 = Date.now();
     const progress = new Map();
     let lastLine = 0;
@@ -127,7 +131,7 @@ async function main() {
       else if (Date.now() - lastLine > 5000 || done === f1 - f0) { lastLine = Date.now(); console.log(line); }
     };
     const kids = [];
-    const results = await Promise.all(chunks.map((c, i) => new Promise((ok, fail) => {
+    const run = (c, i) => new Promise((ok, fail) => {
       const job = { url, f0: c.a, f1: c.b, width: meta.width, height: meta.height, scale: o.scale, fps, samples, shutter: o.shutter, codec, out: c.seg,
         preview: o.preview, crf: o.crf, hashes: !!o.hashes, still, threads: 4,
         spacing: o.spacing, maxSamples: o.maxSamples, fixedSamples: o.fixedSamples || 0, planOnly: o.plan };
@@ -140,7 +144,11 @@ async function main() {
         else if (m.type === 'error') fail(new Error('worker ' + i + ': ' + m.message));
       });
       w.on('exit', (code) => (result ? ok(result) : fail(new Error('worker ' + i + ' exited ' + code))));
-    }))).catch((e) => { for (const k of kids) k.kill('SIGTERM'); throw e; });
+    });
+    const results = new Array(chunks.length);
+    let nextJob = 0;
+    const lane = async () => { while (nextJob < chunks.length) { const i = nextJob++; results[i] = await run(chunks[i], i); } };
+    await Promise.all(Array.from({ length: Math.min(nWorkers, chunks.length) }, lane)).catch((e) => { for (const k of kids) k.kill('SIGTERM'); throw e; });
     const ms = Date.now() - t0;
     if (!o.quiet && process.stdout.isTTY) process.stdout.write('\n');
     if (!still && !o.plan) await concat(results.map((r) => r.seg), out, o.audio ? { audio: resolve(o.audio), duration: (f1 - f0) / fps } : {});
@@ -150,14 +158,16 @@ async function main() {
       fps_render: +(frames / (ms / 1000)).toFixed(2), captures_per_s: +(renders / (ms / 1000)).toFixed(2), errors: results.flatMap((r) => r.errors ?? []) };
     /* the blur plan: every frame's sub-frames and the worst spacing between neighbours */
     const plans = results.flatMap((r) => r.plans ?? []).sort((a, b) => a.k - b.k);
-    /* over the limit: neighbouring sub-frames more than two spacings apart (a copy shows from about 2 px; a step between
-       one and two spacings that would not shrink is layout snapping to the pixel grid, reported as snapped) */
-    const blurred = plans.filter((p) => p.n > 1), over = plans.filter((p) => p.worst > o.spacing * 2);
+    /* over the limit: neighbouring sub-frames more than two spacings apart, two stage px at 4K (a copy shows from about
+       2 px; a step up to that which would not shrink is the page quantising, layout snapping or orb2's four-decimal
+       geometry under a deep zoom, reported as snapped; lib/worker.mjs) */
+    const snap = o.spacing * 2 * Math.max(1, o.scale);
+    const blurred = plans.filter((p) => p.n > 1), over = plans.filter((p) => p.worst > snap);
     const worst = plans.reduce((m, p) => (p.worst > m.worst ? p : m), { worst: 0, k: -1, n: 0, what: '' });
     const hist = {};
     for (const p of plans) { const b = p.n === 1 ? '1' : p.n <= 4 ? '2-4' : p.n <= 8 ? '5-8' : p.n <= 16 ? '9-16' : p.n <= 32 ? '17-32' : '33+'; hist[b] = (hist[b] ?? 0) + 1; }
     stats.blur = { spacingLimit: o.spacing, maxSamples: o.maxSamples, framesBlurred: blurred.length, framesStill: plans.length - blurred.length, histogram: hist,
-      worstSpacing: worst.worst, worstFrame: worst.k, worstWhat: worst.what, shutterClosedDown: plans.filter((p) => p.n > 1 && p.angle < o.shutter - 0.05).map((p) => p.k), framesOverLimit: over.map((p) => p.k), framesSnapped: plans.filter((p) => p.worst > o.spacing * 1.05 && p.worst <= o.spacing * 2).map((p) => p.k),
+      worstSpacing: worst.worst, worstFrame: worst.k, worstWhat: worst.what, shutterClosedDown: plans.filter((p) => p.n > 1 && p.angle < o.shutter - 0.05).map((p) => p.k), framesOverLimit: over.map((p) => p.k), framesSnapped: plans.filter((p) => p.worst > o.spacing * 1.05 && p.worst <= snap).map((p) => p.k),
       /* discontinuities under a shutter (something that changes in an instant): the shutter was kept off them; a scene
          that did not mean one has a pop there */
       jumps: plans.filter((p) => p.jumps).flatMap((p) => p.jumps.map((j) => ({ frame: p.k, t: j.t, px: j.size, what: j.what }))) };
