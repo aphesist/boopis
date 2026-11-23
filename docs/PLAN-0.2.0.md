@@ -47,10 +47,11 @@ ready moves to 0.2.x. The Session waves S1-S3 (worktrees, follow-ups, inbox, git
 - e2e on a real engine for S0 (launch params, model switch, rewind) and for each D feature.
 - Owner previews from the lab before each wave merges.
 
-## Needed from the owner
+## Owner decisions (23 November 2026)
 
-1. **Scope:** is the split above right (D only as ready, S1+ in 0.3)?
-2. **macOS signing secrets** for a signed, notarised dmg: APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD,
-   APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID. Without them, 0.2.0's dmg ships unsigned.
-3. **governed-bots** has defaults the owner already decided (no caps by default; tiers kept). Confirm nothing else
-   needs a decision before it merges.
+1. **Scope:** agreed as planned. 0.2.0 = A + B + C + E; D goes in as each part passes on a real engine; S1-S3 in 0.3.
+2. **macOS:** 0.2.0's dmg ships **unsigned** (Gatekeeper warns on first open). Signing and notarisation move to a
+   later release, once the Apple secrets are in the repo. `w34/notch-helper` stays in 0.2.0.
+3. **governed-bots:** merges with the defaults already decided (no caps by default, tiers kept).
+
+Next: wave A (`w32/integrate`) and wave B (`w32/lab-v7`, then `w32/kit-v7`) start now.
