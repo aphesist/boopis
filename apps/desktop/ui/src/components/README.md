@@ -83,6 +83,10 @@ Each row: what it is for, its variants (the options `variants.ts` lists for the 
   the look its name gives (`lookFor`). `orb` draws every orb through it, `paintLook` writes a look onto a drawn orb (only
   what changed, so orb2 morphs) and `repaintLook` repaints every orb of one bot under a root, so a look that changes
   after a bot was drawn reaches every place. Eyes are never part of a look.
+- **A group's members.** `stack` is the one way to draw several bots: along a line (`shape: 'line'`, the default: the
+  sidebar's open row, the room's header, a card's origin) or around a circle (`shape: 'cluster'`, the collapsed sidebar's
+  group avatar, `clusterLayout` its arithmetic). One step, the first member underneath, "+N" the last place; `extra`
+  counts members it cannot draw into "+N", and `tip: false` leaves the tooltip to a row that already names them.
 
 - **Corners.** One rule derives `--r-in`, `--r-corner`, `--corner-inset` and `--corner-ring` from a container's
   `--r-outer` and `--pad` (`corners.ts`; containers carry `.ui-nest` or are in the rule's list). A control in a corner is

@@ -19,6 +19,66 @@
   "w": 1416,
   "h": 60
  },
+ "cluster-larger-and-on-the-dock@bone": {
+  "sha": "9717eb9e446e647e3f78c549a8af805b874a466d",
+  "w": 1416,
+  "h": 77
+ },
+ "cluster-larger-and-on-the-dock@catalog": {
+  "sha": "9717eb9e446e647e3f78c549a8af805b874a466d",
+  "w": 1416,
+  "h": 77
+ },
+ "cluster-larger-and-on-the-dock@graphite": {
+  "sha": "9717eb9e446e647e3f78c549a8af805b874a466d",
+  "w": 1416,
+  "h": 77
+ },
+ "cluster-larger-and-on-the-dock@typewriter": {
+  "sha": "9717eb9e446e647e3f78c549a8af805b874a466d",
+  "w": 1416,
+  "h": 77
+ },
+ "cluster-one-left-and-none@bone": {
+  "sha": "42ed3acfde784c6e745300b4c70e317b484e32c2",
+  "w": 1416,
+  "h": 48
+ },
+ "cluster-one-left-and-none@catalog": {
+  "sha": "04b7436e58ff424a750f31dd8d40c5f62595f5bf",
+  "w": 1416,
+  "h": 48
+ },
+ "cluster-one-left-and-none@graphite": {
+  "sha": "c7a9aae7bea7bf11521cd540d4f927cbe3d5ac68",
+  "w": 1416,
+  "h": 48
+ },
+ "cluster-one-left-and-none@typewriter": {
+  "sha": "c7a9aae7bea7bf11521cd540d4f927cbe3d5ac68",
+  "w": 1416,
+  "h": 48
+ },
+ "cluster-two-to-six-members@bone": {
+  "sha": "f4739fb168a5e7b0abb04ffd2fbe8c76646b17dd",
+  "w": 1416,
+  "h": 99
+ },
+ "cluster-two-to-six-members@catalog": {
+  "sha": "9913fdc7a5f487f1f2e2c2779c4b5212229826db",
+  "w": 1416,
+  "h": 99
+ },
+ "cluster-two-to-six-members@graphite": {
+  "sha": "b9e39f8a0ce501609b6a8545cdc64bd50a925492",
+  "w": 1416,
+  "h": 99
+ },
+ "cluster-two-to-six-members@typewriter": {
+  "sha": "b9e39f8a0ce501609b6a8545cdc64bd50a925492",
+  "w": 1416,
+  "h": 99
+ },
  "focused-with-n@bone": {
   "sha": "77e52ecf2be51d7b46412d904fa738ebbf17ba8f",
   "w": 1416,

@@ -92,6 +92,13 @@ body {
   overflow: hidden;
 }
 .hx-side__inner { position: relative; height: 100%; width: var(--sb-w); display: flex; flex-direction: column; }
+/* the head holds the open sidebar's column (the pill, New) and the rail's (the vertical pill, "+") in one cell: the list starts
+   under the taller of the two that is in the flow. The rail's column leaves the flow while the sidebar is open, and the open one
+   never moves (it fades in place). The rail's row: a 40px pitch (LAYOUT.md), shared with the bots' rail rows (bots.css). */
+.hx-side__head { display: grid; flex: none; }
+.hx-side__head > * { grid-area: 1 / 1; }
+.hx-side__open { display: flex; flex-direction: column; align-self: start; min-width: 0; }
+.hx { --rail-row: calc(var(--row-h-2) - 4px); }
 
 /* the mark: title bar, top left, centred on the sidebar's icon axis (x = 28) so it sits above the rail's icons. The logo's
    mark, static (`still`: it labels, so nothing moves), in the ink of the frame; 18px wide, inside the 16 to 20px the
@@ -149,6 +156,12 @@ body {
 }
 
 .hx[data-left="rail"] .hx-rail { opacity: 1; visibility: visible; transition: opacity var(--dur-2) var(--ease) var(--dur-out), visibility 0s; }
+/* In the rail its column is in the head's flow, at the same place (12px down, on the axis), so the list starts under "+" and never
+   under it: the vertical pill is taller than the open one, and the list began 22px up, with "+" drawn over the first bot and the list
+   over the lower half of "+" (the owner's report, 0.1.9). "+" then has a row of its own, of the rail's pitch: the list starts half
+   of what the row leaves around "+" below it, so "+" and the first orb are one row apart, as every orb is from the next. */
+.hx[data-left="rail"] .hx-rail { position: relative; top: auto; margin-top: 12px; align-self: start; justify-self: start; }
+.hx[data-left="rail"] .hx-side__list { margin-top: calc((var(--rail-row) - var(--ctl-s)) / 2); }
 .hx[data-left="rail"] :is(.hx-seg, .hx-new, .hx-me__name, .hx-foot__gear) { opacity: 0; visibility: hidden; transition: opacity var(--dur-press) var(--ease), visibility 0s linear var(--dur-press); }
 .hx[data-left="rail"] .hx-side__list { opacity: 0; visibility: hidden; transition: opacity var(--dur-press) var(--ease), visibility 0s linear var(--dur-press); }
 .hx[data-left="rail"] .hx-side__list:has(> .hx-list.is-active[data-rail="ok"]) { opacity: 1; visibility: visible; width: var(--sb-rail-w); }

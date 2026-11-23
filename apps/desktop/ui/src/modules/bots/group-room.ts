@@ -43,14 +43,16 @@ export const memberBot = (m: GroupMember): BotLike => bot(m.profile) ?? { id: m.
     one overlap step, the members in the group's order (the first underneath), "+N" the last member. One orb size per place:
     STACK says which. The members that are bots of the user; `still` for an aria-hidden slot (a row's lead), where nothing takes
     focus. Who is at work is the presence entry's own live stack (presence.ts), drawn the same way. */
-export const STACK = { row: { size: 16, max: 4 }, rail: { size: 16, max: 1 }, head: { size: 32, max: 4 } } as const;
+export const STACK = { row: { size: 16, max: 4 }, rail: { size: 16, max: 4 }, head: { size: 32, max: 4 } } as const;
 export function stackOf(members: readonly GroupMember[], place: keyof typeof STACK, still?: boolean): string {
   const ids = members.map((m) => m.profile).filter((id) => bot(id));
-  if (!ids.length) return '';
   const { size, max } = STACK[place];
-  /* the rail's 40px row holds one orb at equal insets (R-corner-3): the group is its first member there, and the row's tooltip names them all */
-  const shown = place === 'rail' ? ids.slice(0, 1) : ids;
-  return ui.html.stack({ members: shown.map((id) => bot(id) as BotLike), size, max, label: namesText(ids.map((id) => bot(id)?.name ?? id)), focusable: !still, still: !!still });
+  /* the rail's row has room for one mark and no name: the group is a cluster of its members in the row's four places (five and six
+     are three orbs and "+N", as the row's stack draws them), still at 16px, members that are no longer bots counted in "+N"; the
+     row's tooltip names them all, so the cluster has none of its own */
+  if (place === 'rail') return ui.html.stack({ members: ids.map((id) => bot(id) as BotLike), size, max, shape: 'cluster', extra: members.length - ids.length, label: namesOf(members), tip: false, still: true });
+  if (!ids.length) return '';
+  return ui.html.stack({ members: ids.map((id) => bot(id) as BotLike), size, max, label: namesText(ids.map((id) => bot(id)?.name ?? id)), focusable: !still, still: !!still });
 }
 export const namesOf = (members: readonly GroupMember[]): string => namesText(members.map((m) => m.name));
 
