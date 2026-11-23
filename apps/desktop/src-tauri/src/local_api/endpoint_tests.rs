@@ -62,6 +62,15 @@ fn engine() -> (Arc<Scripted>, Store) {
                 json!({"session_id": params["session_id"], "rows": page, "next_cursor": null, "reset": false}),
             )
         }
+        // nina has a conversation to retry (B43); kai's list cannot be read, so kai has none
+        "session.list" if profile == "nina" => {
+            Ok(json!({"sessions": [{"id": "stored-n", "source": "gui"}]}))
+        }
+        "session.resume" => Ok(json!({"session_id": "live-n", "running": false})),
+        "command.dispatch" => {
+            assert_eq!(params["name"], "retry");
+            Ok(json!({"type": "send", "message": "again, please"}))
+        }
         "groups.send" => Ok(json!({"accepted": true})),
         "groups.log" => Ok(json!({"events": [
             {"seq": 1, "event_id": "e1", "kind": "message.user", "payload": {"thread_id": "main", "text": "go"}, "created_at": 1000.0},
@@ -821,6 +830,15 @@ async fn the_reference_client_reads_the_roster_follows_events_and_answers_an_app
     );
     let v: Value = serde_json::from_slice(&out.stdout).unwrap();
     assert!(v["notifications"].is_array(), "{v}");
+    // a retry of nina's last turn (B43)
+    let out = base(&["retry", "nina"]).output().await.unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["retried"]["session_id"], "stored-n", "{v}");
     // a refusal is a sentence and exit code 1
     let bad = base(&["answer", "nope", "once"]).output().await.unwrap();
     assert_eq!(bad.status.code(), Some(1));
@@ -1400,5 +1418,46 @@ async fn a_rooms_log_and_its_stop_and_a_bots_stop_are_served_behind_the_same_che
     assert_eq!(
         (status, json_of(&body)["error"]["code"].as_str()),
         (400, Some("room_without_rooms"))
+    );
+}
+
+#[tokio::test]
+async fn a_retry_is_served_behind_the_same_checks_and_refused_in_words() {
+    // B43
+    let r = rig().await;
+    let (status, _, body) = raw(r.server.addr(), &post(&r, "/v1/bots/nina/retry", "{}", "")).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(json_of(&body)["retried"]["session_id"], "stored-n");
+    assert_eq!(r.scripted.of("prompt.submit")[0].1["text"], "again, please");
+    for (path, body, status, code) in [
+        ("/v1/bots/kai/retry", "{}", 404, "no_conversation"),
+        (
+            "/v1/bots/nina/retry",
+            r#"{"session": "new"}"#,
+            400,
+            "bad_session",
+        ),
+        ("/v1/bots/nina/retry", r#"{"session": 5}"#, 400, "bad_json"),
+        ("/v1/bots/nobody/retry", "{}", 404, "no_such_bot"),
+    ] {
+        let (got, _, answer) = raw(r.server.addr(), &post(&r, path, body, "")).await;
+        assert_eq!(
+            (got, json_of(&answer)["error"]["code"].as_str()),
+            (status, Some(code)),
+            "{path} {body}"
+        );
+    }
+    let (status, _, _) = raw(r.server.addr(), &get(&r, "/v1/bots/nina/retry", "")).await;
+    assert_eq!(status, 405);
+    let no_token = format!(
+        "POST /v1/bots/nina/retry HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{{}}",
+        r.server.addr().port()
+    );
+    let (status, _, _) = raw(r.server.addr(), &no_token).await;
+    assert_eq!(status, 401);
+    assert_eq!(
+        r.scripted.of("command.dispatch").len(),
+        1,
+        "nothing refused reached the engine's retry"
     );
 }

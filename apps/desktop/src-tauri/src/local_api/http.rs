@@ -407,6 +407,7 @@ async fn route<E: Engine>(
             "name": "boopis", "api": API_VERSION,
             "endpoints": ["GET /v1/bots", "GET /v1/presence", "GET /v1/notifications", "GET /v1/approvals", "POST /v1/approvals/<id>",
                           "POST /v1/bots/<name>/say", "GET /v1/bots/<name>/conversation", "POST /v1/bots/<name>/stop",
+                          "POST /v1/bots/<name>/retry",
                           "GET /v1/rooms", "GET /v1/rooms/<id>/log", "POST /v1/rooms/<id>/say", "POST /v1/rooms/<id>/stop",
                           "GET /v1/events"]
         })),
@@ -492,6 +493,16 @@ async fn route<E: Engine>(
             let said = shared.service.say(name, text, &pick, caller).await?;
             Ok(json!({"said": said}))
         }
+        (Method::Post, ["v1", "bots", name, "retry"]) if segment_ok(name) => {
+            let m = object(body)?;
+            let pick = match m.get("session") {
+                None | Some(Value::Null) => Pick::Latest,
+                Some(Value::String(s)) => Pick::parse(Some(s))?,
+                Some(_) => return Err(bad_json()),
+            };
+            let retried = shared.service.retry(name, &pick, caller).await?;
+            Ok(json!({"retried": retried}))
+        }
         (Method::Post, ["v1", "rooms", id, "say"]) if segment_ok(id) => {
             let m = object(body)?;
             let text = m.get("text").and_then(Value::as_str).ok_or_else(bad_json)?;
@@ -505,7 +516,12 @@ async fn route<E: Engine>(
                 json!({"ok": true, "status": sent.status, "event_id": sent.event_id, "held": sent.held}),
             )
         }
-        (Method::Get, ["v1", "approvals", _] | ["v1", "bots" | "rooms", _, "say" | "stop"])
+        (
+            Method::Get,
+            ["v1", "approvals", _]
+            | ["v1", "bots" | "rooms", _, "say" | "stop"]
+            | ["v1", "bots", _, "retry"],
+        )
         | (
             Method::Post,
             ["v1"]

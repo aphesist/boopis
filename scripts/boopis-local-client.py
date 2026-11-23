@@ -19,6 +19,8 @@ Python 3, standard library only. It reads the endpoint and the token the app wro
     boopis-local-client.py approvals                  the approvals waiting
     boopis-local-client.py answer ID once|deny        answer one (the first answer wins)
     boopis-local-client.py say BOT TEXT [--session latest|new|ID]
+    boopis-local-client.py retry BOT [--session latest|ID]
+                                                      retry the conversation's last turn (the engine's own retry)
     boopis-local-client.py stop BOT                   stop the bot's running turn
     boopis-local-client.py rooms
     boopis-local-client.py room-log ROOM [--after SEQ] [--limit N]
@@ -267,6 +269,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("bot")
     p.add_argument("text")
     p.add_argument("--session", default="latest")
+    p = sub.add_parser("retry")
+    p.add_argument("bot")
+    p.add_argument("--session", default="latest")
     p = sub.add_parser("say-room")
     p.add_argument("room")
     p.add_argument("text")
@@ -318,6 +323,12 @@ def main(argv: list[str] | None = None) -> int:
                         "POST",
                         f"/v1/bots/{args.bot}/say",
                         {"text": args.text, "session": args.session},
+                    )
+                )
+            case "retry":
+                show(
+                    client.call(
+                        "POST", f"/v1/bots/{args.bot}/retry", {"session": args.session}
                     )
                 )
             case "say-room":
