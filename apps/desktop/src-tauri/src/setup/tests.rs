@@ -35,6 +35,10 @@ struct Fake {
     working: Mutex<Vec<u32>>,
     /// How many of the next stops without `--yes` the engine refuses because work started since the look.
     busy_stops: Mutex<u32>,
+    /// Who runs the gateway at the next looks, in order; none left is `owner`.
+    owners: Mutex<Vec<crate::hermes::GatewayOwner>>,
+    /// Who runs the gateway otherwise (this run, unless a test says).
+    owner: Mutex<crate::hermes::GatewayOwner>,
     /// How many of the next restarts fail (the gateway does not come up).
     restart_failures: Mutex<u32>,
     /// What Hermes says about the free tier: the status before a claim, and after it.
@@ -140,6 +144,8 @@ impl Fake {
             stays_up: Mutex::new(false),
             working: Mutex::new(Vec::new()),
             busy_stops: Mutex::new(0),
+            owners: Mutex::new(Vec::new()),
+            owner: Mutex::new(crate::hermes::GatewayOwner::ThisRun),
             restart_failures: Mutex::new(0),
             free: Mutex::new(FreeScript::default()),
             catalogue: Mutex::new(Vec::new()),
@@ -260,6 +266,14 @@ impl HermesOps for Fake {
         let n = if next.is_empty() { 0 } else { next.remove(0) };
         self.gateway.lock().unwrap().push(format!("working:{n}"));
         Ok(n)
+    }
+    async fn gateway_owner(&self) -> crate::hermes::GatewayOwner {
+        let mut next = self.owners.lock().unwrap();
+        if next.is_empty() {
+            *self.owner.lock().unwrap()
+        } else {
+            next.remove(0)
+        }
     }
     async fn stop_gateway_when_idle(&self) -> Result<super::ops::Stop> {
         let mut busy = self.busy_stops.lock().unwrap();
@@ -856,6 +870,107 @@ async fn bots_that_work_the_whole_time_leave_everything_as_it_is_until_the_next_
     );
 }
 
+/// The release smoke's case, and `--engine existing`, and a gateway an earlier run left: the update never stops a gateway this
+/// run did not start. It says so, leaves the gateway and its files as they are, and keeps looking.
+#[tokio::test]
+async fn a_gateway_this_run_did_not_start_is_never_stopped() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    *r.fake.owner.lock().unwrap() = crate::hermes::GatewayOwner::Other;
+    let gate = crate::endpoint::Gate::default();
+    let watch = gate.clone();
+    let said = Mutex::new(Vec::new());
+    let waits = super::update::Waits {
+        every: std::time::Duration::from_millis(1),
+        longest: std::time::Duration::from_millis(30),
+    };
+    let notice = r
+        .setup()
+        .update(gate.close(), waits, &|n| {
+            said.lock().unwrap().push((n, watch.is_open()));
+        })
+        .await;
+    assert_eq!(
+        *said.lock().unwrap(),
+        [(
+            super::update::Notice::Waiting(super::update::NOT_OURS_LINE.into()),
+            true
+        )],
+        "said plainly, with the app's links free to use the engine that runs"
+    );
+    assert_eq!(
+        notice,
+        Some(super::update::Notice::Later(
+            super::update::NOT_OURS_LATER_LINE.into()
+        ))
+    );
+    assert!(
+        r.fake.gateway.lock().unwrap().is_empty(),
+        "never stopped, never started, its work never even looked at: {:?}",
+        r.fake.gateway.lock().unwrap()
+    );
+    assert_eq!(r.fake.plugin_marks(), "", "its files are as they were");
+    assert!(gate.is_open());
+    assert!(
+        r.setup().assess().await.unwrap().1,
+        "the next start tries again"
+    );
+}
+
+#[tokio::test]
+async fn once_this_run_starts_the_engine_itself_the_waiting_update_goes_ahead() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    // an earlier run's gateway, then it ended and this run's link started its own
+    *r.fake.owners.lock().unwrap() = vec![
+        crate::hermes::GatewayOwner::Other,
+        crate::hermes::GatewayOwner::Other,
+    ];
+    let notice = r
+        .setup()
+        .update(crate::endpoint::Gate::default().close(), quick(), &|_| {})
+        .await;
+    assert!(
+        matches!(notice, Some(super::update::Notice::Done(_))),
+        "{notice:?}"
+    );
+    assert_eq!(
+        *r.fake.gateway.lock().unwrap(),
+        ["working:0", "working:0", "stop:", "start:V = 'new'"]
+    );
+}
+
+#[tokio::test]
+async fn with_no_gateway_running_the_code_is_put_in_place_without_a_stop() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    *r.fake.owner.lock().unwrap() = crate::hermes::GatewayOwner::Nobody;
+    let notice = r
+        .setup()
+        .update(crate::endpoint::Gate::default().close(), quick(), &|_| {})
+        .await;
+    assert!(matches!(notice, Some(super::update::Notice::Done(_))));
+    assert_eq!(
+        *r.fake.gateway.lock().unwrap(),
+        ["working:0", "start:V = 'new'"]
+    );
+}
+
 /// The owner's decision of 23 November 2026: an install set up before updates the engine's code by itself, with no screen.
 #[tokio::test]
 async fn an_install_set_up_before_updates_by_itself_with_no_screen() {
@@ -1105,12 +1220,11 @@ async fn a_build_without_the_plugin_says_so() {
 /// What a finished setup leaves in the profile's home, as the e2e fixtures write it (`tests/e2e/setup-done.json`).
 const E2E_SETUP_DONE: &str = include_str!("../../../../../tests/e2e/setup-done.json");
 
-/// A home the e2e stack prepared: the bundle's plugin and `hx` copied in and the plugin enabled, as `tests/e2e/stack.py`
-/// does (the same tree, without tests and caches).
+/// A home the e2e stack prepared: the bundle's plugin copied in and enabled, as `tests/e2e/stack.py` does (the same tree,
+/// without tests and caches). The stack places no `hx` in the home: its plugin finds its own.
 fn a_home_with_the_plugin(r: &Rig) {
     let home = r.fake.home.clone();
     super::install::install_plugin(r.bundle.plugin_dir.as_ref().unwrap(), &home).unwrap();
-    super::install::place_hx(r.bundle.hx.as_ref().unwrap(), &home).unwrap();
     r.fake.plugins.lock().unwrap().push(PluginEntry {
         name: "boopis".into(),
         enabled: true,
@@ -1135,6 +1249,10 @@ async fn the_e2e_setup_marker_is_what_makes_the_ui_show_a_session() {
     std::fs::write(&marker, E2E_SETUP_DONE).unwrap();
     let done = r.setup().check().await.unwrap();
     assert!(!done.needed, "{}", done.reason);
+    // and nothing to update by itself either: the release smoke's gateway is the stack's, started with the fake model's
+    // environment, and an update would stop it (B27's first version counted the hx setup never placed as outdated)
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(!check.needed && !update, "{}", check.reason);
 }
 
 #[tokio::test]

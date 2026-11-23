@@ -513,7 +513,7 @@ impl Setup {
             let hx = bundle
                 .hx
                 .as_deref()
-                .is_some_and(|hx| install::hx_differs(hx, &home));
+                .is_some_and(|hx| install::hx_outdated(hx, &home));
             if plugin || carried {
                 Some("the app carries a newer plugin")
             } else if hx {

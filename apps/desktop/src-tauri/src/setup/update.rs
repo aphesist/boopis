@@ -6,9 +6,9 @@
 //! **Order.** The app's own links wait at a gate (`endpoint::Gate`) that the host closes before its answer to `setup_check`
 //! reaches the UI, so the app's first link cannot reach a gateway still running the old plugin: the start-up repair that
 //! link starts (`bots::repair`) would ask `plugin.boopis.bots.guide` of a plugin that does not have it. The window opens and
-//! draws meanwhile; only the link waits. The gate opens again however the update ends. An update that waits for the bots
-//! (below) opens the gate meanwhile, so once it is done the host repairs the bots again (`commands::setup_check`,
-//! `bots::engine::Service::repair_again`).
+//! draws meanwhile; only the link waits. The gate opens again however the update ends. An update that waits (for the bots,
+//! or for a gateway this run did not start; both below) opens the gate meanwhile, so once it is done the host repairs the
+//! bots again (`commands::setup_check`, `bots::engine::Service::repair_again`).
 //!
 //! **Never over running work** (owner decision, 23 November 2026). The gateway is stopped only when nothing is working, by
 //! the engine's own accounts (`HermesOps::working`: the gateway's live work, which covers chat, room and cron turns and
@@ -17,6 +17,12 @@
 //! the app says "Updating once the bots are done", and the one "when idle" wait (`hermes::idle`, the same one a connector's
 //! key uses) updates as soon as nothing is. A wait that never sees such a moment ends after `Limits::restart_wait_max`
 //! without touching anything, and the next start tries again.
+//!
+//! **Only a gateway this run started.** The update never stops a gateway the app did not start in this run
+//! (`Supervisor::gateway_owner`: the gateway must have been launched with this run's secret-channel token): not the
+//! end-to-end stack's, not the user's own with `--engine existing`, not one an earlier run left running with that run's
+//! environment. It leaves such a gateway running and its files as they are, says so, and keeps looking: if this run starts
+//! the engine meanwhile (the old one ended), or none runs at the next start, the code is put in place then.
 //!
 //! **Fail closed.** A copy that cannot be replaced is put back (`install::install_named`), the gateway is started on what is
 //! in place, the failure is recorded (`State::update_failed`) so the next check shows the setup screen, and the app says so
@@ -29,10 +35,16 @@ use super::ops::Stop;
 use super::{Setup, install, state};
 use crate::endpoint::Closed;
 use crate::error::{Error, Result};
+use crate::hermes::GatewayOwner;
 use crate::hermes::idle::{Waited, when_idle};
 
 /// The line while the update waits for the bots.
 pub const WAITING_LINE: &str = "Updating once the bots are done.";
+/// The line while the gateway that runs is not one this run of the app started (the end-to-end stack's, the user's own
+/// Hermes with `--engine existing`, or one an earlier run left running with that run's environment).
+pub const NOT_OURS_LINE: &str = "The engine running now was started outside this boopis window, so boopis leaves it running and updates its code the next time it starts the engine.";
+/// The line when the gateway that ran was never one this run of the app started, the whole time the update could wait.
+pub const NOT_OURS_LATER_LINE: &str = "The engine was started outside this boopis window and kept running, so boopis left it as it was and updates its code the next time it starts the engine.";
 /// The line when the bots worked the whole time the update could wait.
 pub const LATER_LINE: &str = "The bots were working the whole time, so boopis keeps the earlier engine code for now and updates it when it next starts.";
 
@@ -60,11 +72,14 @@ pub struct Waits {
 }
 
 /// One try at putting the code in place.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Tried {
     /// Done.
     Replaced,
     /// Something works (or the engine refused to stop): not now.
     Busy,
+    /// The gateway that runs is not one this run of the app started: never stopped, so not now either.
+    NotOurs,
 }
 
 /// What is outdated, by content (`install::needs_install`, `install::hx_differs`).
@@ -132,7 +147,7 @@ impl Setup {
             hx: bundle
                 .hx
                 .as_deref()
-                .is_some_and(|hx| install::hx_differs(hx, &home)),
+                .is_some_and(|hx| install::hx_outdated(hx, &home)),
         })
         .await
         .unwrap_or_default()
@@ -154,37 +169,68 @@ impl Setup {
         }
         let gate = closed.gate().clone();
         let first = self.try_now(&outdated, closed).await;
+        let last = std::sync::Mutex::new(first.as_ref().ok().copied());
         let result = match first {
             Ok(Tried::Replaced) => Ok(Waited::Done),
-            Ok(Tried::Busy) => {
-                tracing::info!(
-                    "the engine's code is outdated and something is working; updating once nothing is"
-                );
-                said(Notice::Waiting(WAITING_LINE.to_owned()));
+            Ok(blocked) => {
+                let line = if blocked == Tried::NotOurs {
+                    tracing::info!(
+                        "the engine's code is outdated and the gateway is not one this run started; it is left running"
+                    );
+                    NOT_OURS_LINE
+                } else {
+                    tracing::info!(
+                        "the engine's code is outdated and something is working; updating once nothing is"
+                    );
+                    WAITING_LINE
+                };
+                said(Notice::Waiting(line.to_owned()));
                 when_idle(
                     waits.every,
                     waits.longest,
-                    || async { matches!(self.ops.working().await, Ok(0)) },
+                    || async { self.ready().await },
                     || async {
-                        match self.try_now(&outdated, gate.close()).await? {
-                            Tried::Replaced => Ok(true),
-                            Tried::Busy => Ok(false),
-                        }
+                        let tried = self.try_now(&outdated, gate.close()).await?;
+                        *last
+                            .lock()
+                            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(tried);
+                        Ok(tried == Tried::Replaced)
                     },
                 )
                 .await
             }
             Err(e) => Err(e),
         };
-        Some(self.finish(&outdated, result).await)
+        let not_ours = *last
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            == Some(Tried::NotOurs);
+        Some(self.finish(&outdated, result, not_ours).await)
     }
 
-    /// One try, holding the gate shut through it (`closed`, dropped on every way out): when nothing works, stop the gateway
-    /// without ending anything and put the code in place.
+    /// Whether a try may succeed now: the gateway, if one runs, is this run's own, and nothing works. The owner is asked
+    /// first because it costs a socket round trip, while a look at the work may cost an engine command.
+    async fn ready(&self) -> bool {
+        self.ops.gateway_owner().await != GatewayOwner::Other
+            && matches!(self.ops.working().await, Ok(0))
+    }
+
+    /// One try, holding the gate shut through it (`closed`, dropped on every way out). A gateway this run did not start is
+    /// never stopped (`GatewayOwner::Other`: the test stack's, the user's own, an earlier run's). With none running the code
+    /// is put in place at once; with this run's own, once nothing works, it is stopped without ending anything first.
     async fn try_now(&self, outdated: &Outdated, closed: Closed) -> Result<Tried> {
+        let owner = self.ops.gateway_owner().await;
+        if owner == GatewayOwner::Other {
+            return Ok(Tried::NotOurs);
+        }
         // only an answer that says nothing works counts; one that cannot tell is "not now"
         if !matches!(self.ops.working().await, Ok(0)) {
             return Ok(Tried::Busy);
+        }
+        if owner == GatewayOwner::Nobody {
+            self.replace(outdated).await?;
+            drop(closed);
+            return Ok(Tried::Replaced);
         }
         match self.ops.stop_gateway_when_idle().await? {
             Stop::Busy => Ok(Tried::Busy),
@@ -200,8 +246,9 @@ impl Setup {
         }
     }
 
-    /// Record how it ended, start the gateway on what is in place, and say it.
-    async fn finish(&self, outdated: &Outdated, result: Result<Waited>) -> Notice {
+    /// Record how it ended, start the gateway on what is in place (one that runs is left as it is), and say it. `not_ours`:
+    /// the last try found a gateway this run did not start.
+    async fn finish(&self, outdated: &Outdated, result: Result<Waited>, not_ours: bool) -> Notice {
         let home = self.ops.home();
         if !matches!(result, Ok(Waited::GaveUp)) {
             match state::load(&home) {
@@ -214,13 +261,23 @@ impl Setup {
                 Err(e) => tracing::warn!(error = %e, "could not record how the update ended"),
             }
         }
-        if let Err(e) = self.ops.start_gateway().await {
+        // only after a try that may have stopped this run's gateway: a wait that never got that far leaves the engine as it is
+        if !matches!(result, Ok(Waited::GaveUp))
+            && let Err(e) = self.ops.start_gateway().await
+        {
             tracing::warn!(error = %e, "the gateway did not start after the update; the next link starts it");
         }
         match result {
             Ok(Waited::Done) => {
                 tracing::info!(?outdated, "the engine's code was updated to this app's");
                 Notice::Done(outdated.done_line())
+            }
+            Ok(Waited::GaveUp) if not_ours => {
+                tracing::info!(
+                    ?outdated,
+                    "the gateway was never one this run started; the next start tries again"
+                );
+                Notice::Later(NOT_OURS_LATER_LINE.to_owned())
             }
             Ok(Waited::GaveUp) => {
                 tracing::info!(

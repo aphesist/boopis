@@ -139,6 +139,9 @@ impl HermesOps for Fake {
     async fn stop_gateway_when_idle(&self) -> Result<crate::setup::ops::Stop> {
         Ok(crate::setup::ops::Stop::Gone)
     }
+    async fn gateway_owner(&self) -> crate::hermes::GatewayOwner {
+        crate::hermes::GatewayOwner::ThisRun
+    }
     async fn restart_gateway_when_idle(&self) -> Result<bool> {
         let answer = *self.restart_answer.lock().unwrap();
         self.idle_restarts.lock().unwrap().push(answer);

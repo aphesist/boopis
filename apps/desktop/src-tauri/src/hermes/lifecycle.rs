@@ -47,6 +47,19 @@ pub struct HermesStatus {
     pub requirement_met: Option<bool>,
 }
 
+/// Who runs the gateway of a home, as far as stopping it goes (`Supervisor::gateway_owner`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GatewayOwner {
+    /// No gateway answers on the home's control socket.
+    Nobody,
+    /// A gateway this run of the host launched, with this run's environment (it was started with this run's secret-channel
+    /// token).
+    ThisRun,
+    /// Any other: one a test stack, the user's own Hermes or an earlier run of the app started, or one whose start cannot be
+    /// shown to be this run's (no process table to read, no control socket on this platform).
+    Other,
+}
+
 /// Runs Hermes for the host. One per app; cheap to share.
 pub struct Supervisor {
     env: Environment,
@@ -349,6 +362,23 @@ impl Supervisor {
             }
         }
         self.ensure(home).await.map(|_| ())
+    }
+
+    /// Who runs the gateway of `home`: nobody, this run, or anyone else ([`GatewayOwner`]). The evidence is the pid the kernel
+    /// reports on the gateway's control socket and that process's start environment, which holds this run's token only when
+    /// this run launched it (`PeerPolicy::started_by_this_run`). Without a socket (Windows) or a token, nothing can be shown
+    /// to be this run's, so it is `Other`.
+    pub async fn gateway_owner(&self, home: &Path) -> GatewayOwner {
+        if !cfg!(unix) {
+            return GatewayOwner::Other;
+        }
+        let Ok(identity) = control::identify(home).await else {
+            return GatewayOwner::Nobody;
+        };
+        match (identity.pid, &self.channel) {
+            (Some(pid), Some(peers)) if peers.started_by_this_run(pid) => GatewayOwner::ThisRun,
+            _ => GatewayOwner::Other,
+        }
     }
 
     /// Whether [`Supervisor::ensure`] already succeeded for `home` in this run.
