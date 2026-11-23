@@ -1,22 +1,25 @@
 <!doctype html><html><meta charset="utf-8"><title>Fixed pose probe</title>
-<!-- The fixed 3/4 pose, through orb2's own 3D model and its public API only: the `gaze` attribute ("yaw pitch" in degrees,
-     orb2's home gaze), with the idle off. orb2 turns the 3D body by its own head ratio, places the eyes on the turned
-     surface and projects both in perspective. The hidden "pose" reaction only sets the pill eyes and no blink; it adds no
-     motion. ?gaze=Y,P draws all 15 shapes at one angle; ?opts=Y,P;Y,P;Y,P draws one labelled row per option. -->
+<!-- The fixed 3/4 pose. The body is turned by orb2's own 3D rotation (yaw, pitch, roll), set outright through the motion
+     keys byaw, bpitch and bk, and bodyRoll (G8); the eyes are one face for every shape (decal 1, G8): the first fixed
+     pose's pair, anchored at the body's face point. ?opts=Y,P,R;Y,P,R;... draws one labelled row per body orientation
+     (degrees), all 15 shapes; ?body=Y,P,R draws one orientation in a grid. -->
 <style>html,body{margin:0;background:#0e0e0e;color:#9a9a9a;font:13px Inter,system-ui,sans-serif}#g{display:flex;flex-wrap:wrap;width:960px}.c{width:96px;height:96px;display:grid;place-items:center}
-.row{display:flex;align-items:center}.lab{width:150px;padding-left:16px;color:#e8e8e8;font-size:15px}.lab small{display:block;color:#8a8a8a;font-size:12px}.cell{width:92px;height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}.cell span{font-size:11px}</style>
+.row{display:flex;align-items:center}.lab{width:170px;padding-left:16px;color:#e8e8e8;font-size:15px}.lab small{display:block;color:#8a8a8a;font-size:12px;line-height:17px}.cell{width:92px;height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}.cell span{font-size:11px}</style>
 <body><div id="g"></div><script>
 const q = Object.fromEntries(new URLSearchParams(location.search));
 const SH = ['circle', 'squircle', 'soft', 'wide', 'tall', 'bean', 'drop', 'ghost', 'triangle', 'hexagon', 'diamond', 'cloud', 'clover', 'flower', 'star'];
+const D = Math.PI / 180;
 const s = document.createElement('script'); s.src = 'lib/orb-avatar.' + (q.lib || 'tuned') + '.js';
 s.onload = () => { const A = window.OrbAvatar, g = document.getElementById('g'), size = q.size || 64;
-  A.defineReaction('pose', { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: null });
-  const orb = (shape, gz) => `<orb-avatar size="${size}" shape="${shape}" color="#f5f5f5" eye-color="#0e0e0e" reaction="pose" idle-motion="off" mode="drift" gaze="${gz.join(' ')}" face-scale="1.25" jelly="0" style="width:${size}px"></orb-avatar>`;
+  const E = (q.eyes || '30,25,45').split(',').map(Number);   /* the face's own look on the sphere, degrees: yaw, pitch, lean */
+  const def = (n, [y, p, r]) => A.defineReaction(n, { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'),
+    motion: () => ({ byaw: y * D, bpitch: p * D, bk: 1, bodyRoll: (r || 0) * D, decal: 1, deyaw: E[0] * D, depitch: E[1] * D, deroll: E[2] * D, w: 1 }) });
+  const orb = (shape, n) => `<orb-avatar size="${size}" shape="${shape}" color="#f5f5f5" eye-color="#0e0e0e" reaction="${n}" idle-motion="off" mode="drift" face-scale="1.25" jelly="0" style="width:${size}px"></orb-avatar>`;
   if (q.opts) {
     g.style.width = 'auto'; g.style.display = 'block';
-    q.opts.split(';').forEach((o, k) => { const gz = o.split(',').map(Number);
-      g.insertAdjacentHTML('beforeend', `<div class="row"><div class="lab">${'ABCDE'[k]}<small>yaw ${gz[0]}°, pitch ${gz[1]}°</small></div>${SH.map((sh) => `<div class="cell">${orb(sh, gz)}<span>${sh}</span></div>`).join('')}</div>`); });
-  } else { const gz = (q.gaze || '30,12').split(',').map(Number); for (const sh of SH) { const c = document.createElement('div'); c.className = 'c'; c.innerHTML = orb(sh, gz); g.appendChild(c); } }
+    q.opts.split(';').forEach((o, k) => { const v = o.split(',').map(Number); def('pose' + k, v);
+      g.insertAdjacentHTML('beforeend', `<div class="row"><div class="lab">${'ABCDE'[k]}<small>body yaw ${v[0]}°, pitch ${v[1]}°${v[2] ? `, roll ${v[2]}°` : ''}</small></div>${SH.map((sh) => `<div class="cell">${orb(sh, 'pose' + k)}<span>${sh}</span></div>`).join('')}</div>`); });
+  } else { def('pose', (q.body || '30,20,0').split(',').map(Number)); for (const sh of SH) { const c = document.createElement('div'); c.className = 'c'; c.innerHTML = orb(sh, 'pose'); g.appendChild(c); } }
   setTimeout(() => document.body.dataset.ready = 1, 1500); };
 document.head.appendChild(s);
 </script></body></html>

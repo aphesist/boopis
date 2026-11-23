@@ -713,6 +713,7 @@ Far 3D turns are fixed in the geometry, not clamped, so the life stays:
 - G5: a resting bot is exactly still: 0 pixels change.
 - G6: moving edges are drawn at 4x (8x on small bots) and scaled down, so they glide instead of flickering.
 - G7: a hop's top and a bounce's landing ease instead of reversing inside one frame.
+- G8: a reaction can set the body's 3D rotation outright and draw one face on top (the fixed pose).
 
 **The rest of the decision:**
 
@@ -720,18 +721,15 @@ Far 3D turns are fixed in the geometry, not clamped, so the life stays:
 - Sizes: Grok-Bot's, with sidebar rows at 28 px and the rail at 36 px.
 - The blink: 0.2 s.
 
-**The fixed pose** (the full spec is in `character/ORBS.md` §23; `character/K04-pose-options.jpg` shows three angles, all
-15 shapes each). At rest, every bot in the dock, the Bots sidebar, the rail and the 44 px main bot holds one 3/4 pose.
-It is orb2's own 3D, set through its public `gaze` attribute:
+**The fixed pose** (proposed, awaiting the owner's pick; the full spec is in `character/ORBS.md` §23, and
+`character/K05-pose-options.jpg` shows three orientations, all 15 shapes each). At rest, every bot in the dock, the Bots
+sidebar, the rail and the 44 px main bot holds one 3/4 pose:
 
-- **The angle: yaw 38°, pitch 15°** (option B, recommended; A is 25°/10°, C is 50°/20°). It is one gaze for every shape.
-- **What orb2 does with it:** it turns each 3D body by its own head ratio, places the eyes on the turned surface and
-  projects both in perspective. Nothing is tuned per shape.
-- **The one limit:** G3 holds the lobed bodies' eyes to 43° and 17°, which 38° and 15° stays inside.
+- **The body** is turned and tipped by orb2's own 3D rotation, set outright (G8), with one orientation for all shapes.
+  Recommended: B, yaw 35° and pitch 22°. A is 25° and 15°; C is 45° and 30° with a 6° roll.
+- **The eyes** are one face on top: the same pill pair, lean and size on every bot, at each body's face point.
 
-It is drawn with a hidden `defineReaction('pose', …)` (pill eyes, no blink, no motion) and `reaction="pose"
-gaze="38 15" idle-motion="off" mode="drift"`. The gaze stays the bot's home orientation when it wakes or enters a
-state. A resting bot never redraws (G5). The resting dock and sidebar bots take `jelly="0"`.
+A resting bot never redraws (G5).
 
 **Per surface:**
 
@@ -768,7 +766,7 @@ the bots.
 
 - `K01-clarity.jpg`.
 - `K02-main-bot.jpg`.
-- `K04-pose-options.jpg`: the three pose angles, all 15 shapes each.
+- `K05-pose-options.jpg`: the three pose orientations, all 15 shapes each (K04, gaze only, withdrawn).
 - `anim-dock`, `anim-sidebar`, `anim-room` and `anim-torture-before-after.mp4`. Every frame was checked with
   `probes/tools/edges.py`:
   - resting bots change 0 pixels;

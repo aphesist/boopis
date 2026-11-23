@@ -73,54 +73,54 @@ frame.
 `DESIGN-SYSTEM.md` §23 points here. At rest, the dock, the Bots sidebar, the rail and the 44 px main bot hold every bot
 in this one pose.
 
-**It is orb2's own 3D, nothing added** (owner, 23 November). Every orb2 shape is a 3D body. orb2 rotates the body, puts
-the eyes on its turned surface and projects both in perspective; its public `gaze` attribute sets that home orientation
-("yaw pitch", in degrees). The pose is one gaze for every shape:
+**Proposed, awaiting the owner's pick (K05).** `K05-pose-options.jpg` shows all 15 shapes at three orientations.
 
-| | Yaw | Pitch | |
-|---|---|---|---|
-| A | 25° | 10° | the flat bodies read nearly front-on |
-| **B (recommended)** | **38°** | **15°** | **a clear 3/4 on every shape; the eyes sit well inside the face** |
-| C | 50° | 20° | the strongest turn; the circle's eyes near the rim |
+**The body is turned and tipped in orb2's own 3D.**
+- orb2 rotates every shape as a 3D solid with one rotation: yaw, pitch and roll (`mat3D`). This is what turns and tips
+  the cone in the demo's ambient-idle companion.
+- orb2 has no public control for that rotation apart from the eye gaze: the body follows the gaze at 0.54 on a solid,
+  so a held look leaves the body nearly flat. That is why K04 showed only a sideways turn.
+- G8 lets a reaction set the rotation outright, with the motion keys `byaw`, `bpitch` and `bk` (how far the body takes
+  them, blended by orb2's morph). Roll is orb2's own `bodyRoll`.
+- The outline is orb2's 3D silhouette in perspective. Nothing is tuned per shape.
 
-`K04-pose-options.jpg` draws all 15 shapes at each angle. The angle was chosen by eye in orb2's real 3D, not by matching
-Grok-Bot's pixels.
+**The eyes are one face on top.**
+- With `decal` 1 (G8), every bot gets the same pill pair, with the same lean and size, drawn as orb2 draws the circle's
+  eyes for one look: `deyaw` 20°, `depitch` 18°, `deroll` 40°.
+- The pair sits at each body's own face point (orb2's `ox`, `oy`) as the body turns, and stays inside the outline (G2).
 
-**What orb2 does with it.** All of this is orb2's own model, unchanged:
-- **Turn:** the body turns by orb2's own head ratio, 0.54 of the gaze on a solid and 0.68 on the sphere, as in every
-  orb2 look. The eyes lead on the face.
-- **Eyes:** they sit on the turned surface and foreshorten with it.
-- **Outline:** each shape's 3D silhouette, in perspective.
-- **Limits:** the only one is G3. The four lobed bodies hold the eye turn to 0.75 rad (43°) and the pitch to 0.30
-  (17°), which an angle of 38° and 15° stays inside.
+| | Body yaw | Body pitch | Roll | |
+|---|---|---|---|---|
+| A | 25° | 15° | 0 | gentle |
+| **B (recommended)** | **35°** | **22°** | **0** | **a clear turn and tip on every shape; the face stays well inside** |
+| C | 45° | 30° | 6° | the strongest; the narrow shapes show mostly their side |
 
-Earlier versions are withdrawn:
-- a hand-fitted eye angle with a roll (the first pose);
-- a body locked to the eyes by a new motion key, with per-shape ratios (G4).
+**Withdrawn:**
+- the first pose (eyes only, the body barely turned);
+- G4 (the body locked to the eyes, with per-shape ratios);
+- K04 (gaze only: a sideways turn and no tip).
 
-They were corrections on top of orb2's model, and the owner found the bots looked strange with them.
-
-**How it is drawn.** It is a hidden reaction (pill eyes, or the bot's own eye shape, no blink, no motion) on orb2's
-public API:
+**How it is drawn** (with the recommended B):
 
 ```js
+const D = Math.PI / 180;
 OrbAvatar.defineReaction('pose', {
   blink: false,
   useEyeShape: true,   // a constant face: no redraw while the bot rests
   face: (t, e, eye) => OrbAvatar.shapes.pairEyes(eye || 'pill'),
-  motion: null,
+  motion: () => ({ byaw: 35 * D, bpitch: 22 * D, bk: 1, bodyRoll: 0, decal: 1, deyaw: 20 * D, depitch: 18 * D, deroll: 40 * D, w: 1 }),
 });
 ```
 
 ```html
-<orb-avatar reaction="pose" gaze="38 15" idle-motion="off" mode="drift" face-scale="1.25" …>
+<orb-avatar reaction="pose" idle-motion="off" mode="drift" face-scale="1.25" jelly="0" …>
 ```
 
-- The gaze stays the bot's home orientation when it wakes or enters a state, so a hovered bot's lively idle and every
-  state face start from and return to the same 3/4 angle.
-- A resting bot never redraws (G5): 0 changed pixels in every clip.
-- The badge, the unread dot and the status ring are unchanged.
-- The pose is the same at every size (28, 36, 40, 44) and under reduced motion.
+- `byaw`, `bpitch`, `bk`, `decal`, `deyaw`, `depitch` and `deroll` are G8's, in the probe orb2.
+- Waking or entering a state blends the body and the face from the pose to orb2's normal look over the reaction morph,
+  and back again.
+- A resting bot never redraws (G5): 0 changed pixels.
+- The pose is the same at every size and under reduced motion.
 
 ## 1. Clarity: why ours read less clearly
 
