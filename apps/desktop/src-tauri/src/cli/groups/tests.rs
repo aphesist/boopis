@@ -160,7 +160,11 @@ async fn create_says_what_is_wrong() {
     let o = go(&fake, None, &s, false, &["nope"]).await;
     assert_eq!(o.code, 2);
     assert!(o.err.contains("groups nope is not a command"), "{}", o.err);
-    assert!(o.err.contains(&super::super::help::hint("groups")), "{}", o.err);
+    assert!(
+        o.err.contains(&super::super::help::hint("groups")),
+        "{}",
+        o.err
+    );
     let o = go(&fake, None, &s, false, &[]).await;
     assert_eq!(o.code, 2);
     // no subcommand prints the page, as `bots` and `team` do
