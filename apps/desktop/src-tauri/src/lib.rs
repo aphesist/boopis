@@ -347,6 +347,11 @@ pub fn run() {
         tracing::warn!(error = %e, "could not refresh the TypeScript bindings");
     }
     let result = tauri::Builder::default()
+        // First of all (B28): a second launch hands its arguments to the running app and exits while Tauri builds it, before
+        // any window, link or file of its own exists; the running app shows its window and nothing restarts.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            bring_forward(app);
+        }))
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
@@ -630,6 +635,28 @@ pub fn run() {
         Err(e) => {
             tracing::error!(error = %e, "the app failed to start");
             std::process::exit(1);
+        }
+    }
+}
+
+/// boopis was launched again while it runs (the desktop launcher, `panacea-ctl open boopis`): its window comes forward instead
+/// of a second app starting. A second app used to start its own Local API, and then the first one's shutdown deleted the new
+/// one's endpoint and token files (B28). The second launch's arguments are not acted on: a command (`boopis doctor`,
+/// `boopis bots ...`) never gets this far (`cli::dispatch` runs it and exits before the app is built), and the engine choice
+/// (`--engine`) is the running app's.
+fn bring_forward(app: &tauri::AppHandle) {
+    let Some(window) = app.get_webview_window("main") else {
+        tracing::info!("boopis was launched again, and has no main window to show");
+        return;
+    };
+    tracing::info!("boopis was launched again; showing the running window");
+    for (what, done) in [
+        ("unminimize", window.unminimize()),
+        ("show", window.show()),
+        ("focus", window.set_focus()),
+    ] {
+        if let Err(e) = done {
+            tracing::debug!(error = %e, what, "could not bring the window forward");
         }
     }
 }

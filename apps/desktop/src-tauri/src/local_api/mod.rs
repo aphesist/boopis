@@ -261,7 +261,7 @@ impl LocalApi {
         if let Some(r) = self.running.lock().await.take() {
             r.server.stop();
         }
-        token::Files::under(&self.dir).remove();
+        token::Files::under(&self.dir).remove_if_ours();
     }
 }
 
