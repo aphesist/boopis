@@ -342,7 +342,7 @@ WCAG 2.2 AA stays the floor (R-a11y-1 to 8). What v7 adds or tightens because of
 | P2 search | **S5 is the default**: keyboard first with the hint, and the hint itself is clickable and opens the palette; the button (S1) and the pill (S2) stay as Settings options | 7 |
 | P3 the mark | **approved**, info labels included; the outline (i) is no longer a fallback, kept only for forced colours (17.2) | 17 |
 | P4 status | **approved** | 12.2 |
-| Blanks | **changed**: a session's blank waits inline with a countdown (the bot paused, amber); a bot's blank does not wait and goes straight to a card (17.1) | 17 |
+| Blanks | **changed**: sessions only. A session's blank waits inline with a countdown (the agent paused, amber), then lapses to a card; bots never have blanks and ask through approval cards with no time limit (17.1) | 17 |
 
 ### 15.2 The attention reversal (09 A)
 
@@ -393,7 +393,7 @@ The owner's request (23 November): one standardized dashed-underline animation, 
 | Context | What it is | At rest | Opening it |
 |---|---|---|---|
 | **Feedforward** (the composer) | while the person types, the agent reads the request and marks the readings and assumptions it would otherwise ask about later; the person changes them inline before sending (`plugins/boopis` feedforward, `docs/ARCHITECTURE.md` "Feedforward, blanks") | **always visible**: that is the feature | the reading's menu (alt+Down or a click, `ui:decision`); Tab reaches the assumptions |
-| **Blanks** (a reply) | while the bot writes, it leaves inline questions the person answers right there, without waiting or sending a new message (`blank.opened`, `blank.filled`, `blank.lapsed`; `rpc/blanks.py`, `docs/PROTOCOL.md`) | **always visible** | the inline answer in the gap (the options, if the blank has any, as a menu) |
+| **Blanks** (a session's reply; sessions only) | while the agent writes, it leaves inline questions the person answers right there, without waiting or sending a new message (`blank.opened`, `blank.filled`, `blank.lapsed`; `rpc/blanks.py`, `docs/PROTOCOL.md`) | **always visible** | the inline answer in the gap (the options, if the blank has any, as a menu) |
 | **Info labels** (settings and detail rows) | a term that explains itself; replaces the (i) (the owner's pick 08 Info C) | **hidden**; revealed by hovering its row or card, or focusing the label; shown at rest where there is no hover | the explanation popover |
 
 ### 17.1 The primitive
@@ -423,9 +423,9 @@ The owner's request (23 November): one standardized dashed-underline animation, 
   - **Filled in time:** solid accent under the person's words, in the same reply; the bot resumes from there.
   - **Lapsed:** the time ran out. The bot keeps going on its own guess, which the reply shows in place of the gap with a quiet "(my guess)" and the shown mark; the question stays as a card under the reply (or an end-of-turn question) that can still be answered.
   - **Answered late:** the answer in the card turns solid accent and is sent as a **correction** ("sent as a correction"), which the bot takes as its next message.
-  - **Bots: waiting is off by default.** A bot's blank pauses nothing: it goes straight to "keep working, ask later", that is the card at once, with the bot's guess in the reply. A bot can be set to wait like a session in its settings.
+  - **Blanks are for sessions only.** Bots never leave blanks: a bot asks only through the approvals the owner set up beforehand (the rules engine and its tiers), rendered as approval cards (`docs/specs/approval-surfaces.md` on `w31/specs`, Grok's card as the reference), with no countdown: a bot's approval waits until it is answered.
   - Reduced motion: the countdown changes its digits only; the mark appears whole.
-  - **This needs the protocol to change** (`docs/PROTOCOL.md`, `plugins/boopis/exec` and `rpc/blanks.py`): today `leave_blank` returns at once ("the cell goes on"), `blank.lapsed` means "the turn ended unanswered", and a fill after that arrives as the next turn. The owner's decision needs a timed wait on `blank.open` (a `wait_s`, the cell paused), a lapse on timeout carrying the guess the bot went on with, a per-bot "wait" setting off by default, and a late fill marked as a correction. Until the plugin has them, the UI can show only filled and lapsed.
+  - **This needs the protocol to change** (`docs/PROTOCOL.md`, `plugins/boopis/exec` and `rpc/blanks.py`): today `leave_blank` returns at once ("the cell goes on"), `blank.lapsed` means "the turn ended unanswered", and a fill after that arrives as the next turn. The owner's decision needs a timed wait on `blank.open` (a `wait_s`, the cell paused), a lapse on timeout carrying the guess the bot went on with, and a late fill marked as a correction. Until the plugin has them, the UI can show only filled and lapsed.
 - **Info labels:** the label is a button only where it explains (one tab stop); its row's `:hover` or `:focus-within` reveals the mark (draw-in); hovering the label opens the popover after 300 ms (at once while warm, as tooltips), 8 from the label; Enter or Space opens it, Esc closes and returns focus. Under `(hover: none)` the marks show at rest, and a tap opens the popover.
 - **The helper:** `ui.mark(target, { state, reveal, kind, onOpen })` and `html.mark(text, opts)`; components call it, never draw dashes themselves. `ui.markReveal(container, 'hover' | 'always')` sets a context.
 

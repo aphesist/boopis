@@ -1328,7 +1328,7 @@
     "P2": "S5 default, the hint clickable; button and pill as Settings options",
     "P3": "approved, info labels included",
     "P4": "approved",
-    "blanks": "sessions wait with a countdown (amber, bot paused) then lapse to a card; bots do not wait"
+    "blanks": "sessions only: wait with a countdown (amber, the agent paused), then lapse to a card; bots never have blanks and ask through approval cards with no time limit"
   },
   "mark": {
     "about": "the one dashed underline (DESIGN-SYSTEM.md 17): feedforward and blanks always visible, info labels revealed on hover or focus",
@@ -1378,10 +1378,11 @@
         "late": "the card's answer is sent as a correction"
       },
       "bots": {
-        "wait": false,
-        "behaviour": "straight to a card: keep working, ask later; a bot can be set to wait"
+        "blanks": false,
+        "asks_by": "approval cards (docs/specs/approval-surfaces.md on w31/specs), set up beforehand through the rules engine and tiers",
+        "time_limit": null
       },
-      "protocol": "needs a timed wait on blank.open, a lapse with the guess, a per-bot wait setting, and a late fill marked as a correction (docs/PROTOCOL.md, plugins/boopis/exec, rpc/blanks.py)"
+      "protocol": "needs a timed wait on blank.open, a lapse with the guess, and a late fill marked as a correction (docs/PROTOCOL.md, plugins/boopis/exec, rpc/blanks.py)"
     }
   }
 }
