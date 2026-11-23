@@ -5,7 +5,7 @@
    its diff, Roll back, Remove, kill-list banners) and Sources. The view never fetches: it reads and writes through
    `StoreProvider` and shows each failure as the host's own sentence. An item's own text is marked `data-store-item`. */
 import { progressDots, setProgress, ui } from '@boopis/ui';
-import { tipsIfClipped } from '../../core/clip';
+import { clipSpots, tipsIfClipped } from '../../core/clip';
 import { STORE_ITEM, storeItem } from '../../core/engine-words';
 import { reduced } from '../../core/dom';
 import type { FormOutcome, FormSpec, FormsSource, InstallPlan, InstallReceipt, StageResult, StoreBrowse, StoreDetail, StoreItem, StoreKind, StoreProvider, StoreScope, StoreSource, UpdateDiff } from '../../data';
@@ -117,11 +117,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     return s;
   }
   /* a title or a line cut by the row's width shows whole in the tooltip while it is cut */
-  const tipCut = (host: HTMLElement): void => {
-    requestAnimationFrame(() => {
-      tipsIfClipped([...host.querySelectorAll<HTMLElement>('.ui-row--item')].map((r) => [r, [r.querySelector<HTMLElement>('.ui-row__title'), r.querySelector<HTMLElement>('.ui-row__sub')], (r.querySelector('.ui-row__title')?.textContent ?? '') + '. ' + (r.querySelector('.ui-row__sub')?.textContent ?? '')] as const));
-    });
-  };
+  const tipCut = (host: HTMLElement): void => { tipsIfClipped(clipSpots(host)); };
   const wireRows = (host: HTMLElement): void => {
     ui.hydrate(host);
     for (const b of host.querySelectorAll<HTMLElement>('button[data-store-open]:not(.ui-row)')) b.addEventListener('click', () => { void openItem(b.dataset['storeOpen'] ?? ''); });
@@ -256,6 +252,16 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
           clear.addEventListener('click', () => { B.query = ''; B.kind = 'all'; B.source = 'any'; void drawBrowse({ focus: '#hx-store-q input, input#hx-store-q' }); });
           e.append(clear);
           parts.push(e);
+          /* a search narrowed by kind or source that finds nothing may still find something without it: ask the host, and offer
+             its own count of what the wider search holds, as the empty state's one action in place of clearing */
+          if (q && (B.kind !== 'all' || B.source !== 'any')) {
+            store.search(q, filterOf('all', 'any'), null).then((wide) => {
+              if (mine !== gen || !e.isConnected || !wide.total) return;
+              const all = ui.button({ label: `Show the ${plural(wide.total, 'result')} in every kind and source`, size: 's', variant: 'primary', attrs: { 'data-store-widen': '' } });
+              all.addEventListener('click', () => { B.kind = 'all'; B.source = 'any'; void drawBrowse({ focus: '#hx-store-q input, input#hx-store-q' }); });
+              if (!clear.contains(document.activeElement)) clear.replaceWith(all);   /* the empty state's one action (R-empty-1) */
+            }).catch(() => undefined);
+          }
         } else parts.push(notice('The store is empty', sources.length ? 'No source has listed anything yet. Open Sources to read them again.' : 'Every source is off. Switch one on in Sources.'));
       }
       if (page.next_cursor) { const more = ui.button({ label: 'Show more', size: 's' }); more.addEventListener('click', () => { void load(true); }); parts.push(more); }

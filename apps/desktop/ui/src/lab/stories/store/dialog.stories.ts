@@ -57,7 +57,7 @@ function manyItems(now: number): StoreItem[] {
 }
 
 /** the app on a store with these options: the clock is the real one (so "read just now" stays true), and forty more items */
-const withStore = (o: MockStoreOptions = {}) => (p: DataProvider): DataProvider => ({ ...p, store: createMockStore({ now: () => Date.now(), extraItems: [...connectorItems(), ...manyItems(Date.now()), ...recommendedItems()], ...o }) });
+const withStore = (o: MockStoreOptions = {}) => (p: DataProvider): DataProvider => ({ ...p, store: createMockStore({ now: () => Date.now(), extraItems: [...manyItems(Date.now()), ...recommendedItems(), ...connectorItems()], ...o }) });
 
 /** waits until `ok` holds (the store's view is imported the first time it opens, so a fixed wait races it on a busy machine) */
 const until = async (c: AppCtx, ok: () => boolean, ms = 5000): Promise<void> => { for (let t = 0; t < ms && !ok(); t += 50) await c.wait(50); };

@@ -19,7 +19,7 @@ import '../modules/cards';
 import { useFormsHost } from '../modules/cards/forms-host';
 import type { FormOutcome, FormSpec, FormsSource } from '../data';
 import type { ItemRef } from '@boopis/ui';
-import { tipsIfClipped } from '../core/clip';
+import { clipSpots, tipsIfClipped } from '../core/clip';
 import { connectorSigninForm, fromConnectorForm } from './forms';
 import type { ConnectorFormIn } from './forms';
 import type { ConnectorCatalogEntry, ConnectorInfo, ConnectorInstall, ConnectorRequest, ConnectorSource, ConnectorsBridge } from './connectors-bridge';
@@ -253,7 +253,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     collection.innerHTML = ui.html.setHead({ id: 'hx-conn-coll-h', label: 'From boopis\'s collection' }) +
       (rows.length ? '<ul class="ui-rows hx-conn__rows" data-ui="rows" aria-labelledby="hx-conn-coll-h">' + rows.join('') + '</ul>' : '') + none;
     ui.hydrate(collection);
-    requestAnimationFrame(() => { tipsIfClipped([...collection.querySelectorAll<HTMLElement>('.ui-row--item')].map((r) => [r, [r.querySelector<HTMLElement>('.ui-row__title'), r.querySelector<HTMLElement>('.ui-row__sub')], (r.querySelector('.ui-row__title')?.textContent ?? '') + '. ' + (r.querySelector('.ui-row__sub')?.textContent ?? '')] as const)); });
+    tipsIfClipped(clipSpots(collection));   /* measured at once, so every draw of the list carries the same tooltips */
   }
   /* choosing a connector: one way to run adds it at once; several open a menu that says what each one does and where it reaches */
   collection.addEventListener('ui:select', (e) => {

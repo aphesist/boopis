@@ -1039,9 +1039,11 @@ hx-card[data-accent] .cd-mini { --sq-line: color-mix(in srgb, var(--cd-accent) 3
 .ui-pub { display: inline-flex; align-items: baseline; gap: var(--sp-1); min-width: 0; max-width: 100%; vertical-align: bottom; }
 .ui-pub__mark { flex: none; align-self: center; width: var(--ic-s); height: var(--ic-s); }
 .ui-pub__name { min-width: 0; overflow-wrap: anywhere; }
-/* an item row: a two-line list row (R-row-4) whose lead is the item's 24px tile; the lead stays 12 from the row's start, out of its corner */
-.ui-row--item { height: var(--row-h-2); }
-.ui-row--item > .ui-row__lead { width: var(--imark, 24px); height: var(--imark, 24px); }
+/* an item row: a two-line list row (R-row-4) whose lead is the item's 24px tile, set into the row's corner like a corner control: as far
+   from the start as from the top and bottom, its corner the row's less that inset, never under the floor (R-corner-3) */
+.ui-row--item { --imark-in: calc((var(--row-h-2) - 24px) / 2); height: var(--row-h-2); padding-inline-start: var(--imark-in); }
+.ui-row--item > .ui-row__lead { width: 24px; height: 24px; }
+.ui-row--item > .ui-row__lead > .ui-imark { border-radius: max(var(--r-floor), calc(var(--r-s) - var(--imark-in))); }
 /* a settings row about one item (a connector, an installed item): its tile before the label */
 .ui-set__lead { display: flex; flex: none; align-self: center; }
 .ui-set__row:has(> .ui-set__lead) { gap: var(--sp-3); }

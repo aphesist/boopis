@@ -202,6 +202,7 @@ ui/
                         the store: store-bridge (the `store_*` commands as an interface), live/store (`StoreProvider` over it, and the project switch over the plugin's `store.policy.*`); the view is `modules/store/` (model, view, policy), reached by `openStore` in `modules/shell/dialogs.ts` (palette, mod+shift+S, `hx:open-store`)
   src/vendor/hermes-shared/  Hermes's generated gateway contract types (MIT), pinned, with NOTICE and PIN.json
   src/vendor/model-icons/  the provider logos (LobeHub, MIT) and which family a model id gets, with NOTICE
+  src/vendor/service-marks/  the service and publisher marks of the Store and Connectors (Simple Icons, CC0, unchanged) and the evidence each needs (map.json), with README.md
   vendor/               orb-avatar.min.js (the owner's <orb-avatar> web component, MIT) and its .d.ts; boopis-logo.js (the <boopis-logo> element, copied unchanged from design/v6/brand/logo, never edited here) with its .d.ts and NOTICE
   src/lab/              the UI lab (docs/UI-LAB.md): gallery, frame, stories (stories/<area>/*.stories.ts), fixtures, the coverage gate; lab.html is its page, never in the desktop build
   tests/                smoke (Playwright), parity (v6 against the port), perf (WebKitGTK and Chromium frame times; README.md), lab (the lab's checker: check.mjs, probe.js, rules.mjs), lab-golden (its screenshots), lib.mjs

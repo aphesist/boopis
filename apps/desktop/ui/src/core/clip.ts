@@ -27,3 +27,11 @@ export function tipsIfClipped(spots: ReadonlyArray<readonly [HTMLElement | null 
     else if (host.hasAttribute('data-tip-auto')) { host.removeAttribute('data-tip'); host.removeAttribute('data-tip-auto'); }
   }
 }
+
+/** the spots of every item row under `root` (the kit's `.ui-row--item`): the row shows its title and its line whole while either is cut */
+export function clipSpots(root: ParentNode): Array<readonly [HTMLElement, readonly (HTMLElement | null)[], string]> {
+  return [...root.querySelectorAll<HTMLElement>('.ui-row--item')].map((r) => {
+    const t = r.querySelector<HTMLElement>('.ui-row__title'), l = r.querySelector<HTMLElement>('.ui-row__sub');
+    return [r, [t, l], [t?.textContent ?? '', l?.textContent ?? ''].filter(Boolean).join('. ')] as const;
+  });
+}

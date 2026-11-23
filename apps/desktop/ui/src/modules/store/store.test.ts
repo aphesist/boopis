@@ -177,6 +177,18 @@ describe('the store view', () => {
     q().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); await tick(20);
     expect(root.querySelector('.hx-store__title')?.textContent).toBe('Firecrawl');
   });
+  it('a search narrowed to a kind that finds nothing offers the host\'s count in every kind instead', async () => {
+    const { root } = mount(); await tick(20);
+    (root.querySelector('[role=radio][data-value="mod"]') as HTMLElement).click(); await tick(30);
+    const q = root.querySelector<HTMLInputElement>('#hx-store-q input, input#hx-store-q') as HTMLInputElement;
+    q.value = 'firecrawl'; q.dispatchEvent(new Event('input', { bubbles: true })); await tick(250);
+    expect(text(root)).toContain('Nothing in mods matches “firecrawl”');
+    const widen = root.querySelector<HTMLElement>('[data-store-widen]') as HTMLElement;
+    expect(widen.textContent).toBe('Show the 1 result in every kind and source');
+    expect(root.querySelector('[data-store-clear]')).toBeNull();
+    widen.click(); await tick(30);
+    expect(root.querySelectorAll('.ui-row--item')).toHaveLength(1);
+  });
   it('Installed draws each item with its tile', async () => {
     const { root, view } = mount(); await tick(20);
     view.show('installed'); await tick(20);
