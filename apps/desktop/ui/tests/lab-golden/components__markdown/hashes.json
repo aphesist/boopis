@@ -20,24 +20,24 @@
   "h": 42
  },
  "a-path-the-host-found@bone": {
-  "sha": "b74687e1f808b38d468b5ace89c648e257ed6310",
+  "sha": "32dee534d58c3712011398ca8be86fc6f2dca1c7",
   "w": 624,
-  "h": 44
+  "h": 42
  },
  "a-path-the-host-found@catalog": {
-  "sha": "d8f9a8a9460a60693721140afa9bcb9ca854ddd3",
+  "sha": "4105a2f62a063d4fb150b4a38e446bd185050d27",
   "w": 624,
-  "h": 44
+  "h": 42
  },
  "a-path-the-host-found@graphite": {
-  "sha": "9fe82d8f5498423a8002d6f78ffc36094cd4d86c",
+  "sha": "c67aad905a3923bd386875ca0617f1f1e7cbd8dd",
   "w": 624,
-  "h": 44
+  "h": 42
  },
  "a-path-the-host-found@typewriter": {
-  "sha": "eca27d601f094b8c2df99511176ac18536ed7e77",
+  "sha": "dc46f09e6925719f4eb245c5c6782dcff12613f7",
   "w": 624,
-  "h": 44
+  "h": 42
  },
  "a-table@bone": {
   "sha": "303707f197a503199ac75bff5449ed5e20c5fdac",
@@ -120,43 +120,43 @@
   "h": 110
  },
  "long@bone": {
-  "sha": "1f0d26a57808eda09af10b782adb77367ad6c298",
+  "sha": "6e28adcfe1d88125b0b50a88bb4e61257e4558ed",
   "w": 344,
-  "h": 185
+  "h": 182
  },
  "long@catalog": {
-  "sha": "4e104d6ad3024b9dae9af2501dffc1f37700ccc5",
+  "sha": "ab8eb9f2692ff90a52134b67f91a31d8c9f976d5",
   "w": 344,
-  "h": 185
+  "h": 182
  },
  "long@graphite": {
-  "sha": "256153aa6cde143c79170cf4fc1d00fdabee04cf",
+  "sha": "a44aadd3e4570dfa727cd7d381f5fda40162d1a0",
   "w": 344,
-  "h": 185
+  "h": 182
  },
  "long@typewriter": {
-  "sha": "204b0c7e18a44e90d3bb6ac9c57a3b7efc16b12e",
+  "sha": "56d7b22c908cde586d247e1e8ba0240028357708",
   "w": 344,
-  "h": 185
+  "h": 182
  },
  "typical@bone": {
-  "sha": "030f43d3279c984738484e1f6c90aa8ca0413ef6",
+  "sha": "bb8239c3f5681e1ee64f31d1bfdccae6e219a8fb",
   "w": 624,
-  "h": 243
+  "h": 238
  },
  "typical@catalog": {
-  "sha": "f8a134e8ffa009ac116ae61a0f379e934841594d",
+  "sha": "93205f3e28fdc3bfaaf57073e0f21a99a61fc1e6",
   "w": 624,
-  "h": 243
+  "h": 238
  },
  "typical@graphite": {
-  "sha": "607647eb6ee8bacf4579a478b6c8f9cb89d8c9ef",
+  "sha": "c1a034a05551798fd82d416c829693cb62063f3c",
   "w": 624,
-  "h": 243
+  "h": 238
  },
  "typical@typewriter": {
-  "sha": "ff238faead2b1df688019696fb799853a5d5faf0",
+  "sha": "d31eb423f201a4527face1d0306f85e21f56bdf6",
   "w": 624,
-  "h": 243
+  "h": 238
  }
 }

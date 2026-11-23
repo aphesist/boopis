@@ -1,0 +1,162 @@
+{
+ "every-kind-in-a-bot-message@bone": {
+  "sha": "2d13288f857562c05851f5840bb848f6f0ee4315",
+  "w": 364,
+  "h": 193
+ },
+ "every-kind-in-a-bot-message@catalog": {
+  "sha": "f8d9cff25e55dedc4e4d5d6493aee201318b053b",
+  "w": 364,
+  "h": 193
+ },
+ "every-kind-in-a-bot-message@graphite": {
+  "sha": "73dd145c2f434bdbafbbe2d41f4d547a678e7f32",
+  "w": 364,
+  "h": 193
+ },
+ "every-kind-in-a-bot-message@typewriter": {
+  "sha": "eb9992c1c637151d654a5c24dab6ae9ff894852d",
+  "w": 364,
+  "h": 193
+ },
+ "in-a-paragraph@bone": {
+  "sha": "cea5992116726fec447160e6e382ec0536669bc4",
+  "w": 364,
+  "h": 324
+ },
+ "in-a-paragraph@catalog": {
+  "sha": "a43fee910533962ed51c1c4bc4af5fb568be85ac",
+  "w": 364,
+  "h": 324
+ },
+ "in-a-paragraph@graphite": {
+  "sha": "e0695a63f3424b85897fd085bb06355ddb361d9d",
+  "w": 364,
+  "h": 324
+ },
+ "in-a-paragraph@typewriter": {
+  "sha": "2478272d443821e16aeca0afcf175aaa78a0c726",
+  "w": 364,
+  "h": 324
+ },
+ "in-a-request-bubble@bone": {
+  "sha": "9bd6c98838d343c9025477478791325c7f172c4b",
+  "w": 364,
+  "h": 179
+ },
+ "in-a-request-bubble@catalog": {
+  "sha": "ec8160dc4cbd4ab3d5b26e6bbd61324df4ff1eb3",
+  "w": 364,
+  "h": 179
+ },
+ "in-a-request-bubble@graphite": {
+  "sha": "23ebac05d0c00698632da6c045cb585b70dbb090",
+  "w": 364,
+  "h": 179
+ },
+ "in-a-request-bubble@typewriter": {
+  "sha": "b172725dfe1838023021852c545393430b7481a8",
+  "w": 364,
+  "h": 224
+ },
+ "in-dense-text@bone": {
+  "sha": "632c6ec184e24fd72ed1723ce16d44f7601bde98",
+  "w": 364,
+  "h": 160
+ },
+ "in-dense-text@catalog": {
+  "sha": "01dcd0508aaa11a686df20d9779ad45311e62861",
+  "w": 364,
+  "h": 160
+ },
+ "in-dense-text@graphite": {
+  "sha": "7ad87290ac4c6965fd3f7e75436b9c1e7fb6ecfe",
+  "w": 364,
+  "h": 160
+ },
+ "in-dense-text@typewriter": {
+  "sha": "97512d312f0cfeea4696f4645d93abdb0ed84fe5",
+  "w": 364,
+  "h": 178
+ },
+ "in-the-room-composer@bone": {
+  "sha": "bbaf590400ee3c0797ab9a4815b8d8bb4c45ecb1",
+  "w": 364,
+  "h": 81
+ },
+ "in-the-room-composer@catalog": {
+  "sha": "45ea536ac0af02c938953ea677fc2e9cb0ae15e4",
+  "w": 364,
+  "h": 81
+ },
+ "in-the-room-composer@graphite": {
+  "sha": "32625b406c8aba205d4243dae8c3432b0c1a024f",
+  "w": 364,
+  "h": 81
+ },
+ "in-the-room-composer@typewriter": {
+  "sha": "316c694e3914b2a5d9dd91046f80f4e1cfe6e80c",
+  "w": 364,
+  "h": 93
+ },
+ "in-the-session-composer@bone": {
+  "sha": "c2dd90f8e59680f312aaa1fb17347ae3ddde0bac",
+  "w": 364,
+  "h": 81
+ },
+ "in-the-session-composer@catalog": {
+  "sha": "10d3a4c453ffec5391074d1dba7f1920ad9880c1",
+  "w": 364,
+  "h": 81
+ },
+ "in-the-session-composer@graphite": {
+  "sha": "f521805b37c2b8d3356a420db243c7c8f8cee0cc",
+  "w": 364,
+  "h": 81
+ },
+ "in-the-session-composer@typewriter": {
+  "sha": "8340eb3c6fb7d7c6dd5153682b74aeaace98e978",
+  "w": 364,
+  "h": 93
+ },
+ "long@bone": {
+  "sha": "a76771a080280a094f3143b409a2527e53e8b9ce",
+  "w": 364,
+  "h": 271
+ },
+ "long@catalog": {
+  "sha": "938afe8d2e20517fd374338b81143f995ea58bbf",
+  "w": 364,
+  "h": 271
+ },
+ "long@graphite": {
+  "sha": "eb53325ac157b896cb686605ea9016738e689fec",
+  "w": 364,
+  "h": 271
+ },
+ "long@typewriter": {
+  "sha": "d61c09f294eb5fd79bf09da763e93bbbc686097e",
+  "w": 364,
+  "h": 316
+ },
+ "typical@bone": {
+  "sha": "91c6ee022fc1cb6de085be45ea3ef78b7d5cd32e",
+  "w": 364,
+  "h": 69
+ },
+ "typical@catalog": {
+  "sha": "5107512926f13a237ab466e489b148ec5e1d74f0",
+  "w": 364,
+  "h": 69
+ },
+ "typical@graphite": {
+  "sha": "a6174a9b9732ce74033625e165b8c2edfa68d783",
+  "w": 364,
+  "h": 69
+ },
+ "typical@typewriter": {
+  "sha": "a40446c870e4e65d3dc9ad6131e2c04f1163cddd",
+  "w": 364,
+  "h": 69
+ }
+}
