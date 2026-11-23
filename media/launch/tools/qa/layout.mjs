@@ -108,7 +108,20 @@ export async function textEdges(page, { vertical = false, step = 0.25, minPx = 1
       e.to = round(t, 2); found.set(key, e);
     }
   }
-  return [...found.values()];
+  /* the pieces of one line (words or letters set as separate spans) with the same fault over the same time: one entry */
+  const lines = new Map();
+  for (const e of found.values()) {
+    const side = e.kind.replace(/\s*\(.*$/, '') + '|' + (e.kind.match(/left|right|top|bottom/g) ?? []).join(',');
+    const k = e.from + '|' + e.to + '|' + side + '|' + Math.round(e.box[1] / 24);
+    const l = lines.get(k);
+    if (!l) { lines.set(k, { ...e, parts: [e] }); continue; }
+    l.parts.push(e);
+  }
+  return [...lines.values()].map((l) => {
+    const parts = l.parts.sort((p, q) => p.box[0] - q.box[0]);
+    const x0 = Math.min(...parts.map((p) => p.box[0])), y0 = Math.min(...parts.map((p) => p.box[1])), x1 = Math.max(...parts.map((p) => p.box[0] + p.box[2])), y1 = Math.max(...parts.map((p) => p.box[1] + p.box[3]));
+    return { text: parts.map((p) => p.text).join(parts.every((p) => p.text.length === 1) ? '' : ' '), kind: parts[0].kind, from: l.from, to: l.to, box: [x0, y0, x1 - x0, y1 - y0] };
+  });
 }
 
 /** the acts' spans on the film's clock, from src/acts/seams.ts (S1, S2, S3) */

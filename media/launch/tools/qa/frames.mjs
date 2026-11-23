@@ -5,13 +5,15 @@
                    grain). Both frames at 480x270 (270x480 for 9:16), a 3x3 box over each to take the grain out, then
                    8x8 blocks whose mean difference is over 4 grey levels (2 from the page, which has no grain or
                    codec); touching blocks are one region, reported in the video's pixels with how far its content
-                   moved (the shift up to 24 px that matches it best, when it explains the change).
+                   moved (the shift up to 12 px at 480 that matches it best, when it halves the change). A region of
+                   two blocks or more fails the join; a lone block is left to grain and the codec.
      confirm       a few frames of a render re-rendered from the page with 64 sub-frames over the shutter (captured in
                    order, averaged in linear light, no grain) and compared with the render at 480x270 after a 3x3 box:
-                   6 or more touching pixels over 12 levels apart are where the render's motion blur departs from a
-                   smooth one, which is a double image (or a stale sample). The frames are the double-image detector's and the moments of the
-                   render's fastest motion. When the render and the page disagree on most of the frame, the render is
-                   not of this page's source and nothing is confirmed. */
+                   30 or more touching pixels over 12 levels apart (20x20 px at 1080p) are where the render's motion
+                   blur departs from a smooth one, which is a double image (or a stale sample). The frames are the
+                   double-image detector's and the moments of the render's fastest motion. When the render and the
+                   page disagree on most of the frame, the render is not of this page's source and nothing is
+                   confirmed. */
 import { execFileSync } from 'node:child_process';
 import { decodePNG } from '../lib/png.mjs';
 import { round } from './video.mjs';
@@ -129,7 +131,7 @@ export async function confirmDoubles(page, cdp, file, frames, { W, H, fps, shutt
   for (const k of frames) {
     const shipped = videoFrame(file, { w, h, which: 'n', n: k });
     const ref = await pageExposure(page, cdp, k / fps, { W, H, w, n, shutter, fps });
-    const d = pixelRegions(shipped, ref.g, w, h, { level: 12, minArea: 6, scale });
+    const d = pixelRegions(shipped, ref.g, w, h, { level: 12, minArea: 30, scale });
     /* most of the frame disagreeing (or a high median) means the render is not of this source */
     const status = d.median > 3 || d.share > 0.2 ? 'mismatch' : d.regions.length ? 'doubled' : 'clean';
     out.push({ frame: k, t: round(k / fps, 3), status, median: d.median, share: d.share, regions: status === 'doubled' ? d.regions.slice(0, 4) : [] });

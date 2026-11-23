@@ -10,8 +10,10 @@
                     +0.5), and since each copy is sharp it falls to about 0 at t = L/2
 
    So a block is doubled when the correlation is at least 0.3 somewhere in 0.85 L to 1.15 L, nowhere below -0.1 there,
-   at most 0.1 at L/2, and 0.3 above it. Repeated UI (lists, chips, grids, two eyes) puts its peaks at its own pitch,
-   not at the streak length, and a smear's negative lobe vetoes it when the two coincide.
+   at most 0.1 at L/2, and 0.3 above it, and at most 0.15 at 2 L (two copies are two; type in a fixed pitch, a list
+   or a grid repeats at twice its pitch too, which keeps a sharp scrolling wall of words from passing for copies).
+   Repeated UI otherwise puts its peaks at its own pitch, not at the streak length, and a smear's negative lobe vetoes
+   it when the two coincide.
 
    The motion is measured, not assumed: 32x32 blocks at 960x540, matched from the frame before to the frame after
    (coarse to fine from 1/8 scale, and around zero at full scale), and kept only if half of it also carries the frame
@@ -101,7 +103,7 @@ export function doubledBlocks(A, C, Z, shutter = 0.5) {
     const [zx, zy, zs] = match(prev, next, W, H, x0, y0, B, B, 0, 0, 2, 2);
     if (zs <= sad) { dx = zx; dy = zy; }
     const vx = dx / 2, vy = dy / 2, sp = Math.hypot(vx, vy), L = shutter * sp;
-    const hi = Math.min(Math.ceil(1.15 * L), 32);
+    const hi = Math.min(Math.ceil(1.15 * L), 32), far = Math.min(Math.ceil(2.15 * L), 70);
     if (L < 4) continue;
     let s1 = 0, s0 = 0, s2 = 0, s02 = 0;
     for (let y = 0; y < B; y += 2) for (let x = 0; x < B; x += 2) {
@@ -111,11 +113,14 @@ export function doubledBlocks(A, C, Z, shutter = 0.5) {
     }
     if (s1 > 0.8 * s0 || s2 > 0.8 * s02) continue;
     II ??= C.II;
-    const ux = vx / sp, uy = vy / sp, m = hi + 2, gw = B + 2 * m, gh = B + 2 * m;
-    /* band-passed detail over the block and a margin, and what changes across the three frames (dilated by 2) */
+    const ux = vx / sp, uy = vy / sp;
+    /* the block, 3 px around it, and far px along the motion (the lags only look that way) */
+    const ex0 = 3 + Math.ceil(Math.max(0, -ux * far)), ex1 = 3 + Math.ceil(Math.max(0, ux * far)), ey0 = 3 + Math.ceil(Math.max(0, -uy * far)), ey1 = 3 + Math.ceil(Math.max(0, uy * far));
+    const gw = B + ex0 + ex1, gh = B + ey0 + ey1;
+    /* band-passed detail over that region, and what changes across the three frames (dilated by 2) */
     const G = new Float32Array(gw * gh), Mk = new Uint8Array(gw * gh), Md = new Uint8Array(gw * gh);
     for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
-      const X = Math.min(W - 1, Math.max(0, x0 - m + x)), Y = Math.min(H - 1, Math.max(0, y0 - m + y)), i = Y * W + X;
+      const X = Math.min(W - 1, Math.max(0, x0 - ex0 + x)), Y = Math.min(H - 1, Math.max(0, y0 - ey0 + y)), i = Y * W + X;
       G[y * gw + x] = cur[i] - boxMean(X, Y);
       const a = prev[i], b = cur[i], c = next[i];
       if (Math.abs(c - a) > 12 || Math.abs(b - a) > 12 || Math.abs(c - b) > 12) Mk[y * gw + x] = 1;
@@ -126,12 +131,12 @@ export function doubledBlocks(A, C, Z, shutter = 0.5) {
       Md[y * gw + x] = v;
     }
     let moving = 0;
-    for (let y = 0; y < B; y++) for (let x = 0; x < B; x++) moving += Md[(y + m) * gw + x + m];
+    for (let y = 0; y < B; y++) for (let x = 0; x < B; x++) moving += Md[(y + ey0) * gw + x + ex0];
     if (moving < 64) continue;
     const corr = (t) => {
       let sxy = 0, e1 = 0, e2 = 0;
       for (let y = 0; y < B; y++) for (let x = 0; x < B; x++) {
-        const gx = x + m, gy = y + m, j = gy * gw + gx;
+        const gx = x + ex0, gy = y + ey0, j = gy * gw + gx;
         if (!Md[j]) continue;
         const qx = gx + ux * t, qy = gy + uy * t;
         if (!Md[Math.round(qy) * gw + Math.round(qx)]) continue;
@@ -144,7 +149,11 @@ export function doubledBlocks(A, C, Z, shutter = 0.5) {
     if (atHalf > 0.1) continue;
     let atL = -1, low = 1;
     for (let t = Math.max(1, Math.round(0.85 * L)); t <= Math.min(hi, Math.round(1.15 * L)); t++) { const c = corr(t); atL = Math.max(atL, c); low = Math.min(low, c); }
-    if (atL >= 0.3 && low >= -0.1 && atL - atHalf >= 0.3) out.push({ bx, by, speed: round(sp, 1), gap: round(L, 1), corr: round(atL, 2) });
+    if (!(atL >= 0.3 && low >= -0.1 && atL - atHalf >= 0.3)) continue;
+    /* two copies are two: nothing at twice the gap. Type in a fixed pitch, a list, a grid repeat there too */
+    let at2L = -1;
+    for (let t = Math.round(1.85 * L); t <= Math.min(far, Math.round(2.15 * L)); t++) at2L = Math.max(at2L, corr(t));
+    if (at2L <= 0.15) out.push({ bx, by, speed: round(sp, 1), gap: round(L, 1), corr: round(atL, 2) });
   }
   return out;
 }

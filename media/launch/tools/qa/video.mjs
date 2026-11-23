@@ -15,12 +15,13 @@
                   onto f(t+w) (Lucas-Kanade from an integer search, then from the neighbours' motions, which follows
                   pushes, zooms and a single panel drifting), and f(t) is that motion's halfway point, the block is
                   moving; only blocks that motion cannot explain and the blend fits (residual under 0.3 there too)
-                  are counted. A frame is a blend when those cover 2% of the frame or more; runs of 3 or more such
-                  frames are reported (2 when they cover 8% or more: a 4-frame cross-fade at 60 fps is 2 frames at
-                  30), with the share of the frame they cover once the gaps between lines and letters (up to 6 px,
-                  48 px at 1080p) are closed, so a panel of type counts as the panel. qa.mjs fails those over 8%: a
-                  layer cross-fading; smaller ones are element fades. A window that passes through a near-black frame
-                  is a dip, left to `blacks`
+                  are counted. A frame is a blend when its ends differ over 2% of the frame (as before) and those
+                  blocks still cover 0.5% (a word brightening stays an element fade; a drift leaves nothing). Runs of
+                  3 or more such frames are reported (2 when they cover 8% or more: a 4-frame cross-fade at 60 fps is
+                  2 frames at 30), with the share of the frame they cover once the gaps between lines and letters (up
+                  to 6 px, 48 px at 1080p) are closed, so a panel of type counts as the panel. qa.mjs fails those over
+                  8%: a layer cross-fading; smaller ones are element fades. A window that passes through a near-black
+                  frame is a dip, left to `blacks`
      doubles      in doubles.mjs: moving things drawn as two sharp copies (shutter samples) instead of a smear
      words        the first frame with a line of text (a band of rows dense with letter edges); a heuristic for videos
                   without a page (the page's DOM is exact: page.mjs) */
@@ -295,7 +296,7 @@ export async function crossfades(file, blackFlags, srcFps) {
     cands.sort((x, y) => x.r - y.r);
     for (const c of cands) {
       const px = blendNotMotion(f, k, c.w, c.a);
-      if (px >= 0.02) { hit[k] = { r: c.r, differing: c.area, pixels: px, area: closedShare(mask, 3) }; break; }
+      if (px >= 0.005) { hit[k] = { r: c.r, differing: c.area, pixels: px, area: closedShare(mask, 3) }; break; }
     }
   }
   const max = (seg, key) => Math.max(...seg.map((s) => s[key]));

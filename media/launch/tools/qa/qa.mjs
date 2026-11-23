@@ -87,7 +87,8 @@ if (joins) {
   const pj = probe(files[0]);
   const js = videoJoins(files, seamTimes, pj);
   report.joins = js;
-  for (const j of js) rule('act join at ' + j.at + ' s (renders)', j.regions.length ? j.regions.length + ' region(s): ' + j.regions.slice(0, 4).map(region).join('; ') : 'match', j.regions.length === 0, 'last frame of ' + j.from + ' = first of ' + j.to + ', within grain');
+  /* a region of one 8x8 block (32 px at 1080p) is left to grain and the codec; two or more is a pop */
+  for (const j of js) rule('act join at ' + j.at + ' s (renders)', j.regions.length ? j.regions.length + ' region(s): ' + j.regions.slice(0, 4).map(region).join('; ') : 'match', !j.regions.some((r) => r.blocks >= 2), 'last frame of ' + j.from + ' = first of ' + j.to + ', within grain');
 }
 
 if (scene || pageJoins) {
@@ -158,7 +159,7 @@ if (scene || pageJoins) {
         const A = shots[i].last, B = shots[i + 1].first;
         const d = diffRegions(A.g, B.g, A.w, A.h, { level: 2, scale: shots[i].W / A.w });
         report.pageJoins.push({ at: seamTimes[i], ...d });
-        rule('act join at ' + seamTimes[i] + ' s (page)', d.regions.length ? d.regions.length + ' region(s): ' + d.regions.slice(0, 4).map(region).join('; ') : 'match', d.regions.length === 0, 'a' + (i + 1) + '\'s last frame = a' + (i + 2) + '\'s first');
+        rule('act join at ' + seamTimes[i] + ' s (page)', d.regions.length ? d.regions.length + ' region(s): ' + d.regions.slice(0, 4).map(region).join('; ') : 'match', !d.regions.some((r) => r.blocks >= 2), 'a' + (i + 1) + '\'s last frame = a' + (i + 2) + '\'s first');
       }
     }
   } finally { await srv.close(); }
