@@ -124,8 +124,15 @@ const SIG = (isScreen) => {
     const kind = d.getAttribute('data-dk');
     if (!kind) { out.push(['dock:legacy', 'drawn outside the one component']); continue; }
     const row = d.querySelector('.dk-in > .dk7-row, .dk7-row'), geom = d.getAttribute('data-geom');
-    const path = kind === 'open' ? '' : (d.querySelector('svg.slab > path') || {}).getAttribute?.('d') || '';
-    out.push(['dock:' + kind, [geom, path.length + ':' + path.slice(0, 40), row ? px(row, 'paddingLeft', 'paddingRight', 'columnGap', 'height') : 'no row'].join(' | ')]);
+    const path = (d.querySelector('svg.slab > path') || {}).getAttribute?.('d') || '';
+    if (kind === 'open') { out.push(['dock:open', [geom, path, row ? px(row, 'paddingLeft', 'paddingRight', 'columnGap', 'height') : 'no row'].join(' | ')]); continue; }
+    /* the row and the compact dock: height, corner, flares and padding fixed; the width follows the content: width = content + 2 x padding */
+    out.push(['dock:' + kind, [geom, row ? px(row, 'paddingLeft', 'paddingRight', 'columnGap', 'height') : 'no row'].join(' | ')]);
+    if (row) {
+      const kids = [...row.children].filter((k) => getComputedStyle(k).position !== 'absolute'), z = d.getBoundingClientRect().width / d.offsetWidth;
+      const content = kids.length ? (kids[kids.length - 1].getBoundingClientRect().right - kids[0].getBoundingClientRect().left) / z : 0, pad = +d.getAttribute('data-pad');
+      if (Math.abs(content + 2 * pad - d.offsetWidth) > 1) out.push(['dock:fit', `width ${d.offsetWidth} != content ${content.toFixed(1)} + 2 x ${pad}`]);
+    }
   }
   if (isScreen) {
     for (const c of document.querySelectorAll('.composer')) { const l = c.querySelector(':scope > .line'); if (!l || c.querySelector('.modes, .queue-strip')) continue; out.push(['composer', [px(c, 'borderTopLeftRadius'), px(l, 'height', 'paddingLeft', 'paddingRight', 'columnGap')].join(' | ')]); }
@@ -142,7 +149,8 @@ const SIG = (isScreen) => {
     const H = await p.evaluate(() => document.documentElement.scrollHeight); await p.setViewportSize({ width: w, height: Math.min(H, 12000) });
     await p.evaluate(() => { window.V7 && V7.brand && V7.brand(); window.V7 && V7.paint(); });
     const res = await p.evaluate(PAGE); total += res.length;
-    for (const [cls, key] of await p.evaluate(SIG, /screen\.html/.test(url))) { if (cls === 'dock:legacy') { res.push(['same-component', 'a dock drawn outside the one component']); total++; continue; } ((sigs[cls] = sigs[cls] || {})[key] = sigs[cls][key] || []).push(url.split('?')[1]); }
+    for (const [cls, key] of await p.evaluate(SIG, /screen\.html/.test(url))) { if (cls === 'dock:legacy') { res.push(['same-component', 'a dock drawn outside the one component']); total++; continue; }
+      if (cls === 'dock:fit') { res.push(['same-component', 'the row does not fit its content: ' + key]); total++; continue; } ((sigs[cls] = sigs[cls] || {})[key] = sigs[cls][key] || []).push(url.split('?')[1]); }
     const by = {}; for (const [k, v] of res) (by[k] = by[k] || []).push(v);
     lines.push((res.length ? 'FAIL ' : 'ok   ') + url.split('?')[1] + (res.length ? '  ' + Object.entries(by).map(([k, v]) => `${k} ${v.length}: ${[...new Set(v)].slice(0, 3).join(' | ')}`).join('  ;  ') : ''));
     await p.close();

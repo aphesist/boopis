@@ -692,11 +692,11 @@ Tokens (`tokens.v7.json`); the three-step type and alpha hierarchy; R-corner-1 t
 
 | Geometry | Width × height | Corner | Flares | Padding | Orbs | Gap |
 |---|---|---|---|---|---|---|
-| row | 640 × 72 | 30 (continuous) | 30 | 30 (= the corner: nothing sits in a corner zone) | 40 (hover 52, neighbours 46) | 14 |
-| compact | 380 × 48 | 24 | 24 | 24 | 24 | 8 |
-| open (stack, card) | 640 × its content + 72 | 30 | 30 | content on an 8 inset (30 − 8 = 22, the Block) | the row below, as in row | 14 |
+| row | its content, at most 640 × 72 | 30 (continuous) | 30 | 30 (= the corner: nothing sits in a corner zone) | 40 (hover 52, neighbours 46) | 14 |
+| compact | its content, at most 380 × 48 | 24 | 24 | 24 | 24 | 8 |
+| open (stack, card) | 640 × 432, fixed for every card and stack | 30 | 30 | content on an 8 inset (30 − 8 = 22, the Block), from the top | the row below, as in row | 14 |
 
-The width is fixed, not fitted to the content: what changes between states is only the content, and the open slab's documented growth. The content is clipped to the slab's own path, so nothing (an edge fade, a grown orb) can paint outside its curve. The render QA's `same-component` rule fails any drift.
+**The row and the compact dock fit their content** (the owner, 23 Nov: "it should widen or shrink based on what's inside it"): width = the orbs, "N more" and the ask pill, plus twice the padding, at most the maximum, past which D01 B's rule shows as many bots as fit and "N more". When the content changes (a bot added, the pill appearing, a hover growing an orb) the width eases with the slab's spring (200 ms, `--ease-sharp`). Height, corner, flares, padding, orb size and gap never change. **The open dock is one fixed size** (640 × 432) for every card and stack, and the composer keeps its fixed size, so those screens stay consistent. The content is clipped to the slab's own path, so nothing (an edge fade, a grown orb) can paint outside its curve. The render QA's `same-component` rule fails any drift.
 
 **Compact when idle** (Settings > General, "Compact dock when idle", off by default): after 10 s with nothing needing you, while you type or read, the row eases to compact (200 ms, `--ease-sharp`): the bots that matter at 24 px and the ask pill small. A hover, ctrl J or a new ask brings the row back the same way.
 
