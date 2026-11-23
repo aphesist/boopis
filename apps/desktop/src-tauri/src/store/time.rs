@@ -40,7 +40,33 @@ pub fn now() -> String {
     rfc3339(now_secs())
 }
 
-/// Seconds since the epoch of a `YYYY-MM-DDTHH:MM:SS` timestamp ending in `Z` (fractions are ignored); `None` for anything else.
+/// The zone of an RFC 3339 timestamp's tail (after the seconds and any fraction), in seconds east of UTC: `Z` is 0,
+/// `+HH:MM` and `-HH:MM` are what Python's `isoformat()` writes (the engine's cron times). `None` for no zone or another
+/// shape: a time without a zone is not a time anyone can place.
+fn zone(tail: &str) -> Option<i64> {
+    let tail = tail
+        .strip_prefix('.')
+        .map_or(tail, |f| f.trim_start_matches(|c: char| c.is_ascii_digit()));
+    if tail == "Z" {
+        return Some(0);
+    }
+    let b = tail.as_bytes();
+    if b.len() != 6 || b[3] != b':' || !matches!(b[0], b'+' | b'-') {
+        return None;
+    }
+    let (hh, mm) = (
+        tail.get(1..3)?.parse::<i64>().ok()?,
+        tail.get(4..6)?.parse::<i64>().ok()?,
+    );
+    if hh > 23 || mm > 59 {
+        return None;
+    }
+    let east = hh * 3600 + mm * 60;
+    Some(if b[0] == b'-' { -east } else { east })
+}
+
+/// Seconds since the epoch of a `YYYY-MM-DDTHH:MM:SS` timestamp ending in `Z` or a `±HH:MM` offset (fractions are
+/// ignored); `None` for anything else.
 #[must_use]
 pub fn parse(t: &str) -> Option<u64> {
     let b = t.as_bytes();
@@ -50,10 +76,10 @@ pub fn parse(t: &str) -> Option<u64> {
         || b[10] != b'T'
         || b[13] != b':'
         || b[16] != b':'
-        || !t.ends_with('Z')
     {
         return None;
     }
+    let east = zone(t.get(19..)?)?;
     let n = |r: std::ops::Range<usize>| t.get(r)?.parse::<i64>().ok();
     let (y, m, d, hh, mm, ss) = (
         n(0..4)?,
@@ -73,7 +99,7 @@ pub fn parse(t: &str) -> Option<u64> {
     let doy = (153 * mp + 2) / 5 + d - 1;
     let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
     let days = era * 146_097 + doe - 719_468;
-    u64::try_from(days * 86_400 + hh * 3600 + mm * 60 + ss).ok()
+    u64::try_from(days * 86_400 + hh * 3600 + mm * 60 + ss - east).ok()
 }
 
 #[cfg(test)]
@@ -93,6 +119,18 @@ mod tests {
             assert_eq!(parse(text), Some(secs));
         }
         assert_eq!(parse("2026-11-21T09:30:00.123456Z"), Some(1_795_253_400));
+        // the engine's cron times: Python's isoformat(), with the zone as an offset
+        assert_eq!(
+            parse("2026-11-21T10:30:00.123456+01:00"),
+            Some(1_795_253_400)
+        );
+        assert_eq!(parse("2026-11-21T04:00:00-05:30"), Some(1_795_253_400));
+        assert_eq!(
+            parse("2026-11-21T09:30:00"),
+            None,
+            "no zone: not a time to place"
+        );
+        assert_eq!(parse("2026-11-21T09:30:00+1:00"), None);
         assert_eq!(parse("yesterday"), None);
         assert_eq!(parse("2026-13-21T09:30:00Z"), None);
         assert!(parse(&now()).unwrap().abs_diff(now_secs()) <= 1);

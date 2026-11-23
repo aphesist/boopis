@@ -158,6 +158,8 @@ pub struct ApiLimits {
     /// A kanban worker counts as running while its session showed life this recently (the engine refreshes a running
     /// worker's `last_active` at least every minute; the app's roster uses the same window).
     pub worker_active: std::time::Duration,
+    /// How often each bot's cron list is read while somebody listens, for the runs that finished (B42).
+    pub cron_every: std::time::Duration,
 }
 
 impl Default for ApiLimits {
@@ -190,6 +192,7 @@ impl Default for ApiLimits {
             follow_bots: 6,
             stream_every: Duration::from_millis(250),
             worker_active: Duration::from_secs(90),
+            cron_every: Duration::from_secs(10),
         }
     }
 }

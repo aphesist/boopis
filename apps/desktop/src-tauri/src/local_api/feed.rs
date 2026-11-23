@@ -68,6 +68,10 @@ struct Where<'a> {
     seq: Option<u64>,
     /// The room message's event id.
     message_id: Option<&'a str>,
+    /// A scheduled job's id, when a run's notification has no session to belong to (two jobs are two notifications).
+    job: Option<&'a str>,
+    /// A scheduled job's next run, in milliseconds since the epoch.
+    next_run_at: Option<i64>,
 }
 
 impl<'a> Where<'a> {
@@ -151,6 +155,21 @@ pub struct Subscription {
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// Whether a session id is the engine scheduler's name for a run's session: `cron_<job id>_<YYYYmmdd>_<HHMMSS>`
+/// (`hermes_state_ids.py` recognises the same shape).
+#[must_use]
+pub fn is_cron_id(id: &str) -> bool {
+    let Some(rest) = id.strip_prefix("cron_") else {
+        return false;
+    };
+    let mut tail = rest.rsplitn(3, '_');
+    let (Some(time), Some(day), Some(job)) = (tail.next(), tail.next(), tail.next()) else {
+        return false;
+    };
+    let digits = |s: &str, n: usize| s.len() == n && s.bytes().all(|b| b.is_ascii_digit());
+    digits(time, 6) && digits(day, 8) && !job.is_empty()
 }
 
 fn str_of(v: &Value, key: &str) -> String {
@@ -445,12 +464,14 @@ impl Feed {
     /// Where a live session the poll lists came from: what the host knows of it first (its own link runs the app's kind,
     /// `gui`), then the engine's own `source` when the row carries one (`session.active_list` rows usually do not), then the
     /// engine's own name for a room member's session (`Group: <room id>`, `hosted_room_driver.py`, which the engine itself
-    /// reads back in `methods_prompt.py`), else `other`.
+    /// reads back in `methods_prompt.py`), or the scheduler's own name for a run's session (`cron_<job id>_<time>`,
+    /// `cron/scheduler.py`; `stored` is the row's stored id), else `other`.
     #[must_use]
     pub fn resolve_source(
         &self,
         profile: &str,
         session_id: &str,
+        stored: &str,
         engine_source: &str,
         title: &str,
     ) -> Source {
@@ -459,7 +480,9 @@ impl Feed {
             .get(&(profile.to_owned(), session_id.to_owned()))
             .and_then(|m| m.source);
         known.unwrap_or_else(|| {
-            if !engine_source.trim().is_empty() {
+            if is_cron_id(session_id) || is_cron_id(stored) {
+                Source::Cron
+            } else if !engine_source.trim().is_empty() {
                 super::model::source_of(engine_source)
             } else if title.starts_with("Group: ") {
                 Source::Room
@@ -643,10 +666,11 @@ impl Feed {
     ) {
         let now = now_ms();
         // A room's message is its own news (two in a row are two notifications); a session's turn ends once.
-        let place = match (at.session_id, at.room_id, at.seq) {
-            (Some(s), _, _) => s.to_owned(),
-            (None, Some(r), Some(seq)) => format!("{r}#{seq}"),
-            (None, room, _) => room.unwrap_or_default().to_owned(),
+        let place = match (at.session_id, at.room_id, at.seq, at.job) {
+            (Some(s), _, _, _) => s.to_owned(),
+            (None, Some(r), Some(seq), _) => format!("{r}#{seq}"),
+            (None, None, _, Some(job)) => format!("cron:{job}"),
+            (None, room, _, _) => room.unwrap_or_default().to_owned(),
         };
         let key = (profile.to_owned(), place, kind as u8);
         if inner.last_note.get(&key).is_some_and(|t| now - t < 3_000) {
@@ -667,6 +691,7 @@ impl Feed {
             room_id: at.room_id.map(str::to_owned),
             seq: at.seq,
             message_id: at.message_id.map(str::to_owned),
+            next_run_at: at.next_run_at,
             source,
             at: now,
             urgent,
@@ -1024,9 +1049,9 @@ impl Feed {
 
     // ───────────────────────── the poll ─────────────────────────
 
-    /// The live sessions of one profile's link. Returns the turns that ended in a session the host's link does not run and
-    /// that is not a room's or a kanban worker's (those are told from the room's log and the board): the service reads their
-    /// words and makes the notification.
+    /// The live sessions of one profile's link. Returns the turns that ended in a session of another program (`other`):
+    /// the service reads their words and makes the notification. A room's turn is told from the room's log, a kanban
+    /// worker's from the board, and a scheduled run from the engine's own cron list (B42), so none of those is returned.
     pub fn on_poll(
         &self,
         profile: &str,
@@ -1074,7 +1099,7 @@ impl Feed {
             let now_state = inner.presence.session_state(profile, &r.session_id);
             let ended =
                 was.is_some_and(State::busy) && matches!(now_state, Some(State::Idle) | None);
-            if ended && matches!(r.source, Source::Cron | Source::Other) {
+            if ended && r.source == Source::Other {
                 finished.push(Finished {
                     profile: profile.to_owned(),
                     session_id: r.session_id.clone(),
@@ -1089,26 +1114,62 @@ impl Feed {
     }
 
     /// A finished turn's notification, with the words its session ended on (`body`; empty when none could be read). A
-    /// scheduled run is news even without words; a reply with none is not sent (B22).
+    /// reply with no words is not sent (B22).
     pub fn notify_finished(&self, done: &Finished, body: &str) {
         let mut inner = lock(&self.inner);
         let who = Self::display(&inner, &done.profile);
         let body = self.clip(body);
-        let (kind, title) = match done.source {
-            Source::Cron => (NoteKind::Cron, format!("{who}'s scheduled run finished")),
-            _ if body.trim().is_empty() => return,
-            _ => (NoteKind::Reply, format!("{who} finished a turn")),
-        };
+        if body.trim().is_empty() {
+            return;
+        }
         self.notify(
             &mut inner,
-            kind,
+            NoteKind::Reply,
             &done.profile,
             &Where::session(&done.session_id),
             done.source,
+            format!("{who} finished a turn"),
+            body,
+            false,
+        );
+    }
+
+    /// A scheduled run finished (B42): the engine's cron list saw the job's last run move. The title says the job and how
+    /// it ended, the body is the words the run ended on (else, for a failure, the engine's own redacted error; else
+    /// nothing), and `next_run_at` when the job runs next. `session_id` is the run's stored session when it was found.
+    pub fn notify_cron(&self, run: &super::cron::Finished) {
+        let mut inner = lock(&self.inner);
+        let who = Self::display(&inner, &run.profile);
+        let ended = match run.status.as_str() {
+            "error" => "failed",
+            "cancelled" => "was stopped",
+            "delivery_failed" => "finished, but its delivery failed",
+            _ => "finished",
+        };
+        let title = format!("{who}'s scheduled run \u{201c}{}\u{201d} {ended}", run.name);
+        let body = self.clip(&run.body);
+        let at = Where {
+            session_id: run.session_id.as_deref(),
+            job: Some(&run.job_id),
+            next_run_at: run.next_run_at,
+            ..Where::default()
+        };
+        self.notify(
+            &mut inner,
+            NoteKind::Cron,
+            &run.profile,
+            &at,
+            Source::Cron,
             title,
             body,
             false,
         );
+    }
+
+    /// The name a person reads for a bot: its display name, else the profile name.
+    #[must_use]
+    pub fn display_name(&self, profile: &str) -> String {
+        Self::display(&lock(&self.inner), profile)
     }
 
     /// A kanban task the bot was running finished: the engine's own summary of it is the body.
@@ -1731,7 +1792,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_cron_run_that_finishes_is_a_notification_and_a_turn_in_the_app_is_not() {
+    async fn only_another_programs_finished_turn_is_handed_on_by_the_poll() {
         use crate::local_api::presence::Status::{Idle, Working};
         let (f, _d) = feed();
         let mut rx = f.subscribe(None).rx;
@@ -1765,12 +1826,10 @@ mod tests {
                 .iter()
                 .map(|d| d.session_id.as_str())
                 .collect::<Vec<_>>(),
-            ["c1", "o1"],
-            "the app's own turn is told on its link; a cron run and another program's are handed to the service"
+            ["o1"],
+            "the app's own turn is told on its link and a scheduled run from the cron list (B42)"
         );
-        for done in &finished {
-            f.notify_finished(done, "");
-        }
+        f.notify_finished(&finished[0], "");
         let notes: Vec<Notification> = drain(&mut rx)
             .iter()
             .filter_map(|e| match &e.event {
@@ -1778,16 +1837,31 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(
-            notes.len(),
-            1,
+        assert!(
+            notes.is_empty(),
             "B22: a reply with no words is not sent: {notes:?}"
         );
+    }
+
+    #[test]
+    fn a_session_the_scheduler_named_is_a_scheduled_runs() {
+        let (f, _d) = feed();
+        assert!(is_cron_id("cron_a1b2c3d4e5f6_20261123_030000"));
+        assert!(is_cron_id("cron_job-1_20261123_030000"));
+        for not in [
+            "cron_20261123_030000",
+            "cron_x_2026_030000",
+            "20261123_030000_ab12cd",
+            "cronjob",
+        ] {
+            assert!(!is_cron_id(not), "{not}");
+        }
         assert_eq!(
-            (notes[0].kind, notes[0].source),
-            (NoteKind::Cron, Source::Cron)
+            f.resolve_source("kai", "live-1", "cron_j1_20261123_030000", "", ""),
+            Source::Cron,
+            "by its stored id"
         );
-        assert_eq!(notes[0].session_id.as_deref(), Some("c1"));
+        assert_eq!(f.resolve_source("kai", "live-2", "", "", ""), Source::Other);
     }
 
     #[tokio::test]

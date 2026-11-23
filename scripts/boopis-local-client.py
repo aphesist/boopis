@@ -6,6 +6,9 @@ Python 3, standard library only. It reads the endpoint and the token the app wro
 
     boopis-local-client.py bots                       the roster: look, model, presence
     boopis-local-client.py presence                   what every bot is doing now
+    boopis-local-client.py notifications [--after ID] [--limit N]
+                                                      the notifications kept, oldest first (a scheduled run's
+                                                      carries its last words and next_run_at)
     boopis-local-client.py events [--approve] [--conversations [--bot NAME ...]] [--rooms [--room ID ...]]
                                                       follow the event stream; with --approve, ask on the terminal
                                                       for each approval and answer it (once or deny); with
@@ -250,6 +253,9 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--room", action="append", default=[])
         if name == "approvals":
             p.add_argument("--all", action="store_true")
+    p = sub.add_parser("notifications")
+    p.add_argument("--after", type=int)
+    p.add_argument("--limit", type=int, default=50)
     p = sub.add_parser("conversation")
     p.add_argument("bot")
     p.add_argument("--session", default="latest")
@@ -281,6 +287,11 @@ def main(argv: list[str] | None = None) -> int:
                 show(client.call("GET", "/v1/bots"))
             case "presence":
                 show(client.call("GET", "/v1/presence"))
+            case "notifications":
+                after = "" if args.after is None else f"&after={args.after}"
+                show(
+                    client.call("GET", f"/v1/notifications?limit={args.limit}{after}")
+                )
             case "approvals":
                 show(
                     client.call("GET", "/v1/approvals" + ("?all=1" if args.all else ""))

@@ -213,6 +213,9 @@ pub struct Notification {
     pub seq: Option<u64>,
     /// For a room's message: its event id in the room's log (0.2.0).
     pub message_id: Option<String>,
+    /// For a scheduled run: when the job runs next, in milliseconds since the epoch, as the engine's scheduler has it;
+    /// null when it will not run again (paused, or done repeating) or the engine does not say (0.2.0).
+    pub next_run_at: Option<i64>,
     /// The kind of session it came from.
     pub source: Source,
     /// When, in milliseconds since the epoch.

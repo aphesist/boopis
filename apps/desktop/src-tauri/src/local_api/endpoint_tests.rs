@@ -755,6 +755,7 @@ fn the_token_file_is_private_and_the_endpoint_file_names_the_address() {
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)] // one client, run end to end, call after call
 async fn the_reference_client_reads_the_roster_follows_events_and_answers_an_approval() {
     use std::process::Stdio;
     use tokio::io::AsyncBufReadExt;
@@ -808,6 +809,18 @@ async fn the_reference_client_reads_the_roster_follows_events_and_answers_an_app
         !String::from_utf8_lossy(&out.stdout).contains(TOKEN)
             && !String::from_utf8_lossy(&out.stderr).contains(TOKEN)
     );
+    // the notifications kept (B42: a scheduled run's carries its words and when it runs next)
+    let out = base(&["notifications", "--limit", "5"])
+        .output()
+        .await
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert!(v["notifications"].is_array(), "{v}");
     // a refusal is a sentence and exit code 1
     let bad = base(&["answer", "nope", "once"]).output().await.unwrap();
     assert_eq!(bad.status.code(), Some(1));

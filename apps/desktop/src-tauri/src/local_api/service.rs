@@ -152,6 +152,8 @@ pub struct Service<E: Engine> {
     pub(super) room_cursors: tokio::sync::Mutex<HashMap<String, u64>>,
     /// Each bot's kanban worker, as its own link last said (B31).
     pub(super) workers: std::sync::Mutex<HashMap<String, Worker>>,
+    /// Each scheduled job's last run, as the bot's cron list last said (B42).
+    pub(super) cron_seen: std::sync::Mutex<super::cron::Seen>,
 }
 
 pub(super) fn text(v: &Value, key: &str) -> String {
@@ -190,6 +192,7 @@ impl<E: Engine> Service<E> {
             watches: tokio::sync::Mutex::new(HashMap::new()),
             room_cursors: tokio::sync::Mutex::new(HashMap::new()),
             workers: std::sync::Mutex::new(HashMap::new()),
+            cron_seen: std::sync::Mutex::new(HashMap::new()),
         })
     }
 
@@ -327,9 +330,13 @@ impl<E: Engine> Service<E> {
                 continue;
             }
             let (title, preview) = (text(row, "title"), text(row, "preview"));
-            let source = self
-                .feed
-                .resolve_source(profile, &sid, &text(row, "source"), &title);
+            let source = self.feed.resolve_source(
+                profile,
+                &sid,
+                &text(row, "session_key"),
+                &text(row, "source"),
+                &title,
+            );
             if !self.feed.session_known(profile, &sid) {
                 let model = Some(text(row, "model")).filter(|m| !m.is_empty());
                 self.feed.learn_session(
@@ -731,7 +738,7 @@ impl<E: Engine> Service<E> {
     }
 
     /// One stored row as the app's thread draws it: the user's and the bot's words, no tool row, nothing hidden.
-    fn stored_message(&self, row: &Value, index: usize) -> Option<Message> {
+    pub(super) fn stored_message(&self, row: &Value, index: usize) -> Option<Message> {
         let role = match text(row, "role").as_str() {
             "user" => Role::User,
             "assistant" => Role::Assistant,
@@ -878,7 +885,7 @@ impl<E: Engine> Service<E> {
     // ───────────────────────── the loop ─────────────────────────
 
     /// Run until cancelled: read the roster once at start (B24), then, while at least one reader listens, read the roster
-    /// and poll the sessions, and follow the rooms' logs.
+    /// and poll the sessions, follow the rooms' logs, and read the bots' cron lists for the runs that finished (B42).
     pub async fn run(self: Arc<Self>, cancel: CancellationToken) {
         tokio::select! {
             () = cancel.cancelled() => return,
@@ -892,9 +899,13 @@ impl<E: Engine> Service<E> {
                     changed = wanted.changed() => if changed.is_err() { return },
                 }
             }
-            // Rooms are followed from where they are now: what was said while nobody listened is no news (read it with the log).
+            // Rooms and scheduled runs are followed from where they are now: what happened while nobody listened is no news
+            // (read it with the log).
             self.room_cursors.lock().await.clear();
+            self.forget_cron();
             self.refresh_roster().await;
+            self.read_cron().await;
+            let mut cron_at = tokio::time::Instant::now();
             let mut roster_at = tokio::time::Instant::now();
             let mut poll_at = tokio::time::Instant::now() - self.limits.poll_every;
             let mut beat = tokio::time::interval(Duration::from_millis(500));
@@ -907,6 +918,10 @@ impl<E: Engine> Service<E> {
                 if now.duration_since(roster_at) >= self.limits.roster_every {
                     roster_at = now;
                     self.refresh_roster().await;
+                }
+                if now.duration_since(cron_at) >= self.limits.cron_every {
+                    cron_at = now;
+                    self.read_cron().await;
                 }
                 if self.feed.take_poke() || now.duration_since(poll_at) >= self.limits.poll_every {
                     poll_at = now;
