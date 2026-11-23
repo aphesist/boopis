@@ -1137,3 +1137,57 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 **Decision.** Package w28 (foundations) is w31; w29 (the BOOPIS bot) is w32; w30 (Bots onboarding) is w33; w31 (routines and teach-a-task) is w34; w32 (the bot computer) is w35; w33 (voice) is w36; w28c (the calm pass) is w31c and runs in parallel with w31, one UI writer on the library and the copy. Specs cite both numbers on first mention ("package w29, here w32").
 
 **Consequences.** Branch names follow this numbering (`w31/rules-engine`, `w31/host-protections`, `w31/team-ops`, `w31/rules-ui`, `w31c/calm`); the package's text is not rewritten.
+
+## ADR-0055 Feedforward reads the draft in the plugin, with the cheapest model of the answering provider, and its answers ride the next user message (proposed, 23 November 2026)
+**Status.** Proposed (w31; spec `docs/specs/feedforward.md`). On by default and shown live in first run are the owner's decisions (23 November 2026).
+
+**Context.**
+- Liu Xingyu's demo: while the person types, the agent marks ambiguous words, missing parameters and assumptions, and the person fills them before sending. In boopis the composer, its marks and its menus exist, but the live provider feeds them the mock's fixed pattern catalogue behind a preview flag (`host/live-provider.ts`, `core/settings.ts` `readFlag`).
+- Read in the engine (v0.23.2), not patched: plugins call a model with a JSON schema through `ctx.llm.complete_structured` and may route through an auxiliary task they registered (`agent/plugin_llm.py`); plugin RPCs run off the loop on an unbounded pool and cannot be cancelled by the client (`gateway/session_plugin_rpc.py`); `pre_llm_call` context is appended to the turn's user message, never the system prompt, and the sent bytes are persisted and replayed (`agent/turn_context.py`). The gateway session is created at the first send, so the first draft has no session.
+
+**Decision.**
+1. **The read is a plugin RPC**, `plugin.boopis.feedforward.read {session_id?, draft_id, rev, draft, cursor, prior, context}`, returning marks (`text`, UTF-16 `at`, `kind`, `reading`, `options`, `guess`, `confidence`) and assumptions. The model names a mark's text and occurrence; the plugin computes the offsets.
+2. **Staleness by revisions on both sides**: the UI keeps one read in flight per composer and drops answers older than the last applied; the plugin answers an older `rev` as `stale` with no model call and runs one call per draft at a time. Marks are re-anchored on the live text between reads.
+3. **The reader is the cheapest priced, non-heavy model of the provider that will answer the message**, by the reviewer's chooser (one implementation, shared with ADR-0051), through the plugin's own auxiliary task. Not frontier-bound: a read does no governed work.
+4. **Fail quiet**: no reader, an error or a timeout gives no marks and never delays or blocks sending. Feedforward is advice, not a permission, policy or gate check.
+5. **Cost on the ledger**: `usage.recorded` with `purpose: "feedforward"` in the session's ledger, or, before the session exists, in a monthly aside ledger in contraprova's format.
+6. **The answers ride the next user message**: `feedforward.commit` arms the session's next turn (as `mode.once` does), and `pre_llm_call` returns a fixed `<boopis-readings v="1">` block after the typed text. The system prompt, toolsets and skills never change (invariant 4). Each travelled reading is a `feedforward.set` ledger event.
+7. **Smart keeps the start-tier pick** (ADR-0032); the reading's level is one more signal, and the person's choice beats both.
+8. **Sessions and a bot's own chat** read drafts; rooms do not, in this wave.
+
+**Alternatives weighed.**
+- *Keep patterns in the UI*: what exists; cannot read meaning, and invents nothing the model would actually ask.
+- *The reader in the UI calling a provider*: the UI holds no keys and no price book, and the ledger is the plugin's.
+- *Answers written into the message text*: changes the person's words in the transcript.
+- *The global cheapest model*: cheaper, but sends a draft to a lab the message is not going to (owner question).
+
+**Consequences.**
+- The mock catalogue leaves the live path; the preview flag goes; a setting, on by default, replaces it; first run gains a "Try it" step that is live with a model and a labelled recording without one.
+- At most one read in flight and one waiting per composer; a hard timeout of 5 s.
+- `docs/PROTOCOL.md`'s `feedforward.preview` and `feedforward.set` are replaced by `feedforward.read` and `feedforward.commit`.
+
+## ADR-0056 Blanks wait inside the reply, through the engine's own clarify; no injected turn (proposed, 23 November 2026)
+**Status.** Proposed (w31; spec `docs/specs/blanks-inline.md`). The need is the owner's (23 November 2026): "make your answer reach the bot inside their own reply ... so you don't trigger a double output from the bot. boopis needs to function this way."
+
+**Context.**
+- Today a blank does not block: the cell goes on, the turn ends, and the answer is handed to `ctx.inject_message` as a new user turn, which the model answers with a second reply.
+- Read in the engine (v0.23.2), not patched: the engine's `clarify` tool returns the person's answer as its tool result in the same turn, runs with no generic deadline (`agent/tool_executor.py`, `_NEVER_PARALLEL_TOOLS`), waits without limit when `agent.clarify_timeout <= 0` (`tools/clarify_gateway.py`, `tui_gateway/server.py`), survives a missing client by replay and is cancelled by Stop (`tui_gateway/server_requests.py`), and takes up to five questions answered one by one (`clarify.lock`). A plugin tool is held to the generic 420 s deadline and `ctx.register_tool` cannot declare a longer one (`hermes_cli/plugins_context.py`). The engine removes `clarify` from room member turns and cron runs (`gateway/session_hosted_rpc.py`) and from delegated children (`tools/delegate_tool.py`).
+
+**Decision.**
+1. **A blank is the engine's `clarify`**, drawn by boopis inline in the reply being written; the answer goes back through `clarify.lock`/`clarify.respond` and the model continues the same turn. No plugin `ask_inline` tool.
+2. **No limit by default**: the host writes `agent.clarify_timeout: 0` into every profile; a bot can be given a cap. Waiting costs no tokens.
+3. **Governed sessions are created with `["boopis", "clarify"]`**; the governed prompt says to ask through clarify and never end a turn just to ask.
+4. **Exec cells** ask with a blocking `harness.ask`, bounded by the cell's limit; past it the model is told to use `clarify`.
+5. **The `inject_message` path for blanks is removed.** A blank that ended unanswered (Stop, an engine restart, a cap) offers "Answer in a new message", which the person sends themselves.
+6. **Rooms and cron cannot wait** (the engine's rule): a room member asks at the end of its message and the person's next room message is the answer.
+7. Blanks stay in contraprova's vocabulary: `blank.opened`, `blank.filled`, `blank.lapsed` with a `reason`, written from the plugin's hooks on `clarify`.
+
+**Alternatives weighed.**
+- *A blocking plugin tool*: same flow, but a 420 s ceiling unless the operator lifts the deadline for every tool.
+- *Keep injecting the answer*: the double output the owner rejected.
+- *Hold the bot's reply in the UI until answered*: the model has already finished its turn; it would still need a second turn to use the answer.
+
+**Consequences.**
+- One reply per exchange, proven by an end-to-end test that counts submits, user rows, completions and model requests.
+- A question asked before an engine restart cannot resume its turn; it is closed visibly and recorded as lapsed.
+- Old governed sessions (created without `clarify`) have no inline blanks.
