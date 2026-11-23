@@ -116,3 +116,6 @@ Based on Liu Xingyu's demo (x.com/liu_xingyu/status/2121015724374397183).
   bots (bots work alone). Both settable.
 - v7: accent Iris (#5b5bd6 / #8b8dff / #4546c8). Search default S5: keyboard-first with a clickable hint; button and
   pill as Settings options. The mark (P3) approved, info labels included. Status (P4) approved.
+- CORRECTION (owner): blanks are SESSIONS ONLY. Bots never have blanks; they ask only through approvals the owner
+  defined beforehand (rules engine + tiers), shown as the Grok-Bot approval cards, with NO time limit. Sessions keep
+  the timed wait (30 s / 60 s default / 2 min), lapse to "(my guess)" + a card, late answer = correction.
