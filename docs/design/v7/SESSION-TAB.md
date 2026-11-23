@@ -1,6 +1,6 @@
 # The Session tab in v7: a walkthrough
 
-Status: design for the owner's pick, 23 November 2026. No kit implementation yet.
+Status: the owner has picked boards S01 to S13 (23 November 2026; `DESIGN-SYSTEM.md` section 20). No kit implementation yet.
 
 **The idea.** Session is the hands-on harness; Bots is the team that works on its own. The person picks the model, effort, permissions and workspace, then steers, reviews, commits and rewinds. T3 Code's study (`t3code-package/01-LIVE-WALKTHROUGH.md`, `02-FEATURE-LOGIC.md`) sets what the tab contains: its features, flows, states and content. It sets nothing about the look. The look is the v7 kit the Bots tab uses (`DESIGN-SYSTEM.md`): the same sidebar, title pill, bubbles, activity line, tool rows, AskCard, the mark, cards, details pane, composer and dock. Session adds only what Bots does not need, as new v7 components listed at the end for approval. The logic comes from the binding plan (`notes/docs/PLAN-session-waves.md`) and its owner decisions.
 
@@ -8,22 +8,35 @@ Screens are in the boards folder `ds-v7/session/` (dark and light), with contact
 
 ---
 
-## 1. The empty Session tab and adding a project (S10)
+## 1. The new session: the canvas above the composer (S41, S17, S37)
 
-What the person sees: the Sessions / Bots switch at the top of the sidebar, an empty inbox, and one line in the middle, "Add a folder to start", with Add a project, Import sessions and the composer.
-- A project is a folder. Adding it is a folder picker; nothing is copied.
-- **Import** lists the person's existing Claude Code and Codex sessions found on this computer, by project, and brings the chosen ones in as sessions (read-only history, continued on a new engine session).
-- *Differs from T3:* no onboarding wizard of its own; boopis's first run already covers models and sign-in. The empty state is one line (R-calm-4).
+What the person sees: the v7 layout (title pill "New session", search hint, details, the composer and its line, the dock, the sidebar), and in the empty canvas, centred: the brand mark (S41 option D, recommended: the boopis orb wearing the model's mark), "What's next for boopis?" with the folder as a mark-primitive choice, the launch row of quiet selectors (worktree, model, effort, how careful), and **Waiting on you**: the sessions that need the person, one line each with their badge. A usage notice (the Notice) sits above the composer when a limit is near.
+- **No model yet:** the orb sleeps and its tile shows a +; the model selector reads "+ Choose a model" in the accent; a Block says "boopis needs a model to think with. Sign in once and every session can use it." with Claude, ChatGPT, Gemini and More. The composer's placeholder reads "Choose a model to start". Never a red row.
+- **No folder yet:** "Add a folder to start", Add a project and Import sessions, under the same mark. Import lists the sessions found on this computer (Claude Code, Codex), checked by default; they come in with their history and continue on a new engine session.
+- The line under the composer names the keys until the session starts ("Enter starts the session", "ctrl Enter starts it in the background"); the launch row's items then settle into the line.
+- *Differs from T3:* T3 shows an empty thread and a project picker; boopis greets with its own face and shows what is waiting.
 
-## 2. The launch step (S1)
+## 2. The launch step (S1, now S41's launch row)
 
-What the person sees: a "New session" card in the column: Project, Workspace (New worktree or This checkout), Model, Effort, and "How careful": **one 4-step scale** (Supervised / Auto-accept edits / Auto / Full access) with one line that explains the chosen step. The first message starts the session.
+What the person sees: the launch choices are S41's launch row, quiet selectors in the new session's canvas: Workspace (New worktree or This checkout), Model, Effort, and "How careful", which opens **one 4-step scale** as four rows (Supervised / Auto-accept edits / Auto / Full access), Auto-accept edits chosen by default. The Project is the folder in the greeting line. (The earlier "New session" card is replaced; the content is the same.)
 - **One scale, one choice** (owner decision). It maps to governance: Supervised asks before every ship and every command; Auto-accept edits applies ships when the gate passes and asks for commands; Auto asks only where the approval rules say; Full access asks nothing.
 - **Full access still records every write** (owner decision): every change still goes through `ship`, so every turn is rewindable. Full access removes the asks, never the journal.
 - **Worktrees live outside the repo**, in a managed root; the branch takes a temporary name and is renamed from the first message.
 - The settings are passed to the engine at `session.create` (cwd, model, provider, effort, skills) and fixed for that engine session.
-- Two options are rendered: the scale as one segmented track (A, recommended) or as four rows (B).
-- *Differs from T3:* T3's default is Full access and its permissions sit under the composer as an icon row; boopis starts Supervised (a setting) and the scale lives in the launch step and the composer's line.
+- **The scale is four rows** (the owner's pick S01 B), each with its one-line meaning.
+- **New sessions start on Auto-accept edits** (the owner's pick S02 B), a setting in Settings > Sessions. A project without a trusted gate (no gate command, or one the person has not trusted) falls back to Supervised and says so in the row.
+- **Onboarding asks for the default:** a step after the models step, "How careful should new sessions be?", the same four rows with Auto-accept edits chosen; the answer is the Settings value.
+- *Differs from T3:* T3's default is Full access and its permissions sit under the composer as an icon row; boopis starts on Auto-accept edits behind the gate, and the scale lives in the launch step, the composer's line and its quick menu.
+
+## 2b. The composer's line and its quick menu
+
+What the person sees: under the composer, everything by default (the owner's pick S05 B): how careful, the branch, the model and effort, the context tick and the cost. Each item is its own control (click it to change it).
+- **The quick menu** opens from the composer's + ("Show under the composer") or from a click on the line's empty space: one check per item, remembered per composer kind (session, bot, room, dock), the same list as Settings > General > Under the composer.
+- Under 900 px of window width the branch and the context fold into the quick menu first, so the line never wraps.
+
+## 2c. The agent's brand
+
+The agent's messages and cards carry the answering model's brand (the owner, S09), as a bot's carry its orb: the provider's mark (the shipped LobeHub marks, mono, `--text-dim`) in a 22 px tile at the lower left of the last bubble of a run, in a 30 px gutter that every agent-side block shares, and at the head of every agent card (tool rows, approvals, the AskCard). When the model changes mid-session the mark changes with the next message.
 
 ## 3. A running turn, Supervised (S2)
 
@@ -35,9 +48,9 @@ What the person sees: their message, the agent's short acknowledgement, a collap
 
 ## 4. Steer or queue while it runs (S3)
 
-What the person sees: Enter steers the running turn (an inline "Steer" line in the thread); ctrl Enter queues. Queued messages wait above the composer, numbered, with edit, cancel and Send now. A hint under the composer names both keys.
+What the person sees: sending normally (Enter) while a turn runs queues the message; ctrl Enter steers the running turn (an inline "Steer" line in the thread) (the owner's pick S06 B). Queued messages wait above the composer, numbered, with edit, cancel and Send now. The placeholder reads "Queue a message, or ctrl Enter to steer"; a hint under the composer names both keys.
 - **The engine's own queue** (plan fact): queued prompts are rows in Hermes's store; Send now promotes one (`prompt.steer_queued`), edit replaces it (`prompt.replace_queued`). No plugin queue.
-- The default (steer or queue) is a setting; the one-key opposite is ctrl Enter.
+- Enter queues by default (a setting); ctrl Enter does the opposite for one message.
 - Queued messages run in order when the turn ends, each as its own turn.
 
 ## 5. A blank, waiting then lapsed (S9, S4)
@@ -139,6 +152,8 @@ What the person sees: Settings > Sessions, with a scope picker (This device or T
 | Settings cascade device → environment → project → file | device → project → project file | no remote environments yet |
 
 ## New v7 components this tab needs (for approval)
+
+Section 21 of `DESIGN-SYSTEM.md` (the one kit) supersedes this list: each row below now names a kit component or a variant of one (21.3).
 
 | Component | What it is, in v7's language |
 |---|---|

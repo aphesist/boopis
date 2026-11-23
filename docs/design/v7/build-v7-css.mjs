@@ -18,7 +18,7 @@ for (const v of Object.values(t.color)) {
 for (const v of Object.values(t.font)) if (v.css) both.push(`${v.css}: ${v.value};`);
 for (const [, s] of Object.entries(t.font.scale)) both.push(`${s.css}: ${s.size}px;`, `${s.css.replace('--fs', '--lh')}: ${s.line}px;`);
 for (const v of Object.values(t.radius)) both.push(`${v.css}: ${typeof v.value === 'number' && v.css !== '--corner-smoothing' ? v.value + 'px' : v.value};`);
-for (const p of Object.values(t.nesting.pads)) both.push(`${p.css}: ${p.value}px;`);
+for (const p of Object.values(t.nesting.pads)) both.push(`${p.css}: ${p.calc || p.value + 'px'};`);
 for (const [k, v] of Object.entries(t.space.steps)) both.push(`${k}: ${v}px;`);
 for (const v of Object.values(t.size)) if (v.css && typeof v.value === 'number') both.push(`${v.css}: ${v.value}px;`);
 for (const [k, v] of Object.entries(t.motion.easings)) both.push(`${k}: ${v.value};`);
@@ -43,7 +43,7 @@ const css = `/* Generated from tokens.v7.json by build-v7-css.mjs. A proposal: n
 [data-font="figtree"] { --sans: 'Figtree', system-ui, sans-serif; }
 [data-font="geist"] { --sans: 'Geist', system-ui, sans-serif; }
 [data-radii="a"] { --corner-smoothing: 0; }
-[data-radii="c"] { --r-bubble: 22px; --r-dialog: 24px; --r-menu: 20px; --r-card: 18px; --r-tile: 16px; --r-field: 12px; --r-nav: 10px; --r-tip: 8px; --r-composer: 24px; }
+[data-radii="c"] { --r-bubble: 22px; --r-dialog: 24px; --r-menu: 18px; --r-card: 16px; --r-tile: 16px; --r-field: 12px; --r-nav: 10px; --r-tip: 8px; --r-composer: 22px; }
 [data-theme="light"][data-shadow="b"], [data-theme="light"] [data-shadow="b"] {
   --shadow-inline: 0 2px 6px -1px #1c1c1c0d, 0 0 0 0.5px #1c1c1c1f; --shadow-pop: 0 6px 14px -3px #1c1c1c12, 0 0 0 0.5px #1c1c1c24;
   --shadow-modal: 0 12px 24px -6px #1c1c1c14, 0 0 0 0.5px #1c1c1c24; --float-line: #1c1c1c1f; }

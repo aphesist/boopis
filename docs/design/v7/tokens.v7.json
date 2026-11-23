@@ -584,6 +584,11 @@
       "grok": "composer 22 (44 tall)",
       "use": "the composer box (a pill at one line, 22 as it grows)"
     },
+    "block": {
+      "css": "--r-block",
+      "value": 22,
+      "use": "every inline surface that holds controls: tool rows, files, questions (AskCard), approvals, the queue, notices; the composer's radius, so a 28px control sits 8 from both edges (the corner rule)"
+    },
     "bubble": {
       "css": "--r-bubble",
       "value": 18,
@@ -734,8 +739,17 @@
         "outer": 30,
         "inner": 18,
         "grok": "none (kept from the notch spec)"
+      },
+      "block": {
+        "css": "--pad-block",
+        "value": 8,
+        "outer": 22,
+        "inner": 14,
+        "note": "derived so the corner rule holds at every density: a --ctl-s pill control in a Block's corner sits at --r-block - --ctl-s/2 (8 at regular's 28; compact and comfortable move it with --ctl-s); text rows indent 4 more",
+        "calc": "calc(var(--r-block) - var(--ctl-s) / 2)"
       }
-    }
+    },
+    "corner_rule": "R-corner-10 (23 Nov): a control nested in a container's corner zone (both insets under the container's radius) has radius = outer - inset and equal insets, and never runs past the container. Blocking in the lab (concentric check)."
   },
   "space": {
     "grid": 4,
@@ -1059,7 +1073,7 @@
       "choices": {
         "A": "Grok exact: its radii as plain arcs",
         "B": "Grok's radii, boopis's continuous corner and concentric rule",
-        "C": "rounder: every step one notch up (cards 18, dialogs 24, menus 20, bubbles 22)"
+        "C": "rounder: every step one notch up (cards 16, dialogs 24, menus 18, bubbles 22), concentric with the 6 menu inset"
       },
       "default": "B",
       "theme_choices": [
@@ -1452,5 +1466,68 @@
       ],
       "check": "lab inline-baseline (w29/inline-baseline)"
     }
+  },
+  "session": {
+    "picks": "23 Nov, boards S01-S13",
+    "permission_scale": {
+      "layout": "rows",
+      "steps": [
+        "Supervised",
+        "Auto-accept edits",
+        "Auto",
+        "Full access"
+      ],
+      "default": "Auto-accept edits",
+      "fallback": "Supervised when the project has no trusted gate",
+      "onboarding": "asks for the default after the models step"
+    },
+    "inbox": "sections",
+    "scope_picker": "segmented",
+    "right_panel": "four fixed tabs: Diff, Files, Terminal, PR (+ side chat while open)",
+    "composer_line": {
+      "default": [
+        "permission",
+        "branch",
+        "model_effort",
+        "context",
+        "cost"
+      ],
+      "quick_menu": "from the composer's + or a click on the line; per composer kind; same list as Settings > General > Under the composer",
+      "narrow": "under 900 px branch and context fold into the quick menu"
+    },
+    "while_running": {
+      "Enter": "queue",
+      "ctrl+Enter": "steer",
+      "placeholder": "Queue a message, or ctrl Enter to steer"
+    },
+    "brand": {
+      "where": "a 22 px tile at the lower left of the last agent bubble of a run (30 px gutter), and the head of every agent card",
+      "mark": "vendor/model-icons mono, --text-dim"
+    },
+    "diff_view": {
+      "grid": "36 px gutter, 16 px sign, code",
+      "comment": "starts on the code column",
+      "padding": "12 px sides, symmetric"
+    },
+    "new_session": {
+      "board": "S41",
+      "layout": "the v7 layout unchanged; only the canvas above the composer",
+      "mark_options": {
+        "A": "the oo logomark",
+        "B": "the boopis orb, alive",
+        "C": "the model's logo breathing",
+        "D": "the orb wearing the model (recommended)"
+      },
+      "canvas": [
+        "mark",
+        "greeting with the folder as a mark-primitive choice",
+        "launch row of quiet selectors (worktree, model, effort, how careful -> four rows)",
+        "Waiting on you: inbox row, one-line variant",
+        "no model: '+ Choose a model' in the accent and a Block with provider sign-ins",
+        "usage: the Notice above the composer"
+      ],
+      "settle": "launch-row items move into the composer's line when the session starts, 200ms --ease-sharp"
+    },
+    "rows": "R-row-1: menu and list rows are single-line; the name never wraps or shrinks; 12px gap; the description truncates"
   }
 }

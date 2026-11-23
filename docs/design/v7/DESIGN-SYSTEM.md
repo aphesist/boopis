@@ -188,11 +188,19 @@ v6 8.2 stays: `--r-in = max(--r-floor, --r-outer − --pad)`; a piece too small 
 | a row in the palette | 14 | 6 | 8 |
 | a 28 button in the composer | 22 (44 tall) | 8 | 14: a circle |
 | the close button (28) in a form dialog | 20 | 10 | 10 → a capsule (R-corner-9) |
+| a 28 control in a Block (tool row, files, AskCard, approval, notice) | 22 | 8 | 14: a pill (R-corner-10) |
+| a row in the queue, and its button | 22, then 18 | 4, then 4 | 18, then 14 |
+| a button in a line pill (the engine stopped) | 16 (32 tall) | 3 | 13: a pill |
+| a kbd in the search pill | 18 | 8 | 10: a pill |
 | a well in a conversation card | 18 | 8 | 10 |
 | a piece in a settings card | 14 | 8 | 6 (the floor) |
 | the orb in a rail tile | 12 | 9 | a circle |
 | the notch's composer in its shape | 30 | 12 | 18 (= the bubble radius) |
 | the send in the notch's composer | 18 | 6 | 12 |
+
+**R-corner-10, the corner rule made strict (owner, 23 Nov, after S36).** A control nested in a container's corner zone (both of its insets under the container's radius) has radius = outer radius − inset, its two insets are equal, and it never runs past the container's edge. A control that cannot meet it moves out of the corner zone (an inset at least the container's radius on one axis) or the container changes: every inline surface that holds controls is now a **Block** (`--r-block` 22, the composer's radius, `--pad-block` 8), so its 28 px pill controls sit 8 from both edges; text rows inside indent 4 more, so text keeps its 12. Badges are labels, not controls: a status in a Block's head is a word (`.word`), not a capsule in the corner. The render QA checks it (`concentric`), and the lab blocks on it (LAB-v7).
+
+**R-row-1, single-line rows (owner, 23 Nov, after S32).** A menu or list row is one line: the name never wraps or shrinks, a fixed gap (12 px: the row's 8 gap and 4 on the description) separates it from the description, and the description truncates with an ellipsis. Nothing in a row runs past the row's padding edge. The render QA checks it (`row`), and the lab blocks on it.
 
 The notch spec's sections 2.1 and 12 hold under B unchanged (AUDIT.md section 9): `--r-l` becomes `--r-slab`, the request card's radius becomes the bubble's 18, wells take `--r-field`. Under A, the notch switches to plain arcs with the app, never alone.
 
@@ -500,18 +508,138 @@ The owner's direction (23 November): everything in a bot's session feels like Gr
 
 Session is the hands-on harness, Bots the team that works on its own; one app, one kit. T3 Code's study sets what the Session tab contains (features, flows, states, content); its look is this design system, the same components as screens 11, 12 and 17: the sidebar with its Sessions / Bots switch, the title pill, bubbles, the status line (the model's logo, P4), tool rows, the AskCard, the mark (feedforward and blanks), cards, the details pane, the composer with its line, the dock. The walkthrough, screen by screen, with the logic from the session plan and its owner decisions and where boopis differs from T3 on purpose, is `SESSION-TAB.md`. Screens S1 to S20 are in the boards folder (`ds-v7/session/`, dark and light), with `session-sheet-1.jpg`, `session-sheet-2.jpg` and `session-master-sheet.jpg`.
 
+**The owner's picks on the Session boards (23 Nov):**
+
+| Board | Pick | What it means |
+|---|---|---|
+| S01 | B, four rows | the scale is four rows, each with its one-line meaning, in the launch card and Settings |
+| S02 | B, Auto-accept edits | the default step for new sessions; configurable in Settings > Sessions; onboarding asks for it; a project without a trusted gate falls back to Supervised |
+| S03 | A, sections | Needs you, Working, Pinned, Recent, Settled in the session list |
+| S04 | A, segmented | This device / This project at the head of a settings page |
+| S05 | B, everything, customizable | the composer's line shows how careful, branch, model and effort, context and cost by default; the **quick menu** (the on/off list) opens from the composer's + or a click on the line, turns items off per composer kind, and is the same list as Settings > General > Under the composer; under 900 px the branch and the context fold into the quick menu first |
+| S06 | B, Enter queues | sending normally while a turn runs puts the message in the engine's queue; ctrl Enter steers; the placeholder reads "Queue a message, or ctrl Enter to steer" and the hint "Enter queues, ctrl Enter steers" |
+| S07 | A, four fixed tabs | Diff, Files, Terminal, PR; a side chat joins while open |
+| S08, S10, S11, S13 | approved | |
+| S09 | approved, branded | the agent's messages and cards carry the model's brand: the provider's mark in a 22 px tile at the lower left of the last bubble of a run (the gutter, where a bot's orb sits in a room), and at the head of every agent card (tool rows, approvals, the AskCard); all agent-side blocks sit in that 30 px gutter |
+| S12 | approved, DiffView fixed | the DiffView is one grid (a 36 px line-number gutter, a 16 px sign column, the code); the comment box starts on the code column; the card's padding is symmetric (12 px sides, no extra inset around the hunks) |
+
 **Arranged as the Bots tab's boards** (folder `ds-v7/session-boards/`, with `contact-sheet.jpg`):
 
 | Board | What it decides or shows | Recommended |
 |---|---|---|
-| S01 | the permission scale: A one segmented track, B four rows | A |
-| S02 | the default step for new sessions: A Supervised, B Auto-accept edits, C Full access | A |
+| S01 | the permission scale: A one segmented track, B four rows | B (picked) |
+| S02 | the default step for new sessions: A Supervised, B Auto-accept edits, C Full access | B (picked) |
 | S03 | the session inbox: A sections in the list, B filter chips | A |
 | S04 | the settings scope: A segmented in the page head, B a select beside the title | A |
-| S05 | the composer's line in a session: A how careful, branch, model, cost; B everything; C off | A |
-| S06 | while it runs: A Enter steers (ctrl Enter queues), B Enter queues | A |
+| S05 | the composer's line in a session: A how careful, branch, model, cost; B everything; C off | B (picked) |
+| S06 | while it runs: A Enter steers (ctrl Enter queues), B Enter queues (ctrl Enter steers) | B (picked) |
 | S07 | the right panel: A four fixed tabs, B opened surfaces only with + | A |
 | S08 to S16 | component boards, each component in its states, dark and light, tagged new for approval: launch; the turn and approvals; work log, changed files, checkpoint; queue and steer; right panel, diff, terminal; commit; inbox; limits and lines; scope picker | |
 | S17 to S40 | key screens with the recommended picks: empty tab, import, launch, running Supervised, blank waiting, steer and queue, finished turn, Diff, Files, Terminal, PR, side chat, commit, inbox, / commands, @ files and $ skills, settings changed, usage limits, after a restart, three errors, Settings > Sessions, the session's details | |
 
-**New components for approval** (each in v7's language; specs in `SESSION-TAB.md`): LaunchCard, PermissionScale, ToolRow with an inline approval, WorkLog, ChangedFilesCard, CheckpointBar, QueueStrip, SteerLine, RightPanel (tabs Diff, Files, Terminal, PR, Side chat), DiffView with an inline comment, ReferenceChip, Terminal, CommitDialog with a split primary action, InboxSections, SettingsLine, LimitNotice with the context tick, ScopePicker.
+**New components for approval** (each in v7's language; specs in `SESSION-TAB.md`; section 21 merges most of them into the one kit: QueueStrip into Queue, SettingsLine and SteerLine into SystemLine, LimitNotice into Notice, ScopePicker into Segmented, InboxSections into SectionHead and ListRow, ReferenceChip into InlineChip, CheckpointBar into TurnFoot, WorkLog into Disclosure, Terminal into Well, LaunchCard retired): LaunchCard, PermissionScale, ToolRow with an inline approval, WorkLog, ChangedFilesCard, CheckpointBar, QueueStrip, SteerLine, RightPanel (tabs Diff, Files, Terminal, PR, Side chat), DiffView with an inline comment, ReferenceChip, Terminal, CommitDialog with a split primary action, InboxSections, SettingsLine, LimitNotice with the context tick, ScopePicker.
+
+### 20.1 The new session (S41)
+
+The owner kept the v7 layout of the new-session screen (title pill, search hint, details, the composer and its line, the dock, the sidebar) and asked for better content in its empty canvas. Board `S41-new-session.jpg` offers four brand marks; only the canvas changes between them.
+
+| Option | The mark | Note |
+|---|---|---|
+| A | the "oo" logomark: the wordmark's two eyes, large, with the logo's own idle (glance, blink) | calmest; says boopis, not who answers; no asleep state, so "no model" reads only in words |
+| B | the boopis orb, alive: idle, looks at the composer while you type, asleep with no model | most characterful; suggests boopis's bot does the work, which is the model's |
+| C | the model's logo breathing in a tile (P4's breath); an empty dashed tile with no model | ties to P4 and the S09 brand; loses boopis's face |
+| **D (recommended)** | the orb wearing the model: the boopis orb with the model's mark on its shoulder (the S09 gutter tile, 24 px); asleep and a + tile with no model | both facts at once: boopis is the place, the model answers; the tile is the S09 component |
+
+What the canvas holds, the same in every option: the mark; a line in the boopis voice ("What's next for boopis?", the folder a mark-primitive choice); the **launch row** of quiet selectors (worktree, model, effort, how careful; the last opens the four S01 rows); **Waiting on you**, the inbox row in its one-line variant; with no model, a kind inline action (the model selector reads "+ Choose a model" in the accent, and a Block offers Claude, ChatGPT, Gemini, More; never a red row); and above the composer the **Notice** (S15's component) for usage ("Approaching the weekly limit, 81% used, resets Wed 09:00 · Get more usage · ×"). The launch row and the composer's line are the same selector item: before a session starts the items sit in the canvas and the line under the composer names the keys ("Enter starts the session", "ctrl Enter starts it in the background"); when it starts they settle into the line (200 ms, `--ease-sharp`). No folder yet: "Add a folder to start" with Add a project and Import sessions under the same mark.
+
+Screens with D: S17 (the new session, with the usage notice), S19 (the launch step: the permission selector open), S37 (no model yet), S18 (import, over the no-project canvas) and S41-no-project.
+
+### 20.2 Owner-found defects of 23 Nov, fixed systemically
+
+- **S32**: "webapp-testing" wrapped and the row ran past its edge. Every menu row now uses `.nm` (never wraps or shrinks) and `.ds` (truncates); R-row-1; the QA `row` rule.
+- **S36**: "Start it again" overflowed the 26 px line pill and broke the corner. The line pill with an action (`.sysline.act`) is 32 tall with the button on a 3 px inset (16 − 3 = 13); R-corner-10; the QA `concentric` rule.
+- The concentric check found the same fault in 13 more places; all fixed by the Block (radius 22, padding 8, 28 px controls): tool rows, changed files, AskCards, approvals (the "Hold to approve" button is 28 in a Block), the queue (rows 18 on a 4 inset), the limit notice (now `.notice`), the composer's mode chips (26 → 28), the held strip, the dock's approval card, the search pill's kbd (a pill), the details pane's rows (14 px sides), and the rounder radii option C (menu 18, card 16, composer 22).
+
+**Approved items this changes:** S09 and S20 (the tool row's "Waiting for you" capsule becomes a word; tool rows, AskCards and approvals are Blocks), S15 and S34 (the limit notice is the Notice), S17, S19 and S37 (replaced by S41's content, option D pending the pick), S39 (Enter while it runs reads Queues, How careful reads Auto-accept edits, per S06 B and S02 B), S40 (How careful reads Auto-accept edits).
+
+## 21. The kit
+
+The owner, 23 Nov: one app, one kit, no redundancy between tabs; consistency throughout goes over any single approved board. This section is the inventory: every v7 component once, with its variants, states, tokens and the screens that use it. Where two components did the same job they are merged below; **a merge wins over an approved board**, and 21.3 lists what that changes. `docs/UI-COMPONENTS.md` becomes this table when the kit is built; LAB-v7.md is its lab plan.
+
+**Inventory size:** 69 named components before (section 12's 6 live surfaces and 24 blocks, section 20's 17 Session components, and 22 more named only on boards: the mark, the blank, the InboxChip, the dock, the notch, the rail tile, the search hint, the segmented control, the select, the banner, the update notice, the brand tile, the badge, the stamp, the word, the quick menu, the bot row, the session row, the well, the routine line, the activity line, the reply's meta row); **42 after**, plus 5 patterns that are compositions, not components.
+
+### 21.1 Foundations (apply to every component)
+
+Tokens (`tokens.v7.json`); the three-step type and alpha hierarchy; R-corner-1 to 10 (section 8.2, strict since 23 Nov: a control in a corner has radius = outer − inset, equal insets, never past the edge); R-row-1 (rows are single-line); R-inline-1 (inline chips sit on the baseline); R-calm-1 to 7 (section 11); motion tokens; the mark primitive's behaviour (section 17). The lab checks each of these on every story (LAB-v7.md).
+
+### 21.2 The components
+
+| # | Component | Purpose | Variants | States | Tokens | Used on |
+|---|---|---|---|---|---|---|
+| 1 | **WindowChrome** | the floating chrome: title pill (opens details), search hint, details button, window controls | rail A 54/88, compact B 44/64 (under 1200 px) | default, hover, focus, title running (StatusLine inside) | `--bg-3`, `--line`, `--chrome-y`, 36/40 heights | every tab |
+| 2 | **Page** | the ground and its 640 column, or a settings page | column, settings page (head: title + Segmented scope) | empty (EmptyState) | `--bg-2`, `--column` | Bots, Session, Settings, Store |
+| 3 | **Pane** | the right-hand surface; one per view | details (356: bot details with Activity / Library, session details), tools (520, resizable: Diff, Files, Terminal, PR, + Side chat while open) | open, closed, overlay under 900 | `--bg-pane`, hairline, `--shadow-modal` overlay | Bots, Session |
+| 4 | **Dialog** | a modal task | large (Settings: 900, nav 220), form (440 to 520: commit, import, new bot, confirm) | enter 200 ms, scrim, close 28 at 10 (a capsule, R-corner-9) | `--r-dialog` 20, `--bg-3`/`--bg-pane` | Settings, Session, Bots |
+| 5 | **Menu** | every popover list | menu, quick menu (checks), palette (/ @ $), snooze, split-button menu, option menu (the four permission rows) | one open at a time, enter 100 ms from .98 | `--r-menu` 16, `--pad-menu` 6, rows `--r-field` 10 | all |
+| 6 | **Card** | the settings card of Rows | settings, pane card (rows 14 across), danger zone (collapsed) | — | `--r-card` 14, padding 4/8 0, rows 16 across | Settings, Pane |
+| 7 | **Block** | every inline surface that holds controls; the base of 8 to 12 | — | — | `--r-block` 22, `--pad-block` 8, 28 px controls on the 8 inset, text 4 more | Bots, Session |
+| 8 | **ToolRow** (merged: Bots' tool rows + Session's ToolRow) | one tool call | edit, command, read, search | running (shimmer), done, failed (red word), waiting (an attached AskCard) | Block, mono 12 head, the model mark at its head | Bots, Session |
+| 9 | **AskCard** (merged: AskCard + ChoiceCards + the ToolRow's inline approval) | everything that waits on the person's answer | standalone (bot approval, never expires), attached (inside a ToolRow: the approval answers), question (chips), choices (lettered option rows, 36, radius 14), lapsed blank (the guess) | asked, needs you (amber word), answered (collapses to one row), lapsed | Block, chips 28, rows 22 − 8 = 14 | Bots, Session, Notch |
+| 10 | **FilesCard** | a turn's changed files | collapsed, open | — | Block, `.fl` rows 26 mono | Session |
+| 11 | **Queue** (merged: QueueStrip + the room's "1 message waits" strip) | messages waiting to be sent, above the composer | list (the engine's numbered queue: edit, cancel, Send now), held (one row: "1 message waits until the discussion ends", Send now) | — | Block radius 22 on a 4 inset, rows 36 radius 18, buttons 28 on 4 | Session, Bots rooms |
+| 12 | **Notice** (merged: LimitNotice + Toast + Banner + the update notice) | one line that tells the person something about the app, with up to two actions | placement: above the composer, in a page, floating (bottom centre, was the toast); tone: neutral, amber (limited, owes), accent (updated, info), red (failed) | enter 120 ms, dismiss (×) | a 44 pill, `--pad-block` 8, buttons 28 | all |
+| 13 | **SystemLine** (merged: SettingsLine, the restart line, the engine-stopped line, SteerLine, the routine line, the hand-off row) | a centred line in the thread about the thread itself | info (settings changed, continued after a restart, a routine ran), steer (with the steering message as a small bubble), hand-off (two 16 orbs and a chevron), error with action (`.act`: 32 tall, the button on a 3 inset) | — | a pill, `--fill-2`, 26 (32 with an action), 12 | Bots, Session |
+| 14 | **Bubble** | a message | user, agent, bot (derived fill in its own chat), with byline in a room, with the you wash | — | `--r-bubble` 18, padding 7 12, 15/22 | Bots, Session |
+| 15 | **DiffView** | hunks of a change | stacked, split; with an inline comment | — | one grid 36 / 16 / code, comment on the code column, 12 sides | Session |
+| 16 | **Well** (merged: the well + the Terminal) | mono text on the deepest surface | code (in a Block or a bubble), terminal (fills the tools pane, path and branch in its head) | — | `--bg-0`, `--r-field`, mono 12/18 | Bots, Session |
+| 17 | **ListRow** (merged: the session row, the bot row, the Item row, the waiting rows) | one item in a list | session (44, two lines), bot (54, orb 36), item (60, a 40 mark, the action a 28 pill), compact (36, one line: S41's Waiting on you) | default, hover, current, needs you (amber badge), working (dot) | `--r-field` 10, `--current`, `--hover` | Bots, Session, Store, S41 |
+| 18 | **SectionHead** (merged: InboxSections' heads + the bots sidebar's day heads + the settings section heading) | a heading over rows | with count, with disclosure | collapsed | 12 `--text-dim`, count mono 11 | all lists |
+| 19 | **MenuRow** | a single-line row in a Menu | glyph + name, name + description (`.nm` / `.ds`), with kbd, danger | hover, focus | 32, padding 6 8, R-row-1 | all Menus |
+| 20 | **OptionRow** | a two-line radio row | permission step, import pick | chosen (accent ring), hover | `--r-field`, ring 16 | Menus, Settings, S41 |
+| 21 | **Button** (merged: the split commit button is a variant) | an action | secondary, primary, ghost, tint, danger, split (primary + menu) | hover, pressed, focus, disabled, hold-to (fill sweep) | 36 / 32 / 28, pills | all |
+| 22 | **IconButton** | an action with a glyph | floating 36, tinted 28, ghost (window controls) | as Button | circles | all |
+| 23 | **Segmented** (merged: ScopePicker, the Pane's tab bar, Activity / Library) | one of a few | inline, page head (scope), tab bar | chosen thumb, hover, focus | `--seg-on`, track `--fill-2`, nowrap | all |
+| 24 | **SelectorItem** (merged: the composer line's items, S41's launch row, the settings select) | a quiet current value that opens a Menu | line (12, under the composer), launch (13, in the canvas), field (in a Row) | hover (6% fill), open | `--r-field`, `--text-dim` | Session, Bots, Settings |
+| 25 | **Switch** | on or off | — | on (accent), off, focus, disabled | 32 × 20 | Settings, quick menu |
+| 26 | **Field** | text input | text, search (a pill), multi-line | focus ring, error, disabled | 36, `--line-field` | Dialogs, Settings, palette |
+| 27 | **Kbd** | a key | in text (radius 4), in a pill (a pill) | — | 20 tall | all |
+| 28 | **Chip** | a compact choice | answer (in an AskCard), filter, mode (composer B) | chosen (inverted), hover | 28 pills | Bots, Session |
+| 29 | **Tooltip** | a name and its keys | — | enter after 500 ms | `--r-tip` 6 | all |
+| 30 | **InlineChip** (merged: ReferenceChip, mention, the you capsule, inline code, the model chip, a blank's countdown) | a chip in running text | mention (16 orb + name in the bot's colour), you (amber), reference (mono `path:line`), code, model (mark + name), countdown | — | R-inline-1 | Bots, Session, composer |
+| 31 | **Mark** | the dashed underline primitive (section 17) | feedforward, blank (opened, filled, waiting, lapsed), info label (hover only) | shown, hover, open, chosen, owed | `--mark-*` | Bots, Session, S41 |
+| 32 | **StatusWord** (merged: the stamp + the word) | a status said in words | neutral, amber (needs you), red (failed), ok | with a dot, with a pulse | 12 | Blocks, rows |
+| 33 | **Badge** | a count or a short status at the end of a row | neutral, amber | — | 18 tall pill, 11 | ListRow only |
+| 34 | **StatusLine** (merged: the bot activity line + the session status line) | what a job is doing now | bot (16 live orb), session (the model mark breathing), system (phrase alone) | working (shimmer), waiting (still), reduced motion | 2.2 s shimmer, 1.4 s breath | Bots, Session, title pill |
+| 35 | **Avatar** (merged: the orb, the brand tile, OrbStack) | who speaks | orb (16 to 64, faces), brand tile (22, the model's mark), stack (overlap a third), orb wearing the model (S41 D) | idle, working, needs, sleeping | orb2 | all |
+| 36 | **Disclosure** (merged: WorkLog) | a collapsed summary | steps ("Read 6 files"), work log ("Worked for 59s: ...") | open, closed | 13 `--text-dim`, chevron | Bots, Session |
+| 37 | **TurnFoot** (merged: CheckpointBar + the reply's meta row) | under a finished reply: model, time, cost, and what can be done | bot (meta only), session (Undo, Edit from here, Fork) | hover reveals actions | mono 12, ghost 26 buttons | Bots, Session |
+| 38 | **TimeSeparator** | a gap in time | — | — | 12 `--text-dim` | Bots, Session |
+| 39 | **Composer** | the place to type | kinds: session, bot, room, dock, notch; with its line (items are SelectorItems; the quick menu is a Menu) | empty, typed, running (Enter queues), held | 44 pill, `--composer-pad` 8 | all |
+| 40 | **Rail** | the bots' tiles | A 54/88, B 44/64 | current, needs you, working | `--r-tile` | Bots |
+| 41 | **Dock** | the floating dock of bots | — | needs you, working, sleeping | `--r-slab` 30 | all |
+| 42 | **Notch** | the notch's own surface (notch spec) | — | — | `--r-slab` 30 | system |
+| — | **EmptyState** | one line and at most one action where content would be | — | — | — | all (counted in Page) |
+
+**Patterns** (compositions of the above, documented, not new components): the Settings page; the new session's canvas (S41: Avatar, greeting with a Mark, SelectorItems, ListRow compact, Notice); the setup form (merged: LaunchCard + the new-bot form: Rows with SelectorItems and the four OptionRows, in a form Dialog for a bot, in the canvas for a session); the danger zone; the long-text editor.
+
+### 21.3 Merges, and what they change on approved boards
+
+| Merge | Into | What changes on screen |
+|---|---|---|
+| Bots' tool rows, Session's ToolRow | ToolRow | Bots' tool rows become Blocks (radius 22, padding 8) with the model mark at the head (screens 11, 12, 17) |
+| ToolRow's inline approval, AskCard's approval, ChoiceCards | AskCard (attached, standalone, question, choices) | the question card's lettered options become 36 rows with radius 14 inside a Block (board 09's sample, screen 11); the inline approval is the attached AskCard: same chips, same amber word (S09, S20) |
+| QueueStrip, the room's held strip | Queue | the room's "1 message waits" strip becomes a one-row Queue Block above the composer (board 07's room sample, screen 12 with a held message) |
+| SettingsLine, restart, engine stopped, SteerLine, routine, hand-off | SystemLine | the hand-off row becomes a SystemLine pill with its two orbs (screen 12) |
+| LimitNotice, Toast, Banner, update notice | Notice | the toast becomes the floating Notice, a 44 pill (board 03); the settings banner becomes an in-page Notice, accent tone (board 09, screen 14); S15 and S34 already moved |
+| ScopePicker, the Pane's tabs, Activity / Library | Segmented | names only; no visual change |
+| InboxSections, the bots sidebar heads, settings section heads | SectionHead | the bots sidebar's day heads take the count style (screen 12, 13) |
+| Session status line, bot activity line | StatusLine | none (already one class; P4 applies) |
+| ReferenceChip, mention, you, code, model chip, countdown | InlineChip | none (R-inline-1 already applied) |
+| CommitDialog, form dialogs | Dialog (form) + Button (split) | none |
+| LaunchCard, new-bot form | the setup pattern | LaunchCard retired; S19 now shows S41's launch row (done) |
+| session row, bot row, Item row, waiting rows | ListRow | none |
+| stamp, word | StatusWord | the tool row's "Waiting for you" capsule became a word (S09, S20; done) |
+| CheckpointBar, the reply's meta row | TurnFoot | the bot reply's meta row takes TurnFoot's spacing (screen 10) |
+| well, Terminal | Well | none |
+| composer line items, launch row, settings select | SelectorItem | none |
+| orb, brand tile, OrbStack | Avatar | none |
