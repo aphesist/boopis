@@ -180,3 +180,8 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - Orbs (owner): new renderer with all clarity fixes; eyes face-scale 1.25; Grok sizes (rows 28, rail 36); all
   animation tuning + "use more" plan; main bot 44 px ONLY in the Bots tab sidebar (first in the bots list, below the
   switch); the Sessions tab shows no bots except the dock (and maybe notifications).
+- Dock (owner): D01 B (bots that matter now + "N more" to Bots), D02 A full row + a compact idle version toggleable
+  in Settings, D03 C (amber ask pill opening the stack); K01, K02 approved. The dock stays hidden until the person
+  has created a bot of their own (boopis alone does not count). The owner found the dock slab inconsistent across
+  boards: one component from one source everywhere + a blocking "same-component" geometry check.
+- Onboarding revision 2 batch 1: owner liked the changes.
