@@ -30,12 +30,10 @@ ui.scrollEdges.start();
 /** where first run's optional steps asked to land once the app is up (`connectors`, `store`) */
 let landing: 'connectors' | 'store' | null = null;
 
-/* the watchdog's notice waits for the shell: a toast shown while the app is still booting has no layout to sit in */
-let shellReady = false;
+/* the watchdog's and the engine update's notices wait for the shell (the kit's `toast.whenReady`): a toast shown while the app
+   is still booting has no layout to sit in. The update's may offer an action (Set up) */
 type NoticeAction = { label: string; onClick: () => void };
-const owedNotices: Array<{ text: string; action: NoticeAction | undefined }> = [];
-on('hx:ready', () => { shellReady = true; for (const n of owedNotices.splice(0)) ui.toast(n.text, { ms: 8000, action: n.action }); });
-function noticeWhenReady(text: string, action?: NoticeAction): void { if (shellReady) ui.toast(text, { ms: 8000, action }); else owedNotices.push({ text, action }); }
+function noticeWhenReady(text: string, action?: NoticeAction): void { ui.toast.whenReady(text, { ms: 8000, action }); }
 
 async function start(): Promise<void> {
   await orbs;

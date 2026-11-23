@@ -192,12 +192,16 @@ function build(slotEl: HTMLElement): void {
         <span class="dk-foot-ctl">${ui.html.iconButton({ icon: 'chevron-down', label: 'Minimise the dock', tip: 'Minimise', size: 's', tipPos: 'top', class: 'dk-foot-btn dk-down', attrs: { 'data-act': 'down' } })}</span>
       </div>
       <span class="ui-sr" id="dk-bot-hint">Click or Enter opens its session here. Click it again, or Esc, to close. Double-click or ${isMac ? 'Command' : 'Control'}+Enter opens the full chat in the Bots tab.</span>
-    </div>`;
+    </div>
+    <svg class="dk-edges" aria-hidden="true" focusable="false"><defs><linearGradient id="dk-edge-sides" x1="0" x2="1" y1="0" y2="0"><stop offset="0" class="dk-edge-solid"/><stop offset="0" class="dk-edge-clear"/><stop offset="1" class="dk-edge-clear"/><stop offset="1" class="dk-edge-solid"/></linearGradient><linearGradient id="dk-edge-top" x1="0" x2="0" y1="0" y2="1"><stop offset="0" class="dk-edge-solid"/><stop offset="0" class="dk-edge-clear"/></linearGradient></defs><path fill="url(#dk-edge-sides)"/><path fill="url(#dk-edge-top)"/></svg>`;
   slotEl.appendChild(root);
   X.shapeEl = root.querySelector('.dk-shape') as SVGSVGElement;
   X.pathEl = X.shapeEl.querySelector('path') as SVGPathElement;
   X.stageEl = root.querySelector('.dk-stage') as HTMLElement;
   X.footEl = root.querySelector('.dk-foot') as HTMLElement;
+  X.edgesEl = root.querySelector('.dk-edges') as SVGSVGElement;
+  X.edgesPaths = Array.from(X.edgesEl.querySelectorAll('path'));
+  X.edgeStops = Array.from(X.edgesEl.querySelectorAll('stop'));
   X.dotsEl = root.querySelector('.dk-dots') as HTMLElement;
   X.downBtn = root.querySelector('.dk-down') as HTMLElement;
   for (const p of [...PAGE_IDS, 'edit']) X.pageEls[p] = root.querySelector(`#dk-p-${p}`) as HTMLElement;
@@ -225,8 +229,8 @@ function onTheme(): void {
 function mount(slotEl: HTMLElement): void {
   if (flags.mounted) return;
   initData();
-  readRadius();
   build(slotEl);
+  readRadius();
   E.slabW = spring(0, K_SLAB, 1, 0.05); E.slabH = spring(0, K_SLAB, 1, 0.05);
   E.sinkS = spring(0, K_SINK, 1, 0.05);
   E.dotS = spring(0, K_DOT, 1, 0.05);
@@ -277,6 +281,8 @@ function mount(slotEl: HTMLElement): void {
   on('hx:state', (d) => {
     if (d.changed.includes('orbGrow')) readGrow();
     if (d.changed.includes('dock')) { flags.setting = d.state.dock !== 'off'; followSetting(); }
+    /* centred in the window or on the column: the room around its middle is another, so the row fits again (dock.css moves it) */
+    if (d.changed.includes('dockCentred') && !d.initial) { fitRow(); retarget(false); }
   });
   on('hx:attention', (d) => {
     if (!d.source || d.source === 'dock') return;

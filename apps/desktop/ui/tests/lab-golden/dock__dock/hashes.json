@@ -159,6 +159,46 @@
   "w": 1440,
   "h": 84
  },
+ "centred-in-the-window-expanded@bone": {
+  "sha": "451cc1b8fe136bdb6d39f259bdbbdb77b8422c7c",
+  "w": 1440,
+  "h": 84
+ },
+ "centred-in-the-window-expanded@catalog": {
+  "sha": "61e49abbf2366540951929c01c139960bf527923",
+  "w": 1440,
+  "h": 84
+ },
+ "centred-in-the-window-expanded@graphite": {
+  "sha": "398c057b426247b716ab528c6425bc955669d26e",
+  "w": 1440,
+  "h": 84
+ },
+ "centred-in-the-window-expanded@typewriter": {
+  "sha": "610f72b1acfa822b2b019e3e452fcf1c93597262",
+  "w": 1440,
+  "h": 84
+ },
+ "centred-in-the-window@bone": {
+  "sha": "6dff0ca6d2335bb0df440fc8c9167450e14dacc1",
+  "w": 1440,
+  "h": 84
+ },
+ "centred-in-the-window@catalog": {
+  "sha": "b1caf0b3e0e4103b06a1d75b7e6ba1060593bc1a",
+  "w": 1440,
+  "h": 84
+ },
+ "centred-in-the-window@graphite": {
+  "sha": "fefe49c8f321f481973c42a2f3048d10afc4be2a",
+  "w": 1440,
+  "h": 84
+ },
+ "centred-in-the-window@typewriter": {
+  "sha": "3c8f9adec499106478d823070f4ce65be99a7956",
+  "w": 1440,
+  "h": 84
+ },
  "expanded@bone": {
   "sha": "368553f68d7ce2167aac58456b25d06169edb906",
   "w": 1440,

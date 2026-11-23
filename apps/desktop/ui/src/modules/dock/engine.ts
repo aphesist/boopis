@@ -22,7 +22,7 @@ import { setOrbLife } from './orbs';
 import { holdOutsideDock, releaseOutsideDock } from '@boopis/ui';
 import { springAt, springElapsed, springKeyframes } from '../../core/spring';
 import type { Channel, SpringParams } from '../../core/spring';
-import { fillCards, renderView, viewKey } from './views';
+import { fillCards, pageViewKey, renderView, viewKey } from './views';
 import { magClear, magOrb, orbPose, orbsIn, placeIfDirty, placeOrbs, slotBot } from './layer';
 import { keepInView, syncRoving } from './roving';
 import { PAGE_NAME } from './ctx';
@@ -44,7 +44,6 @@ export const E = {
 type Leaving = HTMLElement & { _leave?: Animation | null };
 /** the views fading out as the slab moves (counted here, so the frame never queries the DOM for them) */
 const leaving = new Set<HTMLElement>();
-type Sec = HTMLElement & { _fade?: Animation | null };
 
 export const hideTip = (): void => { try { ui.tooltip.hide(); } catch { /* none */ } };
 
@@ -86,7 +85,11 @@ function frame(now: number): void {
   let busy = magBusy;
   for (const s of springs) { if (atRest(s)) snapS(s); else busy = true; }
   if (flushEnter(now)) busy = true;
-  for (const [p, s] of E.slides) if (atRest(s) && s.t === 0) { const pe = X.pageEls[p]; if (pe) pe.style.translate = ''; E.slides.delete(p); }
+  for (const [p, s] of E.slides) if (atRest(s)) {
+    const pe = X.pageEls[p];
+    if (s.t === 0) { if (pe) pe.style.translate = ''; E.slides.delete(p); }
+    else if (p !== S.page && !E.drag.on) { if (pe) putAway(pe); E.slides.delete(p); }   /* a swipe's neighbour that went back out past the edge */
+  }
   paint();
   if (busy) E.raf = requestAnimationFrame(frame);
   else settled();
@@ -134,18 +137,54 @@ function startFlip(k: string, el: HTMLElement, p: SpringParams, ch: readonly Cha
 }
 /** a page sliding along the slab: from `x0` (with velocity `v0`) to `target`, as a `translate` animation. The page's own
     `translate` is the one thing that moves, so it composes with the centring `transform` it already has. */
-export function slideTo(page: string, el: HTMLElement, x0: number, v0: number, target: number, o: { hold?: boolean } = {}): void {
+export function slideTo(page: string, el: HTMLElement, x0: number, v0: number, target: number, o: { hold?: boolean; end?: () => void; eps?: number } = {}): void {
   stopSlide(page); E.slides.delete(page);
-  const ch = [{ x0: x0 - target, v0, eps: 0.1 }];
+  const ch = [{ x0: x0 - target, v0, eps: o.eps ?? 0.1 }];
   const play = springKeyframes(SLIDE_P, ch, ([x]) => ({ translate: `${px(target + (x as number))}px 0` }));
-  if (play.duration <= 0) { el.style.translate = target ? `${px(target)}px 0` : ''; return; }
+  if (play.duration <= 0) { el.style.translate = target ? `${px(target)}px 0` : ''; o.end?.(); return; }
   const an = el.animate(play.keyframes, { duration: play.duration, easing: 'linear', fill: o.hold ? 'both' : 'backwards' });
   if (motion.timeScale !== 1) an.playbackRate = motion.timeScale;
   const f: Flip = { el, an, delay: 0, p: SLIDE_P, ch, target };
   E.slideAn.set(page, f);
   /* a page that slid away holds its last position until it is put away (its fade has hidden it long before) */
-  const done = (): void => { if (E.slideAn.get(page) === f) { E.slideAn.delete(page); if (o.hold) { try { an.cancel(); } catch { /* gone */ } } kick(); } };
+  const done = (): void => { if (E.slideAn.get(page) === f) { E.slideAn.delete(page); if (o.hold) { try { an.cancel(); } catch { /* gone */ } } o.end?.(); kick(); } };
   an.onfinish = done; an.oncancel = done;
+}
+/** Pages that slid out past the slab's edge and wait there, unseen (the stage keeps its clip while any does: paint), before
+    they are put away: called back meanwhile, a page comes back from where it is instead of being hidden and shown again in
+    the same place a moment later. */
+const parked = new Map<string, number>();
+const PARK_MS = 400;
+export function park(page: string): void {
+  clearTimeout(parked.get(page));
+  parked.set(page, window.setTimeout(() => {
+    parked.delete(page);
+    const sec = X.pageEls[page];
+    if (sec && page !== S.page && !sliding(page)) putAway(sec);
+    kick();
+  }, PARK_MS));
+}
+const unpark = (page: string): void => { clearTimeout(parked.get(page)); parked.delete(page); };
+/** a section that is neither the current page nor on its way: hidden, its slide and its marks gone */
+export function putAway(sec: HTMLElement): void {
+  unpark(sec.dataset['page'] ?? '');
+  sec.hidden = true; sec.classList.remove('is-out'); sec.inert = false; sec.style.translate = ''; sec.style.opacity = '';
+}
+/** show a page that is not the current one beside it (the neighbour a swipe brings in): its view for the dock's mode, its cards,
+    its orbs placed; it takes no pointer and no focus until it is the current page */
+export function readyPage(page: string): HTMLElement | null {
+  const sec = X.pageEls[page]; if (!sec) return null;
+  cancelOut(sec);
+  const key = pageViewKey(page);
+  let view: HTMLElement | null = null;
+  for (const v of sec.querySelectorAll<HTMLElement>(':scope > .dk-view')) {
+    if (v.dataset['view'] === key && !v.classList.contains('is-ghost')) { cancelLeave(v); unhand(v); v.hidden = false; view = v; }
+    else if (!v.classList.contains('is-leaving')) v.hidden = true;
+  }
+  sec.hidden = false; sec.classList.add('is-out'); sec.inert = true;
+  fillCards(view);
+  if (page === 'bots') placeNow();
+  return sec;
 }
 export function stopSlide(page: string): void { const f = E.slideAn.get(page); if (f) { E.slideAn.delete(page); try { f.an.cancel(); } catch { /* gone */ } } }
 /** where the page's slide is now (a drag's own spring, or a running animation), and how fast it moves */
@@ -174,7 +213,7 @@ export function paint(): void {
   for (const [p, s] of E.slides) { const pe = X.pageEls[p]; if (pe) pe.style.translate = `${s.x.toFixed(2)}px 0`; }
   /* while anything travels, the content is held inside the slab (16px of headroom for the orbs' paint), so the black
      shape and what it carries never part; at rest nothing is clipped */
-  const moving = !motion.reduce && h > 0.5 && (E.anims.size > 0 || E.slides.size > 0 || E.slideAn.size > 0 || E.pending.length > 0 || !atRest(E.slabW) || !atRest(E.slabH) || leaving.size > 0);
+  const moving = !motion.reduce && h > 0.5 && (E.anims.size > 0 || E.slides.size > 0 || E.slideAn.size > 0 || parked.size > 0 || E.pending.length > 0 || !atRest(E.slabW) || !atRest(E.slabH) || leaving.size > 0);
   /* a focus ring is drawn where its element will be, not where the orb inside it is: while the slab travels the rings wait
      (CSS, `data-moving`), or a roster row's ring hangs above a slab that has not reached it and a bot's ring circles an
      empty slot while its orb is still on the way */
@@ -184,9 +223,35 @@ export function paint(): void {
      inside while it was set: every orb, the "+" and the foot vanished for as long as the slab moved, a hover's lift included,
      and came back when it settled (Chromium never did; tests/e2e/dock_webkit.py watches pixels for it). `clip` clips the same
      box in both engines. */
-  const clip = moving ? `rect(${(-(h + sink + 16)).toFixed(1)}px, ${(w / 2).toFixed(1)}px, 4px, ${(-w / 2).toFixed(1)}px)` : '';
+  /* A page that moves sideways (a switch, a swipe, an arrow's nudge at the end) fades in and out at the slab's sides, and at its
+     top while the slab grows or shrinks to the next page, over --scroll-fade, instead of meeting the clip's straight cut
+     (R-scroll-9): the slab's own outline above the foot, filled with its black at those edges. A strip of the ground, never a
+     mask: a mask that moves with the dock is the most expensive thing in a morph on WebKitGTK, and masked or clip-pathed content
+     blanked there before. Only while a page moves: at rest nothing fades. The clip's 16px of headroom is for an orb's paint
+     (a magnified one reaches above the slab); a scrolling page gets none, since magnification is off then and a taller page
+     coming in would show above a slab still growing to it. */
+  const scrolling = moving && (E.slides.size > 0 || E.slideAn.size > 0);
+  const head = scrolling ? 0 : 16;
+  const clip = moving ? `rect(${(-(h + sink + head)).toFixed(1)}px, ${(w / 2).toFixed(1)}px, 4px, ${(-w / 2).toFixed(1)}px)` : '';
   if (clip !== stageClip) { stageClip = clip; X.stageEl.style.clip = clip; }
+  if (scrolling !== edgesOn) { edgesOn = scrolling; X.root.toggleAttribute('data-scrolling', scrolling); }
+  if (scrolling) paintEdges(w, h, sink);
   paintMag();
+}
+let edgesOn = false;
+function paintEdges(w: number, h: number, sink: number): void {
+  const pill = S.mode === 'minimal' || S.mode === 'off';
+  const foot = X.footEl.classList.contains('is-off') ? 0 : geomR.BAND;
+  const ht = Math.max(0, h - foot);
+  X.edgesEl.setAttribute('width', w.toFixed(2));
+  X.edgesEl.setAttribute('height', ht.toFixed(2));
+  X.edgesEl.style.transform = `translate3d(${(-w / 2).toFixed(2)}px,${(sink - foot).toFixed(2)}px,0)`;
+  const d = pill ? ui.shape.slab(w, ht, Math.min(ht / 2, w / 2), 0, { round: true }) : ui.shape.slab(w, ht, geom(w, h).R, 0);
+  for (const p of X.edgesPaths) p.setAttribute('d', d);
+  const f = Math.min(0.5, geomR.EDGE / Math.max(1, w)), t = Math.min(1, geomR.EDGE / Math.max(1, ht));
+  X.edgeStops[1]?.setAttribute('offset', f.toFixed(4));
+  X.edgeStops[2]?.setAttribute('offset', (1 - f).toFixed(4));
+  X.edgeStops[5]?.setAttribute('offset', t.toFixed(4));
 }
 /** place the orbs where their slots are, unless a FLIP is running (then when it has settled) */
 export const placeNow = (): void => placeOrbs(orbFlips());
@@ -279,7 +344,7 @@ function snapKeys(a: { x: number; y: number }, clear: boolean): Map<string, KeyR
 export function showView(key: string): HTMLElement | null {
   const p = key.split(':')[0] ?? '';
   for (const [id, sec] of Object.entries(X.pageEls)) {
-    if (id === p) { cancelOut(sec as Sec); sec.hidden = false; }
+    if (id === p) { cancelOut(sec); sec.hidden = false; }
     else if (!sec.classList.contains('is-out')) sec.hidden = true;
   }
   let target: HTMLElement | null = null;
@@ -316,16 +381,16 @@ function finishLeave(view: Leaving): void {
     if (view === X.curView) unhand(view);
     if (view !== X.curView) view.hidden = true;
   }
-  const sec = view.parentElement as Sec | null;
-  if (sec && sec.classList.contains('is-out') && !sec.querySelector('.is-leaving') && !sliding(sec.dataset['page'] ?? '') && !sec._fade) {
+  const sec = view.parentElement;
+  if (sec && sec.classList.contains('is-out') && !sec.querySelector('.is-leaving') && !sliding(sec.dataset['page'] ?? '') && !parked.has(sec.dataset['page'] ?? '')) {
     sec.classList.remove('is-out');
     if (!X.curView || X.curView.parentElement !== sec) sec.hidden = true;
   }
 }
 function unhand(view: HTMLElement): void { for (const el of view.querySelectorAll('.is-handed')) el.classList.remove('is-handed'); }
 function cancelLeave(view: HTMLElement): void { if (view.classList.contains('is-leaving')) finishLeave(view); }
-export function cancelOut(sec: Sec): void {
-  if (sec._fade) { try { sec._fade.cancel(); } catch { /* gone */ } sec._fade = null; }
+export function cancelOut(sec: HTMLElement): void {
+  unpark(sec.dataset['page'] ?? '');
   sec.classList.remove('is-out');
   sec.inert = false;
   sec.style.opacity = '';
@@ -336,8 +401,8 @@ export function cancelOut(sec: Sec): void {
 /* once motion settles, any section that is neither current nor leaving is put away */
 function tidy(): void {
   const curSec = X.curView && X.curView.parentElement;
-  for (const [id, sec] of Object.entries(X.pageEls) as Array<[string, Sec]>) {
-    if (sec === curSec || sec.querySelector('.is-leaving') || (sec._fade && sec._fade.playState === 'running')) continue;
+  for (const [id, sec] of Object.entries(X.pageEls)) {
+    if (sec === curSec || sec.querySelector('.is-leaving') || sliding(id) || parked.has(id)) continue;
     if (!sec.hidden || sec.classList.contains('is-out')) {
       sec.hidden = true; sec.classList.remove('is-out'); sec.inert = false; sec.style.translate = ''; E.slides.delete(id); stopSlide(id);
     }

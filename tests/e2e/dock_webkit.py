@@ -1,6 +1,7 @@
 """The dock in a real WebKitGTK: its content never disappears while it moves.
 
-    python3 tests/e2e/dock_webkit.py [--dist apps/desktop/ui/dist-e2e] [--phases core,presence] [--frames DIR]
+    python3 tests/e2e/dock_webkit.py [--dist apps/desktop/ui/dist-e2e] [--phases core,presence,arrange,pages]
+                                     [--frames DIR]
 
 The owner's recording ("dock still has the same flickering problem") shows the dock's content (the orbs, the "+", the
 options row) gone, with only the black slab left, for as long as the pointer is over the dock and when a session closes.
@@ -28,7 +29,15 @@ Phases:
   and closes; the dock expands, collapses, minimises and comes back (twice: every orb changes place each time), and
   changes page and back; a bot is made;
 - presence (a first install, `?fixture=fresh`): no dock at all; the first bot rises in; on another first install the
-  first session starts and the dock rises with the run alone; a bot is then made and the dock grows to take the roster.
+  first session starts and the dock rises with the run alone; a bot is then made and the dock grows to take the roster;
+- arrange: the "Dock pages" panel opens and closes. The owner's recording of 0.1.9 shows it losing its right half
+  (Done, the end of its line, the tiles from "Needs you") for the last 300 ms of the opening, with the slab still
+  whole: WebKitGTK repainted a page centred with translateX(-50%) inside the clipped stage with the clip taken before
+  the transform, so only what lay left of the centre line was painted again. So in every snapshot of this phase, the
+  panel's head and its tiles' names must hold content right of the centre line wherever they hold some left of it;
+- pages: the dock's other pages, in the transitions the owner's second recording of 0.1.9 shows losing their right
+  half the same way ("Nothing needs you", "Nothing scheduled", Run): the slab growing from the orb row into a page, a
+  page expanding and collapsing, and a switch between two pages. The view each shows is judged like the arrange panel.
 
 Needs `xvfb-run`, `WebKitWebDriver` (Debian and Ubuntu: `webkit2gtk-driver`) and Pillow. Exit 0 when every phase
 holds, 1 when content went missing or a phase saw too few frames to say, 3 when a prerequisite is missing.
@@ -43,6 +52,7 @@ import functools
 import http.server
 import importlib
 import io
+import itertools
 import json
 import os
 import shutil
@@ -58,6 +68,7 @@ from typing import Any
 HERE = Path(__file__).parent
 DEFAULT_DIST = HERE.parent.parent / "apps" / "desktop" / "ui" / "dist-e2e"
 SLOW = 0.1  # the springs' time scale
+SLOWEST = 0.02  # the slowest time scale the dock takes (`timeScale` clamps to it)
 MIN_SLAB = 40  # px: a slab shorter than this has no room to judge
 MIN_LIT = 60  # pixels in the slab's body brighter than the slab itself: any real content has hundreds
 MIN_JUDGED = 3  # snapshots a phase must judge, or it saw too little to say
@@ -70,6 +81,14 @@ ORB_MOVED = (
     8  # px: an orb that moved more than this between a snapshot's two reads is not judged (where it is is unknown)
 )
 LIT = 40  # luminance above which a pixel is content (the slab is 0; the page behind it is below 30)
+MIN_HALF = 150  # lit pixels in a box's left half, at its fullest, before its halves are judged (the head: ~1000)
+HALF_RATIO = 0.25  # the share of its fullest right half a box's right must hold wherever its left holds half its own
+TILE_NAMES = 30  # px: the top of the tiles' row, where their names are (the bots row's orbs never reach it)
+# the arrange panel's boxes that hold content on both sides of the centre line, and how much of each counts from its top
+# (0: all of it)
+PANEL = ((".dk-v-edit .dk-edit-head", 0), (".dk-v-edit .dk-tiles", TILE_NAMES))
+# the view the current page shows (a page that slides in or out moves between a snapshot's two reads: not judged then)
+VIEW = ((".dk-page:not([hidden]):not(.is-out) > .dk-view:not([hidden]):not(.is-leaving)", 0),)
 NEW_BOT = "{name: 'orbit', role: 'watches the build', shape: 'star', color: '#e8b04a', eyes: 'pill'}"
 SEND = "{governed: true, smart: true, model: 'sonnet 5.5', assume: []}"
 
@@ -222,6 +241,22 @@ class Page:
             "return out;"
         )
 
+    def boxes(self, wanted: tuple[tuple[str, int], ...]) -> list[dict[str, Any]]:
+        """The dock's boxes that `wanted` names (a selector, and how many px of it from its top count; 0 for all) and
+        that are drawn now, each with the dock's centre line `cx`."""
+        return self.run(
+            "const cx = document.querySelector('#hx-dock .dk-stage').getBoundingClientRect().left, out = [];"
+            "for (const [s, band] of arguments[0]) for (const e of document.querySelectorAll('#hx-dock ' + s)) {"
+            " if (e.closest('[hidden]')) continue;"
+            " const r = e.getBoundingClientRect();"
+            " const b = band ? Math.min(r.bottom, r.top + band) : r.bottom;"
+            " const id = s + (e.dataset.view ? ' ' + e.dataset.view : '');"
+            " if (r.width && r.height) out.push({id, l: r.left, t: r.top, r: r.right, b, cx});"
+            "}"
+            "return out;",
+            [list(w) for w in wanted],
+        )
+
     def shot(self) -> Any:
         image = importlib.import_module("PIL.Image")
         png = base64.b64decode(self.call("GET", f"/session/{self.sid}/screenshot")["value"])
@@ -282,17 +317,72 @@ def orb_lit(img: Any, a: dict[str, Any], b: dict[str, Any], slab: tuple[dict[str
     return sum(centre.histogram()[ORB_LIT + 1 :])
 
 
+def halves_lit(img: Any, a: dict[str, Any], b: dict[str, Any]) -> tuple[int, int] | None:
+    """Lit pixels of one box left and right of the dock's centre line in one snapshot (the box read before and after).
+
+    None when it cannot be judged: it moved between the two reads, or it is not wholly in the window.
+    """
+    if max(abs(a[k] - b[k]) for k in ("l", "t", "r", "b", "cx")) > 1:
+        return None
+    left, top, right, bottom, cx = (round(a[k]) for k in ("l", "t", "r", "b", "cx"))
+    if left < 0 or top < 0 or right > img.width or bottom > img.height or not left + 8 < cx < right - 8:
+        return None
+
+    def lit(box: tuple[int, int, int, int]) -> int:
+        return sum(img.crop(box).convert("L").histogram()[LIT + 1 :])
+
+    return lit((left, top, cx, bottom)), lit((cx, top, right, bottom))
+
+
+def judge_halves(seen: dict[str, list[tuple[int, int, int]]]) -> tuple[list[str], set[int]]:
+    """The snapshots where a box's right half was not painted, and those that judged any box (see `Run.watch`).
+
+    A right half that stops following its left counts when it does in two judged snapshots in a row: 0.1.9's fault
+    lasted until the slab settled (several snapshots), while an entrance that staggers left to right can catch one
+    snapshot with its left in and its right still coming.
+    """
+    cut: list[str] = []
+    shots: set[int] = set()
+    for box, rows in seen.items():
+        _, left_full, right_full = max(rows, key=lambda r: r[1] + r[2])
+        if left_full < MIN_HALF:
+            continue
+        flagged: list[tuple[int, int, int] | None] = []
+        for k, left, right in rows:
+            if left < 0.5 * left_full:
+                continue
+            shots.add(k)
+            flagged.append((k, left, right) if right < HALF_RATIO * right_full else None)
+        name = box.split(" ")[-1]
+        for prev, here in itertools.pairwise(flagged):
+            if prev and here:
+                k, left, right = here
+                cut.append(f"{name} in shot {k} ({left} left, {right} right; fullest {left_full} and {right_full})")
+    return cut, shots
+
+
 class Run:
     def __init__(self, page: Page) -> None:
         self.page = page
         self.rows: list[tuple[str, int, int | None, bool]] = []
 
-    def watch(self, name: str, seconds: float = 4.0, act: Any = None, expect_orbs: bool = True) -> None:
+    def watch(
+        self,
+        name: str,
+        seconds: float = 4.0,
+        act: Any = None,
+        expect_orbs: bool = True,
+        halves: tuple[tuple[str, int], ...] = (),
+    ) -> None:
         """Do `act`, then snapshot the dock for `seconds`.
 
         Every snapshot that can be judged must show content, and so must every orb that can be judged; no live orb may
         leave the page meanwhile. `expect_orbs` is False for a phase with no orb to see (none on the page showing, or
-        only the minimised pill's 10px ones).
+        only the minimised pill's 10px ones). Each box `halves` names (`Page.boxes`) is judged against its own fullest
+        snapshot in the watch: wherever its left half holds at least half of its fullest left, its right half must
+        hold HALF_RATIO of its fullest right (a fade lowers both together; a right half that was not painted does not
+        follow its left), in no two judged snapshots in a row short of it, and at least MIN_JUDGED snapshots must judge
+        one.
         """
         p = self.page
         p.orbs_out()
@@ -301,13 +391,21 @@ class Run:
         end = time.time() + seconds
         judged, lowest, k = 0, None, 0
         orb_snaps, orb_lowest, orb_blank = 0, None, []
+        seen: dict[str, list[tuple[int, int, int]]] = {}
         while time.time() < end:
             before = p.slab()
             orbs_before = p.orbs()
+            boxes_before = p.boxes(halves) if halves else []
             img = p.shot()
             after = p.slab()
             orbs_after = {o["id"]: o for o in p.orbs()}
+            boxes_after = {x["id"]: x for x in p.boxes(halves)} if halves else {}
             k += 1
+            for x in boxes_before:
+                x2 = boxes_after.get(x["id"])
+                got_halves = halves_lit(img, x, x2) if x2 else None
+                if got_halves is not None:
+                    seen.setdefault(x["id"], []).append((k, *got_halves))
             for o in orbs_before:
                 o2 = orbs_after.get(o["id"])
                 lit = orb_lit(img, o, o2, (before, after)) if o2 else None
@@ -329,12 +427,21 @@ class Run:
         ok = judged >= MIN_JUDGED and lowest is not None and lowest >= MIN_LIT
         out = p.orbs_out()
         orbs_ok = not orb_blank and not out and (orb_snaps >= MIN_ORB_SNAPS or not expect_orbs)
-        self.rows.append((name, judged, lowest, ok and orbs_ok))
+        half_cut, judged_shots = judge_halves(seen)
+        half_snaps = len(judged_shots)
+        halves_ok = not halves or (not half_cut and half_snaps >= MIN_JUDGED)
+        passed = ok and orbs_ok and halves_ok
+        self.rows.append((name, judged, lowest, passed))
         print(
-            f"{'PASS' if ok and orbs_ok else 'FAIL'}  {name:46s} judged {judged:2d}  fewest lit pixels {lowest}"
-            f"  orbs judged {orb_snaps:3d}  dimmest orb {orb_lowest}",
+            f"{'PASS' if passed else 'FAIL'}  {name:46s} judged {judged:2d}  fewest lit pixels {lowest}"
+            f"  orbs judged {orb_snaps:3d}  dimmest orb {orb_lowest}"
+            + (f"  halves judged {half_snaps:2d}" if halves else ""),
             flush=True,
         )
+        if half_cut:
+            print(f"      the right half was not painted: {', '.join(half_cut[:6])}", flush=True)
+        elif halves and half_snaps < MIN_JUDGED:
+            print(f"      too few snapshots judged both halves ({half_snaps} of at least {MIN_JUDGED})", flush=True)
         if out:
             print(f"      live orbs were taken out of the page: {len(out)} ({', '.join(out[:6])})", flush=True)
         if orb_blank:
@@ -429,10 +536,68 @@ def presence(run: Run) -> None:
     )
 
 
+def arrange(run: Run) -> None:
+    p = run.page
+    p.open("x=1")
+    p.move(300, 300)
+    run.watch(
+        "the arrange panel opens",
+        9,
+        lambda: p.run("__hx.dock().setMode('edit')"),
+        expect_orbs=False,
+        halves=PANEL,
+    )
+    # the panel fades out in 100 ms: slowed fifty times (the slowest the dock allows), several snapshots see it go
+    p.run("__hx.dock().timeScale(arguments[0])", SLOWEST)
+    run.watch(
+        "the arrange panel closes",
+        8,
+        lambda: p.run("__hx.dock().setMode('normal')"),
+        expect_orbs=False,  # few orbs are judged as they come back; core watches them, and a blank one still fails
+        halves=PANEL,
+    )
+    p.run("__hx.dock().timeScale(arguments[0])", SLOW)
+
+
+def pages(run: Run) -> None:
+    p = run.page
+    p.open("x=1")
+    p.move(300, 300)
+
+    def go(script: str) -> Any:
+        return lambda: p.run(script)
+
+    def quickly(script: str) -> None:  # a setup step, at full speed, then the springs slow again
+        p.run("__hx.dock().timeScale(4);" + script)
+        time.sleep(1.2)
+        p.run("__hx.dock().timeScale(arguments[0])", SLOW)
+
+    # Run as the mock has it, then Needs you empty as the owner had it ("Nothing needs you"; with cards the view held)
+    quickly("__hx.dock().goPage('wait')")
+    for name, script, seconds in (
+        ("needs you to run", "__hx.dock().goPage('run')", 8),
+        ("run expands", "__hx.dock().setMode('expanded')", 6),
+        ("run collapses", "__hx.dock().setMode('normal')", 6),
+    ):
+        run.watch(name, seconds, go(script), expect_orbs=False, halves=VIEW)
+    quickly(
+        "const d = __hx.data(); for (const w of [...d.waits.snapshot()]) d.waits.resolve(w.id, 'approved');"
+        "__hx.dock().goPage('bots');"
+    )
+    for name, script, seconds in (
+        ("the slab grows from the row into needs you", "__hx.dock().goPage('wait')", 8),
+        ("needs you expands", "__hx.dock().setMode('expanded')", 6),
+        ("needs you collapses", "__hx.dock().setMode('normal')", 6),
+        ("needs you to scheduled", "__hx.dock().goPage('sched')", 8),
+        ("scheduled to needs you", "__hx.dock().goPage('wait')", 8),
+    ):
+        run.watch(name, seconds, go(script), expect_orbs=False, halves=VIEW)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dist", type=Path, default=DEFAULT_DIST)
-    ap.add_argument("--phases", default="core,presence")
+    ap.add_argument("--phases", default="core,presence,arrange,pages")
     ap.add_argument(
         "--frames",
         type=Path,
@@ -463,6 +628,10 @@ def main() -> int:
             core(run)
         if "presence" in phases:
             presence(run)
+        if "arrange" in phases:
+            arrange(run)
+        if "pages" in phases:
+            pages(run)
     finally:
         page.close()
     bad = [r for r in run.rows if not r[3]]

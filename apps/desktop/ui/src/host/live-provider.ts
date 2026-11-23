@@ -561,7 +561,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     }
   };
 
-  const liveBots = createLiveBots({ client, now, ...(opts.linkTo ? { linkTo: opts.linkTo } : {}), ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}), bridge: opts.botsBridge !== undefined ? opts.botsBridge : inTauri() ? tauriBotsBridge() : null, notify: (text) => { ui.toast(text); } });
+  const liveBots = createLiveBots({ client, now, ...(opts.linkTo ? { linkTo: opts.linkTo } : {}), ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}), bridge: opts.botsBridge !== undefined ? opts.botsBridge : inTauri() ? tauriBotsBridge() : null, notify: (text) => { ui.toast.whenReady(text); } });
   Object.assign(details.unavailable, liveBots.unavailable);
   const liveGroups = createLiveGroups({ client, bots: () => liveBots.source.snapshot().bots, now, bridge: opts.roomsBridge !== undefined ? opts.roomsBridge : inTauri() ? tauriRoomsBridge() : null, ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}) });
   const liveStore = createLiveStore({ bridge: opts.storeBridge !== undefined ? opts.storeBridge : inTauri() ? tauriStoreBridge() : null, plugin: (method, params) => client.requestRaw('plugin.boopis.' + method, params) });

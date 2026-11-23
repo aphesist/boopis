@@ -25,6 +25,10 @@ export { clamp };
 /* morph springs: critically damped (no overshoot); ω ≈ 22 settles in ≈ 300ms, the shell's --dur-3.
    Travel along the centre line is never a JS spring: it rides --hx-center-x or a CSS transition. */
 export const K_SLAB = 480, K_FLIP = 480, K_SINK = 400, K_SLIDE = 440, K_DOT = 520;
+/** Pages lie side by side on a strip (owner, 22 November 2026: "make the scroll transition in the dock smoother, with a fade in
+    and fade out at the sides"): a page switch scrolls it, the page leaving moves out past the slab's edge as the next comes in
+    from the other one. Two neighbours sit this far apart beyond their half widths: the slab's own side padding. */
+export const PAGE_GAP = 16;
 /** a hovered row looks toward the pointer through a clamp (about 20 degrees): no face turns away to its rim */
 export const LOOK_X = 72, LOOK_Y = 40;
 export const LOG_N = 4;   /* messages a dock session shows */
@@ -68,6 +72,9 @@ onReducedChange((v) => { motion.reduce = v; });
 const ph = (): HTMLElement => document.createElement('div');
 export interface Els {
   root: HTMLElement; shapeEl: SVGSVGElement; pathEl: SVGPathElement; stageEl: HTMLElement; footEl: HTMLElement; dotsEl: HTMLElement; downBtn: HTMLElement;
+  /** the edge fade over a page that scrolls (engine.ts paint): the slab's outline above the foot, twice, filled with its black fading
+      in at both sides and at its top */
+  edgesEl: SVGSVGElement; edgesPaths: SVGPathElement[]; edgeStops: SVGStopElement[];
   pageEls: Record<string, HTMLElement>;
   orbs: Map<string, HTMLElement>;
   curView: HTMLElement | null;
@@ -76,7 +83,9 @@ export interface Els {
 }
 export const X: Els = {
   root: ph(), shapeEl: document.createElementNS('http://www.w3.org/2000/svg', 'svg'), pathEl: document.createElementNS('http://www.w3.org/2000/svg', 'path'),
-  stageEl: ph(), footEl: ph(), dotsEl: ph(), downBtn: ph(), pageEls: {}, orbs: new Map(), curView: null, composerEls: new Map(), cardEls: new Map()
+  stageEl: ph(), footEl: ph(), dotsEl: ph(), downBtn: ph(),
+  edgesEl: document.createElementNS('http://www.w3.org/2000/svg', 'svg'), edgesPaths: [], edgeStops: [],
+  pageEls: {}, orbs: new Map(), curView: null, composerEls: new Map(), cardEls: new Map()
 };
 /** `setting`: the user's "Show the dock". `afterOut`: what to clear once the dock has sunk out of sight (what it was showing stays until then) */
 export const flags = { mounted: false, layoutSeen: false, offSeq: 0, useVar: false, setting: true, afterOut: null as (() => void) | null };
@@ -95,10 +104,17 @@ export const ctxPct = (): number => Math.round(S.ctx.used / (S.ctx.total || 1) *
 export const clock = (): string => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
 /* the slab (LAYOUT.md section 1): top corners and concave flares share --r-l (the theme customizer's corner setting changes it) */
-export const geomR = { R_TOP: 14, FLARE: 14 };
+export const geomR = { R_TOP: 14, FLARE: 14, EDGE: 16, BAND: 24 };
+/** the tokens the slab's geometry reads, once at mount and on a theme change (never in a frame): the corner radius; the edge fade
+    a scrolling page gets at the slab's sides (`--scroll-fade`, R-scroll-9); the foot's band, which the fade stays above */
 export function readRadius(): void {
-  const r = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--r-l'));
+  const root = getComputedStyle(document.documentElement);
+  const r = parseFloat(root.getPropertyValue('--r-l'));
   if (r > 0) { geomR.R_TOP = r; geomR.FLARE = r; }
+  const f = parseFloat(root.getPropertyValue('--scroll-fade'));
+  if (f > 0) geomR.EDGE = f;
+  const b = X.root.isConnected ? parseFloat(getComputedStyle(X.root).getPropertyValue('--dock-band')) : 0;
+  if (b > 0) geomR.BAND = b;
 }
 
 /** the bot row's room, measured on each layout (input.ts fitRow); null until the first one */

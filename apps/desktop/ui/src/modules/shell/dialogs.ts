@@ -267,6 +267,7 @@ function menuAction(act: string): void {
 export function wireDialogs(): void {
   const el = els();
   $('#hx-set-dock').addEventListener('change', (e) => setState({ dock: (e.target as HTMLInputElement).checked ? 'on' : 'off' }));
+  $('#hx-set-dock-centre').addEventListener('change', (e) => setState({ dockCentred: (e.target as HTMLInputElement).checked }));
   $('#hx-settings-close').addEventListener('click', () => el.settings.close());
   const sd = storeDialog();
   $('#hx-store-close', sd).addEventListener('click', () => sd.close());
