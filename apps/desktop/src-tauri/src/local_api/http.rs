@@ -388,6 +388,7 @@ fn object(body: &[u8]) -> Result<serde_json::Map<String, Value>, ApiError> {
     }
 }
 
+#[allow(clippy::too_many_lines)] // one table of routes
 async fn route<E: Engine>(
     shared: &Shared<E>,
     head: &Head,
@@ -405,12 +406,16 @@ async fn route<E: Engine>(
         (Method::Get, ["v1"]) => Ok(json!({
             "name": "boopis", "api": API_VERSION,
             "endpoints": ["GET /v1/bots", "GET /v1/presence", "GET /v1/notifications", "GET /v1/approvals", "POST /v1/approvals/<id>",
-                          "POST /v1/bots/<name>/say", "GET /v1/bots/<name>/conversation", "GET /v1/rooms", "POST /v1/rooms/<id>/say", "GET /v1/events"]
+                          "POST /v1/bots/<name>/say", "GET /v1/bots/<name>/conversation", "POST /v1/bots/<name>/stop",
+                          "GET /v1/rooms", "GET /v1/rooms/<id>/log", "POST /v1/rooms/<id>/say", "POST /v1/rooms/<id>/stop",
+                          "GET /v1/events"]
         })),
         (Method::Get, ["v1", "bots"]) => {
+            shared.service.ensure_fresh().await;
             Ok(json!({"bots": feed.bots(), "last_event_id": feed.last_id()}))
         }
         (Method::Get, ["v1", "presence"]) => {
+            shared.service.ensure_fresh().await;
             Ok(json!({"presence": feed.presence(), "last_event_id": feed.last_id()}))
         }
         (Method::Get, ["v1", "notifications"]) => {
@@ -425,7 +430,35 @@ async fn route<E: Engine>(
         (Method::Get, ["v1", "approvals"]) => Ok(
             json!({"approvals": feed.approvals(head.param("all").is_some_and(|v| v == "1" || v == "true"))}),
         ),
-        (Method::Get, ["v1", "rooms"]) => Ok(json!({"rooms": feed.rooms()})),
+        (Method::Get, ["v1", "rooms"]) => {
+            shared.service.ensure_fresh().await;
+            Ok(json!({"rooms": feed.rooms()}))
+        }
+        (Method::Get, ["v1", "rooms", id, "log"]) if segment_ok(id) => {
+            let after = head.param("after").and_then(|a| a.parse::<u64>().ok());
+            let limit = head
+                .param("limit")
+                .and_then(|a| a.parse::<usize>().ok())
+                .unwrap_or(100);
+            let log = shared.service.room_log(id, after, limit).await?;
+            Ok(serde_json::to_value(log).unwrap_or(Value::Null))
+        }
+        (Method::Post, ["v1", "rooms", id, "stop"]) if segment_ok(id) => {
+            object(body)?;
+            shared.service.room_stop(id, caller).await
+        }
+        (Method::Post, ["v1", "bots", name, "stop"]) if segment_ok(name) => {
+            let m = object(body)?;
+            let session = match m.get("session_id") {
+                None | Some(Value::Null) => None,
+                Some(Value::String(s)) if segment_ok(s) => Some(s.clone()),
+                Some(_) => return Err(bad_json()),
+            };
+            shared
+                .service
+                .bot_stop(name, session.as_deref(), caller)
+                .await
+        }
         (Method::Post, ["v1", "approvals", id]) if segment_ok(id) => {
             let m = object(body)?;
             let choice = m
@@ -462,10 +495,17 @@ async fn route<E: Engine>(
         (Method::Post, ["v1", "rooms", id, "say"]) if segment_ok(id) => {
             let m = object(body)?;
             let text = m.get("text").and_then(Value::as_str).ok_or_else(bad_json)?;
-            shared.service.say_room(id, text, caller).await?;
-            Ok(json!({"ok": true}))
+            let now = match m.get("now") {
+                None | Some(Value::Null) => false,
+                Some(Value::Bool(b)) => *b,
+                Some(_) => return Err(bad_json()),
+            };
+            let sent = shared.service.say_room(id, text, now, caller).await?;
+            Ok(
+                json!({"ok": true, "status": sent.status, "event_id": sent.event_id, "held": sent.held}),
+            )
         }
-        (Method::Get, ["v1", "approvals", _] | ["v1", "bots" | "rooms", _, "say"])
+        (Method::Get, ["v1", "approvals", _] | ["v1", "bots" | "rooms", _, "say" | "stop"])
         | (
             Method::Post,
             ["v1"]
@@ -473,17 +513,21 @@ async fn route<E: Engine>(
                 "v1",
                 "bots" | "presence" | "notifications" | "approvals" | "rooms" | "events",
             ]
-            | ["v1", "bots", _, "conversation"],
+            | ["v1", "bots", _, "conversation"]
+            | ["v1", "rooms", _, "log"],
         ) => Err(method_not_allowed()),
         _ => Err(not_found()),
     }
 }
 
 /// Which conversations a stream follows: none unless it asks (`conversations=1`), then every bot's, or only the bots it
-/// names (`bot=<name>`, a few at most).
+/// names (`bot=<name>`, a few at most). Rooms the same way: none unless it asks (`rooms=1`), then every room's lines, state
+/// and held messages, or only the rooms it names (`room=<id>`).
 struct Follow {
     on: bool,
     bots: Vec<String>,
+    rooms_on: bool,
+    rooms: Vec<String>,
 }
 
 impl Follow {
@@ -511,15 +555,49 @@ impl Follow {
                 message: format!("Name at most {max_bots} bots, each by its profile name."),
             });
         }
-        Ok(Self { on, bots })
+        let rooms_on = head.param("rooms").is_some_and(|v| v == "1" || v == "true");
+        let rooms: Vec<String> = head
+            .query
+            .iter()
+            .filter(|(k, _)| k == "room")
+            .map(|(_, v)| v.clone())
+            .collect();
+        if !rooms.is_empty() && !rooms_on {
+            return Err(ApiError {
+                status: 400,
+                code: "room_without_rooms",
+                message: "room narrows the rooms a stream follows: ask for rooms=1 as well.".into(),
+            });
+        }
+        if rooms.len() > max_bots || rooms.iter().any(|r| !segment_ok(r)) {
+            return Err(ApiError {
+                status: 400,
+                code: "bad_room",
+                message: format!("Name at most {max_bots} rooms, each by its id."),
+            });
+        }
+        Ok(Self {
+            on,
+            bots,
+            rooms_on,
+            rooms,
+        })
     }
 
-    /// Whether an event is for this stream: every event but a conversation's goes to every stream.
+    fn room(&self, id: &str) -> bool {
+        self.rooms_on && (self.rooms.is_empty() || self.rooms.iter().any(|r| r == id))
+    }
+
+    /// Whether an event is for this stream: a conversation's and a room's only to a stream that asked for them, every other
+    /// event to every stream.
     fn wants(&self, stamped: &Stamped) -> bool {
         match &stamped.event {
             Event::Conversation(c) => {
                 self.on && (self.bots.is_empty() || self.bots.contains(&c.profile))
             }
+            Event::RoomLine(r) => self.room(&r.room_id),
+            Event::RoomState(r) => self.room(&r.room_id),
+            Event::RoomHeld(r) => self.room(&r.room_id),
             _ => true,
         }
     }

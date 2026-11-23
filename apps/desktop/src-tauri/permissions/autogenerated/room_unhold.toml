@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-room-unhold"
+description = "Enables the room_unhold command without any pre-configured scope."
+commands.allow = ["room_unhold"]
+
+[[permission]]
+identifier = "deny-room-unhold"
+description = "Denies the room_unhold command without any pre-configured scope."
+commands.deny = ["room_unhold"]

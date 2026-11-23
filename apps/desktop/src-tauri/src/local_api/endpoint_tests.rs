@@ -63,6 +63,16 @@ fn engine() -> (Arc<Scripted>, Store) {
             )
         }
         "groups.send" => Ok(json!({"accepted": true})),
+        "groups.log" => Ok(json!({"events": [
+            {"seq": 1, "event_id": "e1", "kind": "message.user", "payload": {"thread_id": "main", "text": "go"}, "created_at": 1000.0},
+            {"seq": 2, "event_id": "e2", "kind": "turn.cancelled", "payload": {"member_id": "kai", "reason": "superseded_by_newer_user_event"}, "created_at": 1001.0},
+            {"seq": 3, "event_id": "e3", "kind": "message.member", "payload": {"member_id": "kai", "text": "@user done. sk-proj-CANARY0123456789abcdef"}, "created_at": 1002.0}
+        ], "latest_seq": 3, "has_more": false})),
+        "groups.state" => Ok(
+            json!({"room": {}, "driver_status": {"working": false, "blocked": false, "pending_actions": [], "member_activity": []}}),
+        ),
+        "groups.stop" => Ok(json!({"cancelled": 1})),
+        "session.active_list" => Ok(json!({"sessions": []})),
         "approval.respond" => {
             assert_eq!(profile, "kai");
             assert_eq!(params["choice"], "once");
@@ -93,7 +103,13 @@ async fn rig_with(limits: ApiLimits) -> Rig {
     let dir = tempfile::tempdir().unwrap();
     let feed = Feed::new(Audit::under(dir.path()), limits.clone());
     let (scripted, store) = engine();
-    let service = Service::new(feed, scripted.clone(), limits.clone());
+    let service = Service::new(
+        feed,
+        scripted.clone(),
+        limits.clone(),
+        crate::rooms::hold::Store::under(dir.path()),
+        crate::config::RoomLimits::default(),
+    );
     service.refresh_roster().await;
     let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
     let server = Server::serve(
@@ -1235,4 +1251,141 @@ async fn following_conversations_refuses_what_it_does_not_understand() {
         assert_eq!(status, 400, "{query} {body}");
         assert_eq!(json_of(&body)["error"]["code"], code, "{query}");
     }
+}
+
+#[tokio::test]
+async fn the_snapshots_are_full_from_the_first_request_without_a_stream() {
+    // B24: no reader has opened a stream and nothing read the roster yet
+    let dir = tempfile::tempdir().unwrap();
+    let limits = limits();
+    let feed = Feed::new(Audit::under(dir.path()), limits.clone());
+    let (scripted, _store) = engine();
+    let service = Service::new(
+        feed,
+        scripted,
+        limits.clone(),
+        crate::rooms::hold::Store::under(dir.path()),
+        crate::config::RoomLimits::default(),
+    );
+    let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+    let server = Server::serve(
+        listener,
+        service.clone(),
+        Token::from_text(TOKEN.into()),
+        limits,
+    )
+    .unwrap();
+    let port = server.addr().port();
+    let req = |path: &str| {
+        format!(
+            "GET {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nAuthorization: Bearer {TOKEN}\r\n\r\n"
+        )
+    };
+    let (status, _, body) = raw(server.addr(), &req("/v1/bots")).await;
+    assert_eq!(status, 200);
+    assert_eq!(
+        json_of(&body)["bots"].as_array().unwrap().len(),
+        2,
+        "{body}"
+    );
+    let (_, _, body) = raw(server.addr(), &req("/v1/rooms")).await;
+    assert_eq!(json_of(&body)["rooms"][0]["id"], "g-paper", "{body}");
+    let (_, _, body) = raw(server.addr(), &req("/v1/presence")).await;
+    let presence = json_of(&body);
+    assert_eq!(presence["presence"][0]["state"], "idle");
+    assert!(
+        presence["presence"][0]["source"].is_null(),
+        "B25: idle names no source: {body}"
+    );
+}
+
+#[tokio::test]
+async fn a_rooms_log_and_its_stop_and_a_bots_stop_are_served_behind_the_same_checks() {
+    let r = rig().await;
+    let port = r.server.addr().port();
+    let (status, _, body) = raw(
+        r.server.addr(),
+        &get(&r, "/v1/rooms/g-paper/log?limit=10", ""),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    let log = json_of(&body);
+    let kinds: Vec<&str> = log["lines"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|l| l["kind"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        kinds,
+        ["message.user", "turn.cancelled", "message.member"],
+        "B30: the cancelled turn is a line"
+    );
+    assert_eq!(log["lines"][2]["mentions_you"], true);
+    for canary in CANARIES {
+        assert!(!body.contains(canary), "scrubbed: {body}");
+    }
+    let (status, _, _) = raw(r.server.addr(), &get(&r, "/v1/rooms/g-nope/log", "")).await;
+    assert_eq!(status, 404);
+    // the new routes are behind the token, the Host check and the browser refusal like every other
+    let (status, _, _) = raw(
+        r.server.addr(),
+        &format!("GET /v1/rooms/g-paper/log HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n"),
+    )
+    .await;
+    assert_eq!(status, 401);
+    let (status, _, _) = raw(
+        r.server.addr(),
+        &get(
+            &r,
+            "/v1/rooms/g-paper/log",
+            "Origin: https://evil.example\r\n",
+        ),
+    )
+    .await;
+    assert_eq!(status, 403);
+    let (status, _, body) = raw(
+        r.server.addr(),
+        &post(&r, "/v1/rooms/g-paper/stop", "{}", ""),
+    )
+    .await;
+    assert_eq!(
+        (status, json_of(&body)["stopped"].as_bool()),
+        (200, Some(true)),
+        "{body}"
+    );
+    let (status, _, body) = raw(r.server.addr(), &post(&r, "/v1/bots/kai/stop", "{}", "")).await;
+    assert_eq!(
+        (status, json_of(&body)["error"]["code"].as_str()),
+        (409, Some("not_running")),
+        "{body}"
+    );
+    let (status, _, _) = raw(r.server.addr(), &get(&r, "/v1/rooms/g-paper/stop", "")).await;
+    assert_eq!(status, 405);
+    let (status, _, body) = raw(
+        r.server.addr(),
+        &post(
+            &r,
+            "/v1/rooms/g-paper/say",
+            r#"{"text": "go", "now": "yes"}"#,
+            "",
+        ),
+    )
+    .await;
+    assert_eq!(status, 400, "{body}");
+    let (status, _, body) = raw(
+        r.server.addr(),
+        &post(&r, "/v1/rooms/g-paper/say", r#"{"text": "go"}"#, ""),
+    )
+    .await;
+    assert_eq!(
+        (status, json_of(&body)["status"].as_str()),
+        (200, Some("sent")),
+        "{body}"
+    );
+    let (status, _, body) = raw(r.server.addr(), &get(&r, "/v1/events?room=g-paper", "")).await;
+    assert_eq!(
+        (status, json_of(&body)["error"]["code"].as_str()),
+        (400, Some("room_without_rooms"))
+    );
 }

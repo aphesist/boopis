@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-room-send-now"
+description = "Enables the room_send_now command without any pre-configured scope."
+commands.allow = ["room_send_now"]
+
+[[permission]]
+identifier = "deny-room-send-now"
+description = "Denies the room_send_now command without any pre-configured scope."
+commands.deny = ["room_send_now"]

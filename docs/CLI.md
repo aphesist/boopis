@@ -42,9 +42,26 @@ to six bots, as the app does, and `--lead` makes messages that name nobody go to
 `lead`). A bot the engine will not seat yet is named, with what to do (open boopis once so every bot is prepared). The text of
 `send` may be `-` to read standard input.
 
-`send` returns when the message is written. With `--wait` it follows the discussion, printing each bot's reply as it arrives,
-until the bots stop handing off (exit 0) or the engine pauses at its limit (exit 3: use `run` to go on). `log` prints the
-conversation; `--follow` keeps reading until you stop it (or `--for` seconds pass).
+`send` returns when the message is in the group. **A message never cuts the bots short:** the engine drops the answer of a bot
+still working when a newer message arrives, so while the group's bots are at work (or a discussion is still going) the message
+is held, as one written in the app is, and goes out when the discussion is over. `send` says it is held and who it waits for,
+waits, then says it was sent. The hold is one for every client: the app's room shows the held message (where it can be taken
+back or sent now), and the local API's room messages wait in the same place (`<app data>/room-holds.json`, `docs/LOCAL-API.md`).
+Stopping the wait (Ctrl+C) leaves the message held: the app, or the next command, sends it when the group is free. If it is
+taken back in the app, `send` says so (exit 1); if three hours pass, it is still held (exit 3).
+
+A message that `@`-names a bot that exists but is not in the group reaches only the group's bots (the engine wakes nobody for
+the other name), so `send` and `run` say so first, naming who is in the group and how to ask the other bot in its own chat (a
+warning on standard error, or a `warning` object with `--json`), and then send it, as the app's composer does.
+
+With `--wait` it follows the discussion, printing each bot's reply as it arrives, until the bots stop handing off (exit 0) or
+the engine pauses at its limit (exit 3: use `run` to go on). `log` prints the conversation in the words the app uses: the
+messages, and what happened to a turn (it failed, it was cancelled because a newer message arrived, a bot was not available),
+the lead passing a message on, a stop, and a discussion that paused or settled, so the numbering (`--json`'s `seq`) has no
+gaps a person needs. `--follow` keeps reading until you stop it (or `--for` seconds pass).
+
+**Times** are printed in UTC and say so (`[23:46:17 UTC]`): boopis carries no time-zone database. `--json` has `at` (seconds
+since 1970) and `time` (RFC 3339, `Z`).
 
 ## Run a task through a group
 
@@ -53,7 +70,8 @@ boopis run --group <group> "<task>" [--max-rounds N] [--timeout MINUTES] [--to-b
 ```
 
 The engine runs one discussion per message: the bots answer in rounds, and at its own limit (3 rounds or 10 messages by
-default) the discussion pauses and the app shows a Continue button. `run` sends the task and, whenever the engine pauses,
+default) the discussion pauses and the app shows a Continue button. `run` sends the task (through the hold, as `send` does: a
+task written while the bots work waits for them, within `--timeout`) and, whenever the engine pauses,
 calls `groups.continue` for another budget, for as long as the bots are still handing off, up to a cap of its own. It prints
 every reply as it arrives and ends with one line that says why it stopped:
 
@@ -205,7 +223,8 @@ environment values (the engine does not list them). Exporting and applying the r
 
 ## For scripts
 
-`--json` prints one object per line. `run --group` and `groups send --wait` print `sent`, `message`, `continued`, `note` and a last
+`--json` prints one object per line. `groups send` prints `held` (with `waiting_for`, the bots at work) when the message waits,
+then `sent` (or `still_held`). `run --group` and `groups send --wait` print `held`, `sent`, `message`, `continued`, `note` and a last
 `end` object (`stop` is one of `done`, `cap_reached`, `paused`, `needs_owner`, `error`, `timed_out`, with `rounds`,
 `continues` and `messages`); `run --bot` prints its own, as said above. `team apply --json` prints a `plan` object and then an `applied` object. The exit code is the
 same as without `--json`.

@@ -13,8 +13,9 @@ use tokio::sync::{broadcast, watch};
 use super::approvals::{Delivery, Inbox, Refusal};
 use super::audit::{Audit, Line};
 use super::model::{
-    Answered, Approval, ApprovalState, BotRow, ConversationMessage, Event, Message, MessageState,
-    NoteKind, Notification, Origin, Presence, Role, RoomRow, Source, Stamped, State, now_ms,
+    Answered, Approval, ApprovalState, BotRow, ConversationMessage, Event, LineFrom, Message,
+    MessageState, NoteKind, Notification, Origin, Presence, Role, RoomHeldEvent, RoomLine,
+    RoomLineEvent, RoomRow, RoomStateEvent, Source, Stamped, State, now_ms,
 };
 use super::presence::{Live, Table};
 use super::roster::{self, Entry};
@@ -54,6 +55,20 @@ struct Inner {
     meta: HashMap<(String, String), Meta>,
     gui_answers: HashMap<(String, String), (String, i64)>,
     last_note: HashMap<(String, String, u8), i64>,
+    /// Who was last said to be at work in each room (a `room.state` goes out when it changes).
+    room_working: HashMap<String, Vec<String>>,
+}
+
+/// A turn the poll saw end in a session the host's link does not run: the service reads its words and makes the
+/// notification ([`Feed::notify_finished`]), or none when there are no words (B22).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Finished {
+    /// The bot.
+    pub profile: String,
+    /// The engine's live id of the session.
+    pub session_id: String,
+    /// Where the session came from.
+    pub source: Source,
 }
 
 /// The feed. Cheap to share.
@@ -145,6 +160,7 @@ impl Feed {
                 meta: HashMap::new(),
                 gui_answers: HashMap::new(),
                 last_note: HashMap::new(),
+                room_working: HashMap::new(),
             }),
             tx,
             wanted: watch::channel(0).0,
@@ -156,6 +172,11 @@ impl Feed {
             limits,
             secrets: Mutex::new(Vec::new()),
         })
+    }
+
+    /// Add a line to the security record (a stop asked through this API, `rooms.rs`).
+    pub fn record(&self, line: &Line) {
+        self.audit.record(line);
     }
 
     /// Values that must never leave in any text (the endpoint's token, a ticket the host holds). Replaces the list.
@@ -365,12 +386,67 @@ impl Feed {
         );
     }
 
-    /// Whether the feed already knows a session's kind, so the poller notes it once.
+    /// Whether the feed already knows a session's stored id, so the poller notes it once.
     #[must_use]
     pub fn session_known(&self, profile: &str, session_id: &str) -> bool {
         lock(&self.inner)
             .meta
-            .contains_key(&(profile.to_owned(), session_id.to_owned()))
+            .get(&(profile.to_owned(), session_id.to_owned()))
+            .is_some_and(|m| m.stored.is_some())
+    }
+
+    /// What the poll learned of a session: its stored id and model, and its kind when the feed has none yet. A kind the
+    /// host knows from its own link is never replaced by the poll's (B25).
+    pub fn learn_session(
+        &self,
+        profile: &str,
+        session_id: &str,
+        source: Source,
+        stored: Option<&str>,
+        model: Option<&str>,
+    ) {
+        let mut inner = lock(&self.inner);
+        if inner.meta.len() >= 512 {
+            inner.meta.clear();
+        }
+        let m = inner
+            .meta
+            .entry((profile.to_owned(), session_id.to_owned()))
+            .or_default();
+        m.source.get_or_insert(source);
+        if let Some(s) = stored.filter(|s| !s.is_empty()) {
+            m.stored = Some(s.to_owned());
+        }
+        if let Some(model) = model {
+            m.model = Some(model.to_owned());
+        }
+    }
+
+    /// Where a live session the poll lists came from: what the host knows of it first (its own link runs the app's kind,
+    /// `gui`), then the engine's own `source` when the row carries one (`session.active_list` rows usually do not), then the
+    /// engine's own name for a room member's session (`Group: <room id>`, `hosted_room_driver.py`, which the engine itself
+    /// reads back in `methods_prompt.py`), else `other`.
+    #[must_use]
+    pub fn resolve_source(
+        &self,
+        profile: &str,
+        session_id: &str,
+        engine_source: &str,
+        title: &str,
+    ) -> Source {
+        let known = lock(&self.inner)
+            .meta
+            .get(&(profile.to_owned(), session_id.to_owned()))
+            .and_then(|m| m.source);
+        known.unwrap_or_else(|| {
+            if !engine_source.trim().is_empty() {
+                super::model::source_of(engine_source)
+            } else if title.starts_with("Group: ") {
+                Source::Room
+            } else {
+                Source::Other
+            }
+        })
     }
 
     fn origin(inner: &Inner, profile: &str, session_id: &str) -> Source {
@@ -400,9 +476,10 @@ impl Feed {
     fn emit_message(&self, inner: &mut Inner, profile: &str, session_id: &str, message: Message) {
         let session = Self::conversation_id(inner, profile, session_id);
         // A session the feed has not seen listed: ask the poll to name it, so the next message carries the stored id.
-        if !inner
+        if inner
             .meta
-            .contains_key(&(profile.to_owned(), session_id.to_owned()))
+            .get(&(profile.to_owned(), session_id.to_owned()))
+            .is_none_or(|m| m.stored.is_none())
         {
             self.poke.store(true, Ordering::SeqCst);
         }
@@ -531,7 +608,7 @@ impl Feed {
 
     // ───────────────────────── notifications ─────────────────────────
 
-    /// Make a notification, unless the same kind for the same session was made a moment ago.
+    /// Make a notification, unless the same kind for the same session (or room) was made a moment ago.
     #[allow(clippy::too_many_arguments)]
     fn notify(
         &self,
@@ -539,6 +616,7 @@ impl Feed {
         kind: NoteKind,
         profile: &str,
         session_id: Option<&str>,
+        room_id: Option<&str>,
         source: Source,
         title: String,
         body: String,
@@ -547,7 +625,7 @@ impl Feed {
         let now = now_ms();
         let key = (
             profile.to_owned(),
-            session_id.unwrap_or_default().to_owned(),
+            session_id.or(room_id).unwrap_or_default().to_owned(),
             kind as u8,
         );
         if inner.last_note.get(&key).is_some_and(|t| now - t < 3_000) {
@@ -565,7 +643,7 @@ impl Feed {
             title,
             body,
             session_id: session_id.map(str::to_owned),
-            room_id: None,
+            room_id: room_id.map(str::to_owned),
             source,
             at: now,
             urgent,
@@ -645,7 +723,23 @@ impl Feed {
         let Some(sid) = f.session_id.as_deref() else {
             return;
         };
+        // A session that runs on the host's own link is the app's kind (the window's, or one `say` started): noted once, so
+        // the poll, which cannot tell, never names it otherwise (B25).
+        if inner.meta.len() >= 512 {
+            inner.meta.clear();
+        }
+        inner
+            .meta
+            .entry((profile.to_owned(), sid.to_owned()))
+            .or_default()
+            .source
+            .get_or_insert(Source::Gui);
         let origin = Self::origin(&inner, profile, sid);
+        let held_reply = inner
+            .replies
+            .get(&(profile.to_owned(), sid.to_owned()))
+            .map(|r| r.text.clone())
+            .unwrap_or_default();
         if self.following() {
             self.conversation_frame(&mut inner, profile, sid, f, &payload, now);
         }
@@ -703,23 +797,33 @@ impl Feed {
                         NoteKind::Error,
                         profile,
                         Some(sid),
+                        None,
                         origin,
                         format!("{who} hit an error"),
                         String::new(),
                         false,
                     );
                 } else {
-                    let text = self.clip(&str_of(&payload, "text"));
-                    self.notify(
-                        &mut inner,
-                        NoteKind::Reply,
-                        profile,
-                        Some(sid),
-                        origin,
-                        format!("{who} replied"),
-                        text,
-                        false,
-                    );
+                    // The reply's own words, else what streamed of it; a reply with no words is no notification (B22).
+                    let full = str_of(&payload, "text");
+                    let text = self.clip(if full.trim().is_empty() {
+                        &held_reply
+                    } else {
+                        &full
+                    });
+                    if !text.trim().is_empty() {
+                        self.notify(
+                            &mut inner,
+                            NoteKind::Reply,
+                            profile,
+                            Some(sid),
+                            None,
+                            origin,
+                            format!("{who} replied"),
+                            text,
+                            false,
+                        );
+                    }
                 }
             }
             "error" | "turn.failed" => {
@@ -740,6 +844,7 @@ impl Feed {
                     NoteKind::Error,
                     profile,
                     Some(sid),
+                    None,
                     origin,
                     format!("{who} hit an error"),
                     why,
@@ -844,6 +949,7 @@ impl Feed {
                 NoteKind::Approval,
                 &profile,
                 Some(&sid),
+                None,
                 source,
                 format!("{who} needs your approval"),
                 what,
@@ -868,8 +974,15 @@ impl Feed {
 
     // ───────────────────────── the poll ─────────────────────────
 
-    /// The live sessions of one profile's link.
-    pub fn on_poll(&self, profile: &str, rows: &[Live], models: &HashMap<String, String>) {
+    /// The live sessions of one profile's link. Returns the turns that ended in a session the host's link does not run and
+    /// that is not a room's or a kanban worker's (those are told from the room's log and the board): the service reads their
+    /// words and makes the notification.
+    pub fn on_poll(
+        &self,
+        profile: &str,
+        rows: &[Live],
+        models: &HashMap<String, String>,
+    ) -> Vec<Finished> {
         let now = now_ms();
         let mut inner = lock(&self.inner);
         let previous: HashMap<String, State> = rows
@@ -881,8 +994,7 @@ impl Feed {
                     .map(|s| (r.session_id.clone(), s))
             })
             .collect();
-        let rows: Vec<Live> = rows.to_vec();
-        for r in &rows {
+        for r in rows {
             if let Some(model) = models.get(&r.session_id) {
                 let m = inner
                     .meta
@@ -904,37 +1016,159 @@ impl Feed {
         let changed =
             inner
                 .presence
-                .on_poll(profile, &rows, &|s| inbox_waits.iter().any(|w| w == s), now);
+                .on_poll(profile, rows, &|s| inbox_waits.iter().any(|w| w == s), now);
         self.publish(&mut inner, changed);
-        // A turn that ran and is now idle, in a session another surface runs: someone may want to know.
-        let who = Self::display(&inner, profile);
-        for r in &rows {
+        let mut finished = Vec::new();
+        for r in rows {
             let was = previous.get(&r.session_id).copied();
             let now_state = inner.presence.session_state(profile, &r.session_id);
-            let finished =
+            let ended =
                 was.is_some_and(State::busy) && matches!(now_state, Some(State::Idle) | None);
-            let source = super::model::source_of(&r.source);
-            if finished && source != Source::Gui {
-                let (kind, title) = if source == Source::Cron {
-                    (NoteKind::Cron, format!("{who}'s scheduled run finished"))
-                } else {
-                    (NoteKind::Reply, format!("{who} finished a turn"))
-                };
-                self.notify(
-                    &mut inner,
-                    kind,
-                    profile,
-                    Some(&r.session_id),
-                    source,
-                    title,
-                    String::new(),
-                    false,
-                );
+            if ended && matches!(r.source, Source::Cron | Source::Other) {
+                finished.push(Finished {
+                    profile: profile.to_owned(),
+                    session_id: r.session_id.clone(),
+                    source: r.source,
+                });
             }
         }
         // A session the poll no longer lists has ended: a turn that was busy in it was finished or cut off.
         let ended = inner.presence.tick(now);
         self.publish(&mut inner, ended);
+        finished
+    }
+
+    /// A finished turn's notification, with the words its session ended on (`body`; empty when none could be read). A
+    /// scheduled run is news even without words; a reply with none is not sent (B22).
+    pub fn notify_finished(&self, done: &Finished, body: &str) {
+        let mut inner = lock(&self.inner);
+        let who = Self::display(&inner, &done.profile);
+        let body = self.clip(body);
+        let (kind, title) = match done.source {
+            Source::Cron => (NoteKind::Cron, format!("{who}'s scheduled run finished")),
+            _ if body.trim().is_empty() => return,
+            _ => (NoteKind::Reply, format!("{who} finished a turn")),
+        };
+        self.notify(
+            &mut inner,
+            kind,
+            &done.profile,
+            Some(&done.session_id),
+            None,
+            done.source,
+            title,
+            body,
+            false,
+        );
+    }
+
+    /// A kanban task the bot was running finished: the engine's own summary of it is the body.
+    pub fn notify_task(&self, profile: &str, session_id: &str, title: String, body: &str) {
+        let mut inner = lock(&self.inner);
+        let body = self.clip(body);
+        self.notify(
+            &mut inner,
+            NoteKind::Task,
+            profile,
+            Some(session_id),
+            None,
+            Source::Kanban,
+            title,
+            body,
+            false,
+        );
+    }
+
+    // ───────────────────────── rooms ─────────────────────────
+
+    /// A line added to a room's log: a `room.line` event, and for a member's message a notification with its words and the
+    /// room (B22), loud when it addresses the owner (B26); a failed turn is an error notification in boopis's words.
+    pub fn on_room_line(
+        &self,
+        room_id: &str,
+        room_name: &str,
+        line: RoomLine,
+        profile: Option<&str>,
+    ) {
+        let mut inner = lock(&self.inner);
+        let note = match (line.from, line.kind.as_str(), profile) {
+            (LineFrom::Member, _, Some(p)) if line.mentions_you => Some((
+                NoteKind::Mention,
+                p,
+                format!("{} mentioned you in {room_name}", line.name),
+                true,
+            )),
+            (LineFrom::Member, _, Some(p)) => Some((
+                NoteKind::Reply,
+                p,
+                format!("{} replied in {room_name}", line.name),
+                false,
+            )),
+            (LineFrom::Boopis, "turn.failed", Some(p)) => Some((
+                NoteKind::Error,
+                p,
+                format!("{} hit an error in {room_name}", line.name),
+                false,
+            )),
+            _ => None,
+        };
+        if let Some((kind, p, title, urgent)) = note {
+            let body = self.clip(&line.text);
+            self.notify(
+                &mut inner,
+                kind,
+                p,
+                None,
+                Some(room_id),
+                Source::Room,
+                title,
+                body,
+                urgent,
+            );
+        }
+        self.emit(
+            &mut inner,
+            Event::RoomLine(RoomLineEvent {
+                room_id: room_id.to_owned(),
+                line,
+            }),
+        );
+    }
+
+    /// Who is at work in a room: a `room.state` event when it changed.
+    pub fn on_room_state(&self, room_id: &str, working: &[String]) {
+        let mut inner = lock(&self.inner);
+        if inner.room_working.get(room_id).map(Vec::as_slice) == Some(working) {
+            return;
+        }
+        inner
+            .room_working
+            .insert(room_id.to_owned(), working.to_vec());
+        self.emit(
+            &mut inner,
+            Event::RoomState(RoomStateEvent {
+                room_id: room_id.to_owned(),
+                working: working.to_vec(),
+            }),
+        );
+    }
+
+    /// The messages a room holds changed.
+    pub fn on_room_held(&self, room_id: &str, held: Vec<crate::rooms::hold::Held>) {
+        let mut inner = lock(&self.inner);
+        self.emit(
+            &mut inner,
+            Event::RoomHeld(RoomHeldEvent {
+                room_id: room_id.to_owned(),
+                held,
+            }),
+        );
+    }
+
+    /// A room line's text for another client: scrubbed, cut to the message cap.
+    #[must_use]
+    pub fn line_text(&self, text: &str) -> (String, bool) {
+        self.message_text(text)
     }
 
     /// The approvals the engine holds for one waiting session (from `approval.pending`, with the generation the session's
@@ -1391,7 +1625,8 @@ mod tests {
         let live = |status| Live {
             session_id: "i1".into(),
             status,
-            source: "cli".into(),
+            source: Source::Other,
+            summary: None,
         };
         f.on_poll(
             "nina",
@@ -1399,7 +1634,7 @@ mod tests {
             &none,
         );
         let p = &f.presence()[0];
-        assert_eq!((p.state, p.source), (State::Working, Source::Other));
+        assert_eq!((p.state, p.source), (State::Working, Some(Source::Other)));
         f.on_poll(
             "nina",
             &[live(crate::local_api::presence::Status::Waiting)],
@@ -1422,18 +1657,38 @@ mod tests {
         let live = |sid: &str, status, source: &str| Live {
             session_id: sid.into(),
             status,
-            source: source.into(),
+            source: crate::local_api::model::source_of(source),
+            summary: None,
         };
         f.on_poll(
             "kai",
-            &[live("c1", Working, "cron"), live("i1", Working, "gui")],
+            &[
+                live("c1", Working, "cron"),
+                live("i1", Working, "gui"),
+                live("o1", Working, "cli"),
+            ],
             &none,
         );
-        f.on_poll(
+        let finished = f.on_poll(
             "kai",
-            &[live("c1", Idle, "cron"), live("i1", Idle, "gui")],
+            &[
+                live("c1", Idle, "cron"),
+                live("i1", Idle, "gui"),
+                live("o1", Idle, "cli"),
+            ],
             &none,
         );
+        assert_eq!(
+            finished
+                .iter()
+                .map(|d| d.session_id.as_str())
+                .collect::<Vec<_>>(),
+            ["c1", "o1"],
+            "the app's own turn is told on its link; a cron run and another program's are handed to the service"
+        );
+        for done in &finished {
+            f.notify_finished(done, "");
+        }
         let notes: Vec<Notification> = drain(&mut rx)
             .iter()
             .filter_map(|e| match &e.event {
@@ -1441,7 +1696,11 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(notes.len(), 1, "{notes:?}");
+        assert_eq!(
+            notes.len(),
+            1,
+            "B22: a reply with no words is not sent: {notes:?}"
+        );
         assert_eq!(
             (notes[0].kind, notes[0].source),
             (NoteKind::Cron, Source::Cron)

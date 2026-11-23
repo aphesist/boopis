@@ -4,7 +4,9 @@
 //! changes, and nothing that is a secret has a place in any type here.
 //!
 //! - [`model`]: the contract's values; [`presence`], [`approvals`], [`roster`], [`feed`]: the rules, pure and tested;
-//! - [`service`]: asks the engine (through [`engine`]) and acts for clients;
+//! - [`service`]: asks the engine (through [`engine`]) and acts for clients; [`rooms`]: the room hold's side (the app's
+//!   window and this API send through it, and its pump); [`room_log`]: rooms' logs read and followed, and stops;
+//!   [`workers`]: kanban workers;
 //! - [`wire`], [`http`], [`token`]: the endpoint, its checks and its token file;
 //! - [`audit`], [`scrub`], [`look`]: the record of who answered, the secret scrubber, the default look.
 
@@ -19,11 +21,14 @@ pub mod http;
 pub mod look;
 pub mod model;
 pub mod presence;
+pub mod room_log;
+pub mod rooms;
 pub mod roster;
 pub mod scrub;
 pub mod service;
 pub mod token;
 pub mod wire;
+pub mod workers;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -35,8 +40,8 @@ use tokio_util::sync::CancellationToken;
 use self::engine::Hubbed;
 use self::feed::Feed;
 use self::http::Server;
-use self::service::Service;
-use crate::config::ApiLimits;
+use self::service::{ApiError, Caller, Service};
+use crate::config::{ApiLimits, RoomLimits};
 use crate::gateway::Hub;
 
 /// The file that remembers the owner's switch. Off until the owner turns it on.
@@ -98,12 +103,23 @@ fn write_switch(dir: &Path, enabled: bool) -> std::io::Result<()> {
 
 impl LocalApi {
     /// The local API over the app's engine links. Nothing listens and nothing is polled until the owner turns it on or a
-    /// reader of the feed exists.
+    /// reader of the feed exists; the room hold's pump runs whenever a message is held.
     #[must_use]
-    pub fn new(handle: tauri::AppHandle, dir: PathBuf, limits: &ApiLimits) -> Arc<Self> {
+    pub fn new(
+        handle: tauri::AppHandle,
+        dir: PathBuf,
+        limits: &ApiLimits,
+        rooms: &RoomLimits,
+    ) -> Arc<Self> {
         let feed = Feed::new(audit::Audit::under(&dir), limits.clone());
         let engine = Arc::new(Hubbed::new(handle, limits.engine_wait));
-        let service = Service::new(feed.clone(), engine, limits.clone());
+        let service = Service::new(
+            feed.clone(),
+            engine,
+            limits.clone(),
+            crate::rooms::hold::Store::under(&dir),
+            rooms.clone(),
+        );
         Arc::new(Self {
             feed,
             service,
@@ -121,9 +137,11 @@ impl LocalApi {
         &self.feed
     }
 
-    /// Start the service's loop, and the endpoint when the owner's switch is on. Called once, at start.
+    /// Start the service's loop and the room hold's pump, and the endpoint when the owner's switch is on. Called once, at
+    /// start.
     pub async fn start(self: &Arc<Self>) {
         tokio::spawn(self.service.clone().run(self.cancel.clone()));
+        tokio::spawn(self.service.clone().run_holds(self.cancel.clone()));
         if read_switch(&self.dir) {
             if let Err(e) = self.listen().await {
                 tracing::warn!(error = %e, "the local API did not start");
@@ -262,6 +280,49 @@ impl LocalApi {
             r.server.stop();
         }
         token::Files::under(&self.dir).remove_if_ours();
+    }
+}
+
+impl LocalApi {
+    /// A message from the app's room, through the room hold (B30): held while the members work, sent when they are done;
+    /// `now` stops them first.
+    ///
+    /// # Errors
+    /// The refusal, in words.
+    pub async fn room_send(
+        &self,
+        room_id: &str,
+        text: &str,
+        now: bool,
+    ) -> Result<rooms::RoomSent, ApiError> {
+        self.service
+            .room_send(room_id, text, now, &Caller::through("gui"))
+            .await
+    }
+
+    /// Take a held message back.
+    ///
+    /// # Errors
+    /// The refusal, in words.
+    pub async fn room_unhold(&self, room_id: &str, id: &str) -> Result<rooms::Unheld, ApiError> {
+        self.service.room_unhold(room_id, id).await
+    }
+
+    /// Send a held message now (the running turns stop first).
+    ///
+    /// # Errors
+    /// The refusal, in words.
+    pub async fn room_send_now(
+        &self,
+        room_id: &str,
+        id: &str,
+    ) -> Result<rooms::RoomSent, ApiError> {
+        self.service.room_send_now(room_id, id).await
+    }
+
+    /// The messages a room holds.
+    pub async fn room_held(&self, room_id: &str) -> Vec<crate::rooms::hold::Held> {
+        self.service.room_held(room_id).await
     }
 }
 

@@ -6,6 +6,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
+use tokio::time::Instant;
+
 use serde_json::{Value, json};
 use tokio_util::sync::CancellationToken;
 
@@ -18,11 +20,13 @@ use super::model::{
 };
 use super::presence::{Live, Status};
 use super::roster;
-use crate::config::ApiLimits;
+use super::workers::Worker;
+use crate::config::{ApiLimits, RoomLimits};
 use crate::error::Error;
+use crate::rooms::hold;
 
 /// The profile whose link holds the roster, the rooms and the plugin: the root.
-const ROOT: &str = "default";
+pub(super) const ROOT: &str = "default";
 
 /// A refusal or a failure, in the words a client reads.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,7 +40,7 @@ pub struct ApiError {
 }
 
 impl ApiError {
-    fn new(status: u16, code: &'static str, message: &str) -> Self {
+    pub(super) fn new(status: u16, code: &'static str, message: &str) -> Self {
         Self {
             status,
             code,
@@ -125,22 +129,39 @@ impl Caller {
     }
 }
 
-/// The service.
-pub struct Service<E: Engine> {
-    feed: Arc<Feed>,
-    engine: Arc<E>,
-    limits: ApiLimits,
-    described: tokio::sync::Mutex<HashMap<String, Value>>,
+/// When the roster and the poll were last read: a snapshot read asks again when they are older than their cadence (B24).
+#[derive(Debug, Default)]
+struct Fresh {
+    roster_at: Option<Instant>,
+    poll_at: Option<Instant>,
 }
 
-fn text(v: &Value, key: &str) -> String {
+/// The service.
+pub struct Service<E: Engine> {
+    pub(super) feed: Arc<Feed>,
+    pub(super) engine: Arc<E>,
+    pub(super) limits: ApiLimits,
+    described: tokio::sync::Mutex<HashMap<String, Value>>,
+    fresh: std::sync::Mutex<Fresh>,
+    /// The room hold's file (`rooms/hold.rs`) and its rules: the app's room, the command line and this API send through it.
+    pub(super) holds: hold::Store,
+    pub(super) room_limits: RoomLimits,
+    /// The rooms the hold's pump reads, by id.
+    pub(super) watches: tokio::sync::Mutex<HashMap<String, hold::Watch>>,
+    /// How far each room's log has been read for the feed (lines, notifications), by id.
+    pub(super) room_cursors: tokio::sync::Mutex<HashMap<String, u64>>,
+    /// Each bot's kanban worker, as its own link last said (B31).
+    pub(super) workers: std::sync::Mutex<HashMap<String, Worker>>,
+}
+
+pub(super) fn text(v: &Value, key: &str) -> String {
     v.get(key)
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_owned()
 }
 
-fn failed(what: &str, e: &Error) -> ApiError {
+pub(super) fn failed(what: &str, e: &Error) -> ApiError {
     tracing::debug!(error = %e, "the local API could not {what}");
     ApiError::new(
         502,
@@ -150,14 +171,53 @@ fn failed(what: &str, e: &Error) -> ApiError {
 }
 
 impl<E: Engine> Service<E> {
-    /// A service over `engine` that feeds `feed`.
-    pub fn new(feed: Arc<Feed>, engine: Arc<E>, limits: ApiLimits) -> Arc<Self> {
+    /// A service over `engine` that feeds `feed`, with the room hold kept in `holds`.
+    pub fn new(
+        feed: Arc<Feed>,
+        engine: Arc<E>,
+        limits: ApiLimits,
+        holds: hold::Store,
+        room_limits: RoomLimits,
+    ) -> Arc<Self> {
         Arc::new(Self {
             feed,
             engine,
             limits,
             described: tokio::sync::Mutex::new(HashMap::new()),
+            fresh: std::sync::Mutex::new(Fresh::default()),
+            holds,
+            room_limits,
+            watches: tokio::sync::Mutex::new(HashMap::new()),
+            room_cursors: tokio::sync::Mutex::new(HashMap::new()),
+            workers: std::sync::Mutex::new(HashMap::new()),
         })
+    }
+
+    fn fresh(&self) -> std::sync::MutexGuard<'_, Fresh> {
+        self.fresh
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Make the snapshots current before one is read (B24): the roster and the rooms when they were never read or are
+    /// older than their cadence, and the bots' sessions likewise, so "read the snapshot, then follow" holds from the first
+    /// request after the app starts, with or without a stream open.
+    pub async fn ensure_fresh(&self) {
+        let (roster_stale, poll_stale) = {
+            let f = self.fresh();
+            let stale =
+                |at: Option<Instant>, every: Duration| at.is_none_or(|t| t.elapsed() >= every);
+            (
+                stale(f.roster_at, self.limits.roster_every),
+                stale(f.poll_at, self.limits.poll_every),
+            )
+        };
+        if roster_stale {
+            self.refresh_roster().await;
+        }
+        if poll_stale {
+            self.poll_once().await;
+        }
     }
 
     /// The feed.
@@ -177,6 +237,7 @@ impl<E: Engine> Service<E> {
         let Ok(profiles) = profiles else {
             return;
         };
+        self.fresh().roster_at = Some(Instant::now());
         let plugin = self
             .engine
             .request(ROOT, "plugin.boopis.bots.read", json!({}))
@@ -212,10 +273,28 @@ impl<E: Engine> Service<E> {
         {
             self.feed.set_rooms(rooms_from(&rooms));
         }
+        self.read_workers().await;
+    }
+
+    /// Whether `profile` is a bot of the roster (the root always is); a name the roster does not hold yet is looked up once
+    /// more, so a call right after the app starts is not refused (B24).
+    pub(super) async fn knows_bot(&self, profile: &str) -> bool {
+        if profile == ROOT || self.feed.has_bot(profile) {
+            return true;
+        }
+        self.refresh_roster().await;
+        self.feed.has_bot(profile)
+    }
+
+    /// Poll one bot's sessions now (after a stop, so its presence says so at once).
+    pub(super) async fn poll_profile_now(&self, profile: &str) {
+        self.poll_profile(profile).await;
+        self.feed.tick();
     }
 
     /// Ask every bot's link which sessions are live, and what is waiting on the owner.
     pub async fn poll_once(&self) {
+        self.fresh().poll_at = Some(Instant::now());
         let mut names = self.feed.bot_names();
         if !names.iter().any(|n| n == ROOT) {
             names.push(ROOT.to_owned());
@@ -247,12 +326,16 @@ impl<E: Engine> Service<E> {
             if sid.is_empty() {
                 continue;
             }
+            let (title, preview) = (text(row, "title"), text(row, "preview"));
+            let source = self
+                .feed
+                .resolve_source(profile, &sid, &text(row, "source"), &title);
             if !self.feed.session_known(profile, &sid) {
                 let model = Some(text(row, "model")).filter(|m| !m.is_empty());
-                self.feed.note_session(
+                self.feed.learn_session(
                     profile,
                     &sid,
-                    super::model::source_of(&text(row, "source")),
+                    source,
                     Some(text(row, "session_key")).as_deref(),
                     model.as_deref(),
                 );
@@ -268,13 +351,74 @@ impl<E: Engine> Service<E> {
             live.push(Live {
                 session_id: sid,
                 status,
-                source: text(row, "source"),
+                source,
+                summary: self.summary_of(&title, &preview),
             });
         }
-        self.feed.on_poll(profile, &live, &models);
+        live.extend(self.worker_rows(profile));
+        let finished = self.feed.on_poll(profile, &live, &models);
         for sid in waiting {
             self.read_pending(profile, &sid).await;
         }
+        for done in finished {
+            let words = self.last_words(&done.profile, &done.session_id).await;
+            self.feed.notify_finished(&done, &words);
+        }
+    }
+
+    /// What a live session is about, in a line: its title (a room member's session, `Group: <room id>`, reads as the room's
+    /// name), else the first line of what the engine shows of it; scrubbed and cut.
+    fn summary_of(&self, title: &str, preview: &str) -> Option<String> {
+        let title = title.trim();
+        let line = if let Some(room) = title.strip_prefix("Group: ") {
+            let room = room.trim();
+            let name = self
+                .feed
+                .rooms()
+                .into_iter()
+                .find(|r| r.id == room)
+                .map_or_else(|| room.to_owned(), |r| r.name);
+            format!("In {name}")
+        } else if !title.is_empty() {
+            title.to_owned()
+        } else {
+            preview
+                .lines()
+                .map(str::trim)
+                .find(|l| !l.is_empty())?
+                .to_owned()
+        };
+        let (clean, _) = self.feed.message_text(&line);
+        let clean: String = clean.chars().take(120).collect();
+        (!clean.trim().is_empty()).then_some(clean)
+    }
+
+    /// The words a turn ended on: the last `message.complete` in the session's event ring (`session.events.since`), empty
+    /// when the ring holds none (B22: the notification is then the title alone for a scheduled run, and none for a reply).
+    async fn last_words(&self, profile: &str, sid: &str) -> String {
+        let Ok(since) = self
+            .engine
+            .request(
+                profile,
+                "session.events.since",
+                json!({"session_id": sid, "last_seen": 0}),
+            )
+            .await
+        else {
+            return String::new();
+        };
+        since
+            .get("events")
+            .and_then(Value::as_array)
+            .and_then(|events| {
+                events
+                    .iter()
+                    .rev()
+                    .find(|e| text(e, "type") == "message.complete")
+                    .and_then(|e| e.get("payload"))
+                    .map(|p| text(p, "text"))
+            })
+            .unwrap_or_default()
     }
 
     /// `approval.pending` for a waiting session, with each new approval's generation read off the session's ring.
@@ -398,7 +542,7 @@ impl<E: Engine> Service<E> {
                 "The text is too long to send in one message.",
             ));
         }
-        if !self.feed.has_bot(profile) && profile != ROOT {
+        if !self.knows_bot(profile).await {
             return Err(ApiError::new(
                 404,
                 "no_such_bot",
@@ -522,7 +666,7 @@ impl<E: Engine> Service<E> {
         pick: &Pick,
         limit: usize,
     ) -> Result<Conversation, ApiError> {
-        if !self.feed.has_bot(profile) && profile != ROOT {
+        if !self.knows_bot(profile).await {
             return Err(ApiError::new(
                 404,
                 "no_such_bot",
@@ -626,62 +770,46 @@ impl<E: Engine> Service<E> {
         })
     }
 
-    async fn latest_of(&self, profile: &str) -> Option<String> {
+    /// The bot's latest conversation (B23): the newest row of `session.list` on the bot's own link, the call the app's bot
+    /// view makes for the bot's recent sessions (`host/live/bots.ts`), so "latest" is the conversation the app lists first
+    /// for that bot. The engine's roster (`profiles.list` on the root link) leaves a named bot's `canonical_session` and
+    /// `last_session` out, so it is not read for this.
+    pub(super) async fn latest_of(&self, profile: &str) -> Option<String> {
         let list = self
             .engine
-            .request(ROOT, "profiles.list", json!({"include_sessions": true}))
+            .request(
+                profile,
+                "session.list",
+                json!({"limit": 1, "include_hidden": false}),
+            )
             .await
             .ok()?;
-        let row = list
-            .get("profiles")?
-            .as_array()?
-            .iter()
-            .find(|r| text(r, "name") == profile)?;
-        ["canonical_session", "last_session"].iter().find_map(|k| {
-            let s = row.get(*k)?;
-            Some(text(s, "resolved_id"))
-                .filter(|x| !x.is_empty())
-                .or_else(|| Some(text(s, "id")).filter(|x| !x.is_empty()))
-        })
+        let row = list.get("sessions")?.as_array()?.first()?;
+        Some(text(row, "resolved_id"))
+            .filter(|x| !x.is_empty())
+            .or_else(|| Some(text(row, "id")).filter(|x| !x.is_empty()))
     }
 
-    /// Say something in a room.
+    /// Say something in a room, through the room hold: while its members work the message waits for them, as one written in
+    /// the app does (B30). `now` stops the running turns first.
     ///
     /// # Errors
     /// A refusal in words, or the engine's failure.
-    pub async fn say_room(&self, room: &str, message: &str, by: &Caller) -> Result<(), ApiError> {
-        let message = message.trim();
-        if message.is_empty() {
-            return Err(ApiError::new(
-                400,
-                "empty_text",
-                "There is nothing to say: text is empty.",
-            ));
-        }
-        if message.len() > self.limits.max_say || message.contains('\0') {
+    pub async fn say_room(
+        &self,
+        room: &str,
+        message: &str,
+        now: bool,
+        by: &Caller,
+    ) -> Result<super::rooms::RoomSent, ApiError> {
+        if message.len() > self.limits.max_say {
             return Err(ApiError::new(
                 413,
                 "text_too_long",
                 "The text is too long to send in one message.",
             ));
         }
-        if !self.feed.rooms().iter().any(|r| r.id == room) {
-            return Err(ApiError::new(
-                404,
-                "no_such_room",
-                "There is no room with that id.",
-            ));
-        }
-        let _ = by;
-        self.engine
-            .request(
-                ROOT,
-                "groups.send",
-                json!({"room_id": room, "event_id": format!("api-{}", uuid::Uuid::now_v7()), "payload": {"thread_id": "main", "text": message}}),
-            )
-            .await
-            .map_err(|e| failed("deliver the message", &e))?;
-        Ok(())
+        self.room_send(room, message, now, by).await
     }
 
     /// Answer an approval from outside the window.
@@ -749,8 +877,13 @@ impl<E: Engine> Service<E> {
 
     // ───────────────────────── the loop ─────────────────────────
 
-    /// Run until cancelled: while at least one reader listens, read the roster and poll the sessions.
+    /// Run until cancelled: read the roster once at start (B24), then, while at least one reader listens, read the roster
+    /// and poll the sessions, and follow the rooms' logs.
     pub async fn run(self: Arc<Self>, cancel: CancellationToken) {
+        tokio::select! {
+            () = cancel.cancelled() => return,
+            () = self.refresh_roster() => {}
+        }
         let mut wanted = self.feed.wanted();
         loop {
             while *wanted.borrow_and_update() == 0 {
@@ -759,6 +892,8 @@ impl<E: Engine> Service<E> {
                     changed = wanted.changed() => if changed.is_err() { return },
                 }
             }
+            // Rooms are followed from where they are now: what was said while nobody listened is no news (read it with the log).
+            self.room_cursors.lock().await.clear();
             self.refresh_roster().await;
             let mut roster_at = tokio::time::Instant::now();
             let mut poll_at = tokio::time::Instant::now() - self.limits.poll_every;
@@ -776,6 +911,7 @@ impl<E: Engine> Service<E> {
                 if self.feed.take_poke() || now.duration_since(poll_at) >= self.limits.poll_every {
                     poll_at = now;
                     self.poll_once().await;
+                    self.follow_rooms().await;
                 }
             }
         }
@@ -829,7 +965,13 @@ mod tests {
         let feed = Feed::new(Audit::under(dir.path()), ApiLimits::default());
         let engine = Arc::new(Scripted::new(respond));
         (
-            Service::new(feed, engine.clone(), ApiLimits::default()),
+            Service::new(
+                feed,
+                engine.clone(),
+                ApiLimits::default(),
+                hold::Store::under(dir.path()),
+                RoomLimits::default(),
+            ),
             engine,
             dir,
         )
@@ -839,8 +981,7 @@ mod tests {
         match method {
             "profiles.list" => Some(json!({"profiles": [
                 {"name": "default", "model": "opus", "provider": "p", "display_name": "", "description": ""},
-                {"name": "kai", "model": "", "provider": "", "display_name": "Kai", "description": "editor",
-                 "last_session": {"id": "stored-1"}},
+                {"name": "kai", "model": "", "provider": "", "display_name": "Kai", "description": "editor"},
                 {"name": "nina", "model": "sonnet", "provider": "p", "display_name": "", "description": ""}
             ]})),
             "plugin.boopis.bots.read" => Some(
@@ -914,7 +1055,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             (kai.state, kai.source),
-            (State::Needs, Source::Other),
+            (State::Needs, Some(Source::Other)),
             "needs outranks the cron run"
         );
         let rows = s.feed().approvals(false);
@@ -1077,6 +1218,12 @@ mod tests {
                 "session.resume" => Ok(
                     json!({"session_id": "live-1", "stored_session_id": params["session_id"], "running": running}),
                 ),
+                // B23: the bot's own link lists its sessions, newest first, as the app's bot view reads them
+                "session.list" if p == "kai" => {
+                    assert_eq!(params["limit"], 1);
+                    Ok(json!({"sessions": [{"id": "stored-1", "title": "", "source": "gui"}]}))
+                }
+                "session.list" => Ok(json!({"sessions": []})),
                 "prompt.submit" => Ok(json!({"status": "started"})),
                 _ => Err(Error::Unavailable(format!("unscripted {p} {m}"))),
             }
@@ -1201,7 +1348,7 @@ mod tests {
             .into_iter()
             .find(|p| p.profile == "nina")
             .unwrap();
-        assert_eq!(p.source, Source::Gui);
+        assert_eq!(p.source, Some(Source::Gui));
     }
 
     #[tokio::test]
@@ -1232,27 +1379,108 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn saying_in_a_room_goes_to_the_rooms_own_call_and_only_to_a_room_that_exists() {
-        let (s, e, _d) = service(|_, m, params| {
+    async fn latest_is_the_conversation_the_bots_own_link_lists_first_and_new_when_it_has_none() {
+        // B23: the engine's roster names no latest session for a named bot; the bot's own session list does.
+        let (s, e, _d) = service(say_engine(false));
+        s.refresh_roster().await;
+        assert_eq!(s.latest_of("kai").await.as_deref(), Some("stored-1"));
+        let asked = e.of("session.list");
+        assert_eq!(asked[0].0, "kai", "asked on the bot's own link");
+        assert_eq!(asked[0].1["include_hidden"], false);
+        assert_eq!(s.latest_of("nina").await, None);
+        let said = s
+            .say("nina", "hi", &Pick::Latest, &Caller::through("endpoint"))
+            .await
+            .unwrap();
+        assert!(said.created, "no conversation yet: a new one, as before");
+    }
+
+    fn room_engine(
+        working: bool,
+    ) -> impl Fn(&str, &str, &Value) -> crate::error::Result<Value> + Send + Sync {
+        move |_, m, params| {
             if let Some(v) = roster_answer(m) {
                 return Ok(v);
             }
-            assert_eq!(m, "groups.send");
-            assert_eq!(params["payload"]["text"], "go");
-            Ok(json!({"accepted": true}))
-        });
+            match m {
+                "groups.log" => Ok(json!({"events": [], "latest_seq": 0, "has_more": false})),
+                "groups.state" => Ok(
+                    json!({"room": {}, "driver_status": {"working": working, "blocked": false,
+                    "pending_actions": [], "member_activity": [{"member_id": "kai", "status": "running"}]}}),
+                ),
+                "groups.send" => {
+                    assert_eq!(params["payload"]["text"], "go");
+                    Ok(
+                        json!({"event": {"seq": 1, "event_id": params["event_id"], "kind": "message.user", "payload": params["payload"]}}),
+                    )
+                }
+                "groups.stop" => Ok(json!({"cancelled": 1})),
+                _ => Err(Error::Unavailable(format!("unscripted {m}"))),
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn saying_in_a_room_goes_through_the_hold_and_only_to_a_room_that_exists() {
+        let (s, e, _d) = service(room_engine(false));
         s.refresh_roster().await;
-        s.say_room("g-paper", "go", &Caller::through("endpoint"))
+        let sent = s
+            .say_room("g-paper", "go", false, &Caller::through("endpoint"))
             .await
             .unwrap();
+        assert_eq!((sent.status, sent.held.len()), ("sent", 0));
+        assert!(sent.event_id.starts_with("api-"));
         assert_eq!(e.of("groups.send").len(), 1);
         assert_eq!(
-            s.say_room("g-nope", "go", &Caller::through("endpoint"))
+            s.say_room("g-nope", "go", false, &Caller::through("endpoint"))
                 .await
                 .unwrap_err()
                 .code,
             "no_such_room"
         );
         let _ = Calls::default();
+    }
+
+    #[tokio::test]
+    async fn a_room_message_while_a_member_works_is_held_for_every_client_alike() {
+        // B30: the local API holds as the app's room does, through the same hold
+        let (s, e, _d) = service(room_engine(true));
+        s.refresh_roster().await;
+        let held = s
+            .say_room("g-paper", "go", false, &Caller::through("endpoint"))
+            .await
+            .unwrap();
+        assert_eq!(held.status, "held");
+        assert_eq!(held.held.len(), 1);
+        assert!(
+            e.of("groups.send").is_empty(),
+            "kai's turn is not cut short"
+        );
+        let from_app = s
+            .room_send("g-paper", "go", false, &Caller::through("gui"))
+            .await
+            .unwrap();
+        assert!(from_app.event_id.starts_with("ui-"));
+        assert_eq!(from_app.held.len(), 2, "one queue, whoever wrote it");
+        let back = s.room_unhold("g-paper", &held.event_id).await.unwrap();
+        assert_eq!(back.text.as_deref(), Some("go"));
+        assert_eq!(back.held.len(), 1);
+        let now = s
+            .room_send_now("g-paper", &from_app.event_id)
+            .await
+            .unwrap();
+        assert_eq!(now.status, "sent");
+        assert_eq!(
+            e.of("groups.stop").len(),
+            1,
+            "send now stops the running turn first"
+        );
+        assert_eq!(
+            s.room_send_now("g-paper", &from_app.event_id)
+                .await
+                .unwrap_err()
+                .code,
+            "not_held"
+        );
     }
 }

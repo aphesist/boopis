@@ -6,16 +6,29 @@
 //! several, so this keeps calling it while the bots are still handing off, up to boopis's own cap on rounds (the room's
 //! setting, `settings.rs`, or a flag). It stops cleanly and says why: [`Stop`].
 //!
-//! It only reads the log and the room's state and calls `groups.send`, `groups.continue` and (after a failed turn)
-//! `groups.stop`. A bot's approval is never answered here: it stops with [`Stop::NeedsOwner`].
+//! It only reads the log and the room's state and calls `groups.send` (through the room hold, `hold.rs`: a task written while
+//! the members work waits for them, as it does in the app), `groups.continue` and (after a failed turn) `groups.stop`. A bot's
+//! approval is never answered here: it stops with [`Stop::NeedsOwner`].
 
 use std::time::Duration;
 
 use serde_json::Value;
 use tokio::time::Instant;
 
+use super::hold::{self, Delivered, Store};
 use super::{Event, Room, Rpc};
+use crate::config::RoomLimits;
 use crate::error::Result;
+
+/// The hold a run sends through: the file, its rules, and the surface named in the event id.
+pub struct Via<'a> {
+    /// The held messages' file.
+    pub store: &'a Store,
+    /// The hold's rules.
+    pub limits: &'a RoomLimits,
+    /// `cli` for the command line.
+    pub prefix: &'a str,
+}
 
 /// How a run behaves.
 #[derive(Debug, Clone)]
@@ -47,6 +60,9 @@ impl Default for Opts {
 /// Something worth telling while the run goes on.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Progress {
+    /// The members are at work, so the task is held until they finish (their names; empty when the room only shows an
+    /// open discussion).
+    Held(Vec<String>),
     /// The task was sent; the discussion's id.
     Sent(String),
     /// A bot said something.
@@ -180,7 +196,8 @@ pub fn turn_failed_words(name: &str, raw: &str, reason: Option<&str>) -> String 
     }
 }
 
-/// Send `text` to `room` and follow the discussion it starts to its end.
+/// Send `text` to `room` through the hold and follow the discussion it starts to its end. While the members work the task
+/// waits for them (it never cuts their turns short), within the run's own time.
 ///
 /// # Errors
 /// The gateway's, when a call fails (the run itself ending badly is an [`Outcome`], not an error).
@@ -189,11 +206,52 @@ pub async fn run(
     room: &Room,
     text: &str,
     opts: &Opts,
+    via: &Via<'_>,
     on: &mut dyn FnMut(Progress),
 ) -> Result<Outcome> {
-    let sent = super::send(rpc, &room.id, text).await?;
-    on(Progress::Sent(sent.id.clone()));
-    follow(rpc, room, &sent.id, sent.seq, opts, on).await
+    let mut watch = hold::Watch::new(&room.id);
+    let delivered = hold::deliver(
+        rpc,
+        via.store,
+        &mut watch,
+        text,
+        via.prefix,
+        via.limits,
+        opts.poll,
+        opts.timeout,
+        &mut |_, working| {
+            on(Progress::Held(
+                working
+                    .iter()
+                    .map(|id| room.name_of(id).to_owned())
+                    .collect(),
+            ));
+        },
+    )
+    .await?;
+    let ended = |stop: Stop| Outcome {
+        stop,
+        discussion: String::new(),
+        rounds: 0,
+        continues: 0,
+        messages: 0,
+        last_seq: watch.cursor(),
+    };
+    match delivered {
+        Delivered::Sent(sent) => {
+            on(Progress::Sent(sent.id.clone()));
+            follow(rpc, room, &sent.id, sent.seq, opts, on).await
+        }
+        Delivered::TakenBack => Ok(ended(Stop::Failed(
+            "the task was taken back before it went out".into(),
+        ))),
+        Delivered::StillHeld(_) => {
+            on(Progress::Note(
+                "the task is still held: boopis sends it when the group has finished".into(),
+            ));
+            Ok(ended(Stop::TimedOut))
+        }
+    }
 }
 
 /// Follow the discussion that the event `discussion` started, reading the log after `from_seq`.

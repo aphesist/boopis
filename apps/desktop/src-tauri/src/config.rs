@@ -72,6 +72,37 @@ pub struct Limits {
     pub store: StoreLimits,
     /// The local API's caps and timings (`ADR-0045`).
     pub api: ApiLimits,
+    /// How rooms hold a message while their members work (`rooms/hold.rs`).
+    pub rooms: RoomLimits,
+}
+
+/// How a message written while a room's members work is held (`rooms/hold.rs`, `rooms/discussion.rs`).
+#[derive(Debug, Clone)]
+pub struct RoomLimits {
+    /// A discussion the log shows open but silent (no turn running, nothing new written) for this long is taken as stuck, so
+    /// a held message does not wait on it: the engine's router waits 20 s at most and its worker polls every 5 s.
+    pub quiet_grace: std::time::Duration,
+    /// How often the app reads the rooms that hold messages.
+    pub hold_every: std::time::Duration,
+    /// The longest a command waits for its own held message to go out (a turn may run half an hour).
+    pub hold_wait: std::time::Duration,
+    /// Messages held for one room, at most.
+    pub held_per_room: usize,
+    /// The longest message (the engine's own cap on a user message, 64 KiB).
+    pub max_text: usize,
+}
+
+impl Default for RoomLimits {
+    fn default() -> Self {
+        use std::time::Duration;
+        Self {
+            quiet_grace: Duration::from_secs(45),
+            hold_every: Duration::from_secs(2),
+            hold_wait: Duration::from_hours(3),
+            held_per_room: 20,
+            max_text: 64 * 1024,
+        }
+    }
 }
 
 /// The local API's caps and timings: what the feed keeps, how often it asks the engine, and what the endpoint accepts.
@@ -127,6 +158,9 @@ pub struct ApiLimits {
     pub follow_bots: usize,
     /// How often a streaming reply is sent again while it grows.
     pub stream_every: std::time::Duration,
+    /// A kanban worker counts as running while its session showed life this recently (the engine refreshes a running
+    /// worker's `last_active` at least every minute; the app's roster uses the same window).
+    pub worker_active: std::time::Duration,
 }
 
 impl Default for ApiLimits {
@@ -158,6 +192,7 @@ impl Default for ApiLimits {
             conversation_rows: 200,
             follow_bots: 6,
             stream_every: Duration::from_millis(250),
+            worker_active: Duration::from_secs(90),
         }
     }
 }
@@ -249,6 +284,7 @@ impl Default for Limits {
             chatgpt_refresh_every: Duration::from_mins(5),
             store: StoreLimits::default(),
             api: ApiLimits::default(),
+            rooms: RoomLimits::default(),
         }
     }
 }

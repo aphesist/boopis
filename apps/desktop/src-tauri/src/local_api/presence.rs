@@ -51,8 +51,10 @@ pub struct Live {
     pub session_id: String,
     /// The engine's status word.
     pub status: Status,
-    /// The engine's `source`.
-    pub source: String,
+    /// Where the session came from, as the feed resolved it (what the host knows first, then what the engine says).
+    pub source: Source,
+    /// What it is about (its title, else the first line of what it was asked), when the engine says.
+    pub summary: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -61,6 +63,9 @@ struct Session {
     activity: String,
     attention: Option<String>,
     source: Source,
+    summary: Option<String>,
+    /// Tool steps of the running turn, counted from its events; `None` when only the poll sees the session.
+    steps: Option<u32>,
     since: i64,
     /// Until when a state that came from an event stands against the poll.
     fine_until: i64,
@@ -125,12 +130,21 @@ impl Table {
             activity: String::new(),
             attention: None,
             source,
+            summary: None,
+            steps: None,
             since: now,
             fine_until: 0,
             hold_until: 0,
         };
         let s = self.sessions.entry(key).or_insert_with(fresh);
         s.source = source;
+        // The turn's tool steps, counted from its own events: a new turn starts at zero.
+        match event {
+            "host.prompt" => s.steps = Some(0),
+            "message.start" if !s.state.busy() => s.steps = Some(0),
+            "tool.start" => s.steps = Some(s.steps.unwrap_or(0) + 1),
+            _ => {}
+        }
         let (state, activity, attention) = match event {
             "host.prompt" => (State::Listening, String::new(), None),
             "message.start"
@@ -198,17 +212,21 @@ impl Table {
         });
         for row in rows {
             let key = (profile.to_owned(), row.session_id.clone());
-            let source = super::model::source_of(&row.source);
             let s = self.sessions.entry(key).or_insert_with(|| Session {
                 state: State::Idle,
                 activity: String::new(),
                 attention: None,
-                source,
+                source: row.source,
+                summary: None,
+                steps: None,
                 since: now,
                 fine_until: 0,
                 hold_until: 0,
             });
-            s.source = source;
+            // The source a session started with stands (B25): the poll never turns the host's own `gui` into a guess.
+            if row.summary.is_some() {
+                s.summary.clone_from(&row.summary);
+            }
             if s.fine_until > now && s.state != State::Idle && row.status != Status::Idle {
                 continue; // a fine word from an event stands for a moment
             }
@@ -307,7 +325,9 @@ impl Table {
                 activity: s.activity.clone(),
                 attention: s.attention.clone(),
                 session_id: Some(sid.clone()),
-                source: s.source,
+                source: Some(s.source),
+                summary: s.summary.clone(),
+                steps: s.steps,
                 at: s.since,
             },
             _ => {
@@ -337,6 +357,8 @@ impl Table {
                     && old.attention == now_row.attention
                     && old.session_id == now_row.session_id
                     && old.source == now_row.source
+                    && old.summary == now_row.summary
+                    && old.steps == now_row.steps
             });
             if !same {
                 self.published.insert(p.clone(), now_row.clone());
@@ -458,7 +480,8 @@ mod tests {
         Live {
             session_id: id.into(),
             status,
-            source: source.into(),
+            source: super::super::model::source_of(source),
+            summary: None,
         }
     }
 
@@ -467,9 +490,12 @@ mod tests {
         let mut t = Table::new();
         let none = |_: &str| false;
         let p = t.on_poll("nina", &[live("i1", Status::Working, "cli")], &none, 0);
-        assert_eq!((p[0].state, p[0].source), (State::Working, Source::Other));
+        assert_eq!(
+            (p[0].state, p[0].source),
+            (State::Working, Some(Source::Other))
+        );
         let p = t.on_poll("moss", &[live("c1", Status::Working, "cron")], &none, 0);
-        assert_eq!(p[0].source, Source::Cron);
+        assert_eq!(p[0].source, Some(Source::Cron));
         let p = t.on_poll(
             "nina",
             &[live("i1", Status::Waiting, "cli")],
@@ -533,7 +559,62 @@ mod tests {
         let p = t.presence("kai", 0);
         assert_eq!(
             (p.state, p.session_id.as_deref(), p.source),
-            (State::Needs, Some("b"), Source::Cron)
+            (State::Needs, Some("b"), Some(Source::Cron))
+        );
+    }
+
+    #[test]
+    fn the_source_a_session_started_with_stands_and_idle_has_none() {
+        // B25: a turn the host ran on its own link (gui) ends; the poll, which cannot tell, never turns it into `other`, and
+        // the rest after it names no source at all.
+        let mut t = Table::new();
+        let none = |_: &str| false;
+        ev(&mut t, "host.prompt", None, 0);
+        ev(&mut t, "message.complete", None, 100);
+        let p = t.on_poll("kai", &[live("s1", Status::Idle, "")], &none, 200);
+        assert!(p.is_empty(), "done holds and keeps its source: {p:?}");
+        assert_eq!(t.presence("kai", 200).source, Some(Source::Gui));
+        let p = t.tick(DONE_HOLD_MS + 200);
+        assert_eq!((p[0].state, p[0].source), (State::Idle, None));
+        assert_eq!(Presence::idle("kai", 0).source, None);
+    }
+
+    #[test]
+    fn a_turns_tool_steps_are_counted_from_its_events_and_a_poll_cannot_count() {
+        let mut t = Table::new();
+        ev(&mut t, "host.prompt", None, 0);
+        assert_eq!(t.presence("kai", 0).steps, Some(0));
+        for (i, tool) in ["read_file", "read_file", "exec"].iter().enumerate() {
+            ev(
+                &mut t,
+                "tool.start",
+                Some(tool),
+                10 + i64::try_from(i).unwrap(),
+            );
+            ev(
+                &mut t,
+                "tool.progress",
+                Some(tool),
+                20 + i64::try_from(i).unwrap(),
+            );
+        }
+        assert_eq!(
+            t.presence("kai", 30).steps,
+            Some(3),
+            "a progress event is not a step"
+        );
+        let none = |_: &str| false;
+        let polled = Live {
+            session_id: "c1".into(),
+            status: Status::Working,
+            source: Source::Cron,
+            summary: Some("Nightly digest".into()),
+        };
+        t.on_poll("moss", &[polled], &none, 0);
+        let p = t.presence("moss", 0);
+        assert_eq!(
+            (p.steps, p.summary.as_deref()),
+            (None, Some("Nightly digest"))
         );
     }
 

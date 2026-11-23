@@ -91,6 +91,10 @@ const COMMANDS: &[&str] = &[
     "bots_notice",
     "room_settings_get",
     "room_settings_set",
+    "room_send",
+    "room_unhold",
+    "room_send_now",
+    "room_held",
     "bot_run_limit_get",
     "bot_run_limit_set",
 ];

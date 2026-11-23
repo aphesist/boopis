@@ -6,17 +6,22 @@ Python 3, standard library only. It reads the endpoint and the token the app wro
 
     boopis-local-client.py bots                       the roster: look, model, presence
     boopis-local-client.py presence                   what every bot is doing now
-    boopis-local-client.py events [--approve] [--conversations [--bot NAME ...]]
+    boopis-local-client.py events [--approve] [--conversations [--bot NAME ...]] [--rooms [--room ID ...]]
                                                       follow the event stream; with --approve, ask on the terminal
                                                       for each approval and answer it (once or deny); with
-                                                      --conversations, also each message of the bots' conversations
+                                                      --conversations, also each message of the bots' conversations;
+                                                      with --rooms, each line of the rooms' logs
     boopis-local-client.py conversation BOT [--session latest|ID] [--limit N]
                                                       the messages of a conversation, as the app shows them
     boopis-local-client.py approvals                  the approvals waiting
     boopis-local-client.py answer ID once|deny        answer one (the first answer wins)
     boopis-local-client.py say BOT TEXT [--session latest|new|ID]
+    boopis-local-client.py stop BOT                   stop the bot's running turn
     boopis-local-client.py rooms
-    boopis-local-client.py say-room ROOM TEXT
+    boopis-local-client.py room-log ROOM [--after SEQ] [--limit N]
+                                                      a room's log, as `boopis groups log` prints it
+    boopis-local-client.py say-room ROOM TEXT [--now] held while the members work, unless --now (which stops them)
+    boopis-local-client.py stop-room ROOM             stop the room's running turns
 
 It never prints the token, sends it only as `Authorization: Bearer` and refuses a token file other users can read. It does
 not name itself: the contract does not tell clients apart. Exit codes: 0 done, 1 the endpoint refused or is not reachable,
@@ -136,17 +141,23 @@ class Client:
         last_event_id: int | None = None,
         conversations: bool = False,
         bots: list[str] | None = None,
+        rooms: bool = False,
+        room_ids: list[str] | None = None,
     ) -> Iterator[tuple[str, int | None, dict[str, Any]]]:
         """Follow the event stream: (event name, id, data). Ends when the endpoint closes it (a rotated token ends it).
 
-        `conversations` also asks for `conversation.message` events (every bot's, or only those of `bots`)."""
+        `conversations` also asks for `conversation.message` events (every bot's, or only those of `bots`); `rooms` for
+        `room.line`, `room.state` and `room.held` events (every room's, or only those of `room_ids`)."""
         conn = http.client.HTTPConnection(self.host, self.port, timeout=60)
         headers = self._headers(False)
         if last_event_id is not None:
             headers["Last-Event-ID"] = str(last_event_id)
-        query = ""
+        parts: list[str] = []
         if conversations:
-            query = "?conversations=1" + "".join(f"&bot={b}" for b in bots or [])
+            parts += ["conversations=1"] + [f"bot={b}" for b in bots or []]
+        if rooms:
+            parts += ["rooms=1"] + [f"room={r}" for r in room_ids or []]
+        query = ("?" + "&".join(parts)) if parts else ""
         conn.request("GET", "/v1/events" + query, headers=headers)
         response = conn.getresponse()
         if response.status != 200:
@@ -185,10 +196,14 @@ def follow(
     ask=input,
     conversations: bool = False,
     bots: list[str] | None = None,
+    rooms: bool = False,
+    room_ids: list[str] | None = None,
 ) -> None:
     """Print every event as a line of JSON; with `approve`, answer each approval that arrives from the terminal."""
     last: int | None = None
-    for name, ident, data in client.events(conversations=conversations, bots=bots):
+    for name, ident, data in client.events(
+        conversations=conversations, bots=bots, rooms=rooms, room_ids=room_ids
+    ):
         if ident is not None:
             last = ident
         show(
@@ -231,6 +246,8 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--approve", action="store_true")
             p.add_argument("--conversations", action="store_true")
             p.add_argument("--bot", action="append", default=[])
+            p.add_argument("--rooms", action="store_true")
+            p.add_argument("--room", action="append", default=[])
         if name == "approvals":
             p.add_argument("--all", action="store_true")
     p = sub.add_parser("conversation")
@@ -247,6 +264,15 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("say-room")
     p.add_argument("room")
     p.add_argument("text")
+    p.add_argument("--now", action="store_true")
+    p = sub.add_parser("stop")
+    p.add_argument("bot")
+    p = sub.add_parser("stop-room")
+    p.add_argument("room")
+    p = sub.add_parser("room-log")
+    p.add_argument("room")
+    p.add_argument("--after", type=int)
+    p.add_argument("--limit", type=int, default=100)
     args = parser.parse_args(argv)
     try:
         client = Client.from_files(args.endpoint_file, args.token_file)
@@ -286,7 +312,20 @@ def main(argv: list[str] | None = None) -> int:
             case "say-room":
                 show(
                     client.call(
-                        "POST", f"/v1/rooms/{args.room}/say", {"text": args.text}
+                        "POST",
+                        f"/v1/rooms/{args.room}/say",
+                        {"text": args.text, "now": args.now},
+                    )
+                )
+            case "stop":
+                show(client.call("POST", f"/v1/bots/{args.bot}/stop", {}))
+            case "stop-room":
+                show(client.call("POST", f"/v1/rooms/{args.room}/stop", {}))
+            case "room-log":
+                after = "" if args.after is None else f"&after={args.after}"
+                show(
+                    client.call(
+                        "GET", f"/v1/rooms/{args.room}/log?limit={args.limit}{after}"
                     )
                 )
             case "events":
@@ -295,6 +334,8 @@ def main(argv: list[str] | None = None) -> int:
                     args.approve,
                     conversations=args.conversations,
                     bots=args.bot,
+                    rooms=args.rooms,
+                    room_ids=args.room,
                 )
     except Refused as e:
         print(f"boopis-local-client: {e.message}", file=sys.stderr)

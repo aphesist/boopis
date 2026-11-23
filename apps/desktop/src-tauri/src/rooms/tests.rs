@@ -20,9 +20,19 @@ async fn run_with(script: Script, o: &Opts) -> (run::Outcome, Vec<Progress>, Fak
     let fake = Fake::new(script);
     let room = resolve(&fake, "paper past").await.unwrap();
     let mut seen = Vec::new();
-    let out = run::run(&fake, &room, "make the episode", o, &mut |p| seen.push(p))
-        .await
-        .unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let store = hold::Store::under(dir.path());
+    let limits = crate::config::RoomLimits::default();
+    let via = run::Via {
+        store: &store,
+        limits: &limits,
+        prefix: "cli",
+    };
+    let out = run::run(&fake, &room, "make the episode", o, &via, &mut |p| {
+        seen.push(p);
+    })
+    .await
+    .unwrap();
     (out, seen, fake)
 }
 

@@ -159,9 +159,12 @@ async fn create_says_what_is_wrong() {
     assert_eq!(o.code, 2);
     let o = go(&fake, None, &s, false, &["nope"]).await;
     assert_eq!(o.code, 2);
-    assert!(o.err.contains("usage"));
+    assert!(o.err.contains("groups nope is not a command"), "{}", o.err);
+    assert!(o.err.contains(&super::super::help::hint("groups")), "{}", o.err);
     let o = go(&fake, None, &s, false, &[]).await;
     assert_eq!(o.code, 2);
+    // no subcommand prints the page, as `bots` and `team` do
+    assert!(o.err.contains("groups send"), "{}", o.err);
 }
 
 #[tokio::test(start_paused = true)]
@@ -184,7 +187,11 @@ async fn send_without_wait_sends_and_returns() {
         .find(|(m, _)| m == "groups.send")
         .unwrap();
     assert_eq!(sent.1["payload"]["text"], "hello there");
-    assert_eq!(fake.count("groups.log"), 0);
+    assert!(
+        !o.out.contains("held"),
+        "a free room gets it at once: {}",
+        o.out
+    );
     // the text from standard input
     let o = go(&fake, None, &s, false, &["send", "paper past", "-"]).await;
     assert_eq!(o.code, 0);
@@ -426,7 +433,12 @@ async fn log_prints_the_conversation_and_follow_reads_on() {
         "{}",
         o.out
     );
-    assert!(o.out.contains("settled"), "{}", o.out);
+    assert!(o.out.contains("Settled"), "{}", o.out);
+    assert!(
+        o.out.contains(" UTC] you"),
+        "a time says its zone (B37): {}",
+        o.out
+    );
     let o = go(
         &fake,
         None,
@@ -446,6 +458,8 @@ async fn log_prints_the_conversation_and_follow_reads_on() {
             .lines()
             .all(|l| serde_json::from_str::<Value>(l).is_ok())
     );
+    let first: Value = serde_json::from_str(o.out.lines().next().unwrap()).unwrap();
+    assert!(first["time"].as_str().unwrap().ends_with('Z'), "{first}");
     let o = go(
         &fake,
         None,
@@ -502,5 +516,160 @@ async fn set_keeps_and_clears_the_rooms_cap() {
         .await
         .code,
         1
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn log_shows_a_cancelled_or_failed_turn_so_the_numbering_has_no_gap() {
+    let (_d, s) = tmp();
+    let fake = Fake::new(Script::default());
+    fake.write(
+        "message.user",
+        "user",
+        &json!({"thread_id": "main", "text": "open every source"}),
+    );
+    fake.write(
+        "turn.cancelled",
+        "gateway",
+        &json!({"member_id": "kai", "reason": "superseded_by_newer_user_event", "discussion_event_id": "e1"}),
+    );
+    fake.write(
+        "turn.failed",
+        "gateway",
+        &json!({"member_id": "nina", "error": "Unknown provider 'x'. Check 'hermes model'", "reason_code": "missing_config"}),
+    );
+    let o = go(&fake, None, &s, false, &["log", "paper past"]).await;
+    assert!(
+        o.out
+            .contains("-- Kai's turn was stopped because a newer message arrived"),
+        "{}",
+        o.out
+    );
+    assert!(
+        o.out.contains("-- Nina can't reach its model."),
+        "{}",
+        o.out
+    );
+    assert!(!o.out.contains("hermes"), "{}", o.out);
+    let o = go(&fake, None, &s, false, &["log", "paper past", "--json"]).await;
+    let seqs: Vec<u64> = o
+        .out
+        .lines()
+        .map(|l| {
+            serde_json::from_str::<Value>(l).unwrap()["seq"]
+                .as_u64()
+                .unwrap()
+        })
+        .collect();
+    assert_eq!(seqs, [1, 2, 3], "B30: seq 2 and 3 are not skipped");
+    let cancelled: Value = serde_json::from_str(o.out.lines().nth(1).unwrap()).unwrap();
+    assert_eq!(
+        (cancelled["type"].as_str(), cancelled["member"].as_str()),
+        (Some("turn.cancelled"), Some("kai"))
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_message_while_the_bots_work_is_held_until_they_finish() {
+    let (d, s) = tmp();
+    let fake = Fake::new(Script::default());
+    let o = go(
+        &fake,
+        None,
+        &s,
+        false,
+        &["send", "paper past", "first task"],
+    )
+    .await;
+    assert_eq!(o.code, 0, "{}{}", o.out, o.err);
+    let o = go(&fake, None, &s, false, &["send", "paper past", "also this"]).await;
+    assert_eq!(o.code, 0, "{}{}", o.out, o.err);
+    assert!(
+        o.out
+            .contains("-- held: the group's conversation is still going")
+            || o.out.contains("-- held: Kai"),
+        "{}",
+        o.out
+    );
+    assert!(o.out.contains("sent to paper past (cli-"), "{}", o.out);
+    // the second message went in only after the first discussion settled: nobody's turn was cut short (B30)
+    let log = fake.calls();
+    let sends: Vec<usize> = log
+        .iter()
+        .enumerate()
+        .filter(|(_, (m, _))| m == "groups.send")
+        .map(|(i, _)| i)
+        .collect();
+    assert_eq!(sends.len(), 2);
+    let o = go(&fake, None, &s, false, &["log", "paper past", "--json"]).await;
+    let kinds: Vec<String> = o
+        .out
+        .lines()
+        .map(|l| {
+            serde_json::from_str::<Value>(l).unwrap()["type"]
+                .as_str()
+                .unwrap()
+                .to_owned()
+        })
+        .collect();
+    let settled = kinds.iter().position(|k| k == "room.activity").unwrap();
+    let second = kinds.iter().rposition(|k| k == "message.user").unwrap();
+    assert!(settled < second, "{kinds:?}");
+    assert!(
+        hold::Store::under(d.path())
+            .held("g-paper-past-")
+            .unwrap()
+            .is_empty(),
+        "nothing is left held"
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_mention_of_a_bot_outside_the_group_is_said_and_the_message_still_goes() {
+    let (_d, s) = tmp();
+    let fake = Fake::new(Script::default());
+    let o = go(
+        &fake,
+        None,
+        &s,
+        false,
+        &["send", "paper past", "@moss please confirm, @kai too"],
+    )
+    .await;
+    assert_eq!(o.code, 0, "{}", o.err);
+    assert!(
+        o.err.contains(
+            "boopis: warning: moss isn't in paper past, so the message reaches only Kai and Nina"
+        ),
+        "B20: {}",
+        o.err
+    );
+    assert!(o.err.contains("boopis run --bot moss"), "{}", o.err);
+    let o = go(
+        &fake,
+        None,
+        &s,
+        false,
+        &["send", "paper past", "@nobody @all hi", "--json"],
+    )
+    .await;
+    assert!(
+        o.err.is_empty() && !o.out.contains("warning"),
+        "an unknown handle and @all are not outsiders: {}{}",
+        o.out,
+        o.err
+    );
+    let o = go(
+        &fake,
+        None,
+        &s,
+        true,
+        &["--group", "paper past", "@moss do it", "--json"],
+    )
+    .await;
+    let warning: Value = serde_json::from_str(o.out.lines().next().unwrap()).unwrap();
+    assert_eq!(
+        (warning["type"].as_str(), warning["outside"][0].as_str()),
+        (Some("warning"), Some("moss"))
     );
 }

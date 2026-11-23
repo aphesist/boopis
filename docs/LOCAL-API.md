@@ -6,7 +6,7 @@ Status: version 1 (ADR-0045). For the owner's own tools: a shell's island, a scr
 
 | You want | Use |
 |---|---|
-| The roster with each bot's look and model, what every bot is doing now (the app, a cron run, a room turn), notifications, approvals you can answer from anywhere, a conversation read and followed as the app shows it, a message into the bot's own thread | **The loopback endpoint** (below). Off by default; the owner turns it on in Settings, Local API |
+| The roster with each bot's look and model, what every bot is doing now (the app, a cron run, a room turn, a kanban worker), notifications, approvals you can answer from anywhere, a conversation read and followed as the app shows it, a message into the bot's own thread, a room's log read and followed, a message into a room (held while its members work, as in the app), stopping a bot's or a room's turn | **The loopback endpoint** (below). Off by default; the owner turns it on in Settings, Local API |
 | The engine's own gateway (sessions, the session's events, everything the boopis window itself uses) | **`boopis connect`** (below) says how to dial it |
 
 The engine's gateway has no extension point for a client to add methods or events (a plugin adds `plugin.boopis.*` methods to a session's link, never a global event), so `bots.say`, `bots.presence` and the rest cannot be methods on the engine's WebSocket without patching it, which boopis never does (ADR-0023). They are calls and events of the endpoint instead.
@@ -52,13 +52,13 @@ A small HTTP/1.1 server on `127.0.0.1` (never another address, never IPv6). **Of
 | Limits | 16 connections, 8 event streams; 20 reads a second (burst 40) and 2 writes a second (burst 6); 5 wrong tokens in 10 s shut the door for 10 s (`429 too_many_failures`) |
 | No secret | responses and events are typed values chosen field by field; free text from the engine (a command, a description, a tool's name, a preview) passes a scrubber for bearer tokens, ticket strings, key shapes, `password:`-style values and long opaque strings, and the exact values the host holds (the endpoint's token) |
 | Errors | `{"error": {"code", "message"}}`: what happened and what to do; never the request's text, the token or a path |
-| Audit | every approval answer is a line of `<app data>/audit/client-answers.jsonl` (mode `0600`, rotated at 512 KiB): time, bot, session, prompt, choice, outcome, and the surface it came through (`gui` for the app's window, `endpoint` for this API), never a name and never the command. No screen shows it |
+| Audit | every approval answer and every stop is a line of `<app data>/audit/client-answers.jsonl` (mode `0600`, rotated at 512 KiB): time, bot, session (a room's id for a room's stop), prompt, choice (`stop`, `stop_room` for a stop), outcome, and the surface it came through (`gui` for the app's window, `endpoint` for this API), never a name and never the command. No screen shows it |
 
 There are no per-client tokens (the owner skipped them): every client holds the same token, and no client is told apart from another. On Windows the token file's privacy relies on the user profile folder's access list, which the owner accepted.
 
 ### Calls
 
-Every success is `200` with a JSON object. Every failure is the error object above with a status.
+Every success is `200` with a JSON object. Every failure is the error object above with a status. A snapshot (`/v1/bots`, `/v1/presence`, `/v1/rooms`) is current from the first request after boopis starts, with or without a stream open: the host reads the roster and the rooms at start, and a snapshot read asks the engine again when what it holds is older than its cadence (10 s for the roster, 2 s for the bots' sessions).
 
 | Call | Body | Answer |
 |---|---|---|
@@ -70,19 +70,31 @@ Every success is `200` with a JSON object. Every failure is the error object abo
 | `POST /v1/approvals/<id>` | `{choice: "once" \| "deny", execution_generation?}` | `{approval}`. See below |
 | `GET /v1/bots/<name>/conversation?session=latest\|<stored id>&limit=<n>` | | `{profile, session_id, messages: [Message], older, last_event_id}`: the conversation as the app shows it, oldest first |
 | `POST /v1/bots/<name>/say` | `{text, session?: "latest" \| "new" \| "<stored id>"}` | `{said: {profile, session_id, created}}` |
+| `POST /v1/bots/<name>/stop` | `{session_id?}` | `{stopped: [session id]}`: the bot's running turns are interrupted (`session.interrupt` on its own link), or only that session (a live or stored id). See below |
 | `GET /v1/rooms` | | `{rooms: [{id, name, members: [profile]}]}` |
-| `POST /v1/rooms/<id>/say` | `{text}` | `{ok: true}` |
-| `GET /v1/events?conversations=1&bot=<name>` | `Last-Event-ID` header optional | a Server-Sent Events stream; `conversations=1` adds the words of conversations, `bot=` (up to 6) narrows them |
+| `GET /v1/rooms/<id>/log?after=<seq>&limit=<n>` | | `RoomLog`: the room's log as lines, who is at work, what it holds. See below |
+| `POST /v1/rooms/<id>/say` | `{text, now?: false}` | `{ok: true, status: "sent" \| "held", event_id, held: [Held]}`: through the room hold. See below |
+| `POST /v1/rooms/<id>/stop` | `{}` | `{stopped: true, cancelled, held: [Held]}`: the room's running and queued work is stopped (`groups.stop`) |
+| `GET /v1/events?conversations=1&bot=<name>&rooms=1&room=<id>` | `Last-Event-ID` header optional | a Server-Sent Events stream; `conversations=1` adds the words of conversations, `bot=` (up to 6) narrows them; `rooms=1` adds the rooms' lines, state and held messages, `room=` (up to 6) narrows them |
 
 **`Bot`**: `{name, display_name, role, model, provider, look: {shape, color}, known_to_boopis, presence}`. `name` is the profile name (the id everywhere). `look` is the one the owner chose in boopis, else the default for the name (the same on every machine: `apps/shared/data/look-vectors.json`). `model` is `provider/model` as the engine has it pinned, from `profiles.describe` when the roster row lacks it (the engine's roster drops it for a named profile), and `null` when nobody says. `known_to_boopis` is false for a bot made outside boopis.
 
-**`Presence`**: `{profile, state, activity, attention, session_id, source, at}`.
+**`Presence`**: `{profile, state, activity, attention, session_id, source, summary, steps, at}`.
 - `state` is orb2's own words: `idle`, `listening`, `thinking`, `working`, `compute`, `speaking`, `needs`, `done`, `error`, `sleeping`.
 - `activity` is a tool's name while `working` or `compute`, else empty. `attention` is `approval` or `input` while `needs`, else null.
-- `source` is the engine's kind of session: `gui` (the app, and anything started the way the app starts one, `say` included), `cron`, `room` or `other`. It is not who started it. `at` is when the state began, in milliseconds since the epoch.
-- **What is fine and what is coarse.** The boopis window's own turns come event by event, so every word above is reachable. A turn the app does not run (a cron run, a room turn, a program on the engine's gateway) comes from a poll of the engine's `session.active_list` every two seconds, at the engine's grain: `working`, `needs` (the engine says `waiting`), `thinking` (`starting`) and `idle`. A fine word stands for three seconds against a coarser poll, and a poll never invents one. A bot with several sessions shows its busiest (`needs` first, then `error`, `speaking`, `compute`, `working`, `thinking`, `listening`, `done`, `idle`). A `done` shows for six seconds and an `error` for twenty. The poll runs only while someone listens (a stream is open or the app's own reader exists).
+- `source` is the kind of session the state comes from: `gui` (the app, and anything started the way the app starts one, `say` included), `cron`, `room`, `kanban` (a kanban worker running one of the board's tasks) or `other`; `null` while the bot is idle or sleeping (no session is behind it). It is not who started it, and a session keeps the kind it started with: what the host knows from its own link comes first (a session on it is the app's kind), then the engine's own `source` when its live-session row carries one, then the engine's own name for a room member's session (`Group: <room id>`), else `other`. `at` is when the state began, in milliseconds since the epoch.
+- `summary` is what the running session is about, in a line: its title as the engine keeps it (a room member's session reads `In <room name>`; a kanban worker's, its task), else the first line of what the engine shows of it; scrubbed; `null` when the engine says neither, and while idle.
+- `steps` is how many tool steps the running turn has taken, counted from the turn's own events on the host's link; `null` where only the poll sees the turn (a cron run, a room turn, a kanban worker, another program), since the engine's live-session list does not count them, and while idle.
+- **What is fine and what is coarse.** The boopis window's own turns come event by event, so every word above is reachable. A kanban worker is a process of its own that the engine's live-session list never shows: it is `working` (source `kanban`) while the bot's newest worker session (`worker_session` in `profiles.list`, asked on the bot's own link every 10 s) showed life in the last 90 seconds, the engine's own liveness rule for a worker. A turn the app does not run (a cron run, a room turn, a program on the engine's gateway) comes from a poll of the engine's `session.active_list` every two seconds, at the engine's grain: `working`, `needs` (the engine says `waiting`), `thinking` (`starting`) and `idle`. A fine word stands for three seconds against a coarser poll, and a poll never invents one. A bot with several sessions shows its busiest (`needs` first, then `error`, `speaking`, `compute`, `working`, `thinking`, `listening`, `done`, `idle`). A `done` shows for six seconds and an `error` for twenty. The poll runs only while someone listens (a stream is open or the app's own reader exists).
 
-**`Notification`**: `{id, kind, profile, title, body, session_id, room_id, source, at, urgent}`. `kind` is `approval` (urgent), `reply` (a bot finished a turn), `cron` (a scheduled run finished) or `error`. `body` is scrubbed and cut to 400 characters. A turn in a conversation of the app's kind (`source` `gui`) makes a `reply` notification when it ends on the app's own link, and none from the poll, which sees only that it ended. A room turn that mentions the owner is not built yet.
+**`Notification`**: `{id, kind, profile, title, body, session_id, room_id, source, at, urgent}`. `kind` is `approval` (urgent), `reply` (a bot finished a turn), `cron` (a scheduled run finished), `error`, `mention` (urgent: a room member addressed the owner) or `task` (a kanban task the bot ran finished, is ready for review, or is blocked). `body` is scrubbed and cut to 400 characters. Every body is the engine's own words, never a placeholder:
+- a turn of the app's kind (`gui`) makes a `reply` when it ends on the app's own link, with the reply's words, and none from the poll;
+- a room turn makes a `reply` with the member's message and the room's `room_id` (from the room's log, below), or a `mention` when the message addresses the owner; a failed room turn is an `error` in boopis's words;
+- a turn of another program (`other`) makes a `reply` with the words it ended on (the last `message.complete` in the session's event ring); when the ring holds none, no notification is sent;
+- a scheduled run makes a `cron` with the words it ended on when the ring holds them, else the title alone;
+- a kanban task makes a `task` with the summary its worker handed off (the board's `latest_summary`, read with the engine's own `kanban` command when the worker stops); a task that cannot be found on any board, or that is still running, makes none.
+
+**The owner's mention.** The engine reserves no handle for the human: it names the human `user` in every member's prompt (`User (user): ...`), matches mentions with `@([A-Za-z0-9][A-Za-z0-9._:-]*)` case-insensitively, and resolves `@all` and `@everyone` to the members. So a member's message addresses the owner when it mentions `@user` and no member of the room holds that handle (`@user.` names the handle `user.`, which is nobody). The rule is data, `apps/shared/data/room-mentions.json`, read by the host (`rooms/mentions.rs`) and by the app's room, so both say the same.
 
 **`Approval`**: `{id, profile, session_id, prompt_id, execution_generation, command, description, choices, answerable_with, timeout_s, origin: {model, tool}, governed, state, answered_by, asked_at}`.
 - `id` is the prompt's id. `choices` are what the engine offered. `answerable_with` is what boopis accepts from outside its window: **`once` and `deny` only**.
@@ -96,7 +108,24 @@ Every success is `200` with a JSON object. Every failure is the error object abo
 4. **Nothing is automatic.** No default choice (`400 choice_required`), no "all", no timeout that approves: an unanswered approval expires.
 5. **Every answer is recorded** with who gave it (the audit file) and in the `approvals.changed` event.
 
-**`say`.** `session: "latest"` is the bot's newest conversation as the engine's roster names it (the canonical chat, else the last session), and a new conversation when it has none; `"new"` always starts one, exactly as the app starts one (so it is named and shown as any other); a stored id continues that one. The boopis window does not report which thread it shows, so "the thread boopis shows" is the engine's own latest: if the window has it open, the two share it. A bot that is answering in that conversation is `409 bot_busy`; say it in a new one or wait. The message is made an event for every stream that follows conversations, and the reply streams there (below). In the app, a chat that has the conversation open shows the message at once as the owner's own (the host tells the window before it sends, `connection.said`), and the reply streams in that chat as one typed there would; a conversation that is not open shows it when opened. A message `say` into a room (`POST /v1/rooms/<id>/say`) is the engine's own `groups.send`, so an open room shows it as the owner's, and its members' replies, from the engine's own room change events, with nothing added.
+**`say`.** `session: "latest"` is the bot's newest conversation: the first row of `session.list` on the bot's own link, the list the app's bot view reads for its recent sessions, and a new conversation when it has none (the engine's roster leaves a named bot's `canonical_session` and `last_session` out, so it is not read for this); `"new"` always starts one, exactly as the app starts one (so it is named and shown as any other); a stored id continues that one. The boopis window does not report which thread it shows, so "the thread boopis shows" is the engine's own latest: if the window has it open, the two share it. A bot that is answering in that conversation is `409 bot_busy`; say it in a new one or wait. The message is made an event for every stream that follows conversations, and the reply streams there (below). In the app, a chat that has the conversation open shows the message at once as the owner's own (the host tells the window before it sends, `connection.said`), and the reply streams in that chat as one typed there would; a conversation that is not open shows it when opened. A message said into a room goes through the room hold (below); once it goes out it is the engine's own `groups.send`, so an open room shows it as the owner's, and its members' replies, from the engine's own room change events, with nothing added.
+
+### Rooms
+
+**The room hold.** The engine runs one discussion per thread, and a newer user message ends it: a member still working has its answer dropped (`turn.cancelled`, `superseded_by_newer_user_event`). It has no queue or steer for a room, so boopis holds a message written while the members work and sends it when the discussion is over. The hold is the host's, one for every client: the app's room, `boopis groups send` and `run --group`, and `POST /v1/rooms/<id>/say` all go through it (`rooms/hold.rs`), so a message waits the same way wherever it was written. The room is busy while members are at work (`groups.state`), or while its log holds a discussion the engine has not finished that showed life in the last 45 seconds (a silent open discussion is taken as stuck). Held messages are kept in `<app data>/room-holds.json`, oldest first, so they survive the app closing; the app sends them when the room is free, and so does a command that waits for its own. Each carries the event id it is sent with, and the engine's `groups.send` is idempotent by it, so two senders never make two messages.
+- `POST /v1/rooms/<id>/say` answers `status: "sent"` (it is in the room) or `"held"` (it waits), the `event_id` it has or will have in the log, and what the room holds now. `now: true` stops the running turns first (`groups.stop`) and sends at once.
+- `409 hold_full`: 20 messages already wait for that room. `413 text_too_long`, `400 empty_text`, `404 no_such_room`.
+- A held message is shown in the app's room, where it can be taken back or sent now.
+
+**`RoomLog`** (`GET /v1/rooms/<id>/log`): `{room_id, name, lines: [RoomLine], latest_seq, more, working: [member id], held: [Held], last_event_id}`. Without `after` it is the newest `limit` events (default 100, at most 200); with `after=<seq>` the events after it. `latest_seq` is where to read on from; `more` says more follow. Bookkeeping events are not lines, so a page may hold fewer.
+
+**`RoomLine`**: `{seq, at, kind, from, member, name, text, truncated, mentions_you}`, the words `boopis groups log` prints (`rooms/lines.rs`). `from` is `user`, `member` or `boopis`: boopis says what happened in the room in its own words (a failed turn, a cancelled turn, a member that was not available, the lead passing a message on, a stop, a discussion that paused or settled), never the engine's raw text. `member` is the member it is from, or the member a boopis line is about; `name` its name. `text` is scrubbed and cut at 16 KiB. `mentions_you` is the owner's mention above.
+
+**`Held`**: `{id, text, at}`: the event id it will have, its words, when it was held (seconds).
+
+**Following a room.** Open the stream with `rooms=1` (every room) or `room=<id>`: each line added to a room's log arrives as a `room.line` (`{room_id, line}`), who is at work as a `room.state` (`{room_id, working}`) when it changes, and what a room holds as a `room.held` (`{room_id, held}`) when it changes. The host reads a room's log only when the engine's room list says it moved; a room it sees for the first time starts at its end (its history is no news; read it with `GET /v1/rooms/<id>/log`).
+
+**Stopping.** `POST /v1/rooms/<id>/stop` stops the room's running and queued work; its held messages go out once it is free. `POST /v1/bots/<name>/stop` interrupts the bot's running turns on its own link; `409 not_running` when nothing of it runs there (a kanban worker runs outside the engine's sessions and cannot be stopped from here; the answer says so). Every stop is a line of the audit file (`choice` `stop` or `stop_room`, the outcome and the surface).
 
 ### Conversations
 
@@ -123,15 +152,18 @@ Each event's `data` is `{id, at, type, data}`:
 | `bots.presence` | a `Presence` |
 | `conversation.message` | a `ConversationMessage`: a message added to a conversation, or a reply growing or finished. Only to a stream that asked (`conversations=1`) |
 | `notifications.new` | a `Notification` |
+| `room.line` | `{room_id, line: RoomLine}`: a line added to a room's log. Only to a stream that asked (`rooms=1`) |
+| `room.state` | `{room_id, working}`: who is at work in a room changed. Only to a stream that asked |
+| `room.held` | `{room_id, held: [Held]}`: what a room holds changed (held, sent or taken back, by any client). Only to a stream that asked |
 | `approvals.changed` | an `Approval`, each time its state moves |
 | `lagged` | `{skipped}` |
 
 ### What is not built, and why
 
 - **Gateway methods.** `bots.say`, `bots.presence` and the others as methods of the engine's own WebSocket: the engine offers a client no way to add one.
-- **Room mentions.** A notification for a room turn that mentions the owner needs the room's log read for each change; the feed makes `approval`, `reply`, `cron` and `error` ones.
 - **Per-client tokens (skipped by the owner's decision), a WebSocket, TLS.** One token and Server-Sent Events are enough for the owner's shells and scripts; the endpoint never leaves the machine.
-- **A cron run's result as the notification's body.** The notification carries the session's id; the words are in the session's transcript.
+- **Telling a room what a kanban worker did.** The engine has no room event a host may write except the owner's own message (`groups.send` writes `message.user` as the user), so a note from boopis in a room's log would read as the owner speaking. The `task` notification and the bot's presence say it instead; a room-visible note needs the engine to offer a host- or gateway-authored room event.
+- **Stopping a kanban worker.** It runs outside the engine's sessions; there is no public call that stops it.
 - **Windows.** The endpoint is built for every platform and tested on Linux; the token file's privacy relies on the profile folder's access list there.
 
 ## A worked example: an island in Quickshell
@@ -282,7 +314,7 @@ What to draw from it: `bots[name].look.{shape,color}` is the orb's body and colo
 
 ## The reference client
 
-`scripts/boopis-local-client.py` (Python 3.10+, standard library only) speaks all of the above: `bots`, `presence`, `events [--approve] [--conversations [--bot NAME]]`, `conversation <bot>`, `approvals`, `answer <id> once|deny`, `say <bot> <text> [--session ...]`, `rooms`, `say-room`. `events --approve` follows the stream and asks on the terminal for each approval. It reads the endpoint and token files, refuses a token file other users can read, never prints the token, and names itself nothing (the contract does not tell clients apart). In fish:
+`scripts/boopis-local-client.py` (Python 3.10+, standard library only) speaks all of the above: `bots`, `presence`, `events [--approve] [--conversations [--bot NAME]] [--rooms [--room ID]]`, `conversation <bot>`, `approvals`, `answer <id> once|deny`, `say <bot> <text> [--session ...]`, `stop <bot>`, `rooms`, `room-log <room> [--after SEQ]`, `say-room <room> <text> [--now]`, `stop-room <room>`. `events --approve` follows the stream and asks on the terminal for each approval. It reads the endpoint and token files, refuses a token file other users can read, never prints the token, and names itself nothing (the contract does not tell clients apart). In fish:
 
 ```fish
 python3 scripts/boopis-local-client.py bots

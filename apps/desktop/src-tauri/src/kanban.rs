@@ -165,7 +165,9 @@ pub fn slug_ok(slug: &str) -> bool {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_')
 }
 
-async fn ask(sup: &Supervisor, args: &[&str]) -> Result<String> {
+/// Run the engine's own command in the root home and return what it printed (`kanban ...`; the local API's worker watch reads
+/// a finished task's summary with it too).
+pub(crate) async fn ask(sup: &Supervisor, args: &[&str]) -> Result<String> {
     let info = sup.info().await?;
     let home = sup.environment().hermes_root();
     let out = sup

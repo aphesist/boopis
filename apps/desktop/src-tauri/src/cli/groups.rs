@@ -3,6 +3,10 @@
 //! Each command reads its options, asks the engine through [`Rpc`] (the host's own gateway paths, `headless.rs`), and prints.
 //! Output is plain lines; `--json` prints one JSON object per line instead. Exit codes: 0 done, 1 failed or timed out, 2 a
 //! usage mistake, 3 stopped at a cap, 4 a bot needs the owner (`run::Stop::exit_code`).
+//!
+//! A message goes through the room hold (`rooms/hold.rs`), as one written in the app does: while members work it waits for
+//! them and goes out when the discussion is over, so it never cuts their turns short. Times are printed in UTC and say so
+//! (`[23:46:17 UTC]`); `--json` carries `at` (seconds) and `time` (RFC 3339, `Z`).
 
 use std::io::Write;
 use std::path::Path;
@@ -12,8 +16,11 @@ use async_trait::async_trait;
 use serde_json::{Value, json};
 
 use super::args::{Args, Kind};
+use crate::config::RoomLimits;
 use crate::error::{Error, Result};
-use crate::rooms::run::{self, Opts, Outcome, Progress, Stop};
+use crate::rooms::hold::{self, Delivered};
+use crate::rooms::lines::{self, Speaker};
+use crate::rooms::run::{self, Opts, Outcome, Progress, Stop, Via};
 use crate::rooms::settings::{self, RoomSettings};
 use crate::rooms::{self, Event, NewRoom, Room, Rpc, Seat};
 
@@ -53,8 +60,6 @@ pub struct Ctx<'a> {
     pub poll: Duration,
 }
 
-const USAGE_GROUPS: &str = "usage: boopis groups list | create <name> <bots...> --lead <bot> | send <group> <text> | log <group> | set <group> --max-rounds <n>";
-
 fn say(ctx: &mut Ctx<'_>, line: &str) {
     let _ = writeln!(ctx.out, "{line}");
 }
@@ -80,7 +85,10 @@ fn words(e: &Error) -> String {
 /// `boopis groups ...`. Returns the exit code.
 pub async fn groups(args: &[String], ctx: &mut Ctx<'_>) -> i32 {
     let Some((sub, rest)) = args.split_first() else {
-        return usage(ctx, USAGE_GROUPS);
+        for l in super::help::page_of("groups") {
+            let _ = writeln!(ctx.err, "{l}");
+        }
+        return 2;
     };
     let outcome = match sub.as_str() {
         "list" | "ls" => list(rest, ctx).await,
@@ -89,7 +97,8 @@ pub async fn groups(args: &[String], ctx: &mut Ctx<'_>) -> i32 {
         "log" => log(rest, ctx).await,
         "set" => set(rest, ctx).await,
         other => Err(Fail::Usage(format!(
-            "groups {other} is not a command. {USAGE_GROUPS}"
+            "groups {other} is not a command. {}",
+            super::help::hint("groups")
         ))),
     };
     finish(outcome, ctx)
@@ -128,10 +137,23 @@ fn finish(outcome: std::result::Result<i32, Fail>, ctx: &mut Ctx<'_>) -> i32 {
     }
 }
 
+/// A time of day for a person, in UTC and saying so: the host has no time-zone database (no date-time dependency), so the
+/// zone is marked rather than guessed. Every command that prints a time uses this one.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a time of day from a positive timestamp
 pub(super) fn clock(at: f64) -> String {
-    let s = at as u64 % 86_400;
-    format!("{:02}:{:02}:{:02}", s / 3600, (s / 60) % 60, s % 60)
+    let s = at.max(0.0) as u64 % 86_400;
+    format!("{:02}:{:02}:{:02} UTC", s / 3600, (s / 60) % 60, s % 60)
+}
+
+/// A time for `--json`: RFC 3339 in UTC with `Z` (STANDARDS section 7), beside the seconds.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // seconds since 1970, positive
+pub(super) fn rfc3339(at: f64) -> String {
+    crate::store::time::rfc3339(at.max(0.0) as u64)
+}
+
+/// The held messages' file, beside boopis's room settings in the app's data folder.
+fn hold_store(ctx: &Ctx<'_>) -> hold::Store {
+    hold::Store::under(ctx.settings.parent().unwrap_or(Path::new(".")))
 }
 
 async fn list(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fail> {
@@ -238,7 +260,7 @@ fn print_message(ctx: &mut Ctx<'_>, json: bool, at: f64, who: &str, text: &str, 
     if json {
         json_line(
             ctx,
-            &json!({"type": "message", "seq": seq, "at": at, "who": who, "text": text}),
+            &json!({"type": "message", "seq": seq, "at": at, "time": rfc3339(at), "who": who, "text": text}),
         );
     } else {
         say(ctx, &format!("[{}] {who}", clock(at)));
@@ -260,6 +282,57 @@ fn text_of(a: &Args, from: usize, ctx: &Ctx<'_>) -> Result<String> {
     Ok(words.join(" "))
 }
 
+/// Say so when a message names a bot that is not in the room (the engine wakes nobody for it, as the app's composer warns):
+/// the message still goes to the room, without that bot.
+async fn warn_outsiders(ctx: &mut Ctx<'_>, room: &Room, text: &str, json: bool) {
+    let handles: Vec<&str> = room.members.iter().map(|m| m.handle.as_str()).collect();
+    if rooms::mentions::handles(text).is_empty() {
+        return;
+    }
+    let Ok(known) = rooms::known_bots(ctx.rpc).await else {
+        return;
+    };
+    let out = rooms::mentions::outsiders(text, &handles, &known);
+    if out.is_empty() {
+        return;
+    }
+    let names: Vec<&str> = room.members.iter().map(|m| m.name.as_str()).collect();
+    let who = rooms::list_words(&out);
+    let verb = if out.len() == 1 { "isn't" } else { "aren't" };
+    let words = format!(
+        "{who} {verb} in {}, so the message reaches only {}. To ask {who}, use their own chat: boopis run --bot {} \"...\"",
+        room.name,
+        rooms::list_words(&names),
+        out[0]
+    );
+    if json {
+        json_line(
+            ctx,
+            &json!({"type": "warning", "code": "not_in_group", "outside": out, "members": room.member_ids(), "text": words}),
+        );
+    } else {
+        let _ = writeln!(ctx.err, "boopis: warning: {words}");
+    }
+}
+
+/// What a held message waits for, in words.
+fn held_words(room: &Room, working: &[String]) -> String {
+    let names: Vec<&str> = working.iter().map(|id| room.name_of(id)).collect();
+    let who = if names.is_empty() {
+        "the group's conversation is still going".to_owned()
+    } else {
+        format!(
+            "{} {} working",
+            rooms::list_words(&names),
+            if names.len() == 1 { "is" } else { "are" }
+        )
+    };
+    format!(
+        "held: {who}, and a new message would stop that. It goes to {} when the group has finished (stop waiting with Ctrl+C: boopis keeps it and sends it then).",
+        room.name
+    )
+}
+
 async fn send(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fail> {
     let a = Args::read(
         rest,
@@ -276,19 +349,16 @@ async fn send(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fa
         ));
     };
     let text = text_of(&a, 1, ctx)?;
+    if text.trim().is_empty() {
+        return Err(Fail::Error(Error::InvalidInput(
+            "there is nothing to send".into(),
+        )));
+    }
     let room = rooms::resolve(ctx.rpc, key).await?;
     let json = a.has("json");
+    warn_outsiders(ctx, &room, &text, json).await;
     if !a.has("wait") {
-        let ev = rooms::send(ctx.rpc, &room.id, &text).await?;
-        if json {
-            json_line(
-                ctx,
-                &json!({"type": "sent", "group": room.id, "event": ev.id, "seq": ev.seq}),
-            );
-        } else {
-            say(ctx, &format!("sent to {} ({})", room.name, ev.id));
-        }
-        return Ok(0);
+        return Ok(send_held(ctx, &room, &text, json).await?);
     }
     let opts = Opts {
         auto_continue: false,
@@ -296,6 +366,69 @@ async fn send(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fa
         ..Opts::default()
     };
     Ok(drive(ctx, &room, &text, &opts, json, None).await?)
+}
+
+/// `groups send` without `--wait`: through the hold, back as soon as the message is in the room.
+async fn send_held(ctx: &mut Ctx<'_>, room: &Room, text: &str, json: bool) -> Result<i32> {
+    let store = hold_store(ctx);
+    let limits = RoomLimits::default();
+    let mut watch = hold::Watch::new(&room.id);
+    let (rpc, poll) = (ctx.rpc, ctx.poll);
+    let out = &mut *ctx.out;
+    let delivered = hold::deliver(
+        rpc,
+        &store,
+        &mut watch,
+        text,
+        "cli",
+        &limits,
+        poll,
+        limits.hold_wait,
+        &mut |held, working| {
+            let line = if json {
+                json!({"type": "held", "group": room.id, "id": held.id, "waiting_for": working})
+                    .to_string()
+            } else {
+                format!("-- {}", held_words(room, working))
+            };
+            let _ = writeln!(out, "{line}");
+        },
+    )
+    .await?;
+    match delivered {
+        Delivered::Sent(ev) => {
+            if json {
+                json_line(
+                    ctx,
+                    &json!({"type": "sent", "group": room.id, "event": ev.id, "seq": ev.seq}),
+                );
+            } else {
+                say(ctx, &format!("sent to {} ({})", room.name, ev.id));
+            }
+            Ok(0)
+        }
+        Delivered::TakenBack => {
+            fail(ctx, "the message was taken back before it went out");
+            Ok(1)
+        }
+        Delivered::StillHeld(h) => {
+            if json {
+                json_line(
+                    ctx,
+                    &json!({"type": "still_held", "group": room.id, "id": h.id}),
+                );
+            } else {
+                say(
+                    ctx,
+                    &format!(
+                        "-- still held: boopis sends it to {} when the group has finished",
+                        room.name
+                    ),
+                );
+            }
+            Ok(3)
+        }
+    }
 }
 
 /// Send, follow and print; the outcome's exit code. `hand_off` is the kanban board and the lead to give an unfinished task to.
@@ -308,16 +441,39 @@ async fn drive(
     hand_off: Option<(&str, &str)>,
 ) -> Result<i32> {
     let rpc = ctx.rpc;
+    let store = hold_store(ctx);
+    let limits = RoomLimits::default();
+    let via = Via {
+        store: &store,
+        limits: &limits,
+        prefix: "cli",
+    };
     let out = &mut *ctx.out;
-    let outcome = run::run(rpc, room, text, opts, &mut |p| show(out, json, &p)).await?;
+    let outcome = run::run(rpc, room, text, opts, &via, &mut |p| {
+        show(out, json, room, &p);
+    })
+    .await?;
     finish_run(ctx, room, text, &outcome, json, hand_off).await
 }
 
-fn show(out: &mut dyn Write, json: bool, p: &Progress) {
+fn show(out: &mut dyn Write, json: bool, room: &Room, p: &Progress) {
     let mut put = |line: String| {
         let _ = writeln!(out, "{line}");
     };
     match p {
+        Progress::Held(names) => {
+            if json {
+                put(json!({"type": "held", "group": room.id, "waiting_for": names}).to_string());
+            } else {
+                let ids: Vec<String> = room
+                    .members
+                    .iter()
+                    .filter(|m| names.iter().any(|n| n == &m.name))
+                    .map(|m| m.id.clone())
+                    .collect();
+                put(format!("-- {}", held_words(room, &ids)));
+            }
+        }
         Progress::Sent(id) => {
             if json {
                 put(json!({"type": "sent", "event": id}).to_string());
@@ -326,7 +482,7 @@ fn show(out: &mut dyn Write, json: bool, p: &Progress) {
         Progress::Message { seq, who, text, at } => {
             if json {
                 put(
-                    json!({"type": "message", "seq": seq, "at": at, "who": who, "text": text})
+                    json!({"type": "message", "seq": seq, "at": at, "time": rfc3339(*at), "who": who, "text": text})
                         .to_string(),
                 );
             } else {
@@ -428,57 +584,24 @@ async fn finish_run(
 }
 
 fn log_line(ctx: &mut Ctx<'_>, room: &Room, e: &Event, json: bool) {
-    let line = match e.kind.as_str() {
-        "message.user" => Some(("you".to_owned(), e.text("text").unwrap_or("").to_owned())),
-        "message.member" => {
-            let id = e.text("member_id").unwrap_or(&e.actor);
-            Some((
-                room.name_of(id).to_owned(),
-                e.text("text").unwrap_or("").to_owned(),
-            ))
-        }
-        "turn.failed" => {
-            let id = e.text("member_id").unwrap_or("a bot");
-            Some((
-                "--".to_owned(),
-                run::turn_failed_words(
-                    room.name_of(id),
-                    e.text("error").unwrap_or(""),
-                    e.text("reason_code"),
-                ),
-            ))
-        }
-        "member.unavailable" => Some((
-            "--".to_owned(),
-            format!(
-                "{} is not available.",
-                room.name_of(e.text("member_id").unwrap_or("a bot"))
-            ),
-        )),
-        "room.stop_requested" => Some(("--".to_owned(), "stopped".to_owned())),
-        "room.activity" => match e.text("status") {
-            Some("bounded") => Some(("--".to_owned(), "paused at the engine's limit".to_owned())),
-            Some("settled") => Some((
-                "--".to_owned(),
-                "settled: the bots stopped handing off".to_owned(),
-            )),
-            _ => None,
-        },
-        _ => None,
-    };
-    let Some((who, text)) = line else { return };
-    if text.trim().is_empty() {
+    let Some(l) = lines::line(room, e) else {
         return;
-    }
+    };
+    let who = match &l.from {
+        Speaker::User => "you".to_owned(),
+        Speaker::Member(id) => room.name_of(id).to_owned(),
+        Speaker::Boopis => "--".to_owned(),
+    };
     if json {
-        json_line(
-            ctx,
-            &json!({"type": e.kind, "seq": e.seq, "at": e.at, "who": who, "text": text}),
-        );
-    } else if who == "--" {
-        say(ctx, &format!("[{}] -- {text}", clock(e.at)));
+        let mut v = json!({"type": l.kind, "seq": l.seq, "at": l.at, "time": rfc3339(l.at), "who": who, "text": l.text});
+        if let Some(about) = &l.about {
+            v["member"] = json!(about);
+        }
+        json_line(ctx, &v);
+    } else if l.from == Speaker::Boopis {
+        say(ctx, &format!("[{}] -- {}", clock(l.at), l.text));
     } else {
-        print_message(ctx, false, e.at, &who, &text, e.seq);
+        print_message(ctx, false, l.at, &who, &l.text, l.seq);
     }
 }
 
@@ -615,6 +738,7 @@ async fn run_inner(args: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i3
         ));
     }
     let room = rooms::resolve(ctx.rpc, key).await?;
+    warn_outsiders(ctx, &room, &task, a.has("json")).await;
     let kept = RoomSettings::load(ctx.settings)?;
     let cap = settings::effective(
         a.number("max-rounds")?
