@@ -278,8 +278,13 @@ Output defaults to `SC/renders/<scene>-<variant>-<size>.<ext>`. Options: `--samp
 **Motion blur.** Each frame asks the page what moves under its shutter (`__film.samples`): nothing (one capture),
 the default (8 sub-frames centred on the frame's time, averaged in linear light), or more where a tween asks
 (`data: { samples: 32 }`; camera snaps do it themselves, so whips and zoom-throughs streak without stepping). A frame
-whose shutter's two ends barely differ (a slow glance) keeps those two and skips the rest. Sub-frames never cross a
-hard cut (`film.cut(t)`). Tag a slow drift `data: { blur: false }` (the camera's `drift()` does).
+on the default whose shutter's two ends barely differ (a slow glance, a drift) keeps those two and skips the rest:
+"barely" means under 0.2% of the frame changed **and** no changed block 4 px thick or more (an edge that moved 4 px
+under the shutter, which two captures would show as two copies; `THICK` in `tools/lib/worker.mjs`). A tween that asks
+for samples always gets every sub-frame: the orb's moves (`glance`, `blink`, `eyes`, `shape`, `colour`, `orbMark`,
+`life`) ask for 12 and the cursor's `move` for 16 (`press` 12), because a face or a 48 px arrow changes too little of
+the frame for the shortcut to tell a fast move from a slow one. Sub-frames never cross a hard cut (`film.cut(t)`). Tag
+a slow drift `data: { blur: false }` (the camera's `drift()` does).
 
 **Grain** is added by the renderer to each finished frame, changing every frame: the look's own grain (mid-grey noise
 in soft-light at 55%, generated from the look's seed exactly as `look/src/stage.ts` draws it) for scenes on the look,
@@ -329,7 +334,10 @@ Calibration on the first trailer (`SC/trailer/boopis-trailer.mp4`) against the p
 - Text that must be read: 28 px or more on screen. The checker measures what is drawn, through every zoom.
 - Mounted kit components: their transitions are off; drive their visible state from the timeline (a renderer that
   sets the attribute the kit's CSS reads, as `test.ts` does for the composer's placeholder and send button).
-- Fast moves: `snap` on the camera asks for 32 sub-frames; tag any other very fast tween `data: { samples: 24 }`.
+- Fast moves: `snap` on the camera asks for 32 sub-frames; tag any other very fast tween `data: { samples: 24 }`, and
+  any small element that moves fast and is not an orb or the cursor (a chip, a badge, a thin line) `data: { samples:
+  12 }`: the renderer catches small solid shapes that move 4 px or more under the shutter, but not a hairline. Orb moves
+  and the cursor ask by themselves; a scene never needs `film.motion(t0, t1, n)` over a beat to get them blurred.
 - Before calling a scene done: a preview, a contact sheet of its frames, the checker on the render and the page.
 - Engine limits: a 1080p60 render with blur runs at about 2.5 to 3 frames a second on this machine and 4K at about
   0.7, so work in previews and ranges. A key frame is static DOM: its kit orbs are frozen until swapped for film orbs
@@ -341,21 +349,30 @@ Calibration on the first trailer (`SC/trailer/boopis-trailer.mp4`) against the p
 
 **Determinism.** The test scene rendered twice at 1080p60 with motion blur, once on 4 workers and once on 3 (so every
 worker started from a different frame): all 448 frames' pixel hashes identical. Seeking the same frames in reverse
-order gives the same pixels, and so does seeking with or without the paint wait.
+order gives the same pixels, and so does seeking with or without the paint wait. Re-run with the orb and cursor asks
+and the thickness check (same splits): all 448 identical again. **Not every starting point is safe:** before the asks, a
+worker that started at frame 374 drew frame 375 differently; with them, starting at 374 changes 374 and 375, and
+starting at 380 changes 380 and 381: a few anti-aliased pixels on the send button's edge, up to 31 levels. The composer's scrolling input is a composited layer,
+the bar beside it is promoted because it overlaps it, and Chrome re-rasters composited layers lazily while the camera
+drifts, so their edges depend on what the browser drew before. With the input not scrolling
+(`.ui-scroll { overflow: hidden }`) that difference goes away; one sub-frame still differs by 2 levels.
 
-**Speed** (the test scene, 7.47 s, 448 frames; most frames move; the whip asks for 32 sub-frames):
+**Speed** (the test scene, 7.47 s, 448 frames; most frames move; the whip asks for 32 sub-frames; the 1080p row was
+re-measured with the orb and cursor asks, the other rows predate them):
 
 | render | wall time | output | captures |
 |---|---|---|---|
 | preview, 960x540 30 fps, no blur | 11.6 s | 19 fps | 224 |
-| 1920x1080 60 fps, 8 sub-frames at 180 deg, CRF 14 slow | 156 s | 2.9 fps | 1,634 (10.5 a second) |
+| 1920x1080 60 fps, 8 sub-frames at 180 deg, CRF 14 slow | 276 s (156 s before the asks) | 1.6 fps | 5,098 (18.5 a second; 1,634 before) |
 | 1080x1920 60 fps, same | 169 s | 2.6 fps | 1,556 |
 | 3840x2160 60 fps, same | 626 s | 0.72 fps | 1,586 (2.5 a second) |
 | the animatic: the whole film, 960x540 30 fps, placeholders | 66 s | 21 fps | 1,408 |
 
 One 1080p capture costs about 5 ms to seek, 86 ms to capture (Chrome's fast PNG) and 28 ms to decode; a frame where
 nothing moves is one capture. Budget for the 46.9 s film with blur on 4 workers: roughly 15 to 25 minutes at
-1080p60 and 60 to 75 at 4K60; render previews and ranges while working, the 4K master last.
+1080p60 and 60 to 75 at 4K60 before the orb and cursor asks; the asks took the test scene, whose orb moves most of
+the time, from 156 s to 276 s, so scale the budget by up to 1.8 where orbs move. Render previews and ranges while
+working, the 4K master last.
 
 **The checker on the first trailer** (`SC/trailer/boopis-trailer.mp4`), next to the postmortem:
 

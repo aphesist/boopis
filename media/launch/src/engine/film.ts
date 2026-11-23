@@ -28,7 +28,9 @@ export type Renderer = (t: number) => void;
 export interface GrainSpec { kind?: 'white' | 'look'; seed: number; alpha?: number; opacity?: number; amp?: number }
 
 /** a tween tagged `data: { blur: false }` is motion that needs no motion blur (a slow drift, typing); `samples` asks for
-    more sub-frames than the default 8 while it runs (a whip or a zoom-through: 24 to 32, so the streak does not step) */
+    that many sub-frames while it runs and turns off the renderer's two-capture shortcut there (a whip or a zoom-through:
+    24 to 32, so the streak does not step; a small fast element, an orb's face or the cursor: 12 to 16, so it never
+    shows two copies) */
 export interface TweenData { blur?: boolean; linear?: boolean; role?: string; samples?: number }
 
 export interface TweenInfo {

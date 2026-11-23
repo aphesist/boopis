@@ -9,7 +9,11 @@
      colour(film, orb, at, '#f5a337')             the fill changes colour (opaque, never a fade)
      life(film, orb, t0, t1, seed)                a seeded idle life between t0 and t1: glances and blinks, like
                                                   orb2's calm idle director, but a pure function of time
-     orbMark(film, orb, { mark, toMark, toOrb })  the orb's body splits into the boopis mark's two eyes (and back) */
+     orbMark(film, orb, { mark, toMark, toOrb })  the orb's body splits into the boopis mark's two eyes (and back)
+
+   Every move asks the renderer for ORB_SAMPLES sub-frames over its window. A face changes a tiny share of the frame
+   (two eyes), so without the ask the renderer would take its slow-motion shortcut (average the shutter's two ends)
+   and a glance, a blink or a face morph would show two sharp copies of the eyes instead of a blur. */
 import type { Film } from '../engine/film';
 import { FilmOrb, defaultPose, mixColour, ptsToD, type OrbPose, type Pt } from '../engine/orb';
 import type { MarkGeometry } from '../engine/logo';
@@ -20,18 +24,22 @@ import { interpolate } from 'flubber';
 
 export const BLINK = 0.155;
 const ORB_MORPH = 0.38;
+/** the sub-frames an orb's move asks for (at --samples 8): against a 48-sample reference, 12 keeps the eyes of a
+    glance within 5 levels, where the shutter's two ends alone are 50 levels off (two copies) */
+export const ORB_SAMPLES = 12;
+const ORB = { role: 'orb', samples: ORB_SAMPLES } as const;
 
 /* orb2's blink: closed = pow(sin(pi p), 0.82) over 0.155 s, as two halves so each tween ends exactly where it says */
 const blinkClose = Object.assign((q: number): number => (q <= 0 ? 0 : q >= 1 ? 1 : Math.pow(Math.sin((Math.PI * q) / 2), 0.82)), { easeName: 'orb-blink-close' });
 const blinkOpen = Object.assign((q: number): number => (q <= 0 ? 0 : q >= 1 ? 1 : 1 - Math.pow(Math.cos((Math.PI * q) / 2), 0.82)), { easeName: 'orb-blink-open' });
 export function blink(film: Film, orb: FilmOrb, at: number): void {
-  film.tl.fromTo(orb.pose, { blink: 0 }, { blink: 1, duration: BLINK / 2, ease: blinkClose, immediateRender: false, data: { role: 'orb' } }, at);
-  film.tl.fromTo(orb.pose, { blink: 1 }, { blink: 0, duration: BLINK / 2, ease: blinkOpen, immediateRender: false, data: { role: 'orb' } }, at + BLINK / 2);
+  film.tl.fromTo(orb.pose, { blink: 0 }, { blink: 1, duration: BLINK / 2, ease: blinkClose, immediateRender: false, data: ORB }, at);
+  film.tl.fromTo(orb.pose, { blink: 1 }, { blink: 0, duration: BLINK / 2, ease: blinkOpen, immediateRender: false, data: ORB }, at + BLINK / 2);
 }
 
 export function glance(film: Film, orb: FilmOrb, at: number, yaw: number, pitch: number, o: { dur?: number; ease?: Ease } = {}): void {
   const ease = o.ease ?? springEase('character');
-  film.tl.to(orb.pose, { yaw, pitch, duration: o.dur ?? springDuration('character'), ease, immediateRender: false, data: { role: 'orb' } }, at);
+  film.tl.to(orb.pose, { yaw, pitch, duration: o.dur ?? springDuration('character'), ease, immediateRender: false, data: ORB }, at);
 }
 
 /** morph the eyes from the shape they have at `at` to `to` */
@@ -39,7 +47,7 @@ export function eyes(film: Film, orb: FilmOrb, at: number, to: string, o: { dur?
   /* the shape they have then: what the latest earlier eye morph left */
   const from = eyeState(orb, at);
   film.tl.set(orb.pose, { eyes: from, eyesTo: to, eyesMix: 0 }, at);
-  film.tl.to(orb.pose, { eyesMix: 1, duration: o.dur ?? ORB_MORPH, ease: o.ease ?? travel, immediateRender: false, data: { role: 'orb' } }, at);
+  film.tl.to(orb.pose, { eyesMix: 1, duration: o.dur ?? ORB_MORPH, ease: o.ease ?? travel, immediateRender: false, data: ORB }, at);
   recordEyes(orb, at, to);
 }
 const eyeLog = new WeakMap<FilmOrb, [number, string][]>();
@@ -57,12 +65,12 @@ function recordEyes(orb: FilmOrb, at: number, to: string): void {
 
 export function shape(film: Film, orb: FilmOrb, at: number, to: string, o: { dur?: number; ease?: Ease } = {}): void {
   film.tl.set(orb.pose, { shapeTo: to, shapeMix: 0 }, at);
-  film.tl.to(orb.pose, { shapeMix: 1, duration: o.dur ?? ORB_MORPH * 1.15, ease: o.ease ?? travel, immediateRender: false, data: { role: 'orb' } }, at);
+  film.tl.to(orb.pose, { shapeMix: 1, duration: o.dur ?? ORB_MORPH * 1.15, ease: o.ease ?? travel, immediateRender: false, data: ORB }, at);
 }
 
 export function colour(film: Film, orb: FilmOrb, at: number, to: string, o: { dur?: number; ease?: Ease } = {}): void {
   film.tl.set(orb.pose, { colorTo: to, colorMix: 0 }, at);
-  film.tl.to(orb.pose, { colorMix: 1, duration: o.dur ?? ORB_MORPH, ease: o.ease ?? travel, immediateRender: false, data: { role: 'orb' } }, at);
+  film.tl.to(orb.pose, { colorMix: 1, duration: o.dur ?? ORB_MORPH, ease: o.ease ?? travel, immediateRender: false, data: ORB }, at);
 }
 
 /** a seeded idle life: glances every 1.8 to 2.6 s (orb2's calm director), a blink every 2.1 to 5.7 s, sometimes two */
@@ -118,8 +126,8 @@ export function orbMark(film: Film, orb: FilmOrb, o: OrbMarkOpts): void {
   const eyePaths = eyes.map(() => { const p = document.createElementNS(NS, 'path'); eyeG.appendChild(p); return p; });
 
   const a = { k: 0, __name: 'orb-mark' }, b = { k: 0, __name: 'mark-orb' };
-  film.tl.fromTo(a, { k: 0 }, { k: 1, duration: o.toMark.dur, ease: o.toMark.ease ?? travel, data: { role: 'morph' } }, o.toMark.at);
-  if (o.toOrb) film.tl.fromTo(b, { k: 0 }, { k: 1, duration: o.toOrb.dur, ease: o.toOrb.ease ?? travel, data: { role: 'morph' } }, o.toOrb.at);
+  film.tl.fromTo(a, { k: 0 }, { k: 1, duration: o.toMark.dur, ease: o.toMark.ease ?? travel, data: { role: 'morph', samples: ORB_SAMPLES } }, o.toMark.at);
+  if (o.toOrb) film.tl.fromTo(b, { k: 0 }, { k: 1, duration: o.toOrb.dur, ease: o.toOrb.ease ?? travel, data: { role: 'morph', samples: ORB_SAMPLES } }, o.toOrb.at);
   const startA = o.toMark.at, endB = o.toOrb ? o.toOrb.at + o.toOrb.dur : Infinity;
 
   const drawEyes = (s: number): void => {

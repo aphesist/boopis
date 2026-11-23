@@ -6,11 +6,20 @@
      c.move(1210, 640, { at, dur: g.f(28) })
      const hit = c.press(at + g.f(32))       // react to the click at `hit`
 
-   The cursor is never popped in: it enters from outside the frame (`from` off-screen) or is already on screen. */
+   The cursor is never popped in: it enters from outside the frame (`from` off-screen) or is already on screen.
+
+   Its tweens ask the renderer for sub-frames: a 48 px arrow is a tiny share of the frame, so without the ask the
+   renderer's slow-motion shortcut (the shutter's two ends averaged) would draw two cursors instead of a streak. */
 import type { Film } from '../engine/film';
 import { travel, ui, type Ease } from './ease';
 import { springDuration, springEase } from './spring';
 import { track } from './track';
+
+/** sub-frames (at --samples 8) for a move: on `travel` the peak speed is about 5 times the mean, so a 700 px move in
+    1 s crosses about 29 px under a 180 degree shutter; 16 keeps the streak's steps under 2 px */
+export const CURSOR_MOVE_SAMPLES = 16;
+/** for a press: the dip to 0.85 is slow and short, 12 is plenty */
+export const CURSOR_PRESS_SAMPLES = 12;
 
 const ARROW = '<svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true"><path d="M8 4 L8 38 L17 29.5 L23.5 44 L29.5 41.4 L23.2 27.2 L35 27.2 Z" fill="#fff" stroke="#111" stroke-width="2.4" stroke-linejoin="round"/></svg>';
 
@@ -44,7 +53,7 @@ export function cursor(film: Film, layer: HTMLElement, start: { x: number; y: nu
       const dx = to.x - from.x, dy = to.y - from.y, dist = Math.hypot(dx, dy);
       const arc = (m.arc ?? 0.12) * dist, nx = dist ? -dy / dist : 0, ny = dist ? dx / dist : 0;
       const p = { k: 0, __name: 'cursor-move' };
-      film.tl.fromTo(p, { k: 0 }, { k: 1, duration: m.dur, ease: m.ease ?? travel, data: { role: 'cursor' } }, m.at);
+      film.tl.fromTo(p, { k: 0 }, { k: 1, duration: m.dur, ease: m.ease ?? travel, data: { role: 'cursor', samples: CURSOR_MOVE_SAMPLES } }, m.at);
       track(film, el, {
         t0: m.at,
         draw: () => {
@@ -57,8 +66,8 @@ export function cursor(film: Film, layer: HTMLElement, start: { x: number; y: nu
     },
     press(at) {
       const down = 4 / film.fps;
-      film.tl.fromTo(s, { press: 1 }, { press: 0.85, duration: down, ease: ui, immediateRender: false, data: { role: 'cursor' } }, at);
-      film.tl.to(s, { press: 1, duration: springDuration('settle'), ease: springEase('settle'), immediateRender: false, data: { role: 'cursor' } }, at + down);
+      film.tl.fromTo(s, { press: 1 }, { press: 0.85, duration: down, ease: ui, immediateRender: false, data: { role: 'cursor', samples: CURSOR_PRESS_SAMPLES } }, at);
+      film.tl.to(s, { press: 1, duration: springDuration('settle'), ease: springEase('settle'), immediateRender: false, data: { role: 'cursor', samples: CURSOR_PRESS_SAMPLES } }, at + down);
       return at + down;
     }
   };

@@ -49,10 +49,36 @@ function changed(a, b) {
   for (let i = 0; i < a.length; i += 3 * 7) { m++; if (Math.abs(a[i] - b[i]) > 40 || Math.abs(a[i + 1] - b[i + 1]) > 40) n++; }
   return n / m;
 }
+/* ... unless the change is small but thick. A share says nothing about speed when what moves is small: a 48 px cursor
+   crossing 30 px under the shutter changes 0.05% of the frame, and its two ends averaged are two sharp cursors. How far
+   an edge moved shows as how thick the band of changed pixels is: a sub-pixel move (the camera's drift shimmering on
+   text, a glance settling) changes bands 1 or 2 px thick; an edge that moved THICK px or more leaves a changed block
+   at least THICK x THICK. Measured on the test scene: the cursor's frames have blocks 4 to 12 px, the drift's text 2
+   or 3 (the odd 4). Any block that thick: every sub-frame. (A hairline moving fast leaves two thin bands and is missed;
+   tag such a tween with `samples`.) THICK is in 1080p px; `R` is it at the render's scale. */
+const THICK = 4;
+function thick(a, b, W, H, R) {
+  const up = new Uint16Array(W);   /* per column: consecutive rows in which it sat in a horizontal run >= R */
+  for (let y = 0; y < H; y++) {
+    let start = -1;
+    for (let x = 0; x <= W; x++) {
+      const i = (y * W + x) * 3;
+      if (x < W && (Math.abs(a[i] - b[i]) > 40 || Math.abs(a[i + 1] - b[i + 1]) > 40 || Math.abs(a[i + 2] - b[i + 2]) > 40)) { if (start < 0) start = x; continue; }
+      if (start >= 0) {
+        if (x - start >= R) { for (let c = start; c < x; c++) if (++up[c] >= R) return true; }
+        else up.fill(0, start, x);
+        start = -1;
+      }
+      if (x < W) up[x] = 0;
+    }
+  }
+  return false;
+}
 
 async function main() {
   const { url, f0, f1, width, height, scale, fps, samples, shutter, codec, out, preview, crf, hashes, still } = job;
   const W = Math.round(width * scale), H = Math.round(height * scale);
+  const thickPx = Math.max(2, Math.round(THICK * scale));
   const browser = await chromium.launch({ args: CHROME_ARGS });
   /* 4K is the same layout at deviceScaleFactor 2. Through CDP the capture's size is the clip's scale (without it a
      capture at deviceScaleFactor 2 comes back at 1080p), so any scale but 1 passes one; a preview below 1 too */
@@ -99,11 +125,12 @@ async function main() {
     } else {
       acc.fill(0);
       /* the shutter's two ends first: when they barely differ (a slow glance, a drift) the motion is under a pixel or
-         two across the shutter and their average is the blur; otherwise every sub-frame */
+         two across the shutter and their average is the blur; otherwise (a big change, a thick small one, or a tween
+         that asked for samples) every sub-frame */
       const a = await shoot(times[0]), b = await shoot(times[times.length - 1]);
       add(a); add(b);
       let used = 2;
-      if (ask !== -1 || changed(a, b) > SLOW) { for (const t of times.slice(1, -1)) add(await shoot(t)); used = times.length; }
+      if (ask !== -1 || changed(a, b) > SLOW || thick(a, b, W, H, thickPx)) { for (const t of times.slice(1, -1)) add(await shoot(t)); used = times.length; }
       const inv = LUT_N / used;
       for (let i = 0; i < frame.length; i++) frame[i] = TO_SRGB[Math.min(LUT_N, Math.round(acc[i] * inv))];
       rgb = frame;
