@@ -85,7 +85,8 @@ the screenshot is scaled the same way and pixel-diffed against the thumbnail (th
 pixels). Full-resolution goldens for every state and preset would be about 75 MB, quarter-scale ones about 20; these
 are about 5. A slip smaller than a block is the geometry checks' to catch; the thumbnail says where something moved. Orbs and canvases are hidden in screenshots (their idle
 motion is random by design). Goldens are taken in the lab's own Chromium; another machine's font rasteriser can differ,
-which shows as visual failures there and nowhere else.
+which shows as visual failures there and nowhere else. The lab never fetches a font: the Google Fonts stylesheet `tokens.css`
+imports is served from `@fontsource` (`/__gfonts`), the faces the app bundles, so a page's load never waits on the network.
 
 ## Read the report
 

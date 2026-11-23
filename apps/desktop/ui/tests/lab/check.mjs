@@ -23,7 +23,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, statfsSync } from 'node:fs';
 import { join, normalize } from 'node:path';
 import { createHash } from 'node:crypto';
-import { labRoute, typeOf, UI_ROOT } from './serve.mjs';
+import { labRoute, localFonts, typeOf, UI_ROOT } from './serve.mjs';
 import { CHECKS, AREAS, AREA_TITLES, BRAND_ALLOW, STANDING_ALLOW, areaOf, ruleCoverage } from './rules.mjs';
 import { scan } from './static-scan.mjs';
 import { writeReport } from './report.mjs';
@@ -79,7 +79,10 @@ function serve() {
     if (existsSync(f) && statSync(f).isDirectory()) f = join(f, 'index.html');
     if (!existsSync(f)) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, { 'content-type': typeOf(f), 'cache-control': 'no-store' });
-    res.end(readFileSync(f));
+    /* tokens.css @imports Google Fonts: a page's load event waited on fonts.googleapis.com, so a slow answer there timed out
+       page.goto (30 s) on a state that draws in under a second (CI run 207: three states), and the lab drew Google's faces, not
+       the bundled ones. The build's pages and stylesheets get the local copy instead */
+    res.end(/\.(html|css)$/.test(f) ? localFonts(readFileSync(f, 'utf8')) : readFileSync(f));
   });
   return new Promise((ok) => server.listen(0, '127.0.0.1', () => ok({ origin: 'http://127.0.0.1:' + server.address().port, close: () => new Promise((r) => server.close(r)) })));
 }
