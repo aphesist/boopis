@@ -144,7 +144,7 @@ The pairs table of v6 5.4 is rebuilt for two themes and the dock from these valu
 
 | Part | v7 | v6 |
 |---|---|---|
-| Top chrome | no bar; a 56 px drag region; floating controls at y = 10: the sidebar toggle (36 circle) over the rail, the title pill centred on the column (orb 24 + name; opens the details pane), search and details (36 circles), thin window glyphs (board 05 A, the owner's pick). Search is always reachable (ctrl K opens the palette everywhere); Settings > General > Layout has "Show search" (on) and "Search shows as": a button (default), a pill beside the title (board 05 B), or one of the placements in preview P2 once the owner picks | a 40 px frame bar with back, forward, the command field and toggles |
+| Top chrome | no bar; a 56 px drag region; floating controls at y = 10: the sidebar toggle (36 circle) over the rail, the title pill centred on the column (orb 24 + name; opens the details pane), search and details (36 circles), thin window glyphs (board 05 A, the owner's pick). Search is always reachable (ctrl K opens the palette everywhere). **Default (the owner's pick, P2 S5): keyboard first with a clickable hint.** The hint sits in the right-hand group of the drag region, just left of the details button, vertically centred on the 36 px controls: the word "Search" (13, `--text-quiet`) and the key chips (ctrl K; ⌘K on macOS) with no fill at rest. On hover and focus it becomes a 28 px pill at `--hover` with the text at `--text-dim`, over `--dur-1`; focus also shows the ring. It is a button; its accessible name is "Search, ctrl K" (it contains the visible text, R-a11y-3), and it opens the palette. It never fades. Settings > General > Layout: "Show search" (on; off hides the hint, ctrl K still works) and "Search shows as": the hint (default), a button (board 05 A's 36 px circle), or a pill beside the title (board 05 B) | a 40 px frame bar with back, forward, the command field and toggles |
 | Rail (sidebar collapsed) | 88 px, `--bg-1`, 54 px tiles (radius 12, orb 36, the current one 8%), the attention flag (amber) with a 2.5 px ring; groups as their cluster under a hairline; New bot, Store and Settings at the foot (board 06 A, the owner's pick). **Compact rail** (board 06 B: 64 px, 44 tiles, orb 28): Settings > General > Layout > Rail size: Automatic (default), Standard, Compact. Automatic is compact **under 1200 px of window width** (v6's breakpoint where both side panels stop pushing, R-layout-1, so no new width), standard from 1200; under 900 an open sidebar overlays; under 640 the sidebar is a drawer | 56 px, orbs 24 on x = 28 |
 | Sidebar (open) | 300 (resizable 88 to 400), `--bg-1`; the Sessions / Bots pill at the top; bot rows 54 (orb 36, name 14, activity 13 at `--text-dim`, gap 10, radius 12); "Groups" heading 12 `--text-dim`; you, Store, Settings at the foot | clamp(256, 15vw, 288) |
 | Conversation | column 640 centred on the ground; bubbles up to 560; a time separator only on a gap ("Today 10:05", 12 `--text-dim`) | 720 column with a 112 call-number margin |
@@ -334,6 +334,16 @@ WCAG 2.2 AA stays the floor (R-a11y-1 to 8). What v7 adds or tightens because of
 | 09 | Attention | A, Grok's amber for "needs you"; red stays for failed and destructive confirms (15.2) | 4.3, 15.2 |
 | new | The mark | one dashed-underline primitive for info labels, feedforward and blanks (the owner's request; P3) | 17 |
 
+**Final picks (later on 23 Nov), which close the open items above:**
+
+| Preview | The owner's pick | In this file |
+|---|---|---|
+| P1 accent | **Iris** is the default accent: `#5b5bd6` fill, `#8b8dff` text in dark, `#4546c8` text in light | 4.3 |
+| P2 search | **S5 is the default**: keyboard first with the hint, and the hint itself is clickable and opens the palette; the button (S1) and the pill (S2) stay as Settings options | 7 |
+| P3 the mark | **approved**, info labels included; the outline (i) is no longer a fallback, kept only for forced colours (17.2) | 17 |
+| P4 status | **approved** | 12.2 |
+| Blanks | **changed**: a session's blank waits inline with a countdown (the bot paused, amber); a bot's blank does not wait and goes straight to a card (17.1) | 17 |
+
 ### 15.2 The attention reversal (09 A)
 
 The pick reverses "red means you owe something" (v6 R-colour-2, the stamp rule) and the owner decisions of 22-23 November that name red. Red now means failed and a destructive confirm only; amber (`--owe`) means the person owes something. Every place that changes:
@@ -398,16 +408,24 @@ The owner's request (23 November): one standardized dashed-underline animation, 
 | `--mark-color-hover` | `--text-dim`; the word goes `--text-strong` | hover and keyboard focus |
 | `--mark-color-open` | `--text` | while its menu, input or popover is open |
 | `--mark-color-chosen` | `--accent`, solid | a filled blank, a reading the person chose (`data-confirmed`) |
-| `--mark-color-lapsed` | `--owe`, dashed; the stamp "waiting for you" in `--owe-text` | a blank that lapsed and now waits on the person |
+| `--mark-color-waiting` | `--owe`, dashed, with the countdown chip and "waiting for you" in `--owe-text` | a session's blank waiting (the bot paused) |
+| `--mark-color-guess` | `--mark-color` (shown) | a lapsed blank's guess, in the reply |
 | `--mark-dur-in` | 180ms | the draw-in |
 | `--mark-dur-out` | 120ms | the fade-out |
 | `--mark-ease` | `--ease-sharp` | both |
 
-- **One class, data states:** `.ui-mark` with `data-mark="shown | hover | open | chosen | waiting | lapsed"`, `data-mark-reveal="always | hover"` on its context, and `data-mark-new` for one draw-in. Hover and focus use the pseudo-classes; `hover` as a state is for the lab's forced states.
+- **One class, data states:** `.ui-mark` with `data-mark="shown | hover | open | chosen | waiting | guess"`, `data-mark-reveal="always | hover"` on its context, and `data-mark-new` for one draw-in. Hover and focus use the pseudo-classes; `hover` as a state is for the lab's forced states.
 - **Drawn, not a text decoration:** a dash layer (`repeating-linear-gradient` of `--mark-dash` and `--mark-gap`, `--mark-thick` tall) at `--mark-offset` under the text, `box-decoration-break: clone` so a mark that wraps draws on each line. The width of that layer is a registered `--mark-p` (0 to 100%), which is what the draw-in animates (left to right, per line); WebKitGTK supports `@property` (v6 8.1). Chosen replaces the dashes with a solid line of the same thickness.
 - **Appear:** a new mark draws in once (`--mark-p` 0 to 100% over `--mark-dur-in`), then `data-mark-new` is removed. **Disappear:** the layer fades out over `--mark-dur-out` (no reverse sweep), then the class goes. **Hover and focus:** the colour changes over `--dur-1`; the word brightens. **Reduced motion:** every change is instant: a new mark appears whole, nothing sweeps or fades.
 - **Feedforward stability:** the composer already redraws its marks only when their signature changes (`components/composer.ts` `markSig`). v7 adds: only a span whose signature is new gets `data-mark-new`; existing marks never redraw or re-animate; a reading arrives at most once per 250 ms pause in typing, so nothing flashes per keystroke; while an input method composes nothing changes.
-- **Blank states, exactly the protocol's:** `opened` (waiting: the dashed gap of at least 7 characters and "waiting for you" in `--text-dim`, drawn in as the bot streams it; the cell goes on, so it is not attention), focus (the inline answer, the ring, the caret), `filled` (solid accent under the person's words; delivered as a queued message), `lapsed` (the turn ended unanswered: an end-of-turn question, still answerable; now amber, because it waits on the person). A blank's `blocks` (the steps that cannot go on without it) does not stop the cell; v7 shows them only in the blank's menu ("Waiting on this: deploy").
+- **Blank states (the owner's decision, later on 23 Nov), replacing the protocol's current ones:**
+  - **Sessions: a blank waits.** The bot is paused and the blank waits inline in the reply for a limited time: the dashed gap (at least 7 characters) in `--owe`, a countdown chip inside the blank (mono 11, `--owe-text` on `--owe-soft`, "0:42", ticking every second; at 10 seconds it does not flash or grow), and "waiting for you" in `--owe-text`. The wait is a setting, Settings > General > Sessions > "Wait for my answer": 30 s, 60 s (default), 2 min. Focus puts the answer inline (the ring, the caret, the blank's options as a menu if it has any); Enter answers, Esc leaves it waiting.
+  - **Filled in time:** solid accent under the person's words, in the same reply; the bot resumes from there.
+  - **Lapsed:** the time ran out. The bot keeps going on its own guess, which the reply shows in place of the gap with a quiet "(my guess)" and the shown mark; the question stays as a card under the reply (or an end-of-turn question) that can still be answered.
+  - **Answered late:** the answer in the card turns solid accent and is sent as a **correction** ("sent as a correction"), which the bot takes as its next message.
+  - **Bots: waiting is off by default.** A bot's blank pauses nothing: it goes straight to "keep working, ask later", that is the card at once, with the bot's guess in the reply. A bot can be set to wait like a session in its settings.
+  - Reduced motion: the countdown changes its digits only; the mark appears whole.
+  - **This needs the protocol to change** (`docs/PROTOCOL.md`, `plugins/boopis/exec` and `rpc/blanks.py`): today `leave_blank` returns at once ("the cell goes on"), `blank.lapsed` means "the turn ended unanswered", and a fill after that arrives as the next turn. The owner's decision needs a timed wait on `blank.open` (a `wait_s`, the cell paused), a lapse on timeout carrying the guess the bot went on with, a per-bot "wait" setting off by default, and a late fill marked as a correction. Until the plugin has them, the UI can show only filled and lapsed.
 - **Info labels:** the label is a button only where it explains (one tab stop); its row's `:hover` or `:focus-within` reveals the mark (draw-in); hovering the label opens the popover after 300 ms (at once while warm, as tooltips), 8 from the label; Enter or Space opens it, Esc closes and returns focus. Under `(hover: none)` the marks show at rest, and a tap opens the popover.
 - **The helper:** `ui.mark(target, { state, reveal, kind, onOpen })` and `html.mark(text, opts)`; components call it, never draw dashes themselves. `ui.markReveal(container, 'hover' | 'always')` sets a context.
 
@@ -418,7 +436,7 @@ The owner's request (23 November): one standardized dashed-underline animation, 
 | `.ui-ff` (1px dashed `--text-dim` border, hover `--text-strong`) and `.ui-ff[data-confirmed]` (solid brass) | `components/components.css` 924-927, `components/composer.ts`, `modules/session/composer.ts` | `.ui-mark` (feedforward), chosen in `--accent`; `[data-chip]` and `[data-kind="mention"]` stay capsules, never marks |
 | `.ui-blank__gap` (1px dotted `--red`; answered: dashed `--text-quiet`) and its "waiting for you" stamp | `components/components.css` 852-859, `components/html.ts` `blank` | `.ui-mark` (blank): opened, filled, lapsed as above |
 | `.cd-token` (dotted `--text-quiet`, expanded solid `--text`) | `modules/cards/cards.css` 108-118, `modules/cards/kinds.ts` | `.ui-mark` (info: an explaining phrase in a card) |
-| the (i) of the calm pass (`setRow({ info })`, `icons.ts` `info`) | `components/html.ts`, `calm.ts` | the label as a mark; the (i) stays only as the fallback if the owner rejects P3 |
+| the (i) of the calm pass (`setRow({ info })`, `icons.ts` `info`) | `components/html.ts`, `calm.ts` | the label as a mark (approved). The (i) stays only for forced colours (`forced-colors: active`, where a dashed background layer is not drawn): there the explained label shows the outline (i) after it. The UI always runs with scripts, so no no-script fallback is needed |
 | not marks, kept separate: links (`.ui-link`, `.mv-link`: solid, `--line-strong`), the palette's match underline (`.hx-pal-row__label mark`, R-search-5), the bots glance title's hover underline | | unchanged; their brass becomes the accent where they had it |
 
 ## 18. Theme customization
