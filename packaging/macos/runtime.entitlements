@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The entitlements of the executables in the Hermes runtime (the interpreter and uv), signed by scripts/macos-codesign.sh
+  when scripts/build-runtime.sh gets an identity. The set Hermes's own desktop app gives the processes it starts
+  (apps/desktop/electron/entitlements.mac.inherit.plist at the pinned tag):
+  - allow-jit and allow-unsigned-executable-memory: CPython's JIT and libffi's closures (ctypes, cffi) need writable then
+    executable memory, which the hardened runtime otherwise refuses;
+  - disable-library-validation: the interpreter loads extensions the engine's package manager installs later on the user's
+    Mac (signed by their own makers, or ad hoc), which library validation would refuse because they are not ours;
+  - audio-input, camera, apple-events: the engine's voice, camera and automation tools run inside the interpreter.
+-->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+  <key>com.apple.security.device.audio-input</key>
+  <true/>
+  <key>com.apple.security.device.camera</key>
+  <true/>
+  <key>com.apple.security.automation.apple-events</key>
+  <true/>
+</dict>
+</plist>

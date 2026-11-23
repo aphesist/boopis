@@ -8,10 +8,12 @@
 #   - `hermes --version` runs, and its install directory is the copy's own path;
 #   - the interpreter imports the standard library pieces Hermes needs (ssl, sqlite3, ctypes, zlib, bz2, lzma);
 #   - every ELF file resolves its shared libraries (no `not found`), so dropping libpython or Tk left no dangling need;
+#     on macOS, every Mach-O file carries a valid signature (scripts/macos-codesign.sh --verify) and links nothing by an
+#     absolute path outside the system's own (`otool -L`: a build machine's path would not exist on the user's Mac);
 #   - `hermes update` refuses (the install is sealed: the app owns updates);
 #   - nothing was written outside the copy, the private home and the scratch HOME (no ~/.hermes appears);
 # and that the two copies are byte-identical trees (`diff -r`), so nothing in the archive names a path.
-# Linux and macOS (macOS lacks `ldd`: that check is skipped there). The Windows twin is not written yet.
+# Linux and macOS. The Windows twin is not written yet.
 set -euo pipefail
 
 SRC="${1:?usage: verify-runtime.sh <runtime dir> [--keep]}"
@@ -23,7 +25,9 @@ HERMES_REL="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["h
 if command -v sha256sum >/dev/null; then GOT="$(sha256sum "$ARCHIVE" | cut -d' ' -f1)"; else GOT="$(shasum -a 256 "$ARCHIVE" | cut -d' ' -f1)"; fi
 [ "$GOT" = "$WANT" ] || { echo "the archive does not match runtime.json ($GOT)" >&2; exit 1; }
 
-WORK="$(mktemp -d)"
+# the real path: macOS's temporary folder is under /var, a link to /private/var, and Hermes reports where it really is
+WORK="$(cd "$(mktemp -d)" && pwd -P)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 [ "$KEEP" = --keep ] || trap 'rm -rf "$WORK"' EXIT
 A="$WORK/A/x"
 B="$WORK/B/deeper/path with space"
@@ -49,6 +53,21 @@ for COPY in "$A" "$B"; do
     done < <(find "$COPY" -type f \( -name '*.so' -o -name '*.so.*' -o -perm -u+x \) -exec sh -c 'for f; do head -c4 "$f" | grep -q "^.ELF" && echo "$f"; done' _ {} +)
     [ "$missing" = 0 ] || exit 1
     echo "every ELF file resolves its libraries"
+  fi
+  if [ "$(uname -s)" = Darwin ]; then
+    "$ROOT/scripts/macos-codesign.sh" --verify "$COPY"
+    # every dependency is the system's (/usr/lib, /System) or relative to the file (@rpath, @loader_path, @executable_path);
+    # a library's own install name (otool -D) is not a dependency, and only the slice this Mac runs is read
+    linked=""
+    while IFS= read -r -d '' f; do
+      id="$(otool -arch "$(uname -m)" -D "$f" 2>/dev/null | tail -n +2)"
+      while read -r dep _; do
+        [ -n "$dep" ] && [ "$dep" != "$id" ] || continue
+        case "$dep" in /usr/lib/* | /System/* | @rpath/* | @loader_path/* | @executable_path/*) ;; *) linked+="$f: $dep"$'\n' ;; esac
+      done < <(otool -arch "$(uname -m)" -L "$f" 2>/dev/null | tail -n +2)
+    done < <(find "$COPY" -type f \( -name '*.so' -o -name '*.dylib' -o -perm -u+x \) -print0)
+    [ -z "$linked" ] || { echo "linked by an absolute path outside the system:" >&2; printf '%s' "$linked" | head -20 >&2; exit 1; }
+    echo "every Mach-O file links only the system and its own tree"
   fi
   [ ! -e "$HOME_DIR/home/.hermes" ] || { echo "a ~/.hermes appeared in the scratch HOME" >&2; exit 1; }
 done

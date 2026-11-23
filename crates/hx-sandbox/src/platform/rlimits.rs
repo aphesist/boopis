@@ -109,7 +109,7 @@ pub(crate) fn describe(
                     "nproc={} ({} existing tasks + {})",
                     spec.soft,
                     ctx.baseline_tasks,
-                    spec.soft - ctx.baseline_tasks
+                    spec.soft.saturating_sub(ctx.baseline_tasks)
                 );
             }
             "core" => text.push_str("core=0"),

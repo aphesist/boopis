@@ -83,6 +83,11 @@ gtk = "0.18"
 webkit2gtk = { version = "2.0", features = ["v2_34"] }
 libc = "0.2"
 
+# The secret channel's process table on macOS (src/secrets/macos.rs): the kernel's own answers through libproc and sysctl, the
+# way Linux reads /proc. Already in the tree (through Tauri and tokio); MIT or Apache-2.0.
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+
 # Attaching to the parent console for `boopis --version` and `boopis doctor`: the release binary is a GUI-subsystem one.
 # Already in the tree (through Tauri); only the console feature is added.
 [target.'cfg(windows)'.dependencies]

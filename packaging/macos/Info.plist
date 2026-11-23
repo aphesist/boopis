@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Merged into the Info.plist Tauri writes (tauri.bundle.macos.conf.json, bundle.macOS.infoPlist). macOS asks the person in
+  the app's name when any process the app starts touches one of these, and refuses without asking when the app gives no
+  reason: so each tool the agent may run (voice, camera, automation, calendar, reminders, contacts, the local network) has its
+  sentence here. The set follows Hermes's own desktop app at the pinned tag; the words are boopis's.
+-->
+<plist version="1.0">
+<dict>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>boopis uses the microphone when you talk to an agent.</string>
+  <key>NSAudioCaptureUsageDescription</key>
+  <string>boopis captures audio for voice conversations with an agent.</string>
+  <key>NSCameraUsageDescription</key>
+  <string>boopis uses the camera only when a tool you turned on asks for it.</string>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>boopis controls an app only when you ask an agent to.</string>
+  <key>NSCalendarsUsageDescription</key>
+  <string>boopis reads your calendar when you ask an agent about your schedule.</string>
+  <key>NSCalendarsFullAccessUsageDescription</key>
+  <string>boopis reads and changes calendar events when you ask an agent to.</string>
+  <key>NSRemindersUsageDescription</key>
+  <string>boopis reads your reminders when you ask an agent about them.</string>
+  <key>NSRemindersFullAccessUsageDescription</key>
+  <string>boopis reads and changes reminders when you ask an agent to.</string>
+  <key>NSContactsUsageDescription</key>
+  <string>boopis reads or updates your contacts only when you ask an agent to.</string>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>boopis connects to a device on your network only when a tool you turned on asks for it.</string>
+</dict>
+</plist>

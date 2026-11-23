@@ -203,3 +203,28 @@ pub(crate) fn effective_uid() -> u32 {
     // SAFETY: no arguments, cannot fail.
     unsafe { libc::geteuid() }
 }
+
+/// This process's hard limit for `resource`, or `None` when it has none (or the call fails). `setrlimit` refuses a hard
+/// limit above the current one to anyone but root, so a child never asks for more than this.
+#[cfg(target_os = "macos")]
+pub(crate) fn hard_limit(resource: RlimitResource) -> Option<u64> {
+    // SAFETY: an all-zero rlimit is a valid out-buffer for getrlimit.
+    let mut limit: libc::rlimit = unsafe { std::mem::zeroed() };
+    // SAFETY: `limit` is valid and writable for the call.
+    if unsafe { libc::getrlimit(resource, &raw mut limit) } != 0
+        || limit.rlim_max == libc::RLIM_INFINITY
+    {
+        return None;
+    }
+    Some(limit.rlim_max)
+}
+
+/// How many processes exist on this Mac now, every user's (`proc_listallpids`), or 0 when the kernel does not say. The
+/// macOS twin of Linux's task count: `RLIMIT_NPROC` there counts the processes the user already has, so the allowance is
+/// added on top of this, an upper bound of the user's own.
+#[cfg(target_os = "macos")]
+pub(crate) fn process_count() -> u64 {
+    // SAFETY: a null buffer of size 0 asks only for the count; the kernel writes nothing.
+    let n = unsafe { libc::proc_listallpids(std::ptr::null_mut(), 0) };
+    u64::try_from(n).unwrap_or(0)
+}

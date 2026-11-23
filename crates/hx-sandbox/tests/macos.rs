@@ -127,6 +127,37 @@ async fn env_timeout_and_cap() {
     assert!(r.stdout.truncated);
 }
 
+/// A sandboxed shell starts a child, as the exec kernel's `sh` does: the process-count limit is the user's existing
+/// processes plus the allowance (a logged-in user has hundreds, which the raw allowance alone did not cover).
+#[tokio::test(flavor = "multi_thread")]
+async fn a_sandboxed_program_can_start_children_under_the_process_limit() {
+    if !seatbelt_available() {
+        return;
+    }
+    let w = World::new();
+    let r = run(
+        &argv(&["/bin/sh", "-c", "/usr/bin/true && /bin/echo forked"]),
+        &w.policy(),
+    )
+    .await
+    .unwrap();
+    assert_eq!(code(&r), Some(0), "{r:?}");
+    assert_eq!(r.stdout.text.trim(), "forked", "{r:?}");
+    if uid() != 0 {
+        let detail = r.enforcement.process.detail.clone().unwrap_or_default();
+        assert!(detail.contains("existing tasks"), "{detail}");
+    }
+}
+
+/// This process's effective uid, from `id -u` (the tests use no unsafe code).
+fn uid() -> u32 {
+    let out = std::process::Command::new("/usr/bin/id")
+        .arg("-u")
+        .output()
+        .unwrap();
+    String::from_utf8_lossy(&out.stdout).trim().parse().unwrap()
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn a_missing_binary_is_spawn_failed() {
     let w = World::new();

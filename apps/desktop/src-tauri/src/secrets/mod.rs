@@ -2,6 +2,8 @@
 //! There is no command that returns a secret to the UI (`docs/PROTOCOL.md` section 1).
 
 pub mod channel;
+#[cfg(target_os = "macos")]
+mod macos;
 pub mod peer;
 pub mod refs;
 pub mod store;

@@ -288,7 +288,10 @@ if [ "$1" = attach ]; then
   done
   mkdir -p "$mp/boopis.app/Contents/MacOS"
   printf '#!/bin/sh\necho "dummy app $*"\n' >"$mp/boopis.app/Contents/MacOS/boopis"
-  chmod +x "$mp/boopis.app/Contents/MacOS/boopis"
+  # the sidecar sits beside the app's executable, as Tauri bundles it: the launcher must run the one Info.plist names
+  printf '#!/bin/sh\necho "dummy hx $*"\n' >"$mp/boopis.app/Contents/MacOS/hx"
+  chmod +x "$mp/boopis.app/Contents/MacOS/boopis" "$mp/boopis.app/Contents/MacOS/hx"
+  printf '<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0">\n<dict>\n  <key>CFBundleExecutable</key>\n  <string>boopis</string>\n</dict>\n</plist>\n' >"$mp/boopis.app/Contents/Info.plist"
 fi
 exit 0
 SH
