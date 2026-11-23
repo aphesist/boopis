@@ -23,11 +23,11 @@ function mount(o: Parameters<typeof createMockStore>[0] = {}, project: string | 
 const text = (root: HTMLElement): string => root.textContent ?? '';
 
 describe('the store view', () => {
-  it('opens on Recommended, with each item\'s tier in words and no ratings or counts', async () => {
+  it('opens on Recommended, then each kind, with a missing review said in words and no ratings or counts', async () => {
     const { root } = mount(); await tick(20);
-    expect(text(root)).toContain('Recommended');
-    expect(text(root)).toContain('Recommended by boopis');
-    expect(text(root)).toContain('Not reviewed');
+    const heads = [...root.querySelectorAll('.hx-store__group > .ui-set__head')].map((h) => h.textContent);
+    expect(heads).toEqual(['Recommended', 'Skills', 'Connectors', 'Plugins', 'Mods', 'Engine plugins']);
+    expect(text(root)).toContain('not reviewed');
     expect(text(root)).not.toMatch(/stars?|downloads|installs\b|rating/i);
     expect(engineWordsIn(root)).toEqual([]);
   });
@@ -133,5 +133,53 @@ describe('the store view', () => {
     mountStore(bad, { store: { ...s, browse: () => Promise.reject({ code: 'hx.store.source_unreachable', message: 'boopis could not reach that source. What you see is the last copy it saved.' }) }, toast: () => undefined, enter: false }); await tick(20);
     expect(bad.textContent).toContain('boopis could not reach that source');
     expect(bad.textContent).not.toContain('hx.store');
+  });
+  it('draws each item as a row with its tile and one word at its end, and opens its page from the row', async () => {
+    const { root } = mount(); await tick(20);
+    const row = root.querySelector<HTMLElement>('.ui-row--item[data-value="mcp-registry:com.example/tickets"]') as HTMLElement;
+    expect(row.querySelector('.ui-imark')).not.toBeNull();
+    expect(row.querySelector('.ui-row__end')?.textContent).toBe('needs a key');
+    expect(root.querySelector('.ui-row--item[data-value="engine-plugins:example-old-sync"] .ui-row__end')?.getAttribute('data-tone')).toBe('attention');
+    row.click(); await tick(20);
+    expect(root.querySelector('.hx-store__hero .hx-store__title')?.textContent).toBe('Tickets');
+    expect(root.querySelector('.hx-store__hero .ui-imark[data-size="40"]')).not.toBeNull();
+    const facts = [...root.querySelectorAll('.hx-store__fact > dt')].map((d) => d.textContent);
+    expect(facts.indexOf('Keys')).toBeLessThan(facts.indexOf('Contents'));   /* what it needs comes before what it adds */
+    expect(root.querySelector('.ui-row[aria-current]')).toBeNull();
+  });
+  it('the keyboard: down from the search to the first row, on across the lists, up to the search again', async () => {
+    const { root } = mount(); await tick(20);
+    const q = root.querySelector<HTMLInputElement>('#hx-store-q input, input#hx-store-q') as HTMLInputElement;
+    q.focus();
+    q.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    const lists = [...root.querySelectorAll<HTMLElement>('[data-ui="rows"]')];
+    const first = lists[0]?.querySelector<HTMLElement>('.ui-row');
+    expect(document.activeElement).toBe(first);
+    const lastOfFirst = [...(lists[0] as HTMLElement).querySelectorAll<HTMLElement>('.ui-row')].pop() as HTMLElement;
+    lastOfFirst.focus();
+    lastOfFirst.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(lists[1]?.querySelector('.ui-row'));
+    first?.focus();
+    first?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(q);
+  });
+  it('Enter in the search opens the one result; nothing matching offers to clear the search', async () => {
+    const { root } = mount(); await tick(20);
+    const q = (): HTMLInputElement => root.querySelector<HTMLInputElement>('#hx-store-q input, input#hx-store-q') as HTMLInputElement;
+    q().value = 'zzzzqq'; q().dispatchEvent(new Event('input', { bubbles: true })); await tick(250);
+    const clear = root.querySelector<HTMLElement>('[data-store-clear]') as HTMLElement;
+    expect(clear.textContent).toBe('Clear the search');
+    clear.click(); await tick(30);
+    expect(q().value).toBe('');
+    expect(root.querySelectorAll('.ui-row--item').length).toBeGreaterThan(3);
+    q().value = 'firecrawl'; q().dispatchEvent(new Event('input', { bubbles: true })); await tick(250);
+    expect(root.querySelector('.hx-store__group > .ui-set__head')?.textContent).toBe('1 result for “firecrawl”');
+    q().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); await tick(20);
+    expect(root.querySelector('.hx-store__title')?.textContent).toBe('Firecrawl');
+  });
+  it('Installed draws each item with its tile', async () => {
+    const { root, view } = mount(); await tick(20);
+    view.show('installed'); await tick(20);
+    expect(root.querySelectorAll('.ui-set__row .ui-set__lead .ui-imark').length).toBeGreaterThan(0);
   });
 });

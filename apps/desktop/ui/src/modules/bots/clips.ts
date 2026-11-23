@@ -3,32 +3,8 @@
    accessible name and hx:title always carry it whole. Checked after each render and on resize, one frame later. */
 import { bot, railOn, S } from './model';
 
-/** is the text cut, in width (an ellipsis) or in height (a line clamp)? */
-export const isClipped = (el: HTMLElement): boolean => el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
-
-/** give `host` the whole text as its tooltip while `textEl` is cut, and take it back when it is not; a tooltip the
-    host already had (the rail's) is never touched */
-export function tipIfClipped(host: HTMLElement | null | undefined, textEl: HTMLElement | null | undefined, full: string): void {
-  if (!host || !textEl || !textEl.isConnected) return;
-  if (host.hasAttribute('data-tip') && !host.hasAttribute('data-tip-auto')) return;
-  if (isClipped(textEl)) { host.setAttribute('data-tip', full); host.setAttribute('data-tip-auto', ''); }
-  else if (host.hasAttribute('data-tip-auto')) { host.removeAttribute('data-tip'); host.removeAttribute('data-tip-auto'); }
-}
-
-/** the same as `tipIfClipped` for many spots: every measurement first, then every write. Measuring one, writing its
-    tooltip attribute and measuring the next makes the browser lay the page out again for each spot. */
-export function tipsIfClipped(spots: ReadonlyArray<readonly [HTMLElement | null | undefined, HTMLElement | null | undefined, string]>): void {
-  const todo: Array<[HTMLElement, string, boolean]> = [];
-  for (const [host, textEl, full] of spots) {
-    if (!host || !textEl || !textEl.isConnected) continue;
-    if (host.hasAttribute('data-tip') && !host.hasAttribute('data-tip-auto')) continue;
-    todo.push([host, full, isClipped(textEl)]);
-  }
-  for (const [host, full, clipped] of todo) {
-    if (clipped) { host.setAttribute('data-tip', full); host.setAttribute('data-tip-auto', ''); }
-    else if (host.hasAttribute('data-tip-auto')) { host.removeAttribute('data-tip'); host.removeAttribute('data-tip-auto'); }
-  }
-}
+export { isClipped, tipIfClipped, tipsIfClipped } from '../../core/clip';
+import { tipsIfClipped } from '../../core/clip';
 
 let raf = 0;
 function runChecks(): void {

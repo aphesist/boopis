@@ -6,6 +6,7 @@ import { setProvider } from '../data';
 import { createMockProvider } from '../data/mock-provider';
 import { formsHost } from '../modules/cards/forms-host';
 import { useFormsHost } from '../modules/cards/forms-host';
+import { ui } from '@boopis/ui';
 import { describeConnector, installLines, mountConnectors, textValues } from './connectors';
 import type { ConnectorInfo, ConnectorInstall, ConnectorRequest, ConnectorReview, ConnectorsBridge } from './connectors-bridge';
 
@@ -71,7 +72,11 @@ describe('how a connector reads in the list', () => {
     expect(describeConnector(info({ url: 'https://mcp.x.dev/mcp', command: null, args: [], auth: 'oauth', oauth_tokens_present: false, status: 'configured' }))).toMatchObject({ state: 'sign in', word: 'needs sign-in', canSignIn: true });
     expect(describeConnector(info({ auth: 'oauth', needs_auth: true }))).toMatchObject({ state: 'sign in', canSignIn: true });
     expect(describeConnector(info({ auth: 'oauth', oauth_tokens_present: true })).canSignIn).toBe(false);
-    expect(describeConnector(info({ status: 'failed' })).word).toBe('failed to connect');
+    expect(describeConnector(info({ status: 'failed' }))).toMatchObject({ word: 'failed to connect', tone: 'attention' });
+    expect(describeConnector(info({ status: 'connecting' }))).toMatchObject({ word: 'connecting', tone: 'busy' });
+    expect(describeConnector(info({ auth: 'oauth', needs_auth: true })).tone).toBe('attention');
+    expect(describeConnector(info({ enabled: false, status: 'failed' })).tone).toBeNull();
+    expect(describeConnector(info()).where).toBe('python3 server.py');
     expect(describeConnector(info({ status: 'lazy', tools: null })).word).toBe('connects when used');
     expect(describeConnector(info({ plugin: 'acme' }))).toMatchObject({ state: 'plugin', canSignIn: false });
     expect(describeConnector(info({ secrets: ['secret://connector.fakemcp/key'] })).hint).toContain('1 key in your keychain');
@@ -103,15 +108,60 @@ describe('the Connectors tab', () => {
     expect(panel.querySelector('[data-conn-remove="fakemcp"]')?.getAttribute('aria-label')).toBe('Remove fakemcp');
   });
 
-  it('offers every collection variant with where it reaches and its pin, then a URL and a command', async () => {
+  it('lists the collection one row per connector, and offers each way with where it reaches and its pin, then a URL and a command', async () => {
     const { panel } = await mount(fake());
     expect(panel.textContent).toContain('No connectors yet');
-    const text = panel.querySelector('#hx-conn-add-h')?.parentElement?.textContent ?? '';
-    expect(text).toContain('Firecrawl: Local');
-    expect(text).toContain('Reaches: Only this computer (127.0.0.1). Pinned to firecrawl-mcp@3.40.0.');
-    expect(text).toContain('Reaches: mcp.firecrawl.dev.');
-    expect(text).toContain('From a URL');
-    expect(text).toContain('From a command');
+    const coll = panel.querySelector('#hx-conn-coll-h')?.parentElement as HTMLElement;
+    expect(coll.querySelectorAll('.ui-row--item')).toHaveLength(1);
+    expect(coll.textContent).toContain('Firecrawl');
+    expect(coll.textContent).toContain('Scrape the web.');
+    expect(coll.textContent).toContain('local · hosted');
+    expect(coll.querySelector('[data-add-entry="firecrawl"]')?.getAttribute('aria-haspopup')).toBe('menu');
+    click(coll, '[data-add-entry="firecrawl"]');
+    const menu = document.querySelector('.ui-menu') as HTMLElement;
+    expect(menu.getAttribute('aria-label')).toBe('Ways to add Firecrawl');
+    expect(menu.textContent).toContain('Reaches: Only this computer (127.0.0.1). Pinned to firecrawl-mcp@3.40.0.');
+    expect(menu.textContent).toContain('Reaches: mcp.firecrawl.dev.');
+    ui.menu.close();
+    const add = panel.querySelector('#hx-conn-add-h')?.parentElement?.textContent ?? '';
+    expect(add).toContain('Other ways to add');
+    expect(add).toContain('From a URL');
+    expect(add).toContain('From a command');
+  });
+
+  it('adds a connector with one way at once, and marks one already added', async () => {
+    const f = fake([info({ name: 'firecrawl' })]);
+    f.catalog = () => Promise.resolve([{ id: 'exa', name: 'Exa', publisher: 'Exa', description: 'Web search.', license: 'MIT', verified: '2026-11-19', variants: [{ id: 'hosted', label: 'Hosted', summary: 'Exa runs it.', reaches: 'mcp.exa.ai', pinned: null, default: true }] },
+      { id: 'firecrawl', name: 'Firecrawl', publisher: 'Firecrawl', description: 'Scrape.', license: 'MIT', verified: '2026-11-19', variants: [{ id: 'local', label: 'Local', summary: 'Here.', reaches: 'x', pinned: null, default: true }] }]);
+    const { panel } = await mount(f);
+    expect(panel.querySelector('[data-add-entry="firecrawl"]')?.textContent).toContain('added');
+    expect(panel.querySelector('[data-add-entry="exa"]')?.textContent).not.toContain('Exa ·');   /* the publisher is the name: said once */
+    click(panel, '[data-add-entry="exa"]');
+    await tick();
+    expect(f.calls).toContain('inputs:catalog:exa:hosted');
+    expect(document.querySelector('.ui-menu')).toBeNull();
+  });
+
+  it('narrows the installed list and the collection as you type, and says when nothing matches', async () => {
+    const f = fake([info({ name: 'github', url: 'https://api.githubcopilot.com/mcp/', command: null, args: [] }), info({ name: 'notes' })]);
+    const { panel } = await mount(f);
+    const q = panel.querySelector<HTMLInputElement>('#hx-conn-q input, input#hx-conn-q') as HTMLInputElement;
+    q.value = 'scrape'; q.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(panel.querySelector('[data-add-entry="firecrawl"]')).toBeTruthy();
+    expect(panel.querySelector('#hx-conn-installed-h')?.parentElement?.textContent).toContain('None installed matches');
+    q.value = 'github'; q.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(panel.querySelector('[data-conn-test="github"]')).toBeTruthy();
+    expect(panel.querySelector('[data-conn-test="notes"]')).toBeNull();
+    expect(panel.querySelector('#hx-conn-coll-h')?.parentElement?.textContent).toContain('Nothing in boopis\'s collection matches “github”');
+  });
+
+  it('draws each installed connector with its tile: the service it runs, else its monogram', async () => {
+    const f = fake([info({ name: 'github', url: 'https://api.githubcopilot.com/mcp/', command: null, args: [] }), info({ name: 'github-copy', command: 'npx', args: ['-y', 'other-mcp@1.0.0'] })]);
+    const { panel } = await mount(f);
+    const tile = (n: string): Element | null | undefined => panel.querySelector(`[data-conn-test="${n}"]`)?.closest('.ui-set__row')?.querySelector('.ui-imark');
+    expect(tile('github')?.getAttribute('data-mark')).toBe('github');
+    expect(tile('github-copy')?.getAttribute('data-mark')).toBeNull();
+    expect(tile('github-copy')?.textContent).toBe('GC');
   });
 
   it('says the list could not be read, and draws no list, when the host cannot read it', async () => {
@@ -205,7 +255,8 @@ describe('adding', () => {
   it('names the collection entry and variant in the request, whatever the form holds', async () => {
     const f = fake();
     const { panel } = await mount(f);
-    click(panel, '[data-add-catalog="firecrawl"][data-add-variant="hosted"]');
+    click(panel, '[data-add-entry="firecrawl"]');
+    (document.querySelector('.ui-menu [data-value="hosted"]') as HTMLElement).click();
     await tick();
     expect(f.calls).toContain('inputs:catalog:firecrawl:hosted');
     fill(panel, 'name', 'fc');

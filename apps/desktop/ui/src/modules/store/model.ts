@@ -4,6 +4,7 @@
 import type {
   FormSpec, InstallPlan, InstallReceipt, StoreBrowse, StoreCodeRun, StoreComponent, StoreError, StoreFilter, StoreHosts, StoreItem, StoreKind, StorePin, StoreScanVerdict, StoreSource, StoreTier, UpdateDiff
 } from '../../data';
+import type { ItemRef } from '@boopis/ui';
 import { isRefreshable, isStale } from './reading';
 import type { ReadState, Reading } from './reading';
 
@@ -28,6 +29,52 @@ export function stateOf(item: Pick<StoreItem, 'id' | 'removed'>, installed: read
   if (item.removed || have?.kill_listed) return 'removed';
   if (!have) return null;
   return updates.some((d) => d.item_id === item.id && d.status === 'available') ? 'update' : 'installed';
+}
+
+/* ───────── how an item reads in a list (the redesign of 23 November 2026) ─────────
+   A row is the item's tile, its title, one line that says what it is (kind, publisher, "not reviewed" when nobody has, then
+   its own summary) and, at its end, the one word a person needs before opening it: its state when it has one, else what it
+   needs. Each word is the data's; nothing here ranks, counts or features anything. */
+export const KIND_SHORT: Readonly<Record<StoreKind, string>> = { skill: 'Skill', connector: 'Connector', plugin: 'Plugin', mod: 'Mod', 'engine-plugin': 'Engine plugin' };
+/** the order kinds are grouped in on the front page: the kind filter's order */
+export const KIND_ORDER: readonly StoreKind[] = KIND_FILTERS.map(([v]) => v).filter((v): v is StoreKind => v !== 'all');
+export const KIND_GROUP: Readonly<Record<StoreKind, string>> = { skill: 'Skills', connector: 'Connectors', plugin: 'Plugins', mod: 'Mods', 'engine-plugin': 'Engine plugins' };
+
+/** the row's second line: what it is, by whom (unless the title already says it), a missing review, then its summary */
+export function rowLine(item: Pick<StoreItem, 'kind' | 'publisher' | 'tier' | 'summary' | 'title'>): string {
+  /* a publisher whose name is the item's own (Notion's Notion) is said once, by the title */
+  const by = item.publisher.trim().toLowerCase() === item.title.trim().toLowerCase() ? '' : item.publisher;
+  return [KIND_SHORT[item.kind], by, item.tier === 'not-reviewed' ? 'not reviewed' : '', item.summary.trim()].filter(Boolean).join(' · ');
+}
+/** what an item needs before it can work, in two words: the keys it cannot do without, or that boopis will not install it */
+export function needsWord(item: Pick<StoreItem, 'secrets' | 'pinned' | 'removed'>): string {
+  if (item.removed) return 'taken down';
+  if (!item.pinned) return 'not pinned';
+  const keys = item.secrets.filter((s) => !s.optional).length;
+  return keys ? (keys === 1 ? 'needs a key' : 'needs ' + String(keys) + ' keys') : '';
+}
+/** the word at a row's end: its state (installed, an update, taken down) first, else what it needs, else nothing */
+export function endWord(item: Pick<StoreItem, 'secrets' | 'pinned' | 'removed'>, state: ItemState | null): { word: string; tone: 'attention' | 'busy' | null } {
+  if (state === 'removed') return { word: 'taken down', tone: 'attention' };
+  if (state === 'update') return { word: 'update', tone: 'busy' };
+  if (state === 'installed') return { word: 'installed', tone: null };
+  return { word: needsWord(item), tone: null };
+}
+/** the items, grouped by kind in the kind filter's order, each keeping the order it came in (the host's own order) */
+export function byKind<T extends { kind: StoreKind }>(items: readonly T[]): Array<{ kind: StoreKind; label: string; items: T[] }> {
+  return KIND_ORDER.map((kind) => ({ kind, label: KIND_GROUP[kind], items: items.filter((i) => i.kind === kind) })).filter((g) => g.items.length > 0);
+}
+/** a remote connector's address, from its pin (`remote:<url>`); null for anything that runs from code */
+export const remoteUrl = (p: StorePin | null | undefined): string | null => (isRemote(p) ? (p?.repo ?? '').slice('remote:'.length) || null : null);
+/** what the tile is drawn from: the item's own evidence (docs: components/item-mark.ts). A curated connector's id is its id in
+    boopis's collection; a hosted one connects to its pinned address. */
+export function markRef(item: { id?: string; item_id?: string; title?: string | undefined; kind: StoreKind; source: string; homepage?: string | null; pinned?: StorePin | null }): ItemRef {
+  const id = item.id ?? item.item_id ?? '';
+  return {
+    name: item.title ?? id.replace(/^[^:]*:/, ''), kind: item.kind,
+    collection: item.source === 'boopis' && item.kind === 'connector' ? id.replace(/^boopis:/, '') : null,
+    url: remoteUrl(item.pinned), homepage: item.homepage ?? null
+  };
 }
 
 /** "3 hours ago", from an ISO time; null stays unknown */

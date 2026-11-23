@@ -21,3 +21,30 @@
 .hx-store__reading { min-width: 0; }
 .hx-store__reading:empty { display: none; }
 .hx-store__note > .ui-progress { flex: none; }
+/* ───────── the redesign (23 November 2026): items as rows with their tile, a head on an item's page ─────────
+   Placement only: the rows are the kit's (`.ui-row--item`), the tile is `itemMark`, the type is the system's scale. */
+/* the kind chips and the source select share a line; the select keeps its own width at the line's end and wraps under the chips when narrow */
+.hx-store__filters { justify-content: space-between; }
+.hx-store__source { flex: 0 1 16em; min-width: min(100%, 12em); }
+/* a list of item rows under its heading: the rows reach the section's edges (no list inset: the store has no sidebar axis) */
+.hx-store__rows { padding: 0; }
+.hx-store__group > .ui-set__head { margin-block-start: 0; }
+.hx-store__list > .ui-btn { justify-self: start; }
+/* back to the list: a ghost button at the start of the line, never stretched across the page */
+.hx-store__back { justify-self: start; }
+/* an item's page: its tile, name and meta line, then the action; the action wraps under the name when the dialog is narrow */
+.hx-store__hero { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3) var(--sp-4); min-width: 0; }
+.hx-store__tile { display: flex; flex: none; }
+.hx-store__who { display: grid; gap: var(--sp-1); flex: 1 1 18em; min-width: 0; }
+.hx-store__title { margin: 0; font: 600 var(--fs-l)/var(--lh-tight) var(--sans); color: var(--text-strong); text-transform: var(--ui-case); overflow-wrap: anywhere; }
+.hx-store__meta { margin: 0; font-size: var(--fs-xs); line-height: var(--lh-small); color: var(--text-dim); overflow-wrap: anywhere; }
+.hx-store__sep { color: var(--text-quiet); }
+.hx-store__hero > .ui-set__actions { flex: none; }
+/* an item's facts: reference data as a two-column grid (R-table-1, as the keymap): the label at the start, the value beside it,
+   8 0 per line, a hairline between lines and none after the last; one column when the dialog is narrow */
+.hx-store__facts { display: grid; grid-template-columns: minmax(0, 1fr); margin: 0; container-type: inline-size; }
+.hx-store__fact { display: grid; grid-template-columns: minmax(7em, 12em) minmax(0, 1fr); gap: var(--sp-1) var(--sp-4); padding: var(--sp-2) 0; border-bottom: 1px solid var(--hair); min-width: 0; }
+.hx-store__fact:last-child { border-bottom: 0; }
+.hx-store__fact > dt { font-size: var(--fs-s); line-height: var(--lh-small); color: var(--text-dim); text-transform: var(--ui-case); }
+.hx-store__fact > dd { margin: 0; min-width: 0; font-size: var(--fs-s); line-height: var(--lh-small); color: var(--text); overflow-wrap: anywhere; }
+@container (max-width: 30em) { .hx-store__fact { grid-template-columns: minmax(0, 1fr); } }

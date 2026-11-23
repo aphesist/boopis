@@ -1020,3 +1020,29 @@ hx-card[data-accent] .cd-mini { --sq-line: color-mix(in srgb, var(--cd-accent) 3
 .ui-child__now { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); color: var(--text-quiet); }
 .ui-child__summary { margin: 0; overflow-wrap: anywhere; color: var(--text-dim); }
 .ui-child[data-status="stopped"] .ui-child__goal, .ui-child[data-status="failed"] .ui-child__goal { color: var(--text-dim); }
+
+/* ───────────── item marks (item-mark.ts; docs/UI-COMPONENTS.md, "Item marks") ─────────────
+   What a store item or a connector is, at a glance: a raised tile with a continuous corner holding the service's mark (mono,
+   currentColor) or a monogram. 24 in a row's lead, 40 at the head of an item's page. The corner is the floor at 24 (a 24px
+   square at --r-s would read as a circle) and --r-s at 40. Before the corner engine binds it, a plain radius and an inset line. */
+.ui-imark {
+  --imark: 24px; --sq-bg: var(--bg-3); --sq-line: var(--hair);
+  display: inline-grid; place-items: center; flex: none; box-sizing: border-box; width: var(--imark); height: var(--imark);
+  border-radius: var(--r-floor); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair); color: var(--text); text-transform: none;
+}
+.ui-imark[data-size="40"] { --imark: 40px; border-radius: var(--r-s); }
+.ui-imark__svg { display: block; width: var(--ic-s); height: var(--ic-s); }
+.ui-imark[data-size="40"] .ui-imark__svg { width: calc(var(--imark) * .55); height: calc(var(--imark) * .55); }
+.ui-imark__ini { font: 600 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-dim); white-space: nowrap; }
+.ui-imark[data-size="40"] .ui-imark__ini { font-size: var(--fs-m); }
+/* a publisher's name with its mark first: one unit, the mark 14 beside 12 (R-icon-4), centred on the name's line */
+.ui-pub { display: inline-flex; align-items: baseline; gap: var(--sp-1); min-width: 0; max-width: 100%; vertical-align: bottom; }
+.ui-pub__mark { flex: none; align-self: center; width: var(--ic-s); height: var(--ic-s); }
+.ui-pub__name { min-width: 0; overflow-wrap: anywhere; }
+/* an item row: a two-line list row (R-row-4) whose lead is the item's 24px tile; the lead stays 12 from the row's start, out of its corner */
+.ui-row--item { height: var(--row-h-2); }
+.ui-row--item > .ui-row__lead { width: var(--imark, 24px); height: var(--imark, 24px); }
+/* a settings row about one item (a connector, an installed item): its tile before the label */
+.ui-set__lead { display: flex; flex: none; align-self: center; }
+.ui-set__row:has(> .ui-set__lead) { gap: var(--sp-3); }
+.ui-set__row:has(> .ui-set__lead) > .ui-set__label { flex: 1 1 auto; }

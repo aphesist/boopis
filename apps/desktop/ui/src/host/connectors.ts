@@ -4,8 +4,13 @@
    the keys it needs as secret fields), and, when the server signs in with OAuth, a `signin` card. Every change goes through the
    host, which validates it again and drives Hermes's own mechanisms; this view knows no Hermes file and holds no key (a key
    goes from its field to the host's keychain and no further). It draws the design system's settings rows and cards; the owner
-   has not drawn a connectors view, so it is composed from those patterns, for review (DESIGN-SYSTEM.md 14.21). */
-import { storeItem } from '../core/engine-words';
+   has not drawn a connectors view, so it is composed from those patterns, for review (DESIGN-SYSTEM.md 14.21).
+
+   The redesign (the owner, 23 November 2026: "it's hard to actually find stuff in the screen"): a search over everything on the
+   tab; each installed connector with its tile and its state as a word at the row's end beside its switch; boopis's collection
+   as one list row per connector (the Store's item row: its tile, its publisher and what it does, the ways it can run), where
+   choosing a connector with several ways opens a menu that says what each one does and reaches; then the other ways to add. */
+import { STORE_ITEM, storeItem } from '../core/engine-words';
 import { unlessEngine } from './errors';
 import { ui } from '@boopis/ui';
 import { reduced } from '../core/dom';
@@ -13,6 +18,8 @@ import { logger } from '../core/log';
 import '../modules/cards';
 import { useFormsHost } from '../modules/cards/forms-host';
 import type { FormOutcome, FormSpec, FormsSource } from '../data';
+import type { ItemRef } from '@boopis/ui';
+import { tipsIfClipped } from '../core/clip';
 import { connectorSigninForm, fromConnectorForm } from './forms';
 import type { ConnectorFormIn } from './forms';
 import type { ConnectorCatalogEntry, ConnectorInfo, ConnectorInstall, ConnectorRequest, ConnectorSource, ConnectorsBridge } from './connectors-bridge';
@@ -32,14 +39,21 @@ export interface ConnectorsDeps {
   settle?: number;
 }
 
+const plural = (n: number, one: string): string => String(n) + ' ' + one + (n === 1 ? '' : 's');
 const message = (e: unknown): string => (e instanceof Error ? e.message : String(e)) || 'That did not work';
 
 /** how a connector reads in the list: the word the design system's state vocabulary lets a row say, and its second line */
-export interface ConnectorView { name: string; state: 'on' | 'off' | 'sign in' | 'plugin'; word: string; hint: string; canSignIn: boolean }
+export interface ConnectorView {
+  name: string; state: 'on' | 'off' | 'sign in' | 'plugin'; word: string; hint: string; canSignIn: boolean;
+  /** the state word's tone: attention for what the person owes (a sign-in, a failure), busy while it connects */
+  tone: 'attention' | 'busy' | null;
+  /** where it runs, shortened: its address, or its command and arguments; then its keys */
+  where: string;
+}
 export function describeConnector(c: ConnectorInfo): ConnectorView {
   const where = c.url ?? [c.command, ...c.args].filter(Boolean).join(' ');
   const shown = where.length > 90 ? where.slice(0, 89) + '…' : where;
-  if (c.plugin) return { name: c.name, state: 'plugin', word: 'from a plugin', hint: `Provided by the plugin ${c.plugin}; change the plugin to change it. ${shown}`.trim(), canSignIn: false };
+  if (c.plugin) return { name: c.name, state: 'plugin', word: 'from a plugin', hint: `Provided by the plugin ${c.plugin}; change the plugin to change it. ${shown}`.trim(), canSignIn: false, tone: null, where: `Provided by the plugin ${c.plugin}; change the plugin to change it. ${shown}`.trim() };
   const needsSignIn = c.auth === 'oauth' && (c.needs_auth || c.oauth_tokens_present === false);
   const tools = c.tools === null || c.tools === undefined ? '' : `, ${String(c.tools)} tool${c.tools === 1 ? '' : 's'}`;
   let word: string;
@@ -51,7 +65,27 @@ export function describeConnector(c: ConnectorInfo): ConnectorView {
   else if (c.status === 'lazy') word = 'connects when used';
   else word = 'not connected yet';
   const keys = c.secrets.length ? ` · ${String(c.secrets.length)} key${c.secrets.length === 1 ? '' : 's'} in your keychain` : '';
-  return { name: c.name, state: !c.enabled ? 'off' : needsSignIn ? 'sign in' : 'on', word, hint: `${word} · ${shown}${keys}`, canSignIn: c.enabled && needsSignIn };
+  const tone = !c.enabled ? null : needsSignIn || c.status === 'failed' ? 'attention' : c.status === 'connecting' ? 'busy' : null;
+  return { name: c.name, state: !c.enabled ? 'off' : needsSignIn ? 'sign in' : 'on', word, hint: `${word} · ${shown}${keys}`, canSignIn: c.enabled && needsSignIn, tone, where: `${shown}${keys}` };
+}
+
+/** what a connector's tile is drawn from: what it runs (its address, or its command and arguments), and its name */
+export const connectorRef = (c: Pick<ConnectorInfo, 'name' | 'url' | 'command' | 'args'>): ItemRef => ({ name: c.name, collection: c.name, url: c.url ?? null, command: c.command ?? null, args: c.args });
+
+/** every word of `query` is somewhere in `fields` (case aside); an empty query matches everything */
+export function matches(query: string, ...fields: ReadonlyArray<string | null | undefined>): boolean {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const text = fields.filter(Boolean).join(' ').toLowerCase();
+  return words.every((w) => text.includes(w));
+}
+/** a collection entry as its row says it: by whom (unless the name says it) and what it does; its ways to run at the end, or
+    that it is added already (an installed connector of the same name, as the host names a collection install) */
+export function collectionRow(c: Pick<ConnectorCatalogEntry, 'id' | 'name' | 'publisher' | 'description' | 'variants'>, installed: ReadonlySet<string>): { sub: string; end: string } {
+  const by = c.publisher.trim().toLowerCase() === c.name.trim().toLowerCase() ? '' : c.publisher;
+  const ways = c.variants.map((v) => v.label.toLowerCase()).join(' · ');
+  /* the ways it can run, by their own names while they are short; else how many there are (the menu names them) */
+  return { sub: [by, c.description.trim()].filter(Boolean).join(' · '), end: installed.has(c.id) ? 'added' : ways.length <= 24 ? ways : plural(c.variants.length, 'way') };
 }
 
 /** the host reads every value as text: a form's values, whatever the field's type */
@@ -98,13 +132,24 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   let target: string | null = null;
   const br = (): ConnectorsBridge => (target !== null && deps.bridgeFor ? deps.bridgeFor(target) : deps.bridge);
   const settle = deps.settle ?? (reduced() ? 200 : 700);
+  panel.classList.add('hx-conn');
+  const find = el('div', { class: 'hx-conn__find', role: 'search' });
   const forBot = el('section', { class: 'ui-set', 'aria-labelledby': 'hx-conn-for-h', hidden: '' });
-  const installed = el('section', { class: 'ui-set', 'aria-labelledby': 'hx-conn-installed-h' });
+  const installed = el('section', { class: 'ui-set hx-conn__installed', 'aria-labelledby': 'hx-conn-installed-h' });
+  const collection = el('section', { class: 'ui-set', 'aria-labelledby': 'hx-conn-coll-h' });
   const add = el('section', { class: 'ui-set', 'aria-labelledby': 'hx-conn-add-h' });
   const flow = el('section', { class: 'ui-set', 'aria-label': 'Add a connector', hidden: '' });
-  panel.append(forBot, installed, add, flow);
+  panel.append(find, forBot, installed, collection, add, flow);
   let catalog: ConnectorCatalogEntry[] = [];
   let busy = false;
+  let query = '';
+  let have: ConnectorInfo[] = [];
+  /* one search over the tab: it narrows the installed connectors and the collection as you type */
+  const search = ui.search({ size: 'm', label: 'Find a connector', placeholder: 'Find a connector by name, publisher or what it does', id: 'hx-conn-q' });
+  find.append(search);
+  const qInput = search.querySelector<HTMLInputElement>('input');
+  qInput?.addEventListener('input', () => { query = qInput.value; drawInstalledRows(); drawCollection(); });
+  qInput?.addEventListener('keydown', (e) => { if (e.key === 'ArrowDown') { const r = collection.querySelector<HTMLElement>('.ui-row[tabindex="0"], .ui-row'); if (r) { e.preventDefault(); r.focus(); } } });
 
   const say = (text: string): void => {
     const s = installed.querySelector('[data-conn-status]');
@@ -117,12 +162,16 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     flow.replaceChildren();
     installed.hidden = false;
     add.hidden = false;
+    collection.hidden = !catalog.length;
+    find.hidden = false;
     drawFor();
     await drawInstalled();
   };
   const showFlow = (...kids: Node[]): void => {
     installed.hidden = true;
     add.hidden = true;
+    collection.hidden = true;
+    find.hidden = true;
     forBot.hidden = true;
     flow.hidden = false;
     const back = ui.button({ label: 'Back to connectors', size: 's', variant: 'ghost' });
@@ -151,36 +200,77 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   }
 
   /* ───────── installed ───────── */
+  let listError = '';
   async function drawInstalled(): Promise<void> {
+    try { have = await br().list(); listError = ''; } catch (e) { have = []; listError = message(e); }
+    drawInstalledRows();
+    drawCollection();
+  }
+  function drawInstalledRows(): void {
+    const keep = document.activeElement instanceof HTMLElement && installed.contains(document.activeElement) ? document.activeElement.id : '';
+    const shown = have.filter((c) => matches(query, c.name, c.url, c.command, ...c.args, c.plugin));
     let rows: string[];
-    let list: ConnectorInfo[] = [];
-    try {
-      list = await br().list();
-      rows = list.length
-        ? list.map((c) => {
-          const v = describeConnector(c);
-          const id = 'hx-conn-' + c.name.replace(/[^a-z0-9_-]/gi, '_');
-          const controls = c.plugin ? '' : [
-            v.canSignIn ? ui.html.button({ label: 'Sign in', size: 's', variant: 'primary', attrs: { 'data-conn-signin': c.name, 'aria-label': 'Sign in to ' + c.name } }) : '',
-            ui.html.switch({ id, name: c.name, checked: c.enabled, label: c.name + (c.enabled ? ' is on' : ' is off') }),
-            ui.html.button({ label: 'Test', size: 's', attrs: { 'data-conn-test': c.name, 'aria-label': 'Test ' + c.name } }),
-            ui.html.button({ label: 'Remove', size: 's', variant: 'ghost', attrs: { 'data-conn-remove': c.name, 'aria-label': 'Remove ' + c.name } })
-          ].join('');
-          /* an installed connector is the user's item: its own name is shown as it is (ADR-0031's store exception) */
-          return storeItem(ui.html.setRow({ label: c.name, hint: v.hint, ...(c.plugin ? {} : { for: id }), control: controls ? '<span style="display:inline-flex;gap:var(--sp-2);align-items:center">' + controls + '</span>' : '' }));
-        })
-        : [ui.html.setRow({ label: 'No connectors yet', hint: 'boopis has no connectors yet. Add one below.' })];
-    } catch (e) {
-      rows = [ui.html.setRow({ label: 'Connectors', hint: `boopis could not read the list, so it is not shown: ${message(e)}` })];
-    }
+    if (listError) rows = [ui.html.setRow({ label: 'Connectors', hint: `boopis could not read the list, so it is not shown: ${listError}` })];
+    else if (!have.length) rows = [ui.html.setRow({ label: 'No connectors yet', hint: catalog.length ? 'Pick one from boopis\'s collection below, or add your own.' : 'boopis has no connectors yet. Add one below.' })];
+    else if (!shown.length) rows = [ui.html.setRow({ label: 'None installed matches', hint: `No installed connector matches “${query.trim()}”.` })];
+    else rows = shown.map((c) => {
+      const v = describeConnector(c);
+      const id = 'hx-conn-' + c.name.replace(/[^a-z0-9_-]/gi, '_');
+      /* the state is a word at the row's end, beside the switch: what it is doing, in the system's state vocabulary */
+      const word = '<span class="ui-state hx-conn__state"' + (v.tone ? ' data-tone="' + v.tone + '"' : '') + '>' + ui.esc(v.word) + '</span>';
+      const controls = c.plugin ? word : [
+        word,
+        v.canSignIn ? ui.html.button({ label: 'Sign in', size: 's', variant: 'primary', attrs: { 'data-conn-signin': c.name, 'aria-label': 'Sign in to ' + c.name } }) : '',
+        ui.html.switch({ id, name: c.name, checked: c.enabled, label: c.name + (c.enabled ? ' is on' : ' is off') }),
+        ui.html.button({ label: 'Test', size: 's', attrs: { 'data-conn-test': c.name, 'aria-label': 'Test ' + c.name } }),
+        ui.html.button({ label: 'Remove', size: 's', variant: 'ghost', attrs: { 'data-conn-remove': c.name, 'aria-label': 'Remove ' + c.name } })
+      ].join('');
+      /* an installed connector is the user's item: its own name is shown as it is (ADR-0031's store exception) */
+      return storeItem(ui.html.setRow({ label: c.name, hint: v.where, lead: ui.html.itemMark(connectorRef(c)), ...(c.plugin ? {} : { for: id }), control: '<span class="ui-set__actions hx-conn__acts">' + controls + '</span>' }));
+    });
     installed.innerHTML = ui.html.setHead({ id: 'hx-conn-installed-h', label: 'Installed' }) + rows.join('') + '<p class="ui-field__hint" role="status" aria-live="polite" data-conn-status></p>';
     ui.hydrate(installed);
-    const byName = new Map(list.map((c) => [c.name, c]));
+    const byName = new Map(have.map((c) => [c.name, c]));
     for (const sw of installed.querySelectorAll<HTMLInputElement>('input[role=switch]')) sw.addEventListener('change', () => { void toggle(sw.name, sw); });
     for (const b of installed.querySelectorAll<HTMLElement>('[data-conn-test]')) b.addEventListener('click', () => { void test(b.dataset['connTest'] ?? ''); });
     for (const b of installed.querySelectorAll<HTMLElement>('[data-conn-signin]')) b.addEventListener('click', () => { void signinFlow(b.dataset['connSignin'] ?? ''); });
     for (const b of installed.querySelectorAll<HTMLElement>('[data-conn-remove]')) b.addEventListener('click', () => { const c = byName.get(b.dataset['connRemove'] ?? ''); if (c) removeFlow(c); });
+    if (keep) installed.querySelector<HTMLElement>('#' + CSS.escape(keep))?.focus({ preventScroll: true });
   }
+
+  /* ───────── boopis's collection: one row per connector ───────── */
+  function drawCollection(): void {
+    collection.hidden = !catalog.length || !flow.hidden;
+    if (!catalog.length) { collection.replaceChildren(); return; }
+    const added = new Set(have.map((c) => c.name));
+    const shown = catalog.filter((c) => matches(query, c.name, c.publisher, c.description, ...c.variants.map((v) => v.label)));
+    const rows = shown.map((c) => {
+      const w = collectionRow(c, added);
+      /* a collection item keeps its own name and publisher, whatever they say (ADR-0031's store exception) */
+      return ui.html.itemRow({ ref: { name: c.name, collection: c.id }, title: c.name, sub: w.sub, end: w.end, value: c.id, attrs: { 'data-add-entry': c.id, [STORE_ITEM]: '', 'aria-haspopup': c.variants.length > 1 ? 'menu' : null } });
+    });
+    const none = query.trim() && !shown.length ? '<p class="ui-field__hint" role="status">' + ui.esc(`Nothing in boopis's collection matches “${query.trim()}”. Try another word, browse the store, or add it from a URL or a command below.`) + '</p>' : '';
+    collection.innerHTML = ui.html.setHead({ id: 'hx-conn-coll-h', label: 'From boopis\'s collection' }) +
+      (rows.length ? '<ul class="ui-rows hx-conn__rows" data-ui="rows" aria-labelledby="hx-conn-coll-h">' + rows.join('') + '</ul>' : '') + none;
+    ui.hydrate(collection);
+    requestAnimationFrame(() => { tipsIfClipped([...collection.querySelectorAll<HTMLElement>('.ui-row--item')].map((r) => [r, [r.querySelector<HTMLElement>('.ui-row__title'), r.querySelector<HTMLElement>('.ui-row__sub')], (r.querySelector('.ui-row__title')?.textContent ?? '') + '. ' + (r.querySelector('.ui-row__sub')?.textContent ?? '')] as const)); });
+  }
+  /* choosing a connector: one way to run adds it at once; several open a menu that says what each one does and where it reaches */
+  collection.addEventListener('ui:select', (e) => {
+    e.preventDefault();   /* adding is not choosing: no row is marked current */
+    const d = (e as CustomEvent<{ value?: string; item?: HTMLElement }>).detail;
+    const c = catalog.find((x) => x.id === d.value); if (!c) return;
+    const only = c.variants.length === 1 ? c.variants[0] : undefined;
+    if (only) { void addFlow('catalog', { id: c.id, variant: only.id }); return; }
+    const row = d.item ?? collection.querySelector<HTMLElement>('[data-add-entry="' + CSS.escape(c.id) + '"]');
+    if (!row) return;
+    row.setAttribute('aria-expanded', 'true');
+    ui.menu.open(row, [{ title: 'Add ' + c.name }, ...c.variants.map((v) => ({ label: v.label, value: v.id, desc: `${v.summary} Reaches: ${v.reaches}.${v.pinned ? ' Pinned to ' + v.pinned + '.' : ''}` }))], {
+      label: 'Ways to add ' + c.name, align: 'start',
+      onSelect: (v: string) => { void addFlow('catalog', { id: c.id, variant: v }); },
+      onClose: () => { row.setAttribute('aria-expanded', 'false'); }
+    });
+  });
 
   async function toggle(name: string, sw: HTMLInputElement): Promise<void> {
     if (busy) { sw.checked = !sw.checked; return; }
@@ -288,21 +378,11 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   /* ───────── the add rows ───────── */
   function drawAdd(): void {
     const rows: string[] = [];
-    for (const c of catalog) {
-      for (const v of c.variants) {
-        /* a collection item keeps its own name and publisher, whatever they say (ADR-0031's store exception) */
-        rows.push(storeItem(ui.html.setRow({
-          label: `${c.name}: ${v.label}`, hint: `${v.summary} Reaches: ${v.reaches}.${v.pinned ? ' Pinned to ' + v.pinned + '.' : ''}`,
-          control: ui.html.button({ label: 'Add', size: 's', attrs: { 'data-add-catalog': c.id, 'data-add-variant': v.id, 'aria-label': `Add ${c.name}, ${v.label}` } })
-        })));
-      }
-    }
     if (deps.openStore) rows.unshift(ui.html.setRow({ label: 'From the store', hint: 'Recommended connectors, and every other source boopis can read, to search and review.', control: ui.html.button({ label: 'Browse the store', size: 's', variant: 'primary', attrs: { 'data-add-store': '' } }) }));
     rows.push(ui.html.setRow({ label: 'From a URL', hint: 'A remote MCP server. https only; keys go to your keychain.', control: ui.html.button({ label: 'Add', size: 's', attrs: { 'data-add-url': '', 'aria-label': 'Add a connector from a URL' } }) }));
     rows.push(ui.html.setRow({ label: 'From a command', hint: 'A local program that speaks MCP. It runs on this computer as you.', control: ui.html.button({ label: 'Add', size: 's', attrs: { 'data-add-command': '', 'aria-label': 'Add a connector from a command' } }) }));
-    add.innerHTML = ui.html.setHead({ id: 'hx-conn-add-h', label: 'Add' }) + rows.join('');
+    add.innerHTML = ui.html.setHead({ id: 'hx-conn-add-h', label: catalog.length ? 'Other ways to add' : 'Add' }) + rows.join('');
     ui.hydrate(add);
-    for (const b of add.querySelectorAll<HTMLElement>('[data-add-catalog]')) b.addEventListener('click', () => { void addFlow('catalog', { id: b.dataset['addCatalog'] ?? '', variant: b.dataset['addVariant'] ?? '' }); });
     add.querySelector('[data-add-store]')?.addEventListener('click', () => { deps.openStore?.(); });
     add.querySelector('[data-add-url]')?.addEventListener('click', () => { void addFlow('url'); });
     add.querySelector('[data-add-command]')?.addEventListener('click', () => { void addFlow('command'); });
@@ -311,6 +391,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   try { catalog = await deps.bridge.catalog(); } catch (e) { log.warn('the collection did not load', e); }
   drawAdd();
   drawFor();
+  collection.hidden = !catalog.length;
   await drawInstalled();
   return { refresh: showList };
 }
