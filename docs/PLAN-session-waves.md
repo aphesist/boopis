@@ -166,3 +166,4 @@ Recommended: (1). It keeps every change journaled and rewindable.
   tabs; consistency across the whole app overrides individual approvals. Next: a consolidation pass (one component
   inventory, merges, LAB-v7 plan with every defect class the owner found as a blocking check), then the kit + lab
   build wave (w31/kit-v7 + w31/lab-v7) after the w30 base merge.
+- S41 new session: mark A (the "oo" logomark, idle glance/blink, looks at the composer while typing); other screens approved.
