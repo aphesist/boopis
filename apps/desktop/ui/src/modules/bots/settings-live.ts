@@ -152,6 +152,13 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const ws = ui.segmented({ mode: 'radio', label: 'Workspace', value: c.workspace, options: [{ value: 'worktree', label: 'Worktree' }, { value: 'sandbox', label: 'Sandbox' }], fill: true });
   ws.addEventListener('ui:change', (e) => { own({ workspace: (e as CustomEvent<{ value: string }>).detail.value as BotConfig['workspace'] }); });
   /* what it may do: the plugin enforces each row before every tool call (ADR-0050); a kind the plugin did not report has no row */
+  const switchRow = (key: string, label: string, on: boolean, onChange: (v: boolean) => void): HTMLElement => {
+    const sid = 'bt-sw-' + b.id + '-' + key;
+    const row = frag(ui.html.setRow({ label, hint: null, for: sid, control: ui.html.switch({ id: sid, checked: on }) }));
+    ui.hydrate(row);
+    $<HTMLInputElement>('input', row).addEventListener('change', (e) => onChange((e.target as HTMLInputElement).checked));
+    return row;
+  };
   const appr = el('div', { class: 'ui-set' }, catalog.approvals.map((ap) => tierRow(b, ap, c.approvals[ap.id], (v) => own({ approvals: { [ap.id]: v } }))).filter((n): n is HTMLElement => !!n));
   const apprNote = Object.keys(c.approvals).length ? null : hint('What it may do is not shown: this version of boopis’s plugin did not report it.');
 
