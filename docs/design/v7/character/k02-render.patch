@@ -1,0 +1,234 @@
+diff -ru ds-v7/src/board.html character/src/board.html
+--- ds-v7/src/board.html	2026-11-23 14:45:52.166766688 +0000
++++ character/src/board.html	2026-11-23 14:30:45.441209376 +0000
+@@ -1,10 +1,9 @@
+ <!doctype html><html data-theme="dark"><meta charset="utf-8"><link rel="stylesheet" href="tokens.v7.css"><link rel="stylesheet" href="kit.css">
+ <script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-avatar.min.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script>
+ 
+-<script src="boards.js"></script><script src="previews.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script><script src="dockv7.js"></script><script src="sessionboards.js"></script><title>boopis v7 board</title><body style="background:#0a0a0a"><div id="r"></div><script>
++<script src="boards.js"></script><script src="previews.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script><script src="sessionboards.js"></script><title>boopis v7 board</title><body style="background:#0a0a0a"><div id="r"></div><script>
+ const q = Object.fromEntries(new URLSearchParams(location.search));
+ if (!q.motion) document.documentElement.classList.add('still'); /* stills render live things at rest */
+-document.getElementById('r').innerHTML = (BOARDS[q.b] || PREVIEWS[q.b] || SBOARDS[q.b] || DBOARDS[q.b])();
++document.getElementById('r').innerHTML = (BOARDS[q.b] || PREVIEWS[q.b] || SBOARDS[q.b])();
+ if (q.b === 'p4') document.getElementById('r').setAttribute('data-motion', ''); /* P4 is a labelled motion strip: its frames show the sweep and the breath on purpose */
+-window.DOCK && DOCK.refit();
+ </script></body></html>
+diff -ru ds-v7/src/boards.js character/src/boards.js
+--- ds-v7/src/boards.js	2026-11-23 08:51:39.532795971 +0000
++++ character/src/boards.js	2026-11-23 14:47:30.343094074 +0000
+@@ -177,5 +177,14 @@
+       opt('Attention B', 'boopis red, Grok\'s values', 'what you owe stays red (#cf2b35 marks, #ff6463 text, 6.5:1); destructive confirms are red too, as Grok\'s Reset', true, pair('', att('red')), 'Keeps "red means you owe something" from v6 and the approved notch; the only change is the values.')]);
+   }
+ 
+-  window.BOARDS = { fonts, radii, shadows, orbs, chrome, tiles, composers, calm, accent };
++
++  /* K02 the main bot in the open sidebar (owner, 23 Nov: boopis "visibly bigger", as Grok-Bot's; the rail keeps its size) */
++  function mainbot() {
++    const side = (size, scr) => (t) => clip(300, 600, win(S[scr], { theme: t, sidebar: 'open', main: size }), { r: 0 });
++    const both = (size) => `<div class="row" style="gap:24px;align-items:flex-start">${['room', 'session'].map((scr) => pair('', side(size, scr))).join('')}</div>`;
++    return board('K02 The main bot in the open sidebar', 'Grok-Bot puts its main bot above the list, centred with its name under it: 44 px (measured on its 2880 px capture of the open sidebar, 157-live-sidebar-expanded; the rows are 28 px, the rail 36 px). boopis today lists itself as one more 36 px row. Both options move boopis out of the list to the top of the open sidebar, in the Bots and the Sessions tab alike; the rail is unchanged.', [
++      opt('A', '44 px, Grok-Bot\'s size', '8 px larger than a row (36 px): the main bot reads first and the list keeps its first row above the fold', true, both(44), 'Same size as Grok-Bot\'s main bot; with face-scale 1.25 (K01, C4) its eyes read as clearly. The boopis row leaves the list, so the list keeps every row it had.'),
++      opt('B', '56 px', 'half again a row: a presence, closer to the details pane\'s 64 px', false, both(56), 'Clearly the lead, but at 56 px it is a second header beside the room\'s 40 px presence orb, and the list sits 12 px lower than in A.')]);
++  }
++  window.BOARDS = { mainbot, fonts, radii, shadows, orbs, chrome, tiles, composers, calm, accent };
+ })();
+diff -ru ds-v7/src/botscreens.js character/src/botscreens.js
+--- ds-v7/src/botscreens.js	2026-11-23 14:43:06.725860071 +0000
++++ character/src/botscreens.js	2026-11-23 14:30:44.812870542 +0000
+@@ -45,7 +45,7 @@
+     const bf = o.botFill ? ` data-botfill style="left:${L}px;right:${P}px;--bubble-user:${o.botFill[0]};--bubble-user-text:${o.botFill[1]}"` : ` style="left:${L}px;right:${P}px"`;
+     return S.frame(o, `${side}${S.chrome({ ...o, title, pane: o.pane })}
+       <div class="main"${bf}><div class="thread" style="padding-top:72px">${body}</div>
+-      <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:24px">${comp}</div></div>${o.pane ? pane() : ''}${extra}`);
++      <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:96px">${comp}</div>${S.dockRow()}</div>${o.pane ? pane() : ''}${extra}`);
+   };
+   const comp = (o, ph, under) => S.composer({ ...o, composer: 'c', placeholder: ph, under, composerW: o.pane ? 600 : 720 });
+   const underBot = `<span class="row" style="gap:4px">${I('ladder')}Governed</span><span class="row" style="gap:5px">${mark('claude', 12)}sonnet 5.5</span><span class="grow"></span><span class="mono">$0.12 of $1.00</span>`;
+Only in ds-v7/src: dockv7.js
+Only in ds-v7/src: jobs-dk2.json
+Only in ds-v7/src: jobs-dock.json
+Only in character/src: jobs-k02.json
+diff -ru ds-v7/src/kit.css character/src/kit.css
+--- ds-v7/src/kit.css	2026-11-23 14:45:52.166980434 +0000
++++ character/src/kit.css	2026-11-23 14:45:34.682495631 +0000
+@@ -149,6 +149,9 @@
+ .tile .flag { position: absolute; right: 6px; bottom: 6px; }
+ .side .foot-ctl { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 0 14px; }
+ .sb-open { width: 300px; padding: 56px 10px 12px; }
++.sb-open.has-main { padding-top: 48px; }
++.sb-main { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 0 14px; }
++.sb-main .nm { font-size: var(--fs-s); line-height: 18px; color: var(--text); }
+ .sb-head { font-size: var(--fs-xs); color: var(--text-dim); padding: 14px 12px 6px; }
+ .sb-row { display: flex; align-items: center; gap: 10px; height: var(--row-h-2); padding: 0 10px; border-radius: var(--r-tile); }
+ .sb-row.on { --sq-bg: var(--current); }
+@@ -430,28 +433,3 @@
+ /* Stills: live text at rest. The sweep and the breath exist only in motion (clips and labelled motion strips, [data-motion]). */
+ .still :not([data-motion] *).shimmer { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--text-dim); }
+ .still :not([data-motion] *).mk.pulse, .still :not([data-motion] *).dot.run { animation: none; opacity: 1; transform: none; }
+-/* ---- the dock, v7 (Sessions tab only; no "+"; kit components inside the black slab, always the dark theme) ---- */
+-.dk-in.dk7 { padding: 0; gap: 0; color: var(--text); background: transparent; }
+-.dk7-row { position: relative; display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; height: 72px; flex: none; padding: 0 24px; background: transparent; }
+-.dk7-orb { position: relative; display: inline-grid; place-items: center; flex: none; border-radius: 50%; }
+-.dk7-flag { position: absolute; right: -1px; top: 1px; box-shadow: 0 0 0 2px #000; }
+-.dk7-focus { outline: 2px solid var(--focus); outline-offset: 3px; }
+-.dk7-cur::after { content: ''; position: absolute; left: 50%; bottom: -10px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent-text); }
+-.dk7-tip { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); white-space: nowrap; z-index: 2; }
+-.dk7-ask { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: var(--r-pill); background: var(--owe-soft); color: var(--owe-text); font-size: var(--fs-s); white-space: nowrap; flex: none; }
+-.dk7-more { flex: none; }
+-.dk7-nub { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); display: flex; gap: 6px; }
+-.dk7-nub i { width: 5px; height: 5px; border-radius: 50%; background: var(--text-quiet); }
+-.dk7-nub i.on { background: var(--text); }
+-.dk7-fade { position: absolute; top: 0; bottom: 0; width: 56px; pointer-events: none; }
+-.dk7-fade.l { left: 0; background: linear-gradient(90deg, #000 30%, #0000); }
+-.dk7-fade.r { right: 0; background: linear-gradient(270deg, #000 30%, #0000); }
+-.dk-in.dk7:has(> .dk7-panel) { flex-direction: column; align-items: stretch; justify-content: flex-end; }
+-.dk7-panel { display: flex; flex-direction: column; gap: 8px; padding: 8px 8px 0; min-height: 0; background: transparent; }
+-.dk7-head { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 8px; flex: none; }
+-.dk7-x { background: transparent !important; box-shadow: none !important; }
+-.dk7-log { display: flex; flex-direction: column; padding: 4px 4px 0; }
+-.dk7-q { width: auto; margin-top: 0; }
+-.dk7-panel .composer { --sq-bg: var(--bg-3); }
+-.dk7-cap { display: inline-flex; align-items: baseline; gap: 6px; height: 32px; align-items: center; padding: 0 4px; font-size: var(--fs-s); white-space: nowrap; flex: none; min-width: 150px; }
+-.dk7-cap b { font-weight: 500; color: var(--text); }
+diff -ru ds-v7/src/sbsheet.py character/src/sbsheet.py
+--- ds-v7/src/sbsheet.py	2026-11-23 14:48:13.969383598 +0000
++++ character/src/sbsheet.py	2026-11-23 14:30:45.726158491 +0000
+@@ -1,11 +1,9 @@
+ # python3 sbsheet.py : the contact sheet of ds-v7/session-boards (boards first, then each key screen dark | light)
+ import glob, os, re
+ from PIL import Image, ImageDraw, ImageFont
+-import sys
+-D = os.path.dirname(os.path.abspath(__file__)) + '/../' + (sys.argv[1] if len(sys.argv) > 1 else 'session-boards')
+-TITLE = sys.argv[2] if len(sys.argv) > 2 else 'boopis v7: the Session tab, boards S01-S16 and S41, key screens S17-S41 (dark | light)'
++D = os.path.dirname(os.path.abspath(__file__)) + '/../session-boards'
+ F = ImageFont.load_default(size=22); FH = ImageFont.load_default(size=40)
+-files = sorted(os.path.basename(f) for f in glob.glob(D + '/*.jpg') if not f.endswith('contact-sheet.jpg'))
++files = sorted(os.path.basename(f) for f in glob.glob(D + '/S*.jpg'))
+ boards = [f for f in files if not re.search(r'-(dark|light)\.jpg$', f) and not f.endswith('-board.jpg')]
+ screens = sorted({re.sub(r'-(dark|light)\.jpg$', '', f) for f in files if re.search(r'-(dark|light)\.jpg$', f)})
+ pad, W, cols = 40, 2400, 4
+@@ -26,7 +24,7 @@
+ rh = [max(sum(i.height for i in t[1][:1]) for t in r) + 40 for r in rows]
+ H = 110 + sum(h + pad for h in rh)
+ sheet = Image.new('RGB', (W, H), (10, 10, 10)); d = ImageDraw.Draw(sheet)
+-d.text((pad, 34), TITLE, font=FH, fill=(240, 240, 240))
++d.text((pad, 34), 'boopis v7: the Session tab, boards S01-S16 and S41, key screens S17-S41 (dark | light)', font=FH, fill=(240, 240, 240))
+ y = 110
+ for r, h in zip(rows, rh):
+     for i, (name, ims) in enumerate(r):
+diff -ru ds-v7/src/screen.html character/src/screen.html
+--- ds-v7/src/screen.html	2026-11-23 14:45:52.166537110 +0000
++++ character/src/screen.html	2026-11-23 14:30:44.813336770 +0000
+@@ -1,9 +1,8 @@
+ <!doctype html><html data-theme="dark"><meta charset="utf-8"><link rel="stylesheet" href="tokens.v7.css"><link rel="stylesheet" href="kit.css">
+-<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-avatar.min.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script><script src="dockv7.js"></script>
++<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-avatar.min.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script>
+ 
+ <title>boopis v7 screen</title><body style="background:#000"><div id="r"></div><script>
+ const q = Object.fromEntries(new URLSearchParams(location.search));
+ if (!q.motion) document.documentElement.classList.add('still'); /* stills render live things at rest */
+ document.getElementById('r').innerHTML = SCREENS[q.s || 'session'](Object.assign({ theme: 'dark', chrome: 'a', tile: 'a', composer: 'c', status: 'c' }, q));
+-window.DOCK && DOCK.refit();
+ </script></body></html>
+diff -ru ds-v7/src/screens.js character/src/screens.js
+--- ds-v7/src/screens.js	2026-11-23 14:43:14.293216231 +0000
++++ character/src/screens.js	2026-11-23 14:45:34.678540783 +0000
+@@ -41,13 +41,18 @@
+       <span class="tile" style="width:${geo.tile}px;height:${geo.tile}px">${cluster(['kai', 'nina', 'moss'], Math.round(geo.orb * 0.42))}</span>
+       <div class="foot-ctl"><span class="ib s" style="width:32px;height:32px">${I('plus')}</span><span class="ib s" style="width:32px;height:32px">${I('store')}</span><span class="ib s" style="width:32px;height:32px">${I('gear')}</span></div></aside>`;
+   }
++  /* the main bot at the top of the open sidebar, bigger than the rows (owner, 23 Nov: "visibly bigger", as Grok-Bot's;
++     K02: o.main is its size, 44 or 56); the rail keeps its size. Its row leaves the list. */
++  function mainBot(size) {
++    return `<div class="sb-main">${orb('boopis', size, { surface: 'var(--bg-1)' })}<span class="nm">boopis</span></div>`;
++  }
+   function sidebarOpen(o) {
+     const cur = o.current || 'room';
+     const row = (n, act, extra = {}) => `<div class="sb-row sq${cur === n ? ' on' : ''}">${orb(n, 36, { state: extra.state, surface: 'var(--bg-1)' })}<div class="col grow"><span class="nm ell">${n === 'boopis' ? 'boopis' : n}</span><span class="act ell${extra.owe ? ' owe' : ''}">${act}</span></div>${extra.end || ''}</div>`;
+-    return `<aside class="side sb-open">
++    return `<aside class="side sb-open${o.main ? ' has-main' : ''}">${o.main ? mainBot(o.main) : ''}
+       <div class="row" style="justify-content:space-between;padding:0 6px 6px"><span class="seg"><span>Sessions</span><span class="on">Bots</span></span><span class="ib s">${I('plus')}</span></div>
+       ${o.search === 'side' ? `<div class="input search" style="margin:4px 4px 10px;height:32px">${I('search')}<span class="grow">Search</span><span class="keys"><span class="kbd">ctrl</span><span class="kbd">K</span></span></div>` : ''}
+-      ${row('boopis', 'Summarised the morning')}
++      ${o.main ? '' : row('boopis', 'Summarised the morning')}
+       ${row('kai', 'Writing the changelog', { state: 'working' })}
+       ${row('nina', 'Needs you: approve a deploy', { owe: true, state: 'needs', end: '<span class="dot owe"></span>' })}
+       ${row('moss', 'Found 2 flaky tests')}
+@@ -89,7 +94,7 @@
+   function session(o) {
+     const L = o.sidebar === 'open' ? 300 : 88;
+     const title = pill(`<span style="display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--fill-2);color:var(--icon)">${I('session')}</span>Fix the dock's half paint`, '');
+-    return frame(o, `${o.sidebar === 'open' ? sessionsOpen() : rail({ ...o, current: 'none' })}${chrome({ ...o, title })}
++    return frame(o, `${o.sidebar === 'open' ? sessionsOpen({ main: +o.main || 0 }) : rail({ ...o, current: 'none' })}${chrome({ ...o, title })}
+       <div class="main" style="left:${L}px"><div class="thread" style="padding-top:72px">
+         <div class="sep">Today 09:42</div>
+         <div class="b user sq">The dock loses its right half while the slab moves. Find why and fix it.</div>
+@@ -109,9 +114,9 @@
+       <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:${o.noDock ? 20 : 96}px">${composer({ ...o, placeholder: 'Describe the change' })}</div>
+       ${o.noDock ? '' : dockRow()}</div>`);
+   }
+-  function sessionsOpen() {
++  function sessionsOpen(o = {}) {
+     const r = (t, w, on, dot) => `<div class="sb-srow sq${on ? ' on' : ''}">${dot ? '<span class="dot run"></span>' : `<span style="width:8px"></span>`}<span class="grow ell">${t}</span><span class="xs dim mono">${w}</span></div>`;
+-    return `<aside class="side sb-open"><div class="row" style="justify-content:space-between;padding:0 6px 6px"><span class="seg"><span class="on">Sessions</span><span>Bots</span></span><span class="ib s">${I('plus')}</span></div>
++    return `<aside class="side sb-open${o.main ? ' has-main' : ''}">${o.main ? mainBot(o.main) : ''}<div class="row" style="justify-content:space-between;padding:0 6px 6px"><span class="seg"><span class="on">Sessions</span><span>Bots</span></span><span class="ib s">${I('plus')}</span></div>
+       <div class="sb-head">Today<span class="n">3</span></div>${r("Fix the dock's half paint", '09:42', true, true)}${r('Room mentions in every composer', '08:10')}${r('Store: de-duplicate items', '07:55')}
+       <div class="sb-head">Yesterday<span class="n">3</span></div>${r('Startup notice for Windows', 'mon')}${r('Hold to approve in the dock', 'mon')}${r('Archived bots group', 'sun')}
+       <div class="foot-ctl" style="flex-direction:row;justify-content:flex-end;padding:12px 6px 0"><span class="ib s">${I('store')}</span><span class="ib s">${I('gear')}</span></div></aside>`;
+@@ -119,13 +124,12 @@
+ 
+   /* 2. a bot's chat (kai), the rail, the activity line */
+   function botChat(o) {
+-    o = { ...o, noDock: true }; /* the Bots tab: no dock (owner, 23 Nov) */
+     const st = o.status || 'c';
+     const act = st === 'c' ? `<div class="activity">${orb('kai', 16, { state: 'working' })}<span class="shimmer">Reading the changelog</span></div>`
+       : st === 'a' ? `<div class="status-a" style="margin-top:12px;font-size:var(--fs-l)"><span class="dot run"></span>Reading the changelog</div>`
+       : `<div class="status-b" style="margin-top:12px;font-size:var(--fs-l);opacity:.55">Reading the changelog</div>`;
+     const title = pill(`${orb('kai', 24, { surface: 'var(--bg-3)' })}kai`, '', o.search === 'menu' || o.search === 'menu-off');
+-    return frame(o, `${o.sidebar === 'open' ? sidebarOpen({ current: 'kai', search: o.search }) : rail({ ...o, current: 'kai', kaiState: 'working' })}${chrome({ ...o, title, railW: o.tile === 'b' ? 64 : o.tile === 'c' ? 72 : 88 })}
++    return frame(o, `${o.sidebar === 'open' ? sidebarOpen({ current: 'kai', search: o.search, main: +o.main || 0 }) : rail({ ...o, current: 'kai', kaiState: 'working' })}${chrome({ ...o, title, railW: o.tile === 'b' ? 64 : o.tile === 'c' ? 72 : 88 })}
+       <div class="main" style="left:${o.sidebar === 'open' ? 300 : (o.tile === 'b' ? 64 : o.tile === 'c' ? 72 : 88)}px"><div class="thread" style="padding-top:72px">
+         <div class="sep">Today 10:05</div>
+         <div class="b user sq">Draft the release notes for 0.2.0 from what merged this week.</div>
+@@ -147,11 +151,10 @@
+ 
+   /* 3. a group room: bylines in the bot's colour, mention chips, a hand-off row, a message to you, who is replying */
+   function room(o) {
+-    o = { ...o, noDock: true }; /* the Bots tab: no dock (owner, 23 Nov) */
+     const L = o.sidebar === 'open' ? 300 : 88;
+     const title = pill(`${stack(['kai', 'nina', 'moss'], 24, { surface: 'var(--bg-3)' })}release crew`, '');
+     const by = (n) => `<div class="byline">${orb(n, 16, { still: true })}${nameIn(n)}</div>`;
+-    return frame(o, `${o.sidebar === 'open' ? sidebarOpen({ current: 'room' }) : rail({ ...o, current: 'none' })}${chrome({ ...o, title })}
++    return frame(o, `${o.sidebar === 'open' ? sidebarOpen({ current: 'room', main: +o.main || 0 }) : rail({ ...o, current: 'none' })}${chrome({ ...o, title })}
+       <div class="main" style="left:${L}px"><div class="thread" style="padding-top:72px">
+         <div class="sep">Today 11:20</div>
+         <div class="b user sq">${mention('kai')} write the notes, ${mention('nina')} ship 0.2.0 to staging when they're in.</div>
+@@ -176,7 +179,7 @@
+       <div class="set-head">Layout</div><div class="card sq">${sr('Show the dock', '<span class="switch on"></span>')}${sr('When the sidebar collapses', '<span class="seg"><span class="on">Rail</span><span>Hide</span></span>')}${sr('Rail size', '<span class="seg"><span class="on">Automatic</span><span>Standard</span><span>Compact</span></span>')}${sr('Show search', '<span class="switch on"></span>')}${sr('Search shows as', sel('A button'))}</div>
+       <div class="set-head">Under the composer</div><div class="card sq">${sr('Mode', chk(1))}${sr('Smart or the pinned model', chk(1))}${sr('Model', chk(0))}${sr('Cost against the cap', chk(1))}${sr('Context used', chk(0))}</div>
+       <div class="set-head">Appearance</div><div class="card sq">${sr('Theme', sel('Follow system'))}${sr('Accent', `<span class="select"><span style="width:12px;height:12px;border-radius:50%;background:var(--accent)"></span>Iris${I('chevron-down')}</span>`)}${sr('Corners', '<span class="seg"><span class="on">Standard</span><span>Rounder</span></span>')}</div>`;
+-    const bg = botChat({ ...o, noDock: true }); /* Settings over the Bots tab: no dock there (owner, 23 Nov) */
++    const bg = botChat({ ...o, noDock: false });
+     return bg.replace(/<\/div>$/, `<div class="scrim"></div><div class="dialog sq" style="left:${(1440 - 900) / 2}px;top:64px;width:900px;height:700px;display:flex">
+       <div class="setnav">${nav}</div><div class="setbody">${body}</div><span class="ib s d-close" style="background:transparent;box-shadow:none">${I('close')}</span></div></div>`);
+   }
+@@ -217,5 +220,5 @@
+       <div class="main" style="left:${L}px"><div style="position:absolute;inset:0;display:grid;place-items:center;padding-bottom:300px"><div class="col" style="align-items:center;gap:14px"><span class="l dim">What should change?</span>${composer({ ...o, placeholder: 'Describe the change', composerW: 620 })}</div></div></div>${d}`);
+   }
+ 
+-  window.SCREENS = { session, botChat, room, settings, store, dock: dockScreen, chrome, rail, sidebarOpen, composer, pill, frame, orb, stack, mention, nameIn, dockRow };
++  window.SCREENS = { mainBot, sessionsOpen, session, botChat, room, settings, store, dock: dockScreen, chrome, rail, sidebarOpen, composer, pill, frame, orb, stack, mention, nameIn, dockRow };
+ })();
+diff -ru ds-v7/src/sessiontab.js character/src/sessiontab.js
+--- ds-v7/src/sessiontab.js	2026-11-23 14:43:06.725609850 +0000
++++ character/src/sessiontab.js	2026-11-23 14:30:45.635913614 +0000
+@@ -33,7 +33,7 @@
+     const L = 300, R = ex.panelW || 0;
+     return S.frame(o, `${ex.side || inbox(ex)}${S.chrome({ ...o, sidebar: 'open', title: ex.title || title("Fix the dock's half paint", 'w32/dock-paint'), pane: !!R })}
+       <div class="main" style="left:${L}px;right:${R}px">${ex.mainInner || `<div class="thread sess" data-model="${ex.model || 'claude'}" style="padding-top:72px">${body}</div>`}
+-      <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:${ex.noDock ? 24 : 96}px">${ex.above || ''}${compHTML}</div>${ex.noDock ? '' : (ex.dock || S.dockRow())}</div>${ex.panel || ''}${ex.overlay || ''}`);
++      <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:${ex.noDock ? 24 : 96}px">${ex.above || ''}${compHTML}</div>${ex.noDock ? '' : S.dockRow()}</div>${ex.panel || ''}${ex.overlay || ''}`);
+   }
+ 
+   /* S1: the launch step (option A: the scale as one segmented track; option B: four rows) */

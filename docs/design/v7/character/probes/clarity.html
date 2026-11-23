@@ -1,0 +1,33 @@
+<!doctype html><html><meta charset="utf-8"><title>Orb clarity probe</title>
+<!-- Draws boopis's orbs as the app does (orb2's own element and shadow CSS, boopis's .ui-orb wrapper from
+     components.css:640-642, the dock's render:80 at size 40) at the sizes each surface uses, still, so that the stock
+     build and the snapped build can be compared pixel for pixel. ?lib=stock|snap  ?ladder=2 steps orb2's quality
+     ladder to its last level, as a slow frame run does. -->
+<style>
+  html, body { margin: 0; background: #0e0e0e; }
+  .ui-orb { --o: 20; position: relative; display: inline-block; flex: none; width: calc(var(--o) * 1px); height: calc(var(--o) * 1px); line-height: 0; vertical-align: middle; }
+  .ui-orb > orb-avatar { display: block; width: 100%; height: 100%; }
+  .ui-orb[data-render] > orb-avatar { position: absolute; left: 0; top: 0; width: calc(var(--r) * 1px); height: calc(var(--r) * 1px); transform-origin: 0 0; transform: scale(calc(var(--o) / var(--r))); }
+  #g { display: grid; grid-template-columns: repeat(10, 96px); gap: 0; padding: 0; }
+  .c { width: 96px; height: 96px; display: grid; place-items: center; background: #0e0e0e; }
+  .c.light { background: #f7f7f7; }
+</style>
+<body><div id="g"></div>
+<script>
+const q = Object.fromEntries(new URLSearchParams(location.search));
+const lib = q.lib === 'snap' ? 'lib/orb-avatar.snap.js' : q.lib === 'tuned' ? 'lib/orb-avatar.tuned.js' : 'lib/orb-avatar.min.js';
+/* surface, size, render (the dock draws at 80 and scales to 40) */
+const SURF = [['row', 20], ['gutter', 20], ['rail', 24], ['details', 28], ['grok-rail', 36], ['room', 40], ['dock', 40, 80], ['main-a', 44], ['main-b', 56], ['preview', 64]];
+const BOTS = [{ shape: 'squircle', color: '#f5f5f5', eye: '#0e0e0e', bg: '' }, { shape: 'flower', color: '#f472b6', eye: '#141418', bg: '' }, { shape: 'circle', color: '#1c1c24', eye: '#f5f5f5', bg: 'light' }];
+const s = document.createElement('script'); s.src = lib; s.onload = () => {
+  if (q.ladder) window.OrbAvatar.quality = +q.ladder;
+  const g = document.getElementById('g');
+  for (const b of BOTS) for (const [name, size, render] of SURF) {
+    const c = document.createElement('div'); c.className = 'c ' + b.bg; c.dataset.s = name; c.dataset.size = size;
+    c.innerHTML = `<span class="ui-orb"${render ? ' data-render' : ''} style="--o:${size}${render ? ';--r:' + render : ''}"><orb-avatar size="${render || size}" shape="${b.shape}" color="${b.color}" eye-color="${b.eye}" reaction="idle" idle-motion="off" mode="fixed"${q.fs ? ` face-scale="${q.fs}"` : ""} static></orb-avatar></span>`;
+    g.appendChild(c);
+  }
+  setTimeout(() => { document.body.dataset.ready = '1'; }, 600);
+};
+document.head.appendChild(s);
+</script></body></html>

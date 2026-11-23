@@ -1,0 +1,95 @@
+<!doctype html><html><meta charset="utf-8"><title>Orb stage</title>
+<!-- One half of a before/after clip. Loads the REAL orb2 build (?lib=stock: as boopis ships it; ?lib=tuned: the
+     clarity fixes and the tuning of ORBS.md) and writes the attributes boopis writes (components/orb.ts orbHtml:
+     idle-motion calm, mode drift; the room header lively, room.ts:110). ?plan=today drives the orbs only where boopis
+     does today; ?plan=more applies the "use them more" plan (ORBS.md, part 2) with orb2's own calls (lookAt, blink,
+     alive, face-scale). Math.random is seeded so both halves draw the same idle sequence. -->
+<style>
+  html, body { margin: 0; height: 100%; background: #0e0e0e; color: #e8e8e8; font: 13px/18px Inter, system-ui, sans-serif; overflow: hidden; }
+  .ui-orb { --o: 20; position: relative; display: inline-block; flex: none; width: calc(var(--o) * 1px); height: calc(var(--o) * 1px); line-height: 0; vertical-align: middle; }
+  .ui-orb > orb-avatar { display: block; width: 100%; height: 100%; }
+  .ui-orb[data-render] > orb-avatar { position: absolute; left: 0; top: 0; width: calc(var(--r) * 1px); height: calc(var(--r) * 1px); transform-origin: 0 0; transform: scale(calc(var(--o) / var(--r))); }
+  .tag { position: absolute; left: 16px; top: 12px; font-weight: 600; font-size: 14px; color: #fff; }
+  .tag small { display: block; font-weight: 400; color: #9a9a9a; font-size: 12px; }
+  .side { position: absolute; left: 0; top: 52px; bottom: 120px; width: 210px; background: #161616; padding: 10px 8px; box-sizing: border-box; }
+  .main-bot { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0 12px; }
+  .row { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 8px; border-radius: 10px; }
+  .row.on { background: #232323; }
+  .row b { font-weight: 500; } .row span { color: #9a9a9a; font-size: 12px; display: block; }
+  .room { position: absolute; left: 222px; right: 12px; top: 52px; bottom: 120px; }
+  .hdr { display: flex; align-items: center; gap: 10px; height: 52px; }
+  .msg { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0; opacity: 1; transition: opacity .3s; }
+  .msg .b { background: #1f1f1f; border-radius: 14px; padding: 7px 11px; max-width: 300px; }
+  .msg.you { justify-content: flex-end; } .msg.you .b { background: #2e2e2e; }
+  .msg.hidden { opacity: 0; }
+  .comp { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; border-radius: 20px; background: #1d1d1d; display: flex; align-items: center; padding: 0 16px; color: #8a8a8a; }
+  .comp.typing { color: #e8e8e8; }
+  .dock { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); background: #000; border-radius: 30px; height: 64px; padding: 0 18px; display: flex; align-items: center; gap: 14px; }
+  .big { position: absolute; display: flex; gap: 26px; align-items: center; left: 0; right: 0; justify-content: center; }
+  .cap { color: #8a8a8a; font-size: 12px; text-align: center; margin-top: 6px; }
+</style>
+<body><div id="r"></div>
+<script>
+const q = Object.fromEntries(new URLSearchParams(location.search));
+/* a seeded Math.random (mulberry32): the same idle sequence in both halves */
+let seed = 20261123; Math.random = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const LIB = { stock: 'lib/orb-avatar.min.js', snap: 'lib/orb-avatar.snap.js', tuned: 'lib/orb-avatar.tuned.js' }[q.lib || 'stock'];
+const MORE = q.plan === 'more';
+const LOOKS = { boopis: ['squircle', '#f5f5f5', '#0e0e0e'], kai: ['circle', '#4fc9a8', '#141418'], nina: ['triangle', '#f23b5a', '#141418'], moss: ['squircle', '#2fd26a', '#141418'], iris: ['flower', '#3b82f6', '#141418'], hex: ['hexagon', '#a6a6ab', '#141418'] };
+/* boopis's orbHtml, with its attributes; `fs` is orb2's face-scale (part 1, C4: 1.25 at 28 px and under, after) */
+const orb = (n, size, o = {}) => {
+  const [shape, color, eye] = LOOKS[n]; const render = o.render && o.render !== size ? o.render : null;
+  const fs = MORE && size <= 44 ? ' face-scale="1.25"' : '';
+  return `<span class="ui-orb"${render ? ' data-render' : ''} data-bot="${n}" style="--o:${size}${render ? ';--r:' + render : ''}"><orb-avatar size="${render || size}" shape="${shape}" color="${color}" eye-color="${eye}" reaction="${o.state || 'idle'}" idle-motion="${o.motion || 'calm'}" mode="drift"${fs}${o.attrs || ''} data-glance></orb-avatar></span>`;
+};
+const R = document.getElementById('r');
+function sceneIdle() {
+  R.innerHTML = `<div class="tag">${q.title || ''}<small>${q.sub || ''}</small></div>
+    <div class="big" style="top:150px">${['boopis', 'iris', 'kai'].map((n) => `<div><div>${orb(n, 112)}</div><div class="cap">${n}, 112 px</div></div>`).join('')}</div>
+    <div class="big" style="top:420px">${[20, 24, 28, 44].map((s) => `<div style="display:flex;flex-direction:column;align-items:center">${orb('boopis', s)}<div class="cap">${s} px</div></div>`).join('')}</div>
+    <div class="big" style="top:560px">${['kai', 'nina', 'moss', 'iris', 'hex'].map((n) => orb(n, 20)).join('')}</div>
+    <div class="cap" style="position:absolute;left:0;right:0;top:600px">sidebar rows at 20 px: calm idle, as boopis draws them</div>`;
+}
+function sceneAlive() {
+  const rows = [['kai', 'Writing the changelog'], ['nina', 'Waiting on the deploy'], ['moss', 'Found 2 flaky tests'], ['iris', 'Checked the composer'], ['hex', 'Asleep', 'sleeping']];
+  R.innerHTML = `<div class="tag">${q.title || ''}<small>${q.sub || ''}</small></div>
+  <div class="side">${MORE ? `<div class="main-bot">${orb('boopis', 44, { attrs: ' alive idle-time="9" sleep-after="0" emotes="curious winkswap slowblink"' })}<b style="font-weight:500">boopis</b></div>` : `<div class="row">${orb('boopis', 20)}<div><b>boopis</b><span>Summarised the morning</span></div></div>`}
+    ${rows.map(([n, a, st]) => `<div class="row${n === 'kai' ? ' on' : ''}">${orb(n, 20, { state: st })}<div><b>${n}</b><span>${a}</span></div></div>`).join('')}</div>
+  <div class="room"><div class="hdr">${orb('boopis', 40, { motion: 'lively' })}<b>release crew</b></div>
+    <div class="msg" id="m1">${orb('nina', 20)}<div class="b">staging is green, the deploy is ready</div></div>
+    <div class="msg you hidden" id="m2"><div class="b">ship it after the notes</div></div>
+    <div class="msg hidden" id="m3">${orb('kai', 20)}<div class="b">notes are in CHANGELOG.md, two sections</div></div>
+    <div class="msg" id="m4">${orb('moss', 20)}<div class="b">the flaky test is quarantined</div></div>
+    <div class="comp" id="comp">Message release crew</div></div>
+  <div class="dock">${['boopis', 'kai', 'nina', 'moss', 'iris', 'hex'].map((n) => MORE ? orb(n, 40, { state: n === 'hex' ? 'sleeping' : 'idle' }) : orb(n, 40, { render: 80, state: n === 'hex' ? 'sleeping' : 'idle' })).join('')}</div>`;
+}
+/* the timeline (seconds): the same events in both halves; `today` reacts only where boopis reacts today */
+const $ = (s) => document.querySelector(s);
+const ctr = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+const capLook = (o, px, py, k) => { const [cx, cy] = ctr(o); let vx = (px - cx) * k, vy = (py - cy) * k; const max = 0.3 * Math.max(250, o.getBoundingClientRect().width * 1.65), l = Math.hypot(vx, vy); if (l > max) { vx *= max / l; vy *= max / l; } o.lookAt(cx + vx, cy + vy); };   /* bots/orbs.ts gentleFollow + capLook */
+const O = (n, scope = document) => scope.querySelector(`.ui-orb[data-bot="${n}"] > orb-avatar`);
+const at = (s, f) => setTimeout(f, s * 1000);
+function timeline() {
+  if (q.scene !== 'alive') return;
+  const presence = $('.hdr orb-avatar'), comp = $('#comp'), dockOrbs = [...document.querySelectorAll('.dock orb-avatar')];
+  const gutter = () => [...document.querySelectorAll('.msg:not(.hidden) orb-avatar')];
+  const mainBot = $('.side orb-avatar');
+  /* 1.0 s: you start typing. Today: the presence orb holds a look at the composer (room.ts:408) and turns listening */
+  at(1.0, () => { comp.classList.add('typing'); comp.textContent = 'ship it after the notes'; presence.setAttribute('reaction', 'listening'); capLook(presence, ...ctr(comp), .45);
+    if (MORE) { for (const o of gutter()) capLook(o, ...ctr(comp), .45); for (const o of dockOrbs.slice(0, 5)) capLook(o, ...ctr(comp), .3); capLook(mainBot, ...ctr(comp), .45); } });
+  /* 2.6 s: sent */
+  at(2.6, () => { comp.classList.remove('typing'); comp.textContent = 'Message release crew'; $('#m2').classList.remove('hidden'); presence.setAttribute('reaction', 'idle'); presence.lookAt();
+    if (MORE) { for (const o of [...gutter(), ...dockOrbs, mainBot]) o.lookAt(); } });
+  /* 4.0 s: kai answers. Today: the presence orb glances at the new message for 1.2 s (room.ts:223) */
+  at(4.0, () => { const m = $('#m3'); m.classList.remove('hidden'); const p = ctr(m.querySelector('.b')); capLook(presence, p[0], p[1], .45); at(1.2, () => presence.lookAt());
+    if (MORE) { const k = O('kai', m); k.blink(); for (const o of gutter()) if (o !== k) { capLook(o, p[0], p[1], .45); at(1.2, () => o.lookAt()); }
+      const kr = O('kai', $('.side')); kr.blink(); const kd = dockOrbs[1]; kd.blink(); capLook(mainBot, p[0], p[1], .45); at(1.2, () => mainBot.lookAt()); } });
+  /* 6.0 s: nina needs you (a state change: both) */
+  at(6.0, () => { for (const o of document.querySelectorAll('.ui-orb[data-bot="nina"] > orb-avatar')) o.setAttribute('reaction', 'needs'); if (MORE) { const n = $('#m1 orb-avatar'); for (const o of gutter()) if (o !== n) { capLook(o, ...ctr(n), .45); at(1.0, () => o.lookAt()); } } });
+  /* 7.5 s: the pointer rests on the main bot (hover: listening + lookAt, bots/orbs.ts:42) */
+  at(7.5, () => { mainBot.setAttribute('reaction', 'listening'); const [x, y] = ctr(mainBot); mainBot.lookAt(x + 40, y + 30); });
+  at(9.0, () => { mainBot.setAttribute('reaction', 'idle'); mainBot.lookAt(); });
+}
+const s = document.createElement('script'); s.src = LIB; s.onload = () => { (q.scene === 'alive' ? sceneAlive : sceneIdle)(); document.body.dataset.ready = '1'; window.go = timeline; };
+document.head.appendChild(s);
+</script></body></html>

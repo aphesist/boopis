@@ -1,0 +1,12 @@
+<!doctype html><html><meta charset="utf-8"><title>Orb before and after</title>
+<!-- 1280 x 800: today on the left, proposed on the right, the same seeded run. ?scene=idle|alive -->
+<style>html,body{margin:0;background:#000}iframe{border:0;width:639px;height:800px;float:left}iframe+iframe{margin-left:2px}</style>
+<body><script>
+const q = Object.fromEntries(new URLSearchParams(location.search)), sc = q.scene || 'idle';
+const T = { idle: ['Today: orb2 as boopis ships it', 'calm idle, float and breath at every size, 0.155 s blink', 'Proposed: tuned orb2 (T1-T5), snapped canvas, face-scale 1.25', 'glance and return, a held pose, no float under 44 px, 0.2 s blink'],
+            alive: ['Today: where boopis drives the orbs', 'only the room presence looks; dock drawn at 80 and scaled', 'Proposed: the existing behaviours used more', 'everyone looks at the composer and the new message; main bot 44 px, alive'] }[sc];
+const u = (lib, plan, t, s) => `stage.html?scene=${sc}&lib=${lib}&plan=${plan}&title=${encodeURIComponent(t)}&sub=${encodeURIComponent(s)}`;
+document.body.innerHTML = `<iframe src="${u('stock', 'today', T[0], T[1])}"></iframe><iframe src="${u('tuned', 'more', T[2], T[3])}"></iframe>`;
+window.go = () => { for (const f of document.querySelectorAll('iframe')) f.contentWindow.go(); };
+window.ready = () => [...document.querySelectorAll('iframe')].every((f) => f.contentDocument && f.contentDocument.body && f.contentDocument.body.dataset.ready);
+</script></body></html>

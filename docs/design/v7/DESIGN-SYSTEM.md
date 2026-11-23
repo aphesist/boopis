@@ -656,3 +656,12 @@ Tokens (`tokens.v7.json`); the three-step type and alpha hierarchy; R-corner-1 t
 | well, Terminal | Well | none |
 | composer line items, launch row, settings select | SelectorItem | none |
 | orb, brand tile, OrbStack | Avatar | none |
+
+## 23. The orbs: clarity, motion, the main bot
+
+The bots are not redesigned. `character/ORBS.md` measures why our orbs read less clearly than Grok-Bot's: the canvas is
+resampled at every size, the quality ladder lowers its dpr, the dock draws at 2x and scales, the eyes are small, and
+the float swims at small sizes. It gives the fix list per repo (orb2 and boopis, file:line), proven in `K01-clarity.jpg`.
+It reviews Grok-Bot's states against orb2's, with tuned parameters (T1-T5) and a plan to use the existing behaviours on
+more surfaces (`anim-*-before-after.mp4`). It also sets boopis's size at the top of the open sidebar (`K02-main-bot.jpg`,
+recommended: 44 px). The probe pages in `character/probes/` drive the real orb2 code.
