@@ -150,3 +150,6 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - Defaults kept (no objection): rewind journaled and not gated; session approvals expire at 300 s into the ask card;
   worktrees outside the repo in a managed root; one metadata store in the profile home; GitHub first; settle on merge
   or 7 idle days, never deleting local changes.
+- Owner (spec questions): switching among Supervised / Auto-accept edits / Auto happens in place (same engine
+  session); only crossing to/from Full access, or a workspace/toolset change, continues on a new engine session.
+  Without a trusted gate command a project offers only Supervised and Full access.
