@@ -200,6 +200,17 @@ pub async fn boards(sup: &Supervisor) -> Result<Vec<Board>> {
     parse_boards(&ask(sup, &["kanban", "boards", "list", "--all", "--json"]).await?)
 }
 
+/// How many tasks are running on the boards that are not put away. Each is a worker the engine's dispatcher started: a
+/// separate `hermes` process, which the gateway does not count among its own work (`hermes::control::active_work`).
+#[must_use]
+pub fn running(boards: &[Board]) -> u32 {
+    boards
+        .iter()
+        .filter(|b| !b.archived)
+        .map(|b| b.counts.get("running").copied().unwrap_or(0))
+        .sum()
+}
+
 /// One board with its tasks.
 ///
 /// # Errors
@@ -220,6 +231,17 @@ pub async fn view(sup: &Supervisor, slug: &str) -> Result<View> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_running_workers_are_the_running_tasks_of_the_boards_in_use() {
+        let b = parse_boards(r#"[{"slug":"default","counts":{"running":1,"todo":2}},{"slug":"paper-past","counts":{"running":2,"done":4}},{"slug":"old","archived":true,"counts":{"running":5}},{"slug":"empty"}]"#).unwrap();
+        assert_eq!(
+            running(&b),
+            3,
+            "an archived board's leftovers are no worker"
+        );
+        assert_eq!(running(&[]), 0);
+    }
 
     #[test]
     fn boards_are_read_with_their_counts() {

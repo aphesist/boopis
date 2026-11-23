@@ -270,6 +270,17 @@ impl Supervisor {
     /// # Errors
     /// As [`Supervisor::ensure`].
     pub async fn restart(&self, home: &Path, interrupt: bool) -> Result<EndpointInfo> {
+        self.stop(home, interrupt).await?;
+        self.ensure(home).await
+    }
+
+    /// Stop the gateway of `home` if one runs and wait, bounded by `Limits::gateway_stop_wait`, until nothing answers on its
+    /// control socket; the next [`Supervisor::ensure`] then starts a fresh one. `interrupt` passes `--yes`, which ends live
+    /// work; without it a gateway with live work is left alone (`hx.connectors.busy`). `true` when nothing answers any more.
+    ///
+    /// # Errors
+    /// `hx.connectors.busy` as above; what [`Supervisor::info`] returns.
+    pub async fn stop(&self, home: &Path, interrupt: bool) -> Result<bool> {
         let info = self.info().await?;
         // It fails when no gateway runs, which is fine: `ensure` then starts one. Without `--yes` Hermes itself refuses to stop
         // a gateway that has live work (a turn, a cron job, a delegation), which is the host's safety net for a restart it
@@ -297,7 +308,7 @@ impl Supervisor {
         if let Ok(mut done) = self.ensured.lock() {
             done.remove(home);
         }
-        self.ensure(home).await
+        Ok(control::identify(home).await.is_err())
     }
 
     /// Run [`Supervisor::ensure`] unless it is not needed: it already succeeded for `home` in this run, or the running

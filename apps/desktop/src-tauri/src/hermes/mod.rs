@@ -4,6 +4,7 @@ pub mod attach;
 pub mod cli;
 pub mod control;
 pub mod discover;
+pub mod idle;
 pub mod install;
 pub mod lifecycle;
 

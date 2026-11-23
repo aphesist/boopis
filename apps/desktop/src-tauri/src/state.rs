@@ -23,6 +23,7 @@ pub type HubCreated = Arc<dyn Fn(&str, &Arc<Hub>) + Send + Sync>;
 /// The proxies and the connection index.
 pub struct Hubs {
     observer: Option<HubObserver>,
+    gate: Option<crate::endpoint::Gate>,
     created: Option<HubCreated>,
     supervisor: Arc<Supervisor>,
     limits: Limits,
@@ -38,6 +39,7 @@ impl Hubs {
     pub fn new(supervisor: Arc<Supervisor>, limits: Limits, emitter: StatusEmitter) -> Self {
         Self {
             observer: None,
+            gate: None,
             created: None,
             supervisor,
             limits,
@@ -52,6 +54,13 @@ impl Hubs {
     #[must_use]
     pub fn with_observer(mut self, observer: HubObserver) -> Self {
         self.observer = Some(observer);
+        self
+    }
+
+    /// Make every proxy's link wait at `gate` before it dials (the host closes it while it replaces the gateway's code).
+    #[must_use]
+    pub fn with_gate(mut self, gate: crate::endpoint::Gate) -> Self {
+        self.gate = Some(gate);
         self
     }
 
@@ -82,6 +91,10 @@ impl Hubs {
             profile: (key != "default").then(|| key.clone()),
         }
         .build(&self.supervisor, &self.limits)?;
+        let endpoint: Arc<dyn crate::endpoint::Endpoint> = match &self.gate {
+            Some(gate) => Arc::new(crate::endpoint::Gated::new(endpoint, gate.clone())),
+            None => endpoint,
+        };
         // The free tier works only for a client Hermes counts as its Desktop (a declaration on this link), so the link
         // makes it when, and only when, the user chose the free tier: asked again on every dial.
         let home = self

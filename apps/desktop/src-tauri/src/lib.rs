@@ -50,13 +50,16 @@ use std::sync::Arc;
 use tauri::Manager;
 use tauri_specta::{Builder, Event, collect_commands, collect_events};
 
-use commands::{AppState, ConnectionStateEvent, FileDragEvent, WindowStateEvent};
+use commands::{
+    AppState, ConnectionStateEvent, EngineUpdateEvent, FileDragEvent, WindowStateEvent,
+};
 
 /// Where the generated TypeScript bindings live, relative to this crate.
 pub const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../ui/src/host/bindings.ts");
 
 /// The command and event registry, shared by the app and the bindings export.
 #[must_use]
+#[allow(clippy::too_many_lines)] // the registry: one line per command and per event
 pub fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
@@ -156,6 +159,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             providers::ProviderSigninEvent,
             WindowStateEvent,
             FileDragEvent,
+            EngineUpdateEvent,
             commands::ConnectorRestartEvent
         ])
 }
@@ -347,6 +351,11 @@ pub fn run() {
         tracing::warn!(error = %e, "could not refresh the TypeScript bindings");
     }
     let result = tauri::Builder::default()
+        // First of all (B28): a second launch hands its arguments to the running app and exits while Tauri builds it, before
+        // any window, link or file of its own exists; the running app shows its window and nothing restarts.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            bring_forward(app);
+        }))
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
@@ -577,12 +586,14 @@ pub fn run() {
             let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
             let local_api = local_api::LocalApi::new(app.handle().clone(), app_data, &limits.api);
             let api_feed = local_api.feed().clone();
+            let update_gate = endpoint::Gate::default();
             app.manage(AppState {
                 local_api: local_api.clone(),
                 chatgpt,
                 copilot,
                 xai,
                 hubs: state::Hubs::new(supervisor.clone(), limits.clone(), emitter)
+                    .with_gate(update_gate.clone())
                     .with_observer(observer)
                     .with_created(Arc::new(move |profile, hub| local_api::forward(&api_feed, profile, hub))),
                 supervisor: supervisor.clone(),
@@ -599,6 +610,8 @@ pub fn run() {
                     resource_dir.as_deref(),
                     exe.as_deref().and_then(std::path::Path::parent),
                 ),
+                update_gate,
+                updating: std::sync::atomic::AtomicBool::new(false),
             });
             tauri::async_runtime::spawn(async move { local_api.start().await });
             // The plugin's door to the keychain. A failure (no socket support, another host running) is logged and
@@ -630,6 +643,28 @@ pub fn run() {
         Err(e) => {
             tracing::error!(error = %e, "the app failed to start");
             std::process::exit(1);
+        }
+    }
+}
+
+/// boopis was launched again while it runs (the desktop launcher, `panacea-ctl open boopis`): its window comes forward instead
+/// of a second app starting. A second app used to start its own Local API, and then the first one's shutdown deleted the new
+/// one's endpoint and token files (B28). The second launch's arguments are not acted on: a command (`boopis doctor`,
+/// `boopis bots ...`) never gets this far (`cli::dispatch` runs it and exits before the app is built), and the engine choice
+/// (`--engine`) is the running app's.
+fn bring_forward(app: &tauri::AppHandle) {
+    let Some(window) = app.get_webview_window("main") else {
+        tracing::info!("boopis was launched again, and has no main window to show");
+        return;
+    };
+    tracing::info!("boopis was launched again; showing the running window");
+    for (what, done) in [
+        ("unminimize", window.unminimize()),
+        ("show", window.show()),
+        ("focus", window.set_focus()),
+    ] {
+        if let Err(e) = done {
+            tracing::debug!(error = %e, what, "could not bring the window forward");
         }
     }
 }

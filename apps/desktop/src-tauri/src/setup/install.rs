@@ -1,8 +1,11 @@
 //! Putting the bundled plugin and `hx` where Hermes and the plugin find them (`docs/ARCHITECTURE.md` section 4).
 //!
 //! The plugin is a *copy* in `<home>/plugins/boopis/` (the app image is read-only and its path changes on every
-//! launch), versioned by its `plugin.yaml`. An upgrade replaces the directory in place: the user's settings live in
-//! `config.yaml`, not here, so nothing of theirs is touched. `hx` goes to `<home>/boopis/bin/hx`, a path that stays.
+//! launch). A copy is current when its **content** is the bundle's ([`tree_digest`]): `plugin.yaml`'s `version` names the
+//! manifest, not the code, and it stayed `0.1.0` through every release, so an upgrade that compared versions never
+//! replaced the engine's copy (B27). An upgrade replaces the directory in one step (built beside it, then swapped in with
+//! one rename): the user's settings live in `config.yaml`, not here, so nothing of theirs is touched. `hx` goes to
+//! `<home>/boopis/bin/hx`, a path that stays, and is replaced the same way when its bytes differ.
 
 use std::path::{Path, PathBuf};
 
@@ -60,30 +63,181 @@ const SKIP_DIRS: &[&str] = &[
     ".mypy_cache",
 ];
 
+/// What of a directory entry a copy takes: a directory unless it is a cache or the tests, a regular file unless it is
+/// bytecode. Links and anything else are never copied. One rule for [`copy_tree`] and [`tree_digest`], so the digest of a
+/// copy is the digest of its bundle.
+fn kept(name: &str, kind: std::fs::FileType) -> Option<bool> {
+    if kind.is_dir() {
+        (!SKIP_DIRS.contains(&name)).then_some(true)
+    } else if kind.is_file() {
+        let bytecode = Path::new(name)
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("pyc"));
+        (!bytecode).then_some(false)
+    } else {
+        None
+    }
+}
+
 fn copy_tree(from: &Path, to: &Path) -> std::io::Result<()> {
     std::fs::create_dir_all(to)?;
     for entry in std::fs::read_dir(from)? {
         let entry = entry?;
         let name = entry.file_name();
-        let name_s = name.to_string_lossy();
-        let kind = entry.file_type()?;
-        if kind.is_dir() {
-            if !SKIP_DIRS.contains(&name_s.as_ref()) {
-                copy_tree(&entry.path(), &to.join(&name))?;
+        match kept(&name.to_string_lossy(), entry.file_type()?) {
+            Some(true) => copy_tree(&entry.path(), &to.join(&name))?,
+            Some(false) => {
+                std::fs::copy(entry.path(), to.join(&name))?;
             }
-        } else if kind.is_file() && !name_s.ends_with(".pyc") {
-            std::fs::copy(entry.path(), to.join(&name))?;
+            None => {}
         }
     }
     Ok(())
 }
 
+/// The SHA-256 of a plugin tree as [`copy_tree`] copies it: every kept directory and file by its path relative to `dir`
+/// (`/`-separated, in sorted order), and every file's bytes. Caches, tests and bytecode are not part of it, so the copy in a
+/// profile and the bundle it came from have the same digest, whatever Python wrote beside either.
+///
+/// # Errors
+/// The I/O error of a directory or file that cannot be read.
+pub fn tree_digest(dir: &Path) -> std::io::Result<String> {
+    fn walk(
+        dir: &Path,
+        rel: &str,
+        out: &mut Vec<(String, Option<PathBuf>)>,
+    ) -> std::io::Result<()> {
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let path = if rel.is_empty() {
+                name.clone()
+            } else {
+                format!("{rel}/{name}")
+            };
+            match kept(&name, entry.file_type()?) {
+                Some(true) => {
+                    out.push((path.clone(), None));
+                    walk(&entry.path(), &path, out)?;
+                }
+                Some(false) => out.push((path, Some(entry.path()))),
+                None => {}
+            }
+        }
+        Ok(())
+    }
+    let mut entries = Vec::new();
+    walk(dir, "", &mut entries)?;
+    entries.sort_by(|a, b| a.0.cmp(&b.0));
+    let mut hash = Sha256::new();
+    for (rel, file) in &entries {
+        // `d` or `f`, the path, a NUL (no path holds one), then a file's length and bytes: no two trees hash alike
+        hash.update(if file.is_some() { b"f" } else { b"d" });
+        hash.update(rel.as_bytes());
+        hash.update([0]);
+        if let Some(file) = file {
+            let bytes = std::fs::read(file)?;
+            hash.update((bytes.len() as u64).to_le_bytes());
+            hash.update(&bytes);
+        }
+    }
+    Ok(hex::encode(hash.finalize()))
+}
+
+/// Whether `target` is a copy of `bundle_dir` as setup makes it: a real directory (not a link) with the plugin's
+/// `__init__.py`, whose [`tree_digest`] is the bundle's. Anything that cannot be read is not current.
+#[must_use]
+pub fn is_current(bundle_dir: &Path, target: &Path) -> bool {
+    let real_dir = std::fs::symlink_metadata(target).is_ok_and(|m| m.is_dir());
+    if !real_dir || !target.join("__init__.py").is_file() {
+        return false;
+    }
+    match (tree_digest(bundle_dir), tree_digest(target)) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => false,
+    }
+}
+
+/// Whether [`install_named`] would write `<home>/plugins/<name>/` from `bundle_dir` (setup stops the gateway first, so no
+/// process runs a mix of the old modules and the new).
+#[must_use]
+pub fn needs_install(bundle_dir: &Path, home: &Path, name: &str) -> bool {
+    !is_current(bundle_dir, &super::ops::plugins_dir(home).join(name))
+}
+
+/// Swap two directory entries in one step (Linux `renameat2` with `RENAME_EXCHANGE`), so a reader of either path sees the
+/// old tree or the new one, never neither. `Ok(false)` where the kernel or the filesystem cannot (the caller then swaps
+/// with two renames).
+#[cfg(target_os = "linux")]
+#[allow(unsafe_code)] // renameat2 has no std wrapper; both arguments are NUL-terminated strings that outlive the call
+fn exchange(a: &Path, b: &Path) -> std::io::Result<bool> {
+    use std::os::unix::ffi::OsStrExt as _;
+    let a = std::ffi::CString::new(a.as_os_str().as_bytes())?;
+    let b = std::ffi::CString::new(b.as_os_str().as_bytes())?;
+    // SAFETY: both pointers are valid C strings for the whole call; renameat2 reads them and keeps nothing.
+    let done = unsafe {
+        libc::renameat2(
+            libc::AT_FDCWD,
+            a.as_ptr(),
+            libc::AT_FDCWD,
+            b.as_ptr(),
+            libc::RENAME_EXCHANGE,
+        )
+    };
+    if done == 0 {
+        return Ok(true);
+    }
+    let e = std::io::Error::last_os_error();
+    match e.raw_os_error() {
+        Some(libc::EINVAL | libc::ENOSYS | libc::EOPNOTSUPP) => Ok(false),
+        _ => Err(e),
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn exchange(_a: &Path, _b: &Path) -> std::io::Result<bool> {
+    Ok(false)
+}
+
+/// Put the tree at `fresh` where `target` is: one atomic exchange where the OS has one, else move the old aside and the
+/// new in (putting the old back if the second rename fails). The old tree is removed afterwards; nothing is left beside.
+fn swap_in(fresh: &Path, target: &Path, old: &Path) -> Result<()> {
+    if std::fs::symlink_metadata(target).is_err() {
+        std::fs::rename(fresh, target)
+            .map_err(|e| Error::Config(format!("installing the plugin failed: {e}")))?;
+        return Ok(());
+    }
+    if exchange(fresh, target)
+        .map_err(|e| Error::Config(format!("installing the plugin failed: {e}")))?
+    {
+        // `fresh` now holds the old tree
+        let _ = remove_entry(fresh);
+        return Ok(());
+    }
+    std::fs::rename(target, old)?;
+    if let Err(e) = std::fs::rename(fresh, target) {
+        let _ = std::fs::rename(old, target); // put the old one back
+        return Err(Error::Config(format!("installing the plugin failed: {e}")));
+    }
+    let _ = remove_entry(old);
+    Ok(())
+}
+
+/// Remove a directory with its contents, or a link or file as itself (never what a link points at).
+fn remove_entry(path: &Path) -> std::io::Result<()> {
+    if std::fs::symlink_metadata(path)?.is_dir() {
+        std::fs::remove_dir_all(path)
+    } else {
+        std::fs::remove_file(path)
+    }
+}
+
 /// What `install_plugin` did.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Installed {
-    /// The same version was already there.
+    /// The copy in the profile already had the bundle's content (its version is given).
     Current(String),
-    /// Copied: a first install (`from: None`) or an upgrade.
+    /// Copied: a first install (`from: None`), or a copy whose content differed (an upgrade, even at the same version).
     Written {
         /// The version that was there.
         from: Option<String>,
@@ -92,7 +246,7 @@ pub enum Installed {
     },
 }
 
-/// Copy the bundled plugin into `<home>/plugins/boopis/` unless the same version is already there.
+/// Copy the bundled plugin into `<home>/plugins/boopis/` unless a copy with the same content is already there.
 ///
 /// # Errors
 /// `Config` (`hx.setup.plugin_install_failed`) when the copy fails; the old directory is then put back.
@@ -100,9 +254,10 @@ pub fn install_plugin(bundle_dir: &Path, home: &Path) -> Result<Installed> {
     install_named(bundle_dir, home, "boopis")
 }
 
-/// Copy a plugin the app carries into `<home>/plugins/<name>/` unless the same version is already there: the boopis plugin,
-/// and the Claude subscription plugin boopis's runtime carries (ADR-0030). The same swap for both: copy beside, rename, put
-/// the old one back on failure.
+/// Copy a plugin the app carries into `<home>/plugins/<name>/` unless a copy with the same content ([`is_current`]) is
+/// already there: the boopis plugin, the plugins boopis's runtime carries (ADR-0030), and a bot's own copy where links are
+/// not made (`bots::links`). The same swap for all: build the copy beside the target, swap it in with one rename, remove
+/// the old tree; on failure the old one stays (or is put back).
 ///
 /// # Errors
 /// `Config` when the copy fails; the old directory is then put back.
@@ -110,30 +265,25 @@ pub fn install_named(bundle_dir: &Path, home: &Path, name: &str) -> Result<Insta
     let to = plugin_version(bundle_dir)
         .ok_or_else(|| Error::Config(format!("the bundled {name} plugin has no version")))?;
     let target = super::ops::plugins_dir(home).join(name);
-    let from = plugin_version(&target);
-    if from.as_deref() == Some(to.as_str()) && target.join("__init__.py").is_file() {
+    if is_current(bundle_dir, &target) {
         return Ok(Installed::Current(to));
     }
+    let from = plugin_version(&target);
     let parent = target
         .parent()
         .ok_or_else(|| Error::Io("no plugins dir".into()))?;
     std::fs::create_dir_all(parent)?;
     let fresh = parent.join(format!(".{name}.new"));
     let old = parent.join(format!(".{name}.old"));
-    let _ = std::fs::remove_dir_all(&fresh);
-    let _ = std::fs::remove_dir_all(&old);
+    let _ = remove_entry(&fresh);
+    let _ = remove_entry(&old);
     copy_tree(bundle_dir, &fresh).map_err(|e| {
         let _ = std::fs::remove_dir_all(&fresh);
         Error::Config(format!("copying the plugin failed: {e}"))
     })?;
-    if target.exists() {
-        std::fs::rename(&target, &old)?;
-    }
-    if let Err(e) = std::fs::rename(&fresh, &target) {
-        let _ = std::fs::rename(&old, &target); // put the old one back
-        return Err(Error::Config(format!("installing the plugin failed: {e}")));
-    }
-    let _ = std::fs::remove_dir_all(&old);
+    swap_in(&fresh, &target, &old).inspect_err(|_| {
+        let _ = remove_entry(&fresh);
+    })?;
     Ok(Installed::Written { from, to })
 }
 
@@ -141,24 +291,47 @@ pub fn install_named(bundle_dir: &Path, home: &Path, name: &str) -> Result<Insta
 /// by.
 pub const RUNTIME_PLUGINS: &str = "plugins";
 
+/// The plugins the unpacked runtime at `root` carries, as `(name, directory)`, in name order. A runtime that carries none
+/// (an older build) has none.
+///
+/// # Errors
+/// `Io` when the runtime's plugin folder exists but cannot be listed.
+fn runtime_plugins(root: &Path) -> Result<Vec<(String, PathBuf)>> {
+    let Ok(entries) = std::fs::read_dir(root.join(RUNTIME_PLUGINS)) else {
+        return Ok(Vec::new());
+    };
+    let mut out = Vec::new();
+    for entry in entries {
+        let entry = entry?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if entry.file_type()?.is_dir() && !name.starts_with('.') && name != "boopis" {
+            out.push((name, entry.path()));
+        }
+    }
+    out.sort();
+    Ok(out)
+}
+
+/// The plugins the runtime at `root` carries whose copy in the profile at `home` is missing or differs from it.
+#[must_use]
+pub fn runtime_plugins_pending(root: &Path, home: &Path) -> Vec<String> {
+    runtime_plugins(root)
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|(name, dir)| needs_install(dir, home, name))
+        .map(|(name, _)| name)
+        .collect()
+}
+
 /// Copy every plugin the unpacked runtime at `root` carries into the profile at `home`. True when one was written (the
 /// gateway then restarts to load it). A runtime that carries none (an older build) is not an error.
 ///
 /// # Errors
 /// `Config` or `Io` when a copy fails.
 pub fn install_runtime_plugins(root: &Path, home: &Path) -> Result<bool> {
-    let dir = root.join(RUNTIME_PLUGINS);
-    let Ok(entries) = std::fs::read_dir(&dir) else {
-        return Ok(false);
-    };
     let mut changed = false;
-    for entry in entries {
-        let entry = entry?;
-        let name = entry.file_name().to_string_lossy().into_owned();
-        if !entry.file_type()?.is_dir() || name.starts_with('.') || name == "boopis" {
-            continue;
-        }
-        let written = install_named(&entry.path(), home, &name)?;
+    for (name, dir) in runtime_plugins(root)? {
+        let written = install_named(&dir, home, &name)?;
         if let Installed::Written { from, to } = &written {
             tracing::info!(plugin = %name, ?from, %to, "placed a plugin the runtime carries");
         }
@@ -167,8 +340,32 @@ pub fn install_runtime_plugins(root: &Path, home: &Path) -> Result<bool> {
     Ok(changed)
 }
 
-fn digest(p: &Path) -> Option<String> {
-    Some(hex::encode(Sha256::digest(std::fs::read(p).ok()?)))
+/// Whether two files hold the same bytes: the sizes, then the contents a block at a time, stopping at the first difference.
+/// Cheaper than hashing both, which matters because `Setup::check` asks it at every start, before the window is drawn.
+fn same_bytes(a: &Path, b: &Path) -> std::io::Result<bool> {
+    use std::io::Read as _;
+    if std::fs::metadata(a)?.len() != std::fs::metadata(b)?.len() {
+        return Ok(false);
+    }
+    let (mut fa, mut fb) = (std::fs::File::open(a)?, std::fs::File::open(b)?);
+    let (mut ba, mut bb) = (vec![0u8; 1 << 16], vec![0u8; 1 << 16]);
+    loop {
+        let n = fa.read(&mut ba)?;
+        if n == 0 {
+            return Ok(true);
+        }
+        fb.read_exact(&mut bb[..n])?;
+        if ba[..n] != bb[..n] {
+            return Ok(false);
+        }
+    }
+}
+
+/// Whether the `hx` at its stable place differs from the bundled one (or is missing, or either cannot be read):
+/// [`place_hx`] would write it.
+#[must_use]
+pub fn hx_differs(bundled: &Path, home: &Path) -> bool {
+    !same_bytes(bundled, &hx_target(home)).unwrap_or(false)
 }
 
 /// Where the plugin finds `hx` (`hx_path`).
@@ -185,7 +382,7 @@ pub fn hx_target(home: &Path) -> PathBuf {
 /// `Io` when the copy fails.
 pub fn place_hx(bundled: &Path, home: &Path) -> Result<bool> {
     let target = hx_target(home);
-    if digest(bundled).is_some() && digest(bundled) == digest(&target) {
+    if !hx_differs(bundled, home) {
         return Ok(false);
     }
     let dir = target
@@ -256,6 +453,135 @@ mod tests {
         assert!(!target.parent().unwrap().join(".boopis.old").exists());
     }
 
+    /// B27: `plugin.yaml` said `0.1.0` in every release, so a version check kept the 0.1.7 code on every upgraded machine.
+    #[test]
+    fn a_copy_at_the_same_version_with_other_code_is_replaced() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (b, home) = (tmp.path().join("bundle"), tmp.path().join("home"));
+        bundle(&b, "0.1.0");
+        install_plugin(&b, &home).unwrap();
+        let target = home.join("plugins").join("boopis");
+        // the next release: same manifest version, a changed module and a new one (0.1.9's bots/guides.py)
+        std::fs::write(b.join("__init__.py"), "V = 'new code'\n").unwrap();
+        std::fs::create_dir_all(b.join("bots")).unwrap();
+        std::fs::write(
+            b.join("bots").join("guides.py"),
+            "NAME = 'boopis-handoffs'\n",
+        )
+        .unwrap();
+        assert!(needs_install(&b, &home, "boopis"));
+        assert_eq!(
+            install_plugin(&b, &home).unwrap(),
+            Installed::Written {
+                from: Some("0.1.0".into()),
+                to: "0.1.0".into()
+            }
+        );
+        assert_eq!(
+            std::fs::read_to_string(target.join("__init__.py")).unwrap(),
+            "V = 'new code'\n"
+        );
+        assert!(target.join("bots").join("guides.py").is_file());
+        assert_eq!(tree_digest(&b).unwrap(), tree_digest(&target).unwrap());
+        assert!(!needs_install(&b, &home, "boopis"));
+        assert_eq!(
+            install_plugin(&b, &home).unwrap(),
+            Installed::Current("0.1.0".into())
+        );
+        let left: Vec<_> = std::fs::read_dir(home.join("plugins"))
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(left, ["boopis"], "nothing is left beside the plugin");
+    }
+
+    #[test]
+    fn caches_tests_and_bytecode_are_not_part_of_the_content() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (b, home) = (tmp.path().join("bundle"), tmp.path().join("home"));
+        bundle(&b, "0.1.0"); // carries tests/ and __pycache__/, which are not copied
+        install_plugin(&b, &home).unwrap();
+        let target = home.join("plugins").join("boopis");
+        // what an engine run writes beside the copy (bytecode next to the sources) does not make it stale
+        std::fs::create_dir_all(target.join("__pycache__")).unwrap();
+        std::fs::write(target.join("__pycache__").join("x.cpython-314.pyc"), "b").unwrap();
+        std::fs::write(target.join("y.pyc"), "b").unwrap();
+        assert!(is_current(&b, &target));
+        // but anything else is
+        std::fs::write(target.join("extra.py"), "").unwrap();
+        assert!(!is_current(&b, &target));
+    }
+
+    #[test]
+    fn the_digest_tells_apart_names_contents_and_where_bytes_sit() {
+        let tmp = tempfile::tempdir().unwrap();
+        let tree = |name: &str, files: &[(&str, &str)]| {
+            let d = tmp.path().join(name);
+            for (rel, text) in files {
+                let p = d.join(rel);
+                std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+                std::fs::write(p, text).unwrap();
+            }
+            tree_digest(&d).unwrap()
+        };
+        let base = tree("a", &[("x.py", "12"), ("y.py", "3")]);
+        assert_eq!(base, tree("same", &[("y.py", "3"), ("x.py", "12")]));
+        assert_ne!(base, tree("content", &[("x.py", "13"), ("y.py", "3")]));
+        assert_ne!(base, tree("moved", &[("x.py", "1"), ("y.py", "23")]));
+        assert_ne!(base, tree("renamed", &[("x.py", "12"), ("z.py", "3")]));
+        assert_ne!(base, tree("nested", &[("x.py", "12"), ("d/y.py", "3")]));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_linked_plugin_is_replaced_by_a_copy_and_what_it_pointed_at_is_untouched() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (b, home, elsewhere) = (
+            tmp.path().join("bundle"),
+            tmp.path().join("home"),
+            tmp.path().join("elsewhere"),
+        );
+        bundle(&b, "0.1.0");
+        bundle(&elsewhere, "0.1.0");
+        std::fs::create_dir_all(home.join("plugins")).unwrap();
+        let target = home.join("plugins").join("boopis");
+        std::os::unix::fs::symlink(&elsewhere, &target).unwrap();
+        assert!(!is_current(&b, &target), "a link is not a copy setup made");
+        assert!(matches!(
+            install_plugin(&b, &home).unwrap(),
+            Installed::Written { .. }
+        ));
+        assert!(std::fs::symlink_metadata(&target).unwrap().is_dir());
+        assert!(
+            elsewhere.join("tests").join("t.py").is_file(),
+            "the link's target keeps everything"
+        );
+    }
+
+    #[test]
+    fn the_runtime_plugins_that_differ_are_the_ones_pending() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (root, home) = (tmp.path().join("runtime"), tmp.path().join("home"));
+        bundle(&root.join(RUNTIME_PLUGINS).join("github-copilot"), "0.4.0");
+        bundle(&root.join(RUNTIME_PLUGINS).join("grok-acp"), "1.0.0");
+        assert_eq!(
+            runtime_plugins_pending(&root, &home),
+            ["github-copilot", "grok-acp"]
+        );
+        assert!(install_runtime_plugins(&root, &home).unwrap());
+        assert!(runtime_plugins_pending(&root, &home).is_empty());
+        std::fs::write(
+            root.join(RUNTIME_PLUGINS)
+                .join("grok-acp")
+                .join("__init__.py"),
+            "changed",
+        )
+        .unwrap();
+        assert_eq!(runtime_plugins_pending(&root, &home), ["grok-acp"]);
+        assert!(runtime_plugins_pending(&tmp.path().join("none"), &home).is_empty());
+    }
+
     #[test]
     fn a_bundle_without_a_version_is_refused_and_nothing_is_touched() {
         let tmp = tempfile::tempdir().unwrap();
@@ -284,8 +610,14 @@ mod tests {
                 & 0o777,
             0o755
         );
+        assert!(!hx_differs(&src, &home));
         std::fs::write(&src, "binary v2").unwrap();
+        assert!(
+            hx_differs(&src, &home),
+            "a new hx is seen before it is placed"
+        );
         assert!(place_hx(&src, &home).unwrap());
+        assert!(!hx_differs(&src, &home));
     }
 
     #[test]

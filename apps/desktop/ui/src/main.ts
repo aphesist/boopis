@@ -32,9 +32,10 @@ let landing: 'connectors' | 'store' | null = null;
 
 /* the watchdog's notice waits for the shell: a toast shown while the app is still booting has no layout to sit in */
 let shellReady = false;
-const owedNotices: string[] = [];
-on('hx:ready', () => { shellReady = true; for (const t of owedNotices.splice(0)) ui.toast(t, { ms: 8000 }); });
-function noticeWhenReady(text: string): void { if (shellReady) ui.toast(text, { ms: 8000 }); else owedNotices.push(text); }
+type NoticeAction = { label: string; onClick: () => void };
+const owedNotices: Array<{ text: string; action: NoticeAction | undefined }> = [];
+on('hx:ready', () => { shellReady = true; for (const n of owedNotices.splice(0)) ui.toast(n.text, { ms: 8000, action: n.action }); });
+function noticeWhenReady(text: string, action?: NoticeAction): void { if (shellReady) ui.toast(text, { ms: 8000, action }); else owedNotices.push({ text, action }); }
 
 async function start(): Promise<void> {
   await orbs;
@@ -43,6 +44,9 @@ async function start(): Promise<void> {
   if (inTauri()) {
     /* first run: the host sets Hermes up for boopis (plugin, settings, a key) before anything connects; a screen of its own, thin on purpose */
     const [{ runFirstRun }, { tauriSetupBridge }] = await Promise.all([import('./host/first-run'), import('./host/setup-bridge')]);
+    /* an install set up before gets this app's engine code by itself (no screen): its one line is listened for before the
+       check that starts it, and waits for the shell; a failed update offers the setup screen's Set up */
+    await import('./host/engine-update-notice').then((m) => m.listenEngineUpdates(noticeWhenReady, () => { void runFirstRun(tauriSetupBridge(), document.body, { autostart: true }); })).catch((e: unknown) => { log.warn('engine update notices are not listened for', e); });
     await runFirstRun(tauriSetupBridge(), document.body, { onExit: (e) => { landing = e.open; } });
   }
   const provider = await selectProvider();

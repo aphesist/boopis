@@ -29,7 +29,6 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
-from ..util.log import get_logger
 from . import pool
 from .pool import Grant, Outcome, Row
 
@@ -60,14 +59,6 @@ def sync(read_token: Callable[[], str | None] = _read_token, pool_api: Callable[
     return pool.sync(Row(PROVIDER, SOURCE, LABEL, BASE_URL, read), pool_api, _lock, "SuperGrok")
 
 
-def _safe_sync() -> Outcome | None:
-    try:
-        return sync()
-    except Exception:  # noqa: BLE001 - an observer: the runtime keeps what it has, the next round tries again
-        get_logger("signins.xai").warning("could not hand the SuperGrok sign-in to the runtime", exc_info=True)
-        return None
-
-
 def next_wait(outcome: Outcome | None, every_s: float = EVERY_S, waiting_s: float = WAITING_S) -> float:
     """How long until the next look: long while the runtime holds the sign-in, short while it holds none."""
     return pool.next_wait(outcome, every_s, waiting_s)
@@ -75,4 +66,4 @@ def next_wait(outcome: Outcome | None, every_s: float = EVERY_S, waiting_s: floa
 
 def start(every_s: float = EVERY_S, waiting_s: float = WAITING_S) -> threading.Event:
     """Sync now and every ``every_s`` seconds on a daemon thread. Returns the event that stops it."""
-    return pool.start(_safe_sync, "boopis-xai-signin", every_s, waiting_s)
+    return pool.start(pool.Watch("SuperGrok", "signins.xai"), sync, "boopis-xai-signin", every_s, waiting_s)

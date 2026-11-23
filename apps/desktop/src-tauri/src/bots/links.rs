@@ -1,14 +1,14 @@
 //! A bot's own `plugins/` folder (ADR-0042). The engine gives each profile home its own plugins (`<home>/plugins/<name>/`,
 //! the engine's plugin README), and a bot's home is `<root>/profiles/<bot>`, so it does not see the plugins of the root. Each
 //! plugin boopis manages is placed in the bot's folder as a link to the root's copy where the OS allows one without
-//! privileges, and as a copy, versioned like setup's own, where it does not (Windows: a symbolic link needs a privilege or
-//! Developer Mode). A link that already reaches the root's copy is left as it is, however it was written (the owner's own
-//! absolute links included); anything else under that name is replaced.
+//! privileges, and as a copy, compared by content like setup's own (`setup::install::is_current`), where it does not
+//! (Windows: a symbolic link needs a privilege or Developer Mode). A link that already reaches the root's copy is left as it
+//! is, however it was written (the owner's own absolute links included); anything else under that name is replaced.
 
 use std::path::{Path, PathBuf};
 
 use crate::error::{Error, Result};
-use crate::setup::install::{Installed, install_named, plugin_version};
+use crate::setup::install::{Installed, install_named, is_current, plugin_version};
 
 /// How a plugin reaches a bot's folder.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -16,7 +16,7 @@ pub enum Strategy {
     /// A relative symbolic link to the root's copy: it follows the root's copy through every update and survives the whole
     /// engine folder moving. Unix.
     Link,
-    /// A copy, replaced when the root's copy has another version. Windows.
+    /// A copy, replaced when its content is not the root's copy's. Windows.
     Copy,
 }
 
@@ -35,7 +35,7 @@ impl Strategy {
 /// What placing one plugin did.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Placed {
-    /// It was there already and reaches the root's copy (or is a copy of the same version).
+    /// It was there already and reaches the root's copy (or is a copy with the same content).
     Kept,
     /// Placed where nothing was.
     Added,
@@ -165,6 +165,18 @@ pub fn place(source: &Path, bot: &Path, name: &str, strategy: Strategy) -> Resul
     }
 }
 
+/// Whether the bot whose home is `bot` already has the plugin at `source` as [`place`] would leave it: a link that reaches
+/// it, or (with [`Strategy::Copy`]) a copy with its content. A repair that finds this skips the bot; anything else is placed
+/// again (an outdated copy included, which a look at the manifest alone missed).
+#[must_use]
+pub fn current(source: &Path, bot: &Path, name: &str, strategy: Strategy) -> bool {
+    let target = bot.join("plugins").join(name);
+    match strategy {
+        Strategy::Link => reaches(&target, source),
+        Strategy::Copy => reaches(&target, source) || is_current(source, &target),
+    }
+}
+
 /// The version a bot's copy of a plugin has, for a report (a link reports the root's).
 #[must_use]
 pub fn version_in(bot: &Path, name: &str) -> Option<String> {
@@ -277,6 +289,51 @@ mod tests {
             Placed::Replaced
         );
         assert_eq!(version_in(&bot, "boopis").as_deref(), Some("1.1.0"));
+    }
+
+    /// B27 for the bots' copies: a new release at the same manifest version is still a new copy.
+    #[test]
+    fn a_copy_with_other_code_at_the_same_version_is_not_current_and_is_replaced() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("engine");
+        let source = root.join("plugins").join("boopis");
+        plugin(&source, "0.1.0");
+        let bot = root.join("profiles").join("kai");
+        std::fs::create_dir_all(&bot).unwrap();
+        place(&source, &bot, "boopis", Strategy::Copy).unwrap();
+        assert!(current(&source, &bot, "boopis", Strategy::Copy));
+        std::fs::write(source.join("__init__.py"), "V = 'next release'\n").unwrap();
+        assert!(!current(&source, &bot, "boopis", Strategy::Copy));
+        assert_eq!(
+            place(&source, &bot, "boopis", Strategy::Copy).unwrap(),
+            Placed::Replaced
+        );
+        assert!(current(&source, &bot, "boopis", Strategy::Copy));
+        assert_eq!(
+            std::fs::read_to_string(bot.join("plugins/boopis/__init__.py")).unwrap(),
+            "V = 'next release'\n"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_link_is_current_only_while_it_reaches_the_root_s_copy() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("engine");
+        let source = root.join("plugins").join("boopis");
+        plugin(&source, "0.1.0");
+        let other = tmp.path().join("other");
+        plugin(&other, "0.1.0");
+        let bot = root.join("profiles").join("kai");
+        std::fs::create_dir_all(bot.join("plugins")).unwrap();
+        assert!(!current(&source, &bot, "boopis", Strategy::Link));
+        std::os::unix::fs::symlink(&other, bot.join("plugins/boopis")).unwrap();
+        assert!(
+            !current(&source, &bot, "boopis", Strategy::Link),
+            "a plugin that is there but is not the root's copy"
+        );
+        place(&source, &bot, "boopis", Strategy::Link).unwrap();
+        assert!(current(&source, &bot, "boopis", Strategy::Link));
     }
 
     #[test]

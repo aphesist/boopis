@@ -68,6 +68,10 @@ pub struct State {
     /// 0.1.6 shape) is rewritten to Terra, then Sol, then Astra, from what the account lists. Added without a version bump: a file
     /// from before has none, so the check runs once on the first start of this build.
     pub terra_checked: bool,
+    /// The last automatic update of the engine's code (`Setup::update`) did not finish, so the old code is still in place and
+    /// the next check shows the setup screen, whose plugin step is the way to try again. Added without a version bump: a file
+    /// from before has none.
+    pub update_failed: bool,
 }
 
 /// The heavy models the user opted in to (ADR-0037, ADR-0039): the ids of the `heavy_switches` in `providers.json` that are on.
