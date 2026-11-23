@@ -408,9 +408,11 @@ async fn route<E: Engine>(
                           "POST /v1/bots/<name>/say", "GET /v1/bots/<name>/conversation", "GET /v1/rooms", "POST /v1/rooms/<id>/say", "GET /v1/events"]
         })),
         (Method::Get, ["v1", "bots"]) => {
+            shared.service.ensure_fresh().await;
             Ok(json!({"bots": feed.bots(), "last_event_id": feed.last_id()}))
         }
         (Method::Get, ["v1", "presence"]) => {
+            shared.service.ensure_fresh().await;
             Ok(json!({"presence": feed.presence(), "last_event_id": feed.last_id()}))
         }
         (Method::Get, ["v1", "notifications"]) => {
@@ -425,7 +427,10 @@ async fn route<E: Engine>(
         (Method::Get, ["v1", "approvals"]) => Ok(
             json!({"approvals": feed.approvals(head.param("all").is_some_and(|v| v == "1" || v == "true"))}),
         ),
-        (Method::Get, ["v1", "rooms"]) => Ok(json!({"rooms": feed.rooms()})),
+        (Method::Get, ["v1", "rooms"]) => {
+            shared.service.ensure_fresh().await;
+            Ok(json!({"rooms": feed.rooms()}))
+        }
         (Method::Post, ["v1", "approvals", id]) if segment_ok(id) => {
             let m = object(body)?;
             let choice = m

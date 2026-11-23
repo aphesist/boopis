@@ -6,6 +6,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
+use tokio::time::Instant;
+
 use serde_json::{Value, json};
 use tokio_util::sync::CancellationToken;
 
@@ -126,12 +128,20 @@ impl Caller {
     }
 }
 
+/// When the roster and the poll were last read: a snapshot read asks again when they are older than their cadence (B24).
+#[derive(Debug, Default)]
+struct Fresh {
+    roster_at: Option<Instant>,
+    poll_at: Option<Instant>,
+}
+
 /// The service.
 pub struct Service<E: Engine> {
     pub(super) feed: Arc<Feed>,
     pub(super) engine: Arc<E>,
     pub(super) limits: ApiLimits,
     described: tokio::sync::Mutex<HashMap<String, Value>>,
+    fresh: std::sync::Mutex<Fresh>,
     /// The room hold's file (`rooms/hold.rs`) and its rules: the app's room, the command line and this API send through it.
     pub(super) holds: hold::Store,
     pub(super) room_limits: RoomLimits,
@@ -169,10 +179,38 @@ impl<E: Engine> Service<E> {
             engine,
             limits,
             described: tokio::sync::Mutex::new(HashMap::new()),
+            fresh: std::sync::Mutex::new(Fresh::default()),
             holds,
             room_limits,
             watches: tokio::sync::Mutex::new(HashMap::new()),
         })
+    }
+
+    fn fresh(&self) -> std::sync::MutexGuard<'_, Fresh> {
+        self.fresh
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Make the snapshots current before one is read (B24): the roster and the rooms when they were never read or are
+    /// older than their cadence, and the bots' sessions likewise, so "read the snapshot, then follow" holds from the first
+    /// request after the app starts, with or without a stream open.
+    pub async fn ensure_fresh(&self) {
+        let (roster_stale, poll_stale) = {
+            let f = self.fresh();
+            let stale =
+                |at: Option<Instant>, every: Duration| at.is_none_or(|t| t.elapsed() >= every);
+            (
+                stale(f.roster_at, self.limits.roster_every),
+                stale(f.poll_at, self.limits.poll_every),
+            )
+        };
+        if roster_stale {
+            self.refresh_roster().await;
+        }
+        if poll_stale {
+            self.poll_once().await;
+        }
     }
 
     /// The feed.
@@ -192,6 +230,7 @@ impl<E: Engine> Service<E> {
         let Ok(profiles) = profiles else {
             return;
         };
+        self.fresh().roster_at = Some(Instant::now());
         let plugin = self
             .engine
             .request(ROOT, "plugin.boopis.bots.read", json!({}))
@@ -229,8 +268,19 @@ impl<E: Engine> Service<E> {
         }
     }
 
+    /// Whether `profile` is a bot of the roster (the root always is); a name the roster does not hold yet is looked up once
+    /// more, so a call right after the app starts is not refused (B24).
+    pub(super) async fn knows_bot(&self, profile: &str) -> bool {
+        if profile == ROOT || self.feed.has_bot(profile) {
+            return true;
+        }
+        self.refresh_roster().await;
+        self.feed.has_bot(profile)
+    }
+
     /// Ask every bot's link which sessions are live, and what is waiting on the owner.
     pub async fn poll_once(&self) {
+        self.fresh().poll_at = Some(Instant::now());
         let mut names = self.feed.bot_names();
         if !names.iter().any(|n| n == ROOT) {
             names.push(ROOT.to_owned());
@@ -413,7 +463,7 @@ impl<E: Engine> Service<E> {
                 "The text is too long to send in one message.",
             ));
         }
-        if !self.feed.has_bot(profile) && profile != ROOT {
+        if !self.knows_bot(profile).await {
             return Err(ApiError::new(
                 404,
                 "no_such_bot",
@@ -537,7 +587,7 @@ impl<E: Engine> Service<E> {
         pick: &Pick,
         limit: usize,
     ) -> Result<Conversation, ApiError> {
-        if !self.feed.has_bot(profile) && profile != ROOT {
+        if !self.knows_bot(profile).await {
             return Err(ApiError::new(
                 404,
                 "no_such_bot",
@@ -748,8 +798,13 @@ impl<E: Engine> Service<E> {
 
     // ───────────────────────── the loop ─────────────────────────
 
-    /// Run until cancelled: while at least one reader listens, read the roster and poll the sessions.
+    /// Run until cancelled: read the roster once at start (B24), then, while at least one reader listens, read the roster
+    /// and poll the sessions.
     pub async fn run(self: Arc<Self>, cancel: CancellationToken) {
+        tokio::select! {
+            () = cancel.cancelled() => return,
+            () = self.refresh_roster() => {}
+        }
         let mut wanted = self.feed.wanted();
         loop {
             while *wanted.borrow_and_update() == 0 {

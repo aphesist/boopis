@@ -57,7 +57,7 @@ There are no per-client tokens (the owner skipped them): every client holds the 
 
 ### Calls
 
-Every success is `200` with a JSON object. Every failure is the error object above with a status.
+Every success is `200` with a JSON object. Every failure is the error object above with a status. A snapshot (`/v1/bots`, `/v1/presence`, `/v1/rooms`) is current from the first request after boopis starts, with or without a stream open: the host reads the roster and the rooms at start, and a snapshot read asks the engine again when what it holds is older than its cadence (10 s for the roster, 2 s for the bots' sessions).
 
 | Call | Body | Answer |
 |---|---|---|

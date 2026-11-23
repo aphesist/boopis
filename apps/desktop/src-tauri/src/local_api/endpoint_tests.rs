@@ -1252,3 +1252,44 @@ async fn following_conversations_refuses_what_it_does_not_understand() {
         assert_eq!(json_of(&body)["error"]["code"], code, "{query}");
     }
 }
+
+#[tokio::test]
+async fn the_snapshots_are_full_from_the_first_request_without_a_stream() {
+    // B24: no reader has opened a stream and nothing read the roster yet
+    let dir = tempfile::tempdir().unwrap();
+    let limits = limits();
+    let feed = Feed::new(Audit::under(dir.path()), limits.clone());
+    let (scripted, _store) = engine();
+    let service = Service::new(
+        feed,
+        scripted,
+        limits.clone(),
+        crate::rooms::hold::Store::under(dir.path()),
+        crate::config::RoomLimits::default(),
+    );
+    let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+    let server = Server::serve(
+        listener,
+        service.clone(),
+        Token::from_text(TOKEN.into()),
+        limits,
+    )
+    .unwrap();
+    let port = server.addr().port();
+    let req = |path: &str| {
+        format!(
+            "GET {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nAuthorization: Bearer {TOKEN}\r\n\r\n"
+        )
+    };
+    let (status, _, body) = raw(server.addr(), &req("/v1/bots")).await;
+    assert_eq!(status, 200);
+    assert_eq!(
+        json_of(&body)["bots"].as_array().unwrap().len(),
+        2,
+        "{body}"
+    );
+    let (_, _, body) = raw(server.addr(), &req("/v1/rooms")).await;
+    assert_eq!(json_of(&body)["rooms"][0]["id"], "g-paper", "{body}");
+    let (_, _, body) = raw(server.addr(), &req("/v1/presence")).await;
+    assert_eq!(json_of(&body)["presence"][0]["state"], "idle");
+}
