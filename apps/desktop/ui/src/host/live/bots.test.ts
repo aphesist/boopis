@@ -500,7 +500,8 @@ describe('what a bot may do is what the plugin enforces (ADR-0050)', () => {
     expect(ownConfig({ settings: { cap: '1.20' } }).cap).toBe('1.20');
   });
   it('a new bot is made with no cap and no tiers written: no limit unless the owner sets one, and the plugin’s default tiers', async () => {
-    const { h, bots } = await open();
+    const h = new FakeHermes();
+    const { bots } = await open(h, modelHost(h).bridge);   // a bot's model is set through the host
     await bots.source.admin!.create({ name: 'kai', role: 'docs', shape: 'drop', color: '#4fc9a8', instructions: 'You write docs.' }, { model: 'nous/hermes-4' });
     const writes = h.main.calls.filter((c) => c.method === 'plugin.boopis.bots.write');
     expect(writes.length).toBeGreaterThan(0);
