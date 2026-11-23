@@ -19,8 +19,10 @@
 //!   deliberately not part of either rule: Hermes may retitle its process, and a command line is the peer's to choose.)
 //!
 //! Linux reads `/proc` for the start time, the executable, the parent and the environment it started with, and refuses a
-//! process it cannot read. Other Unix systems have no `/proc` here: the pid alone is compared and rule B is never met, so a
-//! gateway's first read at start-up is refused there until a launch is known by pid (documented in `AGENTS.md`).
+//! process it cannot read. macOS asks the kernel the same four questions (`proc_pidinfo`, `proc_pidpath` and
+//! `KERN_PROCARGS2`, in [`super::macos`]). Other Unix systems have neither here: the pid alone is compared and rule B is
+//! never met, so a gateway's first read at start-up is refused there until a launch is known by pid (documented in
+//! `AGENTS.md`).
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -30,9 +32,10 @@ use std::sync::{Arc, Mutex};
 pub struct Proc {
     /// The process id (the kernel's thread-group id).
     pub pid: u32,
-    /// Start time in clock ticks since boot (`/proc/<pid>/stat` field 22). `None` off Linux.
+    /// When the process was created, only ever compared with itself: clock ticks since boot on Linux (`/proc/<pid>/stat`
+    /// field 22), microseconds since the epoch on macOS (`pbi_start`). Neither changes at `exec`. `None` elsewhere.
     pub start: Option<u64>,
-    /// The executable the kernel runs (`/proc/<pid>/exe`). `None` off Linux.
+    /// The executable the kernel runs (`/proc/<pid>/exe`, macOS's `proc_pidpath`). `None` elsewhere.
     pub exe: Option<PathBuf>,
 }
 
@@ -85,7 +88,7 @@ impl Procs for Os {
     }
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 impl Procs for Os {
     fn describe(&self, pid: u32) -> Option<Proc> {
         Some(Proc {
@@ -467,7 +470,7 @@ mod tests {
         assert_eq!(p.admit(Some(502)), Err(Refusal::NotTheGateway));
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     #[test]
     fn the_real_process_table_is_read_and_a_child_is_not_its_parent() {
         let os = Os;
@@ -482,21 +485,26 @@ mod tests {
         assert!(mine.start.is_some());
         let mut child = std::process::Command::new("sleep")
             .arg("30")
+            .env("HX_PEER_CHILD_ONLY", "1")
             .spawn()
             .unwrap();
         let kid = os.describe(child.id()).unwrap();
         assert_ne!(kid, mine);
         assert_eq!(os.parent(child.id()), Some(me));
-        // The environment a process started with is read from /proc: a variable only the child was given is there.
-        let hold = format!("PATH={}", std::env::var("PATH").unwrap_or_default());
+        // The environment a process started with is the kernel's (Linux /proc, macOS KERN_PROCARGS2): a variable only the
+        // child was given is there.
+        let hold = "HX_PEER_CHILD_ONLY=1";
         assert_eq!(os.started_with(child.id(), "HX_NO_SUCH=1"), Some(false));
+        assert_eq!(os.started_with(me, hold), Some(false));
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-        while os.started_with(child.id(), &hold) != Some(true)
+        while os.started_with(child.id(), hold) != Some(true)
             && std::time::Instant::now() < deadline
         {
             std::thread::yield_now(); // between fork and exec it still shows this binary's environment
         }
-        assert_eq!(os.started_with(child.id(), &hold), Some(true));
+        assert_eq!(os.started_with(child.id(), hold), Some(true));
+        // and once it runs `sleep`, the kernel names that executable, not this one
+        assert_ne!(os.describe(child.id()).unwrap().exe, mine.exe);
         // The policy over the real table: this process is the gateway (no token required), its child is not.
         let p = PeerPolicy::new();
         assert!(p.record_gateway(me));
