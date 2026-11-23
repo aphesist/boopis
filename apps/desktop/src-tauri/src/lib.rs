@@ -50,13 +50,16 @@ use std::sync::Arc;
 use tauri::Manager;
 use tauri_specta::{Builder, Event, collect_commands, collect_events};
 
-use commands::{AppState, ConnectionStateEvent, FileDragEvent, WindowStateEvent};
+use commands::{
+    AppState, ConnectionStateEvent, EngineUpdateEvent, FileDragEvent, WindowStateEvent,
+};
 
 /// Where the generated TypeScript bindings live, relative to this crate.
 pub const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../ui/src/host/bindings.ts");
 
 /// The command and event registry, shared by the app and the bindings export.
 #[must_use]
+#[allow(clippy::too_many_lines)] // the registry: one line per command and per event
 pub fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
@@ -156,6 +159,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             providers::ProviderSigninEvent,
             WindowStateEvent,
             FileDragEvent,
+            EngineUpdateEvent,
             commands::ConnectorRestartEvent
         ])
 }
@@ -582,12 +586,14 @@ pub fn run() {
             let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
             let local_api = local_api::LocalApi::new(app.handle().clone(), app_data, &limits.api);
             let api_feed = local_api.feed().clone();
+            let update_gate = endpoint::Gate::default();
             app.manage(AppState {
                 local_api: local_api.clone(),
                 chatgpt,
                 copilot,
                 xai,
                 hubs: state::Hubs::new(supervisor.clone(), limits.clone(), emitter)
+                    .with_gate(update_gate.clone())
                     .with_observer(observer)
                     .with_created(Arc::new(move |profile, hub| local_api::forward(&api_feed, profile, hub))),
                 supervisor: supervisor.clone(),
@@ -604,6 +610,8 @@ pub fn run() {
                     resource_dir.as_deref(),
                     exe.as_deref().and_then(std::path::Path::parent),
                 ),
+                update_gate,
+                updating: std::sync::atomic::AtomicBool::new(false),
             });
             tauri::async_runtime::spawn(async move { local_api.start().await });
             // The plugin's door to the keychain. A failure (no socket support, another host running) is logged and

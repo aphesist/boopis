@@ -242,6 +242,13 @@ impl HermesOps for Fake {
             .push(format!("stop:{}", self.plugin_marks()));
         Ok(!*self.stays_up.lock().unwrap())
     }
+    async fn start_gateway(&self) -> Result<()> {
+        self.gateway
+            .lock()
+            .unwrap()
+            .push(format!("start:{}", self.plugin_marks()));
+        Ok(())
+    }
     async fn free_tier_status(&self) -> Result<FreeTier> {
         let mut f = self.free.lock().unwrap();
         f.statuses += 1;
@@ -591,9 +598,10 @@ async fn finished(r: &Rig) {
     r.fake.gateway.lock().unwrap().clear();
 }
 
-/// B27: an app update whose plugin keeps `version: 0.1.0` (every release so far) but changes its code. `check` sees it,
-/// setup stops the gateway before the swap (no process runs two releases at once), replaces the copy and starts the
-/// gateway again on the new code, and says so in the receipt.
+/// B27: an app update whose plugin keeps `version: 0.1.0` (every release so far) but changes its code. `assess` sees it (the
+/// host updates by itself, below); when the screen runs anyway (a failed update's Set up, or another need), its plugin step
+/// stops the gateway before the swap (no process runs two releases at once), replaces the copy and starts the gateway again
+/// on the new code, and says so in the receipt.
 #[tokio::test]
 async fn an_update_with_new_plugin_code_at_the_same_version_is_installed_and_loaded() {
     let r = rig(main_provider());
@@ -606,9 +614,9 @@ async fn an_update_with_new_plugin_code_at_the_same_version_is_installed_and_loa
         "NAME = 'boopis-handoffs'\n",
     )
     .unwrap();
-    let check = r.setup().check().await.unwrap();
+    let (check, update) = r.setup().assess().await.unwrap();
     assert!(
-        check.needed && check.reason == "the app carries a newer plugin",
+        update && check.reason == "the app carries a newer plugin",
         "{}",
         check.reason
     );
@@ -630,10 +638,7 @@ async fn an_update_with_new_plugin_code_at_the_same_version_is_installed_and_loa
     );
     let copy = r.fake.home.join("plugins").join("boopis");
     assert!(copy.join("bots").join("guides.py").is_file());
-    assert!(
-        !r.setup().check().await.unwrap().needed,
-        "one run is enough"
-    );
+    assert!(!r.setup().assess().await.unwrap().1, "one run is enough");
 }
 
 #[tokio::test]
@@ -641,9 +646,9 @@ async fn a_new_hx_is_placed_and_the_gateway_restarted() {
     let r = rig(main_provider());
     finished(&r).await;
     std::fs::write(r.bundle.hx.as_ref().unwrap(), "hx 0.1.9").unwrap();
-    let check = r.setup().check().await.unwrap();
+    let (check, update) = r.setup().assess().await.unwrap();
     assert!(
-        check.needed && check.reason == "the app carries a newer hx",
+        update && check.reason == "the app carries a newer hx",
         "{}",
         check.reason
     );
@@ -658,7 +663,7 @@ async fn a_new_hx_is_placed_and_the_gateway_restarted() {
         1,
         "one restart, no stop: the plugin did not change"
     );
-    assert!(!r.setup().check().await.unwrap().needed);
+    assert!(!r.setup().assess().await.unwrap().1);
 }
 
 #[tokio::test]
@@ -687,6 +692,116 @@ async fn a_gateway_that_does_not_stop_keeps_its_plugin() {
     let s = r.setup().advance(None, false).await.unwrap();
     assert!(s.done, "{:?}", s.steps);
     assert_eq!(r.fake.plugin_marks(), "V = 'new'");
+}
+
+/// The owner's decision of 23 November 2026: an install set up before updates the engine's code by itself, with no screen.
+#[tokio::test]
+async fn an_install_set_up_before_updates_by_itself_with_no_screen() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    let bundle = r.bundle.plugin_dir.clone().unwrap();
+    std::fs::write(bundle.join("__init__.py"), "V = '0.1.10'\n").unwrap();
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(!check.needed && update, "{}", check.reason);
+    assert!(
+        !r.setup().check().await.unwrap().needed,
+        "the UI is told: no screen"
+    );
+
+    let gate = crate::endpoint::Gate::default();
+    let closed = gate.close();
+    let notice = r.setup().update(closed).await;
+    assert_eq!(
+        notice,
+        Some(super::update::Notice::Done(
+            "Updated the engine's plugin to this version.".into()
+        ))
+    );
+    assert!(gate.is_open(), "the app's links dial again");
+    assert_eq!(
+        *r.fake.gateway.lock().unwrap(),
+        ["stop:", "start:V = '0.1.10'"],
+        "stopped on the old code, started on the new"
+    );
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(!check.needed && !update, "{}", check.reason);
+    // and a newer hx alone is the same kind of update, with its own line
+    std::fs::write(r.bundle.hx.as_ref().unwrap(), "hx 0.1.10").unwrap();
+    assert!(r.setup().assess().await.unwrap().1);
+    assert_eq!(
+        r.setup().update(gate.close()).await,
+        Some(super::update::Notice::Done(
+            "Updated the hx tool to this version.".into()
+        ))
+    );
+}
+
+#[tokio::test]
+async fn a_first_install_and_any_other_need_still_show_the_screen() {
+    let r = rig(main_provider());
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(check.needed && !update, "{}", check.reason);
+    assert_eq!(check.reason, "the boopis plugin is not installed");
+    // set up before, but something else needs the screen too: the screen, whose plugin step updates the code as well
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    r.fake
+        .plugins
+        .lock()
+        .unwrap()
+        .retain(|p| p.name != "boopis");
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(check.needed && !update, "{}", check.reason);
+    assert_eq!(check.reason, "the boopis plugin is not enabled");
+}
+
+/// Fail closed: the earlier code stays, the gate opens, the failure is said and recorded, and the screen's Set up is the way
+/// to try again (the next check shows it; a finished screen run clears the record).
+#[tokio::test]
+async fn a_failed_update_keeps_the_old_copy_and_offers_the_screen() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    *r.fake.stays_up.lock().unwrap() = true;
+    let gate = crate::endpoint::Gate::default();
+    let notice = r.setup().update(gate.close()).await;
+    assert_eq!(
+        notice,
+        Some(super::update::Notice::Failed(
+            "boopis could not update the engine's plugin, so it keeps using the earlier one. Choose Set up to try again."
+                .into()
+        ))
+    );
+    assert!(gate.is_open());
+    assert_eq!(
+        r.fake.plugin_marks(),
+        "",
+        "the earlier copy is still in place"
+    );
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(
+        check.needed && !update,
+        "the screen this time: {}",
+        check.reason
+    );
+    assert_eq!(
+        check.reason,
+        "the last update of the engine's code did not finish"
+    );
+    *r.fake.stays_up.lock().unwrap() = false;
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(r.fake.plugin_marks(), "V = 'new'");
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(!check.needed && !update, "{}", check.reason);
 }
 
 #[tokio::test]

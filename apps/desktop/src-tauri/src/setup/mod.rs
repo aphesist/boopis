@@ -19,6 +19,7 @@ pub mod install;
 pub mod ops;
 pub mod providers;
 pub mod state;
+pub mod update;
 pub mod xai_ways;
 
 #[cfg(test)]
@@ -424,21 +425,29 @@ impl Setup {
     /// # Errors
     /// `hx.setup.state_invalid` for a progress file that cannot be used.
     pub async fn check(&self) -> Result<Check> {
+        Ok(self.assess().await?.0)
+    }
+
+    /// [`Setup::check`], and whether the host updates the engine's code by itself instead (`true`): setup has finished
+    /// before, and the only thing it would do now is put this app's plugin or `hx` in place. That needs no question, so
+    /// there is no screen (`needed` is false) and `update` does it. A first install, any other need, or an update that
+    /// failed last time is the screen, as before; its own plugin step puts the code in place too.
+    ///
+    /// # Errors
+    /// `hx.setup.state_invalid` for a progress file that cannot be used.
+    pub async fn assess(&self) -> Result<(Check, bool)> {
+        let screen = |reason: &str| Check {
+            hermes_installed: false,
+            needed: true,
+            reason: reason.into(),
+        };
         if let Some(plan) = &self.runtime
             && !plan.runtime.is_installed(&plan.runtimes_dir())
         {
-            return Ok(Check {
-                hermes_installed: false,
-                needed: true,
-                reason: "boopis's engine has not been unpacked yet".into(),
-            });
+            return Ok((screen("boopis's engine has not been unpacked yet"), false));
         }
         if self.ops.version().await.is_err() {
-            return Ok(Check {
-                hermes_installed: false,
-                needed: true,
-                reason: "no engine was found on this computer".into(),
-            });
+            return Ok((screen("no engine was found on this computer"), false));
         }
         let home = self.ops.home();
         let state = state::load(&home)?;
@@ -448,30 +457,40 @@ impl Setup {
             .plugins()
             .await
             .is_ok_and(|l| l.iter().any(|p| p.name == "boopis" && p.enabled));
-        let outdated = self.stale_code(&home).await.unwrap_or("");
-        let (needed, reason) = match (state.done_at, installed, enabled) {
-            (_, None, _) => (true, "the boopis plugin is not installed"),
-            (_, _, false) => (true, "the boopis plugin is not enabled"),
-            (None, _, _) => (true, "setup has not finished"),
-            _ if !outdated.is_empty() => (true, outdated),
+        let other = match (state.done_at, installed, enabled) {
+            (_, None, _) => Some("the boopis plugin is not installed"),
+            (_, _, false) => Some("the boopis plugin is not enabled"),
+            (None, _, _) => Some("setup has not finished"),
             _ if !state.route_checked && self.route_missing(&home, state.clone()).await => {
-                (true, "the engine has no default model")
+                Some("the engine has no default model")
             }
             _ if (!state.ladders_checked || !state.terra_checked)
                 && self.ladders_unrepaired(&home, &state.optins()).await =>
             {
-                (
-                    true,
+                Some(
                     "governed mode runs only on frontier models, and heavy ones only when you turn them on",
                 )
             }
-            _ => (false, "set up"),
+            _ => None,
         };
-        Ok(Check {
-            hermes_installed: true,
-            needed,
-            reason: reason.into(),
-        })
+        let (needed, reason, update) = match (other, self.stale_code(&home).await) {
+            (Some(why), _) => (true, why, false),
+            (None, Some(_)) if state.update_failed => (
+                true,
+                "the last update of the engine's code did not finish",
+                false,
+            ),
+            (None, Some(why)) => (false, why, true),
+            (None, None) => (false, "set up", false),
+        };
+        Ok((
+            Check {
+                hermes_installed: true,
+                needed,
+                reason: reason.into(),
+            },
+            update,
+        ))
     }
 
     /// Why the code the engine runs is not the code this app carries, or `None` when it is: the boopis plugin, a plugin the
@@ -700,6 +719,8 @@ impl Setup {
                 .ok()
                 .map(|d| d.as_secs());
         }
+        // a finished run put this app's code in place (its plugin step), so an automatic update that failed is behind us
+        state.update_failed &= !finished;
         // a finished run's models step wrote the route with the ladder (`providers::write_route`)
         state.route_checked |= finished;
         state.frontier_checked |= finished;

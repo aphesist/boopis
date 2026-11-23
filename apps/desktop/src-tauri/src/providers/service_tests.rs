@@ -130,6 +130,9 @@ impl HermesOps for Fake {
     async fn stop_gateway(&self) -> Result<bool> {
         Ok(true)
     }
+    async fn start_gateway(&self) -> Result<()> {
+        Ok(())
+    }
     async fn restart_gateway_when_idle(&self) -> Result<bool> {
         let answer = *self.restart_answer.lock().unwrap();
         self.idle_restarts.lock().unwrap().push(answer);

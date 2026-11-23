@@ -48,6 +48,8 @@ pub trait HermesOps: Send + Sync {
     /// Stop the gateway if it runs, ending its live work, and wait until it is gone, before setup replaces code it has
     /// loaded; the restart step starts a fresh one. `false` when it still answers after the wait.
     async fn stop_gateway(&self) -> Result<bool>;
+    /// Start the gateway if none runs (`hermes gateway ensure`), on the code in place now; one that runs is left as it is.
+    async fn start_gateway(&self) -> Result<()>;
     /// Restart the gateway so it reads a key saved since it started, but only when no turn is running (ending one is never silent).
     /// `true` when it restarted, `false` when it was left running (a turn is live) or this double does not restart.
     ///
@@ -197,6 +199,10 @@ impl HermesOps for CliOps {
 
     async fn stop_gateway(&self) -> Result<bool> {
         self.sup.stop(&self.home, true).await
+    }
+
+    async fn start_gateway(&self) -> Result<()> {
+        self.sup.ensure_if_needed(&self.home).await
     }
 
     async fn restart_gateway_when_idle(&self) -> Result<bool> {

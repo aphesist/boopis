@@ -141,6 +141,76 @@ impl Endpoint for Local {
     }
 }
 
+/// Where the app's own links wait before they dial. It is closed while the host puts this app's code in place for the
+/// gateway (`setup::update`): a link that dialed in between would start a gateway on the code being replaced. Open
+/// otherwise, and opened again however the update ends ([`Closed`] opens it when dropped).
+#[derive(Clone, Debug)]
+pub struct Gate(Arc<tokio::sync::watch::Sender<bool>>);
+
+impl Default for Gate {
+    fn default() -> Self {
+        Self(Arc::new(tokio::sync::watch::channel(true).0))
+    }
+}
+
+impl Gate {
+    /// Close the gate until the returned guard is dropped.
+    #[must_use]
+    pub fn close(&self) -> Closed {
+        self.0.send_replace(false);
+        Closed(self.clone())
+    }
+
+    /// Whether links may dial now.
+    #[must_use]
+    pub fn is_open(&self) -> bool {
+        *self.0.borrow()
+    }
+
+    /// Wait until links may dial.
+    pub async fn wait(&self) {
+        let mut rx = self.0.subscribe();
+        // The sender lives in `self`, so the channel cannot close while this waits.
+        let _ = rx.wait_for(|open| *open).await;
+    }
+}
+
+/// The gate held closed; dropping this opens it again.
+#[derive(Debug)]
+pub struct Closed(Gate);
+
+impl Drop for Closed {
+    fn drop(&mut self) {
+        self.0.0.send_replace(true);
+    }
+}
+
+/// An endpoint whose links wait at a [`Gate`] before they dial.
+pub struct Gated {
+    inner: Arc<dyn Endpoint>,
+    gate: Gate,
+}
+
+impl Gated {
+    /// `inner`, waiting at `gate`.
+    #[must_use]
+    pub fn new(inner: Arc<dyn Endpoint>, gate: Gate) -> Self {
+        Self { inner, gate }
+    }
+}
+
+#[async_trait]
+impl Endpoint for Gated {
+    fn kind(&self) -> EndpointKind {
+        self.inner.kind()
+    }
+
+    async fn connect(&self) -> Result<GatewayConn> {
+        self.gate.wait().await;
+        self.inner.connect().await
+    }
+}
+
 /// A gateway on another machine. Not yet supported.
 #[derive(Debug)]
 pub struct Remote {
@@ -245,6 +315,48 @@ mod tests {
             token: Redacted("s3cret-token".into()),
         };
         assert!(!format!("{c:?}").contains("s3cret"));
+    }
+
+    #[tokio::test]
+    async fn a_link_waits_at_a_closed_gate_and_dials_once_it_opens() {
+        struct Counting(std::sync::atomic::AtomicU32);
+        #[async_trait]
+        impl Endpoint for Counting {
+            fn kind(&self) -> EndpointKind {
+                EndpointKind::Local
+            }
+            async fn connect(&self) -> Result<GatewayConn> {
+                self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                Err(Error::Unavailable("counted".into()))
+            }
+        }
+        let inner = Arc::new(Counting(std::sync::atomic::AtomicU32::new(0)));
+        let gate = Gate::default();
+        let gated = Arc::new(Gated::new(inner.clone(), gate.clone()));
+        let closed = gate.close();
+        assert!(!gate.is_open());
+        let dial = tokio::spawn({
+            let gated = gated.clone();
+            async move { gated.connect().await.err().map(|e| e.to_string()) }
+        });
+        tokio::time::sleep(std::time::Duration::from_millis(30)).await;
+        assert_eq!(
+            inner.0.load(std::sync::atomic::Ordering::SeqCst),
+            0,
+            "nothing dials while it is closed"
+        );
+        drop(closed);
+        assert!(dial.await.unwrap().unwrap().contains("counted"));
+        assert_eq!(inner.0.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert!(gate.is_open());
+        // a guard dropped on any path (an update that fails or panics) opens it too
+        let again = gate.close();
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+            let _held = again;
+            panic!("an update that panics");
+        }))
+        .unwrap_err();
+        assert!(gate.is_open());
     }
 
     #[tokio::test]
