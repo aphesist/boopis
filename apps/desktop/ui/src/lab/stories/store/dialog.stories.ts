@@ -15,6 +15,7 @@ import type { DataProvider } from '../../../data/provider';
 import type { StoreItem, StoreKind } from '../../../data/types';
 import type { AppCtx, State, Story } from '../../types';
 import { recommendedItems } from './recommended-items';
+import { connectorItems } from './connector-items';
 
 const MOCK = { url: '/v6/__index.html', note: 'the owner has not drawn a store view: it is composed from the kit, for review' };
 const FX = (fixtureFile as unknown as { items: StoreItem[] }).items;
@@ -56,7 +57,7 @@ function manyItems(now: number): StoreItem[] {
 }
 
 /** the app on a store with these options: the clock is the real one (so "read just now" stays true), and forty more items */
-const withStore = (o: MockStoreOptions = {}) => (p: DataProvider): DataProvider => ({ ...p, store: createMockStore({ now: () => Date.now(), extraItems: [...manyItems(Date.now()), ...recommendedItems()], ...o }) });
+const withStore = (o: MockStoreOptions = {}) => (p: DataProvider): DataProvider => ({ ...p, store: createMockStore({ now: () => Date.now(), extraItems: [...manyItems(Date.now()), ...recommendedItems(), ...connectorItems()], ...o }) });
 
 /** waits until `ok` holds (the store's view is imported the first time it opens, so a fixed wait races it on a busy machine) */
 const until = async (c: AppCtx, ok: () => boolean, ms = 5000): Promise<void> => { for (let t = 0; t < ms && !ok(); t += 50) await c.wait(50); };

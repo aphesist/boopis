@@ -10,6 +10,7 @@ import type { StoreProvider } from '../../../data/provider';
 import type { InstallReceipt, StoreBrowse, StoreItem } from '../../../data/types';
 import type { StageCtx, State, Story } from '../../types';
 import { recommendedItems } from './recommended-items';
+import { connectorItems } from './connector-items';
 
 const MOCK = { url: '/v6/__index.html', note: 'the owner has not drawn a store view: it is composed from the kit, for review' };
 const NOW = Date.parse('2026-11-21T10:00:00Z');
@@ -85,6 +86,14 @@ const browse: Story = {
     'out of date: several could not be read (with the reasons one tap away)': view(['error', 'variant'], (c) => c.view.readDue(), { mock: { start: 'unread', now: () => NOW, reads: { 'skills-hub': { ms: 5, error: HUB_DOWN }, anthropic: { ms: 5, error: PROXY_PAGE }, 'mcp-registry': { ms: 5, error: REG_DOWN } } } }),
     'out of date: due a read again': view(['variant'], async (c) => { clock.t = NOW; await c.store.reloadSources?.(); c.view.show('browse'); await c.wait(150); }, { mock: () => { clock.t = NOW - 8 * 3600_000; return { now: () => clock.t }; } }),
     'up to date after a read': view(['typical'], (c) => c.view.readDue(), { mock: { start: 'unread', now: () => NOW, reads: { 'engine-plugins': { ms: 5 }, 'skills-hub': { ms: 5 }, anthropic: { ms: 5 }, 'mcp-registry': { ms: 5 } } } }),
+    'boopis\'s whole collection, by kind, with each connector\'s mark': view(['many', 'variant'], null, { mock: { extraItems: [...connectorItems(), ...recommendedItems()] } }),
+    'connectors only, with their marks': view(['variant'], (c) => click(c, '[role=radio][data-value="connector"]'), { mock: { extraItems: connectorItems() } }),
+    'search with results across kinds': view(['variant'], (c) => type(c, 'design'), { mock: { extraItems: [...connectorItems(), ...recommendedItems()] } }),
+    'nothing matches in one kind (show everything)': view(['empty', 'variant'], async (c) => { await click(c, '[role=radio][data-value="mod"]'); await type(c, 'postgres'); }, { mock: { extraItems: connectorItems() } }),
+    'a row focused from the search (down arrow)': view(['focus'], async (c) => {
+      const i = c.root.querySelector<HTMLInputElement>('#hx-store-q'); i?.focus(); i?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); await c.wait(60);
+    }),
+    'row hover': { ...view(['hover'], null), force: [{ sel: '.ui-row--item', state: 'hover' as const }] },
     'no sources on': view(['empty'], async (c) => { for (const s of c.store.sources.get()) await c.store.setSourceEnabled(s.id, false); await click(c, '[role=radio][data-value="skill"]'); })
   }
 };
@@ -92,6 +101,9 @@ const detail: Story = {
   id: 'store/detail', title: 'Store: detail', area: 'store', kind: 'surface', covers: ['surface:store-detail'], scope: '.hx-store', mock: MOCK,
   states: {
     'a recommended connector': view(['typical'], null, { item: 'boopis:firecrawl' }),
+    'a connector with its service\'s mark and a key': view(['variant'], null, { item: 'boopis:github', mock: { extraItems: connectorItems() } }),
+    'a hosted connector from the collection (sign in)': view(['variant'], null, { item: 'boopis:notion', mock: { extraItems: connectorItems() } }),
+    'a skill with its publisher\'s mark': view(['variant'], null, { item: 'boopis:skills/pdf', mock: { extraItems: recommendedItems() } }),
     'not reviewed, with undeclared egress': view(['variant'], null, { item: 'mcp-registry:com.example/tickets' }),
     'an engine plugin (runs inside the engine)': view(['variant'], null, { item: 'engine-plugins:example-metrics' }),
     'a hosted connector': view(['variant'], null, { item: 'mcp-registry:com.example/tickets', patch: hosted }),

@@ -112,7 +112,9 @@ export function mountRight(root: HTMLElement): void {
       const id = 'ssr-conn-' + c.name;
       const can = d().can.get();
       const control = c.state === 'sign in' ? ui.html.button({ label: 'Sign in', size: 's', disabled: !can.signIn, attrs: { id, 'data-conn': c.name } }) : ui.html.switch({ id, checked: c.state === 'on', disabled: !can.connectors });
-      const row = frag(ui.html.setRow({ label: cap1(c.name), hint: c.hint ?? c.tools + ' tools', for: c.state === 'sign in' ? null : id, control }));
+      /* the same tile as Settings > Connectors and the Store; the session knows only the name, so a collection connector's mark
+         comes from the name the collection gave it, and anything else is its monogram (components/item-mark.ts) */
+      const row = frag(ui.html.setRow({ label: cap1(c.name), hint: c.hint ?? c.tools + ' tools', for: c.state === 'sign in' ? null : id, lead: ui.html.itemMark({ name: c.name, collection: c.name }), control }));
       const sw = row.querySelector<HTMLInputElement>('.ui-switch'), sb = row.querySelector<HTMLButtonElement>('[data-conn]');
       if (sw) { ui.hydrate(row); sw.addEventListener('change', () => d().setConnector(c.name, sw.checked)); }
       if (sb) sb.addEventListener('click', () => { const l = sb.querySelector('span'); if (l) l.textContent = 'Connecting'; sb.disabled = true; void d().signIn(c.name); });

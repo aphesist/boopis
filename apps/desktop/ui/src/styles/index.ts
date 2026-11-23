@@ -2,6 +2,7 @@
    CSS lives beside its code; they are imported here so the order is one decision in one place. */
 import '../components/kit.css';   /* the kit: tokens and the component library */
 import '../host/first-run.css';
+import '../host/connectors.css';
 import '../modules/shell/shell.css';
 import '../modules/cards/cards.css';
 import '../modules/store/store.css';

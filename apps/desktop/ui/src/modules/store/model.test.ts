@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fixtures from '../../../../../shared/data/store.fixtures.json';
 import type { InstallPlan, StoreItem, UpdateDiff } from '../../data';
-import { ageWords, countsWords, freshness, hostsWords, reviewSpec, sourceState, stateOf, TIER_WORDS } from './model';
+import { ageWords, byKind, countsWords, endWord, freshness, hostsWords, markRef, needsWord, remoteUrl, reviewSpec, rowLine, sourceState, stateOf, TIER_WORDS } from './model';
 
 const FX = fixtures as unknown as { items: StoreItem[]; plans: InstallPlan[]; diffs: UpdateDiff[] };
 const plan = (id: string): InstallPlan => FX.plans.find((p) => p.item_id === id) as InstallPlan;
@@ -74,5 +74,47 @@ describe('the review card', () => {
     const rows = reviewSpec(plan('boopis:firecrawl'), { update: d }).contents ?? [];
     expect(rows.some(([l]) => l === 'Changes')).toBe(true);
     expect(rows.some(([l]) => l === 'Reaches further')).toBe(d.widened);
+  });
+});
+
+describe('how an item reads in a list', () => {
+  const item = (id: string): StoreItem => FX.items.find((i) => i.id === id) as StoreItem;
+  it('says what it is, by whom, a missing review, then its summary', () => {
+    expect(rowLine(item('github:example-org/changelog-skills'))).toBe('Skill by example-org · not reviewed · ' + item('github:example-org/changelog-skills').summary);
+    expect(rowLine(item('anthropic:example-lint-kit'))).toMatch(/^Plugin by Example Org · A plugin/);
+  });
+  it('says a publisher whose name is the title once, by the title', () => {
+    expect(rowLine(item('boopis:firecrawl'))).toMatch(/^Connector · Scrape/);
+  });
+  it('says what an item needs: keys it cannot do without, or that it will not be installed', () => {
+    expect(needsWord({ secrets: [{ id: 'k', title: 'Key', optional: false }], pinned: { type: 'version', value: '1' }, removed: null })).toBe('needs a key');
+    expect(needsWord({ secrets: [{ id: 'a', title: 'A', optional: false }, { id: 'b', title: 'B', optional: false }, { id: 'c', title: 'C', optional: true }], pinned: { type: 'version', value: '1' }, removed: null })).toBe('needs 2 keys');
+    expect(needsWord({ secrets: [{ id: 'k', title: 'Key', optional: true }], pinned: { type: 'version', value: '1' }, removed: null })).toBe('');
+    expect(needsWord({ secrets: [], pinned: null, removed: null })).toBe('not pinned');
+    expect(needsWord({ secrets: [], pinned: { type: 'version', value: '1' }, removed: { reason: 'x', by: 'source' } })).toBe('taken down');
+  });
+  it('ends a row with its state first, then what it needs', () => {
+    const keyed = { secrets: [{ id: 'k', title: 'Key', optional: false }], pinned: { type: 'version' as const, value: '1' }, removed: null };
+    expect(endWord(keyed, 'installed')).toEqual({ word: 'installed', tone: null });
+    expect(endWord(keyed, 'update')).toEqual({ word: 'update', tone: 'busy' });
+    expect(endWord(keyed, 'removed')).toEqual({ word: 'taken down', tone: 'attention' });
+    expect(endWord(keyed, null)).toEqual({ word: 'needs a key', tone: null });
+  });
+  it('groups by kind in the kind filter\'s order, each keeping the host\'s order', () => {
+    const g = byKind(FX.items);
+    expect(g.map((x) => x.label)).toEqual(['Skills', 'Connectors', 'Plugins', 'Mods', 'Engine plugins']);
+    expect(g[0]?.items.map((i) => i.id)).toEqual(FX.items.filter((i) => i.kind === 'skill').map((i) => i.id));
+    expect(byKind([])).toEqual([]);
+  });
+  it('draws the tile from the item\'s own evidence: a curated connector\'s collection id, a hosted one\'s address', () => {
+    expect(markRef(item('boopis:firecrawl'))).toMatchObject({ name: 'Firecrawl', kind: 'connector', collection: 'firecrawl' });
+    expect(markRef(item('boopis:release-notes'))).toMatchObject({ publisher: 'Example Org', proven: true });
+    expect(markRef({ ...item('local:focus-theme'), provenance: { ...item('local:focus-theme').provenance, namespace_proof: 'none' } }).proven).toBe(false);
+    expect(markRef({ item_id: 'boopis:skills/pdf', kind: 'skill', source: 'boopis' })).toMatchObject({ publisher: null, proven: false });   /* a receipt names no publisher */
+    expect(markRef(item('boopis:release-notes')).collection).toBeNull();
+    expect(markRef(item('mcp-registry:com.example/tickets')).collection).toBeNull();
+    expect(remoteUrl({ type: 'version', value: 'hosted', repo: 'remote:https://mcp.notion.com/mcp' })).toBe('https://mcp.notion.com/mcp');
+    expect(remoteUrl({ type: 'commit', value: 'abc', repo: 'https://github.com/x/y' })).toBeNull();
+    expect(markRef({ item_id: 'boopis:notion', kind: 'connector', source: 'boopis', pinned: { type: 'version', value: 'hosted', repo: 'remote:https://mcp.notion.com/mcp' } })).toMatchObject({ name: 'notion', collection: 'notion', url: 'https://mcp.notion.com/mcp' });
   });
 });

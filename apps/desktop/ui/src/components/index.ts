@@ -17,7 +17,7 @@ import type { ChildOpts } from './child';
 import { composer } from './composer';
 import { holdElement, wireHold } from './hold';
 import { html } from './html';
-import type { ButtonOpts, ChipOpts, EntryOpts, FieldOpts, IconButtonOpts, LadderOpts, MeasureOpts, MeasurePart, RowOpts, SegmentedOpts, StepItem } from './html';
+import type { ButtonOpts, ChipOpts, EntryOpts, FieldOpts, IconButtonOpts, ItemRowOpts, LadderOpts, MeasureOpts, MeasurePart, RowOpts, SegmentedOpts, StepItem } from './html';
 import { icon, iconNames } from './icons';
 import { layer, menu, popover } from './layer';
 import { isRoute, lastModel, modelFamily, modelHTML, modelMark as modelMarkEl, parseRoute, routeHTML, swapMark, families as modelFamilies } from './model-mark';
@@ -34,6 +34,7 @@ import { squircle } from './squircle';
 import { toast } from './toast';
 import type { SigninButtonOpts } from './signin-button';
 import type { StackOpts } from './stack';
+import type { ItemMarkOpts, ItemRef } from './item-mark';
 import { tooltip } from './tooltip';
 import { hydrate, hydrateOne } from './wire';
 import { scrollClass } from './scroll';
@@ -82,7 +83,13 @@ const factories = {
   group: make<Parameters<typeof html.group>[0]>(html.group),
   child: make<ChildOpts, HTMLElement>(html.child),
   signinButton: make<SigninButtonOpts, HTMLButtonElement>(html.signinButton),
-  stack: make<StackOpts>(html.stack)
+  stack: make<StackOpts>(html.stack),
+  /** an item's tile: the service a connector connects to, else its monogram (item-mark.ts) */
+  itemMark: make<ItemRef & ItemMarkOpts>((o) => html.itemMark(o, o)),
+  /** a publisher's name with its mark first when the kit has one */
+  publisher: make<string>((p) => html.publisher(p)),
+  /** an installable thing as a two-line list row with its tile */
+  itemRow: make<ItemRowOpts, HTMLLIElement>(html.itemRow)
 };
 /** `ui.markdown(text, ctx)` draws what a bot or an agent wrote (markdown.ts); its properties are the parts the surfaces use */
 const markdown = Object.assign(markdownEl, {
@@ -130,6 +137,8 @@ export { setCardFactory } from './card-registry';
 export type { CardFactory, CardSize } from './card-registry';
 export { holdOf } from './hold';
 export { isKnownModel } from './model-mark';
+export { serviceMarkOf, publisherMarkOf, monogram, serviceMarks, serviceMark, packageOf } from './item-mark';
+export type { ItemRef, ItemMarkOpts, ItemMarkSize, ServiceMark } from './item-mark';
 export { modViewUpdate } from './mod-view';
 export type { ModEvent, ModRoot } from './mod-view';
 export { MARK, parseLiteral, setTokenReader } from './mod-colors';
@@ -156,7 +165,7 @@ export { CHILD_STATUSES, STATUS_WORD as CHILD_STATUS_WORDS } from './child';
 export type { ChildOpts, ChildStatus } from './child';
 export type { ScrollAxis, ScrollOpts, ScrollHtmlOpts } from './scroll';
 export type { ComposerEl, ComposerOpts, DecisionDetail, AssumptionDetail, DictateDetail, SendDetail } from './composer';
-export type { PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
+export type { ItemRowOpts, PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
 export type { ModelRef, ModelOpts, MarkOpts, ModelFamily } from './model-mark';
 export type { BotLike } from './bot-state';
 export type { MarkdownCtx, MdBot, PathTarget, Block as MarkdownBlock, MentionSpan, MentionTarget } from './markdown';

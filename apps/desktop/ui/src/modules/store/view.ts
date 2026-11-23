@@ -5,14 +5,15 @@
    its diff, Roll back, Remove, kill-list banners) and Sources. The view never fetches: it reads and writes through
    `StoreProvider` and shows each failure as the host's own sentence. An item's own text is marked `data-store-item`. */
 import { progressDots, setProgress, ui } from '@boopis/ui';
-import { storeItem } from '../../core/engine-words';
+import { clipSpots, tipsIfClipped, watchCuts } from '../../core/clip';
+import { STORE_ITEM, storeItem } from '../../core/engine-words';
 import { reduced } from '../../core/dom';
 import type { FormOutcome, FormSpec, FormsSource, InstallPlan, InstallReceipt, StageResult, StoreBrowse, StoreDetail, StoreItem, StoreKind, StoreProvider, StoreScope, StoreSource, UpdateDiff } from '../../data';
 import '../cards';
 import { useFormsHost } from '../cards/forms-host';
 import {
-  errorCode, ENGINE_PLUGIN_NOTE, REMOTE_WORDS, isRemote, KIND_FILTERS, KIND_LABEL, STATE_WORDS, TIER_TIPS, TIER_WORDS, ageWords, countsWords, errorText, filterOf, hostsWords, isFront, licenseWords, pinWords, plural,
-  outOfDate, READ_BADGE, readingWords, reviewSpec, scanWords, sourceState, stateOf, upToDateWords
+  errorCode, ENGINE_PLUGIN_NOTE, REMOTE_WORDS, isRemote, KIND_FILTERS, KIND_GROUP, KIND_LABEL, KIND_SHORT, STATE_WORDS, TIER_TIPS, TIER_WORDS, ageWords, byKind, countsWords, endWord, errorText, filterOf, hostsWords, isFront, licenseWords, markRef, pinWords, plural,
+  outOfDate, READ_BADGE, readingWords, reviewSpec, rowLine, scanWords, sourceState, stateOf, upToDateWords
 } from './model';
 import { projectSwitch } from './policy';
 import { keepFresh, readerFor } from './reading';
@@ -82,9 +83,17 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     if (again) e.querySelector('button')?.addEventListener('click', again);
     return e;
   };
-  const back = (label: string, go: () => void): HTMLElement => { const b = ui.button({ label, size: 's', variant: 'ghost' }); b.addEventListener('click', go); return b; };
+  const back = (label: string, go: () => void): HTMLElement => { const b = ui.button({ label, size: 's', variant: 'ghost', icon: 'back', class: 'hx-store__back' }); b.addEventListener('click', go); return b; };
   /* A screen that redraws itself (a switch was turned and the list came back) keeps the focus where it was: the control with the same
      id takes it again, so a keyboard user is not sent back to the top of the page after every switch. */
+  /* when the store opens, nothing in it holds the focus yet (the dialog's frame or the page does): the search field takes it, since
+     finding a thing is what a person opens the store for. A tab chosen by keyboard keeps its focus. */
+  const nothingFocused = (): boolean => {
+    const a = document.activeElement;
+    if (!root.isConnected || (a && root.contains(a))) return false;
+    const d = root.closest('dialog');
+    return !a || a === document.body || (!!d && d.contains(a));
+  };
   const place = (...kids: Node[]): void => {
     const held = document.activeElement instanceof HTMLElement && main.contains(document.activeElement) ? document.activeElement.id : '';
     main.replaceChildren(...kids);
@@ -94,29 +103,54 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
   /* ───────── rows ───────── */
   const installedList = (): readonly InstallReceipt[] => store.installed.get();
   const updatesList = (): readonly UpdateDiff[] => store.updates.get();
+  /* An item is one row of the kit's list (14.4): its tile, its title, one line that says what it is, and one word at its end (its
+     state, else what it needs). The whole row opens its page: one tab stop per list, Up and Down move, Enter opens (`ui:select`). */
   function itemRow(item: StoreItem): string {
-    const st = stateOf(item, installedList(), updatesList());
-    const hint = `${KIND_LABEL[item.kind]} by ${item.publisher}. ${item.summary} ${TIER_WORDS[item.tier]}.${item.pinned ? '' : ' Not pinned, so it cannot be installed.'}`;
-    const control = '<span class="ui-set__actions">' + (st ? ui.html.badge({ label: STATE_WORDS[st] }) : '') +
-      ui.html.button({ label: 'Details', size: 's', attrs: { 'data-store-open': item.id, 'aria-label': 'Details for ' + item.title } }) + '</span>';
-    return storeItem(ui.html.setRow({ label: item.title, hint, control }));
+    const end = endWord(item, stateOf(item, installedList(), updatesList()));
+    /* the item's own text is marked on the row itself (a wrapper inside the list would break it) */
+    return ui.html.itemRow({ ref: markRef(item), title: item.title, sub: rowLine(item), value: item.id, end: end.word, endTone: end.tone, attrs: { 'data-store-open': item.id, [STORE_ITEM]: '' } });
   }
+  /* a list of rows under its heading; the heading names the list for a screen reader */
+  function rowsSection(id: string, label: string, items: readonly StoreItem[]): HTMLElement {
+    const s = el('section', { class: 'ui-set hx-store__group', 'aria-labelledby': id });
+    s.innerHTML = ui.html.setHead({ id, label }) + '<ul class="ui-rows hx-store__rows" data-ui="rows" aria-labelledby="' + ui.esc(id) + '">' + items.map(itemRow).join('') + '</ul>';
+    return s;
+  }
+  /* a title or a line cut by the row's width shows whole in the tooltip while it is cut */
+  const tipCut = (host: HTMLElement): void => { tipsIfClipped(clipSpots(host)); };
+  let stopCuts: (() => void) | null = null;
+  const watchList = (host: HTMLElement): void => { stopCuts?.(); stopCuts = watchCuts(host); };
   const wireRows = (host: HTMLElement): void => {
     ui.hydrate(host);
-    for (const b of host.querySelectorAll<HTMLElement>('[data-store-open]')) b.addEventListener('click', () => { void openItem(b.dataset['storeOpen'] ?? ''); });
+    for (const b of host.querySelectorAll<HTMLElement>('button[data-store-open]:not(.ui-row)')) b.addEventListener('click', () => { void openItem(b.dataset['storeOpen'] ?? ''); });
+    tipCut(host);
   };
+  /* Down from the last row of one list goes on to the next list, Up from the first back to the one before, and up from the very
+     first row to the search field: the lists read as one, and the field is where a person types to narrow them */
+  const crossLists = (host: HTMLElement, search: HTMLInputElement | null): void => {
+    host.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      const row = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('.ui-row'); if (!row || !host.contains(row)) return;
+      const lists = [...host.querySelectorAll<HTMLElement>('[data-ui="rows"]')], li = lists.findIndex((l) => l.contains(row));
+      const rows = lists[li] ? [...(lists[li] as HTMLElement).querySelectorAll<HTMLElement>('.ui-row')] : [];
+      const at = rows.indexOf(row);
+      if (e.key === 'ArrowDown' && at === rows.length - 1) { const next = lists[li + 1]?.querySelector<HTMLElement>('.ui-row'); if (next) { e.preventDefault(); focusRow(next); } }
+      if (e.key === 'ArrowUp' && at === 0) { const prev = lists[li - 1]; const last = prev ? [...prev.querySelectorAll<HTMLElement>('.ui-row')].pop() : null; e.preventDefault(); if (last) focusRow(last); else search?.focus(); }
+    });
+  };
+  const focusRow = (r: HTMLElement): void => { r.closest('[data-ui="rows"]')?.querySelectorAll<HTMLElement>('.ui-row').forEach((x) => { x.tabIndex = x === r ? 0 : -1; }); r.focus(); };
 
   /* ───────── browse ───────── */
   const B = { query: '', kind: 'all' as 'all' | StoreKind, source: 'any', items: [] as StoreItem[], page: null as StoreBrowse | null, error: '' };
   async function drawBrowse(keep?: { focus?: string }): Promise<void> {
     const mine = ++gen;
     const sources = store.sources.get().filter((s) => s.enabled !== false);
-    const search = ui.search({ size: 'm', label: 'Search the store', placeholder: 'Search skills, connectors, plugins and mods', value: B.query, id: 'hx-store-q' });
+    const search = ui.search({ size: 'm', label: 'Search the store', placeholder: 'Search by name, publisher or what it does', value: B.query, id: 'hx-store-q' });
     /* the kind filter is the kit's option chips (a radio group, as the bot settings' schedule presets): they wrap at a narrow
        width, where a segmented control of six options cut every label to a few letters */
     const seg = ui.chipGroup({ label: 'Kind', value: B.kind, options: KIND_FILTERS.map(([value, label]) => ({ value, label })) });
     const pick = ui.select({ id: 'hx-store-source', label: 'Source', entries: [{ value: 'any', label: 'All sources' }, ...sources.map((s) => ({ value: s.id, label: s.label }))], value: B.source });
-    const strip = el('div', { class: 'hx-store__filters' }, seg, pick);
+    const strip = el('div', { class: 'hx-store__filters' }, seg, el('div', { class: 'hx-store__source' }, pick));
     const status = el('p', { class: 'ui-field__hint', role: 'status', 'aria-live': 'polite', 'data-store-status': '' });
     const again = ui.button({ label: 'Read the sources again', size: 's' });
     again.addEventListener('click', () => { void reader.read(true); });
@@ -165,11 +199,21 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
       if (wantWhy && !why.isConnected) note.append(why); else if (!wantWhy && why.isConnected && !why.contains(document.activeElement)) why.remove();
     };
     const input = search.querySelector<HTMLInputElement>('input');
+    /* Down from the field goes to the first result; Enter opens the first result when there is exactly one */
+    input?.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') { const r = list.querySelector<HTMLElement>('.ui-row'); if (r) { e.preventDefault(); focusRow(r); } }
+      if (e.key === 'Enter') { const rows = list.querySelectorAll<HTMLElement>('.ui-row'); if (rows.length === 1) { e.preventDefault(); rows[0]?.click(); } }
+    });
+    crossLists(list, input);
+    /* a cut title or line is checked again whenever the list's width changes (a scrollbar arriving, the window resized) */
+    watchList(list);
+    list.addEventListener('ui:select', (e) => { e.preventDefault(); const v = (e as CustomEvent<{ value?: string }>).detail.value; if (v) void openItem(v); });   /* opening is not choosing: no row is marked current */
     let timer = 0;
     input?.addEventListener('input', () => { window.clearTimeout(timer); timer = window.setTimeout(() => { B.query = input.value; void load(false); }, 150); });
     seg.addEventListener('ui:change', (e) => { B.kind = (e as CustomEvent<{ value: string }>).detail.value as typeof B.kind; void load(false); });
     pick.addEventListener('ui:change', (e) => { B.source = (e as CustomEvent<{ value: string }>).detail.value; void load(false); });
     if (keep?.focus) main.querySelector<HTMLElement>(keep.focus)?.focus();
+    else if (nothingFocused()) input?.focus({ preventScroll: true });
     /* while the sources are read, the line says how far it is, and each source that finishes brings its items into the list
        (unless the list holds the focus: a keyboard user is not moved) */
     let doneSeen = reader.state.get().done;
@@ -194,20 +238,50 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     }
     function paint(page: StoreBrowse): void {
       page0 = page; sayFresh();
+      const q = B.query.trim();
       const front = isFront(filterOf(B.kind, B.source), B.query);
       const rec = front ? (page.recommended ?? []) : [];
       const recIds = new Set(rec.map((i) => i.id));
       const rest = front ? B.items.filter((i) => !recIds.has(i.id)) : B.items;
       const parts: Node[] = [];
-      if (rec.length) parts.push(section('hx-store-rec', 'Recommended', rec.map(itemRow).join('')));
-      if (rest.length) parts.push(section('hx-store-all', front ? 'Everything else' : plural(page.total, 'result'), rest.map(itemRow).join('')));
+      /* the front page: Recommended (the host's list), then everything else by kind; a search or a filter: one list of results,
+         its heading the count the host gives and what it was narrowed by */
+      if (rec.length) parts.push(rowsSection('hx-store-rec', 'Recommended', rec));
+      if (front) for (const g of byKind(rest)) parts.push(rowsSection('hx-store-k-' + g.kind, g.label, g.items));
+      else if (rest.length) parts.push(rowsSection('hx-store-all', resultsWords(page.total, q), rest));
       if (!rec.length && !rest.length) {
-        parts.push(B.query.trim() ? notice('Nothing matches', `Nothing in the store matches “${B.query.trim()}”. Try fewer words, another kind, or all sources.`)
-          : notice('The store is empty', sources.length ? 'No source has listed anything yet. Open Sources to read them again.' : 'Every source is off. Switch one on in Sources.'));
+        if (q || B.kind !== 'all' || B.source !== 'any') {
+          const e = notice('Nothing matches', nothingWords(q), undefined);
+          const clear = ui.button({ label: q ? 'Clear the search' : 'Show everything', size: 's', attrs: { 'data-store-clear': '' } });
+          clear.addEventListener('click', () => { B.query = ''; B.kind = 'all'; B.source = 'any'; void drawBrowse({ focus: '#hx-store-q input, input#hx-store-q' }); });
+          e.append(clear);
+          parts.push(e);
+          /* a search narrowed by kind or source that finds nothing may still find something without it: ask the host, and offer
+             its own count of what the wider search holds, as the empty state's one action in place of clearing */
+          if (q && (B.kind !== 'all' || B.source !== 'any')) {
+            store.search(q, filterOf('all', 'any'), null).then((wide) => {
+              if (mine !== gen || !e.isConnected || !wide.total) return;
+              const all = ui.button({ label: `Show the ${plural(wide.total, 'result')} in every kind and source`, size: 's', variant: 'primary', attrs: { 'data-store-widen': '' } });
+              all.addEventListener('click', () => { B.kind = 'all'; B.source = 'any'; void drawBrowse({ focus: '#hx-store-q input, input#hx-store-q' }); });
+              if (!clear.contains(document.activeElement)) clear.replaceWith(all);   /* the empty state's one action (R-empty-1) */
+            }).catch(() => undefined);
+          }
+        } else parts.push(notice('The store is empty', sources.length ? 'No source has listed anything yet. Open Sources to read them again.' : 'Every source is off. Switch one on in Sources.'));
       }
       if (page.next_cursor) { const more = ui.button({ label: 'Show more', size: 's' }); more.addEventListener('click', () => { void load(true); }); parts.push(more); }
       list.replaceChildren(...parts);
       wireRows(list);
+    }
+    /* "3 results for “git” in Skills from GitHub": the host's count, then what narrowed it */
+    function resultsWords(total: number, q: string): string {
+      const kind = B.kind !== 'all' ? KIND_GROUP[B.kind] : '';
+      const src = B.source !== 'any' ? sources.find((s) => s.id === B.source)?.label ?? B.source : '';
+      return plural(total, 'result') + (q ? ' for “' + q + '”' : '') + (kind ? ' in ' + kind : '') + (src ? ' from ' + src : '');
+    }
+    function nothingWords(q: string): string {
+      const kind = B.kind !== 'all' ? KIND_GROUP[B.kind].toLowerCase() : '';
+      if (q) return `Nothing${kind ? ' in ' + kind : ''} matches “${q}”. Try fewer words, ${kind ? 'all kinds' : 'another kind'}, or all sources.`;
+      return `Nothing is listed${kind ? ' in ' + kind : ''}${B.source !== 'any' ? ' from this source' : ''} yet. Try all kinds or all sources.`;
     }
     await load(false);
   }
@@ -228,9 +302,10 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     const srcLabel = store.sources.get().find((s) => s.id === it.source)?.label ?? it.source;
     const prov = it.provenance;
     const blocks: Node[] = [];
-    const sec = (id: string, label: string, body: string): void => { blocks.push(section('hx-store-d-' + id, label, body)); };
-    const R = (label: string, hint: string): string => storeItem(ui.html.setRow({ label, hint }));
-    sec('about', 'About', R('Summary', it.summary));
+    /* reference data is a two-column grid (R-table-1): the label at the start, the value beside it, a hairline between lines */
+    const sec = (id: string, label: string, body: string): void => { blocks.push(section('hx-store-d-' + id, label, storeItem('<dl class="hx-store__facts">' + body + '</dl>'))); };
+    const R = (label: string, value: string): string => '<div class="hx-store__fact"><dt>' + ui.esc(label) + '</dt><dd>' + ui.esc(value) + '</dd></div>';
+    sec('about', 'About', R('Summary', it.summary) + (it.tags?.length ? R('Topics', it.tags.join(', ')) : ''));
     const warn: string[] = [];
     if (it.removed) warn.push(R('Taken down', `${it.removed.reason}. It cannot be installed${d.installed ? ' and is switched off from the next session' : ''}.`));
     if (!it.pinned) warn.push(R('Not pinned', 'This item is not pinned to an exact version, so boopis will not install it.'));
@@ -239,8 +314,8 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     if (it.kind === 'engine-plugin') warn.push(R('Runs inside the engine', ENGINE_PLUGIN_NOTE));
     if (d.update?.status === 'available') warn.push(R('Update available', d.update.widened ? 'It adds new code, hosts or keys. The review shows what.' : 'A newer version is listed. The review shows what changes.'));
     if (warn.length) sec('notes', 'Read first', warn.join(''));
+    sec('reach', 'What it needs and where it reaches', R('Keys', it.secrets.length ? it.secrets.map((s) => s.title + (s.optional ? ' (optional)' : '')).join('; ') + '. They go to your keychain.' : 'None.') + R('Hosts', hostsWords(it.hosts, it.verified)));
     sec('adds', 'What it adds', R('Contents', countsWords(it.components)) + R('Tools and context', d.cost.tools == null ? 'Not known. Every tool it adds is loaded in every session.' : `${plural(d.cost.tools, 'tool')}${d.cost.context_tokens == null ? '' : ', about ' + String(d.cost.context_tokens) + ' tokens of context'}. Every tool is loaded in every session.`));
-    sec('reach', 'Where it reaches and what it needs', R('Hosts', hostsWords(it.hosts, it.verified)) + R('Keys', it.secrets.length ? it.secrets.map((s) => s.title + (s.optional ? ' (optional)' : '')).join('; ') : 'None.'));
     sec('prov', 'Where it comes from', R('Source', `${srcLabel}${prov.source_tier && it.source !== 'boopis' ? ', which calls it ' + prov.source_tier : ''}`) + (it.source === 'boopis' && prov.source_tier ? R('Why it is listed here', prov.source_tier.charAt(0).toUpperCase() + prov.source_tier.slice(1)) : '') + R('Publisher', it.publisher + (prov.namespace_proof === 'none' ? ' (not proved)' : '')) +
       R('Pinned to', pinWords(it.pinned)) + R('Folder hash', prov.tree_sha256 ?? 'Not known until it is downloaded.') + R('Check', scanWords(prov.scan.verdict) + (prov.scan.findings.length ? ': ' + prov.scan.findings.map((f) => f.text).join('; ') : '')) +
       R('Last updated', prov.last_updated ? ageWords(prov.last_updated, now()) : 'Not known') + R('Licence', licenseWords(it.license)) + R('Checked by boopis', it.verified ?? 'Nobody has checked it') + (it.homepage ? R('Home page', it.homepage) : ''));
@@ -255,12 +330,18 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
       b.addEventListener('click', () => { void startReview(it.id, d.update?.status === 'available' ? 'update' : 'install', from); });
       act.append(b);
     }
-    const title = el('h2', { class: 'ui-set__head' });
+    /* the head: the item's tile, its name, one line of what it is (kind, publisher with its mark, tier, state), and the one action */
+    const title = el('h2', { class: 'hx-store__title' });
     title.innerHTML = storeItem(`<span>${ui.esc(it.title)}</span>`);
-    const meta = el('p', { class: 'ui-field__hint' });
-    meta.innerHTML = storeItem(ui.esc(`${KIND_LABEL[it.kind]} by ${it.publisher}. ${TIER_WORDS[it.tier]}${st ? '. ' + STATE_WORDS[st] : ''}.`));
+    const meta = el('p', { class: 'hx-store__meta' });
+    /* "Skill by Anthropic": who made it, the mark only for a publisher its source proved (the tile says the same) */
+    const by = ui.esc(KIND_SHORT[it.kind]) + ' by ' + ui.html.publisher(it.publisher, { proven: prov.namespace_proof !== 'none' });
+    meta.innerHTML = storeItem([by, ui.esc(TIER_WORDS[it.tier]), st ? ui.esc(STATE_WORDS[st]) : ''].filter(Boolean).join('<span class="hx-store__sep" aria-hidden="true"> · </span>'));
+    const tile = el('span', { class: 'hx-store__tile' }); tile.innerHTML = ui.html.itemMark(markRef(it), { size: 40 });
+    const who = el('div', { class: 'hx-store__who' }, title, meta);
+    const hero = el('div', { class: 'hx-store__hero' }, tile, who, act);
     const why = !store.can.install && store.can.reason ? el('p', { class: 'ui-field__hint', role: 'status' }, store.can.reason) : null;
-    const sheet = el('section', { class: 'hx-store__sheet', 'aria-label': 'About ' + it.title }, title, meta, ...(why ? [why] : []), act, ...blocks);
+    const sheet = el('section', { class: 'hx-store__sheet', 'aria-label': 'About ' + it.title }, hero, ...(why ? [why] : []), ...blocks);
     place(board(back('Back to the store', () => { show(from); }), sheet));
     ui.hydrate(sheet);
     main.querySelector<HTMLElement>('.hx-store__sheet button')?.focus();
@@ -333,7 +414,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     const killed = list.filter((r) => r.kill_listed);
     if (killed.length) {
       blocks.push(section('hx-store-kill', 'Taken down by their source', killed.map((r) => storeItem(ui.html.setRow({
-        label: r.title ?? r.item_id, hint: `${r.kill_listed?.reason ?? ''}. It is switched off from the next session.`,
+        label: r.title ?? r.item_id, hint: `${r.kill_listed?.reason ?? ''}. It is switched off from the next session.`, lead: ui.html.itemMark(markRef(r)),
         control: ui.html.button({ label: 'Remove', size: 's', attrs: { 'data-store-remove': r.item_id, 'aria-label': 'Remove ' + (r.title ?? r.item_id) } })
       }))).join('')));
     }
@@ -351,7 +432,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
         ui.html.button({ label: 'Details', size: 's', variant: 'ghost', attrs: { 'data-store-open': r.item_id, 'aria-label': 'Details for ' + name } }),
         ui.html.button({ label: 'Remove', size: 's', variant: 'ghost', attrs: { 'data-store-remove': r.item_id, 'aria-label': 'Remove ' + name } })
       ].join('');
-      return storeItem(ui.html.setRow({ label: name, hint, for: id, control: '<span class="ui-set__actions">' + controls + '</span>' }));
+      return storeItem(ui.html.setRow({ label: name, hint, for: id, lead: ui.html.itemMark(markRef(r)), control: '<span class="ui-set__actions">' + controls + '</span>' }));
     });
     blocks.push(list.length ? section('hx-store-have', 'Installed', rows.join('')) : section('hx-store-have', 'Installed', ui.html.setRow({ label: 'Nothing installed yet', hint: 'Skills, connectors, plugins and mods you install show here, with their switches.' })));
     const check = ui.button({ label: 'Check for updates', size: 's' });
