@@ -69,10 +69,17 @@ class FakeApi:
     def __init__(self, provider: str) -> None:
         self.provider = provider
         self.pool = FakePool([Row(provider, "theirs", "their login", "oauth", 0, "device_code", "their-token", "rt")])
+        self.loads = 0
 
     def load_pool(self, provider: str) -> FakePool:
         assert provider == self.provider
+        self.loads += 1
         return self.pool
+
+    def read_credential_pool(self, provider: str) -> list[dict[str, Any]]:
+        """The stored rows, as the engine's store keeps them (dicts), without loading the pool."""
+        assert provider == self.provider
+        return [vars(r).copy() for r in self.pool.rows]
 
 
 def ours(api: FakeApi, source: str) -> list[Row]:

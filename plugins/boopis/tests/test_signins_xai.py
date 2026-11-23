@@ -82,6 +82,10 @@ class FakeApi:
         assert provider == "xai-oauth"
         return self.pool
 
+    def read_credential_pool(self, provider: str) -> list[dict[str, Any]]:
+        assert provider == "xai-oauth"
+        return [vars(r).copy() for r in self.pool.rows]
+
 
 def ours(api: FakeApi) -> list[Row]:
     return [r for r in api.pool.rows if r.source == xai.SOURCE]
