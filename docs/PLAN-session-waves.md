@@ -195,3 +195,4 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - CORRECTED (owner): one continuous first run: full-window setup with the oo mark -> Sessions setup with the oo mark -> the oo mark morphs into the boopis bot and the tab switches (or prompts) -> the boopis bot takes over in its chat for the Bots setup. Replaces the per-tab first-open model (kept only for skip/resume).
 - Fixed pose (owner): the whole BODY turns in 3D to the 3/4 angle with perspective, like Grok's non-circle bots; not only the eyes. Eye angle itself is fine.
 - Owner: edge flicker on the bots in the sidebar AND room clips; fix (static at rest, smooth sub-pixel motion, no A-B-A edge toggles) with a blocking frame check.
+- Owner: onboarding revision 3 approved ('looks clean, that's what I wanted'). Remaining: re-render sidebar stills and re-record O-M3/M4/M7/M8 once the orb pose + flicker fix land.
