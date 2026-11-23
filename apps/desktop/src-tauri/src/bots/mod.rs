@@ -17,6 +17,9 @@
 //! 5. the hand-off skill in the bot's `skills/` (`give_handoffs`: the plugin's `bots.guide`), so a bot made anywhere, and
 //!    every bot of an upgraded install, has it whether or not the app's window ever opens.
 //!
+//! Beside those, `prepare` and `repair` list the paths a bot's instructions name that are not there (`soul`), for the log and
+//! whoever shows it; they are never a problem, since the bot still works.
+//!
 //! `repair` runs that for every bot once per start, after the first link to the gateway, and, once per install, makes every
 //! existing bot ungoverned (its saved "governed" was the old default and never took effect); a bot that never had the default
 //! skill index gets it once (`skills::Given`). The host never edits the engine's files: everything goes through
@@ -27,6 +30,7 @@ pub mod limit;
 pub mod links;
 pub mod run;
 pub mod skills;
+pub mod soul;
 #[cfg(test)]
 mod tests;
 
@@ -275,6 +279,8 @@ pub struct Prepared {
     pub skills_off: Vec<String>,
     /// It was asked to take the default skill index (`Ask::fresh`) and has it now.
     pub skills_given: bool,
+    /// The paths its instructions (`SOUL.md`) name that are not there (`soul::check`); not a problem: the bot still works.
+    pub soul_missing: Vec<String>,
     /// The root's `hosted_rooms.profiles.<bot>` was written.
     pub seated: bool,
     /// The hand-off skill was written into its `skills/` now (a new bot, or a newer version of the skill).
@@ -657,6 +663,7 @@ pub async fn prepare(
             .problems
             .push(done_problem("the skill for handing work over", &e)),
     }
+    done.soul_missing = soul::check(&home);
     Ok(done)
 }
 
@@ -850,6 +857,8 @@ pub struct Repaired {
     pub released: Vec<String>,
     /// Bots made ungoverned by the one-time change.
     pub ungoverned: Vec<String>,
+    /// Per bot whose instructions name paths that are not there, those paths (every bot is read, prepared or not).
+    pub soul_missing: BTreeMap<String, Vec<String>>,
     /// The gateway was restarted to load what changed.
     pub restarted: bool,
     /// What could not be done, in plain words.
@@ -940,6 +949,10 @@ pub async fn repair(engine: &dyn Engine, layout: &Layout) -> Result<Repaired> {
         let gov = governed.get(name).copied().unwrap_or(false);
         let print = fingerprint(&view, gov);
         let fresh = !given.has(name);
+        let gone = soul::check(&layout.root.join("profiles").join(name));
+        if !gone.is_empty() {
+            out.soul_missing.insert(name.clone(), gone);
+        }
         if !fresh && still_prepared(layout, &view, &marker, name, &print) {
             continue;
         }

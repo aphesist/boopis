@@ -908,3 +908,29 @@ async fn a_skill_for_another_os_that_arrives_later_is_switched_off_at_the_next_p
         Some(json!(["apple-notes", "arxiv", "imessage", "findmy"]))
     );
 }
+
+#[tokio::test]
+async fn the_paths_a_bots_instructions_name_that_are_gone_are_listed_at_every_start() {
+    let fake = Fake::new();
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    let gone = home.root.join("nowhere/notes.md");
+    std::fs::write(
+        home.bot("kai").join("SOUL.md"),
+        format!("Read {} first.", gone.display()),
+    )
+    .unwrap();
+    let first = repair(&fake, &layout).await.unwrap();
+    assert_eq!(
+        first.soul_missing.get("kai"),
+        Some(&vec![gone.display().to_string()])
+    );
+    assert!(
+        first.bots.iter().all(|b| b.problems.is_empty()),
+        "not a problem: the bot still works"
+    );
+    // a start that prepares nobody still says it
+    let next = repair(&fake, &layout).await.unwrap();
+    assert!(next.bots.is_empty());
+    assert_eq!(next.soul_missing.len(), 1);
+}

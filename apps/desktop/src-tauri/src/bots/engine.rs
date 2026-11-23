@@ -276,6 +276,9 @@ impl Service {
                             tracing::warn!(bot = %b.name, problem = %p, "a bot could not be repaired");
                         }
                     }
+                    for (bot, paths) in &done.soul_missing {
+                        tracing::warn!(%bot, missing = ?paths, "a bot's instructions name paths that are not there");
+                    }
                 }
                 Err(e) => {
                     tracing::warn!(error = %e, "the bots could not be checked; trying again next start");
