@@ -51,6 +51,13 @@ const paragraph = (text: string) => ({ root }: { root: HTMLElement }): void => {
   e.querySelector('.ui-entry__body')?.append(m);
   put(root, e);
 };
+/** the same paragraph in dense interface text (13px at 1.35, a card's or the dock's), where the 20px capsule does not fit the line */
+const dense = (text: string) => ({ root }: { root: HTMLElement }): void => {
+  const m = ui.markdown(text, ROOM); paths(m);
+  const p = document.createElement('p'); p.innerHTML = 'Which year does the pot hang from? ' + html.blank() + ' and the answer so far: ' + html.blank({ answer: '1300' });
+  m.append(p);
+  put(root, m);
+};
 /** the room's composer: "@" names a member, the room or the person, drawn as the capsule the sent message will show */
 const roomMentions: MentionSource = {
   label: 'Bring in', query: () => null, entries: () => [], best: () => null, write: () => null,
@@ -78,6 +85,7 @@ const story: Story = {
     'every kind in a bot message': stage(['variant'], botMessage(NINA + '\n\n' + ALL), { width: W, ground: 'ground' }),
     'in a request bubble': stage(['variant'], request('@nina ' + ALL), { width: W, ground: 'ground' }),
     'in a paragraph': stage(['variant'], paragraph(ALL + ' ' + NINA), { width: W, ground: 'frame' }),
+    'in dense text': stage(['variant'], dense(ALL + ' ' + NINA), { width: W, ground: 'frame' }),
     'in the room composer': stage(['variant'], composer('@user @nina and @all: is @rex needed for the deploy?', 'room'), { width: W, ground: 'ground' }),
     'in the session composer': stage(['variant'], composer('@Claude Haiku move src/billing to integer cents', 'session'), { width: W, ground: 'ground' }),
     long: stage(['long'], botMessage(NINA + ' ' + LONG_TITLE + ' @nina @moss `' + LONG_TITLE + '` ' + PATH), { width: W, ground: 'ground' })

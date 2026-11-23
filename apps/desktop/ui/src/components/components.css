@@ -749,6 +749,11 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
    words: they are the one item aligned by baseline (`align-self: baseline`) and fill the chip's height, their box trimmed to the cap
    height and the baseline (`text-box`) with half of what is left above and half below, so where the words sit is measured from the
    font in use (`1cap`), not assumed. Where `text-box` is missing the words are centred by a line as tall as the chip. */
+/* A chip is never taller than the line it sits in: it scales with the text (the owner: consistency across the app beats exceptions).
+   The text's line height reaches the chip as a length (`--text-line`, the parent's 1lh); a chip takes its full size where the line has
+   room for it and shrinks with a dense line (13px at 1.35), keeping a hairline (--pad-row) clear of the line's edges, never below 16px */
+@property --text-line { syntax: '<length>'; inherits: true; initial-value: 20px; }
+:has(> :is(.ui-mention, .ui-path, .ui-blank, .ui-ff[data-kind="mention"])) { --text-line: 1lh; }
 :is(.ui-mention__name, .ui-path__dir, .ui-path__base) { align-self: baseline; line-height: var(--chip-h); }
 @supports (text-box: trim-both cap alphabetic) and (height: 1cap) {
   :is(.ui-mention__name, .ui-path__dir, .ui-path__base) { line-height: 1; text-box: trim-both cap alphabetic; padding-block: calc((var(--chip-h) - 1cap) / 2); }
@@ -758,7 +763,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
    A button set into the sentence (2.5.8's inline exception): it opens the bot's chat, its card on hover or focus, a menu on the menu key.
    The orb is concentric with the capsule's end: as far from the start as from the top and bottom (R-corner-3) */
 .ui-mention {
-  --chip-h: 20px; --chip-mark: 16px;
+  --chip-h: clamp(var(--ic-l), calc(var(--text-line) - 2 * var(--pad-row)), 20px); --chip-mark: calc(var(--chip-h) - 4 * var(--pad-row));   /* 20 and 16 on a reading line: the orb 2px in from every edge */
   display: inline-flex; align-items: center; gap: var(--sp-1); height: var(--chip-h); max-width: 100%; box-sizing: border-box; margin: 0 1px; padding: 0 var(--sp-2) 0 calc((var(--chip-h) - var(--chip-mark)) / 2);
   border: 0; border-radius: var(--r-pill); background: var(--current); color: var(--text-strong); font: 500 var(--fs-s)/1 var(--sans); letter-spacing: 0;
   vertical-align: baseline; cursor: pointer; white-space: nowrap; transition: background-color var(--dur-out) var(--ease), box-shadow var(--dur-out) var(--ease);
@@ -769,6 +774,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-mention--out:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: 1px; }
 .ui-mention__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ui-mention__stack { display: inline-flex; align-items: center; }
+.ui-mention .ui-orb { width: var(--chip-mark); height: var(--chip-mark); }
 .ui-mention__stack > .ui-orb + .ui-orb { margin-left: calc(var(--sp-1) * -1); }
 @media (hover: hover) and (pointer: fine) { .ui-mention:hover { box-shadow: inset 0 0 0 1px var(--line-strong); transition-duration: var(--dur-1); } }
 .ui-mention:focus-visible, .ui-mention[aria-expanded="true"] { outline: var(--focus-w) solid var(--focus); outline-offset: 1px; }
@@ -808,7 +814,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 /* a path the host resolved: the code chip as a button, one line, its folders cut from the left so the file's name always shows; the
    whole path is its tooltip and its accessible name */
 .ui-path {
-  --chip-h: calc(1cap + 2 * var(--sp-1));   /* the code chip's words with a step of room over and under them */
+  --chip-h: min(calc(1cap + 2 * var(--sp-1)), calc(var(--text-line) - 2 * var(--pad-row)));   /* the code chip's words with a step of room over and under them, within the line */
   display: inline-flex; align-items: center; max-width: 100%; box-sizing: border-box; margin: 0; border: 0; padding-block: 0; vertical-align: baseline;
   white-space: nowrap; overflow-wrap: normal; text-align: left; line-height: var(--lh-small); cursor: pointer; transition: box-shadow var(--dur-out) var(--ease);
 }
@@ -874,6 +880,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-entry .ui-blank { border-radius: var(--r-in-entry, var(--r-xs)); }
 .ui-blank > .ui-stamp { border-radius: inherit; }   /* the stamp ends the blank, flush with its edge: the blank's own curve (R-corner-3) */   /* the blank ends the entry's last line, --pad from its corner: concentric with it, so its 4px ring stays inside the entry's curve (R-corner-3, R-corner-4) */
 .ui-blank { appearance: none; display: inline-flex; align-items: baseline; gap: 8px; vertical-align: baseline; padding: 0; margin: 0 0 0 4px; border: 0; border-radius: var(--r-xs); background: none; font: inherit; color: var(--text); cursor: pointer; max-width: 100%; min-width: 0; text-align: start; overflow-wrap: anywhere; }   /* a long answer wraps inside the line instead of widening the window (R-overflow-1) */
+.ui-blank > .ui-stamp { height: min(20px, calc(var(--text-line) - 2 * var(--pad-row))); }   /* the stamp in the sentence, within its line */
 .ui-blank__gap { display: inline-block; min-width: 7ch; border-bottom: 1px dotted var(--red); }
 @media (hover: hover) and (pointer: fine) { .ui-blank:hover .ui-blank__gap { border-bottom-style: solid; } }
 .ui-blank[data-answered] .ui-blank__gap { min-width: 0; border-bottom: 1px dashed var(--text-quiet); }
