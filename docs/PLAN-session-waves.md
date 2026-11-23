@@ -207,3 +207,4 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - CLARIFIED (owner): 'flattened' = flat solid colour, no shading/shadows. Real per-shape 3D solids; the 3D reads only from the perspective silhouette and the eye placement on the surface (Grok's look).
 - Owner: the bots must LOOK like perfect 3D, not necessarily be real-time 3D (too heavy); lightest technique (analytic projection or baked silhouettes per pose), with a per-orb performance figure.
 - Owner on K06: rotations/animations good; fixed angle wrong (eyes small, leaning, at the rim). Next: match Grok's fixed angle closely (big upright eyes right-of-centre, gentle body turn), side by side with Grok; constrain animated eyes (min width, gap, rim margin) so they never go edge-on.
+- Owner on K07: eyes good; rest pose needs a stronger Grok-like body angle (curves visible) so fixed->moving flows smoothly. Next: K08 + transition clip.
