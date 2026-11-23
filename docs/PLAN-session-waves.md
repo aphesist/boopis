@@ -204,3 +204,4 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - Pose (owner): K05 rejected (triangle tumbles toward camera). Owner supplied Grok fixed-angle image + drop and shapes-tour videos; owner gave go-ahead to redesign orb2's 3D model (branch boopis/character-3d in orb2, not pushed until OK).
 - Owner: orb3 = flattened 3D slabs (extruded outline, thin side wall) with true perspective, like Grok; built as branch orb3 in the orb2 repo (new aphesist/orb3 repo only if the owner creates it).
 - CORRECTION (owner): not coins/slabs. Each shape its own proper 3D solid (sphere, box, 3D heart...), flattened in depth, with on-point perspective and shading; start from orb2's per-shape solids, fix rotation axis/pivot and projection.
+- CLARIFIED (owner): 'flattened' = flat solid colour, no shading/shadows. Real per-shape 3D solids; the 3D reads only from the perspective silhouette and the eye placement on the surface (Grok's look).
