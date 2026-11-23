@@ -316,6 +316,8 @@ def test_guide_puts_the_hand_off_skill_in_the_teammate_s_skills_and_only_once(ro
     # a worker the dispatcher started has no kanban_list, and no tool archives a card (engine v0.23.2)
     assert "A worker running one card has no `kanban_list`: call `kanban_show`" in text
     assert "there is no tool that archives one" in text
+    # a card runs in the board's folder only with workspace_kind "dir" (B35); without it, in a scratch folder
+    assert '`workspace_kind: "dir"`' in text and "the card then gets the board's folder" in text
     assert svc.guide("atlas")["written"] is False
     assert target.read_text("utf-8") == text
 
