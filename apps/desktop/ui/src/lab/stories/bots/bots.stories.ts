@@ -148,6 +148,7 @@ const groupRoom: Story = {
       drive.message(g, { kind: 'text', id: 'lv3', who: 'you', t: '09:15', text: 'Thanks, ship it.' }); await c.wait(350);
       if (huddle()?.querySelector('.ui-disclosure')?.getAttribute('aria-expanded') !== 'false') throw new Error('the huddle stayed open after the user wrote');
     }),
+    'members in tools from a connected server': st(['loading', 'owner'], { ...paper, patch: (p) => withActivity(p, [{ at: 0, status: 'running', tool: 'mcp__fetch__fetch' }, { at: 2, status: 'running', tool: 'mcp__github__create_issue' }]) }, openPaper),
     'a mention hovered': st(['hover', 'owner'], paper, async (c) => { await openPaper(c); const m = document.querySelector<HTMLElement>('#hx-view-bots .ui-mention'); if (m) { m.focus(); } await c.wait(700); }),
     'a mention of a bot that is not in the room: the chip and the hint': st(['variant', 'owner'], { fixtures: ['groups'], simulate: false }, async (c) => {
       await openGroup(c);

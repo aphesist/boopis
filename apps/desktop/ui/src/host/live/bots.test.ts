@@ -115,7 +115,7 @@ class FakeHermes {
         ev('message.start', {});
         if (p['text'] === 'deploy') ev('approval.request', { prompt_id: 'a1', command: 'make deploy', description: 'ships it', execution_generation: 3 });
         else if (p['text'] === 'fail') { const raw = "⚠️ Unknown provider 'claude-subscription-directsdk-experimental'. Check 'hermes model' for available providers."; ev('message.delta', { text: raw }); ev('message.complete', { text: raw, status: 'error', error: raw }); }
-        else { ev('tool.start', { name: 'git' }); ev('message.delta', { text: 'On ' }); ev('message.delta', { text: 'it.' }); ev('message.complete', { text: 'On it.' }); }
+        else { ev('tool.start', { name: p['text'] === 'fetch' ? 'mcp__fetch__fetch' : 'git' }); ev('message.delta', { text: 'On ' }); ev('message.delta', { text: 'it.' }); ev('message.complete', { text: 'On it.' }); }
       });
       return { ok: true };
     }
@@ -547,14 +547,22 @@ describe('a conversation with a teammate is a session of its own profile', () =>
     expect(events.some((e) => e.type === 'thread')).toBe(true);
     expect(events.filter((e) => e.type === 'run').pop()).toMatchObject({ running: false });
   });
-  it('shows the bot working while it runs a tool, and idle again after', async () => {
+  it('shows the bot working while it runs a tool, the tool in words, and idle again after', async () => {
     const { bots, events } = await open();
     events.length = 0;
     bots.source.send('nina', 'hello', 'bots');
     await tickAll();
     const states = events.filter((e): e is Extract<BotsEvent, { type: 'bot' }> => e.type === 'bot').map((e) => [e.bot.state, e.bot.activity]);
-    expect(states).toContainEqual(['working', 'git']);
+    expect(states).toContainEqual(['working', 'using git']);
     expect(botOf(bots, 'nina')!.state).toBe('idle');
+  });
+  it('says a connected server’s tool once, as the room does (the engine names it mcp__fetch__fetch)', async () => {
+    const { bots, events } = await open();
+    events.length = 0;
+    bots.source.send('nina', 'fetch', 'bots');
+    await tickAll();
+    const said = events.filter((e): e is Extract<BotsEvent, { type: 'bot' }> => e.type === 'bot').map((e) => e.bot.activity).filter(Boolean);
+    expect(said).toEqual(['using fetch']);
   });
   it('a message that is not accepted says so in the thread and stops the run', async () => {
     const h = new FakeHermes(); h.failLink = true;

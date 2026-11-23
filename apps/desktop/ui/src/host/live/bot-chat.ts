@@ -18,6 +18,7 @@ import type { TranscriptMessage } from '../../vendor/hermes-shared/gateway-contr
 import type { GatewayClient, GatewayEvent } from '../gateway';
 import { clock } from '../map';
 import { turnFailedWords } from './turn-failed';
+import { toolWords } from '../../data/tool-words';
 
 const log = logger('bot-chat');
 
@@ -190,7 +191,7 @@ export function createBotChat(deps: ChatDeps) {
       case 'message.start': start(); break;
       case 'tool.start': {
         start();
-        deps.live(botId, { state: 'working', activity: str(p['name']) || str(p['tool_name']), attention: null });
+        deps.live(botId, { state: 'working', activity: toolWords(str(p['name']) || str(p['tool_name'])), attention: null });   /* `Bot.activity` is words, not the tool's registry name */
         break;
       }
       case 'message.delta': {

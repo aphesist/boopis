@@ -11,7 +11,8 @@ import { reduced } from '../../core/dom';
 import { ui } from '@boopis/ui';
 import type { BotLike, PresenceActor, PresenceElement, PresencePill, PresenceStatus } from '@boopis/ui';
 import type { Bot, GroupMember, MemberActivity } from '../../data';
-import { atEnd, toolWords } from './ledger';
+import { toolWords } from '../../data/tool-words';
+import { atEnd } from './ledger';
 import { liven } from './orbs';
 
 /** a failed turn's error face stays this long before the entry goes */
