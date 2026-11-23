@@ -3,11 +3,11 @@
      the "to" line     one margin line under the name: "to you" for an answer to the user (round 0, "you" in --text-strong), "to nina
                        and moss" for a message the members pass among themselves
      who is at work    one presence entry where the replies will land (the kit's `ui.presence`, placed by presence.ts); the tool a
-                       member is in, in words, is here
+                       member is in, in words, is `data/tool-words.ts`
      the arrival       a reply lands where the presence entry was (above it while others still work); its blocks fade up in
                        turn; the orb speaks for a moment
      unread            a hairline with a brass dot and "new" before the first message the user has not seen, and "N new messages"
-                       above the composer while they are below the fold
+                       above the composer while they are below the fold ("1 for you" and the attention dot when one addresses them)
      hover actions     copy, reply (prefills @handle) and open the bot's chat, in the margin under the time, on hover or focus
    Frame cost: no timer here; the presence keeps the one clock. */
 import { el, esc, reduced } from '../../core/dom';
@@ -30,22 +30,6 @@ export function placeToLine(entry: HTMLElement, line: HTMLElement | null): void 
   const lines = [...callno.children].filter((c) => !c.classList.contains('ui-callno__who') && !c.classList.contains('bt-acts'));
   const time = lines[lines.length - 1];
   if (time) time.before(line); else callno.append(line);
-}
-
-/* ───────── the tool a member is in, in words ───────── */
-const TOOL_WORDS: Readonly<Record<string, string>> = {
-  terminal: 'in the terminal', process: 'in the terminal', execute_code: 'running code', read_file: 'reading a file', search_files: 'searching files',
-  write_file: 'writing a file', patch: 'editing a file', web_search: 'searching the web', web_extract: 'reading a page', todo: 'updating its list',
-  memory: 'going through its memory', session_search: 'looking through past sessions', delegate_task: 'handing off a task', clarify: 'asking a question',
-  vision_analyze: 'looking at an image', image_generate: 'making an image', skill_view: 'reading a skill', skills_list: 'looking at its skills',
-  send_message: 'sending a message', text_to_speech: 'recording speech', cronjob: 'scheduling', ship: 'shipping its change'
-};
-export function toolWords(tool: string | null | undefined): string {
-  const t = String(tool ?? '').trim();
-  if (!t) return '';
-  if (TOOL_WORDS[t]) return TOOL_WORDS[t];
-  if (t.startsWith('browser_')) return 'in the browser';
-  return 'using ' + t.replace(/^mcp_/, '').replace(/[_-]+/g, ' ');
 }
 
 /* ───────── the arrival ───────── */
@@ -73,11 +57,15 @@ export function jumpButton(onJump: () => void): HTMLButtonElement {
   b.addEventListener('click', onJump);
   return b;
 }
-export function setJump(b: HTMLButtonElement | null, n: number): void {
+/** how many messages arrived below the fold, and how many of them address the person (`@user`): those add the attention dot and say so */
+export function setJump(b: HTMLButtonElement | null, n: number, you = 0): void {
   if (!b) return;
   b.dataset['unread'] = String(Math.max(0, n));   /* the presence pill reads it (presence.ts) */
   b.hidden = n <= 0;
-  const label = b.querySelector('span'); if (label) label.textContent = n === 1 ? '1 new message' : n + ' new messages';
+  const label = b.querySelector('span'); if (label) label.textContent = (n === 1 ? '1 new message' : n + ' new messages') + (you > 0 && n > 0 ? (n === 1 ? ', for you' : ', ' + you + ' for you') : '');
+  const dot = b.querySelector(':scope > .ui-dot');
+  if (you > 0 && n > 0 && !dot) b.insertAdjacentHTML('beforeend', ui.html.dot('attention'));
+  else if (!(you > 0 && n > 0)) dot?.remove();
 }
 /** whether a scroller shows its end (within a line): the chats' one definition */
 export { atEnd } from '../chat/follow-zone';

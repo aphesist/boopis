@@ -1,12 +1,13 @@
 /* A group's room: the header (its members as stacked orbs, its name, rename, members, archive), the one thread the user and the
    members write in (each message by the one who wrote it: its orb and name in the entry's origin slot), who is replying now,
-   and the library's composer with a chip for each member to address with `@name`. Everything that changes comes from the
+   and the library's composer, where a typed "@" suggests the members and a member's `@handle` is drawn as its chip (mentions.ts:
+   the "@" list replaced the row of `@handle` chips, which the compact composer never showed). Everything that changes comes from the
    provider's events; everything the user does is a provider command. What a group is in this build (who answers, what the
    members see of each other) is the provider's `nature`, said in the room and never made up here. */
 import { emit } from '../../core/bus';
 import { $, el, esc, frag, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { ui } from '@boopis/ui';
+import { EVERYONE_HANDLES, ui } from '@boopis/ui';
 import type { BotLike, MarkdownCtx, MdBot } from '@boopis/ui';
 import { data } from '../../data';
 import type { Group, GroupMember, GroupMessage, GroupText, GroupsEvent, MemberActivity } from '../../data';
@@ -29,6 +30,7 @@ import { foldHuddles, huddleEntry, huddleRuns, isBetween, liveAt } from './huddl
 import type { HuddleDeps } from './huddle';
 import { mountGroupQueue } from './group-queue';
 import type { GroupQueue } from './group-queue';
+import { botMentions } from './mentions';
 
 const groups = () => data().groups;
 const toast = (t: string, o?: Parameters<typeof ui.toast>[1]): void => { ui.toast(t, o); };
@@ -77,16 +79,17 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
   S.groupPane = pane;
   G.boardEl = boardEl; G.board = mountBoard(boardEl, { source: () => data().kanban });
   G.scroll = scroll; G.head = head; G.log = log; G.zone = zone; G.working = working;
-  const c = ui.composer({ placeholder: 'Message the group', label: 'Message the group', attach: false, queue: true });
+  const c = ui.composer({ placeholder: 'Message the group', label: 'Message the group', attach: false, queue: true, mentions: roomMentions });
   c.classList.add('bt-composer');
   zone.append(c);
   c.input.setAttribute('data-hx-focus', 'composer');
   c.addEventListener('ui:send', (e) => { send((e as CustomEvent<{ text: string }>).detail.text); });
   c.addEventListener('ui:stop', () => { stopTalk(); });
   const showHint = (): void => {
-    const g = group(S.groupSel); const t = g ? outsideHint(g, c.value) : '';
+    const g = group(S.groupSel), out = g ? outsideHint(g, c.value) : '';
+    const t = g ? [nearMissHint(g, c.value), out].filter(Boolean).join(' ') : '';
     hint.textContent = t; hint.hidden = !t;
-    if (!g || !t) return;
+    if (!g || !out) return;
     for (const b of ui.markdown.outsiders(c.value, g.members, outsiders(g))) {
       const go = ui.button({ label: 'Send to ' + b.name, size: 's', variant: 'ghost' });
       go.addEventListener('click', () => { const draft = c.value.trim(); c.setValue(''); showHint(); sendToBot(b, draft); });
@@ -204,17 +207,42 @@ function archiveGroup(g: Group): void {
 const ENTRY = new WeakMap<HTMLElement, { msgs: GroupText[]; who: string; to: string }>();
 /** the last message the user has seen in each group (this run), and how many arrived below the fold since */
 const SEEN = new Map<string, string>();
-const U = { unread: 0, divider: null as HTMLElement | null, jump: null as HTMLButtonElement | null };
+/* `you`: how many of the unread messages address the person: the jump button says so with the attention dot */
+const U = { unread: 0, you: 0, divider: null as HTMLElement | null, jump: null as HTMLButtonElement | null };
 
 const mdBot = (m: GroupMember): MdBot => { const b = bot(m.profile); return { ...memberBot(m), id: m.profile || m.id, name: m.name, handle: m.handle, ...(b?.role ? { role: b.role } : {}) }; };
 /** the bots that exist and are not in the room: a mention of one is a muted chip, and the composer says so before sending */
 const outsiders = (g: Group): Array<MdBot & { handle: string }> => S.bots.filter((b) => !g.members.some((m) => m.profile === b.id)).map((b) => ({ ...b, id: b.id, name: b.name, handle: b.id }));
-const ctxOf = (g: Group): MarkdownCtx => mentionCtx(g.members.map(mdBot), { everyone: true, outside: outsiders(g) });
+/* `you`: in what a member writes, `@user` is the person (the engine's handle for them in a room): their own capsule, and the message
+   marked for them. What the person writes (their messages, their draft) addresses nobody by it */
+const ctxOf = (g: Group, you = true): MarkdownCtx => ({ ...mentionCtx(g.members.map(mdBot), { everyone: true, outside: outsiders(g) }), ...(you ? { you } : {}) });
+/** a member's message that addresses the person by the engine's handle for them (`@user`, markdown.ts) */
+const toYou = (g: Group) => (m: GroupMessage): boolean => m.kind === 'text' && m.who !== 'you' && ui.markdown.toYou(m.text, ctxOf(g));
 /** the quiet hint under a draft that names a bot that is not here: "nimbus isn't in this room: send it to their chat, or send without them" */
 export function outsideHint(g: Group, text: string): string {
   const out = ui.markdown.outsiders(text, g.members, outsiders(g));
   return out.length ? listWords(out.map((b) => b.name)) + (out.length === 1 ? " isn't" : " aren't") + ' in this room: send it to ' + (out.length === 1 ? 'their' : 'their own') + ' chat, or send without them' : '';
 }
+/** "@kai." names nobody: the engine reads a full stop (or a colon, a hyphen, an underscore) right after a handle as part of it. The
+    hint says so for a draft whose handle would name a member or the room without that mark (the composer leaves it as text) */
+export function nearMissHint(g: Group, text: string): string {
+  const handles = new Set([...g.members.map((m) => m.handle.toLowerCase()), ...EVERYONE_HANDLES]);
+  const said: string[] = [];
+  for (const h of ui.markdown.handles(text)) {
+    if (handles.has(h)) continue;
+    const bare = h.replace(/[._:-]+$/, ''), mark = h.slice(bare.length);
+    if (bare && mark && handles.has(bare) && !said.some((x) => x.startsWith('“@' + h))) said.push('“@' + h + '” names nobody: the “' + mark + '” right after the name counts as part of it.');
+  }
+  return said.slice(0, 2).join(' ');
+}
+/** the room's "@": its members (by the handle the engine reads) and `@all`, drawn as the room draws a sent message */
+const roomMentions = botMentions({
+  label: 'Ask in this room',
+  foot: () => { const g = group(S.groupSel); return g?.lead ? 'An @name brings that bot in now.' : 'Only the bots you name answer. With no name, every member does.'; },
+  named: () => group(S.groupSel)?.members.map((m) => ({ ...mdBot(m), handle: m.handle })) ?? [],
+  everyone: () => { const g = group(S.groupSel); return g ? 'Everyone in ' + g.name : null; },
+  ctx: () => { const g = group(S.groupSel); return g ? ctxOf(g, false) : {}; }
+});
 /** a message of this room opened in a bot's own chat, as a draft the owner sends (nothing is forwarded by itself; rosters are frozen, so the bot cannot join) */
 export function sendToBot(bot: { id: string }, text: string): void {
   emit('hx:bot-select', { id: bot.id, from: 'group' });
@@ -242,12 +270,14 @@ export const addSendGuard = (fn: (g: Group, text: string) => boolean): void => {
 const memberOf = (g: Group, idOrProfile: string): GroupMember | undefined => g.members.find((m) => m.id === idOrProfile || m.profile === idOrProfile);
 /** the folders a member's paths resolve in: the folder the engine said its bot works in (none known: absolute paths only) */
 const rootsOf = (g: Group, who: string): string[] => { const m = memberOf(g, who); const ws = m ? data().bots.workspace?.(m.profile) : null; return ws ? [ws] : []; };
-/** whom a message is for, in words: round 0 answers the user; a later round goes to the members the room names, or its mentions name */
+/** whom a message is for, in words: round 0 answers the user; a later round goes to the members the room names, or its mentions name,
+    and to the person when it addresses them (`@user`) */
 function recipients(g: Group, m: GroupText): string[] {
   if (m.who === 'you') return [];
   if (m.round === 0) return ['you'];
   const ids = m.to?.length ? m.to : ui.markdown.resolve(m.text, g.members).members.map((x) => x.id);
-  return ids.filter((id) => id !== m.who).map((id) => memberOf(g, id)?.name ?? id);
+  const names = ids.filter((id) => id !== m.who).map((id) => memberOf(g, id)?.name ?? id);
+  return toYou(g)(m) ? [...names, 'you'] : names;
 }
 function replyTo(g: Group, who: string): void {
   const m = memberOf(g, who), c = G.composer; if (!m || !c) return;
@@ -266,7 +296,7 @@ function huddleDeps(g: Group): HuddleDeps {
 function renderLog(g: Group): void {
   const log = G.log as HTMLElement; log.textContent = '';
   NODE.clear();
-  U.divider = null; U.unread = 0; setJump(U.jump, 0);
+  U.divider = null; U.unread = 0; U.you = 0; setJump(U.jump, 0);
   const msgs = groupThread(g.id);
   if (!msgs.length) {
     const e = ui.empty({ title: 'Nothing here yet', text: groups().nature });
@@ -277,7 +307,7 @@ function renderLog(g: Group): void {
     const at = seen ? msgs.findIndex((x) => x.id === seen) : -1;
     const firstNew = at >= 0 ? msgs.slice(at + 1).find((x) => !(x.kind === 'text' && x.who === 'you')) : undefined;
     let prev: GroupMessage | null = null, entry: HTMLElement | null = null;
-    const runs = huddleRuns(msgs);
+    const runs = huddleRuns(msgs, toYou(g));
     for (let i = 0; i < msgs.length; i++) {
       const m = msgs[i] as GroupMessage;
       const run = runs.find((r) => r[0] === i);
@@ -314,7 +344,7 @@ function renderMsg(g: Group, m: GroupMessage, prev: GroupMessage | null, prevEnt
   const you = m.who === 'you';
   const to = recipients(g, m), toKey = to.join(',');
   let node: HTMLElement;
-  if (you) { node = frag(ui.html.request('')); node.innerHTML = ui.markdown.plain(m.text, ctx); }
+  if (you) { node = frag(ui.html.request('')); node.innerHTML = ui.markdown.plain(m.text, ctxOf(g, false)); }
   else node = ui.markdown(m.text, ctx);
   NODE.set(m.id, node);
   const away = you ? null : outsideNote(g, m);
@@ -358,10 +388,11 @@ function appendMsg(g: Group, m: GroupMessage): void {
   const lastIsLast = !!last && !last.nextElementSibling?.matches('.bt-note, .bt-unread');
   if (m.kind === 'text' && m.who === 'you') foldHuddles(log);
   /* a member's message among the members: two or more in a row fold into one huddle, which stays open while the talk is live */
-  if (isBetween(m)) {
+  const forYou = toYou(g);
+  if (isBetween(m, forYou)) {
     const run: GroupText[] = [];
-    for (let i = list.length - 1; i >= 0; i--) { const x = list[i] as GroupMessage; if (isBetween(x)) run.unshift(x); else break; }
-    if (run.length >= 2) { paintHuddle(g, run, m); if (follow) { sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); markSeen(g); } else { U.unread++; setJump(U.jump, U.unread); } return; }
+    for (let i = list.length - 1; i >= 0; i--) { const x = list[i] as GroupMessage; if (isBetween(x, forYou)) run.unshift(x); else break; }
+    if (run.length >= 2) { paintHuddle(g, run, m); if (follow) { sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); markSeen(g); } else { U.unread++; setJump(U.jump, U.unread, U.you); } return; }
   }
   /* a member at work: its message lands above the presence entry, or in its place when it was the last one at work */
   const pres = G.presence, working = m.kind === 'text' && !!pres?.el?.actors.some((a) => a.id === m.who);
@@ -372,7 +403,8 @@ function appendMsg(g: Group, m: GroupMessage): void {
   if (follow || (m.kind === 'text' && m.who === 'you')) { sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); markSeen(g); }
   else if (m.kind === 'text' && m.who !== 'you') {
     if (!U.divider && node) { U.divider = unreadDivider(); (entry && entry.contains(node) && $('.ui-entry__body', entry).firstElementChild === node ? entry : node).before(U.divider); }
-    U.unread++; setJump(U.jump, U.unread);
+    U.unread++; if (forYou(m)) U.you++;
+    setJump(U.jump, U.unread, U.you);
   }
 }
 /** the run's earlier messages leave the log (their entries, or the huddle they were in) and the whole run is drawn as one huddle, with the arriving message fading up */
@@ -395,13 +427,13 @@ function markSeen(g: Group): void {
   const sc = G.scroll; if (!sc || !atEnd(sc)) return;
   const msgs = groupThread(g.id), last = msgs[msgs.length - 1];
   if (last) SEEN.set(g.id, last.id);
-  U.unread = 0; setJump(U.jump, 0);
+  U.unread = 0; U.you = 0; setJump(U.jump, 0);
 }
 function jumpToLatest(): void {
   const sc = G.scroll; if (!sc) return;
   sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' });
   const g = group(S.groupSel); if (g) { const msgs = groupThread(g.id), last = msgs[msgs.length - 1]; if (last) SEEN.set(g.id, last.id); }
-  U.unread = 0; setJump(U.jump, 0);
+  U.unread = 0; U.you = 0; setJump(U.jump, 0);
   (G.composer as NonNullable<typeof G.composer>).focus();
 }
 
@@ -442,12 +474,7 @@ function renderComposer(g: Group): void {
   const c = G.composer; if (!c) return;
   c.input.setAttribute('data-placeholder', 'Message ' + g.name + ', or @name for one');
   c.input.setAttribute('aria-label', 'Message ' + g.name);
-  const chips = g.members.map((m) => {
-    const chip = ui.chip({ label: '@' + m.handle, tip: 'Ask ' + m.name + ' only' });
-    chip.addEventListener('click', () => { const v = c.value; c.insert((v && !/\s$/.test(v) ? ' ' : '') + '@' + m.handle + ' '); c.focus(); });
-    return chip;
-  });
-  c.chips.replaceChildren(...chips);
+  c.refresh();   /* the draft's chips follow the room's members */
   const why = groups().note();
   (G.working as HTMLElement).dataset['note'] = why ? '1' : '';
   c.setRunning(g.busy);

@@ -29,10 +29,11 @@ export interface RefsOpts {
 const sentence = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 const HOVER_MS = 400;
 
-/** the markdown context for a set of bots: a handle is the bot's handle (or its id), case folded; `@all` names them all */
+/** the markdown context for a set of bots: a handle is the bot's handle (its id when it has none, as in a bot's own chat), case folded,
+    as the engine resolves it (a room's member answers to its handle only); `@all` names them all */
 export function mentionCtx(bots: readonly MdBot[], o: { everyone?: boolean; /** bots that exist but are not in this conversation */ outside?: readonly MdBot[] } = {}): MarkdownCtx {
   const by = new Map<string, MdBot>();
-  for (const b of bots) { by.set((b.handle ?? b.id).toLowerCase(), b); if (!by.has(b.id.toLowerCase())) by.set(b.id.toLowerCase(), b); }
+  for (const b of bots) { const h = (b.handle ?? b.id).toLowerCase(); if (!by.has(h)) by.set(h, b); }
   const away = new Map<string, MdBot>();
   for (const b of o.outside ?? []) away.set((b.handle ?? b.id).toLowerCase(), b);
   return { mention: (h) => by.get(h.toLowerCase()) ?? null, ...(o.everyone ? { everyone: bots } : {}), ...(away.size ? { outside: (h: string) => away.get(h.toLowerCase()) ?? null } : {}) };

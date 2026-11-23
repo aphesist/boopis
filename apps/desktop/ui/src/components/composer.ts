@@ -14,8 +14,12 @@
    Shift+Tab or Esc back to the text), Alt+Down on a dashed word opens it ('ui:decision'), Alt+A attaches, Alt+V
    talks (a tap toggles, a hold talks while held), Esc while listening stops listening.
    Stop is mod+. (the shell's provider) or the stop button; otherwise Esc belongs to the shell (and the dock).
+   "@" (`mentions`, mentions.ts): a typed "@" suggests whom the message can name, and a finished mention is a chip in the text: one
+   unit for the caret, one Backspace takes it out, a click opens the list to change it. The text is always the plain words.
+   A composer that draws its text again (feedforward marks, mention chips) keeps its own undo (mod+Z, shift+mod+Z, ctrl+Y and the
+   edit menu's): the browser's own cannot follow a text rebuilt under it. Nothing is redrawn while an input method is composing.
    Region markers: the root carries data-hx-composer, the text field data-hx-focus="composer". */
-import { attrs, esc, fire, frag, isMac } from '../core/dom';
+import { attrs, cx, esc, fire, frag, isMac } from '../core/dom';
 import type { BotLike } from './bot-state';
 import { announce } from './announce';
 import { html } from './html';
@@ -23,6 +27,8 @@ import type { ChipOpts } from './html';
 import { hydrateOne } from './wire';
 import { icon } from './icons';
 import { orbHtml } from './orb';
+import { wireMentions } from './mentions';
+import type { MentionMark, MentionSource, Mentions } from './mentions';
 
 export interface FeedforwardMark { text: string; kind?: string | undefined; confirmed?: boolean | undefined; at?: number }
 export interface HintItem { label: string; kind: string; text: string }
@@ -37,6 +43,8 @@ export interface ComposerOpts {
   queue?: boolean;
   hint?: (text: string) => string | HintItem[];
   feedforward?: (text: string) => FeedforwardMark[];
+  /** "@": whom a message can name, suggested as it is typed and drawn as chips in the text (mentions.ts) */
+  mentions?: MentionSource | undefined;
 }
 export interface FileChipOpts { kind?: 'file' | 'image' | 'folder'; /** the full path, as the tooltip */ title?: string; onRemove?: () => void }
 /** the file chip: with `onRemove` a button takes it away (the composer's), without it the chip only shows (a sent turn's) */
@@ -99,21 +107,41 @@ export function composer(opts: ComposerOpts = {}): ComposerEl {
   for (const c of o.chips) chipsEl.appendChild(c instanceof Element ? c : chipOf(c));
   hydrateOne(root);
   let running = false, typingT = 0, typed = false, items: HintItem[] = [], flashT = 0;
-  const text = (): string => (input.textContent ?? '').replace(/ /g, ' ');
+  /** the text is drawn again with marks (feedforward, mention chips), so the composer keeps its own undo */
+  const redraws = !!(o.feedforward || o.mentions);
+  /* an input method is composing (nothing is redrawn under it); the last edit typed forward (a mention the caret is still at the end
+     of is a name being typed, not yet a chip) */
+  let composing = false, forward = false;
+  let mentions: Mentions | null = null;
+  const text = (): string => (input.textContent ?? '').replace(/\u00a0/g, ' ');
   function caret(): number | null {
     const s = getSelection(); if (!s || !s.rangeCount || !s.anchorNode || !input.contains(s.anchorNode)) return null;
     const r = s.getRangeAt(0).cloneRange(); r.selectNodeContents(input); r.setEnd(s.anchorNode, s.anchorOffset); return r.toString().length;
   }
+  /** where a node of the text starts, in characters */
+  function offsetOf(node: Node): number { const r = document.createRange(); r.selectNodeContents(input); r.setEndBefore(node); return r.toString().length; }
+  /** the caret at a character offset; a chip is one unit, so an offset inside it or at its end lands after it */
   function setCaret(off: number | null): void {
     if (off == null) return;
     const s = getSelection(); if (!s) return;
-    const w = document.createTreeWalker(input, NodeFilter.SHOW_TEXT); let n: Node | null, left = off;
-    while ((n = w.nextNode())) {
-      const len = (n as Text).length;
-      if (left <= len) { const r = document.createRange(); r.setStart(n, left); r.collapse(true); s.removeAllRanges(); s.addRange(r); return; }
-      left -= len;
-    }
-    const r = document.createRange(); r.selectNodeContents(input); r.collapse(false); s.removeAllRanges(); s.addRange(r);
+    const r = document.createRange();
+    let left = off;
+    const visit = (parent: Node): boolean => {
+      for (const n of parent.childNodes) {
+        if (n.nodeType === 3) { const len = (n as Text).length; if (left <= len) { r.setStart(n, left); return true; } left -= len; continue; }
+        if (n.nodeType !== 1) continue;
+        if ((n as Element).hasAttribute('data-chip')) {
+          const len = (n.textContent ?? '').length;
+          if (left === 0) { r.setStartBefore(n); return true; }
+          if (left <= len) { r.setStartAfter(n); return true; }
+          left -= len; continue;
+        }
+        if (visit(n)) return true;
+      }
+      return false;
+    };
+    if (!visit(input)) { r.selectNodeContents(input); r.collapse(false); } else r.collapse(true);
+    s.removeAllRanges(); s.addRange(r);
   }
   /* the hint: a sentence, or the assumptions as a row of quiet buttons ("Will assume: >refactor, >src/billing") */
   function paintHint(h: string | HintItem[]): void {
@@ -126,24 +154,127 @@ export function composer(opts: ComposerOpts = {}): ComposerEl {
   }
   const hasHint = (): boolean => !!(hintEl && (hintEl.textContent ?? '').trim());
   function syncHint(): void { root.toggleAttribute('data-hinting', hasHint() && ((root.contains(document.activeElement) && (typed || !!hintEl?.contains(document.activeElement))) || root.hasAttribute('data-hint-flash'))); }
+
+  /* ───── the text, drawn with its marks ───── */
+  type Mark = (FeedforwardMark | MentionMark) & { at: number; chip?: boolean };
+  /** the marks of a text, in order: the mention chips first where both start (a name being typed at `off` is left as words), then
+      the feedforward's dashed and solid words */
+  function marksOf(t: string, off: number | null): Mark[] {
+    if (!t) return [];
+    const chips: Mark[] = (o.mentions?.find(t) ?? []).filter((m) => !(forward && off != null && m.at + m.text.length === off)).map((m) => ({ ...m, chip: true }));
+    const ff: Mark[] = o.feedforward ? (o.feedforward(t) || []).map((m) => ({ ...m, at: m.at ?? t.indexOf(m.text) })).filter((m) => m.at >= 0) : [];
+    return [...chips, ...ff].sort((a, b) => a.at - b.at);
+  }
+  const classesOf = (c: string | undefined): string => (c ?? '').split(/\s+/).filter(Boolean).join(' ');
+  const markSig = (chip: boolean, kind: string, confirmed: boolean, cls: string, t: string): string => 'M' + (chip ? 'c' : '') + kind + (confirmed ? '!' : '') + '|' + cls + '|' + t;
+  /** what the text should be: its runs of words and its marks, in order */
+  function wantSig(t: string, marks: readonly Mark[]): string {
+    const parts: string[] = []; let i = 0;
+    for (const m of marks) { if (m.at < i) continue; if (m.at > i) parts.push('T' + t.slice(i, m.at)); parts.push(markSig(!!m.chip, m.kind ?? '', 'confirmed' in m && !!m.confirmed, m.chip ? classesOf((m as MentionMark).cls) : '', m.text)); i = m.at + m.text.length; }
+    if (i < t.length) parts.push('T' + t.slice(i));
+    return parts.join('\u0000');
+  }
+  /** what the text is now (its orbs and their attributes, which the page writes as it draws, do not count) */
+  function haveSig(): string {
+    const parts: string[] = [];
+    for (const n of input.childNodes) {
+      if (n.nodeType === 3) { const v = (n.textContent ?? '').replace(/\u00a0/g, ' '); if (!v) continue; const last = parts[parts.length - 1]; if (last?.startsWith('T')) parts[parts.length - 1] = last + v; else parts.push('T' + v); continue; }
+      if (n.nodeType !== 1) continue;
+      const e = n as HTMLElement, chip = e.hasAttribute('data-chip');
+      if (e.classList.contains('ui-ff')) parts.push(markSig(chip, e.dataset['kind'] ?? '', e.hasAttribute('data-confirmed'), chip ? [...e.classList].filter((c) => c !== 'ui-ff').join(' ') : '', (e.textContent ?? '').replace(/\u00a0/g, ' ')));
+      else parts.push('X' + e.tagName + (e.textContent ?? ''));
+    }
+    return parts.join('\u0000');
+  }
+  /** a chip's markup only when its text is exactly the mention's words (the send reads the text) */
+  const tpl = document.createElement('template');
+  const chipInner = (m: Mark & MentionMark): string => { if (!m.html) return esc(m.text); tpl.innerHTML = m.html; return tpl.content.textContent === m.text ? m.html : esc(m.text); };
+  function markup(t: string, marks: readonly Mark[]): string {
+    let out = '', i = 0;
+    for (const m of marks) {
+      if (m.at < i) continue;
+      out += esc(t.slice(i, m.at));
+      if (m.chip) { const c = m as Mark & MentionMark; out += '<span class="' + cx('ui-ff', classesOf(c.cls)) + '" data-kind="' + esc(c.kind) + '" data-chip contenteditable="false"' + attrs({ 'data-tip': c.tip }) + '>' + chipInner(c) + '</span>'; }
+      else out += '<span class="ui-ff" data-kind="' + esc(m.kind ?? '') + '"' + ('confirmed' in m && m.confirmed ? ' data-confirmed' : '') + '>' + esc(m.text) + '</span>';
+      i = m.at + m.text.length;
+    }
+    return out + esc(t.slice(i));
+  }
   function render(keepCaret: boolean): void {
     const t = text(), off = keepCaret ? caret() : null;
-    if (o.feedforward) {
-      const marks = t ? (o.feedforward(t) || []).map((m) => ({ ...m, at: m.at ?? t.indexOf(m.text) })).filter((m) => m.at >= 0).sort((a, b) => a.at - b.at) : [];
-      let out = '', i = 0;
-      for (const m of marks) { if (m.at < i) continue; out += esc(t.slice(i, m.at)) + '<span class="ui-ff" data-kind="' + esc(m.kind ?? '') + '"' + (m.confirmed ? ' data-confirmed' : '') + '>' + esc(m.text) + '</span>'; i = m.at + m.text.length; }
-      out += esc(t.slice(i));
-      if (input.innerHTML !== out) { input.innerHTML = out; if (off != null) setCaret(off); }
+    if (redraws && !composing && !mentions?.suggesting) {
+      const marks = marksOf(t, off);
+      if (haveSig() !== wantSig(t, marks)) { input.innerHTML = markup(t, marks); if (off != null) setCaret(off); }
     }
     input.dataset['empty'] = String(!t);
     paintSend();
     if (o.hint) paintHint(o.hint(t));
   }
+  const later = (): void => { clearTimeout(typingT); typingT = window.setTimeout(() => render(true), 250); };
+
+  /* ───── the composer's own undo (a redrawn text): snapshots of the words and the caret; typing and deleting coalesce by the second ───── */
+  interface Snap { text: string; caret: number }
+  const past: Snap[] = [], future: Snap[] = [];
+  let lastKind = '', lastAt = 0;
+  const now = (): Snap => ({ text: text(), caret: caret() ?? text().length });
+  function remember(kind: 'type' | 'delete' | 'edit'): void {
+    if (!redraws) return;
+    const at = performance.now();
+    if (kind !== 'edit' && kind === lastKind && at - lastAt < 1000) { lastAt = at; return; }
+    past.push(now()); if (past.length > 100) past.shift();
+    future.length = 0; lastKind = kind; lastAt = at;
+  }
+  /** the text as it was (or will be again): drawn at once, the caret where it was, and said as an input */
+  function travel(back: boolean): void {
+    const from = back ? past : future, to = back ? future : past, snap = from.pop();
+    if (!snap) return;
+    to.push(now()); lastKind = '';
+    input.textContent = snap.text; forward = false; render(false); setCaret(snap.caret);
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: back ? 'historyUndo' : 'historyRedo' }));
+  }
+  /** a typed edit at the caret (the paste, a line break, an insert), kept by the undo */
+  function insertText(t: string): void { remember('edit'); document.execCommand('insertText', false, t); }
+  /** the text from `start` to `end` becomes `ins` at once (a picked name, a chip changed or taken out), the caret after it */
+  function replace(start: number, end: number, ins: string): void {
+    const t = text();
+    remember('edit');
+    input.textContent = t.slice(0, start) + ins + t.slice(end);
+    forward = false; render(false);
+    input.focus(); setCaret(start + ins.length);
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText' }));
+  }
+  /** the chip that ends (Backspace) or starts (Delete) at a caret */
+  function chipBeside(off: number, side: 'before' | 'after'): { el: HTMLElement; start: number; end: number } | null {
+    for (const el of input.querySelectorAll<HTMLElement>('[data-chip]')) {
+      const start = offsetOf(el), end = start + (el.textContent ?? '').length;
+      if (side === 'before' ? end === off : start === off) return { el, start, end };
+    }
+    return null;
+  }
   const assumeBtns = (): HTMLElement[] => (hintEl ? [...hintEl.querySelectorAll<HTMLElement>('.ui-assume')] : []);
-  input.addEventListener('input', () => { typed = true; clearTimeout(typingT); typingT = window.setTimeout(() => render(true), 250); input.dataset['empty'] = String(!text()); paintSend(); });
+  input.addEventListener('input', (e) => {
+    const it = (e as InputEvent).inputType;
+    forward = it === 'insertText' || it === 'insertCompositionText';
+    typed = true; later(); input.dataset['empty'] = String(!text()); paintSend();
+  });
+  input.addEventListener('beforeinput', (e) => {
+    if (!redraws) return;
+    const ie = e as InputEvent;
+    if (ie.inputType === 'historyUndo' || ie.inputType === 'historyRedo') { e.preventDefault(); travel(ie.inputType === 'historyUndo'); return; }
+    if (ie.isComposing || ie.inputType === 'insertCompositionText') return;
+    remember(ie.inputType === 'insertText' && !!ie.data && !/\s/.test(ie.data) ? 'type' : /^delete(Content|Word|Soft)/.test(ie.inputType) ? 'delete' : 'edit');
+  });
+  input.addEventListener('compositionstart', () => { composing = true; remember('edit'); });
+  input.addEventListener('compositionend', () => { composing = false; later(); });
+  /* a name still being typed becomes a chip once the caret leaves the text: read after the focus has settled, since the suggestions
+     take it for a moment as they open and give it straight back */
+  input.addEventListener('blur', () => {
+    if (!o.mentions) return;
+    setTimeout(() => { const a = document.activeElement; if (forward && !mentions?.suggesting && a !== input && !a?.closest('.ui-listbox')) { forward = false; render(false); } }, 0);
+  });
   root.addEventListener('focusin', syncHint);
   root.addEventListener('focusout', () => setTimeout(() => { if (!root.contains(document.activeElement)) typed = false; syncHint(); }, 0));
-  input.addEventListener('paste', (e) => { e.preventDefault(); const t = e.clipboardData?.getData('text/plain') ?? ''; document.execCommand('insertText', false, t); });
+  input.addEventListener('paste', (e) => { e.preventDefault(); const t = e.clipboardData?.getData('text/plain') ?? ''; insertText(t); forward = false; });
   root.addEventListener('keydown', (e) => {
     const mod = isMac ? e.metaKey : e.ctrlKey;
     if (e.key === 'Enter' && mod && !e.altKey) { e.preventDefault(); doSend(); return; }
@@ -162,17 +293,30 @@ export function composer(opts: ComposerOpts = {}): ComposerEl {
   input.addEventListener('keydown', (e) => {
     const mod = isMac ? e.metaKey : e.ctrlKey;
     if (e.key === 'Enter' && !e.shiftKey && !mod && !e.isComposing) { e.preventDefault(); doSend(); return; }
-    if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); document.execCommand('insertText', false, '\n'); return; }
+    if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); insertText('\n'); return; }
+    if (redraws && mod && !e.altKey && e.code === 'KeyZ') { e.preventDefault(); travel(!e.shiftKey); return; }
+    if (redraws && !isMac && e.ctrlKey && !e.altKey && !e.shiftKey && e.code === 'KeyY') { e.preventDefault(); travel(false); return; }
+    if ((e.key === 'Backspace' || e.key === 'Delete') && !mod && !e.altKey && !e.isComposing && getSelection()?.isCollapsed) {
+      /* a chip is one unit: one Backspace after it (or Delete before it) takes the whole mention out */
+      const off = caret(), chip = off == null ? null : chipBeside(off, e.key === 'Backspace' ? 'before' : 'after');
+      if (chip) { e.preventDefault(); replace(chip.start, chip.end, ''); return; }
+    }
     if (e.key === 'ArrowUp' && !e.shiftKey && !e.altKey && !mod && !text().trim() && !caret()) { if (!fire(root, 'ui:edit-last', {}, true)) e.preventDefault(); return; }
     if (e.key === 'Tab' && !e.shiftKey && hasHint() && root.hasAttribute('data-hinting')) { const ab = assumeBtns(); const first = ab[0]; if (first) { e.preventDefault(); ab.forEach((b, i) => { b.tabIndex = i === 0 ? 0 : -1; }); first.focus(); return; } }
     if (e.key === 'ArrowDown' && e.altKey) {
       const s = getSelection(); const an = s?.anchorNode; const n = an && (an.nodeType === 1 ? (an as Element) : an.parentElement);
-      const m = n ? n.closest<HTMLElement>('.ui-ff') : null;
-      if (m) { e.preventDefault(); e.stopPropagation(); fire<DecisionDetail>(root, 'ui:decision', { kind: m.dataset['kind'], text: m.textContent ?? '', el: m }); }
+      const off = caret(), beside = off == null ? null : chipBeside(off, 'before') ?? chipBeside(off, 'after');
+      const m = (n ? n.closest<HTMLElement>('.ui-ff') : null) ?? beside?.el ?? null;
+      if (m) { e.preventDefault(); e.stopPropagation(); decide(m); }
     }
   });
   if (hintEl) hintEl.addEventListener('click', (e) => { const b = (e.target as Element).closest<HTMLElement>('.ui-assume'); if (b) fire<AssumptionDetail>(root, 'ui:assumption', { index: +(b.dataset['i'] ?? 0), item: items[+(b.dataset['i'] ?? 0)], el: b }); });
-  input.addEventListener('click', (e) => { const m = (e.target as Element).closest<HTMLElement>('.ui-ff'); if (m && getSelection()?.isCollapsed) fire<DecisionDetail>(root, 'ui:decision', { kind: m.dataset['kind'], text: m.textContent ?? '', el: m }); });
+  /** a mark is opened: a chip's list (change or remove the mention), or the reading of a dashed word ('ui:decision') */
+  function decide(m: HTMLElement): void {
+    if (m.hasAttribute('data-chip') && mentions) { mentions.open(m); return; }
+    fire<DecisionDetail>(root, 'ui:decision', { kind: m.dataset['kind'], text: m.textContent ?? '', el: m });
+  }
+  input.addEventListener('click', (e) => { const m = (e.target as Element).closest<HTMLElement>('.ui-ff'); if (m && getSelection()?.isCollapsed) decide(m); });
   box.addEventListener('pointerdown', (e) => { if (e.target === box) { e.preventDefault(); api.focus(); } });
   const stopping = (): boolean => running && !(o.queue && text().trim());
   send.addEventListener('click', () => (stopping() ? fire(root, 'ui:stop', {}) : doSend()));
@@ -243,9 +387,9 @@ export function composer(opts: ComposerOpts = {}): ComposerEl {
     input: { value: input }, chips: { value: chipsEl }, mic: { value: mic },
     attach: { value: root.querySelector<HTMLElement>('.ui-composer__attach') }
   });
-  api.setValue = (t) => { input.textContent = t || ''; render(false); };
+  api.setValue = (t) => { input.textContent = t || ''; past.length = 0; future.length = 0; lastKind = ''; forward = false; render(false); };
   api.refresh = () => render(true);
-  api.insert = (t) => { api.focus(); document.execCommand('insertText', false, t); };
+  api.insert = (t) => { api.focus(); insertText(t); };
   api.focus = () => { input.focus(); setCaret(text().length); };
   api.flashHint = (ms) => { root.setAttribute('data-hint-flash', ''); syncHint(); clearTimeout(flashT); flashT = window.setTimeout(() => { root.removeAttribute('data-hint-flash'); syncHint(); }, ms || 2600); };
   api.setListening = (v) => setListening(v, 'toggle');
@@ -276,6 +420,7 @@ export function composer(opts: ComposerOpts = {}): ComposerEl {
   api.setRunning = (v) => { running = !!v; paintSend(); };
   api.setSpend = (spent, cap) => { const c = root.querySelector('.ui-capacity'); if (c) c.outerHTML = cap ? html.capacity(spent, cap) : '<span class="ui-capacity" role="img" aria-label="' + esc(spent + ' spent') + '"><b>' + esc(spent) + '</b></span>'; };
   api.setHint = (h) => paintHint(h);
+  if (o.mentions) mentions = wireMentions({ root, input, box, value: text, caret, setCaret, replace, offsetOf }, o.mentions);
   api.setValue(o.value);
   return api;
 }

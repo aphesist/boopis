@@ -79,7 +79,7 @@ const draft = (text: string) => async (c: AppCtx): Promise<void> => {
   comp.setValue(text);
   await c.wait(350);
 };
-const MENU = { anchor: '#hx-view-session .ss-mention-anchor', layer: '.ui-listbox' };
+const MENU = { anchor: '#hx-view-session .ui-composer__anchor', layer: '.ui-listbox' };
 
 const story: Story = {
   id: 'composer/attribution', title: 'Who answered, and "@"', area: 'composer', kind: 'surface', covers: ['surface:attribution'], scope: '#hx-view-session',

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { blockHTML, inlineHTML, markdownHTML, mentionHandles, mentionsOutside, pathCandidate, pathCandidates, resolveMentions, splitBlocks, upgradePaths } from './markdown';
+import { EVERYONE_HANDLES, HUMAN_HANDLE, MENTION_SOURCE, addressesYou, blockHTML, inlineHTML, markdownHTML, mentionHandles, mentionsOutside, pathCandidate, pathCandidates, resolveMentions, splitBlocks, upgradePaths } from './markdown';
 import type { MarkdownCtx, MdBot } from './markdown';
 import { codeOf, markdown, streamMarkdown } from './md-view';
+import rule from '../../../../shared/data/room-mentions.json';
 
 const BOTS: Record<string, MdBot> = { kai: { id: 'kai', name: 'kai', role: 'showrunner', color: '#4fc9a8', shape: 'circle' }, nina: { id: 'nina', name: 'nina', color: '#f23b5a', shape: 'triangle' } };
 const ctx: MarkdownCtx = { mention: (h) => BOTS[h.toLowerCase()] ?? null, everyone: Object.values(BOTS) };
@@ -184,5 +185,86 @@ describe('a mention of a bot that is not in the room', () => {
     expect(html).toContain("nimbus isn&#39;t in this room");
     expect(html).toContain('@nobody');
     expect(html).not.toContain('data-mention');
+  });
+});
+
+describe('a mention of the person in a room (the engine’s handle for them, @user)', () => {
+  const room: MarkdownCtx = { ...ctx, you: true };
+  it('draws @user as the person’s own capsule, "you" with the attention dot and no orb, never a bot’s', () => {
+    const d = dom(inlineHTML('@user, the fixes are ready. Should she go ahead?', room));
+    const you = d.querySelector('.ui-mention--you');
+    expect(you?.textContent).toBe('you');
+    expect(you?.querySelector('.ui-dot--attention')).not.toBeNull();
+    expect(you?.querySelector('.ui-orb')).toBeNull();
+    expect(you?.tagName).toBe('SPAN');   /* nothing to open */
+    expect(d.textContent).toBe('you, the fixes are ready. Should she go ahead?');
+  });
+  it('reads it exactly as the engine reads a handle: any case, never with a mark glued to it, never outside a room', () => {
+    expect(dom(inlineHTML('@User look', room)).querySelector('.ui-mention--you')).not.toBeNull();
+    expect(dom(inlineHTML('@user. look', room)).querySelector('.ui-mention--you')).toBeNull();
+    expect(dom(inlineHTML('@users look', room)).querySelector('.ui-mention--you')).toBeNull();
+    expect(dom(inlineHTML('@you look', room)).querySelector('.ui-mention--you')).toBeNull();
+    expect(dom(inlineHTML('@user look', ctx)).querySelector('.ui-mention--you')).toBeNull();
+    expect(dom(inlineHTML('`@user` look', room)).querySelector('.ui-mention--you')).toBeNull();
+  });
+  it('leaves @user to a member whose handle it is, as the engine resolves members first', () => {
+    const named: MarkdownCtx = { mention: (h) => (h.toLowerCase() === 'user' ? { id: 'user', name: 'user' } : null), you: true };
+    const d = dom(inlineHTML('@user hi', named));
+    expect(d.querySelector('.ui-mention--you')).toBeNull();
+    expect(d.querySelector('.ui-mention')?.getAttribute('data-mention')).toBe('user');
+  });
+  it('marks a message that addresses the person, and only that message', () => {
+    expect(dom(markdownHTML('Done.\n\n@user, should nina go ahead?', room)).firstElementChild?.hasAttribute('data-to-you')).toBe(true);
+    expect(dom(markdownHTML('@nina, go ahead.', room)).firstElementChild?.hasAttribute('data-to-you')).toBe(false);
+    expect(dom(markdownHTML('@user, look', ctx)).firstElementChild?.hasAttribute('data-to-you')).toBe(false);
+  });
+  it('keeps the mark as a reply grows, and flashes it once as it arrives (the class the CSS animates; none under reduced motion)', async () => {
+    const root = markdown('Working on it.', room);
+    expect(root.hasAttribute('data-to-you')).toBe(false);
+    streamMarkdown(root, 'Working on it.\n\n@user, ready?', room, { animate: false });
+    expect(root.hasAttribute('data-to-you')).toBe(true);
+    const { arrive } = await import('./md-view');
+    arrive(root);
+    expect(root.hasAttribute('data-arrived')).toBe(true);
+    root.dispatchEvent(new Event('animationend'));
+    expect(root.hasAttribute('data-arrived')).toBe(false);
+  });
+});
+
+/* The mention rule has one copy, apps/shared/data/room-mentions.json, which the host's scanner (src-tauri/src/rooms/mentions.rs, its
+   test `the_scanner_is_the_data_files_rule`) and this renderer both read. The cases below are the host's own, so the two scanners are
+   held to the same answers. */
+describe('the mention rule is the shared file’s, and scans as the host’s scanner does', () => {
+  it('takes the pattern, the room’s words and the person’s handle from the file', () => {
+    expect(rule.version).toBe(1);
+    expect(MENTION_SOURCE).toBe(rule.pattern);
+    expect(rule.ignore_case).toBe(true);
+    expect(EVERYONE_HANDLES).toEqual(rule.everyone);
+    expect(HUMAN_HANDLE).toBe(rule.user);
+  });
+  it('matches handles as the engine matches them', () => {
+    expect(mentionHandles('@Kai and @nina, ask @KAI')).toEqual(['kai', 'nina']);
+    expect(mentionHandles('@kai. then')).toEqual(['kai.']);
+    expect(mentionHandles('mail a@b.com')).toEqual(['b.com']);
+    expect(mentionHandles('@@moss')).toEqual(['moss']);
+    expect(mentionHandles('@-x @_y @ z @')).toEqual([]);
+    expect(mentionHandles('@a:b-c_d.e')).toEqual(['a:b-c_d.e']);
+    expect(mentionHandles('é@kai')).toEqual(['kai']);
+  });
+  it('addresses the person by @user unless a member holds it', () => {
+    const room = (handles: string[]): MarkdownCtx => ({ mention: (h) => (handles.includes(h.toLowerCase()) ? { id: h, name: h } : null), you: true });
+    expect(addressesYou('@user can you check?', room(['kai', 'nina']))).toBe(true);
+    expect(addressesYou('Thanks @User.', room(['kai']))).toBe(false);
+    expect(addressesYou('thanks @USER', room(['kai']))).toBe(true);
+    expect(addressesYou('@all done', room(['kai']))).toBe(false);
+    expect(addressesYou('the user wants it', room(['kai']))).toBe(false);
+    expect(addressesYou('@user hi', room(['user', 'kai']))).toBe(false);
+  });
+  it('finds the outsiders the host finds', () => {
+    const known = ['kai', 'nina', 'moss', 'nimbus'].map((handle) => ({ handle }));
+    const members = [{ handle: 'kai' }, { handle: 'nina' }];
+    expect(mentionsOutside('@moss please confirm, @kai too', members, known).map((b) => b.handle)).toEqual(['moss']);
+    expect(mentionsOutside('@nobody @all @everyone @user', members, known)).toEqual([]);
+    expect(mentionsOutside('@nimbus. and @Moss', members, known).map((b) => b.handle)).toEqual(['moss']);
   });
 });

@@ -8,9 +8,13 @@
    wires a drawn block (the code well's buttons). What a mention or a path opens is the surface's: the renderer draws them as
    buttons carrying `data-mention` and `data-path`, and the surface listens.
 
-   Mentions match the engine's own pattern exactly (`@([A-Za-z0-9][A-Za-z0-9._:-]*)`, case-insensitive): a full stop right after a
+   Mentions match the engine's own pattern exactly (`@([A-Za-z0-9][A-Za-z0-9._:-]*)`, case-insensitive), read from the one copy of the
+   rule the host reads too (`apps/shared/data/room-mentions.json`; the host's scanner is `rooms/mentions.rs`): a full stop right after a
    name is part of the handle, so "@kai." names nobody called "kai" and stays text, as the engine reads it. A handle nobody has
-   stays text; `@all` and `@everyone` name the whole room when the surface gives its members.
+   stays text; `@all` and `@everyone` name the whole room when the surface gives its members. In a room (`you`), `@user` is the
+   person: the engine shows the members every message the person writes as "User (user): ..." (`hosted_room_discussion._format_message`),
+   so `user` is the handle a member writes to address them; it is drawn as the person's own capsule, and a message that holds it
+   is marked `data-to-you`. A member whose handle is `user` keeps it, as the engine resolves members first.
 
    Paths are candidates until the host says they exist: a code span that reads as a path (no spaces, a slash or a known
    extension) is drawn as code with `data-path`, and `upgradePaths` turns the ones the host resolved into buttons. Nothing is
@@ -20,10 +24,17 @@ import type { BotLike } from './bot-state';
 import { html } from './html';
 import { icon } from './icons';
 import { orbHtml } from './orb';
+import rule from '../../../../shared/data/room-mentions.json';
 
-/** the engine's mention pattern (hosted_room_discussion._MENTION_RE, re.IGNORECASE), unchanged */
-export const MENTION_SOURCE = '@([A-Za-z0-9][A-Za-z0-9._:-]*)';
-const EVERYONE = new Set(['all', 'everyone']);
+/** the engine's mention pattern (hosted_room_discussion._MENTION_RE, re.IGNORECASE), unchanged, as the shared rule states it */
+export const MENTION_SOURCE: string = rule.pattern;
+/** every mention in a text, by the shared rule's pattern and case rule */
+const mentionRe = (): RegExp => new RegExp(MENTION_SOURCE, rule.ignore_case ? 'gi' : 'g');
+/** the handles that name the whole room (`@all`, `@everyone`), case folded */
+export const EVERYONE_HANDLES: readonly string[] = rule.everyone.map((h) => h.toLowerCase());
+const EVERYONE = new Set(EVERYONE_HANDLES);
+/** the person's handle in a room: the engine labels what they write "User (user)" in every member's prompt */
+export const HUMAN_HANDLE: string = rule.user.toLowerCase();
 
 /** a bot a mention names */
 export interface MdBot extends BotLike { id: string; name: string; handle?: string | undefined }
@@ -36,6 +47,9 @@ export interface MarkdownCtx {
   outsideNote?: string | undefined;
   /** the room's members: `@all` and `@everyone` become one chip with their orbs; without it they stay text */
   everyone?: readonly MdBot[] | undefined;
+  /** a room's conversation: `@user`, the engine's handle for the person, is drawn as the person's capsule ("you"), and a message
+      that holds it is marked as addressed to them */
+  you?: boolean | undefined;
   /** code longer than this many lines folds to `fold - 2` lines (default 14, so 12 show) */
   fold?: number | undefined;
   /** links to https only (a mod's tree: MODS section 2); http stays words */
@@ -45,7 +59,7 @@ export interface MarkdownCtx {
 /** the handles a text mentions, as the engine matches them (case folded, in order, once each) */
 export function mentionHandles(text: string): string[] {
   const out: string[] = [];
-  for (const m of String(text ?? '').matchAll(new RegExp(MENTION_SOURCE, 'g'))) {
+  for (const m of String(text ?? '').matchAll(mentionRe())) {
     const h = (m[1] ?? '').toLowerCase();
     if (h && !out.includes(h)) out.push(h);
   }
@@ -125,10 +139,57 @@ export function mentionOutsideHTML(b: MdBot, note = "isn't in this room"): strin
   const said = b.name + ' ' + note;
   return '<span class="ui-mention ui-mention--out" tabindex="0"' + attrs({ 'data-tip': said, 'aria-label': said }) + '>' + orbHtml(b, { size: 16, still: true }) + '<span class="ui-mention__name">' + esc(b.name) + '</span></span>';
 }
+const stackHTML = (members: readonly MdBot[]): string => '<span class="ui-mention__stack" aria-hidden="true">' + members.slice(0, 4).map((m) => orbHtml(m, { size: 16, still: true })).join('') + '</span>';
 /** `@all`: the members' orbs, overlapping, and the word */
 export function everyoneHTML(word: string, members: readonly MdBot[]): string {
   return '<button type="button" class="ui-mention ui-mention--all"' + attrs({ 'data-mention': '@all', 'aria-label': word + ': ' + members.map((m) => m.name).join(', ') }) + '>' +
-    '<span class="ui-mention__stack" aria-hidden="true">' + members.slice(0, 4).map((m) => orbHtml(m, { size: 16, still: true })).join('') + '</span><span class="ui-mention__name">' + esc(word) + '</span></button>';
+    stackHTML(members) + '<span class="ui-mention__name">' + esc(word) + '</span></button>';
+}
+
+/** `@user` in a room: the person, as a capsule of their own. Not a bot's: no orb (the person has none) but the attention dot, the word
+    "you" in attention text, the capsule's ring and glow in attention red, since a bot that writes it is waiting on them (R-colour-2:
+    red is what the user owes). Not a button: there is nothing to open */
+export const youHTML = (): string => '<span class="ui-mention ui-mention--you">' + html.dot('attention') + '<span class="ui-mention__name">you</span></span>';
+
+/** what a handle names in a context, by the engine's rule: a bot of this conversation, the whole room (`@all`, `@everyone`), the
+    person (`@user`, in a room), or a bot that exists but is not here; null when it names nobody (it stays text) */
+export type MentionTarget = { kind: 'bot'; bot: MdBot } | { kind: 'out'; bot: MdBot } | { kind: 'all'; members: readonly MdBot[] } | { kind: 'you' };
+export function mentionTarget(handle: string, ctx: MarkdownCtx): MentionTarget | null {
+  const k = handle.toLowerCase();
+  if (EVERYONE.has(k)) return ctx.everyone?.length ? { kind: 'all', members: ctx.everyone } : null;
+  const b = ctx.mention?.(handle);
+  if (b) return { kind: 'bot', bot: b };
+  if (ctx.you && k === HUMAN_HANDLE) return { kind: 'you' };
+  const o = ctx.outside?.(handle);
+  return o ? { kind: 'out', bot: o } : null;
+}
+const targetHTML = (t: MentionTarget, word: string, ctx: MarkdownCtx): string => (t.kind === 'all' ? everyoneHTML(word, t.members) : t.kind === 'bot' ? mentionHTML(t.bot) : t.kind === 'you' ? youHTML() : mentionOutsideHTML(t.bot, ctx.outsideNote));
+const hasMentions = (ctx: MarkdownCtx): boolean => !!(ctx.mention || ctx.everyone || ctx.outside || ctx.you);
+/** whether a text addresses the person: a room's member wrote `@user` (the engine's handle for them), and no member answers to it */
+export const addressesYou = (text: string, ctx: MarkdownCtx): boolean => !!ctx.you && mentionSpans(text, ctx).some((s) => s.target.kind === 'you');
+
+/** a mention in a text: where it starts, its words exactly as written ("@kai", "@All"), and what it names */
+export interface MentionSpan { at: number; text: string; target: MentionTarget }
+/** the mentions a text holds that name someone in this context, matched by the engine's pattern anywhere in the text (the engine
+    does not ask for a word start: "me@kai" names kai to it too) */
+export function mentionSpans(text: string, ctx: MarkdownCtx): MentionSpan[] {
+  if (!hasMentions(ctx)) return [];
+  const out: MentionSpan[] = [];
+  for (const m of String(text ?? '').matchAll(mentionRe())) {
+    const t = mentionTarget(m[1] ?? '', ctx);
+    if (t) out.push({ at: m.index ?? 0, text: m[0], target: t });
+  }
+  return out;
+}
+/** A mention set into the composer's text: the capsule a sent mention is drawn as, as a chip of the text. Its text is exactly the words
+    typed (the "@" and the handle, which the send carries), kept for the caret, the copy and the screen reader; what shows is the
+    capsule's own face (the orb and the name, the room's orbs and the word). Not a button: the text box is the control. */
+export function mentionChip(s: MentionSpan, note = "isn't in this room"): { cls: string; html: string; tip?: string } {
+  const t = s.target;
+  if (t.kind === 'you') return { cls: 'ui-mention ui-mention--you', html: html.dot('attention') + '<span class="ui-sr">' + esc(s.text) + '</span><span class="ui-mention__name" aria-hidden="true" data-name="you"></span>' };
+  if (t.kind === 'all') return { cls: 'ui-mention ui-mention--all', html: stackHTML(t.members) + '<span class="ui-mention__name">' + esc(s.text) + '</span>' };
+  const face = orbHtml(t.bot, { size: 16, still: true }) + '<span class="ui-sr">' + esc(s.text) + '</span><span class="ui-mention__name" aria-hidden="true"' + attrs({ 'data-name': t.bot.name }) + '></span>';
+  return t.kind === 'out' ? { cls: 'ui-mention ui-mention--out', html: face, tip: t.bot.name + ' ' + note } : { cls: 'ui-mention', html: face };
 }
 
 /* ───────────── inline ───────────── */
@@ -172,36 +233,17 @@ export function inlineHTML(src: string, ctx: MarkdownCtx = {}): string {
     .replace(/(^|[^\w])_(?=[^\s_])([^_]*?[^\s_])_(?!\w)/g, '$1<em>$2</em>')
     .replace(/~~(?=\S)([\s\S]*?\S)~~/g, '<del>$1</del>');
   /* mentions, by the engine's pattern; an unknown handle stays as written */
-  if (ctx.mention || ctx.everyone || ctx.outside) {
-    s = s.replace(new RegExp(MENTION_SOURCE, 'g'), (m, h: string) => {
-      const k = h.toLowerCase();
-      if (EVERYONE.has(k)) return ctx.everyone?.length ? hold(everyoneHTML('@' + h, ctx.everyone)) : m;
-      const b = ctx.mention?.(h);
-      if (b) return hold(mentionHTML(b));
-      const o = ctx.outside?.(h);
-      return o ? hold(mentionOutsideHTML(o, ctx.outsideNote)) : m;
-    });
-  }
+  if (hasMentions(ctx)) s = s.replace(mentionRe(), (m, h: string) => { const t = mentionTarget(h, ctx); return t ? hold(targetHTML(t, '@' + h, ctx)) : m; });
   for (let i = held.length - 1; i >= 0; i--) s = s.split(PH('h', i)).join(held[i] ?? '');
   return s;
 }
 
 /** what the user wrote, as written (no markdown: a person's message is not styled), with its mentions as chips */
 export function plainHTML(src: string, ctx: MarkdownCtx = {}): string {
-  const held: string[] = [];
-  let s = String(src ?? '');
-  if (ctx.mention || ctx.everyone || ctx.outside) {
-    s = s.replace(new RegExp(MENTION_SOURCE, 'g'), (m, h: string) => {
-      const k = h.toLowerCase();
-      const out = ctx.outside?.(h);
-      const chip = EVERYONE.has(k) ? (ctx.everyone?.length ? everyoneHTML('@' + h, ctx.everyone) : null) : (ctx.mention?.(h) ? mentionHTML(ctx.mention(h) as MdBot) : out ? mentionOutsideHTML(out, ctx.outsideNote) : null);
-      if (!chip) return m;
-      held.push(chip); return PH('h', held.length - 1);
-    });
-  }
-  s = esc(s);
-  for (let i = held.length - 1; i >= 0; i--) s = s.split(PH('h', i)).join(held[i] ?? '');
-  return s;
+  const s = String(src ?? '');
+  let out = '', i = 0;
+  for (const m of mentionSpans(s, ctx)) { out += esc(s.slice(i, m.at)) + targetHTML(m.target, m.text, ctx); i = m.at + m.text.length; }
+  return out + esc(s.slice(i));
 }
 
 /* ───────────── blocks ───────────── */
@@ -353,5 +395,5 @@ export function blockHTML(b: Block, ctx: MarkdownCtx = {}): string {
 
 /** a whole text to HTML: the prose wrapper and its blocks */
 export function markdownHTML(text: string, ctx: MarkdownCtx = {}, o: { class?: string } = {}): string {
-  return '<div class="' + cx('ui-prose ui-md', o.class) + '">' + splitBlocks(text).map((b) => blockHTML(b, ctx)).join('') + '</div>';
+  return '<div class="' + cx('ui-prose ui-md', o.class) + '"' + (addressesYou(text, ctx) ? ' data-to-you' : '') + '>' + splitBlocks(text).map((b) => blockHTML(b, ctx)).join('') + '</div>';
 }

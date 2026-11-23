@@ -2,6 +2,7 @@
 /* Team chat in the Bots tab, and a live bot's composer, over the provider interface: the tests say what the user sees and what
    is asked of the provider, never how the engine answers (that is `host/live/groups.test.ts` and `bots.test.ts`). */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ui } from '@boopis/ui';
 import { setProvider } from '../../data';
 import type { Bot, BotInfo, BotsEvent, DataProvider, Group, GroupsSource } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
@@ -103,15 +104,38 @@ describe('a group’s thread', () => {
   it('draws the members as stacked orbs in the header', () => {
     expect(document.querySelector('.bt-group .bt-ghead .ui-stack')).not.toBeNull();
   });
-  it('sends what is written to the group, and each member can be addressed with a chip', async () => {
-    const chip = [...document.querySelectorAll<HTMLElement>('.bt-group .ui-chip')][1]!;
-    expect(chip.textContent).toMatch(/^@/);
-    const inserted: string[] = [];
-    (document as unknown as { execCommand: (c: string, u: boolean, t: string) => boolean }).execCommand = (_c, _u, t) => { inserted.push(t); return true; };
-    chip.click();
-    expect(inserted.join('')).toBe((chip.textContent ?? '') + ' ');
+  it('sends what is written to the group, exactly as written', async () => {
     q('.bt-group .ui-composer').dispatchEvent(new CustomEvent('ui:send', { detail: { text: '@nina what is left?' } }));
     expect(calls.find((c) => c.fn === 'send')!.args).toEqual(['room-release', '@nina what is left?', 'when-done']);
+  });
+  it('addresses a member with "@": the list of the room’s members (and the room) in place of a row of chips, the mention a chip in the text', async () => {
+    const c = q<HTMLElement & { input: HTMLElement; value: string }>('.bt-group .ui-composer');
+    expect(c.querySelectorAll('.ui-composer__chips .ui-chip')).toHaveLength(0);
+    const g = provider.groups.snapshot().groups[0]!;
+    c.input.focus();
+    c.input.textContent = '@';
+    const r = document.createRange(); r.setStart(c.input.firstChild!, 1); r.collapse(true); getSelection()!.removeAllRanges(); getSelection()!.addRange(r);
+    c.input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: '@' }));
+    await flush();
+    const rows = [...document.querySelectorAll('.ui-listbox .ui-option .ui-menu__label')].map((x) => (x.textContent ?? '').trim());
+    expect(rows).toEqual([...g.members.map((m) => m.name), 'all']);
+    expect(document.querySelector('.ui-listbox .ui-menu__foot')?.textContent).toBe('Only the bots you name answer. With no name, every member does.');
+    [...document.querySelectorAll<HTMLElement>('.ui-listbox .ui-option')][1]?.click();
+    await flush(); await vi.advanceTimersByTimeAsync(300);
+    expect(c.value).toBe('@' + g.members[1]!.handle + ' ');
+    const chip = c.input.querySelector<HTMLElement>('[data-chip]');
+    expect(chip?.classList.contains('ui-mention')).toBe(true);
+    expect(chip?.querySelector('.ui-orb')?.getAttribute('data-bot')).toBe(g.members[1]!.profile);
+  });
+  it('says a draft’s "@kai." names nobody, and leaves it as text', async () => {
+    const g = provider.groups.snapshot().groups[0]!, h = g.members[0]!.handle;
+    const c = q<HTMLElement & { setValue(t: string): void; input: HTMLElement }>('.bt-group .ui-composer');
+    c.setValue('thanks @' + h + '.');
+    c.input.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(c.input.querySelector('[data-chip]')).toBeNull();
+    const hint = q('.bt-group .bt-hint');
+    expect(hint.hidden).toBe(false);
+    expect(hint.textContent).toBe('“@' + h + '.” names nobody: the “.” right after the name counts as part of it.');
   });
   it('shows who is replying in the thread, and says so to the screen reader', async () => {
     const g = provider.groups;
@@ -348,6 +372,66 @@ function liveBot(p: DataProvider): { provider: DataProvider; events: ReturnType<
     sessions: { open: (_b: string, s: string) => { opened.push(s); return Promise.resolve(); }, fresh: (b: string) => { fresh.push(b); }, current: () => null } } as unknown as DataProvider['bots'];
   return { provider: { ...p, info: { ...p.info, live: true }, bots: source }, events, sent, opened, fresh };
 }
+describe('a member’s message that addresses the person (@user, the engine’s handle for them in a room)', () => {
+  beforeEach(async () => { mount(withGroups()); q('.bt-groups .ui-row').click(); await flush(); });
+  it('draws @user as the person’s capsule, marks the message, says “to you”, and never folds it into a huddle', async () => {
+    const { onGroupsEvent } = await import('./group-room');
+    const g = provider.groups.snapshot().groups[0]!, [a, b] = g.members;
+    onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'text', id: 'h1', who: a!.id, t: '10:05', text: '@' + b!.handle + ' the numbering is off by one.', round: 1, to: [b!.id] } });
+    onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'text', id: 'h2', who: b!.id, t: '10:06', text: 'Fair, fixed.\n\n@user, the fixes are ready. Should I go ahead?', round: 2 } });
+    const md = q('.bt-group .ui-md[data-to-you]');
+    expect(md.querySelector('.ui-mention--you')?.textContent).toBe('you');
+    expect(md.closest('.bt-huddle-entry')).toBeNull();
+    const entry = md.closest<HTMLElement>('[data-hx-turn]')!;
+    expect(entry.querySelector('.bt-to')?.textContent).toBe('to you');
+    expect(entry.getAttribute('aria-label')).toContain(', to you');
+    expect(document.querySelectorAll('.bt-group .ui-md[data-to-you]')).toHaveLength(1);
+  });
+  it('reads @user only in what a member writes: the person’s own message addresses nobody by it', async () => {
+    const { onGroupsEvent } = await import('./group-room');
+    const g = provider.groups.snapshot().groups[0]!;
+    onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'text', id: 'u1', who: 'you', t: '10:09', text: 'tell @user it is fine' } });
+    const mine = [...document.querySelectorAll<HTMLElement>('.bt-group .ui-request')].pop()!;
+    expect(mine.textContent).toBe('tell @user it is fine');
+    expect(mine.querySelector('.ui-mention--you')).toBeNull();
+  });
+  it('the jump button says a message below the fold is for the person, with the attention dot', async () => {
+    const { onGroupsEvent } = await import('./group-room');
+    const g = provider.groups.snapshot().groups[0]!, [a] = g.members;
+    const sc = q('.bt-group .bt-scroll');
+    Object.defineProperty(sc, 'scrollHeight', { configurable: true, value: 2000 });
+    Object.defineProperty(sc, 'clientHeight', { configurable: true, value: 400 });
+    onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'text', id: 'j1', who: a!.id, t: '10:07', text: 'Notes are up.', round: 0 } });
+    onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'text', id: 'j2', who: a!.id, t: '10:08', text: '@user can you approve the tag?', round: 1 } });
+    const jump = q<HTMLButtonElement>('.bt-group .bt-jump');
+    expect(jump.hidden).toBe(false);
+    expect(jump.textContent).toContain('2 new messages, 1 for you');
+    expect(jump.querySelector('.ui-dot--attention')).not.toBeNull();
+  });
+});
+
+describe('a bot’s own chat: "@" names a teammate', () => {
+  it('offers the other bots, says that naming one brings it nowhere, and draws the mention as the sent message will', async () => {
+    mount(withGroups());
+    const { emit } = await import('../../core/bus');
+    emit('hx:bot-select', { id: 'atlas', from: 'test' }); await flush();
+    const c = S.composer as unknown as HTMLElement & { input: HTMLElement; value: string; setValue(t: string): void };
+    c.setValue(''); c.input.focus();
+    c.input.textContent = '@';
+    const r = document.createRange(); r.setStart(c.input.firstChild!, 1); r.collapse(true); getSelection()!.removeAllRanges(); getSelection()!.addRange(r);
+    c.input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: '@' }));
+    await flush();
+    const rows = [...document.querySelectorAll('.ui-listbox .ui-option .ui-menu__label')].map((x) => (x.textContent ?? '').trim());
+    expect(rows).not.toContain('atlas');
+    expect(rows).toContain('nina');
+    expect(document.querySelector('.ui-listbox .ui-menu__foot')?.textContent).toBe('atlas reads the name. The bot you name does not see this chat.');
+    ui.listbox.close(false);
+    c.setValue('ask @nina first');
+    expect(c.input.querySelector('[data-chip] .ui-orb')?.getAttribute('data-bot')).toBe('nina');
+    expect(c.value).toBe('ask @nina first');
+  });
+});
+
 describe('a live bot’s room has a live composer', () => {
   it('shows the composer, sends to the bot, and lists the sessions as buttons that open them', async () => {
     const l = liveBot(createMockProvider({ simulate: false }));

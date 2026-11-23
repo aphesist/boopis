@@ -486,6 +486,11 @@ button.ui-group__head { cursor: pointer; }
 .ui-menu__label { overflow-wrap: anywhere; text-transform: var(--ui-case); }
 .ui-menu__label.ui-mono, .ui-menu__label[data-content] { text-transform: none; }
 .ui-menu__desc { overflow-wrap: anywhere; font-size: var(--fs-xs); color: var(--text-quiet); text-transform: var(--ui-case); }
+/* a row led by a teammate's orb or a glyph (the "@" list, a teammate picker): the lead beside the label like a provider's mark
+   (model-mark.css), the description under the label */
+.ui-menu__label[data-content]:has(> .ui-orb, > .ui-icon) { display: flex; align-items: center; gap: var(--ic-gap); }
+.ui-menu__label[data-content] > .ui-icon { width: var(--ic-l); height: var(--ic-l); color: var(--icon); }
+.ui-menu__text:has(> .ui-menu__label[data-content] > :is(.ui-orb, .ui-icon)) .ui-menu__desc { padding-inline-start: calc(var(--ic-l) + var(--ic-gap)); }
 .ui-menu__item .ui-keys, .ui-option .ui-keys { margin-left: auto; align-self: center; }
 /* an item that ends in key chips or a stamp: the end padding is the chip's inset from the top and bottom, (row - chip) / 2, and the chip's radius the item's less that (R-corner-3, R-corner-4) */
 .ui-menu__item:has(.ui-keys, .ui-stamp), .ui-option:has(.ui-keys, .ui-stamp) { --kbd-inset: calc((var(--row-h) - 18px) / 2); padding-inline-end: var(--kbd-inset); }
@@ -739,6 +744,37 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 @media (hover: hover) and (pointer: fine) { .ui-mention:hover { box-shadow: inset 0 0 0 1px var(--line-strong); transition-duration: var(--dur-1); } }
 .ui-mention:focus-visible, .ui-mention[aria-expanded="true"] { outline: var(--focus-w) solid var(--focus); outline-offset: 1px; }
 .ui-mention:active { background: var(--bg-4); }
+/* the same capsule set into the composer's text (a bot, the room, a bot outside it): its words stay in the text for the send and the
+   screen reader (.ui-sr), its face is the sent capsule's, the name drawn from data-name so the text holds only what was typed */
+.ui-mention__name[data-name]::before { content: attr(data-name); }
+.ui-ff.ui-mention { color: var(--text-strong); }
+.ui-ff.ui-mention--out { color: var(--text-dim); }
+@media (hover: hover) and (pointer: fine) { .ui-ff.ui-mention--out:hover { color: var(--text-dim); } }
+/* `@user` in a room: the person, as a capsule of their own (markdown.ts `youHTML`), never a bot's: no orb but the attention dot, the
+   word "you" in attention text, the capsule's ring in attention red with its glow (R-colour-2: a bot that writes it is waiting on the
+   person). The ground shows through it, so the word is attention text on the ground (5.4) */
+.ui-mention--you {
+  padding: 0 var(--sp-2); background: transparent; color: var(--red-text); cursor: default;
+  box-shadow: inset 0 0 0 1px var(--red), 0 0 var(--sp-2) color-mix(in srgb, var(--red) 70%, transparent);
+}
+@media (hover: hover) and (pointer: fine) { .ui-mention--you:hover { box-shadow: inset 0 0 0 1px var(--red), 0 0 var(--sp-2) color-mix(in srgb, var(--red) 70%, transparent); } }
+.ui-mention--you:active { background: transparent; }
+.ui-ff.ui-mention--you { color: var(--red-text); }
+/* a message addressed to the person (`data-to-you`, markdown.ts): an edge in attention red in the gutter beside it, glowing, and a wash
+   of --red-soft from that edge under the words (they hold 4.5:1 on it: theme.ts PAIRS); it stays while the message shows, so a bot
+   waiting on the person stands out in a long room. As it arrives the glow flashes once (`data-arrived`, md-view.ts `arrive`), on
+   opacity only; under reduced motion it is simply there */
+.ui-md[data-to-you] { position: relative; isolation: isolate; }
+.ui-md[data-to-you]::before, .ui-md[data-to-you]::after { content: ''; position: absolute; inset-block: calc(-1 * var(--sp-1)); pointer-events: none; }
+.ui-md[data-to-you]::before {
+  inset-inline-start: calc(-1 * var(--sp-3)); width: 2px; border-radius: var(--r-pill); background: var(--red);
+  box-shadow: 0 0 var(--sp-2) color-mix(in srgb, var(--red) 80%, transparent), 0 0 var(--sp-5) color-mix(in srgb, var(--red) 45%, transparent);
+}
+.ui-md[data-to-you]::after { z-index: -1; inset-inline: calc(-1 * var(--sp-3)) 0; background: linear-gradient(90deg, var(--red-soft), transparent 70%); }
+@media (prefers-reduced-motion: no-preference) {
+  .ui-md[data-to-you][data-arrived]::before, .ui-md[data-to-you][data-arrived]::after { animation: ui-to-you var(--dur-breathe) var(--ease-io) 1; }
+}
+@keyframes ui-to-you { 0% { opacity: 0; } 25% { opacity: 1; } 55% { opacity: .35; } 100% { opacity: 1; } }
 
 /* a path the host resolved: the code chip as a button, one line, its folders cut from the left so the file's name always shows; the
    whole path is its tooltip and its accessible name */
@@ -868,6 +904,8 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-composer[data-compact] .ui-composer__bar { align-self: end; }
 .ui-composer[data-compact] .ui-composer__bar { padding-block: var(--corner-inset); padding-inline-start: 0; }
 .ui-composer[data-compact] :is(.ui-composer__chips, .ui-composer__spacer, .ui-capacity) { display: none; }
+/* what the "@" list opens against: the box itself, as a quiet layer (a text box may not carry the list's expanded state) */
+.ui-composer__anchor { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; }
 /* listening (the mic): pressed, the field's line, and the target bot's orb listening in the mic's place */
 .ui-composer__mic[aria-pressed="true"] { background: var(--current); }
 .ui-composer__mic > .ui-orb { display: none; pointer-events: none; }
@@ -877,7 +915,9 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-ff { border-bottom: 1px dashed var(--text-dim); cursor: pointer; transition: border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease); }
 @media (hover: hover) and (pointer: fine) { .ui-ff:hover { border-bottom-color: var(--text-strong); color: var(--text-strong); } }
 .ui-ff[data-confirmed] { border-bottom-style: solid; border-bottom-color: var(--brass); }
-/* a mention ("@Claude Haiku"): the model that answers this message only, set in the text as a quiet capsule, never dashed (it is the person's own word, not a reading of it) */
+/* a chip in the text (mentions.ts): one unit for the caret, never dashed (it is the person's own word, not a reading of it) */
+.ui-ff[data-chip] { border-bottom: 0; }
+/* a mention ("@Claude Haiku"): the model that answers this message only, set in the text as a quiet capsule */
 .ui-ff[data-kind="mention"] { border-bottom: 0; border-radius: var(--r-pill); padding: 0 var(--sp-1); margin: 0 -1px; background: var(--bg-4); box-shadow: inset 0 0 0 1px var(--hair); color: var(--text-strong); }
 @media (hover: hover) and (pointer: fine) { .ui-ff[data-kind="mention"]:hover { box-shadow: inset 0 0 0 1px var(--line); } }
 @media (max-width: 640px) { .ui-composer__bar .ui-capacity { display: none; } }

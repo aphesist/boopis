@@ -38,7 +38,7 @@ import { tooltip } from './tooltip';
 import { hydrate, hydrateOne } from './wire';
 import { scrollClass } from './scroll';
 import { scrollEdges } from './scroll-edges';
-import { codeHTML, everyoneHTML, inlineHTML, plainHTML, markdownHTML, mentionHandles, mentionHTML, mentionOutsideHTML, mentionsOutside, pathCandidate, pathCandidates, pathHTML, resolveMentions, splitBlocks, upgradePaths } from './markdown';
+import { addressesYou, codeHTML, everyoneHTML, inlineHTML, plainHTML, markdownHTML, mentionChip, mentionHandles, mentionHTML, mentionOutsideHTML, mentionsOutside, mentionSpans, mentionTarget, pathCandidate, pathCandidates, pathHTML, resolveMentions, splitBlocks, upgradePaths } from './markdown';
 import { arrive, codeOf, markdown as markdownEl, streamMarkdown, wireMarkdown } from './md-view';
 import { copyText } from './clipboard';
 import { presence as presenceEl, presencePill, presenceWords, presenceLayout } from './presence';
@@ -88,6 +88,7 @@ const factories = {
 const markdown = Object.assign(markdownEl, {
   html: markdownHTML, inline: inlineHTML, plain: plainHTML, code: codeHTML, blocks: splitBlocks, stream: streamMarkdown, arrive, wire: wireMarkdown, codeOf,
   mention: mentionHTML, outside: mentionOutsideHTML, outsiders: mentionsOutside, everyone: everyoneHTML, handles: mentionHandles, resolve: resolveMentions,
+  target: mentionTarget, spans: mentionSpans, chip: mentionChip, toYou: addressesYou,
   path: pathHTML, pathCandidate, candidates: pathCandidates, upgradePaths
 });
 /** `ui.presence({actors})` is who is at work in a conversation, one entry where their replies land (presence.ts); `.pill` is the same, small, for the jump button */
@@ -158,6 +159,8 @@ export type { ComposerEl, ComposerOpts, DecisionDetail, AssumptionDetail, Dictat
 export type { PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
 export type { ModelRef, ModelOpts, MarkOpts, ModelFamily } from './model-mark';
 export type { BotLike } from './bot-state';
-export type { MarkdownCtx, MdBot, PathTarget, Block as MarkdownBlock } from './markdown';
-export { MENTION_SOURCE } from './markdown';
+export type { MarkdownCtx, MdBot, PathTarget, Block as MarkdownBlock, MentionSpan, MentionTarget } from './markdown';
+export { REMOVE_MENTION } from './mentions';
+export type { MentionMark, MentionSource } from './mentions';
+export { EVERYONE_HANDLES, HUMAN_HANDLE, MENTION_SOURCE } from './markdown';
 export type { CardKind, CardOpts, CardLike, CardData } from './card-registry';

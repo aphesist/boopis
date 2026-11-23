@@ -9,16 +9,17 @@ import type { MarkdownCtx } from '@boopis/ui';
 import type { GroupMember, GroupMessage, GroupText } from '../../data';
 import { listWords, unreadDivider } from './ledger';
 
-/** a message the members wrote among themselves: a member's, in a later round (round 0 answers the user) */
-export const isBetween = (m: GroupMessage): m is GroupText & { round: number } => m.kind === 'text' && m.who !== 'you' && typeof m.round === 'number' && m.round > 0;
+/** a message the members wrote among themselves: a member's, in a later round (round 0 answers the user), that does not address the
+    person (`toYou`: a member's `@user`), since a reply to the person stays a full entry */
+export const isBetween = (m: GroupMessage, toYou?: (m: GroupMessage) => boolean): m is GroupText & { round: number } => m.kind === 'text' && m.who !== 'you' && typeof m.round === 'number' && m.round > 0 && !toYou?.(m);
 /** the runs of two or more such messages in a thread, as [start, end) index pairs */
-export function huddleRuns(msgs: readonly GroupMessage[]): Array<[number, number]> {
+export function huddleRuns(msgs: readonly GroupMessage[], toYou?: (m: GroupMessage) => boolean): Array<[number, number]> {
   const runs: Array<[number, number]> = [];
   for (let i = 0; i < msgs.length;) {
     const at = msgs[i];
-    if (!at || !isBetween(at)) { i++; continue; }
+    if (!at || !isBetween(at, toYou)) { i++; continue; }
     let j = i + 1;
-    while (j < msgs.length && isBetween(msgs[j] as GroupMessage)) j++;
+    while (j < msgs.length && isBetween(msgs[j] as GroupMessage, toYou)) j++;
     if (j - i >= 2) runs.push([i, j]);
     i = j;
   }
