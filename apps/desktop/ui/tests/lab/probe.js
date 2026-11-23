@@ -477,7 +477,7 @@
         if (lr.left < m - 1 || lr.top < m - 1 || lr.right > W - m + 1 || lr.bottom > H - m + 1) add('overlay', l, 'leaves the window\'s ' + m + 'px margin (' + [r1(lr.left), r1(lr.top), r1(W - lr.right), r1(H - lr.bottom)].join(', ') + ')');
         const below = lr.top >= ar.bottom - 1, above = lr.bottom <= ar.top + 1, right = lr.left >= ar.right - 1;
         const gap = below ? lr.top - ar.bottom : above ? ar.top - lr.bottom : right ? lr.left - ar.right : NaN;
-        const wantGap = isTip && right && !below && !above ? 10 : fgap;
+        const wantGap = fgap;   /* R-float-1 (approved, 19 November 2026): 8 on every side, a tooltip to the right of the rail too (the mock's 10 was F45) */
         const clampedY = lr.top <= m + 0.5;
         /* R-tip-2: an anchor inside a container that holds a text field (the composer's attach, chips, mic and send) names what must stay
            visible in data-overlay-avoid, and its overlay sits outside that container, --float-gap beyond its near edge: the gap is then
