@@ -9,13 +9,18 @@
      colour(film, orb, at, '#f5a337')             the fill changes colour (opaque, never a fade)
      life(film, orb, t0, t1, seed)                a seeded idle life between t0 and t1: glances and blinks, like
                                                   orb2's calm idle director, but a pure function of time
-     orbMark(film, orb, { mark, toMark, toOrb })  the orb's body splits into the boopis mark's two eyes (and back) */
+     orbMark(film, orb, { mark, toMark, toOrb })  the orb's body splits into the boopis mark's two eyes (and back)
+
+   On an orb with a character (motion/character.ts), glance() is a look in its gaze queue, blink() one of its blinks,
+   and life() adds its glances as looks (the character's idle does the blinking). eyes() morphs that start while
+   another morph is still under way take over from where it is (pose.eyesVia), never from its end. */
 import type { Film } from '../engine/film';
 import { FilmOrb, defaultPose, mixColour, ptsToD, type OrbPose, type Pt } from '../engine/orb';
 import type { MarkGeometry } from '../engine/logo';
 import { rng } from '../engine/rng';
 import { travel, type Ease } from './ease';
 import { springEase, springDuration } from './spring';
+import { characterOf } from './character';
 import { interpolate } from 'flubber';
 
 export const BLINK = 0.155;
@@ -25,34 +30,44 @@ const ORB_MORPH = 0.38;
 const blinkClose = Object.assign((q: number): number => (q <= 0 ? 0 : q >= 1 ? 1 : Math.pow(Math.sin((Math.PI * q) / 2), 0.82)), { easeName: 'orb-blink-close' });
 const blinkOpen = Object.assign((q: number): number => (q <= 0 ? 0 : q >= 1 ? 1 : 1 - Math.pow(Math.cos((Math.PI * q) / 2), 0.82)), { easeName: 'orb-blink-open' });
 export function blink(film: Film, orb: FilmOrb, at: number): void {
+  const c = characterOf(orb);
+  if (c) { c.blink(at); return; }
   film.tl.fromTo(orb.pose, { blink: 0 }, { blink: 1, duration: BLINK / 2, ease: blinkClose, immediateRender: false, data: { role: 'orb' } }, at);
   film.tl.fromTo(orb.pose, { blink: 1 }, { blink: 0, duration: BLINK / 2, ease: blinkOpen, immediateRender: false, data: { role: 'orb' } }, at + BLINK / 2);
 }
 
 export function glance(film: Film, orb: FilmOrb, at: number, yaw: number, pitch: number, o: { dur?: number; ease?: Ease } = {}): void {
+  /* with a character (motion/character.ts) a glance is a look in its gaze queue: it takes over from the glance before */
+  const c = characterOf(orb);
+  if (c && !o.ease) { c.look(at, yaw, pitch, { dur: o.dur }); return; }
   const ease = o.ease ?? springEase('character');
   film.tl.to(orb.pose, { yaw, pitch, duration: o.dur ?? springDuration('character'), ease, immediateRender: false, data: { role: 'orb' } }, at);
 }
 
-/** morph the eyes from the shape they have at `at` to `to` */
+/** morph the eyes from the face they have at `at` to `to`. A morph that starts while the one before it is still under
+    way starts from where that one is (its start face mixed toward its target by its eased progress, pose.eyesVia), so
+    the face never jumps to the end of the morph it interrupts. */
 export function eyes(film: Film, orb: FilmOrb, at: number, to: string, o: { dur?: number; ease?: Ease } = {}): void {
-  /* the shape they have then: what the latest earlier eye morph left */
-  const from = eyeState(orb, at);
-  film.tl.set(orb.pose, { eyes: from, eyesTo: to, eyesMix: 0 }, at);
-  film.tl.to(orb.pose, { eyesMix: 1, duration: o.dur ?? ORB_MORPH, ease: o.ease ?? travel, immediateRender: false, data: { role: 'orb' } }, at);
-  recordEyes(orb, at, to);
-}
-const eyeLog = new WeakMap<FilmOrb, [number, string][]>();
-function eyeState(orb: FilmOrb, at: number): string {
+  const dur = o.dur ?? ORB_MORPH, ease = o.ease ?? travel;
+  const prev = lastMorph(orb, at);
+  let from: string, via = '', viaMix = 0;
+  if (prev && at < prev.at + prev.dur - 1e-9) {
+    from = prev.from; via = prev.to; viaMix = prev.ease(Math.max(0, (at - prev.at) / prev.dur));
+  } else from = prev ? prev.to : orb.pose.eyesMix >= 1 && orb.pose.eyesTo ? orb.pose.eyesTo : orb.pose.eyes;
+  /* the set changes names, not the face drawn (that is the point of it): no fence for the renderer */
+  film.tl.set(orb.pose, { eyes: from, eyesVia: via, eyesViaMix: viaMix, eyesTo: to, eyesMix: 0, data: { fence: false } }, at);
+  film.tl.to(orb.pose, { eyesMix: 1, duration: dur, ease, immediateRender: false, data: { role: 'orb' } }, at);
   const log = eyeLog.get(orb) ?? [];
-  let s = orb.pose.eyesMix >= 1 && orb.pose.eyesTo ? orb.pose.eyesTo : orb.pose.eyes;
-  for (const [t, e] of log) if (t <= at) s = e;
-  return s;
-}
-function recordEyes(orb: FilmOrb, at: number, to: string): void {
-  const log = eyeLog.get(orb) ?? [];
-  log.push([at, to]); log.sort((a, b) => a[0] - b[0]);
+  log.push({ at, from, to, dur, ease }); log.sort((a, b) => a.at - b.at);
   eyeLog.set(orb, log);
+}
+interface Morph { at: number; from: string; to: string; dur: number; ease: Ease }
+const eyeLog = new WeakMap<FilmOrb, Morph[]>();
+/** the latest eye morph that starts at or before `at` */
+function lastMorph(orb: FilmOrb, at: number): Morph | null {
+  let m: Morph | null = null;
+  for (const e of eyeLog.get(orb) ?? []) if (e.at <= at + 1e-9) m = e;
+  return m;
 }
 
 export function shape(film: Film, orb: FilmOrb, at: number, to: string, o: { dur?: number; ease?: Ease } = {}): void {
@@ -70,6 +85,7 @@ export function life(film: Film, orb: FilmOrb, t0: number, t1: number, seed = 1,
   const r = rng(seed);
   const Y = o.yaw ?? 16, P = o.pitch ?? 9;
   for (let t = t0 + 0.4 + r() * 0.8; t < t1 - 0.5; t += 1.8 + r() * 0.8) glance(film, orb, t, (r() * 2 - 1) * Y, (r() * 2 - 1) * P);
+  if (characterOf(orb)) return;   /* a character blinks on its own idle */
   for (let t = t0 + 0.6 + r() * 1.5; t < t1 - BLINK; t += 2.1 + r() * 3.6) {
     blink(film, orb, t);
     if (r() < 0.24 && t + 0.21 + BLINK < t1) blink(film, orb, t + 0.21);

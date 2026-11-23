@@ -10,6 +10,7 @@ export * from './reveal';
 export * from './type';
 export * from './cursor';
 export * from './orb-moves';
+export * from './character';
 export * from './fade';
 /* the script's timeline (beats.json): beat('B03'), at('5.3'), span('2.2-3.2.5'), script.check() */
 export * as script from './beats';
