@@ -201,3 +201,4 @@ Recommended: (1). It keeps every change journaled and rewindable.
   dock states and the composer stay a fixed size.
 - 0.1.10 RELEASED (23 Nov): develop = main = 5b9b9a0e, release run 45234331903 green, pre-release v0.1.10 with 7 assets, all verified against SHA256SUMS and sent.
 - Pose (owner): K04 rejected (horizontal-only). Need one common body orientation rotated on BOTH axes via orb2's own 3D controls (like orb2's ambient-idle demo), eyes drawn on top at the same position on every shape (first style), aiming at Grok's overall rotation; 3 options.
+- Pose (owner): K05 rejected (triangle tumbles toward camera). Owner supplied Grok fixed-angle image + drop and shapes-tour videos; owner gave go-ahead to redesign orb2's 3D model (branch boopis/character-3d in orb2, not pushed until OK).
