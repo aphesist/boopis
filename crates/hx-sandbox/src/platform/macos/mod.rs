@@ -104,14 +104,24 @@ pub(crate) fn prepare(policy: &ResolvedPolicy) -> Result<Prepared> {
             }
         }
     };
-    // macOS ignores RLIMIT_AS, counts RLIMIT_NPROC per user (baseline unknown here, so the
-    // allowance is the raw number), and exempts uid 0 from it.
+    // macOS ignores RLIMIT_AS, counts RLIMIT_NPROC per user over every process the user already
+    // has (a logged-in user has hundreds, so the raw allowance alone left a sandboxed shell unable
+    // to fork: EAGAIN), and exempts uid 0 from it. The allowance goes on top of the processes that
+    // exist now, as on Linux.
     let context = RlimitContext {
-        baseline_tasks: 0,
+        baseline_tasks: super::unix_sys::process_count(),
         enforces_address_space: false,
         enforces_process_count: super::unix_sys::effective_uid() != 0,
     };
-    let limits = rlimits::plan(&policy.resources, policy.kill_grace, context);
+    let mut limits = rlimits::plan(&policy.resources, policy.kill_grace, context);
+    // The raised process count must stay within this process's own hard limit, which only root
+    // may raise (macOS's per-user ceiling, kern.maxprocperuid, clamps it again in the kernel).
+    if let Some(ceiling) = super::unix_sys::hard_limit(libc::RLIMIT_NPROC) {
+        for spec in limits.iter_mut().filter(|s| s.name == "nproc") {
+            spec.soft = spec.soft.min(ceiling);
+            spec.hard = spec.hard.min(ceiling);
+        }
+    }
     let enforcement = Enforcement {
         platform: "macos".to_owned(),
         fs,

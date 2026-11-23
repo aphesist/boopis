@@ -74,9 +74,9 @@ No setuid helper and no bubblewrap. Every mechanism is a syscall the child makes
 
 Landlock and seccomp are **probed at runtime**, not inferred from a version: a forked child restricts itself and has to be denied. `capabilities()` reports the result. On this container: Landlock ABI 7, seccomp, and network namespaces (root, `CAP_SYS_ADMIN`). The same tests also pass as an unprivileged user (`setpriv --reuid=65534 --regid=65534 --clear-groups <test binary>`), where loopback goes through a user namespace.
 
-### macOS (compiles for both Apple targets; **never run**)
+### macOS (run on Apple silicon by `release.yml`'s `macos-smoke`: `tests/macos.rs`, and the plugin's exec tests through the bundled `hx`)
 
-A **Seatbelt** profile is generated from the policy and applied with `/usr/bin/sandbox-exec -p` (absolute path, never `PATH`). The profile is deny-by-default, adapted from Codex's base and platform-default policies (see `NOTICE`). Each path is a `-D` parameter referenced as `(param "RO_0")`, so a hostile path cannot inject rules. Read-only grants allow `file-read*` and `file-map-executable`; read-write grants add `file-write*`. Network: nothing for off, `localhost:*` for loopback, `(allow network*)` for on. Process: `setsid` plus `killpg`, and rlimits (`RLIMIT_NPROC`, `RLIMIT_FSIZE`, `RLIMIT_CPU`, `RLIMIT_CORE`; macOS ignores `RLIMIT_AS`, so the memory limit is reported as not enforced). Profile generation is unit-tested as text on every platform.
+A **Seatbelt** profile is generated from the policy and applied with `/usr/bin/sandbox-exec -p` (absolute path, never `PATH`). The profile is deny-by-default, adapted from Codex's base and platform-default policies (see `NOTICE`). Each path is a `-D` parameter referenced as `(param "RO_0")`, so a hostile path cannot inject rules. Read-only grants allow `file-read*` and `file-map-executable`; read-write grants add `file-write*`. Network: nothing for off, `localhost:*` for loopback, `(allow network*)` for on. Process: `setsid` plus `killpg`, and rlimits (`RLIMIT_NPROC`, `RLIMIT_FSIZE`, `RLIMIT_CPU`, `RLIMIT_CORE`; macOS ignores `RLIMIT_AS`, so the memory limit is reported as not enforced). `RLIMIT_NPROC` counts every process the user has, so the allowance is added to the number of processes on the Mac (`proc_listallpids`), as Linux adds its task count: with the bare allowance a logged-in user's hundreds of processes left a sandboxed shell unable to fork. Profile generation is unit-tested as text on every platform.
 
 ### Windows (compiles for `x86_64-pc-windows-msvc`; **never run**)
 
@@ -180,7 +180,7 @@ cargo check --target x86_64-pc-windows-msvc --all-targets
 |---|---|---|
 | Linux x86_64, root and unprivileged | everything above | |
 | Linux aarch64 | | the whole crate (`aarch64-unknown-linux-gnu`, clippy clean); the seccomp tables are built from `libc::SYS_*` constants that exist on both architectures |
-| macOS | profile text | the backend and its tests (`aarch64-apple-darwin`, `x86_64-apple-darwin`) |
+| macOS | profile text; on `macos-latest` (Apple silicon, `release.yml` `macos-smoke`): `tests/macos.rs` (read-only and read-write grants, unreadable paths, network off and on, environment allowlist, timeout and tree kill, output cap, spawn failure, a child under the process limit) and the plugin's exec kernel in the profile through the bundled `hx` | `x86_64-apple-darwin` |
 | Windows | argument quoting, environment block, ACL masks, capability SIDs | the whole backend and its tests (`x86_64-pc-windows-msvc`) |
 
 A real Mac and a real Windows machine must confirm at least: that the generated profile lets a stock Python and a stock `cargo` start; that ACL propagation and revocation behave on a real tree; that `CreateProcessW` accepts the attribute combination; that an AppContainer can run the interpreters the kernel needs; the loopback exemption path; and the time cost of granting a large workspace.
