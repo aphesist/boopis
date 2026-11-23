@@ -52,39 +52,58 @@ Foreground: the cursor (48 px) with its tip at [1810, 956] (9:16 [1036, 1515]); 
 
 ## S2: A2 to A3 at 20.000 s (B08 to B09, bar 10.2.5)
 
+Numbers re-measured on the rebuilt key frames (light look, ec9ed6f5), 23 November 2026.
+
 - **Frame state:** B09's key frame **before the request types**: your session at 2.6x, its thread empty, the composer
-  empty with the Governed chip on. The right panel and the film line are not on screen yet.
+  empty with the Governed chip on, the session plate bleeding past the frame (16:9: its right edge at x 1300, the only
+  edge in the frame). The right panel, its Governance section and the film line are not on screen yet.
 - **A2 lands:** B08's pull back to the window (86% of the width), the cursor's click on Session in the tabs pill at
   +2.5 (the thumb slides at `--dur-slide` on `--spring`, the room slides 48 px left as the session slides in), the
   composer's morph (member chips fold away, Governed arrives, `--dur-3`), then the push into the session, landing the
   composer on its rect below on 20.000: the composer is the carried object, never redrawn.
 - **A3 starts:** the request types into that composer (30 cps, no underlines); send at +2.5; the answer and the
   Governance section (it slides in from the right edge) follow.
+- **The lamp on 20.000:** B09's own light, `--lamp-ui`, centred at 0.40, 0.50 of the frame and 0.90 x 0.96 of it
+  (9:16: 0.50, 0.50, 0.90 x 0.96), on the look's ground. A3 starts from whatever the ground holds on 20.000 (it reads
+  it from the timeline), so this is where A2 should leave it.
 
 | handle (`ctx.carry.composer.*`) | what | 16:9 rect | 9:16 rect | zoom | radius, fill |
 |---|---|---|---|---|---|
-| `el` | the session composer, empty, Governed on | [80, 790, 1196, 220] | [50, 1330, 936, 220] (see note) | 2.6 | 52, `--bg-3` |
-| `session` | the session plate / column, empty | [40, -80, 1260, 1240] | [50, 600, 936, 464] | 2.6 | 30 |
+| `el` | the session composer, empty, Governed on | [80, 810, 1196, 220] | [60, 1400, 900, 220] (see note) | 2.6 | 52, `--bg-3` |
+| `session` | the session plate (`.plate--room`, bled with `bleedPlate()`); the thread above the composer is empty | [-230, -130, 1530, 1340] | [-130, -230, 1340, 2380] | | 30 |
 
-Note: B09's 9:16 key frame has no composer in view. Until the art director boards it, the 9:16 composer rect above
-(936 px wide under the column, its top at y 1330, inside the band) is the contract.
+Note: B09's 9:16 key frame has no composer in view (its Governance section is pinned at the band's foot,
+[60, 1349, 900, 291]). The 9:16 composer rect above follows look.md 7.3: the composer pinned at the band's foot (its
+bottom about y 1620), across the safe column (x 60 to 960, 346 real px at 2.6x). After the send A3 lets it leave below
+the band and slides the Governance section into its place.
 
 ## S3: A3 to A4 at 32.000 s (B13 to B14, bar 16.1)
 
+Numbers re-measured on the rebuilt key frames (light look, ec9ed6f5), 23 November 2026.
+
 - **Frame state:** B13's key frame: the run printed and done in the terminal ("-- done: the bots stopped handing off
-  after 3 rounds", the prompt back), and the same messages landed in the open room beside it, vox's and kai's
-  gathered into the live huddle "vox and kai worked it out, 2 messages".
-- **A3 lands:** the widened framing of terminal and room (B13 +0, travel 24 f), each block landing on a half-beat in
-  both, the done line at +2.5; everything at rest on these rects by 32.000.
+  after 3 rounds", the prompt back), and the same messages landed in the open room beside it (16:9) or under it (9:16),
+  vox's and kai's gathered into the live huddle "vox and kai worked it out, 2 messages". The room is the product's
+  narrow layout (each call number folded above its message), scrolled to its end, so every line is whole in the frame.
+- **A3 lands:** the widened framing of terminal and room, each block landing on a half-beat in both, the done line at
+  +2.5; everything at rest on these rects by 32.000.
 - **A4 starts:** holds half a beat, then from +0.5 the camera glides right and down to the dock and the nameless app
   on the camera spring; a click on nina's orb in the dock opens her session (the slab's outline morphs up on its
   springs, the orb travels to the session head). The dock and the app wait off-frame in the world; A4 owns where.
+- **The lamp on 32.000:** `--lamp-cool`, centred at 0.50, 0.50 of the frame, 0.90 x 0.96 of it (both formats), on
+  the look's ground (lookGround's box spans 1.8 frames: 50%, 50%, 50%, 53.33% of it).
+- **Drawn until A4 lets go:** from 32.000 A3 draws its elements only while `desk.terminal` is visible (A4 hides the desk
+  once its glide has taken it out of the frame); A3's root then stops drawing, so nothing of A3 outlives the desk.
 
 | handle (`ctx.carry.desk.*`) | what | 16:9 rect | 9:16 rect | radius, fill |
 |---|---|---|---|---|
-| `terminal` | the terminal plate (`.term`) | [-24, 110, 1004, 860] | [30, 230, 1020, 720] | 18, `--bg-0` |
-| `window` | the open room (`.plate--room`), its thread at 2.6x | [1000, -60, 1000, 1200] | [30, 1000, 1100, 1000] | 30 |
+| `terminal` | the terminal plate (`.term`, the look's 28 px mono) | [0, 110, 1040, 860] | [30, 230, 1020, 544] | 18, `--bg-0` |
+| `window` | the open room's plate (`.plate--room`): 16:9 its left edge in the frame, bleeding top, right and bottom; 9:16 its top edge in the frame, bleeding the rest | [1060, -130, 1090, 1340] | [-130, 814, 1340, 1336] | 30 |
+| (the room's log) | inside `window`: the narrow layout at 2.6x, scrolled to its end in a view from y 60 to 1020 (9:16: 854 to 1640) | x 1100, width 292 real (759 px) | x 60, width 346 real (900 px) | |
 | `app`, `dock` | the nameless app and the dock: off-frame (16:9 right and below; 9:16 below) | A4's | A4's | |
+
+`desk.window` sits in A3's window group (a plate whose CSS transform places it: at 32.000 a translation and scale 1):
+read its rect with `getBoundingClientRect()`, not from its left and top.
 
 ## What exists today (the placeholder)
 
