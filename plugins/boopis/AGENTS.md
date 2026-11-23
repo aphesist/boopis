@@ -23,7 +23,7 @@ The boopis Hermes plugin (Python, stdlib only at runtime). It adds governance, a
 | `_vendor/contraprova/` | exact copy of contraprova's engine at a pinned commit (see below). Never edit |
 | `data/` | copies of shared data files (`errors.json`, `protected.default.json`, hx-pack's rules). Never edit |
 | `config/` | settings and trust-gated project settings, validated against `config/schemas/*.json` |
-| `policy/` | `check(call, session) -> Decision`, the one permission function. Data in `policy/defaults.json` |
+| `policy/` | `check(call, session) -> Decision`, the one permission function. Data in `policy/defaults.json`. `tiers.py` is a bot's capability tiers (Allow, Ask, Block per kind of action; data in `policy/bot_tiers.json`, ADR-0048), a step of `check`, for a session that runs for a bot |
 | `ledger/` | `SessionLedger` over contraprova's `EventLog`; usage mapping; prices; stats |
 | `rpc/` | the boopis-v1 methods (`__init__.py`; `blanks.py`: `blank.fill`; `checkpoints.py`: `checkpoint.list` and `checkpoint.diff`, with `ship/diffview.py` parsing the git diff) |
 | `prompt.py` | the cache-stable governed-mode prompt section |

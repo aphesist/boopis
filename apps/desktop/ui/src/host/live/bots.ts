@@ -16,7 +16,7 @@ import { isFrontier } from '../../data/frontier';
 import { logger } from '../../core/log';
 import { NeedsConfirmation } from '../../data/confirm';
 import { botIdBase, numbered } from '../../data/bot-id';
-import { APPROVALS, SUGGESTIONS } from '../../data/bot-catalog';
+import { APPROVALS, OWN_SETTINGS, SUGGESTIONS } from '../../data/bot-catalog';
 import { TURN_LIMIT_DEFAULT } from '../../data/mock-groups';
 import { scheduleWords } from '../../data/cron';
 import { lineDiff, valueDiff } from '../../data/diff';
@@ -383,7 +383,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       const made = await client.requestRaw('profiles.create', params).catch((e: unknown) => { preparing.delete(plan.profile); throw e; }) as { path?: string; warnings?: string[]; model_set?: boolean };
       try {
         /* a bot is ungoverned until the owner turns Governed on in its settings (ADR-0042) */
-        await plug('bots.write', { name: plan.profile, look: { shape: draft.shape, color: draft.color }, settings: { gov: 'ungoverned', cap: '0.60', workspace: 'worktree' }, approvals: Object.fromEntries(APPROVALS.map((a) => [a.id, true])) });
+        await plug('bots.write', { name: plan.profile, look: { shape: draft.shape, color: draft.color }, settings: { ...OWN_SETTINGS } });   /* its tiers are the plugin's defaults until the owner chooses (ADR-0048) */
       } catch (e) { log.warn('the new teammate’s own record was not saved', e); }
       if (made.warnings?.length) log.warn('Hermes warned while making ' + plan.profile + ': ' + made.warnings.join(' '));
       try { await refreshRoster(); await prepare(plan.profile, true); } finally { preparing.delete(plan.profile); }
@@ -460,7 +460,8 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
         if (approvals) body['approvals'] = approvals;
       }
       const res = await plug<{ record: PluginBot['record'] }>('bots.write', body);
-      r.plugin = { ...(r.plugin ?? { name: id, path: r.row.path, problem: null, archived: null }), record: res.record };
+      const tiers = r.plugin?.tiers && patch.cfg?.approvals ? { ...r.plugin.tiers, ...patch.cfg.approvals } : r.plugin?.tiers;   /* what was just enforced; the next read says it again */
+      r.plugin = { ...(r.plugin ?? { name: id, path: r.row.path, problem: null, archived: null }), record: res.record, ...(tiers ? { tiers } : {}) };
       events.emit({ type: 'bot', bot: toBot(r) });
       if (patch.cfg?.gov) await prepare(id, false);   /* the Governed switch is the bot's plugin mode */
     },

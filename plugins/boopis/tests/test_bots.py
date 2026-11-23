@@ -176,18 +176,19 @@ def test_write_refuses_what_is_not_a_look_or_a_setting(root: Path, svc: BotServi
         svc.write("atlas", look=look, settings=settings)
 
 
-def test_approvals_merge_and_are_a_short_id_to_a_boolean(root: Path, svc: BotService) -> None:
+def test_approvals_merge_and_map_an_id_to_a_tier_or_an_old_switch(root: Path, svc: BotService) -> None:
     make_profile(root, "atlas")
     assert svc.write("atlas", approvals={"deploys": True, "push": False})["approvals"] == {
         "deploys": True,
         "push": False,
     }
     assert svc.write("atlas", approvals={"push": True})["approvals"] == {"deploys": True, "push": True}
+    assert svc.write("atlas", approvals={"push": "block"})["approvals"] == {"deploys": True, "push": "block"}
     for bad in (
-        {"Deploys": True},
+        {"_deploys": True},
         {"deploys": "yes"},
-        {"x" * 40: True},
-        {f"a{i}": True for i in range(40)},
+        {"x" * 70: True},
+        {f"a{i}": True for i in range(70)},
         ["deploys"],
     ):
         with pytest.raises(InvalidParamsError):

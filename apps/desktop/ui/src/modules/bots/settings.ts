@@ -5,7 +5,8 @@ import { emit } from '../../core/bus';
 import { $, cap1, el, esc, frag, reduced } from '../../core/dom';
 import { ui } from '@boopis/ui';
 import { data } from '../../data';
-import type { Bot, BotConfig } from '../../data';
+import type { ApprovalTier, Bot, BotConfig, Choice } from '../../data';
+import { APPROVAL_TIERS } from '../../data/types';
 import { cronValid, cronWords, CRON_PRESETS } from './cron';
 import { bot, S } from './model';
 import { orbButton } from './orbs';
@@ -49,6 +50,18 @@ export function runLimitRow(b: Bot): HTMLElement {
       onPick: (v) => { data().bots.setRunLimit(b.id, v).then((now) => { show(now); ui.toast(now.turns === null ? b.name + ' runs for up to ' + now.fallback + ' turns.' : b.name + ' runs for up to ' + now.turns + ' turns.'); }).catch((e: unknown) => { ui.toast('The limit was not saved: ' + said(e)); }); }
     });
   });
+  return row;
+}
+const TIER_WORDS: Readonly<Record<ApprovalTier, string>> = { allow: 'Allow', ask: 'Ask', block: 'Block' };
+/** one kind of action's tier, a settings row with the kit's radio segmented control (ADR-0048). A kind the plugin has not reported has no
+ *  row (its tier is unknown, never drawn as a guess) */
+export function tierRow(b: Bot, ap: Choice, now: ApprovalTier | undefined, onChange: (tier: ApprovalTier) => void): HTMLElement | null {
+  if (!now) return null;
+  const labelId = 'bt-tier-' + b.id + '-' + ap.id;
+  const offers = ap.tiers ?? APPROVAL_TIERS;
+  const row = frag(ui.html.setRow({ label: ap.name, labelId, control: ui.html.segmented({ mode: 'radio', size: 's', labelledby: labelId, value: offers.includes(now) ? now : 'ask', options: offers.map((t) => ({ value: t, label: TIER_WORDS[t] })) }) }));
+  ui.hydrate(row);
+  row.querySelector('[data-ui="seg"]')?.addEventListener('ui:change', (e) => { onChange((e as CustomEvent<{ value: string }>).detail.value as ApprovalTier); });
   return row;
 }
 /** the headers are the sheet's tab stops: up and down move between them, home and end jump (KEYMAP section 9) */
@@ -150,7 +163,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
     return row;
   };
   const chans = el('div', { class: 'ui-set' }, catalog.channels.map((ch) => switchRow('ch-' + ch.id, ch.name, ch.hint ?? null, !!c.channels[ch.id], ch.id === 'app', (v) => { c.channels = { ...c.channels, [ch.id]: v }; push({ channels: { [ch.id]: v } }); changed(); })));
-  const appr = el('div', { class: 'ui-set' }, catalog.approvals.map((ap) => switchRow('ap-' + ap.id, ap.name, null, !!c.approvals[ap.id], false, (v) => { c.approvals = { ...c.approvals, [ap.id]: v }; push({ approvals: { [ap.id]: v } }); })));
+  const appr = el('div', { class: 'ui-set' }, catalog.approvals.map((ap) => tierRow(b, ap, c.approvals[ap.id], (v) => { c.approvals = { ...c.approvals, [ap.id]: v }; push({ approvals: { [ap.id]: v } }); })).filter((n): n is HTMLElement => !!n));
 
   /* workspace */
   const wsHint = hint('');
@@ -168,7 +181,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
     sec('model', 'Model', c.gov === 'governed' ? 'governed' : c.model, [hint('Governed starts cheap and climbs the ladder only when a step fails.'), gov, modelBox, el('div', { class: 'ui-set' }, runLimitRow(b))]),
     sec('schedule', 'Schedule', c.cron ? (cronValid(c.cron) ? cronWords(c.cron) : 'incomplete') : null, [hint('When it runs without being asked.'), presets, cronF]),
     sec('channels', 'Channels', null, [hint('Where you can reach it, and where it reports.'), chans]),
-    sec('approvals', 'Ask me before', null, [hint('It pauses and sends you an approval card.'), appr]),
+    sec('approvals', 'What it may do', null, [hint('Allow: it goes ahead. Ask: it pauses and sends you an approval card. Block: it may not.'), appr]),
     sec('workspace', 'Workspace', c.workspace, [ws, wsHint])
   );
   const heads = wireSectionKeys(body);

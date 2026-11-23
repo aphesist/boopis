@@ -204,7 +204,10 @@ def test_the_pause_card_carries_the_policy_s_own_question_too(make: Make) -> Non
     spend(2)
     paused = tool()
     assert paused is not None and paused["action"] == "approve"
-    assert "cap for this run" in paused["message"] and "Also: The permission rule Read(a.txt)" in paused["message"]
+    assert (
+        "cap for this run" in paused["message"]
+        and "Also: kai asks: The permission rule Read(a.txt)" in paused["message"]
+    )
 
 
 def test_a_policy_refusal_stands_whatever_the_budget_says(make: Make) -> None:

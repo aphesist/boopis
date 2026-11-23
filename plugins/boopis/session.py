@@ -247,6 +247,7 @@ class Runtime:
         its ``ship`` is still open."""
         base = caller.state.policy
         assert base is not None
+        base = replace(base, bot=self.bot_rules())  # read again when the record changes: a new tier applies at once
         if caller.link is None:
             return replace(base, mode="ungoverned") if caller.state.track.active else base
         return replace(base, role="worker", ship_closed=caller.link.closed_reason())

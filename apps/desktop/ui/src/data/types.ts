@@ -11,14 +11,18 @@ export interface BotConfig {
   instructions: string;
   gov: Governance;
   model: string;
-  /** dollars per run, as typed ("0.60") */
+  /** dollars per run, as typed ("0.60"); '' when the bot has no cap of its own */
   cap: string;
   /** a five-field cron expression, or '' for "only when asked" */
   cron: string;
   channels: Readonly<Record<string, boolean>>;
-  approvals: Readonly<Record<string, boolean>>;
+  /** what it may do, per kind of action (`APPROVALS`): Allow, Ask or Block, as the plugin enforces it (ADR-0048) */
+  approvals: Readonly<Record<string, ApprovalTier>>;
   workspace: 'worktree' | 'sandbox';
 }
+/** a bot's tier for one kind of action: it does it, it asks first, or it may not */
+export type ApprovalTier = 'allow' | 'ask' | 'block';
+export const APPROVAL_TIERS: readonly ApprovalTier[] = ['allow', 'ask', 'block'];
 export interface Bot {
   id: string; name: string; role: string;
   /** the orb2 look: bot data, not interface colour */
@@ -89,7 +93,7 @@ export interface BotInfo {
 export interface ArchivedBot { id: string; name: string; was: string; at: string; when: string }
 export interface BotDraft { name: string; role: string; shape: string; color: string }
 export interface BotSuggestion { name: string; desc: string; shape: string; color: string }
-export interface Choice { id: string; name: string; hint?: string }
+export interface Choice { id: string; name: string; hint?: string; /** the tiers a kind of action offers, when not all three */ tiers?: readonly ApprovalTier[] }
 export interface BotCatalog {
   models: readonly string[];
   /** where a bot can be reached; 'app' is always on */

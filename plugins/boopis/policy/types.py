@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from ..config.model import Fallback, Mode
+
+if TYPE_CHECKING:
+    from ..bots.rules import BotRules
 
 DecisionKind = Literal["allow", "block", "approve", "modify"]
 Role = Literal["orchestrator", "worker"]
@@ -95,3 +98,5 @@ class SessionPolicy:
     hermes_home: str = ""  # this profile's home: where hx's journal key and the old rendezvous file live
     hermes_root: str = ""  # the Hermes root, whose ``profiles/*`` hold the other profiles' keys
     ship_closed: str = ""  # a worker whose attempt is over (or has no task): why ship is refused; empty = open
+    bot: BotRules | None = None  # the bot this session runs for (its tiers, ``policy.tiers``); None: the owner's own
+    asked_by: str = ""  # who asked for the running turn, said on a bot's approval cards (``bots.origin``)

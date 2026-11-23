@@ -14,6 +14,8 @@ Order, first to last:
    role (orchestrator, worker) only its own boopis tools. It has no shell (``terminal``) at all, and its
    ``read_file`` and ``search_files`` reach only the workspace. No ``allow`` rule can widen it. Outside
    governed mode the cascade tool ``dispatch`` is refused: it has no cascade to run;
+4b. for a session that runs for a bot, the bot's capability tier (``policy/tiers.py``): Block refuses, Ask asks a
+   human at the engine's approval gate, Allow goes on (it never widens anything below);
 5. an ``ask`` rule asks a human;
 6. an ``allow`` rule allows;
 7. in governed mode a network tool (``web_search``, ``web_extract``, ``vision_analyze``, ...) that no rule allowed asks
@@ -117,6 +119,12 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
         return block(
             f"`{call.tool}` runs the governed model cascade and is available in governed mode only.", "ungoverned"
         )
+    if session.bot is not None:
+        from .tiers import decide as decide_tier
+
+        tier = decide_tier(call, session, defaults)
+        if tier is not None:
+            return tier
     for rule in _parsed(session.ask):
         if match_rule(rule, call, root, defaults, deny_like=True) is not Match.NO:
             return _ask(rule.text, call, session)
@@ -143,9 +151,11 @@ def _ask(rule_text: str, call: ToolCall, session: SessionPolicy) -> Decision:
 
         if consume_allow(call.session_id, call.tool_call_id):
             return ALLOW
+    who = f"{session.bot.name} asks: " if session.bot is not None else ""
+    asked = f" {session.asked_by}" if session.bot is not None and session.asked_by else ""
     return Decision(
         "approve",
-        message=f"The permission rule {rule_text} asks for confirmation before {call.tool} runs.",
+        message=f"{who}The permission rule {rule_text} asks for confirmation before {call.tool} runs.{asked}",
         rule_key=f"boopis:{rule_text}",
         reason="ask_rule",
         rule=rule_text,

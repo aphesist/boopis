@@ -41,7 +41,14 @@ class BotService:
                     "name": path.name.removeprefix(homes.ARCHIVE_PREFIX)
                 }  # renamed by hand, or the store is lost
             bots.append(
-                {"name": path.name, "path": str(path), "record": record, "problem": problem, "archived": archived}
+                {
+                    "name": path.name,
+                    "path": str(path),
+                    "record": record,
+                    "problem": problem,
+                    "archived": archived,
+                    "tiers": _tiers(path.name, record, problem),
+                }
             )
         return {"root": str(self.root), "bots": bots}
 
@@ -147,6 +154,15 @@ class BotService:
         done = self.cli.run(["profile", "alias", name, "--remove"])
         if done.returncode != 0:
             log.info("the alias of %s was not removed (exit %s)", name, done.returncode)
+
+
+def _tiers(name: str, record: Mapping[str, Any] | None, problem: str | None) -> dict[str, str]:
+    """Every category's tier as the gates read it (record, else preset, else default; ADR-0048), so the app shows what
+    is enforced and not a default of its own."""
+    from ..policy.tiers import effective
+    from .rules import from_record
+
+    return effective(from_record(name, record, problem))
 
 
 def _count(path: Path) -> int:

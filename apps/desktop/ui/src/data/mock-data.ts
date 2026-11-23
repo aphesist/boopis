@@ -54,7 +54,7 @@ export const defaultConfig = (id: string): BotConfig => ({
   instructions: '', gov: id === 'noct' ? 'ungoverned' : 'governed', model: 'sonnet 5.5', cap: '0.60',
   cron: CRON_DEFAULT[id] ?? '',
   channels: { app: true, slack: ['nina', 'noct', 'hex'].includes(id), telegram: id === 'noct', email: id === 'nimbus' },
-  approvals: { deploys: true, push: true, network: id !== 'nimbus', spend: true, people: true, outside: true },
+  approvals: { deploys: 'ask', push: 'ask', network: id !== 'nimbus' ? 'ask' : 'allow', spend: 'ask', people: 'ask', outside: 'ask', delete: 'ask', commands: 'allow' },
   workspace: ['hex', 'moss', 'terra'].includes(id) ? 'sandbox' : 'worktree'
 });
 export const seedBots = (): Bot[] => BOT_SEEDS.map((b) => ({

@@ -7,7 +7,7 @@ import type { GatewayClient, GatewayEvent } from '../gateway';
 import { NeedsConfirmation } from '../../data/confirm';
 import { lookFor } from '@boopis/ui';
 import { createLiveBots } from './bots';
-import { madeOutside } from './map-bots';
+import { madeOutside, ownConfig } from './map-bots';
 import type { LiveBots } from './bots';
 
 const NOW = new Date('2026-11-19T10:00:00Z');
@@ -291,8 +291,8 @@ describe('the settings sheet edits the real profile, and shows the diff first', 
   });
   it('saves boopis’s own settings in the plugin’s store, never through a Hermes config method', async () => {
     const { h, bots } = await open();
-    await bots.source.admin!.saveOwn('atlas', { cfg: { gov: 'ungoverned', cap: '1.00', approvals: { push: false } }, look: { shape: 'star' } });
-    expect(h.main.calls.at(-1)).toMatchObject({ method: 'plugin.boopis.bots.write', params: { name: 'atlas', look: { shape: 'star' }, settings: { gov: 'ungoverned', cap: '1.00' }, approvals: { push: false } } });
+    await bots.source.admin!.saveOwn('atlas', { cfg: { gov: 'ungoverned', cap: '1.00', approvals: { push: 'block' } }, look: { shape: 'star' } });
+    expect(h.main.calls.at(-1)).toMatchObject({ method: 'plugin.boopis.bots.write', params: { name: 'atlas', look: { shape: 'star' }, settings: { gov: 'ungoverned', cap: '1.00' }, approvals: { push: 'block' } } });
     expect(h.main.calls.some((c) => c.method === 'profiles.configure')).toBe(false);
     expect(botOf(bots, 'atlas')).toMatchObject({ shape: 'star', cfg: { gov: 'ungoverned', cap: '1.00' } });
   });
@@ -407,6 +407,26 @@ describe('which profiles boopis did not make (the "made outside boopis" mark)', 
   });
 });
 
+describe('what a bot may do is what the plugin enforces (ADR-0048)', () => {
+  it('shows the plugin’s own tiers, and only what the record names when the plugin did not say', () => {
+    const tiers = { deploys: 'ask', network: 'allow', spend: 'block', delete: 'nonsense' };
+    expect(ownConfig({ approvals: { network: true } }, tiers).approvals).toEqual({ deploys: 'ask', network: 'allow', spend: 'block', delete: 'ask' });
+    expect(ownConfig({ approvals: { network: true, people: false } }).approvals).toEqual({ network: 'ask', people: 'allow' });   // old switches
+    expect(ownConfig(null).approvals).toEqual({});   // unknown is not drawn as a default
+  });
+  it('a bot with no cap in its record has none: the plugin enforces no other', () => {
+    expect(ownConfig({ settings: {} }).cap).toBe('');
+    expect(ownConfig({ settings: { cap: '1.20' } }).cap).toBe('1.20');
+  });
+  it('a new bot is made with its cap and no tiers written, so the plugin’s defaults apply', async () => {
+    const { h, bots } = await open();
+    await bots.source.admin!.create({ name: 'kai', role: 'docs', shape: 'drop', color: '#4fc9a8', instructions: 'You write docs.' }, { model: 'nous/hermes-4' });
+    const writes = h.main.calls.filter((c) => c.method === 'plugin.boopis.bots.write');
+    expect(writes.length).toBeGreaterThan(0);
+    for (const w of writes) expect(w.params).not.toHaveProperty('approvals');
+    expect(h.own['kai']).toMatchObject({ settings: { gov: 'ungoverned', cap: '0.60', workspace: 'worktree' } });
+  });
+});
 describe('archived bots, restored from the Archived group and the palette', () => {
   const archive = (h: FakeHermes, name: string, was: string, at: string): void => {
     h.profiles.push({ name, path: HOME + '/profiles/' + name, description: 'x' });
