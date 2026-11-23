@@ -72,23 +72,6 @@ const SNAP = [
    "const soft01 = x => x * x * x * (x * (x * 6 - 15) + 10);\nconst hop = (t, period, dur, amp) => { const p = (t % period) / dur; return p > 1 ? {} : { dy: -amp * soft01(Math.sin(p * Math.PI)) }; };", 'G7 hop'],
   ["    motion: t => ({ dy: -.08 * Math.abs(Math.sin(t * 1.55 * Math.PI)), epitch: .12, w: .35 })",
    "    motion: t => ({ dy: -.08 * soft01(Math.abs(Math.sin(t * 1.55 * Math.PI))), epitch: .12, w: .35 })", 'G7 happy'],
-  // G8: the fixed pose as a turned bot with one face (owner, 23 Nov). orb2 turns the body only as a share of the eye gaze
-  // (0.54 on a solid), so a held 3/4 look left the body nearly flat. Its 3D body rotation itself (mat3D: yaw, pitch, roll;
-  // the same one the ambient idle and the voice companion turn and tip) is fine: a reaction can now set it outright with
-  // the motion keys byaw, bpitch (radians) and bk (0..1, how far the body takes them; blended by orb2's morph like every
-  // motion key; bodyRoll is orb2's own). And with decal 1 the eyes are drawn as one face for every shape: the pair as orb2
-  // puts it on its sphere for the eye angles deyaw, depitch, deroll (the circle's own look, head at 0.68 of them),
-  // anchored at the body's own face point as orb2 turns it, inside the outline (G2). Same spot, size and lean on every bot
-  ["const MKEYS = { dy: 0, s: 1, bodyRoll: 0, yawAdd: 0, spinYaw: 0, spinEyeLead: 0, eroll: 0, w: 0 };",
-   "const MKEYS = { dy: 0, s: 1, bodyRoll: 0, yawAdd: 0, spinYaw: 0, spinEyeLead: 0, eroll: 0, w: 0, byaw: 0, bpitch: 0, bk: 0, decal: 0, deyaw: 0, depitch: 0, deroll: 0 };", 'G8 keys'],
-  ["    const hRatio = this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo);",
-   "    const hRatio = this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo);\n    const bkW = clamp(m.bk || 0, 0, 1), hgY = lerp(T[0] * hRatio, m.byaw || 0, bkW), hgP = lerp(T[1] * hRatio, m.bpitch || 0, bkW);", 'G8 goals'],
-  ["      this._hyaw = T[0] * hRatio; this._hpitch = T[1] * hRatio; this._bRoll = T[3];", "      this._hyaw = hgY; this._hpitch = hgP; this._bRoll = T[3];", 'G8 static'],
-  ["      [this._hyaw, this._vhy] = stepHead(this._hyaw, this._vhy, T[0] * hRatio);\n      [this._hpitch, this._vhp] = stepHead(this._hpitch, this._vhp, T[1] * hRatio);",
-   "      [this._hyaw, this._vhy] = stepHead(this._hyaw, this._vhy, hgY);\n      [this._hpitch, this._vhp] = stepHead(this._hpitch, this._vhp, hgP);", 'G8 spring'],
-  ["land('_hyaw', '_vhy', T[0] * hRatio); land('_hpitch', '_vhp', T[1] * hRatio);", "land('_hyaw', '_vhy', hgY); land('_hpitch', '_vhp', hgP);", 'G8 land'],
-  ["    drawFaceCells(c, localFr, M, this._curFace, blinkAmt, pal, body, this._face, warp, jx, jiggle, stride);",
-   "    if ((m.decal || 0) > .5) {\n      const ox = body.ox || 0, oy = body.oy || 0, ax = M.m00 * ox + M.m01 * oy, ay = M.m10 * ox + M.m11 * oy;\n      const dY = m.deyaw || 0, dP = m.depitch || 0;\n      drawFaceCells(c, frame3D(dY * .32, dP * .32, m.deroll || 0), mat3D(dY * .68, dP * .68, bodyRoll), this._curFace, blinkAmt, pal, SHAPES.circle, this._face, { ...warp, dx: warp.dx + ax * s, sh: warp.sh + ay * s }, jx, jiggle, stride);\n    } else drawFaceCells(c, localFr, M, this._curFace, blinkAmt, pal, body, this._face, warp, jx, jiggle, stride);", 'G8 decal'],
 ];
 const TUNE = [
   // T1: a blink as long as Grok-Bot's (0.20 s, was 0.155 s)

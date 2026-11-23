@@ -11,14 +11,15 @@ const SH = ['circle', 'squircle', 'soft', 'wide', 'tall', 'bean', 'drop', 'ghost
 const D = Math.PI / 180;
 const s = document.createElement('script'); s.src = 'lib/orb-avatar.' + (q.lib || 'tuned') + '.js';
 s.onload = () => { const A = window.OrbAvatar, g = document.getElementById('g'), size = q.size || 64;
-  const E = (q.eyes || '30,25,45').split(',').map(Number);   /* the face's own look on the sphere, degrees: yaw, pitch, lean */
-  const def = (n, [y, p, r]) => A.defineReaction(n, { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'),
-    motion: () => ({ byaw: y * D, bpitch: p * D, bk: 1, bodyRoll: (r || 0) * D, decal: 1, deyaw: E[0] * D, depitch: E[1] * D, deroll: E[2] * D, w: 1 }) });
-  const orb = (shape, n) => `<orb-avatar size="${size}" shape="${shape}" color="#f5f5f5" eye-color="#0e0e0e" reaction="${n}" idle-motion="off" mode="drift" face-scale="1.25" jelly="0" style="width:${size}px"></orb-avatar>`;
+  /* orb3: one pose is orb2's own look (eye yaw and pitch, the eyes' lean) plus a body roll; orb3 turns each flattened
+     3D solid by its head ratio and projects it. ?opts=Y,P,L,R,depth;... in degrees */
+  const def = (n, [y, p, l, r]) => A.defineReaction(n, { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'),
+    motion: () => ({ eyaw: y * D, epitch: p * D, eroll: (l || 0) * D, bodyRoll: (r || 0) * D, w: 1 }) });
+  const orb = (shape, n, dep) => `<orb-avatar size="${size}"${dep ? ` depth="${dep}"` : ''} shape="${shape}" color="#f5f5f5" eye-color="#0e0e0e" reaction="${n}" idle-motion="off" mode="drift" face-scale="1.25" jelly="0" style="width:${size}px"></orb-avatar>`;
   if (q.opts) {
     g.style.width = 'auto'; g.style.display = 'block';
-    q.opts.split(';').forEach((o, k) => { const v = o.split(',').map(Number); def('pose' + k, v);
-      g.insertAdjacentHTML('beforeend', `<div class="row"><div class="lab">${'ABCDE'[k]}<small>body yaw ${v[0]}°, pitch ${v[1]}°${v[2] ? `, roll ${v[2]}°` : ''}</small></div>${SH.map((sh) => `<div class="cell">${orb(sh, 'pose' + k)}<span>${sh}</span></div>`).join('')}</div>`); });
+    q.opts.split(';').forEach((o, k) => { const v = o.split(',').map(Number); def('pose' + k, v); const dep = v[4];
+      g.insertAdjacentHTML('beforeend', `<div class="row"><div class="lab">${'ABCDE'[k]}<small>look ${v[0]}° / ${v[1]}°, lean ${v[2] || 0}°, roll ${v[3] || 0}°${v[4] ? `, depth ${v[4]}` : ''}</small></div>${SH.map((sh) => `<div class="cell">${orb(sh, 'pose' + k, dep)}<span>${sh}</span></div>`).join('')}</div>`); });
   } else { def('pose', (q.body || '30,20,0').split(',').map(Number)); for (const sh of SH) { const c = document.createElement('div'); c.className = 'c'; c.innerHTML = orb(sh, 'pose'); g.appendChild(c); } }
   setTimeout(() => document.body.dataset.ready = 1, 1500); };
 document.head.appendChild(s);

@@ -713,7 +713,6 @@ Far 3D turns are fixed in the geometry, not clamped, so the life stays:
 - G5: a resting bot is exactly still: 0 pixels change.
 - G6: moving edges are drawn at 4x (8x on small bots) and scaled down, so they glide instead of flickering.
 - G7: a hop's top and a bounce's landing ease instead of reversing inside one frame.
-- G8: a reaction can set the body's 3D rotation outright and draw one face on top (the fixed pose).
 
 **The rest of the decision:**
 
@@ -722,14 +721,18 @@ Far 3D turns are fixed in the geometry, not clamped, so the life stays:
 - The blink: 0.2 s.
 
 **The fixed pose** (proposed, awaiting the owner's pick; the full spec is in `character/ORBS.md` §23, and
-`character/K05-pose-options.jpg` shows three orientations, all 15 shapes each). At rest, every bot in the dock, the Bots
-sidebar, the rail and the 44 px main bot holds one 3/4 pose:
+`character/K06-pose-options.jpg` shows three angles, all 15 shapes each, beside Grok-Bot's capture). The bots are drawn
+by **orb3**, a new major version of orb2 on its `orb3` branch (not pushed yet), with the same element and attributes:
 
-- **The body** is turned and tipped by orb2's own 3D rotation, set outright (G8), with one orientation for all shapes.
-  Recommended: B, yaw 35° and pitch 22°. A is 25° and 15°; C is 45° and 30° with a 6° roll.
-- **The eyes** are one face on top: the same pill pair, lean and size on every bot, at each body's face point.
+- each shape is its own 3D solid in one flat colour;
+- the volume reads from the perspective outline and the eyes on the front surface;
+- the body leans into a turn, under a closer camera.
 
-A resting bot never redraws (G5).
+At rest, every bot in the dock, the Bots sidebar, the rail and the 44 px main bot holds one pose. It is orb3's look plus
+a body roll, with no per-shape values. Recommended: B, a look of 35° and 25°, the eyes leaning 30°, about 17° of body
+lean in all.
+
+Cost per orb per frame: 0.27 ms while moving, 0.006 ms at rest (no redraw).
 
 **Per surface:**
 
@@ -766,7 +769,10 @@ the bots.
 
 - `K01-clarity.jpg`.
 - `K02-main-bot.jpg`.
-- `K05-pose-options.jpg`: the three pose orientations, all 15 shapes each (K04, gaze only, withdrawn).
+- `K06-pose-options.jpg`: the three pose angles in orb3, all 15 shapes each, with Grok-Bot's capture (K04 and K05
+  withdrawn).
+- `anim-look-orb3-vs-grok.mp4` and `anim-torture-orb3.mp4`: orb3 looking around beside Grok-Bot's drop, and the
+  torture test.
 - `anim-dock`, `anim-sidebar`, `anim-room` and `anim-torture-before-after.mp4`. Every frame was checked with
   `probes/tools/edges.py`:
   - resting bots change 0 pixels;

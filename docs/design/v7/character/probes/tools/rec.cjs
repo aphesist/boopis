@@ -51,7 +51,7 @@ const [url, framesDir, secs, dpr] = process.argv.slice(2);
       let dump = null;
       if (window.__DUMP && aba >= window.__DUMP) { const toURL = (a) => { const k = document.createElement('canvas'); k.width = w; k.height = h; k.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(a), w, h), 0, 0); return k.toDataURL(); }; dump = [toURL(p2), toURL(p1), toURL(d)]; }
       o.__p2 = p1; o.__p1 = d;
-      const rest = o.getAttribute('reaction') === 'pose' && !o._hover && t - o.__chg >= 1.5 ? 1 : 0;
+      const rest = ['pose', 'k06'].includes(o.getAttribute('reaction')) && !o._hover && t - o.__chg >= 1.5 ? 1 : 0;
       return { dump, ch, aba, iso, d1: Math.round(d1 / 255 * 10) / 10, d2: Math.round(d2 / 255 * 10) / 10, rest, a: Math.round(sa / 255 * 10) / 10, cx: sa ? Math.round(sx / sa * 1000) / 1000 : 0, cy: sa ? Math.round(sy / sa * 1000) / 1000 : 0, x: Math.round((fr.left + r.left) * dpr * 100) / 100, y: Math.round((fr.top + r.top) * dpr * 100) / 100, w };
     }); }).flat(); };
   for (let i = 0; i < n; i++) { await p.clock.runFor(32); stats.push(await p.evaluate(STAT, (i + 1) * .032)); await p.screenshot({ path: `${framesDir}/${String(i).padStart(4, '0')}.jpg`, type: 'jpeg', quality: 95 }); }

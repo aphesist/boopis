@@ -1,0 +1,22 @@
+<!doctype html><html><meta charset="utf-8"><title>Orb cost bench</title>
+<!-- Cost per orb per frame: ?lib=orb3&size=28&n=30&motion=lively|rest. Every orb's _update is timed with the real clock for
+     4 s; the page reports the mean and the 95th percentile per orb per frame (ms), split into the frames that redrew and
+     the frames that skipped (a resting orb, G5). -->
+<style>html,body{margin:0;background:#0e0e0e;color:#ddd;font:13px system-ui}#g{display:flex;flex-wrap:wrap;gap:6px;padding:8px}</style>
+<body><div id="g"></div><pre id="out"></pre><script>
+const q = Object.fromEntries(new URLSearchParams(location.search)), n = +(q.n || 30), size = +(q.size || 28);
+const SH = ['circle', 'squircle', 'soft', 'wide', 'tall', 'bean', 'drop', 'ghost', 'triangle', 'hexagon', 'diamond', 'cloud', 'clover', 'flower', 'star'];
+const s = document.createElement('script'); s.src = 'lib/orb-avatar.' + (q.lib || 'orb3') + '.js';
+s.onload = () => { const A = window.OrbAvatar, g = document.getElementById('g');
+  A.defineReaction('pose', { blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: () => ({ eyaw: .61, epitch: .44, eroll: .52, bodyRoll: -.1, w: 1 }) });
+  const rest = q.motion === 'rest';
+  g.innerHTML = Array.from({ length: n }, (_, i) => `<orb-avatar size="${size}" shape="${SH[i % 15]}" color="#f5f5f5" eye-color="#0e0e0e" reaction="${rest ? 'pose' : 'idle'}" idle-motion="${rest ? 'off' : 'lively'}" mode="drift" face-scale="1.25" style="width:${size}px"></orb-avatar>`).join('');
+  const o0 = g.querySelector('orb-avatar'), P = Object.getPrototypeOf(o0), up = P._update, T = [];
+  let on = false; P._update = function (dt, t) { if (!on) return up.call(this, dt, t); const a = performance.now(); const sig = this._sig; up.call(this, dt, t); T.push([performance.now() - a, this._sig !== sig]); };
+  setTimeout(() => { on = true; }, 1500);
+  setTimeout(() => { on = false; const st = (xs) => { xs.sort((a, b) => a - b); return xs.length ? `n ${xs.length}, mean ${(xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(3)} ms, p95 ${xs[Math.floor(xs.length * .95)].toFixed(3)} ms` : 'n 0'; };
+    const drew = T.filter((x) => x[1]).map((x) => x[0]), skip = T.filter((x) => !x[1]).map((x) => x[0]);
+    document.getElementById('out').textContent = JSON.stringify({ drew: st(drew), skipped: st(skip) }); document.body.dataset.ready = 1; }, 5500);
+};
+document.head.appendChild(s);
+</script></body></html>

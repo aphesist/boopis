@@ -42,7 +42,7 @@
 <script>
 const q = Object.fromEntries(new URLSearchParams(location.search));
 let seed = 20261123; Math.random = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-const LIB = { stock: 'lib/orb-avatar.min.js', snap: 'lib/orb-avatar.snap.js', tuned: 'lib/orb-avatar.tuned.js' }[q.lib || 'stock'];
+const LIB = { stock: 'lib/orb-avatar.min.js', snap: 'lib/orb-avatar.snap.js', tuned: 'lib/orb-avatar.tuned.js', orb3: 'lib/orb-avatar.orb3.js' }[q.lib || 'stock'];
 const MORE = q.plan === 'more';
 const LOOKS = { boopis: ['squircle', '#f5f5f5', '#0e0e0e'], kai: ['circle', '#4fc9a8', '#141418'], nina: ['triangle', '#f23b5a', '#141418'], moss: ['squircle', '#2fd26a', '#141418'], iris: ['flower', '#3b82f6', '#141418'], hex: ['hexagon', '#a6a6ab', '#141418'] };
 /* THE FIXED POSE (ORBS.md section 23): orb2's own 3D look, through its public `gaze` attribute ("yaw pitch", degrees). orb2
@@ -88,6 +88,12 @@ const S = {
       ${rows.map(([n, a]) => `<div class="row">${orb(n, MORE ? 28 : 20)}<div><b>${n}</b><span id="a-${n}">${a}</span></div></div>`).join('')}</div>`;
     if (MORE) for (const o of document.querySelectorAll('.side orb-avatar')) { o.setAttribute('jelly', '0'); fixed(o); }
     R.insertAdjacentHTML('beforeend', '<div class="cursor" id="cur"></div>');
+  },
+  look() {
+    /* orb3 looking around: five shapes at 96 px, from the fixed pose (K06 B) */
+    const sh = ['drop', 'squircle', 'triangle', 'hexagon', 'flower'];
+    R.innerHTML = tag() + `<div class="grid" style="grid-template-columns:repeat(2,1fr);top:90px;gap:34px 0">${sh.map((s) => `<div>${orb(s, 96, { motion: 'off' })}<div class="cap">${s}</div></div>`).join('')}</div>`;
+    for (const o of document.querySelectorAll('orb-avatar')) { o.setAttribute('jelly', '.25'); o.dataset.base = 'k06'; o.setAttribute('reaction', 'k06'); }
   },
   torture() {
     const sh = ['circle', 'squircle', 'soft', 'wide', 'tall', 'bean', 'drop', 'ghost', 'triangle', 'hexagon', 'diamond', 'cloud', 'clover', 'flower', 'star'];
@@ -148,6 +154,16 @@ const T = {
     at(16.5, () => { const p = O('iris'); hideCur(cur); MORE ? settle(p) : (p.lookAt(), p.setAttribute('reaction', 'idle')); });
     at(18.0, () => { A('nina').textContent = 'Deployed staging'; A('nina').className = ''; MORE ? state(O('nina'), 'pose') : O('nina').setAttribute('reaction', 'idle'); });
   },
+  look() {
+    /* 0-2 s the fixed pose; 2-6.5 s a head turn left and right and a nod (lookAt); 6.5-10 s the lively idle; 10-13 s working;
+       13-15 s back to the pose */
+    const os = [...document.querySelectorAll('orb-avatar')]; let t0 = performance.now();
+    at(2, () => { t0 = performance.now(); for (const o of os) o.setAttribute('reaction', 'idle'); const step = () => { const t = (performance.now() - t0) / 1000; if (t > 4.5) return;
+      for (const o of os) { const [cx, cy] = ctr(o); o.lookAt(cx + Math.sin(t * 1.4) * 700, cy - Math.sin(t * 2.1) * 260); } requestAnimationFrame(step); }; step(); });
+    at(6.5, () => { for (const o of os) { o.lookAt(); o.setAttribute('idle-motion', 'lively'); } });
+    at(10, () => { for (const o of os) { o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', 'working'); } });
+    at(13, () => { for (const o of os) o.setAttribute('reaction', 'k06'); });
+  },
   torture() {
     /* every shape is turned through orb2's whole range: the lookAt clamp is 1.18 rad, the rim peek reaches 1.26,
        and the sky gaze 0.94 of pitch. The look point sweeps a wide ellipse around each orb, then each orb spins,
@@ -166,6 +182,8 @@ window.go = () => T[q.scene || 'dock']();
 const s = document.createElement('script'); s.src = LIB; s.onload = () => {
   const A = window.OrbAvatar;
   A.defineReaction('pose', { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: null });
+  /* K06 B in orb3: a look of 35 and 25 degrees, the eyes leaning 30, a body roll of -6 (plus orb3's own lean into the turn) */
+  A.defineReaction('k06', { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: () => ({ eyaw: .611, epitch: .436, eroll: .524, bodyRoll: -.105, w: 1 }) });
   S[q.scene || 'dock'](); document.body.dataset.ready = '1';
 };
 document.head.appendChild(s);

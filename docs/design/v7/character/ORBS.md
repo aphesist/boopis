@@ -71,56 +71,93 @@ frame.
 ## §23. The fixed pose (the spec the other surfaces build on)
 
 `DESIGN-SYSTEM.md` §23 points here. At rest, the dock, the Bots sidebar, the rail and the 44 px main bot hold every bot
-in this one pose.
+in this one pose. The angle is **proposed, awaiting the owner's pick (K06)**.
 
-**Proposed, awaiting the owner's pick (K05).** `K05-pose-options.jpg` shows all 15 shapes at three orientations.
+### orb3: the look of a perfect 3D shape, in flat colour
 
-**The body is turned and tipped in orb2's own 3D.**
-- orb2 rotates every shape as a 3D solid with one rotation: yaw, pitch and roll (`mat3D`). This is what turns and tips
-  the cone in the demo's ambient-idle companion.
-- orb2 has no public control for that rotation apart from the eye gaze: the body follows the gaze at 0.54 on a solid,
-  so a held look leaves the body nearly flat. That is why K04 showed only a sideways turn.
-- G8 lets a reaction set the rotation outright, with the motion keys `byaw`, `bpitch` and `bk` (how far the body takes
-  them, blended by orb2's morph). Roll is orb2's own `bodyRoll`.
-- The outline is orb2's 3D silhouette in perspective. Nothing is tuned per shape.
+The owner's model: every shape looks like a real 3D solid (the ball is round, the box is a box), drawn in one solid
+colour with no shading. The volume reads from two things alone: the perspective outline of the turned solid, and the
+eyes placed and foreshortened on its front surface.
 
-**The eyes are one face on top.**
-- With `decal` 1 (G8), every bot gets the same pill pair, with the same lean and size, drawn as orb2 draws the circle's
-  eyes for one look: `deyaw` 20°, `depitch` 18°, `deroll` 40°.
-- The pair sits at each body's own face point (orb2's `ox`, `oy`) as the body turns, and stays inside the outline (G2).
+orb3 is a new major version of orb2, on the `orb3` branch of the orb2 repo. It is not pushed yet.
 
-| | Body yaw | Body pitch | Roll | |
+| Commit | What it does |
+|---|---|
+| `debfb20` | The base: orb2 with the crispness and flicker fixes (C1–C3, C7, C8, G1–G3, G5–G7, T1–T5) built in. |
+| `fd13d86` | The look of a turned character. The body leans into a turn (0.3 rad of roll per radian of look, the lean Grok-Bot's drop shows), the camera is closer (`CAM_D` 9, was 15), the eye-on-face check is cheap when the eyes are well inside, and moving bots are drawn at 3x. |
+| `f93b3e3` | Eyes slide back onto the face in up to four steps. |
+| `554af9f` | Version 3.0.0-alpha.0, and the README section on what changed. |
+
+**The API is unchanged.** It is the same `<orb-avatar>`, with the same attributes and methods.
+
+**Behaviour changes:**
+- the rest gaze faces front;
+- the calm idle doesn't float under 44 px;
+- bodies lean as they turn;
+- a moving orb uses a 3x backing canvas;
+- the `.min.js` build is still orb2's.
+
+**The technique, and why.** orb3 keeps orb2's analytic projection:
+- **The outline:** each frame, each solid's outline is the exact support-function hull of its few spheres (convex
+  shapes), or a 160-ray cast against them (lobed shapes). It is computed in 2D.
+- **The eyes:** they sit on a precomputed 48 × 48 heightfield of the front surface.
+
+This is already the light option the owner asked about: no 3D engine and no meshes, a few thousand multiply-adds per
+frame. Precomputed silhouette tables would save little of that and would cost memory and morphing work. Most of the
+cost is the fill, not the geometry.
+
+Measured with `probes/bench.html` (30 orbs at 28 px, DPR 2, Chromium software canvas):
+
+| | Per orb per frame |
+|---|---|
+| Moving (lively idle), orb3 | 0.27 ms mean, 0.5 ms p95. 0.19 ms of it is geometry and eyes; the rest is the 3x fill. |
+| Moving, orb3 drawing at 8x | 0.82 ms. This is why orb3 draws at 3x. |
+| At rest (the pose, G5) | 0.006 ms: a signature check, no redraw. |
+| orb2 as boopis ships it, moving | 0.04 ms (half the outline points under 44 px, no supersampling, and it flickers) |
+
+Thirty orbs moving at once is not a real state: at rest the sidebar, rail and dock cost nothing. With 30 moving, orb2's
+quality governor halves their frame rate.
+
+**What K06 measured against.** In Grok-Bot's fixed-angle capture, the drop video and the shapes tour:
+- the bodies stay mostly front-on, with a small consistent turn and a lean;
+- the eyes sit up and to one side;
+- looking around is a head turn about the vertical axis, with a nod and a lean into the turn: the drop's tip tilts away
+  from where it looks;
+- the eyes travel across the face to near the rim.
+
+orb3's lean and camera were set to match. The fixed pose is orb2's own look (eye yaw, pitch and lean) plus a body roll;
+orb3 turns each solid by its head ratio and projects it. The pose uses no per-shape values.
+
+| | Look (yaw, pitch) | Eyes' lean | Body roll | Total lean with orb3's turn |
 |---|---|---|---|---|
-| A | 25° | 15° | 0 | gentle |
-| **B (recommended)** | **35°** | **22°** | **0** | **a clear turn and tip on every shape; the face stays well inside** |
-| C | 45° | 30° | 6° | the strongest; the narrow shapes show mostly their side |
+| A | 25°, 18° | 25° | 0 | about 8° |
+| **B (recommended)** | **35°, 25°** | **30°** | **−6°** | **about 17°** |
+| C | 45°, 30° | 30° | −12° | about 26° |
+
+`K06-pose-options.jpg` draws all 15 shapes for each option, with Grok-Bot's capture below for reference.
 
 **Withdrawn:**
-- the first pose (eyes only, the body barely turned);
-- G4 (the body locked to the eyes, with per-shape ratios);
-- K04 (gaze only: a sideways turn and no tip).
+- the first pose (eyes only);
+- G4 (the body locked to the eyes);
+- K04 (gaze only);
+- K05 (a body rotation set outright, with the cone tipped at the camera);
+- the coin and slab ideas.
 
-**How it is drawn** (with the recommended B):
+### Checks on orb3
 
-```js
-const D = Math.PI / 180;
-OrbAvatar.defineReaction('pose', {
-  blink: false,
-  useEyeShape: true,   // a constant face: no redraw while the bot rests
-  face: (t, e, eye) => OrbAvatar.shapes.pairEyes(eye || 'pill'),
-  motion: () => ({ byaw: 35 * D, bpitch: 22 * D, bk: 1, bodyRoll: 0, decal: 1, deyaw: 20 * D, depitch: 18 * D, deroll: 40 * D, w: 1 }),
-});
-```
+| Clip | What it is | Changed at rest | Shimmer px | Lone flips px | Dents |
+|---|---|---|---|---|---|
+| `anim-look-orb3-vs-grok.mp4` (15 s) | five shapes at 96 px: the pose, a head turn and nod, the lively idle, working, the pose; Grok-Bot's drop beside it | **0** in 165 resting orb-frames | 5 | 11 | squircle 12 frames, its eyes at the rim on the far turns |
+| `anim-torture-orb3.mp4` (13 s) | orb2 today against orb3, all 15 shapes through the whole turn range and both spins | n/a | 958 → **65** | 523 → **33** | see below |
 
-```html
-<orb-avatar reaction="pose" idle-motion="off" mode="drift" face-scale="1.25" jelly="0" …>
-```
+Dents in the torture test, proposed side, kept frames:
+- **The circle and 9 convex shapes:** 0, with the squircle at most 1.41 px.
+- **Triangle (25 frames, up to 2.8 px) and diamond (7 frames):** the eyes touch the rim on the far turns under the closer
+  camera, even after the four-step slide.
+- **The lobed four:** they flag their own valleys.
 
-- `byaw`, `bpitch`, `bk`, `decal`, `deyaw`, `depitch` and `deroll` are G8's, in the probe orb2.
-- Waking or entering a state blends the body and the face from the pose to orb2's normal look over the reaction morph,
-  and back again.
-- A resting bot never redraws (G5): 0 changed pixels.
-- The pose is the same at every size and under reduced motion.
+**Next, once the owner picks:** the chosen angle goes into the prototype and the render source. Then the sidebar and
+dock clips are re-recorded, K02 and screens 11–13 re-rendered, and QA is re-run.
 
 ## 1. Clarity: why ours read less clearly
 
