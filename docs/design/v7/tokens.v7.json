@@ -1379,10 +1379,34 @@
       },
       "bots": {
         "blanks": false,
-        "asks_by": "approval cards (docs/specs/approval-surfaces.md on w31/specs), set up beforehand through the rules engine and tiers",
+        "asks_by": "approvals, drawn with the AskCard (approval variant), set up beforehand through the rules engine and tiers",
         "time_limit": null
       },
       "protocol": "needs a timed wait on blank.open, a lapse with the guess, and a late fill marked as a correction (docs/PROTOCOL.md, plugins/boopis/exec, rpc/blanks.py)"
+    }
+  },
+  "components": {
+    "AskCard": {
+      "about": "one card for everything that waits on the person's answer under a reply (owner's pick, 23 Nov); the reference approval-surfaces.md section 5 should point to",
+      "surface": "--bg-3, --line, radius 18 (--r-bubble), padding 10 12, the reply's width",
+      "anatomy": [
+        "head: 12 --text-dim, the asker's 16 px mark or orb, a short line, the state at the end",
+        "ask: 14 --text",
+        "sub (optional): 12 --text-dim, one line",
+        "answers: 28 px chips, the default inverted"
+      ],
+      "variants": {
+        "question": "a session's lapsed blank: the agent's guess as the default chip; answered late = a correction",
+        "approval": "a bot's ask from approval-surfaces.md: summary, Rule line with link, Hold to allow once / Allow all this turn / Always allow / Deny (esc); no time limit"
+      },
+      "countdown": false,
+      "states": [
+        "pending",
+        "answering",
+        "answered",
+        "withdrawn"
+      ],
+      "open": "approval-surfaces.md lists expired (engine timeout 300 s); the owner says no time limit"
     }
   }
 }
