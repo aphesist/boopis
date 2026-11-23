@@ -120,3 +120,4 @@ Based on Liu Xingyu's demo (x.com/liu_xingyu/status/2121015724374397183).
   defined beforehand (rules engine + tiers), shown as the Grok-Bot approval cards, with NO time limit. Sessions keep
   the timed wait (30 s / 60 s default / 2 min), lapse to "(my guess)" + a card, late answer = correction.
 - Owner: the blank's card design (the card under the reply) is kept and reused for bots' approval asks (no countdown, no guess, no time limit): one card component, two uses (v7 §17.1).
+- Owner: the whole bot session (chat, room, cards, activity, approvals, pane, header, empty state) follows Grok-Bot's recordings, with picks 1-9 on top; deviations only for the keep list.
