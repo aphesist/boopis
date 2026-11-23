@@ -62,6 +62,9 @@ class TierData:
     never_allow: frozenset[str]
     default: Mapping[str, str]
     presets: Mapping[str, Mapping[str, str]]
+    answer_markers: tuple[str, ...] = ()
+    answer_slash: tuple[str, ...] = ()
+    answer_text_keys: frozenset[str] = frozenset()
 
     def category(self, cid: str) -> Category | None:
         return next((c for c in self.categories if c.id == cid), None)
@@ -82,7 +85,11 @@ def load() -> TierData:
         )
         for cid, spec in cast("dict[str, Any]", raw["categories"]).items()
     )
+    answer = cast("dict[str, Any]", raw.get("owner_answer") or {})
     return TierData(
+        answer_markers=tuple(str(m).lower() for m in answer.get("markers", ())),
+        answer_slash=tuple(str(m).lower() for m in answer.get("slash", ())),
+        answer_text_keys=frozenset(answer.get("text_keys", ())),
         categories=cats,
         quiet_tools=frozenset(raw["quiet_tools"]),
         quiet_prefixes=tuple(raw["quiet_prefixes"]),
@@ -211,6 +218,9 @@ def decide(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
     if bot is None:
         return None
     data = load()
+    refused = owner_answer(call, defaults, data, bot.name)
+    if refused is not None:
+        return refused
     tiers = effective(bot, data)
     cats = categories(call, defaults, session.cwd, data)
     judged: list[tuple[str, str]] = [(c, tiers.get(c, "ask")) for c in cats]
@@ -237,6 +247,38 @@ def decide(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
         rule_key=f"boopis:tier:{bot.name}:{what}:{call.tool_call_id or call.tool}",
         reason="bot_tier",
         rule=what,
+    )
+
+
+def owner_answer(call: ToolCall, defaults: Defaults, data: TierData, bot: str) -> Decision | None:
+    """No bot answers for the owner, whatever its tiers (ADR-0048, S2): a command line, code or URL that reaches an
+    answer method (the gateway's ``approval.respond``, ``groups.approve``, ``clarify.respond``, the plugin's
+    ``form.submit``, the local API's approvals route or its token, a ticket from the engine's CLI), or a message whose
+    first word answers an approval on a chat platform, is refused. A best effort over the words of a call, not a
+    boundary: the boundary is that a bot holds no ticket and cannot read the local API's token
+    (``denied_read_paths``)."""
+    for key, value in call.args.items():
+        if not isinstance(value, str) or not value:
+            continue
+        low = value.lower()
+        if key in defaults.denied_read_script_keys or key in ("url", "uri", "endpoint"):
+            hit = next((m for m in data.answer_markers if m in low), None)
+            if hit is not None:
+                return _owner_answer_block(bot, call.tool)
+        if key in data.answer_text_keys:
+            first = low.lstrip().split(maxsplit=1)
+            if first and first[0] in data.answer_slash:
+                return _owner_answer_block(bot, call.tool)
+    return None
+
+
+def _owner_answer_block(bot: str, tool: str) -> Decision:
+    return block(
+        f"Blocked: {tool} would answer an approval, a question or a form that belongs to the owner. No bot answers "
+        f"for the owner, {bot} included; only the owner does, in boopis or on their own devices. Nothing ran. Tell the "
+        "owner what needs an answer instead.",
+        "owner_answer",
+        "owner_answer",
     )
 
 

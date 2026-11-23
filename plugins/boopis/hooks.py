@@ -13,6 +13,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from . import budget, policy, turns
+from .bots import origin
 from .hermes_api import bound
 from .ledger import project_costs, usage_event_payload
 from .policy import Decision, ToolCall
@@ -116,7 +117,7 @@ def _budget_gate(rt: Runtime, caller: Caller, decision: Decision) -> Decision:
             budget.record_block(rt, state, "month_budget", cap=month[1], scope="month")
         return block_decision(month[0], "month_budget")
     bot = rt.bot_rules()
-    verdict = budget.run_gate(state, bot, asked_by="")
+    verdict = budget.run_gate(state, bot, asked_by=origin.asked_by(state.origin))
     if verdict is None or bot is None or bot.cap_usd is None:
         return decision
     if verdict.kind == "stop":
@@ -211,15 +212,18 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
             return _worker_turn(rt, rt.caller(session_id), str(kw.get("model") or ""))
         rt.roster.note_message(session_id, str(kw.get("user_message") or ""))  # what the user named (delegation guard)
         state = _locked(rt, session_id, model=str(kw.get("model") or ""))
+        state.origin = origin.read(kw)  # who started this turn: the owner, a room, a2a, a card, a schedule (S2)
         budget.run.begin(state.run, str(kw.get("turn_id") or ""))  # every turn is a new run
         capped = _cost_cap(rt, state, state.provider, state.model) or _turn_budgets(rt, state)
         if capped is not None:
             state.track.armed_at = None  # a blocked turn does not use the exception
             return capped
+        bot = rt.bot_rules()
+        label = origin.context(state.origin, bot.name if bot is not None else "this session")
         if turns.begin(rt, state, str(kw.get("turn_id") or "")):
-            return {"context": turns.CONTEXT}
+            return _with_label(label, {"context": turns.CONTEXT})
         if state.mode != "governed":
-            return None
+            return _with_label(label, None)
         from .governance.frontier import session_refusal
 
         refused = session_refusal(state.provider, state.model)  # ADR-0037: the orchestrator is frontier too
@@ -232,10 +236,19 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
             return _block(engine_plugins)
         from .governance.lifecycle import turn_directive
 
-        return turn_directive(rt, state, str(kw.get("user_message") or ""))
+        return _with_label(label, turn_directive(rt, state, str(kw.get("user_message") or "")))
     except Exception:  # noqa: BLE001
         _log.error("pre_llm_call failed closed", exc_info=True)
         return _block("boopis could not evaluate the cost cap, so this turn was blocked.")
+
+
+def _with_label(label: str | None, answer: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The turn's answer with the origin's line first in its context (a block stays a block: nothing runs)."""
+    if label is None or (answer is not None and answer.get("action") == "block"):
+        return answer
+    if answer is None:
+        return {"context": label}
+    return {**answer, "context": f"{label}\n\n{answer['context']}" if answer.get("context") else label}
 
 
 def _worker_turn(rt: Runtime, caller: Caller, model: str) -> dict[str, Any] | None:

@@ -17,6 +17,7 @@ from typing import Any
 
 from . import hx, policy
 from ._vendor.contraprova.interfaces import TierLadder
+from .bots.origin import TurnOrigin, asked_by
 from .bots.rules import BotRules, rules_for
 from .budget.month import MonthScanner
 from .budget.run import RunBudget
@@ -76,6 +77,7 @@ class SessionState:
     lock: threading.RLock = field(default_factory=threading.RLock)
     track: TurnTrack = field(default_factory=TurnTrack)  # who answers the current turn, and the one-turn exception
     run: RunBudget = field(default_factory=RunBudget)  # the current turn's spend against a bot's cap per run
+    origin: TurnOrigin | None = None  # who started the current turn (``bots.origin``), said on a bot's approval cards
 
     @property
     def effective_mode(self) -> Mode:
@@ -247,7 +249,8 @@ class Runtime:
         its ``ship`` is still open."""
         base = caller.state.policy
         assert base is not None
-        base = replace(base, bot=self.bot_rules())  # read again when the record changes: a new tier applies at once
+        # read again when the record changes: a new tier applies at once; the card says who asked for the turn
+        base = replace(base, bot=self.bot_rules(), asked_by=asked_by(caller.state.origin))
         if caller.link is None:
             return replace(base, mode="ungoverned") if caller.state.track.active else base
         return replace(base, role="worker", ship_closed=caller.link.closed_reason())

@@ -65,6 +65,7 @@ _MAX_SCRIPT = 100_000
 _MAX_DEPTH = 4
 _JOURNAL_KEY = ("boopis", "journals", ".hx-journal-key")  # <profile home>/boopis/journals/.hx-journal-key (hx-txn)
 _RENDEZVOUS = ("boopis", "host-channel.json")  # what older hosts wrote in <hermes home>/boopis/
+_CLIENT_TOKEN = "client-token"  # noqa: S105 - a file name, not a secret: the local API's token, in the app's data folder, beside the engine's root (ADR-0045)
 
 
 def denied_locations(home: str, root: str, env: Mapping[str, str]) -> tuple[str, ...]:
@@ -80,6 +81,8 @@ def denied_locations(home: str, root: str, env: Mapping[str, str]) -> tuple[str,
     for base in homes:
         found.append(os.path.join(base, *_JOURNAL_KEY))
         found.append(os.path.join(base, *_RENDEZVOUS))
+    if root:
+        found.append(os.path.join(os.path.dirname(os.path.abspath(root)), _CLIENT_TOKEN))  # the local API's token
     socket = env.get(SOCKET_ENV, "").strip()
     if socket:
         found.append(socket)
