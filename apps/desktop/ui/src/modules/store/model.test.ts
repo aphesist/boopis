@@ -80,8 +80,8 @@ describe('the review card', () => {
 describe('how an item reads in a list', () => {
   const item = (id: string): StoreItem => FX.items.find((i) => i.id === id) as StoreItem;
   it('says what it is, by whom, a missing review, then its summary', () => {
-    expect(rowLine(item('github:example-org/changelog-skills'))).toBe('Skill · example-org · not reviewed · ' + item('github:example-org/changelog-skills').summary);
-    expect(rowLine(item('anthropic:example-lint-kit'))).toMatch(/^Plugin · Example Org · A plugin/);
+    expect(rowLine(item('github:example-org/changelog-skills'))).toBe('Skill by example-org · not reviewed · ' + item('github:example-org/changelog-skills').summary);
+    expect(rowLine(item('anthropic:example-lint-kit'))).toMatch(/^Plugin by Example Org · A plugin/);
   });
   it('says a publisher whose name is the title once, by the title', () => {
     expect(rowLine(item('boopis:firecrawl'))).toMatch(/^Connector · Scrape/);
@@ -108,6 +108,9 @@ describe('how an item reads in a list', () => {
   });
   it('draws the tile from the item\'s own evidence: a curated connector\'s collection id, a hosted one\'s address', () => {
     expect(markRef(item('boopis:firecrawl'))).toMatchObject({ name: 'Firecrawl', kind: 'connector', collection: 'firecrawl' });
+    expect(markRef(item('boopis:release-notes'))).toMatchObject({ publisher: 'Example Org', proven: true });
+    expect(markRef({ ...item('local:focus-theme'), provenance: { ...item('local:focus-theme').provenance, namespace_proof: 'none' } }).proven).toBe(false);
+    expect(markRef({ item_id: 'boopis:skills/pdf', kind: 'skill', source: 'boopis' })).toMatchObject({ publisher: null, proven: false });   /* a receipt names no publisher */
     expect(markRef(item('boopis:release-notes')).collection).toBeNull();
     expect(markRef(item('mcp-registry:com.example/tickets')).collection).toBeNull();
     expect(remoteUrl({ type: 'version', value: 'hosted', repo: 'remote:https://mcp.notion.com/mcp' })).toBe('https://mcp.notion.com/mcp');

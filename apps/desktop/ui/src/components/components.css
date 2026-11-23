@@ -1022,8 +1022,8 @@ hx-card[data-accent] .cd-mini { --sq-line: color-mix(in srgb, var(--cd-accent) 3
 .ui-child[data-status="stopped"] .ui-child__goal, .ui-child[data-status="failed"] .ui-child__goal { color: var(--text-dim); }
 
 /* ───────────── item marks (item-mark.ts; docs/UI-COMPONENTS.md, "Item marks") ─────────────
-   What a store item or a connector is, at a glance: a raised tile with a continuous corner holding the service's mark (mono,
-   currentColor) or a monogram. 24 in a row's lead, 40 at the head of an item's page. The corner is the floor at 24 (a 24px
+   What a store item or a connector is, at a glance: a raised tile with a continuous corner holding the service's or a proven
+   publisher's mark (in its brand's colours) or a monogram. 24 in a row's lead, 40 at the head of an item's page. The corner is the floor at 24 (a 24px
    square at --r-s would read as a circle) and --r-s at 40. Before the corner engine binds it, a plain radius and an inset line. */
 .ui-imark {
   --imark: 24px; --sq-bg: var(--bg-3); --sq-line: var(--hair);
@@ -1032,6 +1032,9 @@ hx-card[data-accent] .cd-mini { --sq-line: color-mix(in srgb, var(--cd-accent) 3
 }
 .ui-imark[data-size="40"] { --imark: 40px; border-radius: var(--r-s); }
 .ui-imark__svg { display: block; width: var(--ic-s); height: var(--ic-s); }
+/* a mark in its brand's colours (owner decision, 23 November 2026, ADR-0040 amended): the map's colour for the scheme the page is in,
+   each one checked at 3:1 on every preset's tile (item-mark.test.ts); a brand colour is data, like a bot's look, never a token */
+:is(.ui-imark__svg, .ui-pub__mark)[data-brand] { color: light-dark(var(--mk-l), var(--mk-d)); }
 .ui-imark[data-size="40"] .ui-imark__svg { width: calc(var(--imark) * .55); height: calc(var(--imark) * .55); }
 .ui-imark__ini { font: 600 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-dim); white-space: nowrap; }
 .ui-imark[data-size="40"] .ui-imark__ini { font-size: var(--fs-m); }

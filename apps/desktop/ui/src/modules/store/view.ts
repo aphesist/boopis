@@ -334,7 +334,9 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     const title = el('h2', { class: 'hx-store__title' });
     title.innerHTML = storeItem(`<span>${ui.esc(it.title)}</span>`);
     const meta = el('p', { class: 'hx-store__meta' });
-    meta.innerHTML = storeItem([ui.esc(KIND_SHORT[it.kind]), ui.html.publisher(it.publisher), ui.esc(TIER_WORDS[it.tier]), st ? ui.esc(STATE_WORDS[st]) : ''].filter(Boolean).join('<span class="hx-store__sep" aria-hidden="true"> · </span>'));
+    /* "Skill by Anthropic": who made it, the mark only for a publisher its source proved (the tile says the same) */
+    const by = ui.esc(KIND_SHORT[it.kind]) + ' by ' + ui.html.publisher(it.publisher, { proven: prov.namespace_proof !== 'none' });
+    meta.innerHTML = storeItem([by, ui.esc(TIER_WORDS[it.tier]), st ? ui.esc(STATE_WORDS[st]) : ''].filter(Boolean).join('<span class="hx-store__sep" aria-hidden="true"> · </span>'));
     const tile = el('span', { class: 'hx-store__tile' }); tile.innerHTML = ui.html.itemMark(markRef(it), { size: 40 });
     const who = el('div', { class: 'hx-store__who' }, title, meta);
     const hero = el('div', { class: 'hx-store__hero' }, tile, who, act);

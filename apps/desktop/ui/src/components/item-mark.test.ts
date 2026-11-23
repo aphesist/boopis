@@ -3,8 +3,11 @@
    everything else, the same letters every time. */
 import { describe, expect, it } from 'vitest';
 import collection from '../../../../shared/data/connectors.json';
-import { itemMarkHTML, monogram, packageOf, publisherHTML, publisherMarkOf, serviceMark, serviceMarkOf, serviceMarks } from './item-mark';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { itemMarkHTML, monogram, packageOf, publisherHTML, publisherMarkOf, serviceMark, serviceMarkOf, serviceMarks, tileMarkOf } from './item-mark';
 import mapFile from '../vendor/service-marks/map.json';
+import { lum, ratio } from '../styles/colour';
 
 const id = (m: { id: string } | null): string | null => (m ? m.id : null);
 
@@ -114,6 +117,7 @@ describe('the tile', () => {
     const h = itemMarkHTML({ name: 'GitHub', collection: 'github' });
     expect(h).toContain('data-mark="github"');
     expect(h).toContain('fill="currentColor"');
+    expect(h).toContain('data-brand style="--mk-l:#181717;--mk-d:#FFFFFF"');
     expect(h).toContain('aria-hidden="true"');
     expect(h).toContain('data-sq');
     expect(h).toContain('data-size="24"');
@@ -133,5 +137,62 @@ describe('the tile', () => {
     expect(publisherHTML('Matt Pocock')).not.toContain('<svg');
     expect(publisherHTML('Matt Pocock')).toContain('Matt Pocock');
     expect(serviceMark('github')?.name).toBe('GitHub');
+  });
+});
+
+describe('brand colours (owner decision, 23 November 2026)', () => {
+  /* the raised tile (--bg-3) of every preset, read from tokens.css, and its scheme as theme.ts decides it (the ground's luminance) */
+  const css = readFileSync(join(__dirname, '..', 'styles', 'tokens.css'), 'utf8');
+  const presets = ['catalog', 'graphite', 'bone', 'typewriter'].map((id) => {
+    const block = new RegExp('\\[data-hx-preset="' + id + '"\\][^{]*\\{([^}]*)\\}').exec(css)?.[1] ?? '';
+    const tok = (n: string): string => new RegExp('--' + n + ':\\s*(#[0-9a-fA-F]{6})').exec(block)?.[1] ?? '';
+    return { id, tile: tok('bg-3'), light: lum(tok('bg-2')) > 0.4 };
+  });
+  it('reads a tile for every preset, and Bone is the light one', () => {
+    for (const p of presets) expect(p.tile, p.id).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(presets.filter((p) => p.light).map((p) => p.id)).toEqual(['bone']);
+  });
+  it('every mark holds 3:1 against the tile of every preset, in the colour its scheme draws (WCAG 1.4.11)', () => {
+    for (const m of serviceMarks()) for (const p of presets) {
+      const c = p.light ? m.light : m.dark;
+      expect(ratio(c, p.tile), `${m.id} on ${p.id} (${c} on ${p.tile})`).toBeGreaterThanOrEqual(3);
+    }
+  });
+  it('each colour is the brand\'s own (Simple Icons\' hex) or its one-colour black or white version, with the reason written down', () => {
+    for (const e of (mapFile as unknown as { marks: { id: string; hex: string; color: { light: string; dark: string; why: string } }[] }).marks) {
+      for (const c of [e.color.light, e.color.dark]) expect(['#' + e.hex.toUpperCase(), '#000000', '#FFFFFF', '#181717', '#191919'], e.id).toContain(c.toUpperCase());
+      expect(e.color.why.length, e.id).toBeGreaterThan(20);
+    }
+  });
+  it('a dark brand on the dark tiles takes its white version (GitHub on Graphite), a pale one on the light tile its black', () => {
+    expect(serviceMark('github')).toMatchObject({ light: '#181717', dark: '#FFFFFF' });
+    expect(serviceMark('supabase')).toMatchObject({ light: '#000000', dark: '#3FCF8E' });
+    expect(serviceMark('brave')).toMatchObject({ light: '#FB542B', dark: '#FB542B' });
+  });
+  it('the stylesheet picks the colour by the scheme', () => {
+    const kit = readFileSync(join(__dirname, 'components.css'), 'utf8');
+    expect(kit).toMatch(/:is\(\.ui-imark__svg, \.ui-pub__mark\)\[data-brand\] \{ color: light-dark\(var\(--mk-l\), var\(--mk-d\)\); \}/);
+  });
+});
+
+describe('publisher tiles', () => {
+  it('a skill, plugin or mod whose source proved its publisher shows the publisher\'s mark', () => {
+    expect(tileMarkOf({ name: 'PDF files', kind: 'skill', publisher: 'Anthropic', proven: true })).toMatchObject({ of: 'publisher', mark: { id: 'anthropic' } });
+    expect(tileMarkOf({ name: 'React best practices', kind: 'skill', publisher: 'Vercel', proven: true })?.mark.id).toBe('vercel');
+    expect(itemMarkHTML({ name: 'PDF files', kind: 'plugin', publisher: 'Anthropic', proven: true })).toContain('data-mark-of="publisher"');
+  });
+  it('a claimed publisher, an unknown one, or a code host keeps the monogram', () => {
+    expect(tileMarkOf({ name: 'Anthropic tools', kind: 'skill', publisher: 'Anthropic', proven: false })).toBeNull();
+    expect(tileMarkOf({ name: 'Code review', kind: 'skill', publisher: 'Matt Pocock', proven: true })).toBeNull();
+    expect(tileMarkOf({ name: 'Tips', kind: 'skill', publisher: 'github.com', proven: true })).toBeNull();
+    expect(tileMarkOf({ name: 'Tips', kind: 'skill', publisher: 'GitHub Inc', proven: true })).toBeNull();
+  });
+  it('a connector shows its service or its monogram, never its publisher\'s mark', () => {
+    expect(tileMarkOf({ name: 'Context7', kind: 'connector', collection: 'context7', publisher: 'Upstash', proven: true })).toBeNull();
+    expect(tileMarkOf({ name: 'GitHub', kind: 'connector', collection: 'github', publisher: 'GitHub', proven: true })).toMatchObject({ of: 'service' });
+  });
+  it('the publisher\'s name drops its mark when the source did not prove it', () => {
+    expect(publisherHTML('Anthropic', { proven: false })).not.toContain('<svg');
+    expect(publisherHTML('Anthropic', { proven: true })).toContain('data-brand');
   });
 });

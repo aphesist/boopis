@@ -40,11 +40,13 @@ export const KIND_SHORT: Readonly<Record<StoreKind, string>> = { skill: 'Skill',
 export const KIND_ORDER: readonly StoreKind[] = KIND_FILTERS.map(([v]) => v).filter((v): v is StoreKind => v !== 'all');
 export const KIND_GROUP: Readonly<Record<StoreKind, string>> = { skill: 'Skills', connector: 'Connectors', plugin: 'Plugins', mod: 'Mods', 'engine-plugin': 'Engine plugins' };
 
-/** the row's second line: what it is, by whom (unless the title already says it), a missing review, then its summary */
+/** the row's second line: what it is and who published it ("Skill by Supabase", so a publisher's mark on the tile reads as who made
+    it, not as the item being that company's product), a missing review, then its summary; a publisher whose name is the title
+    ("Notion" by Notion) is said once, by the title */
 export function rowLine(item: Pick<StoreItem, 'kind' | 'publisher' | 'tier' | 'summary' | 'title'>): string {
   /* a publisher whose name is the item's own (Notion's Notion) is said once, by the title */
   const by = item.publisher.trim().toLowerCase() === item.title.trim().toLowerCase() ? '' : item.publisher;
-  return [KIND_SHORT[item.kind], by, item.tier === 'not-reviewed' ? 'not reviewed' : '', item.summary.trim()].filter(Boolean).join(' · ');
+  return [KIND_SHORT[item.kind] + (by ? ' by ' + by : ''), item.tier === 'not-reviewed' ? 'not reviewed' : '', item.summary.trim()].filter(Boolean).join(' · ');
 }
 /** what an item needs before it can work, in two words: the keys it cannot do without, or that boopis will not install it */
 export function needsWord(item: Pick<StoreItem, 'secrets' | 'pinned' | 'removed'>): string {
@@ -67,13 +69,16 @@ export function byKind<T extends { kind: StoreKind }>(items: readonly T[]): Arra
 /** a remote connector's address, from its pin (`remote:<url>`); null for anything that runs from code */
 export const remoteUrl = (p: StorePin | null | undefined): string | null => (isRemote(p) ? (p?.repo ?? '').slice('remote:'.length) || null : null);
 /** what the tile is drawn from: the item's own evidence (docs: components/item-mark.ts). A curated connector's id is its id in
-    boopis's collection; a hosted one connects to its pinned address. */
-export function markRef(item: { id?: string; item_id?: string; title?: string | undefined; kind: StoreKind; source: string; homepage?: string | null; pinned?: StorePin | null }): ItemRef {
+    boopis's collection; a hosted one connects to its pinned address; a skill, plugin or mod shows its publisher's mark when its
+    provenance proves the publisher. */
+export function markRef(item: { id?: string; item_id?: string; title?: string | undefined; kind: StoreKind; source: string; homepage?: string | null; pinned?: StorePin | null; publisher?: string; provenance?: { namespace_proof: string } }): ItemRef {
   const id = item.id ?? item.item_id ?? '';
   return {
     name: item.title ?? id.replace(/^[^:]*:/, ''), kind: item.kind,
     collection: item.source === 'boopis' && item.kind === 'connector' ? id.replace(/^boopis:/, '') : null,
-    url: remoteUrl(item.pinned), homepage: item.homepage ?? null
+    url: remoteUrl(item.pinned), homepage: item.homepage ?? null,
+    /* a publisher's mark only for a publisher the source proved: a receipt carries neither, so an installed item keeps its monogram */
+    publisher: item.publisher ?? null, proven: !!item.provenance && item.provenance.namespace_proof !== 'none'
   };
 }
 

@@ -138,20 +138,24 @@ changed most is that it is now the kit's component, one markup for both fields a
 - **Fixed:** Settings > Keyboard laid the keymap's groups in a two-column grid meant for bare `dt`/`dd` and drew each
   row's line twice; it now lists the groups as the shortcut sheet does.
 
-### Item marks and item rows — one each (pending the owner's approval)
+### Item marks and item rows — one each (brand colours and publisher tiles: the owner, 23 November 2026)
 - **Why:** the owner, 23 November 2026, on the Store and Settings > Connectors: "we need more visuals. logos, right now
   it's just text. it's hard to actually find stuff in the screen." The design system had no mark for an installable
   thing (R-icon-1 names only model marks, the logo and orbs), so this is the smallest addition in its own terms, made
   for that redesign and awaiting the owner's approval with its screenshots.
 - `itemMark` (`components/item-mark.ts`): a raised tile (`--bg-3`, a `--hair` line, a continuous corner through
   `data-sq`), 24px in a row's lead and 40px at the head of an item's page; the floor corner at 24, `--r-s` at 40. It
-  holds the mark of the service a connector connects to, mono in `--text` like the model marks everywhere but the model
-  menu (10.1; ADR-0040 keeps brand colour to the sign-in surfaces), or a monogram (one or two letters, mono 11/600 in
-  `--text-dim`). A mark comes only from evidence (`vendor/service-marks/map.json`: an id in boopis's collection, an
-  address's host, a package or image it runs, a store item's home page host); a skill, plugin or mod always gets its
-  monogram. Always `aria-hidden`: the name beside it says what it is. The files are Simple Icons' (CC0), unchanged
-  (`vendor/service-marks/README.md`).
-- `publisher`: a publisher's name with its 14px mark first when the kit carries one (R-icon-4), one unit like `model`.
+  holds the mark of the service a connector connects to, or for a skill, plugin or mod the mark of its publisher when the
+  source proved the publisher (`tileMarkOf`; `data-mark-of` says which), or a monogram (one or two letters, mono 11/600
+  in `--text-dim`). Marks are in their brand colours (the owner, 23 November 2026, ADR-0040 amended for these surfaces):
+  `light-dark(--mk-l, --mk-d)` from the map, the brand's `hex` where it holds 3:1 on the preset's tile, else its black or
+  white version; `item-mark.test.ts` checks every mark on every preset. A mark comes only from evidence
+  (`vendor/service-marks/map.json`: an id in boopis's collection, an address's host, a package or image it runs, a store
+  item's home page host, a proven publisher's exact name). Always `aria-hidden`: the name beside it says what it is. The
+  files are Simple Icons' (CC0), unchanged (`vendor/service-marks/README.md`).
+- `publisher`: a publisher's name with its 14px mark first when the kit carries one and the source proved it (`proven`),
+  in its brand colours (R-icon-4), one unit like `model`. Rows say "Skill by Supabase", so a publisher's mark on a tile
+  reads as who made the item.
 - `itemRow`: the kit's two-line `row` (R-row-4) with the tile as its lead (`.ui-row--item`: the lead is 24 wide instead
   of 16, its left inset stays 12 so it sits outside the row's corner), a quiet line of what the item is, and the end
   slot's state word (`endTone` attention for what the person owes, busy for an update). One tab stop per list, Up and
