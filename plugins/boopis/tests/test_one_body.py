@@ -1,4 +1,4 @@
-"""One bot, one body (ADR-0048, T1): a bot's cards are one per job, ordered, in the project's folder, and a bot holds
+"""One bot, one body (ADR-0050, T1): a bot's cards are one per job, ordered, in the project's folder, and a bot holds
 one claim on work at a time."""
 
 from __future__ import annotations

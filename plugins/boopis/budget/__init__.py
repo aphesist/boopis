@@ -1,6 +1,6 @@
 """Budgets: may the next model call, or the next tool call of a run, happen?
 
-The hierarchy, tightest first wins (ADR-0048):
+The hierarchy, tightest first wins (ADR-0050):
 
 1. **a bot's cap per run** (``bot.json`` ``settings.cap``, ``run.py``): every turn of that bot, checked before each tool
    call, paused at the engine's approval gate;
@@ -159,7 +159,7 @@ def bot_turn_refusal(bot: BotRules | None) -> str | None:
 
 def spend_tier(bot: BotRules) -> str:
     """What the bot does at its cap: Block stops there, anything else asks. Allow is read as Ask: a cap is never
-    passed without a person (ADR-0048, ADR-0021's protected spend class)."""
+    passed without a person (ADR-0050, ADR-0021's protected spend class)."""
     return "block" if bot.approvals.get("spend") == "block" else "ask"
 
 

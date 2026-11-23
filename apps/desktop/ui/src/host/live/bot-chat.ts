@@ -243,7 +243,7 @@ export function createBotChat(deps: ChatDeps) {
         break;
       }
       case 'plugin.boopis.budget.updated': {
-        /* the plugin's count of this run against the bot's cap per run (ADR-0048); unknown stays unknown */
+        /* the plugin's count of this run against the bot's cap per run (ADR-0050); unknown stays unknown */
         const dollars = (v: unknown): string | null => (typeof v === 'number' && Number.isFinite(v) ? '$' + v.toFixed(2) : null);
         deps.emit({ type: 'spend', botId, spent: dollars(p['spent_usd']), cap: dollars(p['limit_usd']) });
         return true;

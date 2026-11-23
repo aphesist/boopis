@@ -488,7 +488,7 @@ describe('which profiles boopis did not make (the "made outside boopis" mark)', 
   });
 });
 
-describe('what a bot may do is what the plugin enforces (ADR-0048)', () => {
+describe('what a bot may do is what the plugin enforces (ADR-0050)', () => {
   it('shows the plugin’s own tiers, and only what the record names when the plugin did not say', () => {
     const tiers = { deploys: 'ask', network: 'allow', spend: 'block', delete: 'nonsense' };
     expect(ownConfig({ approvals: { network: true } }, tiers).approvals).toEqual({ deploys: 'ask', network: 'allow', spend: 'block', delete: 'ask' });

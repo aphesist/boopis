@@ -29,7 +29,7 @@ _WORD = re.compile(r"^[a-z0-9][a-z0-9 -]{0,31}$")  # an orb2 shape or eye name
 _COLOUR = re.compile(r"^#[0-9a-fA-F]{6}$")
 _CAP = re.compile(r"^\d{1,4}(\.\d{1,4})?$")
 # what a teammate may do: a category id (``network``) or a tool name (``mcp__fetch__fetch``, ``mcp__fetch``), mapped to
-# a tier (``allow``, ``ask``, ``block``) or, as the first switches were, on (Ask) or off (Allow); ADR-0048
+# a tier (``allow``, ``ask``, ``block``) or, as the first switches were, on (Ask) or off (Allow); ADR-0050
 _APPROVAL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 TIER_WORDS = ("allow", "ask", "block")
 MAX_APPROVALS = 64
@@ -196,7 +196,7 @@ def update(
         if settings:
             merged = {**cast("dict[str, str]", record.get("settings") or {}), **settings}
             if merged.get("cap") == "":
-                del merged["cap"]  # a bot has no cap unless the owner sets one (ADR-0048)
+                del merged["cap"]  # a bot has no cap unless the owner sets one (ADR-0050)
             record["settings"] = merged
         if approvals:
             record["approvals"] = {**cast("dict[str, bool | str]", record.get("approvals") or {}), **approvals}

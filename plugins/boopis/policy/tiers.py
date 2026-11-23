@@ -1,4 +1,4 @@
-"""A bot's capability tiers: Allow, Ask or Block for each kind of action (ADR-0048).
+"""A bot's capability tiers: Allow, Ask or Block for each kind of action (ADR-0050).
 
 One step of the one permission function (``policy.check``), so the ``pre_tool_call`` hook and the exec kernel judge a
 bot's calls alike. It applies only to a session that runs for a bot (``SessionPolicy.bot``): the owner's own profile has
@@ -251,7 +251,7 @@ def decide(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
 
 
 def owner_answer(call: ToolCall, defaults: Defaults, data: TierData, bot: str) -> Decision | None:
-    """No bot answers for the owner, whatever its tiers (ADR-0048, S2): a command line, code or URL that reaches an
+    """No bot answers for the owner, whatever its tiers (ADR-0050, S2): a command line, code or URL that reaches an
     answer method (the gateway's ``approval.respond``, ``groups.approve``, ``clarify.respond``, the plugin's
     ``form.submit``, the local API's approvals route or its token, a ticket from the engine's CLI), or a message whose
     first word answers an approval on a chat platform, is refused. A best effort over the words of a call, not a

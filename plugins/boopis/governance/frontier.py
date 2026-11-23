@@ -128,7 +128,7 @@ def normalise(model: str) -> list[str]:
 
 def resolve_alias(provider: str, model: str) -> str:
     """The id a provider's alias names (the Claude subscription's ``opus`` is ``claude-opus-5-5``), else the model as
-    it came. The price book uses it too, so a subscription's tokens have an API-equivalent price (ADR-0048)."""
+    it came. The price book uses it too, so a subscription's tokens have an API-equivalent price (ADR-0050)."""
     return _resolve_alias(provider, model)
 
 

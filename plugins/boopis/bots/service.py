@@ -34,7 +34,7 @@ class BotService:
     def read_all(self) -> dict[str, Any]:
         bots: list[dict[str, Any]] = []
         for path in homes.named_profiles(self.root):
-            defaults.give(self.root, path.name, path)  # the owner's new defaults, once per bot (ADR-0048)
+            defaults.give(self.root, path.name, path)  # the owner's new defaults, once per bot (ADR-0050)
             record, problem = store.read(path)
             archived = record.get("archived") if record else None
             if archived is None and homes.is_archived_name(path.name):
@@ -176,7 +176,7 @@ class BotService:
 
 
 def _tiers(name: str, record: Mapping[str, Any] | None, problem: str | None) -> dict[str, str]:
-    """Every category's tier as the gates read it (record, else preset, else default; ADR-0048), so the app shows what
+    """Every category's tier as the gates read it (record, else preset, else default; ADR-0050), so the app shows what
     is enforced and not a default of its own."""
     from ..policy.tiers import effective
     from .rules import from_record

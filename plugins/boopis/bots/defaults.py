@@ -1,4 +1,4 @@
-"""The owner's defaults, given once to the bots that already exist (owner decisions, 23 November 2026; ADR-0048).
+"""The owner's defaults, given once to the bots that already exist (owner decisions, 23 November 2026; ADR-0050).
 
 Two moves, each made once per bot and recorded, so a choice the owner makes afterwards is never overwritten:
 

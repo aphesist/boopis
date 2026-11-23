@@ -1,4 +1,4 @@
-"""Budgets per bot and for the team (ADR-0048): a bot's cap per run, the team's monthly budget, the tightest wins."""
+"""Budgets per bot and for the team (ADR-0050): a bot's cap per run, the team's monthly budget, the tightest wins."""
 
 from __future__ import annotations
 

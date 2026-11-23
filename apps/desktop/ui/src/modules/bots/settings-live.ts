@@ -23,7 +23,7 @@ import { openNew } from './new-bot';
 import { updateRow } from './list';
 
 const sentence = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-/** what the cap per run means, said where it is set (ADR-0048) */
+/** what the cap per run means, said where it is set (ADR-0050) */
 export const CAP_HINT = 'No cap unless you set one. Dollars per run: one message, room turn, card or scheduled run. At the cap it pauses and asks you; no answer stops it. On a subscription it counts what the same tokens would cost on the API, so it works as a token budget. Empty it to remove the cap.';
 
 export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | null, keepFocus: boolean): void {
@@ -151,7 +151,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   });
   const ws = ui.segmented({ mode: 'radio', label: 'Workspace', value: c.workspace, options: [{ value: 'worktree', label: 'Worktree' }, { value: 'sandbox', label: 'Sandbox' }], fill: true });
   ws.addEventListener('ui:change', (e) => { own({ workspace: (e as CustomEvent<{ value: string }>).detail.value as BotConfig['workspace'] }); });
-  /* what it may do: the plugin enforces each row before every tool call (ADR-0048); a kind the plugin did not report has no row */
+  /* what it may do: the plugin enforces each row before every tool call (ADR-0050); a kind the plugin did not report has no row */
   const appr = el('div', { class: 'ui-set' }, catalog.approvals.map((ap) => tierRow(b, ap, c.approvals[ap.id], (v) => own({ approvals: { [ap.id]: v } }))).filter((n): n is HTMLElement => !!n));
   const apprNote = Object.keys(c.approvals).length ? null : hint('What it may do is not shown: this version of boopis’s plugin did not report it.');
 

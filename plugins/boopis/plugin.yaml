@@ -24,9 +24,9 @@ provides_hooks:
   - on_session_start
   - on_session_end
   - on_session_finalize
-  # budget/: a run cap's pause card is answered at the engine's approval gate (ADR-0048)
+  # budget/: a run cap's pause card is answered at the engine's approval gate (ADR-0050)
   - post_approval_response
-  # bots/claims.py: a card's end drops its bot's claim (one bot, one body, ADR-0048)
+  # bots/claims.py: a card's end drops its bot's claim (one bot, one body, ADR-0050)
   - kanban_task_completed
   - kanban_task_blocked
   # compat/: the Claude Code hooks bridge (docs/COMPAT.md section 4)

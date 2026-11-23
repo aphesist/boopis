@@ -393,7 +393,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       const made = await client.requestRaw('profiles.create', params).catch((e: unknown) => { preparing.delete(plan.profile); throw e; }) as { path?: string; warnings?: string[]; model_set?: boolean };
       try {
         /* a bot is ungoverned until the owner turns Governed on in its settings (ADR-0042) */
-        await plug('bots.write', { name: plan.profile, look: { shape: draft.shape, color: draft.color }, settings: { gov: OWN_SETTINGS.gov, workspace: OWN_SETTINGS.workspace } });   /* no cap, and the plugin's default tiers until the owner chooses (ADR-0048) */
+        await plug('bots.write', { name: plan.profile, look: { shape: draft.shape, color: draft.color }, settings: { gov: OWN_SETTINGS.gov, workspace: OWN_SETTINGS.workspace } });   /* no cap, and the plugin's default tiers until the owner chooses (ADR-0050) */
       } catch (e) { log.warn('the new teammate’s own record was not saved', e); }
       if (made.warnings?.length) log.warn('Hermes warned while making ' + plan.profile + ': ' + made.warnings.join(' '));
       try {

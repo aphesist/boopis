@@ -1,4 +1,4 @@
-"""Where a kanban board works: its ``default_workdir``, asked of the engine's own CLI (ADR-0048, T1, B35).
+"""Where a kanban board works: its ``default_workdir``, asked of the engine's own CLI (ADR-0050, T1, B35).
 
 The engine has no plugin API that lists boards. Its command ``kanban boards list --all --json`` does, as the desktop
 host reads them (``kanban.rs``); boards belong to the root home, so it runs there. The answer is kept for ``TTL_S``

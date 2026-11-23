@@ -53,7 +53,7 @@ export function runLimitRow(b: Bot): HTMLElement {
   return row;
 }
 const TIER_WORDS: Readonly<Record<ApprovalTier, string>> = { allow: 'Allow', ask: 'Ask', block: 'Block' };
-/** one kind of action's tier, a settings row with the kit's radio segmented control (ADR-0048). A kind the plugin has not reported has no
+/** one kind of action's tier, a settings row with the kit's radio segmented control (ADR-0050). A kind the plugin has not reported has no
  *  row (its tier is unknown, never drawn as a guess) */
 export function tierRow(b: Bot, ap: Choice, now: ApprovalTier | undefined, onChange: (tier: ApprovalTier) => void): HTMLElement | null {
   if (!now) return null;
@@ -127,7 +127,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
       f.addEventListener('ui:change', (e) => { c.model = (e as CustomEvent<{ value: string }>).detail.value; push({ model: c.model }); changed(); });
       modelBox.append(f);
     }
-    /* the cap per run holds governed or not (ADR-0048) */
+    /* the cap per run holds governed or not (ADR-0050) */
     const capId = 'bt-cap-' + b.id;
     const row = frag(ui.html.setRow({ label: 'Cap per run', hint: CAP_HINT, for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
     $<HTMLInputElement>('input', row).addEventListener('input', (e) => { c.cap = (e.target as HTMLInputElement).value; push({ cap: c.cap }); paintToolbar(b); });

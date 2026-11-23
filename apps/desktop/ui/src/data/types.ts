@@ -16,7 +16,7 @@ export interface BotConfig {
   /** a five-field cron expression, or '' for "only when asked" */
   cron: string;
   channels: Readonly<Record<string, boolean>>;
-  /** what it may do, per kind of action (`APPROVALS`): Allow, Ask or Block, as the plugin enforces it (ADR-0048) */
+  /** what it may do, per kind of action (`APPROVALS`): Allow, Ask or Block, as the plugin enforces it (ADR-0050) */
   approvals: Readonly<Record<string, ApprovalTier>>;
   workspace: 'worktree' | 'sandbox';
 }

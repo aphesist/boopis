@@ -1,4 +1,4 @@
-"""Bot-to-bot traffic is labelled, cards say who asks for whom, and no bot answers for the owner (ADR-0048, S2)."""
+"""Bot-to-bot traffic is labelled, cards say who asks for whom, and no bot answers for the owner (ADR-0050, S2)."""
 
 from __future__ import annotations
 

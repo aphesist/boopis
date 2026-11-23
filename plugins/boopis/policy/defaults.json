@@ -278,7 +278,7 @@
     "//**/.hx-journal-key",
     "//**/boopis/journals/**"
   ],
-  "denied_read_paths_comment": "Paths no tool of the agent may read: the desktop host's secret socket, the rendezvous file older hosts wrote (it held the channel token), the key that vouches for hx's journals, and the local API's token (beside the engine's root in the app's data folder: whoever reads it can answer the owner's approvals, ADR-0045, ADR-0048). Absolute globs (`//` prefix), like protected_extra's; the host's own peer check does not depend on this list.",
+  "denied_read_paths_comment": "Paths no tool of the agent may read: the desktop host's secret socket, the rendezvous file older hosts wrote (it held the channel token), the key that vouches for hx's journals, and the local API's token (beside the engine's root in the app's data folder: whoever reads it can answer the owner's approvals, ADR-0045, ADR-0050). Absolute globs (`//` prefix), like protected_extra's; the host's own peer check does not depend on this list.",
   "denied_read_paths": [
     "//**/boopis/host.sock",
     "//**/boopis/**/host.sock",

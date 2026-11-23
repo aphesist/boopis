@@ -1,4 +1,4 @@
-"""One bot, one body: a bot holds at most one claim on work at a time (ADR-0048, T1).
+"""One bot, one body: a bot holds at most one claim on work at a time (ADR-0050, T1).
 
 Work comes to a bot from several places that run at once: a room turn (in the gateway), a kanban card's worker (its own
 process), a scheduled run, a forwarded message. Without a claim, one bot works in a room and in a worker at the same

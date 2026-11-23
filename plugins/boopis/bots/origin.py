@@ -9,7 +9,7 @@ scheduled job's post is marked as automated), a forwarded message (source ``a2a`
 session context the engine binds (``gateway.session_context.get_session_env``, on the public plugin API list). Nothing
 is guessed: a turn whose source is not recognised is ``chat``, and only the owner's own local surfaces are ``owner``.
 
-What it is used for (ADR-0048):
+What it is used for (ADR-0050):
 - ``context``: one line added to the turn's user message (``pre_llm_call`` context, never the system prompt, so the
   prompt cache is untouched), saying who wrote what and that nobody but the owner can approve anything;
 - ``asked_by``: the words an approval card ends with, so the owner sees which bot asks and at whose request.

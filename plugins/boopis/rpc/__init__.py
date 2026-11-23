@@ -337,7 +337,7 @@ def prices_refresh(params: Mapping[str, Any], *, session_id: str | None = None, 
 
 
 def budget_state(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
-    """The session's current run against its bot's cap per run, and the team's month (ADR-0048)."""
+    """The session's current run against its bot's cap per run, and the team's month (ADR-0050)."""
     from .. import budget
 
     rt = runtime()

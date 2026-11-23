@@ -1,4 +1,4 @@
-"""The owner's defaults, given once to the bots that already exist (ADR-0048): the default tiers for a record still on
+"""The owner's defaults, given once to the bots that already exist (ADR-0050): the default tiers for a record still on
 the switches it was made with, and no cap where the cap is still one boopis wrote. No bot has a limit unless the owner
 sets one."""
 

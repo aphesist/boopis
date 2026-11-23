@@ -1,4 +1,4 @@
-"""A bot's capability tiers (ADR-0048): Allow, Ask or Block per kind of action, enforced by the one policy function."""
+"""A bot's capability tiers (ADR-0050): Allow, Ask or Block per kind of action, enforced by the one policy function."""
 
 from __future__ import annotations
 

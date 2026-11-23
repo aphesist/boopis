@@ -1,4 +1,4 @@
-"""``kanban_create`` from a bot: one card per job, ordered by ``parents``, in the project's folder (ADR-0048, T1).
+"""``kanban_create`` from a bot: one card per job, ordered by ``parents``, in the project's folder (ADR-0050, T1).
 
 The hand-off skill (``bots/guides.py``) asks a bot to do all three; this makes them hold whether or not the bot read it.
 A step of ``policy.check``, run when the rest of the policy allows the call, for a session that runs for a bot:

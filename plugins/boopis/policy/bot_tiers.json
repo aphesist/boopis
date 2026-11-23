@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "_comment": [
-    "A bot's capability tiers (ADR-0048): what each kind of action does for a bot, Allow, Ask or Block, read by policy/tiers.py.",
+    "A bot's capability tiers (ADR-0050): what each kind of action does for a bot, Allow, Ask or Block, read by policy/tiers.py.",
     "categories: the ids are the keys of bot.json `approvals` (the app's rows). A call belongs to every category it matches: a tool named in",
     "`tools`, a command line (`terminal`'s `command`) with a simple command that matches one of `commands` (the program, then the words",
     "after it in order; a word starting with '-' must appear as it is), any MCP tool for `mcp: true`, a write outside the session's folder",
@@ -10,12 +10,12 @@
     "no category and not quiet asks: an unknown kind of action fails closed.",
     "never_allow: categories where Allow is read as Ask (spend: a cap or a payment is never passed without a person, ADR-0021).",
     "default: the tiers of a bot whose record does not name one. presets: named defaults a bot's record may choose (settings.preset).",
-    "The owner decides these numbers; they are listed in ADR-0048.",
-    "owner_answer: what no bot may do in any tier: answer an approval, a clarify or a form meant for the owner (ADR-0048, S2).",
+    "The owner decides these numbers; they are listed in ADR-0050.",
+    "owner_answer: what no bot may do in any tier: answer an approval, a clarify or a form meant for the owner (ADR-0050, S2).",
     "`markers` are looked for in command lines, code and URLs (the gateway's answer methods, the local API's approvals route and",
     "its token, a ticket minted from the engine's CLI); `slash` are chat commands that answer an approval, refused at the start of",
     "a message a people tool sends (`text_keys`).",
-    "kanban: how a bot files a card (ADR-0048, T1, policy/kanban.py). `depends_on` are the words that say a card waits for other work",
+    "kanban: how a bot files a card (ADR-0050, T1, policy/kanban.py). `depends_on` are the words that say a card waits for other work",
     "(case-insensitive regular expressions over its title and body): such a card needs `parents`, because the dispatcher starts a card",
     "without parents at once whatever its text says. `key_max` bounds the idempotency key boopis derives for a room turn's card."
   ],

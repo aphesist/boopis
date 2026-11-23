@@ -534,7 +534,7 @@ impl Backend for Live<'_> {
                         ),
                     ));
                 }
-                // no cap and no tiers: a bot has no limit unless the owner sets one, and the plugin's default tiers apply (ADR-0048)
+                // no cap and no tiers: a bot has no limit unless the owner sets one, and the plugin's default tiers apply (ADR-0050)
                 let mut body = json!({"name": name, "settings": {"gov": if gov { "governed" } else { "ungoverned" }, "workspace": "worktree"}});
                 if let Some(l) = &bot.look {
                     body["look"] = json!({"shape": l.shape, "color": l.color});

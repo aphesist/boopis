@@ -151,7 +151,7 @@ It registers:
   See ADR-0007.
 - **Tool surface:** boopis sessions need `tools.tool_search.enabled: "off"`, set with consent (ADR-0014).
 - **Cost cap:** `pre_llm_call` blocks the call that would exceed the cap and the UI asks. Usage comes from `post_api_request`, normalised to `Usage {input_uncached, output, cache_read, cache_write, reasoning}`.
-- **Budgets (ADR-0048):** a bot's cap per run (one turn; `bot.json`) is checked before every tool call and pauses at the engine's approval gate; the team's monthly budget (`<root>/boopis/budget.json`) is checked when a turn starts and before every tool call, over every profile's ledgers; the tightest wins. Both count API-equivalent dollars, so a subscription's tokens count as a token budget. `budget/` is the one implementation.
+- **Budgets (ADR-0050):** a bot's cap per run (one turn; `bot.json`) is checked before every tool call and pauses at the engine's approval gate; the team's monthly budget (`<root>/boopis/budget.json`) is checked when a turn starts and before every tool call, over every profile's ledgers; the tightest wins. Both count API-equivalent dollars, so a subscription's tokens count as a token budget. `budget/` is the one implementation.
 - The **capability probe** stores per-model flags (tool use, edit format, prefill, prompt-cache kind) and picks the tool surface for weak models.
 
 ## 7. Execution plane
