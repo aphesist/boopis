@@ -27,6 +27,7 @@ pub mod roster;
 pub mod scrub;
 pub mod service;
 pub mod token;
+pub mod toolwords;
 pub mod wire;
 pub mod workers;
 

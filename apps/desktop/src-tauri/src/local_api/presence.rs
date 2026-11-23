@@ -57,10 +57,23 @@ pub struct Live {
     pub summary: Option<String>,
 }
 
+/// What one event of a link says beyond its type.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Facts<'a> {
+    /// The tool's name, for a tool event.
+    pub tool: Option<&'a str>,
+    /// What the tool call touches, in safe words (`toolwords.rs`), for a `tool.start`.
+    pub detail: Option<&'a str>,
+    /// A completion that failed.
+    pub failed: bool,
+}
+
 #[derive(Debug, Clone)]
 struct Session {
     state: State,
     activity: String,
+    /// What the running tool touches (B40), while `activity` names it.
+    detail: Option<String>,
     attention: Option<String>,
     source: Source,
     summary: Option<String>,
@@ -111,23 +124,22 @@ impl Table {
         self.changed(&[profile.to_owned()], now)
     }
 
-    /// An event on a link of the host. `tool` is the tool's name for a tool event, `failed` is true for a completion that
-    /// failed. Returns the presences that changed.
-    #[allow(clippy::too_many_arguments)] // one event's facts, read by one caller
+    /// An event on a link of the host, with what it says (`facts`). Returns the presences that changed.
     pub fn on_event(
         &mut self,
         profile: &str,
         session_id: &str,
         event: &str,
-        tool: Option<&str>,
-        failed: bool,
+        facts: &Facts<'_>,
         source: Source,
         now: i64,
     ) -> Vec<Presence> {
+        let (tool, failed) = (facts.tool, facts.failed);
         let key = (profile.to_owned(), session_id.to_owned());
         let fresh = || Session {
             state: State::Idle,
             activity: String::new(),
+            detail: None,
             attention: None,
             source,
             summary: None,
@@ -185,6 +197,12 @@ impl Table {
         if s.state != state || s.activity != activity {
             s.since = now;
         }
+        // The detail is the call's: set by its start, kept while the same tool streams progress, gone with it.
+        s.detail = match event {
+            "tool.start" => facts.detail.map(str::to_owned),
+            "tool.generating" | "tool.progress" if s.activity == activity => s.detail.take(),
+            _ => None,
+        };
         s.state = state;
         s.activity = activity;
         s.attention = attention;
@@ -215,6 +233,7 @@ impl Table {
             let s = self.sessions.entry(key).or_insert_with(|| Session {
                 state: State::Idle,
                 activity: String::new(),
+                detail: None,
                 attention: None,
                 source: row.source,
                 summary: None,
@@ -260,6 +279,7 @@ impl Table {
                 s.since = now;
                 if state != State::Working {
                     s.activity.clear();
+                    s.detail = None;
                 }
             }
             s.state = state;
@@ -300,6 +320,7 @@ impl Table {
             {
                 s.state = State::Idle;
                 s.activity.clear();
+                s.detail = None;
                 s.hold_until = 0;
                 s.since = now;
                 touched.push(profile.clone());
@@ -323,6 +344,7 @@ impl Table {
                 profile: profile.to_owned(),
                 state: s.state,
                 activity: s.activity.clone(),
+                detail: s.detail.clone(),
                 attention: s.attention.clone(),
                 session_id: Some(sid.clone()),
                 source: Some(s.source),
@@ -354,6 +376,7 @@ impl Table {
             let same = self.published.get(p).is_some_and(|old| {
                 old.state == now_row.state
                     && old.activity == now_row.activity
+                    && old.detail == now_row.detail
                     && old.attention == now_row.attention
                     && old.session_id == now_row.session_id
                     && old.source == now_row.source
@@ -395,7 +418,40 @@ mod tests {
     use super::*;
 
     fn ev(t: &mut Table, e: &str, tool: Option<&str>, now: i64) -> Vec<Presence> {
-        t.on_event("kai", "s1", e, tool, false, Source::Gui, now)
+        let facts = Facts {
+            tool,
+            ..Facts::default()
+        };
+        t.on_event("kai", "s1", e, &facts, Source::Gui, now)
+    }
+
+    #[test]
+    fn a_tools_detail_shows_while_it_runs_and_goes_with_it() {
+        let mut t = Table::new();
+        let facts = Facts {
+            tool: Some("read_file"),
+            detail: Some("Read a file · shots/03.json"),
+            failed: false,
+        };
+        let p = t.on_event("kai", "s1", "tool.start", &facts, Source::Gui, 0);
+        assert_eq!(p[0].detail.as_deref(), Some("Read a file · shots/03.json"));
+        ev(&mut t, "tool.progress", Some("read_file"), 10);
+        assert_eq!(
+            t.presence("kai", 10).detail.as_deref(),
+            Some("Read a file · shots/03.json"),
+            "progress keeps it"
+        );
+        let p = ev(&mut t, "tool.complete", None, 20);
+        assert_eq!(
+            (p[0].state, p[0].detail.as_deref()),
+            (State::Thinking, None)
+        );
+        ev(&mut t, "tool.start", Some("terminal"), 30);
+        assert_eq!(
+            t.presence("kai", 30).detail,
+            None,
+            "a call that touches nothing named has none"
+        );
     }
 
     #[test]
@@ -465,7 +521,11 @@ mod tests {
     #[test]
     fn a_failure_shows_as_an_error_and_a_finished_turn_rests_after_its_time() {
         let mut t = Table::new();
-        let p = t.on_event("kai", "s1", "message.complete", None, true, Source::Gui, 0);
+        let failed = Facts {
+            failed: true,
+            ..Facts::default()
+        };
+        let p = t.on_event("kai", "s1", "message.complete", &failed, Source::Gui, 0);
         assert_eq!(p[0].state, State::Error);
         assert!(t.tick(ERROR_HOLD_MS - 1).is_empty());
         let p = t.tick(ERROR_HOLD_MS + 1);

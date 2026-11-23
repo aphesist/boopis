@@ -17,7 +17,7 @@ use super::model::{
     MessageState, NoteKind, Notification, Origin, Presence, Role, RoomHeldEvent, RoomLine,
     RoomLineEvent, RoomRow, RoomStateEvent, Source, Stamped, State, now_ms,
 };
-use super::presence::{Live, Table};
+use super::presence::{Facts, Live, Table};
 use super::roster::{self, Entry};
 use super::scrub;
 use crate::config::ApiLimits;
@@ -761,9 +761,10 @@ impl Feed {
                     self.audit_gui(profile, &row, by.as_ref());
                     self.emit(&mut inner, Event::Approvals(row));
                 }
-                let changed = inner
-                    .presence
-                    .on_event(profile, sid, &f.name, None, false, origin, now);
+                let changed =
+                    inner
+                        .presence
+                        .on_event(profile, sid, &f.name, &Facts::default(), origin, now);
                 self.publish(&mut inner, changed);
             }
             "tool.start" | "tool.generating" | "tool.progress" => {
@@ -772,23 +773,40 @@ impl Feed {
                     .map(|k| str_of(&payload, k))
                     .find(|s| !s.is_empty());
                 let tool = tool.map(|t| self.clip(&t));
-                let changed = inner.presence.on_event(
-                    profile,
-                    sid,
-                    &f.name,
-                    tool.as_deref(),
-                    false,
-                    origin,
-                    now,
-                );
+                // What the call touches (B40): from the arguments `tool.start` carries, safe words only, then scrubbed.
+                let detail = (f.name == "tool.start")
+                    .then(|| {
+                        super::toolwords::detail(
+                            tool.as_deref().unwrap_or_default(),
+                            payload.get("args"),
+                        )
+                    })
+                    .flatten()
+                    .map(|d| self.clip(&d));
+                let facts = Facts {
+                    tool: tool.as_deref(),
+                    detail: detail.as_deref(),
+                    failed: false,
+                };
+                let changed = inner
+                    .presence
+                    .on_event(profile, sid, &f.name, &facts, origin, now);
                 self.publish(&mut inner, changed);
             }
             "message.complete" => {
                 let outcome = str_of(&payload, "outcome");
                 let failed = matches!(outcome.as_str(), "failed" | "error");
-                let changed = inner
-                    .presence
-                    .on_event(profile, sid, &f.name, None, failed, origin, now);
+                let changed = inner.presence.on_event(
+                    profile,
+                    sid,
+                    &f.name,
+                    &Facts {
+                        failed,
+                        ..Facts::default()
+                    },
+                    origin,
+                    now,
+                );
                 self.publish(&mut inner, changed);
                 let who = Self::display(&inner, profile);
                 if failed {
@@ -827,9 +845,17 @@ impl Feed {
                 }
             }
             "error" | "turn.failed" => {
-                let changed = inner
-                    .presence
-                    .on_event(profile, sid, &f.name, None, true, origin, now);
+                let changed = inner.presence.on_event(
+                    profile,
+                    sid,
+                    &f.name,
+                    &Facts {
+                        failed: true,
+                        ..Facts::default()
+                    },
+                    origin,
+                    now,
+                );
                 self.publish(&mut inner, changed);
                 let who = Self::display(&inner, profile);
                 let why = self.clip(
@@ -852,9 +878,10 @@ impl Feed {
                 );
             }
             _ => {
-                let changed = inner
-                    .presence
-                    .on_event(profile, sid, &f.name, None, false, origin, now);
+                let changed =
+                    inner
+                        .presence
+                        .on_event(profile, sid, &f.name, &Facts::default(), origin, now);
                 self.publish(&mut inner, changed);
             }
         }
@@ -927,10 +954,14 @@ impl Feed {
         };
         self.add_approval(inner, row, source, now);
         let origin = Self::origin(inner, profile, sid);
-        let changed =
-            inner
-                .presence
-                .on_event(profile, sid, "approval.request", None, false, origin, now);
+        let changed = inner.presence.on_event(
+            profile,
+            sid,
+            "approval.request",
+            &Facts::default(),
+            origin,
+            now,
+        );
         self.publish(inner, changed);
     }
 
@@ -1420,6 +1451,44 @@ mod tests {
         let ids: Vec<u64> = events.iter().map(|e| e.id).collect();
         assert!(ids.windows(2).all(|w| w[1] == w[0] + 1), "{ids:?}");
         assert!(events.iter().any(|e| matches!(&e.event, Event::Notification(n) if n.kind == NoteKind::Reply && n.body == "hello")));
+    }
+
+    #[tokio::test]
+    async fn a_tool_start_says_what_it_touches_in_safe_scrubbed_words() {
+        // B40: the engine's tool.start carries the call's full arguments; only the touched thing leaves, scrubbed
+        let (f, _d) = feed();
+        let kai = |f: &Feed| {
+            f.presence()
+                .into_iter()
+                .find(|p| p.profile == "kai")
+                .unwrap()
+        };
+        f.on_frame(
+            "kai",
+            &frame(
+                "tool.start",
+                "s1",
+                Some(json!({"name": "terminal", "args": {"command": "API_KEY=sk-proj-abc123456789xyz cargo test --all"}})),
+                None,
+            ),
+        );
+        assert_eq!(
+            kai(&f).detail.as_deref(),
+            Some("Run a command · cargo test")
+        );
+        f.on_frame(
+            "kai",
+            &frame(
+                "tool.start",
+                "s1",
+                Some(json!({"name": "read_file", "args": {"path": "/x/ghp_ABCDEFGHIJKLMNOPQRSTUV0123456789/secret.txt"}})),
+                None,
+            ),
+        );
+        let d = kai(&f).detail.unwrap();
+        assert!(!d.contains("ghp_") && d.ends_with("/secret.txt"), "{d}");
+        f.on_frame("kai", &frame("tool.complete", "s1", None, None));
+        assert_eq!(kai(&f).detail, None);
     }
 
     #[tokio::test]

@@ -78,9 +78,10 @@ Every success is `200` with a JSON object. Every failure is the error object abo
 
 **`Bot`**: `{name, display_name, role, model, provider, look: {shape, color}, known_to_boopis, presence}`. `name` is the profile name (the id everywhere). `look` is the one the owner chose in boopis, else the default for the name (the same on every machine: `apps/shared/data/look-vectors.json`). `model` is `provider/model` as the engine has it pinned, from `profiles.describe` when the roster row lacks it (the engine's roster drops it for a named profile), and `null` when nobody says. `known_to_boopis` is false for a bot made outside boopis.
 
-**`Presence`**: `{profile, state, activity, attention, session_id, source, summary, steps, at}`.
+**`Presence`**: `{profile, state, activity, detail, attention, session_id, source, summary, steps, at}`.
 - `state` is orb2's own words: `idle`, `listening`, `thinking`, `working`, `compute`, `speaking`, `needs`, `done`, `error`, `sleeping`.
 - `activity` is a tool's name while `working` or `compute`, else empty. `attention` is `approval` or `input` while `needs`, else null.
+- `detail` is what the running tool touches, in a few safe words: `Read a file · shots/03.json`, `Run a command · cargo test`, `Open a page · docs.rs`. It is made from the arguments the engine's `tool.start` carries, and only from a file's last two path parts, a command's program and plain subcommand (never its arguments, flags or `NAME=value` environment), or a page's host (never its path, query or credentials); anything else (a search query, a message, code) leaves only the verb. It passes the scrubber and is cut at 80 characters. Null when the tool names none of these, and when no tool runs.
 - `source` is the kind of session the state comes from: `gui` (the app, and anything started the way the app starts one, `say` included), `cron`, `room`, `kanban` (a kanban worker running one of the board's tasks) or `other`; `null` while the bot is idle or sleeping (no session is behind it). It is not who started it, and a session keeps the kind it started with: what the host knows from its own link comes first (a session on it is the app's kind), then the engine's own `source` when its live-session row carries one, then the engine's own name for a room member's session (`Group: <room id>`), else `other`. `at` is when the state began, in milliseconds since the epoch.
 - `summary` is what the running session is about, in a line: its title as the engine keeps it (a room member's session reads `In <room name>`; a kanban worker's, its task), else the first line of what the engine shows of it; scrubbed; `null` when the engine says neither, and while idle.
 - `steps` is how many tool steps the running turn has taken, counted from the turn's own events on the host's link; `null` where only the poll sees the turn (a cron run, a room turn, a kanban worker, another program), since the engine's live-session list does not count them, and while idle.
@@ -322,4 +323,7 @@ python3 scripts/boopis-local-client.py events --approve
 
 ## Versioning
 
-`version` is 1. A new field or event is not a new version; a changed meaning is. The host's tests build on the engine's shapes for `session.active_list`, `approval.pending`, `session.events.since` and `session.resume`; a gateway upgrade that moves one fails them, not a user.
+`version` is 1. A new field or event is not a new version; a changed meaning is.
+
+**What boopis 0.2.0 adds**, all of it optional and compatible with version 1 (new fields, events and calls; nothing changed meaning, so a 0.1.9 client keeps working and ignores what it does not know):
+- `Presence.detail`: what the running tool touches, in safe words. The host's tests build on the engine's shapes for `session.active_list`, `approval.pending`, `session.events.since` and `session.resume`; a gateway upgrade that moves one fails them, not a user.

@@ -101,6 +101,10 @@ pub struct Presence {
     pub state: State,
     /// What it is doing in a few words (a tool's name); empty when nothing says.
     pub activity: String,
+    /// What the running tool touches, in a few safe words ("Read a file · shots/03.json"): a file's last two parts, a
+    /// command's program and subcommand, a page's host, never more; scrubbed and capped. Null when the tool names none of
+    /// these, and when no tool runs (0.2.0).
+    pub detail: Option<String>,
     /// `approval` or `input` while the bot waits for the owner, else null.
     pub attention: Option<String>,
     /// The session the state comes from.
@@ -125,6 +129,7 @@ impl Presence {
             profile: profile.to_owned(),
             state: State::Idle,
             activity: String::new(),
+            detail: None,
             attention: None,
             session_id: None,
             source: None,
