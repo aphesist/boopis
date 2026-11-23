@@ -16,11 +16,13 @@
 //! key uses) updates as soon as nothing is. A wait that never sees such a moment ends after `Limits::restart_wait_max`
 //! without touching anything, and the next start tries again.
 //!
-//! **Only a gateway this run started.** The update never stops a gateway the app did not start in this run
-//! (`Supervisor::gateway_owner`: the gateway must have been launched with this run's secret-channel token): not the
-//! end-to-end stack's, not the user's own with `--engine existing`, not one an earlier run left running with that run's
-//! environment. It leaves such a gateway running and its files as they are, says so, and keeps looking: if this run starts
-//! the engine meanwhile (the old one ended), or none runs at the next start, the code is put in place then.
+//! **Only a gateway boopis started.** The update stops a gateway only when boopis launched it (`Supervisor::gateway_owner`):
+//! in this run (started with this run's secret-channel token), or in an earlier session of this install for its bundled
+//! engine (started with the app's own lock folder, which only boopis sets; the gateway outlives the app, so this is the usual
+//! case after an upgrade, and boopis's `ensure` brings it back with the same allowlisted environment). It never stops one
+//! boopis did not start: the end-to-end stack's, the user's own with `--engine existing`, or one whose start cannot be
+//! shown. That one is left running with its files as they are, the app says so, and the update keeps looking: once boopis
+//! starts the engine itself, or none runs at the next start, the code is put in place then.
 //!
 //! **Fail closed.** A copy that cannot be replaced is put back (`install::install_named`), the gateway is started on what is
 //! in place, the failure is recorded (`State::update_failed`) so the next check shows the setup screen, and the app says so
@@ -38,11 +40,11 @@ use crate::hermes::idle::{Waited, when_idle};
 
 /// The line while the update waits for the bots.
 pub const WAITING_LINE: &str = "Updating once the bots are done.";
-/// The line while the gateway that runs is not one this run of the app started (the end-to-end stack's, the user's own
-/// Hermes with `--engine existing`, or one an earlier run left running with that run's environment).
-pub const NOT_OURS_LINE: &str = "The engine running now was started outside this boopis window, so boopis leaves it running and updates its code the next time it starts the engine.";
-/// The line when the gateway that ran was never one this run of the app started, the whole time the update could wait.
-pub const NOT_OURS_LATER_LINE: &str = "The engine was started outside this boopis window and kept running, so boopis left it as it was and updates its code the next time it starts the engine.";
+/// The line while the gateway that runs is not one boopis started (the end-to-end stack's, the user's own Hermes with
+/// `--engine existing`, or one whose start cannot be shown).
+pub const NOT_OURS_LINE: &str = "The engine running now was not started by boopis, so boopis leaves it running and updates its code the next time it starts the engine.";
+/// The line when the gateway that ran was never one boopis started, the whole time the update could wait.
+pub const NOT_OURS_LATER_LINE: &str = "The engine running now was not started by boopis and kept running, so boopis left it as it was and updates its code the next time it starts the engine.";
 /// The line when the bots worked the whole time the update could wait.
 pub const LATER_LINE: &str = "The bots were working the whole time, so boopis keeps the earlier engine code for now and updates it when it next starts.";
 
@@ -76,7 +78,7 @@ enum Tried {
     Replaced,
     /// Something works (or the engine refused to stop): not now.
     Busy,
-    /// The gateway that runs is not one this run of the app started: never stopped, so not now either.
+    /// The gateway that runs is not one boopis started: never stopped, so not now either.
     NotOurs,
 }
 
@@ -206,16 +208,16 @@ impl Setup {
         Some(self.finish(&outdated, result, not_ours).await)
     }
 
-    /// Whether a try may succeed now: the gateway, if one runs, is this run's own, and nothing works. The owner is asked
+    /// Whether a try may succeed now: the gateway, if one runs, is boopis's own, and nothing works. The owner is asked
     /// first because it costs a socket round trip, while a look at the work may cost an engine command.
     async fn ready(&self) -> bool {
         self.ops.gateway_owner().await != GatewayOwner::Other
             && matches!(self.ops.working().await, Ok(0))
     }
 
-    /// One try, holding the gate shut through it (`closed`, dropped on every way out). A gateway this run did not start is
-    /// never stopped (`GatewayOwner::Other`: the test stack's, the user's own, an earlier run's). With none running the code
-    /// is put in place at once; with this run's own, once nothing works, it is stopped without ending anything first.
+    /// One try, holding the gate shut through it (`closed`, dropped on every way out). A gateway boopis did not start is never
+    /// stopped (`GatewayOwner::Other`: the test stack's, the user's own). With none running the code is put in place at once;
+    /// with boopis's own (this run's, or an earlier session's), once nothing works, it is stopped without ending anything.
     async fn try_now(&self, outdated: &Outdated, closed: Closed) -> Result<Tried> {
         let owner = self.ops.gateway_owner().await;
         if owner == GatewayOwner::Other {
