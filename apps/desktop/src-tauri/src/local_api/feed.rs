@@ -57,6 +57,18 @@ struct Inner {
     last_note: HashMap<(String, String, u8), i64>,
 }
 
+/// A turn the poll saw end in a session the host's link does not run: the service reads its words and makes the
+/// notification ([`Feed::notify_finished`]), or none when there are no words (B22).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Finished {
+    /// The bot.
+    pub profile: String,
+    /// The engine's live id of the session.
+    pub session_id: String,
+    /// Where the session came from.
+    pub source: Source,
+}
+
 /// The feed. Cheap to share.
 pub struct Feed {
     inner: Mutex<Inner>,
@@ -714,6 +726,11 @@ impl Feed {
             .source
             .get_or_insert(Source::Gui);
         let origin = Self::origin(&inner, profile, sid);
+        let held_reply = inner
+            .replies
+            .get(&(profile.to_owned(), sid.to_owned()))
+            .map(|r| r.text.clone())
+            .unwrap_or_default();
         if self.following() {
             self.conversation_frame(&mut inner, profile, sid, f, &payload, now);
         }
@@ -777,17 +794,25 @@ impl Feed {
                         false,
                     );
                 } else {
-                    let text = self.clip(&str_of(&payload, "text"));
-                    self.notify(
-                        &mut inner,
-                        NoteKind::Reply,
-                        profile,
-                        Some(sid),
-                        origin,
-                        format!("{who} replied"),
-                        text,
-                        false,
-                    );
+                    // The reply's own words, else what streamed of it; a reply with no words is no notification (B22).
+                    let full = str_of(&payload, "text");
+                    let text = self.clip(if full.trim().is_empty() {
+                        &held_reply
+                    } else {
+                        &full
+                    });
+                    if !text.trim().is_empty() {
+                        self.notify(
+                            &mut inner,
+                            NoteKind::Reply,
+                            profile,
+                            Some(sid),
+                            origin,
+                            format!("{who} replied"),
+                            text,
+                            false,
+                        );
+                    }
                 }
             }
             "error" | "turn.failed" => {
@@ -936,8 +961,15 @@ impl Feed {
 
     // ───────────────────────── the poll ─────────────────────────
 
-    /// The live sessions of one profile's link.
-    pub fn on_poll(&self, profile: &str, rows: &[Live], models: &HashMap<String, String>) {
+    /// The live sessions of one profile's link. Returns the turns that ended in a session the host's link does not run and
+    /// that is not a room's or a kanban worker's (those are told from the room's log and the board): the service reads their
+    /// words and makes the notification.
+    pub fn on_poll(
+        &self,
+        profile: &str,
+        rows: &[Live],
+        models: &HashMap<String, String>,
+    ) -> Vec<Finished> {
         let now = now_ms();
         let mut inner = lock(&self.inner);
         let previous: HashMap<String, State> = rows
@@ -973,35 +1005,47 @@ impl Feed {
                 .presence
                 .on_poll(profile, rows, &|s| inbox_waits.iter().any(|w| w == s), now);
         self.publish(&mut inner, changed);
-        // A turn that ran and is now idle, in a session another surface runs: someone may want to know.
-        let who = Self::display(&inner, profile);
+        let mut finished = Vec::new();
         for r in rows {
             let was = previous.get(&r.session_id).copied();
             let now_state = inner.presence.session_state(profile, &r.session_id);
-            let finished =
+            let ended =
                 was.is_some_and(State::busy) && matches!(now_state, Some(State::Idle) | None);
-            let source = r.source;
-            if finished && source != Source::Gui {
-                let (kind, title) = if source == Source::Cron {
-                    (NoteKind::Cron, format!("{who}'s scheduled run finished"))
-                } else {
-                    (NoteKind::Reply, format!("{who} finished a turn"))
-                };
-                self.notify(
-                    &mut inner,
-                    kind,
-                    profile,
-                    Some(&r.session_id),
-                    source,
-                    title,
-                    String::new(),
-                    false,
-                );
+            if ended && matches!(r.source, Source::Cron | Source::Other) {
+                finished.push(Finished {
+                    profile: profile.to_owned(),
+                    session_id: r.session_id.clone(),
+                    source: r.source,
+                });
             }
         }
         // A session the poll no longer lists has ended: a turn that was busy in it was finished or cut off.
         let ended = inner.presence.tick(now);
         self.publish(&mut inner, ended);
+        finished
+    }
+
+    /// A finished turn's notification, with the words its session ended on (`body`; empty when none could be read). A
+    /// scheduled run is news even without words; a reply with none is not sent (B22).
+    pub fn notify_finished(&self, done: &Finished, body: &str) {
+        let mut inner = lock(&self.inner);
+        let who = Self::display(&inner, &done.profile);
+        let body = self.clip(body);
+        let (kind, title) = match done.source {
+            Source::Cron => (NoteKind::Cron, format!("{who}'s scheduled run finished")),
+            _ if body.trim().is_empty() => return,
+            _ => (NoteKind::Reply, format!("{who} finished a turn")),
+        };
+        self.notify(
+            &mut inner,
+            kind,
+            &done.profile,
+            Some(&done.session_id),
+            done.source,
+            title,
+            body,
+            false,
+        );
     }
 
     // ───────────────────────── rooms ─────────────────────────
@@ -1507,14 +1551,33 @@ mod tests {
         };
         f.on_poll(
             "kai",
-            &[live("c1", Working, "cron"), live("i1", Working, "gui")],
+            &[
+                live("c1", Working, "cron"),
+                live("i1", Working, "gui"),
+                live("o1", Working, "cli"),
+            ],
             &none,
         );
-        f.on_poll(
+        let finished = f.on_poll(
             "kai",
-            &[live("c1", Idle, "cron"), live("i1", Idle, "gui")],
+            &[
+                live("c1", Idle, "cron"),
+                live("i1", Idle, "gui"),
+                live("o1", Idle, "cli"),
+            ],
             &none,
         );
+        assert_eq!(
+            finished
+                .iter()
+                .map(|d| d.session_id.as_str())
+                .collect::<Vec<_>>(),
+            ["c1", "o1"],
+            "the app's own turn is told on its link; a cron run and another program's are handed to the service"
+        );
+        for done in &finished {
+            f.notify_finished(done, "");
+        }
         let notes: Vec<Notification> = drain(&mut rx)
             .iter()
             .filter_map(|e| match &e.event {
@@ -1522,7 +1585,11 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(notes.len(), 1, "{notes:?}");
+        assert_eq!(
+            notes.len(),
+            1,
+            "B22: a reply with no words is not sent: {notes:?}"
+        );
         assert_eq!(
             (notes[0].kind, notes[0].source),
             (NoteKind::Cron, Source::Cron)

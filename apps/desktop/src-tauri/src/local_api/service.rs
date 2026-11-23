@@ -340,10 +340,42 @@ impl<E: Engine> Service<E> {
                 source,
             });
         }
-        self.feed.on_poll(profile, &live, &models);
+        let finished = self.feed.on_poll(profile, &live, &models);
         for sid in waiting {
             self.read_pending(profile, &sid).await;
         }
+        for done in finished {
+            let words = self.last_words(&done.profile, &done.session_id).await;
+            self.feed.notify_finished(&done, &words);
+        }
+    }
+
+    /// The words a turn ended on: the last `message.complete` in the session's event ring (`session.events.since`), empty
+    /// when the ring holds none (B22: the notification is then the title alone for a scheduled run, and none for a reply).
+    async fn last_words(&self, profile: &str, sid: &str) -> String {
+        let Ok(since) = self
+            .engine
+            .request(
+                profile,
+                "session.events.since",
+                json!({"session_id": sid, "last_seen": 0}),
+            )
+            .await
+        else {
+            return String::new();
+        };
+        since
+            .get("events")
+            .and_then(Value::as_array)
+            .and_then(|events| {
+                events
+                    .iter()
+                    .rev()
+                    .find(|e| text(e, "type") == "message.complete")
+                    .and_then(|e| e.get("payload"))
+                    .map(|p| text(p, "text"))
+            })
+            .unwrap_or_default()
     }
 
     /// `approval.pending` for a waiting session, with each new approval's generation read off the session's ring.

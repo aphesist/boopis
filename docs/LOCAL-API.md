@@ -81,7 +81,12 @@ Every success is `200` with a JSON object. Every failure is the error object abo
 - `source` is the kind of session the state comes from: `gui` (the app, and anything started the way the app starts one, `say` included), `cron`, `room` or `other`; `null` while the bot is idle or sleeping (no session is behind it). It is not who started it, and a session keeps the kind it started with: what the host knows from its own link comes first (a session on it is the app's kind), then the engine's own `source` when its live-session row carries one, then the engine's own name for a room member's session (`Group: <room id>`), else `other`. `at` is when the state began, in milliseconds since the epoch.
 - **What is fine and what is coarse.** The boopis window's own turns come event by event, so every word above is reachable. A turn the app does not run (a cron run, a room turn, a program on the engine's gateway) comes from a poll of the engine's `session.active_list` every two seconds, at the engine's grain: `working`, `needs` (the engine says `waiting`), `thinking` (`starting`) and `idle`. A fine word stands for three seconds against a coarser poll, and a poll never invents one. A bot with several sessions shows its busiest (`needs` first, then `error`, `speaking`, `compute`, `working`, `thinking`, `listening`, `done`, `idle`). A `done` shows for six seconds and an `error` for twenty. The poll runs only while someone listens (a stream is open or the app's own reader exists).
 
-**`Notification`**: `{id, kind, profile, title, body, session_id, room_id, source, at, urgent}`. `kind` is `approval` (urgent), `reply` (a bot finished a turn), `cron` (a scheduled run finished) or `error`. `body` is scrubbed and cut to 400 characters. A turn in a conversation of the app's kind (`source` `gui`) makes a `reply` notification when it ends on the app's own link, and none from the poll, which sees only that it ended. A room turn that mentions the owner is not built yet.
+**`Notification`**: `{id, kind, profile, title, body, session_id, room_id, source, at, urgent}`. `kind` is `approval` (urgent), `reply` (a bot finished a turn), `cron` (a scheduled run finished) or `error`. `body` is scrubbed and cut to 400 characters. Every body is the engine's own words, never a placeholder:
+- a turn of the app's kind (`gui`) makes a `reply` when it ends on the app's own link, with the reply's words, and none from the poll;
+- a room turn makes none: the poll sees only that it ended, and a room turn that mentions the owner is not built yet;
+- a turn of another program (`other`) makes a `reply` with the words it ended on (the last `message.complete` in the session's event ring); when the ring holds none, no notification is sent;
+- a scheduled run makes a `cron` with the words it ended on when the ring holds them, else the title alone;
+
 
 **`Approval`**: `{id, profile, session_id, prompt_id, execution_generation, command, description, choices, answerable_with, timeout_s, origin: {model, tool}, governed, state, answered_by, asked_at}`.
 - `id` is the prompt's id. `choices` are what the engine offered. `answerable_with` is what boopis accepts from outside its window: **`once` and `deny` only**.
@@ -138,7 +143,6 @@ Each event's `data` is `{id, at, type, data}`:
 - **Gateway methods.** `bots.say`, `bots.presence` and the others as methods of the engine's own WebSocket: the engine offers a client no way to add one.
 - **Room mentions.** A notification for a room turn that mentions the owner needs the room's log read for each change; the feed makes `approval`, `reply`, `cron` and `error` ones.
 - **Per-client tokens (skipped by the owner's decision), a WebSocket, TLS.** One token and Server-Sent Events are enough for the owner's shells and scripts; the endpoint never leaves the machine.
-- **A cron run's result as the notification's body.** The notification carries the session's id; the words are in the session's transcript.
 - **Windows.** The endpoint is built for every platform and tested on Linux; the token file's privacy relies on the profile folder's access list there.
 
 ## A worked example: an island in Quickshell
