@@ -39,9 +39,13 @@ The fix now is in the geometry, in three parts:
   its projected discs.
 - **G2, the eyes stay on the face.** An eye group that a far turn carries past the outline slides back onto the
   visible face, so the clip never cuts it.
-- **G3, the one remaining limit, per shape.** Lobed bodies (cloud, clover, flower, star) hold their eyes to 0.75 rad of
-  turn and 0.3 of pitch. Past that, the far eye folds behind a lobe. Every convex body and the circle keep orb2's whole
-  range: `lookAt` reaches 1.18 rad, rim peeks 1.26 and spins a full turn.
+- **G3, the limits left, per shape.** Each is the largest turn that still draws clean:
+  - Lobed bodies (cloud, clover, flower, star) hold their eyes to 0.75 rad of turn and 0.3 of pitch. Past that, the far
+    eye folds behind a lobe.
+  - With the body now turning with the face (G4), a convex body holds its eye direction to 1 rad and its body to 0.85
+    rad, measured as a vector, so a diagonal look is held too. Past that its eyes reach the rim.
+  - The circle keeps orb2's whole range (`lookAt` 1.18 rad, rim peeks 1.26).
+  - Spins are a full turn on every shape.
 
 Two more came from the owner's review of the pose and the clips:
 
@@ -53,6 +57,14 @@ Two more came from the owner's review of the pose and the clips:
   lands exactly on its goal once it is within 2e-3 rad and slow, the jelly stops below a small energy, and the
   dock's and sidebar's bots take `jelly="0"`, so a state change does not wobble their edges. A resting bot then never
   redraws.
+- **G6, edges glide instead of flickering.** Chromium's software canvas, which every small canvas uses, antialiases a
+  path with a 4-row supersample. A long straight or gently curved edge (a squircle's side, a hexagon's face) then
+  steps its coverage in quarters as it moves, and whole runs of edge pixels jump about 64 levels and back. The orb is
+  now drawn at 3x into its own canvas and scaled down with high-quality smoothing. A resting orb never redraws (G5),
+  so this costs only while it moves.
+- **The clips' own judder, fixed.** The recorder stepped Playwright's clock by 1/30 s, but the fake clock fires a
+  frame every 16 ms, so every eighth step got three updates instead of two: a 48 ms jump every 0.27 s on every moving
+  edge. The recorder now steps 32 ms (two updates exactly) and encodes at 31.25 fps.
 
 `anim-torture-before-after.mp4` takes all 15 shapes through that whole range and both spins, and is checked frame by
 frame.
@@ -196,6 +208,7 @@ So vividness is not the difference. The geometry, the resampling and the size ar
 | G3 | **A lobed body folds its far eye.** On a cloud, clover, flower or star past about 0.75 rad, the far eye folds behind a lobe. | `probes/pose.html`, `turn.html` | orb2 `:2849`, `:2856-2857`: `_eyeCap` clamps the eye turn to ±0.75 rad and the pitch to ±0.3, on lobed bodies only |
 | G4 | **The body does not turn with the face.** A flat body's head turns 0.54 of the eye turn (`:2846`). | `probes/pose.html`, `K03-pose-vs-grok.jpg` | orb2 `:2201` (MKEYS gains `hk`), `:2846-2847` (head ratio 0.85 flat, 0.65 domed, `lerp(…, 1, hk)`), `:2525` (`toSVG`, the same ratio) |
 | G5 | **A bot at rest keeps redrawing.** The springs (`:2854-2861`) and the jelly (`:2878`) never reach their goals; past the 1e-4 signature threshold (`:2941`) the canvas redraws slightly off, and edge pixels flip. | `tools/edges.py` on the clips: 0 changed pixels at rest | orb2 `:2861` (land each spring within 2e-3 rad), `:2888` (stop the jelly under energy 2e-3) |
+| G6 | **A moving edge flickers.** Chromium's software canvas antialiases with a 4-row supersample, so a straight edge's coverage steps in quarters and edge pixels jump about 64 levels and back. | `tools/abamethods.cjs` (a turning squircle: 10 toggles drawn directly, 4 at 2x, 0 at 3x), `tools/edges.py` | orb2 `_render` (`:2892`): draw into a 3x backing canvas, then `drawImage` it down with `imageSmoothingQuality = 'high'` |
 
 ### The fix list
 
@@ -420,64 +433,85 @@ The render-source change is `k02-render.patch`, against `ds-v7/src`:
 
 `qa.cjs --jobs jobs-k02.json` with all rules, sweep included, returned 7 pages and 0 findings.
 
-## Critic pass (the per-surface policy and G1–G3)
+## Critic pass (the per-surface policy, G1–G6)
 
 **How the clips were made.** There are four clips, each 1280 × 800, today on the left and the proposal on the right.
-Each was recorded at DPR 2 on Playwright's paused clock, so a frame is exactly 1/30 s and the timeline is the same in
-both halves (`Math.random` is seeded). Every frame of every clip was checked:
+Each was recorded at DPR 2 on Playwright's paused clock, 32 ms a frame (two orb2 updates exactly), with the same
+seeded timeline in both halves, and encoded at 31.25 fps.
 
-- **`probes/tools/shape.py`** looks for dents and cuts. For every orb in every frame it finds the deepest point of
-  the body's convex hull minus its blob; an eye cut at the rim shows up as a dent too. A convex body fails past 1.2
-  device px. A lobed body fails past its own median plus 1.5 px. It also flags a blob that touches its canvas's
-  bounds, which is a straight cut.
-- **`probes/tools/flicker.py`** looks for A-B-A flicker, and for a one-frame dip in an orb's pixel mass (a canvas
-  painted empty).
-- **`probes/tools/lifewin.py`** measures liveliness: the mean change per orb between frames 0.1 s apart, by time
-  window.
+**The checks.** Every frame of every clip was checked:
 
-| Clip | Frames | Dents (today → proposed) | Cuts | Flicker | Life (today → proposed) |
-|---|---|---|---|---|---|
-| `anim-dock-before-after.mp4` (19 s) | 570 | 0 → 0 | 0 | 0 | at rest 0.96 → 0.003; hover sweep 1.31 → 1.11; states 1.00 → 0.36 |
-| `anim-sidebar-before-after.mp4` (20 s) | 600 | 0 → 0 | 0 | 0 | at rest 1.29 → 0.005; states 1.29 → 0.41; hover 1.59 → 1.06 |
-| `anim-room-before-after.mp4` (14 s) | 420 | 0 → 0 | 0 | 0 | **1.71 → 2.64** (+54 %); 4–9 s: 1.76 → 3.23 |
-| `anim-torture-before-after.mp4` (13 s) | 390 | **313 → 0** on convex bodies | 0 | 0 | 1.74 → 1.78 |
+- **`probes/tools/edges.py`** is the blocking stillness and flicker check. It reads every orb's own canvas pixels
+  each frame, exactly, before any encoding (`rec.cjs` writes `stats.json`).
+  - **At rest:** a bot whose reaction is the pose, not hovered and unchanged for 1.5 s, must change 0 pixels.
+  - **Shimmer:** silhouette pixels that toggle and come back (A-B-A) while the shape holds or creeps. The target is 0.
+  - **Fast motion:** A-B-A pixels inside a real swing, spin, wobble or hop. These are reported and do not block.
+  - **Jumps and refits:** a canvas that moves on screen, or whose backing size changes.
+- **`probes/tools/shape.py`** and **`tools/convexdents.py`** look for dents and cuts. **`tools/flicker.py`** looks for
+  whole-orb flicker and empty frames. **`tools/lifewin.py`** measures liveliness.
 
-The dock and sidebar figures are averages over every orb on screen. At rest the proposal is still by design.
-In the hover windows, one bot at a time carries the whole figure; today's figure is every orb's calm drift and float
-shimmer (C6) together.
+**At rest, and the shimmer, today against the proposal:**
 
-**The torture test, by shape.** It turns all 15 shapes at 72 px through orb2's whole range: a look point swept round
-a wide ellipse (`lookAt` reaches its 1.18 rad clamp), then a turntable spin and a tilt spin.
+| Clip | Pixels changed at rest | Shimmer px | Fast-motion px | Canvas jumps, refits |
+|---|---|---|---|---|
+| Sidebar (20 s) | — → **0** in 2,366 orb-frames at rest | 201 → **0** | 162 → 155 | 0, 0 |
+| Dock (19 s) | — → **0** in 2,349 | 560 → **3** | 2,326 → 118 | 0, 0 |
+| Room (14 s) | (no resting bots) | 173 → **21** | 351 → 369 | 0, 0 |
+| Torture, 15 shapes (13 s) | (no resting bots) | 747 → **38** | 41,479 → 38,639 | 0, 0 |
 
-- **Convex bodies.** All 11 (circle, squircle, soft, wide, tall, bean, drop, ghost, triangle, hexagon, diamond) keep
-  a clean outline in every frame. On kept frames the worst dent is 1.41 device px, on the squircle, against today's
-  313 failing orb-frames. One unkept frame (70) measured 2.0 px. Re-recorded and viewed at 4×, it is the far eye lying
-  one pixel inside the rim: the outline is whole, and the eye is inside it.
-- **Lobed bodies.** On cloud, clover, flower and star, the 82 flags are the bodies' own valleys deepening as they
-  turn edge-on, not breaks. The median rule is too tight for them. Contact sheets of frames 138–150 at 200 px were
-  checked by eye: at G3's 0.75 rad the far eye narrows to a sliver against the next lobe and is never cut. 0.75 rad is
-  the largest clean turn for these four.
+"Today" has no pose, so it has no resting bots to count. Its bots drift and float all the time, and that is the
+flicker the owner saw.
 
-| Shape | Eye turn | Eye pitch | Spins |
+**What was causing the flicker, and the fixes:**
+
+1. **Resting bots kept redrawing.** orb2's springs and jelly never settle exactly. Every time the residue passed the
+   redraw threshold, the canvas was redrawn a hair off and the edge pixels flipped. G5 lands the springs exactly and
+   stops the jelly, so a resting bot never redraws: 0 pixels change.
+2. **Moving edges stepped.** Chromium's software canvas antialiases in quarter steps, so a moving straight edge toggles
+   whole runs of pixels. G6 draws at 3x and scales down.
+3. **The recorder juddered.** A 48 ms jump every 0.27 s, now fixed.
+4. **Jelly.** The dock and sidebar bots take `jelly="0"`, and the chat orbs `jelly=".25"`: the wobble stays, softer
+   and damped.
+
+Snapping (C1) was not the cause: no canvas moved on screen in any frame.
+
+**What is left:**
+- The dock's 3 px are nina's needs-you hop at its top, once.
+- The room's 21 px are single pixels on the 20 px gutter bots, at most 6 in a frame. Today's room has 173.
+- The torture test's 38 px come during spins.
+
+At 1:1 and 4:1, frame strips of the gutter (moss, nina) and the header (boopis) show edges that glide. The shimmer
+target of 0 is met on the sidebar. Elsewhere it is not yet exactly 0, but it is 8 to 190 times below today.
+
+**Liveliness** (mean change per orb between frames 0.1 s apart):
+
+| Clip | Window | Today | Proposed |
 |---|---|---|---|
-| circle and the 10 other convex bodies | orb2's whole range (1.18 `lookAt`, 1.26 rim peeks) | whole range (sky gaze 0.94) | full |
-| cloud, clover, flower, star | 0.75 rad (G3) | 0.30 rad (G3) | full |
+| Room | the whole clip | 1.52 | **2.42**, +59 % |
+| Dock | at rest | 0.93 | 0.01 |
+| Dock | hover sweep, one bot awake at a time | 1.24 | 0.95 |
+| Sidebar | at rest | 1.23 | **0.000** |
+| Sidebar | hover | 1.56 | 0.89 |
 
-**By eye, frame strips** (every 0.2–0.75 s, at 2×) were checked for each clip:
+The bodies now turn with the faces (G4), so a lively turn reads as the whole bot turning.
 
-- **Dock.** At rest every bot holds the pose. Under the sweep, each bot wakes as the pointer reaches it and settles
-  back within about 0.7 s of it leaving. kai works, and the pointer resting on kai changes only where it looks. kai
-  then shows `done`'s arcs for 3 s and returns to the pose. nina needs you with the amber flag, then returns. No pop,
-  no jump of the outline, no frame where a face is missing.
-- **Sidebar.** The 44 px main bot and the 28 px rows hold the pose. kai works, then is done, then holds the pose.
-  nina needs you, and when the pointer passes over her she keeps the state and only looks. The hover sweep wakes
-  boopis, kai, moss and iris in turn.
-- **Room.** Today, the presence orb is lively and the gutter is frozen. In the proposal, every orb is lively and orb2's
-  emotes change the faces: grid eyes, round eyes, squints. They all look at the composer and at the new bubble.
-  This is more life than today, as the owner asked, and the clamped version (C9 and C10) is gone.
+**The torture test, by shape** (dents over 1.8 px in kept frames, proposed side):
+- **The circle and 9 of the 10 convex bodies:** 0. The worst, the squircle, is 1.41 px.
+- **The ghost:** 2 frames, while it looks straight down. The eyes sit within a pixel of its flat base; they are not cut.
+- **The four lobed bodies:** they flag their own valleys deepening as they turn edge-on. Checked by eye, nothing is
+  cut.
 
-**Images.** K02 and screens 11–13 were re-rendered with every sidebar and dock bot at the fixed pose. The v7 QA was
-run with every rule, sweep and same-component included: 7 pages, 0 findings.
+| Shape | Eye direction | Body turn | Spins |
+|---|---|---|---|
+| circle | orb2's whole range (1.18 `lookAt`, 1.26 rim peeks) | 0.68 of the eyes | full |
+| the 10 convex bodies | at most 1 rad (as a vector) | 0.85 of the eyes, at most 0.85 rad; 1.0 in the pose | full |
+| cloud, clover, flower, star | 0.75 rad of turn, 0.30 of pitch | 0.65 of the eyes | full |
+| diamond | at most 1 rad | 0.65 of the eyes | full |
+
+**Images.**
+- `K02-main-bot.jpg` and screens 11–13 are re-rendered with every sidebar and dock bot in the turned pose. v7 QA ran
+  every rule, including sweep and same-component: 7 pages, 0 findings.
+- `K03-pose-vs-grok.jpg` shows all 15 shapes in the pose beside Grok-Bot's turned shapes.
 
 ## Probes
 
@@ -494,4 +528,6 @@ Serve `probes/` over HTTP (`python3 -m http.server`). The clip page uses same-or
 | `tools/rec.cjs` | The recorder. The clock is paused, so a frame is exactly 1/30 s whatever a screenshot costs. |
 | `tools/shape.py`, `tools/flicker.py`, `tools/lifewin.py` | The frame-by-frame checks (dents, canvas cuts, A-B-A, mass dips) and liveliness by time window |
 | `tools/posemeas.py`, `tools/shoot-pose.cjs` | The §23 pose check: a still of `pose.html` and where every shape's eyes land |
+| `tools/edges.py`, `tools/convexdents.py` | The blocking stillness and shimmer check on `rec.cjs`'s exact canvas stats, and dents per shape |
+| `smooth.html`, `tools/smooth.cjs`, `tools/abamethods.cjs` | One orb turning steadily: its outline's smoothness, and A-B-A toggles drawn directly against supersampled |
 | `tools/sideact.py`, `tools/track.py` | The Grok-Bot measurements: sidebar activity per avatar, and eyes and body per frame |

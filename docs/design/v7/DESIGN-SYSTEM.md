@@ -711,7 +711,8 @@ Far 3D turns are fixed in the geometry, not clamped, so the life stays:
 - G2: an eye group carried past the outline slides back onto the face; it is never cut.
 - G3: only lobed bodies keep a limit, at 0.75 rad of eye turn and 0.3 of pitch.
 - G4: the body turns with the face.
-- G5: a resting bot is exactly still.
+- G5: a resting bot is exactly still: 0 pixels change.
+- G6: moving edges are drawn at 3x and scaled down, so they glide instead of flickering.
 
 **The rest of the decision:**
 
@@ -781,5 +782,9 @@ the bots.
 
 - `K01-clarity.jpg`.
 - `K02-main-bot.jpg`.
-- `anim-dock`, `anim-room`, `anim-sidebar` and `anim-torture-before-after.mp4`: every frame checked for flicker, dents
-  and cuts.
+- `K03-pose-vs-grok.jpg`: all 15 shapes in the pose beside Grok-Bot's.
+- `anim-dock`, `anim-sidebar`, `anim-room` and `anim-torture-before-after.mp4`. Every frame was checked with
+  `probes/tools/edges.py`:
+  - resting bots change 0 pixels;
+  - edge shimmer, today → proposed: sidebar 201 → 0, dock 560 → 3, room 173 → 21, torture 747 → 38.
+

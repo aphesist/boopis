@@ -51,7 +51,8 @@ const POSE = { eyaw: .5, epitch: .45, eroll: .55, bodyRoll: .05, w: 1, hk: 1 };
 const orb = (n, size, o = {}) => {
   const [shape, color, eye] = LOOKS[n] || [n, '#f5f5f5', '#0e0e0e']; const render = o.render && o.render !== size ? o.render : null;
   const fs = MORE && size <= 44 ? ' face-scale="1.25"' : '';
-  return `<span class="ui-orb"${render ? ' data-render' : ''} data-bot="${n}" style="--o:${size}${render ? ';--r:' + render : ''}"><orb-avatar size="${render || size}" shape="${shape}" color="${color}" eye-color="${eye}" reaction="${o.state || 'idle'}" idle-motion="${o.motion || 'calm'}" mode="drift"${fs}${o.attrs || ''} data-glance></orb-avatar></span>`;
+  const jl = q.jelly != null ? ` jelly="${q.jelly}"` : '';   /* probe switch: ?jelly= on every orb */
+  return `<span class="ui-orb"${render ? ' data-render' : ''} data-bot="${n}" style="--o:${size}${render ? ';--r:' + render : ''}"><orb-avatar size="${render || size}" shape="${shape}" color="${color}" eye-color="${eye}" reaction="${o.state || 'idle'}" idle-motion="${o.motion || 'calm'}" mode="drift"${fs}${jl}${o.attrs || ''} data-glance></orb-avatar></span>`;
 };
 /* the policy's three behaviours, on orb2's own attributes */
 const fixed = (o) => { o.dataset.base = 'pose'; o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', 'pose'); };
@@ -70,7 +71,8 @@ const S = {
   room() {
     /* the chat is fully lively, and more than today: every orb lively, plus orb2's own emotes (face variety: wink, giggle,
        surprise...) every few seconds, never dozing */
-    const LIFE = MORE ? ' alive idle-time="4" sleep-after="0"' : '';
+    const LIFE = MORE ? ' alive idle-time="4" sleep-after="0" jelly=".25"' : '';   /* jelly .25: the wobble stays, softer and damped,
+       so a kick does not shimmer a small bot's edge (tools/edges.py) */
     R.innerHTML = tag() + `<div class="room"><div class="hdr">${orb('boopis', 40, { motion: 'lively', attrs: LIFE })}<b>release crew</b></div>
       <div class="msg" id="m1">${orb('nina', 20, { motion: MORE ? 'lively' : 'calm', attrs: LIFE })}<div class="b">staging is green, the deploy is ready</div></div>
       <div class="msg you hidden" id="m2"><div class="b">ship it after the notes</div></div>

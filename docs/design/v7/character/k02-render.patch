@@ -27,24 +27,28 @@ diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/boards.js cha
 +  window.BOARDS = { mainbot, fonts, radii, shadows, orbs, chrome, tiles, composers, calm, accent };
  })();
 diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/dockv7.js character/src2/dockv7.js
---- ds-v7/src/dockv7.js	2026-11-23 15:31:55.175251549 +0000
+--- ds-v7/src/dockv7.js	2026-11-23 16:50:16.984838523 +0000
 +++ character/src2/dockv7.js	2026-11-23 16:30:41.836108844 +0000
-@@ -14,7 +14,6 @@
+@@ -14,10 +14,6 @@
      compact: { w: 380, h: 48, R: 24, F: 24, padX: 24, orb: 24, gap: 8 },
      open: { w: 640, R: 30, F: 30, inset: 8 }
    };
--  const POSE = '32 4';   /* provisional until ORBS.md section 23: yaw 32 degrees toward the right, pitch 4 up; inside C9 and C10's limits */
+-  /* THE POSE: one parameter (ORBS.md §23). kit.js defines orb2's hidden reaction "pose" from it (no blink; the orb takes
+-     reaction="pose" idle-motion="off" mode="drift"). The owner asked for the whole body to turn to the 3/4 angle in 3D; §23 is
+-     being revised for that, and only these values change when it lands. */
+-  const POSE = { motion: { eyaw: 0.50, epitch: 0.45, eroll: 0.55, bodyRoll: 0.05 }, lobed: { epitch: 0.30 }, lobedShapes: ['cloud', 'clover', 'flower', 'star'] };
    let clipN = 0;
    /* the slab: black in both themes, flush, its flares; the content is clipped to the slab's own path, so nothing (a fade, an orb)
       can paint outside its curve; the inside is the dark theme */
-@@ -35,10 +34,12 @@
+@@ -38,11 +34,12 @@
      const s = g.grow && o.hover === n ? g.grow[0] : g.grow && o.hover && Math.abs(hi - i) === 1 ? g.grow[1] : g.orb;
      const flag = (o.needs || []).includes(n) ? `<span class="dot owe dk7-flag"${g.orb < 30 ? ' style="width:6px;height:6px"' : ''}></span>` : '';
      const cls = (o.current === n ? ' dk7-cur' : '') + (o.focus === n ? ' dk7-focus' : '');
--    /* at idle every dock bot holds the fixed sideways three-quarter pose of the Bots tab's sidebar (owner, 23 Nov; the exact
--       pose lands in ORBS.md section 23: POSE is the one constant to change); the hovered bot is alive, face-on */
--    const look = o.hover === n ? ' gaze="0 5"' : ` gaze="${POSE}"`;
--    return `<span class="dk7-orb${cls}" style="width:${s}px;height:${s}px">${orb(n, s, { state: st, surface: '#000000', dockInk: true, still: true }).replace('<orb-avatar ', `<orb-avatar${look} `).replace('idle-motion="calm"', 'idle-motion="lively"')}${flag}</span>`;
+-    /* at idle every dock bot holds the fixed pose of ORBS.md §23 (kit.js pose(): reaction "pose"); the hovered bot is awake:
+-       the lively idle, drawn here at rest, face-on */
+-    const awake = o.hover === n;
+-    const look = awake ? ' gaze="0 5"' : '';
+-    return `<span class="dk7-orb${cls}"${awake ? ' data-awake' : ''} style="width:${s}px;height:${s}px">${orb(n, s, { state: st, surface: '#000000', dockInk: true, still: true }).replace('<orb-avatar ', `<orb-avatar${look} `).replace('idle-motion="calm"', 'idle-motion="lively"')}${flag}</span>`;
 +    /* ORBS.md section 23: at rest, orb2's hidden "pose" reaction (eyaw .5, epitch .45, eroll .55, bodyRoll .05); a state keeps its
 +       face; the hovered bot is awake, face-on */
 +    const awake = o.hover === n && st === 'idle';
@@ -54,6 +58,15 @@ diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/dockv7.js cha
    };
    const askPill = (n, who, small) => n ? `<span class="dk7-ask${small ? ' sm' : ''}"><span class="dot owe"></span>${n === 1 && who ? who : n} need${n === 1 ? 's' : ''} you</span>` : '';
  
+@@ -168,7 +165,7 @@
+     });
+   }
+ 
+-  Object.assign(window.DOCK = {}, { DK, POSE, row, slab, dockRow, compact, collapsed, asks, card, approval, question, refit, BOTS, MANY });
++  Object.assign(window.DOCK = {}, { DK, row, slab, dockRow, compact, collapsed, asks, card, approval, question, refit, BOTS, MANY });
+   /* the Sessions tab's dock from now on: no "+"; nina needs you; the ask pill at the row's end */
+   S.dockRow = (o = {}) => dockRow({ needs: ['nina'], ...o });
+ })();
 diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/kit.css character/src2/kit.css
 --- ds-v7/src/kit.css	2026-11-23 15:11:58.368002046 +0000
 +++ character/src2/kit.css	2026-11-23 16:32:24.142558229 +0000
@@ -67,15 +80,15 @@ diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/kit.css chara
  .sb-row { display: flex; align-items: center; gap: 10px; height: var(--row-h-2); padding: 0 10px; border-radius: var(--r-tile); }
  .sb-row.on { --sq-bg: var(--current); }
 diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/kit.js character/src2/kit.js
---- ds-v7/src/kit.js	2026-11-23 15:13:39.974521979 +0000
-+++ character/src2/kit.js	2026-11-23 16:32:24.143275947 +0000
+--- ds-v7/src/kit.js	2026-11-23 16:50:25.334842811 +0000
++++ character/src2/kit.js	2026-11-23 16:56:25.097882164 +0000
 @@ -31,13 +31,16 @@
      nimbus: { color: '#9b5cf6', shape: 'cloud', role: 'inbox triage' }
    };
    // orb: eyes 'cut' = the surface colour (option B), 'dark' = orb2's own (option A)
 +  /* the fixed sideways pose of the Bots sidebar, the rail and the dock at rest (owner, 23 Nov; ORBS.md): a hidden orb2
 +     reaction whose motion is Grok-Bot's measured 3/4 pose */
-+  if (window.OrbAvatar && !window.OrbAvatar.__pose) { const A = window.OrbAvatar; A.__pose = 1; A.defineReaction('pose', { label: 'Pose', blink: false, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: () => ({ eyaw: .5, epitch: .45, eroll: .55, bodyRoll: .05, w: 1 }) }); }
++  if (window.OrbAvatar && !window.OrbAvatar.__pose) { const A = window.OrbAvatar; A.__pose = 1; A.defineReaction('pose', { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: () => ({ eyaw: .5, epitch: .45, eroll: .55, bodyRoll: .05, w: 1, hk: 1 }) }); }
    function orb(name, size, o = {}) {
      const l = LOOKS[name] || LOOKS.kai;
 -    const reaction = o.state || 'idle';
@@ -88,6 +101,42 @@ diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/kit.js charac
    }
    function stack(names, size, o = {}) {
      const step = Math.round(size * 2 / 3);
+@@ -85,26 +88,6 @@
+   }
+   function mark(fam, size = 16, cls = '') { const m = (window.MODEL_ICONS[fam] || {}).mono; if (!m) return ''; return `<svg class="mk ${cls}" viewBox="${m.viewBox}" width="${size}" height="${size}" ${m.attrs} aria-hidden="true" style="flex:none">${m.body}</svg>`; }
+   /* a session's agent is branded by its model: the provider's mark in the gutter of the last bubble of a run (as a bot's orb in a room) */
+-
+-  /* The fixed sideways pose (ORBS.md §23, owner 23 Nov): at rest, the dock, the Bots sidebar and the rail hold every bot in one
+-     3/4 pose, drawn with orb2's public API as a hidden reaction (no blink; the idle off; mode drift, never fixed). Lobed bodies
+-     (cloud, clover, flower, star) hold the pitch to 0.30. A bot in a state keeps its state; a hovered bot (data-awake) is alive. */
+-  const LOBED = ['cloud', 'clover', 'flower', 'star'];
+-  /* the pose's values are ONE parameter, DOCK.POSE in dockv7.js (ORBS.md §23); the reaction is defined from it on first use */
+-  function definePose() {
+-    const A = window.OrbAvatar, P = (window.DOCK && window.DOCK.POSE) || null; if (!A || !A.defineReaction || !P || A._v7pose) return; A._v7pose = true;
+-    const def = (n, m) => A.defineReaction(n, { blink: false, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: () => ({ ...m, w: 1 }) });
+-    def('pose', P.motion); def('pose-lobed', { ...P.motion, ...P.lobed });
+-  }
+-  function pose(root = document) {
+-    definePose();
+-    root.querySelectorAll('.rail orb-avatar, .side orb-avatar, .dock orb-avatar').forEach((o) => {
+-      if (o.closest('[data-awake]') || (o.getAttribute('reaction') || 'idle') !== 'idle') return;
+-      o.setAttribute('reaction', ((window.DOCK && window.DOCK.POSE.lobedShapes) || LOBED).includes(o.getAttribute('shape')) ? 'pose-lobed' : 'pose');
+-      o.setAttribute('idle-motion', 'off'); o.setAttribute('mode', 'drift'); o.removeAttribute('static'); o.removeAttribute('gaze');
+-    });
+-  }
+-
+   function brand(root = document) {
+     root.querySelectorAll('.thread.sess').forEach((th) => {
+       const fam = th.getAttribute('data-model') || 'claude';
+@@ -115,6 +98,6 @@
+       });
+     });
+   }
+-  window.V7 = { brand, pose, I, mark, orb, stack, cluster, paint, eyes, dock, LOOKS };
+-  window.addEventListener('load', () => { document.fonts.ready.then(() => { brand(); pose(); eyes(); paint(); setTimeout(() => { paint(); }, 300); }); });
++  window.V7 = { brand, I, mark, orb, stack, cluster, paint, eyes, dock, LOOKS };
++  window.addEventListener('load', () => { document.fonts.ready.then(() => { brand(); eyes(); paint(); setTimeout(() => { paint(); }, 300); }); });
+ })();
 diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/qa-selftest.html character/src2/qa-selftest.html
 --- ds-v7/src/qa-selftest.html	2026-11-23 15:14:00.437007296 +0000
 +++ character/src2/qa-selftest.html	2026-11-23 15:00:21.000394503 +0000

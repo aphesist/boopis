@@ -1,0 +1,12 @@
+<!doctype html><html><meta charset="utf-8"><title>Smooth turn probe</title>
+<!-- One orb turning slowly and steadily (?shape=&size=&lib=&ratio=hk): a probe for edge jitter. Its outline should change
+     smoothly from frame to frame; tools/smooth.cjs records its canvas and measures the second difference of its area. -->
+<style>html,body{margin:0;background:#0e0e0e}</style><body><script>
+const q = Object.fromEntries(new URLSearchParams(location.search));
+const s = document.createElement('script'); s.src = 'lib/orb-avatar.' + (q.lib || 'tuned') + '.js';
+s.onload = () => { const A = window.OrbAvatar;
+  A.defineReaction('turn', { blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: (t) => ({ eyaw: .2 + .06 * t, epitch: .1 + .02 * t, w: 1, hk: +(q.hk || 1) }) });
+  document.body.innerHTML = `<orb-avatar size="${q.size || 40}" shape="${q.shape || 'squircle'}" color="#f5f5f5" eye-color="#0e0e0e" reaction="turn" idle-motion="off" mode="drift" jelly="0" style="width:${q.size || 40}px;margin:20px"></orb-avatar>`;
+  document.body.dataset.ready = 1; };
+document.head.appendChild(s);
+</script></body></html>

@@ -8,7 +8,7 @@ W = [(w.split(':')[0], *map(float, w.split(':')[1].split('-'))) for w in sys.arg
 acc = {}
 prev = None
 for f, i in zip(fs, idx):
-    im = np.asarray(Image.open(f).convert('RGB')).astype(np.int16); t = i / 30
+    im = np.asarray(Image.open(f).convert('RGB')).astype(np.int16); t = i * .032
     if prev is not None:
         for j, r in enumerate(R['rects']):
             x0, y0, x1, y1 = [int(round(v * k)) for v in (r['x'], r['y'], r['x'] + r['w'], r['y'] + r['h'])]

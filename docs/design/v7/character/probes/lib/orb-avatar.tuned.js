@@ -2650,7 +2650,9 @@ class OrbAvatar extends HTMLElement {
     }
   }
 
-  _eyeCap(v, m = .75) { const b = this._bodyTo; return (!b || b.isCircle || b.convex) ? v : clamp(v, -m, m); }
+  _ecK(T) { const b = this._bodyTo; if (!b || b.isCircle) return 1; if (b.convex) { const h = Math.hypot(T[0], T[1]); return h > 1 ? 1 / h : 1; } return 0; }
+  _ecY(T) { const k = this._ecK(T); return k ? T[0] * k : clamp(T[0], -.75, .75); }
+  _ecP(T) { const k = this._ecK(T); return k ? T[1] * k : clamp(T[1], -.3, .3); }
   _followMode() { return this._mode === 'follow' || (this._follow && this._mode === 'drift'); }
   _aria() { if (this.isConnected) this.setAttribute('aria-label', this.getAttribute('label') || OrbAvatar.reactionLabel(this._base)); }
 
@@ -2908,23 +2910,23 @@ class OrbAvatar extends HTMLElement {
 
     const domed = b => !!b.solid && (!b.solid.convex || b.label === 'Lozenge');
     const hR = b => b.isCircle ? .68 : domed(b) ? .65 : .85;
-    const hRatio = lerp(this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo), 1, clamp(this._bodyTo.isCircle || domed(this._bodyTo) ? 0 : (m.hk || 0), 0, 1));
+    const hRatio = Math.min(lerp(this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo), 1, clamp(this._bodyTo.isCircle || domed(this._bodyTo) ? 0 : (m.hk || 0), 0, 1)), (this._bodyTo.isCircle ? 99 : .85) / Math.max(Math.hypot(T[0], T[1]), 1e-6));
     if (st || !this._init) {
-      this._eyaw = this._eyeCap(T[0]); this._epitch = this._eyeCap(T[1], .3); this._eroll = T[2];
+      this._eyaw = this._ecY(T); this._epitch = this._ecP(T); this._eroll = T[2];
       this._hyaw = T[0] * hRatio; this._hpitch = T[1] * hRatio; this._bRoll = T[3];
       this._init = true;
     } else {
       // Agile eye spring (leads turns crisply) + plush 3D head spring (rotates solid in 3D perspective!)
       const stepEye = (x, v, goal) => { v += (goal - x) * 165 * dt; v *= Math.exp(-19 * dt); return [x + v * dt, v]; };
       const stepHead = (x, v, goal) => { v += (goal - x) * 68 * dt; v *= Math.exp(-11.5 * dt); return [x + v * dt, v]; };
-      [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, this._eyeCap(T[0]));
-      [this._epitch, this._vep] = stepEye(this._epitch, this._vep, this._eyeCap(T[1], .3));
+      [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, this._ecY(T));
+      [this._epitch, this._vep] = stepEye(this._epitch, this._vep, this._ecP(T));
       [this._eroll, this._ver] = stepEye(this._eroll, this._ver, T[2]);
       [this._hyaw, this._vhy] = stepHead(this._hyaw, this._vhy, T[0] * hRatio);
       [this._hpitch, this._vhp] = stepHead(this._hpitch, this._vhp, T[1] * hRatio);
       [this._bRoll, this._vbr] = stepHead(this._bRoll, this._vbr, T[3]);
       { const land = (k, vk, g) => { if (Math.abs(g - this[k]) < 2e-3 && Math.abs(this[vk]) < 2e-2) { this[k] = g; this[vk] = 0; } };
-        land('_eyaw', '_vey', this._eyeCap(T[0])); land('_epitch', '_vep', this._eyeCap(T[1], .3)); land('_eroll', '_ver', T[2]);
+        land('_eyaw', '_vey', this._ecY(T)); land('_epitch', '_vep', this._ecP(T)); land('_eroll', '_ver', T[2]);
         land('_hyaw', '_vhy', T[0] * hRatio); land('_hpitch', '_vhp', T[1] * hRatio); land('_bRoll', '_vbr', T[3]); }
     }
 
@@ -2958,8 +2960,10 @@ class OrbAvatar extends HTMLElement {
   }
 
   _render(p, m, calm, dyn, fixed) {
-    const c = this._ctx, W = this._cw;
-    if (!W) return;
+    const SSF = 3, Wo = this._cw, cOut = this._ctx;
+    if (!Wo) return;
+    if (!this._ssCv || this._ssCv.width !== Wo * SSF) { this._ssCv = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(Wo * SSF, Wo * SSF) : document.createElement('canvas'); this._ssCv.width = this._ssCv.height = Wo * SSF; this._ssCtx = this._ssCv.getContext('2d'); }
+    const c = this._ssCtx, W = Wo * SSF;
     const t = this._t, ex = EX[this._expr] || EX.idle, pal = this._pal, jx = this._jx, body = this._bodyCur;
 
     // Snappy Grok-style 3D spin (`turntable` level whip-spin + `tilt` buoyant 3D pebble spin)
@@ -3054,6 +3058,7 @@ class OrbAvatar extends HTMLElement {
       layer(EXTRA, fx, 1 - p); layer(EXTRA, ex, p);
       c.restore();
     }
+    cOut.setTransform(1, 0, 0, 1, 0, 0); cOut.clearRect(0, 0, Wo, Wo); cOut.imageSmoothingEnabled = true; cOut.imageSmoothingQuality = 'high'; cOut.drawImage(this._ssCv, 0, 0, Wo, Wo);
     this._Fr = localFr;
   }
 }
