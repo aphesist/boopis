@@ -12,7 +12,12 @@ export const commands = {
 	hermesInstall: (consent: boolean, options?: InvokeOptions) => __TAURI_INVOKE<InstallReport>("hermes_install", { consent }, options),
 	/**  Ask a gateway link that gave up (`incompatible`) to try again, after the user fixed Hermes. */
 	hermesRetry: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<null>("hermes_retry", { profile }, options),
-	/**  Whether first-run setup still has to run. Read-only: it changes nothing. */
+	/**
+	 *  Whether first-run setup still has to run. When the only thing it would do is put this app's code in place on an install
+	 *  that was set up before, the answer is "not needed" and the host does that by itself, once per run (`setup::update`): the
+	 *  app's links wait at the gate from before this answer reaches the UI until the code is in place, and the app is told how
+	 *  it went (`EngineUpdateEvent`). Otherwise it changes nothing.
+	 */
 	setupCheck: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<Check>("setup_check", { profile }, options),
 	/**
 	 *  Run first-run setup as far as it goes. `answer` replies to the form the last call returned (secret values go to the
@@ -350,6 +355,7 @@ export const events = {
 	chatgptSigninEvent: makeEvent<ChatgptSigninEvent, ChatgptSigninEvent>("chatgpt-signin-event"),
 	connectionStateEvent: makeEvent<ConnectionStateEvent_Serialize, ConnectionStateEvent_Deserialize>("connection-state-event"),
 	connectorRestartEvent: makeEvent<ConnectorRestartEvent, ConnectorRestartEvent>("connector-restart-event"),
+	engineUpdateEvent: makeEvent<EngineUpdateEvent, EngineUpdateEvent>("engine-update-event"),
 	fileDragEvent: makeEvent<FileDragEvent_Serialize, FileDragEvent_Deserialize>("file-drag-event"),
 	providerSigninEvent: makeEvent<ProviderSigninEvent, ProviderSigninEvent>("provider-signin-event"),
 	setupProgress: makeEvent<SetupProgress, SetupProgress>("setup-progress"),
@@ -560,7 +566,10 @@ export type ChatgptStatus_Serialize = {
 export type Check = {
 	/**  Hermes is installed. */
 	hermes_installed: boolean,
-	/**  Setup has not finished, or the plugin is missing, outdated or disabled. */
+	/**
+	 *  The setup screen is needed: setup has not finished, the plugin is missing or disabled, something else needs an
+	 *  answer, or the last automatic update failed. Code that is only outdated is not this: the host updates it by itself.
+	 */
 	needed: boolean,
 	/**  One line saying why. */
 	reason: string,
@@ -1159,6 +1168,18 @@ export type EndpointTestResult_Serialize = {
 	code: string | null,
 	/**  One plain line, never the server's own text and never a secret. */
 	detail: string | null,
+};
+
+/**  How the automatic update of the engine's code goes (`setup::update`). The app shows `message` as a notice. */
+export type EngineUpdateEvent = {
+	/**
+	 *  `waiting` (something works; the app runs on the earlier code meanwhile), `done`, `later` (something worked the whole
+	 *  time; the next start tries again) or `failed` (the earlier code is still in use; the notice offers the setup screen's
+	 *  Set up).
+	 */
+	state: string,
+	/**  What to tell the user. */
+	message: string,
 };
 
 /**

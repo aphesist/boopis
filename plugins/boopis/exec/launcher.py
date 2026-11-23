@@ -8,6 +8,7 @@ rule 5; ADR-0017: a dimension the host cannot enforce is ``hx.sandbox.unavailabl
 from __future__ import annotations
 
 import os
+import shutil
 import socket
 import sys
 from collections.abc import Mapping, Sequence
@@ -30,6 +31,7 @@ from ..hx.types import (
 )
 from ..util.log import get_logger
 from ..util.roots import vet_runtime_roots
+from . import sockdir
 
 _log = get_logger("exec.launcher")
 EXEC_DIR = Path(__file__).resolve().parent
@@ -207,10 +209,20 @@ class HxLauncher:
     def spawn(self, spec: KernelSpec) -> Spawned:
         self._require()
         env = {**spec.env, "HX_SCRATCH": spec.scratch, "HOME": spec.scratch, "TMPDIR": spec.scratch}
+        # the socket's own short, private directory, never under TMPDIR (``sockdir``); gone once the plugin is connected
+        channel_dir = sockdir.new_channel_dir()
+        try:
+            return self._spawn(spec, env, channel_dir)
+        finally:
+            shutil.rmtree(channel_dir, ignore_errors=True)
+
+    def _spawn(self, spec: KernelSpec, env: dict[str, str], channel_dir: Path) -> Spawned:
         params = SandboxSpawnParams(
             argv=[sys.executable, "-B", "-s", str(KERNEL_MAIN)],
             cwd=spec.workspace,
-            channel=ChannelRequest(accept_timeout_ms=int(CONNECT_TIMEOUT_S * 1000), env="HX_CHANNEL_FD"),
+            channel=ChannelRequest(
+                accept_timeout_ms=int(CONNECT_TIMEOUT_S * 1000), dir=str(channel_dir), env="HX_CHANNEL_FD"
+            ),
             env=env,
             net={"off": False, "loopback": "loopback", "on": True}[spec.net],
             ro=list(spec.ro),

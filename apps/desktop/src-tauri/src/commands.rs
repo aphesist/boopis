@@ -82,6 +82,10 @@ pub struct AppState {
     pub connectors: std::sync::Mutex<std::collections::HashMap<std::path::PathBuf, Arc<Engine>>>,
     /// The bots: what each one's home needs, and the repair once per run (ADR-0042).
     pub bots: Arc<crate::bots::engine::Service>,
+    /// Where the app's links wait while the host puts this app's code in place for the gateway (`setup::update`).
+    pub update_gate: crate::endpoint::Gate,
+    /// The automatic update was started in this run (once per run).
+    pub updating: std::sync::atomic::AtomicBool,
 }
 
 /// Where the bots live and what each gets: the root home, and boopis plus the plugins the bundled runtime carries.
@@ -218,7 +222,10 @@ fn setup_engine(app: &AppHandle, state: &AppState, profile: Option<String>) -> R
     })
 }
 
-/// Whether first-run setup still has to run. Read-only: it changes nothing.
+/// Whether first-run setup still has to run. When the only thing it would do is put this app's code in place on an install
+/// that was set up before, the answer is "not needed" and the host does that by itself, once per run (`setup::update`): the
+/// app's links wait at the gate from before this answer reaches the UI until the code is in place, and the app is told how
+/// it went (`EngineUpdateEvent`). Otherwise it changes nothing.
 #[tauri::command]
 #[specta::specta]
 pub async fn setup_check(
@@ -226,7 +233,59 @@ pub async fn setup_check(
     state: State<'_, AppState>,
     profile: Option<String>,
 ) -> std::result::Result<Check, HostError> {
-    Ok(setup_engine(&app, &state, profile)?.check().await?)
+    let setup = setup_engine(&app, &state, profile)?;
+    let (check, update) = setup.assess().await?;
+    if update
+        && !state
+            .updating
+            .swap(true, std::sync::atomic::Ordering::SeqCst)
+    {
+        let closed = state.update_gate.close();
+        let waits = crate::setup::update::Waits {
+            every: state.limits.update_poll_every,
+            longest: state.limits.restart_wait_max,
+        };
+        let events = app.clone();
+        tauri::async_runtime::spawn(async move {
+            let say = move |notice: crate::setup::update::Notice| {
+                let event = EngineUpdateEvent::from(notice);
+                if let Err(e) = tauri_specta::Event::emit(&event, &events) {
+                    tracing::debug!(error = %e, "could not emit the engine update notice");
+                }
+            };
+            if let Some(notice) = setup.update(closed, waits, &say).await {
+                say(notice);
+            }
+        });
+    }
+    Ok(check)
+}
+
+/// How the automatic update of the engine's code goes (`setup::update`). The app shows `message` as a notice.
+#[derive(Debug, Clone, Serialize, Type, tauri_specta::Event)]
+pub struct EngineUpdateEvent {
+    /// `waiting` (something works; the app runs on the earlier code meanwhile), `done`, `later` (something worked the whole
+    /// time; the next start tries again) or `failed` (the earlier code is still in use; the notice offers the setup screen's
+    /// Set up).
+    pub state: String,
+    /// What to tell the user.
+    pub message: String,
+}
+
+impl From<crate::setup::update::Notice> for EngineUpdateEvent {
+    fn from(n: crate::setup::update::Notice) -> Self {
+        use crate::setup::update::Notice;
+        let (state, message) = match n {
+            Notice::Waiting(m) => ("waiting", m),
+            Notice::Done(m) => ("done", m),
+            Notice::Later(m) => ("later", m),
+            Notice::Failed(m) => ("failed", m),
+        };
+        Self {
+            state: state.to_owned(),
+            message,
+        }
+    }
 }
 
 /// Run first-run setup as far as it goes. `answer` replies to the form the last call returned (secret values go to the

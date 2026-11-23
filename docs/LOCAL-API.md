@@ -35,6 +35,7 @@ Runs as the owner in a terminal, before any window. Reads the control socket; pr
 A small HTTP/1.1 server on `127.0.0.1` (never another address, never IPv6). **Off by default.** Settings, Local API shows the switch, the address, the token file's path (never the token), how many streams are open and **Rotate token**.
 
 - The address is in `<app data>/client-endpoint` (`{"url": "http://127.0.0.1:<port>", "version": 1}`; the port is 47821 when free, else any free port). The token is in `<app data>/client-token`.
+- Both files belong to the running app. One boopis runs per user: launching it again brings the running window forward and starts nothing. When the app closes it removes each file only while it still holds what that app wrote, so a file written by a later run is never taken away.
 - `<app data>` is `~/.local/share/dev.aphesist.boopis` (Linux, `$XDG_DATA_HOME` honoured), `~/Library/Application Support/dev.aphesist.boopis` (macOS), `%APPDATA%\dev.aphesist.boopis` (Windows).
 - Every request carries `Authorization: Bearer <token>`. Never put the token in an address. There is one token for every local client: a client is cut off by Rotate, and by the new token every start makes.
 - One request per connection (`Connection: close`) except the event stream. JSON in and out (`Content-Type: application/json` on a `POST`). No keep-alive, no chunked bodies, no compression, no CORS, no cookies, no redirects.

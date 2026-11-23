@@ -636,6 +636,47 @@ async fn on_windows_the_plugins_are_copies_and_follow_the_root() {
     assert_eq!(links::version_in(&bot, BOOPIS).as_deref(), Some("1.1.0"));
 }
 
+/// B27 on Windows: a repair skipped every bot whose copy was merely there, so a release at the same manifest version never
+/// reached the bots. A copy is now looked at by content.
+#[tokio::test]
+async fn a_repair_replaces_a_bot_s_copy_whose_code_is_not_the_root_s() {
+    let fake = Fake::new();
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::Copy);
+    repair(&fake, &layout).await.unwrap();
+    let again = repair(&fake, &layout).await.unwrap();
+    assert!(
+        again.bots.is_empty(),
+        "nothing to do while every copy is current"
+    );
+    // the next release: the same `version: 1.0.0`, other code
+    std::fs::write(
+        home.root.join("plugins").join(BOOPIS).join("__init__.py"),
+        "V = 'next release'\n",
+    )
+    .unwrap();
+    let after = repair(&fake, &layout).await.unwrap();
+    assert!(
+        after
+            .bots
+            .iter()
+            .all(|b| b.placed == vec![BOOPIS.to_owned()])
+            && !after.bots.is_empty(),
+        "{:?}",
+        after.bots
+    );
+    assert_eq!(
+        std::fs::read_to_string(
+            home.bot("moss")
+                .join("plugins")
+                .join(BOOPIS)
+                .join("__init__.py")
+        )
+        .unwrap(),
+        "V = 'next release'\n"
+    );
+}
+
 #[tokio::test]
 async fn nothing_happens_before_setup_placed_the_plugin() {
     let fake = Fake::new();

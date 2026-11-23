@@ -7,11 +7,31 @@
 //!   other user can read it, not even for an instant. Re-checked at every start: a file that is group- or world-readable is
 //!   replaced, never used. On Windows the file relies on the user profile folder's access list (not tightened further yet).
 //! - **Comparison**: both sides hashed, then compared in constant time.
+//! - **Ownership**: the files belong to the run that wrote them. A run that ends removes a file only while it still holds
+//!   exactly what this process last wrote there ([`Files::remove_if_ours`]): a second launch writes its own files before
+//!   the first one exits, and the first one's shutdown used to delete them, leaving the running app with an endpoint no
+//!   client could find or use (B28).
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use sha2::{Digest as _, Sha256};
 use subtle::ConstantTimeEq as _;
+
+/// What this process last wrote at each file path, as a digest of the bytes (never the text: a token is kept nowhere else).
+/// Another process's write is not here, so a file it replaced is not this process's to remove.
+static WRITTEN: Mutex<BTreeMap<PathBuf, [u8; 32]>> = Mutex::new(BTreeMap::new());
+
+fn written() -> std::sync::MutexGuard<'static, BTreeMap<PathBuf, [u8; 32]>> {
+    WRITTEN
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+fn digest_of(bytes: &[u8]) -> [u8; 32] {
+    Sha256::digest(bytes).into()
+}
 
 /// The token's file name.
 pub const TOKEN_FILE: &str = "client-token";
@@ -120,15 +140,20 @@ impl Files {
             use std::os::unix::fs::OpenOptionsExt as _;
             options.mode(0o600);
         }
+        let bytes = format!("{text}\n");
         let result = (|| {
             let mut file = options.open(&tmp)?;
-            file.write_all(text.as_bytes())?;
-            file.write_all(b"\n")?;
+            file.write_all(bytes.as_bytes())?;
             file.sync_all()?;
             std::fs::rename(&tmp, target)
         })();
-        if result.is_err() {
-            let _ = std::fs::remove_file(&tmp);
+        match &result {
+            Ok(()) => {
+                written().insert(target.to_path_buf(), digest_of(bytes.as_bytes()));
+            }
+            Err(_) => {
+                let _ = std::fs::remove_file(&tmp);
+            }
         }
         result
     }
@@ -150,9 +175,55 @@ impl Files {
 
     /// Remove both files (the endpoint is off).
     pub fn remove(&self) {
-        let _ = std::fs::remove_file(self.token_path());
-        let _ = std::fs::remove_file(self.endpoint_path());
+        for path in [self.token_path(), self.endpoint_path()] {
+            let _ = std::fs::remove_file(&path);
+            written().remove(&path);
+        }
     }
+
+    /// Remove each file only while it holds exactly what this process last wrote there (the run is ending): a file another
+    /// run wrote since, a second launch's own token and endpoint, is left where it is.
+    pub fn remove_if_ours(&self) {
+        for path in [self.token_path(), self.endpoint_path()] {
+            let Some(mine) = written().remove(&path) else {
+                continue;
+            };
+            self.remove_if_still(&path, mine);
+        }
+    }
+
+    /// Remove `path` if its bytes digest to `mine`. A plain check-then-delete could delete a file another run renamed into
+    /// place between the two, so the file is first moved aside (one rename) and what was moved is checked: a write that
+    /// landed in between is linked back (never over a newer one) and only this run's own bytes are removed.
+    fn remove_if_still(&self, path: &Path, mine: [u8; 32]) {
+        if !holds(path, mine) {
+            return;
+        }
+        let mut nonce = [0u8; 8];
+        if getrandom::fill(&mut nonce).is_err() {
+            return; // with no name to move it to, leaving it is the safe answer
+        }
+        let aside = self
+            .dir
+            .join(format!(".client-{}.gone", hex::encode(nonce)));
+        if std::fs::rename(path, &aside).is_ok() {
+            settle(&aside, path, mine);
+        }
+    }
+}
+
+/// Whether the file at `path` holds the bytes whose digest is `mine`.
+fn holds(path: &Path, mine: [u8; 32]) -> bool {
+    std::fs::read(path).is_ok_and(|b| digest_of(&b) == mine)
+}
+
+/// The file moved aside from `path`: removed when it is this run's (`mine`), else linked back where it was (which fails,
+/// rightly, when a newer file is already there) and the aside name removed.
+fn settle(aside: &Path, path: &Path, mine: [u8; 32]) {
+    if !holds(aside, mine) {
+        let _ = std::fs::hard_link(aside, path);
+    }
+    let _ = std::fs::remove_file(aside);
 }
 
 #[cfg(test)]
@@ -216,6 +287,113 @@ mod tests {
         assert!(!files.token_is_private());
         files.write_token(&Token::mint().unwrap()).unwrap();
         assert!(files.token_is_private());
+    }
+
+    /// Another run's write, as a second launch makes it: a different process, so nothing of this one's record.
+    fn foreign_write(path: &Path, text: &str) {
+        let tmp = path.with_extension("foreign");
+        std::fs::write(&tmp, format!("{text}\n")).unwrap();
+        std::fs::rename(&tmp, path).unwrap();
+    }
+
+    /// B28: the first run's shutdown deleted the second launch's endpoint and token.
+    #[test]
+    fn a_run_that_ends_leaves_the_files_a_later_run_wrote() {
+        let dir = tempfile::tempdir().unwrap();
+        let files = Files::under(dir.path());
+        files.write_token(&Token::mint().unwrap()).unwrap();
+        files.write_endpoint("127.0.0.1:32915", 1).unwrap();
+        let theirs = Token::mint().unwrap();
+        foreign_write(&files.token_path(), theirs.expose());
+        foreign_write(
+            &files.endpoint_path(),
+            r#"{"url":"http://127.0.0.1:47821","version":1}"#,
+        );
+        files.remove_if_ours();
+        assert_eq!(
+            std::fs::read_to_string(files.token_path()).unwrap().trim(),
+            theirs.expose()
+        );
+        assert!(
+            std::fs::read_to_string(files.endpoint_path())
+                .unwrap()
+                .contains("47821")
+        );
+        let names: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            names.len(),
+            2,
+            "nothing moved aside is left behind: {names:?}"
+        );
+    }
+
+    #[test]
+    fn a_run_that_ends_removes_its_own_files_after_a_rotation_too() {
+        let dir = tempfile::tempdir().unwrap();
+        let files = Files::under(dir.path());
+        files.write_token(&Token::mint().unwrap()).unwrap();
+        files.write_endpoint("127.0.0.1:47821", 1).unwrap();
+        files.write_token(&Token::mint().unwrap()).unwrap(); // the owner rotated it
+        files.remove_if_ours();
+        assert!(!files.token_path().exists() && !files.endpoint_path().exists());
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn only_the_file_another_run_replaced_is_kept() {
+        let dir = tempfile::tempdir().unwrap();
+        let files = Files::under(dir.path());
+        files.write_token(&Token::mint().unwrap()).unwrap();
+        files.write_endpoint("127.0.0.1:32915", 1).unwrap();
+        // a second launch has written its token and not yet its endpoint
+        let theirs = Token::mint().unwrap();
+        foreign_write(&files.token_path(), theirs.expose());
+        files.remove_if_ours();
+        assert!(!files.endpoint_path().exists(), "this run's endpoint goes");
+        assert_eq!(
+            std::fs::read_to_string(files.token_path()).unwrap().trim(),
+            theirs.expose(),
+            "their token stays"
+        );
+    }
+
+    #[test]
+    fn a_file_this_run_never_wrote_is_never_removed() {
+        let dir = tempfile::tempdir().unwrap();
+        let files = Files::under(dir.path());
+        foreign_write(&files.token_path(), "someone else's");
+        files.remove_if_ours();
+        assert!(files.token_path().exists());
+    }
+
+    #[test]
+    fn a_write_that_lands_while_the_file_is_checked_is_put_back_and_never_over_a_newer_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let (path, aside) = (
+            dir.path().join(TOKEN_FILE),
+            dir.path().join(".client-x.gone"),
+        );
+        let mine = digest_of(b"mine\n");
+        // another run renamed its file into place between the look and the move: what was moved aside is theirs
+        std::fs::write(&aside, "theirs\n").unwrap();
+        settle(&aside, &path, mine);
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "theirs\n");
+        assert!(!aside.exists());
+        // and when a newer one is already back in place, the moved file does not replace it
+        std::fs::write(&aside, "theirs\n").unwrap();
+        std::fs::write(&path, "newest\n").unwrap();
+        settle(&aside, &path, mine);
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "newest\n");
+        assert!(!aside.exists());
+        // this run's own bytes go
+        std::fs::write(&aside, "mine\n").unwrap();
+        std::fs::remove_file(&path).unwrap();
+        settle(&aside, &path, mine);
+        assert!(!path.exists() && !aside.exists());
     }
 
     #[test]

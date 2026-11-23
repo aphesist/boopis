@@ -19,7 +19,6 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
-from ..util.log import get_logger
 from . import pool
 from .pool import Grant, Outcome, Row
 
@@ -57,14 +56,6 @@ def sync(read_grant: Callable[[], Grant | None] | None = None, pool_api: Callabl
     return pool.sync(row, pool_api, _lock, "ChatGPT")
 
 
-def _safe_sync() -> Outcome | None:
-    try:
-        return sync()
-    except Exception:  # noqa: BLE001 - an observer: the runtime keeps what it has, the next round tries again
-        get_logger("signins.chatgpt").warning("could not hand the ChatGPT sign-in to the runtime", exc_info=True)
-        return None
-
-
 def next_wait(outcome: Outcome | None, every_s: float = EVERY_S, waiting_s: float = WAITING_S) -> float:
     """How long until the next look: long while the runtime holds the sign-in, short while it holds none."""
     return pool.next_wait(outcome, every_s, waiting_s)
@@ -72,4 +63,4 @@ def next_wait(outcome: Outcome | None, every_s: float = EVERY_S, waiting_s: floa
 
 def start(every_s: float = EVERY_S, waiting_s: float = WAITING_S) -> threading.Event:
     """Sync now and every ``every_s`` seconds on a daemon thread. Returns the event that stops it."""
-    return pool.start(_safe_sync, "boopis-chatgpt-signin", every_s, waiting_s)
+    return pool.start(pool.Watch("ChatGPT", "signins.chatgpt"), sync, "boopis-chatgpt-signin", every_s, waiting_s)

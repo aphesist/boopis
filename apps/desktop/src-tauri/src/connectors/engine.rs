@@ -597,22 +597,33 @@ impl Engine {
         let (ops, notify, waiting) = (self.ops.clone(), self.notify.clone(), self.waiting.clone());
         let (every, longest) = (self.limits.restart_poll_every, self.limits.restart_wait_max);
         tokio::spawn(async move {
-            let give_up = tokio::time::Instant::now() + longest;
-            let outcome: std::result::Result<(), String> = loop {
-                if tokio::time::Instant::now() >= give_up {
-                    break Err("no moment came when no session had a turn running".to_owned());
+            // The one "when idle" wait (`hermes::idle`): only an answer that says no session runs a turn counts, and the restart
+            // is made without `--yes`, so Hermes itself refuses if a turn started since the look.
+            let waited = crate::hermes::idle::when_idle(
+                every,
+                longest,
+                || {
+                    let ops = ops.clone();
+                    async move { matches!(ops.running_turns().await, Ok(0)) }
+                },
+                || {
+                    let ops = ops.clone();
+                    async move {
+                        match ops.restart_gateway(false).await {
+                            Ok(()) => Ok(true),
+                            Err(Error::Connector("hx.connectors.busy", _)) => Ok(false),
+                            Err(e) => Err(e),
+                        }
+                    }
+                },
+            )
+            .await;
+            let outcome: std::result::Result<(), String> = match waited {
+                Ok(crate::hermes::idle::Waited::Done) => Ok(()),
+                Ok(crate::hermes::idle::Waited::GaveUp) => {
+                    Err("no moment came when no session had a turn running".to_owned())
                 }
-                tokio::time::sleep(every).await;
-                // Only an answer that says nothing is running counts: when Hermes cannot say, the wait goes on.
-                if !matches!(ops.running_turns().await, Ok(0)) {
-                    continue;
-                }
-                // Without `--yes`, Hermes itself refuses if a turn started since the check.
-                match ops.restart_gateway(false).await {
-                    Ok(()) => break Ok(()),
-                    Err(Error::Connector("hx.connectors.busy", _)) => {}
-                    Err(e) => break Err(e.to_string()),
-                }
+                Err(e) => Err(e.to_string()),
             };
             let names =
                 std::mem::take(&mut *waiting.lock().unwrap_or_else(PoisonError::into_inner));

@@ -35,6 +35,10 @@ tauri-plugin-store = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
+# One boopis per user (B28): a second launch hands its arguments to the running app, which shows its window, and exits before
+# it starts anything. Without it the second instance took over and the first one's shutdown deleted the Local API files. Its
+# dependencies are already in the tree (zbus on Linux, windows-sys on Windows); MIT or Apache-2.0.
+tauri-plugin-single-instance = "2.5"
 serde.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }
 thiserror.workspace = true

@@ -26,6 +26,15 @@ struct Fake {
     plugins: Mutex<Vec<PluginEntry>>,
     sets: Mutex<Vec<String>>,
     restarts: Mutex<u32>,
+    /// What happened to the gateway, in order: `stop:` and `restart:`, each with the profile's boopis `__init__.py` at that
+    /// moment (`plugin_marks`), so a test sees which code a stop and a restart met.
+    gateway: Mutex<Vec<String>>,
+    /// Whether the gateway refuses to stop (it still answers after the wait).
+    stays_up: Mutex<bool>,
+    /// What the next looks at the engine's work answer, in order (`working`); none left is 0, nothing working.
+    working: Mutex<Vec<u32>>,
+    /// How many of the next stops without `--yes` the engine refuses because work started since the look.
+    busy_stops: Mutex<u32>,
     /// How many of the next restarts fail (the gateway does not come up).
     restart_failures: Mutex<u32>,
     /// What Hermes says about the free tier: the status before a claim, and after it.
@@ -87,6 +96,12 @@ struct FreeScript {
 }
 
 impl Fake {
+    /// The profile's copy of the boopis plugin as the gateway would load it now: its `__init__.py`, or `none`.
+    fn plugin_marks(&self) -> String {
+        std::fs::read_to_string(self.home.join("plugins").join("boopis").join("__init__.py"))
+            .map_or_else(|_| "none".to_owned(), |t| t.trim().to_owned())
+    }
+
     /// What boopis's runtime leaves in the profile (`install::install_runtime_plugins`): the Claude subscription plugin's
     /// directory, named by its manifest, with its model catalogue, listed by the engine as an enabled model provider.
     fn bundled_claude(&self) {
@@ -121,6 +136,10 @@ impl Fake {
             plugins: Mutex::new(Vec::new()),
             sets: Mutex::new(Vec::new()),
             restarts: Mutex::new(0),
+            gateway: Mutex::new(Vec::new()),
+            stays_up: Mutex::new(false),
+            working: Mutex::new(Vec::new()),
+            busy_stops: Mutex::new(0),
             restart_failures: Mutex::new(0),
             free: Mutex::new(FreeScript::default()),
             catalogue: Mutex::new(Vec::new()),
@@ -216,7 +235,48 @@ impl HermesOps for Fake {
             return Err(Error::Unavailable("the gateway did not start".into()));
         }
         *self.restarts.lock().unwrap() += 1;
+        self.gateway
+            .lock()
+            .unwrap()
+            .push(format!("restart:{}", self.plugin_marks()));
         Ok(())
+    }
+    async fn stop_gateway(&self) -> Result<bool> {
+        self.gateway
+            .lock()
+            .unwrap()
+            .push(format!("stop:{}", self.plugin_marks()));
+        Ok(!*self.stays_up.lock().unwrap())
+    }
+    async fn start_gateway(&self) -> Result<()> {
+        self.gateway
+            .lock()
+            .unwrap()
+            .push(format!("start:{}", self.plugin_marks()));
+        Ok(())
+    }
+    async fn working(&self) -> Result<u32> {
+        let mut next = self.working.lock().unwrap();
+        let n = if next.is_empty() { 0 } else { next.remove(0) };
+        self.gateway.lock().unwrap().push(format!("working:{n}"));
+        Ok(n)
+    }
+    async fn stop_gateway_when_idle(&self) -> Result<super::ops::Stop> {
+        let mut busy = self.busy_stops.lock().unwrap();
+        if *busy > 0 {
+            *busy -= 1;
+            self.gateway.lock().unwrap().push("busy".to_owned());
+            return Ok(super::ops::Stop::Busy);
+        }
+        self.gateway
+            .lock()
+            .unwrap()
+            .push(format!("stop:{}", self.plugin_marks()));
+        Ok(if *self.stays_up.lock().unwrap() {
+            super::ops::Stop::StillUp
+        } else {
+            super::ops::Stop::Gone
+        })
     }
     async fn free_tier_status(&self) -> Result<FreeTier> {
         let mut f = self.free.lock().unwrap();
@@ -549,6 +609,371 @@ async fn running_it_again_changes_nothing() {
     );
 }
 
+/// Setup run to the end: the consent, a model and its key, as a person does it the first time.
+async fn finished(r: &Rig) {
+    let _ = r.setup().advance(None, false).await.unwrap();
+    for (form, values, secrets) in [
+        ("setup.config", json!({}), json!({})),
+        ("setup.ladder", json!({"choice": "main/fake-a"}), json!({})),
+        ("setup.credential.main", json!({}), json!({"value": KEY})),
+    ] {
+        let _ = r
+            .setup()
+            .advance(Some(answer(form, values, secrets)), false)
+            .await
+            .unwrap();
+    }
+    assert!(!r.setup().check().await.unwrap().needed);
+    r.fake.gateway.lock().unwrap().clear();
+}
+
+/// B27: an app update whose plugin keeps `version: 0.1.0` (every release so far) but changes its code. `assess` sees it (the
+/// host updates by itself, below); when the screen runs anyway (a failed update's Set up, or another need), its plugin step
+/// stops the gateway before the swap (no process runs two releases at once), replaces the copy and starts the gateway again
+/// on the new code, and says so in the receipt.
+#[tokio::test]
+async fn an_update_with_new_plugin_code_at_the_same_version_is_installed_and_loaded() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    let bundle = r.bundle.plugin_dir.clone().unwrap();
+    std::fs::write(bundle.join("__init__.py"), "V = '0.1.9'\n").unwrap();
+    std::fs::create_dir_all(bundle.join("bots")).unwrap();
+    std::fs::write(
+        bundle.join("bots").join("guides.py"),
+        "NAME = 'boopis-handoffs'\n",
+    )
+    .unwrap();
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(
+        update && check.reason == "the app carries a newer plugin",
+        "{}",
+        check.reason
+    );
+
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    let plugin = s.steps.iter().find(|x| x.id == "plugin").unwrap();
+    assert!(
+        plugin
+            .detail
+            .contains("replaced with the copy this app carries (version 0.1.0)"),
+        "{}",
+        plugin.detail
+    );
+    assert_eq!(
+        *r.fake.gateway.lock().unwrap(),
+        ["stop:", "restart:V = '0.1.9'"],
+        "stopped on the old code before the swap, started on the new one after it"
+    );
+    let copy = r.fake.home.join("plugins").join("boopis");
+    assert!(copy.join("bots").join("guides.py").is_file());
+    assert!(!r.setup().assess().await.unwrap().1, "one run is enough");
+}
+
+#[tokio::test]
+async fn a_new_hx_is_placed_and_the_gateway_restarted() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(r.bundle.hx.as_ref().unwrap(), "hx 0.1.9").unwrap();
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(
+        update && check.reason == "the app carries a newer hx",
+        "{}",
+        check.reason
+    );
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(
+        std::fs::read_to_string(super::install::hx_target(&r.fake.home)).unwrap(),
+        "hx 0.1.9"
+    );
+    assert_eq!(
+        r.fake.gateway.lock().unwrap().len(),
+        1,
+        "one restart, no stop: the plugin did not change"
+    );
+    assert!(!r.setup().assess().await.unwrap().1);
+}
+
+#[tokio::test]
+async fn a_gateway_that_does_not_stop_keeps_its_plugin() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    *r.fake.stays_up.lock().unwrap() = true;
+    let s = r.setup().advance(None, false).await.unwrap();
+    let plugin = s.steps.iter().find(|x| x.id == "plugin").unwrap();
+    assert_eq!(
+        (plugin.state, plugin.code.as_deref()),
+        (StepState::Blocked, Some("hx.setup.plugin_install_failed"))
+    );
+    assert_eq!(
+        r.fake.plugin_marks(),
+        "",
+        "nothing was written under a running gateway"
+    );
+    // the person retries once it stopped
+    *r.fake.stays_up.lock().unwrap() = false;
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(r.fake.plugin_marks(), "V = 'new'");
+}
+
+/// Waits short enough for a test.
+fn quick() -> super::update::Waits {
+    super::update::Waits {
+        every: std::time::Duration::from_millis(1),
+        longest: std::time::Duration::from_secs(5),
+    }
+}
+
+/// The owner's second decision of 23 November 2026: the update never stops the gateway over running work. While a turn runs
+/// the app's links dial (the app runs on the earlier plugin) and the app says it waits; as soon as nothing works, it updates.
+#[tokio::test]
+async fn the_update_waits_while_a_turn_runs_and_updates_once_nothing_works() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    *r.fake.working.lock().unwrap() = vec![1, 2, 0];
+    let gate = crate::endpoint::Gate::default();
+    let watch = gate.clone();
+    let said = Mutex::new(Vec::new());
+    let notice = r
+        .setup()
+        .update(gate.close(), quick(), &|n| {
+            said.lock().unwrap().push((n, watch.is_open()));
+        })
+        .await;
+    assert_eq!(
+        *said.lock().unwrap(),
+        [(
+            super::update::Notice::Waiting("Updating once the bots are done.".into()),
+            true
+        )],
+        "said once, with the app's links free to dial the earlier plugin meanwhile"
+    );
+    assert_eq!(
+        notice,
+        Some(super::update::Notice::Done(
+            "Updated the engine's plugin to this version.".into()
+        ))
+    );
+    assert_eq!(
+        *r.fake.gateway.lock().unwrap(),
+        [
+            "working:1",
+            "working:2",
+            "working:0",
+            "working:0",
+            "stop:",
+            "start:V = 'new'"
+        ],
+        "no stop while a turn ran; one once nothing did"
+    );
+    assert!(gate.is_open());
+}
+
+#[tokio::test]
+async fn a_turn_that_starts_between_the_look_and_the_stop_sends_the_update_back_to_waiting() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    *r.fake.busy_stops.lock().unwrap() = 1; // the engine refuses the stop without `--yes`
+    let said = Mutex::new(Vec::new());
+    let notice = r
+        .setup()
+        .update(crate::endpoint::Gate::default().close(), quick(), &|n| {
+            said.lock().unwrap().push(n);
+        })
+        .await;
+    assert_eq!(said.lock().unwrap().len(), 1, "it said it waits");
+    assert!(matches!(notice, Some(super::update::Notice::Done(_))));
+    assert_eq!(
+        *r.fake.gateway.lock().unwrap(),
+        [
+            "working:0",
+            "busy",
+            "working:0",
+            "working:0",
+            "stop:",
+            "start:V = 'new'"
+        ],
+        "nothing written while the engine refused"
+    );
+}
+
+#[tokio::test]
+async fn bots_that_work_the_whole_time_leave_everything_as_it_is_until_the_next_start() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    *r.fake.working.lock().unwrap() = vec![1; 10_000];
+    let waits = super::update::Waits {
+        every: std::time::Duration::from_millis(1),
+        longest: std::time::Duration::from_millis(30),
+    };
+    let notice = r
+        .setup()
+        .update(crate::endpoint::Gate::default().close(), waits, &|_| {})
+        .await;
+    assert_eq!(
+        notice,
+        Some(super::update::Notice::Later(
+            super::update::LATER_LINE.into()
+        ))
+    );
+    assert_eq!(r.fake.plugin_marks(), "", "the earlier copy is untouched");
+    assert!(
+        !r.fake
+            .gateway
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|e| e.starts_with("stop") || e == "busy"),
+        "the gateway was never stopped"
+    );
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(
+        !check.needed && update,
+        "the next start updates by itself again: {}",
+        check.reason
+    );
+}
+
+/// The owner's decision of 23 November 2026: an install set up before updates the engine's code by itself, with no screen.
+#[tokio::test]
+async fn an_install_set_up_before_updates_by_itself_with_no_screen() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    let bundle = r.bundle.plugin_dir.clone().unwrap();
+    std::fs::write(bundle.join("__init__.py"), "V = '0.1.10'\n").unwrap();
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(!check.needed && update, "{}", check.reason);
+    assert!(
+        !r.setup().check().await.unwrap().needed,
+        "the UI is told: no screen"
+    );
+
+    let gate = crate::endpoint::Gate::default();
+    let closed = gate.close();
+    let said = Mutex::new(Vec::new());
+    let notice = r
+        .setup()
+        .update(closed, quick(), &|n| said.lock().unwrap().push(n))
+        .await;
+    assert_eq!(
+        notice,
+        Some(super::update::Notice::Done(
+            "Updated the engine's plugin to this version.".into()
+        ))
+    );
+    assert!(
+        said.lock().unwrap().is_empty(),
+        "nothing was working: no wait to announce"
+    );
+    assert!(gate.is_open(), "the app's links dial again");
+    assert_eq!(
+        *r.fake.gateway.lock().unwrap(),
+        ["working:0", "stop:", "start:V = '0.1.10'"],
+        "nothing working, so stopped on the old code without ending anything, and started on the new"
+    );
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(!check.needed && !update, "{}", check.reason);
+    // and a newer hx alone is the same kind of update, with its own line
+    std::fs::write(r.bundle.hx.as_ref().unwrap(), "hx 0.1.10").unwrap();
+    assert!(r.setup().assess().await.unwrap().1);
+    assert_eq!(
+        r.setup().update(gate.close(), quick(), &|_| {}).await,
+        Some(super::update::Notice::Done(
+            "Updated the hx tool to this version.".into()
+        ))
+    );
+}
+
+#[tokio::test]
+async fn a_first_install_and_any_other_need_still_show_the_screen() {
+    let r = rig(main_provider());
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(check.needed && !update, "{}", check.reason);
+    assert_eq!(check.reason, "the boopis plugin is not installed");
+    // set up before, but something else needs the screen too: the screen, whose plugin step updates the code as well
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    r.fake
+        .plugins
+        .lock()
+        .unwrap()
+        .retain(|p| p.name != "boopis");
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(check.needed && !update, "{}", check.reason);
+    assert_eq!(check.reason, "the boopis plugin is not enabled");
+}
+
+/// Fail closed: the earlier code stays, the gate opens, the failure is said and recorded, and the screen's Set up is the way
+/// to try again (the next check shows it; a finished screen run clears the record).
+#[tokio::test]
+async fn a_failed_update_keeps_the_old_copy_and_offers_the_screen() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    *r.fake.stays_up.lock().unwrap() = true;
+    let gate = crate::endpoint::Gate::default();
+    let notice = r.setup().update(gate.close(), quick(), &|_| {}).await;
+    assert_eq!(
+        notice,
+        Some(super::update::Notice::Failed(
+            "boopis could not update the engine's plugin, so it keeps using the earlier one. Choose Set up to try again."
+                .into()
+        ))
+    );
+    assert!(gate.is_open());
+    assert_eq!(
+        r.fake.plugin_marks(),
+        "",
+        "the earlier copy is still in place"
+    );
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(
+        check.needed && !update,
+        "the screen this time: {}",
+        check.reason
+    );
+    assert_eq!(
+        check.reason,
+        "the last update of the engine's code did not finish"
+    );
+    *r.fake.stays_up.lock().unwrap() = false;
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(r.fake.plugin_marks(), "V = 'new'");
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(!check.needed && !update, "{}", check.reason);
+}
+
 #[tokio::test]
 async fn declining_is_respected_explained_and_can_be_reconsidered() {
     let r = rig(json!({"providers": {}}));
@@ -680,16 +1105,12 @@ async fn a_build_without_the_plugin_says_so() {
 /// What a finished setup leaves in the profile's home, as the e2e fixtures write it (`tests/e2e/setup-done.json`).
 const E2E_SETUP_DONE: &str = include_str!("../../../../../tests/e2e/setup-done.json");
 
-/// A home the e2e stack prepared: the plugin copied in at the bundle's version and enabled, as `tests/e2e/stack.py` does.
+/// A home the e2e stack prepared: the bundle's plugin and `hx` copied in and the plugin enabled, as `tests/e2e/stack.py`
+/// does (the same tree, without tests and caches).
 fn a_home_with_the_plugin(r: &Rig) {
     let home = r.fake.home.clone();
-    let plugin = home.join("plugins").join("boopis");
-    std::fs::create_dir_all(&plugin).unwrap();
-    std::fs::copy(
-        r.bundle.plugin_dir.as_ref().unwrap().join("plugin.yaml"),
-        plugin.join("plugin.yaml"),
-    )
-    .unwrap();
+    super::install::install_plugin(r.bundle.plugin_dir.as_ref().unwrap(), &home).unwrap();
+    super::install::place_hx(r.bundle.hx.as_ref().unwrap(), &home).unwrap();
     r.fake.plugins.lock().unwrap().push(PluginEntry {
         name: "boopis".into(),
         enabled: true,

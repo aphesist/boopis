@@ -228,10 +228,16 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
    *  room member nothing about the kanban board, so a cut-off turn files the same cards again and ordered cards run in parallel.
    *  A plugin that has no such method (an older one) is left alone. */
   const guided = new Set<string>();
+  /* a plugin without the method (the engine still runs the earlier plugin while the host's update of it waits for the bots
+     to be done) is asked again once the link comes back: the update restarts the engine, so that is when the new one is in */
+  const owedGuides = new Set<string>();
   function giveHandoffs(name: string): void {
     if (guided.has(name)) return;
     guided.add(name);
-    void track(client.requestRaw('plugin.boopis.bots.guide', { name }).then(() => undefined, (e: unknown) => { (isUnknownMethod(e) ? log.info : log.warn)('the hand-off skill was not given to ' + name, e); }));
+    void track(client.requestRaw('plugin.boopis.bots.guide', { name }).then(() => undefined, (e: unknown) => {
+      if (isUnknownMethod(e)) owedGuides.add(name);
+      (isUnknownMethod(e) ? log.info : log.warn)('the hand-off skill was not given to ' + name, e);
+    }));
   }
   /** a session row of the roster, for a teammate whose own link is not open (or not yet): the newest one Hermes names */
   function fromRow(row: ProfileRow): BotSession[] {
@@ -589,7 +595,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const soon = (): void => { if (timer) return; timer = setTimeout(() => { timer = null; void refreshRoster(); }, 400); };
   client.onEvent((ev) => { if (ev.type === 'sessions.changed' || ev.type === 'cron.changed' || ev.type === 'profiles.changed') soon(); });
-  client.onState((s) => { if (s.phase === 'ready' && s.reconnected) { void refreshRoster(); for (const [id, r] of recs) if (r.loaded) void track(loadLinked(id, r)); } });
+  client.onState((s) => { if (s.phase === 'ready' && s.reconnected) { for (const n of owedGuides) guided.delete(n); owedGuides.clear(); void refreshRoster(); for (const [id, r] of recs) if (r.loaded) void track(loadLinked(id, r)); } });
   const poll = deps.pollMs === undefined ? POLL_MS : deps.pollMs;
   if (poll && typeof setInterval === 'function') setInterval(() => { if (typeof document === 'undefined' || document.visibilityState === 'visible') void refreshRoster(); }, poll);
 
