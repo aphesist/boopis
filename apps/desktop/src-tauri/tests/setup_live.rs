@@ -467,9 +467,10 @@ async fn run_flow(install: Install) {
         |b| b.join("hermes"),
     );
     // The host's secret channel: its token goes to the gateway this supervisor starts, and the policy learns which process
-    // that is, exactly as the app wires it.
+    // that is and requires that it was started with the token, exactly as the app wires it (on macOS, where the engine's
+    // daemon is a launchd job and not the launcher's child, the token is what admits it while it starts).
     let auth = Auth::mint_in(&root.path().join("run")).expect("a channel token");
-    let peers = Arc::new(PeerPolicy::new());
+    let peers = Arc::new(PeerPolicy::new().holding(auth.token_entry()));
     let sup = Arc::new(
         Supervisor::new(env, Limits::default())
             .with_child_env(child_env.clone())

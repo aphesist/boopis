@@ -17,6 +17,12 @@
 //!   a peer passes when it descends from that process and was started with the token: the daemon that call is starting.
 //!   The window closes when the call returns, before any session, so no tool child can exist in it. (The command line is
 //!   deliberately not part of either rule: Hermes may retitle its process, and a command line is the peer's to choose.)
+//!   On macOS Hermes does not start the daemon as its own child: it hands it to launchd as a one-off job run through
+//!   `/usr/bin/osascript` (so macOS lets it reach the local network after the app that asked for it quits;
+//!   `hermes_cli/gateway_launchd_runtime.py`), so the daemon's parent is that `osascript` and its parent launchd, never the
+//!   launcher. There the daemon passes instead when its parent is `osascript` directly under launchd, it was created after
+//!   a launcher in flight began, and it was started with this run's token: the token is required outright (a process the
+//!   platform cannot read is refused), which is what stands in for the descent no launchd job can show.
 //!
 //! Linux reads `/proc` for the start time, the executable, the parent and the environment it started with, and refuses a
 //! process it cannot read. macOS asks the kernel the same four questions (`proc_pidinfo`, `proc_pidpath` and
@@ -118,6 +124,11 @@ pub enum Refusal {
 
 /// How far up the parent chain rule B looks for the launcher: the launcher, a wrapper, the CLI, the daemon.
 const MAX_HOPS: usize = 6;
+/// The program a macOS launchd job of Hermes's gateway runs, and whose only child the daemon is (rule B, macOS). Only ever
+/// a parent here, under launchd; on another system no process has it as a parent and the rule never applies.
+const LAUNCHD_WRAPPER: &str = "/usr/bin/osascript";
+/// launchd's pid on macOS (and init's elsewhere).
+const LAUNCHD_PID: u32 = 1;
 /// Recorded gateways kept: a restart leaves the old one behind until it is replaced.
 const MAX_GATEWAYS: usize = 4;
 
@@ -229,11 +240,17 @@ impl PeerPolicy {
         Err(Refusal::NotTheGateway)
     }
 
-    /// Rule B: the peer holds the token and sits below a launcher the host still has in flight.
+    /// Rule B: the peer holds the token and sits below a launcher the host still has in flight, or, on macOS, is the
+    /// launchd job such a launcher started (see [`PeerPolicy::launched_by_launchd`]).
     fn in_launch_window(&self, pid: u32, launchers: &[Proc]) -> bool {
         if self.lacks_token(pid) {
             return false;
         }
+        self.descends_from_launcher(pid, launchers) || self.launched_by_launchd(pid, launchers)
+    }
+
+    /// Rule B as the daemon's ancestry shows it: a launcher in flight is up its parent chain, within [`MAX_HOPS`].
+    fn descends_from_launcher(&self, pid: u32, launchers: &[Proc]) -> bool {
         let mut at = pid;
         for _ in 0..MAX_HOPS {
             let Some(parent) = self.procs.parent(at) else {
@@ -257,6 +274,40 @@ impl PeerPolicy {
             at = parent;
         }
         false
+    }
+
+    /// Rule B for a daemon launchd started (macOS): its parent is [`LAUNCHD_WRAPPER`] and that wrapper's parent is
+    /// launchd, it was created after a launcher in flight began (same pid and start time as when the host noted it), and
+    /// it was started with this run's token, which must be readable and present: with no token required, or one the
+    /// platform cannot read, the rule admits nothing.
+    fn launched_by_launchd(&self, pid: u32, launchers: &[Proc]) -> bool {
+        let Some(entry) = self.holds.as_deref() else {
+            return false;
+        };
+        if self.procs.started_with(pid, entry) != Some(true) {
+            return false;
+        }
+        let Some(born) = self.procs.describe(pid).and_then(|p| p.start) else {
+            return false;
+        };
+        let Some(wrapper) = self.procs.parent(pid) else {
+            return false;
+        };
+        let is_wrapper = self
+            .procs
+            .describe(wrapper)
+            .and_then(|w| w.exe)
+            .is_some_and(|exe| exe == std::path::Path::new(LAUNCHD_WRAPPER));
+        if !is_wrapper || self.procs.parent(wrapper) != Some(LAUNCHD_PID) {
+            return false;
+        }
+        launchers.iter().any(|l| {
+            l.start.is_some_and(|began| born >= began)
+                && self
+                    .procs
+                    .describe(l.pid)
+                    .is_some_and(|now| now.start == l.start)
+        })
     }
 }
 
@@ -468,6 +519,87 @@ mod tests {
         t.kill(210);
         t.put(210, 999, PY, 100);
         assert_eq!(p.admit(Some(502)), Err(Refusal::NotTheGateway));
+    }
+
+    /// macOS: Hermes hands the daemon to launchd, which runs it under `/usr/bin/osascript`; it never descends from the
+    /// launcher, so it passes only as that job, while the launch runs, created after it began, holding the token.
+    #[test]
+    fn the_launchd_job_a_launch_started_is_admitted_with_the_token_only() {
+        let (t, p) = world();
+        t.put(1, 0, "/sbin/launchd", 0);
+        gateway(&t, 210, 21, 100);
+        let guard = p.begin_launch(210);
+        t.put(220, 22, LAUNCHD_WRAPPER, 1);
+        gateway(&t, 221, 23, 220);
+        assert_eq!(
+            p.admit(Some(221)),
+            Ok(()),
+            "the job's daemon reading its secrets as it starts"
+        );
+        // the wrapper itself, and a daemon of the same shape without the token or with another one
+        assert_eq!(p.admit(Some(220)), Err(Refusal::NotTheGateway));
+        t.put(222, 23, PY, 220);
+        assert_eq!(p.admit(Some(222)), Err(Refusal::NotTheGateway), "no token");
+        t.put(223, 23, PY, 220);
+        t.started_with_env(223, &["BOOPIS_HOST_SECRETS_TOKEN=old"]);
+        assert_eq!(
+            p.admit(Some(223)),
+            Err(Refusal::NotTheGateway),
+            "another run's token"
+        );
+        // created before the launch began: not the job this launch started
+        t.put(230, 5, LAUNCHD_WRAPPER, 1);
+        gateway(&t, 231, 6, 230);
+        assert_eq!(
+            p.admit(Some(231)),
+            Err(Refusal::NotTheGateway),
+            "older than the launch"
+        );
+        // the token under another parent, or a wrapper that is not directly under launchd
+        t.put(240, 24, "/bin/sh", 1);
+        gateway(&t, 241, 25, 240);
+        assert_eq!(
+            p.admit(Some(241)),
+            Err(Refusal::NotTheGateway),
+            "not osascript"
+        );
+        t.put(250, 24, LAUNCHD_WRAPPER, 100);
+        gateway(&t, 251, 25, 250);
+        assert_eq!(
+            p.admit(Some(251)),
+            Err(Refusal::NotTheGateway),
+            "osascript not under launchd"
+        );
+        // a launcher whose pid was recycled opens no window
+        t.put(210, 999, PY, 100);
+        assert_eq!(
+            p.admit(Some(221)),
+            Err(Refusal::NotTheGateway),
+            "recycled launcher"
+        );
+        t.put(210, 21, PY, 100);
+        // the call returns: the window closes, and the daemon is admitted only once it is recorded
+        drop(guard);
+        assert_eq!(p.admit(Some(221)), Err(Refusal::NotTheGateway));
+        assert!(p.record_gateway(221));
+        assert_eq!(p.admit(Some(221)), Ok(()));
+    }
+
+    /// With no token required (or none the platform can read), the launchd rule admits nothing: it has no descent to rely on.
+    #[test]
+    fn the_launchd_rule_needs_a_token_to_check() {
+        let t = Arc::new(Table::default());
+        t.put(1, 0, "/sbin/launchd", 0);
+        t.put(100, 10, "/app/boopis", 1);
+        let p = Arc::new(PeerPolicy::with_procs(t.clone()));
+        t.put(210, 21, PY, 100);
+        let _guard = p.begin_launch(210);
+        t.put(220, 22, LAUNCHD_WRAPPER, 1);
+        gateway(&t, 221, 23, 220);
+        assert_eq!(p.admit(Some(221)), Err(Refusal::NotTheGateway));
+        // the descent rule is unchanged without a token requirement
+        gateway(&t, 211, 22, 210);
+        assert_eq!(p.admit(Some(211)), Ok(()));
     }
 
     #[cfg(any(target_os = "linux", target_os = "macos"))]
