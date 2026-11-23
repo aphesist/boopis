@@ -1298,3 +1298,94 @@ async fn the_snapshots_are_full_from_the_first_request_without_a_stream() {
         "B25: idle names no source: {body}"
     );
 }
+
+#[tokio::test]
+async fn a_rooms_log_and_its_stop_and_a_bots_stop_are_served_behind_the_same_checks() {
+    let r = rig().await;
+    let port = r.server.addr().port();
+    let (status, _, body) = raw(
+        r.server.addr(),
+        &get(&r, "/v1/rooms/g-paper/log?limit=10", ""),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    let log = json_of(&body);
+    let kinds: Vec<&str> = log["lines"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|l| l["kind"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        kinds,
+        ["message.user", "turn.cancelled", "message.member"],
+        "B30: the cancelled turn is a line"
+    );
+    assert_eq!(log["lines"][2]["mentions_you"], true);
+    for canary in CANARIES {
+        assert!(!body.contains(canary), "scrubbed: {body}");
+    }
+    let (status, _, _) = raw(r.server.addr(), &get(&r, "/v1/rooms/g-nope/log", "")).await;
+    assert_eq!(status, 404);
+    // the new routes are behind the token, the Host check and the browser refusal like every other
+    let (status, _, _) = raw(
+        r.server.addr(),
+        &format!("GET /v1/rooms/g-paper/log HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n"),
+    )
+    .await;
+    assert_eq!(status, 401);
+    let (status, _, _) = raw(
+        r.server.addr(),
+        &get(
+            &r,
+            "/v1/rooms/g-paper/log",
+            "Origin: https://evil.example\r\n",
+        ),
+    )
+    .await;
+    assert_eq!(status, 403);
+    let (status, _, body) = raw(
+        r.server.addr(),
+        &post(&r, "/v1/rooms/g-paper/stop", "{}", ""),
+    )
+    .await;
+    assert_eq!(
+        (status, json_of(&body)["stopped"].as_bool()),
+        (200, Some(true)),
+        "{body}"
+    );
+    let (status, _, body) = raw(r.server.addr(), &post(&r, "/v1/bots/kai/stop", "{}", "")).await;
+    assert_eq!(
+        (status, json_of(&body)["error"]["code"].as_str()),
+        (409, Some("not_running")),
+        "{body}"
+    );
+    let (status, _, _) = raw(r.server.addr(), &get(&r, "/v1/rooms/g-paper/stop", "")).await;
+    assert_eq!(status, 405);
+    let (status, _, body) = raw(
+        r.server.addr(),
+        &post(
+            &r,
+            "/v1/rooms/g-paper/say",
+            r#"{"text": "go", "now": "yes"}"#,
+            "",
+        ),
+    )
+    .await;
+    assert_eq!(status, 400, "{body}");
+    let (status, _, body) = raw(
+        r.server.addr(),
+        &post(&r, "/v1/rooms/g-paper/say", r#"{"text": "go"}"#, ""),
+    )
+    .await;
+    assert_eq!(
+        (status, json_of(&body)["status"].as_str()),
+        (200, Some("sent")),
+        "{body}"
+    );
+    let (status, _, body) = raw(r.server.addr(), &get(&r, "/v1/events?room=g-paper", "")).await;
+    assert_eq!(
+        (status, json_of(&body)["error"]["code"].as_str()),
+        (400, Some("room_without_rooms"))
+    );
+}

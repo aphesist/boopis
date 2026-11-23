@@ -13,9 +13,9 @@ use tokio::sync::{broadcast, watch};
 use super::approvals::{Delivery, Inbox, Refusal};
 use super::audit::{Audit, Line};
 use super::model::{
-    Answered, Approval, ApprovalState, BotRow, ConversationMessage, Event, Message, MessageState,
-    NoteKind, Notification, Origin, Presence, Role, RoomHeldEvent, RoomRow, Source, Stamped, State,
-    now_ms,
+    Answered, Approval, ApprovalState, BotRow, ConversationMessage, Event, LineFrom, Message,
+    MessageState, NoteKind, Notification, Origin, Presence, Role, RoomHeldEvent, RoomLine,
+    RoomLineEvent, RoomRow, RoomStateEvent, Source, Stamped, State, now_ms,
 };
 use super::presence::{Live, Table};
 use super::roster::{self, Entry};
@@ -55,6 +55,8 @@ struct Inner {
     meta: HashMap<(String, String), Meta>,
     gui_answers: HashMap<(String, String), (String, i64)>,
     last_note: HashMap<(String, String, u8), i64>,
+    /// Who was last said to be at work in each room (a `room.state` goes out when it changes).
+    room_working: HashMap<String, Vec<String>>,
 }
 
 /// A turn the poll saw end in a session the host's link does not run: the service reads its words and makes the
@@ -158,6 +160,7 @@ impl Feed {
                 meta: HashMap::new(),
                 gui_answers: HashMap::new(),
                 last_note: HashMap::new(),
+                room_working: HashMap::new(),
             }),
             tx,
             wanted: watch::channel(0).0,
@@ -169,6 +172,11 @@ impl Feed {
             limits,
             secrets: Mutex::new(Vec::new()),
         })
+    }
+
+    /// Add a line to the security record (a stop asked through this API, `rooms.rs`).
+    pub fn record(&self, line: &Line) {
+        self.audit.record(line);
     }
 
     /// Values that must never leave in any text (the endpoint's token, a ticket the host holds). Replaces the list.
@@ -600,7 +608,7 @@ impl Feed {
 
     // ───────────────────────── notifications ─────────────────────────
 
-    /// Make a notification, unless the same kind for the same session was made a moment ago.
+    /// Make a notification, unless the same kind for the same session (or room) was made a moment ago.
     #[allow(clippy::too_many_arguments)]
     fn notify(
         &self,
@@ -608,6 +616,7 @@ impl Feed {
         kind: NoteKind,
         profile: &str,
         session_id: Option<&str>,
+        room_id: Option<&str>,
         source: Source,
         title: String,
         body: String,
@@ -616,7 +625,7 @@ impl Feed {
         let now = now_ms();
         let key = (
             profile.to_owned(),
-            session_id.unwrap_or_default().to_owned(),
+            session_id.or(room_id).unwrap_or_default().to_owned(),
             kind as u8,
         );
         if inner.last_note.get(&key).is_some_and(|t| now - t < 3_000) {
@@ -634,7 +643,7 @@ impl Feed {
             title,
             body,
             session_id: session_id.map(str::to_owned),
-            room_id: None,
+            room_id: room_id.map(str::to_owned),
             source,
             at: now,
             urgent,
@@ -788,6 +797,7 @@ impl Feed {
                         NoteKind::Error,
                         profile,
                         Some(sid),
+                        None,
                         origin,
                         format!("{who} hit an error"),
                         String::new(),
@@ -807,6 +817,7 @@ impl Feed {
                             NoteKind::Reply,
                             profile,
                             Some(sid),
+                            None,
                             origin,
                             format!("{who} replied"),
                             text,
@@ -833,6 +844,7 @@ impl Feed {
                     NoteKind::Error,
                     profile,
                     Some(sid),
+                    None,
                     origin,
                     format!("{who} hit an error"),
                     why,
@@ -937,6 +949,7 @@ impl Feed {
                 NoteKind::Approval,
                 &profile,
                 Some(&sid),
+                None,
                 source,
                 format!("{who} needs your approval"),
                 what,
@@ -1041,6 +1054,7 @@ impl Feed {
             kind,
             &done.profile,
             Some(&done.session_id),
+            None,
             done.source,
             title,
             body,
@@ -1049,6 +1063,78 @@ impl Feed {
     }
 
     // ───────────────────────── rooms ─────────────────────────
+
+    /// A line added to a room's log: a `room.line` event, and for a member's message a notification with its words and the
+    /// room (B22), loud when it addresses the owner (B26); a failed turn is an error notification in boopis's words.
+    pub fn on_room_line(
+        &self,
+        room_id: &str,
+        room_name: &str,
+        line: RoomLine,
+        profile: Option<&str>,
+    ) {
+        let mut inner = lock(&self.inner);
+        let note = match (line.from, line.kind.as_str(), profile) {
+            (LineFrom::Member, _, Some(p)) if line.mentions_you => Some((
+                NoteKind::Mention,
+                p,
+                format!("{} mentioned you in {room_name}", line.name),
+                true,
+            )),
+            (LineFrom::Member, _, Some(p)) => Some((
+                NoteKind::Reply,
+                p,
+                format!("{} replied in {room_name}", line.name),
+                false,
+            )),
+            (LineFrom::Boopis, "turn.failed", Some(p)) => Some((
+                NoteKind::Error,
+                p,
+                format!("{} hit an error in {room_name}", line.name),
+                false,
+            )),
+            _ => None,
+        };
+        if let Some((kind, p, title, urgent)) = note {
+            let body = self.clip(&line.text);
+            self.notify(
+                &mut inner,
+                kind,
+                p,
+                None,
+                Some(room_id),
+                Source::Room,
+                title,
+                body,
+                urgent,
+            );
+        }
+        self.emit(
+            &mut inner,
+            Event::RoomLine(RoomLineEvent {
+                room_id: room_id.to_owned(),
+                line,
+            }),
+        );
+    }
+
+    /// Who is at work in a room: a `room.state` event when it changed.
+    pub fn on_room_state(&self, room_id: &str, working: &[String]) {
+        let mut inner = lock(&self.inner);
+        if inner.room_working.get(room_id).map(Vec::as_slice) == Some(working) {
+            return;
+        }
+        inner
+            .room_working
+            .insert(room_id.to_owned(), working.to_vec());
+        self.emit(
+            &mut inner,
+            Event::RoomState(RoomStateEvent {
+                room_id: room_id.to_owned(),
+                working: working.to_vec(),
+            }),
+        );
+    }
 
     /// The messages a room holds changed.
     pub fn on_room_held(&self, room_id: &str, held: Vec<crate::rooms::hold::Held>) {
@@ -1060,6 +1146,12 @@ impl Feed {
                 held,
             }),
         );
+    }
+
+    /// A room line's text for another client: scrubbed, cut to the message cap.
+    #[must_use]
+    pub fn line_text(&self, text: &str) -> (String, bool) {
+        self.message_text(text)
     }
 
     /// The approvals the engine holds for one waiting session (from `approval.pending`, with the generation the session's
@@ -1517,6 +1609,7 @@ mod tests {
             session_id: "i1".into(),
             status,
             source: Source::Other,
+            summary: None,
         };
         f.on_poll(
             "nina",
@@ -1548,6 +1641,7 @@ mod tests {
             session_id: sid.into(),
             status,
             source: crate::local_api::model::source_of(source),
+            summary: None,
         };
         f.on_poll(
             "kai",

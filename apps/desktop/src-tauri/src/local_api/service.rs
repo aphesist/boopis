@@ -147,6 +147,8 @@ pub struct Service<E: Engine> {
     pub(super) room_limits: RoomLimits,
     /// The rooms the hold's pump reads, by id.
     pub(super) watches: tokio::sync::Mutex<HashMap<String, hold::Watch>>,
+    /// How far each room's log has been read for the feed (lines, notifications), by id.
+    pub(super) room_cursors: tokio::sync::Mutex<HashMap<String, u64>>,
 }
 
 pub(super) fn text(v: &Value, key: &str) -> String {
@@ -183,6 +185,7 @@ impl<E: Engine> Service<E> {
             holds,
             room_limits,
             watches: tokio::sync::Mutex::new(HashMap::new()),
+            room_cursors: tokio::sync::Mutex::new(HashMap::new()),
         })
     }
 
@@ -278,6 +281,12 @@ impl<E: Engine> Service<E> {
         self.feed.has_bot(profile)
     }
 
+    /// Poll one bot's sessions now (after a stop, so its presence says so at once).
+    pub(super) async fn poll_profile_now(&self, profile: &str) {
+        self.poll_profile(profile).await;
+        self.feed.tick();
+    }
+
     /// Ask every bot's link which sessions are live, and what is waiting on the owner.
     pub async fn poll_once(&self) {
         self.fresh().poll_at = Some(Instant::now());
@@ -312,7 +321,7 @@ impl<E: Engine> Service<E> {
             if sid.is_empty() {
                 continue;
             }
-            let title = text(row, "title");
+            let (title, preview) = (text(row, "title"), text(row, "preview"));
             let source = self
                 .feed
                 .resolve_source(profile, &sid, &text(row, "source"), &title);
@@ -338,6 +347,7 @@ impl<E: Engine> Service<E> {
                 session_id: sid,
                 status,
                 source,
+                summary: self.summary_of(&title, &preview),
             });
         }
         let finished = self.feed.on_poll(profile, &live, &models);
@@ -348,6 +358,33 @@ impl<E: Engine> Service<E> {
             let words = self.last_words(&done.profile, &done.session_id).await;
             self.feed.notify_finished(&done, &words);
         }
+    }
+
+    /// What a live session is about, in a line: its title (a room member's session, `Group: <room id>`, reads as the room's
+    /// name), else the first line of what the engine shows of it; scrubbed and cut.
+    fn summary_of(&self, title: &str, preview: &str) -> Option<String> {
+        let title = title.trim();
+        let line = if let Some(room) = title.strip_prefix("Group: ") {
+            let room = room.trim();
+            let name = self
+                .feed
+                .rooms()
+                .into_iter()
+                .find(|r| r.id == room)
+                .map_or_else(|| room.to_owned(), |r| r.name);
+            format!("In {name}")
+        } else if !title.is_empty() {
+            title.to_owned()
+        } else {
+            preview
+                .lines()
+                .map(str::trim)
+                .find(|l| !l.is_empty())?
+                .to_owned()
+        };
+        let (clean, _) = self.feed.message_text(&line);
+        let clean: String = clean.chars().take(120).collect();
+        (!clean.trim().is_empty()).then_some(clean)
     }
 
     /// The words a turn ended on: the last `message.complete` in the session's event ring (`session.events.since`), empty
@@ -835,7 +872,7 @@ impl<E: Engine> Service<E> {
     // ───────────────────────── the loop ─────────────────────────
 
     /// Run until cancelled: read the roster once at start (B24), then, while at least one reader listens, read the roster
-    /// and poll the sessions.
+    /// and poll the sessions, and follow the rooms' logs.
     pub async fn run(self: Arc<Self>, cancel: CancellationToken) {
         tokio::select! {
             () = cancel.cancelled() => return,
@@ -849,6 +886,8 @@ impl<E: Engine> Service<E> {
                     changed = wanted.changed() => if changed.is_err() { return },
                 }
             }
+            // Rooms are followed from where they are now: what was said while nobody listened is no news (read it with the log).
+            self.room_cursors.lock().await.clear();
             self.refresh_roster().await;
             let mut roster_at = tokio::time::Instant::now();
             let mut poll_at = tokio::time::Instant::now() - self.limits.poll_every;
@@ -866,6 +905,7 @@ impl<E: Engine> Service<E> {
                 if self.feed.take_poke() || now.duration_since(poll_at) >= self.limits.poll_every {
                     poll_at = now;
                     self.poll_once().await;
+                    self.follow_rooms().await;
                 }
             }
         }

@@ -104,6 +104,12 @@ pub struct Presence {
     pub session_id: Option<String>,
     /// Where that session came from; null when no session is behind the state (idle, sleeping).
     pub source: Option<Source>,
+    /// What the running session is about: its title as the engine keeps it, else the first line of what it was asked; null
+    /// when the engine says neither, and while idle.
+    pub summary: Option<String>,
+    /// How many tool steps the running turn has taken, counted from the turn's own events; null where only a poll sees the
+    /// turn (it cannot count them), and while idle.
+    pub steps: Option<u32>,
     /// When the state began, in milliseconds since the epoch.
     pub at: i64,
 }
@@ -119,6 +125,8 @@ impl Presence {
             attention: None,
             session_id: None,
             source: None,
+            summary: None,
+            steps: None,
             at,
         }
     }
@@ -169,6 +177,8 @@ pub enum NoteKind {
     Cron,
     /// A turn failed.
     Error,
+    /// A member of a room addressed the owner (`@user`, the engine's name for the human: `rooms/mentions.rs`).
+    Mention,
 }
 
 /// "A bot did something you should see."
@@ -329,6 +339,80 @@ pub struct Conversation {
     pub last_event_id: u64,
 }
 
+/// Who a room line is from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LineFrom {
+    /// The owner, from any client.
+    User,
+    /// A member of the room.
+    Member,
+    /// boopis, saying what happened (a turn failed or was cancelled, a stop, a pause).
+    Boopis,
+}
+
+/// One line of a room's log, as `boopis groups log` prints it and the app's room draws it (`rooms/lines.rs`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RoomLine {
+    /// Its place in the room's log (the engine's `seq`).
+    pub seq: u64,
+    /// When, in milliseconds since the epoch.
+    pub at: i64,
+    /// The engine's event kind (`message.user`, `message.member`, `turn.failed`, `turn.cancelled`, ...).
+    pub kind: String,
+    /// Who it is from.
+    pub from: LineFrom,
+    /// The member it is from, or the member a boopis line is about; null otherwise.
+    pub member: Option<String>,
+    /// That member's name as people read it; empty when there is no member.
+    pub name: String,
+    /// The text, scrubbed, line breaks kept, cut to the message cap.
+    pub text: String,
+    /// Whether the text was cut.
+    pub truncated: bool,
+    /// Whether a member's message addresses the owner (`@user`, by the engine's own rule).
+    pub mentions_you: bool,
+}
+
+/// A room's log, read.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RoomLog {
+    /// The room.
+    pub room_id: String,
+    /// Its name.
+    pub name: String,
+    /// The lines, oldest first.
+    pub lines: Vec<RoomLine>,
+    /// The newest event in the room's log (read on from here with `after`).
+    pub latest_seq: u64,
+    /// Whether more events follow the last one read.
+    pub more: bool,
+    /// The members at work now.
+    pub working: Vec<String>,
+    /// The messages the room holds until its members finish (`rooms/hold.rs`).
+    pub held: Vec<crate::rooms::hold::Held>,
+    /// The feed's last event id before the read, to follow from.
+    pub last_event_id: u64,
+}
+
+/// A line added to a room's log.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RoomLineEvent {
+    /// The room.
+    pub room_id: String,
+    /// The line.
+    pub line: RoomLine,
+}
+
+/// Who is at work in a room now.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RoomStateEvent {
+    /// The room.
+    pub room_id: String,
+    /// The members at work.
+    pub working: Vec<String>,
+}
+
 /// The messages a room holds now.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RoomHeldEvent {
@@ -367,6 +451,12 @@ pub enum Event {
     /// A message was added to a conversation, or a reply grew or finished. Only to streams that asked for conversations.
     #[serde(rename = "conversation.message")]
     Conversation(ConversationMessage),
+    /// A line was added to a room's log. Only to streams that asked for rooms.
+    #[serde(rename = "room.line")]
+    RoomLine(RoomLineEvent),
+    /// Who is at work in a room changed. Only to streams that asked for rooms.
+    #[serde(rename = "room.state")]
+    RoomState(RoomStateEvent),
     /// The messages a room holds changed (one was held, sent or taken back). Only to streams that asked for rooms.
     #[serde(rename = "room.held")]
     RoomHeld(RoomHeldEvent),
@@ -389,6 +479,8 @@ impl Event {
             Self::Notification(_) => "notifications.new",
             Self::Approvals(_) => "approvals.changed",
             Self::Conversation(_) => "conversation.message",
+            Self::RoomLine(_) => "room.line",
+            Self::RoomState(_) => "room.state",
             Self::RoomHeld(_) => "room.held",
             Self::Lagged { .. } => "lagged",
         }
