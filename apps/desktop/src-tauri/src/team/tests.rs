@@ -144,6 +144,9 @@ impl Model {
             .get(bot)
             .and_then(|b| b.max_turns)
     }
+    pub(crate) fn read_now(&self) -> Current {
+        self.now.lock().unwrap().clone()
+    }
     pub(crate) fn ran(&self) -> Vec<String> {
         self.ran.lock().unwrap().clone()
     }
@@ -187,9 +190,10 @@ impl Backend for Model {
                                 (p.to_owned(), m.to_owned())
                             })
                     });
+                // the engine's bundled skills, off on a new bot: neither is in the bots' default index (ADR-0047)
                 let mut skills: Vec<(String, bool)> = ["web", "files"]
                     .iter()
-                    .map(|s| ((*s).to_owned(), true))
+                    .map(|s| ((*s).to_owned(), false))
                     .collect();
                 skills.extend(
                     self.installed
@@ -209,6 +213,11 @@ impl Backend for Model {
                         max_turns: bot.max_turns,
                         skills,
                         connectors: Vec::new(),
+                        toolsets: ["file", "web", "browser"]
+                            .iter()
+                            .map(|t| ((*t).to_owned(), *t != "browser"))
+                            .collect(),
+                        project: None,
                     },
                 );
             }
@@ -247,6 +256,22 @@ impl Backend for Model {
                         s.1 = true;
                     }
                 }
+            }
+            Op::SetToolsets { bot, on, off } => {
+                let b = n.bots.get_mut(bot).unwrap();
+                for (t, state) in on
+                    .iter()
+                    .map(|t| (t, true))
+                    .chain(off.iter().map(|t| (t, false)))
+                {
+                    match b.toolsets.iter_mut().find(|(n, _)| n == t) {
+                        Some(e) => e.1 = state,
+                        None => b.toolsets.push((t.clone(), state)),
+                    }
+                }
+            }
+            Op::SetProject { bot, project } => {
+                n.bots.get_mut(bot).unwrap().project.clone_from(project);
             }
             Op::AddConnector { bot, connector } => {
                 n.bots.get_mut(bot).unwrap().connectors.push(ConnectorNow {
@@ -345,9 +370,10 @@ impl Backend for Model {
         Ok(())
     }
     async fn missing_skills(&self, _: &str, wanted: &[String]) -> Result<Vec<String>> {
+        // the bundled skills every new bot has, on or off, and the store's installed ones
         Ok(wanted
             .iter()
-            .filter(|w| !self.installed.contains(w))
+            .filter(|w| !self.installed.contains(w) && !["web", "files"].contains(&w.as_str()))
             .cloned()
             .collect())
     }
@@ -774,4 +800,98 @@ async fn a_cap_on_turns_applies_once_and_exports_back_to_an_empty_plan() {
     let p = plan(&more, &now, false);
     apply(&model, &p, &BTreeMap::new()).await.unwrap();
     assert_eq!(model.read().await.unwrap().bots["kai"].max_turns, Some(12));
+}
+
+#[tokio::test]
+async fn a_new_bot_gets_the_skills_its_file_names_and_export_keeps_a_bundled_one_switched_on() {
+    // the engine leaves a wanted skill off on a new bot (the default index): apply switches it on
+    let mut team = example();
+    team.bots.get_mut("kai").unwrap().skills = vec!["web".into()];
+    let model = Model::new(base());
+    let report = apply_to(&model, &team, false).await;
+    assert!(report.all_ok() && report.warnings.is_empty(), "{report:?}");
+    let now = model.read().await.unwrap();
+    assert!(now.bots["kai"].skills.contains(&("web".to_owned(), true)));
+    assert!(
+        now.bots["kai"]
+            .skills
+            .contains(&("files".to_owned(), false))
+    );
+    assert!(plan(&team, &now, false).is_empty());
+    // a bundled skill outside the index that a bot has on is written, so a fresh install gets it back
+    let e = export(&now);
+    assert_eq!(e.team.bots["kai"].skills, ["web"]);
+    assert!(e.team.bots["nina"].skills.is_empty());
+}
+
+#[tokio::test]
+async fn a_bots_toolsets_and_project_folder_are_applied_exported_and_applied_again_as_no_change() {
+    let mut team = example();
+    {
+        let kai = team.bots.get_mut("kai").unwrap();
+        kai.toolsets = Some(vec!["file".into(), "kanban".into()]);
+        kai.project = Some("~/repos/paper-shorts".into());
+    }
+    let model = Model::new(base());
+    let report = apply_to(&model, &team, false).await;
+    assert!(report.all_ok(), "{report:?}");
+    let now = model.read().await.unwrap();
+    let on: Vec<&str> = now.bots["kai"]
+        .toolsets
+        .iter()
+        .filter(|(_, on)| *on)
+        .map(|(n, _)| n.as_str())
+        .collect();
+    assert_eq!(
+        on,
+        ["file", "kanban"],
+        "the file's list, and nothing else on"
+    );
+    assert_eq!(
+        now.bots["kai"].project.as_deref(),
+        Some("~/repos/paper-shorts")
+    );
+    assert!(plan(&team, &now, false).is_empty());
+    // export writes them; applying the export changes nothing
+    let e = export(&now);
+    assert_eq!(
+        e.team.bots["kai"].toolsets.as_deref(),
+        Some(&["file".to_owned(), "kanban".to_owned()][..])
+    );
+    assert_eq!(
+        e.team.bots["kai"].project.as_deref(),
+        Some("~/repos/paper-shorts")
+    );
+    assert!(plan(&e.team, &now, false).is_empty());
+    // an existing bot whose list differs: one action, both ways
+    let mut changed = team.clone();
+    changed.bots.get_mut("kai").unwrap().toolsets = Some(vec!["web".into(), "file".into()]);
+    let p = plan(&changed, &now, false);
+    let set: Vec<&Op> = p
+        .actions
+        .iter()
+        .map(|a| &a.op)
+        .filter(|o| matches!(o, Op::SetToolsets { .. }))
+        .collect();
+    assert_eq!(
+        set,
+        [&Op::SetToolsets {
+            bot: "kai".into(),
+            on: vec!["web".into()],
+            off: vec!["kanban".into()]
+        }]
+    );
+    // a toolset name or a folder the file cannot mean is a problem before anything runs
+    let mut bad = team.clone();
+    bad.bots.get_mut("nina").unwrap().toolsets = Some(vec!["Web Search".into()]);
+    bad.bots.get_mut("nina").unwrap().project = Some("repos/x".into());
+    let problems = bad.check();
+    assert!(
+        problems.iter().any(|p| p.contains("bots.nina.toolsets")),
+        "{problems:?}"
+    );
+    assert!(
+        problems.iter().any(|p| p.contains("bots.nina.project")),
+        "{problems:?}"
+    );
 }

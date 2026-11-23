@@ -210,6 +210,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       r.row = row; r.plugin = plugin;
       if (!r.loaded) r.sessions = r.sessions ?? fromRow(row);
       if (plugin?.problem) r.notes['store'] = plugin.problem; else delete r.notes['store'];
+      if (plugin?.project_problem) r.notes['project'] = plugin.project_problem; else delete r.notes['project'];
       if (ownRecords.size === 0 && !had) r.notes['store'] = r.notes['store'] ?? 'boopis’s own record of this teammate was not read, so its look is the one its name gives it';
       recs.set(row.name, r);
       if (r.loaded) emitFor(before, toBot(r)); else if (!had) { events.emit({ type: 'bot-created', bot: toBot(r) }); void track(loadDetail(row.name)); }
@@ -220,7 +221,6 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
     rosterSeen = true;
     if (appeared.length) void track((async () => { for (const id of appeared) await prepare(id, true); })());
     for (const id of gone) { recs.delete(id); chat.forget(id); events.emit({ type: 'bot-archived', id }); void closeLink(id); }
-    if (ownRecords.size) for (const row of live) giveHandoffs(row.name);
     const t = now();
     archivedNow.set(mine.filter((r) => isArchived(r.name, ownRecords.get(r.name))).map((r): ArchivedBot => {
       const p = ownRecords.get(r.name);
@@ -228,21 +228,6 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       return { id: r.name, name: botName(r), was: p?.archived?.name ?? r.name.replace(/^archived--/, ''), at, when: at ? whenLabel(Date.parse(at) / 1000, t) : '' };
     }).sort((a, b) => (b.at > a.at ? 1 : b.at < a.at ? -1 : 0)));   /* the newest first; an archive with no date goes last */
     rebuildSchedules();
-  }
-  /** Every teammate is given the hand-off skill once per run of boopis (`plugin.boopis.bots.guide`, idempotent): the engine tells a
-   *  room member nothing about the kanban board, so a cut-off turn files the same cards again and ordered cards run in parallel.
-   *  A plugin that has no such method (an older one) is left alone. */
-  const guided = new Set<string>();
-  /* a plugin without the method (the engine still runs the earlier plugin while the host's update of it waits for the bots
-     to be done) is asked again once the link comes back: the update restarts the engine, so that is when the new one is in */
-  const owedGuides = new Set<string>();
-  function giveHandoffs(name: string): void {
-    if (guided.has(name)) return;
-    guided.add(name);
-    void track(client.requestRaw('plugin.boopis.bots.guide', { name }).then(() => undefined, (e: unknown) => {
-      if (isUnknownMethod(e)) owedGuides.add(name);
-      (isUnknownMethod(e) ? log.info : log.warn)('the hand-off skill was not given to ' + name, e);
-    }));
   }
   /** a session row of the roster, for a teammate whose own link is not open (or not yet): the newest one Hermes names */
   function fromRow(row: ProfileRow): BotSession[] {
@@ -488,6 +473,19 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       if (res.error) throw new Error(res.error);
       await loadLinked(id, r);
     },
+    async setToolsets(id, on, off) {
+      const r = need(id);
+      await plug('bots.toolsets', { name: id, on: [...on], off: [...off] });
+      r.loaded = false;
+      await loadDetail(id);   /* the engine's own list, read back */
+    },
+    async setProject(id, folder) {
+      const r = need(id);
+      const res = await plug<{ project: string | null }>('bots.project', { name: id, project: folder });
+      r.plugin = { ...(r.plugin ?? { name: id, path: r.row.path, record: null, problem: null, archived: null }), project: res.project, project_problem: null };
+      delete r.notes['project'];
+      events.emit({ type: 'bot', bot: toBot(r) });
+    },
     async saveOwn(id, patch) {
       const r = need(id);
       const body: Record<string, unknown> = { name: id };
@@ -631,7 +629,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const soon = (): void => { if (timer) return; timer = setTimeout(() => { timer = null; void refreshRoster(); }, 400); };
   client.onEvent((ev) => { if (ev.type === 'sessions.changed' || ev.type === 'cron.changed' || ev.type === 'profiles.changed') soon(); });
-  client.onState((s) => { if (s.phase === 'ready' && s.reconnected) { for (const n of owedGuides) guided.delete(n); owedGuides.clear(); void refreshRoster(); for (const [id, r] of recs) if (r.loaded) void track(loadLinked(id, r)); } });
+  client.onState((s) => { if (s.phase === 'ready' && s.reconnected) { void refreshRoster(); for (const [id, r] of recs) if (r.loaded) void track(loadLinked(id, r)); } });
   const poll = deps.pollMs === undefined ? POLL_MS : deps.pollMs;
   if (poll && typeof setInterval === 'function') setInterval(() => { if (typeof document === 'undefined' || document.visibilityState === 'visible') void refreshRoster(); }, poll);
 

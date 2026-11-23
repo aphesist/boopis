@@ -37,10 +37,11 @@ pub fn export(now: &Current) -> Exported {
     };
     for (name, b) in &now.bots {
         let skills: Vec<String> = match &now.baseline_skills {
+            // what a new bot would not have on: every skill but the bundled ones the bots' default index keeps (ADR-0047)
             Some(base) => b
                 .skills
                 .iter()
-                .filter(|(n, on)| *on && !base.contains(n))
+                .filter(|(n, on)| *on && !crate::bots::skills::a_new_bot_has(n, base))
                 .map(|(n, _)| n.clone())
                 .collect(),
             None => Vec::new(),
@@ -67,6 +68,16 @@ pub fn export(now: &Current) -> Exported {
                     .collect(),
                 governed: Some(b.governed),
                 max_turns: b.max_turns,
+                // every toolset it has on, so an apply elsewhere gives it exactly these (ADR-0048)
+                toolsets: Some(
+                    b.toolsets
+                        .iter()
+                        .filter(|(_, on)| *on)
+                        .map(|(n, _)| n.clone())
+                        .collect(),
+                )
+                .filter(|t: &Vec<String>| !t.is_empty()),
+                project: b.project.clone(),
             },
         );
     }

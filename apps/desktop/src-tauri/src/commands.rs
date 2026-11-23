@@ -246,15 +246,27 @@ pub async fn setup_check(
             longest: state.limits.restart_wait_max,
         };
         let events = app.clone();
+        let (bots, layout) = (state.bots.clone(), bots_layout(&state));
         tauri::async_runtime::spawn(async move {
-            let say = move |notice: crate::setup::update::Notice| {
+            use crate::setup::update::Notice;
+            // An update that waited for the bots opened the gate meanwhile, so the start-up repair may have asked the earlier
+            // plugin; once the new one is in, the bots are repaired again (the hand-off skill is the host's to give).
+            let waited = std::sync::atomic::AtomicBool::new(false);
+            let say = |notice: Notice| {
+                if matches!(notice, Notice::Waiting(_)) {
+                    waited.store(true, std::sync::atomic::Ordering::SeqCst);
+                }
                 let event = EngineUpdateEvent::from(notice);
                 if let Err(e) = tauri_specta::Event::emit(&event, &events) {
                     tracing::debug!(error = %e, "could not emit the engine update notice");
                 }
             };
             if let Some(notice) = setup.update(closed, waits, &say).await {
+                let done = matches!(notice, Notice::Done(_));
                 say(notice);
+                if done && waited.load(std::sync::atomic::Ordering::SeqCst) {
+                    bots.repair_again(layout);
+                }
             }
         });
     }

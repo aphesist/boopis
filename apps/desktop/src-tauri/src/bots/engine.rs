@@ -81,6 +81,24 @@ impl super::Engine for CliEngine {
             Err(e) => Err(e),
         }
     }
+
+    async fn boards(&self, _root: &Path) -> Result<Vec<(String, String)>> {
+        Ok(crate::kanban::boards(&self.sup)
+            .await?
+            .into_iter()
+            .filter(|b| !b.archived)
+            .map(|b| (b.slug, b.name))
+            .collect())
+    }
+
+    async fn board_assignees(&self, _root: &Path, slug: &str) -> Result<Vec<String>> {
+        Ok(crate::kanban::view(&self.sup, slug)
+            .await?
+            .tasks
+            .into_iter()
+            .filter_map(|t| t.assignee)
+            .collect())
+    }
 }
 
 /// The bots' side of the app: one operation at a time (two `hermes config set` in one home must not race), and the repair once
@@ -134,7 +152,8 @@ impl Service {
         self.engine.as_ref()
     }
 
-    /// Prepare the bot `name` (made just now when `fresh`), with its Governed switch as its record says.
+    /// Prepare the bot `name` (made just now when `fresh`: it gets the default skill index unless it had it), with its Governed
+    /// switch as its record says.
     ///
     /// # Errors
     /// As [`super::prepare`], and when the records or the root cannot be read.
@@ -158,14 +177,24 @@ impl Service {
             .copied()
             .unwrap_or(false);
         let mut view = super::RootView::read(self.engine.as_ref(), &layout.root).await?;
-        let done = super::prepare(
-            self.engine.as_ref(),
-            layout,
-            &mut view,
-            name,
-            super::Ask { governed, fresh },
-        )
-        .await?;
+        // A bot gets the default skill index and its role's toolsets once: one made by `boopis team apply` and then seen by
+        // the app keeps the skills and toolsets the team file switched on.
+        let mut given = super::Records::load(&layout.root);
+        let members = if given.tools.pending(name) {
+            super::board_members(self.engine.as_ref(), &layout.root)
+                .await
+                .ok()
+        } else {
+            None
+        };
+        let mut ask = given.ask(name, governed, members.as_ref());
+        ask.fresh = fresh && ask.fresh;
+        let mut done = super::prepare(self.engine.as_ref(), layout, &mut view, name, ask).await?;
+        done.problems.extend(super::project_problem(&records, name));
+        given.note(&done);
+        if done.skills_given || done.toolsets_given || done.kanban_given {
+            given.save(&layout.root, &mut done.problems);
+        }
         if let Ok(mut at) = self.last_prepared.lock() {
             *at = std::time::Instant::now();
         }
@@ -264,6 +293,16 @@ impl Service {
         super::release(self.engine.as_ref(), root, name).await
     }
 
+    /// Run the repair again in this run, in the background. The automatic update replaced the engine's code under the running
+    /// app after it waited for the bots (`setup::update`), so the app's links ran on the earlier plugin meanwhile and a repair
+    /// made then asked that plugin: one without `bots.guide` left every bot without the hand-off skill (a problem on the bot,
+    /// so its preparation is due again). The update restarted the engine, which is a new start for what the repair gives.
+    pub fn repair_again(self: &Arc<Self>, layout: super::Layout) {
+        self.repaired
+            .store(false, std::sync::atomic::Ordering::SeqCst);
+        self.repair_once(layout);
+    }
+
     /// Run the repair once in this run, in the background, once setup has placed the plugin in the root.
     pub fn repair_once(self: &Arc<Self>, layout: super::Layout) {
         use std::sync::atomic::Ordering;
@@ -289,6 +328,9 @@ impl Service {
                         for p in &b.problems {
                             tracing::warn!(bot = %b.name, problem = %p, "a bot could not be repaired");
                         }
+                    }
+                    for (bot, paths) in &done.soul_missing {
+                        tracing::warn!(%bot, missing = ?paths, "a bot's instructions name paths that are not there");
                     }
                 }
                 Err(e) => {

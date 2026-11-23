@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "description": "The engine toolsets boopis switches on and off for a bot, once, when it makes the bot and once for every bot made before this list (ADR-0048). A toolset in neither list is left as the engine has it (a plugin's toolset, an MCP server, a toolset the engine leaves off). The same set applies to the bot's chats, its `boopis run --bot` runs, its kanban workers and its group-room turns. A toolset the owner switches on later stays on: boopis does not apply the list to that bot again. The owner chooses what is in these lists.",
+  "every_bot": {
+    "on": [
+      { "name": "file", "why": "Reading and writing the project's files: every Paper Past bot does." },
+      { "name": "terminal", "why": "Running the project's commands (uv run shorts.py, ffmpeg, capture.py)." },
+      { "name": "web", "why": "Search and fetch: research and fact-checks with sources." },
+      { "name": "vision", "why": "Looking at stills and contact sheets (QA, renders, scenes)." },
+      { "name": "skills", "why": "Without it a bot sees no skills at all, the hand-off skill and the default skill index included." },
+      { "name": "memory", "why": "A bot keeps its own memory across sessions." },
+      { "name": "todo", "why": "Planning a task of several steps." },
+      { "name": "clarify", "why": "Asking the owner a question instead of guessing." }
+    ],
+    "off": [
+      { "name": "kanban", "why": "On only for a bot on a board (below): 15 tools, the largest toolset." },
+      { "name": "browser", "why": "Driving a browser; a bot that renders pages runs its own script in the terminal." },
+      { "name": "computer_use", "why": "Driving the desktop." },
+      { "name": "delegation", "why": "Starting subagents; a bot hands work to teammates on the board instead." },
+      { "name": "code_execution", "why": "The engine's code kernel; the terminal covers a bot's scripts." },
+      { "name": "session_search", "why": "Searching past conversations." },
+      { "name": "connections", "why": "Remote connectors and account sign-ins; connectors are added in Settings." },
+      { "name": "cronjob", "why": "A bot changing its own schedule; the owner sets it in the bot's settings." },
+      { "name": "tts", "why": "Speech; a bot that voices videos runs the project's own tool." },
+      { "name": "image_gen", "why": "Image generation." }
+    ]
+  },
+  "on_a_board": {
+    "on": [
+      { "name": "kanban", "why": "A bot on a board files, links and comments on cards from its room and its chats. A kanban worker has these tools whatever this says: the engine adds them to the card's session." }
+    ]
+  }
+}

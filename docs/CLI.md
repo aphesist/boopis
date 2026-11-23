@@ -142,8 +142,8 @@ receipt's. With `--json` the lines are `started` (the session), `message` (`turn
 
 ```
 boopis bots list [--json]
-boopis bots create <name> [--role TEXT] [--soul-file FILE|-] [--model MODEL] [--shape SHAPE --color #rrggbb] [--governed] [--max-turns N] [--json]
-boopis bots set <name> [--role TEXT] [--soul-file FILE|-] [--model MODEL] [--shape SHAPE] [--color #rrggbb] [--governed|--ungoverned] [--max-turns N|default] [--json]
+boopis bots create <name> [--role TEXT] [--soul-file FILE|-] [--model MODEL] [--shape SHAPE --color #rrggbb] [--governed] [--max-turns N] [--project FOLDER] [--json]
+boopis bots set <name> [--role TEXT] [--soul-file FILE|-] [--model MODEL] [--shape SHAPE] [--color #rrggbb] [--governed|--ungoverned] [--max-turns N|default] [--project FOLDER|none] [--json]
 ```
 
 Made and changed by the same operations the Bots form and `team apply` use, so a bot made here is the same bot (its home, its
@@ -175,6 +175,10 @@ of 10. It is written where the engine reads a goal's budget: `goals.max_turns` i
 `config set` (and `config unset` for the way back), so the number is the bot's wherever it is run. `bots list --json` shows it as
 `max_turns` (`null` when the bot has none) beside `default_max_turns`.
 
+`--project FOLDER` is the bot's project folder (ADR-0049): the engine's `terminal.cwd` in the bot's own configuration, so its
+sessions start there and read the folder's AGENTS.md or CLAUDE.md, from its next new session. A folder that is not there or
+cannot be read is refused before anything is changed (exit 2); `--project none` takes it away.
+
 ## Teams
 
 ```
@@ -183,7 +187,7 @@ boopis team apply <file> [--dry-run] [--prune] [--json]
 boopis team export [--output FILE [--force]] [--json]
 ```
 
-A team file holds a whole team: bots (role, instructions, model, look, skills, connectors, the Governed switch, `max_turns`), rooms
+A team file holds a whole team: bots (role, instructions, model, look, skills, connectors, the Governed switch, `max_turns`, `toolsets`, `project`), rooms
 (members, lead, purpose, max rounds), kanban boards (name, folder) and cron jobs (schedule, prompt, where the result goes,
 paused). The format is [`team.schema.json`](team.schema.json); a complete example, the Paper Past team, is in
 [`team-example/`](team-example/paper-past.yaml). A file with a mistake is refused whole: every problem is listed with where
@@ -205,6 +209,10 @@ What each part does:
   store installs skills), one that is switched off is switched on. `connectors` are added when missing; one that is there
   with another command is left alone and said (change it in Settings > Connectors). Keys never go in a team file: a
   connector's `env` is for plain values only, and keys belong in Settings > Connectors, which keeps them in the keychain.
+  `toolsets` is every engine toolset the bot has on; the others it lists are switched off, the same for its chats, kanban
+  workers and room turns, from its next new session (a bot not said keeps what it has; a new one gets its role's defaults,
+  `apps/shared/data/bot-skills.json`'s neighbour `bot-toolsets.json`). `project` is the bot's project folder: its sessions
+  start there and read the folder's AGENTS.md or CLAUDE.md; a folder that is not there is refused. Export writes both.
 - **Rooms**, by name (or by `id`, to adopt a room that exists). A room's members cannot be changed once it is made, so a
   roster that differs from the file is a note, not a change; make a room under another name to have a different one. `lead`
   and `purpose` are updated, `max_rounds` is boopis's cap.

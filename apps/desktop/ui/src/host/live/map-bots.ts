@@ -23,6 +23,9 @@ export interface PluginBot {
   record: (OwnRecord & Record<string, unknown>) | null;
   problem: string | null;
   archived: { name?: string; at?: string; paused_jobs?: string[] } | null;
+  /** its project folder as its configuration says, and what is wrong with it (older plugins: absent) */
+  project?: string | null;
+  project_problem?: string | null;
 }
 
 /** boopis never kept anything for this profile: the plugin read its folder and found no `boopis/bot.json` (`record: null`, and no
@@ -132,7 +135,8 @@ export function botFrom(k: Known, nowSeconds: number): Bot {
   const info: BotInfo = {
     profile: row.name, path: row.path, model, provider: detail?.provider ?? (row.provider || null),
     skills: detail?.skills ?? null, toolsets: detail?.toolsets ?? null, mcpServers: detail?.mcpServers ?? null,
-    jobs, sessions: k.sessions, soul: detail?.soul ?? null, running, worker: workerFrom(row, nowSeconds), notes: k.notes
+    jobs, sessions: k.sessions, soul: detail?.soul ?? null, running, worker: workerFrom(row, nowSeconds),
+    project: plugin?.project ?? null, notes: k.notes
   };
   return {
     id: row.name, name, role: (detail?.role ?? row.description ?? '').trim(),

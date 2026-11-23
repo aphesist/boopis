@@ -4,9 +4,11 @@
 //! it is done (`commands::EngineUpdateEvent`).
 //!
 //! **Order.** The app's own links wait at a gate (`endpoint::Gate`) that the host closes before its answer to `setup_check`
-//! reaches the UI, so the UI's first link cannot reach a gateway still running the old plugin: on a link to it, the UI's
-//! first roster read would ask `plugin.boopis.bots.guide` of a plugin that does not have it, and nothing would ask again in
-//! that run. The window opens and draws meanwhile; only the link waits. The gate opens again however the update ends.
+//! reaches the UI, so the app's first link cannot reach a gateway still running the old plugin: the start-up repair that
+//! link starts (`bots::repair`) would ask `plugin.boopis.bots.guide` of a plugin that does not have it. The window opens and
+//! draws meanwhile; only the link waits. The gate opens again however the update ends. An update that waits for the bots
+//! (below) opens the gate meanwhile, so once it is done the host repairs the bots again (`commands::setup_check`,
+//! `bots::engine::Service::repair_again`).
 //!
 //! **Never over running work** (owner decision, 23 November 2026). The gateway is stopped only when nothing is working, by
 //! the engine's own accounts (`HermesOps::working`: the gateway's live work, which covers chat, room and cron turns and

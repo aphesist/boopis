@@ -2,9 +2,13 @@
 
 The rest is Hermes's own ``profiles.*`` and ``cron.manage``.
 
-``bots.read``     every teammate's store: ``{root, bots: [{name, path, record, problem, archived}]}``
+``bots.read``     every teammate's store: ``{root, bots: [{name, path, record, problem, archived, project,
+                  project_problem}]}``
 ``bots.write``    ``{name, look?, settings?, approvals?}``: merge into the teammate's store, answer the whole record
 ``bots.guide``    ``{name}``: the hand-off skill (use of the kanban board) into the teammate's skills
+``bots.toolsets`` ``{name, on?, off?}``: switch toolsets on and off, the same for its chats, workers and room turns
+``bots.project``  ``{name, project}``: its project folder (``terminal.cwd``); ``null`` takes it away; a folder that is
+                  not there is refused
 ``bots.inspect``  ``{name}``: what deleting it would remove, counted on disk
 ``bots.archive``  ``{name, paused_jobs?}``: Hermes's ``profile rename`` to ``archived--<name>``; notes paused jobs
 ``bots.restore``  ``{name}``: the way back; answers the routines to resume
@@ -49,6 +53,16 @@ def bots_guide(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
     return service().guide(_name(params))
 
 
+def bots_toolsets(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
+    return service().toolsets(_name(params), params.get("on"), params.get("off"))
+
+
+def bots_project(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
+    if "project" not in params:
+        raise InvalidParamsError("project is required (null takes the folder away)")
+    return service().project(_name(params), params.get("project"))
+
+
 def bots_inspect(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
     return service().inspect(_name(params))
 
@@ -76,6 +90,8 @@ HANDLERS: dict[str, Handler] = {
     "bots.read": bots_read,
     "bots.write": bots_write,
     "bots.guide": bots_guide,
+    "bots.toolsets": bots_toolsets,
+    "bots.project": bots_project,
     "bots.inspect": bots_inspect,
     "bots.archive": bots_archive,
     "bots.restore": bots_restore,

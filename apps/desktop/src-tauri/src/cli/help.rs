@@ -129,12 +129,14 @@ fn bots() -> Vec<String> {
     lines(&[
         "  {p} bots list [--json]",
         "  {p} bots create <name> [--role TEXT] [--soul-file FILE|-] [--model MODEL] [--shape SHAPE --color #rrggbb]",
-        "                         [--governed] [--max-turns N] [--json]",
+        "                         [--governed] [--max-turns N] [--project FOLDER] [--json]",
         "  {p} bots set <name> [--role TEXT] [--soul-file FILE|-] [--model MODEL] [--shape SHAPE] [--color #rrggbb]",
-        "                      [--governed|--ungoverned] [--max-turns N|default] [--json]",
+        "                      [--governed|--ungoverned] [--max-turns N|default] [--project FOLDER|none] [--json]",
         "",
         "A model is opus (on the provider the app uses) or provider/model, and it must be one the bot can reach:",
         "its provider set up for the bot and, where the provider lists its models, one of them.",
+        "A project folder is a full path (from / or ~/) to a folder on this computer; the bot's new sessions start there",
+        "and read its AGENTS.md or CLAUDE.md. --project none takes it away.",
         "Exit codes: 0 done, 1 failed, 2 a usage mistake.",
     ])
 }

@@ -89,6 +89,11 @@ pub async fn apply(
                         Err(e) => report.warnings.push(format!("bot {name}: its skills could not be checked: {e}")),
                     }
                 }
+                if let Op::CreateBot { name, .. } = &a.op
+                    && let Some(skills) = wanted_skills.get(name)
+                {
+                    switch_on_wanted(backend, name, skills, &mut report).await;
+                }
             }
             Err(e) => {
                 if let Op::CreateBot { name, .. } = &a.op {
@@ -109,6 +114,30 @@ pub async fn apply(
         }
     }
     Ok(report)
+}
+
+/// A new bot starts with the bots' default skill index (ADR-0047), so the skills the file names are switched on once it exists;
+/// one that is not installed is left to the check above.
+async fn switch_on_wanted(
+    backend: &dyn Backend,
+    name: &str,
+    wanted: &[String],
+    report: &mut Report,
+) {
+    if wanted.is_empty() {
+        return;
+    }
+    let op = Op::EnableSkills {
+        bot: name.to_owned(),
+        skills: wanted.to_vec(),
+    };
+    if let Err(e) = backend.run(&op).await {
+        report.warnings.push(format!(
+            "bot {name}: its skills ({}) could not be switched on: {}",
+            wanted.join(", "),
+            crate::error::unless_engine("hx.engine.refused", &e.to_string())
+        ));
+    }
 }
 
 fn done(a: &Action, result: &'static str, error: Option<String>) -> Done {

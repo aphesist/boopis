@@ -35,12 +35,28 @@ enum Did {
 }
 
 /// The engine, in memory: one configuration tree per home, the plugin's records by bot, and a log.
+#[allow(clippy::struct_excessive_bools)] // independent switches of the double
 struct Fake {
     config: Mutex<BTreeMap<PathBuf, Value>>,
     records: Mutex<BTreeMap<String, Value>>,
+    /// The bots `bots.guide` was asked for, in order.
+    guided: Mutex<Vec<String>>,
     log: Mutex<Vec<Did>>,
     reload_works: bool,
     busy: bool,
+    /// An older plugin, without `bots.guide` (switched while a service holds the engine, as an update does).
+    no_guide: std::sync::atomic::AtomicBool,
+    /// The live kanban boards, `(slug, name)`, and who each board's cards are assigned to.
+    boards: Mutex<Vec<(String, String)>>,
+    assignees: Mutex<BTreeMap<String, Vec<String>>>,
+    /// The groups (`groups.list`'s `rooms`).
+    rooms: Mutex<Value>,
+    /// Each bot's toolsets as `bots.toolsets` left them: name to whether it is on.
+    toolsets: Mutex<BTreeMap<String, BTreeMap<String, bool>>>,
+    /// The boards cannot be read.
+    boards_fail: bool,
+    /// What `bots.read` says is wrong with a bot's project folder.
+    project_problems: Mutex<BTreeMap<String, String>>,
 }
 
 fn walk<'a>(v: &'a Value, key: &str) -> Option<&'a Value> {
@@ -76,9 +92,17 @@ impl Fake {
         Self {
             config: Mutex::new(BTreeMap::new()),
             records: Mutex::new(BTreeMap::new()),
+            guided: Mutex::new(Vec::new()),
             log: Mutex::new(Vec::new()),
             reload_works: true,
             busy: false,
+            no_guide: std::sync::atomic::AtomicBool::new(false),
+            boards: Mutex::new(Vec::new()),
+            assignees: Mutex::new(BTreeMap::new()),
+            rooms: Mutex::new(json!([])),
+            toolsets: Mutex::new(BTreeMap::new()),
+            boards_fail: false,
+            project_problems: Mutex::new(BTreeMap::new()),
         }
     }
     fn seed(&self, home: &Path, config: Value) {
@@ -99,7 +123,9 @@ impl Fake {
             .lock()
             .unwrap()
             .iter()
-            .filter(|d| !matches!(d, Did::Call(m) if m.ends_with("bots.read")))
+            .filter(
+                |d| !matches!(d, Did::Call(m) if m.ends_with("bots.read") || m == "groups.list"),
+            )
             .cloned()
             .collect()
     }
@@ -163,9 +189,12 @@ impl Engine for Fake {
         self.log.lock().unwrap().push(Did::Call(method.to_owned()));
         let mut records = self.records.lock().unwrap();
         match method {
-            "plugin.boopis.bots.read" => Ok(
-                json!({"bots": records.iter().map(|(n, r)| json!({"name": n, "record": r})).collect::<Vec<_>>()}),
-            ),
+            "plugin.boopis.bots.read" => {
+                let problems = self.project_problems.lock().unwrap();
+                Ok(
+                    json!({"bots": records.iter().map(|(n, r)| json!({"name": n, "record": r, "project_problem": problems.get(n)})).collect::<Vec<_>>()}),
+                )
+            }
             "plugin.boopis.bots.write" => {
                 let name = params["name"].as_str().unwrap().to_owned();
                 let r = records.entry(name).or_insert_with(|| json!({}));
@@ -175,6 +204,27 @@ impl Engine for Fake {
                     }
                 }
                 Ok(json!({"record": r.clone()}))
+            }
+            "plugin.boopis.bots.guide"
+                if !self.no_guide.load(std::sync::atomic::Ordering::SeqCst) =>
+            {
+                let name = params["name"].as_str().unwrap().to_owned();
+                let mut guided = self.guided.lock().unwrap();
+                let fresh = !guided.contains(&name);
+                guided.push(name);
+                Ok(json!({"skill": "boopis-handoffs", "version": 2, "written": fresh}))
+            }
+            "groups.list" => Ok(json!({"rooms": self.rooms.lock().unwrap().clone()})),
+            "plugin.boopis.bots.toolsets" => {
+                let name = params["name"].as_str().unwrap().to_owned();
+                let mut all = self.toolsets.lock().unwrap();
+                let bot = all.entry(name).or_default();
+                for (key, on) in [("on", true), ("off", false)] {
+                    for t in params[key].as_array().unwrap() {
+                        bot.insert(t.as_str().unwrap().to_owned(), on);
+                    }
+                }
+                Ok(json!({"on": params["on"], "off": params["off"]}))
             }
             other => Err(Error::Unavailable(format!("the double has no {other}"))),
         }
@@ -193,6 +243,21 @@ impl Engine for Fake {
     async fn restart_when_idle(&self, _root: &Path) -> Result<bool> {
         self.log.lock().unwrap().push(Did::Restart);
         Ok(!self.busy)
+    }
+    async fn boards(&self, _root: &Path) -> Result<Vec<(String, String)>> {
+        if self.boards_fail {
+            return Err(Error::Unavailable("the board could not be read".into()));
+        }
+        Ok(self.boards.lock().unwrap().clone())
+    }
+    async fn board_assignees(&self, _root: &Path, slug: &str) -> Result<Vec<String>> {
+        Ok(self
+            .assignees
+            .lock()
+            .unwrap()
+            .get(slug)
+            .cloned()
+            .unwrap_or_default())
     }
 }
 
@@ -246,11 +311,20 @@ fn owners_home(fake: &Fake) -> Home {
         for d in ["cron", "runtime", "boopis"] {
             std::fs::create_dir_all(home.join(d)).unwrap();
         }
-        // the engine's bundled skills, the mac ones among them
+        // the engine's bundled skills, the mac ones among them, with the engine's list of them; and one from the store
+        std::fs::create_dir_all(home.join("skills")).unwrap();
+        std::fs::write(
+            home.join("skills/.bundled_manifest"),
+            "apple-notes:a969\nimessage:f545\narxiv:1f2a\nhermes-agent:a6fb\nsdlc-review:4a4b\n",
+        )
+        .unwrap();
         for (skill, fm) in [
             ("apple/apple-notes", "platforms: [macos]"),
             ("apple/imessage", "platforms: [macos]"),
             ("research/arxiv", "name: arxiv"),
+            ("autonomous-ai-agents/hermes-agent", "name: hermes-agent"),
+            ("devops/sdlc-review", "name: sdlc-review"),
+            ("papercraft", "name: papercraft"),
         ] {
             std::fs::create_dir_all(home.join("skills").join(skill)).unwrap();
             std::fs::write(
@@ -356,16 +430,32 @@ async fn the_owners_home_is_repaired_once_and_their_fixes_are_kept() {
             home.root.join("plugins").join(SUB),
             "the owner's absolute link is left as it was"
         );
-        // the mac skills are off, the rest on
+        // the mac skills are off, and the bundled ones outside the default index; the index's and the store's stay on
         assert_eq!(
             fake.get(&bot, "skills.disabled"),
-            Some(json!(["apple-notes", "imessage"]))
+            Some(json!(["apple-notes", "arxiv", "imessage"]))
         );
         // their MCP connector is untouched
         if *name == "kai" || *name == "nina" {
             assert!(fake.get(&bot, "mcp_servers.fetch").is_some());
         }
     }
+    // every bot got its role's toolsets, once; none is on a board, so none has kanban
+    for (name, _) in TEAM {
+        let tools = fake.toolsets.lock().unwrap()[*name].clone();
+        for t in &toolsets::defaults().on {
+            assert_eq!(tools.get(t), Some(&true), "{name} {t}");
+        }
+        assert_eq!(tools.get("kanban"), Some(&false), "{name}");
+        assert_eq!(tools.get("browser"), Some(&false), "{name}");
+    }
+    // every bot got the hand-off skill, once
+    let mut guided = fake.guided.lock().unwrap().clone();
+    guided.sort();
+    let mut team: Vec<String> = TEAM.iter().map(|(n, _)| (*n).to_owned()).collect();
+    team.sort();
+    assert_eq!(guided, team);
+    assert!(done.bots.iter().all(|b| b.handoffs));
     // kai runs on opus, a frontier model: its ladder is its own model; the others get none
     assert_eq!(
         fake.get(&home.bot("kai"), "plugins.entries.boopis.settings.ladder"),
@@ -420,6 +510,7 @@ async fn a_governed_bot_turned_on_later_stays_governed() {
         Ask {
             governed: true,
             fresh: false,
+            ..Ask::default()
         },
     )
     .await
@@ -474,6 +565,7 @@ async fn a_new_bot_gets_everything_and_its_seat() {
         Ask {
             governed: false,
             fresh: true,
+            ..Ask::default()
         },
     )
     .await
@@ -814,4 +906,291 @@ async fn bots_that_appear_together_share_one_restart() {
     }
     tokio::time::sleep(std::time::Duration::from_millis(250)).await;
     assert_eq!(restarts(), 1);
+}
+
+#[tokio::test]
+async fn an_older_plugin_without_the_hand_off_skill_is_said_and_tried_again_next_start() {
+    let fake = Fake::new();
+    fake.no_guide
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    let first = repair(&fake, &layout).await.unwrap();
+    assert_eq!(first.bots.len(), 6);
+    for b in &first.bots {
+        assert!(!b.handoffs);
+        assert_eq!(b.problems.len(), 1, "{:?}", b.problems);
+        assert!(
+            b.problems[0].starts_with("the skill for handing work over:"),
+            "{:?}",
+            b.problems
+        );
+    }
+    // the plugin is updated: the next start looks at every bot again and gives it the skill
+    fake.no_guide
+        .store(false, std::sync::atomic::Ordering::SeqCst);
+    let second = repair(&fake, &layout).await.unwrap();
+    assert_eq!(second.bots.len(), 6);
+    assert!(
+        second
+            .bots
+            .iter()
+            .all(|b| b.handoffs && b.problems.is_empty())
+    );
+    assert!(repair(&fake, &layout).await.unwrap().bots.is_empty());
+}
+
+/// The automatic update replaced the plugin under the running app after it waited for the bots: the start-up repair had asked
+/// the earlier plugin, which has no `bots.guide`. `repair_once` does nothing more in that run; `repair_again` (the host calls it
+/// once such an update is done) gives every bot the skill from the new plugin, so the UI keeps no retry of its own.
+#[tokio::test]
+async fn the_repair_runs_again_after_an_update_that_replaced_the_plugin_under_it() {
+    use std::sync::atomic::Ordering;
+    let fake = std::sync::Arc::new(Fake::new());
+    fake.no_guide.store(true, Ordering::SeqCst);
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    let service = std::sync::Arc::new(engine::Service::with_engine(fake.clone()));
+    let wait_for = |what: &dyn Fn() -> bool| {
+        for _ in 0..250 {
+            if what() {
+                return true;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        false
+    };
+    service.repair_once(layout.clone());
+    assert!(
+        wait_for(&|| skills::Given::load(&home.root).has("kai")),
+        "the first repair ran"
+    );
+    assert!(fake.guided.lock().unwrap().is_empty());
+    // the new plugin is in: once per run means once
+    fake.no_guide.store(false, Ordering::SeqCst);
+    service.repair_once(layout.clone());
+    std::thread::sleep(std::time::Duration::from_millis(200));
+    assert!(fake.guided.lock().unwrap().is_empty());
+    service.repair_again(layout);
+    assert!(
+        wait_for(&|| fake.guided.lock().unwrap().len() == 6),
+        "{:?}",
+        fake.guided.lock().unwrap()
+    );
+}
+
+#[tokio::test]
+async fn a_bot_gets_the_default_skills_once_and_keeps_what_was_switched_on_since() {
+    let fake = std::sync::Arc::new(Fake::new());
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    repair(fake.as_ref(), &layout).await.unwrap();
+    assert!(skills::Given::load(&home.root).has("kai"));
+    // a team file switches arxiv back on for kai; the app then sees kai as new (made elsewhere) and prepares it fresh
+    fake.config_set(
+        &home.bot("kai"),
+        "skills.disabled",
+        r#"["apple-notes","imessage"]"#,
+    )
+    .await
+    .unwrap();
+    let service = std::sync::Arc::new(engine::Service::with_engine(fake.clone()));
+    let done = service.prepare(&layout, "kai", true).await.unwrap();
+    assert!(done.skills_off.is_empty() && !done.skills_given, "{done:?}");
+    assert_eq!(
+        fake.get(&home.bot("kai"), "skills.disabled"),
+        Some(json!(["apple-notes", "imessage"]))
+    );
+    // a bot made now gets them, once, and is remembered
+    let bot = home.bot("sol");
+    std::fs::create_dir_all(bot.join("skills/research/arxiv")).unwrap();
+    std::fs::write(
+        bot.join("skills/research/arxiv/SKILL.md"),
+        "---\nname: arxiv\n---\n",
+    )
+    .unwrap();
+    std::fs::write(
+        bot.join("skills/.bundled_manifest"),
+        "arxiv:1f2a\ngrounded-citations:9f8d\n",
+    )
+    .unwrap();
+    std::fs::write(bot.join("config.yaml"), "").unwrap();
+    fake.seed(
+        &bot,
+        json!({"model": {"provider": SUB, "default": "sonnet"}}),
+    );
+    let done = service.prepare(&layout, "sol", true).await.unwrap();
+    assert_eq!(done.skills_off, vec!["arxiv".to_owned()]);
+    assert!(done.skills_given);
+    assert!(skills::Given::load(&home.root).has("sol"));
+    // a later change (its model) does not touch its skills
+    let again = service.prepare(&layout, "sol", false).await.unwrap();
+    assert!(again.skills_off.is_empty());
+}
+
+#[tokio::test]
+async fn a_skill_for_another_os_that_arrives_later_is_switched_off_at_the_next_preparation() {
+    let fake = Fake::new();
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    repair(&fake, &layout).await.unwrap();
+    // an engine update brings a new bundled skill made for macOS into moss's home; the bot had its default skills already
+    let moss = home.bot("moss");
+    std::fs::create_dir_all(moss.join("skills/apple/findmy")).unwrap();
+    std::fs::write(
+        moss.join("skills/apple/findmy/SKILL.md"),
+        "---\nplatforms: [macos]\n---\n",
+    )
+    .unwrap();
+    let mut view = RootView::read(&fake, &home.root).await.unwrap();
+    let done = prepare(&fake, &layout, &mut view, "moss", Ask::default())
+        .await
+        .unwrap();
+    assert_eq!(done.skills_off, vec!["findmy".to_owned()]);
+    assert!(!done.skills_given, "not asked for the default index again");
+    assert_eq!(
+        fake.get(&moss, "skills.disabled"),
+        Some(json!(["apple-notes", "arxiv", "imessage", "findmy"]))
+    );
+}
+
+#[tokio::test]
+async fn the_paths_a_bots_instructions_name_that_are_gone_are_listed_at_every_start() {
+    let fake = Fake::new();
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    let gone = home.root.join("nowhere/notes.md");
+    std::fs::write(
+        home.bot("kai").join("SOUL.md"),
+        format!("Read {} first.", gone.display()),
+    )
+    .unwrap();
+    let first = repair(&fake, &layout).await.unwrap();
+    assert_eq!(
+        first.soul_missing.get("kai"),
+        Some(&vec![gone.display().to_string()])
+    );
+    assert!(
+        first.bots.iter().all(|b| b.problems.is_empty()),
+        "not a problem: the bot still works"
+    );
+    // a start that prepares nobody still says it
+    let next = repair(&fake, &layout).await.unwrap();
+    assert!(next.bots.is_empty());
+    assert_eq!(next.soul_missing.len(), 1);
+}
+
+#[tokio::test]
+async fn a_bot_on_a_board_gets_kanban_once_and_keeps_what_the_owner_chose() {
+    let fake = Fake::new();
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    // the Paper Past board, its group with kai and nina, and a card for hex
+    *fake.boards.lock().unwrap() = vec![("paper-past".into(), "Paper Past".into())];
+    *fake.rooms.lock().unwrap() =
+        json!([{"name": "paper past", "members": [{"profile": "kai"}, {"profile": "nina"}]}]);
+    fake.assignees
+        .lock()
+        .unwrap()
+        .insert("paper-past".into(), vec!["hex".into()]);
+    let done = repair(&fake, &layout).await.unwrap();
+    assert!(done.problems.is_empty(), "{:?}", done.problems);
+    let kanban = |name: &str| fake.toolsets.lock().unwrap()[name].get("kanban").copied();
+    for name in ["kai", "nina", "hex"] {
+        assert_eq!(kanban(name), Some(true), "{name}");
+    }
+    assert_eq!(kanban("moss"), Some(false));
+    // the owner switches kanban off for kai; moss is given a card: the next start gives moss kanban and leaves kai's off
+    fake.toolsets
+        .lock()
+        .unwrap()
+        .get_mut("kai")
+        .unwrap()
+        .insert("kanban".into(), false);
+    fake.assignees
+        .lock()
+        .unwrap()
+        .get_mut("paper-past")
+        .unwrap()
+        .push("moss".into());
+    let next = repair(&fake, &layout).await.unwrap();
+    assert_eq!(
+        next.bots
+            .iter()
+            .map(|b| b.name.as_str())
+            .collect::<Vec<_>>(),
+        ["moss"]
+    );
+    assert_eq!(next.bots[0].toolsets_on, vec!["kanban".to_owned()]);
+    assert!(next.bots[0].toolsets_off.is_empty());
+    assert_eq!(kanban("moss"), Some(true));
+    assert_eq!(kanban("kai"), Some(false), "what the owner chose stays");
+    let given = toolsets::Given::load(&home.root);
+    assert_eq!(given.defaults.len(), 6);
+    assert_eq!(
+        given.kanban.into_iter().collect::<Vec<_>>(),
+        ["hex", "kai", "moss", "nina"]
+    );
+}
+
+#[tokio::test]
+async fn when_the_boards_cannot_be_read_kanban_is_left_as_it_is() {
+    let mut fake = Fake::new();
+    fake.boards_fail = true;
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    let done = repair(&fake, &layout).await.unwrap();
+    assert!(
+        done.problems
+            .iter()
+            .any(|p| p.starts_with("which bots are on a board:")),
+        "{:?}",
+        done.problems
+    );
+    let kai = fake.toolsets.lock().unwrap()["kai"].clone();
+    assert_eq!(kai.get("kanban"), None, "neither switched on nor off");
+    assert_eq!(kai.get("file"), Some(&true));
+    // the boards read again, kai is on one: it gets kanban then
+    fake.boards_fail = false;
+    *fake.boards.lock().unwrap() = vec![("ops".into(), "Ops".into())];
+    fake.assignees
+        .lock()
+        .unwrap()
+        .insert("ops".into(), vec!["kai".into()]);
+    repair(&fake, &layout).await.unwrap();
+    assert_eq!(
+        fake.toolsets.lock().unwrap()["kai"].get("kanban"),
+        Some(&true)
+    );
+}
+
+#[tokio::test]
+async fn a_project_folder_that_is_not_there_is_a_problem_at_every_start() {
+    let fake = Fake::new();
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    fake.project_problems.lock().unwrap().insert(
+        "iris".into(),
+        "/home/me/repos/gone is not a folder on this computer".into(),
+    );
+    let done = repair(&fake, &layout).await.unwrap();
+    let iris = done.bots.iter().find(|b| b.name == "iris").unwrap();
+    assert_eq!(
+        iris.problems,
+        vec!["its project folder: /home/me/repos/gone is not a folder on this computer".to_owned()]
+    );
+    // not marked prepared: the next start says it again, until the folder is fixed
+    let next = repair(&fake, &layout).await.unwrap();
+    assert_eq!(
+        next.bots
+            .iter()
+            .map(|b| b.name.as_str())
+            .collect::<Vec<_>>(),
+        ["iris"]
+    );
+    fake.project_problems.lock().unwrap().clear();
+    let fixed = repair(&fake, &layout).await.unwrap();
+    assert_eq!(fixed.bots.len(), 1, "looked at once more, and fine");
+    assert!(fixed.bots[0].problems.is_empty());
+    assert!(repair(&fake, &layout).await.unwrap().bots.is_empty());
 }
