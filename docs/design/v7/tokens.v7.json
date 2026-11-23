@@ -1,0 +1,1138 @@
+{
+  "$meta": {
+    "name": "boopis design system v7 (proposal)",
+    "status": "proposal for the owner; nothing in the app reads this file yet",
+    "date": "2026-11-23",
+    "source": "Grok Bot desktop 1.2.3 measured values (grok-package/grokbot-design/tokens.json, Part A section 2) as the starting values; boopis keeps its character (orb2 orbs, the wordmark and logo, the bots' colours, its vocabulary) and its accessibility floors",
+    "format": "each token: css (the custom property the kit reads), dark and light (or value when it does not change with the theme), v6 (what it replaces), grok (the measured source), use. Options the owner picks are in options; defaults below are the recommended pick of each.",
+    "modes": [
+      "dark",
+      "light"
+    ],
+    "generator": "docs/design/v7/build-v7-css.mjs writes tokens.v7.css from this file"
+  },
+  "color": {
+    "ink": {
+      "css": "--ink",
+      "dark": "#f5f5f5",
+      "light": "#1c1c1c",
+      "v6": "--text (per preset)",
+      "grok": "--sand-text-primary",
+      "use": "the one neutral; every text, line and fill below is this ink at an alpha step"
+    },
+    "bg-sidebar": {
+      "css": "--bg-1",
+      "dark": "#0e0e0e",
+      "light": "#f5f5f5",
+      "v6": "--bg-1 frame",
+      "grok": "--sand-bg-sidebar",
+      "use": "the sidebar and the rail; the deepest surface"
+    },
+    "bg-chrome": {
+      "css": "--bg-2",
+      "dark": "#121212",
+      "light": "#fcfcfc",
+      "v6": "--bg-2 ground",
+      "grok": "--sand-bg-chrome",
+      "use": "the window and the ground the work sits on; the floating chrome sits on it"
+    },
+    "bg-pane": {
+      "css": "--bg-pane",
+      "dark": "#161616",
+      "light": "#ffffff",
+      "v6": "new (the open right panel was --bg-1)",
+      "grok": "--sand-bg-pane",
+      "use": "the details panel and other side panes that push the work"
+    },
+    "bg-elevated": {
+      "css": "--bg-3",
+      "dark": "#1f1f1f",
+      "light": "#ffffff",
+      "v6": "--bg-3 raised",
+      "grok": "--sand-bg-elevated",
+      "use": "cards, settings cards, menus, popovers, dialogs, the composer, tooltips, toasts, floating chrome buttons"
+    },
+    "bg-elevated-hover": {
+      "css": "--bg-4",
+      "dark": "#2c2c2c",
+      "light": "#f1f1f1",
+      "v6": "--bg-4 pressed",
+      "grok": "--sand-bg-elevated-hover",
+      "use": "a hovered row on an elevated surface; pressed fills; the scrollbar thumb"
+    },
+    "bg-well": {
+      "css": "--bg-0",
+      "dark": "#171717",
+      "light": "#f7f7f7",
+      "v6": "--bg-0 inset (cards, fields, wells)",
+      "grok": "code box of the approval card (sampled)",
+      "use": "wells only: code, terminal output, diffs. Cards are no longer inset (R-colour-4 changes)"
+    },
+    "chip": {
+      "css": "--chip",
+      "dark": "#f5f5f514",
+      "light": "#1c1c1c0f",
+      "v6": "--chip solid",
+      "grok": "inline code in bubbles (sampled)",
+      "use": "inline code chip"
+    },
+    "dock": {
+      "css": "--dock-bg",
+      "value": "#000000",
+      "v6": "--dock-bg",
+      "grok": "none",
+      "use": "owner decision kept: the dock is pitch black in both themes and is never themeable"
+    },
+    "text-strong": {
+      "css": "--text-strong",
+      "dark": "#f5f5f5",
+      "light": "#1c1c1c",
+      "v6": "--text-strong",
+      "grok": "text-primary 100%",
+      "use": "names, titles, the current row; equal to --text in v7 (kept as a name so modules need no change)"
+    },
+    "text": {
+      "css": "--text",
+      "dark": "#f5f5f5",
+      "light": "#1c1c1c",
+      "v6": "--text",
+      "grok": "text-primary 100%",
+      "use": "body, labels, message text"
+    },
+    "text-dim": {
+      "css": "--text-dim",
+      "dark": "#f5f5f5a8",
+      "light": "#1c1c1cad",
+      "v6": "--text-dim",
+      "grok": "text-secondary 66% / 68%",
+      "use": "everything secondary a person must read: descriptions, timestamps, section headings, meta, state words, costs. 7.3:1 on elevated (dark), 5.4:1 (light)"
+    },
+    "text-quiet": {
+      "css": "--text-quiet",
+      "dark": "#f5f5f58a",
+      "light": "#1c1c1c8f",
+      "v6": "--text-quiet (meta, 4.5:1)",
+      "grok": "text-tertiary 54% / 56%",
+      "use": "placeholders and labelling glyphs only. Never meta a person must read: it is 3.7:1 in light (R-a11y-8). Meta moves to --text-dim"
+    },
+    "text-faint": {
+      "css": "--text-faint",
+      "dark": "#f5f5f561",
+      "light": "#1c1c1c66",
+      "v6": "--text-faint",
+      "grok": "text-quaternary 38% / 40%",
+      "use": "disabled and decoration only"
+    },
+    "icon": {
+      "css": "--icon",
+      "dark": "#f5f5f5e6",
+      "light": "#1c1c1ce6",
+      "v6": "--icon",
+      "grok": "--sand-icon-primary 90%",
+      "use": "glyphs in icon buttons and rows"
+    },
+    "icon-quiet": {
+      "css": "--icon-quiet",
+      "dark": "#f5f5f58a",
+      "light": "#1c1c1c8f",
+      "v6": "--icon-quiet",
+      "grok": "icon in the composer (54%)",
+      "use": "window controls, the composer's + and mic, labelling glyphs; 3:1 floor holds (5.4 dark, 3.7 light)"
+    },
+    "icon-off": {
+      "css": "--icon-off",
+      "dark": "#f5f5f54d",
+      "light": "#1c1c1c4d",
+      "v6": "--icon-off",
+      "grok": "--sand-icon-quaternary 30%",
+      "use": "disabled glyphs"
+    },
+    "mark-off": {
+      "css": "--mark-off",
+      "dark": "#f5f5f561",
+      "light": "#1c1c1c6b",
+      "v6": "--mark-off (3:1)",
+      "grok": "none",
+      "use": "inactive non-text marks (page dots, empty rings): 3.36:1 dark, 3.1:1 light, kept for WCAG 1.4.11"
+    },
+    "fill-quaternary": {
+      "css": "--fill-4",
+      "dark": "#f5f5f505",
+      "light": "#1c1c1c05",
+      "v6": "new",
+      "grok": "--sand-bg-quaternary",
+      "use": "the faintest wash: skeleton rest, disabled secondary"
+    },
+    "fill-secondary": {
+      "css": "--fill-2",
+      "dark": "#f5f5f50a",
+      "light": "#1c1c1c0f",
+      "v6": "new",
+      "grok": "--sand-bg-secondary 4%",
+      "use": "the composer's round buttons, chips at rest, the agent bubble, letter tiles"
+    },
+    "hover": {
+      "css": "--hover",
+      "dark": "#f5f5f50f",
+      "light": "#1c1c1c0f",
+      "v6": "--hover 4.5%",
+      "grok": "--sand-bg-hover 6%",
+      "use": "row, icon button and chip hover"
+    },
+    "current": {
+      "css": "--current",
+      "dark": "#f5f5f514",
+      "light": "#1c1c1c14",
+      "v6": "--current 8.5%",
+      "grok": "--sand-bg-active 8%",
+      "use": "the selected row, the active nav item, the current rail tile, the highlighted palette row"
+    },
+    "fill-active": {
+      "css": "--fill-active",
+      "dark": "#f5f5f533",
+      "light": "#1c1c1c33",
+      "v6": "new",
+      "grok": "--sand-bg-secondary-active 20%",
+      "use": "a pressed secondary control"
+    },
+    "hair": {
+      "css": "--hair",
+      "dark": "#f5f5f50a",
+      "light": "#1c1c1c14",
+      "v6": "--hair 7.5%",
+      "grok": "--sand-border-quaternary-translucent",
+      "use": "dividers between groups, the agent bubble's ring"
+    },
+    "line": {
+      "css": "--line",
+      "dark": "#f5f5f50f",
+      "light": "#1c1c1c1f",
+      "v6": "--line 15%",
+      "grok": "--sand-border-tertiary-translucent 6%",
+      "use": "the outline of every elevated thing: floating buttons, menus, dialogs, the composer at rest"
+    },
+    "line-strong": {
+      "css": "--line-strong",
+      "dark": "#f5f5f51a",
+      "light": "#1c1c1c2e",
+      "v6": "--line-strong 26%",
+      "grok": "--sand-border-secondary-translucent 10%",
+      "use": "hovered outlines, the composer focused, attachment cards"
+    },
+    "line-field": {
+      "css": "--line-field",
+      "dark": "#f5f5f561",
+      "light": "#1c1c1c6b",
+      "v6": "--line-field 42%",
+      "grok": "--sand-border-primary-translucent 22% (fails 3:1)",
+      "use": "a text field's outline: kept at 3:1 (WCAG 1.4.11); Grok's 22% is the one place v7 does not follow Grok"
+    },
+    "float-line": {
+      "css": "--float-line",
+      "dark": "#f5f5f50f",
+      "light": "#1c1c1c0d",
+      "v6": "--line on floating surfaces",
+      "grok": "dark 6% hairline; light: the shadow's 1px ring, almost nothing",
+      "use": "the outline of menus, popovers, tooltips, toasts, dialogs and settings cards: in light the shadow carries the edge (light-shadow option A; B 12%, C 18%)"
+    },
+    "composer-line": {
+      "css": "--composer-line",
+      "dark": "#f5f5f51a",
+      "light": "#1c1c1c14",
+      "v6": "--hair at rest, --line-field focused",
+      "grok": "composer hairline 10% (22% focused)",
+      "use": "the composer's outline at rest; focused it takes --line-field"
+    },
+    "specular": {
+      "css": "--spec",
+      "dark": "#ffffff08",
+      "light": "#ffffff00",
+      "v6": "new",
+      "grok": "--sand-specular-secondary 3%",
+      "use": "the inset top and bottom light on elevated surfaces and the agent bubble, dark only"
+    },
+    "specular-strong": {
+      "css": "--spec-strong",
+      "dark": "#ffffff1f",
+      "light": "#ffffff00",
+      "v6": "new",
+      "grok": "--sand-specular-primary 12%",
+      "use": "the top-most layer's 1px top highlight (Grok gap 9: stacked dialogs)"
+    },
+    "selected": {
+      "css": "--selected",
+      "dark": "#f5f5f5",
+      "light": "#1c1c1c",
+      "v6": "--selected bone",
+      "grok": "--sand-bg-primary",
+      "use": "the primary pill, the send button, the active filter chip: inverted ink"
+    },
+    "selected-hover": {
+      "css": "--selected-hover",
+      "dark": "#dbdbdb",
+      "light": "#333333",
+      "v6": "new",
+      "grok": "--sand-bg-primary-hover",
+      "use": "primary hover"
+    },
+    "text-on-selected": {
+      "css": "--text-on-light",
+      "dark": "#121212",
+      "light": "#fcfcfc",
+      "v6": "--text-on-light",
+      "grok": "--sand-text-inverted",
+      "use": "ink on the primary fill"
+    },
+    "selected-disabled": {
+      "css": "--selected-off",
+      "dark": "#f5f5f521",
+      "light": "#1c1c1c21",
+      "v6": "--bg-4",
+      "grok": "--sand-bg-primary-disabled 13%",
+      "use": "a disabled primary (its text at 30%)"
+    },
+    "accent": {
+      "css": "--accent",
+      "dark": "#116dd2",
+      "light": "#1680f3",
+      "v6": "--brass (per preset)",
+      "grok": "--sand-bg-accent-primary",
+      "use": "option A (recommended): the switch when on, the chosen letter tile, the progress fill. A fill, never text"
+    },
+    "accent-text": {
+      "css": "--accent-text",
+      "dark": "#4d9bff",
+      "light": "#0b6dd3",
+      "v6": "none (brass was never text)",
+      "grok": "--sand-text-accent-primary",
+      "use": "links, the info banner's text: 6.6:1 dark, 5.1:1 light"
+    },
+    "accent-soft": {
+      "css": "--accent-soft",
+      "dark": "#1884fc12",
+      "light": "#1680f312",
+      "v6": "--brass-soft",
+      "grok": "--sand-bg-accent-secondary 7%",
+      "use": "the info banner, text selection"
+    },
+    "on-accent": {
+      "css": "--on-accent",
+      "value": "#ffffff",
+      "v6": "--text-on-light on brass marks",
+      "grok": "white on the blue switch and letter tile",
+      "use": "the knob of a switch that is on, the letter of a chosen option; under accent option B it becomes the inverted ink"
+    },
+    "focus": {
+      "css": "--focus",
+      "dark": "#4d9bff",
+      "light": "#0b6dd3",
+      "v6": "--focus (brass)",
+      "grok": "none (Grok shows no visible ring)",
+      "use": "the 2px focus ring: kept (R-focus-1, WCAG 2.4.7), in the accent text colour"
+    },
+    "attention": {
+      "css": "--red",
+      "dark": "#cf2b35",
+      "light": "#cf2b35",
+      "v6": "--red #e5484d",
+      "grok": "--sand-bg-danger-primary",
+      "use": "option B of the attention board (recommended): what the person owes, as dots, stamps, the 'you' capsule's ring; also failed and a destructive confirm"
+    },
+    "attention-text": {
+      "css": "--red-text",
+      "dark": "#ff6463",
+      "light": "#c4232f",
+      "v6": "--red-text #f0646a",
+      "grok": "--sand-text-danger-primary",
+      "use": "'needs you', 'failed' and error lines: 6.5:1 dark, 5.6:1 light"
+    },
+    "attention-soft": {
+      "css": "--red-soft",
+      "dark": "#fc2c3e12",
+      "light": "#cf2b3512",
+      "v6": "--red-soft 14%",
+      "grok": "--sand-bg-danger-secondary 7%",
+      "use": "behind a message addressed to you"
+    },
+    "warn": {
+      "css": "--warn",
+      "dark": "#c8770c",
+      "light": "#c8770c",
+      "v6": "--warn (customizer only)",
+      "grok": "--sand-bg-warn-primary",
+      "use": "option A of the attention board: Grok's 'needs you' dot and words; under option B, a warning that is not owed"
+    },
+    "warn-text": {
+      "css": "--warn-text",
+      "dark": "#e28600",
+      "light": "#b25e00",
+      "v6": "new",
+      "grok": "--sand-text-warn-primary",
+      "use": "warning words: 6.8:1 dark, 4.6:1 light"
+    },
+    "ok": {
+      "css": "--ok",
+      "dark": "#0e9f5a",
+      "light": "#0e9f5a",
+      "v6": "--ok",
+      "grok": "--sand-bg-success-primary",
+      "use": "the online dot, a connected mark, a passed gate's dot"
+    },
+    "ok-text": {
+      "css": "--ok-text",
+      "dark": "#00ba69",
+      "light": "#087a43",
+      "v6": "--ok as text",
+      "grok": "--sand-text-success-primary",
+      "use": "'Connected', 'passed'"
+    },
+    "add": {
+      "css": "--add",
+      "dark": "#00ba69",
+      "light": "#087a43",
+      "v6": "--add",
+      "grok": "success text",
+      "use": "added lines and counts"
+    },
+    "del": {
+      "css": "--del",
+      "dark": "#ff6463",
+      "light": "#c4232f",
+      "v6": "--del",
+      "grok": "danger text",
+      "use": "removed lines and counts"
+    },
+    "bubble-agent": {
+      "css": "--bubble-agent",
+      "dark": "#f5f5f50a",
+      "light": "#1c1c1c0f",
+      "v6": "new (answers had no surface)",
+      "grok": "--sand-fill-bubble-agent",
+      "use": "a bot's message; dark adds the specular ring and a 3% top gradient"
+    },
+    "bubble-user": {
+      "css": "--bubble-user",
+      "dark": "#f5f5f52e",
+      "light": "#1c1c1c",
+      "v6": "--bg-3 (the request card)",
+      "grok": "--sand-fill-bubble-user",
+      "use": "your message: 18% ink in dark, solid ink in light"
+    },
+    "bubble-user-text": {
+      "css": "--bubble-user-text",
+      "dark": "#f5f5f5",
+      "light": "#fcfcfc",
+      "v6": "--text",
+      "grok": "--sand-transcript-bubble-user-text",
+      "use": "the text in your message"
+    },
+    "find": {
+      "css": "--find",
+      "dark": "#ffd60a38",
+      "light": "#ffd60a59",
+      "v6": "brass underline",
+      "grok": "find highlight 22% / current 32%",
+      "use": "find-in-chat matches; the current match one step stronger"
+    },
+    "scrim": {
+      "css": "--scrim",
+      "dark": "#000000b2",
+      "light": "#00000080",
+      "v6": "--scrim 56-60%",
+      "grok": "--sand-bg-scrim",
+      "use": "behind dialogs and the palette; never blurred"
+    }
+  },
+  "font": {
+    "sans": {
+      "css": "--sans",
+      "value": "'Geist', system-ui, sans-serif",
+      "v6": "Libre Franklin (Card catalog, Bone), Geist (Graphite)",
+      "grok": "XVF (proprietary, not copied)",
+      "use": "option A of the font board (recommended): Geist, SIL OFL 1.1, already bundled (@fontsource/geist). B: Inter (OFL 1.1). C: Figtree (OFL 1.1)"
+    },
+    "mono": {
+      "css": "--mono",
+      "value": "'Geist Mono', ui-monospace, monospace",
+      "v6": "IBM Plex Mono / Geist Mono",
+      "grok": "XVF Mono",
+      "use": "code, paths, numbers that line up, keys. No longer for state words or model names (R-type-1 changes)"
+    },
+    "tracking": {
+      "css": "--track",
+      "value": "0.01em",
+      "v6": "0 sans, -0.01em mono",
+      "grok": "+0.01em everywhere, +0.015em at 13",
+      "use": "letter-spacing of every sans step; --track-s 0.015em at 13px"
+    },
+    "tracking-s": {
+      "css": "--track-s",
+      "value": "0.015em",
+      "v6": "new",
+      "grok": "sm step",
+      "use": "13px text"
+    },
+    "weights": {
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "use": "400 nearly everything (buttons, tabs, menus, rows included); 500 page titles and a bot's name in the title pill; 600 dialog titles and a question card's question. Hierarchy by alpha, not weight"
+    },
+    "scale": {
+      "fs-2xs": {
+        "css": "--fs-2xs",
+        "size": 11,
+        "line": 16,
+        "v6": "11/1.45 meta",
+        "grok": "xxs",
+        "use": "badges, key chips, mono meta"
+      },
+      "fs-xs": {
+        "css": "--fs-xs",
+        "size": 12,
+        "line": 16,
+        "v6": "12/1.35-1.5",
+        "grok": "xs",
+        "use": "timestamps, section headings, tooltips, captions, state words"
+      },
+      "fs-s": {
+        "css": "--fs-s",
+        "size": 13,
+        "line": 18,
+        "v6": "13/1.35",
+        "grok": "sm (ls .015em)",
+        "use": "settings rows, inputs, row subtitles, palette subtitles"
+      },
+      "fs-m": {
+        "css": "--fs-m",
+        "size": 14,
+        "line": 20,
+        "v6": "14/1.6 reading",
+        "grok": "base",
+        "use": "menus, buttons, the composer, row names, settings labels"
+      },
+      "fs-l": {
+        "css": "--fs-l",
+        "size": 15,
+        "line": 22,
+        "v6": "16/1.2 title",
+        "grok": "lg",
+        "use": "messages (prose line 22) and dialog titles (600)"
+      },
+      "fs-xl": {
+        "css": "--fs-xl",
+        "size": 17,
+        "line": 24,
+        "v6": "20/1.2 display",
+        "grok": "xl",
+        "use": "a page title (500), the bot name field"
+      },
+      "fs-2xl": {
+        "css": "--fs-2xl",
+        "size": 22,
+        "line": 28,
+        "v6": "new",
+        "grok": "xxl",
+        "use": "first-run headings"
+      },
+      "fs-3xl": {
+        "css": "--fs-3xl",
+        "size": 26,
+        "line": 32,
+        "v6": "new",
+        "grok": "xxxl",
+        "use": "the first-run hero only"
+      }
+    }
+  },
+  "radius": {
+    "pill": {
+      "css": "--r-pill",
+      "value": 9999,
+      "v6": "--r-pill (chips only)",
+      "grok": "buttons, chips, toggles, icon buttons, title pill",
+      "use": "every button, icon button, chip, segmented track and thumb, switch, the title pill, the search pill, the one-line composer, avatars"
+    },
+    "composer": {
+      "css": "--r-composer",
+      "value": 22,
+      "v6": "--r-m 20",
+      "grok": "composer 22 (44 tall)",
+      "use": "the composer box (a pill at one line, 22 as it grows)"
+    },
+    "bubble": {
+      "css": "--r-bubble",
+      "value": 18,
+      "v6": "--r-m 20 (request card)",
+      "grok": "chat bubble 18",
+      "use": "messages, question cards, inline cards in a conversation (approval, connector, plan, file)"
+    },
+    "dialog-form": {
+      "css": "--r-dialog",
+      "value": 20,
+      "v6": "--r-l 30",
+      "grok": "small form dialog 20",
+      "use": "form dialogs (new bot, confirm, a long-text editor), 440 to 488 wide"
+    },
+    "menu": {
+      "css": "--r-menu",
+      "value": 16,
+      "v6": "--r-m 20",
+      "grok": "menu 16",
+      "use": "menus, popovers, the listbox"
+    },
+    "card": {
+      "css": "--r-card",
+      "value": 14,
+      "v6": "--r-m 20 (cards), --r-l 30 (dialogs, palette)",
+      "grok": "settings card 14, large dialog 14, palette 14",
+      "use": "settings cards, the large dialogs (Settings, Store, Keyboard), the palette, kanban cards"
+    },
+    "tile": {
+      "css": "--r-tile",
+      "value": 12,
+      "v6": "--r-s 12",
+      "grok": "sidebar agent item 12",
+      "use": "the rail tile, the expanded sidebar row, item marks at 40"
+    },
+    "field": {
+      "css": "--r-field",
+      "value": 10,
+      "v6": "--r-s 12",
+      "grok": "select trigger 10, menu row 10, toast 10, input 8",
+      "use": "fields, selects, a menu row, toasts, the info banner, wells"
+    },
+    "nav": {
+      "css": "--r-nav",
+      "value": 8,
+      "v6": "--r-s 12",
+      "grok": "settings nav row 8, search-menu row 8",
+      "use": "settings nav rows, palette rows, key chips in a field"
+    },
+    "tip": {
+      "css": "--r-tip",
+      "value": 6,
+      "v6": "--r-s 12",
+      "grok": "tooltip 6",
+      "use": "tooltips, the question card's letter tile"
+    },
+    "kbd": {
+      "css": "--r-xs",
+      "value": 4,
+      "v6": "--r-xs 6",
+      "grok": "key chip 4",
+      "use": "key chips in running text, inline code"
+    },
+    "slab": {
+      "css": "--r-slab",
+      "value": 30,
+      "v6": "--r-l 30",
+      "grok": "none",
+      "use": "the dock's slab and flares and the approved notch's shape only: kept so the notch spec (section 2.1) and the dock stay as approved"
+    },
+    "floor": {
+      "css": "--r-floor",
+      "value": 6,
+      "v6": "--r-floor 8",
+      "grok": "the smallest nested radius in Grok (menu 16, inset 6, row 10; palette 14, 6, 8)",
+      "use": "the smallest inner radius of a nested corner"
+    },
+    "smoothing": {
+      "css": "--corner-smoothing",
+      "value": 0.6,
+      "v6": "0.6 (owner decision)",
+      "grok": "plain arcs",
+      "use": "option B of the radius board (recommended): boopis's continuous corner kept at Grok's radii. Option A sets 0 (Grok's plain arc)"
+    }
+  },
+  "nesting": {
+    "rule": "unchanged from v6 8.2: --r-in = max(--r-floor, --r-outer - --pad); a piece too small to be that round moves in until its curve shares the corner's centre (corners.ts); a round piece in a pill stays a pill. Grok's own numbers already satisfy it, which is why v7 can keep the rule and take Grok's values",
+    "pads": {
+      "menu": {
+        "css": "--pad-menu",
+        "value": 6,
+        "outer": 16,
+        "inner": 10,
+        "grok": "menu 16, inset 6, row 10"
+      },
+      "palette": {
+        "css": "--pad-palette",
+        "value": 6,
+        "outer": 14,
+        "inner": 8,
+        "grok": "search menu 14, inset 6, row 8"
+      },
+      "composer": {
+        "css": "--composer-pad",
+        "value": 8,
+        "outer": 22,
+        "inner": 14,
+        "grok": "44 tall, 28 buttons: inset 8, a circle"
+      },
+      "dialog": {
+        "css": "--pad-dialog",
+        "value": 10,
+        "outer": 20,
+        "inner": 10,
+        "grok": "the close button (28) 10 in from a 20 form dialog"
+      },
+      "card": {
+        "css": "--pad-card",
+        "value": 8,
+        "outer": 14,
+        "inner": 6,
+        "grok": "settings card rows are full-bleed; a nested piece takes 6"
+      },
+      "bubble": {
+        "css": "--pad-bubble",
+        "value": 8,
+        "outer": 18,
+        "inner": 10,
+        "grok": "approval card: code box 10 inside an 18 card"
+      },
+      "seg": {
+        "css": "--pad-seg",
+        "value": 2,
+        "outer": "pill",
+        "inner": "pill",
+        "grok": "segmented: pill in pill"
+      },
+      "tile": {
+        "css": "--pad-tile",
+        "value": 9,
+        "outer": 12,
+        "inner": "orb (circle)",
+        "grok": "54 tile, 9 padding, 36 character"
+      },
+      "dock": {
+        "css": "--pad-dock",
+        "value": 12,
+        "outer": 30,
+        "inner": 18,
+        "grok": "none (kept from the notch spec)"
+      }
+    }
+  },
+  "space": {
+    "grid": 4,
+    "steps": {
+      "--sp-1": 4,
+      "--sp-2": 8,
+      "--sp-3": 12,
+      "--sp-4": 16,
+      "--sp-5": 24,
+      "--sp-6": 32,
+      "--sp-7": 48
+    },
+    "named": {
+      "bubble": "7 12 (Grok bubble padding)",
+      "bubble-gap": "6 between consecutive bubbles of one sender, 16 between senders, 24 to a time separator",
+      "menu-row": "32 tall, padding 6 8, gap 6, inset 6",
+      "button": "padding 8 16 (36), 6 14 (32 in cards)",
+      "chip": "padding 5 14, 28 tall",
+      "settings-row": "16 horizontal, 44 to 52 tall by content; card padding 8 0",
+      "settings-nav": "32 tall, padding 7 9",
+      "palette-row": "inset 8, leading slot 24, gap 10",
+      "title-pill": "padding 7.5 13.5 7.5 7.5, gap 8",
+      "tooltip": "4 6",
+      "toast": "8 12"
+    }
+  },
+  "size": {
+    "row-h": {
+      "css": "--row-h",
+      "value": 32,
+      "v6": 30,
+      "grok": "menu row 32, nav row 32"
+    },
+    "row-h-2": {
+      "css": "--row-h-2",
+      "value": 54,
+      "v6": 44,
+      "grok": "sidebar agent item 54"
+    },
+    "ctl": {
+      "css": "--ctl",
+      "value": 36,
+      "v6": 30,
+      "grok": "secondary button 36, floating icon button 36"
+    },
+    "ctl-card": {
+      "css": "--ctl-card",
+      "value": 32,
+      "v6": "new",
+      "grok": "a button inside a settings card 32"
+    },
+    "ctl-s": {
+      "css": "--ctl-s",
+      "value": 28,
+      "v6": 28,
+      "grok": "composer buttons 28, chips 28"
+    },
+    "hit-min": {
+      "css": "--hit-min",
+      "value": 28,
+      "v6": 24,
+      "grok": "28 composer buttons (Grok gap 3 says 32; 28 keeps the composer's geometry and passes WCAG 2.5.8)"
+    },
+    "composer-h": {
+      "css": "--composer-h",
+      "value": 44,
+      "v6": "56 to 220",
+      "grok": "44 pill, grows"
+    },
+    "title-pill-h": {
+      "css": "--pill-h",
+      "value": 40,
+      "v6": "26 command field",
+      "grok": "title pill 40"
+    },
+    "chrome-y": {
+      "css": "--chrome-y",
+      "value": 10,
+      "v6": "--chrome-h 40 bar",
+      "grok": "floating controls at y = 10"
+    },
+    "drag-h": {
+      "css": "--drag-h",
+      "value": 56,
+      "v6": "--chrome-h 40",
+      "grok": "the top 56 is a drag region, no bar drawn"
+    },
+    "rail": {
+      "css": "--sb-rail-w",
+      "value": 88,
+      "v6": 56,
+      "grok": "compact rail 88"
+    },
+    "sidebar": {
+      "css": "--sb-w",
+      "value": "clamp(240px, 16vw, 320px), resizable 88-400",
+      "v6": "clamp(256px, 15vw, 288px)",
+      "grok": "resizable 88-400"
+    },
+    "pane": {
+      "css": "--right-w",
+      "value": 356,
+      "v6": "clamp(300px, 18vw, 340px)",
+      "grok": "details panel about 355"
+    },
+    "bubble-max": {
+      "css": "--bubble-max",
+      "value": 560,
+      "v6": "--measure 608",
+      "grok": "bubble max width 560"
+    },
+    "col-w": {
+      "css": "--col-w",
+      "value": 640,
+      "v6": "720 (112 margin + 608)",
+      "grok": "the column is the bubbles' width; the composer is wider"
+    },
+    "composer-w": {
+      "css": "--composer-w",
+      "value": "min(720px, the column + 80)",
+      "v6": "the column's width",
+      "grok": "composer max 960"
+    },
+    "dialog-l": {
+      "css": "--dialog-l",
+      "value": 900,
+      "v6": 600,
+      "grok": "Settings, Store, Keyboard 900"
+    },
+    "dialog-form": {
+      "css": "--dialog-form",
+      "value": 460,
+      "v6": 600,
+      "grok": "440 to 488"
+    },
+    "palette": {
+      "css": "--palette-w",
+      "value": 640,
+      "v6": 600,
+      "grok": "641"
+    },
+    "settings-nav": {
+      "css": "--set-nav-w",
+      "value": 220,
+      "v6": "tabs in the head",
+      "grok": "220 nav"
+    },
+    "orbs": {
+      "value": [
+        10,
+        16,
+        20,
+        24,
+        28,
+        36,
+        40,
+        64,
+        96
+      ],
+      "v6": [
+        10,
+        16,
+        20,
+        24,
+        26,
+        40,
+        120
+      ],
+      "grok": "16 / 24 / 36 / 64 / 96",
+      "use": "10 the dock pill, 16 the activity line and card minis, 20 lists and mentions, 24 the title pill and room bylines, 28 the compact rail, 36 the rail tile and sidebar rows, 40 the dock row, 64 the details header, 96 the new-bot preview"
+    }
+  },
+  "elevation": {
+    "dark": {
+      "rule": "no shadows. Depth is surface steps (#0e0e0e < #121212 < #161616 < #1f1f1f < #2c2c2c), a 1 device px --line outline, and an inset --spec top and bottom line",
+      "--elev-1": "none (in flow: elevated fill, --line, --spec)",
+      "--elev-2": "none (tooltips)",
+      "--elev-3": "inset 0 1px 0 var(--spec-strong) on the top-most floating layer only",
+      "--elev-4": "the same, over --scrim"
+    },
+    "light": {
+      "rule": "option A of the light-shadow board (recommended): Grok's shadows as measured",
+      "--shadow-inline": "0 4px 12px -1px #1c1c1c14, 0 2px 4px -2px #1c1c1c0f, 0 0 0 1px #1c1c1c03",
+      "--shadow-pop": "0 10px 20px -3px #1c1c1c1a, 0 4px 6px -4px #1c1c1c1a, 0 0 0 1px #1c1c1c03",
+      "--shadow-modal": "0 20px 32px -5px #1c1c1c1a, 0 8px 12px -6px #1c1c1c1a, 0 0 0 1px #1c1c1c03",
+      "--shadow-window": "0 22px 70px 4px #1c1c1c8f, 0 0 0 0.5px #1c1c1c1a"
+    },
+    "composer": {
+      "css": "--shadow-composer",
+      "value": "0 2px 8px -1px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.03), 0 0 0 1px rgba(228,228,228,.04)",
+      "use": "both themes"
+    },
+    "hairline": {
+      "css": "--hl",
+      "value": "1 device px (0.5px at 2x, 0.625px at 1.6x); the squircle snaps it as in v6 8.1"
+    },
+    "z": "unchanged from v6 (--z-*)"
+  },
+  "motion": {
+    "easings": {
+      "--ease-sharp": {
+        "value": "cubic-bezier(.165, .84, .44, 1)",
+        "v6": "--ease (.2,.8,.2,1)",
+        "grok": "--ease-sharp",
+        "use": "popovers, menus, tooltips, dialogs, presses"
+      },
+      "--spring": {
+        "value": "cubic-bezier(.22, 1, .36, 1)",
+        "v6": "--spring (same)",
+        "grok": "out-expo-ish (sidebar items, status dot)",
+        "use": "layout travel: sidebar, panel, tiles; unchanged"
+      },
+      "--ease-drawer": {
+        "value": "cubic-bezier(.32, .72, 0, 1)",
+        "v6": "new",
+        "grok": "--ease-drawer",
+        "use": "the details pane and side sheets"
+      },
+      "--ease-out": {
+        "value": "ease-out",
+        "v6": "new",
+        "grok": "button colour",
+        "use": "colour and background changes"
+      },
+      "--ease-io": {
+        "value": "ease-in-out",
+        "v6": "--ease-io (.65,0,.35,1)",
+        "grok": "working pulse",
+        "use": "the one loop"
+      }
+    },
+    "durations": {
+      "--dur-press": {
+        "value": "50ms",
+        "v6": "90ms",
+        "grok": "icon-button transform 50ms",
+        "use": "press: scale(.96), no travel"
+      },
+      "--dur-1": {
+        "value": "120ms",
+        "v6": "150ms",
+        "grok": "button colour 120ms",
+        "use": "hover in, colour"
+      },
+      "--dur-out": {
+        "value": "100ms",
+        "v6": "120ms",
+        "grok": "icon colour 100ms",
+        "use": "hover out, exits"
+      },
+      "--dur-pop": {
+        "value": "100ms",
+        "v6": "--dur-2 200ms with a 6px drop",
+        "grok": "tooltip/menu/popover enter 100ms from scale(.98)",
+        "use": "menus, popovers, tooltips, the palette: from scale(.98) and 2-4px toward the anchor"
+      },
+      "--dur-2": {
+        "value": "200ms",
+        "v6": "200ms",
+        "grok": "dialog 200ms, mic/send swap 200ms",
+        "use": "dialogs, the send morph, cross-fades"
+      },
+      "--dur-dot": {
+        "value": "130ms",
+        "v6": "new",
+        "grok": "status dot opacity 130ms",
+        "use": "status dots and badges"
+      },
+      "--dur-slide": {
+        "value": "200ms",
+        "v6": "240ms",
+        "grok": "sidebar tile 200ms",
+        "use": "the sidebar, the rail tiles, a segmented thumb"
+      },
+      "--dur-3": {
+        "value": "300ms",
+        "v6": "300ms",
+        "grok": "composer height 300ms spring",
+        "use": "card height (owner decision), the composer's growth, the dock's springs"
+      },
+      "--dur-hold": {
+        "value": "1000ms",
+        "v6": "1000ms (owner decision)",
+        "grok": "none",
+        "use": "hold to approve, unchanged"
+      },
+      "--dur-breathe": {
+        "value": "1.4s",
+        "v6": "1.8s",
+        "grok": "working badge pulse 1.4s, .35 to 1 to .35",
+        "use": "the running dot"
+      },
+      "--dur-shimmer": {
+        "value": "2.2s",
+        "v6": "none",
+        "grok": "activity text shimmer 2.2s steps(60)",
+        "use": "option C of the status board: the activity phrase's sweep"
+      },
+      "--dur-hold-phrase": {
+        "value": "800ms",
+        "v6": "none",
+        "grok": "activity phrase held at least 800ms",
+        "use": "a status phrase stays at least this long before it changes"
+      }
+    },
+    "reduced": "unchanged from v6: durations become 1ms, loops stop (the shimmer included), travel becomes a cross-fade, orbs reduce and never freeze"
+  },
+  "options": {
+    "font": {
+      "board": "01-fonts",
+      "choices": {
+        "A": "Geist + Geist Mono (OFL 1.1, bundled today)",
+        "B": "Inter + Geist Mono (OFL 1.1)",
+        "C": "Figtree + Geist Mono (OFL 1.1)"
+      },
+      "recommended": "A"
+    },
+    "radii": {
+      "board": "02-radii",
+      "choices": {
+        "A": "Grok exact: its radii as plain arcs",
+        "B": "Grok's radii, boopis's continuous corner and concentric rule",
+        "C": "rounder: every step one notch up (cards 18, dialogs 24, menus 20, bubbles 22)"
+      },
+      "recommended": "B"
+    },
+    "light-shadow": {
+      "board": "03-light-shadows",
+      "choices": {
+        "A": "Grok's measured shadows",
+        "B": "a hairline plus half-strength shadows",
+        "C": "flat like dark: hairlines and surface steps only"
+      },
+      "recommended": "A"
+    },
+    "orb-surface": {
+      "board": "04-orb-surface",
+      "choices": {
+        "A": "orb2 as it is: its dark eyes",
+        "B": "cut-out eyes: the eyes take the surface colour",
+        "C": "the orb in a tile (8% fill), as Grok's rail"
+      },
+      "recommended": "B"
+    },
+    "chrome": {
+      "board": "05-chrome",
+      "choices": {
+        "A": "Grok: floating sidebar toggle, title pill (orb + name, opens details), search and details pills; no bar",
+        "B": "the same plus a centred search pill that keeps boopis's command field",
+        "C": "an unfilled 40px bar holding v6's controls, no line"
+      },
+      "recommended": "A"
+    },
+    "sidebar-tile": {
+      "board": "06-sidebar-tile",
+      "choices": {
+        "A": "Grok: 54 tile, radius 12, orb 36, rail 88",
+        "B": "compact: 44 tile, radius 12, orb 28, rail 64",
+        "C": "round: a 48 circle, orb 32, rail 72"
+      },
+      "recommended": "A"
+    },
+    "composer": {
+      "board": "07-composer",
+      "choices": {
+        "A": "Grok: a 44 pill, + left, mic and voice-or-send right, nothing else",
+        "B": "the pill plus boopis's mode chips (Governed, Smart, the model) on a second line inside, 22 radius once it grows",
+        "C": "the pill alone, the mode chips as a quiet line under it"
+      },
+      "recommended": "B"
+    },
+    "status": {
+      "board": "08-calm-options",
+      "choices": {
+        "A": "a breathing dot and the phrase (calm pass default)",
+        "B": "the phrase alone, breathing (dips under 4.5:1)",
+        "C": "Grok: the live 16px orb and the phrase with a 2.2s shimmer"
+      },
+      "recommended": "C for a bot, A where there is no bot"
+    },
+    "danger": {
+      "board": "08-calm-options",
+      "choices": {
+        "A": "a collapsed Danger zone at the page's end",
+        "B": "the overflow menu in the header"
+      },
+      "recommended": "B on sheets and panes, A on Settings pages"
+    },
+    "info-glyph": {
+      "board": "08-calm-options",
+      "choices": {
+        "A": "the calm pass's (i): a 12-radius circle, stroke 1.5",
+        "B": "a filled 16px disc with a knocked-out i",
+        "C": "no glyph: the label is dotted-underlined and opens the popover"
+      },
+      "recommended": "A"
+    },
+    "long-text": {
+      "board": "08-calm-options",
+      "choices": {
+        "A": "a centred form dialog (720 x 640, radius 20)",
+        "B": "a full focused view over the work, the chrome kept"
+      },
+      "recommended": "B"
+    },
+    "accent": {
+      "board": "09-accent-attention",
+      "choices": {
+        "A": "Grok blue #116dd2 for the switch, links, focus",
+        "B": "ink: the accent is the inverted ink (Grok's 'Black' accent)",
+        "C": "keep boopis's brass"
+      },
+      "recommended": "A"
+    },
+    "attention": {
+      "board": "09-accent-attention",
+      "choices": {
+        "A": "Grok: 'needs you' in warn amber, red only for failed and destructive",
+        "B": "boopis: what you owe stays red (the 'you' capsule, the notch's edge), in Grok's red values"
+      },
+      "recommended": "B"
+    }
+  }
+}
