@@ -3,7 +3,7 @@
 //! stream that resumes, and broadcasts them. It does no I/O: the service tells it what the engine said and asks it what
 //! to say next, so every rule here is tested with scripted frames.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
@@ -119,6 +119,8 @@ pub struct Feed {
     wanted: watch::Sender<usize>,
     text_wanted: watch::Sender<usize>,
     followers: AtomicUsize,
+    /// The pace each follower asked for, in milliseconds, counted (B46): replies are sent again at the fastest.
+    paces: Mutex<BTreeMap<u64, usize>>,
     listeners: AtomicUsize,
     poke: AtomicBool,
     audit: Audit,
@@ -145,10 +147,20 @@ impl Drop for Consumer {
 /// A reader that follows conversations. While one exists the host copies the words of replies and of the owner's messages.
 pub struct Follower {
     feed: Arc<Feed>,
+    pace: u64,
 }
 
 impl Drop for Follower {
     fn drop(&mut self) {
+        {
+            let mut paces = lock(&self.feed.paces);
+            if let Some(n) = paces.get_mut(&self.pace) {
+                *n -= 1;
+                if *n == 0 {
+                    paces.remove(&self.pace);
+                }
+            }
+        }
         let n = self
             .feed
             .followers
@@ -224,6 +236,7 @@ impl Feed {
             wanted: watch::channel(0).0,
             text_wanted: watch::channel(0).0,
             followers: AtomicUsize::new(0),
+            paces: Mutex::new(BTreeMap::new()),
             listeners: AtomicUsize::new(0),
             poke: AtomicBool::new(false),
             audit,
@@ -256,12 +269,34 @@ impl Feed {
         Consumer { feed: self.clone() }
     }
 
-    /// Count a reader that follows conversations.
+    /// Count a reader that follows conversations, at the default pace.
     #[must_use]
     pub fn follower(self: &Arc<Self>) -> Follower {
+        self.follower_at(self.limits.stream_every)
+    }
+
+    /// Count a reader that follows conversations and wants a growing reply sent again at most every `pace` (B46).
+    #[must_use]
+    pub fn follower_at(self: &Arc<Self>, pace: std::time::Duration) -> Follower {
+        let pace = u64::try_from(pace.as_millis()).unwrap_or(u64::MAX);
+        *lock(&self.paces).entry(pace).or_insert(0) += 1;
         let n = self.followers.fetch_add(1, Ordering::SeqCst) + 1;
         self.text_wanted.send_replace(n);
-        Follower { feed: self.clone() }
+        Follower {
+            feed: self.clone(),
+            pace,
+        }
+    }
+
+    /// How often a growing reply is sent again: the fastest pace any follower asked for, else the default.
+    #[must_use]
+    pub fn stream_every(&self) -> std::time::Duration {
+        lock(&self.paces)
+            .keys()
+            .next()
+            .map_or(self.limits.stream_every, |ms| {
+                std::time::Duration::from_millis(*ms)
+            })
     }
 
     /// How many readers follow conversations, as a watch (the links copy words only while it is above zero).
@@ -653,7 +688,7 @@ impl Feed {
 
     /// Send a growing reply again when it has changed and has not been sent for the stream interval.
     fn flush_reply(&self, inner: &mut Inner, profile: &str, sid: &str, now: i64) {
-        let every = i64::try_from(self.limits.stream_every.as_millis()).unwrap_or(250);
+        let every = i64::try_from(self.stream_every().as_millis()).unwrap_or(i64::MAX);
         let key = (profile.to_owned(), sid.to_owned());
         let Some(r) = inner.replies.get_mut(&key) else {
             return;
@@ -1526,6 +1561,17 @@ impl Feed {
         for row in inner.inbox.sweep(now) {
             self.emit(&mut inner, Event::Approvals(row));
         }
+        self.flush_growing(&mut inner, now);
+    }
+
+    /// Send again every reply that grew and was not sent for the pace (B46: the service does this at the fastest pace a
+    /// follower asked for, so the words of a reply whose deltas stopped do not wait for the next one).
+    pub fn flush_replies(&self) {
+        let mut inner = lock(&self.inner);
+        self.flush_growing(&mut inner, now_ms());
+    }
+
+    fn flush_growing(&self, inner: &mut Inner, now: i64) {
         let growing: Vec<(String, String)> = inner
             .replies
             .iter()
@@ -1533,7 +1579,7 @@ impl Feed {
             .map(|(k, _)| k.clone())
             .collect();
         for (profile, sid) in growing {
-            self.flush_reply(&mut inner, &profile, &sid, now);
+            self.flush_reply(inner, &profile, &sid, now);
         }
     }
 
@@ -2376,6 +2422,26 @@ mod tests {
             first[0].0,
             "the next reply is another message"
         );
+    }
+
+    #[tokio::test]
+    async fn replies_are_sent_again_at_the_fastest_pace_any_follower_asked_for() {
+        // B46
+        let (f, _d) = feed();
+        let ms = std::time::Duration::from_millis;
+        assert_eq!(f.stream_every(), ms(250), "nobody asked: the default");
+        let slow = f.follower_at(ms(1000));
+        assert_eq!(f.stream_every(), ms(1000));
+        let fast = f.follower_at(ms(50));
+        let also = f.follower_at(ms(50));
+        assert_eq!(f.stream_every(), ms(50));
+        drop(fast);
+        assert_eq!(f.stream_every(), ms(50), "one still asks for 50");
+        drop(also);
+        assert_eq!(f.stream_every(), ms(1000));
+        assert_eq!(*f.text_wanted().borrow(), 1);
+        drop(slow);
+        assert_eq!((f.stream_every(), *f.text_wanted().borrow()), (ms(250), 0));
     }
 
     #[tokio::test]

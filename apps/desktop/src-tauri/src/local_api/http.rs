@@ -2,6 +2,7 @@
 //! dependency; the ChatGPT callback is the precedent). One request per connection, except the event stream. Every rule of
 //! `wire` is applied here in the order that model fixes; routing starts only after the token has passed.
 
+use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::{Arc, Mutex, PoisonError, RwLock};
@@ -544,10 +545,13 @@ struct Follow {
     bots: Vec<String>,
     rooms_on: bool,
     rooms: Vec<String>,
+    /// The stream's own pace for a growing reply (`stream_ms`, B46).
+    pace: Option<std::time::Duration>,
 }
 
 impl Follow {
-    fn from_query(head: &Head, max_bots: usize) -> Result<Self, ApiError> {
+    fn from_query(head: &Head, limits: &ApiLimits) -> Result<Self, ApiError> {
+        let max_bots = limits.follow_bots;
         let on = head
             .param("conversations")
             .is_some_and(|v| v == "1" || v == "true");
@@ -592,11 +596,44 @@ impl Follow {
                 message: format!("Name at most {max_bots} rooms, each by its id."),
             });
         }
+        let (fastest, slowest) = limits.stream_pace;
+        let pace = match head.param("stream_ms") {
+            None => None,
+            Some(v) => {
+                let ms = v
+                    .parse::<u64>()
+                    .ok()
+                    .map(std::time::Duration::from_millis)
+                    .filter(|d| (fastest..=slowest).contains(d));
+                if ms.is_none() {
+                    return Err(ApiError {
+                        status: 400,
+                        code: "bad_stream_ms",
+                        message: format!(
+                            "stream_ms is how often a growing reply is sent again, in milliseconds from {} to {}.",
+                            fastest.as_millis(),
+                            slowest.as_millis()
+                        ),
+                    });
+                }
+                ms
+            }
+        };
+        if pace.is_some() && !on {
+            return Err(ApiError {
+                status: 400,
+                code: "stream_ms_without_conversations",
+                message:
+                    "stream_ms paces the words of conversations: ask for conversations=1 as well."
+                        .into(),
+            });
+        }
         Ok(Self {
             on,
             bots,
             rooms_on,
             rooms,
+            pace,
         })
     }
 
@@ -640,6 +677,78 @@ async fn put(stream: &mut TcpStream, text: &str, limit: std::time::Duration) -> 
     )
 }
 
+/// A stream's own pace for a growing reply (B46): the feed sends a reply again at the fastest pace any stream asked for, and
+/// each stream thins those updates to its own. The latest update it held back is sent when its time comes, so the words
+/// never stall; a finished message is sent at once and drops what was held of it.
+struct Pace {
+    every: std::time::Duration,
+    /// Per message: when it was last sent, and the newest update held back since.
+    held: HashMap<String, (tokio::time::Instant, Option<Arc<Stamped>>)>,
+}
+
+/// Messages a stream keeps a pace for at most (a reply that never finishes is forgotten past this).
+const PACED_MAX: usize = 64;
+
+impl Pace {
+    fn new(every: std::time::Duration) -> Self {
+        Self {
+            every,
+            held: HashMap::new(),
+        }
+    }
+
+    /// Whether to send an event now; an update that comes too soon is held instead.
+    fn admit(&mut self, e: &Arc<Stamped>, now: tokio::time::Instant) -> bool {
+        let Event::Conversation(c) = &e.event else {
+            return true;
+        };
+        if c.message.state == super::model::MessageState::Done {
+            self.held.remove(&c.message.id);
+            return true;
+        }
+        match self.held.get_mut(&c.message.id) {
+            Some((sent, pending)) if now.duration_since(*sent) < self.every => {
+                *pending = Some(e.clone());
+                false
+            }
+            Some((sent, pending)) => {
+                *sent = now;
+                *pending = None;
+                true
+            }
+            None => {
+                if self.held.len() >= PACED_MAX {
+                    self.held.clear();
+                }
+                self.held.insert(c.message.id.clone(), (now, None));
+                true
+            }
+        }
+    }
+
+    /// When the next held update is due.
+    fn due(&self) -> Option<tokio::time::Instant> {
+        self.held
+            .values()
+            .filter(|(_, p)| p.is_some())
+            .map(|(sent, _)| *sent + self.every)
+            .min()
+    }
+
+    /// The held updates whose time has come, oldest first.
+    fn take_due(&mut self, now: tokio::time::Instant) -> Vec<Arc<Stamped>> {
+        let mut out = Vec::new();
+        for (sent, pending) in self.held.values_mut() {
+            if pending.is_some() && now.duration_since(*sent) >= self.every {
+                *sent = now;
+                out.extend(pending.take());
+            }
+        }
+        out.sort_by_key(|e| e.id);
+        out
+    }
+}
+
 async fn events<E: Engine>(
     mut stream: TcpStream,
     shared: &Arc<Shared<E>>,
@@ -660,7 +769,7 @@ async fn events<E: Engine>(
         return;
     };
     let limit = shared.limits.read_timeout;
-    let follow = match Follow::from_query(head, shared.limits.follow_bots) {
+    let follow = match Follow::from_query(head, &shared.limits) {
         Ok(f) => f,
         Err(e) => {
             let _ = write_json(&mut stream, e.status, &error_body(e.code, &e.message), &[]).await;
@@ -671,7 +780,9 @@ async fn events<E: Engine>(
         .header("last-event-id")
         .and_then(|v| v.trim().parse::<u64>().ok());
     let sub = shared.service.feed().subscribe(since);
-    let _follower = follow.on.then(|| shared.service.feed().follower());
+    let every = follow.pace.unwrap_or(shared.limits.stream_every);
+    let _follower = follow.on.then(|| shared.service.feed().follower_at(every));
+    let mut pace = Pace::new(every);
     let mut epoch = shared.epoch.subscribe();
     epoch.borrow_and_update();
     let preamble = format!(
@@ -705,15 +816,22 @@ async fn events<E: Engine>(
     let mut beat = tokio::time::interval(shared.limits.keepalive);
     beat.tick().await;
     loop {
+        let due = pace.due();
         tokio::select! {
             () = cancel.cancelled() => return,
             _ = epoch.changed() => return,
             _ = beat.tick() => {
                 if !put(&mut stream, ": keepalive\n\n", limit).await { return; }
             }
+            () = async { if let Some(at) = due { tokio::time::sleep_until(at).await } }, if due.is_some() => {
+                for e in pace.take_due(tokio::time::Instant::now()) {
+                    if !put(&mut stream, &sse(&e), limit).await { return; }
+                }
+            }
             got = rx.recv() => match got {
                 Ok(e) => {
-                    if follow.wants(&e) && !put(&mut stream, &sse(&e), limit).await { return; }
+                    let send = follow.wants(&e) && pace.admit(&e, tokio::time::Instant::now());
+                    if send && !put(&mut stream, &sse(&e), limit).await { return; }
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     let lagged = Event::Lagged { skipped: n };

@@ -1074,6 +1074,30 @@ impl<E: Engine> Service<E> {
     }
 }
 
+impl<E: Engine> Service<E> {
+    /// Run until cancelled: while a stream follows conversations, send again every reply that grew, at the fastest pace a
+    /// stream asked for (B46), so the words of a reply whose deltas paused reach every stream on time.
+    pub async fn run_flush(self: Arc<Self>, cancel: CancellationToken) {
+        let mut wanted = self.feed.text_wanted();
+        loop {
+            while *wanted.borrow_and_update() == 0 {
+                tokio::select! {
+                    () = cancel.cancelled() => return,
+                    changed = wanted.changed() => if changed.is_err() { return },
+                }
+            }
+            while *wanted.borrow() > 0 {
+                let every = self.feed.stream_every().max(self.limits.stream_pace.0 / 5);
+                tokio::select! {
+                    () = cancel.cancelled() => return,
+                    () = tokio::time::sleep(every) => {}
+                }
+                self.feed.flush_replies();
+            }
+        }
+    }
+}
+
 fn rooms_from(v: &Value) -> Vec<RoomRow> {
     v.get("rooms")
         .and_then(Value::as_array)

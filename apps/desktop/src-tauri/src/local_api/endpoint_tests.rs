@@ -1461,3 +1461,76 @@ async fn a_retry_is_served_behind_the_same_checks_and_refused_in_words() {
         "nothing refused reached the engine's retry"
     );
 }
+
+#[tokio::test]
+async fn each_stream_gets_a_growing_reply_at_its_own_pace_and_the_words_never_stall() {
+    // B46: one stream asks for 50 ms, one for a second; the feed sends at the fastest and each stream thins to its own
+    use crate::gateway::{Direction, FeedFrame};
+    let r = rig().await;
+    let cancel = tokio_util::sync::CancellationToken::new();
+    tokio::spawn(r.service.clone().run_flush(cancel.clone()));
+    let mut fast = follow(&r, "?conversations=1&stream_ms=50").await;
+    let mut slow = follow(&r, "?conversations=1&stream_ms=1000").await;
+    assert_eq!(r.service.feed().stream_every(), Duration::from_millis(50));
+    let frame = |name: &str, payload: Option<Value>| FeedFrame {
+        direction: Direction::In,
+        name: name.into(),
+        session_id: Some("live-7".into()),
+        generation: None,
+        payload,
+    };
+    let feed = r.service.feed();
+    feed.on_frame("kai", &frame("message.start", None));
+    let mut whole = String::new();
+    for i in 0..20 {
+        let piece = format!("w{i} ");
+        whole.push_str(&piece);
+        feed.on_frame("kai", &frame("message.delta", Some(json!({"text": piece}))));
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    // the deltas stop; the last words still arrive on each stream's own time
+    let last = whole.trim_end().to_owned();
+    let got_fast = read_stream(&mut fast, &last, Duration::from_secs(2)).await;
+    let got_slow = read_stream(&mut slow, &last, Duration::from_secs(3)).await;
+    let streaming = |text: &str| text.matches("\"state\":\"streaming\"").count();
+    assert!(
+        got_slow.contains(&last),
+        "a held update is sent when its time comes: {got_slow}"
+    );
+    assert!(
+        streaming(&got_fast) >= streaming(&got_slow) + 3,
+        "fast {} slow {}",
+        streaming(&got_fast),
+        streaming(&got_slow)
+    );
+    assert!(streaming(&got_slow) <= 3, "{got_slow}");
+    feed.on_frame(
+        "kai",
+        &frame(
+            "message.complete",
+            Some(json!({"text": whole, "outcome": "completed"})),
+        ),
+    );
+    for s in [&mut fast, &mut slow] {
+        let done = read_stream(s, "\"state\":\"done\"", Duration::from_secs(2)).await;
+        assert!(
+            done.contains("\"state\":\"done\""),
+            "a finished message is sent at once: {done}"
+        );
+    }
+    for (query, code) in [
+        ("?conversations=1&stream_ms=10", "bad_stream_ms"),
+        ("?conversations=1&stream_ms=5000", "bad_stream_ms"),
+        ("?conversations=1&stream_ms=fast", "bad_stream_ms"),
+        ("?stream_ms=100", "stream_ms_without_conversations"),
+    ] {
+        let (status, _, body) =
+            raw(r.server.addr(), &get(&r, &format!("/v1/events{query}"), "")).await;
+        assert_eq!(
+            (status, json_of(&body)["error"]["code"].as_str()),
+            (400, Some(code)),
+            "{query}"
+        );
+    }
+    cancel.cancel();
+}

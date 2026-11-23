@@ -153,8 +153,10 @@ pub struct ApiLimits {
     pub conversation_rows: usize,
     /// Bots one event stream may narrow its conversation events to.
     pub follow_bots: usize,
-    /// How often a streaming reply is sent again while it grows.
+    /// How often a streaming reply is sent again while it grows, for a stream that names no pace of its own.
     pub stream_every: std::time::Duration,
+    /// The fastest and the slowest pace a stream may ask for (`stream_ms`, B46).
+    pub stream_pace: (std::time::Duration, std::time::Duration),
     /// A kanban worker counts as running while its session showed life this recently (the engine refreshes a running
     /// worker's `last_active` at least every minute; the app's roster uses the same window).
     pub worker_active: std::time::Duration,
@@ -196,6 +198,7 @@ impl Default for ApiLimits {
             conversation_rows: 200,
             follow_bots: 6,
             stream_every: Duration::from_millis(250),
+            stream_pace: (Duration::from_millis(50), Duration::from_secs(1)),
             worker_active: Duration::from_secs(90),
             cron_every: Duration::from_secs(10),
             push_hold: Duration::from_mins(10),

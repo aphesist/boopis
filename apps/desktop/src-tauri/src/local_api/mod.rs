@@ -155,6 +155,7 @@ impl LocalApi {
     pub async fn start(self: &Arc<Self>) {
         tokio::spawn(self.service.clone().run(self.cancel.clone()));
         tokio::spawn(self.service.clone().run_holds(self.cancel.clone()));
+        tokio::spawn(self.service.clone().run_flush(self.cancel.clone()));
         self.listen_for_activity();
         if read_switch(&self.dir) {
             if let Err(e) = self.listen().await {
