@@ -1,0 +1,11 @@
+[["obS01","engine=busy","O-S01b-hello-engine-getting-ready"],
+["obS02","","O-S02-settings-boopis-needs"],
+["obS03","","O-S03-model-found"],["obS03","st=none","O-S03b-model-nothing-found"],["obS03","st=waiting","O-S03c-model-signing-in"],["obS03","st=failed","O-S03d-error-sign-in-failed"],["obS03","st=offline","O-S03e-error-offline"],
+["obS04","phase=shown","O-S04a-try-it-marks"],["obS04","phase=open","O-S04b-try-it-mark-open"],["obS04","phase=ask","O-S04c-try-it-keep-it-on"],["obS04","phase=open&rec=1","O-S04d-try-it-recorded"],
+["obS05","","O-S05-add-a-folder"],["obS05","v=second","O-S05-second-with-receipts"],["obS06","","O-S06-how-careful"],["obS07","","O-S07-first-task"],
+["obB01","","O-B01-hello"],["obB01","v=second","O-B01-second-welcome-to-bots"],["obB01c","","O-B01c-settings-boopis-needs"],["obB02","","O-B02-meet-the-boopis-bot"],
+["obB04","picks=two","O-B04b-goals-two-picks"],
+["obB05a","","O-B05a-model-in-boopis-chat"],["obB05b","phase=open","O-B05b-try-it-in-boopis-chat"],
+["obB06","","O-B06-where-bots-work"],["obB06","v=second","O-B06-second-shared-receipt"],
+["obB07","","O-B07-your-name"],["obB08","","O-B08-starter-team-and-connectors"],["obB09","","O-B09-approval-rules"],["obB10","","O-B10-build"],["obB11","","O-B11-reach"],["obB12","","O-B12-first-job"],
+["obX01","","O-X01-resume"],["obX02","","O-X02-settings-getting-started"],["obX03","","O-X03-returning-user"]]

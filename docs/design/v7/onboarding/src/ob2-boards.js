@@ -81,5 +81,47 @@
       section('A', 'The app speaks, as the living logomark', 'picked 23 Nov', picked('owner'), body, '')]);
   }
 
-  window.OB2BOARDS = { o01, o02, o03, o04 };
+  /* ---------- C01: what onboarding has of its own (owner C02: it may; the product UI on screen stays v7) ---------- */
+  function c01() {
+    const tb = (rows) => `<div class="ob2-spec"><table>${rows.map(([a, b]) => `<tr><th>${a}</th><td>${b}</td></tr>`).join('')}</table></div>`;
+    const parts = tb([
+      ['The speaker', 'the oo mark with a head of its own: poses, states, the director, the dip under reduced motion (board O04). Hero 96 on a page, stage 44 above the Session tab’s setup conversation and as S41’s mark.'],
+      ['The goal tiles', 'Grok’s tiles, given bots (board O03). Only on O-B04.'],
+      ['The Page, intro variant', 'approved in revision 1 (C01): heading at <code>--fs-3xl</code> at 196, the lede, a 760 x 300 scene, actions at 640, the ghost bottom left. Now inside the tab’s main area, beside the tab’s own sidebar.'],
+      ['The scenes', 'hello (the speaker at the hero size), meet the boopis bot (the orb at 120), your team (three bots at 64 with their jobs), the goals’ orbit (the bots drifting round the heading on 8 x 5 px ellipses, 4.2 to 5.4 s).'],
+      ['The stage', 'the speaker above the setup conversation, 56 high, 12 above the first line; the conversation is the kit’s thread, bubbles, receipts, AskCards and composer, unchanged.'],
+      ['One speaker, travelling', 'the same element goes from the hero to a page’s 44 spot, to the stage, into S41’s mark (640 ms on the travel ease, scale with it); a page’s other parts go in 120 ms and the next page’s come in 200 ms with a 50 to 60 ms stagger; parts the two pages share (the pill, the dock, the ghost) never move.'],
+      ['The boopis bot is born', 'the speaker’s eyes shrink to half and fall into the orb (380 ms spring), which grows from .4 round them (380 ms spring): the eyes are the body’s colour, so they disappear into it, never doubled; the orb wakes (orb2’s wake), is happy and bobs.'],
+      ['The team assembles', 'each bot is made above the composer (from .3, 300 ms spring, happy), looks at boopis, turns (orb2’s spin) and flies to its row in the Bots sidebar along a 60 px arc (640 ms travel, 44 to 28 px); its row opens as it leaves (200 ms) and its words come as it lands; it settles on the sidebar’s fixed 3/4 angle before it lands, and there moves only through its states.'],
+      ['A pick takes a bot', 'the bot leaves the heading’s orbit, turns, and flies into the tile’s disc (660 ms travel, a 40 px arc); the tile takes its colour as it lands (120 ms) and the icon goes as it arrives.'],
+      ['NEW easings', 'turn, cubic-bezier(.45, 0, .2, 1), for the speaker’s full turns; travel, cubic-bezier(.32, 0, .12, 1), for anything that goes from one place to another (<code>--spring</code> starts at full speed: a jump in the first frame of a long move at 60 fps).']]);
+    const body = `<div style="padding:20px">${parts}<div class="thumbs">${thumb({ s: 'obS03' }, 'the stage: O-S03')}${thumb({ s: 'obB02' }, 'the boopis bot is born: O-B02')}${thumb({ s: 'obB10' }, 'the team in the sidebar: O-B10')}</div></div>`;
+    return board('C01 Onboarding’s own parts and motion', 'The owner approved revision 1’s new parts and asked for much more animation (C01), and allowed onboarding animations, scenes and transitions of its own (C02). These are they. Nothing here enters the kit; the product UI they sit on (the composer, the bubbles, the AskCard, the rows, the sidebar) is v7 exactly.', [section('', 'Parts and moments', 'onboarding only', '', body, '')]);
+  }
+
+  /* ---------- C02: what onboarding takes from the kit and from orb2 (no new character behaviour) ---------- */
+  function c02() {
+    const tb = (head, rows) => `<div class="ob2-spec"><table><tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr>${rows.map((r) => `<tr>${r.map((c, i) => i ? `<td>${c}</td>` : `<th>${c}</th>`).join('')}</tr>`).join('')}</table></div>`;
+    const kit = tb(['Screen', 'Kit components (DESIGN-SYSTEM.md 21)'], [
+      ['O-S01, O-B01 to O-B04', 'Button (primary, secondary, ghost), StatusLine (system), the sidebar (Sessions / Bots switch, rows), Chip'],
+      ['O-S02, O-B01c', 'Card with SettingsRows, Button'],
+      ['O-S03, O-S04, O-B05a/b', 'Bubble (agent, you), Receipt, AskCard (options, choices), Composer with its line, Mark (feedforward), Menu, Notice, Well'],
+      ['O-S05 to O-S07', 'S41’s canvas: the launch row selectors, OptionRows in a Block, Chips, the Composer, the dock (v7, Sessions only)'],
+      ['O-B06 to O-B12', 'Bubble, Receipt, AskCard (choices, plan, rules with Switches, approval), StatusLine, SystemLine with Undo, ToolRow, hand-off line, ListRow, the Bots sidebar (main bot 44, rows 28)'],
+      ['O-X01 to O-X03', 'the same, and Settings (Card, SettingsRows)']]);
+    const orbs = tb(['orb2 behaviour (existing)', 'Where onboarding uses it'], [
+      ['<code>wakeUp()</code>, the <code>wake</code> emote, <code>reaction</code> from sleeping', 'the boopis bot born (O-B02); kai and moss waking (O-B03)'],
+      ['<code>emote(\'doubletake\')</code>', 'iris waking (O-B03)'],
+      ['<code>lookAt(x, y)</code>, <code>gaze</code>', 'every bot looks at another, at boopis, at the newcomer, at the tile under the pointer, at you (O-B03, O-B04, O-B10)'],
+      ['<code>react(\'happy\')</code>', 'a bot made, a bot landing in its tile, the team at the end'],
+      ['<code>poke(force, {react: false})</code>', 'the bob as a bot lands in its row or its tile, or is happy'],
+      ['<code>spin(\'turntable\')</code>', 'a bot turning as it takes off (O-B04, O-B10), moss turning to kai (O-B03)'],
+      ['<code>blink()</code>', 'a bot noticing; the newborn before it flies'],
+      ['the tuned build (ORBS.md C1 to C3, T1 to T5) and <code>face-scale</code> 1.25 at 44 and under', 'every orb in every still and clip']]);
+    const none = `<div class="fl-lab">WOULD NEED NEW (not built in; for the owner)</div><div class="ob2-ledger"><p>None. Every bot moment above is orb2 as it is, used more. The two things onboarding does that orb2 does not are scene motion around an orb (its flight, its orbit, its row opening), not a behaviour of the orb itself.</p></div>`;
+    const body = `<div style="padding:20px"><div class="fl-lab">THE KIT ON EACH SCREEN</div>${kit}<div class="fl-lab" style="margin-top:20px">THE BOTS: ORB2’S OWN BEHAVIOURS, USED MORE (the owner’s decision: no new character system)</div>${orbs}${none}</div>`;
+    return board('C02 What onboarding takes from the kit and from orb2', 'Every product part on an onboarding screen is a kit component as v7 draws it; every bot behaves only as orb2 already can (ORBS.md, w31/bot-character e8c87cf1, with the owner’s decisions of 23 Nov: the tuned renderer, face-scale 1.25, rows at 28 and the rail at 36, the main bot at 44 in the Bots sidebar, no dock in the Bots tab).', [section('', 'The map', '', '', body, '')]);
+  }
+
+  window.OB2BOARDS = { o01, o02, o03, o04, c01, c02 };
 })();

@@ -41,3 +41,16 @@
 .ob2-spec th { text-align: left; vertical-align: top; color: #f0f0f0; font-weight: 500; padding: 7px 24px 7px 0; white-space: nowrap; border-top: 1px solid #262626; }
 .ob2-spec td { padding: 7px 0; border-top: 1px solid #262626; }
 .ob2-spec code { font-family: 'Geist Mono', monospace; font-size: 12px; color: #e8e8e8; }
+
+/* ---- the Session tab's setup conversation: the speaker on the stage above the thread ---- */
+.ob2-sthread { padding-top: 64px; }
+.ob2-stagehead { display: grid; place-items: center; height: 56px; margin-bottom: 12px; }
+.ob2-pagespk { position: absolute; top: 116px; left: 50%; transform: translateX(-50%); }
+.ob2-rcpts { display: flex; justify-content: center; margin-top: 16px; }
+.ob2-rcpts .ob-rcpt { align-self: center; margin: 0; }
+
+/* ---- the Bots tab's sidebar while onboarding (ORBS.md K02 A, the owner's pick): the main bot at 44, rows at 28 ---- */
+.ob2-bside .sb-main { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0 14px; }
+.ob2-bside .sb-main .nm { font-size: var(--fs-s); line-height: 18px; color: var(--text); }
+.ob2-bside .ob2-row { height: 44px; }
+.ob2-nobots { padding: 18px 10px; }

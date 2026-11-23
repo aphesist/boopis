@@ -68,7 +68,8 @@
     for (const q of cues) {
       if (!q.pose && !q.posev) continue;
       const p = Object.assign({}, q.pose ? POSES[q.pose] : {}, q.posev || {});
-      for (const c of CH) if (p[c] !== undefined) segs[c].push({ t0: q.t + (c === 'x' || c === 'yaw' ? (q.lag ?? 60) : (q.lag ?? 60)), dur: q.dur || 420, to: p[c], ease: EASE[q.ease || 'spring'] });
+      /* a cue at t <= 0 is the starting pose: in place before the first frame, no lag, no travel */
+      for (const c of CH) if (p[c] !== undefined) segs[c].push(q.t <= 0 ? { t0: -10, dur: 1, to: p[c], ease: EASE.spring } : { t0: q.t + (q.lag ?? 60), dur: q.dur || 420, to: p[c], ease: EASE[q.ease || 'spring'] });
     }
     /* each segment starts from wherever the previous one is at its start (a cue may interrupt one in flight) */
     for (const c of CH) {

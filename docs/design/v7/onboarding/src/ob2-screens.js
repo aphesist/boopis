@@ -20,14 +20,40 @@
   function sessPage(o, inner, ex = {}) {
     return S.sessShell(o, '', ex.comp || '', { mainInner: `<div class="ob-page ob2">${inner}</div>`, title: S.sessTitle(ex.title || 'Sessions'), side: S.emptyInbox, noDock: !ex.dock, overlay: ex.overlay });
   }
-  /* Bots: the rail holds only the bots that exist (boopis until the team is built) */
-  function railOf(names, cur = 'boopis', st = {}) {
-    return `<aside class="side rail" style="width:88px">${names.map((n) => `<span class="tile sq${n === cur ? ' on' : ''}" style="width:54px;height:54px">${orb(n, 36, { state: st[n] || 'idle', surface: 'var(--bg-1)' })}</span>`).join('')}
-      <div class="foot-ctl"><span class="ib s" style="width:32px;height:32px">${I('plus')}</span><span class="ib s" style="width:32px;height:32px">${I('store')}</span><span class="ib s" style="width:32px;height:32px">${I('gear')}</span></div></aside>`;
+  /* Bots (owner, 23 Nov, ORBS.md): the open sidebar with its Sessions / Bots switch, then the main boopis bot at 44 px,
+     centred with its name (the Bots tab only, never Sessions), then the bots that exist as rows at 28 px. The Bots tab has
+     no dock (v7 528a5dca: the dock is Sessions only). While onboarding, the list holds only the bots already made. */
+  const TEAM_ACT = { kai: 'Reviews pull requests', moss: 'Runs the tests at night', iris: 'Writes the release notes' };
+  /* the sidebar's bots sit at one fixed sideways 3/4 angle, as Grok-Bot's do, and move only through their states (owner, 23 Nov;
+     the exact angle lands in ORBS.md 23: this value is provisional and set in this one place) */
+  const SIDE_GAZE = '-24 4';
+  const sideOrb = (n, size, o) => orb(n, size, { ...o, gaze: SIDE_GAZE }).replace('idle-motion="calm"', 'idle-motion="off" data-side');
+  function botsSide(o = {}) {
+    const team = o.team || [], st = o.st || {};
+    const row = (n) => `<div class="sb-row sq ob2-row" data-n="${n}">${sideOrb(n, 28, { state: st[n] || 'idle', surface: 'var(--bg-1)' })}<div class="col grow"><span class="nm ell">${n}</span><span class="act ell${st[n] === 'needs' ? ' owe' : ''}">${st[n] === 'needs' ? 'Needs you: install a package' : st[n] === 'working' ? 'Reviewing 3 commits' : TEAM_ACT[n]}</span></div>${st[n] === 'needs' ? '<span class="dot owe"></span>' : ''}</div>`;
+    return `<aside class="side sb-open ob2-bside"><div class="row" style="justify-content:space-between;padding:0 6px 6px"><span class="seg"><span>Sessions</span><span class="on">Bots</span></span><span class="ib s">${I('plus')}</span></div>
+      ${o.noMain ? '<div class="s dim ob2-nobots">No bots yet</div>' : `<div class="sb-main" data-n="boopis">${sideOrb('boopis', 44, { state: o.mainState || 'idle', surface: 'var(--bg-1)' })}<span class="nm">boopis</span></div>`}
+      <div class="ob2-rows">${team.map(row).join('')}</div>
+      <div class="foot-ctl" style="flex-direction:row;justify-content:flex-end;padding:12px 6px 0"><span class="ib s">${I('store')}</span><span class="ib s">${I('gear')}</span></div></aside>`;
   }
+  const botsPill = () => S.pill(`<span style="display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--fill-2);color:var(--icon)">${I('bots')}</span>Bots`, '');
   function botsPage(o, inner, ex = {}) {
-    const chrome = `<div class="drag"><span class="ib" style="margin-left:${88 / 2 - 12 - 18}px">${I('sidebar-left', 'l')}</span><span class="grow"></span>${wc()}</div>`;
-    return S.frame(o, `${railOf(ex.rail || ['boopis'])}${chrome}<div class="main" style="left:88px"><div class="ob-page ob2">${inner}</div>${ex.skip === false ? '' : `<span class="btn ghost ob-skip">${ex.skip || 'Not now'}</span>`}</div>${ex.overlay || ''}`);
+    return S.frame(o, `${botsSide(ex)}${S.chrome({ ...o, sidebar: 'open', title: botsPill() })}<div class="main" style="left:300px"><div class="ob-page ob2">${inner}</div>${ex.skip === false ? '' : `<span class="btn ghost ob-skip">${ex.skip || 'Not now'}</span>`}</div>${ex.overlay || ''}`);
+  }
+  /* boopis's chat in the Bots tab: the thread and the composer, no dock; ex.comp replaces the composer block */
+  const underBoopis = `<span class="row" style="gap:4px">${I('ladder')}Governed</span><span class="row" style="gap:5px">${mark('claude', 12)}Claude Opus</span><span class="grow"></span><span class="mono">$0.00</span>`;
+  function botsChat(o, body, ex = {}) {
+    const title = S.pill(`${orb('boopis', 24, { surface: 'var(--bg-3)' })}boopis`, '');
+    const comp = ex.comp || S.composer({ ...o, composer: 'c', placeholder: ex.ph || 'Type your answer, or ask something else', typed: ex.typed, under: ex.under || underBoopis, composerW: 720 });
+    return S.frame(o, `${botsSide(ex)}${S.chrome({ ...o, sidebar: 'open', title })}<div class="main" style="left:300px"><div class="thread" style="padding-top:72px">${body}</div>
+      <div class="ob2-compwrap" style="position:absolute;left:50%;transform:translateX(-50%);bottom:24px">${ex.above || ''}${comp}</div></div>${ex.overlay || ''}`);
+  }
+  /* revision 1's Bots screens, moved into the v7 Bots tab: the same thread and composer in the new shell */
+  function reshell(html, o, ex = {}) {
+    const d = document.createElement('div'); d.innerHTML = html;
+    const th = d.querySelector('.thread'); const comp = d.querySelector('.composer');
+    const wrap = comp && comp.parentElement && comp.parentElement.parentElement;
+    return botsChat(o, th ? th.innerHTML : '', { ...ex, comp: wrap ? wrap.innerHTML : '' });
   }
   const acts = (...b) => `<div class="ob-acts">${b.join('')}</div>`;
   const prim = (t) => `<span class="btn primary">${t}</span>`;
@@ -47,22 +73,21 @@
     }
     const h = v === 'second' ? 'Welcome to Bots' : 'Hi, I’m boopis';
     const l = v === 'second' ? 'Your model and draft reading are already set, so this is only about your team.' : 'Let’s set up your bots: a small team that works on its own and asks you first.';
-    return botsPage(o, `<div class="ob-h">${h}</div><div class="ob-lede">${l}</div>${scene}${acts(busy || prim(v === 'second' ? 'Continue' : 'Let’s start'))}`, { skip: 'Not now' });
+    return botsPage(o, `<div class="ob-h">${h}</div><div class="ob-lede">${l}</div>${scene}${acts(busy || prim(v === 'second' ? 'Continue' : 'Let’s start'))}`, { skip: 'Not now', noMain: v !== 'second' });
   }
 
   /* ---------- O-B03: your team comes alive (Grok's "give each bot a job", with life) ----------
-     The boopis bot (met in O-B02) and three bots, each with its job. At rest in the still, every bot looks at another one:
-     kai at moss, moss at boopis, iris at kai, and boopis at the person. In the clip they wake one by one (orb2's own wakeUp,
-     happy, poke, spin and lookAt). */
+     The boopis bot has just taken its place at the top of the sidebar (it travelled there from O-B02). Three bots, each with
+     its job. At rest in the still every bot looks at another one, with orb2's own gaze: kai at moss, moss up at boopis in
+     the sidebar, iris at kai. In the clip they wake one by one (orb2's own wake, happy, poke, spin and lookAt). */
   const TEAM = { kai: 'Reviews pull requests', moss: 'Runs the tests at night', iris: 'Writes the release notes' };
   function teamScene(o = {}) {
-    const asleep = o.asleep;
     const g = o.gaze || {};
-    const at = (n, x, y, size, label) => `<div class="ob-job" data-n="${n}" style="left:${x}px;top:${y}px">${orb(n, size, { state: asleep && n !== 'boopis' ? 'sleeping' : 'idle', surface: 'var(--bg-2)', gaze: g[n], id: n })}${label ? `<span class="chip">${label}</span>` : ''}</div>`;
-    return `<div class="ob-scene ob2-team">${at('boopis', 380, 24, 72, '')}${at('kai', 150, 96, 60, TEAM.kai)}${at('moss', 380, 156, 60, TEAM.moss)}${at('iris', 610, 96, 60, TEAM.iris)}</div>`;
+    const at = (n, x, y, size, label) => `<div class="ob-job" data-n="${n}" style="left:${x}px;top:${y}px">${orb(n, size, { state: o.asleep ? 'sleeping' : 'idle', surface: 'var(--bg-2)', gaze: g[n], id: n })}${label ? `<span class="chip">${label}</span>` : ''}</div>`;
+    return `<div class="ob-scene ob2-team">${at('kai', 160, 52, 64, TEAM.kai)}${at('moss', 380, 112, 64, TEAM.moss)}${at('iris', 600, 52, 64, TEAM.iris)}</div>`;
   }
-  /* where each bot looks in the still: a bot looks at another (yaw, pitch in degrees, orb2's gaze) */
-  const LOOKS_AT = { boopis: '0 -6', kai: '24 -10', moss: '0 20', iris: '-26 -6' };
+  /* where each bot looks in the still (yaw, pitch in degrees, orb2's gaze) */
+  const LOOKS_AT = { kai: '26 -12', moss: '-34 14', iris: '-30 -2' };
   function team(o) {
     return botsPage(o, `<div class="ob-h">Meet your team</div><div class="ob-lede">Each bot has one job. They work on their own and ask you before anything risky.</div>${teamScene({ gaze: o.asleep ? {} : LOOKS_AT, asleep: o.asleep })}${acts(prim('Next'), sec('Back'))}`);
   }
@@ -93,6 +118,9 @@
     return botsPage(o, `${head}<div class="ob-lede">Pick up to three. Each pick gets a bot.</div>${tiles(picks)}${acts(prim('Next'), sec('Back'))}`, { skip: 'Skip' });
   }
 
+  /* the owner's orb decisions (ORBS.md, 23 Nov): eyes at face-scale 1.25 on orbs of 44 px and under (C4); the renderer is
+     the tuned orb2 build (C1-C3 clarity, T1-T5 motion: lib/orb-avatar.tuned.js) */
+  function orbRules(root = document) { root.querySelectorAll('orb-avatar').forEach((e) => { if (+e.getAttribute('size') <= 44 && !e.hasAttribute('face-scale')) e.setAttribute('face-scale', '1.25'); }); return root; }
   Object.assign(window.SCREENS, { obS01: (o) => hello(o, 'sess'), obB01: (o) => hello(o, 'bots'), obB03: team, obB04: goals });
-  window.OB2 = { sessPage, botsPage, railOf, orb, teamScene, tiles, tile, GOALS, TEAM, LOOKS_AT, acts, prim, sec };
+  window.OB2 = { SIDE_GAZE, sideOrb, orbRules, sessPage, botsPage, botsSide, botsChat, reshell, underBoopis, TEAM_ACT, orb, teamScene, tiles, tile, GOALS, TEAM, LOOKS_AT, acts, prim, sec };
 })();

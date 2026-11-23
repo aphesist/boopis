@@ -5,7 +5,9 @@
    element's and orb2's own motion advance in lockstep with these timelines. */
 (function () {
   const S = window.SCREENS, SP = window.OB2S, O2 = window.OB2;
-  const E = { sharp: SP.bez(0.165, 0.84, 0.44, 1), spring: SP.bez(0.22, 1, 0.36, 1), out: SP.bez(0, 0, 0.58, 1), turn: SP.EASE.turn, inout: SP.EASE.inout, lin: (x) => Math.max(0, Math.min(1, x)) };
+  /* travel (NEW, onboarding only): a speaker or a bot going from one place to another. --spring starts at full speed (a jump in
+     the first frame at 60 fps); travel eases out of rest and lands as softly */
+  const E = { travel: SP.bez(0.32, 0, 0.12, 1), sharp: SP.bez(0.165, 0.84, 0.44, 1), spring: SP.bez(0.22, 1, 0.36, 1), out: SP.bez(0, 0, 0.58, 1), turn: SP.EASE.turn, inout: SP.EASE.inout, lin: (x) => Math.max(0, Math.min(1, x)) };
   const D = { press: 50, hover: 120, out: 100, pop: 100, d2: 200, d3: 300, hold: 1000, phrase: 800, shimmer: 2200 };
   const R = new URLSearchParams(location.search).has('reduced');
   const p = (t, t0, dur, ease = E.sharp) => R ? E.lin((t - t0) / 150) : ease((t - t0) / dur);
@@ -18,7 +20,7 @@
   const press = (el, t, t0, base = '') => { if (!el || R) return; const k = t < t0 ? 0 : t < t0 + D.press ? (t - t0) / D.press : t < t0 + 2 * D.press ? 1 - (t - t0 - D.press) / D.press : 0; el.style.transform = `${base} scale(${1 - 0.04 * k})`; };
   const shimmer = (t) => R ? null : $$('.shimmer').forEach((el) => { const ph = Math.floor(((t % D.shimmer) / D.shimmer) * 60) / 60; el.style.backgroundPosition = `${200 - 400 * ph}% 0`; });
   const host = () => document.getElementById('r');
-  const mount = (html) => { host().innerHTML = html; window.V7.eyes(); window.V7.paint(); return host(); };
+  const mount = (html) => { host().innerHTML = html; O2.orbRules(host()); window.V7.eyes(); window.V7.paint(); return host(); };
   /* a cue list fired once as the clock passes each one (orb2's and the logo's own calls) */
   function calls(list) { const done = new Set(); return (t) => list.forEach((c, i) => { if (t >= c[0] && !done.has(i)) { done.add(i); try { c[1](); } catch (e) { console.error(e); } } }); }
   /* where an element's centre is, for orb2's lookAt (viewport px) */
