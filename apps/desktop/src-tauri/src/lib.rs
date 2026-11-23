@@ -26,6 +26,7 @@ pub mod kanban;
 pub mod local;
 pub mod local_api;
 pub mod migrate;
+pub mod model_names;
 pub mod os;
 pub mod paths;
 pub mod providers;

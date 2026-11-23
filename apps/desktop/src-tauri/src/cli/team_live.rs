@@ -6,6 +6,11 @@
 //! `cron.manage` on the bot's own link, with the whole prompt read from the bot's `cron/jobs.json` (the list gives 100
 //! characters). Bot creation is the Bots form's path: `profiles.create`, `bots.write`, then `bots::engine::Service::prepare`.
 //!
+//! A model is checked before anything is written: the provider and the model must be ones the bot can reach (`bot_model`,
+//! from `model.options` in the bot's own scope), and after the engine's `profiles.configure` the configuration is read back, so a model
+//! is reported as changed only when it changed. A new bot is made on the main profile's model and given its own once
+//! `prepare` has put its provider's plugin in its home: before that the engine could not resolve the provider for it.
+//!
 //! One command opens one link to the root's gateway and one to each bot it asks about, and keeps them for every call, as
 //! `groups` keeps its one link: a link per call cost a ticket each, and for a bot's home it used to cost two starts of the
 //! engine's command line (`gateway ensure`, `gateway attach`) before the supervisor learnt to ask the root's control socket.
@@ -17,6 +22,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use serde_json::{Value, json};
 
+use super::bot_model;
 use super::headless::{GatewayRpc, Host};
 use crate::bots::{self, Layout};
 use crate::connectors::ops::{GatewayMcp, McpOps};
@@ -356,6 +362,57 @@ impl<'a> Live<'a> {
         out
     }
 
+    /// Write the bot's role and instructions, and read them back.
+    async fn write_profile(
+        &self,
+        name: &str,
+        role: Option<&str>,
+        soul: Option<&str>,
+    ) -> Result<()> {
+        if role.is_none() && soul.is_none() {
+            return Ok(());
+        }
+        let mut params = json!({"name": name});
+        if let Some(r) = role {
+            params["description"] = json!(r);
+        }
+        if let Some(s) = soul {
+            params["soul"] = json!(format!("{}\n", s.trim()));
+        }
+        let res = self.root.call("profiles.configure", params).await?;
+        let missed = bot_model::not_saved(&res);
+        if !missed.is_empty() {
+            return Err(Error::Bots(
+                "hx.bots.not_saved",
+                format!(
+                    "the engine did not save {} of {name}",
+                    bots::and_list(&missed)
+                ),
+            ));
+        }
+        let d = self.describe(name).await?;
+        let kept = role.is_none_or(|r| text(&d, "description").trim() == r.trim())
+            && soul.is_none_or(|s| text(&d, "soul").trim() == s.trim());
+        if kept {
+            Ok(())
+        } else {
+            Err(Error::Bots(
+                "hx.bots.not_saved",
+                format!("{name}'s role or instructions read back otherwise than they were written"),
+            ))
+        }
+    }
+
+    /// Refuse a model the bot `name` cannot reach, before anything is written (`bot_model::check`).
+    async fn check_reach(&self, name: &str, asked: &(String, String), made: bool) -> Result<()> {
+        bot_model::check(&self.root, name, asked, made).await
+    }
+
+    /// Make `asked` the bot's model and read it back (`bot_model::write`).
+    async fn write_model(&self, name: &str, asked: &(String, String)) -> Result<()> {
+        bot_model::write(&self.root, name, asked).await
+    }
+
     async fn prepare(&self, name: &str, fresh: bool) -> Result<()> {
         let done = self.service.prepare(&self.layout, name, fresh).await?;
         if done.problems.is_empty() {
@@ -436,14 +493,17 @@ impl Backend for Live<'_> {
                 {
                     params["soul"] = json!(format!("{}\n", s.trim()));
                 }
-                let mut provider = String::new();
-                let mut model = String::new();
-                if let Some(m) = &bot.model {
-                    (provider, model) = self.resolve_model(m).await?;
-                    params["provider"] = json!(provider);
-                    params["model"] = json!(model);
+                let asked = match &bot.model {
+                    Some(m) => Some(self.resolve_model(m).await?),
+                    None => None,
+                };
+                // A new bot is given the root's providers: one the root cannot reach is refused before anything is made.
+                if let Some(a) = &asked {
+                    self.check_reach(name, a, false).await?;
                 }
+                // Made on the main profile's model; its own is set below, once its home has its provider's plugin.
                 self.root.call("profiles.create", params).await?;
+                let (provider, model) = asked.clone().unwrap_or_default();
                 let gov = bot.governed == Some(true);
                 if gov && !crate::frontier::is_frontier(&provider, &model) {
                     return Err(Error::Bots(
@@ -460,6 +520,17 @@ impl Backend for Live<'_> {
                 }
                 self.plugin("bots.write", body).await?;
                 self.prepare(name, true).await?;
+                if let Some(a) = &asked {
+                    let set = async {
+                        self.check_reach(name, a, true).await?;
+                        self.write_model(name, a).await
+                    };
+                    set.await.map_err(|e| {
+                        Error::Bots("hx.bots.not_saved", format!("{name} was made, but {e}"))
+                    })?;
+                    // its ladder follows its model
+                    self.prepare(name, false).await?;
+                }
                 if let Some(n) = bot.max_turns {
                     self.service
                         .set_run_limit(&self.layout, name, Some(n))
@@ -476,24 +547,18 @@ impl Backend for Live<'_> {
                 governed,
                 max_turns,
             } => {
-                let mut params = json!({"name": name});
-                if let Some(r) = role {
-                    params["description"] = json!(r);
-                }
-                if let Some(s) = soul {
-                    params["soul"] = json!(format!("{}\n", s.trim()));
-                }
-                let mut next = None;
-                if let Some(m) = model {
-                    let (p, mo) = self.resolve_model(m).await?;
-                    params["provider"] = json!(p);
-                    params["model"] = json!(mo);
-                    next = Some((p, mo));
+                let asked = match model {
+                    Some(m) => Some(self.resolve_model(m).await?),
+                    None => None,
+                };
+                // A model the bot cannot reach is refused before anything is written.
+                if let Some(a) = &asked {
+                    self.check_reach(name, a, true).await?;
                 }
                 if let Some(true) = governed {
-                    let (p, m) = match next.clone() {
+                    let (p, m) = match asked.clone() {
                         Some(x) => x,
-                        None => bots::model_of(self.describe(name).await?.get("model")),
+                        None => bot_model::model_now(&self.root, name).await?,
                     };
                     if !crate::frontier::is_frontier(&p, &m) {
                         return Err(Error::Bots(
@@ -502,14 +567,10 @@ impl Backend for Live<'_> {
                         ));
                     }
                 }
-                if params.as_object().is_some_and(|o| o.len() > 1) {
-                    let res = self.root.call("profiles.configure", params).await?;
-                    if res.get("confirm_required").and_then(Value::as_bool) == Some(true) {
-                        return Err(Error::Unavailable(format!(
-                            "the model {} needs your confirmation: change it in the app's Bots page once",
-                            model.clone().unwrap_or_default()
-                        )));
-                    }
+                self.write_profile(name, role.as_deref(), soul.as_deref())
+                    .await?;
+                if let Some(a) = &asked {
+                    self.write_model(name, a).await?;
                 }
                 if look.is_some() || governed.is_some() {
                     self.set_bot_record(name, look.as_ref(), *governed).await?;

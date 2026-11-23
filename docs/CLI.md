@@ -134,6 +134,16 @@ only what differs: setting a bot to what it already is does nothing (exit 0). `c
 one that does not (exit 1). Because they go through the gateway, they attach to the running app's, which is where the secret
 channel is.
 
+**A model is checked before anything is written.** Its provider must be one the bot can reach: listed by the engine's
+`model.options` in the bot's own scope (the inventory the app's model picker reads), which means its plugin is in the bot's
+home and the sign-in or key it needs is there. Where the provider lists its models, the model must be one of them (an alias
+such as `haiku` counts as the model it names today, as the picker counts it). Otherwise nothing is changed and the command
+says which providers the bot can reach (exit 1). The engine checks the pick once more when it writes it, and writes nothing
+when it refuses; the bot's configuration is then read back, so `changed` (or `made`) is printed only when the model really
+is the one asked for. A new bot is made on the main profile's model and given its own once its home has its provider's
+plugin (before that the engine cannot resolve the provider for it); a model the main profile cannot reach is refused before
+the bot is made.
+
 `--max-turns N` (1 to 1000) is the bot's own cap for `boopis run --bot`, and `--max-turns default` takes the bot back to the default
 of 10. It is written where the engine reads a goal's budget: `goals.max_turns` in the bot's own configuration, by the engine's own
 `config set` (and `config unset` for the way back), so the number is the bot's wherever it is run. `bots list --json` shows it as

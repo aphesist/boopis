@@ -15,6 +15,7 @@ use crate::renderer::{self, Gpu, RendererReport, Session};
 use crate::{frame_rate, gpu, runtime, startup, webkit};
 
 mod args;
+mod bot_model;
 mod bots;
 pub mod connectors;
 mod groups;

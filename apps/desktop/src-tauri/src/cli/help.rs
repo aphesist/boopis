@@ -133,7 +133,8 @@ fn bots() -> Vec<String> {
         "  {p} bots set <name> [--role TEXT] [--soul-file FILE|-] [--model MODEL] [--shape SHAPE] [--color #rrggbb]",
         "                      [--governed|--ungoverned] [--max-turns N|default] [--json]",
         "",
-        "A model is opus (on the provider the app uses) or provider/model.",
+        "A model is opus (on the provider the app uses) or provider/model, and it must be one the bot can reach:",
+        "its provider set up for the bot and, where the provider lists its models, one of them.",
         "Exit codes: 0 done, 1 failed, 2 a usage mistake.",
     ])
 }

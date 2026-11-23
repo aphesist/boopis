@@ -246,15 +246,9 @@ pub struct HeavyChoice {
     pub blocked: Option<String>,
 }
 
-/// The pinned models of the Claude aliases (`aliases` of `model-names.json`): what an alias is on an Anthropic key.
-const NAMES_JSON: &str = include_str!("../../../../shared/data/model-names.json");
-
 /// The model an alias of the Claude route is on an Anthropic key (`fable` is `claude-fable-5-2`), read from the names table.
 fn alias_pinned(alias: &str) -> Option<String> {
-    let names: Value = serde_json::from_str(NAMES_JSON).ok()?;
-    names["aliases"][alias]["pinned"]
-        .as_str()
-        .map(str::to_owned)
+    crate::model_names::pinned(alias).map(str::to_owned)
 }
 
 fn all_on(tiers: &[LadderTier], provider: &str) -> bool {
