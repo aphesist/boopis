@@ -28,6 +28,9 @@ export { arrive, depart, travel };
 /** a hold's drift: sine in-out, so a held frame keeps moving at a near-even slow speed from end to end (travel would
     bunch the motion in the middle and sit still at both ends) */
 export const drift = cubicBezier(0.37, 0, 0.63, 1, 'drift');
+/** the camera following the thread: the same sine in-out, so a follow that moves reading content keeps its peak speed
+    near 1.6 times its average (a spring or quint would peak at 3 to 5 times, the critique's A2-13) */
+export const follow = cubicBezier(0.37, 0, 0.63, 1, 'follow');
 export type { Ease };
 
 /** the last frame act 2 draws in this edit: S2 in the master (act 3 takes over); in a cut-down that ends the act on B07,
@@ -115,6 +118,11 @@ export function leaveOut(film: Film, el: HTMLElement | SVGElement, at: number, o
   film.tl.fromTo(el, { opacity: 1, y: 0, scale: 1 }, { opacity: 0, y: o.y ?? 4, scale: o.scale ?? 1, duration: o.dur ?? DUR.out, ease: o.ease ?? ui, immediateRender: false, data: { role: 'ui' } }, at);
 }
 
+/** a small element leaves as the product's presence does: a shrink and out (--dur-out) */
+export function shrinkOut(film: Film, el: HTMLElement | SVGElement, at: number, o: { dur?: number; scale?: number } = {}): void {
+  film.tl.fromTo(el, { opacity: 1, scale: 1, transformOrigin: '0% 50%' }, { opacity: 0, scale: o.scale ?? 0.9, duration: o.dur ?? DUR.out, ease: ui, immediateRender: false, data: { role: 'ui' } }, at);
+}
+
 /** CSS for the act's own pieces (tokens only) */
 let cssIn = false;
 export function a2css(): void {
@@ -125,20 +133,26 @@ export function a2css(): void {
   s.textContent = `
 .a2-scroller { position: absolute; left: 0; top: 0; width: 2400px; height: 9000px; pointer-events: none; }
 .a2-room { position: absolute; left: 0; top: 0; width: 0; height: 0; }
-.a2-bar { position: absolute; display: block; border-radius: 999px; background: color-mix(in srgb, var(--text) 22%, transparent); pointer-events: none; }
-.a2-bar[data-q] { background: color-mix(in srgb, var(--text) 11%, transparent); }
-.a2-bar[data-s] { background: color-mix(in srgb, var(--text) 40%, transparent); }
-.a2-sel { position: absolute; border-radius: .06em; background: var(--brass-soft); }
-.a2-caret { position: absolute; width: max(4px, .04em); border-radius: 2px; background: var(--brass); }
-.a2-split .a2-wm { display: inline-block; overflow: clip; overflow-clip-margin: 0; vertical-align: top; padding: .12em .05em .2em; margin: -.12em -.05em -.2em; }
-.a2-split .a2-wm--sel { padding-left: .14em; padding-right: .16em; margin-left: -.14em; margin-right: -.16em; }
-.a2-split .a2-wu { display: inline-block; }
-.film-line[data-a2-nosel] .sel::before, .film-line[data-a2-nosel] .sel::after { display: none; }
+.a2-phbar { position: absolute; display: block; pointer-events: none; }
 .film-line .sel[data-a2-sweep]::before { clip-path: inset(0 calc((1 - var(--a2-k, 1)) * 100%) 0 0); }
-.film-line .sel[data-a2-sweep]::after { transform: translateX(calc((var(--a2-k, 1) - 1) * var(--a2-w, 0px))); }
+.film-line .sel[data-a2-sweep]::after { transform: translateX(calc((var(--a2-k, 1) - 1) * var(--a2-w, 0px))); opacity: calc(var(--a2-k, 1) * 20); }
 .a2-type { position: absolute; white-space: pre; }
 .a2-spine.bt-hmsg::after { transform-origin: 50% 0; transform: scaleY(var(--a2-sp, 1)); }
 .a2-card { position: absolute; border-radius: 0; }
 `;
   document.head.appendChild(s);
+}
+
+/* ───────── tokens, resolved where a value has to be computed (a shadow that grows with a fold) ───────── */
+/** a custom property's value as the page resolves it on `el` (the light theme's own) */
+export function token(el: Element, name: string): string {
+  return getComputedStyle(el).getPropertyValue(name).trim();
+}
+/** a shadow list with every colour's alpha times k (the token's own shape and colours, its strength scaled) */
+export function scaleShadow(shadow: string, k: number): string {
+  return shadow.replace(/rgba?\(([^)]+)\)/g, (_, a: string) => {
+    const p = a.split(',').map((x) => x.trim());
+    const al = p.length > 3 ? parseFloat(p[3]!) : 1;
+    return 'rgba(' + p[0] + ', ' + p[1] + ', ' + p[2] + ', ' + (al * k).toFixed(4) + ')';
+  });
 }

@@ -47,10 +47,6 @@ export async function a2state(ctx: ActCtx): Promise<A2State> {
   });
   /* the act's last frame in this edit (S2 in the master): nothing of act 2 is drawn after it */
   const end = actEnd(ctx);
-  /* small things move fast all through the act (the cursor, the orbs that fly, the words that travel): every frame
-     takes all its sub-frames (the renderer would keep only the shutter's two ends where few pixels change, and draw
-     them twice) */
-  ctx.film.motion(room.s1, end, 8);
   const st: A2State = { room, lay, thread, lines, end };
   states.set(ctx, st);
   return st;

@@ -1,7 +1,9 @@
 /* Act 1's own helpers (the shared motion library is frozen for the act animators): beat time in a cut-down, visibility
    that hands over cleanly at the seam, structure-keeping word units for the art director's film lines, the selection
-   sweep, zoom-aware moves for kit components, the shared ground's light pool, and the key frame's own cursor. */
+   sweep, zoom-aware measures for kit components, the shared ground's light pool, chained pose beats that never overlap,
+   and the key frame's own cursor. */
 import type { Film } from '../../engine/film';
+import type { FilmOrb } from '../../engine/orb';
 import type { Stage } from '../../engine/stage';
 import type { ActCtx } from '../context';
 import { beat } from '../../motion/beats';
@@ -12,6 +14,7 @@ import { track } from '../../motion/track';
 
 /** S1, the act's outgoing seam (SEAMS.md): every renderer here writes its own state before it and hands over after it */
 export const SEAM = 9.6;
+export const f = (n: number): number => n / 60;
 
 /* ───────── time: a beat's builder writes master times; a cut-down plays the beat in its own window ───────── */
 export interface Tm {
@@ -34,7 +37,8 @@ export function tmap(ctx: ActCtx, id: string): Tm {
 /* ───────── visibility ─────────
    `on(t)` decides while the act owns the element (t < until); from `until` on the element is left at `after` by a
    renderer that runs before every other act's (priority -11), so a later act can still hide or show it. Never an
-   opacity: a hard switch, used only where the two sides of the switch draw the same pixels (a swap) or nothing. */
+   opacity: a hard switch, used only where the two sides of the switch draw the same pixels (a swap) or nothing. A swap
+   that must not be averaged by a frame's shutter is also given a film.cut() by its beat. */
 export function vis(film: Film, el: HTMLElement | SVGElement, on: (t: number) => boolean, o: { until?: number; after?: boolean } = {}): void {
   const until = o.until ?? SEAM, after = o.after ?? false;
   const set = (v: boolean): void => { const want = v ? '' : 'hidden'; if (el.style.visibility !== want) el.style.visibility = want; };
@@ -43,15 +47,9 @@ export function vis(film: Film, el: HTMLElement | SVGElement, on: (t: number) =>
 }
 export const between = (a: number, b: number) => (t: number): boolean => t >= a - 1e-9 && t < b - 1e-9;
 
-/* ───────── motion blur ─────────
-   The renderer takes every sub-frame only where the page asks, or where the shutter's two ends differ over a good share
-   of the frame; small fast things (an orb's eyes, the cursor, a chip) differ over a tiny share and would get the two
-   ends only: a double image. A beat asks for full sampling over its whole window. */
-export function sampleAll(film: Film, t0: number, t1: number, n = 10): void { film.motion(t0, t1, n); }
-
 /* ───────── measuring ───────── */
 export const centre = (b: Box): [number, number] => [b.x + b.w / 2, b.y + b.h / 2];
-/** an element's own CSS px to world px (the product's components sit inside a CSS zoom) */
+/** an element's own CSS px to world px (the product's components sit inside a CSS zoom); measure before any transform */
 export function zoomOf(el: HTMLElement, stage: Stage): number {
   const w = el.offsetWidth;
   return w ? boxOf(el, stage).w / w : 1;
@@ -59,7 +57,8 @@ export function zoomOf(el: HTMLElement, stage: Stage): number {
 
 /* ───────── film lines ─────────
    The art director's film line keeps its inner structure (the lab marks, the selection with its caret): each word, or
-   each inline element, becomes one unit (an inline-block span) that K1 moves, without retyping the line. */
+   each inline element, becomes one unit (an inline-block span) that K1 moves, without retyping the line and without a
+   mask (nothing ever cuts a letter). */
 export function wordUnits(line: HTMLElement): HTMLElement[] {
   const out: HTMLElement[] = [];
   for (const n of [...line.childNodes]) {
@@ -93,16 +92,18 @@ export function k1(film: Film, units: HTMLElement[], at: number, o: { dur?: numb
 export const k1Start = (land: number, n: number, dur = 20 / 60, st = 4 / 60): number => Math.round((land - dur - (n - 1) * st) * 60) / 60;
 /** K1 exit: the whole line up 16 px with blur, 12 f on depart, never word by word: every word on the same frames, so the
     line leaves as one (the words are the targets, each a small unit; the line's own box spans the frame's width) */
-export function k1Exit(film: Film, units: HTMLElement[], at: number, dur = 12 / 60): void {
+export function k1Exit(film: Film, units: HTMLElement[], at: number, dur = 12 / 60): number {
   film.tl.fromTo(units, { y: 0, filter: 'blur(0px)', opacity: 1 }, { y: -16, filter: 'blur(6px)', opacity: 0, duration: dur, ease: depart, immediateRender: false, data: { role: 'type' } }, at);
+  return at + dur;
 }
 
 /* the selection (look.md 3): the product's own text selection sweeps in behind the accent word (10 f on arrive, K7),
-   and the brass caret lands at its end. The art director's .sel draws both as pseudo-elements; these variables drive
-   them. */
+   and the brass caret lands outside it. The look's .sel draws both as pseudo-elements; these variables drive them, and
+   the act sets the selection's air even on both sides of the word's ink (critique A1-20: a word's advance box carries
+   more side bearing before it than after), with the caret clear of the selection. */
 const SEL_CSS = `
-.a1-sel::before { transform: scaleX(var(--a1-sel, 1)); transform-origin: 0 50%; }
-.a1-sel[data-caret]::after { opacity: var(--a1-caret, 1); transform: scaleY(var(--a1-caret, 1)); transform-origin: 50% 100%; }
+.a1-sel::before { left: -.035em; right: -.075em; transform: scaleX(var(--a1-sel, 1)); transform-origin: 0 50%; }
+.a1-sel[data-caret]::after { right: -.135em; opacity: var(--a1-caret, 1); transform: scaleY(var(--a1-caret, 1)); transform-origin: 50% 100%; }
 .a1-w { display: inline-block; }
 `;
 let cssIn = false;
@@ -119,22 +120,37 @@ export function selSweep(film: Film, sel: HTMLElement, at: number): number {
   return at + 13 / 60;
 }
 
-/* ───────── springs as tween parts ───────── */
+/* ───────── springs ───────── */
 export const SETTLE = springDuration('settle');
 export const CHAR = springDuration('character');
 export const CAM = springDuration('camera');
 export const settle = springEase('settle');
-export const camSpring = springEase('camera');
 export const character = springEase('character');
 
+/* ───────── chained pose beats ─────────
+   A run of pose values for one number, each step a fromTo from the value the step before ends on, so no two tweens
+   ever overlap on one field (overlapping tweens on one field were the pops the motion lead measured). A step is
+   [frames or 'char' (the character spring at its natural length) or 'settle', value, ease]. */
+type Step = [number | 'char' | 'settle', number, Ease?];
+export function chain(film: Film, orb: FilmOrb, key: 'squash' | 'dx' | 'dy' | 'roll' | 'scale', at: number, from: number, steps: Step[]): number {
+  let t = at, v = from;
+  for (const [len, to, e] of steps) {
+    const dur = len === 'char' ? CHAR : len === 'settle' ? SETTLE : len / 60;
+    const ease = e ?? (len === 'char' ? character : len === 'settle' ? settle : travel);
+    film.tl.fromTo(orb.pose, { [key]: v }, { [key]: to, duration: dur, ease, immediateRender: false, data: { role: 'orb' } }, t);
+    t += dur; v = to;
+  }
+  return t;
+}
+
 /* ───────── the light pool ─────────
-   A key frame states its lamp on its own 1920x1080 box (--pool-x/y/w/h in % of the frame, --pool the centre tone). The
+   A key frame states its light on its own 1920x1080 box (--pool-x/y/w/h in % of the frame, --pool the tint token). The
    film's ground (engine/look.ts) is one box at inset -40% behind the camera; these convert a frame's pool to a box at
    any inset, so the same ellipse lands on the same pixels. */
 export interface Pool { x: number; y: number; w: number; h: number; tint: string }
 export function poolOf(kf: HTMLElement): Pool {
   const n = (k: string, d: number): number => { const v = parseFloat(kf.style.getPropertyValue(k)); return Number.isFinite(v) ? v : d; };
-  const raw = kf.style.getPropertyValue('--pool').trim() || 'var(--bg-4)';
+  const raw = kf.style.getPropertyValue('--pool').trim() || 'var(--lamp-orbs)';
   return { x: n('--pool-x', 50), y: n('--pool-y', 58), w: n('--pool-w', 62), h: n('--pool-h', 72), tint: resolveColour(raw) };
 }
 export function poolVars(p: Pool, inset: number): Record<string, string> {
@@ -148,25 +164,28 @@ export function resolveColour(c: string): string {
   s.style.color = c; s.style.display = 'none';
   document.body.appendChild(s);
   const v = getComputedStyle(s).color;
-  s.remove();
-  return v || 'rgb(46, 43, 39)';
+  const probe = document.createElement('span');
+  probe.style.color = 'var(--lamp-orbs)'; probe.style.display = 'none';
+  document.body.appendChild(probe);
+  const fallback = getComputedStyle(probe).color;
+  s.remove(); probe.remove();
+  return v || fallback;
 }
-/** tween the ground's pool from one key frame's lamp to another's */
+/** tween the ground's pool from one key frame's light to another's */
 export function poolTo(film: Film, ground: HTMLElement, from: Pool, to: Pool, at: number, dur: number, ease: Ease = travel): void {
   film.tl.fromTo(ground, poolVars(from, 0.4), { ...poolVars(to, 0.4), duration: dur, ease, immediateRender: false, data: { role: 'ground', blur: false } }, at);
 }
 
 /* ───────── the key frame's own cursor ─────────
-   The art director's cursor (bone, ink edge, a soft shadow) stays where the key frame draws it at rest; these moves
-   are offsets from that rest, on slight arcs (U1), and a press dips it to 0.85 for 4 f and lets go on the settle
-   spring. Offset 0 is the key frame. */
+   The art director's cursor stays where the key frame draws it at rest; these moves are offsets from that rest, on
+   slight arcs (U1), written to the individual translate and scale properties (from the seam on they rest at zero and
+   one, so the next act can move the same cursor with its own transform). A press dips it to 0.85 for 4 f and lets go
+   on the settle spring. */
 export interface KfCursor { from(x: number, y: number): KfCursor; move(x: number, y: number, at: number, dur: number, arc?: number): KfCursor; press(at: number): number }
 export function kfCursor(film: Film, el: HTMLElement, rest: { x: number; y: number }): KfCursor {
   const s = { x: 0, y: 0, p: 1, __name: 'a1-cursor' };
   let last = { x: 0, y: 0 };
   el.style.transformOrigin = '8% 6%';
-  /* the individual translate and scale properties, not transform: from the seam on they rest at zero and one, so the
-     next act can move the same cursor with its own transform */
   film.onRender(() => { el.style.translate = s.x.toFixed(2) + 'px ' + s.y.toFixed(2) + 'px'; el.style.scale = s.p.toFixed(4); });
   const c: KfCursor = {
     from(x, y) {

@@ -28,6 +28,8 @@ export interface A1State {
   /** the B01 to B02 dive: the origin of the buttons' fan in B02 (the column's centre), and when the dive starts */
   origin?: [number, number];
   diveStart?: number;
+  /** when B02's line has left (B03's line rises after it) */
+  line2Out?: number;
   /** when B02's key frame has nothing left on screen (its last lab mark has landed in a card) */
   kf2End?: number;
   /** B03 to B04: when the first orb leaves its card, and when each lands in the room's stack (by bot name) */

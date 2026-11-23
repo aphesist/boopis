@@ -1,27 +1,28 @@
 /* B04, the room: you ask once (7.467 to 9.600 s, bars 4.3 to 5.3).
 
-   The orbs land in the room's head stack (B03's flights, kai first on the beat), each on top of the one before; the
-   room "release" opens around them: its plate grows out from behind the stack (T8, travel), the name and the members
-   rise beside it, the head's actions follow, and the composer rises from the bottom edge (arrive 30 f) with its four
-   member chips. The cursor arcs in from the lower right and clicks into the composer on beat 15; the line types (K2,
-   28 cps, no caret while typing) and "@kai" becomes a mention chip as the handle completes: the "@" folds into kai's
-   orb, the capsule opens behind the name, and the stack's kai hops at being named while the others look at him. The
-   cursor goes to the send button and presses on beat 17 (the button dips to .96); on that frame the line lifts out of
-   the composer and travels up into the thread as your request (travel 20 f), its call number "You 14:02" arriving
-   under it, and the composer is empty again. The presence entry "kai thinking" rises at the thread's tail (the
-   product's --dur-2, 6 px, --ease). The camera eases back to rest and lands on 9.600 with every part at rest: the seam
-   S1 state, B04's key frame. */
+   The orbs land in the room's head stack (B03's flights, kai first on the beat), each on top of the one before and
+   nudging it; each is a character from its landing. The room "release" builds out of the stack, its parts overlapping
+   by a few frames: the plate grows out from behind the stack (T8), the name and the members rise beside it, the head's
+   actions follow, and the composer rises from the bottom edge (arrive 30 f) with its four member chips while the cursor
+   arcs in (34 f) and clicks into it on beat 15. The line types (K2, 28 cps) and "@kai" becomes the mention chip as the
+   handle completes: the "@" folds into kai's orb, the capsule opens behind the name (the kit's own chip, on the text's
+   baseline), and the stack's kai hops at being named while the others look at him; they read along. The cursor goes to
+   the send button and presses on beat 17 in the product's order: the cursor dips, the button squeezes to .96, and on
+   the frame it bottoms out the line lifts out of the composer and travels up into the thread as your request, its call
+   number "You 14:02" arriving under it; the button greys once the field is empty and the placeholder comes back. The
+   presence entry "kai thinking" rises at the thread's tail (the product's --dur-2, 6 px, --ease). The camera leans to
+   the composer while you type, follows the request up and lands at rest on 9.600 with every part at rest: the seam S1
+   state, B04's key frame. */
 import type { ActCtx } from '../context';
 import type { FilmOrb } from '../../engine/orb';
-import { blink, eyes, glance } from '../../motion/orb-moves';
+import { eyes } from '../../motion/orb-moves';
+import { character, type Character } from '../../motion/character';
 import { boxOf } from '../../motion/carry';
 import { arrive, travel, ui } from '../../motion/ease';
 import { a1state } from './state';
-import { SEAM, a1css, centre, kfCursor, poolTo, tmap, vis, zoomOf, sampleAll } from './util';
-import { glanceBy, hop, land, nudge, poseNow, quick } from './orbs';
+import { SEAM, a1css, centre, chain, f, kfCursor, poolTo, tmap, vis, zoomOf } from './util';
+import { hop, land, nudge, poseNow } from './orbs';
 import { LAND_POSE, STACK_ORDER } from './b03';
-
-const f = (n: number): number => n / 60;
 
 export async function b04(ctx: ActCtx): Promise<void> {
   if (!ctx.has('B04')) return;
@@ -31,7 +32,6 @@ export async function b04(ctx: ActCtx): Promise<void> {
   const kf = s.kf.b04!, m = s.m, orbs = s.orbs.b04!;
   const W = stage.width, H = stage.height;
   film.mark('B04 the room', T.start);
-  sampleAll(film, T.start, T.end);
   a1css('.a1-input[data-empty="true"]::before { opacity: var(--a1-ph, 1); position: relative; top: var(--a1-phy, 0px); }');
 
   /* ── the parts (measured before any tween) ── */
@@ -71,8 +71,12 @@ export async function b04(ctx: ActCtx): Promise<void> {
   const rest = document.createElement('span');
   const rChars = chars(' is it ready to cut?', rest);
   typed.append(chip, rest, handle);
+  const emptyH = input.offsetHeight;
   input.appendChild(typed);
   input.dataset['empty'] = 'false';
+  const typedH = input.offsetHeight;
+  /* the field keeps one height from its placeholder to the typed line (critique A1-15: it snapped on the first key) */
+  if (Math.abs(typedH - emptyH) > 0.5) input.style.minHeight = Math.max(typedH, emptyH) + 'px';
   /* measured in place: where the chip's name sits against the typed handle, and the chip against the request's */
   const chipBox = boxOf(chip, stage), chipName = boxOf(chip.querySelector('.ui-mention__name')!, stage), chipOrb = boxOf(chip.querySelector('.ui-orb')!, stage);
   const hb = hChars.map((c) => boxOf(c, stage));
@@ -87,41 +91,25 @@ export async function b04(ctx: ActCtx): Promise<void> {
   vis(film, kf, (x) => x >= (s.flightStart ?? T.start) - 1e-9, { after: true });
   colOuter.style.zIndex = '2';   /* your request passes over the composer as it lifts */
 
-  /* ── the stack: each orb is the B03 orb that landed there, in the same pose ── */
+  /* ── the stack: each orb is the B03 orb that landed there, in the same pose, and a character from its landing ── */
   const stack = STACK_ORDER.map((n) => orbs.get(n)!);
+  const cs: Character[] = [];
   stack.forEach((so, j) => {
     const L = s.landAt[so.name] ?? T.start + j * f(3);
     poseNow(so.orb, LAND_POSE);
+    cs.push(character(film, so.orb, { seed: 41 + j * 13, from: L }));
     vis(film, so.holder, (x) => x >= L - 1e-9, { after: true });
     land(film, so.orb, L, 0.1);
     const prev = stack[j - 1];
     if (prev) nudge(film, prev.orb, L, -prev.orb.size * 0.035);
   });
-  const [kai, nina, moss, vox] = stack.map((x) => x.orb) as [FilmOrb, FilmOrb, FilmOrb, FilmOrb];
+  const [kai] = stack.map((x) => x.orb) as [FilmOrb];
+  const [kaiC, ninaC, mossC, voxC] = cs as [Character, Character, Character, Character];
 
   /* ── the plate grows out from behind the stack (T8) ── */
   const [scx, scy] = m.slot.length ? [(m.slot[0]!.x + m.slot[m.slot.length - 1]!.x + m.slot[m.slot.length - 1]!.w) / 2, centre(m.slot[0]!)[1]] : centre(plateBox);
   const plateAt = t(7.5), PLATE = d(f(30));
   film.tl.fromTo(plate, { left: scx, top: scy, width: 0, height: 0 }, { left: plateBox.x, top: plateBox.y, width: plateBox.w, height: plateBox.h, duration: PLATE, ease: arrive, immediateRender: true, data: { role: 'carry' } }, plateAt);
-
-  /* the head's own ground (the product's sticky header is --bg-2) is revealed with the plate, never before it */
-  const header = kf.querySelector<HTMLElement>('.room-head');
-  if (header) {
-    const headBox = boxOf(header, stage), hz = zoomOf(header, stage);
-    header.style.background = 'transparent';
-    const bg = document.createElement('div');
-    bg.className = 'a1-headbg';
-    bg.style.cssText = 'position:absolute;inset:0;z-index:-1;background:var(--bg-2);pointer-events:none';
-    header.prepend(bg);
-    film.onRender((x) => {
-      if (x >= plateAt + PLATE - 1e-9) { if (bg.style.clipPath) bg.style.clipPath = ''; return; }
-      const L = parseFloat(plate.style.left) || 0, Tp = parseFloat(plate.style.top) || 0, Wp = parseFloat(plate.style.width) || 0, Hp = parseFloat(plate.style.height) || 0;
-      const x0 = Math.max(L, headBox.x), y0 = Math.max(Tp, headBox.y), x1 = Math.min(L + Wp, headBox.x + headBox.w), y1 = Math.min(Tp + Hp, headBox.y + headBox.h);
-      if (x < plateAt - 1e-9 || x1 <= x0 || y1 <= y0) { bg.style.clipPath = 'inset(50%)'; return; }
-      const r = Math.min(30, Wp / 2, Hp / 2) / hz;
-      bg.style.clipPath = 'inset(' + ((y0 - headBox.y) / hz).toFixed(2) + 'px ' + ((headBox.x + headBox.w - x1) / hz).toFixed(2) + 'px ' + ((headBox.y + headBox.h - y1) / hz).toFixed(2) + 'px ' + ((x0 - headBox.x) / hz).toFixed(2) + 'px round ' + r.toFixed(2) + 'px)';
-    }, 1);
-  }
 
   /* ── the head: the name and members rise beside the stack, its actions follow ── */
   const riseIn = (el: HTMLElement | null, at: number, dy = 10, dx = 0, frames = 22): void => {
@@ -146,12 +134,14 @@ export async function b04(ctx: ActCtx): Promise<void> {
     const c = kfCursor(film, cursorEl, { x: curRest.x, y: curRest.y });
     const clickX = inputBox.x + inputBox.w * 0.3 - tip.x, clickY = inputBox.y + inputBox.h * 0.5 - tip.y;
     const [sxc, syc] = centre(sendBox);
-    c.from(W + 140, H + 180);
-    c.move(clickX, clickY, typeAt - f(4) - d(f(26)), d(f(22)), 0.18);
+    /* in from just past the lower right edge, on an arc over 34 f, arriving 4 f before the click (critique A1-03) */
+    c.from(W + 40, H + 60);
+    c.move(clickX, clickY, typeAt - f(8) - d(f(34)), d(f(34)), 0.16);
     c.press(typeAt - f(4));
-    c.move(sxc - tip.x - 6, syc - tip.y - 4, t(8.62), d(f(22)), 0.12);
+    /* to the send button over 30 f, arriving 4 f before the press; after it, just off the button, inside the frame */
+    c.move(sxc - tip.x - 6, syc - tip.y - 4, sendHit - f(8) - d(f(30)), d(f(30)), 0.12);
     c.press(sendHit - f(4));
-    c.move(curRest.x, curRest.y, sendHit + d(f(6)), d(f(18)), 0.2);
+    c.move(Math.min(curRest.x, W - 60), curRest.y, sendHit + d(f(6)), d(f(20)), 0.2);
   }
 
   /* ── typing (K2): the handle, the chip, the rest ── */
@@ -166,9 +156,10 @@ export async function b04(ctx: ActCtx): Promise<void> {
   const chipOrbEl = chip.querySelector<HTMLElement>('.ui-orb')!, chipNameEl = chip.querySelector<HTMLElement>('.ui-mention__name')!;
   const openFrom = Math.max(0, 100 - (100 * (hb[3]!.x + hb[3]!.w - hb[0]!.x)) / chipBox.w);
   film.tl.fromTo(chip, { clipPath: 'inset(0% ' + openFrom.toFixed(2) + '% 0% 0% round 999px)' }, { clipPath: 'inset(0% 0% 0% 0% round 999px)', duration: CHIP, ease: arrive, immediateRender: true, data: { role: 'ui' } }, chipAt);
-  chipOrbEl.style.transformOrigin = '50% 50%';
-  chipOrbEl.style.display = 'inline-block';
-  film.tl.fromTo(chipOrbEl, { scale: 0 }, { scale: 1, duration: CHIP, ease: arrive, immediateRender: true, data: { role: 'ui' } }, chipAt);
+  /* the orb grows in its holder (a transform: the kit's .ui-orb box, which sets the chip's baseline, is never touched) */
+  const chipHolder = chipOrbEl.querySelector<HTMLElement>('.film-orb-holder') ?? chipOrbEl;
+  chipHolder.style.transformOrigin = '50% 50%';
+  film.tl.fromTo(chipHolder, { scale: 0 }, { scale: 1, duration: CHIP, ease: arrive, immediateRender: true, data: { role: 'ui' } }, chipAt);
   hChars[0]!.style.transformOrigin = '50% 60%';
   film.tl.fromTo(hChars[0]!, { scale: 1, x: 0 }, { scale: 0, x: atShift, duration: d(f(6)), ease: ui, immediateRender: false, data: { role: 'ui' } }, chipAt);
   hChars.slice(1).forEach((c) => film.tl.fromTo(c, { x: 0 }, { x: kaiShift, duration: CHIP, ease: arrive, immediateRender: false, data: { role: 'ui' } }, chipAt));
@@ -192,12 +183,13 @@ export async function b04(ctx: ActCtx): Promise<void> {
     input.style.setProperty('--a1-phy', ((1 - ph) * 8).toFixed(2) + 'px');
     const full = x >= typeAt - 1e-9 && x < lift + d(f(9)) - 1e-9;
     input.dataset['empty'] = full ? 'false' : 'true';
-    const up = Math.min(1, Math.max(0, (x - typeAt) / f(8))), down = Math.min(1, Math.max(0, (x - lift) / f(8)));
+    /* the send button wakes with the first key and greys only once the field is empty (the product's order) */
+    const up = Math.min(1, Math.max(0, (x - typeAt) / f(8))), down = Math.min(1, Math.max(0, (x - (lift + d(f(9)))) / f(8)));
     const k = ui(up) * (1 - ui(down));
     send.style.opacity = (0.35 + 0.65 * k).toFixed(4);
   });
-  /* the placeholder comes back once your request has left the composer, rising into place */
   input.classList.add('a1-input');
+  /* the press: the button squeezes to .96 as the cursor dips, and lets go on the frame the line lifts */
   film.tl.fromTo(send, { scale: 1 }, { scale: 0.96, duration: f(4), ease: ui, immediateRender: false, data: { role: 'ui' } }, lift - f(4));
   film.tl.fromTo(send, { scale: 0.96 }, { scale: 1, duration: f(10), ease: ui, immediateRender: false, data: { role: 'ui' } }, lift);
 
@@ -211,33 +203,33 @@ export async function b04(ctx: ActCtx): Promise<void> {
   const presAt = lift + d(f(12)), DUR2 = d(0.2);
   presParts.forEach((el, j) => film.tl.fromTo(el, { y: 6 / zUI, opacity: 0 }, { y: 0, opacity: 1, duration: DUR2, ease: ui, immediateRender: true, data: { role: 'ui' } }, presAt + j * d(f(2))));
 
-  /* ── the stack acts ── */
-  const cast = [kai, nina, moss, vox];
-  cast.forEach((o, j) => glance(film, o, t(7.74) + j * f(2), 18, 2));                   /* to "release" as it rises */
-  cast.forEach((o, j) => glance(film, o, typeAt + f(2) + j * f(2), 10, -16));           /* down to the composer */
-  hop(film, kai, chipAt + f(2), kai.size * 0.07);                                        /* named */
-  eyes(film, kai, chipAt + f(2), 'circle', { dur: 0.12 });
-  eyes(film, kai, chipAt + 0.42, 'pill', { dur: 0.14 });
-  [nina, moss, vox].forEach((o, j) => glance(film, o, chipAt + f(4) + j * f(2), -24, 1));  /* the others look at him */
+  /* ── the stack acts (looks are the characters' queues: each takes over from the one before, never a fight) ── */
+  cs.forEach((c, j) => c.look(t(7.74) + j * f(2), 18, 2));                 /* to "release" as it rises */
+  cs.forEach((c, j) => c.look(typeAt + f(2) + j * f(2), 10, -16));         /* down to the composer */
+  const hopAt = chipAt + f(8);
+  hop(film, kai, hopAt, kai.size * 0.07);                                   /* named */
+  eyes(film, kai, hopAt - f(4), 'circle', { dur: 0.14 });
+  eyes(film, kai, hopAt + 0.38, 'pill', { dur: 0.14 });
+  [ninaC, mossC, voxC].forEach((c, j) => c.look(chipAt + f(6) + j * f(2), -24, 1));   /* the others look at him */
   /* they read along as the line types, their gaze following it to the right */
-  cast.forEach((o, j) => glance(film, o, t(8.5) + j * f(2), 4, -16));
-  cast.forEach((o, j) => glance(film, o, t(8.72) + j * f(2), 14, -15));
-  blink(film, moss, t(8.48));
-  blink(film, nina, t(8.8));
+  cs.forEach((c, j) => c.look(t(8.5) + j * f(2), 4, -16));
+  cs.forEach((c, j) => c.look(t(8.74) + j * f(2), 14, -15));
+  mossC.blink(t(8.46));
+  ninaC.blink(t(8.82));
   /* they follow your request up into the thread; kai turns to thinking with his presence */
-  cast.forEach((o, j) => glanceBy(film, o, lift + f(4) + j * f(2), 16, j === 0 ? -8 : -20, j === 0 ? 12 : -2));
-  eyes(film, kai, presAt + f(2), 'squint', { dur: 0.16 });
-  quick(film, kai, presAt, 4, { squash: 0.04 });
-  film.tl.to(kai.pose, { squash: 0, duration: f(12), ease: travel, immediateRender: false, data: { role: 'orb' } }, presAt + f(4));
+  cs.forEach((c, j) => c.look(lift - f(4) + j * f(2), j === 0 ? -8 : -20, j === 0 ? 12 : -2));
+  eyes(film, kai, presAt + f(2), 'squint', { dur: 0.18 });
+  chain(film, kai, 'squash', presAt, 0, [[4, 0.04, ui], [14, 0, travel]]);
+  void kaiC;
   const presOrb = [...orbs.values()].find((o) => presence.contains(o.holder))?.orb;
-  if (presOrb) glanceBy(film, presOrb, presAt + f(6), 14, -10, 12);
+  if (presOrb) character(film, presOrb, { seed: 97, from: presAt }).look(presAt + f(6), -10, 12);
 
   /* ── the lamp opens on the room; the camera eases back to rest and lands on the seam ── */
   if (s.ground && s.pool.b03 && s.pool.b04) poolTo(film, s.ground, s.pool.b03, s.pool.b04, plateAt, d(0.7));
   const camFrom = s.camFree ?? T.start;
   const leanY = H / 2 + (centre(compBox)[1] - H / 2) * 0.16;
   cam.to({ x: W / 2, y: H / 2, zoom: 1.0 }, { at: camFrom, dur: compLand - camFrom, ease: travel });
-  cam.to({ y: leanY, zoom: 1.05 }, { at: typeAt - f(6), dur: lift - typeAt + f(2), ease: travel });
+  cam.to({ y: leanY, zoom: 1.05 }, { at: typeAt - f(6), dur: lift - typeAt + f(2), ease: arrive });
   cam.to({ x: W / 2, y: H / 2, zoom: 1, roll: 0 }, { at: lift + f(2), dur: T.end - lift - f(2), ease: travel });
   s.camFree = T.end;
 }

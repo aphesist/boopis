@@ -16,7 +16,7 @@ export interface Layout {
   X: number; L: number; W: number; gap: number; fade: number;
 }
 export const LAYOUT = (v: boolean): Layout => (v
-  ? { v, X: 2.6, L: 60, W: 370, gap: 32 * 2.6, fade: 16 * 2.6 }
+  ? { v, X: 2.6, L: 60, W: 346, gap: 32 * 2.6, fade: 16 * 2.6 }
   : { v, X: 3, L: 130, W: 556, gap: 32 * 3, fade: 16 * 3 });
 
 export interface Room {
@@ -86,17 +86,13 @@ export async function takeRoom(ctx: ActCtx): Promise<Room> {
   for (const e of [head, thread]) if (e.parentElement === scope || e.parentElement === wrap) scroller.appendChild(e);
   wrap.appendChild(composer);
 
-  /* 16:9: the plate bleeds past the frame on three sides; act 2's camera looks above and below it, so it grows (off
-     screen) while its light keeps its place in the world (the gradient pinned to the plate's own box at S1) */
-  if (plate && !lay.v) {
-    const pr = { top: plate.offsetTop, h: plate.offsetHeight, w: plate.offsetWidth };
+  /* the plate bleeds 12% past the frame (bleedPlate); act 2's camera follows the thread further than that up and down, so
+     the plate grows off screen (its fill is one tone, so nothing on screen changes) */
+  if (plate) {
+    const pr = { top: plate.offsetTop, h: plate.offsetHeight };
     const grow = 1600;
     styleFrom(film, plate, 'top', S1, () => (pr.top - grow) + 'px');
     styleFrom(film, plate, 'height', S1, () => (pr.h + grow * 2) + 'px');
-    styleFrom(film, plate, 'background-size', S1, () => pr.w + 'px ' + pr.h + 'px');
-    styleFrom(film, plate, 'background-position', S1, () => '0px ' + grow + 'px');
-    styleFrom(film, plate, 'background-repeat', S1, () => 'no-repeat');
-    styleFrom(film, plate, 'background-color', S1, () => 'var(--bg-2)');
   }
   /* the room is act 2's from S1: drawn, and never clipped by the key frame's box (the camera moves past it) */
   const end = actEnd(ctx);
