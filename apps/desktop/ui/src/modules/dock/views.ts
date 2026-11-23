@@ -118,6 +118,8 @@ const TIP_CH = 26;
 export const tipOf = (b: Pick<Bot, 'name' | 'role'>): string => { const n = clip(b.name, 18), room = TIP_CH - n.length - 2; return room >= 8 ? `${n}, ${clip(b.role, room)}` : n; };
 
 /* ───────── view templates ───────── */
+/** the Shown/Hidden toggle's name: its visible word first, then which page (WCAG 2.5.3); aria-pressed carries the state */
+const toggleName = (on: boolean, name: string): string => `${on ? 'Shown in' : 'Hidden from'} the dock: ${name}`;
 function tileHTML(p: { id: string; on: boolean }, i: number): string {
   const name = PAGE_NAME[p.id] ?? p.id, first = i === 0, last = i === S.pages.length - 1;
   const onCount = S.pages.filter((x) => x.on).length;   /* the arrangement's own count: a page whose part is absent is still arranged */
@@ -128,10 +130,12 @@ function tileHTML(p: { id: string; on: boolean }, i: number): string {
   if (p.id === 'sched') glyph = `<span class="dk-tile-sub">${S.sched.length} runs</span>`;
   if (p.id === 'ctx') glyph = `<span class="dk-tile-sub">${ctxPct()}%</span>`;
   const dot = !p.on ? '<i class="dk-tile-dot" data-off></i>' : `<i class="dk-tile-dot"${p.id === S.page ? ' aria-current="true"' : ''} data-k="dot:${p.id}"></i>`;
-  return `<li class="dk-tile" data-tile="${p.id}"${p.on ? '' : ' data-off'}><span class="dk-tile-o" data-e aria-hidden="true"></span>
+  /* the tile is a container (.ui-nest, dock.css): Shown sits in its bottom corner and the move buttons in its top one as
+     .ui-corner controls, so their radius, size, inset and focus ring come from the tile (R-corner-3, R-corner-4, R-corner-5) */
+  return `<li class="dk-tile ui-nest" data-tile="${p.id}"${p.on ? '' : ' data-off'}><span class="dk-tile-o" data-e aria-hidden="true"></span>
       <span class="dk-tile-name" data-e>${esc(name)}</span><span class="dk-tile-glyph" aria-hidden="true" data-e>${glyph}</span>
-      <span class="dk-tile-foot">${dot}${btn(p.on ? 'Shown' : 'Hidden', 'page-toggle', { variant: 'ghost', size: 's', class: 'dk-tile-show', attrs: { 'data-id': p.id, 'aria-pressed': String(p.on), 'aria-label': `Show ${name} in the dock`, 'aria-disabled': p.on && onCount === 1 ? 'true' : null, 'data-e': true } })}</span>
-      <span class="dk-tile-move">${ui.html.iconButton({ icon: 'back', label: `Move ${name} left`, size: 's', disabled: first, attrs: { 'data-act': 'page-left', 'data-id': p.id } })}${ui.html.iconButton({ icon: 'forward', label: `Move ${name} right`, size: 's', disabled: last, attrs: { 'data-act': 'page-right', 'data-id': p.id } })}</span></li>`;
+      <span class="dk-tile-foot">${dot}${btn(p.on ? 'Shown' : 'Hidden', 'page-toggle', { variant: 'ghost', size: 's', class: 'dk-tile-show ui-corner', attrs: { 'data-id': p.id, 'aria-pressed': String(p.on), 'aria-label': toggleName(p.on, name), 'aria-disabled': p.on && onCount === 1 ? 'true' : null, 'data-e': true } })}</span>
+      <span class="dk-tile-move">${ui.html.iconButton({ icon: 'back', label: `Move ${name} left`, size: 's', class: 'ui-corner', disabled: first, attrs: { 'data-act': 'page-left', 'data-id': p.id } })}${ui.html.iconButton({ icon: 'forward', label: `Move ${name} right`, size: 's', class: 'ui-corner', disabled: last, attrs: { 'data-act': 'page-right', 'data-id': p.id } })}</span></li>`;
 }
 
 export const V: Record<string, () => string> = {

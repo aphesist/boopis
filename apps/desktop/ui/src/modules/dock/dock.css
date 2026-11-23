@@ -238,7 +238,10 @@ button.dk-sched-what:hover { color: var(--text-strong); }
 .dk-edit-head h2 { margin: 0; font-size: var(--fs-m); line-height: var(--lh-ui); font-weight: 600; color: var(--text-strong); }
 .dk-edit-head p { margin: 2px 0 0; font-size: var(--fs-xs); color: var(--text-quiet); }
 .dk-tiles { list-style: none; margin: 14px 0 0; padding: 0; display: flex; gap: var(--sp-2); }
-.dk-tile { position: relative; width: 104px; height: 92px; border-radius: var(--r-m); display: flex; flex-direction: column; justify-content: space-between; padding: 10px 10px var(--sp-2); box-sizing: border-box; cursor: grab; touch-action: none; user-select: none; }
+/* a tile is a container (.ui-nest) whose corner controls are 24px (the move buttons; Shown takes the same size): the corner
+   rule derives their radius, inset and ring (inset 8, radius 12 at the default corners), and the tile's padding on the
+   sides that hold them is that inset, so Shown sits concentric in the bottom corner (R-corner-3, R-corner-4) */
+.dk-tile { --r-outer: var(--r-m); --pad: var(--pad-menu); --corner-size: 24px; position: relative; width: 104px; height: 92px; border-radius: var(--r-outer); display: flex; flex-direction: column; justify-content: space-between; padding: 10px var(--corner-inset) var(--corner-inset) 10px; box-sizing: border-box; cursor: grab; touch-action: none; user-select: none; }
 .dk-tile-o { position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--line); pointer-events: none; transition: box-shadow var(--dur-1) var(--ease); }
 .dk-tile:hover .dk-tile-o { box-shadow: inset 0 0 0 1px var(--line-strong); }
 .dk-tile > * { position: relative; }
@@ -254,8 +257,7 @@ button.dk-sched-what:hover { color: var(--text-strong); }
 .dk-tile-dot { width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--mark-off); }
 .dk-tile-dot[aria-current="true"] { width: 14px; background: var(--brass); }
 .dk-tile-dot[data-off] { background: transparent; box-shadow: inset 0 0 0 1px var(--mark-off); }
-.dk-tile-show { margin-right: -6px; }
-.dk-tile-move { top: 6px; right: 6px; display: flex; opacity: 0; transition: opacity var(--dur-1) var(--ease); }
+.dk-tile-move { top: var(--corner-inset); right: var(--corner-inset); display: flex; opacity: 0; transition: opacity var(--dur-1) var(--ease); }
 .dk-tile:hover .dk-tile-move, .dk-tile:focus-within .dk-tile-move { opacity: 1; }
 .dk-edit-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
 .dk-edit-foot p { margin: 0; font-family: var(--mono); font-size: var(--fs-2xs); color: var(--text-quiet); }
