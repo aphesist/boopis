@@ -33,19 +33,19 @@ The order below is the order of `policy.check` after this spec. Steps 0-4 exist;
 | 0 | Host protections: denied reads (all sessions), governance writes and owner-answer words (bot sessions) (`host-protections.md` H1-H3) | block |
 | 1-4 | invalid configuration, the owner's `deny` rules, protected paths, governed mode (unchanged) | block |
 | 4b | the bot's row is **Block** for a category the call is in, or for the tool (`policy/tiers.py`) | block |
-| 4c.1 | **Exceptions** with a deterministic `match` that cover every rule that would otherwise ask | allow (skip 4c.2-4c.4) |
-| 4c.2 | **Pre-filter**: unedited default rules, by their patterns (section 5) | match set M |
-| 4c.3 | **Reviewer**: every enabled rule whose `kinds` cover the call and that the pre-filter did not decide, plus plain-language exceptions (section 7) | M, minus rules an applying exception excepts |
-| 4c.4 | M is not empty, or the bot's row is **Ask** | card (section 8) |
+| 4c.1 | **Pre-filter**: unedited default rules, by their patterns (section 5); and the bot's **Ask** rows the call is in, as `row.<category>` | match set M |
+| 4c.2 | **Reviewer**: every enabled rule whose `kinds` cover the call and that the pre-filter did not decide, plus the plain-language exceptions for this bot, in one request (section 7) | M grows |
+| 4c.3 | **Exceptions** for this bot: one with a deterministic `match` that matches, or a plain-language one the reviewer says applies, removes the rules it excepts from M | M shrinks |
+| 4c.4 | M is not empty | card (section 8) |
 | 5-8 | the owner's `ask` and `allow` rules, governed network, the default (unchanged) | ask / allow |
 | 9 | a bot's `kanban_create` filed right (unchanged) | modify |
 | then | budgets: the month, the run cap when one is set (unchanged; no cap by default, section 12) | block / card |
 
 **Engine hardline.** The engine's hardline floor (`tools/approval.py` `_floor_block`, also `approvals.deny`) is unconditional, but it runs inside the terminal tool, after `pre_tool_call` returns. So it is first in authority and last in time: a hardline command that matched a rule shows a card, and after Allow the engine still blocks it. The card never promises the action will run. The plugin cannot call the hardline check first: `detect_hardline_command` is not on the public plugin API. *Not as the package states it* ("engine hardline, then pre-filter").
 
-**When the pre-filter matched**, the reviewer is skipped unless a plain-language exception might cancel the match (the card is the outcome either way; the card names the pre-filter's rule).
+**When the pre-filter matched**, the reviewer is skipped unless a plain-language exception for this bot excepts a matched rule (the card is the outcome either way; it names the pre-filter's rule). A deterministic exception that covers every matched rule lets the call run with no reviewer call.
 
-**When the bot's row is Ask** (4c.4) and no global rule needs the reviewer, the reviewer is skipped too: the card names the row ("kai's row: deploying anywhere").
+**When the bot's row is Ask** and no global rule or plain-language exception needs the reviewer, the reviewer is skipped too: the card names the row ("kai's row: deploying anywhere").
 
 ## 4. The default rules
 
@@ -93,7 +93,7 @@ The rows (w30/governed-bots, `policy/bot_tiers.json`): deploys, push, network, s
 
 1. host protections (block)
 2. per-bot **Block** (block)
-3. an **exception** that applies, for the rules it excepts and the bots it names (allow)
+3. an **exception** that applies, for the rules or rows it excepts and the bots it names (allow)
 4. a **global rule** match (ask, card names the rule)
 5. per-bot **Ask** (ask, card names the row)
 6. per-bot **Allow**, or nothing covers it (run)
@@ -217,7 +217,7 @@ As every ask today: a refusal (`policy/__init__.py` `_ask` is not reachable from
 ## 10. Always allow: the narrow exception
 
 1. The owner presses Always allow. The card is answered `once`.
-2. The UI calls the plugin's `rules.draft {session_id, prompt_id}`. The plugin finds the pending call (kept in memory per card, 10 minutes) and returns a draft: `text` written by the reviewer model with a fixed prompt ("the narrowest exception that covers this action and nothing broader: name the program, the target and the folder"), and a deterministic `match` when one can be made from the call (policy rule grammar, `policy/rules.py`: `Bash(git push --force origin feature/*)` with the path, `mcp__gmail__send_email` with the recipient in the text only), `excepts: [matched rule ids]`, `bots: [this bot]`.
+2. The UI calls the plugin's `rules.draft {session_id, description}` (the card's text: the plugin never learns the engine's `prompt_id`). The plugin finds that session's pending call whose summary and rule lines match (the engine may redact parts of the text, `gateway/session_pending_controls.py:28-30`; calls are kept in memory per card, 10 minutes). A card raised in a kanban or cron worker's own process is not in the gateway's memory: its draft is made from the card's text alone, with no `match` and returns a draft: `text` written by the reviewer model with a fixed prompt ("the narrowest exception that covers this action and nothing broader: name the program, the target and the folder"), and a deterministic `match` when one can be made from the call (policy rule grammar, `policy/rules.py`: `Bash(git push --force origin feature/*)` with the path, `mcp__gmail__send_email` with the recipient in the text only), `excepts` (the matched rule ids, and `row.<category>` for a row card), and `bots: [this bot]`.
 3. The owner edits the text (one line, at most 200 characters), may widen `bots` to all bots, and saves; or cancels and nothing is saved. The host writes it with `source: "card"`.
 4. If drafting fails, the UI offers the owner an empty exception with `excepts` and `bots` filled.
 
@@ -271,7 +271,7 @@ Written by the host only (atomic: temp file, fsync, rename, mode `0600`, under `
 
 | Method | Params | Result |
 |---|---|---|
-| `rules.draft` | `{session_id, prompt_id}` or `{session_id, description}` | `{text, match?, match_cwd?, excepts, bots}`; writes nothing |
+| `rules.draft` | `{session_id, description}` | `{text, match?, match_cwd?, excepts, bots}`; writes nothing |
 | `rules.kinds` | `{text}` | `{kinds}`; the reviewer's reading of a new rule's kinds, for the save dialog |
 | `rules.reviewer.rank` | `{}` | `{candidates: [{provider, model, estimate_usd}], unpriced: [{provider, model}]}` |
 | `rules.explain` | `{bot, tool, args}` | `{decision, rules: [{id, applies, by: "pattern"\|"reviewer"\|"exception"}], reviewed}`; a dry check for Settings' "Try it" and for tests; makes no card |
