@@ -870,10 +870,54 @@ async fn bots_that_work_the_whole_time_leave_everything_as_it_is_until_the_next_
     );
 }
 
-/// The release smoke's case, and `--engine existing`, and a gateway an earlier run left: the update never stops a gateway this
-/// run did not start. It says so, leaves the gateway and its files as they are, and keeps looking.
+/// The usual case after an upgrade: the gateway an earlier session of boopis started is still running (it outlives the app).
+/// It is boopis's own (`GatewayOwner::ThisInstall`, proven by the app's lock folder in its environment), so the update
+/// waits until nothing works, stops it without `--yes`, puts the code in place and starts it again.
 #[tokio::test]
-async fn a_gateway_this_run_did_not_start_is_never_stopped() {
+async fn an_earlier_sessions_gateway_proven_boopiss_is_updated_once_idle() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    *r.fake.owner.lock().unwrap() = crate::hermes::GatewayOwner::ThisInstall;
+    *r.fake.working.lock().unwrap() = vec![1, 0];
+    let said = Mutex::new(Vec::new());
+    let notice = r
+        .setup()
+        .update(crate::endpoint::Gate::default().close(), quick(), &|n| {
+            said.lock().unwrap().push(n);
+        })
+        .await;
+    assert_eq!(
+        *said.lock().unwrap(),
+        [super::update::Notice::Waiting(
+            super::update::WAITING_LINE.into()
+        )]
+    );
+    assert!(
+        matches!(notice, Some(super::update::Notice::Done(_))),
+        "{notice:?}"
+    );
+    assert_eq!(
+        *r.fake.gateway.lock().unwrap(),
+        [
+            "working:1",
+            "working:0",
+            "working:0",
+            "stop:",
+            "start:V = 'new'"
+        ],
+        "no stop while a bot worked; then stopped without `--yes`, swapped, started"
+    );
+}
+
+/// The release smoke's case, and `--engine existing`: the update never stops a gateway boopis did not start. It says so,
+/// leaves the gateway and its files as they are, and keeps looking.
+#[tokio::test]
+async fn a_gateway_boopis_did_not_start_is_never_stopped() {
     let r = rig(main_provider());
     finished(&r).await;
     std::fs::write(
@@ -923,7 +967,7 @@ async fn a_gateway_this_run_did_not_start_is_never_stopped() {
 }
 
 #[tokio::test]
-async fn once_this_run_starts_the_engine_itself_the_waiting_update_goes_ahead() {
+async fn once_boopis_starts_the_engine_itself_the_waiting_update_goes_ahead() {
     let r = rig(main_provider());
     finished(&r).await;
     std::fs::write(
@@ -931,7 +975,7 @@ async fn once_this_run_starts_the_engine_itself_the_waiting_update_goes_ahead() 
         "V = 'new'\n",
     )
     .unwrap();
-    // an earlier run's gateway, then it ended and this run's link started its own
+    // a gateway boopis did not start, then it ended and this run's link started its own
     *r.fake.owners.lock().unwrap() = vec![
         crate::hermes::GatewayOwner::Other,
         crate::hermes::GatewayOwner::Other,

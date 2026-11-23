@@ -55,9 +55,32 @@ pub enum GatewayOwner {
     /// A gateway this run of the host launched, with this run's environment (it was started with this run's secret-channel
     /// token).
     ThisRun,
-    /// Any other: one a test stack, the user's own Hermes or an earlier run of the app started, or one whose start cannot be
-    /// shown to be this run's (no process table to read, no control socket on this platform).
+    /// A gateway an earlier session of this install of boopis launched, for its bundled engine: it was started with the
+    /// app's own lock folder (`HERMES_GATEWAY_LOCK_DIR=<app data>/locks`), which only boopis's supervisor sets, so it runs
+    /// with boopis's own allowlisted environment and an `ensure` brings it back the same way.
+    ThisInstall,
+    /// Any other: one a test stack or the user's own Hermes started (also under `--engine existing`), or one that cannot be
+    /// shown to be boopis's (no process table to read, no control socket on this platform, a marker missing or not exact).
     Other,
+}
+
+impl GatewayOwner {
+    /// Whether boopis may stop it: it launched it, in this session or an earlier one.
+    #[must_use]
+    pub fn is_boopis(self) -> bool {
+        matches!(self, Self::ThisRun | Self::ThisInstall)
+    }
+}
+
+/// The variable that puts the bundled engine's one-gateway lock in the app's own folder, as `(name, value)`. Every gateway
+/// boopis launches for its bundled engine is started with it (`Supervisor::new`), which is what proves a gateway an earlier
+/// session left running is boopis's own (`GatewayOwner::ThisInstall`). One function, so the value set and the value looked
+/// for cannot drift apart.
+fn lock_dir_var(b: &super::discover::Bundled) -> (String, String) {
+    (
+        "HERMES_GATEWAY_LOCK_DIR".to_owned(),
+        b.locks.display().to_string(),
+    )
 }
 
 /// Runs Hermes for the host. One per app; cheap to share.
@@ -70,6 +93,8 @@ pub struct Supervisor {
     ensured: Mutex<HashSet<PathBuf>>,
     /// The secret channel's gateway policy.
     channel: Option<Arc<PeerPolicy>>,
+    /// The process table the install proof is read from (`gateway_owner`).
+    procs: Arc<dyn crate::secrets::peer::Procs>,
 }
 
 impl Supervisor {
@@ -88,10 +113,7 @@ impl Supervisor {
                         "PYTHONPYCACHEPREFIX".to_owned(),
                         b.pycache.display().to_string(),
                     ),
-                    (
-                        "HERMES_GATEWAY_LOCK_DIR".to_owned(),
-                        b.locks.display().to_string(),
-                    ),
+                    lock_dir_var(b),
                 ])
             }
             None => Cli::new(&limits),
@@ -104,7 +126,15 @@ impl Supervisor {
             info: tokio::sync::Mutex::new(None),
             ensured: Mutex::new(HashSet::new()),
             channel: None,
+            procs: Arc::new(crate::secrets::peer::Os),
         }
+    }
+
+    /// Read the install proof from `procs` instead of the operating system (the tests' made-up process table).
+    #[must_use]
+    pub fn with_procs(mut self, procs: Arc<dyn crate::secrets::peer::Procs>) -> Self {
+        self.procs = procs;
+        self
     }
 
     /// Hand the plugin secret channel to the gateways this supervisor starts: `env` (the socket and the token) reaches
@@ -241,6 +271,20 @@ impl Supervisor {
             .code_mismatch()
             .map(|(c, g)| (c.to_owned(), g.to_owned()))
         {
+            // Only a gateway boopis launched is stopped: one a test stack or the user's own Hermes started keeps its own
+            // environment and work, and is left running (the person restarts it), with the link refused as incompatible.
+            if !self.gateway_owner(home).await.is_boopis() {
+                tracing::warn!(
+                    client,
+                    gateway,
+                    "the gateway runs older code than Hermes and boopis did not start it; leaving it running"
+                );
+                return Err(Error::Incompatible(
+                    "the gateway runs older code than the installed engine, and boopis did not start it, so it was left \
+                     running; restart it to use the installed code"
+                        .into(),
+                ));
+            }
             tracing::info!(
                 client,
                 gateway,
@@ -364,10 +408,11 @@ impl Supervisor {
         self.ensure(home).await.map(|_| ())
     }
 
-    /// Who runs the gateway of `home`: nobody, this run, or anyone else ([`GatewayOwner`]). The evidence is the pid the kernel
-    /// reports on the gateway's control socket and that process's start environment, which holds this run's token only when
-    /// this run launched it (`PeerPolicy::started_by_this_run`). Without a socket (Windows) or a token, nothing can be shown
-    /// to be this run's, so it is `Other`.
+    /// Who runs the gateway of `home` ([`GatewayOwner`]). The evidence is the pid the kernel reports on the gateway's control
+    /// socket, and the environment that process was started with: this run's secret-channel token (`ThisRun`,
+    /// `PeerPolicy::started_by_this_run`), else, for the bundled engine, exactly this install's lock folder (`ThisInstall`).
+    /// Only an answer the process table gives counts: without a socket (Windows) or a readable environment, or with a marker
+    /// missing or not exact, it is `Other`. The user's own Hermes (`--engine existing`) has no install marker to look for.
     pub async fn gateway_owner(&self, home: &Path) -> GatewayOwner {
         if !cfg!(unix) {
             return GatewayOwner::Other;
@@ -375,9 +420,24 @@ impl Supervisor {
         let Ok(identity) = control::identify(home).await else {
             return GatewayOwner::Nobody;
         };
-        match (identity.pid, &self.channel) {
-            (Some(pid), Some(peers)) if peers.started_by_this_run(pid) => GatewayOwner::ThisRun,
-            _ => GatewayOwner::Other,
+        let Some(pid) = identity.pid else {
+            return GatewayOwner::Other;
+        };
+        if self
+            .channel
+            .as_ref()
+            .is_some_and(|peers| peers.started_by_this_run(pid))
+        {
+            return GatewayOwner::ThisRun;
+        }
+        let marked = self.env.bundled.as_ref().is_some_and(|b| {
+            let (name, value) = lock_dir_var(b);
+            self.procs.started_with(pid, &format!("{name}={value}")) == Some(true)
+        });
+        if marked {
+            GatewayOwner::ThisInstall
+        } else {
+            GatewayOwner::Other
         }
     }
 
@@ -536,21 +596,193 @@ mod tests {
         assert_eq!(st.requirement_met, Some(false));
     }
 
+    /// A made-up process table: the entries each pid was started with.
+    #[derive(Default)]
+    struct Started(Mutex<std::collections::HashMap<u32, Vec<String>>>);
+
+    impl crate::secrets::peer::Procs for Started {
+        fn describe(&self, pid: u32) -> Option<crate::secrets::peer::Proc> {
+            Some(crate::secrets::peer::Proc {
+                pid,
+                start: Some(1),
+                exe: None,
+            })
+        }
+        fn parent(&self, _pid: u32) -> Option<u32> {
+            None
+        }
+        fn started_with(&self, pid: u32, entry: &str) -> Option<bool> {
+            Some(
+                self.0
+                    .lock()
+                    .unwrap()
+                    .get(&pid)
+                    .is_some_and(|e| e.iter().any(|x| x == entry)),
+            )
+        }
+    }
+
+    /// A gateway answering `identify` on `home`'s control socket: the pid the kernel reports is this test's own.
+    #[cfg(unix)]
+    fn serve_identify(home: &Path) -> tokio::task::JoinHandle<()> {
+        use std::os::unix::fs::PermissionsExt;
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        std::fs::set_permissions(home, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let listener = tokio::net::UnixListener::bind(home.join("gateway.sock")).unwrap();
+        tokio::spawn(async move {
+            while let Ok((s, _)) = listener.accept().await {
+                let (r, mut w) = s.into_split();
+                let mut line = String::new();
+                let _ = BufReader::new(r).read_line(&mut line).await;
+                let answer =
+                    serde_json::json!({"ok":true,"protocol":1,"id":1,"result":{"state":"ready"}});
+                let _ = w.write_all(format!("{answer}\n").as_bytes()).await;
+            }
+        })
+    }
+
+    /// The bundled engine's layout over the fake `hermes`, with its lock folder at `locks`.
+    #[cfg(unix)]
+    fn bundled(env: Environment, dir: &Path, locks: &Path) -> Environment {
+        Environment {
+            bundled: Some(super::super::discover::Bundled {
+                binary: dir.join("bin").join("hermes"),
+                home: dir.join("home"),
+                pycache: dir.join("pycache"),
+                locks: locks.to_path_buf(),
+            }),
+            ..env
+        }
+    }
+
     #[cfg(unix)]
     #[tokio::test]
-    async fn a_code_sha_mismatch_restarts_the_gateway_once() {
+    async fn only_a_gateway_started_with_this_installs_lock_folder_or_this_runs_token_is_boopiss() {
+        let dir = tempfile::tempdir().unwrap();
+        let env = fake_hermes(dir.path(), "Hermes Agent v0.23.2 (x)", "{}");
+        let home = dir.path().join("home");
+        let locks = dir.path().join("app").join("locks");
+        let me = std::process::id();
+        let table = Arc::new(Started::default());
+        let owner_with = |entries: &[&str], bundled_env: bool, token: Option<&str>| {
+            table
+                .0
+                .lock()
+                .unwrap()
+                .insert(me, entries.iter().map(|e| (*e).to_owned()).collect());
+            let base = if bundled_env {
+                bundled(env.clone(), dir.path(), &locks)
+            } else {
+                env.clone()
+            };
+            let mut sup = Supervisor::new(base, Limits::default()).with_procs(table.clone());
+            if let Some(t) = token {
+                let peers = Arc::new(PeerPolicy::with_procs(table.clone()).holding(t.to_owned()));
+                sup = sup.with_secret_channel(Vec::new(), peers);
+            }
+            sup
+        };
+        let mark = format!("HERMES_GATEWAY_LOCK_DIR={}", locks.display());
+        assert_eq!(
+            owner_with(&[], true, None).gateway_owner(&home).await,
+            GatewayOwner::Nobody,
+            "nothing answers yet"
+        );
+        let _gateway = serve_identify(&home);
+        // an earlier session's gateway, launched by boopis for its bundled engine
+        assert_eq!(
+            owner_with(&[&mark], true, None).gateway_owner(&home).await,
+            GatewayOwner::ThisInstall
+        );
+        // this run's own
+        assert_eq!(
+            owner_with(
+                &["BOOPIS_HOST_SECRETS_TOKEN=now"],
+                true,
+                Some("BOOPIS_HOST_SECRETS_TOKEN=now")
+            )
+            .gateway_owner(&home)
+            .await,
+            GatewayOwner::ThisRun
+        );
+        // the test stack's (no marker), a forged one (another folder), an earlier run's token alone
+        assert_eq!(
+            owner_with(&[], true, None).gateway_owner(&home).await,
+            GatewayOwner::Other
+        );
+        assert_eq!(
+            owner_with(
+                &["HERMES_GATEWAY_LOCK_DIR=/somewhere/else/locks"],
+                true,
+                None
+            )
+            .gateway_owner(&home)
+            .await,
+            GatewayOwner::Other
+        );
+        assert_eq!(
+            owner_with(&[&format!("{mark}/")], true, None)
+                .gateway_owner(&home)
+                .await,
+            GatewayOwner::Other,
+            "exactly the folder, not something like it"
+        );
+        assert_eq!(
+            owner_with(
+                &["BOOPIS_HOST_SECRETS_TOKEN=then"],
+                true,
+                Some("BOOPIS_HOST_SECRETS_TOKEN=now")
+            )
+            .gateway_owner(&home)
+            .await,
+            GatewayOwner::Other
+        );
+        // `--engine existing`: the user's own Hermes has no install marker to look for, whatever its environment says
+        assert_eq!(
+            owner_with(&[&mark], false, None).gateway_owner(&home).await,
+            GatewayOwner::Other
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_code_sha_mismatch_restarts_a_gateway_boopis_started_once() {
         let dir = tempfile::tempdir().unwrap();
         let mismatch = r#"{"state":"ready","client_code_sha":"new","endpoint":{"code_sha":"old"}}"#;
         let env = fake_hermes(dir.path(), "Hermes Agent v0.23.2 (x)", mismatch);
-        let sup = Supervisor::new(env, Limits::default());
-        let err = sup.ensure(&dir.path().join("home")).await.unwrap_err();
+        let home = dir.path().join("home");
+        let locks = dir.path().join("app").join("locks");
+        let table = Arc::new(Started::default());
+        table.0.lock().unwrap().insert(
+            std::process::id(),
+            vec![format!("HERMES_GATEWAY_LOCK_DIR={}", locks.display())],
+        );
+        let _gateway = serve_identify(&home);
+        let sup =
+            Supervisor::new(bundled(env, dir.path(), &locks), Limits::default()).with_procs(table);
+        let err = sup.ensure(&home).await.unwrap_err();
         assert_eq!(
             err.code(),
             "hx.engine.incompatible",
             "still stale after the restart"
         );
-        let stops = std::fs::read_to_string(dir.path().join("home").join("stops")).unwrap();
+        let stops = std::fs::read_to_string(home.join("stops")).unwrap();
         assert_eq!(stops.lines().count(), 1, "one restart, not a loop");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_code_sha_mismatch_never_stops_a_gateway_boopis_did_not_start() {
+        let dir = tempfile::tempdir().unwrap();
+        let mismatch = r#"{"state":"ready","client_code_sha":"new","endpoint":{"code_sha":"old"}}"#;
+        let env = fake_hermes(dir.path(), "Hermes Agent v0.23.2 (x)", mismatch);
+        let home = dir.path().join("home");
+        let _gateway = serve_identify(&home); // the user's own, or a test stack's: started without boopis's markers
+        let sup = Supervisor::new(env, Limits::default()).with_procs(Arc::new(Started::default()));
+        let err = sup.ensure(&home).await.unwrap_err();
+        assert_eq!(err.code(), "hx.engine.incompatible");
+        assert!(err.to_string().contains("did not start it"), "{err}");
+        assert!(!home.join("stops").exists(), "never stopped");
     }
 
     #[cfg(unix)]
