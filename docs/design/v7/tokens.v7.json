@@ -1540,5 +1540,33 @@
       }
     },
     "rows": "R-row-1: menu and list rows are single-line; the name never wraps or shrinks; 12px gap; the description truncates"
+  },
+  "dock": {
+    "where": "the Sessions tab only (owner, 23 Nov)",
+    "slab": "black in both themes, flush, flares 30, --r-slab 30; content inset 8 (Blocks 22); the inside is data-theme dark",
+    "row": "orbs 40, gap 14, height 72; grow on hover 52/46; no '+'",
+    "attention": "amber flag (--owe) ringed in #000; the ask pill (--owe-soft, --owe-text, 32 tall)",
+    "current": "the Iris dot under the bot whose card is open (--accent-text)",
+    "open": "the stack of AskCards (approval variant, never expires) or a bot's card; the slab fits its content; the session's composer fades out 120ms",
+    "choices": {
+      "D01": "many bots: A pages, B relevant + N more (recommended), C scroll strip",
+      "D02": "at rest: A the row (recommended), B collapsed",
+      "D03": "asks: A page, B orbs only, C ask pill + stack (recommended)"
+    },
+    "removed": [
+      "+ new bot",
+      "expanded roster",
+      "Run page",
+      "Context page",
+      "Scheduled page",
+      "Needs-you page",
+      "page nub and paging",
+      "Arrange mode",
+      "Turn off inside the dock",
+      "minimal mode summaries",
+      "the card's mini-orb strip",
+      "the orb tooltip",
+      "the dock in the Bots tab"
+    ]
   }
 }
