@@ -1,4 +1,4 @@
-/* The dock (14.12): pitch black in every theme, centred, its pages, its modes, a bot's session in it, and the owner's
+/* The dock (14.12): pitch black in every theme, centred, its pages, its modes (arranging its pages too), a bot's session in it, and the owner's
    cases: zero bots (the empty shape), one bot, eleven (the mock), a hundred and more; hovering and opening must not
    flicker (the stability check samples frames while the interaction plays). The dock agent (w11/empty-dock) fixes; this
    covers. */
@@ -16,6 +16,7 @@ const page = (id: string) => async (c: AppCtx): Promise<void> => { c.hx.dock()?.
 const HOVER_ROW: Interaction = { name: 'hover along the row', watch: SCOPE, orbs: 'stay', steps: [{ do: 'hover', sel: '#hx-dock .dk-bot >> nth=0', ms: 250 }, { do: 'hover', sel: '#hx-dock .dk-bot >> nth=2', ms: 250 }, { do: 'hover', sel: '#hx-dock .dk-bot >> nth=4', ms: 250 }, { do: 'move-away', ms: 300 }], sample: 900 };
 const OPEN_CLOSE: Interaction = { name: 'open a bot, close it', watch: SCOPE, orbs: 'stay', steps: [{ do: 'click', sel: '#hx-dock .dk-bot >> nth=1', ms: 900 }, { do: 'press', key: 'Escape', ms: 200 }], sample: 1100 };
 const EXPAND: Interaction = { name: 'expand and collapse', watch: SCOPE, orbs: 'stay', steps: [{ do: 'call', js: '__lab.hx.dock().setMode("expanded")', ms: 900 }, { do: 'call', js: '__lab.hx.dock().setMode("normal")' }], sample: 1100 };
+const ARRANGE: Interaction = { name: 'open the arrange panel, close it', watch: SCOPE, orbs: 'stay', steps: [{ do: 'call', js: '__lab.hx.dock().setMode("edit")', ms: 900 }, { do: 'call', js: '__lab.hx.dock().setMode("normal")' }], sample: 1100 };
 const MINIMISE: Interaction = { name: 'minimise and restore', watch: SCOPE, orbs: 'stay', steps: [{ do: 'call', js: '__lab.hx.dock().setMode("minimal")', ms: 900 }, { do: 'call', js: '__lab.hx.dock().setMode("normal")' }], sample: 1100 };
 const PAGES: Interaction = { name: 'switch pages', watch: SCOPE, orbs: 'stay', steps: [{ do: 'call', js: '__lab.hx.dock().goPage("run")', ms: 700 }, { do: 'call', js: '__lab.hx.dock().goPage("bots")' }], sample: 1000 };
 const HOVER_EMPTY: Interaction = { name: 'hover the empty dock', watch: SCOPE, orbs: 'stay', steps: [{ do: 'hover', sel: '#hx-dock .dk', ms: 400 }, { do: 'move-away', ms: 300 }], sample: 900 };
@@ -24,7 +25,7 @@ const dock: Story = {
   id: 'dock/dock', title: 'Dock', area: 'dock', kind: 'surface', covers: ['surface:dock'], scope: SCOPE,
   mock: { url: '/v6/dock.test.html' },
   states: {
-    'at rest (11 bots)': dockState(['typical', 'owner'], {}, undefined, { interact: [HOVER_ROW, OPEN_CLOSE, EXPAND, MINIMISE, PAGES] }),
+    'at rest (11 bots)': dockState(['typical', 'owner'], {}, undefined, { interact: [HOVER_ROW, OPEN_CLOSE, EXPAND, ARRANGE, MINIMISE, PAGES] }),
     'no bots (the empty shape)': dockState(['empty', 'owner'], { bots: 'none' }, undefined, { interact: [HOVER_EMPTY, EXPAND, MINIMISE] }),
     'no bots, expanded': dockState(['empty', 'owner'], { bots: 'none' }, mode('expanded')),
     'one bot': dockState(['single', 'owner'], { bots: 'one' }, undefined, { interact: [HOVER_ROW] }),
@@ -42,6 +43,7 @@ const dock: Story = {
     'a long-named bot, its session': dockState(['long'], { fixtures: ['long'] }, async (c) => { c.hx.dock()?.openSession('cassiopeia-staging-deploy-guardian'); await c.wait(900); }),
     expanded: dockState(['open'], {}, mode('expanded')),
     minimised: dockState(['variant'], {}, mode('minimal')),
+    'arranging pages': dockState(['open', 'owner'], {}, mode('edit')),
     off: dockState(['disabled'], {}, async (c) => { c.hx.dock()?.setOn(false); await c.wait(700); }, { allow: { 'geometry.contain': 'the dock is off: nothing to check' } }),
     "nina's session (an approval)": dockState(['typical', 'owner'], {}, async (c) => { c.hx.dock()?.openSession('nina'); await c.wait(900); }),
     "atlas's session (a thread)": dockState(['typical'], {}, async (c) => { c.hx.dock()?.openSession('atlas'); await c.wait(900); }),

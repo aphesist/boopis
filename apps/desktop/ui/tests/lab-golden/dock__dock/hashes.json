@@ -119,6 +119,26 @@
   "w": 1440,
   "h": 84
  },
+ "arranging-pages@bone": {
+  "sha": "3ce50aafc2b0062088eef311b4d57246b4c59f88",
+  "w": 1440,
+  "h": 84
+ },
+ "arranging-pages@catalog": {
+  "sha": "cfe6a986b076a11275afea8d74f257b18d8c0d6a",
+  "w": 1440,
+  "h": 84
+ },
+ "arranging-pages@graphite": {
+  "sha": "1919c2686ca78cf72924d19e1ea865bad9bfe483",
+  "w": 1440,
+  "h": 84
+ },
+ "arranging-pages@typewriter": {
+  "sha": "711e6175c47128c11e03526c00c521b5d2fcb60c",
+  "w": 1440,
+  "h": 84
+ },
  "at-rest-11-bots@bone": {
   "sha": "73e7412d9a3ef546013086ca441ce1ebcbef72fa",
   "w": 1440,

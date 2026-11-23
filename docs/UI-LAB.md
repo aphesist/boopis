@@ -68,7 +68,7 @@ rules have a check and which do not.
 | `roles` | R-colour-3, R-colour-4 | text in `--brass`; `--bg-0` on `--bg-0`, `--bg-3` on `--bg-3` |
 | `axe` | R-a11y-1, R-a11y-3, R-a11y-8 | an axe-core violation (every rule but page landmarks) |
 | `stability.render` | | the state drawn twice (a fresh cell, or a reload) has a different DOM structure |
-| `stability.interact` | R-motion-5, R-motion-8 | while an interaction plays (with full motion), a node is removed and drawn again, an `<orb-avatar>` is taken out and put back or drawn anew (its canvas is empty until the worker paints it), an element goes invisible and comes back, or a box jumps away for a frame or two and comes back |
+| `stability.interact` | R-motion-5, R-motion-8 | while an interaction plays (with full motion), a node is removed and drawn again, an `<orb-avatar>` is taken out and put back or drawn anew (its canvas is empty until the worker paints it), an element goes invisible and comes back (it counts as shown only while it is drawn: under a `display: none` ancestor it is not, so an entrance from opacity 0 out of a view put away is not a blink), or a box jumps away for a frame or two and comes back |
 | `visual` | | the screenshot differs from its golden |
 
 **The matrix.** Each state loads once at 1440 x 900 with reduced motion. For each preset (catalog, graphite, bone,

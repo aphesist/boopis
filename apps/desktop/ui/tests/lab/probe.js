@@ -899,7 +899,11 @@
       for (const [e, rec] of tracked) {
         if (!e.isConnected) { rec.frames.push(null); continue; }
         const r = e.getBoundingClientRect(), s = getComputedStyle(e);
-        rec.frames.push([r1(r.left), r1(r.top), r1(r.width), r1(r.height), Math.round(parseFloat(s.opacity) * 100) / 100, s.visibility === 'hidden' || s.display === 'none' ? 0 : 1, frame]);
+        /* shown only while it is drawn: under a `display: none` ancestor (a view put away) an element keeps its own display and
+           opacity but has no box, so it is not shown. Read from the element alone, the dock's entrances were blinks: a slot in the
+           hidden view read as shown, then the entrance started it at opacity 0 and faded it in, so it seemed to go out and back */
+        const drawn = e.checkVisibility ? e.checkVisibility({ visibilityProperty: true }) : s.visibility !== 'hidden' && s.display !== 'none';
+        rec.frames.push([r1(r.left), r1(r.top), r1(r.width), r1(r.height), Math.round(parseFloat(s.opacity) * 100) / 100, drawn ? 1 : 0, frame]);
       }
       raf = requestAnimationFrame(tick);
     };

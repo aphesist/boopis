@@ -34,5 +34,37 @@ export async function labProbe(env) {
     check('lab-probe', 'a row that fits reports nothing', (await cuts(page('overflow-y:auto;overflow-x:hidden', row(420)))).length === 0);
     check('lab-probe', 'what a column scrolls out of view below is not a cut', (await cuts(page('overflow-y:auto;overflow-x:hidden', row(420)).replace('</div></div></body>', below + '</div></div></body>'))).length === 0);
   });
+  /* stability.interact reads what is drawn. The dock's arrange panel and its expanded roster were "blinks" that nobody saw: a
+     slot in a view put away (`hidden`) kept its own opacity, so it read as shown, and its entrance (opacity 0, then a fade in
+     a few frames) read as going out and back. Each case plays frame by frame (rAF) under the sampler. */
+  const blinks = async (play) => {
+    await p.setContent(`<!doctype html><body style="margin:0;background:#111"><div id="root">
+      <div id="view"${play === 'enter' ? ' hidden' : ''}><span id="slot" style="display:inline-block;width:40px;height:40px;background:#888"></span></div></div></body>`);
+    await p.addScriptTag({ path: PROBE });
+    return p.evaluate((play) => new Promise((done) => {
+      const sm = window.__labProbe.sampler('#root', {});
+      const view = document.getElementById('view'), slot = document.getElementById('slot');
+      /* frame by frame: 3 at rest, then the change, then 12 more */
+      const steps = {
+        /* the view is shown and its slot enters in the same task, from opacity 0, over 5 frames */
+        enter: [() => { view.hidden = false; slot.style.opacity = '0'; }, () => { slot.style.opacity = '0.25'; }, () => { slot.style.opacity = '0.5'; }, () => { slot.style.opacity = '0.75'; }, () => { slot.style.opacity = '1'; }],
+        /* drawn, gone for two frames, back */
+        dip: [() => { slot.style.opacity = '0'; }, () => {}, () => { slot.style.opacity = '1'; }],
+        /* its view put away for two frames and shown again */
+        hide: [() => { view.hidden = true; }, () => {}, () => { view.hidden = false; }]
+      }[play];
+      let f = 0;
+      const tick = () => { f++; const s = f - 4; if (s >= 0 && s < steps.length) steps[s](); if (f < 4 + steps.length + 12) requestAnimationFrame(tick); else done(sm.stop().filter((i) => i.kind === 'flicker').map((i) => i.key)); };
+      requestAnimationFrame(tick);
+    }), play);
+  };
+  await s.safe('lab-probe', async () => {
+    const enter = await blinks('enter');
+    check('lab-probe', 'stability: a slot that enters from opacity 0 out of a hidden view is not a blink (the dock\'s arrange panel)', !enter.some((k) => /#slot/.test(k)), enter);
+    const dip = await blinks('dip');
+    check('lab-probe', 'stability: a drawn slot that goes to opacity 0 for two frames and back is a blink', dip.some((k) => /#slot/.test(k)), dip);
+    const hide = await blinks('hide');
+    check('lab-probe', 'stability: a slot whose view is put away for two frames blinks with it', hide.some((k) => /#slot/.test(k)) && hide.some((k) => /#view/.test(k)), hide);
+  });
   await s.close();
 }
