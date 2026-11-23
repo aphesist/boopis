@@ -38,9 +38,13 @@ enum Did {
 struct Fake {
     config: Mutex<BTreeMap<PathBuf, Value>>,
     records: Mutex<BTreeMap<String, Value>>,
+    /// The bots `bots.guide` was asked for, in order.
+    guided: Mutex<Vec<String>>,
     log: Mutex<Vec<Did>>,
     reload_works: bool,
     busy: bool,
+    /// An older plugin, without `bots.guide`.
+    no_guide: bool,
 }
 
 fn walk<'a>(v: &'a Value, key: &str) -> Option<&'a Value> {
@@ -76,9 +80,11 @@ impl Fake {
         Self {
             config: Mutex::new(BTreeMap::new()),
             records: Mutex::new(BTreeMap::new()),
+            guided: Mutex::new(Vec::new()),
             log: Mutex::new(Vec::new()),
             reload_works: true,
             busy: false,
+            no_guide: false,
         }
     }
     fn seed(&self, home: &Path, config: Value) {
@@ -175,6 +181,13 @@ impl Engine for Fake {
                     }
                 }
                 Ok(json!({"record": r.clone()}))
+            }
+            "plugin.boopis.bots.guide" if !self.no_guide => {
+                let name = params["name"].as_str().unwrap().to_owned();
+                let mut guided = self.guided.lock().unwrap();
+                let fresh = !guided.contains(&name);
+                guided.push(name);
+                Ok(json!({"skill": "boopis-handoffs", "version": 2, "written": fresh}))
             }
             other => Err(Error::Unavailable(format!("the double has no {other}"))),
         }
@@ -366,6 +379,13 @@ async fn the_owners_home_is_repaired_once_and_their_fixes_are_kept() {
             assert!(fake.get(&bot, "mcp_servers.fetch").is_some());
         }
     }
+    // every bot got the hand-off skill, once
+    let mut guided = fake.guided.lock().unwrap().clone();
+    guided.sort();
+    let mut team: Vec<String> = TEAM.iter().map(|(n, _)| (*n).to_owned()).collect();
+    team.sort();
+    assert_eq!(guided, team);
+    assert!(done.bots.iter().all(|b| b.handoffs));
     // kai runs on opus, a frontier model: its ladder is its own model; the others get none
     assert_eq!(
         fake.get(&home.bot("kai"), "plugins.entries.boopis.settings.ladder"),
@@ -773,4 +793,34 @@ async fn bots_that_appear_together_share_one_restart() {
     }
     tokio::time::sleep(std::time::Duration::from_millis(250)).await;
     assert_eq!(restarts(), 1);
+}
+
+#[tokio::test]
+async fn an_older_plugin_without_the_hand_off_skill_is_said_and_tried_again_next_start() {
+    let mut fake = Fake::new();
+    fake.no_guide = true;
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    let first = repair(&fake, &layout).await.unwrap();
+    assert_eq!(first.bots.len(), 6);
+    for b in &first.bots {
+        assert!(!b.handoffs);
+        assert_eq!(b.problems.len(), 1, "{:?}", b.problems);
+        assert!(
+            b.problems[0].starts_with("the skill for handing work over:"),
+            "{:?}",
+            b.problems
+        );
+    }
+    // the plugin is updated: the next start looks at every bot again and gives it the skill
+    fake.no_guide = false;
+    let second = repair(&fake, &layout).await.unwrap();
+    assert_eq!(second.bots.len(), 6);
+    assert!(
+        second
+            .bots
+            .iter()
+            .all(|b| b.handoffs && b.problems.is_empty())
+    );
+    assert!(repair(&fake, &layout).await.unwrap().bots.is_empty());
 }

@@ -13,7 +13,9 @@
 //!    skills made for another OS switched off (`skills`);
 //! 3. `plugins enable boopis` in the bot's home, which also makes the running gateway load it;
 //! 4. in the root, `hosted_rooms.profiles.<bot>` = the bot's home, so a group can seat it (the engine's
-//!    `session_hosted_members`; `release` removes it when the bot is archived or deleted).
+//!    `session_hosted_members`; `release` removes it when the bot is archived or deleted);
+//! 5. the hand-off skill in the bot's `skills/` (`give_handoffs`: the plugin's `bots.guide`), so a bot made anywhere, and
+//!    every bot of an upgraded install, has it whether or not the app's window ever opens.
 //!
 //! `repair` runs that for every bot once per start, after the first link to the gateway, and, once per install, makes every
 //! existing bot ungoverned (its saved "governed" was the old default and never took effect) and switches off the skills made
@@ -258,6 +260,7 @@ pub struct Ask {
 
 /// What `prepare` did to one bot.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[allow(clippy::struct_excessive_bools)] // one flag per step, each said on its own
 pub struct Prepared {
     /// The bot.
     pub name: String,
@@ -271,6 +274,8 @@ pub struct Prepared {
     pub skills_off: Vec<String>,
     /// The root's `hosted_rooms.profiles.<bot>` was written.
     pub seated: bool,
+    /// The hand-off skill was written into its `skills/` now (a new bot, or a newer version of the skill).
+    pub handoffs: bool,
     /// Its plugins could not be reloaded in the running gateway: the gateway must restart for them.
     pub needs_restart: bool,
     /// What went wrong, in plain words (each step goes on without the one that failed).
@@ -286,6 +291,7 @@ impl Prepared {
             || !self.written.is_empty()
             || !self.skills_off.is_empty()
             || self.seated
+            || self.handoffs
     }
 }
 
@@ -636,7 +642,31 @@ pub async fn prepare(
             Err(e) => done.problems.push(done_problem("its place in groups", &e)),
         }
     }
+    // 5. the hand-off skill
+    match give_handoffs(engine, &layout.root, name).await {
+        Ok(wrote) => done.handoffs = wrote,
+        Err(e) => done
+            .problems
+            .push(done_problem("the skill for handing work over", &e)),
+    }
     Ok(done)
+}
+
+/// Give the bot `name` the hand-off skill (`boopis-handoffs`, `plugins/boopis/bots/guides.py`) through the root plugin's
+/// `bots.guide`, which writes it into the bot's own `skills/` and leaves a file of that name it did not write alone. The engine
+/// tells a room member nothing about the kanban board (it guides only a worker the dispatcher started), so without it a cut-off
+/// turn files its cards again, ordered cards run in parallel and one bot works in a room and a worker at once. Idempotent:
+/// `true` when the skill was written now. `prepare` calls it, so whatever prepares a bot (the app, `boopis bots create`, `boopis
+/// team apply`, the start-up repair) gives it.
+///
+/// # Errors
+/// The gateway's, when the call fails (an older plugin without the method among them): the skill is then not there.
+pub async fn give_handoffs(engine: &dyn Engine, root: &Path, name: &str) -> Result<bool> {
+    check_name(name)?;
+    let answer = engine
+        .call(root, "plugin.boopis.bots.guide", json!({"name": name}))
+        .await?;
+    Ok(answer.get("written").and_then(Value::as_bool) == Some(true))
 }
 
 fn done_problem(what: &str, e: &Error) -> String {

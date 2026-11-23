@@ -311,8 +311,11 @@ def test_guide_puts_the_hand_off_skill_in_the_teammate_s_skills_and_only_once(ro
     text = target.read_text("utf-8")
     assert text.startswith("---\nname: boopis-handoffs\n")
     assert "environments: [kanban]" in text  # the engine offers it only to a profile that has the kanban toolset
-    for word in ("kanban_list", "idempotency_key", "parents", "kanban_link", "archived, not blocked"):
+    for word in ("kanban_list", "idempotency_key", "parents", "kanban_link", "todo, ready or running"):
         assert word in text
+    # a worker the dispatcher started has no kanban_list, and no tool archives a card (engine v0.23.2)
+    assert "A worker running one card has no `kanban_list`: call `kanban_show`" in text
+    assert "there is no tool that archives one" in text
     assert svc.guide("atlas")["written"] is False
     assert target.read_text("utf-8") == text
 

@@ -44,9 +44,8 @@ class FakeHermes {
   failProfilesList = false;
   /** the plugin's read answers nothing, or reports a store it could not read */
   failOwn = false;
-  /** the hand-off skill, given to each live teammate; a plugin without the method refuses */
+  /** the hand-off skill: the host gives it when it prepares a bot (`bots::prepare`), so the UI never asks for it */
   guided: string[] = [];
-  failGuide = false;
   problems: Record<string, string> = {};
   failLink = false;
   main = new FakeLink((m, p) => this.mainCall(m, p));
@@ -81,7 +80,7 @@ class FakeHermes {
       }
       case 'plugin.boopis.bots.read': if (this.failOwn) throw new Error('the plugin is not there'); return { root: HOME, bots: this.profiles.filter((x) => !x['is_default']).map((x) => ({ name: x['name'], path: x['path'], record: this.own[x['name']] ?? null, problem: this.problems[x['name']] ?? null, archived: this.archived[x['name']] ?? null })) };
       case 'plugin.boopis.bots.write': { this.own[p['name']] = { ...(this.own[p['name']] ?? {}), ...(p['look'] ? { look: p['look'] } : {}), ...(p['settings'] ? { settings: { ...(this.own[p['name']]?.['settings'] ?? {}), ...p['settings'] } } : {}), ...(p['approvals'] ? { approvals: p['approvals'] } : {}) }; return { record: this.own[p['name']] }; }
-      case 'plugin.boopis.bots.guide': if (this.failGuide) throw new Error('unknown method'); this.guided.push(p['name']); return { skill: 'boopis-handoffs', version: 1, written: true };
+      case 'plugin.boopis.bots.guide': this.guided.push(p['name']); return { skill: 'boopis-handoffs', version: 2, written: true };
       case 'plugin.boopis.bots.inspect': return { path: HOME + '/profiles/' + p['name'], bytes: 3 * 1024 * 1024, files: 240, truncated: false, has_sessions: true, memory_files: 2, skills: 9, boopis_bytes: 300 };
       case 'plugin.boopis.bots.archive': {
         const to = 'archived--' + p['name'];
@@ -729,29 +728,12 @@ describe('a bot that is also running a kanban card', () => {
   });
 });
 
-describe('every teammate is given the hand-off skill, once', () => {
-  it('asks the plugin for each live bot after the first read, and not again on the next', async () => {
+describe('the hand-off skill is the host\'s', () => {
+  it('is never asked for by the UI: the host gives it when it prepares a bot, at creation and at the start-up repair', async () => {
     const { h, bots } = await open();
-    expect(h.guided.sort()).toEqual(['atlas', 'nina']);
     h.main.emit({ type: 'profiles.changed', payload: {} } as never);
     await new Promise((r) => setTimeout(r, 600)); await bots.settled();
     expect(h.main.calls.filter((c) => c.method === 'profiles.list').length).toBeGreaterThan(1);
-    expect(h.guided).toHaveLength(2);
-  });
-  it('does not ask for an archived bot, and does not fail when the plugin has no such method', async () => {
-    const h = new FakeHermes();
-    h.profiles.push({ name: 'archived--old', path: HOME + '/profiles/archived--old', description: '' });
-    h.archived['archived--old'] = { name: 'old', at: '2026-11-19T10:00:00+00:00', paused_jobs: [] };
-    const { h: g, bots } = await open(h);
-    expect(g.guided).not.toContain('archived--old');
-    const none = new FakeHermes(); none.failGuide = true;
-    const again = await open(none);
-    expect(again.bots.source.snapshot().bots.map((b) => b.id).sort()).toEqual(['atlas', 'nina']);
-    void bots;
-  });
-  it('says nothing to a plugin that did not answer the read', async () => {
-    const none = new FakeHermes(); none.failOwn = true;
-    const { h } = await open(none);
     expect(h.guided).toEqual([]);
   });
 });

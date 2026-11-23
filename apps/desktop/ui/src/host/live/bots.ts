@@ -215,7 +215,6 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
     rosterSeen = true;
     if (appeared.length) void track((async () => { for (const id of appeared) await prepare(id, true); })());
     for (const id of gone) { recs.delete(id); chat.forget(id); events.emit({ type: 'bot-archived', id }); void closeLink(id); }
-    if (ownRecords.size) for (const row of live) giveHandoffs(row.name);
     const t = now();
     archivedNow.set(mine.filter((r) => isArchived(r.name, ownRecords.get(r.name))).map((r): ArchivedBot => {
       const p = ownRecords.get(r.name);
@@ -223,15 +222,6 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       return { id: r.name, name: botName(r), was: p?.archived?.name ?? r.name.replace(/^archived--/, ''), at, when: at ? whenLabel(Date.parse(at) / 1000, t) : '' };
     }).sort((a, b) => (b.at > a.at ? 1 : b.at < a.at ? -1 : 0)));   /* the newest first; an archive with no date goes last */
     rebuildSchedules();
-  }
-  /** Every teammate is given the hand-off skill once per run of boopis (`plugin.boopis.bots.guide`, idempotent): the engine tells a
-   *  room member nothing about the kanban board, so a cut-off turn files the same cards again and ordered cards run in parallel.
-   *  A plugin that has no such method (an older one) is left alone. */
-  const guided = new Set<string>();
-  function giveHandoffs(name: string): void {
-    if (guided.has(name)) return;
-    guided.add(name);
-    void track(client.requestRaw('plugin.boopis.bots.guide', { name }).then(() => undefined, (e: unknown) => { (isUnknownMethod(e) ? log.info : log.warn)('the hand-off skill was not given to ' + name, e); }));
   }
   /** a session row of the roster, for a teammate whose own link is not open (or not yet): the newest one Hermes names */
   function fromRow(row: ProfileRow): BotSession[] {
