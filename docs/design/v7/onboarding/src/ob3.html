@@ -1,0 +1,13 @@
+<!doctype html><html data-theme="dark"><meta charset="utf-8"><link rel="stylesheet" href="tokens.v7.css"><link rel="stylesheet" href="kit.css"><link rel="stylesheet" href="onboarding.css"><link rel="stylesheet" href="ob2.css"><link rel="stylesheet" href="ob3.css">
+<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-avatar.tuned.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script><script src="dockv7.js"></script><script src="onboarding.js"></script><script src="onboarding2.js"></script><script src="onboarding3.js"></script><script src="ob2-speaker.js"></script><script src="ob2-screens.js"></script><script src="ob2-screens2.js"></script><script src="ob2-boards.js"></script><script src="ob3-screens.js"></script><script src="ob3-boards.js"></script>
+<title>boopis v7 onboarding, revision 3</title><body style="background:#000;margin:0"><div id="r"></div><script>
+const q = Object.fromEntries(new URLSearchParams(location.search));
+document.getElementById('r').innerHTML = q.b ? OB3BOARDS[q.b](q) : SCREENS[q.s](Object.assign({ theme: 'dark', chrome: 'a', tile: 'a', composer: 'c', status: 'c' }, q));
+if (q.b) document.body.style.background = '#0a0a0a';
+/* stills render live things at rest (the sweep rule): orbs still in their pose, the speaker settled with its own idle off */
+document.documentElement.classList.add('still');
+OB2.orbRules(document);
+document.querySelectorAll('orb-avatar').forEach((e) => { if (!e.closest('[data-motion]')) e.setAttribute('static', ''); });
+OB3.place(document);
+window.addEventListener('load', () => setTimeout(() => { OB2S.settle(); document.querySelectorAll('boopis-logo[data-look]').forEach((e) => e.look && e.look(0, -1)); }, 50));
+</script></body></html>

@@ -1,0 +1,9 @@
+[["o3P01","","O-P01-hello"],["o3P01","engine=busy","O-P01b-hello-engine-getting-ready"],
+["o3P02","","O-P02-settings-boopis-needs"],
+["o3P03","","O-P03-model-found"],["o3P03","st=none","O-P03b-model-nothing-found"],["o3P03","st=waiting","O-P03c-model-signing-in"],["o3P03","st=failed","O-P03d-error-sign-in-failed"],["o3P03","st=offline","O-P03e-error-offline"],
+["o3P04","phase=shown","O-P04a-try-it-marks"],["o3P04","phase=open","O-P04b-try-it-mark-open"],["o3P04","phase=ask","O-P04c-try-it-keep-it-on"],["o3P04","phase=open&rec=1","O-P04d-try-it-recorded"],
+["o3S01","","O-S01-add-a-folder"],["o3S02","","O-S02-worktree"],["o3S03","","O-S03-how-careful"],["o3S04","","O-S04-ready"],
+["o3H01","","O-H01-handoff-auto-switch"],["o3H01","v=prompt","O-H01b-handoff-prompt-option"],
+["o3B01","","O-B01-boopis-greets"],["o3B02","","O-B02-what-bots-are"],["o3B03","","O-B03-goals-tiles"],["o3B03","picks=two","O-B03b-goals-two-picks"],
+["o3B04","","O-B04-where-bots-work"],["o3B05","","O-B05-your-name"],["o3B06","","O-B06-starter-team-and-connectors"],["o3B07","","O-B07-approval-rules"],["o3B08","","O-B08-build"],["o3B09","","O-B09-reach"],["o3B10","","O-B10-first-job"],
+["o3X01","","O-X01-resume"],["o3X02","","O-X02-settings-getting-started"],["o3X03","","O-X03-returning-user"],["o3X04","","O-X04-bots-later-first-open"]]

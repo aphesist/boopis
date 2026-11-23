@@ -42,7 +42,7 @@
     return { el: fl, c0: [cx, cy], at(x, y, s = 1) { fl.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) scale(${s.toFixed(4)})`; } };
   }
   /* a page swap inside one window: the old page's parts go (120 ms), then the new page's parts come (entries are the clip's) */
-  const partsOf = (win) => [...win.querySelectorAll('.main > *, .drag .title-pill')];
+  const partsOf = (win) => [...win.querySelectorAll('.main > *, .drag .title-pill, .ob3-pre > *, :scope > .ob-skip')];   /* revision 3: a setup page's parts too */
   function swapper(A, B, t0, vis = true) {
     const pa = partsOf(A), pb = partsOf(B);
     /* a part that is the same on both pages (the pill, the dock, "Not now") stays put: it is never faded out and back in */
@@ -159,7 +159,7 @@
       /* A: the words, then the eyes drop in: the speaker shrinks to half and falls into the orb, which grows round it */
       [$('.ob-h', A), $('.ob-lede', A)].forEach((e, i) => enter(e, t, i * 60));
       enter($('.ob-acts', A), t, 2000, D.d2, 4, 1, 'translateX(-50%)'); enter($('.ob-skip', A), t, 2000, D.d2, 0);
-      press($('.ob-acts .btn.primary', A), t, 3900, 'translateX(-50%)');
+      press($('.ob-acts .btn.primary', A), t, 3900);
       const ks = R ? (t >= 1300 ? 1 : 0) : p(t, 1100, 380, E.spring);
       sp.style.transform = `scale(${lerp(1, 0.35, ks).toFixed(4)})`;
       /* the eyes fade only once the body is round them: white on the white body (ink on ink in light), so never two faces */
@@ -354,7 +354,7 @@
         T.disc.style.opacity = String(1 - p(t, T.t0 + 200, D.hover));
         if (T.tile.classList.contains('on')) T.tile.style.opacity = '1';
       });
-      press($('.ob-acts .btn.primary', win), t, 9000, 'translateX(-50%)');
+      press($('.ob-acts .btn.primary', win), t, 9000);
     } };
   }
 
@@ -395,12 +395,12 @@
       const q = C.path(t);
       if (R) { const i = t < 2720 ? 0 : t < 5720 ? 1 : 2; const tg = C.targets[i]; C.fly.at(tg.c[0], tg.c[1], tg.s); const d = [2600, 5600].map((x) => (t >= x && t < x + 120 ? 1 - p(t, x, 90) : t >= x + 120 && t < x + 300 ? p(t, x + 120, 90) : 1)); C.fly.el.style.opacity = String(Math.min(...d)); }
       else C.fly.at(q.x, q.y, q.s);
-      press($('.ob-acts .btn.primary', A), t, 2500, 'translateX(-50%)');
+      press($('.ob-acts .btn.primary', A), t, 2500);
       /* B: the words and the card, staggered */
       /* B's words come once the speaker has passed above them (it crosses the heading's line about 400 ms into its travel) */
       [$('.ob-h', B), $('.ob-lede', B)].forEach((e, i) => enter(e, t, 3120 + i * 60)); enter(card, t, 3240, D.d2, 4, 0.98);
       enter($('.ob-acts', B), t, 3300, D.d2, 4, 1, 'translateX(-50%)');
-      press($('.ob-acts .btn.primary', B), t, 5500, 'translateX(-50%)');
+      press($('.ob-acts .btn.primary', B), t, 5500);
       /* C: the setup conversation; the composer and the pill come in, then each line with a bob */
       enter($('.sep', Cw), t, 5720); enter(sayC[0], t, 5900); enter(sayC[1], t, 6380); enter(qc, t, 6850, D.d2, 4, 0.98);
     } };
@@ -441,4 +441,5 @@
   }
 
   Object.assign(window.CLIPS, { listen, alive, assemble, tryit, goals, stepsA, stepsB });
+  window.OB2M2 = { look, turn, ctr, tween, poseTo, lift, partsOf, swapper, stack, collapse, addTo, hov, stepsChain };
 })();
