@@ -1,6 +1,7 @@
 """The dock in a real WebKitGTK: its content never disappears while it moves.
 
-    python3 tests/e2e/dock_webkit.py [--dist apps/desktop/ui/dist-e2e] [--phases core,presence,arrange] [--frames DIR]
+    python3 tests/e2e/dock_webkit.py [--dist apps/desktop/ui/dist-e2e] [--phases core,presence,arrange,pages]
+                                     [--frames DIR]
 
 The owner's recording ("dock still has the same flickering problem") shows the dock's content (the orbs, the "+", the
 options row) gone, with only the black slab left, for as long as the pointer is over the dock and when a session closes.
@@ -33,7 +34,10 @@ Phases:
   (Done, the end of its line, the tiles from "Needs you") for the last 300 ms of the opening, with the slab still
   whole: WebKitGTK repainted a page centred with translateX(-50%) inside the clipped stage with the clip taken before
   the transform, so only what lay left of the centre line was painted again. So in every snapshot of this phase, the
-  panel's head and its tiles' names must hold content right of the centre line wherever they hold some left of it.
+  panel's head and its tiles' names must hold content right of the centre line wherever they hold some left of it;
+- pages: the dock's other pages, in the transitions the owner's second recording of 0.1.9 shows losing their right
+  half the same way ("Nothing needs you", "Nothing scheduled", Run): the slab growing from the orb row into a page, a
+  page expanding and collapsing, and a switch between two pages. The view each shows is judged like the arrange panel.
 
 Needs `xvfb-run`, `WebKitWebDriver` (Debian and Ubuntu: `webkit2gtk-driver`) and Pillow. Exit 0 when every phase
 holds, 1 when content went missing or a phase saw too few frames to say, 3 when a prerequisite is missing.
@@ -48,6 +52,7 @@ import functools
 import http.server
 import importlib
 import io
+import itertools
 import json
 import os
 import shutil
@@ -76,12 +81,14 @@ ORB_MOVED = (
     8  # px: an orb that moved more than this between a snapshot's two reads is not judged (where it is is unknown)
 )
 LIT = 40  # luminance above which a pixel is content (the slab is 0; the page behind it is below 30)
-MIN_HALF = 150  # lit pixels in a box's left half before its halves are compared (the panel's head: about 1000 at rest)
-HALF_RATIO = 0.15  # the share of the left's lit pixels the right half must hold (at rest the head's right holds 1.6x)
+MIN_HALF = 150  # lit pixels in a box's left half, at its fullest, before its halves are judged (the head: ~1000)
+HALF_RATIO = 0.25  # the share of its fullest right half a box's right must hold wherever its left holds half its own
 TILE_NAMES = 30  # px: the top of the tiles' row, where their names are (the bots row's orbs never reach it)
 # the arrange panel's boxes that hold content on both sides of the centre line, and how much of each counts from its top
 # (0: all of it)
 PANEL = ((".dk-v-edit .dk-edit-head", 0), (".dk-v-edit .dk-tiles", TILE_NAMES))
+# the view the current page shows (a page that slides in or out moves between a snapshot's two reads: not judged then)
+VIEW = ((".dk-page:not([hidden]):not(.is-out) > .dk-view:not([hidden]):not(.is-leaving)", 0),)
 NEW_BOT = "{name: 'orbit', role: 'watches the build', shape: 'star', color: '#e8b04a', eyes: 'pill'}"
 SEND = "{governed: true, smart: true, model: 'sonnet 5.5', assume: []}"
 
@@ -243,7 +250,8 @@ class Page:
             " if (e.closest('[hidden]')) continue;"
             " const r = e.getBoundingClientRect();"
             " const b = band ? Math.min(r.bottom, r.top + band) : r.bottom;"
-            " if (r.width && r.height) out.push({id: s, l: r.left, t: r.top, r: r.right, b, cx});"
+            " const id = s + (e.dataset.view ? ' ' + e.dataset.view : '');"
+            " if (r.width && r.height) out.push({id, l: r.left, t: r.top, r: r.right, b, cx});"
             "}"
             "return out;",
             [list(w) for w in wanted],
@@ -326,6 +334,33 @@ def halves_lit(img: Any, a: dict[str, Any], b: dict[str, Any]) -> tuple[int, int
     return lit((left, top, cx, bottom)), lit((cx, top, right, bottom))
 
 
+def judge_halves(seen: dict[str, list[tuple[int, int, int]]]) -> tuple[list[str], set[int]]:
+    """The snapshots where a box's right half was not painted, and those that judged any box (see `Run.watch`).
+
+    A right half that stops following its left counts when it does in two judged snapshots in a row: 0.1.9's fault
+    lasted until the slab settled (several snapshots), while an entrance that staggers left to right can catch one
+    snapshot with its left in and its right still coming.
+    """
+    cut: list[str] = []
+    shots: set[int] = set()
+    for box, rows in seen.items():
+        _, left_full, right_full = max(rows, key=lambda r: r[1] + r[2])
+        if left_full < MIN_HALF:
+            continue
+        flagged: list[tuple[int, int, int] | None] = []
+        for k, left, right in rows:
+            if left < 0.5 * left_full:
+                continue
+            shots.add(k)
+            flagged.append((k, left, right) if right < HALF_RATIO * right_full else None)
+        name = box.split(" ")[-1]
+        for prev, here in itertools.pairwise(flagged):
+            if prev and here:
+                k, left, right = here
+                cut.append(f"{name} in shot {k} ({left} left, {right} right; fullest {left_full} and {right_full})")
+    return cut, shots
+
+
 class Run:
     def __init__(self, page: Page) -> None:
         self.page = page
@@ -343,8 +378,11 @@ class Run:
 
         Every snapshot that can be judged must show content, and so must every orb that can be judged; no live orb may
         leave the page meanwhile. `expect_orbs` is False for a phase with no orb to see (none on the page showing, or
-        only the minimised pill's 10px ones). Each box `halves` names (`Page.boxes`) must hold content right of the
-        centre line in every snapshot where it holds some left of it, and at least MIN_JUDGED snapshots must judge one.
+        only the minimised pill's 10px ones). Each box `halves` names (`Page.boxes`) is judged against its own fullest
+        snapshot in the watch: wherever its left half holds at least half of its fullest left, its right half must
+        hold HALF_RATIO of its fullest right (a fade lowers both together; a right half that was not painted does not
+        follow its left), in no two judged snapshots in a row short of it, and at least MIN_JUDGED snapshots must judge
+        one.
         """
         p = self.page
         p.orbs_out()
@@ -353,7 +391,7 @@ class Run:
         end = time.time() + seconds
         judged, lowest, k = 0, None, 0
         orb_snaps, orb_lowest, orb_blank = 0, None, []
-        half_snaps, half_cut = 0, []
+        seen: dict[str, list[tuple[int, int, int]]] = {}
         while time.time() < end:
             before = p.slab()
             orbs_before = p.orbs()
@@ -363,16 +401,11 @@ class Run:
             orbs_after = {o["id"]: o for o in p.orbs()}
             boxes_after = {x["id"]: x for x in p.boxes(halves)} if halves else {}
             k += 1
-            judged_half = False
             for x in boxes_before:
                 x2 = boxes_after.get(x["id"])
                 got_halves = halves_lit(img, x, x2) if x2 else None
-                if got_halves is None or got_halves[0] < MIN_HALF:
-                    continue
-                judged_half = True
-                if got_halves[1] < HALF_RATIO * got_halves[0]:
-                    half_cut.append(f"{x['id'].split()[-1]} in shot {k} ({got_halves[0]} left, {got_halves[1]} right)")
-            half_snaps += judged_half
+                if got_halves is not None:
+                    seen.setdefault(x["id"], []).append((k, *got_halves))
             for o in orbs_before:
                 o2 = orbs_after.get(o["id"])
                 lit = orb_lit(img, o, o2, (before, after)) if o2 else None
@@ -394,6 +427,8 @@ class Run:
         ok = judged >= MIN_JUDGED and lowest is not None and lowest >= MIN_LIT
         out = p.orbs_out()
         orbs_ok = not orb_blank and not out and (orb_snaps >= MIN_ORB_SNAPS or not expect_orbs)
+        half_cut, judged_shots = judge_halves(seen)
+        half_snaps = len(judged_shots)
         halves_ok = not halves or (not half_cut and half_snaps >= MIN_JUDGED)
         passed = ok and orbs_ok and halves_ok
         self.rows.append((name, judged, lowest, passed))
@@ -524,10 +559,45 @@ def arrange(run: Run) -> None:
     p.run("__hx.dock().timeScale(arguments[0])", SLOW)
 
 
+def pages(run: Run) -> None:
+    p = run.page
+    p.open("x=1")
+    p.move(300, 300)
+
+    def go(script: str) -> Any:
+        return lambda: p.run(script)
+
+    def quickly(script: str) -> None:  # a setup step, at full speed, then the springs slow again
+        p.run("__hx.dock().timeScale(4);" + script)
+        time.sleep(1.2)
+        p.run("__hx.dock().timeScale(arguments[0])", SLOW)
+
+    # Run as the mock has it, then Needs you empty as the owner had it ("Nothing needs you"; with cards the view held)
+    quickly("__hx.dock().goPage('wait')")
+    for name, script, seconds in (
+        ("needs you to run", "__hx.dock().goPage('run')", 8),
+        ("run expands", "__hx.dock().setMode('expanded')", 6),
+        ("run collapses", "__hx.dock().setMode('normal')", 6),
+    ):
+        run.watch(name, seconds, go(script), expect_orbs=False, halves=VIEW)
+    quickly(
+        "const d = __hx.data(); for (const w of [...d.waits.snapshot()]) d.waits.resolve(w.id, 'approved');"
+        "__hx.dock().goPage('bots');"
+    )
+    for name, script, seconds in (
+        ("the slab grows from the row into needs you", "__hx.dock().goPage('wait')", 8),
+        ("needs you expands", "__hx.dock().setMode('expanded')", 6),
+        ("needs you collapses", "__hx.dock().setMode('normal')", 6),
+        ("needs you to scheduled", "__hx.dock().goPage('sched')", 8),
+        ("scheduled to needs you", "__hx.dock().goPage('wait')", 8),
+    ):
+        run.watch(name, seconds, go(script), expect_orbs=False, halves=VIEW)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dist", type=Path, default=DEFAULT_DIST)
-    ap.add_argument("--phases", default="core,presence,arrange")
+    ap.add_argument("--phases", default="core,presence,arrange,pages")
     ap.add_argument(
         "--frames",
         type=Path,
@@ -560,6 +630,8 @@ def main() -> int:
             presence(run)
         if "arrange" in phases:
             arrange(run)
+        if "pages" in phases:
+            pages(run)
     finally:
         page.close()
     bad = [r for r in run.rows if not r[3]]
