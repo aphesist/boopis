@@ -23,6 +23,7 @@
 pub mod engine;
 pub mod limit;
 pub mod links;
+pub mod model;
 pub mod run;
 pub mod skills;
 #[cfg(test)]

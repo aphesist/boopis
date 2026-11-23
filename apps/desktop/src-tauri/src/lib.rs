@@ -26,6 +26,7 @@ pub mod kanban;
 pub mod local;
 pub mod local_api;
 pub mod migrate;
+pub mod model_names;
 pub mod os;
 pub mod paths;
 pub mod providers;
@@ -59,7 +60,7 @@ pub const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../ui/src/
 
 /// The command and event registry, shared by the app and the bindings export.
 #[must_use]
-#[allow(clippy::too_many_lines)] // the registry: one line per command and per event
+#[allow(clippy::too_many_lines)] // one line per command and event: the list `commands_match_the_capability` checks
 pub fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
@@ -145,6 +146,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::local_api_set_enabled,
             commands::local_api_rotate_token,
             commands::bots_prepare,
+            commands::bots_set_model,
             commands::bots_release,
             commands::bots_notice,
             commands::room_settings_get,

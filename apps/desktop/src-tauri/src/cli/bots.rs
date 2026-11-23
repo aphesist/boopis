@@ -25,8 +25,6 @@ pub struct Ctx<'a> {
     pub err: &'a mut dyn Write,
 }
 
-const USAGE: &str = "usage: boopis bots list [--json] | create <name> [--role <text>] [--soul-file <file>] [--model <model>] [--shape <shape> --color <#rrggbb>] [--governed] [--max-turns <n>] | set <name> [--role <text>] [--soul-file <file>] [--model <model>] [--shape <shape>] [--color <#rrggbb>] [--governed|--ungoverned] [--max-turns <n>|default]";
-
 fn fail(ctx: &mut Ctx<'_>, line: &str) {
     let _ = writeln!(ctx.err, "boopis: {line}");
 }
@@ -34,7 +32,9 @@ fn fail(ctx: &mut Ctx<'_>, line: &str) {
 /// `boopis bots ...`. Returns the exit code.
 pub async fn bots(args: &[String], ctx: &mut Ctx<'_>) -> i32 {
     let Some((sub, rest)) = args.split_first() else {
-        fail(ctx, USAGE);
+        for l in super::help::page_of("bots") {
+            let _ = writeln!(ctx.err, "{l}");
+        }
         return 2;
     };
     match sub.as_str() {
@@ -42,7 +42,13 @@ pub async fn bots(args: &[String], ctx: &mut Ctx<'_>) -> i32 {
         "create" => create(rest, ctx).await,
         "set" => set(rest, ctx).await,
         other => {
-            fail(ctx, &format!("bots {other} is not a command. {USAGE}"));
+            fail(
+                ctx,
+                &format!(
+                    "bots {other} is not a command. {}",
+                    super::help::hint("bots")
+                ),
+            );
             2
         }
     }
@@ -221,7 +227,10 @@ async fn create(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
         }
     };
     let [name] = a.plain.as_slice() else {
-        fail(ctx, &format!("bots create takes one name. {USAGE}"));
+        fail(
+            ctx,
+            &format!("bots create takes one name. {}", super::help::hint("bots")),
+        );
         return 2;
     };
     if a.has("ungoverned") {
@@ -290,7 +299,10 @@ async fn set(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
         }
     };
     let [name] = a.plain.as_slice() else {
-        fail(ctx, &format!("bots set takes one name. {USAGE}"));
+        fail(
+            ctx,
+            &format!("bots set takes one name. {}", super::help::hint("bots")),
+        );
         return 2;
     };
     let given = [
@@ -308,7 +320,10 @@ async fn set(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
     if !given {
         fail(
             ctx,
-            &format!("bots set {name} needs something to change. {USAGE}"),
+            &format!(
+                "bots set {name} needs something to change. {}",
+                super::help::hint("bots")
+            ),
         );
         return 2;
     }

@@ -26,6 +26,97 @@ fn the_arguments_pick_a_command() {
     );
 }
 
+/// The word of a command that talks to the engine, `None` for one that does not. Exhaustive on purpose: a new command does
+/// not compile here until it is said whether it talks to the engine, and one that does must be in the help's table.
+fn engine_word(c: &Command) -> Option<&'static str> {
+    match c {
+        Command::Groups(_) => Some("groups"),
+        Command::Run(_) => Some("run"),
+        Command::Team(_) => Some("team"),
+        Command::Bots(_) => Some("bots"),
+        Command::Connectors(_) => Some("connectors"),
+        Command::Connect(_) => Some("connect"),
+        Command::Launch
+        | Command::Version
+        | Command::Doctor
+        | Command::Help
+        | Command::Unknown(_) => None,
+    }
+}
+
+#[test]
+fn the_help_lists_exactly_the_commands_that_talk_to_the_engine() {
+    let text = help_lines(&plain(), "0.1.0").join("\n");
+    let mut seen = Vec::new();
+    for page in help::PAGES {
+        // the word is a command, the command its own, and the top of the help names it
+        let made = parse(&args(&[page.word, "list"]));
+        assert_eq!(engine_word(&made), Some(page.word), "{}", page.word);
+        assert!(
+            text.contains(&format!("  {PRODUCT} {:<14}{}", page.word, page.summary)),
+            "boopis --help does not list {}:\n{text}",
+            page.word
+        );
+        assert!(!seen.contains(&page.word), "{} is listed twice", page.word);
+        seen.push(page.word);
+    }
+    // every command the exhaustive match calls an engine command is in the table
+    for c in [
+        Command::Groups(vec![]),
+        Command::Run(vec![]),
+        Command::Team(vec![]),
+        Command::Bots(vec![]),
+        Command::Connectors(vec![]),
+        Command::Connect(vec![]),
+    ] {
+        let w = engine_word(&c).unwrap();
+        assert!(seen.contains(&w), "{w} is a command the help does not list");
+    }
+    assert_eq!(seen.len(), 6);
+    // no count to go stale: the text says which, not how many
+    for stale in ["The four", "The six", "four that", "six that"] {
+        assert!(!text.contains(stale), "{stale}");
+    }
+}
+
+#[test]
+fn every_command_and_subcommand_takes_help_and_asks_no_engine_for_it() {
+    for page in help::PAGES {
+        let w = page.word;
+        for a in [
+            &[w, "--help"][..],
+            &[w, "-h"],
+            &[w, "help"],
+            &[w, "list", "--help"],
+            &[w, "set", "kai", "-h"],
+            &[w, "--bot", "kai", "--help"],
+            &["help", w],
+            &["--help", w],
+        ] {
+            assert_eq!(asks_help(&parse(&args(a))), Some(w), "{a:?}");
+        }
+        // after `--` it is a plain argument, and a word that only contains it is not it
+        for a in [
+            &[w, "send", "g", "--", "-h"][..],
+            &[w, "send", "g", "fix -h"],
+            &[w, "list"],
+        ] {
+            assert_eq!(asks_help(&parse(&args(a))), None, "{a:?}");
+        }
+        let lines = help::page_of(w);
+        assert!(lines.len() > 2, "{w}");
+        assert!(
+            lines.iter().any(|l| l.contains(&format!("{PRODUCT} {w}"))),
+            "{w}: {lines:?}"
+        );
+    }
+    assert_eq!(asks_help(&parse(&args(&["--help"]))), None);
+    assert_eq!(
+        parse(&args(&["help", "nope"])),
+        Command::Unknown("nope".into())
+    );
+}
+
 fn fixture(unpacked: bool) -> Gathered {
     let gpus = vec![
         Gpu {
@@ -262,6 +353,9 @@ fn no_command_names_the_engine() {
     let mut all = version_lines(&plain(), "0.1.0", &facts);
     all.extend(doctor_lines(&plain(), "0.1.0", &fixture(true)));
     all.extend(help_lines(&plain(), "0.1.0"));
+    for page in help::PAGES {
+        all.extend(help::page_of(page.word));
+    }
     let mut broken = fixture(true);
     broken.runtime = RuntimeStatus::Broken("the bundled Hermes runtime cannot be read".into());
     all.extend(doctor_lines(&plain(), "0.1.0", &broken));

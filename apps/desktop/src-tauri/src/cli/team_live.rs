@@ -5,16 +5,26 @@
 //! link; rooms by `groups.*` and boopis's `rooms.json`; boards by the engine's `kanban boards` commands; jobs by
 //! `cron.manage` on the bot's own link, with the whole prompt read from the bot's `cron/jobs.json` (the list gives 100
 //! characters). Bot creation is the Bots form's path: `profiles.create`, `bots.write`, then `bots::engine::Service::prepare`.
+//!
+//! A model is checked before anything is written: the provider and the model must be ones the bot can reach (`bot_model`,
+//! from `model.options` in the bot's own scope), and after the engine's `profiles.configure` the configuration is read back,
+//! so a model is reported as changed only when it changed; an alias the provider floats (`haiku`) is kept as it was written.
+//! A new bot is made on the main profile's model and given its own once `prepare` has put its provider's plugin in its home:
+//! before that the engine could not resolve the provider for it.
+//!
+//! One command opens one link to the root's gateway and one to each bot it asks about, and keeps them for every call, as
+//! `groups` keeps its one link: a link per call cost a ticket each, and for a bot's home it used to cost two starts of the
+//! engine's command line (`gateway ensure`, `gateway attach`) before the supervisor learnt to ask the root's control socket.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use serde_json::{Value, json};
 
-use super::headless::Host;
-use crate::bots::{self, Layout};
+use super::headless::{GatewayRpc, Host};
+use crate::bots::{self, Layout, model as bot_model};
 use crate::connectors::ops::{GatewayMcp, McpOps};
 use crate::error::{Error, Result};
 use crate::rooms::settings::RoomSettings;
@@ -32,6 +42,12 @@ pub struct Live<'a> {
     layout: Layout,
     service: Arc<bots::engine::Service>,
     settings: PathBuf,
+    /// The root's gateway, one link for the whole command.
+    root: GatewayRpc,
+    /// Each bot's own gateway link, opened when first asked and kept.
+    links: Mutex<BTreeMap<String, Arc<GatewayRpc>>>,
+    /// What `profiles.describe default` said, asked once.
+    root_profile: tokio::sync::OnceCell<Value>,
 }
 
 impl<'a> Live<'a> {
@@ -42,8 +58,25 @@ impl<'a> Live<'a> {
             layout: Layout::new(host.root().to_path_buf(), carried),
             service: Arc::new(bots::engine::Service::new(host.supervisor().clone())),
             settings: host.data_dir().join(crate::rooms::settings::FILE),
+            root: host.rpc(),
+            links: Mutex::new(BTreeMap::new()),
+            root_profile: tokio::sync::OnceCell::new(),
             host,
         }
+    }
+
+    /// The bot's own link, the same one for every call of this command.
+    fn bot_link(&self, bot: &str) -> Result<Arc<GatewayRpc>> {
+        let mut links = self
+            .links
+            .lock()
+            .map_err(|_| Error::Unavailable("a bot's link was lost".into()))?;
+        if let Some(l) = links.get(bot) {
+            return Ok(l.clone());
+        }
+        let l = Arc::new(self.host.rpc_for(bot)?);
+        links.insert(bot.to_owned(), l.clone());
+        Ok(l)
     }
 
     fn mcp(&self, bot: &str) -> Result<GatewayMcp> {
@@ -56,9 +89,15 @@ impl<'a> Live<'a> {
     }
 
     async fn describe(&self, name: &str) -> Result<Value> {
-        self.host
-            .rpc()
+        self.root
             .call("profiles.describe", json!({"name": name}))
+            .await
+    }
+
+    /// The root profile as `profiles.describe` gives it, asked once per command.
+    async fn root_profile(&self) -> Result<&Value> {
+        self.root_profile
+            .get_or_try_init(|| self.describe("default"))
             .await
     }
 
@@ -70,23 +109,20 @@ impl<'a> Live<'a> {
         Ok((self.default_provider().await, label.to_owned()))
     }
 
+    /// The provider of the root's model (`model.provider` of its configuration, as `profiles.describe` reads it over the link
+    /// that is open anyway, not a start of the engine's command line); empty when it cannot be read.
     async fn default_provider(&self) -> String {
-        match self
-            .host
-            .engine_cli(&["config", "get", "--json", "model.provider"])
-            .await
-        {
-            Ok(o) if o.code == 0 => serde_json::from_str::<Value>(o.stdout.trim())
-                .ok()
-                .and_then(|v| v.as_str().map(str::to_owned))
-                .unwrap_or_default(),
-            _ => String::new(),
+        match self.root_profile().await {
+            Ok(d) => bots::model_of(d.get("model")).0,
+            Err(e) => {
+                tracing::debug!(error = %e, "the root's provider could not be read");
+                String::new()
+            }
         }
     }
 
     async fn plugin(&self, method: &str, params: Value) -> Result<Value> {
-        self.host
-            .rpc()
+        self.root
             .call(&format!("plugin.boopis.{method}"), params)
             .await
     }
@@ -110,7 +146,7 @@ impl<'a> Live<'a> {
     }
 
     async fn jobs_of(&self, bot: &str) -> Result<Vec<JobNow>> {
-        let rpc = self.host.rpc_for(bot)?;
+        let rpc = self.bot_link(bot)?;
         let res = rpc
             .call(
                 "cron.manage",
@@ -164,7 +200,7 @@ impl<'a> Live<'a> {
     }
 
     async fn cron(&self, bot: &str, params: Value) -> Result<()> {
-        let res = self.host.rpc_for(bot)?.call("cron.manage", params).await?;
+        let res = self.bot_link(bot)?.call("cron.manage", params).await?;
         match res.get("error").and_then(Value::as_str) {
             Some(e) => Err(Error::Unavailable(e.to_owned())),
             None => Ok(()),
@@ -187,70 +223,9 @@ impl<'a> Live<'a> {
         self.plugin("bots.write", body).await.map(|_| ())
     }
 
-    async fn prepare(&self, name: &str, fresh: bool) -> Result<()> {
-        let done = self.service.prepare(&self.layout, name, fresh).await?;
-        if done.problems.is_empty() {
-            Ok(())
-        } else {
-            Err(Error::Bots(
-                "hx.bots.prepare_failed",
-                done.problems.join("; "),
-            ))
-        }
-    }
-}
-
-fn text(v: &Value, key: &str) -> String {
-    v.get(key).and_then(Value::as_str).unwrap_or("").to_owned()
-}
-
-/// The whole prompt of each job of a home, from its `cron/jobs.json` (read only; the engine owns the file). Empty when the
-/// file is not there or is not a shape this reads.
-fn whole_prompts(home: &std::path::Path) -> BTreeMap<String, String> {
-    let Ok(raw) = std::fs::read_to_string(home.join("cron").join("jobs.json")) else {
-        return BTreeMap::new();
-    };
-    let Ok(v) = serde_json::from_str::<Value>(&raw) else {
-        return BTreeMap::new();
-    };
-    let rows = v
-        .get("jobs")
-        .and_then(Value::as_array)
-        .or_else(|| v.as_array());
-    rows.map(|rows| {
-        rows.iter()
-            .filter_map(|j| {
-                Some((
-                    j.get("id")?.as_str()?.to_owned(),
-                    j.get("prompt")?.as_str()?.to_owned(),
-                ))
-            })
-            .collect()
-    })
-    .unwrap_or_default()
-}
-
-fn expand(path: &str) -> String {
-    match (path.strip_prefix("~/"), dirs::home_dir()) {
-        (Some(rest), Some(h)) => h.join(rest).display().to_string(),
-        (None, Some(h)) if path == "~" => h.display().to_string(),
-        _ => path.to_owned(),
-    }
-}
-
-fn contract(path: &str) -> String {
-    match dirs::home_dir() {
-        Some(h) => std::path::Path::new(path)
-            .strip_prefix(&h)
-            .map_or_else(|_| path.to_owned(), |rest| format!("~/{}", rest.display())),
-        None => path.to_owned(),
-    }
-}
-
-#[async_trait]
-impl Backend for Live<'_> {
+    /// Everything but the boards: the bots, their jobs and the rooms, over the kept links.
     #[allow(clippy::too_many_lines)] // one read per kind of thing
-    async fn read(&self) -> Result<Current> {
+    async fn read_linked(&self) -> Result<Current> {
         let mut now = Current {
             default_provider: self.default_provider().await,
             ..Current::default()
@@ -334,14 +309,14 @@ impl Backend for Live<'_> {
             now.jobs
                 .insert(name.clone(), self.jobs_of(&name).await.unwrap_or_default());
         }
-        now.baseline_skills = self.describe("default").await.ok().and_then(|d| {
+        now.baseline_skills = self.root_profile().await.ok().and_then(|d| {
             d.get("skills")
                 .and_then(Value::as_array)
                 .map(|s| s.iter().map(|e| text(e, "name")).collect())
         });
         let kept = RoomSettings::load(&self.settings).unwrap_or_default();
-        for r in rooms::list(&self.host.rpc(), false).await? {
-            let state = rooms::state(&self.host.rpc(), &r.id).await?;
+        for r in rooms::list(&self.root, false).await? {
+            let state = rooms::state(&self.root, &r.id).await?;
             now.rooms.push(RoomNow {
                 members: r.members.iter().map(|m| m.id.clone()).collect(),
                 lead: if state.context.routing == "lead" {
@@ -355,6 +330,12 @@ impl Backend for Live<'_> {
                 name: r.name,
             });
         }
+        Ok(now)
+    }
+
+    /// The boards that are not archived, by slug, from the engine's `kanban boards list` (empty when it cannot be read).
+    async fn read_boards(&self) -> BTreeMap<String, BoardNow> {
+        let mut out = BTreeMap::new();
         let boards = self
             .kanban(&["boards", "list", "--json"])
             .await
@@ -365,7 +346,7 @@ impl Backend for Live<'_> {
                 if slug.is_empty() || b.get("archived").and_then(Value::as_bool) == Some(true) {
                     continue;
                 }
-                now.boards.insert(
+                out.insert(
                     slug,
                     BoardNow {
                         name: text(&b, "name"),
@@ -378,6 +359,139 @@ impl Backend for Live<'_> {
                 );
             }
         }
+        out
+    }
+
+    /// Write the bot's role and instructions, and read them back.
+    async fn write_profile(
+        &self,
+        name: &str,
+        role: Option<&str>,
+        soul: Option<&str>,
+    ) -> Result<()> {
+        if role.is_none() && soul.is_none() {
+            return Ok(());
+        }
+        let mut params = json!({"name": name});
+        if let Some(r) = role {
+            params["description"] = json!(r);
+        }
+        if let Some(s) = soul {
+            params["soul"] = json!(format!("{}\n", s.trim()));
+        }
+        let res = self.root.call("profiles.configure", params).await?;
+        let missed = bot_model::not_saved(&res);
+        if !missed.is_empty() {
+            return Err(Error::Bots(
+                "hx.bots.not_saved",
+                format!(
+                    "the engine did not save {} of {name}",
+                    bots::and_list(&missed)
+                ),
+            ));
+        }
+        let d = self.describe(name).await?;
+        let kept = role.is_none_or(|r| text(&d, "description").trim() == r.trim())
+            && soul.is_none_or(|s| text(&d, "soul").trim() == s.trim());
+        if kept {
+            Ok(())
+        } else {
+            Err(Error::Bots(
+                "hx.bots.not_saved",
+                format!("{name}'s role or instructions read back otherwise than they were written"),
+            ))
+        }
+    }
+
+    /// Refuse a model the bot `name` cannot reach, before anything is written (`bot_model::check`).
+    async fn check_reach(&self, name: &str, asked: &(String, String), made: bool) -> Result<()> {
+        bot_model::check(&self.root, name, asked, made).await
+    }
+
+    /// Make `asked` the bot's model the one way it is done (`Service::set_model`: checked, written, read back, an alias kept),
+    /// over this command's own link. A model the engine wants confirmed is confirmed in the app, which can ask.
+    async fn write_model(&self, name: &str, asked: &(String, String)) -> Result<()> {
+        match self
+            .service
+            .set_model(Some(&self.root), &self.layout, name, asked, false)
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(Error::Bots(bot_model::CONFIRM, asks)) => Err(Error::Bots(
+                bot_model::CONFIRM,
+                format!("{asks} Change it once in the app's Bots page, which asks for that."),
+            )),
+            Err(e) => Err(e),
+        }
+    }
+
+    async fn prepare(&self, name: &str, fresh: bool) -> Result<()> {
+        let done = self.service.prepare(&self.layout, name, fresh).await?;
+        if done.problems.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::Bots(
+                "hx.bots.prepare_failed",
+                done.problems.join("; "),
+            ))
+        }
+    }
+}
+
+fn text(v: &Value, key: &str) -> String {
+    v.get(key).and_then(Value::as_str).unwrap_or("").to_owned()
+}
+
+/// The whole prompt of each job of a home, from its `cron/jobs.json` (read only; the engine owns the file). Empty when the
+/// file is not there or is not a shape this reads.
+fn whole_prompts(home: &std::path::Path) -> BTreeMap<String, String> {
+    let Ok(raw) = std::fs::read_to_string(home.join("cron").join("jobs.json")) else {
+        return BTreeMap::new();
+    };
+    let Ok(v) = serde_json::from_str::<Value>(&raw) else {
+        return BTreeMap::new();
+    };
+    let rows = v
+        .get("jobs")
+        .and_then(Value::as_array)
+        .or_else(|| v.as_array());
+    rows.map(|rows| {
+        rows.iter()
+            .filter_map(|j| {
+                Some((
+                    j.get("id")?.as_str()?.to_owned(),
+                    j.get("prompt")?.as_str()?.to_owned(),
+                ))
+            })
+            .collect()
+    })
+    .unwrap_or_default()
+}
+
+fn expand(path: &str) -> String {
+    match (path.strip_prefix("~/"), dirs::home_dir()) {
+        (Some(rest), Some(h)) => h.join(rest).display().to_string(),
+        (None, Some(h)) if path == "~" => h.display().to_string(),
+        _ => path.to_owned(),
+    }
+}
+
+fn contract(path: &str) -> String {
+    match dirs::home_dir() {
+        Some(h) => std::path::Path::new(path)
+            .strip_prefix(&h)
+            .map_or_else(|_| path.to_owned(), |rest| format!("~/{}", rest.display())),
+        None => path.to_owned(),
+    }
+}
+
+#[async_trait]
+impl Backend for Live<'_> {
+    async fn read(&self) -> Result<Current> {
+        // The boards are the one read that starts the engine's command line: it runs while the links are asked.
+        let (now, boards) = tokio::join!(self.read_linked(), self.read_boards());
+        let mut now = now?;
+        now.boards = boards;
         Ok(now)
     }
 
@@ -391,14 +505,17 @@ impl Backend for Live<'_> {
                 {
                     params["soul"] = json!(format!("{}\n", s.trim()));
                 }
-                let mut provider = String::new();
-                let mut model = String::new();
-                if let Some(m) = &bot.model {
-                    (provider, model) = self.resolve_model(m).await?;
-                    params["provider"] = json!(provider);
-                    params["model"] = json!(model);
+                let asked = match &bot.model {
+                    Some(m) => Some(self.resolve_model(m).await?),
+                    None => None,
+                };
+                // A new bot is given the root's providers: one the root cannot reach is refused before anything is made.
+                if let Some(a) = &asked {
+                    self.check_reach(name, a, false).await?;
                 }
-                self.host.rpc().call("profiles.create", params).await?;
+                // Made on the main profile's model; its own is set below, once its home has its provider's plugin.
+                self.root.call("profiles.create", params).await?;
+                let (provider, model) = asked.clone().unwrap_or_default();
                 let gov = bot.governed == Some(true);
                 if gov && !crate::frontier::is_frontier(&provider, &model) {
                     return Err(Error::Bots(
@@ -415,6 +532,13 @@ impl Backend for Live<'_> {
                 }
                 self.plugin("bots.write", body).await?;
                 self.prepare(name, true).await?;
+                if let Some(a) = &asked {
+                    self.write_model(name, a).await.map_err(|e| {
+                        Error::Bots("hx.bots.not_saved", format!("{name} was made, but {e}"))
+                    })?;
+                    // its ladder follows its model
+                    self.prepare(name, false).await?;
+                }
                 if let Some(n) = bot.max_turns {
                     self.service
                         .set_run_limit(&self.layout, name, Some(n))
@@ -431,24 +555,18 @@ impl Backend for Live<'_> {
                 governed,
                 max_turns,
             } => {
-                let mut params = json!({"name": name});
-                if let Some(r) = role {
-                    params["description"] = json!(r);
-                }
-                if let Some(s) = soul {
-                    params["soul"] = json!(format!("{}\n", s.trim()));
-                }
-                let mut next = None;
-                if let Some(m) = model {
-                    let (p, mo) = self.resolve_model(m).await?;
-                    params["provider"] = json!(p);
-                    params["model"] = json!(mo);
-                    next = Some((p, mo));
+                let asked = match model {
+                    Some(m) => Some(self.resolve_model(m).await?),
+                    None => None,
+                };
+                // A model the bot cannot reach is refused before anything is written.
+                if let Some(a) = &asked {
+                    self.check_reach(name, a, true).await?;
                 }
                 if let Some(true) = governed {
-                    let (p, m) = match next.clone() {
+                    let (p, m) = match asked.clone() {
                         Some(x) => x,
-                        None => bots::model_of(self.describe(name).await?.get("model")),
+                        None => bot_model::model_now(&self.root, name).await?,
                     };
                     if !crate::frontier::is_frontier(&p, &m) {
                         return Err(Error::Bots(
@@ -457,14 +575,10 @@ impl Backend for Live<'_> {
                         ));
                     }
                 }
-                if params.as_object().is_some_and(|o| o.len() > 1) {
-                    let res = self.host.rpc().call("profiles.configure", params).await?;
-                    if res.get("confirm_required").and_then(Value::as_bool) == Some(true) {
-                        return Err(Error::Unavailable(format!(
-                            "the model {} needs your confirmation: change it in the app's Bots page once",
-                            model.clone().unwrap_or_default()
-                        )));
-                    }
+                self.write_profile(name, role.as_deref(), soul.as_deref())
+                    .await?;
+                if let Some(a) = &asked {
+                    self.write_model(name, a).await?;
                 }
                 if look.is_some() || governed.is_some() {
                     self.set_bot_record(name, look.as_ref(), *governed).await?;
@@ -492,8 +606,7 @@ impl Backend for Live<'_> {
                             .collect()
                     })
                     .unwrap_or_default();
-                self.host
-                    .rpc()
+                self.root
                     .call(
                         "profiles.configure",
                         json!({"name": bot, "disabled_skills": off}),
@@ -535,7 +648,7 @@ impl Backend for Live<'_> {
                     lead: lead.clone(),
                     purpose: purpose.clone(),
                 };
-                let room = rooms::create(&self.host.rpc(), &new).await?;
+                let room = rooms::create(&self.root, &new).await?;
                 if let Some(n) = max_rounds {
                     let mut kept = RoomSettings::load(&self.settings)?;
                     kept.set_max_rounds(&room.id, Some(*n))?;
@@ -544,12 +657,12 @@ impl Backend for Live<'_> {
                 Ok(())
             }
             Op::SetRoomContext { id, lead, purpose } => {
-                let rpc = self.host.rpc();
-                let mut ctx = rooms::state(&rpc, id).await?.context;
+                let rpc = &self.root;
+                let mut ctx = rooms::state(rpc, id).await?.context;
                 ctx.purpose.clone_from(purpose);
                 ctx.lead.clone_from(lead);
                 if lead.is_empty() { "everyone" } else { "lead" }.clone_into(&mut ctx.routing);
-                rooms::set_context(&rpc, id, &ctx).await
+                rooms::set_context(rpc, id, &ctx).await
             }
             Op::SetMaxRounds { id, max_rounds } => {
                 let mut kept = RoomSettings::load(&self.settings)?;
@@ -624,8 +737,7 @@ impl Backend for Live<'_> {
                     .map(|_| ())
             }
             Op::DisbandRoom { id } => self
-                .host
-                .rpc()
+                .root
                 .call(
                     "groups.disband",
                     json!({"room_id": id, "cancel_id": rooms::new_event_id("disband")}),

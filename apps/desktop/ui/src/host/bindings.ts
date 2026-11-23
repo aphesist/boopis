@@ -320,6 +320,17 @@ export const commands = {
 	 *  The UI calls it after it makes, restores or changes a bot.
 	 */
 	botsPrepare: (name: string, fresh: boolean, options?: InvokeOptions) => __TAURI_INVOKE<BotPrepared>("bots_prepare", { name, fresh }, options),
+	/**
+	 *  Make `provider`/`model` the model of the bot `name`, the one way a bot's model is set (`bots/model.rs`, as `boopis bots set`
+	 *  does it): refused before anything is written when the bot cannot reach it, with a sentence that names the providers it can;
+	 *  written by the engine; read back, so a model is reported only when it is the bot's. `confirm` is the owner's yes to a model
+	 *  the engine asked about (`hx.bots.confirm_model`, whose message is the question). Then the bot is prepared, as its ladder
+	 *  follows its model.
+	 * 
+	 *  Errors: `hx.bots.model_unreachable`, `hx.bots.confirm_model`, `hx.bots.not_saved`, `hx.bots.model_unchecked`,
+	 *  `hx.bots.not_found`.
+	 */
+	botsSetModel: (name: string, provider: string, model: string, confirm: boolean, options?: InvokeOptions) => __TAURI_INVOKE<BotModelSet>("bots_set_model", { name, provider, model, confirm }, options),
 	/**  Take the bot `name` out of the root's groups (its `hosted_rooms.profiles` entry): after it is archived or deleted. */
 	botsRelease: (name: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("bots_release", { name }, options),
 	/**  The one notice the bots' repair left (the governance change), taken: the app shows it once. `None` when there is none. */
@@ -451,6 +462,19 @@ export type Attachment_Serialize = {
 	kind: AttachmentKind,
 	/**  The size of a file in bytes; unknown for a folder. */
 	bytes: number | null,
+};
+
+/**
+ *  What `bots_set_model` did: the model read back from the bot's configuration, and what preparing the bot afterwards could not
+ *  do.
+ */
+export type BotModelSet = {
+	/**  The provider read back. */
+	provider: string,
+	/**  The model read back, as the bot's configuration writes it (an alias stays an alias). */
+	model: string,
+	/**  What preparing the bot afterwards could not do (its ladder follows its model); the model is set. */
+	problems: string[],
 };
 
 /**  What preparing a bot did: whether anything changed, and each step that could not be done, in plain words. */

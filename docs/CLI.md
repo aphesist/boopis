@@ -10,11 +10,17 @@ where a script wants it (one JSON object per line), and the same exit codes ever
 | `boopis run --group <group> "<task>"` | Run a task through a group to its end, past the engine's round cap. |
 | `boopis bots list\|create\|set` | One bot: its role, instructions, model, look and Governed switch. |
 | `boopis team check\|apply\|export` | A whole team as one file. |
+| `boopis connectors list\|add\|test\|remove` | The connectors of the main profile or of one bot ([`CONNECTORS.md`](CONNECTORS.md)). |
+| `boopis connect` | How to dial the engine's gateway, for another client of yours ([`LOCAL-API.md`](LOCAL-API.md)). |
+
+`boopis --help` lists them, and `boopis <command> --help` (or `-h`, anywhere before a `--`, or `boopis help <command>`) prints
+what one takes and exits 0, without starting or reaching the engine. The list and the pages are one table in the code
+(`cli/help.rs`), which the parser reads too, so a command cannot be missing from the help.
 
 Exit codes: `0` done, `1` failed or timed out (or a plan with problems), `2` a usage mistake, `3` stopped at a cap (boopis's or
 the engine's), `4` a bot needs you.
 
-The commands that talk to the engine (`groups`, `run`, `bots`, `team apply|export`) reach it the way the app does: the same engine
+The commands that talk to the engine (`groups`, `run`, `bots`, `team apply|export`, `connectors`) reach it the way the app does: the same engine
 plan, the same control socket and ticket, the same short link to the gateway (`gateway::oneshot::Link`), and the same
 `groups.*`, `profiles.*`, `cron.manage` and `mcp.servers.*` calls the app makes. If the app is running they attach to its
 gateway. If nothing is running they start one the way the app would, and serve the plugin's keychain channel for as long as
@@ -127,6 +133,24 @@ plugin, its approvals). A new bot is ungoverned unless you say `--governed`, and
 only what differs: setting a bot to what it already is does nothing (exit 0). `create` refuses a name that exists and `set`
 one that does not (exit 1). Because they go through the gateway, they attach to the running app's, which is where the secret
 channel is.
+
+**A model is checked before anything is written.** Its provider must be one the bot can reach: listed by the engine's
+`model.options` in the bot's own scope (the inventory the app's model picker reads), which means its plugin is in the bot's
+home and the sign-in or key it needs is there. Where the provider lists its models, the model must be one of them (an alias
+such as `haiku` counts as the model it names today, as the picker counts it). Otherwise nothing is changed and the command
+says which providers the bot can reach (exit 1). The engine checks the pick once more when it writes it, and writes nothing
+when it refuses; the bot's configuration is then read back, so `changed` (or `made`) is printed only when the model really
+is the one asked for. A new bot is made on the main profile's model and given its own once its home has its provider's
+plugin (before that the engine cannot resolve the provider for it); a model the main profile cannot reach is refused before
+the bot is made. The app's Bots page sets a bot's model through the same code (`bots/model.rs`), when a bot is made and when
+its model is changed, and shows the same sentence when it refuses.
+
+**An alias stays an alias.** A provider that floats short names (the Claude subscription's `haiku`, `sonnet`, `opus` and
+`fable`) resolves them itself at every request, and each follows the newest model of its tier. The engine writes the id an
+alias names today (`claude-haiku-5-5[1m]`), so boopis writes the alias back as it was asked, through the engine's own
+`config set` in the bot's home: the bot then reads like the main profile, the team file and the app's picker, keeps
+following its tier, and a team file exported and applied again finds nothing to change. A provider that does not float the
+alias (an API key's) keeps the engine's id.
 
 `--max-turns N` (1 to 1000) is the bot's own cap for `boopis run --bot`, and `--max-turns default` takes the bot back to the default
 of 10. It is written where the engine reads a goal's budget: `goals.max_turns` in the bot's own configuration, by the engine's own
