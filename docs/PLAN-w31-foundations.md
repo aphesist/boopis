@@ -90,3 +90,15 @@ dark and light for the owner's pick before w31/rules-ui is built (Part H rules a
 - 07 mode line under the composer (C), with toggles for what shows (cost, etc.).
 - 08 status: bot = live orb + shimmer; normal session = same shimmer with an animated model logo (normal-session screen discussion next). Danger hybrid. Info C only with a hover reveal (preview first, else A). Long text: focused view.
 - 09 accent indigo, editable per theme (owner picks a hex from Iris #5b5bd6, Indigo #4f46e5, Ultramarine #3e4fd8, Violet-indigo #5e4ad9, Soft indigo #6366f1). Attention A amber: reverses red for "you", needs-you and the notch edge; red stays for failed and destructive.
+
+## Feedforward and blanks (owner, 23 Nov): must be real in boopis
+
+Based on Liu Xingyu's demo (x.com/liu_xingyu/status/2121015724374397183).
+- Blanks: real today. A cell opens one (exec/blanks.py), the answer goes back through ctx.inject_message as a queued
+  message (rpc/blanks.py); states opened / filled / lapsed (lapsed = end-of-turn question).
+- Feedforward: NOT real today. In the live app it is off by default (readFlag('feedforward')) and when on uses the
+  mock's fixed pattern catalog (host/live-provider.ts:577), so the agent does not actually read the draft.
+- To do: a w31 spec + branch `w31/feedforward-live`: the plugin reads the draft (debounced, cheap model through
+  ctx.llm.complete_structured, fail quiet), returns the gaps and assumptions, the composer fills them inline before
+  sending, the answers travel with the message; on by default once it works.
+- Visual: one shared dashed-mark primitive (design system v7) for feedforward, blanks and info labels.
