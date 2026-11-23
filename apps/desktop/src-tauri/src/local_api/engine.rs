@@ -18,6 +18,14 @@ pub trait Engine: Send + Sync + 'static {
     /// or, when it failed, `{reason}`. Nothing to do where there is no window.
     async fn said(&self, _profile: &str, _session: &str, _payload: Value, _failed: bool) {}
 
+    /// Run the engine's own `kanban` command in the root home (a board is shared by every profile) and return what it
+    /// printed. Where there is no engine command (a test), the board cannot be read.
+    async fn kanban(&self, _args: &[&str]) -> Result<String> {
+        Err(crate::error::Error::Unavailable(
+            "the board cannot be read here".into(),
+        ))
+    }
+
     /// Tell the windows that the messages a room holds changed (`rooms/hold.rs`). Nothing to do where there is no window.
     fn held_changed(&self, _room_id: &str, _held: &[crate::rooms::hold::Held]) {}
 }
@@ -52,6 +60,12 @@ impl Engine for Hubbed {
         if let Ok((_, hub)) = state.hubs.hub_for(Some(profile)) {
             hub.announce_said(session, &payload, failed);
         }
+    }
+
+    async fn kanban(&self, args: &[&str]) -> Result<String> {
+        use tauri::Manager as _;
+        let state = self.handle.state::<crate::commands::AppState>();
+        crate::kanban::ask(&state.supervisor, args).await
     }
 
     fn held_changed(&self, room_id: &str, held: &[crate::rooms::hold::Held]) {
@@ -115,6 +129,15 @@ pub mod scripted {
                 c.push((profile.to_owned(), method.to_owned(), params.clone()));
             }
             (self.respond)(profile, method, &params)
+        }
+
+        async fn kanban(&self, args: &[&str]) -> Result<String> {
+            let args = serde_json::json!(args);
+            if let Ok(mut c) = self.calls.lock() {
+                c.push(("default".to_owned(), "kanban".to_owned(), args.clone()));
+            }
+            let out = (self.respond)("default", "kanban", &args)?;
+            Ok(out.as_str().map_or_else(|| out.to_string(), str::to_owned))
         }
 
         async fn said(&self, profile: &str, session: &str, payload: Value, failed: bool) {

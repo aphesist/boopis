@@ -20,6 +20,7 @@ use super::model::{
 };
 use super::presence::{Live, Status};
 use super::roster;
+use super::workers::Worker;
 use crate::config::{ApiLimits, RoomLimits};
 use crate::error::Error;
 use crate::rooms::hold;
@@ -149,6 +150,8 @@ pub struct Service<E: Engine> {
     pub(super) watches: tokio::sync::Mutex<HashMap<String, hold::Watch>>,
     /// How far each room's log has been read for the feed (lines, notifications), by id.
     pub(super) room_cursors: tokio::sync::Mutex<HashMap<String, u64>>,
+    /// Each bot's kanban worker, as its own link last said (B31).
+    pub(super) workers: std::sync::Mutex<HashMap<String, Worker>>,
 }
 
 pub(super) fn text(v: &Value, key: &str) -> String {
@@ -186,6 +189,7 @@ impl<E: Engine> Service<E> {
             room_limits,
             watches: tokio::sync::Mutex::new(HashMap::new()),
             room_cursors: tokio::sync::Mutex::new(HashMap::new()),
+            workers: std::sync::Mutex::new(HashMap::new()),
         })
     }
 
@@ -269,6 +273,7 @@ impl<E: Engine> Service<E> {
         {
             self.feed.set_rooms(rooms_from(&rooms));
         }
+        self.read_workers().await;
     }
 
     /// Whether `profile` is a bot of the roster (the root always is); a name the roster does not hold yet is looked up once
@@ -350,6 +355,7 @@ impl<E: Engine> Service<E> {
                 summary: self.summary_of(&title, &preview),
             });
         }
+        live.extend(self.worker_rows(profile));
         let finished = self.feed.on_poll(profile, &live, &models);
         for sid in waiting {
             self.read_pending(profile, &sid).await;

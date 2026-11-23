@@ -6,6 +6,7 @@
 //! - [`model`]: the contract's values; [`presence`], [`approvals`], [`roster`], [`feed`]: the rules, pure and tested;
 //! - [`service`]: asks the engine (through [`engine`]) and acts for clients; [`rooms`]: the room hold's side (the app's
 //!   window and this API send through it, and its pump); [`room_log`]: rooms' logs read and followed, and stops;
+//!   [`workers`]: kanban workers;
 //! - [`wire`], [`http`], [`token`]: the endpoint, its checks and its token file;
 //! - [`audit`], [`scrub`], [`look`]: the record of who answered, the secret scrubber, the default look.
 
@@ -27,6 +28,7 @@ pub mod scrub;
 pub mod service;
 pub mod token;
 pub mod wire;
+pub mod workers;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

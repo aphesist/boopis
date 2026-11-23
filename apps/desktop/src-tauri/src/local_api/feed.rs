@@ -1062,6 +1062,23 @@ impl Feed {
         );
     }
 
+    /// A kanban task the bot was running finished: the engine's own summary of it is the body.
+    pub fn notify_task(&self, profile: &str, session_id: &str, title: String, body: &str) {
+        let mut inner = lock(&self.inner);
+        let body = self.clip(body);
+        self.notify(
+            &mut inner,
+            NoteKind::Task,
+            profile,
+            Some(session_id),
+            None,
+            Source::Kanban,
+            title,
+            body,
+            false,
+        );
+    }
+
     // ───────────────────────── rooms ─────────────────────────
 
     /// A line added to a room's log: a `room.line` event, and for a member's message a notification with its words and the

@@ -73,6 +73,8 @@ pub enum Source {
     Cron,
     /// A turn in a team room.
     Room,
+    /// A kanban worker running one of the board's tasks (a process of its own, seen through the profile's sessions).
+    Kanban,
     /// Anything else the engine runs (the command line, another program).
     Other,
 }
@@ -85,6 +87,7 @@ pub fn source_of(engine_source: &str) -> Source {
         "gui" | "desktop" => Source::Gui,
         "cron" | "scheduled" => Source::Cron,
         "bot_room" | "room" | "hosted_room" | "group" => Source::Room,
+        "kanban" => Source::Kanban,
         _ => Source::Other,
     }
 }
@@ -179,6 +182,8 @@ pub enum NoteKind {
     Error,
     /// A member of a room addressed the owner (`@user`, the engine's name for the human: `rooms/mentions.rs`).
     Mention,
+    /// A kanban task the bot was running finished (its summary is the body).
+    Task,
 }
 
 /// "A bot did something you should see."
@@ -567,6 +572,7 @@ mod tests {
         assert_eq!(source_of("cron"), Source::Cron);
         assert_eq!(source_of("bot_room"), Source::Room);
         assert_eq!(source_of("cli"), Source::Other);
+        assert_eq!(source_of("kanban"), Source::Kanban, "B31");
         assert_eq!(source_of("acp"), Source::Other);
     }
 

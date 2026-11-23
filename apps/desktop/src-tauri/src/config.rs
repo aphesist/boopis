@@ -155,6 +155,9 @@ pub struct ApiLimits {
     pub follow_bots: usize,
     /// How often a streaming reply is sent again while it grows.
     pub stream_every: std::time::Duration,
+    /// A kanban worker counts as running while its session showed life this recently (the engine refreshes a running
+    /// worker's `last_active` at least every minute; the app's roster uses the same window).
+    pub worker_active: std::time::Duration,
 }
 
 impl Default for ApiLimits {
@@ -186,6 +189,7 @@ impl Default for ApiLimits {
             conversation_rows: 200,
             follow_bots: 6,
             stream_every: Duration::from_millis(250),
+            worker_active: Duration::from_secs(90),
         }
     }
 }

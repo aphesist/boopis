@@ -233,10 +233,15 @@ impl<E: Engine> Service<E> {
             })
             .unwrap_or_default();
         if running.is_empty() {
+            let worker = self.worker_of(profile).is_some();
             return Err(ApiError::new(
                 409,
                 "not_running",
-                "That bot has no running turn to stop.",
+                if worker {
+                    "Its turn runs as a kanban worker, which the engine runs outside its sessions: it cannot be stopped from here."
+                } else {
+                    "That bot has no running turn to stop."
+                },
             ));
         }
         let mut stopped = Vec::new();
