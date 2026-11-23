@@ -424,7 +424,7 @@ describe('what a bot may do is what the plugin enforces (ADR-0048)', () => {
     const writes = h.main.calls.filter((c) => c.method === 'plugin.boopis.bots.write');
     expect(writes.length).toBeGreaterThan(0);
     for (const w of writes) expect(w.params).not.toHaveProperty('approvals');
-    expect(h.own['kai']).toMatchObject({ settings: { gov: 'ungoverned', cap: '0.60', workspace: 'worktree' } });
+    expect(h.own['kai']).toMatchObject({ settings: { gov: 'ungoverned', cap: '5.00', workspace: 'worktree' } });
   });
 });
 describe('archived bots, restored from the Archived group and the palette', () => {

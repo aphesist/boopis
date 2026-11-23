@@ -23,8 +23,9 @@ use crate::team::apply::Backend;
 use crate::team::plan::{BoardNow, BotNow, ConnectorNow, Current, JobNow, Op, RoomNow};
 use crate::team::spec::Look;
 
-/// The approvals a new bot starts with: it asks before every kind of thing (the Bots form's `OWN_SETTINGS`).
-const APPROVALS: [&str; 6] = ["deploys", "push", "network", "spend", "people", "outside"];
+/// A new bot's cap per run, in dollars (the Bots form's `OWN_SETTINGS`; ADR-0048). Its tiers are not written: the plugin's
+/// defaults apply until the owner chooses one.
+const CAP: &str = "5.00";
 
 /// The live engine.
 pub struct Live<'a> {
@@ -408,8 +409,7 @@ impl Backend for Live<'_> {
                         ),
                     ));
                 }
-                let mut body = json!({"name": name, "settings": {"gov": if gov { "governed" } else { "ungoverned" }, "cap": "0.60", "workspace": "worktree"},
-                    "approvals": APPROVALS.iter().map(|a| ((*a).to_owned(), json!(true))).collect::<serde_json::Map<_, _>>()});
+                let mut body = json!({"name": name, "settings": {"gov": if gov { "governed" } else { "ungoverned" }, "cap": CAP, "workspace": "worktree"}});
                 if let Some(l) = &bot.look {
                     body["look"] = json!({"shape": l.shape, "color": l.color});
                 }

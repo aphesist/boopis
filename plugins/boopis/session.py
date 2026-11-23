@@ -18,7 +18,7 @@ from typing import Any
 from . import hx, policy
 from ._vendor.contraprova.interfaces import TierLadder
 from .bots.origin import TurnOrigin, asked_by
-from .bots.rules import BotRules, rules_for
+from .bots.rules import BotRules, bot_name, rules_for
 from .budget.month import MonthScanner
 from .budget.run import RunBudget
 from .config import (
@@ -126,6 +126,7 @@ class Runtime:
         self.month_scanner = MonthScanner()  # the team's spend this month, for every profile of the root
         self.pauses: dict[str, str] = {}  # the rule key of a run cap's pause card -> the session it holds
         self.board_folders: Callable[[str | None], str | None] | None = None  # made on first use (``bots.boards``)
+        self._defaults_given: set[str] = set()  # the bots this process gave the owner's new defaults (once each)
         self._sessions: dict[str, SessionState] = {}
         self._registry_lock = threading.Lock()
         self.links: dict[str, WorkerLink] = {}  # a delegated child's session id -> the attempt it is
@@ -150,8 +151,18 @@ class Runtime:
         return self._root if self._root is not None else Path(self._hermes_root())
 
     def bot_rules(self) -> BotRules | None:
-        """The rules of the bot whose turn this is (``bots.rules``), None in the owner's own profile."""
-        return rules_for(self.home, self.root)
+        """The rules of the bot whose turn this is (``bots.rules``), None in the owner's own profile. The first time a
+        process meets a bot, the owner's new defaults are given to it if it has not had them (``bots.defaults``)."""
+        home, root = self.home, self.root
+        name = bot_name(home, root)
+        if name is None:
+            return None
+        if name not in self._defaults_given:
+            from .bots.defaults import give
+
+            give(root, name, home)
+            self._defaults_given.add(name)
+        return rules_for(home, root)
 
     def boards(self) -> Callable[[str | None], str | None]:
         """A kanban board's ``default_workdir``, asked of the engine's CLI in the root home and kept a minute."""

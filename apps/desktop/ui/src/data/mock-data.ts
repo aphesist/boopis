@@ -51,7 +51,7 @@ export function ideasFor(role: string): readonly string[] {
   return ['What are you working on?', 'Summarise yesterday'];
 }
 export const defaultConfig = (id: string): BotConfig => ({
-  instructions: '', gov: id === 'noct' ? 'ungoverned' : 'governed', model: 'sonnet 5.5', cap: '0.60',
+  instructions: '', gov: id === 'noct' ? 'ungoverned' : 'governed', model: 'sonnet 5.5', cap: '5.00',
   cron: CRON_DEFAULT[id] ?? '',
   channels: { app: true, slack: ['nina', 'noct', 'hex'].includes(id), telegram: id === 'noct', email: id === 'nimbus' },
   approvals: { deploys: 'ask', push: 'ask', network: id !== 'nimbus' ? 'ask' : 'allow', spend: 'ask', people: 'ask', outside: 'ask', delete: 'ask', commands: 'allow' },

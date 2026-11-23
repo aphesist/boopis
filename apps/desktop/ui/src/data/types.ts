@@ -11,7 +11,7 @@ export interface BotConfig {
   instructions: string;
   gov: Governance;
   model: string;
-  /** dollars per run, as typed ("0.60"); '' when the bot has no cap of its own */
+  /** dollars per run, as typed ("5.00"); '' when the bot has no cap of its own */
   cap: string;
   /** a five-field cron expression, or '' for "only when asked" */
   cron: string;

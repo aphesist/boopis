@@ -24,7 +24,7 @@ import { updateRow } from './list';
 
 const sentence = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 /** what the cap per run means, said where it is set (ADR-0048) */
-export const CAP_HINT = 'Dollars per run: one message, room turn, card or scheduled run. At the cap it pauses and asks you; no answer stops it. On a subscription it counts what the same tokens would cost on the API, so it works as a token budget.';
+export const CAP_HINT = 'Dollars per run: one message, room turn, card or scheduled run. A new bot starts at $5. At the cap it pauses and asks you; no answer stops it. On a subscription it counts what the same tokens would cost on the API, so it works as a token budget.';
 
 export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | null, keepFocus: boolean): void {
   const admin = data().bots.admin as BotsAdmin;

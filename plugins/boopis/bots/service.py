@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from ..util.log import get_logger
-from . import guides, homes, store
+from . import defaults, guides, homes, store
 from .cli import HermesCli
 from .errors import BotExistsError, BotRefusedError, HermesCliError
 
@@ -34,6 +34,7 @@ class BotService:
     def read_all(self) -> dict[str, Any]:
         bots: list[dict[str, Any]] = []
         for path in homes.named_profiles(self.root):
+            defaults.give(self.root, path.name, path)  # the owner's new defaults, once per bot (ADR-0048)
             record, problem = store.read(path)
             archived = record.get("archived") if record else None
             if archived is None and homes.is_archived_name(path.name):
