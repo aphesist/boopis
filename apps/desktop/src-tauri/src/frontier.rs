@@ -100,8 +100,16 @@ fn tail_ignorable(rest: &[String]) -> bool {
 }
 
 fn resolve_alias(provider: &str, model: &str) -> String {
+    route_alias(provider, model).map_or_else(|| model.to_owned(), str::to_owned)
+}
+
+/// The id `alias` names on `provider`'s own routes today (the Claude subscription's `opus` is `claude-opus-5-5`), from the list's
+/// `aliases`; `None` when that provider floats no such alias. Such a provider resolves the alias itself at every request, so a
+/// configuration may keep the alias and still run.
+#[must_use]
+pub fn route_alias(provider: &str, alias: &str) -> Option<&'static str> {
     let key = {
-        let m = model.trim().to_lowercase();
+        let m = alias.trim().to_lowercase();
         match (m.ends_with(']'), m.rfind('[')) {
             (true, Some(open)) => m[..open].to_owned(),
             _ => m,
@@ -110,8 +118,7 @@ fn resolve_alias(provider: &str, model: &str) -> String {
     FILE.aliases
         .get(&provider.trim().to_lowercase())
         .and_then(|t| t.get(&key))
-        .cloned()
-        .unwrap_or_else(|| model.to_owned())
+        .map(String::as_str)
 }
 
 /// A model recognised as a family: its readable name, whether it is at or above the family's floor, and the floor.
@@ -261,6 +268,15 @@ mod tests {
                 "heavy: {p}/{m}"
             );
         }
+    }
+
+    #[test]
+    fn a_route_alias_is_the_providers_own() {
+        let sub = "claude-subscription-directsdk-experimental";
+        assert_eq!(route_alias(sub, "haiku"), Some("claude-haiku-5-5"));
+        assert_eq!(route_alias(sub, "Opus[1m]"), Some("claude-opus-5-5"));
+        assert_eq!(route_alias(sub, "claude-opus-5-5"), None);
+        assert_eq!(route_alias("anthropic", "haiku"), None);
     }
 
     #[test]

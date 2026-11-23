@@ -144,6 +144,13 @@ is the one asked for. A new bot is made on the main profile's model and given it
 plugin (before that the engine cannot resolve the provider for it); a model the main profile cannot reach is refused before
 the bot is made.
 
+**An alias stays an alias.** A provider that floats short names (the Claude subscription's `haiku`, `sonnet`, `opus` and
+`fable`) resolves them itself at every request, and each follows the newest model of its tier. The engine writes the id an
+alias names today (`claude-haiku-5-5[1m]`), so boopis writes the alias back as it was asked, through the engine's own
+`config set` in the bot's home: the bot then reads like the main profile, the team file and the app's picker, keeps
+following its tier, and a team file exported and applied again finds nothing to change. A provider that does not float the
+alias (an API key's) keeps the engine's id.
+
 `--max-turns N` (1 to 1000) is the bot's own cap for `boopis run --bot`, and `--max-turns default` takes the bot back to the default
 of 10. It is written where the engine reads a goal's budget: `goals.max_turns` in the bot's own configuration, by the engine's own
 `config set` (and `config unset` for the way back), so the number is the bot's wherever it is run. `bots list --json` shows it as

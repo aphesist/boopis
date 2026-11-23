@@ -10,8 +10,16 @@
 //!
 //! The calls go over one link to the root's gateway (`Rpc`): `model.options` with the bot's name, which the engine binds to the
 //! bot's scope, `profiles.configure` and `profiles.describe`.
+//!
+//! An alias the provider floats itself (the Claude subscription's `haiku`) is kept as it was written. The engine pins it to the
+//! id it names today (`claude-haiku-5-5[1m]`), which would stop the bot following the newest model of its tier and set it apart
+//! from the main profile, the team file and the app's picker, which all write the alias: `team apply` of an exported file then
+//! found a change it could never make (B34). Treating the two spellings as equal in the plan instead would keep two
+//! representations on disk and hide a real difference (an alias moves, a pinned id does not), so the alias is written back.
 
 use serde_json::{Value, json};
+
+use std::path::Path;
 
 use crate::bots;
 use crate::error::{self, Error};
@@ -161,6 +169,18 @@ impl Reach {
     }
 }
 
+/// Whether the engine pinned an alias that the provider floats itself: `asked` names one of its provider's own aliases
+/// (`frontier::route_alias`, the Claude subscription's `haiku`) and the model read back is the id that alias names today,
+/// spelled as the engine pins it (`claude-haiku-5-5[1m]`). The bot then keeps the alias as it was written. A provider that does
+/// not float the alias (an API key's) gets no such rewrite: it would send the short name to an API that does not know it.
+#[must_use]
+pub fn keeps_alias(asked: &(String, String), now: &(String, String)) -> bool {
+    now.0.eq_ignore_ascii_case(&asked.0)
+        && !now.1.eq_ignore_ascii_case(&asked.1)
+        && crate::frontier::route_alias(&asked.0, &asked.1)
+            .is_some_and(|pinned| model_names::canon(&now.1) == model_names::canon(pinned))
+}
+
 /// A model as a person reads it: `provider/model`, or the model alone when it names no provider.
 #[must_use]
 pub fn label((provider, model): &(String, String)) -> String {
@@ -273,12 +293,20 @@ pub async fn model_now(rpc: &dyn Rpc, name: &str) -> error::Result<(String, Stri
 }
 
 /// Make `asked` the bot's model with the engine's `profiles.configure`, which checks the pick against the provider once more
-/// and writes nothing when it refuses, then read the configuration back: only a model that really changed is reported.
+/// and writes nothing when it refuses, then read the configuration back: only a model that really changed is reported. An
+/// alias the engine pinned ([`keeps_alias`]) is written back as asked, by the engine's own `config set` in the bot's `home`
+/// (through `engine`, as `bots::prepare` writes every other key there).
 ///
 /// # Errors
 /// A pick that needs the owner's confirmation, one the engine refused (`applied.model` false), or a configuration that read
 /// back otherwise ([`written`]); the link's.
-pub async fn write(rpc: &dyn Rpc, name: &str, asked: &(String, String)) -> error::Result<()> {
+pub async fn write(
+    rpc: &dyn Rpc,
+    engine: &dyn bots::Engine,
+    home: &Path,
+    name: &str,
+    asked: &(String, String),
+) -> error::Result<()> {
     let before = model_now(rpc, name).await?;
     let res = rpc
         .call(
@@ -301,7 +329,11 @@ pub async fn write(rpc: &dyn Rpc, name: &str, asked: &(String, String)) -> error
             ),
         ));
     }
-    let now = model_now(rpc, name).await?;
+    let mut now = model_now(rpc, name).await?;
+    if keeps_alias(asked, &now) {
+        engine.config_set(home, "model.default", &asked.1).await?;
+        now = model_now(rpc, name).await?;
+    }
     written(name, asked, &before, &now).map_err(|why| Error::Bots("hx.bots.not_saved", why))
 }
 
@@ -422,6 +454,44 @@ mod tests {
     }
 
     #[test]
+    fn an_alias_the_provider_floats_is_kept_and_no_other_name_is_rewritten() {
+        // what `bots set nimbus --model haiku` read back on 0.1.9
+        assert!(keeps_alias(
+            &pair(SUB, "haiku"),
+            &pair(SUB, "claude-haiku-5-5[1m]")
+        ));
+        assert!(keeps_alias(
+            &pair(SUB, "sonnet"),
+            &pair(SUB, "claude-sonnet-5-5[1m]")
+        ));
+        // already the alias, or an id asked for: nothing to keep
+        assert!(!keeps_alias(&pair(SUB, "haiku"), &pair(SUB, "haiku")));
+        assert!(!keeps_alias(
+            &pair(SUB, "claude-haiku-5-5[1m]"),
+            &pair(SUB, "claude-haiku-5-5[1m]")
+        ));
+        // pinned to another model, or moved to another provider
+        assert!(!keeps_alias(
+            &pair(SUB, "haiku"),
+            &pair(SUB, "claude-sonnet-5-5[1m]")
+        ));
+        assert!(!keeps_alias(
+            &pair(SUB, "haiku"),
+            &pair("anthropic", "claude-haiku-5-5")
+        ));
+        // an API key's provider does not float `haiku`: its id stays as the engine wrote it
+        assert!(!keeps_alias(
+            &pair("anthropic", "haiku"),
+            &pair("anthropic", "claude-haiku-5-5")
+        ));
+        // the engine's own spelling of an id is not an alias
+        assert!(!keeps_alias(
+            &pair(SUB, "claude-opus-5.5"),
+            &pair(SUB, "claude-opus-5-5[1m]")
+        ));
+    }
+
+    #[test]
     fn what_the_engine_did_not_save_is_named() {
         let a =
             json!({"ok": false, "applied": {"model": false, "description": true, "soul": false}});
@@ -432,13 +502,13 @@ mod tests {
 
     /// A scripted engine for one bot: its model, the providers it reaches, and what `profiles.configure` stores for a pick
     /// (`None`: it refuses, `applied.model` false, as the engine does when its own check fails).
-    struct Engine {
+    struct Scripted {
         model: std::sync::Mutex<(String, String)>,
         stores: fn(&str, &str) -> Option<(String, String)>,
         asked: std::sync::Mutex<Vec<(String, Value)>>,
     }
 
-    impl Engine {
+    impl Scripted {
         fn new(stores: fn(&str, &str) -> Option<(String, String)>) -> Self {
             Self {
                 model: std::sync::Mutex::new(pair(SUB, "opus")),
@@ -457,7 +527,7 @@ mod tests {
     }
 
     #[async_trait::async_trait]
-    impl Rpc for Engine {
+    impl Rpc for Scripted {
         async fn call(&self, method: &str, params: Value) -> error::Result<Value> {
             self.asked
                 .lock()
@@ -490,10 +560,76 @@ mod tests {
         }
     }
 
+    /// The engine's own `config set` in the bot's home, as `bots::prepare` uses it: only `model.default` is scripted.
+    #[async_trait::async_trait]
+    impl bots::Engine for Scripted {
+        async fn config_get(&self, _: &Path, key: &str) -> error::Result<Option<Value>> {
+            panic!("not scripted: config get {key}")
+        }
+        async fn config_set(&self, home: &Path, key: &str, value: &str) -> error::Result<()> {
+            assert_eq!(
+                (home, key),
+                (Path::new("/e/profiles/nimbus"), "model.default")
+            );
+            self.asked
+                .lock()
+                .unwrap()
+                .push(("config set".to_owned(), json!(value)));
+            self.model.lock().unwrap().1 = value.to_owned();
+            Ok(())
+        }
+        async fn config_unset(&self, _: &Path, key: &str) -> error::Result<()> {
+            panic!("not scripted: config unset {key}")
+        }
+        async fn enable_plugin(&self, _: &Path, name: &str) -> error::Result<()> {
+            panic!("not scripted: enable {name}")
+        }
+        async fn call(&self, _: &Path, method: &str, _: Value) -> error::Result<Value> {
+            panic!("not scripted: {method}")
+        }
+        async fn reload_plugins(&self, _: &Path, _: &Path) -> error::Result<()> {
+            panic!("not scripted: reload")
+        }
+        async fn restart_when_idle(&self, _: &Path) -> error::Result<bool> {
+            panic!("not scripted: restart")
+        }
+    }
+
+    async fn set(e: &Scripted, asked: (String, String)) -> error::Result<()> {
+        write(e, e, Path::new("/e/profiles/nimbus"), "nimbus", &asked).await
+    }
+
+    /// B34: `boopis bots set nimbus --model haiku` wrote `claude-haiku-5-5[1m]`, and an exported team file then showed drift.
+    #[tokio::test]
+    async fn an_alias_the_engine_pins_is_written_back_as_asked() {
+        let e = Scripted::new(|p, m| {
+            Some(match (p, m) {
+                (SUB, "haiku") => pair(SUB, "claude-haiku-5-5[1m]"),
+                _ => pair(p, m),
+            })
+        });
+        set(&e, pair(SUB, "haiku")).await.unwrap();
+        assert_eq!(*e.model.lock().unwrap(), pair(SUB, "haiku"));
+        assert_eq!(
+            e.methods(),
+            [
+                "profiles.describe",
+                "profiles.configure",
+                "profiles.describe",
+                "config set",
+                "profiles.describe"
+            ]
+        );
+        // an id asked for stays the id; nothing is written back
+        let e = Scripted::new(|p, m| Some(pair(p, m)));
+        set(&e, pair(SUB, "claude-haiku-5-5[1m]")).await.unwrap();
+        assert!(!e.methods().contains(&"config set".to_owned()));
+    }
+
     /// B33: `boopis bots set nimbus --model nosuchprovider/xyz` said "changed" and left the configuration as it was.
     #[tokio::test]
     async fn an_unreachable_model_is_refused_before_anything_is_written() {
-        let e = Engine::new(|p, m| Some(pair(p, m)));
+        let e = Scripted::new(|p, m| Some(pair(p, m)));
         let err = check(&e, "nimbus", &pair("nosuchprovider", "xyz"), true)
             .await
             .unwrap_err();
@@ -517,10 +653,8 @@ mod tests {
     #[tokio::test]
     async fn changed_is_said_only_when_the_configuration_changed() {
         // the engine takes the pick: read back, it is the model asked for
-        let e = Engine::new(|p, m| Some(pair(p, m)));
-        write(&e, "nimbus", &pair("openrouter", "some/model"))
-            .await
-            .unwrap();
+        let e = Scripted::new(|p, m| Some(pair(p, m)));
+        set(&e, pair("openrouter", "some/model")).await.unwrap();
         assert_eq!(*e.model.lock().unwrap(), pair("openrouter", "some/model"));
         assert_eq!(
             e.methods(),
@@ -531,20 +665,16 @@ mod tests {
             ]
         );
         // the engine refuses it: the error says so, and the model is as it was
-        let e = Engine::new(|_, _| None);
-        let err = write(&e, "nimbus", &pair("openrouter", "nope"))
-            .await
-            .unwrap_err();
+        let e = Scripted::new(|_, _| None);
+        let err = set(&e, pair("openrouter", "nope")).await.unwrap_err();
         assert_eq!(
             err.to_string(),
             "the engine refused openrouter/nope for nimbus, so its model was not changed"
         );
         assert_eq!(*e.model.lock().unwrap(), pair(SUB, "opus"));
         // the engine says it applied the pick but the configuration did not move: read back, it is not reported as changed
-        let e = Engine::new(|_, _| Some(pair(SUB, "opus")));
-        let err = write(&e, "nimbus", &pair("openrouter", "x"))
-            .await
-            .unwrap_err();
+        let e = Scripted::new(|_, _| Some(pair(SUB, "opus")));
+        let err = set(&e, pair("openrouter", "x")).await.unwrap_err();
         assert!(
             err.to_string()
                 .starts_with("nimbus's model was not changed"),

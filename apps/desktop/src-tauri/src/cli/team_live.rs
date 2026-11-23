@@ -7,9 +7,10 @@
 //! characters). Bot creation is the Bots form's path: `profiles.create`, `bots.write`, then `bots::engine::Service::prepare`.
 //!
 //! A model is checked before anything is written: the provider and the model must be ones the bot can reach (`bot_model`,
-//! from `model.options` in the bot's own scope), and after the engine's `profiles.configure` the configuration is read back, so a model
-//! is reported as changed only when it changed. A new bot is made on the main profile's model and given its own once
-//! `prepare` has put its provider's plugin in its home: before that the engine could not resolve the provider for it.
+//! from `model.options` in the bot's own scope), and after the engine's `profiles.configure` the configuration is read back,
+//! so a model is reported as changed only when it changed; an alias the provider floats (`haiku`) is kept as it was written.
+//! A new bot is made on the main profile's model and given its own once `prepare` has put its provider's plugin in its home:
+//! before that the engine could not resolve the provider for it.
 //!
 //! One command opens one link to the root's gateway and one to each bot it asks about, and keeps them for every call, as
 //! `groups` keeps its one link: a link per call cost a ticket each, and for a bot's home it used to cost two starts of the
@@ -408,9 +409,10 @@ impl<'a> Live<'a> {
         bot_model::check(&self.root, name, asked, made).await
     }
 
-    /// Make `asked` the bot's model and read it back (`bot_model::write`).
+    /// Make `asked` the bot's model and read it back, an alias kept as asked (`bot_model::write`).
     async fn write_model(&self, name: &str, asked: &(String, String)) -> Result<()> {
-        bot_model::write(&self.root, name, asked).await
+        let home = self.layout.home(name)?;
+        bot_model::write(&self.root, self.service.engine(), &home, name, asked).await
     }
 
     async fn prepare(&self, name: &str, fresh: bool) -> Result<()> {
