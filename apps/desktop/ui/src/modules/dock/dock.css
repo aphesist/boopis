@@ -34,6 +34,9 @@
   -webkit-font-smoothing: antialiased;
 }
 .dk.is-self-centred { transition: left var(--dur-3) var(--spring); }
+/* "Keep the dock centred in the window" (the owner's setting): on the window's middle, whatever the bars do, and never animated
+   there (the room around it: input.ts fitRow) */
+.hx[data-dock-centre="on"] .dk { left: 50vw; transition: none; }
 .dk.is-snap { transition: none; }
 .dk[data-mode="off"].is-gone { visibility: hidden; }
 .dk-mono, .dk-time, .dk-ctx-num, .dk-ctx-of, .dk-sched-when, .dk-runx-more, .dk-tile-sub {

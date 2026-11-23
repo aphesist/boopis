@@ -281,6 +281,8 @@ function mount(slotEl: HTMLElement): void {
   on('hx:state', (d) => {
     if (d.changed.includes('orbGrow')) readGrow();
     if (d.changed.includes('dock')) { flags.setting = d.state.dock !== 'off'; followSetting(); }
+    /* centred in the window or on the column: the room around its middle is another, so the row fits again (dock.css moves it) */
+    if (d.changed.includes('dockCentred') && !d.initial) { fitRow(); retarget(false); }
   });
   on('hx:attention', (d) => {
     if (!d.source || d.source === 'dock') return;

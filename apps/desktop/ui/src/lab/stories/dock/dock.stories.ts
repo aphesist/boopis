@@ -42,6 +42,10 @@ const dock: Story = {
     'a long-named bot, its session': dockState(['long'], { fixtures: ['long'] }, async (c) => { c.hx.dock()?.openSession('cassiopeia-staging-deploy-guardian'); await c.wait(900); }),
     expanded: dockState(['open'], {}, mode('expanded')),
     minimised: dockState(['variant'], {}, mode('minimal')),
+    /* "Keep the dock centred in the window" (owner, 22 November 2026): on the window's middle with the sidebar open, in the room
+       between the bars around it (at 1200 the roster is narrower than its 640) */
+    'centred in the window': dockState(['variant', 'owner'], {}, async (c) => { c.hx.setState({ dockCentred: true }); await c.wait(600); }),
+    'centred in the window, expanded': dockState(['variant', 'open'], {}, async (c) => { c.hx.setState({ dockCentred: true }); await c.wait(400); c.hx.dock()?.setMode('expanded'); await c.wait(900); }),
     off: dockState(['disabled'], {}, async (c) => { c.hx.dock()?.setOn(false); await c.wait(700); }, { allow: { 'geometry.contain': 'the dock is off: nothing to check' } }),
     "nina's session (an approval)": dockState(['typical', 'owner'], {}, async (c) => { c.hx.dock()?.openSession('nina'); await c.wait(900); }),
     "atlas's session (a thread)": dockState(['typical'], {}, async (c) => { c.hx.dock()?.openSession('atlas'); await c.wait(900); }),

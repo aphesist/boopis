@@ -12,6 +12,9 @@ export interface AppState {
   theme: ThemeScheme;
   /** owner setting: dock bots grow under the pointer (Settings > Appearance), default on */
   orbGrow: boolean;
+  /** owner setting (22 November 2026: "put an option that centralizes the dock and makes sure it doesn't move with the other
+      bars/animations"): the dock sits on the window's middle instead of the column's centre line (Settings > General), default off */
+  dockCentred: boolean;
 }
 
 /** emitted by the shell as `hx:layout` (viewport coordinates) */

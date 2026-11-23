@@ -2,7 +2,7 @@
    touch and trackpad paging, hover (magnification and looking), a press outside returning the dock to rest, and
    fitting the column. */
 import { $$, isMac } from '../../core/dom';
-import { getLayout, setState } from '../../core/state';
+import { getLayout, setState, state as appState } from '../../core/state';
 import { emit } from '../../core/bus';
 import { ui } from '@boopis/ui';
 import { MAG, MAG_ADD, PAGE_GAP, S, SIG, X, fitIn, flags, geomR, motion, rendered, rowNow, shownPages, spring, K_SLIDE } from './ctx';
@@ -11,7 +11,7 @@ import { E, cxNow, hideTip, kick, placeNow, putAway, readyPage, resetMag, retarg
 import { listenOrb, lookRow, pokeBot, setOrbLife } from './orbs';
 import { renderView } from './views';
 import { columnsOf, gridTarget, rowIdxOf, rove, stepIndex } from './roving';
-import { rowFit } from './geometry';
+import { dockRoom, rowFit } from './geometry';
 import {
   closeCard, curFocusTarget, dragTile, down, focusBot, goPage, movePage, openBotInTab, openCard, schedAction, setMode, stepPage, stopRun, togglePage, up
 } from './controller';
@@ -392,11 +392,10 @@ export function fitRow(): void {
   /* never below --hit-min: an orb is a pointer target (R-a11y-2) */
   const floor = parseFloat(cs.getPropertyValue('--hit-min')) || 24;
   const ctl = parseFloat(cs.getPropertyValue('--ctl-s')) || 28;
-  /* the room around the centre line: a view never grows past the ground on either side (flares included), so on a
-     phone, where the centre line sits left of the window's middle (the details strip), nothing runs off the edge */
-  const L = getLayout(), cx = L ? L.centerX : cxNow();
-  const left = L ? L.viewLeft : 0, right = L ? L.viewRight : vw;
-  const room = Math.floor(2 * (Math.min(cx - left, right - cx) - geomR.FLARE - 2));
+  /* the room around the dock's middle (geometry.ts dockRoom): a view never grows past the ground on either side, so on a phone,
+     where the centre line sits left of the window's middle (the details strip), nothing runs off the edge */
+  const L = getLayout();
+  const room = dockRoom({ centred: appState.dockCentred, viewportW: L ? L.viewportW : vw, centerX: L ? L.centerX : cxNow(), viewLeft: L ? L.viewLeft : 0, viewRight: L ? L.viewRight : vw, flare: geomR.FLARE });
   fitIn.room = { room: room > 0 ? Math.min(avail, room) : avail, floor, ctl, pad, mag: MAG, magCtl: MAG_ADD, sig: SIG };
   const f = rowFit(n, fitIn.room), o = f.orb;
   const orbChanged = o !== lastOrb; lastOrb = o;
