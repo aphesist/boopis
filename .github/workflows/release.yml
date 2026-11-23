@@ -1,6 +1,7 @@
 name: release
 # Builds the desktop app in release mode on every push to develop and on tags v*. The Linux AppImage is the
-# deliverable (the owner runs Arch); Windows and macOS bundles are non-blocking extras. Builds are unsigned.
+# deliverable (the owner runs Arch); Windows and macOS bundles are non-blocking extras. Builds are unsigned, except the macOS
+# one when the repository has the Apple secrets (Developer ID and notarisation, docs/RELEASING.md "macOS").
 # On a tag, the AppImage, the Arch package and SHA256SUMS become a GitHub release. A release can also be cut from the
 # Actions tab without a clone: run this workflow with `release` set to the version's tag (vX.Y.Z, equal to the app's
 # version); the release job then creates that tag on the commit it built and publishes. With `from_run` set, nothing is
@@ -58,6 +59,7 @@ jobs:
       sha: ${{ steps.guard.outputs.sha }}
       version: ${{ steps.guard.outputs.version }}
       has_arch: ${{ steps.guard.outputs.has_arch }}
+      has_macos: ${{ steps.guard.outputs.has_macos }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
@@ -84,6 +86,7 @@ jobs:
           names=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$FROM_RUN/artifacts" --jq '.artifacts[] | select(.expired | not) | .name')
           grep -qx boopis-linux-x86_64-appimage <<<"$names" || refuse "run $FROM_RUN has no kept AppImage artifact (boopis-linux-x86_64-appimage): its build failed or the artifacts expired."
           has_arch=false; grep -qx "$ARCH_ARTIFACT" <<<"$names" && has_arch=true
+          has_macos=false; grep -qx boopis-macos-aarch64-dmg <<<"$names" && has_macos=true
           echo "kept artifacts: $(tr '\n' ' ' <<<"$names")"
 
           # the version: the artifacts' commit and this commit must name the same app version
@@ -107,6 +110,7 @@ jobs:
             echo "sha=$sha"
             echo "version=$now_v"
             echo "has_arch=$has_arch"
+            echo "has_macos=$has_macos"
           } >> "$GITHUB_OUTPUT"
           echo "Publishing from run $FROM_RUN (built at ${sha:0:8}, smoke scripts from ${GITHUB_SHA:0:8}), version $now_v." >> "$GITHUB_STEP_SUMMARY"
 
@@ -409,18 +413,67 @@ jobs:
   macos:
     # macOS minutes count ten times and Windows twice: build them for tags and on demand, not every develop push
     if: ${{ inputs.from_run == '' && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') }}
-    # Non-blocking. macos-latest is Apple silicon: the bundle is aarch64-apple-darwin. Unsigned and not notarised, so
-    # Gatekeeper asks the user to allow it.
+    # Non-blocking. Apple silicon (macos-latest): the Hermes runtime for macos-aarch64, built here natively by
+    # scripts/build-runtime.sh and proved relocatable, hx for aarch64-apple-darwin and the plugin, staged by the same
+    # scripts/stage-bundle.sh as the Linux and Windows jobs, then boopis.app and the dmg with tauri.bundle.macos.conf.json.
+    # Signed with a Developer ID, the runtime's nested code included, and notarised when the repository has the Apple secrets
+    # (docs/RELEASING.md, "macOS"); without them the app is signed ad hoc, which the summary says. `macos-smoke` installs it.
     runs-on: macos-latest
     continue-on-error: true
-    timeout-minutes: 60
+    timeout-minutes: 75
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "13.0"  # = bundle.macOS.minimumSystemVersion; hx is built by cargo itself
     steps:
       - uses: actions/checkout@v4
+      - name: the tag matches the app's version
+        if: env.RELEASE_TAG != ''
+        run: |
+          v=$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)
+          [ "$RELEASE_TAG" = "v$v" ] || { echo "tag $RELEASE_TAG but tauri.conf.json says $v"; exit 1; }
+      - name: Developer ID signing and notarisation, when the repository has the secrets
+        id: signing
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -z "$APPLE_CERTIFICATE" ] || [ -z "$APPLE_CERTIFICATE_PASSWORD" ] || [ -z "$APPLE_SIGNING_IDENTITY" ]; then
+            { echo "sign=false"; echo "notarize=false"; } >> "$GITHUB_OUTPUT"
+            echo "::notice title=macOS build not signed::APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD and APPLE_SIGNING_IDENTITY are not all set, so the app is signed ad hoc and not notarised (docs/RELEASING.md, macOS)."
+            exit 0
+          fi
+          # a keychain of this job only, holding the Developer ID Application certificate; removed by the last step
+          keychain="$RUNNER_TEMP/boopis-signing.keychain-db"
+          pass="$(openssl rand -hex 24)"
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/developer-id.p12"
+          security create-keychain -p "$pass" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$pass" "$keychain"
+          security import "$RUNNER_TEMP/developer-id.p12" -k "$keychain" -f pkcs12 -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/developer-id.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$pass" "$keychain" >/dev/null
+          # shellcheck disable=SC2046 # the existing search list, one word per keychain
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v -p codesigning "$keychain" | grep -qF "$APPLE_SIGNING_IDENTITY" \
+            || { echo "::error::the certificate in APPLE_CERTIFICATE holds no valid identity named by APPLE_SIGNING_IDENTITY"; exit 1; }
+          { echo "sign=true"; echo "keychain=$keychain"; } >> "$GITHUB_OUTPUT"
+          if [ -n "$APPLE_ID" ] && [ -n "$APPLE_PASSWORD" ] && [ -n "$APPLE_TEAM_ID" ]; then
+            echo "notarize=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "notarize=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=macOS build not notarised::APPLE_ID, APPLE_PASSWORD and APPLE_TEAM_ID are not all set: the app is signed but not notarised."
+          fi
       - uses: dtolnay/rust-toolchain@1.97.0
         with:
+          targets: aarch64-apple-darwin
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
         with: { shared-key: release-macos }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
       - uses: pnpm/action-setup@v4
         with: { version: 10 }
       - uses: actions/setup-node@v4
@@ -430,23 +483,259 @@ jobs:
           cache-dependency-path: apps/desktop/ui/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
         working-directory: apps/desktop/ui
-      # TODO: stage the sidecar and plugin resource as the Linux job does (aarch64-apple-darwin).
-      - name: build the app and dmg (unsigned)
+      # The runtime is cached only while it is not signed: a signed build signs a fresh one with the certificate it has now.
+      - uses: actions/cache@v4
+        id: runtime-cache
+        if: steps.signing.outputs.sign != 'true'
+        with:
+          path: dist/runtime-macos
+          key: hermes-runtime-macos-aarch64-unsigned-${{ hashFiles('scripts/build-runtime.sh', 'scripts/verify-runtime.sh', 'scripts/macos-codesign.sh', 'scripts/runtime/**') }}
+      - name: build hermes-runtime-macos-aarch64.tar.zst and runtime.json (scripts/build-runtime.sh, natively)
+        if: steps.runtime-cache.outputs.cache-hit != 'true'
+        env:
+          SIGN: ${{ steps.signing.outputs.sign }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          command -v gtar >/dev/null || brew install gnu-tar
+          command -v zstd >/dev/null || brew install zstd
+          if [ "$SIGN" = true ]; then
+            scripts/build-runtime.sh --out dist/runtime-macos --codesign "$APPLE_SIGNING_IDENTITY"
+          else
+            scripts/build-runtime.sh --out dist/runtime-macos
+          fi
+      - name: relocation proof (unpacked in two paths, one with spaces; every signature valid, no foreign library path)
+        run: scripts/verify-runtime.sh dist/runtime-macos
+      - name: notarise the runtime's nested code (the archive is not a bundle, so Apple learns its signatures from a zip of it)
+        if: steps.signing.outputs.notarize == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          payload="$RUNNER_TEMP/runtime-payload"; rm -rf "$payload"; mkdir -p "$payload"
+          zstd -d -q -c dist/runtime-macos/hermes-runtime-macos-aarch64.tar.zst | tar -x -C "$payload"
+          ditto -c -k --keepParent "$payload" "$RUNNER_TEMP/runtime-payload.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/runtime-payload.zip" --apple-id "$APPLE_ID" --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" --wait --output-format json | tee "$RUNNER_TEMP/runtime-notary.json"
+          [ "$(jq -r .status "$RUNNER_TEMP/runtime-notary.json")" = Accepted ] || { echo "::error::the runtime was not accepted by the notary service"; exit 1; }
+      - name: sizes
+        run: |
+          ls -l dist/runtime-macos
+          jq -r '"macOS runtime archive: \(.archive.size) bytes, unpacked about \(.unpacked_size) bytes, Hermes \(.hermes_version), Python \(.python_version), target \(.target)"' dist/runtime-macos/runtime.json | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          # not named boopis-*: the release job publishes only those
+          name: hermes-runtime-macos-aarch64
+          path: dist/runtime-macos/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: build hx (release), the sidecar
+        run: cargo build --release -p hx --target aarch64-apple-darwin
+      - name: stage the hx sidecar, the plugin and the Hermes runtime (scripts/stage-bundle.sh)
+        run: scripts/stage-bundle.sh --target aarch64-apple-darwin --runtime dist/runtime-macos
+      # A nested helper built outside Tauri (the notch, docs/RELEASING.md "macOS") is signed here, before the bundle, with
+      # scripts/macos-codesign.sh and its own entitlements; tauri.bundle.macos.conf.json's bundle.macOS.files puts it in
+      # Contents/Helpers, and the app's signature then seals it.
+      - name: build boopis.app and the dmg (Developer ID when the secrets exist, ad hoc otherwise; notarised and stapled by Tauri)
         working-directory: apps/desktop/src-tauri
-        run: pnpm dlx @tauri-apps/cli@2 build --bundles dmg
+        env:
+          SIGN: ${{ steps.signing.outputs.sign }}
+          NOTARIZE: ${{ steps.signing.outputs.notarize }}
+          SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          NOTARY_APPLE_ID: ${{ secrets.APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          NOTARY_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          configs=(--config tauri.bundle.conf.json --config tauri.bundle.macos.conf.json)
+          if [ "$SIGN" = true ]; then
+            jq -n --arg id "$SIGNING_IDENTITY" '{bundle: {macOS: {signingIdentity: $id}}}' > "$RUNNER_TEMP/tauri.signing.json"
+            configs+=(--config "$RUNNER_TEMP/tauri.signing.json")
+          fi
+          if [ "$NOTARIZE" = true ]; then
+            export APPLE_ID="$NOTARY_APPLE_ID" APPLE_PASSWORD="$NOTARY_PASSWORD" APPLE_TEAM_ID="$NOTARY_TEAM_ID"
+          fi
+          pnpm dlx @tauri-apps/cli@2 build --bundles app,dmg --target aarch64-apple-darwin "${configs[@]}"
+      - name: the bundle holds hx, the plugin and the runtime, and its signature is sound
+        env:
+          SIGN: ${{ steps.signing.outputs.sign }}
+          NOTARIZE: ${{ steps.signing.outputs.notarize }}
+        run: |
+          out=target/aarch64-apple-darwin/release/bundle
+          app="$out/macos/boopis.app"
+          dmg=$(ls "$out"/dmg/boopis_*_aarch64.dmg)
+          for want in MacOS/boopis MacOS/hx Resources/plugin/boopis/plugin.yaml Resources/runtime/runtime.json \
+              Resources/runtime/hermes-runtime-macos-aarch64.tar.zst; do
+            [ -e "$app/Contents/$want" ] || { echo "the app does not hold Contents/$want"; exit 1; }
+          done
+          lipo -archs "$app/Contents/MacOS/boopis" "$app/Contents/MacOS/hx"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign --display --verbose=2 "$app" 2>&1 | grep -E '^(Identifier|Authority|TeamIdentifier|Signature|CodeDirectory)'
+          codesign --display --entitlements - --xml "$app" | plutil -p - || echo "::warning::the app carries no entitlements"
+          hdiutil verify "$dmg"
+          if [ "$NOTARIZE" = true ]; then
+            xcrun stapler validate "$app"
+            spctl --assess --type execute --verbose=2 "$app"
+            signed="signed with a Developer ID and notarised (Gatekeeper opens it)"
+          elif [ "$SIGN" = true ]; then
+            signed="signed with a Developer ID, not notarised (Gatekeeper asks)"
+          else
+            signed="NOT signed: ad hoc only, no Developer ID and no notarisation, because the repository has no Apple signing secrets (Gatekeeper refuses it from a browser download until the person allows it; scripts/install.sh is not affected)"
+          fi
+          {
+            echo "macOS dmg: $(stat -f %z "$dmg") bytes, $signed"
+            echo "of which the Hermes runtime archive: $(jq .archive.size dist/runtime-macos/runtime.json) bytes"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: boopis-macos-aarch64-dmg
-          path: target/release/bundle/dmg/*.dmg
+          path: target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
           if-no-files-found: error
           retention-days: 30
+      - name: remove the signing keychain
+        if: always() && steps.signing.outputs.sign == 'true'
+        env:
+          KEYCHAIN: ${{ steps.signing.outputs.keychain }}
+        run: security delete-keychain "$KEYCHAIN" || true
+
+  macos-smoke:
+    # The dmg on a clean Mac, as a person gets it (tests/e2e/smoke_macos.sh: scripts/install.sh, the bundle, `boopis
+    # --version`, the app started with the Local API on, one app per user), then the engine on the bundle's own runtime and
+    # hx (tests/setup_live.rs: the host's unpack, the plugin, the gateway, the secret channel through the macOS peer check, a
+    # governed session against the fake model), the plugin's exec kernel in the bundle's Seatbelt sandbox, hx-sandbox's own
+    # macOS tests and the host's unit tests of the macOS process table. Non-blocking like the build for now; `release`
+    # attaches the dmg only when this passed. With `from_run` the dmg is the earlier run's and the scripts are this commit's.
+    if: ${{ !cancelled() && (needs.macos.result == 'success' || (needs.reuse.result == 'success' && needs.reuse.outputs.has_macos == 'true')) }}
+    needs: [macos, reuse]
+    runs-on: macos-latest
+    continue-on-error: true
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: boopis-macos-aarch64-dmg
+          path: ${{ runner.temp }}/dmg
+          run-id: ${{ inputs.from_run || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: install the dmg and start the app (tests/e2e/smoke_macos.sh)
+        id: app
+        continue-on-error: true
+        timeout-minutes: 15
+        run: tests/e2e/smoke_macos.sh "$(ls "$RUNNER_TEMP"/dmg/boopis_*_aarch64.dmg)" "$RUNNER_TEMP/smoke"
+      - uses: astral-sh/setup-uv@v5
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: live-signins-macos }  # the same debug build of the host as live-signins.yml's macOS probe
+      - name: the bundle's runtime, unpacked for the plugin's tests (the archive the app carries)
+        id: runtime
+        if: env.BOOPIS_RUNTIME_DIR != ''
+        run: |
+          command -v zstd >/dev/null || brew install zstd
+          dir="$RUNNER_TEMP/hermes-runtime"; mkdir -p "$dir"
+          zstd -d -q -c "$BOOPIS_RUNTIME_DIR"/hermes-runtime-macos-aarch64.tar.zst | tar -x -C "$dir"
+          echo "HX_E2E_RUNTIME=$dir" >> "$GITHUB_ENV"
+      - name: contraprova's CLI at the vendored commit (the plugin's tests verify a ledger with it)
+        env:
+          CONTRAPROVA_TOKEN: ${{ secrets.CONTRAPROVA_TOKEN }}
+        run: |
+          sha=$(jq -r .sha plugins/boopis/_vendor/contraprova/VENDOR.json)
+          auth=""
+          if [ -n "$CONTRAPROVA_TOKEN" ]; then
+            echo "::add-mask::$CONTRAPROVA_TOKEN"
+            auth="x-access-token:${CONTRAPROVA_TOKEN}@"
+          fi
+          echo "CONTRAPROVA_SPEC=contraprova @ git+https://${auth}github.com/aphesist/contraprova@${sha}" >> "$GITHUB_ENV"
+      - name: exec in the bundle's sandbox (the plugin's kernel under hx's Seatbelt profile, the short channel folder)
+        id: exec
+        timeout-minutes: 20
+        if: env.HX_E2E_RUNTIME != ''
+        continue-on-error: true
+        working-directory: plugins/boopis
+        env:
+          HX_E2E_RUNTIME_ROOT: ${{ env.HX_E2E_RUNTIME }}
+        run: |
+          uv run --no-project --python 3.11 --with pytest --with hypothesis --with ruamel.yaml --with "$CONTRAPROVA_SPEC" \
+            pytest -q -rs tests/test_exec_sandbox.py tests/test_exec_sockdir.py
+      - name: first-run setup on the bundle's runtime and hx (tests/setup_live.rs, the host's own unpack and the fake model)
+        id: setup
+        timeout-minutes: 20
+        if: env.HX_BIN != ''
+        continue-on-error: true
+        env:
+          HX_E2E_RUNTIME_ARCHIVE: ${{ env.BOOPIS_RUNTIME_DIR }}
+        run: |
+          set -o pipefail
+          cargo test -p boopis-host --test setup_live first_run_setup_end_to_end_on_the_bundled_runtime -- --exact --nocapture 2>&1 \
+            | tee "$RUNNER_TEMP/setup_live.log"
+          if grep -q 'skipped:' "$RUNNER_TEMP/setup_live.log"; then echo "::error::setup_live skipped instead of running"; exit 1; fi
+          grep -q 'test result: ok. [1-9]' "$RUNNER_TEMP/setup_live.log"
+      - name: the host's macOS process table for the secret channel, and its other unit tests of secrets
+        id: peer
+        timeout-minutes: 20
+        continue-on-error: true
+        run: |
+          cargo test -p boopis-host --lib secrets:: -- --nocapture
+      - name: hx-sandbox's own macOS tests (the Seatbelt backend, each assertion made inside the sandbox)
+        id: sandbox
+        timeout-minutes: 20
+        continue-on-error: true
+        run: |
+          cargo build -p hx-sandbox --examples
+          cargo test -p hx-sandbox --test macos -- --nocapture
+      - name: the plugin's end-to-end suite on the bundle's runtime (informational on macOS for now)
+        id: e2e
+        timeout-minutes: 20
+        if: env.HX_E2E_RUNTIME != ''
+        continue-on-error: true
+        working-directory: plugins/boopis
+        run: |
+          PYTHONPATH="$HX_E2E_RUNTIME/hermes-agent" \
+          uv run --no-project --python 3.11 --with pytest --with hypothesis --with ruamel.yaml --with "$CONTRAPROVA_SPEC" \
+            pytest -q -rs ../../tests/e2e
+      - name: verdict
+        env:
+          APP: ${{ steps.app.outcome }}
+          EXEC: ${{ steps.exec.outcome }}
+          SETUP: ${{ steps.setup.outcome }}
+          PEER: ${{ steps.peer.outcome }}
+          SANDBOX: ${{ steps.sandbox.outcome }}
+          E2E: ${{ steps.e2e.outcome }}
+        run: |
+          {
+            echo "### macOS smoke"
+            echo "| check | result |"
+            echo "|---|---|"
+            echo "| install, bundle, app, Local API, one app per user (smoke_macos.sh) | $APP |"
+            echo "| exec in the Seatbelt sandbox (plugin tests, bundle's hx) | $EXEC |"
+            echo "| first-run setup on the bundle's runtime (setup_live) | $SETUP |"
+            echo "| secret channel's process table (host unit tests) | $PEER |"
+            echo "| hx-sandbox macOS tests | $SANDBOX |"
+            echo "| plugin end-to-end suite (informational) | $E2E |"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          for r in "$APP" "$EXEC" "$SETUP" "$PEER" "$SANDBOX"; do [ "$r" = success ] || exit 1; done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-smoke
+          path: |
+            ${{ runner.temp }}/smoke/*.png
+            ${{ runner.temp }}/smoke/*.log
+            ${{ runner.temp }}/smoke/*.txt
+            ${{ runner.temp }}/smoke/*.json
+            ${{ runner.temp }}/setup_live.log
+          if-no-files-found: ignore
+          retention-days: 7
 
   release:
-    # Tags only: a GitHub release with the AppImage, whatever extra bundles built (the Arch package among them), the two
-    # installers, and SHA256SUMS over all of them. The AppImage and its smoke test are what the release waits on; the others are attached if they built.
+    # Tags only: a GitHub release with the AppImage, whatever extra bundles built (the Arch package and the dmg only when their
+    # smoke tests passed), the two installers, and SHA256SUMS over all of them. The AppImage and its smoke test are what the
+    # release waits on; the others are attached if they built.
     # With `from_run` it publishes the artifacts of that earlier run (smoke-tested above with this commit's scripts), not a build of this one.
     if: ${{ !cancelled() && (needs.linux.result == 'success' || needs.reuse.result == 'success') && needs.smoke.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release != '')) }}
-    needs: [reuse, linux, smoke, windows, macos, arch, arch-smoke]
+    needs: [reuse, linux, smoke, windows, macos, macos-smoke, arch, arch-smoke]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -467,6 +756,9 @@ jobs:
       - name: the Arch package is published only when its smoke test passed
         if: ${{ needs.arch-smoke.result != 'success' }}
         run: rm -f release-files/*.pkg.tar.zst
+      - name: the dmg is published only when the macOS smoke test passed
+        if: ${{ needs.macos-smoke.result != 'success' }}
+        run: rm -f release-files/*.dmg
       - name: checksums over every file
         working-directory: release-files
         run: |

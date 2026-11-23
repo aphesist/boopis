@@ -280,9 +280,21 @@ async fn first_run_setup_end_to_end_on_the_bundled_runtime() {
     run_flow(Install::Runtime(dir)).await;
 }
 
-/// The running processes whose command line mentions `needle` (Linux: `/proc`).
+/// The running processes whose command line mentions `needle` (Linux: `/proc`; macOS: `ps`, which reads the kernel's
+/// argument blocks).
 fn processes_using(needle: &Path) -> Vec<String> {
     let needle = needle.display().to_string();
+    if cfg!(target_os = "macos") {
+        let out = Command::new("/bin/ps")
+            .args(["-axww", "-o", "command="])
+            .output()
+            .unwrap();
+        return String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .filter(|l| l.contains(&needle))
+            .map(str::to_owned)
+            .collect();
+    }
     let mut found = Vec::new();
     if let Ok(rd) = std::fs::read_dir("/proc") {
         for e in rd.flatten() {

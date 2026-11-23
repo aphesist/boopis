@@ -1,4 +1,4 @@
-"""exec inside the real OS sandbox (Linux, a built hx: set HX_BIN). The kernel is started by ``sandbox.spawn``;
+"""exec inside the real OS sandbox (Linux and macOS, a built hx: set HX_BIN). The kernel is started by ``sandbox.spawn``;
 each assertion is made by code running inside it."""
 
 from __future__ import annotations
@@ -23,9 +23,11 @@ from exec_support import ExecCtx, scratch_of
 HX_BIN = os.environ.get("HX_BIN", "")
 pytestmark = [
     pytest.mark.skipif(not HX_BIN, reason="set HX_BIN to a built hx (cargo build -p hx)"),
-    pytest.mark.skipif(sys.platform != "linux", reason="the sandbox channel is verified on Linux"),
+    pytest.mark.skipif(sys.platform not in ("linux", "darwin"), reason="the sandbox channel runs on Linux and macOS"),
 ]
 SID = "sandboxed-1"
+# A system file this plugin never lists, which hx's own `system_read` grants (hx-sandbox's defaults for each platform).
+SYSTEM_FILE = "/etc/os-release" if sys.platform == "linux" else "/private/etc/passwd"
 
 
 class Box:
@@ -125,13 +127,24 @@ def test_the_kernel_reads_the_workspace_and_nothing_outside_the_grants(make_box:
 
 
 def test_the_network_is_off_by_default_and_the_environment_is_an_allowlist(make_box: MakeBox) -> None:
-    box = make_box()
-    out = box.run(
-        "import os, socket\n"
-        "try:\n    socket.socket(socket.AF_INET, socket.SOCK_STREAM)\n    net = 'socket created'\n"
-        "except OSError as exc:\n    net = type(exc).__name__\n"
-        "(net, 'ANTHROPIC_API_KEY' in os.environ, os.environ['HOME'] == harness.scratch, sorted(k for k in os.environ if 'KEY' in k))"
-    )
+    # Linux's filter refuses the socket itself; Seatbelt lets it be made and refuses the connection. Either way nothing
+    # reaches the listener this test holds open on the loopback.
+    server = socket.socket()
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    port = server.getsockname()[1]
+    try:
+        box = make_box()
+        out = box.run(
+            "import os, socket\n"
+            "try:\n    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\n"
+            "except OSError as exc:\n    net = type(exc).__name__\n"
+            f"else:\n    try:\n        s.connect(('127.0.0.1', {port}))\n        net = 'connected'\n"
+            "    except OSError as exc:\n        net = type(exc).__name__\n"
+            "(net, 'ANTHROPIC_API_KEY' in os.environ, os.environ['HOME'] == harness.scratch, sorted(k for k in os.environ if 'KEY' in k))"
+        )
+    finally:
+        server.close()
     assert out["status"] == "ok", out
     assert out["result"] == "('PermissionError', False, True, [])"
 
@@ -206,11 +219,11 @@ def test_a_kernel_that_dies_reports_how_it_ended(make_box: MakeBox) -> None:
 def test_cell_output_is_redacted_by_the_real_hx_and_the_system_paths_are_hxs_own(make_box: MakeBox) -> None:
     box = make_box()
     key = "sk-live-0123456789abcdefghijklmnopqrstuv"
-    out = box.run(f"print('AWS_SECRET={key}')\nopen('/etc/os-release').read()[:4]")
+    out = box.run(f"print('AWS_SECRET={key}')\nopen({SYSTEM_FILE!r}).read()[:4]")
     assert out["status"] == "ok", out
     assert key not in repr(out) and "[REDACTED:" in out["stdout"]
-    # /etc/os-release is readable although this plugin never lists it: hx's `system_read` granted it
-    assert out["result"] == repr(Path("/etc/os-release").read_text()[:4])
+    # the system file is readable although this plugin never lists it: hx's `system_read` granted it
+    assert out["result"] == repr(Path(SYSTEM_FILE).read_text()[:4])
 
 
 def test_the_probe_starts_a_real_kernel_and_says_ready(make_box: MakeBox) -> None:
