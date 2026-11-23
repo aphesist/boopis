@@ -167,3 +167,11 @@ Recommended: (1). It keeps every change journaled and rewindable.
   inventory, merges, LAB-v7 plan with every defect class the owner found as a blocking check), then the kit + lab
   build wave (w31/kit-v7 + w31/lab-v7) after the w30 base merge.
 - S41 new session: mark A (the "oo" logomark, idle glance/blink, looks at the composer while typing); other screens approved.
+
+## Owner on onboarding and the bots' look (23 Nov)
+- O01 B: one onboarding per tab (each tab its own, the first time it opens). O02 A: rules walkthrough in Bots.
+  O03: closer to B, Grok-style tiles. O04 A, but the speaker is the "oo" logomark's eyes moving vividly, looking
+  around like a bot, not a static ball. C02: onboarding may have its own special animations (no reuse required).
+- Much more motion in onboarding, closer to Grok-Bot: bots look to the sides, turn, bob their heads.
+- The bots must look sharper, clearer, vivid and snappy (Grok's look crisper than ours): character pass on the orbs.
+- The main boopis bot is visibly bigger in the open Bots sidebar, like Grok-Bot's main bot (closed rail size is fine).
