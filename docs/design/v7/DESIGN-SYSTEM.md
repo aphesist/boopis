@@ -772,5 +772,6 @@ the bots.
 - `anim-dock`, `anim-sidebar`, `anim-room` and `anim-torture-before-after.mp4`. Every frame was checked with
   `probes/tools/edges.py`:
   - resting bots change 0 pixels;
-  - edge shimmer, today → proposed: sidebar 201 → 0, dock 560 → 3, room 173 → 21, torture 747 → 38.
+  - edge shimmer, today → proposed: sidebar 201 → 0, dock 560 → 0, room 220 → 37, torture 636 → 27;
+  - lone flips: sidebar and dock 0, room 2.
 
