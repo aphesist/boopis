@@ -177,3 +177,6 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - The main boopis bot is visibly bigger in the open Bots sidebar, like Grok-Bot's main bot (closed rail size is fine).
 - Owner: in Sessions, Auto uses the approval rules (only the rules ask); Full access is the only step that never asks. Recorded in w32/session-specs b2b5a62b.
 - Owner: the dock (with the bots) appears only in the Sessions tab, not in Bots. Full v7 redesign pass of the dock; remove its + new bot button.
+- Orbs (owner): new renderer with all clarity fixes; eyes face-scale 1.25; Grok sizes (rows 28, rail 36); all
+  animation tuning + "use more" plan; main bot 44 px ONLY in the Bots tab sidebar (first in the bots list, below the
+  switch); the Sessions tab shows no bots except the dock (and maybe notifications).
