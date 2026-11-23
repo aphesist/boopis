@@ -68,6 +68,15 @@ pub fn export(now: &Current) -> Exported {
                     .collect(),
                 governed: Some(b.governed),
                 max_turns: b.max_turns,
+                // every toolset it has on, so an apply elsewhere gives it exactly these (ADR-0047)
+                toolsets: Some(
+                    b.toolsets
+                        .iter()
+                        .filter(|(_, on)| *on)
+                        .map(|(n, _)| n.clone())
+                        .collect(),
+                )
+                .filter(|t: &Vec<String>| !t.is_empty()),
             },
         );
     }

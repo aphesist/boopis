@@ -15,7 +15,8 @@
 //! 4. in the root, `hosted_rooms.profiles.<bot>` = the bot's home, so a group can seat it (the engine's
 //!    `session_hosted_members`; `release` removes it when the bot is archived or deleted);
 //! 5. the hand-off skill in the bot's `skills/` (`give_handoffs`: the plugin's `bots.guide`), so a bot made anywhere, and
-//!    every bot of an upgraded install, has it whether or not the app's window ever opens.
+//!    every bot of an upgraded install, has it whether or not the app's window ever opens;
+//! 6. its toolsets (`toolsets`, ADR-0047): the role's defaults once, and `kanban` once it is on a board.
 //!
 //! Beside those, `prepare` and `repair` list the paths a bot's instructions name that are not there (`soul`), for the log and
 //! whoever shows it; they are never a problem, since the bot still works.
@@ -33,8 +34,9 @@ pub mod skills;
 pub mod soul;
 #[cfg(test)]
 mod tests;
+pub mod toolsets;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
@@ -86,6 +88,15 @@ pub trait Engine: Send + Sync {
     async fn reload_plugins(&self, root: &Path, home: &Path) -> Result<()>;
     /// Restart the root's gateway unless work is running; `false` when it was left running.
     async fn restart_when_idle(&self, root: &Path) -> Result<bool>;
+    /// The engine's live kanban boards, `(slug, name)` (its `kanban boards list`, archived ones left out). An engine that
+    /// cannot say has none to give: which bots are on a board is then unknown, and their `kanban` is left as it is.
+    async fn boards(&self, _root: &Path) -> Result<Vec<(String, String)>> {
+        Err(Error::Unavailable("this engine lists no boards".into()))
+    }
+    /// Who the cards on the board `slug` are assigned to (its `kanban --board <slug> list`).
+    async fn board_assignees(&self, _root: &Path, _slug: &str) -> Result<Vec<String>> {
+        Err(Error::Unavailable("this engine lists no boards".into()))
+    }
 }
 
 /// Where the bots live and what each gets.
@@ -255,12 +266,19 @@ impl RootView {
 
 /// What `prepare` was asked to do beyond the usual.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[allow(clippy::struct_excessive_bools)] // one flag per thing given once, each decided on its own
 pub struct Ask {
     /// The bot's Governed switch, as its record says (opt-in: `false` when the record says nothing).
     pub governed: bool,
     /// A bot that has not had the default skill index yet (made just now, or made before the index): the engine's bundled
     /// skills outside it are switched off. Its skills for another OS are switched off whatever this says.
     pub fresh: bool,
+    /// Its toolsets have not been set from the role's defaults yet (`toolsets`).
+    pub toolsets_first: bool,
+    /// Whether it is on a board (`toolsets::on_boards`); `None` when that could not be read, and its `kanban` is left as it is.
+    pub on_board: Option<bool>,
+    /// boopis gave it `kanban` for being on a board already.
+    pub kanban_given: bool,
 }
 
 /// What `prepare` did to one bot.
@@ -285,6 +303,14 @@ pub struct Prepared {
     pub seated: bool,
     /// The hand-off skill was written into its `skills/` now (a new bot, or a newer version of the skill).
     pub handoffs: bool,
+    /// Toolsets switched on now (ADR-0047).
+    pub toolsets_on: Vec<String>,
+    /// Toolsets switched off now.
+    pub toolsets_off: Vec<String>,
+    /// It had the role's default toolsets now (`Ask::toolsets_first`).
+    pub toolsets_given: bool,
+    /// It had `kanban` now, for being on a board.
+    pub kanban_given: bool,
     /// Its plugins could not be reloaded in the running gateway: the gateway must restart for them.
     pub needs_restart: bool,
     /// What went wrong, in plain words (each step goes on without the one that failed).
@@ -301,6 +327,8 @@ impl Prepared {
             || !self.skills_off.is_empty()
             || self.seated
             || self.handoffs
+            || !self.toolsets_on.is_empty()
+            || !self.toolsets_off.is_empty()
     }
 }
 
@@ -663,8 +691,60 @@ pub async fn prepare(
             .problems
             .push(done_problem("the skill for handing work over", &e)),
     }
+    // 6. its toolsets
+    give_toolsets(engine, &layout.root, name, ask, &mut done).await;
     done.soul_missing = soul::check(&home);
     Ok(done)
+}
+
+/// Step 6 of `prepare`: switch the toolsets `Ask` calls for through the plugin's `bots.toolsets` (the one writer of a bot's
+/// toolsets, on every platform the bot runs on). Nothing to switch: nothing is called.
+async fn give_toolsets(
+    engine: &dyn Engine,
+    root: &Path,
+    name: &str,
+    ask: Ask,
+    done: &mut Prepared,
+) {
+    let defaults = toolsets::defaults();
+    let kanban = ask.on_board == Some(true) && !ask.kanban_given;
+    let (on, mut off) = toolsets::switch(defaults, ask.toolsets_first, kanban);
+    if ask.on_board.is_none() {
+        // whether it is on a board is not known: its kanban is left as it is
+        off.retain(|t| !defaults.on_a_board.contains(t));
+    }
+    if on.is_empty() && off.is_empty() {
+        done.toolsets_given = ask.toolsets_first;
+        return;
+    }
+    let params = json!({"name": name, "on": on, "off": off});
+    match engine
+        .call(root, "plugin.boopis.bots.toolsets", params)
+        .await
+    {
+        Ok(_) => {
+            done.toolsets_given = ask.toolsets_first;
+            done.kanban_given = kanban;
+            done.toolsets_on = on;
+            done.toolsets_off = off;
+        }
+        Err(e) => done.problems.push(done_problem("its toolsets", &e)),
+    }
+}
+
+/// The bots on a board (`toolsets::on_boards`), read from the engine: its live boards, who their cards are assigned to, and
+/// its groups.
+///
+/// # Errors
+/// The engine's, when a board or the groups cannot be read.
+pub async fn board_members(engine: &dyn Engine, root: &Path) -> Result<BTreeSet<String>> {
+    let boards = engine.boards(root).await?;
+    let mut assignees = Vec::new();
+    for (slug, _) in &boards {
+        assignees.extend(engine.board_assignees(root, slug).await?);
+    }
+    let groups = engine.call(root, "groups.list", json!({})).await?;
+    Ok(toolsets::on_boards(&boards, &assignees, &groups))
 }
 
 /// Give the bot `name` the hand-off skill (`boopis-handoffs`, `plugins/boopis/bots/guides.py`) through the root plugin's
@@ -922,6 +1002,63 @@ fn still_prepared(
         && marker.prepared.get(name).map(String::as_str) == Some(print)
 }
 
+impl Ask {
+    /// Whether something given once is still due: the default skill index, the role's toolsets, or `kanban` on a board.
+    #[must_use]
+    pub fn due(&self) -> bool {
+        self.fresh || self.toolsets_first || (self.on_board == Some(true) && !self.kanban_given)
+    }
+}
+
+/// What boopis remembers giving each bot once: the default skill index and the role's toolsets.
+struct Records {
+    skills: skills::Given,
+    tools: toolsets::Given,
+}
+
+impl Records {
+    fn load(root: &Path) -> Self {
+        Self {
+            skills: skills::Given::load(root),
+            tools: toolsets::Given::load(root),
+        }
+    }
+
+    /// What `prepare` is asked for the bot `name` (`members`: the bots on a board, when they could be read).
+    fn ask(&self, name: &str, governed: bool, members: Option<&BTreeSet<String>>) -> Ask {
+        Ask {
+            governed,
+            fresh: !self.skills.has(name),
+            toolsets_first: !self.tools.defaults.contains(name),
+            on_board: members.map(|m| m.contains(name)),
+            kanban_given: self.tools.kanban.contains(name),
+        }
+    }
+
+    /// Remember what `done` gave.
+    fn note(&mut self, done: &Prepared) {
+        if done.skills_given {
+            self.skills.bots.insert(done.name.clone());
+        }
+        if done.toolsets_given {
+            self.tools.defaults.insert(done.name.clone());
+        }
+        if done.kanban_given {
+            self.tools.kanban.insert(done.name.clone());
+        }
+    }
+
+    /// Write both records; a write that fails is a problem.
+    fn save(&self, root: &Path, problems: &mut Vec<String>) {
+        if let Err(e) = self.skills.save(root) {
+            problems.push(done_problem("the bots' default skills", &e));
+        }
+        if let Err(e) = self.tools.save(root) {
+            problems.push(done_problem("the bots' toolsets", &e));
+        }
+    }
+}
+
 /// Give every bot what it needs (see the module's comment). Safe to run at every start: a bot that already has everything
 /// costs a look at its folder.
 ///
@@ -943,42 +1080,46 @@ pub async fn repair(engine: &dyn Engine, layout: &Layout) -> Result<Repaired> {
         opt_in_governance(engine, layout, &bots, &mut governed, &mut marker, &mut out).await;
     }
     let mut view = RootView::read(engine, &layout.root).await?;
-    let mut given = skills::Given::load(&layout.root);
+    let mut given = Records::load(&layout.root);
+    let members = if bots.iter().any(|n| given.tools.pending(n)) {
+        match board_members(engine, &layout.root).await {
+            Ok(m) => Some(m),
+            Err(e) => {
+                out.problems
+                    .push(done_problem("which bots are on a board", &e));
+                None
+            }
+        }
+    } else {
+        None
+    };
     let mut needs_restart = false;
     for name in &bots {
         let gov = governed.get(name).copied().unwrap_or(false);
         let print = fingerprint(&view, gov);
-        let fresh = !given.has(name);
         let gone = soul::check(&layout.root.join("profiles").join(name));
         if !gone.is_empty() {
             out.soul_missing.insert(name.clone(), gone);
         }
-        if !fresh && still_prepared(layout, &view, &marker, name, &print) {
+        let ask = given.ask(name, gov, members.as_ref());
+        if !ask.due() && still_prepared(layout, &view, &marker, name, &print) {
             continue;
         }
-        let ask = Ask {
-            governed: gov,
-            fresh,
-        };
         match prepare(engine, layout, &mut view, name, ask).await {
             Ok(done) => {
                 needs_restart |= done.needs_restart;
                 if done.problems.is_empty() {
                     marker.prepared.insert(name.clone(), print);
                 }
-                if done.skills_given {
-                    given.bots.insert(name.clone());
-                }
+                given.note(&done);
                 out.bots.push(done);
             }
             Err(e) => out.problems.push(done_problem(name, &e)),
         }
     }
-    given.bots.retain(|n| bots.contains(n));
-    if let Err(e) = given.save(&layout.root) {
-        out.problems
-            .push(done_problem("the bots' default skills", &e));
-    }
+    given.skills.bots.retain(|n| bots.contains(n));
+    given.tools.retain(&bots);
+    given.save(&layout.root, &mut out.problems);
     for name in stale_entries(layout, &view.rooms) {
         match engine
             .config_unset(&layout.root, &format!("{ROOMS}.{name}"))

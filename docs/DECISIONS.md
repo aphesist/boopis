@@ -1005,5 +1005,29 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - **Widening is per bot**: its skill switches in the app, `skills:` in a team file (`team apply` switches a new bot's named skills on after making it; `team export` writes every skill a bot has on that a new bot would not), or the engine's own `skills enable`.
 
 **Consequences.**
-- Measured the same way: the `<available_skills>` block goes from 813 to 89 tokens and the system prompt from 3,558 to 2,834, so a fresh prompt is about 724 tokens smaller, about 3.6 % of what the engine builds and about 1.7 % of the 42,695 the owner saw. The tool schemas are the larger part; which tools each bot needs is a separate decision (toolsets are fixed at `session.create`).
+- Measured the same way: the `<available_skills>` block goes from 813 to 89 tokens and the system prompt from 3,558 to 2,834, so a fresh prompt is about 724 tokens smaller, about 3.6 % of what the engine builds and about 1.7 % of the 42,695 the owner saw. The tool schemas are the larger part; which tools each bot needs is ADR-0047 (toolsets are fixed at `session.create`).
 - A bundled skill the engine adds in a later version reaches existing bots switched on (the list is applied once per bot); one made for another OS is switched off at the next preparation.
+
+## ADR-0047 A bot's toolsets fit its role, and kanban goes to a bot on a board (owner decision, 23 November 2026)
+**Context.**
+- After B38 (ADR-0046) the owner chose the proposal: a bot gets only the toolsets its role needs, and `kanban` only when it is on a board.
+- Read in the engine (v0.23.2): a session's tools are its toolsets' schemas, fixed when the session is created. A chat, a `boopis run --bot` run and a kanban worker read the profile's `platform_toolsets.cli` (`gateway/session_policy.py` `_resolve_toolsets`); a group room's turn reads `platform_toolsets.api_server` (`gateway/hosted_room_execution_policy.py`). A kanban worker's session gets `kanban` added whatever the profile says (`gateway/session_kanban.py`), and its lifecycle tools are shown to a worker by the worker's own context (`tools/kanban_tools.py` `_visible`). The engine's own `hermes tools enable|disable --platform <p>` saves a list and keeps its record of what was offered and declined. `agent.disabled_toolsets` would subtract `kanban` from the worker too, so it is not used.
+- Measured with the engine's own dry run, `hermes prompt-size` (offline, bytes; about four bytes a token), for kai's SOUL and the 44 bundled skills, tool search off (the browser, computer-use, cron and image tools could not load where this ran, so the real before is larger):
+
+  | | chats and workers (`cli`) | room turns (`api_server`) |
+  |---|---|---|
+  | 0.1.9, `kanban` on, every bundled skill | 79,874 B (35 tools, 66,676 B) | 76,777 B (33 tools, 63,271 B) |
+  | defaults, on a board | 59,859 B (30 tools, 49,738 B) | 60,167 B |
+  | defaults, not on a board | 32,519 B (15 tools, 22,467 B) | 32,827 B |
+
+**Decision.**
+- **Defaults.** `apps/shared/data/bot-toolsets.json` lists what every bot has on (file, terminal, web, vision, skills, memory, todo, clarify) and off (kanban, browser, computer_use, delegation, code_execution, session_search, connections, cronjob, tts, image_gen), and what a bot on a board gets (kanban). A toolset in neither list is left as the engine has it (a plugin's, an MCP server's). The owner chooses the lists.
+- **Once per bot**, like the skill index: when boopis makes it, and once for every bot made before (`<root>/boopis/bot-toolsets.json`). A toolset switched on later stays on.
+- **On a board** means a card on a live board is assigned to the bot, or the bot is in a group whose board exists (the board named like the group, as the group's board view finds it). `kanban` is given once, when boopis first finds the bot there, at preparation or at the start-up repair, and never taken away by boopis. When the boards cannot be read, a bot's `kanban` is left as it is. A worker does not depend on any of this.
+- **One writer, every platform.** The plugin's `bots.toolsets` runs the engine's own `tools enable|disable` for `cli` and `api_server` alike; the host's preparation, the bot's settings (a switch per toolset, saved at once) and a team file (`toolsets:`, every toolset on; export writes it) all go through it. A team file's list is the owner's own: boopis gives that bot no defaults afterwards.
+- **Prompt caching.** A change applies from the bot's next new session; the settings say so in one line.
+
+**Consequences.**
+- A board bot's fresh prompt is about 20,000 bytes (about 5,000 tokens) smaller than in 0.1.9, a bot off the boards about 47,000 bytes (about 11,800 tokens). `kanban` alone is 27,241 bytes of a board bot's tools.
+- An edit made with the engine's own editor changes the `cli` list only; boopis's switches keep both lists equal.
+

@@ -210,6 +210,10 @@ impl Backend for Model {
                         max_turns: bot.max_turns,
                         skills,
                         connectors: Vec::new(),
+                        toolsets: ["file", "web", "browser"]
+                            .iter()
+                            .map(|t| ((*t).to_owned(), *t != "browser"))
+                            .collect(),
                     },
                 );
             }
@@ -246,6 +250,19 @@ impl Backend for Model {
                 for s in &mut n.bots.get_mut(bot).unwrap().skills {
                     if skills.contains(&s.0) {
                         s.1 = true;
+                    }
+                }
+            }
+            Op::SetToolsets { bot, on, off } => {
+                let b = n.bots.get_mut(bot).unwrap();
+                for (t, state) in on
+                    .iter()
+                    .map(|t| (t, true))
+                    .chain(off.iter().map(|t| (t, false)))
+                {
+                    match b.toolsets.iter_mut().find(|(n, _)| n == t) {
+                        Some(e) => e.1 = state,
+                        None => b.toolsets.push((t.clone(), state)),
                     }
                 }
             }
@@ -798,4 +815,62 @@ async fn a_new_bot_gets_the_skills_its_file_names_and_export_keeps_a_bundled_one
     let e = export(&now);
     assert_eq!(e.team.bots["kai"].skills, ["web"]);
     assert!(e.team.bots["nina"].skills.is_empty());
+}
+
+#[tokio::test]
+async fn a_bots_toolsets_are_applied_exported_and_applied_again_as_no_change() {
+    let mut team = example();
+    {
+        let kai = team.bots.get_mut("kai").unwrap();
+        kai.toolsets = Some(vec!["file".into(), "kanban".into()]);
+    }
+    let model = Model::new(base());
+    let report = apply_to(&model, &team, false).await;
+    assert!(report.all_ok(), "{report:?}");
+    let now = model.read().await.unwrap();
+    let on: Vec<&str> = now.bots["kai"]
+        .toolsets
+        .iter()
+        .filter(|(_, on)| *on)
+        .map(|(n, _)| n.as_str())
+        .collect();
+    assert_eq!(
+        on,
+        ["file", "kanban"],
+        "the file's list, and nothing else on"
+    );
+    assert!(plan(&team, &now, false).is_empty());
+    // export writes them; applying the export changes nothing
+    let e = export(&now);
+    assert_eq!(
+        e.team.bots["kai"].toolsets.as_deref(),
+        Some(&["file".to_owned(), "kanban".to_owned()][..])
+    );
+    assert!(plan(&e.team, &now, false).is_empty());
+    // an existing bot whose list differs: one action, both ways
+    let mut changed = team.clone();
+    changed.bots.get_mut("kai").unwrap().toolsets = Some(vec!["web".into(), "file".into()]);
+    let p = plan(&changed, &now, false);
+    let set: Vec<&Op> = p
+        .actions
+        .iter()
+        .map(|a| &a.op)
+        .filter(|o| matches!(o, Op::SetToolsets { .. }))
+        .collect();
+    assert_eq!(
+        set,
+        [&Op::SetToolsets {
+            bot: "kai".into(),
+            on: vec!["web".into()],
+            off: vec!["kanban".into()]
+        }]
+    );
+    // a toolset name the file cannot mean is a problem before anything runs
+    let mut bad = team.clone();
+    bad.bots.get_mut("nina").unwrap().toolsets = Some(vec!["Web Search".into()]);
+    let problems = bad.check();
+    assert!(
+        problems.iter().any(|p| p.contains("bots.nina.toolsets")),
+        "{problems:?}"
+    );
 }

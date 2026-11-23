@@ -329,6 +329,15 @@ impl Backend for Live<'_> {
                     }),
                     skills,
                     connectors,
+                    toolsets: d
+                        .get("toolsets")
+                        .and_then(Value::as_array)
+                        .map(|s| {
+                            s.iter()
+                                .map(|e| (text(e, "name"), e.get("enabled").and_then(Value::as_bool) == Some(true)))
+                                .collect()
+                        })
+                        .unwrap_or_default(),
                 },
             );
             now.jobs
@@ -500,6 +509,12 @@ impl Backend for Live<'_> {
                     )
                     .await
                     .map(|_| ())
+            }
+            Op::SetToolsets { bot, on, off } => {
+                self.plugin("bots.toolsets", json!({"name": bot, "on": on, "off": off}))
+                    .await?;
+                // the team file's list is the owner's own: boopis does not apply its defaults to this bot again
+                bots::toolsets::chosen(&self.layout.root, bot)
             }
             Op::AddConnector { bot, connector } => {
                 let config = if let Some(u) = &connector.url {

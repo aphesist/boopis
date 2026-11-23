@@ -64,6 +64,7 @@ function fake(bots: Bot[]): Fake {
     save: (id, patch, opts) => { calls.push({ fn: 'save', args: [id, patch, opts] }); return f.saveError ? Promise.reject(f.saveError) : Promise.resolve(); },
     setRoutinePaused: (id, job, paused) => { calls.push({ fn: 'pause', args: [id, job, paused] }); return Promise.resolve(); },
     saveOwn: (id, patch) => { calls.push({ fn: 'saveOwn', args: [id, patch] }); return Promise.resolve(); },
+    setToolsets: (id, on, off) => { calls.push({ fn: 'setToolsets', args: [id, on, off] }); return Promise.resolve(); },
     removal: () => Promise.resolve({ folder: '/h/profiles/atlas', lines: ['The folder /h/profiles/atlas (3.0 MB in 240 files).', 'All its sessions and what they said.'] }),
     archive: (id) => { calls.push({ fn: 'archive', args: [id] }); const i = bots.findIndex((b) => b.id === id); bots.splice(i, 1); events.emit({ type: 'bot-archived', id }); return Promise.resolve({ undo: () => Promise.resolve() }); },
     remove: (id, confirm) => { calls.push({ fn: 'remove', args: [id, confirm] }); const i = bots.findIndex((b) => b.id === id); bots.splice(i, 1); events.emit({ type: 'bot-archived', id }); return Promise.resolve(); },
@@ -245,6 +246,14 @@ describe('the settings sheet edits the profile and shows each file’s diff firs
   it('pausing a routine is at once, like a switch', async () => {
     const sw = q<HTMLInputElement>('.bt-routine input[type="checkbox"]'); sw.checked = false; sw.dispatchEvent(new Event('change')); await flush();
     expect(f.calls.find((c) => c.fn === 'pause')!.args).toEqual(['atlas', 'j1', true]);
+  });
+  it('switches a toolset at once, saying it applies from its next session', async () => {
+    const caps = q('.bt-sheet [data-name="capabilities"]');
+    expect(caps.textContent).toContain('apply from its next new session');
+    const sw = q<HTMLInputElement>('.bt-sheet [data-name="capabilities"] input[type="checkbox"]');
+    expect(sw.closest('.ui-set__row')?.textContent).toContain('Terminal');
+    sw.checked = false; sw.dispatchEvent(new Event('change')); await flush();
+    expect(f.calls.find((c) => c.fn === 'setToolsets')!.args).toEqual(['atlas', [], ['terminal']]);
   });
   it('boopis’s own settings are saved at once, in its store', async () => {
     const un = [...document.querySelectorAll<HTMLElement>('.bt-sheet [role="radio"]')].find((x) => x.textContent === 'Ungoverned')!;

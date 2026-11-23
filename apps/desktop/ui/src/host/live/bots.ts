@@ -436,6 +436,12 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       if (res.error) throw new Error(res.error);
       await loadLinked(id, r);
     },
+    async setToolsets(id, on, off) {
+      const r = need(id);
+      await plug('bots.toolsets', { name: id, on: [...on], off: [...off] });
+      r.loaded = false;
+      await loadDetail(id);   /* the engine's own list, read back */
+    },
     async saveOwn(id, patch) {
       const r = need(id);
       const body: Record<string, unknown> = { name: id };

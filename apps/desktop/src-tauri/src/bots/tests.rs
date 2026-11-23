@@ -35,6 +35,7 @@ enum Did {
 }
 
 /// The engine, in memory: one configuration tree per home, the plugin's records by bot, and a log.
+#[allow(clippy::struct_excessive_bools)] // independent switches of the double
 struct Fake {
     config: Mutex<BTreeMap<PathBuf, Value>>,
     records: Mutex<BTreeMap<String, Value>>,
@@ -45,6 +46,15 @@ struct Fake {
     busy: bool,
     /// An older plugin, without `bots.guide`.
     no_guide: bool,
+    /// The live kanban boards, `(slug, name)`, and who each board's cards are assigned to.
+    boards: Mutex<Vec<(String, String)>>,
+    assignees: Mutex<BTreeMap<String, Vec<String>>>,
+    /// The groups (`groups.list`'s `rooms`).
+    rooms: Mutex<Value>,
+    /// Each bot's toolsets as `bots.toolsets` left them: name to whether it is on.
+    toolsets: Mutex<BTreeMap<String, BTreeMap<String, bool>>>,
+    /// The boards cannot be read.
+    boards_fail: bool,
 }
 
 fn walk<'a>(v: &'a Value, key: &str) -> Option<&'a Value> {
@@ -85,6 +95,11 @@ impl Fake {
             reload_works: true,
             busy: false,
             no_guide: false,
+            boards: Mutex::new(Vec::new()),
+            assignees: Mutex::new(BTreeMap::new()),
+            rooms: Mutex::new(json!([])),
+            toolsets: Mutex::new(BTreeMap::new()),
+            boards_fail: false,
         }
     }
     fn seed(&self, home: &Path, config: Value) {
@@ -105,7 +120,9 @@ impl Fake {
             .lock()
             .unwrap()
             .iter()
-            .filter(|d| !matches!(d, Did::Call(m) if m.ends_with("bots.read")))
+            .filter(
+                |d| !matches!(d, Did::Call(m) if m.ends_with("bots.read") || m == "groups.list"),
+            )
             .cloned()
             .collect()
     }
@@ -189,6 +206,18 @@ impl Engine for Fake {
                 guided.push(name);
                 Ok(json!({"skill": "boopis-handoffs", "version": 2, "written": fresh}))
             }
+            "groups.list" => Ok(json!({"rooms": self.rooms.lock().unwrap().clone()})),
+            "plugin.boopis.bots.toolsets" => {
+                let name = params["name"].as_str().unwrap().to_owned();
+                let mut all = self.toolsets.lock().unwrap();
+                let bot = all.entry(name).or_default();
+                for (key, on) in [("on", true), ("off", false)] {
+                    for t in params[key].as_array().unwrap() {
+                        bot.insert(t.as_str().unwrap().to_owned(), on);
+                    }
+                }
+                Ok(json!({"on": params["on"], "off": params["off"]}))
+            }
             other => Err(Error::Unavailable(format!("the double has no {other}"))),
         }
     }
@@ -206,6 +235,21 @@ impl Engine for Fake {
     async fn restart_when_idle(&self, _root: &Path) -> Result<bool> {
         self.log.lock().unwrap().push(Did::Restart);
         Ok(!self.busy)
+    }
+    async fn boards(&self, _root: &Path) -> Result<Vec<(String, String)>> {
+        if self.boards_fail {
+            return Err(Error::Unavailable("the board could not be read".into()));
+        }
+        Ok(self.boards.lock().unwrap().clone())
+    }
+    async fn board_assignees(&self, _root: &Path, slug: &str) -> Result<Vec<String>> {
+        Ok(self
+            .assignees
+            .lock()
+            .unwrap()
+            .get(slug)
+            .cloned()
+            .unwrap_or_default())
     }
 }
 
@@ -388,6 +432,15 @@ async fn the_owners_home_is_repaired_once_and_their_fixes_are_kept() {
             assert!(fake.get(&bot, "mcp_servers.fetch").is_some());
         }
     }
+    // every bot got its role's toolsets, once; none is on a board, so none has kanban
+    for (name, _) in TEAM {
+        let tools = fake.toolsets.lock().unwrap()[*name].clone();
+        for t in &toolsets::defaults().on {
+            assert_eq!(tools.get(t), Some(&true), "{name} {t}");
+        }
+        assert_eq!(tools.get("kanban"), Some(&false), "{name}");
+        assert_eq!(tools.get("browser"), Some(&false), "{name}");
+    }
     // every bot got the hand-off skill, once
     let mut guided = fake.guided.lock().unwrap().clone();
     guided.sort();
@@ -449,6 +502,7 @@ async fn a_governed_bot_turned_on_later_stays_governed() {
         Ask {
             governed: true,
             fresh: false,
+            ..Ask::default()
         },
     )
     .await
@@ -503,6 +557,7 @@ async fn a_new_bot_gets_everything_and_its_seat() {
         Ask {
             governed: false,
             fresh: true,
+            ..Ask::default()
         },
     )
     .await
@@ -933,4 +988,88 @@ async fn the_paths_a_bots_instructions_name_that_are_gone_are_listed_at_every_st
     let next = repair(&fake, &layout).await.unwrap();
     assert!(next.bots.is_empty());
     assert_eq!(next.soul_missing.len(), 1);
+}
+
+#[tokio::test]
+async fn a_bot_on_a_board_gets_kanban_once_and_keeps_what_the_owner_chose() {
+    let fake = Fake::new();
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    // the Paper Past board, its group with kai and nina, and a card for hex
+    *fake.boards.lock().unwrap() = vec![("paper-past".into(), "Paper Past".into())];
+    *fake.rooms.lock().unwrap() =
+        json!([{"name": "paper past", "members": [{"profile": "kai"}, {"profile": "nina"}]}]);
+    fake.assignees
+        .lock()
+        .unwrap()
+        .insert("paper-past".into(), vec!["hex".into()]);
+    let done = repair(&fake, &layout).await.unwrap();
+    assert!(done.problems.is_empty(), "{:?}", done.problems);
+    let kanban = |name: &str| fake.toolsets.lock().unwrap()[name].get("kanban").copied();
+    for name in ["kai", "nina", "hex"] {
+        assert_eq!(kanban(name), Some(true), "{name}");
+    }
+    assert_eq!(kanban("moss"), Some(false));
+    // the owner switches kanban off for kai; moss is given a card: the next start gives moss kanban and leaves kai's off
+    fake.toolsets
+        .lock()
+        .unwrap()
+        .get_mut("kai")
+        .unwrap()
+        .insert("kanban".into(), false);
+    fake.assignees
+        .lock()
+        .unwrap()
+        .get_mut("paper-past")
+        .unwrap()
+        .push("moss".into());
+    let next = repair(&fake, &layout).await.unwrap();
+    assert_eq!(
+        next.bots
+            .iter()
+            .map(|b| b.name.as_str())
+            .collect::<Vec<_>>(),
+        ["moss"]
+    );
+    assert_eq!(next.bots[0].toolsets_on, vec!["kanban".to_owned()]);
+    assert!(next.bots[0].toolsets_off.is_empty());
+    assert_eq!(kanban("moss"), Some(true));
+    assert_eq!(kanban("kai"), Some(false), "what the owner chose stays");
+    let given = toolsets::Given::load(&home.root);
+    assert_eq!(given.defaults.len(), 6);
+    assert_eq!(
+        given.kanban.into_iter().collect::<Vec<_>>(),
+        ["hex", "kai", "moss", "nina"]
+    );
+}
+
+#[tokio::test]
+async fn when_the_boards_cannot_be_read_kanban_is_left_as_it_is() {
+    let mut fake = Fake::new();
+    fake.boards_fail = true;
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    let done = repair(&fake, &layout).await.unwrap();
+    assert!(
+        done.problems
+            .iter()
+            .any(|p| p.starts_with("which bots are on a board:")),
+        "{:?}",
+        done.problems
+    );
+    let kai = fake.toolsets.lock().unwrap()["kai"].clone();
+    assert_eq!(kai.get("kanban"), None, "neither switched on nor off");
+    assert_eq!(kai.get("file"), Some(&true));
+    // the boards read again, kai is on one: it gets kanban then
+    fake.boards_fail = false;
+    *fake.boards.lock().unwrap() = vec![("ops".into(), "Ops".into())];
+    fake.assignees
+        .lock()
+        .unwrap()
+        .insert("ops".into(), vec!["kai".into()]);
+    repair(&fake, &layout).await.unwrap();
+    assert_eq!(
+        fake.toolsets.lock().unwrap()["kai"].get("kanban"),
+        Some(&true)
+    );
 }

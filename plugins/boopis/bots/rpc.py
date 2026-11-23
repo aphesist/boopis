@@ -5,6 +5,7 @@ The rest is Hermes's own ``profiles.*`` and ``cron.manage``.
 ``bots.read``     every teammate's store: ``{root, bots: [{name, path, record, problem, archived}]}``
 ``bots.write``    ``{name, look?, settings?, approvals?}``: merge into the teammate's store, answer the whole record
 ``bots.guide``    ``{name}``: the hand-off skill (use of the kanban board) into the teammate's skills
+``bots.toolsets`` ``{name, on?, off?}``: switch toolsets on and off, the same for its chats, workers and room turns
 ``bots.inspect``  ``{name}``: what deleting it would remove, counted on disk
 ``bots.archive``  ``{name, paused_jobs?}``: Hermes's ``profile rename`` to ``archived--<name>``; notes paused jobs
 ``bots.restore``  ``{name}``: the way back; answers the routines to resume
@@ -49,6 +50,10 @@ def bots_guide(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
     return service().guide(_name(params))
 
 
+def bots_toolsets(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
+    return service().toolsets(_name(params), params.get("on"), params.get("off"))
+
+
 def bots_inspect(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
     return service().inspect(_name(params))
 
@@ -76,6 +81,7 @@ HANDLERS: dict[str, Handler] = {
     "bots.read": bots_read,
     "bots.write": bots_write,
     "bots.guide": bots_guide,
+    "bots.toolsets": bots_toolsets,
     "bots.inspect": bots_inspect,
     "bots.archive": bots_archive,
     "bots.restore": bots_restore,

@@ -42,6 +42,11 @@ class FakeHermes:
         return CliResult(0, "ok")
 
 
+def profile_calls(hermes: FakeHermes, name: str) -> list[list[str]]:
+    """The calls made in one teammate's profile (``-p <name> ...``), without the flag."""
+    return [c[2:] for c in hermes.calls if c[:2] == ["-p", name]]
+
+
 def make_profile(root: Path, name: str, *, soul: str = "be kind") -> Path:
     path = root / "profiles" / name
     path.mkdir(parents=True)
@@ -414,3 +419,25 @@ def test_the_manifest_capabilities_list_the_bots_methods() -> None:
 
     bots = {m for m in RPC_METHODS if m.startswith("bots.")}
     assert bots == set(rpc.HANDLERS) and bots <= set(CAPABILITIES) and bots <= set(handlers())
+
+
+# ───────── toolsets and the project folder ─────────
+def test_toolsets_are_switched_the_same_for_chats_workers_and_room_turns(
+    root: Path, svc: BotService, hermes: FakeHermes
+) -> None:
+    make_profile(root, "atlas")
+    done = svc.toolsets("atlas", ["file", "kanban", "file"], ["browser"])
+    assert done == {"on": ["file", "kanban"], "off": ["browser"], "platforms": ["cli", "api_server"]}
+    assert profile_calls(hermes, "atlas") == [
+        ["tools", "enable", "--platform", "cli", "file", "kanban"],
+        ["tools", "disable", "--platform", "cli", "browser"],
+        ["tools", "enable", "--platform", "api_server", "file", "kanban"],
+        ["tools", "disable", "--platform", "api_server", "browser"],
+    ]
+    with pytest.raises(InvalidParamsError):
+        svc.toolsets("atlas", ["file"], ["file"])
+    with pytest.raises(InvalidParamsError):
+        svc.toolsets("atlas", ["Not A Toolset"], None)
+    hermes.fail.add("atlas")  # the engine refuses
+    with pytest.raises(HermesCliError):
+        svc.toolsets("atlas", ["web"], None)

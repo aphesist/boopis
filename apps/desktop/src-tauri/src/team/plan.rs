@@ -29,6 +29,8 @@ pub struct BotNow {
     pub skills: Vec<(String, bool)>,
     /// Its MCP servers by name, with their program and arguments.
     pub connectors: Vec<ConnectorNow>,
+    /// Its toolsets, `(name, enabled)`, as the engine lists them for it.
+    pub toolsets: Vec<(String, bool)>,
 }
 
 /// An MCP server as it is now.
@@ -108,6 +110,89 @@ pub struct Current {
     pub default_provider: String,
 }
 
+/// What a team file says of a new bot's toolsets, done once it exists. Its toolsets are the file's
+/// list: the role's defaults it is made with that the list does not name are switched off again.
+fn new_bot_settings(name: &str, want: &Bot) -> Vec<Action> {
+    let mut out = Vec::new();
+    if let Some(list) = &want.toolsets {
+        let d = crate::bots::toolsets::defaults();
+        let on: Vec<String> = sorted(list.iter().cloned());
+        let off = sorted(
+            d.on.iter()
+                .chain(&d.on_a_board)
+                .filter(|t| !list.contains(t))
+                .cloned(),
+        );
+        out.push(settings_action(
+            name,
+            Some(name),
+            Op::SetToolsets {
+                bot: name.to_owned(),
+                on,
+                off,
+            },
+            "toolsets",
+        ));
+    }
+    out
+}
+
+/// What a team file says of an existing bot's toolsets, where it differs from what is there.
+fn bot_settings(name: &str, want: &Bot, have: &BotNow) -> Vec<Action> {
+    let mut out = Vec::new();
+    if let Some(list) = &want.toolsets {
+        let enabled: Vec<&String> = have
+            .toolsets
+            .iter()
+            .filter(|(_, on)| *on)
+            .map(|(n, _)| n)
+            .collect();
+        let on = sorted(list.iter().filter(|t| !enabled.contains(t)).cloned());
+        let off = sorted(
+            enabled
+                .iter()
+                .filter(|t| !list.contains(**t))
+                .map(|t| (*t).clone()),
+        );
+        if !on.is_empty() || !off.is_empty() {
+            let what = [("on", &on), ("off", &off)]
+                .iter()
+                .filter(|(_, l)| !l.is_empty())
+                .map(|(w, l)| format!("switch {w} toolset {}", l.join(", ")))
+                .collect::<Vec<_>>()
+                .join("; ");
+            out.push(settings_action(
+                name,
+                None,
+                Op::SetToolsets {
+                    bot: name.to_owned(),
+                    on,
+                    off,
+                },
+                &what,
+            ));
+        }
+    }
+    out
+}
+
+fn settings_action(name: &str, needs: Option<&str>, op: Op, what: &str) -> Action {
+    Action {
+        mark: '~',
+        target: format!("bot {name}"),
+        what: what.to_owned(),
+        needs: needs.map(str::to_owned),
+        op,
+    }
+}
+
+fn sorted(items: impl IntoIterator<Item = String>) -> Vec<String> {
+    let mut v: Vec<String> = items.into_iter().collect();
+    v.sort();
+    v.dedup();
+    v
+}
+
 /// One thing to do.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
@@ -142,6 +227,15 @@ pub enum Op {
         bot: String,
         /// The skills.
         skills: Vec<String>,
+    },
+    /// Switch a bot's toolsets on and off (the same for its chats, workers and room turns).
+    SetToolsets {
+        /// The bot.
+        bot: String,
+        /// Switched on.
+        on: Vec<String>,
+        /// Switched off.
+        off: Vec<String>,
     },
     /// Add an MCP server to a bot.
     AddConnector {
@@ -355,6 +449,7 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
                     },
                 });
             }
+            out.actions.extend(new_bot_settings(name, want));
             if !want.skills.is_empty() {
                 // Skills are checked once the bot exists: a new bot starts with the bundled ones.
                 out.notes.push(format!("bot {name}: its skills ({}) are checked after it is made; one that is not installed is reported then", want.skills.join(", ")));
@@ -422,6 +517,7 @@ pub fn plan(team: &Team, now: &Current, prune: bool) -> Plan {
                 },
             });
         }
+        out.actions.extend(bot_settings(name, want, have));
         let mut off = Vec::new();
         for s in &want.skills {
             match have.skills.iter().find(|(n, _)| n == s) {

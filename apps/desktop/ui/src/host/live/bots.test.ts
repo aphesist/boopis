@@ -81,6 +81,7 @@ class FakeHermes {
       case 'plugin.boopis.bots.read': if (this.failOwn) throw new Error('the plugin is not there'); return { root: HOME, bots: this.profiles.filter((x) => !x['is_default']).map((x) => ({ name: x['name'], path: x['path'], record: this.own[x['name']] ?? null, problem: this.problems[x['name']] ?? null, archived: this.archived[x['name']] ?? null })) };
       case 'plugin.boopis.bots.write': { this.own[p['name']] = { ...(this.own[p['name']] ?? {}), ...(p['look'] ? { look: p['look'] } : {}), ...(p['settings'] ? { settings: { ...(this.own[p['name']]?.['settings'] ?? {}), ...p['settings'] } } : {}), ...(p['approvals'] ? { approvals: p['approvals'] } : {}) }; return { record: this.own[p['name']] }; }
       case 'plugin.boopis.bots.guide': this.guided.push(p['name']); return { skill: 'boopis-handoffs', version: 2, written: true };
+      case 'plugin.boopis.bots.toolsets': return { on: p['on'], off: p['off'], platforms: ['cli', 'api_server'] };
       case 'plugin.boopis.bots.inspect': return { path: HOME + '/profiles/' + p['name'], bytes: 3 * 1024 * 1024, files: 240, truncated: false, has_sessions: true, memory_files: 2, skills: 9, boopis_bytes: 300 };
       case 'plugin.boopis.bots.archive': {
         const to = 'archived--' + p['name'];
@@ -204,6 +205,14 @@ describe('the roster is the user’s Hermes profiles, minus the default one', ()
     (h.main as FakeLink).emit({ type: 'cron.changed' });
     await new Promise((r) => setTimeout(r, 500)); await bots.settled();
     expect(events.some((e) => e.type === 'bot-archived' && e.id === 'nina')).toBe(true);
+  });
+});
+
+describe('a teammate’s toolsets go through the plugin', () => {
+  it('switches toolsets and reads the engine’s list back', async () => {
+    const { h, bots } = await open();
+    await bots.source.admin!.setToolsets('atlas', ['web'], ['browser']);
+    expect(h.main.calls.find((c) => c.method === 'plugin.boopis.bots.toolsets')!.params).toEqual({ name: 'atlas', on: ['web'], off: ['browser'] });
   });
 });
 

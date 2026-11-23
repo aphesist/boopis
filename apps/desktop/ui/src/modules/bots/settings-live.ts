@@ -160,13 +160,26 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   };
   const appr = el('div', { class: 'ui-set' }, catalog.approvals.map((ap) => switchRow('ap-' + ap.id, ap.name, !!c.approvals[ap.id], (v) => own({ approvals: { [ap.id]: v } }))));
 
-  /* ───────── what it has: read only ───────── */
+  /* ───────── what it has: skills and servers read only; its toolsets switch here (ADR-0047) ───────── */
   const mcpLine = inventoryLine('MCP servers', 'server', 'servers', info.mcpServers, info.notes.detail);
   const caps = el('div', { class: 'bt-caps' }, [
     el('p', { class: 'ui-field__hint', text: inventoryLine('Skills', 'skill', 'skills', info.skills, info.notes.detail) }),
-    el('p', { class: 'ui-field__hint', text: inventoryLine('Toolsets', 'toolset', 'toolsets', info.toolsets, info.notes.detail) }),
     el('p', { class: 'ui-field__hint', text: mcpLine })
   ]);
+  const toolErr = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: true });
+  const toolRows: HTMLElement[] = info.toolsets === null
+    ? [el('p', { class: 'ui-field__hint', text: inventoryLine('Toolsets', 'toolset', 'toolsets', info.toolsets, info.notes.detail) })]
+    : info.toolsets.map((t) => {
+      const row = switchRow('ts-' + t.name, t.label || t.name, t.enabled, (v) => {
+        toolErr.hidden = true;
+        admin.setToolsets(b.id, v ? [t.name] : [], v ? [] : [t.name]).catch((e: unknown) => {
+          $<HTMLInputElement>('input', row).checked = !v;
+          toolErr.textContent = 'boopis did not change it: ' + sentence(e); toolErr.hidden = false;
+        });
+      });
+      return row;
+    });
+  const tools = el('div', { class: 'ui-set' }, [...toolRows, toolErr]);
 
   const who = el('div', { class: 'bt-sh-who' }, [orbButton(b, 28, b.name, { state: b.state }), el('span', { class: 'bt-sh-name', text: b.name }), el('span', { class: 'bt-sh-role', text: b.role })]);
   checkClips();
@@ -177,7 +190,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     sec('role', 'Role and instructions', null, [roleF, instrF]),
     sec('model', 'Model', info.model ?? 'not set', [modelF]),
     sec('schedule', 'Schedule', jobsMeta, [hint('What it does when you have not asked. Each is a job in this bot’s own schedule.'), routines, routineErr, promptF, presets, cronF, el('div', { class: 'bt-add-row' }, addBtn)]),
-    sec('capabilities', 'What it can use', null, [hint('The tools and skills this bot has. boopis shows them here; changing them is not offered here yet.'), caps]),
+    sec('capabilities', 'What it can use', null, [hint('Toolsets apply from its next new session.'), caps, tools]),
     sec('rules', 'Rules', null, [hint('Saved with the bot, in its boopis folder. Governed applies from its next session and needs a frontier model; the workspace and what it asks first do not apply yet.'), gov, capRow, ws, appr, ownErr, el('div', { class: 'ui-set' }, runLimitRow(b))])
   );
   paintRoutines();

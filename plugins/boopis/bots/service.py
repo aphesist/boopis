@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from ..util.log import get_logger
-from . import guides, homes, store
+from . import engine_config, guides, homes, store
 from .cli import HermesCli
 from .errors import BotExistsError, BotRefusedError, HermesCliError
 
@@ -93,6 +93,16 @@ class BotService:
         if homes.is_archived_name(name):
             raise BotRefusedError("an archived teammate is read only; restore it first")
         return {"skill": guides.NAME, "version": guides.VERSION, "written": guides.install(path)}
+
+    def toolsets(self, name: str, on: object, off: object) -> dict[str, Any]:
+        """Switch toolsets on and off for the teammate, the same on every platform (``engine_config``)."""
+        self._live(name)
+        return engine_config.set_toolsets(self.cli, name, on, off)
+
+    def _live(self, name: str) -> None:
+        homes.profile_dir(self.root, name)
+        if homes.is_archived_name(name):
+            raise BotRefusedError("an archived teammate is read only; restore it first")
 
     # ───────── archive, restore, delete: Hermes's own CLI ─────────
     def archive(self, name: str, paused_jobs: Sequence[str] = ()) -> dict[str, Any]:

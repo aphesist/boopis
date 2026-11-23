@@ -81,6 +81,24 @@ impl super::Engine for CliEngine {
             Err(e) => Err(e),
         }
     }
+
+    async fn boards(&self, _root: &Path) -> Result<Vec<(String, String)>> {
+        Ok(crate::kanban::boards(&self.sup)
+            .await?
+            .into_iter()
+            .filter(|b| !b.archived)
+            .map(|b| (b.slug, b.name))
+            .collect())
+    }
+
+    async fn board_assignees(&self, _root: &Path, slug: &str) -> Result<Vec<String>> {
+        Ok(crate::kanban::view(&self.sup, slug)
+            .await?
+            .tasks
+            .into_iter()
+            .filter_map(|t| t.assignee)
+            .collect())
+    }
 }
 
 /// The bots' side of the app: one operation at a time (two `hermes config set` in one home must not race), and the repair once
@@ -159,24 +177,22 @@ impl Service {
             .copied()
             .unwrap_or(false);
         let mut view = super::RootView::read(self.engine.as_ref(), &layout.root).await?;
-        // A bot gets the default skill index once: one made by `boopis team apply` and then seen by the app keeps the skills
-        // the team file switched on.
-        let mut given = super::skills::Given::load(&layout.root);
-        let fresh = fresh && !given.has(name);
-        let mut done = super::prepare(
-            self.engine.as_ref(),
-            layout,
-            &mut view,
-            name,
-            super::Ask { governed, fresh },
-        )
-        .await?;
-        if done.skills_given {
-            given.bots.insert(name.to_owned());
-            if let Err(e) = given.save(&layout.root) {
-                done.problems
-                    .push(super::done_problem("the bot's default skills", &e));
-            }
+        // A bot gets the default skill index and its role's toolsets once: one made by `boopis team apply` and then seen by
+        // the app keeps the skills and toolsets the team file switched on.
+        let mut given = super::Records::load(&layout.root);
+        let members = if given.tools.pending(name) {
+            super::board_members(self.engine.as_ref(), &layout.root)
+                .await
+                .ok()
+        } else {
+            None
+        };
+        let mut ask = given.ask(name, governed, members.as_ref());
+        ask.fresh = fresh && ask.fresh;
+        let mut done = super::prepare(self.engine.as_ref(), layout, &mut view, name, ask).await?;
+        given.note(&done);
+        if done.skills_given || done.toolsets_given || done.kanban_given {
+            given.save(&layout.root, &mut done.problems);
         }
         if let Ok(mut at) = self.last_prepared.lock() {
             *at = std::time::Instant::now();

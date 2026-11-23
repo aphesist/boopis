@@ -141,7 +141,7 @@ boopis team apply <file> [--dry-run] [--prune] [--json]
 boopis team export [--output FILE [--force]] [--json]
 ```
 
-A team file holds a whole team: bots (role, instructions, model, look, skills, connectors, the Governed switch, `max_turns`), rooms
+A team file holds a whole team: bots (role, instructions, model, look, skills, connectors, the Governed switch, `max_turns`, `toolsets`), rooms
 (members, lead, purpose, max rounds), kanban boards (name, folder) and cron jobs (schedule, prompt, where the result goes,
 paused). The format is [`team.schema.json`](team.schema.json); a complete example, the Paper Past team, is in
 [`team-example/`](team-example/paper-past.yaml). A file with a mistake is refused whole: every problem is listed with where
@@ -163,6 +163,9 @@ What each part does:
   store installs skills), one that is switched off is switched on. `connectors` are added when missing; one that is there
   with another command is left alone and said (change it in Settings > Connectors). Keys never go in a team file: a
   connector's `env` is for plain values only, and keys belong in Settings > Connectors, which keeps them in the keychain.
+  `toolsets` is every engine toolset the bot has on; the others it lists are switched off, the same for its chats, kanban
+  workers and room turns, from its next new session (a bot not said keeps what it has; a new one gets its role's defaults,
+  `apps/shared/data/bot-skills.json`'s neighbour `bot-toolsets.json`). Export writes it.
 - **Rooms**, by name (or by `id`, to adopt a room that exists). A room's members cannot be changed once it is made, so a
   roster that differs from the file is a note, not a change; make a room under another name to have a different one. `lead`
   and `purpose` are updated, `max_rounds` is boopis's cap.

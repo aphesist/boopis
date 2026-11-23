@@ -29,7 +29,8 @@
         "skills": {"type": "array", "items": {"type": "string"}, "description": "Skills it must have: checked, and switched on when off."},
         "connectors": {"type": "array", "items": {"$ref": "#/$defs/connector"}},
         "governed": {"type": "boolean", "description": "The Governed switch (frontier models only)."},
-        "max_turns": {"type": "integer", "minimum": 1, "maximum": 1000, "description": "The most turns `boopis run --bot` lets one task take with this bot (the engine's goal budget, `goals.max_turns`, in the bot's own configuration)."}
+        "max_turns": {"type": "integer", "minimum": 1, "maximum": 1000, "description": "The most turns `boopis run --bot` lets one task take with this bot (the engine's goal budget, `goals.max_turns`, in the bot's own configuration)."},
+        "toolsets": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"}, "uniqueItems": true, "description": "Every engine toolset the bot has on; every other toolset it lists is switched off, the same for its chats, kanban workers and room turns (ADR-0047). Applies from the bot's next new session."}
       }
     },
     "connector": {

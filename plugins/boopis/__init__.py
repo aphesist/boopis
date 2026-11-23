@@ -54,6 +54,7 @@ RPC_METHODS = (
     "bots.read",
     "bots.write",
     "bots.guide",
+    "bots.toolsets",
     "bots.inspect",
     "bots.archive",
     "bots.restore",

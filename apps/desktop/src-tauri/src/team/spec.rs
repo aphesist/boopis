@@ -65,6 +65,10 @@ pub struct Bot {
     /// MCP servers it must have.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub connectors: Vec<Connector>,
+    /// The engine toolsets it has on, all of them: every other toolset it lists is switched off (ADR-0047). Not said: left
+    /// as it is (a new bot gets its role's defaults).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub toolsets: Option<Vec<String>>,
     /// Its Governed switch (off when not said, for a new bot).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub governed: Option<bool>,
@@ -244,6 +248,11 @@ impl Team {
             if crate::bots::check_name(n).is_err() {
                 p.push(format!("bots.{n}: not a bot's name (lower case letters, digits, '-' and '_', and not 'default')"));
             }
+            if let Some(ts) = &b.toolsets {
+                for t in ts.iter().filter(|t| !toolset_ok(t)) {
+                    p.push(format!("bots.{n}.toolsets: {t:?} is not a toolset's name"));
+                }
+            }
             if let Some(l) = &b.look {
                 if !SHAPES.contains(&l.shape.as_str()) {
                     p.push(format!(
@@ -419,6 +428,18 @@ impl Team {
 fn is_windows_path(w: &str) -> bool {
     let b = w.as_bytes();
     b.len() > 2 && b[0].is_ascii_alphabetic() && b[1] == b':' && (b[2] == b'\\' || b[2] == b'/')
+}
+
+/// A toolset's name as the engine writes one (the plugin's `bots.toolsets` takes the same).
+#[must_use]
+pub fn toolset_ok(t: &str) -> bool {
+    !t.is_empty()
+        && t.len() <= 64
+        && t.chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+        && t.chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '_' | '.' | '-'))
 }
 
 /// Whether `c` is a `#rrggbb` colour.

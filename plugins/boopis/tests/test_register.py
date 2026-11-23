@@ -77,6 +77,7 @@ def test_register_wires_hooks_rpc_and_the_prompt_section() -> None:
         "bots.read",
         "bots.write",
         "bots.guide",
+        "bots.toolsets",
         "bots.inspect",
         "bots.archive",
         "bots.restore",
