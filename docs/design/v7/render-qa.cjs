@@ -5,7 +5,8 @@
 // row (a menu or list row whose text wraps or runs past the row), concentric (a control nested near a container's corner whose
 // radius is not the outer radius minus the inset, whose insets are unequal, or which runs past the container's edge),
 // mark (the dashed underline shown at rest outside feedforward and blank contexts: the composer's text, a reply's guess, an AskCard,
-// a blank; an info label shows it only on hover or focus, section 17).
+// a blank; an info label shows it only on hover or focus, section 17), sweep (in a still, a status phrase frozen mid-shimmer or a
+// breath frozen mid-cycle; labelled motion strips, [data-motion], are exempt).
 const { chromium } = require('playwright');
 const fs = require('fs');
 let urls = process.argv.slice(2);
@@ -80,6 +81,13 @@ const PAGE = () => {
       if (!st || st === 'hover' || st === 'open' || m.classList.contains('focus')) continue;
       if (m.classList.contains('gap') || m.closest('.composer, .b, .qcard, .hov')) continue;
       out.push(['mark', `shown at rest (${st}) outside feedforward or a blank: ` + name(m)]);
+    }
+
+    // stills: no status phrase frozen mid-sweep (the shimmer's gradient clipped to text) and no breath frozen mid-cycle
+    for (const el of root.querySelectorAll('.shimmer, .mk.pulse, .dot.run')) {
+      if (!vis(el) || el.closest('[data-motion]')) continue; const cs = getComputedStyle(el);
+      if (el.matches('.shimmer') && cs.backgroundImage !== 'none' && (cs.webkitBackgroundClip === 'text' || cs.backgroundClip === 'text')) out.push(['sweep', 'a status phrase frozen mid-sweep: ' + name(el)]);
+      if (el.matches('.mk.pulse, .dot.run') && cs.animationName !== 'none') out.push(['sweep', 'a breath frozen mid-cycle: ' + name(el)]);
     }
     // R-inline-1
     const probe = () => { const s = document.createElement('span'); s.textContent = 'x'; s.style.cssText = 'display:inline-block;width:0;height:0;overflow:hidden;vertical-align:baseline'; return s; };
