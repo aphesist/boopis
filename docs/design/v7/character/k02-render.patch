@@ -1,16 +1,16 @@
 diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/board.html character/src2/board.html
 --- ds-v7/src/board.html	2026-11-23 15:31:51.038540839 +0000
-+++ character/src2/board.html	2026-11-23 16:32:24.142833714 +0000
++++ character/src2/board.html	2026-11-23 21:12:19.457874066 +0000
 @@ -1,5 +1,5 @@
  <!doctype html><html data-theme="dark"><meta charset="utf-8"><link rel="stylesheet" href="tokens.v7.css"><link rel="stylesheet" href="kit.css">
 -<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-tuned/orb-avatar.tuned.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script>
-+<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-avatar.tuned.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script>
++<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-avatar.orb3.min.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script>
  
  <script src="boards.js"></script><script src="previews.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script><script src="dockv7.js"></script><script src="sessionboards.js"></script><title>boopis v7 board</title><body style="background:#0a0a0a"><div id="r"></div><script>
  const q = Object.fromEntries(new URLSearchParams(location.search));
 diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/boards.js character/src2/boards.js
 --- ds-v7/src/boards.js	2026-11-23 08:51:39.532795971 +0000
-+++ character/src2/boards.js	2026-11-23 16:29:11.967244776 +0000
++++ character/src2/boards.js	2026-11-23 21:13:21.942802276 +0000
 @@ -177,5 +177,13 @@
        opt('Attention B', 'boopis red, Grok\'s values', 'what you owe stays red (#cf2b35 marks, #ff6463 text, 6.5:1); destructive confirms are red too, as Grok\'s Reset', true, pair('', att('red')), 'Keeps "red means you owe something" from v6 and the approved notch; the only change is the values.')]);
    }
@@ -20,7 +20,7 @@ diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/boards.js cha
 +  /* K02 the main bot in the open sidebar: decided, A (owner, 23 Nov). Bots tab only, the list's first entry, below the switch */
 +  function mainbot() {
 +    const side = (scr, o) => (t) => clip(300, 600, win(S[scr], Object.assign({ theme: t, sidebar: 'open' }, o)), { r: 0 });
-+    return board('K02 The main bot in the open sidebar', 'Decided (owner, 23 Nov): A, 44 px, Grok-Bot\'s size (measured on its 2880 px capture of the open sidebar, 157-live-sidebar-expanded: a 44 px main bot over 28 px rows and a 36 px rail; the rows take 28 px too). boopis is the first entry of the Bots tab\'s list, below the Sessions and Bots switch, centred with its name under it, as Grok-Bot shows its main bot. The Sessions tab shows no bot: there the dock is the quick way to the bots. The rail keeps its size. Every bot in the sidebar holds one fixed sideways 3/4 pose, Grok-Bot\'s (measured: the eyes up and to the right, strokes at 55 degrees, the far eye foreshortened), and animates in a state: kai working, nina needing you. A hovered bot comes alive and settles back (ORBS.md §23).', [
++    return board('K02 The main bot in the open sidebar', 'Decided (owner, 23 Nov): A, 44 px, Grok-Bot\'s size (measured on its 2880 px capture of the open sidebar, 157-live-sidebar-expanded: a 44 px main bot over 28 px rows and a 36 px rail; the rows take 28 px too). boopis is the first entry of the Bots tab\'s list, below the Sessions and Bots switch, centred with its name under it, as Grok-Bot shows its main bot. The Sessions tab shows no bot: there the dock is the quick way to the bots. The rail keeps its size. Every bot holds the decided home pose (K08 B, orb3 3.0.0: the whole bot turned 38°, nodded 22° and leaned −24°, with big upright pills painted on its face) and animates in a state: kai working, nina needing you. A hovered bot comes alive from that pose and settles back to it (ORBS.md §23).', [
 +      opt('A', '44 px, the Bots tab only', 'the bots list\'s first entry, 16 px larger than a row (28 px, Grok-Bot\'s row size, decided with it)', true, `<div class="row" style="gap:24px;align-items:flex-start">${pair('', side('room', { main: 44 }))}${pair('', side('botChat', { main: 44 }))}</div>`, 'Left: the room (screen 12). Right: a bot\'s chat (screen 11). Both are the Bots tab, with no dock.'),
 +      opt('Sessions tab', 'shows no bot', 'the session list only; the bots are reached from the dock under the session', false, `<div class="row" style="gap:24px;align-items:flex-start">${pair('', side('session', {}))}</div>`, 'Screen 13: no boopis entry; the dock (not in this crop) is the quick access to the bots.')]);
 +  }
@@ -192,14 +192,15 @@ diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/kit.css chara
 -.dk-in.dk7[data-kind="open"] > .dk7-row { flex: none; }
 diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/kit.js character/src2/kit.js
 --- ds-v7/src/kit.js	2026-11-23 18:13:26.964388957 +0000
-+++ character/src2/kit.js	2026-11-23 18:42:04.356953189 +0000
-@@ -31,13 +31,16 @@
++++ character/src2/kit.js	2026-11-23 21:12:19.451589791 +0000
+@@ -31,13 +31,17 @@
      nimbus: { color: '#9b5cf6', shape: 'cloud', role: 'inbox triage' }
    };
    // orb: eyes 'cut' = the surface colour (option B), 'dark' = orb2's own (option A)
-+  /* the fixed sideways pose of the Bots sidebar, the rail and the dock at rest (owner, 23 Nov; ORBS.md): a hidden orb2
++  /* the decided pose (owner, 23 Nov; ORBS.md section 23, K08 B, orb3 3.0.0): every bot turned by orb3's home orientation
++     (38, 22, -24) and, at rest, K07's big upright pills painted on its face. The rest of the old note: a hidden orb2
 +     reaction (pill eyes, no blink); the angle is orb2's own gaze, 38 and 15 degrees (ORBS.md section 23) */
-+  if (window.OrbAvatar && !window.OrbAvatar.__pose) { const A = window.OrbAvatar; A.__pose = 1; A.defineReaction('pose', { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: null }); }
++  if (window.OrbAvatar && !window.OrbAvatar.__pose) { const A = window.OrbAvatar; A.__pose = 1; const D0 = Math.PI / 180, P8 = A.shapes.pairEyes(['pill', { x: -.19 + .04, y: -.08, w: .18, h: .41, ang: 4 * D0 }], ['pill', { x: .19 + .04, y: -.08, w: .18, h: .41, ang: 4 * D0 }]); A.defineReaction('pose', { label: 'Pose', blink: false, face: () => P8, motion: () => ({ eyaw: 0, epitch: 0, w: 1 }) }); }
    function orb(name, size, o = {}) {
      const l = LOOKS[name] || LOOKS.kai;
 -    const reaction = o.state || 'idle';
@@ -208,11 +209,11 @@ diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/kit.js charac
      const eye = o.eyes === 'dark' ? '' : ` data-eye-cut="${o.surface || 'var(--bg-2)'}"`;
      const col = name === 'boopis' ? ' data-ink' : '';
 -    return `<orb-avatar${size <= 44 ? ' face-scale="1.25"' : ''} jelly=".25" size="${size}" shape="${l.shape}" color="${l.color.startsWith('var') ? '#f5f5f5' : l.color}" reaction="${reaction}" idle-motion="calm" mode="fixed"${still}${eye}${col} style="width:${size}px;height:${size}px;flex:none"></orb-avatar>`;
-+    return `<orb-avatar size="${size}" shape="${l.shape}" color="${l.color.startsWith('var') ? '#f5f5f5' : l.color}" reaction="${reaction}"${o.pose ? ' gaze="38 15"' : ''} idle-motion="${o.pose ? 'off' : 'calm'}" mode="${o.pose ? 'drift' : 'fixed'}"${size <= 44 ? ' face-scale="1.25"' : ''}${still}${eye}${col} style="width:${size}px;height:${size}px;flex:none"></orb-avatar>`;
++    return `<orb-avatar size="${size}" shape="${l.shape}" color="${l.color.startsWith('var') ? '#f5f5f5' : l.color}" reaction="${reaction}" home="38 22 -24" idle-motion="${o.pose ? 'off' : 'calm'}" mode="${o.pose ? 'drift' : 'fixed'}"${size <= 44 ? ' face-scale="1.25"' : ''}${still}${eye}${col} style="width:${size}px;height:${size}px;flex:none"></orb-avatar>`;
    }
    function stack(names, size, o = {}) {
      const step = Math.round(size * 2 / 3);
-@@ -85,27 +88,6 @@
+@@ -85,27 +89,6 @@
    }
    function mark(fam, size = 16, cls = '') { const m = (window.MODEL_ICONS[fam] || {}).mono; if (!m) return ''; return `<svg class="mk ${cls}" viewBox="${m.viewBox}" width="${size}" height="${size}" ${m.attrs} aria-hidden="true" style="flex:none">${m.body}</svg>`; }
    /* a session's agent is branded by its model: the provider's mark in the gutter of the last bubble of a run (as a bot's orb in a room) */
@@ -240,7 +241,7 @@ diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/kit.js charac
    function brand(root = document) {
      root.querySelectorAll('.thread.sess').forEach((th) => {
        const fam = th.getAttribute('data-model') || 'claude';
-@@ -116,6 +98,6 @@
+@@ -116,6 +99,6 @@
        });
      });
    }
@@ -281,11 +282,11 @@ diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/sbsheet.py ch
  pad, W, cols = 40, 2400, 4
 diff -ru -x 'jobs-*.json' -x 'qa*.cjs' -x '*.png' -x lib ds-v7/src/screen.html character/src2/screen.html
 --- ds-v7/src/screen.html	2026-11-23 15:31:51.035950527 +0000
-+++ character/src2/screen.html	2026-11-23 16:32:24.143003724 +0000
++++ character/src2/screen.html	2026-11-23 21:12:19.457650340 +0000
 @@ -1,5 +1,5 @@
  <!doctype html><html data-theme="dark"><meta charset="utf-8"><link rel="stylesheet" href="tokens.v7.css"><link rel="stylesheet" href="kit.css">
 -<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-tuned/orb-avatar.tuned.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script><script src="dockv7.js"></script>
-+<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-avatar.tuned.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script><script src="dockv7.js"></script>
++<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-avatar.orb3.min.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script><script src="dockv7.js"></script>
  
  <title>boopis v7 screen</title><body style="background:#000"><div id="r"></div><script>
  const q = Object.fromEntries(new URLSearchParams(location.search));

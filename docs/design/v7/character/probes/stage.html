@@ -42,7 +42,7 @@
 <script>
 const q = Object.fromEntries(new URLSearchParams(location.search));
 let seed = 20261123; Math.random = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-const LIB = { stock: 'lib/orb-avatar.min.js', snap: 'lib/orb-avatar.snap.js', tuned: 'lib/orb-avatar.tuned.js', orb3: 'lib/orb-avatar.orb3.js' }[q.lib || 'stock'];
+const LIB = { stock: 'lib/orb-avatar.min.js', snap: 'lib/orb-avatar.snap.js', tuned: 'lib/orb-avatar.tuned.js', orb3: 'lib/orb-avatar.orb3.js', orb3min: 'lib/orb-avatar.orb3min.js' }[q.lib || 'stock'];
 const MORE = q.plan === 'more';
 const LOOKS = { boopis: ['squircle', '#f5f5f5', '#0e0e0e'], kai: ['circle', '#4fc9a8', '#141418'], nina: ['triangle', '#f23b5a', '#141418'], moss: ['squircle', '#2fd26a', '#141418'], iris: ['flower', '#3b82f6', '#141418'], hex: ['hexagon', '#a6a6ab', '#141418'] };
 /* THE FIXED POSE (ORBS.md section 23): orb2's own 3D look, through its public `gaze` attribute ("yaw pitch", degrees). orb2
@@ -56,7 +56,8 @@ const orb = (n, size, o = {}) => {
   return `<span class="ui-orb"${render ? ' data-render' : ''} data-bot="${n}" style="--o:${size}${render ? ';--r:' + render : ''}"><orb-avatar size="${render || size}" shape="${shape}" color="${color}" eye-color="${eye}" reaction="${o.state || 'idle'}" idle-motion="${o.motion || 'calm'}" mode="drift"${fs}${jl}${o.attrs || ''} data-glance></orb-avatar></span>`;
 };
 /* the policy's three behaviours, on orb2's own attributes */
-const fixed = (o) => { o.dataset.base = 'pose'; o.setAttribute('gaze', GAZE); o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', 'pose'); };
+const ORB3 = /^orb3/.test(q.lib || '');   /* orb3 (3.0.0): the decided pose is K08 B, the home orientation plus K07's eyes */
+const fixed = (o) => { o.dataset.base = 'pose'; if (!ORB3) o.setAttribute('gaze', GAZE); o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', 'pose'); };
 const state = (o, r) => { o.dataset.base = r; if (!o._hover) { o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', r); } };
 /* hover: a bot at the pose wakes lively; a bot in a state keeps its state, and only looks toward the pointer (capped) */
 const wake = (o, px, py) => { o._hover = true; if (o.dataset.base === 'pose') { o.setAttribute('reaction', 'idle'); o.setAttribute('idle-motion', 'lively'); } else if (px != null) capLook(o, px, py, .3); };
@@ -194,11 +195,13 @@ window.go = () => T[q.scene || 'dock']();
 const s = document.createElement('script'); s.src = LIB; s.onload = () => {
   const A = window.OrbAvatar;
   A.defineReaction('pose', { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: null });
+  if (ORB3) { const D0 = Math.PI / 180, P8 = A.shapes.pairEyes(['pill', { x: -.19 + .04, y: -.08, w: .18, h: .41, ang: 4 * D0 }], ['pill', { x: .19 + .04, y: -.08, w: .18, h: .41, ang: 4 * D0 }]);
+    A.defineReaction('pose', { label: 'Pose', blink: false, face: () => P8, motion: () => ({ eyaw: 0, epitch: 0, w: 1 }) }); }
   /* K08 B in orb3: the home orientation (turn 38, nod 22, roll -24) carries the whole bot; K07's big upright pills are
      painted on the face, right of centre and a little above; the pose itself adds no look */
   const D = Math.PI / 180, K8 = A.shapes.pairEyes(['pill', { x: -.19 + .04, y: -.08, w: .18, h: .41, ang: 4 * D }], ['pill', { x: .19 + .04, y: -.08, w: .18, h: .41, ang: 4 * D }]);
   A.defineReaction('k06', { label: 'Pose', blink: false, face: () => K8, motion: () => ({ eyaw: 0, epitch: 0, w: 1 }) });
-  S[q.scene || 'dock'](); document.body.dataset.ready = '1';
+  S[q.scene || 'dock'](); if (ORB3) for (const o of document.querySelectorAll('orb-avatar')) o.setAttribute('home', HOME); document.body.dataset.ready = '1';
 };
 document.head.appendChild(s);
 </script></body></html>

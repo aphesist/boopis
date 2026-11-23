@@ -24,6 +24,7 @@ for f in fs:
         sz = ndimage.sum(m, lab, range(1, n + 1)); body = lab == (np.argmax(sz) + 1); fill = ndimage.binary_fill_holes(body)
         eye = fill & ~body; el, ne = ndimage.label(eye)
         if ne < 2: rows.setdefault(j, []).append((i, None)); continue
+        if ne > 3: continue   # a grid, bars or other many-cell face, not a pill pair
         es = ndimage.sum(eye, el, range(1, ne + 1)); o = np.argsort(es)[::-1][:2] + 1
         if es[o[1] - 1] < 6: rows.setdefault(j, []).append((i, None)); continue
         ws, ok = [], True
@@ -31,7 +32,7 @@ for f in fs:
             yy, xx = np.nonzero(el == q)
             if len(xx) < 6: ok = False; break
             w, v = np.linalg.eigh(np.cov(np.vstack([xx, yy]))); L, W = 4 * np.sqrt(w[1]), 4 * np.sqrt(max(w[0], 1e-6))
-            if L / max(W, 1e-6) < 1.3 and W > 3: ok = False   # not a pill (a state's round or grid eyes)
+            if L / max(W, 1e-6) < 1.6: ok = False   # not a pill (round, square, arc or wide eyes of a state or an emote)
             ws.append(W)
         if not ok: continue
         gap = float(ndimage.distance_transform_edt(el != o[0])[el == o[1]].min())

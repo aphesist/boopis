@@ -71,7 +71,37 @@ frame.
 ## §23. The fixed pose (the spec the other surfaces build on)
 
 `DESIGN-SYSTEM.md` §23 points here. At rest, the dock, the Bots sidebar, the rail and the 44 px main bot hold every bot
-in this one pose. The angle is **proposed, awaiting the owner's pick (K08)**.
+in this one pose.
+
+**DECIDED (owner, 23 November): K08 B, drawn by orb3 3.0.0.**
+- **Library:** orb3 is published on aphesist/orb2 `main` (commit `265777c`, a fast-forward from `03d9094`).
+- **The pose:** `home="38 22 -24"`, with K07's big upright pills painted on the face.
+- **Every bot, on every surface,** carries that home orientation. Idle, hover and states depart from it and return to
+  it.
+
+**Not yet changed in boopis:** the app still vendors orb2's `orb-avatar.min.js`. Swapping in orb3's build is the
+integration step.
+
+**The decided build, checked** (orb3 3.0.0 `orb-avatar.min.js`, K08 B on every bot):
+
+| Clip | Changed at rest | Shimmer px (today → orb3) | Lone flips px | Eye floors (width, gap, margin) | Dents |
+|---|---|---|---|---|---|
+| `anim-sidebar-before-after.mp4` (20 s) | **0** (2,366 resting orb-frames) | 201 → **0** | 22 → **0** | **0** below; narrowest 0.57 | 0 |
+| `anim-dock-before-after.mp4` (19 s) | **0** (2,349) | 501 → **0** | 156 → **0** | **0** below; narrowest 0.56 | 0 |
+| `anim-room-before-after.mp4` (14 s) | (all lively) | 91 → **2** | 18 → **0** | see below | 0 |
+
+In the room, every pill-pair frame is within the gap and margin floors. Three frames on the 20 px gutter bots measure
+0.52–0.53 of width, about one device pixel off at that size. The "merged" frames are iris's 3×3 grid emote at 20 px,
+which is not a pill pair. Liveliness in the room is 0.83 today against 0.99 with orb3.
+
+- **The minified build:** it renders the same as the source; a pixel difference against the source is within the
+  difference between two runs of the source itself.
+- **The demo:** `index.html` loads it with no errors and the companion at the home pose.
+- **The transition clip,** re-checked on the build, gives the same numbers as above.
+- **Cost:** 0.26 ms per moving 28 px orb per frame, 0.004 ms at rest.
+
+**Renders:** `K02-main-bot.jpg` and screens 11–13 are re-rendered with orb3 3.0.0 and the home pose on every bot. v7 QA
+ran every rule, including sweep and same-component: 7 pages, 0 findings.
 
 ### orb3: the look of a perfect 3D shape, in flat colour
 
@@ -79,7 +109,7 @@ The owner's model: every shape looks like a real 3D solid (the ball is round, th
 colour with no shading. The volume reads from two things alone: the perspective outline of the turned solid, and the
 eyes placed and foreshortened on its front surface.
 
-orb3 is a new major version of orb2, on the `orb3` branch of the orb2 repo. It is not pushed yet.
+orb3 is the new major version of orb2, version 3.0.0, published on aphesist/orb2 `main` (it is the `orb3` branch, fast-forwarded).
 
 | Commit | What it does |
 |---|---|
@@ -89,6 +119,7 @@ orb3 is a new major version of orb2, on the `orb3` branch of the orb2 repo. It i
 | `554af9f` | Version 3.0.0-alpha.0, and the README section on what changed. |
 | `e3d4552` | Eyes that never go edge-on, never merge and never touch the rim (below). |
 | `d48ceb2` | The home orientation (attribute `home`). |
+| `265777c` | orb 3.0.0: the README (the `home` attribute, recommended `38 22 -24`), the types (`OrbAvatarAttributes`), the demo's companion at the home pose, and `orb-avatar.min.js` rebuilt from the orb3 source with the README's terser command. |
 | `40d8bd1` | Transitions glide: look-source changes and the float fade, no pops. |
 
 **The API is unchanged.** It is the same `<orb-avatar>`, with the same attributes and methods.
