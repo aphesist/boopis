@@ -212,3 +212,4 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - Owner: home pose B only at rest (sidebar/dock/rail); any other state rotates out into front-facing lively behaviour (as before) and back in at rest, per Grok's recordings. orb3 follow-up on a branch; orb2 main push needs the owner's OK.
 - CORRECTION (owner): out of rest, bots don't just face front; each state runs alive-idle style movement (look anywhere, rotate, spin) tuned per state (amount, face, tempo), e.g. needs-you slightly less movement + needs-you face. One consistent state table for every surface.
 - Owner: orb3 3.0.1 state behaviour 'perfect'; make the eyes bigger and bolder like Grok's in all states. orb2 main push of 3.0.1 still awaits explicit OK.
+- orb3 3.0.2 PUSHED to aphesist/orb2 main (bfa4e8c, owner approved). Final re-render of v7 + onboarding with it, then send the set; next: build the UI kit/lab (v7) and start the 0.2.0 refactor.
