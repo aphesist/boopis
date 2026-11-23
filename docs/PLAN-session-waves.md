@@ -199,3 +199,4 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - Owner: animations good, no flicker (keep G5/G6/edges.py). Fixed angle still wrong: use orb2's real 3D body rotation and
   perspective (drop the hk pseudo-pose); 2-3 angle options for the owner. Dock row width follows its content; the open
   dock states and the composer stay a fixed size.
+- 0.1.10 RELEASED (23 Nov): develop = main = 5b9b9a0e, release run 45234331903 green, pre-release v0.1.10 with 7 assets, all verified against SHA256SUMS and sent.
