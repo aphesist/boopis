@@ -23,13 +23,24 @@ const huddleLive = (extra = 0): ProviderSpec => ({ ...paper, patch: (p) => withG
 }) });
 const openHuddle = async (c: AppCtx): Promise<void> => { await openPaper(c); await c.click('#hx-view-bots .bt-huddle-entry .ui-disclosure'); await c.wait(400); };
 const openGroup = async (c: AppCtx): Promise<void> => { await bots(c); await c.click('.bt-groups .ui-row'); await c.wait(500); };
-/** types into a composer the way a person does: the caret at the end, then each character as its own edit (a typed "@" opens the menu) */
+/** types into a composer the way a person does: the caret at the end, then each character as its own edit (a typed "@" opens the
+    list, which the setup waits for). On a loaded machine the room may still be settling when the typing starts and the keys land
+    nowhere, so the setup checks what the text says and types again from an empty draft (at most three times) */
 const typeIn = (scope: string, text: string) => async (c: AppCtx): Promise<void> => {
-  const input = document.querySelector<HTMLElement>(scope + ' .ui-composer__input'); if (!input) throw new Error('no composer in ' + scope);
-  input.focus();
-  for (const ch of text) { document.execCommand('insertText', false, ch); await c.wait(20); }
-  await c.wait(450);
+  const comp = document.querySelector<HTMLElement & { setValue(t: string): void; focus(): void; readonly value: string }>(scope + ' .ui-composer');
+  if (!comp) throw new Error('no composer in ' + scope);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    comp.setValue(''); comp.focus(); await c.wait(60);
+    for (const ch of text) { document.execCommand('insertText', false, ch); await c.wait(20); }
+    await c.wait(450);
+    if (text.endsWith('@')) for (let i = 0; i < 40 && !document.querySelector('.ui-listbox'); i++) await c.wait(50);
+    if (comp.value === text && (!text.endsWith('@') || document.querySelector('.ui-listbox'))) return;
+    c.hx.ui.listbox.close(false);
+  }
+  throw new Error('the composer in ' + scope + ' did not take the typing: it says "' + comp.value + '"');
 };
+/** the bot's header says it is listening while the owner types (its transient state), on its own clock: two draws a moment apart differ */
+const LISTENING = { 'stability.render': 'typing in a bot’s chat makes its header say it is listening, a transient state that settles on its own clock, so two draws a moment apart differ in that word' } as const;
 const ROOM_COMPOSER = '#hx-view-bots .bt-group';
 const BOT_COMPOSER = '#hx-view-bots .bt-room:not(.bt-group)';
 const ROOM_MENU = { anchor: ROOM_COMPOSER + ' .ui-composer__anchor', layer: '.ui-listbox' };
@@ -107,8 +118,8 @@ const room: Story = {
     'a reply in markdown: lists, a quote, code, a path, a mention': st(['typical', 'owner'], { simulate: false, patch: (p) => withMarkdownThread(p, 'atlas') }, pick('atlas')),
     'a reply under way: the presence entry': st(['loading', 'owner'], { simulate: false, patch: (p) => withRun(p, 'atlas') }, pick('atlas'), { allow: { 'stability.render': 'the pending entry counts the seconds the reply has taken (a clock, text only), so two draws a moment apart differ in that one number' } }),
     'no bots at all': st(['empty', 'owner'], { bots: 'none' }, bots),
-    'the composer: "@" names a teammate': st(['open', 'owner'], {}, async (c) => { await pick('atlas')(c); await typeIn(BOT_COMPOSER, '@')(c); }, { overlay: { anchor: BOT_COMPOSER + ' .ui-composer__anchor', layer: '.ui-listbox' } }),
-    'the composer: a teammate drawn as a chip': st(['variant', 'owner'], {}, async (c) => { await pick('atlas')(c); await typeIn(BOT_COMPOSER, 'ask @nina before you merge it ')(c); }),
+    'the composer: "@" names a teammate': st(['open', 'owner'], {}, async (c) => { await pick('atlas')(c); await typeIn(BOT_COMPOSER, '@')(c); }, { overlay: { anchor: BOT_COMPOSER + ' .ui-composer__anchor', layer: '.ui-listbox' }, allow: LISTENING }),
+    'the composer: a teammate drawn as a chip': st(['variant', 'owner'], {}, async (c) => { await pick('atlas')(c); await typeIn(BOT_COMPOSER, 'ask @nina before you merge it ')(c); }, { allow: LISTENING }),
     'composer send hover': st(['hover', 'owner'], {}, pick('atlas'), { force: [{ sel: '#hx-view-bots .ui-send', state: 'hover' }] }),
     'composer attach tooltip': st(['tooltip', 'owner'], {}, async (c) => { await pick('atlas')(c); const b = document.querySelector<HTMLElement>('#hx-view-bots .ui-composer__attach, #hx-view-bots .ui-composer__mic'); if (b) { b.focus(); c.hx.ui.tooltip.show(b); } await c.wait(250); }, { overlay: { anchor: '#hx-view-bots .ui-composer__attach, #hx-view-bots .ui-composer__mic', layer: '.ui-tip' } })
   }
