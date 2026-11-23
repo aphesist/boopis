@@ -65,6 +65,7 @@ export class Film {
   private readonly extraMotion: [number, number, number][] = [];
   private motionSpans: [number, number, number][] = [];
   private finalized = false;
+  private readonly finalizers: (() => void)[] = [];
   private time = -1;
   private lastAbs = -1;
   ready: Promise<void> = Promise.resolve();
@@ -86,6 +87,11 @@ export class Film {
     gsap.config({ autoSleep: 60, force3D: false, nullTargetWarn: false });
     this.tl = gsap.timeline({ paused: true, defaults: { immediateRender: true, overwrite: false } });
   }
+
+  /** run once the timeline is complete (after the scene is built, before the first frame): for plans that read the
+      finished timeline, such as a camera's stateAt over the whole film. The timeline is at 0 when each runs and is
+      put back at 0 after it */
+  onFinalize(fn: () => void): void { this.finalizers.push(fn); }
 
   /** draw something that GSAP does not set directly, on every seek: it must be a pure function of t. Lower priorities
       run first (-10: decide what is shown; 0: draw; 10: the camera) */
@@ -160,6 +166,7 @@ export class Film {
     spans.sort((a, b) => a[0] - b[0]);
     this.motionSpans = spans;
     this.fences = this.liveSets();
+    for (const fn of this.finalizers) { fn(); this.tl.time(0, true); }
     gsap.ticker.sleep();
   }
 
