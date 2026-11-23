@@ -207,12 +207,17 @@ function archiveGroup(g: Group): void {
 const ENTRY = new WeakMap<HTMLElement, { msgs: GroupText[]; who: string; to: string }>();
 /** the last message the user has seen in each group (this run), and how many arrived below the fold since */
 const SEEN = new Map<string, string>();
-const U = { unread: 0, divider: null as HTMLElement | null, jump: null as HTMLButtonElement | null };
+/* `you`: how many of the unread messages address the person: the jump button says so with the attention dot */
+const U = { unread: 0, you: 0, divider: null as HTMLElement | null, jump: null as HTMLButtonElement | null };
 
 const mdBot = (m: GroupMember): MdBot => { const b = bot(m.profile); return { ...memberBot(m), id: m.profile || m.id, name: m.name, handle: m.handle, ...(b?.role ? { role: b.role } : {}) }; };
 /** the bots that exist and are not in the room: a mention of one is a muted chip, and the composer says so before sending */
 const outsiders = (g: Group): Array<MdBot & { handle: string }> => S.bots.filter((b) => !g.members.some((m) => m.profile === b.id)).map((b) => ({ ...b, id: b.id, name: b.name, handle: b.id }));
-const ctxOf = (g: Group): MarkdownCtx => mentionCtx(g.members.map(mdBot), { everyone: true, outside: outsiders(g) });
+/* `you`: in what a member writes, `@user` is the person (the engine's handle for them in a room): their own capsule, and the message
+   marked for them. What the person writes (their messages, their draft) addresses nobody by it */
+const ctxOf = (g: Group, you = true): MarkdownCtx => ({ ...mentionCtx(g.members.map(mdBot), { everyone: true, outside: outsiders(g) }), ...(you ? { you } : {}) });
+/** a member's message that addresses the person by the engine's handle for them (`@user`, markdown.ts) */
+const toYou = (g: Group) => (m: GroupMessage): boolean => m.kind === 'text' && m.who !== 'you' && ui.markdown.toYou(m.text, ctxOf(g));
 /** the quiet hint under a draft that names a bot that is not here: "nimbus isn't in this room: send it to their chat, or send without them" */
 export function outsideHint(g: Group, text: string): string {
   const out = ui.markdown.outsiders(text, g.members, outsiders(g));
@@ -236,7 +241,7 @@ const roomMentions = botMentions({
   foot: () => { const g = group(S.groupSel); return g?.lead ? 'An @name brings that bot in now.' : 'Only the bots you name answer. With no name, every member does.'; },
   named: () => group(S.groupSel)?.members.map((m) => ({ ...mdBot(m), handle: m.handle })) ?? [],
   everyone: () => { const g = group(S.groupSel); return g ? 'Everyone in ' + g.name : null; },
-  ctx: () => { const g = group(S.groupSel); return g ? ctxOf(g) : {}; }
+  ctx: () => { const g = group(S.groupSel); return g ? ctxOf(g, false) : {}; }
 });
 /** a message of this room opened in a bot's own chat, as a draft the owner sends (nothing is forwarded by itself; rosters are frozen, so the bot cannot join) */
 export function sendToBot(bot: { id: string }, text: string): void {
@@ -265,12 +270,14 @@ export const addSendGuard = (fn: (g: Group, text: string) => boolean): void => {
 const memberOf = (g: Group, idOrProfile: string): GroupMember | undefined => g.members.find((m) => m.id === idOrProfile || m.profile === idOrProfile);
 /** the folders a member's paths resolve in: the folder the engine said its bot works in (none known: absolute paths only) */
 const rootsOf = (g: Group, who: string): string[] => { const m = memberOf(g, who); const ws = m ? data().bots.workspace?.(m.profile) : null; return ws ? [ws] : []; };
-/** whom a message is for, in words: round 0 answers the user; a later round goes to the members the room names, or its mentions name */
+/** whom a message is for, in words: round 0 answers the user; a later round goes to the members the room names, or its mentions name,
+    and to the person when it addresses them (`@user`) */
 function recipients(g: Group, m: GroupText): string[] {
   if (m.who === 'you') return [];
   if (m.round === 0) return ['you'];
   const ids = m.to?.length ? m.to : ui.markdown.resolve(m.text, g.members).members.map((x) => x.id);
-  return ids.filter((id) => id !== m.who).map((id) => memberOf(g, id)?.name ?? id);
+  const names = ids.filter((id) => id !== m.who).map((id) => memberOf(g, id)?.name ?? id);
+  return toYou(g)(m) ? [...names, 'you'] : names;
 }
 function replyTo(g: Group, who: string): void {
   const m = memberOf(g, who), c = G.composer; if (!m || !c) return;
@@ -289,7 +296,7 @@ function huddleDeps(g: Group): HuddleDeps {
 function renderLog(g: Group): void {
   const log = G.log as HTMLElement; log.textContent = '';
   NODE.clear();
-  U.divider = null; U.unread = 0; setJump(U.jump, 0);
+  U.divider = null; U.unread = 0; U.you = 0; setJump(U.jump, 0);
   const msgs = groupThread(g.id);
   if (!msgs.length) {
     const e = ui.empty({ title: 'Nothing here yet', text: groups().nature });
@@ -300,7 +307,7 @@ function renderLog(g: Group): void {
     const at = seen ? msgs.findIndex((x) => x.id === seen) : -1;
     const firstNew = at >= 0 ? msgs.slice(at + 1).find((x) => !(x.kind === 'text' && x.who === 'you')) : undefined;
     let prev: GroupMessage | null = null, entry: HTMLElement | null = null;
-    const runs = huddleRuns(msgs);
+    const runs = huddleRuns(msgs, toYou(g));
     for (let i = 0; i < msgs.length; i++) {
       const m = msgs[i] as GroupMessage;
       const run = runs.find((r) => r[0] === i);
@@ -337,7 +344,7 @@ function renderMsg(g: Group, m: GroupMessage, prev: GroupMessage | null, prevEnt
   const you = m.who === 'you';
   const to = recipients(g, m), toKey = to.join(',');
   let node: HTMLElement;
-  if (you) { node = frag(ui.html.request('')); node.innerHTML = ui.markdown.plain(m.text, ctx); }
+  if (you) { node = frag(ui.html.request('')); node.innerHTML = ui.markdown.plain(m.text, ctxOf(g, false)); }
   else node = ui.markdown(m.text, ctx);
   NODE.set(m.id, node);
   const away = you ? null : outsideNote(g, m);
@@ -381,10 +388,11 @@ function appendMsg(g: Group, m: GroupMessage): void {
   const lastIsLast = !!last && !last.nextElementSibling?.matches('.bt-note, .bt-unread');
   if (m.kind === 'text' && m.who === 'you') foldHuddles(log);
   /* a member's message among the members: two or more in a row fold into one huddle, which stays open while the talk is live */
-  if (isBetween(m)) {
+  const forYou = toYou(g);
+  if (isBetween(m, forYou)) {
     const run: GroupText[] = [];
-    for (let i = list.length - 1; i >= 0; i--) { const x = list[i] as GroupMessage; if (isBetween(x)) run.unshift(x); else break; }
-    if (run.length >= 2) { paintHuddle(g, run, m); if (follow) { sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); markSeen(g); } else { U.unread++; setJump(U.jump, U.unread); } return; }
+    for (let i = list.length - 1; i >= 0; i--) { const x = list[i] as GroupMessage; if (isBetween(x, forYou)) run.unshift(x); else break; }
+    if (run.length >= 2) { paintHuddle(g, run, m); if (follow) { sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); markSeen(g); } else { U.unread++; setJump(U.jump, U.unread, U.you); } return; }
   }
   /* a member at work: its message lands above the presence entry, or in its place when it was the last one at work */
   const pres = G.presence, working = m.kind === 'text' && !!pres?.el?.actors.some((a) => a.id === m.who);
@@ -395,7 +403,8 @@ function appendMsg(g: Group, m: GroupMessage): void {
   if (follow || (m.kind === 'text' && m.who === 'you')) { sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); markSeen(g); }
   else if (m.kind === 'text' && m.who !== 'you') {
     if (!U.divider && node) { U.divider = unreadDivider(); (entry && entry.contains(node) && $('.ui-entry__body', entry).firstElementChild === node ? entry : node).before(U.divider); }
-    U.unread++; setJump(U.jump, U.unread);
+    U.unread++; if (forYou(m)) U.you++;
+    setJump(U.jump, U.unread, U.you);
   }
 }
 /** the run's earlier messages leave the log (their entries, or the huddle they were in) and the whole run is drawn as one huddle, with the arriving message fading up */
@@ -418,13 +427,13 @@ function markSeen(g: Group): void {
   const sc = G.scroll; if (!sc || !atEnd(sc)) return;
   const msgs = groupThread(g.id), last = msgs[msgs.length - 1];
   if (last) SEEN.set(g.id, last.id);
-  U.unread = 0; setJump(U.jump, 0);
+  U.unread = 0; U.you = 0; setJump(U.jump, 0);
 }
 function jumpToLatest(): void {
   const sc = G.scroll; if (!sc) return;
   sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' });
   const g = group(S.groupSel); if (g) { const msgs = groupThread(g.id), last = msgs[msgs.length - 1]; if (last) SEEN.set(g.id, last.id); }
-  U.unread = 0; setJump(U.jump, 0);
+  U.unread = 0; U.you = 0; setJump(U.jump, 0);
   (G.composer as NonNullable<typeof G.composer>).focus();
 }
 

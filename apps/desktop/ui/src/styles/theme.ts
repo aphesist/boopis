@@ -79,6 +79,7 @@ export const PAIRS: readonly Pair[] = [
   ['--text', '--chip', 4.5, 'Code in a chip'], ['--text-dim', '--bg-4', 4.5, 'Keys in a tooltip'],
   ['--text-on-light', '--selected', 4.5, 'Text on the selected fill'],
   ['--red-text', '--bg-2', 4.5, 'Attention text on the ground'], ['--red-text', '--bg-0', 4.5, 'Attention text on inset cards'], ['--red-text', '--bg-1', 4.5, 'Attention text on the frame'], ['--red-text', '--current@--bg-1', 4.5, 'Attention text on a selected row'],
+  ['--red-text', '--red-soft@--bg-2', 4.5, 'Attention text on a message to you'], ['--text', '--red-soft@--bg-2', 4.5, 'Text on a message to you'],
   ['--add', '--bg-1', 4.5, 'Added-line count on the frame'], ['--del', '--bg-1', 4.5, 'Removed-line count on the frame'],
   ['--brass', '--bg-1', 3, 'Accent on the frame'], ['--brass', '--bg-2', 3, 'Accent on the ground'], ['--brass', '--bg-3', 3, 'Accent on raised surfaces'],
   ['--icon', '--bg-1', 3, 'Icons on the frame'], ['--icon-quiet', '--bg-1', 3, 'Window controls on the frame'],
@@ -140,7 +141,16 @@ export function sanitize(t: unknown): Theme | null {
    resolves each token to. */
 /** `--current` is the text colour at this share over the frame (tokens.css); a test keeps the two in step */
 export const CURRENT_ALPHA = 0.085;
-/** the pairs the guard checks: [fg, bg, min]. Specs may be `--current@--bg-1`, the selected row */
+/** `--red-soft` is attention red at this share (tokens.css): the wash under a message to the person; a test keeps the two in step */
+export const RED_SOFT_ALPHA = 0.14;
+/** the translucent tokens a pair lays over a solid one: the colour each mixes, and its share */
+const TINTS: Readonly<Record<string, readonly [mix: string, alpha: number]>> = { '--current': ['--text', CURRENT_ALPHA], '--red-soft': ['--red', RED_SOFT_ALPHA] };
+const tintOf = (spec: string): { mix: string; alpha: number; under: string } | null => {
+  const [top, under] = spec.split('@'), t = top && under ? TINTS[top] : undefined;
+  return t && under ? { mix: t[0], alpha: t[1], under } : null;
+};
+/** the pairs the guard checks: [fg, bg, min]. Specs may be a tint over a surface: `--current@--bg-1` (the selected row),
+    `--red-soft@--bg-2` (a message to the person) */
 export const GUARD_PAIRS: readonly (readonly [fg: string, bg: string, min: number])[] = [
   ...PAIRS.filter(([, , min, , scope]) => min >= 4.5 && scope === undefined).map(([fg, bg, min]) => [fg, bg, min] as const),
   ['--text-strong', '--bg-0', 4.5], ['--text-strong', '--bg-1', 4.5], ['--text-strong', '--bg-2', 4.5], ['--text-strong', '--bg-3', 4.5]
@@ -148,7 +158,7 @@ export const GUARD_PAIRS: readonly (readonly [fg: string, bg: string, min: numbe
 /** what a skipped colour is called on the card, in the order the card lists them */
 export const GUARD_LABELS: Readonly<Record<string, string>> = {
   '--text': 'text on surface', '--text-strong': 'strong text', '--text-dim': 'dim text', '--text-quiet': 'quiet text', '--text-on-light': 'text on the selected fill',
-  '--red-text': 'attention text', '--add': 'added lines', '--del': 'removed lines',
+  '--red-text': 'attention text', '--red': 'attention', '--add': 'added lines', '--del': 'removed lines',
   '--bg-0': 'inset cards', '--bg-1': 'the frame', '--bg-2': 'the ground', '--bg-3': 'raised surfaces', '--bg-4': 'pressed surfaces', '--chip': 'code chips', '--selected': 'the selected fill'
 };
 const GUARD_ORDER = Object.keys(GUARD_LABELS);
@@ -164,7 +174,7 @@ export const skippedSentence = (skipped: readonly Skipped[]): string | null =>
   skipped.length ? 'Skipped ' + skipped.length + (skipped.length === 1 ? ' colour' : ' colours') + ' that would make text hard to read: ' + skipped.map((x) => x.label).join(', ') + '.' : null;
 const rgbOf = (hex: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
 /** the tokens a pair's side is made of, the one blamed first at the front */
-const partsOf = (spec: string): readonly string[] => (spec === '--current@--bg-1' ? ['--text', '--bg-1'] : [spec]);
+const partsOf = (spec: string): readonly string[] => { const t = tintOf(spec); return t ? [t.mix, t.under] : [spec]; };
 /**
  * Checks a patch of colours over a theme. `base` is what the theme resolves a token to (#rrggbb) without the patch. While a pair that
  * carries text is under its floor, one patched colour it is made of is left out (the text side first: dark text on a dark frame
@@ -176,9 +186,10 @@ export function guardColors(patch: Readonly<Record<string, string>>, base: (toke
   const gone: string[] = [];
   const value = (t: string): string | null => kept[t] ?? base(t);
   const resolve = (spec: string): string | null => {
-    if (spec !== '--current@--bg-1') return value(spec);
-    const text = value('--text'), frame = value('--bg-1');
-    return text && frame ? composite([...rgbOf(text), CURRENT_ALPHA], [...rgbOf(frame), 1]) : null;
+    const t = tintOf(spec);
+    if (!t) return value(spec);
+    const top = value(t.mix), under = value(t.under);
+    return top && under ? composite([...rgbOf(top), t.alpha], [...rgbOf(under), 1]) : null;
   };
   for (;;) {
     let blame: string | null = null;

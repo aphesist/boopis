@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { on } from '../core/bus';
 import { KEYS, readJSON } from '../core/settings';
 import { installPreset, presetTokens } from './testing';
-import { CURRENT_ALPHA, EDITABLE, GUARD_LABELS, GUARD_PAIRS, PAIRS, PRESETS, blank, composite, guardColors, lum, parseColor, ratio, sanitize, skippedSentence, themeApi, toHex } from './theme';
+import { CURRENT_ALPHA, RED_SOFT_ALPHA, EDITABLE, GUARD_LABELS, GUARD_PAIRS, PAIRS, PRESETS, blank, composite, guardColors, lum, parseColor, ratio, sanitize, skippedSentence, themeApi, toHex } from './theme';
 
 describe('colour parsing', () => {
   it('reads the rgb() Chrome reports for a plain colour', () => {
@@ -70,6 +70,10 @@ describe('the contrast guard (a mod’s colours that would make text hard to rea
   it('--current is the text colour at the share the guard assumes (tokens.css is the source)', () => {
     const css = readFileSync('src/styles/tokens.css', 'utf8');
     expect(css).toContain('--current: color-mix(in srgb, var(--text) ' + CURRENT_ALPHA * 100 + '%, transparent)');
+  });
+  it('--red-soft is attention red at the share the guard assumes (the wash under a message to the person)', () => {
+    const css = readFileSync('src/styles/tokens.css', 'utf8');
+    expect(css).toContain('--red-soft: color-mix(in srgb, var(--red) ' + Math.round(RED_SOFT_ALPHA * 1000) / 10 + '%, transparent)');
   });
   it('each preset’s own colours pass, so nothing a user already has is ever skipped', () => {
     for (const id of ['catalog', 'graphite', 'bone', 'typewriter'] as const) {

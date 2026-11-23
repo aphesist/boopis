@@ -36,6 +36,11 @@ const ROOM_MENU = { anchor: ROOM_COMPOSER + ' .ui-composer__anchor', layer: '.ui
 /** the owner's mixed draft: two members (chips), the whole room, a bot outside the room (the muted chip and the hint) and "@kai." (a
     full stop right after a name is part of the handle, so it names nobody and stays text) */
 const MIXED = '@kai check the dates with @nina, then @all read it; ask @sol too. Thanks @kai.';
+/** the paper past thread, then nina and kai among themselves; kai's last message asks the user, by the engine's word for the person */
+const TO_YOU: ProviderSpec = { ...paper, patch: (p) => withGroupThread(p, (t) => [...t,
+  { kind: 'text', id: 'ty1', who: 'nina', t: '09:12', round: 1, to: ['kai'], text: '@kai two points on the script: the numbering of the beats is off by one, and beat 9 leans on Juvenal for something he does not say.' },
+  { kind: 'text', id: 'ty2', who: 'kai', t: '09:13', round: 2, text: 'nina, both points are fair. The numbering mix-up is mine.\n\n- **Beat numbers:** go by the line text, not the number.\n- **Juvenal:** the cracked-walls line goes, and its two sources with it.\n\n@user, the two blocking fixes and the source cuts are ready for nina to apply. Should she go ahead?' }
+] as GroupMessage[]) };
 const MOCK = { url: '/v6/__index.html', note: 'the mock opens on the session; its Bots tab is alt+2' };
 /** the owner's sequence: the six drawn before their records, then the records read; every orb must wear the saved look */
 const team: ProviderSpec = { simulate: false, patch: teamBeforeRecords };
@@ -166,6 +171,7 @@ const groupRoom: Story = {
     'the composer: "@" names the members': st(['open', 'owner'], paper, async (c) => { await openPaper(c); await typeIn(ROOM_COMPOSER, '@')(c); }, { overlay: ROOM_MENU }),
     'the composer: "@" with a member option hovered': st(['hover'], paper, async (c) => { await openPaper(c); await typeIn(ROOM_COMPOSER, '@')(c); }, { overlay: ROOM_MENU, force: [{ sel: '.ui-listbox .ui-option:nth-of-type(2)', state: 'hover' }] }),
     'the composer: mentions drawn as chips, an outsider muted, "@kai." left as text': st(['variant', 'owner'], paper, async (c) => { await openPaper(c); await typeIn(ROOM_COMPOSER, MIXED)(c); document.querySelector<HTMLElement>(ROOM_COMPOSER + ' .ui-composer__input')?.blur(); await c.wait(400); }),
+    'a message addressed to you': st(['variant', 'owner'], TO_YOU, openPaper),
     'members in tools from a connected server': st(['loading', 'owner'], { ...paper, patch: (p) => withActivity(p, [{ at: 0, status: 'running', tool: 'mcp__fetch__fetch' }, { at: 2, status: 'running', tool: 'mcp__github__create_issue' }]) }, openPaper),
     'a mention hovered': st(['hover', 'owner'], paper, async (c) => { await openPaper(c); const m = document.querySelector<HTMLElement>('#hx-view-bots .ui-mention'); if (m) { m.focus(); } await c.wait(700); }),
     'a mention of a bot that is not in the room: the chip and the hint': st(['variant', 'owner'], { fixtures: ['groups'], simulate: false }, async (c) => {

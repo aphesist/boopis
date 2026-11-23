@@ -10,7 +10,10 @@
 
    Mentions match the engine's own pattern exactly (`@([A-Za-z0-9][A-Za-z0-9._:-]*)`, case-insensitive): a full stop right after a
    name is part of the handle, so "@kai." names nobody called "kai" and stays text, as the engine reads it. A handle nobody has
-   stays text; `@all` and `@everyone` name the whole room when the surface gives its members.
+   stays text; `@all` and `@everyone` name the whole room when the surface gives its members. In a room (`you`), `@user` is the
+   person: the engine shows the members every message the person writes as "User (user): ..." (`hosted_room_discussion._format_message`),
+   so `user` is the handle a member writes to address them; it is drawn as the person's own capsule, and a message that holds it
+   is marked `data-to-you`. A member whose handle is `user` keeps it, as the engine resolves members first.
 
    Paths are candidates until the host says they exist: a code span that reads as a path (no spaces, a slash or a known
    extension) is drawn as code with `data-path`, and `upgradePaths` turns the ones the host resolved into buttons. Nothing is
@@ -24,6 +27,8 @@ import { orbHtml } from './orb';
 /** the engine's mention pattern (hosted_room_discussion._MENTION_RE, re.IGNORECASE), unchanged */
 export const MENTION_SOURCE = '@([A-Za-z0-9][A-Za-z0-9._:-]*)';
 const EVERYONE = new Set(['all', 'everyone']);
+/** the person's handle in a room: the engine labels what they write "User (user)" in every member's prompt */
+export const HUMAN_HANDLE = 'user';
 
 /** a bot a mention names */
 export interface MdBot extends BotLike { id: string; name: string; handle?: string | undefined }
@@ -36,6 +41,9 @@ export interface MarkdownCtx {
   outsideNote?: string | undefined;
   /** the room's members: `@all` and `@everyone` become one chip with their orbs; without it they stay text */
   everyone?: readonly MdBot[] | undefined;
+  /** a room's conversation: `@user`, the engine's handle for the person, is drawn as the person's capsule ("you"), and a message
+      that holds it is marked as addressed to them */
+  you?: boolean | undefined;
   /** code longer than this many lines folds to `fold - 2` lines (default 14, so 12 show) */
   fold?: number | undefined;
   /** links to https only (a mod's tree: MODS section 2); http stays words */
@@ -132,18 +140,27 @@ export function everyoneHTML(word: string, members: readonly MdBot[]): string {
     stackHTML(members) + '<span class="ui-mention__name">' + esc(word) + '</span></button>';
 }
 
-/** what a handle names in a context, by the engine's rule: a bot of this conversation, the whole room (`@all`, `@everyone`), or a bot
-    that exists but is not here; null when it names nobody (it stays text) */
-export type MentionTarget = { kind: 'bot'; bot: MdBot } | { kind: 'out'; bot: MdBot } | { kind: 'all'; members: readonly MdBot[] };
+/** `@user` in a room: the person, as a capsule of their own. Not a bot's: no orb (the person has none) but the attention dot, the word
+    "you" in attention text, the capsule's ring and glow in attention red, since a bot that writes it is waiting on them (R-colour-2:
+    red is what the user owes). Not a button: there is nothing to open */
+export const youHTML = (): string => '<span class="ui-mention ui-mention--you">' + html.dot('attention') + '<span class="ui-mention__name">you</span></span>';
+
+/** what a handle names in a context, by the engine's rule: a bot of this conversation, the whole room (`@all`, `@everyone`), the
+    person (`@user`, in a room), or a bot that exists but is not here; null when it names nobody (it stays text) */
+export type MentionTarget = { kind: 'bot'; bot: MdBot } | { kind: 'out'; bot: MdBot } | { kind: 'all'; members: readonly MdBot[] } | { kind: 'you' };
 export function mentionTarget(handle: string, ctx: MarkdownCtx): MentionTarget | null {
-  if (EVERYONE.has(handle.toLowerCase())) return ctx.everyone?.length ? { kind: 'all', members: ctx.everyone } : null;
+  const k = handle.toLowerCase();
+  if (EVERYONE.has(k)) return ctx.everyone?.length ? { kind: 'all', members: ctx.everyone } : null;
   const b = ctx.mention?.(handle);
   if (b) return { kind: 'bot', bot: b };
+  if (ctx.you && k === HUMAN_HANDLE) return { kind: 'you' };
   const o = ctx.outside?.(handle);
   return o ? { kind: 'out', bot: o } : null;
 }
-const targetHTML = (t: MentionTarget, word: string, ctx: MarkdownCtx): string => (t.kind === 'all' ? everyoneHTML(word, t.members) : t.kind === 'bot' ? mentionHTML(t.bot) : mentionOutsideHTML(t.bot, ctx.outsideNote));
-const hasMentions = (ctx: MarkdownCtx): boolean => !!(ctx.mention || ctx.everyone || ctx.outside);
+const targetHTML = (t: MentionTarget, word: string, ctx: MarkdownCtx): string => (t.kind === 'all' ? everyoneHTML(word, t.members) : t.kind === 'bot' ? mentionHTML(t.bot) : t.kind === 'you' ? youHTML() : mentionOutsideHTML(t.bot, ctx.outsideNote));
+const hasMentions = (ctx: MarkdownCtx): boolean => !!(ctx.mention || ctx.everyone || ctx.outside || ctx.you);
+/** whether a text addresses the person: a room's member wrote `@user` (the engine's handle for them), and no member answers to it */
+export const addressesYou = (text: string, ctx: MarkdownCtx): boolean => !!ctx.you && mentionSpans(text, ctx).some((s) => s.target.kind === 'you');
 
 /** a mention in a text: where it starts, its words exactly as written ("@kai", "@All"), and what it names */
 export interface MentionSpan { at: number; text: string; target: MentionTarget }
@@ -163,6 +180,7 @@ export function mentionSpans(text: string, ctx: MarkdownCtx): MentionSpan[] {
     capsule's own face (the orb and the name, the room's orbs and the word). Not a button: the text box is the control. */
 export function mentionChip(s: MentionSpan, note = "isn't in this room"): { cls: string; html: string; tip?: string } {
   const t = s.target;
+  if (t.kind === 'you') return { cls: 'ui-mention ui-mention--you', html: html.dot('attention') + '<span class="ui-sr">' + esc(s.text) + '</span><span class="ui-mention__name" aria-hidden="true" data-name="you"></span>' };
   if (t.kind === 'all') return { cls: 'ui-mention ui-mention--all', html: stackHTML(t.members) + '<span class="ui-mention__name">' + esc(s.text) + '</span>' };
   const face = orbHtml(t.bot, { size: 16, still: true }) + '<span class="ui-sr">' + esc(s.text) + '</span><span class="ui-mention__name" aria-hidden="true"' + attrs({ 'data-name': t.bot.name }) + '></span>';
   return t.kind === 'out' ? { cls: 'ui-mention ui-mention--out', html: face, tip: t.bot.name + ' ' + note } : { cls: 'ui-mention', html: face };
@@ -371,5 +389,5 @@ export function blockHTML(b: Block, ctx: MarkdownCtx = {}): string {
 
 /** a whole text to HTML: the prose wrapper and its blocks */
 export function markdownHTML(text: string, ctx: MarkdownCtx = {}, o: { class?: string } = {}): string {
-  return '<div class="' + cx('ui-prose ui-md', o.class) + '">' + splitBlocks(text).map((b) => blockHTML(b, ctx)).join('') + '</div>';
+  return '<div class="' + cx('ui-prose ui-md', o.class) + '"' + (addressesYou(text, ctx) ? ' data-to-you' : '') + '>' + splitBlocks(text).map((b) => blockHTML(b, ctx)).join('') + '</div>';
 }

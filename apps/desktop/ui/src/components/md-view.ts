@@ -5,7 +5,7 @@
    `data-path`). */
 import { reduced, tokenMs } from '../core/dom';
 import { copyText } from './clipboard';
-import { blockHTML, markdownHTML, splitBlocks } from './markdown';
+import { addressesYou, blockHTML, markdownHTML, splitBlocks } from './markdown';
 import type { MarkdownCtx } from './markdown';
 
 interface MdRoot extends HTMLElement { _md?: string[] }
@@ -53,9 +53,11 @@ const fadeUp = (n: Element, delay: number): void => {
   if (reduced()) { n.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 120, delay, fill: 'backwards' }); return; }
   n.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: tokenMs('--dur-2', 200), easing: 'cubic-bezier(.2,.8,.2,1)', delay, fill: 'backwards' });
 };
-/** the arrival: each block of `root` fades up in turn, 40ms apart (reduced motion: one short crossfade) */
+/** the arrival: each block of `root` fades up in turn, 40ms apart (reduced motion: one short crossfade). A message addressed to the
+    person flashes its glow once as it lands (`data-arrived`, CSS: never under reduced motion; the glow itself stays) */
 export function arrive(root: Element, o: { stagger?: number } = {}): void {
   const kids = [...root.children];
+  if (root.hasAttribute('data-to-you')) { root.setAttribute('data-arrived', ''); root.addEventListener('animationend', () => { root.removeAttribute('data-arrived'); }, { once: true }); }
   if (reduced()) { fadeUp(root, 0); return; }
   kids.forEach((k, i) => fadeUp(k, i * (o.stagger ?? 40)));
 }
@@ -79,6 +81,7 @@ export function streamMarkdown(root: HTMLElement, text: string, ctx: MarkdownCtx
   });
   while (root.children.length > blocks.length) root.lastElementChild?.remove();
   r._md = blocks.map((b) => b.src);
+  root.toggleAttribute('data-to-you', addressesYou(text, ctx));
   wireMarkdown(root);
   return drawn;
 }

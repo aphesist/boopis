@@ -372,6 +372,44 @@ function liveBot(p: DataProvider): { provider: DataProvider; events: ReturnType<
     sessions: { open: (_b: string, s: string) => { opened.push(s); return Promise.resolve(); }, fresh: (b: string) => { fresh.push(b); }, current: () => null } } as unknown as DataProvider['bots'];
   return { provider: { ...p, info: { ...p.info, live: true }, bots: source }, events, sent, opened, fresh };
 }
+describe('a member’s message that addresses the person (@user, the engine’s handle for them in a room)', () => {
+  beforeEach(async () => { mount(withGroups()); q('.bt-groups .ui-row').click(); await flush(); });
+  it('draws @user as the person’s capsule, marks the message, says “to you”, and never folds it into a huddle', async () => {
+    const { onGroupsEvent } = await import('./group-room');
+    const g = provider.groups.snapshot().groups[0]!, [a, b] = g.members;
+    onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'text', id: 'h1', who: a!.id, t: '10:05', text: '@' + b!.handle + ' the numbering is off by one.', round: 1, to: [b!.id] } });
+    onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'text', id: 'h2', who: b!.id, t: '10:06', text: 'Fair, fixed.\n\n@user, the fixes are ready. Should I go ahead?', round: 2 } });
+    const md = q('.bt-group .ui-md[data-to-you]');
+    expect(md.querySelector('.ui-mention--you')?.textContent).toBe('you');
+    expect(md.closest('.bt-huddle-entry')).toBeNull();
+    const entry = md.closest<HTMLElement>('[data-hx-turn]')!;
+    expect(entry.querySelector('.bt-to')?.textContent).toBe('to you');
+    expect(entry.getAttribute('aria-label')).toContain(', to you');
+    expect(document.querySelectorAll('.bt-group .ui-md[data-to-you]')).toHaveLength(1);
+  });
+  it('reads @user only in what a member writes: the person’s own message addresses nobody by it', async () => {
+    const { onGroupsEvent } = await import('./group-room');
+    const g = provider.groups.snapshot().groups[0]!;
+    onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'text', id: 'u1', who: 'you', t: '10:09', text: 'tell @user it is fine' } });
+    const mine = [...document.querySelectorAll<HTMLElement>('.bt-group .ui-request')].pop()!;
+    expect(mine.textContent).toBe('tell @user it is fine');
+    expect(mine.querySelector('.ui-mention--you')).toBeNull();
+  });
+  it('the jump button says a message below the fold is for the person, with the attention dot', async () => {
+    const { onGroupsEvent } = await import('./group-room');
+    const g = provider.groups.snapshot().groups[0]!, [a] = g.members;
+    const sc = q('.bt-group .bt-scroll');
+    Object.defineProperty(sc, 'scrollHeight', { configurable: true, value: 2000 });
+    Object.defineProperty(sc, 'clientHeight', { configurable: true, value: 400 });
+    onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'text', id: 'j1', who: a!.id, t: '10:07', text: 'Notes are up.', round: 0 } });
+    onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'text', id: 'j2', who: a!.id, t: '10:08', text: '@user can you approve the tag?', round: 1 } });
+    const jump = q<HTMLButtonElement>('.bt-group .bt-jump');
+    expect(jump.hidden).toBe(false);
+    expect(jump.textContent).toContain('2 new messages, 1 for you');
+    expect(jump.querySelector('.ui-dot--attention')).not.toBeNull();
+  });
+});
+
 describe('a bot’s own chat: "@" names a teammate', () => {
   it('offers the other bots, says that naming one brings it nowhere, and draws the mention as the sent message will', async () => {
     mount(withGroups());

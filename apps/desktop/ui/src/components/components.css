@@ -750,6 +750,31 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-ff.ui-mention { color: var(--text-strong); }
 .ui-ff.ui-mention--out { color: var(--text-dim); }
 @media (hover: hover) and (pointer: fine) { .ui-ff.ui-mention--out:hover { color: var(--text-dim); } }
+/* `@user` in a room: the person, as a capsule of their own (markdown.ts `youHTML`), never a bot's: no orb but the attention dot, the
+   word "you" in attention text, the capsule's ring in attention red with its glow (R-colour-2: a bot that writes it is waiting on the
+   person). The ground shows through it, so the word is attention text on the ground (5.4) */
+.ui-mention--you {
+  padding: 0 var(--sp-2); background: transparent; color: var(--red-text); cursor: default;
+  box-shadow: inset 0 0 0 1px var(--red), 0 0 var(--sp-2) color-mix(in srgb, var(--red) 70%, transparent);
+}
+@media (hover: hover) and (pointer: fine) { .ui-mention--you:hover { box-shadow: inset 0 0 0 1px var(--red), 0 0 var(--sp-2) color-mix(in srgb, var(--red) 70%, transparent); } }
+.ui-mention--you:active { background: transparent; }
+.ui-ff.ui-mention--you { color: var(--red-text); }
+/* a message addressed to the person (`data-to-you`, markdown.ts): an edge in attention red in the gutter beside it, glowing, and a wash
+   of --red-soft from that edge under the words (they hold 4.5:1 on it: theme.ts PAIRS); it stays while the message shows, so a bot
+   waiting on the person stands out in a long room. As it arrives the glow flashes once (`data-arrived`, md-view.ts `arrive`), on
+   opacity only; under reduced motion it is simply there */
+.ui-md[data-to-you] { position: relative; isolation: isolate; }
+.ui-md[data-to-you]::before, .ui-md[data-to-you]::after { content: ''; position: absolute; inset-block: calc(-1 * var(--sp-1)); pointer-events: none; }
+.ui-md[data-to-you]::before {
+  inset-inline-start: calc(-1 * var(--sp-3)); width: 2px; border-radius: var(--r-pill); background: var(--red);
+  box-shadow: 0 0 var(--sp-2) color-mix(in srgb, var(--red) 80%, transparent), 0 0 var(--sp-5) color-mix(in srgb, var(--red) 45%, transparent);
+}
+.ui-md[data-to-you]::after { z-index: -1; inset-inline: calc(-1 * var(--sp-3)) 0; background: linear-gradient(90deg, var(--red-soft), transparent 70%); }
+@media (prefers-reduced-motion: no-preference) {
+  .ui-md[data-to-you][data-arrived]::before, .ui-md[data-to-you][data-arrived]::after { animation: ui-to-you var(--dur-breathe) var(--ease-io) 1; }
+}
+@keyframes ui-to-you { 0% { opacity: 0; } 25% { opacity: 1; } 55% { opacity: .35; } 100% { opacity: 1; } }
 
 /* a path the host resolved: the code chip as a button, one line, its folders cut from the left so the file's name always shows; the
    whole path is its tooltip and its accessible name */

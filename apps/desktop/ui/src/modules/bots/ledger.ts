@@ -7,7 +7,7 @@
      the arrival       a reply lands where the presence entry was (above it while others still work); its blocks fade up in
                        turn; the orb speaks for a moment
      unread            a hairline with a brass dot and "new" before the first message the user has not seen, and "N new messages"
-                       above the composer while they are below the fold
+                       above the composer while they are below the fold ("1 for you" and the attention dot when one addresses them)
      hover actions     copy, reply (prefills @handle) and open the bot's chat, in the margin under the time, on hover or focus
    Frame cost: no timer here; the presence keeps the one clock. */
 import { el, esc, reduced } from '../../core/dom';
@@ -57,11 +57,15 @@ export function jumpButton(onJump: () => void): HTMLButtonElement {
   b.addEventListener('click', onJump);
   return b;
 }
-export function setJump(b: HTMLButtonElement | null, n: number): void {
+/** how many messages arrived below the fold, and how many of them address the person (`@user`): those add the attention dot and say so */
+export function setJump(b: HTMLButtonElement | null, n: number, you = 0): void {
   if (!b) return;
   b.dataset['unread'] = String(Math.max(0, n));   /* the presence pill reads it (presence.ts) */
   b.hidden = n <= 0;
-  const label = b.querySelector('span'); if (label) label.textContent = n === 1 ? '1 new message' : n + ' new messages';
+  const label = b.querySelector('span'); if (label) label.textContent = (n === 1 ? '1 new message' : n + ' new messages') + (you > 0 && n > 0 ? (n === 1 ? ', for you' : ', ' + you + ' for you') : '');
+  const dot = b.querySelector(':scope > .ui-dot');
+  if (you > 0 && n > 0 && !dot) b.insertAdjacentHTML('beforeend', ui.html.dot('attention'));
+  else if (!(you > 0 && n > 0)) dot?.remove();
 }
 /** whether a scroller shows its end (within a line): the chats' one definition */
 export { atEnd } from '../chat/follow-zone';

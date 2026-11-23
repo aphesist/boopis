@@ -186,3 +186,46 @@ describe('a mention of a bot that is not in the room', () => {
     expect(html).not.toContain('data-mention');
   });
 });
+
+describe('a mention of the person in a room (the engine’s handle for them, @user)', () => {
+  const room: MarkdownCtx = { ...ctx, you: true };
+  it('draws @user as the person’s own capsule, "you" with the attention dot and no orb, never a bot’s', () => {
+    const d = dom(inlineHTML('@user, the fixes are ready. Should she go ahead?', room));
+    const you = d.querySelector('.ui-mention--you');
+    expect(you?.textContent).toBe('you');
+    expect(you?.querySelector('.ui-dot--attention')).not.toBeNull();
+    expect(you?.querySelector('.ui-orb')).toBeNull();
+    expect(you?.tagName).toBe('SPAN');   /* nothing to open */
+    expect(d.textContent).toBe('you, the fixes are ready. Should she go ahead?');
+  });
+  it('reads it exactly as the engine reads a handle: any case, never with a mark glued to it, never outside a room', () => {
+    expect(dom(inlineHTML('@User look', room)).querySelector('.ui-mention--you')).not.toBeNull();
+    expect(dom(inlineHTML('@user. look', room)).querySelector('.ui-mention--you')).toBeNull();
+    expect(dom(inlineHTML('@users look', room)).querySelector('.ui-mention--you')).toBeNull();
+    expect(dom(inlineHTML('@you look', room)).querySelector('.ui-mention--you')).toBeNull();
+    expect(dom(inlineHTML('@user look', ctx)).querySelector('.ui-mention--you')).toBeNull();
+    expect(dom(inlineHTML('`@user` look', room)).querySelector('.ui-mention--you')).toBeNull();
+  });
+  it('leaves @user to a member whose handle it is, as the engine resolves members first', () => {
+    const named: MarkdownCtx = { mention: (h) => (h.toLowerCase() === 'user' ? { id: 'user', name: 'user' } : null), you: true };
+    const d = dom(inlineHTML('@user hi', named));
+    expect(d.querySelector('.ui-mention--you')).toBeNull();
+    expect(d.querySelector('.ui-mention')?.getAttribute('data-mention')).toBe('user');
+  });
+  it('marks a message that addresses the person, and only that message', () => {
+    expect(dom(markdownHTML('Done.\n\n@user, should nina go ahead?', room)).firstElementChild?.hasAttribute('data-to-you')).toBe(true);
+    expect(dom(markdownHTML('@nina, go ahead.', room)).firstElementChild?.hasAttribute('data-to-you')).toBe(false);
+    expect(dom(markdownHTML('@user, look', ctx)).firstElementChild?.hasAttribute('data-to-you')).toBe(false);
+  });
+  it('keeps the mark as a reply grows, and flashes it once as it arrives (the class the CSS animates; none under reduced motion)', async () => {
+    const root = markdown('Working on it.', room);
+    expect(root.hasAttribute('data-to-you')).toBe(false);
+    streamMarkdown(root, 'Working on it.\n\n@user, ready?', room, { animate: false });
+    expect(root.hasAttribute('data-to-you')).toBe(true);
+    const { arrive } = await import('./md-view');
+    arrive(root);
+    expect(root.hasAttribute('data-arrived')).toBe(true);
+    root.dispatchEvent(new Event('animationend'));
+    expect(root.hasAttribute('data-arrived')).toBe(false);
+  });
+});

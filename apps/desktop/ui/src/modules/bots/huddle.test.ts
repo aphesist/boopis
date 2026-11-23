@@ -10,9 +10,14 @@ const thread: GroupMessage[] = [t('a', 'you'), t('b', 'kai', 0), t('cc', 'nina',
 
 describe('the huddle', () => {
   it('folds only what the members say among themselves, two or more in a row', () => {
-    expect(thread.filter(isBetween).map((m) => m.id)).toEqual(['cc', 'ddd', 'eeee']);
+    expect(thread.filter((m) => isBetween(m)).map((m) => m.id)).toEqual(['cc', 'ddd', 'eeee']);
     expect(huddleRuns(thread)).toEqual([[2, 5]]);
     expect(huddleRuns([t('a', 'you'), t('cc', 'nina', 1), t('b', 'kai', 0)])).toEqual([]);
+  });
+  it('keeps a member’s message that addresses the person (@user) out of the fold: a reply to the person stays a full entry', () => {
+    const toYou = (m: GroupMessage): boolean => m.id === 'ddd';
+    expect(thread.filter((m) => isBetween(m, toYou)).map((m) => m.id)).toEqual(['cc', 'eeee']);
+    expect(huddleRuns(thread, toYou)).toEqual([]);
   });
   it('is live until the user writes again', () => {
     expect(liveAt(thread, 5)).toBe(false);
