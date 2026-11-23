@@ -629,7 +629,7 @@ Tokens (`tokens.v7.json`); the three-step type and alpha hierarchy; R-corner-1 t
 | 38 | **TimeSeparator** | a gap in time | — | — | 12 `--text-dim` | Bots, Session |
 | 39 | **Composer** | the place to type | kinds: session, bot, room, dock, notch; with its line (items are SelectorItems; the quick menu is a Menu) | empty, typed, running (Enter queues), held | 44 pill, `--composer-pad` 8 | all |
 | 40 | **Rail** | the bots' tiles | A 54/88, B 44/64 | current, needs you, working | `--r-tile` | Bots |
-| 41 | **Dock** (v7 pass, 23 Nov: 21.4) | reaching your bots and their asks while you work hands-on; in the Sessions tab only | the row (rest, hover, focus, a card open), the asks open (D03 C), a bot's card; at rest: the row (D02 A) | needs you (amber flag and the ask pill), working, resting | `--r-slab` 30, the dark theme inside, content on an 8 inset (30 − 8 = 22, the Block) | Sessions |
+| 41 | **Dock** (v7 pass, 23 Nov: 21.4) | reaching your bots and their asks while you work hands-on; in the Sessions tab only, once you have a bot of your own | one component, three geometries: row (640 × 72), compact (380 × 48, a setting), open (640, its height fits the stack or a card) | needs you (amber flag and the ask pill), working, resting | `--r-slab` 30, the dark theme inside, content on an 8 inset (30 − 8 = 22, the Block) | Sessions |
 | 42 | **Notch** | the notch's own surface (notch spec) | — | — | `--r-slab` 30 | system |
 | — | **EmptyState** | one line and at most one action where content would be | — | — | — | all (counted in Page) |
 
@@ -659,7 +659,7 @@ Tokens (`tokens.v7.json`); the three-step type and alpha hierarchy; R-corner-1 t
 
 ### 21.4 The dock, v7 (owner, 23 Nov)
 
-**The owner's decisions:** the dock with the bots appears only in the **Sessions tab**, never in the Bots tab (there the bots live in the sidebar and rail); **"+ new bot" is removed** (new bots are made in the Bots tab); the dock gets a full pass for the kit. Boards and screens: `ds-v7/dock-boards/` (D01 to D03 choices, DK1 and DK2 components, K01 to K07 key screens dark and light, `contact-sheet.jpg`).
+**The owner's decisions:** the dock with the bots appears only in the **Sessions tab**, never in the Bots tab (there the bots live in the sidebar and rail); **"+ new bot" is removed** (new bots are made in the Bots tab); the dock gets a full pass for the kit. Boards and screens: `ds-v7/dock-boards/` (D01 to D03 with the picks, DK1 and DK2 components, K01 to K09 key screens dark and light, `contact-sheet.jpg`).
 
 **What it is for now.** Reaching your bots and their asks while you work hands-on in a session: who is working, who needs you, answer an ask, say a word to a bot, and go back to the session. Everything else a bot has (its settings, routines, library, the full chat, new bots) is in the Bots tab, one click away.
 
@@ -672,20 +672,36 @@ Tokens (`tokens.v7.json`); the three-step type and alpha hierarchy; R-corner-1 t
 | Focus, roving keys | kept: the Iris focus ring; arrows move along the row |
 | The attention flag on an orb | kept: the amber dot (`--owe`) ringed in the slab's black; the state in words in the end slot |
 | Expanded mode: the full roster (120 bots, scrolling, "All bots", the "New bot" row) | **removed** (the Bots tab's sidebar and rail are the roster); many bots: D01 |
-| Minimal mode: a pill with a page's summary ("2 need you", "All clear", the run's time) | **replaced** by D02 (at rest, A the row; B a collapsed slab that rises on hover) |
+| Minimal mode: a pill with a page's summary ("2 need you", "All clear", the run's time) | **replaced** by the compact geometry (D02 A+, a setting, off by default) |
 | Pages: Bots, Run, Needs you, Scheduled, Context; the page nub; swiping with the sides fading | **the dock is one page**: Run and Context **removed** (the session shows them itself: the title pill, the status line, the composer's line, the details); Scheduled **removed** (routines are the Bots tab's); Needs you becomes the ask pill and the stack (D03); the nub and the edge fades remain only in D01 A or C |
 | Arrange mode ("Dock pages": shown or hidden, move left or right, Done, Turn off the dock) | **removed** with the pages; turning the dock off stays in Settings > General ("Show the dock") |
 | "Keep the dock centred in the window" | kept, in Settings > General: centred on the window, or on the session's column (K07) |
 | An approval in the dock (hold to approve) | the **AskCard approval variant** (a Block): the bot's ask, its command in a Well, "Hold to allow once" (inverted chip with the hold sweep), "Always for staging", "Deny esc"; never expires |
 | A bot's session in the dock (card: head, log, asks, composer, the strip of mini orbs to switch) | a **bot's card**: the head (28 orb, name, StatusWord, "Open in Bots", close), the log as Bubbles (your bubbles in the bot's derived fill, section 18.1), its AskCard, a bot Composer (44 pill); **the strip is removed**: the row stays under the card as the switcher, the open bot marked by the Iris dot |
 | Bubbles and replies (the log's entries and your request bubbles) | Bubbles (R-bubble-1): the bot's on `--bubble-agent`, yours in the bot's fill with its text colour |
-| An empty dock (no bots; or no bots and no session) | with no bots the dock is **not drawn** in the Sessions tab, and the composer sits 24 px from the bottom (K06); the session part (Run, Context) no longer exists, so a session alone never draws it |
-| Many bots | D01 (B recommended: the ones that matter now, then "N more" to the Bots tab) |
+| An empty dock (no bots; or no bots and no session) | with no bot of your own (boopis alone does not count) the dock is **not drawn** in the Sessions tab, and the composer sits 24 px from the bottom (K06); the session part (Run, Context) no longer exists, so a session alone never draws it |
+| Many bots | D01 B (picked): the ones that matter now, then "N more" to the Bots tab |
 | The dock while a session runs | the row at rest under the composer; the slab rises over the session only to show the stack or a card, and the session's composer steps aside (fades out in 120 ms, focus in the dock) until Esc |
 | Arrival and departure (the first bot raises it, the last takes it away) | kept; the slab's spring, unchanged |
 
 **Removals (everything that duplicated the Bots tab or the session):** "+ new bot" in the row and the roster's "New bot" row; the expanded roster ("All bots", 120 bots scrolling); the Run page; the Context page; the Scheduled page (with Run now and Pause); the Needs-you page as a page; the page nub and paging (unless D01 A); Arrange mode and its "Dock pages" tiles; "Turn off the dock" inside the dock (Settings keeps it); minimal mode's run and context summaries; the card's strip of mini orbs; the orb tooltip; the dock in the Bots tab, in Settings over the Bots tab and in the Store (screens 11, 12, 14 and 17 lose it; screen 16 is now the Sessions tab with a bot's card).
 
-**Open choices:** D01 many bots (A pages with the nub and fades, **B the ones that matter now + "N more"**, C a scrolling strip with fades); D02 at rest (**A the row**, B collapsed until reached for); D03 where asks surface (A a Needs-you page, B on the orbs only, **C the ask pill at the row's end, opening the stack**).
+**The owner's picks (23 Nov):** D01 **B** (the ones that matter now, then "N more" opening the Bots tab); D02 **A**, the full row at rest, **plus a compact idle version** (a setting, off by default); D03 **C** (the amber ask pill at the row's end, opening the stack). K01 and K02 approved. D01 C was dropped from the board once B was picked.
+
+**One component (the owner, after D01 showed a different slab in every option: "something as egregious as that never goes to production").** Every board, component board and screen draws the dock through one function (`slab()` in `dockv7.js`, the kit's `Dock` when built) from one set of tokens (`tokens.v7.json` `dock.geometry`):
+
+| Geometry | Width × height | Corner | Flares | Padding | Orbs | Gap |
+|---|---|---|---|---|---|---|
+| row | 640 × 72 | 30 (continuous) | 30 | 30 (= the corner: nothing sits in a corner zone) | 40 (hover 52, neighbours 46) | 14 |
+| compact | 380 × 48 | 24 | 24 | 24 | 24 | 8 |
+| open (stack, card) | 640 × its content + 72 | 30 | 30 | content on an 8 inset (30 − 8 = 22, the Block) | the row below, as in row | 14 |
+
+The width is fixed, not fitted to the content: what changes between states is only the content, and the open slab's documented growth. The content is clipped to the slab's own path, so nothing (an edge fade, a grown orb) can paint outside its curve. The render QA's `same-component` rule fails any drift.
+
+**Compact when idle** (Settings > General, "Compact dock when idle", off by default): after 10 s with nothing needing you, while you type or read, the row eases to compact (200 ms, `--ease-sharp`): the bots that matter at 24 px and the ask pill small. A hover, ctrl J or a new ask brings the row back the same way.
+
+**Hidden until you have a bot of your own.** boopis alone does not count (the owner: "showing it with just the boopis bot there looks bland"). With no own bot there is no dock and the composer sits 24 px from the bottom (K06). **First appearance:** when the first own bot is created, the composer moves up to its 96 px place (200 ms, `--ease-sharp`), then the slab rises from below the window's edge (200 ms, `--ease-sharp`, the existing arrival spring) and the orbs pop in left to right (100 ms each, 40 ms apart, from scale .98); the new bot's orb blinks once as it lands. Reduced motion: the dock cross-fades in (150 ms). **If every own bot is deleted:** an open stack or card closes first, the slab sinks (200 ms) and the composer moves back down to 24 px; boopis stays in the Bots tab.
+
+**The bots in the dock (ORBS.md, w31/bot-character):** the owner's decision (23 Nov, replacing the earlier "lively" note): **at idle the dock's bots hold the same fixed sideways three-quarter pose as the Bots tab's sidebar**; a hovered bot comes alive smoothly (turns face-on, blinks, idles) and settles back to the pose when the pointer leaves; a bot in a state (working, needs you) animates its state. The exact pose and the transitions land in ORBS.md section 23; until then the boards draw a provisional pose (yaw 32°, pitch 4°, one constant in the dock's source), and the stills follow section 23 when it lands. The main chat stays fully animated. Stills draw the dock at rest (the sweep rule). The sharp renderer (the canvas snapped to device pixels, drawn at its own size: no 2x render scaled down; C1 to C3, C6, C7, C9, C10); face-scale 1.25 (for every orb of 44 px and under, in the dock and everywhere); the dock row stays 40 px (ORBS.md keeps the dock at 40); a bot that posts blinks. The earlier plan to have dock orbs look at the composer while you type is superseded by the fixed pose. boopis is not special in the dock: it is one of your bots, ordered like the others (needs you, working, pinned, recent).
 
 **Changes the kit made necessary (flagged):** the inside of the slab is the dark theme in both modes (`data-theme="dark"` on the dock's content), so its components use tokens instead of the hand-set `#f5f5f5` alphas (R-colour-1); content sits on the slab's 8 px inset, which makes Blocks inside it concentric with the slab's 30 px corners (R-corner-10); the slab grows to fit an open stack or card (its height follows its content, the path redrawn). The black, flush slab with its flares is unchanged.
