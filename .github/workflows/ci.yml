@@ -453,3 +453,6 @@ jobs:
           name: lab-report
           path: apps/desktop/ui/lab-report/
           retention-days: 14
+      # chips in running text at the owner's fractional and a 2x scale: the inline-baseline check's tolerances are device pixels
+      - run: pnpm lab:check --story components/inline-chips --dpr 2 --no-visual --no-axe --no-stability --strict
+      - run: pnpm lab:check --story components/inline-chips --dpr 1.6 --no-visual --no-axe --no-stability --strict
