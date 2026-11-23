@@ -1,0 +1,42 @@
+{
+ "empty-sections@bone": {
+  "sha": "85029391eabe8e1775e2fc72eb8d415bdf6e178b",
+  "w": 344,
+  "h": 276
+ },
+ "empty-sections@catalog": {
+  "sha": "b1e1eacd87ce0c939c544f3ab22b516f91964f44",
+  "w": 344,
+  "h": 276
+ },
+ "long@bone": {
+  "sha": "9054c2fbc9ec5eb1b747fd19ea7b47d3a99757a5",
+  "w": 344,
+  "h": 357
+ },
+ "long@catalog": {
+  "sha": "e9833e0b4fdfccf4aa4f27cced14e3ae3a5a923d",
+  "w": 344,
+  "h": 357
+ },
+ "one-line-empty@bone": {
+  "sha": "325d1de4a50d4feed43d0191d276ae30f5a44577",
+  "w": 504,
+  "h": 185
+ },
+ "one-line-empty@catalog": {
+  "sha": "04986f5dea43e052a89b1148170e2e390a243dba",
+  "w": 504,
+  "h": 185
+ },
+ "typical@bone": {
+  "sha": "5a5758622404139ed0c2018fae0392f16fe67504",
+  "w": 384,
+  "h": 238
+ },
+ "typical@catalog": {
+  "sha": "9566cd7da29d6ee25100cd040833365e7ba7accb",
+  "w": 384,
+  "h": 238
+ }
+}

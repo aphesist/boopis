@@ -32,7 +32,7 @@
    (radius, size, ring); a row along an edge that holds corner controls at its ends: .ui-corners (the inset). Never set a
    radius or an inset in a corner by hand. A squircle-drawn container also exposes its drawn radius as --r-outer when it
    declared none (squircle.ts), so its children nest the same way. */
-:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-codeblock, .ui-composer__box, .ui-file, .ui-child, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m,
+:where(.ui-nest, .ui-editor__card, .ui-row-wrap, .ui-entry, .ui-codeblock, .ui-composer__box, .ui-file, .ui-child, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m,
   hx-card[data-size="inline"], hx-card[data-size="compact"], hx-card[data-size="popover"]) {
   --corner-size: var(--ctl-s);
   --r-in: min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))));
@@ -1103,3 +1103,48 @@ hx-card[data-accent] .cd-mini { --sq-line: color-mix(in srgb, var(--cd-accent) 3
 .ui-set__lead { display: flex; flex: none; align-self: center; }
 .ui-set__row:has(> .ui-set__lead) { gap: var(--sp-3); }
 .ui-set__row:has(> .ui-set__lead) > .ui-set__label { flex: 1 1 auto; }
+
+/* ───────── The calm pass (R-calm-*, owner decision 23 November 2026) ───────── */
+/* a row's value and its (i): quiet, after the label (R-calm-1) */
+.ui-set__value { flex: none; margin-left: auto; font-size: var(--fs-xs); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
+.ui-set__info { flex: none; margin-right: auto; color: var(--text-quiet); }
+.ui-set__row:has(> .ui-set__info) > .ui-set__label { flex: 0 1 auto; }
+.ui-set__row[data-tone="danger"] .ui-set__label { color: var(--text-dim); }
+/* a section with nothing to open: its heading row alone, the value muted, no chevron, not a button's affordance (R-calm-4) */
+.ui-sec[data-empty] > .ui-sec__head { cursor: default; }
+.ui-sec[data-empty] > .ui-sec__label { color: var(--text-dim); }
+@media (hover: hover) and (pointer: fine) { .ui-sec[data-empty] > .ui-sec__head:hover { background: transparent; } }
+.ui-sec[data-empty] > .ui-sec__body { display: none; }
+/* an empty state of one line (R-calm-4) */
+.ui-empty--line { display: flex; align-items: center; justify-content: center; gap: var(--sp-3); padding: var(--sp-5) var(--sp-4); }
+.ui-empty__line { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 var(--fs-s)/var(--lh) var(--sans); color: var(--text-dim); text-transform: var(--ui-case); }
+/* the status line: a mark, a short phrase, a count in mono; the phrase cross-fades when it changes (R-calm-6, R-flow-4) */
+.ui-status { display: flex; align-items: center; gap: var(--sp-2); margin: 0; min-width: 0; min-height: var(--row-h); font-size: var(--fs-s); color: var(--text-dim); }
+.ui-status[data-tone="attention"] { color: var(--red-text); }
+.ui-status__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-status__text.is-swap { animation: ui-status-in var(--dur-2) var(--ease); }
+.ui-status__count { flex: none; font-size: var(--fs-xs); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
+.ui-status__count:empty { display: none; }
+.ui-status[data-look="pulse"][data-tone="work"] .ui-status__text { animation: ui-breathe var(--dur-breathe) var(--ease-io) infinite alternate; }
+@keyframes ui-status-in { from { opacity: 0; } to { opacity: 1; } }
+/* the danger zone: the section collapsed at the page's end (R-calm-14), a group's space above it (R-calm-15) */
+.ui-danger { margin-top: var(--sp-5); }
+.ui-danger .ui-sec { box-shadow: none; }
+.ui-danger .ui-sec__head, .ui-danger .ui-sec__body { padding-left: 0; padding-right: 0; }
+/* a long text's preview: its label and Edit, then at most --lines lines (R-calm-9) */
+.ui-long { display: grid; gap: var(--sp-1); min-width: 0; }
+.ui-long__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.ui-long__label { font-size: var(--fs-s); color: var(--text); text-transform: var(--ui-case); }
+.ui-long__preview { margin: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--lines, 2); line-clamp: var(--lines, 2); overflow: hidden; overflow-wrap: anywhere; font-size: var(--fs-xs); line-height: var(--lh); color: var(--text-dim); }
+.ui-long__preview[data-empty] { color: var(--text-quiet); }
+/* the long-text editor: its own dialog, head, the text, foot (R-calm-9, R-comp-1) */
+.ui-editor { padding: 0; border: 0; background: transparent; color: var(--text); width: min(720px, calc(100% - 32px)); height: min(640px, calc(100% - 64px)); max-height: none; font-family: var(--sans); }
+.ui-editor::backdrop { background: var(--scrim); }
+.ui-editor[open] { animation: ui-status-in var(--dur-2) var(--ease); }
+.ui-editor__card { --r-outer: var(--r-l); --pad: var(--pad-dialog); display: flex; flex-direction: column; height: 100%; box-sizing: border-box; border-radius: var(--r-outer); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop); overflow: hidden; }
+.ui-editor__head { display: flex; align-items: center; gap: var(--sp-4); height: 52px; padding: 0 var(--sp-3) 0 var(--sp-5); border-bottom: 1px solid var(--hair); flex: none; }
+.ui-editor__head h2 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-l); font-weight: 600; color: var(--text-strong); text-transform: var(--ui-case); }
+.ui-editor__head .ui-ib { margin-left: auto; }
+.ui-editor__body { flex: 1; min-height: 0; display: flex; padding: var(--sp-3) var(--sp-5); }
+textarea.ui-editor__text { overflow: auto; flex: 1; width: 100%; height: 100%; min-height: 0; resize: none; }
+.ui-editor__foot { display: flex; justify-content: flex-end; gap: var(--sp-2); padding: var(--sp-3); border-top: 1px solid var(--hair); flex: none; }

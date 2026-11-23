@@ -1,0 +1,52 @@
+{
+ "danger-a-a-collapsed-section-at-the-end@bone": {
+  "sha": "0010f35f4253b0296dd06fb535b2c987e03e4baf",
+  "w": 384,
+  "h": 88
+ },
+ "danger-a-a-collapsed-section-at-the-end@catalog": {
+  "sha": "b4e98d6560177f15682abaac92804aded31a9277",
+  "w": 384,
+  "h": 88
+ },
+ "danger-b-the-overflow-menu-in-the-header@bone": {
+  "sha": "e0a5ba936ecd01cb6aede8fed369aaf68ad923e6",
+  "w": 1416,
+  "h": 48
+ },
+ "danger-b-the-overflow-menu-in-the-header@catalog": {
+  "sha": "0b3aeb8940aad0087bbd8811e608a079b7c6432e",
+  "w": 1416,
+  "h": 48
+ },
+ "info-i-beside-a-label@bone": {
+  "sha": "ce6384d11904d6439fdca2142b5077087987ce90",
+  "w": 384,
+  "h": 84
+ },
+ "info-i-beside-a-label@catalog": {
+  "sha": "bfe3e147f96fe745d899a3ad30d0655693594a27",
+  "w": 384,
+  "h": 84
+ },
+ "status-a-a-dot-then-the-phrase@bone": {
+  "sha": "0a1cb0377b3836496fcf63e0120f3c38c15e78ea",
+  "w": 344,
+  "h": 54
+ },
+ "status-a-a-dot-then-the-phrase@catalog": {
+  "sha": "e1e2ce10124cc35ddd2509901e9862ceaa845fbf",
+  "w": 344,
+  "h": 54
+ },
+ "status-b-the-phrase-alone-breathing@bone": {
+  "sha": "ae521eff82f6cb223f96bcbf38af1424b2e51f6c",
+  "w": 344,
+  "h": 54
+ },
+ "status-b-the-phrase-alone-breathing@catalog": {
+  "sha": "db5080c5218fb8be0e0c054bbed0a11d21ab6ed4",
+  "w": 344,
+  "h": 54
+ }
+}

@@ -1,0 +1,42 @@
+{
+ "editor@bone": {
+  "sha": "05757951b82a3577a0d9561fa6f362c65cb59202",
+  "w": 704,
+  "h": 444
+ },
+ "editor@catalog": {
+  "sha": "2e6d2b250bbc4b18d88117d1e32362f70a8be001",
+  "w": 704,
+  "h": 444
+ },
+ "empty@bone": {
+  "sha": "34e344876eba1411566880e7c3825142c79bec88",
+  "w": 344,
+  "h": 76
+ },
+ "empty@catalog": {
+  "sha": "6aa9e8a55ecd0dafae99f0e1690970e6b9a3821e",
+  "w": 344,
+  "h": 76
+ },
+ "long@bone": {
+  "sha": "65a8564246b326a4c82c0c66cfb0aa416c3998ee",
+  "w": 344,
+  "h": 120
+ },
+ "long@catalog": {
+  "sha": "e79368b82bc0cc4714ebc3120df7536a3ce3b69d",
+  "w": 344,
+  "h": 120
+ },
+ "typical@bone": {
+  "sha": "5fc1fa7f905bcc96067ed42bc21948804a4474cc",
+  "w": 344,
+  "h": 95
+ },
+ "typical@catalog": {
+  "sha": "13e0b74bffbe2dc1a7c07d9612a0e7f50323f530",
+  "w": 344,
+  "h": 95
+ }
+}

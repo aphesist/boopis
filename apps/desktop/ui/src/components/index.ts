@@ -17,6 +17,8 @@ import type { ChildOpts } from './child';
 import { composer } from './composer';
 import { holdElement, wireHold } from './hold';
 import { html } from './html';
+import { dangerZone, editLong, longText, overflow, setLongText, setStatus, statusLine } from './calm';
+import type { DangerZoneOpts, LongTextOpts, StatusLineOpts } from './calm';
 import type { ButtonOpts, ChipOpts, EntryOpts, FieldOpts, IconButtonOpts, ItemRowOpts, LadderOpts, MeasureOpts, MeasurePart, RowOpts, SegmentedOpts, StepItem } from './html';
 import { icon, iconNames } from './icons';
 import { layer, menu, popover } from './layer';
@@ -46,6 +48,9 @@ import { presence as presenceEl, presencePill, presenceWords, presenceLayout } f
 import type { SegElement } from './wire';
 
 export const version = '1.0.0';
+
+/* the calm pass's templates join `html` (calm.ts builds on it, so they are added here, once) */
+const htmlFull = Object.assign(html, { statusLine, dangerZone, longText });
 
 /** build an element from a template and wire it */
 function make<O, E extends HTMLElement = HTMLElement>(fn: (o: O) => string): (o: O) => E {
@@ -79,6 +84,12 @@ const factories = {
   field: make<FieldOpts>(html.field),
   select: make<SelectOpts, SelectElement>(html.select),
   empty: make<Parameters<typeof html.empty>[0]>(html.empty),
+  /** one job, one status line (R-calm-6); `ui.setStatus` changes it in place */
+  statusLine: make<StatusLineOpts, HTMLElement>(statusLine),
+  /** the rare and destructive actions, collapsed at the end of a page (R-calm-14) */
+  dangerZone: make<DangerZoneOpts>(dangerZone),
+  /** a long text's preview and its Edit action (R-calm-9); `ui.editLong` opens the editor */
+  longText: make<LongTextOpts>(longText),
   row: make<RowOpts, HTMLLIElement>(html.row),
   group: make<Parameters<typeof html.group>[0]>(html.group),
   child: make<ChildOpts, HTMLElement>(html.child),
@@ -110,8 +121,8 @@ const model = (ref: ModelRef, o?: ModelOpts): HTMLElement => frag(modelHTML(ref,
 const modelRoute = (text: string, o?: ModelOpts): HTMLElement => frag(routeHTML(text, o));
 
 export const ui = {
-  version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
-  ...factories, legend, keys, inline, scrollClass, scrollEdges,
+  version, html: htmlFull, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
+  ...factories, overflow, editLong, setStatus, setLongText, legend, keys, inline, scrollClass, scrollEdges,
   markdown, copyText, presence,
   hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, composer, card,
   hold: Object.assign(holdElement, { wire: wireHold }),
@@ -119,8 +130,10 @@ export const ui = {
   modView: Object.assign(modView, { update: modViewUpdate, validate: validateTree, limits: MOD_LIMITS, sanitizeSvg, h: modH, colors: modColors })
 };
 export type Ui = typeof ui;
-export { html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, menu, popover, layer, listbox, modelEntries, tooltip, toast, composer, card, wireHold, holdElement };
+export { htmlFull as html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, menu, popover, layer, listbox, modelEntries, tooltip, toast, composer, card, wireHold, holdElement };
 export type { SegElement } from './wire';
+export { statusLine, setStatus, dangerZone, overflow, longText, setLongText, editLong, STATUS_TONES, STATUS_LOOKS } from './calm';
+export type { StatusLineOpts, StatusTone, StatusLook, DangerZoneOpts, DangerAction, OverflowOpts, LongTextOpts, TextEditorOpts } from './calm';
 export { fileChip } from './composer';
 export type { FileChipOpts } from './composer';
 /* runtime pieces the app's modules and host wire (the orbs' engine, the card layer's factory, the first run's moments) */

@@ -58,14 +58,17 @@ Each row: what it is for, its variants (the options `variants.ts` lists for the 
 | `search` | the search field family | `size: s` (the title bar's 26px command field, a button), `m` (a search in a form), `l` (the palette's 48px head); `as: input, button`; `keys`, `textHTML`, `placeholder`, `attrs` | R-search-1 to 5, R-kbd-2 |
 | `input`, `field` | the text control; with its label, hint and error | `mono`, `raised`, `rows` (a textarea); `field.kind: text, textarea, select, model`, `error` | R-field-1 to 4 |
 | `select` | the themed select and listbox (`ui.listbox`) | `mono`, `raised`, `entries`, `labelId` | R-select-1 to 4, R-native-1 to 3 |
-| `setRow`, `setHead`, `setSection` | a settings row (label, hint, control); a section and its heading | `hint`, `for` or `labelId`, `control` | §14.21, R-switch-2 |
+| `setRow`, `setHead`, `setSection` | a settings row (label, hint, control); a section and its heading | `for` or `labelId`, `control`; `value` (mono, quiet), `info` (an (i) with the explanation), `danger`; `hint` only as the exception (R-calm-2) | §14.21, R-switch-2 |
 | `row`, `group` | list rows; a project or archive group | `sub` (two lines), `current`, `archived`, `acts`; `group.collapsible`, `expanded` | R-row-1 to 4 |
-| `section` | a collapsible panel section | `open`, `meta` | §14.11 |
+| `section` | a collapsible panel section | `open`, `meta`; `empty` collapses it to its heading and a muted `meta` value, `hideEmpty` draws nothing (R-calm-4) | §14.11 |
 | `scroll` (`scrollClass`) | every scroller: one bar | `axis: y, x, both`; `bare` (no bar); `inset: end, both` (the track stops short of a curved corner); `--stable` class (keeps its gutter) | R-scroll-1 to 9 |
 | `menu`, `popover`, `layer` | floating surfaces | `menu.open(anchor, items, {label, place, align, multi, onSelect})`; items: `checked`, `keys`, `desc`, `model`, `stamp` | R-menu-1 to 3, R-float-1 to 5 |
 | `tooltip` (`tip`, `tipBody`) | any `[data-tip]`; keys after the label | `data-kbd`, `data-tip-pos`, `data-tip-state` | R-tip-1 to 4, R-kbd-2 |
 | `toast` | confirms what just happened | `action: {label, onClick}`, `ms` | R-toast-1 to 3 |
-| `empty` | an empty state that teaches | `mark`, `action` | R-empty-1 |
+| `statusLine` | one job, one status line: a dot, a short phrase, a mono count; `ui.setStatus` changes it in place and cross-fades the phrase | `tone: work, idle, attention`; `look: dot, pulse` (pulse is an owner option, see the lab) | R-calm-6 |
+| `dangerZone`, `overflow` | the rare and destructive actions: a collapsed section at the end of a page, or the "more" menu | `actions[]`, `open`; `overflow.items`, `onSelect` | R-calm-14 |
+| `longText`, `editLong` | a long text's two-line preview with Edit; the editor is its own dialog (Save only once the text changed) | `lines`, `empty`; `editLong.title, value, mono, save` | R-calm-9 |
+| `empty` | an empty state that teaches | `mark`, `action`; `line`: one line, at most one action (R-calm-4) | R-empty-1 |
 | `ladder`, `measure`, `legend`, `capacity`, `pages`, `progressDots` | measures, positions and progress, all dots | `ladder.variant: line, list`; `measure.variant: strip, row, grid`; `pages.interactive` | R-data-1, §14.27 |
 | `entry`, `steps`, `disclosure`, `blank`, `request` | the conversation's parts | `entry.kind: user, agent, bot, mod`; `steps[].kind` | §14.5 to 14.9 |
 | `composer` | every composer (session, Bots tab, dock) | `running`; mic in each; `mentions` ("@": a typed "@" suggests whom a message can name and a finished mention is a chip in the text, one unit for the caret; the session's models, a room's members, a bot's teammates; `mentions.ts`) | §14.10 |

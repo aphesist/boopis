@@ -213,10 +213,13 @@ const blank = (o: { answer?: U<string> } = {}): string => {
   const a = o.answer ?? '';
   return '<button type="button" class="ui-blank"' + attrs({ 'data-answered': a ? '' : null, 'aria-haspopup': 'dialog', 'aria-expanded': 'false', 'aria-label': a ? 'Answer: ' + a + '. Change it' : 'Answer the open question, waiting for you' }) + '><span class="ui-blank__gap">' + esc(a) + '</span>' + (a ? '' : stamp('waiting for you', { attrs: { 'aria-hidden': 'true' } })) + '</button>';
 };
-function section(o: { label: string; meta?: U<string>; open?: U<boolean>; body?: U<string>; id?: U<string>; name?: U<string> }): string {
-  const id = o.id || nid('sec');
-  return '<div class="ui-sec" role="group"' + attrs({ 'aria-labelledby': id + '-h', 'data-name': o.name }) + '><button type="button" class="ui-sec__head" data-ui="section" id="' + id + '-h" aria-expanded="' + (!!o.open) + '" aria-controls="' + id + '">' +
-    '<span class="ui-sec__label">' + esc(o.label) + '</span><span class="ui-sec__meta">' + (o.meta ?? '') + '</span>' + icon('chevron') + '</button><div class="ui-sec__body" id="' + id + '">' + (o.body ?? '') + '</div></div>';
+/** a collapsible panel section (R-calm-4, R-calm-12). `empty` collapses it to its heading row with a muted value in `meta` ("none", "unknown", "0"):
+    no chevron, nothing to open, no sentence inside; `hideEmpty` draws nothing at all, for an empty section with no action. */
+function section(o: { label: string; meta?: U<string>; open?: U<boolean>; body?: U<string>; id?: U<string>; name?: U<string>; empty?: U<boolean>; hideEmpty?: U<boolean> }): string {
+  if (o.empty && o.hideEmpty) return '';
+  const id = o.id || nid('sec'), shut = !!o.empty;
+  return '<div class="ui-sec" role="group"' + attrs({ 'aria-labelledby': id + '-h', 'data-name': o.name, 'data-empty': shut ? '' : null }) + '><button type="button" class="ui-sec__head"' + (shut ? ' aria-disabled="true"' : ' data-ui="section"') + ' id="' + id + '-h" aria-expanded="' + (!shut && !!o.open) + '" aria-controls="' + id + '">' +
+    '<span class="ui-sec__label">' + esc(o.label) + '</span><span class="ui-sec__meta">' + (o.meta ?? '') + '</span>' + (shut ? '' : icon('chevron')) + '</button><div class="ui-sec__body" id="' + id + '">' + (shut ? '' : (o.body ?? '')) + '</div></div>';
 }
 
 export interface MenuItem {
@@ -254,10 +257,15 @@ function field(o: FieldOpts): string {
   return '<div class="ui-field">' + (o.label ? (picker ? '<span class="ui-field__label" id="' + id + '-l">' + esc(o.label) + '</span>' : '<label class="ui-field__label" for="' + id + '">' + esc(o.label) + '</label>') : '') + control +
     (o.error || o.hint ? '<p class="ui-field__hint" id="' + hid + '"' + (o.error ? ' data-tone="attention"' : '') + '>' + esc(o.error || o.hint) + '</p>' : '') + '</div>';
 }
-/** a settings row: its label, a hint under it (a command in backticks shows as code, as the host writes its sentences), its control */
-const setRow = (o: { label: string; hint?: U<string | null>; for?: U<string | null>; /** the label's own id, for a control named by aria-labelledby (a select) */ labelId?: U<string>; control?: U<string>;
+/** a settings row (R-calm-1): a label, an optional value (mono, quiet), a control. No sentence under it: a `hint` is the exception (R-calm-2: one line, 60
+    characters at most, only where the label alone would mislead or the consequence is irreversible); the explanation goes behind `info`, an (i) that
+    shows it on hover and focus. `danger` marks a rare, destructive row (R-calm-14), used by the danger zone. */
+const setRow = (o: { label: string; hint?: U<string | null>; /** the explanation, one step away: an (i) beside the label */ info?: U<string | null>; /** what is set now, quiet; mono */ value?: U<string | null>;
+  danger?: U<boolean>; for?: U<string | null>; /** the label's own id, for a control named by aria-labelledby (a select) */ labelId?: U<string>; control?: U<string>;
   /** what the row is about, before its label: an item's mark (`itemMark`), never decoration (docs/UI-COMPONENTS.md, Item marks) */ lead?: U<string> }): string =>
-  '<div class="ui-set__row">' + (o.lead ? '<span class="ui-set__lead">' + o.lead + '</span>' : '') + '<' + (o.for ? 'label for="' + esc(o.for) + '"' : 'span') + attrs({ id: o.labelId }) + ' class="ui-set__label"><span>' + esc(o.label) + '</span>' + (o.hint ? '<small>' + inline(o.hint) + '</small>' : '') + '</' + (o.for ? 'label' : 'span') + '>' + (o.control ?? '') + '</div>';
+  '<div class="ui-set__row"' + attrs({ 'data-tone': o.danger ? 'danger' : null }) + '>' + (o.lead ? '<span class="ui-set__lead">' + o.lead + '</span>' : '') + '<' + (o.for ? 'label for="' + esc(o.for) + '"' : 'span') + attrs({ id: o.labelId }) + ' class="ui-set__label"><span>' + esc(o.label) + '</span>' + (o.hint ? '<small>' + inline(o.hint) + '</small>' : '') + '</' + (o.for ? 'label' : 'span') + '>' +
+  (o.info ? iconButton({ icon: 'info', label: o.info, size: 's', class: 'ui-set__info' }) : '') +
+  (o.value ? '<span class="ui-set__value ui-mono">' + esc(o.value) + '</span>' : '') + (o.control ?? '') + '</div>';
 export interface BadgeOpts {
   label: string;
   /** the sentence behind the short words: its tooltip (and, with `describedBy`, its accessible description) */
@@ -293,8 +301,11 @@ const setHead = (o: { label: string; id: string; level?: 2 | 3 }): string => { c
 /** a settings section: its heading, then its rows (`setRow`) */
 const setSection = (o: { label: string; id: string; body?: U<string>; attrs?: U<Attrs> }): string =>
   '<section class="ui-set"' + attrs({ 'aria-labelledby': o.id, ...o.attrs }) + '>' + setHead(o) + (o.body ?? '') + '</section>';
-const empty = (o: { title: string; text?: U<string>; mark?: U<boolean>; action?: U<string> }): string =>
-  '<div class="ui-empty">' + (o.mark ? '<span class="ui-empty__mark">' + logoHTML({ mark: true, label: false }) + '</span>' : '') + '<h2 class="ui-empty__title">' + esc(o.title) + '</h2>' + (o.text ? '<p class="ui-empty__text">' + esc(o.text) + '</p>' : '') + (o.action ?? '') + '</div>';
+/** an empty state (R-calm-4, R-comp-2): `line` is one line of at most 80 characters and at most one action, for a whole page; the heading form stays
+    for the first run and the few places that teach */
+const empty = (o: { title: string; text?: U<string>; mark?: U<boolean>; action?: U<string>; line?: U<boolean> }): string => o.line
+  ? '<div class="ui-empty ui-empty--line"><p class="ui-empty__line">' + esc(o.title) + '</p>' + (o.action ?? '') + '</div>'
+  : '<div class="ui-empty">' + (o.mark ? '<span class="ui-empty__mark">' + logoHTML({ mark: true, label: false }) + '</span>' : '') + '<h2 class="ui-empty__title">' + esc(o.title) + '</h2>' + (o.text ? '<p class="ui-empty__text">' + esc(o.text) + '</p>' : '') + (o.action ?? '') + '</div>';
 
 /** the mod as a name: its glyph and its name, one unit (origin slots, tabs, band rows, toasts, placed rows) */
 const mod = (name: string, o?: { class?: string }): string => '<span class="mv-by' + (o?.class ? ' ' + o.class : '') + '">' + icon('mod', { class: 'mv-by__g' }) + '<span class="mv-by__n">' + esc(name) + '</span></span>';

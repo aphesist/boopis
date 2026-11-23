@@ -41,6 +41,7 @@ const ICONS: Record<string, readonly [viewBox: string, inner: string | null]> = 
   dice: [I16, '<rect x="2.5" y="2.5" width="11" height="11" rx="2.6"/><circle class="is-fill" cx="5.6" cy="5.6" r="1.05"/><circle class="is-fill" cx="8" cy="8" r="1.05"/><circle class="is-fill" cx="10.4" cy="10.4" r="1.05"/>'],
   /* the puzzle glyph: a mod's name is this and its name wherever it speaks (DESIGN-SYSTEM.md 14.29) */
   mod: [I16, '<path d="M3.5 4h2.7v-.5a1.8 1.8 0 0 1 3.6 0V4h2.7a1 1 0 0 1 1 1v2.2h-.5a1.8 1.8 0 0 0 0 3.6h.5V13a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/>'],
+  info: [I16, '<circle cx="8" cy="8" r="6"/><path d="M8 7.2v3.6"/><circle class="is-fill" cx="8" cy="5.2" r=".8"/>'],
   more: [I16, '<circle class="is-fill" cx="3.5" cy="8" r="1.1"/><circle class="is-fill" cx="8" cy="8" r="1.1"/><circle class="is-fill" cx="12.5" cy="8" r="1.1"/>']
   };
 
