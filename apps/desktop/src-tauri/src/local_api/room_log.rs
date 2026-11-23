@@ -45,6 +45,7 @@ impl<E: Engine> Service<E> {
         Some((
             RoomLine {
                 seq: l.seq,
+                id: l.id,
                 at,
                 kind: l.kind,
                 from,
@@ -464,6 +465,16 @@ mod tests {
             (NoteKind::Mention, true, "nina")
         );
         assert_eq!(notes[1].title, "Nina mentioned you in paper past");
+        // B41: the mention carries the room, the message's place and id, and its words
+        assert_eq!(
+            (
+                notes[1].room_id.as_deref(),
+                notes[1].seq,
+                notes[1].message_id.as_deref()
+            ),
+            (Some("g-paper"), Some(3), Some("e3"))
+        );
+        assert_eq!(notes[1].body, "@user should I apply the two blockers?");
         assert_eq!(notes[2].kind, NoteKind::Error);
         assert!(
             notes[2].body.starts_with("Nina can't reach its model."),
@@ -486,6 +497,53 @@ mod tests {
                 .iter()
                 .all(|e| !matches!(e, Event::RoomLine(_))),
             "nothing told twice"
+        );
+    }
+
+    #[tokio::test]
+    async fn two_messages_of_one_member_in_a_row_are_two_notifications() {
+        let log: Log = std::sync::Arc::default();
+        log.lock().unwrap().push(ev(
+            1,
+            "message.member",
+            &json!({"member_id": "kai", "text": "old news"}),
+        ));
+        let (s, _e, _d) = service(&log);
+        let mut rx = s.feed().subscribe(None).rx;
+        s.follow_rooms().await;
+        drain(&mut rx);
+        {
+            let mut l = log.lock().unwrap();
+            l.push(ev(
+                2,
+                "message.member",
+                &json!({"member_id": "kai", "text": "Table posted."}),
+            ));
+            l.push(ev(
+                3,
+                "message.member",
+                &json!({"member_id": "kai", "text": "And the sources."}),
+            ));
+        }
+        s.refresh_roster().await;
+        s.follow_rooms().await;
+        let notes: Vec<_> = drain(&mut rx)
+            .into_iter()
+            .filter_map(|e| match e {
+                Event::Notification(n) => Some(n),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            notes
+                .iter()
+                .map(|n| (n.seq, n.message_id.as_deref(), n.body.as_str()))
+                .collect::<Vec<_>>(),
+            [
+                (Some(2), Some("e2"), "Table posted."),
+                (Some(3), Some("e3"), "And the sources.")
+            ],
+            "kai's second message within seconds is its own news"
         );
     }
 

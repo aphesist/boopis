@@ -59,6 +59,26 @@ struct Inner {
     room_working: HashMap<String, Vec<String>>,
 }
 
+/// Where a notification belongs: a session, or a room's message.
+#[derive(Debug, Clone, Copy, Default)]
+struct Where<'a> {
+    session_id: Option<&'a str>,
+    room_id: Option<&'a str>,
+    /// The room message's place in the room's log.
+    seq: Option<u64>,
+    /// The room message's event id.
+    message_id: Option<&'a str>,
+}
+
+impl<'a> Where<'a> {
+    fn session(id: &'a str) -> Self {
+        Self {
+            session_id: Some(id),
+            ..Self::default()
+        }
+    }
+}
+
 /// A turn the poll saw end in a session the host's link does not run: the service reads its words and makes the
 /// notification ([`Feed::notify_finished`]), or none when there are no words (B22).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -615,19 +635,20 @@ impl Feed {
         inner: &mut Inner,
         kind: NoteKind,
         profile: &str,
-        session_id: Option<&str>,
-        room_id: Option<&str>,
+        at: &Where<'_>,
         source: Source,
         title: String,
         body: String,
         urgent: bool,
     ) {
         let now = now_ms();
-        let key = (
-            profile.to_owned(),
-            session_id.or(room_id).unwrap_or_default().to_owned(),
-            kind as u8,
-        );
+        // A room's message is its own news (two in a row are two notifications); a session's turn ends once.
+        let place = match (at.session_id, at.room_id, at.seq) {
+            (Some(s), _, _) => s.to_owned(),
+            (None, Some(r), Some(seq)) => format!("{r}#{seq}"),
+            (None, room, _) => room.unwrap_or_default().to_owned(),
+        };
+        let key = (profile.to_owned(), place, kind as u8);
         if inner.last_note.get(&key).is_some_and(|t| now - t < 3_000) {
             return;
         }
@@ -642,8 +663,10 @@ impl Feed {
             profile: profile.to_owned(),
             title,
             body,
-            session_id: session_id.map(str::to_owned),
-            room_id: room_id.map(str::to_owned),
+            session_id: at.session_id.map(str::to_owned),
+            room_id: at.room_id.map(str::to_owned),
+            seq: at.seq,
+            message_id: at.message_id.map(str::to_owned),
             source,
             at: now,
             urgent,
@@ -814,8 +837,7 @@ impl Feed {
                         &mut inner,
                         NoteKind::Error,
                         profile,
-                        Some(sid),
-                        None,
+                        &Where::session(sid),
                         origin,
                         format!("{who} hit an error"),
                         String::new(),
@@ -834,8 +856,7 @@ impl Feed {
                             &mut inner,
                             NoteKind::Reply,
                             profile,
-                            Some(sid),
-                            None,
+                            &Where::session(sid),
                             origin,
                             format!("{who} replied"),
                             text,
@@ -869,8 +890,7 @@ impl Feed {
                     &mut inner,
                     NoteKind::Error,
                     profile,
-                    Some(sid),
-                    None,
+                    &Where::session(sid),
                     origin,
                     format!("{who} hit an error"),
                     why,
@@ -979,8 +999,7 @@ impl Feed {
                 inner,
                 NoteKind::Approval,
                 &profile,
-                Some(&sid),
-                None,
+                &Where::session(&sid),
                 source,
                 format!("{who} needs your approval"),
                 what,
@@ -1084,8 +1103,7 @@ impl Feed {
             &mut inner,
             kind,
             &done.profile,
-            Some(&done.session_id),
-            None,
+            &Where::session(&done.session_id),
             done.source,
             title,
             body,
@@ -1101,8 +1119,7 @@ impl Feed {
             &mut inner,
             NoteKind::Task,
             profile,
-            Some(session_id),
-            None,
+            &Where::session(session_id),
             Source::Kanban,
             title,
             body,
@@ -1145,17 +1162,13 @@ impl Feed {
         };
         if let Some((kind, p, title, urgent)) = note {
             let body = self.clip(&line.text);
-            self.notify(
-                &mut inner,
-                kind,
-                p,
-                None,
-                Some(room_id),
-                Source::Room,
-                title,
-                body,
-                urgent,
-            );
+            let at = Where {
+                room_id: Some(room_id),
+                seq: Some(line.seq),
+                message_id: Some(line.id.as_str()),
+                ..Where::default()
+            };
+            self.notify(&mut inner, kind, p, &at, Source::Room, title, body, urgent);
         }
         self.emit(
             &mut inner,

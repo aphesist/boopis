@@ -24,6 +24,8 @@ pub enum Speaker {
 pub struct Line {
     /// Its place in the log.
     pub seq: u64,
+    /// The event's id.
+    pub id: String,
     /// When, in seconds since 1970.
     pub at: f64,
     /// The engine's event kind it comes from.
@@ -92,6 +94,7 @@ pub fn line(room: &Room, e: &Event) -> Option<Line> {
         let text = text.trim().to_owned();
         (!text.is_empty()).then(|| Line {
             seq: e.seq,
+            id: e.id.clone(),
             at: e.at,
             kind: e.kind.clone(),
             from,

@@ -208,6 +208,11 @@ pub struct Notification {
     pub session_id: Option<String>,
     /// The room it belongs to, when there is one.
     pub room_id: Option<String>,
+    /// For a room's message (a reply, a mention, a failed turn): its place in the room's log, to read it whole with
+    /// `GET /v1/rooms/<id>/log` (0.2.0).
+    pub seq: Option<u64>,
+    /// For a room's message: its event id in the room's log (0.2.0).
+    pub message_id: Option<String>,
     /// The kind of session it came from.
     pub source: Source,
     /// When, in milliseconds since the epoch.
@@ -366,6 +371,8 @@ pub enum LineFrom {
 pub struct RoomLine {
     /// Its place in the room's log (the engine's `seq`).
     pub seq: u64,
+    /// Its event id in the room's log (0.2.0).
+    pub id: String,
     /// When, in milliseconds since the epoch.
     pub at: i64,
     /// The engine's event kind (`message.user`, `message.member`, `turn.failed`, `turn.cancelled`, ...).
