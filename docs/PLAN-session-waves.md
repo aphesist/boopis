@@ -193,3 +193,4 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - Sessions hand-off (owner): the oo mark carries on into the app (becomes mark A on the new-session canvas); Bots: the boopis bot in its chat.
 - Bots hand-off (owner): the oo mark transforms into the boopis bot while the tab switches to Bots by itself; then the bot explains and helps build the team in its chat.
 - CORRECTED (owner): one continuous first run: full-window setup with the oo mark -> Sessions setup with the oo mark -> the oo mark morphs into the boopis bot and the tab switches (or prompts) -> the boopis bot takes over in its chat for the Bots setup. Replaces the per-tab first-open model (kept only for skip/resume).
+- Fixed pose (owner): the whole BODY turns in 3D to the 3/4 angle with perspective, like Grok's non-circle bots; not only the eyes. Eye angle itself is fine.
