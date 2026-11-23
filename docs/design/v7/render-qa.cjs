@@ -3,7 +3,9 @@
 // crossing its board half or its window), clip (text cut without an ellipsis), baseline (R-inline-1, > 0.5 device px),
 // padding (left != right or top != bottom by > 0.5 px in cards and controls), align (siblings that should share a left edge),
 // row (a menu or list row whose text wraps or runs past the row), concentric (a control nested near a container's corner whose
-// radius is not the outer radius minus the inset, whose insets are unequal, or which runs past the container's edge).
+// radius is not the outer radius minus the inset, whose insets are unequal, or which runs past the container's edge),
+// mark (the dashed underline shown at rest outside feedforward and blank contexts: the composer's text, a reply's guess, an AskCard,
+// a blank; an info label shows it only on hover or focus, section 17).
 const { chromium } = require('playwright');
 const fs = require('fs');
 let urls = process.argv.slice(2);
@@ -70,6 +72,14 @@ const PAGE = () => {
       if (h >= R0 - 0.5 || v >= R0 - 0.5) continue; // not in a corner zone
       if (Math.abs(h - v) > 0.5) out.push(['concentric', `unequal insets ${h.toFixed(1)}/${v.toFixed(1)}: ` + name(kid) + ' in ' + name(box)]);
       else if (Math.abs(er(kid) - (R0 - v)) > 0.75) out.push(['concentric', `radius ${er(kid).toFixed(1)} != ${R0.toFixed(1)} - ${v.toFixed(1)}: ` + name(kid) + ' in ' + name(box)]);
+    }
+
+    // section 17: a mark at rest only in feedforward and blank contexts; info labels only on hover or focus
+    for (const m of root.querySelectorAll('.mk2')) {
+      if (!vis(m)) continue; const st = m.getAttribute('data-state') || '';
+      if (!st || st === 'hover' || st === 'open' || m.classList.contains('focus')) continue;
+      if (m.classList.contains('gap') || m.closest('.composer, .b, .qcard, .hov')) continue;
+      out.push(['mark', `shown at rest (${st}) outside feedforward or a blank: ` + name(m)]);
     }
     // R-inline-1
     const probe = () => { const s = document.createElement('span'); s.textContent = 'x'; s.style.cssText = 'display:inline-block;width:0;height:0;overflow:hidden;vertical-align:baseline'; return s; };

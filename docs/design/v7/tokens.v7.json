@@ -1520,8 +1520,8 @@
       },
       "canvas": [
         "mark",
-        "greeting with the folder as a mark-primitive choice",
-        "launch row of quiet selectors (worktree, model, effort, how careful -> four rows)",
+        "greeting in plain text (no mark at rest)",
+        "launch row of quiet selectors (folder, worktree, model, effort, how careful -> four rows)",
         "Waiting on you: inbox row, one-line variant",
         "no model: '+ Choose a model' in the accent and a Block with provider sign-ins",
         "usage: the Notice above the composer"
