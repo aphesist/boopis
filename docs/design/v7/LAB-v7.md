@@ -52,7 +52,7 @@ One story file per component under `src/lab/stories/kit/`, named as in section 2
 | 38 | TimeSeparator | — | — |
 | 39 | Composer | session, bot, room, dock, notch; with its line; quick menu open | empty, typed, multi-line, running (Enter queues), held, no model |
 | 40 | Rail | A, B | current, needs you, working |
-| 41 | Dock | — | needs you, working, sleeping |
+| 41 | Dock | row, compact, open (stack, card); no own bot (not drawn) | rest, hover, focus, a card open, needs you, typing (look at the composer), arrival, departure |
 | 42 | Notch | (notch spec stories) | — |
 | — | EmptyState | per tab | — |
 
@@ -91,10 +91,11 @@ The existing checks stay (`tests/lab/rules.mjs`): geometry.contain, geometry.cen
 | **contrast** (axe plus the derived accent) | R-a11y-1, section 18 | axe's colour contrast, and the derived `--accent-text`, `--focus` and `--on-accent` at 4.5:1 for every accent in the matrix | blocking |
 | **mark.rest** (new, ported) | section 17 | a mark (dashed underline) shown at rest only inside feedforward (the composer's text, a reply's guess), an AskCard or a blank; an info label's mark only on hover or focus; any other resting mark (a heading, static text) fails | blocking |
 | **sweep** (new, ported from the onboarding QA) | section 9.2, P4 | in a still (a golden, a board image, any reduced-motion check), no status phrase frozen mid-shimmer (its gradient clipped to text) and no orb or mark breath frozen mid-cycle (`.mk.pulse`, `.dot.run` still animating): live things render at rest; the motion belongs to clips and labelled motion strips (`[data-motion]`), which are exempt | blocking |
+| **same-component** (new) | section 21, 21.4 | a component's geometry never varies between surfaces: for every render of the same component and state class (the dock per geometry: row, compact, open; the composer; the title pill; the AskCard), the bounding size, corner radius, flare path and inner padding are identical; a dock drawn outside the one component fails | blocking |
 | **kit.single** (new, static) | section 21 | no component class outside the kit's 42 (and the patterns'); a story file per component; a merged name (QueueStrip, LimitNotice, Toast, Banner, ScopePicker, SettingsLine, SteerLine, CheckpointBar, ChoiceCards, LaunchCard, ReferenceChip) used anywhere fails | blocking |
 | **visual** | — | pixel difference against `tests/lab-golden` at 1440, DPR 1, per theme and corners | reported, not blocking (as today) |
 
-The render QA that found the 23 November defects (`docs/design/v7/render-qa.cjs`, run from the design scratch, rules `wrap`, `overflow`, `escape`, `clip`, `baseline`, `padding`, `align`, `row`, `concentric`, `mark`, `sweep`) is the reference implementation for the ported checks; its self-test page (`qa-selftest.html`: a wrapped Segmented item, a clipped chip, an unequal card padding, a button crossing a board half, clipped text, a raised "you" capsule, a wrapped menu name, a button overflowing a line pill, a button of the wrong radius, a button on unequal insets, a heading with a resting mark) becomes `src/lab/stories/kit/selftest.stories.ts`, and the lab's own test (as `overlap.test.ts` does for geometry.overlap) asserts each check fires on it.
+The render QA that found the 23 November defects (`docs/design/v7/render-qa.cjs`, run from the design scratch, rules `wrap`, `overflow`, `escape`, `clip`, `baseline`, `padding`, `align`, `row`, `concentric`, `mark`, `sweep`, `same-component`) is the reference implementation for the ported checks; its self-test page (`qa-selftest.html`: a wrapped Segmented item, a clipped chip, an unequal card padding, a button crossing a board half, clipped text, a raised "you" capsule, a wrapped menu name, a button overflowing a line pill, a button of the wrong radius, a button on unequal insets, a heading with a resting mark, two docks of different geometry) becomes `src/lab/stories/kit/selftest.stories.ts`, and the lab's own test (as `overlap.test.ts` does for geometry.overlap) asserts each check fires on it.
 
 ## 5. Goldens
 

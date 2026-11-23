@@ -174,3 +174,7 @@ Section 21 of `DESIGN-SYSTEM.md` (the one kit) supersedes this list: each row be
 | **SettingsLine** | the system line ("Settings changed: ...") with the cost |
 | **LimitNotice** | a one-line notice above the composer with two actions; the composer line's context tick |
 | **ScopePicker** | a segmented control at the head of a settings page: This device, This project |
+
+## The dock in the Sessions tab (owner, 23 Nov)
+
+The dock lives in the Sessions tab only (never in the Bots tab), has no "+ new bot", and appears only once you have a bot of your own (boopis alone does not count). The owner's picks: many bots show the ones that matter now and "N more" (D01 B); the full row at rest, with a compact idle version as a setting (D02 A); the ask pill at the row's end (D03 C). It is for reaching your bots and their asks while you work hands-on: the row of orbs under the composer, the amber flag on a bot that needs you and an ask pill at the row's end ("nina needs you", "2 need you"), which opens the stack of AskCards; a click on an orb opens that bot's card (its small chat, its ask, its composer). While the stack or a card is open the session's composer steps aside; Esc folds the dock back. Run, Context, Scheduled, the expanded roster and Arrange are gone: the session shows its own run, and the Bots tab holds everything else. At idle its bots hold the sidebar's fixed three-quarter pose; a hovered bot comes alive and settles back; bots in a state animate. Full spec and removals: `DESIGN-SYSTEM.md` 21.4; boards `ds-v7/dock-boards/`.

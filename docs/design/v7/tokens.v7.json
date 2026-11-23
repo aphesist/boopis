@@ -1540,5 +1540,67 @@
       }
     },
     "rows": "R-row-1: menu and list rows are single-line; the name never wraps or shrinks; 12px gap; the description truncates"
+  },
+  "dock": {
+    "where": "the Sessions tab only (owner, 23 Nov)",
+    "slab": "black in both themes, flush, flares 30, --r-slab 30; content inset 8 (Blocks 22); the inside is data-theme dark",
+    "row": "orbs 40, gap 14, height 72; grow on hover 52/46; no '+'",
+    "attention": "amber flag (--owe) ringed in #000; the ask pill (--owe-soft, --owe-text, 32 tall)",
+    "current": "the Iris dot under the bot whose card is open (--accent-text)",
+    "open": "the stack of AskCards (approval variant, never expires) or a bot's card; the slab fits its content; the session's composer fades out 120ms",
+    "choices": {
+      "D01": "B (owner's pick): the ones that matter now + N more to the Bots tab",
+      "D02": "A (owner's pick) + compact idle, a setting, off by default",
+      "D03": "C (owner's pick): the ask pill at the row's end opening the stack"
+    },
+    "removed": [
+      "+ new bot",
+      "expanded roster",
+      "Run page",
+      "Context page",
+      "Scheduled page",
+      "Needs-you page",
+      "page nub and paging",
+      "Arrange mode",
+      "Turn off inside the dock",
+      "minimal mode summaries",
+      "the card's mini-orb strip",
+      "the orb tooltip",
+      "the dock in the Bots tab"
+    ],
+    "geometry": {
+      "row": {
+        "w": 640,
+        "h": 72,
+        "R": 30,
+        "F": 30,
+        "padX": 30,
+        "orb": 40,
+        "grow": [
+          52,
+          46
+        ],
+        "gap": 14
+      },
+      "compact": {
+        "w": 380,
+        "h": 48,
+        "R": 24,
+        "F": 24,
+        "padX": 24,
+        "orb": 24,
+        "gap": 8
+      },
+      "open": {
+        "w": 640,
+        "h": "content + 72",
+        "R": 30,
+        "F": 30,
+        "inset": 8
+      },
+      "rule": "one component; width fixed; content clipped to the slab path; same-component QA blocks drift"
+    },
+    "presence": "hidden until the person has a bot of their own (boopis alone does not count); arrival: composer up 200ms, slab rises 200ms --ease-sharp, orbs pop 100ms 40ms apart; departure when the last own bot is deleted: close panels, slab sinks 200ms, composer down to 24px",
+    "orbs": "ORBS.md: idle bots hold the sidebar's fixed three-quarter pose (exact pose: ORBS.md section 23; provisional gaze 32/4 degrees); the hovered bot comes alive face-on and settles back; bots in a state animate; stills at rest; sharp renderer (C1-C3, C6, C7, C9, C10), face-scale 1.25 (<=44px), row 40px; boopis not special"
   }
 }
