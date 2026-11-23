@@ -3,7 +3,7 @@
 import { ui } from '@boopis/ui';
 import type { PresenceActor } from '@boopis/ui';
 import { BOTS, filmUI, h } from '../stage';
-import { T, botEntry, cursor, filmLine, huddle, like, roomComposer, roomHead, youEntry } from './parts';
+import { T, bleedPlate, botEntry, cursor, filmLine, huddle, inStage, like, roomComposer, roomHead, youEntry } from './parts';
 
 const pool = (s: HTMLElement, x: string, y: string, w = '80%', hh = '90%'): void => {
   s.style.setProperty('--pool-x', x); s.style.setProperty('--pool-y', y); s.style.setProperty('--pool-w', w); s.style.setProperty('--pool-h', hh);
@@ -24,25 +24,26 @@ function column(parts: Array<string | Node>, o: { x: number; y: number; width: n
   const f = filmUI(log, { x: o.x, y: o.y, scale: o.scale, width: o.width });
   return f.outer;
 }
-const plate = (s: HTMLElement, v: boolean): void => {
-  s.append(h('div', 'plate plate--room', '', v ? { left: '-40px', top: '120px', width: '1160px', height: '1580px' } : { left: '40px', top: '-80px', width: '1840px', height: '1240px' }));
-};
+/** the room's plate: the camera is inside the room, so it bleeds past every edge of the frame (critique A1-13) */
+const plate = (s: HTMLElement, v: boolean): void => { s.append(bleedPlate(v)); };
+/* the column: 16:9 at 3x from x 130; 9:16 at 2.6x across the safe band, x 60 to 960 (346 real px) */
+const COL = (v: boolean): { X: number; L: number; W: number } => (v ? { X: 2.6, L: 60, W: 346 } : { X: 3, L: 130, W: 556 });
 
 /** B04 at 9.3 s: the room assembled around its stack, your ask sent and landed as your request, kai thinking, the composer
     with the four member chips; the cursor just left the send button */
 export function b04(s: HTMLElement, v: boolean): void {
   pool(s, '50%', '50%');
   plate(s, v);
-  const X = v ? 2.6 : 3, L = v ? 60 : 130, W = v ? 370 : 556;
+  const { X, L, W } = COL(v);
   const head = filmUI(roomHead(), { x: L, y: v ? 230 : 40, scale: X, width: W });
   if (v) head.inner.dataset['margin'] = 'off';
   s.append(head.outer);
   /* the thread starts where the head ends, as in the room (the head's own bottom padding is the gap) */
-  const top = Math.round(head.outer.getBoundingClientRect().bottom - s.getBoundingClientRect().top);
+  const top = Math.round(inStage(s, head.outer).bottom);
   s.append(column([youEntry(...T.ask), presence([{ id: 'kai', bot: like(BOTS.kai), status: 'thinking' }])], { x: L, y: top, width: W, scale: X, narrow: v }));
-  const comp = filmUI(roomComposer(), { x: L, y: v ? 1330 : 740, scale: X, width: W });
+  const comp = filmUI(roomComposer(), { x: L, y: v ? 1410 : 740, scale: X, width: W });
   s.append(comp.outer);
-  const send = comp.outer.querySelector<HTMLElement>('.ui-send')?.getBoundingClientRect();
+  const sendEl = comp.outer.querySelector<HTMLElement>('.ui-send'), send = sendEl ? inStage(s, sendEl) : null;
   if (send) s.append(cursor(Math.round(send.right + 30), Math.round(send.bottom - 20)));
 }
 
@@ -51,14 +52,14 @@ export function b04(s: HTMLElement, v: boolean): void {
 export function b05(s: HTMLElement, v: boolean): void {
   pool(s, '46%', '50%');
   plate(s, v);
-  const X = v ? 2.6 : 3, L = v ? 60 : 130, W = v ? 370 : 556;
-  s.append(filmLine(v ? 'They {hand} work<br>to each other' : 'They {hand} work to each other', v ? { y: 300, size: 100 } : { y: 110, align: 'left', x: L + 112 * X, size: 88 }));
+  const { X, L, W } = COL(v);
+  s.append(filmLine(v ? 'They {hand} work<br>to each other' : 'They {hand} work to each other', v ? { y: 300 } : { y: 110, align: 'left', x: L + 112 * X }));
   const pres = presence([
     { id: 'moss', bot: like(BOTS.moss), status: 'tool', doing: 'in the terminal' },
     { id: 'nina', bot: like(BOTS.nina), status: 'tool', doing: 'reading a file' }
   ]);
   s.append(column([botEntry(BOTS.kai, ...T.kai1.slice(0, 2) as [string, string], [...T.kai1[2]]), pres], { x: L, y: v ? 640 : 330, width: W, scale: X, narrow: v }));
-  s.append(filmUI(roomComposer(), { x: L, y: v ? 1360 : 790, scale: X, width: W }).outer);
+  s.append(filmUI(roomComposer(), { x: L, y: v ? 1410 : 790, scale: X, width: W }).outer);
 }
 
 /** B06 at 14.5 s: nina's and moss's replies have gathered into the live huddle, open; kai's message has just landed in it
@@ -66,10 +67,10 @@ export function b05(s: HTMLElement, v: boolean): void {
 export function b06(s: HTMLElement, v: boolean): void {
   pool(s, '46%', '54%');
   plate(s, v);
-  const X = v ? 2.6 : 3, L = v ? 60 : 130, W = v ? 370 : 556;
-  s.append(filmLine('They {work} it out', v ? { y: 300, size: 104 } : { y: 84, align: 'left', x: L + 112 * X, size: 88 }));
+  const { X, L, W } = COL(v);
+  s.append(filmLine('They {work} it out', v ? { y: 300 } : { y: 84, align: 'left', x: L + 112 * X }));
   s.append(column([huddle(T.huddle, true)], { x: L, y: v ? 520 : 250, width: W, scale: X, narrow: v }));
-  if (v) s.append(filmUI(roomComposer(), { x: L, y: 1380, scale: X, width: W }).outer);
+  if (v) s.append(filmUI(roomComposer(), { x: L, y: 1410, scale: X, width: W }).outer);
 }
 
 /** B07 at 17.0 s: you wrote again, so the huddle folded; the camera has pushed in until its label is 44px tall in the
@@ -77,14 +78,14 @@ export function b06(s: HTMLElement, v: boolean): void {
 export function b07(s: HTMLElement, v: boolean): void {
   pool(s, '50%', '50%', '70%', '80%');
   plate(s, v);
-  const X = v ? 3.6 : 3.4;
+  const X = 3.4;
   const folded = huddle(T.huddle, false);
-  const col = column([folded, youEntry(...T.next)], { x: v ? 40 : 120, y: v ? 640 : 300, width: v ? 280 : 500, scale: X, narrow: v });
+  /* 9:16: the column spans the safe band (x 60 to 960) and is centred on the band's middle, y 930 */
+  const col = column([folded, youEntry(...T.next)], { x: v ? 60 : 120, y: v ? 640 : 300, width: v ? Math.floor(900 / X) : 500, scale: X, narrow: v });
   s.append(col);
-  /* centre the folded line in the frame */
-  const r = col.getBoundingClientRect();
-  col.style.left = Math.round((v ? 540 : 960) - r.width / 2) + 'px';
-  col.style.top = Math.round((v ? 900 : 540) - r.height / 2) + 'px';
+  const r = inStage(s, col);
+  if (!v) col.style.left = Math.round(960 - r.width / 2) + 'px';
+  col.style.top = Math.round((v ? 930 : 540) - r.height / 2) + 'px';
 }
 
 export { cursor };

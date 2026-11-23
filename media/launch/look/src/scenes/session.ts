@@ -1,7 +1,7 @@
 /* B08 to B11: the window, your own session (governed), the breath (SC/script/script.md). The session's pieces are the kit's
    (ui.html.entry with its model route, ui.html.steps, ui.html.ladder in a ui.html.section, the composer's Governed chip). */
 import { BOTS, filmUI, h } from '../stage';
-import { agentEntry, appWindow, barRoom, cursor, filmLine, governance, otherApp, sessionComposer, terminal, youEntry } from './parts';
+import { agentEntry, appWindow, barRoom, bleedPlate, cursor, filmLine, governance, inStage, otherApp, sessionComposer, terminal, youEntry } from './parts';
 import type { Step } from './parts';
 
 const pool = (s: HTMLElement, x: string, y: string, w = '86%', hh = '90%', c = 'var(--lamp-ui)'): void => {
@@ -48,27 +48,45 @@ const S2: Step[] = [...S1,
   { title: 'Rounded once per invoice' },
   { title: 'npm test', mono: true, meta: ['passed'] }];
 
+/* Your session, governed (B09, B10). When the answer grows past the room it has (B10), the conversation scrolls as the
+   product's does (the answer's end sits --sp-5 above what is under it, ledger.ts followZone) and your request leaves the
+   view whole: it is marked `data-scrolled` and hidden only while it is in this key frame (SCENE_CSS), so an act that
+   takes the log out of the key frame and lays it out itself (act 3) gets every entry back.
+   16:9: the column at 2.6x on the left, its plate bleeding off the left, top and bottom; the right panel's frame from
+   x 1300 down, bleeding right and bottom; the film line over the panel; the composer pinned at the foot, inside the safe
+   box. 9:16: the narrow layout across the safe band, the film line in the upper band, the Governance section pinned at
+   the band's foot (the ladder stays put while its marker moves), the conversation between them; the composer is below
+   the frame. Every part is a direct child of the stage, placed in stage px. */
 function sessionScene(s: HTMLElement, v: boolean, climbed: boolean): void {
   pool(s, v ? '50%' : '40%', '50%', '90%', '96%', climbed ? COOL : 'var(--lamp-ui)');
-  const X = 2.6;
-  /* the ground and the panel, the panel's frame a step darker (bg-1), as the app's right panel */
-  if (v) {
-    s.append(h('div', 'plate plate--room', '', { left: '-40px', top: '520px', width: '1160px', height: '1500px' }));
-  } else {
-    s.append(h('div', 'plate plate--room', '', { left: '40px', top: '-80px', width: '1260px', height: '1240px' }));
-    s.append(h('div', 'plate plate--frame', '', { left: '1300px', top: '400px', width: '700px', height: '760px' }));
-  }
-  s.append(filmLine(v ? 'The {cheaper} one<br>tries first' : 'The {cheaper}<br>one tries first', v ? { y: 280, size: 104 } : { y: 168, align: 'left', x: 1336, size: 80, width: 580 }));
+  const X = 2.6, SP5 = Math.round(24 * X), GAP = Math.round(32 * X);
+  if (v) s.append(bleedPlate(v));
+  else { s.append(bleedPlate(v, { r: 1300 })); s.append(bleedPlate(v, { l: 1300, t: 400 }, 'plate plate--frame')); }
+  s.append(filmLine(v ? 'The {cheaper} one<br>tries first' : 'The {cheaper}<br>one tries first', v ? { y: 240 } : { y: 150, align: 'left', x: 1320, width: 540 }));
   const steps = climbed ? S2 : S1;
   const models = climbed ? ['gpt-6.2-sol', 'gpt-6.2-astra'] : ['gpt-6.2-sol'];
   const log = h('div', 'room-log');
   if (v) log.dataset['margin'] = 'off';
   log.insertAdjacentHTML('beforeend', youEntry('fix the proration drift in src/billing', '14:06') + agentEntry(models, steps));
-  s.append(filmUI(log, { x: v ? 50 : 80, y: v ? 600 : (climbed ? 44 : 140), width: v ? 360 : 460, scale: X }).outer);
-  const gov = filmUI(governance(climbed ? 1 : 0), { x: v ? 50 : 1336, y: v ? (climbed ? 1440 : 1220) : 430, width: v ? 360 : 214, scale: X });
-  if (v) { gov.outer.style.padding = '12px 0'; }
+  const L = v ? 60 : 80, W = v ? 346 : 460;
+  const hgt = (e: Element): number => inStage(s, e).height;
+  const lf = filmUI(log, { x: L, y: 0, width: W, scale: X });
+  s.append(lf.outer);
+  /* what sits under the conversation: the composer (16:9) or the Governance section (9:16), its foot on the safe box's */
+  const gov = filmUI(governance(climbed ? 1 : 0), { x: v ? L : 1320, y: 430, width: v ? W : 214, scale: X });
   s.append(gov.outer);
-  if (!v) s.append(filmUI(sessionComposer(), { x: 80, y: climbed ? 880 : 790, width: 460, scale: X }).outer);
+  let under: HTMLElement;
+  if (v) under = gov.outer;
+  else { under = filmUI(sessionComposer(), { x: L, y: 0, width: W, scale: X }).outer; s.append(under); }
+  const underY = Math.round((v ? 1640 : 1030) - hgt(under));
+  under.style.top = underY + 'px';
+  const viewTop = v ? 470 : 60, end = underY - SP5;
+  const logH = hgt(log), agentH = hgt(log.children[1]!), reqH = logH - agentH - GAP;
+  const want = v ? 560 : (climbed ? 80 : 140);
+  if (want + logH <= end) { lf.outer.style.top = want + 'px'; return; }
+  /* scrolled: the answer from the view's top, the request above it and hidden */
+  lf.outer.style.top = Math.round(Math.min(viewTop + 20, end - agentH) - reqH - GAP) + 'px';
+  lf.outer.dataset['scrolled'] = '';
 }
 /** B09 at 22.5 s: your request sent; the answer starts on GPT-6.2 Sol, its first steps rising; the right panel's
     Governance section has slid in with the ladder, Sol current in brass; the film line anchored above it */

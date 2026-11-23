@@ -27,9 +27,12 @@ export const SCENE_CSS = `
 .stage[data-format="vertical"] .room-head.bt-ghead { grid-template-columns: auto minmax(0, 1fr); row-gap: var(--sp-2); }
 .stage[data-format="vertical"] .room-head.bt-ghead > .bt-p-actions { grid-column: 1 / -1; justify-self: end; }
 .ui-film .ui-disclosure { text-align: start; }
-.film-line { position: absolute; margin: 0; font: 600 92px/1.06 var(--sans); letter-spacing: -.024em; color: var(--text-strong); text-wrap: balance; }
+/* entries scrolled out of a conversation's view, hidden only while the log is in its key frame (an act that lays the log
+   out itself gets them back) */
+.stage > .ui-place[data-scrolled] .room-log > :first-child { visibility: hidden; }
+.film-line { position: absolute; margin: 0; font: 600 var(--film-line-size)/1.06 var(--sans); letter-spacing: var(--film-line-track); color: var(--text-strong); text-wrap: balance; }
+.film-line--hook { font-size: var(--film-hook-size); }
 .film-line[data-align="center"] { left: 0; right: 0; text-align: center; }
-.stage[data-format="vertical"] .film-line { font-size: 104px; }
 .cursor { position: absolute; width: 48px; height: 59px; filter: var(--cursor-shadow); z-index: 20; }
 .cursor svg { display: block; width: 100%; height: 100%; }
 /* the boopis window at establishing scale: its own chrome, words as bars */
@@ -77,12 +80,45 @@ export const mdCtx = { mention: (x: string): FilmLike | null => { const b = botB
 
 /* ───────── film lines ───────── */
 /** a film line: Libre Franklin 600, the one brass word held in the selection ({word}), lab marks inline ([claude]) */
-export function filmLine(text: string, o: { y: number; x?: number; align?: 'center' | 'left'; size?: number; width?: number }): HTMLElement {
-  const e = h('h2', 'film-line', typeset(text), { top: o.y + 'px' });
+/** a film line. Its size is the film's token (--film-line-size, or --film-hook-size for the hook), never a number here:
+    `size` is ignored (kept so older callers still compile; a line they set takes the token like every other). `y` is
+    the line box's top; a line at the top of the frame sits at --film-line-top or lower. */
+export function filmLine(text: string, o: { y: number; x?: number; align?: 'center' | 'left'; size?: number; width?: number; hook?: boolean }): HTMLElement {
+  const e = h('h2', 'film-line' + (o.hook ? ' film-line--hook' : ''), typeset(text), { top: o.y + 'px' });
   e.dataset['align'] = o.align ?? 'center';
   if (o.align === 'left') { e.style.left = (o.x ?? 0) + 'px'; if (o.width) e.style.width = o.width + 'px'; }
-  if (o.size) e.style.fontSize = o.size + 'px';
   return e;
+}
+/** a conversation in its scroll view (x 0 to `viewW`, `top` to `bottom` on the stage), scrolled to its end as the product
+    keeps it (ledger.ts followZone). Entries that do not fit have scrolled out of the view whole: they are hidden, never
+    cut by the view's edge. Returns the view. */
+export function scrolledLog(s: HTMLElement, log: HTMLElement, o: { x: number; top: number; bottom: number; width: number; scale: number; viewW: number }): HTMLElement {
+  const view = h('div', 'scroll-view', '', { position: 'absolute', left: '0', top: o.top + 'px', width: o.viewW + 'px', height: (o.bottom - o.top) + 'px', overflow: 'hidden' });
+  s.append(view);
+  const f = filmUI(log, { x: o.x, y: 0, width: o.width, scale: o.scale });
+  view.append(f.outer);
+  const H = o.bottom - o.top, lr = inStage(s, log);
+  if (lr.height <= H) return view;
+  const y = H - lr.height;
+  f.outer.style.top = Math.round(y) + 'px';
+  for (const k of [...log.children] as HTMLElement[]) { if (inStage(s, k).top - lr.top + y < 0) k.style.visibility = 'hidden'; }
+  return view;
+}
+/** an element's box in the stage's own px (1920 x 1080 or 1080 x 1920), wherever the stage sits: a key frame is built
+    into a box an act may place anywhere in its world, under any camera, so a builder never places by viewport px */
+export function inStage(s: HTMLElement, el: Element): { left: number; top: number; right: number; bottom: number; width: number; height: number } {
+  const sr = s.getBoundingClientRect(), r = el.getBoundingClientRect(), k = (s.dataset['format'] === 'vertical' ? 1080 : 1920) / (sr.width || 1);
+  const left = (r.left - sr.left) * k, top = (r.top - sr.top) * k, width = r.width * k, height = r.height * k;
+  return { left, top, right: left + width, bottom: top + height, width, height };
+}
+/** the frame's safe box (look.md 7): what must be read sits inside it */
+export const SAFE = { landscape: { l: 60, r: 1860, t: 60, b: 1020 }, vertical: { l: 60, r: 960, t: 220, b: 1640 } } as const;
+/** a plate that bleeds past the frame (--bleed, 12% of the frame on that side) on every side not given; a side given is
+    a deliberate edge inside the frame, in frame px (as B13's room beside the terminal) */
+export function bleedPlate(v: boolean, edges: { l?: number; t?: number; r?: number; b?: number } = {}, cls = 'plate plate--room'): HTMLElement {
+  const W = v ? 1080 : 1920, H = v ? 1920 : 1080, bw = Math.round(W * 0.12), bh = Math.round(H * 0.12);
+  const l = edges.l ?? -bw, t = edges.t ?? -bh, r = edges.r ?? W + bw, b = edges.b ?? H + bh;
+  return h('div', cls, '', { left: l + 'px', top: t + 'px', width: (r - l) + 'px', height: (b - t) + 'px' });
 }
 
 /* ───────── the cursor: oversized, bone with an ink edge, a soft shadow ───────── */

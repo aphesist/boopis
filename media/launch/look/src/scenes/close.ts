@@ -1,16 +1,19 @@
 /* B17 to B19: the tagline, the eyes becoming the wordmark, the end card (SC/script/script.md; cutdowns.md section 1). */
 import { BOTS, h, orb } from '../stage';
-import { appWindow, filmLine } from './parts';
+import { appWindow, filmLine, inStage } from './parts';
 
 const logoSvg = (o: object = {}): string => (window as unknown as { BoopisLogo: { svg(o: object): string } }).BoopisLogo.svg({ color: 'currentColor', ...o });
 
 /** B17 at 40.8 s: everything but nina has blurred into the ground; she keeps her happy face and glances up at the tagline */
 export function b17(s: HTMLElement, v: boolean): void {
   s.style.setProperty('--pool-x', '50%'); s.style.setProperty('--pool-y', v ? '64%' : '72%'); s.style.setProperty('--pool-w', '70%'); s.style.setProperty('--pool-h', '80%');
-  const back = appWindow({ x: v ? -200 : 160, y: v ? 500 : 120, w: v ? 1500 : 1600, h: v ? 1100 : 900, tab: 'bots', main: () => undefined });
+  /* the back is the light desktop: the window runs past the frame's foot, so its black dock is below the frame and
+     never blurs into a dark mass behind her (critique: the B17 smudge) */
+  /* and its sidebar's dark tab thumb is off the frame's left edge, for the same reason */
+  const back = appWindow({ x: v ? -560 : -460, y: v ? 500 : 120, w: v ? 1860 : 2220, h: v ? 1700 : 1200, tab: 'bots', main: () => undefined });
   back.style.filter = 'blur(24px) var(--focus-pull)';
   s.append(back);
-  s.append(filmLine(v ? 'Your AI plans,<br>on one {team}' : 'Your AI plans, on one {team}', { y: v ? 420 : 240, size: v ? 104 : 96 }));
+  s.append(filmLine(v ? 'Your AI plans,<br>on one {team}' : 'Your AI plans, on one {team}', { y: v ? 420 : 240 }));
   s.append(orb(BOTS.nina, { size: v ? 420 : 360, x: v ? 540 : 960, y: v ? 1180 : 720, reaction: 'happy', gaze: [0, 16], still: true }));
 }
 
@@ -38,7 +41,7 @@ export function b18(s: HTMLElement, v: boolean): void {
   /* nina's body, an opaque triangle scaled down to 28% behind the eyes */
   const eyes = paths.slice(1, 3).map((p) => p.getBoundingClientRect());
   s.append(wrap);
-  const e1 = paths[1]!.getBoundingClientRect(), e2 = paths[2]!.getBoundingClientRect();
+  const e1 = inStage(s, paths[1]!), e2 = inStage(s, paths[2]!);
   const ex = (e1.left + e2.right) / 2, ey = (e1.top + e1.bottom) / 2;
   const body = orb(BOTS.nina, { size: Math.round((v ? 420 : 360) * 0.62), x: ex, y: ey + 8, reaction: 'happy', still: true, shadow: false });
   body.style.zIndex = '0'; wrap.style.zIndex = '1';

@@ -145,7 +145,7 @@ export function grain(stage: HTMLElement, seed = 7, amp = GRAIN[FILM_THEME].amp)
 /** build a frame, then say when it is ready to capture: fonts loaded, orbs drawn and their faces settled */
 export function frame(build: (stage: HTMLElement) => void | Promise<void>, o: { vertical?: boolean; settle?: number } = {}): void {
   const stage = document.querySelector<HTMLElement>('.stage') ?? document.body.appendChild(h('div', 'stage'));
-  if (o.vertical) stage.dataset['format'] = 'vertical';
+  if (o.vertical) { stage.dataset['format'] = 'vertical'; document.documentElement.dataset['filmFormat'] = 'vertical'; }
   if (!stage.querySelector('.ground')) stage.prepend(h('div', 'ground'));
   void (async () => {
     await document.fonts.ready;

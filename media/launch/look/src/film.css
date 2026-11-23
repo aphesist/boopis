@@ -50,11 +50,30 @@
   --far-dim: brightness(.85);          /* one layer back, out of focus */
   --grain-opacity: .55;
 
+  /* ── the film's type and frame (look.md 3 and 7) ──
+     A film line's size is a token, never a number in a builder: the script's 84 to 96 px (16:9), the hook at its 96.
+     In 9:16 a line and the hook are 92 px: the largest that keeps the longest two-line break inside the 840 px a centred
+     line has between the platforms' rails (x 120 to 960 is the safe band's width, centred on the frame). The safe box is
+     where everything that must be read sits; plates bleed past the frame by --bleed at every camera state. */
+  --film-line-size: 88px;
+  --film-hook-size: 96px;
+  --film-line-track: -.015em;          /* the script's -1.5% */
+  --film-line-top: 84px;               /* a top line's box: its cap top lands about 100 px down, inside title safe */
+  --bleed: 12%;
+
   /* ── motion, in words and numbers: craft-bible part 3 (the film) and DESIGN-SYSTEM 11 (the product, shown faithfully) ── */
   --arrive: cubic-bezier(.16, 1, .3, 1);
   --travel: cubic-bezier(.83, 0, .17, 1);
   --snap: cubic-bezier(.87, 0, .13, 1);
   --depart: cubic-bezier(.5, 0, .75, 0);
+}
+
+/* 9:16: set on a vertical stage (the look's frame(), the engine's key frame box) and on <html> by the engine for a
+   vertical film, so lines an act draws outside a key frame take it too */
+:root[data-film-format="vertical"], .stage[data-format="vertical"] {
+  --film-line-size: 92px;
+  --film-hook-size: 90px;              /* "Claude and GPT" with its two marks, the widest line, inside x 120 to 960 */
+  --film-line-top: 240px;
 }
 
 /* ── the light theme (data-film-theme="light", with the product's Bone preset: look/src/theme.ts) ──

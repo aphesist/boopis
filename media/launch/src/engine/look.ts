@@ -28,6 +28,7 @@ export const keyFrameIds = (): string[] => Object.keys(KEY_FRAMES);
 
 /** the look's ground in the engine's ground layer (it moves with the camera at the ground's depth) */
 export function lookGround(film: Film, stage: Stage, o: { seed?: number } = {}): void {
+  filmFormat(film);
   stage.ground.dataset['depth'] = '0.25';
   stage.ground.innerHTML = '';
   const g = document.createElement('div');
@@ -47,12 +48,19 @@ export function lookGround(film: Film, stage: Stage, o: { seed?: number } = {}):
   }
 }
 
+/** a vertical film says so on <html>, so the look's 9:16 tokens (film line size, the line's top) reach every line an act
+    draws, inside a key frame or not (look/src/film.css) */
+function filmFormat(film: Film): void {
+  if (film.variant === 'vertical') document.documentElement.dataset['filmFormat'] = 'vertical';
+}
+
 let cssIn = false;
 /** build a beat's key frame with the art director's builder into a box in a world layer; returns the box (`.stage`) */
 export async function keyFrame(film: Film, stage: Stage, id: string, o: { x?: number; y?: number; layer?: HTMLElement; vertical?: boolean; ownGround?: boolean } = {}): Promise<HTMLElement> {
   const build = KEY_FRAMES[id.toLowerCase()];
   if (!build) throw new Error('keyFrame: no key frame "' + id + '" (have ' + keyFrameIds().join(', ') + ')');
   if (!cssIn) { const s = document.createElement('style'); s.textContent = SCENE_CSS; document.head.appendChild(s); cssIn = true; }
+  filmFormat(film);
   const vertical = o.vertical ?? film.variant === 'vertical';
   const box = document.createElement('div');
   box.className = 'stage film-keyframe';
