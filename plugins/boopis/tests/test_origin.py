@@ -57,14 +57,18 @@ def test_who_started_a_room_turn(line: str, by: str) -> None:
 
 def test_a_forwarded_message_a_card_and_a_schedule_are_not_the_owner(monkeypatch: pytest.MonkeyPatch) -> None:
     a2a = origin.read({"platform": "a2a", "sender_id": "kai@laptop"}, env())
-    assert a2a.kind == "a2a" and "forwarded from another bot's session (kai@laptop)" in (origin.context(a2a, "moss") or "")
+    assert a2a.kind == "a2a" and "forwarded from another bot's session (kai@laptop)" in (
+        origin.context(a2a, "moss") or ""
+    )
     monkeypatch.setenv("HERMES_KANBAN_TASK", "t_cd34")
     card = origin.read({}, env(HERMES_SESSION_SOURCE="kanban"))
     assert card.kind == "kanban" and card.card == "t_cd34"
     assert "works on kanban card t_cd34" in (origin.context(card, "moss") or "")
     monkeypatch.delenv("HERMES_KANBAN_TASK")
     cron = origin.read({"platform": "cron"}, env())
-    assert cron.kind == "cron" and "a scheduled run, not a message from the owner" in (origin.context(cron, "moss") or "")
+    assert cron.kind == "cron" and "a scheduled run, not a message from the owner" in (
+        origin.context(cron, "moss") or ""
+    )
 
 
 def test_the_owner_s_own_turns_carry_no_label() -> None:

@@ -24,6 +24,8 @@ HOOKS = (
     "subagent_start",
     "subagent_stop",
     "post_approval_response",
+    "kanban_task_completed",
+    "kanban_task_blocked",
 )
 RPC_METHODS = (
     "describe",

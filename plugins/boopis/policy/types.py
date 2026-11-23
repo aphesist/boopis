@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
 from ..config.model import Fallback, Mode
 
 if TYPE_CHECKING:
+    from ..bots.origin import TurnOrigin
     from ..bots.rules import BotRules
 
 DecisionKind = Literal["allow", "block", "approve", "modify"]
@@ -100,3 +101,5 @@ class SessionPolicy:
     ship_closed: str = ""  # a worker whose attempt is over (or has no task): why ship is refused; empty = open
     bot: BotRules | None = None  # the bot this session runs for (its tiers, ``policy.tiers``); None: the owner's own
     asked_by: str = ""  # who asked for the running turn, said on a bot's approval cards (``bots.origin``)
+    origin: TurnOrigin | None = None  # where the running turn came from (``bots.origin``), for a bot's kanban cards
+    board_folder: Callable[[str | None], str | None] | None = None  # a board's ``default_workdir``, ``bots.boards``

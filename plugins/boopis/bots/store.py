@@ -81,8 +81,9 @@ def clean_look(raw: Any) -> dict[str, str]:
 
 
 def clean_settings(raw: Any) -> dict[str, str]:
-    """boopis's settings for the teammate: ``{gov, cap, workspace, preset}``, each optional on a patch. ``preset``
-    names a set of default tiers (``policy/bot_tiers.json``); an empty one clears it."""
+    """boopis's settings for the teammate: ``{gov, cap, workspace, preset, parallel}``, each optional on a patch.
+    ``preset`` names a set of default tiers (``policy/bot_tiers.json``), an empty one clears it; ``parallel: on`` lets
+    it hold more than one claim on work at a time (``bots.claims``)."""
     settings = _mapping(raw, "settings")
     out: dict[str, str] = {}
     if "gov" in settings:
@@ -111,9 +112,15 @@ def clean_settings(raw: Any) -> dict[str, str]:
                 f"settings.preset is one of {', '.join(names)}, or empty", data={"found": repr(settings["preset"])}
             )
         out["preset"] = settings["preset"]
-    unknown = set(settings) - {"gov", "cap", "workspace", "preset"}
+    if "parallel" in settings:
+        if settings["parallel"] not in ("on", "off"):
+            raise InvalidParamsError("settings.parallel is 'on' or 'off'", data={"found": repr(settings["parallel"])})
+        out["parallel"] = settings["parallel"]
+    unknown = set(settings) - {"gov", "cap", "workspace", "preset", "parallel"}
     if unknown:
-        raise InvalidParamsError("settings has only gov, cap, workspace and preset", data={"found": sorted(unknown)})
+        raise InvalidParamsError(
+            "settings has only gov, cap, workspace, preset and parallel", data={"found": sorted(unknown)}
+        )
     return out
 
 

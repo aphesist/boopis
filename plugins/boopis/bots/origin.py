@@ -110,6 +110,25 @@ def _room(text: str, head: re.Match[str] | None, chat_id: str) -> TurnOrigin:
     return TurnOrigin("room", by=by, room=room, room_id=chat_id, handle=handle, discussion=digest, surface="bot_room")
 
 
+def work_of(origin: TurnOrigin | None, session_id: str) -> tuple[str, str] | None:
+    """The work a turn claims for its bot (``bots.claims``) and how to say it, None for a turn that claims nothing (the
+    owner's own chat, and a surface that is not a producer of work)."""
+    if origin is None:
+        return None
+    if origin.kind == "room":
+        room = origin.room_id or origin.room or "a room"
+        label = f"a turn in the room “{origin.room}”" if origin.room else "a room turn"
+        return f"room:{room}:{origin.discussion or session_id}", label
+    if origin.kind == "kanban":
+        card = origin.card or session_id
+        return f"kanban:{card}", f"kanban card {card}"
+    if origin.kind == "cron":
+        return f"cron:{session_id}", "a scheduled run"
+    if origin.kind == "a2a":
+        return f"a2a:{session_id}", "a forwarded message"
+    return None
+
+
 def asked_by(origin: TurnOrigin | None) -> str:
     """The end of an approval card's text: at whose request the bot asks."""
     if origin is None:

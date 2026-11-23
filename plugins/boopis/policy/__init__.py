@@ -21,7 +21,9 @@ Order, first to last:
 7. in governed mode a network tool (``web_search``, ``web_extract``, ``vision_analyze``, ...) that no rule allowed asks
    human: it sends data out. From an exec cell a network tool is refused unless ``exec.network`` is ``on``
    (step 2's neighbour: the sandbox keeps the cell off the network, so the plugin must not lend it one);
-8. otherwise the configured default (``allow`` unless set) applies.
+8. otherwise the configured default (``allow`` unless set) applies;
+9. a bot's ``kanban_create`` that would be allowed is filed as one card per job, ordered by ``parents``, in the
+   project's folder (``policy/kanban.py``): a ``modify``, or a refusal when its text waits for work it does not name.
 
 Any exception blocks (fail closed).
 """
@@ -67,7 +69,12 @@ def _parsed(texts: tuple[str, ...]) -> tuple[Rule, ...]:
 def check(call: ToolCall, session: SessionPolicy) -> Decision:
     """Allow, block, ask a human, or modify. Never raises."""
     try:
-        return _check(call, session, load_defaults())
+        decision = _check(call, session, load_defaults())
+        if decision.kind == "allow" and call.tool == "kanban_create":
+            from .kanban import decide as decide_card
+
+            return decide_card(call, session) or decision
+        return decision
     except Exception:  # noqa: BLE001 - a policy that errors denies
         _log.error("policy failed closed for tool=%s session=%s", call.tool, call.session_id, exc_info=True)
         return block("boopis policy could not judge this call, so it was blocked.", "fail_closed")

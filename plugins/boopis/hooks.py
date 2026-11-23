@@ -14,6 +14,7 @@ from typing import Any
 
 from . import budget, policy, turns
 from .bots import origin
+from .bots.rules import BotRules
 from .hermes_api import bound
 from .ledger import project_costs, usage_event_payload
 from .policy import Decision, ToolCall
@@ -219,7 +220,12 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
             state.track.armed_at = None  # a blocked turn does not use the exception
             return capped
         bot = rt.bot_rules()
-        label = origin.context(state.origin, bot.name if bot is not None else "this session")
+        busy = _claim(rt, state, bot)  # one bot, one body (T1)
+        if busy is not None:
+            state.track.armed_at = None
+            return _block(busy)
+        said = origin.context(state.origin, bot.name if bot is not None else "this session")
+        label = "\n\n".join(x for x in (said, _busy_note(rt, bot)) if x) or None
         if turns.begin(rt, state, str(kw.get("turn_id") or "")):
             return _with_label(label, {"context": turns.CONTEXT})
         if state.mode != "governed":
@@ -240,6 +246,77 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
     except Exception:  # noqa: BLE001
         _log.error("pre_llm_call failed closed", exc_info=True)
         return _block("boopis could not evaluate the cost cap, so this turn was blocked.")
+
+
+def _claim(rt: Runtime, state: SessionState, bot: BotRules | None) -> str | None:
+    """Take the bot's claim for the work this turn starts (``bots.claims``); why not, when another live claim holds
+    it. A bot allowed to work in parallel, the owner's own chat and the owner's own profile claim nothing."""
+    work = origin.work_of(state.origin, state.session_id)
+    if bot is None or bot.parallel or work is None:
+        return None
+    from datetime import UTC, datetime
+
+    from .bots import claims
+
+    got = claims.take(rt.home, work[0], state.session_id, work[1])
+    if got.held:
+        return None
+    if got.by is None:
+        return f"boopis did not start {work[1]} for {bot.name}: {got.problem}. It starts once that is cleared."
+    since = datetime.fromtimestamp(got.by.at, UTC).strftime("%H:%M UTC")
+    return (
+        f"{bot.name} is already working on {got.by.label or got.by.work} (since {since}). One bot works on one thing "
+        f"at a time, so {work[1]} was not started; send it again when that is done, or let {bot.name} work in "
+        "parallel in its settings."
+    )
+
+
+def _busy_note(rt: Runtime, bot: BotRules | None) -> str | None:
+    """For the owner's own chat with a bot that holds a claim elsewhere: what else it is doing, so it does not start
+    that work a second time here."""
+    if bot is None:
+        return None
+    from .bots import claims
+
+    held = claims.read(rt.home)
+    if not isinstance(held, claims.Claim) or claims.stale(held, held.at):
+        return None
+    return (
+        f"[boopis] {bot.name} is also working on {held.label or held.work} in another session right now. Do not start "
+        "that work here a second time; say so if this message asks for it."
+    )
+
+
+def _release(rt: Runtime, session_id: str) -> None:
+    """The turn or the session ended: its claim, if it held the bot's, is dropped."""
+    if rt.bot_rules() is None:
+        return
+    from .bots import claims
+
+    claims.release(rt.home, session_id=session_id)
+
+
+def kanban_task_completed(**kw: Any) -> None:
+    """The engine's kanban hook, in the worker: the card is done, so its bot's claim on it is dropped."""
+    _card_ended(kw)
+
+
+def kanban_task_blocked(**kw: Any) -> None:
+    """The engine's kanban hook, in the worker: the card is blocked, so its bot's claim on it is dropped."""
+    _card_ended(kw)
+
+
+def _card_ended(kw: Mapping[str, Any]) -> None:
+    try:
+        from .bots import claims
+        from .bots.homes import PROFILE_ID_RE
+
+        profile, task = str(kw.get("profile_name") or ""), str(kw.get("task_id") or "")
+        if not task or not PROFILE_ID_RE.match(profile) or profile == "default":
+            return
+        claims.release(runtime().root / "profiles" / profile, work=f"kanban:{task}")
+    except Exception:  # noqa: BLE001 - an observer; a claim left behind goes stale with its process
+        _log.error("a card's claim was not released", exc_info=True)
 
 
 def _with_label(label: str | None, answer: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -421,6 +498,7 @@ def on_session_end(**kw: Any) -> None:
             return
         reason = "interrupted" if kw.get("interrupted") else "failed" if kw.get("failed") else "completed"
         turns.end(rt, rt.state(session_id), reason)
+        _release(rt, session_id)
     except Exception:  # noqa: BLE001
         _log.error("the end of a turn was not recorded", exc_info=True)
 
@@ -430,6 +508,7 @@ def on_session_finalize(**kw: Any) -> None:
     try:
         rt = runtime()
         _stop_kernel(str(kw.get("session_id") or ""))
+        _release(rt, str(kw.get("session_id") or ""))
         if str(kw.get("session_id") or "") in rt.links:
             return  # a worker ending; ``subagent_stop`` is where its attempt is closed
         if rt.forms is not None:

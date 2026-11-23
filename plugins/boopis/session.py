@@ -125,6 +125,7 @@ class Runtime:
         self._root = root  # tests name the Hermes root; the product asks Hermes
         self.month_scanner = MonthScanner()  # the team's spend this month, for every profile of the root
         self.pauses: dict[str, str] = {}  # the rule key of a run cap's pause card -> the session it holds
+        self.board_folders: Callable[[str | None], str | None] | None = None  # made on first use (``bots.boards``)
         self._sessions: dict[str, SessionState] = {}
         self._registry_lock = threading.Lock()
         self.links: dict[str, WorkerLink] = {}  # a delegated child's session id -> the attempt it is
@@ -151,6 +152,14 @@ class Runtime:
     def bot_rules(self) -> BotRules | None:
         """The rules of the bot whose turn this is (``bots.rules``), None in the owner's own profile."""
         return rules_for(self.home, self.root)
+
+    def boards(self) -> Callable[[str | None], str | None]:
+        """A kanban board's ``default_workdir``, asked of the engine's CLI in the root home and kept a minute."""
+        if self.board_folders is None:
+            from .bots.boards import BoardFolders
+
+            self.board_folders = BoardFolders.over(str(self.root))
+        return self.board_folders
 
     def own_ledger_dirs(self, state: SessionState) -> tuple[Path, ...]:
         """This profile's ledger folder when ``ledger_dir`` moved it: the month counts it too."""
@@ -250,7 +259,14 @@ class Runtime:
         base = caller.state.policy
         assert base is not None
         # read again when the record changes: a new tier applies at once; the card says who asked for the turn
-        base = replace(base, bot=self.bot_rules(), asked_by=asked_by(caller.state.origin))
+        bot = self.bot_rules()
+        base = replace(
+            base,
+            bot=bot,
+            asked_by=asked_by(caller.state.origin),
+            origin=caller.state.origin,
+            board_folder=self.boards() if bot is not None else None,
+        )
         if caller.link is None:
             return replace(base, mode="ungoverned") if caller.state.track.active else base
         return replace(base, role="worker", ship_closed=caller.link.closed_reason())

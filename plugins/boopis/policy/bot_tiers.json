@@ -14,7 +14,10 @@
     "owner_answer: what no bot may do in any tier: answer an approval, a clarify or a form meant for the owner (ADR-0048, S2).",
     "`markers` are looked for in command lines, code and URLs (the gateway's answer methods, the local API's approvals route and",
     "its token, a ticket minted from the engine's CLI); `slash` are chat commands that answer an approval, refused at the start of",
-    "a message a people tool sends (`text_keys`)."
+    "a message a people tool sends (`text_keys`).",
+    "kanban: how a bot files a card (ADR-0048, T1, policy/kanban.py). `depends_on` are the words that say a card waits for other work",
+    "(case-insensitive regular expressions over its title and body): such a card needs `parents`, because the dispatcher starts a card",
+    "without parents at once whatever its text says. `key_max` bounds the idempotency key boopis derives for a room turn's card."
   ],
   "categories": {
     "deploys": {
@@ -135,5 +138,18 @@
     ],
     "slash": ["/approve", "/deny", "/always", "/yes", "/no"],
     "text_keys": ["message", "text", "content", "body", "reply"]
+  },
+  "kanban": {
+    "depends_on": [
+      "\\b(after|once|when|until)\\b[^.\\n]{0,80}\\b(is|are|has been|have been|gets?|got)\\s+(done|finished|complete|completed|merged|landed|ready|approved|fixed|in)\\b",
+      "\\bafter\\s+@?[a-z0-9_-]+['\u2019]s\\b",
+      "\\bdepends?\\s+on\\b",
+      "\\bblocked\\s+(by|on)\\b",
+      "\\bwait(s|ing)?\\s+(for|until)\\b",
+      "\\bonly\\s+after\\b",
+      "\\bnot\\s+before\\b",
+      "\\bafter\\s+t_[0-9a-z]{4,}\\b"
+    ],
+    "key_max": 200
   }
 }
