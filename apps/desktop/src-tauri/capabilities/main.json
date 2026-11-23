@@ -93,6 +93,7 @@
     "allow-local-api-set-enabled",
     "allow-local-api-rotate-token",
     "allow-bots-prepare",
+    "allow-bots-set-model",
     "allow-bots-release",
     "allow-bots-notice",
     "allow-room-settings-get",

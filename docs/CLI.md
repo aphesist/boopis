@@ -142,7 +142,8 @@ says which providers the bot can reach (exit 1). The engine checks the pick once
 when it refuses; the bot's configuration is then read back, so `changed` (or `made`) is printed only when the model really
 is the one asked for. A new bot is made on the main profile's model and given its own once its home has its provider's
 plugin (before that the engine cannot resolve the provider for it); a model the main profile cannot reach is refused before
-the bot is made.
+the bot is made. The app's Bots page sets a bot's model through the same code (`bots/model.rs`), when a bot is made and when
+its model is changed, and shows the same sentence when it refuses.
 
 **An alias stays an alias.** A provider that floats short names (the Claude subscription's `haiku`, `sonnet`, `opus` and
 `fable`) resolves them itself at every request, and each follows the newest model of its tier. The engine writes the id an

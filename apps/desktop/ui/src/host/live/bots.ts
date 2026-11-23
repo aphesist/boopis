@@ -7,10 +7,13 @@
      archive, restore, delete                                    the plugin, through Hermes's `profile rename` and `profile delete`
      what its home needs beyond the profile                      the host (`../bots-bridge.ts`, ADR-0042): the plugins boopis manages, its
                                                                   boopis settings and Governed switch, the root's key wiring, its seat in groups
+     setting its model                                           the host too (`bots_set_model`, `src-tauri/src/bots/model.rs`, the command
+                                                                  line's own code): checked against what the bot can reach, written, read back
    a conversation with it                                     a session of its own profile on its own link (`./bot-chat.ts`)
    Nothing is written to a Hermes file here, and nothing is invented: what Hermes did not answer is null and says why in
    `info.notes`. */
 import { sentenceFor, unlessEngine } from '../errors';
+import { CONFIRM_MODEL } from '../bots-bridge';
 import type { BotsBridge } from '../bots-bridge';
 import { isFrontier } from '../../data/frontier';
 import { logger } from '../../core/log';
@@ -59,6 +62,8 @@ export interface LiveBots {
 
 export const NO_TEAMMATE_LINK = 'This build cannot talk to a teammate: its own link to the engine is not available here.';
 export const NO_RUN_NOW = 'A routine cannot be run on demand from here yet.';
+/** a bot's model is set by the host, which checks it against what the bot can reach and reads it back */
+export const NO_MODEL_HOST = 'A bot’s model can be set in the desktop app.';
 const FEATURED_LIMIT = 40;
 const LOAD_AT_ONCE = 3;
 const POLL_MS = 15_000;
@@ -300,12 +305,23 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
     let problems: readonly string[];
     try { problems = (await deps.bridge.prepare(id, fresh)).problems; }
     catch (e) { problems = [why(e)]; }
+    noteSetup(id, problems);
+  }
+  function noteSetup(id: string, problems: readonly string[]): void {
     const r = recs.get(id);
     if (problems.length) {
       log.warn('a bot was not given everything its home needs: ' + id, problems);
       if (r) r.notes['setup'] = 'boopis could not finish setting it up: ' + problems.join('; ');
     } else if (r) delete r.notes['setup'];
     if (r) events.emit({ type: 'bot', bot: toBot(r) });
+  }
+  /** the bot's model, set by the host the one way it is set (`bots_set_model`: checked against what the bot can reach, written,
+      read back, then the bot prepared); what preparing could not do is a note. A model the engine asks about first is a
+      NeedsConfirmation carrying its question */
+  async function setModel(id: string, next: { provider: string; model: string }, confirm: boolean): Promise<void> {
+    if (!deps.bridge) throw new Error(NO_MODEL_HOST);
+    try { noteSetup(id, (await deps.bridge.setModel(id, next.provider, next.model, confirm)).problems); }
+    catch (e) { throw (e as { code?: unknown } | null)?.code === CONFIRM_MODEL ? new NeedsConfirmation(why(e)) : e; }
   }
   async function release(id: string): Promise<void> {
     if (!deps.bridge) return;
@@ -378,7 +394,10 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       const plan = planCreate(draft.name);
       const params: Record<string, unknown> = { name: plan.profile, description: draft.role.trim(), no_alias: true };
       if (draft.instructions.trim()) params['soul'] = draft.instructions.trim() + '\n';
-      if (opts.model) Object.assign(params, resolveModel(opts.model));
+      /* made on the main profile's model; its own is set by the host once its home has its provider's plugin (the engine could
+         not resolve the provider for it before), and read back */
+      const next = opts.model ? resolveModel(opts.model) : null;
+      if (next && !deps.bridge) throw new Error(NO_MODEL_HOST);
       preparing.add(plan.profile);
       const made = await client.requestRaw('profiles.create', params).catch((e: unknown) => { preparing.delete(plan.profile); throw e; }) as { path?: string; warnings?: string[]; model_set?: boolean };
       try {
@@ -386,7 +405,17 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
         await plug('bots.write', { name: plan.profile, look: { shape: draft.shape, color: draft.color }, settings: { gov: 'ungoverned', cap: '0.60', workspace: 'worktree' }, approvals: Object.fromEntries(APPROVALS.map((a) => [a.id, true])) });
       } catch (e) { log.warn('the new teammate’s own record was not saved', e); }
       if (made.warnings?.length) log.warn('Hermes warned while making ' + plan.profile + ': ' + made.warnings.join(' '));
-      try { await refreshRoster(); await prepare(plan.profile, true); } finally { preparing.delete(plan.profile); }
+      try {
+        await refreshRoster(); await prepare(plan.profile, true);
+        if (next && opts.model) {
+          const asked = opts.model;
+          /* it is made: a model it could not take is said on the bot, never as a bot that was not made */
+          await setModel(plan.profile, next, false).catch((e: unknown) => {
+            log.warn('a new teammate kept the main model', e);
+            noteSetup(plan.profile, ['it runs on the main profile’s model, not ' + asked + ': ' + why(e) + (e instanceof NeedsConfirmation ? ' Pick it in its settings to confirm it.' : '')]);
+          });
+        }
+      } finally { preparing.delete(plan.profile); }
       const r = need(plan.profile);
       await loadDetail(plan.profile);
       return toBot(r);
@@ -409,16 +438,24 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       const params: Record<string, unknown> = { name: id };
       if (patch.role !== undefined) params['description'] = patch.role.trim();
       if (patch.instructions !== undefined) params['soul'] = patch.instructions;
+      let next: { provider: string; model: string } | null = null;
       if (patch.model !== undefined) {
-        const next = resolveModel(patch.model);
+        next = resolveModel(patch.model);
         const refused = governed(r) ? governedRefusal(botName(r.row), next.provider, next.model) : null;
         if (refused) throw new Error(refused);
-        Object.assign(params, next, opts?.confirmModel ? { confirm_expensive_model: true } : {});
+        if (!deps.bridge) throw new Error(NO_MODEL_HOST);
       }
       if (Object.keys(params).length > 1) {
-        const res = await client.request('profiles.configure', params) as { ok?: boolean; applied?: Record<string, boolean | null>; confirm_required?: boolean | null; confirm_message?: string | null };
-        if (res.confirm_required) { r.loaded = false; await loadDetail(id); throw new NeedsConfirmation(unlessEngine('hx.engine.refused', res.confirm_message || 'Confirm this model before it is saved.')); }
-        for (const [key, ok] of Object.entries(res.applied ?? {})) if (ok === false) failures.push(({ soul: 'SOUL.md', description: 'the role', model: 'the model' } as Record<string, string>)[key] ?? key);
+        const res = await client.request('profiles.configure', params) as { ok?: boolean; applied?: Record<string, boolean | null> };
+        for (const [key, ok] of Object.entries(res.applied ?? {})) if (ok === false) failures.push(({ soul: 'SOUL.md', description: 'the role' } as Record<string, string>)[key] ?? key);
+      }
+      /* the model is the host's to set: checked against what the bot can reach, written, read back, then the bot prepared */
+      if (next) {
+        try { await setModel(id, next, opts?.confirmModel === true); }
+        catch (e) {
+          if (e instanceof NeedsConfirmation) { r.loaded = false; await loadDetail(id); throw e; }
+          failures.push('the model (' + why(e) + ')');
+        }
       }
       if (patch.addRoutines?.length || patch.removeRoutines?.length) {
         try {
@@ -436,7 +473,6 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       r.loaded = false;
       await loadDetail(id);
       await refreshRoster();
-      if (patch.model !== undefined) await prepare(id, false);   /* its ladder follows its model */
       if (failures.length) throw new Error(failures.join(', ') + ' could not be saved. The rest was saved.');
     },
     async setRoutinePaused(id, jobId, paused) {

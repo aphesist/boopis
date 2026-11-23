@@ -86,6 +86,7 @@ const COMMANDS: &[&str] = &[
     "local_api_set_enabled",
     "local_api_rotate_token",
     "bots_prepare",
+    "bots_set_model",
     "bots_release",
     "bots_notice",
     "room_settings_get",

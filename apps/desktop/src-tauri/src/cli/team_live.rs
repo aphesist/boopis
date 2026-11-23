@@ -23,9 +23,8 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use serde_json::{Value, json};
 
-use super::bot_model;
 use super::headless::{GatewayRpc, Host};
-use crate::bots::{self, Layout};
+use crate::bots::{self, Layout, model as bot_model};
 use crate::connectors::ops::{GatewayMcp, McpOps};
 use crate::error::{Error, Result};
 use crate::rooms::settings::RoomSettings;
@@ -409,10 +408,21 @@ impl<'a> Live<'a> {
         bot_model::check(&self.root, name, asked, made).await
     }
 
-    /// Make `asked` the bot's model and read it back, an alias kept as asked (`bot_model::write`).
+    /// Make `asked` the bot's model the one way it is done (`Service::set_model`: checked, written, read back, an alias kept),
+    /// over this command's own link. A model the engine wants confirmed is confirmed in the app, which can ask.
     async fn write_model(&self, name: &str, asked: &(String, String)) -> Result<()> {
-        let home = self.layout.home(name)?;
-        bot_model::write(&self.root, self.service.engine(), &home, name, asked).await
+        match self
+            .service
+            .set_model(Some(&self.root), &self.layout, name, asked, false)
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(Error::Bots(bot_model::CONFIRM, asks)) => Err(Error::Bots(
+                bot_model::CONFIRM,
+                format!("{asks} Change it once in the app's Bots page, which asks for that."),
+            )),
+            Err(e) => Err(e),
+        }
     }
 
     async fn prepare(&self, name: &str, fresh: bool) -> Result<()> {
@@ -523,11 +533,7 @@ impl Backend for Live<'_> {
                 self.plugin("bots.write", body).await?;
                 self.prepare(name, true).await?;
                 if let Some(a) = &asked {
-                    let set = async {
-                        self.check_reach(name, a, true).await?;
-                        self.write_model(name, a).await
-                    };
-                    set.await.map_err(|e| {
+                    self.write_model(name, a).await.map_err(|e| {
                         Error::Bots("hx.bots.not_saved", format!("{name} was made, but {e}"))
                     })?;
                     // its ladder follows its model

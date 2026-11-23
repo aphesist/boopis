@@ -1,5 +1,6 @@
 //! A bot's model, set so that what is reported is what happened: which providers and models the bot can reach (checked before
-//! anything is written), what the engine did not save, and the model read back afterwards.
+//! anything is written), what the engine did not save, and the model read back afterwards. The one way a bot's model is set:
+//! `boopis bots`, `team apply` and the app's Bots page (`bots_set_model`, through `engine::Service::set_model`) all come here.
 //!
 //! What a bot can reach is read from `model.options` in the bot's own scope: the inventory the app's model picker reads
 //! (`ui/src/host/live/bots.ts`, `readModels`: a provider row counts unless it says `authenticated: false`), asked with the
@@ -8,8 +9,9 @@
 //! can reach is: a provider in that list, and, where the row has a catalogue, a model in it (an alias counts as the model it
 //! points at today, `model_names::same`, as the picker counts it).
 //!
-//! The calls go over one link to the root's gateway (`Rpc`): `model.options` with the bot's name, which the engine binds to the
-//! bot's scope, `profiles.configure` and `profiles.describe`.
+//! The calls go over a link to the root's gateway (`Rpc`): `model.options` with the bot's name, which the engine binds to the
+//! bot's scope, `profiles.configure` and `profiles.describe`. The command line passes the link it keeps; the app, which keeps
+//! none outside its windows, passes [`RootLink`] (a short link per call, the engine's `call`).
 //!
 //! An alias the provider floats itself (the Claude subscription's `haiku`) is kept as it was written. The engine pins it to the
 //! id it names today (`claude-haiku-5-5[1m]`), which would stop the bot following the newest model of its tier and set it apart
@@ -17,9 +19,10 @@
 //! found a change it could never make (B34). Treating the two spellings as equal in the plan instead would keep two
 //! representations on disk and hide a real difference (an alias moves, a pinned id does not), so the alias is written back.
 
-use serde_json::{Value, json};
-
 use std::path::Path;
+
+use async_trait::async_trait;
+use serde_json::{Value, json};
 
 use crate::bots;
 use crate::error::{self, Error};
@@ -217,7 +220,8 @@ pub fn not_saved(answer: &Value) -> Vec<String> {
 }
 
 /// Whether the model read back after a write is the one asked for, given the one before. The engine may spell the model its
-/// own way (a provider's form of the id); it may not leave the bot where it was or put it on another provider.
+/// own way (a provider's form of the id); it may not leave the bot where it was, unless that is already the model asked for
+/// (a new bot asked for the main profile's own model), or put it on another provider.
 ///
 /// # Errors
 /// The sentence for a model that did not change, or that changed to another provider's.
@@ -227,7 +231,9 @@ pub fn written(
     before: &(String, String),
     now: &(String, String),
 ) -> Result<(), String> {
-    if now == before {
+    let is_asked = now.0.eq_ignore_ascii_case(&asked.0)
+        && (now.1.eq_ignore_ascii_case(&asked.1) || model_names::same(&now.1, &asked.1));
+    if now == before && !is_asked {
         return Err(format!(
             "{bot}'s model was not changed: it is still {}, not {}",
             label(before),
@@ -292,33 +298,43 @@ pub async fn model_now(rpc: &dyn Rpc, name: &str) -> error::Result<(String, Stri
     ))
 }
 
+/// The code of a pick the engine wants the owner to confirm first (a costly model, a data policy): the app asks once and sends
+/// it again with `confirm`.
+pub const CONFIRM: &str = "hx.bots.confirm_model";
+
 /// Make `asked` the bot's model with the engine's `profiles.configure`, which checks the pick against the provider once more
 /// and writes nothing when it refuses, then read the configuration back: only a model that really changed is reported. An
 /// alias the engine pinned ([`keeps_alias`]) is written back as asked, by the engine's own `config set` in the bot's `home`
-/// (through `engine`, as `bots::prepare` writes every other key there).
+/// (through `engine`, as `bots::prepare` writes every other key there). `confirm` is the owner's yes to a pick the engine
+/// asked about ([`CONFIRM`]). Returns the model read back.
 ///
 /// # Errors
-/// A pick that needs the owner's confirmation, one the engine refused (`applied.model` false), or a configuration that read
-/// back otherwise ([`written`]); the link's.
+/// [`CONFIRM`] with the engine's question; `hx.bots.not_saved` for a pick the engine refused (`applied.model` false) or a
+/// configuration that read back otherwise ([`written`]); the link's.
 pub async fn write(
     rpc: &dyn Rpc,
     engine: &dyn bots::Engine,
     home: &Path,
     name: &str,
     asked: &(String, String),
-) -> error::Result<()> {
+    confirm: bool,
+) -> error::Result<(String, String)> {
     let before = model_now(rpc, name).await?;
-    let res = rpc
-        .call(
-            "profiles.configure",
-            json!({"name": name, "provider": asked.0, "model": asked.1}),
-        )
-        .await?;
+    let mut params = json!({"name": name, "provider": asked.0, "model": asked.1});
+    if confirm {
+        params["confirm_expensive_model"] = json!(true);
+    }
+    let res = rpc.call("profiles.configure", params).await?;
     if res.get("confirm_required").and_then(Value::as_bool) == Some(true) {
-        return Err(Error::Unavailable(format!(
-            "the model {} needs your confirmation: change it in the app's Bots page once",
-            label(asked)
-        )));
+        let asks = res
+            .get("confirm_message")
+            .and_then(Value::as_str)
+            .filter(|m| !m.trim().is_empty())
+            .map_or_else(
+                || format!("Confirm {} before it is saved.", label(asked)),
+                |m| error::unless_engine("hx.engine.refused", m),
+            );
+        return Err(Error::Bots(CONFIRM, asks));
     }
     if !not_saved(&res).is_empty() {
         return Err(Error::Bots(
@@ -334,7 +350,23 @@ pub async fn write(
         engine.config_set(home, "model.default", &asked.1).await?;
         now = model_now(rpc, name).await?;
     }
-    written(name, asked, &before, &now).map_err(|why| Error::Bots("hx.bots.not_saved", why))
+    written(name, asked, &before, &now).map_err(|why| Error::Bots("hx.bots.not_saved", why))?;
+    Ok(now)
+}
+
+/// The root's gateway as an [`Rpc`] for the app: one short link per call, through the engine's own `call`.
+pub struct RootLink<'a> {
+    /// The engine.
+    pub engine: &'a dyn bots::Engine,
+    /// The root's home.
+    pub root: &'a Path,
+}
+
+#[async_trait]
+impl Rpc for RootLink<'_> {
+    async fn call(&self, method: &str, params: Value) -> error::Result<Value> {
+        self.engine.call(self.root, method, params).await
+    }
 }
 
 #[cfg(test)]
@@ -435,6 +467,8 @@ mod tests {
             ),
             Ok(())
         );
+        // a new bot asked for the main profile's own model: it is already there
+        assert_eq!(written("nimbus", &before, &before, &before), Ok(()));
         let e = written("nimbus", &asked, &before, &before).unwrap_err();
         assert_eq!(
             e,
@@ -535,7 +569,7 @@ mod tests {
                 .push((method.to_owned(), params.clone()));
             match method {
                 "model.options" => Ok(json!({"providers": [
-                    {"slug": SUB, "authenticated": true, "models": ["claude-opus-5-5[1m]", "claude-haiku-5-5[1m]"]},
+                    {"slug": SUB, "authenticated": true, "models": ["claude-opus-5-5[1m]", "claude-haiku-5-5[1m]", "claude-fable-5-2[1m]"]},
                     {"slug": "openrouter", "authenticated": true, "models": []},
                 ]})),
                 "profiles.describe" => {
@@ -547,6 +581,13 @@ mod tests {
                         params["provider"].as_str().unwrap(),
                         params["model"].as_str().unwrap(),
                     );
+                    // a costly pick is written only once the owner said yes, as the engine's guard does
+                    if m == "claude-fable-5-2[1m]"
+                        && params["confirm_expensive_model"] != json!(true)
+                    {
+                        return Ok(json!({"ok": true, "applied": {}, "confirm_required": true,
+                            "confirm_message": "Fable bills usage credits from the first request."}));
+                    }
                     Ok(match (self.stores)(p, m) {
                         Some(x) => {
                             *self.model.lock().unwrap() = x;
@@ -567,10 +608,8 @@ mod tests {
             panic!("not scripted: config get {key}")
         }
         async fn config_set(&self, home: &Path, key: &str, value: &str) -> error::Result<()> {
-            assert_eq!(
-                (home, key),
-                (Path::new("/e/profiles/nimbus"), "model.default")
-            );
+            assert!(home.ends_with("profiles/nimbus"), "{}", home.display());
+            assert_eq!(key, "model.default");
             self.asked
                 .lock()
                 .unwrap()
@@ -584,8 +623,9 @@ mod tests {
         async fn enable_plugin(&self, _: &Path, name: &str) -> error::Result<()> {
             panic!("not scripted: enable {name}")
         }
-        async fn call(&self, _: &Path, method: &str, _: Value) -> error::Result<Value> {
-            panic!("not scripted: {method}")
+        /// The app's short links reach the same gateway.
+        async fn call(&self, _: &Path, method: &str, params: Value) -> error::Result<Value> {
+            Rpc::call(self, method, params).await
         }
         async fn reload_plugins(&self, _: &Path, _: &Path) -> error::Result<()> {
             panic!("not scripted: reload")
@@ -596,7 +636,16 @@ mod tests {
     }
 
     async fn set(e: &Scripted, asked: (String, String)) -> error::Result<()> {
-        write(e, e, Path::new("/e/profiles/nimbus"), "nimbus", &asked).await
+        write(
+            e,
+            e,
+            Path::new("/e/profiles/nimbus"),
+            "nimbus",
+            &asked,
+            false,
+        )
+        .await
+        .map(|_| ())
     }
 
     /// B34: `boopis bots set nimbus --model haiku` wrote `claude-haiku-5-5[1m]`, and an exported team file then showed drift.
@@ -680,6 +729,123 @@ mod tests {
                 .starts_with("nimbus's model was not changed"),
             "{err}"
         );
+    }
+
+    /// The app's way in: `Service::set_model` with no link of its own (short links through the engine, `RootLink`), as
+    /// `bots_set_model` calls it. The same check, write and read-back as the command line's.
+    mod the_apps_path {
+        use super::*;
+        use std::sync::Arc;
+
+        fn service(
+            e: &Arc<Scripted>,
+        ) -> (tempfile::TempDir, bots::Layout, Arc<bots::engine::Service>) {
+            let dir = tempfile::tempdir().unwrap();
+            std::fs::create_dir_all(dir.path().join("profiles").join("nimbus")).unwrap();
+            let layout = bots::Layout::new(dir.path().to_path_buf(), &[]);
+            let svc = Arc::new(bots::engine::Service::with_engine(e.clone()));
+            (dir, layout, svc)
+        }
+
+        #[tokio::test]
+        async fn a_refused_pick_leaves_the_model_and_says_what_the_bot_can_reach() {
+            let e = Arc::new(Scripted::new(|p, m| Some(pair(p, m))));
+            let (_dir, layout, svc) = service(&e);
+            let err = svc
+                .set_model(
+                    None,
+                    &layout,
+                    "nimbus",
+                    &pair("nosuchprovider", "xyz"),
+                    false,
+                )
+                .await
+                .unwrap_err();
+            assert_eq!(err.code(), "hx.bots.model_unreachable");
+            let shown = crate::error::HostError::from(err).message;
+            assert_eq!(
+                shown,
+                format!(
+                    "nosuchprovider is not a provider nimbus can reach. nimbus can reach {SUB} and openrouter"
+                )
+            );
+            assert_eq!(*e.model.lock().unwrap(), pair(SUB, "opus"));
+            assert!(!e.methods().contains(&"profiles.configure".to_owned()));
+        }
+
+        #[tokio::test]
+        async fn a_pick_ends_on_that_model_and_an_alias_stays_one() {
+            let e = Arc::new(Scripted::new(|p, m| {
+                Some(match (p, m) {
+                    (SUB, "haiku") => pair(SUB, "claude-haiku-5-5[1m]"),
+                    _ => pair(p, m),
+                })
+            }));
+            let (_dir, layout, svc) = service(&e);
+            let now = svc
+                .set_model(None, &layout, "nimbus", &pair(SUB, "haiku"), false)
+                .await
+                .unwrap();
+            assert_eq!(now, pair(SUB, "haiku"));
+            assert_eq!(*e.model.lock().unwrap(), pair(SUB, "haiku"));
+        }
+
+        #[tokio::test]
+        async fn an_engine_that_claims_success_without_writing_is_caught() {
+            let e = Arc::new(Scripted::new(|_, _| Some(pair(SUB, "opus"))));
+            let (_dir, layout, svc) = service(&e);
+            let err = svc
+                .set_model(
+                    None,
+                    &layout,
+                    "nimbus",
+                    &pair("openrouter", "some/model"),
+                    false,
+                )
+                .await
+                .unwrap_err();
+            assert_eq!(err.code(), "hx.bots.not_saved");
+            assert!(
+                err.to_string()
+                    .starts_with("nimbus's model was not changed"),
+                "{err}"
+            );
+        }
+
+        #[tokio::test]
+        async fn a_costly_pick_is_asked_about_then_written_once_confirmed() {
+            let e = Arc::new(Scripted::new(|p, m| Some(pair(p, m))));
+            let (_dir, layout, svc) = service(&e);
+            let fable = pair(SUB, "claude-fable-5-2[1m]");
+            let err = svc
+                .set_model(None, &layout, "nimbus", &fable, false)
+                .await
+                .unwrap_err();
+            assert_eq!(err.code(), CONFIRM);
+            assert_eq!(
+                err.to_string(),
+                "Fable bills usage credits from the first request."
+            );
+            assert_eq!(*e.model.lock().unwrap(), pair(SUB, "opus"));
+            assert_eq!(
+                svc.set_model(None, &layout, "nimbus", &fable, true)
+                    .await
+                    .unwrap(),
+                fable
+            );
+        }
+
+        #[tokio::test]
+        async fn a_bot_that_is_not_there_is_not_asked_about() {
+            let e = Arc::new(Scripted::new(|p, m| Some(pair(p, m))));
+            let (_dir, layout, svc) = service(&e);
+            let err = svc
+                .set_model(None, &layout, "ghost", &pair(SUB, "opus"), false)
+                .await
+                .unwrap_err();
+            assert_eq!(err.code(), "hx.bots.not_found");
+            assert!(e.methods().is_empty());
+        }
     }
 
     #[test]

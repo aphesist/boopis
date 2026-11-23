@@ -1678,6 +1678,49 @@ pub async fn bots_prepare(
     })
 }
 
+/// What `bots_set_model` did: the model read back from the bot's configuration, and what preparing the bot afterwards could not
+/// do.
+#[derive(Debug, Clone, Serialize, Type)]
+pub struct BotModelSet {
+    /// The provider read back.
+    pub provider: String,
+    /// The model read back, as the bot's configuration writes it (an alias stays an alias).
+    pub model: String,
+    /// What preparing the bot afterwards could not do (its ladder follows its model); the model is set.
+    pub problems: Vec<String>,
+}
+
+/// Make `provider`/`model` the model of the bot `name`, the one way a bot's model is set (`bots/model.rs`, as `boopis bots set`
+/// does it): refused before anything is written when the bot cannot reach it, with a sentence that names the providers it can;
+/// written by the engine; read back, so a model is reported only when it is the bot's. `confirm` is the owner's yes to a model
+/// the engine asked about (`hx.bots.confirm_model`, whose message is the question). Then the bot is prepared, as its ladder
+/// follows its model.
+///
+/// Errors: `hx.bots.model_unreachable`, `hx.bots.confirm_model`, `hx.bots.not_saved`, `hx.bots.model_unchecked`,
+/// `hx.bots.not_found`.
+#[tauri::command]
+#[specta::specta]
+pub async fn bots_set_model(
+    state: State<'_, AppState>,
+    name: String,
+    provider: String,
+    model: String,
+    confirm: bool,
+) -> std::result::Result<BotModelSet, HostError> {
+    let layout = bots_layout(&state);
+    let asked = (provider.trim().to_owned(), model.trim().to_owned());
+    let (provider, model) = state
+        .bots
+        .set_model(None, &layout, &name, &asked, confirm)
+        .await?;
+    let done = state.bots.prepare(&layout, &name, false).await?;
+    Ok(BotModelSet {
+        provider,
+        model,
+        problems: done.problems,
+    })
+}
+
 /// Take the bot `name` out of the root's groups (its `hosted_rooms.profiles` entry): after it is archived or deleted.
 #[tauri::command]
 #[specta::specta]

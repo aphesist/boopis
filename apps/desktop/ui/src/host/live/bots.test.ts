@@ -9,6 +9,8 @@ import { lookFor } from '@boopis/ui';
 import { createLiveBots } from './bots';
 import { madeOutside } from './map-bots';
 import type { LiveBots } from './bots';
+import type { BotsBridge } from '../bots-bridge';
+import { HostError } from '../bridge';
 
 const NOW = new Date('2026-11-19T10:00:00Z');
 const SEC = NOW.getTime() / 1000;
@@ -132,14 +134,35 @@ class FakeHermes {
   }
 }
 
-async function open(h = new FakeHermes()): Promise<{ h: FakeHermes; bots: LiveBots; events: BotsEvent[] }> {
-  const bots = createLiveBots({ client: h.main as unknown as GatewayClient, linkTo: h.linkTo, now: () => NOW, pollMs: null });
+async function open(h = new FakeHermes(), bridge: BotsBridge | null = null): Promise<{ h: FakeHermes; bots: LiveBots; events: BotsEvent[] }> {
+  const bots = createLiveBots({ client: h.main as unknown as GatewayClient, linkTo: h.linkTo, now: () => NOW, pollMs: null, bridge });
   const events: BotsEvent[] = [];
   bots.source.subscribe((e) => events.push(e));
   await bots.ready; await bots.settled();
   return { h, bots, events };
 }
 const botOf = (b: LiveBots, id: string) => b.source.snapshot().bots.find((x) => x.id === id);
+
+/** The host's model command as the app sees it (`bots_set_model`, whose check, write and read-back are the host's own tests'):
+    by default it ends on the pick, as the engine writes it; `answer` scripts a refusal (a HostError's code and sentence). */
+function modelHost(h: FakeHermes, answer: (name: string, provider: string, model: string, confirm: boolean) => { code: string; message: string } | null = () => null) {
+  const calls: string[] = [];
+  const bridge: BotsBridge = {
+    prepare: (name, fresh) => { calls.push('prepare ' + name + (fresh ? ' fresh' : '')); return Promise.resolve({ changed: true, problems: [] }); },
+    setModel: (name, provider, model, confirm) => {
+      calls.push('setModel ' + name + ' ' + provider + '/' + model + (confirm ? ' confirmed' : ''));
+      const no = answer(name, provider, model, confirm);
+      if (no) return Promise.reject(new HostError(no.code, no.message));
+      (h.describes[name] as Json)['model'] = { provider, default: model };
+      return Promise.resolve({ provider, model, problems: [] });
+    },
+    release: () => Promise.resolve(),
+    notice: () => Promise.resolve(null),
+    runLimit: () => Promise.resolve({ turns: null, fallback: 10 }),
+    setRunLimit: () => Promise.resolve({ turns: null, fallback: 10 })
+  };
+  return { bridge, calls };
+}
 
 describe('the roster is the user’s Hermes profiles, minus the default one', () => {
   it('lists each teammate with Hermes’s name and role, and never the default profile', async () => {
@@ -235,12 +258,16 @@ describe('making a bot is Hermes’s profiles.create, then the look in boopis’
     expect(a.planCreate('archived--x').profile).toBe('x');
     expect(a.planCreate('nova!').notes[0]).toMatch(/It will be called nova/);
   });
-  it('creates the profile with no alias, the model of a configured provider and the role, saves the look, and opens it', async () => {
-    const { h, bots, events } = await open();
+  it('creates the profile with no alias and the role, saves the look, gives it its model through the host, and opens it', async () => {
+    const h = new FakeHermes();
+    const host = modelHost(h);
+    const { bots, events } = await open(h, host.bridge);
     events.length = 0;
     const made = await bots.source.admin!.create({ name: 'kai', role: 'docs and changelog', shape: 'drop', color: '#4fc9a8', instructions: 'You write docs.' }, { model: 'nous/hermes-4' });
     const call = h.main.calls.find((c) => c.method === 'profiles.create')!;
-    expect(call.params).toEqual({ name: 'kai', description: 'docs and changelog', no_alias: true, soul: 'You write docs.\n', provider: 'nous', model: 'hermes-4' });
+    // made on the main profile's model; its own is set once its home has its provider's plugin, and read back by the host
+    expect(call.params).toEqual({ name: 'kai', description: 'docs and changelog', no_alias: true, soul: 'You write docs.\n' });
+    expect(host.calls).toEqual(['prepare kai fresh', 'setModel kai nous/hermes-4']);
     expect(h.own['kai']).toMatchObject({ look: { shape: 'drop', color: '#4fc9a8' }, settings: { gov: 'ungoverned' } });   // governance is opt-in (ADR-0042)
     expect(made).toMatchObject({ id: 'kai', shape: 'drop' });
     expect(made.info?.model).toBe('nous/hermes-4');
@@ -250,6 +277,18 @@ describe('making a bot is Hermes’s profiles.create, then the look in boopis’
     const { h, bots } = await open();
     await expect(bots.source.admin!.create({ name: 'kai', role: '', shape: 'circle', color: '#fff000', instructions: '' }, { model: 'ghost/none' })).rejects.toThrow(/not a model of a configured provider/);
     expect(h.main.calls.some((c) => c.method === 'profiles.create')).toBe(false);
+    // without the host nothing can check a model: nothing is made
+    await expect(bots.source.admin!.create({ name: 'kai', role: '', shape: 'circle', color: '#fff000', instructions: '' }, { model: 'nous/hermes-4' })).rejects.toThrow(/desktop app/);
+    expect(h.main.calls.some((c) => c.method === 'profiles.create')).toBe(false);
+  });
+  it('a bot whose model the host refused is made on the main model, and its glance says why', async () => {
+    const h = new FakeHermes();
+    const host = modelHost(h, (name) => ({ code: 'hx.bots.model_unreachable', message: 'nous is not a provider ' + name + ' can reach. ' + name + ' can reach main' }));
+    const { bots } = await open(h, host.bridge);
+    const made = await bots.source.admin!.create({ name: 'kai', role: '', shape: 'drop', color: '#4fc9a8', instructions: '' }, { model: 'nous/hermes-4' });
+    expect(made.id).toBe('kai');
+    expect(made.info?.model).not.toBe('nous/hermes-4');
+    expect(botOf(bots, 'kai')!.info!.notes.setup).toBe('boopis could not finish setting it up: it runs on the main profile’s model, not nous/hermes-4: nous is not a provider kai can reach. kai can reach main');
   });
 });
 
@@ -265,22 +304,49 @@ describe('the settings sheet edits the real profile, and shows the diff first', 
     ]);
     expect(bots.source.admin!.review('atlas', { role: 'reviews pull requests', instructions: 'You review.\n' })).toEqual([]);
   });
-  it('saves through profiles.configure and cron.manage, then reads the profile again', async () => {
-    const { h, bots } = await open();
+  it('saves through profiles.configure, the host’s model command and cron.manage, then reads the profile again', async () => {
+    const h = new FakeHermes();
+    const host = modelHost(h);
+    const { bots } = await open(h, host.bridge);
     await bots.source.admin!.save('atlas', { role: 'security reviewer', instructions: 'New soul\n', model: 'main/fake-b', addRoutines: [{ name: 'weekly', prompt: 'look', schedule: '0 9 * * 1' }], removeRoutines: ['j1'] });
-    expect(h.main.calls.find((c) => c.method === 'profiles.configure')!.params).toEqual({ name: 'atlas', description: 'security reviewer', soul: 'New soul\n', provider: 'main', model: 'fake-b' });
+    expect(h.main.calls.find((c) => c.method === 'profiles.configure')!.params).toEqual({ name: 'atlas', description: 'security reviewer', soul: 'New soul\n' });
+    expect(host.calls).toEqual(['setModel atlas main/fake-b']);   // the host prepares it after, as its ladder follows its model
     expect(h.links.get('atlas')!.calls.filter((c) => c.method === 'cron.manage').map((c) => c.params['action'])).toEqual(expect.arrayContaining(['remove', 'add']));
     const b = botOf(bots, 'atlas')!;
     expect([b.role, b.cfg.instructions, b.cfg.model, b.info!.jobs?.map((j) => j.name)]).toEqual(['security reviewer', 'New soul\n', 'main/fake-b', ['weekly']]);
   });
-  it('asks for confirmation when Hermes does, and sends the confirmed pick once', async () => {
-    const { h, bots } = await open();
-    const orig = h.main.requestRaw.bind(h.main);
-    h.main.requestRaw = async (m: string, p: Json) => (m === 'profiles.configure' && !p['confirm_expensive_model'] && p['model'] ? { ok: true, applied: {}, confirm_required: true, confirm_message: 'This model is expensive.' } : orig(m, p));
-    await expect(bots.source.admin!.save('atlas', { model: 'nous/hermes-4' })).rejects.toBeInstanceOf(NeedsConfirmation);
+  it('asks for confirmation when the engine does, and sends the confirmed pick once', async () => {
+    const h = new FakeHermes();
+    const host = modelHost(h, (_n, _p, _m, confirm) => (confirm ? null : { code: 'hx.bots.confirm_model', message: 'This model is expensive.' }));
+    const { bots } = await open(h, host.bridge);
+    const asked = bots.source.admin!.save('atlas', { model: 'nous/hermes-4' });
+    await expect(asked).rejects.toBeInstanceOf(NeedsConfirmation);
+    await expect(asked).rejects.toThrow('This model is expensive.');
     expect(botOf(bots, 'atlas')!.info!.model).toBe('main/fake-a');          // nothing of the model was written
     await bots.source.admin!.save('atlas', { model: 'nous/hermes-4' }, { confirmModel: true });
     expect(botOf(bots, 'atlas')!.info!.model).toBe('nous/hermes-4');
+    expect(host.calls).toEqual(['setModel atlas nous/hermes-4', 'setModel atlas nous/hermes-4 confirmed']);
+  });
+  it('a pick the bot cannot reach leaves its model and shows the host’s sentence, with what it can reach', async () => {
+    const h = new FakeHermes();
+    const host = modelHost(h, (name) => ({ code: 'hx.bots.model_unreachable', message: 'nous is not a provider ' + name + ' can reach. ' + name + ' can reach main' }));
+    const { bots } = await open(h, host.bridge);
+    await expect(bots.source.admin!.save('atlas', { model: 'nous/hermes-4' })).rejects.toThrow('the model (nous is not a provider atlas can reach. atlas can reach main) could not be saved. The rest was saved.');
+    expect(botOf(bots, 'atlas')!.info!.model).toBe('main/fake-a');
+    expect(h.main.calls.some((c) => c.method === 'profiles.configure')).toBe(false);   // nothing else was asked to change
+  });
+  it('says so when the host read the model back and it was not the pick', async () => {
+    const h = new FakeHermes();
+    const host = modelHost(h, (name) => ({ code: 'hx.bots.not_saved', message: name + '’s model was not changed: it is still main/fake-a, not main/fake-b' }));
+    const { bots } = await open(h, host.bridge);
+    await expect(bots.source.admin!.save('atlas', { role: 'reviewer', model: 'main/fake-b' })).rejects.toThrow(/the model \(atlas’s model was not changed: it is still main\/fake-a, not main\/fake-b\) could not be saved\. The rest was saved\./);
+    expect(botOf(bots, 'atlas')!.info!.model).toBe('main/fake-a');
+    expect(botOf(bots, 'atlas')!.role).toBe('reviewer');
+  });
+  it('writes no model without the host, which is what checks it', async () => {
+    const { h, bots } = await open();
+    await expect(bots.source.admin!.save('atlas', { role: 'x', model: 'main/fake-b' })).rejects.toThrow('A bot’s model can be set in the desktop app.');
+    expect(h.main.calls.some((c) => c.method === 'profiles.configure')).toBe(false);
   });
   it('says what Hermes refused and keeps what it accepted', async () => {
     const { h, bots } = await open();
@@ -640,6 +706,7 @@ describe('what a bot’s home needs is the host’s (ADR-0042)', () => {
     let notice: string | null = 'Governed mode now really applies to a bot when you turn it on.';
     const bridge = {
       prepare: (name: string, fresh: boolean) => { calls.push('prepare ' + name + (fresh ? ' fresh' : '')); return Promise.resolve({ changed: true, problems: name === 'nina' ? ['its place in groups: boopis could not finish'] : [] }); },
+      setModel: (name: string, provider: string, model: string) => { calls.push('setModel ' + name); (h.describes[name] as Json)['model'] = { provider, default: model }; return Promise.resolve({ provider, model, problems: [] }); },
       release: (name: string) => { calls.push('release ' + name); return Promise.resolve(); },
       notice: () => { const n = notice; notice = null; return Promise.resolve(n); },
       runLimit: (name: string) => { calls.push('runLimit ' + name); return Promise.resolve({ turns: kept.get(name) ?? null, fallback: 10 }); },
@@ -655,7 +722,7 @@ describe('what a bot’s home needs is the host’s (ADR-0042)', () => {
     await bots.source.admin!.create({ name: 'kai', role: '', shape: 'drop', color: '#4fc9a8', instructions: '' }, { model: 'nous/hermes-4' });
     expect(calls).toContain('prepare kai fresh');
     await bots.source.admin!.save('kai', { model: 'main/fake-b' });
-    expect(calls.at(-1)).toBe('prepare kai');   // its ladder follows its model
+    expect(calls.at(-1)).toBe('setModel kai');   // the host sets it, then prepares it: its ladder follows its model
     const { undo } = await bots.source.admin!.archive('atlas');
     expect(calls.at(-1)).toBe('release atlas');
     await undo();
@@ -667,8 +734,9 @@ describe('what a bot’s home needs is the host’s (ADR-0042)', () => {
     // what the host could not do is a note on the bot, never a failed save
     expect(botOf(bots, 'nina')!.info!.notes.setup).toMatch(/boopis could not finish setting it up/);
     expect(h.own['nina']).toMatchObject({ settings: { gov: 'ungoverned' } });
-    // each flow prepares its bot once: the roster reads in between leave it to the flow
-    expect(calls.filter((c) => c.startsWith('prepare kai')).length).toBe(2);
+    // each flow prepares its bot once (a model change on the host's side): the roster reads in between leave it to the flow
+    expect(calls.filter((c) => c.startsWith('prepare kai'))).toEqual(['prepare kai fresh']);
+    expect(calls.filter((c) => c === 'setModel kai')).toHaveLength(2);
     expect(calls.filter((c) => c === 'prepare atlas' || c === 'prepare atlas fresh')).toEqual(['prepare atlas']);
   });
   it('reads and keeps a bot’s cap on turns through the host, and says so where there is no host', async () => {

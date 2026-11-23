@@ -175,6 +175,32 @@ impl Service {
         Ok(done)
     }
 
+    /// Make `asked` the model of the bot `name`, the one way a bot's model is set (`super::model`): refused when the bot cannot
+    /// reach it, written by the engine, read back, an alias kept as asked. `link` is a link to the root's gateway the caller
+    /// keeps (the command line's); `None` uses a short link per call (the app). One operation at a time with the others on the
+    /// bot's home. Returns the model read back; the caller prepares the bot afterwards, as its ladder follows its model.
+    ///
+    /// # Errors
+    /// `hx.bots.not_found` for a bot that is not there; as `super::model::check` and `super::model::write` otherwise.
+    pub async fn set_model(
+        &self,
+        link: Option<&dyn crate::rooms::Rpc>,
+        layout: &super::Layout,
+        name: &str,
+        asked: &(String, String),
+        confirm: bool,
+    ) -> Result<(String, String)> {
+        let home = layout.home(name)?;
+        let _one = self.lock.lock().await;
+        let own = super::model::RootLink {
+            engine: self.engine.as_ref(),
+            root: &layout.root,
+        };
+        let rpc = link.unwrap_or(&own);
+        super::model::check(rpc, name, asked, true).await?;
+        super::model::write(rpc, self.engine.as_ref(), &home, name, asked, confirm).await
+    }
+
     /// One gateway restart for the bots prepared one after another (bots that appeared together, made elsewhere): it runs
     /// once nothing has been prepared for the quiet time, and never while work runs (`restart_when_idle`).
     fn restart_after_batch(self: &Arc<Self>, root: std::path::PathBuf) {
