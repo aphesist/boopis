@@ -47,8 +47,6 @@ pub struct Ctx<'a> {
     pub poll: Duration,
 }
 
-const USAGE: &str = "usage: boopis run --bot <bot> \"<task>\" [--max-turns N] [--timeout MINUTES] [--file FILE] [--json]";
-
 fn say(ctx: &mut Ctx<'_>, line: &str) {
     let _ = writeln!(ctx.out, "{line}");
 }
@@ -91,7 +89,10 @@ pub async fn run_bot(args: &[String], ctx: &mut Ctx<'_>) -> i32 {
         }
     };
     let Some(bot) = a.value("bot") else {
-        fail(ctx, USAGE);
+        fail(
+            ctx,
+            &format!("run --bot needs a bot's name. {}", super::help::hint("run")),
+        );
         return 2;
     };
     let flag = match a.number("max-turns") {
@@ -117,7 +118,10 @@ pub async fn run_bot(args: &[String], ctx: &mut Ctx<'_>) -> i32 {
     let task = match task_of(&a, ctx) {
         Ok(t) if !t.trim().is_empty() => t,
         Ok(_) => {
-            fail(ctx, &format!("run needs the task. {USAGE}"));
+            fail(
+                ctx,
+                &format!("run needs the task. {}", super::help::hint("run")),
+            );
             return 2;
         }
         Err(e) => {

@@ -19,6 +19,7 @@ mod bots;
 pub mod connectors;
 mod groups;
 mod headless;
+mod help;
 mod remote;
 mod run_bot;
 mod team;
@@ -66,6 +67,8 @@ pub enum Command {
     Team(Vec<String>),
     /// `bots ...` (list, make and change bots).
     Bots(Vec<String>),
+    /// `connect ...` (how to dial the engine's gateway, `docs/LOCAL-API.md`).
+    Connect(Vec<String>),
     /// An option or command that does not exist, or one that takes no more arguments.
     Unknown(String),
 }
@@ -77,15 +80,20 @@ pub fn parse(args: &[String]) -> Command {
     let Some(first) = args.first() else {
         return Command::Launch;
     };
+    if let Some(page) = help::find(first) {
+        return (page.make)(args[1..].to_vec());
+    }
+    // `boopis help bots` is `boopis bots --help`
+    if matches!(first.as_str(), "--help" | "-h" | "help")
+        && let [_, word] = args
+        && let Some(page) = help::find(word)
+    {
+        return (page.make)(vec!["--help".to_owned()]);
+    }
     let rest_ok = args.len() == 1;
     match first.as_str() {
         "--version" | "-V" | "version" if rest_ok => Command::Version,
         "doctor" if rest_ok => Command::Doctor,
-        "groups" => Command::Groups(args[1..].to_vec()),
-        "run" => Command::Run(args[1..].to_vec()),
-        "team" => Command::Team(args[1..].to_vec()),
-        "bots" => Command::Bots(args[1..].to_vec()),
-        "connectors" => Command::Connectors(args[1..].to_vec()),
         "--help" | "-h" | "help" if rest_ok => Command::Help,
         "--version" | "-V" | "version" | "doctor" | "--help" | "-h" | "help" => {
             Command::Unknown(args[1].clone())
@@ -119,6 +127,25 @@ pub fn needs_console(command: &Command) -> bool {
     !matches!(command, Command::Launch)
 }
 
+/// The word of an engine command whose arguments ask for its page (`--help`, `-h`, or `help` first), else `None`.
+#[must_use]
+pub fn asks_help(command: &Command) -> Option<&'static str> {
+    let (word, rest) = match command {
+        Command::Groups(r) => ("groups", r),
+        Command::Run(r) => ("run", r),
+        Command::Team(r) => ("team", r),
+        Command::Bots(r) => ("bots", r),
+        Command::Connectors(r) => ("connectors", r),
+        Command::Connect(r) => ("connect", r),
+        Command::Launch
+        | Command::Version
+        | Command::Doctor
+        | Command::Help
+        | Command::Unknown(_) => return None,
+    };
+    help::asked(rest).then_some(word)
+}
+
 /// Run a command if the arguments ask for one. Returns the exit code; `None` means "start the app".
 /// `resource_dir` is asked only by the commands that need it.
 pub fn dispatch(args: &[String], resource_dir: &dyn Fn() -> Option<PathBuf>) -> Option<i32> {
@@ -139,18 +166,17 @@ pub fn dispatch(args: &[String], resource_dir: &dyn Fn() -> Option<PathBuf>) -> 
             return Some(2);
         }
     };
-    let args = args.as_slice();
-    // `boopis connect` (docs/LOCAL-API.md): how to dial the engine's gateway, for a client of the owner's.
-    if args.first().map(String::as_str) == Some("connect") {
-        console::attach_to_parent();
-        return Some(crate::local_api::connect::run(&args[1..], resource_dir));
-    }
-    let command = parse(args);
+    let command = parse(&args);
     if !needs_console(&command) {
         return None;
     }
     // The release binary is a GUI-subsystem one on Windows: without this a command's output goes nowhere.
     console::attach_to_parent();
+    // `boopis <command> --help`: the command's page, before anything opens a link.
+    if let Some(word) = asks_help(&command) {
+        println!("{}", help::page_of(word).join("\n"));
+        return Some(0);
+    }
     let caps = Caps::from_process();
     let out = Out::new(caps);
     let version = env!("CARGO_PKG_VERSION");
@@ -190,6 +216,8 @@ pub fn dispatch(args: &[String], resource_dir: &dyn Fn() -> Option<PathBuf>) -> 
         Command::Connectors(rest) => {
             return Some(connectors::run(&rest, resource_dir().as_deref()));
         }
+        // How to dial the engine's gateway, for a client of the owner's (docs/LOCAL-API.md).
+        Command::Connect(rest) => return Some(crate::local_api::connect::run(&rest, resource_dir)),
         Command::Unknown(what) => {
             eprintln!(
                 "{PRODUCT}: {what} is not something {PRODUCT} understands. Try {PRODUCT} --help for what it does."
@@ -344,39 +372,34 @@ impl Out {
 }
 
 fn help_lines(out: &Out, version: &str) -> Vec<String> {
-    vec![
+    let mut lines = vec![
         format!("{} {version}", out.logo()),
         String::new(),
         "A desktop app for AI coding agents.".to_owned(),
         String::new(),
         format!("Usage: {PRODUCT} [command]"),
         String::new(),
-        format!("  {PRODUCT}            start the app"),
+        format!("  {PRODUCT}               start the app"),
         format!(
-            "  {PRODUCT} doctor     check this machine: session, GPUs, renderer, WebKitGTK, runtime and folders"
+            "  {PRODUCT} doctor        check this machine: session, GPUs, renderer, WebKitGTK, runtime and folders"
         ),
-        format!(
-            "  {PRODUCT} connect    say how to dial the engine's gateway, for another client of yours (--json, --ticket)"
-        ),
-        format!("  {PRODUCT} --version  print the version and what the app carries"),
-        format!("  {PRODUCT} groups     list, create, send to and read the log of group chats"),
-        format!(
-            "  {PRODUCT} run --group <group> \"<task>\"   run a task through a group to its end"
-        ),
-        format!(
-            "  {PRODUCT} run --bot <bot> \"<task>\"       run a task with one bot to its end"
-        ),
-        format!("  {PRODUCT} team       apply or export a whole team as one file"),
-        format!("  {PRODUCT} bots       list, create and change bots"),
+        format!("  {PRODUCT} --version     print the version and what the app carries"),
+        String::new(),
+        "These talk to the engine (docs/CLI.md):".to_owned(),
+    ];
+    lines.extend(
+        help::PAGES
+            .iter()
+            .map(|p| format!("  {PRODUCT} {:<14}{}", p.word, p.summary)),
+    );
+    lines.extend([
         String::new(),
         format!(
-            "The four that talk to the engine are described in docs/CLI.md. Exit codes: 0 done, 1 failed,"
+            "{PRODUCT} <command> --help shows what a command takes. Exit codes: 0 done, 1 failed, 2 a usage mistake,"
         ),
-        format!("2 a usage mistake, 3 stopped at a cap, 4 a bot needs you."),
-    ]
-    .into_iter()
-    .chain(connectors::usage(PRODUCT))
-    .collect()
+        "3 stopped at a cap (or waiting for --yes), 4 a bot needs you.".to_owned(),
+    ]);
+    lines
 }
 
 /// What `--version` shows beside the version.

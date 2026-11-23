@@ -26,8 +26,6 @@ pub struct Ctx<'a> {
     pub stdin: &'a dyn Fn() -> std::io::Result<String>,
 }
 
-const USAGE: &str = "usage: boopis team check <file> | apply <file> [--dry-run] [--prune] | export [--output <file>]";
-
 fn fail(ctx: &mut Ctx<'_>, line: &str) {
     let _ = writeln!(ctx.err, "boopis: {line}");
 }
@@ -55,7 +53,9 @@ fn load(ctx: &Ctx<'_>, file: &str) -> Result<Team, String> {
 /// `boopis team ...`. Returns the exit code.
 pub async fn team(args: &[String], ctx: &mut Ctx<'_>) -> i32 {
     let Some((sub, rest)) = args.split_first() else {
-        fail(ctx, USAGE);
+        for l in super::help::page_of("team") {
+            let _ = writeln!(ctx.err, "{l}");
+        }
         return 2;
     };
     match sub.as_str() {
@@ -63,7 +63,13 @@ pub async fn team(args: &[String], ctx: &mut Ctx<'_>) -> i32 {
         "apply" => apply_cmd(rest, ctx).await,
         "export" => export_cmd(rest, ctx).await,
         other => {
-            fail(ctx, &format!("team {other} is not a command. {USAGE}"));
+            fail(
+                ctx,
+                &format!(
+                    "team {other} is not a command. {}",
+                    super::help::hint("team")
+                ),
+            );
             2
         }
     }
@@ -143,7 +149,10 @@ async fn apply_cmd(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
         }
     };
     let [file] = a.plain.as_slice() else {
-        fail(ctx, &format!("team apply takes one file. {USAGE}"));
+        fail(
+            ctx,
+            &format!("team apply takes one file. {}", super::help::hint("team")),
+        );
         return 2;
     };
     let team = match load(ctx, file) {

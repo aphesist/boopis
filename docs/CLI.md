@@ -10,11 +10,17 @@ where a script wants it (one JSON object per line), and the same exit codes ever
 | `boopis run --group <group> "<task>"` | Run a task through a group to its end, past the engine's round cap. |
 | `boopis bots list\|create\|set` | One bot: its role, instructions, model, look and Governed switch. |
 | `boopis team check\|apply\|export` | A whole team as one file. |
+| `boopis connectors list\|add\|test\|remove` | The connectors of the main profile or of one bot ([`CONNECTORS.md`](CONNECTORS.md)). |
+| `boopis connect` | How to dial the engine's gateway, for another client of yours ([`LOCAL-API.md`](LOCAL-API.md)). |
+
+`boopis --help` lists them, and `boopis <command> --help` (or `-h`, anywhere before a `--`, or `boopis help <command>`) prints
+what one takes and exits 0, without starting or reaching the engine. The list and the pages are one table in the code
+(`cli/help.rs`), which the parser reads too, so a command cannot be missing from the help.
 
 Exit codes: `0` done, `1` failed or timed out (or a plan with problems), `2` a usage mistake, `3` stopped at a cap (boopis's or
 the engine's), `4` a bot needs you.
 
-The commands that talk to the engine (`groups`, `run`, `bots`, `team apply|export`) reach it the way the app does: the same engine
+The commands that talk to the engine (`groups`, `run`, `bots`, `team apply|export`, `connectors`) reach it the way the app does: the same engine
 plan, the same control socket and ticket, the same short link to the gateway (`gateway::oneshot::Link`), and the same
 `groups.*`, `profiles.*`, `cron.manage` and `mcp.servers.*` calls the app makes. If the app is running they attach to its
 gateway. If nothing is running they start one the way the app would, and serve the plugin's keychain channel for as long as
