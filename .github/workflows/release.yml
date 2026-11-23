@@ -421,6 +421,10 @@ jobs:
     runs-on: macos-latest
     continue-on-error: true
     timeout-minutes: 75
+    # A job with continue-on-error reports `success` to the jobs that need it even when it failed, so the jobs after it read
+    # this output instead: true only once the dmg is checked and uploaded.
+    outputs:
+      built: ${{ steps.built.outputs.built }}
     env:
       MACOSX_DEPLOYMENT_TARGET: "13.0"  # = bundle.macOS.minimumSystemVersion; hx is built by cargo itself
     steps:
@@ -567,7 +571,9 @@ jobs:
               Resources/runtime/hermes-runtime-macos-aarch64.tar.zst; do
             [ -e "$app/Contents/$want" ] || { echo "the app does not hold Contents/$want"; exit 1; }
           done
-          lipo -archs "$app/Contents/MacOS/boopis" "$app/Contents/MacOS/hx"
+          for bin in boopis hx; do
+            [ "$(lipo -archs "$app/Contents/MacOS/$bin")" = arm64 ] || { echo "Contents/MacOS/$bin is not arm64"; exit 1; }
+          done
           codesign --verify --deep --strict --verbose=2 "$app"
           codesign --display --verbose=2 "$app" 2>&1 | grep -E '^(Identifier|Authority|TeamIdentifier|Signature|CodeDirectory)'
           codesign --display --entitlements - --xml "$app" | plutil -p - || echo "::warning::the app carries no entitlements"
@@ -591,6 +597,9 @@ jobs:
           path: target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
           if-no-files-found: error
           retention-days: 30
+      - name: the dmg is built, checked and uploaded
+        id: built
+        run: echo "built=true" >> "$GITHUB_OUTPUT"
       - name: remove the signing keychain
         if: always() && steps.signing.outputs.sign == 'true'
         env:
@@ -604,11 +613,14 @@ jobs:
     # governed session against the fake model), the plugin's exec kernel in the bundle's Seatbelt sandbox, hx-sandbox's own
     # macOS tests and the host's unit tests of the macOS process table. Non-blocking like the build for now; `release`
     # attaches the dmg only when this passed. With `from_run` the dmg is the earlier run's and the scripts are this commit's.
-    if: ${{ !cancelled() && (needs.macos.result == 'success' || (needs.reuse.result == 'success' && needs.reuse.outputs.has_macos == 'true')) }}
+    if: ${{ !cancelled() && (needs.macos.outputs.built == 'true' || (needs.reuse.result == 'success' && needs.reuse.outputs.has_macos == 'true')) }}
     needs: [macos, reuse]
     runs-on: macos-latest
     continue-on-error: true
     timeout-minutes: 60
+    # what `release` reads (continue-on-error makes the job's own result `success` whatever happened): true only from the verdict
+    outputs:
+      passed: ${{ steps.verdict.outputs.passed }}
     permissions:
       contents: read
       actions: read
@@ -696,6 +708,7 @@ jobs:
           uv run --no-project --python 3.11 --with pytest --with hypothesis --with ruamel.yaml --with "$CONTRAPROVA_SPEC" \
             pytest -q -rs ../../tests/e2e
       - name: verdict
+        id: verdict
         env:
           APP: ${{ steps.app.outcome }}
           EXEC: ${{ steps.exec.outcome }}
@@ -716,6 +729,7 @@ jobs:
             echo "| plugin end-to-end suite (informational) | $E2E |"
           } | tee -a "$GITHUB_STEP_SUMMARY"
           for r in "$APP" "$EXEC" "$SETUP" "$PEER" "$SANDBOX"; do [ "$r" = success ] || exit 1; done
+          echo "passed=true" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -757,7 +771,7 @@ jobs:
         if: ${{ needs.arch-smoke.result != 'success' }}
         run: rm -f release-files/*.pkg.tar.zst
       - name: the dmg is published only when the macOS smoke test passed
-        if: ${{ needs.macos-smoke.result != 'success' }}
+        if: ${{ needs.macos-smoke.outputs.passed != 'true' }}
         run: rm -f release-files/*.dmg
       - name: checksums over every file
         working-directory: release-files

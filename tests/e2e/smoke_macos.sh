@@ -64,11 +64,18 @@ done
 want_sha="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["archive"]["sha256"])' "$APP/Contents/Resources/runtime/runtime.json")"
 [ "$(shasum -a 256 "$APP/Contents/Resources/runtime/$RUNTIME_ARCHIVE" | cut -d' ' -f1)" = "$want_sha" ] || fail "the runtime archive is not what runtime.json says"
 codesign --verify --deep --strict --verbose=2 "$APP" 2>&1 | tail -2
-for bin in "$APP" "$APP/Contents/MacOS/hx"; do
-  codesign --display --verbose=2 "$bin" 2>&1 | grep -q 'flags=.*runtime' || fail "no hardened runtime on $bin"
-done
 signer="$(codesign --display --verbose=2 "$APP" 2>&1 | sed -n 's/^Authority=//p' | head -1)"
 echo "signed by: ${signer:-ad hoc (no Developer ID)}"
+# the hardened runtime is what notarisation requires; an ad hoc build reports what it has
+for bin in "$APP" "$APP/Contents/MacOS/hx"; do
+  if codesign --display --verbose=2 "$bin" 2>&1 | grep -q 'flags=.*runtime'; then
+    echo "hardened runtime: $bin"
+  elif [ -n "$signer" ]; then
+    fail "no hardened runtime on $bin"
+  else
+    echo "no hardened runtime on $bin (ad hoc build)"
+  fi
+done
 codesign --display --entitlements - --xml "$APP" 2>/dev/null | plutil -p - 2>/dev/null || true
 spctl --assess --type execute --verbose=2 "$APP" 2>&1 | tee "$OUT/gatekeeper.txt" || true
 
@@ -92,7 +99,7 @@ step "4. the app, with the Local API on"
 mkdir -p "$DATA"
 printf '{"enabled": true}\n' >"$DATA/local-api.json"
 LOG="$OUT/app.log"
-"$APP/Contents/MacOS/$exe" >"$LOG" 2>&1 &
+NO_COLOR=1 "$APP/Contents/MacOS/$exe" >"$LOG" 2>&1 &
 pid=$!
 stop() { kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; }
 trap stop EXIT
