@@ -8,7 +8,12 @@
    counts as the visible box it cuts. Structural boxes (the stage, the world, the layers) are not things.
 
    The element set is taken once per call, visible at the call's middle time; an element hidden at a probe time has
-   an empty box there and is skipped for that step (an element appearing is a cut, not a move). */
+   an empty box there and is skipped for that step (an element appearing is a cut, not a move).
+
+   An orb's eye cells are paths reused by index (engine/orb.ts): when a face morph changes how many cells there are,
+   path k is a different cell on either side, and its box would read as a jump of tens of px that nothing on screen
+   makes. Across a step where an orb's cell count changes, its cells are not compared one by one; the eyes' group box
+   (all the cells together, which changes smoothly through the morph) still is. */
 import type { Film } from './film';
 import type { Stage } from './stage';
 
@@ -26,14 +31,16 @@ const structural = (e: Element): boolean => {
   return false;
 };
 
-function things(root: Element): { els: Element[]; clipped: Set<Element> } {
-  const els: Element[] = [], clipped = new Set<Element>();
+const CELLS = 'film-orb__eyes';
+function things(root: Element): { els: Element[]; clipped: Set<Element>; groups: Element[]; groupOf: Int32Array } {
+  const els: Element[] = [], clipped = new Set<Element>(), groups: Element[] = [], gi: number[] = [];
   const walk = (el: Element): void => {
     for (const c of el.children) {
       if (SKIP_TAGS.has(c.tagName)) continue;
       if (!visible(c)) continue;      /* display none, visibility hidden, opacity 0: nothing of it is seen */
       if (!structural(c)) {
         els.push(c);
+        if (el.classList.contains(CELLS)) { let g = groups.indexOf(el); if (g < 0) { groups.push(el); g = groups.length - 1; } gi[els.length - 1] = g; }
         const cp = getComputedStyle(c).clipPath;
         if (cp && cp !== 'none') clipped.add(c);
       }
@@ -41,7 +48,9 @@ function things(root: Element): { els: Element[]; clipped: Set<Element> } {
     }
   };
   walk(root);
-  return { els, clipped };
+  const groupOf = new Int32Array(els.length).fill(-1);
+  gi.forEach((g, i) => { groupOf[i] = g; });
+  return { els, clipped, groups, groupOf };
 }
 
 /** the visible box of a clip-path inset()/circle() on a box (px or %), or the box itself */
@@ -91,15 +100,17 @@ export interface ProbeResult {
 export async function probe(film: Film, stage: Stage, times: number[]): Promise<ProbeResult> {
   if (times.length < 2) return { steps: [], things: 0, fastest: '' };
   await film.seek(times[Math.floor(times.length / 2)]!, { paint: false });
-  const { els, clipped } = things(stage.root);
-  const per: Float64Array[] = [];
-  for (const t of times) { await film.seek(t, { paint: false }); per.push(boxes(stage, els, clipped)); }
+  const { els, clipped, groups, groupOf } = things(stage.root);
+  const per: Float64Array[] = [], counts: number[][] = [];
+  for (const t of times) { await film.seek(t, { paint: false }); per.push(boxes(stage, els, clipped)); counts.push(groups.map((g) => g.childElementCount)); }
   const steps: number[] = [];
   let best = 0, who = -1;
   for (let s = 0; s + 1 < per.length; s++) {
-    const a = per[s]!, b = per[s + 1]!;
+    const a = per[s]!, b = per[s + 1]!, ca = counts[s]!, cb = counts[s + 1]!;
     let m = 0;
     for (let i = 0; i < els.length; i++) {
+      const g = groupOf[i]!;
+      if (g >= 0 && ca[g] !== cb[g]) continue;   /* the cells were renumbered: the group's box speaks for them */
       const o = i * 4;
       if (Number.isNaN(a[o]!) || Number.isNaN(b[o]!)) continue;
       const d = Math.max(Math.abs(a[o]! - b[o]!), Math.abs(a[o + 1]! - b[o + 1]!), Math.abs(a[o + 2]! - b[o + 2]!), Math.abs(a[o + 3]! - b[o + 3]!));
