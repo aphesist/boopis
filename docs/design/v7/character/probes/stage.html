@@ -48,6 +48,7 @@ const LOOKS = { boopis: ['squircle', '#f5f5f5', '#0e0e0e'], kai: ['circle', '#4f
 /* THE FIXED POSE (ORBS.md section 23): orb2's own 3D look, through its public `gaze` attribute ("yaw pitch", degrees). orb2
    turns each 3D body by its own head ratio, puts the eyes on the turned surface and projects both in perspective */
 const GAZE = '38 15';
+const HOME = '38 22 -24';   /* K08 B: orb3's home orientation */
 const orb = (n, size, o = {}) => {
   const [shape, color, eye] = LOOKS[n] || [n, '#f5f5f5', '#0e0e0e']; const render = o.render && o.render !== size ? o.render : null;
   const fs = MORE && size <= 44 ? ' face-scale="1.25"' : '';
@@ -93,8 +94,9 @@ const S = {
     /* orb3 looking around: five shapes at 96 px, from the fixed pose (K06 B) */
     const sh = ['drop', 'squircle', 'triangle', 'hexagon', 'flower'];
     R.innerHTML = tag() + `<div class="grid" style="grid-template-columns:repeat(2,1fr);top:90px;gap:34px 0">${sh.map((s) => `<div>${orb(s, 96, { motion: 'off' })}<div class="cap">${s}</div></div>`).join('')}</div>`;
-    for (const o of document.querySelectorAll('orb-avatar')) { o.setAttribute('jelly', '.25'); o.dataset.base = 'k06'; o.setAttribute('reaction', 'k06'); }
+    for (const o of document.querySelectorAll('orb-avatar')) { o.setAttribute('jelly', '.25'); o.setAttribute('home', HOME); o.dataset.base = 'k06'; o.setAttribute('reaction', 'k06'); }
   },
+  trans() { S.look(); for (const o of document.querySelectorAll('orb-avatar')) { o.setAttribute('jelly', '0'); o.setAttribute('color', '#f43f5e'); o.setAttribute('eye-color', '#1f1f1f'); } document.body.style.background = '#1f1f1f'; },
   torture() {
     const sh = ['circle', 'squircle', 'soft', 'wide', 'tall', 'bean', 'drop', 'ghost', 'triangle', 'hexagon', 'diamond', 'cloud', 'clover', 'flower', 'star'];
     R.innerHTML = tag() + `<div class="grid">${sh.map((s) => `<div>${orb(s, 72, { motion: 'lively', attrs: ' mode="fixed"' })}<div class="cap">${s}</div></div>`).join('')}</div>`;
@@ -164,6 +166,16 @@ const T = {
     at(10, () => { for (const o of os) { o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', 'working'); } });
     at(13, () => { for (const o of os) o.setAttribute('reaction', 'k06'); });
   },
+  trans() {
+    /* the transition: 0-2 s at rest; 2 s a hover wakes it (lively, a look toward the pointer at the right); 5.5 s the
+       pointer leaves and it settles home; 8 s working; 11 s done, home again */
+    const os = [...document.querySelectorAll('orb-avatar')];
+    at(2, () => { for (const o of os) { o.setAttribute('reaction', 'idle'); o.setAttribute('idle-motion', 'lively'); const [cx, cy] = ctr(o); o.lookAt(cx + 160, cy + 40); } });
+    at(3.6, () => { for (const o of os) o.lookAt(); });
+    at(5.5, () => { for (const o of os) { o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', 'k06'); o.lookAt(); } });
+    at(8, () => { for (const o of os) o.setAttribute('reaction', 'working'); });
+    at(11, () => { for (const o of os) o.setAttribute('reaction', 'k06'); });
+  },
   torture() {
     /* every shape is turned through orb2's whole range: the lookAt clamp is 1.18 rad, the rim peek reaches 1.26,
        and the sky gaze 0.94 of pitch. The look point sweeps a wide ellipse around each orb, then each orb spins,
@@ -182,10 +194,10 @@ window.go = () => T[q.scene || 'dock']();
 const s = document.createElement('script'); s.src = LIB; s.onload = () => {
   const A = window.OrbAvatar;
   A.defineReaction('pose', { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: null });
-  /* K07 A in orb3: Grok-Bot's fixed angle. Big upright pills painted on the face (right of centre, a little above), a
-     small look of 6 and 5 degrees and a body roll of -10 */
-  const D = Math.PI / 180, K7 = A.shapes.pairEyes(['pill', { x: -.19 + .13, y: .06, w: .17, h: .41, ang: 15 * D }], ['pill', { x: .19 + .13, y: .06, w: .17, h: .41, ang: 15 * D }]);
-  A.defineReaction('k06', { label: 'Pose', blink: false, face: () => K7, motion: () => ({ eyaw: 6 * D, epitch: 5 * D, bodyRoll: -10 * D, w: 1 }) });
+  /* K08 B in orb3: the home orientation (turn 38, nod 22, roll -24) carries the whole bot; K07's big upright pills are
+     painted on the face, right of centre and a little above; the pose itself adds no look */
+  const D = Math.PI / 180, K8 = A.shapes.pairEyes(['pill', { x: -.19 + .04, y: -.08, w: .18, h: .41, ang: 4 * D }], ['pill', { x: .19 + .04, y: -.08, w: .18, h: .41, ang: 4 * D }]);
+  A.defineReaction('k06', { label: 'Pose', blink: false, face: () => K8, motion: () => ({ eyaw: 0, epitch: 0, w: 1 }) });
   S[q.scene || 'dock'](); document.body.dataset.ready = '1';
 };
 document.head.appendChild(s);

@@ -20,7 +20,7 @@ s.onload = () => { const A = window.OrbAvatar, g = document.getElementById('g'),
   const FACE = FF && A.shapes.pairEyes(['pill', { x: -X0 + FF[0], y: FF[1], w: FF[2], h: FF[3], ang: FF[4] * D }], ['pill', { x: X0 + FF[0], y: FF[1], w: FF[2], h: FF[3], ang: FF[4] * D }]);
   const def = (n, [y, p, l, r]) => A.defineReaction(n, { label: 'Pose', blink: false, useEyeShape: true, face: FACE ? () => FACE : (t, e, eye) => A.shapes.pairEyes(eye || 'pill'),
     motion: () => ({ eyaw: y * D, epitch: p * D, eroll: (l || 0) * D, bodyRoll: (r || 0) * D, w: 1 }) });
-  const orb = (shape, n, dep) => `<orb-avatar size="${size}"${dep ? ` depth="${dep}"` : ''} shape="${shape}" color="${q.color || '#f5f5f5'}" eye-color="${q.eye || '#0e0e0e'}" reaction="${n}" idle-motion="off" mode="drift" face-scale="${q.fs || 1.25}" jelly="0" style="width:${size}px"></orb-avatar>`;
+  const orb = (shape, n, dep) => `<orb-avatar size="${size}"${dep ? ` depth="${dep}"` : ''} shape="${shape}" color="${q.color || '#f5f5f5'}" eye-color="${q.eye || '#0e0e0e'}" reaction="${n}" idle-motion="off" mode="drift" face-scale="${q.fs || 1.25}"${q.home ? ` home="${q.home.split(',').join(' ')}"` : ''} jelly="0" style="width:${size}px"></orb-avatar>`;
   if (q.opts) {
     g.style.width = 'auto'; g.style.display = 'block';
     q.opts.split(';').forEach((o, k) => { const v = o.split(',').map(Number); def('pose' + k, v); const dep = v[4];

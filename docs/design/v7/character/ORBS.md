@@ -71,7 +71,7 @@ frame.
 ## §23. The fixed pose (the spec the other surfaces build on)
 
 `DESIGN-SYSTEM.md` §23 points here. At rest, the dock, the Bots sidebar, the rail and the 44 px main bot hold every bot
-in this one pose. The angle is **proposed, awaiting the owner's pick (K07)**.
+in this one pose. The angle is **proposed, awaiting the owner's pick (K08)**.
 
 ### orb3: the look of a perfect 3D shape, in flat colour
 
@@ -88,6 +88,8 @@ orb3 is a new major version of orb2, on the `orb3` branch of the orb2 repo. It i
 | `f93b3e3` | Eyes slide back onto the face in up to four steps. |
 | `554af9f` | Version 3.0.0-alpha.0, and the README section on what changed. |
 | `e3d4552` | Eyes that never go edge-on, never merge and never touch the rim (below). |
+| `d48ceb2` | The home orientation (attribute `home`). |
+| `40d8bd1` | Transitions glide: look-source changes and the float fade, no pops. |
 
 **The API is unchanged.** It is the same `<orb-avatar>`, with the same attributes and methods.
 
@@ -119,25 +121,61 @@ Measured with `probes/bench.html` (30 orbs at 28 px, DPR 2, Chromium software ca
 Thirty orbs moving at once is not a real state: at rest the sidebar, rail and dock cost nothing. With 30 moving, orb2's
 quality governor halves their frame rate.
 
-**The fixed angle (K07).** K06 put small leaning dashes against the top-right rim, which the owner rejected. Grok-Bot's
-fixed angle has big, upright pills, well inside the face, on a body only gently turned. I measured its capture (13
-shapes, `probes/tools/eyemeas.py`) and match it:
+**The fixed angle (K08).** The owner liked K07's eyes, but its near-frontal body revealed its 3D curves only once it
+moved, which made the start of motion look like a snap. K08 keeps K07's eyes and turns the whole bot through orb3's
+new **home orientation** (attribute `home`, "yaw pitch roll" in degrees). Body and eyes turn together, so the rest pose
+already shows the volume, and every look, idle move and state departs from it and returns to it.
 
-| | Eye pair x, y (box) | Length / height | Aspect | Centres apart / width | Lean from vertical | Far / near width |
+Silhouettes against Grok-Bot's capture (`probes/tools/silmeas.py`: the principal axis, and the direction to the
+farthest outline point):
+
+| Shape | Grok-Bot | A (30°, 18°, −20°) | **B (38°, 22°, −24°), recommended** | C (45°, 26°, −28°) |
+|---|---|---|---|---|
+| drop, axis / apex | 64° / 246° | 70° / 250° | **66° / 246°** | 62° / 241° |
+| triangle, apex | 243° | 249° | **248°** | 241° |
+| hexagon, axis | 42° | 36° | **37°** | 34° |
+| wide, axis | 165° | 169° | **169°** | 169° |
+| squircle, axis | 35° | 2° | **15°** | 21° |
+
+The squircle is the one shape that stays less rotated than Grok-Bot's.
+
+| Eyes | x, y (box) | Length / height | Aspect | Centres apart | Lean from vertical | Far / near width |
 |---|---|---|---|---|---|---|
 | Grok-Bot | +0.11, −0.10 | 0.26 | 2.5 | 0.21 | 30° | 0.89 |
-| **A (recommended)** | **+0.10, −0.09** | **0.27** | **2.4** | **0.23** | **27°** | **0.89** |
-| B | +0.11, −0.11 | 0.26 | 2.4 | 0.23 | 29° | 0.88 |
-| C | +0.11, −0.13 | 0.26 | 2.4 | 0.22 | 31° | 0.86 |
+| **B** | +0.14, −0.13 | 0.27 | 2.65 | 0.20 | 30° | 0.86 |
 
 **How the pose is built.**
-- **The eyes:** the pose paints its own pair of pills on the face, right of centre and a little above
-  (`pill x ±0.19 + 0.13`, `y 0.06`, `w 0.17`, `h 0.41`, 15° lean).
-- **The body:** only a small look (A: 6° and 5°) and a body roll (−10°), so the pills stay upright and full width while
-  the outline shows the solid's 3D. No per-shape values.
+- **The orientation:** `home="38 22 -24"`.
+- **The face:** K07's pills painted on it, now nearer the centre because the turn carries them right
+  (`pill x ±0.19 + 0.04`, `y −0.08`, `w 0.18`, `h 0.41`, 4° lean).
+- **The look:** the pose adds none.
 
-`K07-pose-near-grok.jpg` shows A, B and C beside Grok-Bot's capture, shape by shape, at its scale and in its red
-(#f43f5e on dark).
+`K08-pose-volume.jpg` shows A, B and C beside Grok-Bot's capture, shape by shape. The K07 board is kept for its eye
+measurements.
+
+**The transition** (owner: no frontal snap). The rest pose is the home of the motion system; nothing leaves the home
+orientation family.
+- **Waking (hover) and states:** the face morphs over orb2's 0.38 s with `easeMorph`. The eyes then move on their spring
+  (about 0.4 s) and the body on its own (about 0.7 s). Both move only relative to the home orientation, so the turn the
+  rest pose shows is never undone.
+- **Look-source changes glide.** When the source of the look changes (the idle director, the pointer, the held home look),
+  it glides from where it was over 0.45 s with `easeMorph` (new in orb3). Before, it snapped.
+- **The float and breath fade** in and out over 0.5 s (new in orb3). Before, they jumped to their phase.
+- **Eyes against body:** the eyes slide at most 0.36 rad across the face (eased), and the body carries the rest of any
+  large look.
+- **No jelly kick** on the dock and sidebar bots (`jelly="0"`), so a state change doesn't wobble.
+
+Measured on `anim-transition-orb3-vs-grok.mp4` with `probes/tools/trans.py`, for each moment the clip changes state.
+"Peak" is the largest per-frame change in an orb; "step" is the largest jump between consecutive frames' changes (a pop
+shows as a step as big as the peak):
+
+| Moment | Before the glide and fade | After |
+|---|---|---|
+| wake at 2 s | peak 2.00, step 2.00 | peak 0.63, step 0.27 |
+| pointer leaves at 3.6 s | | peak 1.31, step 0.30 |
+| settle home at 5.5 s | peak 1.77, step 1.63 | peak 1.03, step 0.17 |
+| working at 8 s | peak 0.52, step 0.18 | peak 0.53, step 0.18 |
+| home at 11 s | peak 0.60, step 0.16 | peak 0.60, step 0.17 |
 
 **The eyes never go edge-on** (owner, from the K06 clip). Every rule eases in smoothly; there is no visible stop.
 - **A look eases into a limit:** 0.72 rad of yaw and 0.5 of pitch. Past about 50° the eyes would foreshorten below 0.6
@@ -164,11 +202,11 @@ shapes, `probes/tools/eyemeas.py`) and match it:
 
 | Clip | Width | Gap | Margin | Merged/hidden | Changed at rest | Shimmer px | Lone flips px | Dents (convex) |
 |---|---|---|---|---|---|---|---|---|
-| `anim-look-orb3-vs-grok.mp4` (15 s): the K07 A pose, a head turn and nod, the lively idle, working, the pose; Grok-Bot's drop beside it | min 0.65, **0** below | min 0.86, **0** below | min 2.2 px, **0** below | **0** | **0** (165 resting orb-frames) | 12 | 6 | **0** |
-| `anim-torture-orb3.mp4` (13 s): orb2 today against orb3, all 15 shapes, the turn sweep and both spins | min 0.65, **0** below | min 0.86, **0** below | **0** below | **0** | n/a | 958 → **47** | 523 → **27** | **0** |
+| `anim-transition-orb3-vs-grok.mp4` (13.5 s): K08 B at home, a hover, home, working, home, in Grok-Bot's red, beside Grok-Bot's drop | min 0.71, **0** below | **0** below | **0** below | **0** | **0** (405 resting orb-frames) | 19 | 1 | **0** |
+| `anim-look-orb3-vs-grok.mp4` (15 s, K07 pose, recorded before K08) | min 0.65, **0** below | min 0.86, **0** below | **0** below | **0** | **0** (165) | 12 | 6 | **0** |
+| `anim-torture-orb3.mp4` (13 s), orb2 today against orb3 | min 0.65, **0** below | min 0.86, **0** below | **0** below | **0** | n/a | 958 → **47** | 523 → **27** | **0** |
 
-The eye checks cover the head turn, the nod and the lively idle. During spins the eyes travel round the back on
-purpose. The four lobed shapes still flag their own valleys in the dent check; nothing is cut.
+The torture test was not re-run for K08. The home orientation defaults to 0, and the glide and fade change no geometry.
 
 **The shimmer left on moving bots** is single pixels, up to 7 in one frame: 12 and 47 px in the two clips, against 958
 in today's torture. It is not yet at 0. Drawing at 8x instead of 3x roughly triples the cost and does not remove it

@@ -7,6 +7,7 @@ const T = {
   dock: ['Today: the dock as boopis draws it', 'calm idle, drawn at 80 and scaled; hover listens and blinks', 'Proposed: fixed at rest, alive under the pointer', 'the 3/4 pose; hover wakes a bot lively; working and needs you animate'],
   room: ['Today: the room', 'presence lively, the gutter calm', 'Proposed: the chat fully lively', 'every orb lively; they look at the composer and the new message'],
   sidebar: ['Today: the Bots sidebar', '20 px rows, calm idle', 'Proposed: fixed, alive in a state', '28 px rows and a 44 px main bot at the 3/4 pose; kai works, nina needs you'],
+  trans: ['Grok-Bot', 'the owner\'s drop video', 'orb3: rest, hover, rest, working, rest', 'K08 B: the home pose; a hover wakes it at 2 s, home at 5.5 s; working at 8 s, home at 11 s'],
   look: ['Grok-Bot', 'the owner\'s drop video', 'orb3: looking around', 'pose, head turn and nod, lively idle, working, pose'],
   torture: ['Today: orb2 as shipped', 'every shape through its whole turn range, then spins', 'Proposed: the fixed geometry (G1-G3)', 'convex bodies traced as hulls; the eyes kept on the face'] }[sc];
 const extra = Object.entries(q).filter(([k]) => k !== 'scene').map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join('');   /* probe switches, passed to both halves */

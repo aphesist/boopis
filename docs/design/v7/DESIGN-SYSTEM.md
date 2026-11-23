@@ -721,17 +721,18 @@ Far 3D turns are fixed in the geometry, not clamped, so the life stays:
 - The blink: 0.2 s.
 
 **The fixed pose** (proposed, awaiting the owner's pick; the full spec is in `character/ORBS.md` §23, and
-`character/K07-pose-near-grok.jpg` shows three near-Grok options beside Grok-Bot's capture, shape by shape). The bots
-are drawn by **orb3**, a new major version of orb2 on its `orb3` branch (not pushed yet), with the same element and
-attributes: each shape is its own 3D solid in one flat colour, read from its perspective outline and its eyes.
+`character/K08-pose-volume.jpg` shows three options beside Grok-Bot's capture, shape by shape). The bots are drawn by
+**orb3**, a new major version of orb2 on its `orb3` branch (not pushed yet), with the same element and attributes: each
+shape is its own 3D solid in one flat colour, read from its perspective outline and its eyes.
 
-At rest, every bot in the dock, the Bots sidebar, the rail and the 44 px main bot holds one pose: big upright pills
-painted right of centre and a little above, on a body only gently turned (a 6° and 5° look, a −10° roll). Recommended:
-A. It matches Grok-Bot's measured eye placement, size, spacing, lean and foreshortening.
+At rest, every bot in the dock, the Bots sidebar, the rail and the 44 px main bot holds one pose:
+- **The body:** the whole bot turned, nodded and leaned through orb3's `home` orientation. Recommended: B, 38°, 22° and
+  −24°. Its silhouettes match Grok-Bot's.
+- **The eyes:** K07's big upright pills, painted on the face.
 
-In motion, the eyes never go edge-on. Each pill keeps at least 0.62 of its width, the pair never closes up, and it keeps
-a margin inside the outline; the body carries large looks. Cost per orb per frame: 0.30 ms while moving, 0.006 ms at
-rest.
+Idle, hover and states depart from this pose and return to it, gliding with no snap. In motion, the eyes never go
+edge-on: each pill keeps at least 0.62 of its width, the pair never closes up, and it keeps a margin inside the outline.
+Cost per orb per frame: 0.30 ms while moving, 0.006 ms at rest.
 
 **Per surface:**
 
@@ -768,8 +769,9 @@ the bots.
 
 - `K01-clarity.jpg`.
 - `K02-main-bot.jpg`.
-- `K07-pose-near-grok.jpg`: three near-Grok fixed angles beside Grok-Bot's capture, shape by shape (K04, K05 and K06
-  withdrawn).
+- `K08-pose-volume.jpg`: three fixed angles with the body turned, beside Grok-Bot's capture, shape by shape.
+- `K07-pose-near-grok.jpg`: the eye measurements (K04, K05 and K06 withdrawn).
+- `anim-transition-orb3-vs-grok.mp4`: rest, hover, rest, working, rest, beside Grok-Bot's drop.
 - `anim-look-orb3-vs-grok.mp4` and `anim-torture-orb3.mp4`: orb3 looking around beside Grok-Bot's drop, and the
   torture test.
 - `anim-dock`, `anim-sidebar`, `anim-room` and `anim-torture-before-after.mp4`. Every frame was checked with

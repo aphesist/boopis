@@ -267,6 +267,7 @@ const MEDIAL_N = 64;
 const EYE_SLIDE = [.36, .26];
 const LOOK_LIM = [.72, .5];
 const FACE_CURVE = .25;
+const LOOK_BLEND = .45;   // seconds: a change of look source glides (see _update)
 const headOf = (e, ratio, lim) => e - lim * Math.tanh(e * (1 - ratio) / lim);
 const LEAN = -.3;     // orb3: the body leans into a turn, as Grok-Bot's characters do (roll per radian of look)
 const CAM_D = 9.0;    // orb3: a closer camera than orb2 (15): the turned solid's near side reads larger, as in Grok-Bot's frames
@@ -2331,7 +2332,7 @@ function mixMotion(a, b, p) {
 const ATTRS = [
   'reaction', 'shape', 'eye-shape', 'mode', 'color', 'eye-color', 'size', 'follow',
   'shadow', 'extras', 'face-scale', 'morph', 'jelly', 'gaze', 'static', 'label',
-  'alive', 'idle-motion', 'idle-time', 'sleep-after', 'emotes', 'particle-color', 'spark-color'
+  'alive', 'idle-motion', 'idle-time', 'sleep-after', 'emotes', 'particle-color', 'spark-color', 'home'
 ];
 
 class OrbAvatar extends HTMLElement {
@@ -2417,7 +2418,7 @@ class OrbAvatar extends HTMLElement {
     this._pal = { color: '#f1efe9', eye: '#141418', blush: '#ff6f91', spark: '#ffe08a' };
     this._ink = '#888';
 
-    this._face = 1; this._morph = .38; this._jelly = .55; this._gaze = null;
+    this._face = 1; this._morph = .38; this._jelly = .55; this._gaze = null; this._home = [0, 0, 0];
     this._follow = false; this._shadow = false; this._extras = false; this._static = false; this._visible = true; this._target = null;
 
     // Dual-rate 3D springs: agile eye gaze (`_eyaw, _epitch, _eroll`) + plush 3D head volume (`_hyaw, _hpitch, _bRoll`)
@@ -2519,6 +2520,7 @@ class OrbAvatar extends HTMLElement {
       case 'idle-time': this._idleTime = Math.max(.5, num(v, 7)); this._nextEmote = now + this._idleTime * (.5 + Math.random() * .6); break;
       case 'sleep-after': this._sleepAfter = Math.max(0, num(v, 60)); break;
       case 'particle-color': case 'spark-color': this._colors(); break;
+      case 'home': { const h = (v || '').split(/[\s,]+/).map(Number).filter(Number.isFinite); this._home = [(h[0] || 0) * Math.PI / 180, (h[1] || 0) * Math.PI / 180, (h[2] || 0) * Math.PI / 180]; this._sig = null; wake(); break; }
       case 'emotes': this._emoteList = v ? v.split(/[\s,]+/).filter(Boolean) : null; break;
     }
     this._sig = null; this._aria();
@@ -2943,6 +2945,7 @@ class OrbAvatar extends HTMLElement {
       const b = this._rect, cx = b.left + b.width / 2, cy = b.top + b.height / 2, D = Math.max(250, b.width * 1.65);
       ly = clamp(Math.atan((look.x - cx) / D) * 1.25, -1.18, 1.18);
       lp = clamp(Math.atan((cy - look.y) / D) * 1.22, -.92, .92);
+      ly -= this._home[0]; lp -= this._home[1];   // orb3: a look at the pointer is a look from the home orientation
       lroll = clamp(ly * 0.18, -.24, .24);
       // Clear temporary idle eye micro-shift smoothly when user engages cursor
       if (this._idFace) { this._idFaceFrom = this._curFace; this._idFace = null; this._idFaceTp = 0; }
@@ -2954,6 +2957,16 @@ class OrbAvatar extends HTMLElement {
     } else {
       ly = g[0]; lp = g[1]; lroll = 0;
     }
+    // orb3: when the look's source changes (the idle director, the pointer, the held home look), the look glides from
+    // where it was over LOOK_BLEND with orb2's easeMorph, so waking, settling home and letting go of a look never snap
+    const lsrc = look && this._rect ? 1 : (!calm && mode !== 'fixed' ? (this._idleMotion === 'off' ? 2 : 0) : 3);
+    if (lsrc !== this._lsrc) { if (this._lsrc != null && this._lastL) { this._lfrom = this._lastL.slice(); this._lT0 = t; } this._lsrc = lsrc; }
+    if (this._lfrom) {
+      const q = (t - this._lT0) / LOOK_BLEND;
+      if (q >= 1) this._lfrom = null;
+      else { const e = easeMorph(q); ly = lerp(this._lfrom[0], ly, e); lp = lerp(this._lfrom[1], lp, e); lroll = lerp(this._lfrom[2], lroll, e); }
+    }
+    this._lastL = [ly, lp, lroll];
 
     const tgtOf = q => {
       const w = q.w ?? 0, qy = q.eyaw ?? q.yaw, qp = q.epitch ?? q.pitch;
@@ -2969,7 +2982,7 @@ class OrbAvatar extends HTMLElement {
     }
     // orb3: the eyes never face the viewer at more than about 50 degrees, where they would foreshorten below 0.6 of their
     // width; a large look eases into that (tanh, no visible stop), and the body carries the rest of the turn's meaning
-    T[0] = LOOK_LIM[0] * Math.tanh(T[0] / LOOK_LIM[0]); T[1] = LOOK_LIM[1] * Math.tanh(T[1] / LOOK_LIM[1]);
+    { const H = this._home; T[0] = LOOK_LIM[0] * Math.tanh((T[0] + H[0]) / LOOK_LIM[0]) - H[0]; T[1] = LOOK_LIM[1] * Math.tanh((T[1] + H[1]) / LOOK_LIM[1]) - H[1]; }
 
     const hR = b => b.isCircle ? .68 : .54;
     const hRatio = this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo);
@@ -3043,11 +3056,14 @@ class OrbAvatar extends HTMLElement {
     const spinRollAdd = inSpin ? sDir * (this._spinStyle === 1 ? .24 : .12) * sBell : 0;
     const spinDy = inSpin ? -(this._spinStyle === 1 ? .062 : .038) * sBell : 0;
 
-    const yaw = this._eyaw + spinYaw + spinLead + (m.yawAdd || 0);
-    const pitch = clamp(inSpin ? lerp(this._epitch, spinPitch * 1.15, sBell * .8) : this._epitch, -1.25, 1.25);
-    const headYaw = this._hyaw + spinYaw + (m.yawAdd || 0) * .7;
-    const headPitch = clamp(spinPitch, -1.15, 1.15);
-    const bodyRoll = (calm ? 0 : this._bRoll) + spinRollAdd;
+    // orb3: the home orientation (attribute `home`, "yaw pitch roll" in degrees) turns the whole character, body and eyes
+    // together, so every look, idle move and state departs from it and returns to it; at rest the bot shows its volume
+    const HM = this._home;
+    const yaw = this._eyaw + spinYaw + spinLead + (m.yawAdd || 0) + HM[0];
+    const pitch = clamp(inSpin ? lerp(this._epitch, spinPitch * 1.15, sBell * .8) : this._epitch, -1.25, 1.25) + HM[1];
+    const headYaw = this._hyaw + spinYaw + (m.yawAdd || 0) * .7 + HM[0];
+    const headPitch = clamp(spinPitch, -1.15, 1.15) + HM[1];
+    const bodyRoll = (calm ? 0 : this._bRoll) + spinRollAdd + HM[2];
     const eyeRoll = this._eroll;
 
     // Blink envelope: smooth symmetric cushion into heavy capsule
@@ -3058,9 +3074,13 @@ class OrbAvatar extends HTMLElement {
     // Continuous weightless hover & gentle breath when not locked to `fixed`
     const floatOn = !calm && !fixed && this._idleMotion !== 'off' && (this._idleMotion !== 'calm' || this._cssW >= 44);
     const ph = this._ph;
-    const floatX = floatOn ? (.020 * Math.sin(t * .92 + ph) + .009 * Math.sin(t * 2.05 + ph * 1.7)) : 0;
-    const floatY = floatOn ? (-.026 * Math.sin(t * 1.18 + ph * .8) - .009 * Math.cos(t * 2.25 + ph)) : 0;
-    const breath = floatOn ? .011 * Math.sin(t * 1.5 + ph) : 0;
+    // orb3: the float and breath fade in and out over 0.5 s when they turn on or off (waking, settling home), instead of
+    // jumping to their current phase
+    if (floatOn !== this._fOn) { const was = this._fAmp ?? (floatOn ? 0 : 1); this._fOn = floatOn; this._fT0 = t; this._fFrom = was; }
+    const fq = clamp((t - (this._fT0 ?? -9)) / .5, 0, 1), fAmp = this._fAmp = lerp(this._fFrom ?? 0, floatOn ? 1 : 0, easeMorph(fq));
+    const floatX = fAmp ? fAmp * (.020 * Math.sin(t * .92 + ph) + .009 * Math.sin(t * 2.05 + ph * 1.7)) : 0;
+    const floatY = fAmp ? fAmp * (-.026 * Math.sin(t * 1.18 + ph * .8) - .009 * Math.cos(t * 2.25 + ph)) : 0;
+    const breath = fAmp ? fAmp * .011 * Math.sin(t * 1.5 + ph) : 0;
     const s = (m.s ?? 1) + breath;
     const dy = (calm ? 0 : (m.dy || 0) + spinDy) + floatY;
     const dx = calm ? 0 : floatX;
