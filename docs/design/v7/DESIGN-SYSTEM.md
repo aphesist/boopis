@@ -724,8 +724,11 @@ Far 3D turns are fixed in the geometry, not clamped, so the life stays:
 on aphesist/orb2 `main`, with the same element and attributes. Each shape is its own 3D solid in one flat colour, read
 from its perspective outline and its eyes.
 
-- **Every bot carries the home orientation** `home="38 22 -24"`: the whole bot turned, nodded and leaned, its silhouette
-  matched to Grok-Bot's. Idle, hover and states depart from it and return to it, gliding with no snap.
+- **The home orientation** `home="38 22 -24"` is the REST pose: a still bot in the sidebar, the dock or the rail,
+  turned, nodded and leaned, its silhouette matched to Grok-Bot's.
+- **Every other state turns the bot out of it in 0.4 s and back at rest** (orb3 3.0.1). It runs on the alive-idle
+  engine: it looks, turns, peeks and spins. The state sets the movement, the tempo and the face, from one shared table
+  (`character/ORBS.md` §23). Chat and room bots are lively all the time.
 - **At rest it wears big upright pills painted on its face**, K07's measured placement: right of centre, a little above,
   well inside the outline.
 - **In motion the eyes never go edge-on:** each pill keeps at least 0.62 of its width, the pair never closes up, and it

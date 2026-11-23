@@ -97,6 +97,13 @@ const S = {
     R.innerHTML = tag() + `<div class="grid" style="grid-template-columns:repeat(2,1fr);top:90px;gap:34px 0">${sh.map((s) => `<div>${orb(s, 96, { motion: 'off' })}<div class="cap">${s}</div></div>`).join('')}</div>`;
     for (const o of document.querySelectorAll('orb-avatar')) { o.setAttribute('jelly', '.25'); o.setAttribute('home', HOME); o.dataset.base = 'k06'; o.setAttribute('reaction', 'k06'); }
   },
+  states() {
+    /* one bot through every state and back to rest, beside four bots at rest (the sidebar's home pose) */
+    const bots = [['kai', 'circle'], ['nina', 'triangle'], ['moss', 'squircle'], ['iris', 'flower'], ['hex', 'hexagon']];
+    R.innerHTML = tag() + `<div class="side" style="left:40px;right:40px;width:auto"><div class="seg"><span>Sessions</span><span class="on">Bots</span></div>
+      ${bots.map(([n]) => `<div class="row" style="height:84px">${orb(n, 64)}<div><b>${n}</b><span id="a-${n}">${n === 'kai' ? 'Idle' : 'Idle'}</span></div></div>`).join('')}</div>`;
+    for (const o of document.querySelectorAll('orb-avatar')) { o.setAttribute('jelly', '0'); fixed(o); }
+  },
   trans() { S.look(); for (const o of document.querySelectorAll('orb-avatar')) { o.setAttribute('jelly', '0'); o.setAttribute('color', '#f43f5e'); o.setAttribute('eye-color', '#1f1f1f'); } document.body.style.background = '#1f1f1f'; },
   torture() {
     const sh = ['circle', 'squircle', 'soft', 'wide', 'tall', 'bean', 'drop', 'ghost', 'triangle', 'hexagon', 'diamond', 'cloud', 'clover', 'flower', 'star'];
@@ -167,6 +174,20 @@ const T = {
     at(10, () => { for (const o of os) { o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', 'working'); } });
     at(13, () => { for (const o of os) o.setAttribute('reaction', 'k06'); });
   },
+  states() {
+    /* nina (the triangle): 0-1.5 s rest; hover 1.5-4; rest; thinking 5-7.5; rest; working 8.5-11; replying (speaking) 11-13.5; needs you
+       13.5-16; done 16-18.5; rest from 18.5 */
+    const k = $('.ui-orb[data-bot="nina"] > orb-avatar'), A = $('#a-nina'), say = (x) => { A.textContent = x; };
+    at(1.5, () => { say('Hover'); wake(k); });
+    at(4, () => { say('Idle'); settle(k); });
+    at(5, () => { say('Thinking'); state(k, 'thinking'); });
+    at(7.5, () => { say('Idle'); state(k, 'pose'); });
+    at(8.5, () => { say('Working'); state(k, 'working'); });
+    at(11, () => { say('Replying'); state(k, 'speaking'); });
+    at(13.5, () => { say('Needs you'); A.className = 'owe'; state(k, 'needs'); });
+    at(16, () => { say('Done'); A.className = ''; state(k, 'done'); });
+    at(18.5, () => { say('Idle'); state(k, 'pose'); });
+  },
   trans() {
     /* the transition: 0-2 s at rest; 2 s a hover wakes it (lively, a look toward the pointer at the right); 5.5 s the
        pointer leaves and it settles home; 8 s working; 11 s done, home again */
@@ -196,11 +217,11 @@ const s = document.createElement('script'); s.src = LIB; s.onload = () => {
   const A = window.OrbAvatar;
   A.defineReaction('pose', { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: null });
   if (ORB3) { const D0 = Math.PI / 180, P8 = A.shapes.pairEyes(['pill', { x: -.19 + .04, y: -.08, w: .18, h: .41, ang: 4 * D0 }], ['pill', { x: .19 + .04, y: -.08, w: .18, h: .41, ang: 4 * D0 }]);
-    A.defineReaction('pose', { label: 'Pose', blink: false, face: () => P8, motion: () => ({ eyaw: 0, epitch: 0, w: 1 }) }); }
+    A.defineReaction('pose', { label: 'Pose', blink: false, rest: true, face: () => P8, motion: () => ({ eyaw: 0, epitch: 0, w: 1 }) }); }
   /* K08 B in orb3: the home orientation (turn 38, nod 22, roll -24) carries the whole bot; K07's big upright pills are
      painted on the face, right of centre and a little above; the pose itself adds no look */
   const D = Math.PI / 180, K8 = A.shapes.pairEyes(['pill', { x: -.19 + .04, y: -.08, w: .18, h: .41, ang: 4 * D }], ['pill', { x: .19 + .04, y: -.08, w: .18, h: .41, ang: 4 * D }]);
-  A.defineReaction('k06', { label: 'Pose', blink: false, face: () => K8, motion: () => ({ eyaw: 0, epitch: 0, w: 1 }) });
+  A.defineReaction('k06', { label: 'Pose', blink: false, rest: true, face: () => K8, motion: () => ({ eyaw: 0, epitch: 0, w: 1 }) });
   S[q.scene || 'dock'](); if (ORB3) for (const o of document.querySelectorAll('orb-avatar')) o.setAttribute('home', HOME); document.body.dataset.ready = '1';
 };
 document.head.appendChild(s);

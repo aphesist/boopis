@@ -265,9 +265,27 @@ const MEDIAL_N = 64;
    the body turns for the rest. The eyes stay on the open middle of the face, where they keep their width, their gap and
    a margin inside the outline. A smooth tanh, so there is no visible stop */
 const EYE_SLIDE = [.36, .26];
-const LOOK_LIM = [.72, .5];
+const LOOK_LIM = [.66, .46];
 const FACE_CURVE = .25;
-const LOOK_BLEND = .45;   // seconds: a change of look source glides (see _update)
+const LOOK_BLEND = .45;
+const HOME_TURN = .4;
+/* orb3: the shared state table. Outside rest, every state runs the alive-idle engine: amp scales its movement, tempo its
+   pace, lead how much the state's own motion (its scan, its sky gaze, its hop) leads over the free looking around. The face
+   is always the state's own. Measured on Grok-Bot's sidebar: a working or replying bot looks around, tilts and spins; a bot
+   that needs you moves less, its face and hop carrying the signal */
+const STATE_LIFE = {
+  working:   { amp: 1,   tempo: 1.25, lead: .35 },
+  compute:   { amp: .9,  tempo: 1.25, lead: .4 },
+  thinking:  { amp: .9,  tempo: 1,    lead: .5 },
+  speaking:  { amp: .85, tempo: 1.1,  lead: .4 },
+  listening: { amp: .75, tempo: 1,    lead: .5 },
+  needs:     { amp: .55, tempo: .9,   lead: .6 },
+  done:      { amp: 1,   tempo: 1.3,  lead: .5 },
+  happy:     { amp: 1,   tempo: 1.3,  lead: .5 },
+  error:     { amp: .4,  tempo: 1,    lead: .7 },
+  sleeping:  { amp: .2,  tempo: .5,   lead: .9 },
+  _default:  { amp: .8,  tempo: 1,    lead: .5 }
+};    // seconds: turning out of the home orientation and back   // seconds: a change of look source glides (see _update)
 const headOf = (e, ratio, lim) => e - lim * Math.tanh(e * (1 - ratio) / lim);
 const LEAN = -.3;     // orb3: the body leans into a turn, as Grok-Bot's characters do (roll per radian of look)
 const CAM_D = 9.0;    // orb3: a closer camera than orb2 (15): the turned solid's near side reads larger, as in Grok-Bot's frames
@@ -2937,6 +2955,15 @@ class OrbAvatar extends HTMLElement {
     const m = this._tp < 1 ? mixMotion(fixed ? {} : this._fromM, rawM, p) : rawM;
     this._m = m;
 
+    // orb3: the home orientation holds only at rest (idle motion off, no look target, the plain idle face or a reaction
+    // marked rest). Any other state turns the bot out of it into its normal front-facing life, and back home at rest:
+    // a continuous turn of the whole body and face over HOME_TURN, eased in and out (smooth5) (Grok-Bot's sidebar turns in 0.25-0.35 s)
+    const restNow = this._idleMotion === 'off' && !this._target && !this._override && !this._customSeq && (this._expr === 'idle' || !!(EX[this._expr] || {}).rest);
+    if (restNow !== this._restOn) { this._hwFrom = this._hw ?? (restNow ? 1 : 0); this._restOn = restNow; this._hwT0 = this._init ? t : -9; }
+    this._hw = lerp(this._hwFrom ?? 1, restNow ? 1 : 0, smooth5(clamp((t - (this._hwT0 ?? -9)) / HOME_TURN, 0, 1)));   // symmetric: no jolt as it starts
+    this._homeW = [this._home[0] * this._hw, this._home[1] * this._hw, this._home[2] * this._hw];
+    const life = !restNow && this._expr !== 'idle' && !this._customSeq ? (STATE_LIFE[this._expr] || STATE_LIFE._default) : null;
+
     // Base gaze from active pointer tracking OR Grokbot-style Ambient Idle Director
     let ly, lp, lroll = 0, idleCustomFace = null;
     const g = this._gaze || [0, .05];
@@ -2945,15 +2972,20 @@ class OrbAvatar extends HTMLElement {
       const b = this._rect, cx = b.left + b.width / 2, cy = b.top + b.height / 2, D = Math.max(250, b.width * 1.65);
       ly = clamp(Math.atan((look.x - cx) / D) * 1.25, -1.18, 1.18);
       lp = clamp(Math.atan((cy - look.y) / D) * 1.22, -.92, .92);
-      ly -= this._home[0]; lp -= this._home[1];   // orb3: a look at the pointer is a look from the home orientation
+      ly -= this._homeW[0]; lp -= this._homeW[1];   // orb3: a look at the pointer is a look from the home orientation
       lroll = clamp(ly * 0.18, -.24, .24);
       // Clear temporary idle eye micro-shift smoothly when user engages cursor
       if (this._idFace) { this._idFaceFrom = this._curFace; this._idFace = null; this._idFaceTp = 0; }
       this._idNext = t + 0.4 + Math.random() * 0.6;
     } else if (!calm && mode !== 'fixed') {
       const allowEyeShifts = this._expr === 'idle' && !this._override && !this._customSeq;
-      const id = this._stepIdleDirector(t, dt, allowEyeShifts);
-      ly = id.yaw; lp = id.pitch; lroll = id.roll; idleCustomFace = id.face;
+      // orb3: every state outside rest lives on the alive-idle engine (looks, turns, rim peeks, spins), tuned per state
+      // by STATE_LIFE: how far it moves, how fast, and how much the state's own motion leads; its face is the state's
+      let id;
+      if (life) { const im = this._idleMotion; this._idleMotion = 'lively'; id = this._stepIdleDirector(t, dt * life.tempo, false); this._idleMotion = im; }
+      else id = this._stepIdleDirector(t, dt, allowEyeShifts);
+      const amp = life ? life.amp : 1;
+      ly = id.yaw * amp; lp = id.pitch * amp; lroll = id.roll * amp; idleCustomFace = life ? null : id.face;
     } else {
       ly = g[0]; lp = g[1]; lroll = 0;
     }
@@ -2969,7 +3001,7 @@ class OrbAvatar extends HTMLElement {
     this._lastL = [ly, lp, lroll];
 
     const tgtOf = q => {
-      const w = q.w ?? 0, qy = q.eyaw ?? q.yaw, qp = q.epitch ?? q.pitch;
+      const w = (q.w ?? 0) * (life ? life.lead : 1), qy = q.eyaw ?? q.yaw, qp = q.epitch ?? q.pitch;
       const ey = ly + ((qy ?? ly) - ly) * w;
       const ep = lp + ((qp ?? lp) - lp) * w;
       const br = q.bodyRoll != null || q.roll != null ? lerp(lroll, q.bodyRoll ?? q.roll, Math.max(w, .7)) : lroll;
@@ -2982,7 +3014,7 @@ class OrbAvatar extends HTMLElement {
     }
     // orb3: the eyes never face the viewer at more than about 50 degrees, where they would foreshorten below 0.6 of their
     // width; a large look eases into that (tanh, no visible stop), and the body carries the rest of the turn's meaning
-    { const H = this._home; T[0] = LOOK_LIM[0] * Math.tanh((T[0] + H[0]) / LOOK_LIM[0]) - H[0]; T[1] = LOOK_LIM[1] * Math.tanh((T[1] + H[1]) / LOOK_LIM[1]) - H[1]; }
+    { const H = this._homeW; T[0] = LOOK_LIM[0] * Math.tanh((T[0] + H[0]) / LOOK_LIM[0]) - H[0]; T[1] = LOOK_LIM[1] * Math.tanh((T[1] + H[1]) / LOOK_LIM[1]) - H[1]; }
 
     const hR = b => b.isCircle ? .68 : .54;
     const hRatio = this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo);
@@ -3058,7 +3090,7 @@ class OrbAvatar extends HTMLElement {
 
     // orb3: the home orientation (attribute `home`, "yaw pitch roll" in degrees) turns the whole character, body and eyes
     // together, so every look, idle move and state departs from it and returns to it; at rest the bot shows its volume
-    const HM = this._home;
+    const HM = this._homeW || this._home;
     const yaw = this._eyaw + spinYaw + spinLead + (m.yawAdd || 0) + HM[0];
     const pitch = clamp(inSpin ? lerp(this._epitch, spinPitch * 1.15, sBell * .8) : this._epitch, -1.25, 1.25) + HM[1];
     const headYaw = this._hyaw + spinYaw + (m.yawAdd || 0) * .7 + HM[0];

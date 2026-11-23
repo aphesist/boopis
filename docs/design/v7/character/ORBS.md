@@ -73,32 +73,59 @@ frame.
 `DESIGN-SYSTEM.md` §23 points here. At rest, the dock, the Bots sidebar, the rail and the 44 px main bot hold every bot
 in this one pose.
 
-**DECIDED (owner, 23 November): K08 B, drawn by orb3 3.0.0.**
+**DECIDED (owner, 23 November): K08 B as the rest pose, drawn by orb3 (3.0.0 published; 3.0.1, rest-only home and the state table, on branch `orb3.0.1`, not pushed).**
 - **Library:** orb3 is published on aphesist/orb2 `main` (commit `265777c`, a fast-forward from `03d9094`).
 - **The pose:** `home="38 22 -24"`, with K07's big upright pills painted on the face.
 - **Every bot, on every surface,** carries that home orientation. Idle, hover and states depart from it and return to
   it.
 
+**Rest and the states (owner, 23 November; orb3 3.0.1, branch `orb3.0.1` of orb2, not pushed).** The home pose is
+the REST pose only: a still bot in the sidebar, the dock or the rail. Any other state turns the whole bot out of it into
+that state's life, and back into it at rest.
+
+- **Rest:** `idle-motion="off"`, no look target, and the idle face or a reaction defined with `rest: true` (boopis's
+  pose). The bot holds `home="38 22 -24"`, still.
+- **The turn out and back:** a continuous turn of the whole body and face over 0.4 s, eased in and out (smooth5).
+  Grok-Bot's zoomed sidebar turns between its rest angle and a state in 0.25–0.35 s
+  (`avatar-states-zoom-sidebar.mp4`: 0.9–1.2 s out, 20.5–20.7 s back).
+- **Every state outside rest runs the alive-idle engine:** it looks wherever it wants, turns, peeks at the rim and
+  spins, as Grok-Bot's working and replying bots do. Each state tunes it through one shared table, `STATE_LIFE` in
+  orb3. Chat and room bots run it all the time.
+
+| State | Movement | Tempo | State's own motion leads | Face and gesture |
+|---|---|---|---|---|
+| hover (alive idle) | 1 | 1 | — | the default face |
+| working | 1 | 1.25 | 0.35 | working capsules, the left-to-right scan |
+| compute | 0.9 | 1.25 | 0.4 | the travelling grid |
+| thinking | 0.9 | 1 | 0.5 | the sky gaze, the dots |
+| replying (speaking) | 0.85 | 1.1 | 0.4 | the talking bars |
+| listening | 0.75 | 1 | 0.5 | round attentive eyes |
+| needs you | 0.55 | 0.9 | 0.6 | tall eyes, the hop every 2 s, the ring |
+| done / happy | 1 | 1.3 | 0.5 | `^ ^` arcs and the hop; boopis returns it to rest after 3 s |
+| error | 0.4 | 1 | 0.7 | the chevrons and shake |
+| sleeping | 0.2 | 0.5 | 0.9 | rest eyes |
+
+Every surface (dock, sidebar, rail, chat) uses the same states, identically. The eye constraints hold throughout.
+
 **Not yet changed in boopis:** the app still vendors orb2's `orb-avatar.min.js`. Swapping in orb3's build is the
 integration step.
 
-**The decided build, checked** (orb3 3.0.0 `orb-avatar.min.js`, K08 B on every bot):
+**The decided build, checked** (orb3 3.0.1 `orb-avatar.min.js`: home at rest, every state on the alive-idle engine):
 
 | Clip | Changed at rest | Shimmer px (today → orb3) | Lone flips px | Eye floors (width, gap, margin) | Dents |
 |---|---|---|---|---|---|
-| `anim-sidebar-before-after.mp4` (20 s) | **0** (2,366 resting orb-frames) | 201 → **0** | 22 → **0** | **0** below; narrowest 0.57 | 0 |
-| `anim-dock-before-after.mp4` (19 s) | **0** (2,349) | 501 → **0** | 156 → **0** | **0** below; narrowest 0.56 | 0 |
-| `anim-room-before-after.mp4` (14 s) | (all lively) | 91 → **2** | 18 → **0** | see below | 0 |
+| `anim-states-orb3-vs-grok.mp4` (20 s): one bot (nina) through every state and back, four at rest; Grok-Bot's sidebar and its working row beside it | **0** (2,317 resting orb-frames) | — → 32 | 2 | 0 below, except 4 frames at 0.53 (see the note) | 0 |
+| `anim-sidebar-before-after.mp4` (20 s) | **0** (2,366) | 201 → 6 | 22 → 1 | **0** below | 0 |
+| `anim-dock-before-after.mp4` (19 s) | **0** (2,349) | 501 → 16 | 156 → 1 | **0** below | 0 |
+| `anim-room-before-after.mp4` (14 s) | (all lively) | 91 → 20 | 18 → 0 | **0** below | 0 |
 
-In the room, every pill-pair frame is within the gap and margin floors. Three frames on the 20 px gutter bots measure
-0.52–0.53 of width, about one device pixel off at that size. The "merged" frames are iris's 3×3 grid emote at 20 px,
-which is not a pill pair. Liveliness in the room is 0.83 today against 0.99 with orb3.
-
-- **The minified build:** it renders the same as the source; a pixel difference against the source is within the
-  difference between two runs of the source itself.
-- **The demo:** `index.html` loads it with no errors and the companion at the home pose.
-- **The transition clip,** re-checked on the build, gives the same numbers as above.
-- **Cost:** 0.26 ms per moving 28 px orb per frame, 0.004 ms at rest.
+- **The eye check** now takes each face class's own front-on width: tall pills, and wide capsules such as the working
+  face. The states clip's four frames at 0.53 were measured under the earlier, mixed reference.
+- **The room's "merged" frames** are iris's grid emote at 20 px, which is not a pill pair.
+- **The turns** out of rest and back (`probes/tools/trans.py`, states clip) have a largest frame-to-frame step of
+  0.5–0.8 against peaks of 2–3. The done burst at 16 s is 1.2, by design.
+- **The shimmer has risen** from 0 to 6–16 px in the sidebar and dock clips because their bots now move in their states
+  and on hover. It is single pixels.
 
 **Renders:** `K02-main-bot.jpg` and screens 11–13 are re-rendered with orb3 3.0.0 and the home pose on every bot. v7 QA
 ran every rule, including sweep and same-component: 7 pages, 0 findings.
