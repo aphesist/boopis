@@ -205,6 +205,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       r.row = row; r.plugin = plugin;
       if (!r.loaded) r.sessions = r.sessions ?? fromRow(row);
       if (plugin?.problem) r.notes['store'] = plugin.problem; else delete r.notes['store'];
+      if (plugin?.project_problem) r.notes['project'] = plugin.project_problem; else delete r.notes['project'];
       if (ownRecords.size === 0 && !had) r.notes['store'] = r.notes['store'] ?? 'boopis’s own record of this teammate was not read, so its look is the one its name gives it';
       recs.set(row.name, r);
       if (r.loaded) emitFor(before, toBot(r)); else if (!had) { events.emit({ type: 'bot-created', bot: toBot(r) }); void track(loadDetail(row.name)); }
@@ -441,6 +442,13 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       await plug('bots.toolsets', { name: id, on: [...on], off: [...off] });
       r.loaded = false;
       await loadDetail(id);   /* the engine's own list, read back */
+    },
+    async setProject(id, folder) {
+      const r = need(id);
+      const res = await plug<{ project: string | null }>('bots.project', { name: id, project: folder });
+      r.plugin = { ...(r.plugin ?? { name: id, path: r.row.path, record: null, problem: null, archived: null }), project: res.project, project_problem: null };
+      delete r.notes['project'];
+      events.emit({ type: 'bot', bot: toBot(r) });
     },
     async saveOwn(id, patch) {
       const r = need(id);

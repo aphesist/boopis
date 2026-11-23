@@ -77,6 +77,7 @@ pub fn export(now: &Current) -> Exported {
                         .collect(),
                 )
                 .filter(|t: &Vec<String>| !t.is_empty()),
+                project: b.project.clone(),
             },
         );
     }

@@ -55,6 +55,8 @@ struct Fake {
     toolsets: Mutex<BTreeMap<String, BTreeMap<String, bool>>>,
     /// The boards cannot be read.
     boards_fail: bool,
+    /// What `bots.read` says is wrong with a bot's project folder.
+    project_problems: Mutex<BTreeMap<String, String>>,
 }
 
 fn walk<'a>(v: &'a Value, key: &str) -> Option<&'a Value> {
@@ -100,6 +102,7 @@ impl Fake {
             rooms: Mutex::new(json!([])),
             toolsets: Mutex::new(BTreeMap::new()),
             boards_fail: false,
+            project_problems: Mutex::new(BTreeMap::new()),
         }
     }
     fn seed(&self, home: &Path, config: Value) {
@@ -186,9 +189,12 @@ impl Engine for Fake {
         self.log.lock().unwrap().push(Did::Call(method.to_owned()));
         let mut records = self.records.lock().unwrap();
         match method {
-            "plugin.boopis.bots.read" => Ok(
-                json!({"bots": records.iter().map(|(n, r)| json!({"name": n, "record": r})).collect::<Vec<_>>()}),
-            ),
+            "plugin.boopis.bots.read" => {
+                let problems = self.project_problems.lock().unwrap();
+                Ok(
+                    json!({"bots": records.iter().map(|(n, r)| json!({"name": n, "record": r, "project_problem": problems.get(n)})).collect::<Vec<_>>()}),
+                )
+            }
             "plugin.boopis.bots.write" => {
                 let name = params["name"].as_str().unwrap().to_owned();
                 let r = records.entry(name).or_insert_with(|| json!({}));
@@ -1072,4 +1078,35 @@ async fn when_the_boards_cannot_be_read_kanban_is_left_as_it_is() {
         fake.toolsets.lock().unwrap()["kai"].get("kanban"),
         Some(&true)
     );
+}
+
+#[tokio::test]
+async fn a_project_folder_that_is_not_there_is_a_problem_at_every_start() {
+    let fake = Fake::new();
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    fake.project_problems.lock().unwrap().insert(
+        "iris".into(),
+        "/home/me/repos/gone is not a folder on this computer".into(),
+    );
+    let done = repair(&fake, &layout).await.unwrap();
+    let iris = done.bots.iter().find(|b| b.name == "iris").unwrap();
+    assert_eq!(
+        iris.problems,
+        vec!["its project folder: /home/me/repos/gone is not a folder on this computer".to_owned()]
+    );
+    // not marked prepared: the next start says it again, until the folder is fixed
+    let next = repair(&fake, &layout).await.unwrap();
+    assert_eq!(
+        next.bots
+            .iter()
+            .map(|b| b.name.as_str())
+            .collect::<Vec<_>>(),
+        ["iris"]
+    );
+    fake.project_problems.lock().unwrap().clear();
+    let fixed = repair(&fake, &layout).await.unwrap();
+    assert_eq!(fixed.bots.len(), 1, "looked at once more, and fine");
+    assert!(fixed.bots[0].problems.is_empty());
+    assert!(repair(&fake, &layout).await.unwrap().bots.is_empty());
 }

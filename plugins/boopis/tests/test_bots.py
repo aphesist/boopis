@@ -441,3 +441,37 @@ def test_toolsets_are_switched_the_same_for_chats_workers_and_room_turns(
     hermes.fail.add("atlas")  # the engine refuses
     with pytest.raises(HermesCliError):
         svc.toolsets("atlas", ["web"], None)
+
+
+def test_a_project_folder_must_be_there_and_readable(
+    root: Path, svc: BotService, hermes: FakeHermes, tmp_path: Path
+) -> None:
+    make_profile(root, "atlas")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    assert svc.project("atlas", str(repo)) == {"project": str(repo.resolve())}
+    assert profile_calls(hermes, "atlas")[-1] == ["config", "set", "terminal.cwd", str(repo.resolve())]
+    for bad in (str(tmp_path / "gone"), "relative/path", str(repo / "file.txt")):
+        (repo / "file.txt").write_text("x")
+        with pytest.raises(BotRefusedError):
+            svc.project("atlas", bad)
+    assert svc.project("atlas", None) == {"project": None}
+    assert profile_calls(hermes, "atlas")[-1] == ["config", "unset", "terminal.cwd"]
+    svc.archive("atlas")
+    with pytest.raises(BotRefusedError):
+        svc.project("archived--atlas", str(repo))
+
+
+def test_the_read_says_each_teammates_project_folder_and_what_is_wrong_with_it(
+    root: Path, svc: BotService, tmp_path: Path
+) -> None:
+    pytest.importorskip("hermes_yaml")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (make_profile(root, "atlas") / "config.yaml").write_text(f"terminal:\n  cwd: {repo}\n")
+    (make_profile(root, "nina") / "config.yaml").write_text(f"terminal:\n  cwd: {tmp_path / 'gone'}\n")
+    make_profile(root, "moss")
+    rows = {b["name"]: b for b in svc.read_all()["bots"]}
+    assert (rows["atlas"]["project"], rows["atlas"]["project_problem"]) == (str(repo), None)
+    assert rows["nina"]["project_problem"] == f"{tmp_path / 'gone'} is not a folder on this computer"
+    assert (rows["moss"]["project"], rows["moss"]["project_problem"]) == (None, None)

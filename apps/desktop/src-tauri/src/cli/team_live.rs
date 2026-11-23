@@ -230,7 +230,7 @@ fn whole_prompts(home: &std::path::Path) -> BTreeMap<String, String> {
     .unwrap_or_default()
 }
 
-fn expand(path: &str) -> String {
+pub(crate) fn expand(path: &str) -> String {
     match (path.strip_prefix("~/"), dirs::home_dir()) {
         (Some(rest), Some(h)) => h.join(rest).display().to_string(),
         (None, Some(h)) if path == "~" => h.display().to_string(),
@@ -259,14 +259,15 @@ impl Backend for Live<'_> {
             .plugin("bots.read", json!({}))
             .await
             .unwrap_or(Value::Null);
-        let record_of = |name: &str| -> Option<Value> {
+        let row_of = |name: &str| -> Option<Value> {
             records
                 .get("bots")
                 .and_then(Value::as_array)?
                 .iter()
                 .find(|b| b.get("name").and_then(Value::as_str) == Some(name))
-                .and_then(|b| b.get("record").cloned())
+                .cloned()
         };
+        let record_of = |name: &str| row_of(name).and_then(|b| b.get("record").cloned());
         for name in self.layout.bots() {
             let d = self.describe(&name).await?;
             let (provider, model) = bots::model_of(d.get("model"));
@@ -338,6 +339,8 @@ impl Backend for Live<'_> {
                                 .collect()
                         })
                         .unwrap_or_default(),
+                    project: row_of(&name)
+                        .and_then(|b| b.get("project").and_then(Value::as_str).map(contract)),
                 },
             );
             now.jobs
@@ -516,6 +519,13 @@ impl Backend for Live<'_> {
                 // the team file's list is the owner's own: boopis does not apply its defaults to this bot again
                 bots::toolsets::chosen(&self.layout.root, bot)
             }
+            Op::SetProject { bot, project } => self
+                .plugin(
+                    "bots.project",
+                    json!({"name": bot, "project": project.as_deref().map(expand)}),
+                )
+                .await
+                .map(|_| ()),
             Op::AddConnector { bot, connector } => {
                 let config = if let Some(u) = &connector.url {
                     json!({"url": u})

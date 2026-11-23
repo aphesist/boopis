@@ -151,3 +151,30 @@ async fn a_bots_cap_on_turns_is_made_changed_and_taken_back_to_the_default() {
     }
     assert_eq!(m.ran().len(), n);
 }
+
+#[tokio::test]
+async fn a_bots_project_folder_is_set_changed_and_taken_away_and_a_missing_one_refused() {
+    let m = Model::new(base());
+    let tmp = tempfile::tempdir().unwrap();
+    let folder = tmp.path().display().to_string();
+    let o = go(&m, &["create", "kai", "--project", &folder]).await;
+    assert_eq!(o.code, 0, "{}{}", o.out, o.err);
+    assert!(o.out.contains("set the project folder of kai"), "{}", o.out);
+    let project = || m.read_now().bots["kai"].project.clone();
+    assert_eq!(project().as_deref(), Some(folder.as_str()));
+    let n = m.ran().len();
+    let o = go(&m, &["set", "kai", "--project", &folder]).await;
+    assert!(o.out.contains("nothing to change"), "{}", o.out);
+    assert_eq!(m.ran().len(), n);
+    let o = go(&m, &["set", "kai", "--project", "none"]).await;
+    assert_eq!(o.code, 0, "{}{}", o.out, o.err);
+    assert_eq!(project(), None);
+    for bad in ["relative/folder", "/nowhere/at/all"] {
+        let o = go(&m, &["set", "kai", "--project", bad]).await;
+        assert_eq!(o.code, 2, "{bad}: {}{}", o.out, o.err);
+    }
+    // a bad folder refuses a new bot before it is made
+    let o = go(&m, &["create", "nina", "--project", "/nowhere/at/all"]).await;
+    assert_eq!(o.code, 2);
+    assert!(!m.read_now().bots.contains_key("nina"));
+}

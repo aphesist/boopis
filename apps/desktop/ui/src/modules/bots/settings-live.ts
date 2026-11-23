@@ -160,7 +160,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   };
   const appr = el('div', { class: 'ui-set' }, catalog.approvals.map((ap) => switchRow('ap-' + ap.id, ap.name, !!c.approvals[ap.id], (v) => own({ approvals: { [ap.id]: v } }))));
 
-  /* ───────── what it has: skills and servers read only; its toolsets switch here (ADR-0047) ───────── */
+  /* ───────── what it has: skills and servers read only; its toolsets switch here (ADR-0047), and its project folder (ADR-0048) ───────── */
   const mcpLine = inventoryLine('MCP servers', 'server', 'servers', info.mcpServers, info.notes.detail);
   const caps = el('div', { class: 'bt-caps' }, [
     el('p', { class: 'ui-field__hint', text: inventoryLine('Skills', 'skill', 'skills', info.skills, info.notes.detail) }),
@@ -180,6 +180,26 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
       return row;
     });
   const tools = el('div', { class: 'ui-set' }, [...toolRows, toolErr]);
+  const projId = 'bt-project-' + b.id;
+  const projRow = frag(ui.html.setRow({ label: 'Project folder', hint: 'Its sessions start here and read the folder’s AGENTS.md or CLAUDE.md.', for: projId, control: ui.html.input({ id: projId, value: info.project ?? '', mono: true, placeholder: 'None', attrs: { spellcheck: null } }) }));
+  const projInput = $<HTMLInputElement>('input', projRow);
+  const projErr = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: !info.notes.project, text: info.notes.project ?? '' });
+  let projSaved = info.project ?? '';
+  const saveProject = (v: string): void => {
+    const want = v.trim();
+    if (want === projSaved) return;
+    projErr.hidden = true;
+    admin.setProject(b.id, want || null).then(() => { projSaved = want; }).catch((e: unknown) => {
+      projInput.value = projSaved; projErr.textContent = 'boopis did not set it: ' + sentence(e); projErr.hidden = false;
+    });
+  };
+  projInput.addEventListener('change', () => saveProject(projInput.value));
+  const project = el('div', { class: 'ui-set' }, [projRow, projErr]);
+  if (data().forms.can.folder) {
+    const choose = ui.button({ label: 'Choose a folder…', size: 's' });
+    choose.addEventListener('click', () => { void data().forms.pickFolder().then((f) => { if (f) { projInput.value = f; saveProject(f); } }); });
+    project.append(el('div', { class: 'bt-add-row' }, choose));
+  }
 
   const who = el('div', { class: 'bt-sh-who' }, [orbButton(b, 28, b.name, { state: b.state }), el('span', { class: 'bt-sh-name', text: b.name }), el('span', { class: 'bt-sh-role', text: b.role })]);
   checkClips();
@@ -190,7 +210,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     sec('role', 'Role and instructions', null, [roleF, instrF]),
     sec('model', 'Model', info.model ?? 'not set', [modelF]),
     sec('schedule', 'Schedule', jobsMeta, [hint('What it does when you have not asked. Each is a job in this bot’s own schedule.'), routines, routineErr, promptF, presets, cronF, el('div', { class: 'bt-add-row' }, addBtn)]),
-    sec('capabilities', 'What it can use', null, [hint('Toolsets apply from its next new session.'), caps, tools]),
+    sec('capabilities', 'What it can use', null, [hint('Toolsets and the project folder apply from its next new session.'), caps, tools, project]),
     sec('rules', 'Rules', null, [hint('Saved with the bot, in its boopis folder. Governed applies from its next session and needs a frontier model; the workspace and what it asks first do not apply yet.'), gov, capRow, ws, appr, ownErr, el('div', { class: 'ui-set' }, runLimitRow(b))])
   );
   paintRoutines();

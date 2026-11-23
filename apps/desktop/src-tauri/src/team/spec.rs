@@ -69,6 +69,10 @@ pub struct Bot {
     /// as it is (a new bot gets its role's defaults).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub toolsets: Option<Vec<String>>,
+    /// Its project folder (`~` is the home folder): its sessions start there and read the folder's AGENTS.md or CLAUDE.md.
+    /// Not said: left as it is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project: Option<String>,
     /// Its Governed switch (off when not said, for a new bot).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub governed: Option<bool>,
@@ -252,6 +256,15 @@ impl Team {
                 for t in ts.iter().filter(|t| !toolset_ok(t)) {
                     p.push(format!("bots.{n}.toolsets: {t:?} is not a toolset's name"));
                 }
+            }
+            if let Some(f) = b
+                .project
+                .as_deref()
+                .filter(|f| !(f.starts_with('/') || f.starts_with("~/")))
+            {
+                p.push(format!(
+                    "bots.{n}.project: {f:?} is not a full path (start it with / or ~/)"
+                ));
             }
             if let Some(l) = &b.look {
                 if !SHAPES.contains(&l.shape.as_str()) {

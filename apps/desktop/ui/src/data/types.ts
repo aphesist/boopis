@@ -82,7 +82,10 @@ export interface BotInfo {
   /** a kanban worker of this bot wrote within the last 90 seconds: the bot is doing a card as well as whatever it does in rooms
    *  and chats (the engine runs that worker as a second session of the same profile and does not tie the two together) */
   worker?: BotWorker | null;
-  notes: Readonly<Partial<Record<'detail' | 'jobs' | 'sessions' | 'store' | 'setup', string>>>;
+  /** its project folder (the engine's `terminal.cwd`): its sessions start there and read the folder's AGENTS.md or CLAUDE.md.
+   *  null: it has none, or boopis's record was not read. What is wrong with it is `notes.project`. */
+  project?: string | null;
+  notes: Readonly<Partial<Record<'detail' | 'jobs' | 'sessions' | 'store' | 'setup' | 'project', string>>>;
 }
 /** an archived teammate: a profile renamed out of the way (nothing was deleted). `id` is the profile's name now, `was` the name it
  *  returns to, `at` when it was archived (ISO, '' when unknown) and `when` the same as the list says it ("5m", "yesterday", "mon") */

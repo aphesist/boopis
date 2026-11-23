@@ -25,7 +25,7 @@ pub struct Ctx<'a> {
     pub err: &'a mut dyn Write,
 }
 
-const USAGE: &str = "usage: boopis bots list [--json] | create <name> [--role <text>] [--soul-file <file>] [--model <model>] [--shape <shape> --color <#rrggbb>] [--governed] [--max-turns <n>] | set <name> [--role <text>] [--soul-file <file>] [--model <model>] [--shape <shape>] [--color <#rrggbb>] [--governed|--ungoverned] [--max-turns <n>|default]";
+const USAGE: &str = "usage: boopis bots list [--json] | create <name> [--role <text>] [--soul-file <file>] [--model <model>] [--shape <shape> --color <#rrggbb>] [--governed] [--max-turns <n>] [--project <folder>] | set <name> [--role <text>] [--soul-file <file>] [--model <model>] [--shape <shape>] [--color <#rrggbb>] [--governed|--ungoverned] [--max-turns <n>|default] [--project <folder>|none]";
 
 fn fail(ctx: &mut Ctx<'_>, line: &str) {
     let _ = writeln!(ctx.err, "boopis: {line}");
@@ -120,8 +120,43 @@ const EDIT: &[(&str, Kind)] = &[
     ("governed", Kind::Switch),
     ("ungoverned", Kind::Switch),
     ("max-turns", Kind::Value),
+    ("project", Kind::Value),
     ("json", Kind::Switch),
 ];
+
+/// What `--project` asks.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum ProjectArg {
+    /// Not given.
+    Keep,
+    /// `none`: take the folder away (`set` only).
+    Clear,
+    /// This folder.
+    Set(String),
+}
+
+/// `--project FOLDER` (`none` takes the folder away, for `set`), checked here so a bad folder is refused before anything is
+/// changed; the plugin's `bots.project` checks it again when it writes it.
+fn project_of(a: &Args, may_clear: bool) -> Result<ProjectArg, String> {
+    let Some(raw) = a.value("project").map(str::trim) else {
+        return Ok(ProjectArg::Keep);
+    };
+    if may_clear && raw == "none" {
+        return Ok(ProjectArg::Clear);
+    }
+    let full = super::team_live::expand(raw);
+    if !Path::new(&full).is_absolute() {
+        return Err(format!(
+            "--project {raw:?} is not a full path; write it from / or ~/"
+        ));
+    }
+    if !Path::new(&full).is_dir() {
+        return Err(format!(
+            "--project {raw:?} is not a folder on this computer"
+        ));
+    }
+    Ok(ProjectArg::Set(raw.to_owned()))
+}
 
 /// What the options say about a bot's look: both parts or neither, each checked.
 fn look_of(a: &Args, have: Option<&Look>) -> Result<Option<Look>, String> {
@@ -247,6 +282,14 @@ async fn create(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
             return 2;
         }
     };
+    let project = match project_of(&a, false) {
+        Ok(ProjectArg::Set(f)) => Some(f),
+        Ok(_) => None,
+        Err(e) => {
+            fail(ctx, &e);
+            return 2;
+        }
+    };
     let now = match read(ctx).await {
         Ok(n) => n,
         Err(c) => return c,
@@ -267,7 +310,7 @@ async fn create(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
         max_turns: cap.and_then(Cap::kept),
         ..Bot::default()
     };
-    run_op(
+    let code = run_op(
         ctx,
         &Op::CreateBot {
             name: name.clone(),
@@ -277,7 +320,19 @@ async fn create(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
         name,
         "made",
     )
-    .await
+    .await;
+    match project {
+        Some(p) if code == 0 => set_project(ctx, name, Some(p), a.has("json")).await,
+        _ => code,
+    }
+}
+
+async fn set_project(ctx: &mut Ctx<'_>, name: &str, project: Option<String>, json: bool) -> i32 {
+    let op = Op::SetProject {
+        bot: name.to_owned(),
+        project,
+    };
+    run_op(ctx, &op, json, name, "set the project folder of").await
 }
 
 #[allow(clippy::too_many_lines)] // one pass: read, check, compare each field, send
@@ -302,6 +357,7 @@ async fn set(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
         "governed",
         "ungoverned",
         "max-turns",
+        "project",
     ]
     .iter()
     .any(|o| a.has(o));
@@ -338,6 +394,21 @@ async fn set(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
             return 2;
         }
     };
+    // `None`: nothing to write; `Some(None)`: take the folder away
+    let project: Option<ProjectArg> = match project_of(&a, true) {
+        Ok(ProjectArg::Keep) => None,
+        Ok(p) => {
+            let want = match &p {
+                ProjectArg::Set(f) => Some(super::team_live::expand(f)),
+                _ => None,
+            };
+            (want != have.project.as_deref().map(super::team_live::expand)).then_some(p)
+        }
+        Err(e) => {
+            fail(ctx, &e);
+            return 2;
+        }
+    };
     // Only what differs is sent, as `team apply` does: setting a bot to what it is does nothing.
     let role = a
         .value("role")
@@ -356,17 +427,20 @@ async fn set(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
     let look = look.filter(|l| have.look.as_ref() != Some(l));
     let governed = governed.filter(|g| *g != have.governed);
     let max_turns = cap.filter(|c| c.kept() != have.max_turns);
-    if role.is_none()
+    let rest_same = role.is_none()
         && soul.is_none()
         && model.is_none()
         && look.is_none()
         && governed.is_none()
-        && max_turns.is_none()
-    {
+        && max_turns.is_none();
+    if rest_same && project.is_none() {
         let _ = writeln!(ctx.out, "nothing to change: {name} is as asked");
         return 0;
     }
-    run_op(
+    if rest_same {
+        return set_project(ctx, name, folder_of(project), a.has("json")).await;
+    }
+    let code = run_op(
         ctx,
         &Op::UpdateBot {
             name: name.clone(),
@@ -381,7 +455,19 @@ async fn set(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
         name,
         "changed",
     )
-    .await
+    .await;
+    match project {
+        Some(p) if code == 0 => set_project(ctx, name, folder_of(Some(p)), a.has("json")).await,
+        _ => code,
+    }
+}
+
+/// The folder a `ProjectArg` writes: `None` takes the folder away.
+fn folder_of(p: Option<ProjectArg>) -> Option<String> {
+    match p {
+        Some(ProjectArg::Set(f)) => Some(f),
+        _ => None,
+    }
 }
 
 #[cfg(test)]

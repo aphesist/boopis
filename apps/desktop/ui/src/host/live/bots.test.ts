@@ -82,6 +82,7 @@ class FakeHermes {
       case 'plugin.boopis.bots.write': { this.own[p['name']] = { ...(this.own[p['name']] ?? {}), ...(p['look'] ? { look: p['look'] } : {}), ...(p['settings'] ? { settings: { ...(this.own[p['name']]?.['settings'] ?? {}), ...p['settings'] } } : {}), ...(p['approvals'] ? { approvals: p['approvals'] } : {}) }; return { record: this.own[p['name']] }; }
       case 'plugin.boopis.bots.guide': this.guided.push(p['name']); return { skill: 'boopis-handoffs', version: 2, written: true };
       case 'plugin.boopis.bots.toolsets': return { on: p['on'], off: p['off'], platforms: ['cli', 'api_server'] };
+      case 'plugin.boopis.bots.project': if (p['project'] === '/nowhere') throw new Error('/nowhere is not a folder on this computer'); return { project: p['project'] };
       case 'plugin.boopis.bots.inspect': return { path: HOME + '/profiles/' + p['name'], bytes: 3 * 1024 * 1024, files: 240, truncated: false, has_sessions: true, memory_files: 2, skills: 9, boopis_bytes: 300 };
       case 'plugin.boopis.bots.archive': {
         const to = 'archived--' + p['name'];
@@ -208,11 +209,14 @@ describe('the roster is the user’s Hermes profiles, minus the default one', ()
   });
 });
 
-describe('a teammate’s toolsets go through the plugin', () => {
-  it('switches toolsets and reads the engine’s list back', async () => {
+describe('a teammate’s toolsets and project folder go through the plugin', () => {
+  it('switches toolsets and reads the engine’s list back; sets the folder, and a folder that is not there is refused', async () => {
     const { h, bots } = await open();
     await bots.source.admin!.setToolsets('atlas', ['web'], ['browser']);
     expect(h.main.calls.find((c) => c.method === 'plugin.boopis.bots.toolsets')!.params).toEqual({ name: 'atlas', on: ['web'], off: ['browser'] });
+    await bots.source.admin!.setProject('atlas', '/home/me/repos/paper');
+    expect(bots.source.snapshot().bots.find((b) => b.id === 'atlas')!.info!.project).toBe('/home/me/repos/paper');
+    await expect(bots.source.admin!.setProject('atlas', '/nowhere')).rejects.toThrow(/not a folder/);
   });
 });
 

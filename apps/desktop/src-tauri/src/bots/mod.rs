@@ -747,6 +747,19 @@ pub async fn board_members(engine: &dyn Engine, root: &Path) -> Result<BTreeSet<
     Ok(toolsets::on_boards(&boards, &assignees, &groups))
 }
 
+/// What is wrong with the project folder of the bot `name`, as the plugin's `bots.read` says (`project_problem`).
+#[must_use]
+pub fn project_problem(records: &Value, name: &str) -> Option<String> {
+    records
+        .get("bots")
+        .and_then(Value::as_array)?
+        .iter()
+        .find(|b| b.get("name").and_then(Value::as_str) == Some(name))?
+        .get("project_problem")
+        .and_then(Value::as_str)
+        .map(|p| format!("its project folder: {p}"))
+}
+
 /// Give the bot `name` the hand-off skill (`boopis-handoffs`, `plugins/boopis/bots/guides.py`) through the root plugin's
 /// `bots.guide`, which writes it into the bot's own `skills/` and leaves a file of that name it did not write alone. The engine
 /// tells a room member nothing about the kanban board (it guides only a worker the dispatcher started), so without it a cut-off
@@ -1102,11 +1115,13 @@ pub async fn repair(engine: &dyn Engine, layout: &Layout) -> Result<Repaired> {
             out.soul_missing.insert(name.clone(), gone);
         }
         let ask = given.ask(name, gov, members.as_ref());
-        if !ask.due() && still_prepared(layout, &view, &marker, name, &print) {
+        let project = project_problem(&records, name);
+        if !ask.due() && project.is_none() && still_prepared(layout, &view, &marker, name, &print) {
             continue;
         }
         match prepare(engine, layout, &mut view, name, ask).await {
-            Ok(done) => {
+            Ok(mut done) => {
+                done.problems.extend(project);
                 needs_restart |= done.needs_restart;
                 if done.problems.is_empty() {
                     marker.prepared.insert(name.clone(), print);

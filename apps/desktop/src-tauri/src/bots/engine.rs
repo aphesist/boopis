@@ -190,6 +190,7 @@ impl Service {
         let mut ask = given.ask(name, governed, members.as_ref());
         ask.fresh = fresh && ask.fresh;
         let mut done = super::prepare(self.engine.as_ref(), layout, &mut view, name, ask).await?;
+        done.problems.extend(super::project_problem(&records, name));
         given.note(&done);
         if done.skills_given || done.toolsets_given || done.kanban_given {
             given.save(&layout.root, &mut done.problems);

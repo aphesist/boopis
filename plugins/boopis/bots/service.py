@@ -40,8 +40,17 @@ class BotService:
                 archived = {
                     "name": path.name.removeprefix(homes.ARCHIVE_PREFIX)
                 }  # renamed by hand, or the store is lost
+            project, project_problem = engine_config.read_project(path)
             bots.append(
-                {"name": path.name, "path": str(path), "record": record, "problem": problem, "archived": archived}
+                {
+                    "name": path.name,
+                    "path": str(path),
+                    "record": record,
+                    "problem": problem,
+                    "archived": archived,
+                    "project": project,
+                    "project_problem": project_problem,
+                }
             )
         return {"root": str(self.root), "bots": bots}
 
@@ -98,6 +107,11 @@ class BotService:
         """Switch toolsets on and off for the teammate, the same on every platform (``engine_config``)."""
         self._live(name)
         return engine_config.set_toolsets(self.cli, name, on, off)
+
+    def project(self, name: str, folder: object) -> dict[str, Any]:
+        """Set (or, with ``None``, take away) the teammate's project folder (``engine_config``)."""
+        self._live(name)
+        return engine_config.set_project(self.cli, name, folder)
 
     def _live(self, name: str) -> None:
         homes.profile_dir(self.root, name)

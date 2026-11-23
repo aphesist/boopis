@@ -31,6 +31,8 @@ pub struct BotNow {
     pub connectors: Vec<ConnectorNow>,
     /// Its toolsets, `(name, enabled)`, as the engine lists them for it.
     pub toolsets: Vec<(String, bool)>,
+    /// Its project folder, `~/...` when it is under the home folder.
+    pub project: Option<String>,
 }
 
 /// An MCP server as it is now.
@@ -110,7 +112,7 @@ pub struct Current {
     pub default_provider: String,
 }
 
-/// What a team file says of a new bot's toolsets, done once it exists. Its toolsets are the file's
+/// What a team file says of a new bot's toolsets and project folder, done once it exists. Its toolsets are the file's
 /// list: the role's defaults it is made with that the list does not name are switched off again.
 fn new_bot_settings(name: &str, want: &Bot) -> Vec<Action> {
     let mut out = Vec::new();
@@ -134,10 +136,21 @@ fn new_bot_settings(name: &str, want: &Bot) -> Vec<Action> {
             "toolsets",
         ));
     }
+    if let Some(p) = &want.project {
+        out.push(settings_action(
+            name,
+            Some(name),
+            Op::SetProject {
+                bot: name.to_owned(),
+                project: Some(p.clone()),
+            },
+            &format!("project {p}"),
+        ));
+    }
     out
 }
 
-/// What a team file says of an existing bot's toolsets, where it differs from what is there.
+/// What a team file says of an existing bot's toolsets and project folder, where it differs from what is there.
 fn bot_settings(name: &str, want: &Bot, have: &BotNow) -> Vec<Action> {
     let mut out = Vec::new();
     if let Some(list) = &want.toolsets {
@@ -172,6 +185,21 @@ fn bot_settings(name: &str, want: &Bot, have: &BotNow) -> Vec<Action> {
                 &what,
             ));
         }
+    }
+    if let Some(p) = want
+        .project
+        .as_ref()
+        .filter(|p| have.project.as_deref() != Some(p.as_str()))
+    {
+        out.push(settings_action(
+            name,
+            None,
+            Op::SetProject {
+                bot: name.to_owned(),
+                project: Some(p.clone()),
+            },
+            &format!("project {p}"),
+        ));
     }
     out
 }
@@ -236,6 +264,13 @@ pub enum Op {
         on: Vec<String>,
         /// Switched off.
         off: Vec<String>,
+    },
+    /// Set (or, with `None`, take away) a bot's project folder.
+    SetProject {
+        /// The bot.
+        bot: String,
+        /// The folder.
+        project: Option<String>,
     },
     /// Add an MCP server to a bot.
     AddConnector {

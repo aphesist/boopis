@@ -1031,3 +1031,16 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - A board bot's fresh prompt is about 20,000 bytes (about 5,000 tokens) smaller than in 0.1.9, a bot off the boards about 47,000 bytes (about 11,800 tokens). `kanban` alone is 27,241 bytes of a board bot's tools.
 - An edit made with the engine's own editor changes the `cli` list only; boopis's switches keep both lists equal.
 
+## ADR-0048 A bot can have a project folder (owner decision, 23 November 2026)
+**Context.**
+- After B14 (`bots::soul`) the owner chose the proposal: a bot has a project folder whose `AGENTS.md` or `CLAUDE.md` the engine loads itself, instead of an include copied into its SOUL.
+- Read in the engine (v0.23.2): a named profile's `terminal.cwd` is where its sessions start (`gateway/session_policy.py` `_profile_workspace_cwd`), and the engine loads that folder's context files into each new session (`agent/prompt_builder.py` `build_context_files_prompt`, through `resolve_context_cwd`). A group room's turn runs in the member's profile scope (`gateway/platforms/api_server.py` `_profile_scope`, `_profile_runtime_scope`, which binds the profile's whole terminal policy), so it reads the same folder; checked offline (the profile's terminal scope carries the folder, and the loader reads its `CLAUDE.md`), not with a live room. A kanban worker starts in its card's workspace instead (`gateway/session_kanban.py`), which is why the hand-off skill makes cards with `workspace_kind: "dir"` in the project folder (B35). The engine treats a missing folder as unset and falls back silently.
+
+**Decision.**
+- **The folder is `terminal.cwd`** in the bot's configuration, through the plugin's `bots.project` (the engine's `config set|unset`): in the bot's settings (a path field and the system folder picker), in a team file (`project:`) and in `boopis bots create|set --project`.
+- **Fail closed.** A folder that is not there or cannot be read is refused when it is set, and one that disappears later is a problem on the bot at every start, never a silent fallback. The SOUL path check stays as it is.
+- **Prompt caching.** It applies from the bot's next new session.
+
+**Consequences.**
+- A bot whose project lives in a repository reads that repository's own instructions in its chats and rooms, fresh at each new session; nothing is copied into its SOUL.
+- A kanban card made without `workspace_kind: "dir"` still runs in the board's scratch folder, without the project's instructions (an engine report asks for a better default).

@@ -144,6 +144,9 @@ impl Model {
             .get(bot)
             .and_then(|b| b.max_turns)
     }
+    pub(crate) fn read_now(&self) -> Current {
+        self.now.lock().unwrap().clone()
+    }
     pub(crate) fn ran(&self) -> Vec<String> {
         self.ran.lock().unwrap().clone()
     }
@@ -214,6 +217,7 @@ impl Backend for Model {
                             .iter()
                             .map(|t| ((*t).to_owned(), *t != "browser"))
                             .collect(),
+                        project: None,
                     },
                 );
             }
@@ -265,6 +269,9 @@ impl Backend for Model {
                         None => b.toolsets.push((t.clone(), state)),
                     }
                 }
+            }
+            Op::SetProject { bot, project } => {
+                n.bots.get_mut(bot).unwrap().project.clone_from(project);
             }
             Op::AddConnector { bot, connector } => {
                 n.bots.get_mut(bot).unwrap().connectors.push(ConnectorNow {
@@ -818,11 +825,12 @@ async fn a_new_bot_gets_the_skills_its_file_names_and_export_keeps_a_bundled_one
 }
 
 #[tokio::test]
-async fn a_bots_toolsets_are_applied_exported_and_applied_again_as_no_change() {
+async fn a_bots_toolsets_and_project_folder_are_applied_exported_and_applied_again_as_no_change() {
     let mut team = example();
     {
         let kai = team.bots.get_mut("kai").unwrap();
         kai.toolsets = Some(vec!["file".into(), "kanban".into()]);
+        kai.project = Some("~/repos/paper-shorts".into());
     }
     let model = Model::new(base());
     let report = apply_to(&model, &team, false).await;
@@ -839,12 +847,20 @@ async fn a_bots_toolsets_are_applied_exported_and_applied_again_as_no_change() {
         ["file", "kanban"],
         "the file's list, and nothing else on"
     );
+    assert_eq!(
+        now.bots["kai"].project.as_deref(),
+        Some("~/repos/paper-shorts")
+    );
     assert!(plan(&team, &now, false).is_empty());
     // export writes them; applying the export changes nothing
     let e = export(&now);
     assert_eq!(
         e.team.bots["kai"].toolsets.as_deref(),
         Some(&["file".to_owned(), "kanban".to_owned()][..])
+    );
+    assert_eq!(
+        e.team.bots["kai"].project.as_deref(),
+        Some("~/repos/paper-shorts")
     );
     assert!(plan(&e.team, &now, false).is_empty());
     // an existing bot whose list differs: one action, both ways
@@ -865,12 +881,17 @@ async fn a_bots_toolsets_are_applied_exported_and_applied_again_as_no_change() {
             off: vec!["kanban".into()]
         }]
     );
-    // a toolset name the file cannot mean is a problem before anything runs
+    // a toolset name or a folder the file cannot mean is a problem before anything runs
     let mut bad = team.clone();
     bad.bots.get_mut("nina").unwrap().toolsets = Some(vec!["Web Search".into()]);
+    bad.bots.get_mut("nina").unwrap().project = Some("repos/x".into());
     let problems = bad.check();
     assert!(
         problems.iter().any(|p| p.contains("bots.nina.toolsets")),
+        "{problems:?}"
+    );
+    assert!(
+        problems.iter().any(|p| p.contains("bots.nina.project")),
         "{problems:?}"
     );
 }

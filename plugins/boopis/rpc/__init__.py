@@ -49,6 +49,7 @@ CAPABILITIES = (
     "bots.write",
     "bots.guide",
     "bots.toolsets",
+    "bots.project",
     "bots.inspect",
     "bots.archive",
     "bots.restore",
