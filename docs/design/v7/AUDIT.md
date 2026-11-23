@@ -1,6 +1,10 @@
 # Design system v7: the audit
 
-Status: **proposal for the owner** (invariant 8). Nothing in the app changes until the owner picks the options in `DESIGN-SYSTEM.md` section 13. 23 November 2026.
+Status: written before the owner's picks (23 November 2026). The picks are in `DESIGN-SYSTEM.md` section 15.1 and win over the "recommended" readings below. What they change in this audit:
+- **Attention (09 A):** amber (`--owe`) now marks what the person owes; red is failed and destructive confirms only. R-colour-2, R-error-2, R-card-3 and the owner decision "a message to the person stands out" move to amber; every changed place, the notch spec included, is listed in DESIGN-SYSTEM.md 15.2.
+- **Accent (09):** an indigo (Iris as placeholder), not Grok's blue; editable per theme (section 18).
+- **Composer (07 C), rail (06 A with B automatic under 1200 px), search (05 A, toggleable), status (08 C, the model's logo for sessions), danger (hybrid), info (the mark), long text (B):** as DESIGN-SYSTEM.md 7, 12 and 17 now say.
+- **The mark (new, section 17 there):** `.ui-ff`, `.ui-blank__gap`, `.cd-token` and the calm pass's (i) migrate to one `.ui-mark` primitive; add that to section 5 below.
 
 This file maps everything in the v6 design system to its v7 target: every token (`tokens.css`), every rule (`RULES.md`, 220 IDs), every kit component (`apps/desktop/ui/src/components`, `docs/UI-COMPONENTS.md`), every lab check (`docs/UI-LAB.md`), and the v6 owner decisions. Each is marked **keep**, **change** (with the value), **add** or **remove**.
 

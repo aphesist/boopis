@@ -1,6 +1,6 @@
 # boopis design system v7 (proposal)
 
-Status: **proposal for the owner**, 23 November 2026. Invariant 8: the owner designs the UI. Nothing in `apps/desktop/ui` changes until the owner picks the options in section 15; after the pick, this file replaces `design/v6/design-system/DESIGN-SYSTEM.md` as the source of truth and the kit is restyled from it.
+Status: **the owner has picked** (23 November 2026; section 15.1). Invariant 8: the owner designs the UI. The kit is not restyled yet: the next step is the accent hex (one of five indigo candidates, preview P1), the search placement (P2), the mark (P3) and the normal-session screen, which the owner will discuss next. Where an earlier section says "recommended", section 15.1 wins. Once implemented, this file replaces `design/v6/design-system/DESIGN-SYSTEM.md` as the source of truth and the kit is restyled from it.
 
 | File | What it is |
 |---|---|
@@ -89,13 +89,14 @@ What the user writes is a bubble (`--bubble-user`, 18% ink in dark, solid ink in
 
 | Token | Role | Dark | Light |
 |---|---|---|---|
-| `--accent` | board 09 A (recommended): the switch on, the chosen option, progress. A fill, never text | `#116dd2` | `#1680f3` |
-| `--accent-text` | links, the info banner | `#4d9bff` (6.6:1) | `#0b6dd3` (5.1:1) |
+| `--accent` | the owner's pick: an indigo (Iris `#5b5bd6` as placeholder, one of five candidates; editable in a custom theme). The switch on, the chosen option, progress, a filled or chosen mark (section 17). A fill, never text | `#5b5bd6` | `#5b5bd6` |
+| `--accent-text` | links, the info banner | `#8b8dff` (6.6:1) | `#4546c8` (7.1:1) |
 | `--accent-soft` | the info banner, text selection | accent 7% | accent 7% |
-| `--focus` | the 2px focus ring | `#4d9bff` | `#0b6dd3` |
-| `--red` | board 09 B (recommended): what the person owes (dots, stamps, the "you" capsule's ring), failed, a destructive confirm | `#cf2b35` | `#cf2b35` |
-| `--red-text` | "needs you", "failed", error lines | `#ff6463` (6.5:1) | `#c4232f` (5.6:1) |
-| `--warn` / `--warn-text` | a warning that is not owed (board 09 A would make it "needs you") | `#c8770c` / `#e28600` | `#c8770c` / `#b25e00` |
+| `--focus` | the 2px focus ring | `#8b8dff` | `#4546c8` |
+| `--owe` / `--owe-text` / `--owe-soft` | the owner's pick (09 A): what the person owes: the needs-you dot and words, the rail's flag, the "you" capsule, a lapsed blank, the notch's edge | `#c8770c` / `#e28600` (7.0:1) / amber 8% | `#c8770c` / `#a35600` (4.8:1) / amber 8% |
+| `--red` | failed, and the fill of a destructive confirm, only | `#cf2b35` | `#cf2b35` |
+| `--red-text` | "failed", error lines, a destructive menu item | `#ff6463` (6.5:1) | `#c4232f` (5.6:1) |
+| `--warn` / `--warn-text` | the same amber; `--owe*` are its "you owe" names | `#c8770c` / `#e28600` | `#c8770c` / `#a35600` |
 | `--ok` / `--ok-text` | online, connected, passed | `#0e9f5a` / `#00ba69` | `#0e9f5a` / `#087a43` |
 | `--add` / `--del` | diff counts | `#00ba69` / `#ff6463` | `#087a43` / `#c4232f` |
 
@@ -108,14 +109,14 @@ The pairs table of v6 5.4 is rebuilt for two themes and the dock from these valu
 ## 5. Theming
 
 - **Theme:** Follow system, Light, Dark (Grok's three).
-- **Accent:** Blue (default), Ink, or (owner's call on board 09) Brass. Grok's "Bot colour" accent is not offered: an orb's colour never becomes interface colour.
+- **Accent:** an indigo by default (the owner chooses the hex from P1), any hex in a custom theme (section 18). Grok's "Bot colour" accent is not offered: an orb's colour never becomes interface colour.
 - **Size:** Default, Larger, Largest (owner decision: the web view's zoom).
 - **Density:** compact, regular (Grok's), comfortable; moves `--row-h`, `--row-h-2`, `--ctl`, `--ctl-s` only.
 - **Mods** keep their theme preview and readability guard (owner decisions), mapped onto v7's roles.
 
 ## 6. Typography
 
-**Families** (board 01): **A Geist** (recommended: SIL OFL 1.1, already bundled as `@fontsource/geist`), B Inter (SIL OFL 1.1), C Figtree (SIL OFL 1.1). Mono is Geist Mono (SIL OFL 1.1) in every option. Licences are checked: all three families and Geist Mono are SIL OFL 1.1 (the files' own LICENSE texts are in the boards' `src/fonts/`). Grok's XVF is proprietary and is not used or shipped.
+**Family** (board 01, the owner's pick): **Geist** ( SIL OFL 1.1, already bundled as `@fontsource/geist`), B Inter (SIL OFL 1.1), C Figtree (SIL OFL 1.1). Mono is Geist Mono (SIL OFL 1.1) in every option. Licences are checked: all three families and Geist Mono are SIL OFL 1.1 (the files' own LICENSE texts are in the boards' `src/fonts/`). Grok's XVF is proprietary and is not used or shipped.
 
 | Token | Size / line | Weight | Where |
 |---|---|---|---|
@@ -143,11 +144,11 @@ The pairs table of v6 5.4 is rebuilt for two themes and the dock from these valu
 
 | Part | v7 | v6 |
 |---|---|---|
-| Top chrome | no bar; a 56 px drag region; floating controls at y = 10: the sidebar toggle (36 circle) over the rail, the title pill centred on the column (orb 24 + name; opens the details pane), search and details (36 circles), thin window glyphs (board 05 A) | a 40 px frame bar with back, forward, the command field and toggles |
-| Rail (sidebar collapsed) | 88 px, `--bg-1`, 54 px tiles (radius 12, orb 36, the current one 8%), the attention flag with a 2.5 px ring; groups as their cluster under a hairline; New bot, Store and Settings at the foot (board 06 A) | 56 px, orbs 24 on x = 28 |
+| Top chrome | no bar; a 56 px drag region; floating controls at y = 10: the sidebar toggle (36 circle) over the rail, the title pill centred on the column (orb 24 + name; opens the details pane), search and details (36 circles), thin window glyphs (board 05 A, the owner's pick). Search is always reachable (ctrl K opens the palette everywhere); Settings > General > Layout has "Show search" (on) and "Search shows as": a button (default), a pill beside the title (board 05 B), or one of the placements in preview P2 once the owner picks | a 40 px frame bar with back, forward, the command field and toggles |
+| Rail (sidebar collapsed) | 88 px, `--bg-1`, 54 px tiles (radius 12, orb 36, the current one 8%), the attention flag (amber) with a 2.5 px ring; groups as their cluster under a hairline; New bot, Store and Settings at the foot (board 06 A, the owner's pick). **Compact rail** (board 06 B: 64 px, 44 tiles, orb 28): Settings > General > Layout > Rail size: Automatic (default), Standard, Compact. Automatic is compact **under 1200 px of window width** (v6's breakpoint where both side panels stop pushing, R-layout-1, so no new width), standard from 1200; under 900 an open sidebar overlays; under 640 the sidebar is a drawer | 56 px, orbs 24 on x = 28 |
 | Sidebar (open) | 300 (resizable 88 to 400), `--bg-1`; the Sessions / Bots pill at the top; bot rows 54 (orb 36, name 14, activity 13 at `--text-dim`, gap 10, radius 12); "Groups" heading 12 `--text-dim`; you, Store, Settings at the foot | clamp(256, 15vw, 288) |
 | Conversation | column 640 centred on the ground; bubbles up to 560; a time separator only on a gap ("Today 10:05", 12 `--text-dim`) | 720 column with a 112 call-number margin |
-| Composer | centred, min(720, column + 80), 16 above the dock (board 07) | the column's width |
+| Composer | centred, min(720, column + 80), 16 above the dock; its line underneath (board 07 C, the owner's pick; section 12.2) | the column's width |
 | Details pane | 356, `--bg-pane`, pushes the work (overlays under 900): the 64 orb, the name, an Activity / Library pill, then only the sections that exist | a 28 px strip closed; clamp(300, 18vw, 340) open |
 | Dialogs | large 900 (Settings, Store, Keyboard): radius 14, `--bg-pane`, a 220 nav, `--bg-3` cards; forms 440 to 488: radius 20, `--bg-3` | 600 x 680, radius 30 |
 | Palette | 640, radius 14, rows inset 6 radius 8 | 600 |
@@ -242,10 +243,10 @@ orb2 is unchanged: shapes, colours, faces, reactions, the state map (`HX.ui.stat
 | 64 | the details header | lively |
 | 96 | the new-bot preview | calm, glance lead |
 
-- **Eyes on a Grok-style surface** (board 04): **B (recommended)** gives orb2's eyes the colour of the surface behind the orb (read on `hx:theme`, R-theme-5), so they read as cut out, as Grok's characters' are. On dark surfaces A and B look alike; on light surfaces and tiles B's eyes go white.
+- **Eyes on a Grok-style surface** (board 04, the owner's pick B) give orb2's eyes the colour of the surface behind the orb (read on `hx:theme`, R-theme-5), so they read as cut out, as Grok's characters' are. On dark surfaces A and B look alike; on light surfaces and tiles B's eyes go white.
 - **The boopis bot:** the `squircle` shape (the reserved `boop` shape when it ships), coloured with `--text-strong`, so it is light ink on dark, dark ink on light, and light on the black dock; its eyes are the ground. It reads as the logo given a body.
 - **The activity line** (R-status-1): the working bot's 16 px orb, live, beside one phrase in `--text-dim` at 15, swept by the shimmer; in a room, the stacked orbs of everyone replying ("kai and moss are replying"). Thinking turns the orb to its dot-grid eyes (orb2's `thinking`).
-- **The attention flag:** an 8 px `--red` dot with a 2.5 px ring of the surface, bottom-right of a tile; always with words in the row ("Needs you: approve a deploy") so colour is never the only cue (Grok gap 2).
+- **The attention flag:** an 8 px `--owe` (amber) dot with a 2.5 px ring of the surface, bottom-right of a tile; always with words in the row ("Needs you: approve a deploy") so colour is never the only cue (Grok gap 2).
 
 ## 11. The calm rules (Part H, owner decision)
 
@@ -277,34 +278,34 @@ Part H R-comp-1 and R-comp-2, in v7's values. Each lists its spec; states, keybo
 | Block | Spec |
 |---|---|
 | **Section** | heading 12 `--text-dim` (4 in from its card), an optional muted value, a disclosure; collapses to its heading when empty (calm pass) |
-| **Row** | settings: label 14, optional value 13 `--text-dim` (mono for numbers), control at the end, (i) after the label (board 08). List: 32 (sessions, menus) or 54 (bots, groups: orb 36, name 14, activity 13, radius 12; current 8%, hover 6%) |
+| **Row** | settings: label 14, optional value 13 `--text-dim` (mono for numbers), control at the end; a label that explains itself is a mark (section 17, the owner's pick 08 Info C; fallback the outline (i)). List: 32 (sessions, menus) or 54 (bots, groups: orb 36, name 14, activity 13, radius 12; current 8%, hover 6%) |
 | **List** | rows, virtualised; one tab stop, arrows move |
 | **EmptyState** | one line (≤ 80 characters) in `--text-dim` and at most one action, where the content would be |
-| **StatusLine** | board 08: C for a bot (live 16 orb + phrase + shimmer), A for the nameless agent and system jobs (the 8 px pulsing dot + phrase); an optional count in mono; one per job per view; live region, polite |
+| **StatusLine** | the owner's pick (08): one line, one shimmer (2.2 s, the phrase held at least 800 ms), one configuration. A bot: its live 16 px orb. A normal session (the nameless agent): the answering model's provider mark (the shipped LobeHub marks, mono, `--text-dim`), breathing on the working pulse (opacity .55 to 1, scale .92 to 1, 1.4 s); still while it waits. A system job with no model: the phrase alone. Reduced motion: the mark still, no sweep. An optional count in mono; one per job per view; polite live region (preview P4). The session screen's own look is the next discussion with the owner |
 | **Disclosure** | "Read 6 files, ran 2 commands" with a chevron, 13 `--text-dim`; opens the step list (icon + verb + target, 13) |
 | **Field** | 36, radius 10, transparent, `--line-field`; label 12 `--text-dim` above; "(Optional)" in `--text-quiet`; error below in `--red-text`; search is a pill at `--fill-2` |
 | **Toolbar** | chips 28 at `--fill-2` (13), the active filter an inverted pill; segmented pills; a status line at the end |
 | **ChoiceCards** | the question card: bubble surface, radius 18, question 15/600, options 36 tall with a 20 letter tile (radius 6, 6% fill), hover 6%, the chosen tile in the accent; "Something else" turns into a free answer; once answered the others collapse away |
 | **PlanCard**, **ApprovalCard** | conversation cards (12.1); approval: tool head, the question, one plain sentence naming the rule, the exact command in a well, Deny (esc) and Hold to approve (1 s, owner decision); collapses to "Terminal, ran 1 command" |
 | **OrbStack** | members overlapped by a third of an orb (owner decision): 24 in the title pill and rows, 16 in the activity line, the rail's cluster |
-| **Composer** | board 07 B: a 44 pill (radius 22 as it grows), `--bg-3`, `--composer-line`, `--shadow-composer`; + (28, `--fill-2`) left; mic (28) then the voice button (28, inverted ink) that becomes send with text; a second line with mode chips (26: Governed, Smart, Mention) and the capacity in mono; a held message as a strip inside (owner decision); grows with a 300 ms spring |
+| **Composer** | the owner's pick (07 C): a 44 pill (radius 22 as it grows), `--bg-3`, `--composer-line`, `--shadow-composer`; + (28, `--fill-2`) left; mic (28) then the voice button (28, inverted ink) that becomes send with text; grows with a 300 ms spring; a held message as a strip above it (owner decision). **The line under it**, 12 `--text-dim`, 8 below, items left and the cost at the end, each item toggleable: Mode (Governed or Ungoverned; on), Smart (Smart, or the pinned model; on), Model (the answering model with its provider mark; off), Cost ("$0.37 of $0.60", mono, unknown when unknown; on), Context ("76k / 200k"; off); in a room Members ("3 members") replaces Mode. Toggled from the composer's + menu > "Show under the composer" (checks, remembered per kind of composer: session, bot, room, dock) and Settings > General > Under the composer (the defaults); kept in `core/settings`; an empty line takes no space. Each item is also the control (click Governed to switch, Smart to open the model picker, as today) |
 | **Buttons** | pills: secondary (`--bg-3` + `--line`), primary (inverted ink), ghost (`--text-dim`), danger (red fill, confirms only); 36, 32 in cards, 28 small |
 | **Icon buttons** | circles: 36 floating, 28 tinted, ghost for window controls |
 | **Switch** | 32 x 20; on: accent with a white knob; off: 4% (light: a grey track and a raised white knob) |
 | **Key chip** | 20 tall, 6% fill, radius 4, 12 `--text-dim` |
 | **Tooltip** | `--bg-3`, radius 6, padding 4 6, 12; the name, then the keys |
-| **Bubble** | R-bubble-1: radius 18, padding 7 12, 15/22; a bot's `--bubble-agent`, yours `--bubble-user`; 6 apart within a sender, 16 between; in a room a byline (16 orb + name in the bot's colour) above a sender's first bubble; mentions as chips (16 orb + name in the bot's colour); a message to you gets the red "you" capsule and a 7% red wash (owner decision) |
+| **Bubble** | R-bubble-1: radius 18, padding 7 12, 15/22; a bot's `--bubble-agent`, yours `--bubble-user`; 6 apart within a sender, 16 between; in a room a byline (16 orb + name in the bot's colour) above a sender's first bubble; mentions as chips (16 orb + name in the bot's colour); a message to you gets the amber "you" capsule and an 8% amber wash (owner decision, recoloured by the 09 A pick) |
 | **Time separator** | 12 `--text-dim`, centred, only after a gap |
 | **Hand-off row** | centred, 13 `--text-dim`: two 16 orbs, a chevron, "kai handed the notes to nina" |
 | **Item row** | 60 tall, a 40 mark (radius 12, `--bg-4`), name 14, one line 13 `--text-dim` (ellipsized), the action as a 28 tinted pill |
-| **Danger zone / overflow** | board 08: the overflow (28 circle, `more` glyph) on panes; the collapsed "Danger zone" card at the end of a Settings page; a destructive item in red; confirms in a form dialog with a red pill |
-| **Long-text editor** | board 08 B: a focused view over the work, the chrome kept (back, the title pill, Save), the text in mono 13/22 at the column's measure |
+| **Danger zone / overflow** | the owner's pick (08, hybrid): the overflow (28 circle, `more` glyph) in the head of panes and sheets; the collapsed "Danger zone" card at the end of a Settings page; a destructive item in red; confirms in a form dialog with a red pill |
+| **Long-text editor** | the owner's pick (08 B): a focused view over the work, the chrome kept (back, the title pill, Save), the text in mono 13/22 at the column's measure |
 
 Every component ships with its states in the lab before a module uses it (R-comp-5); `docs/UI-COMPONENTS.md` becomes the registry.
 
 ## 13. Key screens
 
-Rendered with the recommended options beside the boards (`ds-v7/10-` to `16-`, dark and light): the session chat, a bot's chat with the rail (the sidebar collapsed), a group room with the sidebar open, the session list open, Settings, the Store, and the dock opened on a bot's session. They are drawn from the kit's own tokens (`tokens.v7.css`), boopis's icon set, the real `<orb-avatar>` (orb2) and `<boopis-logo>`, and the kit's `squircle-path.ts` for the continuous corners. The app's own lab draws v6 components, so the v7 previews are standalone boards until the kit is restyled.
+Rendered with the owner's picks (Iris as the placeholder accent) beside the boards (`ds-v7/10-` to `16-`, dark and light): the session chat, a bot's chat with the rail (the sidebar collapsed), a group room with the sidebar open, the session list open, Settings, the Store, and the dock opened on a bot's session. They are drawn from the kit's own tokens (`tokens.v7.css`), boopis's icon set, the real `<orb-avatar>` (orb2) and `<boopis-logo>`, and the kit's `squircle-path.ts` for the continuous corners. The app's own lab draws v6 components, so the v7 previews are standalone boards until the kit is restyled.
 
 ## 14. Accessibility
 
@@ -315,11 +316,44 @@ WCAG 2.2 AA stays the floor (R-a11y-1 to 8). What v7 adds or tightens because of
 - targets at least 28 (the composer's buttons), 32 for message actions (Grok gap 3);
 - colour never the only cue: the attention flag always has words; the status shimmer never dims the phrase below 4.5:1 (its rest colour is `--text-dim`, the sweep only brightens); reduced motion stops it.
 
-## 15. Options for the owner
+## 15. The owner's picks
 
-Each board shows 2 or 3 options in dark and light at app scale. The recommended one is the default in `tokens.v7.json` and in the key screens.
+### 15.1 Owner's picks, 23 Nov
 
-| # | Choice | Options | Recommended |
+| # | Choice | The owner's pick | In this file |
+|---|---|---|---|
+| 01 | Font | A, Geist (SIL OFL 1.1) | 6 |
+| 02 | Radii | B (Grok's radii, the continuous corner) is the default; C (rounder) is offered in theme customization. This reading of "B and C look good" is the coordinator's; the owner can correct it | 8, 18 |
+| 03 | Light shadows | A (Grok's measured) is the standard; each theme can pick A, B or C | 9.1, 18 |
+| 04 | The orb on the surface | B, cut-out eyes | 10 |
+| 05 | Chrome | A, floating pills, is the standard. Search is always reachable (ctrl K) and its visible control can be turned off; B (the search pill) is a Settings option; other placements in preview P2 | 7 |
+| 06 | Rail | A (54 tile, rail 88) is the standard; B (44 / 64) is a setting and switches on automatically under 1200 px of window width | 7 |
+| 07 | Composer | C, the line under the composer; its items are toggles (Mode, Smart, Model, Cost, Context; Members in a room), in the composer's + menu and Settings | 12.2 |
+| 08 | Calm options | Status: C for a bot (live orb + shimmer); for a normal session the same shimmer with the answering model's logo, animated (P4). Danger: the hybrid (overflow on panes and sheets, the danger zone at the end of Settings). Info: C, the mark revealed on hover (fallback A, the outline (i), if the owner rejects P3). Long text: B, the focused view | 12.2, 17 |
+| 09 | Accent | an indigo default, editable in custom themes; the owner chooses among Iris, Indigo, Ultramarine, Violet-indigo, Soft indigo (P1); Iris is the placeholder | 4.3, 18 |
+| 09 | Attention | A, Grok's amber for "needs you"; red stays for failed and destructive confirms (15.2) | 4.3, 15.2 |
+| new | The mark | one dashed-underline primitive for info labels, feedforward and blanks (the owner's request; P3) | 17 |
+
+### 15.2 The attention reversal (09 A)
+
+The pick reverses "red means you owe something" (v6 R-colour-2, the stamp rule) and the owner decisions of 22-23 November that name red. Red now means failed and a destructive confirm only; amber (`--owe`) means the person owes something. Every place that changes:
+
+| Where | Was | Becomes |
+|---|---|---|
+| v6 R-colour-2, R-error-2, R-card-3, R-copy-3 (the "needs you" stamp) | `--red`, `--red-text` | `--owe`, `--owe-text`; "failed" stays red |
+| The "you" capsule and the message addressed to you (owner decision, 23 Nov: "a message to the person stands out"; `components/markdown.ts` `you`, `components.css`, `PAIRS`) | ring and glow in attention red, a `--red-soft` wash, the attention edge in the gutter | ring, word and edge in amber, an `--owe-soft` wash; the flash on arrival stays |
+| The sidebar's needs-you line and dot, the rail's attention flag (`modules/bots/list.ts`, `.ui-dot--flag`) | red | amber |
+| The jump button's "1 for you" and its dot (`modules/bots/ledger.ts` `setJump`) | red dot | amber dot |
+| The blank (`.ui-blank__gap`, "waiting for you" stamp) | a dotted red line and the red stamp | the mark (section 17): neutral while the bot runs (a blank does not stop the cell), amber only once it has lapsed and waits on the person |
+| Approval cards and the dock's needs-you state (stamp, dot, "Needs you" word) | red | amber |
+| A tab's attention dot and ", needs you" (R-tab-3), the palette's red trail | red | amber |
+| The notch spec (`notch-design/notch-spec.md`): principle 4 "Red only when you owe something"; section 3 the attention edge ("a 1 pt red edge ... soft red glow"); 4.4 the wings' approval count "in red" and the red outline; "needs you" in red (wings with words, 4.10's byline); 4.6 page dots ("a bot that needs you a red dot") and the Rooms tab's red dot; 4.9 ping highlight C and boopis's red edge, glow and wash; 4.10 "the red dot and count stay"; 4.11 the ping card's red edge; 5 "others as a red ..." in the priority rule; 6 option 2 (C, the red dot until seen; the red edge); 7 full screen "a red dot and the edge glow"; the `tools/check-corners.js` scenes that draw them | red | amber; 4.11's error card ("failed" in red, the last lines in red text) stays red. Not re-rendered now |
+| The island (panacea-island) round-4 options that share the notch's letters (ping C) | red | amber, decided once with the notch |
+| Contrast pairs (`styles/theme.ts` `PAIRS`, the mods' readability guard) | `--red-text` on every surface | `--owe-text` on every surface (7.0:1 dark; `#a35600` 4.8:1 on the lightest and the darkest light surfaces) |
+
+### 15.3 The boards as offered
+
+| # | Choice | Options | Recommended then |
 |---|---|---|---|
 | 01 | Font | A Geist, B Inter, C Figtree (all SIL OFL 1.1) | A |
 | 02 | Radii | A Grok exact (plain arcs), B Grok's radii with the continuous corner, C rounder | B |
@@ -341,3 +375,61 @@ Not on a board, smaller questions for the owner: Grok's thin usage bar in Settin
 4. Update the lab's matrix (two themes), its token, spacing and roles checks, and add the R-calm checks; retake the goldens.
 5. Port the notch and the island's styles from the same tokens (`--r-slab`, the dock ground).
 6. Replace `design/v6/design-system/DESIGN-SYSTEM.md`'s role as source of truth with this file (the v6 folder stays as the reference it is).
+
+## 17. The mark: one dashed underline for the whole app
+
+The owner's request (23 November): one standardized dashed-underline animation, part of the design system and the kit, for every place boopis underlines words with dashes. It has three uses, and all three are the same primitive. Preview P3.
+
+| Context | What it is | At rest | Opening it |
+|---|---|---|---|
+| **Feedforward** (the composer) | while the person types, the agent reads the request and marks the readings and assumptions it would otherwise ask about later; the person changes them inline before sending (`plugins/boopis` feedforward, `docs/ARCHITECTURE.md` "Feedforward, blanks") | **always visible**: that is the feature | the reading's menu (alt+Down or a click, `ui:decision`); Tab reaches the assumptions |
+| **Blanks** (a reply) | while the bot writes, it leaves inline questions the person answers right there, without waiting or sending a new message (`blank.opened`, `blank.filled`, `blank.lapsed`; `rpc/blanks.py`, `docs/PROTOCOL.md`) | **always visible** | the inline answer in the gap (the options, if the blank has any, as a menu) |
+| **Info labels** (settings and detail rows) | a term that explains itself; replaces the (i) (the owner's pick 08 Info C) | **hidden**; revealed by hovering its row or card, or focusing the label; shown at rest where there is no hover | the explanation popover |
+
+### 17.1 The primitive
+
+| Token | Value | What |
+|---|---|---|
+| `--mark-dash` | 3px | dash length |
+| `--mark-gap` | 2px | gap between dashes |
+| `--mark-thick` | 1px | thickness (one device pixel at 1x; 1px at 2x reads as Grok's hairline weight) |
+| `--mark-offset` | 3px | below the baseline |
+| `--mark-color` | `--mark-off` (38% / 42%: 3:1) | shown |
+| `--mark-color-hover` | `--text-dim`; the word goes `--text-strong` | hover and keyboard focus |
+| `--mark-color-open` | `--text` | while its menu, input or popover is open |
+| `--mark-color-chosen` | `--accent`, solid | a filled blank, a reading the person chose (`data-confirmed`) |
+| `--mark-color-lapsed` | `--owe`, dashed; the stamp "waiting for you" in `--owe-text` | a blank that lapsed and now waits on the person |
+| `--mark-dur-in` | 180ms | the draw-in |
+| `--mark-dur-out` | 120ms | the fade-out |
+| `--mark-ease` | `--ease-sharp` | both |
+
+- **One class, data states:** `.ui-mark` with `data-mark="shown | hover | open | chosen | waiting | lapsed"`, `data-mark-reveal="always | hover"` on its context, and `data-mark-new` for one draw-in. Hover and focus use the pseudo-classes; `hover` as a state is for the lab's forced states.
+- **Drawn, not a text decoration:** a dash layer (`repeating-linear-gradient` of `--mark-dash` and `--mark-gap`, `--mark-thick` tall) at `--mark-offset` under the text, `box-decoration-break: clone` so a mark that wraps draws on each line. The width of that layer is a registered `--mark-p` (0 to 100%), which is what the draw-in animates (left to right, per line); WebKitGTK supports `@property` (v6 8.1). Chosen replaces the dashes with a solid line of the same thickness.
+- **Appear:** a new mark draws in once (`--mark-p` 0 to 100% over `--mark-dur-in`), then `data-mark-new` is removed. **Disappear:** the layer fades out over `--mark-dur-out` (no reverse sweep), then the class goes. **Hover and focus:** the colour changes over `--dur-1`; the word brightens. **Reduced motion:** every change is instant: a new mark appears whole, nothing sweeps or fades.
+- **Feedforward stability:** the composer already redraws its marks only when their signature changes (`components/composer.ts` `markSig`). v7 adds: only a span whose signature is new gets `data-mark-new`; existing marks never redraw or re-animate; a reading arrives at most once per 250 ms pause in typing, so nothing flashes per keystroke; while an input method composes nothing changes.
+- **Blank states, exactly the protocol's:** `opened` (waiting: the dashed gap of at least 7 characters and "waiting for you" in `--text-dim`, drawn in as the bot streams it; the cell goes on, so it is not attention), focus (the inline answer, the ring, the caret), `filled` (solid accent under the person's words; delivered as a queued message), `lapsed` (the turn ended unanswered: an end-of-turn question, still answerable; now amber, because it waits on the person). A blank's `blocks` (the steps that cannot go on without it) does not stop the cell; v7 shows them only in the blank's menu ("Waiting on this: deploy").
+- **Info labels:** the label is a button only where it explains (one tab stop); its row's `:hover` or `:focus-within` reveals the mark (draw-in); hovering the label opens the popover after 300 ms (at once while warm, as tooltips), 8 from the label; Enter or Space opens it, Esc closes and returns focus. Under `(hover: none)` the marks show at rest, and a tap opens the popover.
+- **The helper:** `ui.mark(target, { state, reveal, kind, onOpen })` and `html.mark(text, opts)`; components call it, never draw dashes themselves. `ui.markReveal(container, 'hover' | 'always')` sets a context.
+
+### 17.2 What migrates to it
+
+| Today | Where | Becomes |
+|---|---|---|
+| `.ui-ff` (1px dashed `--text-dim` border, hover `--text-strong`) and `.ui-ff[data-confirmed]` (solid brass) | `components/components.css` 924-927, `components/composer.ts`, `modules/session/composer.ts` | `.ui-mark` (feedforward), chosen in `--accent`; `[data-chip]` and `[data-kind="mention"]` stay capsules, never marks |
+| `.ui-blank__gap` (1px dotted `--red`; answered: dashed `--text-quiet`) and its "waiting for you" stamp | `components/components.css` 852-859, `components/html.ts` `blank` | `.ui-mark` (blank): opened, filled, lapsed as above |
+| `.cd-token` (dotted `--text-quiet`, expanded solid `--text`) | `modules/cards/cards.css` 108-118, `modules/cards/kinds.ts` | `.ui-mark` (info: an explaining phrase in a card) |
+| the (i) of the calm pass (`setRow({ info })`, `icons.ts` `info`) | `components/html.ts`, `calm.ts` | the label as a mark; the (i) stays only as the fallback if the owner rejects P3 |
+| not marks, kept separate: links (`.ui-link`, `.mv-link`: solid, `--line-strong`), the palette's match underline (`.hx-pal-row__label mark`, R-search-5), the bots glance title's hover underline | | unchanged; their brass becomes the accent where they had it |
+
+## 18. Theme customization
+
+Several picks are "standard, customizable by theme". A theme (a built-in one or one the person makes) can set:
+
+| Setting | Choices | Default |
+|---|---|---|
+| Accent | any hex. A contrast check derives the rest: `--accent-text` and `--focus` (lightened in OKLab until 4.5:1 on `--bg-3` and `--bg-1` in dark, darkened until 4.5:1 on `--bg-1` in light), `--on-accent` (white, or the inverted ink when white is under 4.5:1 on the fill), and, for marks only, a fill lightened (dark) or darkened (light) until 3:1 on `--bg-2` | the owner's indigo (Iris for now) |
+| Corners | B Standard (Grok's radii, continuous) or C Rounder | B |
+| Light shadows | A Grok's, B hairline + half, C flat | A |
+| Density | compact, regular, comfortable | regular |
+
+**Fixed by meaning, not by theme:** the attention amber (`--owe`) and the danger red (`--red`). They are the two colours a person must recognise in every theme, on the dock and in the notch; if a theme could move them, "needs you" could look like "failed" or like the accent, and the contrast and colour-blindness checks were made for these two values only. The surfaces and the ink come from the two modes (a mod can still preview a palette through the one theme mechanism, under the readability guard: owner decisions); the dock stays #000.

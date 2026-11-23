@@ -293,24 +293,24 @@
     },
     "accent": {
       "css": "--accent",
-      "dark": "#116dd2",
-      "light": "#1680f3",
+      "dark": "#5b5bd6",
+      "light": "#5b5bd6",
       "v6": "--brass (per preset)",
-      "grok": "--sand-bg-accent-primary",
-      "use": "option A (recommended): the switch when on, the chosen letter tile, the progress fill. A fill, never text"
+      "grok": "--sand-bg-accent-primary (#116dd2), replaced by the owner's indigo",
+      "use": "owner's pick (09): an indigo; Iris is the placeholder until the owner chooses among the five candidates (options.accent). A fill: the switch on, the chosen option, progress. Editable in a custom theme"
     },
     "accent-text": {
       "css": "--accent-text",
-      "dark": "#4d9bff",
-      "light": "#0b6dd3",
+      "dark": "#8b8dff",
+      "light": "#4546c8",
       "v6": "none (brass was never text)",
       "grok": "--sand-text-accent-primary",
-      "use": "links, the info banner's text: 6.6:1 dark, 5.1:1 light"
+      "use": "links, the info banner; Iris placeholder: 6.6:1 on #121212, 5.8:1 on #1f1f1f (dark); 7.1:1 on white, 6.5:1 on #f5f5f5 (light)"
     },
     "accent-soft": {
       "css": "--accent-soft",
-      "dark": "#1884fc12",
-      "light": "#1680f312",
+      "dark": "#5b5bd61f",
+      "light": "#5b5bd614",
       "v6": "--brass-soft",
       "grok": "--sand-bg-accent-secondary 7%",
       "use": "the info banner, text selection"
@@ -320,15 +320,15 @@
       "value": "#ffffff",
       "v6": "--text-on-light on brass marks",
       "grok": "white on the blue switch and letter tile",
-      "use": "the knob of a switch that is on, the letter of a chosen option; under accent option B it becomes the inverted ink"
+      "use": "white on the indigo fill (Iris 5.4:1); the theme check keeps it at 4.5:1 or switches to the inverted ink"
     },
     "focus": {
       "css": "--focus",
-      "dark": "#4d9bff",
-      "light": "#0b6dd3",
+      "dark": "#8b8dff",
+      "light": "#4546c8",
       "v6": "--focus (brass)",
       "grok": "none (Grok shows no visible ring)",
-      "use": "the 2px focus ring: kept (R-focus-1, WCAG 2.4.7), in the accent text colour"
+      "use": "the 2px focus ring, the accent's text shade (derived by the theme's contrast check)"
     },
     "attention": {
       "css": "--red",
@@ -336,7 +336,7 @@
       "light": "#cf2b35",
       "v6": "--red #e5484d",
       "grok": "--sand-bg-danger-primary",
-      "use": "option B of the attention board (recommended): what the person owes, as dots, stamps, the 'you' capsule's ring; also failed and a destructive confirm"
+      "use": "red now means failed and a destructive confirm only (owner's pick 09 A reverses 'red = you owe')"
     },
     "attention-text": {
       "css": "--red-text",
@@ -344,7 +344,7 @@
       "light": "#c4232f",
       "v6": "--red-text #f0646a",
       "grok": "--sand-text-danger-primary",
-      "use": "'needs you', 'failed' and error lines: 6.5:1 dark, 5.6:1 light"
+      "use": "'failed', error lines, a destructive menu item: 6.5:1 dark, 5.6:1 light"
     },
     "attention-soft": {
       "css": "--red-soft",
@@ -352,7 +352,7 @@
       "light": "#cf2b3512",
       "v6": "--red-soft 14%",
       "grok": "--sand-bg-danger-secondary 7%",
-      "use": "behind a message addressed to you"
+      "use": "behind a failed card; the message addressed to you now takes --owe-soft"
     },
     "warn": {
       "css": "--warn",
@@ -360,15 +360,39 @@
       "light": "#c8770c",
       "v6": "--warn (customizer only)",
       "grok": "--sand-bg-warn-primary",
-      "use": "option A of the attention board: Grok's 'needs you' dot and words; under option B, a warning that is not owed"
+      "use": "owner's pick (09 A): what the person owes: the needs-you dot, the attention flag, the 'you' capsule's ring, the notch's attention edge"
     },
     "warn-text": {
       "css": "--warn-text",
       "dark": "#e28600",
-      "light": "#b25e00",
+      "light": "#a35600",
       "v6": "new",
       "grok": "--sand-text-warn-primary",
-      "use": "warning words: 6.8:1 dark, 4.6:1 light"
+      "use": "'needs you' words and the 'you' capsule: 7.0:1 on #0e0e0e (dark); #a35600 is 4.8:1 on every light surface (Grok's #b25e00 is 4.3:1 on the #f5f5f5 sidebar, so v7 darkens it)"
+    },
+    "owe": {
+      "css": "--owe",
+      "dark": "#c8770c",
+      "light": "#c8770c",
+      "v6": "--red (the stamp rule)",
+      "grok": "--sand-bg-warn-primary",
+      "use": "what the person owes, as a mark: the needs-you dot, the rail's flag, the 'you' capsule's ring, the notch's edge (owner's pick 09 A). 5.6:1 on #0e0e0e; 3.2:1 on #f5f5f5"
+    },
+    "owe-text": {
+      "css": "--owe-text",
+      "dark": "#e28600",
+      "light": "#a35600",
+      "v6": "--red-text",
+      "grok": "--sand-text-warn-primary",
+      "use": "'needs you', 'Needs you: approve a deploy', the 'you' capsule's word"
+    },
+    "owe-soft": {
+      "css": "--owe-soft",
+      "dark": "#f6941214",
+      "light": "#c8770c14",
+      "v6": "--red-soft",
+      "grok": "--sand-bg-warn-secondary",
+      "use": "the wash under a message addressed to you"
     },
     "ok": {
       "css": "--ok",
@@ -1027,7 +1051,8 @@
         "B": "Inter + Geist Mono (OFL 1.1)",
         "C": "Figtree + Geist Mono (OFL 1.1)"
       },
-      "recommended": "A"
+      "recommended": "A",
+      "picked": "A"
     },
     "radii": {
       "board": "02-radii",
@@ -1036,7 +1061,12 @@
         "B": "Grok's radii, boopis's continuous corner and concentric rule",
         "C": "rounder: every step one notch up (cards 18, dialogs 24, menus 20, bubbles 22)"
       },
-      "recommended": "B"
+      "default": "B",
+      "theme_choices": [
+        "B",
+        "C"
+      ],
+      "picked": "B default; C offered in theme customization (the coordinator's reading of the owner's 'B and C look good'; the owner can correct it)"
     },
     "light-shadow": {
       "board": "03-light-shadows",
@@ -1045,7 +1075,14 @@
         "B": "a hairline plus half-strength shadows",
         "C": "flat like dark: hairlines and surface steps only"
       },
-      "recommended": "A"
+      "recommended": "A",
+      "default": "A",
+      "theme_choices": [
+        "A",
+        "B",
+        "C"
+      ],
+      "picked": "A standard; each theme picks A, B or C"
     },
     "orb-surface": {
       "board": "04-orb-surface",
@@ -1054,7 +1091,8 @@
         "B": "cut-out eyes: the eyes take the surface colour",
         "C": "the orb in a tile (8% fill), as Grok's rail"
       },
-      "recommended": "B"
+      "recommended": "B",
+      "picked": "B"
     },
     "chrome": {
       "board": "05-chrome",
@@ -1063,7 +1101,9 @@
         "B": "the same plus a centred search pill that keeps boopis's command field",
         "C": "an unfilled 40px bar holding v6's controls, no line"
       },
-      "recommended": "A"
+      "recommended": "A",
+      "default": "A",
+      "picked": "A standard; search always reachable (ctrl K and the search button) and its visible control toggleable; B (the search pill) becomes a Settings option; other placements in preview P2"
     },
     "sidebar-tile": {
       "board": "06-sidebar-tile",
@@ -1072,7 +1112,16 @@
         "B": "compact: 44 tile, radius 12, orb 28, rail 64",
         "C": "round: a 48 circle, orb 32, rail 72"
       },
-      "recommended": "A"
+      "recommended": "A",
+      "default": "A",
+      "picked": "A standard; B a setting, and automatic under 1200 px window width",
+      "auto_compact_below": 1200,
+      "breakpoints": {
+        "open sidebar or A rail": ">= 1200",
+        "compact rail B (44 tile, orb 28, rail 64)": "900 to 1199",
+        "compact rail B, the open sidebar overlays": "640 to 899",
+        "closed (a drawer)": "< 640"
+      }
     },
     "composer": {
       "board": "07-composer",
@@ -1081,7 +1130,36 @@
         "B": "the pill plus boopis's mode chips (Governed, Smart, the model) on a second line inside, 22 radius once it grows",
         "C": "the pill alone, the mode chips as a quiet line under it"
       },
-      "recommended": "B"
+      "recommended": "B",
+      "default": "C",
+      "picked": "C: the mode line under the composer, its items toggleable",
+      "line_items": {
+        "mode": {
+          "default": true,
+          "what": "Governed or Ungoverned"
+        },
+        "smart": {
+          "default": true,
+          "what": "Smart on, or the pinned model"
+        },
+        "model": {
+          "default": false,
+          "what": "the model that will answer, with its provider mark"
+        },
+        "cost": {
+          "default": true,
+          "what": "the running total against the cap, '$0.37 of $0.60' (unknown when unknown)"
+        },
+        "context": {
+          "default": false,
+          "what": "context used, '76k / 200k'"
+        },
+        "members": {
+          "default": true,
+          "what": "in a room: '3 members'; replaces mode"
+        }
+      },
+      "where": "the composer's + menu > 'Show under the composer' (checks, per composer kind: session, bot, room, dock), and Settings > General > Composer (the same checks, the defaults); kept in core/settings; an empty line collapses to nothing"
     },
     "status": {
       "board": "08-calm-options",
@@ -1090,7 +1168,14 @@
         "B": "the phrase alone, breathing (dips under 4.5:1)",
         "C": "Grok: the live 16px orb and the phrase with a 2.2s shimmer"
       },
-      "recommended": "C for a bot, A where there is no bot"
+      "recommended": "C for a bot, A where there is no bot",
+      "picked": "bot: C (live orb + shimmer); session (nameless agent): the same shimmer with the answering model's provider logo, animated, in place of the dot",
+      "agent_logo": {
+        "size": 16,
+        "motion": "opacity .55 to 1 and scale .92 to 1, 1.4s ease-in-out (the working pulse), the mark in --text-dim, monochrome currentColor",
+        "reduced_motion": "still, full opacity; the shimmer stops",
+        "source": "vendor/model-icons (LobeHub, MIT), the mono variant; unknown family = the generic mark, never the phi"
+      }
     },
     "danger": {
       "board": "08-calm-options",
@@ -1098,7 +1183,8 @@
         "A": "a collapsed Danger zone at the page's end",
         "B": "the overflow menu in the header"
       },
-      "recommended": "B on sheets and panes, A on Settings pages"
+      "recommended": "B on sheets and panes, A on Settings pages",
+      "picked": "hybrid: B (overflow) on panes and sheets, A (collapsed Danger zone) at the end of Settings pages"
     },
     "info-glyph": {
       "board": "08-calm-options",
@@ -1107,7 +1193,15 @@
         "B": "a filled 16px disc with a knocked-out i",
         "C": "no glyph: the label is dotted-underlined and opens the popover"
       },
-      "recommended": "A"
+      "recommended": "A",
+      "picked": "C, with the hover reveal (fallback A if the owner rejects the preview)",
+      "reveal": {
+        "rest": "no underline anywhere",
+        "row hover": "the hovered row's explained label gets a dotted underline in --text-quiet (2px offset), fading in over --dur-1",
+        "label hover": "the popover opens after 300 ms (tooltip timing when warm), 8 from the label",
+        "keyboard": "the label is a button in the tab order (only where it explains); focus shows the underline and the ring, Enter or Space opens the popover, Esc closes",
+        "no hover (touch, or hover: none)": "the underline shows at rest on explained labels only in that mode (there is nothing else to reveal it); a tap opens the popover"
+      }
     },
     "long-text": {
       "board": "08-calm-options",
@@ -1115,16 +1209,42 @@
         "A": "a centred form dialog (720 x 640, radius 20)",
         "B": "a full focused view over the work, the chrome kept"
       },
-      "recommended": "B"
+      "recommended": "B",
+      "picked": "B"
     },
     "accent": {
-      "board": "09-accent-attention",
+      "board": "P1-accent",
       "choices": {
-        "A": "Grok blue #116dd2 for the switch, links, focus",
-        "B": "ink: the accent is the inverted ink (Grok's 'Black' accent)",
-        "C": "keep boopis's brass"
+        "Iris": [
+          "#5b5bd6",
+          "#8b8dff",
+          "#4546c8"
+        ],
+        "Indigo": [
+          "#4f46e5",
+          "#8f8cff",
+          "#4338ca"
+        ],
+        "Ultramarine": [
+          "#3e4fd8",
+          "#7d8cff",
+          "#3241c4"
+        ],
+        "Violet-indigo": [
+          "#5e4ad9",
+          "#9d8cff",
+          "#4d3bc4"
+        ],
+        "Soft indigo": [
+          "#6366f1",
+          "#9497ff",
+          "#4f4fd8"
+        ]
       },
-      "recommended": "A"
+      "format": "fill / dark-theme text / light-theme text",
+      "placeholder": "Iris",
+      "picked": "an indigo, to be chosen by the owner; editable in custom themes",
+      "notes": "as a non-text fill on #121212 only Iris (3.5:1), Soft indigo (4.2:1) and Violet-indigo (3.1:1) reach 3:1; Indigo and Ultramarine are 3.0:1 there. White on Soft indigo is 4.47:1 (under 4.5)"
     },
     "attention": {
       "board": "09-accent-attention",
@@ -1132,7 +1252,85 @@
         "A": "Grok: 'needs you' in warn amber, red only for failed and destructive",
         "B": "boopis: what you owe stays red (the 'you' capsule, the notch's edge), in Grok's red values"
       },
-      "recommended": "B"
+      "picked": "A: needs-you in amber (--owe #c8770c / text #e28600, #a35600 light); red for failed and destructive confirms. Reverses the 22-23 November red decisions (DESIGN-SYSTEM.md 15.2)"
     }
+  },
+  "theme": {
+    "about": "what a theme (built-in or custom) can set; everything else is fixed by the system",
+    "accent": {
+      "value": "any hex",
+      "derived": "a contrast check derives --accent-text and --focus for dark (lightened in OKLab until 4.5:1 on --bg-3 and --bg-1) and light (darkened until 4.5:1 on --bg-1), and --on-accent (white, or the inverted ink when white is under 4.5:1); a fill under 3:1 on --bg-2 is lightened (dark) or darkened (light) for marks only"
+    },
+    "radii": {
+      "choices": [
+        "B",
+        "C"
+      ],
+      "default": "B"
+    },
+    "light-shadow": {
+      "choices": [
+        "A",
+        "B",
+        "C"
+      ],
+      "default": "A"
+    },
+    "density": {
+      "choices": [
+        "compact",
+        "regular",
+        "comfortable"
+      ],
+      "default": "regular"
+    },
+    "fixed": {
+      "attention (--owe, amber) and danger (--red)": "fixed by meaning: they are the two colours a person must recognise in every theme, on the dock and in the notch, and colour-blind safety was checked for these two only; a theme that recoloured them could make 'needs you' look like 'failed' or like the accent",
+      "surfaces and ink": "from the two modes; a mod theme still previews colours through the one theme mechanism (owner decision), under the readability guard",
+      "the dock": "#000 (owner decision)"
+    }
+  },
+  "owner_picks": {
+    "date": "2026-11-23",
+    "01": "A Geist",
+    "02": "B default, C in theme customization (coordinator's reading)",
+    "03": "A standard, per theme A/B/C",
+    "04": "B cut-out eyes",
+    "05": "A floating; search always reachable and toggleable; B as a Settings option",
+    "06": "A standard; B a setting and automatic under 1200 px",
+    "07": "C, line items toggleable",
+    "08": "status C for bots, model logo + shimmer for sessions; danger hybrid; info C with hover reveal (fallback A); long text B",
+    "09 accent": "indigo, Iris as placeholder",
+    "09 attention": "A amber; red for failed and destructive"
+  },
+  "mark": {
+    "about": "the one dashed underline (DESIGN-SYSTEM.md 17): feedforward and blanks always visible, info labels revealed on hover or focus",
+    "--mark-dash": "3px",
+    "--mark-gap": "2px",
+    "--mark-thick": "1px",
+    "--mark-offset": "3px",
+    "--mark-color": "var(--mark-off)",
+    "--mark-color-hover": "var(--text-dim)",
+    "--mark-color-open": "var(--text)",
+    "--mark-color-chosen": "var(--accent)",
+    "--mark-color-lapsed": "var(--owe)",
+    "--mark-dur-in": "180ms",
+    "--mark-dur-out": "120ms",
+    "--mark-ease": "var(--ease-sharp)",
+    "states": [
+      "shown",
+      "hover",
+      "open",
+      "chosen",
+      "waiting",
+      "lapsed"
+    ],
+    "reveal": {
+      "feedforward": "always",
+      "blanks": "always",
+      "info labels": "hover or focus of the row; at rest under (hover: none)"
+    },
+    "reduced_motion": "instant: no sweep, no fade",
+    "feedforward_debounce": "a reading at most once per 250 ms pause; only new spans draw in"
   }
 }
