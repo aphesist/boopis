@@ -2,7 +2,7 @@
 
 Status: **revision 3, for the owner** (23 Nov 2026). The owner liked revision 2's look and animations ("everything is looking dandy now") and changed three things: the structure (one continuous first run, below), the buttons the clips drew off-centre, and the bots' sidebar pose. Everything else is revision 2's. Invariant 8: the owner designs the UI. Nothing here is built.
 
-Renders are in the scratchpad folder `onboarding-v3/`: `boards/` (O01 to O04, C01, C02), `screens/` (33 screens, dark and light, 1440 x 900 at 2x), `motion/` (9 clips, 1280 x 800 at 60 fps, each with a reduced-motion version and a 16-frame strip), `contact-sheet.jpg`, `qa-final.txt` and `flicker-final.txt`. They are drawn by `src/` in this folder: revision 3's files are `ob3-screens.js`, `ob3-boards.js`, `ob3-motion.js`, `ob3.css`, `ob3.html`, `ob3-motion.html`, `rec3.cjs` (the 60 fps recorder), `recall3.sh` (records every clip), `qa3.cjs` (the render QA, now also on clip frames, with the new `align-btn` rule), `flickall3.sh` (the frame check of every clip, `flicker2.py` with its regions), `regions3.cjs`, `frames3.py` (frame grids for the critic pass), `mkjobs3.py` with `screens3.json` (the render list), `shot3.cjs` and `obcontact3.py`. Revision 3 builds on revision 2's builders (`ob2-*.js`, `ob2.css`), which stay beside it; `ob2-motion2.js` gets the button fix and exports its helpers. They run beside v7's render source as of the design-system branch's latest (`kit.css`, `kit.js`, `screens.js`, `dockv7.js` from `ds-v7/src`, the session builders and `lib/`, with the real `<boopis-logo>`), and draw every orb in the stills with orb3 3.0.0 (`lib/orb-avatar.orb3min.js`, the decided rest pose, ORBS.md section 23) and, until the state table lands, every orb in the clips with the tuned orb2 build (`lib/orb-avatar.tuned.js`).
+Renders are in the scratchpad folder `onboarding-v3/`: `boards/` (O01 to O04, C01, C02), `screens/` (33 screens, dark and light, 1440 x 900 at 2x), `motion/` (9 clips, 1280 x 800 at 60 fps, each with a reduced-motion version and a 16-frame strip), `contact-sheet.jpg`, `qa-final.txt` and `flicker-final.txt`. They are drawn by `src/` in this folder: revision 3's files are `ob3-screens.js`, `ob3-boards.js`, `ob3-motion.js`, `ob3.css`, `ob3.html`, `ob3-motion.html`, `rec3.cjs` (the 60 fps recorder), `recall3.sh` (records every clip), `qa3.cjs` (the render QA, now also on clip frames, with the new `align-btn` rule), `flickall3.sh` (the frame check of every clip, `flicker2.py` with its regions), `regions3.cjs`, `frames3.py` (frame grids for the critic pass), `mkjobs3.py` with `screens3.json` (the render list), `shot3.cjs` and `obcontact3.py`. Revision 3 builds on revision 2's builders (`ob2-*.js`, `ob2.css`), which stay beside it; `ob2-motion2.js` gets the button fix and exports its helpers. They run beside v7's render source as of the design-system branch's latest (`kit.css`, `kit.js`, `screens.js`, `dockv7.js` from `ds-v7/src`, the session builders and `lib/`, with the real `<boopis-logo>`), and draw every orb, stills and clips, with orb3 3.0.2 (`lib/orb-avatar.orb3min.js`: aphesist/orb2 `main` bfa4e8c, byte-identical to the build on `w31/bot-character`; ORBS.md section 23).
 
 ## The owner's decisions
 
@@ -12,7 +12,7 @@ Revision 1's picks (23 Nov) stand: **O02 A** (the approval rules in the Bots par
 
 **The buttons.** "Let's start" sat left of the centred heading on "Hi, I'm boopis", and "Apply the changes" was off-centre from "Not now" on "Settings boopis needs", in the owner's frames of the clips. Fixed, and guarded by a new QA rule run on clip frames (below).
 
-**The orbs.** Decided later the same day (ORBS.md section 23, K08 B, orb3 3.0.0): a bot at rest in a sidebar or dock context holds the home pose (38, 22, −24) with K07's pills; outside rest (a state, a hover, the chat, a scene) it runs its lively behaviour with its state's face. The stills follow it; the clips wait for the orb agent's state table.
+**The orbs.** Decided later the same day (ORBS.md section 23, K08 B, orb3 3.0.2): a bot at rest in a sidebar or dock holds the home pose (38, 22, −24) with orb3's rest face; any state, a hover, the chat and the scenes turn it out of that pose into the alive-idle engine (looking around, rotating, with the state's face), through orb3's shared state table, and back home at rest.
 
 ## What onboarding must do
 
@@ -177,26 +177,26 @@ orb2's existing behaviours, used generously (the owner: no new character system)
 
 | Decision | In onboarding |
 |---|---|
-| The tuned renderer (C1 to C3, T1 to T5), `face-scale` 1.25 at 44 and under | every orb (`lib/orb-avatar.tuned.js`, `OB2.orbRules`) |
+| orb3 3.0.2 (the clarity fixes, G1 to G7, T1 to T5, bolder eyes), `face-scale` 1.25 at 44 and under | every orb (`lib/orb-avatar.orb3min.js`, `OB2.orbRules`) |
 | The main bot at 44, only in the Bots tab, first below the switch; rows at 28 | the Bots sidebar throughout part (d) |
-| **The rest pose, DECIDED (owner, 23 Nov; ORBS.md section 23, K08 B, orb3 3.0.0)** | in the stills, every bot **at rest in a sidebar or dock context** (the Bots sidebar's main bot and idle rows) is drawn by orb3 (`lib/orb-avatar.orb3min.js`, aphesist/orb2 `main` 265777c, byte-identical to the build on `w31/bot-character`) with the home orientation `home="38 22 -24"` and K07's big upright pills (the hidden reaction `pose`: no blink, idle off, mode drift, jelly 0). Onboarding never shows the dock (no own bot exists while it runs) |
-| **Outside rest: lively** (owner, 23 Nov) | a bot in a state (kai working, moss needing you), in the boopis chat or in a scene runs that state's lively behaviour (looking around, rotating, with the state's face). A still catches it mid-behaviour: its body part-way through a look-around turn (an orb3 orientation smaller than the rest pose, never it) and its eyes on its look, with the state's face; a held look a scene gives it (the team card's bots looking at each other) turns its body the same way |
+| **Rest** (owner, 23 Nov; ORBS.md section 23, K08 B, orb3 3.0.2) | every bot carries `home="38 22 -24"`; orb3 holds it only at rest. In onboarding, rest is a Bots-sidebar bot with nothing to do (the main bot, an idle row): the reaction `pose` (`rest: true`, orb3's rest face, no blink), `idle-motion="off"`, mode drift, jelly 0. Onboarding never shows the dock (no own bot exists while it runs) |
+| **Every other state, and the chat and scenes** | orb3 turns the whole bot out of the home pose over 0.4 s into the alive-idle engine, tuned per state by its shared table (`STATE_LIFE`), and back into it at rest. In the clips the chat and scene bots run `idle-motion="lively"`; a sidebar bot in a state (happy as it is made, working, needs you) leaves its pose for the state and returns to `pose` after it. **A still** catches a lively bot mid-behaviour: each looks at a point (`lookAt`, which takes it out of rest, its body turning with the look) and wears its state's face; a held look a scene gives it (the team card's bots looking at each other) is that point. Each still freezes its orbs (orb3's `static`) 650 ms in, once they have turned and before their first blink can fall |
 
-**Stills and clips are on different builds for now.** The stills (`ob3.html`) are drawn by orb3 with the rules above (`OB2.orbRules`, extended in `ob3-screens.js`, applies them only where orb3 draws). The rotation out of the rest pose into lively behaviour and back is the orb agent's next build (the state table on `w31/bot-character`); until it lands, **the clips are on hold**: `ob3-motion.html` stays on revision 3's committed build (the tuned orb2 build, the provisional sidebar gaze 32 4, revision 2's `lookAt` cap and round-only turntable), and O-M3, O-M4, O-M7 and O-M8 are not re-recorded. When the state table lands, the motion page switches to orb3, the cap and the round-only turntable go (orb3's eye constraints replace them: a look eases into 0.72 rad of yaw and 0.5 of pitch, the eyes never go edge-on, merge or touch the rim), sidebar bots return to `pose` after a state, and those four clips are re-recorded and checked (`flickall3.sh`, `qa3.cjs --clips`, and orb3's `eyecheck.py` through `eyes3.sh`).
+**The checks on the orbs.**
+- **orb3's per-face eye check** (`eyecheck.py`, `w31/bot-character` probes/tools): every resting place of a bot in O-M3, O-M4, O-M7 and O-M8, both motion modes (`eyes3.sh`), and every bot of 24 px and more in the Bots stills, dark and light, at 2x (`eyes3-stills.cjs`; a single still is its own front-on reference, so the width ratio counts only in the clips). Bots under 30 px in the clips (the goal card's waiting bots at 24, iris's row at 28) are below what the 1280 MP4 resolves, so `eyes3.sh` records their region again at DPR 2 (`rec3-crop.cjs`). Results below.
+- **`edges.py`** reads the character recorder's per-frame canvas stats and does not apply to our MP4s; the silhouettes are checked by `flicker2.py` (spikes, jumps, dents) on every tracked orb.
 
-**The rest pose's eyes, checked on the stills** (`eyes3-stills.cjs`: orb3's `eyecheck.py` from `w31/bot-character` probes/tools, on every Bots-sidebar still, dark and light, at 2x): 34 pose orbs across the 22 Bots-sidebar stills, 0 below the width, gap and margin floors, 0 merged or hidden (`eyes-stills.txt`). `edges.py` reads the canvases' own per-frame pixel stats from the character recorder and does not apply to stills or to MP4s; the clips' silhouettes are checked by `flicker2.py`.
-
-| Behaviour | orb2 | Onboarding uses it for |
+| Behaviour | orb3 | Onboarding uses it for |
 |---|---|---|
 | Wake | the `wake` emote, `reaction` from sleeping | the boopis bot after the morph (O-M8); kai and moss waking (O-M3) |
 | Double take | `emote('doubletake')` | iris waking (O-M3) |
 | Look at a thing | `lookAt(x, y)`, `gaze` for a held look | bots looking at each other, at boopis, at the tile under the pointer, at the choice card, at you |
 | Happy, bob | `react('happy')`, `poke(force, {react: false})` | a bot born, landing at its chat's head, in its tile or on its row |
-| Turn | `spin('turntable')` | a round bot turning as it takes off (kai) |
+| Turn | `spin('turntable')`, on every body | a bot turning as it takes off (O-M4's newborns, the goal card's bots); moss shows interest with `curious` instead (a spin carries the eyes round the back, which the eye check rightly flags where a bot rests) |
 | Blink | `blink()` | a bot noticing; boopis as its lines land |
-| Reduced motion | orb2 reduces and never freezes | every bot; travel becomes a dip |
+| Reduced motion | orb3 reduces and never freezes | every bot; travel becomes a dip |
 
-**A render guard for big turns, kept in the clips only.** Until the clips move to orb3 (whose geometry and eye constraints replace orb2's turn clamps, ORBS.md G1 to G3), they keep revision 2's limits: each `lookAt` is capped so the head turns at most about 0.5 rad, and a full turn (`spin('turntable')`) is used on a round body only; a flat body shows interest with `curious`.
+**No render guard any more.** orb3's geometry (G1 to G3) and its eye limits (a look eases into 0.66 rad of yaw and 0.46 of pitch, the body turning for the rest; the eyes never go edge-on, merge or touch the rim) replace revision 2's `lookAt` cap and its round-only turntable, which are gone from `ob3-motion.js`. Looks that would roll a small bot's far eye to the rim are aimed nearer (the goal card's bots look at its Next chip, not at the composer).
 
 **Would need new** (not built in): none. The morph is scene motion between two existing elements (the logo's eyes shrink and fade inside orb2's body), never a new behaviour of either.
 
@@ -370,6 +370,8 @@ ok   b=c02
 - the press bug above (the owner's two frames);
 - the setup pages' parts were not faded by the step-to-step swap (it only knew the app's main area); they now go in 120 ms like the app's;
 - every clip's first ten frames showed orb2's own mount animation (a new orb easing from a circle into its shape: boopis's squircle in the sidebar was round at frame 0; revision 2's clips have it too); the recorder now pre-rolls 30 frames at t = 0, so each clip starts with every orb settled;
+- O-M4's newborns landed 16 px above their rows and jumped at the swap to the row's orb (the landing point was measured while the row was still opening; revision 2's clips had it too): the landing point is now the row orb's final place, measured once with every row open, and the swap moves the orb by 0.4 px at most;
+- on orb3, moss's turntable in O-M3 carried its eyes edge-on and round the back while it rested in the team card (the eye check flagged 3 frames, and the silhouette check a jump): moss now shows interest with orb3's `curious`; the goal card's bots looked at a point far below, which rolled a 24 px bot's far eye to the rim: they look at the card's Next chip;
 - the first check of O-M4 reported jumps on kai's and moss's rows: the next newborn flying past through the crop, not a deformed orb (viewed frame by frame); the windows now end before and start after each fly-past, and are clean.
 
 Final frame check, all eighteen clips (`flicker-final.txt`):
@@ -379,18 +381,18 @@ O-M1-speaker-wakes.mp4: 624 frames, mean change 0.04, max 0.65 at frame 319; fli
   track [470, 300, 340, 200] frames 0-624: shapes per frame 2-2 (expected <= 2); frames with more: none; max speed 5.26 px/frame; jerk p99 1.46, max 2.84 at frames [217, 292, 216, 315, 291]
 O-M2-speaker-reacts.mp4: 576 frames, mean change 0.01, max 0.43 at frame 246; flicker none; cuts over 6 none
   track [560, 60, 160, 100] frames 0-576: shapes per frame 2-2 (expected <= 2); frames with more: none; max speed 1.97 px/frame; jerk p99 0.71, max 1.07 at frames [250, 332, 272, 438, 253]
-O-M3-what-bots-are.mp4: 552 frames, mean change 0.01, max 0.43 at frame 79; flicker none; cuts over 6 none
-  orb [558,268,52,52] frames 96-552: area 1134-1179 px, convexity median 0.988 min 0.978; area spikes none; jumps over 8% none; dents none
-  orb [746,268,52,52] frames 96-552: area 1397-1526 px, convexity median 0.992 min 0.969; area spikes none; jumps over 8% none; dents none
-  orb [934,268,52,52] frames 96-552: area 1006-1058 px, convexity median 0.929 min 0.919; area spikes none; jumps over 8% none; dents none
-  orb [106,84,52,52] frames 0-552: area 1514-1514 px, convexity median 0.992 min 0.992; area spikes none; jumps over 8% none; dents none
+O-M3-what-bots-are.mp4: 552 frames, mean change 0.01, max 0.42 at frame 79; flicker none; cuts over 6 none
+  orb [558,268,52,52] frames 96-552: area 1122-1182 px, convexity median 0.986 min 0.950; area spikes none; jumps over 8% none; dents none
+  orb [746,268,52,52] frames 96-552: area 1407-1511 px, convexity median 0.987 min 0.969; area spikes none; jumps over 8% none; dents none
+  orb [934,268,52,52] frames 96-552: area 974-1067 px, convexity median 0.937 min 0.928; area spikes none; jumps over 8% none; dents none
+  orb [106,84,52,52] frames 0-552: area 1557-1563 px, convexity median 0.975 min 0.973; area spikes none; jumps over 8% none; dents none
 O-M4-team-assembles.mp4: 516 frames, mean change 0.04, max 1.87 at frame 31; flicker none; cuts over 6 none
-  orb [106,84,52,52] frames 0-516: area 1504-1522 px, convexity median 0.992 min 0.984; area spikes none; jumps over 8% none; dents none
-  orb [10,164,38,38] frames 215-256: area 480-484 px, convexity median 0.978 min 0.976; area spikes none; jumps over 8% none; dents none
-  orb [10,164,38,38] frames 300-516: area 480-482 px, convexity median 0.978 min 0.978; area spikes none; jumps over 8% none; dents none
-  orb [10,202,38,38] frames 300-340: area 625-626 px, convexity median 0.998 min 0.998; area spikes none; jumps over 8% none; dents none
-  orb [10,202,38,38] frames 380-516: area 625-625 px, convexity median 0.998 min 0.998; area spikes none; jumps over 8% none; dents none
-  orb [10,242,38,38] frames 390-516: area 407-421 px, convexity median 0.944 min 0.938; area spikes none; jumps over 8% none; dents none
+  orb [106,84,52,52] frames 0-516: area 1430-1572 px, convexity median 0.974 min 0.969; area spikes none; jumps over 8% none; dents none
+  orb [10,164,38,38] frames 215-256: area 481-492 px, convexity median 0.979 min 0.974; area spikes none; jumps over 8% none; dents none
+  orb [10,164,38,38] frames 300-516: area 474-492 px, convexity median 0.985 min 0.950; area spikes none; jumps over 8% none; dents none
+  orb [10,202,38,38] frames 300-340: area 609-652 px, convexity median 0.980 min 0.953; area spikes none; jumps over 8% none; dents none
+  orb [10,202,38,38] frames 380-516: area 650-655 px, convexity median 0.966 min 0.960; area spikes none; jumps over 8% none; dents none
+  orb [10,242,38,38] frames 390-516: area 388-445 px, convexity median 0.954 min 0.932; area spikes none; jumps over 8% none; dents none
 O-M5-try-it.mp4: 570 frames, mean change 0.01, max 0.61 at frame 406; flicker none; cuts over 6 none
   track [560, 60, 160, 100] frames 0-570: shapes per frame 2-2 (expected <= 2); frames with more: none; max speed 1.70 px/frame; jerk p99 0.67, max 1.46 at frames [489, 135, 191, 127, 511]
 O-M6a-setup-hello-to-model.mp4: 528 frames, mean change 0.05, max 3.94 at frame 344; flicker none; cuts over 6 none
@@ -398,53 +400,89 @@ O-M6a-setup-hello-to-model.mp4: 528 frames, mean change 0.05, max 3.94 at frame 
 O-M6b-setup-into-sessions.mp4: 672 frames, mean change 0.05, max 0.82 at frame 531; flicker none; cuts over 6 none
   track [560, 60, 300, 260] frames 0-672: shapes per frame 0-2 (expected <= 2); frames with more: none; max speed 10.84 px/frame; jerk p99 1.19, max 1.86 at frames [92, 93, 536, 90, 94]
 O-M7-goal-tiles.mp4: 540 frames, mean change 0.02, max 0.80 at frame 49; flicker none; cuts over 6 none
-  orb [504,248,38,38] frames 270-540: area 476-489 px, convexity median 0.984 min 0.967; area spikes none; jumps over 8% none; dents none
-  orb [690,248,38,38] frames 400-540: area 417-434 px, convexity median 0.954 min 0.935; area spikes none; jumps over 8% none; dents none
-  orb [966,206,32,32] frames 60-540: area 277-292 px, convexity median 0.967 min 0.945; area spikes none; jumps over 8% none; dents none
-  orb [1018,206,32,32] frames 60-540: area 310-329 px, convexity median 0.965 min 0.940; area spikes none; jumps over 8% none; dents none
-O-M8-handoff.mp4: 600 frames, mean change 0.03, max 0.42 at frame 397; flicker none; cuts over 6 none
+  orb [504,248,38,38] frames 270-540: area 471-499 px, convexity median 0.978 min 0.942; area spikes none; jumps over 8% none; dents none
+  orb [690,248,38,38] frames 400-540: area 425-452 px, convexity median 0.957 min 0.924; area spikes none; jumps over 8% none; dents none
+  orb [966,206,32,32] frames 60-540: area 278-301 px, convexity median 0.958 min 0.955; area spikes none; jumps over 8% none; dents none
+  orb [1018,206,32,32] frames 60-540: area 322-334 px, convexity median 0.955 min 0.949; area spikes none; jumps over 8% none; dents none
+O-M8-handoff.mp4: 600 frames, mean change 0.03, max 0.43 at frame 397; flicker none; cuts over 6 none
   track [708, 196, 130, 96] frames 0-255: shapes per frame 0-2 (expected <= 2); frames with more: none; max speed 1.48 px/frame; jerk p99 0.94, max 1.03 at frames [157, 80, 108, 156, 72]
-  orb [738,68,70,70] frames 330-600: area 2929-3127 px, convexity median 0.992 min 0.983; area spikes none; jumps over 8% none; dents none
-  orb [106,84,52,52] frames 330-600: area 1514-1517 px, convexity median 0.993 min 0.992; area spikes none; jumps over 8% none; dents none
+  orb [738,68,70,70] frames 330-600: area 2937-3061 px, convexity median 0.986 min 0.981; area spikes none; jumps over 8% none; dents none
+  orb [106,84,52,52] frames 330-600: area 1563-1563 px, convexity median 0.978 min 0.975; area spikes none; jumps over 8% none; dents none
 O-M1r-speaker-wakes-reduced-motion.mp4: 624 frames, mean change 0.03, max 0.23 at frame 130; flicker none; cuts over 6 none
   track [470, 300, 340, 200] frames 0-624: shapes per frame 0-2 (expected <= 2); frames with more: none; max speed 0.16 px/frame; jerk p99 0.11, max 0.21 at frames [545, 544, 412, 509, 581]
 O-M2r-speaker-reacts-reduced-motion.mp4: 576 frames, mean change 0.01, max 0.31 at frame 250; flicker none; cuts over 6 none
   track [560, 60, 160, 100] frames 0-576: shapes per frame 0-2 (expected <= 2); frames with more: none; max speed 0.18 px/frame; jerk p99 0.18, max 0.23 at frames [267, 455, 299, 540, 276]
 O-M3r-what-bots-are-reduced-motion.mp4: 552 frames, mean change 0.01, max 0.25 at frame 85; flicker none; cuts over 6 none
-  orb [558,268,52,52] frames 96-552: area 1154-1182 px, convexity median 0.987 min 0.977; area spikes none; jumps over 8% none; dents none
-  orb [746,268,52,52] frames 96-552: area 1408-1520 px, convexity median 0.995 min 0.978; area spikes none; jumps over 8% none; dents none
-  orb [934,268,52,52] frames 96-552: area 996-1046 px, convexity median 0.929 min 0.915; area spikes none; jumps over 8% none; dents none
-  orb [106,84,52,52] frames 0-552: area 1514-1515 px, convexity median 0.992 min 0.992; area spikes none; jumps over 8% none; dents none
+  orb [558,268,52,52] frames 96-552: area 1116-1185 px, convexity median 0.986 min 0.947; area spikes none; jumps over 8% none; dents none
+  orb [746,268,52,52] frames 96-552: area 1407-1492 px, convexity median 0.992 min 0.975; area spikes none; jumps over 8% none; dents none
+  orb [934,268,52,52] frames 96-552: area 981-1043 px, convexity median 0.935 min 0.922; area spikes none; jumps over 8% none; dents none
+  orb [106,84,52,52] frames 0-552: area 1559-1562 px, convexity median 0.978 min 0.977; area spikes none; jumps over 8% none; dents none
 O-M4r-team-assembles-reduced-motion.mp4: 516 frames, mean change 0.02, max 5.09 at frame 30; flicker none; cuts over 6 none
-  orb [106,84,52,52] frames 0-516: area 1506-1519 px, convexity median 0.992 min 0.989; area spikes none; jumps over 8% none; dents none
-  orb [10,164,38,38] frames 215-256: area 475-484 px, convexity median 0.979 min 0.973; area spikes none; jumps over 8% none; dents none
-  orb [10,164,38,38] frames 300-516: area 482-484 px, convexity median 0.981 min 0.979; area spikes none; jumps over 8% none; dents none
-  orb [10,202,38,38] frames 300-340: area 623-624 px, convexity median 0.999 min 0.999; area spikes none; jumps over 8% none; dents none
-  orb [10,202,38,38] frames 380-516: area 623-623 px, convexity median 0.999 min 0.999; area spikes none; jumps over 8% none; dents none
-  orb [10,242,38,38] frames 390-516: area 403-418 px, convexity median 0.943 min 0.935; area spikes none; jumps over 8% none; dents none
+  orb [106,84,52,52] frames 0-516: area 1414-1573 px, convexity median 0.977 min 0.966; area spikes none; jumps over 8% none; dents none
+  orb [10,164,38,38] frames 215-256: area 486-488 px, convexity median 0.983 min 0.980; area spikes none; jumps over 8% none; dents none
+  orb [10,164,38,38] frames 300-516: area 486-487 px, convexity median 0.981 min 0.980; area spikes none; jumps over 8% none; dents none
+  orb [10,202,38,38] frames 300-340: area 602-644 px, convexity median 1.000 min 0.958; area spikes none; jumps over 8% none; dents none
+  orb [10,202,38,38] frames 380-516: area 647-650 px, convexity median 0.964 min 0.960; area spikes none; jumps over 8% none; dents none
+  orb [10,242,38,38] frames 390-516: area 390-441 px, convexity median 0.954 min 0.942; area spikes none; jumps over 8% none; dents none
 O-M5r-try-it-reduced-motion.mp4: 570 frames, mean change 0.01, max 0.30 at frame 406; flicker none; cuts over 6 none
   track [560, 60, 160, 100] frames 0-570: shapes per frame 0-2 (expected <= 2); frames with more: none; max speed 0.22 px/frame; jerk p99 0.16, max 0.22 at frames [42, 284, 546, 506, 484]
 O-M6ar-setup-hello-to-model-reduced-motion.mp4: 528 frames, mean change 0.04, max 3.92 at frame 344; flicker none; cuts over 6 none
   track [400, 30, 480, 480] frames 0-528: shapes per frame 0-2 (expected <= 2); frames with more: none; max speed 0.62 px/frame; jerk p99 0.21, max 0.61 at frames [254, 56, 2, 481, 502]
 O-M6br-setup-into-sessions-reduced-motion.mp4: 672 frames, mean change 0.04, max 0.83 at frame 536; flicker none; cuts over 6 none
   track [560, 60, 300, 260] frames 0-672: shapes per frame 0-2 (expected <= 2); frames with more: none; max speed 0.50 px/frame; jerk p99 0.31, max 0.48 at frames [32, 267, 411, 446, 150]
-O-M7r-goal-tiles-reduced-motion.mp4: 540 frames, mean change 0.01, max 0.56 at frame 250; flicker none; cuts over 6 none
-  orb [504,248,38,38] frames 270-540: area 473-488 px, convexity median 0.990 min 0.971; area spikes none; jumps over 8% none; dents none
-  orb [690,248,38,38] frames 400-540: area 413-431 px, convexity median 0.959 min 0.949; area spikes none; jumps over 8% none; dents none
-  orb [966,206,32,32] frames 60-540: area 273-290 px, convexity median 0.971 min 0.953; area spikes none; jumps over 8% none; dents none
-  orb [1018,206,32,32] frames 60-540: area 320-331 px, convexity median 0.961 min 0.952; area spikes none; jumps over 8% none; dents none
+O-M7r-goal-tiles-reduced-motion.mp4: 540 frames, mean change 0.01, max 0.57 at frame 250; flicker none; cuts over 6 none
+  orb [504,248,38,38] frames 270-540: area 484-498 px, convexity median 0.980 min 0.972; area spikes none; jumps over 8% none; dents none
+  orb [690,248,38,38] frames 400-540: area 420-448 px, convexity median 0.947 min 0.923; area spikes none; jumps over 8% none; dents none
+  orb [966,206,32,32] frames 60-540: area 281-306 px, convexity median 0.971 min 0.957; area spikes none; jumps over 8% none; dents none
+  orb [1018,206,32,32] frames 60-540: area 324-337 px, convexity median 0.964 min 0.944; area spikes none; jumps over 8% none; dents none
 O-M8r-handoff-reduced-motion.mp4: 600 frames, mean change 0.02, max 0.45 at frame 258; flicker none; cuts over 6 none
   track [708, 196, 130, 96] frames 0-255: shapes per frame 0-2 (expected <= 2); frames with more: none; max speed 0.12 px/frame; jerk p99 0.12, max 0.21 at frames [55, 57, 56, 117, 54]
-  orb [738,68,70,70] frames 330-600: area 2923-3121 px, convexity median 0.991 min 0.984; area spikes none; jumps over 8% none; dents none
-  orb [106,84,52,52] frames 330-600: area 1514-1515 px, convexity median 0.992 min 0.992; area spikes none; jumps over 8% none; dents none
+  orb [738,68,70,70] frames 330-600: area 2936-3059 px, convexity median 0.989 min 0.982; area spikes none; jumps over 8% none; dents none
+  orb [106,84,52,52] frames 330-600: area 1562-1568 px, convexity median 0.976 min 0.975; area spikes none; jumps over 8% none; dents none
 ```
 
 Every clip: no A-B-A flicker, no single-frame cut, never more than two eye shapes (in O-M8 the morph region never shows more than the pair or the one body), no silhouette spike, jump or dent.
+
+orb3's per-face eye check (`eyes-clips.txt`, `eyes-stills.txt`; columns: frames measured, narrowest width against front-on, frames under 0.55, smallest gap, frames under 0.5, smallest margin in px, frames under 1.5, merged or hidden):
+
+```
+O-M3-what-bots-are.mp4 kai frames 96-551: kai 352 0.65 0 1.02 0 2.8 0 0
+O-M3-what-bots-are.mp4 moss frames 96-551: moss 241 0.69 0 1.11 0 5.0 0 0
+O-M3-what-bots-are.mp4 iris frames 96-551: iris 355 0.71 0 1.16 0 5.0 0 0
+O-M3-what-bots-are.mp4 boopis-side frames 0-551: boopis-side 552 0.91 0 1.45 0 6.3 0 0
+O-M4-team-assembles.mp4 boopis-side frames 0-515: boopis-side 492 0.63 0 0.84 0 5.0 0 0
+O-M4-team-assembles.mp4 kai-row frames 300-515: kai-row 216 1.00 0 2.26 0 2.2 0 0
+O-M4-team-assembles.mp4 moss-row frames 380-515: moss-row 136 0.90 0 1.31 0 4.1 0 0
+O-M7-goal-tiles.mp4 kai-tile frames 300-539: kai-tile 218 0.63 0 1.22 0 3.2 0 0
+O-M7-goal-tiles.mp4 iris-tile frames 440-539: iris-tile 97 1.00 0 1.86 0 4.0 0 0
+O-M8-handoff.mp4 boopis-chat frames 330-599: boopis-chat 243 0.76 0 1.14 0 12.0 0 0
+O-M8-handoff.mp4 boopis-side frames 330-599: boopis-side 270 0.91 0 1.50 0 6.1 0 0
+O-M3r-what-bots-are-reduced-motion.mp4 kai frames 96-551: kai 337 0.62 0 1.19 0 2.8 0 0
+O-M3r-what-bots-are-reduced-motion.mp4 moss frames 96-551: moss 260 0.81 0 1.01 0 6.0 0 0
+O-M3r-what-bots-are-reduced-motion.mp4 iris frames 96-551: iris 348 0.63 0 1.21 0 5.0 0 0
+O-M3r-what-bots-are-reduced-motion.mp4 boopis-side frames 0-551: boopis-side 552 0.85 0 1.45 0 6.1 0 0
+O-M4r-team-assembles-reduced-motion.mp4 boopis-side frames 0-515: boopis-side 502 0.72 0 0.85 0 5.0 0 0
+O-M4r-team-assembles-reduced-motion.mp4 kai-row frames 300-515: kai-row 216 1.00 0 2.26 0 2.2 0 0
+O-M4r-team-assembles-reduced-motion.mp4 moss-row frames 380-515: moss-row 136 0.90 0 1.31 0 4.1 0 0
+O-M7r-goal-tiles-reduced-motion.mp4 kai-tile frames 300-539: kai-tile 220 0.63 0 1.23 0 3.2 0 0
+O-M7r-goal-tiles-reduced-motion.mp4 iris-tile frames 440-539: iris-tile 100 0.97 0 2.34 0 4.0 0 0
+O-M8r-handoff-reduced-motion.mp4 boopis-chat frames 330-599: boopis-chat 248 0.76 0 1.14 0 12.0 0 0
+O-M8r-handoff-reduced-motion.mp4 boopis-side frames 330-599: boopis-side 270 0.99 0 1.44 0 6.3 0 0
+goals nimbus at 2x frames 60-539: goals 458 0.72 0 1.09 0 4.2 0 0
+goals nina at 2x frames 60-539: goals 458 0.79 0 1.00 0 2.8 0 0
+assemble iris-row at 2x frames 470-515: assemble 46 0.98 0 1.21 0 5.0 0 0
+goals reduced nimbus at 2x frames 60-539: goals 459 0.68 0 1.09 0 4.5 0 0
+goals reduced nina at 2x frames 60-539: goals 458 0.73 0 1.00 0 2.8 0 0
+assemble reduced iris-row at 2x frames 470-515: assemble 46 0.96 0 1.20 0 5.4 0 0
+ALL: 68 orbs; below floors: width 0, gap 0, margin 0; merged or hidden 0
+```
+
+Every resting place of every bot, in both motion modes, and every bot in the Bots stills: 0 frames under a floor, 0 merged or hidden.
 
 **Not checkable here:** WebKitGTK's frame rate (the clips are rendered on a virtual clock in Chromium; the 60 fps check in WebKitGTK belongs to the kit's lab), and real reads for Try it (no live engine in this container: the screens show the reading the spec describes, and the recording path is what a run with no model shows).
 
 ## Dependencies
 
-- `w31/bot-character` ORBS.md section 23 (bfc32575): the rest pose is decided (K08 B, orb3 3.0.0) and drawn in the stills. Waiting: the state table (a bot rotating out of the rest pose into lively behaviour and back); then the clips O-M3, O-M4, O-M7 and O-M8 move to orb3 and are re-recorded.
+- `w31/bot-character` ORBS.md section 23 (5946c226): orb3 3.0.2, home at rest only, every state on the alive-idle engine through the shared state table, bolder eyes; drawn in every still and clip. Vendoring orb3 in the app in place of orb2's `orb-avatar.min.js` is ORBS.md's integration step.
 - v7 (`w31/design-system-v7`, merged): the dock only with a bot of your own (21.4), so onboarding draws none; the `same-component` QA rule.
 - The speaker's blink is `<boopis-logo>`'s (155 ms); ORBS.md's T1 (0.20 s) applies to orb2.

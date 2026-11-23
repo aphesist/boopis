@@ -105,21 +105,21 @@
      rows at 28. Every sidebar bot holds ONE fixed sideways three-quarter pose and moves only through its states (owner, 23 Nov).
      The exact pose lands in ORBS.md section 23; until then this is the dock's provisional pose (dockv7.js POSE, DESIGN-SYSTEM 21.4),
      so the sidebar and the dock share one constant. */
-  /* DECIDED (owner, 23 Nov; ORBS.md section 23, K08 B, orb3 3.0.0), the REST pose: a bot AT REST in a sidebar or dock context
-     is turned by orb3's home orientation, HOME, and shows K07's big upright pills (the hidden reaction 'pose': no blink, the
-     idle off, mode drift, jelly 0). Outside rest (a state, a hover, the lively chat and scenes) a bot faces front and is
-     lively: the rotation out of the pose and back is the orb agent's next build, so the clips wait for it. The rules apply
-     only where orb3 draws (the stills, ob3.html); the clips stay on revision 3's committed build until then. */
+  /* DECIDED (owner, 23 Nov; ORBS.md section 23, K08 B, orb3 3.0.2). Every bot carries orb3's home orientation, HOME; orb3
+     holds it only AT REST (idle motion off, no look target, a `rest: true` reaction) and turns the whole bot out of it into the
+     state's front-facing life over 0.4 s, and back at rest. Rest is a sidebar or dock bot with nothing to do: the reaction
+     'pose' (orb3's rest face, K07's pills; no blink, jelly 0, mode drift). Every state, and every bot in the chat or a scene,
+     runs orb3's alive-idle engine through its shared state table (STATE_LIFE): in the clips the chat and scene bots are
+     lively; a still catches each one mid-behaviour, looking somewhere (its body turned with the look) with its state's face. */
   const HOME = '38 22 -24';
   const ORB3 = !!document.querySelector('script[src*="orb3"]');
   if (ORB3 && window.OrbAvatar && !window.OrbAvatar.__pose) {
     const A = window.OrbAvatar; A.__pose = 1; const D0 = Math.PI / 180;
     const P8 = A.shapes.pairEyes(['pill', { x: -0.19 + 0.04, y: -0.08, w: 0.18, h: 0.41, ang: 4 * D0 }], ['pill', { x: 0.19 + 0.04, y: -0.08, w: 0.18, h: 0.41, ang: 4 * D0 }]);
-    A.defineReaction('pose', { label: 'Pose', blink: false, face: () => P8, motion: () => ({ eyaw: 0, epitch: 0, w: 1 }) });
+    A.defineReaction('pose', { label: 'Pose', blink: false, rest: true, face: () => (A.shapes.restFace ? A.shapes.restFace() : P8), motion: () => ({ eyaw: 0, epitch: 0, w: 1 }) });
   }
-  /* a lively bot caught mid-behaviour in a still: its body part-way through a look-around turn (orb3's orientation, yaw pitch
-     roll in degrees, smaller than the rest pose and never it), its eyes on its look (orb3's gaze, inside its eye limits) */
-  const LIVELY = [['20 -6 5', '14 -6'], ['-18 6 -4', '-12 4'], ['24 4 6', '16 2'], ['-22 -4 -5', '-14 -4'], ['14 10 3', '8 8'], ['-14 -8 -3', '-10 -6']];
+  /* the looks a still catches a lively bot in (yaw, pitch in degrees; orb3 limits a look to 0.66 and 0.46 rad, the body turning for the rest) */
+  const LIVELY = ['30 -8', '-26 8', '34 6', '-32 -6', '22 12', '-20 -12'];
   const rules2 = O2.orbRules;
   O2.orbRules = (root = document) => {
     rules2(root);
@@ -127,19 +127,28 @@
     let k = 0;
     root.querySelectorAll('orb-avatar').forEach((e) => {
       const side = e.closest('.side, .dock, [data-side]') || e.hasAttribute('data-side');
-      if (side) { e.setAttribute('jelly', '0'); e.setAttribute('idle-motion', 'off'); e.setAttribute('mode', 'drift'); }
-      if (side && (e.getAttribute('reaction') || 'idle') === 'idle') { e.setAttribute('home', HOME); e.setAttribute('reaction', 'pose'); e.removeAttribute('gaze'); return; }
-      /* not at rest (a state, the chat, a scene): the bot runs its lively behaviour, so a still catches it mid-behaviour in a
-         natural look-around pose with the state's face, never dead front; a held look a scene gives it (gaze) is kept */
-      const [o3, g] = LIVELY[(k++) % LIVELY.length];
-      const held = e.getAttribute('gaze');   /* a held look a scene gives it: the body turns the same way */
-      e.setAttribute('home', held ? `${Math.round(+held.split(' ')[0] * 0.6)} ${Math.round(+held.split(' ')[1] * 0.6)} ${Math.round(+held.split(' ')[0] * 0.15)}` : o3);
-      if (!held) e.setAttribute('gaze', g);
+      const clip = !!e.closest('[data-motion]');
+      e.setAttribute('home', HOME);
+      if (side) { e.setAttribute('jelly', '0'); e.setAttribute('mode', 'drift'); }
+      if (side && ['idle', 'pose'].includes(e.getAttribute('reaction') || 'idle')) { e.setAttribute('reaction', 'pose'); e.setAttribute('idle-motion', 'off'); e.removeAttribute('gaze'); return; }
+      if (clip) { if (!side) e.setAttribute('idle-motion', 'lively'); return; }   /* the clips: the alive-idle engine, per the table */
+      /* a still: mid-behaviour. A held look a scene gives it (the team card's bots at each other) is kept */
+      e.setAttribute('idle-motion', 'off');
+      e.dataset.look = e.getAttribute('gaze') || LIVELY[(k++) % LIVELY.length]; e.removeAttribute('gaze');   /* a look target, not a rest gaze: orb3 turns it out of home */
     });
     return root;
   };
-  const SIDE_POSE = '32 4';   /* revision 3's provisional sidebar gaze, kept for the clips (orb2) until the transitions land */
-  const sideOrb = (n, size, o) => orb(n, size, ORB3 ? o : { ...o, gaze: SIDE_POSE }).replace('idle-motion="calm"', 'idle-motion="off" data-side');
+  /* a still: each lively bot looks at its point (yaw, pitch from the bot), then every orb is frozen once orb3 has turned it
+     into its pose or its look, before its first blink can fall (orb3
+     schedules it 1.1 s or more after it starts) */
+  function freeze(root = document, ms = 650) {
+    root.querySelectorAll('orb-avatar').forEach((e) => {
+      e._nextBlink = 1e9;
+      if (e.dataset.look && e.lookAt) { const [y, p] = e.dataset.look.split(' ').map((v) => (+v * Math.PI) / 180), r = e.getBoundingClientRect(), D = 260; e.lookAt(r.left + r.width / 2 + Math.tan(y) * D, r.top + r.height / 2 - Math.tan(p) * D); }
+    });
+    setTimeout(() => root.querySelectorAll('orb-avatar').forEach((e) => { if (!e.closest('[data-motion]')) e.setAttribute('static', ''); }), ms);
+  }
+  const sideOrb = (n, size, o) => orb(n, size, o).replace('idle-motion="calm"', 'idle-motion="off" data-side');
   function botsSide(o = {}) {
     const team = o.team || [], st = o.st || {};
     const act = (n) => st[n] === 'needs' ? 'Needs you: install a package' : st[n] === 'working' ? 'Reviewing 3 commits' : O2.TEAM_ACT[n];
@@ -244,5 +253,5 @@
       mn.style.left = (r.left - b.left - 8) + 'px'; mn.style.bottom = (b.bottom - r.top + 8) + 'px';
     });
   }
-  window.OB3 = { HOME, place, prePage, top, head, canvas, nsMark, botsSide, botsChat, reshell, sideOrb, SIDE_POSE, chatHead, teamCard, goalCard, LOOKS_AT, TEAM3 };
+  window.OB3 = { HOME, freeze, place, prePage, top, head, canvas, nsMark, botsSide, botsChat, reshell, sideOrb, chatHead, teamCard, goalCard, LOOKS_AT, TEAM3 };
 })();

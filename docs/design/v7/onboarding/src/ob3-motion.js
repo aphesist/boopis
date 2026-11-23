@@ -5,7 +5,14 @@
 (function () {
   const S = window.SCREENS, SP = window.OB2S, O2 = window.OB2, OB = window.OB, O3 = window.OB3;
   const { E, D, R, p, lerp, $, $$, set, enter, press, shimmer, mount, calls } = window.OB2M;
-  const { look, turn, ctr, tween, poseTo, lift, swapper, stack, collapse, addTo, hov, stepsChain } = window.OB2M2;
+  const { ctr, tween, poseTo, lift, swapper, stack, collapse, addTo, hov, stepsChain } = window.OB2M2;
+  /* orb3 3.0.2 (ORBS.md section 23): its geometric outlines and eye limits (a look eases into 0.66 rad of yaw and 0.46 of
+     pitch, the body turning for the rest; the eyes never go edge-on, merge or touch the rim) replace revision 2's lookAt cap
+     and its round-only turntable: a look is orb3's own lookAt, and every body turns */
+  const look = (o, x, y) => (x === undefined ? o.lookAt() : o.lookAt(x, y));
+  const turn = (o) => o.spin('turntable');
+  /* a bot leaves a state: a sidebar bot back to its rest pose (orb3 turns it home), any other bot back to its lively idle */
+  const rest = (o) => o.setAttribute('reaction', o.closest('.side, [data-side]') || o.hasAttribute('data-side') ? 'pose' : 'idle');
   const I = window.V7.I;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const typeInto = (ph, text, t, t0, cps, idle) => { if (!ph) return; const n = t < t0 ? 0 : Math.min(text.length, Math.floor((t - t0) / 1000 * cps)); ph.textContent = n ? text.slice(0, n) : idle; ph.classList.toggle('typed', n > 0); };
@@ -220,7 +227,7 @@
     const spath = tween({ x: cA[0], y: cA[1] }, [{ t: T_H + 40, v: { x: cH[0], y: cH[1] }, dur: 640, ease: 'travel' }]);
     /* the boopis bot: B's own chat-head orb, lifted; it is born where the mark is, then travels to the chat's head */
     const headOrb = $('.ob3-ch-orb orb-avatar', B); const cB = ctr(headOrb);
-    headOrb.setAttribute('reaction', 'sleeping'); headOrb.setAttribute('gaze', '0 -4');
+    headOrb.setAttribute('reaction', 'sleeping'); headOrb.removeAttribute('gaze');
     const ofly = lift(headOrb, root);
     const opath = tween({ x: cH[0], y: cH[1] }, [{ t: T_TAB + 60, v: { x: cB[0], y: cB[1] }, dur: 680, ease: 'travel' }]);
     /* the sidebar: H's stays on screen while its switch slides to Bots and its list empties; then B's (identical by then) takes
@@ -302,7 +309,7 @@
       [2000, () => { orbs.kai.setAttribute('reaction', 'idle'); orbs.kai.emote('wake'); }], [2450, L(orbs.kai, 'boopis')],
       [2700, () => { orbs.kai.setAttribute('reaction', 'happy'); orbs.kai.poke(0.5, { react: false }); }], [3350, () => orbs.kai.setAttribute('reaction', 'idle')],
       [2800, () => { orbs.moss.setAttribute('reaction', 'idle'); orbs.moss.emote('wake'); }], [3150, L(orbs.moss, 'kai')], [3250, L(orbs.kai, 'moss')],
-      [3600, () => turn(orbs.moss)], [4200, L(orbs.moss, 'boopis')],
+      [3600, () => orbs.moss.emote('curious')], [4200, L(orbs.moss, 'boopis')],   /* interest without a spin: a turntable carries the eyes round the back */
       [3800, () => { orbs.iris.setAttribute('reaction', 'idle'); orbs.iris.emote('doubletake'); }],
       [4250, L(orbs.iris, 'moss')], [4350, L(orbs.moss, 'iris')],
       [4550, () => { orbs.iris.setAttribute('reaction', 'happy'); orbs.iris.poke(0.5, { react: false }); }], [5200, () => orbs.iris.setAttribute('reaction', 'idle')],
@@ -336,8 +343,8 @@
     const allLook = (g) => () => { const c = ctr(byName[g]); Object.values(free).forEach((o) => look(o, c[0], c[1])); };
     const cue = calls([
       ...HOV.map(([g, t]) => [t + 60, allLook(g)]),
-      ...trips.flatMap((T) => [[T.t0 - 40, () => turn(free[T.n])], [T.t0 + 560, () => { free[T.n].setAttribute('reaction', 'happy'); free[T.n].poke(0.4, { react: false }); }], [T.t0 + 1300, () => { free[T.n].setAttribute('reaction', 'idle'); look(free[T.n], 870, 860); }]]),
-      [8200, () => Object.values(free).forEach((o) => look(o, 870, 860))]
+      ...trips.flatMap((T) => [[T.t0 - 40, () => turn(free[T.n])], [T.t0 + 560, () => { free[T.n].setAttribute('reaction', 'happy'); free[T.n].poke(0.4, { react: false }); }], [T.t0 + 1300, () => { free[T.n].setAttribute('reaction', 'idle'); look(free[T.n], ...ctr(next)); }]]),
+      [8200, () => Object.values(free).forEach((o) => look(o, ...ctr(next)))]   /* near targets: a far one rolls a 24 px bot's far eye to the rim */
     ]);
     return { dur: 9000, at(t) {
       cue(t);
@@ -380,20 +387,23 @@
     const born = NEW.map((n) => { const e = addTo(root, `<span class="ob2-born" style="position:absolute;left:0;top:0;z-index:20">${O2.orb(n, 44, { surface: 'var(--bg-2)', state: 'happy' })}</span>`); O2.orbRules(e); window.V7.eyes(e); return e; });
     const BIRTH = [870, 430];
     const rowOrb = rows.map((r) => $('orb-avatar', r));
+    /* where each row's orb ends up, measured once with every row open (its final layout), before the rows close: the newborn
+       lands exactly there (measured mid-opening, it landed 16 px above its row and jumped at the swap) */
+    const finalC = rowOrb.map((o) => ctr(o));
     rows.forEach((r) => { r.style.height = '0px'; r.style.overflow = 'hidden'; r.style.opacity = '0'; });
-    const plans = NEW.map((n, i) => { const t0 = PH[i][1] + 120, tf = t0 + 900, tl = tf + 900; return { t0, tf, tl }; });
+    const plans = NEW.map((n, i) => { const t0 = PH[i][1] + 120, tf = t0 + 900, tl = tf + 900; return { t0, tf, tl, end: finalC[i] }; });
     const cue = calls([
       ...NEW.flatMap((n, i) => { const P = plans[i]; const b = $('orb-avatar', born[i]);
         return [
           [P.t0 + 380, () => { b.setAttribute('reaction', 'idle'); look(b, ...ctr(main)); }],
           [P.t0 + 600, () => b.blink()],
           [P.tf - 200, () => turn(b)],
-          [P.tf + 540, () => { look(b); b.setAttribute('gaze', O3.SIDE_POSE); }],
+          [P.tf + 540, () => { look(b); b.setAttribute('jelly', '0'); b.setAttribute('idle-motion', 'off'); b.setAttribute('reaction', 'pose'); }],   /* it turns into the rest pose as it arrives */
           [P.tl, () => rowOrb[i].setAttribute('reaction', 'happy')],
-          [P.tl + 900, () => rowOrb[i].setAttribute('reaction', 'idle')]
+          [P.tl + 900, () => rest(rowOrb[i])]
         ]; }),
       [6900, () => main.setAttribute('reaction', 'happy')],
-      [7900, () => main.setAttribute('reaction', 'idle')]
+      [7900, () => rest(main)]
     ]);
     return { dur: 8600, at(t) {
       cue(t);
@@ -411,8 +421,7 @@
         const kr = p(t, P.tf, D.d2, E.spring);
         set(rows[i], { height: `${lerp(0, 44, kr).toFixed(2)}px`, opacity: '1' });
         $('.col', rows[i]).style.opacity = String(p(t, P.tl, D.d2));
-        if (!P.end && t >= P.tf - 1) P.end = ctr(rowOrb[i]);
-        const end = P.end || [0, 0];
+        const end = P.end;
         let x = BIRTH[0], y = BIRTH[1], s = R ? 1 : lerp(0.3, 1, p(t, P.t0, D.d3, E.spring));
         if (t >= P.tf) { const k = R ? (t >= P.tf + 150 ? 1 : 0) : E.travel((t - P.tf) / 640); x = lerp(BIRTH[0], end[0], k); y = lerp(BIRTH[1], end[1], k) - (R ? 0 : Math.sin(Math.PI * Math.min(1, k)) * 60); s = lerp(1, 28 / 44, k); }
         const vis = t >= P.t0 && t < P.tl;

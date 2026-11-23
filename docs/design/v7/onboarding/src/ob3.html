@@ -7,7 +7,7 @@ if (q.b) document.body.style.background = '#0a0a0a';
 /* stills render live things at rest (the sweep rule): orbs still in their pose, the speaker settled with its own idle off */
 document.documentElement.classList.add('still');
 OB2.orbRules(document);
-document.querySelectorAll('orb-avatar').forEach((e) => { if (!e.closest('[data-motion]')) e.setAttribute('static', ''); });
+OB3.freeze(document);   /* orb3: frozen (static) once each bot has turned into its pose or its look */
 OB3.place(document);
 window.addEventListener('load', () => setTimeout(() => { OB2S.settle(); document.querySelectorAll('boopis-logo[data-look]').forEach((e) => e.look && e.look(0, -1)); }, 50));
 </script></body></html>

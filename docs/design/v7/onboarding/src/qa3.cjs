@@ -209,7 +209,7 @@ const CLOCK = fs.readFileSync(__dirname + '/rec3.cjs', 'utf8').match(/const CLOC
   }
   for (const { url, w } of urls) {
     const p = await b.newPage({ viewport: { width: w, height: 900 }, deviceScaleFactor: 2 });
-    await p.goto(url); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(500);
+    await p.goto(url); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(900);   /* orb3's stills freeze 520 ms in */
     const H = await p.evaluate(() => document.documentElement.scrollHeight); await p.setViewportSize({ width: w, height: Math.min(H, 12000) });
     await p.evaluate(() => { window.V7 && V7.brand && V7.brand(); window.V7 && V7.paint(); });
     const res = await p.evaluate(PAGE, {}); total += res.length;
