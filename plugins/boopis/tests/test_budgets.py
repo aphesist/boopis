@@ -180,6 +180,15 @@ def test_a_new_turn_is_a_new_run(make: Make) -> None:
     assert tool(2) is None
 
 
+def test_the_claude_subscription_s_aliases_are_priced_as_the_models_they_name(make: Make) -> None:
+    """The Claude subscription reports ``opus``; its API-equivalent is Anthropic's price for claude-opus-5-5."""
+    make({"settings": {"cap": "0.20"}})
+    start()
+    spend(2, provider="claude-subscription-directsdk-experimental", model="opus")  # $0.24 API-equivalent, $0 billed
+    paused = tool()
+    assert paused is not None and "has spent $0.24 of its $0.20 cap" in paused["message"]
+
+
 def test_a_capped_run_with_a_model_that_has_no_price_asks_rather_than_guess(make: Make) -> None:
     make({"settings": {"cap": "5.00"}})
     start()

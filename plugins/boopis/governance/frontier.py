@@ -126,6 +126,12 @@ def normalise(model: str) -> list[str]:
     return [t for t in re.split(r"[.\-_]", text) if t]
 
 
+def resolve_alias(provider: str, model: str) -> str:
+    """The id a provider's alias names (the Claude subscription's ``opus`` is ``claude-opus-5-5``), else the model as
+    it came. The price book uses it too, so a subscription's tokens have an API-equivalent price (ADR-0048)."""
+    return _resolve_alias(provider, model)
+
+
 def _resolve_alias(provider: str, model: str) -> str:
     """The id a provider's alias names (the Claude subscription's ``opus``), else the model as it came."""
     table = load().aliases.get(provider.strip().lower())

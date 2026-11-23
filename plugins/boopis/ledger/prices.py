@@ -32,6 +32,9 @@ BUILTIN_ALIASES: Mapping[str, str] = {
     "google-ai-studio": "google",
     "vertex": "google-vertex",
     "vertex-ai": "google-vertex",
+    # the Claude subscription (the user's own Claude Code, ADR-0029) bills Anthropic's models: its API-equivalent is
+    # Anthropic's price for the model its alias names (``opus`` is ``claude-opus-5-5``, ``resolve`` below)
+    "claude-subscription-directsdk-experimental": "anthropic",
 }
 
 
@@ -47,11 +50,16 @@ class PriceBook:
         """The table entry that prices ``provider``/``model``, or None."""
         entries = self.table.entries
         candidates = [provider, self.aliases.get(provider, ""), BUILTIN_ALIASES.get(provider, "")]
-        for name in candidates:
-            if name and ModelRef(name, model) in entries:
-                return ModelRef(name, model)
-        matches = [ref for ref in entries if ref.id == model]
-        return matches[0] if len(matches) == 1 else None
+        from ..governance.frontier import resolve_alias
+
+        for wanted in dict.fromkeys((model, resolve_alias(provider, model))):
+            for name in candidates:
+                if name and ModelRef(name, wanted) in entries:
+                    return ModelRef(name, wanted)
+            matches = [ref for ref in entries if ref.id == wanted]
+            if len(matches) == 1:
+                return matches[0]
+        return None
 
     def has(self, provider: str, model: str) -> bool:
         return self.resolve(provider, model) is not None
@@ -110,7 +118,7 @@ def project_costs(records: Iterable[Mapping[str, Any]], book: PriceBook, subscri
             if not covered:
                 billed_missing.add(name)
             continue
-        priced = {**record, "provider": ref.provider}
+        priced = {**record, "provider": ref.provider, "model": ref.id}  # an alias is priced as the model it names
         if covered:
             priced["subscription"] = True
         cost = request_cost_detail(priced, book.table, "auto")

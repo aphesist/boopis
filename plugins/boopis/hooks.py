@@ -276,10 +276,12 @@ def _busy_note(rt: Runtime, bot: BotRules | None) -> str | None:
     that work a second time here."""
     if bot is None:
         return None
+    import time
+
     from .bots import claims
 
     held = claims.read(rt.home)
-    if not isinstance(held, claims.Claim) or claims.stale(held, held.at):
+    if not isinstance(held, claims.Claim) or claims.stale(held, time.time()):
         return None
     return (
         f"[boopis] {bot.name} is also working on {held.label or held.work} in another session right now. Do not start "
