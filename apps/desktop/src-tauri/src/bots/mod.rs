@@ -870,7 +870,7 @@ fn still_prepared(
     let home = layout.root.join("profiles").join(name);
     let placed = layout.plugins.iter().all(|p| {
         let source = layout.root.join("plugins").join(p);
-        !links::is_plugin(&source) || links::is_plugin(&home.join("plugins").join(p))
+        !links::is_plugin(&source) || links::current(&source, &home, p, layout.strategy)
     });
     placed
         && view.rooms.get(name) == Some(&Value::String(resolved(&home)))

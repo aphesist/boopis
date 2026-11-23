@@ -26,6 +26,11 @@ struct Fake {
     plugins: Mutex<Vec<PluginEntry>>,
     sets: Mutex<Vec<String>>,
     restarts: Mutex<u32>,
+    /// What happened to the gateway, in order: `stop:` and `restart:`, each with the profile's boopis `__init__.py` at that
+    /// moment (`plugin_marks`), so a test sees which code a stop and a restart met.
+    gateway: Mutex<Vec<String>>,
+    /// Whether the gateway refuses to stop (it still answers after the wait).
+    stays_up: Mutex<bool>,
     /// How many of the next restarts fail (the gateway does not come up).
     restart_failures: Mutex<u32>,
     /// What Hermes says about the free tier: the status before a claim, and after it.
@@ -87,6 +92,12 @@ struct FreeScript {
 }
 
 impl Fake {
+    /// The profile's copy of the boopis plugin as the gateway would load it now: its `__init__.py`, or `none`.
+    fn plugin_marks(&self) -> String {
+        std::fs::read_to_string(self.home.join("plugins").join("boopis").join("__init__.py"))
+            .map_or_else(|_| "none".to_owned(), |t| t.trim().to_owned())
+    }
+
     /// What boopis's runtime leaves in the profile (`install::install_runtime_plugins`): the Claude subscription plugin's
     /// directory, named by its manifest, with its model catalogue, listed by the engine as an enabled model provider.
     fn bundled_claude(&self) {
@@ -121,6 +132,8 @@ impl Fake {
             plugins: Mutex::new(Vec::new()),
             sets: Mutex::new(Vec::new()),
             restarts: Mutex::new(0),
+            gateway: Mutex::new(Vec::new()),
+            stays_up: Mutex::new(false),
             restart_failures: Mutex::new(0),
             free: Mutex::new(FreeScript::default()),
             catalogue: Mutex::new(Vec::new()),
@@ -216,7 +229,18 @@ impl HermesOps for Fake {
             return Err(Error::Unavailable("the gateway did not start".into()));
         }
         *self.restarts.lock().unwrap() += 1;
+        self.gateway
+            .lock()
+            .unwrap()
+            .push(format!("restart:{}", self.plugin_marks()));
         Ok(())
+    }
+    async fn stop_gateway(&self) -> Result<bool> {
+        self.gateway
+            .lock()
+            .unwrap()
+            .push(format!("stop:{}", self.plugin_marks()));
+        Ok(!*self.stays_up.lock().unwrap())
     }
     async fn free_tier_status(&self) -> Result<FreeTier> {
         let mut f = self.free.lock().unwrap();
@@ -549,6 +573,122 @@ async fn running_it_again_changes_nothing() {
     );
 }
 
+/// Setup run to the end: the consent, a model and its key, as a person does it the first time.
+async fn finished(r: &Rig) {
+    let _ = r.setup().advance(None, false).await.unwrap();
+    for (form, values, secrets) in [
+        ("setup.config", json!({}), json!({})),
+        ("setup.ladder", json!({"choice": "main/fake-a"}), json!({})),
+        ("setup.credential.main", json!({}), json!({"value": KEY})),
+    ] {
+        let _ = r
+            .setup()
+            .advance(Some(answer(form, values, secrets)), false)
+            .await
+            .unwrap();
+    }
+    assert!(!r.setup().check().await.unwrap().needed);
+    r.fake.gateway.lock().unwrap().clear();
+}
+
+/// B27: an app update whose plugin keeps `version: 0.1.0` (every release so far) but changes its code. `check` sees it,
+/// setup stops the gateway before the swap (no process runs two releases at once), replaces the copy and starts the
+/// gateway again on the new code, and says so in the receipt.
+#[tokio::test]
+async fn an_update_with_new_plugin_code_at_the_same_version_is_installed_and_loaded() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    let bundle = r.bundle.plugin_dir.clone().unwrap();
+    std::fs::write(bundle.join("__init__.py"), "V = '0.1.9'\n").unwrap();
+    std::fs::create_dir_all(bundle.join("bots")).unwrap();
+    std::fs::write(
+        bundle.join("bots").join("guides.py"),
+        "NAME = 'boopis-handoffs'\n",
+    )
+    .unwrap();
+    let check = r.setup().check().await.unwrap();
+    assert!(
+        check.needed && check.reason == "the app carries a newer plugin",
+        "{}",
+        check.reason
+    );
+
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    let plugin = s.steps.iter().find(|x| x.id == "plugin").unwrap();
+    assert!(
+        plugin
+            .detail
+            .contains("replaced with the copy this app carries (version 0.1.0)"),
+        "{}",
+        plugin.detail
+    );
+    assert_eq!(
+        *r.fake.gateway.lock().unwrap(),
+        ["stop:", "restart:V = '0.1.9'"],
+        "stopped on the old code before the swap, started on the new one after it"
+    );
+    let copy = r.fake.home.join("plugins").join("boopis");
+    assert!(copy.join("bots").join("guides.py").is_file());
+    assert!(
+        !r.setup().check().await.unwrap().needed,
+        "one run is enough"
+    );
+}
+
+#[tokio::test]
+async fn a_new_hx_is_placed_and_the_gateway_restarted() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(r.bundle.hx.as_ref().unwrap(), "hx 0.1.9").unwrap();
+    let check = r.setup().check().await.unwrap();
+    assert!(
+        check.needed && check.reason == "the app carries a newer hx",
+        "{}",
+        check.reason
+    );
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(
+        std::fs::read_to_string(super::install::hx_target(&r.fake.home)).unwrap(),
+        "hx 0.1.9"
+    );
+    assert_eq!(
+        r.fake.gateway.lock().unwrap().len(),
+        1,
+        "one restart, no stop: the plugin did not change"
+    );
+    assert!(!r.setup().check().await.unwrap().needed);
+}
+
+#[tokio::test]
+async fn a_gateway_that_does_not_stop_keeps_its_plugin() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    *r.fake.stays_up.lock().unwrap() = true;
+    let s = r.setup().advance(None, false).await.unwrap();
+    let plugin = s.steps.iter().find(|x| x.id == "plugin").unwrap();
+    assert_eq!(
+        (plugin.state, plugin.code.as_deref()),
+        (StepState::Blocked, Some("hx.setup.plugin_install_failed"))
+    );
+    assert_eq!(
+        r.fake.plugin_marks(),
+        "",
+        "nothing was written under a running gateway"
+    );
+    // the person retries once it stopped
+    *r.fake.stays_up.lock().unwrap() = false;
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(r.fake.plugin_marks(), "V = 'new'");
+}
+
 #[tokio::test]
 async fn declining_is_respected_explained_and_can_be_reconsidered() {
     let r = rig(json!({"providers": {}}));
@@ -680,16 +820,12 @@ async fn a_build_without_the_plugin_says_so() {
 /// What a finished setup leaves in the profile's home, as the e2e fixtures write it (`tests/e2e/setup-done.json`).
 const E2E_SETUP_DONE: &str = include_str!("../../../../../tests/e2e/setup-done.json");
 
-/// A home the e2e stack prepared: the plugin copied in at the bundle's version and enabled, as `tests/e2e/stack.py` does.
+/// A home the e2e stack prepared: the bundle's plugin and `hx` copied in and the plugin enabled, as `tests/e2e/stack.py`
+/// does (the same tree, without tests and caches).
 fn a_home_with_the_plugin(r: &Rig) {
     let home = r.fake.home.clone();
-    let plugin = home.join("plugins").join("boopis");
-    std::fs::create_dir_all(&plugin).unwrap();
-    std::fs::copy(
-        r.bundle.plugin_dir.as_ref().unwrap().join("plugin.yaml"),
-        plugin.join("plugin.yaml"),
-    )
-    .unwrap();
+    super::install::install_plugin(r.bundle.plugin_dir.as_ref().unwrap(), &home).unwrap();
+    super::install::place_hx(r.bundle.hx.as_ref().unwrap(), &home).unwrap();
     r.fake.plugins.lock().unwrap().push(PluginEntry {
         name: "boopis".into(),
         enabled: true,

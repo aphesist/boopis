@@ -45,6 +45,9 @@ pub trait HermesOps: Send + Sync {
     async fn enable_plugin(&self, name: &str) -> Result<()>;
     /// Stop the gateway if it runs and start it again, so it loads the plugin and re-reads its secret sources.
     async fn restart_gateway(&self) -> Result<()>;
+    /// Stop the gateway if it runs, ending its live work, and wait until it is gone, before setup replaces code it has
+    /// loaded; the restart step starts a fresh one. `false` when it still answers after the wait.
+    async fn stop_gateway(&self) -> Result<bool>;
     /// Restart the gateway so it reads a key saved since it started, but only when no turn is running (ending one is never silent).
     /// `true` when it restarted, `false` when it was left running (a turn is live) or this double does not restart.
     ///
@@ -190,6 +193,10 @@ impl HermesOps for CliOps {
         // It waits for the old gateway to go before it starts the new one, so the new one is served its keys
         // (`Supervisor::restart`).
         self.sup.restart(&self.home, true).await.map(|_| ())
+    }
+
+    async fn stop_gateway(&self) -> Result<bool> {
+        self.sup.stop(&self.home, true).await
     }
 
     async fn restart_gateway_when_idle(&self) -> Result<bool> {

@@ -24,6 +24,7 @@ pub mod xai_ways;
 #[cfg(test)]
 mod tests;
 
+use std::path::Path;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -442,23 +443,17 @@ impl Setup {
         let home = self.ops.home();
         let state = state::load(&home)?;
         let installed = install::plugin_version(&ops::plugins_dir(&home).join("boopis"));
-        let bundled = self
-            .bundle
-            .plugin_dir
-            .as_deref()
-            .and_then(install::plugin_version);
         let enabled = self
             .ops
             .plugins()
             .await
             .is_ok_and(|l| l.iter().any(|p| p.name == "boopis" && p.enabled));
+        let outdated = self.stale_code(&home).await.unwrap_or("");
         let (needed, reason) = match (state.done_at, installed, enabled) {
             (_, None, _) => (true, "the boopis plugin is not installed"),
             (_, _, false) => (true, "the boopis plugin is not enabled"),
             (None, _, _) => (true, "setup has not finished"),
-            (Some(_), Some(i), true) if bundled.is_some_and(|b| b != i) => {
-                (true, "the app carries a newer plugin")
-            }
+            _ if !outdated.is_empty() => (true, outdated),
             _ if !state.route_checked && self.route_missing(&home, state.clone()).await => {
                 (true, "the engine has no default model")
             }
@@ -477,6 +472,54 @@ impl Setup {
             needed,
             reason: reason.into(),
         })
+    }
+
+    /// Why the code the engine runs is not the code this app carries, or `None` when it is: the boopis plugin, a plugin the
+    /// runtime carries, or `hx`, each compared by content (`install::tree_digest`, the bytes of `hx`), never by a version
+    /// string (B27: `plugin.yaml` said `0.1.0` in every release). Read-only: it hashes, it writes nothing.
+    async fn stale_code(&self, home: &Path) -> Option<&'static str> {
+        let (bundle, home) = (self.bundle.clone(), home.to_path_buf());
+        let runtime_root = self
+            .runtime
+            .as_ref()
+            .map(|plan| plan.runtime.layout(&plan.runtimes_dir()).root);
+        let looked = tokio::task::spawn_blocking(move || {
+            let plugin = bundle
+                .plugin_dir
+                .as_deref()
+                .is_some_and(|dir| install::needs_install(dir, &home, "boopis"));
+            let carried = runtime_root
+                .is_some_and(|root| !install::runtime_plugins_pending(&root, &home).is_empty());
+            let hx = bundle
+                .hx
+                .as_deref()
+                .is_some_and(|hx| install::hx_differs(hx, &home));
+            if plugin || carried {
+                Some("the app carries a newer plugin")
+            } else if hx {
+                Some("the app carries a newer hx")
+            } else {
+                None
+            }
+        })
+        .await;
+        // a look that could not finish says nothing is stale: setup is not forced on a guess
+        looked.unwrap_or(None)
+    }
+
+    /// Stop the gateway before setup replaces code it has loaded. Python keeps the modules it imported and imports the rest
+    /// lazily, so a gateway left running over a replaced plugin would run two releases at once; stopped first, the restart
+    /// step starts it fresh on the new code. It ends running work with `--yes`, as setup's restart always has: this only
+    /// moves the stop before the swap. A gateway that does not go is not written under.
+    async fn stop_for_replace(&self, state: &mut State) -> Result<()> {
+        state.restart_pending = true;
+        if self.ops.stop_gateway().await? {
+            return Ok(());
+        }
+        Err(Error::Setup(
+            "hx.setup.plugin_install_failed",
+            "the engine did not stop, so the code it runs was not replaced".into(),
+        ))
     }
 
     fn apply_answer(&self, state: &mut State, answer: &Answer) -> Result<()> {
@@ -757,6 +800,19 @@ impl Setup {
         // The plugins the runtime carries (the Claude subscription, ADR-0030) go where the engine finds a profile's plugins.
         // A model-provider plugin needs no enable entry; nothing here asks the user, and nothing is downloaded.
         let (root, home) = (layout.root.clone(), self.ops.home());
+        let pending = {
+            let (root, home) = (root.clone(), home.clone());
+            tokio::task::spawn_blocking(move || install::runtime_plugins_pending(&root, &home))
+                .await
+                .unwrap_or_default()
+        };
+        // only a copy the gateway may have loaded calls for a stop; a first placement does not
+        let replacing = pending
+            .iter()
+            .any(|name| std::fs::symlink_metadata(ops::plugins_dir(&home).join(name)).is_ok());
+        if replacing && let Err(e) = self.stop_for_replace(state).await {
+            return run.blocked(id, title, "hx.setup.plugin_install_failed", &e);
+        }
         match tokio::task::spawn_blocking(move || install::install_runtime_plugins(&root, &home))
             .await
         {
@@ -807,6 +863,18 @@ impl Setup {
             return run.blocked(id, title, "hx.setup.no_bundle", &e);
         };
         let home = self.ops.home();
+        let pending = {
+            let (dir, home) = (dir.clone(), home.clone());
+            tokio::task::spawn_blocking(move || install::needs_install(&dir, &home, "boopis"))
+                .await
+                .unwrap_or(true)
+        };
+        if pending
+            && install::plugin_version(&ops::plugins_dir(&home).join("boopis")).is_some()
+            && let Err(e) = self.stop_for_replace(state).await
+        {
+            return run.blocked(id, title, "hx.setup.plugin_install_failed", &e);
+        }
         let copied =
             tokio::task::spawn_blocking(move || install::install_plugin(&dir, &home)).await;
         let line = match copied {
@@ -814,6 +882,12 @@ impl Setup {
             Ok(Ok(Installed::Written { from: None, to })) => {
                 state.restart_pending = true;
                 format!("installed version {to}")
+            }
+            Ok(Ok(Installed::Written { from: Some(f), to })) if f == to => {
+                state.restart_pending = true;
+                format!(
+                    "replaced with the copy this app carries (version {to}); your settings are kept"
+                )
             }
             Ok(Ok(Installed::Written { from: Some(f), to })) => {
                 state.restart_pending = true;
