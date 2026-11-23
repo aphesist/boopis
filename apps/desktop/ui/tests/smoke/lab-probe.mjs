@@ -34,5 +34,24 @@ export async function labProbe(env) {
     check('lab-probe', 'a row that fits reports nothing', (await cuts(page('overflow-y:auto;overflow-x:hidden', row(420)))).length === 0);
     check('lab-probe', 'what a column scrolls out of view below is not a cut', (await cuts(page('overflow-y:auto;overflow-x:hidden', row(420)).replace('</div></div></body>', below + '</div></div></body>'))).length === 0);
   });
+  /* inline-baseline: a capsule in a sentence, trimmed to its words' cap height and baseline and padded by half of what is left, is
+     on its line; the same capsule nudged 4px down is not. The family's italic face is drawn smaller (size-adjust), as a face that has
+     not loaded yet stands in a smaller fallback: the probes take the text's own face, never the italic an <i> would ask for (CI run
+     207 read Liberation Sans's cap height off Libre Franklin's unloaded italic, a chip 0.7px low that was not) */
+  const chips = async (nudge) => {
+    await p.setContent(`<!doctype html><style>
+@font-face { font-family: LabSans; src: local("DejaVu Sans"), local("Liberation Sans"), local("Arial"); font-weight: 100 900; }
+@font-face { font-family: LabSans; font-style: italic; src: local("DejaVu Sans"), local("Liberation Sans"), local("Arial"); font-weight: 100 900; size-adjust: 80%; }
+</style><body style="margin:0;background:#111;color:#eee"><div id="t" style="width:600px;padding:20px">
+  <p style="margin:0;font:400 15px/24px LabSans">staging needs <span class="ui-mention" style="display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:10px;background:#444;font:500 13px/1 LabSans;vertical-align:${nudge}"><span style="align-self:baseline;line-height:1;text-box:trim-both cap alphabetic;padding-block:calc((20px - 1cap) / 2)">you</span></span> before I deploy.</p></div></body>`);
+    await p.addScriptTag({ path: PROBE });
+    return p.evaluate(() => window.__labProbe.run({ scope: '#t', checks: ['inline-baseline'] }).findings.map((f) => f.el + ': ' + f.msg));
+  };
+  await s.safe('lab-probe', async () => {
+    const on = await chips('baseline');
+    check('lab-probe', 'inline-baseline: a capsule trimmed to its cap height and baseline is on its line, measured in its own face (not an italic one)', on.length === 0, on);
+    const off = await chips('-4px');
+    check('lab-probe', 'inline-baseline: the same capsule nudged 4px down is off its line', off.length === 1 && /\(a\) its text's baseline is 4 device px below/.test(off[0] ?? ''), off);
+  });
   await s.close();
 }
