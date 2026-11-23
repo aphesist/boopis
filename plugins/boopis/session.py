@@ -17,6 +17,9 @@ from typing import Any
 
 from . import hx, policy
 from ._vendor.contraprova.interfaces import TierLadder
+from .bots.rules import BotRules, rules_for
+from .budget.month import MonthScanner
+from .budget.run import RunBudget
 from .config import (
     Loaded,
     Mode,
@@ -72,6 +75,7 @@ class SessionState:
     )  # tool_call_id -> (reason, rule) of the block
     lock: threading.RLock = field(default_factory=threading.RLock)
     track: TurnTrack = field(default_factory=TurnTrack)  # who answers the current turn, and the one-turn exception
+    run: RunBudget = field(default_factory=RunBudget)  # the current turn's spend against a bot's cap per run
 
     @property
     def effective_mode(self) -> Mode:
@@ -112,9 +116,13 @@ class Runtime:
         delegation_backend: Callable[[], str | None] | None = None,
         active_parent: Callable[[], Any] | None = None,
         redactor: Callable[[str], str] | None = None,
+        root: Path | None = None,
     ) -> None:
         self.ctx = ctx
         self._home = home
+        self._root = root  # tests name the Hermes root; the product asks Hermes
+        self.month_scanner = MonthScanner()  # the team's spend this month, for every profile of the root
+        self.pauses: dict[str, str] = {}  # the rule key of a run cap's pause card -> the session it holds
         self._sessions: dict[str, SessionState] = {}
         self._registry_lock = threading.Lock()
         self.links: dict[str, WorkerLink] = {}  # a delegated child's session id -> the attempt it is
@@ -132,6 +140,20 @@ class Runtime:
     @property
     def home(self) -> Path:
         return self._home if self._home is not None else Path(hermes_home())
+
+    @property
+    def root(self) -> Path:
+        """The Hermes root (the default profile's home), where the team's budget and every profile live."""
+        return self._root if self._root is not None else Path(self._hermes_root())
+
+    def bot_rules(self) -> BotRules | None:
+        """The rules of the bot whose turn this is (``bots.rules``), None in the owner's own profile."""
+        return rules_for(self.home, self.root)
+
+    def own_ledger_dirs(self, state: SessionState) -> tuple[Path, ...]:
+        """This profile's ledger folder when ``ledger_dir`` moved it: the month counts it too."""
+        configured = state.settings.ledger_dir
+        return (Path(configured),) if configured else ()
 
     def load_settings(self) -> Loaded:
         return load_settings(self.ctx.get_config)
@@ -388,7 +410,7 @@ class Runtime:
             config_error="; ".join(errors),
             exec_network=settings.exec.network,
             hermes_home=str(self.home),
-            hermes_root=self._hermes_root(),
+            hermes_root=str(self.root),
         )
 
     def _bootstrap_spend(self, state: SessionState) -> None:

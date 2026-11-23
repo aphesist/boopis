@@ -15,7 +15,8 @@ from typing import Any
 from . import budget, policy, turns
 from .hermes_api import bound
 from .ledger import project_costs, usage_event_payload
-from .policy import ToolCall
+from .policy import Decision, ToolCall
+from .policy.types import block as block_decision
 from .session import Caller, Runtime, SessionState
 from .util.log import get_logger
 
@@ -88,7 +89,7 @@ def pre_tool_call(tool_name: str = "", args: Mapping[str, Any] | None = None, **
         session_id = str(kw.get("session_id") or "")
         caller = _caller(rt, kw)
         call = ToolCall(tool_name, args or {}, session_id, str(kw.get("tool_call_id") or ""))
-        decision = policy.check(call, rt.policy_for(caller))
+        decision = _budget_gate(rt, caller, policy.check(call, rt.policy_for(caller)))
         if decision.kind == "block" and call.tool_call_id:
             caller.state.blocked_calls[call.tool_call_id] = "hx.policy.denied"
             caller.state.blocked_rules[call.tool_call_id] = (decision.reason, decision.rule)
@@ -100,6 +101,48 @@ def pre_tool_call(tool_name: str = "", args: Mapping[str, Any] | None = None, **
     except Exception:  # noqa: BLE001 - the policy hook fails closed
         _log.error("pre_tool_call failed closed for tool=%s", tool_name, exc_info=True)
         return _block("boopis could not evaluate its policy, so this call was blocked.")
+
+
+def _budget_gate(rt: Runtime, caller: Caller, decision: Decision) -> Decision:
+    """The budgets a run meets before a tool call (``budget``): the team's month, then the bot's cap per run. A refusal
+    of the policy stands; a pause of the budget is the engine's approval card, and when the policy also asked, the one
+    card carries both reasons (allowing it allows the call)."""
+    if decision.kind == "block":
+        return decision
+    state = caller.state
+    month = budget.month_stop(rt, state, state.provider, state.model)
+    if month is not None:
+        if budget.run.stop(state.run, "month"):
+            budget.record_block(rt, state, "month_budget", cap=month[1], scope="month")
+        return block_decision(month[0], "month_budget")
+    bot = rt.bot_rules()
+    verdict = budget.run_gate(state, bot, asked_by="")
+    if verdict is None or bot is None or bot.cap_usd is None:
+        return decision
+    if verdict.kind == "stop":
+        if budget.run.first_stop(state.run):
+            budget.record_block(rt, state, verdict.reason, cap=bot.cap_usd, scope="run")
+        return block_decision(verdict.message, verdict.reason)
+    rt.pauses[verdict.rule_key] = state.session_id
+    budget.record_block(rt, state, verdict.reason, cap=bot.cap_usd, scope="run")
+    message = verdict.message if decision.kind != "approve" else f"{verdict.message} Also: {decision.message}"
+    return Decision("approve", message=message, rule_key=verdict.rule_key, reason=verdict.reason, rule="run_cap")
+
+
+def post_approval_response(**kw: Any) -> None:
+    """The engine's approval gate settled a card. When it is a run cap's pause, the run is raised or stopped
+    (``budget.run.answered``); any other card is not the budget's business. An observer: never raises."""
+    try:
+        key = str(kw.get("pattern_key") or "").removeprefix("plugin_rule:")
+        if not key.startswith(budget.run.RULE_PREFIX):
+            return
+        rt = runtime()
+        session_id = rt.pauses.pop(key, None)
+        if session_id is None:
+            return
+        budget.run.answered(rt.state(session_id).run, key, str(kw.get("choice") or ""))
+    except Exception:  # noqa: BLE001
+        _log.error("an answer at a run cap was not recorded; the run stops at its next tool call", exc_info=True)
 
 
 def _why(reason: str, rule: str) -> dict[str, Any]:
@@ -168,7 +211,8 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
             return _worker_turn(rt, rt.caller(session_id), str(kw.get("model") or ""))
         rt.roster.note_message(session_id, str(kw.get("user_message") or ""))  # what the user named (delegation guard)
         state = _locked(rt, session_id, model=str(kw.get("model") or ""))
-        capped = _cost_cap(rt, state, state.provider, state.model)
+        budget.run.begin(state.run, str(kw.get("turn_id") or ""))  # every turn is a new run
+        capped = _cost_cap(rt, state, state.provider, state.model) or _turn_budgets(rt, state)
         if capped is not None:
             state.track.armed_at = None  # a blocked turn does not use the exception
             return capped
@@ -205,6 +249,19 @@ def _worker_turn(rt: Runtime, caller: Caller, model: str) -> dict[str, Any] | No
             "The attempt was stopped: a tier is the plugin's choice."
         )
     return _cost_cap(rt, caller.state, link.provider, link.model)
+
+
+def _turn_budgets(rt: Runtime, state: SessionState) -> dict[str, Any] | None:
+    """When a turn starts: a bot whose rules cannot be read does not run, and a spent team budget stops every turn."""
+    refused = budget.bot_turn_refusal(rt.bot_rules())
+    if refused is not None:
+        return _block(refused)
+    month = budget.month_stop(rt, state, state.provider, state.model)
+    if month is None:
+        return None
+    budget.run.stop(state.run, "month")
+    budget.record_block(rt, state, "month_budget", cap=month[1], scope="month")
+    return _block(month[0])
 
 
 def _cost_cap(rt: Runtime, state: SessionState, provider: str, model: str) -> dict[str, Any] | None:
@@ -312,6 +369,7 @@ def _record_usage(kw: Mapping[str, Any], *, auxiliary: bool) -> None:
             state.unpriced.update(costs.billed_unpriced)
         else:
             state.spend_usd += costs.billed_usd
+    budget.note_usage(rt, state, payload)  # the run's API-equivalent, against a bot's cap per run
 
 
 def post_api_request(**kw: Any) -> None:

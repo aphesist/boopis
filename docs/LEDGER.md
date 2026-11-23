@@ -40,7 +40,7 @@ The harness adds the types below. They go upstream into contraprova's `EVENT_TYP
 | `blank.lapsed` | `blank_id` | became an end-of-turn question |
 | `feedforward.set` | `turn_id`, `decision`, `value`, `source` (`config`/`convention`/`model`/`user`) | |
 | `mode.changed` | `from`, `to` | |
-| `budget.blocked` | `cap_usd`, `price_table` | dollars beyond the cap value are computed, never stored |
+| `budget.blocked` | `cap_usd`, `price_table` | dollars beyond the cap value are computed, never stored. Extra fields: `reason` (`cap_reached`, `unpriced`, `run_cap_paused`, `run_cap_stopped`, `month_budget`) and `scope` (`run`: a bot's cap per run, `month`: the team's monthly budget; absent: the session's `cost_cap_usd`), ADR-0048 |
 
 ### Pending upstream: form events
 Forms (`docs/FORMS.md` section 6) are recorded today as `tool.called` events whose `tool` is `form.opened` or `form.resolved`, because contraprova's `EVENT_TYPES` has no `form.*` yet. The extra keys are `form_id`, `kind`, `origin`, and then `fields` and `secrets` (names only) on open, or `form_status` (`submitted`, `cancelled`, `expired`), `provided` (the secret fields saved to the host) and `answered` (the non-secret field names) on resolve. Values are never written. Upstream adds `form.opened` (`form_id`, `kind`, `fields`) and `form.resolved` (`form_id`, `form_status`, `provided`) to `HARNESS_EVENT_TYPES` and `REQUIRED_FIELDS`; the plugin then writes them under those names and stops using `tool.called`. The vendored copy is not edited.

@@ -504,6 +504,20 @@ describe('a conversation with a teammate is a session of its own profile', () =>
     expect(events.find((e) => e.type === 'run')).toMatchObject({ running: true });
     expect(events.filter((e) => e.type === 'run').pop()).toMatchObject({ running: false });
   });
+  it('the run’s spend against its cap is the plugin’s own count, and unknown stays unknown', async () => {
+    const { h, bots, events } = await open();
+    bots.source.send('atlas', 'hello', 'bots');
+    await tickAll();
+    events.length = 0;
+    const link = h.links.get('atlas')!;
+    link.emit({ type: 'plugin.boopis.budget.updated', session_id: 'gw-atlas', payload: { spent_usd: 0.2411, limit_usd: 0.6, cap_usd: 0.6, basis: 'api_equivalent' } });
+    link.emit({ type: 'plugin.boopis.budget.updated', session_id: 'gw-atlas', payload: { spent_usd: null, unpriced: ['x/y'], limit_usd: 0.6 } });
+    link.emit({ type: 'plugin.boopis.budget.updated', session_id: 'gw-other', payload: { spent_usd: 9, limit_usd: 1 } });   // not this chat
+    expect(events.filter((e) => e.type === 'spend')).toEqual([
+      { type: 'spend', botId: 'atlas', spent: '$0.24', cap: '$0.60' },
+      { type: 'spend', botId: 'atlas', spent: null, cap: '$0.60' }
+    ]);
+  });
   it('a said message for a conversation that is not open draws nothing (it shows when the conversation is opened)', async () => {
     const { h, bots, events } = await open();
     events.length = 0;

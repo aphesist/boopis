@@ -24,6 +24,8 @@ provides_hooks:
   - on_session_start
   - on_session_end
   - on_session_finalize
+  # budget/: a run cap's pause card is answered at the engine's approval gate (ADR-0048)
+  - post_approval_response
   # compat/: the Claude Code hooks bridge (docs/COMPAT.md section 4)
   - transform_tool_result
   - post_llm_call

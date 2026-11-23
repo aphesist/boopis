@@ -83,7 +83,10 @@ export type BotsEvent =
   /** a reply is being worked on (true) or finished or was stopped (false) */
   | { type: 'run'; botId: string; running: boolean }
   /** the whole thread changed under the room (a session was opened or a new one started): draw it again */
-  | { type: 'thread'; botId: string; messages: readonly ThreadMessage[] };
+  | { type: 'thread'; botId: string; messages: readonly ThreadMessage[] }
+  /** what the bot's current run has spent against its cap per run, as the plugin counts it (`plugin.boopis.budget.updated`):
+      dollars as shown ("$0.24"), null when unknown (a model of the run has no price) or when it has no cap */
+  | { type: 'spend'; botId: string; spent: string | null; cap: string | null };
 export interface BotsSnapshot { bots: readonly Bot[]; threads: Readonly<Record<string, readonly ThreadMessage[]>> }
 /** a routine a bot is asked to take on: a job in its profile's cron store */
 export interface RoutineDraft { name: string; prompt: string; schedule: string }

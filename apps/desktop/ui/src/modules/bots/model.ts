@@ -26,6 +26,8 @@ export const S = {
   newFollow: null as Follower | null,
   draft: null as Draft | null, draftRow: null as { li: HTMLElement; o: HTMLElement; name: HTMLElement; btn: HTMLElement } | null,
   runs: new Set<string>(),
+  /** each bot's current run against its cap per run, as the plugin last said (`spend` events); a bot not in it: unknown */
+  spend: {} as Record<string, { spent: string | null; cap: string | null }>,
   /** the Archived group under the roster, and the way to stop listening to the provider's archived bots */
   archivedEl: null as HTMLElement | null, offArchived: null as (() => void) | null,
   sheetOpen: false, sheetFor: null as string | null, sheetReturn: null as Element | null

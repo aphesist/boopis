@@ -23,6 +23,8 @@ import { openNew } from './new-bot';
 import { updateRow } from './list';
 
 const sentence = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+/** what the cap per run means, said where it is set (ADR-0048) */
+export const CAP_HINT = 'Dollars per run: one message, room turn, card or scheduled run. At the cap it pauses and asks you; no answer stops it. On a subscription it counts what the same tokens would cost on the API, so it works as a token budget.';
 
 export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | null, keepFocus: boolean): void {
   const admin = data().bots.admin as BotsAdmin;
@@ -139,15 +141,13 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const ownErr = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: true });
   const gov = ui.segmented({ mode: 'radio', label: 'Governance', value: c.gov, options: [{ value: 'governed', label: 'Governed' }, { value: 'ungoverned', label: 'Ungoverned' }], fill: true });
   const capId = 'bt-cap-' + b.id;
-  const capRow = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
-  capRow.hidden = c.gov !== 'governed';
+  const capRow = frag(ui.html.setRow({ label: 'Cap per run', hint: CAP_HINT, for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
   let capTimer = 0;
   $<HTMLInputElement>('input', capRow).addEventListener('input', (e) => { const v = (e.target as HTMLInputElement).value.trim(); window.clearTimeout(capTimer); capTimer = window.setTimeout(() => { if (/^\d{1,4}(\.\d{1,4})?$/.test(v)) own({ cap: v }); }, 500); });
   gov.addEventListener('ui:change', (e) => {
     const v = (e as CustomEvent<{ value: string }>).detail.value as BotConfig['gov'];
-    capRow.hidden = v !== 'governed';
     /* refused (governed mode needs a frontier model): the switch goes back to what is saved, and the reason shows below */
-    own({ gov: v }, undefined, () => { gov.select(c.gov); capRow.hidden = c.gov !== 'governed'; });
+    own({ gov: v }, undefined, () => { gov.select(c.gov); });
   });
   const ws = ui.segmented({ mode: 'radio', label: 'Workspace', value: c.workspace, options: [{ value: 'worktree', label: 'Worktree' }, { value: 'sandbox', label: 'Sandbox' }], fill: true });
   ws.addEventListener('ui:change', (e) => { own({ workspace: (e as CustomEvent<{ value: string }>).detail.value as BotConfig['workspace'] }); });
@@ -178,7 +178,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     sec('model', 'Model', info.model ?? 'not set', [modelF]),
     sec('schedule', 'Schedule', jobsMeta, [hint('What it does when you have not asked. Each is a job in this bot’s own schedule.'), routines, routineErr, promptF, presets, cronF, el('div', { class: 'bt-add-row' }, addBtn)]),
     sec('capabilities', 'What it can use', null, [hint('The tools and skills this bot has. boopis shows them here; changing them is not offered here yet.'), caps]),
-    sec('rules', 'Rules', null, [hint('Saved with the bot, in its boopis folder. Governed applies from its next session and needs a frontier model; the workspace and what it asks first do not apply yet.'), gov, capRow, ws, appr, ownErr, el('div', { class: 'ui-set' }, runLimitRow(b))])
+    sec('rules', 'Rules', null, [hint('Saved with the bot, in its boopis folder. Governed applies from its next session and needs a frontier model; the cap applies from its next step; the workspace and what it asks first do not apply yet.'), gov, capRow, ws, appr, ownErr, el('div', { class: 'ui-set' }, runLimitRow(b))])
   );
   paintRoutines();
   const heads = wireSectionKeys(body);

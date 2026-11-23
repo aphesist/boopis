@@ -12,7 +12,7 @@ import { orbButton } from './orbs';
 import { updateRow } from './list';
 import { focusConversation, openBot, paintToolbar, refreshPresence } from './room';
 import { checkClips } from './clips';
-import { openLiveSheet } from './settings-live';
+import { CAP_HINT, openLiveSheet } from './settings-live';
 import { lookEditor } from './look-edit';
 import { limitWords, openLimitMenu } from './run-limit';
 
@@ -109,15 +109,16 @@ export function openSettings(id: string | null, focusSection?: string | null, op
     if (c.gov === 'governed') {
       const g = data().details.governance.get();
       modelBox.append(ui.ladder({ stations: g.ladder, current: 0, variant: 'list', label: 'Escalation ladder' }));
-      const capId = 'bt-cap-' + b.id;
-      const row = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
-      $<HTMLInputElement>('input', row).addEventListener('input', (e) => { c.cap = (e.target as HTMLInputElement).value; push({ cap: c.cap }); paintToolbar(b); });
-      modelBox.append(row);
     } else {
-      const f = ui.field({ kind: 'model', label: 'Model', options: catalog.models, value: c.model, hint: 'Runs every step on this model, with no escalation and no cap.' });
+      const f = ui.field({ kind: 'model', label: 'Model', options: catalog.models, value: c.model, hint: 'Runs every step on this model, with no escalation.' });
       f.addEventListener('ui:change', (e) => { c.model = (e as CustomEvent<{ value: string }>).detail.value; push({ model: c.model }); changed(); });
       modelBox.append(f);
     }
+    /* the cap per run holds governed or not (ADR-0048) */
+    const capId = 'bt-cap-' + b.id;
+    const row = frag(ui.html.setRow({ label: 'Cap per run', hint: CAP_HINT, for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
+    $<HTMLInputElement>('input', row).addEventListener('input', (e) => { c.cap = (e.target as HTMLInputElement).value; push({ cap: c.cap }); paintToolbar(b); });
+    modelBox.append(row);
   };
   const gov = ui.segmented({ mode: 'radio', label: 'Governance', value: c.gov, options: [{ value: 'governed', label: 'Governed' }, { value: 'ungoverned', label: 'Ungoverned' }], fill: true });
   gov.addEventListener('ui:change', (e) => { c.gov = (e as CustomEvent<{ value: string }>).detail.value as BotConfig['gov']; push({ gov: c.gov }); paintModel(); changed(); });
