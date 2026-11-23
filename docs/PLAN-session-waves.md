@@ -190,3 +190,4 @@ Recommended: (1). It keeps every change journaled and rewindable.
   Keep the life: fix the turned-silhouette notch geometrically instead of clamping turns.
 - CHANGE (owner): the dock also uses the fixed 3/4 pose at idle; a hovered bot animates smoothly out of it and back; bots in a state (working, needs you) animate. Main chat stays fully animated.
 - Onboarding (owner): setup + onboarding are full-window standalone animated screens led by the oo logomark (no app chrome), like Grok-Bot; then in the app the boopis bot talks in its chat (Bots), and Sessions gets an equivalent hand-off. Fix misaligned buttons; QA must cover clip frames.
+- Sessions hand-off (owner): the oo mark carries on into the app (becomes mark A on the new-session canvas); Bots: the boopis bot in its chat.
