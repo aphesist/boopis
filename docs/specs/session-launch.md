@@ -276,6 +276,7 @@ No host change in S0 beyond what the UI already proxies. The Local API is unchan
 
 1. **The three governed steps change in place.** Switching between Supervised, Auto-accept edits and Auto happens in the same engine session (`careful.set`): it touches no toolset and no prompt, so it costs no cache. Only crossing to or from Full access, or changing the folder, skills or toolsets, continues on a new engine session. (section 6.1)
 2. **Without a trusted gate command, only Supervised and Full access are offered.** Auto-accept edits and Auto are unavailable for that project, with the reason shown. (section 5.4)
+3. **Auto means "only your rules ask".** The owner confirmed (23 Nov 2026): at Auto the global approval rules are the session's only asks; Full access is the one step that never asks. (section 5)
 
 ## 11. Acceptance tests
 

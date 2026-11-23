@@ -351,6 +351,7 @@ End to end (fake model server, pinned engine, as CI does): a bot's `terminal` ca
 - Recorded owner decision (23 November 2026): a scheduled run's rule match is refused for now, left as the shared approval card, and re-run on approval (section 8.3).
 - Owner question 1: should a per-bot Allow override a global rule for that bot (proposed: no, an exception does that)?
 - Owner question 2: do the global rules apply to the owner's own sessions too (proposed: bots only, as decision 10 says)?
+  - **Decided (owner, 23 Nov 2026):** the global rules apply to bots always, and to the owner's Session tab sessions at the Auto step (where they are the only asks), as `session-launch.md` section 5 specifies. They do not ask at Full access.
 
 ## 16. Verification log
 
