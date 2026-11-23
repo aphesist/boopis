@@ -101,7 +101,7 @@ export async function takeRoom(ctx: ActCtx): Promise<Room> {
   /* the room is act 2's from S1: drawn, and never clipped by the key frame's box (the camera moves past it) */
   const end = actEnd(ctx);
   visFrom(film, kfBox, S1, (t) => t <= end + 1e-9);
-  for (const e of [scope, wrap, head, thread, presence, composer]) if (e !== kfBox) visFrom(film, e, S1, () => true);
+  for (const e of [scope, wrap, head, thread, presence, composer]) if (e !== kfBox) visFrom(film, e, S1, (t) => t <= end + 1e-9);
   if (kfBox.classList.contains('stage')) styleFrom(film, kfBox, 'overflow', S1, () => 'visible');
 
   /* kai's orb in the presence entry: act 1's film orb when shared, else ours drawn over it from S1 */
