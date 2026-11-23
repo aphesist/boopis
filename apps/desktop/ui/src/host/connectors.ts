@@ -19,7 +19,7 @@ import '../modules/cards';
 import { useFormsHost } from '../modules/cards/forms-host';
 import type { FormOutcome, FormSpec, FormsSource } from '../data';
 import type { ItemRef } from '@boopis/ui';
-import { clipSpots, tipsIfClipped } from '../core/clip';
+import { clipSpots, tipsIfClipped, watchCuts } from '../core/clip';
 import { connectorSigninForm, fromConnectorForm } from './forms';
 import type { ConnectorFormIn } from './forms';
 import type { ConnectorCatalogEntry, ConnectorInfo, ConnectorInstall, ConnectorRequest, ConnectorSource, ConnectorsBridge } from './connectors-bridge';
@@ -255,6 +255,8 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     ui.hydrate(collection);
     tipsIfClipped(clipSpots(collection));   /* measured at once, so every draw of the list carries the same tooltips */
   }
+  /* a cut name or line is checked again whenever the collection's width changes */
+  watchCuts(collection);
   /* choosing a connector: one way to run adds it at once; several open a menu that says what each one does and where it reaches */
   collection.addEventListener('ui:select', (e) => {
     e.preventDefault();   /* adding is not choosing: no row is marked current */

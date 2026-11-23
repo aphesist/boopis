@@ -41,6 +41,6 @@ export default [
       list(root, ui.html.itemRow({ ref: { name: LONG_TITLE, kind: 'skill' }, title: LONG_TITLE, sub: 'Skill · ' + UNBROKEN + ' · ' + LONG_TITLE, end: 'needs 2 keys', value: 'long' }), 320).setAttribute('data-ui', 'rows');
       ui.hydrate(root);
     }, { width: 360, note: 'the title and the line are cut with an ellipsis; the whole text is the row\'s accessible name' }),
-    empty: stage(['empty'], ({ root }) => { list(root, ui.html.itemRow({ ref: { name: '' }, title: '', sub: '', value: 'none' }), 320); }, { width: 360, note: 'an item with no name and no line still keeps the row\'s height' })
+    empty: stage(['empty'], ({ root }) => { list(root, ui.html.itemRow({ ref: { name: 'Loose skill', kind: 'skill' }, title: 'Loose skill', sub: '', value: 'none' }), 320); }, { width: 360, note: 'an item whose source gave no summary and that needs nothing: its name alone, the row keeps its height' })
   })
 ];

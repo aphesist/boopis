@@ -5,7 +5,7 @@
    its diff, Roll back, Remove, kill-list banners) and Sources. The view never fetches: it reads and writes through
    `StoreProvider` and shows each failure as the host's own sentence. An item's own text is marked `data-store-item`. */
 import { progressDots, setProgress, ui } from '@boopis/ui';
-import { clipSpots, tipsIfClipped } from '../../core/clip';
+import { clipSpots, tipsIfClipped, watchCuts } from '../../core/clip';
 import { STORE_ITEM, storeItem } from '../../core/engine-words';
 import { reduced } from '../../core/dom';
 import type { FormOutcome, FormSpec, FormsSource, InstallPlan, InstallReceipt, StageResult, StoreBrowse, StoreDetail, StoreItem, StoreKind, StoreProvider, StoreScope, StoreSource, UpdateDiff } from '../../data';
@@ -118,6 +118,8 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
   }
   /* a title or a line cut by the row's width shows whole in the tooltip while it is cut */
   const tipCut = (host: HTMLElement): void => { tipsIfClipped(clipSpots(host)); };
+  let stopCuts: (() => void) | null = null;
+  const watchList = (host: HTMLElement): void => { stopCuts?.(); stopCuts = watchCuts(host); };
   const wireRows = (host: HTMLElement): void => {
     ui.hydrate(host);
     for (const b of host.querySelectorAll<HTMLElement>('button[data-store-open]:not(.ui-row)')) b.addEventListener('click', () => { void openItem(b.dataset['storeOpen'] ?? ''); });
@@ -203,6 +205,8 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
       if (e.key === 'Enter') { const rows = list.querySelectorAll<HTMLElement>('.ui-row'); if (rows.length === 1) { e.preventDefault(); rows[0]?.click(); } }
     });
     crossLists(list, input);
+    /* a cut title or line is checked again whenever the list's width changes (a scrollbar arriving, the window resized) */
+    watchList(list);
     list.addEventListener('ui:select', (e) => { e.preventDefault(); const v = (e as CustomEvent<{ value?: string }>).detail.value; if (v) void openItem(v); });   /* opening is not choosing: no row is marked current */
     let timer = 0;
     input?.addEventListener('input', () => { window.clearTimeout(timer); timer = window.setTimeout(() => { B.query = input.value; void load(false); }, 150); });

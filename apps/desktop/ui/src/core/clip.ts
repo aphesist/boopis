@@ -35,3 +35,19 @@ export function clipSpots(root: ParentNode): Array<readonly [HTMLElement, readon
     return [r, [t, l], [t?.textContent ?? '', l?.textContent ?? ''].filter(Boolean).join('. ')] as const;
   });
 }
+
+/** keep the item rows under `host` honest: their cut text is checked now, whenever `host` changes width (a scrollbar arriving,
+    the window resized) and whenever a web font finishes loading (text measured in the fallback face can be cut, or not, until
+    the real one arrives). Returns the way to stop; it also stops by itself once `host`, having been on the page, leaves it. */
+export function watchCuts(host: HTMLElement): () => void {
+  let seen = false;   /* stops when the host leaves the page, not before it first arrives */
+  const check = (): void => { if (host.isConnected) { seen = true; tipsIfClipped(clipSpots(host)); } else if (seen) stop(); };
+  const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(check);
+  ro?.observe(host);
+  const fonts = typeof document !== 'undefined' ? document.fonts : undefined;
+  fonts?.addEventListener?.('loadingdone', check);
+  void fonts?.ready?.then(check);
+  check();
+  function stop(): void { ro?.disconnect(); fonts?.removeEventListener?.('loadingdone', check); }
+  return stop;
+}
