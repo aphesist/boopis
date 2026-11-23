@@ -205,3 +205,4 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - Owner: orb3 = flattened 3D slabs (extruded outline, thin side wall) with true perspective, like Grok; built as branch orb3 in the orb2 repo (new aphesist/orb3 repo only if the owner creates it).
 - CORRECTION (owner): not coins/slabs. Each shape its own proper 3D solid (sphere, box, 3D heart...), flattened in depth, with on-point perspective and shading; start from orb2's per-shape solids, fix rotation axis/pivot and projection.
 - CLARIFIED (owner): 'flattened' = flat solid colour, no shading/shadows. Real per-shape 3D solids; the 3D reads only from the perspective silhouette and the eye placement on the surface (Grok's look).
+- Owner: the bots must LOOK like perfect 3D, not necessarily be real-time 3D (too heavy); lightest technique (analytic projection or baked silhouettes per pose), with a per-orb performance figure.
