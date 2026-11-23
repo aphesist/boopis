@@ -188,3 +188,4 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - Orb animation policy (owner): dock fully animated (lively, 3D turns, face variety); Bots-tab sidebar like Grok-Bot:
   bots fixed at one sideways 3/4 angle, animating only in states (working, needs you...); main chat fully animated.
   Keep the life: fix the turned-silhouette notch geometrically instead of clamping turns.
+- CHANGE (owner): the dock also uses the fixed 3/4 pose at idle; a hovered bot animates smoothly out of it and back; bots in a state (working, needs you) animate. Main chat stays fully animated.
