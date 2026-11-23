@@ -14,8 +14,8 @@ use super::approvals::{Delivery, Inbox, Refusal};
 use super::audit::{Audit, Line};
 use super::model::{
     Answered, Approval, ApprovalState, BotRow, ConversationMessage, Event, LineFrom, Message,
-    MessageState, NoteKind, Notification, Origin, Presence, Role, RoomHeldEvent, RoomLine,
-    RoomLineEvent, RoomRow, RoomStateEvent, Source, Stamped, State, now_ms,
+    MessageState, NoteKind, Notification, Origin, Presence, Progress, Role, RoomHeldEvent,
+    RoomLine, RoomLineEvent, RoomRow, RoomStateEvent, Source, Stamped, State, now_ms,
 };
 use super::presence::{Facts, Live, Table};
 use super::roster::{self, Entry};
@@ -831,9 +831,14 @@ impl Feed {
                     })
                     .flatten()
                     .map(|d| self.clip(&d));
+                // How far it says it has come (B44): only what the engine relayed, never an estimate.
+                let progress = (f.name == "tool.progress")
+                    .then(|| self.progress_of(&payload))
+                    .flatten();
                 let facts = Facts {
                     tool: tool.as_deref(),
                     detail: detail.as_deref(),
+                    progress: progress.as_ref(),
                     failed: false,
                 };
                 let changed = inner
@@ -930,6 +935,37 @@ impl Feed {
                 self.publish(&mut inner, changed);
             }
         }
+    }
+
+    /// A `tool.progress` payload as the contract's progress (`agent/tool_progress_relay.py`: `progress`, `total`, and
+    /// `percent` from 0 to 100 when there is a total; `message`): `None` when it carries no count.
+    fn progress_of(&self, payload: &Value) -> Option<Progress> {
+        let number = |k: &str| {
+            payload
+                .get(k)
+                .and_then(Value::as_f64)
+                .filter(|v| v.is_finite() && *v >= 0.0)
+        };
+        let step = number("progress")?;
+        let of = number("total").filter(|t| *t > 0.0);
+        let fraction = number("percent")
+            .map(|p| (p / 100.0).min(1.0))
+            .or_else(|| of.map(|t| (step / t).min(1.0)));
+        let label = Some(str_of(payload, "message"))
+            .filter(|m| !m.trim().is_empty())
+            .map(|m| {
+                self.clip(&m)
+                    .chars()
+                    .take(super::toolwords::MAX_DETAIL)
+                    .collect::<String>()
+            })
+            .filter(|m| !m.trim().is_empty());
+        Some(Progress {
+            fraction,
+            step,
+            of,
+            label,
+        })
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1563,6 +1599,56 @@ mod tests {
         assert!(!d.contains("ghp_") && d.ends_with("/secret.txt"), "{d}");
         f.on_frame("kai", &frame("tool.complete", "s1", None, None));
         assert_eq!(kai(&f).detail, None);
+    }
+
+    #[tokio::test]
+    async fn a_tool_that_reports_its_progress_shows_how_far_in_its_own_scrubbed_words() {
+        // B44: the engine relays an MCP server's progress as tool.progress; nothing else makes progress
+        let (f, _d) = feed();
+        let kai = |f: &Feed| {
+            f.presence()
+                .into_iter()
+                .find(|p| p.profile == "kai")
+                .unwrap()
+        };
+        f.on_frame(
+            "kai",
+            &frame("tool.start", "s1", Some(json!({"name": "render"})), None),
+        );
+        assert_eq!(kai(&f).progress, None);
+        f.on_frame(
+            "kai",
+            &frame(
+                "tool.progress",
+                "s1",
+                Some(json!({"tool_id": "c1", "name": "render", "progress": 2.0, "total": 3.0, "percent": 67, "message": "Rendering French token=abcdef0123456789zz"})),
+                None,
+            ),
+        );
+        let p = kai(&f).progress.unwrap();
+        assert_eq!((p.fraction, p.step, p.of), (Some(0.67), 2.0, Some(3.0)));
+        let label = p.label.unwrap();
+        assert!(
+            label.starts_with("Rendering French") && !label.contains("abcdef0123456789zz"),
+            "{label}"
+        );
+        f.on_frame(
+            "kai",
+            &frame(
+                "tool.progress",
+                "s1",
+                Some(json!({"name": "render", "progress": 5.0, "total": null, "percent": null, "message": null})),
+                None,
+            ),
+        );
+        let p = kai(&f).progress.unwrap();
+        assert_eq!(
+            (p.fraction, p.step, p.of, p.label),
+            (None, 5.0, None, None),
+            "no total: no fraction is made up"
+        );
+        f.on_frame("kai", &frame("tool.complete", "s1", None, None));
+        assert_eq!(kai(&f).progress, None);
     }
 
     #[tokio::test]

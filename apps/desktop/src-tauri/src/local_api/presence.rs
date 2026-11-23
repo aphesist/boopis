@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 
-use super::model::{Presence, Source, State};
+use super::model::{Presence, Progress, Source, State};
 
 /// How long an event's state outranks a poll that says something coarser.
 pub const FINE_HOLD_MS: i64 = 3_000;
@@ -64,6 +64,8 @@ pub struct Facts<'a> {
     pub tool: Option<&'a str>,
     /// What the tool call touches, in safe words (`toolwords.rs`), for a `tool.start`.
     pub detail: Option<&'a str>,
+    /// How far the running tool says it has come, for a `tool.progress` that carries it (B44).
+    pub progress: Option<&'a Progress>,
     /// A completion that failed.
     pub failed: bool,
 }
@@ -74,6 +76,8 @@ struct Session {
     activity: String,
     /// What the running tool touches (B40), while `activity` names it.
     detail: Option<String>,
+    /// How far the running tool says it has come (B44), while `activity` names it.
+    progress: Option<Progress>,
     attention: Option<String>,
     source: Source,
     summary: Option<String>,
@@ -140,6 +144,7 @@ impl Table {
             state: State::Idle,
             activity: String::new(),
             detail: None,
+            progress: None,
             attention: None,
             source,
             summary: None,
@@ -197,10 +202,20 @@ impl Table {
         if s.state != state || s.activity != activity {
             s.since = now;
         }
-        // The detail is the call's: set by its start, kept while the same tool streams progress, gone with it.
+        // The detail is the call's: set by its start, kept while the same tool streams progress, gone with it. Progress is
+        // what the tool last reported, kept until the call ends; nothing reported is none (B44).
+        let same = s.activity == activity;
         s.detail = match event {
             "tool.start" => facts.detail.map(str::to_owned),
-            "tool.generating" | "tool.progress" if s.activity == activity => s.detail.take(),
+            "tool.generating" | "tool.progress" if same => s.detail.take(),
+            _ => None,
+        };
+        s.progress = match event {
+            "tool.progress" => facts
+                .progress
+                .cloned()
+                .or_else(|| if same { s.progress.take() } else { None }),
+            "tool.generating" if same => s.progress.take(),
             _ => None,
         };
         s.state = state;
@@ -234,6 +249,7 @@ impl Table {
                 state: State::Idle,
                 activity: String::new(),
                 detail: None,
+                progress: None,
                 attention: None,
                 source: row.source,
                 summary: None,
@@ -280,6 +296,7 @@ impl Table {
                 if state != State::Working {
                     s.activity.clear();
                     s.detail = None;
+                    s.progress = None;
                 }
             }
             s.state = state;
@@ -321,6 +338,7 @@ impl Table {
                 s.state = State::Idle;
                 s.activity.clear();
                 s.detail = None;
+                s.progress = None;
                 s.hold_until = 0;
                 s.since = now;
                 touched.push(profile.clone());
@@ -345,6 +363,7 @@ impl Table {
                 state: s.state,
                 activity: s.activity.clone(),
                 detail: s.detail.clone(),
+                progress: s.progress.clone(),
                 attention: s.attention.clone(),
                 session_id: Some(sid.clone()),
                 source: Some(s.source),
@@ -377,6 +396,7 @@ impl Table {
                 old.state == now_row.state
                     && old.activity == now_row.activity
                     && old.detail == now_row.detail
+                    && old.progress == now_row.progress
                     && old.attention == now_row.attention
                     && old.session_id == now_row.session_id
                     && old.source == now_row.source
@@ -431,7 +451,7 @@ mod tests {
         let facts = Facts {
             tool: Some("read_file"),
             detail: Some("Read a file · shots/03.json"),
-            failed: false,
+            ..Facts::default()
         };
         let p = t.on_event("kai", "s1", "tool.start", &facts, Source::Gui, 0);
         assert_eq!(p[0].detail.as_deref(), Some("Read a file · shots/03.json"));
@@ -452,6 +472,46 @@ mod tests {
             None,
             "a call that touches nothing named has none"
         );
+    }
+
+    #[test]
+    fn a_tools_progress_is_what_it_reported_and_goes_with_the_call() {
+        let mut t = Table::new();
+        ev(&mut t, "tool.start", Some("render"), 0);
+        assert_eq!(
+            t.presence("kai", 0).progress,
+            None,
+            "nothing reported: none"
+        );
+        let two_of_three = Progress {
+            fraction: Some(0.67),
+            step: 2.0,
+            of: Some(3.0),
+            label: Some("Rendering French".into()),
+        };
+        let facts = Facts {
+            tool: Some("render"),
+            progress: Some(&two_of_three),
+            ..Facts::default()
+        };
+        let p = t.on_event("kai", "s1", "tool.progress", &facts, Source::Gui, 10);
+        assert_eq!(p[0].progress.as_ref(), Some(&two_of_three));
+        ev(&mut t, "tool.progress", Some("render"), 20);
+        assert_eq!(
+            t.presence("kai", 20).progress.as_ref(),
+            Some(&two_of_three),
+            "an update without numbers keeps the last"
+        );
+        let p = ev(&mut t, "tool.complete", None, 30);
+        assert_eq!(p[0].progress, None, "the call ended");
+        ev(&mut t, "tool.start", Some("render"), 40);
+        assert_eq!(
+            t.presence("kai", 40).progress,
+            None,
+            "a new call starts with none"
+        );
+        let json = serde_json::to_value(Presence::idle("kai", 0)).unwrap();
+        assert!(json["progress"].is_null(), "{json}");
     }
 
     #[test]
