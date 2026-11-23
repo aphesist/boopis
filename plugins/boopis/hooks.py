@@ -13,9 +13,12 @@ from collections.abc import Mapping
 from typing import Any
 
 from . import budget, policy, turns
+from .bots import origin
+from .bots.rules import BotRules
 from .hermes_api import bound
 from .ledger import project_costs, usage_event_payload
-from .policy import ToolCall
+from .policy import Decision, ToolCall
+from .policy.types import block as block_decision
 from .session import Caller, Runtime, SessionState
 from .util.log import get_logger
 
@@ -88,7 +91,7 @@ def pre_tool_call(tool_name: str = "", args: Mapping[str, Any] | None = None, **
         session_id = str(kw.get("session_id") or "")
         caller = _caller(rt, kw)
         call = ToolCall(tool_name, args or {}, session_id, str(kw.get("tool_call_id") or ""))
-        decision = policy.check(call, rt.policy_for(caller))
+        decision = _budget_gate(rt, caller, policy.check(call, rt.policy_for(caller)))
         if decision.kind == "block" and call.tool_call_id:
             caller.state.blocked_calls[call.tool_call_id] = "hx.policy.denied"
             caller.state.blocked_rules[call.tool_call_id] = (decision.reason, decision.rule)
@@ -100,6 +103,48 @@ def pre_tool_call(tool_name: str = "", args: Mapping[str, Any] | None = None, **
     except Exception:  # noqa: BLE001 - the policy hook fails closed
         _log.error("pre_tool_call failed closed for tool=%s", tool_name, exc_info=True)
         return _block("boopis could not evaluate its policy, so this call was blocked.")
+
+
+def _budget_gate(rt: Runtime, caller: Caller, decision: Decision) -> Decision:
+    """The budgets a run meets before a tool call (``budget``): the team's month, then the bot's cap per run. A refusal
+    of the policy stands; a pause of the budget is the engine's approval card, and when the policy also asked, the one
+    card carries both reasons (allowing it allows the call)."""
+    if decision.kind == "block":
+        return decision
+    state = caller.state
+    month = budget.month_stop(rt, state, state.provider, state.model)
+    if month is not None:
+        if budget.run.stop(state.run, "month"):
+            budget.record_block(rt, state, "month_budget", cap=month[1], scope="month")
+        return block_decision(month[0], "month_budget")
+    bot = rt.bot_rules()
+    verdict = budget.run_gate(state, bot, asked_by=origin.asked_by(state.origin))
+    if verdict is None or bot is None or bot.cap_usd is None:
+        return decision
+    if verdict.kind == "stop":
+        if budget.run.first_stop(state.run):
+            budget.record_block(rt, state, verdict.reason, cap=bot.cap_usd, scope="run")
+        return block_decision(verdict.message, verdict.reason)
+    rt.pauses[verdict.rule_key] = state.session_id
+    budget.record_block(rt, state, verdict.reason, cap=bot.cap_usd, scope="run")
+    message = verdict.message if decision.kind != "approve" else f"{verdict.message} Also: {decision.message}"
+    return Decision("approve", message=message, rule_key=verdict.rule_key, reason=verdict.reason, rule="run_cap")
+
+
+def post_approval_response(**kw: Any) -> None:
+    """The engine's approval gate settled a card. When it is a run cap's pause, the run is raised or stopped
+    (``budget.run.answered``); any other card is not the budget's business. An observer: never raises."""
+    try:
+        key = str(kw.get("pattern_key") or "").removeprefix("plugin_rule:")
+        if not key.startswith(budget.run.RULE_PREFIX):
+            return
+        rt = runtime()
+        session_id = rt.pauses.pop(key, None)
+        if session_id is None:
+            return
+        budget.run.answered(rt.state(session_id).run, key, str(kw.get("choice") or ""))
+    except Exception:  # noqa: BLE001
+        _log.error("an answer at a run cap was not recorded; the run stops at its next tool call", exc_info=True)
 
 
 def _why(reason: str, rule: str) -> dict[str, Any]:
@@ -168,14 +213,23 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
             return _worker_turn(rt, rt.caller(session_id), str(kw.get("model") or ""))
         rt.roster.note_message(session_id, str(kw.get("user_message") or ""))  # what the user named (delegation guard)
         state = _locked(rt, session_id, model=str(kw.get("model") or ""))
-        capped = _cost_cap(rt, state, state.provider, state.model)
+        state.origin = origin.read(kw)  # who started this turn: the owner, a room, a2a, a card, a schedule (S2)
+        budget.run.begin(state.run, str(kw.get("turn_id") or ""))  # every turn is a new run
+        capped = _cost_cap(rt, state, state.provider, state.model) or _turn_budgets(rt, state)
         if capped is not None:
             state.track.armed_at = None  # a blocked turn does not use the exception
             return capped
+        bot = rt.bot_rules()
+        busy = _claim(rt, state, bot)  # one bot, one body (T1)
+        if busy is not None:
+            state.track.armed_at = None
+            return _block(busy)
+        said = origin.context(state.origin, bot.name if bot is not None else "this session")
+        label = "\n\n".join(x for x in (said, _busy_note(rt, bot)) if x) or None
         if turns.begin(rt, state, str(kw.get("turn_id") or "")):
-            return {"context": turns.CONTEXT}
+            return _with_label(label, {"context": turns.CONTEXT})
         if state.mode != "governed":
-            return None
+            return _with_label(label, None)
         from .governance.frontier import session_refusal
 
         refused = session_refusal(state.provider, state.model)  # ADR-0037: the orchestrator is frontier too
@@ -188,10 +242,92 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
             return _block(engine_plugins)
         from .governance.lifecycle import turn_directive
 
-        return turn_directive(rt, state, str(kw.get("user_message") or ""))
+        return _with_label(label, turn_directive(rt, state, str(kw.get("user_message") or "")))
     except Exception:  # noqa: BLE001
         _log.error("pre_llm_call failed closed", exc_info=True)
         return _block("boopis could not evaluate the cost cap, so this turn was blocked.")
+
+
+def _claim(rt: Runtime, state: SessionState, bot: BotRules | None) -> str | None:
+    """Take the bot's claim for the work this turn starts (``bots.claims``); why not, when another live claim holds
+    it. A bot allowed to work in parallel, the owner's own chat and the owner's own profile claim nothing."""
+    work = origin.work_of(state.origin, state.session_id)
+    if bot is None or bot.parallel or work is None:
+        return None
+    from datetime import UTC, datetime
+
+    from .bots import claims
+
+    got = claims.take(rt.home, work[0], state.session_id, work[1])
+    if got.held:
+        return None
+    if got.by is None:
+        return f"boopis did not start {work[1]} for {bot.name}: {got.problem}. It starts once that is cleared."
+    since = datetime.fromtimestamp(got.by.at, UTC).strftime("%H:%M UTC")
+    return (
+        f"{bot.name} is already working on {got.by.label or got.by.work} (since {since}). One bot works on one thing "
+        f"at a time, so {work[1]} was not started; send it again when that is done, or let {bot.name} work in "
+        "parallel in its settings."
+    )
+
+
+def _busy_note(rt: Runtime, bot: BotRules | None) -> str | None:
+    """For the owner's own chat with a bot that holds a claim elsewhere: what else it is doing, so it does not start
+    that work a second time here."""
+    if bot is None:
+        return None
+    import time
+
+    from .bots import claims
+
+    held = claims.read(rt.home)
+    if not isinstance(held, claims.Claim) or claims.stale(held, time.time()):
+        return None
+    return (
+        f"[boopis] {bot.name} is also working on {held.label or held.work} in another session right now. Do not start "
+        "that work here a second time; say so if this message asks for it."
+    )
+
+
+def _release(rt: Runtime, session_id: str) -> None:
+    """The turn or the session ended: its claim, if it held the bot's, is dropped."""
+    if rt.bot_rules() is None:
+        return
+    from .bots import claims
+
+    claims.release(rt.home, session_id=session_id)
+
+
+def kanban_task_completed(**kw: Any) -> None:
+    """The engine's kanban hook, in the worker: the card is done, so its bot's claim on it is dropped."""
+    _card_ended(kw)
+
+
+def kanban_task_blocked(**kw: Any) -> None:
+    """The engine's kanban hook, in the worker: the card is blocked, so its bot's claim on it is dropped."""
+    _card_ended(kw)
+
+
+def _card_ended(kw: Mapping[str, Any]) -> None:
+    try:
+        from .bots import claims
+        from .bots.homes import PROFILE_ID_RE
+
+        profile, task = str(kw.get("profile_name") or ""), str(kw.get("task_id") or "")
+        if not task or not PROFILE_ID_RE.match(profile) or profile == "default":
+            return
+        claims.release(runtime().root / "profiles" / profile, work=f"kanban:{task}")
+    except Exception:  # noqa: BLE001 - an observer; a claim left behind goes stale with its process
+        _log.error("a card's claim was not released", exc_info=True)
+
+
+def _with_label(label: str | None, answer: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The turn's answer with the origin's line first in its context (a block stays a block: nothing runs)."""
+    if label is None or (answer is not None and answer.get("action") == "block"):
+        return answer
+    if answer is None:
+        return {"context": label}
+    return {**answer, "context": f"{label}\n\n{answer['context']}" if answer.get("context") else label}
 
 
 def _worker_turn(rt: Runtime, caller: Caller, model: str) -> dict[str, Any] | None:
@@ -205,6 +341,19 @@ def _worker_turn(rt: Runtime, caller: Caller, model: str) -> dict[str, Any] | No
             "The attempt was stopped: a tier is the plugin's choice."
         )
     return _cost_cap(rt, caller.state, link.provider, link.model)
+
+
+def _turn_budgets(rt: Runtime, state: SessionState) -> dict[str, Any] | None:
+    """When a turn starts: a bot whose rules cannot be read does not run, and a spent team budget stops every turn."""
+    refused = budget.bot_turn_refusal(rt.bot_rules())
+    if refused is not None:
+        return _block(refused)
+    month = budget.month_stop(rt, state, state.provider, state.model)
+    if month is None:
+        return None
+    budget.run.stop(state.run, "month")
+    budget.record_block(rt, state, "month_budget", cap=month[1], scope="month")
+    return _block(month[0])
 
 
 def _cost_cap(rt: Runtime, state: SessionState, provider: str, model: str) -> dict[str, Any] | None:
@@ -312,6 +461,7 @@ def _record_usage(kw: Mapping[str, Any], *, auxiliary: bool) -> None:
             state.unpriced.update(costs.billed_unpriced)
         else:
             state.spend_usd += costs.billed_usd
+    budget.note_usage(rt, state, payload)  # the run's API-equivalent, against a bot's cap per run
 
 
 def post_api_request(**kw: Any) -> None:
@@ -350,6 +500,7 @@ def on_session_end(**kw: Any) -> None:
             return
         reason = "interrupted" if kw.get("interrupted") else "failed" if kw.get("failed") else "completed"
         turns.end(rt, rt.state(session_id), reason)
+        _release(rt, session_id)
     except Exception:  # noqa: BLE001
         _log.error("the end of a turn was not recorded", exc_info=True)
 
@@ -359,6 +510,7 @@ def on_session_finalize(**kw: Any) -> None:
     try:
         rt = runtime()
         _stop_kernel(str(kw.get("session_id") or ""))
+        _release(rt, str(kw.get("session_id") or ""))
         if str(kw.get("session_id") or "") in rt.links:
             return  # a worker ending; ``subagent_stop`` is where its attempt is closed
         if rt.forms is not None:

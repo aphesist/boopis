@@ -24,6 +24,9 @@ CAPABILITIES = (
     "mode.once",
     "turns.bind",
     "turns.models",
+    "budget.state",
+    "budget.get",
+    "budget.set",
     "ledger.tail",
     "ledger.verify",
     "ledger.stats",
@@ -333,6 +336,41 @@ def prices_refresh(params: Mapping[str, Any], *, session_id: str | None = None, 
     return refresh(rt.home)
 
 
+def budget_state(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
+    """The session's current run against its bot's cap per run, and the team's month (ADR-0048)."""
+    from .. import budget
+
+    rt = runtime()
+    state = rt.state(_session_id(params, session_id))
+    return {"run": budget.run_view(state, rt.bot_rules()), "month": budget.month_view(rt, state)}
+
+
+def budget_get(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
+    """The team's monthly budget and this month's spend, for every profile of the root."""
+    from .. import budget
+
+    rt = runtime()
+    sid = params.get("session_id") or session_id
+    state = rt.state(sid) if isinstance(sid, str) and sid else None
+    if state is None or state.book is None:
+        from ..session import SessionState
+
+        settings = rt.load_settings().value
+        state = SessionState("", settings.mode, settings=settings, book=rt.price_book(settings))
+    return budget.month_view(rt, state)
+
+
+def budget_set(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
+    """``{monthly_usd: "50.00" | null}``: set or clear the team's monthly budget (``<root>/boopis/budget.json``)."""
+    from ..budget import month
+
+    if "monthly_usd" not in params:
+        raise InvalidParamsError("monthly_usd is required (dollars like '50.00', or null to clear the budget)")
+    rt = runtime()
+    doc = month.write_budget(rt.root, params["monthly_usd"])
+    return {"monthly_usd": doc["monthly_usd"]}
+
+
 def handlers() -> dict[str, Handler]:
     from ..bots.rpc import HANDLERS as BOT_HANDLERS
     from ..forms.rpc import form_cancel, form_list, form_submit
@@ -351,6 +389,9 @@ def handlers() -> dict[str, Handler]:
         "mode.once": mode_once,
         "turns.bind": turns_bind,
         "turns.models": turns_models,
+        "budget.state": budget_state,
+        "budget.get": budget_get,
+        "budget.set": budget_set,
         "ledger.tail": ledger_tail,
         "ledger.verify": ledger_verify,
         "ledger.stats": ledger_stats,

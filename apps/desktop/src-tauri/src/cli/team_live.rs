@@ -33,9 +33,6 @@ use crate::team::apply::Backend;
 use crate::team::plan::{BoardNow, BotNow, ConnectorNow, Current, JobNow, Op, RoomNow};
 use crate::team::spec::Look;
 
-/// The approvals a new bot starts with: it asks before every kind of thing (the Bots form's `OWN_SETTINGS`).
-const APPROVALS: [&str; 6] = ["deploys", "push", "network", "spend", "people", "outside"];
-
 /// The live engine.
 pub struct Live<'a> {
     host: &'a Host,
@@ -537,8 +534,8 @@ impl Backend for Live<'_> {
                         ),
                     ));
                 }
-                let mut body = json!({"name": name, "settings": {"gov": if gov { "governed" } else { "ungoverned" }, "cap": "0.60", "workspace": "worktree"},
-                    "approvals": APPROVALS.iter().map(|a| ((*a).to_owned(), json!(true))).collect::<serde_json::Map<_, _>>()});
+                // no cap and no tiers: a bot has no limit unless the owner sets one, and the plugin's default tiers apply (ADR-0048)
+                let mut body = json!({"name": name, "settings": {"gov": if gov { "governed" } else { "ungoverned" }, "workspace": "worktree"}});
                 if let Some(l) = &bot.look {
                     body["look"] = json!({"shape": l.shape, "color": l.color});
                 }

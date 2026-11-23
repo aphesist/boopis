@@ -7,7 +7,7 @@ import type { GatewayClient, GatewayEvent } from '../gateway';
 import { NeedsConfirmation } from '../../data/confirm';
 import { lookFor } from '@boopis/ui';
 import { createLiveBots } from './bots';
-import { madeOutside } from './map-bots';
+import { madeOutside, ownConfig } from './map-bots';
 import type { LiveBots } from './bots';
 import type { BotsBridge } from '../bots-bridge';
 import { HostError } from '../bridge';
@@ -372,8 +372,8 @@ describe('the settings sheet edits the real profile, and shows the diff first', 
   });
   it('saves boopis’s own settings in the plugin’s store, never through a Hermes config method', async () => {
     const { h, bots } = await open();
-    await bots.source.admin!.saveOwn('atlas', { cfg: { gov: 'ungoverned', cap: '1.00', approvals: { push: false } }, look: { shape: 'star' } });
-    expect(h.main.calls.at(-1)).toMatchObject({ method: 'plugin.boopis.bots.write', params: { name: 'atlas', look: { shape: 'star' }, settings: { gov: 'ungoverned', cap: '1.00' }, approvals: { push: false } } });
+    await bots.source.admin!.saveOwn('atlas', { cfg: { gov: 'ungoverned', cap: '1.00', approvals: { push: 'block' } }, look: { shape: 'star' } });
+    expect(h.main.calls.at(-1)).toMatchObject({ method: 'plugin.boopis.bots.write', params: { name: 'atlas', look: { shape: 'star' }, settings: { gov: 'ungoverned', cap: '1.00' }, approvals: { push: 'block' } } });
     expect(h.main.calls.some((c) => c.method === 'profiles.configure')).toBe(false);
     expect(botOf(bots, 'atlas')).toMatchObject({ shape: 'star', cfg: { gov: 'ungoverned', cap: '1.00' } });
   });
@@ -488,6 +488,27 @@ describe('which profiles boopis did not make (the "made outside boopis" mark)', 
   });
 });
 
+describe('what a bot may do is what the plugin enforces (ADR-0048)', () => {
+  it('shows the plugin’s own tiers, and only what the record names when the plugin did not say', () => {
+    const tiers = { deploys: 'ask', network: 'allow', spend: 'block', delete: 'nonsense' };
+    expect(ownConfig({ approvals: { network: true } }, tiers).approvals).toEqual({ deploys: 'ask', network: 'allow', spend: 'block', delete: 'ask' });
+    expect(ownConfig({ approvals: { network: true, people: false } }).approvals).toEqual({ network: 'ask', people: 'allow' });   // old switches
+    expect(ownConfig(null).approvals).toEqual({});   // unknown is not drawn as a default
+  });
+  it('a bot with no cap in its record has none: the plugin enforces no other', () => {
+    expect(ownConfig({ settings: {} }).cap).toBe('');
+    expect(ownConfig({ settings: { cap: '1.20' } }).cap).toBe('1.20');
+  });
+  it('a new bot is made with no cap and no tiers written: no limit unless the owner sets one, and the plugin’s default tiers', async () => {
+    const { h, bots } = await open();
+    await bots.source.admin!.create({ name: 'kai', role: 'docs', shape: 'drop', color: '#4fc9a8', instructions: 'You write docs.' }, { model: 'nous/hermes-4' });
+    const writes = h.main.calls.filter((c) => c.method === 'plugin.boopis.bots.write');
+    expect(writes.length).toBeGreaterThan(0);
+    for (const w of writes) expect(w.params).not.toHaveProperty('approvals');
+    expect(h.own['kai']).toMatchObject({ settings: { gov: 'ungoverned', workspace: 'worktree' } });
+    for (const w of writes) expect((w.params as { settings?: Record<string, unknown> }).settings ?? {}).not.toHaveProperty('cap');
+  });
+});
 describe('archived bots, restored from the Archived group and the palette', () => {
   const archive = (h: FakeHermes, name: string, was: string, at: string): void => {
     h.profiles.push({ name, path: HOME + '/profiles/' + name, description: 'x' });
@@ -584,6 +605,20 @@ describe('a conversation with a teammate is a session of its own profile', () =>
     expect(bots.source.snapshot().threads['atlas']!.map((m) => m.kind === 'text' ? [m.who, m.text] : [])).toEqual([['you', 'hello'], ['atlas', 'On it.'], ['you', 'how is the build?'], ['atlas', 'Green, all of it.']]);
     expect(events.find((e) => e.type === 'run')).toMatchObject({ running: true });
     expect(events.filter((e) => e.type === 'run').pop()).toMatchObject({ running: false });
+  });
+  it('the run’s spend against its cap is the plugin’s own count, and unknown stays unknown', async () => {
+    const { h, bots, events } = await open();
+    bots.source.send('atlas', 'hello', 'bots');
+    await tickAll();
+    events.length = 0;
+    const link = h.links.get('atlas')!;
+    link.emit({ type: 'plugin.boopis.budget.updated', session_id: 'gw-atlas', payload: { spent_usd: 0.2411, limit_usd: 0.6, cap_usd: 0.6, basis: 'api_equivalent' } });
+    link.emit({ type: 'plugin.boopis.budget.updated', session_id: 'gw-atlas', payload: { spent_usd: null, unpriced: ['x/y'], limit_usd: 0.6 } });
+    link.emit({ type: 'plugin.boopis.budget.updated', session_id: 'gw-other', payload: { spent_usd: 9, limit_usd: 1 } });   // not this chat
+    expect(events.filter((e) => e.type === 'spend')).toEqual([
+      { type: 'spend', botId: 'atlas', spent: '$0.24', cap: '$0.60' },
+      { type: 'spend', botId: 'atlas', spent: null, cap: '$0.60' }
+    ]);
   });
   it('a said message for a conversation that is not open draws nothing (it shows when the conversation is opened)', async () => {
     const { h, bots, events } = await open();

@@ -32,7 +32,7 @@ const INFO: BotInfo = {
 };
 const atlas = (): Bot => ({
   id: 'atlas', name: 'atlas', role: 'reviews pull requests', shape: 'triangle', color: '#f23b5a', state: 'idle', attention: null, paused: false, activity: '', spent: '', last: null, ideas: [],
-  cfg: { instructions: 'You review.\n', gov: 'governed', model: 'main/fake-a', cap: '0.60', cron: '0 9 * * 1-5', channels: { app: true }, approvals: { deploys: true }, workspace: 'worktree' }, info: INFO
+  cfg: { instructions: 'You review.\n', gov: 'governed', model: 'main/fake-a', cap: '0.60', cron: '0 9 * * 1-5', channels: { app: true }, approvals: { deploys: 'ask' }, workspace: 'worktree' }, info: INFO
 });
 
 interface Fake { provider: DataProvider; calls: { fn: string; args: unknown[] }[]; events: ReturnType<typeof emitter<BotsEvent>>; bots: Bot[]; admin: BotsAdmin; failCreate: string | null; saveError: unknown; kept: Map<string, number> }

@@ -8,6 +8,7 @@ changes a temporary home the way Hermes does.
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -52,3 +53,25 @@ class SubprocessCli:
             return CliResult(124, f"hermes {' '.join(args[:2])} did not finish in {TIMEOUT_SECONDS:.0f} s")
         text = (done.stdout + done.stderr).strip()
         return CliResult(done.returncode, text[-TAIL:])
+
+    def read_json(self, args: Sequence[str], timeout: float = 15.0, limit: int = 1 << 20) -> object:
+        """What a ``--json`` command prints, parsed; None when it failed, timed out or printed no JSON."""
+        argv = [sys.executable, "-m", "hermes_cli.main", *args]
+        try:
+            done = subprocess.run(  # noqa: S603 - a vector, never a shell string; fixed arguments
+                argv,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                env=safe_env({"HERMES_HOME": self.home, "PYTHONIOENCODING": "utf-8", "NO_COLOR": "1"}),
+                stdin=subprocess.DEVNULL,
+                check=False,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return None
+        if done.returncode != 0 or len(done.stdout) > limit:
+            return None
+        try:
+            return json.loads(done.stdout)
+        except ValueError:
+            return None

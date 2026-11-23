@@ -322,7 +322,8 @@ const teammates = botMentions({
   ctx
 });
 function buildComposer(host: HTMLElement): void {
-  const c = ui.composer({ placeholder: 'Message', label: 'Message', attach: true, spend: { spent: '$0.00', cap: '$0.60' }, bot: bot(S.sel) ?? null, orbs: () => [S.presence], mentions: teammates });
+  /* the meter is the open bot's current run against its cap per run; paintToolbar fills it, and hides it for a bot with no cap */
+  const c = ui.composer({ placeholder: 'Message', label: 'Message', attach: true, spend: { spent: '—', cap: '—' }, bot: bot(S.sel) ?? null, orbs: () => [S.presence], mentions: teammates });
   c.classList.add('bt-composer');
   host.append(c);
   const input = c.input;
@@ -384,8 +385,10 @@ export function paintToolbar(b: Bot): void {
   const chans = data().bots.catalog().channels.filter((ch) => b.cfg.channels[ch.id] && ch.id !== 'app').map((ch) => ch.name);
   /* rebuild the chips only when what they say changes (an open menu may be anchored to one) */
   const sig = [b.id, gov, b.cfg.model, chans.join(',')].join('|');
-  if (gov) c.setSpend('$' + b.spent, '$' + b.cfg.cap);
-  { const capEl = c.querySelector<HTMLElement>('.ui-capacity'); if (capEl) capEl.hidden = !gov; }
+  /* what this run spent is the plugin's own count, unknown until it says; against the bot's cap when it has one (no limit unless the owner sets one) */
+  const run = S.spend[b.id], cap = run?.cap ?? (b.cfg.cap ? '$' + b.cfg.cap : null);
+  if (cap) c.setSpend(run?.spent ?? '—', cap); else if (run?.spent) c.setSpend(run.spent, null);
+  { const capEl = c.querySelector<HTMLElement>('.ui-capacity'); if (capEl) capEl.hidden = !cap && !run?.spent; }
   if (c._chipSig === sig) return;
   c._chipSig = sig;
   /* Governed is a toggle (off reads struck through); an ungoverned bot also shows its one model, which opens the picker */
@@ -482,6 +485,12 @@ export function onBotsEvent(ev: BotsEvent, handlers: { announce: () => void }): 
       S.threads[ev.botId] = [...ev.messages];
       const b = bot(ev.botId);
       if (b && ev.botId === S.sel && S.view === 'bot' && S.log) { S.log.removeAttribute('aria-busy'); renderThread(b); paintNewSession(); }
+      break;
+    }
+    case 'spend': {
+      S.spend[ev.botId] = { spent: ev.spent, cap: ev.cap };
+      const b = bot(ev.botId);
+      if (b && ev.botId === S.sel && S.view === 'bot') paintToolbar(b);
       break;
     }
     case 'run': {

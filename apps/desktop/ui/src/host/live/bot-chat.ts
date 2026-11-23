@@ -242,6 +242,12 @@ export function createBotChat(deps: ChatDeps) {
         deps.live(botId, { state: 'needs', activity: '', attention: 'approval' });
         break;
       }
+      case 'plugin.boopis.budget.updated': {
+        /* the plugin's count of this run against the bot's cap per run (ADR-0048); unknown stays unknown */
+        const dollars = (v: unknown): string | null => (typeof v === 'number' && Number.isFinite(v) ? '$' + v.toFixed(2) : null);
+        deps.emit({ type: 'spend', botId, spent: dollars(p['spent_usd']), cap: dollars(p['limit_usd']) });
+        return true;
+      }
       case 'approval.settled': {
         const id = str(p['prompt_id']);
         settled(botId, c, 'ap-' + id, 'approved');   /* settled elsewhere or here; the ledger says who */

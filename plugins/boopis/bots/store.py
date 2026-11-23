@@ -28,8 +28,11 @@ WORKSPACES = ("worktree", "sandbox")
 _WORD = re.compile(r"^[a-z0-9][a-z0-9 -]{0,31}$")  # an orb2 shape or eye name
 _COLOUR = re.compile(r"^#[0-9a-fA-F]{6}$")
 _CAP = re.compile(r"^\d{1,4}(\.\d{1,4})?$")
-_APPROVAL = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")  # what a teammate asks before: a short id, on or off
-MAX_APPROVALS = 32
+# what a teammate may do: a category id (``network``) or a tool name (``mcp__fetch__fetch``, ``mcp__fetch``), mapped to
+# a tier (``allow``, ``ask``, ``block``) or, as the first switches were, on (Ask) or off (Allow); ADR-0048
+_APPROVAL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+TIER_WORDS = ("allow", "ask", "block")
+MAX_APPROVALS = 64
 _LOCKS: dict[str, threading.Lock] = {}
 
 
@@ -78,7 +81,9 @@ def clean_look(raw: Any) -> dict[str, str]:
 
 
 def clean_settings(raw: Any) -> dict[str, str]:
-    """boopis's settings for the teammate: ``{gov, cap, workspace}``, each optional on a patch."""
+    """boopis's settings for the teammate: ``{gov, cap, workspace, preset, parallel}``, each optional on a patch.
+    ``preset`` names a set of default tiers (``policy/bot_tiers.json``), an empty one clears it; ``parallel: on`` lets
+    it hold more than one claim on work at a time (``bots.claims``)."""
     settings = _mapping(raw, "settings")
     out: dict[str, str] = {}
     if "gov" in settings:
@@ -95,26 +100,44 @@ def clean_settings(raw: Any) -> dict[str, str]:
         out["workspace"] = settings["workspace"]
     if "cap" in settings:
         cap = settings["cap"]
-        if not isinstance(cap, str) or not _CAP.match(cap):
-            raise InvalidParamsError("settings.cap is dollars per run, like '0.60'", data={"found": repr(cap)})
-        out["cap"] = cap
-    unknown = set(settings) - {"gov", "cap", "workspace"}
+        if not isinstance(cap, str) or not (cap == "" or _CAP.match(cap)):
+            raise InvalidParamsError(
+                "settings.cap is dollars per run, like '2.50', or empty for no cap", data={"found": repr(cap)}
+            )
+        out["cap"] = cap  # empty: no cap, removed from the record (``update``)
+    if "preset" in settings:
+        from ..policy.tiers import load
+
+        names = sorted(load().presets)
+        if settings["preset"] != "" and settings["preset"] not in names:
+            raise InvalidParamsError(
+                f"settings.preset is one of {', '.join(names)}, or empty", data={"found": repr(settings["preset"])}
+            )
+        out["preset"] = settings["preset"]
+    if "parallel" in settings:
+        if settings["parallel"] not in ("on", "off"):
+            raise InvalidParamsError("settings.parallel is 'on' or 'off'", data={"found": repr(settings["parallel"])})
+        out["parallel"] = settings["parallel"]
+    unknown = set(settings) - {"gov", "cap", "workspace", "preset", "parallel"}
     if unknown:
-        raise InvalidParamsError("settings has only gov, cap and workspace", data={"found": sorted(unknown)})
+        raise InvalidParamsError(
+            "settings has only gov, cap, workspace, preset and parallel", data={"found": sorted(unknown)}
+        )
     return out
 
 
-def clean_approvals(raw: Any) -> dict[str, bool]:
-    """What the teammate asks about first: ``{id: true|false}``, merged over what is stored."""
+def clean_approvals(raw: Any) -> dict[str, bool | str]:
+    """What the teammate may do: ``{id: "allow"|"ask"|"block"}`` (or the old ``true|false``), merged over what is
+    stored. An id is a category or a tool name."""
     approvals = _mapping(raw, "approvals")
     if len(approvals) > MAX_APPROVALS:
         raise InvalidParamsError(f"approvals has at most {MAX_APPROVALS} entries")
     for key, value in approvals.items():
-        if not _APPROVAL.match(key) or not isinstance(value, bool):
+        if not _APPROVAL.match(key) or not (isinstance(value, bool) or value in TIER_WORDS):
             raise InvalidParamsError(
-                "approvals maps a short id to true or false", data={"found": f"{key!r}: {value!r}"}
+                "approvals maps a category or tool name to allow, ask or block", data={"found": f"{key!r}: {value!r}"}
             )
-    return {str(k): bool(v) for k, v in approvals.items()}
+    return {str(k): v if isinstance(v, bool) else str(v) for k, v in approvals.items()}
 
 
 def read(profile: Path) -> tuple[dict[str, Any] | None, str | None]:
@@ -156,7 +179,7 @@ def update(
     *,
     look: Mapping[str, str] | None = None,
     settings: Mapping[str, str] | None = None,
-    approvals: Mapping[str, bool] | None = None,
+    approvals: Mapping[str, bool | str] | None = None,
     archived: Mapping[str, Any] | _Keep | None = KEEP,
 ) -> dict[str, Any]:
     """Merge a patch into the record and write it. ``archived`` is left alone unless given (``None`` clears it)."""
@@ -171,9 +194,12 @@ def update(
         if look:
             record["look"] = {**cast("dict[str, str]", record.get("look") or {}), **look}
         if settings:
-            record["settings"] = {**cast("dict[str, str]", record.get("settings") or {}), **settings}
+            merged = {**cast("dict[str, str]", record.get("settings") or {}), **settings}
+            if merged.get("cap") == "":
+                del merged["cap"]  # a bot has no cap unless the owner sets one (ADR-0048)
+            record["settings"] = merged
         if approvals:
-            record["approvals"] = {**cast("dict[str, bool]", record.get("approvals") or {}), **approvals}
+            record["approvals"] = {**cast("dict[str, bool | str]", record.get("approvals") or {}), **approvals}
         if not isinstance(archived, _Keep):
             if archived is None:
                 record.pop("archived", None)

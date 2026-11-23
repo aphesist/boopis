@@ -2,7 +2,7 @@
    profile; its name is the profile's display name when Hermes has one and its profile name otherwise. What Hermes did
    not answer is `null` or empty and is shown as unknown: nothing here invents a model, a schedule or a session. */
 import type { CronJobRow, ProfileRow, ProfilesDescribeResult, SessionListRow } from '../../vendor/hermes-shared/gateway-contract.generated';
-import { OWN_SETTINGS } from '../../data/bot-catalog';
+import { OWN_SETTINGS, tierOf } from '../../data/bot-catalog';
 import { lookOf } from '@boopis/ui';
 import type { Bot, BotCapability, BotConfig, BotInfo, BotJob, BotSession, BotWorker } from '../../data/types';
 import { whenLabel } from '../map';
@@ -16,7 +16,7 @@ export const ACTIVE_SECONDS = 90;
 export interface OwnRecord {
   look?: { shape?: unknown; color?: unknown; eyes?: unknown };   /* as written: by boopis, or by hand for a profile made outside it */
   settings?: { gov?: string; cap?: string; workspace?: string };
-  approvals?: Record<string, boolean>;
+  approvals?: Record<string, boolean | string>;
 }
 export interface PluginBot {
   name: string; path: string;
@@ -26,6 +26,8 @@ export interface PluginBot {
   /** its project folder as its configuration says, and what is wrong with it (older plugins: absent) */
   project?: string | null;
   project_problem?: string | null;
+  /** every kind of action's tier as the plugin enforces it (record, else preset, else its default); absent from an older plugin */
+  tiers?: Record<string, string>;
 }
 
 /** boopis never kept anything for this profile: the plugin read its folder and found no `boopis/bot.json` (`record: null`, and no
@@ -100,14 +102,16 @@ export function capabilitiesFrom(d: ProfilesDescribeResult): Pick<BotInfo, 'skil
   return { skills: caps(d.skills), toolsets: caps(d.toolsets), mcpServers: caps(d.mcp_servers) };
 }
 
-/** what the plugin's record says, over the boopis defaults of a teammate that has none yet */
-export function ownConfig(record: OwnRecord | null | undefined): Pick<BotConfig, 'gov' | 'cap' | 'workspace' | 'approvals'> {
+/** what the plugin's record says. The cap is the record's or none (the plugin enforces no other); the tiers are the plugin's own word for
+ *  what it enforces, else only what the record names (a kind the plugin did not report is left out, never guessed) */
+export function ownConfig(record: OwnRecord | null | undefined, tiers?: Record<string, string>): Pick<BotConfig, 'gov' | 'cap' | 'workspace' | 'approvals'> {
   const s = record?.settings ?? {};
+  const named = tiers ?? record?.approvals ?? {};
   return {
     gov: s.gov === 'governed' ? 'governed' : OWN_SETTINGS.gov,   /* opt-in: governed only when the owner turned it on (ADR-0042) */
-    cap: s.cap ?? OWN_SETTINGS.cap,
+    cap: s.cap ?? '',
     workspace: s.workspace === 'sandbox' ? 'sandbox' : OWN_SETTINGS.workspace,
-    approvals: { ...OWN_SETTINGS.approvals, ...(record?.approvals ?? {}) }
+    approvals: Object.fromEntries(Object.entries(named).map(([k, v]) => [k, tierOf(v)]))
   };
 }
 
@@ -146,7 +150,7 @@ export function botFrom(k: Known, nowSeconds: number): Bot {
     cfg: {
       instructions: detail?.soul ?? '', model: model ?? '',
       cron: (jobs?.find((j) => j.enabled) ?? null)?.schedule ?? '',
-      channels: { app: true }, ...ownConfig(own)
+      channels: { app: true }, ...ownConfig(own, plugin?.tiers)
     },
     info
   };

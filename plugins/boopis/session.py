@@ -17,6 +17,10 @@ from typing import Any
 
 from . import hx, policy
 from ._vendor.contraprova.interfaces import TierLadder
+from .bots.origin import TurnOrigin, asked_by
+from .bots.rules import BotRules, bot_name, rules_for
+from .budget.month import MonthScanner
+from .budget.run import RunBudget
 from .config import (
     Loaded,
     Mode,
@@ -72,6 +76,8 @@ class SessionState:
     )  # tool_call_id -> (reason, rule) of the block
     lock: threading.RLock = field(default_factory=threading.RLock)
     track: TurnTrack = field(default_factory=TurnTrack)  # who answers the current turn, and the one-turn exception
+    run: RunBudget = field(default_factory=RunBudget)  # the current turn's spend against a bot's cap per run
+    origin: TurnOrigin | None = None  # who started the current turn (``bots.origin``), said on a bot's approval cards
 
     @property
     def effective_mode(self) -> Mode:
@@ -112,9 +118,15 @@ class Runtime:
         delegation_backend: Callable[[], str | None] | None = None,
         active_parent: Callable[[], Any] | None = None,
         redactor: Callable[[str], str] | None = None,
+        root: Path | None = None,
     ) -> None:
         self.ctx = ctx
         self._home = home
+        self._root = root  # tests name the Hermes root; the product asks Hermes
+        self.month_scanner = MonthScanner()  # the team's spend this month, for every profile of the root
+        self.pauses: dict[str, str] = {}  # the rule key of a run cap's pause card -> the session it holds
+        self.board_folders: Callable[[str | None], str | None] | None = None  # made on first use (``bots.boards``)
+        self._defaults_given: set[str] = set()  # the bots this process gave the owner's new defaults (once each)
         self._sessions: dict[str, SessionState] = {}
         self._registry_lock = threading.Lock()
         self.links: dict[str, WorkerLink] = {}  # a delegated child's session id -> the attempt it is
@@ -132,6 +144,38 @@ class Runtime:
     @property
     def home(self) -> Path:
         return self._home if self._home is not None else Path(hermes_home())
+
+    @property
+    def root(self) -> Path:
+        """The Hermes root (the default profile's home), where the team's budget and every profile live."""
+        return self._root if self._root is not None else Path(self._hermes_root())
+
+    def bot_rules(self) -> BotRules | None:
+        """The rules of the bot whose turn this is (``bots.rules``), None in the owner's own profile. The first time a
+        process meets a bot, the owner's new defaults are given to it if it has not had them (``bots.defaults``)."""
+        home, root = self.home, self.root
+        name = bot_name(home, root)
+        if name is None:
+            return None
+        if name not in self._defaults_given:
+            from .bots.defaults import give
+
+            give(root, name, home)
+            self._defaults_given.add(name)
+        return rules_for(home, root)
+
+    def boards(self) -> Callable[[str | None], str | None]:
+        """A kanban board's ``default_workdir``, asked of the engine's CLI in the root home and kept a minute."""
+        if self.board_folders is None:
+            from .bots.boards import BoardFolders
+
+            self.board_folders = BoardFolders.over(str(self.root))
+        return self.board_folders
+
+    def own_ledger_dirs(self, state: SessionState) -> tuple[Path, ...]:
+        """This profile's ledger folder when ``ledger_dir`` moved it: the month counts it too."""
+        configured = state.settings.ledger_dir
+        return (Path(configured),) if configured else ()
 
     def load_settings(self) -> Loaded:
         return load_settings(self.ctx.get_config)
@@ -225,6 +269,15 @@ class Runtime:
         its ``ship`` is still open."""
         base = caller.state.policy
         assert base is not None
+        # read again when the record changes: a new tier applies at once; the card says who asked for the turn
+        bot = self.bot_rules()
+        base = replace(
+            base,
+            bot=bot,
+            asked_by=asked_by(caller.state.origin),
+            origin=caller.state.origin,
+            board_folder=self.boards() if bot is not None else None,
+        )
         if caller.link is None:
             return replace(base, mode="ungoverned") if caller.state.track.active else base
         return replace(base, role="worker", ship_closed=caller.link.closed_reason())
@@ -388,7 +441,7 @@ class Runtime:
             config_error="; ".join(errors),
             exec_network=settings.exec.network,
             hermes_home=str(self.home),
-            hermes_root=self._hermes_root(),
+            hermes_root=str(self.root),
         )
 
     def _bootstrap_spend(self, state: SessionState) -> None:

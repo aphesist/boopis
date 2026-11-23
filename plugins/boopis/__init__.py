@@ -24,6 +24,9 @@ HOOKS = (
     "on_session_finalize",
     "subagent_start",
     "subagent_stop",
+    "post_approval_response",
+    "kanban_task_completed",
+    "kanban_task_blocked",
 )
 RPC_METHODS = (
     "describe",
@@ -31,6 +34,9 @@ RPC_METHODS = (
     "mode.once",
     "turns.bind",
     "turns.models",
+    "budget.state",
+    "budget.get",
+    "budget.set",
     "ledger.tail",
     "ledger.verify",
     "ledger.stats",

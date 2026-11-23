@@ -7,7 +7,7 @@
    and the boopis plugin) implements the same interfaces. Nothing in a module may fabricate data a provider
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type {
-  ArchivedBot, Turn, Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment, ArchivedGroup,
+  ApprovalTier, ArchivedBot, Turn, Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment, ArchivedGroup,
   Attached, KanbanBoardInfo, KanbanView, DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome, ModelChoice, CouncilSource, Group, GroupMessage,
   InstallPlan, InstallReceipt, InstallRequest, ProjectPolicy, StageResult, StoreBrowse, StoreDetail, StoreFilter, StoreScope, StoreSource, UninstallResult, UpdateDiff
 } from './types';
@@ -83,7 +83,10 @@ export type BotsEvent =
   /** a reply is being worked on (true) or finished or was stopped (false) */
   | { type: 'run'; botId: string; running: boolean }
   /** the whole thread changed under the room (a session was opened or a new one started): draw it again */
-  | { type: 'thread'; botId: string; messages: readonly ThreadMessage[] };
+  | { type: 'thread'; botId: string; messages: readonly ThreadMessage[] }
+  /** what the bot's current run has spent against its cap per run, as the plugin counts it (`plugin.boopis.budget.updated`):
+      dollars as shown ("$0.24"), null when unknown (a model of the run has no price) or when it has no cap */
+  | { type: 'spend'; botId: string; spent: string | null; cap: string | null };
 export interface BotsSnapshot { bots: readonly Bot[]; threads: Readonly<Record<string, readonly ThreadMessage[]>> }
 /** a routine a bot is asked to take on: a job in its profile's cron store */
 export interface RoutineDraft { name: string; prompt: string; schedule: string }
@@ -135,7 +138,7 @@ export interface BotsAdmin {
   /** its project folder (null: it has none). Rejects with a sentence when the folder is not there or cannot be read */
   setProject(id: string, folder: string | null): Promise<void>;
   /** boopis's own settings and the look: saved in the bot's own store */
-  saveOwn(id: string, patch: { cfg?: Partial<Pick<BotConfig, 'gov' | 'cap' | 'workspace'>> & { approvals?: Readonly<Record<string, boolean>> }; look?: { shape?: string; color?: string } }): Promise<void>;
+  saveOwn(id: string, patch: { cfg?: Partial<Pick<BotConfig, 'gov' | 'cap' | 'workspace'>> & { approvals?: Readonly<Record<string, ApprovalTier>> }; look?: { shape?: string; color?: string } }): Promise<void>;
   /** what deleting would remove */
   removal(id: string): Promise<RemovalNote>;
   /** the profile is renamed out of the way (nothing is destroyed) and its routines paused; resolves with the way back */

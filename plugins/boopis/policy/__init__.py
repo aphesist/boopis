@@ -14,12 +14,16 @@ Order, first to last:
    role (orchestrator, worker) only its own boopis tools. It has no shell (``terminal``) at all, and its
    ``read_file`` and ``search_files`` reach only the workspace. No ``allow`` rule can widen it. Outside
    governed mode the cascade tool ``dispatch`` is refused: it has no cascade to run;
+4b. for a session that runs for a bot, the bot's capability tier (``policy/tiers.py``): Block refuses, Ask asks a
+   human at the engine's approval gate, Allow goes on (it never widens anything below);
 5. an ``ask`` rule asks a human;
 6. an ``allow`` rule allows;
 7. in governed mode a network tool (``web_search``, ``web_extract``, ``vision_analyze``, ...) that no rule allowed asks
    human: it sends data out. From an exec cell a network tool is refused unless ``exec.network`` is ``on``
    (step 2's neighbour: the sandbox keeps the cell off the network, so the plugin must not lend it one);
-8. otherwise the configured default (``allow`` unless set) applies.
+8. otherwise the configured default (``allow`` unless set) applies;
+9. a bot's ``kanban_create`` that would be allowed is filed as one card per job, ordered by ``parents``, in the
+   project's folder (``policy/kanban.py``): a ``modify``, or a refusal when its text waits for work it does not name.
 
 Any exception blocks (fail closed).
 """
@@ -65,7 +69,12 @@ def _parsed(texts: tuple[str, ...]) -> tuple[Rule, ...]:
 def check(call: ToolCall, session: SessionPolicy) -> Decision:
     """Allow, block, ask a human, or modify. Never raises."""
     try:
-        return _check(call, session, load_defaults())
+        decision = _check(call, session, load_defaults())
+        if decision.kind == "allow" and call.tool == "kanban_create":
+            from .kanban import decide as decide_card
+
+            return decide_card(call, session) or decision
+        return decision
     except Exception:  # noqa: BLE001 - a policy that errors denies
         _log.error("policy failed closed for tool=%s session=%s", call.tool, call.session_id, exc_info=True)
         return block("boopis policy could not judge this call, so it was blocked.", "fail_closed")
@@ -117,6 +126,12 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
         return block(
             f"`{call.tool}` runs the governed model cascade and is available in governed mode only.", "ungoverned"
         )
+    if session.bot is not None:
+        from .tiers import decide as decide_tier
+
+        tier = decide_tier(call, session, defaults)
+        if tier is not None:
+            return tier
     for rule in _parsed(session.ask):
         if match_rule(rule, call, root, defaults, deny_like=True) is not Match.NO:
             return _ask(rule.text, call, session)
@@ -143,9 +158,11 @@ def _ask(rule_text: str, call: ToolCall, session: SessionPolicy) -> Decision:
 
         if consume_allow(call.session_id, call.tool_call_id):
             return ALLOW
+    who = f"{session.bot.name} asks: " if session.bot is not None else ""
+    asked = f" {session.asked_by}" if session.bot is not None and session.asked_by else ""
     return Decision(
         "approve",
-        message=f"The permission rule {rule_text} asks for confirmation before {call.tool} runs.",
+        message=f"{who}The permission rule {rule_text} asks for confirmation before {call.tool} runs.{asked}",
         rule_key=f"boopis:{rule_text}",
         reason="ask_rule",
         rule=rule_text,

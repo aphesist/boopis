@@ -8,7 +8,7 @@
 import { $, cap1, el, frag } from '../../core/dom';
 import { ui } from '@boopis/ui';
 import { data, NeedsConfirmation } from '../../data';
-import type { Bot, BotConfig, BotsAdmin, BotPatch, RoutineDraft } from '../../data';
+import type { ApprovalTier, Bot, BotConfig, BotsAdmin, BotPatch, RoutineDraft } from '../../data';
 import { diffWell } from '../cards/parts';
 import { cronValid, CRON_PRESETS, scheduleWords } from './cron';
 import { deliveryParts } from '../../data/delivery';
@@ -17,12 +17,14 @@ import { inventoryLine } from './glance';
 import { bot, S } from './model';
 import { orbButton } from './orbs';
 import { checkClips } from './clips';
-import { closeSettings, hintOf, lookSection, openSettings, runLimitRow, sectionOf, wireSectionKeys } from './settings';
+import { closeSettings, hintOf, lookSection, openSettings, runLimitRow, sectionOf, tierRow, wireSectionKeys } from './settings';
 import { focusConversation, openBot, refreshPresence } from './room';
 import { openNew } from './new-bot';
 import { updateRow } from './list';
 
 const sentence = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+/** what the cap per run means, said where it is set (ADR-0048) */
+export const CAP_HINT = 'No cap unless you set one. Dollars per run: one message, room turn, card or scheduled run. At the cap it pauses and asks you; no answer stops it. On a subscription it counts what the same tokens would cost on the API, so it works as a token budget. Empty it to remove the cap.';
 
 export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | null, keepFocus: boolean): void {
   const admin = data().bots.admin as BotsAdmin;
@@ -132,33 +134,26 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
 
   /* ───────── what boopis keeps for it: its own store, saved at once ───────── */
   const c = b.cfg;
-  const own = (patch: Partial<Pick<BotConfig, 'gov' | 'cap' | 'workspace'>> & { approvals?: Readonly<Record<string, boolean>> }, then?: () => void, undo?: () => void): void => {
+  const own = (patch: Partial<Pick<BotConfig, 'gov' | 'cap' | 'workspace'>> & { approvals?: Readonly<Record<string, ApprovalTier>> }, then?: () => void, undo?: () => void): void => {
     admin.saveOwn(b.id, { cfg: patch }).then(() => { if (patch.gov) c.gov = patch.gov; then?.(); }).catch((e: unknown) => { undo?.(); ownErr.textContent = 'boopis did not save it: ' + sentence(e); ownErr.hidden = false; });
     ownErr.hidden = true;
   };
   const ownErr = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: true });
   const gov = ui.segmented({ mode: 'radio', label: 'Governance', value: c.gov, options: [{ value: 'governed', label: 'Governed' }, { value: 'ungoverned', label: 'Ungoverned' }], fill: true });
   const capId = 'bt-cap-' + b.id;
-  const capRow = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
-  capRow.hidden = c.gov !== 'governed';
+  const capRow = frag(ui.html.setRow({ label: 'Cap per run', hint: CAP_HINT, for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
   let capTimer = 0;
-  $<HTMLInputElement>('input', capRow).addEventListener('input', (e) => { const v = (e.target as HTMLInputElement).value.trim(); window.clearTimeout(capTimer); capTimer = window.setTimeout(() => { if (/^\d{1,4}(\.\d{1,4})?$/.test(v)) own({ cap: v }); }, 500); });
+  $<HTMLInputElement>('input', capRow).addEventListener('input', (e) => { const v = (e.target as HTMLInputElement).value.trim(); window.clearTimeout(capTimer); capTimer = window.setTimeout(() => { if (v === '' || /^\d{1,4}(\.\d{1,4})?$/.test(v)) own({ cap: v }); }, 500); });   /* empty: no cap */
   gov.addEventListener('ui:change', (e) => {
     const v = (e as CustomEvent<{ value: string }>).detail.value as BotConfig['gov'];
-    capRow.hidden = v !== 'governed';
     /* refused (governed mode needs a frontier model): the switch goes back to what is saved, and the reason shows below */
-    own({ gov: v }, undefined, () => { gov.select(c.gov); capRow.hidden = c.gov !== 'governed'; });
+    own({ gov: v }, undefined, () => { gov.select(c.gov); });
   });
   const ws = ui.segmented({ mode: 'radio', label: 'Workspace', value: c.workspace, options: [{ value: 'worktree', label: 'Worktree' }, { value: 'sandbox', label: 'Sandbox' }], fill: true });
   ws.addEventListener('ui:change', (e) => { own({ workspace: (e as CustomEvent<{ value: string }>).detail.value as BotConfig['workspace'] }); });
-  const switchRow = (key: string, label: string, on: boolean, onChange: (v: boolean) => void): HTMLElement => {
-    const sid = 'bt-sw-' + b.id + '-' + key;
-    const row = frag(ui.html.setRow({ label, hint: null, for: sid, control: ui.html.switch({ id: sid, checked: on }) }));
-    ui.hydrate(row);
-    $<HTMLInputElement>('input', row).addEventListener('change', (e) => onChange((e.target as HTMLInputElement).checked));
-    return row;
-  };
-  const appr = el('div', { class: 'ui-set' }, catalog.approvals.map((ap) => switchRow('ap-' + ap.id, ap.name, !!c.approvals[ap.id], (v) => own({ approvals: { [ap.id]: v } }))));
+  /* what it may do: the plugin enforces each row before every tool call (ADR-0048); a kind the plugin did not report has no row */
+  const appr = el('div', { class: 'ui-set' }, catalog.approvals.map((ap) => tierRow(b, ap, c.approvals[ap.id], (v) => own({ approvals: { [ap.id]: v } }))).filter((n): n is HTMLElement => !!n));
+  const apprNote = Object.keys(c.approvals).length ? null : hint('What it may do is not shown: this version of boopis’s plugin did not report it.');
 
   /* ───────── what it has: skills and servers read only; its toolsets switch here (ADR-0048), and its project folder (ADR-0049) ───────── */
   const mcpLine = inventoryLine('MCP servers', 'server', 'servers', info.mcpServers, info.notes.detail);
@@ -211,7 +206,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     sec('model', 'Model', info.model ?? 'not set', [modelF]),
     sec('schedule', 'Schedule', jobsMeta, [hint('What it does when you have not asked. Each is a job in this bot’s own schedule.'), routines, routineErr, promptF, presets, cronF, el('div', { class: 'bt-add-row' }, addBtn)]),
     sec('capabilities', 'What it can use', null, [hint('Toolsets and the project folder apply from its next new session.'), caps, tools, project]),
-    sec('rules', 'Rules', null, [hint('Saved with the bot, in its boopis folder. Governed applies from its next session and needs a frontier model; the workspace and what it asks first do not apply yet.'), gov, capRow, ws, appr, ownErr, el('div', { class: 'ui-set' }, runLimitRow(b))])
+    sec('rules', 'Rules', null, [hint('Saved with the bot, in its boopis folder. Governed applies from its next session and needs a frontier model; the cap and what it may do apply from its next step (Allow: it goes ahead, Ask: it pauses for your approval, Block: it may not); the workspace does not apply yet.'), gov, capRow, ws, appr, apprNote, ownErr, el('div', { class: 'ui-set' }, runLimitRow(b))])
   );
   paintRoutines();
   const heads = wireSectionKeys(body);

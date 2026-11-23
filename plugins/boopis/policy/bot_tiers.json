@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "_comment": [
+    "A bot's capability tiers (ADR-0048): what each kind of action does for a bot, Allow, Ask or Block, read by policy/tiers.py.",
+    "categories: the ids are the keys of bot.json `approvals` (the app's rows). A call belongs to every category it matches: a tool named in",
+    "`tools`, a command line (`terminal`'s `command`) with a simple command that matches one of `commands` (the program, then the words",
+    "after it in order; a word starting with '-' must appear as it is), any MCP tool for `mcp: true`, a write outside the session's folder",
+    "for `writes_outside: true`, and the policy's own `network_tools` for `network_tools: true`. The strictest tier of its categories wins.",
+    "quiet_tools and quiet_prefixes: tools that belong to no category (reading, planning, the board, boopis's own tools). A tool that is in",
+    "no category and not quiet asks: an unknown kind of action fails closed.",
+    "never_allow: categories where Allow is read as Ask (spend: a cap or a payment is never passed without a person, ADR-0021).",
+    "default: the tiers of a bot whose record does not name one. presets: named defaults a bot's record may choose (settings.preset).",
+    "The owner decides these numbers; they are listed in ADR-0048.",
+    "owner_answer: what no bot may do in any tier: answer an approval, a clarify or a form meant for the owner (ADR-0048, S2).",
+    "`markers` are looked for in command lines, code and URLs (the gateway's answer methods, the local API's approvals route and",
+    "its token, a ticket minted from the engine's CLI); `slash` are chat commands that answer an approval, refused at the start of",
+    "a message a people tool sends (`text_keys`).",
+    "kanban: how a bot files a card (ADR-0048, T1, policy/kanban.py). `depends_on` are the words that say a card waits for other work",
+    "(case-insensitive regular expressions over its title and body): such a card needs `parents`, because the dispatcher starts a card",
+    "without parents at once whatever its text says. `key_max` bounds the idempotency key boopis derives for a room turn's card."
+  ],
+  "categories": {
+    "deploys": {
+      "name": "deploying anywhere",
+      "tools": [],
+      "commands": [
+        "vercel", "netlify deploy", "fly deploy", "flyctl deploy", "kubectl apply", "kubectl rollout", "kubectl delete",
+        "helm install", "helm upgrade", "terraform apply", "terraform destroy", "pulumi up", "pulumi destroy",
+        "npm publish", "pnpm publish", "yarn publish", "cargo publish", "twine upload", "gem push", "gh release create",
+        "docker push", "podman push", "firebase deploy", "wrangler deploy", "wrangler publish", "serverless deploy",
+        "sls deploy", "railway up", "heroku", "eb deploy", "gcloud app deploy", "gcloud run deploy", "aws s3 sync",
+        "aws s3 cp", "aws cloudformation deploy", "ansible-playbook"
+      ]
+    },
+    "push": {
+      "name": "pushing to protected branches",
+      "tools": [],
+      "commands": ["git push", "gh pr merge", "hg push", "svn commit", "jj git push"]
+    },
+    "network": {
+      "name": "reaching the network",
+      "network_tools": true,
+      "mcp": true,
+      "tools": [
+        "image_generate", "video_generate", "xai_video_edit", "xai_video_extend", "text_to_speech", "feishu_doc_read",
+        "feishu_drive_list_comments", "feishu_drive_list_comment_replies", "manage_connections", "browser_dialog"
+      ],
+      "commands": [
+        "curl", "wget", "ssh", "scp", "sftp", "rsync", "nc", "ncat", "netcat", "telnet", "ftp", "http", "https",
+        "xh", "websocat", "git clone", "git fetch", "git pull", "git ls-remote"
+      ]
+    },
+    "spend": {
+      "name": "spending past the run cap",
+      "tools": ["browser_vault"],
+      "commands": []
+    },
+    "people": {
+      "name": "messaging people",
+      "tools": [
+        "send_message", "react_to_message", "feishu_drive_add_comment", "feishu_drive_reply_comment", "discord",
+        "discord_admin"
+      ],
+      "commands": [
+        "mail", "mailx", "sendmail", "mutt", "gh issue create", "gh issue comment", "gh pr comment", "gh pr review",
+        "gh pr create"
+      ]
+    },
+    "outside": {
+      "name": "writing outside its workspace",
+      "writes_outside": true,
+      "tools": ["computer_use"],
+      "commands": []
+    },
+    "delete": {
+      "name": "deleting files",
+      "tools": [],
+      "commands": [
+        "rm", "rmdir", "shred", "unlink", "truncate", "git clean", "git reset --hard", "git branch -D",
+        "git checkout --", "git restore", "find -delete", "find -exec rm"
+      ]
+    },
+    "commands": {
+      "name": "running commands",
+      "tools": ["terminal", "execute_code", "process_manage", "exec"],
+      "commands": []
+    }
+  },
+  "quiet_tools": [
+    "read_file", "search_files", "write_file", "patch", "session_search", "skills_list", "skill_view", "skill_manage",
+    "todo_list", "memory", "clarify", "request_input", "request_credential", "ask", "pack", "ship", "dispatch",
+    "delegate_task", "cronjob_manage", "read_terminal", "close_terminal", "desktop_preview", "drive_preview",
+    "annotate_preview", "read_window_below", "focus_pane", "gui_tour", "show_tip", "set_theme", "setup_beat",
+    "desktop_project", "manage_catalog"
+  ],
+  "quiet_prefixes": ["kanban_"],
+  "never_allow": ["spend"],
+  "default": {
+    "deploys": "ask",
+    "push": "ask",
+    "network": "allow",
+    "spend": "ask",
+    "people": "ask",
+    "outside": "ask",
+    "delete": "ask",
+    "commands": "allow"
+  },
+  "presets": {
+    "lead": {
+      "deploys": "ask", "push": "ask", "network": "allow", "spend": "ask", "people": "ask", "outside": "ask",
+      "delete": "ask", "commands": "allow"
+    },
+    "research": {
+      "deploys": "block", "push": "block", "network": "allow", "spend": "block", "people": "block", "outside": "block",
+      "delete": "block", "commands": "ask"
+    },
+    "writer": {
+      "deploys": "block", "push": "block", "network": "ask", "spend": "block", "people": "block", "outside": "block",
+      "delete": "ask", "commands": "ask"
+    },
+    "builder": {
+      "deploys": "ask", "push": "ask", "network": "ask", "spend": "block", "people": "block", "outside": "ask",
+      "delete": "ask", "commands": "allow"
+    },
+    "reviewer": {
+      "deploys": "block", "push": "block", "network": "allow", "spend": "block", "people": "block", "outside": "block",
+      "delete": "block", "commands": "allow"
+    },
+    "publisher": {
+      "deploys": "block", "push": "block", "network": "allow", "spend": "ask", "people": "ask", "outside": "block",
+      "delete": "block", "commands": "ask"
+    }
+  },
+  "owner_answer": {
+    "markers": [
+      "approval.respond", "clarify.respond", "groups.approve", "secret.respond", "sudo.respond", "form.submit",
+      "form.cancel", "/v1/approvals", "client-token", "connect --ticket", "gateway attach"
+    ],
+    "slash": ["/approve", "/deny", "/always", "/yes", "/no"],
+    "text_keys": ["message", "text", "content", "body", "reply"]
+  },
+  "kanban": {
+    "depends_on": [
+      "\\b(after|once|when|until)\\b[^.\\n]{0,80}\\b(is|are|has been|have been|gets?|got)\\s+(done|finished|complete|completed|merged|landed|ready|approved|fixed|in)\\b",
+      "\\bafter\\s+@?[a-z0-9_-]+['\u2019]s\\b",
+      "\\bdepends?\\s+on\\b",
+      "\\bblocked\\s+(by|on)\\b",
+      "\\bwait(s|ing)?\\s+(for|until)\\b",
+      "\\bonly\\s+after\\b",
+      "\\bnot\\s+before\\b",
+      "\\bafter\\s+t_[0-9a-z]{4,}\\b"
+    ],
+    "key_max": 200
+  }
+}

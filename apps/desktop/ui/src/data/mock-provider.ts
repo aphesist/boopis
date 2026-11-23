@@ -223,7 +223,7 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       const role = shortRole(draft.role);
       const nb: Bot = {
         id, name: id, role, shape: draft.shape, color: draft.color, state: 'happy', attention: null, paused: false, activity: '', spent: '0.00', last: null, ideas: M.ideasFor(role),
-        cfg: { instructions: draft.instructions, gov: 'governed', model: 'sonnet 5.5', cap: '0.60', cron: '', channels: { app: true, slack: false, telegram: false, email: false }, approvals: { deploys: true, push: true, network: true, spend: true, people: true, outside: true }, workspace: 'worktree' }
+        cfg: { instructions: draft.instructions, gov: 'governed', model: 'sonnet 5.5', cap: '', cron: '', channels: { app: true, slack: false, telegram: false, email: false }, approvals: { deploys: 'ask', push: 'ask', network: 'allow', spend: 'ask', people: 'ask', outside: 'ask', delete: 'ask', commands: 'allow' }, workspace: 'worktree' }
       };
       bots.push(nb);
       botsEv.emit({ type: 'bot-created', bot: cloneBot(nb) });
