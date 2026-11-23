@@ -774,3 +774,92 @@ async fn bots_that_appear_together_share_one_restart() {
     tokio::time::sleep(std::time::Duration::from_millis(250)).await;
     assert_eq!(restarts(), 1);
 }
+
+/// The engine while the app starts: everything goes to `inner`, and the app's own `bots_notice` (`take_notice`) arrives at the
+/// repair's first engine call, after the repair read the marker and before it wrote it back. In the app the repair starts at
+/// the first link to the gateway and the live bots ask for the notice after the first roster read over that same link, while
+/// the repair still waits on the engine's CLI.
+struct UiTakesMidRepair<'a> {
+    inner: &'a Fake,
+    root: PathBuf,
+    /// What the app's one ask during this repair got.
+    taken: Mutex<Vec<Option<String>>>,
+}
+
+impl<'a> UiTakesMidRepair<'a> {
+    fn new(inner: &'a Fake, root: &Path) -> Self {
+        Self {
+            inner,
+            root: root.to_path_buf(),
+            taken: Mutex::new(Vec::new()),
+        }
+    }
+    fn taken(&self) -> Vec<Option<String>> {
+        self.taken.lock().unwrap().clone()
+    }
+}
+
+#[async_trait]
+impl Engine for UiTakesMidRepair<'_> {
+    async fn config_get(&self, home: &Path, key: &str) -> Result<Option<Value>> {
+        self.inner.config_get(home, key).await
+    }
+    async fn config_set(&self, home: &Path, key: &str, value: &str) -> Result<()> {
+        self.inner.config_set(home, key, value).await
+    }
+    async fn config_unset(&self, home: &Path, key: &str) -> Result<()> {
+        self.inner.config_unset(home, key).await
+    }
+    async fn enable_plugin(&self, home: &Path, name: &str) -> Result<()> {
+        self.inner.enable_plugin(home, name).await
+    }
+    async fn call(&self, root: &Path, method: &str, params: Value) -> Result<Value> {
+        {
+            let mut taken = self.taken.lock().unwrap();
+            if taken.is_empty() {
+                taken.push(take_notice(&self.root).unwrap());
+            }
+        }
+        self.inner.call(root, method, params).await
+    }
+    async fn reload_plugins(&self, root: &Path, home: &Path) -> Result<()> {
+        self.inner.reload_plugins(root, home).await
+    }
+    async fn restart_when_idle(&self, root: &Path) -> Result<bool> {
+        self.inner.restart_when_idle(root).await
+    }
+}
+
+#[tokio::test]
+async fn the_notice_is_shown_once_even_when_taken_while_the_repair_runs() {
+    let fake = Fake::new();
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    // The start that makes the bots ungoverned: the app asks before the opt-in has finished, so the notice waits.
+    let first = UiTakesMidRepair::new(&fake, &home.root);
+    repair(&first, &layout).await.unwrap();
+    assert_eq!(first.taken(), vec![None]);
+
+    // The next start: the app takes it while the repair runs, and shows it.
+    let second = UiTakesMidRepair::new(&fake, &home.root);
+    repair(&second, &layout).await.unwrap();
+    let shown = second.taken();
+    assert!(
+        matches!(shown.as_slice(), [Some(n)] if n.contains("nimbus")),
+        "{shown:?}"
+    );
+    assert_eq!(
+        take_notice(&home.root).unwrap(),
+        None,
+        "the repair does not write back the notice the app took"
+    );
+
+    // Every start after that: no notice, however the take and the repair fall.
+    for _ in 0..2 {
+        let later = UiTakesMidRepair::new(&fake, &home.root);
+        repair(&later, &layout).await.unwrap();
+        assert_eq!(later.taken(), vec![None], "shown again");
+        assert_eq!(take_notice(&home.root).unwrap(), None);
+    }
+    assert!(Marker::load(&home.root).governance_opt_in);
+}

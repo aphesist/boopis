@@ -1,23 +1,23 @@
 {
  "live@bone": {
-  "sha": "8e97013c9bbc6044cbaf38bcdd3da0561f30d8f1",
-  "w": 1440,
+  "sha": "56aabfcd456a0eeda9b75252634adc55808b0d4a",
+  "w": 1416,
   "h": 92
  },
  "live@catalog": {
-  "sha": "4c90ca78aef18bd303853dc89c85840bf571605a",
-  "w": 1440,
+  "sha": "ac2eff2e7adaf6114c13fe5abd15ef51d4c697e6",
+  "w": 1416,
   "h": 92
  },
  "live@graphite": {
-  "sha": "ca8460c2c2858ba11a3e4d033ee150cc2cf61fe6",
-  "w": 1440,
+  "sha": "25bcdd1c2af4c9da901f34a6d26d7a097bf81688",
+  "w": 1416,
   "h": 92
  },
  "live@typewriter": {
-  "sha": "1979b1a5f240e4f1d326a1d1bf423e905df0b999",
-  "w": 1440,
-  "h": 92
+  "sha": "b0185931f7cf0722ab81acea463cd058e3f7ebf0",
+  "w": 1416,
+  "h": 104
  },
  "long@bone": {
   "sha": "4d1d6edce0bf918dd9fa8b23ff2a27a71d07c6f9",

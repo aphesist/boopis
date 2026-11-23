@@ -31,10 +31,7 @@ ui.scrollEdges.start();
 let landing: 'connectors' | 'store' | null = null;
 
 /* the watchdog's notice waits for the shell: a toast shown while the app is still booting has no layout to sit in */
-let shellReady = false;
-const owedNotices: string[] = [];
-on('hx:ready', () => { shellReady = true; for (const t of owedNotices.splice(0)) ui.toast(t, { ms: 8000 }); });
-function noticeWhenReady(text: string): void { if (shellReady) ui.toast(text, { ms: 8000 }); else owedNotices.push(text); }
+function noticeWhenReady(text: string): void { ui.toast.whenReady(text, { ms: 8000 }); }
 
 async function start(): Promise<void> {
   await orbs;

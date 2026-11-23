@@ -714,11 +714,34 @@ impl Marker {
             .unwrap_or_default()
     }
 
+    /// Read it, change it with `change` and write it back, as one step against every other `update` in this process; nothing
+    /// is written when `change` left it as it was. Every write of the marker goes through here: the repair holds what it read
+    /// for as long as the engine's CLI takes, and the app takes the notice meanwhile (`take_notice`), so a write of the whole
+    /// copy read earlier put back a notice the app had already shown, at every start (0.1.9).
+    ///
+    /// # Errors
+    /// `Io` when the write fails.
+    pub fn update<T>(root: &Path, change: impl FnOnce(&mut Self) -> T) -> Result<T> {
+        static ONE: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        // A panic while another update held the lock leaves nothing half-written (the write is a rename), so the lock is taken
+        // back rather than refused.
+        let _one = ONE
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let mut marker = Self::load(root);
+        let before = marker.clone();
+        let out = change(&mut marker);
+        if marker != before {
+            marker.save(root)?;
+        }
+        Ok(out)
+    }
+
     /// Write it atomically (a temporary file, then a rename).
     ///
     /// # Errors
     /// `Io` when the write fails.
-    pub fn save(&self, root: &Path) -> Result<()> {
+    fn save(&self, root: &Path) -> Result<()> {
         let path = Self::path(root);
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir)?;
@@ -740,12 +763,7 @@ impl Marker {
 /// # Errors
 /// `Io` when the file cannot be written back.
 pub fn take_notice(root: &Path) -> Result<Option<String>> {
-    let mut marker = Marker::load(root);
-    let notice = marker.notice.take();
-    if notice.is_some() {
-        marker.save(root)?;
-    }
-    Ok(notice)
+    Marker::update(root, |marker| marker.notice.take())
 }
 
 /// What a bot's fingerprint is made of: the boopis version that prepared it, the root's view and its Governed switch.
@@ -820,6 +838,14 @@ pub struct Repaired {
     pub problems: Vec<String>,
 }
 
+/// What the once-per-install governance change came to.
+enum OptIn {
+    /// A write did not go through: the next start tries the rest.
+    Pending,
+    /// Every write went through; the notice names the bots it switched, when it switched any.
+    Done(Option<String>),
+}
+
 /// Once per install: every bot whose record says governed (the old default, which never applied) is made ungoverned through
 /// the plugin's own `bots.write`, and the notice names them. Done when every write went through.
 async fn opt_in_governance(
@@ -827,9 +853,8 @@ async fn opt_in_governance(
     layout: &Layout,
     bots: &[String],
     governed: &mut BTreeMap<String, bool>,
-    marker: &mut Marker,
     out: &mut Repaired,
-) {
+) -> OptIn {
     for name in bots {
         if !governed.get(name).copied().unwrap_or(false) {
             continue;
@@ -851,12 +876,10 @@ async fn opt_in_governance(
                 .push(done_problem(&format!("{name}'s governance"), &e)),
         }
     }
-    if out.problems.is_empty() {
-        marker.governance_opt_in = true;
-        if !out.ungoverned.is_empty() {
-            marker.notice = Some(governance_notice(&out.ungoverned));
-        }
+    if !out.problems.is_empty() {
+        return OptIn::Pending;
     }
+    OptIn::Done((!out.ungoverned.is_empty()).then(|| governance_notice(&out.ungoverned)))
 }
 
 /// Whether a bot already has everything its fingerprint says it was given: its plugins in place and its seat in groups.
@@ -894,8 +917,19 @@ pub async fn repair(engine: &dyn Engine, layout: &Layout) -> Result<Repaired> {
         .await?;
     let mut governed = governed_of(&records);
     let bots = layout.bots();
-    if !marker.governance_opt_in {
-        opt_in_governance(engine, layout, &bots, &mut governed, &mut marker, &mut out).await;
+    if !marker.governance_opt_in
+        && let OptIn::Done(notice) =
+            opt_in_governance(engine, layout, &bots, &mut governed, &mut out).await
+    {
+        // Recorded the moment it is done, before the rest of the repair: the app can show the notice in this start, and a
+        // step below that fails cannot lose it (the next start would find no bot to switch and make none).
+        marker.governance_opt_in = true;
+        Marker::update(&layout.root, |m| {
+            m.governance_opt_in = true;
+            if notice.is_some() {
+                m.notice = notice;
+            }
+        })?;
     }
     let mut view = RootView::read(engine, &layout.root).await?;
     let skills_once = !marker.other_os_skills;
@@ -948,6 +982,16 @@ pub async fn repair(engine: &dyn Engine, layout: &Layout) -> Result<Repaired> {
             }
         }
     }
-    marker.save(&layout.root)?;
+    // Only what the repair keeps goes back: the skills switched off once, and the fingerprints. The notice it read at the start
+    // is not written back, since the app may have taken it meanwhile.
+    let Marker {
+        other_os_skills,
+        prepared,
+        ..
+    } = marker;
+    Marker::update(&layout.root, |m| {
+        m.other_os_skills |= other_os_skills;
+        m.prepared = prepared;
+    })?;
     Ok(out)
 }
