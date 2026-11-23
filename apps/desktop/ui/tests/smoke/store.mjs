@@ -22,7 +22,10 @@ export async function store(env) {
       focusIn: !!document.activeElement.closest('#hx-store')
     }));
     check('store', 'mod+shift+S opens the store with focus inside it, on Browse, Installed and Sources', front.title === 'Store' && front.tabs.join() === 'Browse,Installed,Sources' && front.focusIn, front);
-    check('store', 'the front page is Recommended first, then everything else', front.heads[0] === 'Recommended' && front.heads.includes('Everything else') && front.rows >= 9, front);
+    /* the rest of the front page is grouped by kind, in the kinds' order (src/modules/store/model.ts KIND_ORDER and KIND_GROUP) */
+    const KINDS = ['Skills', 'Connectors', 'Plugins', 'Mods', 'Engine plugins'];
+    const kinds = front.heads.slice(1).map((h) => KINDS.indexOf(h));
+    check('store', 'the front page is Recommended first, then everything else by kind', front.heads[0] === 'Recommended' && kinds.length > 0 && kinds.every((k, i) => k >= 0 && (i === 0 || k > kinds[i - 1])) && front.rows >= 9, front);
     check('store', 'the engine\'s name is nowhere on the page outside an item\'s own words', !/hermes/i.test(await text(page, '#hx-store-body :not([data-store-item]):not([data-store-item] *)') || ''), null);
 
     /* search is local and narrows by words; a miss says so */
