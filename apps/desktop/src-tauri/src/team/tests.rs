@@ -187,9 +187,10 @@ impl Backend for Model {
                                 (p.to_owned(), m.to_owned())
                             })
                     });
+                // the engine's bundled skills, off on a new bot: neither is in the bots' default index (ADR-0046)
                 let mut skills: Vec<(String, bool)> = ["web", "files"]
                     .iter()
-                    .map(|s| ((*s).to_owned(), true))
+                    .map(|s| ((*s).to_owned(), false))
                     .collect();
                 skills.extend(
                     self.installed
@@ -345,9 +346,10 @@ impl Backend for Model {
         Ok(())
     }
     async fn missing_skills(&self, _: &str, wanted: &[String]) -> Result<Vec<String>> {
+        // the bundled skills every new bot has, on or off, and the store's installed ones
         Ok(wanted
             .iter()
-            .filter(|w| !self.installed.contains(w))
+            .filter(|w| !self.installed.contains(w) && !["web", "files"].contains(&w.as_str()))
             .cloned()
             .collect())
     }
@@ -774,4 +776,26 @@ async fn a_cap_on_turns_applies_once_and_exports_back_to_an_empty_plan() {
     let p = plan(&more, &now, false);
     apply(&model, &p, &BTreeMap::new()).await.unwrap();
     assert_eq!(model.read().await.unwrap().bots["kai"].max_turns, Some(12));
+}
+
+#[tokio::test]
+async fn a_new_bot_gets_the_skills_its_file_names_and_export_keeps_a_bundled_one_switched_on() {
+    // the engine leaves a wanted skill off on a new bot (the default index): apply switches it on
+    let mut team = example();
+    team.bots.get_mut("kai").unwrap().skills = vec!["web".into()];
+    let model = Model::new(base());
+    let report = apply_to(&model, &team, false).await;
+    assert!(report.all_ok() && report.warnings.is_empty(), "{report:?}");
+    let now = model.read().await.unwrap();
+    assert!(now.bots["kai"].skills.contains(&("web".to_owned(), true)));
+    assert!(
+        now.bots["kai"]
+            .skills
+            .contains(&("files".to_owned(), false))
+    );
+    assert!(plan(&team, &now, false).is_empty());
+    // a bundled skill outside the index that a bot has on is written, so a fresh install gets it back
+    let e = export(&now);
+    assert_eq!(e.team.bots["kai"].skills, ["web"]);
+    assert!(e.team.bots["nina"].skills.is_empty());
 }

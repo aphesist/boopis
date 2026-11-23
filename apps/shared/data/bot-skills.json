@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "description": "The engine's bundled skills a new bot keeps switched on (B38, ADR-0046). Every other bundled skill (the engine's own list, `skills/.bundled_manifest` in the bot's home) goes into the bot's `skills.disabled` when boopis makes the bot, and once for the bots of an install made before this list. A skill the bot got any other way (the store, a team file, one it wrote, boopis's own `boopis-handoffs`) is never touched. Widen one bot with its skill switches in the app, `skills:` in a team file, or the engine's `skills enable`; widen every new bot by adding a name here. The owner chooses what is in this list.",
+  "on": [
+    {
+      "name": "hermes-agent",
+      "why": "The engine's own manual; the engine never lets it be switched off and its prompt points at it."
+    },
+    {
+      "name": "sdlc-review",
+      "why": "The kanban review lane loads it into every review worker; a switched-off skill is not loaded, so review cards would run without it."
+    },
+    {
+      "name": "grounded-citations",
+      "why": "Research and fact-checks with sources (the Paper Past team: nina's research, kai's fact-check; 'real, sourced facts only')."
+    },
+    {
+      "name": "blocked-page-recovery",
+      "why": "What to do when fetching a source fails (403, 429, a paywall): the researchers fetch every source they cite."
+    }
+  ]
+}

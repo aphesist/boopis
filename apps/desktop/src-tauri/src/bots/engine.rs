@@ -134,7 +134,8 @@ impl Service {
         self.engine.as_ref()
     }
 
-    /// Prepare the bot `name` (made just now when `fresh`), with its Governed switch as its record says.
+    /// Prepare the bot `name` (made just now when `fresh`: it gets the default skill index unless it had it), with its Governed
+    /// switch as its record says.
     ///
     /// # Errors
     /// As [`super::prepare`], and when the records or the root cannot be read.
@@ -158,7 +159,11 @@ impl Service {
             .copied()
             .unwrap_or(false);
         let mut view = super::RootView::read(self.engine.as_ref(), &layout.root).await?;
-        let done = super::prepare(
+        // A bot gets the default skill index once: one made by `boopis team apply` and then seen by the app keeps the skills
+        // the team file switched on.
+        let mut given = super::skills::Given::load(&layout.root);
+        let fresh = fresh && !given.has(name);
+        let mut done = super::prepare(
             self.engine.as_ref(),
             layout,
             &mut view,
@@ -166,6 +171,13 @@ impl Service {
             super::Ask { governed, fresh },
         )
         .await?;
+        if done.skills_given {
+            given.bots.insert(name.to_owned());
+            if let Err(e) = given.save(&layout.root) {
+                done.problems
+                    .push(super::done_problem("the bot's default skills", &e));
+            }
+        }
         if let Ok(mut at) = self.last_prepared.lock() {
             *at = std::time::Instant::now();
         }

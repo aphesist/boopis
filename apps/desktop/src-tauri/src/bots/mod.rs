@@ -10,7 +10,7 @@
 //! 2. its configuration, through the engine's own CLI in the bot's home: the root's secret-source wiring
 //!    (`secrets.boopis_host`), the three settings the user agreed to in setup, the plugin's `hx_path`, its mode (the bot's
 //!    Governed switch, which is opt-in) and a ladder of the bot's own model when that model is frontier; on a new bot, its
-//!    skills made for another OS switched off (`skills`);
+//!    skills made for another OS and the engine's bundled skills outside the bots' default index switched off (`skills`);
 //! 3. `plugins enable boopis` in the bot's home, which also makes the running gateway load it;
 //! 4. in the root, `hosted_rooms.profiles.<bot>` = the bot's home, so a group can seat it (the engine's
 //!    `session_hosted_members`; `release` removes it when the bot is archived or deleted);
@@ -18,9 +18,9 @@
 //!    every bot of an upgraded install, has it whether or not the app's window ever opens.
 //!
 //! `repair` runs that for every bot once per start, after the first link to the gateway, and, once per install, makes every
-//! existing bot ungoverned (its saved "governed" was the old default and never took effect) and switches off the skills made
-//! for another OS. The host never edits the engine's files: everything goes through `hermes config`, `hermes plugins` and the
-//! plugin's own `bots.*` methods (ADR-0014).
+//! existing bot ungoverned (its saved "governed" was the old default and never took effect); a bot that never had the default
+//! skill index gets it once (`skills::Given`). The host never edits the engine's files: everything goes through
+//! `hermes config`, `hermes plugins` and the plugin's own `bots.*` methods (ADR-0014).
 
 pub mod engine;
 pub mod limit;
@@ -254,7 +254,8 @@ impl RootView {
 pub struct Ask {
     /// The bot's Governed switch, as its record says (opt-in: `false` when the record says nothing).
     pub governed: bool,
-    /// A bot made just now, or the first repair of this install: its skills for another OS are switched off.
+    /// A bot that has not had the default skill index yet (made just now, or made before the index): its skills made for
+    /// another OS and the engine's bundled skills outside the index are switched off.
     pub fresh: bool,
 }
 
@@ -270,8 +271,10 @@ pub struct Prepared {
     pub enabled: bool,
     /// The configuration keys written in its home.
     pub written: Vec<String>,
-    /// Its skills that were switched off as made for another OS.
+    /// Its skills that were switched off now (made for another OS, or outside the default index).
     pub skills_off: Vec<String>,
+    /// It was asked to take the default skill index (`Ask::fresh`) and has it now.
+    pub skills_given: bool,
     /// The root's `hosted_rooms.profiles.<bot>` was written.
     pub seated: bool,
     /// The hand-off skill was written into its `skills/` now (a new bot, or a newer version of the skill).
@@ -523,13 +526,12 @@ async fn config_writes(
     (writes, roots)
 }
 
-/// The skills of the bot made for another OS that its `skills.disabled` does not list yet, and the list with them.
+/// The skills of the bot in `off` that its `skills.disabled` does not list yet, and the list with them.
 async fn skills_write(
     engine: &dyn Engine,
     home: &Path,
-    system: &str,
+    off: Vec<String>,
 ) -> Option<(Vec<String>, Value)> {
-    let off = skills::for_other_systems(home, system);
     if off.is_empty() {
         return None;
     }
@@ -600,18 +602,25 @@ pub async fn prepare(
         &mut done,
     )
     .await;
-    if ask.fresh
-        && let Some((new, list)) = skills_write(engine, &home, &layout.system).await
-    {
+    let mut off = Vec::new();
+    if ask.fresh {
+        off = skills::for_other_systems(&home, &layout.system);
+        off.extend(skills::outside_default(&home));
+        off.sort();
+        off.dedup();
+    }
+    if let Some((new, list)) = skills_write(engine, &home, off).await {
         writes.push(("skills.disabled".to_owned(), list));
         done.skills_off = new;
     }
+    done.skills_given = ask.fresh;
     for (key, value) in writes {
         match engine.config_set(&home, &key, &as_text(&value)).await {
             Ok(()) => done.written.push(key),
             Err(e) => {
                 if key == "skills.disabled" {
                     done.skills_off.clear();
+                    done.skills_given = false;
                 }
                 done.problems.push(done_problem(&key, &e));
             }
@@ -721,8 +730,6 @@ pub struct Marker {
     pub version: u32,
     /// Every bot made before governance was opt-in was made ungoverned (ADR-0042), once.
     pub governance_opt_in: bool,
-    /// The skills made for another OS were switched off in every bot, once.
-    pub other_os_skills: bool,
     /// The one notice the repair left for the app to show, taken once (`take_notice`).
     pub notice: Option<String>,
     /// Per bot, the fingerprint of what it was last given (`fingerprint`): a bot whose fingerprint still matches and whose
@@ -928,17 +935,18 @@ pub async fn repair(engine: &dyn Engine, layout: &Layout) -> Result<Repaired> {
         opt_in_governance(engine, layout, &bots, &mut governed, &mut marker, &mut out).await;
     }
     let mut view = RootView::read(engine, &layout.root).await?;
-    let skills_once = !marker.other_os_skills;
+    let mut given = skills::Given::load(&layout.root);
     let mut needs_restart = false;
     for name in &bots {
         let gov = governed.get(name).copied().unwrap_or(false);
         let print = fingerprint(&view, gov);
-        if !skills_once && still_prepared(layout, &view, &marker, name, &print) {
+        let fresh = !given.has(name);
+        if !fresh && still_prepared(layout, &view, &marker, name, &print) {
             continue;
         }
         let ask = Ask {
             governed: gov,
-            fresh: skills_once,
+            fresh,
         };
         match prepare(engine, layout, &mut view, name, ask).await {
             Ok(done) => {
@@ -946,13 +954,18 @@ pub async fn repair(engine: &dyn Engine, layout: &Layout) -> Result<Repaired> {
                 if done.problems.is_empty() {
                     marker.prepared.insert(name.clone(), print);
                 }
+                if done.skills_given {
+                    given.bots.insert(name.clone());
+                }
                 out.bots.push(done);
             }
             Err(e) => out.problems.push(done_problem(name, &e)),
         }
     }
-    if skills_once && out.bots.iter().all(|b| b.problems.is_empty()) {
-        marker.other_os_skills = true;
+    given.bots.retain(|n| bots.contains(n));
+    if let Err(e) = given.save(&layout.root) {
+        out.problems
+            .push(done_problem("the bots' default skills", &e));
     }
     for name in stale_entries(layout, &view.rooms) {
         match engine

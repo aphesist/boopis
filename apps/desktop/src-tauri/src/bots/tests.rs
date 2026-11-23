@@ -259,11 +259,20 @@ fn owners_home(fake: &Fake) -> Home {
         for d in ["cron", "runtime", "boopis"] {
             std::fs::create_dir_all(home.join(d)).unwrap();
         }
-        // the engine's bundled skills, the mac ones among them
+        // the engine's bundled skills, the mac ones among them, with the engine's list of them; and one from the store
+        std::fs::create_dir_all(home.join("skills")).unwrap();
+        std::fs::write(
+            home.join("skills/.bundled_manifest"),
+            "apple-notes:a969\nimessage:f545\narxiv:1f2a\nhermes-agent:a6fb\nsdlc-review:4a4b\n",
+        )
+        .unwrap();
         for (skill, fm) in [
             ("apple/apple-notes", "platforms: [macos]"),
             ("apple/imessage", "platforms: [macos]"),
             ("research/arxiv", "name: arxiv"),
+            ("autonomous-ai-agents/hermes-agent", "name: hermes-agent"),
+            ("devops/sdlc-review", "name: sdlc-review"),
+            ("papercraft", "name: papercraft"),
         ] {
             std::fs::create_dir_all(home.join("skills").join(skill)).unwrap();
             std::fs::write(
@@ -369,10 +378,10 @@ async fn the_owners_home_is_repaired_once_and_their_fixes_are_kept() {
             home.root.join("plugins").join(SUB),
             "the owner's absolute link is left as it was"
         );
-        // the mac skills are off, the rest on
+        // the mac skills are off, and the bundled ones outside the default index; the index's and the store's stay on
         assert_eq!(
             fake.get(&bot, "skills.disabled"),
-            Some(json!(["apple-notes", "imessage"]))
+            Some(json!(["apple-notes", "arxiv", "imessage"]))
         );
         // their MCP connector is untouched
         if *name == "kai" || *name == "nina" {
@@ -823,4 +832,53 @@ async fn an_older_plugin_without_the_hand_off_skill_is_said_and_tried_again_next
             .all(|b| b.handoffs && b.problems.is_empty())
     );
     assert!(repair(&fake, &layout).await.unwrap().bots.is_empty());
+}
+
+#[tokio::test]
+async fn a_bot_gets_the_default_skills_once_and_keeps_what_was_switched_on_since() {
+    let fake = std::sync::Arc::new(Fake::new());
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    repair(fake.as_ref(), &layout).await.unwrap();
+    assert!(skills::Given::load(&home.root).has("kai"));
+    // a team file switches arxiv back on for kai; the app then sees kai as new (made elsewhere) and prepares it fresh
+    fake.config_set(
+        &home.bot("kai"),
+        "skills.disabled",
+        r#"["apple-notes","imessage"]"#,
+    )
+    .await
+    .unwrap();
+    let service = std::sync::Arc::new(engine::Service::with_engine(fake.clone()));
+    let done = service.prepare(&layout, "kai", true).await.unwrap();
+    assert!(done.skills_off.is_empty() && !done.skills_given, "{done:?}");
+    assert_eq!(
+        fake.get(&home.bot("kai"), "skills.disabled"),
+        Some(json!(["apple-notes", "imessage"]))
+    );
+    // a bot made now gets them, once, and is remembered
+    let bot = home.bot("sol");
+    std::fs::create_dir_all(bot.join("skills/research/arxiv")).unwrap();
+    std::fs::write(
+        bot.join("skills/research/arxiv/SKILL.md"),
+        "---\nname: arxiv\n---\n",
+    )
+    .unwrap();
+    std::fs::write(
+        bot.join("skills/.bundled_manifest"),
+        "arxiv:1f2a\ngrounded-citations:9f8d\n",
+    )
+    .unwrap();
+    std::fs::write(bot.join("config.yaml"), "").unwrap();
+    fake.seed(
+        &bot,
+        json!({"model": {"provider": SUB, "default": "sonnet"}}),
+    );
+    let done = service.prepare(&layout, "sol", true).await.unwrap();
+    assert_eq!(done.skills_off, vec!["arxiv".to_owned()]);
+    assert!(done.skills_given);
+    assert!(skills::Given::load(&home.root).has("sol"));
+    // a later change (its model) does not touch its skills
+    let again = service.prepare(&layout, "sol", false).await.unwrap();
+    assert!(again.skills_off.is_empty());
 }
