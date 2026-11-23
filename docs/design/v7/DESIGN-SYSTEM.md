@@ -305,7 +305,7 @@ Every component ships with its states in the lab before a module uses it (R-comp
 
 ## 13. Key screens
 
-Rendered with the owner's picks (Iris as the placeholder accent) beside the boards (`ds-v7/10-` to `16-`, dark and light): the session chat, a bot's chat with the rail (the sidebar collapsed), a group room with the sidebar open, the session list open, Settings, the Store, and the dock opened on a bot's session. They are drawn from the kit's own tokens (`tokens.v7.css`), boopis's icon set, the real `<orb-avatar>` (orb2) and `<boopis-logo>`, and the kit's `squircle-path.ts` for the continuous corners. The app's own lab draws v6 components, so the v7 previews are standalone boards until the kit is restyled.
+Rendered with the owner's picks beside the boards; 11, 12 and the new 17 follow the Grok-Bot parity of section 19 (`ds-v7/10-` to `16-`, dark and light): the session chat, a bot's chat with the rail (the sidebar collapsed), a group room with the sidebar open, the session list open, Settings, the Store, and the dock opened on a bot's session. They are drawn from the kit's own tokens (`tokens.v7.css`), boopis's icon set, the real `<orb-avatar>` (orb2) and `<boopis-logo>`, and the kit's `squircle-path.ts` for the continuous corners. The app's own lab draws v6 components, so the v7 previews are standalone boards until the kit is restyled.
 
 ## 14. Accessibility
 
@@ -454,3 +454,38 @@ Several picks are "standard, customizable by theme". A theme (a built-in one or 
 | Density | compact, regular, comfortable | regular |
 
 **Fixed by meaning, not by theme:** the attention amber (`--owe`) and the danger red (`--red`). They are the two colours a person must recognise in every theme, on the dock and in the notch; if a theme could move them, "needs you" could look like "failed" or like the accent, and the contrast and colour-blindness checks were made for these two values only. The surfaces and the ink come from the two modes (a mod can still preview a palette through the one theme mechanism, under the readability guard: owner decisions); the dock stays #000.
+
+## 19. Bot session: Grok-Bot parity
+
+The owner's direction (23 November): everything in a bot's session feels like Grok Bot (`GROKBOT-DESIGN.md`, sections 3 and 9, and the recordings), with the picks of section 15.1 on top. The only deviations are the keep list (orbs and faces, the dock, group clusters, the notch decisions) and the owner's picks. Screens 11 (a bot's chat with the details pane and an approval waiting), 12 (a room with the sidebar open and an approval) and 17 (a bot working through a multi-step task) show it. The normal session screen is the next discussion and is not covered here.
+
+| Grok-Bot element | v7 element | Same / differs (why) |
+|---|---|---|
+| Frameless window, three floating controls, thin window glyphs | floating sidebar toggle, title pill, details button, thin glyphs | same; Share is not offered (boopis has no share meaning yet, 15) |
+| Title pill: the bot's avatar and name; opens the details pane | the same, orb 24 | same (orb: keep list) |
+| Search: a button at the top of the open sidebar, ctrl K | the clickable "Search ctrl K" hint in the chrome; ctrl K everywhere | differs: the owner's pick P2 (S5) |
+| Rail: 54 tiles on 88, current 8%, status badge with a 2.5px ring | the same; compact 44 on 64 under 1200 px | same; the compact rail is the owner's pick 06 |
+| Open sidebar: the main bot large at the top, then rows (avatar, name, activity line), groups as an avatar cluster with "@sender message" | the boopis bot large (64) at the top, rows of 36 orbs, name and activity, the room's row as its stack with "@nina ..." | same; the Sessions / Bots switch sits in the sidebar of the session view only (boopis's vocabulary); the rail's group cluster is a keep-list item |
+| Needs-you in the sidebar: orange subtitle and dot ("Waiting for you: Approval needed") | amber subtitle and dot ("Needs you: approve a deploy") | same colour (the owner's pick 09 A); boopis's own wording |
+| Transcript: a centred column, separators only on gaps, bubbles of 560, one thought per bubble, 6 apart | the same | same |
+| Bot bubble 4% + specular, user bubble 18% white (solid ink in light) | the same | same |
+| User bubble and send button in the bot's colour ("Accent: Bot color", as the live screens show) | the user bubble in ink; the accent Iris | differs: the owner's pick 09 (Iris) and R-colour-8 (an orb's colour never becomes interface colour). If the owner wants Grok's "Bot color" accent inside a bot's chat, it is one more theme option; not added |
+| No per-message avatar in a 1:1 | none | same |
+| Group: name above the bubble in the bot's colour, the avatar at the bubble's lower left, @mention chips with avatar and name in the bot's colour | the same (name 12 in the bot's colour, orb 20 in a 30 px gutter at the bubble's foot, mention chips) | same |
+| A message to you | the "you" capsule and an amber wash | differs: a boopis owner decision (22 Nov), recoloured amber by pick 09 A; Grok has no equivalent |
+| Activity line: the live mini avatar and one shimmering phrase; thinking turns the avatar into dots; who is replying in a room | the same (orb 16, shimmer 2.2 s, phrase held 800 ms); stacked orbs for who is replying | same (orb faces: keep list) |
+| Acknowledge first, then work | the same in the content (the bot's first bubble says what it will do) | same |
+| Tool rows: "Terminal · Ran 1 command", collapsed; expanding shows the reason, the command and "Manage settings" | the same row ("Terminal ran 2 commands", "Read 14 merged pull requests"), collapsed, a chevron; expanded it shows the steps or the command | same; no middle dot (R-copy-4) |
+| Multi-step work: only the activity line and tool rows (no plan card) | the same tool row titled by the task ("Release 0.2.0 step 3 of 5") that expands to its step list (done, now, still to do, times); the activity line stays the one status | differs a little: the step list is Part A's "N steps" disclosure, drawn as Grok's expanded tool row; the live step has the pulse, not a second shimmer (R-calm-6) |
+| Approval card: tool header, the question, one plain line naming the rule as a link, the command, Not now / Allow; collapses to one row after | the AskCard, approval variant: head (orb, "nina asks", "needs you"), the summary, "Rule: …" linked, Hold to allow once, Allow all this turn, Always allow, Deny (esc); collapses to a receipt row | differs: the owner's pick (the AskCard, 17.1) with the answers of `approval-surfaces.md`; hold to approve is an owner decision |
+| Question card: A/B/C letter tiles and "Something else" | the same | same |
+| File card: icon, name, size; Open and Save on hover | the same | same |
+| Source citations: favicon and site name, underlined | the same | same |
+| System line: "Created routine ⏲ name", centred | "Created routine Weekly changelog", centred chip | same |
+| Message hover: react, reply, more | copy and more | differs: boopis has no reactions or threads; the trio becomes what exists |
+| "NEW" unread separator | the same, in the accent | same |
+| Details pane: 64 avatar, the name, Activity / Library, Upcoming (routines with switches), Computer, Voice | 64 orb, the name, Activity / Library, Upcoming, Work (model, spend against the cap, workspace) | same shape; the sections are boopis's data (Part A section 7: model, cap and worktree), shown only when they exist (R-calm-4) |
+| Composer: a pill, +, mic, voice-or-send | the same, with the line underneath | differs: the owner's pick 07 C (the line and its toggles) |
+| Empty state: the bot greets and asks a question card | the same (the bot's first message and a question card) | same |
+| Dock | the black dock | differs: keep list (owner decision) |
+| Notch / voice pill | the approved notch | differs: keep list (the notch decisions, now amber per 15.2) |
