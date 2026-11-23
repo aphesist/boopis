@@ -55,6 +55,7 @@ export class Film {
   private motionSpans: [number, number, number][] = [];
   private finalized = false;
   private time = -1;
+  private lastAbs = -1;
   ready: Promise<void> = Promise.resolve();
   /** the ground's grain, which the renderer adds to finished frames (engine/ground.ts, engine/look.ts) */
   grain: GrainSpec | null = null;
@@ -142,7 +143,12 @@ export class Film {
     const time = Math.max(0, Math.min(this.duration, t));
     this.time = time;
     const abs = this.offset + time;
+    /* never render the timeline backward: where two tweens overlap on one property, GSAP's backward render lets the
+       earlier one win and its forward render the later one, so the same time could draw two different frames. A seek
+       back goes to 0 and forward again: every frame is the forward state, whatever was drawn before it. */
+    if (abs < this.lastAbs - 1e-9) this.tl.time(0, true);
     this.tl.time(abs, true);
+    this.lastAbs = abs;
     for (const r of this.renderers) r.fn(abs);
     cancelScriptAnimations();
     await this.ready;
