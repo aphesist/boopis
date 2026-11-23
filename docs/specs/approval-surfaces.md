@@ -50,6 +50,8 @@ Every `rule` card shows the rule by its text and links to it in Settings > Appro
 
 The owner designs it (lab renders, owner picks; invariant 8; Part H, R-comp-2 `ApprovalCard`, one canonical component).
 
+**A bot's approval in the app renders with the shared card that a lapsed session blank also uses** (design system v7 section 17.1 on `w31/design-system-v7`: one card component, two uses): no countdown, no time limit and no guess, with the approval's own content and answers below (owner decision, 23 November 2026; `blanks-inline.md` section 6).
+
 | Depth (R-calm-11) | Content |
 |---|---|
 | glance | the bot's orb and name, the summary words, the rule's text (one line, ellipsized), the answers |
