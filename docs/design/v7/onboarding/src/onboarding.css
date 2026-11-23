@@ -1,0 +1,79 @@
+/* Onboarding (docs/design/v7/onboarding): the intro page, its scenes, the setup conversation, and the board's flow diagrams.
+   Everything product-side is drawn from tokens.v7.css and the kit's classes; the .fl- flow diagram is board scaffolding only. */
+
+/* ---- the intro page (NEW, FOR APPROVAL: Page, intro variant): full window, no sidebar, Grok's anatomy ---- */
+.ob-page { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; }
+.ob-page .ob-h { margin-top: 196px; font-size: var(--fs-3xl); line-height: var(--lh-3xl); font-weight: 400; color: var(--text-strong); white-space: nowrap; }
+.ob-page .ob-lede { margin-top: 8px; width: 420px; text-align: center; font-size: var(--fs-l); line-height: var(--lh-l); color: var(--text-dim); text-wrap: balance; }
+.ob-scene { position: relative; width: 760px; height: 300px; margin-top: 28px; flex: none; }
+.ob-acts { position: absolute; top: 640px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 12px; width: 288px; }
+.ob-acts .btn { width: 100%; }
+.ob-skip { position: absolute; left: 24px; bottom: 20px; }
+.ob-wc { position: absolute; right: 12px; top: var(--chrome-y); display: flex; }
+.ob-status { height: var(--ctl); display: flex; align-items: center; justify-content: center; gap: 8px; font-size: var(--fs-m); color: var(--text-dim); }
+
+/* the hero mark: <boopis-logo mark> at the hero size (type size 96: the pair about 70 px wide), in a 120 box */
+.ob-hero { position: absolute; left: 50%; top: 50%; width: 160px; height: 120px; transform: translate(-50%, -50%); display: grid; place-items: center; }
+
+/* scene pieces: real kit components on mini cards (the Card surface, r-card) */
+.ob-card { position: absolute; width: 340px; height: 256px; border-radius: var(--r-card); --sq-bg: var(--bg-3); --sq-line: var(--line); --sq-shadow: var(--shadow-inline); overflow: hidden; }
+.ob-card .ob-cap { position: absolute; left: 0; right: 0; bottom: 0; height: 52px; padding: 8px 16px; border-top: 0.5px solid var(--hair); display: flex; flex-direction: column; justify-content: center; }
+.ob-card .ob-cap b { font-weight: 500; font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); }
+.ob-card .ob-cap span { font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); }
+.ob-card .ob-in { position: absolute; left: 0; right: 0; top: 0; bottom: 52px; padding: 16px; display: flex; flex-direction: column; overflow: hidden; }
+.ob-mini { width: 100%; }
+.ob-job { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 10px; transform: translateX(-50%); }
+.ob-job .chip { background: var(--fill-2); color: var(--text); font-size: var(--fs-m); height: var(--ctl-card); padding: 0 16px; }
+
+/* ---- the setup conversation (shared setup, before the branch) ---- */
+.ob-chat .thread { padding-top: 72px; }
+.ob-gm { position: absolute; left: -30px; bottom: 0; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--fill-2); box-shadow: inset 0 0 0 0.5px var(--line); }
+.ob-say { position: relative; }
+.ob-rcpt { align-self: flex-start; margin: 6px 0 0 4px; font-size: var(--fs-xs); color: var(--text-dim); display: flex; gap: 6px; align-items: center; }
+.ob-rcpt svg { color: var(--ok-text); }
+.qcard.ob-w { width: min(100%, var(--bubble-max)); }
+.qcard .ob-opts { display: flex; flex-direction: column; gap: 2px; margin: 0 -4px; padding-left: 0; }
+.qcard .optrow { border-radius: calc(var(--r-block) - var(--pad-block)); padding: 8px 10px; align-items: center; }
+.qcard .optrow .m { white-space: nowrap; }
+.qcard .optrow .grow { min-width: 0; }
+.qcard .ob-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: nowrap; }
+.qcard .ob-foot .grow { padding-left: 0; }
+.qcard .ob-sub { font-size: var(--fs-xs); color: var(--text-dim); line-height: var(--lh-xs); margin: -4px 0 8px; }
+.ob-rule { display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 4px 0 10px; border-radius: calc(var(--r-block) - var(--pad-block)); font-size: var(--fs-s); color: var(--text); }
+.ob-rule .t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ob-rule .ib.s { background: transparent; box-shadow: none; width: 28px; height: 28px; }
+.ob-rule.hov { background: var(--hover); }
+
+/* ---- the flow diagrams (board scaffolding) ---- */
+.fl-row { display: flex; align-items: center; gap: 0; flex-wrap: nowrap; }
+.fl-n { display: inline-flex; flex-direction: column; justify-content: center; min-width: 0; height: 52px; padding: 0 12px; border-radius: 12px; background: #1c1c1c; box-shadow: inset 0 0 0 1px #2e2e2e; flex: none; }
+.fl-n b { font-size: 13px; line-height: 18px; color: #f0f0f0; font-weight: 500; white-space: nowrap; }
+.fl-n i { font-style: normal; font-size: 11px; line-height: 16px; color: #9a9a9a; white-space: nowrap; font-family: 'Geist Mono', monospace; }
+.fl-n.intro { box-shadow: inset 0 0 0 1px #3a3a3a; background: #202020; }
+.fl-n.setup { box-shadow: inset 0 0 0 1px #4546c8; background: #1a1a2c; }
+.fl-n.sess { box-shadow: inset 0 0 0 1px #2f6f5a; background: #142420; }
+.fl-n.bots { box-shadow: inset 0 0 0 1px #6b4f9c; background: #201a2c; }
+.fl-n.task { background: #f0f0f0; box-shadow: none; } .fl-n.task b { color: #0a0a0a; } .fl-n.task i { color: #555; }
+.fl-n.dup { box-shadow: inset 0 0 0 1px #c8770c; background: #2a1e10; }
+.fl-n.later { background: transparent; box-shadow: inset 0 0 0 1px #3a3a3a; border: 0; outline: 1px dashed #4a4a4a; outline-offset: -1px; }
+.fl-a { width: 22px; height: 2px; background: #3a3a3a; position: relative; flex: none; }
+.fl-a::after { content: ''; position: absolute; right: -1px; top: -3px; border: 4px solid transparent; border-left: 5px solid #3a3a3a; border-right: 0; }
+.fl-lab { font-size: 11px; color: #8a8a8a; font-family: 'Geist Mono', monospace; letter-spacing: .02em; margin: 14px 0 8px; }
+.fl-key { display: flex; gap: 16px; font-size: 12px; color: #9a9a9a; margin-top: 12px; flex-wrap: wrap; }
+.fl-key span { display: inline-flex; align-items: center; gap: 6px; }
+.fl-key span::before { content: ''; width: 12px; height: 12px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--k); background: var(--kb); }
+.fl-stats { display: grid; grid-template-columns: repeat(4, auto); gap: 4px 28px; justify-content: start; margin-top: 14px; font-size: 12px; color: #9a9a9a; }
+.fl-stats b { display: block; font-size: 15px; color: #f0f0f0; font-weight: 500; }
+.fl-split { display: grid; grid-template-columns: auto auto; align-items: center; gap: 0; }
+.fl-fork { display: flex; flex-direction: column; gap: 10px; }
+.thumbs { display: flex; gap: 16px; margin-top: 18px; }
+.thumb { flex: none; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 1px #2a2a2a; position: relative; }
+.thumb > .sc { transform-origin: 0 0; position: absolute; left: 0; top: 0; }
+.thumb-l { font-size: 11px; color: #9a9a9a; font-family: 'Geist Mono', monospace; margin-top: 6px; }
+.fl-fork.br { margin-top: 0; gap: 8px; }
+.fl-elb { width: 26px; height: 40px; margin-top: -40px; border-left: 2px solid #3a3a3a; border-bottom: 2px solid #3a3a3a; border-bottom-left-radius: 10px; flex: none; align-self: flex-start; margin-right: 0; }
+.fl-fork.br .fl-row > .fl-a:first-of-type { display: none; }
+.fl-fk { display: flex; align-items: center; }
+.fl-fk > .fl-a { width: 14px; } .fl-fk > .fl-a::after { display: none; }
+.fl-br { width: 2px; background: #3a3a3a; flex: none; }
+.fl-fk .fl-fork .fl-row > .fl-a:first-child { width: 14px; }
