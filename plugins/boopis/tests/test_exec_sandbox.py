@@ -193,10 +193,12 @@ def test_sh_runs_inside_the_same_sandbox(make_box: MakeBox) -> None:
     box = make_box()
     out = box.run(
         "r = await harness.sh(['sh', '-c', 'echo x > ' + harness.workspace + '/blocked; echo y > ' + harness.scratch + '/fine'], timeout=20)\n"
-        "(r['exit'], 'denied' in r['stderr'].lower())"
+        "(r['exit'], any(w in r['stderr'].lower() for w in ('denied', 'not permitted')))"
     )
     assert out["status"] == "ok", out
-    assert out["result"] == "(0, True)"  # the last command (scratch) succeeded; the first was refused by the sandbox
+    # the last command (scratch) succeeded; the first was refused by the sandbox (Landlock answers EACCES, "Permission
+    # denied"; Seatbelt EPERM, "Operation not permitted")
+    assert out["result"] == "(0, True)"
     assert not (box.workspace / "blocked").exists()
     assert (box.scratch / "fine").read_text() == "y\n"
 

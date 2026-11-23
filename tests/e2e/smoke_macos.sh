@@ -133,7 +133,8 @@ code="$(api /v1 again)"
 # the window starts first-run setup by itself: report the unpack it does (the full flow is tests/setup_live.rs)
 unpacked=""
 for _ in $(seq 1 120); do
-  unpacked="$(find "$DATA/runtime" -maxdepth 2 -name .hx-runtime.json 2>/dev/null | head -1)"
+  # the folder appears only once the unpack starts: a missing one is "not yet", not a failure
+  unpacked="$(find "$DATA/runtime" -maxdepth 2 -name .hx-runtime.json 2>/dev/null | head -1 || true)"
   [ -n "$unpacked" ] && break
   sleep 1
 done

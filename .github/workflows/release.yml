@@ -678,8 +678,10 @@ jobs:
         continue-on-error: true
         env:
           HX_E2E_RUNTIME_ARCHIVE: ${{ env.BOOPIS_RUNTIME_DIR }}
+          HX_E2E_KEEP: ${{ runner.temp }}/setup-keep  # the scratch profile stays, so the engine's logs are uploaded below
         run: |
           set -o pipefail
+          mkdir -p "$HX_E2E_KEEP"
           cargo test -p boopis-host --test setup_live first_run_setup_end_to_end_on_the_bundled_runtime -- --exact --nocapture 2>&1 \
             | tee "$RUNNER_TEMP/setup_live.log"
           if grep -q 'skipped:' "$RUNNER_TEMP/setup_live.log"; then echo "::error::setup_live skipped instead of running"; exit 1; fi
@@ -740,6 +742,8 @@ jobs:
             ${{ runner.temp }}/smoke/*.txt
             ${{ runner.temp }}/smoke/*.json
             ${{ runner.temp }}/setup_live.log
+            ${{ runner.temp }}/setup-keep/**/logs/**/*.log
+            ${{ runner.temp }}/setup-keep/**/model-requests.jsonl
           if-no-files-found: ignore
           retention-days: 7
 
