@@ -100,9 +100,11 @@ def clean_settings(raw: Any) -> dict[str, str]:
         out["workspace"] = settings["workspace"]
     if "cap" in settings:
         cap = settings["cap"]
-        if not isinstance(cap, str) or not _CAP.match(cap):
-            raise InvalidParamsError("settings.cap is dollars per run, like '0.60'", data={"found": repr(cap)})
-        out["cap"] = cap
+        if not isinstance(cap, str) or not (cap == "" or _CAP.match(cap)):
+            raise InvalidParamsError(
+                "settings.cap is dollars per run, like '2.50', or empty for no cap", data={"found": repr(cap)}
+            )
+        out["cap"] = cap  # empty: no cap, removed from the record (``update``)
     if "preset" in settings:
         from ..policy.tiers import load
 
@@ -192,7 +194,10 @@ def update(
         if look:
             record["look"] = {**cast("dict[str, str]", record.get("look") or {}), **look}
         if settings:
-            record["settings"] = {**cast("dict[str, str]", record.get("settings") or {}), **settings}
+            merged = {**cast("dict[str, str]", record.get("settings") or {}), **settings}
+            if merged.get("cap") == "":
+                del merged["cap"]  # a bot has no cap unless the owner sets one (ADR-0048)
+            record["settings"] = merged
         if approvals:
             record["approvals"] = {**cast("dict[str, bool | str]", record.get("approvals") or {}), **approvals}
         if not isinstance(archived, _Keep):

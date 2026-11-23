@@ -23,10 +23,6 @@ use crate::team::apply::Backend;
 use crate::team::plan::{BoardNow, BotNow, ConnectorNow, Current, JobNow, Op, RoomNow};
 use crate::team::spec::Look;
 
-/// A new bot's cap per run, in dollars (the Bots form's `OWN_SETTINGS`; ADR-0048). Its tiers are not written: the plugin's
-/// defaults apply until the owner chooses one.
-const CAP: &str = "5.00";
-
 /// The live engine.
 pub struct Live<'a> {
     host: &'a Host,
@@ -409,7 +405,8 @@ impl Backend for Live<'_> {
                         ),
                     ));
                 }
-                let mut body = json!({"name": name, "settings": {"gov": if gov { "governed" } else { "ungoverned" }, "cap": CAP, "workspace": "worktree"}});
+                // no cap and no tiers: a bot has no limit unless the owner sets one, and the plugin's default tiers apply (ADR-0048)
+                let mut body = json!({"name": name, "settings": {"gov": if gov { "governed" } else { "ungoverned" }, "workspace": "worktree"}});
                 if let Some(l) = &bot.look {
                     body["look"] = json!({"shape": l.shape, "color": l.color});
                 }

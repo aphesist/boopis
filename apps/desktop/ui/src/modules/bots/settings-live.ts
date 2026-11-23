@@ -24,7 +24,7 @@ import { updateRow } from './list';
 
 const sentence = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 /** what the cap per run means, said where it is set (ADR-0048) */
-export const CAP_HINT = 'Dollars per run: one message, room turn, card or scheduled run. A new bot starts at $5. At the cap it pauses and asks you; no answer stops it. On a subscription it counts what the same tokens would cost on the API, so it works as a token budget.';
+export const CAP_HINT = 'No cap unless you set one. Dollars per run: one message, room turn, card or scheduled run. At the cap it pauses and asks you; no answer stops it. On a subscription it counts what the same tokens would cost on the API, so it works as a token budget. Empty it to remove the cap.';
 
 export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | null, keepFocus: boolean): void {
   const admin = data().bots.admin as BotsAdmin;
@@ -143,7 +143,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const capId = 'bt-cap-' + b.id;
   const capRow = frag(ui.html.setRow({ label: 'Cap per run', hint: CAP_HINT, for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
   let capTimer = 0;
-  $<HTMLInputElement>('input', capRow).addEventListener('input', (e) => { const v = (e.target as HTMLInputElement).value.trim(); window.clearTimeout(capTimer); capTimer = window.setTimeout(() => { if (/^\d{1,4}(\.\d{1,4})?$/.test(v)) own({ cap: v }); }, 500); });
+  $<HTMLInputElement>('input', capRow).addEventListener('input', (e) => { const v = (e.target as HTMLInputElement).value.trim(); window.clearTimeout(capTimer); capTimer = window.setTimeout(() => { if (v === '' || /^\d{1,4}(\.\d{1,4})?$/.test(v)) own({ cap: v }); }, 500); });   /* empty: no cap */
   gov.addEventListener('ui:change', (e) => {
     const v = (e as CustomEvent<{ value: string }>).detail.value as BotConfig['gov'];
     /* refused (governed mode needs a frontier model): the switch goes back to what is saved, and the reason shows below */

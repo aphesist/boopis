@@ -15,9 +15,9 @@ export const APPROVALS: readonly Choice[] = [
   { id: 'spend', name: 'Spending past the run cap', tiers: ['ask', 'block'] }, { id: 'people', name: 'Messaging people' }, { id: 'outside', name: 'Writing outside its workspace' },
   { id: 'delete', name: 'Deleting files' }, { id: 'commands', name: 'Running commands' }
 ];
-/** a new teammate's own settings: ungoverned until the owner turns Governed on (ADR-0042), a cap of $5 per run (ADR-0048) and a worktree. Its
-    tiers are not written: the plugin's defaults apply until the owner chooses one (ADR-0048) */
-export const OWN_SETTINGS: Pick<BotConfig, 'gov' | 'cap' | 'workspace'> = { gov: 'ungoverned', cap: '5.00', workspace: 'worktree' };
+/** a new teammate's own settings: ungoverned until the owner turns Governed on (ADR-0042) and a worktree. It has no cap: a bot has no limit
+    unless the owner sets one; its tiers are not written either, so the plugin's defaults apply until the owner chooses one (ADR-0048) */
+export const OWN_SETTINGS: Pick<BotConfig, 'gov' | 'cap' | 'workspace'> = { gov: 'ungoverned', cap: '', workspace: 'worktree' };
 /** a tier word as the plugin stores it, and an old switch as it reads it (on: Ask, off: Allow); anything else asks */
 export function tierOf(v: unknown): ApprovalTier {
   return v === false || v === 'allow' ? 'allow' : v === 'block' ? 'block' : 'ask';

@@ -376,10 +376,10 @@ export function paintToolbar(b: Bot): void {
   const chans = data().bots.catalog().channels.filter((ch) => b.cfg.channels[ch.id] && ch.id !== 'app').map((ch) => ch.name);
   /* rebuild the chips only when what they say changes (an open menu may be anchored to one) */
   const sig = [b.id, gov, b.cfg.model, chans.join(',')].join('|');
-  /* every bot's cap per run is enforced by the plugin, governed or not; what this run spent is the plugin's own count, unknown until it says */
+  /* what this run spent is the plugin's own count, unknown until it says; against the bot's cap when it has one (no limit unless the owner sets one) */
   const run = S.spend[b.id], cap = run?.cap ?? (b.cfg.cap ? '$' + b.cfg.cap : null);
-  if (cap) c.setSpend(run?.spent ?? '—', cap);
-  { const capEl = c.querySelector<HTMLElement>('.ui-capacity'); if (capEl) capEl.hidden = !cap; }
+  if (cap) c.setSpend(run?.spent ?? '—', cap); else if (run?.spent) c.setSpend(run.spent, null);
+  { const capEl = c.querySelector<HTMLElement>('.ui-capacity'); if (capEl) capEl.hidden = !cap && !run?.spent; }
   if (c._chipSig === sig) return;
   c._chipSig = sig;
   /* Governed is a toggle (off reads struck through); an ungoverned bot also shows its one model, which opens the picker */

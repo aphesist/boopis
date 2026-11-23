@@ -99,7 +99,7 @@ def from_record(name: str, record: Mapping[str, Any] | None, problem: str | None
     settings = cast(Mapping[str, Any], settings) if isinstance(settings, Mapping) else {}
     cap: float | None = None
     raw_cap = settings.get("cap")
-    if raw_cap is not None:
+    if raw_cap is not None and raw_cap != "":
         if not isinstance(raw_cap, str) or not _CAP.match(raw_cap):
             return BotRules(name, problem=f"bot.json has a cap that is not dollars: {raw_cap!r}")
         cap = float(raw_cap)

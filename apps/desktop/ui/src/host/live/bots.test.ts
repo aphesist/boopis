@@ -418,13 +418,14 @@ describe('what a bot may do is what the plugin enforces (ADR-0048)', () => {
     expect(ownConfig({ settings: {} }).cap).toBe('');
     expect(ownConfig({ settings: { cap: '1.20' } }).cap).toBe('1.20');
   });
-  it('a new bot is made with its cap and no tiers written, so the plugin’s defaults apply', async () => {
+  it('a new bot is made with no cap and no tiers written: no limit unless the owner sets one, and the plugin’s default tiers', async () => {
     const { h, bots } = await open();
     await bots.source.admin!.create({ name: 'kai', role: 'docs', shape: 'drop', color: '#4fc9a8', instructions: 'You write docs.' }, { model: 'nous/hermes-4' });
     const writes = h.main.calls.filter((c) => c.method === 'plugin.boopis.bots.write');
     expect(writes.length).toBeGreaterThan(0);
     for (const w of writes) expect(w.params).not.toHaveProperty('approvals');
-    expect(h.own['kai']).toMatchObject({ settings: { gov: 'ungoverned', cap: '5.00', workspace: 'worktree' } });
+    expect(h.own['kai']).toMatchObject({ settings: { gov: 'ungoverned', workspace: 'worktree' } });
+    for (const w of writes) expect((w.params as { settings?: Record<string, unknown> }).settings ?? {}).not.toHaveProperty('cap');
   });
 });
 describe('archived bots, restored from the Archived group and the palette', () => {

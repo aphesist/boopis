@@ -1,4 +1,4 @@
-"""The owner's new defaults, given once to the bots that already exist (owner decision, 23 November 2026; ADR-0048).
+"""The owner's defaults, given once to the bots that already exist (owner decisions, 23 November 2026; ADR-0048).
 
 Two moves, each made once per bot and recorded, so a choice the owner makes afterwards is never overwritten:
 
@@ -6,13 +6,16 @@ Two moves, each made once per bot and recorded, so a choice the owner makes afte
   kinds, every one on: "ask before everything") gets the default tiers of ``policy/bot_tiers.json`` written into it
   (network and commands Allow; deploys, push, spend, people, outside and delete Ask). Any other approvals were set by
   hand and stay as they are;
-- **cap.** A record whose cap per run is still the first default, ``0.60``, gets ``5.00``. A cap set to anything else,
-  or none, stays as it is.
+- **cap.** No bot has a limit unless the owner sets one. A cap that is still a default boopis wrote is removed: the
+  first default, ``0.60``, and the ``5.00`` an earlier build of this move wrote (a bot that build looked at, still on
+  ``5.00``). A cap set to anything else stays as it is.
 
 The record of what was given is boopis's own file at the root, ``<root>/boopis/bot-defaults.json`` (``{schema_version,
-tiers: [bot], cap: [bot]}``), the way the host records the skills and toolsets it gives once (``bot-skills.json``). A
-bot is listed after it was looked at, moved or not, so it is looked at once. An archived bot is left until it is
-restored. The move runs where the plugin first meets a bot: the roster read (``bots.read``) and a bot's own turn.
+tiers: [bot], caps: [bot], cap: [bot]}``), the way the host records the skills and toolsets it gives once
+(``bot-skills.json``). ``tiers`` and ``caps`` list the bots each move looked at, moved or not, so each bot is looked at
+once; ``cap`` is what the earlier build's move looked at, kept to tell the ``5.00`` it wrote from one set by hand. An
+archived bot is left until it is restored. The move runs where the plugin first meets a bot: the roster read
+(``bots.read``) and a bot's own turn.
 """
 
 from __future__ import annotations
@@ -29,11 +32,12 @@ from ..util.log import get_logger
 from . import homes, store
 
 _log = get_logger("bots.defaults")
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 #: what boopis wrote as a new bot's approvals before tiers existed: the first six kinds, every one on
 FIRST_APPROVALS: Mapping[str, bool] = dict.fromkeys(("deploys", "push", "network", "spend", "people", "outside"), True)
-FIRST_CAP = "0.60"
-CAP = "5.00"
+FIRST_CAP = "0.60"  # what boopis wrote as a new bot's cap before limits were the owner's to set
+EARLIER_CAP = "5.00"  # what the earlier build of this move wrote (its record: ``cap``)
+KEYS = ("tiers", "caps", "cap")
 _LOCK = threading.Lock()
 
 
@@ -45,10 +49,10 @@ def _load(root: Path) -> dict[str, set[str]]:
     try:
         doc = json.loads(given_path(root).read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return {"tiers": set(), "cap": set()}
+        doc = {}
     data = cast("dict[str, Any]", doc) if isinstance(doc, dict) else {}
     out: dict[str, set[str]] = {}
-    for key in ("tiers", "cap"):
+    for key in KEYS:
         names = data.get(key)
         out[key] = {n for n in cast("list[Any]", names) if isinstance(n, str)} if isinstance(names, list) else set()
     return out
@@ -57,7 +61,7 @@ def _load(root: Path) -> dict[str, set[str]]:
 def _save(root: Path, given: Mapping[str, set[str]]) -> None:
     path = given_path(root)
     path.parent.mkdir(parents=True, exist_ok=True)
-    doc = {"schema_version": SCHEMA_VERSION, **{k: sorted(v) for k, v in given.items()}}
+    doc = {"schema_version": SCHEMA_VERSION, **{k: sorted(given[k]) for k in KEYS}}
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".bot-defaults-")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
@@ -76,16 +80,22 @@ def default_tiers() -> dict[str, str]:
     return dict(load().default)
 
 
+def _default_cap(cap: Any, earlier: bool) -> bool:
+    """A cap boopis wrote, not the owner: the first default, or the earlier build's ``5.00`` on a bot it looked at."""
+    return cap == FIRST_CAP or (earlier and cap == EARLIER_CAP)
+
+
 def give(root: Path, name: str, home: Path) -> dict[str, bool]:
-    """Give the bot ``name`` the defaults it has not been given yet. ``{tiers, cap}``: which ones moved now. Never
-    raises: a bot whose record cannot be read or written is left, and looked at again next time."""
+    """Give the bot ``name`` the defaults it has not been given yet. ``{tiers, cap}``: which ones moved now (``cap``: a
+    default cap was removed). Never raises: a bot whose record cannot be read or written is left, and looked at again
+    next time."""
     moved = {"tiers": False, "cap": False}
     if homes.is_archived_name(name):
         return moved
     try:
         with _LOCK:
             given = _load(root)
-            due = [k for k in ("tiers", "cap") if name not in given[k]]
+            due = [k for k in ("tiers", "caps") if name not in given[k]]
             if not due:
                 return moved
             record, problem = store.read(home)
@@ -96,8 +106,9 @@ def give(root: Path, name: str, home: Path) -> dict[str, bool]:
                 store.update(home, approvals=default_tiers())
                 moved["tiers"] = True
             settings = doc.get("settings")
-            if "cap" in due and isinstance(settings, Mapping) and settings.get("cap") == FIRST_CAP:
-                store.update(home, settings={"cap": CAP})
+            cap = settings.get("cap") if isinstance(settings, Mapping) else None
+            if "caps" in due and _default_cap(cap, name in given["cap"]):
+                store.update(home, settings={"cap": ""})
                 moved["cap"] = True
             for key in due:
                 given[key].add(name)
