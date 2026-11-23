@@ -38,7 +38,3 @@ export function choicesFrom(options: ModelOptionsWire | null, ladder: readonly L
   }
   return out;
 }
-
-/** what `config.set` takes to switch only this session's model: the pick and its provider, `--session` so nothing is written to the
-    profile's configuration (without it a first pick on a fresh install would be saved as the default) */
-export const switchValue = (c: { provider: string; model: string }): string => c.model + (c.provider ? ' --provider ' + c.provider : '') + ' --session';

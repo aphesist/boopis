@@ -53,5 +53,3 @@ export interface ModelOptionsWire {
   providers?: { slug: string; name?: string; models?: string[]; featured_models?: string[] | null; authenticated?: boolean | null }[];
   model?: string; provider?: string;
 }
-/** the answer of `config.set` for the `model` key */
-export interface ConfigSetModelWire { key?: string; value?: string; warning?: string; confirm_required?: boolean; confirm_message?: string; scope?: string; deferred?: boolean }

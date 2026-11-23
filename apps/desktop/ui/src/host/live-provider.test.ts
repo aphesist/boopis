@@ -149,7 +149,8 @@ describe('the live provider: the conversation stream, from recorded frames', () 
       if (f['method'] === 'plugin.boopis.cascade.state') { host.result(id, { ladder, status: 'idle' }); return; }
       if (f['method'] === 'plugin.boopis.ledger.tail') { host.result(id, { events: [] }); return; }
       if (String(f['method']).startsWith('plugin.boopis.')) { host.result(id, {}); return; }
-      if (f['method'] === 'config.set') { sent.push((f['params'] as { value: string }).value); host.result(id, { key: 'model', value: 'x' }); return; }
+      if (f['method'] === 'config.set' && (f['params'] as { key?: string }).key === 'model') { host.error(id, 4001, 'use_session_mutation_model', { reason: 'use_session_mutation_model' }); return; }
+      if (f['method'] === 'session.mutate') { const p = (f['params'] as { payload: { model: string; provider?: string } }).payload; sent.push(p.model + ' --provider ' + p.provider); host.result(id, { session_id: SESSION, operation: 'model', revision: 1, execution_generation: 0 }); return; }
       gateway(f);
     }, true);
     const conv = provider.sessions.conversation(SESSION);
@@ -159,7 +160,7 @@ describe('the live provider: the conversation stream, from recorded frames', () 
     expect(provider.details.setGovernance({ smart: true })).toBeNull();
     provider.sessions.send(SESSION, 'debug why the login test is flaky', { ...META, smart: true });
     await tick(); await tick();
-    expect(sent).toEqual(['sonnet --provider ' + P + ' --session']);
+    expect(sent).toEqual(['sonnet --provider ' + P]);
     expect(host.last('prompt.submit')).toBeDefined();
     host.event('message.start', SESSION);
     const t = conv.snapshot().turns.at(-1);

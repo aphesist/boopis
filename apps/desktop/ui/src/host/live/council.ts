@@ -4,8 +4,8 @@
    engine; this file does three things with what it already has:
      1. writes the preset into the profile's configuration with the engine's own command (`cli.exec` runs `config set
         moa.presets.council.<field> <value>`; the host never edits the file, ADR-0014);
-     2. makes the next message of one session a council's with `config.set model "boopis-council --provider moa --once"`, then
-        `prompt.submit` as always. The engine puts the session's model back after that turn;
+     2. makes the next message of one session a council's: its `prompt.submit` carries `model_override: {model: "boopis-council",
+        provider: "moa"}`, so that admission alone runs the preset and the session's own model is never written (model-switch.ts);
      3. reads the turn's `moa.reference`, `moa.progress`, `moa.phase` and `moa.aggregating` events into a `CouncilTurn`.
    The pure parts (who sits by default, the preset's writes, the labels, the event reducer) are tested alone; the rest is thin. */
 import { ui } from '@boopis/ui';
@@ -17,18 +17,18 @@ import type { GatewayClient } from '../gateway';
 import { choicesFrom, splitValue, valueOf } from './models';
 import type { LadderTier } from './models';
 import type { ModelOptionsWire } from './wire';
-import { isUnknownMethod } from './wire';
+import type { ModelOverride } from './model-switch';
 
 const log = logger('live.council');
 
 /** the preset boopis keeps in the profile's `moa:` section. The name is unmistakably boopis's, so a preset of the user's own is never
     overwritten; it is written only by the council form */
 export const COUNCIL_PRESET = 'boopis-council';
-/** the one-turn switch: the preset, on the engine's virtual provider, for this turn only (the engine restores the model after it) */
 /** a report of the session's model that is the council's own: the engine names a council turn by its preset on its virtual provider
     (`boopis-council`, provider `moa`). It is not a model, so it is never the session's (the chip, the details, the answer) */
 export const isCouncilReport = (provider: string | null | undefined, model: string | null | undefined): boolean => provider === 'moa' || model === COUNCIL_PRESET;
-export const onceValue = (preset = COUNCIL_PRESET): string => preset + ' --provider moa --once';
+/** the one-turn switch (`prompt.submit`'s `model_override`): the preset, on the engine's virtual provider, for this admission only */
+export const COUNCIL_OVERRIDE: ModelOverride = { model: COUNCIL_PRESET, provider: 'moa' };
 
 /* ───────── who sits by default ───────── */
 
@@ -210,21 +210,19 @@ export interface CouncilDeps {
   gwId(uiId: string): string | null;
   /** the models on offer, and the session's model ('provider/model') and mode */
   context(uiId: string): { options: ModelOptionsWire | null; ladder: readonly LadderTier[]; current: string; governed: boolean; running: boolean };
-  /** the wait between tries while a new session's agent is being built (tests make it short) */
-  wait?: (ms: number) => Promise<void>;
 }
 
 export const GOVERNED_WHY = 'A governed session climbs the model ladder only when a gate fails. A council would buy more models without a failure, so it is not offered here. Start an ungoverned session to ask one.';
 const sentence = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 export interface CouncilHost extends CouncilSource {
-  /** before the message goes out: switch this one turn to the council. Resolves with the choice that ran it, null when nothing was armed. Rejects with a sentence when the engine refuses, so the message is not answered by a model nobody chose. */
+  /** before the message goes out: spend the armed council on this one message. Resolves with the choice that runs it (the caller then
+      submits with `COUNCIL_OVERRIDE`), null when nothing was armed. Rejects when the session is not on the engine yet. */
   start(uiId: string): Promise<CouncilChoice | null>;
 }
 
 export function createCouncil(deps: CouncilDeps): CouncilHost {
   const { client } = deps;
-  const wait = deps.wait ?? ((ms: number): Promise<void> => new Promise((r) => { setTimeout(r, ms); }));
   const armedBy = new Map<string, CouncilChoice>();
   const subs = new Set<() => void>();
   const notify = (): void => { for (const f of [...subs]) f(); };
@@ -302,24 +300,9 @@ export function createCouncil(deps: CouncilDeps): CouncilHost {
       notify();
       const gw = deps.gwId(uiId);
       if (!gw) throw new Error('The council could not start: this session is not on the engine yet.');
-      /* a session made a moment ago has no agent until the engine has built it, and a one-turn switch needs one: it answers that it is
-         "a live session" that is missing (code 5001) or says it is still starting (5032). The engine's words are not shown to us (the gateway
-         keeps them for Diagnostics), so the code tells them apart from a refusal of the model itself (4002), which is not tried again */
-      let last: unknown = null;
-      for (let i = 0; i < 12; i++) {
-        try {
-          const r = (await client.requestRaw('config.set', { session_id: gw, key: 'model', value: onceValue(), confirm_expensive_model: true })) as { confirm_required?: boolean; confirm_message?: string; deferred?: boolean } | null;
-          if (r?.confirm_required) throw new Error(r.confirm_message || 'the engine asked for a confirmation');
-          return choice;
-        } catch (e) {
-          last = e;
-          const code = (e as { rpcCode?: number } | null)?.rpcCode;
-          if (isUnknownMethod(e) || (code !== 5001 && code !== 5032)) break;
-          await wait(500);
-        }
-      }
-      log.warn('the one-turn switch to the council failed', last);
-      throw new Error('The council could not start (' + sentence(last) + '), so the message was not sent.');
+      /* nothing is switched here: the message's own `prompt.submit` carries `COUNCIL_OVERRIDE` (the caller adds it), so there is no session
+         agent to wait for and nothing to put back */
+      return choice;
     }
   };
 }
