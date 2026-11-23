@@ -138,3 +138,15 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - A session is settled when its branch is merged, or after 7 idle days.
 - Settling never deletes a worktree with local changes.
 - A clean worktree is removed on settle only if the owner turns that on (T3 has it off).
+
+## Owner decisions (23 Nov)
+
+- Permissions: one 4-step scale (Supervised / Auto-accept edits / Auto / Full access) in the launch step.
+- Full access keeps every write recorded (through `ship`): it removes the asks, never the journal; every turn rewindable.
+- Mid-session: EVERYTHING may change (as in T3). The caching invariant holds per engine session: the model switches in
+  place (engine `model_switch`); a change to workspace, permissions or toolsets continues the same visible thread on a
+  new engine session (fork with the history or a summary), and the cost of the cache miss is shown. No Hermes patch.
+- S0 ships in 0.2.0, after the Session screen design pass for the launch step.
+- Defaults kept (no objection): rewind journaled and not gated; session approvals expire at 300 s into the ask card;
+  worktrees outside the repo in a managed root; one metadata store in the profile home; GitHub first; settle on merge
+  or 7 idle days, never deleting local changes.
