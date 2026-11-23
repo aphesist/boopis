@@ -1062,3 +1062,78 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 **Consequences.**
 - A bot whose project lives in a repository reads that repository's own instructions in its chats and rooms, fresh at each new session; nothing is copied into its SOUL.
 - A kanban card made without `workspace_kind: "dir"` still runs in the board's scratch folder, without the project's instructions (an engine report asks for a better default).
+
+<!-- ADR-0050 is kept for w30/governed-bots's record "A bot's own rules are enforced", numbered ADR-0048 on its branch, which collides with ADR-0048 here; it is renumbered when w30 is merged. The records below are drafts for the w31 foundations wave (docs/specs/). -->
+
+## ADR-0051 The rules engine runs in the plugin's gate, for every tool, with its own reviewer (proposed, 23 November 2026)
+**Status.** Proposed (w31 foundations; spec `docs/specs/rules-engine.md`).
+
+**Context.**
+- Owner decision 10 (23 November 2026): one plain-language rules list in Settings for every bot, defaults for dangerous actions pre-filled and removable, anything uncovered runs, a pattern pre-filter plus an AI reviewer, fail closed; the card names the rule and offers Allow once, Always allow, Deny, Allow all this turn. The owner's answers to the plan (same day): the per-bot Allow/Ask/Block rows of w30/governed-bots stay on top; the reviewer is the cheapest connected model, changeable; no default caps.
+- Read in the engine (v0.23.2), not patched: its `smart` reviewer judges only shell commands its own detection flagged and takes operator policy as one prompt string (`tools/approval_smart.py`); plugin cards never pass through it (`tools/approval.py`, `_run_approval_gate`); `pre_tool_call` sees every tool call, receives `turn_id`, may return `approve` with a `rule_key`, and fails closed on error and timeout (`hermes_cli/plugins_dispatch.py`); plugins have LLM access through `ctx.llm` and may register their own auxiliary task (`agent/plugin_llm.py`, on the public plugin API list); `approvals.mode: off`, yolo and approving cron or unattended modes approve plugin cards without a person.
+
+**Decision.**
+1. **The rules engine is a step of the plugin's one permission function** (`policy.check`, inside `pre_tool_call`), for every tool of every bot: terminal, code, files, MCP and connector writes, messaging, browser, computer use. Not the engine's smart mode, which cannot judge per rule, cannot see non-shell tools, and would not show the owner which rule matched.
+2. **Order:** host protections, the existing hard policy, per-bot Block, exceptions, global rule match (ask), per-bot Ask, then run. A per-bot Allow never switches a global rule off; an exception does.
+3. **Pre-filter** for unedited default rules only, exact for structured calls (a miss means the rule does not apply) and a hint for opaque ones; **reviewer** for the rest, through `ctx.llm.complete_structured(task="boopis_reviewer")`, trusted rules in the system prompt, the action as delimited untrusted input, one verdict per rule id. A failure, timeout or wrong route holds the action at a card; where nobody can answer, it is refused and the owner notified.
+4. **The card is the engine's approval gate.** "Allow all this turn" is the engine's `session` answer on a turn-scoped rule key; "Always allow" answers `once` and drafts a narrow exception the owner edits; the engine's `always` is never sent for these cards.
+5. **`rules.json` is written by the host only** (Tauri commands from the window); the plugin reads it. The reviewer is the cheapest priced connected model by a fixed standard check, or the owner's pick.
+6. `approvals.mode` stays as the owner has it (`smart` or `manual`); `off`, yolo and approving cron or unattended modes are refused for bot profiles (ADR-0053).
+7. w30/governed-bots's tiers become per-bot rows whose default is "follow the rules list"; boopis-written tiers and caps are cleared once.
+
+**Alternatives weighed.**
+- *Feed the rules to the engine's smart mode* (`approvals.smart_policy`): shell-only, no rule named on the card, and its own decisions are not the owner's rules.
+- *Reviewer on the bot's own model*: costlier, and a bot's model is the one the action came from.
+- *Only deterministic rules*: the owner asked for plain language.
+
+**Consequences.**
+- One reviewer call at most per tool call that a rule's kinds cover and the pre-filter did not decide; cached per identical action. Latency budget p95 4 s, timeout 8 s.
+- The engine's hardline runs after the plugin's card (inside the tool), so a hardline command can show a card and still be blocked.
+- Room turns and kanban workers: whether their cards reach a person is to be verified on a live engine; behaviour is held where a person can answer, refused and notified where not.
+
+## ADR-0052 The host-ops channel, and the verbs a bot can reach (proposed, 23 November 2026)
+**Status.** Proposed (w31 foundations; spec `docs/specs/team-ops.md`).
+
+**Context.**
+- The BOOPIS bot (package w29, here w32) must run rooms, message bots, stop work and propose team changes from plugin tools. The plugin's only channel to the host is the secret channel (`hx-host-secrets-v1`: `get` and `has`), whose transport admits only the gateway process the host recorded, never a child of it (`secrets/peer.rs`).
+- Part C 2.5: team changes go through a dry-run plan card, the owner's hold, apply by plan hash and an undo snapshot; no bot answers approvals.
+
+**Decision.**
+1. **`hx-host-ops-v1`**: a second socket in the secret channel's `0700` folder, the same peer check, its own per-launch token handed only to the gateway. The listener moves into one shared module for both protocols.
+2. **The verbs are a closed list:** `team.plan`, `room.say`, `room.run`, `room.log`, `room.stop`, `bot.say`, `bot.run`, `session.stop`, `jobs.get`, `jobs.put`, `grant.redeem`. **Never** an apply, undo, reject, approval, clarify, form, secret, config, rules, budget or token verb, nor "send now" into a room. A test pins the list.
+3. Every changing verb takes an idempotency key and accepts `dry_run`; messages carry the host-written label "From boopis, for <owner>. This is not an approval."; a bot's `bot.say` never writes into the owner's open thread.
+4. **Plans** are stored under `<app data>/house/plans/<plan_hash>.json`; `plan_hash` is a SHA-256 over the plan's actions and the export hash it was planned against. Apply is a Tauri command behind the window's hold-to-approve, refused when the team changed since the plan; a snapshot is taken first; undo is a new plan through the same hold. The CLI gets `team plan`, `team apply --hash` and `team undo`, all refusing a bot caller.
+5. The Local API reads plans and jobs and may stop jobs; it cannot apply.
+6. Every call is a line of `<app data>/audit/house-ops.jsonl`, never message text.
+
+**Consequences.**
+- Only the gateway process reaches the channel: house tools work in the BOOPIS bot's chat and room turns, not in kanban or cron worker processes. Windows has no channel until a named-pipe server exists.
+- A plan made before another window or the CLI changed the team is refused at apply and must be made again.
+
+## ADR-0053 B47: host protections, and approvals answered only from an owner surface (proposed, 23 November 2026)
+**Status.** Proposed (w31 foundations; specs `docs/specs/host-protections.md`, `docs/specs/approval-surfaces.md`). Changes part of ADR-0045 ("once or deny only" from outside the window).
+
+**Context.**
+- B47 (verified in source): a bot with `terminal` can read the Local API token and answer approvals, including its own. w30/governed-bots denies the token read and refuses answer words in a bot's command lines. Still open: the engine's control socket (it mints tickets for any process of the owner), speaking as the owner through the Local API's `say`, editing the files that hold a bot's rules or the engine's `approvals.mode`, and owner-only CLI commands.
+- Owner decision 10: B47 and no self-approval are host protections, not rules. Bots run as the owner's user, so none of this is a sandbox.
+
+**Decision.**
+1. **Plugin, every session:** denied reads add `client-endpoint`, `gateway.sock` with its pointer and target, `host-ops.sock`, `activity.sock` and `activity.json`.
+2. **Plugin, bot sessions:** governance files (`rules.json`, `bot.json`, budgets, the engine's `config.yaml`, the plugin's installed copy, audit and plan files) cannot be written by any tool; more denied command words (the control socket, the Local API's say routes, owner-only CLI commands, engine settings that silence cards).
+3. **Host, Local API:** an answer or a message in the owner's voice (`approvals`, `say`, `retry`, room `say`) is refused when any process holding the client's end of the connection descends from the recorded gateway, was started with the per-launch `BOOPIS_ENGINE_LAUNCH` marker, or (Linux) sits in the gateway's own cgroup; and when the peer cannot be identified. Linux: `/proc/net/tcp` inode, `/proc/<pid>/fd`, `/proc/<pid>/stat`. macOS: `proc_pidfdinfo` socket info, `proc_pidinfo`. Windows: `GetExtendedTcpTable` gives the pid, but the gateway's pid is unknown there, so owner-voice routes are refused on Windows until it is known. Stops and reads stay open.
+4. **Owner surface:** an approval is answered from the window, from a Local API client that passed 3, or from a chat platform the engine bridges with `approvals.approvers: []` for bot profiles; never from a bot's tool, a host-ops verb or a plugin RPC. From the Local API: `once`, `deny`, `session` (bounded to the turn on boopis cards), and `always` on a boopis card answers `once` and saves the exception disabled, for the owner to finish in the window.
+5. **Owner-only commands** (`boopis team apply`, `undo`) refuse a bot caller; plugin RPCs that loosen tiers or budgets need a one-time owner grant redeemed over host-ops where it exists.
+6. `approvals.mode: off` and approving cron or unattended modes in a bot profile are a problem on the bot, and cards it would need are refused.
+
+**Consequences.**
+- Said plainly in `docs/LOCAL-API.md`: a program that double-forks, clears its environment and leaves the gateway's cgroup passes check 3; reading the token is denied but can be built. Defence in depth.
+- Follow-ups: per-client tokens (reverses ADR-0045's one-token consequence; the owner's call), an engine veto hook carrying who answered (an answer through a ticket minted at the control socket is invisible to the host today), the gateway's pid on Windows.
+
+## ADR-0054 The package's waves are renumbered w31 to w36 (proposed, 23 November 2026)
+**Status.** Proposed; the owner did not object to the plan's proposal (23 November 2026).
+
+**Context.** The owner's design package (`boopis-package`, 23 November 2026) names its waves w28 to w33 and the calm pass w28c. Branches `w28/launch-video`, `w29/*` and `w30/*` already exist.
+
+**Decision.** Package w28 (foundations) is w31; w29 (the BOOPIS bot) is w32; w30 (Bots onboarding) is w33; w31 (routines and teach-a-task) is w34; w32 (the bot computer) is w35; w33 (voice) is w36; w28c (the calm pass) is w31c and runs in parallel with w31, one UI writer on the library and the copy. Specs cite both numbers on first mention ("package w29, here w32").
+
+**Consequences.** Branch names follow this numbering (`w31/rules-engine`, `w31/host-protections`, `w31/team-ops`, `w31/rules-ui`, `w31c/calm`); the package's text is not rewritten.
