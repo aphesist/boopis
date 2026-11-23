@@ -34,7 +34,9 @@ export function googleFontsCss(search) {
   }
   return css;
 }
-const localFonts = (html) => html.replace(/https:\/\/fonts\.googleapis\.com\/css2\?/g, '/__gfonts?').replace(/<link[^>]+fonts\.gstatic\.com[^>]*>/g, '');
+/** a page or stylesheet with its Google Fonts reference pointed at /__gfonts (the same faces, from @fontsource, served here): the lab
+    never waits on the network, and draws the faces the app bundles (the app's CSP refuses the remote stylesheet) */
+export const localFonts = (html) => html.replace(/https:\/\/fonts\.googleapis\.com\/css2\?/g, '/__gfonts?').replace(/<link[^>]+fonts\.gstatic\.com[^>]*>/g, '');
 
 /** the v6 app page: the fragment in the skeleton the owner's test scripts used */
 export function v6IndexPage() {

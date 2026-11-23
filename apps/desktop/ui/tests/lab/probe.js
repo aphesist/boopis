@@ -241,7 +241,7 @@
     for (const a of document.getAnimations()) if (a instanceof CSSTransition && /color|background|shadow|outline|fill|stroke|radius/.test(a.transitionProperty)) { try { a.finish(); } catch { /* an animation that cannot finish is left */ } }
     const scope = o.scope ? document.querySelector(o.scope) : (window.__lab && window.__lab.scope && window.__lab.scope()) || document.body;
     if (!scope) return { error: 'no scope', findings: [] };
-    const want = new Set(o.checks || ['geometry.contain', 'geometry.center', 'geometry.clip', 'geometry.hscroll', 'geometry.target', 'geometry.overlap', 'concentric', 'overlay', 'tokens.computed', 'tokens.spacing', 'native', 'scrollbar', 'brand', 'copy', 'roles']);
+    const want = new Set(o.checks || ['geometry.contain', 'geometry.center', 'geometry.clip', 'geometry.hscroll', 'geometry.target', 'geometry.overlap', 'concentric', 'overlay', 'tokens.computed', 'tokens.spacing', 'native', 'scrollbar', 'brand', 'copy', 'roles', 'inline-baseline']);
     const els = elements(scope).filter((e) => shown(e));
     const cs = new Map(els.map((e) => [e, getComputedStyle(e)]));
     const shapes = new Map();
@@ -321,7 +321,7 @@
         for (const k of kids) {
           const kr = k.getBoundingClientRect();
           const kcs = getComputedStyle(k);
-          if (kcs.alignSelf === 'flex-start' || kcs.alignSelf === 'flex-end' || kcs.alignSelf === 'baseline') continue;
+          if (kcs.alignSelf === 'flex-start' || kcs.alignSelf === 'flex-end' || kcs.alignSelf === 'baseline' || (/^(auto|normal)$/.test(kcs.alignSelf) && /baseline/.test(s.alignItems))) continue;
           const off = (kr.top + kr.bottom) / 2 - mid;
           if (Math.abs(off) > 1) { add('geometry.center', k, 'sits ' + r1(Math.abs(off)) + 'px ' + (off > 0 ? 'below' : 'above') + ' the centre of its row ' + describe(e)); }
         }
@@ -557,6 +557,9 @@
             if (!/px$/.test(v)) continue;
             const n = r1(px(v));
             if (n === 0 || T.space.has(n) || SPACE_NAMED.has(n)) continue;
+            /* words trimmed to their cap height and baseline (`text-box`) centred in a chip: half of what the chip's height leaves, measured
+               from the font in use (calc(... - 1cap) / 2), so its value follows the font and is not a step (inline-baseline) */
+            if (/^padding-(top|bottom)$/.test(prop) && s.textBoxTrim && s.textBoxTrim !== 'none') continue;
             if (/gap/.test(prop) && !/flex|grid/.test(s.display)) continue;
             /* R-layout-5: a scroller that runs under the composer or the dock pads its end by their height, a sum of live heights and not a step.
                The pad may sit on the scroller or on the column that fills it (the thread's .ss-col inside .ss-scroll); either way the band
@@ -817,7 +820,156 @@
       }
       overlapMs = r1(performance.now() - t0);
     }
+
+    if (want.has('inline-baseline')) for (const f of inlineBaseline(els, cs)) add('inline-baseline', f.el, f.msg);
     return { findings: out, count: els.length, overlapMs };
+  }
+
+  /* ───────── inline-baseline ─────────
+     A chip set into running text (a mention, the person's "you" capsule, a model mention or a feedforward mark in the composer, inline
+     code, a path, the blank, an attachment chip) sits on the text's line: (a) its text's baseline is the line's baseline within half a
+     device pixel; (b) its box is centred on the line's cap band (baseline to cap height) within one device pixel; (c) the line box is
+     as tall with the chip as without it; (d) its box holds its content evenly: as much room left as right (a round mark at the start,
+     an orb, is as far from the start as from the top and bottom), and as much above the cap height as below the baseline, within half
+     a device pixel. The line is measured, never guessed from font metrics: a zero-width inline-block one cap tall (`height: 1cap`)
+     set in the parent's text just before the chip stands on the line's baseline and reaches its cap height, and another set in the
+     chip's own text does the same for the chip. No pixels are read, so a fallback font (CI's) moves both probes alike.
+     (b)'s tolerance is one device pixel because a box's top and bottom each round to the device pixel grid when painted, so a box
+     centred exactly in layout can paint up to one device pixel off; anything past that is a slip the eye sees. */
+  const INLINE_CHIP = '.ui-mention, .ui-ff, .ui-path, .ui-code, .ui-blank, .ui-md .ui-file';
+  const RUNNING = /^(block|inline|list-item|flow-root|table-cell|inline-block|run-in)$/;
+  function inlineBaseline(els, cs) {
+    const res = [];
+    const dpr = window.devicePixelRatio || 1;
+    const dev = (n) => r1(n * dpr * 100) / 100;   /* CSS px to device px, for the message */
+    /* the probe is an <i>, which the browser sets in italic: `font-style: inherit` keeps it in the face of the text it measures. In italic
+       it took `1cap` from the family's italic face, which loads only when something asks for it (Libre Franklin ships italic 400 and 600,
+       not 500), so the first probe on a page measured the fallback font while the face loaded: Inter here, 0.2px short of Libre
+       Franklin's cap height, Liberation Sans on CI's runner, 0.7px short, which read as a chip 0.7px low in its capsule */
+    const STYLE = 'position:static;visibility:hidden;display:inline-block;width:0;height:1cap;margin:0;padding:0;border:0;vertical-align:baseline;font-style:inherit;';
+    const capProbe = () => { const p = document.createElement('i'); p.className = 'lab-baseline-probe'; p.setAttribute('aria-hidden', 'true'); p.style.cssText = STYLE; return p; };
+    const chips = els.filter((e) => e.matches(INLINE_CHIP) && !e.parentElement?.closest(INLINE_CHIP));
+    for (const chip of chips) {
+      const c = cs.get(chip) || getComputedStyle(chip);
+      const par = chip.parentElement;
+      if (!par || !/^inline/.test(c.display) || c.position === 'absolute' || c.position === 'fixed' || c.float !== 'none') continue;
+      const pcs = getComputedStyle(par);
+      if (!RUNNING.test(pcs.display)) continue;   /* a chip laid out by a flex or grid row is a row item (geometry.center's), not text */
+      /* a chip alone in its block (an attachment on a line of its own) is not set into text: there is no line to sit on */
+      const blockOf = (() => { for (let p = par; p && p !== document.body; p = p.parentElement) if (!/^inline/.test(getComputedStyle(p).display)) return p; return document.body; })();
+      const others = (() => { const w = document.createTreeWalker(blockOf, NodeFilter.SHOW_TEXT); for (let t = w.nextNode(); t; t = w.nextNode()) if (!chip.contains(t) && t.data.trim() && !t.parentElement?.closest(SR)) return true; return false; })();
+      if (!others) continue;
+      /* the chip's text: the first shown element (never a screen reader's copy) whose own text or ::before draws it */
+      let holder = null, firstText = null;
+      const visit = (n) => {
+        for (const k of n.childNodes) {
+          if (holder) return;
+          if (k.nodeType === 3 && k.data.trim()) { holder = n; firstText = k; return; }
+          if (k.nodeType !== 1 || k.matches(SR) || k.matches('svg, orb-avatar, canvas, .ui-orb, .ui-dot')) continue;
+          const b = getComputedStyle(k, '::before').content;
+          if (b && b !== 'none' && b !== 'normal' && b !== '""' && !k.firstChild) { holder = k; return; }
+          visit(k);
+        }
+      };
+      if (chip.firstChild && chip.firstChild.nodeType === 3 && chip.firstChild.data.trim()) { holder = chip; firstText = chip.firstChild; } else visit(chip);
+      const lineProbe = capProbe(), ownProbe = holder ? capProbe() : null;
+      const painted = (() => {
+        /* a box the eye sees: a fill, a ring or a border on more than the bottom edge (a feedforward mark is an underline only) */
+        const bg = !transparent(c.backgroundColor), ring = c.boxShadow && c.boxShadow !== 'none';
+        const bd = ['Top', 'Left', 'Right'].some((s) => px(c['border' + s + 'Width']) > 0 && c['border' + s + 'Style'] !== 'none');
+        return bg || ring || bd;
+      })();
+      const problems = [];
+      try {
+        par.insertBefore(lineProbe, chip);
+        if (ownProbe) { if (firstText) holder.insertBefore(ownProbe, firstText); else holder.append(ownProbe); }
+        let L = lineProbe.getBoundingClientRect();
+        const b0 = chip.getClientRects()[0] || chip.getBoundingClientRect();
+        /* the chip began a new line: the probe before it stayed at the end of the line above, so it stands just after the chip */
+        if (L.bottom < b0.top) { par.insertBefore(lineProbe, chip.nextSibling); L = lineProbe.getBoundingClientRect(); }
+        if (L.bottom < b0.top || L.top > b0.bottom) continue;
+        const baseLine = L.bottom, capLine = L.height;
+        if (!(capLine > 0)) continue;   /* no cap unit, or a probe that did not lay out: nothing to measure against */
+        const b = chip.getClientRects()[0] || chip.getBoundingClientRect();
+        /* (a) the chip's text stands on the line's baseline */
+        let O = null;
+        if (ownProbe) {
+          O = ownProbe.getBoundingClientRect();
+          const da = O.bottom - baseLine;
+          if (Math.abs(da) * dpr > 0.5) problems.push('(a) its text\'s baseline is ' + dev(Math.abs(da)) + ' device px ' + (da > 0 ? 'below' : 'above') + ' the line\'s');
+        }
+        if (painted) {
+          /* (b) its box is centred on the line's cap band */
+          /* a chip in a smaller type (inline code) centres its box on its own text, as (d) asks, and its text stands on the line's baseline,
+             so its box's centre sits half the difference of the two cap heights below the line's: that much is allowed on top of the pixel */
+          const capOwn = O ? O.height : capLine;
+          const db = (b.top + b.bottom) / 2 - (baseLine - capLine / 2);
+          if (Math.abs(db) - Math.max(0, capLine - capOwn) / 2 > 1 / dpr) problems.push('(b) its box\'s centre is ' + dev(Math.abs(db)) + ' device px ' + (db > 0 ? 'below' : 'above') + ' the centre of the line\'s cap band');
+          /* (d) top and bottom: as much room over its cap height as under its baseline. An atomic chip (inline-flex, inline-block) only: an
+             inline box that flows and wraps with the sentence (inline code) paints its font's content area, ascent to descent, as CSS 2
+             lays it out, and centring that on the cap band needs `text-box` on inline boxes, which neither Chromium nor WebKitGTK ships;
+             its baseline (a) and its centring on the line (b) are still held */
+          if (O && /^inline-/.test(c.display)) {
+            const top = O.top - b.top, bottom = b.bottom - O.bottom;
+            if (Math.abs(top - bottom) * dpr > 0.5) problems.push('(d) ' + r1(top) + 'px above its cap height and ' + r1(bottom) + 'px below its baseline');
+          }
+          /* (d) left and right: the content's extent inside the box */
+          const parts = [];
+          const walk = (n) => {
+            for (const k of n.childNodes) {
+              if (k === ownProbe) continue;
+              if (k.nodeType === 3) { if (!k.data.trim()) continue; const r = document.createRange(); r.selectNodeContents(k); let clip = null;   /* what a box between the text and the chip cuts away (a path's folders, cut from the left) is not content */
+                for (let pe = k.parentElement; pe && pe !== chip; pe = pe.parentElement) if (getComputedStyle(pe).overflowX !== 'visible') { const z = pe.getBoundingClientRect(); clip = clip ? { left: Math.max(clip.left, z.left), right: Math.min(clip.right, z.right) } : { left: z.left, right: z.right }; }
+                for (const q0 of r.getClientRects()) { const q = clip ? { left: Math.max(q0.left, clip.left), right: Math.min(q0.right, clip.right), top: q0.top, bottom: q0.bottom, width: q0.width } : q0; if (q.width > 0 && q.right > q.left && q.top < b.bottom && q.bottom > b.top) parts.push({ q, mark: false }); }
+                continue; }
+              if (k.nodeType !== 1 || k.matches(SR) || !shown(k)) continue;
+              if (k.matches('svg, orb-avatar, canvas, .ui-orb, .ui-dot, .ui-icon, .ui-mention__stack, .ui-stamp') || ![...k.childNodes].some((n) => n !== ownProbe)) { const q = k.getBoundingClientRect(); if (q.width > 0 && q.top < b.bottom && q.bottom > b.top) parts.push({ q, mark: k.matches('.ui-orb, orb-avatar, .ui-mention__stack') }); continue; }
+              walk(k);
+            }
+          };
+          walk(chip);
+          if (parts.length && chip.getClientRects().length === 1) {
+            parts.sort((x, y) => x.q.left - y.q.left);
+            const first = parts[0], left = first.q.left - b.left, right = b.right - Math.max(...parts.map((p) => p.q.right));
+            if (first.mark) {
+              /* a round mark at the start, concentric with the capsule's end: as far from the start as from the top and bottom */
+              const v = Math.min(first.q.top - b.top, b.bottom - first.q.bottom);
+              if (Math.abs(left - v) * dpr > 0.5) problems.push('(d) its leading mark is ' + r1(left) + 'px from the start and ' + r1(v) + 'px from the top and bottom');
+            } else if (Math.abs(left - right) * dpr > 0.5) problems.push('(d) ' + r1(left) + 'px of room on the left and ' + r1(right) + 'px on the right');
+          }
+        }
+        /* (c) the line is as tall with the chip as without it: the chip is swapped for a stand-in as wide and no taller than a baseline
+           (an atomic chip), or its own inline box is folded to nothing (an inline one, which keeps its widths and so its line breaks) */
+        const block = blockOf;
+        /* where the chip's line and the block's last line stand (a probe on the baseline at the block's end): fractional layout positions,
+           not scrollHeight, which rounds to whole pixels */
+        const endProbe = capProbe(); block.append(endProbe);
+        const measure = () => { const t = block.getBoundingClientRect().top; return [lineProbe.getBoundingClientRect().bottom - t, endProbe.getBoundingClientRect().bottom - t]; };
+        const withChip = measure();
+        let without;
+        if (/^inline-/.test(c.display)) {
+          const stand = document.createElement('i'); stand.className = 'lab-baseline-probe';
+          stand.style.cssText = 'position:static;display:inline-block;height:0;padding:0;border:0;vertical-align:baseline;width:' + b.width + 'px;margin:0 ' + c.marginRight + ' 0 ' + c.marginLeft;
+          const was = chip.style.getPropertyValue('display'), pri = chip.style.getPropertyPriority('display');
+          par.insertBefore(stand, chip); chip.style.setProperty('display', 'none', 'important');
+          without = measure();
+          chip.style.setProperty('display', was, pri); if (!was) chip.style.removeProperty('display');
+          stand.remove();
+        } else {
+          const st = document.createElement('style'); st.textContent = '.lab-baseline-flat, .lab-baseline-flat * { line-height: 0 !important; vertical-align: baseline !important; }';
+          document.head.append(st); chip.classList.add('lab-baseline-flat');
+          without = measure();
+          chip.classList.remove('lab-baseline-flat'); st.remove();
+        }
+        endProbe.remove();
+        const grew = Math.max(withChip[0] - without[0], withChip[1] - without[1]);
+        if (grew * dpr > 0.5) problems.push('(c) it makes its line ' + dev(grew) + ' device px taller');
+      } finally {
+        lineProbe.remove(); ownProbe?.remove();
+      }
+      if (problems.length) res.push({ el: chip, msg: 'off its line: ' + problems.join('; ') });
+    }
+    return res;
   }
 
   let sbCache = null;

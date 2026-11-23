@@ -61,6 +61,7 @@ rules have a check and which do not.
 | `tokens.computed` | R-colour-1, R-type-1, R-type-2, R-type-4, R-corner-1, R-copy-1 | a computed colour, background, border, outline, fill, shadow colour, font size or radius that is not a token of the active preset (resolved on the element's ground, so the dock's re-derived tokens count) |
 | `tokens.spacing` | R-space-1, R-space-2 | padding or gap that is neither a `--sp-*` step, a `--pad-*` token nor a value of R-space-2's named exceptions |
 | `tokens.static` | R-colour-1 | a literal colour, font size, radius or inline-style length in the UI's CSS and TS outside the token files (`tests/lab/static-scan.mjs`) |
+| `inline-baseline` | | a chip set into running text (a mention, the person's "you" capsule, `@all`, a bot outside the room, the composer's model mention and feedforward marks, inline code, a path, the blank, an attachment chip) that is off its line: (a) its text's baseline more than 0.5 device px from the line's; (b) its box's centre more than 1 device px from the centre of the line's cap band (plus half the difference of the two cap heights, for a chip in a smaller type such as code); (c) the line box taller with it than with a stand-in as wide; (d) uneven room inside it, left against right (a leading orb: from the start against from the top and bottom) and over the cap height against under the baseline, more than 0.5 device px. The line and the chip's text are measured with zero-width inline-blocks one cap tall (`height: 1cap`) set in each, never from pixels or assumed font metrics, so a fallback font moves both alike. A chip alone in its block, or laid out by a flex or grid row, is not in running text. Its stories are `components/inline-chips` |
 | `native` | R-native-1, R-native-3, R-field-4, R-select-1 | an unthemed native control: `select`, date, colour, range, file or number inputs, an engine-drawn checkbox or radio, `progress`, `meter` |
 | `scrollbar` | R-scroll-1, -2, -3, -6, -8 | a scroller with no `::-webkit-scrollbar` rule (WebKitGTK ignores `scrollbar-width`), a bar wider than `--scroll-size`, a thumb that is not `--bg-4`, an inner scroller without `overscroll-behavior: contain`; and, in the source, any `scrollbar-width` or `scrollbar-color` |
 | `brand` | R-copy-8 | rendered text, `aria-label`, `aria-description`, `title`, placeholder or tooltip names the engine (ADR-0031; any case). The exception, a plugin store item under its own name or publisher (`data-store-item`, `core/engine-words.ts`), is `BRAND_ALLOW` in `rules.mjs` |
@@ -84,7 +85,8 @@ the screenshot is scaled the same way and pixel-diffed against the thumbnail (th
 pixels). Full-resolution goldens for every state and preset would be about 75 MB, quarter-scale ones about 20; these
 are about 5. A slip smaller than a block is the geometry checks' to catch; the thumbnail says where something moved. Orbs and canvases are hidden in screenshots (their idle
 motion is random by design). Goldens are taken in the lab's own Chromium; another machine's font rasteriser can differ,
-which shows as visual failures there and nowhere else.
+which shows as visual failures there and nowhere else. The lab never fetches a font: the Google Fonts stylesheet `tokens.css`
+imports is served from `@fontsource` (`/__gfonts`), the faces the app bundles, so a page's load never waits on the network.
 
 ## Read the report
 
