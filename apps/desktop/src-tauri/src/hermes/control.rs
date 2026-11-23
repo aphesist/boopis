@@ -56,6 +56,22 @@ impl Identify {
             .map(|p| p.profile_id.as_str())
     }
 
+    /// The profile id of the entry that names `home` itself, never a stand-in: how a profile home with no control socket of its
+    /// own is found among the profiles the root's gateway serves (the engine's multiplexer, `docs/LOCAL-API.md`). Paths are
+    /// compared as written and as resolved, since the engine names homes resolved.
+    #[must_use]
+    pub fn served_id(&self, home: &Path) -> Option<&str> {
+        let resolved = std::fs::canonicalize(home).ok();
+        let same = |p: &str| {
+            let p = Path::new(p);
+            p == home || resolved.as_deref().is_some_and(|r| p == r)
+        };
+        self.served_profiles
+            .iter()
+            .find(|p| p.home.as_deref().is_some_and(same) || same(&p.profile_id))
+            .map(|p| p.profile_id.as_str())
+    }
+
     /// The home this gateway serves when it is not `home`, is `home`'s sibling and no longer exists: a gateway whose folder was
     /// renamed under it (ADR-0031's `hermes-home` to `engine`) still answers on the moved control socket, but its
     /// database was moved while open, so its writes are refused (`storage_unavailable`). Such a gateway is stopped and

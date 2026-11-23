@@ -303,7 +303,8 @@ impl Supervisor {
     /// Run [`Supervisor::ensure`] unless it is not needed: it already succeeded for `home` in this run, or the running
     /// gateway cannot be older than Hermes (it names no code identity, or it names the one the install stamp names).
     /// That check is a socket round trip instead of a Python start, which is what lets the first attach of a run meet
-    /// its 300 ms budget when a gateway is already up.
+    /// its 300 ms budget when a gateway is already up. A bot's home is answered for by the root's gateway (`identify_for`), so
+    /// it costs the same.
     ///
     /// # Errors
     /// Whatever [`Supervisor::ensure`] returns when it runs.
@@ -312,8 +313,10 @@ impl Supervisor {
             return Ok(());
         }
         let info = self.info().await?;
-        if let Ok(identity) = control::identify(home).await {
-            if let Some(theirs) = identity.stale_home(home) {
+        if let Ok((identity, socket)) = self.identify_for(home).await {
+            if socket == home
+                && let Some(theirs) = identity.stale_home(home)
+            {
                 tracing::warn!(home = %home.display(), serves = %theirs, "the gateway on this home's socket serves a folder that no longer exists; restarting it");
                 return self.restart(home, true).await.map(|_| ());
             }
@@ -343,8 +346,8 @@ impl Supervisor {
         self.ensured.lock().is_ok_and(|d| d.contains(home))
     }
 
-    /// A fresh dial for `home`: the control socket first (about 2 ms), `hermes gateway attach --json --start` when it
-    /// does not answer (about 500 ms, and it starts a gateway that is gone).
+    /// A fresh dial for `home`: the control socket first (about 2 ms; the root's for a bot's home it serves), `hermes gateway
+    /// attach --json --start` when none answers (about 500 ms, and it starts a gateway that is gone).
     ///
     /// # Errors
     /// Whatever the CLI verdict says when both routes fail.
@@ -365,7 +368,7 @@ impl Supervisor {
     }
 
     async fn attach_fast(&self, home: &Path) -> Result<Dial> {
-        let identity = control::identify(home).await?;
+        let (identity, socket) = self.identify_for(home).await?;
         self.note_gateway(&identity);
         if identity.state != "ready" {
             return Err(Error::Unavailable(format!(
@@ -373,12 +376,36 @@ impl Supervisor {
                 identity.state
             )));
         }
-        let profile = identity
-            .profile_id_for(home)
-            .ok_or_else(|| Error::Unavailable("the gateway does not serve this home".into()))?
-            .to_owned();
-        let ticket = control::session_ticket(home, &identity, &profile).await?;
+        let profile = if socket == home {
+            identity.profile_id_for(home)
+        } else {
+            identity.served_id(home)
+        }
+        .ok_or_else(|| Error::Unavailable("the gateway does not serve this home".into()))?
+        .to_owned();
+        let ticket = control::session_ticket(&socket, &identity, &profile).await?;
         Dial::from_control(identity.endpoint, &ticket)
+    }
+
+    /// Who answers for `home`, and the home whose control socket that is: `home`'s own socket, or, for a profile home that has
+    /// none, the root's, when the root's gateway names `home` among the profiles it serves. That is the engine's own rule for a
+    /// served profile (`hermes gateway attach` asks the multiplexer's socket and mints a ticket bound to the profile's home), done
+    /// as two socket round trips instead of a Python start, so a bot's link costs what the root's does. A profile home the root
+    /// does not name (not served yet, or a gateway of its own that is down) gets the own socket's error, and the callers fall
+    /// back to the engine's command line as before.
+    async fn identify_for(&self, home: &Path) -> Result<(control::Identify, PathBuf)> {
+        let own = match control::identify(home).await {
+            Ok(identity) => return Ok((identity, home.to_path_buf())),
+            Err(e) => e,
+        };
+        let root = self.env.hermes_root();
+        if root.as_path() == home {
+            return Err(own);
+        }
+        match control::identify(&root).await {
+            Ok(identity) if identity.served_id(home).is_some() => Ok((identity, root)),
+            _ => Err(own),
+        }
     }
 
     /// A gateway a launch just made ready: ask its control socket who it is and record that.
@@ -497,5 +524,117 @@ mod tests {
         let ep = sup.ensure(&home).await.unwrap();
         assert_eq!(ep.instance_id.as_deref(), Some("i"));
         assert!(sup.is_ensured(&home));
+    }
+
+    /// A fake root gateway's control socket: `identify` names `served` homes, `session-ticket` records the profile id it was
+    /// asked for. Returns what it was asked for.
+    #[cfg(unix)]
+    fn serve_root_socket(root: &Path, served: Vec<String>) -> Arc<Mutex<Vec<String>>> {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        let asked = Arc::new(Mutex::new(Vec::new()));
+        let listener = tokio::net::UnixListener::bind(root.join("gateway.sock")).unwrap();
+        let seen = asked.clone();
+        tokio::spawn(async move {
+            loop {
+                let Ok((s, _)) = listener.accept().await else {
+                    return;
+                };
+                let (r, mut w) = s.into_split();
+                let mut line = String::new();
+                BufReader::new(r).read_line(&mut line).await.unwrap();
+                let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+                let result = if req["verb"] == "identify" {
+                    let rows: Vec<_> = served
+                        .iter()
+                        .map(|h| serde_json::json!({"profile_id": h, "home": h}))
+                        .collect();
+                    serde_json::json!({"state":"ready","instance_id":"inst","api_origin":"http://127.0.0.1:7","served_profiles":rows})
+                } else {
+                    let id = req["params"]["profile_id"].as_str().unwrap().to_owned();
+                    seen.lock().unwrap().push(id);
+                    serde_json::json!({"ticket":"abc_DEF-123"})
+                };
+                let answer = serde_json::json!({"ok":true,"protocol":1,"result":result,"id":1});
+                w.write_all(format!("{answer}\n").as_bytes()).await.unwrap();
+            }
+        });
+        asked
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_bots_home_the_roots_gateway_serves_is_reached_through_its_socket_without_starting_the_engine()
+     {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        // the engine's command line writes down every call it gets
+        let bin = dir.path().join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let calls = dir.path().join("calls");
+        std::fs::write(
+            bin.join("hermes"),
+            format!(
+                "#!/bin/sh\necho \"$*\" >> '{}'\ncase \"$1\" in --version) echo 'Hermes Agent v0.23.2 (x)';; esac\n",
+                calls.display()
+            ),
+        )
+        .unwrap();
+        std::fs::set_permissions(bin.join("hermes"), std::fs::Permissions::from_mode(0o755))
+            .unwrap();
+        let root = dir.path().join("home");
+        let (kai, nina) = (root.join("profiles/kai"), root.join("profiles/nina"));
+        for d in [&root, &kai, &nina] {
+            std::fs::create_dir_all(d).unwrap();
+            std::fs::set_permissions(d, std::fs::Permissions::from_mode(0o700)).unwrap();
+        }
+        let env = Environment {
+            hermes_home: Some(root.display().to_string()),
+            home_dir: Some(dir.path().to_path_buf()),
+            path: Some(bin.into_os_string()),
+            ..Environment::default()
+        };
+        // the multiplexer serves the root and kai; nina is not served (yet)
+        let asked = serve_root_socket(
+            &root,
+            vec![root.display().to_string(), kai.display().to_string()],
+        );
+        let sup = Supervisor::new(env, Limits::default());
+
+        sup.ensure_if_needed(&kai).await.unwrap();
+        assert!(sup.is_ensured(&kai));
+        let dial = sup.attach(&kai).await.unwrap();
+        assert_eq!(dial.url.as_str(), "ws://127.0.0.1:7/api/ws");
+        // the ticket is bound to kai's home, never the root's, and minted on the root's socket
+        assert_eq!(*asked.lock().unwrap(), [kai.display().to_string()]);
+        let ran = std::fs::read_to_string(&calls).unwrap();
+        assert!(
+            ran.lines().all(|l| l == "--version"),
+            "no engine start for a served bot: {ran}"
+        );
+
+        // a home the root does not name gets no ticket of the root's: the engine's own attach is asked, as before
+        assert!(sup.attach(&nina).await.is_err());
+        assert_eq!(asked.lock().unwrap().len(), 1, "no ticket for nina");
+        let ran = std::fs::read_to_string(&calls).unwrap();
+        assert!(ran.contains("gateway attach --json --start"), "{ran}");
+    }
+
+    #[test]
+    fn only_the_entry_that_names_a_home_serves_it() {
+        let id: control::Identify = serde_json::from_str(
+            r#"{"state":"ready","served_profiles":[{"profile_id":"/e","home":"/e"},{"profile_id":"/e/profiles/kai","home":"/e/profiles/kai"}]}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            id.served_id(Path::new("/e/profiles/kai")),
+            Some("/e/profiles/kai")
+        );
+        assert_eq!(id.served_id(Path::new("/e")), Some("/e"));
+        assert_eq!(id.served_id(Path::new("/e/profiles/nina")), None);
+        // the only entry is never a stand-in for a bot's home
+        let alone: control::Identify =
+            serde_json::from_str(r#"{"served_profiles":[{"profile_id":"/e","home":"/e"}]}"#)
+                .unwrap();
+        assert_eq!(alone.served_id(Path::new("/e/profiles/kai")), None);
     }
 }

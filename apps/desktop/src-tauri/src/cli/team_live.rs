@@ -5,15 +5,19 @@
 //! link; rooms by `groups.*` and boopis's `rooms.json`; boards by the engine's `kanban boards` commands; jobs by
 //! `cron.manage` on the bot's own link, with the whole prompt read from the bot's `cron/jobs.json` (the list gives 100
 //! characters). Bot creation is the Bots form's path: `profiles.create`, `bots.write`, then `bots::engine::Service::prepare`.
+//!
+//! One command opens one link to the root's gateway and one to each bot it asks about, and keeps them for every call, as
+//! `groups` keeps its one link: a link per call cost a ticket each, and for a bot's home it used to cost two starts of the
+//! engine's command line (`gateway ensure`, `gateway attach`) before the supervisor learnt to ask the root's control socket.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use serde_json::{Value, json};
 
-use super::headless::Host;
+use super::headless::{GatewayRpc, Host};
 use crate::bots::{self, Layout};
 use crate::connectors::ops::{GatewayMcp, McpOps};
 use crate::error::{Error, Result};
@@ -32,6 +36,12 @@ pub struct Live<'a> {
     layout: Layout,
     service: Arc<bots::engine::Service>,
     settings: PathBuf,
+    /// The root's gateway, one link for the whole command.
+    root: GatewayRpc,
+    /// Each bot's own gateway link, opened when first asked and kept.
+    links: Mutex<BTreeMap<String, Arc<GatewayRpc>>>,
+    /// What `profiles.describe default` said, asked once.
+    root_profile: tokio::sync::OnceCell<Value>,
 }
 
 impl<'a> Live<'a> {
@@ -42,8 +52,25 @@ impl<'a> Live<'a> {
             layout: Layout::new(host.root().to_path_buf(), carried),
             service: Arc::new(bots::engine::Service::new(host.supervisor().clone())),
             settings: host.data_dir().join(crate::rooms::settings::FILE),
+            root: host.rpc(),
+            links: Mutex::new(BTreeMap::new()),
+            root_profile: tokio::sync::OnceCell::new(),
             host,
         }
+    }
+
+    /// The bot's own link, the same one for every call of this command.
+    fn bot_link(&self, bot: &str) -> Result<Arc<GatewayRpc>> {
+        let mut links = self
+            .links
+            .lock()
+            .map_err(|_| Error::Unavailable("a bot's link was lost".into()))?;
+        if let Some(l) = links.get(bot) {
+            return Ok(l.clone());
+        }
+        let l = Arc::new(self.host.rpc_for(bot)?);
+        links.insert(bot.to_owned(), l.clone());
+        Ok(l)
     }
 
     fn mcp(&self, bot: &str) -> Result<GatewayMcp> {
@@ -56,9 +83,15 @@ impl<'a> Live<'a> {
     }
 
     async fn describe(&self, name: &str) -> Result<Value> {
-        self.host
-            .rpc()
+        self.root
             .call("profiles.describe", json!({"name": name}))
+            .await
+    }
+
+    /// The root profile as `profiles.describe` gives it, asked once per command.
+    async fn root_profile(&self) -> Result<&Value> {
+        self.root_profile
+            .get_or_try_init(|| self.describe("default"))
             .await
     }
 
@@ -70,23 +103,20 @@ impl<'a> Live<'a> {
         Ok((self.default_provider().await, label.to_owned()))
     }
 
+    /// The provider of the root's model (`model.provider` of its configuration, as `profiles.describe` reads it over the link
+    /// that is open anyway, not a start of the engine's command line); empty when it cannot be read.
     async fn default_provider(&self) -> String {
-        match self
-            .host
-            .engine_cli(&["config", "get", "--json", "model.provider"])
-            .await
-        {
-            Ok(o) if o.code == 0 => serde_json::from_str::<Value>(o.stdout.trim())
-                .ok()
-                .and_then(|v| v.as_str().map(str::to_owned))
-                .unwrap_or_default(),
-            _ => String::new(),
+        match self.root_profile().await {
+            Ok(d) => bots::model_of(d.get("model")).0,
+            Err(e) => {
+                tracing::debug!(error = %e, "the root's provider could not be read");
+                String::new()
+            }
         }
     }
 
     async fn plugin(&self, method: &str, params: Value) -> Result<Value> {
-        self.host
-            .rpc()
+        self.root
             .call(&format!("plugin.boopis.{method}"), params)
             .await
     }
@@ -110,7 +140,7 @@ impl<'a> Live<'a> {
     }
 
     async fn jobs_of(&self, bot: &str) -> Result<Vec<JobNow>> {
-        let rpc = self.host.rpc_for(bot)?;
+        let rpc = self.bot_link(bot)?;
         let res = rpc
             .call(
                 "cron.manage",
@@ -164,7 +194,7 @@ impl<'a> Live<'a> {
     }
 
     async fn cron(&self, bot: &str, params: Value) -> Result<()> {
-        let res = self.host.rpc_for(bot)?.call("cron.manage", params).await?;
+        let res = self.bot_link(bot)?.call("cron.manage", params).await?;
         match res.get("error").and_then(Value::as_str) {
             Some(e) => Err(Error::Unavailable(e.to_owned())),
             None => Ok(()),
@@ -187,70 +217,9 @@ impl<'a> Live<'a> {
         self.plugin("bots.write", body).await.map(|_| ())
     }
 
-    async fn prepare(&self, name: &str, fresh: bool) -> Result<()> {
-        let done = self.service.prepare(&self.layout, name, fresh).await?;
-        if done.problems.is_empty() {
-            Ok(())
-        } else {
-            Err(Error::Bots(
-                "hx.bots.prepare_failed",
-                done.problems.join("; "),
-            ))
-        }
-    }
-}
-
-fn text(v: &Value, key: &str) -> String {
-    v.get(key).and_then(Value::as_str).unwrap_or("").to_owned()
-}
-
-/// The whole prompt of each job of a home, from its `cron/jobs.json` (read only; the engine owns the file). Empty when the
-/// file is not there or is not a shape this reads.
-fn whole_prompts(home: &std::path::Path) -> BTreeMap<String, String> {
-    let Ok(raw) = std::fs::read_to_string(home.join("cron").join("jobs.json")) else {
-        return BTreeMap::new();
-    };
-    let Ok(v) = serde_json::from_str::<Value>(&raw) else {
-        return BTreeMap::new();
-    };
-    let rows = v
-        .get("jobs")
-        .and_then(Value::as_array)
-        .or_else(|| v.as_array());
-    rows.map(|rows| {
-        rows.iter()
-            .filter_map(|j| {
-                Some((
-                    j.get("id")?.as_str()?.to_owned(),
-                    j.get("prompt")?.as_str()?.to_owned(),
-                ))
-            })
-            .collect()
-    })
-    .unwrap_or_default()
-}
-
-fn expand(path: &str) -> String {
-    match (path.strip_prefix("~/"), dirs::home_dir()) {
-        (Some(rest), Some(h)) => h.join(rest).display().to_string(),
-        (None, Some(h)) if path == "~" => h.display().to_string(),
-        _ => path.to_owned(),
-    }
-}
-
-fn contract(path: &str) -> String {
-    match dirs::home_dir() {
-        Some(h) => std::path::Path::new(path)
-            .strip_prefix(&h)
-            .map_or_else(|_| path.to_owned(), |rest| format!("~/{}", rest.display())),
-        None => path.to_owned(),
-    }
-}
-
-#[async_trait]
-impl Backend for Live<'_> {
+    /// Everything but the boards: the bots, their jobs and the rooms, over the kept links.
     #[allow(clippy::too_many_lines)] // one read per kind of thing
-    async fn read(&self) -> Result<Current> {
+    async fn read_linked(&self) -> Result<Current> {
         let mut now = Current {
             default_provider: self.default_provider().await,
             ..Current::default()
@@ -334,14 +303,14 @@ impl Backend for Live<'_> {
             now.jobs
                 .insert(name.clone(), self.jobs_of(&name).await.unwrap_or_default());
         }
-        now.baseline_skills = self.describe("default").await.ok().and_then(|d| {
+        now.baseline_skills = self.root_profile().await.ok().and_then(|d| {
             d.get("skills")
                 .and_then(Value::as_array)
                 .map(|s| s.iter().map(|e| text(e, "name")).collect())
         });
         let kept = RoomSettings::load(&self.settings).unwrap_or_default();
-        for r in rooms::list(&self.host.rpc(), false).await? {
-            let state = rooms::state(&self.host.rpc(), &r.id).await?;
+        for r in rooms::list(&self.root, false).await? {
+            let state = rooms::state(&self.root, &r.id).await?;
             now.rooms.push(RoomNow {
                 members: r.members.iter().map(|m| m.id.clone()).collect(),
                 lead: if state.context.routing == "lead" {
@@ -355,6 +324,12 @@ impl Backend for Live<'_> {
                 name: r.name,
             });
         }
+        Ok(now)
+    }
+
+    /// The boards that are not archived, by slug, from the engine's `kanban boards list` (empty when it cannot be read).
+    async fn read_boards(&self) -> BTreeMap<String, BoardNow> {
+        let mut out = BTreeMap::new();
         let boards = self
             .kanban(&["boards", "list", "--json"])
             .await
@@ -365,7 +340,7 @@ impl Backend for Live<'_> {
                 if slug.is_empty() || b.get("archived").and_then(Value::as_bool) == Some(true) {
                     continue;
                 }
-                now.boards.insert(
+                out.insert(
                     slug,
                     BoardNow {
                         name: text(&b, "name"),
@@ -378,6 +353,76 @@ impl Backend for Live<'_> {
                 );
             }
         }
+        out
+    }
+
+    async fn prepare(&self, name: &str, fresh: bool) -> Result<()> {
+        let done = self.service.prepare(&self.layout, name, fresh).await?;
+        if done.problems.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::Bots(
+                "hx.bots.prepare_failed",
+                done.problems.join("; "),
+            ))
+        }
+    }
+}
+
+fn text(v: &Value, key: &str) -> String {
+    v.get(key).and_then(Value::as_str).unwrap_or("").to_owned()
+}
+
+/// The whole prompt of each job of a home, from its `cron/jobs.json` (read only; the engine owns the file). Empty when the
+/// file is not there or is not a shape this reads.
+fn whole_prompts(home: &std::path::Path) -> BTreeMap<String, String> {
+    let Ok(raw) = std::fs::read_to_string(home.join("cron").join("jobs.json")) else {
+        return BTreeMap::new();
+    };
+    let Ok(v) = serde_json::from_str::<Value>(&raw) else {
+        return BTreeMap::new();
+    };
+    let rows = v
+        .get("jobs")
+        .and_then(Value::as_array)
+        .or_else(|| v.as_array());
+    rows.map(|rows| {
+        rows.iter()
+            .filter_map(|j| {
+                Some((
+                    j.get("id")?.as_str()?.to_owned(),
+                    j.get("prompt")?.as_str()?.to_owned(),
+                ))
+            })
+            .collect()
+    })
+    .unwrap_or_default()
+}
+
+fn expand(path: &str) -> String {
+    match (path.strip_prefix("~/"), dirs::home_dir()) {
+        (Some(rest), Some(h)) => h.join(rest).display().to_string(),
+        (None, Some(h)) if path == "~" => h.display().to_string(),
+        _ => path.to_owned(),
+    }
+}
+
+fn contract(path: &str) -> String {
+    match dirs::home_dir() {
+        Some(h) => std::path::Path::new(path)
+            .strip_prefix(&h)
+            .map_or_else(|_| path.to_owned(), |rest| format!("~/{}", rest.display())),
+        None => path.to_owned(),
+    }
+}
+
+#[async_trait]
+impl Backend for Live<'_> {
+    async fn read(&self) -> Result<Current> {
+        // The boards are the one read that starts the engine's command line: it runs while the links are asked.
+        let (now, boards) = tokio::join!(self.read_linked(), self.read_boards());
+        let mut now = now?;
+        now.boards = boards;
         Ok(now)
     }
 
@@ -398,7 +443,7 @@ impl Backend for Live<'_> {
                     params["provider"] = json!(provider);
                     params["model"] = json!(model);
                 }
-                self.host.rpc().call("profiles.create", params).await?;
+                self.root.call("profiles.create", params).await?;
                 let gov = bot.governed == Some(true);
                 if gov && !crate::frontier::is_frontier(&provider, &model) {
                     return Err(Error::Bots(
@@ -458,7 +503,7 @@ impl Backend for Live<'_> {
                     }
                 }
                 if params.as_object().is_some_and(|o| o.len() > 1) {
-                    let res = self.host.rpc().call("profiles.configure", params).await?;
+                    let res = self.root.call("profiles.configure", params).await?;
                     if res.get("confirm_required").and_then(Value::as_bool) == Some(true) {
                         return Err(Error::Unavailable(format!(
                             "the model {} needs your confirmation: change it in the app's Bots page once",
@@ -492,8 +537,7 @@ impl Backend for Live<'_> {
                             .collect()
                     })
                     .unwrap_or_default();
-                self.host
-                    .rpc()
+                self.root
                     .call(
                         "profiles.configure",
                         json!({"name": bot, "disabled_skills": off}),
@@ -535,7 +579,7 @@ impl Backend for Live<'_> {
                     lead: lead.clone(),
                     purpose: purpose.clone(),
                 };
-                let room = rooms::create(&self.host.rpc(), &new).await?;
+                let room = rooms::create(&self.root, &new).await?;
                 if let Some(n) = max_rounds {
                     let mut kept = RoomSettings::load(&self.settings)?;
                     kept.set_max_rounds(&room.id, Some(*n))?;
@@ -544,12 +588,12 @@ impl Backend for Live<'_> {
                 Ok(())
             }
             Op::SetRoomContext { id, lead, purpose } => {
-                let rpc = self.host.rpc();
-                let mut ctx = rooms::state(&rpc, id).await?.context;
+                let rpc = &self.root;
+                let mut ctx = rooms::state(rpc, id).await?.context;
                 ctx.purpose.clone_from(purpose);
                 ctx.lead.clone_from(lead);
                 if lead.is_empty() { "everyone" } else { "lead" }.clone_into(&mut ctx.routing);
-                rooms::set_context(&rpc, id, &ctx).await
+                rooms::set_context(rpc, id, &ctx).await
             }
             Op::SetMaxRounds { id, max_rounds } => {
                 let mut kept = RoomSettings::load(&self.settings)?;
@@ -624,8 +668,7 @@ impl Backend for Live<'_> {
                     .map(|_| ())
             }
             Op::DisbandRoom { id } => self
-                .host
-                .rpc()
+                .root
                 .call(
                     "groups.disband",
                     json!({"room_id": id, "cancel_id": rooms::new_event_id("disband")}),
