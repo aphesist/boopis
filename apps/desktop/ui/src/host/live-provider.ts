@@ -11,7 +11,7 @@ import { emitter, feed, store } from '../data/store';
 import type { AgentTurn, BlankData, CouncilChoice, BlankWait, ConversationEvent, FormStatus, FormWait, SendMeta, SessionSummary, Turn, User, UserTurn, Wait, WaitOutcome } from '../data/types';
 import { readFlag } from '../core/settings';
 import { createDetails } from './live/details';
-import { applyMoa, createCouncil, isCouncilReport, finishedCouncil, startedCouncil, valueOfSlot } from './live/council';
+import { applyMoa, COUNCIL_OVERRIDE, createCouncil, isCouncilReport, finishedCouncil, startedCouncil, valueOfSlot } from './live/council';
 import { createLiveBots } from './live/bots';
 import { createLiveGroups } from './live/groups';
 import { todosFrom } from './live/map-details';
@@ -21,6 +21,7 @@ import { foldChild, isSubagentEvent } from './live/children';
 import { sendRoster } from './live/dispatch';
 import { loadModelsView } from './setup-bridge';
 import { tiersFromHost } from './live/models';
+import type { ModelOverride } from './live/model-switch';
 import { chooseAnotherModel, createFormsHost, hasHostDialogs, hostCancelSignin, hostSignin, tauriPickFolder } from './live/forms';
 import type { XSignin } from './live/forms';
 import { tauriConnectorsBridge } from './connectors-bridge';
@@ -160,6 +161,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     await sendRoster(client, details.source.choices.get());   /* its tools are rebuilt now: the models it can name are today's */
     const res = await client.request('session.resume', { session_id: c.uiId });
     bind(c, res.session_id);
+    details.onHandle(c.uiId, res);   /* its fences, for a model pick (`session.mutate`) */
     void modsHost.attach(c.uiId);   /* the mods already loaded in a resumed session */
     c.model = res.info.model && !isCouncilReport((res.info as { provider?: string }).provider, res.info.model) ? res.info.model : '';
     c.turns = transcriptToTurns(res.messages, c.uiId + ':', await loadTurnBook(client, res.session_id));   /* each past turn has its own recorded model, or none */
@@ -200,6 +202,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       }
     }
     bind(c, res.session_id);
+    details.onHandle(c.uiId, res);
     c.model = res.info.model && !isCouncilReport((res.info as { provider?: string }).provider, res.info.model) ? res.info.model : '';
     details.onBound(c.uiId);
     return res.session_id;
@@ -470,6 +473,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
         .then((res) => {
           const r = res as { session_id: string; messages?: Parameters<typeof transcriptToTurns>[0]; info?: { model?: string } };
           bind(c, r.session_id);
+          details.onHandle(s.id, res);
           c.turns = transcriptToTurns(r.messages ?? [], s.id + ':');   /* a branch is a new session: nothing recorded who answered its copied turns */
           details.model(s.id).started = true;
           c.events.emit({ type: 'reset' });
@@ -500,6 +504,8 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       c.turns.push(user);
       c.events.emit({ type: 'turn-added', turn: user });
       let abortOnce: (() => Promise<void>) | null = null;
+      /* a one-turn switch (an "@" mention, a council) rides on this message's own submit: that admission alone runs it (model-switch.ts) */
+      let override: ModelOverride | null = null;
       ensureLive(c)
         /* who answers is decided now, for this message: Smart's rule or the user's pick, applied through the engine before it goes */
         .then(async (gw) => {
@@ -510,19 +516,19 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
           c.once = { model: '', ungoverned: false };   /* the engine reports the switch while it is made: those reports name the mentioned model, not the session's */
           let mention: Awaited<ReturnType<typeof details.prepareMention>>;
           try { mention = await details.prepareMention(id, text, { idle: !c.running }); } catch (e) { c.once = null; c.model = keep; throw e; }
-          if (mention) { c.model = keep; c.once = { model: mention.model, ungoverned: mention.ungoverned }; c.why = mention.why; abortOnce = mention.abort; return gw; }
+          if (mention) { c.model = keep; c.once = { model: mention.model, ungoverned: mention.ungoverned }; c.why = mention.why; abortOnce = mention.abort; override = mention.override; return gw; }
           c.once = null; c.model = keep;
           const who = await details.prepareSend(id, text, { attachments: attachments.length }); if (who.model) c.model = who.model; c.why = who.why; return gw;
         })
-        .then(async (gw) => { if (asked) setCouncil(c, await councilHost.start(id)); return gw; })
+        .then(async (gw) => { if (asked) { const choice = await councilHost.start(id); setCouncil(c, choice); if (choice) override = COUNCIL_OVERRIDE; } return gw; })
         .then(async (gw) => {
           const refs = attachments.length ? await stageAttachments((m, p) => client.requestRaw(m, p), gw, attachments) : [];   /* files, pictures and folders go first (live/attachments.ts) */
-          return client.requestRaw('prompt.submit', { session_id: gw, text: withRefs(text, refs), submission_id: 'sub-' + crypto.randomUUID() }); /* the gateway requires submission_id; the vendored contract does not list it yet */
+          return client.requestRaw('prompt.submit', { session_id: gw, text: withRefs(text, refs), submission_id: 'sub-' + crypto.randomUUID(), ...(override ? { model_override: override } : {}) }); /* the gateway requires submission_id; the vendored contract does not list it yet */
         })
         .catch(async (e: unknown) => {
           log.error('the message was not accepted', e);
           c.once = null; setCouncil(c, null);
-          await abortOnce?.();   /* nothing started: the exception and the switch are taken back */
+          await abortOnce?.();   /* nothing started: the one-message exception is taken back (the session's model was never changed) */
           startTurn(c);
           finishTurn(c, 'The message was not sent: ' + (e instanceof Error ? e.message : String(e)), true);
         });

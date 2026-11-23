@@ -12,7 +12,9 @@ import type { HostGoverned } from './map-details';
 import { changesFrom, connectorsFrom, contextFrom, contextNote, costNote, diffFilesFrom, diffNote, environmentFrom, frontierFrom, governanceFrom, ledgerFrom, planNote, runFrom } from './map-details';
 import { blanksFromLedger } from './blanks';
 import { automaticTiers, recentFailures, smartPick } from '../../data/smart';
-import { choicesFrom, splitValue, switchValue, valueOf } from './models';
+import { choicesFrom, splitValue, valueOf } from './models';
+import { fencesFrom, ModelNeedsConfirmation, mutateModel, pickFor } from './model-switch';
+import type { ModelOverride } from './model-switch';
 import { routeMentions } from '../../data/mentions';
 import { prepareOnce } from './attribution';
 import type { LadderTier } from './models';
@@ -20,7 +22,7 @@ import { ui } from '@boopis/ui';
 import { applyEvent, infoReport, newModel, usageReport } from './session-model';
 import type { Part, SessionModel } from './session-model';
 import { isUnknownMethod } from './wire';
-import type { BreakdownWire, CascadeWire, ConfigSetModelWire, ModelOptionsWire, CompletionWire, DescribeWire, DiffWire, InfoWire, InventoryWire, McpStatusWire, StatsWire } from './wire';
+import type { BreakdownWire, CascadeWire, ModelOptionsWire, CompletionWire, DescribeWire, DiffWire, InfoWire, InventoryWire, McpStatusWire, StatsWire } from './wire';
 
 const log = logger('live.details');
 const PLUGIN = 'plugin.boopis.';
@@ -56,6 +58,8 @@ export interface LiveDetails {
   onEvent(uiId: string, ev: GatewayEvent): Part[];
   /** a session became live on the gateway (created or resumed) */
   onBound(uiId: string): void;
+  /** the session's handle as the engine gave it (`session.create`/`session.resume`'s snapshot): its fences for `session.mutate` */
+  onHandle(uiId: string, res: unknown): void;
   onSent(uiId: string, text: string): void;
   /** the link came back after a loss, or events were lost for a session: read again what they would have said */
   onLinkReady(): void;
@@ -67,7 +71,7 @@ export interface LiveDetails {
   /** a message whose only mention is one model ("@Claude Haiku ...") goes to that model for this turn only: the engine's one-turn
    *  switch (and, in a governed session, the plugin's one-turn exception). Null when the message mentions no model, or two or more
    *  (the task-splitting tool reads those). Rejects when it cannot be set up: the message must not go to a model nobody chose. */
-  prepareMention(uiId: string, text: string, o: { idle: boolean }): Promise<{ model: string; why: string; ungoverned: boolean; abort(): Promise<void> } | null>;
+  prepareMention(uiId: string, text: string, o: { idle: boolean }): Promise<{ model: string; why: string; ungoverned: boolean; override: ModelOverride; abort(): Promise<void> } | null>;
   /** what a council needs of a session: the models on offer, the tiers, the session's model and mode, whether a turn runs */
   councilContext(uiId: string): { options: ModelOptionsWire | null; ladder: LadderTier[]; current: string; governed: boolean; running: boolean };
   /** the model the session answers with now (the engine's, or the user's pick), 'provider/model', for a turn that has not heard from the engine */
@@ -291,6 +295,8 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
       if (patch.model !== undefined) {
         /* a person's pick answers the next messages of this session; it is applied when the message goes out (`prepareSend`) */
         if (governedOf(m) && !ladderOf(m).some((t) => ui.modelMark.same(valueOf(t.provider, t.id), patch.model))) return 'In governed mode the ladder runs the work. Choose one of its tiers to say where it starts.';
+        /* the engine asked to confirm this very model and the person chose it again: that is their yes, sent with the next message */
+        if (m.pick?.asked && ui.modelMark.same(m.pick.value, patch.model)) m.pick.confirmed = m.pick.asked;
         m.wantModel = patch.model;
         m.smart = false;
         endOnce(m);
@@ -344,6 +350,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
       if (uiId === followed) publishFollowed(['info']); else publishRun();
     },
     onBound(uiId) { void track(refresh(uiId, ALL)); },
+    onHandle(uiId, res) { fencesFrom(res, model(uiId)); },
     onSent(uiId, text) { const m = model(uiId); m.started = true; m.title = text.split('\n')[0]?.trim().slice(0, 80) ?? ''; publishRun(); },
     onLinkReady() { void track(read<McpStatusWire>('mcp.servers.status', {}).then((r) => { mcp = r; })); for (const [id] of models) if (deps.gwId(id)) void track(refresh(id, ALL)); },
     onReplayGap(uiId) { models.set(uiId, Object.assign(newModel(), { title: model(uiId).title, started: true })); void track(refresh(uiId, ALL)); },
@@ -353,11 +360,11 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
       const route = routeMentions(text, choices.get(), (x) => ui.modelMark.called(x));
       if (route.kind !== 'one' || !gw) return null;
       const c = route.choice, say = ui.modelMark.called(c.model) || c.model, was = engineModel(m);
-      m.once = { default: was };   /* before the switch: the engine's report of it must not become the chip */
+      m.once = { default: was };   /* the turn's reports name the mentioned model: they must not become the chip */
       let run;
-      try { run = await prepareOnce({ client, gw, governed: governedOf(m), pluginOk, idle: o.idle, target: { provider: c.provider, model: c.model }, previous: was ? splitValue(was) : null, say }); }
+      try { run = await prepareOnce({ client, gw, governed: governedOf(m), pluginOk, idle: o.idle, target: { provider: c.provider, model: c.model }, say }); }
       catch (e) { m.once = null; throw e; }
-      return { model: c.value, why: 'You asked for ' + say, ungoverned: run.ungoverned, abort: run.abort };
+      return { model: c.value, why: 'You asked for ' + say, ungoverned: run.ungoverned, override: run.override, abort: run.abort };
     },
     async prepareSend(uiId, text, meta) {
       const m = model(uiId), gw = deps.gwId(uiId);
@@ -390,12 +397,23 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
           catch (e) { throw new Error('The ladder could not be told to start on ' + say + ' (' + (e instanceof Error ? e.message : String(e)) + '), so the message was not sent.'); }
         }
       } else if (gw && m.appliedModel !== value && !ui.modelMark.same(engineModel(m), value)) {
-        try {
-          const r = (await client.requestRaw('config.set', { session_id: gw, key: 'model', value: switchValue(target), confirm_expensive_model: true })) as ConfigSetModelWire | null;
-          if (r?.confirm_required) throw new Error(r.confirm_message || 'the engine asked for a confirmation');
-          m.appliedModel = value;
-          m.info = { ...(m.info ?? {}), model: target.model, provider: target.provider };
-        } catch (e) { throw new Error('The model could not be switched to ' + say + ' (' + (e instanceof Error ? e.message : String(e)) + '), so the message was not sent.'); }
+        /* the engine's own model pick (`session.mutate` operation `model`, see model-switch.ts): one request id per pick, kept across its retries */
+        const pick = pickFor(m.pick, value);
+        m.pick = pick;
+        let outcome;
+        try { outcome = await mutateModel(client, gw, m, pick, target); }
+        catch (e) {
+          if (e instanceof ModelNeedsConfirmation) {
+            throw new Error('Switching to ' + say + ' needs your confirmation: ' + e.message + (pick.asked ? ' To switch anyway, choose ' + say + ' in the model menu again and send the message again.' : '') + ' The message was not sent.');
+          }
+          throw new Error('The model could not be switched to ' + say + ' (' + (e instanceof Error ? e.message : String(e)) + '), so the message was not sent.');
+        }
+        m.pick = null;
+        m.appliedModel = value;
+        if (outcome === 'deferred') {
+          /* a turn is running: the engine keeps its model and applies the pick before the next turn starts, so the chip waits for its report */
+          why ??= say + ' answers from the next turn: the turn that is running keeps its model';
+        } else m.info = { ...(m.info ?? {}), model: target.model, provider: target.provider };
       } else m.appliedModel = value;
       publishFollowed(['info', 'usage']);
       return { model: value, why };

@@ -1,14 +1,16 @@
 /* Who answered, per message, and the one-message "@" switch. The engine's transcript has no model column, so the plugin keeps a book
    of turns (`turns.bind` writes it when a turn completes, with the rows the engine stored for it; `turns.models` reads it back on a
    resume): a turn the book does not list is shown as unknown, never as the model the session has now (invariant 5).
-   The one-message switch is the engine's `config.set ... --once` followed by `prompt.submit` on an idle session: the engine
-   restores the session's model itself after that turn, so the session's default and the sticky pick stay as they were. In a
-   governed session the plugin is told first (`mode.once`) to run the turn outside governed mode (ADR-0036). */
+   The one-message switch is `prompt.submit`'s `model_override` (model-switch.ts): that admission alone runs the mentioned model and
+   the session's own model is never written, so the session's default and the sticky pick stay as they were and nothing is put back.
+   In a governed session the plugin is told first (`mode.once`) to run the turn outside governed mode (ADR-0036). */
 import { logger } from '../../core/log';
 import type { ChildStatus, ChildTask, CouncilMember, CouncilTurn } from '../../data/types';
 import type { GatewayClient } from '../gateway';
 import { valueOfSlot } from './council';
 import { splitValue } from './models';
+import { overrideOf } from './model-switch';
+import type { ModelOverride } from './model-switch';
 import { isUnknownMethod } from './wire';
 
 const log = logger('live.attribution');
@@ -118,28 +120,30 @@ export function bindTurn(client: GatewayClient, gw: string, persisted: unknown, 
     .catch((e: unknown) => { if (!isUnknownMethod(e)) log.warn('the answering model of a turn was not recorded', e); });
 }
 
-/** `config.set` value for one turn only: the engine puts the session's model back after the turn */
-export const onceValue = (c: { provider: string; model: string }): string => c.model + (c.provider ? ' --provider ' + c.provider : '') + ' --once';
-
 export interface OnceDeps {
   client: GatewayClient;
   gw: string;
   /** the session is governed (the plugin's mode, fixed at its first prompt) */
   governed: boolean;
   pluginOk: boolean;
-  /** no turn is running: a switch asked of a running turn would only be stashed for the next one */
+  /** no turn is running: the plugin's one-message exception is armed for the session's next turn, which must be this message's */
   idle: boolean;
   target: { provider: string; model: string };
-  /** the model the session answers with now, to put back if the message cannot be sent after the switch (null when not known) */
-  previous: { provider: string; model: string } | null;
   /** the target's readable name, for the words of a refusal */
   say: string;
 }
-export interface OnceRun { /** the message could not be submitted after all: take the arming and the switch back */ abort(): Promise<void>; /** the turn runs outside governed mode */ ungoverned: boolean }
+export interface OnceRun {
+  /** the message could not be submitted after all: take the arming back (the session's model was never changed) */
+  abort(): Promise<void>;
+  /** the turn runs outside governed mode */
+  ungoverned: boolean;
+  /** what `prompt.submit` carries as `model_override` for this message */
+  override: ModelOverride;
+}
 
 const why = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
-/** switch the next turn to `target` only. Rejects (nothing armed, nothing switched) when it cannot, so the message is not sent to a model nobody chose */
+/** set up the next turn to run on `target` only. Rejects (nothing armed) when it cannot, so the message is not sent to a model nobody chose */
 export async function prepareOnce(d: OnceDeps): Promise<OnceRun> {
   if (!d.idle) throw new Error('A message to ' + d.say + ' goes out when the session is idle, so it was not sent. Wait for the answer, or stop it.');
   let armed = false;
@@ -157,20 +161,5 @@ export async function prepareOnce(d: OnceDeps): Promise<OnceRun> {
       armed = true;
     } catch (e) { throw new Error('This message could not be set to run outside governed mode (' + why(e) + '), so it was not sent.'); }
   }
-  try {
-    const r = (await d.client.requestRaw('config.set', { session_id: d.gw, key: 'model', value: onceValue(d.target), confirm_expensive_model: true })) as { confirm_required?: boolean; confirm_message?: string } | null;
-    if (r?.confirm_required) throw new Error(r.confirm_message || 'the engine asked for a confirmation');
-  } catch (e) {
-    await disarm();
-    throw new Error('The model could not be switched to ' + d.say + ' for this message (' + why(e) + '), so it was not sent.');
-  }
-  const abort = async (): Promise<void> => {
-    await disarm();
-    /* the engine switched its model at once and restores it when the next turn ends: a turn that never started would leave the
-       session on the mentioned model, so the previous one is put back (as a session pick, which is what it answers with anyway) */
-    if (!d.previous) { log.warn('the mentioned model stays until the next turn: the previous one is not known'); return; }
-    try { await d.client.requestRaw('config.set', { session_id: d.gw, key: 'model', value: d.previous.model + (d.previous.provider ? ' --provider ' + d.previous.provider : '') + ' --session', confirm_expensive_model: true }); }
-    catch (e) { log.warn('the session\'s model could not be put back', e); }
-  };
-  return { abort, ungoverned: d.governed };
+  return { abort: disarm, ungoverned: d.governed, override: overrideOf(d.target) };
 }

@@ -5,7 +5,7 @@ import { GatewayClient } from '../gateway';
 import { createLiveProvider } from '../live-provider';
 import type { LiveProvider } from '../live-provider';
 import { FakeHost } from '../testing';
-import { applyMoa, bestOf, firstWrite, choiceFromPreset, defaultChoice, defaultMembers, onceValue, presetWrites, slotOfLabel, startedCouncil, versionOf } from './council';
+import { applyMoa, bestOf, firstWrite, choiceFromPreset, defaultChoice, defaultMembers, COUNCIL_OVERRIDE, presetWrites, slotOfLabel, startedCouncil, versionOf } from './council';
 
 const C = 'claude-subscription-directsdk-experimental';
 const ch = (provider: string, model: string, tier?: number): ModelChoice => ({ value: provider + '/' + model, provider, model, providerName: provider, ...(tier !== undefined ? { tier, tierName: model } : {}) });
@@ -71,7 +71,7 @@ describe('the preset', () => {
     expect(key).toBe('moa.presets');
     expect(Object.keys(JSON.parse(value) as object)).toEqual(['default', 'boopis-council']);
   });
-  it('the one-turn switch names the preset on the virtual provider', () => { expect(onceValue()).toBe('boopis-council --provider moa --once'); });
+  it('the one-turn switch names the preset on the virtual provider (prompt.submit\'s model_override)', () => { expect(COUNCIL_OVERRIDE).toEqual({ model: 'boopis-council', provider: 'moa' }); });
 });
 
 describe('the events of a council', () => {
@@ -99,7 +99,7 @@ describe('the events of a council', () => {
 
 /* ───────── the provider over fake frames ───────── */
 const OPTIONS = { model: 'sonnet', provider: C, providers: [{ slug: C, name: 'Claude', models: ['sonnet', 'opus'], authenticated: true }, { slug: 'openai-codex', name: 'OpenAI', models: ['gpt-6-luna'], authenticated: true }] };
-let host: FakeHost; let provider: LiveProvider; let calls: { method: string; params: Record<string, unknown> }[]; let onceFails: number;
+let host: FakeHost; let provider: LiveProvider; let calls: { method: string; params: Record<string, unknown> }[];
 /* a small model of the engine's configuration: the user's own file (no `moa.presets` until something writes one), and the merge with the seeded
    `default` preset that `hermes config get` shows, in which a user map replaces the seeded one outright (`apply_user_moa_presets`) */
 const SEED = { default: { reference_models: [{ provider: 'openai-codex', model: 'gpt-5.5' }], aggregator: { provider: 'openrouter', model: 'anthropic/claude-opus-4.8' }, enabled: true } };
@@ -123,7 +123,8 @@ function gateway(f: Record<string, unknown>): void {
     case 'session.create': host.result(id, { session_id: 'g1', info: { model: 'sonnet' } }); break;
     case 'config.get': host.result(id, { config: { moa: userMap ? { presets: userMap } : {} } }); break;
     case 'cli.exec': host.result(id, exec(params['argv'] as string[])); break;
-    case 'config.set': if (onceFails-- > 0) host.error(id, 5001, 'config.set --once requires a live session'); else host.result(id, { key: 'model', value: 'council', scope: 'once' }); break;
+    /* the canonical owner gateway refuses a model write through config.set (gateway/session_busy_controls.py) */
+    case 'config.set': if (params['key'] === 'model') host.error(id, 4001, 'use_session_mutation_model', { reason: 'use_session_mutation_model' }); else host.result(id, {}); break;
     case 'prompt.submit': host.result(id, { status: 'streaming' }); break;
     case 'profiles.list': host.result(id, { profiles: [] }); break;
     case 'groups.list': host.result(id, { groups: [] }); break;
@@ -132,7 +133,7 @@ function gateway(f: Record<string, unknown>): void {
   }
 }
 beforeEach(async () => {
-  host = new FakeHost(); host.autoReply = gateway; calls = []; userMap = null; onceFails = 0;
+  host = new FakeHost(); host.autoReply = gateway; calls = []; userMap = null;
   const client = new GatewayClient(host); await client.connect();
   provider = createLiveProvider({ client, mock: createMockProvider({ simulate: false }) });
   await provider.ready;
@@ -210,8 +211,8 @@ describe('asking a council, end to end over fake frames', () => {
     provider.sessions.send(s.id, 'which index?', { governed: false, smart: false, model: '', assume: [] });
     await tick(20);
     const order = calls.map((c) => c.method).filter((m) => ['cli.exec', 'config.set', 'prompt.submit'].includes(m));
-    expect(order).toEqual(['cli.exec', 'cli.exec', 'config.set', 'prompt.submit']);
-    expect(calls.find((c) => c.method === 'config.set')?.params).toMatchObject({ session_id: 'g1', key: 'model', value: 'boopis-council --provider moa --once' });
+    expect(order).toEqual(['cli.exec', 'cli.exec', 'prompt.submit']);   /* no model write: the council rides on the message's own submit */
+    expect(calls.find((c) => c.method === 'prompt.submit')?.params).toMatchObject({ session_id: 'g1', text: 'which index?', model_override: { model: 'boopis-council', provider: 'moa' } });
     expect(provider.council.armed(s.id)).toBeNull();
     host.event('message.start', 'g1');
     host.event('moa.progress', 'g1', { label: C + ':opus', refs_done: 1, refs_total: 2 });
@@ -228,24 +229,29 @@ describe('asking a council, end to end over fake frames', () => {
     expect(turn?.why).toBe('Council of 2');
     expect(events.filter((e) => e.type === 'council').length).toBeGreaterThan(2);
   });
-  it('waits for a new session\'s agent: the one-turn switch is tried again while the engine builds it', async () => {
-    onceFails = 2;
+  it('the override is the preset on the engine\'s virtual provider, and only the council\'s message carries it', async () => {
+    expect(COUNCIL_OVERRIDE).toEqual({ model: 'boopis-council', provider: 'moa' });
     const s = provider.sessions.create('p');
     await provider.council.arm(s.id, CHOICE);
     provider.sessions.send(s.id, 'hi', { governed: false, smart: false, model: '', assume: [] });
-    await new Promise((r) => setTimeout(r, 1300));
-    expect(calls.filter((c) => c.method === 'config.set').length).toBe(3);
-    expect(calls.some((c) => c.method === 'prompt.submit')).toBe(true);
-  }, 10000);
-  it('does not send the message to a model nobody chose when the switch is refused', async () => {
-    onceFails = 99;
+    await tick(20);
+    host.event('message.start', 'g1'); host.event('message.complete', 'g1', { text: 'ok' });
+    await tick(5);
+    provider.sessions.send(s.id, 'and now?', { governed: false, smart: false, model: '', assume: [] });
+    await tick(20);
+    const submits = calls.filter((c) => c.method === 'prompt.submit').map((c) => c.params['model_override'] ?? null);
+    expect(submits).toEqual([COUNCIL_OVERRIDE, null]);
+    expect(calls.some((c) => c.method === 'config.set')).toBe(false);
+  });
+  it('a refusal of the council\'s message says the message was not sent', async () => {
     const s = provider.sessions.create('p');
     await provider.council.arm(s.id, CHOICE);
-    host.autoReply = (f) => { if (f['method'] === 'config.set') host.error(f['id'], 4002, 'model refused'); else gateway(f); };
+    host.autoReply = (f) => { if (f['method'] === 'prompt.submit') { calls.push({ method: 'prompt.submit', params: f['params'] as Record<string, unknown> }); host.error(f['id'], 4001, 'invalid_params', { reason: 'invalid_params' }); } else gateway(f); };
     provider.sessions.send(s.id, 'hi', { governed: false, smart: false, model: '', assume: [] });
     await tick(30);
-    expect(calls.some((c) => c.method === 'prompt.submit')).toBe(false);
+    expect(provider.council.armed(s.id)).toBeNull();
     const turn = provider.sessions.conversation(s.id).snapshot().turns.find((t): t is AgentTurn => t.role === 'assistant');
-    expect(turn?.paragraphs.join(' ')).toMatch(/council could not start/);
+    expect(turn?.paragraphs.join(' ')).toMatch(/not sent/);
+    expect(turn?.council).toBeUndefined();
   });
 });

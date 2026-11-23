@@ -33,7 +33,14 @@ export interface SessionModel {
   once: { default: string } | null;
   /** a council answers this turn, of this many members: the chip says so, and the engine's reports in between name its preset, not a model */
   council: number | null;
+  /** the session's fences for `session.mutate` (`revision`, `execution_generation`), as the engine last gave them (create, resume, a
+   *  mutation's receipt or refusal, an event); null when not known yet, in which case the engine's refusal hands over the current ones */
+  revision: number | null; generation: number | null;
+  /** a sticky pick being applied (`model-switch.ts`): its request id, kept across the retries of that one pick, and the engine's
+   *  confirmation exchange (the token it asked about, and the token the person confirmed by choosing the model again) */
+  pick: PendingPick | null;
 }
+export interface PendingPick { value: string; requestId: string; asked: string | null; confirmed: string | null }
 
 /** an engine report of the session's info without a model that is the council's preset (see `isCouncilReport`): the session's stays */
 export function infoReport(info: InfoWire): InfoWire {
@@ -51,7 +58,8 @@ export function newModel(): SessionModel {
   return {
     todos: [], todoRevision: -1, usage: null, breakdown: null, info: null, output: [], steps: 0, running: false, stopped: false, turnStartedAt: null, turnEndedAt: null, title: '', started: false,
     stats: null, cascade: null, describe: null, diff: null, inventory: null, blanks: [], wantGoverned: null, wantModel: null,
-    smart: false, history: [], turnFailed: false, appliedModel: null, appliedTier: null, answered: null, once: null, council: null
+    smart: false, history: [], turnFailed: false, appliedModel: null, appliedTier: null, answered: null, once: null, council: null,
+    revision: null, generation: null, pick: null
   };
 }
 
@@ -61,6 +69,7 @@ const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object'
 /** apply one gateway or plugin event; the parts it changed */
 export function applyEvent(m: SessionModel, ev: GatewayEvent, nowMs: number): Part[] {
   const p = obj(ev.payload);
+  if (typeof ev['execution_generation'] === 'number') m.generation = ev['execution_generation'];
   switch (ev.type) {
     case 'todo.updated': {
       const rev = typeof p['revision'] === 'number' ? p['revision'] : m.todoRevision + 1;
@@ -88,6 +97,11 @@ export function applyEvent(m: SessionModel, ev: GatewayEvent, nowMs: number): Pa
     case 'plugin.boopis.ship.completed': if ((p as { status?: string }).status === 'restored') m.turnFailed = true; m.output = capLines([...m.output, ...shipLine(p as unknown as ShipWire)]); return ['output', 'diff'];
     case 'plugin.boopis.cascade.updated': return ['cascade', 'stats'];
     case 'plugin.boopis.ledger.appended': return ['stats'];
+    case 'session.updated':
+      /* a pick the engine deferred to the next turn was refused, or now needs a confirmation: it was not applied, so the next message
+         makes it again (and asks the person then); the session's own model is what the engine reports next */
+      if (p['operation'] === 'model' && (p['status'] === 'refused' || p['status'] === 'confirmation_required')) { m.appliedModel = null; return ['info']; }
+      return [];
     case 'plugin.boopis.blank.opened': {
       const b = p as unknown as BlankWire;
       if (!b.blank_id || m.blanks.some((x) => x.id === b.blank_id)) return [];
