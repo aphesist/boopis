@@ -121,3 +121,7 @@ Based on Liu Xingyu's demo (x.com/liu_xingyu/status/2121015724374397183).
   the timed wait (30 s / 60 s default / 2 min), lapse to "(my guess)" + a card, late answer = correction.
 - Owner: the blank's card design (the card under the reply) is kept and reused for bots' approval asks (no countdown, no guess, no time limit): one card component, two uses (v7 §17.1).
 - Owner: the whole bot session (chat, room, cards, activity, approvals, pane, header, empty state) follows Grok-Bot's recordings, with picks 1-9 on top; deviations only for the keep list.
+- Owner answers (specs): feedforward reads with the cheapest model of the same provider; runs everywhere (sessions,
+  bot chats, rooms) with global + per-context + per-bot/room toggles. Scheduled run hitting Ask -> refused for now,
+  left as an approval card; approving re-runs the step. `ask` and `request_input` follow the blanks rule next wave.
+  Defaults kept: 24 h for lapsed questions; subscription reads allowed if fast; everything in "Will assume" travels.
