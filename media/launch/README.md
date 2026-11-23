@@ -108,8 +108,25 @@ life(film, kai, t0, t1, seed);          // a seeded idle life (glances every 1.8
 orbMark(film, kai, { mark: markGeometry(330), markColor: 'var(--text-strong)', toMark: { at, dur }, toOrb: { at, dur } });
 ```
 
-The pose's numbers (`yaw`, `pitch`, `blink`, `eyesMix`, `shapeMix`, `colorMix`, `scale`, `squash`, `dx`, `dy`) can
-also be tweened directly: `film.tl.to(kai.pose, { yaw: 12, ... })`. `size` is the kit's orb size (orb2 draws the
+The pose's numbers (`yaw`, `pitch`, `blink`, `eyesMix`, `shapeMix`, `colorMix`, `speak`, `scale`, `squash`, `dx`, `dy`)
+can also be tweened directly: `film.tl.to(kai.pose, { yaw: 12, ... })`.
+
+**A character** (`motion/character.ts`) makes an orb alive between the beats. It writes the orb's `life` layer every
+frame (a pure function of time, drawn on top of the pose, so the act's own tweens still apply):
+
+```ts
+const k = character(film, kai, { seed: 7 });   // before the beats that move it; each orb its own seed
+k.look(at, 20, -6);                            // the gaze queue: a spring from wherever the gaze is, at its speed
+k.speak(t0, t1);                               // orb2's speaking face: bars with moving heights, circles on its slow cycle
+k.blink(at);
+k.hold(t0, t1);                                // the idle fades out (8 f) for frames that must be exact
+```
+
+Its idle never freezes in a hold: a float of a few px and a 1% breath out of phase, micro-glances of a few degrees
+every 1.6 to 3 s, seeded blinks. A look that comes while another is travelling takes over from it smoothly (position
+and speed), so nothing ever has two tweens on one property. On an orb with a character, `glance()`, `blink()` and
+`life()` feed it; on one without, they are the tweens they always were. `eyes()` morphs that overlap start from where
+the one before is, never from its end. `size` is the kit's orb size (orb2 draws the
 body at 0.96 of it). `markGeometry(width)` is the boopis mark's two eyes sampled from the logo's own `BoopisLogo.svg()`;
 `logoSVG()` the mark or wordmark as one colour.
 
@@ -243,7 +260,10 @@ its name for the checker.
 | `morph`, `morphSplit`, `morphJoin` | SVG shape morphs (flubber): one into one, one into several, several into one |
 | `orbMark` | the orb's body divides into the mark's two eyes (and joins back); one opaque shape at every frame |
 | `wipe`, `iris`, `lids`, `focus` | clip reveals from an edge or a point, the blink transition (two opaque lids), the focus pull (T7) |
-| `setType`, `split(el, 'line' \| 'word' \| 'char')`, `rise`, `soft`, `sink`, `typeOn`, `exit` | type per line, word or character behind masks (`rise` and `sink` move units inside their masks, no opacity); K1 (`soft`, `exit`), K2 (`typeOn`) |
+| `setType`, `split(el, 'line' \| 'word' \| 'char')`, `rise`, `soft`, `sink`, `typeOn`, `exit` | type per line, word or character behind masks (`rise` and `sink` move units inside their masks, no opacity); K2 (`typeOn`) |
+| `words`, `wordRise`, `lineExit`, `selfEdit` | lines with no mask at all (`motion/line.ts`): K1 in (each word +32 px, blur 8, 20 f, 4 f apart) and out (the whole line -16 px, blur 6, 12 f); K5, a line that edits itself with a named caret (selection 8 f, type-on, the caret travels to the next edit). They warn when given text inside a clipping box |
+| `textRuns`, `textBars` | words into bars (`motion/bars.ts`): whole runs, only while under 12 px on screen, a 6-frame dissolve where each run crosses; `scale(t)` (a camera's `stateAt(t).zoom`, a group's scale) is read once the timeline is complete |
+| `character(film, orb, { seed })` | an orb's character (above): gaze queue, idle, speech, holds |
 | `cursor(film, layer, start)` | the oversized cursor: `move(x, y, { at, dur })` on a slight arc, `press(at)` (dips to 0.85, returns the frame the target reacts on) |
 | `glance`, `blink`, `eyes`, `shape`, `colour`, `life`, `attach` | an orb's moves (above) |
 | `fadeSmall(film, stage, el, { at, dur, y })` | the only opacity helper: it throws for an element over 10% of the frame or without movement |
@@ -261,7 +281,7 @@ checked. No image sequence is ever written to disk.
 
 ```sh
 node tools/render.mjs --scene test --preview                      # 960x540, 30 fps, no blur: judge rhythm
-node tools/render.mjs --scene test                                # 1920x1080 60 fps, H.264 CRF 14, BT.709, 8 sub-frames at 180 deg
+node tools/render.mjs --scene test                                # 1920x1080 60 fps, H.264 CRF 14, BT.709, blur planned at 180 deg
 node tools/render.mjs --scene test --scale 2                      # 3840x2160 60 fps (deviceScaleFactor 2: same layout, crisp)
 node tools/render.mjs --scene test --variant vertical             # 1080x1920
 node tools/render.mjs --scene test --codec prores                 # ProRes 4444 master (.mov); --codec lossless: FFV1 RGB (.mkv), exact
@@ -270,16 +290,38 @@ node tools/render.mjs --scene test --still 300                    # frame 300 to
 node tools/render.mjs --scene test --audio mix.wav                # mux a wav (AAC 320k 48 kHz in mp4, 24-bit PCM in mov/mkv)
 node tools/render.mjs --mux film.mp4 --audio mix.wav --out film-sound.mp4   # put a wav under an existing render
 node tools/render.mjs --scene test --hashes h.json                # every frame's pixel md5 (determinism)
+node tools/render.mjs --scene a1 --plan --plan-log plan.json      # measure every frame's motion, capture nothing
+node tools/render-selftest.mjs --scene a1                         # the motion-blur self-test (below)
 ```
 
-Output defaults to `SC/renders/<scene>-<variant>-<size>.<ext>`. Options: `--samples` (sub-frames, 1 turns blur off),
-`--shutter` (degrees), `--crf`, `--fps`, `--workers` (default 4, one per core), `--no-build`, `--out`.
+Output defaults to `SC/renders/<scene>-<variant>-<size>.<ext>`. Options: `--samples 1` (blur off), `--shutter`
+(degrees), `--spacing` (px, default 1), `--max-samples` (default 96), `--crf`, `--fps`, `--workers` (default 4, one per
+core; fewer while other work runs), `--chunk` (frames per job: workers take jobs from a queue, so a heavy stretch is
+shared out instead of left to one worker), `--no-build`, `--dist <dir>` (build into and serve another folder, so a
+render in progress from `dist/` is not disturbed), `--out`.
 
-**Motion blur.** Each frame asks the page what moves under its shutter (`__film.samples`): nothing (one capture),
-the default (8 sub-frames centred on the frame's time, averaged in linear light), or more where a tween asks
-(`data: { samples: 32 }`; camera snaps do it themselves, so whips and zoom-throughs streak without stepping). A frame
-whose shutter's two ends barely differ (a slow glance) keeps those two and skips the rest. Sub-frames never cross a
-hard cut (`film.cut(t)`). Tag a slow drift `data: { blur: false }` (the camera's `drift()` does).
+**Motion blur is planned from the motion.** For each frame the page measures how far everything visible moves on
+screen across the shutter (`__film.probe`, `engine/probe.ts`: every element and SVG shape by its box clamped to the
+frame, a clip-path inset or circle as the box it cuts), at the output scale, and the frame gets enough sub-frames
+that neighbours are at most `--spacing` px apart (1 by default: a smear, never copies). Above `--max-samples` the
+shutter closes down instead (a shorter streak, still continuous; never a strobe). The plan is checked at the planned
+times and refined; a jump that does not shrink as sub-frames get denser is bisected to its instant and the shutter is
+kept on one side of it. Sub-frames never cross a hard cut (`film.cut(t)`) or an **instant change** (a set that changes
+a value), so a swap on a frame time cuts cleanly. Sub-frames average in linear light; a frame where nothing moves is one
+capture. The renderer logs the worst spacing and exits 1 if any frame is over twice the limit. A step that never
+shrinks as sub-frames get denser, up to two stage px (2 output px at 1080p, 4 at 4K), is the page quantising (layout
+snapping, or orb2's four-decimal geometry under a deep zoom such as the dive into kai's eye): it is reported as snapped,
+and the shutter is never shortened for it. `film.motion` counts and tweens' `data.samples` are no longer read.
+
+**The self-test** (`tools/render-selftest.mjs [--scene a1]`) plans every frame of `engine/blurtest.ts` (a small orb at
+30 px a frame, darting eyes, the cursor on an arc, a word at 240 px a frame, overlapping glances, an instant set) and of
+`--scene`; renders the worst frames planned, as a 0.25 px reference and forced to two sub-frames, and requires the
+planned frames within 3 levels of the reference (99.9% within 2) while the forced ones fail; checks the set cuts
+cleanly; and requires frames to be identical pixels seeked from 20 frames before and after. `--only plan,pixels,set,det`
+runs parts.
+
+**Every frame is the same pixels whatever came before it.** The timeline is never rendered backward (a seek back goes
+to 0 and forward), so overlapping tweens resolve the same way every time, and each capture is a full raster.
 
 **Grain** is added by the renderer to each finished frame, changing every frame: the look's own grain (mid-grey noise
 in soft-light at 55%, generated from the look's seed exactly as `look/src/stage.ts` draws it) for scenes on the look,
@@ -329,10 +371,13 @@ Calibration on the first trailer (`SC/trailer/boopis-trailer.mp4`) against the p
 - Text that must be read: 28 px or more on screen. The checker measures what is drawn, through every zoom.
 - Mounted kit components: their transitions are off; drive their visible state from the timeline (a renderer that
   sets the attribute the kit's CSS reads, as `test.ts` does for the composer's placeholder and send button).
-- Fast moves: `snap` on the camera asks for 32 sub-frames; tag any other very fast tween `data: { samples: 24 }`.
+- Fast moves need nothing: the renderer counts sub-frames from what moves on screen. An instant change (`tl.set`)
+  cuts cleanly on a frame time; a set that only renames (keeps what is drawn) says `data: { fence: false }`.
+- Orbs: give each a `character()` before its beats; looks queue, idles never freeze, speech is orb2's face.
 - Before calling a scene done: a preview, a contact sheet of its frames, the checker on the render and the page.
-- Engine limits: a 1080p60 render with blur runs at about 2.5 to 3 frames a second on this machine and 4K at about
-  0.7, so work in previews and ranges. A key frame is static DOM: its kit orbs are frozen until swapped for film orbs
+- Engine limits: with the planned blur, act 1 (9.6 s) took 26 minutes at 1080p60 on 3 workers on a shared machine,
+  about 13.6 captures a frame; 4K costs about twice the sub-frames on fast frames and four times the pixels. Work in
+  previews and ranges, and render 4K last. A key frame is static DOM: its kit orbs are frozen until swapped for film orbs
   (`swapOrbs`; reactions map to resting eye shapes, `engine/look.ts`), and a kit component's own transitions are off
   (drive its state from a renderer). One key-frame instance can be shown by one `showDuring` window. `cam.stateAt()`
   and `carryOrb(..., { camera })` read only the camera moves defined before them. A seam is never a `film.cut()`.
@@ -356,6 +401,24 @@ order gives the same pixels, and so does seeking with or without the paint wait.
 One 1080p capture costs about 5 ms to seek, 86 ms to capture (Chrome's fast PNG) and 28 ms to decode; a frame where
 nothing moves is one capture. Budget for the 46.9 s film with blur on 4 workers: roughly 15 to 25 minutes at
 1080p60 and 60 to 75 at 4K60; render previews and ranges while working, the 4K master last.
+
+**Planned motion blur** (23 November 2026; act 1, 576 frames, 3 workers; the machine was shared with other agents'
+builds, load 11 to 26 on 4 cores, so wall times are rough and the capture counts are the firmer number):
+
+| render | wall time | captures | a frame |
+|---|---|---|---|
+| 1080p60, the previous renderer (8 sub-frames, two-end shortcut) | 954 s | 6,310 | 11.0 |
+| 1080p60, planned (1 px) | 1,564 s | 7,824 | 13.6 |
+| 4K60, frames 120 to 240 (the dive), previous renderer | 1,571 s | 1,750 | 14.6 |
+| 4K60, frames 120 to 240, planned, one share per worker | 1,516 s | 2,927 | 24.4 |
+| 4K60, frames 120 to 240, planned, job queue (run at the heaviest load, 18 to 25) | 2,061 s | 3,055 | 25.5 |
+
+At 1080p the plan gives 149 frames one capture, 196 two to four, 129 five to sixteen, 102 more (75 at the cap of
+96); 25 frames close the shutter down (the dive, the orb flight). Planning seeks every planned sub-frame time at
+least once more to measure it (no paint, no capture); on the shared machine the planned renderer took 1.6 times the
+wall time at 1080p for 24% more captures. On the dive at 4K the plan asks for 1.7 times the captures of the old
+renderer (every frame there moves fast); one fixed share per worker left a single worker with the dive, which the job
+queue shares out (its run here fell in the machine's busiest half hour, so its wall time says little).
 
 **The checker on the first trailer** (`SC/trailer/boopis-trailer.mp4`), next to the postmortem:
 
