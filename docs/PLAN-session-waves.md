@@ -196,3 +196,6 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - Fixed pose (owner): the whole BODY turns in 3D to the 3/4 angle with perspective, like Grok's non-circle bots; not only the eyes. Eye angle itself is fine.
 - Owner: edge flicker on the bots in the sidebar AND room clips; fix (static at rest, smooth sub-pixel motion, no A-B-A edge toggles) with a blocking frame check.
 - Owner: onboarding revision 3 approved ('looks clean, that's what I wanted'). Remaining: re-render sidebar stills and re-record O-M3/M4/M7/M8 once the orb pose + flicker fix land.
+- Owner: animations good, no flicker (keep G5/G6/edges.py). Fixed angle still wrong: use orb2's real 3D body rotation and
+  perspective (drop the hk pseudo-pose); 2-3 angle options for the owner. Dock row width follows its content; the open
+  dock states and the composer stay a fixed size.
