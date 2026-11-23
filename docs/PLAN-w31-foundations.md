@@ -125,3 +125,4 @@ Based on Liu Xingyu's demo (x.com/liu_xingyu/status/2121015724374397183).
   bot chats, rooms) with global + per-context + per-bot/room toggles. Scheduled run hitting Ask -> refused for now,
   left as an approval card; approving re-runs the step. `ask` and `request_input` follow the blanks rule next wave.
   Defaults kept: 24 h for lapsed questions; subscription reads allowed if fast; everything in "Will assume" travels.
+- Owner: your bubble + send button are ink by default and in group chats / the boopis bot's chat; in a specific bot's own chat they take that bot's colour by default (contrast-safe), with a setting to disable.
