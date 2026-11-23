@@ -87,7 +87,7 @@ orb3 is a new major version of orb2, on the `orb3` branch of the orb2 repo. It i
 | `fd13d86` | The look of a turned character. The body leans into a turn (0.3 rad of roll per radian of look, the lean Grok-Bot's drop shows), the camera is closer (`CAM_D` 9, was 15), the eye-on-face check is cheap when the eyes are well inside, and moving bots are drawn at 3x. |
 | `f93b3e3` | Eyes slide back onto the face in up to four steps. |
 | `554af9f` | Version 3.0.0-alpha.0, and the README section on what changed. |
-| *(latest)* | Eyes that never go edge-on, never merge and never touch the rim (below). |
+| `e3d4552` | Eyes that never go edge-on, never merge and never touch the rim (below). |
 
 **The API is unchanged.** It is the same `<orb-avatar>`, with the same attributes and methods.
 
