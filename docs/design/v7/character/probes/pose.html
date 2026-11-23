@@ -1,13 +1,14 @@
 <!doctype html><html><meta charset="utf-8"><title>Fixed pose probe</title>
 <!-- The fixed sideways pose, defined with orb2's public defineReaction (a hidden reaction whose motion is the pose).
      ?grid=1 draws a grid of candidate poses (eyaw x epitch x eroll) for measuring against Grok-Bot's sidebar pose;
-     otherwise every shape in the chosen pose (?y=&p=&r=&b=). -->
+     otherwise every shape in the chosen pose (?y=&p=&r=&b=; ?hk=0..1 how far the body turns with the eyes, 1 by default: the
+     whole bot turned, ORBS.md section 23). -->
 <style>html,body{margin:0;background:#0e0e0e}#g{display:flex;flex-wrap:wrap;width:960px}.c{width:96px;height:96px;display:grid;place-items:center}</style>
 <body><div id="g"></div><script>
 const q = Object.fromEntries(new URLSearchParams(location.search));
 const s = document.createElement('script'); s.src = 'lib/orb-avatar.' + (q.lib || 'tuned') + '.js';
 s.onload = () => { const A = window.OrbAvatar, g = document.getElementById('g');
-  const def = (n, y, p, r, b) => A.defineReaction(n, { blink: false, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: () => ({ eyaw: y, epitch: p, eroll: r, bodyRoll: b, w: 1 }) });
+  const def = (n, y, p, r, b) => A.defineReaction(n, { blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: () => ({ eyaw: y, epitch: p, eroll: r, bodyRoll: b, w: 1, hk: q.hk == null ? 1 : +q.hk }) });
   const put = (n, shape) => { const c = document.createElement('div'); c.className = 'c'; c.innerHTML = `<orb-avatar size="${q.size || 64}" shape="${shape}" color="#f5f5f5" eye-color="#0e0e0e" reaction="${n}" idle-motion="off" mode="drift" face-scale="1.25" style="width:${q.size || 64}px"></orb-avatar>`; g.appendChild(c); };
   if (q.grid) { let i = 0; for (const y of [.5, .7, .9]) for (const p of [.25, .4, .55]) for (const r of [-.5, -.25, .25, .5]) { def('pose' + i, y, p, r, 0); put('pose' + i, q.shape || 'circle'); i++; } }
   else { def('pose', +q.y, +q.p, +q.r, +(q.b || 0)); for (const sh of ['circle', 'squircle', 'soft', 'wide', 'tall', 'bean', 'drop', 'ghost', 'triangle', 'hexagon', 'diamond', 'cloud', 'clover', 'flower', 'star']) put('pose', sh); }

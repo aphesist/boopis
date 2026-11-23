@@ -2251,7 +2251,7 @@ const parseGaze = v => {
 const CANVAS_SCALE = 3.2 / 2.08;
 let slots = 0;
 
-const MKEYS = { dy: 0, s: 1, bodyRoll: 0, yawAdd: 0, spinYaw: 0, spinEyeLead: 0, eroll: 0, w: 0 };
+const MKEYS = { dy: 0, s: 1, bodyRoll: 0, yawAdd: 0, spinYaw: 0, spinEyeLead: 0, eroll: 0, w: 0, hk: 0 };
 function mixMotion(a, b, p) {
   const o = {};
   for (const [k, d] of Object.entries(MKEYS)) o[k] = lerp(a[k] ?? d, b[k] ?? d, p);
@@ -2575,7 +2575,7 @@ class OrbAvatar extends HTMLElement {
   /** Crisp standalone SVG string of the current 3D silhouette, perspective pose, and multi-cell eyes */
   toSVG({ size = 512 } = {}) {
     const body = this._bodyCur || SHAPES.circle;
-    const hRatio = body.isCircle ? .68 : .54;
+    const hRatio = body.isCircle ? .68 : (body.solid && (!body.solid.convex || body.label === 'Lozenge')) ? .65 : .85;
     const yaw = this._eyaw || .18, pitch = this._epitch || .12, bodyRoll = this._bRoll || 0;
     const headYaw = this._hyaw ?? (yaw * hRatio), headPitch = this._hpitch ?? (pitch * hRatio);
     const M = mat3D(headYaw, headPitch, bodyRoll);
@@ -2906,8 +2906,9 @@ class OrbAvatar extends HTMLElement {
       T = T.map((v, i) => lerp(A[i], v, p));
     }
 
-    const hR = b => b.isCircle ? .68 : .54;
-    const hRatio = this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo);
+    const domed = b => !!b.solid && (!b.solid.convex || b.label === 'Lozenge');
+    const hR = b => b.isCircle ? .68 : domed(b) ? .65 : .85;
+    const hRatio = lerp(this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo), 1, clamp(this._bodyTo.isCircle || domed(this._bodyTo) ? 0 : (m.hk || 0), 0, 1));
     if (st || !this._init) {
       this._eyaw = this._eyeCap(T[0]); this._epitch = this._eyeCap(T[1], .3); this._eroll = T[2];
       this._hyaw = T[0] * hRatio; this._hpitch = T[1] * hRatio; this._bRoll = T[3];
@@ -2922,6 +2923,9 @@ class OrbAvatar extends HTMLElement {
       [this._hyaw, this._vhy] = stepHead(this._hyaw, this._vhy, T[0] * hRatio);
       [this._hpitch, this._vhp] = stepHead(this._hpitch, this._vhp, T[1] * hRatio);
       [this._bRoll, this._vbr] = stepHead(this._bRoll, this._vbr, T[3]);
+      { const land = (k, vk, g) => { if (Math.abs(g - this[k]) < 2e-3 && Math.abs(this[vk]) < 2e-2) { this[k] = g; this[vk] = 0; } };
+        land('_eyaw', '_vey', this._eyeCap(T[0])); land('_epitch', '_vep', this._eyeCap(T[1], .3)); land('_eroll', '_ver', T[2]);
+        land('_hyaw', '_vhy', T[0] * hRatio); land('_hpitch', '_vhp', T[1] * hRatio); land('_bRoll', '_vbr', T[3]); }
     }
 
     this._jellyStep(dt);
@@ -2949,6 +2953,8 @@ class OrbAvatar extends HTMLElement {
         x[i] = clamp(x[i] + v[i] * h, -.28, .28);
       }
     }
+    let en = 0; for (let i = 0; i < 6; i++) en += Math.abs(x[i]) + Math.abs(v[i]) * .02;
+    if (en < 2e-3) for (let i = 0; i < 6; i++) x[i] = v[i] = 0;
   }
 
   _render(p, m, calm, dyn, fixed) {

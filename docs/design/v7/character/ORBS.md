@@ -21,7 +21,7 @@ Every finding below was measured in Chromium (Playwright) on the real orb2 code.
 
 | Question | Decision |
 |---|---|
-| K01, the renderer | **The new renderer, with every clarity fix:** C1–C3, C6 and C7. Far turns are fixed in the geometry, G1–G3, not clamped. |
+| K01, the renderer | **The new renderer, with every clarity fix:** C1–C3, C6 and C7. Far turns are fixed in the geometry, G1–G3, not clamped. The body turns with the face (G4) and a resting bot is exactly still (G5). |
 | The eyes | **`face-scale` 1.25** (C4). |
 | Sizes | **Grok-Bot's: sidebar rows 28 px, the rail 36 px** (C5). |
 | Motion | **One policy per surface.** The Bots sidebar, the rail and the dock hold one fixed sideways pose (§23) and animate in a state. A hovered bot comes alive and settles back. The chat is fully lively, more than today. All of this is under "Per-surface policy" below; T1 still applies everywhere. |
@@ -42,6 +42,17 @@ The fix now is in the geometry, in three parts:
 - **G3, the one remaining limit, per shape.** Lobed bodies (cloud, clover, flower, star) hold their eyes to 0.75 rad of
   turn and 0.3 of pitch. Past that, the far eye folds behind a lobe. Every convex body and the circle keep orb2's whole
   range: `lookAt` reaches 1.18 rad, rim peeks 1.26 and spins a full turn.
+
+Two more came from the owner's review of the pose and the clips:
+
+- **G4, the body turns with the face.** orb2 turned a flat body by only 0.54 of the eye turn, so the eyes looked
+  sideways out of a front-on body. The head now follows at 0.85 on flat bodies and 0.65 on domed ones, and a
+  reaction can lock it to the eyes (`hk` 1, which the fixed pose uses). See §23.
+- **G5, a bot at rest is exactly still.** orb2's springs and jelly decay forever. Whenever their residue passed the
+  redraw threshold, the canvas was redrawn a hair off and a small bot's anti-aliased edge flickered. Each spring now
+  lands exactly on its goal once it is within 2e-3 rad and slow, the jelly stops below a small energy, and the
+  dock's and sidebar's bots take `jelly="0"`, so a state change does not wobble their edges. A resting bot then never
+  redraws.
 
 `anim-torture-before-after.mp4` takes all 15 shapes through that whole range and both spins, and is checked frame by
 frame.
@@ -64,8 +75,16 @@ Grok-Bot's other sidebar bots do not share one pose. Each holds the pose its las
 turned (`156`, `162` and `185`), and its rest pose leans less (the flower: +0.11 across, −0.03 down). The owner's
 policy is one fixed pose for every bot, so ours takes the main bot's pose for all.
 
+**The whole bot turns, not just its eyes** (owner's correction, 23 November). In Grok-Bot the body turns to the 3/4
+angle and the face goes with it. On its circle that changes nothing visible, but a square shows its turned face
+foreshortened, a triangle or a hexagon turns, and a flower is seen at an angle. Measured on Grok-Bot's turned shapes
+(`avatar-shapes-idle-and-pointer.mp4`, the hexagon on `185`, the flower at rest in `avatar-states-zoom-sidebar.mp4`),
+its eyes stay near the middle of the turned face and the two eyes are nearly the same size. Ours had the body at 0.27
+rad while the eyes looked over, which read as eyes looking sideways out of a front-on body. `K03-pose-vs-grok.jpg`
+shows all 15 of ours beside Grok-Bot's.
+
 **The pose.** These are orb2 reaction motion values, fitted in `probes/pose.html` and checked against the numbers
-above.
+above. The eye angle is unchanged; the body now turns with it.
 
 | Parameter | Value | Note |
 |---|---|---|
@@ -74,45 +93,61 @@ above.
 | `eroll` | 0.55 rad | the strokes lean, as Grok-Bot's do |
 | `bodyRoll` | 0.05 rad | |
 | `w` | 1 | the pose fully replaces the rest gaze |
+| `hk` | 1 | new (G4): the body locks to the eye angle |
 
-The head follows by orb2's own ratio (0.54), so the body turns 0.27 rad. The eyes are `pill`, or the bot's own eye
-shape, at `face-scale` 1.25.
+**The body's turn, per kind of body (G4):**
 
-**Per shape.** It is one set of numbers for every shape; nothing is tuned per shape. The table gives where the eyes
-land, measured by `tools/posemeas.py` on `pose.html` at 64 px and DPR 2. "Across" and "down" are the eye pair's
-centroid against the centre of the body's box, in box widths and heights.
+| Bodies | Body turn in the pose | Why |
+|---|---|---|
+| circle | 0.68 of the eyes (orb2's own) | a sphere looks the same at any turn |
+| squircle, soft, wide, tall, bean, drop, ghost, triangle, hexagon | **1.0: yaw 0.50, pitch 0.45**, the same as the eyes | one turned object; G1's hull keeps the outline clean |
+| diamond, cloud, clover, flower, star | **0.65: yaw 0.33, pitch 0.29** (0.20 on the lobed four, whose eye pitch is 0.30) | their largest clean turn, see below |
 
-| Shape | Across | Down | Far/near eye | Strokes |
-|---|---|---|---|---|
-| circle | +0.19 | −0.19 | 0.52 | 58° |
-| squircle | +0.17 | −0.16 | 0.77 | 60° |
-| soft | +0.21 | −0.18 | 0.65 | 60° |
-| wide | +0.16 | −0.19 | 0.65 | 54° |
-| tall | +0.20 | −0.20 | 0.61 | 61° |
-| bean | +0.16 | −0.17 | 0.56 | 62° |
-| drop | +0.15 | −0.08 | 0.47 | 53° |
-| ghost | +0.21 | −0.18 | 0.59 | 58° |
-| triangle | +0.13 | −0.11 | 0.53 | 51° |
-| hexagon | +0.15 | −0.15 | 0.76 | 59° |
-| diamond | +0.14 | −0.14 | 0.52 | 54° |
-| cloud | +0.14 | −0.07 | 0.46 | 62° |
-| clover | +0.14 | −0.08 | 0.67 | 57° |
-| flower | +0.14 | −0.09 | 0.63 | 61° |
-| star | +0.11 | −0.05 | 0.61 | 58° |
-| *Grok-Bot circle* | *+0.22* | *−0.21* | *0.60* | *54.5°* |
-| *Grok-Bot flower* | *+0.11* | *−0.03* | | |
+The diamond (orb2's Lozenge) and the four lobed bodies are 3D clusters of domes. Past 0.65 the near eye lands on a
+dome bulging toward the camera and swells, while the far eye thins to a sliver: on the flower the far eye falls from
+0.63 of the near one at 0.54 to 0.42 at 0.65 and 0.33 at 0.75. 0.65 is the largest turn where both eyes still read as a
+pair (`probes/pose.html?lib=…`, measured with `tools/posemeas.py`).
 
-Lobed bodies sit nearer the centre because G3 holds their pitch to 0.30 and G2 keeps the pair inside 0.84 of the
-outline. Grok-Bot's flower does the same. Every eye is whole and inside the outline: the nearest edge of an eye is at
-least 5 px (DPR 2) from the box at 64 px.
+The same principle applies to every motion, not just the pose. The head follows the eyes at 0.85 on the flat bodies
+(it was 0.54) and at 0.65 on the domed ones, so lively turns, glances and states turn the whole bot, with the eyes
+leading only a little.
 
-**How it is drawn.** It uses orb2's public API and needs no new renderer code. It is a hidden reaction:
+**Per shape.** The table gives where the eyes land, measured by `tools/posemeas.py` on `pose.html` at 64 px and DPR
+2. "Across" and "down" are the eye pair's centroid against the centre of the body's box, in box widths and heights.
+
+| Shape | Across | Down | Far/near eye |
+|---|---|---|---|
+| circle | +0.19 | −0.19 | 0.52 |
+| squircle | +0.17 | −0.13 | 0.90 |
+| soft | +0.21 | −0.17 | 0.68 |
+| wide | +0.15 | −0.17 | 0.70 |
+| tall | +0.19 | −0.18 | 0.63 |
+| bean | +0.16 | −0.15 | 0.55 |
+| drop | +0.16 | −0.09 | 0.42 |
+| ghost | +0.22 | −0.20 | 0.63 |
+| triangle | +0.16 | −0.14 | 0.59 |
+| hexagon | +0.12 | −0.12 | 0.88 |
+| diamond | +0.12 | −0.14 | 0.44 |
+| cloud | +0.14 | −0.06 | 0.46 |
+| clover | +0.13 | −0.07 | 0.61 |
+| flower | +0.12 | −0.07 | 0.42 |
+| star | +0.09 | −0.05 | 0.59 |
+| *Grok-Bot circle* | *+0.22* | *−0.21* | *0.60* |
+| *Grok-Bot flower* | *+0.11* | *−0.03* | |
+
+On the flat bodies the far eye is now almost as large as the near one (squircle 0.90, hexagon 0.88), as on Grok-Bot's
+turned square and hexagon: both eyes sit on one turned plane. Every eye is whole and inside the outline: the nearest
+edge of an eye is at least 5 px (DPR 2) from the box at 64 px.
+
+**How it is drawn.** It is a hidden reaction on orb2's public API. The `hk` key and an exact rest need the G4 and G5
+changes in orb2 (fix list, part 1):
 
 ```js
 OrbAvatar.defineReaction('pose', {
   blink: false,
   face: (t, e, eye) => OrbAvatar.shapes.pairEyes(eye || 'pill'),
-  motion: () => ({ eyaw: .5, epitch: .45, eroll: .55, bodyRoll: .05, w: 1 }),
+  motion: () => ({ eyaw: .5, epitch: .45, eroll: .55, bodyRoll: .05, w: 1, hk: 1 }),
+  useEyeShape: true,   // a constant face: no redraw while the bot rests
 });
 ```
 
@@ -159,6 +194,8 @@ So vividness is not the difference. The geometry, the resampling and the size ar
 | G1 | **A far turn dents a turned flat body.** For a squircle, hexagon, wide or tall body, orb2 casts 160 rays from the pole against the swept spine discs and the bitangents between them, keeping only bitangents that face outward (`buildBodyContour`, `:1832-1985`). On a far turn some are missed. The outline gets dents and steps along its edges and a bite out of the side the eyes sit on. Every body whose front outline is convex is convex in 3D, so its exact silhouette is the hull of its projected discs. orb2 already traces its convex solids this way (`solidOutline`, `:553`). The rounded corner a turned box shows at its top is real 3D and stays. | `probes/turn.html` (five shapes, 0–72° at 40 px) and `anim-torture-before-after.mp4` (15 shapes, the whole range). | orb2 `:429` (a `polyConvex` helper), `:519` (`convex` flag), `:1951` (hull branch before the ray cast) |
 | G2 | **Eyes are cut at the rim.** On a far turn the eyes lead the head (the head turns 0.54 of the eye turn, `:2846`). They reach the rim and the body clip (`:2976`) halves them. | `probes/turn.html`, 55–72°. | orb2 `drawFaceCells` (`:2089-2130`): the group is projected first, and `keepOnFace` slides it toward the centre until every point is inside 0.93 of the outline (0.84 on a lobed body). The contour travels in `warp` (`:2978`). |
 | G3 | **A lobed body folds its far eye.** On a cloud, clover, flower or star past about 0.75 rad, the far eye folds behind a lobe. | `probes/pose.html`, `turn.html` | orb2 `:2849`, `:2856-2857`: `_eyeCap` clamps the eye turn to ±0.75 rad and the pitch to ±0.3, on lobed bodies only |
+| G4 | **The body does not turn with the face.** A flat body's head turns 0.54 of the eye turn (`:2846`). | `probes/pose.html`, `K03-pose-vs-grok.jpg` | orb2 `:2201` (MKEYS gains `hk`), `:2846-2847` (head ratio 0.85 flat, 0.65 domed, `lerp(…, 1, hk)`), `:2525` (`toSVG`, the same ratio) |
+| G5 | **A bot at rest keeps redrawing.** The springs (`:2854-2861`) and the jelly (`:2878`) never reach their goals; past the 1e-4 signature threshold (`:2941`) the canvas redraws slightly off, and edge pixels flip. | `tools/edges.py` on the clips: 0 changed pixels at rest | orb2 `:2861` (land each spring within 2e-3 rad), `:2888` (stop the jelly under energy 2e-3) |
 
 ### The fix list
 

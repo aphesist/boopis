@@ -47,7 +47,7 @@ const MORE = q.plan === 'more';
 const LOOKS = { boopis: ['squircle', '#f5f5f5', '#0e0e0e'], kai: ['circle', '#4fc9a8', '#141418'], nina: ['triangle', '#f23b5a', '#141418'], moss: ['squircle', '#2fd26a', '#141418'], iris: ['flower', '#3b82f6', '#141418'], hex: ['hexagon', '#a6a6ab', '#141418'] };
 /* THE FIXED POSE (ORBS.md): Grok-Bot's sidebar pose measured on 157-live-sidebar-expanded (eye centroid +0.22, -0.21 of
    the body box, strokes at 54.5 degrees, the far eye 0.6 of the near one's area), matched in probes/pose.html */
-const POSE = { eyaw: .5, epitch: .45, eroll: .55, bodyRoll: .05, w: 1 };
+const POSE = { eyaw: .5, epitch: .45, eroll: .55, bodyRoll: .05, w: 1, hk: 1 };
 const orb = (n, size, o = {}) => {
   const [shape, color, eye] = LOOKS[n] || [n, '#f5f5f5', '#0e0e0e']; const render = o.render && o.render !== size ? o.render : null;
   const fs = MORE && size <= 44 ? ' face-scale="1.25"' : '';
@@ -65,7 +65,7 @@ const S = {
   dock() {
     const bots = ['boopis', 'kai', 'nina', 'moss', 'iris', 'hex'];
     R.innerHTML = tag() + `<div class="dock">${bots.map((n) => MORE ? orb(n, 40) : orb(n, 40, { render: 80, state: n === 'hex' ? 'sleeping' : 'idle' })).join('')}</div><div class="word" id="word"></div><div class="cursor" id="cur"></div>`;
-    if (MORE) for (const o of document.querySelectorAll('.dock orb-avatar')) { o.setAttribute('jelly', '.55'); fixed(o); }
+    if (MORE) for (const o of document.querySelectorAll('.dock orb-avatar')) { o.setAttribute('jelly', '0'); fixed(o); }
   },
   room() {
     /* the chat is fully lively, and more than today: every orb lively, plus orb2's own emotes (face variety: wink, giggle,
@@ -84,7 +84,7 @@ const S = {
     R.innerHTML = tag() + `<div class="side"><div class="seg"><span>Sessions</span><span class="on">Bots</span></div>
       ${MORE ? `<div class="main-bot">${orb('boopis', 44)}<b style="font-weight:500">boopis</b></div>` : `<div class="row">${orb('boopis', 20)}<div><b>boopis</b><span>Summarised the morning</span></div></div>`}
       ${rows.map(([n, a]) => `<div class="row">${orb(n, MORE ? 28 : 20)}<div><b>${n}</b><span id="a-${n}">${a}</span></div></div>`).join('')}</div>`;
-    if (MORE) for (const o of document.querySelectorAll('.side orb-avatar')) { o.setAttribute('jelly', '.55'); fixed(o); }
+    if (MORE) for (const o of document.querySelectorAll('.side orb-avatar')) { o.setAttribute('jelly', '0'); fixed(o); }
     R.insertAdjacentHTML('beforeend', '<div class="cursor" id="cur"></div>');
   },
   torture() {
@@ -163,7 +163,7 @@ const T = {
 window.go = () => T[q.scene || 'dock']();
 const s = document.createElement('script'); s.src = LIB; s.onload = () => {
   const A = window.OrbAvatar;
-  A.defineReaction('pose', { label: 'Pose', blink: false, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: () => ({ ...POSE }) });
+  A.defineReaction('pose', { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: () => ({ ...POSE }) });
   S[q.scene || 'dock'](); document.body.dataset.ready = '1';
 };
 document.head.appendChild(s);

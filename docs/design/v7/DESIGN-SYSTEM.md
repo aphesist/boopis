@@ -710,6 +710,8 @@ Far 3D turns are fixed in the geometry, not clamped, so the life stays:
 - G1: a convex body is traced as the exact hull of its projected discs, with no dents.
 - G2: an eye group carried past the outline slides back onto the face; it is never cut.
 - G3: only lobed bodies keep a limit, at 0.75 rad of eye turn and 0.3 of pitch.
+- G4: the body turns with the face.
+- G5: a resting bot is exactly still.
 
 **The rest of the decision:**
 
@@ -717,24 +719,32 @@ Far 3D turns are fixed in the geometry, not clamped, so the life stays:
 - Sizes: Grok-Bot's, with sidebar rows at 28 px and the rail at 36 px.
 - The blink: 0.2 s.
 
-**The fixed pose** (the full spec, per shape, is in `character/ORBS.md` §23). At rest, every bot in the dock, the Bots
-sidebar, the rail and the 44 px main bot holds one sideways 3/4 pose. It is Grok-Bot's main bot's rest pose,
-measured.
+**The fixed pose** (the full spec, per shape, is in `character/ORBS.md` §23; `character/K03-pose-vs-grok.jpg` shows all
+15 beside Grok-Bot's). At rest, every bot in the dock, the Bots sidebar, the rail and the 44 px main bot holds one
+sideways 3/4 pose. **The whole bot turns**, as Grok-Bot's do: the body takes the same angle as the eyes, so a square
+shows its turned face foreshortened and a triangle or a hexagon turns. The eyes are not looking sideways out of a
+front-on body.
 
-| `eyaw` | `epitch` | `eroll` | `bodyRoll` | `w` |
-|---|---|---|---|---|
-| 0.50 | 0.45 (0.30 on lobed bodies, G3) | 0.55 | 0.05 | 1 |
+| `eyaw` | `epitch` | `eroll` | `bodyRoll` | `w` | `hk` (body locked to the eyes) |
+|---|---|---|---|---|---|
+| 0.50 | 0.45 (0.30 on lobed bodies, G3) | 0.55 | 0.05 | 1 | 1 |
 
-The body follows at 0.27 rad. The eyes land up and to the right of centre:
+The body's turn depends on the kind of body:
 
-- On the circle, +0.19 across and −0.19 down the body's box (Grok-Bot: +0.22 and −0.21), with the far eye foreshortened
-  to about half.
-- On the lobed bodies, nearer the centre: +0.11 to +0.14 across and −0.05 to −0.09 down. Grok-Bot's flower is at +0.11
-  and −0.03.
+- **Flat bodies** (squircle, soft, wide, tall, bean, drop, ghost, triangle, hexagon): yaw 0.50 and pitch 0.45, the same
+  as the eyes. G1 keeps the turned outline clean.
+- **Domed bodies** (diamond, cloud, clover, flower, star): 0.65 of the eye angle, their largest clean turn. Past it the
+  near eye swells on a dome and the far one thins.
+- **The circle**: unchanged, since a sphere looks the same.
 
-The pose is the same at every size and under reduced motion. It is drawn with orb2's public API: a hidden
-`defineReaction('pose', …)` and `reaction="pose" idle-motion="off" mode="drift"`, with no blink. A bot at rest costs no
-redraw.
+The eyes land up and to the right of centre: +0.19 across and −0.19 down on the circle (Grok-Bot: +0.22 and −0.21).
+On the flat bodies both eyes are nearly the same size (squircle 0.90), as on Grok-Bot's turned square.
+
+The same rule holds in motion: the body follows the eyes at 0.85 (flat) and 0.65 (domed) in every lively turn, glance
+and state. A resting bot is exactly still: no redraw and no edge flicker (G5).
+
+It is drawn with a hidden `defineReaction('pose', …)` and `reaction="pose" idle-motion="off" mode="drift"`, with no
+blink. The resting dock and sidebar bots take `jelly="0"`.
 
 **Per surface:**
 

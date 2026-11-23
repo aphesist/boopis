@@ -45,6 +45,27 @@ const SNAP = [
   ["  _followMode() {", "  _eyeCap(v, m = .75) { const b = this._bodyTo; return (!b || b.isCircle || b.convex) ? v : clamp(v, -m, m); }\n  _followMode() {", 'G3 cap'],
   ["      this._eyaw = T[0]; this._epitch = T[1]; this._eroll = T[2];", "      this._eyaw = this._eyeCap(T[0]); this._epitch = this._eyeCap(T[1], .3); this._eroll = T[2];", 'G3 static'],
   ["      [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, T[0]);\n      [this._epitch, this._vep] = stepEye(this._epitch, this._vep, T[1]);", "      [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, this._eyeCap(T[0]));\n      [this._epitch, this._vep] = stepEye(this._epitch, this._vep, this._eyeCap(T[1], .3));", 'G3 spring'],
+  // G4: the body turns with the face (owner, 23 Nov). orb2 turns the head by only 0.54 of the eye turn on a flat body, so a
+  // turned square or hexagon keeps its body nearly front-on while its eyes slide over: it reads as eyes looking, not as a
+  // turned bot. Grok-Bot turns the whole body (avatar-shapes-idle-and-pointer.mp4; its 3/4 sidebar pose). The head ratio is
+  // 0.85 on every extruded body (the eyes still lead a little), and a reaction can lock it to the eyes with the motion key hk
+  // (0..1, blended by orb2's morph like every motion key): the fixed pose uses hk 1. The domed solids (the diamond, a lozenge, and
+  // the lobed cloud, clover, flower and star) take 0.65, their largest clean turn: past it the near eye sits on a lobe bulging toward the camera and
+  // swells while the far one thins (probes/pose.html, ORBS.md section 23). A circle keeps 0.68 (a sphere looks the same).
+  ["const MKEYS = { dy: 0, s: 1, bodyRoll: 0, yawAdd: 0, spinYaw: 0, spinEyeLead: 0, eroll: 0, w: 0 };",
+   "const MKEYS = { dy: 0, s: 1, bodyRoll: 0, yawAdd: 0, spinYaw: 0, spinEyeLead: 0, eroll: 0, w: 0, hk: 0 };", 'G4 key'],
+  ["    const hR = b => b.isCircle ? .68 : .54;\n    const hRatio = this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo);",
+   "    const domed = b => !!b.solid && (!b.solid.convex || b.label === 'Lozenge');\n    const hR = b => b.isCircle ? .68 : domed(b) ? .65 : .85;\n    const hRatio = lerp(this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo), 1, clamp(this._bodyTo.isCircle || domed(this._bodyTo) ? 0 : (m.hk || 0), 0, 1));", 'G4 ratio'],
+  ["    const hRatio = body.isCircle ? .68 : .54;", "    const hRatio = body.isCircle ? .68 : (body.solid && (!body.solid.convex || body.label === 'Lozenge')) ? .65 : .85;", 'G4 svg'],
+  // G5: a bot at rest is exactly still (owner, 23 Nov: "the flickering on the borders still happen"). orb2's springs and
+  // jelly decay forever; whenever the residue passes the redraw threshold (1e-4) the canvas is redrawn a hair off, and on a
+  // small bot the anti-aliased edge pixels flip. Each spring now lands exactly on its goal once it is within 2e-3 rad and
+  // slow (under 0.09 device px at 44 px), and the jelly stops below an energy of 2e-3, so the signature stops changing and
+  // the canvas is never redrawn while the bot rests
+  ["      [this._bRoll, this._vbr] = stepHead(this._bRoll, this._vbr, T[3]);",
+   "      [this._bRoll, this._vbr] = stepHead(this._bRoll, this._vbr, T[3]);\n      { const land = (k, vk, g) => { if (Math.abs(g - this[k]) < 2e-3 && Math.abs(this[vk]) < 2e-2) { this[k] = g; this[vk] = 0; } };\n        land('_eyaw', '_vey', this._eyeCap(T[0])); land('_epitch', '_vep', this._eyeCap(T[1], .3)); land('_eroll', '_ver', T[2]);\n        land('_hyaw', '_vhy', T[0] * hRatio); land('_hpitch', '_vhp', T[1] * hRatio); land('_bRoll', '_vbr', T[3]); }", 'G5 springs'],
+  ["        x[i] = clamp(x[i] + v[i] * h, -.28, .28);\n      }\n    }\n  }",
+   "        x[i] = clamp(x[i] + v[i] * h, -.28, .28);\n      }\n    }\n    let en = 0; for (let i = 0; i < 6; i++) en += Math.abs(x[i]) + Math.abs(v[i]) * .02;\n    if (en < 2e-3) for (let i = 0; i < 6; i++) x[i] = v[i] = 0;\n  }", 'G5 jelly'],
 ];
 const TUNE = [
   // T1: a blink as long as Grok-Bot's (0.20 s, was 0.155 s)
