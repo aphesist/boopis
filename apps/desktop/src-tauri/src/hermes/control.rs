@@ -151,6 +151,37 @@ pub async fn reload_plugins(root: &Path, home: &Path) -> Result<Vec<String>> {
         .unwrap_or_default())
 }
 
+/// How long `active-work` may take: the gateway answers it from its own loop and gives up after 5 s.
+const ACTIVE_WORK_WAIT: std::time::Duration = std::time::Duration::from_secs(6);
+
+/// What the gateway serving `home` is running now, by its own account (`active-work`, the verb the engine's own `gateway stop`
+/// asks before it refuses to interrupt): chat and room turns, managed turns, cron runs, API runs, background delegations and
+/// processes, counted the way the engine counts them (the larger of its total and the units it names). `None` when no
+/// gateway answers on the socket (none runs, or this platform has no socket support). Kanban workers are separate
+/// processes and are not in it.
+///
+/// # Errors
+/// `Unavailable` when a gateway answers but not with a count.
+pub async fn active_work(home: &Path) -> Result<Option<u32>> {
+    if identify(home).await.is_err() {
+        return Ok(None);
+    }
+    let req = serde_json::json!({"protocol": 1, "id": 1, "verb": "active-work"});
+    let (result, _) = query_within(home, &req, ACTIVE_WORK_WAIT).await?;
+    let units = result
+        .get("active_work")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| Error::Unavailable("active-work named no work list".into()))?
+        .len();
+    let total = result
+        .get("active_agents")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    Ok(Some(
+        u32::try_from(total.max(units as u64)).unwrap_or(u32::MAX),
+    ))
+}
+
 /// One round trip: the answer's `result`, and the pid the kernel reports for the process that answered.
 async fn query(
     home: &Path,
@@ -379,6 +410,60 @@ mod tests {
         assert!(loaded.iter().any(|p| p == "boopis"));
         let refused = reload_plugins(dir.path(), &bot).await.unwrap_err();
         assert!(refused.to_string().contains("not served"));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn active_work_counts_what_the_gateway_says_it_runs_and_none_when_nothing_answers() {
+        use std::os::unix::fs::PermissionsExt;
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(active_work(dir.path()).await.unwrap(), None, "no gateway");
+        std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+        let listener = tokio::net::UnixListener::bind(dir.path().join("gateway.sock")).unwrap();
+        tokio::spawn(async move {
+            for work in [
+                serde_json::json!({"active_agents": 1, "active_work": [{"kind": "chat"}, {"kind": "cron"}]}),
+                serde_json::json!({"active_agents": 3, "active_work": []}),
+                serde_json::json!({"active_agents": 0, "active_work": []}),
+            ] {
+                for verb in ["identify", "active-work"] {
+                    let Ok((s, _)) = listener.accept().await else {
+                        return;
+                    };
+                    let (r, mut w) = s.into_split();
+                    let mut line = String::new();
+                    BufReader::new(r).read_line(&mut line).await.unwrap();
+                    let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+                    assert_eq!(req["verb"], verb);
+                    let result = if verb == "identify" {
+                        serde_json::json!({"state": "ready"})
+                    } else {
+                        work.clone()
+                    };
+                    w.write_all(
+                        format!(
+                            "{}\n",
+                            serde_json::json!({"ok":true,"protocol":1,"result":result,"id":1})
+                        )
+                        .as_bytes(),
+                    )
+                    .await
+                    .unwrap();
+                }
+            }
+        });
+        assert_eq!(
+            active_work(dir.path()).await.unwrap(),
+            Some(2),
+            "two units named"
+        );
+        assert_eq!(
+            active_work(dir.path()).await.unwrap(),
+            Some(3),
+            "a total larger than the units"
+        );
+        assert_eq!(active_work(dir.path()).await.unwrap(), Some(0));
     }
 
     #[cfg(unix)]

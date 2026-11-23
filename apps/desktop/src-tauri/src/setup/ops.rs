@@ -23,6 +23,17 @@ pub struct PluginEntry {
     pub enabled: bool,
 }
 
+/// How a stop that leaves running work alone went ([`HermesOps::stop_gateway_when_idle`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Stop {
+    /// Nothing answers any more.
+    Gone,
+    /// The engine refused: work started since the look.
+    Busy,
+    /// It was told to stop and still answers after the wait.
+    StillUp,
+}
+
 /// Hermes, as setup needs it.
 #[async_trait]
 pub trait HermesOps: Send + Sync {
@@ -50,6 +61,13 @@ pub trait HermesOps: Send + Sync {
     async fn stop_gateway(&self) -> Result<bool>;
     /// Start the gateway if none runs (`hermes gateway ensure`), on the code in place now; one that runs is left as it is.
     async fn start_gateway(&self) -> Result<()>;
+    /// How much is working now, by the engine's own accounts: the gateway's live work (`hermes::control::active_work`: turns,
+    /// room turns, cron runs, delegations) and the kanban workers (`kanban::running`), which are separate processes. An error
+    /// when it cannot say.
+    async fn working(&self) -> Result<u32>;
+    /// Stop the gateway unless it has live work (`gateway stop` without `--yes`, which the engine refuses then) and wait
+    /// until it is gone.
+    async fn stop_gateway_when_idle(&self) -> Result<Stop>;
     /// Restart the gateway so it reads a key saved since it started, but only when no turn is running (ending one is never silent).
     /// `true` when it restarted, `false` when it was left running (a turn is live) or this double does not restart.
     ///
@@ -203,6 +221,27 @@ impl HermesOps for CliOps {
 
     async fn start_gateway(&self) -> Result<()> {
         self.sup.ensure_if_needed(&self.home).await
+    }
+
+    async fn working(&self) -> Result<u32> {
+        // the gateway's own count first: a socket round trip, while the boards cost an engine command
+        if let Some(n) = crate::hermes::control::active_work(&self.home).await?
+            && n > 0
+        {
+            return Ok(n);
+        }
+        Ok(crate::kanban::running(
+            &crate::kanban::boards(&self.sup).await?,
+        ))
+    }
+
+    async fn stop_gateway_when_idle(&self) -> Result<Stop> {
+        match self.sup.stop(&self.home, false).await {
+            Ok(true) => Ok(Stop::Gone),
+            Ok(false) => Ok(Stop::StillUp),
+            Err(Error::Connector("hx.connectors.busy", _)) => Ok(Stop::Busy),
+            Err(e) => Err(e),
+        }
     }
 
     async fn restart_gateway_when_idle(&self) -> Result<bool> {

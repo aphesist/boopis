@@ -47,8 +47,11 @@ pub struct Limits {
     pub connector_start_wait: std::time::Duration,
     /// How often a restart that waits for idle sessions asks whether any has a turn running.
     pub restart_poll_every: std::time::Duration,
-    /// The longest such a restart waits before it gives up and says so.
+    /// The longest such a restart waits before it gives up and says so (the automatic update of the engine's code too).
     pub restart_wait_max: std::time::Duration,
+    /// How often the automatic update of the engine's code looks whether anything is working (`setup::update`). Longer than
+    /// `restart_poll_every`: a look at the kanban boards is an engine command.
+    pub update_poll_every: std::time::Duration,
     /// How often the host asks Hermes how a sign-in stands.
     pub connector_poll_every: std::time::Duration,
     /// How long a provider's own `login` command may run.
@@ -235,6 +238,7 @@ impl Default for Limits {
             connector_start_wait: Duration::from_secs(10),
             restart_poll_every: Duration::from_secs(5),
             restart_wait_max: Duration::from_hours(8),
+            update_poll_every: Duration::from_secs(15),
             connector_poll_every: Duration::from_secs(1),
             login_timeout: Duration::from_mins(5),
             login_output_cap: 64 * 1024,

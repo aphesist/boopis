@@ -31,6 +31,10 @@ struct Fake {
     gateway: Mutex<Vec<String>>,
     /// Whether the gateway refuses to stop (it still answers after the wait).
     stays_up: Mutex<bool>,
+    /// What the next looks at the engine's work answer, in order (`working`); none left is 0, nothing working.
+    working: Mutex<Vec<u32>>,
+    /// How many of the next stops without `--yes` the engine refuses because work started since the look.
+    busy_stops: Mutex<u32>,
     /// How many of the next restarts fail (the gateway does not come up).
     restart_failures: Mutex<u32>,
     /// What Hermes says about the free tier: the status before a claim, and after it.
@@ -134,6 +138,8 @@ impl Fake {
             restarts: Mutex::new(0),
             gateway: Mutex::new(Vec::new()),
             stays_up: Mutex::new(false),
+            working: Mutex::new(Vec::new()),
+            busy_stops: Mutex::new(0),
             restart_failures: Mutex::new(0),
             free: Mutex::new(FreeScript::default()),
             catalogue: Mutex::new(Vec::new()),
@@ -248,6 +254,29 @@ impl HermesOps for Fake {
             .unwrap()
             .push(format!("start:{}", self.plugin_marks()));
         Ok(())
+    }
+    async fn working(&self) -> Result<u32> {
+        let mut next = self.working.lock().unwrap();
+        let n = if next.is_empty() { 0 } else { next.remove(0) };
+        self.gateway.lock().unwrap().push(format!("working:{n}"));
+        Ok(n)
+    }
+    async fn stop_gateway_when_idle(&self) -> Result<super::ops::Stop> {
+        let mut busy = self.busy_stops.lock().unwrap();
+        if *busy > 0 {
+            *busy -= 1;
+            self.gateway.lock().unwrap().push("busy".to_owned());
+            return Ok(super::ops::Stop::Busy);
+        }
+        self.gateway
+            .lock()
+            .unwrap()
+            .push(format!("stop:{}", self.plugin_marks()));
+        Ok(if *self.stays_up.lock().unwrap() {
+            super::ops::Stop::StillUp
+        } else {
+            super::ops::Stop::Gone
+        })
     }
     async fn free_tier_status(&self) -> Result<FreeTier> {
         let mut f = self.free.lock().unwrap();
@@ -694,6 +723,139 @@ async fn a_gateway_that_does_not_stop_keeps_its_plugin() {
     assert_eq!(r.fake.plugin_marks(), "V = 'new'");
 }
 
+/// Waits short enough for a test.
+fn quick() -> super::update::Waits {
+    super::update::Waits {
+        every: std::time::Duration::from_millis(1),
+        longest: std::time::Duration::from_secs(5),
+    }
+}
+
+/// The owner's second decision of 23 November 2026: the update never stops the gateway over running work. While a turn runs
+/// the app's links dial (the app runs on the earlier plugin) and the app says it waits; as soon as nothing works, it updates.
+#[tokio::test]
+async fn the_update_waits_while_a_turn_runs_and_updates_once_nothing_works() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    *r.fake.working.lock().unwrap() = vec![1, 2, 0];
+    let gate = crate::endpoint::Gate::default();
+    let watch = gate.clone();
+    let said = Mutex::new(Vec::new());
+    let notice = r
+        .setup()
+        .update(gate.close(), quick(), &|n| {
+            said.lock().unwrap().push((n, watch.is_open()));
+        })
+        .await;
+    assert_eq!(
+        *said.lock().unwrap(),
+        [(
+            super::update::Notice::Waiting("Updating once the bots are done.".into()),
+            true
+        )],
+        "said once, with the app's links free to dial the earlier plugin meanwhile"
+    );
+    assert_eq!(
+        notice,
+        Some(super::update::Notice::Done(
+            "Updated the engine's plugin to this version.".into()
+        ))
+    );
+    assert_eq!(
+        *r.fake.gateway.lock().unwrap(),
+        [
+            "working:1",
+            "working:2",
+            "working:0",
+            "working:0",
+            "stop:",
+            "start:V = 'new'"
+        ],
+        "no stop while a turn ran; one once nothing did"
+    );
+    assert!(gate.is_open());
+}
+
+#[tokio::test]
+async fn a_turn_that_starts_between_the_look_and_the_stop_sends_the_update_back_to_waiting() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    *r.fake.busy_stops.lock().unwrap() = 1; // the engine refuses the stop without `--yes`
+    let said = Mutex::new(Vec::new());
+    let notice = r
+        .setup()
+        .update(crate::endpoint::Gate::default().close(), quick(), &|n| {
+            said.lock().unwrap().push(n);
+        })
+        .await;
+    assert_eq!(said.lock().unwrap().len(), 1, "it said it waits");
+    assert!(matches!(notice, Some(super::update::Notice::Done(_))));
+    assert_eq!(
+        *r.fake.gateway.lock().unwrap(),
+        [
+            "working:0",
+            "busy",
+            "working:0",
+            "working:0",
+            "stop:",
+            "start:V = 'new'"
+        ],
+        "nothing written while the engine refused"
+    );
+}
+
+#[tokio::test]
+async fn bots_that_work_the_whole_time_leave_everything_as_it_is_until_the_next_start() {
+    let r = rig(main_provider());
+    finished(&r).await;
+    std::fs::write(
+        r.bundle.plugin_dir.as_ref().unwrap().join("__init__.py"),
+        "V = 'new'\n",
+    )
+    .unwrap();
+    *r.fake.working.lock().unwrap() = vec![1; 10_000];
+    let waits = super::update::Waits {
+        every: std::time::Duration::from_millis(1),
+        longest: std::time::Duration::from_millis(30),
+    };
+    let notice = r
+        .setup()
+        .update(crate::endpoint::Gate::default().close(), waits, &|_| {})
+        .await;
+    assert_eq!(
+        notice,
+        Some(super::update::Notice::Later(
+            super::update::LATER_LINE.into()
+        ))
+    );
+    assert_eq!(r.fake.plugin_marks(), "", "the earlier copy is untouched");
+    assert!(
+        !r.fake
+            .gateway
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|e| e.starts_with("stop") || e == "busy"),
+        "the gateway was never stopped"
+    );
+    let (check, update) = r.setup().assess().await.unwrap();
+    assert!(
+        !check.needed && update,
+        "the next start updates by itself again: {}",
+        check.reason
+    );
+}
+
 /// The owner's decision of 23 November 2026: an install set up before updates the engine's code by itself, with no screen.
 #[tokio::test]
 async fn an_install_set_up_before_updates_by_itself_with_no_screen() {
@@ -710,18 +872,26 @@ async fn an_install_set_up_before_updates_by_itself_with_no_screen() {
 
     let gate = crate::endpoint::Gate::default();
     let closed = gate.close();
-    let notice = r.setup().update(closed).await;
+    let said = Mutex::new(Vec::new());
+    let notice = r
+        .setup()
+        .update(closed, quick(), &|n| said.lock().unwrap().push(n))
+        .await;
     assert_eq!(
         notice,
         Some(super::update::Notice::Done(
             "Updated the engine's plugin to this version.".into()
         ))
     );
+    assert!(
+        said.lock().unwrap().is_empty(),
+        "nothing was working: no wait to announce"
+    );
     assert!(gate.is_open(), "the app's links dial again");
     assert_eq!(
         *r.fake.gateway.lock().unwrap(),
-        ["stop:", "start:V = '0.1.10'"],
-        "stopped on the old code, started on the new"
+        ["working:0", "stop:", "start:V = '0.1.10'"],
+        "nothing working, so stopped on the old code without ending anything, and started on the new"
     );
     let (check, update) = r.setup().assess().await.unwrap();
     assert!(!check.needed && !update, "{}", check.reason);
@@ -729,7 +899,7 @@ async fn an_install_set_up_before_updates_by_itself_with_no_screen() {
     std::fs::write(r.bundle.hx.as_ref().unwrap(), "hx 0.1.10").unwrap();
     assert!(r.setup().assess().await.unwrap().1);
     assert_eq!(
-        r.setup().update(gate.close()).await,
+        r.setup().update(gate.close(), quick(), &|_| {}).await,
         Some(super::update::Notice::Done(
             "Updated the hx tool to this version.".into()
         ))
@@ -772,7 +942,7 @@ async fn a_failed_update_keeps_the_old_copy_and_offers_the_screen() {
     .unwrap();
     *r.fake.stays_up.lock().unwrap() = true;
     let gate = crate::endpoint::Gate::default();
-    let notice = r.setup().update(gate.close()).await;
+    let notice = r.setup().update(gate.close(), quick(), &|_| {}).await;
     assert_eq!(
         notice,
         Some(super::update::Notice::Failed(

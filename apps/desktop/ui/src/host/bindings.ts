@@ -566,7 +566,10 @@ export type ChatgptStatus_Serialize = {
 export type Check = {
 	/**  Hermes is installed. */
 	hermes_installed: boolean,
-	/**  Setup has not finished, or the plugin is missing, outdated or disabled. */
+	/**
+	 *  The setup screen is needed: setup has not finished, the plugin is missing or disabled, something else needs an
+	 *  answer, or the last automatic update failed. Code that is only outdated is not this: the host updates it by itself.
+	 */
 	needed: boolean,
 	/**  One line saying why. */
 	reason: string,
@@ -1167,9 +1170,13 @@ export type EndpointTestResult_Serialize = {
 	detail: string | null,
 };
 
-/**  How the automatic update of the engine's code went (`setup::update`). The app shows `message` as a notice. */
+/**  How the automatic update of the engine's code goes (`setup::update`). The app shows `message` as a notice. */
 export type EngineUpdateEvent = {
-	/**  `done`, or `failed` (the earlier code is still in use; the notice offers the setup screen's Set up). */
+	/**
+	 *  `waiting` (something works; the app runs on the earlier code meanwhile), `done`, `later` (something worked the whole
+	 *  time; the next start tries again) or `failed` (the earlier code is still in use; the notice offers the setup screen's
+	 *  Set up).
+	 */
 	state: string,
 	/**  What to tell the user. */
 	message: string,

@@ -8,23 +8,61 @@
 //! first roster read would ask `plugin.boopis.bots.guide` of a plugin that does not have it, and nothing would ask again in
 //! that run. The window opens and draws meanwhile; only the link waits. The gate opens again however the update ends.
 //!
+//! **Never over running work** (owner decision, 23 November 2026). The gateway is stopped only when nothing is working, by
+//! the engine's own accounts (`HermesOps::working`: the gateway's live work, which covers chat, room and cron turns and
+//! background delegations, and the kanban workers, which are separate processes), and without `--yes`, so the engine itself
+//! refuses if work started since the look. While anything works the gate is open and the app runs on the earlier plugin;
+//! the app says "Updating once the bots are done", and the one "when idle" wait (`hermes::idle`, the same one a connector's
+//! key uses) updates as soon as nothing is. A wait that never sees such a moment ends after `Limits::restart_wait_max`
+//! without touching anything, and the next start tries again.
+//!
 //! **Fail closed.** A copy that cannot be replaced is put back (`install::install_named`), the gateway is started on what is
 //! in place, the failure is recorded (`State::update_failed`) so the next check shows the setup screen, and the app says so
 //! and offers that screen's Set up now.
 
 use std::path::PathBuf;
+use std::time::Duration;
 
+use super::ops::Stop;
 use super::{Setup, install, state};
 use crate::endpoint::Closed;
 use crate::error::{Error, Result};
+use crate::hermes::idle::{Waited, when_idle};
+
+/// The line while the update waits for the bots.
+pub const WAITING_LINE: &str = "Updating once the bots are done.";
+/// The line when the bots worked the whole time the update could wait.
+pub const LATER_LINE: &str = "The bots were working the whole time, so boopis keeps the earlier engine code for now and updates it when it next starts.";
 
 /// What an automatic update came to, as the app shows it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Notice {
+    /// Something is working, so the update waits and the app runs on the earlier code meanwhile: the line to show.
+    Waiting(String),
+    /// Something worked the whole time the update could wait: nothing was touched, and the next start tries again.
+    Later(String),
     /// The code is in place and the gateway runs on it: the line to show.
     Done(String),
     /// It did not happen and the earlier code is still in use: the line to show, with Set up offered.
     Failed(String),
+}
+
+/// How often the update looks whether anything works, and how long it waits at most (`Limits::update_poll_every`,
+/// `Limits::restart_wait_max`).
+#[derive(Debug, Clone, Copy)]
+pub struct Waits {
+    /// Between two looks.
+    pub every: Duration,
+    /// In all.
+    pub longest: Duration,
+}
+
+/// One try at putting the code in place.
+enum Tried {
+    /// Done.
+    Replaced,
+    /// Something works (or the engine refused to stop): not now.
+    Busy,
 }
 
 /// What is outdated, by content (`install::needs_install`, `install::hx_differs`).
@@ -99,50 +137,107 @@ impl Setup {
     }
 
     /// Put this app's plugins and `hx` in place and start the gateway on them, without the setup screen (see the module).
-    /// `closed` holds the app's link gate shut from before the UI could dial; it opens when the code is in place, or when
-    /// this fails. `None` when there turned out to be nothing to do.
-    pub async fn update(&self, closed: Closed) -> Option<Notice> {
+    /// `closed` holds the app's link gate shut from before the UI could dial. It opens as soon as it is clear that something
+    /// works (the app then runs on the earlier code, and `said` is told [`Notice::Waiting`]), and when the code is in place
+    /// or this fails. `None` when there turned out to be nothing to do.
+    pub async fn update(
+        &self,
+        closed: Closed,
+        waits: Waits,
+        said: &(dyn Fn(Notice) + Send + Sync),
+    ) -> Option<Notice> {
         let outdated = self.outdated().await;
         if outdated.is_empty() {
             return None;
         }
-        let replaced = self.replace(&outdated).await;
-        drop(closed); // the app's links dial again; the first one finds the code now in place
-        let home = self.ops.home();
-        match state::load(&home) {
-            Ok(mut st) => {
-                st.update_failed = replaced.is_err();
-                if let Err(e) = state::save(&home, &st) {
-                    tracing::warn!(error = %e, "could not record how the update ended");
-                }
+        let gate = closed.gate().clone();
+        let first = self.try_now(&outdated, closed).await;
+        let result = match first {
+            Ok(Tried::Replaced) => Ok(Waited::Done),
+            Ok(Tried::Busy) => {
+                tracing::info!(
+                    "the engine's code is outdated and something is working; updating once nothing is"
+                );
+                said(Notice::Waiting(WAITING_LINE.to_owned()));
+                when_idle(
+                    waits.every,
+                    waits.longest,
+                    || async { matches!(self.ops.working().await, Ok(0)) },
+                    || async {
+                        match self.try_now(&outdated, gate.close()).await? {
+                            Tried::Replaced => Ok(true),
+                            Tried::Busy => Ok(false),
+                        }
+                    },
+                )
+                .await
             }
-            Err(e) => tracing::warn!(error = %e, "could not record how the update ended"),
+            Err(e) => Err(e),
+        };
+        Some(self.finish(&outdated, result).await)
+    }
+
+    /// One try, holding the gate shut through it (`closed`, dropped on every way out): when nothing works, stop the gateway
+    /// without ending anything and put the code in place.
+    async fn try_now(&self, outdated: &Outdated, closed: Closed) -> Result<Tried> {
+        // only an answer that says nothing works counts; one that cannot tell is "not now"
+        if !matches!(self.ops.working().await, Ok(0)) {
+            return Ok(Tried::Busy);
+        }
+        match self.ops.stop_gateway_when_idle().await? {
+            Stop::Busy => Ok(Tried::Busy),
+            Stop::StillUp => Err(Error::Setup(
+                "hx.setup.plugin_install_failed",
+                "the engine did not stop, so the code it runs was not replaced".into(),
+            )),
+            Stop::Gone => {
+                self.replace(outdated).await?;
+                drop(closed); // the app's links dial again; the first one finds the code now in place
+                Ok(Tried::Replaced)
+            }
+        }
+    }
+
+    /// Record how it ended, start the gateway on what is in place, and say it.
+    async fn finish(&self, outdated: &Outdated, result: Result<Waited>) -> Notice {
+        let home = self.ops.home();
+        if !matches!(result, Ok(Waited::GaveUp)) {
+            match state::load(&home) {
+                Ok(mut st) => {
+                    st.update_failed = result.is_err();
+                    if let Err(e) = state::save(&home, &st) {
+                        tracing::warn!(error = %e, "could not record how the update ended");
+                    }
+                }
+                Err(e) => tracing::warn!(error = %e, "could not record how the update ended"),
+            }
         }
         if let Err(e) = self.ops.start_gateway().await {
             tracing::warn!(error = %e, "the gateway did not start after the update; the next link starts it");
         }
-        Some(match replaced {
-            Ok(()) => {
+        match result {
+            Ok(Waited::Done) => {
                 tracing::info!(?outdated, "the engine's code was updated to this app's");
                 Notice::Done(outdated.done_line())
+            }
+            Ok(Waited::GaveUp) => {
+                tracing::info!(
+                    ?outdated,
+                    "no moment came when nothing was working; the next start tries again"
+                );
+                Notice::Later(LATER_LINE.to_owned())
             }
             Err(e) => {
                 crate::error::keep(e.code(), &e.to_string());
                 tracing::warn!(error = %e, ?outdated, "the engine's code was not updated; the earlier code stays");
                 Notice::Failed(outdated.failed_line())
             }
-        })
+        }
     }
 
-    /// Stop the gateway (it loaded the code being replaced), then put each outdated piece in place: the boopis plugin first,
-    /// then the plugins the runtime carries, then `hx`. A copy that fails is put back; one already replaced stays replaced.
+    /// Put each outdated piece in place, with the gateway stopped (it loaded the code being replaced): the boopis plugin
+    /// first, then the plugins the runtime carries, then `hx`. A copy that fails is put back; one already replaced stays.
     async fn replace(&self, outdated: &Outdated) -> Result<()> {
-        if !self.ops.stop_gateway().await? {
-            return Err(Error::Setup(
-                "hx.setup.plugin_install_failed",
-                "the engine did not stop, so the code it runs was not replaced".into(),
-            ));
-        }
         let (bundle, home, outdated) = (self.bundle.clone(), self.ops.home(), outdated.clone());
         let root: Option<PathBuf> = self
             .runtime

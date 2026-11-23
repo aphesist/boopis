@@ -241,23 +241,32 @@ pub async fn setup_check(
             .swap(true, std::sync::atomic::Ordering::SeqCst)
     {
         let closed = state.update_gate.close();
+        let waits = crate::setup::update::Waits {
+            every: state.limits.update_poll_every,
+            longest: state.limits.restart_wait_max,
+        };
         let events = app.clone();
         tauri::async_runtime::spawn(async move {
-            if let Some(notice) = setup.update(closed).await {
+            let say = move |notice: crate::setup::update::Notice| {
                 let event = EngineUpdateEvent::from(notice);
                 if let Err(e) = tauri_specta::Event::emit(&event, &events) {
                     tracing::debug!(error = %e, "could not emit the engine update notice");
                 }
+            };
+            if let Some(notice) = setup.update(closed, waits, &say).await {
+                say(notice);
             }
         });
     }
     Ok(check)
 }
 
-/// How the automatic update of the engine's code went (`setup::update`). The app shows `message` as a notice.
+/// How the automatic update of the engine's code goes (`setup::update`). The app shows `message` as a notice.
 #[derive(Debug, Clone, Serialize, Type, tauri_specta::Event)]
 pub struct EngineUpdateEvent {
-    /// `done`, or `failed` (the earlier code is still in use; the notice offers the setup screen's Set up).
+    /// `waiting` (something works; the app runs on the earlier code meanwhile), `done`, `later` (something worked the whole
+    /// time; the next start tries again) or `failed` (the earlier code is still in use; the notice offers the setup screen's
+    /// Set up).
     pub state: String,
     /// What to tell the user.
     pub message: String,
@@ -267,7 +276,9 @@ impl From<crate::setup::update::Notice> for EngineUpdateEvent {
     fn from(n: crate::setup::update::Notice) -> Self {
         use crate::setup::update::Notice;
         let (state, message) = match n {
+            Notice::Waiting(m) => ("waiting", m),
             Notice::Done(m) => ("done", m),
+            Notice::Later(m) => ("later", m),
             Notice::Failed(m) => ("failed", m),
         };
         Self {

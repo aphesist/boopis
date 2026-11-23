@@ -179,6 +179,14 @@ impl Gate {
 #[derive(Debug)]
 pub struct Closed(Gate);
 
+impl Closed {
+    /// The gate this holds closed.
+    #[must_use]
+    pub fn gate(&self) -> &Gate {
+        &self.0
+    }
+}
+
 impl Drop for Closed {
     fn drop(&mut self) {
         self.0.0.send_replace(true);

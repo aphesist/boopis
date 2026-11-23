@@ -219,7 +219,8 @@ impl std::fmt::Debug for Answer {
 pub struct Check {
     /// Hermes is installed.
     pub hermes_installed: bool,
-    /// Setup has not finished, or the plugin is missing, outdated or disabled.
+    /// The setup screen is needed: setup has not finished, the plugin is missing or disabled, something else needs an
+    /// answer, or the last automatic update failed. Code that is only outdated is not this: the host updates it by itself.
     pub needed: bool,
     /// One line saying why.
     pub reason: String,

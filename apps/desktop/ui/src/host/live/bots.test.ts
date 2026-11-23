@@ -23,9 +23,12 @@ class FakeLink {
   request(method: string, params: Json): Promise<unknown> { return this.requestRaw(method, params); }
   async requestRaw(method: string, params: Json): Promise<unknown> { this.calls.push({ method, params }); return this.handle(method, params); }
   onEvent(fn: (e: GatewayEvent) => void): () => void { this.subs.add(fn); return () => { this.subs.delete(fn); }; }
-  onState(): () => void { return () => undefined; }
+  private states = new Set<(s: { phase: string; reconnected?: boolean }) => void>();
+  onState(fn: (s: { phase: string; reconnected?: boolean }) => void): () => void { this.states.add(fn); return () => { this.states.delete(fn); }; }
   close(): Promise<void> { this.closed = true; return Promise.resolve(); }
   emit(ev: GatewayEvent): void { for (const f of this.subs) f(ev); }
+  /** the link came back after a loss (the engine restarted) */
+  reconnect(): void { for (const f of this.states) f({ phase: 'ready', reconnected: true }); }
 }
 
 class FakeHermes {
@@ -47,6 +50,8 @@ class FakeHermes {
   /** the hand-off skill, given to each live teammate; a plugin without the method refuses */
   guided: string[] = [];
   failGuide = false;
+  /** the plugin is the earlier one, which has no such method (the engine says so as an unknown method) */
+  guideUnknown = false;
   problems: Record<string, string> = {};
   failLink = false;
   main = new FakeLink((m, p) => this.mainCall(m, p));
@@ -81,7 +86,7 @@ class FakeHermes {
       }
       case 'plugin.boopis.bots.read': if (this.failOwn) throw new Error('the plugin is not there'); return { root: HOME, bots: this.profiles.filter((x) => !x['is_default']).map((x) => ({ name: x['name'], path: x['path'], record: this.own[x['name']] ?? null, problem: this.problems[x['name']] ?? null, archived: this.archived[x['name']] ?? null })) };
       case 'plugin.boopis.bots.write': { this.own[p['name']] = { ...(this.own[p['name']] ?? {}), ...(p['look'] ? { look: p['look'] } : {}), ...(p['settings'] ? { settings: { ...(this.own[p['name']]?.['settings'] ?? {}), ...p['settings'] } } : {}), ...(p['approvals'] ? { approvals: p['approvals'] } : {}) }; return { record: this.own[p['name']] }; }
-      case 'plugin.boopis.bots.guide': if (this.failGuide) throw new Error('unknown method'); this.guided.push(p['name']); return { skill: 'boopis-handoffs', version: 1, written: true };
+      case 'plugin.boopis.bots.guide': if (this.guideUnknown) throw Object.assign(new Error('unknown method'), { rpcCode: -32601 }); if (this.failGuide) throw new Error('unknown method'); this.guided.push(p['name']); return { skill: 'boopis-handoffs', version: 1, written: true };
       case 'plugin.boopis.bots.inspect': return { path: HOME + '/profiles/' + p['name'], bytes: 3 * 1024 * 1024, files: 240, truncated: false, has_sessions: true, memory_files: 2, skills: 9, boopis_bytes: 300 };
       case 'plugin.boopis.bots.archive': {
         const to = 'archived--' + p['name'];
@@ -748,6 +753,18 @@ describe('every teammate is given the hand-off skill, once', () => {
     const again = await open(none);
     expect(again.bots.source.snapshot().bots.map((b) => b.id).sort()).toEqual(['atlas', 'nina']);
     void bots;
+  });
+  it('asks again once the link comes back when the plugin did not have the method yet (an update was waiting)', async () => {
+    const earlier = new FakeHermes(); earlier.guideUnknown = true;
+    const { h, bots } = await open(earlier);
+    expect(h.guided).toEqual([]);
+    h.guideUnknown = false; // the host's update put the new plugin in place and restarted the engine
+    h.main.reconnect();
+    await new Promise((r) => setTimeout(r, 50)); await bots.settled();
+    expect(h.guided.sort()).toEqual(['atlas', 'nina']);
+    h.main.reconnect();
+    await new Promise((r) => setTimeout(r, 50)); await bots.settled();
+    expect(h.guided).toHaveLength(2);
   });
   it('says nothing to a plugin that did not answer the read', async () => {
     const none = new FakeHermes(); none.failOwn = true;
