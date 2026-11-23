@@ -102,3 +102,10 @@ Based on Liu Xingyu's demo (x.com/liu_xingyu/status/2121015724374397183).
   ctx.llm.complete_structured, fail quiet), returns the gaps and assumptions, the composer fills them inline before
   sending, the answers travel with the message; on by default once it works.
 - Visual: one shared dashed-mark primitive (design system v7) for feedforward, blanks and info labels.
+
+### Owner decisions (23 Nov, later)
+- Feedforward: ON by default. Onboarding shows a live demonstration (real reading when a model is connected, a
+  labelled recording otherwise) and asks to keep it on or turn it off.
+- Blanks: must wait for the person and deliver the answer INSIDE the bot's same reply (no injected turn, no double
+  output). Direction: the blank lives in a plugin-owned tool call that blocks until answered; the answer is the tool
+  result. Spec: docs/specs/blanks-inline.md on w31/specs (in progress, with docs/specs/feedforward.md).
