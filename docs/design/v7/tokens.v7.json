@@ -1601,19 +1601,21 @@
       "rule": "one component; row and compact fit their content (width eases 200ms) up to the max, then D01 B; open fixed 640 x 432; content clipped to the slab path; same-component QA blocks drift and checks width = content + 2 x padding"
     },
     "presence": "hidden until the person has a bot of their own (boopis alone does not count); arrival: composer up 200ms, slab rises 200ms --ease-sharp, orbs pop 100ms 40ms apart; departure when the last own bot is deleted: close panels, slab sinks 200ms, composer down to 24px",
-    "orbs": "ORBS.md §23 DECIDED: resting dock bots home 38 22 -24 with the pill-eyed pose (orb3 3.0.0); bots in a state and the hovered bot run their lively behaviour (stills: a natural glance, the state face); jelly 0; face-scale 1.25; row 40px; boopis not special"
+    "orbs": "ORBS.md §23 decided, orb3 3.0.2: resting bots hold home 38 22 -24 with the pill-eyed rest reaction; states and hover turn out over 0.4s into STATE_LIFE's alive-idle; jelly 0; face-scale 1.25; row 40px; boopis not special"
   },
   "orb_pose": {
     "status": "DECIDED (owner, 23 Nov): K08 B, ORBS.md §23",
-    "renderer": "orb3 3.0.0 (aphesist/orb2 265777c, orb-avatar.min.js)",
-    "home": "38 22 -24",
-    "rest_face": "hidden reaction 'pose': K07 pills x ±0.19+0.04, y -0.08, w 0.18, h 0.41, lean 4deg; blink false; idle-motion off; mode drift",
-    "surfaces": "home 38 22 -24 + the pill-eyed pose only for bots at rest in the dock, the Bots sidebar and the rail; bots in a state, the hovered dock bot, and chat/room/gutter/title-pill bots run their lively state behaviour; stills show a natural glance with the state face",
+    "renderer": "orb3 3.0.2 (aphesist/orb2 bfa4e8c, orb-avatar.min.js)",
+    "home": "38 22 -24 on every bot, holding only at rest",
+    "rest": "hidden reaction 'pose' with rest: true (K07 pills x ±0.19+0.04, y -0.08, w 0.18, h 0.41, lean 4deg; blink false); idle-motion off; mode drift; dock, Bots sidebar, rail",
+    "turn": "out of the home and back over 0.4s, smooth5",
+    "states": "alive-idle engine via STATE_LIFE (movement, tempo, the state's own motion lead): hover 1/1; working 1/1.25/.35; compute .9/1.25/.4; thinking .9/1/.5; replying .85/1.1/.4; listening .75/1/.5; needs .55/.9/.6; done 1/1.3/.5 (rest after 3s); error .4/1/.7; sleeping .2/.5/.9",
+    "chat": "idle-motion lively all the time",
     "jelly": {
       "dock_and_sidebar": 0,
       "chat": 0.25
     },
     "face_scale": "1.25 for orbs <= 44px",
-    "transitions": "rotate-out from the home pose and back: in progress (orb agent)"
+    "eyes": "bolder in every state (3.0.2)"
   }
 }
