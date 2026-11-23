@@ -273,10 +273,10 @@ Motion runs at the display's full rate, so what moves must not wait for the main
 | Motion | Driven by | Properties | Now |
 |---|---|---|---|
 | Dock morph (lift, expand, collapse, session, minimise): keyed elements, and each slot's orb beside it | Web Animation from the spring (was per-frame JS) | `transform` | compositor |
-| Dock slab outline, stage clip while moving, foot width, sink | per-frame JS, one rAF | SVG `d`, `clip-path`, `width`, `transform` | main thread (geometry; follows the sprung size) |
+| Dock slab outline, stage clip while moving, foot width, sink, the edge fade while a page scrolls | per-frame JS, one rAF | SVG `d`, `clip`, `width`, `transform`, two gradient stops | main thread (geometry; follows the sprung size) |
 | Dock magnification, key-focus grow (arrow keys along the row) | per-frame JS | `transform` on the button and on each orb's layer point | main thread (follows input); layers only while the pointer is on the row |
-| Dock page switch: sections, dots | Web Animation from the spring (was per-frame JS); the fades were already WAAPI | `translate`, `transform`, `opacity` | compositor |
-| Dock page drag (touch, trackpad) | per-frame JS spring | `translate`, `opacity` | main thread (follows input) |
+| Dock page switch: sections, dots | Web Animation from the spring: the pages scroll as a strip (the one leaving moves out past the slab's edge as the next comes in, `PAGE_GAP` apart, never a cross-fade; owner, 22 November 2026), held inside the slab and faded at its sides and top by the edge strip; the page that left waits off the slab a moment (`park`) before it is put away. Reduced motion: no slide, the next page fades in | `translate`, `transform` | compositor |
+| Dock page drag (touch, trackpad) | per-frame JS spring: the current page follows the finger and the neighbour comes in beside it; a release hands both springs to the switch | `translate` | main thread (follows input) |
 | Dock entrances and exits, popovers, menus, tooltips, toast, palette, dialogs | CSS transitions and keyframes | `opacity`, `translate`, `transform` | compositor |
 | Shell layout travel (sidebars, column, composer, centre line, dock space, right panel) | CSS transitions of non-inherited registered lengths (were inherited on the root) | `width`, `left`, `bottom`, padding | main thread (it reflows text); restyles only its users |
 | View cross-fade, tab switch | CSS | `opacity`, `--hx-shift` (`left`, `right`) | opacity on the compositor; the 12 px shift is layout |

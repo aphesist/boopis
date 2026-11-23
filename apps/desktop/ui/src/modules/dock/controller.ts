@@ -10,8 +10,8 @@ import { writeJSON, KEYS } from '../../core/settings';
 import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Wait } from '../../data';
-import { PAGE_NAME, S, X, botById, flags, motion, presence, shownPages, rowNow, EASE, clamp } from './ctx';
-import { cancelOut, flipDots, hideTip, markFocus, morph, placeNow, renderDots, resetMag, retarget, showView, slideNow, slideTo, stopSlide, syncFoot, emitDock, updateDots } from './engine';
+import { PAGE_GAP, PAGE_NAME, S, X, botById, flags, motion, presence, shownPages, rowNow, EASE, clamp } from './ctx';
+import { cancelOut, flipDots, hideTip, markFocus, morph, park, placeNow, renderDots, resetMag, retarget, showView, slideNow, slideTo, syncFoot, emitDock, updateDots } from './engine';
 import type { MorphOpts } from './engine';
 import { lookRow, setOrbLife } from './orbs';
 import { fillCards, refreshBot, renderMins, renderView, viewKey } from './views';
@@ -78,7 +78,7 @@ export function goPage(id: string, opts: { dir?: number; focusDot?: boolean; foc
   if (!flags.mounted || S.mode === 'edit' || S.mode === 'off' || id === S.page || !shownPages().includes(id)) return;
   const order = shownPages();
   const dir = opts.dir || (order.indexOf(id) > order.indexOf(S.page) ? 1 : -1);
-  const from = S.page, outSec = X.pageEls[from] as HTMLElement & { _fade?: Animation | null }, inSec = X.pageEls[id] as HTMLElement;
+  const from = S.page, outSec = X.pageEls[from] as HTMLElement, inSec = X.pageEls[id] as HTMLElement;
   const back = slideNow(id);
   hideTip(); resetMag();
   if (S.mode === 'expanded' && S.card) { S.card = null; S.mode = 'normal'; X.root.dataset['mode'] = 'normal'; }
@@ -96,27 +96,20 @@ export function goPage(id: string, opts: { dir?: number; focusDot?: boolean; foc
   outSec.hidden = false;
   outSec.classList.add('is-out');
   outSec.inert = true;
-  if (outSec._fade) outSec._fade.cancel();
   if (motion.reduce) {
     outSec.hidden = true; outSec.classList.remove('is-out'); outSec.inert = false;
     inSec.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, easing: 'linear' });
   } else {
-    const dist = Math.min(40, (wOut + wIn) / 16 + 16);     /* a short travel inside the slab, never a lurch */
-    /* both pages slide as springs on the compositor (engine.slideTo): the one leaving from where it is, the one arriving from
-       where it was (a swipe still settling hands its position and velocity over) */
+    /* The pages scroll as a strip (ctx.ts PAGE_GAP): the one leaving moves out past the slab's edge as the next comes in from the
+       other, side by side, both as springs on the compositor (engine.slideTo), never a cross-fade. The slab holds them inside it
+       and fades its sides while they move (engine.paint). A swipe still settling hands their positions and velocities over. */
+    const D = (wOut + wIn) / 2 + PAGE_GAP;
     const so = slideNow(from) ?? { x: 0, v: 0 };
-    slideTo(from, outSec, so.x, so.v, -dir * dist, { hold: true });
-    slideTo(id, inSec, back ? back.x : dir * dist, back ? back.v : 0, 0);
-    const fo = outSec.animate([{ opacity: outSec.style.opacity || '1' }, { opacity: 0 }], { duration: 140, easing: 'linear', fill: 'forwards' });
-    fo.playbackRate = motion.timeScale;
-    outSec._fade = fo;
-    fo.onfinish = () => {
-      outSec._fade = null;
-      try { fo.cancel(); } catch { /* gone */ }
-      if (S.page !== from) { outSec.hidden = true; outSec.classList.remove('is-out'); outSec.inert = false; stopSlide(from); outSec.style.translate = ''; }
-    };
-    const fi = inSec.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, delay: 50, easing: EASE, fill: 'backwards' });
-    fi.playbackRate = motion.timeScale;
+    /* the page leaving stops PAGE_GAP past the slab's edge, unseen, and waits there a moment before it is put away (engine.park):
+       called back meanwhile, it comes back from where it is. It is done within 2px of there, not after the spring's last
+       sub-pixel tail (a quarter of a second more) */
+    slideTo(from, outSec, so.x, so.v, -dir * D, { hold: true, eps: 2, end: () => { if (S.page !== from) { outSec.style.translate = `${(-dir * D).toFixed(2)}px 0`; park(from); } } });
+    slideTo(id, inSec, back ? back.x : dir * D, back ? back.v : 0, 0);
   }
   flipDots(updateDots);
   retarget(false);

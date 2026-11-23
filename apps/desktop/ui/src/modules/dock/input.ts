@@ -5,9 +5,9 @@ import { $$, isMac } from '../../core/dom';
 import { getLayout, setState } from '../../core/state';
 import { emit } from '../../core/bus';
 import { ui } from '@boopis/ui';
-import { MAG, MAG_ADD, S, SIG, X, fitIn, flags, geomR, motion, rendered, rowNow, shownPages, spring, K_SLIDE } from './ctx';
+import { MAG, MAG_ADD, PAGE_GAP, S, SIG, X, fitIn, flags, geomR, motion, rendered, rowNow, shownPages, spring, K_SLIDE } from './ctx';
 import type { Spring } from './ctx';
-import { E, cxNow, hideTip, kick, placeNow, resetMag, retarget, shellVar, returnFocus, markFocus, slideNow, stopSlide } from './engine';
+import { E, cxNow, hideTip, kick, placeNow, putAway, readyPage, resetMag, retarget, shellVar, returnFocus, markFocus, slideNow, stopSlide } from './engine';
 import { listenOrb, lookRow, pokeBot, setOrbLife } from './orbs';
 import { renderView } from './views';
 import { columnsOf, gridTarget, rowIdxOf, rove, stepIndex } from './roving';
@@ -173,10 +173,14 @@ export function onKey(e: KeyboardEvent): void {
   }
 }
 
-/* ───────── paging by touch and trackpad ───────── */
+/* ───────── paging by touch and trackpad ─────────
+   The pages lie side by side on a strip (ctx.ts PAGE_GAP). A swipe moves the current page with the finger and brings the
+   neighbour on that side in from the slab's edge, both held inside the slab and faded at its sides (engine.paint). Past the
+   first or last page there is no neighbour: the page gives a little (~18px, stiffer) and comes back. A release past the commit
+   point (64px or a flick) scrolls on to the neighbour, handing both positions and velocities over (controller.goPage); short of
+   it both spring back. Under reduced motion nothing slides: the swipe is counted, and its release pages with a fade. */
 const canDrag = (): boolean => S.mode === 'normal' || S.mode === 'minimal' || (S.mode === 'expanded' && !S.card);
-/* the page follows the finger inside the slab's open lanes: ~34px toward a neighbour, ~18px (stiffer) past the first or
-   last page, so content never leaves the slab; it fades a little as the swipe nears its commit point */
+/** a rubber band: x of travel gives at most `lim` */
 const follow = (x: number, lim: number): number => Math.sign(x) * lim * (1 - 1 / (Math.abs(x) * 0.6 / lim + 1));
 /** the page's live spring for a drag or a nudge: a slide that is still settling on the compositor hands over its position and velocity */
 function pageSpring(page: string): Spring {
@@ -188,15 +192,35 @@ function pageSpring(page: string): Spring {
   E.slides.set(page, s);
   return s;
 }
+/** the neighbour a swipe brings in: shown beside the current page at its distance on the strip, measured once per neighbour */
+let nb: { page: string; dir: number; D: number } | null = null;
+function neighbour(page: string, dir: number): { page: string; dir: number; D: number } {
+  if (nb && nb.page === page) return nb;
+  dropNeighbour();
+  const cur = X.pageEls[S.page] as HTMLElement, sec = readyPage(page) as HTMLElement;
+  const n = { page, dir, D: (cur.offsetWidth + sec.offsetWidth) / 2 + PAGE_GAP };
+  nb = n;
+  return n;
+}
+/** the swipe turned back past its start, or reached an end: the neighbour it brought in goes away at once */
+function dropNeighbour(): void {
+  const n = nb; nb = null;
+  if (!n || n.page === S.page) return;
+  E.slides.delete(n.page); stopSlide(n.page);
+  const sec = X.pageEls[n.page]; if (sec) putAway(sec);
+}
 function dragTo(x: number): void {
-  const o = shownPages(), i = o.indexOf(S.page);
-  const free = (x > 0 && i > 0) || (x < 0 && i < o.length - 1);
-  const eff = follow(x, free ? 34 : 18);
-  const pe = X.pageEls[S.page] as HTMLElement;
-  pe.style.opacity = free ? String(1 - Math.min(0.35, Math.abs(x) / 200)) : '';
+  if (!E.drag.on) { E.drag.on = true; hideTip(); resetMag(); }
+  if (motion.reduce) return;
+  const o = shownPages(), i = o.indexOf(S.page), dir = x < 0 ? 1 : -1, next = o[i + dir];
+  let eff: number;
+  if (next) {
+    const n = neighbour(next, dir), m = Math.abs(x);
+    eff = Math.sign(x) * (m <= n.D ? m : n.D + Math.abs(follow(m - n.D, 18)));
+    const ns = pageSpring(next); ns.x = dir * n.D + eff; ns.t = ns.x; ns.v = 0;
+  } else { dropNeighbour(); eff = follow(x, 18); }
   const s = pageSpring(S.page);
   s.x = eff; s.t = eff; s.v = 0;
-  if (!E.drag.on) { E.drag.on = true; hideTip(); resetMag(); }
   kick();
 }
 function dragRelease(vel: number): void {
@@ -205,12 +229,15 @@ function dragRelease(vel: number): void {
   const commit = (Math.abs(E.drag.x) > 64 || Math.abs(vel) > 0.45) && j >= 0 && j < o.length;
   E.drag.on = false;
   const next = o[j];
-  if (commit && next) { E.drag.lock = performance.now() + 420; goPage(next, { dir }); }
+  if (commit && next) {
+    /* a flick carries on at the finger's speed (px/ms to px/s) */
+    for (const p of [S.page, next]) { const sp = E.slides.get(p); if (sp) sp.v = vel * 1000; }
+    E.drag.lock = performance.now() + 420; nb = null; goPage(next, { dir });
+  }
   else {
     const s = E.slides.get(S.page); if (s) s.t = 0;
-    const sec = X.pageEls[S.page] as HTMLElement, op = sec.style.opacity;
-    sec.style.opacity = '';
-    if (op && !motion.reduce) sec.animate([{ opacity: op }, { opacity: 1 }], { duration: 160, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    /* the neighbour springs back out past the slab's edge, and is put away once there (engine.frame) */
+    if (nb) { const ns = E.slides.get(nb.page); if (ns) ns.t = nb.dir * nb.D; nb = null; }
   }
   E.drag.x = 0;
   kick();

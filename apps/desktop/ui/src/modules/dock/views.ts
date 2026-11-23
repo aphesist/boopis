@@ -299,8 +299,12 @@ export function renderAll(): void { for (const k of Object.keys(V)) if (k !== 'b
 export function renderMins(): void { for (const p of ['bots', 'run', 'wait', 'sched', 'ctx']) renderView(p + ':min'); }
 export function viewKey(): string {
   if (S.mode === 'edit') return 'edit:edit';
-  if (S.mode === 'minimal' || S.mode === 'off') return S.page + ':min';
-  if (S.mode === 'expanded') return S.page === 'bots' && S.card ? 'bots:card' : S.page + ':exp';
-  return S.page + ':norm';
+  return pageViewKey(S.page);
+}
+/** the view a page shows in the dock's mode now (the current page's, or a neighbour's that a swipe brings in) */
+export function pageViewKey(page: string): string {
+  if (S.mode === 'minimal' || S.mode === 'off') return page + ':min';
+  if (S.mode === 'expanded') return page === 'bots' && S.card ? 'bots:card' : page + ':exp';
+  return page + ':norm';
 }
 export { setOrbLife, motion };

@@ -61,7 +61,12 @@
 .dk-view { position: relative; box-sizing: border-box; max-width: var(--dock-room, none); }
 .dk-view[hidden] { display: none; }
 .dk-view.is-leaving { position: absolute; pointer-events: none; }
-.dk-view [data-k].is-handed { visibility: hidden; }   /* the key lives on in the view that took it; stays until this view is shown again (engine.ts unhand) */
+.dk-view [data-k].is-handed { visibility: hidden; }
+/* the edge fade over a page that moves sideways (engine.ts paintEdges): the slab's black at both sides over --scroll-fade */
+.dk-edges { position: absolute; left: 0; bottom: 0; overflow: visible; pointer-events: none; display: none; }
+.dk[data-scrolling] .dk-edges { display: block; }
+.dk-edge-solid { stop-color: var(--dock-bg); }
+.dk-edge-clear { stop-color: var(--dock-bg); stop-opacity: 0; }   /* the key lives on in the view that took it; stays until this view is shown again (engine.ts unhand) */
 :where(.dk) button:not([class*="ui-"]) { font: inherit; color: inherit; background: none; border: 0; margin: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .dk :focus { outline: none; }
 .dk :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
