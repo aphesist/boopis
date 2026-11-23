@@ -210,3 +210,4 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - Owner on K07: eyes good; rest pose needs a stronger Grok-like body angle (curves visible) so fixed->moving flows smoothly. Next: K08 + transition clip.
 - DECIDED (owner): orb3 fixed pose K08 B (home 38/22/-24, K07 A eyes). Owner approved publishing orb3 to aphesist/orb2 main (v3.0.0, min.js rebuilt). Then dock/sidebar/onboarding re-renders with B.
 - Owner: home pose B only at rest (sidebar/dock/rail); any other state rotates out into front-facing lively behaviour (as before) and back in at rest, per Grok's recordings. orb3 follow-up on a branch; orb2 main push needs the owner's OK.
+- CORRECTION (owner): out of rest, bots don't just face front; each state runs alive-idle style movement (look anywhere, rotate, spin) tuned per state (amount, face, tempo), e.g. needs-you slightly less movement + needs-you face. One consistent state table for every surface.
