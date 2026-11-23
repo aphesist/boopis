@@ -361,6 +361,15 @@ fn same_bytes(a: &Path, b: &Path) -> std::io::Result<bool> {
     }
 }
 
+/// Whether the `hx` setup placed in this home is not the bundled one: there is one at its stable place, and its bytes differ
+/// (or cannot be read). A home where setup never placed one (the end-to-end stack's, which names its own `hx`) has
+/// nothing of setup's to update: a missing file is not an outdated one, and counting it as one restarted the stack's
+/// gateway in the release smoke.
+#[must_use]
+pub fn hx_outdated(bundled: &Path, home: &Path) -> bool {
+    std::fs::symlink_metadata(hx_target(home)).is_ok() && hx_differs(bundled, home)
+}
+
 /// Whether the `hx` at its stable place differs from the bundled one (or is missing, or either cannot be read):
 /// [`place_hx`] would write it.
 #[must_use]
@@ -610,14 +619,30 @@ mod tests {
                 & 0o777,
             0o755
         );
-        assert!(!hx_differs(&src, &home));
+        assert!(!hx_differs(&src, &home) && !hx_outdated(&src, &home));
         std::fs::write(&src, "binary v2").unwrap();
+        assert!(
+            hx_outdated(&src, &home),
+            "the one setup placed is older than the bundle"
+        );
         assert!(
             hx_differs(&src, &home),
             "a new hx is seen before it is placed"
         );
         assert!(place_hx(&src, &home).unwrap());
         assert!(!hx_differs(&src, &home));
+    }
+
+    #[test]
+    fn a_home_where_setup_never_placed_hx_has_no_outdated_hx() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (src, home) = (tmp.path().join("hx"), tmp.path().join("home"));
+        std::fs::write(&src, "binary").unwrap();
+        assert!(hx_differs(&src, &home), "setup's hx step still places it");
+        assert!(
+            !hx_outdated(&src, &home),
+            "but nothing of setup's is out of date"
+        );
     }
 
     #[test]

@@ -10,4 +10,4 @@ pub mod lifecycle;
 
 pub use attach::{Dial, EndpointInfo};
 pub use discover::Environment;
-pub use lifecycle::{GatewayState, HermesStatus, Supervisor};
+pub use lifecycle::{GatewayOwner, GatewayState, HermesStatus, Supervisor};

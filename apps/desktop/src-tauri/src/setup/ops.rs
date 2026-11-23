@@ -68,6 +68,8 @@ pub trait HermesOps: Send + Sync {
     /// Stop the gateway unless it has live work (`gateway stop` without `--yes`, which the engine refuses then) and wait
     /// until it is gone.
     async fn stop_gateway_when_idle(&self) -> Result<Stop>;
+    /// Who runs the gateway now: nobody, this run of the app, or anyone else (`Supervisor::gateway_owner`).
+    async fn gateway_owner(&self) -> crate::hermes::GatewayOwner;
     /// Restart the gateway so it reads a key saved since it started, but only when no turn is running (ending one is never silent).
     /// `true` when it restarted, `false` when it was left running (a turn is live) or this double does not restart.
     ///
@@ -233,6 +235,10 @@ impl HermesOps for CliOps {
         Ok(crate::kanban::running(
             &crate::kanban::boards(&self.sup).await?,
         ))
+    }
+
+    async fn gateway_owner(&self) -> crate::hermes::GatewayOwner {
+        self.sup.gateway_owner(&self.home).await
     }
 
     async fn stop_gateway_when_idle(&self) -> Result<Stop> {

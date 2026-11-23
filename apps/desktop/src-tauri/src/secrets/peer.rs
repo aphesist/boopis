@@ -176,6 +176,16 @@ impl PeerPolicy {
             .is_some_and(|entry| self.procs.started_with(pid, entry) == Some(false))
     }
 
+    /// Whether `pid` was started with this run's token: a gateway this run of the host launched, with this run's
+    /// environment. `false` when the process table cannot say (no `/proc`), and when this run handed out no token: what
+    /// cannot be shown to be this run's is not (the automatic update never stops a gateway on less, `setup::update`).
+    #[must_use]
+    pub fn started_by_this_run(&self, pid: u32) -> bool {
+        self.holds
+            .as_deref()
+            .is_some_and(|entry| self.procs.started_with(pid, entry) == Some(true))
+    }
+
     /// Records the gateway the host is talking to (rule A). Called with the pid the kernel reported on the gateway's own
     /// control socket, so it is the process that listens there, not a guess. Where the platform can say, the process must
     /// have been started with this run's token ([`PeerPolicy::holding`]). `false` when the process cannot be pinned or
@@ -341,6 +351,23 @@ mod tests {
     fn gateway(t: &Table, pid: u32, start: u64, parent: u32) {
         t.put(pid, start, PY, parent);
         t.started_with_env(pid, &[HOLDS]);
+    }
+
+    #[test]
+    fn only_a_process_started_with_this_runs_token_is_this_runs() {
+        let (t, p) = world();
+        gateway(&t, 200, 20, 1);
+        assert!(p.started_by_this_run(200));
+        // the test stack's gateway, the user's own, or one an earlier run left: started without this run's token
+        t.put(201, 21, PY, 1);
+        t.started_with_env(201, &["BOOPIS_HOST_SECRETS_TOKEN=an-earlier-run"]);
+        assert!(!p.started_by_this_run(201));
+        t.put(202, 22, PY, 1);
+        assert!(!p.started_by_this_run(202));
+        assert!(!p.started_by_this_run(999), "a pid that cannot be read");
+        // a run that handed out no token can show nothing to be its own
+        let none = PeerPolicy::with_procs(t.clone());
+        assert!(!none.started_by_this_run(200));
     }
 
     #[test]
