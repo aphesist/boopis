@@ -156,11 +156,20 @@ pub struct ApiLimits {
     pub conversation_rows: usize,
     /// Bots one event stream may narrow its conversation events to.
     pub follow_bots: usize,
-    /// How often a streaming reply is sent again while it grows.
+    /// How often a streaming reply is sent again while it grows, for a stream that names no pace of its own.
     pub stream_every: std::time::Duration,
+    /// The fastest and the slowest pace a stream may ask for (`stream_ms`, B46).
+    pub stream_pace: (std::time::Duration, std::time::Duration),
     /// A kanban worker counts as running while its session showed life this recently (the engine refreshes a running
     /// worker's `last_active` at least every minute; the app's roster uses the same window).
     pub worker_active: std::time::Duration,
+    /// How often each bot's cron list is read while somebody listens, for the runs that finished (B42).
+    pub cron_every: std::time::Duration,
+    /// How long a session only the plugin's pushes tell of (a scheduled run) stands without another push (B45): a tool
+    /// may run this long; its turn's end, or the cron list, ends it sooner.
+    pub push_hold: std::time::Duration,
+    /// How long a push for a session the poll has not listed yet waits for it (B45).
+    pub push_pending: std::time::Duration,
 }
 
 impl Default for ApiLimits {
@@ -192,7 +201,11 @@ impl Default for ApiLimits {
             conversation_rows: 200,
             follow_bots: 6,
             stream_every: Duration::from_millis(250),
+            stream_pace: (Duration::from_millis(50), Duration::from_secs(1)),
             worker_active: Duration::from_secs(90),
+            cron_every: Duration::from_secs(10),
+            push_hold: Duration::from_mins(10),
+            push_pending: Duration::from_secs(5),
         }
     }
 }

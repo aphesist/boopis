@@ -6,16 +6,23 @@ Python 3, standard library only. It reads the endpoint and the token the app wro
 
     boopis-local-client.py bots                       the roster: look, model, presence
     boopis-local-client.py presence                   what every bot is doing now
-    boopis-local-client.py events [--approve] [--conversations [--bot NAME ...]] [--rooms [--room ID ...]]
+    boopis-local-client.py notifications [--after ID] [--limit N]
+                                                      the notifications kept, oldest first (a scheduled run's
+                                                      carries its last words and next_run_at)
+    boopis-local-client.py events [--approve] [--conversations [--bot NAME ...] [--stream-ms N]]
+                                  [--rooms [--room ID ...]]
                                                       follow the event stream; with --approve, ask on the terminal
                                                       for each approval and answer it (once or deny); with
-                                                      --conversations, also each message of the bots' conversations;
+                                                      --conversations, also each message of the bots' conversations
+                                                      (a growing reply again every --stream-ms, 50 to 1000);
                                                       with --rooms, each line of the rooms' logs
     boopis-local-client.py conversation BOT [--session latest|ID] [--limit N]
                                                       the messages of a conversation, as the app shows them
     boopis-local-client.py approvals                  the approvals waiting
     boopis-local-client.py answer ID once|deny        answer one (the first answer wins)
     boopis-local-client.py say BOT TEXT [--session latest|new|ID]
+    boopis-local-client.py retry BOT [--session latest|ID]
+                                                      retry the conversation's last turn (the engine's own retry)
     boopis-local-client.py stop BOT                   stop the bot's running turn
     boopis-local-client.py rooms
     boopis-local-client.py room-log ROOM [--after SEQ] [--limit N]
@@ -143,6 +150,7 @@ class Client:
         bots: list[str] | None = None,
         rooms: bool = False,
         room_ids: list[str] | None = None,
+        stream_ms: int | None = None,
     ) -> Iterator[tuple[str, int | None, dict[str, Any]]]:
         """Follow the event stream: (event name, id, data). Ends when the endpoint closes it (a rotated token ends it).
 
@@ -155,6 +163,8 @@ class Client:
         parts: list[str] = []
         if conversations:
             parts += ["conversations=1"] + [f"bot={b}" for b in bots or []]
+            if stream_ms is not None:
+                parts.append(f"stream_ms={stream_ms}")
         if rooms:
             parts += ["rooms=1"] + [f"room={r}" for r in room_ids or []]
         query = ("?" + "&".join(parts)) if parts else ""
@@ -198,11 +208,16 @@ def follow(
     bots: list[str] | None = None,
     rooms: bool = False,
     room_ids: list[str] | None = None,
+    stream_ms: int | None = None,
 ) -> None:
     """Print every event as a line of JSON; with `approve`, answer each approval that arrives from the terminal."""
     last: int | None = None
     for name, ident, data in client.events(
-        conversations=conversations, bots=bots, rooms=rooms, room_ids=room_ids
+        conversations=conversations,
+        bots=bots,
+        rooms=rooms,
+        room_ids=room_ids,
+        stream_ms=stream_ms,
     ):
         if ident is not None:
             last = ident
@@ -246,10 +261,14 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--approve", action="store_true")
             p.add_argument("--conversations", action="store_true")
             p.add_argument("--bot", action="append", default=[])
+            p.add_argument("--stream-ms", type=int)
             p.add_argument("--rooms", action="store_true")
             p.add_argument("--room", action="append", default=[])
         if name == "approvals":
             p.add_argument("--all", action="store_true")
+    p = sub.add_parser("notifications")
+    p.add_argument("--after", type=int)
+    p.add_argument("--limit", type=int, default=50)
     p = sub.add_parser("conversation")
     p.add_argument("bot")
     p.add_argument("--session", default="latest")
@@ -260,6 +279,9 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("say")
     p.add_argument("bot")
     p.add_argument("text")
+    p.add_argument("--session", default="latest")
+    p = sub.add_parser("retry")
+    p.add_argument("bot")
     p.add_argument("--session", default="latest")
     p = sub.add_parser("say-room")
     p.add_argument("room")
@@ -281,6 +303,9 @@ def main(argv: list[str] | None = None) -> int:
                 show(client.call("GET", "/v1/bots"))
             case "presence":
                 show(client.call("GET", "/v1/presence"))
+            case "notifications":
+                after = "" if args.after is None else f"&after={args.after}"
+                show(client.call("GET", f"/v1/notifications?limit={args.limit}{after}"))
             case "approvals":
                 show(
                     client.call("GET", "/v1/approvals" + ("?all=1" if args.all else ""))
@@ -307,6 +332,12 @@ def main(argv: list[str] | None = None) -> int:
                         "POST",
                         f"/v1/bots/{args.bot}/say",
                         {"text": args.text, "session": args.session},
+                    )
+                )
+            case "retry":
+                show(
+                    client.call(
+                        "POST", f"/v1/bots/{args.bot}/retry", {"session": args.session}
                     )
                 )
             case "say-room":
@@ -336,6 +367,7 @@ def main(argv: list[str] | None = None) -> int:
                     bots=args.bot,
                     rooms=args.rooms,
                     room_ids=args.room,
+                    stream_ms=args.stream_ms,
                 )
     except Refused as e:
         print(f"boopis-local-client: {e.message}", file=sys.stderr)

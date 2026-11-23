@@ -92,8 +92,22 @@ pub fn source_of(engine_source: &str) -> Source {
     }
 }
 
+/// How far a running tool says it has come (0.2.0): exactly what it reported (an MCP server's progress notification, as
+/// the engine relays it in `tool.progress`), never an estimate.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Progress {
+    /// How much is done, from 0 to 1, when the tool said out of how much; null otherwise.
+    pub fraction: Option<f64>,
+    /// How far it is, in the tool's own count (the step it is on, the items or bytes it has done).
+    pub step: f64,
+    /// Out of how much, when the tool said; null otherwise.
+    pub of: Option<f64>,
+    /// What it is doing, in its own words, scrubbed and cut; null when it said nothing.
+    pub label: Option<String>,
+}
+
 /// One bot's presence: what it is doing now, and where that is happening.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Presence {
     /// The bot's profile name.
     pub profile: String,
@@ -101,6 +115,12 @@ pub struct Presence {
     pub state: State,
     /// What it is doing in a few words (a tool's name); empty when nothing says.
     pub activity: String,
+    /// What the running tool touches, in a few safe words ("Read a file · shots/03.json"): a file's last two parts, a
+    /// command's program and subcommand, a page's host, never more; scrubbed and capped. Null when the tool names none of
+    /// these, and when no tool runs (0.2.0).
+    pub detail: Option<String>,
+    /// How far the running tool says it has come, when it reports it; null otherwise (0.2.0).
+    pub progress: Option<Progress>,
     /// `approval` or `input` while the bot waits for the owner, else null.
     pub attention: Option<String>,
     /// The session the state comes from.
@@ -125,6 +145,8 @@ impl Presence {
             profile: profile.to_owned(),
             state: State::Idle,
             activity: String::new(),
+            detail: None,
+            progress: None,
             attention: None,
             session_id: None,
             source: None,
@@ -136,7 +158,7 @@ impl Presence {
 }
 
 /// One bot of the roster.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BotRow {
     /// The profile name (the bot's id everywhere).
     pub name: String,
@@ -203,6 +225,14 @@ pub struct Notification {
     pub session_id: Option<String>,
     /// The room it belongs to, when there is one.
     pub room_id: Option<String>,
+    /// For a room's message (a reply, a mention, a failed turn): its place in the room's log, to read it whole with
+    /// `GET /v1/rooms/<id>/log` (0.2.0).
+    pub seq: Option<u64>,
+    /// For a room's message: its event id in the room's log (0.2.0).
+    pub message_id: Option<String>,
+    /// For a scheduled run: when the job runs next, in milliseconds since the epoch, as the engine's scheduler has it;
+    /// null when it will not run again (paused, or done repeating) or the engine does not say (0.2.0).
+    pub next_run_at: Option<i64>,
     /// The kind of session it came from.
     pub source: Source,
     /// When, in milliseconds since the epoch.
@@ -361,6 +391,8 @@ pub enum LineFrom {
 pub struct RoomLine {
     /// Its place in the room's log (the engine's `seq`).
     pub seq: u64,
+    /// Its event id in the room's log (0.2.0).
+    pub id: String,
     /// When, in milliseconds since the epoch.
     pub at: i64,
     /// The engine's event kind (`message.user`, `message.member`, `turn.failed`, `turn.cancelled`, ...).

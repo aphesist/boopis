@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "about": "The arguments of a tool call that say what it touches (B40, B45). The host makes a call's safe words from these alone (apps/desktop/src-tauri/src/local_api/toolwords.rs): a file's last two path parts, a command's program and plain subcommand, a page's host. The plugin sends only these to the host when it tells what a bot is doing (plugins/boopis/activity.py), each value cut to max_chars: a path keeps its end (the parts the words use), a command its first line's start, a URL its start. Nothing else of a call's arguments leaves the engine's process.",
+  "path": ["path", "file_path", "filepath", "file", "filename", "target_file", "notebook_path"],
+  "paths": ["paths"],
+  "command": ["command", "cmd", "argv"],
+  "url": ["url", "uri", "href"],
+  "max_chars": 256,
+  "max_items": 3
+}

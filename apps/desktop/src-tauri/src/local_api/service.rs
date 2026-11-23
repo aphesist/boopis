@@ -152,6 +152,8 @@ pub struct Service<E: Engine> {
     pub(super) room_cursors: tokio::sync::Mutex<HashMap<String, u64>>,
     /// Each bot's kanban worker, as its own link last said (B31).
     pub(super) workers: std::sync::Mutex<HashMap<String, Worker>>,
+    /// Each scheduled job's last run, as the bot's cron list last said (B42).
+    pub(super) cron_seen: std::sync::Mutex<super::cron::Seen>,
 }
 
 pub(super) fn text(v: &Value, key: &str) -> String {
@@ -159,6 +161,48 @@ pub(super) fn text(v: &Value, key: &str) -> String {
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_owned()
+}
+
+/// The engine's own error code and words in a failed request's text (`<method>: {"code": .., "message": ..}`), for the
+/// refusals that depend on which it was. The words are never shown.
+fn engine_code(e: &Error) -> Option<(i64, String)> {
+    let said = e.to_string();
+    let v: Value = serde_json::from_str(&said[said.find('{')?..]).ok()?;
+    Some((v.get("code")?.as_i64()?, text(&v, "message")))
+}
+
+/// Why the engine would not retry, in words (`tui_gateway/methods_tools.py` `_cmd_retry`: 4009 busy, 4018 no message or
+/// one it cannot rebuild, 4001 no session).
+fn retry_refused(e: &Error) -> ApiError {
+    match engine_code(e) {
+        Some((4009, _)) => ApiError::new(
+            409,
+            "bot_busy",
+            "The bot is answering in that conversation. Wait for it to finish, then retry.",
+        ),
+        Some((4018, words))
+            if words
+                .to_ascii_lowercase()
+                .contains("no previous user message") =>
+        {
+            ApiError::new(
+                409,
+                "nothing_to_retry",
+                "That conversation has no message of yours to retry.",
+            )
+        }
+        Some((4018, _)) => ApiError::new(
+            409,
+            "cannot_retry",
+            "That turn cannot be retried from here (its message had attachments, or the engine could not rebuild it). Retry it in the app.",
+        ),
+        Some((4001, _)) => ApiError::new(
+            404,
+            "no_such_session",
+            "That conversation could not be opened.",
+        ),
+        _ => failed("retry the turn", e),
+    }
 }
 
 pub(super) fn failed(what: &str, e: &Error) -> ApiError {
@@ -190,6 +234,7 @@ impl<E: Engine> Service<E> {
             watches: tokio::sync::Mutex::new(HashMap::new()),
             room_cursors: tokio::sync::Mutex::new(HashMap::new()),
             workers: std::sync::Mutex::new(HashMap::new()),
+            cron_seen: std::sync::Mutex::new(HashMap::new()),
         })
     }
 
@@ -327,9 +372,13 @@ impl<E: Engine> Service<E> {
                 continue;
             }
             let (title, preview) = (text(row, "title"), text(row, "preview"));
-            let source = self
-                .feed
-                .resolve_source(profile, &sid, &text(row, "source"), &title);
+            let source = self.feed.resolve_source(
+                profile,
+                &sid,
+                &text(row, "session_key"),
+                &text(row, "source"),
+                &title,
+            );
             if !self.feed.session_known(profile, &sid) {
                 let model = Some(text(row, "model")).filter(|m| !m.is_empty());
                 self.feed.learn_session(
@@ -577,45 +626,73 @@ impl<E: Engine> Service<E> {
         let (live, kept, created) = match stored {
             None => create().await?,
             Some(id) => {
-                let res = self
-                    .engine
-                    .request(
-                        profile,
-                        "session.resume",
-                        json!({"session_id": id, "omit_messages": true}),
-                    )
-                    .await
-                    .map_err(|e| failed("open that conversation", &e))?;
-                if res.get("running").and_then(Value::as_bool) == Some(true) {
-                    return Err(ApiError::new(
-                        409,
-                        "bot_busy",
-                        "The bot is answering in that conversation. Wait for it to finish, or say it in a new one.",
-                    ));
-                }
-                let live = text(&res, "session_id");
-                if live.is_empty() {
-                    return Err(ApiError::new(
-                        404,
-                        "no_such_session",
-                        "That conversation could not be opened.",
-                    ));
-                }
+                let live = self.open(profile, &id, "or say it in a new one").await?;
                 (live, id, false)
             }
         };
         self.feed
             .note_session(profile, &live, Source::Gui, Some(&kept), None);
-        // The windows hear it before the engine does: the engine starts the reply at once and sends a window nothing for a
-        // message another surface submits, so a chat that has this conversation open draws it first, as the owner's own.
-        self.engine
-            .said(
+        self.send_into(profile, &live, &kept, message, false)
+            .await?;
+        Ok(Said {
+            profile: profile.to_owned(),
+            session_id: kept,
+            created,
+        })
+    }
+
+    /// Open a stored conversation of `profile` without sending anything (`session.resume`): its live id. A bot that is
+    /// answering in it is `409 bot_busy` (`instead` says what else the caller can do).
+    async fn open(&self, profile: &str, stored: &str, instead: &str) -> Result<String, ApiError> {
+        let res = self
+            .engine
+            .request(
                 profile,
-                &live,
-                json!({"text": message, "stored_session_id": kept}),
-                false,
+                "session.resume",
+                json!({"session_id": stored, "omit_messages": true}),
             )
-            .await;
+            .await
+            .map_err(|e| failed("open that conversation", &e))?;
+        if res.get("running").and_then(Value::as_bool) == Some(true) {
+            return Err(ApiError::new(
+                409,
+                "bot_busy",
+                &format!(
+                    "The bot is answering in that conversation. Wait for it to finish, {instead}."
+                ),
+            ));
+        }
+        let live = text(&res, "session_id");
+        if live.is_empty() {
+            return Err(ApiError::new(
+                404,
+                "no_such_session",
+                "That conversation could not be opened.",
+            ));
+        }
+        self.feed
+            .note_session(profile, &live, Source::Gui, Some(stored), None);
+        Ok(live)
+    }
+
+    /// Send `message` into the live session `live` as the owner's own, the one way `say` and `retry` both send. The windows
+    /// hear it before the engine does: the engine starts the reply at once and sends a window nothing for a message another
+    /// surface submits, so a chat that has this conversation open draws it first, as the owner's own (`retry` marks it as
+    /// a retry). When the engine does not take it the windows are told why, and so is the caller: for a retry, that the
+    /// message the engine took back is no longer in the conversation.
+    async fn send_into(
+        &self,
+        profile: &str,
+        live: &str,
+        kept: &str,
+        message: &str,
+        retry: bool,
+    ) -> Result<(), ApiError> {
+        let mut said = json!({"text": message, "stored_session_id": kept});
+        if retry {
+            said["retry"] = Value::Bool(true);
+        }
+        self.engine.said(profile, live, said, false).await;
         if let Err(e) = self
             .engine
             .request(
@@ -625,32 +702,103 @@ impl<E: Engine> Service<E> {
             )
             .await
         {
-            let refused = failed("deliver the message", &e);
+            let refused = if retry {
+                tracing::debug!(error = %e, "the local API could not send a retried message again");
+                ApiError::new(
+                    502,
+                    "resend_failed",
+                    "boopis took the last message back to retry it, but its engine did not take it again, so it is no longer in the conversation. Say it again.",
+                )
+            } else {
+                failed("deliver the message", &e)
+            };
             self.engine
                 .said(
                     profile,
-                    &live,
+                    live,
                     json!({"reason": refused.message, "stored_session_id": kept}),
                     true,
                 )
                 .await;
             return Err(refused);
         }
-        self.feed.on_user_message(profile, &live, message);
+        self.feed.on_user_message(profile, live, message);
         self.feed.on_frame(
             profile,
             &crate::gateway::FeedFrame {
                 direction: crate::gateway::Direction::In,
                 name: "host.prompt".into(),
-                session_id: Some(live),
+                session_id: Some(live.to_owned()),
                 generation: None,
                 payload: None,
             },
         );
+        Ok(())
+    }
+
+    /// Retry the last turn of a conversation (B43), the engine's own way: `command.dispatch {name: "retry"}` on the live
+    /// session takes the owner's last message and what followed it out of the conversation and answers that message,
+    /// which is then sent again exactly as `say` sends one. `latest` is the bot's newest conversation.
+    ///
+    /// # Errors
+    /// `404 no_such_bot`, `no_conversation` or `no_such_session`; `400 bad_session` for `new`; `409 bot_busy` while the bot
+    /// answers there, `nothing_to_retry` when the conversation holds no message of the owner's, `cannot_retry` when the
+    /// engine will not rebuild it (a message with attachments); `502 resend_failed` when the engine took the message back
+    /// but did not take it again; or the engine's failure.
+    pub async fn retry(&self, profile: &str, pick: &Pick, by: &Caller) -> Result<Said, ApiError> {
+        if !self.knows_bot(profile).await {
+            return Err(ApiError::new(
+                404,
+                "no_such_bot",
+                "There is no bot with that name.",
+            ));
+        }
+        let _ = by;
+        let stored = match pick {
+            Pick::New => {
+                return Err(ApiError::new(
+                    400,
+                    "bad_session",
+                    "There is nothing to retry in a new conversation: session is latest or the id of one of the bot's sessions.",
+                ));
+            }
+            Pick::Id(id) => id.clone(),
+            Pick::Latest => self.latest_of(profile).await.ok_or_else(|| {
+                ApiError::new(404, "no_conversation", "That bot has no conversation yet.")
+            })?,
+        };
+        let live = self.open(profile, &stored, "then retry").await?;
+        let answer = self
+            .engine
+            .request(
+                profile,
+                "command.dispatch",
+                json!({"name": "retry", "session_id": live}),
+            )
+            .await
+            .map_err(|e| retry_refused(&e))?;
+        if text(&answer, "type") != "send" {
+            // another command answered to the name (a quick or a plugin command): nothing was taken back
+            return Err(ApiError::new(
+                409,
+                "cannot_retry",
+                "That turn cannot be retried from here. Retry it in the app.",
+            ));
+        }
+        let message = text(&answer, "message");
+        if message.trim().is_empty() {
+            return Err(ApiError::new(
+                502,
+                "resend_failed",
+                "boopis took the last message back to retry it, but its engine gave nothing to send again, so it is no longer in the conversation. Say it again.",
+            ));
+        }
+        self.send_into(profile, &live, &stored, &message, true)
+            .await?;
         Ok(Said {
             profile: profile.to_owned(),
-            session_id: kept,
-            created,
+            session_id: stored,
+            created: false,
         })
     }
 
@@ -731,7 +879,7 @@ impl<E: Engine> Service<E> {
     }
 
     /// One stored row as the app's thread draws it: the user's and the bot's words, no tool row, nothing hidden.
-    fn stored_message(&self, row: &Value, index: usize) -> Option<Message> {
+    pub(super) fn stored_message(&self, row: &Value, index: usize) -> Option<Message> {
         let role = match text(row, "role").as_str() {
             "user" => Role::User,
             "assistant" => Role::Assistant,
@@ -878,7 +1026,7 @@ impl<E: Engine> Service<E> {
     // ───────────────────────── the loop ─────────────────────────
 
     /// Run until cancelled: read the roster once at start (B24), then, while at least one reader listens, read the roster
-    /// and poll the sessions, and follow the rooms' logs.
+    /// and poll the sessions, follow the rooms' logs, and read the bots' cron lists for the runs that finished (B42).
     pub async fn run(self: Arc<Self>, cancel: CancellationToken) {
         tokio::select! {
             () = cancel.cancelled() => return,
@@ -892,9 +1040,13 @@ impl<E: Engine> Service<E> {
                     changed = wanted.changed() => if changed.is_err() { return },
                 }
             }
-            // Rooms are followed from where they are now: what was said while nobody listened is no news (read it with the log).
+            // Rooms and scheduled runs are followed from where they are now: what happened while nobody listened is no news
+            // (read it with the log).
             self.room_cursors.lock().await.clear();
+            self.forget_cron();
             self.refresh_roster().await;
+            self.read_cron().await;
+            let mut cron_at = tokio::time::Instant::now();
             let mut roster_at = tokio::time::Instant::now();
             let mut poll_at = tokio::time::Instant::now() - self.limits.poll_every;
             let mut beat = tokio::time::interval(Duration::from_millis(500));
@@ -908,11 +1060,39 @@ impl<E: Engine> Service<E> {
                     roster_at = now;
                     self.refresh_roster().await;
                 }
+                if now.duration_since(cron_at) >= self.limits.cron_every {
+                    cron_at = now;
+                    self.read_cron().await;
+                }
                 if self.feed.take_poke() || now.duration_since(poll_at) >= self.limits.poll_every {
                     poll_at = now;
                     self.poll_once().await;
                     self.follow_rooms().await;
                 }
+            }
+        }
+    }
+}
+
+impl<E: Engine> Service<E> {
+    /// Run until cancelled: while a stream follows conversations, send again every reply that grew, at the fastest pace a
+    /// stream asked for (B46), so the words of a reply whose deltas paused reach every stream on time.
+    pub async fn run_flush(self: Arc<Self>, cancel: CancellationToken) {
+        let mut wanted = self.feed.text_wanted();
+        loop {
+            while *wanted.borrow_and_update() == 0 {
+                tokio::select! {
+                    () = cancel.cancelled() => return,
+                    changed = wanted.changed() => if changed.is_err() { return },
+                }
+            }
+            while *wanted.borrow() > 0 {
+                let every = self.feed.stream_every().max(self.limits.stream_pace.0 / 5);
+                tokio::select! {
+                    () = cancel.cancelled() => return,
+                    () = tokio::time::sleep(every) => {}
+                }
+                self.feed.flush_replies();
             }
         }
     }
@@ -1393,6 +1573,177 @@ mod tests {
             .await
             .unwrap();
         assert!(said.created, "no conversation yet: a new one, as before");
+    }
+
+    /// kai's latest conversation ends on a turn that failed; the engine's retry answers with the owner's last message.
+    fn retry_engine(
+        dispatch: impl Fn() -> crate::error::Result<Value> + Send + Sync + 'static,
+        submit_fails: bool,
+        running: bool,
+    ) -> impl Fn(&str, &str, &Value) -> crate::error::Result<Value> + Send + Sync {
+        move |p, m, params| match m {
+            "command.dispatch" => {
+                assert_eq!(
+                    (params["name"].as_str(), params["session_id"].as_str()),
+                    (Some("retry"), Some("live-1")),
+                    "the engine's own retry, on the live session"
+                );
+                dispatch()
+            }
+            "prompt.submit" if submit_fails => Err(Error::Unavailable("boom /home/x".into())),
+            _ => say_engine(running)(p, m, params),
+        }
+    }
+
+    #[allow(clippy::unnecessary_wraps)] // the engine's answer, which may fail elsewhere
+    fn sent() -> crate::error::Result<Value> {
+        Ok(json!({"type": "send", "message": "render it in three languages"}))
+    }
+
+    #[tokio::test]
+    async fn a_retry_takes_the_last_turn_back_and_sends_the_owners_message_again() {
+        let (s, e, _d) = service(retry_engine(sent, false, false));
+        s.refresh_roster().await;
+        let by = Caller::through("endpoint");
+        let done = s.retry("kai", &Pick::Latest, &by).await.unwrap();
+        assert_eq!(
+            (done.session_id.as_str(), done.created),
+            ("stored-1", false)
+        );
+        let calls = e.calls.lock().unwrap().clone();
+        let order: Vec<&str> = calls
+            .iter()
+            .map(|(_, m, _)| m.as_str())
+            .filter(|m| {
+                matches!(
+                    *m,
+                    "session.resume" | "command.dispatch" | "window.said" | "prompt.submit"
+                )
+            })
+            .collect();
+        assert_eq!(
+            order,
+            [
+                "session.resume",
+                "command.dispatch",
+                "window.said",
+                "prompt.submit"
+            ],
+            "the engine rewinds, the windows hear the message, then it is sent again"
+        );
+        assert_eq!(
+            e.of("prompt.submit")[0].1["text"],
+            "render it in three languages"
+        );
+        assert_eq!(e.of("window.said")[0].1["payload"]["retry"], true);
+        assert_eq!(
+            s.feed()
+                .presence()
+                .into_iter()
+                .find(|p| p.profile == "kai")
+                .unwrap()
+                .state,
+            State::Listening
+        );
+    }
+
+    #[tokio::test]
+    async fn a_retry_is_refused_in_words_before_anything_is_lost() {
+        let by = Caller::through("endpoint");
+        let (s, e, _d) = service(retry_engine(sent, false, true));
+        s.refresh_roster().await;
+        assert_eq!(
+            s.retry("kai", &Pick::Latest, &by).await.unwrap_err().code,
+            "bot_busy"
+        );
+        assert!(
+            e.of("command.dispatch").is_empty(),
+            "a busy bot is never rewound"
+        );
+        let engine_says = |code: i64, words: &'static str| {
+            move || {
+                Err(Error::Unavailable(format!(
+                    "command.dispatch: {}",
+                    json!({"code": code, "message": words})
+                )))
+            }
+        };
+        for (code, words, want) in [
+            (4009, "session busy", "bot_busy"),
+            (
+                4018,
+                "no previous user message to retry",
+                "nothing_to_retry",
+            ),
+            (
+                4018,
+                "retry cannot safely reconstruct or combine attached media",
+                "cannot_retry",
+            ),
+            (
+                5008,
+                "retry: failed to persist history: disk",
+                "engine_unavailable",
+            ),
+        ] {
+            let (s, e, _d) = service(retry_engine(engine_says(code, words), false, false));
+            s.refresh_roster().await;
+            let err = s.retry("kai", &Pick::Latest, &by).await.unwrap_err();
+            assert_eq!(err.code, want, "{code} {words}");
+            assert!(
+                !err.message.contains(words),
+                "the engine's words are not shown: {}",
+                err.message
+            );
+            assert!(e.of("prompt.submit").is_empty() && e.of("window.said").is_empty());
+        }
+        let (s, _e, _d) = service(retry_engine(
+            || Ok(json!({"type": "exec", "output": "x"})),
+            false,
+            false,
+        ));
+        s.refresh_roster().await;
+        assert_eq!(
+            s.retry("kai", &Pick::Latest, &by).await.unwrap_err().code,
+            "cannot_retry"
+        );
+        assert_eq!(
+            s.retry("kai", &Pick::New, &by).await.unwrap_err().code,
+            "bad_session"
+        );
+        assert_eq!(
+            s.retry("nobody", &Pick::Latest, &by)
+                .await
+                .unwrap_err()
+                .code,
+            "no_such_bot"
+        );
+        assert_eq!(
+            s.retry("nina", &Pick::Latest, &by).await.unwrap_err().code,
+            "no_conversation"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_retried_message_the_engine_does_not_take_again_is_said_to_be_gone() {
+        let (s, e, _d) = service(retry_engine(sent, true, false));
+        s.refresh_roster().await;
+        let err = s
+            .retry("kai", &Pick::Latest, &Caller::through("endpoint"))
+            .await
+            .unwrap_err();
+        assert_eq!((err.status, err.code), (502, "resend_failed"));
+        assert!(
+            err.message.contains("no longer in the conversation"),
+            "{}",
+            err.message
+        );
+        let told = e.of("window.said_failed");
+        assert_eq!(
+            told[0].1["payload"]["reason"],
+            err.message.as_str(),
+            "the windows are told the same"
+        );
     }
 
     fn room_engine(

@@ -4,12 +4,17 @@
 //! - a poll of `session.active_list` on each profile's link gives the rest (the island's sessions, a cron run, a room
 //!   turn), at the engine's own grain: `working`, `waiting`, `starting`, `idle`.
 //!
+//! A third input is what the plugin pushes from the engine's own tool hooks (B45, `activity.rs`): a tool's start and end
+//! and a turn's end for the sessions the host's links do not run. It is as fine as a link's event but counts no steps
+//! (the host did not see the turn begin). A session the poll lists keeps the poll as the judge of whether it is alive; a
+//! session no poll lists (a scheduled run) lives until its turn ends or its hold runs out.
+//!
 //! A fine state wins for [`FINE_HOLD_MS`] after its event, and a poll never invents a fine word. The reducer is pure: it
 //! takes the time as an argument and returns the presences that changed, so a table of cases tests it.
 
 use std::collections::HashMap;
 
-use super::model::{Presence, Source, State};
+use super::model::{Presence, Progress, Source, State};
 
 /// How long an event's state outranks a poll that says something coarser.
 pub const FINE_HOLD_MS: i64 = 3_000;
@@ -57,10 +62,29 @@ pub struct Live {
     pub summary: Option<String>,
 }
 
+/// What one event of a link says beyond its type.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Facts<'a> {
+    /// The tool's name, for a tool event.
+    pub tool: Option<&'a str>,
+    /// What the tool call touches, in safe words (`toolwords.rs`), for a `tool.start`.
+    pub detail: Option<&'a str>,
+    /// How far the running tool says it has come, for a `tool.progress` that carries it (B44).
+    pub progress: Option<&'a Progress>,
+    /// The tool call's id, for a pushed start or end (B45): an end of another call than the one shown changes nothing.
+    pub call: Option<&'a str>,
+    /// A completion that failed.
+    pub failed: bool,
+}
+
 #[derive(Debug, Clone)]
 struct Session {
     state: State,
     activity: String,
+    /// What the running tool touches (B40), while `activity` names it.
+    detail: Option<String>,
+    /// How far the running tool says it has come (B44), while `activity` names it.
+    progress: Option<Progress>,
     attention: Option<String>,
     source: Source,
     summary: Option<String>,
@@ -71,6 +95,12 @@ struct Session {
     fine_until: i64,
     /// Until when a `done` or `error` shows.
     hold_until: i64,
+    /// Whether a poll listed it (the poll then judges whether it is alive).
+    polled: bool,
+    /// For a session only pushes tell of (B45): until when it stands without another push.
+    alive_until: i64,
+    /// The pushed tool call shown now (B45).
+    call: Option<String>,
 }
 
 /// Every bot's sessions and the presence last published for it.
@@ -111,23 +141,108 @@ impl Table {
         self.changed(&[profile.to_owned()], now)
     }
 
-    /// An event on a link of the host. `tool` is the tool's name for a tool event, `failed` is true for a completion that
-    /// failed. Returns the presences that changed.
-    #[allow(clippy::too_many_arguments)] // one event's facts, read by one caller
+    /// An event on a link of the host, with what it says (`facts`). Returns the presences that changed.
     pub fn on_event(
         &mut self,
         profile: &str,
         session_id: &str,
         event: &str,
-        tool: Option<&str>,
-        failed: bool,
+        facts: &Facts<'_>,
         source: Source,
         now: i64,
     ) -> Vec<Presence> {
+        self.apply(profile, session_id, event, facts, source, now, true)
+    }
+
+    /// What the plugin pushed for a session (B45), as the link event it stands for (`tool.start`, `tool.complete`,
+    /// `message.complete`). It counts no steps. `alive_until` is for a session no poll lists: it stands until then.
+    #[allow(clippy::too_many_arguments)]
+    pub fn on_push(
+        &mut self,
+        profile: &str,
+        session_id: &str,
+        event: &str,
+        facts: &Facts<'_>,
+        source: Source,
+        alive_until: Option<i64>,
+        now: i64,
+    ) -> Vec<Presence> {
+        let changed = self.apply(profile, session_id, event, facts, source, now, false);
+        if let Some(until) = alive_until
+            && let Some(s) = self
+                .sessions
+                .get_mut(&(profile.to_owned(), session_id.to_owned()))
+            && !s.polled
+        {
+            s.alive_until = until;
+        }
+        changed
+    }
+
+    /// The kind of a session the table holds.
+    #[must_use]
+    pub fn source_of(&self, profile: &str, session_id: &str) -> Option<Source> {
+        self.sessions
+            .get(&(profile.to_owned(), session_id.to_owned()))
+            .map(|s| s.source)
+    }
+
+    /// Whether the table holds a session (from a poll, a worker's row, or a push).
+    #[must_use]
+    pub fn knows(&self, profile: &str, session_id: &str) -> bool {
+        self.sessions
+            .contains_key(&(profile.to_owned(), session_id.to_owned()))
+    }
+
+    /// A session only pushes told of ended without saying so (its scheduled run is over): it shows as done, or as an error.
+    pub fn end_push(
+        &mut self,
+        profile: &str,
+        session_id: &str,
+        failed: bool,
+        now: i64,
+    ) -> Vec<Presence> {
+        let open = self
+            .sessions
+            .get(&(profile.to_owned(), session_id.to_owned()))
+            .is_some_and(|s| !s.polled && (s.state.busy() || s.state == State::Needs));
+        if !open {
+            return Vec::new();
+        }
+        let facts = Facts {
+            failed,
+            ..Facts::default()
+        };
+        let source = self.sessions[&(profile.to_owned(), session_id.to_owned())].source;
+        self.apply(
+            profile,
+            session_id,
+            "message.complete",
+            &facts,
+            source,
+            now,
+            false,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments, clippy::too_many_lines)] // one table of events
+    fn apply(
+        &mut self,
+        profile: &str,
+        session_id: &str,
+        event: &str,
+        facts: &Facts<'_>,
+        source: Source,
+        now: i64,
+        count: bool,
+    ) -> Vec<Presence> {
+        let (tool, failed) = (facts.tool, facts.failed);
         let key = (profile.to_owned(), session_id.to_owned());
         let fresh = || Session {
             state: State::Idle,
             activity: String::new(),
+            detail: None,
+            progress: None,
             attention: None,
             source,
             summary: None,
@@ -135,15 +250,27 @@ impl Table {
             since: now,
             fine_until: 0,
             hold_until: 0,
+            polled: false,
+            alive_until: 0,
+            call: None,
         };
         let s = self.sessions.entry(key).or_insert_with(fresh);
         s.source = source;
-        // The turn's tool steps, counted from its own events: a new turn starts at zero.
-        match event {
-            "host.prompt" => s.steps = Some(0),
-            "message.start" if !s.state.busy() => s.steps = Some(0),
-            "tool.start" => s.steps = Some(s.steps.unwrap_or(0) + 1),
-            _ => {}
+        // A pushed end of another call than the one shown: that one still runs.
+        if event == "tool.complete"
+            && let (Some(shown), Some(ended)) = (s.call.as_deref(), facts.call)
+            && shown != ended
+        {
+            return Vec::new();
+        }
+        // The turn's tool steps, counted from its own events: a new turn starts at zero. A push counts none.
+        if count {
+            match event {
+                "host.prompt" => s.steps = Some(0),
+                "message.start" if !s.state.busy() => s.steps = Some(0),
+                "tool.start" => s.steps = Some(s.steps.unwrap_or(0) + 1),
+                _ => {}
+            }
         }
         let (state, activity, attention) = match event {
             "host.prompt" => (State::Listening, String::new(), None),
@@ -185,6 +312,25 @@ impl Table {
         if s.state != state || s.activity != activity {
             s.since = now;
         }
+        // The detail is the call's: set by its start, kept while the same tool streams progress, gone with it. Progress is
+        // what the tool last reported, kept until the call ends; nothing reported is none (B44).
+        let same = s.activity == activity;
+        s.detail = match event {
+            "tool.start" => facts.detail.map(str::to_owned),
+            "tool.generating" | "tool.progress" if same => s.detail.take(),
+            _ => None,
+        };
+        s.progress = match event {
+            "tool.progress" => facts
+                .progress
+                .cloned()
+                .or_else(|| if same { s.progress.take() } else { None }),
+            "tool.generating" if same => s.progress.take(),
+            _ => None,
+        };
+        s.call = (event == "tool.start")
+            .then(|| facts.call.map(str::to_owned))
+            .flatten();
         s.state = state;
         s.activity = activity;
         s.attention = attention;
@@ -208,13 +354,18 @@ impl Table {
     ) -> Vec<Presence> {
         let listed: Vec<&str> = rows.iter().map(|r| r.session_id.as_str()).collect();
         self.sessions.retain(|(p, sid), s| {
-            p != profile || listed.contains(&sid.as_str()) || s.hold_until > now
+            p != profile
+                || listed.contains(&sid.as_str())
+                || s.hold_until > now
+                || (!s.polled && s.alive_until > now)
         });
         for row in rows {
             let key = (profile.to_owned(), row.session_id.clone());
             let s = self.sessions.entry(key).or_insert_with(|| Session {
                 state: State::Idle,
                 activity: String::new(),
+                detail: None,
+                progress: None,
                 attention: None,
                 source: row.source,
                 summary: None,
@@ -222,7 +373,11 @@ impl Table {
                 since: now,
                 fine_until: 0,
                 hold_until: 0,
+                polled: true,
+                alive_until: 0,
+                call: None,
             });
+            s.polled = true;
             // The source a session started with stands (B25): the poll never turns the host's own `gui` into a guess.
             if row.summary.is_some() {
                 s.summary.clone_from(&row.summary);
@@ -260,6 +415,8 @@ impl Table {
                 s.since = now;
                 if state != State::Working {
                     s.activity.clear();
+                    s.detail = None;
+                    s.progress = None;
                 }
             }
             s.state = state;
@@ -294,12 +451,26 @@ impl Table {
     pub fn tick(&mut self, now: i64) -> Vec<Presence> {
         let mut touched = Vec::new();
         for ((profile, _), s) in &mut self.sessions {
+            // a session only pushes told of, silent past its hold, is no longer known to run
+            let lapsed = !s.polled && s.alive_until != 0 && s.alive_until <= now;
+            if lapsed && s.state != State::Idle && s.hold_until == 0 {
+                s.state = State::Idle;
+                s.activity.clear();
+                s.detail = None;
+                s.progress = None;
+                s.call = None;
+                s.since = now;
+                touched.push(profile.clone());
+                continue;
+            }
             if matches!(s.state, State::Done | State::Error)
                 && s.hold_until != 0
                 && s.hold_until <= now
             {
                 s.state = State::Idle;
                 s.activity.clear();
+                s.detail = None;
+                s.progress = None;
                 s.hold_until = 0;
                 s.since = now;
                 touched.push(profile.clone());
@@ -323,6 +494,8 @@ impl Table {
                 profile: profile.to_owned(),
                 state: s.state,
                 activity: s.activity.clone(),
+                detail: s.detail.clone(),
+                progress: s.progress.clone(),
                 attention: s.attention.clone(),
                 session_id: Some(sid.clone()),
                 source: Some(s.source),
@@ -354,6 +527,8 @@ impl Table {
             let same = self.published.get(p).is_some_and(|old| {
                 old.state == now_row.state
                     && old.activity == now_row.activity
+                    && old.detail == now_row.detail
+                    && old.progress == now_row.progress
                     && old.attention == now_row.attention
                     && old.session_id == now_row.session_id
                     && old.source == now_row.source
@@ -395,7 +570,188 @@ mod tests {
     use super::*;
 
     fn ev(t: &mut Table, e: &str, tool: Option<&str>, now: i64) -> Vec<Presence> {
-        t.on_event("kai", "s1", e, tool, false, Source::Gui, now)
+        let facts = Facts {
+            tool,
+            ..Facts::default()
+        };
+        t.on_event("kai", "s1", e, &facts, Source::Gui, now)
+    }
+
+    #[test]
+    fn a_tools_detail_shows_while_it_runs_and_goes_with_it() {
+        let mut t = Table::new();
+        let facts = Facts {
+            tool: Some("read_file"),
+            detail: Some("Read a file · shots/03.json"),
+            ..Facts::default()
+        };
+        let p = t.on_event("kai", "s1", "tool.start", &facts, Source::Gui, 0);
+        assert_eq!(p[0].detail.as_deref(), Some("Read a file · shots/03.json"));
+        ev(&mut t, "tool.progress", Some("read_file"), 10);
+        assert_eq!(
+            t.presence("kai", 10).detail.as_deref(),
+            Some("Read a file · shots/03.json"),
+            "progress keeps it"
+        );
+        let p = ev(&mut t, "tool.complete", None, 20);
+        assert_eq!(
+            (p[0].state, p[0].detail.as_deref()),
+            (State::Thinking, None)
+        );
+        ev(&mut t, "tool.start", Some("terminal"), 30);
+        assert_eq!(
+            t.presence("kai", 30).detail,
+            None,
+            "a call that touches nothing named has none"
+        );
+    }
+
+    #[test]
+    fn a_tools_progress_is_what_it_reported_and_goes_with_the_call() {
+        let mut t = Table::new();
+        ev(&mut t, "tool.start", Some("render"), 0);
+        assert_eq!(
+            t.presence("kai", 0).progress,
+            None,
+            "nothing reported: none"
+        );
+        let two_of_three = Progress {
+            fraction: Some(0.67),
+            step: 2.0,
+            of: Some(3.0),
+            label: Some("Rendering French".into()),
+        };
+        let facts = Facts {
+            tool: Some("render"),
+            progress: Some(&two_of_three),
+            ..Facts::default()
+        };
+        let p = t.on_event("kai", "s1", "tool.progress", &facts, Source::Gui, 10);
+        assert_eq!(p[0].progress.as_ref(), Some(&two_of_three));
+        ev(&mut t, "tool.progress", Some("render"), 20);
+        assert_eq!(
+            t.presence("kai", 20).progress.as_ref(),
+            Some(&two_of_three),
+            "an update without numbers keeps the last"
+        );
+        let p = ev(&mut t, "tool.complete", None, 30);
+        assert_eq!(p[0].progress, None, "the call ended");
+        ev(&mut t, "tool.start", Some("render"), 40);
+        assert_eq!(
+            t.presence("kai", 40).progress,
+            None,
+            "a new call starts with none"
+        );
+        let json = serde_json::to_value(Presence::idle("kai", 0)).unwrap();
+        assert!(json["progress"].is_null(), "{json}");
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)] // one story, every source in turn
+    fn a_pushed_tool_shows_on_a_polled_session_and_an_unpolled_one_lives_until_its_hold() {
+        // B45: a room member's turn the poll lists, and a scheduled run no poll lists
+        let mut t = Table::new();
+        let none = |_: &str| false;
+        let room = Live {
+            session_id: "r1".into(),
+            status: Status::Working,
+            source: Source::Room,
+            summary: Some("In paper past".into()),
+        };
+        t.on_poll("kai", std::slice::from_ref(&room), &none, 0);
+        let start = Facts {
+            tool: Some("read_file"),
+            detail: Some("Read a file · shots/03.json"),
+            call: Some("c1"),
+            ..Facts::default()
+        };
+        let p = t.on_push("kai", "r1", "tool.start", &start, Source::Room, None, 100);
+        assert_eq!(
+            (
+                p[0].state,
+                p[0].activity.as_str(),
+                p[0].detail.as_deref(),
+                p[0].steps
+            ),
+            (
+                State::Working,
+                "read_file",
+                Some("Read a file · shots/03.json"),
+                None
+            ),
+            "fine, but a push counts no steps"
+        );
+        let other = Facts {
+            call: Some("c0"),
+            ..Facts::default()
+        };
+        assert!(
+            t.on_push(
+                "kai",
+                "r1",
+                "tool.complete",
+                &other,
+                Source::Room,
+                None,
+                150
+            )
+            .is_empty(),
+            "another call's end: the shown one still runs"
+        );
+        let mine = Facts {
+            call: Some("c1"),
+            ..Facts::default()
+        };
+        assert_eq!(
+            t.on_push("kai", "r1", "tool.complete", &mine, Source::Room, None, 200)[0].state,
+            State::Thinking
+        );
+        t.on_poll("kai", &[], &none, 5_000);
+        assert_eq!(
+            t.presence("kai", 5_000).state,
+            State::Idle,
+            "the poll judges a polled session"
+        );
+        let p = t.on_push(
+            "moss",
+            "c9",
+            "tool.start",
+            &start,
+            Source::Cron,
+            Some(60_000),
+            0,
+        );
+        assert_eq!(
+            (p[0].state, p[0].source),
+            (State::Working, Some(Source::Cron))
+        );
+        t.on_poll("moss", &[], &none, 2_000);
+        assert_eq!(
+            t.presence("moss", 2_000).state,
+            State::Working,
+            "no poll lists a scheduled run: it stands on its pushes"
+        );
+        let p = t.tick(60_001);
+        assert_eq!(
+            p[0].state,
+            State::Idle,
+            "silent past its hold: no longer known to run"
+        );
+        t.on_push(
+            "moss",
+            "c9",
+            "tool.start",
+            &start,
+            Source::Cron,
+            Some(200_000),
+            100_000,
+        );
+        let p = t.end_push("moss", "c9", true, 100_010);
+        assert_eq!(
+            p[0].state,
+            State::Error,
+            "its run ended badly, as the cron list says"
+        );
     }
 
     #[test]
@@ -465,7 +821,11 @@ mod tests {
     #[test]
     fn a_failure_shows_as_an_error_and_a_finished_turn_rests_after_its_time() {
         let mut t = Table::new();
-        let p = t.on_event("kai", "s1", "message.complete", None, true, Source::Gui, 0);
+        let failed = Facts {
+            failed: true,
+            ..Facts::default()
+        };
+        let p = t.on_event("kai", "s1", "message.complete", &failed, Source::Gui, 0);
         assert_eq!(p[0].state, State::Error);
         assert!(t.tick(ERROR_HOLD_MS - 1).is_empty());
         let p = t.tick(ERROR_HOLD_MS + 1);

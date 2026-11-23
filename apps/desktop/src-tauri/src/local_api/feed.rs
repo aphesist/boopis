@@ -3,7 +3,7 @@
 //! stream that resumes, and broadcasts them. It does no I/O: the service tells it what the engine said and asks it what
 //! to say next, so every rule here is tested with scripted frames.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
@@ -14,10 +14,10 @@ use super::approvals::{Delivery, Inbox, Refusal};
 use super::audit::{Audit, Line};
 use super::model::{
     Answered, Approval, ApprovalState, BotRow, ConversationMessage, Event, LineFrom, Message,
-    MessageState, NoteKind, Notification, Origin, Presence, Role, RoomHeldEvent, RoomLine,
-    RoomLineEvent, RoomRow, RoomStateEvent, Source, Stamped, State, now_ms,
+    MessageState, NoteKind, Notification, Origin, Presence, Progress, Role, RoomHeldEvent,
+    RoomLine, RoomLineEvent, RoomRow, RoomStateEvent, Source, Stamped, State, now_ms,
 };
-use super::presence::{Live, Table};
+use super::presence::{Facts, Live, Table};
 use super::roster::{self, Entry};
 use super::scrub;
 use crate::config::ApiLimits;
@@ -30,6 +30,19 @@ struct Meta {
     /// The stored session id (what `say` returns), when known.
     stored: Option<String>,
     model: Option<String>,
+    /// Whether the host's own link carries the session's events (then a push of the plugin's adds nothing).
+    linked: bool,
+}
+
+/// A push for a session the poll has not listed yet (B45): applied when it does, if it is still fresh.
+#[derive(Debug, Clone)]
+struct PendingPush {
+    event: &'static str,
+    tool: Option<String>,
+    detail: Option<String>,
+    call: Option<String>,
+    failed: bool,
+    at: i64,
 }
 
 /// A reply that is being written, as the app's own conversation shows it.
@@ -57,6 +70,34 @@ struct Inner {
     last_note: HashMap<(String, String, u8), i64>,
     /// Who was last said to be at work in each room (a `room.state` goes out when it changes).
     room_working: HashMap<String, Vec<String>>,
+    /// Pushes for sessions the poll has not listed yet (B45).
+    pending: HashMap<(String, String), PendingPush>,
+    /// The session the plugin last pushed for each scheduled job, by `(profile, job id)` (B45).
+    cron_runs: HashMap<(String, String), String>,
+}
+
+/// Where a notification belongs: a session, or a room's message.
+#[derive(Debug, Clone, Copy, Default)]
+struct Where<'a> {
+    session_id: Option<&'a str>,
+    room_id: Option<&'a str>,
+    /// The room message's place in the room's log.
+    seq: Option<u64>,
+    /// The room message's event id.
+    message_id: Option<&'a str>,
+    /// A scheduled job's id, when a run's notification has no session to belong to (two jobs are two notifications).
+    job: Option<&'a str>,
+    /// A scheduled job's next run, in milliseconds since the epoch.
+    next_run_at: Option<i64>,
+}
+
+impl<'a> Where<'a> {
+    fn session(id: &'a str) -> Self {
+        Self {
+            session_id: Some(id),
+            ..Self::default()
+        }
+    }
 }
 
 /// A turn the poll saw end in a session the host's link does not run: the service reads its words and makes the
@@ -78,6 +119,8 @@ pub struct Feed {
     wanted: watch::Sender<usize>,
     text_wanted: watch::Sender<usize>,
     followers: AtomicUsize,
+    /// The pace each follower asked for, in milliseconds, counted (B46): replies are sent again at the fastest.
+    paces: Mutex<BTreeMap<u64, usize>>,
     listeners: AtomicUsize,
     poke: AtomicBool,
     audit: Audit,
@@ -104,10 +147,20 @@ impl Drop for Consumer {
 /// A reader that follows conversations. While one exists the host copies the words of replies and of the owner's messages.
 pub struct Follower {
     feed: Arc<Feed>,
+    pace: u64,
 }
 
 impl Drop for Follower {
     fn drop(&mut self) {
+        {
+            let mut paces = lock(&self.feed.paces);
+            if let Some(n) = paces.get_mut(&self.pace) {
+                *n -= 1;
+                if *n == 0 {
+                    paces.remove(&self.pace);
+                }
+            }
+        }
         let n = self
             .feed
             .followers
@@ -131,6 +184,21 @@ pub struct Subscription {
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// Whether a session id is the engine scheduler's name for a run's session: `cron_<job id>_<YYYYmmdd>_<HHMMSS>`
+/// (`hermes_state_ids.py` recognises the same shape).
+#[must_use]
+pub fn is_cron_id(id: &str) -> bool {
+    let Some(rest) = id.strip_prefix("cron_") else {
+        return false;
+    };
+    let mut tail = rest.rsplitn(3, '_');
+    let (Some(time), Some(day), Some(job)) = (tail.next(), tail.next(), tail.next()) else {
+        return false;
+    };
+    let digits = |s: &str, n: usize| s.len() == n && s.bytes().all(|b| b.is_ascii_digit());
+    digits(time, 6) && digits(day, 8) && !job.is_empty()
 }
 
 fn str_of(v: &Value, key: &str) -> String {
@@ -161,11 +229,14 @@ impl Feed {
                 gui_answers: HashMap::new(),
                 last_note: HashMap::new(),
                 room_working: HashMap::new(),
+                pending: HashMap::new(),
+                cron_runs: HashMap::new(),
             }),
             tx,
             wanted: watch::channel(0).0,
             text_wanted: watch::channel(0).0,
             followers: AtomicUsize::new(0),
+            paces: Mutex::new(BTreeMap::new()),
             listeners: AtomicUsize::new(0),
             poke: AtomicBool::new(false),
             audit,
@@ -198,12 +269,34 @@ impl Feed {
         Consumer { feed: self.clone() }
     }
 
-    /// Count a reader that follows conversations.
+    /// Count a reader that follows conversations, at the default pace.
     #[must_use]
     pub fn follower(self: &Arc<Self>) -> Follower {
+        self.follower_at(self.limits.stream_every)
+    }
+
+    /// Count a reader that follows conversations and wants a growing reply sent again at most every `pace` (B46).
+    #[must_use]
+    pub fn follower_at(self: &Arc<Self>, pace: std::time::Duration) -> Follower {
+        let pace = u64::try_from(pace.as_millis()).unwrap_or(u64::MAX);
+        *lock(&self.paces).entry(pace).or_insert(0) += 1;
         let n = self.followers.fetch_add(1, Ordering::SeqCst) + 1;
         self.text_wanted.send_replace(n);
-        Follower { feed: self.clone() }
+        Follower {
+            feed: self.clone(),
+            pace,
+        }
+    }
+
+    /// How often a growing reply is sent again: the fastest pace any follower asked for, else the default.
+    #[must_use]
+    pub fn stream_every(&self) -> std::time::Duration {
+        lock(&self.paces)
+            .keys()
+            .next()
+            .map_or(self.limits.stream_every, |ms| {
+                std::time::Duration::from_millis(*ms)
+            })
     }
 
     /// How many readers follow conversations, as a watch (the links copy words only while it is above zero).
@@ -376,14 +469,14 @@ impl Feed {
         if inner.meta.len() >= 512 {
             inner.meta.clear();
         }
-        inner.meta.insert(
-            (profile.to_owned(), session_id.to_owned()),
-            Meta {
-                source: Some(source),
-                stored: stored.filter(|s| !s.is_empty()).map(str::to_owned),
-                model: model.map(str::to_owned),
-            },
-        );
+        // whether the host's own link carries it is the link's to say, so it is kept
+        let m = inner
+            .meta
+            .entry((profile.to_owned(), session_id.to_owned()))
+            .or_default();
+        m.source = Some(source);
+        m.stored = stored.filter(|s| !s.is_empty()).map(str::to_owned);
+        m.model = model.map(str::to_owned);
     }
 
     /// Whether the feed already knows a session's stored id, so the poller notes it once.
@@ -425,12 +518,14 @@ impl Feed {
     /// Where a live session the poll lists came from: what the host knows of it first (its own link runs the app's kind,
     /// `gui`), then the engine's own `source` when the row carries one (`session.active_list` rows usually do not), then the
     /// engine's own name for a room member's session (`Group: <room id>`, `hosted_room_driver.py`, which the engine itself
-    /// reads back in `methods_prompt.py`), else `other`.
+    /// reads back in `methods_prompt.py`), or the scheduler's own name for a run's session (`cron_<job id>_<time>`,
+    /// `cron/scheduler.py`; `stored` is the row's stored id), else `other`.
     #[must_use]
     pub fn resolve_source(
         &self,
         profile: &str,
         session_id: &str,
+        stored: &str,
         engine_source: &str,
         title: &str,
     ) -> Source {
@@ -439,7 +534,9 @@ impl Feed {
             .get(&(profile.to_owned(), session_id.to_owned()))
             .and_then(|m| m.source);
         known.unwrap_or_else(|| {
-            if !engine_source.trim().is_empty() {
+            if is_cron_id(session_id) || is_cron_id(stored) {
+                Source::Cron
+            } else if !engine_source.trim().is_empty() {
                 super::model::source_of(engine_source)
             } else if title.starts_with("Group: ") {
                 Source::Room
@@ -591,7 +688,7 @@ impl Feed {
 
     /// Send a growing reply again when it has changed and has not been sent for the stream interval.
     fn flush_reply(&self, inner: &mut Inner, profile: &str, sid: &str, now: i64) {
-        let every = i64::try_from(self.limits.stream_every.as_millis()).unwrap_or(250);
+        let every = i64::try_from(self.stream_every().as_millis()).unwrap_or(i64::MAX);
         let key = (profile.to_owned(), sid.to_owned());
         let Some(r) = inner.replies.get_mut(&key) else {
             return;
@@ -615,19 +712,21 @@ impl Feed {
         inner: &mut Inner,
         kind: NoteKind,
         profile: &str,
-        session_id: Option<&str>,
-        room_id: Option<&str>,
+        at: &Where<'_>,
         source: Source,
         title: String,
         body: String,
         urgent: bool,
     ) {
         let now = now_ms();
-        let key = (
-            profile.to_owned(),
-            session_id.or(room_id).unwrap_or_default().to_owned(),
-            kind as u8,
-        );
+        // A room's message is its own news (two in a row are two notifications); a session's turn ends once.
+        let place = match (at.session_id, at.room_id, at.seq, at.job) {
+            (Some(s), _, _, _) => s.to_owned(),
+            (None, Some(r), Some(seq), _) => format!("{r}#{seq}"),
+            (None, None, _, Some(job)) => format!("cron:{job}"),
+            (None, room, _, _) => room.unwrap_or_default().to_owned(),
+        };
+        let key = (profile.to_owned(), place, kind as u8);
         if inner.last_note.get(&key).is_some_and(|t| now - t < 3_000) {
             return;
         }
@@ -642,8 +741,11 @@ impl Feed {
             profile: profile.to_owned(),
             title,
             body,
-            session_id: session_id.map(str::to_owned),
-            room_id: room_id.map(str::to_owned),
+            session_id: at.session_id.map(str::to_owned),
+            room_id: at.room_id.map(str::to_owned),
+            seq: at.seq,
+            message_id: at.message_id.map(str::to_owned),
+            next_run_at: at.next_run_at,
             source,
             at: now,
             urgent,
@@ -728,12 +830,12 @@ impl Feed {
         if inner.meta.len() >= 512 {
             inner.meta.clear();
         }
-        inner
+        let m = inner
             .meta
             .entry((profile.to_owned(), sid.to_owned()))
-            .or_default()
-            .source
-            .get_or_insert(Source::Gui);
+            .or_default();
+        m.source.get_or_insert(Source::Gui);
+        m.linked = true;
         let origin = Self::origin(&inner, profile, sid);
         let held_reply = inner
             .replies
@@ -761,9 +863,10 @@ impl Feed {
                     self.audit_gui(profile, &row, by.as_ref());
                     self.emit(&mut inner, Event::Approvals(row));
                 }
-                let changed = inner
-                    .presence
-                    .on_event(profile, sid, &f.name, None, false, origin, now);
+                let changed =
+                    inner
+                        .presence
+                        .on_event(profile, sid, &f.name, &Facts::default(), origin, now);
                 self.publish(&mut inner, changed);
             }
             "tool.start" | "tool.generating" | "tool.progress" => {
@@ -772,23 +875,45 @@ impl Feed {
                     .map(|k| str_of(&payload, k))
                     .find(|s| !s.is_empty());
                 let tool = tool.map(|t| self.clip(&t));
-                let changed = inner.presence.on_event(
-                    profile,
-                    sid,
-                    &f.name,
-                    tool.as_deref(),
-                    false,
-                    origin,
-                    now,
-                );
+                // What the call touches (B40): from the arguments `tool.start` carries, safe words only, then scrubbed.
+                let detail = (f.name == "tool.start")
+                    .then(|| {
+                        super::toolwords::detail(
+                            tool.as_deref().unwrap_or_default(),
+                            payload.get("args"),
+                        )
+                    })
+                    .flatten()
+                    .map(|d| self.clip(&d));
+                // How far it says it has come (B44): only what the engine relayed, never an estimate.
+                let progress = (f.name == "tool.progress")
+                    .then(|| self.progress_of(&payload))
+                    .flatten();
+                let facts = Facts {
+                    tool: tool.as_deref(),
+                    detail: detail.as_deref(),
+                    progress: progress.as_ref(),
+                    ..Facts::default()
+                };
+                let changed = inner
+                    .presence
+                    .on_event(profile, sid, &f.name, &facts, origin, now);
                 self.publish(&mut inner, changed);
             }
             "message.complete" => {
                 let outcome = str_of(&payload, "outcome");
                 let failed = matches!(outcome.as_str(), "failed" | "error");
-                let changed = inner
-                    .presence
-                    .on_event(profile, sid, &f.name, None, failed, origin, now);
+                let changed = inner.presence.on_event(
+                    profile,
+                    sid,
+                    &f.name,
+                    &Facts {
+                        failed,
+                        ..Facts::default()
+                    },
+                    origin,
+                    now,
+                );
                 self.publish(&mut inner, changed);
                 let who = Self::display(&inner, profile);
                 if failed {
@@ -796,8 +921,7 @@ impl Feed {
                         &mut inner,
                         NoteKind::Error,
                         profile,
-                        Some(sid),
-                        None,
+                        &Where::session(sid),
                         origin,
                         format!("{who} hit an error"),
                         String::new(),
@@ -816,8 +940,7 @@ impl Feed {
                             &mut inner,
                             NoteKind::Reply,
                             profile,
-                            Some(sid),
-                            None,
+                            &Where::session(sid),
                             origin,
                             format!("{who} replied"),
                             text,
@@ -827,9 +950,17 @@ impl Feed {
                 }
             }
             "error" | "turn.failed" => {
-                let changed = inner
-                    .presence
-                    .on_event(profile, sid, &f.name, None, true, origin, now);
+                let changed = inner.presence.on_event(
+                    profile,
+                    sid,
+                    &f.name,
+                    &Facts {
+                        failed: true,
+                        ..Facts::default()
+                    },
+                    origin,
+                    now,
+                );
                 self.publish(&mut inner, changed);
                 let who = Self::display(&inner, profile);
                 let why = self.clip(
@@ -843,8 +974,7 @@ impl Feed {
                     &mut inner,
                     NoteKind::Error,
                     profile,
-                    Some(sid),
-                    None,
+                    &Where::session(sid),
                     origin,
                     format!("{who} hit an error"),
                     why,
@@ -852,12 +982,44 @@ impl Feed {
                 );
             }
             _ => {
-                let changed = inner
-                    .presence
-                    .on_event(profile, sid, &f.name, None, false, origin, now);
+                let changed =
+                    inner
+                        .presence
+                        .on_event(profile, sid, &f.name, &Facts::default(), origin, now);
                 self.publish(&mut inner, changed);
             }
         }
+    }
+
+    /// A `tool.progress` payload as the contract's progress (`agent/tool_progress_relay.py`: `progress`, `total`, and
+    /// `percent` from 0 to 100 when there is a total; `message`): `None` when it carries no count.
+    fn progress_of(&self, payload: &Value) -> Option<Progress> {
+        let number = |k: &str| {
+            payload
+                .get(k)
+                .and_then(Value::as_f64)
+                .filter(|v| v.is_finite() && *v >= 0.0)
+        };
+        let step = number("progress")?;
+        let of = number("total").filter(|t| *t > 0.0);
+        let fraction = number("percent")
+            .map(|p| (p / 100.0).min(1.0))
+            .or_else(|| of.map(|t| (step / t).min(1.0)));
+        let label = Some(str_of(payload, "message"))
+            .filter(|m| !m.trim().is_empty())
+            .map(|m| {
+                self.clip(&m)
+                    .chars()
+                    .take(super::toolwords::MAX_DETAIL)
+                    .collect::<String>()
+            })
+            .filter(|m| !m.trim().is_empty());
+        Some(Progress {
+            fraction,
+            step,
+            of,
+            label,
+        })
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -927,10 +1089,14 @@ impl Feed {
         };
         self.add_approval(inner, row, source, now);
         let origin = Self::origin(inner, profile, sid);
-        let changed =
-            inner
-                .presence
-                .on_event(profile, sid, "approval.request", None, false, origin, now);
+        let changed = inner.presence.on_event(
+            profile,
+            sid,
+            "approval.request",
+            &Facts::default(),
+            origin,
+            now,
+        );
         self.publish(inner, changed);
     }
 
@@ -948,8 +1114,7 @@ impl Feed {
                 inner,
                 NoteKind::Approval,
                 &profile,
-                Some(&sid),
-                None,
+                &Where::session(&sid),
                 source,
                 format!("{who} needs your approval"),
                 what,
@@ -974,9 +1139,9 @@ impl Feed {
 
     // ───────────────────────── the poll ─────────────────────────
 
-    /// The live sessions of one profile's link. Returns the turns that ended in a session the host's link does not run and
-    /// that is not a room's or a kanban worker's (those are told from the room's log and the board): the service reads their
-    /// words and makes the notification.
+    /// The live sessions of one profile's link. Returns the turns that ended in a session of another program (`other`):
+    /// the service reads their words and makes the notification. A room's turn is told from the room's log, a kanban
+    /// worker's from the board, and a scheduled run from the engine's own cron list (B42), so none of those is returned.
     pub fn on_poll(
         &self,
         profile: &str,
@@ -1018,13 +1183,14 @@ impl Feed {
                 .presence
                 .on_poll(profile, rows, &|s| inbox_waits.iter().any(|w| w == s), now);
         self.publish(&mut inner, changed);
+        self.apply_pending(&mut inner, profile, rows, now);
         let mut finished = Vec::new();
         for r in rows {
             let was = previous.get(&r.session_id).copied();
             let now_state = inner.presence.session_state(profile, &r.session_id);
             let ended =
                 was.is_some_and(State::busy) && matches!(now_state, Some(State::Idle) | None);
-            if ended && matches!(r.source, Source::Cron | Source::Other) {
+            if ended && r.source == Source::Other {
                 finished.push(Finished {
                     profile: profile.to_owned(),
                     session_id: r.session_id.clone(),
@@ -1038,28 +1204,204 @@ impl Feed {
         finished
     }
 
+    /// What the plugin pushed from the engine's tool hooks (B45, `activity.rs`): a tool's start or end, or a turn's end, for
+    /// a session the host's own link does not run. Kept only while someone listens, for a bot of the roster. A scheduled
+    /// run's session (no poll lists one) is taken at once and stands on its pushes; any other session the table does not
+    /// hold yet waits for the poll to list it (it is asked at once), so a delegated child or a stray id never shows.
+    pub fn on_push(&self, p: &super::activity::Pushed) {
+        use super::activity::Kind;
+        if self.listeners.load(Ordering::SeqCst) == 0 {
+            return;
+        }
+        let now = now_ms();
+        let tool = Some(p.tool.trim())
+            .filter(|t| !t.is_empty())
+            .map(|t| self.clip(t));
+        // What the call touches, in the one set of safe words (B40), then scrubbed like every engine text.
+        let detail = (p.kind == Kind::ToolStart)
+            .then(|| super::toolwords::detail(tool.as_deref().unwrap_or_default(), p.args.as_ref()))
+            .flatten()
+            .map(|d| self.clip(&d));
+        let event = match p.kind {
+            Kind::ToolStart => "tool.start",
+            Kind::ToolEnd => "tool.complete",
+            Kind::TurnEnd => "message.complete",
+        };
+        let mut inner = lock(&self.inner);
+        if p.profile != "default" && !inner.roster.iter().any(|e| e.name == p.profile) {
+            return;
+        }
+        let key = (p.profile.clone(), p.session_id.clone());
+        if inner.meta.get(&key).is_some_and(|m| m.linked) {
+            return;
+        }
+        if let Some(job) = &p.cron {
+            if inner.cron_runs.len() >= 128 {
+                inner.cron_runs.clear();
+            }
+            inner
+                .cron_runs
+                .insert((p.profile.clone(), job.clone()), p.session_id.clone());
+            if inner.meta.len() >= 512 {
+                inner.meta.clear();
+            }
+            inner
+                .meta
+                .entry(key.clone())
+                .or_default()
+                .source
+                .get_or_insert(Source::Cron);
+        }
+        // the kind a session started with stands (B25): what the table holds, then what the feed was told
+        let source = inner
+            .presence
+            .source_of(&p.profile, &p.session_id)
+            .or_else(|| inner.meta.get(&key).and_then(|m| m.source))
+            .unwrap_or(if is_cron_id(&p.session_id) {
+                Source::Cron
+            } else {
+                Source::Other
+            });
+        let call = Some(p.call.as_str()).filter(|c| !c.is_empty());
+        if source != Source::Cron && !inner.presence.knows(&p.profile, &p.session_id) {
+            let grace = i64::try_from(self.limits.push_pending.as_millis()).unwrap_or(i64::MAX);
+            inner.pending.retain(|_, w| now - w.at <= grace);
+            if inner.pending.len() >= 64 {
+                inner.pending.clear();
+            }
+            inner.pending.insert(
+                key,
+                PendingPush {
+                    event,
+                    tool,
+                    detail,
+                    call: call.map(str::to_owned),
+                    failed: p.failed,
+                    at: now,
+                },
+            );
+            self.poke.store(true, Ordering::SeqCst);
+            return;
+        }
+        let facts = Facts {
+            tool: tool.as_deref(),
+            detail: detail.as_deref(),
+            call,
+            failed: p.failed,
+            progress: None,
+        };
+        let alive = (source == Source::Cron).then(|| {
+            now.saturating_add(i64::try_from(self.limits.push_hold.as_millis()).unwrap_or(i64::MAX))
+        });
+        let changed =
+            inner
+                .presence
+                .on_push(&p.profile, &p.session_id, event, &facts, source, alive, now);
+        self.publish(&mut inner, changed);
+    }
+
+    /// The pushes that waited for the poll to list their session: applied to a session it lists busy, while fresh.
+    fn apply_pending(&self, inner: &mut Inner, profile: &str, rows: &[Live], now: i64) {
+        let grace = i64::try_from(self.limits.push_pending.as_millis()).unwrap_or(i64::MAX);
+        for r in rows {
+            let Some(w) = inner
+                .pending
+                .remove(&(profile.to_owned(), r.session_id.clone()))
+            else {
+                continue;
+            };
+            if now - w.at > grace || r.status == super::presence::Status::Idle {
+                continue;
+            }
+            let facts = Facts {
+                tool: w.tool.as_deref(),
+                detail: w.detail.as_deref(),
+                call: w.call.as_deref(),
+                failed: w.failed,
+                progress: None,
+            };
+            let changed = inner.presence.on_push(
+                profile,
+                &r.session_id,
+                w.event,
+                &facts,
+                r.source,
+                None,
+                now,
+            );
+            self.publish(inner, changed);
+        }
+    }
+
+    /// A scheduled job's run ended, as its cron list says (B42): the session the plugin pushed for it, if any, shows as done
+    /// (or failed) when its own end never came, and its id is handed back (the run's session, when the list names none).
+    pub fn cron_run_ended(&self, profile: &str, job: &str, failed: bool) -> Option<String> {
+        let mut inner = lock(&self.inner);
+        let sid = inner
+            .cron_runs
+            .remove(&(profile.to_owned(), job.to_owned()))?;
+        let changed = inner.presence.end_push(profile, &sid, failed, now_ms());
+        self.publish(&mut inner, changed);
+        Some(sid)
+    }
+
     /// A finished turn's notification, with the words its session ended on (`body`; empty when none could be read). A
-    /// scheduled run is news even without words; a reply with none is not sent (B22).
+    /// reply with no words is not sent (B22).
     pub fn notify_finished(&self, done: &Finished, body: &str) {
         let mut inner = lock(&self.inner);
         let who = Self::display(&inner, &done.profile);
         let body = self.clip(body);
-        let (kind, title) = match done.source {
-            Source::Cron => (NoteKind::Cron, format!("{who}'s scheduled run finished")),
-            _ if body.trim().is_empty() => return,
-            _ => (NoteKind::Reply, format!("{who} finished a turn")),
+        if body.trim().is_empty() {
+            return;
+        }
+        self.notify(
+            &mut inner,
+            NoteKind::Reply,
+            &done.profile,
+            &Where::session(&done.session_id),
+            done.source,
+            format!("{who} finished a turn"),
+            body,
+            false,
+        );
+    }
+
+    /// A scheduled run finished (B42): the engine's cron list saw the job's last run move. The title says the job and how
+    /// it ended, the body is the words the run ended on (else, for a failure, the engine's own redacted error; else
+    /// nothing), and `next_run_at` when the job runs next. `session_id` is the run's stored session when it was found.
+    pub fn notify_cron(&self, run: &super::cron::Finished) {
+        let mut inner = lock(&self.inner);
+        let who = Self::display(&inner, &run.profile);
+        let ended = match run.status.as_str() {
+            "error" => "failed",
+            "cancelled" => "was stopped",
+            "delivery_failed" => "finished, but its delivery failed",
+            _ => "finished",
+        };
+        let title = format!("{who}'s scheduled run \u{201c}{}\u{201d} {ended}", run.name);
+        let body = self.clip(&run.body);
+        let at = Where {
+            session_id: run.session_id.as_deref(),
+            job: Some(&run.job_id),
+            next_run_at: run.next_run_at,
+            ..Where::default()
         };
         self.notify(
             &mut inner,
-            kind,
-            &done.profile,
-            Some(&done.session_id),
-            None,
-            done.source,
+            NoteKind::Cron,
+            &run.profile,
+            &at,
+            Source::Cron,
             title,
             body,
             false,
         );
+    }
+
+    /// The name a person reads for a bot: its display name, else the profile name.
+    #[must_use]
+    pub fn display_name(&self, profile: &str) -> String {
+        Self::display(&lock(&self.inner), profile)
     }
 
     /// A kanban task the bot was running finished: the engine's own summary of it is the body.
@@ -1070,8 +1412,7 @@ impl Feed {
             &mut inner,
             NoteKind::Task,
             profile,
-            Some(session_id),
-            None,
+            &Where::session(session_id),
             Source::Kanban,
             title,
             body,
@@ -1114,17 +1455,13 @@ impl Feed {
         };
         if let Some((kind, p, title, urgent)) = note {
             let body = self.clip(&line.text);
-            self.notify(
-                &mut inner,
-                kind,
-                p,
-                None,
-                Some(room_id),
-                Source::Room,
-                title,
-                body,
-                urgent,
-            );
+            let at = Where {
+                room_id: Some(room_id),
+                seq: Some(line.seq),
+                message_id: Some(line.id.as_str()),
+                ..Where::default()
+            };
+            self.notify(&mut inner, kind, p, &at, Source::Room, title, body, urgent);
         }
         self.emit(
             &mut inner,
@@ -1224,6 +1561,17 @@ impl Feed {
         for row in inner.inbox.sweep(now) {
             self.emit(&mut inner, Event::Approvals(row));
         }
+        self.flush_growing(&mut inner, now);
+    }
+
+    /// Send again every reply that grew and was not sent for the pace (B46: the service does this at the fastest pace a
+    /// follower asked for, so the words of a reply whose deltas stopped do not wait for the next one).
+    pub fn flush_replies(&self) {
+        let mut inner = lock(&self.inner);
+        self.flush_growing(&mut inner, now_ms());
+    }
+
+    fn flush_growing(&self, inner: &mut Inner, now: i64) {
         let growing: Vec<(String, String)> = inner
             .replies
             .iter()
@@ -1231,7 +1579,7 @@ impl Feed {
             .map(|(k, _)| k.clone())
             .collect();
         for (profile, sid) in growing {
-            self.flush_reply(&mut inner, &profile, &sid, now);
+            self.flush_reply(inner, &profile, &sid, now);
         }
     }
 
@@ -1420,6 +1768,219 @@ mod tests {
         let ids: Vec<u64> = events.iter().map(|e| e.id).collect();
         assert!(ids.windows(2).all(|w| w[1] == w[0] + 1), "{ids:?}");
         assert!(events.iter().any(|e| matches!(&e.event, Event::Notification(n) if n.kind == NoteKind::Reply && n.body == "hello")));
+    }
+
+    #[tokio::test]
+    async fn a_tool_start_says_what_it_touches_in_safe_scrubbed_words() {
+        // B40: the engine's tool.start carries the call's full arguments; only the touched thing leaves, scrubbed
+        let (f, _d) = feed();
+        let kai = |f: &Feed| {
+            f.presence()
+                .into_iter()
+                .find(|p| p.profile == "kai")
+                .unwrap()
+        };
+        f.on_frame(
+            "kai",
+            &frame(
+                "tool.start",
+                "s1",
+                Some(json!({"name": "terminal", "args": {"command": "API_KEY=sk-proj-abc123456789xyz cargo test --all"}})),
+                None,
+            ),
+        );
+        assert_eq!(
+            kai(&f).detail.as_deref(),
+            Some("Run a command · cargo test")
+        );
+        f.on_frame(
+            "kai",
+            &frame(
+                "tool.start",
+                "s1",
+                Some(json!({"name": "read_file", "args": {"path": "/x/ghp_ABCDEFGHIJKLMNOPQRSTUV0123456789/secret.txt"}})),
+                None,
+            ),
+        );
+        let d = kai(&f).detail.unwrap();
+        assert!(!d.contains("ghp_") && d.ends_with("/secret.txt"), "{d}");
+        f.on_frame("kai", &frame("tool.complete", "s1", None, None));
+        assert_eq!(kai(&f).detail, None);
+    }
+
+    #[tokio::test]
+    async fn a_tool_that_reports_its_progress_shows_how_far_in_its_own_scrubbed_words() {
+        // B44: the engine relays an MCP server's progress as tool.progress; nothing else makes progress
+        let (f, _d) = feed();
+        let kai = |f: &Feed| {
+            f.presence()
+                .into_iter()
+                .find(|p| p.profile == "kai")
+                .unwrap()
+        };
+        f.on_frame(
+            "kai",
+            &frame("tool.start", "s1", Some(json!({"name": "render"})), None),
+        );
+        assert_eq!(kai(&f).progress, None);
+        f.on_frame(
+            "kai",
+            &frame(
+                "tool.progress",
+                "s1",
+                Some(json!({"tool_id": "c1", "name": "render", "progress": 2.0, "total": 3.0, "percent": 67, "message": "Rendering French token=abcdef0123456789zz"})),
+                None,
+            ),
+        );
+        let p = kai(&f).progress.unwrap();
+        assert_eq!((p.fraction, p.step, p.of), (Some(0.67), 2.0, Some(3.0)));
+        let label = p.label.unwrap();
+        assert!(
+            label.starts_with("Rendering French") && !label.contains("abcdef0123456789zz"),
+            "{label}"
+        );
+        f.on_frame(
+            "kai",
+            &frame(
+                "tool.progress",
+                "s1",
+                Some(json!({"name": "render", "progress": 5.0, "total": null, "percent": null, "message": null})),
+                None,
+            ),
+        );
+        let p = kai(&f).progress.unwrap();
+        assert_eq!(
+            (p.fraction, p.step, p.of, p.label),
+            (None, 5.0, None, None),
+            "no total: no fraction is made up"
+        );
+        f.on_frame("kai", &frame("tool.complete", "s1", None, None));
+        assert_eq!(kai(&f).progress, None);
+    }
+
+    fn push(kind: &str, profile: &str, sid: &str, extra: &Value) -> super::super::activity::Pushed {
+        let mut v = json!({"v": 1, "kind": kind, "profile": profile, "session_id": sid, "tool": "read_file", "call": "c1"});
+        for (k, x) in extra.as_object().unwrap() {
+            v[k] = x.clone();
+        }
+        super::super::activity::parse(v.to_string().as_bytes()).unwrap()
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)] // one story, every source in turn
+    async fn the_plugins_pushes_move_presence_for_turns_the_hosts_links_never_see() {
+        // B45
+        use crate::local_api::presence::Status::Working;
+        let (f, _d) = feed();
+        let kai = |f: &Feed| {
+            f.presence()
+                .into_iter()
+                .find(|p| p.profile == "kai")
+                .unwrap()
+        };
+        let path = json!({"args": {"path": "/x/ghp_ABCDEFGHIJKLMNOPQRSTUV0123456789/secret.txt"}});
+        f.on_push(&push("tool.start", "kai", "r1", &path));
+        assert_eq!(
+            kai(&f).state,
+            State::Idle,
+            "nobody listens: nothing is kept"
+        );
+        let _reader = f.consumer();
+        let room = Live {
+            session_id: "r1".into(),
+            status: Working,
+            source: Source::Room,
+            summary: None,
+        };
+        f.on_poll("kai", std::slice::from_ref(&room), &HashMap::new());
+        f.on_push(&push("tool.start", "kai", "r1", &path));
+        let p = kai(&f);
+        assert_eq!(
+            (p.state, p.activity.as_str(), p.source),
+            (State::Working, "read_file", Some(Source::Room))
+        );
+        let d = p.detail.unwrap();
+        assert!(
+            !d.contains("ghp_") && d.ends_with("/secret.txt"),
+            "the one set of words, scrubbed: {d}"
+        );
+        assert_eq!(p.steps, None, "a push counts no steps");
+        f.on_push(&push("tool.end", "kai", "r1", &json!({})));
+        assert_eq!(kai(&f).state, State::Thinking);
+        f.on_push(&push("turn.end", "kai", "r1", &json!({"tool": ""})));
+        assert_eq!(kai(&f).state, State::Done);
+        // a session the poll has not listed waits for it; then the push stands
+        f.on_push(&push(
+            "tool.start",
+            "kai",
+            "r2",
+            &json!({"tool": "terminal", "args": {"command": "cargo test"}}),
+        ));
+        assert!(f.take_poke(), "the poll is asked to list it");
+        assert_ne!(
+            kai(&f).activity,
+            "terminal",
+            "not shown before the poll lists it"
+        );
+        let r1_done = Live {
+            status: crate::local_api::presence::Status::Idle,
+            ..room.clone()
+        };
+        let r2 = Live {
+            session_id: "r2".into(),
+            ..room.clone()
+        };
+        f.on_poll("kai", &[r1_done, r2], &HashMap::new());
+        let p = kai(&f);
+        assert_eq!(
+            (p.detail.as_deref(), p.source),
+            (Some("Run a command · cargo test"), Some(Source::Room)),
+            "the poll's kind stands"
+        );
+        f.on_push(&push("turn.end", "kai", "r2", &json!({"tool": ""})));
+        // a scheduled run no poll lists stands on its pushes
+        f.on_push(&push(
+            "tool.start",
+            "kai",
+            "local-9f",
+            &json!({"cron": "a1b2c3"}),
+        ));
+        let p = kai(&f);
+        assert_eq!((p.state, p.source), (State::Working, Some(Source::Cron)));
+        f.on_poll("kai", &[], &HashMap::new());
+        assert_eq!(
+            kai(&f).source,
+            Some(Source::Cron),
+            "no poll lists it, and it stands"
+        );
+        assert_eq!(
+            f.cron_run_ended("kai", "a1b2c3", false).as_deref(),
+            Some("local-9f")
+        );
+        assert_eq!(
+            kai(&f).state,
+            State::Done,
+            "its run is over, as the cron list says"
+        );
+        assert_eq!(
+            f.cron_run_ended("kai", "a1b2c3", false),
+            None,
+            "handed back once"
+        );
+        // the host's own link says it finer; a bot not on the roster says nothing
+        f.on_frame("kai", &frame("message.start", "s1", None, None));
+        f.on_push(&push(
+            "tool.start",
+            "kai",
+            "s1",
+            &json!({"tool": "web_fetch"}),
+        ));
+        f.on_push(&push("tool.start", "stranger", "x1", &json!({"cron": "j"})));
+        assert!(
+            f.presence()
+                .iter()
+                .all(|p| p.activity != "web_fetch" && p.profile != "stranger")
+        );
     }
 
     #[tokio::test]
@@ -1649,7 +2210,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_cron_run_that_finishes_is_a_notification_and_a_turn_in_the_app_is_not() {
+    async fn only_another_programs_finished_turn_is_handed_on_by_the_poll() {
         use crate::local_api::presence::Status::{Idle, Working};
         let (f, _d) = feed();
         let mut rx = f.subscribe(None).rx;
@@ -1683,12 +2244,10 @@ mod tests {
                 .iter()
                 .map(|d| d.session_id.as_str())
                 .collect::<Vec<_>>(),
-            ["c1", "o1"],
-            "the app's own turn is told on its link; a cron run and another program's are handed to the service"
+            ["o1"],
+            "the app's own turn is told on its link and a scheduled run from the cron list (B42)"
         );
-        for done in &finished {
-            f.notify_finished(done, "");
-        }
+        f.notify_finished(&finished[0], "");
         let notes: Vec<Notification> = drain(&mut rx)
             .iter()
             .filter_map(|e| match &e.event {
@@ -1696,16 +2255,31 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(
-            notes.len(),
-            1,
+        assert!(
+            notes.is_empty(),
             "B22: a reply with no words is not sent: {notes:?}"
         );
+    }
+
+    #[test]
+    fn a_session_the_scheduler_named_is_a_scheduled_runs() {
+        let (f, _d) = feed();
+        assert!(is_cron_id("cron_a1b2c3d4e5f6_20261123_030000"));
+        assert!(is_cron_id("cron_job-1_20261123_030000"));
+        for not in [
+            "cron_20261123_030000",
+            "cron_x_2026_030000",
+            "20261123_030000_ab12cd",
+            "cronjob",
+        ] {
+            assert!(!is_cron_id(not), "{not}");
+        }
         assert_eq!(
-            (notes[0].kind, notes[0].source),
-            (NoteKind::Cron, Source::Cron)
+            f.resolve_source("kai", "live-1", "cron_j1_20261123_030000", "", ""),
+            Source::Cron,
+            "by its stored id"
         );
-        assert_eq!(notes[0].session_id.as_deref(), Some("c1"));
+        assert_eq!(f.resolve_source("kai", "live-2", "", "", ""), Source::Other);
     }
 
     #[tokio::test]
@@ -1848,6 +2422,26 @@ mod tests {
             first[0].0,
             "the next reply is another message"
         );
+    }
+
+    #[tokio::test]
+    async fn replies_are_sent_again_at_the_fastest_pace_any_follower_asked_for() {
+        // B46
+        let (f, _d) = feed();
+        let ms = std::time::Duration::from_millis;
+        assert_eq!(f.stream_every(), ms(250), "nobody asked: the default");
+        let slow = f.follower_at(ms(1000));
+        assert_eq!(f.stream_every(), ms(1000));
+        let fast = f.follower_at(ms(50));
+        let also = f.follower_at(ms(50));
+        assert_eq!(f.stream_every(), ms(50));
+        drop(fast);
+        assert_eq!(f.stream_every(), ms(50), "one still asks for 50");
+        drop(also);
+        assert_eq!(f.stream_every(), ms(1000));
+        assert_eq!(*f.text_wanted().borrow(), 1);
+        drop(slow);
+        assert_eq!((f.stream_every(), *f.text_wanted().borrow()), (ms(250), 0));
     }
 
     #[tokio::test]

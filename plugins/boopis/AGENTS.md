@@ -8,6 +8,7 @@ The boopis Hermes plugin (Python, stdlib only at runtime). It adds governance, a
 | `plugin.yaml` | manifest v2. `provides_*` list only what `register` really registers (a test checks it) |
 | `__init__.py` | thin `register(ctx)`: lazy wrappers only, so import stays far under 150 ms |
 | `hooks.py` | the Hermes hook callbacks. Policy hooks fail closed, observers never raise |
+| `activity.py` | tells the desktop host what a bot is doing (B45): after `pre_tool_call`, `post_tool_call` and `on_session_end` (wrapped in `__init__._observed`, one callback per hook), one non-blocking Unix datagram to the socket named in `<root home>/boopis/activity.json`; only the arguments `data/tool-args.json` lists, cut. Never raises, never waits, writes nothing; a blocked call is never told (docs/LOCAL-API.md) |
 | `session.py` | `Runtime` and `SessionState`: the lock at first prompt, `session.opened`, spend |
 | `compat/` | Claude Code files and hooks on Hermes (readers, merge, trust, hooks bridge, inventory RPC). Area guide: `compat/AGENTS.md` |
 | `exec/` | the `exec` tool: `kernel_main.py` and `kernel_harness.py` run **inside the hx sandbox** (stdlib only, never import the plugin); `launcher.py` (`sandbox.spawn` + channel), `kernel.py` (one process), `calls.py` (policy, dispatch and ledger for every kernel call), `registry.py` (LRU, idle reaper), `run.py` (the tool), `blanks.py` (blanks, forms stub) |

@@ -62,6 +62,15 @@ fn engine() -> (Arc<Scripted>, Store) {
                 json!({"session_id": params["session_id"], "rows": page, "next_cursor": null, "reset": false}),
             )
         }
+        // nina has a conversation to retry (B43); kai's list cannot be read, so kai has none
+        "session.list" if profile == "nina" => {
+            Ok(json!({"sessions": [{"id": "stored-n", "source": "gui"}]}))
+        }
+        "session.resume" => Ok(json!({"session_id": "live-n", "running": false})),
+        "command.dispatch" => {
+            assert_eq!(params["name"], "retry");
+            Ok(json!({"type": "send", "message": "again, please"}))
+        }
         "groups.send" => Ok(json!({"accepted": true})),
         "groups.log" => Ok(json!({"events": [
             {"seq": 1, "event_id": "e1", "kind": "message.user", "payload": {"thread_id": "main", "text": "go"}, "created_at": 1000.0},
@@ -755,6 +764,7 @@ fn the_token_file_is_private_and_the_endpoint_file_names_the_address() {
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)] // one client, run end to end, call after call
 async fn the_reference_client_reads_the_roster_follows_events_and_answers_an_approval() {
     use std::process::Stdio;
     use tokio::io::AsyncBufReadExt;
@@ -808,6 +818,27 @@ async fn the_reference_client_reads_the_roster_follows_events_and_answers_an_app
         !String::from_utf8_lossy(&out.stdout).contains(TOKEN)
             && !String::from_utf8_lossy(&out.stderr).contains(TOKEN)
     );
+    // the notifications kept (B42: a scheduled run's carries its words and when it runs next)
+    let out = base(&["notifications", "--limit", "5"])
+        .output()
+        .await
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert!(v["notifications"].is_array(), "{v}");
+    // a retry of nina's last turn (B43)
+    let out = base(&["retry", "nina"]).output().await.unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["retried"]["session_id"], "stored-n", "{v}");
     // a refusal is a sentence and exit code 1
     let bad = base(&["answer", "nope", "once"]).output().await.unwrap();
     assert_eq!(bad.status.code(), Some(1));
@@ -1388,4 +1419,118 @@ async fn a_rooms_log_and_its_stop_and_a_bots_stop_are_served_behind_the_same_che
         (status, json_of(&body)["error"]["code"].as_str()),
         (400, Some("room_without_rooms"))
     );
+}
+
+#[tokio::test]
+async fn a_retry_is_served_behind_the_same_checks_and_refused_in_words() {
+    // B43
+    let r = rig().await;
+    let (status, _, body) = raw(r.server.addr(), &post(&r, "/v1/bots/nina/retry", "{}", "")).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(json_of(&body)["retried"]["session_id"], "stored-n");
+    assert_eq!(r.scripted.of("prompt.submit")[0].1["text"], "again, please");
+    for (path, body, status, code) in [
+        ("/v1/bots/kai/retry", "{}", 404, "no_conversation"),
+        (
+            "/v1/bots/nina/retry",
+            r#"{"session": "new"}"#,
+            400,
+            "bad_session",
+        ),
+        ("/v1/bots/nina/retry", r#"{"session": 5}"#, 400, "bad_json"),
+        ("/v1/bots/nobody/retry", "{}", 404, "no_such_bot"),
+    ] {
+        let (got, _, answer) = raw(r.server.addr(), &post(&r, path, body, "")).await;
+        assert_eq!(
+            (got, json_of(&answer)["error"]["code"].as_str()),
+            (status, Some(code)),
+            "{path} {body}"
+        );
+    }
+    let (status, _, _) = raw(r.server.addr(), &get(&r, "/v1/bots/nina/retry", "")).await;
+    assert_eq!(status, 405);
+    let no_token = format!(
+        "POST /v1/bots/nina/retry HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{{}}",
+        r.server.addr().port()
+    );
+    let (status, _, _) = raw(r.server.addr(), &no_token).await;
+    assert_eq!(status, 401);
+    assert_eq!(
+        r.scripted.of("command.dispatch").len(),
+        1,
+        "nothing refused reached the engine's retry"
+    );
+}
+
+#[tokio::test]
+async fn each_stream_gets_a_growing_reply_at_its_own_pace_and_the_words_never_stall() {
+    // B46: one stream asks for 50 ms, one for a second; the feed sends at the fastest and each stream thins to its own
+    use crate::gateway::{Direction, FeedFrame};
+    let r = rig().await;
+    let cancel = tokio_util::sync::CancellationToken::new();
+    tokio::spawn(r.service.clone().run_flush(cancel.clone()));
+    let mut fast = follow(&r, "?conversations=1&stream_ms=50").await;
+    let mut slow = follow(&r, "?conversations=1&stream_ms=1000").await;
+    assert_eq!(r.service.feed().stream_every(), Duration::from_millis(50));
+    let frame = |name: &str, payload: Option<Value>| FeedFrame {
+        direction: Direction::In,
+        name: name.into(),
+        session_id: Some("live-7".into()),
+        generation: None,
+        payload,
+    };
+    let feed = r.service.feed();
+    feed.on_frame("kai", &frame("message.start", None));
+    let mut whole = String::new();
+    for i in 0..20 {
+        let piece = format!("w{i} ");
+        whole.push_str(&piece);
+        feed.on_frame("kai", &frame("message.delta", Some(json!({"text": piece}))));
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    // the deltas stop; the last words still arrive on each stream's own time
+    let last = whole.trim_end().to_owned();
+    let got_fast = read_stream(&mut fast, &last, Duration::from_secs(2)).await;
+    let got_slow = read_stream(&mut slow, &last, Duration::from_secs(3)).await;
+    let streaming = |text: &str| text.matches("\"state\":\"streaming\"").count();
+    assert!(
+        got_slow.contains(&last),
+        "a held update is sent when its time comes: {got_slow}"
+    );
+    assert!(
+        streaming(&got_fast) >= streaming(&got_slow) + 3,
+        "fast {} slow {}",
+        streaming(&got_fast),
+        streaming(&got_slow)
+    );
+    assert!(streaming(&got_slow) <= 3, "{got_slow}");
+    feed.on_frame(
+        "kai",
+        &frame(
+            "message.complete",
+            Some(json!({"text": whole, "outcome": "completed"})),
+        ),
+    );
+    for s in [&mut fast, &mut slow] {
+        let done = read_stream(s, "\"state\":\"done\"", Duration::from_secs(2)).await;
+        assert!(
+            done.contains("\"state\":\"done\""),
+            "a finished message is sent at once: {done}"
+        );
+    }
+    for (query, code) in [
+        ("?conversations=1&stream_ms=10", "bad_stream_ms"),
+        ("?conversations=1&stream_ms=5000", "bad_stream_ms"),
+        ("?conversations=1&stream_ms=fast", "bad_stream_ms"),
+        ("?stream_ms=100", "stream_ms_without_conversations"),
+    ] {
+        let (status, _, body) =
+            raw(r.server.addr(), &get(&r, &format!("/v1/events{query}"), "")).await;
+        assert_eq!(
+            (status, json_of(&body)["error"]["code"].as_str()),
+            (400, Some(code)),
+            "{query}"
+        );
+    }
+    cancel.cancel();
 }

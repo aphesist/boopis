@@ -7,6 +7,7 @@ section 6). The real modules load on first use, and contraprova with the first l
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Callable
 from importlib import import_module
 from pathlib import Path
@@ -84,6 +85,25 @@ def _lazy(module: str, name: str) -> Callable[..., Any]:
     return call
 
 
+def _observed(hook: str) -> Callable[..., Any]:
+    """The hook's callback, and for the hooks ``activity`` watches (a tool's start and end, a turn's end) the same
+    callback followed by telling the desktop host what it saw (B45). One callback, so the engine runs no second worker
+    thread for it; the policy's own answer comes first and is returned untouched, and a blocked call is never told as
+    started. Telling never raises and never blocks (``activity.observe``)."""
+    real = _lazy("hooks", hook)
+    if hook not in ("pre_tool_call", "post_tool_call", "on_session_end"):
+        return real
+
+    def call(*args: Any, **kwargs: Any) -> Any:
+        result = real(*args, **kwargs)
+        with contextlib.suppress(Exception):  # an observer never touches the turn
+            import_module(f"{__name__}.activity").observe(hook, kwargs, result)
+        return result
+
+    call.__name__ = hook
+    return call
+
+
 def _rpc(method: str) -> Callable[..., Any]:
     def call(params: dict[str, Any], **kwargs: Any) -> Any:
         handlers = import_module(f"{__name__}.rpc").handlers()
@@ -135,7 +155,7 @@ def register(ctx: Any) -> None:
         )
 
     for hook in HOOKS:
-        ctx.register_hook(hook, _lazy("hooks", hook))
+        ctx.register_hook(hook, _observed(hook))
     for method in RPC_METHODS:
         ctx.register_rpc(method, _rpc(method))
     ctx.register_system_prompt_section("boopis", _lazy("hooks", "system_prompt_section"))
