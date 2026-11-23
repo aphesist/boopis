@@ -73,7 +73,7 @@ frame.
 `DESIGN-SYSTEM.md` §23 points here. At rest, the dock, the Bots sidebar, the rail and the 44 px main bot hold every bot
 in this one pose.
 
-**DECIDED (owner, 23 November): K08 B as the rest pose, drawn by orb3 (3.0.0 published; 3.0.1, rest-only home and the state table, on branch `orb3.0.1`, not pushed).**
+**DECIDED (owner, 23 November): K08 B as the rest pose, drawn by orb3 (3.0.0 published; 3.0.1 and 3.0.2, rest-only home, the state table and bolder eyes, on branch `orb3.0.1`, not pushed).**
 - **Library:** orb3 is published on aphesist/orb2 `main` (commit `265777c`, a fast-forward from `03d9094`).
 - **The pose:** `home="38 22 -24"`, with K07's big upright pills painted on the face.
 - **Every bot, on every surface,** carries that home orientation. Idle, hover and states depart from it and return to
@@ -110,22 +110,39 @@ Every surface (dock, sidebar, rail, chat) uses the same states, identically. The
 **Not yet changed in boopis:** the app still vendors orb2's `orb-avatar.min.js`. Swapping in orb3's build is the
 integration step.
 
-**The decided build, checked** (orb3 3.0.1 `orb-avatar.min.js`: home at rest, every state on the alive-idle engine):
+**Bigger, bolder eyes (owner, 23 November; orb3 3.0.2 on branch `orb3.0.1`, not pushed).** I measured with
+`probes/tools/inkmeas.py`, as fractions of the body's height:
+- **Grok-Bot at rest:** pills 0.27 long and 0.11 thick (its fixed-angle capture and the drop at rest).
+- **Grok-Bot in its states:** round eyes and dots up to 0.19 thick, `^ ^` arcs 0.17.
+- **Ours before:** 0.27 by 0.10 at rest; 0.12–0.16 thick in the states.
+
+**The change.** orb3 now grows every eye cell of every face outward after projection, by `EYE_BOLD`: 0.022 body radii
+times the face scale. That covers pills, the working capsules, the talking bars, dots, arcs, chevrons and grids.
+- Multi-cell eyes (bars, grids) grow by 0.45 of that, so their cells stay apart.
+- It happens before the pair, gap and margin constraints, so those apply to the bolder eyes unchanged.
+- At rest a pill is now 0.30 by 0.13.
+- In the states: working 0.15 thick, needs you 0.16, thinking 0.16, done 0.18, error 0.19.
+- It holds at every size, the 20 px gutter included.
+
+`K09-eyes-bolder.jpg` shows before and after for all 15 shapes, at rest and in five states, at 64 px and 28 px.
+
+**The decided build, checked** (orb3 3.0.2 `orb-avatar.min.js`: home at rest, every state on the alive-idle engine,
+bolder eyes). The eye check uses the per-face method (tall pills and wide capsules each against their own front-on
+width) on every clip, the states clip included:
 
 | Clip | Changed at rest | Shimmer px (today → orb3) | Lone flips px | Eye floors (width, gap, margin) | Dents |
 |---|---|---|---|---|---|
-| `anim-states-orb3-vs-grok.mp4` (20 s): one bot (nina) through every state and back, four at rest; Grok-Bot's sidebar and its working row beside it | **0** (2,317 resting orb-frames) | — → 32 | 2 | 0 below, except 4 frames at 0.53 (see the note) | 0 |
-| `anim-sidebar-before-after.mp4` (20 s) | **0** (2,366) | 201 → 6 | 22 → 1 | **0** below | 0 |
+| `anim-states-orb3-vs-grok.mp4` (20 s): nina through every state and back, four bots at rest; Grok-Bot's sidebar and its working row beside it | **0** (2,317 resting orb-frames) | — → 27 | 0 | **0** below (narrowest 0.65, smallest gap 0.63) | 0 |
+| `anim-sidebar-before-after.mp4` (20 s) | **0** (2,366) | 201 → 6 | 22 → 0 | **0** below | 0 |
 | `anim-dock-before-after.mp4` (19 s) | **0** (2,349) | 501 → 16 | 156 → 1 | **0** below | 0 |
-| `anim-room-before-after.mp4` (14 s) | (all lively) | 91 → 20 | 18 → 0 | **0** below | 0 |
+| `anim-room-before-after.mp4` (14 s) | (all lively) | 91 → 11 | 18 → 1 | 1 frame below, on iris (20 px) | 0 |
 
-- **The eye check** now takes each face class's own front-on width: tall pills, and wide capsules such as the working
-  face. The states clip's four frames at 0.53 were measured under the earlier, mixed reference.
-- **The room's "merged" frames** are iris's grid emote at 20 px, which is not a pill pair.
-- **The turns** out of rest and back (`probes/tools/trans.py`, states clip) have a largest frame-to-frame step of
-  0.5–0.8 against peaks of 2–3. The done burst at 16 s is 1.2, by design.
-- **The shimmer has risen** from 0 to 6–16 px in the sidebar and dock clips because their bots now move in their states
-  and on hover. It is single pixels.
+- **In the room,** the one frame below the floor and the 14 "merged" frames are iris's 3×3 grid emote at 20 px. Its
+  bolder dots run together at that size, and it is not a pill pair.
+- **The eye constraints are unchanged:** look limit 0.66 and 0.46 rad, slide 0.36 and 0.26, margin 0.09 of the radius,
+  gap half an eye. They act on the bolder shapes, so no clip goes below a floor with pill eyes.
+- **The turns** out of rest and back (states clip): largest frame-to-frame step 0.5–0.8 against peaks of 2–3. The hover
+  release at 4 s is 1.4 and the done burst at 16 s is 1.0.
 
 **Renders:** `K02-main-bot.jpg` and screens 11–13 are re-rendered with orb3 3.0.0 and the home pose on every bot. v7 QA
 ran every rule, including sweep and same-component: 7 pages, 0 findings.

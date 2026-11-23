@@ -729,6 +729,8 @@ from its perspective outline and its eyes.
 - **Every other state turns the bot out of it in 0.4 s and back at rest** (orb3 3.0.1). It runs on the alive-idle
   engine: it looks, turns, peeks and spins. The state sets the movement, the tempo and the face, from one shared table
   (`character/ORBS.md` §23). Chat and room bots are lively all the time.
+- **The eyes are bigger and bolder in every state** (orb3 3.0.2): a rest pill is 0.30 by 0.13 of the body's height, and
+  every state face is drawn heavier, at every size (`character/K09-eyes-bolder.jpg`).
 - **At rest it wears big upright pills painted on its face**, K07's measured placement: right of centre, a little above,
   well inside the outline.
 - **In motion the eyes never go edge-on:** each pill keeps at least 0.62 of its width, the pair never closes up, and it

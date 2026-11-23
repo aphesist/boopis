@@ -269,6 +269,7 @@ const LOOK_LIM = [.66, .46];
 const FACE_CURVE = .25;
 const LOOK_BLEND = .45;
 const HOME_TURN = .4;
+const EYE_BOLD = .022;   // orb3: how far every eye cell is grown outward (body radii x face scale): Grok-Bot's stroke weight
 /* orb3: the shared state table. Outside rest, every state runs the alive-idle engine: amp scales its movement, tempo its
    pace, lead how much the state's own motion (its scan, its sky gaze, its hop) leads over the free looking around. The face
    is always the state's own. Measured on Grok-Bot's sidebar: a working or replying bot looks around, tilts and spins; a bot
@@ -2150,6 +2151,20 @@ function projEyeSolid(a, b, localFr, M, body, faceScale) {
 /* G2: an eye group that a far turn carries past the body's outline slides back onto the visible face (it is never cut by
    the clip): every point of the group must sit inside 0.9 of the outline's radius (0.84 on a lobed body, whose valleys are near) in its own direction, and the group
    moves toward the body's centre by what the worst point overshoots (two passes). */
+/* orb3: grow a closed polygon outward by d along its vertex normals (in place); a cell foreshortened to a sliver still
+   grows evenly, so a thin far eye keeps some weight */
+function outsetPoly(q, d) {
+  const n = q.length; if (n < 3) return;
+  let a = 0; for (let i = 0, j = n - 1; i < n; j = i++) a += q[j][0] * q[i][1] - q[i][0] * q[j][1];
+  const sg = a >= 0 ? 1 : -1, src = q.map((p) => p.slice());
+  for (let i = 0; i < n; i++) {
+    const p0 = src[(i - 1 + n) % n], p1 = src[i], p2 = src[(i + 1) % n];
+    let e1x = p1[0] - p0[0], e1y = p1[1] - p0[1], e2x = p2[0] - p1[0], e2y = p2[1] - p1[1];
+    const l1 = Math.hypot(e1x, e1y) || 1, l2 = Math.hypot(e2x, e2y) || 1;
+    let nx = (e1y / l1 + e2y / l2) * sg, ny = (-e1x / l1 - e2x / l2) * sg; const nl = Math.hypot(nx, ny) || 1;
+    q[i][0] = p1[0] + nx / nl * d; q[i][1] = p1[1] + ny / nl * d;
+  }
+}
 function keepOnFace(gp, warp) {
   const B = warp.pts; if (!B || !B.length) return;
   const cx = warp.dx, cy = warp.sh, rel = warp._rel || (warp._rel = B.map((b) => [b[0] - cx, b[1] - cy]));
@@ -2223,6 +2238,11 @@ function drawFaceCells(c, localFr, M, rawFace, blinkAmt, pal, body, faceScale, w
     }
     proj.push({ grp, gp, vis });
   }
+  // orb3: bolder eyes. Every cell of every face (pills, bars, dots, arcs, chevrons, grids) is grown outward by EYE_BOLD
+  // (body radii, times the face scale) after projection, so the strokes read as heavy as Grok-Bot's in every state
+  const bold = EYE_BOLD * faceScale * warp.s;
+  // multi-cell eyes (bars, grids) grow by less, so their cells stay apart
+  if (bold > 0) for (const pr of proj) if (pr) for (const q of pr.gp) outsetPoly(q, pr.gp.length > 1 ? bold * .45 : bold);
   // orb3: the two eyes move as one pair. The pair keeps a margin inside the outline (it slides as one, toward the face
   // point), and the two never close up: their clear gap stays at least half an eye's width (eased, so it never snaps)
   const L = proj[0], R = proj[1];

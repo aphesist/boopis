@@ -1,0 +1,18 @@
+<!doctype html><html><meta charset="utf-8"><title>State faces probe</title>
+<!-- All 15 shapes in one reaction, still (the face at its first frame): ?reaction=working|speaking|needs|thinking|happy|error|
+     sleeping|compute|pose&size=64&lib=orb3min&fs=1.25. "pose" is boopis's rest pose (home and K07's pills). Red on dark, as
+     Grok-Bot's, for measuring eye size and boldness (tools/inkmeas.py --grid). -->
+<style>html,body{margin:0;background:#1f1f1f}#g{display:flex;flex-wrap:wrap;width:960px}.c{width:96px;height:96px;display:grid;place-items:center}</style>
+<body><div id="g"></div><script>
+const q = Object.fromEntries(new URLSearchParams(location.search));
+const SH = ['circle', 'squircle', 'soft', 'wide', 'tall', 'bean', 'drop', 'ghost', 'triangle', 'hexagon', 'diamond', 'cloud', 'clover', 'flower', 'star'];
+const s = document.createElement('script'); s.src = 'lib/orb-avatar.' + (q.lib || 'orb3min') + '.js';
+s.onload = () => { const A = window.OrbAvatar, g = document.getElementById('g'), size = q.size || 64, D = Math.PI / 180;
+  const P8 = A.shapes.pairEyes(['pill', { x: -.19 + .04, y: -.08, w: .18, h: .41, ang: 4 * D }], ['pill', { x: .19 + .04, y: -.08, w: .18, h: .41, ang: 4 * D }]);
+  A.defineReaction('pose', { label: 'Pose', blink: false, rest: true, face: () => (A.shapes.restFace ? A.shapes.restFace() : P8), motion: () => ({ eyaw: 0, epitch: 0, w: 1 }) });
+  const r = q.reaction || 'pose', rest = r === 'pose';
+  for (const sh of SH) { const c = document.createElement('div'); c.className = 'c';
+    c.innerHTML = `<orb-avatar size="${size}" shape="${sh}" color="#f43f5e" eye-color="#1f1f1f" reaction="${r}" idle-motion="off" mode="${rest ? 'drift' : 'fixed'}" home="38 22 -24" face-scale="${q.fs || 1.25}" jelly="0" style="width:${size}px"></orb-avatar>`; g.appendChild(c); }
+  setTimeout(() => document.body.dataset.ready = 1, 1500); };
+document.head.appendChild(s);
+</script></body></html>
