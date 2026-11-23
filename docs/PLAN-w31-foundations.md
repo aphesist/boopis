@@ -80,3 +80,13 @@ dark and light for the owner's pick before w31/rules-ui is built (Part H rules a
 - Spec questions (23 Nov): a global rule beats a per-bot Allow (exceptions are the way to let one bot skip);
   rules apply to bots only, not the owner's own sessions; answering approvals from the island and other clients
   stays on, with "Always allow" from a client saved only as a draft confirmed in the app.
+
+## Owner's design-system v7 picks (23 Nov)
+
+- 01 Geist. 02 radii B default, C as a theme option (coordinator's reading of "B and C look good").
+- 03 light shadows A, customizable per theme. 04 cut-out eyes.
+- 05 floating pills; search always reachable and toggleable; B (search pill) as a Settings option; more placements to preview.
+- 06 rail 54/88 standard; 44/64 as an option, automatic at small desktop sizes.
+- 07 mode line under the composer (C), with toggles for what shows (cost, etc.).
+- 08 status: bot = live orb + shimmer; normal session = same shimmer with an animated model logo (normal-session screen discussion next). Danger hybrid. Info C only with a hover reveal (preview first, else A). Long text: focused view.
+- 09 accent indigo, editable per theme (owner picks a hex from Iris #5b5bd6, Indigo #4f46e5, Ultramarine #3e4fd8, Violet-indigo #5e4ad9, Soft indigo #6366f1). Attention A amber: reverses red for "you", needs-you and the notch edge; red stays for failed and destructive.
