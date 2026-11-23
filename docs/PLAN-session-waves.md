@@ -185,3 +185,6 @@ Recommended: (1). It keeps every change journaled and rewindable.
   has created a bot of their own (boopis alone does not count). The owner found the dock slab inconsistent across
   boards: one component from one source everywhere + a blocking "same-component" geometry check.
 - Onboarding revision 2 batch 1: owner liked the changes.
+- Orb animation policy (owner): dock fully animated (lively, 3D turns, face variety); Bots-tab sidebar like Grok-Bot:
+  bots fixed at one sideways 3/4 angle, animating only in states (working, needs you...); main chat fully animated.
+  Keep the life: fix the turned-silhouette notch geometrically instead of clamping turns.
