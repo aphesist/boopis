@@ -162,3 +162,7 @@ Recommended: (1). It keeps every change journaled and rewindable.
   (provider logo), like a bot's orb.
 - Visual bugs found by the owner (pill escaping its track, text wrapping in a segmented control, content crossing the
   dark/light split, DiffView comment misaligned): fixed + a render QA script over every board before anything is sent.
+- S14-S16 approved. Owner rule: ONE app, one UI kit and one UI lab for everything; no redundant components between
+  tabs; consistency across the whole app overrides individual approvals. Next: a consolidation pass (one component
+  inventory, merges, LAB-v7 plan with every defect class the owner found as a blocking check), then the kit + lab
+  build wave (w31/kit-v7 + w31/lab-v7) after the w30 base merge.
