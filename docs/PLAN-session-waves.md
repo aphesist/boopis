@@ -208,3 +208,4 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - Owner: the bots must LOOK like perfect 3D, not necessarily be real-time 3D (too heavy); lightest technique (analytic projection or baked silhouettes per pose), with a per-orb performance figure.
 - Owner on K06: rotations/animations good; fixed angle wrong (eyes small, leaning, at the rim). Next: match Grok's fixed angle closely (big upright eyes right-of-centre, gentle body turn), side by side with Grok; constrain animated eyes (min width, gap, rim margin) so they never go edge-on.
 - Owner on K07: eyes good; rest pose needs a stronger Grok-like body angle (curves visible) so fixed->moving flows smoothly. Next: K08 + transition clip.
+- DECIDED (owner): orb3 fixed pose K08 B (home 38/22/-24, K07 A eyes). Owner approved publishing orb3 to aphesist/orb2 main (v3.0.0, min.js rebuilt). Then dock/sidebar/onboarding re-renders with B.
