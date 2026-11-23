@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 # Build the Hermes runtime the app ships (ADR-0023): hermes-runtime-<os>-<arch>.tar.zst plus runtime.json.
 #
-#   scripts/build-runtime.sh [--target <os>-<arch>] [--out <dir>] [--work <dir>]
+#   scripts/build-runtime.sh [--target <os>-<arch>] [--out <dir>] [--work <dir>] [--codesign <identity>]
 #
 # --target is the platform the runtime is FOR, named as the archive names it (linux-x86_64, macos-aarch64, windows-x86_64);
 # the default is this machine. windows-x86_64 is built from Linux: the interpreter and uv are Hermes's own pins for
 # win32-x64, the dependencies are the locked wheels for win_amd64 (`uv pip install --python-platform`, hashes checked), and
 # nothing of the target runs, so it needs `uv` on PATH besides the tools below. See scripts/runtime/build_payload.py.
+#
+# macOS (macos-aarch64, built on an Apple-silicon Mac): every Mach-O file of the payload (the interpreter, uv, each library
+# and Python extension) must carry a valid signature, because the host unpacks the archive and runs it from the app's data
+# folder. --codesign <identity> signs each one with that Developer ID identity, the hardened runtime, a secure timestamp and,
+# on executables, packaging/macos/runtime.entitlements (scripts/macos-codesign.sh), then has Hermes's own `rehash` record the
+# tools' digests again over the signed bytes, which its package manager checks. Without --codesign nothing is changed and
+# every signature the files were built with is checked; the build fails on one that would not load.
 #
 # Inputs (environment):
 #   HERMES_TAG        the Hermes release to bundle (default v0.23.2; the pin of REQUIRES_HERMES)
@@ -49,11 +56,13 @@ BOOT_PYTHON="${BOOT_PYTHON:-python3}"
 OUT="$ROOT/dist/runtime"
 WORK=""
 WANT=""
+CODESIGN=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --target) WANT="$2"; shift 2 ;;
     --out) OUT="$2"; shift 2 ;;
     --work) WORK="$2"; shift 2 ;;
+    --codesign) CODESIGN="$2"; shift 2 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -87,6 +96,7 @@ if [ -n "$WANT" ]; then
     *) echo "cannot build $WANT on $OS-$ARCH (supported: this machine's own, and windows-x86_64 from Linux)" >&2; exit 1 ;;
   esac
 fi
+[ -z "$CODESIGN" ] || [ "$OS" = macos ] || { echo "--codesign signs a macOS runtime, on a Mac" >&2; exit 1; }
 
 if [ -z "$WORK" ]; then WORK="$(mktemp -d)"; CLEAN_WORK=1; else mkdir -p "$WORK"; CLEAN_WORK=0; fi
 WORK="$(cd "$WORK" && pwd)"
@@ -151,7 +161,9 @@ bundle_plugin() {  # <catalog name>
     [ -f "$pkg/__init__.py" ] || continue
     case "$name" in tests|evals|__pycache__) continue ;; esac
     mkdir -p "$dest/$name"
-    (cd "$pkg" && find . -type f -name '*.py' ! -path '*/tests/*' ! -path '*/__pycache__/*' -exec cp --parents {} "$dest/$name/" \;)
+    # through tar, which keeps the relative paths on every system (BSD cp has no --parents)
+    (cd "$pkg" && find . -type f -name '*.py' ! -path '*/tests/*' ! -path '*/__pycache__/*' -print0 | "$TAR" --null -T - -cf -) \
+      | "$TAR" -C "$dest/$name" -xf -
   done
   PLUGINS_JSON="$("$BOOT_PYTHON" -c 'import json,sys; l=json.loads(sys.argv[1]); l.append(dict(zip(["name","catalog","version","repo","sha","licence"],sys.argv[2:]))); print(json.dumps(l))' \
     "$PLUGINS_JSON" "$manifest_name" "$1" "$version" "$repo" "$sha" "MIT")"
@@ -160,6 +172,20 @@ bundle_plugin() {  # <catalog name>
 bundle_plugin claude-subscription-directsdk
 bundle_plugin github-copilot
 bundle_plugin grok-acp  # community tier (nicolasdmolina/hermes-grok-acp): the catalog pins the commit, boopis only carries it (ADR-0039)
+
+# 2c. macOS: the payload's Mach-O files are signed (--codesign) or their signatures checked (see the header). Signing changes
+#     the bytes of the tools Hermes records digests of, so its own `rehash` records them again (scripts/bundles/payload.py).
+if [ "$OS" = macos ]; then
+  if [ -n "$CODESIGN" ]; then
+    "$ROOT/scripts/macos-codesign.sh" --identity "$CODESIGN" --entitlements "$ROOT/packaging/macos/runtime.entitlements" "$PAYLOAD"
+    mkdir -p "$WORK/home"
+    (cd "$SRC" && env -i PATH="$PATH" LANG=C.UTF-8 HOME="$WORK/home" HERMES_HOME="$WORK/home/.hermes" PYTHONPATH="$SRC" \
+      "$BOOT_PYTHON" -B -m scripts.bundles.payload rehash "$PAYLOAD")
+    rm -rf "${WORK:?}/home"
+  else
+    "$ROOT/scripts/macos-codesign.sh" --verify "$PAYLOAD"
+  fi
+fi
 
 # 3. what the manifest says: the launcher and interpreter paths inside the archive, the interpreter's build
 read -r HERMES_CMD PY_REL PY_VERSION TARGET < <("$BOOT_PYTHON" - "$PAYLOAD/manifest.json" <<'PY'
