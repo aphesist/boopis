@@ -82,6 +82,16 @@ describe('a stack drawn as a cluster', () => {
     expect(places(none)).toEqual(['+3 0px,0px']);
     expect(cluster(0).hidden).toBe(true);
   });
+  it('keeps "+N" at its place\'s outer corner, and widens its chip by the count of digits, never by their glyphs', () => {
+    const more = (c: HTMLElement): string[] => { const m = c.querySelector('.ui-stack__more')!; return ['data-h', 'data-v', 'data-digits'].map((a) => m.getAttribute(a) ?? '-'); };
+    expect(more(cluster(5))).toEqual(['start', 'end', '-']);
+    expect(more(cluster(1, { extra: 2 }))).toEqual(['end', 'end', '-']);
+    expect(more(cluster(0, { extra: 3 }))).toEqual(['center', 'center', '-']);
+    expect(more(cluster(3, { extra: 12 }))).toEqual(['start', 'end', '2']);
+    expect(more(cluster(3, { extra: 120 }))).toEqual(['start', 'end', '3']);
+    const line = document.createElement('div'); line.innerHTML = html.stack({ members: team, size: S, max: 4, extra: 20, still: true });
+    expect(['data-h', 'data-v', 'data-digits'].map((a) => line.querySelector('.ui-stack__more')!.hasAttribute(a))).toEqual([false, false, false]);
+  });
   it('draws its orbs still, at 16px', () => {
     for (const o of cluster(4).querySelectorAll('orb-avatar')) { expect(o.hasAttribute('static')).toBe(true); expect(o.getAttribute('size')).toBe('16'); }
   });

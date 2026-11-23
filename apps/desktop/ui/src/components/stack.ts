@@ -6,11 +6,17 @@
      - one order: the members as given, the first underneath and each next one on top;
      - one slot in a row: a row's lead is as wide as the place's whole stack (`--places`), so the titles of a list of
        groups line up whatever each has (a "+N" too wide for a disc widens its own row only);
-     - "+N" is the last member: a disc the size of an orb (a capsule only when N needs more room), overlapped by the same
-       step, never colliding with the orb before it;
+     - "+N" is the last member: along a line, a disc the size of an orb (a capsule only when N needs more room), overlapped
+       by the same step, never colliding with the orb before it; in a cluster, a counter attached to the last place, not a
+       member of its own (the owner, 23 November 2026, of the rail's group: "that +2 is too big"): a chip as tall as the
+       smallest type step or half an orb, whichever is more (11px for orbs of 16 and 20, 16 for 32), 16px wide for one digit
+       (24 for two, 32 for three: tabular figures, never wider than the chip), in mono 11 on the raised fill with a
+       hairline, as a key chip is, its figures centred. Its size comes from tokens, never from the font's glyphs, and it
+       keeps the last place's outer corner (`data-h`, `data-v`), so its outer edges, and with them its insets in a row's
+       corner, are the same in any font and for any N (a wider N grows inwards, over the cluster);
      - nothing is cut or masked (the owner, 22 November 2026: "styled on top of one another, but still fully visible. i
        don't want this cutting/masking thing"): each orb is drawn whole, with no disc or ring under it, and the next lies
-       over it; only "+N" has a disc, which is its own body.
+       over it; only "+N" has a fill, which is its own body.
    The stack is one image to assistive technology: role img, named by the members ("atlas, nina and kai"), the same words
    on hover; `focusable` gives it a tab stop when some names are folded into "+N" (where it is not inside a control).
    "+N" is drawn, not written (`data-more`, shown by CSS): it is part of the picture, whose words are the members' names.
@@ -21,7 +27,7 @@
    indistinguishible from bots themselves. should probably make them more group-like, with the other bots appearing there
    too in another more circly configuration of them hovering each other"). The same rules hold: one step between
    neighbours (a third of an orb), one orb size, the first member underneath at the top and each next one clockwise and on
-   top, "+N" the last place, nothing cut or masked. `clusterLayout` is the arithmetic. */
+   top, "+N" the counter in the last place, nothing cut or masked. `clusterLayout` is the arithmetic. */
 import { attrs } from '../core/dom';
 import { orbHtml } from './orb';
 import type { BotLike } from './bot-state';
@@ -80,6 +86,13 @@ export function clusterLayout(n: number, size: number): { w: number; h: number; 
   return { w: Math.max(...at.map((p) => p.x)) + size, h: Math.max(...at.map((p) => p.y)) + size, at };
 }
 
+/** which corner of its place a cluster's counter keeps: the one farthest from the cluster's middle (start, centre or end on each
+    axis), so it hangs on the cluster's outside and off the members' faces */
+const side = (d: number): 'start' | 'center' | 'end' => (d < 0 ? 'start' : d > 0 ? 'end' : 'center');
+const corner = (p: ClusterPlace | undefined): Record<string, string> => (p ? { 'data-h': side(p.dx), 'data-v': side(p.dy) } : {});
+/** how many digits a cluster's counter carries past one (its chip's width follows the count of digits, not their glyphs) */
+const digits = (n: number): string | null => (String(n).length > 1 ? String(Math.min(3, String(n).length)) : null);
+
 export function stack(o: StackOpts): string {
   const members = o.members.filter(Boolean), extra = Math.max(0, Math.floor(o.extra ?? 0)), cluster = o.shape === 'cluster';
   if (!members.length && !extra) return '<span class="ui-stack" data-count="0" hidden></span>';
@@ -90,5 +103,5 @@ export function stack(o: StackOpts): string {
   const place = (i: number): string | null => { const p = box?.at[i]; return p ? '--x:' + p.x + 'px;--y:' + p.y + 'px;--dx:' + p.dx + 'px;--dy:' + p.dy + 'px' : null; };
   return '<span' + attrs({ class: 'ui-stack' + (cluster ? ' ui-stack--cluster' : '') + (o.class ? ' ' + o.class : ''), style: '--s:' + o.size + 'px;--places:' + max + (box ? ';--w:' + box.w + 'px;--h:' + box.h + 'px' : ''), role: 'img', 'aria-label': label, 'data-tip': o.tip === false ? null : label, tabindex: more && o.focusable ? '0' : null, 'data-count': String(members.length + extra) }) + '>' +
     members.slice(0, shown).map((b, i) => '<span' + attrs({ class: 'ui-stack__one', style: place(i) }) + '>' + orbHtml(b, { size: o.size, still: o.still ?? undefined }) + '</span>').join('') +
-    (more ? '<span class="ui-stack__more"' + attrs({ style: place(shown), 'data-more': '+' + more, 'aria-hidden': 'true' }) + '></span>' : '') + '</span>';
+    (more ? '<span class="ui-stack__more"' + attrs({ style: place(shown), ...corner(box?.at[shown]), 'data-digits': box ? digits(more) : null, 'data-more': '+' + more, 'aria-hidden': 'true' }) + '></span>' : '') + '</span>';
 }
