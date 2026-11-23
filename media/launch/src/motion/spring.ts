@@ -6,7 +6,7 @@
      character  k 400, c 22, ratio 0.55, ~13% overshoot    the mark and the bots' faces only: blinks, glances, playful letters
 
    As a GSAP ease a spring needs a duration: `springDuration(name)` is the time it takes to come within 0.1% of rest and
-   stay there; the ease then ends exactly at 1. */
+   stay there; the ease closes that last 0.1% smoothly, so it lands exactly at 1 with zero velocity (springEase). */
 import type { Ease } from './ease';
 
 export interface SpringDef { stiffness: number; damping: number; mass?: number }
@@ -42,11 +42,28 @@ export function springDuration(def: SpringDef | SpringName, tol = 0.001): number
   return Math.ceil(last * 60) / 60;
 }
 
-/** a spring as an ease over `duration` seconds (default: its settling time); exact 0 and 1 at the ends */
+/** a spring as an ease over `duration` seconds of spring time (default: its settling time), landing EXACTLY at rest.
+
+    The closed form never quite arrives: at its settling time it is still up to 0.1% short (1 px of a 1000 px camera
+    move) and still moving, so an ease that jumped to 1 at the end popped. Here the last stretch is closed by a smooth
+    correction (zero at the start with zero slope, so the start is the spring's own) that takes away both the remaining
+    distance and the remaining velocity: the ease is 1 with zero velocity at p = 1, and continuous everywhere.
+
+    A duration shorter than the spring's settling time used to cut it off mid-flight (a jump, and a sudden stop): a
+    spring cannot settle faster than it settles, so asked to, it is now played whole, faster (time-scaled into the
+    duration). A longer duration lets it settle and then rest. */
 export function springEase(def: SpringDef | SpringName, duration?: number): Ease {
   const d: SpringDef = typeof def === 'string' ? SPRINGS[def] : def;
-  const T = duration ?? springDuration(d);
-  const e = ((p: number): number => (p <= 0 ? 0 : p >= 1 ? 1 : springAt(d, p * T).x)) as Ease;
+  const settle = springDuration(d);
+  const T = duration == null ? settle : Math.max(duration, settle);
+  const end = springAt(d, T);
+  const r = 1 - end.x, vT = end.v * T;              /* the distance and the velocity (per unit of p) left at p = 1 */
+  const e = ((p: number): number => {
+    if (p <= 0) return 0;
+    if (p >= 1) return 1;
+    const p2 = p * p, p3 = p2 * p;
+    return springAt(d, p * T).x + r * (3 * p2 - 2 * p3) - vT * (p3 - p2);
+  }) as Ease;
   e.easeName = 'spring:' + (typeof def === 'string' ? def : d.stiffness + '/' + d.damping);
   return e;
 }
