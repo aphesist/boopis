@@ -18,7 +18,9 @@ the rules. The inventory of what was consolidated, and what is still known debt,
   outside this folder imports a file inside it; `kit.guard.test.ts` fails if anything does.
 - **Pure.** The kit imports nothing from the app: no module, no host, no data provider, no app state or settings. Its
   only outside imports are `core/dom`, `core/keys`, `core/log`, `core/bus` (it re-reads tokens on `hx:theme`),
-  `styles/colour` (colour maths) and the vendored elements. Templates render from their options alone.
+  `styles/colour` (colour maths), the vendored elements and two shared tables in `apps/shared/data` that state rules from
+  outside the app (`model-names.json`; `room-mentions.json`, the engine's mention rule, which the host reads too). Templates render
+  from their options alone.
 - **Styles.** `kit.css` is the kit's stylesheet: the design-system tokens from their one source (`styles/tokens.css`,
   generated into `tokens.json`; never copied) and the library CSS (`components.css`, `model-mark.css`, `progress.css`,
   `mod-view.css`). The app loads it first (`styles/index.ts`), then its modules' CSS, which only places kit components.

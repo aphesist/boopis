@@ -19,7 +19,9 @@ allowlisted one that is gone); **other branch** (owned by a parallel branch; not
   change and a rename under every open branch for the same import name. The folder keeps its paths and history.
 - **One entry** (`index.ts`): every component, its typed options and `variants` (`variants.ts`, the UI lab's axes).
 - **Pure**: no import from `modules/`, `host/`, `data/`, the app's state, settings or registry. The colour maths the kit
-  needed moved out of the theme runtime (which reads settings) into `styles/colour.ts`.
+  needed moved out of the theme runtime (which reads settings) into `styles/colour.ts`. Two shared tables that state rules from
+  outside the app may be read: `apps/shared/data/model-names.json` and `room-mentions.json` (the engine's mention rule, one copy
+  for the host and the kit).
 - **Tokens from the one source**: `kit.css` imports `styles/tokens.css` (generated into `tokens.json` by
   `pnpm tokens`), then the library CSS. The app loads `kit.css` first (`styles/index.ts`).
 - **Build**: `pnpm kit` writes `dist-kit/boopis-ui.js` (ES module) and `dist-kit/boopis-ui.css` (gitignored).
