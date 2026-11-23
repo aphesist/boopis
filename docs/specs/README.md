@@ -13,7 +13,7 @@ Wave numbers: the package's w28 is w31 here, w29 is w32, and so on (ADR-0054).
 | [team-ops.md](team-ops.md) | `team.plan`, apply by the owner's hold, undo; room, bot, session and job verbs on the `hx-host-ops-v1` channel; read-only plans and stops on the Local API; CLI parity | `w31/team-ops` | ADR-0052 |
 | [approval-surfaces.md](approval-surfaces.md) | The inbox's answers (once, deny, session, always), the rule link, the B40 summary on the card, edit before approve (not in the engine) | `w31/rules-engine` (plugin), `w31/host-protections` (host), `w31/rules-ui` | ADR-0053 |
 | [feedforward.md](feedforward.md) | The agent reads the draft while it is typed: `feedforward.read` in the plugin with the cheapest model of the answering provider, revisions and fail-quiet, the readings on send as `pre_llm_call` context, on by default, the live first-run step | `w31/feedforward` (plugin and UI) | ADR-0055 |
-| [blanks-inline.md](blanks-inline.md) | Blanks wait inside the reply through the engine's `clarify`: no injected turn, no double output; waiting, Stop, restarts, rooms, exec cells, the island and the Local API | `w31/blanks-inline` (plugin and UI) | ADR-0056 |
+| [blanks-inline.md](blanks-inline.md) | Blanks wait inline for a while (sessions 60 s by default, bots not at all) through the plugin's `leave_blank`, then the bot goes on with its guess and the question stays as a card; a late answer is one labelled correction; no injected turn, no double output | `w31/blanks-inline` (plugin and UI) | ADR-0056 |
 
 Order inside the wave: host protections first (the BOOPIS bot cannot ship without them), then rules engine and team ops in parallel (different areas), then the rules UI once the owner has picked. The calm pass (w31c) runs beside it on the UI library and copy only.
 
@@ -28,6 +28,6 @@ Only what is the owner's to decide. Each spec states its proposal; work can star
 5. **Reading on a subscription.** May drafts be read on your Claude or ChatGPT plan, counted against its limits? Proposed: yes, if fast enough. (`feedforward.md` section 17)
 6. **Feedforward in rooms and bot chats.** Proposed: on in a bot's own chat, off in rooms for now. (`feedforward.md` section 11)
 7. **What travels with the message.** Proposed: everything the "Will assume" row shows, your picks marked as yours. (`feedforward.md` section 7)
-8. **Quitting while a bot waits for your answer.** The turn cannot resume after the engine restarts. Proposed: the question is closed and offered as "Answer in a new message", and the quit dialog warns first. (`blanks-inline.md` section 5)
-9. **Forms that don't wait.** `ask` and `request_input` also deliver late answers as a new message. Make them wait inline too? Proposed: yes, next wave. (`blanks-inline.md` section 9)
-10. **Rooms and blanks.** The engine does not let a room member wait for an answer. Proposed: the bot asks at the end of its message. (`blanks-inline.md` section 6.1)
+8. **The engine's question tool for bots.** Bots have the engine's `clarify` on today. Proposed: switch it off and give every bot boopis's blanks, so a bot always goes on with a guess and leaves a card. (`blanks-inline.md` section 3.5)
+9. **How long a lapsed question stays answerable.** Proposed: 24 hours. (`blanks-inline.md` section 5.3)
+10. **Forms that don't wait.** `ask` and `request_input` also deliver late answers as a new message. Give them the same rule? Proposed: yes, next wave. (`blanks-inline.md` section 9)

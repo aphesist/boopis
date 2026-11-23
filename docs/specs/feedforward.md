@@ -225,13 +225,13 @@ Feedforward is advice, not a gate, so it fails **quiet** (the opposite of invari
 | | Feedforward | Blanks (`blanks-inline.md`) |
 |---|---|---|
 | When | while typing, before send | while the bot writes, inside its reply |
-| Who asks | the reader model, from the draft | the answering model, through the engine's `clarify` |
+| Who asks | the reader model, from the draft | the answering model, through the plugin's `leave_blank`, with its guess |
 | The mark | the v7 dashed mark on a word of the draft | the v7 dashed mark on the blank in the reply |
-| Answer | pick, type, or leave the guess | pick or type; the reply goes on |
-| Travels | as the `<boopis-readings>` block in the same message | as the tool result, in the same turn |
+| Answer | pick, type, or leave the guess | pick or type within the wait (sessions 60 s by default; bots do not wait); else the bot goes on with its guess, marked "(my guess)" |
+| Travels | as the `<boopis-readings>` block in the same message | in time: as the tool result, in the same turn; late: one labelled correction message, none when it equals the guess |
 | Ledger | `feedforward.set` | `blank.opened`, `blank.filled` |
 
-Shared, so they feel like one thing: the same dashed-then-solid look (dashed is the agent's guess or question, solid is the person's answer), the same menu shape (question, options best first, a typed answer, "Dashed: my guess. Solid: your choice."), the same keys (Alt+Down opens, Enter picks), and the same rule that **an answer never makes a second exchange**. The reader model is told that what it marks now will not be asked later; the answering model is told (in the governed and bot prompt sections, which are fixed at creation) that readings arrive with the message and that a question it still has goes in a blank, never in a separate turn.
+Shared, so they feel like one thing: the same dashed-then-solid look (dashed is the agent's guess or question, solid is the person's answer), the same menu shape (question, options best first, a typed answer, "Dashed: my guess. Solid: your choice."), the same keys (Alt+Down opens, Enter picks), and the same rule that **an answer never makes a second exchange**. The reader model is told that what it marks now will not be asked later; the answering model is told (in the governed prompt section and the bots' hand-off skill, both fixed at creation) that readings arrive with the message and that a question it still has goes in a blank with its guess, never in a separate turn.
 
 ## 10. Smart routing and the starting tier
 

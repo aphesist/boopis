@@ -1166,28 +1166,27 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - At most one read in flight and one waiting per composer; a hard timeout of 5 s.
 - `docs/PROTOCOL.md`'s `feedforward.preview` and `feedforward.set` are replaced by `feedforward.read` and `feedforward.commit`.
 
-## ADR-0056 Blanks wait inside the reply, through the engine's own clarify; no injected turn (proposed, 23 November 2026)
-**Status.** Proposed (w31; spec `docs/specs/blanks-inline.md`). The need is the owner's (23 November 2026): "make your answer reach the bot inside their own reply ... so you don't trigger a double output from the bot. boopis needs to function this way."
+## ADR-0056 Blanks wait inline for a while through a plugin tool, then the bot goes on with its guess and asks later; no injected turn (proposed, 23 November 2026)
+**Status.** Proposed (w31; spec `docs/specs/blanks-inline.md`). The need and the rules are the owner's (23 November 2026): "make your answer reach the bot inside their own reply ... so you don't trigger a double output from the bot"; then: wait for a while, not forever; with no answer the bot keeps going on its best guess and the question stays answerable; sessions wait by default, bots do not ("The bots should work alone, that's their entire thing"); both are settings. Defaults as design system v7 section 17.1: 30 s, 60 s (default), 2 min.
 
 **Context.**
-- Today a blank does not block: the cell goes on, the turn ends, and the answer is handed to `ctx.inject_message` as a new user turn, which the model answers with a second reply.
-- Read in the engine (v0.23.2), not patched: the engine's `clarify` tool returns the person's answer as its tool result in the same turn, runs with no generic deadline (`agent/tool_executor.py`, `_NEVER_PARALLEL_TOOLS`), waits without limit when `agent.clarify_timeout <= 0` (`tools/clarify_gateway.py`, `tui_gateway/server.py`), survives a missing client by replay and is cancelled by Stop (`tui_gateway/server_requests.py`), and takes up to five questions answered one by one (`clarify.lock`). A plugin tool is held to the generic 420 s deadline and `ctx.register_tool` cannot declare a longer one (`hermes_cli/plugins_context.py`). The engine removes `clarify` from room member turns and cron runs (`gateway/session_hosted_rpc.py`) and from delegated children (`tools/delegate_tool.py`).
+- Today a blank does not block: the cell goes on, the turn ends, and the answer is handed to `ctx.inject_message` as an unlabelled new user turn, which the model answers with a second reply.
+- Read in the engine (v0.23.2), not patched: a plugin tool runs under the generic tool deadline of 420 s and `ctx.register_tool` cannot declare a longer one (`agent/tool_executor.py`, `hermes_cli/plugins_context.py`); an interrupted tool is abandoned after 3 s and `on_session_end` fires for the interrupted turn. The engine's `clarify` returns an answer in the same turn and waits per profile (`agent.clarify_timeout`), but its timeout result carries no guess and no instruction (`tools/clarify_tool.py`), and the engine removes it from room member turns, cron runs (`gateway/session_hosted_rpc.py`) and delegated children (`tools/delegate_tool.py`). `pre_llm_call` context is appended to the user message (`agent/turn_context.py`).
 
 **Decision.**
-1. **A blank is the engine's `clarify`**, drawn by boopis inline in the reply being written; the answer goes back through `clarify.lock`/`clarify.respond` and the model continues the same turn. No plugin `ask_inline` tool.
-2. **No limit by default**: the host writes `agent.clarify_timeout: 0` into every profile; a bot can be given a cap. Waiting costs no tokens.
-3. **Governed sessions are created with `["boopis", "clarify"]`**; the governed prompt says to ask through clarify and never end a turn just to ask.
-4. **Exec cells** ask with a blocking `harness.ask`, bounded by the cell's limit; past it the model is told to use `clarify`.
-5. **The `inject_message` path for blanks is removed.** A blank that ended unanswered (Stop, an engine restart, a cap) offers "Answer in a new message", which the person sends themselves.
-6. **Rooms and cron cannot wait** (the engine's rule): a room member asks at the end of its message and the person's next room message is the answer.
-7. Blanks stay in contraprova's vocabulary: `blank.opened`, `blank.filled`, `blank.lapsed` with a `reason`, written from the plugin's hooks on `clarify`.
+1. **A blank is the plugin's `leave_blank` tool** (toolset `boopis_blanks`), with a required `guess` per question. It blocks for the profile's wait; an answer in time is its result, so the model goes on in the same reply.
+2. **With no answer in time, it returns `no_answer_yet` with the guess** and tells the model to go on, mention the assumption once and not ask again in its reply. The reply shows the guess marked "(my guess)"; the question stays as a card that can still be answered.
+3. **Who waits:** sessions, 60 s by default (30 s, 60 s, 2 min in Settings > General > Sessions, which is also the root profile's `agent.clarify_timeout`); bots do not wait unless set to in their own settings (the same choices); rooms, schedules and workers never wait. Nothing waits forever.
+4. **A late answer is one labelled correction**: nothing is sent when it equals the guess; otherwise one message starting "[Correction to your guess]", held until the bot's current turn ends and merged with other late answers, submitted by the client as the person's message, or given to a lone bot's next run as `pre_llm_call` context. The bot's instructions treat it as a correction, not a new task. It is not sent when superseded, undone by a rewind, expired (24 h) or the session is gone.
+5. **The `inject_message` path for blanks is removed.** The engine's `clarify` is switched off where boopis makes the session or the bot, so there is one way to ask, and its timeout is never 0.
+6. Blanks stay in contraprova's vocabulary (`blank.opened`, `blank.filled`, `blank.lapsed`), with `guess`, `wait_s`, `deadline`, `matches_guess`, `delivered` and a lapse `reason` as extra fields.
 
 **Alternatives weighed.**
-- *A blocking plugin tool*: same flow, but a 420 s ceiling unless the operator lifts the deadline for every tool.
+- *The engine's `clarify` with a finite profile timeout*: waits and resumes in the same turn, but its lapse has no guess, so "go on" is undefined and the model tends to ask again in its reply; and it does not exist in rooms, schedules or governed sessions.
+- *Wait without a limit*: rejected by the owner; a bot must work alone.
 - *Keep injecting the answer*: the double output the owner rejected.
-- *Hold the bot's reply in the UI until answered*: the model has already finished its turn; it would still need a second turn to use the answer.
 
 **Consequences.**
-- One reply per exchange, proven by an end-to-end test that counts submits, user rows, completions and model requests.
-- A question asked before an engine restart cannot resume its turn; it is closed visibly and recorded as lapsed.
-- Old governed sessions (created without `clarify`) have no inline blanks.
+- One reply per message, in time or not, proven by end-to-end tests that count submits, stored rows, completions and model requests.
+- A late, different answer costs one more turn, visibly labelled as the person's correction; an answer equal to the guess costs nothing.
+- Sessions created before this have no `leave_blank` (their toolsets are fixed); bots need `boopis_blanks` added to their default toolsets and `clarify` removed (the owner chooses those lists).
