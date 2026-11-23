@@ -5,6 +5,8 @@ import type { Scene } from './types';
 export const SCENES: Record<string, () => Promise<{ default: Scene }>> = {
   test: () => import('./test'),
   kit: () => import('./kit-sheet'),
+  /* the motion-blur self-test's moves (tools/render-selftest.mjs) */
+  blurtest: () => import('../engine/blurtest'),
   board: () => import('./board'),
   /* the film and its views (src/scenes/film.ts) */
   film: () => import('./film').then((m) => ({ default: m.editScene('master') })),

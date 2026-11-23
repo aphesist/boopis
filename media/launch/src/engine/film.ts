@@ -29,12 +29,19 @@ export interface GrainSpec { kind?: 'white' | 'look'; seed: number; alpha?: numb
 
 /** a tween tagged `data: { blur: false }` is motion that needs no motion blur (a slow drift, typing); `samples` asks for
     more sub-frames than the default 8 while it runs (a whip or a zoom-through: 24 to 32, so the streak does not step) */
-export interface TweenData { blur?: boolean; linear?: boolean; role?: string; samples?: number }
+/** fence: false marks a set that keeps what is drawn (it renames, it does not change): the renderer does not stop a
+    shutter at it (Film.fences) */
+export interface TweenData { blur?: boolean; linear?: boolean; role?: string; samples?: number; fence?: boolean }
 
 export interface TweenInfo {
   start: number; end: number; ease: string; linear: boolean; linearOk: boolean; blur: boolean;
   props: string[]; targets: string[]; role: string | null;
 }
+
+/* the vars of a tween that are not values it sets */
+const TWEEN_KEYS = new Set(['data', 'duration', 'ease', 'immediateRender', 'delay', 'overwrite', 'id', 'repeat', 'yoyo', 'yoyoEase', 'repeatDelay',
+  'repeatRefresh', 'stagger', 'callbackScope', 'lazy', 'runBackwards', 'startAt', 'inherit', 'paused', 'reversed', 'keyframes', 'autoRound',
+  'onStart', 'onUpdate', 'onComplete', 'onRepeat', 'onReverseComplete', 'onInterrupt', 'onStartParams', 'onUpdateParams', 'onCompleteParams']);
 
 export class Film {
   readonly name: string;
@@ -48,6 +55,10 @@ export class Film {
   readonly height: number;
   readonly tl: gsap.core.Timeline;
   readonly cuts: number[] = [];
+  /** instant changes (the zero-duration tweens, sets, that change a value): the renderer keeps a frame's shutter on one
+      side of each, as at a cut, so an instant change placed on a frame time cuts cleanly instead of being averaged
+      into a double (absolute times; clipFences() gives them in clip time with the cuts) */
+  fences: number[] = [];
   /** scene boundaries by name (a script beat's id at its start): the checker counts and lists them */
   readonly marks: { name: string; t: number }[] = [];
   private readonly renderers: { fn: Renderer; priority: number; order: number }[] = [];
@@ -103,6 +114,34 @@ export class Film {
     return out;
   }
 
+  /** the times of the instant changes that change something: every zero-duration tween (a set) whose targets read
+      differently just after it than just before (a set that only repeats the value already there is not a fence, so
+      it never shortens a frame's shutter for nothing). The timeline is walked forward once and left at 0. */
+  private liveSets(): number[] {
+    const at = new Map<number, gsap.core.Tween[]>();
+    for (const { tween, start, end } of this.tweens()) {
+      if (end - start > 1e-9 || start <= 1e-6) continue;
+      if ((tween.data as TweenData | undefined)?.fence === false) continue;   /* a set that keeps what is drawn */
+      const k = Math.round(start * 1e6) / 1e6;
+      at.set(k, [...(at.get(k) ?? []), tween]);
+    }
+    const read = (tw: gsap.core.Tween): string => {
+      const keys = Object.keys(tw.vars).filter((k) => !TWEEN_KEYS.has(k)).flatMap((k) => (k === 'autoAlpha' ? ['opacity', 'visibility'] : [k]));
+      if (!keys.length) return '';
+      return tw.targets().map((tg) => keys.map((k) => { try { return String(gsap.getProperty(tg as gsap.TweenTarget, k)); } catch { return '?'; } }).join('|')).join('/');
+    };
+    const live: number[] = [];
+    for (const t of [...at.keys()].sort((a, b) => a - b)) {
+      const tws = at.get(t)!;
+      this.tl.time(Math.max(0, t - 1e-6), true);
+      const before = tws.map(read).join('#');
+      this.tl.time(t + 1e-6, true);
+      if (tws.map(read).join('#') !== before) live.push(t);
+    }
+    this.tl.time(0, true);
+    return live;
+  }
+
   /** after the scene is built: record every tween's start values in time order, and index the motion */
   finalize(): void {
     if (this.finalized) return;
@@ -120,6 +159,7 @@ export class Film {
     }
     spans.sort((a, b) => a[0] - b[0]);
     this.motionSpans = spans;
+    this.fences = this.liveSets();
     gsap.ticker.sleep();
   }
 
@@ -158,6 +198,8 @@ export class Film {
   get now(): number { return this.time; }
   /** hard cuts in clip time */
   clipCuts(): number[] { return this.cuts.map((c) => c - this.offset).filter((c) => c > 0 && c < this.duration); }
+  /** cuts and instant changes in clip time: where a shutter must not reach across */
+  clipFences(): number[] { return [...new Set([...this.cuts, ...this.fences])].map((c) => c - this.offset).filter((c) => c > 0 && c < this.duration).sort((a, b) => a - b); }
 
   /** fonts and images, once, before the first frame */
   async load(root: ParentNode): Promise<void> {

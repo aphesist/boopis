@@ -7,9 +7,12 @@ export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 export const SC = process.env.FILM_SC || '/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/launch-video';
 const require = createRequire(join(ROOT, 'package.json'));
 
-export async function buildFilm() {
+/** where the built page lives: dist/, or FILM_DIST / --dist (a separate build, so one agent's build never swaps the
+    page under another agent's running render) */
+export const distDir = (d) => resolve(d ?? process.env.FILM_DIST ?? join(ROOT, 'dist'));
+export async function buildFilm(outDir) {
   const vite = await import(require.resolve('vite'));
-  await vite.build({ configFile: join(ROOT, 'vite.config.ts'), logLevel: 'error' });
+  await vite.build({ configFile: join(ROOT, 'vite.config.ts'), logLevel: 'error', build: { outDir: distDir(outDir), emptyOutDir: true } });
 }
 export const playwright = () => require('playwright');
 export const CHROME_ARGS = ['--force-color-profile=srgb', '--font-render-hinting=none', '--disable-lcd-text', '--hide-scrollbars', '--disable-threaded-animation', '--disable-checker-imaging'];

@@ -2,13 +2,15 @@
 
      duration, fps, width, height, variant, frames, bpm, cuts
      seek(t)                 async; resolves once the frame at t is painted, fonts and images ready
-     moving(t0, t1)          does anything that needs motion blur move in (t0, t1]?
+     moving(t0, t1)          does a tween or a marked span run in (t0, t1]? (informational)
+     probe(times)            the largest on-screen displacement between consecutive times (the blur planner's input)
      samples(t0, t1)         0 = nothing moves, -1 = the default sub-frames, n = a fast move asks for at least n
      tweens()                every tween with its global times, ease, properties and targets
      text()                  the text visible now: each run's words, its size on screen in px, its opacity
      fades()                 opacity tweens on large elements (a full-layer cross-fade is never allowed) */
 import type { Film } from './film';
 import type { Stage } from './stage';
+import { probe, type ProbeResult } from './probe';
 
 export interface TextRun { text: string; px: number; opacity: number; x: number; y: number; w: number; h: number; clipped: number; el: string }
 export interface FadeInfo { start: number; end: number; target: string; area: number; overlaps: number }
@@ -18,10 +20,14 @@ export interface FilmApi {
   grain: Film['grain'];
   warnings: string[];
   marks: { name: string; t: number }[];
+  /** cuts and instant changes (zero-duration tweens), clip time: no shutter reaches across one */
+  fences: number[];
   /** the clip's start on the film's absolute clock (an act alone); everything else here is clip time */
   offset: number;
   seek(t: number, o?: { paint?: boolean }): Promise<void>;
   moving(t0: number, t1: number): boolean;
+  /** the largest on-screen displacement between consecutive clip times, stage px (engine/probe.ts) */
+  probe(times: number[]): Promise<ProbeResult>;
   samples(t0: number, t1: number): number;
   tweens(): ReturnType<Film['tweenInfo']>;
   text(): TextRun[];
@@ -29,13 +35,25 @@ export interface FilmApi {
 }
 declare global { interface Window { __film?: FilmApi } }
 
+/* Every capture is a full raster. Chromium repaints only what changed since the last frame it drew, and a repainted
+   strip of an unchanged shape (the edge of a box under a cursor that moved) can come out up to 10 levels different
+   in its antialiasing from the same shape drawn whole: the same frame then had different pixels depending on what was
+   drawn before it. A zero, transparent shadow toggled on the stage after each seek invalidates the whole stage, so
+   every frame is drawn whole and is the same pixels whatever came before (the self-test's determinism check). */
+let flip = false;
+function repaintAll(stage: Stage): void {
+  flip = !flip;
+  stage.root.style.boxShadow = flip ? '0 0 0 0 rgba(0, 0, 0, 0)' : 'none';
+}
+
 export function expose(film: Film, stage: Stage): FilmApi {
   const api: FilmApi = {
     name: film.name, duration: film.duration, fps: film.fps, width: film.width, height: film.height, variant: film.variant,
-    frames: Math.round(film.duration * film.fps), bpm: film.bpm, cuts: film.clipCuts(), grain: film.grain,
+    frames: Math.round(film.duration * film.fps), bpm: film.bpm, cuts: film.clipCuts(), fences: film.clipFences(), grain: film.grain,
     marks: film.marks.map((m) => ({ name: m.name, t: m.t - film.offset })).filter((m) => m.t >= -1e-9 && m.t < film.duration), warnings: film.warnings, offset: film.offset,
-    seek: (t, o) => film.seek(t, o),
+    seek: async (t, o) => { await film.seek(t, o); repaintAll(stage); },
     moving: (a, b) => film.moving(a, b),
+    probe: (times) => probe(film, stage, times),
     samples: (a, b) => film.samples(a, b),
     tweens: () => film.tweenInfo().map((t) => ({ ...t, start: t.start - film.offset, end: t.end - film.offset })).filter((t) => t.end > 0 && t.start < film.duration),
     text: () => visibleText(stage),
@@ -100,11 +118,11 @@ export function visibleText(stage: Stage): TextRun[] {
     const vis = clipOf(el, stage, r);
     if (!vis) continue;
     /* 1em of this text on screen: a zero-width inline-block 1em tall, measured through zoom and transforms */
-    const probe = document.createElement('span');
-    probe.style.cssText = 'display:inline-block;width:0;height:1em;vertical-align:baseline;padding:0;margin:0;border:0';
-    el.appendChild(probe);
-    const em = probe.getBoundingClientRect().height / k;
-    probe.remove();
+    const ruler = document.createElement('span');
+    ruler.style.cssText = 'display:inline-block;width:0;height:1em;vertical-align:baseline;padding:0;margin:0;border:0';
+    el.appendChild(ruler);
+    const em = ruler.getBoundingClientRect().height / k;
+    ruler.remove();
     seen.add(el);
     out.push({ text: (el.textContent ?? text).replace(/\s+/g, ' ').trim().slice(0, 80), px: Math.round(em * 10) / 10, opacity: Math.round(op * 100) / 100,
       x: Math.round((vis.left - f.left) / k), y: Math.round((vis.top - f.top) / k), w: Math.round(vis.width / k), h: Math.round(vis.height / k),
