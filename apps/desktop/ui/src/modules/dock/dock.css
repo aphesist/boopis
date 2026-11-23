@@ -46,9 +46,16 @@
 .dk-shape { position: absolute; bottom: 0; left: 0; overflow: visible; pointer-events: none; display: block; }
 .dk-shape path { fill: var(--dock-bg); pointer-events: auto; }
 
-/* ---------- stage: a 0×0 anchor at the slab's bottom centre ---------- */
+/* ---------- stage: a 0×0 anchor at the slab's bottom centre ----------
+   What sits on the anchor (each page, the foot) is centred on it by layout, never by a transform: insets of 100vw on both
+   sides and auto margins put a box of any width the window can show with its middle on the anchor. While the slab moves the
+   stage is clipped (engine.ts paint), and WebKitGTK (2.52, accelerated) repaints a transformed child of the clipped stage that
+   has no compositing layer of its own with the clip taken in the child's own space, before its translateX(-50%): only the
+   part left of the anchor was painted again, and the arrange panel lost its right half (Done, the end of its line, the tiles
+   from "Needs you") from the moment its entrances ended until the slab settled (the owner's recording, 0.1.9). A box placed
+   by layout is clipped where it is. tests/e2e/dock_webkit.py watches both halves of the panel as it opens and closes. */
 .dk-stage { position: absolute; left: 0; bottom: 0; width: 0; height: 0; }
-.dk-page { position: absolute; left: 0; bottom: 0; transform: translateX(-50%); width: max-content; pointer-events: auto; touch-action: none; }
+.dk-page { position: absolute; left: -100vw; right: -100vw; bottom: 0; margin-inline: auto; width: max-content; pointer-events: auto; touch-action: none; }
 .dk-page[hidden] { display: none; }
 .dk-page.is-out { pointer-events: none; }
 .dk-view { position: relative; box-sizing: border-box; max-width: var(--dock-room, none); }
@@ -65,7 +72,7 @@
 /* ---------- the foot: Arrange · the page nub · Minimise, inside the slab's last 24px, always the slab's width ----------
    The nub is the library's page dots (the current page a short brass pill, the others --mark-off dots, a page that
    owes you something a red dot). It is a quiet affordance: clicking a dot pages, and so do swipes, [ ] and 1-9. */
-.dk-foot { position: absolute; left: 0; bottom: 0; height: var(--dock-band); transform: translateX(-50%); box-sizing: border-box; padding: 0 var(--sp-1); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); pointer-events: none; transition: opacity var(--dur-1) var(--ease), visibility 0s; }
+.dk-foot { position: absolute; left: -100vw; right: -100vw; bottom: 0; margin-inline: auto; width: max-content; height: var(--dock-band); box-sizing: border-box; padding: 0 var(--sp-1); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); pointer-events: none; transition: opacity var(--dur-1) var(--ease), visibility 0s; }
 .dk-foot > * { pointer-events: auto; flex: none; }
 /* The configuration controls (Arrange, Minimise) show only while the pointer is over the dock or focus is inside it (and for a
    moment after a tap on a touch screen: `data-reveal`, set by input.ts). At rest they are transparent and take no pointer, but
