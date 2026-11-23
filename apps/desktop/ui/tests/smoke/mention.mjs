@@ -51,5 +51,35 @@ export async function mentions(env) {
     await page.keyboard.press('Escape'); await page.waitForTimeout(200);
     check('mention', 'Esc closes the suggestions and keeps the "@"', (await value()) === '@' && !(await menuOpen()) && (await inBox()), await value());
   });
+
+  /* the same "@" in a group room (the owner, 0.1.9: "it stays as a text"): the members, a chip in the text, one Backspace, the undo,
+     and "@kai." left as text, as the engine reads it */
+  await s.safe('mention', async () => {
+    const room = await s.fresh({ q: 'fixture=groups&fixture=paper-past' });
+    await room.evaluate(() => { __hx.setState({ tab: 'bots' }); }); await room.waitForTimeout(400);
+    await room.click('.bt-groups li:nth-of-type(2) .ui-row'); await room.waitForTimeout(500);
+    const rbox = '.bt-group .ui-composer__input';
+    const rvalue = () => room.evaluate((sel) => (document.querySelector(sel)?.textContent ?? '').replace(/\u00a0/g, ' '), rbox);
+    const rchips = () => room.evaluate((sel) => [...document.querySelectorAll(sel + ' [data-chip]')].map((c) => c.textContent), rbox);
+    const rmenu = () => room.evaluate(() => [...document.querySelectorAll('.ui-listbox .ui-option .ui-menu__label')].map((x) => x.textContent.trim()));
+    const rclear = async () => { await room.click(rbox); await room.keyboard.press('Control+a'); await room.keyboard.press('Delete'); await room.waitForTimeout(150); };
+    await rclear();
+    await room.keyboard.type('@', { delay: 30 }); await room.waitForTimeout(250);
+    check('mention', 'a room: "@" suggests the members and the room', (await rmenu()).join() === 'kai,nina,moss,iris,hex,nimbus,all', await rmenu());
+    await room.keyboard.type('ni', { delay: 30 }); await room.keyboard.press('Tab'); await room.waitForTimeout(350);
+    check('mention', 'a room: Tab writes the member’s handle, drawn as its chip', (await rvalue()) === '@nina ' && (await rchips()).join() === '@nina', [await rvalue(), await rchips()]);
+    await room.keyboard.type('and @kai please', { delay: 15 }); await room.waitForTimeout(400);
+    check('mention', 'a room: a typed mention becomes a chip, and typing goes on', (await rvalue()) === '@nina and @kai please' && (await rchips()).join() === '@nina,@kai', [await rvalue(), await rchips()]);
+    for (let i = 0; i < 'please'.length + 1; i++) await room.keyboard.press('Backspace');
+    await room.waitForTimeout(350);
+    await room.keyboard.press('Backspace'); await room.waitForTimeout(200);
+    check('mention', 'a room: one Backspace takes a chip out', (await rvalue()) === '@nina and ' && (await rchips()).join() === '@nina', [await rvalue(), await rchips()]);
+    await room.keyboard.press('Control+z'); await room.waitForTimeout(200);
+    check('mention', 'a room: undo puts the chip back', (await rvalue()) === '@nina and @kai' && (await rchips()).join() === '@nina,@kai', [await rvalue(), await rchips()]);
+    await rclear();
+    await room.keyboard.type('thanks @kai.', { delay: 15 }); await room.waitForTimeout(400);
+    const hint = await room.evaluate(() => document.querySelector('.bt-group .bt-hint')?.textContent ?? '');
+    check('mention', 'a room: "@kai." stays text and the hint says why', (await rchips()).length === 0 && hint.includes('names nobody'), [await rchips(), hint]);
+  });
   await s.close();
 }

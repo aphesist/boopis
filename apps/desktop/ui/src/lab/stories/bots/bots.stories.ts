@@ -23,6 +23,19 @@ const huddleLive = (extra = 0): ProviderSpec => ({ ...paper, patch: (p) => withG
 }) });
 const openHuddle = async (c: AppCtx): Promise<void> => { await openPaper(c); await c.click('#hx-view-bots .bt-huddle-entry .ui-disclosure'); await c.wait(400); };
 const openGroup = async (c: AppCtx): Promise<void> => { await bots(c); await c.click('.bt-groups .ui-row'); await c.wait(500); };
+/** types into a composer the way a person does: the caret at the end, then each character as its own edit (a typed "@" opens the menu) */
+const typeIn = (scope: string, text: string) => async (c: AppCtx): Promise<void> => {
+  const input = document.querySelector<HTMLElement>(scope + ' .ui-composer__input'); if (!input) throw new Error('no composer in ' + scope);
+  input.focus();
+  for (const ch of text) { document.execCommand('insertText', false, ch); await c.wait(20); }
+  await c.wait(450);
+};
+const ROOM_COMPOSER = '#hx-view-bots .bt-group';
+const BOT_COMPOSER = '#hx-view-bots .bt-room:not(.bt-group)';
+const ROOM_MENU = { anchor: ROOM_COMPOSER + ' .ui-composer__anchor', layer: '.ui-listbox' };
+/** the owner's mixed draft: two members (chips), the whole room, a bot outside the room (the muted chip and the hint) and "@kai." (a
+    full stop right after a name is part of the handle, so it names nobody and stays text) */
+const MIXED = '@kai check the dates with @nina, then @all read it; ask @sol too. Thanks @kai.';
 const MOCK = { url: '/v6/__index.html', note: 'the mock opens on the session; its Bots tab is alt+2' };
 /** the owner's sequence: the six drawn before their records, then the records read; every orb must wear the saved look */
 const team: ProviderSpec = { simulate: false, patch: teamBeforeRecords };
@@ -89,6 +102,8 @@ const room: Story = {
     'a reply in markdown: lists, a quote, code, a path, a mention': st(['typical', 'owner'], { simulate: false, patch: (p) => withMarkdownThread(p, 'atlas') }, pick('atlas')),
     'a reply under way: the presence entry': st(['loading', 'owner'], { simulate: false, patch: (p) => withRun(p, 'atlas') }, pick('atlas'), { allow: { 'stability.render': 'the pending entry counts the seconds the reply has taken (a clock, text only), so two draws a moment apart differ in that one number' } }),
     'no bots at all': st(['empty', 'owner'], { bots: 'none' }, bots),
+    'the composer: "@" names a teammate': st(['open', 'owner'], {}, async (c) => { await pick('atlas')(c); await typeIn(BOT_COMPOSER, '@')(c); }, { overlay: { anchor: BOT_COMPOSER + ' .ui-composer__anchor', layer: '.ui-listbox' } }),
+    'the composer: a teammate drawn as a chip': st(['variant', 'owner'], {}, async (c) => { await pick('atlas')(c); await typeIn(BOT_COMPOSER, 'ask @nina before you merge it ')(c); }),
     'composer send hover': st(['hover', 'owner'], {}, pick('atlas'), { force: [{ sel: '#hx-view-bots .ui-send', state: 'hover' }] }),
     'composer attach tooltip': st(['tooltip', 'owner'], {}, async (c) => { await pick('atlas')(c); const b = document.querySelector<HTMLElement>('#hx-view-bots .ui-composer__attach, #hx-view-bots .ui-composer__mic'); if (b) { b.focus(); c.hx.ui.tooltip.show(b); } await c.wait(250); }, { overlay: { anchor: '#hx-view-bots .ui-composer__attach, #hx-view-bots .ui-composer__mic', layer: '.ui-tip' } })
   }
@@ -148,6 +163,9 @@ const groupRoom: Story = {
       drive.message(g, { kind: 'text', id: 'lv3', who: 'you', t: '09:15', text: 'Thanks, ship it.' }); await c.wait(350);
       if (huddle()?.querySelector('.ui-disclosure')?.getAttribute('aria-expanded') !== 'false') throw new Error('the huddle stayed open after the user wrote');
     }),
+    'the composer: "@" names the members': st(['open', 'owner'], paper, async (c) => { await openPaper(c); await typeIn(ROOM_COMPOSER, '@')(c); }, { overlay: ROOM_MENU }),
+    'the composer: "@" with a member option hovered': st(['hover'], paper, async (c) => { await openPaper(c); await typeIn(ROOM_COMPOSER, '@')(c); }, { overlay: ROOM_MENU, force: [{ sel: '.ui-listbox .ui-option:nth-of-type(2)', state: 'hover' }] }),
+    'the composer: mentions drawn as chips, an outsider muted, "@kai." left as text': st(['variant', 'owner'], paper, async (c) => { await openPaper(c); await typeIn(ROOM_COMPOSER, MIXED)(c); document.querySelector<HTMLElement>(ROOM_COMPOSER + ' .ui-composer__input')?.blur(); await c.wait(400); }),
     'members in tools from a connected server': st(['loading', 'owner'], { ...paper, patch: (p) => withActivity(p, [{ at: 0, status: 'running', tool: 'mcp__fetch__fetch' }, { at: 2, status: 'running', tool: 'mcp__github__create_issue' }]) }, openPaper),
     'a mention hovered': st(['hover', 'owner'], paper, async (c) => { await openPaper(c); const m = document.querySelector<HTMLElement>('#hx-view-bots .ui-mention'); if (m) { m.focus(); } await c.wait(700); }),
     'a mention of a bot that is not in the room: the chip and the hint': st(['variant', 'owner'], { fixtures: ['groups'], simulate: false }, async (c) => {
@@ -164,7 +182,6 @@ const groupRoom: Story = {
     'no messages yet': st(['empty'], { fixtures: ['groups'], simulate: false, patch: (p) => ({ ...p, groups: { ...p.groups, snapshot: () => ({ groups: p.groups.snapshot().groups, threads: {} }) } }) }, openGroup),
     'group chat is off': st(['error'], { ...grp, patch: (p) => ({ ...p, groups: { ...p.groups, note: () => 'Group chat is not running in the engine. Restart boopis and try again.' } }) }, openGroup),
     'renaming': st(['variant'], grp, async (c) => { await openGroup(c); await c.click('#hx-view-bots [aria-label^="Rename"]'); await c.wait(300); }),
-    'a member chip hover': st(['hover'], grp, openGroup, { force: [{ sel: '#hx-view-bots .bt-group .ui-chip', state: 'hover' }] }),
     'run limit menu open': st(['open', 'owner'], grp, async (c) => { await openGroup(c); await c.click('#hx-view-bots [aria-label^="Rounds a run may take"]'); await c.wait(400); }, { overlay: { anchor: '#hx-view-bots [aria-label^="Rounds a run may take"]', layer: '.ui-menu' } }),
     'run limit menu, the group has its own': st(['open', 'variant'], { ...grp, patch: (p) => ({ ...p, groups: { ...p.groups, roundLimit: () => Promise.resolve({ rounds: 45, fallback: 30 }) } }) }, async (c) => { await openGroup(c); await c.click('#hx-view-bots [aria-label^="Rounds a run may take"]'); await c.wait(400); }, { overlay: { anchor: '#hx-view-bots [aria-label^="Rounds a run may take"]', layer: '.ui-menu' } }),
     'a lead answers first': st(['variant'], { ...grp, patch: (p) => ({ ...p, groups: { ...p.groups, snapshot: () => { const s = p.groups.snapshot(); return { ...s, groups: s.groups.map((g) => ({ ...g, working: [], ...(g.members[0] ? { lead: g.members[0].id } : {}) })) }; } } }) }, openGroup),

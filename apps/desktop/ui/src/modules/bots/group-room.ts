@@ -1,6 +1,7 @@
 /* A group's room: the header (its members as stacked orbs, its name, rename, members, archive), the one thread the user and the
    members write in (each message by the one who wrote it: its orb and name in the entry's origin slot), who is replying now,
-   and the library's composer with a chip for each member to address with `@name`. Everything that changes comes from the
+   and the library's composer, where a typed "@" suggests the members and a member's `@handle` is drawn as its chip (mentions.ts:
+   the "@" list replaced the row of `@handle` chips, which the compact composer never showed). Everything that changes comes from the
    provider's events; everything the user does is a provider command. What a group is in this build (who answers, what the
    members see of each other) is the provider's `nature`, said in the room and never made up here. */
 import { emit } from '../../core/bus';
@@ -29,6 +30,7 @@ import { foldHuddles, huddleEntry, huddleRuns, isBetween, liveAt } from './huddl
 import type { HuddleDeps } from './huddle';
 import { mountGroupQueue } from './group-queue';
 import type { GroupQueue } from './group-queue';
+import { botMentions } from './mentions';
 
 const groups = () => data().groups;
 const toast = (t: string, o?: Parameters<typeof ui.toast>[1]): void => { ui.toast(t, o); };
@@ -77,16 +79,17 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
   S.groupPane = pane;
   G.boardEl = boardEl; G.board = mountBoard(boardEl, { source: () => data().kanban });
   G.scroll = scroll; G.head = head; G.log = log; G.zone = zone; G.working = working;
-  const c = ui.composer({ placeholder: 'Message the group', label: 'Message the group', attach: false, queue: true });
+  const c = ui.composer({ placeholder: 'Message the group', label: 'Message the group', attach: false, queue: true, mentions: roomMentions });
   c.classList.add('bt-composer');
   zone.append(c);
   c.input.setAttribute('data-hx-focus', 'composer');
   c.addEventListener('ui:send', (e) => { send((e as CustomEvent<{ text: string }>).detail.text); });
   c.addEventListener('ui:stop', () => { stopTalk(); });
   const showHint = (): void => {
-    const g = group(S.groupSel); const t = g ? outsideHint(g, c.value) : '';
+    const g = group(S.groupSel), out = g ? outsideHint(g, c.value) : '';
+    const t = g ? [nearMissHint(g, c.value), out].filter(Boolean).join(' ') : '';
     hint.textContent = t; hint.hidden = !t;
-    if (!g || !t) return;
+    if (!g || !out) return;
     for (const b of ui.markdown.outsiders(c.value, g.members, outsiders(g))) {
       const go = ui.button({ label: 'Send to ' + b.name, size: 's', variant: 'ghost' });
       go.addEventListener('click', () => { const draft = c.value.trim(); c.setValue(''); showHint(); sendToBot(b, draft); });
@@ -215,6 +218,26 @@ export function outsideHint(g: Group, text: string): string {
   const out = ui.markdown.outsiders(text, g.members, outsiders(g));
   return out.length ? listWords(out.map((b) => b.name)) + (out.length === 1 ? " isn't" : " aren't") + ' in this room: send it to ' + (out.length === 1 ? 'their' : 'their own') + ' chat, or send without them' : '';
 }
+/** "@kai." names nobody: the engine reads a full stop (or a colon, a hyphen, an underscore) right after a handle as part of it. The
+    hint says so for a draft whose handle would name a member or the room without that mark (the composer leaves it as text) */
+export function nearMissHint(g: Group, text: string): string {
+  const handles = new Set([...g.members.map((m) => m.handle.toLowerCase()), 'all', 'everyone']);
+  const said: string[] = [];
+  for (const h of ui.markdown.handles(text)) {
+    if (handles.has(h)) continue;
+    const bare = h.replace(/[._:-]+$/, ''), mark = h.slice(bare.length);
+    if (bare && mark && handles.has(bare) && !said.some((x) => x.startsWith('“@' + h))) said.push('“@' + h + '” names nobody: the “' + mark + '” right after the name counts as part of it.');
+  }
+  return said.slice(0, 2).join(' ');
+}
+/** the room's "@": its members (by the handle the engine reads) and `@all`, drawn as the room draws a sent message */
+const roomMentions = botMentions({
+  label: 'Ask in this room',
+  foot: () => { const g = group(S.groupSel); return g?.lead ? 'An @name brings that bot in now.' : 'Only the bots you name answer. With no name, every member does.'; },
+  named: () => group(S.groupSel)?.members.map((m) => ({ ...mdBot(m), handle: m.handle })) ?? [],
+  everyone: () => { const g = group(S.groupSel); return g ? 'Everyone in ' + g.name : null; },
+  ctx: () => { const g = group(S.groupSel); return g ? ctxOf(g) : {}; }
+});
 /** a message of this room opened in a bot's own chat, as a draft the owner sends (nothing is forwarded by itself; rosters are frozen, so the bot cannot join) */
 export function sendToBot(bot: { id: string }, text: string): void {
   emit('hx:bot-select', { id: bot.id, from: 'group' });
@@ -442,12 +465,7 @@ function renderComposer(g: Group): void {
   const c = G.composer; if (!c) return;
   c.input.setAttribute('data-placeholder', 'Message ' + g.name + ', or @name for one');
   c.input.setAttribute('aria-label', 'Message ' + g.name);
-  const chips = g.members.map((m) => {
-    const chip = ui.chip({ label: '@' + m.handle, tip: 'Ask ' + m.name + ' only' });
-    chip.addEventListener('click', () => { const v = c.value; c.insert((v && !/\s$/.test(v) ? ' ' : '') + '@' + m.handle + ' '); c.focus(); });
-    return chip;
-  });
-  c.chips.replaceChildren(...chips);
+  c.refresh();   /* the draft's chips follow the room's members */
   const why = groups().note();
   (G.working as HTMLElement).dataset['note'] = why ? '1' : '';
   c.setRunning(g.busy);

@@ -24,6 +24,7 @@ import { followZone } from '../chat/follow-zone';
 import { botActor, placeInLog, roomPresence } from './presence';
 import type { RoomPresence } from './presence';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
+import { botMentions } from './mentions';
 
 const bots = () => data().bots;
 const NODE = new Map<string, HTMLElement>();
@@ -311,9 +312,17 @@ function resolveCard(id: string, m: ApprovalMessage, action: string): void {
 /* ───────── composer: the library's (KEYMAP section 7) ─────────
    The library's composer talks: the mic shows the open bot's orb listening, and while you talk the presence orb (and
    every .ui-orb[data-bot] of that bot) takes orb2's listening reaction. The bot's chips go in its chips slot:
-   Governed (alt+G toggles governance), and its channels (opens settings). */
+   Governed (alt+G toggles governance), and its channels (opens settings). A typed "@" suggests the teammates, and a
+   teammate's `@name` is drawn as the capsule the sent message will show (mentions.ts); naming one brings it nowhere,
+   which the list's foot says. */
+const teammates = botMentions({
+  label: 'Name a teammate',
+  foot: () => (bot(S.sel)?.name ?? 'This bot') + ' reads the name. The bot you name does not see this chat.',
+  named: () => S.bots.filter((x) => x.id !== S.sel).map((x) => ({ ...x, id: x.id, name: x.name, handle: x.id })),
+  ctx
+});
 function buildComposer(host: HTMLElement): void {
-  const c = ui.composer({ placeholder: 'Message', label: 'Message', attach: true, spend: { spent: '$0.00', cap: '$0.60' }, bot: bot(S.sel) ?? null, orbs: () => [S.presence] });
+  const c = ui.composer({ placeholder: 'Message', label: 'Message', attach: true, spend: { spent: '$0.00', cap: '$0.60' }, bot: bot(S.sel) ?? null, orbs: () => [S.presence], mentions: teammates });
   c.classList.add('bt-composer');
   host.append(c);
   const input = c.input;

@@ -125,10 +125,47 @@ export function mentionOutsideHTML(b: MdBot, note = "isn't in this room"): strin
   const said = b.name + ' ' + note;
   return '<span class="ui-mention ui-mention--out" tabindex="0"' + attrs({ 'data-tip': said, 'aria-label': said }) + '>' + orbHtml(b, { size: 16, still: true }) + '<span class="ui-mention__name">' + esc(b.name) + '</span></span>';
 }
+const stackHTML = (members: readonly MdBot[]): string => '<span class="ui-mention__stack" aria-hidden="true">' + members.slice(0, 4).map((m) => orbHtml(m, { size: 16, still: true })).join('') + '</span>';
 /** `@all`: the members' orbs, overlapping, and the word */
 export function everyoneHTML(word: string, members: readonly MdBot[]): string {
   return '<button type="button" class="ui-mention ui-mention--all"' + attrs({ 'data-mention': '@all', 'aria-label': word + ': ' + members.map((m) => m.name).join(', ') }) + '>' +
-    '<span class="ui-mention__stack" aria-hidden="true">' + members.slice(0, 4).map((m) => orbHtml(m, { size: 16, still: true })).join('') + '</span><span class="ui-mention__name">' + esc(word) + '</span></button>';
+    stackHTML(members) + '<span class="ui-mention__name">' + esc(word) + '</span></button>';
+}
+
+/** what a handle names in a context, by the engine's rule: a bot of this conversation, the whole room (`@all`, `@everyone`), or a bot
+    that exists but is not here; null when it names nobody (it stays text) */
+export type MentionTarget = { kind: 'bot'; bot: MdBot } | { kind: 'out'; bot: MdBot } | { kind: 'all'; members: readonly MdBot[] };
+export function mentionTarget(handle: string, ctx: MarkdownCtx): MentionTarget | null {
+  if (EVERYONE.has(handle.toLowerCase())) return ctx.everyone?.length ? { kind: 'all', members: ctx.everyone } : null;
+  const b = ctx.mention?.(handle);
+  if (b) return { kind: 'bot', bot: b };
+  const o = ctx.outside?.(handle);
+  return o ? { kind: 'out', bot: o } : null;
+}
+const targetHTML = (t: MentionTarget, word: string, ctx: MarkdownCtx): string => (t.kind === 'all' ? everyoneHTML(word, t.members) : t.kind === 'bot' ? mentionHTML(t.bot) : mentionOutsideHTML(t.bot, ctx.outsideNote));
+const hasMentions = (ctx: MarkdownCtx): boolean => !!(ctx.mention || ctx.everyone || ctx.outside);
+
+/** a mention in a text: where it starts, its words exactly as written ("@kai", "@All"), and what it names */
+export interface MentionSpan { at: number; text: string; target: MentionTarget }
+/** the mentions a text holds that name someone in this context, matched by the engine's pattern anywhere in the text (the engine
+    does not ask for a word start: "me@kai" names kai to it too) */
+export function mentionSpans(text: string, ctx: MarkdownCtx): MentionSpan[] {
+  if (!hasMentions(ctx)) return [];
+  const out: MentionSpan[] = [];
+  for (const m of String(text ?? '').matchAll(new RegExp(MENTION_SOURCE, 'g'))) {
+    const t = mentionTarget(m[1] ?? '', ctx);
+    if (t) out.push({ at: m.index ?? 0, text: m[0], target: t });
+  }
+  return out;
+}
+/** A mention set into the composer's text: the capsule a sent mention is drawn as, as a chip of the text. Its text is exactly the words
+    typed (the "@" and the handle, which the send carries), kept for the caret, the copy and the screen reader; what shows is the
+    capsule's own face (the orb and the name, the room's orbs and the word). Not a button: the text box is the control. */
+export function mentionChip(s: MentionSpan, note = "isn't in this room"): { cls: string; html: string; tip?: string } {
+  const t = s.target;
+  if (t.kind === 'all') return { cls: 'ui-mention ui-mention--all', html: stackHTML(t.members) + '<span class="ui-mention__name">' + esc(s.text) + '</span>' };
+  const face = orbHtml(t.bot, { size: 16, still: true }) + '<span class="ui-sr">' + esc(s.text) + '</span><span class="ui-mention__name" aria-hidden="true"' + attrs({ 'data-name': t.bot.name }) + '></span>';
+  return t.kind === 'out' ? { cls: 'ui-mention ui-mention--out', html: face, tip: t.bot.name + ' ' + note } : { cls: 'ui-mention', html: face };
 }
 
 /* ───────────── inline ───────────── */
@@ -172,36 +209,17 @@ export function inlineHTML(src: string, ctx: MarkdownCtx = {}): string {
     .replace(/(^|[^\w])_(?=[^\s_])([^_]*?[^\s_])_(?!\w)/g, '$1<em>$2</em>')
     .replace(/~~(?=\S)([\s\S]*?\S)~~/g, '<del>$1</del>');
   /* mentions, by the engine's pattern; an unknown handle stays as written */
-  if (ctx.mention || ctx.everyone || ctx.outside) {
-    s = s.replace(new RegExp(MENTION_SOURCE, 'g'), (m, h: string) => {
-      const k = h.toLowerCase();
-      if (EVERYONE.has(k)) return ctx.everyone?.length ? hold(everyoneHTML('@' + h, ctx.everyone)) : m;
-      const b = ctx.mention?.(h);
-      if (b) return hold(mentionHTML(b));
-      const o = ctx.outside?.(h);
-      return o ? hold(mentionOutsideHTML(o, ctx.outsideNote)) : m;
-    });
-  }
+  if (hasMentions(ctx)) s = s.replace(new RegExp(MENTION_SOURCE, 'g'), (m, h: string) => { const t = mentionTarget(h, ctx); return t ? hold(targetHTML(t, '@' + h, ctx)) : m; });
   for (let i = held.length - 1; i >= 0; i--) s = s.split(PH('h', i)).join(held[i] ?? '');
   return s;
 }
 
 /** what the user wrote, as written (no markdown: a person's message is not styled), with its mentions as chips */
 export function plainHTML(src: string, ctx: MarkdownCtx = {}): string {
-  const held: string[] = [];
-  let s = String(src ?? '');
-  if (ctx.mention || ctx.everyone || ctx.outside) {
-    s = s.replace(new RegExp(MENTION_SOURCE, 'g'), (m, h: string) => {
-      const k = h.toLowerCase();
-      const out = ctx.outside?.(h);
-      const chip = EVERYONE.has(k) ? (ctx.everyone?.length ? everyoneHTML('@' + h, ctx.everyone) : null) : (ctx.mention?.(h) ? mentionHTML(ctx.mention(h) as MdBot) : out ? mentionOutsideHTML(out, ctx.outsideNote) : null);
-      if (!chip) return m;
-      held.push(chip); return PH('h', held.length - 1);
-    });
-  }
-  s = esc(s);
-  for (let i = held.length - 1; i >= 0; i--) s = s.split(PH('h', i)).join(held[i] ?? '');
-  return s;
+  const s = String(src ?? '');
+  let out = '', i = 0;
+  for (const m of mentionSpans(s, ctx)) { out += esc(s.slice(i, m.at)) + targetHTML(m.target, m.text, ctx); i = m.at + m.text.length; }
+  return out + esc(s.slice(i));
 }
 
 /* ───────────── blocks ───────────── */
