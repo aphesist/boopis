@@ -1,9 +1,15 @@
 <!doctype html><html><meta charset="utf-8"><title>Orb stage</title>
-<!-- One half of a before/after clip. Loads the REAL orb2 build (?lib=stock: as boopis ships it; ?lib=tuned: the
-     clarity fixes and the tuning of ORBS.md) and writes the attributes boopis writes (components/orb.ts orbHtml:
-     idle-motion calm, mode drift; the room header lively, room.ts:110; the proposed plan makes it calm: lively's rim peeks, sky gazes and spins turn a flat body past what it can draw cleanly, ORBS.md C9-C10). ?plan=today drives the orbs only where boopis
-     does today; ?plan=more applies the "use them more" plan (ORBS.md, part 2) with orb2's own calls (lookAt, blink,
-     alive, face-scale). Math.random is seeded so both halves draw the same idle sequence. -->
+<!-- One half of a before/after clip. It loads the REAL orb2 build: ?lib=stock is the build boopis ships, and ?lib=tuned is
+     that build with ORBS.md's renderer fixes (C1-C3, C7, G1-G3) and tuning. It writes the attributes boopis writes
+     (components/orb.ts orbHtml).
+     ?plan=today drives the orbs only where boopis drives them today.
+     ?plan=more applies the owner's per-surface policy (ORBS.md, "Per-surface policy"):
+     - the Bots sidebar and the dock hold one fixed sideways pose, and animate in a state;
+     - a dock bot comes alive under the pointer;
+     - the chat is lively.
+     The fixed pose is orb2's public defineReaction: a hidden "pose" reaction whose motion is the pose. Changing a
+     reaction is orb2's own morph (0.38 s, easeMorph), so the pose, a state and the lively idle blend into each other.
+     Math.random is seeded, so both halves draw the same sequence. ?scene=dock|room|sidebar|torture -->
 <style>
   html, body { margin: 0; height: 100%; background: #0e0e0e; color: #e8e8e8; font: 13px/18px Inter, system-ui, sans-serif; overflow: hidden; }
   .ui-orb { --o: 20; position: relative; display: inline-block; flex: none; width: calc(var(--o) * 1px); height: calc(var(--o) * 1px); line-height: 0; vertical-align: middle; }
@@ -11,85 +17,133 @@
   .ui-orb[data-render] > orb-avatar { position: absolute; left: 0; top: 0; width: calc(var(--r) * 1px); height: calc(var(--r) * 1px); transform-origin: 0 0; transform: scale(calc(var(--o) / var(--r))); }
   .tag { position: absolute; left: 16px; top: 12px; font-weight: 600; font-size: 14px; color: #fff; }
   .tag small { display: block; font-weight: 400; color: #9a9a9a; font-size: 12px; }
-  .side { position: absolute; left: 0; top: 52px; bottom: 120px; width: 210px; background: #161616; padding: 10px 8px; box-sizing: border-box; }
+  .side { position: absolute; left: 150px; top: 70px; width: 300px; bottom: 60px; background: #161616; padding: 12px 10px; box-sizing: border-box; border-radius: 12px; }
   .main-bot { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0 12px; }
-  .row { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 8px; border-radius: 10px; }
-  .row.on { background: #232323; }
-  .row b { font-weight: 500; } .row span { color: #9a9a9a; font-size: 12px; display: block; }
-  .room { position: absolute; left: 222px; right: 12px; top: 52px; bottom: 120px; }
+  .seg { display: flex; gap: 4px; margin: 0 0 10px 4px; } .seg span { padding: 3px 12px; border-radius: 99px; color: #9a9a9a; } .seg .on { background: #2a2a2a; color: #fff; }
+  .row { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 8px; border-radius: 10px; }
+  .row b { font-weight: 500; } .row span { color: #9a9a9a; font-size: 12px; display: block; } .row span.owe { color: #e28600; }
+  .room { position: absolute; left: 24px; right: 24px; top: 60px; bottom: 30px; }
   .hdr { display: flex; align-items: center; gap: 10px; height: 52px; }
-  .msg { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0; opacity: 1; transition: opacity .3s; }
-  .msg .b { background: #1f1f1f; border-radius: 14px; padding: 7px 11px; max-width: 300px; }
+  .msg { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0; transition: opacity .3s; }
+  .msg .b { background: #1f1f1f; border-radius: 14px; padding: 7px 11px; max-width: 340px; }
   .msg.you { justify-content: flex-end; } .msg.you .b { background: #2e2e2e; }
   .msg.hidden { opacity: 0; }
   .comp { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; border-radius: 20px; background: #1d1d1d; display: flex; align-items: center; padding: 0 16px; color: #8a8a8a; }
   .comp.typing { color: #e8e8e8; }
-  .dock { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); background: #000; border-radius: 30px; height: 64px; padding: 0 18px; display: flex; align-items: center; gap: 14px; }
-  .big { position: absolute; display: flex; gap: 26px; align-items: center; left: 0; right: 0; justify-content: center; }
-  .cap { color: #8a8a8a; font-size: 12px; text-align: center; margin-top: 6px; }
+  .dock { position: absolute; left: 50%; top: 360px; transform: translateX(-50%); background: #000; border-radius: 36px; height: 72px; padding: 0 20px; display: flex; align-items: center; gap: 14px; }
+  .dock .ui-orb { position: relative; }
+  .dot { position: absolute; right: -1px; top: 1px; width: 8px; height: 8px; border-radius: 50%; background: #e28600; box-shadow: 0 0 0 2px #000; }
+  .word { position: absolute; left: 0; right: 0; top: 460px; text-align: center; color: #9a9a9a; }
+  .cursor { position: absolute; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; margin: -8px 0 0 -8px; pointer-events: none; transition: left .45s cubic-bezier(.3,.7,.2,1), top .45s cubic-bezier(.3,.7,.2,1); left: -40px; top: -40px; }
+  .grid { position: absolute; left: 20px; right: 20px; top: 70px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px 0; justify-items: center; }
+  .cap { color: #8a8a8a; font-size: 11px; text-align: center; margin-top: 4px; }
 </style>
 <body><div id="r"></div>
 <script>
 const q = Object.fromEntries(new URLSearchParams(location.search));
-/* a seeded Math.random (mulberry32): the same idle sequence in both halves */
 let seed = 20261123; Math.random = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 const LIB = { stock: 'lib/orb-avatar.min.js', snap: 'lib/orb-avatar.snap.js', tuned: 'lib/orb-avatar.tuned.js' }[q.lib || 'stock'];
 const MORE = q.plan === 'more';
 const LOOKS = { boopis: ['squircle', '#f5f5f5', '#0e0e0e'], kai: ['circle', '#4fc9a8', '#141418'], nina: ['triangle', '#f23b5a', '#141418'], moss: ['squircle', '#2fd26a', '#141418'], iris: ['flower', '#3b82f6', '#141418'], hex: ['hexagon', '#a6a6ab', '#141418'] };
-/* boopis's orbHtml, with its attributes; `fs` is orb2's face-scale (part 1, C4: 1.25 at 28 px and under, after) */
+/* THE FIXED POSE (ORBS.md): Grok-Bot's sidebar pose measured on 157-live-sidebar-expanded (eye centroid +0.22, -0.21 of
+   the body box, strokes at 54.5 degrees, the far eye 0.6 of the near one's area), matched in probes/pose.html */
+const POSE = { eyaw: .5, epitch: .45, eroll: .55, bodyRoll: .05, w: 1 };
 const orb = (n, size, o = {}) => {
-  const [shape, color, eye] = LOOKS[n]; const render = o.render && o.render !== size ? o.render : null;
+  const [shape, color, eye] = LOOKS[n] || [n, '#f5f5f5', '#0e0e0e']; const render = o.render && o.render !== size ? o.render : null;
   const fs = MORE && size <= 44 ? ' face-scale="1.25"' : '';
   return `<span class="ui-orb"${render ? ' data-render' : ''} data-bot="${n}" style="--o:${size}${render ? ';--r:' + render : ''}"><orb-avatar size="${render || size}" shape="${shape}" color="${color}" eye-color="${eye}" reaction="${o.state || 'idle'}" idle-motion="${o.motion || 'calm'}" mode="drift"${fs}${o.attrs || ''} data-glance></orb-avatar></span>`;
 };
+/* the policy's three behaviours, on orb2's own attributes */
+const fixed = (o) => { o.dataset.base = 'pose'; o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', 'pose'); };
+const state = (o, r) => { o.dataset.base = r; if (!o._hover) { o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', r); } };
+const wake = (o) => { o._hover = true; if (o.dataset.base === 'pose') { o.setAttribute('reaction', 'idle'); o.setAttribute('idle-motion', 'lively'); } };
+const settle = (o) => { o._hover = false; o.lookAt(); if (o.dataset.base === 'pose') { o.setAttribute('reaction', 'pose'); o.setAttribute('idle-motion', 'off'); } };
 const R = document.getElementById('r');
-function sceneIdle() {
-  R.innerHTML = `<div class="tag">${q.title || ''}<small>${q.sub || ''}</small></div>
-    <div class="big" style="top:150px">${['boopis', 'iris', 'kai'].map((n) => `<div><div>${orb(n, 112)}</div><div class="cap">${n}, 112 px</div></div>`).join('')}</div>
-    <div class="big" style="top:420px">${[20, 24, 28, 44].map((s) => `<div style="display:flex;flex-direction:column;align-items:center">${orb('boopis', s)}<div class="cap">${s} px</div></div>`).join('')}</div>
-    <div class="big" style="top:560px">${['kai', 'nina', 'moss', 'iris', 'hex'].map((n) => orb(n, 20)).join('')}</div>
-    <div class="cap" style="position:absolute;left:0;right:0;top:600px">sidebar rows at 20 px: calm idle, as boopis draws them</div>`;
-}
-function sceneAlive() {
-  const rows = [['kai', 'Writing the changelog'], ['nina', 'Waiting on the deploy'], ['moss', 'Found 2 flaky tests'], ['iris', 'Checked the composer'], ['hex', 'Asleep', 'sleeping']];
-  R.innerHTML = `<div class="tag">${q.title || ''}<small>${q.sub || ''}</small></div>
-  <div class="side">${MORE ? `<div class="main-bot">${orb('boopis', 44, { attrs: ' alive idle-time="9" sleep-after="0" emotes="curious winkswap slowblink"' })}<b style="font-weight:500">boopis</b></div>` : `<div class="row">${orb('boopis', 20)}<div><b>boopis</b><span>Summarised the morning</span></div></div>`}
-    ${rows.map(([n, a, st]) => `<div class="row${n === 'kai' ? ' on' : ''}">${orb(n, 20, { state: st })}<div><b>${n}</b><span>${a}</span></div></div>`).join('')}</div>
-  <div class="room"><div class="hdr">${orb('boopis', 40, { motion: MORE ? 'calm' : 'lively' })}<b>release crew</b></div>
-    <div class="msg" id="m1">${orb('nina', 20)}<div class="b">staging is green, the deploy is ready</div></div>
-    <div class="msg you hidden" id="m2"><div class="b">ship it after the notes</div></div>
-    <div class="msg hidden" id="m3">${orb('kai', 20)}<div class="b">notes are in CHANGELOG.md, two sections</div></div>
-    <div class="msg" id="m4">${orb('moss', 20)}<div class="b">the flaky test is quarantined</div></div>
-    <div class="comp" id="comp">Message release crew</div></div>
-  <div class="dock">${['boopis', 'kai', 'nina', 'moss', 'iris', 'hex'].map((n) => MORE ? orb(n, 40, { state: n === 'hex' ? 'sleeping' : 'idle' }) : orb(n, 40, { render: 80, state: n === 'hex' ? 'sleeping' : 'idle' })).join('')}</div>`;
-}
-/* the timeline (seconds): the same events in both halves; `today` reacts only where boopis reacts today */
+const tag = () => `<div class="tag">${q.title || ''}<small>${q.sub || ''}</small></div>`;
+const S = {
+  dock() {
+    const bots = ['boopis', 'kai', 'nina', 'moss', 'iris', 'hex'];
+    R.innerHTML = tag() + `<div class="dock">${bots.map((n) => MORE ? orb(n, 40) : orb(n, 40, { render: 80, state: n === 'hex' ? 'sleeping' : 'idle' })).join('')}</div><div class="word" id="word"></div><div class="cursor" id="cur"></div>`;
+    if (MORE) for (const o of document.querySelectorAll('.dock orb-avatar')) { o.setAttribute('jelly', '.55'); fixed(o); }
+  },
+  room() {
+    R.innerHTML = tag() + `<div class="room"><div class="hdr">${orb('boopis', 40, { motion: 'lively' })}<b>release crew</b></div>
+      <div class="msg" id="m1">${orb('nina', 20, { motion: MORE ? 'lively' : 'calm' })}<div class="b">staging is green, the deploy is ready</div></div>
+      <div class="msg you hidden" id="m2"><div class="b">ship it after the notes</div></div>
+      <div class="msg hidden" id="m3">${orb('kai', 20, { motion: MORE ? 'lively' : 'calm' })}<div class="b">notes are in CHANGELOG.md, two sections</div></div>
+      <div class="msg" id="m4">${orb('moss', 20, { motion: MORE ? 'lively' : 'calm' })}<div class="b">the flaky test is quarantined</div></div>
+      <div class="msg" id="m5">${orb('iris', 20, { motion: MORE ? 'lively' : 'calm' })}<div class="b">the composer passes on both themes</div></div>
+      <div class="comp" id="comp">Message release crew</div></div>`;
+  },
+  sidebar() {
+    const rows = [['kai', 'Writing the changelog'], ['nina', 'Waiting on the deploy'], ['moss', 'Found 2 flaky tests'], ['iris', 'Checked the composer'], ['hex', 'Sorted 14 emails']];
+    R.innerHTML = tag() + `<div class="side"><div class="seg"><span>Sessions</span><span class="on">Bots</span></div>
+      ${MORE ? `<div class="main-bot">${orb('boopis', 44)}<b style="font-weight:500">boopis</b></div>` : `<div class="row">${orb('boopis', 20)}<div><b>boopis</b><span>Summarised the morning</span></div></div>`}
+      ${rows.map(([n, a]) => `<div class="row">${orb(n, MORE ? 28 : 20)}<div><b>${n}</b><span id="a-${n}">${a}</span></div></div>`).join('')}</div>`;
+    if (MORE) for (const o of document.querySelectorAll('.side orb-avatar')) fixed(o);
+  },
+  torture() {
+    const sh = ['circle', 'squircle', 'soft', 'wide', 'tall', 'bean', 'drop', 'ghost', 'triangle', 'hexagon', 'diamond', 'cloud', 'clover', 'flower', 'star'];
+    R.innerHTML = tag() + `<div class="grid">${sh.map((s) => `<div>${orb(s, 72, { motion: 'lively', attrs: ' mode="fixed"' })}<div class="cap">${s}</div></div>`).join('')}</div>`;
+  }
+};
 const $ = (s) => document.querySelector(s);
 const ctr = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
-const capLook = (o, px, py, k) => { const [cx, cy] = ctr(o); let vx = (px - cx) * k, vy = (py - cy) * k; const max = 0.3 * Math.max(250, o.getBoundingClientRect().width * 1.65), l = Math.hypot(vx, vy); if (l > max) { vx *= max / l; vy *= max / l; } o.lookAt(cx + vx, cy + vy); };   /* bots/orbs.ts gentleFollow + capLook */
-const O = (n, scope = document) => scope.querySelector(`.ui-orb[data-bot="${n}"] > orb-avatar`);
+const capLook = (o, px, py, k) => { const [cx, cy] = ctr(o); let vx = (px - cx) * k, vy = (py - cy) * k; const max = 0.3 * Math.max(250, o.getBoundingClientRect().width * 1.65), l = Math.hypot(vx, vy); if (l > max) { vx *= max / l; vy *= max / l; } o.lookAt(cx + vx, cy + vy); };
 const at = (s, f) => setTimeout(f, s * 1000);
-function timeline() {
-  if (q.scene !== 'alive') return;
-  const presence = $('.hdr orb-avatar'), comp = $('#comp'), dockOrbs = [...document.querySelectorAll('.dock orb-avatar')];
-  const gutter = () => [...document.querySelectorAll('.msg:not(.hidden) orb-avatar')];
-  const mainBot = $('.side orb-avatar');
-  /* 1.0 s: you start typing. Today: the presence orb holds a look at the composer (room.ts:408) and turns listening */
-  at(1.0, () => { comp.classList.add('typing'); comp.textContent = 'ship it after the notes'; presence.setAttribute('reaction', 'listening'); capLook(presence, ...ctr(comp), .45);
-    if (MORE) { for (const o of gutter()) capLook(o, ...ctr(comp), .45); for (const o of dockOrbs.slice(0, 5)) capLook(o, ...ctr(comp), .3); capLook(mainBot, ...ctr(comp), .45); } });
-  /* 2.6 s: sent */
-  at(2.6, () => { comp.classList.remove('typing'); comp.textContent = 'Message release crew'; $('#m2').classList.remove('hidden'); presence.setAttribute('reaction', 'idle'); presence.lookAt();
-    if (MORE) { for (const o of [...gutter(), ...dockOrbs, mainBot]) o.lookAt(); } });
-  /* 4.0 s: kai answers. Today: the presence orb glances at the new message for 1.2 s (room.ts:223) */
-  at(4.0, () => { const m = $('#m3'); m.classList.remove('hidden'); const p = ctr(m.querySelector('.b')); capLook(presence, p[0], p[1], .45); at(1.2, () => presence.lookAt());
-    if (MORE) { const k = O('kai', m); k.blink(); for (const o of gutter()) if (o !== k) { capLook(o, p[0], p[1], .45); at(1.2, () => o.lookAt()); }
-      const kr = O('kai', $('.side')); kr.blink(); const kd = dockOrbs[1]; kd.blink(); capLook(mainBot, p[0], p[1], .45); at(1.2, () => mainBot.lookAt()); } });
-  /* 6.0 s: nina needs you (a state change: both) */
-  at(6.0, () => { for (const o of document.querySelectorAll('.ui-orb[data-bot="nina"] > orb-avatar')) o.setAttribute('reaction', 'needs'); if (MORE) { const n = $('#m1 orb-avatar'); for (const o of gutter()) if (o !== n) { capLook(o, ...ctr(n), .45); at(1.0, () => o.lookAt()); } } });
-  /* 7.5 s: the pointer rests on the main bot (hover: listening + lookAt, bots/orbs.ts:42) */
-  at(7.5, () => { mainBot.setAttribute('reaction', 'listening'); const [x, y] = ctr(mainBot); mainBot.lookAt(x + 40, y + 30); });
-  at(9.0, () => { mainBot.setAttribute('reaction', 'idle'); mainBot.lookAt(); });
-}
-const s = document.createElement('script'); s.src = LIB; s.onload = () => { (q.scene === 'alive' ? sceneAlive : sceneIdle)(); document.body.dataset.ready = '1'; window.go = timeline; };
+const T = {
+  dock() {
+    const os = [...document.querySelectorAll('.dock orb-avatar')], cur = $('#cur'), word = $('#word');
+    const point = (i) => { const [x, y] = ctr(os[i].parentElement); cur.style.left = x + 'px'; cur.style.top = (y + 46) + 'px';   /* below the canvas box, so the checks see only the orb */ };
+    /* 0-3 s: the row at rest. 3-7.8 s: the pointer crosses the row, 0.8 s per bot */
+    for (let i = 0; i < 6; i++) at(3 + i * .8, () => {
+      point(i); word.textContent = ['boopis', 'kai', 'nina', 'moss', 'iris', 'hex'][i];
+      if (i > 0) { const p = os[i - 1]; MORE ? settle(p) : (p.setAttribute('reaction', p.getAttribute('reaction') === 'listening' ? 'idle' : p.getAttribute('reaction')), p.lookAt()); }
+      const o = os[i]; if (MORE) wake(o); else { if (o.getAttribute('reaction') === 'idle') o.setAttribute('reaction', 'listening'); o.blink(); }   /* today: listenOrb + blink (dock/input.ts:320-324) */
+    });
+    at(7.8, () => { const p = os[5]; MORE ? settle(p) : p.lookAt(); cur.style.left = '-40px'; word.textContent = ''; if (!MORE && p.getAttribute('reaction') === 'listening') p.setAttribute('reaction', 'sleeping'); });
+    /* 9 s: kai starts working; 11 s: nina needs you; 14.5 s: kai is done and settles back; 16 s: you answer nina */
+    at(9.0, () => { word.textContent = 'kai is working'; MORE ? state(os[1], 'working') : os[1].setAttribute('reaction', 'working'); });
+    at(11.0, () => { word.textContent = 'nina needs you'; MORE ? state(os[2], 'needs') : os[2].setAttribute('reaction', 'needs'); os[2].parentElement.insertAdjacentHTML('beforeend', '<span class="dot"></span>'); });
+    at(14.5, () => { word.textContent = 'kai is done'; MORE ? state(os[1], 'pose') : os[1].setAttribute('reaction', 'idle'); });
+    at(16.0, () => { word.textContent = 'you answered nina'; MORE ? state(os[2], 'pose') : os[2].setAttribute('reaction', 'idle'); os[2].parentElement.querySelector('.dot')?.remove(); });
+  },
+  room() {
+    const presence = $('.hdr orb-avatar'), comp = $('#comp');
+    const gutter = () => [...document.querySelectorAll('.msg:not(.hidden) orb-avatar')];
+    at(1.0, () => { comp.classList.add('typing'); comp.textContent = 'ship it after the notes'; presence.setAttribute('reaction', 'listening'); capLook(presence, ...ctr(comp), .45); if (MORE) for (const o of gutter()) capLook(o, ...ctr(comp), .45); });
+    at(2.8, () => { comp.classList.remove('typing'); comp.textContent = 'Message release crew'; $('#m2').classList.remove('hidden'); presence.setAttribute('reaction', 'idle'); presence.lookAt(); if (MORE) for (const o of gutter()) o.lookAt(); });
+    at(4.2, () => { const m = $('#m3'); m.classList.remove('hidden'); const p = ctr(m.querySelector('.b')); capLook(presence, p[0], p[1], .45); at(1.2, () => presence.lookAt());
+      if (MORE) { const k = m.querySelector('orb-avatar'); k.setAttribute('reaction', 'speaking'); at(1.6, () => k.setAttribute('reaction', 'idle')); for (const o of gutter()) if (o !== k) { capLook(o, p[0], p[1], .45); at(1.2, () => o.lookAt()); } } });
+    at(7.0, () => { const n = $('#m1 orb-avatar'); n.setAttribute('reaction', 'needs'); if (MORE) for (const o of gutter()) if (o !== n) { capLook(o, ...ctr(n), .45); at(1.0, () => o.lookAt()); } });
+    at(9.5, () => { $('#m1 orb-avatar').setAttribute('reaction', 'happy'); });
+  },
+  sidebar() {
+    const O = (n) => $(`.ui-orb[data-bot="${n}"] > orb-avatar`), A = (n) => $('#a-' + n);
+    at(2.0, () => { A('kai').textContent = 'Working: reading the changelog'; MORE ? state(O('kai'), 'working') : O('kai').setAttribute('reaction', 'working'); });
+    at(4.0, () => { A('nina').textContent = 'Needs you: approve a deploy'; A('nina').className = 'owe'; MORE ? state(O('nina'), 'needs') : O('nina').setAttribute('reaction', 'needs'); });
+    at(8.0, () => { A('kai').textContent = 'Wrote the changelog'; MORE ? state(O('kai'), 'pose') : O('kai').setAttribute('reaction', 'idle'); });
+    at(10.0, () => { A('nina').textContent = 'Deployed staging'; A('nina').className = ''; MORE ? state(O('nina'), 'pose') : O('nina').setAttribute('reaction', 'idle'); });
+  },
+  torture() {
+    /* every shape is turned through orb2's whole range: the lookAt clamp is 1.18 rad, the rim peek reaches 1.26,
+       and the sky gaze 0.94 of pitch. The look point sweeps a wide ellipse around each orb, then each orb spins,
+       turntable and tilt */
+    const os = [...document.querySelectorAll('orb-avatar')]; let t0 = performance.now();
+    const step = () => { const t = (performance.now() - t0) / 1000; if (t > 9) return;
+      for (const o of os) { const [cx, cy] = ctr(o); const a = t * 1.6; o.lookAt(cx + Math.cos(a) * 900, cy + Math.sin(a * 1.3) * 520); }
+      requestAnimationFrame(step); };
+    step();
+    at(9.2, () => { for (const o of os) o.lookAt(); });
+    at(9.6, () => os.forEach((o) => o.spin('turntable')));
+    at(11.0, () => os.forEach((o) => o.spin('tilt')));
+  }
+};
+window.go = () => T[q.scene || 'dock']();
+const s = document.createElement('script'); s.src = LIB; s.onload = () => {
+  const A = window.OrbAvatar;
+  A.defineReaction('pose', { label: 'Pose', blink: false, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: () => ({ ...POSE }) });
+  S[q.scene || 'dock'](); document.body.dataset.ready = '1';
+};
 document.head.appendChild(s);
 </script></body></html>

@@ -426,6 +426,16 @@ function signedDistPoly(px, py, P) {
 }
 
 /** Normalize raw contour into `[-1, 1]²` canvas body space (+y down) and compute 3D face placement metadata */
+function polyConvex(P) {
+  let sgn = 0;
+  for (let i = 0, n = P.length; i < n; i++) {
+    const a = P[i], b = P[(i + 1) % n], c = P[(i + 2) % n];
+    const cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+    if (Math.abs(cr) < 1e-7) continue;
+    if (!sgn) sgn = Math.sign(cr); else if (Math.sign(cr) !== sgn) return false;
+  }
+  return true;
+}
 function compileBodyShape(rawPts, opts = {}) {
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const [x, y] of rawPts) {
@@ -516,7 +526,7 @@ function compileBodyShape(rawPts, opts = {}) {
   const zHalf = opts.isCircle ? 1.0 : (opts.zHalf ?? Math.max(maxSpineR + slabH, coreR));
 
   return {
-    pts, spine, slabH, coreR, camber, zHalf, taperY,
+    pts, spine, slabH, coreR, camber, zHalf, taperY, convex: !opts.isCircle && polyConvex(pts),
     ox, oy, poleX: bestX, poleY: bestY,
     rx, ry, fScale, floorY, isCircle: !!opts.isCircle,
     label: opts.label || 'Custom'
@@ -1948,6 +1958,22 @@ function buildBodyContour(body, s, dxOff, dyOff, M, jx, jiggle, stride) {
     for (let m = 0; m < N; m++) addCapsule(m, N + m);
   }
 
+  if (body.convex) {
+    const tot = N * nL, cT = body.coreR * p0;
+    for (let i = 0; i < BODY_N; i += stride) {
+      const nx = RAY_DIRS[i][0], ny = RAY_DIRS[i][1];
+      let best = cT, bx = nx * cT, by = ny * cT;
+      for (let k = 0; k < tot; k++) {
+        const h = _QX[k] * nx + _QY[k] * ny + _AK[k];
+        if (h > best) { best = h; bx = _QX[k] + nx * _AK[k]; by = _QY[k] + ny * _AK[k]; }
+      }
+      let x = (ox0 + bx) * s, y = (oy0 + by) * s;
+      if (jiggle) { const jr = jellyScale(jx, Math.atan2(y, x)); x *= jr; y *= jr; }
+      if (flat > 0 && y > fy) y = fy + (y - fy) * .28;
+      out.push([x + dxOff, y + dyOff]);
+    }
+    return { pts: out, dx: dxOff, sh: dyOff };
+  }
   const totalSph = N * nL;
   const coreT = body.coreR * p0;
   for (let i = 0; i < BODY_N; i += stride) {
@@ -2086,6 +2112,26 @@ function projEyeSolid(a, b, localFr, M, body, faceScale) {
 /**
  * Draw all eye & extra face cells onto `<canvas>`, clipped cleanly to the live 3D body silhouette!
  */
+/* G2: an eye group that a far turn carries past the body's outline slides back onto the visible face (it is never cut by
+   the clip): every point of the group must sit inside 0.9 of the outline's radius (0.84 on a lobed body, whose valleys are near) in its own direction, and the group
+   moves toward the body's centre by what the worst point overshoots (two passes). */
+function keepOnFace(gp, warp) {
+  const B = warp.pts; if (!B || !B.length) return;
+  const cx = warp.dx, cy = warp.sh, rel = warp._rel || (warp._rel = B.map((b) => [b[0] - cx, b[1] - cy]));
+  for (let pass = 0; pass < 2; pass++) {
+    let worst = 0, gx = 0, gy = 0, n = 0;
+    for (const q of gp) for (const [X, Y] of q) {
+      const x = X - cx, y = Y - cy, r = Math.hypot(x, y); gx += x; gy += y; n++;
+      if (r < 1e-6) continue;
+      const R = rayHit(rel, x / r, y / r);
+      const k = warp.lobed ? .84 : .9;
+      if (R > 0 && r - k * R > worst) worst = r - k * R;
+    }
+    if (worst <= 0 || !n) return;
+    const gl = Math.hypot(gx, gy) || 1, sx = -gx / gl * worst * 1.05, sy = -gy / gl * worst * 1.05;
+    for (const q of gp) for (const p of q) { p[0] += sx; p[1] += sy; }
+  }
+}
 function drawFaceCells(c, localFr, M, rawFace, blinkAmt, pal, body, faceScale, warp, jx, jiggle, stride) {
   const face = blinkAmt > .002 ? {
     L: rawFace.L[0]?.noBlink ? rawFace.L : mixCluster(rawFace.L, F_WIDE.L, blinkAmt),
@@ -2104,22 +2150,27 @@ function drawFaceCells(c, localFr, M, rawFace, blinkAmt, pal, body, faceScale, w
     const vis = clamp((grpCp[2] + limb) / fadeSpan, 0, 1);
     if (vis <= 0) continue;
 
+    const gp = [];
     for (const cell of grp) {
-      const op0 = cell.op ?? 1;
-      if (op0 <= .01) continue;
-      const P = cell.pts, n = P.length;
-      c.beginPath();
-      for (let i = 0; i < n; i += stride) {
+      const P = cell.pts, n = P.length, q = [];
+      if ((cell.op ?? 1) > .01) for (let i = 0; i < n; i += stride) {
         const p = projEye3D(P[i][0], P[i][1], localFr, M, body, faceScale);
         let X = p[0] * warp.s, Y = p[1] * warp.s;
         if (jiggle) {
           const r = jellyScale(jx, Math.atan2(Y, X));
           X *= r; Y *= r;
         }
-        X += warp.dx;
-        Y += warp.sh;
-        i ? c.lineTo(X, Y) : c.moveTo(X, Y);
+        q.push([X + warp.dx, Y + warp.sh]);
       }
+      gp.push(q);
+    }
+    keepOnFace(gp, warp);
+    for (let ci = 0; ci < grp.length; ci++) {
+      const cell = grp[ci], q = gp[ci];
+      const op0 = cell.op ?? 1;
+      if (op0 <= .01 || !q.length) continue;
+      c.beginPath();
+      for (let i = 0; i < q.length; i++) i ? c.lineTo(q[i][0], q[i][1]) : c.moveTo(q[i][0], q[i][1]);
       c.closePath();
       c.globalAlpha = op0 * vis;
       c.fillStyle = pal[cell.fill] || cell.fill;
@@ -2599,7 +2650,7 @@ class OrbAvatar extends HTMLElement {
     }
   }
 
-  _headCap(v) { return (this._bodyTo && this._bodyTo.isCircle) ? v : clamp(v, -.18, .18); }
+  _eyeCap(v, m = .75) { const b = this._bodyTo; return (!b || b.isCircle || b.convex) ? v : clamp(v, -m, m); }
   _followMode() { return this._mode === 'follow' || (this._follow && this._mode === 'drift'); }
   _aria() { if (this.isConnected) this.setAttribute('aria-label', this.getAttribute('label') || OrbAvatar.reactionLabel(this._base)); }
 
@@ -2858,18 +2909,18 @@ class OrbAvatar extends HTMLElement {
     const hR = b => b.isCircle ? .68 : .54;
     const hRatio = this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo);
     if (st || !this._init) {
-      this._eyaw = clamp(T[0], -.7, .7); this._epitch = clamp(T[1], -.7, .7); this._eroll = T[2];
-      this._hyaw = this._headCap(T[0] * hRatio); this._hpitch = this._headCap(T[1] * hRatio); this._bRoll = T[3];
+      this._eyaw = this._eyeCap(T[0]); this._epitch = this._eyeCap(T[1], .3); this._eroll = T[2];
+      this._hyaw = T[0] * hRatio; this._hpitch = T[1] * hRatio; this._bRoll = T[3];
       this._init = true;
     } else {
       // Agile eye spring (leads turns crisply) + plush 3D head spring (rotates solid in 3D perspective!)
       const stepEye = (x, v, goal) => { v += (goal - x) * 165 * dt; v *= Math.exp(-19 * dt); return [x + v * dt, v]; };
       const stepHead = (x, v, goal) => { v += (goal - x) * 68 * dt; v *= Math.exp(-11.5 * dt); return [x + v * dt, v]; };
-      [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, clamp(T[0], -.7, .7));
-      [this._epitch, this._vep] = stepEye(this._epitch, this._vep, clamp(T[1], -.7, .7));
+      [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, this._eyeCap(T[0]));
+      [this._epitch, this._vep] = stepEye(this._epitch, this._vep, this._eyeCap(T[1], .3));
       [this._eroll, this._ver] = stepEye(this._eroll, this._ver, T[2]);
-      [this._hyaw, this._vhy] = stepHead(this._hyaw, this._vhy, this._headCap(T[0] * hRatio));
-      [this._hpitch, this._vhp] = stepHead(this._hpitch, this._vhp, this._headCap(T[1] * hRatio));
+      [this._hyaw, this._vhy] = stepHead(this._hyaw, this._vhy, T[0] * hRatio);
+      [this._hpitch, this._vhp] = stepHead(this._hpitch, this._vhp, T[1] * hRatio);
       [this._bRoll, this._vbr] = stepHead(this._bRoll, this._vbr, T[3]);
     }
 
@@ -2933,7 +2984,7 @@ class OrbAvatar extends HTMLElement {
       ? Math.pow(Math.sin(bl * Math.PI), 0.82) : 0;
 
     // Continuous weightless hover & gentle breath when not locked to `fixed`
-    const floatOn = !calm && !fixed && this._idleMotion !== 'off' && this._cssW >= 44;
+    const floatOn = !calm && !fixed && this._idleMotion !== 'off' && (this._idleMotion !== 'calm' || this._cssW >= 44);
     const ph = this._ph;
     const floatX = floatOn ? (.020 * Math.sin(t * .92 + ph) + .009 * Math.sin(t * 2.05 + ph * 1.7)) : 0;
     const floatY = floatOn ? (-.026 * Math.sin(t * 1.18 + ph * .8) - .009 * Math.cos(t * 2.25 + ph)) : 0;
@@ -2987,7 +3038,7 @@ class OrbAvatar extends HTMLElement {
     c.fill();
     c.clip();
 
-    const warp = { s, dx: contour.dx, sh: contour.sh };
+    const warp = { s, dx: contour.dx, sh: contour.sh, pts: contour.pts, lobed: !body.isCircle && !body.convex && !body.mix };
     drawFaceCells(c, localFr, M, this._curFace, blinkAmt, pal, body, this._face, warp, jx, jiggle, stride);
     c.restore();
 

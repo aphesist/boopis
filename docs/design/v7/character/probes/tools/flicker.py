@@ -1,7 +1,7 @@
 # frame-by-frame critic: A-B-A flicker (frame i+1 differs from i and i+2 while i ~ i+2), empty frames (an orb canvas cleared)
 import sys, glob, numpy as np
 from PIL import Image
-fs = sorted(glob.glob(sys.argv[1] + "/*.png")); prev2 = prev = None; bad = []
+fs = sorted(glob.glob(sys.argv[1] + "/*.png") + glob.glob(sys.argv[1] + "/*.jpg")); prev2 = prev = None; bad = []
 def orbmass(a): return (np.abs(a - 14).sum(2) > 60).sum()
 for i, f in enumerate(fs):
     a = np.asarray(Image.open(f).convert('RGB')).astype(np.int16)

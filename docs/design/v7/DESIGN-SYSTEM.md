@@ -692,35 +692,71 @@ Tokens (`tokens.v7.json`); the three-step type and alpha hierarchy; R-corner-1 t
 
 ## 23. The orbs: clarity, motion, the main bot
 
-The bots are not redesigned. `character/ORBS.md` measures why our orbs read less clearly than Grok-Bot's and reviews
-Grok-Bot's states against orb2's. It gives the fix list per repo (orb2 and boopis, file:line).
+The bots are not redesigned. `character/ORBS.md` holds the measurements, the fix list per repo (orb2 and boopis,
+file:line), the review of Grok-Bot's states against orb2's, and the probes, which drive the real orb2 code.
 
-**The owner's decisions (23 November):**
+**Decided (owner, 23 November).**
 
-- **The renderer:** the new one, with every clarity fix (K01).
-  - C1: the canvas snapped to device pixels.
-  - C2: no dpr cap in the quality ladder.
-  - C3: the dock draws at its own size.
-  - C6: no sub-pixel float.
-  - C7: a refit on a dpr change.
-  - C9 and C10: a turned flat body's head is held to 0.18 rad and the eyes to 0.7 rad, so no outline notches and no
-    eye is cut at the rim.
-- **The eyes:** `face-scale` 1.25.
-- **Sizes:** Grok-Bot's. Sidebar rows are 28 px and the rail is 36 px.
-- **Motion:** all of T1–T5, plus the "use more" plan.
-  - T1: a 0.2 s blink.
-  - T2: calm glances and returns.
-  - T3: the micro-drift at a quarter.
-  - T4: no float under 44 px.
-  - T5: a front-facing rest gaze.
-  - The room's presence orb is calm, no longer lively.
-- **The main bot (K02 A):** boopis at 44 px, in the Bots tab only, as the first entry of the bots list below the
-  Sessions and Bots switch, centred with its name under it. The Sessions tab shows no bot; its dock is the quick way
-  to the bots.
+**The renderer** (K01) has every clarity fix:
 
-**The evidence:**
+- C1: the canvas is snapped to device pixels.
+- C2: the quality ladder has no dpr cap.
+- C3: the dock draws at its own size.
+- C6: no sub-pixel float.
+- C7: a refit on a dpr change.
 
-- `K01-clarity.jpg`: the clarity crops.
-- `anim-*-before-after.mp4`: the motion clips, checked frame by frame for flicker, notches and cuts.
-- `K02-main-bot.jpg`: the main-bot board.
-- `character/probes/`: the probe pages, which drive the real orb2 code.
+Far 3D turns are fixed in the geometry, not clamped, so the life stays:
+
+- G1: a convex body is traced as the exact hull of its projected discs, with no dents.
+- G2: an eye group carried past the outline slides back onto the face; it is never cut.
+- G3: only lobed bodies keep a limit, at 0.75 rad of eye turn and 0.3 of pitch.
+
+**The rest of the decision:**
+
+- The eyes: `face-scale` 1.25.
+- Sizes: Grok-Bot's, with sidebar rows at 28 px and the rail at 36 px.
+- The blink: 0.2 s.
+
+**The fixed pose** (the full spec, per shape, is in `character/ORBS.md` §23). At rest, every bot in the dock, the Bots
+sidebar, the rail and the 44 px main bot holds one sideways 3/4 pose. It is Grok-Bot's main bot's rest pose,
+measured.
+
+| `eyaw` | `epitch` | `eroll` | `bodyRoll` | `w` |
+|---|---|---|---|---|
+| 0.50 | 0.45 (0.30 on lobed bodies, G3) | 0.55 | 0.05 | 1 |
+
+The body follows at 0.27 rad. The eyes land up and to the right of centre:
+
+- On the circle, +0.19 across and −0.19 down the body's box (Grok-Bot: +0.22 and −0.21), with the far eye foreshortened
+  to about half.
+- On the lobed bodies, nearer the centre: +0.11 to +0.14 across and −0.05 to −0.09 down. Grok-Bot's flower is at +0.11
+  and −0.03.
+
+The pose is the same at every size and under reduced motion. It is drawn with orb2's public API: a hidden
+`defineReaction('pose', …)` and `reaction="pose" idle-motion="off" mode="drift"`, with no blink. A bot at rest costs no
+redraw.
+
+**Per surface:**
+
+- **The Bots sidebar, the rail and the dock.**
+  - At rest, the fixed pose, held still.
+  - In a state, the bot animates, following the states Grok-Bot animates in its sidebar: working, thinking, replying,
+    needs you.
+  - The hovered bot comes alive (3D turns, face variety) and settles back when the pointer leaves.
+  - Grok-Bot's one hover still (screen 015) shows its rail bot turned to face front. No recording shows the motion.
+- **The chat** (bot chat, rooms, the gutter, the title pill). It is fully lively, with every lively turn drawn cleanly
+  by G1–G3.
+
+**Transitions** use orb2's own reaction morph: 0.38 s with `easeMorph` for the face and motion, and 0.44 s for the
+body, with the springs carrying the turn and no pops. A state wins over hover; hover then adds only a capped `lookAt`.
+
+**The main bot (K02 A).** boopis is 44 px, in the Bots tab only, as the first entry of the bots list below the
+Sessions and Bots switch, centred with its name under it. The Sessions tab shows no bot; its dock is the quick way to
+the bots.
+
+**Evidence.** All in `character/`:
+
+- `K01-clarity.jpg`.
+- `K02-main-bot.jpg`.
+- `anim-dock`, `anim-room`, `anim-sidebar` and `anim-torture-before-after.mp4`: every frame checked for flicker, dents
+  and cuts.
