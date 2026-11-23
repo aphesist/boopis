@@ -427,6 +427,11 @@ async fn log_prints_the_conversation_and_follow_reads_on() {
         o.out
     );
     assert!(o.out.contains("settled"), "{}", o.out);
+    assert!(
+        o.out.contains(" UTC] you"),
+        "a time says its zone (B37): {}",
+        o.out
+    );
     let o = go(
         &fake,
         None,
@@ -446,6 +451,8 @@ async fn log_prints_the_conversation_and_follow_reads_on() {
             .lines()
             .all(|l| serde_json::from_str::<Value>(l).is_ok())
     );
+    let first: Value = serde_json::from_str(o.out.lines().next().unwrap()).unwrap();
+    assert!(first["time"].as_str().unwrap().ends_with('Z'), "{first}");
     let o = go(
         &fake,
         None,

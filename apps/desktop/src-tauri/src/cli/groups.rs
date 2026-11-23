@@ -3,6 +3,8 @@
 //! Each command reads its options, asks the engine through [`Rpc`] (the host's own gateway paths, `headless.rs`), and prints.
 //! Output is plain lines; `--json` prints one JSON object per line instead. Exit codes: 0 done, 1 failed or timed out, 2 a
 //! usage mistake, 3 stopped at a cap, 4 a bot needs the owner (`run::Stop::exit_code`).
+//!
+//! Times are printed in UTC and say so (`[23:46:17 UTC]`); `--json` carries `at` (seconds) and `time` (RFC 3339, `Z`).
 
 use std::io::Write;
 use std::path::Path;
@@ -128,10 +130,18 @@ fn finish(outcome: std::result::Result<i32, Fail>, ctx: &mut Ctx<'_>) -> i32 {
     }
 }
 
+/// A time of day for a person, in UTC and saying so: the host has no time-zone database (no date-time dependency), so the
+/// zone is marked rather than guessed. Every command that prints a time uses this one.
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a time of day from a positive timestamp
 pub(super) fn clock(at: f64) -> String {
-    let s = at as u64 % 86_400;
-    format!("{:02}:{:02}:{:02}", s / 3600, (s / 60) % 60, s % 60)
+    let s = at.max(0.0) as u64 % 86_400;
+    format!("{:02}:{:02}:{:02} UTC", s / 3600, (s / 60) % 60, s % 60)
+}
+
+/// A time for `--json`: RFC 3339 in UTC with `Z` (STANDARDS section 7), beside the seconds.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // seconds since 1970, positive
+pub(super) fn rfc3339(at: f64) -> String {
+    crate::store::time::rfc3339(at.max(0.0) as u64)
 }
 
 async fn list(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fail> {
@@ -238,7 +248,7 @@ fn print_message(ctx: &mut Ctx<'_>, json: bool, at: f64, who: &str, text: &str, 
     if json {
         json_line(
             ctx,
-            &json!({"type": "message", "seq": seq, "at": at, "who": who, "text": text}),
+            &json!({"type": "message", "seq": seq, "at": at, "time": rfc3339(at), "who": who, "text": text}),
         );
     } else {
         say(ctx, &format!("[{}] {who}", clock(at)));
@@ -326,7 +336,7 @@ fn show(out: &mut dyn Write, json: bool, p: &Progress) {
         Progress::Message { seq, who, text, at } => {
             if json {
                 put(
-                    json!({"type": "message", "seq": seq, "at": at, "who": who, "text": text})
+                    json!({"type": "message", "seq": seq, "at": at, "time": rfc3339(*at), "who": who, "text": text})
                         .to_string(),
                 );
             } else {
@@ -473,7 +483,7 @@ fn log_line(ctx: &mut Ctx<'_>, room: &Room, e: &Event, json: bool) {
     if json {
         json_line(
             ctx,
-            &json!({"type": e.kind, "seq": e.seq, "at": e.at, "who": who, "text": text}),
+            &json!({"type": e.kind, "seq": e.seq, "at": e.at, "time": rfc3339(e.at), "who": who, "text": text}),
         );
     } else if who == "--" {
         say(ctx, &format!("[{}] -- {text}", clock(e.at)));

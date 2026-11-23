@@ -36,9 +36,12 @@ to six bots, as the app does, and `--lead` makes messages that name nobody go to
 `lead`). A bot the engine will not seat yet is named, with what to do (open boopis once so every bot is prepared). The text of
 `send` may be `-` to read standard input.
 
-`send` returns when the message is written. With `--wait` it follows the discussion, printing each bot's reply as it arrives,
-until the bots stop handing off (exit 0) or the engine pauses at its limit (exit 3: use `run` to go on). `log` prints the
+`send` returns when the message is written. With `--wait` it follows the discussion, printing each bot's reply as it arrives, until the bots stop handing off (exit 0) or
+the engine pauses at its limit (exit 3: use `run` to go on). `log` prints the
 conversation; `--follow` keeps reading until you stop it (or `--for` seconds pass).
+
+**Times** are printed in UTC and say so (`[23:46:17 UTC]`): boopis carries no time-zone database. `--json` has `at` (seconds
+since 1970) and `time` (RFC 3339, `Z`).
 
 ## Run a task through a group
 
