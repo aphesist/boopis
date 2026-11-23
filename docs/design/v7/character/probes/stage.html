@@ -1,7 +1,7 @@
 <!doctype html><html><meta charset="utf-8"><title>Orb stage</title>
 <!-- One half of a before/after clip. Loads the REAL orb2 build (?lib=stock: as boopis ships it; ?lib=tuned: the
      clarity fixes and the tuning of ORBS.md) and writes the attributes boopis writes (components/orb.ts orbHtml:
-     idle-motion calm, mode drift; the room header lively, room.ts:110). ?plan=today drives the orbs only where boopis
+     idle-motion calm, mode drift; the room header lively, room.ts:110; the proposed plan makes it calm: lively's rim peeks, sky gazes and spins turn a flat body past what it can draw cleanly, ORBS.md C9-C10). ?plan=today drives the orbs only where boopis
      does today; ?plan=more applies the "use them more" plan (ORBS.md, part 2) with orb2's own calls (lookAt, blink,
      alive, face-scale). Math.random is seeded so both halves draw the same idle sequence. -->
 <style>
@@ -55,7 +55,7 @@ function sceneAlive() {
   R.innerHTML = `<div class="tag">${q.title || ''}<small>${q.sub || ''}</small></div>
   <div class="side">${MORE ? `<div class="main-bot">${orb('boopis', 44, { attrs: ' alive idle-time="9" sleep-after="0" emotes="curious winkswap slowblink"' })}<b style="font-weight:500">boopis</b></div>` : `<div class="row">${orb('boopis', 20)}<div><b>boopis</b><span>Summarised the morning</span></div></div>`}
     ${rows.map(([n, a, st]) => `<div class="row${n === 'kai' ? ' on' : ''}">${orb(n, 20, { state: st })}<div><b>${n}</b><span>${a}</span></div></div>`).join('')}</div>
-  <div class="room"><div class="hdr">${orb('boopis', 40, { motion: 'lively' })}<b>release crew</b></div>
+  <div class="room"><div class="hdr">${orb('boopis', 40, { motion: MORE ? 'calm' : 'lively' })}<b>release crew</b></div>
     <div class="msg" id="m1">${orb('nina', 20)}<div class="b">staging is green, the deploy is ready</div></div>
     <div class="msg you hidden" id="m2"><div class="b">ship it after the notes</div></div>
     <div class="msg hidden" id="m3">${orb('kai', 20)}<div class="b">notes are in CHANGELOG.md, two sections</div></div>

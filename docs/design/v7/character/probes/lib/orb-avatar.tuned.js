@@ -2599,6 +2599,7 @@ class OrbAvatar extends HTMLElement {
     }
   }
 
+  _headCap(v) { return (this._bodyTo && this._bodyTo.isCircle) ? v : clamp(v, -.18, .18); }
   _followMode() { return this._mode === 'follow' || (this._follow && this._mode === 'drift'); }
   _aria() { if (this.isConnected) this.setAttribute('aria-label', this.getAttribute('label') || OrbAvatar.reactionLabel(this._base)); }
 
@@ -2857,18 +2858,18 @@ class OrbAvatar extends HTMLElement {
     const hR = b => b.isCircle ? .68 : .54;
     const hRatio = this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo);
     if (st || !this._init) {
-      this._eyaw = T[0]; this._epitch = T[1]; this._eroll = T[2];
-      this._hyaw = T[0] * hRatio; this._hpitch = T[1] * hRatio; this._bRoll = T[3];
+      this._eyaw = clamp(T[0], -.7, .7); this._epitch = clamp(T[1], -.7, .7); this._eroll = T[2];
+      this._hyaw = this._headCap(T[0] * hRatio); this._hpitch = this._headCap(T[1] * hRatio); this._bRoll = T[3];
       this._init = true;
     } else {
       // Agile eye spring (leads turns crisply) + plush 3D head spring (rotates solid in 3D perspective!)
       const stepEye = (x, v, goal) => { v += (goal - x) * 165 * dt; v *= Math.exp(-19 * dt); return [x + v * dt, v]; };
       const stepHead = (x, v, goal) => { v += (goal - x) * 68 * dt; v *= Math.exp(-11.5 * dt); return [x + v * dt, v]; };
-      [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, T[0]);
-      [this._epitch, this._vep] = stepEye(this._epitch, this._vep, T[1]);
+      [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, clamp(T[0], -.7, .7));
+      [this._epitch, this._vep] = stepEye(this._epitch, this._vep, clamp(T[1], -.7, .7));
       [this._eroll, this._ver] = stepEye(this._eroll, this._ver, T[2]);
-      [this._hyaw, this._vhy] = stepHead(this._hyaw, this._vhy, T[0] * hRatio);
-      [this._hpitch, this._vhp] = stepHead(this._hpitch, this._vhp, T[1] * hRatio);
+      [this._hyaw, this._vhy] = stepHead(this._hyaw, this._vhy, this._headCap(T[0] * hRatio));
+      [this._hpitch, this._vhp] = stepHead(this._hpitch, this._vhp, this._headCap(T[1] * hRatio));
       [this._bRoll, this._vbr] = stepHead(this._bRoll, this._vbr, T[3]);
     }
 
@@ -2946,7 +2947,7 @@ class OrbAvatar extends HTMLElement {
     const jiggle = energy > 2e-4 && !inSpin;
     const fx = this._tp < 1 ? EX[this._fromExpr] : null;
     const extras = this._extras && ((ex.extra && (EXTRA[ex.extra] || BACK[ex.extra])) || (fx && fx.extra));
-    const stride = Math.max(LEVELS[Q.level].stride, this._cssW < 44 ? 2 : 1);
+    const stride = 1;
 
     const sig = [yaw, pitch, headYaw, headPitch, eyeRoll, bodyRoll, blinkAmt, s, dx, dy, W, this._colorVer, stride, this._shadow ? 1 : 0, this._btp];
     if (!dyn && !jiggle && !extras && this._sig && this._sigBody === body && sig.every((v, i) => Math.abs(v - this._sig[i]) < 1e-4)) return;

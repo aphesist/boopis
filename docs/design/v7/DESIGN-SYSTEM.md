@@ -692,9 +692,35 @@ Tokens (`tokens.v7.json`); the three-step type and alpha hierarchy; R-corner-1 t
 
 ## 23. The orbs: clarity, motion, the main bot
 
-The bots are not redesigned. `character/ORBS.md` measures why our orbs read less clearly than Grok-Bot's: the canvas is
-resampled at every size, the quality ladder lowers its dpr, the dock draws at 2x and scales, the eyes are small, and
-the float swims at small sizes. It gives the fix list per repo (orb2 and boopis, file:line), proven in `K01-clarity.jpg`.
-It reviews Grok-Bot's states against orb2's, with tuned parameters (T1-T5) and a plan to use the existing behaviours on
-more surfaces (`anim-*-before-after.mp4`). It also sets boopis's size at the top of the open sidebar (`K02-main-bot.jpg`,
-recommended: 44 px). The probe pages in `character/probes/` drive the real orb2 code.
+The bots are not redesigned. `character/ORBS.md` measures why our orbs read less clearly than Grok-Bot's and reviews
+Grok-Bot's states against orb2's. It gives the fix list per repo (orb2 and boopis, file:line).
+
+**The owner's decisions (23 November):**
+
+- **The renderer:** the new one, with every clarity fix (K01).
+  - C1: the canvas snapped to device pixels.
+  - C2: no dpr cap in the quality ladder.
+  - C3: the dock draws at its own size.
+  - C6: no sub-pixel float.
+  - C7: a refit on a dpr change.
+  - C9 and C10: a turned flat body's head is held to 0.18 rad and the eyes to 0.7 rad, so no outline notches and no
+    eye is cut at the rim.
+- **The eyes:** `face-scale` 1.25.
+- **Sizes:** Grok-Bot's. Sidebar rows are 28 px and the rail is 36 px.
+- **Motion:** all of T1–T5, plus the "use more" plan.
+  - T1: a 0.2 s blink.
+  - T2: calm glances and returns.
+  - T3: the micro-drift at a quarter.
+  - T4: no float under 44 px.
+  - T5: a front-facing rest gaze.
+  - The room's presence orb is calm, no longer lively.
+- **The main bot (K02 A):** boopis at 44 px, in the Bots tab only, as the first entry of the bots list below the
+  Sessions and Bots switch, centred with its name under it. The Sessions tab shows no bot; its dock is the quick way
+  to the bots.
+
+**The evidence:**
+
+- `K01-clarity.jpg`: the clarity crops.
+- `anim-*-before-after.mp4`: the motion clips, checked frame by frame for flicker, notches and cuts.
+- `K02-main-bot.jpg`: the main-bot board.
+- `character/probes/`: the probe pages, which drive the real orb2 code.

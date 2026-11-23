@@ -1,188 +1,370 @@
-diff -ru ds-v7/src/board.html character/src/board.html
---- ds-v7/src/board.html	2026-11-23 14:45:52.166766688 +0000
-+++ character/src/board.html	2026-11-23 14:30:45.441209376 +0000
-@@ -1,10 +1,9 @@
+diff -ru ds-v7/src/board.html character/src2/board.html
+--- ds-v7/src/board.html	2026-11-23 15:13:24.679958612 +0000
++++ character/src2/board.html	2026-11-23 15:00:21.000402975 +0000
+@@ -1,5 +1,5 @@
  <!doctype html><html data-theme="dark"><meta charset="utf-8"><link rel="stylesheet" href="tokens.v7.css"><link rel="stylesheet" href="kit.css">
- <script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-avatar.min.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script>
+-<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-tuned/orb-avatar.tuned.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script>
++<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-avatar.min.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script>
  
--<script src="boards.js"></script><script src="previews.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script><script src="dockv7.js"></script><script src="sessionboards.js"></script><title>boopis v7 board</title><body style="background:#0a0a0a"><div id="r"></div><script>
-+<script src="boards.js"></script><script src="previews.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script><script src="sessionboards.js"></script><title>boopis v7 board</title><body style="background:#0a0a0a"><div id="r"></div><script>
+ <script src="boards.js"></script><script src="previews.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script><script src="dockv7.js"></script><script src="sessionboards.js"></script><title>boopis v7 board</title><body style="background:#0a0a0a"><div id="r"></div><script>
  const q = Object.fromEntries(new URLSearchParams(location.search));
- if (!q.motion) document.documentElement.classList.add('still'); /* stills render live things at rest */
--document.getElementById('r').innerHTML = (BOARDS[q.b] || PREVIEWS[q.b] || SBOARDS[q.b] || DBOARDS[q.b])();
-+document.getElementById('r').innerHTML = (BOARDS[q.b] || PREVIEWS[q.b] || SBOARDS[q.b])();
- if (q.b === 'p4') document.getElementById('r').setAttribute('data-motion', ''); /* P4 is a labelled motion strip: its frames show the sweep and the breath on purpose */
--window.DOCK && DOCK.refit();
- </script></body></html>
-diff -ru ds-v7/src/boards.js character/src/boards.js
+diff -ru ds-v7/src/boards.js character/src2/boards.js
 --- ds-v7/src/boards.js	2026-11-23 08:51:39.532795971 +0000
-+++ character/src/boards.js	2026-11-23 14:47:30.343094074 +0000
-@@ -177,5 +177,14 @@
++++ character/src2/boards.js	2026-11-23 15:01:36.791777322 +0000
+@@ -177,5 +177,13 @@
        opt('Attention B', 'boopis red, Grok\'s values', 'what you owe stays red (#cf2b35 marks, #ff6463 text, 6.5:1); destructive confirms are red too, as Grok\'s Reset', true, pair('', att('red')), 'Keeps "red means you owe something" from v6 and the approved notch; the only change is the values.')]);
    }
  
 -  window.BOARDS = { fonts, radii, shadows, orbs, chrome, tiles, composers, calm, accent };
 +
-+  /* K02 the main bot in the open sidebar (owner, 23 Nov: boopis "visibly bigger", as Grok-Bot's; the rail keeps its size) */
++  /* K02 the main bot in the open sidebar: decided, A (owner, 23 Nov). Bots tab only, the list's first entry, below the switch */
 +  function mainbot() {
-+    const side = (size, scr) => (t) => clip(300, 600, win(S[scr], { theme: t, sidebar: 'open', main: size }), { r: 0 });
-+    const both = (size) => `<div class="row" style="gap:24px;align-items:flex-start">${['room', 'session'].map((scr) => pair('', side(size, scr))).join('')}</div>`;
-+    return board('K02 The main bot in the open sidebar', 'Grok-Bot puts its main bot above the list, centred with its name under it: 44 px (measured on its 2880 px capture of the open sidebar, 157-live-sidebar-expanded; the rows are 28 px, the rail 36 px). boopis today lists itself as one more 36 px row. Both options move boopis out of the list to the top of the open sidebar, in the Bots and the Sessions tab alike; the rail is unchanged.', [
-+      opt('A', '44 px, Grok-Bot\'s size', '8 px larger than a row (36 px): the main bot reads first and the list keeps its first row above the fold', true, both(44), 'Same size as Grok-Bot\'s main bot; with face-scale 1.25 (K01, C4) its eyes read as clearly. The boopis row leaves the list, so the list keeps every row it had.'),
-+      opt('B', '56 px', 'half again a row: a presence, closer to the details pane\'s 64 px', false, both(56), 'Clearly the lead, but at 56 px it is a second header beside the room\'s 40 px presence orb, and the list sits 12 px lower than in A.')]);
++    const side = (scr, o) => (t) => clip(300, 600, win(S[scr], Object.assign({ theme: t, sidebar: 'open' }, o)), { r: 0 });
++    return board('K02 The main bot in the open sidebar', 'Decided (owner, 23 Nov): A, 44 px, Grok-Bot\'s size (measured on its 2880 px capture of the open sidebar, 157-live-sidebar-expanded: a 44 px main bot over 28 px rows and a 36 px rail; the rows take 28 px too). boopis is the first entry of the Bots tab\'s list, below the Sessions and Bots switch, centred with its name under it, as Grok-Bot shows its main bot. The Sessions tab shows no bot: there the dock is the quick way to the bots. The rail keeps its size.', [
++      opt('A', '44 px, the Bots tab only', 'the bots list\'s first entry, 16 px larger than a row (28 px, Grok-Bot\'s row size, decided with it)', true, `<div class="row" style="gap:24px;align-items:flex-start">${pair('', side('room', { main: 44 }))}${pair('', side('botChat', { main: 44 }))}</div>`, 'Left: the room (screen 12). Right: a bot\'s chat (screen 11). Both are the Bots tab, with no dock.'),
++      opt('Sessions tab', 'shows no bot', 'the session list only; the bots are reached from the dock under the session', false, `<div class="row" style="gap:24px;align-items:flex-start">${pair('', side('session', {}))}</div>`, 'Screen 13: no boopis entry; the dock (not in this crop) is the quick access to the bots.')]);
 +  }
 +  window.BOARDS = { mainbot, fonts, radii, shadows, orbs, chrome, tiles, composers, calm, accent };
  })();
-diff -ru ds-v7/src/botscreens.js character/src/botscreens.js
---- ds-v7/src/botscreens.js	2026-11-23 14:43:06.725860071 +0000
-+++ character/src/botscreens.js	2026-11-23 14:30:44.812870542 +0000
-@@ -45,7 +45,7 @@
-     const bf = o.botFill ? ` data-botfill style="left:${L}px;right:${P}px;--bubble-user:${o.botFill[0]};--bubble-user-text:${o.botFill[1]}"` : ` style="left:${L}px;right:${P}px"`;
-     return S.frame(o, `${side}${S.chrome({ ...o, title, pane: o.pane })}
-       <div class="main"${bf}><div class="thread" style="padding-top:72px">${body}</div>
--      <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:24px">${comp}</div></div>${o.pane ? pane() : ''}${extra}`);
-+      <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:96px">${comp}</div>${S.dockRow()}</div>${o.pane ? pane() : ''}${extra}`);
+diff -ru ds-v7/src/dockv7.js character/src2/dockv7.js
+--- ds-v7/src/dockv7.js	2026-11-23 15:13:39.978496124 +0000
++++ character/src2/dockv7.js	2026-11-23 15:00:21.001240191 +0000
+@@ -3,58 +3,48 @@
+ (function () {
+   const { I, mark, orb } = window.V7;
+   const S = window.SCREENS;
+-  /* the bots, ordered as the dock orders them (D01 B): needs you first, then working, then pinned and recent; boopis is not special */
+-  const BOTS = ['nina', 'kai', 'boopis', 'moss', 'iris', 'hex'];
+-  const MANY = ['nina', 'moss', 'kai', 'boopis', 'iris', 'hex', 'nimbus'];
++  const BOTS = ['boopis', 'kai', 'nina', 'moss', 'iris', 'hex'];
++  const MANY = ['boopis', 'kai', 'nina', 'moss', 'iris', 'hex', 'nimbus'];
+   const STATE = { nina: 'needs', kai: 'working', hex: 'sleeping', moss: 'needs' };
++  const ORB = 40, GAP = 14, PADX = 24;
+ 
+-  /* ONE source for the dock's geometry (tokens.v7.json "dock"): every board, component board and screen draws the slab through slab() */
+-  const DK = {
+-    row: { w: 640, h: 72, R: 30, F: 30, padX: 30, orb: 40, gap: 14, grow: [52, 46] },   /* padding = the corner radius: nothing sits in the corner zone */
+-    compact: { w: 380, h: 48, R: 24, F: 24, padX: 24, orb: 24, gap: 8 },
+-    open: { w: 640, R: 30, F: 30, inset: 8 }
+-  };
+-  let clipN = 0;
+-  /* the slab: black in both themes, flush, its flares; the content is clipped to the slab's own path, so nothing (a fade, an orb)
+-     can paint outside its curve; the inside is the dark theme */
+-  function slab(kind, inner, o = {}) {
+-    const g = DK[kind], w = g.w, h = o.h || g.h, F = g.F, id = 'dkc' + (++clipN);
+-    const path = window.SQ.slabPath(w, h, g.R, F);
+-    return `<div class="dock" data-dk="${kind}" data-geom="${w},${kind === 'open' ? 'auto' : h},${g.R},${F}" style="left:${o.left || '50%'};width:${w}px;height:${h}px">` +
+-      `<svg class="slab" style="inset:auto;top:0;left:-${F}px" viewBox="0 0 ${w + 2 * F} ${h}" width="${w + 2 * F}" height="${h}"><defs><clipPath id="${id}" clipPathUnits="userSpaceOnUse"><path d="${path}" transform="translate(-${F} 0)"/></clipPath></defs><path d="${path}" fill="#000"/></svg>` +
+-      `<div class="dk-in dk7" data-theme="dark" data-kind="${kind}" style="clip-path:url(#${id})">${inner}</div></div>`;
+-  }
+-
+-  /* one orb: its state face; face-scale 1.25 (ORBS.md C4, orbs of 44 px and under); the amber flag when it needs you;
+-     o.look: while you type, the dock orbs hold a look up at the composer (ORBS.md, k .3) */
+-  const one = (n, o = {}, g = DK.row) => {
++  /* one orb in the row: its state face; the amber flag when it needs you; hover grows it (the Grow-on-hover setting) */
++  const one = (n, o = {}) => {
+     const st = (o.needs || []).includes(n) ? 'needs' : (STATE[n] === 'needs' ? 'idle' : STATE[n] || 'idle');
+-    const i = (o.bots || BOTS).indexOf(n), hi = (o.bots || BOTS).indexOf(o.hover);
+-    const s = g.grow && o.hover === n ? g.grow[0] : g.grow && o.hover && Math.abs(hi - i) === 1 ? g.grow[1] : g.orb;
+-    const flag = (o.needs || []).includes(n) ? `<span class="dot owe dk7-flag"${g.orb < 30 ? ' style="width:6px;height:6px"' : ''}></span>` : '';
+-    const cls = (o.current === n ? ' dk7-cur' : '') + (o.focus === n ? ' dk7-focus' : '');
+-    const look = o.look ? ' gaze="0 12"' : '';
+-    return `<span class="dk7-orb${cls}" style="width:${s}px;height:${s}px">${orb(n, s, { state: st, surface: '#000000', dockInk: true }).replace('<orb-avatar ', `<orb-avatar${look} `)}${flag}</span>`;
++    const s = o.hover === n ? 52 : o.hover && Math.abs(BOTS.indexOf(o.hover) - BOTS.indexOf(n)) === 1 ? 46 : ORB;
++    const flag = (o.needs || []).includes(n) ? '<span class="dot owe dk7-flag"></span>' : '';
++    const tip = '';
++    const cur = o.current === n ? ' dk7-cur' : '';
++    const focus = o.focus === n ? ' dk7-focus' : '';
++    return `<span class="dk7-orb${cur}${focus}" style="width:${s}px;height:${s}px">${orb(n, s, { state: st, surface: '#000000', dockInk: true })}${flag}${tip}</span>`;
    };
-   const comp = (o, ph, under) => S.composer({ ...o, composer: 'c', placeholder: ph, under, composerW: o.pane ? 600 : 720 });
-   const underBot = `<span class="row" style="gap:4px">${I('ladder')}Governed</span><span class="row" style="gap:5px">${mark('claude', 12)}sonnet 5.5</span><span class="grow"></span><span class="mono">$0.12 of $1.00</span>`;
-Only in ds-v7/src: dockv7.js
-Only in ds-v7/src: jobs-dk2.json
-Only in ds-v7/src: jobs-dock.json
-Only in character/src: jobs-k02.json
-diff -ru ds-v7/src/kit.css character/src/kit.css
---- ds-v7/src/kit.css	2026-11-23 14:45:52.166980434 +0000
-+++ character/src/kit.css	2026-11-23 14:45:34.682495631 +0000
-@@ -149,6 +149,9 @@
+-  const askPill = (n, who, small) => n ? `<span class="dk7-ask${small ? ' sm' : ''}"><span class="dot owe"></span>${n === 1 && who ? who : n} need${n === 1 ? 's' : ''} you</span>` : '';
++  const askPill = (n, who) => n ? `<span class="dk7-ask"><span class="dot owe"></span>${n === 1 && who ? who : n} need${n === 1 ? 's' : ''} you</span>` : '';
+ 
+-  /* the row's content: o.bots, o.needs, o.hover, o.focus, o.current, o.more (D01 B: "N more" opens the Bots tab), o.pages and o.fade
+-     (D01 A, recorded only), o.ask (D03 C: the ask pill at the row's end; on hover the same slot names the bot) */
+-  function rowHTML(o = {}, g = DK.row) {
++  /* the row: o.bots, o.needs, o.hover, o.focus, o.current, o.more (D01 B: "N more" opens the Bots tab), o.pages (D01 A: the nub),
++     o.fade (D01 A/C: the edge fades), o.ask (D03 C: the ask pill at the row's end) */
++  function row(o = {}) {
+     const bots = o.bots || BOTS;
+-    const orbs = bots.map((n) => one(n, o, g)).join('');
++    const orbs = bots.map((n) => one(n, o)).join('');
+     const more = o.more ? `<span class="chip dk7-more">${o.more} more</span>` : '';
+     const hn = o.hover, hs = hn && ((o.needs || []).includes(hn) ? ['owe', 'needs you'] : STATE[hn] === 'working' ? ['', 'working'] : STATE[hn] === 'sleeping' ? ['', 'resting'] : ['', 'idle']);
+-    const end = hn ? `<span class="dk7-cap"><b>${hn}</b><span class="word ${hs[0]}">${hs[1]}</span></span>` : o.ask !== false ? askPill((o.needs || []).length, (o.needs || [])[0], g === DK.compact) : '';
++    const ask = hn ? `<span class="dk7-cap"><b>${hn}</b><span class="word ${hs[0]}">${hs[1]}</span></span>` : o.ask !== false ? askPill((o.needs || []).length, (o.needs || [])[0]) : '';
+     const nub = o.pages ? `<span class="dk7-nub">${Array.from({ length: o.pages }, (_, i) => `<i class="${i === 0 ? 'on' : ''}"></i>`).join('')}</span>` : '';
+     const fades = o.fade ? '<span class="dk7-fade l"></span><span class="dk7-fade r"></span>' : '';
+-    return `<div class="dk7-row" style="gap:${g.gap}px;padding:0 ${g.padX}px;height:${g.h}px">${orbs}${more}${end}${nub}${fades}</div>`;
++    const w = o.w || PADX * 2 + bots.length * ORB + (bots.length - 1) * GAP + (more ? 96 + GAP : 0) + (ask ? 150 + GAP : 0) + (o.hover ? 18 : 0);
++    return { w, html: `<div class="dk7-row" data-theme="dark">${orbs}${more}${ask}${nub}${fades}</div>` };
++  }
++
++  /* the slab around any content: R 30, flares 30, black in both themes; content on an 8 inset (30 - 8 = 22, the Block's radius) */
++  function slab(w, h, inner, o = {}) {
++    return window.V7.dock(w, h, inner, { left: o.left }).replace('class="dk-in"', `class="dk-in dk7" data-theme="dark"`);
++  }
++  function dockRow(o = {}) { const r = row(o); return slab(r.w, 72, r.html, o); }
++
++  /* collapsed (D02 B): a short slab, the bots that need you or work, and the count */
++  function collapsed(o = {}) {
++    const inner = `<div class="dk7-row" data-theme="dark" style="gap:8px">${['nina', 'moss', 'kai'].map((n) => `<span class="dk7-orb" style="width:24px;height:24px">${orb(n, 24, { state: n === 'kai' ? 'working' : 'needs', surface: '#000000', still: true })}</span>`).join('')}${askPill(2)}</div>`;
++    return slab(260, 48, inner, o);
+   }
+-  const row = (o) => ({ w: DK.row.w, html: rowHTML(o) });
+-  function dockRow(o = {}) { return slab('row', rowHTML(o), o); }
+-  /* compact when idle (D02 A + the Compact setting, off by default): 24 px orbs, the ask pill small; the row rises on hover or ctrl J */
+-  function compact(o = {}) { return slab('compact', rowHTML({ ...o, bots: (o.bots || BOTS) }, DK.compact), o); }
+-  const collapsed = compact;
+ 
+   /* an AskCard from a bot, the approval variant (never expires) or a question */
+   const approval = (who = 'nina') => `<div class="qcard sq dk7-q"><div class="row xs dim" style="gap:6px;margin-bottom:4px">${orb(who, 16, { still: true, surface: 'var(--bg-3)' })}<span>${who} asks</span><span class="grow"></span><span class="word owe">needs you</span></div>
+@@ -67,21 +57,21 @@
+   /* the asks, open (D03 C): the stack of AskCards over the row */
+   function asks(o = {}) {
+     const r = row({ ...o, ask: false, current: null });
+-    const inner = `<div class="dk7-panel"><div class="dk7-head"><span class="inbox-h" style="padding:0 0 0 4px">Waiting on you<span class="n">2</span></span><span class="grow"></span><span class="ib s dk7-x">${I('close')}</span></div>
++    const inner = `<div class="dk7-panel" data-theme="dark"><div class="dk7-head"><span class="inbox-h" style="padding:0 0 0 4px">Waiting on you<span class="n">2</span></span><span class="grow"></span><span class="ib s dk7-x">${I('close')}</span></div>
+       ${approval('nina')}${question('moss')}</div>${r.html}`;
+-    return slab('open', inner, { ...o, h: 400 });
++    return slab(560, 520, inner, o);
+   }
+ 
+   /* a bot's card: its own chat, small (the bot's bubble fill), its ask, its composer; the row stays below as the switcher */
+   function card(o = {}) {
+     const who = o.who || 'nina';
+     const r = row({ ...o, ask: false, current: who });
+-    const inner = `<div class="dk7-panel" style="--bubble-user:#d42746;--bubble-user-text:#ffffff">
++    const inner = `<div class="dk7-panel" data-theme="dark" style="--bubble-user:#d42746;--bubble-user-text:#ffffff">
+       <div class="dk7-head">${orb(who, 28, { state: 'needs', surface: '#000000' })}<span class="m w5" style="margin-left:2px">${who}</span><span class="word owe">needs you</span><span class="grow"></span><span class="ib s dk7-x" title="Open in Bots">${I('bots')}</span><span class="ib s dk7-x">${I('close')}</span></div>
+       <div class="dk7-log"><div class="b user sq">Ship 0.2.0 when the notes are in.</div><div class="b agent sq" style="margin-top:16px">The notes are in. Staging is ready.</div></div>
+       ${approval(who)}
+       <div class="composer sq" style="border-radius:var(--r-pill);flex:none"><div class="line"><span class="ib s">${I('plus')}</span><span class="ph">Message ${who}</span><span class="ib s">${I('mic')}</span><span class="ib s inv">${I('waveform')}</span></div></div></div>${r.html}`;
+-    return slab('open', inner, { ...o, h: 460 });
++    return slab(560, 620, inner, o);
+   }
+ 
+ 
+@@ -95,13 +85,11 @@
+     const comp = k === 'asks' || k === 'card' ? '' : S.sessComp(o, 'Message', {});
+     const centre = o.centre ? 'calc(50% - 150px)' : undefined;
+     let dock;
+-    if (k === 'none') return S.sessShell(o, body, comp, { noDock: true }); /* no bot of your own yet (boopis alone does not count): no dock */
++    if (k === 'none') return S.sessShell(o, body, comp, { noDock: true });
+     if (k === 'hover') dock = dockRow({ needs: ['nina'], hover: 'nina' });
+     else if (k === 'asks') dock = asks({ needs: ['nina', 'moss'] });
+     else if (k === 'card') dock = card({ needs: ['nina'], who: 'nina' });
+     else if (k === 'many') dock = dockRow({ bots: MANY, needs: ['nina'], more: 12 });
+-    else if (k === 'compact') dock = compact({ needs: ['nina'] });
+-    else if (k === 'typing') dock = dockRow({ needs: ['nina'], look: true });
+     else dock = dockRow({ needs: ['nina'], left: centre });
+     if (k === 'rest' && centre) dock = dockRow({ needs: ['nina'], left: centre });
+     return S.sessShell(o, body, comp, { dock });
+@@ -120,31 +108,32 @@
+   const states = (list) => `<div class="col" style="gap:22px;align-items:center">${list.map(([cap, html]) => `<div style="width:100%"><div class="cap">${cap}</div>${html}</div>`).join('')}</div>`;
+   const scr = (t, o) => `<div style="zoom:.6;width:1440px;height:900px;border-radius:16px;overflow:hidden">${screen(Object.assign({ theme: t, chrome: 'a', tile: 'a', composer: 'c', status: 'c' }, o))}</div>`;
+ 
+-  const stg = (h, inner) => stage(h, inner, 760);
+   function d01() {
+-    return board('D01 Many bots in the dock: the owner’s pick B', 'The dock is in the Sessions tab only, to reach your bots and their asks while you work. The full roster lives in the Bots tab, so the dock no longer opens an expanded roster. Every slab on these boards is the one dock component (640 × 72, radius 30, flares 30, padding 30, orbs 40, gap 14); only its content differs.', [
+-      opt('A', 'Pages of the row', 'swipe or alt+arrows between pages of orbs; the page nub in the slab’s foot; the sides fade while a page moves', false, pair(() => stg(110, dockRow({ bots: MANY, needs: ['nina'], pages: 3, ask: false }))), 'Not chosen. A nub and a gesture to learn.'),
+-      opt('B', 'The ones that matter now, then “N more”', 'needs you first, then working, then your pinned and recent bots, as many as fit; “12 more” opens the Bots tab', 'THE OWNER’S PICK', pair(() => stg(110, dockRow({ bots: MANY, needs: ['nina'], more: 12 }))), 'Picked (23 Nov). One row, no paging, no roster to duplicate. Option C (a scrolling strip) was offered and is dropped from this board now that B is picked.')]);
++    return board('D01 Many bots in the dock', 'The dock is in the Sessions tab only now, to reach your bots and their asks while you work. The full roster lives in the Bots tab (its sidebar and rail), so the dock no longer opens an expanded roster. What happens when the bots outnumber the row?', [
++      opt('A', 'Pages of the row', 'today’s behaviour: swipe or alt+arrows between pages of orbs; the page nub in the slab’s foot; the sides fade while a page moves', false, pair(() => stage(110, dockRow({ bots: MANY, needs: ['nina'], pages: 3, fade: true, ask: false }))), 'Keeps every bot one swipe away; a nub and a gesture to learn, and the order of pages is one more thing to keep.'),
++      opt('B', 'The ones that matter now, then “N more”', 'needs you first, then working, then your pinned and recent bots, as many as fit; “12 more” opens the Bots tab', true, pair(() => stage(110, dockRow({ bots: MANY, needs: ['nina'], more: 12 }))), 'One row, no paging, no roster to duplicate: the dock carries what you reach for while you work; everyone else is a click away in the Bots tab.'),
++      opt('C', 'A scrolling strip', 'one row that scrolls sideways with the wheel or a drag; the sides fade where it continues', false, pair(() => stage(110, dockRow({ bots: MANY, needs: ['nina'], fade: true, w: 520 }))), 'No pages, but the bot you need can be scrolled out of sight.')]);
+   }
+   function d02() {
+-    return board('D02 The dock at rest while you work: the owner’s pick A, plus a compact idle version', 'The full row at rest (A, picked). The owner added a smaller compact version for idle moments, a setting (Settings > General > “Compact dock when idle”), off by default. Compact is the same component in its compact geometry (380 × 48, radius 24, flares 24, padding 24, orbs 24, gap 8): when nothing has needed you for 10 s and you are typing, the row eases to compact (200 ms, --ease-sharp); a hover, ctrl J or a new ask brings the row back.', [
+-      opt('A', 'The row', 'every bot that matters now (D01 B), the ask pill at its end; the composer sits 24 px above it', 'THE OWNER’S PICK', pair((t) => scr(t, { k: 'rest' })), 'Picked (23 Nov).'),
+-      opt('A+', 'Compact when idle (the setting on)', 'the same component, compact: the bots at 24 px, the ask pill small; the row rises on hover or ctrl J', 'NEW STATE', pair((t) => scr(t, { k: 'compact' }))),
+-      opt('A, A+', 'The two geometries side by side, 1:1', 'the row and the compact dock, from the same component', false, pair(() => `<div class="col" style="gap:20px">${stg(110, dockRow({ needs: ['nina'] }))}${stg(80, compact({ needs: ['nina'] }))}</div>`))]);
++    return board('D02 The dock at rest while you work', 'Over a running session the dock sits under the composer. How much of it shows when you are not reaching for it?', [
++      opt('A', 'The row', 'every bot in the row (D01), the ask pill at its end; the composer sits 24 px above it', true, pair((t) => scr(t, { k: 'rest' })), 'Today’s layout and the approved Session screens; one glance shows who works and who needs you.'),
++      opt('B', 'Collapsed until you reach for it', 'a short slab with the bots that need you or work and the ask pill; the row rises on hover or ctrl J', false, pair(() => stage(110, collapsed())), 'More room for the session; the bots are one hover away, and the collapsed slab still says who needs you.')]);
+   }
+   function d03() {
+-    return board('D03 Where the bots’ asks surface: the owner’s pick C', 'A bot that needs you waits until you answer; it never expires. Sessions’ own asks live in the Sessions inbox, so the dock carries the bots’ asks only.', [
+-      opt('C', 'An ask pill at the row’s end', '“2 need you” (or “nina needs you”) in amber; it opens the stack of AskCards over the row; each orb keeps its flag', 'THE OWNER’S PICK', pair(() => stg(110, dockRow({ needs: ['nina', 'moss'] }))) + '<div style="height:14px"></div>' + pair(() => stg(400, asks({ needs: ['nina', 'moss'] }))), 'Picked (23 Nov). One place for every ask without a page: the dock is one page, so the nub, the paging and Arrange go away. A (a Needs-you page) and B (on the orbs only) were not chosen.')]);
++    return board('D03 Where the bots’ asks surface', 'A bot that needs you (an approval or a question) waits until you answer; it never expires (approval-surfaces). Sessions’ own asks live in the Sessions inbox, so the dock carries the bots’ asks only.', [
++      opt('A', 'A Needs-you page', 'today’s: a second page beside the bots, reached by the nub; it lists every ask as an AskCard', false, pair(() => stage(110, dockRow({ needs: ['nina', 'moss'], pages: 2, ask: false }))), 'A whole page and the paging that comes with it, for a list that is usually one or two items.'),
++      opt('B', 'On the orbs only', 'the amber flag on the bot; clicking it opens that bot’s card with its AskCard', false, pair(() => stage(110, dockRow({ needs: ['nina', 'moss'], ask: false }))), 'The quietest; with several asks you open them one bot at a time.'),
++      opt('C', 'An ask pill at the row’s end', '“2 need you” (or “nina needs you”) in amber; it opens the stack of AskCards over the row; each orb keeps its flag', true, pair(() => stage(392, asks({ needs: ['nina', 'moss'] }))), 'One place for every ask without a page; the dock becomes one page, so the nub, the paging and Arrange go away.')]);
+   }
+   function dk1() {
+-    const st = (cap, o, h = 110) => [cap, stage(h, dockRow(o))];
+-    return board('DK1 The row', 'The dock’s row in v7, one component: 640 × 72, radius 30, flares 30, padding 30 (the corner radius, so nothing sits in a corner), orbs 40 (ORBS.md keeps the dock at 40, with face-scale 1.25 and the sharp renderer), gap 14. No “+” (new bots are made in the Bots tab); boopis is not special, it is one of your bots. Grow on hover lifts the hovered orb to 52 and its neighbours to 46; the row’s end slot names the hovered bot and its state in words (a tooltip would cover the composer’s line 24 px above); the flag is the amber dot ringed in the slab’s black; the bot whose card is open has an Iris dot under it; focus is the Iris ring.', [
+-      comp2('States', 'dark and light pages; the slab is black in both', pair(() => states([st('REST: NINA NEEDS YOU, KAI WORKS, HEX RESTS', { needs: ['nina'] }), st('HOVER: GROW, AND THE END SLOT NAMES THE BOT (NO TOOLTIP OVER THE COMPOSER)', { needs: ['nina'], hover: 'nina' }), st('FOCUS (KEYBOARD): THE IRIS RING', { needs: ['nina'], focus: 'kai' }), st('A CARD OPEN: THE IRIS DOT UNDER ITS BOT', { needs: ['nina'], current: 'nina', ask: false }), st('NOTHING NEEDS YOU: NO PILL', { needs: [] }), st('WHILE YOU TYPE: THE ORBS LOOK UP AT THE COMPOSER (ORBS.md, k .3)', { needs: ['nina'], look: true }), ['COMPACT WHEN IDLE (THE SETTING ON): THE SAME COMPONENT, COMPACT GEOMETRY', stage(80, compact({ needs: ['nina'] }))]])), 'R-row-1 holds in the end slot and the pill (one line each); the pill is a 32 tall capsule 30 px from the slab’s side, out of the slab’s 30 px corner zone.')]);
++    const st = (cap, o, h = 120) => [cap, stage(h, dockRow(o))];
++    return board('DK1 The row', 'The dock’s row in v7. No “+” (new bots are made in the Bots tab). Orbs 40, gap 14; Grow on hover lifts the hovered orb to 52 and its neighbours to 46; the row’s end slot names the hovered bot and its state in words (a tooltip would cover the composer’s line 24 px above); the flag is the amber dot ringed in the slab’s black; the bot whose card is open has an Iris dot under it; focus is the Iris ring.', [
++      comp2('States', 'dark and light pages; the slab is black in both', pair(() => states([st('REST: NINA NEEDS YOU, KAI WORKS, HEX RESTS', { needs: ['nina'] }), st('HOVER: GROW, AND THE END SLOT NAMES THE BOT (NO TOOLTIP OVER THE COMPOSER)', { needs: ['nina'], hover: 'nina' }), st('FOCUS (KEYBOARD): THE IRIS RING', { needs: ['nina'], focus: 'kai' }), st('A CARD OPEN: THE IRIS DOT UNDER ITS BOT', { needs: ['nina'], current: 'nina', ask: false }), st('NOTHING NEEDS YOU: NO PILL', { needs: [] })])), 'R-row-1 holds in the end slot and the pill (one line each); the pill is a 32 tall capsule 20 px from the slab’s side, out of the slab’s 30 px corner zone.')]);
+   }
+   function dk2() {
+     return board('DK2 Asks and a bot’s card in the dock', 'What opens from the row. Both grow the slab upward over the session; Esc or the close button folds them back. Inside: kit components only (the Block, the AskCard approval variant, Bubbles, the Composer), on the slab’s 8 px inset: 30 − 8 = 22, the Block’s radius (R-corner-10).', [
+-      comp2('The asks, open (D03 C)', 'the stack of AskCards: an approval (hold to allow, never expires) and a question; the row stays as the switcher', pair(() => stage(400, asks({ needs: ['nina', 'moss'] })))),
+-      comp2('A bot’s card', 'nina’s own chat, small: your bubbles in nina’s derived fill (white text at 5.0:1, section 18.1), her ask, her composer; “Open in Bots” goes to the full chat; the strip of mini orbs is gone: the row below is the switcher', pair(() => stage(450, card({ needs: ['nina'], who: 'nina' }))))]);
++      comp2('The asks, open (D03 C)', 'the stack of AskCards: an approval (hold to allow, never expires) and a question; the row stays as the switcher', pair(() => stage(392, asks({ needs: ['nina', 'moss'] })))),
++      comp2('A bot’s card', 'nina’s own chat, small: your bubbles in nina’s derived fill (white text at 5.0:1, section 18.1), her ask, her composer; “Open in Bots” goes to the full chat; the strip of mini orbs is gone: the row below is the switcher', pair(() => stage(444, card({ needs: ['nina'], who: 'nina' }))))]);
+   }
+ 
+   window.DBOARDS = { d01, d02, d03, dk1, dk2 };
+@@ -154,14 +143,14 @@
+   function refit(root = document) {
+     root.querySelectorAll('.dock').forEach((d) => {
+       const p = d.querySelector('.dk7-panel'); if (!p) return;
+-      const g = DK.open, w = g.w, h = Math.ceil(p.scrollHeight + DK.row.h), F = g.F, path = window.SQ.slabPath(w, h, g.R, F);
++      const w = d.offsetWidth, h = Math.ceil(p.scrollHeight + 72), F = 30;
+       d.style.height = h + 'px';
+       const svg = d.querySelector('svg.slab'); svg.setAttribute('viewBox', `0 0 ${w + 2 * F} ${h}`); svg.setAttribute('height', h);
+-      svg.querySelectorAll('path').forEach((q) => q.setAttribute('d', path));
++      svg.querySelector('path').setAttribute('d', window.SQ.slabPath(w, h, 30, F));
+     });
+   }
+ 
+-  Object.assign(window.DOCK = {}, { DK, row, slab, dockRow, compact, collapsed, asks, card, approval, question, refit, BOTS, MANY });
++  Object.assign(window.DOCK = {}, { row, slab, dockRow, collapsed, asks, card, approval, question, refit, BOTS, MANY });
+   /* the Sessions tab's dock from now on: no "+"; nina needs you; the ask pill at the row's end */
+   S.dockRow = (o = {}) => dockRow({ needs: ['nina'], ...o });
+ })();
+diff -ru ds-v7/src/jobs-dock.json character/src2/jobs-dock.json
+--- ds-v7/src/jobs-dock.json	2026-11-23 15:11:58.391212622 +0000
++++ character/src2/jobs-dock.json	2026-11-23 15:00:21.000993257 +0000
+@@ -1 +1 @@
+-[{"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/board.html?b=d01", "out": "../dock-boards/D01-many-bots.jpg", "w": 1940, "h": 900, "wait": 2500}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/board.html?b=d02", "out": "../dock-boards/D02-at-rest.jpg", "w": 1940, "h": 900, "wait": 2500}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/board.html?b=d03", "out": "../dock-boards/D03-asks.jpg", "w": 1940, "h": 900, "wait": 2500}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/board.html?b=dk1", "out": "../dock-boards/DK1-the-row.jpg", "w": 1940, "h": 900, "wait": 2500}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/board.html?b=dk2", "out": "../dock-boards/DK2-asks-and-card.jpg", "w": 1940, "h": 900, "wait": 2500}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=rest&theme=dark", "out": "../dock-boards/K01-rest-running-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=rest&theme=light", "out": "../dock-boards/K01-rest-running-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=hover&theme=dark", "out": "../dock-boards/K02-hover-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=hover&theme=light", "out": "../dock-boards/K02-hover-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=asks&theme=dark", "out": "../dock-boards/K03-asks-open-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=asks&theme=light", "out": "../dock-boards/K03-asks-open-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=card&theme=dark", "out": "../dock-boards/K04-bot-card-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=card&theme=light", "out": "../dock-boards/K04-bot-card-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=many&theme=dark", "out": "../dock-boards/K05-many-bots-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=many&theme=light", "out": "../dock-boards/K05-many-bots-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=none&theme=dark", "out": "../dock-boards/K06-no-bots-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=none&theme=light", "out": "../dock-boards/K06-no-bots-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=rest&centre=1&theme=dark", "out": "../dock-boards/K07-centred-in-window-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=rest&centre=1&theme=light", "out": "../dock-boards/K07-centred-in-window-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=compact&theme=dark", "out": "../dock-boards/K08-compact-idle-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=compact&theme=light", "out": "../dock-boards/K08-compact-idle-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=typing&theme=dark", "out": "../dock-boards/K09-typing-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=typing&theme=light", "out": "../dock-boards/K09-typing-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}]
+\ No newline at end of file
++[{"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/board.html?b=d01", "out": "../dock-boards/D01-many-bots.jpg", "w": 1940, "h": 900, "wait": 2500}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/board.html?b=d02", "out": "../dock-boards/D02-at-rest.jpg", "w": 1940, "h": 900, "wait": 2500}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/board.html?b=d03", "out": "../dock-boards/D03-asks.jpg", "w": 1940, "h": 900, "wait": 2500}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/board.html?b=dk1", "out": "../dock-boards/DK1-the-row.jpg", "w": 1940, "h": 900, "wait": 2500}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/board.html?b=dk2", "out": "../dock-boards/DK2-asks-and-card.jpg", "w": 1940, "h": 900, "wait": 2500}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=rest&theme=dark", "out": "../dock-boards/K01-rest-running-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=rest&theme=light", "out": "../dock-boards/K01-rest-running-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=hover&theme=dark", "out": "../dock-boards/K02-hover-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=hover&theme=light", "out": "../dock-boards/K02-hover-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=asks&theme=dark", "out": "../dock-boards/K03-asks-open-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=asks&theme=light", "out": "../dock-boards/K03-asks-open-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=card&theme=dark", "out": "../dock-boards/K04-bot-card-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=card&theme=light", "out": "../dock-boards/K04-bot-card-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=many&theme=dark", "out": "../dock-boards/K05-many-bots-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=many&theme=light", "out": "../dock-boards/K05-many-bots-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=none&theme=dark", "out": "../dock-boards/K06-no-bots-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=none&theme=light", "out": "../dock-boards/K06-no-bots-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=rest&centre=1&theme=dark", "out": "../dock-boards/K07-centred-in-window-dark.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}, {"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/ds-v7/src/screen.html?s=dockv7&k=rest&centre=1&theme=light", "out": "../dock-boards/K07-centred-in-window-light.jpg", "w": 1440, "h": 900, "wait": 1800, "full": false}]
+\ No newline at end of file
+Only in character/src2: jobs-k02.json
+diff -ru ds-v7/src/kit.css character/src2/kit.css
+--- ds-v7/src/kit.css	2026-11-23 15:11:58.368002046 +0000
++++ character/src2/kit.css	2026-11-23 15:00:34.728389425 +0000
+@@ -149,6 +149,8 @@
  .tile .flag { position: absolute; right: 6px; bottom: 6px; }
  .side .foot-ctl { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 0 14px; }
  .sb-open { width: 300px; padding: 56px 10px 12px; }
-+.sb-open.has-main { padding-top: 48px; }
-+.sb-main { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 0 14px; }
++.sb-main { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0 12px; }   /* K02 A: the Bots tab's main bot */
 +.sb-main .nm { font-size: var(--fs-s); line-height: 18px; color: var(--text); }
  .sb-head { font-size: var(--fs-xs); color: var(--text-dim); padding: 14px 12px 6px; }
  .sb-row { display: flex; align-items: center; gap: 10px; height: var(--row-h-2); padding: 0 10px; border-radius: var(--r-tile); }
  .sb-row.on { --sq-bg: var(--current); }
-@@ -430,28 +433,3 @@
- /* Stills: live text at rest. The sweep and the breath exist only in motion (clips and labelled motion strips, [data-motion]). */
- .still :not([data-motion] *).shimmer { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--text-dim); }
- .still :not([data-motion] *).mk.pulse, .still :not([data-motion] *).dot.run { animation: none; opacity: 1; transform: none; }
--/* ---- the dock, v7 (Sessions tab only; no "+"; kit components inside the black slab, always the dark theme) ---- */
--.dk-in.dk7 { padding: 0; gap: 0; color: var(--text); background: transparent; }
--.dk7-row { position: relative; display: flex; align-items: center; justify-content: center; gap: 14px; width: 100%; height: 72px; flex: none; padding: 0 24px; background: transparent; }
--.dk7-orb { position: relative; display: inline-grid; place-items: center; flex: none; border-radius: 50%; }
--.dk7-flag { position: absolute; right: -1px; top: 1px; box-shadow: 0 0 0 2px #000; }
--.dk7-focus { outline: 2px solid var(--focus); outline-offset: 3px; }
--.dk7-cur::after { content: ''; position: absolute; left: 50%; bottom: -10px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent-text); }
--.dk7-tip { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); white-space: nowrap; z-index: 2; }
--.dk7-ask { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: var(--r-pill); background: var(--owe-soft); color: var(--owe-text); font-size: var(--fs-s); white-space: nowrap; flex: none; }
--.dk7-more { flex: none; }
--.dk7-nub { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); display: flex; gap: 6px; }
--.dk7-nub i { width: 5px; height: 5px; border-radius: 50%; background: var(--text-quiet); }
--.dk7-nub i.on { background: var(--text); }
--.dk7-fade { position: absolute; top: 0; bottom: 0; width: 56px; pointer-events: none; }
--.dk7-fade.l { left: 0; background: linear-gradient(90deg, #000 30%, #0000); }
--.dk7-fade.r { right: 0; background: linear-gradient(270deg, #000 30%, #0000); }
--.dk-in.dk7:has(> .dk7-panel) { flex-direction: column; align-items: stretch; justify-content: flex-end; }
--.dk7-panel { display: flex; flex-direction: column; gap: 8px; padding: 8px 8px 0; min-height: 0; background: transparent; }
--.dk7-head { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 8px; flex: none; }
--.dk7-x { background: transparent !important; box-shadow: none !important; }
--.dk7-log { display: flex; flex-direction: column; padding: 4px 4px 0; }
--.dk7-q { width: auto; margin-top: 0; }
--.dk7-panel .composer { --sq-bg: var(--bg-3); }
--.dk7-cap { display: inline-flex; align-items: baseline; gap: 6px; height: 32px; align-items: center; padding: 0 4px; font-size: var(--fs-s); white-space: nowrap; flex: none; min-width: 150px; }
--.dk7-cap b { font-weight: 500; color: var(--text); }
-diff -ru ds-v7/src/sbsheet.py character/src/sbsheet.py
---- ds-v7/src/sbsheet.py	2026-11-23 14:48:13.969383598 +0000
-+++ character/src/sbsheet.py	2026-11-23 14:30:45.726158491 +0000
-@@ -1,11 +1,9 @@
- # python3 sbsheet.py : the contact sheet of ds-v7/session-boards (boards first, then each key screen dark | light)
- import glob, os, re
- from PIL import Image, ImageDraw, ImageFont
--import sys
--D = os.path.dirname(os.path.abspath(__file__)) + '/../' + (sys.argv[1] if len(sys.argv) > 1 else 'session-boards')
--TITLE = sys.argv[2] if len(sys.argv) > 2 else 'boopis v7: the Session tab, boards S01-S16 and S41, key screens S17-S41 (dark | light)'
-+D = os.path.dirname(os.path.abspath(__file__)) + '/../session-boards'
- F = ImageFont.load_default(size=22); FH = ImageFont.load_default(size=40)
--files = sorted(os.path.basename(f) for f in glob.glob(D + '/*.jpg') if not f.endswith('contact-sheet.jpg'))
-+files = sorted(os.path.basename(f) for f in glob.glob(D + '/S*.jpg'))
- boards = [f for f in files if not re.search(r'-(dark|light)\.jpg$', f) and not f.endswith('-board.jpg')]
- screens = sorted({re.sub(r'-(dark|light)\.jpg$', '', f) for f in files if re.search(r'-(dark|light)\.jpg$', f)})
- pad, W, cols = 40, 2400, 4
-@@ -26,7 +24,7 @@
- rh = [max(sum(i.height for i in t[1][:1]) for t in r) + 40 for r in rows]
- H = 110 + sum(h + pad for h in rh)
- sheet = Image.new('RGB', (W, H), (10, 10, 10)); d = ImageDraw.Draw(sheet)
--d.text((pad, 34), TITLE, font=FH, fill=(240, 240, 240))
-+d.text((pad, 34), 'boopis v7: the Session tab, boards S01-S16 and S41, key screens S17-S41 (dark | light)', font=FH, fill=(240, 240, 240))
- y = 110
- for r, h in zip(rows, rh):
-     for i, (name, ims) in enumerate(r):
-diff -ru ds-v7/src/screen.html character/src/screen.html
---- ds-v7/src/screen.html	2026-11-23 14:45:52.166537110 +0000
-+++ character/src/screen.html	2026-11-23 14:30:44.813336770 +0000
-@@ -1,9 +1,8 @@
+@@ -455,6 +457,3 @@
+ .dk7-panel .composer { --sq-bg: var(--bg-3); }
+ .dk7-cap { display: inline-flex; align-items: baseline; gap: 6px; height: 32px; align-items: center; padding: 0 4px; font-size: var(--fs-s); white-space: nowrap; flex: none; min-width: 150px; }
+ .dk7-cap b { font-weight: 500; color: var(--text); }
+-.dk7-ask.sm { height: 24px; padding: 0 10px; font-size: var(--fs-xs); gap: 5px; }
+-.dk7-ask.sm .dot { width: 6px; height: 6px; }
+-.dk-in.dk7[data-kind="compact"] .dk7-row { justify-content: center; }
+diff -ru ds-v7/src/kit.js character/src2/kit.js
+--- ds-v7/src/kit.js	2026-11-23 15:13:39.974521979 +0000
++++ character/src2/kit.js	2026-11-23 15:00:21.000328456 +0000
+@@ -37,7 +37,7 @@
+     const still = o.still || size <= 16 ? ' static' : '';
+     const eye = o.eyes === 'dark' ? '' : ` data-eye-cut="${o.surface || 'var(--bg-2)'}"`;
+     const col = name === 'boopis' ? ' data-ink' : '';
+-    return `<orb-avatar${size <= 44 ? ' face-scale="1.25"' : ''} size="${size}" shape="${l.shape}" color="${l.color.startsWith('var') ? '#f5f5f5' : l.color}" reaction="${reaction}" idle-motion="calm" mode="fixed"${still}${eye}${col} style="width:${size}px;height:${size}px;flex:none"></orb-avatar>`;
++    return `<orb-avatar size="${size}" shape="${l.shape}" color="${l.color.startsWith('var') ? '#f5f5f5' : l.color}" reaction="${reaction}" idle-motion="calm" mode="fixed"${still}${eye}${col} style="width:${size}px;height:${size}px;flex:none"></orb-avatar>`;
+   }
+   function stack(names, size, o = {}) {
+     const step = Math.round(size * 2 / 3);
+Only in ds-v7/src/lib: orb-tuned
+diff -ru ds-v7/src/qa-selftest.html character/src2/qa-selftest.html
+--- ds-v7/src/qa-selftest.html	2026-11-23 15:14:00.437007296 +0000
++++ character/src2/qa-selftest.html	2026-11-23 15:00:21.000394503 +0000
+@@ -1,5 +1,5 @@
  <!doctype html><html data-theme="dark"><meta charset="utf-8"><link rel="stylesheet" href="tokens.v7.css"><link rel="stylesheet" href="kit.css">
--<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-avatar.min.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script><script src="dockv7.js"></script>
-+<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-avatar.min.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script>
+-<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-tuned/orb-avatar.tuned.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script>
++<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-avatar.min.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script>
+ 
+ <body><div class="bd"><div class="pair">
+ <div class="v7 cell" data-theme="dark" style="overflow:visible">
+@@ -12,7 +12,5 @@
+  <div class="sysline" style="color:var(--red-text)">engine stopped<span class="btn xs tint" style="margin-left:8px">Start it again</span></div>
+  <div class="sysline act">Saved<span class="btn" style="border-radius:4px">Undo</span></div><div class="sysline act" style="padding-right:6px">Saved<span class="btn">Undo</span></div>
+  <div class="ns-h">What’s next for <span class="mk2" data-state="shown">boopis</span>?</div>
+- <div class="dock" data-dk="row" data-geom="640,72,30,30" style="position:relative;width:640px;height:72px"><svg class="slab"><path d="M0 0L640 0"/></svg><div class="dk-in dk7"><div class="dk7-row" style="padding:0 30px"></div></div></div>
+- <div class="dock" data-dk="row" data-geom="560,96,40,20" style="position:relative;width:560px;height:96px"><svg class="slab"><path d="M0 0L560 0"/></svg><div class="dk-in dk7"><div class="dk7-row" style="padding:0 24px"></div></div></div>
+  <div class="b agent sq">text <span class="you" style="vertical-align:6px">you</span> more</div>
+ </div><div class="v7 cell" data-theme="light">x</div></div></div></body>
+diff -ru ds-v7/src/qa.cjs character/src2/qa.cjs
+--- ds-v7/src/qa.cjs	2026-11-23 15:14:00.434477217 +0000
++++ character/src2/qa.cjs	2026-11-23 15:00:21.001189297 +0000
+@@ -6,8 +6,7 @@
+ // radius is not the outer radius minus the inset, whose insets are unequal, or which runs past the container's edge),
+ // mark (the dashed underline shown at rest outside feedforward and blank contexts: the composer's text, a reply's guess, an AskCard,
+ // a blank; an info label shows it only on hover or focus, section 17), sweep (in a still, a status phrase frozen mid-shimmer or a
+-// breath frozen mid-cycle; labelled motion strips, [data-motion], are exempt), same-component (a shared component's geometry
+-// differs between renders of the same state: the dock's slab per kind, and on screens the composer, the title pill and the AskCard).
++// breath frozen mid-cycle; labelled motion strips, [data-motion], are exempt).
+ const { chromium } = require('playwright');
+ const fs = require('fs');
+ let urls = process.argv.slice(2);
+@@ -117,37 +116,17 @@
+   }
+   return out;
+ };
+-
+-const SIG = (isScreen) => {
+-  const out = [], cs = (el) => getComputedStyle(el), px = (el, ...k) => k.map((x) => cs(el)[x]).join(' ');
+-  for (const d of document.querySelectorAll('.dock')) {
+-    const kind = d.getAttribute('data-dk');
+-    if (!kind) { out.push(['dock:legacy', 'drawn outside the one component']); continue; }
+-    const row = d.querySelector('.dk-in > .dk7-row, .dk7-row'), geom = d.getAttribute('data-geom');
+-    const path = kind === 'open' ? '' : (d.querySelector('svg.slab > path') || {}).getAttribute?.('d') || '';
+-    out.push(['dock:' + kind, [geom, path.length + ':' + path.slice(0, 40), row ? px(row, 'paddingLeft', 'paddingRight', 'columnGap', 'height') : 'no row'].join(' | ')]);
+-  }
+-  if (isScreen) {
+-    for (const c of document.querySelectorAll('.composer')) { const l = c.querySelector(':scope > .line'); if (!l || c.querySelector('.modes, .queue-strip')) continue; out.push(['composer', [px(c, 'borderTopLeftRadius'), px(l, 'height', 'paddingLeft', 'paddingRight', 'columnGap')].join(' | ')]); }
+-    for (const t of document.querySelectorAll('.title-pill')) out.push(['title-pill', px(t, 'height', 'borderTopLeftRadius', 'paddingLeft', 'paddingRight')]);
+-    for (const q of document.querySelectorAll('.qcard')) out.push(['askcard', px(q, 'borderTopLeftRadius', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft')]);
+-  }
+-  return out;
+-};
+ (async () => {
+-  const b = await chromium.launch(); let total = 0; const lines = []; const sigs = {};
++  const b = await chromium.launch(); let total = 0; const lines = [];
+   for (const { url, w } of urls) {
+     const p = await b.newPage({ viewport: { width: w, height: 900 }, deviceScaleFactor: 2 });
+     await p.goto(url); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(500);
+     const H = await p.evaluate(() => document.documentElement.scrollHeight); await p.setViewportSize({ width: w, height: Math.min(H, 12000) });
+     await p.evaluate(() => { window.V7 && V7.brand && V7.brand(); window.V7 && V7.paint(); });
+     const res = await p.evaluate(PAGE); total += res.length;
+-    for (const [cls, key] of await p.evaluate(SIG, /screen\.html/.test(url))) { if (cls === 'dock:legacy') { res.push(['same-component', 'a dock drawn outside the one component']); total++; continue; } ((sigs[cls] = sigs[cls] || {})[key] = sigs[cls][key] || []).push(url.split('?')[1]); }
+     const by = {}; for (const [k, v] of res) (by[k] = by[k] || []).push(v);
+     lines.push((res.length ? 'FAIL ' : 'ok   ') + url.split('?')[1] + (res.length ? '  ' + Object.entries(by).map(([k, v]) => `${k} ${v.length}: ${[...new Set(v)].slice(0, 3).join(' | ')}`).join('  ;  ') : ''));
+     await p.close();
+   }
+-  // same-component: one geometry per component and state class across every render
+-  for (const [cls, keys] of Object.entries(sigs)) { const ks = Object.keys(keys); if (ks.length > 1) { total++; lines.push(`FAIL same-component ${cls}: ${ks.length} geometries: ` + ks.map((k) => `[${k}] in ${keys[k].slice(0, 2).join(', ')}${keys[k].length > 2 ? ' +' + (keys[k].length - 2) : ''}`).join('  vs  ')); } }
+   console.log(lines.join('\n')); console.log(`\n${urls.length} pages, ${total} findings`); await b.close();
+ })();
+diff -ru ds-v7/src/screen.html character/src2/screen.html
+--- ds-v7/src/screen.html	2026-11-23 15:13:24.679508872 +0000
++++ character/src2/screen.html	2026-11-23 15:00:21.001225927 +0000
+@@ -1,5 +1,5 @@
+ <!doctype html><html data-theme="dark"><meta charset="utf-8"><link rel="stylesheet" href="tokens.v7.css"><link rel="stylesheet" href="kit.css">
+-<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-tuned/orb-avatar.tuned.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script><script src="dockv7.js"></script>
++<script src="lib/icons.js"></script><script src="lib/model-icons.js"></script><script src="lib/squircle-path.js"></script><script src="lib/orb-avatar.min.js"></script><script src="lib/boopis-logo.js"></script><script src="kit.js"></script><script src="screens.js"></script><script src="botscreens.js"></script><script src="sessiontab.js"></script><script src="sessiontab2.js"></script><script src="sessionnew.js"></script><script src="dockv7.js"></script>
  
  <title>boopis v7 screen</title><body style="background:#000"><div id="r"></div><script>
  const q = Object.fromEntries(new URLSearchParams(location.search));
- if (!q.motion) document.documentElement.classList.add('still'); /* stills render live things at rest */
- document.getElementById('r').innerHTML = SCREENS[q.s || 'session'](Object.assign({ theme: 'dark', chrome: 'a', tile: 'a', composer: 'c', status: 'c' }, q));
--window.DOCK && DOCK.refit();
- </script></body></html>
-diff -ru ds-v7/src/screens.js character/src/screens.js
+diff -ru ds-v7/src/screens.js character/src2/screens.js
 --- ds-v7/src/screens.js	2026-11-23 14:43:14.293216231 +0000
-+++ character/src/screens.js	2026-11-23 14:45:34.678540783 +0000
-@@ -41,13 +41,18 @@
-       <span class="tile" style="width:${geo.tile}px;height:${geo.tile}px">${cluster(['kai', 'nina', 'moss'], Math.round(geo.orb * 0.42))}</span>
-       <div class="foot-ctl"><span class="ib s" style="width:32px;height:32px">${I('plus')}</span><span class="ib s" style="width:32px;height:32px">${I('store')}</span><span class="ib s" style="width:32px;height:32px">${I('gear')}</span></div></aside>`;
++++ character/src2/screens.js	2026-11-23 15:01:36.791355583 +0000
+@@ -43,11 +43,11 @@
    }
-+  /* the main bot at the top of the open sidebar, bigger than the rows (owner, 23 Nov: "visibly bigger", as Grok-Bot's;
-+     K02: o.main is its size, 44 or 56); the rail keeps its size. Its row leaves the list. */
-+  function mainBot(size) {
-+    return `<div class="sb-main">${orb('boopis', size, { surface: 'var(--bg-1)' })}<span class="nm">boopis</span></div>`;
-+  }
    function sidebarOpen(o) {
      const cur = o.current || 'room';
-     const row = (n, act, extra = {}) => `<div class="sb-row sq${cur === n ? ' on' : ''}">${orb(n, 36, { state: extra.state, surface: 'var(--bg-1)' })}<div class="col grow"><span class="nm ell">${n === 'boopis' ? 'boopis' : n}</span><span class="act ell${extra.owe ? ' owe' : ''}">${act}</span></div>${extra.end || ''}</div>`;
--    return `<aside class="side sb-open">
-+    return `<aside class="side sb-open${o.main ? ' has-main' : ''}">${o.main ? mainBot(o.main) : ''}
+-    const row = (n, act, extra = {}) => `<div class="sb-row sq${cur === n ? ' on' : ''}">${orb(n, 36, { state: extra.state, surface: 'var(--bg-1)' })}<div class="col grow"><span class="nm ell">${n === 'boopis' ? 'boopis' : n}</span><span class="act ell${extra.owe ? ' owe' : ''}">${act}</span></div>${extra.end || ''}</div>`;
++    const row = (n, act, extra = {}) => `<div class="sb-row sq${cur === n ? ' on' : ''}">${orb(n, 28, { state: extra.state, surface: 'var(--bg-1)' })}<div class="col grow"><span class="nm ell">${n === 'boopis' ? 'boopis' : n}</span><span class="act ell${extra.owe ? ' owe' : ''}">${act}</span></div>${extra.end || ''}</div>`;
+     return `<aside class="side sb-open">
        <div class="row" style="justify-content:space-between;padding:0 6px 6px"><span class="seg"><span>Sessions</span><span class="on">Bots</span></span><span class="ib s">${I('plus')}</span></div>
        ${o.search === 'side' ? `<div class="input search" style="margin:4px 4px 10px;height:32px">${I('search')}<span class="grow">Search</span><span class="keys"><span class="kbd">ctrl</span><span class="kbd">K</span></span></div>` : ''}
 -      ${row('boopis', 'Summarised the morning')}
-+      ${o.main ? '' : row('boopis', 'Summarised the morning')}
++      ${o.main ? `<div class="sb-main">${orb('boopis', o.main, { surface: 'var(--bg-1)' })}<span class="nm">boopis</span></div>` : row('boopis', 'Summarised the morning')}
        ${row('kai', 'Writing the changelog', { state: 'working' })}
        ${row('nina', 'Needs you: approve a deploy', { owe: true, state: 'needs', end: '<span class="dot owe"></span>' })}
        ${row('moss', 'Found 2 flaky tests')}
-@@ -89,7 +94,7 @@
-   function session(o) {
-     const L = o.sidebar === 'open' ? 300 : 88;
-     const title = pill(`<span style="display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--fill-2);color:var(--icon)">${I('session')}</span>Fix the dock's half paint`, '');
--    return frame(o, `${o.sidebar === 'open' ? sessionsOpen() : rail({ ...o, current: 'none' })}${chrome({ ...o, title })}
-+    return frame(o, `${o.sidebar === 'open' ? sessionsOpen({ main: +o.main || 0 }) : rail({ ...o, current: 'none' })}${chrome({ ...o, title })}
-       <div class="main" style="left:${L}px"><div class="thread" style="padding-top:72px">
-         <div class="sep">Today 09:42</div>
-         <div class="b user sq">The dock loses its right half while the slab moves. Find why and fix it.</div>
-@@ -109,9 +114,9 @@
-       <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:${o.noDock ? 20 : 96}px">${composer({ ...o, placeholder: 'Describe the change' })}</div>
-       ${o.noDock ? '' : dockRow()}</div>`);
-   }
--  function sessionsOpen() {
-+  function sessionsOpen(o = {}) {
-     const r = (t, w, on, dot) => `<div class="sb-srow sq${on ? ' on' : ''}">${dot ? '<span class="dot run"></span>' : `<span style="width:8px"></span>`}<span class="grow ell">${t}</span><span class="xs dim mono">${w}</span></div>`;
--    return `<aside class="side sb-open"><div class="row" style="justify-content:space-between;padding:0 6px 6px"><span class="seg"><span class="on">Sessions</span><span>Bots</span></span><span class="ib s">${I('plus')}</span></div>
-+    return `<aside class="side sb-open${o.main ? ' has-main' : ''}">${o.main ? mainBot(o.main) : ''}<div class="row" style="justify-content:space-between;padding:0 6px 6px"><span class="seg"><span class="on">Sessions</span><span>Bots</span></span><span class="ib s">${I('plus')}</span></div>
-       <div class="sb-head">Today<span class="n">3</span></div>${r("Fix the dock's half paint", '09:42', true, true)}${r('Room mentions in every composer', '08:10')}${r('Store: de-duplicate items', '07:55')}
-       <div class="sb-head">Yesterday<span class="n">3</span></div>${r('Startup notice for Windows', 'mon')}${r('Hold to approve in the dock', 'mon')}${r('Archived bots group', 'sun')}
-       <div class="foot-ctl" style="flex-direction:row;justify-content:flex-end;padding:12px 6px 0"><span class="ib s">${I('store')}</span><span class="ib s">${I('gear')}</span></div></aside>`;
-@@ -119,13 +124,12 @@
- 
-   /* 2. a bot's chat (kai), the rail, the activity line */
-   function botChat(o) {
--    o = { ...o, noDock: true }; /* the Bots tab: no dock (owner, 23 Nov) */
-     const st = o.status || 'c';
-     const act = st === 'c' ? `<div class="activity">${orb('kai', 16, { state: 'working' })}<span class="shimmer">Reading the changelog</span></div>`
+@@ -125,7 +125,7 @@
        : st === 'a' ? `<div class="status-a" style="margin-top:12px;font-size:var(--fs-l)"><span class="dot run"></span>Reading the changelog</div>`
        : `<div class="status-b" style="margin-top:12px;font-size:var(--fs-l);opacity:.55">Reading the changelog</div>`;
      const title = pill(`${orb('kai', 24, { surface: 'var(--bg-3)' })}kai`, '', o.search === 'menu' || o.search === 'menu-off');
@@ -191,11 +373,7 @@ diff -ru ds-v7/src/screens.js character/src/screens.js
        <div class="main" style="left:${o.sidebar === 'open' ? 300 : (o.tile === 'b' ? 64 : o.tile === 'c' ? 72 : 88)}px"><div class="thread" style="padding-top:72px">
          <div class="sep">Today 10:05</div>
          <div class="b user sq">Draft the release notes for 0.2.0 from what merged this week.</div>
-@@ -147,11 +151,10 @@
- 
-   /* 3. a group room: bylines in the bot's colour, mention chips, a hand-off row, a message to you, who is replying */
-   function room(o) {
--    o = { ...o, noDock: true }; /* the Bots tab: no dock (owner, 23 Nov) */
+@@ -151,7 +151,7 @@
      const L = o.sidebar === 'open' ? 300 : 88;
      const title = pill(`${stack(['kai', 'nina', 'moss'], 24, { surface: 'var(--bg-3)' })}release crew`, '');
      const by = (n) => `<div class="byline">${orb(n, 16, { still: true })}${nameIn(n)}</div>`;
@@ -204,31 +382,3 @@ diff -ru ds-v7/src/screens.js character/src/screens.js
        <div class="main" style="left:${L}px"><div class="thread" style="padding-top:72px">
          <div class="sep">Today 11:20</div>
          <div class="b user sq">${mention('kai')} write the notes, ${mention('nina')} ship 0.2.0 to staging when they're in.</div>
-@@ -176,7 +179,7 @@
-       <div class="set-head">Layout</div><div class="card sq">${sr('Show the dock', '<span class="switch on"></span>')}${sr('When the sidebar collapses', '<span class="seg"><span class="on">Rail</span><span>Hide</span></span>')}${sr('Rail size', '<span class="seg"><span class="on">Automatic</span><span>Standard</span><span>Compact</span></span>')}${sr('Show search', '<span class="switch on"></span>')}${sr('Search shows as', sel('A button'))}</div>
-       <div class="set-head">Under the composer</div><div class="card sq">${sr('Mode', chk(1))}${sr('Smart or the pinned model', chk(1))}${sr('Model', chk(0))}${sr('Cost against the cap', chk(1))}${sr('Context used', chk(0))}</div>
-       <div class="set-head">Appearance</div><div class="card sq">${sr('Theme', sel('Follow system'))}${sr('Accent', `<span class="select"><span style="width:12px;height:12px;border-radius:50%;background:var(--accent)"></span>Iris${I('chevron-down')}</span>`)}${sr('Corners', '<span class="seg"><span class="on">Standard</span><span>Rounder</span></span>')}</div>`;
--    const bg = botChat({ ...o, noDock: true }); /* Settings over the Bots tab: no dock there (owner, 23 Nov) */
-+    const bg = botChat({ ...o, noDock: false });
-     return bg.replace(/<\/div>$/, `<div class="scrim"></div><div class="dialog sq" style="left:${(1440 - 900) / 2}px;top:64px;width:900px;height:700px;display:flex">
-       <div class="setnav">${nav}</div><div class="setbody">${body}</div><span class="ib s d-close" style="background:transparent;box-shadow:none">${I('close')}</span></div></div>`);
-   }
-@@ -217,5 +220,5 @@
-       <div class="main" style="left:${L}px"><div style="position:absolute;inset:0;display:grid;place-items:center;padding-bottom:300px"><div class="col" style="align-items:center;gap:14px"><span class="l dim">What should change?</span>${composer({ ...o, placeholder: 'Describe the change', composerW: 620 })}</div></div></div>${d}`);
-   }
- 
--  window.SCREENS = { session, botChat, room, settings, store, dock: dockScreen, chrome, rail, sidebarOpen, composer, pill, frame, orb, stack, mention, nameIn, dockRow };
-+  window.SCREENS = { mainBot, sessionsOpen, session, botChat, room, settings, store, dock: dockScreen, chrome, rail, sidebarOpen, composer, pill, frame, orb, stack, mention, nameIn, dockRow };
- })();
-diff -ru ds-v7/src/sessiontab.js character/src/sessiontab.js
---- ds-v7/src/sessiontab.js	2026-11-23 14:43:06.725609850 +0000
-+++ character/src/sessiontab.js	2026-11-23 14:30:45.635913614 +0000
-@@ -33,7 +33,7 @@
-     const L = 300, R = ex.panelW || 0;
-     return S.frame(o, `${ex.side || inbox(ex)}${S.chrome({ ...o, sidebar: 'open', title: ex.title || title("Fix the dock's half paint", 'w32/dock-paint'), pane: !!R })}
-       <div class="main" style="left:${L}px;right:${R}px">${ex.mainInner || `<div class="thread sess" data-model="${ex.model || 'claude'}" style="padding-top:72px">${body}</div>`}
--      <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:${ex.noDock ? 24 : 96}px">${ex.above || ''}${compHTML}</div>${ex.noDock ? '' : (ex.dock || S.dockRow())}</div>${ex.panel || ''}${ex.overlay || ''}`);
-+      <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:${ex.noDock ? 24 : 96}px">${ex.above || ''}${compHTML}</div>${ex.noDock ? '' : S.dockRow()}</div>${ex.panel || ''}${ex.overlay || ''}`);
-   }
- 
-   /* S1: the launch step (option A: the scale as one segmented track; option B: four rows) */

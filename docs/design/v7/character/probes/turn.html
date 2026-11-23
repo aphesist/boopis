@@ -1,0 +1,14 @@
+<!doctype html><html><meta charset="utf-8"><title>Turned orb probe</title>
+<!-- A squircle orb turned as orb2's lively idle turns it (rim peek: yaw up to 72 degrees), still, at the room header's
+     40 px, for each yaw. ?lib=stock|snap|tuned -->
+<style>html,body{margin:0;background:#0e0e0e}#g{display:flex;flex-wrap:wrap;width:800px}.c{width:80px;height:80px;display:grid;place-items:center}</style>
+<body><div id="g"></div><script>
+const q = Object.fromEntries(new URLSearchParams(location.search));
+const s = document.createElement('script'); s.src = { stock: 'lib/orb-avatar.min.js', snap: 'lib/orb-avatar.snap.js', tuned: 'lib/orb-avatar.tuned.js' }[q.lib || 'stock'];
+s.onload = () => { const g = document.getElementById('g');
+  for (const sh of ['squircle', 'circle', 'triangle', 'flower', 'hexagon']) for (const y of [0, 20, 40, 55, 65, 72, -40, -55, -65, -72]) {
+    const c = document.createElement('div'); c.className = 'c';
+    c.innerHTML = `<orb-avatar size="${q.size || 40}" shape="${sh}" color="#f5f5f5" eye-color="#0e0e0e" gaze="${y} 10" idle-motion="off" mode="fixed" static style="width:${q.size || 40}px"></orb-avatar>`; g.appendChild(c); }
+  setTimeout(() => document.body.dataset.ready = 1, 500); };
+document.head.appendChild(s);
+</script></body></html>

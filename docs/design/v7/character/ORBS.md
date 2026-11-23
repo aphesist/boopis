@@ -17,6 +17,28 @@ Sources:
 
 Every finding below was measured in Chromium (Playwright) on the real orb2 code.
 
+## Decisions (owner, 23 November)
+
+| Question | Decision |
+|---|---|
+| K01, the renderer | **The new renderer, with every clarity fix:** C1–C3, C6 and C7, plus C9 and C10, the turn limits found while fixing the clip defect below. |
+| The eyes | **`face-scale` 1.25** (C4). |
+| Sizes | **Grok-Bot's: sidebar rows 28 px, the rail 36 px** (C5). |
+| Animation | **All of T1–T5, plus the "use more" plan** (part 2). |
+| K02 | **A: a 44 px main bot.** It appears only in the Bots tab, as the first entry of the bots list, below the Sessions and Bots switch. The Sessions tab shows no bot; there, the dock is the quick way to the bots. |
+
+**A defect, fixed.** The first proposed clip showed the room header's square boopis with a notched edge, and the
+owner said that cannot happen. The cause is orb2's 3D turn, not the snapping. Every frame of the "today" side has it
+too. `probes/turn.html` shows it:
+
+- **Body.** Past about 0.2 rad of head turn, a flat body's projected outline kinks at its corner. Lively rim peeks
+  turn the head up to 0.68 rad, and the sky gaze up to 0.51.
+- **Eyes.** Past about 0.75 rad of eye turn, the body's clip cuts the eye cells in half.
+
+C9 holds a non-circular head to 0.18 rad, and C10 holds the eyes to 0.7 rad. The proposed plan also makes the room
+header calm instead of lively, because lively's spins and rim peeks are the turns that cannot draw cleanly. Both
+clips were re-recorded and checked frame by frame; see the critic pass below.
+
 | File | What it is |
 |---|---|
 | `K01-clarity.jpg` | Part 1, the clarity crops |
@@ -55,6 +77,8 @@ So vividness is not the difference. The geometry, the resampling and the size ar
 | C5 | **The orbs are smaller than Grok-Bot's.** Our sidebar row is 20 px against Grok-Bot's 28; the rail is 24 against 36. Size is the largest single difference. The v7 kit already uses 36 px rows and tiles. | Measured on `157-live-sidebar-expanded.png` and `010-chat-sidebar-compact.png`. | `modules/bots/list.ts:69, 132` |
 | C6 | **Constant sub-pixel float.** orb2's float and breath (`.020/.026` body radii, 1.1 % scale, every frame) move a 20 px orb's edges by about 0.25 px all the time, so the anti-aliasing shimmers. Grok-Bot holds a pose completely still: `avatar-states-zoom-sidebar.mp4` is unchanged from 21 s to 40 s. | `anim-idle-before-after.mp4` | orb2 `:2924-2931` |
 | C7 | **A DPR change never refits.** `_fit` runs only from the ResizeObserver and from `setLevel`, and a DPR change does not change the CSS width. A window moved to a 2x screen, or a zoom, keeps a 1x canvas. In the worker, the `env` message only sets `devicePixelRatio` (`worker.ts:210`). | Code path. | orb2 `:2154`, `:2196`; boopis `orb-worker/worker.ts:210`, `host.ts:141-142` |
+| C9 | **A turned flat body notches.** The head turns by 0.54 of the eye turn (`hR`, `:2846`). Past about 0.2 rad, the outline of a squircle, hexagon or other extruded body kinks at a corner. Lively rim peeks (eye yaw 0.82–1.26 rad, `:2675`) and the sky gaze (pitch 0.62–0.94, `:2698`) reach 0.68 and 0.51 rad of head turn. | `probes/turn.html`: five shapes at a 0–72° gaze, stock against the variant. The kink is gone with the cap. | orb2 `:2850`, `:2859-2860`: hold the head target to ±0.18 rad unless the body is a circle (a sphere has no edge to kink). Spins add their own yaw after this and are unaffected. |
+| C10 | **Eyes are cut at the rim.** Past about 0.75 rad, the eye cells reach the rim and the body clip (`:2976`) halves them. `lookAt` allows 1.18 rad (`:2819`) and rim peeks 1.26. Grok-Bot's eyes reach 0.18 of the body width at most and are never cut (LARGE 7.0–7.8 s). | `probes/turn.html`, 55–72°. | orb2 `:2849`, `:2856-2857`: hold the eye target to ±0.7 rad. |
 
 ### The fix list
 
@@ -74,6 +98,9 @@ So vividness is not the difference. The geometry, the resampling and the size ar
   skip is what saves time.
 - **`:2147`** Re-snap on the layout bump that already counts scroll and resize (`for (const o of live) o._snap()`).
   Add a `matchMedia('(resolution: …dppx)')` listener that refits every orb (C7).
+- **`:2849-2860`, plus a new `_headCap(v)`** C9 and C10: the head target goes through `_headCap`, which clamps to
+  ±0.18 rad when `!this._bodyTo.isCircle`, and the eye targets go through `clamp(…, -.7, .7)`. Both apply in the
+  static branch and in the springs.
 
 **In boopis**
 
@@ -87,9 +114,11 @@ So vividness is not the difference. The geometry, the resampling and the size ar
 - **`modules/dock/views.ts:27, 29, 171`** Remove `render:` so the dock orbs draw at their own size. The
   `.ui-orb[data-render]` rule in `components/components.css:642` then has no users. The hover magnification
   (`scale(1.22)`/`1.33`, `dock.css:116, 187, 189`) is a transition and is acceptable while it moves.
-- **`components/orb.ts:38-40`** (optional, C4) Write `face-scale="1.25"` for orbs of 44 px and under. This only
+- **`components/orb.ts:38-40`** (C4, decided) Write `face-scale="1.25"` for orbs of 44 px and under. This only
   scales the eyes the owner already has.
-- **`modules/bots/list.ts:69`** (C5) Rows at 28 px and the rail at 36 px, as the v7 kit has them.
+- **`modules/bots/list.ts:69, 132`** (C5, decided) Rows at 28 px and the rail at 36 px.
+- **`modules/bots/room.ts:110`** The room presence orb goes from `motion: 'lively'` to calm (C9 and C10: lively's
+  spins and rim peeks).
 
 ### WebKitGTK notes
 
@@ -109,7 +138,7 @@ contact sheets of `avatar-shapes-idle-and-pointer.mp4`. The orb2 side is cited f
 | State | Grok-Bot (recording, time) | Ours today (code) | Gap | Improvement (parameters within orb2's model) |
 |---|---|---|---|---|
 | Blink | Eye height 39 → 27 → 7 → 30 → 39 px over 0.20–0.27 s, closing in about 0.1 s (LARGE 1.07–1.40 s, 3.13–3.43 s, 5.13–5.33 s, 7.27–7.47 s). Every 2.0–2.1 s in that clip. | 0.155 s, `sin^0.82` (`:2919`). Every 2.1–5.7 s, 24 % double (`:2766-2775`). | Ours is a flick, about 4–5 frames, and it can be missed at 20 px. | **T1** blink 0.20 s (`:2919`). |
-| Idle, held pose | Holds a pose dead still: no drift, no float. The sidebar held one pose for 19 s (ZOOM 21–40 s). The large avatar rests face-on (eye dx ≈ 0, LARGE 0.9–2.6 s). | `idle-motion="calm"` everywhere (`orb.ts:39`). A new pose every 1.8–4.2 s with yaw ±0.38 rad around an 8° right rest gaze (`:2661-2664`, `:2646`). A constant micro-drift (`:2752-2754`), plus float and breath at every size (`:2924-2931`). | Ours never holds still and rests turned, so small orbs swim (C6). | **T2** calm glances and returns: a glance of ±0.20–0.42 rad for 0.7–1.5 s, then the rest pose for 1.6–3.8 s. **T3** calm micro-drift at ¼. **T4** no float or breath under 44 px. **T5** rest gaze `[0, .05]`. This one is optional, because Grok-Bot's sidebar rests turned. |
+| Idle, held pose | Holds a pose dead still: no drift, no float. The sidebar held one pose for 19 s (ZOOM 21–40 s). The large avatar rests face-on (eye dx ≈ 0, LARGE 0.9–2.6 s). | `idle-motion="calm"` everywhere (`orb.ts:39`). A new pose every 1.8–4.2 s with yaw ±0.38 rad around an 8° right rest gaze (`:2661-2664`, `:2646`). A constant micro-drift (`:2752-2754`), plus float and breath at every size (`:2924-2931`). | Ours never holds still and rests turned, so small orbs swim (C6). | **T2** calm glances and returns: a glance of ±0.20–0.42 rad for 0.7–1.5 s, then the rest pose for 1.6–3.8 s. **T3** calm micro-drift at ¼. **T4** no float or breath under 44 px. **T5** rest gaze `[0, .05]` (decided; Grok-Bot's sidebar rests turned, its large avatar faces front). |
 | Glance | Eye offset moves 0.04 → 0 → −0.06 → +0.04 of the body width, each move in 0.33–0.5 s, ease-out (LARGE 0.53–0.87 s, 2.70–3.13 s, 3.67–4.00 s). | Eye spring k = 165, damping 19 (ζ ≈ 0.74, settles in about 0.3 s); head spring 68 / 11.5 (`:2848-2853`). | Timing matches. Ours wanders, theirs returns. | T2 covers it. The springs are unchanged. |
 | Eyes track the pointer | Eyes reach dx −0.18 and dy −0.16 of the body (to the rim), easing in about 0.4 s and back in about 0.15 s, with a small lean (LARGE 6.70–7.13 s, return at 7.87–8.00 s). | `lookAt` clamps to ±1.18 rad (`:2823-2826`). boopis aims only on hover (`bots/orbs.ts:42-54`), the room presence and the new-bot preview (`gentleFollow`, ≤ 0.3·250 px, `bots/orbs.ts:108-120`), and the dock row (`dock/orbs.ts:30-40`). | Same mechanics. Ours is used on few surfaces. | Use it more (the plan below). No parameter change. |
 | Scale pulse | Body 152 → 142 → 152 px (6.6 %) over about 0.9 s, ease-in-out, held about 1.2 s (LARGE 0–4.9 s). The cause is not visible in the clip. | Breath 1.1 % (`:2929`). Listening `s` is 1.4 % (`:1308`). | Theirs is a slow, held change; ours is a constant ripple. | No new pulse. T4 stops the ripple at small sizes. Out of scope: a held "lean in" scale. |
@@ -157,7 +186,7 @@ Everything in the plan uses orb2's own calls and boopis's existing helpers (`gen
 | Sidebar rows (20) | Calm idle; looks on hover only. | When a bot posts, its row orb `blink()`s. Calm idle with T2–T4. |
 | Main bot, open sidebar | One more row. | 44 px (part 3). It becomes `alive` with `emotes="curious winkswap slowblink"`, `idle-time` about 9–20 s and `sleep-after="0"`. It takes the glance lead under reduced motion, and `gentleFollow` to the composer while you type and to a new message. |
 | Rail (24) | Calm idle. | Same as the rows. |
-| Room presence (40, lively) | Holds a look at the composer while you type (`room.ts:408`). Glances at a new message for 1.2 s (`room.ts:223`). | Unchanged. |
+| Room presence (40, lively) | Holds a look at the composer while you type (`room.ts:408`). Glances at a new message for 1.2 s (`room.ts:223`). | The looks are unchanged. The idle becomes calm (with T2), because lively's spins and rim peeks notch the body (C9, C10). |
 | Room gutter (20) | Nothing. | The other members' orbs turn toward the speaker's new bubble for 1.2 s (`capLook`, k .45). While you type they look at the composer. The speaker `blink()`s as its bubble lands. |
 | Dock (40) | Looks at the pointer only when the pointer is in the row; blink on hover (`dock/input.ts:317-324`). | While you type in a room, its members' dock orbs hold a look at the composer (k .3). The bot that posts `blink()`s. |
 | 1:1 chat | The composer mic orb at 18 px, live (`composer.ts:343`). | The bot's title-pill orb glances at its own new bubble. |
@@ -189,30 +218,53 @@ Everything in the plan uses orb2's own calls and boopis's existing helpers (`gen
 Grok-Bot's main bot is centred above the list with its name under it. Its body is 44 px, against 28 px rows and a
 36 px rail. These were measured as 88 device px on `157-live-sidebar-expanded.png`, which is DPR 2.
 
-`K02-main-bot.jpg` (board-09 format) offers two sizes. Both move boopis out of the list to the top of the open
-sidebar, in the Bots and the Sessions tab alike. The rail is unchanged.
+**Decided: A, 44 px, the Bots tab only.** boopis is the first entry of the Bots tab's list, below the Sessions and
+Bots switch, centred with its name under it, as Grok-Bot shows its main bot. The list's rows take Grok-Bot's 28 px.
+The Sessions tab has nothing to do with bots, so it shows no bot; the dock under the session is the quick access to
+them. The rail keeps its size. `K02-main-bot.jpg` shows A only.
 
-**I recommend A, at 44 px.** It is Grok-Bot's size: visibly the lead against the 36 px rows, without becoming a
-second header beside the room's 40 px presence orb.
-
-Screens 11 (bot chat), 12 (room) and 13 (session) were rendered with the open sidebar, for both options in dark and
-light. They are `K02-1{1,2,3}-*-main{44,56}-{dark,light}.jpg` in the deliverables folder.
+Screens 11 (bot chat) and 12 (room) are the Bots tab, with no dock. Screen 13 is the Sessions sidebar, with no
+boopis entry and with its dock. All were rendered in dark and light from the v7 source after the dock pass
+(528a5dca). They are `K02-11-bot-chat-main44-{dark,light}.jpg`, `K02-12-room-main44-{dark,light}.jpg` and
+`K02-13-session-{dark,light}.jpg` in the deliverables folder.
 
 The render-source change is `k02-render.patch`, against `ds-v7/src`:
 
-- `mainBot()` and `.sb-main` were added.
-- `sidebarOpen` and `sessionsOpen` take `main`.
-- The screens read `?main=`.
+- In `sidebarOpen`, `main` replaces the boopis row with the `.sb-main` entry below the switch, and the row orbs are
+  28 px.
+- `.sb-main` is added to `kit.css`.
+- `botChat` and `room` read `?main=`.
 
-`qa.cjs --jobs jobs-k02.json` with all rules, sweep included, returned 13 pages and 0 findings.
+`qa.cjs --jobs jobs-k02.json` with all rules, sweep included, returned 7 pages and 0 findings.
 
 ## Critic pass
 
-- **Clips.** Both clips were checked frame by frame with `probes/tools/flicker.py`, which looks for A-B-A flicker and for an
-  orb's pixel mass dipping for a single frame (a canvas painted empty), as well as by eye on the contact sheets.
-  Result: 240 and 315 frames, 0 suspect. The clips are recorded on Playwright's clock: one 1/30 s step per
-  screenshot, seeded `Math.random`, and the same timeline in both halves.
-- **Images.** K01 and K02 were viewed at full resolution: no double images and no clipped text.
+**Clips.** Both clips were re-recorded after the C9 and C10 fix: 315 frames for the alive clip and 240 for the idle
+clip. They were captured at DPR 2 on Playwright's clock (one 1/30 s step per screenshot, seeded `Math.random`, the same
+timeline in both halves) and encoded to 1280 × 800. Each frame was checked three ways:
+
+- **`probes/tools/flicker.py`** looks for A-B-A flicker, and for an orb's pixel mass dipping for one frame (a canvas
+  painted empty). Result: 0 suspect frames in either clip.
+- **`probes/tools/shape.py`** is new. For every orb in every frame it measures the body's largest blob, its
+  solidity (area over convex-hull area) against that orb's own median, and whether the blob touches the canvas's
+  bounds (a straight cut). Result: 0 notches and 0 cuts.
+
+  It also reads the pose each orb drew, using orb2's own `_hyaw`, `_hpitch`, `_eyaw` and `_epitch` fields, which
+  `rec.cjs` writes to `poses.json`. It flags the turns that `probes/turn.html` shows to notch a flat body (head past
+  0.2 rad) or to cut the eyes (past 0.75 rad), and spins.
+
+  | Half | Alive clip | Idle clip |
+  |---|---|---|
+  | Today | 646 orb-frames | 429 orb-frames |
+  | Proposed | 0 | 0 |
+
+  The pose check is the stronger of the two tests. A slab's kink at 20–40 px moves solidity by less than its noise,
+  which is why it was missed the first time.
+
+By eye, contact sheets of every third frame were reviewed for the proposed half's orbs: the main bot, the room header,
+the dock and the gutters. No notched, cut or deformed outline appears.
+
+**Images.** K01 and the new K02 were viewed at full resolution: no double images and no clipped text.
 
 ## Probes
 
@@ -223,4 +275,6 @@ Serve `probes/` over HTTP (`python3 -m http.server`). The clip page uses same-or
 | `clarity.html?lib=stock\|snap\|tuned&ladder=2&fs=1.25` | The K01 orbs at the app's sizes, still |
 | `stage.html?scene=idle\|alive&lib=…&plan=today\|more` | One half of a clip; it drives the real orb2 build |
 | `clip.html?scene=idle\|alive` | The 1280 × 800 before and after |
-| `gen-variants.cjs` | Builds `lib/orb-avatar.snap.js` (C1–C3) and `lib/orb-avatar.tuned.js` (C1–C3 and T1–T5) from orb2's `orb-avatar.js`; it stops if a replaced line is not found |
+| `turn.html?lib=stock\|snap` | Five shapes turned 0–72° at 40 px, still: the C9 and C10 proof |
+| `gen-variants.cjs` | Builds `lib/orb-avatar.snap.js` (C1–C3, C7–C10) and `lib/orb-avatar.tuned.js` (the same, plus T1–T5) from orb2's `orb-avatar.js`; it stops if a replaced line is not found. C8, the full outline stride, made no visible difference in `turn.html` and is optional. |
+| `tools/rec.cjs`, `tools/shape.py`, `tools/flicker.py` | The deterministic recorder and the frame-by-frame checks |
