@@ -1310,6 +1310,39 @@
       "attention (--owe, amber) and danger (--red)": "fixed by meaning: they are the two colours a person must recognise in every theme, on the dock and in the notch, and colour-blind safety was checked for these two only; a theme that recoloured them could make 'needs you' look like 'failed' or like the accent",
       "surfaces and ink": "from the two modes; a mod theme still previews colours through the one theme mechanism (owner decision), under the readability guard",
       "the dock": "#000 (owner decision)"
+    },
+    "bot-colour-bubble": {
+      "default": true,
+      "where": "a specific bot's own chat only: your bubble and the send button; ink in rooms and in the boopis bot's chat",
+      "derivation": "white text if 4.5:1 is reachable by lowering OKLab L by at most 0.08 (the fill is that darkened colour); else the orb colour as is with #121212 text",
+      "examples": {
+        "kai": [
+          "#4fc9a8",
+          "#121212"
+        ],
+        "nina": [
+          "#e1274d",
+          "#ffffff"
+        ],
+        "moss": [
+          "#2fd26a",
+          "#121212"
+        ],
+        "iris": [
+          "#2b72e5",
+          "#ffffff"
+        ],
+        "hex": [
+          "#a6a6ab",
+          "#121212"
+        ],
+        "nimbus": [
+          "#9252ec",
+          "#ffffff"
+        ]
+      },
+      "settings": "Settings > Appearance > Your messages in a bot's colour (on); per bot in its details pane, overriding",
+      "exception": "R-colour-8, owner-approved, scoped to that chat's bubble and send button"
     }
   },
   "owner_picks": {
@@ -1406,7 +1439,18 @@
         "answered",
         "withdrawn"
       ],
-      "open": "approval-surfaces.md lists expired (engine timeout 300 s); the owner says no time limit"
+      "expiry": "a bot's card never expires (approval-surfaces section 5, w31/specs d5350c0b); expired applies only to the owner's own sessions and parked steps after 7 days"
+    },
+    "InlineChip": {
+      "rule": "R-inline-1: text baseline = line baseline (<= 0.5 device px), box optically centred, line height never grows, symmetric padding; inline-level, never flex",
+      "applies": [
+        "you capsule",
+        "@mention",
+        "inline code",
+        "the mark",
+        "blank countdown"
+      ],
+      "check": "lab inline-baseline (w29/inline-baseline)"
     }
   }
 }
