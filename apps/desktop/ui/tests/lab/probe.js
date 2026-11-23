@@ -842,7 +842,11 @@
     const res = [];
     const dpr = window.devicePixelRatio || 1;
     const dev = (n) => r1(n * dpr * 100) / 100;   /* CSS px to device px, for the message */
-    const STYLE = 'position:static;visibility:hidden;display:inline-block;width:0;height:1cap;margin:0;padding:0;border:0;vertical-align:baseline;';
+    /* the probe is an <i>, which the browser sets in italic: `font-style: inherit` keeps it in the face of the text it measures. In italic
+       it took `1cap` from the family's italic face, which loads only when something asks for it (Libre Franklin ships italic 400 and 600,
+       not 500), so the first probe on a page measured the fallback font while the face loaded: Inter here, 0.2px short of Libre
+       Franklin's cap height, Liberation Sans on CI's runner, 0.7px short, which read as a chip 0.7px low in its capsule */
+    const STYLE = 'position:static;visibility:hidden;display:inline-block;width:0;height:1cap;margin:0;padding:0;border:0;vertical-align:baseline;font-style:inherit;';
     const capProbe = () => { const p = document.createElement('i'); p.className = 'lab-baseline-probe'; p.setAttribute('aria-hidden', 'true'); p.style.cssText = STYLE; return p; };
     const chips = els.filter((e) => e.matches(INLINE_CHIP) && !e.parentElement?.closest(INLINE_CHIP));
     for (const chip of chips) {
