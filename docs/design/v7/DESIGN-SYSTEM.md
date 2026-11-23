@@ -721,18 +721,17 @@ Far 3D turns are fixed in the geometry, not clamped, so the life stays:
 - The blink: 0.2 s.
 
 **The fixed pose** (proposed, awaiting the owner's pick; the full spec is in `character/ORBS.md` §23, and
-`character/K06-pose-options.jpg` shows three angles, all 15 shapes each, beside Grok-Bot's capture). The bots are drawn
-by **orb3**, a new major version of orb2 on its `orb3` branch (not pushed yet), with the same element and attributes:
+`character/K07-pose-near-grok.jpg` shows three near-Grok options beside Grok-Bot's capture, shape by shape). The bots
+are drawn by **orb3**, a new major version of orb2 on its `orb3` branch (not pushed yet), with the same element and
+attributes: each shape is its own 3D solid in one flat colour, read from its perspective outline and its eyes.
 
-- each shape is its own 3D solid in one flat colour;
-- the volume reads from the perspective outline and the eyes on the front surface;
-- the body leans into a turn, under a closer camera.
+At rest, every bot in the dock, the Bots sidebar, the rail and the 44 px main bot holds one pose: big upright pills
+painted right of centre and a little above, on a body only gently turned (a 6° and 5° look, a −10° roll). Recommended:
+A. It matches Grok-Bot's measured eye placement, size, spacing, lean and foreshortening.
 
-At rest, every bot in the dock, the Bots sidebar, the rail and the 44 px main bot holds one pose. It is orb3's look plus
-a body roll, with no per-shape values. Recommended: B, a look of 35° and 25°, the eyes leaning 30°, about 17° of body
-lean in all.
-
-Cost per orb per frame: 0.27 ms while moving, 0.006 ms at rest (no redraw).
+In motion, the eyes never go edge-on. Each pill keeps at least 0.62 of its width, the pair never closes up, and it keeps
+a margin inside the outline; the body carries large looks. Cost per orb per frame: 0.30 ms while moving, 0.006 ms at
+rest.
 
 **Per surface:**
 
@@ -769,7 +768,7 @@ the bots.
 
 - `K01-clarity.jpg`.
 - `K02-main-bot.jpg`.
-- `K06-pose-options.jpg`: the three pose angles in orb3, all 15 shapes each, with Grok-Bot's capture (K04 and K05
+- `K07-pose-near-grok.jpg`: three near-Grok fixed angles beside Grok-Bot's capture, shape by shape (K04, K05 and K06
   withdrawn).
 - `anim-look-orb3-vs-grok.mp4` and `anim-torture-orb3.mp4`: orb3 looking around beside Grok-Bot's drop, and the
   torture test.

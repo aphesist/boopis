@@ -260,6 +260,14 @@ const heart = (cx, cy, s = .30) => pillHeart(cx, cy, s / .30);
 
 const BODY_N = 160;
 const MEDIAL_N = 64;
+/* orb3: the eyes never go edge-on. A look is split between the body and the eyes' slide across the face: small looks
+   as orb2 shares them (the head at its ratio), but the slide eases into a limit (EYE_SLIDE, radians of yaw and pitch) and
+   the body turns for the rest. The eyes stay on the open middle of the face, where they keep their width, their gap and
+   a margin inside the outline. A smooth tanh, so there is no visible stop */
+const EYE_SLIDE = [.36, .26];
+const LOOK_LIM = [.72, .5];
+const FACE_CURVE = .25;
+const headOf = (e, ratio, lim) => e - lim * Math.tanh(e * (1 - ratio) / lim);
 const LEAN = -.3;     // orb3: the body leans into a turn, as Grok-Bot's characters do (roll per radian of look)
 const CAM_D = 9.0;    // orb3: a closer camera than orb2 (15): the turned solid's near side reads larger, as in Grok-Bot's frames
 const RAY_DIRS = Array.from({ length: BODY_N }, (_, i) => {
@@ -2025,7 +2033,7 @@ function projEye3D(a, b, localFr, M, body, faceScale) {
   }
   if (body.solid) return projEyeSolid(a, b, localFr, M, body, faceScale);
   const zHalf = body.zHalf || 1;
-  const camber = body.camber ?? 1;
+  const camber = body.isCircle ? FACE_CURVE + .1 : (body.camber ?? 1);   // orb3: the sphere's eyes ride a gentler face too (FACE_CURVE)
   const kDepth = (CAM_D - zHalf) / CAM_D;
   const S = faceScale * body.fScale;
   const sa = a * S, sb = b * S, rho = Math.hypot(sa, sb);
@@ -2095,7 +2103,13 @@ function projEyeSolid(a, b, localFr, M, body, faceScale) {
   const effRx = body.rx * clamp(1 + body.taperY * fDy, 0.50, 1.18);
   const xb = body.ox + f[0] * cr * effRx + tx;
   const yb = body.oy + fDy * body.ry + ty;
-  const h = sampleHF(body.solid.hf, xb, yb), zb = h[0];
+  // orb3: the eyes ride a gentler copy of the front surface (its depth and normals eased toward the face point's by
+  // FACE_CURVE), like a decal on a softly curved face: on a drop, a cone or a lobe they still turn with the body and
+  // foreshorten, but no longer fold edge-on where the solid curves away fast
+  const hf = body.solid.hf, a0 = hf._a0 || (hf._a0 = Array.from(sampleHF(hf, body.ox, body.oy)));
+  const h0 = sampleHF(hf, xb, yb), h = [lerp(a0[0], h0[0], FACE_CURVE), lerp(a0[1], h0[1], FACE_CURVE), lerp(a0[2], h0[2], FACE_CURVE), lerp(a0[3], h0[3], FACE_CURVE)];
+  { const l = Math.hypot(h[1], h[2], h[3]) || 1; h[1] /= l; h[2] /= l; h[3] /= l; }
+  const zb = h[0];
   const X = M.m00 * xb + M.m01 * yb + M.m02 * zb;
   const Y = M.m10 * xb + M.m11 * yb + M.m12 * zb;
   const Z = M.m20 * xb + M.m21 * yb + M.m22 * zb;
@@ -2120,22 +2134,40 @@ function projEyeSolid(a, b, localFr, M, body, faceScale) {
 function keepOnFace(gp, warp) {
   const B = warp.pts; if (!B || !B.length) return;
   const cx = warp.dx, cy = warp.sh, rel = warp._rel || (warp._rel = B.map((b) => [b[0] - cx, b[1] - cy]));
-  // fast exit: every point well inside the outline's smallest radius (the usual case) needs no ray casts
-  const k0 = warp.lobed ? .84 : .9; let rMin = Infinity, rMax = 0;
-  for (const b of rel) { const r = b[0] * b[0] + b[1] * b[1]; if (r < rMin) rMin = r; }
+  // orb3: every eye point keeps a clear margin from the outline, measured square to the edge (not just along a ray from
+  // the centre, which let a pill graze a slanted side of a triangle or a diamond)
+  const mg = warp.lobed ? .12 : .09;
+  // fast exit: every point well inside the outline's smallest radius (the usual case) needs no edge distances
+  let rMin = Infinity, rMax = 0;
+  // the outline's nearest approach to the centre, over its edges (a hull's straight side is one long chord between two
+  // far-apart points, so its vertices alone overstate it)
+  for (let i = 0, n = rel.length, j = n - 1; i < n; j = i++) {
+    const ax = rel[j][0], ay = rel[j][1], ex = rel[i][0] - ax, ey = rel[i][1] - ay, t = clamp(-(ax * ex + ay * ey) / (ex * ex + ey * ey || 1e-12), 0, 1);
+    const dx = ax + ex * t, dy = ay + ey * t, r = dx * dx + dy * dy; if (r < rMin) rMin = r;
+  }
   for (const q of gp) for (const [X, Y] of q) { const x = X - cx, y = Y - cy, r = x * x + y * y; if (r > rMax) rMax = r; }
-  if (rMax < k0 * k0 * rMin) return;
-  for (let pass = 0; pass < 4; pass++) {
+  rMin = Math.sqrt(rMin);
+  if (Math.sqrt(rMax) < rMin - mg) return;
+  const edgeDist = (x, y) => { let d = Infinity;
+    for (let i = 0, n = rel.length, j = n - 1; i < n; j = i++) {
+      const ax = rel[j][0], ay = rel[j][1], ex = rel[i][0] - ax, ey = rel[i][1] - ay, L2 = ex * ex + ey * ey || 1e-12;
+      const t = clamp(((x - ax) * ex + (y - ay) * ey) / L2, 0, 1), dx = x - ax - ex * t, dy = y - ay - ey * t, dd = dx * dx + dy * dy;
+      if (dd < d) d = dd;
+    } return Math.sqrt(d); };
+  for (let pass = 0; pass < 6; pass++) {
     let worst = 0, gx = 0, gy = 0, n = 0;
     for (const q of gp) for (const [X, Y] of q) {
       const x = X - cx, y = Y - cy, r = Math.hypot(x, y); gx += x; gy += y; n++;
-      if (r < 1e-6) continue;
-      const R = rayHit(rel, x / r, y / r);
-      const k = warp.lobed ? .84 : .9;
-      if (R > 0 && r - k * R > worst) worst = r - k * R;
+      if (r < rMin - mg) continue;
+      const R = r < 1e-6 ? Infinity : rayHit(rel, x / r, y / r), inside = r < R, d = edgeDist(x, y);
+      const over = inside ? mg - d : mg + d;
+      if (over > worst) worst = over;
     }
-    if (worst <= 0 || !n) return;
-    const gl = Math.hypot(gx, gy) || 1, sx = -gx / gl * worst * 1.15, sy = -gy / gl * worst * 1.15;
+    if (worst <= 1e-4 || !n) return;
+    // slide toward the face's own anchor (the body's face point as the body turns), so on a drop or a cone a pair pushed
+    // into the narrow tip moves down into the wide part; then toward the centre
+    const useA = pass < 3 && warp.ax != null, tx = useA ? warp.ax - gx / n : -gx / n, ty = useA ? warp.ay - gy / n : -gy / n;
+    const gl = Math.hypot(tx, ty) || 1, sx = tx / gl * worst * 1.15, sy = ty / gl * worst * 1.15;
     for (const q of gp) for (const p of q) { p[0] += sx; p[1] += sy; }
   }
 }
@@ -2147,16 +2179,15 @@ function drawFaceCells(c, localFr, M, rawFace, blinkAmt, pal, body, faceScale, w
   } : rawFace;
   const limb = 0.055 * (body.camber ?? 1);
   const fadeSpan = 0.11 + 0.08 * (body.camber ?? 1);
-  const groups = [face.L, face.R, face.extras || []];
+  const groups = [face.L, face.R, face.extras || []], proj = [];
   for (const grp of groups) {
-    if (!grp || !grp.length) continue;
+    if (!grp || !grp.length) { proj.push(null); continue; }
     let gcx = 0, gcy = 0;
     for (const cell of grp) { gcx += cell.c[0]; gcy += cell.c[1]; }
     gcx /= grp.length; gcy /= grp.length;
     const grpCp = projEye3D(gcx, gcy, localFr, M, body, faceScale);
     const vis = clamp((grpCp[2] + limb) / fadeSpan, 0, 1);
-    if (vis <= 0) continue;
-
+    if (vis <= 0) { proj.push(null); continue; }
     const gp = [];
     for (const cell of grp) {
       const P = cell.pts, n = P.length, q = [];
@@ -2171,7 +2202,31 @@ function drawFaceCells(c, localFr, M, rawFace, blinkAmt, pal, body, faceScale, w
       }
       gp.push(q);
     }
-    keepOnFace(gp, warp);
+    proj.push({ grp, gp, vis });
+  }
+  // orb3: the two eyes move as one pair. The pair keeps a margin inside the outline (it slides as one, toward the face
+  // point), and the two never close up: their clear gap stays at least half an eye's width (eased, so it never snaps)
+  const L = proj[0], R = proj[1];
+  if (L && R) {
+    keepOnFace([...L.gp, ...R.gp], warp);
+    const cen = (gp) => { let x = 0, y = 0, n = 0; for (const q of gp) for (const p of q) { x += p[0]; y += p[1]; n++; } return n ? [x / n, y / n] : null; };
+    const cL = cen(L.gp), cR = cen(R.gp);
+    if (cL && cR) {
+      let ux = cR[0] - cL[0], uy = cR[1] - cL[1]; const dist = Math.hypot(ux, uy) || 1e-6; ux /= dist; uy /= dist;
+      const ext = (gp, c0, sgn) => { let m = 0; for (const q of gp) for (const p of q) m = Math.max(m, sgn * ((p[0] - c0[0]) * ux + (p[1] - c0[1]) * uy)); return m; };
+      const rL = ext(L.gp, cL, 1), rR = ext(R.gp, cR, -1), want = .5 * Math.min(rL, rR) * 2, clear = dist - rL - rR;
+      if (clear < want) {
+        const push = (want - clear) * .5;
+        for (const q of L.gp) for (const p of q) { p[0] -= ux * push; p[1] -= uy * push; }
+        for (const q of R.gp) for (const p of q) { p[0] += ux * push; p[1] += uy * push; }
+        keepOnFace([...L.gp, ...R.gp], warp);
+      }
+    }
+  } else if (L || R) keepOnFace((L || R).gp, warp);
+  if (proj[2]) keepOnFace(proj[2].gp, warp);
+  for (const pr of proj) {
+    if (!pr) continue;
+    const { grp, gp, vis } = pr;
     for (let ci = 0; ci < grp.length; ci++) {
       const cell = grp[ci], q = gp[ci];
       const op0 = cell.op ?? 1;
@@ -2912,12 +2967,15 @@ class OrbAvatar extends HTMLElement {
       const A = tgtOf(this._fromM);
       T = T.map((v, i) => lerp(A[i], v, p));
     }
+    // orb3: the eyes never face the viewer at more than about 50 degrees, where they would foreshorten below 0.6 of their
+    // width; a large look eases into that (tanh, no visible stop), and the body carries the rest of the turn's meaning
+    T[0] = LOOK_LIM[0] * Math.tanh(T[0] / LOOK_LIM[0]); T[1] = LOOK_LIM[1] * Math.tanh(T[1] / LOOK_LIM[1]);
 
     const hR = b => b.isCircle ? .68 : .54;
     const hRatio = this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo);
     if (st || !this._init) {
       this._eyaw = this._eyeCap(T[0]); this._epitch = this._eyeCap(T[1], .3); this._eroll = T[2];
-      this._hyaw = T[0] * hRatio; this._hpitch = T[1] * hRatio; this._bRoll = T[3];
+      this._hyaw = headOf(T[0], hRatio, EYE_SLIDE[0]); this._hpitch = headOf(T[1], hRatio, EYE_SLIDE[1]); this._bRoll = T[3];
       this._init = true;
     } else {
       // Agile eye spring (leads turns crisply) + plush 3D head spring (rotates solid in 3D perspective!)
@@ -2926,12 +2984,12 @@ class OrbAvatar extends HTMLElement {
       [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, this._eyeCap(T[0]));
       [this._epitch, this._vep] = stepEye(this._epitch, this._vep, this._eyeCap(T[1], .3));
       [this._eroll, this._ver] = stepEye(this._eroll, this._ver, T[2]);
-      [this._hyaw, this._vhy] = stepHead(this._hyaw, this._vhy, T[0] * hRatio);
-      [this._hpitch, this._vhp] = stepHead(this._hpitch, this._vhp, T[1] * hRatio);
+      [this._hyaw, this._vhy] = stepHead(this._hyaw, this._vhy, headOf(T[0], hRatio, EYE_SLIDE[0]));
+      [this._hpitch, this._vhp] = stepHead(this._hpitch, this._vhp, headOf(T[1], hRatio, EYE_SLIDE[1]));
       [this._bRoll, this._vbr] = stepHead(this._bRoll, this._vbr, T[3]);
       { const land = (k, vk, g) => { if (Math.abs(g - this[k]) < 2e-3 && Math.abs(this[vk]) < 2e-2) { this[k] = g; this[vk] = 0; } };
         land('_eyaw', '_vey', this._eyeCap(T[0])); land('_epitch', '_vep', this._eyeCap(T[1], .3)); land('_eroll', '_ver', T[2]);
-        land('_hyaw', '_vhy', T[0] * hRatio); land('_hpitch', '_vhp', T[1] * hRatio); land('_bRoll', '_vbr', T[3]); }
+        land('_hyaw', '_vhy', headOf(T[0], hRatio, EYE_SLIDE[0])); land('_hpitch', '_vhp', headOf(T[1], hRatio, EYE_SLIDE[1])); land('_bRoll', '_vbr', T[3]); }
     }
 
     this._jellyStep(dt);
@@ -3052,7 +3110,8 @@ class OrbAvatar extends HTMLElement {
     c.fill();
     c.clip();
 
-    const warp = { s, dx: contour.dx, sh: contour.sh, pts: contour.pts, lobed: !body.isCircle && !body.convex && !body.mix };
+    const warp = { s, dx: contour.dx, sh: contour.sh, pts: contour.pts, lobed: !body.isCircle && !body.convex && !body.mix,
+      ax: (M.m00 * (body.ox || 0) + M.m01 * (body.oy || 0)) * s, ay: (M.m10 * (body.ox || 0) + M.m11 * (body.oy || 0)) * s };
     drawFaceCells(c, localFr, M, this._curFace, blinkAmt, pal, body, this._face, warp, jx, jiggle, stride);
     c.restore();
 

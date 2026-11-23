@@ -71,7 +71,7 @@ frame.
 ## §23. The fixed pose (the spec the other surfaces build on)
 
 `DESIGN-SYSTEM.md` §23 points here. At rest, the dock, the Bots sidebar, the rail and the 44 px main bot hold every bot
-in this one pose. The angle is **proposed, awaiting the owner's pick (K06)**.
+in this one pose. The angle is **proposed, awaiting the owner's pick (K07)**.
 
 ### orb3: the look of a perfect 3D shape, in flat colour
 
@@ -87,6 +87,7 @@ orb3 is a new major version of orb2, on the `orb3` branch of the orb2 repo. It i
 | `fd13d86` | The look of a turned character. The body leans into a turn (0.3 rad of roll per radian of look, the lean Grok-Bot's drop shows), the camera is closer (`CAM_D` 9, was 15), the eye-on-face check is cheap when the eyes are well inside, and moving bots are drawn at 3x. |
 | `f93b3e3` | Eyes slide back onto the face in up to four steps. |
 | `554af9f` | Version 3.0.0-alpha.0, and the README section on what changed. |
+| *(latest)* | Eyes that never go edge-on, never merge and never touch the rim (below). |
 
 **The API is unchanged.** It is the same `<orb-avatar>`, with the same attributes and methods.
 
@@ -118,46 +119,63 @@ Measured with `probes/bench.html` (30 orbs at 28 px, DPR 2, Chromium software ca
 Thirty orbs moving at once is not a real state: at rest the sidebar, rail and dock cost nothing. With 30 moving, orb2's
 quality governor halves their frame rate.
 
-**What K06 measured against.** In Grok-Bot's fixed-angle capture, the drop video and the shapes tour:
-- the bodies stay mostly front-on, with a small consistent turn and a lean;
-- the eyes sit up and to one side;
-- looking around is a head turn about the vertical axis, with a nod and a lean into the turn: the drop's tip tilts away
-  from where it looks;
-- the eyes travel across the face to near the rim.
+**The fixed angle (K07).** K06 put small leaning dashes against the top-right rim, which the owner rejected. Grok-Bot's
+fixed angle has big, upright pills, well inside the face, on a body only gently turned. I measured its capture (13
+shapes, `probes/tools/eyemeas.py`) and match it:
 
-orb3's lean and camera were set to match. The fixed pose is orb2's own look (eye yaw, pitch and lean) plus a body roll;
-orb3 turns each solid by its head ratio and projects it. The pose uses no per-shape values.
+| | Eye pair x, y (box) | Length / height | Aspect | Centres apart / width | Lean from vertical | Far / near width |
+|---|---|---|---|---|---|---|
+| Grok-Bot | +0.11, −0.10 | 0.26 | 2.5 | 0.21 | 30° | 0.89 |
+| **A (recommended)** | **+0.10, −0.09** | **0.27** | **2.4** | **0.23** | **27°** | **0.89** |
+| B | +0.11, −0.11 | 0.26 | 2.4 | 0.23 | 29° | 0.88 |
+| C | +0.11, −0.13 | 0.26 | 2.4 | 0.22 | 31° | 0.86 |
 
-| | Look (yaw, pitch) | Eyes' lean | Body roll | Total lean with orb3's turn |
-|---|---|---|---|---|
-| A | 25°, 18° | 25° | 0 | about 8° |
-| **B (recommended)** | **35°, 25°** | **30°** | **−6°** | **about 17°** |
-| C | 45°, 30° | 30° | −12° | about 26° |
+**How the pose is built.**
+- **The eyes:** the pose paints its own pair of pills on the face, right of centre and a little above
+  (`pill x ±0.19 + 0.13`, `y 0.06`, `w 0.17`, `h 0.41`, 15° lean).
+- **The body:** only a small look (A: 6° and 5°) and a body roll (−10°), so the pills stay upright and full width while
+  the outline shows the solid's 3D. No per-shape values.
 
-`K06-pose-options.jpg` draws all 15 shapes for each option, with Grok-Bot's capture below for reference.
+`K07-pose-near-grok.jpg` shows A, B and C beside Grok-Bot's capture, shape by shape, at its scale and in its red
+(#f43f5e on dark).
 
-**Withdrawn:**
-- the first pose (eyes only);
-- G4 (the body locked to the eyes);
-- K04 (gaze only);
-- K05 (a body rotation set outright, with the cone tipped at the camera);
-- the coin and slab ideas.
+**The eyes never go edge-on** (owner, from the K06 clip). Every rule eases in smoothly; there is no visible stop.
+- **A look eases into a limit:** 0.72 rad of yaw and 0.5 of pitch. Past about 50° the eyes would foreshorten below 0.6
+  of their width.
+- **The eyes' slide across the face eases into 0.36 and 0.26.** The body takes the rest of a large look.
+- **The eyes ride a gentler copy of the front surface** (`FACE_CURVE` 0.25), on the sphere too. On a drop, a cone or a
+  lobe they still turn and foreshorten with the body, but they don't fold where the solid curves away fast.
+- **The two eyes move as one pair:**
+  - their clear gap stays at least half an eye;
+  - they keep a margin from the outline (0.09 of the radius, 0.12 on lobed bodies), measured square to the edge;
+  - they slide back toward the face point, then toward the centre.
+- **The rim-touch fix:** the outline's nearest approach is now taken over its edges, not its vertices. A hull's
+  straight side, one long chord, had let a pill cross it on the triangle and the diamond.
+
+**Cost:** 0.30 ms per moving 28 px orb per frame (`probes/bench.html`), and 0.006 ms at rest.
 
 ### Checks on orb3
 
-| Clip | What it is | Changed at rest | Shimmer px | Lone flips px | Dents |
-|---|---|---|---|---|---|
-| `anim-look-orb3-vs-grok.mp4` (15 s) | five shapes at 96 px: the pose, a head turn and nod, the lively idle, working, the pose; Grok-Bot's drop beside it | **0** in 165 resting orb-frames | 5 | 11 | squircle 12 frames, its eyes at the rim on the far turns |
-| `anim-torture-orb3.mp4` (13 s) | orb2 today against orb3, all 15 shapes through the whole turn range and both spins | n/a | 958 → **65** | 523 → **33** | see below |
+`probes/tools/eyecheck.py` is the eye-constraint check. For every orb and frame where both eyes are pills, it measures:
+- each pill's width against its front-on width (floor 0.55);
+- the clear gap between the pills against that width (floor 0.5);
+- the margin to the outline (floor 1.5 device px);
+- whether the eyes are merged or hidden.
 
-Dents in the torture test, proposed side, kept frames:
-- **The circle and 9 convex shapes:** 0, with the squircle at most 1.41 px.
-- **Triangle (25 frames, up to 2.8 px) and diamond (7 frames):** the eyes touch the rim on the far turns under the closer
-  camera, even after the four-step slide.
-- **The lobed four:** they flag their own valleys.
+| Clip | Width | Gap | Margin | Merged/hidden | Changed at rest | Shimmer px | Lone flips px | Dents (convex) |
+|---|---|---|---|---|---|---|---|---|
+| `anim-look-orb3-vs-grok.mp4` (15 s): the K07 A pose, a head turn and nod, the lively idle, working, the pose; Grok-Bot's drop beside it | min 0.65, **0** below | min 0.86, **0** below | min 2.2 px, **0** below | **0** | **0** (165 resting orb-frames) | 12 | 6 | **0** |
+| `anim-torture-orb3.mp4` (13 s): orb2 today against orb3, all 15 shapes, the turn sweep and both spins | min 0.65, **0** below | min 0.86, **0** below | **0** below | **0** | n/a | 958 → **47** | 523 → **27** | **0** |
 
-**Next, once the owner picks:** the chosen angle goes into the prototype and the render source. Then the sidebar and
-dock clips are re-recorded, K02 and screens 11–13 re-rendered, and QA is re-run.
+The eye checks cover the head turn, the nod and the lively idle. During spins the eyes travel round the back on
+purpose. The four lobed shapes still flag their own valleys in the dent check; nothing is cut.
+
+**The shimmer left on moving bots** is single pixels, up to 7 in one frame: 12 and 47 px in the two clips, against 958
+in today's torture. It is not yet at 0. Drawing at 8x instead of 3x roughly triples the cost and does not remove it
+either.
+
+**Next, once the owner picks:** the chosen pose goes into the prototype and the render source. Then the sidebar and dock
+clips are re-recorded, K02 and screens 11–13 re-rendered, and QA is re-run.
 
 ## 1. Clarity: why ours read less clearly
 

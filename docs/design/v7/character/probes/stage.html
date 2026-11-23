@@ -182,8 +182,10 @@ window.go = () => T[q.scene || 'dock']();
 const s = document.createElement('script'); s.src = LIB; s.onload = () => {
   const A = window.OrbAvatar;
   A.defineReaction('pose', { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: null });
-  /* K06 B in orb3: a look of 35 and 25 degrees, the eyes leaning 30, a body roll of -6 (plus orb3's own lean into the turn) */
-  A.defineReaction('k06', { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: () => ({ eyaw: .611, epitch: .436, eroll: .524, bodyRoll: -.105, w: 1 }) });
+  /* K07 A in orb3: Grok-Bot's fixed angle. Big upright pills painted on the face (right of centre, a little above), a
+     small look of 6 and 5 degrees and a body roll of -10 */
+  const D = Math.PI / 180, K7 = A.shapes.pairEyes(['pill', { x: -.19 + .13, y: .06, w: .17, h: .41, ang: 15 * D }], ['pill', { x: .19 + .13, y: .06, w: .17, h: .41, ang: 15 * D }]);
+  A.defineReaction('k06', { label: 'Pose', blink: false, face: () => K7, motion: () => ({ eyaw: 6 * D, epitch: 5 * D, bodyRoll: -10 * D, w: 1 }) });
   S[q.scene || 'dock'](); document.body.dataset.ready = '1';
 };
 document.head.appendChild(s);
