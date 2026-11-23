@@ -77,3 +77,6 @@ dark and light for the owner's pick before w31/rules-ui is built (Part H rules a
 - Calm pass (Part H, w31c): runs in parallel with w31, one UI writer on the library and copy, no overlap with the
   host/plugin writers.
 - Wave renumbering: package w28 -> w31 (not objected).
+- Spec questions (23 Nov): a global rule beats a per-bot Allow (exceptions are the way to let one bot skip);
+  rules apply to bots only, not the owner's own sessions; answering approvals from the island and other clients
+  stays on, with "Always allow" from a client saved only as a draft confirmed in the app.
