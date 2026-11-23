@@ -240,17 +240,20 @@ async function restoreArchivedBot(id: string, button: HTMLElement): Promise<void
 
 /* ───────── the Groups under the roster (team chat) ─────────
    A row for each group (its members as stacked orbs, its name, who is in it) and, last, "New group" beside the roster's own
-   "New bot". The block follows the groups in place (`drawGroups`), so a live update never blanks a stack's orbs. */
+   "New bot". The block follows the groups in place (`drawGroups`), so a live update never blanks a stack's orbs. In the rail a
+   group is a cluster of its members' orbs under a rule, and its tooltip says its name and who is in it, as a bot's says its name
+   and state. */
 function groupRow(g: Group): string {
-  const busy = g.busy;
+  const busy = g.busy, rail = railOn(), who = namesOf(g.members) + (busy ? ', replying' : '');
   return ui.html.row({
-    title: g.name, sub: namesOf(g.members), value: g.id, lead: stackOf(g.members, railOn() ? 'rail' : 'row', true),
+    title: g.name, sub: namesOf(g.members), value: g.id, lead: stackOf(g.members, rail ? 'rail' : 'row', true),
     end: busy ? ui.html.dot('run') : '', current: S.view === 'group' && g.id === S.groupSel,
-    attrs: { 'aria-label': g.name + ', ' + namesOf(g.members) + (busy ? ', replying' : ''), 'data-gid': g.id, 'data-tip': railOn() ? g.name : null, 'data-tip-pos': 'right' }
+    attrs: { 'aria-label': g.name + ', ' + who, 'data-gid': g.id, 'data-tip': rail ? g.name : null, 'data-tip-state': rail ? who : null, 'data-tip-pos': 'right' }
   });
 }
-/** the stack of orbs a group row wears: it is drawn again only when who is in it (or its size) changes */
-const stackSig = (g: Group): string => g.members.map((m) => m.profile).filter((id) => bot(id)).join() + '@' + (railOn() ? 20 : 16);
+/** the stack of orbs a group row wears: it is drawn again only when who is in it (a member that is no longer a bot is drawn in the
+    rail's "+N" and not in a row) or its place (the open sidebar's row, or the rail's cluster) changes */
+const stackSig = (g: Group): string => g.members.map((m) => (bot(m.profile) ? '' : '?') + m.profile).join() + '@' + (railOn() ? 'rail' : 'row');
 function groupsSkeleton(host: HTMLElement): HTMLElement {
   const ul = el('ul', { class: 'ui-rows bt-group-rows', 'data-ui': 'rows', 'aria-label': 'Groups' });
   host.append(el('h2', { class: 'ui-group__head bt-groups-h', text: 'Groups' }), ul);

@@ -663,6 +663,16 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
    takes the row's fill (rest, hover, current), and the first orb keeps the row's orb axis */
 .ui-row__lead:has(> .ui-stack) { width: auto; }
 .ui-row__lead > .ui-stack { --stack-fill: var(--sq-bg); margin-left: -2px; min-width: calc(var(--s) + (var(--places) - 1) * (var(--s) + var(--stack-step))); }
+/* a cluster (stack.ts `shape: 'cluster'`): the same places set around a circle, a group's avatar. Its box is the cluster's own
+   (--w by --h, from clusterLayout), so centring the box centres the cluster; each place sits at its --x, --y, the first
+   underneath and each next one on top, with the line's size, step and "+N" disc. In a row it is the lead's one item (no slot of
+   places, no ring padding: the row draws the ring). While its row is hovered or focused the members breathe out a pixel each
+   (--dx, --dy, whole pixels, on the compositor), and settle back; reduced motion keeps them where they are. */
+.ui-stack--cluster { position: relative; display: inline-block; width: var(--w); height: var(--h); padding: 0; }
+.ui-stack--cluster > :is(.ui-stack__one, .ui-stack__more) { position: absolute; left: var(--x); top: var(--y); margin: 0; transition: translate var(--dur-2) var(--ease); }
+.ui-row__lead > .ui-stack--cluster { margin: 0; min-width: 0; }
+@media (hover: hover) and (pointer: fine) { .ui-row:hover .ui-stack--cluster > * { translate: var(--dx) var(--dy); } }
+.ui-row:focus-visible .ui-stack--cluster > * { translate: var(--dx) var(--dy); }
 .ui-state { font: 400 var(--fs-2xs)/1.45 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); white-space: nowrap; }
 .ui-state[data-tone="attention"] { color: var(--red-text); }
 .ui-state[data-tone="busy"] { color: var(--text-dim); }
@@ -931,6 +941,8 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
   :is(.ui-menu, .ui-pop, .ui-toast, .ui-tip, .ui-composer__hint) { translate: none; transform: none; }
   .ui-toast { translate: -50% 0; }
   .ui-toast[data-static] { translate: none; }
+  .ui-stack--cluster > * { transition: none; }
+  .ui-row:is(:hover, :focus-visible) .ui-stack--cluster > * { translate: none; }
 }
 
 /* ───────────── squircle: the drawn corner (HX.ui.squircle binds these; DESIGN-SYSTEM.md §8.1) ─────────────
