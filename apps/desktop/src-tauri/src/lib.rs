@@ -50,13 +50,14 @@ use std::sync::Arc;
 use tauri::Manager;
 use tauri_specta::{Builder, Event, collect_commands, collect_events};
 
-use commands::{AppState, ConnectionStateEvent, FileDragEvent, WindowStateEvent};
+use commands::{AppState, ConnectionStateEvent, FileDragEvent, RoomHeldEvent, WindowStateEvent};
 
 /// Where the generated TypeScript bindings live, relative to this crate.
 pub const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../ui/src/host/bindings.ts");
 
 /// The command and event registry, shared by the app and the bindings export.
 #[must_use]
+#[allow(clippy::too_many_lines)] // one list of every command and event
 pub fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
@@ -146,6 +147,10 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::bots_notice,
             commands::room_settings_get,
             commands::room_settings_set,
+            commands::room_send,
+            commands::room_unhold,
+            commands::room_send_now,
+            commands::room_held,
             commands::bot_run_limit_get,
             commands::bot_run_limit_set,
         ])
@@ -156,6 +161,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             providers::ProviderSigninEvent,
             WindowStateEvent,
             FileDragEvent,
+            RoomHeldEvent,
             commands::ConnectorRestartEvent
         ])
 }
@@ -575,7 +581,7 @@ pub fn run() {
             tauri::async_runtime::spawn(xai.clone().run_refresher());
             // The local API (`ADR-0045`): presence, notifications and approvals for other clients, and the opt-in endpoint.
             let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
-            let local_api = local_api::LocalApi::new(app.handle().clone(), app_data, &limits.api);
+            let local_api = local_api::LocalApi::new(app.handle().clone(), app_data, &limits.api, &limits.rooms);
             let api_feed = local_api.feed().clone();
             app.manage(AppState {
                 local_api: local_api.clone(),

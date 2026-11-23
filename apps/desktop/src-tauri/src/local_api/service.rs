@@ -18,11 +18,12 @@ use super::model::{
 };
 use super::presence::{Live, Status};
 use super::roster;
-use crate::config::ApiLimits;
+use crate::config::{ApiLimits, RoomLimits};
 use crate::error::Error;
+use crate::rooms::hold;
 
 /// The profile whose link holds the roster, the rooms and the plugin: the root.
-const ROOT: &str = "default";
+pub(super) const ROOT: &str = "default";
 
 /// A refusal or a failure, in the words a client reads.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,7 +37,7 @@ pub struct ApiError {
 }
 
 impl ApiError {
-    fn new(status: u16, code: &'static str, message: &str) -> Self {
+    pub(super) fn new(status: u16, code: &'static str, message: &str) -> Self {
         Self {
             status,
             code,
@@ -127,20 +128,25 @@ impl Caller {
 
 /// The service.
 pub struct Service<E: Engine> {
-    feed: Arc<Feed>,
-    engine: Arc<E>,
-    limits: ApiLimits,
+    pub(super) feed: Arc<Feed>,
+    pub(super) engine: Arc<E>,
+    pub(super) limits: ApiLimits,
     described: tokio::sync::Mutex<HashMap<String, Value>>,
+    /// The room hold's file (`rooms/hold.rs`) and its rules: the app's room, the command line and this API send through it.
+    pub(super) holds: hold::Store,
+    pub(super) room_limits: RoomLimits,
+    /// The rooms the hold's pump reads, by id.
+    pub(super) watches: tokio::sync::Mutex<HashMap<String, hold::Watch>>,
 }
 
-fn text(v: &Value, key: &str) -> String {
+pub(super) fn text(v: &Value, key: &str) -> String {
     v.get(key)
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_owned()
 }
 
-fn failed(what: &str, e: &Error) -> ApiError {
+pub(super) fn failed(what: &str, e: &Error) -> ApiError {
     tracing::debug!(error = %e, "the local API could not {what}");
     ApiError::new(
         502,
@@ -150,13 +156,22 @@ fn failed(what: &str, e: &Error) -> ApiError {
 }
 
 impl<E: Engine> Service<E> {
-    /// A service over `engine` that feeds `feed`.
-    pub fn new(feed: Arc<Feed>, engine: Arc<E>, limits: ApiLimits) -> Arc<Self> {
+    /// A service over `engine` that feeds `feed`, with the room hold kept in `holds`.
+    pub fn new(
+        feed: Arc<Feed>,
+        engine: Arc<E>,
+        limits: ApiLimits,
+        holds: hold::Store,
+        room_limits: RoomLimits,
+    ) -> Arc<Self> {
         Arc::new(Self {
             feed,
             engine,
             limits,
             described: tokio::sync::Mutex::new(HashMap::new()),
+            holds,
+            room_limits,
+            watches: tokio::sync::Mutex::new(HashMap::new()),
         })
     }
 
@@ -645,43 +660,26 @@ impl<E: Engine> Service<E> {
         })
     }
 
-    /// Say something in a room.
+    /// Say something in a room, through the room hold: while its members work the message waits for them, as one written in
+    /// the app does (B30). `now` stops the running turns first.
     ///
     /// # Errors
     /// A refusal in words, or the engine's failure.
-    pub async fn say_room(&self, room: &str, message: &str, by: &Caller) -> Result<(), ApiError> {
-        let message = message.trim();
-        if message.is_empty() {
-            return Err(ApiError::new(
-                400,
-                "empty_text",
-                "There is nothing to say: text is empty.",
-            ));
-        }
-        if message.len() > self.limits.max_say || message.contains('\0') {
+    pub async fn say_room(
+        &self,
+        room: &str,
+        message: &str,
+        now: bool,
+        by: &Caller,
+    ) -> Result<super::rooms::RoomSent, ApiError> {
+        if message.len() > self.limits.max_say {
             return Err(ApiError::new(
                 413,
                 "text_too_long",
                 "The text is too long to send in one message.",
             ));
         }
-        if !self.feed.rooms().iter().any(|r| r.id == room) {
-            return Err(ApiError::new(
-                404,
-                "no_such_room",
-                "There is no room with that id.",
-            ));
-        }
-        let _ = by;
-        self.engine
-            .request(
-                ROOT,
-                "groups.send",
-                json!({"room_id": room, "event_id": format!("api-{}", uuid::Uuid::now_v7()), "payload": {"thread_id": "main", "text": message}}),
-            )
-            .await
-            .map_err(|e| failed("deliver the message", &e))?;
-        Ok(())
+        self.room_send(room, message, now, by).await
     }
 
     /// Answer an approval from outside the window.
@@ -829,7 +827,13 @@ mod tests {
         let feed = Feed::new(Audit::under(dir.path()), ApiLimits::default());
         let engine = Arc::new(Scripted::new(respond));
         (
-            Service::new(feed, engine.clone(), ApiLimits::default()),
+            Service::new(
+                feed,
+                engine.clone(),
+                ApiLimits::default(),
+                hold::Store::under(dir.path()),
+                RoomLimits::default(),
+            ),
             engine,
             dir,
         )
@@ -1231,28 +1235,92 @@ mod tests {
         assert_eq!(Pick::parse(None).unwrap(), Pick::Latest);
     }
 
-    #[tokio::test]
-    async fn saying_in_a_room_goes_to_the_rooms_own_call_and_only_to_a_room_that_exists() {
-        let (s, e, _d) = service(|_, m, params| {
+    fn room_engine(
+        working: bool,
+    ) -> impl Fn(&str, &str, &Value) -> crate::error::Result<Value> + Send + Sync {
+        move |_, m, params| {
             if let Some(v) = roster_answer(m) {
                 return Ok(v);
             }
-            assert_eq!(m, "groups.send");
-            assert_eq!(params["payload"]["text"], "go");
-            Ok(json!({"accepted": true}))
-        });
+            match m {
+                "groups.log" => Ok(json!({"events": [], "latest_seq": 0, "has_more": false})),
+                "groups.state" => Ok(
+                    json!({"room": {}, "driver_status": {"working": working, "blocked": false,
+                    "pending_actions": [], "member_activity": [{"member_id": "kai", "status": "running"}]}}),
+                ),
+                "groups.send" => {
+                    assert_eq!(params["payload"]["text"], "go");
+                    Ok(
+                        json!({"event": {"seq": 1, "event_id": params["event_id"], "kind": "message.user", "payload": params["payload"]}}),
+                    )
+                }
+                "groups.stop" => Ok(json!({"cancelled": 1})),
+                _ => Err(Error::Unavailable(format!("unscripted {m}"))),
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn saying_in_a_room_goes_through_the_hold_and_only_to_a_room_that_exists() {
+        let (s, e, _d) = service(room_engine(false));
         s.refresh_roster().await;
-        s.say_room("g-paper", "go", &Caller::through("endpoint"))
+        let sent = s
+            .say_room("g-paper", "go", false, &Caller::through("endpoint"))
             .await
             .unwrap();
+        assert_eq!((sent.status, sent.held.len()), ("sent", 0));
+        assert!(sent.event_id.starts_with("api-"));
         assert_eq!(e.of("groups.send").len(), 1);
         assert_eq!(
-            s.say_room("g-nope", "go", &Caller::through("endpoint"))
+            s.say_room("g-nope", "go", false, &Caller::through("endpoint"))
                 .await
                 .unwrap_err()
                 .code,
             "no_such_room"
         );
         let _ = Calls::default();
+    }
+
+    #[tokio::test]
+    async fn a_room_message_while_a_member_works_is_held_for_every_client_alike() {
+        // B30: the local API holds as the app's room does, through the same hold
+        let (s, e, _d) = service(room_engine(true));
+        s.refresh_roster().await;
+        let held = s
+            .say_room("g-paper", "go", false, &Caller::through("endpoint"))
+            .await
+            .unwrap();
+        assert_eq!(held.status, "held");
+        assert_eq!(held.held.len(), 1);
+        assert!(
+            e.of("groups.send").is_empty(),
+            "kai's turn is not cut short"
+        );
+        let from_app = s
+            .room_send("g-paper", "go", false, &Caller::through("gui"))
+            .await
+            .unwrap();
+        assert!(from_app.event_id.starts_with("ui-"));
+        assert_eq!(from_app.held.len(), 2, "one queue, whoever wrote it");
+        let back = s.room_unhold("g-paper", &held.event_id).await.unwrap();
+        assert_eq!(back.text.as_deref(), Some("go"));
+        assert_eq!(back.held.len(), 1);
+        let now = s
+            .room_send_now("g-paper", &from_app.event_id)
+            .await
+            .unwrap();
+        assert_eq!(now.status, "sent");
+        assert_eq!(
+            e.of("groups.stop").len(),
+            1,
+            "send now stops the running turn first"
+        );
+        assert_eq!(
+            s.room_send_now("g-paper", &from_app.event_id)
+                .await
+                .unwrap_err()
+                .code,
+            "not_held"
+        );
     }
 }

@@ -210,7 +210,15 @@ async fn a_task_runs_through_a_group_past_the_engines_pause_to_boopis_cap() {
         ..Opts::default()
     };
     let mut seen = Vec::new();
-    let out = rooms::run::run(&gw, &room, task, &opts, &mut |p| seen.push(p))
+    let held_dir = tempfile::tempdir().expect("a folder for the hold");
+    let store = rooms::hold::Store::under(held_dir.path());
+    let limits = boopis_host::config::RoomLimits::default();
+    let via = rooms::run::Via {
+        store: &store,
+        limits: &limits,
+        prefix: "cli",
+    };
+    let out = rooms::run::run(&gw, &room, task, &opts, &via, &mut |p| seen.push(p))
         .await
         .expect("the run reads the room");
     eprintln!(

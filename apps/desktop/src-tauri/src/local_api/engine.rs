@@ -17,6 +17,9 @@ pub trait Engine: Send + Sync + 'static {
     /// take it), so a chat that has the conversation open shows it as the owner's own. `payload` is `{text, stored_session_id}`
     /// or, when it failed, `{reason}`. Nothing to do where there is no window.
     async fn said(&self, _profile: &str, _session: &str, _payload: Value, _failed: bool) {}
+
+    /// Tell the windows that the messages a room holds changed (`rooms/hold.rs`). Nothing to do where there is no window.
+    fn held_changed(&self, _room_id: &str, _held: &[crate::rooms::hold::Held]) {}
 }
 
 /// The engine through the host's proxies.
@@ -48,6 +51,16 @@ impl Engine for Hubbed {
         let state = self.handle.state::<crate::commands::AppState>();
         if let Ok((_, hub)) = state.hubs.hub_for(Some(profile)) {
             hub.announce_said(session, &payload, failed);
+        }
+    }
+
+    fn held_changed(&self, room_id: &str, held: &[crate::rooms::hold::Held]) {
+        let event = crate::commands::RoomHeldEvent {
+            room_id: room_id.to_owned(),
+            held: held.to_vec(),
+        };
+        if let Err(e) = tauri_specta::Event::emit(&event, &self.handle) {
+            tracing::debug!(error = %e, "could not tell the windows what a room holds");
         }
     }
 }

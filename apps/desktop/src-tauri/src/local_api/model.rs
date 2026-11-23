@@ -329,9 +329,18 @@ pub struct Conversation {
     pub last_event_id: u64,
 }
 
+/// The messages a room holds now.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RoomHeldEvent {
+    /// The room.
+    pub room_id: String,
+    /// Held, oldest first (empty: nothing waits any more).
+    pub held: Vec<crate::rooms::hold::Held>,
+}
+
 /// The events of the feed. Each is stamped by the feed with a counter and the time.
 #[allow(clippy::large_enum_variant)] // an event is built once and shared behind an `Arc`; boxing buys nothing
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
 pub enum Event {
     /// The first event of a stream: the contract and the counter.
@@ -358,6 +367,9 @@ pub enum Event {
     /// A message was added to a conversation, or a reply grew or finished. Only to streams that asked for conversations.
     #[serde(rename = "conversation.message")]
     Conversation(ConversationMessage),
+    /// The messages a room holds changed (one was held, sent or taken back). Only to streams that asked for rooms.
+    #[serde(rename = "room.held")]
+    RoomHeld(RoomHeldEvent),
     /// The stream fell behind and events were dropped: read the snapshots again.
     #[serde(rename = "lagged")]
     Lagged {
@@ -377,13 +389,14 @@ impl Event {
             Self::Notification(_) => "notifications.new",
             Self::Approvals(_) => "approvals.changed",
             Self::Conversation(_) => "conversation.message",
+            Self::RoomHeld(_) => "room.held",
             Self::Lagged { .. } => "lagged",
         }
     }
 }
 
 /// An event with its place in the feed.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Stamped {
     /// A counter, rising by one with each event of the run (`Last-Event-ID` resumes after it).
     pub id: u64,

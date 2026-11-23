@@ -989,3 +989,20 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - Presence for sessions of other clients is polled (about two seconds) and coarse; the fine states exist for sessions the boopis window itself runs. Said in `docs/LOCAL-API.md`.
 - **One token for every local client** (owner decision, 22 November 2026: per-client tokens are skipped). Any holder of the token can do everything the token allows, and no client is told apart from another. A client is cut off by Rotate, and by the new token every start makes.
 - A gateway upgrade that changes `session.active_list` or the approval shapes is caught by tests built on the engine's shapes, and by the contract version.
+
+## ADR-0047 A message written while a room's members work is held by the host, once for every client (owner report B30, 22 November 2026)
+**Context.**
+- The engine runs one discussion per thread and a newer user message ends it: a member still working has its answer dropped (`turn.cancelled`, `superseded_by_newer_user_event`, `gateway/hosted_room_discussion.py plan_publication`). It has no queue, steer or interjection for a room; `groups.send` is the only way in, and it is idempotent by event id.
+- The 0.1.8 fix (B16) held such a message in the app's room only, in the webview's memory: `boopis groups send`, `run --group` and the local API's room say went straight in (B30, a 95-second table thrown away), and a held message was lost when the app closed or a second launch replaced it (B28).
+
+**Decision.**
+1. **The hold is the host's, and every client goes through it** (`rooms/hold.rs`): the app's room (`room_send`, `room_unhold`, `room_send_now`, `room_held`, `RoomHeldEvent`), the command line and the local API. The webview keeps only a mirror for the room's strip.
+2. **One busy rule** (`rooms/discussion.rs`): members at work (`groups.state`), or a discussion the log shows open (the engine's own `_pending_discussion` reading) that showed life in the last 45 seconds; an open discussion silent for longer is taken as stuck, so nothing waits on it forever.
+3. **Held messages are kept in a file** (`<app data>/room-holds.json`, versioned, changed under an exclusive file lock that is never held across a call to the engine, written by one rename), so they survive the app closing. The app's pump sends a room's oldest held message when the room is free, every two seconds while anything is held; a command that held a message waits for it and pumps too, so it goes out without the app, and an interrupted command leaves it for the app or the next command.
+4. **Two senders make one message**: a held message carries the event id it will be sent with, minted when it was held, and the engine's `groups.send` returns the existing event for an id it has.
+5. "Send now" stops the running turns first (`groups.stop`) and says so where it is offered; a message is taken back only while it is still held.
+
+**Alternatives weighed.**
+- *Hold in each client* (the 0.1.8 shape, copied to the command line and the local API): three implementations of one concern, and held messages die with their process.
+- *The command line asks the running app to hold for it* (over the local API): the endpoint is off by default and the app may not be running, so a command would still need its own fallback.
+- *A plugin-side queue*: the engine gives a plugin no hook before `groups.send`, and not every bot's home loads the plugin.

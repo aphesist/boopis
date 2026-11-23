@@ -184,7 +184,11 @@ async fn send_without_wait_sends_and_returns() {
         .find(|(m, _)| m == "groups.send")
         .unwrap();
     assert_eq!(sent.1["payload"]["text"], "hello there");
-    assert_eq!(fake.count("groups.log"), 0);
+    assert!(
+        !o.out.contains("held"),
+        "a free room gets it at once: {}",
+        o.out
+    );
     // the text from standard input
     let o = go(&fake, None, &s, false, &["send", "paper past", "-"]).await;
     assert_eq!(o.code, 0);
@@ -561,6 +565,62 @@ async fn log_shows_a_cancelled_or_failed_turn_so_the_numbering_has_no_gap() {
         (Some("turn.cancelled"), Some("kai"))
     );
 }
+
+#[tokio::test(start_paused = true)]
+async fn a_message_while_the_bots_work_is_held_until_they_finish() {
+    let (d, s) = tmp();
+    let fake = Fake::new(Script::default());
+    let o = go(
+        &fake,
+        None,
+        &s,
+        false,
+        &["send", "paper past", "first task"],
+    )
+    .await;
+    assert_eq!(o.code, 0, "{}{}", o.out, o.err);
+    let o = go(&fake, None, &s, false, &["send", "paper past", "also this"]).await;
+    assert_eq!(o.code, 0, "{}{}", o.out, o.err);
+    assert!(
+        o.out
+            .contains("-- held: the group's conversation is still going")
+            || o.out.contains("-- held: Kai"),
+        "{}",
+        o.out
+    );
+    assert!(o.out.contains("sent to paper past (cli-"), "{}", o.out);
+    // the second message went in only after the first discussion settled: nobody's turn was cut short (B30)
+    let log = fake.calls();
+    let sends: Vec<usize> = log
+        .iter()
+        .enumerate()
+        .filter(|(_, (m, _))| m == "groups.send")
+        .map(|(i, _)| i)
+        .collect();
+    assert_eq!(sends.len(), 2);
+    let o = go(&fake, None, &s, false, &["log", "paper past", "--json"]).await;
+    let kinds: Vec<String> = o
+        .out
+        .lines()
+        .map(|l| {
+            serde_json::from_str::<Value>(l).unwrap()["type"]
+                .as_str()
+                .unwrap()
+                .to_owned()
+        })
+        .collect();
+    let settled = kinds.iter().position(|k| k == "room.activity").unwrap();
+    let second = kinds.iter().rposition(|k| k == "message.user").unwrap();
+    assert!(settled < second, "{kinds:?}");
+    assert!(
+        hold::Store::under(d.path())
+            .held("g-paper-past-")
+            .unwrap()
+            .is_empty(),
+        "nothing is left held"
+    );
+}
+
 #[tokio::test(start_paused = true)]
 async fn a_mention_of_a_bot_outside_the_group_is_said_and_the_message_still_goes() {
     let (_d, s) = tmp();

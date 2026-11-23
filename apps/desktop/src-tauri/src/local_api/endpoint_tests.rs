@@ -63,6 +63,16 @@ fn engine() -> (Arc<Scripted>, Store) {
             )
         }
         "groups.send" => Ok(json!({"accepted": true})),
+        "groups.log" => Ok(json!({"events": [
+            {"seq": 1, "event_id": "e1", "kind": "message.user", "payload": {"thread_id": "main", "text": "go"}, "created_at": 1000.0},
+            {"seq": 2, "event_id": "e2", "kind": "turn.cancelled", "payload": {"member_id": "kai", "reason": "superseded_by_newer_user_event"}, "created_at": 1001.0},
+            {"seq": 3, "event_id": "e3", "kind": "message.member", "payload": {"member_id": "kai", "text": "@user done. sk-proj-CANARY0123456789abcdef"}, "created_at": 1002.0}
+        ], "latest_seq": 3, "has_more": false})),
+        "groups.state" => Ok(
+            json!({"room": {}, "driver_status": {"working": false, "blocked": false, "pending_actions": [], "member_activity": []}}),
+        ),
+        "groups.stop" => Ok(json!({"cancelled": 1})),
+        "session.active_list" => Ok(json!({"sessions": []})),
         "approval.respond" => {
             assert_eq!(profile, "kai");
             assert_eq!(params["choice"], "once");
@@ -93,7 +103,13 @@ async fn rig_with(limits: ApiLimits) -> Rig {
     let dir = tempfile::tempdir().unwrap();
     let feed = Feed::new(Audit::under(dir.path()), limits.clone());
     let (scripted, store) = engine();
-    let service = Service::new(feed, scripted.clone(), limits.clone());
+    let service = Service::new(
+        feed,
+        scripted.clone(),
+        limits.clone(),
+        crate::rooms::hold::Store::under(dir.path()),
+        crate::config::RoomLimits::default(),
+    );
     service.refresh_roster().await;
     let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
     let server = Server::serve(

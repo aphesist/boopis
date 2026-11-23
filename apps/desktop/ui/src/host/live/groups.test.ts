@@ -3,7 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Bot, GroupsEvent } from '../../data';
 import type { GatewayClient, GatewayEvent } from '../gateway';
-import type { RoomsBridge } from '../rooms-bridge';
+import type { HeldMessage, RoomSendResult, RoomsBridge } from '../rooms-bridge';
 import { createLiveGroups } from './groups';
 import { ROUND_LIMIT_DEFAULT } from '../../data/mock-groups';
 
@@ -199,11 +199,11 @@ describe('talking to a group', () => {
 
 /* A newer message in a room ends the running Discussion: the engine drops a working member's answer (`turn.cancelled`,
    `superseded_by_newer_user_event`). It has no queue, steer or interjection for a room, so boopis holds a message written
-   meanwhile and sends it when the Discussion is over. These tests say that no `groups.send` goes out while the room is busy
-   unless the user chose "send now", which stops the running turns first. */
+   meanwhile and sends it when the Discussion is over. The hold is the host's (`rooms/hold.rs`, tested there: when to hold, when
+   to send, in order, idempotent, kept across restarts), one for this window, the command line and the local API. These tests
+   say that the window goes through it and shows what it holds; `FakeHold` stands in for the host here and only here. */
 describe('a message written while the members are working', () => {
   const sends = (e: FakeEngine): Json[] => e.calls.filter((c) => c.method === 'groups.send').map((c) => c.params);
-  const names = (e: FakeEngine): string[] => e.calls.map((c) => c.method).filter((m) => m === 'groups.send' || m === 'groups.stop');
   const crew = (e: FakeEngine): void => { e.rooms.push(room('r1', 'crew', ['atlas', 'nina'])); };
   /** a Discussion in the log, the members still at it */
   const running = (e: FakeEngine, closed = false): Json => {
@@ -212,147 +212,131 @@ describe('a message written while the members are working', () => {
     if (closed) e.push('r1', 'room.activity', { status: 'settled', discussion_event_id: u['event_id'], thread_id: 'main' });
     return u;
   };
-  const finish = (e: FakeEngine, u: Json): void => {
-    e.working = false; e.activity = [];
-    e.push('r1', 'message.member', { member_id: 'atlas', text: 'Done.' }, { kind: 'member', id: 'atlas', profile: 'atlas' });
-    e.push('r1', 'room.activity', { status: 'settled', discussion_event_id: u['event_id'], thread_id: 'main' });
+  /** the host's hold, scripted: it holds while the engine says a member works, sends through the engine otherwise */
+  class FakeHold {
+    kept: HeldMessage[] = [];
+    calls: string[] = [];
+    listeners: ((roomId: string, held: HeldMessage[]) => void)[] = [];
+    alreadyGone = false;
+    n = 0;
+    constructor(private e: FakeEngine) {}
+    get = (): Promise<{ rounds: number | null; fallback: number }> => Promise.resolve({ rounds: null, fallback: 10 });
+    set = (): Promise<{ rounds: number | null; fallback: number }> => Promise.resolve({ rounds: null, fallback: 10 });
+    async send(roomId: string, text: string, now: boolean): Promise<RoomSendResult> {
+      this.calls.push('send' + (now ? ' now' : ''));
+      const eventId = 'ui-' + ++this.n;
+      if (!now && (this.e.working || this.kept.length)) { this.kept.push({ id: eventId, text, at: 1763546400 }); return { status: 'held', eventId, held: [...this.kept] }; }
+      if (now && this.e.working) await this.e.call('groups.stop', { room_id: roomId });
+      await this.e.call('groups.send', { room_id: roomId, event_id: eventId, payload: { thread_id: 'main', text } });
+      return { status: 'sent', eventId, held: [...this.kept] };
+    }
+    unhold(_roomId: string, id: string): Promise<{ text: string | null; held: HeldMessage[] }> {
+      this.calls.push('unhold');
+      const h = this.kept.find((x) => x.id === id);
+      this.kept = this.kept.filter((x) => x.id !== id);
+      return Promise.resolve({ text: this.alreadyGone ? null : h?.text ?? null, held: [...this.kept] });
+    }
+    async sendNow(roomId: string, id: string): Promise<RoomSendResult> {
+      this.calls.push('sendNow');
+      const h = this.kept.find((x) => x.id === id) as HeldMessage;
+      this.kept = this.kept.filter((x) => x.id !== id);
+      await this.e.call('groups.stop', { room_id: roomId });
+      await this.e.call('groups.send', { room_id: roomId, event_id: h.id, payload: { thread_id: 'main', text: h.text } });
+      return { status: 'sent', eventId: h.id, held: [...this.kept] };
+    }
+    held(roomId: string): Promise<HeldMessage[]> { void roomId; return Promise.resolve([...this.kept]); }
+    onHeld(fn: (roomId: string, held: HeldMessage[]) => void): Promise<() => void> { this.listeners.push(fn); return Promise.resolve(() => undefined); }
+    /** the host sent the oldest held message (its pump), or the command line held one: it says so */
+    tell(held: HeldMessage[]): void { this.kept = held; for (const f of this.listeners) f('r1', [...held]); }
+  }
+  const withHold = async (setup: (e: FakeEngine) => void) => {
+    const e0 = new FakeEngine();
+    setup(e0);
+    const h = new FakeHold(e0);
+    const bridge: RoomsBridge = { get: h.get, set: h.set, send: (a, b, c) => h.send(a, b, c), unhold: (a, b) => h.unhold(a, b), sendNow: (a, b) => h.sendNow(a, b), held: (a) => h.held(a), onHeld: (f) => h.onHeld(f) };
+    const g = createLiveGroups({ client: e0.client, bots: () => BOTS, now: () => new Date('2026-11-19T10:00:00Z'), pollMs: null, bridge });
+    const events: GroupsEvent[] = [];
+    g.source.subscribe((x) => events.push(x));
+    await g.ready; await g.settled();
+    return { e: e0, g, events, hold: h };
   };
 
-  it('is sent at once when the room is quiet', async () => {
-    const { e, g } = await open(crew);
+  it('goes through the host, which sends it at once when the room is quiet', async () => {
+    const { e, g, hold } = await withHold(crew);
     await g.source.open('r1');
     await expect(g.source.send('r1', 'hello')).resolves.toBe('sent');
+    expect(hold.calls).toEqual(['send']);
     expect(sends(e)).toHaveLength(1);
     expect(g.source.snapshot().groups[0]).toMatchObject({ queued: [] });
+    expect(g.source.snapshot().threads['r1']!.map((m) => (m.kind === 'text' ? m.text : m.kind))).toEqual(['hello']);
   });
-  it('is sent at once when the last Discussion is over, whatever its members said', async () => {
-    const { e, g } = await open((x) => { crew(x); running(x, true); });
+  it('is held by the host while a member works: the window sends nothing itself and shows what the host holds', async () => {
+    const { e, g, events, hold } = await withHold((x) => { crew(x); running(x); });
     await g.source.open('r1');
-    expect(g.source.snapshot().groups[0]!.busy).toBe(false);
-    await expect(g.source.send('r1', 'next')).resolves.toBe('sent');
-    expect(sends(e)).toHaveLength(1);
-  });
-  it('is held, not sent, while a member is working: nothing is stopped and nothing reaches the engine', async () => {
-    const { e, g, events } = await open((x) => { crew(x); running(x); });
-    await g.source.open('r1');
-    expect(g.source.snapshot().groups[0]).toMatchObject({ busy: true, working: ['atlas'] });
     await expect(g.source.send('r1', 'also check billing')).resolves.toBe('queued');
-    expect(names(e)).toEqual([]);
-    expect(g.source.snapshot().groups[0]!.queued).toMatchObject([{ text: 'also check billing' }]);
-    expect(events.filter((x) => x.type === 'group').at(-1)).toMatchObject({ group: { queued: [{ text: 'also check billing' }] } });
-    expect(JSON.stringify(g.source.snapshot().threads['r1'])).not.toMatch(/also check billing/);   // it is not in the room yet
-  });
-  it('is held in the gap between two members’ turns, when nobody is working but the Discussion is still open', async () => {
-    const { e, g } = await open((x) => { crew(x); running(x); x.working = false; x.activity = []; });
-    await g.source.open('r1');
-    e.push('r1', 'message.member', { member_id: 'atlas', text: 'First part.' }, { kind: 'member', id: 'atlas', profile: 'atlas' });   // the log moves: the Discussion shows life
-    expect(await g.source.send('r1', 'one more thing')).toBe('queued');
     expect(sends(e)).toEqual([]);
+    expect(e.calls.map((c) => c.method)).not.toContain('groups.stop');
+    expect(g.source.snapshot().groups[0]!.queued).toMatchObject([{ id: 'ui-1', text: 'also check billing' }]);
+    expect(events.filter((x) => x.type === 'group').at(-1)).toMatchObject({ group: { queued: [{ text: 'also check billing' }] } });
+    expect(hold.calls).toEqual(['send']);
   });
-  it('goes out once the Discussion is over, as one message in the same thread, and the held list empties', async () => {
-    vi.useFakeTimers();
-    try {
-      let u: Json = {};
-      const { e, g } = await open((x) => { crew(x); u = running(x); });
-      await g.source.open('r1');
-      await g.source.send('r1', 'also check billing');
-      await vi.advanceTimersByTimeAsync(3000);
-      expect(sends(e)).toEqual([]);   // still working
-      finish(e, u);
-      await vi.advanceTimersByTimeAsync(3000);
-      expect(sends(e)).toMatchObject([{ room_id: 'r1', payload: { thread_id: 'main', text: 'also check billing' } }]);
-      expect(g.source.snapshot().groups[0]!.queued).toEqual([]);
-      expect(names(e)).toEqual(['groups.send']);   // never a stop
-      expect(g.source.snapshot().threads['r1']!.map((m) => (m.kind === 'text' ? m.text : m.kind))).toEqual(['review the diff', 'Done.', 'also check billing']);
-    } finally { vi.useRealTimers(); }
+  it('follows the host: a message it sent leaves the strip, and one the command line held appears in it', async () => {
+    const { g, hold } = await withHold((x) => { crew(x); running(x); });
+    await g.source.open('r1');
+    await g.source.send('r1', 'first');
+    hold.tell([]);
+    expect(g.source.snapshot().groups[0]!.queued).toEqual([]);
+    hold.tell([{ id: 'cli-abc', text: 'from the terminal', at: 1763546400 }]);
+    expect(g.source.snapshot().groups[0]!.queued).toMatchObject([{ id: 'cli-abc', text: 'from the terminal' }]);
   });
-  it('sends several held messages one at a time, each after the Discussion the one before opened is over', async () => {
-    vi.useFakeTimers();
-    try {
-      let u: Json = {};
-      const { e, g } = await open((x) => { crew(x); u = running(x); });
-      await g.source.open('r1');
-      await g.source.send('r1', 'first'); await g.source.send('r1', 'second');
-      expect(g.source.snapshot().groups[0]!.queued.map((q) => q.text)).toEqual(['first', 'second']);
-      finish(e, u);
-      await vi.advanceTimersByTimeAsync(3000);
-      expect(sends(e).map((p) => (p['payload'] as Json)['text'])).toEqual(['first']);   // the second waits for the first's answers
-      expect(g.source.snapshot().groups[0]).toMatchObject({ busy: true, queued: [{ text: 'second' }] });
-      const opened = e.logs['r1']!.filter((x) => x['kind'] === 'message.user').at(-1) as Json;
-      finish(e, opened);
-      await vi.advanceTimersByTimeAsync(3000);
-      expect(sends(e).map((p) => (p['payload'] as Json)['text'])).toEqual(['first', 'second']);
-      expect(g.source.snapshot().groups[0]!.queued).toEqual([]);
-    } finally { vi.useRealTimers(); }
+  it('shows what the host already holds when the room is opened (held before the window, or by another client)', async () => {
+    const { g, hold } = await withHold((x) => { crew(x); running(x); });
+    hold.kept = [{ id: 'api-1', text: 'from the island', at: 1763546400 }];
+    await g.source.open('r1');
+    expect(g.source.snapshot().groups[0]!.queued).toMatchObject([{ id: 'api-1', text: 'from the island' }]);
   });
-  it('a Discussion with no sign of life for a while is taken as stuck, and the held message goes out', async () => {
-    vi.useFakeTimers();
-    try {
-      const { e, g } = await open((x) => { crew(x); running(x); x.working = false; x.activity = []; });
-      await g.source.open('r1');
-      e.push('r1', 'message.member', { member_id: 'atlas', text: 'First part.' }, { kind: 'member', id: 'atlas', profile: 'atlas' });
-      await g.source.send('r1', 'still there?');
-      await vi.advanceTimersByTimeAsync(10_000);
-      expect(sends(e)).toEqual([]);
-      await vi.advanceTimersByTimeAsync(60_000);
-      expect(sends(e)).toMatchObject([{ payload: { text: 'still there?' } }]);
-    } finally { vi.useRealTimers(); }
+  it('can be taken back: its words come back at once, the host lets it go, and a message that had already gone says so', async () => {
+    const { g, events, hold } = await withHold((x) => { crew(x); running(x); });
+    await g.source.open('r1');
+    await g.source.send('r1', 'never mind this');
+    const id = g.source.snapshot().groups[0]!.queued[0]!.id;
+    expect(g.source.unqueue('r1', id)).toBe('never mind this');
+    expect(g.source.unqueue('r1', id)).toBeNull();
+    await tickAll();
+    expect(hold.calls).toEqual(['send', 'unhold']);
+    expect(g.source.snapshot().groups[0]!.queued).toEqual([]);
+    await g.source.send('r1', 'too late');
+    hold.alreadyGone = true;
+    g.source.unqueue('r1', g.source.snapshot().groups[0]!.queued[0]!.id);
+    await tickAll();
+    expect(events.some((x) => x.type === 'message' && x.message.kind === 'note' && /had already gone out/.test(x.message.text))).toBe(true);
   });
-  it('can be taken back before it is sent: its words come back and nothing is sent', async () => {
-    vi.useFakeTimers();
-    try {
-      let u: Json = {};
-      const { e, g } = await open((x) => { crew(x); u = running(x); });
-      await g.source.open('r1');
-      await g.source.send('r1', 'never mind this');
-      const id = g.source.snapshot().groups[0]!.queued[0]!.id;
-      expect(g.source.unqueue('r1', id)).toBe('never mind this');
-      expect(g.source.unqueue('r1', id)).toBeNull();
-      expect(g.source.snapshot().groups[0]!.queued).toEqual([]);
-      finish(e, u);
-      await vi.advanceTimersByTimeAsync(5000);
-      expect(sends(e)).toEqual([]);
-    } finally { vi.useRealTimers(); }
-  });
-  it('"send now" stops the running turns first and then sends, in that order, and says so by doing it', async () => {
-    const { e, g } = await open((x) => { crew(x); running(x); });
+  it('"send now" asks the host to stop the running turns first, and a held message sent now leaves the others held', async () => {
+    const { e, g, hold } = await withHold((x) => { crew(x); running(x); });
     await g.source.open('r1');
     await expect(g.source.send('r1', 'drop that, do this', 'now')).resolves.toBe('sent');
-    expect(names(e)).toEqual(['groups.stop', 'groups.send']);
-    expect(g.source.snapshot().groups[0]!.queued).toEqual([]);
-  });
-  it('a held message sent now leaves the others held, and stops first', async () => {
-    const { e, g } = await open((x) => { crew(x); running(x); });
-    await g.source.open('r1');
+    expect(e.calls.map((c) => c.method).filter((m) => m === 'groups.send' || m === 'groups.stop')).toEqual(['groups.stop', 'groups.send']);
+    e.working = true;
     await g.source.send('r1', 'a'); await g.source.send('r1', 'b');
     const [, second] = g.source.snapshot().groups[0]!.queued;
     await g.source.sendNow('r1', second!.id);
-    expect(names(e)).toEqual(['groups.stop', 'groups.send']);
-    expect(sends(e)[0]).toMatchObject({ payload: { text: 'b' } });
+    expect(hold.calls.at(-1)).toBe('sendNow');
+    expect(sends(e).at(-1)).toMatchObject({ payload: { text: 'b' } });
     expect(g.source.snapshot().groups[0]!.queued.map((q) => q.text)).toEqual(['a']);
   });
-  it('"send now" on a quiet room does not stop anything', async () => {
-    const { e, g } = await open((x) => { crew(x); running(x, true); });
+  it('a message the host refuses says so in the thread', async () => {
+    const { g, events, hold } = await withHold(crew);
     await g.source.open('r1');
-    await g.source.send('r1', 'hi', 'now');
-    expect(names(e)).toEqual(['groups.send']);
+    hold.send = () => Promise.reject(new Error('the room is gone'));
+    await g.source.send('r1', 'doomed');
+    expect(events.some((x) => x.type === 'message' && x.message.kind === 'note' && /The message was not sent: the room is gone/.test(x.message.text))).toBe(true);
   });
-  it('a held message that the engine refuses says so in the thread and is not tried again', async () => {
-    vi.useFakeTimers();
-    try {
-      let u: Json = {};
-      const { e, g, events } = await open((x) => { crew(x); u = running(x); });
-      await g.source.open('r1');
-      await g.source.send('r1', 'doomed');
-      const orig = e.call.bind(e);
-      let tries = 0;
-      e.call = (m, p) => { if (m === 'groups.send') { tries++; return Promise.reject(new Error('the room is gone')); } return orig(m, p); };
-      finish(e, u);
-      await vi.advanceTimersByTimeAsync(6000);
-      expect(events.some((x) => x.type === 'message' && x.message.kind === 'note' && /The message was not sent: the room is gone/.test(x.message.text))).toBe(true);
-      expect(g.source.snapshot().groups[0]!.queued).toEqual([]);
-      expect(tries).toBe(1);
-    } finally { vi.useRealTimers(); }
+  it('outside the desktop app there is no host to hold it: it goes straight in, and "send now" stops first', async () => {
+    const { e, g } = await open((x) => { crew(x); running(x); });
+    await g.source.open('r1');
+    await expect(g.source.send('r1', 'drop that, do this', 'now')).resolves.toBe('sent');
+    expect(e.calls.map((c) => c.method).filter((m) => m === 'groups.send' || m === 'groups.stop')).toEqual(['groups.stop', 'groups.send']);
+    expect(g.source.snapshot().groups[0]!.queued).toEqual([]);
   });
   it('stopping the room also ends a Discussion that is between turns, and a stopped room is not busy', async () => {
     const { e, g } = await open((x) => { crew(x); running(x); x.working = false; x.activity = []; });
@@ -414,7 +398,12 @@ describe('archiving and changing members, which the engine’s rooms cannot do t
 describe('boopis’s own cap on rounds for a group', () => {
   const bridge = (kept: Map<string, number>): RoomsBridge => ({
     get: (id) => Promise.resolve({ rounds: kept.get(id) ?? null, fallback: 30 }),
-    set: (id, rounds) => { if (rounds === null) kept.delete(id); else kept.set(id, rounds); return Promise.resolve({ rounds: kept.get(id) ?? null, fallback: 30 }); }
+    set: (id, rounds) => { if (rounds === null) kept.delete(id); else kept.set(id, rounds); return Promise.resolve({ rounds: kept.get(id) ?? null, fallback: 30 }); },
+    send: () => Promise.reject(new Error('not in this test')),
+    unhold: () => Promise.reject(new Error('not in this test')),
+    sendNow: () => Promise.reject(new Error('not in this test')),
+    held: () => Promise.resolve([]),
+    onHeld: () => Promise.resolve(() => undefined)
   });
   it('reads and keeps the cap through the host, and the engine is never asked', async () => {
     const kept = new Map<string, number>();

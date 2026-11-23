@@ -97,6 +97,10 @@
     "allow-bots-notice",
     "allow-room-settings-get",
     "allow-room-settings-set",
+    "allow-room-send",
+    "allow-room-unhold",
+    "allow-room-send-now",
+    "allow-room-held",
     "allow-bot-run-limit-get",
     "allow-bot-run-limit-set"
   ]

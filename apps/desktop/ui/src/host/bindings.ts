@@ -332,6 +332,28 @@ export const commands = {
 	 */
 	roomSettingsSet: (roomId: string, maxRounds: number | null, options?: InvokeOptions) => __TAURI_INVOKE<RoomSettingsView_Serialize>("room_settings_set", { roomId, maxRounds }, options),
 	/**
+	 *  Send a message to the group `room_id` through the room hold (B30): sent now when the members are not working, held
+	 *  otherwise and sent when the discussion is over; `now` stops the running turns first. The command line and the local API
+	 *  send through the same hold.
+	 * 
+	 *  Errors: `hx.invalid_params` for an empty text, a room that is not there or a full hold; `hx.engine.unavailable`.
+	 */
+	roomSend: (roomId: string, text: string, now: boolean, options?: InvokeOptions) => __TAURI_INVOKE<RoomSendResult>("room_send", { roomId, text, now }, options),
+	/**
+	 *  Take a held message back before it goes out. Its words come back (null when it had already gone).
+	 * 
+	 *  Errors: `hx.engine.unavailable` when the hold cannot be read.
+	 */
+	roomUnhold: (roomId: string, id: string, options?: InvokeOptions) => __TAURI_INVOKE<RoomUnholdResult_Serialize>("room_unhold", { roomId, id }, options),
+	/**
+	 *  Send a held message now: the running turns stop first, as the strip says before it is pressed.
+	 * 
+	 *  Errors: `hx.invalid_params` when it is no longer held; `hx.engine.unavailable`.
+	 */
+	roomSendNow: (roomId: string, id: string, options?: InvokeOptions) => __TAURI_INVOKE<RoomSendResult>("room_send_now", { roomId, id }, options),
+	/**  The messages the group `room_id` holds (a window that opens after they were held). */
+	roomHeld: (roomId: string, options?: InvokeOptions) => __TAURI_INVOKE<HeldMessage[]>("room_held", { roomId }, options),
+	/**
 	 *  What the bot `name` keeps.
 	 * 
 	 *  Errors: `hx.bots.not_found` for a bot that is not there, `hx.host.config` for a configuration that cannot be read.
@@ -352,6 +374,7 @@ export const events = {
 	connectorRestartEvent: makeEvent<ConnectorRestartEvent, ConnectorRestartEvent>("connector-restart-event"),
 	fileDragEvent: makeEvent<FileDragEvent_Serialize, FileDragEvent_Deserialize>("file-drag-event"),
 	providerSigninEvent: makeEvent<ProviderSigninEvent, ProviderSigninEvent>("provider-signin-event"),
+	roomHeldEvent: makeEvent<RoomHeldEvent, RoomHeldEvent>("room-held-event"),
 	setupProgress: makeEvent<SetupProgress, SetupProgress>("setup-progress"),
 	windowStateEvent: makeEvent<WindowStateEvent, WindowStateEvent>("window-state-event"),
 };
@@ -1620,6 +1643,19 @@ export type HeavyChoice_Serialize = {
 	blocked: string | null,
 };
 
+/**  A message waiting for a room to finish. */
+export type HeldMessage = {
+	/**
+	 *  The event id the engine is given when it is sent (`ui-`, `cli-` or `api-` and 12 hex characters, so the log shows where
+	 *  it came from). It is also the message's id while it is held.
+	 */
+	id: string,
+	/**  What it says. */
+	text: string,
+	/**  When it was held, in whole seconds since 1970. */
+	at: number | null,
+};
+
 /**  The `hermes_status` answer (`docs/PROTOCOL.md` section 1). */
 export type HermesStatus = HermesStatus_Serialize | HermesStatus_Deserialize;
 
@@ -2467,6 +2503,27 @@ export type ResolvedPath_Serialize = {
 };
 
 /**
+ *  The messages a room holds changed (`rooms/hold.rs`): one was held, went out, or was taken back, through any client (the
+ *  app, the command line, the local API). The room's strip shows these.
+ */
+export type RoomHeldEvent = {
+	/**  The room. */
+	room_id: string,
+	/**  Held, oldest first (empty: nothing waits any more). */
+	held: HeldMessage[],
+};
+
+/**  What a message to a room did. */
+export type RoomSendResult = {
+	/**  `sent` (it is in the room) or `held` (it waits for the members to finish). */
+	status: string,
+	/**  The event id it has, or will have, in the room's log. */
+	event_id: string,
+	/**  The messages the room holds now, oldest first. */
+	held: HeldMessage[],
+};
+
+/**
  *  boopis's own settings for one group (`rooms/settings.rs`): the most rounds `boopis run --group` lets a discussion take.
  *  The engine has one pair of limits for every room and no per-room value, so this is boopis's, kept in the app's data folder.
  */
@@ -2492,6 +2549,25 @@ export type RoomSettingsView_Serialize = {
 	max_rounds: number | null,
 	/**  The cap a group without its own has. */
 	default_max_rounds: number,
+};
+
+/**  What taking a held message back did. */
+export type RoomUnholdResult = RoomUnholdResult_Serialize | RoomUnholdResult_Deserialize;
+
+/**  What taking a held message back did. */
+export type RoomUnholdResult_Deserialize = {
+	/**  Its words, when it was still held (it never went out); null when it had already gone, or was taken back elsewhere. */
+	text?: string | null,
+	/**  The messages the room holds now. */
+	held: HeldMessage[],
+};
+
+/**  What taking a held message back did. */
+export type RoomUnholdResult_Serialize = {
+	/**  Its words, when it was still held (it never went out); null when it had already gone, or was taken back elsewhere. */
+	text: string | null,
+	/**  The messages the room holds now. */
+	held: HeldMessage[],
 };
 
 /**  Why the decision came out as it did (stable names: they go in the log and in the diagnostics). */

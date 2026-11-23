@@ -5,6 +5,8 @@
 //! (a fresh ticket, the same dial the app's own proxy makes) and the tests fill with a scripted room. No method is guessed:
 //! each one and its parameters are the engine's (`tui_gateway/contracts/groups_bot_relay.py`).
 
+pub mod discussion;
+pub mod hold;
 pub mod lines;
 pub mod mentions;
 pub mod run;
@@ -315,6 +317,8 @@ pub struct State {
     pub engine_rounds: Option<u32>,
     /// The driver's last preparation failure.
     pub last_error: Option<String>,
+    /// The members the room says are at work now (`member_activity`, member ids, in the engine's order).
+    pub at_work: Vec<String>,
 }
 
 /// Read a room's state.
@@ -346,6 +350,16 @@ pub async fn state(rpc: &dyn Rpc, room_id: &str) -> Result<State> {
             .and_then(|d| d.get("last_error"))
             .and_then(Value::as_str)
             .map(str::to_owned),
+        at_work: d
+            .and_then(|d| d.get("member_activity"))
+            .and_then(Value::as_array)
+            .map(|rows| {
+                rows.iter()
+                    .filter_map(|r| r.get("member_id").and_then(Value::as_str))
+                    .map(str::to_owned)
+                    .collect()
+            })
+            .unwrap_or_default(),
     })
 }
 
@@ -596,25 +610,26 @@ pub async fn log_since(rpc: &dyn Rpc, room_id: &str, since_seq: u64) -> Result<V
     Ok(out)
 }
 
-/// Send a message to a room as the user. Returns the event the engine wrote.
+/// Send a message to a room as the user, straight away. Every client sends through the hold (`hold::submit`), which calls
+/// this when the room is free; nothing else should.
 ///
 /// # Errors
 /// `InvalidInput` for an empty text, the gateway's otherwise.
-pub async fn send(rpc: &dyn Rpc, room_id: &str, text: &str) -> Result<Event> {
+pub async fn send_as(rpc: &dyn Rpc, room_id: &str, event_id: &str, text: &str) -> Result<Event> {
     let text = text.trim();
     if text.is_empty() {
         return Err(Error::InvalidInput("there is nothing to send".into()));
     }
-    let id = new_event_id("cli");
+    // The engine's `groups.send` is idempotent by event id: the same id twice is one message (a hold pumped by two processes).
     let res = rpc
         .call(
             "groups.send",
-            json!({"room_id": room_id, "event_id": id, "payload": {"thread_id": THREAD, "text": text}}),
+            json!({"room_id": room_id, "event_id": event_id, "payload": {"thread_id": THREAD, "text": text}}),
         )
         .await?;
     let mut event = Event::from_value(res.get("event").unwrap_or(&Value::Null));
     if event.id.is_empty() {
-        event.id = id;
+        event_id.clone_into(&mut event.id);
     }
     Ok(event)
 }

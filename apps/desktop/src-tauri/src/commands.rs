@@ -1743,6 +1743,92 @@ pub fn room_settings_set(
     })
 }
 
+/// The messages a room holds changed (`rooms/hold.rs`): one was held, went out, or was taken back, through any client (the
+/// app, the command line, the local API). The room's strip shows these.
+#[derive(Debug, Clone, Serialize, Type, tauri_specta::Event)]
+pub struct RoomHeldEvent {
+    /// The room.
+    pub room_id: String,
+    /// Held, oldest first (empty: nothing waits any more).
+    pub held: Vec<crate::rooms::hold::Held>,
+}
+
+/// A refusal of the room hold as the window reads it: the local API's words, which already say what to do.
+fn room_refused(e: crate::local_api::service::ApiError) -> HostError {
+    let code = match e.status {
+        502 => "hx.engine.unavailable",
+        _ => "hx.invalid_params",
+    };
+    HostError {
+        code: code.to_owned(),
+        message: e.message,
+    }
+}
+
+/// Send a message to the group `room_id` through the room hold (B30): sent now when the members are not working, held
+/// otherwise and sent when the discussion is over; `now` stops the running turns first. The command line and the local API
+/// send through the same hold.
+///
+/// Errors: `hx.invalid_params` for an empty text, a room that is not there or a full hold; `hx.engine.unavailable`.
+#[tauri::command]
+#[specta::specta]
+pub async fn room_send(
+    state: State<'_, AppState>,
+    room_id: String,
+    text: String,
+    now: bool,
+) -> std::result::Result<crate::local_api::rooms::RoomSent, HostError> {
+    state
+        .local_api
+        .room_send(&room_id, &text, now)
+        .await
+        .map_err(room_refused)
+}
+
+/// Take a held message back before it goes out. Its words come back (null when it had already gone).
+///
+/// Errors: `hx.engine.unavailable` when the hold cannot be read.
+#[tauri::command]
+#[specta::specta]
+pub async fn room_unhold(
+    state: State<'_, AppState>,
+    room_id: String,
+    id: String,
+) -> std::result::Result<crate::local_api::rooms::Unheld, HostError> {
+    state
+        .local_api
+        .room_unhold(&room_id, &id)
+        .await
+        .map_err(room_refused)
+}
+
+/// Send a held message now: the running turns stop first, as the strip says before it is pressed.
+///
+/// Errors: `hx.invalid_params` when it is no longer held; `hx.engine.unavailable`.
+#[tauri::command]
+#[specta::specta]
+pub async fn room_send_now(
+    state: State<'_, AppState>,
+    room_id: String,
+    id: String,
+) -> std::result::Result<crate::local_api::rooms::RoomSent, HostError> {
+    state
+        .local_api
+        .room_send_now(&room_id, &id)
+        .await
+        .map_err(room_refused)
+}
+
+/// The messages the group `room_id` holds (a window that opens after they were held).
+#[tauri::command]
+#[specta::specta]
+pub async fn room_held(
+    state: State<'_, AppState>,
+    room_id: String,
+) -> std::result::Result<Vec<crate::rooms::hold::Held>, HostError> {
+    Ok(state.local_api.room_held(&room_id).await)
+}
+
 /// A bot's own cap on turns for `boopis run --bot` (`bots/limit.rs`): the engine's goal budget, `goals.max_turns`, kept in the
 /// bot's own configuration where the engine reads it.
 #[derive(Debug, Clone, Serialize, Type)]

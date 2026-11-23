@@ -462,8 +462,15 @@ async fn route<E: Engine>(
         (Method::Post, ["v1", "rooms", id, "say"]) if segment_ok(id) => {
             let m = object(body)?;
             let text = m.get("text").and_then(Value::as_str).ok_or_else(bad_json)?;
-            shared.service.say_room(id, text, caller).await?;
-            Ok(json!({"ok": true}))
+            let now = match m.get("now") {
+                None | Some(Value::Null) => false,
+                Some(Value::Bool(b)) => *b,
+                Some(_) => return Err(bad_json()),
+            };
+            let sent = shared.service.say_room(id, text, now, caller).await?;
+            Ok(
+                json!({"ok": true, "status": sent.status, "event_id": sent.event_id, "held": sent.held}),
+            )
         }
         (Method::Get, ["v1", "approvals", _] | ["v1", "bots" | "rooms", _, "say"])
         | (
@@ -480,10 +487,13 @@ async fn route<E: Engine>(
 }
 
 /// Which conversations a stream follows: none unless it asks (`conversations=1`), then every bot's, or only the bots it
-/// names (`bot=<name>`, a few at most).
+/// names (`bot=<name>`, a few at most). Rooms the same way: none unless it asks (`rooms=1`), then what every room holds,
+/// or only the rooms it names (`room=<id>`).
 struct Follow {
     on: bool,
     bots: Vec<String>,
+    rooms_on: bool,
+    rooms: Vec<String>,
 }
 
 impl Follow {
@@ -511,15 +521,47 @@ impl Follow {
                 message: format!("Name at most {max_bots} bots, each by its profile name."),
             });
         }
-        Ok(Self { on, bots })
+        let rooms_on = head.param("rooms").is_some_and(|v| v == "1" || v == "true");
+        let rooms: Vec<String> = head
+            .query
+            .iter()
+            .filter(|(k, _)| k == "room")
+            .map(|(_, v)| v.clone())
+            .collect();
+        if !rooms.is_empty() && !rooms_on {
+            return Err(ApiError {
+                status: 400,
+                code: "room_without_rooms",
+                message: "room narrows the rooms a stream follows: ask for rooms=1 as well.".into(),
+            });
+        }
+        if rooms.len() > max_bots || rooms.iter().any(|r| !segment_ok(r)) {
+            return Err(ApiError {
+                status: 400,
+                code: "bad_room",
+                message: format!("Name at most {max_bots} rooms, each by its id."),
+            });
+        }
+        Ok(Self {
+            on,
+            bots,
+            rooms_on,
+            rooms,
+        })
     }
 
-    /// Whether an event is for this stream: every event but a conversation's goes to every stream.
+    fn room(&self, id: &str) -> bool {
+        self.rooms_on && (self.rooms.is_empty() || self.rooms.iter().any(|r| r == id))
+    }
+
+    /// Whether an event is for this stream: a conversation's and a room's only to a stream that asked for them, every other
+    /// event to every stream.
     fn wants(&self, stamped: &Stamped) -> bool {
         match &stamped.event {
             Event::Conversation(c) => {
                 self.on && (self.bots.is_empty() || self.bots.contains(&c.profile))
             }
+            Event::RoomHeld(r) => self.room(&r.room_id),
             _ => true,
         }
     }

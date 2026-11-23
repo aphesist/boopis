@@ -14,7 +14,8 @@ use super::approvals::{Delivery, Inbox, Refusal};
 use super::audit::{Audit, Line};
 use super::model::{
     Answered, Approval, ApprovalState, BotRow, ConversationMessage, Event, Message, MessageState,
-    NoteKind, Notification, Origin, Presence, Role, RoomRow, Source, Stamped, State, now_ms,
+    NoteKind, Notification, Origin, Presence, Role, RoomHeldEvent, RoomRow, Source, Stamped, State,
+    now_ms,
 };
 use super::presence::{Live, Table};
 use super::roster::{self, Entry};
@@ -935,6 +936,20 @@ impl Feed {
         // A session the poll no longer lists has ended: a turn that was busy in it was finished or cut off.
         let ended = inner.presence.tick(now);
         self.publish(&mut inner, ended);
+    }
+
+    // ───────────────────────── rooms ─────────────────────────
+
+    /// The messages a room holds changed.
+    pub fn on_room_held(&self, room_id: &str, held: Vec<crate::rooms::hold::Held>) {
+        let mut inner = lock(&self.inner);
+        self.emit(
+            &mut inner,
+            Event::RoomHeld(RoomHeldEvent {
+                room_id: room_id.to_owned(),
+                held,
+            }),
+        );
     }
 
     /// The approvals the engine holds for one waiting session (from `approval.pending`, with the generation the session's

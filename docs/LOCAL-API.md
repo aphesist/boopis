@@ -6,7 +6,7 @@ Status: version 1 (ADR-0045). For the owner's own tools: a shell's island, a scr
 
 | You want | Use |
 |---|---|
-| The roster with each bot's look and model, what every bot is doing now (the app, a cron run, a room turn), notifications, approvals you can answer from anywhere, a conversation read and followed as the app shows it, a message into the bot's own thread | **The loopback endpoint** (below). Off by default; the owner turns it on in Settings, Local API |
+| The roster with each bot's look and model, what every bot is doing now (the app, a cron run, a room turn), notifications, approvals you can answer from anywhere, a conversation read and followed as the app shows it, a message into the bot's own thread, a message into a room (held while its members work, as in the app) | **The loopback endpoint** (below). Off by default; the owner turns it on in Settings, Local API |
 | The engine's own gateway (sessions, the session's events, everything the boopis window itself uses) | **`boopis connect`** (below) says how to dial it |
 
 The engine's gateway has no extension point for a client to add methods or events (a plugin adds `plugin.boopis.*` methods to a session's link, never a global event), so `bots.say`, `bots.presence` and the rest cannot be methods on the engine's WebSocket without patching it, which boopis never does (ADR-0023). They are calls and events of the endpoint instead.
@@ -70,8 +70,8 @@ Every success is `200` with a JSON object. Every failure is the error object abo
 | `GET /v1/bots/<name>/conversation?session=latest\|<stored id>&limit=<n>` | | `{profile, session_id, messages: [Message], older, last_event_id}`: the conversation as the app shows it, oldest first |
 | `POST /v1/bots/<name>/say` | `{text, session?: "latest" \| "new" \| "<stored id>"}` | `{said: {profile, session_id, created}}` |
 | `GET /v1/rooms` | | `{rooms: [{id, name, members: [profile]}]}` |
-| `POST /v1/rooms/<id>/say` | `{text}` | `{ok: true}` |
-| `GET /v1/events?conversations=1&bot=<name>` | `Last-Event-ID` header optional | a Server-Sent Events stream; `conversations=1` adds the words of conversations, `bot=` (up to 6) narrows them |
+| `POST /v1/rooms/<id>/say` | `{text, now?: false}` | `{ok: true, status: "sent" \| "held", event_id, held: [Held]}`: through the room hold. See below |
+| `GET /v1/events?conversations=1&bot=<name>&rooms=1&room=<id>` | `Last-Event-ID` header optional | a Server-Sent Events stream; `conversations=1` adds the words of conversations, `bot=` (up to 6) narrows them; `rooms=1` adds what the rooms hold, `room=` (up to 6) narrows it |
 
 **`Bot`**: `{name, display_name, role, model, provider, look: {shape, color}, known_to_boopis, presence}`. `name` is the profile name (the id everywhere). `look` is the one the owner chose in boopis, else the default for the name (the same on every machine: `apps/shared/data/look-vectors.json`). `model` is `provider/model` as the engine has it pinned, from `profiles.describe` when the roster row lacks it (the engine's roster drops it for a named profile), and `null` when nobody says. `known_to_boopis` is false for a bot made outside boopis.
 
@@ -95,7 +95,14 @@ Every success is `200` with a JSON object. Every failure is the error object abo
 4. **Nothing is automatic.** No default choice (`400 choice_required`), no "all", no timeout that approves: an unanswered approval expires.
 5. **Every answer is recorded** with who gave it (the audit file) and in the `approvals.changed` event.
 
-**`say`.** `session: "latest"` is the bot's newest conversation as the engine's roster names it (the canonical chat, else the last session), and a new conversation when it has none; `"new"` always starts one, exactly as the app starts one (so it is named and shown as any other); a stored id continues that one. The boopis window does not report which thread it shows, so "the thread boopis shows" is the engine's own latest: if the window has it open, the two share it. A bot that is answering in that conversation is `409 bot_busy`; say it in a new one or wait. The message is made an event for every stream that follows conversations, and the reply streams there (below). In the app, a chat that has the conversation open shows the message at once as the owner's own (the host tells the window before it sends, `connection.said`), and the reply streams in that chat as one typed there would; a conversation that is not open shows it when opened. A message `say` into a room (`POST /v1/rooms/<id>/say`) is the engine's own `groups.send`, so an open room shows it as the owner's, and its members' replies, from the engine's own room change events, with nothing added.
+**`say`.** `session: "latest"` is the bot's newest conversation as the engine's roster names it (the canonical chat, else the last session), and a new conversation when it has none; `"new"` always starts one, exactly as the app starts one (so it is named and shown as any other); a stored id continues that one. The boopis window does not report which thread it shows, so "the thread boopis shows" is the engine's own latest: if the window has it open, the two share it. A bot that is answering in that conversation is `409 bot_busy`; say it in a new one or wait. The message is made an event for every stream that follows conversations, and the reply streams there (below). In the app, a chat that has the conversation open shows the message at once as the owner's own (the host tells the window before it sends, `connection.said`), and the reply streams in that chat as one typed there would; a conversation that is not open shows it when opened. A message said into a room goes through the room hold (below); once it goes out it is the engine's own `groups.send`, so an open room shows it as the owner's, and its members' replies, from the engine's own room change events, with nothing added.
+
+### Rooms
+
+**The room hold.** The engine runs one discussion per thread, and a newer user message ends it: a member still working has its answer dropped (`turn.cancelled`, `superseded_by_newer_user_event`). It has no queue or steer for a room, so boopis holds a message written while the members work and sends it when the discussion is over. The hold is the host's, one for every client: the app's room, `boopis groups send` and `run --group`, and `POST /v1/rooms/<id>/say` all go through it (`rooms/hold.rs`), so a message waits the same way wherever it was written. The room is busy while members are at work (`groups.state`), or while its log holds a discussion the engine has not finished that showed life in the last 45 seconds (a silent open discussion is taken as stuck). Held messages are kept in `<app data>/room-holds.json`, oldest first, so they survive the app closing; the app sends them when the room is free, and so does a command that waits for its own. Each carries the event id it is sent with, and the engine's `groups.send` is idempotent by it, so two senders never make two messages.
+- `POST /v1/rooms/<id>/say` answers `status: "sent"` (it is in the room) or `"held"` (it waits), the `event_id` it has or will have in the log, and what the room holds now. `now: true` stops the running turns first (`groups.stop`) and sends at once.
+- `409 hold_full`: 20 messages already wait for that room. `413 text_too_long`, `400 empty_text`, `404 no_such_room`.
+- A held message is shown in the app's room, where it can be taken back or sent now.
 
 ### Conversations
 
@@ -122,6 +129,7 @@ Each event's `data` is `{id, at, type, data}`:
 | `bots.presence` | a `Presence` |
 | `conversation.message` | a `ConversationMessage`: a message added to a conversation, or a reply growing or finished. Only to a stream that asked (`conversations=1`) |
 | `notifications.new` | a `Notification` |
+| `room.held` | `{room_id, held: [Held]}`: what a room holds changed (held, sent or taken back, by any client). Only to a stream that asked |
 | `approvals.changed` | an `Approval`, each time its state moves |
 | `lagged` | `{skipped}` |
 
