@@ -641,23 +641,24 @@ impl<E: Engine> Service<E> {
         })
     }
 
-    async fn latest_of(&self, profile: &str) -> Option<String> {
+    /// The bot's latest conversation (B23): the newest row of `session.list` on the bot's own link, the call the app's bot
+    /// view makes for the bot's recent sessions (`host/live/bots.ts`), so "latest" is the conversation the app lists first
+    /// for that bot. The engine's roster (`profiles.list` on the root link) leaves a named bot's `canonical_session` and
+    /// `last_session` out, so it is not read for this.
+    pub(super) async fn latest_of(&self, profile: &str) -> Option<String> {
         let list = self
             .engine
-            .request(ROOT, "profiles.list", json!({"include_sessions": true}))
+            .request(
+                profile,
+                "session.list",
+                json!({"limit": 1, "include_hidden": false}),
+            )
             .await
             .ok()?;
-        let row = list
-            .get("profiles")?
-            .as_array()?
-            .iter()
-            .find(|r| text(r, "name") == profile)?;
-        ["canonical_session", "last_session"].iter().find_map(|k| {
-            let s = row.get(*k)?;
-            Some(text(s, "resolved_id"))
-                .filter(|x| !x.is_empty())
-                .or_else(|| Some(text(s, "id")).filter(|x| !x.is_empty()))
-        })
+        let row = list.get("sessions")?.as_array()?.first()?;
+        Some(text(row, "resolved_id"))
+            .filter(|x| !x.is_empty())
+            .or_else(|| Some(text(row, "id")).filter(|x| !x.is_empty()))
     }
 
     /// Say something in a room, through the room hold: while its members work the message waits for them, as one written in
@@ -843,8 +844,7 @@ mod tests {
         match method {
             "profiles.list" => Some(json!({"profiles": [
                 {"name": "default", "model": "opus", "provider": "p", "display_name": "", "description": ""},
-                {"name": "kai", "model": "", "provider": "", "display_name": "Kai", "description": "editor",
-                 "last_session": {"id": "stored-1"}},
+                {"name": "kai", "model": "", "provider": "", "display_name": "Kai", "description": "editor"},
                 {"name": "nina", "model": "sonnet", "provider": "p", "display_name": "", "description": ""}
             ]})),
             "plugin.boopis.bots.read" => Some(
@@ -1081,6 +1081,12 @@ mod tests {
                 "session.resume" => Ok(
                     json!({"session_id": "live-1", "stored_session_id": params["session_id"], "running": running}),
                 ),
+                // B23: the bot's own link lists its sessions, newest first, as the app's bot view reads them
+                "session.list" if p == "kai" => {
+                    assert_eq!(params["limit"], 1);
+                    Ok(json!({"sessions": [{"id": "stored-1", "title": "", "source": "gui"}]}))
+                }
+                "session.list" => Ok(json!({"sessions": []})),
                 "prompt.submit" => Ok(json!({"status": "started"})),
                 _ => Err(Error::Unavailable(format!("unscripted {p} {m}"))),
             }
@@ -1233,6 +1239,23 @@ mod tests {
             Pick::Id("20261122_abc".into())
         );
         assert_eq!(Pick::parse(None).unwrap(), Pick::Latest);
+    }
+
+    #[tokio::test]
+    async fn latest_is_the_conversation_the_bots_own_link_lists_first_and_new_when_it_has_none() {
+        // B23: the engine's roster names no latest session for a named bot; the bot's own session list does.
+        let (s, e, _d) = service(say_engine(false));
+        s.refresh_roster().await;
+        assert_eq!(s.latest_of("kai").await.as_deref(), Some("stored-1"));
+        let asked = e.of("session.list");
+        assert_eq!(asked[0].0, "kai", "asked on the bot's own link");
+        assert_eq!(asked[0].1["include_hidden"], false);
+        assert_eq!(s.latest_of("nina").await, None);
+        let said = s
+            .say("nina", "hi", &Pick::Latest, &Caller::through("endpoint"))
+            .await
+            .unwrap();
+        assert!(said.created, "no conversation yet: a new one, as before");
     }
 
     fn room_engine(
