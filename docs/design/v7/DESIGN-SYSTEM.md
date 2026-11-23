@@ -495,3 +495,11 @@ The owner's direction (23 November): everything in a bot's session feels like Gr
 | Empty state: the bot greets and asks a question card | the same (the bot's first message and a question card) | same |
 | Dock | the black dock | differs: keep list (owner decision) |
 | Notch / voice pill | the approved notch | differs: keep list (the notch decisions, now amber per 15.2) |
+
+## 20. Session tab
+
+Session is the hands-on harness, Bots the team that works on its own; one app, one kit. T3 Code's study sets what the Session tab contains (features, flows, states, content); its look is this design system, the same components as screens 11, 12 and 17: the sidebar with its Sessions / Bots switch, the title pill, bubbles, the status line (the model's logo, P4), tool rows, the AskCard, the mark (feedforward and blanks), cards, the details pane, the composer with its line, the dock. The walkthrough, screen by screen, with the logic from the session plan and its owner decisions and where boopis differs from T3 on purpose, is `SESSION-TAB.md`. Screens S1 to S20 are in the boards folder (`ds-v7/session/`, dark and light), with `session-sheet-1.jpg`, `session-sheet-2.jpg` and `session-master-sheet.jpg`.
+
+**Options for the owner:** the permission scale as one segmented track (S1a, recommended) or four rows (S1b); the inbox as sections in the session list (S7a, recommended) or filter chips over one list (S7b); the settings scope as a segmented control in the page head (S19a, recommended) or a select beside the title (S19b).
+
+**New components for approval** (each in v7's language; specs in `SESSION-TAB.md`): LaunchCard, PermissionScale, ToolRow with an inline approval, WorkLog, ChangedFilesCard, CheckpointBar, QueueStrip, SteerLine, RightPanel (tabs Diff, Files, Terminal, PR, Side chat), DiffView with an inline comment, ReferenceChip, Terminal, CommitDialog with a split primary action, InboxSections, SettingsLine, LimitNotice with the context tick, ScopePicker.
