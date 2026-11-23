@@ -51,8 +51,8 @@ pub struct Live {
     pub session_id: String,
     /// The engine's status word.
     pub status: Status,
-    /// The engine's `source`.
-    pub source: String,
+    /// Where the session came from, as the feed resolved it (what the host knows first, then what the engine says).
+    pub source: Source,
 }
 
 #[derive(Debug, Clone)]
@@ -198,17 +198,16 @@ impl Table {
         });
         for row in rows {
             let key = (profile.to_owned(), row.session_id.clone());
-            let source = super::model::source_of(&row.source);
             let s = self.sessions.entry(key).or_insert_with(|| Session {
                 state: State::Idle,
                 activity: String::new(),
                 attention: None,
-                source,
+                source: row.source,
                 since: now,
                 fine_until: 0,
                 hold_until: 0,
             });
-            s.source = source;
+            // The source a session started with stands (B25): the poll never turns the host's own `gui` into a guess.
             if s.fine_until > now && s.state != State::Idle && row.status != Status::Idle {
                 continue; // a fine word from an event stands for a moment
             }
@@ -307,7 +306,7 @@ impl Table {
                 activity: s.activity.clone(),
                 attention: s.attention.clone(),
                 session_id: Some(sid.clone()),
-                source: s.source,
+                source: Some(s.source),
                 at: s.since,
             },
             _ => {
@@ -458,7 +457,7 @@ mod tests {
         Live {
             session_id: id.into(),
             status,
-            source: source.into(),
+            source: super::super::model::source_of(source),
         }
     }
 
@@ -467,9 +466,12 @@ mod tests {
         let mut t = Table::new();
         let none = |_: &str| false;
         let p = t.on_poll("nina", &[live("i1", Status::Working, "cli")], &none, 0);
-        assert_eq!((p[0].state, p[0].source), (State::Working, Source::Other));
+        assert_eq!(
+            (p[0].state, p[0].source),
+            (State::Working, Some(Source::Other))
+        );
         let p = t.on_poll("moss", &[live("c1", Status::Working, "cron")], &none, 0);
-        assert_eq!(p[0].source, Source::Cron);
+        assert_eq!(p[0].source, Some(Source::Cron));
         let p = t.on_poll(
             "nina",
             &[live("i1", Status::Waiting, "cli")],
@@ -533,8 +535,24 @@ mod tests {
         let p = t.presence("kai", 0);
         assert_eq!(
             (p.state, p.session_id.as_deref(), p.source),
-            (State::Needs, Some("b"), Source::Cron)
+            (State::Needs, Some("b"), Some(Source::Cron))
         );
+    }
+
+    #[test]
+    fn the_source_a_session_started_with_stands_and_idle_has_none() {
+        // B25: a turn the host ran on its own link (gui) ends; the poll, which cannot tell, never turns it into `other`, and
+        // the rest after it names no source at all.
+        let mut t = Table::new();
+        let none = |_: &str| false;
+        ev(&mut t, "host.prompt", None, 0);
+        ev(&mut t, "message.complete", None, 100);
+        let p = t.on_poll("kai", &[live("s1", Status::Idle, "")], &none, 200);
+        assert!(p.is_empty(), "done holds and keeps its source: {p:?}");
+        assert_eq!(t.presence("kai", 200).source, Some(Source::Gui));
+        let p = t.tick(DONE_HOLD_MS + 200);
+        assert_eq!((p[0].state, p[0].source), (State::Idle, None));
+        assert_eq!(Presence::idle("kai", 0).source, None);
     }
 
     #[test]

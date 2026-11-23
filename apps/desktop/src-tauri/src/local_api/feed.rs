@@ -366,12 +366,67 @@ impl Feed {
         );
     }
 
-    /// Whether the feed already knows a session's kind, so the poller notes it once.
+    /// Whether the feed already knows a session's stored id, so the poller notes it once.
     #[must_use]
     pub fn session_known(&self, profile: &str, session_id: &str) -> bool {
         lock(&self.inner)
             .meta
-            .contains_key(&(profile.to_owned(), session_id.to_owned()))
+            .get(&(profile.to_owned(), session_id.to_owned()))
+            .is_some_and(|m| m.stored.is_some())
+    }
+
+    /// What the poll learned of a session: its stored id and model, and its kind when the feed has none yet. A kind the
+    /// host knows from its own link is never replaced by the poll's (B25).
+    pub fn learn_session(
+        &self,
+        profile: &str,
+        session_id: &str,
+        source: Source,
+        stored: Option<&str>,
+        model: Option<&str>,
+    ) {
+        let mut inner = lock(&self.inner);
+        if inner.meta.len() >= 512 {
+            inner.meta.clear();
+        }
+        let m = inner
+            .meta
+            .entry((profile.to_owned(), session_id.to_owned()))
+            .or_default();
+        m.source.get_or_insert(source);
+        if let Some(s) = stored.filter(|s| !s.is_empty()) {
+            m.stored = Some(s.to_owned());
+        }
+        if let Some(model) = model {
+            m.model = Some(model.to_owned());
+        }
+    }
+
+    /// Where a live session the poll lists came from: what the host knows of it first (its own link runs the app's kind,
+    /// `gui`), then the engine's own `source` when the row carries one (`session.active_list` rows usually do not), then the
+    /// engine's own name for a room member's session (`Group: <room id>`, `hosted_room_driver.py`, which the engine itself
+    /// reads back in `methods_prompt.py`), else `other`.
+    #[must_use]
+    pub fn resolve_source(
+        &self,
+        profile: &str,
+        session_id: &str,
+        engine_source: &str,
+        title: &str,
+    ) -> Source {
+        let known = lock(&self.inner)
+            .meta
+            .get(&(profile.to_owned(), session_id.to_owned()))
+            .and_then(|m| m.source);
+        known.unwrap_or_else(|| {
+            if !engine_source.trim().is_empty() {
+                super::model::source_of(engine_source)
+            } else if title.starts_with("Group: ") {
+                Source::Room
+            } else {
+                Source::Other
+            }
+        })
     }
 
     fn origin(inner: &Inner, profile: &str, session_id: &str) -> Source {
@@ -401,9 +456,10 @@ impl Feed {
     fn emit_message(&self, inner: &mut Inner, profile: &str, session_id: &str, message: Message) {
         let session = Self::conversation_id(inner, profile, session_id);
         // A session the feed has not seen listed: ask the poll to name it, so the next message carries the stored id.
-        if !inner
+        if inner
             .meta
-            .contains_key(&(profile.to_owned(), session_id.to_owned()))
+            .get(&(profile.to_owned(), session_id.to_owned()))
+            .is_none_or(|m| m.stored.is_none())
         {
             self.poke.store(true, Ordering::SeqCst);
         }
@@ -646,6 +702,17 @@ impl Feed {
         let Some(sid) = f.session_id.as_deref() else {
             return;
         };
+        // A session that runs on the host's own link is the app's kind (the window's, or one `say` started): noted once, so
+        // the poll, which cannot tell, never names it otherwise (B25).
+        if inner.meta.len() >= 512 {
+            inner.meta.clear();
+        }
+        inner
+            .meta
+            .entry((profile.to_owned(), sid.to_owned()))
+            .or_default()
+            .source
+            .get_or_insert(Source::Gui);
         let origin = Self::origin(&inner, profile, sid);
         if self.following() {
             self.conversation_frame(&mut inner, profile, sid, f, &payload, now);
@@ -882,8 +949,7 @@ impl Feed {
                     .map(|s| (r.session_id.clone(), s))
             })
             .collect();
-        let rows: Vec<Live> = rows.to_vec();
-        for r in &rows {
+        for r in rows {
             if let Some(model) = models.get(&r.session_id) {
                 let m = inner
                     .meta
@@ -905,16 +971,16 @@ impl Feed {
         let changed =
             inner
                 .presence
-                .on_poll(profile, &rows, &|s| inbox_waits.iter().any(|w| w == s), now);
+                .on_poll(profile, rows, &|s| inbox_waits.iter().any(|w| w == s), now);
         self.publish(&mut inner, changed);
         // A turn that ran and is now idle, in a session another surface runs: someone may want to know.
         let who = Self::display(&inner, profile);
-        for r in &rows {
+        for r in rows {
             let was = previous.get(&r.session_id).copied();
             let now_state = inner.presence.session_state(profile, &r.session_id);
             let finished =
                 was.is_some_and(State::busy) && matches!(now_state, Some(State::Idle) | None);
-            let source = super::model::source_of(&r.source);
+            let source = r.source;
             if finished && source != Source::Gui {
                 let (kind, title) = if source == Source::Cron {
                     (NoteKind::Cron, format!("{who}'s scheduled run finished"))
@@ -1406,7 +1472,7 @@ mod tests {
         let live = |status| Live {
             session_id: "i1".into(),
             status,
-            source: "cli".into(),
+            source: Source::Other,
         };
         f.on_poll(
             "nina",
@@ -1414,7 +1480,7 @@ mod tests {
             &none,
         );
         let p = &f.presence()[0];
-        assert_eq!((p.state, p.source), (State::Working, Source::Other));
+        assert_eq!((p.state, p.source), (State::Working, Some(Source::Other)));
         f.on_poll(
             "nina",
             &[live(crate::local_api::presence::Status::Waiting)],
@@ -1437,7 +1503,7 @@ mod tests {
         let live = |sid: &str, status, source: &str| Live {
             session_id: sid.into(),
             status,
-            source: source.into(),
+            source: crate::local_api::model::source_of(source),
         };
         f.on_poll(
             "kai",

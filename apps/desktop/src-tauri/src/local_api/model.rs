@@ -102,8 +102,8 @@ pub struct Presence {
     pub attention: Option<String>,
     /// The session the state comes from.
     pub session_id: Option<String>,
-    /// Where that session came from.
-    pub source: Source,
+    /// Where that session came from; null when no session is behind the state (idle, sleeping).
+    pub source: Option<Source>,
     /// When the state began, in milliseconds since the epoch.
     pub at: i64,
 }
@@ -118,7 +118,7 @@ impl Presence {
             activity: String::new(),
             attention: None,
             session_id: None,
-            source: Source::Gui,
+            source: None,
             at,
         }
     }

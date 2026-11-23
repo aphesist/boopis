@@ -312,12 +312,16 @@ impl<E: Engine> Service<E> {
             if sid.is_empty() {
                 continue;
             }
+            let title = text(row, "title");
+            let source = self
+                .feed
+                .resolve_source(profile, &sid, &text(row, "source"), &title);
             if !self.feed.session_known(profile, &sid) {
                 let model = Some(text(row, "model")).filter(|m| !m.is_empty());
-                self.feed.note_session(
+                self.feed.learn_session(
                     profile,
                     &sid,
-                    super::model::source_of(&text(row, "source")),
+                    source,
                     Some(text(row, "session_key")).as_deref(),
                     model.as_deref(),
                 );
@@ -333,7 +337,7 @@ impl<E: Engine> Service<E> {
             live.push(Live {
                 session_id: sid,
                 status,
-                source: text(row, "source"),
+                source,
             });
         }
         self.feed.on_poll(profile, &live, &models);
@@ -973,7 +977,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             (kai.state, kai.source),
-            (State::Needs, Source::Other),
+            (State::Needs, Some(Source::Other)),
             "needs outranks the cron run"
         );
         let rows = s.feed().approvals(false);
@@ -1266,7 +1270,7 @@ mod tests {
             .into_iter()
             .find(|p| p.profile == "nina")
             .unwrap();
-        assert_eq!(p.source, Source::Gui);
+        assert_eq!(p.source, Some(Source::Gui));
     }
 
     #[tokio::test]

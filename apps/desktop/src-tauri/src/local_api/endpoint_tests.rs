@@ -1291,5 +1291,10 @@ async fn the_snapshots_are_full_from_the_first_request_without_a_stream() {
     let (_, _, body) = raw(server.addr(), &req("/v1/rooms")).await;
     assert_eq!(json_of(&body)["rooms"][0]["id"], "g-paper", "{body}");
     let (_, _, body) = raw(server.addr(), &req("/v1/presence")).await;
-    assert_eq!(json_of(&body)["presence"][0]["state"], "idle");
+    let presence = json_of(&body);
+    assert_eq!(presence["presence"][0]["state"], "idle");
+    assert!(
+        presence["presence"][0]["source"].is_null(),
+        "B25: idle names no source: {body}"
+    );
 }
