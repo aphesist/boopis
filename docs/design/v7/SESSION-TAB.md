@@ -10,11 +10,11 @@ Screens are in the boards folder `ds-v7/session/` (dark and light), with contact
 
 ## 1. The new session: the canvas above the composer (S41, S17, S37)
 
-What the person sees: the v7 layout (title pill "New session", search hint, details, the composer and its line, the dock, the sidebar), and in the empty canvas, centred: the brand mark (S41 option D, recommended: the boopis orb wearing the model's mark), "What's next for boopis?" (plain text), the launch row of quiet selectors (folder, worktree, model, effort, how careful), and **Waiting on you**: the sessions that need the person, one line each with their badge. A usage notice (the Notice) sits above the composer when a limit is near.
-- **No model yet:** the orb sleeps and its tile shows a +; the model selector reads "+ Choose a model" in the accent; a Block says "boopis needs a model to think with. Sign in once and every session can use it." with Claude, ChatGPT, Gemini and More. The composer's placeholder reads "Choose a model to start". Never a red row.
+What the person sees: the v7 layout (title pill "New session", search hint, details, the composer and its line, the dock, the sidebar), and in the empty canvas, centred: the brand mark (S41 A, the owner's pick: the "oo" logomark, glancing and blinking on its own and looking at the composer while you type; D was the recommendation, not chosen), "What's next for boopis?" (plain text), the launch row of quiet selectors (folder, worktree, model, effort, how careful), and **Waiting on you**: the sessions that need the person, one line each with their badge. A usage notice (the Notice) sits above the composer when a limit is near.
+- **No model yet:** the logomark sleeps; the model selector reads "+ Choose a model" in the accent; a Block says "boopis needs a model to think with. Sign in once and every session can use it." with Claude, ChatGPT, Gemini and More. The composer's placeholder reads "Choose a model to start". Never a red row.
 - **No folder yet:** "Add a folder to start", Add a project and Import sessions, under the same mark. Import lists the sessions found on this computer (Claude Code, Codex), checked by default; they come in with their history and continue on a new engine session.
 - The line under the composer names the keys until the session starts ("Enter starts the session", "ctrl Enter starts it in the background"); the launch row's items then settle into the line.
-- *Differs from T3:* T3 shows an empty thread and a project picker; boopis greets with its own face and shows what is waiting.
+- *Differs from T3:* T3 shows an empty thread and a project picker; boopis greets with its own eyes and shows what is waiting. The mark's motion is specified in `DESIGN-SYSTEM.md` 20.1.
 
 ## 2. The launch step (S1, now S41's launch row)
 

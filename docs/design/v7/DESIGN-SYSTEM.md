@@ -545,14 +545,27 @@ The owner kept the v7 layout of the new-session screen (title pill, search hint,
 
 | Option | The mark | Note |
 |---|---|---|
-| A | the "oo" logomark: the wordmark's two eyes, large, with the logo's own idle (glance, blink) | calmest; says boopis, not who answers; no asleep state, so "no model" reads only in words |
+| **A (the owner's pick, 23 Nov)** | the "oo" logomark: the wordmark's two eyes, large, with the logo's own idle (glance, blink), looking at the composer while you type, asleep with no model | calmest and most branded; says boopis, not who answers (the model's brand stays on the agent's messages and cards, S09) |
 | B | the boopis orb, alive: idle, looks at the composer while you type, asleep with no model | most characterful; suggests boopis's bot does the work, which is the model's |
 | C | the model's logo breathing in a tile (P4's breath); an empty dashed tile with no model | ties to P4 and the S09 brand; loses boopis's face |
-| **D (recommended)** | the orb wearing the model: the boopis orb with the model's mark on its shoulder (the S09 gutter tile, 24 px); asleep and a + tile with no model | both facts at once: boopis is the place, the model answers; the tile is the S09 component |
+| D (was the recommendation, not chosen) | the orb wearing the model: the boopis orb with the model's mark on its shoulder (the S09 gutter tile, 24 px); asleep and a + tile with no model | both facts at once: boopis is the place, the model answers; the tile is the S09 component |
 
 What the canvas holds, the same in every option: the mark; a line in the boopis voice ("What's next for boopis?", plain text: no mark at rest, section 17); the **launch row** of quiet selectors (folder, worktree, model, effort, how careful; the last opens the four S01 rows); **Waiting on you**, the inbox row in its one-line variant; with no model, a kind inline action (the model selector reads "+ Choose a model" in the accent, and a Block offers Claude, ChatGPT, Gemini, More; never a red row); and above the composer the **Notice** (S15's component) for usage ("Approaching the weekly limit, 81% used, resets Wed 09:00 · Get more usage · ×"). The launch row and the composer's line are the same selector item: before a session starts the items sit in the canvas and the line under the composer names the keys ("Enter starts the session", "ctrl Enter starts it in the background"); when it starts they settle into the line (200 ms, `--ease-sharp`). No folder yet: "Add a folder to start" with Add a project and Import sessions under the same mark.
 
-Screens with D: S17 (the new session, with the usage notice), S19 (the launch step: the permission selector open), S37 (no model yet), S18 (import, over the no-project canvas) and S41-no-project.
+**The A mark, specified for the kit** (`<boopis-logo mark>`, the shipped element; numbers are its own constants, so the build uses the element and sets nothing by hand):
+
+| Aspect | Spec |
+|---|---|
+| Size and colour | the symbol at a type size of 44 px (the eyes are as tall as an o at that size, about 32 px wide for the pair), `--text-strong`, centred in a 72 px box, 16 px above the greeting |
+| Idle glance | the logo's calm idle director: a new gaze target every 1.8 to 2.6 s (uniform), yaw within ±0.255 rad and pitch within ±0.17 rad (85% of its cap, ±0.30 / ±0.20), a body roll within ±0.08; the eyes travel to it on the element's own easing; the pointer is not followed (no `look` attribute) |
+| Blink | the orb's blink envelope, 155 ms, into its wide capsule (an eye may widen by at most 30%); the next blink 2.1 to 5.7 s after the last (uniform); 24% of blinks are doubled, the second 210 ms after the first |
+| Looking at the composer | on the first keystroke in the composer, `look(0, -1)`: the eyes turn down to the composer (pitch −0.20 rad, the cap) and hold while typing continues; blinks go on; 1.2 s after the last keystroke, or when the composer empties, `look()` lets go and the idle director resumes; focus alone does not move them |
+| No model | `state="sleeping"`: the bots' sleeping face (closed, drooping eyes, the slow sleep motion); no glances, no blinks; when a model is signed in, `morph('happy')` (380 ms), held 1.2 s, then idle |
+| No folder | the same idle as ready |
+| Reduced motion | the element's own handling: no blink, no travel; a state change cross-fades in 150 ms (`--dur-1`); looking at the composer is a single cross-fade to the down gaze and back |
+| Leaving | when the session starts the canvas leaves with the launch row settling into the composer's line (200 ms, `--ease-sharp`); the mark fades out in 120 ms, it does not travel |
+
+Screens with A: S17 (the new session, with the usage notice), S19 (the launch step: the permission selector open), S37 (no model yet, the mark asleep), S18 (import, over the no-project canvas) and S41-no-project. The other Session screens are approved (23 Nov).
 
 ### 20.2 Owner-found defects of 23 Nov, fixed systemically
 
@@ -560,7 +573,7 @@ Screens with D: S17 (the new session, with the usage notice), S19 (the launch st
 - **S36**: "Start it again" overflowed the 26 px line pill and broke the corner. The line pill with an action (`.sysline.act`) is 32 tall with the button on a 3 px inset (16 − 3 = 13); R-corner-10; the QA `concentric` rule.
 - The concentric check found the same fault in 13 more places; all fixed by the Block (radius 22, padding 8, 28 px controls): tool rows, changed files, AskCards, approvals (the "Hold to approve" button is 28 in a Block), the queue (rows 18 on a 4 inset), the limit notice (now `.notice`), the composer's mode chips (26 → 28), the held strip, the dock's approval card, the search pill's kbd (a pill), the details pane's rows (14 px sides), and the rounder radii option C (menu 18, card 16, composer 22).
 
-**Approved items this changes:** S09 and S20 (the tool row's "Waiting for you" capsule becomes a word; tool rows, AskCards and approvals are Blocks), S15 and S34 (the limit notice is the Notice), S17, S19 and S37 (replaced by S41's content, option D pending the pick), S39 (Enter while it runs reads Queues, How careful reads Auto-accept edits, per S06 B and S02 B), S40 (How careful reads Auto-accept edits).
+**Approved items this changes:** S09 and S20 (the tool row's "Waiting for you" capsule becomes a word; tool rows, AskCards and approvals are Blocks), S15 and S34 (the limit notice is the Notice), S17, S19 and S37 (replaced by S41's content with A, the owner's pick), S39 (Enter while it runs reads Queues, How careful reads Auto-accept edits, per S06 B and S02 B), S40 (How careful reads Auto-accept edits).
 
 ## 21. The kit
 
@@ -610,7 +623,7 @@ Tokens (`tokens.v7.json`); the three-step type and alpha hierarchy; R-corner-1 t
 | 32 | **StatusWord** (merged: the stamp + the word) | a status said in words | neutral, amber (needs you), red (failed), ok | with a dot, with a pulse | 12 | Blocks, rows |
 | 33 | **Badge** | a count or a short status at the end of a row | neutral, amber | — | 18 tall pill, 11 | ListRow only |
 | 34 | **StatusLine** (merged: the bot activity line + the session status line) | what a job is doing now | bot (16 live orb), session (the model mark breathing), system (phrase alone) | working (shimmer), waiting (still), reduced motion | 2.2 s shimmer, 1.4 s breath | Bots, Session, title pill |
-| 35 | **Avatar** (merged: the orb, the brand tile, OrbStack) | who speaks | orb (16 to 64, faces), brand tile (22, the model's mark), stack (overlap a third), orb wearing the model (S41 D) | idle, working, needs, sleeping | orb2 | all |
+| 35 | **Avatar** (merged: the orb, the brand tile, OrbStack, the logomark) | who speaks, or whose place this is | orb (16 to 64, faces), brand tile (22, the model's mark), stack (overlap a third), logomark (S41 A: the oo eyes, 44) | idle, working, needs, sleeping | orb2 | all |
 | 36 | **Disclosure** (merged: WorkLog) | a collapsed summary | steps ("Read 6 files"), work log ("Worked for 59s: ...") | open, closed | 13 `--text-dim`, chevron | Bots, Session |
 | 37 | **TurnFoot** (merged: CheckpointBar + the reply's meta row) | under a finished reply: model, time, cost, and what can be done | bot (meta only), session (Undo, Edit from here, Fork) | hover reveals actions | mono 12, ghost 26 buttons | Bots, Session |
 | 38 | **TimeSeparator** | a gap in time | — | — | 12 `--text-dim` | Bots, Session |
@@ -620,7 +633,7 @@ Tokens (`tokens.v7.json`); the three-step type and alpha hierarchy; R-corner-1 t
 | 42 | **Notch** | the notch's own surface (notch spec) | — | — | `--r-slab` 30 | system |
 | — | **EmptyState** | one line and at most one action where content would be | — | — | — | all (counted in Page) |
 
-**Patterns** (compositions of the above, documented, not new components): the Settings page; the new session's canvas (S41: Avatar, greeting with a Mark, SelectorItems, ListRow compact, Notice); the setup form (merged: LaunchCard + the new-bot form: Rows with SelectorItems and the four OptionRows, in a form Dialog for a bot, in the canvas for a session); the danger zone; the long-text editor.
+**Patterns** (compositions of the above, documented, not new components): the Settings page; the new session's canvas (S41: the logomark, the greeting, SelectorItems, ListRow compact, Notice); the setup form (merged: LaunchCard + the new-bot form: Rows with SelectorItems and the four OptionRows, in a form Dialog for a bot, in the canvas for a session); the danger zone; the long-text editor.
 
 ### 21.3 Merges, and what they change on approved boards
 

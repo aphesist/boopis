@@ -1526,7 +1526,18 @@
         "no model: '+ Choose a model' in the accent and a Block with provider sign-ins",
         "usage: the Notice above the composer"
       ],
-      "settle": "launch-row items move into the composer's line when the session starts, 200ms --ease-sharp"
+      "settle": "launch-row items move into the composer's line when the session starts, 200ms --ease-sharp",
+      "mark_pick": "A (owner, 23 Nov); D was the recommendation, not chosen",
+      "mark_a": {
+        "element": "<boopis-logo mark>",
+        "size": "44px type size, --text-strong, 72px box, 16px above the greeting",
+        "glance": "new target every 1.8-2.6s; yaw +-0.255 rad, pitch +-0.17 rad, roll +-0.08; pointer not followed",
+        "blink": "155ms envelope; next 2.1-5.7s after the last; 24% doubled, second at +210ms",
+        "typing": "look(0,-1) on the first keystroke; release 1.2s after the last keystroke or when the composer empties",
+        "no_model": "state=sleeping, no glances or blinks; on sign-in morph('happy') 380ms, hold 1.2s, then idle",
+        "reduced_motion": "no blink, no travel; state changes cross-fade 150ms",
+        "leave": "fade out 120ms as the session starts"
+      }
     },
     "rows": "R-row-1: menu and list rows are single-line; the name never wraps or shrinks; 12px gap; the description truncates"
   }
