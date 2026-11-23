@@ -256,7 +256,7 @@ Implemented but unused by boopis:
 ### Where each surface uses them today, and the plan to use them more
 
 Everything in the plan uses orb2's own calls and boopis's existing helpers (`gentleFollow` with `hold`, `glance` and
-`capLook`; `liven`; `glance.lead`). The before and after are in `anim-alive-before-after.mp4`.
+`capLook`; `liven`; `glance.lead`). The before and after are in `anim-room-before-after.mp4`.
 
 | Surface | Today | Use more |
 |---|---|---|
@@ -295,41 +295,50 @@ This section replaces the calm "use more" rows above wherever they differ.
 So Grok-Bot at least turns to face you. The owner's policy goes further, with a lively wake under the pointer, in the
 sidebar and the rail as in the dock.
 
-**Which states animate in Grok-Bot's sidebar.** Measured with `probes/tools/sideact.py`, which reports per-avatar frame
-change at 10 fps, in 0.5 s bins:
+**Which states animate in Grok-Bot's sidebar.** Measured with `probes/tools/sideact.py`. It reports each avatar's
+frame change at 10 fps, in 0.5 s bins, on every recording that shows the sidebar or the rail.
 
 | Recording | What animates | What holds still |
 |---|---|---|
-| `live-approval-request.mp4` | The bot that is working and then waiting for your approval animates for the whole 35 s. In order: a thinking shrink to about 70 % with dot eyes, a full turntable spin (an edge-on frame), side tilts with wide eyes, and the eyes looking around. | The other three rows for all 35 s. |
-| `live-group-chat-bots-replying.mp4` | Each bot while it works or replies: row 4 from 0.5–28 s, row 3 from 1–20 s, and the main bot from 1–10 s and 52–60 s. | Each bot is still once it is done. The only other changes are the list reordering. |
-| `avatar-states-zoom-sidebar.mp4` | The state faces (dots, `^ ^`). | The rest pose, unchanged from 21 s to 40 s: no blink and no drift. |
+| `live-approval-request.mp4` | The bot that works and then waits for your approval animates for the whole 35 s. | The other four avatars, for all 35 s. |
+| `live-approval-allow-then-done.mp4` | The same bot animates through allowed, working and done, all 14 s, still moving when the recording ends. | The other four. |
+| `live-group-chat-bots-replying.mp4` | Each bot while it works or replies: row 4 from 0.5–28 s, row 3 from 1–20 s, and the main bot from 1–10 s and 52–60 s. | Each bot once its turn is over. The only other changes are the list reordering. |
+| `live-thinking-working-steps.mp4` (the rail) | The rail bot animates for all 40 s while it works. | The rail's Grok-Bot. |
+| `avatar-states-zoom-sidebar.mp4` | The state faces, up to 21 s. | The rest pose, from 21 s to 40 s: no blink and no drift. |
+| `live-first-reply-streaming.mp4`, `live-new-bot-setup-working.mp4` | Nothing in the sidebar. | All of it. |
 
-So, in a state:
+**The state table.** Every state Grok-Bot animates in its sidebar, and the orb2 reaction that plays it. The faces and
+rhythms come from contact sheets of the same recordings at 1–2 fps.
 
-- **Working, thinking, replying** use orb2's `working`, `thinking` and `speaking`: looping, lively, for as long as the
-  state lasts.
-- **Needs you** uses `needs`: the hop every 2 s and the ring.
-- **Idle, done and asleep** hold the pose. `done` may play its hop once, then the pose returns. `sleeping` keeps its
-  rest eyes.
-- When a state ends, Grok-Bot's motion stops within a 0.5 s bin and the pose is simply held again. Ours blends back.
+| boopis state | Grok-Bot, measured | orb2 reaction | Animates | Ends |
+|---|---|---|---|---|
+| Thinking | Shrinks to about 70 % with dot eyes, then looks around. | `thinking` (sky gaze, dots) | Looping, as long as the state | Blends back to the pose |
+| Working (tool) | Wide eyes and dot eyes, turned left and right, with one full turntable spin in 35 s. Motion every 0.5 s bin for the whole state. | `working` (or `compute`) | Looping | Blends back to the pose |
+| Replying | Animates while the reply streams. | `speaking` | Looping | Blends back to the pose |
+| Needs you | Repeats every **2.0 s** (the strongest self-match in the frame difference at 12–35 s). It alternates a squint (`> <`) with tall pills, with a small turn. | `needs`: tall eyes, a hop every 2.0 s, and the ring | Looping until you answer | Blends to the next state (working, after an allow) |
+| Done | Happy `^ ^` arcs, still moving 3 s later, when the recording ends. | `done`: arcs, a hop every 2.4 s, and the sparkle | **3 s**, about one hop and a bit | Blends back to the pose |
+| Error | Not seen in any recording. | `error` | As orb2 plays it, until it clears | Blends back to the pose |
+| Idle, asleep | Hold still. | `pose`; asleep keeps the pose with `sleeping`'s rest eyes and no zzz | No | n/a |
 
-**The transitions** (orb2's own morph, no pops):
+When a state ends in Grok-Bot, the motion stops within one 0.5 s bin and the pose is held again. Ours blends back over
+the same span.
 
-- **Pose to a state, or a state to the pose.** This is a reaction change. orb2 blends the face and the motion over
-  `morph` (0.38 s, `easeMorph`), and the body over 0.44 s. The springs carry the eyes (about 0.3 s) and the head (about
-  0.5 s). The jelly gives one small kick: 0.75 of `jelly`, and boopis lowers it to 0.12 under reduced motion.
-- **Hover in** (dock, sidebar, rail). `reaction="idle"` and `idle-motion="lively"`, from the pose. The face and the motion blend away
-  from the pose over 0.38 s. The idle director's first target is taken up by the springs, so the bot turns into its
-  first lively pose over about 0.5 s and never jumps.
-- **Hover out.** `reaction="pose"` and `idle-motion="off"`, plus `lookAt()` to clear any pointer target. `_show`
-  blends from the face the orb is wearing now, including an idle eye micro-morph, back to the pose's pills over
-  0.38 s.
-- **Hover and a state together.** The state wins. A bot in a state keeps its state's animation under the pointer, and
-  hover only adds `lookAt` toward the pointer, held to the dock's `LOOK_X` and `LOOK_Y`. If a state starts while a bot
-  is hovered, the state takes over at once with the same blend. When a state ends under the pointer, the bot goes to
-  the lively hover idle, and to the pose when the pointer leaves.
-- **Reduced motion.** The pose is unchanged and a state animates as orb2 reduces it. Hover wakes with eye glances
-  only: orb2 holds the head under reduced motion, and boopis's `glance` gives the steps.
+**The transitions.** Every change is a reaction change, carried by orb2's own morph, so nothing pops. All values are
+read from orb2 at 03d9094.
+
+| Change | What happens | Duration and easing |
+|---|---|---|
+| Pose to a state, a state to the pose, a state to another state | `_show` keeps the face being drawn and blends it into the new one. The motion target blends at the same time, and the springs carry the turn. | Face and motion: `morph`, 0.38 s, `easeMorph`. Eyes: a spring (k 165, damping 19, ζ 0.74), within 2 % in about 0.4 s. Head and body: a spring (k 68, damping 11.5, ζ 0.70), within 2 % in about 0.7 s. |
+| Hover in, from the pose | `reaction="idle"` and `idle-motion="lively"`. The idle director's first lively target goes through the same springs, so the bot turns out of the pose. It does not jump. | 0.38 s face, about 0.7 s turn, then lively. |
+| Hover out, back to the pose | `reaction="pose"`, `idle-motion="off"`, and `lookAt()` with no point clears the pointer target. `_show` blends from whatever face the idle wears now, an eye micro-morph included, back to the pills. | 0.38 s face, about 0.7 s turn. |
+| Hover over a bot in a state | The state wins. Hover adds only a capped `lookAt` toward the pointer (`k` 0.3, at most 0.3 of 250 px), and the state keeps playing. | The eye spring, about 0.4 s. |
+| A state starts under the pointer | The state takes over at once, with the same blend. | 0.38 s. |
+| A state ends under the pointer | The bot goes to the lively hover idle, then to the pose when the pointer leaves. | 0.38 s each. |
+
+A reaction change also gives the body one small jelly kick, 0.75 of `jelly`. At the default 0.55 that is one soft
+wobble, which reads as the bot noticing. Under reduced motion boopis lowers `jelly` to 0.12
+and orb2 holds the head. A hover then wakes the eyes only, with boopis's `glance` for the steps. The pose and the state
+faces are the same.
 
 ### Calm, performance, reduced motion
 
@@ -374,34 +383,64 @@ The render-source change is `k02-render.patch`, against `ds-v7/src`:
 
 `qa.cjs --jobs jobs-k02.json` with all rules, sweep included, returned 7 pages and 0 findings.
 
-## Critic pass
+## Critic pass (the per-surface policy and G1–G3)
 
-**Clips.** Both clips were re-recorded after the C9 and C10 fix: 315 frames for the alive clip and 240 for the idle
-clip. They were captured at DPR 2 on Playwright's clock (one 1/30 s step per screenshot, seeded `Math.random`, the same
-timeline in both halves) and encoded to 1280 × 800. Each frame was checked three ways:
+**How the clips were made.** There are four clips, each 1280 × 800, today on the left and the proposal on the right.
+Each was recorded at DPR 2 on Playwright's paused clock, so a frame is exactly 1/30 s and the timeline is the same in
+both halves (`Math.random` is seeded). Every frame of every clip was checked:
 
-- **`probes/tools/flicker.py`** looks for A-B-A flicker, and for an orb's pixel mass dipping for one frame (a canvas
-  painted empty). Result: 0 suspect frames in either clip.
-- **`probes/tools/shape.py`** is new. For every orb in every frame it measures the body's largest blob, its
-  solidity (area over convex-hull area) against that orb's own median, and whether the blob touches the canvas's
-  bounds (a straight cut). Result: 0 notches and 0 cuts.
+- **`probes/tools/shape.py`** looks for dents and cuts. For every orb in every frame it finds the deepest point of
+  the body's convex hull minus its blob; an eye cut at the rim shows up as a dent too. A convex body fails past 1.2
+  device px. A lobed body fails past its own median plus 1.5 px. It also flags a blob that touches its canvas's
+  bounds, which is a straight cut.
+- **`probes/tools/flicker.py`** looks for A-B-A flicker, and for a one-frame dip in an orb's pixel mass (a canvas
+  painted empty).
+- **`probes/tools/lifewin.py`** measures liveliness: the mean change per orb between frames 0.1 s apart, by time
+  window.
 
-  It also reads the pose each orb drew, using orb2's own `_hyaw`, `_hpitch`, `_eyaw` and `_epitch` fields, which
-  `rec.cjs` writes to `poses.json`. It flags the turns that `probes/turn.html` shows to notch a flat body (head past
-  0.2 rad) or to cut the eyes (past 0.75 rad), and spins.
+| Clip | Frames | Dents (today → proposed) | Cuts | Flicker | Life (today → proposed) |
+|---|---|---|---|---|---|
+| `anim-dock-before-after.mp4` (19 s) | 570 | 0 → 0 | 0 | 0 | at rest 0.96 → 0.003; hover sweep 1.31 → 1.11; states 1.00 → 0.36 |
+| `anim-sidebar-before-after.mp4` (20 s) | 600 | 0 → 0 | 0 | 0 | at rest 1.29 → 0.005; states 1.29 → 0.41; hover 1.59 → 1.06 |
+| `anim-room-before-after.mp4` (14 s) | 420 | 0 → 0 | 0 | 0 | **1.71 → 2.64** (+54 %); 4–9 s: 1.76 → 3.23 |
+| `anim-torture-before-after.mp4` (13 s) | 390 | **313 → 0** on convex bodies | 0 | 0 | 1.74 → 1.78 |
 
-  | Half | Alive clip | Idle clip |
-  |---|---|---|
-  | Today | 646 orb-frames | 429 orb-frames |
-  | Proposed | 0 | 0 |
+The dock and sidebar figures are averages over every orb on screen. At rest the proposal is still by design.
+In the hover windows, one bot at a time carries the whole figure; today's figure is every orb's calm drift and float
+shimmer (C6) together.
 
-  The pose check is the stronger of the two tests. A slab's kink at 20–40 px moves solidity by less than its noise,
-  which is why it was missed the first time.
+**The torture test, by shape.** It turns all 15 shapes at 72 px through orb2's whole range: a look point swept round
+a wide ellipse (`lookAt` reaches its 1.18 rad clamp), then a turntable spin and a tilt spin.
 
-By eye, contact sheets of every third frame were reviewed for the proposed half's orbs: the main bot, the room header,
-the dock and the gutters. No notched, cut or deformed outline appears.
+- **Convex bodies.** All 11 (circle, squircle, soft, wide, tall, bean, drop, ghost, triangle, hexagon, diamond) keep
+  a clean outline in every frame. On kept frames the worst dent is 1.41 device px, on the squircle, against today's
+  313 failing orb-frames. One unkept frame (70) measured 2.0 px. Re-recorded and viewed at 4×, it is the far eye lying
+  one pixel inside the rim: the outline is whole, and the eye is inside it.
+- **Lobed bodies.** On cloud, clover, flower and star, the 82 flags are the bodies' own valleys deepening as they
+  turn edge-on, not breaks. The median rule is too tight for them. Contact sheets of frames 138–150 at 200 px were
+  checked by eye: at G3's 0.75 rad the far eye narrows to a sliver against the next lobe and is never cut. 0.75 rad is
+  the largest clean turn for these four.
 
-**Images.** K01 and the new K02 were viewed at full resolution: no double images and no clipped text.
+| Shape | Eye turn | Eye pitch | Spins |
+|---|---|---|---|
+| circle and the 10 other convex bodies | orb2's whole range (1.18 `lookAt`, 1.26 rim peeks) | whole range (sky gaze 0.94) | full |
+| cloud, clover, flower, star | 0.75 rad (G3) | 0.30 rad (G3) | full |
+
+**By eye, frame strips** (every 0.2–0.75 s, at 2×) were checked for each clip:
+
+- **Dock.** At rest every bot holds the pose. Under the sweep, each bot wakes as the pointer reaches it and settles
+  back within about 0.7 s of it leaving. kai works, and the pointer resting on kai changes only where it looks. kai
+  then shows `done`'s arcs for 3 s and returns to the pose. nina needs you with the amber flag, then returns. No pop,
+  no jump of the outline, no frame where a face is missing.
+- **Sidebar.** The 44 px main bot and the 28 px rows hold the pose. kai works, then is done, then holds the pose.
+  nina needs you, and when the pointer passes over her she keeps the state and only looks. The hover sweep wakes
+  boopis, kai, moss and iris in turn.
+- **Room.** Today, the presence orb is lively and the gutter is frozen. In the proposal, every orb is lively and orb2's
+  emotes change the faces: grid eyes, round eyes, squints. They all look at the composer and at the new bubble.
+  This is more life than today, as the owner asked, and the clamped version (C9 and C10) is gone.
+
+**Images.** K02 and screens 11–13 were re-rendered with every sidebar and dock bot at the fixed pose. The v7 QA was
+run with every rule, sweep and same-component included: 7 pages, 0 findings.
 
 ## Probes
 
@@ -417,4 +456,5 @@ Serve `probes/` over HTTP (`python3 -m http.server`). The clip page uses same-or
 | `gen-variants.cjs` | Builds `lib/orb-avatar.snap.js` (C1–C3, C7, C8, G1–G3) and `lib/orb-avatar.tuned.js` (the same, plus T1–T5; T2–T4 touch only the calm idle, which no surface uses now) from orb2's `orb-avatar.js`. It stops if a replaced line is not found. C8, the full outline stride, made no visible difference in `turn.html` and is optional. |
 | `tools/rec.cjs` | The recorder. The clock is paused, so a frame is exactly 1/30 s whatever a screenshot costs. |
 | `tools/shape.py`, `tools/flicker.py`, `tools/lifewin.py` | The frame-by-frame checks (dents, canvas cuts, A-B-A, mass dips) and liveliness by time window |
+| `tools/posemeas.py`, `tools/shoot-pose.cjs` | The §23 pose check: a still of `pose.html` and where every shape's eyes land |
 | `tools/sideact.py`, `tools/track.py` | The Grok-Bot measurements: sidebar activity per avatar, and eyes and body per frame |

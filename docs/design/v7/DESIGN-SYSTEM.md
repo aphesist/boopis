@@ -747,8 +747,21 @@ redraw.
 - **The chat** (bot chat, rooms, the gutter, the title pill). It is fully lively, with every lively turn drawn cleanly
   by G1–G3.
 
-**Transitions** use orb2's own reaction morph: 0.38 s with `easeMorph` for the face and motion, and 0.44 s for the
-body, with the springs carrying the turn and no pops. A state wins over hover; hover then adds only a capped `lookAt`.
+**Transitions** use orb2's own reaction morph, so nothing pops (the table is in `ORBS.md`, "The transitions"):
+
+- The face and the motion blend over 0.38 s with `easeMorph`.
+- The eyes follow on a spring, about 0.4 s; the head and body on a slower one, about 0.7 s.
+- Hover in wakes the lively idle out of the pose. Hover out blends back to the pose.
+- A state wins over hover; hover then adds only a capped `lookAt`.
+
+**States** (measured on Grok-Bot's sidebar recordings):
+
+| State | orb2 | Plays |
+|---|---|---|
+| thinking, working, replying | `thinking`, `working`, `speaking` | looping, for as long as the state |
+| needs you | `needs` | a 2.0 s cycle, until answered |
+| done | `done` | 3 s |
+| idle, asleep | the pose | still |
 
 **The main bot (K02 A).** boopis is 44 px, in the Bots tab only, as the first entry of the bots list below the
 Sessions and Bots switch, centred with its name under it. The Sessions tab shows no bot; its dock is the quick way to

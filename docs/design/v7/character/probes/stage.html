@@ -56,7 +56,8 @@ const orb = (n, size, o = {}) => {
 /* the policy's three behaviours, on orb2's own attributes */
 const fixed = (o) => { o.dataset.base = 'pose'; o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', 'pose'); };
 const state = (o, r) => { o.dataset.base = r; if (!o._hover) { o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', r); } };
-const wake = (o) => { o._hover = true; if (o.dataset.base === 'pose') { o.setAttribute('reaction', 'idle'); o.setAttribute('idle-motion', 'lively'); } };
+/* hover: a bot at the pose wakes lively; a bot in a state keeps its state, and only looks toward the pointer (capped) */
+const wake = (o, px, py) => { o._hover = true; if (o.dataset.base === 'pose') { o.setAttribute('reaction', 'idle'); o.setAttribute('idle-motion', 'lively'); } else if (px != null) capLook(o, px, py, .3); };
 const settle = (o) => { o._hover = false; o.lookAt(); if (o.dataset.base === 'pose') { o.setAttribute('reaction', 'pose'); o.setAttribute('idle-motion', 'off'); } };
 const R = document.getElementById('r');
 const tag = () => `<div class="tag">${q.title || ''}<small>${q.sub || ''}</small></div>`;
@@ -67,12 +68,15 @@ const S = {
     if (MORE) for (const o of document.querySelectorAll('.dock orb-avatar')) { o.setAttribute('jelly', '.55'); fixed(o); }
   },
   room() {
-    R.innerHTML = tag() + `<div class="room"><div class="hdr">${orb('boopis', 40, { motion: 'lively' })}<b>release crew</b></div>
-      <div class="msg" id="m1">${orb('nina', 20, { motion: MORE ? 'lively' : 'calm' })}<div class="b">staging is green, the deploy is ready</div></div>
+    /* the chat is fully lively, and more than today: every orb lively, plus orb2's own emotes (face variety: wink, giggle,
+       surprise...) every few seconds, never dozing */
+    const LIFE = MORE ? ' alive idle-time="4" sleep-after="0"' : '';
+    R.innerHTML = tag() + `<div class="room"><div class="hdr">${orb('boopis', 40, { motion: 'lively', attrs: LIFE })}<b>release crew</b></div>
+      <div class="msg" id="m1">${orb('nina', 20, { motion: MORE ? 'lively' : 'calm', attrs: LIFE })}<div class="b">staging is green, the deploy is ready</div></div>
       <div class="msg you hidden" id="m2"><div class="b">ship it after the notes</div></div>
-      <div class="msg hidden" id="m3">${orb('kai', 20, { motion: MORE ? 'lively' : 'calm' })}<div class="b">notes are in CHANGELOG.md, two sections</div></div>
-      <div class="msg" id="m4">${orb('moss', 20, { motion: MORE ? 'lively' : 'calm' })}<div class="b">the flaky test is quarantined</div></div>
-      <div class="msg" id="m5">${orb('iris', 20, { motion: MORE ? 'lively' : 'calm' })}<div class="b">the composer passes on both themes</div></div>
+      <div class="msg hidden" id="m3">${orb('kai', 20, { motion: MORE ? 'lively' : 'calm', attrs: LIFE })}<div class="b">notes are in CHANGELOG.md, two sections</div></div>
+      <div class="msg" id="m4">${orb('moss', 20, { motion: MORE ? 'lively' : 'calm', attrs: LIFE })}<div class="b">the flaky test is quarantined</div></div>
+      <div class="msg" id="m5">${orb('iris', 20, { motion: MORE ? 'lively' : 'calm', attrs: LIFE })}<div class="b">the composer passes on both themes</div></div>
       <div class="comp" id="comp">Message release crew</div></div>`;
   },
   sidebar() {
@@ -80,7 +84,8 @@ const S = {
     R.innerHTML = tag() + `<div class="side"><div class="seg"><span>Sessions</span><span class="on">Bots</span></div>
       ${MORE ? `<div class="main-bot">${orb('boopis', 44)}<b style="font-weight:500">boopis</b></div>` : `<div class="row">${orb('boopis', 20)}<div><b>boopis</b><span>Summarised the morning</span></div></div>`}
       ${rows.map(([n, a]) => `<div class="row">${orb(n, MORE ? 28 : 20)}<div><b>${n}</b><span id="a-${n}">${a}</span></div></div>`).join('')}</div>`;
-    if (MORE) for (const o of document.querySelectorAll('.side orb-avatar')) fixed(o);
+    if (MORE) for (const o of document.querySelectorAll('.side orb-avatar')) { o.setAttribute('jelly', '.55'); fixed(o); }
+    R.insertAdjacentHTML('beforeend', '<div class="cursor" id="cur"></div>');
   },
   torture() {
     const sh = ['circle', 'squircle', 'soft', 'wide', 'tall', 'bean', 'drop', 'ghost', 'triangle', 'hexagon', 'diamond', 'cloud', 'clover', 'flower', 'star'];
@@ -91,21 +96,28 @@ const $ = (s) => document.querySelector(s);
 const ctr = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
 const capLook = (o, px, py, k) => { const [cx, cy] = ctr(o); let vx = (px - cx) * k, vy = (py - cy) * k; const max = 0.3 * Math.max(250, o.getBoundingClientRect().width * 1.65), l = Math.hypot(vx, vy); if (l > max) { vx *= max / l; vy *= max / l; } o.lookAt(cx + vx, cy + vy); };
 const at = (s, f) => setTimeout(f, s * 1000);
+/* the pointer: it enters from below its target (never across another orb) and leaves the same way */
+const moveCur = (cur, x, y) => { if (!cur._in) { cur.style.transition = 'none'; cur.style.left = x + 'px'; cur.style.top = (y + 200) + 'px'; void cur.offsetWidth; cur.style.transition = ''; cur._in = true; } cur.style.left = x + 'px'; cur.style.top = y + 'px'; };
+const hideCur = (cur) => { cur.style.top = (parseFloat(cur.style.top) + 200) + 'px'; cur._in = false; };
 const T = {
   dock() {
     const os = [...document.querySelectorAll('.dock orb-avatar')], cur = $('#cur'), word = $('#word');
-    const point = (i) => { const [x, y] = ctr(os[i].parentElement); cur.style.left = x + 'px'; cur.style.top = (y + 46) + 'px';   /* below the canvas box, so the checks see only the orb */ };
+    const point = (i) => { const [x, y] = ctr(os[i].parentElement); moveCur(cur, x, y + 46);   /* below the canvas box, so the checks see only the orb */ };
     /* 0-3 s: the row at rest. 3-7.8 s: the pointer crosses the row, 0.8 s per bot */
     for (let i = 0; i < 6; i++) at(3 + i * .8, () => {
       point(i); word.textContent = ['boopis', 'kai', 'nina', 'moss', 'iris', 'hex'][i];
       if (i > 0) { const p = os[i - 1]; MORE ? settle(p) : (p.setAttribute('reaction', p.getAttribute('reaction') === 'listening' ? 'idle' : p.getAttribute('reaction')), p.lookAt()); }
       const o = os[i]; if (MORE) wake(o); else { if (o.getAttribute('reaction') === 'idle') o.setAttribute('reaction', 'listening'); o.blink(); }   /* today: listenOrb + blink (dock/input.ts:320-324) */
     });
-    at(7.8, () => { const p = os[5]; MORE ? settle(p) : p.lookAt(); cur.style.left = '-40px'; word.textContent = ''; if (!MORE && p.getAttribute('reaction') === 'listening') p.setAttribute('reaction', 'sleeping'); });
-    /* 9 s: kai starts working; 11 s: nina needs you; 14.5 s: kai is done and settles back; 16 s: you answer nina */
+    at(7.8, () => { const p = os[5]; MORE ? settle(p) : p.lookAt(); hideCur(cur); word.textContent = ''; if (!MORE && p.getAttribute('reaction') === 'listening') p.setAttribute('reaction', 'sleeping'); });
+    /* 9 s: kai starts working; 11 s: nina needs you; 12.2-13.4 s: the pointer rests on kai while it works (the state
+       wins; hover only looks); 14.5 s: kai is done (3 s), then the pose; 16 s: you answer nina */
+    at(12.2, () => { const [x, y] = ctr(os[1].parentElement); moveCur(cur, x, y + 46); if (MORE) wake(os[1], x, y + 46); });
+    at(13.4, () => { hideCur(cur); if (MORE) settle(os[1]); else os[1].lookAt(); });
+    if (MORE) at(17.5, () => state(os[1], 'pose'));
     at(9.0, () => { word.textContent = 'kai is working'; MORE ? state(os[1], 'working') : os[1].setAttribute('reaction', 'working'); });
     at(11.0, () => { word.textContent = 'nina needs you'; MORE ? state(os[2], 'needs') : os[2].setAttribute('reaction', 'needs'); os[2].parentElement.insertAdjacentHTML('beforeend', '<span class="dot"></span>'); });
-    at(14.5, () => { word.textContent = 'kai is done'; MORE ? state(os[1], 'pose') : os[1].setAttribute('reaction', 'idle'); });
+    at(14.5, () => { word.textContent = 'kai is done'; MORE ? state(os[1], 'done') : os[1].setAttribute('reaction', 'idle'); });
     at(16.0, () => { word.textContent = 'you answered nina'; MORE ? state(os[2], 'pose') : os[2].setAttribute('reaction', 'idle'); os[2].parentElement.querySelector('.dot')?.remove(); });
   },
   room() {
@@ -122,8 +134,17 @@ const T = {
     const O = (n) => $(`.ui-orb[data-bot="${n}"] > orb-avatar`), A = (n) => $('#a-' + n);
     at(2.0, () => { A('kai').textContent = 'Working: reading the changelog'; MORE ? state(O('kai'), 'working') : O('kai').setAttribute('reaction', 'working'); });
     at(4.0, () => { A('nina').textContent = 'Needs you: approve a deploy'; A('nina').className = 'owe'; MORE ? state(O('nina'), 'needs') : O('nina').setAttribute('reaction', 'needs'); });
-    at(8.0, () => { A('kai').textContent = 'Wrote the changelog'; MORE ? state(O('kai'), 'pose') : O('kai').setAttribute('reaction', 'idle'); });
-    at(10.0, () => { A('nina').textContent = 'Deployed staging'; A('nina').className = ''; MORE ? state(O('nina'), 'pose') : O('nina').setAttribute('reaction', 'idle'); });
+    at(8.0, () => { A('kai').textContent = 'Wrote the changelog'; MORE ? state(O('kai'), 'done') : O('kai').setAttribute('reaction', 'idle'); });
+    if (MORE) at(11.0, () => state(O('kai'), 'pose'));
+    /* 12-16.5 s: the pointer goes down the list, 0.9 s per bot, and rests on nina, who needs you (she only looks) */
+    const cur = $('#cur'), ord = ['boopis', 'kai', 'nina', 'moss', 'iris'];
+    ord.forEach((n, i) => at(12 + i * .9, () => {
+      const o = O(n), [x, y] = ctr(o.parentElement); moveCur(cur, x + 70, y);
+      if (i > 0) { const p = O(ord[i - 1]); MORE ? settle(p) : (p.lookAt(), p.getAttribute('reaction') === 'listening' && p.setAttribute('reaction', 'idle')); }
+      if (MORE) wake(o, x + 70, y); else { if (o.getAttribute('reaction') === 'idle') o.setAttribute('reaction', 'listening'); capLook(o, x + 70, y, .45); }   /* today: listening plus lookAt (bots/orbs.ts:42-48) */
+    }));
+    at(16.5, () => { const p = O('iris'); hideCur(cur); MORE ? settle(p) : (p.lookAt(), p.setAttribute('reaction', 'idle')); });
+    at(18.0, () => { A('nina').textContent = 'Deployed staging'; A('nina').className = ''; MORE ? state(O('nina'), 'pose') : O('nina').setAttribute('reaction', 'idle'); });
   },
   torture() {
     /* every shape is turned through orb2's whole range: the lookAt clamp is 1.18 rad, the rim peek reaches 1.26,
