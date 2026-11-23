@@ -38,6 +38,7 @@ The scrubber and caps of ADR-0045 apply to every field; `description` keeps the 
 - **`always` on an `engine` card** stays in the window only and keeps the engine's meaning (a permanent allowlist entry for the engine's pattern), behind a confirm that says it applies to every command the engine's detector groups with this one. From the Local API it is refused (`403 policy_refused`).
 - **Governed sessions** (`governed: true`): `once` and `deny` only, from every surface, as today.
 - **Budget pauses** (`kind: "budget"`): `once` and `deny` only (each pause has its own key; ADR-0048 on w30/governed-bots).
+- **A parked step from a scheduled run** (`rules-engine.md` 8.3, owner decision 23 November 2026): the run is over, so the card is boopis's own (`kind: "parked"`), not the engine's. Its answers are **Approve and re-run** (`once`), **Always allow and re-run** (`once` plus the drafted exception; from the Local API the draft is saved disabled, as for any Always allow) and **Deny**; never `session`. Approving makes the host re-run that step as `rules-engine.md` 8.3 says (a new run of the bot that resumes the scheduled run's session, with a one-time grant for that exact call), and the card then follows the re-run: "Re-running…", "Done" or "kai did not run the approved step". Answered from every owner surface; the Local API answers it with `POST /v1/approvals/<id>` like any approval and gets `{approval, rerun: {session}}`.
 - `choice` must be one the engine offered (`choices`) and one `answerable_with` lists; anything else is `400 choice_not_offered` or `403 policy_refused`. No default, no approve-all, no timeout that approves (unchanged).
 
 `POST /v1/approvals/<id>` body: `{choice: "once"|"deny"|"session"|"always", execution_generation?}`. `always` answers `{approval, draft: {id, text, state: "draft"}}`.
@@ -58,7 +59,7 @@ The owner designs it (lab renders, owner picks; invariant 8; Part H, R-comp-2 `A
 | look | the exact action (line 2), who asked (origin), the reviewer's one-line why |
 | dig | the full rule, its source and who it applies to; the turn and session |
 
-States: pending, answering (after a press, until the engine settles), answered (by which surface: `gui`, `endpoint`), expired (the engine's timeout, 300 s by default, `approvals.timeout`), withdrawn (the turn ended), and the draft editor after Always allow. Keys: every answer needs one, chosen by the owner and listed in `design/v6/KEYMAP.md` (reference: Grok's Esc is "Deny once"). Word budget: a card, at most 25 words of interface text at rest (R-calm-10); the action and the rule are content.
+States: pending, answering (after a press, until the engine settles), answered (by which surface: `gui`, `endpoint`), withdrawn (the turn ended), parked (a scheduled run's step, refused for now; then re-running and done, `rules-engine.md` 8.3), and the draft editor after Always allow. **A bot's card does not expire:** the host writes the engine's maximum `approvals.timeout` into every bot profile (`blanks-inline.md` section 6.3, owner decision 23 November 2026), so "expired" applies only to the owner's own sessions, whose `approvals.timeout` stays the engine's (300 s by default), and to a parked step after 7 days. Keys: every answer needs one, chosen by the owner and listed in `design/v6/KEYMAP.md` (reference: Grok's Esc is "Deny once"). Word budget: a card, at most 25 words of interface text at rest (R-calm-10); the action and the rule are content.
 
 ## 6. The B40 summary
 
@@ -100,7 +101,7 @@ End to end: a bot's rule card answered `session` from the reference client (`scr
 
 ## 11. Open questions
 
-None beyond owner question 3 (`README.md`): endpoint answers stay on.
+None beyond owner question 3 (`README.md`): endpoint answers stay on. Recorded owner decisions (23 November 2026): bot cards have no time limit and use the shared v7 card (section 5); a scheduled run's refused step is a parked card that re-runs the step on approval (section 3).
 
 ## 12. Verification log
 

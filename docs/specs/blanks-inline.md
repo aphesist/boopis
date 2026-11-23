@@ -132,7 +132,7 @@ Merged answers repeat the three middle lines per question, in the order asked. E
 Nothing is sent, and the card closes with its reason, when:
 - **Superseded:** the agent asked the same thing again later in the session (same question after normalising): "Asked again below".
 - **Undone:** the work that rested on the guess was rewound (`checkpoint.rewind` to before the blank), or the session was closed, archived or deleted: "No longer needed".
-- **Expired:** after **24 hours** (owner question 1): "Expired: finished on its guess"; it stays in the history.
+- **Expired:** after **24 hours** (owner decision, a default): "Expired: finished on its guess"; it stays in the history.
 - **Answered with the guess:** case 5.1.1.
 
 ## 6. Bots: approvals only, with no time limit
@@ -163,7 +163,7 @@ The engine expires an approval card after `approvals.timeout`, 300 s by default,
 - Waiting costs no tokens. A provider's prompt cache can expire meanwhile, so the next request may pay a cache write again.
 - **[verify]** on a live engine that the gateway's turn inactivity watchdog does not end a turn parked at an approval for hours (`gateway/run_turn.py` around 1440); if it does, the host raises the profile's agent timeout for bots by the engine's own setting.
 - `approval-surfaces.md` section 5 lists "expired (the engine's timeout, 300 s by default)" as a card state; for a bot's card that state then only comes from the engine's ceiling or a withdrawn turn. That spec's owner should update the line; the card's design is not changed here.
-- **Where nobody can answer** (a scheduled run, an unattended platform), the engine resolves the card from `approvals.cron_mode` / `unattended_mode` at once (`tools/approval.py`, `rules-engine.md` 8.3): refused and notified. That is not a time limit but the absence of anyone to ask; whether a scheduled run should instead pause and wait is owner question 2.
+- **Where nobody can answer** (a scheduled run, an unattended platform), the engine resolves the card from `approvals.cron_mode` / `unattended_mode` at once (`tools/approval.py`, `rules-engine.md` 8.3): That is not a time limit but the absence of anyone to ask. The owner's decision: **the step is refused for now and left as the shared approval card; approving it re-runs that step** in a new run scoped to that step, with the context the run had. How the re-run works is `rules-engine.md` 8.3 and how the card offers it is `approval-surfaces.md` section 3.
 
 ### 6.4 Rooms
 
@@ -201,7 +201,7 @@ Events: `blank.opened` (with `wait_s` and `deadline`), `blank.filled`, `blank.la
 ## 10. Removing the injected turn
 
 - `rpc/blanks.py`: the `ctx.inject_message` call and its `HEADER` ("[ANSWER TO YOUR OPEN QUESTION]") are deleted. The plugin never sends anything to the model by itself.
-- The forms tools' non-waiting delivery (`forms/service.py` `_deliver`, also `inject_message`) has the same double-output problem; out of scope here (owner question 3).
+- The forms tools' non-waiting delivery (`forms/service.py` `_deliver`, also `inject_message`) has the same double-output problem; handled next wave (section 12).
 
 ## 11. Acceptance tests
 
@@ -229,13 +229,23 @@ Events: `blank.opened` (with `wait_s` and `deadline`), `blank.filled`, `blank.la
 15. **Lapsed, still one reply.** With the wait at 30 s (the shortest setting), the test does not answer; the fake model receives `no_answer_yet` with the guess in the same turn and ends its reply; the stored reply holds the assumption line and not the question again. Answering the card with a different value submits exactly one message starting "[Correction to your guess]", and the model is asked once for it; answering a second card with the guess submits nothing.
 16. **A bot cannot ask a question, and its approval waits.** A bot whose row says Ask for `terminal` reaches a command: its tools have neither `clarify` nor `leave_blank`; the approval card stays pending for longer than the engine's default 300 s (the test runs on the engine's own clock override, or asserts the profile's `approvals.timeout` and that the pending card is not expired after 301 s of fake time) and runs once allowed.
 
-## 12. Open owner questions
+## 12. Next wave (not built in w31): `ask` and `request_input` follow the same rule
 
-1. **How long a lapsed question in a session stays answerable.** Proposed: 24 hours, then it closes as "finished on its guess" and stays in the history.
-2. **A scheduled bot run that meets an Ask rule.** The engine cannot hold a scheduled run for a person, so today it is refused and you are notified ("kai's scheduled run stopped before sending an email"). Keep that, or should such a run end and leave the action as a card for you to approve and re-run?
-3. **Forms that don't wait.** In sessions, the `ask` and `request_input` tools also deliver a late answer as a new message. Give them the blanks rule (wait, then a labelled correction)? Proposed: yes, next wave.
+Owner decision (23 November 2026). The forms tools (`docs/FORMS.md`: `request_input`, `ask`, and `harness.request_input` in a cell) today return at once and deliver a late answer through `ctx.inject_message` (`forms/service.py` `_deliver`): the same double output. In the next wave:
+- **In sessions** they wait with the same timer as blanks ("Wait for my answer", 30 s, 60 s, 2 min), then return "no answer yet" and the agent goes on (with its `default` or guess where the form has one); the form stays as the shared card, answerable for 24 hours, and a late answer is the same labelled correction (section 5). `wait=true` and `timeout_s` are replaced by the session's wait.
+- **For bots** they become **approval cards with no time limit**: the call waits at the plugin's gate like any rule match (section 6.3), and the answer is the tool's result. A scheduled run's form is refused and left as a card like a scheduled step (`rules-engine.md` 8.3).
+- **Credentials and secrets never reach the agent**, in either case: a `credential` or `secret` field is still saved by the host and only its name (or "saved") is in the result, the correction message and the ledger (`docs/FORMS.md` section 6, `forms/effects.py`). A late credential is saved and announced as "saved", never quoted.
+- `_deliver` and its `inject_message` call are removed then. Nothing here is built in w31.
 
-## 13. Verification log
+## 13. Owner decisions recorded (23 November 2026)
+
+1. A lapsed session question stays answerable for **24 hours** (a default; section 5.3).
+2. A scheduled bot run that meets an Ask rule: the step is **refused for now and left as the shared approval card; approving re-runs that step** (section 6.3; `rules-engine.md` 8.3; `approval-surfaces.md` section 3).
+3. `ask` and `request_input` get the same rule **next wave** (section 12).
+
+No open questions remain in this spec.
+
+## 14. Verification log
 
 | Claim | Where | Result |
 |---|---|---|

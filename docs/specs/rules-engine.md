@@ -204,6 +204,22 @@ Line 1 is the B40 summary; line 2 the exact action (the command, the full path, 
 
 Read in the engine: a cron run resolves a plugin card from `approvals.cron_mode`, an unattended platform from `unattended_mode` (both `deny` by default), and `request_tool_approval` blocks where neither applies and no human is present (`tools/approval.py:1238-1273`). So in a scheduled run a rule match is **refused**, not held: the model is told "This needs the owner's OK (rule: …). Do not try another way; report it." and the plugin sends the host an activity event `rule.refused {profile, session, rule_id, summary}` (the w30/local-api-0.2 datagram), which becomes a notification: "kai's scheduled run stopped before sending an email." H7 makes `approve` modes a problem for bot profiles.
 
+**Refused for now, left as a card, re-run on approval** (owner decision, 23 November 2026). The refused step is not lost:
+1. **Parked.** With the refusal, the plugin writes a parked step, `<root>/boopis/parked/<id>.json` (UUIDv7 id; mode `0600`; written by the plugin process, never by a bot tool, which H2 refuses): `{id, profile, bot, job_id, session_id` (the run's stored session)`, turn_id, tool, args` (the exact arguments, needed to re-run; kept only here, never in the ledger, which keeps `args_sha256` as always)`, args_sha256, summary` (the B40 words)`, action` (line 2 of the card)`, rules` (the matched rule ids and texts)`, context: {job_name, scheduled_at, last_text}` (the run's last assistant text, redacted, at most 2,000 characters)`, at, expires_at` (7 days)`}`. `rule.refused` carries the id.
+2. **The card.** The host shows it as the shared approval card (`approval-surfaces.md` sections 3 and 5) with "From kai's scheduled run (Daily digest, 09:00): stopped before this step." Answers: **Approve and re-run** (`once`), **Always allow and re-run** (`once`, then the narrow exception of section 10), **Deny** (nothing runs; the parked step is deleted). No "Allow all this turn": that turn is over. No time limit while it is parked; after 7 days the card closes "Expired: run the job again from its schedule" and the file is deleted.
+3. **The re-run: a new run scoped to that step, with the context it had.** On approval the host starts a run of the bot (the same path as `boopis run --bot` and the `bot.run` verb, `team-ops.md`) that **resumes the scheduled run's own session** (`session.resume` in the bot's profile), so the model has everything the run had, and submits one fixed message:
+   ```
+   [Approved step] The owner approved the step your scheduled run "Daily digest" stopped at:
+   Send an email · to: board@example.com, subject: "Weekly digest"
+   Do this step now, then finish only what depended on it, and report. Do not redo the rest of the run.
+   ```
+   If the session cannot be resumed (it was pruned, or the engine refuses), the run starts a fresh session in the bot's profile whose message adds the job's own prompt and `context.last_text` above the same lines, and the card says it ran "with a summary of the earlier run". **[verify]** on a live engine that a cron run's stored session resumes in the bot's profile.
+4. **A one-time grant.** The host passes the parked id to the plugin with the run (`rules.grant {session_id, parked_id}` on the host-ops channel, `team-ops.md` section 4). In that run's first turn, the first call whose `tool` and `args_sha256` equal the parked step's passes **the matched rules only**: host protections, the hard policy (steps 0-4b), budgets and the engine's hardline still apply, and the hardline can still block it. Any other call meets the rules as usual; the re-run is started from an owner surface, so a new match makes a normal card that waits (`blanks-inline.md` section 6.3). The grant is used once and ends with that turn; an unused grant is reported on the card ("kai did not run the approved step") and nothing else is allowed by it.
+5. **Audit.** The re-run's ledger has `approval.decided {approval_id: <parked id>, decision: approve, decided_by: user, surface}` and the step's `tool.called` with the extra `grant: "parked:<id>"`; a deny is `approval.decided {decision: deny}` in the original run's ledger.
+6. **Local API and the island:** a parked card is answered like any approval from an owner surface (`approval-surfaces.md`); a bot process cannot approve its own parked step (`host-protections.md` H4).
+
+Forms that a scheduled run opens follow the same rule from the next wave (`blanks-inline.md` section 12).
+
 **[verify]** on a live engine, for a room member's turn (it runs with the room's frozen `approval_mode`, `gateway/hosted_room_execution_policy.py`, on the `api_server` platform, which is unattended unless the turn registered a notifier, `tools/approval.py:1172-1202`) and for a kanban worker: whether the card reaches the inbox or is resolved as unattended. The spec's behaviour is the same either way: held where a person can answer, refused and notified where not.
 
 ### 8.4 From an exec cell
@@ -328,9 +344,11 @@ Host:
 17. `rules_reviewer_set` writes `auxiliary.boopis_reviewer` into every bot profile.
 
 End to end (fake model server, pinned engine, as CI does): a bot's `terminal` call `git push --force` shows a card in the inbox naming `default.git_cloud`; answering `once` runs it; `deny` refuses it.
+- **Parked step (8.3):** in a cron run a rule match is refused, writes one parked file with the exact arguments (and none in the ledger) and one `rule.refused` with its id; Approve and re-run resumes that session with the fixed `[Approved step]` message and a grant that passes exactly one call with the same tool and `args_sha256` in the first turn, never a second, never a different call, and never past host protections or the hard policy; Deny deletes the file and runs nothing; after 7 days the card closes as expired; a re-run whose session cannot be resumed starts a fresh one with the job prompt and `last_text`.
 
 ## 15. Open questions
 
+- Recorded owner decision (23 November 2026): a scheduled run's rule match is refused for now, left as the shared approval card, and re-run on approval (section 8.3).
 - Owner question 1: should a per-bot Allow override a global rule for that bot (proposed: no, an exception does that)?
 - Owner question 2: do the global rules apply to the owner's own sessions too (proposed: bots only, as decision 10 says)?
 

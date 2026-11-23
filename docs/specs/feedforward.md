@@ -1,6 +1,6 @@
 # Feedforward: the agent reads the draft before it is sent
 
-Status: draft for w31, proposed in ADR-0055. The owner's decisions: feedforward is **on by default** (23 November 2026), and first run shows it live (section 13). The reviewer is "the cheapest connected model" (owner decision 10), and this spec uses the same choice.
+Status: draft for w31, proposed in ADR-0055. The owner's decisions (23 November 2026): feedforward is **on by default**, first run shows it live (section 13); the reader is **the cheapest fast model of the same provider the message goes to** (6.1); it runs **everywhere** (sessions, bot chats and rooms), with a global switch, a switch per context and a per-bot and per-room override (sections 11, 12); drafts **may be read on a subscription** if it is fast enough (6.1); **everything the "Will assume" row shows travels**, the person's picks marked as theirs (7.1). The last two are defaults. The reviewer is "the cheapest connected model" (owner decision 10), and this spec uses the same choice.
 
 Source of the idea: Liu Xingyu's demo (x.com/liu_xingyu/status/2121015724374397183). While the person types, the agent marks the places where it would need more: ambiguous words, missing parameters, and assumptions it would otherwise ask about later. The person fills or changes them inline **before sending**, so there is no back-and-forth. Blanks are the same move after sending, and `blanks-inline.md` makes them wait inside the reply. Together they are one feature: the agent asks in place, before or during the turn, and never as a second exchange (section 9).
 
@@ -118,14 +118,15 @@ The reader keeps, per mark, its `text`, `at` and the draft it was read on. On ev
 
 ### 6.1 Which model
 
-**The cheapest connected model of the provider that will answer the message** (proposed; owner question 1):
-- Candidates: the roster the host sends (`dispatch.roster`, ADR-0034) filtered to `context.answering.provider`, each priced by the price book (`PriceBook.resolve`, models.dev rates and the owner's overrides). The same function as the reviewer (`rules-engine.md` 7.3: a standard check of 2,000 input and 200 output tokens; ties to the owner's order; an unpriced model is never ranked). One implementation (STANDARDS section 9): the chooser moves to `plugins/boopis/routes/cheapest.py` and both callers use it.
-- **Why the answering provider, not the global cheapest:** the draft then goes only where the message itself is about to go, under the same account. The global cheapest would send a draft written for Claude to Google whenever a Gemini key is also connected.
+**The cheapest fast model of the same provider the message goes to** (owner decision):
+- Candidates: the roster the host sends (`dispatch.roster`, ADR-0034) filtered to the provider of the model that will answer (`context.answering.provider`; for rooms see section 11), each priced by the price book (`PriceBook.resolve`, models.dev rates and the owner's overrides), cheapest first by the reviewer's standard check (`rules-engine.md` 7.3: 2,000 input and 200 output tokens; ties to the owner's order; an unpriced model is never ranked). One implementation (STANDARDS section 9): the chooser moves to `plugins/boopis/routes/cheapest.py` and both callers use it.
+- **Fast:** the plugin keeps each route's latency over its last 10 reads. A route whose median is over 2.5 s, or that timed out three times in a row, is **too slow** for an hour and the next cheapest of the same provider is tried. A route with no history is tried. When every candidate of the provider is too slow, there is no reader: no marks, quietly, and Settings says why.
+- **Same provider, never another:** the draft goes only where the message itself is about to go, under the same account. If the provider has no fast, priced, non-heavy model, feedforward is quiet for that message; it never borrows another lab.
 - **Never a heavy model** (ADR-0037: nothing automatic picks one). If the provider's only models are heavy, there is no reader and feedforward is quiet for that message.
 - **Governed or ungoverned does not matter.** A read does no work, writes nothing and is not on the ladder, so the frontier-only rule of governed mode (ADR-0037) does not apply to it, exactly as for the reviewer. The reader may be Haiku while the session runs on Opus.
-- **A subscription** (Claude through the person's Claude Code, ChatGPT sign-in): its cheapest non-heavy model is the reader, billed to the plan (owner question 2). **[verify]** the latency of `complete_structured` on `claude-subscription-directsdk-experimental`: if a read cannot meet the budget below on a live engine, the subscription has no reader and feedforward is quiet for it, with Settings saying why.
+- **A subscription** (Claude through the person's Claude Code, ChatGPT sign-in): drafts **may be read on the plan**, counted against its limits, by its cheapest non-heavy model (owner decision, a default). The "fast" rule above decides it: if the plugin finds reads on the plan too slow, there are no marks for that subscription, quietly, and Settings says so. Settings can also turn reading on subscriptions off. **[verify]** the latency of `complete_structured` on `claude-subscription-directsdk-experimental` on a live engine.
 - **The free tier and OpenRouter free models** count as connected; their price is zero. **[verify]** that `complete_structured` with a JSON schema works on the free tier's models; a model that does not honour the schema fails quietly.
-- **Routing:** the plugin registers its own auxiliary task `boopis_feedforward` (`ctx.register_auxiliary_task`, defaults `{provider, model, timeout: 5}`); a plugin may route through a task it registered without any trust flag (verified, `agent/plugin_llm.py` `_check_task`: "a key the plugin registered itself → allowed"). The host writes the chosen route per provider into `auxiliary.boopis_feedforward` of the root profile (and of a bot's profile when its chat reads drafts, section 11) through the engine's own `config set`, and again when the roster or price book changes. The plugin checks the result's `provider` and `model` against the route it expected; a different one is a failure (quiet). **[verify]** that one auxiliary task can be given a route per call: if the engine reads one route per task, the plugin registers one task per provider (`boopis_feedforward.<provider>`), which the same code allows.
+- **Routing:** the plugin registers its own auxiliary task `boopis_feedforward` (`ctx.register_auxiliary_task`, defaults `{provider, model, timeout: 5}`); a plugin may route through a task it registered without any trust flag (verified, `agent/plugin_llm.py` `_check_task`: "a key the plugin registered itself → allowed"). The host writes the chosen route per provider into `auxiliary.boopis_feedforward` of the root profile (every read runs there, section 11) through the engine's own `config set`, and again when the roster or price book changes. The plugin checks the result's `provider` and `model` against the route it expected; a different one is a failure (quiet). **[verify]** that one auxiliary task can be given a route per call: if the engine reads one route per task, the plugin registers one task per provider (`boopis_feedforward.<provider>`), which the same code allows.
 
 ### 6.2 Cost on the ledger
 
@@ -154,7 +155,7 @@ Per process, in memory, 256 entries, 10 minutes. Key: SHA-256 over the canonical
 
 ### 7.1 What travels
 
-Everything the assumptions row shows at the moment of sending, because the row says "Will assume:" and sending is accepting it:
+Everything the assumptions row shows at the moment of sending, because the row says "Will assume:" and sending is accepting it (owner decision, a default; Settings can limit it to "only what I picked", which sends `source: user` items only):
 - a reading the person picked or typed: `source: user`, shown as **chosen**;
 - a guess the person left: `source: model`, shown as **assumed**;
 - an assumption from the row: `source: model`, **assumed**;
@@ -242,18 +243,34 @@ Shared, so they feel like one thing: the same dashed-then-solid look (dashed is 
 - No reading (quiet failure): Smart runs on its own rule as today.
 - `docs/ARCHITECTURE.md` section 6's row becomes: "Smart picks the starting tier for each message from the ladder, with the draft's reading as one of its signals."
 
-## 11. Rooms and bots
+## 11. Everywhere: sessions, bot chats and rooms
 
-Proposed (owner question 3):
-- **Sessions tab:** on.
-- **A bot's own chat** (`host/live/bot-chat.ts`, one bot, its own profile): on. The read goes through that bot's link, so the reader is the cheapest model of the **bot's** answering provider, written into the bot's profile, and the cost lands in the bot's session (or its aside ledger). The commit and `pre_llm_call` run in the bot's own plugin copy.
-- **Rooms** (`groups.send`, several bots): **off** in this wave. A room message goes to several members, each its own profile, model and session; the engine's room worker hands the text to each member (`gateway/hosted_room_*.py`), and no single `pre_llm_call` sees the person's commit. Arming every member's plugin copy is possible but each member would then read the same message with readings written for a different model. The honest version is later: readings as a visible part of the room message, which the owner would have to approve as a change to what people see in the room.
-- The dock's session composer follows the session it shows.
+Feedforward runs in every composer that sends a message to an agent (owner decision), each switchable (section 12). **Every read runs in the root profile's plugin, on the person's link, and its cost is the person's**: in the session's ledger for a session, otherwise in the root profile's aside ledger (6.2) with the extra field `context` (`bot:<name>` or `room:<group_id>`), so Settings can show what reading cost per bot and per room. Bots read the root's sign-ins (ADR-0042), so the root reaches every provider a bot uses. Only the **commit** goes to where the message is answered.
+
+| Context | The reader (6.1) is the cheapest fast model of | The commit and the injection |
+|---|---|---|
+| **Session** (Sessions tab, the dock) | the provider of the model that answers next (the chip, a mention, Smart's pick) | `feedforward.commit` to the root plugin; `pre_llm_call` of the session's next turn (section 7) |
+| **A bot's chat** (`host/live/bot-chat.ts`) | the bot's provider (its profile's model) | `feedforward.commit` over the bot's link, so the **bot's** plugin copy arms the bot's next turn; same block, same `pre_llm_call` |
+| **A room** (`groups.send`) | see below | see below |
+
+**Rooms.** A room message goes to several members, each its own profile, model and session, and the engine's room worker runs a Discussion: it hands the person's message to every member (or to those named with `@handle`), then republishes their answers to the others for up to three rounds (`gateway/hosted_room_*.py`, ADR-0033).
+- **Which model reads:** the provider of **the members the message will reach first**, as the composer already knows it: the members named with `@handle`; else the room's lead when its routing is `lead` (`groups.context`); else every member. When those members use more than one provider, the provider most of them use is read with, ties to the first in the roster. One read per pause, never one per member: the readings are about the person's words, not about each member.
+- **Cost:** the person's, in the root aside ledger with `context: room:<group_id>`; never charged to a member bot.
+- **How the readings travel:** `feedforward.commit {room: group_id, text, readings, assumptions}` goes to the root plugin, which keeps it in `<root>/boopis/feedforward/rooms/<group_id>.json` (written by the root plugin only, one pending entry per message, 10 minutes). Each member's plugin copy reads that file (as it reads `rules.json`) in `pre_llm_call` of the member's turn and, if the turn's `user_message` contains the committed text, adds the same `<boopis-readings>` block, **once per member and message**. **Only the first round** carries it: later rounds are members answering each other, and their turns' messages do not contain the person's text as the newest message. **[verify]** on a live engine that a member's `pre_llm_call` sees the person's text in `user_message` on the first round; if not, the member copies match on the room's message id, which the room worker hands each member.
+- **Held messages:** a message the host holds while members work (ADR-0046) is committed when it is actually sent, with the text as sent.
+- The room's transcript shows the person's words only; the readings are visible under the person's message as the row the composer had (from the `feedforward.set` events the members' copies write), so every viewer of the room sees what the members were told.
 
 ## 12. On by default, and the setting
 
 - **Default on** (owner decision). It is on for new installs and for existing ones on the release that ships this, with a one-time line under the composer the first time marks appear: "boopis reads your draft as you type, to ask before it starts. Turn this off in Settings." (copy is the owner's to approve).
-- **The setting:** one switch, "Read my drafts as I type", with the reader named under it ("Reads with Claude Haiku 5.5, about $0.0006 a read" or why there is none). Where it sits in Settings is the owner's (v7); proposed beside the reviewer, since both name "the cheapest connected model". Stored by the UI (`core/settings.ts`, key `hx.v6.feedforward` `{on: boolean}`, default true when absent); the host keeps the reader routes. The first-run step (section 13) writes the same key.
+- **The settings** (owner decision: customizable and switchable everywhere):
+  - **Global:** "Read my drafts as I type", on. Off stops every read everywhere.
+  - **Per context:** Sessions, Bot chats, Rooms, each on by default, each under the global switch.
+  - **Per bot and per room:** an override in the bot's settings and in the room's settings, `inherit` (default), `on` or `off`. `on` reads there even when its context is off; `off` never reads there.
+  - **Subscriptions:** "Read drafts on my subscription plans", on by default (6.1).
+  - **What travels:** "Everything I see in 'Will assume'" (default) or "Only what I picked" (7.1).
+  - Under the global switch, the reader per provider and its cost per read ("Reads with Claude Haiku 5.5, about $0.0006 a read") or why there is none. Where these sit in Settings is the owner's (v7).
+  - Stored by the UI (`core/settings.ts`, key `hx.v6.feedforward`: `{on, contexts: {sessions, bots, rooms}, bots: {<name>: "on"|"off"}, rooms: {<group_id>: "on"|"off"}, subscriptions, travels: "row"|"picked"}`, every field defaulting as above when absent); the host keeps the reader routes. The first-run step (section 13) writes `on`. The composer asks one function, `readsHere(context, id)`, so the rule is in one place.
 - **Removing the mock from the live path:** delete `readFlag('feedforward')` and its `VITE_PREVIEW_FEEDFORWARD` switch, the `feedforward` entry of `MOCK_SOURCES` and of `info.preview`, the `preview` kind's ">preview: not read by the agent" item, and `PreviewSource`'s `feedforward`. `FeedforwardSource` becomes `{ read(req): Promise<ReadResult>; commit(req): Promise<void> }`; the mock provider answers `read` from `DECISIONS` (so the lab and the UI tests keep their catalogue), the live provider from the plugin. A test pins that the live provider never imports `mock-data`'s `DECISIONS`.
 
 ## 13. First run: a live demonstration
@@ -304,6 +321,9 @@ Event: `feedforward.unused {draft_id}` (the commit lapsed or did not match). `de
 9. Commit and inject: after `commit`, the next `pre_llm_call` whose `user_message` contains the text returns exactly the block of section 7.4 (a golden file), joined with `turns.CONTEXT` when the one-turn exception is armed; a worker's turn and a child completion do not consume it; a second commit replaces the first; after 120 s it lapses and `feedforward.unused` is emitted; one `feedforward.set` per travelled item.
 10. The block escapes quotes, angle brackets and newlines, cuts at 160 characters, and stays under 2,000 characters with 12 items.
 11. The system prompt is byte-identical across calls (cache-stable).
+11a. Fast: a route whose last 10 reads have a median over 2.5 s, or three timeouts in a row, is skipped for an hour and the next cheapest of the same provider is used; with none left the answer is `skipped: "no_reader"`; another provider is never used.
+11b. Rooms: a room commit is stored once; two member copies each add the block once on the first round's turn and never on a later round's; the read's usage lands in the root aside ledger with `context: room:<group_id>`; the provider read with follows the `@handle`, lead, then majority rule.
+11c. A bot chat's read runs in the root profile with the bot's provider and records `context: bot:<name>`; its commit arms the bot's own plugin copy.
 
 **UI (vitest):**
 12. Stale revisions: answers arriving out of order (rev 2 after rev 3) never replace newer marks; an answer for a forgotten `draft_id` is dropped; only one read is in flight per composer and the waiting one carries the latest text.
@@ -312,18 +332,21 @@ Event: `feedforward.unused {draft_id}` (the commit lapsed or did not match). `de
 15. Fail quiet: with `read` rejecting, timing out or returning `skipped`, no marks are drawn, no toast is shown, and `ui:send` still fires and the message is submitted without waiting.
 16. The send payload: after picking "rewrite" for "refactor" and leaving "ship it", `feedforward.commit` is called before `prompt.submit` with `readings` `[{…value: "rewrite", source: "user"}, {…value: "draft", source: "model"}]` and the exact submitted text; a dropped mark is absent; a failing commit still submits, and the sent turn's row says "Not read by the agent".
 17. Off: with the setting off, no `read` is ever called and no marks show; turning it off clears the marks at once.
+17a. `readsHere`: the global switch beats everything; a context switch off stops reads in that context except where a bot or room override says `on`; an override `off` stops reads there with everything else on; "Only what I picked" commits `source: user` items only.
 18. The live provider does not reference `DECISIONS`, `MOCK_SOURCES` has no `feedforward`, and `readFlag` is gone.
 19. First run: with a connected model the step calls `feedforward.read`; with none, or after a failed read, it plays `feedforward-demo.json` with the "Recorded example" label visible; both end at the keep-or-turn-off question, which writes the setting.
 
 **End to end (one, `tests/e2e`, real Hermes v0.23.2 with the fake model server CI already runs, answering the reader's structured request):**
 20. Type a draft in a new session; marks appear from the plugin's answer within the budget; pick one; send; the fake model's received request for that turn has the typed text followed by the `<boopis-readings>` block in the user message and an unchanged system prompt; the second turn's request replays the first turn's user message byte for byte; the ledger has the `usage.recorded` with `purpose: "feedforward"` (in the aside ledger for the first draft) and the `feedforward.set` events.
 
-## 17. Open owner questions
+## 17. Owner decisions recorded (23 November 2026)
 
-1. **Which reader.** The cheapest model of the provider that will answer the message (proposed: the draft goes only where the message goes), or the cheapest connected model of any provider, like the reviewer (cheaper, but the draft can reach another lab)?
-2. **Reading on a subscription.** When the message goes to your Claude or ChatGPT subscription, may the drafts be read on that plan (its smallest model, a read per typing pause, counted against the plan's limits)? Proposed: yes, if it is fast enough; otherwise no reads for that subscription.
-3. **Rooms and bot chats.** Proposed: on in a bot's own chat, off in rooms for now (a room message goes to several bots, each on its own model). Agree?
-4. **What travels.** Proposed: everything the "Will assume" row shows when you send, your picks marked as yours and the rest as assumed. Or only what you picked yourself?
+1. **Reader:** the cheapest fast model of the same provider the message goes to (6.1).
+2. **Where:** everywhere (sessions, bot chats, rooms), with a global switch, a switch per context and a per-bot and per-room override (sections 11, 12).
+3. **Subscriptions:** drafts may be read on a Claude or ChatGPT plan, counting against its limits, if fast enough; otherwise no marks. A default (6.1).
+4. **What travels:** everything the "Will assume" row shows, the person's picks marked as theirs. A default (7.1).
+
+No open questions remain in this spec.
 
 ## 18. Verification log
 
@@ -339,6 +362,7 @@ Event: `feedforward.unused {draft_id}` (the commit lapsed or did not match). `de
 | `feedforward.set` in contraprova's vocabulary | `plugins/boopis/_vendor/contraprova/events.py` | verified |
 | the gateway session is created at the first send | `apps/desktop/ui/src/host/live-provider.ts` `createLive` | verified |
 | one auxiliary task routed per provider | engine | **[verify]** |
+| a room member's `pre_llm_call` sees the person's text on the first round | `gateway/hosted_room_*.py`, live engine | **[verify]** |
 | `post_auxiliary_call` fires for `ctx.llm` | engine | **[verify]** |
 | subscription latency; free-tier structured output | live engine | **[verify]** |
 | a gateway link in first run after Models | `host/first-run.ts` | **[verify]** |

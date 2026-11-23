@@ -1090,6 +1090,7 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - One reviewer call at most per tool call that a rule's kinds cover and the pre-filter did not decide; cached per identical action. Latency budget p95 4 s, timeout 8 s.
 - The engine's hardline runs after the plugin's card (inside the tool), so a hardline command can show a card and still be blocked.
 - Room turns and kanban workers: whether their cards reach a person is to be verified on a live engine; behaviour is held where a person can answer, refused and notified where not.
+- A scheduled run's refused step is parked as an approval card and re-run on approval, in a run that resumes the scheduled session with a one-time grant for that exact call (owner decision, 23 November 2026; spec section 8.3).
 
 ## ADR-0052 The host-ops channel, and the verbs a bot can reach (proposed, 23 November 2026)
 **Status.** Proposed (w31 foundations; spec `docs/specs/team-ops.md`).
@@ -1139,7 +1140,7 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 **Consequences.** Branch names follow this numbering (`w31/rules-engine`, `w31/host-protections`, `w31/team-ops`, `w31/rules-ui`, `w31c/calm`); the package's text is not rewritten.
 
 ## ADR-0055 Feedforward reads the draft in the plugin, with the cheapest model of the answering provider, and its answers ride the next user message (proposed, 23 November 2026)
-**Status.** Proposed (w31; spec `docs/specs/feedforward.md`). On by default and shown live in first run are the owner's decisions (23 November 2026).
+**Status.** Proposed (w31; spec `docs/specs/feedforward.md`). The owner's decisions (23 November 2026): on by default and shown live in first run; the reader is the cheapest fast model of the same provider the message goes to; it runs in sessions, bot chats and rooms, each switchable, with per-bot and per-room overrides; subscriptions may be read on if fast enough; everything the "Will assume" row shows travels, the person's picks marked (the last two are defaults).
 
 **Context.**
 - Liu Xingyu's demo: while the person types, the agent marks ambiguous words, missing parameters and assumptions, and the person fills them before sending. In boopis the composer, its marks and its menus exist, but the live provider feeds them the mock's fixed pattern catalogue behind a preview flag (`host/live-provider.ts`, `core/settings.ts` `readFlag`).
@@ -1148,18 +1149,18 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 **Decision.**
 1. **The read is a plugin RPC**, `plugin.boopis.feedforward.read {session_id?, draft_id, rev, draft, cursor, prior, context}`, returning marks (`text`, UTF-16 `at`, `kind`, `reading`, `options`, `guess`, `confidence`) and assumptions. The model names a mark's text and occurrence; the plugin computes the offsets.
 2. **Staleness by revisions on both sides**: the UI keeps one read in flight per composer and drops answers older than the last applied; the plugin answers an older `rev` as `stale` with no model call and runs one call per draft at a time. Marks are re-anchored on the live text between reads.
-3. **The reader is the cheapest priced, non-heavy model of the provider that will answer the message**, by the reviewer's chooser (one implementation, shared with ADR-0051), through the plugin's own auxiliary task. Not frontier-bound: a read does no governed work.
+3. **The reader is the cheapest fast, priced, non-heavy model of the same provider the message goes to**, by the reviewer's chooser (one implementation, shared with ADR-0051), through the plugin's own auxiliary task; a route measured too slow is skipped, and with none left there are no marks. A subscription may be the reader. Not frontier-bound: a read does no governed work. Every read runs in the root profile and its cost is the person's.
 4. **Fail quiet**: no reader, an error or a timeout gives no marks and never delays or blocks sending. Feedforward is advice, not a permission, policy or gate check.
 5. **Cost on the ledger**: `usage.recorded` with `purpose: "feedforward"` in the session's ledger, or, before the session exists, in a monthly aside ledger in contraprova's format.
 6. **The answers ride the next user message**: `feedforward.commit` arms the session's next turn (as `mode.once` does), and `pre_llm_call` returns a fixed `<boopis-readings v="1">` block after the typed text. The system prompt, toolsets and skills never change (invariant 4). Each travelled reading is a `feedforward.set` ledger event.
 7. **Smart keeps the start-tier pick** (ADR-0032); the reading's level is one more signal, and the person's choice beats both.
-8. **Sessions and a bot's own chat** read drafts; rooms do not, in this wave.
+8. **Everywhere, switchable:** sessions, bot chats and rooms, with a global switch, one per context and a per-bot and per-room override. In a room one read is made with the provider of the members the message reaches first; the commit is stored by the root plugin and each member's plugin copy adds the block on the first round only.
 
 **Alternatives weighed.**
 - *Keep patterns in the UI*: what exists; cannot read meaning, and invents nothing the model would actually ask.
 - *The reader in the UI calling a provider*: the UI holds no keys and no price book, and the ledger is the plugin's.
 - *Answers written into the message text*: changes the person's words in the transcript.
-- *The global cheapest model*: cheaper, but sends a draft to a lab the message is not going to (owner question).
+- *The global cheapest model*: cheaper, but sends a draft to a lab the message is not going to; the owner chose the same provider.
 
 **Consequences.**
 - The mock catalogue leaves the live path; the preview flag goes; a setting, on by default, replaces it; first run gains a "Try it" step that is live with a model and a labelled recording without one.
@@ -1179,8 +1180,9 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 3. **The wait:** Settings > General > Sessions > "Wait for my answer", 30 s, 60 s (default), 2 min, which is also the root profile's `agent.clarify_timeout`; never unlimited. The engine's `clarify` is off in the root profile, so there is one way to ask.
 4. **A late answer is one labelled correction:** nothing when it equals the guess; otherwise one message starting "[Correction to your guess]", held until the current turn ends and merged with other late answers, submitted by the client as the person's message; not sent when superseded, undone, expired (24 h) or the session is gone. The `inject_message` path is removed.
 5. **Bots have no blanks and no `clarify`.** `clarify` moves to `bot-toolsets.json`'s off list and is turned off once for every existing bot (a version of ADR-0048's once-per-bot record); neither it nor `boopis_blanks` can be switched on for a bot (settings, `bots.toolsets`, team files), and the plugin refuses both in a bot's session. A bot asks only through the rules engine and its rows, as an approval card, rendered in the app with the same shared v7 card (no countdown, no guess).
-6. **A bot's approval has no time limit:** the host writes `approvals.timeout` = the engine's maximum into every bot profile. Where nobody can answer (scheduled runs, unattended platforms), the engine's refusal stands (ADR-0051).
-7. Blanks stay in contraprova's vocabulary (`blank.opened`, `blank.filled`, `blank.lapsed`) with extra fields.
+6. **A bot's approval has no time limit:** the host writes `approvals.timeout` = the engine's maximum into every bot profile. Where nobody can answer (scheduled runs), the step is refused for now and left as the shared approval card; approving it re-runs that step in a run that resumes the scheduled run's session, with a one-time grant for that exact call (`rules-engine.md` 8.3; owner decision).
+7. **A lapsed session question stays answerable for 24 hours** (owner decision, a default). **Next wave:** `ask` and `request_input` follow the same rule (sessions wait with the same timer, bots get approval cards with no limit), and credentials and secrets still never reach the agent.
+8. Blanks stay in contraprova's vocabulary (`blank.opened`, `blank.filled`, `blank.lapsed`) with extra fields.
 
 **Alternatives weighed.**
 - *The engine's `clarify` for sessions*: its lapse has no guess, and it is absent from governed sessions.
