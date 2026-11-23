@@ -67,3 +67,13 @@ w32 -> w35 bot computer, w33 -> w36 voice, w28c -> w31c calm pass.
 Reviewer (fresh context) per branch, max 3 rounds. QA: CI e2e with the fake provider plus the owner's playtest
 (this container has no live engine; noted as a gap). Lab: Settings > Approvals and the approval card rendered in
 dark and light for the owner's pick before w31/rules-ui is built (Part H rules apply).
+
+## Owner answers (23 Nov 2026)
+- Default limits: none for every bot. Budgets and caps are optional and off by default; usage is still shown. The
+  $5 default per-run cap is dropped (existing bots' untouched default caps are removed once).
+- Per-bot tiers: keep both. One global plain-language rules list for every bot, plus the per-bot Allow/Ask/Block rows
+  on top (w30/governed-bots). The rules-engine spec defines the precedence.
+- Reviewer model: the cheapest/fastest model among what the owner connected, changeable in Settings > Approvals.
+- Calm pass (Part H, w31c): runs in parallel with w31, one UI writer on the library and copy, no overlap with the
+  host/plugin writers.
+- Wave renumbering: package w28 -> w31 (not objected).
