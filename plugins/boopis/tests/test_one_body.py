@@ -90,7 +90,8 @@ def test_a_card_that_waits_for_nothing_needs_no_parents() -> None:
 
 def test_a_card_with_no_workspace_runs_in_the_board_s_folder() -> None:
     d = card({"title": "x", "assignee": "hex", "idempotency_key": "k"}, folder="/home/u/repos/paper-shorts")
-    assert d.kind == "modify" and d.args == {"workspace_kind": "dir"}
+    assert d.kind == "modify"
+    assert d.args == {"title": "x", "assignee": "hex", "idempotency_key": "k", "workspace_kind": "dir"}  # whole
     assert card({"title": "x", "assignee": "hex", "idempotency_key": "k"}, folder=None).kind == "allow"
     named = {"title": "x", "assignee": "hex", "idempotency_key": "k", "workspace_kind": "scratch"}
     assert card(named, folder="/repo").kind == "allow"  # what the bot chose is kept

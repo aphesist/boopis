@@ -91,4 +91,6 @@ def decide(call: ToolCall, session: SessionPolicy) -> Decision | None:
             changes["workspace_kind"] = "dir"
     if not changes:
         return None
-    return Decision("modify", args=changes, reason="kanban", rule=",".join(sorted(changes)))
+    # the whole arguments, not the change alone: the engine merges a partial ``modify``, but the exec kernel runs what a
+    # ``modify`` names (``exec/calls.py``), so a partial one would lose the title
+    return Decision("modify", args={**args, **changes}, reason="kanban", rule=",".join(sorted(changes)))
