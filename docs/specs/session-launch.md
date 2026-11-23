@@ -1,6 +1,6 @@
 # Session launch: live switching, launch settings, one capability map, the permission scale
 
-Status: draft for S0 (`w32/session-core`, package roadmap #1-3), proposed in ADR-0057. Sources: the T3 Code study (`T3CODE-MASTER.md`: walkthrough §16, feature logic §0, §3.1, §5.2-5.4, §11), `PLAN-session-waves.md` and the owner's decisions of 23 November 2026, which bind this spec:
+Status: draft for S0 (`w32/session-core`, package roadmap #1-3), proposed in ADR-0057; the owner approved its two questions (section 10). Sources: the T3 Code study (`T3CODE-MASTER.md`: walkthrough §16, feature logic §0, §3.1, §5.2-5.4, §11), `PLAN-session-waves.md` and the owner's decisions of 23 November 2026, which bind this spec:
 
 - one 4-step permission scale (Supervised / Auto-accept edits / Auto / Full access) in the launch step;
 - Full access removes the asks, never the journal: every write still goes through `ship`, and every turn can be rewound;
@@ -272,10 +272,10 @@ No host change in S0 beyond what the UI already proxies. The Local API is unchan
 - A settings change that fails leaves the old engine session and settings in place.
 - An engine confirmation is never answered without the person.
 
-## 10. Owner questions
+## 10. Owner decisions (23 November 2026)
 
-1. **Changing between the three governed steps in place.** It touches no toolset and no prompt, so it costs no cache; the decision's text says permission changes continue on a new engine session. Proposed: in place for Supervised ↔ Auto-accept edits ↔ Auto; a new engine session only across the Full access line. (section 6.1)
-2. **Auto and Auto-accept edits need a gate.** Without a trusted gate command for the folder they are unavailable (Supervised and Full access remain). Proposed: yes, since "ships apply when the gate passes" means nothing without a gate. (section 5.4)
+1. **The three governed steps change in place.** Switching between Supervised, Auto-accept edits and Auto happens in the same engine session (`careful.set`): it touches no toolset and no prompt, so it costs no cache. Only crossing to or from Full access, or changing the folder, skills or toolsets, continues on a new engine session. (section 6.1)
+2. **Without a trusted gate command, only Supervised and Full access are offered.** Auto-accept edits and Auto are unavailable for that project, with the reason shown. (section 5.4)
 
 ## 11. Acceptance tests
 

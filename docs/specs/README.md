@@ -26,7 +26,7 @@ The Session tab's waves follow `PLAN-session-waves.md` (the T3 Code study). S0 s
 | [session-launch.md](session-launch.md) | Switching never stops a running turn (per-session feeds); `session.create` carries folder, model, provider, effort, skills and toolsets from a launch step; one `SessionCapabilities` map; the 4-step permission scale mapped onto governed mode, the plugin's asks, the rules engine and the sandbox; mid-session changes: the model in place, folder, skills, toolsets and the Full access line on a new engine session carrying the history | `w32/session-core` (UI and plugin) | ADR-0057 |
 | [checkpoint-rewind.md](checkpoint-rewind.md) | `checkpoint.rewind` as a journaled, ungated ship with its own checkpoint, so undo is a rewind; the isolation guard (own worktree, or nothing else changed in the folder, proven by a folder digest and per-path hashes in hx); a `checkpoint` turn item; hooks for edit and fork from here (S2) | `w32/rewind` (plugin, hx, UI) | ADR-0058 |
 
-S0 questions for the owner: changing between the three governed steps in place (`session-launch.md` 10.1); Auto and Auto-accept edits need a gate command (10.2).
+S0 owner decisions (23 November 2026): switching between Supervised, Auto-accept edits and Auto happens in place, in the same engine session; only crossing to or from Full access, or changing the folder or toolsets, continues on a new engine session (`session-launch.md` 10.1). A project without a trusted gate command shows only Supervised and Full access; Auto-accept edits and Auto are unavailable, with the reason (10.2).
 
 ## Open owner questions
 
