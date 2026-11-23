@@ -13,9 +13,9 @@ frame((s) => {
   s.style.setProperty('--pool-y', '70%');
   s.style.setProperty('--pool-w', '76%');
   s.style.setProperty('--pool-h', '80%');
-  s.style.setProperty('--pool', 'var(--bg-3)');
+  s.style.setProperty('--pool', 'var(--lamp-ui)');
   s.append(h('style', '', ROOM_CSS + `
-    .far-room { position: absolute; left: 260px; top: -40px; width: 1400px; display: flex; flex-direction: column; gap: 56px; filter: blur(14px) brightness(.8); }
+    .far-room { position: absolute; left: 260px; top: -40px; width: 1400px; display: flex; flex-direction: column; gap: 56px; filter: blur(14px) var(--far-dim); }
     .far-row { display: grid; grid-template-columns: 96px 1fr; gap: 0 56px; align-items: start; }
     .far-row .dot { width: 72px; height: 72px; border-radius: 50%; }
     .far-row .lines { display: flex; flex-direction: column; gap: 30px; padding-top: 14px; }

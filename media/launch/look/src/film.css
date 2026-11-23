@@ -17,30 +17,75 @@
   /* ── the UI scale: the product's own components at 3x, 4x for a close-up (look.md, Rebuilding the UI) ── */
   --ui-x: 3;
 
-  /* ── the ground: the reading room after hours. One warm light pool, the card stock's own tone, never brass ── */
+  /* ── the ground (look.md, Ground and depth). Dark: the reading room after hours, one warm lamp the card stock's tone.
+     Light (the film's theme since 23 November 2026): the same room by day, warm paper lit from above (see below). ── */
   --pool-x: 50%;
   --pool-y: 58%;
   --pool-w: 62%;
   --pool-h: 72%;
-  --pool: var(--bg-4);                 /* the lit centre of the table */
+  --lamp-orbs: var(--bg-4);            /* the lamp's tint when orbs are the subject */
+  --lamp-ui: var(--bg-3);              /* when the product's UI is */
+  --lamp-cool: color-mix(in oklab, var(--text) 9%, var(--bg-2));   /* the escalation (B10 to B14) */
+  --lamp-red: color-mix(in oklab, var(--red) 13%, var(--bg-3));    /* only where something is owed (B15) */
+  --lamp-red-close: color-mix(in oklab, var(--red) 10%, var(--bg-3));
+  --pool: var(--lamp-orbs);            /* the lit centre of the table */
   --pool-mid: var(--bg-2);             /* the reading room */
   --pool-edge: var(--bg-1);            /* the cabinet */
   --pool-far: var(--bg-0);             /* the drawer: the frame's corners */
-  --pool-tint: var(--pool);            /* a section may tint the light (red only where something is owed) */
 
   /* ── depth: plates, shadows, focus (look.md, Ground and depth) ── */
   --plate: var(--bg-3);
   --plate-edge: color-mix(in srgb, var(--text) 9%, transparent);         /* the 1px top light on a plate */
+  --plate-ring: inset 0 1px 0 var(--plate-edge);
   --plate-shadow: 0 36px 90px rgba(0, 0, 0, .46), 0 3px 9px rgba(0, 0, 0, .40);   /* the product's --shadow-pop, at the film's 2.25x */
+  --card-shadow: 0 24px 60px rgba(0, 0, 0, .35), 0 2px 6px rgba(0, 0, 0, .30);    /* a card on a plate */
+  --slab-shadow: 0 -20px 80px rgba(0, 0, 0, .35);                                  /* the dock's slab, lifting off the frame */
   --contact: rgba(0, 0, 0, .62);       /* the soft shadow an orb casts on the table */
+  --contact-soft: rgba(0, 0, 0, .20);  /* its penumbra */
+  --cursor-shadow: drop-shadow(0 4px 12px rgba(0, 0, 0, .25));
   --far-blur: 10px;                    /* one layer away from focus */
   --farther-blur: 18px;                /* two layers away */
+  --haze: brightness(.6);              /* two layers back: out of the lamp's reach (a value change, never an opacity) */
+  --focus-pull: brightness(.9);        /* T7: the outgoing frame, blurred, darkens 10% */
+  --far-dim: brightness(.85);          /* one layer back, out of focus */
+  --grain-opacity: .55;
 
   /* ── motion, in words and numbers: craft-bible part 3 (the film) and DESIGN-SYSTEM 11 (the product, shown faithfully) ── */
   --arrive: cubic-bezier(.16, 1, .3, 1);
   --travel: cubic-bezier(.83, 0, .17, 1);
   --snap: cubic-bezier(.87, 0, .13, 1);
   --depart: cubic-bezier(.5, 0, .75, 0);
+}
+
+/* ── the light theme (data-film-theme="light", with the product's Bone preset: look/src/theme.ts) ──
+   The room by day: warm paper (--bg-2) lit from above, the card stock's near-white (--bg-3) where the light falls, the
+   cabinet's tone (--bg-1) toward the edges and a little of the pressed tone (--bg-4) in the corners. Every neutral is
+   Bone's own, so nothing turns grey. The lamp keeps its place, size and tint from the scenes, but on a light ground a tint
+   only casts the light (28% into the card stock), so no tint written for the dark ground can darken the centre.
+   Shadows are Bone's own shadow colour (its --shadow-pop: rgba(40, 34, 26)), softer and warmer than black: a light frame
+   reads shadows as dirt when they are grey or heavy. */
+:root[data-film-theme="light"] {
+  --lamp-orbs: var(--bg-3);
+  --lamp-ui: var(--bg-1);
+  --lamp-cool: var(--bg-0);
+  --lamp-red: color-mix(in oklab, var(--red) 22%, var(--bg-3));
+  --lamp-red-close: color-mix(in oklab, var(--red) 16%, var(--bg-3));
+  --pool-mid: var(--bg-2);
+  --pool-edge: var(--bg-1);
+  --pool-far: color-mix(in oklab, var(--bg-1) 70%, var(--bg-4));
+
+  --plate-edge: var(--hair);
+  --plate-ring: inset 0 0 0 1px var(--hair);
+  --plate-shadow: 0 36px 90px rgba(40, 34, 26, .13), 0 3px 9px rgba(40, 34, 26, .09);
+  --card-shadow: 0 24px 60px rgba(40, 34, 26, .11), 0 2px 6px rgba(40, 34, 26, .08);
+  --slab-shadow: 0 -16px 64px rgba(40, 34, 26, .16);
+  --contact: rgba(40, 34, 26, .30);
+  --contact-soft: rgba(40, 34, 26, .09);
+  --cursor-shadow: drop-shadow(0 4px 12px rgba(40, 34, 26, .22));
+  --haze: brightness(1.1) saturate(.72);
+  --focus-pull: brightness(1.04) saturate(.88);
+  --far-dim: brightness(1.04) saturate(.9);
+  --grain-opacity: .55;
 }
 
 * { box-sizing: border-box; }
@@ -59,14 +104,19 @@ body { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; 
 
 /* the ground: a light pool on the table, falling off to the cabinet and the drawer in the corners */
 .ground {
+  /* declared here, not on :root, so a scene's --pool on its stage (or an act's --pool-tint on this element) is what the
+     gradient reads: a custom property is resolved where it is declared */
+  --pool-tint: var(--pool);            /* a section may tint the light (red only where something is owed) */
+  --pool-centre: var(--pool-tint);     /* where the gradient starts: the tint itself on the dark ground */
   position: absolute; inset: 0; z-index: -2;
   background:
     radial-gradient(var(--pool-w) var(--pool-h) at var(--pool-x) var(--pool-y),
-      var(--pool-tint) 0%, color-mix(in oklab, var(--pool-tint) 55%, var(--pool-mid)) 22%, var(--pool-mid) 46%, var(--pool-edge) 74%, var(--pool-far) 100%),
+      var(--pool-centre) 0%, color-mix(in oklab, var(--pool-centre) 55%, var(--pool-mid)) 22%, var(--pool-mid) 46%, var(--pool-edge) 74%, var(--pool-far) 100%),
     var(--pool-far);
 }
+:root[data-film-theme="light"] .ground { --pool-centre: color-mix(in oklab, var(--pool-tint) 28%, var(--bg-3)); }
 /* the grain: monochrome, 1px, about 3%. It lights the ground and dithers the gradient so the 8-bit encode does not band */
-.grain { position: absolute; inset: 0; z-index: 50; pointer-events: none; mix-blend-mode: soft-light; opacity: .55; }
+.grain { position: absolute; inset: 0; z-index: 50; pointer-events: none; mix-blend-mode: soft-light; opacity: var(--grain-opacity); }
 
 /* layers of depth: the ground moves at .3x the camera, the stage at 1x, the foreground at 1.3x (look.md) */
 .layer { position: absolute; inset: 0; }
@@ -101,7 +151,7 @@ body { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; 
 .orb orb-avatar { display: block; }
 /* the contact shadow: an ellipse under the orb, sized from it; the light is overhead and a little in front */
 .orb[data-shadow]::after { content: ''; position: absolute; z-index: -1; left: 50%; bottom: calc(var(--o) * -.15); width: calc(var(--o) * .78); height: calc(var(--o) * .13);
-  transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, var(--contact), transparent); filter: blur(calc(var(--o) * .025)); }
+  transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, var(--contact), var(--contact-soft) 62%, transparent); filter: blur(calc(var(--o) * .025)); }
 /* the attention flag at hero scale: the product's 8px dot with a 2px ring of the surface, scaled with the orb (R-orb-5) */
 /* the ring is a true cut: the orb is masked where the ring falls, so the ground itself shows through (the product draws the
    ring in the surface's colour; on a lit, graded ground only a cut matches it) */
@@ -116,7 +166,7 @@ body { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; 
   box-shadow: 0 0 0 calc(var(--o) * .03) var(--ring, var(--bg-2)); top: calc(var(--o) * (var(--fy) - .06)); right: calc(var(--o) * (var(--fx) - .06)); }
 
 /* ── plates: the product's surfaces, redrawn large ── */
-.plate { position: absolute; background: var(--plate); border-radius: 30px; box-shadow: inset 0 1px 0 var(--plate-edge), var(--plate-shadow); }
+.plate { position: absolute; background: var(--plate); border-radius: 30px; box-shadow: var(--plate-ring), var(--plate-shadow); }
 .plate--ground { background: var(--bg-2); }
 .plate--frame { background: var(--bg-1); }
 .plate--dock { background: var(--dock-bg); }
@@ -132,5 +182,5 @@ body { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; 
    of a shot, because dictation does not hear yet (truth.md, "must not claim") */
 
 /* the cursor: oversized, bone with an ink edge, a soft shadow; a click leaves a brass ring (you are here) */
-.cursor { position: absolute; width: 52px; height: 52px; filter: drop-shadow(0 4px 12px rgba(0, 0, 0, .35)); }
+.cursor { position: absolute; width: 52px; height: 52px; filter: var(--cursor-shadow); }
 .ring { position: absolute; border-radius: 50%; box-shadow: 0 0 0 3px var(--brass); }

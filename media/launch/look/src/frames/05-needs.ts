@@ -12,7 +12,7 @@ frame((s) => {
   s.style.setProperty('--pool-y', '62%');
   s.style.setProperty('--pool-w', '64%');
   s.style.setProperty('--pool-h', '80%');
-  s.style.setProperty('--pool-tint', 'color-mix(in oklab, var(--red) 13%, var(--bg-3))');
+  s.style.setProperty('--pool', 'var(--lamp-red)');
   s.append(h('style', '', `
     .ask { position: absolute; left: 1120px; top: 300px; width: 700px; display: flex; flex-direction: column; align-items: flex-start; }
     .ask__who { display: flex; align-items: baseline; gap: 26px; }
@@ -23,7 +23,7 @@ frame((s) => {
   const far: Array<[keyof typeof BOTS, number, number, [number, number]]> = [['kai', 1300, 176, [-30, -6]], ['moss', 1560, 158, [-32, -6]], ['vox', 1800, 196, [-34, -6]]];
   for (const [id, x, y, gaze] of far) {
     const o = orb(BOTS[id], { size: 128, x, y, reaction: 'listening', gaze, still: true, shadow: false });
-    o.style.filter = 'blur(9px) brightness(.6)';   /* two layers back: out of focus, and out of the lamp's reach */
+    o.style.filter = 'blur(9px) var(--haze)';   /* two layers back: out of focus, and out of the lamp's reach */
     s.append(o);
   }
 

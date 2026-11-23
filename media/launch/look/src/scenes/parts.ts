@@ -19,18 +19,21 @@ export const SCENE_CSS = `
 .dof-in { filter: blur(1.7px); }
 .ui-film .ui-entry { margin: 0; }
 .room-log { display: flex; flex-direction: column; gap: 32px; }
-.room-head { display: flex; align-items: center; gap: 14px; }
-.room-head .bt-p-name { margin: 0; font: 600 var(--fs-l)/var(--lh-tight) var(--sans); color: var(--text-strong); }
+/* the room's head is the product's own (.bt-presence.bt-ghead, bots.css: its grid puts the name on the margin's edge, over
+   the entries' bodies). Its ground is the room's --bg-2, invisible in the app; on the film's lit plate it would show as a
+   flat box, so it is clear here. The 9:16 column is a narrow window's: the product's rule for a window under 640 px (its
+   buttons take a row of their own under the name) is the film's there, because the film's viewport is never narrow. */
+.ui-film .room-head { background: transparent; }
+.stage[data-format="vertical"] .room-head.bt-ghead { grid-template-columns: auto minmax(0, 1fr); row-gap: var(--sp-2); }
+.stage[data-format="vertical"] .room-head.bt-ghead > .bt-p-actions { grid-column: 1 / -1; justify-self: end; }
 .ui-film .ui-disclosure { text-align: start; }
-.stage[data-format="vertical"] .room-head .bt-p-actions { display: none; }
-.room-head .bt-p-line { margin: 2px 0 0; font: 400 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); }
 .film-line { position: absolute; margin: 0; font: 600 92px/1.06 var(--sans); letter-spacing: -.024em; color: var(--text-strong); text-wrap: balance; }
 .film-line[data-align="center"] { left: 0; right: 0; text-align: center; }
 .stage[data-format="vertical"] .film-line { font-size: 104px; }
-.cursor { position: absolute; width: 48px; height: 59px; filter: drop-shadow(0 4px 12px rgba(0, 0, 0, .25)); z-index: 20; }
+.cursor { position: absolute; width: 48px; height: 59px; filter: var(--cursor-shadow); z-index: 20; }
 .cursor svg { display: block; width: 100%; height: 100%; }
 /* the boopis window at establishing scale: its own chrome, words as bars */
-.win { position: absolute; border-radius: 30px; background: var(--bg-1); overflow: hidden; box-shadow: inset 0 1px 0 var(--plate-edge), 0 32px 80px rgba(0,0,0,.40), 0 3px 9px rgba(0,0,0,.35); }
+.win { position: absolute; border-radius: 30px; background: var(--bg-1); overflow: hidden; box-shadow: var(--plate-ring), var(--plate-shadow); }
 .win__bar { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; padding: 0 22px; gap: 18px; color: var(--icon); }
 .win__bar svg { width: 24px; height: 24px; }
 .win__search { position: absolute; left: 50%; transform: translateX(-50%); border-radius: 999px; background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--hair); display: flex; align-items: center; gap: 14px; padding: 0 18px; }
@@ -49,15 +52,17 @@ export const SCENE_CSS = `
 .wbar--s { background: color-mix(in srgb, var(--text) 40%, transparent); }
 .wcomp { position: absolute; border-radius: 22px; background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair); }
 .wchip { display: inline-block; height: 26px; border-radius: 13px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--hair); }
+/* the dock's own session view (modules/dock), placed in a film slab instead of the app's fixed corner */
+.film-dock.dk { position: relative; left: auto; bottom: auto; width: max-content; height: auto; transition: none; pointer-events: none; z-index: auto; }
 .dock { position: absolute; background: var(--dock-bg); border-radius: 30px 30px 0 0; display: flex; align-items: center; justify-content: center; }
 .dock__plus { color: var(--ink-on-dock); opacity: .7; }
 /* a terminal and the other app: not boopis, so not the kit; dark plates from the tokens, nothing named */
-.term { position: absolute; border-radius: 18px; background: var(--bg-0); overflow: hidden; box-shadow: inset 0 0 0 1px var(--hair), 0 32px 80px rgba(0,0,0,.42); }
+.term { position: absolute; border-radius: 18px; background: var(--bg-0); overflow: hidden; box-shadow: inset 0 0 0 1px var(--hair), var(--plate-shadow); }
 .term__strip { height: 30px; background: var(--bg-1); box-shadow: inset 0 -1px 0 var(--hair); }
 .term__body { padding: 26px 34px; font: 400 30px/1.5 var(--mono); color: var(--text); white-space: pre; font-variant-numeric: tabular-nums; }
 .term__body .q { color: var(--text-quiet); }
 .term__body .p { color: var(--text-dim); }
-.app2 { position: absolute; border-radius: 26px; background: var(--bg-1); box-shadow: inset 0 1px 0 var(--plate-edge), 0 32px 80px rgba(0,0,0,.45); display: flex; flex-direction: column; gap: 16px; padding: 26px; }
+.app2 { position: absolute; border-radius: 26px; background: var(--bg-1); box-shadow: var(--plate-ring), var(--plate-shadow); display: flex; flex-direction: column; gap: 16px; padding: 26px; }
 .app2__msg { align-self: flex-start; max-width: 86%; padding: 14px 20px; border-radius: 20px; background: var(--bg-3); font: 400 32px/1.3 var(--sans); color: var(--text); }
 .app2__msg[data-you] { align-self: flex-end; background: color-mix(in oklab, var(--bg-3) 70%, var(--bg-4)); }
 .app2__msg .wbar { height: 12px; }
@@ -188,7 +193,7 @@ export function appWindow(o: WinOpts): HTMLElement {
     win.append(dock);
     sharpenOrbs(dock, 1);
   }
-  if (o.dim) win.style.filter = 'brightness(.94)';
+  if (o.dim) win.style.filter = 'var(--far-dim)';
   return win;
 }
 /** the room's thread drawn as bars inside a window's ground (orbs real, words bars) */

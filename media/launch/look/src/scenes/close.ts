@@ -8,7 +8,7 @@ const logoSvg = (o: object = {}): string => (window as unknown as { BoopisLogo: 
 export function b17(s: HTMLElement, v: boolean): void {
   s.style.setProperty('--pool-x', '50%'); s.style.setProperty('--pool-y', v ? '64%' : '72%'); s.style.setProperty('--pool-w', '70%'); s.style.setProperty('--pool-h', '80%');
   const back = appWindow({ x: v ? -200 : 160, y: v ? 500 : 120, w: v ? 1500 : 1600, h: v ? 1100 : 900, tab: 'bots', main: () => undefined });
-  back.style.filter = 'blur(24px) brightness(.9)';
+  back.style.filter = 'blur(24px) var(--focus-pull)';
   s.append(back);
   s.append(filmLine(v ? 'Your AI plans,<br>on one {team}' : 'Your AI plans, on one {team}', { y: v ? 420 : 240, size: v ? 104 : 96 }));
   s.append(orb(BOTS.nina, { size: v ? 420 : 360, x: v ? 540 : 960, y: v ? 1180 : 720, reaction: 'happy', gaze: [0, 16], still: true }));
@@ -47,11 +47,11 @@ export function b18(s: HTMLElement, v: boolean): void {
   void eyes;
 }
 
-/** B19 at 45.3 s: the end card. (a) with the repository's address; (b) without it, the tagline set as its own line under
-    the wordmark, outside its protection area. Both carry the platforms. */
-export function endCard(s: HTMLElement, v: boolean, extra: 'url' | 'tagline' | 'none'): void {
+/** B19 at 45.3 s: the end card, variant (b), the owner's (SC/decisions.md 2): the wordmark, the tagline set as its own line
+    well below it (outside its protection area), and the platforms. No address and no handle, anywhere. */
+export function endCard(s: HTMLElement, v: boolean, extra: 'tagline' | 'none'): void {
   s.style.setProperty('--pool-x', '50%'); s.style.setProperty('--pool-y', '46%'); s.style.setProperty('--pool-w', '130%'); s.style.setProperty('--pool-h', '140%');
-  s.style.setProperty('--pool', 'var(--bg-3)');
+  s.style.setProperty('--pool', 'var(--lamp-orbs)');
   const typeSize = v ? 170 : 200;
   const logo = document.createElement('boopis-logo');
   logo.setAttribute('blink', 'off'); logo.setAttribute('gaze', 'off');
@@ -59,13 +59,10 @@ export function endCard(s: HTMLElement, v: boolean, extra: 'url' | 'tagline' | '
   const top = v ? 820 - typeSize * 0.55 : 500 - typeSize * 0.6;
   s.append(h('div', '', '', { position: 'absolute', left: '0', right: '0', top: Math.round(top) + 'px', display: 'flex', 'justify-content': 'center', color: 'var(--text-strong)' }));
   (s.lastElementChild as HTMLElement).append(logo);
-  const lines = extra === 'url'
-    ? '<p style="margin:0;font:500 ' + (v ? 46 : 44) + 'px/1.2 var(--mono);color:var(--text-strong)">github.com/aphesist/boopis</p>'
-    : extra === 'tagline' ? '<p style="margin:0;font:500 ' + (v ? 56 : 52) + 'px/1.15 var(--sans);letter-spacing:-.012em;color:var(--text)">Your AI plans, on one team</p>' : '';
+  const lines = extra === 'tagline' ? '<p style="margin:0;font:500 ' + (v ? 56 : 52) + 'px/1.15 var(--sans);letter-spacing:-.012em;color:var(--text)">Your AI plans, on one team</p>' : '';
   s.append(h('div', '', lines + '<p style="margin:0;font:400 40px/1.3 var(--sans);color:var(--text-quiet)">For Linux, and early on Windows</p>', {
     position: 'absolute', left: '0', right: '0', top: (v ? 1060 : 760) + 'px', display: 'flex', 'flex-direction': 'column', 'align-items': 'center', gap: '16px', 'text-align': 'center'
   }));
   void customElements.whenDefined('boopis-logo').then(() => setTimeout(() => logo.look(0.3, 0.16), 300));
 }
-export const b19a = (s: HTMLElement, v: boolean): void => endCard(s, v, 'url');
 export const b19b = (s: HTMLElement, v: boolean): void => endCard(s, v, 'tagline');

@@ -18,6 +18,7 @@ import './film.css';
 import '@ui/vendor/orb-avatar.min.js';
 import '@ui/vendor/boopis-logo.js';
 import { markOf } from '@ui/src/components/signin-button';
+import { FILM_THEME, GRAIN } from './theme';
 import { lookAttrs } from '@ui/src/components/look';
 
 /* orb2 lowers its own canvas resolution when frames run long (quality "auto"); a film frame is drawn once, at full
@@ -41,11 +42,12 @@ export const ROOM = { name: 'release', members: [BOTS.kai, BOTS.nina, BOTS.moss,
 export const botById = (id: string): FilmBot | undefined => (BOTS as Record<string, FilmBot>)[id];
 
 /* ── the labs' marks inside a film line or on a plan line: the labs' own files as the app's sign-in buttons draw them
-   (components/signin-button.ts), never recoloured: Claude keeps #D97757, the others are their white files. Beside a model
-   name inside the UI the kit draws its own mono marks (DESIGN-SYSTEM 10.1). ── */
+   (components/signin-button.ts), never recoloured: Claude keeps #D97757, the others are their black files on the light
+   theme and their white files on the dark one (the button shows "the one that reads"). Beside a model name inside the UI
+   the kit draws its own mono marks (DESIGN-SYSTEM 10.1). ── */
 export function labSvg(lab: Lab): string {
   const m = markOf(lab);
-  return 'colour' in m ? m.colour : m.white;
+  return 'colour' in m ? m.colour : FILM_THEME === 'light' ? m.black : m.white;
 }
 
 /* ── elements ── */
@@ -123,7 +125,7 @@ export function typeset(text: string): string {
 export const labLine = (b: FilmBot, text: string = b.labName): string => '<span class="lab"><span class="lab__mark">' + labSvg(b.lab) + '</span>' + text + '</span>';
 
 /** a seeded grain canvas over the whole stage (deterministic: the same frame renders the same pixels) */
-export function grain(stage: HTMLElement, seed = 7): void {
+export function grain(stage: HTMLElement, seed = 7, amp = GRAIN[FILM_THEME].amp): void {
   const w = stage.offsetWidth, ht = stage.offsetHeight;
   const c = document.createElement('canvas');
   c.className = 'grain'; c.width = w; c.height = ht;
@@ -133,7 +135,7 @@ export function grain(stage: HTMLElement, seed = 7): void {
   let s = seed >>> 0;
   const rnd = (): number => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   for (let i = 0; i < img.data.length; i += 4) {
-    const v = 128 + (rnd() + rnd() - 1) * 46;
+    const v = 128 + (rnd() + rnd() - 1) * amp;
     img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255;
   }
   g.putImageData(img, 0, 0);

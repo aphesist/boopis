@@ -10,9 +10,9 @@ frame((s) => {
   s.style.setProperty('--pool-y', '64%');
   s.style.setProperty('--pool-w', '70%');
   s.style.setProperty('--pool-h', '84%');
-  s.style.setProperty('--pool', 'var(--bg-3)');
+  s.style.setProperty('--pool', 'var(--lamp-ui)');
   s.append(h('style', '', SCENE_CSS + `
-    .fold-card { position: absolute; left: 0; right: 0; border-radius: 30px; box-shadow: inset 0 1px 0 var(--plate-edge), 0 24px 60px rgba(0,0,0,.42), 0 2px 6px rgba(0,0,0,.35); overflow: hidden; }
+    .fold-card { position: absolute; left: 0; right: 0; border-radius: 30px; box-shadow: var(--plate-ring), var(--card-shadow); overflow: hidden; }
     .fold-card .ui-film { padding: 10px 14px 12px; }
     .fold-card .bt-hmsg::after { display: none; }
     .fold-stack { position: absolute; z-index: 1; left: 330px; width: 1260px; top: 0; height: 1080px; }

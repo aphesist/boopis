@@ -1,7 +1,11 @@
 /* The film page. Units are 1080p CSS px; 4K is the same page at deviceScaleFactor 2. Colours come from the product's
-   tokens (apps/desktop/ui/src/styles/tokens.css, loaded by the kit) or are mixed from them. */
+   tokens (apps/desktop/ui/src/styles/tokens.css, loaded by the kit) or are mixed from them. The film is in the product's
+   light theme, the Bone preset (look/src/theme.ts, loaded by engine/kit.ts); the rules under :root[data-film-theme="light"]
+   are its light defaults, the plain rules the old dark ones (?theme=dark). */
 
 html, body { margin: 0; padding: 0; background: #050505; overflow: hidden; }
+/* the light theme (look/src/theme.ts): around the stage, the product's light paper */
+:root[data-film-theme="light"], :root[data-film-theme="light"] body { background: var(--bg-1); }
 body { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; font-kerning: normal; }
 
 .film-host { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
@@ -20,6 +24,16 @@ body { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; 
   background: var(--film-ground-edge);
   font-family: var(--sans); color: var(--text-strong);
   font-variant-numeric: tabular-nums;
+}
+/* the light theme's ground (the film's: look/src/theme.ts): the product's warm paper (Bone's --bg-2) lit to its card stock
+   (--bg-3) at the pool and falling to --bg-1 at the edges. Never flat white, never a tint: a brass pool would muddy a
+   light ground, so the light here is the paper itself, brighter. The look's own ground (look/src/film.css .ground) is
+   the same light; a scene that uses the look draws that one instead. */
+:root[data-film-theme="light"] .film-stage {
+  --film-ground: var(--bg-2);
+  --film-ground-edge: var(--bg-1);
+  --film-pool: var(--bg-3);
+  --film-pool-strength: 85%;
 }
 .film-ground, .film-world, .film-screen { position: absolute; inset: 0; transform-origin: 0 0; }
 .film-ground { pointer-events: none; }
@@ -43,6 +57,8 @@ body { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; 
 
 /* the cursor (motion/cursor.ts) */
 .film-cursor { position: absolute; left: 0; top: 0; width: 48px; height: 48px; pointer-events: none; transform-origin: 6px 4px; filter: drop-shadow(0 4px 12px rgba(0, 0, 0, .25)); }
+/* on the light ground the cursor's shadow is Bone's shadow colour (its --shadow-pop ink), softer: black reads as dirt */
+:root[data-film-theme="light"] .film-cursor { filter: drop-shadow(0 4px 12px rgba(40, 34, 26, .22)); }
 
 /* the film orb (engine/orb.ts) */
 .film-orb { display: block; overflow: visible; }

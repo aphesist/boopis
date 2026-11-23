@@ -15,6 +15,7 @@
    Importing this module loads the look's stylesheets for the whole page (its film.css sets box-sizing on everything,
    as the style frames have it), so only scenes that use the look import it. */
 import { BOTS, ROOM, botById, grain as lookGrain } from '../../look/src/stage';
+import { FILM_THEME, GRAIN } from '../../look/src/theme';
 import { BEATS as KEY_FRAMES } from '../../look/src/scenes/beats';
 import { SCENE_CSS } from '../../look/src/scenes/parts';
 import { neutralise } from './kit';
@@ -34,9 +35,10 @@ export function lookGround(film: Film, stage: Stage, o: { seed?: number } = {}):
   g.style.inset = '-40%';
   stage.ground.appendChild(g);
   const seed = o.seed ?? 7;
-  /* the look's grain: mid-grey noise in soft-light at 55%. The renderer adds it to every finished frame, changing per
-     frame; a preview shows the look's own (still) grain canvas */
-  film.grain = { kind: 'look', seed, opacity: 0.55, amp: 46 };
+  /* the look's grain: mid-grey noise in soft-light at 55%, wider on the light ground (soft-light barely moves values near
+     white; look/src/theme.ts GRAIN). The renderer adds it to every finished frame, changing per frame; a preview shows
+     the look's own (still) grain canvas, drawn with the same amplitude */
+  film.grain = { kind: 'look', seed, ...GRAIN[FILM_THEME] };
   if (!new URLSearchParams(location.search).has('nograin')) {
     const holder = document.createElement('div');
     holder.style.cssText = 'position:absolute;inset:0;width:' + stage.width + 'px;height:' + stage.height + 'px';
@@ -93,9 +95,18 @@ export function swapOrbs(film: Film, root: ParentNode, o: { pose?: Partial<OrbPo
     const eyes = a.getAttribute('eye-shape') ?? REACTION_EYES[reaction] ?? 'pill';
     const orb = new FilmOrb({ shape: a.getAttribute('shape') ?? 'circle', color: a.getAttribute('color') ?? '#f1efe9', eyeColor: a.getAttribute('eye-color') }, size,
       { eyes, yaw: Number.isFinite(gaze[0]) ? gaze[0]! : 8, pitch: Number.isFinite(gaze[1]) ? gaze[1]! : 5, ...o.pose });
+    /* the holder takes the orb's own box: its display, position and alignment as the kit's CSS computed them. Inside the
+       kit's .ui-orb the orb is display:block (components.css), so the .ui-orb keeps no line box and its baseline stays
+       at its bottom edge, which is what the mention chip, the bylines and the rows align to. An inline-block holder with
+       vertical-align:middle there made a line box inside the .ui-orb, moved its baseline and dropped the chip 13.7 px
+       below the text at 3x (the owner's act 1 frame). Bare orbs keep their :host box (inline-block, middle). */
+    const cs = getComputedStyle(a);
     const holder = document.createElement('span');
     holder.className = 'film-orb-holder';
-    holder.style.cssText = 'display:inline-block;position:relative;width:' + size + 'px;height:' + size + 'px;line-height:0;vertical-align:middle';
+    holder.style.cssText = 'display:' + (cs.display === 'inline' ? 'inline-block' : cs.display) + ';position:' + (cs.position === 'static' ? 'relative' : cs.position) +
+      ';width:' + size + 'px;height:' + size + 'px;line-height:0;vertical-align:' + cs.verticalAlign + ';flex:none';
+    if (cs.position === 'absolute') { holder.style.left = a.style.left || '0'; holder.style.top = a.style.top || '0'; }
+    if (cs.transform !== 'none') { holder.style.transform = cs.transform; holder.style.transformOrigin = cs.transformOrigin; }
     if (a.style.zoom) holder.style.zoom = a.style.zoom;
     holder.appendChild(orb.el);
     a.replaceWith(holder);

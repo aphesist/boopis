@@ -24,7 +24,7 @@ export function b01(s: HTMLElement, v: boolean): void {
 
 /** B02 at 4.4 s: the app's four sign-in buttons settled in their column, the promise above them */
 export function b02(s: HTMLElement, v: boolean): void {
-  pool(s, '50%', v ? '48%' : '62%', v ? '100%' : '60%', v ? '60%' : '80%', 'var(--bg-3)');
+  pool(s, '50%', v ? '48%' : '62%', v ? '100%' : '60%', v ? '60%' : '80%', 'var(--lamp-ui)');
   s.append(filmLine(v ? 'Bring the plans<br>you {already} pay for' : 'Bring the plans you {already} pay for', { y: v ? 300 : 216, size: v ? 104 : 92 }));
   const col = h('div', '', '', { display: 'flex', 'flex-direction': 'column', gap: '10px', width: '316px' });
   for (const brand of ['chatgpt', 'github', 'claude', 'xai'] as const) col.insertAdjacentHTML('beforeend', ui.html.signinButton({ brand }));
@@ -36,10 +36,10 @@ export function b02(s: HTMLElement, v: boolean): void {
 /** B03 at 6.0 s: the buttons have become the four cast cards; the eyes are opening card by card (two awake, one waking,
     one still asleep) */
 export function b03(s: HTMLElement, v: boolean): void {
-  pool(s, '50%', v ? '50%' : '60%', v ? '100%' : '64%', v ? '60%' : '86%', 'var(--bg-3)');
+  pool(s, '50%', v ? '50%' : '60%', v ? '100%' : '64%', v ? '60%' : '86%', 'var(--lamp-ui)');
   s.append(h('style', '', `
     .castcard { position: absolute; width: 880px; display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 32px; padding: 0 36px; border-radius: 24px;
-      background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair), inset 0 1px 0 var(--plate-edge), 0 24px 60px rgba(0,0,0,.35); }
+      background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair), var(--card-shadow); }
     .castcard .nm { font: 600 38px/1.15 var(--sans); color: var(--text-strong); letter-spacing: -.01em; }
     .castcard .rl { font: 400 29px/1.3 var(--sans); color: var(--text-quiet); }
     .castcard .pl { display: flex; align-items: center; gap: 12px; margin-top: 4px; font: 400 29px/1.3 var(--mono); color: var(--text-dim); }

@@ -4,12 +4,13 @@ import { BOTS, filmUI, h } from '../stage';
 import { agentEntry, appWindow, barRoom, cursor, filmLine, governance, otherApp, sessionComposer, terminal, youEntry } from './parts';
 import type { Step } from './parts';
 
-const pool = (s: HTMLElement, x: string, y: string, w = '86%', hh = '90%', c = 'var(--bg-3)'): void => {
+const pool = (s: HTMLElement, x: string, y: string, w = '86%', hh = '90%', c = 'var(--lamp-ui)'): void => {
   s.style.setProperty('--pool-x', x); s.style.setProperty('--pool-y', y); s.style.setProperty('--pool-w', w); s.style.setProperty('--pool-h', hh);
   s.style.setProperty('--pool', c);
 };
-/** the escalation's light: the lamp cools toward the text's own ink (a tint of a token, not a new colour) */
-const COOL = 'color-mix(in oklab, var(--text) 9%, var(--bg-2))';
+/** the escalation's light (film.css --lamp-cool): on the light ground the least warm of Bone's whites, on the dark one the
+    lamp cooled toward the text's own ink */
+const COOL = 'var(--lamp-cool)';
 
 const roomBars = (main: HTMLElement, w: number, hh: number, k: number): void => {
   barRoom(main, w, k, [['you', [44]], [BOTS.kai, [92, 58]], ['huddle', [70]], ['you', [36]], [BOTS.nina, [80]]]);
@@ -48,7 +49,7 @@ const S2: Step[] = [...S1,
   { title: 'npm test', mono: true, meta: ['passed'] }];
 
 function sessionScene(s: HTMLElement, v: boolean, climbed: boolean): void {
-  pool(s, v ? '50%' : '40%', '50%', '90%', '96%', climbed ? COOL : 'var(--bg-3)');
+  pool(s, v ? '50%' : '40%', '50%', '90%', '96%', climbed ? COOL : 'var(--lamp-ui)');
   const X = 2.6;
   /* the ground and the panel, the panel's frame a step darker (bg-1), as the app's right panel */
   if (v) {
@@ -88,7 +89,7 @@ export function b11(s: HTMLElement, v: boolean): void {
     return;
   }
   const t = terminal({ x: 110, y: 170, w: 760, h: 520, lines: '<span class="p">$</span> ' });
-  t.style.filter = 'brightness(.9)';
+  t.style.filter = 'var(--far-dim)';
   s.append(t);
   const w = 1120, k = w / 1280;
   s.append(appWindow({ x: 600, y: 250, w, h: Math.round(w * 0.5625), tab: 'bots', main: (m, mw, mh) => roomBars(m, mw, mh, k) }));

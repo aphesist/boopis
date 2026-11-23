@@ -7,7 +7,7 @@ import { T, botEntry, cursor, filmLine, huddle, like, roomComposer, roomHead, yo
 
 const pool = (s: HTMLElement, x: string, y: string, w = '80%', hh = '90%'): void => {
   s.style.setProperty('--pool-x', x); s.style.setProperty('--pool-y', y); s.style.setProperty('--pool-w', w); s.style.setProperty('--pool-h', hh);
-  s.style.setProperty('--pool', 'var(--bg-3)');
+  s.style.setProperty('--pool', 'var(--lamp-ui)');
 };
 /** the presence entry as the room draws it, its clock drawn as a short bar (no digits on screen) */
 export function presence(actors: PresenceActor[]): HTMLElement {
@@ -34,9 +34,12 @@ export function b04(s: HTMLElement, v: boolean): void {
   pool(s, '50%', '50%');
   plate(s, v);
   const X = v ? 2.6 : 3, L = v ? 60 : 130, W = v ? 370 : 556;
-  const head = filmUI(roomHead(), { x: L, y: v ? 250 : 64, scale: X, width: W });
+  const head = filmUI(roomHead(), { x: L, y: v ? 230 : 40, scale: X, width: W });
+  if (v) head.inner.dataset['margin'] = 'off';
   s.append(head.outer);
-  s.append(column([youEntry(...T.ask), presence([{ id: 'kai', bot: like(BOTS.kai), status: 'thinking' }])], { x: L, y: v ? 520 : 340, width: W, scale: X, narrow: v }));
+  /* the thread starts where the head ends, as in the room (the head's own bottom padding is the gap) */
+  const top = Math.round(head.outer.getBoundingClientRect().bottom - s.getBoundingClientRect().top);
+  s.append(column([youEntry(...T.ask), presence([{ id: 'kai', bot: like(BOTS.kai), status: 'thinking' }])], { x: L, y: top, width: W, scale: X, narrow: v }));
   const comp = filmUI(roomComposer(), { x: L, y: v ? 1330 : 740, scale: X, width: W });
   s.append(comp.outer);
   const send = comp.outer.querySelector<HTMLElement>('.ui-send')?.getBoundingClientRect();

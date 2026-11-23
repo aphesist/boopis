@@ -6,7 +6,14 @@
    a clock: CSS transitions and keyframes (one stylesheet), Web Animations the kit starts from script (cancelled on every
    seek, see film.ts), and the orbs' own frame loop (every <orb-avatar> is made `static`; a film orb is drawn by its pose,
    see orb.ts). The orb worker is never started: the film does not call the kit's `setupOrbs()`, so no OffscreenCanvas
-   worker and no worker clock exist on the page. The glance timers (`startGlance`) and tooltips are never enabled. */
+   worker and no worker clock exist on the page. The glance timers (`startGlance`) and tooltips are never enabled.
+
+   The theme: the film is in the product's light theme, the Bone preset, put on the page by the app's own theme module
+   (look/src/theme.ts, imported first so that no later import can apply another). It sets the product's attributes on
+   <html> (data-hx-preset="bone", data-hx-theme="light") and the film's own data-film-theme="light", which only the film's
+   CSS reads (src/film.css, look/src/film.css: the ground, the lamp, shadows, grain). `?theme=dark` gives the old dark
+   look for comparison. */
+import '../../look/src/theme';
 import '@fontsource/libre-franklin/latin-400.css';
 import '@fontsource/libre-franklin/latin-500.css';
 import '@fontsource/libre-franklin/latin-600.css';
@@ -58,7 +65,8 @@ const mounted: { el: HTMLElement; zoom: number }[] = [];
 export interface MountOpts {
   /** the kit's real size times this (default 2.6), laid out at that size (CSS zoom: text and corners stay vectors) */
   zoom?: number;
-  /** a theme preset of the product's tokens (catalog, graphite, typewriter, bone); default the app's own */
+  /** a theme preset of the product's tokens (catalog, graphite, typewriter, bone) for this component only; default the
+      film's (bone, see look/src/theme.ts). A different preset here breaks the film's one theme: leave it out. */
   preset?: string;
   /** a width for the component at its real size (before zoom) */
   width?: number;

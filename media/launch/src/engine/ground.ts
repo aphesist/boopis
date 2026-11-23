@@ -12,7 +12,12 @@
 
    Speed: the light is a CSS gradient on its own layer moved by transform (no repaint), and the grain is six small
    pre-drawn tiles picked by frame number (no full-frame canvas fill per frame: the trap the scout measured). In a
-   render the page draws no grain (?nograin) and the renderer adds the same tiles to each finished frame. */
+   render the page draws no grain (?nograin) and the renderer adds the same tiles to each finished frame.
+
+   The light theme (look/src/theme.ts, the film's): the ground is the product's light paper, --bg-2 lit to --bg-3 at the
+   pool and falling to --bg-1 (src/film.css), and the grain is the look's (mid-grey noise in soft-light): white grain at
+   2.5% cannot move a value near white by even one code value, so it would neither light nor dither the light ground. */
+import { FILM_THEME, GRAIN } from '../../look/src/theme';
 import type { Film } from './film';
 import type { Stage } from './stage';
 import { rng } from './rng';
@@ -34,12 +39,14 @@ export function ground(film: Film, stage: Stage, o: GroundOpts = {}): void {
   const seed = o.seed ?? 7, alpha = Number(getComputedStyle(stage.root).getPropertyValue('--film-grain-alpha')) || 0.025;
   /* the renderer adds the grain itself, after the capture (tools/lib/grain.mjs, the same tiles from the same seed): a
      page without grain captures and compresses about twice as fast. The page draws it for previews and style frames. */
-  film.grain = { seed, alpha };
-  if (!new URLSearchParams(location.search).has('nograin')) grain(film, stage, seed);
+  const light = FILM_THEME === 'light';
+  film.grain = light ? { kind: 'look', seed, ...GRAIN.light } : { seed, alpha };
+  if (!new URLSearchParams(location.search).has('nograin')) grain(film, stage, seed, light);
 }
 
-/** six seeded 256 px tiles; frame n shows tile n mod 6 at an offset from the same seed (deterministic) */
-function grain(film: Film, stage: Stage, seed: number): void {
+/** six seeded 256 px tiles; frame n shows tile n mod 6 at an offset from the same seed (deterministic). Light: the tiles
+    are mid-grey noise blended soft-light, as the renderer's look grain (a preview of it, not the same pixels) */
+function grain(film: Film, stage: Stage, seed: number, light = false): void {
   const N = 6, S = 256;
   const tiles: string[] = [];
   const r = rng(seed);
@@ -49,15 +56,20 @@ function grain(film: Film, stage: Stage, seed: number): void {
     const ctx = c.getContext('2d')!;
     const img = ctx.createImageData(S, S);
     for (let i = 0; i < img.data.length; i += 4) {
-      const v = r();
-      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
-      img.data[i + 3] = Math.round(v * 255);
+      if (light) {
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.max(0, Math.min(255, Math.round(128 + (r() + r() - 1) * GRAIN.light.amp)));
+        img.data[i + 3] = 255;
+      } else {
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+        img.data[i + 3] = Math.round(r() * 255);
+      }
     }
     ctx.putImageData(img, 0, 0);
     tiles.push('url(' + c.toDataURL('image/png') + ')');
   }
   const el = document.createElement('div');
   el.className = 'film-grain';
+  if (light) { el.style.mixBlendMode = 'soft-light'; el.style.opacity = String(GRAIN.light.opacity); }
   stage.screen.appendChild(el);
   const pos = rng(seed + 1);
   const offsets = Array.from({ length: 64 }, () => [Math.floor(pos() * S), Math.floor(pos() * S)] as const);
