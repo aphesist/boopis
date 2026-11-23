@@ -1601,6 +1601,20 @@
       "rule": "one component; width fixed; content clipped to the slab path; same-component QA blocks drift"
     },
     "presence": "hidden until the person has a bot of their own (boopis alone does not count); arrival: composer up 200ms, slab rises 200ms --ease-sharp, orbs pop 100ms 40ms apart; departure when the last own bot is deleted: close panels, slab sinks 200ms, composer down to 24px",
-    "orbs": "ORBS.md: idle bots hold the sidebar's fixed three-quarter pose (exact pose: ORBS.md section 23; provisional gaze 32/4 degrees); the hovered bot comes alive face-on and settles back; bots in a state animate; stills at rest; sharp renderer (C1-C3, C6, C7, C9, C10), face-scale 1.25 (<=44px), row 40px; boopis not special"
+    "orbs": "ORBS.md §23: at rest the fixed pose (hidden reaction 'pose', no blink; reaction=pose idle-motion=off mode=drift; eyaw .50, epitch .45 (.30 lobed: cloud clover flower star), eroll .55, bodyRoll .05; body .27 rad); a state plays and blends back (0.38s); hover wakes lively (about 0.7s) and settles back; stills at rest; tuned orb2 build; face-scale 1.25; row 40px; boopis not special"
+  },
+  "orb_pose": {
+    "source": "ORBS.md §23 (w31/bot-character 894d9b85, f5f95f3d)",
+    "surfaces": "dock, Bots sidebar, rail, the 44px main bot: at rest",
+    "reaction": "pose (hidden, blink false, face pairEyes(eye || 'pill'))",
+    "motion": {
+      "eyaw": 0.5,
+      "epitch": 0.45,
+      "epitch_lobed": 0.3,
+      "eroll": 0.55,
+      "bodyRoll": 0.05,
+      "w": 1
+    },
+    "attributes": "reaction=pose idle-motion=off mode=drift face-scale=1.25"
   }
 }
