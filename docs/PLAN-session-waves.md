@@ -175,3 +175,4 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - Much more motion in onboarding, closer to Grok-Bot: bots look to the sides, turn, bob their heads.
 - The bots must look sharper, clearer, vivid and snappy (Grok's look crisper than ours): character pass on the orbs.
 - The main boopis bot is visibly bigger in the open Bots sidebar, like Grok-Bot's main bot (closed rail size is fine).
+- Owner: in Sessions, Auto uses the approval rules (only the rules ask); Full access is the only step that never asks. Recorded in w32/session-specs b2b5a62b.
