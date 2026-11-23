@@ -7,6 +7,8 @@ export const SCENES: Record<string, () => Promise<{ default: Scene }>> = {
   kit: () => import('./kit-sheet'),
   /* the motion-blur self-test's moves (tools/render-selftest.mjs) */
   blurtest: () => import('../engine/blurtest'),
+  /* the character layer and the line helpers at work (engine/craftdemo.ts) */
+  craft: () => import('../engine/craftdemo'),
   board: () => import('./board'),
   /* the film and its views (src/scenes/film.ts) */
   film: () => import('./film').then((m) => ({ default: m.editScene('master') })),
