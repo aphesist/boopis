@@ -133,7 +133,7 @@ export function selfEdit(film: Film, line: HTMLElement, edits: Edit[], o: SelfEd
   }
   line.appendChild(caret);
   const pad = 0.06;   /* em of air either side of a selected word */
-  const linger = (o.linger ?? 18) * f, leave = 8 * f, arriveIn = 6 * f;
+  const linger = (o.linger ?? 18) * f, leave = 8 * f, arriveIn = 8 * f;
   const endOf = (el: HTMLElement): [number, number, number] => [el.offsetLeft + el.offsetWidth, el.offsetTop, el.offsetHeight];
   const startOf = (el: HTMLElement): [number, number, number] => [el.offsetLeft, el.offsetTop, el.offsetHeight];
   const smooth = (x: number): number => { const u = Math.max(0, Math.min(1, x)); return u * u * (3 - 2 * u); };
@@ -153,7 +153,8 @@ export function selfEdit(film: Film, line: HTMLElement, edits: Edit[], o: SelfEd
       }
     }
     /* the caret: at the end of the selection, then of what is typed; travelling between edits; in and out */
-    let i = plans.findIndex((_, k) => t < (plans[k + 1]?.sel0 ?? Infinity) - arriveIn);
+    /* the edit the caret belongs to: the last one started (the travel toward the next is the end of this one) */
+    let i = plans.findIndex((_, k) => t < (plans[k + 1]?.sel0 ?? Infinity));
     if (i < 0) i = plans.length - 1;
     const p = plans[i]!, next = plans[i + 1];
     const here = (q: Plan): [number, number, number] => (t < q.type0 ? endOf(q.old) : endOf(q.neu));
