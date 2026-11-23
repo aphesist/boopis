@@ -3,8 +3,9 @@
 //!
 //! - **Made for another OS** (ADR-0042). A skill names the systems it works on in its `SKILL.md` front matter
 //!   (`platforms: [macos]`); the engine leaves such a skill out of the prompt on any other system, but still lists it as on
-//!   (`profiles.describe`), so a Linux bot shows `apple-notes` and `imessage` switched on. Switched off when
-//!   boopis makes a bot, and once for the bots that exist. A skill with no `platforms` works everywhere; a value this reader does not understand leaves the skill as it is.
+//!   (`profiles.describe`), so a Linux bot shows `apple-notes` and `imessage` switched on. Switched off whenever a bot is
+//!   prepared, so one an engine update brings is switched off too. A skill with no `platforms` works everywhere; a value this
+//!   reader does not understand leaves the skill as it is.
 //! - **Outside the bots' default index** (ADR-0046). Every engine-bundled skill sits in every prompt's skill index; a bot keeps
 //!   only the ones `apps/shared/data/bot-skills.json` names, switched off when boopis makes the bot and once for the bots that
 //!   exist. Only the engine's bundled skills (its own list, `skills/.bundled_manifest`) are ever switched off this way.

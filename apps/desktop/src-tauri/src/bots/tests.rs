@@ -882,3 +882,29 @@ async fn a_bot_gets_the_default_skills_once_and_keeps_what_was_switched_on_since
     let again = service.prepare(&layout, "sol", false).await.unwrap();
     assert!(again.skills_off.is_empty());
 }
+
+#[tokio::test]
+async fn a_skill_for_another_os_that_arrives_later_is_switched_off_at_the_next_preparation() {
+    let fake = Fake::new();
+    let home = owners_home(&fake);
+    let layout = layout_of(&home, Strategy::here());
+    repair(&fake, &layout).await.unwrap();
+    // an engine update brings a new bundled skill made for macOS into moss's home; the bot had its default skills already
+    let moss = home.bot("moss");
+    std::fs::create_dir_all(moss.join("skills/apple/findmy")).unwrap();
+    std::fs::write(
+        moss.join("skills/apple/findmy/SKILL.md"),
+        "---\nplatforms: [macos]\n---\n",
+    )
+    .unwrap();
+    let mut view = RootView::read(&fake, &home.root).await.unwrap();
+    let done = prepare(&fake, &layout, &mut view, "moss", Ask::default())
+        .await
+        .unwrap();
+    assert_eq!(done.skills_off, vec!["findmy".to_owned()]);
+    assert!(!done.skills_given, "not asked for the default index again");
+    assert_eq!(
+        fake.get(&moss, "skills.disabled"),
+        Some(json!(["apple-notes", "arxiv", "imessage", "findmy"]))
+    );
+}

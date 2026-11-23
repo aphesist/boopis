@@ -9,8 +9,8 @@
 //! 1. the plugins: boopis and every plugin the runtime carries, linked or copied into `<bot>/plugins/` (`links`);
 //! 2. its configuration, through the engine's own CLI in the bot's home: the root's secret-source wiring
 //!    (`secrets.boopis_host`), the three settings the user agreed to in setup, the plugin's `hx_path`, its mode (the bot's
-//!    Governed switch, which is opt-in) and a ladder of the bot's own model when that model is frontier; on a new bot, its
-//!    skills made for another OS and the engine's bundled skills outside the bots' default index switched off (`skills`);
+//!    Governed switch, which is opt-in) and a ladder of the bot's own model when that model is frontier; its skills made for
+//!    another OS switched off and, on a new bot, the engine's bundled skills outside the bots' default index (`skills`);
 //! 3. `plugins enable boopis` in the bot's home, which also makes the running gateway load it;
 //! 4. in the root, `hosted_rooms.profiles.<bot>` = the bot's home, so a group can seat it (the engine's
 //!    `session_hosted_members`; `release` removes it when the bot is archived or deleted);
@@ -254,8 +254,8 @@ impl RootView {
 pub struct Ask {
     /// The bot's Governed switch, as its record says (opt-in: `false` when the record says nothing).
     pub governed: bool,
-    /// A bot that has not had the default skill index yet (made just now, or made before the index): its skills made for
-    /// another OS and the engine's bundled skills outside the index are switched off.
+    /// A bot that has not had the default skill index yet (made just now, or made before the index): the engine's bundled
+    /// skills outside it are switched off. Its skills for another OS are switched off whatever this says.
     pub fresh: bool,
 }
 
@@ -602,9 +602,8 @@ pub async fn prepare(
         &mut done,
     )
     .await;
-    let mut off = Vec::new();
+    let mut off = skills::for_other_systems(&home, &layout.system);
     if ask.fresh {
-        off = skills::for_other_systems(&home, &layout.system);
         off.extend(skills::outside_default(&home));
         off.sort();
         off.dedup();
