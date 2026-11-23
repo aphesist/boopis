@@ -153,3 +153,12 @@ Recommended: (1). It keeps every change journaled and rewindable.
 - Owner (spec questions): switching among Supervised / Auto-accept edits / Auto happens in place (same engine
   session); only crossing to/from Full access, or a workspace/toolset change, continues on a new engine session.
   Without a trusted gate command a project offers only Supervised and Full access.
+
+## Owner picks on the Session boards (23 Nov, S01-S13)
+- S01 four rows; S02 default Auto-accept edits (configurable; asked in onboarding; no trusted gate -> Supervised);
+  S03 sections; S04 segmented; S05 composer line shows everything, customizable, and its on/off popup becomes the
+  session composer's quick menu; S06 Ctrl+Enter steers, Enter while running queues; S07 four fixed tabs.
+- Components S08-S13 approved (S12's DiffView to be fixed). Session messages and cards carry the model's brand
+  (provider logo), like a bot's orb.
+- Visual bugs found by the owner (pill escaping its track, text wrapping in a segmented control, content crossing the
+  dark/light split, DiffView comment misaligned): fixed + a render QA script over every board before anything is sent.
