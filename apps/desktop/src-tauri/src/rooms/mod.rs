@@ -6,6 +6,7 @@
 //! each one and its parameters are the engine's (`tui_gateway/contracts/groups_bot_relay.py`).
 
 pub mod lines;
+pub mod mentions;
 pub mod run;
 pub mod settings;
 
@@ -192,6 +193,27 @@ pub fn list_words<S: AsRef<str>>(names: &[S]) -> String {
             last.as_ref()
         ),
     }
+}
+
+/// The bots that exist (the engine's profiles, archived ones left out), by name: who a mention can name outside a room.
+///
+/// # Errors
+/// The gateway's.
+pub async fn known_bots(rpc: &dyn Rpc) -> Result<Vec<String>> {
+    let res = rpc
+        .call("profiles.list", json!({"include_sessions": false}))
+        .await?;
+    Ok(res
+        .get("profiles")
+        .and_then(Value::as_array)
+        .map(|rows| {
+            rows.iter()
+                .filter_map(|r| r.get("name").and_then(Value::as_str))
+                .filter(|n| !n.is_empty() && !n.starts_with(crate::bots::ARCHIVE_PREFIX))
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default())
 }
 
 /// The rooms of the root's gateway, most recently changed first.

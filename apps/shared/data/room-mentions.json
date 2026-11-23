@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "source": "vendor/hermes-agent (v0.23.2) gateway/hosted_room_discussion.py: _MENTION_RE and resolve_mentions (the handle rule), validate_roster (the reserved handles), _format_message and _build_prompt (the human is \"User (user)\" and \"the user\" in every member's prompt)",
+  "pattern": "@([A-Za-z0-9][A-Za-z0-9._:-]*)",
+  "ignore_case": true,
+  "everyone": ["all", "everyone"],
+  "user": "user",
+  "rules": [
+    "A mention is every non-overlapping match of pattern, scanned left to right; the handle is the whole run after the @, compared case-folded. \"@kai.\" names the handle \"kai.\", which is nobody.",
+    "A handle in everyone names every member of the room and never the human (the engine's resolve_mentions returns the roster).",
+    "The engine reserves no handle for the human: it names the human \"user\" (\"User (user): ...\" in the transcript each member reads). A message addresses the human when it mentions the handle in user and no member of the room has that handle; a member whose handle is user takes the mention, as the engine routes it.",
+    "Any other handle names the member whose handle it is, or nobody."
+  ]
+}

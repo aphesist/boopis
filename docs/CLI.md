@@ -36,6 +36,10 @@ to six bots, as the app does, and `--lead` makes messages that name nobody go to
 `lead`). A bot the engine will not seat yet is named, with what to do (open boopis once so every bot is prepared). The text of
 `send` may be `-` to read standard input.
 
+A message that `@`-names a bot that exists but is not in the group reaches only the group's bots (the engine wakes nobody for
+the other name), so `send` and `run` say so first, naming who is in the group and how to ask the other bot in its own chat (a
+warning on standard error, or a `warning` object with `--json`), and then send it, as the app's composer does.
+
 `send` returns when the message is written. With `--wait` it follows the discussion, printing each bot's reply as it arrives, until the bots stop handing off (exit 0) or
 the engine pauses at its limit (exit 3: use `run` to go on). `log` prints the conversation in the words the app uses: the
 messages, and what happened to a turn (it failed, it was cancelled because a newer message arrived, a bot was not available),

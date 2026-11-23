@@ -271,6 +271,39 @@ fn text_of(a: &Args, from: usize, ctx: &Ctx<'_>) -> Result<String> {
     Ok(words.join(" "))
 }
 
+/// Say so when a message names a bot that is not in the room (the engine wakes nobody for it, as the app's composer warns):
+/// the message still goes to the room, without that bot.
+async fn warn_outsiders(ctx: &mut Ctx<'_>, room: &Room, text: &str, json: bool) {
+    let handles: Vec<&str> = room.members.iter().map(|m| m.handle.as_str()).collect();
+    if rooms::mentions::handles(text).is_empty() {
+        return;
+    }
+    let Ok(known) = rooms::known_bots(ctx.rpc).await else {
+        return;
+    };
+    let out = rooms::mentions::outsiders(text, &handles, &known);
+    if out.is_empty() {
+        return;
+    }
+    let names: Vec<&str> = room.members.iter().map(|m| m.name.as_str()).collect();
+    let who = rooms::list_words(&out);
+    let verb = if out.len() == 1 { "isn't" } else { "aren't" };
+    let words = format!(
+        "{who} {verb} in {}, so the message reaches only {}. To ask {who}, use their own chat: boopis run --bot {} \"...\"",
+        room.name,
+        rooms::list_words(&names),
+        out[0]
+    );
+    if json {
+        json_line(
+            ctx,
+            &json!({"type": "warning", "code": "not_in_group", "outside": out, "members": room.member_ids(), "text": words}),
+        );
+    } else {
+        let _ = writeln!(ctx.err, "boopis: warning: {words}");
+    }
+}
+
 async fn send(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fail> {
     let a = Args::read(
         rest,
@@ -289,6 +322,7 @@ async fn send(rest: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i32, Fa
     let text = text_of(&a, 1, ctx)?;
     let room = rooms::resolve(ctx.rpc, key).await?;
     let json = a.has("json");
+    warn_outsiders(ctx, &room, &text, json).await;
     if !a.has("wait") {
         let ev = rooms::send(ctx.rpc, &room.id, &text).await?;
         if json {
@@ -593,6 +627,7 @@ async fn run_inner(args: &[String], ctx: &mut Ctx<'_>) -> std::result::Result<i3
         ));
     }
     let room = rooms::resolve(ctx.rpc, key).await?;
+    warn_outsiders(ctx, &room, &task, a.has("json")).await;
     let kept = RoomSettings::load(ctx.settings)?;
     let cap = settings::effective(
         a.number("max-rounds")?

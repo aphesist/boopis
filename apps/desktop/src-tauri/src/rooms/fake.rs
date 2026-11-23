@@ -97,6 +97,14 @@ impl Fake {
         self.inner.lock().unwrap().calls.clone()
     }
 
+    /// Write an event into the room's log as the engine would (a test sets up what a log holds).
+    ///
+    /// # Panics
+    /// When the lock was poisoned by another test thread.
+    pub fn write(&self, kind: &str, actor: &str, payload: &Value) {
+        self.inner.lock().unwrap().push(kind, actor, payload);
+    }
+
     /// How many times `method` was called.
     #[must_use]
     pub fn count(&self, method: &str) -> usize {
@@ -179,6 +187,9 @@ impl Rpc for Fake {
         g.calls.push((method.to_owned(), params.clone()));
         match method {
             "groups.list" => Ok(json!({"rooms": g.rooms})),
+            "profiles.list" => Ok(json!({"profiles": [
+                {"name": "default"}, {"name": "kai"}, {"name": "nina"}, {"name": "moss"}, {"name": "archived--old"}
+            ]})),
             "groups.capabilities" => Ok(g.capabilities.clone()),
             "groups.create" => {
                 let room = json!({"room_id": params["room_id"], "name": params["name"], "members": params["members"]});

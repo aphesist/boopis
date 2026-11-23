@@ -561,3 +561,52 @@ async fn log_shows_a_cancelled_or_failed_turn_so_the_numbering_has_no_gap() {
         (Some("turn.cancelled"), Some("kai"))
     );
 }
+#[tokio::test(start_paused = true)]
+async fn a_mention_of_a_bot_outside_the_group_is_said_and_the_message_still_goes() {
+    let (_d, s) = tmp();
+    let fake = Fake::new(Script::default());
+    let o = go(
+        &fake,
+        None,
+        &s,
+        false,
+        &["send", "paper past", "@moss please confirm, @kai too"],
+    )
+    .await;
+    assert_eq!(o.code, 0, "{}", o.err);
+    assert!(
+        o.err.contains(
+            "boopis: warning: moss isn't in paper past, so the message reaches only Kai and Nina"
+        ),
+        "B20: {}",
+        o.err
+    );
+    assert!(o.err.contains("boopis run --bot moss"), "{}", o.err);
+    let o = go(
+        &fake,
+        None,
+        &s,
+        false,
+        &["send", "paper past", "@nobody @all hi", "--json"],
+    )
+    .await;
+    assert!(
+        o.err.is_empty() && !o.out.contains("warning"),
+        "an unknown handle and @all are not outsiders: {}{}",
+        o.out,
+        o.err
+    );
+    let o = go(
+        &fake,
+        None,
+        &s,
+        true,
+        &["--group", "paper past", "@moss do it", "--json"],
+    )
+    .await;
+    let warning: Value = serde_json::from_str(o.out.lines().next().unwrap()).unwrap();
+    assert_eq!(
+        (warning["type"].as_str(), warning["outside"][0].as_str()),
+        (Some("warning"), Some("moss"))
+    );
+}
