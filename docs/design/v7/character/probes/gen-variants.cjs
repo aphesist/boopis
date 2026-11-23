@@ -40,42 +40,38 @@ const SNAP = [
   ["function drawFaceCells(", "/* G2: an eye group that a far turn carries past the body's outline slides back onto the visible face (it is never cut by\n   the clip): every point of the group must sit inside 0.9 of the outline's radius (0.84 on a lobed body, whose valleys are near) in its own direction, and the group\n   moves toward the body's centre by what the worst point overshoots (two passes). */\nfunction keepOnFace(gp, warp) {\n  const B = warp.pts; if (!B || !B.length) return;\n  const cx = warp.dx, cy = warp.sh, rel = warp._rel || (warp._rel = B.map((b) => [b[0] - cx, b[1] - cy]));\n  for (let pass = 0; pass < 2; pass++) {\n    let worst = 0, gx = 0, gy = 0, n = 0;\n    for (const q of gp) for (const [X, Y] of q) {\n      const x = X - cx, y = Y - cy, r = Math.hypot(x, y); gx += x; gy += y; n++;\n      if (r < 1e-6) continue;\n      const R = rayHit(rel, x / r, y / r);\n      const k = warp.lobed ? .84 : .9;\n      if (R > 0 && r - k * R > worst) worst = r - k * R;\n    }\n    if (worst <= 0 || !n) return;\n    const gl = Math.hypot(gx, gy) || 1, sx = -gx / gl * worst * 1.05, sy = -gy / gl * worst * 1.05;\n    for (const q of gp) for (const p of q) { p[0] += sx; p[1] += sy; }\n  }\n}\nfunction drawFaceCells(", 'G2 helper'],
   ["    const warp = { s, dx: contour.dx, sh: contour.sh };", "    const warp = { s, dx: contour.dx, sh: contour.sh, pts: contour.pts, lobed: !body.isCircle && !body.convex && !body.mix };", 'G2 warp'],
   // G3: the one limit left, per shape, at the largest turn that renders clean (probes/turn.html): a lobed body (flower,
-  // clover, star, cloud: not convex) holds its eyes to 0.75 rad of turn and 0.3 of pitch, past which the far eye folds behind a lobe; a
-  // convex body holds the eye direction to 1 rad (as a vector, so a diagonal look is held too), past which (with the body turning with them, G4) they reach its rim; the circle keeps orb2's whole range
-  ["  _followMode() {", "  _ecK(T) { const b = this._bodyTo; if (!b || b.isCircle) return 1; if (b.convex) { const h = Math.hypot(T[0], T[1]); return h > 1 ? 1 / h : 1; } return 0; }\n  _ecY(T) { const k = this._ecK(T); return k ? T[0] * k : clamp(T[0], -.75, .75); }\n  _ecP(T) { const k = this._ecK(T); return k ? T[1] * k : clamp(T[1], -.3, .3); }\n  _followMode() {", 'G3 cap'],
-  ["      this._eyaw = T[0]; this._epitch = T[1]; this._eroll = T[2];", "      this._eyaw = this._ecY(T); this._epitch = this._ecP(T); this._eroll = T[2];", 'G3 static'],
-  ["      [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, T[0]);\n      [this._epitch, this._vep] = stepEye(this._epitch, this._vep, T[1]);", "      [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, this._ecY(T));\n      [this._epitch, this._vep] = stepEye(this._epitch, this._vep, this._ecP(T));", 'G3 spring'],
-  // G4: the body turns with the face (owner, 23 Nov). orb2 turns the head by only 0.54 of the eye turn on a flat body, so a
-  // turned square or hexagon keeps its body nearly front-on while its eyes slide over: it reads as eyes looking, not as a
-  // turned bot. Grok-Bot turns the whole body (avatar-shapes-idle-and-pointer.mp4; its 3/4 sidebar pose). The head ratio is
-  // 0.85 on every extruded body (the eyes still lead a little), and a reaction can lock it to the eyes with the motion key hk
-  // (0..1, blended by orb2's morph like every motion key): the fixed pose uses hk 1. A non-circular body never turns past
-  // 0.85 rad: beyond it the face is so far round that its eyes reach the rim (anim-torture, ORBS.md section 23). The domed solids (the diamond, a lozenge, and
-  // the lobed cloud, clover, flower and star) take 0.65, their largest clean turn: past it the near eye sits on a lobe bulging toward the camera and
-  // swells while the far one thins (probes/pose.html, ORBS.md section 23). A circle keeps 0.68 (a sphere looks the same).
-  ["const MKEYS = { dy: 0, s: 1, bodyRoll: 0, yawAdd: 0, spinYaw: 0, spinEyeLead: 0, eroll: 0, w: 0 };",
-   "const MKEYS = { dy: 0, s: 1, bodyRoll: 0, yawAdd: 0, spinYaw: 0, spinEyeLead: 0, eroll: 0, w: 0, hk: 0 };", 'G4 key'],
-  ["    const hR = b => b.isCircle ? .68 : .54;\n    const hRatio = this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo);",
-   "    const domed = b => !!b.solid && (!b.solid.convex || b.label === 'Lozenge');\n    const hR = b => b.isCircle ? .68 : domed(b) ? .65 : .85;\n    const hRatio = Math.min(lerp(this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo), 1, clamp(this._bodyTo.isCircle || domed(this._bodyTo) ? 0 : (m.hk || 0), 0, 1)), (this._bodyTo.isCircle ? 99 : .85) / Math.max(Math.hypot(T[0], T[1]), 1e-6));", 'G4 ratio'],
-  ["    const hRatio = body.isCircle ? .68 : .54;", "    const hRatio = body.isCircle ? .68 : (body.solid && (!body.solid.convex || body.label === 'Lozenge')) ? .65 : .85;", 'G4 svg'],
+  // clover, star, cloud: not convex) holds its eyes to 0.75 rad of turn and 0.3 of pitch, past which the far eye folds behind a lobe; convex
+  // bodies and the circle keep their whole range (lookAt 1.18 rad, rim peeks 1.26)
+  ["  _followMode() {", "  _eyeCap(v, m = .75) { const b = this._bodyTo; return (!b || b.isCircle || b.convex) ? v : clamp(v, -m, m); }\n  _followMode() {", 'G3 cap'],
+  ["      this._eyaw = T[0]; this._epitch = T[1]; this._eroll = T[2];", "      this._eyaw = this._eyeCap(T[0]); this._epitch = this._eyeCap(T[1], .3); this._eroll = T[2];", 'G3 static'],
+  ["      [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, T[0]);\n      [this._epitch, this._vep] = stepEye(this._epitch, this._vep, T[1]);", "      [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, this._eyeCap(T[0]));\n      [this._epitch, this._vep] = stepEye(this._epitch, this._vep, this._eyeCap(T[1], .3));", 'G3 spring'],
   // G5: a bot at rest is exactly still (owner, 23 Nov: "the flickering on the borders still happen"). orb2's springs and
   // jelly decay forever; whenever the residue passes the redraw threshold (1e-4) the canvas is redrawn a hair off, and on a
   // small bot the anti-aliased edge pixels flip. Each spring now lands exactly on its goal once it is within 2e-3 rad and
   // slow (under 0.09 device px at 44 px), and the jelly stops below an energy of 2e-3, so the signature stops changing and
   // the canvas is never redrawn while the bot rests
   ["      [this._bRoll, this._vbr] = stepHead(this._bRoll, this._vbr, T[3]);",
-   "      [this._bRoll, this._vbr] = stepHead(this._bRoll, this._vbr, T[3]);\n      { const land = (k, vk, g) => { if (Math.abs(g - this[k]) < 2e-3 && Math.abs(this[vk]) < 2e-2) { this[k] = g; this[vk] = 0; } };\n        land('_eyaw', '_vey', this._ecY(T)); land('_epitch', '_vep', this._ecP(T)); land('_eroll', '_ver', T[2]);\n        land('_hyaw', '_vhy', T[0] * hRatio); land('_hpitch', '_vhp', T[1] * hRatio); land('_bRoll', '_vbr', T[3]); }", 'G5 springs'],
+   "      [this._bRoll, this._vbr] = stepHead(this._bRoll, this._vbr, T[3]);\n      { const land = (k, vk, g) => { if (Math.abs(g - this[k]) < 2e-3 && Math.abs(this[vk]) < 2e-2) { this[k] = g; this[vk] = 0; } };\n        land('_eyaw', '_vey', this._eyeCap(T[0])); land('_epitch', '_vep', this._eyeCap(T[1], .3)); land('_eroll', '_ver', T[2]);\n        land('_hyaw', '_vhy', T[0] * hRatio); land('_hpitch', '_vhp', T[1] * hRatio); land('_bRoll', '_vbr', T[3]); }", 'G5 springs'],
   ["        x[i] = clamp(x[i] + v[i] * h, -.28, .28);\n      }\n    }\n  }",
    "        x[i] = clamp(x[i] + v[i] * h, -.28, .28);\n      }\n    }\n    let en = 0; for (let i = 0; i < 6; i++) en += Math.abs(x[i]) + Math.abs(v[i]) * .02;\n    if (en < 2e-3) for (let i = 0; i < 6; i++) x[i] = v[i] = 0;\n  }", 'G5 jelly'],
   // G6: edges glide instead of toggling (owner, 23 Nov: the room's moving bots flicker at the border too). Chromium's
   // software canvas, which every small canvas uses, antialiases a path with a 4-row supersample, so a long straight or
   // gently curved edge (a squircle's side, a hexagon's face) steps its coverage in quarters as it moves: whole runs of
-  // edge pixels jump by about 64 levels and back (A-B-A). The orb is drawn at 3x into its own backing canvas and scaled
+  // edge pixels jump by about 64 levels and back (A-B-A). The orb is drawn at 4x (a power of two, so the high-quality
+  // downscale is an exact box over 16 samples) into its own backing canvas and scaled
   // down with high-quality smoothing, which averages nine samples per pixel; the toggles go away (tools/abamethods.cjs:
   // 10 at 1x, 4 at 2x, 0 at 3x on a turning squircle). A resting orb never redraws (G5), so this costs only while it moves
   ["    const c = this._ctx, W = this._cw;\n    if (!W) return;",
-   "    const SSF = 3, Wo = this._cw, cOut = this._ctx;\n    if (!Wo) return;\n    if (!this._ssCv || this._ssCv.width !== Wo * SSF) { this._ssCv = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(Wo * SSF, Wo * SSF) : document.createElement('canvas'); this._ssCv.width = this._ssCv.height = Wo * SSF; this._ssCtx = this._ssCv.getContext('2d'); }\n    const c = this._ssCtx, W = Wo * SSF;", 'G6 supersample'],
+   "    const Wo = this._cw, SSF = Wo < 100 ? 8 : 4, cOut = this._ctx;\n    if (!Wo) return;\n    if (!this._ssCv || this._ssCv.width !== Wo * SSF) { this._ssCv = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(Wo * SSF, Wo * SSF) : document.createElement('canvas'); this._ssCv.width = this._ssCv.height = Wo * SSF; this._ssCtx = this._ssCv.getContext('2d'); }\n    const c = this._ssCtx, W = Wo * SSF;", 'G6 supersample'],
   ["    this._Fr = localFr;\n", "    cOut.setTransform(1, 0, 0, 1, 0, 0); cOut.clearRect(0, 0, Wo, Wo); cOut.imageSmoothingEnabled = true; cOut.imageSmoothingQuality = 'high'; cOut.drawImage(this._ssCv, 0, 0, Wo, Wo);\n    this._Fr = localFr;\n", 'G6 blit'],
+  // G7: no sharp reversals (owner, 23 Nov: the room's gutter bots still flickered). A hop's top (sin) and the happy bounce's
+  // landing (|sin|, a cusp) turn the motion round inside one frame, so an edge pixel steps out and straight back (A-B-A)
+  // on a 20-40 px bot. Both now pass through smootherstep, whose first and second derivatives vanish at 0 and 1: the bot
+  // eases into the top and the landing, with the same height, rhythm and timing
+  ["const hop = (t, period, dur, amp) => { const p = (t % period) / dur; return p > 1 ? {} : { dy: -amp * Math.sin(p * Math.PI) }; };",
+   "const soft01 = x => x * x * x * (x * (x * 6 - 15) + 10);\nconst hop = (t, period, dur, amp) => { const p = (t % period) / dur; return p > 1 ? {} : { dy: -amp * soft01(Math.sin(p * Math.PI)) }; };", 'G7 hop'],
+  ["    motion: t => ({ dy: -.08 * Math.abs(Math.sin(t * 1.55 * Math.PI)), epitch: .12, w: .35 })",
+   "    motion: t => ({ dy: -.08 * soft01(Math.abs(Math.sin(t * 1.55 * Math.PI))), epitch: .12, w: .35 })", 'G7 happy'],
 ];
 const TUNE = [
   // T1: a blink as long as Grok-Bot's (0.20 s, was 0.155 s)

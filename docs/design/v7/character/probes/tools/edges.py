@@ -6,6 +6,8 @@
 #                  swing, a spin, a wobble, a hop's top. A pixel near a moving edge can then read A-B-A legitimately.
 #      shimmer     every other toggle: edge pixels flipping while the shape holds or creeps, which reads as flicker.
 #                  The target is 0, and it blocks.
+#  - LONE FLIPS: A-B-A pixels whose four neighbours held still (8 levels or less): a pixel flipping on its own, the purest
+#    form of flicker. Blocking, target 0.
 #  - JUMP: a canvas whose screen position changes (no orb moves in the layout of these scenes); REFIT: its backing width changes.
 # usage: python3 -I edges.py <framesDir>   exit 1 when a proposed-side orb at rest changes, or the proposed side toggles or jumps.
 import sys, json
@@ -24,8 +26,10 @@ for h, name in ((0, 'today'), (1, 'proposed')):
     aba = sum(n for _, _, n in aba_f); turn_px = sum(n for _, _, n in turn)
     jump = sum(1 for i in range(1, len(S)) for j in js if (S[i][j]['x'], S[i][j]['y']) != (S[i - 1][j]['x'], S[i - 1][j]['y']))
     refit = sum(1 for i in range(1, len(S)) for j in js if S[i][j]['w'] != S[i - 1][j]['w'])
-    print(f'{name:8s} rest orb-frames {rest_f}, changed at rest {len(rest_bad)}; shimmer (A-B-A) {aba} px in {len(aba_f)} orb-frames; in fast motion {turn_px} px in {len(turn)}; canvas jumps {jump}; refits {refit}')
+    iso = sum(f[j].get('iso', 0) for f in S for j in js); iso_f = [(i, R[j]['bot'] or R[j]['shape'], f[j]['iso']) for i, f in enumerate(S) for j in js if f[j].get('iso')]
+    print(f'{name:8s} rest orb-frames {rest_f}, changed at rest {len(rest_bad)}; shimmer (A-B-A) {aba} px in {len(aba_f)} orb-frames; in fast motion {turn_px} px in {len(turn)}; canvas jumps {jump}; refits {refit}; lone flips {iso} px in {len(iso_f)}')
+    for b in sorted(iso_f, key=lambda b: -b[2])[:5]: print('   lone flip: frame %d %s %d px' % b)
     for b in rest_bad[:5]: print('   rest changed: frame %d %s %d px' % b)
     for b in sorted(aba_f, key=lambda b: -b[2])[:5]: print('   shimmer: frame %d %s %d px' % b)
-    if h == 1 and (rest_bad or aba or jump or refit): bad = 1
+    if h == 1 and (rest_bad or aba or iso or jump or refit): bad = 1
 sys.exit(bad)

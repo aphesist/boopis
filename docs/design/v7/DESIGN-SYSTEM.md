@@ -710,9 +710,9 @@ Far 3D turns are fixed in the geometry, not clamped, so the life stays:
 - G1: a convex body is traced as the exact hull of its projected discs, with no dents.
 - G2: an eye group carried past the outline slides back onto the face; it is never cut.
 - G3: only lobed bodies keep a limit, at 0.75 rad of eye turn and 0.3 of pitch.
-- G4: the body turns with the face.
 - G5: a resting bot is exactly still: 0 pixels change.
-- G6: moving edges are drawn at 3x and scaled down, so they glide instead of flickering.
+- G6: moving edges are drawn at 4x (8x on small bots) and scaled down, so they glide instead of flickering.
+- G7: a hop's top and a bounce's landing ease instead of reversing inside one frame.
 
 **The rest of the decision:**
 
@@ -720,32 +720,18 @@ Far 3D turns are fixed in the geometry, not clamped, so the life stays:
 - Sizes: Grok-Bot's, with sidebar rows at 28 px and the rail at 36 px.
 - The blink: 0.2 s.
 
-**The fixed pose** (the full spec, per shape, is in `character/ORBS.md` §23; `character/K03-pose-vs-grok.jpg` shows all
-15 beside Grok-Bot's). At rest, every bot in the dock, the Bots sidebar, the rail and the 44 px main bot holds one
-sideways 3/4 pose. **The whole bot turns**, as Grok-Bot's do: the body takes the same angle as the eyes, so a square
-shows its turned face foreshortened and a triangle or a hexagon turns. The eyes are not looking sideways out of a
-front-on body.
+**The fixed pose** (the full spec is in `character/ORBS.md` §23; `character/K04-pose-options.jpg` shows three angles, all
+15 shapes each). At rest, every bot in the dock, the Bots sidebar, the rail and the 44 px main bot holds one 3/4 pose.
+It is orb2's own 3D, set through its public `gaze` attribute:
 
-| `eyaw` | `epitch` | `eroll` | `bodyRoll` | `w` | `hk` (body locked to the eyes) |
-|---|---|---|---|---|---|
-| 0.50 | 0.45 (0.30 on lobed bodies, G3) | 0.55 | 0.05 | 1 | 1 |
+- **The angle: yaw 38°, pitch 15°** (option B, recommended; A is 25°/10°, C is 50°/20°). It is one gaze for every shape.
+- **What orb2 does with it:** it turns each 3D body by its own head ratio, places the eyes on the turned surface and
+  projects both in perspective. Nothing is tuned per shape.
+- **The one limit:** G3 holds the lobed bodies' eyes to 43° and 17°, which 38° and 15° stays inside.
 
-The body's turn depends on the kind of body:
-
-- **Flat bodies** (squircle, soft, wide, tall, bean, drop, ghost, triangle, hexagon): yaw 0.50 and pitch 0.45, the same
-  as the eyes. G1 keeps the turned outline clean.
-- **Domed bodies** (diamond, cloud, clover, flower, star): 0.65 of the eye angle, their largest clean turn. Past it the
-  near eye swells on a dome and the far one thins.
-- **The circle**: unchanged, since a sphere looks the same.
-
-The eyes land up and to the right of centre: +0.19 across and −0.19 down on the circle (Grok-Bot: +0.22 and −0.21).
-On the flat bodies both eyes are nearly the same size (squircle 0.90), as on Grok-Bot's turned square.
-
-The same rule holds in motion: the body follows the eyes at 0.85 (flat) and 0.65 (domed) in every lively turn, glance
-and state. A resting bot is exactly still: no redraw and no edge flicker (G5).
-
-It is drawn with a hidden `defineReaction('pose', …)` and `reaction="pose" idle-motion="off" mode="drift"`, with no
-blink. The resting dock and sidebar bots take `jelly="0"`.
+It is drawn with a hidden `defineReaction('pose', …)` (pill eyes, no blink, no motion) and `reaction="pose"
+gaze="38 15" idle-motion="off" mode="drift"`. The gaze stays the bot's home orientation when it wakes or enters a
+state. A resting bot never redraws (G5). The resting dock and sidebar bots take `jelly="0"`.
 
 **Per surface:**
 
@@ -782,7 +768,7 @@ the bots.
 
 - `K01-clarity.jpg`.
 - `K02-main-bot.jpg`.
-- `K03-pose-vs-grok.jpg`: all 15 shapes in the pose beside Grok-Bot's.
+- `K04-pose-options.jpg`: the three pose angles, all 15 shapes each.
 - `anim-dock`, `anim-sidebar`, `anim-room` and `anim-torture-before-after.mp4`. Every frame was checked with
   `probes/tools/edges.py`:
   - resting bots change 0 pixels;

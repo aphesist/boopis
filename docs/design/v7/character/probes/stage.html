@@ -45,9 +45,9 @@ let seed = 20261123; Math.random = () => { seed |= 0; seed = seed + 0x6D2B79F5 |
 const LIB = { stock: 'lib/orb-avatar.min.js', snap: 'lib/orb-avatar.snap.js', tuned: 'lib/orb-avatar.tuned.js' }[q.lib || 'stock'];
 const MORE = q.plan === 'more';
 const LOOKS = { boopis: ['squircle', '#f5f5f5', '#0e0e0e'], kai: ['circle', '#4fc9a8', '#141418'], nina: ['triangle', '#f23b5a', '#141418'], moss: ['squircle', '#2fd26a', '#141418'], iris: ['flower', '#3b82f6', '#141418'], hex: ['hexagon', '#a6a6ab', '#141418'] };
-/* THE FIXED POSE (ORBS.md): Grok-Bot's sidebar pose measured on 157-live-sidebar-expanded (eye centroid +0.22, -0.21 of
-   the body box, strokes at 54.5 degrees, the far eye 0.6 of the near one's area), matched in probes/pose.html */
-const POSE = { eyaw: .5, epitch: .45, eroll: .55, bodyRoll: .05, w: 1, hk: 1 };
+/* THE FIXED POSE (ORBS.md section 23): orb2's own 3D look, through its public `gaze` attribute ("yaw pitch", degrees). orb2
+   turns each 3D body by its own head ratio, puts the eyes on the turned surface and projects both in perspective */
+const GAZE = '38 15';
 const orb = (n, size, o = {}) => {
   const [shape, color, eye] = LOOKS[n] || [n, '#f5f5f5', '#0e0e0e']; const render = o.render && o.render !== size ? o.render : null;
   const fs = MORE && size <= 44 ? ' face-scale="1.25"' : '';
@@ -55,7 +55,7 @@ const orb = (n, size, o = {}) => {
   return `<span class="ui-orb"${render ? ' data-render' : ''} data-bot="${n}" style="--o:${size}${render ? ';--r:' + render : ''}"><orb-avatar size="${render || size}" shape="${shape}" color="${color}" eye-color="${eye}" reaction="${o.state || 'idle'}" idle-motion="${o.motion || 'calm'}" mode="drift"${fs}${jl}${o.attrs || ''} data-glance></orb-avatar></span>`;
 };
 /* the policy's three behaviours, on orb2's own attributes */
-const fixed = (o) => { o.dataset.base = 'pose'; o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', 'pose'); };
+const fixed = (o) => { o.dataset.base = 'pose'; o.setAttribute('gaze', GAZE); o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', 'pose'); };
 const state = (o, r) => { o.dataset.base = r; if (!o._hover) { o.setAttribute('idle-motion', 'off'); o.setAttribute('reaction', r); } };
 /* hover: a bot at the pose wakes lively; a bot in a state keeps its state, and only looks toward the pointer (capped) */
 const wake = (o, px, py) => { o._hover = true; if (o.dataset.base === 'pose') { o.setAttribute('reaction', 'idle'); o.setAttribute('idle-motion', 'lively'); } else if (px != null) capLook(o, px, py, .3); };
@@ -165,7 +165,7 @@ const T = {
 window.go = () => T[q.scene || 'dock']();
 const s = document.createElement('script'); s.src = LIB; s.onload = () => {
   const A = window.OrbAvatar;
-  A.defineReaction('pose', { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: () => ({ ...POSE }) });
+  A.defineReaction('pose', { label: 'Pose', blink: false, useEyeShape: true, face: (t, e, eye) => A.shapes.pairEyes(eye || 'pill'), motion: null });
   S[q.scene || 'dock'](); document.body.dataset.ready = '1';
 };
 document.head.appendChild(s);

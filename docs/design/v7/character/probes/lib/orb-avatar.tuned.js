@@ -1280,7 +1280,8 @@ function seqGaze(e, stops, glide = 0.24) {
    4. REACTIONS & PURE EYE-CHOREOGRAPHY EMOTES
    ========================================================================== */
 
-const hop = (t, period, dur, amp) => { const p = (t % period) / dur; return p > 1 ? {} : { dy: -amp * Math.sin(p * Math.PI) }; };
+const soft01 = x => x * x * x * (x * (x * 6 - 15) + 10);
+const hop = (t, period, dur, amp) => { const p = (t % period) / dur; return p > 1 ? {} : { dy: -amp * soft01(Math.sin(p * Math.PI)) }; };
 
 const F_PILL = pairEyes('pill');
 const F_CIRCLE = pairEyes('circle');
@@ -1382,7 +1383,7 @@ const EX = {
   happy: {
     label: 'Happy',
     face: () => F_ARC,
-    motion: t => ({ dy: -.08 * Math.abs(Math.sin(t * 1.55 * Math.PI)), epitch: .12, w: .35 })
+    motion: t => ({ dy: -.08 * soft01(Math.abs(Math.sin(t * 1.55 * Math.PI))), epitch: .12, w: .35 })
   },
   done: {
     label: 'Done', extra: 'sparkle',
@@ -2251,7 +2252,7 @@ const parseGaze = v => {
 const CANVAS_SCALE = 3.2 / 2.08;
 let slots = 0;
 
-const MKEYS = { dy: 0, s: 1, bodyRoll: 0, yawAdd: 0, spinYaw: 0, spinEyeLead: 0, eroll: 0, w: 0, hk: 0 };
+const MKEYS = { dy: 0, s: 1, bodyRoll: 0, yawAdd: 0, spinYaw: 0, spinEyeLead: 0, eroll: 0, w: 0 };
 function mixMotion(a, b, p) {
   const o = {};
   for (const [k, d] of Object.entries(MKEYS)) o[k] = lerp(a[k] ?? d, b[k] ?? d, p);
@@ -2575,7 +2576,7 @@ class OrbAvatar extends HTMLElement {
   /** Crisp standalone SVG string of the current 3D silhouette, perspective pose, and multi-cell eyes */
   toSVG({ size = 512 } = {}) {
     const body = this._bodyCur || SHAPES.circle;
-    const hRatio = body.isCircle ? .68 : (body.solid && (!body.solid.convex || body.label === 'Lozenge')) ? .65 : .85;
+    const hRatio = body.isCircle ? .68 : .54;
     const yaw = this._eyaw || .18, pitch = this._epitch || .12, bodyRoll = this._bRoll || 0;
     const headYaw = this._hyaw ?? (yaw * hRatio), headPitch = this._hpitch ?? (pitch * hRatio);
     const M = mat3D(headYaw, headPitch, bodyRoll);
@@ -2650,9 +2651,7 @@ class OrbAvatar extends HTMLElement {
     }
   }
 
-  _ecK(T) { const b = this._bodyTo; if (!b || b.isCircle) return 1; if (b.convex) { const h = Math.hypot(T[0], T[1]); return h > 1 ? 1 / h : 1; } return 0; }
-  _ecY(T) { const k = this._ecK(T); return k ? T[0] * k : clamp(T[0], -.75, .75); }
-  _ecP(T) { const k = this._ecK(T); return k ? T[1] * k : clamp(T[1], -.3, .3); }
+  _eyeCap(v, m = .75) { const b = this._bodyTo; return (!b || b.isCircle || b.convex) ? v : clamp(v, -m, m); }
   _followMode() { return this._mode === 'follow' || (this._follow && this._mode === 'drift'); }
   _aria() { if (this.isConnected) this.setAttribute('aria-label', this.getAttribute('label') || OrbAvatar.reactionLabel(this._base)); }
 
@@ -2908,25 +2907,24 @@ class OrbAvatar extends HTMLElement {
       T = T.map((v, i) => lerp(A[i], v, p));
     }
 
-    const domed = b => !!b.solid && (!b.solid.convex || b.label === 'Lozenge');
-    const hR = b => b.isCircle ? .68 : domed(b) ? .65 : .85;
-    const hRatio = Math.min(lerp(this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo), 1, clamp(this._bodyTo.isCircle || domed(this._bodyTo) ? 0 : (m.hk || 0), 0, 1)), (this._bodyTo.isCircle ? 99 : .85) / Math.max(Math.hypot(T[0], T[1]), 1e-6));
+    const hR = b => b.isCircle ? .68 : .54;
+    const hRatio = this._btp < 1 ? lerp(hR(this._bodyFrom), hR(this._bodyTo), easeMorph(this._btp)) : hR(this._bodyTo);
     if (st || !this._init) {
-      this._eyaw = this._ecY(T); this._epitch = this._ecP(T); this._eroll = T[2];
+      this._eyaw = this._eyeCap(T[0]); this._epitch = this._eyeCap(T[1], .3); this._eroll = T[2];
       this._hyaw = T[0] * hRatio; this._hpitch = T[1] * hRatio; this._bRoll = T[3];
       this._init = true;
     } else {
       // Agile eye spring (leads turns crisply) + plush 3D head spring (rotates solid in 3D perspective!)
       const stepEye = (x, v, goal) => { v += (goal - x) * 165 * dt; v *= Math.exp(-19 * dt); return [x + v * dt, v]; };
       const stepHead = (x, v, goal) => { v += (goal - x) * 68 * dt; v *= Math.exp(-11.5 * dt); return [x + v * dt, v]; };
-      [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, this._ecY(T));
-      [this._epitch, this._vep] = stepEye(this._epitch, this._vep, this._ecP(T));
+      [this._eyaw, this._vey] = stepEye(this._eyaw, this._vey, this._eyeCap(T[0]));
+      [this._epitch, this._vep] = stepEye(this._epitch, this._vep, this._eyeCap(T[1], .3));
       [this._eroll, this._ver] = stepEye(this._eroll, this._ver, T[2]);
       [this._hyaw, this._vhy] = stepHead(this._hyaw, this._vhy, T[0] * hRatio);
       [this._hpitch, this._vhp] = stepHead(this._hpitch, this._vhp, T[1] * hRatio);
       [this._bRoll, this._vbr] = stepHead(this._bRoll, this._vbr, T[3]);
       { const land = (k, vk, g) => { if (Math.abs(g - this[k]) < 2e-3 && Math.abs(this[vk]) < 2e-2) { this[k] = g; this[vk] = 0; } };
-        land('_eyaw', '_vey', this._ecY(T)); land('_epitch', '_vep', this._ecP(T)); land('_eroll', '_ver', T[2]);
+        land('_eyaw', '_vey', this._eyeCap(T[0])); land('_epitch', '_vep', this._eyeCap(T[1], .3)); land('_eroll', '_ver', T[2]);
         land('_hyaw', '_vhy', T[0] * hRatio); land('_hpitch', '_vhp', T[1] * hRatio); land('_bRoll', '_vbr', T[3]); }
     }
 
@@ -2960,7 +2958,7 @@ class OrbAvatar extends HTMLElement {
   }
 
   _render(p, m, calm, dyn, fixed) {
-    const SSF = 3, Wo = this._cw, cOut = this._ctx;
+    const Wo = this._cw, SSF = Wo < 100 ? 8 : 4, cOut = this._ctx;
     if (!Wo) return;
     if (!this._ssCv || this._ssCv.width !== Wo * SSF) { this._ssCv = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(Wo * SSF, Wo * SSF) : document.createElement('canvas'); this._ssCv.width = this._ssCv.height = Wo * SSF; this._ssCtx = this._ssCv.getContext('2d'); }
     const c = this._ssCtx, W = Wo * SSF;
