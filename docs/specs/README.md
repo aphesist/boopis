@@ -17,6 +17,17 @@ Wave numbers: the package's w28 is w31 here, w29 is w32, and so on (ADR-0054).
 
 Order inside the wave: host protections first (the BOOPIS bot cannot ship without them), then rules engine and team ops in parallel (different areas), then the rules UI once the owner has picked. The calm pass (w31c) runs beside it on the UI library and copy only.
 
+## Session tab, wave S0
+
+The Session tab's waves follow `PLAN-session-waves.md` (the T3 Code study). S0 ships in 0.2.0, after the lab's design pass for the launch step.
+
+| Spec | What | Branch | ADR |
+|---|---|---|---|
+| [session-launch.md](session-launch.md) | Switching never stops a running turn (per-session feeds); `session.create` carries folder, model, provider, effort, skills and toolsets from a launch step; one `SessionCapabilities` map; the 4-step permission scale mapped onto governed mode, the plugin's asks, the rules engine and the sandbox; mid-session changes: the model in place, folder, skills, toolsets and the Full access line on a new engine session carrying the history | `w32/session-core` (UI and plugin) | ADR-0057 |
+| [checkpoint-rewind.md](checkpoint-rewind.md) | `checkpoint.rewind` as a journaled, ungated ship with its own checkpoint, so undo is a rewind; the isolation guard (own worktree, or nothing else changed in the folder, proven by a folder digest and per-path hashes in hx); a `checkpoint` turn item; hooks for edit and fork from here (S2) | `w32/rewind` (plugin, hx, UI) | ADR-0058 |
+
+S0 questions for the owner: changing between the three governed steps in place (`session-launch.md` 10.1); Auto and Auto-accept edits need a gate command (10.2).
+
 ## Open owner questions
 
 Only what is the owner's to decide. Each spec states its proposal; work can start on the proposal.

@@ -1193,3 +1193,55 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - One reply per message in sessions, proven by end-to-end tests that count submits, stored rows, completions and model requests; a late different answer costs one visibly labelled turn.
 - ADR-0048 changes: `clarify` is off for every bot and cannot be turned on; a team file's list loses it on import.
 - `approval-surfaces.md`'s "expired after 300 s" no longer applies to bots' cards.
+
+<!-- The records below are drafts for the Session tab's wave S0 (docs/specs/session-launch.md, docs/specs/checkpoint-rewind.md). -->
+
+## ADR-0057 Session launch settings, one permission scale, and changes mid-session (proposed, 23 November 2026)
+**Status.** Proposed (S0, `w32/session-core`; spec `docs/specs/session-launch.md`). The owner's decisions (23 November 2026): one 4-step scale (Supervised / Auto-accept edits / Auto / Full access) in the launch step; Full access removes the asks and keeps every write recorded through `ship`; mid-session everything may change, as in T3, with the caching invariant held per engine session; S0 ships in 0.2.0 after the launch step's design pass.
+
+**Context.**
+- T3 Code fixes model, effort, permissions and workspace per thread and ranks four permission modes, falling back to the most careful when a driver lacks one (T3 study, FEATURE-LOGIC §3.1, §5.2). boopis has governed/ungoverned plus Hermes approvals, creates live sessions with no folder, model, effort or skills (`apps/desktop/ui/src/host/live-provider.ts:190`), and stops a running session when another is selected (`modules/session/conversation.ts:374`).
+- Read in the engine, not patched: the canonical gateway's `session.create` accepts `cwd`, `cwd_explicit`, `model`, `provider`, `reasoning`, `skills`, `toolsets`, `yolo`, `checkpoints` and refuses unknown names (`gateway/session_policy.py:15-20`, `:442-445`), and publishes them in `runtime.describe` (`gateway/session_controls.py:569-570`); a titled create resumes an existing session (`:511`); one connection streams every session it subscribed to (`:708-713`). The model switch is `session.mutate {operation: "model"}`, deferred to the next turn when busy, with confirmation tokens for flagged targets (`gateway/session_mutations.py:133-142`; `gateway/session_mutation_model.py:346-371`); `config.set {key: "model"}`, which boopis sends today, is refused (`gateway/session_busy_controls.py:31-35`). yolo and `approvals.mode: off` approve plugin cards with no person (`tools/approval.py:1231-1232`). A cell cannot ask (`plugins/boopis/exec/calls.py:154-161`).
+
+**Decision.**
+1. **Switching never stops a turn.** Every bound session keeps streaming into its conversation; the view subscribes to the selected one; running state, Stop and the clock are per session; a running turn's snapshot holds its steps and text.
+2. **`session.create` carries the launch step:** `cwd` with `cwd_explicit: true`, `model`, `provider`, `reasoning`, `skills`, `toolsets: ["boopis"]`, `client`; never `title`, `yolo` or `checkpoints`. Only names `runtime.describe` lists are sent; without `cwd` or `toolsets` the Session tab does not create.
+3. **One `SessionCapabilities` map**, built in the details module from `runtime.describe`, the method probes and `plugin.boopis.describe` (which gains a folder query and per-session `careful`, `rewind`); every control reads it; unknown is `ok: false` with a reason.
+4. **The scale.** Supervised = governed, the plugin asks before every `ship` and every `exec` call; Auto-accept edits = governed, asks before `exec`, ships apply when the gate passes; Auto = governed, only the owner's rules ask (the rules engine's list, which now also runs in Session tab sessions, and the permission `ask` rules); Full access = ungoverned, no asks. Every step: toolsets `["boopis"]`, the engine's direct-write tools blocked on the session surface even through `exec`, the sandbox unchanged (which keeps every write in `ship`), blocks unchanged, `yolo` never set and checked before each submit. A step that cannot be honoured (no plugin, non-frontier model, `approvals.mode: off`, no gate for Auto-accept edits and Auto, no hx) is unavailable with its reason, never swapped for another.
+5. **Mid-session.** Changes apply at the next turn boundary. The model switches in place (`session.mutate`; governed: `cascade.start_tier`); effort in place; a step change among the three governed steps in place (a plugin policy field); a change across the Full access line, of folder, of skills or of toolsets continues the same visible thread on a **new engine session**, carrying the history cut to a budget (16,000 tokens, clamped 1,024-64,000), never a model-written summary, as a fixed block on its first user message. The ledgers link the two (`parent_session_id` on `session.opened`, `session.closed {reason: "continued"}`); `checkpoint.list {chain: true}` spans them. The person sees one line, "Settings changed: continued with X" (or "Model changed to X"), and the cache miss's cost, computed from the price table or "cost unknown".
+
+**Alternatives weighed.**
+- *Two controls (governed toggle plus approvals)*: what exists; CALM-UI prefers one choice, and the owner chose the scale.
+- *Full access with the engine's own tools*: breaks "only ship writes"; refused by the owner.
+- *A summary when the settings change*: a model call that can lose or invent facts, on every change.
+- *The engine's in-place `workspace` mutation*: the plugin's folder, gate, protected paths and checkpoint chain are bound at open.
+
+**Consequences.**
+- boopis's four `config.set {key: "model"}` calls move to `session.mutate`; the automatic `confirm_expensive_model: true` goes.
+- The rules engine's open question 2 is answered for sessions: it runs there at Supervised, Auto-accept edits and Auto, never at Full access; per-bot rows never apply to sessions.
+- To verify on a live engine: that a governed worker's card reaches the person (else Supervised and Auto-accept edits are unavailable for governed sessions), the refusal of `config.set model` on the pinned runtime, and concurrency of running sessions.
+
+## ADR-0058 A rewind is a journaled, ungated ship behind an isolation guard (proposed, 23 November 2026)
+**Status.** Proposed (S0, `w32/rewind`; spec `docs/specs/checkpoint-rewind.md`). Owner defaults kept (23 November 2026): journaled and undoable, not gated; rewind needs a worktree (T3's rule).
+
+**Context.**
+- `checkpoint.rewind` is documented as "itself a journaled ship, so it's reversible" (`docs/PROTOCOL.md:140`) but not registered (`plugins/boopis/__init__.py:27-74`). Every kept ship is a checkpoint whose tree is the previous one plus that ship's files (`plugins/boopis/ship/checkpoint.py:96-142`), so the paths between two checkpoints are exactly the ships between them. hx's edits are UTF-8 text with no mode (`crates/hx-proto/schema/hx-v1.schema.json:932-958`).
+- T3 refuses a file restore outside an isolated worktree and has no undo of a rewind (T3 study, FEATURE-LOGIC §4.2).
+
+**Decision.**
+1. **`checkpoint.rewind {session_id, ship_id | null, dry_run?, expect_head?}`** puts every file the session's ships changed after the target back to the target's bytes and mode, through the hx transaction (journal, atomic apply), as a ship with `kind: "rewind"` and its own checkpoint. Files only in S0; the model is told by a fixed block on its next user message.
+2. **Not gated.** No `gate.decided` is written. A ledger or checkpoint failure after the write restores the journal: a rewind that could not be undone does not stand.
+3. **Undo is a rewind** to the previous head, returned as `undo.ship_id`; redo is the same.
+4. **Isolation:** the folder is this session's own worktree (S1's records; none in S0), or nothing else changed it since this session's last kept ship, proven by a `folder_digest` recorded on every `checkpoint.committed` and no other live session in the folder; in both cases every path must still be as the session left it, checked by hx under its lock (`expect_sha256`). Otherwise refused, with the changed paths named, and nothing written.
+5. **The person's act:** a plugin RPC from an owner surface, never a tool, not a host-ops verb; not subject to the careful scale's asks; confirmed in a dry-run sheet.
+6. **hx-v1 gains** an internal `put` edit (base64 bytes, mode, expected hash) and `expect_sha256` on `delete`; the model-facing `ship` does not accept them.
+7. A `checkpoint` turn item in the thread; "edit from here" and "fork from here" are S2, on the engine's own conversation `rewind` and `branch` mutations.
+
+**Alternatives weighed.**
+- *Gate the rewind*: consistent, but a failing gate could trap the person in a bad state.
+- *T3's whole-worktree snapshot per turn*: boopis's ships already cover every agent write.
+- *Per-path check only in a shared folder*: safe for the paths written, but not "nothing else changed", which the owner asked for.
+
+**Consequences.**
+- In S0 every folder is shared, so a rewind runs only when the folder is untouched since the session's last change; S1's worktrees lift that.
+- Every kept ship pays a `git status` and hashes of changed files for the digest (budget to verify on a large repository).
