@@ -15,6 +15,7 @@ use serde_json::{Value, json};
 
 use super::args::{Args, Kind};
 use crate::error::{Error, Result};
+use crate::rooms::lines::{self, Speaker};
 use crate::rooms::run::{self, Opts, Outcome, Progress, Stop};
 use crate::rooms::settings::{self, RoomSettings};
 use crate::rooms::{self, Event, NewRoom, Room, Rpc, Seat};
@@ -438,57 +439,24 @@ async fn finish_run(
 }
 
 fn log_line(ctx: &mut Ctx<'_>, room: &Room, e: &Event, json: bool) {
-    let line = match e.kind.as_str() {
-        "message.user" => Some(("you".to_owned(), e.text("text").unwrap_or("").to_owned())),
-        "message.member" => {
-            let id = e.text("member_id").unwrap_or(&e.actor);
-            Some((
-                room.name_of(id).to_owned(),
-                e.text("text").unwrap_or("").to_owned(),
-            ))
-        }
-        "turn.failed" => {
-            let id = e.text("member_id").unwrap_or("a bot");
-            Some((
-                "--".to_owned(),
-                run::turn_failed_words(
-                    room.name_of(id),
-                    e.text("error").unwrap_or(""),
-                    e.text("reason_code"),
-                ),
-            ))
-        }
-        "member.unavailable" => Some((
-            "--".to_owned(),
-            format!(
-                "{} is not available.",
-                room.name_of(e.text("member_id").unwrap_or("a bot"))
-            ),
-        )),
-        "room.stop_requested" => Some(("--".to_owned(), "stopped".to_owned())),
-        "room.activity" => match e.text("status") {
-            Some("bounded") => Some(("--".to_owned(), "paused at the engine's limit".to_owned())),
-            Some("settled") => Some((
-                "--".to_owned(),
-                "settled: the bots stopped handing off".to_owned(),
-            )),
-            _ => None,
-        },
-        _ => None,
-    };
-    let Some((who, text)) = line else { return };
-    if text.trim().is_empty() {
+    let Some(l) = lines::line(room, e) else {
         return;
-    }
+    };
+    let who = match &l.from {
+        Speaker::User => "you".to_owned(),
+        Speaker::Member(id) => room.name_of(id).to_owned(),
+        Speaker::Boopis => "--".to_owned(),
+    };
     if json {
-        json_line(
-            ctx,
-            &json!({"type": e.kind, "seq": e.seq, "at": e.at, "time": rfc3339(e.at), "who": who, "text": text}),
-        );
-    } else if who == "--" {
-        say(ctx, &format!("[{}] -- {text}", clock(e.at)));
+        let mut v = json!({"type": l.kind, "seq": l.seq, "at": l.at, "time": rfc3339(l.at), "who": who, "text": l.text});
+        if let Some(about) = &l.about {
+            v["member"] = json!(about);
+        }
+        json_line(ctx, &v);
+    } else if l.from == Speaker::Boopis {
+        say(ctx, &format!("[{}] -- {}", clock(l.at), l.text));
     } else {
-        print_message(ctx, false, e.at, &who, &text, e.seq);
+        print_message(ctx, false, l.at, &who, &l.text, l.seq);
     }
 }
 

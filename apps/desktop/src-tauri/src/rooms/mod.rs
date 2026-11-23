@@ -5,6 +5,7 @@
 //! (a fresh ticket, the same dial the app's own proxy makes) and the tests fill with a scripted room. No method is guessed:
 //! each one and its parameters are the engine's (`tui_gateway/contracts/groups_bot_relay.py`).
 
+pub mod lines;
 pub mod run;
 pub mod settings;
 
@@ -174,6 +175,23 @@ pub fn new_room_id(name: &str) -> String {
 #[must_use]
 pub fn new_event_id(prefix: &str) -> String {
     format!("{prefix}-{}", random_hex())
+}
+
+/// Names in a sentence: "kai", "kai and nina", "kai, nina and moss".
+#[must_use]
+pub fn list_words<S: AsRef<str>>(names: &[S]) -> String {
+    match names {
+        [] => String::new(),
+        [one] => one.as_ref().to_owned(),
+        [rest @ .., last] => format!(
+            "{} and {}",
+            rest.iter()
+                .map(AsRef::as_ref)
+                .collect::<Vec<_>>()
+                .join(", "),
+            last.as_ref()
+        ),
+    }
 }
 
 /// The rooms of the root's gateway, most recently changed first.
@@ -473,7 +491,9 @@ pub struct Event {
 }
 
 impl Event {
-    fn from_value(v: &Value) -> Self {
+    /// Read one event of `groups.log`.
+    #[must_use]
+    pub fn from_value(v: &Value) -> Self {
         Self {
             seq: v.get("seq").and_then(Value::as_u64).unwrap_or(0),
             id: v

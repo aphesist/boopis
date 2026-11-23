@@ -426,7 +426,7 @@ async fn log_prints_the_conversation_and_follow_reads_on() {
         "{}",
         o.out
     );
-    assert!(o.out.contains("settled"), "{}", o.out);
+    assert!(o.out.contains("Settled"), "{}", o.out);
     assert!(
         o.out.contains(" UTC] you"),
         "a time says its zone (B37): {}",
@@ -509,5 +509,55 @@ async fn set_keeps_and_clears_the_rooms_cap() {
         .await
         .code,
         1
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn log_shows_a_cancelled_or_failed_turn_so_the_numbering_has_no_gap() {
+    let (_d, s) = tmp();
+    let fake = Fake::new(Script::default());
+    fake.write(
+        "message.user",
+        "user",
+        &json!({"thread_id": "main", "text": "open every source"}),
+    );
+    fake.write(
+        "turn.cancelled",
+        "gateway",
+        &json!({"member_id": "kai", "reason": "superseded_by_newer_user_event", "discussion_event_id": "e1"}),
+    );
+    fake.write(
+        "turn.failed",
+        "gateway",
+        &json!({"member_id": "nina", "error": "Unknown provider 'x'. Check 'hermes model'", "reason_code": "missing_config"}),
+    );
+    let o = go(&fake, None, &s, false, &["log", "paper past"]).await;
+    assert!(
+        o.out
+            .contains("-- Kai's turn was stopped because a newer message arrived"),
+        "{}",
+        o.out
+    );
+    assert!(
+        o.out.contains("-- Nina can't reach its model."),
+        "{}",
+        o.out
+    );
+    assert!(!o.out.contains("hermes"), "{}", o.out);
+    let o = go(&fake, None, &s, false, &["log", "paper past", "--json"]).await;
+    let seqs: Vec<u64> = o
+        .out
+        .lines()
+        .map(|l| {
+            serde_json::from_str::<Value>(l).unwrap()["seq"]
+                .as_u64()
+                .unwrap()
+        })
+        .collect();
+    assert_eq!(seqs, [1, 2, 3], "B30: seq 2 and 3 are not skipped");
+    let cancelled: Value = serde_json::from_str(o.out.lines().nth(1).unwrap()).unwrap();
+    assert_eq!(
+        (cancelled["type"].as_str(), cancelled["member"].as_str()),
+        (Some("turn.cancelled"), Some("kai"))
     );
 }

@@ -37,8 +37,10 @@ to six bots, as the app does, and `--lead` makes messages that name nobody go to
 `send` may be `-` to read standard input.
 
 `send` returns when the message is written. With `--wait` it follows the discussion, printing each bot's reply as it arrives, until the bots stop handing off (exit 0) or
-the engine pauses at its limit (exit 3: use `run` to go on). `log` prints the
-conversation; `--follow` keeps reading until you stop it (or `--for` seconds pass).
+the engine pauses at its limit (exit 3: use `run` to go on). `log` prints the conversation in the words the app uses: the
+messages, and what happened to a turn (it failed, it was cancelled because a newer message arrived, a bot was not available),
+the lead passing a message on, a stop, and a discussion that paused or settled, so the numbering (`--json`'s `seq`) has no
+gaps a person needs. `--follow` keeps reading until you stop it (or `--for` seconds pass).
 
 **Times** are printed in UTC and say so (`[23:46:17 UTC]`): boopis carries no time-zone database. `--json` has `at` (seconds
 since 1970) and `time` (RFC 3339, `Z`).
