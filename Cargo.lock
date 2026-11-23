@@ -425,7 +425,7 @@ dependencies = [
 
 [[package]]
 name = "boopis-host"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "async-trait",
  "dirs 6.0.0",
@@ -2135,7 +2135,7 @@ checksum = "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87"
 
 [[package]]
 name = "hx"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "anyhow",
  "clap",
@@ -2155,7 +2155,7 @@ dependencies = [
 
 [[package]]
 name = "hx-mods"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "cap-std",
  "getrandom 0.3.4",
@@ -2179,7 +2179,7 @@ dependencies = [
 
 [[package]]
 name = "hx-pack"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "cap-std",
  "globset",
@@ -2211,7 +2211,7 @@ dependencies = [
 
 [[package]]
 name = "hx-proto"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "schemars 1.2.3",
  "serde",
@@ -2226,7 +2226,7 @@ dependencies = [
 
 [[package]]
 name = "hx-sandbox"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "hx-proto",
  "libc",
@@ -2246,7 +2246,7 @@ dependencies = [
 
 [[package]]
 name = "hx-txn"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "cap-std",
  "getrandom 0.3.4",
