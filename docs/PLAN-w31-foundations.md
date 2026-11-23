@@ -109,3 +109,10 @@ Based on Liu Xingyu's demo (x.com/liu_xingyu/status/2121015724374397183).
 - Blanks: must wait for the person and deliver the answer INSIDE the bot's same reply (no injected turn, no double
   output). Direction: the blank lives in a plugin-owned tool call that blocks until answered; the answer is the tool
   result. Spec: docs/specs/blanks-inline.md on w31/specs (in progress, with docs/specs/feedforward.md).
+
+### Owner decisions (23 Nov, final round)
+- Blanks wait inline for a limited time, never forever; with no answer the bot keeps going on its guess and asks later
+  (a card / end-of-turn question; a late answer is a correction). Waiting ON by default in sessions, OFF by default for
+  bots (bots work alone). Both settable.
+- v7: accent Iris (#5b5bd6 / #8b8dff / #4546c8). Search default S5: keyboard-first with a clickable hint; button and
+  pill as Settings options. The mark (P3) approved, info labels included. Status (P4) approved.
