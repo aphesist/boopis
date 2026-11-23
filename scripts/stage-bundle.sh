@@ -4,7 +4,8 @@
 #   scripts/stage-bundle.sh [--target <triple>] [--hx <path to a built hx>] [--runtime <dir with runtime.json>] [--no-runtime] [--dest <src-tauri dir>]
 #   cargo tauri build --bundles appimage --config src-tauri/tauri.bundle.conf.json    (from apps/desktop)
 #
-# --target is the Rust target triple the bundle is for (default: this machine's). For x86_64-pc-windows-msvc, hx is
+# --target is the Rust target triple the bundle is for (default: this machine's; aarch64-apple-darwin in release.yml's macos
+# job, where hx goes to binaries/hx-aarch64-apple-darwin and Tauri puts it in Contents/MacOS). For x86_64-pc-windows-msvc, hx is
 # `<target dir>/<triple>/release/hx.exe` and goes to `binaries/hx-<triple>.exe`; the Windows installer is built by
 # scripts/build-windows.sh (cross-built on Linux) or by the `windows` job in release.yml (on a Windows runner), which both stage
 # through this script. It runs under Git Bash on Windows too.

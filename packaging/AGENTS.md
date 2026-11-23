@@ -1,6 +1,6 @@
 # AGENTS.md: packaging
 
-How boopis reaches a terminal: the installers (`scripts/install.sh`, `scripts/install.ps1`), the Arch install script (`arch/boopis.install`) and the art they and the app's binary (`boopis --version`, `boopis doctor`) draw. Why the art is data with three renderers: ADR-0026.
+How boopis reaches a terminal: the installers (`scripts/install.sh`, `scripts/install.ps1`), the Arch install script (`arch/boopis.install`) and the art they and the app's binary (`boopis --version`, `boopis doctor`) draw. Why the art is data with three renderers: ADR-0026. Also the macOS bundle's Info.plist and entitlements (`macos/`).
 
 ## Layout
 ```
@@ -15,6 +15,10 @@ packaging/
     make-readme-hero.py        the README's animated logo (two SVGs, CSS keyframes, no script), from the logo's static SVG files
     make-readme-terminal.py    the README's installer replay (one animated SVG), from boopis.art through render.awk and from install.sh's own wording
   arch/boopis.install   pacman's install script: a static banner and two lines on how to start
+  macos/
+    Info.plist            merged into the app's Info.plist (tauri.bundle.macos.conf.json): the privacy sentences
+    boopis.entitlements   the app's and hx's entitlements under the hardened runtime (never the App Sandbox)
+    runtime.entitlements  the runtime's interpreter and uv, signed by scripts/macos-codesign.sh (docs/RELEASING.md, "macOS")
 scripts/
   install.sh  install.ps1   the installers; their `>>> brand` blocks are generated
   embed-brand.sh            writes those blocks (and the Arch banner); `--check` fails when one is stale

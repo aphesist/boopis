@@ -570,7 +570,9 @@ install_macos() { # install_macos <dmg>
   make_dir "$APPS_DIR"
   priv cp -R "$app" "$dest"
   record a "$dest"
-  exe=$(find "$dest/Contents/MacOS" -type f | head -n 1)
+  # the bundle's own executable, as its Info.plist names it (Contents/MacOS also holds hx, and may hold helpers)
+  exe=$(sed -n '/<key>CFBundleExecutable<\/key>/{n;s/.*<string>\(.*\)<\/string>.*/\1/p;}' "$dest/Contents/Info.plist" 2>/dev/null | head -n 1)
+  exe="$dest/Contents/MacOS/${exe:-$(basename "$app" .app)}"
   hdiutil detach "$mount" >/dev/null 2>&1 || true
   # A command for the terminal: no arguments opens the app, `boopis doctor` and the like run its binary.
   {
