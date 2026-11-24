@@ -117,10 +117,10 @@ export function switchHTML(o: SwitchOpts): string {
 /* ── Field (26): text, search (a pill), multi-line ── */
 export const FIELD_KINDS = ['text', 'search', 'multiline'] as const;
 export type FieldKind = typeof FIELD_KINDS[number];
-export interface FieldOpts { id: string; kind?: U<FieldKind>; label?: U<string>; optional?: U<boolean>; value?: U<string>; placeholder?: U<string>; error?: U<string>; disabled?: U<boolean>; keys?: U<string>; mono?: U<boolean>; rows?: U<number>; attrs?: U<Attrs> }
+export interface FieldOpts { id: string; kind?: U<FieldKind>; label?: U<string>; optional?: U<boolean>; value?: U<string>; placeholder?: U<string>; error?: U<string>; disabled?: U<boolean>; keys?: U<string>; mono?: U<boolean>; rows?: U<number>; /** the accessible name where no label shows */ ariaLabel?: U<string>; attrs?: U<Attrs> }
 export function field(o: FieldOpts): string {
   const k = o.kind ?? 'text', err = o.error ? o.id + '-err' : null;
-  const common = attrs({ id: o.id, placeholder: o.placeholder, disabled: !!o.disabled, 'aria-invalid': o.error ? 'true' : null, 'aria-describedby': err, 'aria-label': o.label ? null : o.placeholder, ...(o.attrs ?? {}) });
+  const common = attrs({ id: o.id, placeholder: o.placeholder, disabled: !!o.disabled, 'aria-invalid': o.error ? 'true' : null, 'aria-describedby': err, 'aria-label': o.label ? null : o.ariaLabel ?? o.placeholder, ...(o.attrs ?? {}) });
   const control = k === 'multiline'
     ? '<textarea class="' + cls('k7-field__input', o.mono && 'k7-mono') + '" rows="' + (o.rows ?? 3) + '"' + common + '>' + esc(o.value ?? '') + '</textarea>'
     : '<input class="' + cls('k7-field__input', o.mono && 'k7-mono') + '" type="' + (k === 'search' ? 'search' : 'text') + '"' + attrs({ value: o.value }) + common + '>';

@@ -16,7 +16,8 @@ export type AvatarVariant = typeof AVATAR_VARIANTS[number];
 export const ORB_SIZES = [16, 20, 24, 28, 36, 40, 64, 96] as const;
 export interface AvatarOpts {
   variant?: U<AvatarVariant>; bot?: U<BotLike>; size?: U<number>; state?: U<string>; still?: U<boolean>; live?: U<boolean>; flag?: U<boolean>;
-  members?: U<readonly BotLike[]>; model?: U<ModelRef>; label?: U<string>; attrs?: U<Attrs>;
+  members?: U<readonly BotLike[]>; model?: U<ModelRef>; label?: U<string>;
+  /** on a rest surface (the dock, the Bots sidebar, the rail): idle is the still rest pose (ORBS.md section 23) */ rest?: U<boolean>; attrs?: U<Attrs>;
 }
 export function avatar(o: AvatarOpts): string {
   const v = o.variant ?? 'orb';
@@ -25,7 +26,7 @@ export function avatar(o: AvatarOpts): string {
   if (v === 'logomark') return '<span class="k7-avatar k7-logomark"' + a() + '><boopis-logo mark' + attrs({ label: o.label ?? 'boopis', state: o.state === 'sleeping' ? 'sleeping' : null }) + '></boopis-logo></span>';
   if (v === 'stack') return '<span class="k7-avatar"' + a() + '>' + stack({ members: o.members ?? [], size: o.size ?? 24, still: true, ...(o.label ? { label: o.label } : {}) }) + '</span>';
   const size = o.size ?? 36;
-  return '<span class="k7-avatar"' + a({ 'data-size': size }) + '>' + orbHtml(o.bot ?? { id: 'boopis', name: 'boopis' }, { size, state: o.state, still: o.still, live: o.live, flag: o.flag }) + '</span>';
+  return '<span class="k7-avatar"' + a({ 'data-size': size }) + '>' + orbHtml(o.bot ?? { id: 'boopis', name: 'boopis' }, { size, state: o.state, still: o.still, live: o.live, flag: o.flag, rest: o.rest }) + '</span>';
 }
 
 /** a bot's colour as text in each theme (theme.ts botText), for the CSS to pick */
