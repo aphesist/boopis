@@ -437,16 +437,10 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit == 'true'
       # the whole matrix: about 40 minutes at two at a time. The run itself always finishes; the next step decides
       - run: pnpm lab:check --jobs 2
-      - name: every check but the screenshot comparison passes
-        run: |
-          node -e '
-            const s = require("./lab-report/summary.json");
-            const bad = s.findings.filter((f) => f.check !== "visual");
-            const visual = s.findings.length - bad.length;
-            console.log("lab: " + bad.length + " failures that block, " + visual + " screenshot differences (reported only)");
-            for (const f of bad.slice(0, 50)) console.log("  " + f.check + " | " + f.story + " / " + f.state + " | " + f.el + " | " + f.msg);
-            process.exit(bad.length ? 1 : 0);
-          '
+      # every check but the screenshot comparison blocks, the v7 checks of LAB-v7 included; a v6 story that fails a v7 rule today is
+      # listed in tests/lab/v7-allowlist.json (kit-v7 empties it), and any finding the list does not name fails (docs/UI-LAB.md)
+      - name: every check but the screenshot comparison passes (v7 checks with the known pre-v7 exceptions)
+        run: node tests/lab/gate.mjs lab-report/summary.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -454,5 +448,47 @@ jobs:
           path: apps/desktop/ui/lab-report/
           retention-days: 14
       # chips in running text at the owner's fractional and a 2x scale: the inline-baseline check's tolerances are device pixels
-      - run: pnpm lab:check --story components/inline-chips --dpr 2 --no-visual --no-axe --no-stability --strict
-      - run: pnpm lab:check --story components/inline-chips --dpr 1.6 --no-visual --no-axe --no-stability --strict
+      - run: pnpm lab:check --story components/inline-chips --dpr 2 --no-visual --no-axe --no-stability && node tests/lab/gate.mjs lab-report/summary.json
+      - run: pnpm lab:check --story components/inline-chips --dpr 1.6 --no-visual --no-axe --no-stability && node tests/lab/gate.mjs lab-report/summary.json
+
+  lab-orbs:
+    # The v7 orb checks (docs/UI-LAB.md, "The orb checks"; ORBS.md G5 to G7): every story state that draws an orb, read from the orbs'
+    # own canvas pixels frame by frame on a paused clock. orb.rest: a bot at rest changes 0 pixels; orb.edges: no shimmer, no lone
+    # flipping pixel, no canvas that jumps or refits. BLOCKING; today's orb2 stories are known pre-v7 exceptions in v7-allowlist.json
+    # until kit-v7 swaps in orb3 3.0.2.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: apps/desktop/ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/desktop/ui/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Chromium (cached by Playwright's version)
+        id: pw-version
+        run: echo "v=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.v }}
+      - run: pnpm exec playwright install --with-deps chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+      - run: pnpm exec playwright install-deps chromium
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+      - run: pnpm lab:orbs --jobs 2
+      - name: the orb checks pass (with the known pre-v7 exceptions)
+        run: node tests/lab/gate.mjs lab-report-orbs/summary.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lab-orbs-report
+          path: apps/desktop/ui/lab-report-orbs/
+          retention-days: 14

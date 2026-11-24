@@ -138,7 +138,9 @@ export type CheckId =
   | 'geometry.contain' | 'geometry.center' | 'geometry.clip' | 'geometry.hscroll' | 'geometry.target' | 'geometry.overlap'
   | 'concentric' | 'overlay' | 'tokens.computed' | 'native' | 'scrollbar' | 'axe'
   | 'tokens.spacing' | 'roles' | 'copy' | 'brand'
-  | 'stability.render' | 'stability.interact' | 'visual' | 'errors';
+  | 'stability.render' | 'stability.interact' | 'visual' | 'errors'
+  | 'geometry.wrap' | 'geometry.row' | 'geometry.escape' | 'geometry.padding' | 'geometry.align' | 'concentric.strict'
+  | 'mark.rest' | 'sweep' | 'same-component' | 'contrast.accent' | 'orb.rest' | 'orb.edges';
 
 /** an excuse for one check: the reason alone (the whole check, for the whole state), or the reason and the text the
     finding's element description must contain (`el`, matched against the report's selector, e.g. `ui-pages__dot`; for axe,
