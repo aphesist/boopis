@@ -1,0 +1,1694 @@
+{
+ "about": "Known pre-v7 exceptions to the v7 lab checks (docs/UI-LAB.md, \"The v7 checks\"). Each entry is a v6 story or source file that fails a v7 rule today because the v7 kit is not built. w32/kit-v7 must empty this list; CI blocks on any finding it does not name.",
+ "reasons": {
+  "contrast.accent": "the v6 component this story draws predates the v7 rule (R-a11y-1); kit-v7 replaces it",
+  "kit.single": "the v6 component this story draws predates the v7 rule (v7 21, LAB-v7 4); kit-v7 replaces it",
+  "orb.edges": "the v6 component this story draws predates the v7 rule (ORBS.md G6, G7); kit-v7 replaces it",
+  "orb.rest": "the v6 component this story draws predates the v7 rule (v7 10, 21.4; ORBS.md G5); kit-v7 replaces it",
+  "tokens.loose": "the v6 component this story draws predates the v7 rule (R-space-1); kit-v7 replaces it"
+ },
+ "stories": [
+  {
+   "check": "orb.edges",
+   "story": "bots/group",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "bots/group-board",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "bots/new-bot",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "bots/new-group",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "bots/rail",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "bots/room",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "bots/roster",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "bots/settings-sheet",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "cards/approval",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "cards/form-approval",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "cards/form-askers",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "cards/form-multi",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "cards/mod-surfaces",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "cards/schedule",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "cards/teammate",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "chat/presence",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "chat/presence-rooms",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "composer/attribution",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "composer/composer",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "composer/composer-in-app",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "dock/dock",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "pages/window",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "settings/dialog",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "shell/details-panel",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "shell/interface-size",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "shell/keys-sheet",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "shell/menus",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "shell/palette",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "shell/sidebar",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "shell/title-bar",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "shell/toast",
+   "states": "*"
+  },
+  {
+   "check": "orb.edges",
+   "story": "store/dialog",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "bots/group",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "bots/group-board",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "bots/new-bot",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "bots/new-group",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "bots/rail",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "bots/room",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "bots/roster",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "bots/settings-sheet",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "cards/mod-surfaces",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "chat/presence-rooms",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "composer/attribution",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "composer/composer-in-app",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "dock/dock",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "pages/window",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "settings/dialog",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "shell/details-panel",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "shell/interface-size",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "shell/keys-sheet",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "shell/menus",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "shell/palette",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "shell/sidebar",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "shell/title-bar",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "shell/toast",
+   "states": "*"
+  },
+  {
+   "check": "orb.rest",
+   "story": "store/dialog",
+   "states": "*"
+  }
+ ],
+ "files": [
+  {
+   "check": "contrast.accent",
+   "file": "src/styles/tokens.css",
+   "msg": "the theme defines no --accent-text (section 18 derives it from the accent and checks it at 4.5:1)"
+  },
+  {
+   "check": "contrast.accent",
+   "file": "src/styles/tokens.css",
+   "msg": "the theme defines no --on-accent (section 18 derives it from the accent and checks it at 4.5:1)"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/clipboard.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/components.css",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/html.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/index.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/kit.guard.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/native-controls.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/squircle.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/toast-place.test.ts",
+   "msg": "the file is named for Toast, which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/toast-place.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/toast.test.ts",
+   "msg": "the file is named for Toast, which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/toast.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/toast.ts",
+   "msg": "the file is named for Toast, which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/toast.ts",
+   "msg": "uses Toast (\"Toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/toast.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/components/variants.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/core/bus.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/core/bus.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/data/mods-model.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/data/mods-model.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/data/types.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/claude-card.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/connectors-notice.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/connectors-notice.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/connectors.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/connectors.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/endpoint-form.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/endpoint-form.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/first-run.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/first-run.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/live-provider.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/live/live-mods.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/models-tab.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/models-tab.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/notice.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/providers-view.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/window-controls.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/host/window-controls.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/coverage.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/cards/mods.stories.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/components/floating.stories.ts",
+   "msg": "uses Toast (\"Toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/components/floating.stories.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/ask-card.stories.ts",
+   "msg": "the kit component AskCard has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/avatar.stories.ts",
+   "msg": "the kit component Avatar has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/badge.stories.ts",
+   "msg": "the kit component Badge has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/block.stories.ts",
+   "msg": "the kit component Block has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/bubble.stories.ts",
+   "msg": "the kit component Bubble has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/button.stories.ts",
+   "msg": "the kit component Button has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/card.stories.ts",
+   "msg": "the kit component Card has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/chip.stories.ts",
+   "msg": "the kit component Chip has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/composer.stories.ts",
+   "msg": "the kit component Composer has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/dialog.stories.ts",
+   "msg": "the kit component Dialog has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/diff-view.stories.ts",
+   "msg": "the kit component DiffView has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/disclosure.stories.ts",
+   "msg": "the kit component Disclosure has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/dock.stories.ts",
+   "msg": "the kit component Dock has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/empty-state.stories.ts",
+   "msg": "the kit component EmptyState has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/field.stories.ts",
+   "msg": "the kit component Field has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/files-card.stories.ts",
+   "msg": "the kit component FilesCard has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/icon-button.stories.ts",
+   "msg": "the kit component IconButton has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/inline-chip.stories.ts",
+   "msg": "the kit component InlineChip has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/kbd.stories.ts",
+   "msg": "the kit component Kbd has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/list-row.stories.ts",
+   "msg": "the kit component ListRow has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/mark.stories.ts",
+   "msg": "the kit component Mark has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/menu-row.stories.ts",
+   "msg": "the kit component MenuRow has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/menu.stories.ts",
+   "msg": "the kit component Menu has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/notch.stories.ts",
+   "msg": "the kit component Notch has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/notice.stories.ts",
+   "msg": "the kit component Notice has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/option-row.stories.ts",
+   "msg": "the kit component OptionRow has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/page.stories.ts",
+   "msg": "the kit component Page has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/pane.stories.ts",
+   "msg": "the kit component Pane has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/queue.stories.ts",
+   "msg": "the kit component Queue has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/rail.stories.ts",
+   "msg": "the kit component Rail has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/section-head.stories.ts",
+   "msg": "the kit component SectionHead has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/segmented.stories.ts",
+   "msg": "the kit component Segmented has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/selector-item.stories.ts",
+   "msg": "the kit component SelectorItem has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/status-line.stories.ts",
+   "msg": "the kit component StatusLine has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/status-word.stories.ts",
+   "msg": "the kit component StatusWord has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/switch.stories.ts",
+   "msg": "the kit component Switch has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/system-line.stories.ts",
+   "msg": "the kit component SystemLine has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/time-separator.stories.ts",
+   "msg": "the kit component TimeSeparator has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/tool-row.stories.ts",
+   "msg": "the kit component ToolRow has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/tooltip.stories.ts",
+   "msg": "the kit component Tooltip has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/turn-foot.stories.ts",
+   "msg": "the kit component TurnFoot has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/well.stories.ts",
+   "msg": "the kit component Well has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/kit/window-chrome.stories.ts",
+   "msg": "the kit component WindowChrome has no story file"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/settings/connectors.stories.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/settings/providers.stories.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/shell/shell.stories.ts",
+   "msg": "uses Toast (\"Toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/shell/shell.stories.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/store/store.stories.ts",
+   "msg": "uses Banner (\"banner\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/stories/store/store.stories.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/v7-checks.test.ts",
+   "msg": "uses QueueStrip (\"QUEUE_STRIP\"), which section 21 merged into Queue"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/v7-checks.test.ts",
+   "msg": "uses QueueStrip (\"QueueStrip\"), which section 21 merged into Queue"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/v7-checks.test.ts",
+   "msg": "uses QueueStrip (\"queue-strip\"), which section 21 merged into Queue"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/v7-checks.test.ts",
+   "msg": "uses QueueStrip (\"queueStrip\"), which section 21 merged into Queue"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/v7-checks.test.ts",
+   "msg": "uses QueueStrip (\"queue_strip\"), which section 21 merged into Queue"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/v7-checks.test.ts",
+   "msg": "uses Toast (\"Toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/lab/variant-drawers.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/main.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/bots/archived.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/bots/group-room.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/bots/groups.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/bots/list.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/bots/live-bots.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/bots/room.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/bots/settings-live.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/bots/settings.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/chat/refs.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/dock/controller.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/mods/index.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/mods/mods.css",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/mods/mods.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/mods/toasts.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/session/composer.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/session/council.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/session/list.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/session/right.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/shell/actions.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/shell/dialogs.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/shell/index.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/shell/local-api.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/shell/palette.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/shell/palette.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/shell/regions.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/shell/shell.css",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/shell/ui-size.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/shell/ui-size.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/store/reading.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/store/store.test.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/modules/store/view.ts",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "kit.single",
+   "file": "src/styles/tokens.css",
+   "msg": "uses Toast (\"toast\"), which section 21 merged into Notice"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal column-gap 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal gap 10px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal gap 12px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal gap 14px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal gap 24px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal gap 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal gap 3px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal gap 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal gap 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal gap 7px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal gap 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal inset 20px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal margin -2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal margin 20px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal margin 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal margin 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal margin-bottom 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal margin-bottom 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal margin-left -2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal margin-right 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal margin-right 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal margin-top 12px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal margin-top 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal margin-top 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding 10px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding 12px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding 14px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding 16px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding 20px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding 3px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding 5px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding 7px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding-block 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding-bottom 24px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding-bottom 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding-right 14px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding-right 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/components.css",
+   "msg": "literal padding-top 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/mod-view.css",
+   "msg": "literal gap 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/mod-view.css",
+   "msg": "literal padding 10px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/mod-view.css",
+   "msg": "literal padding 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/mod-view.css",
+   "msg": "literal padding 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/mod-view.css",
+   "msg": "literal padding-block 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/presence.css",
+   "msg": "literal gap 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/presence.css",
+   "msg": "literal margin -2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/presence.css",
+   "msg": "literal padding 12px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/presence.css",
+   "msg": "literal padding 3px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/components/presence.css",
+   "msg": "literal padding-left 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/bots/bots.css",
+   "msg": "literal gap 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/bots/bots.css",
+   "msg": "literal gap 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/bots/bots.css",
+   "msg": "literal margin -4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/bots/bots.css",
+   "msg": "literal margin 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/bots/bots.css",
+   "msg": "literal margin-left 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/bots/bots.css",
+   "msg": "literal margin-top 12px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/bots/bots.css",
+   "msg": "literal padding 14px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/bots/bots.css",
+   "msg": "literal padding 16px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/bots/bots.css",
+   "msg": "literal padding 20px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/bots/bots.css",
+   "msg": "literal padding 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/cards/cards.css",
+   "msg": "literal gap 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/cards/cards.css",
+   "msg": "literal gap 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/cards/cards.css",
+   "msg": "literal padding 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/cards/cards.css",
+   "msg": "literal padding 5px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/cards/cards.css",
+   "msg": "literal padding 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/cards/cards.css",
+   "msg": "literal padding-top 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal column-gap 14px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal gap 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal gap 3px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal gap 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal gap 5px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal gap 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal margin 14px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal margin 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal margin-left 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal margin-right -6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal margin-top 14px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal margin-top 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal padding 10px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal padding 14px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/dock/dock.css",
+   "msg": "literal row-gap 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal gap 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal margin-left -6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal margin-top 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal padding 10px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal padding 12px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal padding 14px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal padding 20px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal padding 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal padding-block 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal padding-block 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal padding-block 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal padding-block 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal padding-inline 10px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal padding-left 10px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal padding-left 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal padding-right 12px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/mods/mods.css",
+   "msg": "literal padding-top 9px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/session/session.css",
+   "msg": "literal gap 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/session/session.css",
+   "msg": "literal gap 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/session/session.css",
+   "msg": "literal margin -6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/session/session.css",
+   "msg": "literal margin 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/session/session.css",
+   "msg": "literal margin 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/session/session.css",
+   "msg": "literal padding 10px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/session/session.css",
+   "msg": "literal padding 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/session/session.css",
+   "msg": "literal padding 48px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/session/session.css",
+   "msg": "literal padding 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/session/session.css",
+   "msg": "literal padding 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal column-gap 32px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal gap 10px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal gap 12px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal gap 14px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal gap 16px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal gap 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal gap 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal gap 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal gap 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin 12px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin 16px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin 20px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin 2px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin-left 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin-right -6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin-right 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin-right 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin-top 10px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin-top 12px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin-top 16px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal margin-top 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal padding 10px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal padding 12px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal padding 14px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal padding 16px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal padding 200px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal padding 20px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal padding 24px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal padding 32px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal padding 4px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal padding 6px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal padding 8px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal padding-inline-start 12px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal padding-left 12px"
+  },
+  {
+   "check": "tokens.loose",
+   "file": "src/modules/shell/shell.css",
+   "msg": "literal padding-top 8px"
+  }
+ ]
+}
