@@ -4,6 +4,7 @@
    on it come from contrast searches (section 18), so they are computed here and written on the root as custom properties.
    Iris, the owner's pick (P1), is the tokens' own value and needs nothing. Two derivations live here: the accent's
    (section 18) and a bot's own fill for your bubble and send in its chat (18.1). */
+import { emit } from '../../core/bus';
 import { ratio } from '../../styles/colour';
 
 export type Mode = 'dark' | 'light';
@@ -71,12 +72,15 @@ export function applyTheme(root: HTMLElement, o: ThemeOpts = {}): void {
   if (o.radii === 'c') root.setAttribute('data-radii', 'c'); else if (o.radii) root.removeAttribute('data-radii');
   if (o.shadow && o.shadow !== 'a') root.setAttribute('data-shadow', o.shadow); else if (o.shadow) root.removeAttribute('data-shadow');
   const keys: (keyof AccentTokens)[] = ['--accent', '--accent-text', '--focus', '--on-accent', '--accent-soft', '--accent-mark'];
-  if (o.accent === null) { for (const k of keys) root.style.removeProperty(k); root.removeAttribute('data-accent'); return; }
-  const accent = o.accent ?? root.getAttribute('data-accent');
-  if (!accent) return;
-  root.setAttribute('data-accent', accent);
-  const t = deriveAccent(accent, mode);
-  for (const k of keys) root.style.setProperty(k, t[k]);
+  const accent = o.accent === null ? null : o.accent ?? root.getAttribute('data-accent');
+  if (!accent) { for (const k of keys) root.style.removeProperty(k); root.removeAttribute('data-accent'); }
+  else {
+    root.setAttribute('data-accent', accent);
+    const t = deriveAccent(accent, mode);
+    for (const k of keys) root.style.setProperty(k, t[k]);
+  }
+  /* orbs re-read the colours they resolved (the boopis bot's ink, cut-out eyes): the app's one theme event */
+  emit('hx:theme', { preset: 'v7-' + mode, scheme: mode });
 }
 
 /** section 18.1: a bot's derived fill for your bubble and the send button in its own chat. White text when 4.5:1 is

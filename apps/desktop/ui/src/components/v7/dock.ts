@@ -13,7 +13,7 @@ import { askCard } from './thread';
 import type { AskCardOpts } from './thread';
 import { bubble } from './blocks';
 import { composer } from './thread';
-import { statusWord } from './inline';
+import { inkOrb, statusWord } from './inline';
 import { botFill } from './theme';
 import { attrs, esc, kitAttrs, partAttrs } from './util';
 import type { Attrs, U } from './util';
@@ -24,7 +24,7 @@ export const DOCK_GEOMETRY = {
   open: { w: 640, h: 432, R: 30, F: 30, pad: 8, orb: 40, grow: [52, 46] as const, gap: 14 }
 } as const;
 export type DockKind = keyof typeof DOCK_GEOMETRY;
-export interface DockBot extends BotLike { color?: string; working?: boolean; needs?: boolean; resting?: boolean }
+export interface DockBot extends BotLike { color?: string; working?: boolean; needs?: boolean; resting?: boolean; /** the boopis bot, in ink (light on the dock) */ ink?: boolean }
 export interface DockOpts {
   kind?: U<DockKind>; bots: readonly DockBot[]; hover?: U<string>; focus?: U<string>; current?: U<string>; more?: U<number>;
   /** open: the stack of asks (D03 C) or a bot's card */ open?: U<{ kind: 'stack'; asks: readonly AskCardOpts[] } | { kind: 'card'; bot: DockBot; log: readonly { kind: 'user' | 'agent'; text: string }[]; ask?: AskCardOpts }>;
@@ -40,7 +40,7 @@ function rowHTML(o: DockOpts, kind: DockKind): string {
     return '<button class="k7-reset k7-dock__orb"' + attrs({
       type: 'button', 'data-bot': b.id, 'aria-label': (b.name ?? '') + ', ' + stateOf(b)[0], 'aria-current': o.current === b.id ? 'true' : null,
       'data-focus': o.focus === b.id ? '' : null, 'data-awake': o.hover === b.id ? '' : null, tabindex: o.focus === b.id || (!o.focus && i === 0) ? '0' : '-1', style: '--s:' + s + 'px'
-    }) + '>' + orbHtml(b, { size: s, rest: true, state: b.needs ? 'needs' : b.working ? 'working' : b.resting ? 'sleeping' : undefined }) + (b.needs ? '<span class="k7-flag" aria-hidden="true"></span>' : '') + '</button>';
+    }) + '>' + ((h: string) => (b.ink ? inkOrb(h) : h))(orbHtml(b, { size: s, rest: true, state: b.needs ? 'needs' : b.working ? 'working' : b.resting ? 'sleeping' : undefined })) + (b.needs ? '<span class="k7-flag" aria-hidden="true"></span>' : '') + '</button>';
   };
   const needs = o.bots.filter((b) => b.needs);
   const hovered = o.bots.find((b) => b.id === o.hover);

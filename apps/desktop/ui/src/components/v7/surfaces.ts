@@ -7,7 +7,7 @@ import { slabPath } from '../squircle-path';
 import { button, iconButton, kbd, segmented } from './controls';
 import type { SegItem } from './controls';
 import { emptyState, sectionHead } from './blocks';
-import { statusLine } from './inline';
+import { inkOrb, statusLine } from './inline';
 import { composer } from './thread';
 import { attrs, cls, esc, glyph, kitAttrs, partAttrs } from './util';
 import type { Attrs, U } from './util';
@@ -95,12 +95,12 @@ export function dialog(o: DialogOpts): string {
 }
 
 /* ── Rail (40): the bots' tiles; A 54 on 88, B 44 on 64 (automatic under 1200 px); current, needs you, working ── */
-export interface RailBot extends BotLike { current?: boolean; needs?: boolean; working?: boolean }
+export interface RailBot extends BotLike { current?: boolean; needs?: boolean; working?: boolean; /** the boopis bot, in ink */ ink?: boolean }
 export interface RailOpts { size?: U<'a' | 'b'>; bots: readonly RailBot[]; groups?: U<readonly { name: string; members: readonly BotLike[] }[]>; attrs?: U<Attrs> }
 export function rail(o: RailOpts): string {
   const b = o.size === 'b', orb = b ? 28 : 36;
   const tile = (x: RailBot): string => '<button class="k7-reset k7-tile"' + attrs({ type: 'button', 'aria-label': (x.name ?? '') + (x.needs ? ', needs you' : x.working ? ', working' : ''), 'aria-current': x.current ? 'page' : null, 'data-tip': x.name, 'data-tip-pos': 'right', 'data-needs': x.needs ? '' : null }) + '>' +
-    orbHtml(x, { size: orb, rest: true, state: x.needs ? 'needs' : x.working ? 'working' : undefined }) + (x.needs ? '<span class="k7-flag" aria-hidden="true"></span>' : '') + '</button>';
+    ((h: string) => (x.ink ? inkOrb(h) : h))(orbHtml(x, { size: orb, rest: true, state: x.needs ? 'needs' : x.working ? 'working' : undefined })) + (x.needs ? '<span class="k7-flag" aria-hidden="true"></span>' : '') + '</button>';
   const groups = (o.groups ?? []).map((g) => '<button class="k7-reset k7-tile" type="button"' + attrs({ 'aria-label': g.name + ': ' + g.members.map((m) => m.name).join(', '), 'data-tip': g.name, 'data-tip-pos': 'right' }) + '>' + stack({ members: g.members, size: 16, shape: 'cluster', still: true, tip: false }) + '</button>').join('');
   return '<nav class="k7-rail"' + kitAttrs('Rail', { 'data-size': b ? 'b' : 'a', 'aria-label': 'Bots', ...(o.attrs ?? {}) }) + '>' + o.bots.map(tile).join('') +
     (groups ? '<hr class="k7-rail__rule">' + groups : '') + '<span class="k7-grow"></span><div class="k7-rail__foot">' +

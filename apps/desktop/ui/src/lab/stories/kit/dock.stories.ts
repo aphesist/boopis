@@ -5,7 +5,7 @@ import { line, stage } from '../../story';
 import type { Story } from '../../types';
 import { BOOPIS, HEX, IRIS, KAI, MOSS, NINA } from './_bots';
 
-const BOTS = [{ ...NINA, needs: true }, { ...KAI, working: true }, { ...BOOPIS }, { ...MOSS }, { ...IRIS }, { ...HEX, resting: true }];
+const BOTS = [{ ...NINA, needs: true }, { ...KAI, working: true }, { ...BOOPIS, ink: true }, { ...MOSS }, { ...IRIS }, { ...HEX, resting: true }];
 const ASK = { bot: NINA, ask: 'Deploy 0.2.0 to staging?', command: 'boopis deploy staging --tag 0.2.0', answers: [{ label: 'Hold to allow once', primary: true, hold: true }, { label: 'Always for staging' }, { label: 'Deny', keys: 'esc' }] };
 const at = (d: HTMLElement): HTMLElement => { const w = document.createElement('div'); w.className = 'k7-lab-dock'; w.append(d); return w; };
 export default {

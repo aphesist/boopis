@@ -4,7 +4,7 @@ import { line, stage } from '../../story';
 import type { Story } from '../../types';
 import { BOOPIS, HEX, IRIS, KAI, MOSS, NINA, NIMBUS } from './_bots';
 
-const BOTS = [{ ...BOOPIS }, { ...KAI, current: true }, { ...NINA, needs: true }, { ...MOSS, working: true }, { ...IRIS }, { ...HEX }];
+const BOTS = [{ ...BOOPIS, ink: true }, { ...KAI, current: true }, { ...NINA, needs: true }, { ...MOSS, working: true }, { ...IRIS }, { ...HEX }];
 const GROUPS = [{ name: 'release', members: [KAI, NINA, MOSS] }, { name: 'triage', members: [NIMBUS, HEX, IRIS, KAI, NINA] }];
 export default {
   id: 'kit/rail', title: 'Rail', area: 'bots', kind: 'component', covers: ['kit.rail'],

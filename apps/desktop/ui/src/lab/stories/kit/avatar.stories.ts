@@ -15,7 +15,7 @@ export default {
       line(root, kit.avatar({ variant: 'logomark' }));
     }, { width: 720 }),
     states: stage(['variant'], ({ root }) => {
-      line(root, kit.avatar({ bot: { ...NINA, state: 'idle' }, size: 40 }), kit.avatar({ bot: { ...KAI, state: 'working' }, size: 40 }), kit.avatar({ bot: { ...NINA, state: 'needs', attention: 'approval' }, size: 40, flag: true }), kit.avatar({ bot: { ...NIMBUS, state: 'sleeping' }, size: 40 }), kit.avatar({ bot: BOOPIS, size: 40 }));
+      line(root, kit.avatar({ bot: { ...NINA, state: 'idle' }, size: 40 }), kit.avatar({ bot: { ...KAI, state: 'working' }, size: 40 }), kit.avatar({ bot: { ...NINA, state: 'needs', attention: 'approval' }, size: 40, flag: true }), kit.avatar({ bot: { ...NIMBUS, state: 'sleeping' }, size: 40 }), kit.avatar({ bot: BOOPIS, size: 40, ink: true }));
       line(root, kit.avatar({ variant: 'logomark', state: 'sleeping', label: 'boopis, asleep' }));
     }, { allow: { 'orb.edges': { el: 'orb-avatar[boopis]', reason: 'orb3 3.0.2\'s own residual edge shimmer on the ink squircle in its lively idle (1 to 3 px in 48 frames, not every run; ORBS.md measures 6 to 27 px per clip for this build): an upstream fix, reported to the owner, not a kit defect' } } }),
     /* ORBS.md section 23: the rest pose at the home (still, 0 changed pixels), then the state table's faces, each on the alive-idle engine */
