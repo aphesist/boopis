@@ -1,13 +1,1250 @@
 {
  "about": "Known pre-v7 exceptions to the v7 lab checks (docs/UI-LAB.md, \"The v7 checks\"). Each entry is a v6 story or source file that fails a v7 rule today because the v7 kit is not built. w32/kit-v7 must empty this list; CI blocks on any finding it does not name.",
  "reasons": {
+  "concentric.strict": "the v6 component this story draws predates the v7 rule (R-corner-10); kit-v7 replaces it",
   "contrast.accent": "the v6 component this story draws predates the v7 rule (R-a11y-1); kit-v7 replaces it",
+  "geometry.escape": "the v6 component this story draws predates the v7 rule (R-overflow-1); kit-v7 replaces it",
+  "geometry.padding": "the v6 component this story draws predates the v7 rule (R-space-3); kit-v7 replaces it",
+  "geometry.row": "the v6 component this story draws predates the v7 rule (R-row-1); kit-v7 replaces it",
+  "geometry.wrap": "the v6 component this story draws predates the v7 rule (R-row-1); kit-v7 replaces it",
   "kit.single": "the v6 component this story draws predates the v7 rule (v7 21, LAB-v7 4); kit-v7 replaces it",
   "orb.edges": "the v6 component this story draws predates the v7 rule (ORBS.md G6, G7); kit-v7 replaces it",
   "orb.rest": "the v6 component this story draws predates the v7 rule (v7 10, 21.4; ORBS.md G5); kit-v7 replaces it",
+  "same-component": "the v6 component this story draws predates the v7 rule (v7 21, 21.4, LAB-v7 4); kit-v7 replaces it",
   "tokens.loose": "the v6 component this story draws predates the v7 rule (R-space-1); kit-v7 replaces it"
  },
  "stories": [
+  {
+   "check": "concentric.strict",
+   "story": "bots/group",
+   "states": [
+    "a message waiting for a member",
+    "two messages waiting"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "bots/room",
+   "states": [
+    "a long name",
+    "nina (an approval)"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "bots/roster",
+   "states": [
+    "120 bots, scrolling",
+    "a long name and the made-outside mark",
+    "archived group open",
+    "groups: one, two, three and six members, a long name",
+    "live updates of several bots",
+    "no bots",
+    "one bot",
+    "row focus",
+    "row hover",
+    "the owner's six, their records read after the roster",
+    "those groups, a row hovered",
+    "those groups, the current one",
+    "typical",
+    "with a group"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "bots/settings-sheet",
+   "states": [
+    "a long name",
+    "look: a new shape, on every orb at once",
+    "look: a swatch focused",
+    "look: dice hover",
+    "look: the shape tab",
+    "nina",
+    "run limit menu, the bot has its own",
+    "run limit: the row, in the model section",
+    "scrolled to the end"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "cards/form-multi",
+   "states": [
+    "compact",
+    "compact, on the dock",
+    "first field focus",
+    "invalid",
+    "long",
+    "open",
+    "submit focus",
+    "submit hover",
+    "submitting"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "cards/mod-surfaces",
+   "states": [
+    "whole window"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "chat/presence-rooms",
+   "states": [
+    "a bot's chat: needs your approval",
+    "a group: a message held while they work",
+    "the dock, the sidebar and the chat agree"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "components/button",
+   "states": [
+    "focus",
+    "hover",
+    "pressed",
+    "typical"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "components/markdown",
+   "states": [
+    "fenced code, folded"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "components/menu",
+   "states": [
+    "governed mode unavailable (the Governed chip)",
+    "governed mode unavailable, at rest",
+    "many, scrolling",
+    "open, end aligned",
+    "typical"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "components/row",
+   "states": [
+    "focus",
+    "hover",
+    "long",
+    "pressed",
+    "typical"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "components/search",
+   "states": [
+    "focus",
+    "hover",
+    "pressed",
+    "typical"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "components/variants-button",
+   "states": [
+    "keys"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "components/variants-row",
+   "states": [
+    "acts"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "components/variants-search",
+   "states": [
+    "size"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "dock/dock",
+   "states": [
+    "no waits, no schedules (one bot)",
+    "the waiting page"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "pages/window",
+   "states": [
+    "Bots",
+    "Bots with 120 bots",
+    "Bots: the owner's six, their records read after the roster",
+    "Settings open",
+    "a conversation",
+    "a live conversation (recorded frames)",
+    "a live conversation with a form (recorded)",
+    "details panel open",
+    "empty app",
+    "long names everywhere",
+    "palette open",
+    "sidebar closed, dock off",
+    "unpriced models (recorded)"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "settings/dialog",
+   "states": [
+    "appearance",
+    "appearance, a larger interface chosen",
+    "appearance, scrolled",
+    "close tooltip",
+    "connectors",
+    "general",
+    "general, scrolled (the scrollbar)",
+    "interface size focus",
+    "keyboard",
+    "models",
+    "segmented focus",
+    "segmented hover",
+    "segmented pressed",
+    "tab bar focus",
+    "tab bar hover"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "settings/first-run",
+   "states": [
+    "models hub, Claude Code not installed (Windows)",
+    "models hub, close, minimize, zoom (macOS)",
+    "models hub, everything connected",
+    "models hub, partly connected",
+    "models hub, trouble in words"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "shell/interface-size",
+   "states": [
+    "bots with a group, largest (125%)",
+    "bots, larger (112%)",
+    "bots, largest (125%)",
+    "rail, largest (125%)",
+    "session, larger (112%)",
+    "session, largest (125%)"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "shell/keys-sheet",
+   "states": [
+    "filtered",
+    "no matches",
+    "open"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "shell/menus",
+   "states": [
+    "a menu item hover",
+    "account menu",
+    "account menu, rail",
+    "attach menu",
+    "model picker",
+    "the blank popover"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "shell/palette",
+   "states": [
+    "a long query",
+    "field focus (the esc key chip)",
+    "many results, scrolling",
+    "no matches",
+    "open",
+    "row hover",
+    "typed query"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "shell/sidebar",
+   "states": [
+    "150 sessions, scrolling",
+    "long names",
+    "no sessions",
+    "one session",
+    "open",
+    "row focus",
+    "row hover",
+    "tabs pill focus",
+    "tabs pill hover"
+   ]
+  },
+  {
+   "check": "concentric.strict",
+   "story": "store/dialog",
+   "states": [
+    "an item's page",
+    "browse (the front page)",
+    "browse, connectors",
+    "browse, long names",
+    "browse, many items",
+    "browse, sources that could not be read",
+    "browse, the list is out of date and says why",
+    "browse, the sources being read",
+    "browse, the sources being read, one by one",
+    "browse, up to date after a read",
+    "sources",
+    "sources, being read",
+    "sources, every state",
+    "the review card"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "cards/blank",
+   "states": [
+    "compact, long"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "components/button",
+   "states": [
+    "long",
+    "rtl"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "components/capacity",
+   "states": [
+    "error",
+    "long",
+    "typical"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "components/chip",
+   "states": [
+    "long"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "components/chip-group",
+   "states": [
+    "long"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "components/code",
+   "states": [
+    "long"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "components/group",
+   "states": [
+    "long",
+    "many",
+    "typical"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "components/hold",
+   "states": [
+    "long"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "components/inline-chips",
+   "states": [
+    "long"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "components/key-combos",
+   "states": [
+    "long"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "components/signin-button",
+   "states": [
+    "pressed"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "components/tooltip",
+   "states": [
+    "long"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "components/variants-row",
+   "states": [
+    "acts",
+    "archived",
+    "current",
+    "sub"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "composer/entry",
+   "states": [
+    "a sent message with files",
+    "long"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "composer/steps",
+   "states": [
+    "long"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "settings/connectors-for",
+   "states": [
+    "a bot with a long name"
+   ]
+  },
+  {
+   "check": "geometry.escape",
+   "story": "settings/signin-card",
+   "states": [
+    "chatgpt, start pressed"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "bots/group",
+   "states": [
+    "a huddle grows as messages arrive, then folds when you write",
+    "a huddle opened",
+    "a huddle under way: open while the talk is live",
+    "a huddle with a mention chip hovered inside",
+    "a lead answers first",
+    "a long huddle, opened",
+    "a long name",
+    "a member also running a kanban task",
+    "a member names a bot that is not in the room: the note and Send to",
+    "a mention hovered",
+    "a mention of a bot that is not in the room: the chip and the hint",
+    "a message addressed to you",
+    "a message waiting for a member",
+    "a team across rounds: to-lines, mentions, paths, code",
+    "five at work: one presence entry",
+    "group chat is off",
+    "members in tools from a connected server",
+    "renaming",
+    "run limit menu open",
+    "run limit menu, the group has its own",
+    "several members answered",
+    "the composer: \"@\" names the members",
+    "the composer: \"@\" with a member option hovered",
+    "the composer: mentions drawn as chips, an outsider muted, \"@kai.\" left as text",
+    "three members at work, each in a tool",
+    "two members replying",
+    "two messages waiting"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "bots/group-board",
+   "states": [
+    "a blocked task and long titles",
+    "a column collapsed",
+    "columns and their tasks",
+    "forty tasks, scrolling",
+    "the board button focus",
+    "the board button hover"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "bots/room",
+   "states": [
+    "a long name",
+    "a reply in markdown: lists, a quote, code, a path, a mention",
+    "a reply under way: the presence entry",
+    "also running a kanban task",
+    "atlas (a thread)",
+    "composer attach tooltip",
+    "composer send hover",
+    "kai (no thread yet)",
+    "kai, its record read after the roster",
+    "live bot: a long name",
+    "live bot: a session open, with a line the app says",
+    "live bot: recent sessions and a live composer",
+    "made outside boopis",
+    "nina (an approval)",
+    "the composer: \"@\" names a teammate",
+    "the composer: a teammate drawn as a chip"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "bots/roster",
+   "states": [
+    "120 bots, scrolling",
+    "a long name and the made-outside mark",
+    "archived group open",
+    "groups: one, two, three and six members, a long name",
+    "live updates of several bots",
+    "no bots",
+    "one bot",
+    "row focus",
+    "row hover",
+    "the owner's six, their records read after the roster",
+    "those groups, a row hovered",
+    "those groups, the current one",
+    "typical",
+    "with a group"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "bots/settings-sheet",
+   "states": [
+    "a long name",
+    "live bot: a routine posting to a long group name",
+    "live bot: the room link, focused",
+    "live bot: where each routine posts",
+    "look: a live bot made outside boopis",
+    "look: a new shape, on every orb at once",
+    "look: a swatch focused",
+    "look: dice hover",
+    "look: the shape tab",
+    "nina",
+    "run limit menu, the bot has its own",
+    "run limit: the row, in the model section",
+    "scrolled to the end"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "cards/mod-surfaces",
+   "states": [
+    "band and status",
+    "the conversation with placed rows",
+    "theme card hover",
+    "whole window"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "chat/presence",
+   "states": [
+    "scrolled away",
+    "scrolled away, replies below"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "chat/presence-rooms",
+   "states": [
+    "a bot's chat: at 125%",
+    "a bot's chat: in a tool",
+    "a bot's chat: needs your approval",
+    "a bot's chat: thinking",
+    "a bot's chat: watch a turn",
+    "a group: a lead answers first",
+    "a group: a message held while they work",
+    "a group: one also on a kanban task",
+    "a group: scrolled away while two think",
+    "a group: six at work",
+    "a group: three doing different things",
+    "a group: two thinking",
+    "a group: watch them answer",
+    "the dock, the sidebar and the chat agree"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "components/button",
+   "states": [
+    "focus",
+    "hover",
+    "pressed",
+    "typical"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "components/chip",
+   "states": [
+    "focus",
+    "hover",
+    "long",
+    "pressed",
+    "typical",
+    "unknown model"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "components/group",
+   "states": [
+    "long",
+    "many",
+    "typical"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "components/icon-button",
+   "states": [
+    "tooltip open"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "components/item-row",
+   "states": [
+    "empty",
+    "focus",
+    "hover",
+    "long",
+    "pressed",
+    "typical"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "components/key-combos",
+   "states": [
+    "long",
+    "typical"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "components/listbox",
+   "states": [
+    "empty",
+    "long",
+    "typical",
+    "who answers next, Smart on",
+    "who answers next, a model chosen",
+    "who answers next, governed (off-ladder models disabled)",
+    "who answers next, the answering model is not listed"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "components/row",
+   "states": [
+    "focus",
+    "hover",
+    "long",
+    "many",
+    "pressed",
+    "rtl",
+    "single",
+    "typical"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "components/toast",
+   "states": [
+    "long",
+    "typical"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "components/tooltip",
+   "states": [
+    "at the right edge",
+    "below the anchor",
+    "long",
+    "near the bottom flips above",
+    "typical"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "components/variants-button",
+   "states": [
+    "keys"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "components/variants-chip",
+   "states": [
+    "haspopup",
+    "mono",
+    "option",
+    "pressed"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "components/variants-group",
+   "states": [
+    "collapsible",
+    "expanded"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "components/variants-row",
+   "states": [
+    "acts",
+    "archived",
+    "current",
+    "sub"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "composer/attribution",
+   "states": [
+    "a council is answering: the chip says so",
+    "a mention chip in the composer",
+    "after a resume: a council turn with its members",
+    "after a resume: one reply of unknown model",
+    "governed: a mention chip",
+    "governed: the \"@\" menu says the message runs without governance",
+    "governed: the tier route, then an ungoverned turn",
+    "the \"@\" menu",
+    "three models, with dividers",
+    "two mentions in one message"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "composer/composer",
+   "states": [
+    "attach focus",
+    "attach hover",
+    "attach pressed",
+    "attach tooltip",
+    "compact, attach tooltip",
+    "compact, send tooltip",
+    "empty",
+    "empty, attach tooltip",
+    "listening",
+    "long unbroken",
+    "mic focus",
+    "mic hover",
+    "mic pressed",
+    "mic tooltip",
+    "multi-line",
+    "narrow (390)",
+    "rtl",
+    "running",
+    "send focus",
+    "send hover",
+    "send pressed",
+    "send tooltip",
+    "tall, scrolling",
+    "with a folder and a picture",
+    "with files",
+    "with text"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "composer/composer-in-app",
+   "states": [
+    "session",
+    "session, attach hover",
+    "session, attach menu",
+    "session, attach tooltip",
+    "session, empty",
+    "session, send hover"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "composer/steps",
+   "states": [
+    "error",
+    "long",
+    "many",
+    "typical"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "dock/dock",
+   "states": [
+    "120 bots, expanded",
+    "120 bots, expanded, scrolled to the end",
+    "centred in the window, expanded",
+    "expanded",
+    "one bot, expanded"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "pages/window",
+   "states": [
+    "Bots",
+    "Bots with 120 bots",
+    "Bots: the owner's six, their records read after the roster",
+    "Settings open",
+    "a conversation",
+    "a live conversation (recorded frames)",
+    "a live conversation with a form (recorded)",
+    "details panel open",
+    "empty app",
+    "long names everywhere",
+    "palette open",
+    "sidebar as a rail",
+    "sidebar closed, dock off",
+    "unpriced models (recorded)"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "settings/connectors",
+   "states": [
+    "a connector with several ways (its menu)",
+    "every state of an installed connector",
+    "long names",
+    "nothing installed yet",
+    "row focus",
+    "row hover",
+    "the list could not be read",
+    "the search narrows both lists",
+    "with boopis's collection"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "settings/dialog",
+   "states": [
+    "close tooltip"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "shell/interface-size",
+   "states": [
+    "bots with a group, largest (125%)",
+    "bots, larger (112%)",
+    "bots, largest (125%)",
+    "rail, largest (125%)",
+    "session, larger (112%)",
+    "session, largest (125%)"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "shell/menus",
+   "states": [
+    "a menu item hover",
+    "account menu",
+    "account menu, rail",
+    "attach menu",
+    "model picker",
+    "the blank popover"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "shell/palette",
+   "states": [
+    "field focus (the esc key chip)",
+    "many results, scrolling",
+    "open",
+    "row hover",
+    "typed query"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "shell/sidebar",
+   "states": [
+    "150 sessions, scrolling",
+    "long names",
+    "no sessions",
+    "one session",
+    "open",
+    "row focus",
+    "row hover",
+    "tabs pill focus",
+    "tabs pill hover"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "store/browse",
+   "states": [
+    "a row focused from the search (down arrow)",
+    "boopis's whole collection, by kind, with each connector's mark",
+    "connectors only, with their marks",
+    "details focus",
+    "details hover",
+    "engine plugins only",
+    "front page (Recommended)",
+    "long names",
+    "offline, with the saved copy",
+    "out of date: a source could not be read",
+    "out of date: due a read again",
+    "out of date: several could not be read (with the reasons one tap away)",
+    "row hover",
+    "search results",
+    "search with results across kinds",
+    "skills only, most used first",
+    "the front page with boopis's skills and plugins, most used first",
+    "the sources being read, source by source",
+    "up to date after a read"
+   ]
+  },
+  {
+   "check": "geometry.padding",
+   "story": "store/dialog",
+   "states": [
+    "browse (the front page)",
+    "browse, connectors",
+    "browse, long names",
+    "browse, many items",
+    "browse, sources that could not be read",
+    "browse, the list is out of date and says why",
+    "browse, the sources being read",
+    "browse, the sources being read, one by one",
+    "browse, up to date after a read"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "bots/settings-sheet",
+   "states": [
+    "a long name",
+    "live bot: a routine posting to a long group name",
+    "live bot: the room link, focused",
+    "live bot: where each routine posts",
+    "look: a live bot made outside boopis",
+    "look: a new shape, on every orb at once",
+    "look: a swatch focused",
+    "look: dice hover",
+    "look: the shape tab",
+    "nina",
+    "run limit menu, the bot has its own",
+    "run limit: the row, in the model section",
+    "scrolled to the end"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "cards/form-endpoint",
+   "states": [
+    "compact",
+    "compact, on the dock",
+    "first field focus",
+    "invalid",
+    "long",
+    "open",
+    "submit focus",
+    "submit hover",
+    "submitting"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "cards/form-endpoint-found",
+   "states": [
+    "compact",
+    "compact, on the dock",
+    "first field focus",
+    "invalid",
+    "long",
+    "open",
+    "submit focus",
+    "submit hover",
+    "submitting"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "cards/mod-surfaces",
+   "states": [
+    "pane in the details panel"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "components/listbox",
+   "states": [
+    "long",
+    "who answers next, Smart on",
+    "who answers next, a model chosen",
+    "who answers next, governed (off-ladder models disabled)",
+    "who answers next, the answering model is not listed"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "components/menu",
+   "states": [
+    "long"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "components/set-row",
+   "states": [
+    "governed mode, a ladder with cheap tiers marked (Settings > Models)",
+    "governed mode, an xAI key alone: unavailable until Grok is on (Settings > Models)",
+    "governed mode, available (Settings > Models)",
+    "governed mode, the Carbon switch on a Gemini ladder, off then on (Settings > Models)",
+    "governed mode, the Grok switch on and off beside Fable on (Settings > Models)",
+    "governed mode, the heavy switches: Fable off, then on (Settings > Models)",
+    "governed mode, unavailable: no frontier model (Settings > Models)",
+    "long",
+    "narrow"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "composer/council",
+   "states": [
+    "the form, long names"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "pages/window",
+   "states": [
+    "Settings open",
+    "details panel open"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "settings/connectors",
+   "states": [
+    "a connector with several ways (its menu)",
+    "every state of an installed connector",
+    "long names",
+    "nothing installed yet",
+    "nothing matches the search",
+    "row focus",
+    "row hover",
+    "the list could not be read",
+    "the search narrows both lists",
+    "with boopis's collection"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "settings/connectors-for",
+   "states": [
+    "a bot with a long name",
+    "main profile",
+    "one bot, its own list",
+    "one bot, none yet",
+    "one bot, the list could not be read"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "settings/dialog",
+   "states": [
+    "appearance",
+    "appearance, a larger interface chosen",
+    "appearance, scrolled",
+    "close tooltip",
+    "general",
+    "general, scrolled (the scrollbar)",
+    "interface size focus",
+    "models",
+    "segmented focus",
+    "segmented hover",
+    "segmented pressed",
+    "tab bar focus",
+    "tab bar hover"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "settings/first-run",
+   "states": [
+    "do it later: the summary",
+    "optional: connectors",
+    "summary: a ladder from what is connected",
+    "summary: several labs, change the start"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "settings/local-api",
+   "states": [
+    "copy address hover",
+    "copy path focus",
+    "off, the default",
+    "on, a different port",
+    "on, a long token path",
+    "on, one app following",
+    "on, two apps following",
+    "on, with the address and the token file",
+    "rotate pressed",
+    "switch focus",
+    "switch hover",
+    "switched on but not started",
+    "switched on, the address could not be opened"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "settings/providers",
+   "states": [
+    "Claude: billed per use",
+    "Claude: did not start",
+    "Claude: not installed, narrow",
+    "Claude: not installed, with the installer",
+    "Claude: only the desktop app’s copy",
+    "Claude: signed out, in the host’s words",
+    "Claude: signing in (Claude Code’s own sign-in is open)",
+    "Claude: too old",
+    "a key row focused",
+    "a key row hovered",
+    "every state in words",
+    "filter: connected",
+    "filter: custom, with endpoints",
+    "filter: on this computer",
+    "filter: sign in",
+    "found on this computer",
+    "long names and reasons",
+    "many endpoints",
+    "more providers, open",
+    "narrow",
+    "nothing set up",
+    "the endpoint form, first step",
+    "the endpoint form, models found",
+    "the filter focused",
+    "typical"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "shell/details-panel",
+   "states": [
+    "every section open",
+    "from recorded frames (live)",
+    "open",
+    "section head hover"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "shell/menus",
+   "states": [
+    "model picker"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "store/dialog",
+   "states": [
+    "sources",
+    "sources, being read",
+    "sources, every state"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "store/installed",
+   "states": [
+    "an update is available",
+    "button pressed",
+    "in a governed project (the switch is on)",
+    "in an ordinary project (the switch is off)",
+    "installed",
+    "long name",
+    "nothing installed",
+    "switch focus",
+    "taken down by its source (banner)"
+   ]
+  },
+  {
+   "check": "geometry.row",
+   "story": "store/sources",
+   "states": [
+    "a source added by you",
+    "a source that could not be read",
+    "a source that is off, with the reason",
+    "offline",
+    "sources"
+   ]
+  },
+  {
+   "check": "geometry.wrap",
+   "story": "bots/group",
+   "states": [
+    "a huddle opened",
+    "a huddle under way: open while the talk is live",
+    "a huddle with a mention chip hovered inside",
+    "a long huddle, opened"
+   ]
+  },
+  {
+   "check": "geometry.wrap",
+   "story": "chat/presence-rooms",
+   "states": [
+    "a group: scrolled away while two think"
+   ]
+  },
+  {
+   "check": "geometry.wrap",
+   "story": "components/inline-chips",
+   "states": [
+    "long"
+   ]
+  },
+  {
+   "check": "geometry.wrap",
+   "story": "components/menu",
+   "states": [
+    "focus",
+    "hover",
+    "long",
+    "open",
+    "open, end aligned",
+    "typical"
+   ]
+  },
+  {
+   "check": "geometry.wrap",
+   "story": "composer/council",
+   "states": [
+    "the form",
+    "the form, long names",
+    "the form, one member",
+    "the form, remembered"
+   ]
+  },
+  {
+   "check": "geometry.wrap",
+   "story": "shell/menus",
+   "states": [
+    "attach menu"
+   ]
+  },
   {
    "check": "orb.edges",
    "story": "bots/group",
@@ -287,9 +1524,436 @@
    "check": "orb.rest",
    "story": "store/dialog",
    "states": "*"
+  },
+  {
+   "check": "same-component",
+   "story": "bots/group",
+   "states": [
+    "a huddle grows as messages arrive, then folds when you write",
+    "a huddle opened",
+    "a huddle under way: open while the talk is live",
+    "a huddle with a mention chip hovered inside",
+    "a lead answers first",
+    "a long huddle, opened",
+    "a long name",
+    "a member also running a kanban task",
+    "a member names a bot that is not in the room: the note and Send to",
+    "a mention hovered",
+    "a mention of a bot that is not in the room: the chip and the hint",
+    "a message addressed to you",
+    "a message waiting for a member",
+    "a team across rounds: to-lines, mentions, paths, code",
+    "five at work: one presence entry",
+    "group chat is off",
+    "members in tools from a connected server",
+    "no messages yet",
+    "renaming",
+    "run limit menu open",
+    "run limit menu, the group has its own",
+    "several members answered",
+    "the composer: \"@\" names the members",
+    "the composer: \"@\" with a member option hovered",
+    "the composer: mentions drawn as chips, an outsider muted, \"@kai.\" left as text",
+    "three members at work, each in a tool",
+    "two members replying",
+    "two messages waiting"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "bots/group-board",
+   "states": [
+    "a blocked task and long titles",
+    "a column collapsed",
+    "a long group name",
+    "columns and their tasks",
+    "forty tasks, scrolling",
+    "no board named like the group",
+    "nothing on the board yet",
+    "reading the board",
+    "the board button focus",
+    "the board button hover",
+    "the board could not be read",
+    "the boards could not be listed",
+    "the engine has no board",
+    "this build cannot read boards"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "bots/new-bot",
+   "states": [
+    "dice hover",
+    "from no bots",
+    "typical"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "bots/new-group",
+   "states": [
+    "changing the members",
+    "group chat is off",
+    "members picked",
+    "only one bot",
+    "typical"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "bots/rail",
+   "states": [
+    "New bot focused",
+    "New group's tooltip",
+    "a bot hovered",
+    "a group focused",
+    "a group hovered",
+    "a group open",
+    "a group's tooltip",
+    "no bots, no groups",
+    "one bot",
+    "one bot, a group with one member left",
+    "seven bots and five groups, larger (112%)",
+    "seven bots, five groups (two to six members)",
+    "seven bots, no groups",
+    "seven bots, one group",
+    "the owner's seven and two groups",
+    "twelve bots, five groups",
+    "twelve bots, five groups, scrolled to the end",
+    "twelve bots, two groups"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "bots/room",
+   "states": [
+    "a long name",
+    "a reply in markdown: lists, a quote, code, a path, a mention",
+    "a reply under way: the presence entry",
+    "also running a kanban task",
+    "atlas (a thread)",
+    "composer attach tooltip",
+    "composer send hover",
+    "kai (no thread yet)",
+    "kai, its record read after the roster",
+    "live bot: a long name",
+    "live bot: a session open, with a line the app says",
+    "live bot: recent sessions and a live composer",
+    "made outside boopis",
+    "nina (an approval)",
+    "no bots at all",
+    "the composer: \"@\" names a teammate",
+    "the composer: a teammate drawn as a chip"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "bots/roster",
+   "states": [
+    "120 bots, scrolling",
+    "a long name and the made-outside mark",
+    "archived group open",
+    "groups: one, two, three and six members, a long name",
+    "live updates of several bots",
+    "no bots",
+    "one bot",
+    "rail",
+    "rail with a group",
+    "rail with those groups",
+    "row focus",
+    "row hover",
+    "the owner's six, their records read after the roster",
+    "those groups, a row hovered",
+    "those groups, the current one",
+    "typical",
+    "with a group"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "bots/settings-sheet",
+   "states": [
+    "a long name",
+    "live bot: a routine posting to a long group name",
+    "live bot: the room link, focused",
+    "live bot: where each routine posts",
+    "look: a live bot made outside boopis",
+    "look: a new shape, on every orb at once",
+    "look: a swatch focused",
+    "look: dice hover",
+    "look: the shape tab",
+    "nina",
+    "run limit menu, the bot has its own",
+    "run limit: the row, in the model section",
+    "scrolled to the end"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "cards/mod-surfaces",
+   "states": [
+    "band and status",
+    "pane in the details panel",
+    "the conversation with placed rows",
+    "theme card hover",
+    "toast with +N",
+    "whole window"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "chat/presence-rooms",
+   "states": [
+    "a bot's chat: at 125%",
+    "a bot's chat: in a tool",
+    "a bot's chat: needs your approval",
+    "a bot's chat: thinking",
+    "a bot's chat: watch a turn",
+    "a group: a lead answers first",
+    "a group: a message held while they work",
+    "a group: one also on a kanban task",
+    "a group: scrolled away while two think",
+    "a group: six at work",
+    "a group: three doing different things",
+    "a group: two thinking",
+    "a group: watch them answer",
+    "the dock, the sidebar and the chat agree"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "components/inline-chips",
+   "states": [
+    "in the room composer",
+    "in the session composer"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "composer/attribution",
+   "states": [
+    "a council is answering: the chip says so",
+    "a mention chip in the composer",
+    "after a resume: a council turn with its members",
+    "after a resume: one reply of unknown model",
+    "governed: a mention chip",
+    "governed: the \"@\" menu says the message runs without governance",
+    "governed: the tier route, then an ungoverned turn",
+    "the \"@\" menu",
+    "three models, with dividers",
+    "two mentions in one message"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "composer/composer-in-app",
+   "states": [
+    "dock session",
+    "dock session, send hover",
+    "session",
+    "session, attach hover",
+    "session, attach menu",
+    "session, attach tooltip",
+    "session, empty",
+    "session, send hover"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "dock/dock",
+   "states": [
+    "120 bots",
+    "120 bots, expanded",
+    "120 bots, expanded, scrolled to the end",
+    "120 bots, minimised",
+    "a long-named bot",
+    "a long-named bot, its session",
+    "at rest (11 bots)",
+    "atlas's session (a thread)",
+    "centred in the window",
+    "centred in the window, expanded",
+    "expanded",
+    "minimised",
+    "nina's session (an approval)",
+    "no bots (the empty shape)",
+    "no bots, expanded",
+    "no waits, no schedules (one bot)",
+    "off",
+    "one bot",
+    "one bot, expanded",
+    "orb focus",
+    "orb hover",
+    "orb tooltip",
+    "the run page",
+    "the schedules page",
+    "the waiting page"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "pages/window",
+   "states": [
+    "Bots",
+    "Bots with 120 bots",
+    "Bots: the owner's six, their records read after the roster",
+    "Settings open",
+    "a conversation",
+    "a live conversation (recorded frames)",
+    "a live conversation with a form (recorded)",
+    "details panel open",
+    "empty app",
+    "long names everywhere",
+    "palette open",
+    "sidebar as a rail",
+    "sidebar closed, dock off",
+    "unpriced models (recorded)"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "settings/dialog",
+   "states": [
+    "appearance",
+    "appearance, a larger interface chosen",
+    "appearance, scrolled",
+    "close tooltip",
+    "connectors",
+    "general",
+    "general, scrolled (the scrollbar)",
+    "interface size focus",
+    "keyboard",
+    "models",
+    "segmented focus",
+    "segmented hover",
+    "segmented pressed",
+    "tab bar focus",
+    "tab bar hover"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "shell/details-panel",
+   "states": [
+    "closed",
+    "every section open",
+    "from recorded frames (live)",
+    "open",
+    "section head hover"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "shell/interface-size",
+   "states": [
+    "bots with a group, largest (125%)",
+    "bots, larger (112%)",
+    "bots, largest (125%)",
+    "rail, largest (125%)",
+    "session, larger (112%)",
+    "session, largest (125%)"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "shell/keys-sheet",
+   "states": [
+    "filtered",
+    "no matches",
+    "open"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "shell/menus",
+   "states": [
+    "a menu item hover",
+    "account menu",
+    "account menu, rail",
+    "attach menu",
+    "model picker",
+    "the blank popover"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "shell/palette",
+   "states": [
+    "a long query",
+    "field focus (the esc key chip)",
+    "many results, scrolling",
+    "no matches",
+    "open",
+    "row hover",
+    "typed query"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "shell/sidebar",
+   "states": [
+    "150 sessions, scrolling",
+    "long names",
+    "no sessions",
+    "one session",
+    "open",
+    "rail",
+    "row focus",
+    "row hover",
+    "tabs pill focus",
+    "tabs pill hover"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "shell/title-bar",
+   "states": [
+    "a long session title",
+    "all three (a floating desktop)",
+    "close only (a tiling window manager)",
+    "close only, hover",
+    "close, minimize, zoom (macOS)",
+    "command field focus",
+    "command field hover",
+    "sidebar button tooltip",
+    "typical"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "shell/toast",
+   "states": [
+    "long",
+    "typical",
+    "with an action"
+   ]
+  },
+  {
+   "check": "same-component",
+   "story": "store/dialog",
+   "states": [
+    "an item's page",
+    "browse (the front page)",
+    "browse, connectors",
+    "browse, long names",
+    "browse, many items",
+    "browse, sources that could not be read",
+    "browse, the list is out of date and says why",
+    "browse, the sources being read",
+    "browse, the sources being read, one by one",
+    "browse, up to date after a read",
+    "sources",
+    "sources, being read",
+    "sources, every state",
+    "the review card"
+   ]
   }
  ],
  "files": [
+  {
+   "check": "contrast.accent",
+   "file": "src/styles/tokens.css",
+   "msg": "bone: --focus (#8a6a2c) on --bg-1 (#ebe6dc) is 4.04:1, under 4.5:1"
+  },
   {
    "check": "contrast.accent",
    "file": "src/styles/tokens.css",

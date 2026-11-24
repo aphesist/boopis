@@ -19,9 +19,12 @@ const argv = process.argv.slice(2);
 const opt = (n) => { const i = argv.indexOf('--' + n); return i >= 0 ? argv[i + 1] : null; };
 const reports = [argv[0] && !argv[0].startsWith('--') ? argv[0] : join(UI_ROOT, 'lab-report', 'summary.json'), opt('orbs')].filter(Boolean);
 const findings = [];
+let narrowed = null;   // the story or area a run was narrowed to: only its own entries can be proved stale
 for (const r of reports) {
   if (!existsSync(r)) { console.error('gate: no report at ' + r); process.exit(2); }
-  findings.push(...JSON.parse(readFileSync(r, 'utf8')).findings);
+  const j = JSON.parse(readFileSync(r, 'utf8'));
+  findings.push(...j.findings);
+  if (j.story || (j.area && j.area.length)) narrowed = { story: j.story || null, area: j.area || null };
 }
 const v7 = (check) => !!CHECKS[check]?.v7;
 /* orbs move by design: whether one orb's edge flips in a given window is not the same from run to run, so an orb story is excused
@@ -83,7 +86,7 @@ for (const f of bad.slice(0, 80)) console.log('  ' + f.check + ' | ' + (f.story 
 const stale = [...allow.stories.map((e, i) => ['s' + i, e.check + ' | ' + e.story]), ...allow.files.map((e, i) => ['f' + i, e.check + ' | ' + e.file + ' | ' + e.msg])].filter(([k]) => !used.has(k));
 /* only checks this run produced can prove an entry stale (a run narrowed to one story, or without the orb report, proves nothing else) */
 const ran = new Set(findings.map((f) => f.check));
-const provable = stale.filter(([, d]) => ran.has(d.split(' | ')[0]));
+const provable = stale.filter(([k, d]) => ran.has(d.split(' | ')[0]) && !(narrowed && (k[0] === 'f' || (narrowed.story && !d.split(' | ')[1].includes(narrowed.story)) || (!narrowed.story && narrowed.area))));
 if (provable.length) {
   console.log(`  ${provable.length} allowlist entries matched nothing in this run (fixed: remove them from v7-allowlist.json):`);
   for (const [, d] of provable.slice(0, 40)) console.log('    ' + d);
