@@ -25,6 +25,9 @@
   .k7-btn[data-variant="danger"]:not(:disabled):hover { background: var(--red); }
 }
 .k7-btn:not(:disabled):active { transform: scale(.96); }
+/* a control set into a container's corner, or the anchor of an open menu, presses in colour only: a scale would break its equal
+   insets (R-corner-10) or move the menu off its anchor (R-float-1). An owner question: 9.2 says every press scales */
+:is(.k7-block, .k7-notice, .k7-sys, .k7-composer, .k7-queue, [data-kit~="Dock"]) :is(.k7-btn, .k7-chip, .k7-ib):active, :is(.k7-btn, .k7-chip, .k7-ib, .k7-sel)[aria-expanded="true"]:active { transform: none; }
 /* disabled: a 13% ink fill with 30% text (R-state-6, Grok) */
 .k7-btn:disabled { background: var(--selected-off); color: var(--icon-off); box-shadow: none; cursor: default; }
 .k7-btn__label { position: relative; }
@@ -101,6 +104,8 @@
   transition: color var(--dur-out) var(--ease-out);
 }
 .k7-seg__item:is([aria-checked="true"], [aria-selected="true"]) { color: var(--text); }
+/* the ring inside the item, so it stays in the track (R-corner-4) */
+.k7-seg__item:focus-visible, .k7-split > .k7-btn:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
 @media (hover: hover) and (pointer: fine) { .k7-seg__item:hover { color: var(--text); transition-duration: var(--dur-1); } }
 
 /* ── SelectorItem (24): a quiet current value that opens a Menu; transparent until hover, radius 10 ── */
@@ -115,7 +120,7 @@
 @media (hover: hover) and (pointer: fine) { .k7-sel:hover { background: var(--hover); transition-duration: var(--dur-1); } }
 .k7-sel[data-need] { color: var(--accent-text); background: var(--accent-soft); padding: 0 var(--pad-need-end) 0 var(--pad-need-start); }
 .k7-ticks { display: inline-flex; gap: var(--gap-xs); }
-.k7-ticks > i { width: var(--pad-row-y); height: var(--pad-row-y); border-radius: var(--r-pill); background: var(--mark-off); }
+.k7-ticks > i { width: var(--tick); height: var(--tick); border-radius: var(--r-pill); background: var(--mark-off); }
 .k7-ticks > i[data-on] { background: var(--text-dim); }
 
 /* ── Switch (25): 32 x 20; on: the accent with a white knob; off: 4% (light: a grey track and a raised white knob) ── */
@@ -137,12 +142,14 @@
 .k7-field { display: flex; flex-direction: column; gap: var(--gap-label); min-width: 0; }
 .k7-field__label { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
 .k7-field__opt { color: var(--text-quiet); }
+/* light's --text-quiet is 3.7:1, under the text floor (section 14): there the note takes --text-dim (an owner question) */
+[data-theme="light"] .k7-field__opt { color: var(--text-dim); }
 .k7-field__box {
   display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl); padding: 0 var(--pad-field); box-sizing: border-box;
   border-radius: var(--r-field); background: transparent; box-shadow: inset 0 0 0 var(--hl) var(--line-field); color: var(--text);
   transition: box-shadow var(--dur-out) var(--ease-out);
 }
-.k7-field__box[data-kind="search"] { border-radius: var(--r-pill); background: var(--fill-2); box-shadow: inset 0 0 0 var(--hl) var(--line); padding: 0 var(--pad-field-search) 0 var(--pad-field); }
+.k7-field__box[data-kind="search"] { border-radius: var(--r-pill); background: var(--fill-2); box-shadow: inset 0 0 0 var(--hl) var(--line); padding: 0 var(--sp-2) 0 var(--pad-field); }   /* a kbd 8 in from the pill's end: 18 - 8 = 10, a pill (8.2) */
 .k7-field__box[data-kind="multiline"] { align-items: flex-start; padding: var(--pad-field-y) var(--pad-field); }
 .k7-field__glyph { width: var(--icon-s); height: var(--icon-s); color: var(--icon-quiet); }
 .k7-field__input { flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text); outline: none; resize: none; }

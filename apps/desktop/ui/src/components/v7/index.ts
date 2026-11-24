@@ -3,12 +3,21 @@
    `kit.applyTheme`). Each component's root carries `data-kit="<Name>"`. The lab's stories are src/lab/stories/kit/. */
 import { frag } from '../../core/dom';
 import * as controls from './controls';
+import * as inline from './inline';
+import * as blocks from './blocks';
+import { fire } from '../../core/dom';
+import { layer } from '../layer';
+import { glyph } from './util';
 import { applyTheme, botFill, deriveAccent } from './theme';
-import { wire, wireHold, wireMenu } from './wire';
+import { markReveal, wire, wireHold, wireMenu } from './wire';
 
 const html = {
   button: controls.button, iconButton: controls.iconButton, kbd: controls.kbd, chip: controls.chip, segmented: controls.segmented,
-  selectorItem: controls.selectorItem, switch: controls.switchHTML, field: controls.field, tooltip: controls.tooltip
+  selectorItem: controls.selectorItem, switch: controls.switchHTML, field: controls.field, tooltip: controls.tooltip,
+  inlineChip: inline.inlineChip, mark: inline.mark, statusWord: inline.statusWord, badge: inline.badge, statusLine: inline.statusLine, avatar: inline.avatar,
+  card: blocks.card, block: blocks.block, menu: blocks.menu, menuRow: blocks.menuRow, optionRow: blocks.optionRow, listRow: blocks.listRow, sectionHead: blocks.sectionHead,
+  notice: blocks.notice, systemLine: blocks.systemLine, bubble: blocks.bubble, well: blocks.well, disclosure: blocks.disclosure, turnFoot: blocks.turnFoot,
+  timeSeparator: blocks.timeSeparator, emptyState: blocks.emptyState, list: blocks.list
 };
 type Html = typeof html;
 type Factories = { [K in keyof Html]: (o: Parameters<Html[K]>[0]) => HTMLElement };
@@ -21,12 +30,43 @@ export const kitVariants = {
   chip: { variant: controls.CHIP_VARIANTS },
   segmented: { variant: controls.SEGMENTED_VARIANTS },
   selectorItem: { variant: controls.SELECTOR_VARIANTS },
-  field: { kind: controls.FIELD_KINDS }
+  field: { kind: controls.FIELD_KINDS },
+  avatar: { variant: inline.AVATAR_VARIANTS, size: inline.ORB_SIZES },
+  inlineChip: { kind: inline.INLINE_KINDS },
+  mark: { kind: inline.MARK_KINDS, state: inline.MARK_STATES },
+  statusWord: { tone: inline.STATUS_TONES },
+  statusLine: { kind: inline.STATUS_LINE_KINDS },
+  card: { variant: blocks.CARD_VARIANTS },
+  menu: { variant: blocks.MENU_VARIANTS },
+  listRow: { variant: blocks.LIST_ROW_VARIANTS },
+  notice: { place: blocks.NOTICE_PLACES, tone: blocks.NOTICE_TONES },
+  systemLine: { variant: blocks.SYSTEM_LINE_VARIANTS },
+  bubble: { kind: blocks.BUBBLE_KINDS }
 } as const;
 
+/** a Menu opened against an anchor: one open at a time, placed by place.ts, Esc or an outside press closes it and focus returns
+    (layer.ts); choosing a row fires ui:select {value} on the menu (cancelable) and closes it, a quick menu's check toggles in place */
+function openMenu(anchor: HTMLElement, o: blocks.MenuOpts & { place?: 'above' | 'below'; align?: 'start' | 'end' | 'center'; onSelect?: (value: string) => void }): HTMLElement | null {
+  const node = wire(frag(blocks.menu({ ...o, attrs: { ...(o.attrs ?? {}), 'data-floating': '' } })));
+  if (!layer.open(anchor, node, { place: o.place, align: o.align })) return null;
+  node.addEventListener('click', (e) => {
+    const r = (e.target as Element).closest<HTMLElement>('[data-kit~="MenuRow"], [data-kit~="OptionRow"]');
+    if (!r || r.getAttribute('aria-disabled') === 'true') return;
+    const value = r.dataset['value'] ?? '';
+    if (!fire(node, 'ui:select', { value }, true)) return;
+    o.onSelect?.(value);
+    if (r.getAttribute('role') === 'menuitemcheckbox') { const on = r.getAttribute('aria-checked') !== 'true'; r.setAttribute('aria-checked', String(on)); const c = r.querySelector('.k7-mrow__check'); if (c) c.innerHTML = on ? glyph('check') : ''; return; }
+    layer.close();
+  });
+  (node.querySelector<HTMLElement>('[aria-checked="true"]') ?? node.querySelector<HTMLElement>('[data-kit~="MenuRow"], [data-kit~="OptionRow"]'))?.focus({ preventScroll: true });
+  return node;
+}
+
 export const kit = {
-  html, ...factories, wire, wireHold, wireMenu, applyTheme, deriveAccent, botFill, keyNames: controls.keyNames, variants: kitVariants
+  html, ...factories, wire, wireHold, wireMenu, markReveal, openMenu, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, keyNames: controls.keyNames, variants: kitVariants
 };
 export type Kit = typeof kit;
 export type { ButtonOpts, IconButtonOpts, ChipOpts, SegmentedOpts, SegItem, SelectorItemOpts, SwitchOpts, FieldOpts, KbdOpts, TooltipOpts } from './controls';
+export type { CardOpts, RowOpts, BlockOpts, MenuOpts, MenuEntry, MenuRowOpts, OptionRowOpts, ListRowOpts, ListOpts, SectionHeadOpts, NoticeOpts, SystemLineOpts, BubbleOpts, WellOpts, DisclosureOpts, StepOpts, TurnFootOpts, TimeSeparatorOpts, EmptyStateOpts } from './blocks';
+export type { AvatarOpts, InlineChipOpts, MarkOpts, StatusWordOpts, BadgeOpts, StatusLineOpts } from './inline';
 export type { ThemeOpts, Mode as KitMode, AccentTokens } from './theme';

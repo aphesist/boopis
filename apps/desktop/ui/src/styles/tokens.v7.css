@@ -281,10 +281,15 @@
   --pad-need-start: 7px;
   --pad-need-end: 9px;
   --pad-field: 12px;
-  --pad-field-search: 6px;
   --pad-field-y: 8px;
   --gap-label: 6px;
+  --menu-w: 240px;
+  --options-w: 372px;
+  --pop-w: 260px;
   --on-danger: #ffffff;
+  --logo-box: 72px;
+  --logo-w: 32px;
+  --tick: 6px;
   --seg-item-h: 26px;
   --kbd-h: 20px;
   --switch-w: 32px;

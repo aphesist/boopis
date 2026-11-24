@@ -90,3 +90,12 @@ export function botFill(hex: string): { fill: string; text: string } {
   }
   return { fill: base, text: '#121212' };
 }
+
+/** a bot's colour as text on a theme's ground (its name above a bubble in a room, its mention chip: 4.3). The orb's colour where it
+    holds 4.5:1 on --bg-2 and --bg-3, else moved in OKLab lightness until it does (lighter in dark, darker in light), so the WCAG floor
+    holds for every look. The design names the colour, not this floor's derivation: an owner question (kit-v7 report) */
+export function botText(hex: string, mode: Mode): string {
+  const s = SURFACE[mode], base = rgbToHex(hexToRgb(hex));
+  const ok = (c: string): boolean => ratio(c, s.bg2) >= 4.5 && ratio(c, s.bg3) >= 4.5;
+  return ok(base) ? base : walk(base, mode === 'dark' ? 1 : -1, ok);
+}

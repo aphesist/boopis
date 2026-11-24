@@ -1,0 +1,48 @@
+/* Menu (21.2 row 5; LAB-v7: menu, quick menu, palette /, @, $, snooze, split-button menu, option menu; open, a row hover, a row
+   focus, long names (truncate), flipped near the bottom). */
+import { kit } from '@boopis/ui';
+import { line, stage } from '../../story';
+import type { Story } from '../../types';
+import { KAI, NINA } from './_bots';
+
+const STEPS = [
+  { label: 'Supervised', meaning: 'Asks before every change', ticks: { of: 4, on: 1 } },
+  { label: 'Auto-accept edits', meaning: 'Edits files, asks before commands', ticks: { of: 4, on: 2 }, chosen: true },
+  { label: 'Trusted', meaning: 'Runs what the gate allows', ticks: { of: 4, on: 3 } },
+  { label: 'Full access', meaning: 'Never asks', ticks: { of: 4, on: 4 } }
+];
+const menu = (): HTMLElement => kit.menu({ label: 'Session', entries: [
+  { label: 'Rename', icon: 'pen' }, { label: 'Fork', icon: 'fork', keys: 'mod+shift+F' }, { label: 'Copy link', icon: 'copy' }, '-', { label: 'Archive', icon: 'archive' }, { label: 'Delete', icon: 'close', danger: true }
+] });
+const open = (variant: 'menu' | 'split', place?: 'above'): ReturnType<typeof stage> => stage(['open'], async ({ root, wait }) => {
+  const b = kit.button({ label: variant === 'split' ? 'Commit' : 'Options', variant: variant === 'split' ? 'split' : 'secondary', menuLabel: 'Commit options' });
+  line(root, b);
+  const anchor = (b.querySelector('.k7-split__menu') ?? b) as HTMLElement;
+  kit.openMenu(anchor, variant === 'split'
+    ? { label: 'Commit options', variant: 'split', entries: [{ label: 'Commit and push' }, { label: 'Commit and open a PR' }, { label: 'Amend the last commit' }], align: 'end', ...(place ? { place } : {}) }
+    : { label: 'Session', entries: [{ label: 'Rename', icon: 'pen' }, { label: 'Fork', icon: 'fork' }, '-', { label: 'Delete', icon: 'close', danger: true }], ...(place ? { place } : {}) });
+  await wait(200);
+}, { overlay: { anchor: variant === 'split' ? '.k7-split__menu' : '[data-kit~="Button"]', layer: '.k7-menu[data-floating]' } });
+export default {
+  id: 'kit/menu', title: 'Menu', area: 'components', kind: 'component', covers: ['kit.menu'],
+  states: {
+    typical: stage(['typical', 'variant'], ({ root }) => { line(root, menu()); }),
+    'row hover': stage(['hover'], ({ root }) => { line(root, menu()); }, { force: [{ sel: '[data-kit~="MenuRow"]:nth-child(2)', state: 'hover' }] }),
+    'row focus': stage(['focus'], ({ root }) => { line(root, menu()); }, { force: [{ sel: '[data-kit~="MenuRow"]:nth-child(2)', state: 'focus' }] }),
+    quick: stage(['variant'], ({ root }) => { line(root, kit.menu({ label: 'Show under the composer', variant: 'quick', entries: [{ heading: 'Show under the composer' }, { label: 'Mode', checked: true }, { label: 'Smart', checked: true }, { label: 'Model', checked: false }, { label: 'Cost', checked: true }, { label: 'Context', checked: false }] })); }),
+    'palette /': stage(['variant'], ({ root }) => { line(root, kit.menu({ label: 'Commands', variant: 'palette', query: '/', entries: [{ label: '/review', desc: 'Review the changes since the last commit' }, { label: '/test', desc: 'Run the tests and report what failed' }, { label: '/webapp-testing', desc: 'Drive the web app in a browser and check each flow' }] })); }, { width: 680 }),
+    'palette @': stage(['variant'], ({ root }) => { line(root, kit.menu({ label: 'Mention', variant: 'palette', query: '@', entries: [{ label: 'kai', desc: 'docs and changelog', leadHTML: kit.html.avatar({ bot: KAI, size: 20 }) }, { label: 'nina', desc: 'deploys', leadHTML: kit.html.avatar({ bot: NINA, size: 20 }) }, { label: 'src/billing.ts', desc: 'a file', icon: 'file' }] })); }, { width: 680 }),
+    'palette $': stage(['variant'], ({ root }) => { line(root, kit.menu({ label: 'Skills', variant: 'palette', query: '$', entries: [{ label: '$changelog', desc: 'Write the changelog from merged pull requests' }, { label: '$release', desc: 'Cut a release with notes' }] })); }, { width: 680 }),
+    snooze: stage(['variant'], ({ root }) => { line(root, kit.menu({ label: 'Snooze', variant: 'snooze', entries: [{ label: 'In an hour', icon: 'clock' }, { label: 'This evening', icon: 'clock', desc: '18:00' }, { label: 'Tomorrow', icon: 'clock', desc: '09:00' }] })); }),
+    'option menu': stage(['variant'], ({ root }) => { line(root, kit.menu({ label: 'How careful', variant: 'options', entries: STEPS })); }),
+    open: open('menu'),
+    'split-button menu': open('split'),
+    'flipped near the bottom': stage(['open'], async ({ root, wait }) => {
+      const pad = document.createElement('div'); pad.className = 'k7-lab-push'; root.append(pad);
+      const b = kit.button({ label: 'Options' }); line(root, b);
+      kit.openMenu(b, { label: 'Session', entries: [{ label: 'Rename', icon: 'pen' }, { label: 'Fork', icon: 'fork' }, { label: 'Archive', icon: 'archive' }] });
+      await wait(200);
+    }, { overlay: { anchor: '[data-kit~="Button"]', layer: '.k7-menu[data-floating]' } }),
+    long: stage(['long'], ({ root }) => { line(root, kit.menu({ label: 'Skills', entries: [{ label: 'webapp-testing', desc: 'Drive the web app in a real browser and check each of its flows end to end' }, { label: 'changelog', desc: 'Write it' }] })); })
+  }
+} satisfies Story;

@@ -77,12 +77,12 @@ const NAMED = {
   '--pad-chip-mode': 10,                               /* a composer mode chip: 0 10 (kit.css .chip.mode) */
   '--pad-sel-start': 7, '--pad-sel-end': 5, '--gap-sel': 4,   /* a SelectorItem: 0 5 0 7, gap 4 (kit.css .select) */
   '--pad-need-start': 7, '--pad-need-end': 9,          /* "+ Choose a model": 0 9 0 7 (kit.css .ns-need) */
-  '--pad-field': 12, '--pad-field-search': 6, '--pad-field-y': 8,   /* a field 0 12; a search pill 0 6 (kit.css .input) */
+  '--pad-field': 12, '--pad-field-y': 8,             /* a field 0 12 (kit.css .input) */
   '--gap-label': 6                                     /* a field's label above it */
 };
 for (const [k, v] of Object.entries(NAMED)) both.push(`${k}: ${v}px;`);
 /* the sizes the components share that section 7 names but tokens.v7.json does not carry as a number */
-both.push('--on-danger: #ffffff;', '--seg-item-h: 26px;', '--kbd-h: 20px;', '--switch-w: 32px;', '--switch-h: 20px;', '--knob-d: 16px;', '--line-h: 26px;', '--line-h-act: 32px;', '--item-h: 60px;',
+both.push('--menu-w: 240px;', '--options-w: 372px;', '--pop-w: 260px;', '--on-danger: #ffffff;', '--logo-box: 72px;', '--logo-w: 32px;', '--tick: 6px;', '--seg-item-h: 26px;', '--kbd-h: 20px;', '--switch-w: 32px;', '--switch-h: 20px;', '--knob-d: 16px;', '--line-h: 26px;', '--line-h-act: 32px;', '--item-h: 60px;',
   '--item-mark: 40px;', '--session-h: 44px;', '--compact-h: 36px;', '--badge-h: 18px;', '--dot: 8px;', '--letter: 20px;', '--icon-s: 16px;',
   '--flag-ring: 2.5px;', '--hold-ring: 2px;', '--focus-w: 2px;', '--focus-off: 2px;', '--mark-gap-ch: 7ch;', '--tools-w: 520px;', '--sb-open-w: 300px;',
   '--rail-b-w: 64px;', '--tile-b: 44px;', '--pane-orb: 64px;', '--dk-row-h: 72px;', '--dk-compact-h: 48px;', '--dk-open-w: 640px;', '--dk-open-h: 432px;',

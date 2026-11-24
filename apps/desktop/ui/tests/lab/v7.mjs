@@ -50,6 +50,8 @@ export const ROLES = {
   Notice: [kit('Notice'), '.ui-toast'],
   SystemLine: [kit('SystemLine')],
   Bubble: [kit('Bubble'), '.ui-entry__body'],
+  /* the agent side of a thread (what shares the 30 px gutter's edge): your bubbles sit at the other edge */
+  AgentBubble: [kit('Bubble') + ':not([data-kind="user"])', '.ui-entry__body'],
   DiffView: [kit('DiffView')],
   Well: [kit('Well'), '.ui-codeblock'],
   ListRow: [kit('ListRow'), '.ui-row'],
@@ -112,7 +114,7 @@ export const V7_TARGETS = {
   align: [
     [sel('Card'), sel('Row')], [sel('Steps'), sel('ToolRow')], [sel('Queue'), sel('QueueRow')], [sel('Menu'), sel('MenuRow')],
     [sel('FilesCard'), sel('FileRow')], [sel('DiffView'), sel('DiffRow')], [sel('Sidebar'), sel('ListRow')],
-    [sel('Thread'), sel('Bubble', 'Disclosure', 'ToolRow', 'FilesCard', 'TurnFoot', 'AskCard', 'StatusLine')]
+    [sel('Thread'), sel('AgentBubble', 'Disclosure', 'ToolRow', 'FilesCard', 'TurnFoot', 'AskCard', 'StatusLine')]
   ],
   /* concentric (tightened): the controls set into a container's corner */
   corner: sel('Button', 'IconButton', 'Chip', 'SegmentedThumb', 'MenuRow', 'Kbd', 'SelectorItem', 'Badge', 'Switch', 'Field'),

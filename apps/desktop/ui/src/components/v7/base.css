@@ -65,3 +65,8 @@
   .k7-mark[data-mark-new] { animation: none; }
   [data-mark-reveal="hover"]:hover .k7-mark { animation: none; }
 }
+
+/* running text at the type scale's three reading sizes (13, 14, 15: section 6) */
+.k7-type-s { margin: 0; font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); }
+.k7-type-m { margin: 0; font-size: var(--fs-m); line-height: var(--lh-m); }
+.k7-type-l { margin: 0; font-size: var(--fs-l); line-height: var(--lh-l); }

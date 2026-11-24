@@ -1,7 +1,8 @@
 /* The v7 kit's behaviours, wired once per element (`wire(root)` wires every kit component under root). Events bubble and
    are cancelable where an action follows: ui:change {value} (Segmented, Switch, Chip), ui:commit (a hold finished),
    ui:toggle {open} (Disclosure, Card's danger zone, FilesCard). State lives in ARIA and data attributes (R-state-2). */
-import { fire, reduced, tokenMs } from '../../core/dom';
+import { esc, fire, frag, reduced, tokenMs } from '../../core/dom';
+import { layer } from '../layer';
 
 /* which behaviours an element has: an element can carry two (a chip that holds) */
 const WIRED = new WeakMap<Element, Set<string>>();
@@ -105,9 +106,25 @@ function wireMark(mk: HTMLElement): void {
   mk.addEventListener('animationend', () => mk.removeAttribute('data-mark-new'), { once: true });
 }
 
+/** an info label (17.1): hovering it opens its explanation after 300 ms, 8 from the label; Enter or Space opens it; Esc closes and
+    returns focus (layer.ts) */
+function wireInfo(b: HTMLElement): void {
+  let t = 0;
+  const open = (): void => {
+    const text = b.getAttribute('data-explain');
+    if (!text || b.getAttribute('aria-expanded') === 'true') return;
+    const pop = frag('<div class="k7-pop" role="dialog" data-kit="Menu" data-variant="popover" data-sq data-sq-mode="surface"' + (b.textContent ? ' aria-label="' + esc(b.textContent.trim()) + '"' : '') + '>' + esc(text) + '</div>');
+    b.setAttribute('data-mark', 'open');
+    layer.open(b, pop, { place: 'below', align: 'start', onClose: () => b.removeAttribute('data-mark') });
+  };
+  b.addEventListener('pointerenter', () => { clearTimeout(t); t = window.setTimeout(open, 300); });
+  b.addEventListener('pointerleave', () => clearTimeout(t));
+  b.addEventListener('click', open);
+}
+
 const WIRES: ReadonlyArray<readonly [string, (el: HTMLElement) => void]> = [
   ['.k7-seg', wireSegmented], ['.k7-switch', (el) => wireSwitch(el as HTMLButtonElement)], ['.k7-chip', (el) => wireChip(el as HTMLButtonElement)],
-  ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark]
+  ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark], ['.k7-info', wireInfo]
 ];
 /** wire every kit component under root (and root itself) once */
 export function wire<T extends Element>(root: T): T {
@@ -117,3 +134,6 @@ export function wire<T extends Element>(root: T): T {
   }
   return root;
 }
+
+/** a container's mark reveal (17.1): 'hover' hides its info labels' marks until the row or card is hovered or focused */
+export function markReveal(container: HTMLElement, mode: 'hover' | 'always'): void { container.setAttribute('data-mark-reveal', mode); }

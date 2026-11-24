@@ -122,9 +122,18 @@
     mixCache.set(k, ok);
     return ok;
   }
+  /* v7 sets line heights as lengths of its type scale (--lh-2xs to --lh-3xl, DESIGN-SYSTEM.md v7 section 6), not ratios: inside a v7
+     root a line height that is one of them is a token */
+  let v7Lines = null;
+  const v7Line = (e, lh) => {
+    const root = e.closest && e.closest('[data-ui="v7"]');
+    if (!root) return false;
+    if (!v7Lines) { const rs = getComputedStyle(root); v7Lines = new Set(['2xs', 'xs', 's', 'm', 'l', 'xl', '2xl', '3xl'].map((k) => parseFloat(rs.getPropertyValue('--lh-' + k))).filter((n) => n > 0)); }
+    return [...v7Lines].some((n) => Math.abs(n - lh) < 0.05);
+  };
   /* bot data, not interface colour: an orb's colour where the system allows it (R-colour-8: orbs, hx-card[data-accent]),
      a swatch of a bot's or a theme's colour drawn from data (an inline colour), a sign-in's or an item's brand mark (ADR-0040) */
-  const dataColour = (e, prop) => !!e.closest('hx-card[data-accent], [data-swatch], .bt-swatch, .mod-swatches, .hxt-swatch, .ui-sso__logo, .ui-imark__svg[data-brand], .ui-pub__mark[data-brand]') || (/background|box-shadow/.test(prop) && /#|rgb/.test(e.getAttribute('style') || ''));
+  const dataColour = (e, prop) => !!e.closest('hx-card[data-accent], [data-bot-colour], [data-swatch], .bt-swatch, .mod-swatches, .hxt-swatch, .ui-sso__logo, .ui-imark__svg[data-brand], .ui-pub__mark[data-brand]') || (/background|box-shadow/.test(prop) && /#|rgb/.test(e.getAttribute('style') || ''));
 
 
   /* in a whole-app state, which fix agent's area an element belongs to (a card in the conversation is the cards area's) */
@@ -280,8 +289,8 @@
           add('geometry.contain', e, msg, { container: rectOf(c) });
         }
         if (want.has('concentric')) {
-          /* the floor is the corners setting's (--r-floor: 4 sharp, 8 default, 12 round), not a constant (R-corner-3: max(--r-floor, R - gap)) */
-          const FLOOR = px(getComputedStyle(document.documentElement).getPropertyValue('--r-floor')) || 8;
+          /* the floor is the corners setting's (--r-floor: 4 sharp, 8 default, 12 round; v7's 6), not a constant (R-corner-3: max(--r-floor, R - gap)) */
+          const FLOOR = px(ccs.getPropertyValue('--r-floor')) || px(getComputedStyle(document.documentElement).getPropertyValue('--r-floor')) || 8;   /* the container's: a v7 root sets 6 */
           const corners = [['top-left', er.left - cr.left, er.top - cr.top, 0], ['top-right', cr.right - er.right, er.top - cr.top, 1], ['bottom-right', cr.right - er.right, cr.bottom - er.bottom, 2], ['bottom-left', er.left - cr.left, cr.bottom - er.bottom, 3]];
           for (const [name, dx, dy, i] of corners) {
             const R = Math.min(cRad[i], cr.width / 2, cr.height / 2);
@@ -543,7 +552,7 @@
           if (s.boxShadow && s.boxShadow !== 'none') for (const m of s.boxShadow.matchAll(/rgba?\([^)]+\)|color\(srgb[^)]+\)/g)) if (!transparent(m[0]) && !T.colors.has(ckey(m[0])) && !derived(T, m[0]) && !dataColour(e, 'box-shadow')) { stray('tokens.computed', e, 'box-shadow colour', m[0]); break; }
           if (hasText && !T.fs.has(r1(px(s.fontSize)))) stray('tokens.computed', e, 'font-size', s.fontSize);
           if (hasText && T.families.size && !T.families.has(s.fontFamily.replace(/\s+/g, ' '))) stray('tokens.computed', e, 'font-family', s.fontFamily.split(',')[0] + ' (not --sans or --mono, R-type-1)');
-          if (hasText && s.lineHeight !== 'normal') { const ratio = Math.round(px(s.lineHeight) / px(s.fontSize) * 100) / 100; if (![1, 1.2, 1.35, 1.45, 1.5, 1.6].some((x) => Math.abs(x - ratio) < 0.03)) stray('tokens.computed', e, 'line-height', s.lineHeight + ' (' + ratio + ', not a --lh-* ratio, R-type-4)'); }
+          if (hasText && s.lineHeight !== 'normal' && !v7Line(e, px(s.lineHeight))) { const ratio = Math.round(px(s.lineHeight) / px(s.fontSize) * 100) / 100; if (![1, 1.2, 1.35, 1.45, 1.5, 1.6].some((x) => Math.abs(x - ratio) < 0.03)) stray('tokens.computed', e, 'line-height', s.lineHeight + ' (' + ratio + ', not a --lh-* ratio, R-type-4)'); }
           if (hasText && /uppercase|capitalize/.test(s.textTransform)) stray('tokens.computed', e, 'text-transform', s.textTransform + ' (sentence case only; --ui-case lowers, R-copy-1)');
           const r = e.getBoundingClientRect(), pill = Math.min(r.width, r.height) / 2;
           for (const v of radiiOf(s)) {

@@ -41,7 +41,15 @@ const ICONS: Record<string, readonly [viewBox: string, inner: string | null]> = 
   dice: [I16, '<rect x="2.5" y="2.5" width="11" height="11" rx="2.6"/><circle class="is-fill" cx="5.6" cy="5.6" r="1.05"/><circle class="is-fill" cx="8" cy="8" r="1.05"/><circle class="is-fill" cx="10.4" cy="10.4" r="1.05"/>'],
   /* the puzzle glyph: a mod's name is this and its name wherever it speaks (DESIGN-SYSTEM.md 14.29) */
   mod: [I16, '<path d="M3.5 4h2.7v-.5a1.8 1.8 0 0 1 3.6 0V4h2.7a1 1 0 0 1 1 1v2.2h-.5a1.8 1.8 0 0 0 0 3.6h.5V13a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/>'],
-  more: [I16, '<circle class="is-fill" cx="3.5" cy="8" r="1.1"/><circle class="is-fill" cx="8" cy="8" r="1.1"/><circle class="is-fill" cx="12.5" cy="8" r="1.1"/>']
+  more: [I16, '<circle class="is-fill" cx="3.5" cy="8" r="1.1"/><circle class="is-fill" cx="8" cy="8" r="1.1"/><circle class="is-fill" cx="12.5" cy="8" r="1.1"/>'],
+  /* the v7 glyphs the approved boards draw on the same 16 grid (ds-v7 kit.js EXTRA): the info outline (forced colours only, 17.2),
+     the voice button's waveform and send's arrow (the composer, 12.2), the person, the terminal, the store */
+  info: [I16, '<circle cx="8" cy="8" r="6"/><path d="M8 7.2v3.6"/><circle class="is-fill" cx="8" cy="5.2" r=".8"/>'],
+  waveform: [I16, '<path d="M3 6.5v3M5.5 4.5v7M8 3v10M10.5 5v6M13 6.5v3"/>'],
+  arrowup: [I16, '<path d="M8 13V3.5M4 7.5l4-4 4 4"/>'],
+  user: [I16, '<circle cx="8" cy="5.5" r="2.6"/><path d="M3 13.5a5 5 0 0 1 10 0"/>'],
+  terminal: [I16, '<rect x="1.8" y="2.8" width="12.4" height="10.4" rx="2"/><path d="m4.6 6.2 2 1.8-2 1.8M8.4 10h3"/>'],
+  store: [I16, '<path d="M2.5 6 3.6 3h8.8l1.1 3"/><path d="M2.5 6h11v1a2 2 0 0 1-3.7 1 2 2 0 0 1-3.6 0A2 2 0 0 1 2.5 7z"/><path d="M3.5 8.8V13h9V8.8"/>']
   };
 
 export const iconNames: string[] = Object.keys(ICONS);
