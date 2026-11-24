@@ -6,8 +6,12 @@
 /* a capsule in running text (you, a reference, a countdown, a badge): an inline-block whose box is trimmed to the cap height and the
    baseline (text-box) with even room over and under (R-inline-1 (d)); where text-box is missing, a line as tall as the capsule */
 .k7-cap { display: inline-block; box-sizing: border-box; height: var(--badge-h); line-height: var(--badge-h); vertical-align: baseline; white-space: nowrap; }
+/* never taller than the line it sits in: 18 where the line has room, a hairline clear of a dense line's edges (13/18) otherwise */
+@property --k7-line { syntax: '<length>'; inherits: true; initial-value: 20px; }
+:has(> .k7-cap) { --k7-line: 1lh; }
+.k7-cap { --cap-h: min(var(--badge-h), calc(var(--k7-line) - 2 * var(--hl) - var(--gap-hair))); }
 @supports (text-box: trim-both cap alphabetic) and (height: 1cap) {
-  .k7-cap { height: auto; line-height: 1; text-box: trim-both cap alphabetic; padding-block: calc((var(--badge-h) - 1cap) / 2); }
+  .k7-cap { height: auto; line-height: 1; text-box: trim-both cap alphabetic; padding-block: calc((var(--cap-h) - 1cap) / 2); }
 }
 .k7-chip-in { white-space: nowrap; vertical-align: baseline; }
 .k7-mention { display: inline; color: var(--bot-dark, var(--text)); }

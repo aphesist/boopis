@@ -51,3 +51,4 @@ html:has(.lab-stage), body:has(.lab-stage) { margin: 0; background: var(--bg-2);
 .k7-lab-launch { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }
 .k7-lab-hello { margin: 0; font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 500; color: var(--text-strong); text-align: center; }
 .k7-lab-editor { display: grid; grid-template-columns: auto 1fr auto; align-items: center; justify-items: center; gap: var(--sp-2); }
+.k7-lab-para { padding-block: var(--sp-1); }
