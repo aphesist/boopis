@@ -272,6 +272,7 @@
   --gap-xs: 3px;
   --gap-s: 6px;
   --gap-row: 10px;
+  --pad-chrome: 56px;
   --gutter: 30px;
   --gm: 22px;
   --pad-chip-mode: 10px;
@@ -283,6 +284,8 @@
   --pad-field: 12px;
   --pad-field-y: 8px;
   --gap-label: 6px;
+  --search-pill-w: 300px;
+  --notch-h: 60px;
   --diff-n: 36px;
   --diff-g: 16px;
   --notch-ctl: 24px;

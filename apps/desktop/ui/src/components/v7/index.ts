@@ -6,6 +6,8 @@ import * as controls from './controls';
 import * as inline from './inline';
 import * as blocks from './blocks';
 import * as thread from './thread';
+import * as surfaces from './surfaces';
+import { dock, DOCK_GEOMETRY } from './dock';
 import { fire } from '../../core/dom';
 import { layer } from '../layer';
 import { glyph } from './util';
@@ -19,7 +21,8 @@ const html = {
   card: blocks.card, block: blocks.block, menu: blocks.menu, menuRow: blocks.menuRow, optionRow: blocks.optionRow, listRow: blocks.listRow, sectionHead: blocks.sectionHead,
   notice: blocks.notice, systemLine: blocks.systemLine, bubble: blocks.bubble, well: blocks.well, disclosure: blocks.disclosure, turnFoot: blocks.turnFoot,
   timeSeparator: blocks.timeSeparator, emptyState: blocks.emptyState, list: blocks.list,
-  toolRow: thread.toolRow, askCard: thread.askCard, filesCard: thread.filesCard, queue: thread.queue, diffView: thread.diffView, composer: thread.composer
+  toolRow: thread.toolRow, askCard: thread.askCard, filesCard: thread.filesCard, queue: thread.queue, diffView: thread.diffView, composer: thread.composer,
+  windowChrome: surfaces.windowChrome, page: surfaces.page, pane: surfaces.pane, dialog: surfaces.dialog, rail: surfaces.rail, notch: surfaces.notch, dock
 };
 type Html = typeof html;
 type Factories = { [K in keyof Html]: (o: Parameters<Html[K]>[0]) => HTMLElement };
@@ -46,7 +49,9 @@ export const kitVariants = {
   bubble: { kind: blocks.BUBBLE_KINDS },
   toolRow: { kind: thread.TOOL_KINDS, state: thread.TOOL_STATES },
   askCard: { variant: thread.ASK_VARIANTS, state: thread.ASK_STATES },
-  composer: { kind: thread.COMPOSER_KINDS }
+  composer: { kind: thread.COMPOSER_KINDS },
+  windowChrome: { rail: surfaces.CHROME_RAILS, search: surfaces.SEARCH_SHOWS },
+  dock: { kind: ['row', 'compact', 'open'] as const }
 } as const;
 
 /** a Menu opened against an anchor: one open at a time, placed by place.ts, Esc or an outside press closes it and focus returns
@@ -68,10 +73,12 @@ function openMenu(anchor: HTMLElement, o: blocks.MenuOpts & { place?: 'above' | 
 }
 
 export const kit = {
-  html, ...factories, wire, wireHold, wireMenu, markReveal, openMenu, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, keyNames: controls.keyNames, variants: kitVariants
+  html, ...factories, section: surfaces.section, dockGeometry: DOCK_GEOMETRY, wire, wireHold, wireMenu, markReveal, openMenu, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, keyNames: controls.keyNames, variants: kitVariants
 };
 export type Kit = typeof kit;
 export type { ButtonOpts, IconButtonOpts, ChipOpts, SegmentedOpts, SegItem, SelectorItemOpts, SwitchOpts, FieldOpts, KbdOpts, TooltipOpts } from './controls';
+export type { ChromeOpts, PageOpts, PaneOpts, DialogOpts, RailOpts, RailBot, NotchOpts } from './surfaces';
+export type { DockOpts, DockBot, DockKind } from './dock';
 export type { ToolRowOpts, AskCardOpts, AskAnswer, FilesCardOpts, FileRow, QueueOpts, DiffViewOpts, DiffLine, DiffComment, ComposerOpts, LineItem } from './thread';
 export type { CardOpts, RowOpts, BlockOpts, MenuOpts, MenuEntry, MenuRowOpts, OptionRowOpts, ListRowOpts, ListOpts, SectionHeadOpts, NoticeOpts, SystemLineOpts, BubbleOpts, WellOpts, DisclosureOpts, StepOpts, TurnFootOpts, TimeSeparatorOpts, EmptyStateOpts } from './blocks';
 export type { AvatarOpts, InlineChipOpts, MarkOpts, StatusWordOpts, BadgeOpts, StatusLineOpts } from './inline';

@@ -44,3 +44,5 @@ html:has(.lab-stage), body:has(.lab-stage) { margin: 0; background: var(--bg-2);
 .k7-lab-corners > :nth-child(4) { grid-row: 3; grid-column: 1; align-self: end; }
 .k7-lab-corners > :nth-child(5) { grid-row: 3; grid-column: 3; align-self: end; justify-self: end; }
 .k7-lab-push { height: calc(100vh - 140px); }
+.k7-lab-dock { display: flex; justify-content: center; align-items: flex-end; width: 700px; padding-top: var(--sp-5); }
+[data-kit~="Notch"] { margin-inline: var(--sp-6); }

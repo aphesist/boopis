@@ -289,7 +289,8 @@ async function checkRow(browser, origin, row, log) {
     const allow = row.allow || {};
     /* an allowance is a reason (the whole check) or { reason, el } (only findings whose element description contains el) */
     const whole = (c) => typeof allow[c] === 'string';
-    const skip = (c, f) => { if (f && STANDING_ALLOW.some((s) => s.check === c && String(f.el ?? '').includes(s.el))) return true; const a = allow[c]; if (!a) return false; if (typeof a === 'string') return true; return !!f && String(f.el ?? '').includes(a.el); };
+    /* a kit story is held to the tightened corner rule (concentric.strict, R-corner-10, LAB-v7 section 4), which replaces v6's concentric */
+    const skip = (c, f) => { if (c === 'concentric' && isKit(row)) return true; if (f && STANDING_ALLOW.some((s) => s.check === c && String(f.el ?? '').includes(s.el))) return true; const a = allow[c]; if (!a) return false; if (typeof a === 'string') return true; return !!f && String(f.el ?? '').includes(a.el); };
     if (DRAW_ONLY) { for (const e of page.errorsSeen) record(row, { check: 'errors', msg: e, key: 'errors|' + e.slice(0, 120) }, 'load'); return; }
     for (const preset of presetsOf(row)) {
       await page.evaluate((p) => window.__lab.preset(p), preset);

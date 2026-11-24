@@ -1,0 +1,101 @@
+/* The v7 kit's surfaces (DESIGN-SYSTEM.md v7 7, 12.1, 21.2 and 21.4; the approved renders' kit.css and dockv7.js). Tokens only. */
+
+/* ── WindowChrome (1): a 56 px drag region, floating controls at y = 10 ── */
+.k7-chrome { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; height: var(--drag-h); padding: var(--chrome-y) var(--sp-3) 0 0; box-sizing: border-box; -webkit-app-region: drag; }
+.k7-chrome :is(button, [role="button"]) { -webkit-app-region: no-drag; }
+/* the sidebar toggle sits over the rail's middle: (88 - 36) / 2 in, (64 - 36) / 2 on the compact rail */
+.k7-chrome__start { flex: none; width: var(--sb-rail-w); display: flex; justify-content: center; }
+.k7-chrome[data-rail="b"] .k7-chrome__start { width: var(--rail-b-w); }
+.k7-chrome__centre { position: absolute; left: 50%; top: var(--chrome-y); transform: translateX(-50%); max-width: calc(100% - 2 * var(--sb-rail-w) - 2 * var(--ctl) - var(--sp-6)); }
+.k7-chrome__end { grid-column: 3; display: flex; align-items: center; gap: var(--sp-2); height: var(--ctl); }
+.k7-chrome__wc { display: inline-flex; gap: var(--gap-hair); margin-inline-start: var(--sp-1); }
+/* the title pill: 40 tall, the orb 24 and the name 15; it opens the details pane */
+.k7-title {
+  display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--pill-h); max-width: 100%; padding: 0 var(--pad-pill-end) 0 var(--pad-pill-start); box-sizing: border-box;
+  border-radius: var(--r-pill); background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line), var(--shadow-inline); color: var(--text); white-space: nowrap;
+  transition: background-color var(--dur-out) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) { .k7-title:hover { background: var(--bg-4); transition-duration: var(--dur-1); } }
+.k7-title__name { font-size: var(--fs-l); line-height: var(--lh-l); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.k7-title .k7-status { font-size: var(--fs-s); line-height: var(--lh-s); min-width: 0; }
+/* the search hint (S5): the word and the key chips, no fill at rest; a 28 pill at --hover on hover and focus; it never fades */
+.k7-search-hint {
+  display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--ctl-s); padding: 0 var(--sp-1) 0 var(--sp-3); border-radius: var(--r-pill);
+  font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-quiet); white-space: nowrap; transition: background-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+.k7-search-hint .k7-kbd { background: transparent; border-radius: var(--r-pill); }   /* a pill in the 28 pill: 14 - 4 = 10, half its 20 (8.2) */
+/* light's --text-quiet is under the text floor (4.4, section 14): the word takes --text-dim there (an owner question) */
+[data-theme="light"] :is(.k7-search-hint, .k7-search-pill) { color: var(--text-dim); }
+.k7-search-hint:is(:hover, :focus-visible) { background: var(--hover); color: var(--text-dim); }
+.k7-search-pill {
+  display: inline-flex; align-items: center; gap: var(--sp-2); width: var(--search-pill-w); height: var(--ctl); padding: 0 var(--sp-2) 0 var(--sp-3); box-sizing: border-box;
+  border-radius: var(--r-pill); background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line), var(--shadow-inline); font-size: var(--fs-s); color: var(--text-quiet); text-align: start;
+}
+.k7-search-pill .k7-kbd { border-radius: var(--r-pill); }
+
+/* ── Page (2) ── */
+.k7-page { display: block; min-width: 0; background: var(--bg-2); color: var(--text); }
+.k7-page__column { width: var(--col-w); max-width: calc(100% - 2 * var(--sp-5)); margin: 0 auto; padding: var(--sp-5) 0; }
+.k7-page[data-variant="settings"] { padding: var(--sp-5) var(--sp-6) var(--sp-6) var(--sp-2); background: transparent; }
+.k7-page__head { display: flex; align-items: center; gap: var(--sp-4); margin-bottom: var(--sp-4); }
+.k7-page__title { flex: 1 1 auto; margin: 0; font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 500; color: var(--text); }
+.k7-page__body { display: flex; flex-direction: column; gap: var(--sp-5); min-width: 0; }
+.k7-section { display: flex; flex-direction: column; min-width: 0; }
+.k7-section > .k7-shead { padding: 0 var(--sp-1) var(--sp-2); }
+
+/* ── Pane (3): the details pane (356, --bg-pane, a hairline at its left edge) or the tools (520, resizable); overlay under 900 ── */
+.k7-pane {
+  position: relative; display: flex; flex-direction: column; width: var(--right-w); max-width: 100%; min-height: 0; box-sizing: border-box;
+  background: var(--bg-pane); box-shadow: inset var(--hl) 0 0 var(--hair); color: var(--text);
+}
+.k7-pane[data-variant="tools"] { width: var(--tools-w); }
+.k7-pane:not([data-open]) { display: none; }
+.k7-pane[data-overlay] { box-shadow: inset var(--hl) 0 0 var(--hair), var(--shadow-modal); }
+.k7-pane__head { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); padding: var(--pad-chrome) var(--sp-4) var(--sp-4); }
+.k7-pane__name { margin: 0; font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 500; color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k7-pane__body { display: flex; flex-direction: column; gap: var(--sp-1); padding: 0 var(--sp-4) var(--sp-4); min-height: 0; }
+.k7-pane > [data-pane-more] { position: absolute; top: var(--chrome-y); right: var(--sp-3); }
+.k7-pane__tabs { display: flex; align-items: center; gap: var(--sp-1); padding: var(--pad-chrome) var(--sp-3) var(--sp-2); }
+.k7-pane[data-variant="tools"] .k7-pane__body { padding: 0 var(--sp-3) var(--sp-3); }
+.k7-pane__grip { position: absolute; top: 0; bottom: 0; left: 0; width: var(--sp-1); cursor: col-resize; }
+.k7-pane__grip:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
+
+/* ── Dialog (4): large (900, radius 14, --bg-pane, a 220 nav) or form (radius 20, --bg-3); the scrim, never blurred ── */
+.k7-scrim { position: relative; display: grid; place-items: center; padding: var(--sp-6) var(--sp-4); background: var(--scrim); min-width: 0; }
+.k7-dialog {
+  --sq-bg: var(--bg-3); --sq-line: var(--float-line); --sq-shadow: var(--shadow-modal);
+  position: relative; display: flex; flex-direction: column; gap: var(--sp-3); width: var(--dialog-form); max-width: 100%; padding: var(--sp-5); box-sizing: border-box;
+  border-radius: var(--r-dialog); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line), inset 0 1px 0 var(--spec-strong), var(--sq-shadow); color: var(--text);
+}
+.k7-dialog[data-sq-on]:not(#sq) { box-shadow: var(--sq-shadow); }
+@media (prefers-reduced-motion: no-preference) { .k7-dialog { animation: k7-dialog-in var(--dur-2) var(--ease-sharp); } }
+@keyframes k7-dialog-in { from { opacity: 0; transform: scale(.98); } }
+.k7-dialog__title { margin: 0; padding-inline-end: var(--sp-4); font-size: var(--fs-l); line-height: var(--lh-l); font-weight: 600; }
+.k7-dialog__body { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); }
+.k7-dialog__foot { display: flex; justify-content: flex-end; gap: var(--sp-2); margin-top: var(--sp-2); }
+/* the close button: 28, 10 in from a 20 corner, a capsule (R-corner-9) */
+.k7-dialog > [data-dialog-close] { position: absolute; top: var(--pad-dialog); right: var(--pad-dialog); }
+.k7-dialog[data-variant="large"] { --sq-bg: var(--bg-pane); flex-direction: row; gap: 0; width: var(--dialog-l); padding: 0; border-radius: var(--r-card); }
+.k7-dialog__nav { display: flex; flex-direction: column; gap: var(--gap-hair); flex: none; width: var(--set-nav-w); padding: var(--r-card) var(--sp-2);   /* its rows start a corner's radius down, out of the corner zone (R-corner-10) */ box-sizing: border-box; }
+.k7-dialog__navrow { display: flex; align-items: center; gap: var(--pad-nav-x); height: var(--row-h); padding: 0 var(--pad-nav-x); border-radius: var(--r-nav); font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text); text-align: start; }
+.k7-dialog__navrow > .k7-ic { color: var(--icon); }
+.k7-dialog__navrow[aria-current="page"] { background: var(--current); }
+@media (hover: hover) and (pointer: fine) { .k7-dialog__navrow:not([aria-current]):hover { background: var(--hover); } }
+.k7-dialog__navrow:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
+.k7-dialog__page { flex: 1 1 auto; min-width: 0; overflow-y: auto; overscroll-behavior: contain; }
+
+/* ── Rail (40): A 54 tiles on 88, B 44 on 64; the current tile 8%; the attention flag amber with a 2.5 ring of the rail ── */
+.k7-rail { display: flex; flex-direction: column; align-items: center; gap: var(--gap-s); width: var(--sb-rail-w); min-height: 100%; padding: var(--pad-chrome) 0 var(--sp-3); box-sizing: border-box; background: var(--bg-1); }
+.k7-rail[data-size="b"] { width: var(--rail-b-w); }
+.k7-tile { position: relative; display: grid; place-items: center; flex: none; width: var(--row-h-2); height: var(--row-h-2); border-radius: var(--r-tile); transition: background-color var(--dur-out) var(--ease-out); }
+.k7-rail[data-size="b"] .k7-tile { width: var(--tile-b); height: var(--tile-b); }
+.k7-tile[aria-current="page"] { background: var(--current); }
+@media (hover: hover) and (pointer: fine) { .k7-tile:not([aria-current]):hover { background: var(--hover); transition-duration: var(--dur-1); } }
+.k7-flag { position: absolute; right: var(--gap-s); bottom: var(--gap-s); width: var(--dot); height: var(--dot); border-radius: var(--r-pill); background: var(--owe); box-shadow: 0 0 0 var(--flag-ring) var(--bg-1); }
+.k7-rail__rule { width: var(--sp-6); margin: var(--gap-s) 0; border: 0; height: var(--hl); background: var(--hair); }
+.k7-rail__foot { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); }
+
+/* ── Notch (42): the slab's black shape flush to the top, its composer on a 12 inset ── */
+.k7-notch { position: relative; width: var(--w); height: var(--notch-h); }
+.k7-notch__slab { position: absolute; top: 0; left: calc(-1 * var(--r-slab)); fill: var(--dock-bg); }
+.k7-notch__in { position: relative; padding: var(--pad-dock); color: var(--text); }

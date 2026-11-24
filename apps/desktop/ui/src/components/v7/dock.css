@@ -1,0 +1,36 @@
+/* The v7 dock (DESIGN-SYSTEM.md v7 21.4; dockv7.js). Black in both themes, flush, its flares; its inside the dark theme (dock.ts
+   sets data-theme="dark" on it). Height, corner, flares, padding, orb size and gap never change; a row's width fits its content. */
+.k7-dock {
+  position: relative; display: inline-flex; flex-direction: column; justify-content: flex-end; width: max-content; max-width: var(--dk-max); height: var(--dk-h);
+  color: var(--text); background: transparent; isolation: isolate; transition: width var(--dur-2) var(--ease-sharp);
+}
+.k7-dock[data-dk="open"] { width: var(--dk-max); }
+.k7-dock__slab { position: absolute; top: 0; left: calc(-1 * var(--dk-f)); z-index: -1; overflow: visible; fill: var(--dock-bg); }
+.k7-dock__row { display: flex; align-items: center; justify-content: center; gap: var(--dk-gap); flex: none; height: var(--dk-row-h); padding: 0 var(--dk-pad); box-sizing: border-box; }
+.k7-dock[data-dk="compact"] .k7-dock__row { height: var(--dk-compact-h); }
+.k7-dock[data-dk="open"] .k7-dock__row { padding: 0 var(--dk-r); }
+.k7-dock__orb { position: relative; display: inline-grid; place-items: center; flex: none; width: var(--s); height: var(--s); border-radius: var(--r-pill);
+  transition: width var(--dur-2) var(--ease-sharp), height var(--dur-2) var(--ease-sharp); }
+.k7-dock__orb[data-focus] { outline: var(--focus-w) solid var(--focus); outline-offset: var(--gap-xs); }
+.k7-dock__orb .k7-flag { right: calc(-1 * var(--hl)); top: var(--hl); bottom: auto; box-shadow: 0 0 0 var(--gap-hair) var(--dock-bg); }
+.k7-dock[data-dk="compact"] .k7-dock__orb .k7-flag { width: var(--gap-s); height: var(--gap-s); }
+/* the open bot is marked by the accent dot under its orb */
+.k7-dock__orb[aria-current="true"]::after { content: ''; position: absolute; left: 50%; bottom: calc(-1 * var(--gap-row)); width: var(--sp-1); height: var(--sp-1); margin-left: calc(-1 * var(--gap-hair)); border-radius: var(--r-pill); background: var(--accent-text); }
+/* the ask pill (D03 C): amber, at the row's end; small in the compact dock */
+.k7-dock__ask { display: inline-flex; align-items: center; gap: var(--gap-s); flex: none; height: var(--ctl-card); padding: 0 var(--sp-3); border-radius: var(--r-pill); background: var(--owe-soft); color: var(--owe-text); font-size: var(--fs-s); line-height: var(--lh-s); white-space: nowrap; }
+.k7-dock__ask > .k7-dot { background: var(--owe); }
+.k7-dock[data-dk="compact"] .k7-dock__ask { height: var(--dk-orb-compact); padding: 0 var(--gap-row); font-size: var(--fs-xs); line-height: var(--lh-xs); gap: var(--gap-xs); }
+.k7-dock[data-dk="compact"] .k7-dock__ask > .k7-dot { width: var(--gap-s); height: var(--gap-s); }
+/* a hover names the bot and its state in the row's end slot (a tooltip would cover the composer's line) */
+.k7-dock__cap { display: inline-flex; align-items: center; gap: var(--gap-s); flex: none; height: var(--ctl-card); padding: 0 var(--sp-1); font-size: var(--fs-s); line-height: var(--lh-s); white-space: nowrap; }
+.k7-dock__cap > b { font-weight: 500; color: var(--text); }
+/* open: 640 x 432; the panel takes the room above the row, its content on an 8 inset from the top */
+.k7-dock[data-dk="open"] { height: var(--dk-open-h); }
+.k7-dock__panel { display: flex; flex-direction: column; gap: var(--sp-2); flex: 1 1 0; min-height: 0; padding: var(--dk-inset) var(--dk-inset) 0; overflow-y: auto; overscroll-behavior: contain; }
+.k7-dock__head { display: flex; align-items: center; gap: var(--sp-2); flex: none; height: var(--composer-h); padding: 0 var(--sp-2); }
+.k7-dock__title { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); padding-inline-start: var(--sp-1); }
+.k7-dock__count { font-size: var(--fs-2xs); color: var(--text-dim); }
+.k7-dock__name { font-size: var(--fs-m); line-height: var(--lh-m); font-weight: 500; margin-inline-start: var(--gap-hair); }
+.k7-dock__log { padding: var(--sp-1) var(--sp-1) 0; }
+.k7-dock__panel > .k7-ask { max-width: none; }
+.k7-dock__panel > .k7-composer { flex: none; }

@@ -31,7 +31,7 @@
   const SR = '.ui-sr, .sr-only, [class$="-sr"]';
   /* owner decisions that reach past an edge on purpose: an orb's attention flag (orbs stay whole) */
   /* a flag dot sits on its orb's corner; a concave flare lies outside the surface it softens (DESIGN-SYSTEM.md section 8: where the ground meets the frame) */
-  const OVERHANG_OK = '.ui-dot--flag, .ui-orb .ui-dot, .ui-concave';
+  const OVERHANG_OK = '.ui-dot--flag, .ui-orb .ui-dot, .ui-concave, .k7-flag';
   const MAX = 4000;
   /* R-space-2's named exceptions, by value (card 14 16, request 10 14, composer 12 14 4 and 6, button 0 14 / 10 / 8, chip 10 8,
      field 6 10, menu 4 and 6 8, popover 12, tooltip 4 8, toast 6 14, segmented 3, stamp 7, code chip 1 5, key chip 4 and 3 apart,
@@ -58,7 +58,7 @@
   /* token values as they resolve on a ground: the root, or an element that re-derives tokens (the dock's black,
      [data-ground]), so a colour derived on the dock is still a token */
   const tokenCache = new Map();
-  const groundOf = (e) => (e && e.closest && e.closest('[data-ground], [data-hx-preset]:not(html)')) || document.documentElement;
+  const groundOf = (e) => (e && e.closest && e.closest('[data-ui="v7"] [data-theme], [data-ground], [data-hx-preset]:not(html)')) || document.documentElement;   /* a v7 island in the other theme (the dock's dark inside) is its own ground */
   function tokens(names, ground) {
     ground = ground || document.documentElement;
     const de = document.documentElement;

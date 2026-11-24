@@ -4,6 +4,7 @@
 import { esc, fire, frag, reduced, tokenMs } from '../../core/dom';
 import { layer } from '../layer';
 import { icon } from '../icons';
+import { paintDock } from './dock';
 
 /* which behaviours an element has: an element can carry two (a chip that holds) */
 const WIRED = new WeakMap<Element, Set<string>>();
@@ -147,7 +148,7 @@ function wireComposer(c: HTMLElement): void {
 
 const WIRES: ReadonlyArray<readonly [string, (el: HTMLElement) => void]> = [
   ['.k7-seg', wireSegmented], ['.k7-switch', (el) => wireSwitch(el as HTMLButtonElement)], ['.k7-chip', (el) => wireChip(el as HTMLButtonElement)],
-  ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark], ['.k7-info', wireInfo], ['.k7-composer', wireComposer]
+  ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark], ['.k7-info', wireInfo], ['.k7-composer', wireComposer], ['.k7-dock', paintDock]
 ];
 /** wire every kit component under root (and root itself) once */
 export function wire<T extends Element>(root: T): T {
