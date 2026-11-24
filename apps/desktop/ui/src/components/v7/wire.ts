@@ -3,6 +3,7 @@
    ui:toggle {open} (Disclosure, Card's danger zone, FilesCard). State lives in ARIA and data attributes (R-state-2). */
 import { esc, fire, frag, reduced, tokenMs } from '../../core/dom';
 import { layer } from '../layer';
+import { icon } from '../icons';
 
 /* which behaviours an element has: an element can carry two (a chip that holds) */
 const WIRED = new WeakMap<Element, Set<string>>();
@@ -122,9 +123,31 @@ function wireInfo(b: HTMLElement): void {
   b.addEventListener('click', open);
 }
 
+/** Composer (12.2): the voice button becomes send with text (200 ms cross-fade, --dur-2); Enter sends (queues while it runs, S06 B),
+    ctrl Enter steers; Shift Enter is a new line. Fires ui:send {text, queue} and ui:steer {text} */
+function wireComposer(c: HTMLElement): void {
+  const t = c.querySelector<HTMLElement>('.k7-composer__text'), b = c.querySelector<HTMLButtonElement>('[data-send]');
+  if (!t || !b) return;
+  const sync = (): void => {
+    const typed = (t.textContent ?? '').trim().length > 0, running = c.hasAttribute('data-running');
+    c.toggleAttribute('data-typed', typed);
+    const [glyphName, label] = typed ? ['arrowup', running ? 'Queue' : 'Send'] : running ? ['stop', 'Stop'] : ['waveform', 'Talk'];
+    if (b.getAttribute('aria-label') !== label) { b.setAttribute('aria-label', label); b.setAttribute('data-tip', label); b.innerHTML = icon(glyphName, { size: 'm', class: 'k7-ic' }); }
+  };
+  t.addEventListener('input', sync);
+  t.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
+    e.preventDefault();
+    const text = (t.textContent ?? '').trim();
+    if (!text) return;
+    const steer = e.ctrlKey || e.metaKey;
+    if (fire(c, steer ? 'ui:steer' : 'ui:send', { text, queue: c.hasAttribute('data-running') && !steer }, true)) { t.textContent = ''; sync(); }
+  });
+}
+
 const WIRES: ReadonlyArray<readonly [string, (el: HTMLElement) => void]> = [
   ['.k7-seg', wireSegmented], ['.k7-switch', (el) => wireSwitch(el as HTMLButtonElement)], ['.k7-chip', (el) => wireChip(el as HTMLButtonElement)],
-  ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark], ['.k7-info', wireInfo]
+  ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark], ['.k7-info', wireInfo], ['.k7-composer', wireComposer]
 ];
 /** wire every kit component under root (and root itself) once */
 export function wire<T extends Element>(root: T): T {

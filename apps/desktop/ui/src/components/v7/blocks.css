@@ -191,7 +191,7 @@
 .k7-well { --sq-bg: var(--bg-0); --sq-line: var(--hair); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line); border-radius: var(--r-field); min-width: 0; color: var(--text-dim); }
 .k7-well[data-sq-on]:not(#sq) { box-shadow: none; }
 /* in a Block's corner a well is concentric with it (22 - 8 = 14, R-corner-10); elsewhere radius 10 (8.2: a well in a card) */
-.k7-block > .k7-well { border-radius: calc(var(--r-block) - var(--pad-block)); }
+.k7-block .k7-well { border-radius: calc(var(--r-block) - var(--pad-block)); }
 .k7-well__pre:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
 .k7-well__pre { margin: 0; padding: var(--gap-row) var(--sp-3); font-family: var(--mono); font-size: var(--fs-xs); line-height: var(--lh-s); letter-spacing: 0; white-space: pre; overflow-x: auto; overscroll-behavior: contain; border-radius: inherit; }
 .k7-well[data-kind="terminal"] { color: var(--text); }

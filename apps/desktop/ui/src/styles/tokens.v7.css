@@ -283,6 +283,10 @@
   --pad-field: 12px;
   --pad-field-y: 8px;
   --gap-label: 6px;
+  --diff-n: 36px;
+  --diff-g: 16px;
+  --notch-ctl: 24px;
+  --composer-max-h: 204px;
   --menu-w: 240px;
   --options-w: 372px;
   --pop-w: 260px;
