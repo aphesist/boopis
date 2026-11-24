@@ -24,8 +24,8 @@ export const CHECKS = {
   'stability.render':  { title: 'Renders the same twice', ds: 'STANDARDS 6', rule: null, severity: 'fail', how: 'the DOM structure of two renders of the same state' },
   'stability.interact':{ title: 'No flicker, replacement or jump', ds: '11, STANDARDS 6', rule: 'R-motion-5', severity: 'fail', how: 'frames sampled during an interaction: nothing replaced, nothing invisible and back, no box that jumps away and back' },
   'visual':            { title: 'Matches its golden screenshot', ds: '—', rule: null, severity: 'fail', how: 'pixel difference against tests/lab-golden at 1440, per preset' },
-  /* v7 (docs/design/v7/LAB-v7.md section 4, DESIGN-SYSTEM.md v7 rule IDs): probe-v7.js, static-v7.mjs, orbs.mjs. Blocking; a v6 story that
-     fails one is listed in v7-allowlist.json, which kit-v7 empties (gate.mjs) */
+  /* v7 (docs/design/v7/LAB-v7.md section 4, DESIGN-SYSTEM.md v7 rule IDs): probe-v7.js, static-v7.mjs, orbs.mjs. Report-only in CI until
+     LAB_V7_BLOCKING=1 (gate.mjs), which kit-v7 sets once its components have replaced today's v6 screens */
   'geometry.wrap':     { title: 'Single-line controls stay on one line', ds: 'v7 21.1, LAB-v7 4', rule: 'R-row-1', v7: true, severity: 'fail', how: 'a Segmented item, Chip, Button, Badge, Kbd, SelectorItem, title pill, InlineChip, StatusWord, Tooltip, MenuRow or countdown on more than one line, or its text wider than its box with no ellipsis' },
   'geometry.row':      { title: 'Rows are single-line', ds: 'v7 21.1, LAB-v7 4', rule: 'R-row-1', v7: true, severity: 'fail', how: 'in a MenuRow, ListRow, OptionRow, Row, queue or file row: a text run on two lines, cut without an ellipsis, or past the row\'s padding edge' },
   'geometry.escape':   { title: 'Nothing escapes its cell (geometry.contain, extended)', ds: 'v7 8.2, LAB-v7 4', rule: 'R-overflow-1', v7: true, severity: 'fail', how: 'the visible part of an element, after its clipping ancestors, outside its story cell or the window' },

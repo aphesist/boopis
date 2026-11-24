@@ -122,7 +122,7 @@ accents of the contrast matrix and the surfaces where a bot is at rest.
 
 ```sh
 pnpm lab:check [--area dock]       # every check above but the orbs, in the whole matrix; lab-report/summary.json
-pnpm lab:gate                      # what CI decides on that report: blocking findings, minus the known pre-v7 exceptions
+pnpm lab:gate                      # what CI decides on that report (LAB_V7_BLOCKING=1 pnpm lab:gate: as it will once v7 blocks)
 pnpm lab:orbs [--story dock/dock]  # the orb checks; lab-report-orbs/summary.json
 node tests/lab/gate.mjs lab-report-orbs/summary.json
 pnpm lab:static [--all]            # kit.single, tokens.loose and the accent tokens, from the source alone (seconds)
@@ -132,17 +132,16 @@ pnpm exec vitest run src/lab/v7-checks.test.ts   # the checks' own proof: each f
 **The orb run.** `pnpm lab:orbs` loads each state with full motion, the orbs on the main thread (`?orbs=main`, so their canvases
 can be read) and Playwright's clock installed and paused, then reads 48 frames 32 ms apart (two orb updates each) from every orb's
 own canvas, as the character probes do: exact pixels, no screenshot. Math.random is seeded; the frames still differ from run to run
-by a pixel here and there, so an orb story is excused whole (every state) in the allowlist.
+by a pixel here and there.
 
 **Fonts.** The lab draws only the bundled `@fontsource` faces: the stylesheet's Google Fonts URL is answered from them (`serve.mjs`),
 and a request that still reaches Google is an `errors` finding, in `lab:check` and in `lab:orbs`.
 
-**The known pre-v7 exceptions.** Today's v6 stories legitimately fail v7 rules. They are listed in `tests/lab/v7-allowlist.json`:
-per v7 check, the story and its states (an orb story whole), and for the source checks the file and the finding. The rules are not
-weakened: `tests/lab/gate.mjs` blocks on every finding whose check is not `visual` unless the list names it, so a new story, a new
-state, a check that newly fails or a new file fails CI. The list may name v7 checks only. An entry that matched nothing in a run is
-printed as stale: remove it. `node tests/lab/gate.mjs --write [--orbs lab-report-orbs/summary.json]` rewrites the list from the
-reports of a full run (never from a narrowed one). **kit-v7 empties this file**: each component it lands removes its stories' entries.
+**Report-only until the kit lands.** Today's v6 screens fail v7 rules by design, and the v7 kit replaces them, so the v7 checks
+(every `rules.mjs` row with `v7: true`) are printed and counted by `tests/lab/gate.mjs` but fail CI only when `LAB_V7_BLOCKING` is
+`1`. CI sets it to `"0"` in `.github/workflows/ci.yml`'s top-level `env`; **kit-v7 turns it to `"1"`** when its components have
+replaced the v6 screens. While it is off, a v7 finding gets no crop in the report (a crop is a full-page screenshot, and the run
+would spend its time on findings that do not block). Every other check but `visual` blocks as before.
 
 **Not yet in the matrix.** LAB-v7's axes beyond today's (dark and light, corners B and C, three accents, three densities) need the
 v7 theme, which kit-v7 builds; until then the matrix is the v6 presets and widths. The contrast check already walks `ACCENTS` when
@@ -151,9 +150,10 @@ corners and density hooks to `check.mjs`.
 
 ## What CI blocks on
 
-The `lab` job runs `pnpm lab:check --jobs 2`, then `node tests/lab/gate.mjs`: it fails on any finding whose check is not `visual`
-and that `v7-allowlist.json` does not name. The `lab-orbs` job runs `pnpm lab:orbs --jobs 2` and the same gate on its report. The
-`ui` job runs `src/lab/v7-checks.test.ts` with the unit tests, and the inline-chips runs at DPR 2 and 1.6 through the gate.
+The `lab` job runs `pnpm lab:check --jobs 2`, then `node tests/lab/gate.mjs`: it fails on any finding whose check is not `visual`,
+except the v7 checks while `LAB_V7_BLOCKING` is not `1`. The `lab-orbs` job runs `pnpm lab:orbs --jobs 2` and the same gate on its
+report (report-only until the switch is on). The `ui` job runs `src/lab/v7-checks.test.ts` with the unit tests, and the
+inline-chips runs at DPR 2 and 1.6 through the gate.
 
 ## Read the report
 
