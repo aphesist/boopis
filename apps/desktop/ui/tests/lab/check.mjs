@@ -294,14 +294,21 @@ async function checkRow(browser, origin, row, log) {
         const rest = await probe(page, null, row.overlayDecl, preset === PRESETS[0] && w === 1440 && !skip('same-component'));
         for (const [cls, geom, el] of rest.sigs || []) { let m = sigMap.get(cls); if (!m) sigMap.set(cls, (m = new Map())); let l = m.get(geom); if (!l) m.set(geom, (l = [])); if (!l.some((x) => x.row === row)) l.push({ row, el }); }
         if (rest.overlapMs != null) { overlapCost.n++; overlapCost.sum += rest.overlapMs; overlapCost.max = Math.max(overlapCost.max, rest.overlapMs); }
+        /* a crop is a full-page screenshot, which resizes the window for a moment, and an open layer closes on a resize (layer.ts):
+           after a crop, a state with an overlay is drawn again before anything else measures it */
+        const reopen = async (before) => { if (row.overlay && crops !== before) await redraw(page, row); };
+        let c0 = crops;
         for (const f of rest.findings || []) { if (skip(f.check, f)) continue; const x = record(row, f, where); await cropFor(page, x, f); }
+        await reopen(c0);
         if (w === 1440 || (w === 390 && preset === 'catalog')) {
           for (const fs of FORCES) {
+            c0 = crops;
             await page.evaluate((s) => window.__lab.force(null, s, true), fs);
             await settle(page, 40);
             const r = await probe(page, FORCED_CHECKS, row.overlayDecl);
             for (const f of r.findings || []) { if (skip(f.check, f)) continue; const x = record(row, f, where + '/' + fs); await cropFor(page, x, f); }
             await page.evaluate(() => window.__lab.clearForced());
+            await reopen(c0);
           }
         }
         if (w === 1440 && AXE_ON && !whole('axe')) {
