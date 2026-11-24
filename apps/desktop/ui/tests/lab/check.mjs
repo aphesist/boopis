@@ -65,10 +65,9 @@ const FORCED_CHECKS = ['geometry.contain', 'concentric', 'tokens.computed', 'ove
 /* the v7 checks (probe-v7.js, LAB-v7 section 4); same-component is compared across renders below */
 const V7_CHECKS = ['geometry.wrap', 'geometry.row', 'geometry.escape', 'geometry.padding', 'geometry.align', 'concentric.strict', 'mark.rest', 'sweep'];
 const MAX_CROPS = 900;
-/* the known pre-v7 exceptions (gate.mjs): a finding the list excuses gets no crop. A crop is a full-page screenshot, and the v6
-   stories' v7 findings would spend the run's time (and its 900 crops) on what the gate does not block on */
-const KNOWN = (() => { try { return JSON.parse(readFileSync(join(UI_ROOT, 'tests', 'lab', 'v7-allowlist.json'), 'utf8')).stories ?? []; } catch { return []; } })();
-const known = (x) => !!CHECKS[x.check]?.v7 && KNOWN.some((e) => e.check === x.check && e.story === x.story && (e.states === '*' || e.states.includes(x.state)));
+/* while the v7 checks are report-only (LAB_V7_BLOCKING, gate.mjs), a v7 finding gets no crop: a crop is a full-page screenshot, and
+   today's v6 screens' v7 findings would spend the run's time (and its 900 crops) on what the gate does not block on */
+const known = (x) => process.env.LAB_V7_BLOCKING !== '1' && !!CHECKS[x.check]?.v7;
 if (AREA && AREA.some((a) => !AREAS.includes(a))) { console.error('unknown area: ' + AREA.join(',') + ' (areas: ' + AREAS.join(', ') + ')'); process.exit(2); }
 
 /* ───────── build and serve ───────── */
