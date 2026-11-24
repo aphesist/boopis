@@ -117,7 +117,7 @@ describe('mark.rest', () => {
   it('flags a heading with a resting mark, passes feedforward in the composer, and flags an info label at rest', async () => {
     expect(of(await probe(page('<h3 style="text-decoration:underline dashed">Settings</h3>'), ['mark.rest']), 'mark.rest')).toHaveLength(1);
     expect(of(await probe(page('<div data-kit="Composer"><span data-kit="Mark" style="border-bottom:1px dashed #888">tomorrow</span></div>'), ['mark.rest']), 'mark.rest')).toEqual([]);
-    expect(of(await probe(page('<p>a <span data-kit="Mark" data-mark="info" style="border-bottom:1px dashed #888">term</span></p>'), ['mark.rest']), 'mark.rest')).toHaveLength(1);
+    expect(of(await probe(page('<p>a <span data-kit="Mark" data-mark-kind="info" style="border-bottom:1px dashed #888">term</span></p>'), ['mark.rest']), 'mark.rest')).toHaveLength(1);
   });
 });
 

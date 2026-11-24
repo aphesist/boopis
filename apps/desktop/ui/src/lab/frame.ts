@@ -5,12 +5,13 @@
    exposes `window.__lab` for the checker. */
 import '../styles';
 import '../../vendor/boopis-logo.js';
-import { setupOrbs, startGlance, ui } from '@boopis/ui';
+import { kit, setupOrbs, startGlance, ui } from '@boopis/ui';
 import { emit, on } from '../core/bus';
 import { getDockApi } from '../core/registry';
 import { getLayout, setState, state } from '../core/state';
 import { setProvider } from '../data';
 import { themeApi } from '../styles/theme';
+import { loadFont } from '../styles/fonts';
 import '../modules/cards';
 import '../modules/session';
 import '../modules/bots';
@@ -99,6 +100,10 @@ function applyForces(st: State): void {
   if (g) force(scopeOf(currentStory as Story, st) ?? document, null, g);
 }
 let currentStory: Story | null = null;
+/** a story of the v7 kit (src/lab/stories/kit/) */
+const isKitStory = (s: Story): boolean => s.id.startsWith('kit/');
+/** a preset id as a v7 theme: dark and light, or a v6 preset's scheme (bone is the light one) */
+const v7Theme = (id: string | null): 'dark' | 'light' => (id === 'light' || id === 'bone' ? 'light' : 'dark');
 function scopeOf(s: Story, st: State): Element | null {
   if (!st.app) return document.querySelector(st.scope ?? '.lab-stage');
   const sel = st.scope ?? s.scope ?? '#hx-app';
@@ -113,7 +118,12 @@ export async function startFrame(): Promise<void> {
   currentStory = s;
   document.title = s.title + ' · ' + name;
   const preset = q.get('preset');
-  if (preset) themeApi.preset(preset);
+  /* the v7 kit's stories (stories/kit/) draw on a v7 root: the body, so the v6 theme's inline colours on <html> stay
+     underneath; their presets are v7's two themes (a v6 preset id maps to its scheme), with the accent and corners of
+     section 18 settable by the checker */
+  const v7 = isKitStory(s);
+  if (v7) { kit.applyTheme(document.body, { theme: v7Theme(preset) }); await Promise.all([loadFont('Geist'), loadFont('Geist Mono')]); }
+  else if (preset) themeApi.preset(preset);
   const dir = q.get('dir') ?? st.dir;
   if (dir) document.documentElement.dir = dir;
   const zoom = Number(q.get('zoom') || '1');
@@ -136,7 +146,13 @@ export async function startFrame(): Promise<void> {
     async rerender(): Promise<void> { if (st.app) return; await renderCell(st, document.querySelector('.lab-stage') as HTMLElement); applyForces(st); await frames(3); },
     force: (sel: string | null, which: Forced, onOff = true) => force(scopeOf(s, st) ?? document, sel, which, onOff),
     clearForced: () => { clearForced(document); for (const f of st.force ?? []) force(document, f.sel, f.state); },
-    preset: (id: string) => themeApi.preset(id),
+    preset: (id: string) => (v7 ? kit.applyTheme(document.body, { theme: v7Theme(id) }) : themeApi.preset(id)),
+    /** v7 only: a custom accent (section 18; null for the default Iris), corners B or C, light shadows A, B or C */
+    ...(v7 ? {
+      accent: (hex: string | null) => kit.applyTheme(document.body, { accent: hex }),
+      corners: (c: 'b' | 'c') => kit.applyTheme(document.body, { radii: c }),
+      shadow: (x: 'a' | 'b' | 'c') => kit.applyTheme(document.body, { shadow: x })
+    } : {}),
     hx: { state, setState, on, emit, ui, theme: themeApi, dock: getDockApi, layout: getLayout }
   };
   document.documentElement.dataset['labReady'] = '1';

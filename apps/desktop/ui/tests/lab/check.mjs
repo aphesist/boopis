@@ -40,7 +40,8 @@ const PROBE_V7 = join(UI_ROOT, 'tests', 'lab', 'probe-v7.js');
 const DIST = join(UI_ROOT, 'dist-e2e');
 const GOLDEN = join(UI_ROOT, 'tests', 'lab-golden');
 const REPORT = join(UI_ROOT, 'lab-report');
-const TOKEN_NAMES = [...new Set([...readFileSync(join(UI_ROOT, 'src', 'styles', 'tokens.css'), 'utf8').matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]))];
+/* the v6 tokens and the v7 ones (tokens.v7.css, declared on a v7 root): the token checks resolve every name on the element's ground */
+const TOKEN_NAMES = [...new Set(['tokens.css', 'tokens.v7.css'].flatMap((f) => [...readFileSync(join(UI_ROOT, 'src', 'styles', f), 'utf8').matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1])))];
 
 /* ───────── arguments ───────── */
 const argv = process.argv.slice(2);
@@ -48,6 +49,10 @@ const flag = (n) => argv.includes('--' + n);
 const opt = (n, d) => { const i = argv.indexOf('--' + n); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : d; };
 const quick = flag('quick');
 const PRESETS = opt('presets', quick ? 'catalog,bone' : 'catalog,graphite,bone,typewriter').split(',');
+/* the v7 kit's stories (src/lab/stories/kit/) run in v7's two themes, not the v6 presets (LAB-v7 section 3) */
+const KIT_PRESETS = opt('kit-presets', 'dark,light').split(',');
+const isKit = (row) => typeof row.story === 'string' && row.story.startsWith('kit/');
+const presetsOf = (row) => (isKit(row) ? KIT_PRESETS : PRESETS);
 const WIDTHS = opt('widths', quick ? '1440' : '390,1200,1440,1920').split(',').map(Number);
 const AREA = opt('area', '') ? opt('area', '').split(',').map(areaOf) : null;
 const STORY = opt('story', '');
@@ -286,7 +291,7 @@ async function checkRow(browser, origin, row, log) {
     const whole = (c) => typeof allow[c] === 'string';
     const skip = (c, f) => { if (f && STANDING_ALLOW.some((s) => s.check === c && String(f.el ?? '').includes(s.el))) return true; const a = allow[c]; if (!a) return false; if (typeof a === 'string') return true; return !!f && String(f.el ?? '').includes(a.el); };
     if (DRAW_ONLY) { for (const e of page.errorsSeen) record(row, { check: 'errors', msg: e, key: 'errors|' + e.slice(0, 120) }, 'load'); return; }
-    for (const preset of PRESETS) {
+    for (const preset of presetsOf(row)) {
       await page.evaluate((p) => window.__lab.preset(p), preset);
       await settle(page, 80);
       for (const w of WIDTHS) {
@@ -294,7 +299,7 @@ async function checkRow(browser, origin, row, log) {
         if (!row.app && row.width && row.width + 48 > w) continue;   /* a fixed-width cell wider than this window: not meaningful */
         await setWidth(page, row, w);
         const where = preset + '/' + w;
-        const rest = await probe(page, null, row.overlayDecl, preset === PRESETS[0] && w === 1440 && !skip('same-component'));
+        const rest = await probe(page, null, row.overlayDecl, preset === presetsOf(row)[0] && w === 1440 && !skip('same-component'));
         for (const [cls, geom, el] of rest.sigs || []) { let m = sigMap.get(cls); if (!m) sigMap.set(cls, (m = new Map())); let l = m.get(geom); if (!l) m.set(geom, (l = [])); if (!l.some((x) => x.row === row)) l.push({ row, el }); }
         if (rest.overlapMs != null) { overlapCost.n++; overlapCost.sum += rest.overlapMs; overlapCost.max = Math.max(overlapCost.max, rest.overlapMs); }
         /* a crop is a full-page screenshot, which resizes the window for a moment, and an open layer closes on a resize (layer.ts):
@@ -410,7 +415,7 @@ async function mockShots(browser, origin, list) {
 /* contrast.accent: a theme's derived accent tokens, once per preset (and per accent of the matrix, when the theme can set one:
    `__lab.accent(hex)`, which kit-v7 adds with the v7 theme). A property of the theme, not of a story: reported against the token file */
 async function accentContrast() {
-  const row = rows.find((r) => !r.app);
+  const row = rows.find((r) => !r.app && isKit(r)) ?? rows.find((r) => !r.app);
   if (!row) return [];
   const { ctx, page, ready } = await openState(await liveBrowser(), srv.origin, row);
   const out = [];
@@ -418,7 +423,7 @@ async function accentContrast() {
     if (!ready) return [];
     await page.addScriptTag({ path: PROBE_V7 });
     const accents = (await page.evaluate(() => typeof window.__lab.accent === 'function')) ? ACCENTS : [null];
-    for (const preset of PRESETS) for (const a of accents) {
+    for (const preset of presetsOf(row)) for (const a of accents) {
       await page.evaluate(([p, hex]) => { window.__lab.preset(p); if (hex) window.__lab.accent(hex); }, [preset, a && a.hex]);
       await settle(page, 60);
       const r = await page.evaluate((pairs) => window.__labProbeV7.run({ checks: ['contrast.accent'], accentPairs: pairs, targets: {} }), ACCENT_PAIRS);

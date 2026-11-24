@@ -193,7 +193,9 @@
         const cs = getComputedStyle(el);
         const dashedLine = /underline/.test(cs.textDecorationLine) && cs.textDecorationStyle === 'dashed';
         const dashedBorder = cs.borderBottomStyle === 'dashed' && px(cs.borderBottomWidth) > 0 && cs.borderTopStyle !== 'dashed' && !transparent(cs.borderBottomColor);
-        if (!dashedLine && !dashedBorder) continue;
+        /* the v7 Mark draws its dashes as a background layer (section 17.1), so it says when they show: --mark-dashes is 1 */
+        const drawn = matches(el, T.mark) && cs.getPropertyValue('--mark-dashes').trim() === '1';
+        if (!dashedLine && !dashedBorder && !drawn) continue;
         if (!vis(el)) continue;
         if (T.infoMark && matches(el, T.infoMark)) { add('mark.rest', el, 'an info label\'s mark shows at rest: it shows only on hover or focus'); continue; }
         if (T.markContext && el.closest(T.markContext)) continue;
@@ -215,7 +217,8 @@
 
     /* contrast.accent: the derived accent tokens on their surfaces, when the theme defines them */
     if (want.has('contrast.accent') && o.accentPairs) {
-      const rs = getComputedStyle(document.documentElement);
+      /* the v7 root's tokens where there is one (the kit's stories), else the document's */
+      const rs = getComputedStyle(document.querySelector('[data-ui="v7"]') || document.documentElement);
       const p = document.createElement('i'); p.style.cssText = 'position:fixed;left:-99px;top:0;width:1px;height:1px'; document.documentElement.appendChild(p);
       const rgb = (v) => { p.style.color = ''; p.style.color = v; const m = /rgba?\(([^)]+)\)/.exec(getComputedStyle(p).color); return m ? m[1].split(/[ ,/]+/).filter(Boolean).map(Number) : null; };
       const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };

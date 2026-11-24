@@ -73,11 +73,16 @@ const NAMED = {
   '--pad-text': 4,                                     /* text rows inside a Block indent 4 more (R-corner-10) */
   '--gap-hair': 2,                                     /* 2 px: the segmented track's and the window controls' gap (section 7: "plus 2") */
   '--gap-xs': 3, '--gap-s': 6, '--gap-row': 10,        /* key chips 3 apart; glyph gaps 6; a 54 row's orb to name 10 */
-  '--gutter': 30, '--gm': 22                           /* the thread's agent gutter and the brand tile (20, S09) */
+  '--gutter': 30, '--gm': 22,                          /* the thread's agent gutter and the brand tile (20, S09) */
+  '--pad-chip-mode': 10,                               /* a composer mode chip: 0 10 (kit.css .chip.mode) */
+  '--pad-sel-start': 7, '--pad-sel-end': 5, '--gap-sel': 4,   /* a SelectorItem: 0 5 0 7, gap 4 (kit.css .select) */
+  '--pad-need-start': 7, '--pad-need-end': 9,          /* "+ Choose a model": 0 9 0 7 (kit.css .ns-need) */
+  '--pad-field': 12, '--pad-field-search': 6, '--pad-field-y': 8,   /* a field 0 12; a search pill 0 6 (kit.css .input) */
+  '--gap-label': 6                                     /* a field's label above it */
 };
 for (const [k, v] of Object.entries(NAMED)) both.push(`${k}: ${v}px;`);
 /* the sizes the components share that section 7 names but tokens.v7.json does not carry as a number */
-both.push('--kbd-h: 20px;', '--switch-w: 32px;', '--switch-h: 20px;', '--knob-d: 16px;', '--line-h: 26px;', '--line-h-act: 32px;', '--item-h: 60px;',
+both.push('--on-danger: #ffffff;', '--seg-item-h: 26px;', '--kbd-h: 20px;', '--switch-w: 32px;', '--switch-h: 20px;', '--knob-d: 16px;', '--line-h: 26px;', '--line-h-act: 32px;', '--item-h: 60px;',
   '--item-mark: 40px;', '--session-h: 44px;', '--compact-h: 36px;', '--badge-h: 18px;', '--dot: 8px;', '--letter: 20px;', '--icon-s: 16px;',
   '--flag-ring: 2.5px;', '--hold-ring: 2px;', '--focus-w: 2px;', '--focus-off: 2px;', '--mark-gap-ch: 7ch;', '--tools-w: 520px;', '--sb-open-w: 300px;',
   '--rail-b-w: 64px;', '--tile-b: 44px;', '--pane-orb: 64px;', '--dk-row-h: 72px;', '--dk-compact-h: 48px;', '--dk-open-w: 640px;', '--dk-open-h: 432px;',

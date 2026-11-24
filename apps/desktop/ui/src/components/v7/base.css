@@ -1,0 +1,67 @@
+/* The v7 kit's foundations (DESIGN-SYSTEM.md v7 21.1): what every component inherits on a v7 root. Tokens only.
+   The type and alpha hierarchy (section 6), the focus ring (14), the glyphs, the drawn corner's line and fill
+   (squircle.ts binds [data-sq]; section 8.1, curve B), the mark primitive (17.1), stills (9.2: live things at rest)
+   and reduced motion. */
+
+[data-ui="v7"] {
+  font-family: var(--sans); font-size: var(--fs-m); line-height: var(--lh-m); letter-spacing: var(--track); font-weight: 400;
+  color: var(--text); -webkit-font-smoothing: antialiased; caret-color: var(--focus);
+}
+[data-ui="v7"] ::selection { background: var(--accent-soft); color: var(--text-strong); }
+/* a visible 2 px ring in --focus everywhere (section 14) */
+[data-ui="v7"] :focus { outline: none; }
+[data-ui="v7"] :focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-off); }
+
+/* glyphs: the kit's icon set at 16, one stroke */
+.k7-ic { width: var(--icon-s); height: var(--icon-s); flex: none; }
+.k7-mono { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.k7-dim { color: var(--text-dim); }
+.k7-quiet { color: var(--text-quiet); }
+.k7-ell { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k7-grow { flex: 1 1 auto; min-width: 0; }
+.k7-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* a control's reset: the kit draws every control itself (R-native-1) */
+.k7-reset { margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; letter-spacing: inherit; text-align: inherit; cursor: pointer; appearance: none; }
+
+/* the surface primitive (the approved renders' .sq): a fill and a one device px line, the continuous corner drawn by
+   squircle.ts when the radius is under half the short side. A bound element writes --sq-bg and --sq-line once */
+.k7-surface { --sq-bg: transparent; --sq-line: transparent; background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line), var(--sq-shadow, 0 0 #0000); }
+.k7-surface[data-sq-on]:not(#sq) { box-shadow: var(--sq-shadow, 0 0 #0000); }
+.k7-elev { --sq-bg: var(--bg-3); --sq-line: var(--line); }
+
+/* ── the mark (section 17.1): one dashed underline, drawn as a layer, never a text decoration ── */
+@property --mark-p { syntax: '<percentage>'; inherits: false; initial-value: 100%; }
+.k7-mark {
+  --mc: var(--mark-color); --mark-dashes: 1;
+  background-image: repeating-linear-gradient(90deg, var(--mc) 0 var(--mark-dash), transparent var(--mark-dash) calc(var(--mark-dash) + var(--mark-gap)));
+  background-repeat: no-repeat; background-size: var(--mark-p) var(--mark-thick); background-position: 0 100%;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; padding-bottom: var(--mark-thick);
+  transition: --mc var(--dur-1) var(--mark-ease), color var(--dur-1) var(--mark-ease);
+  cursor: pointer;
+}
+@property --mc { syntax: '<color>'; inherits: false; initial-value: transparent; }
+.k7-mark[data-mark="hover"], .k7-mark:is(:hover, :focus-visible) { --mc: var(--mark-color-hover); color: var(--text-strong); }
+.k7-mark[data-mark="open"] { --mc: var(--mark-color-open); color: var(--text-strong); }
+.k7-mark[data-mark="chosen"] { --mark-dashes: 0; background-image: linear-gradient(var(--mark-color-chosen), var(--mark-color-chosen)); }
+.k7-mark[data-mark="waiting"] { --mc: var(--mark-color-waiting); }
+.k7-mark[data-mark="guess"] { --mc: var(--mark-color-guess); }
+/* a new mark draws in once, left to right (per line); a mark that goes fades out */
+.k7-mark[data-mark-new] { animation: k7-mark-in var(--mark-dur-in) var(--mark-ease) both; }
+@keyframes k7-mark-in { from { --mark-p: 0%; } to { --mark-p: 100%; } }
+.k7-mark[data-mark-out] { --mc: transparent; transition-duration: var(--mark-dur-out); }
+/* info labels: hidden at rest; revealed by hovering the row or card that holds them, or focusing the label */
+[data-mark-reveal="hover"] .k7-mark { --mc: transparent; --mark-dashes: 0; }
+@media (hover: hover) and (pointer: fine) { [data-mark-reveal="hover"]:hover .k7-mark { --mc: var(--mark-color); --mark-dashes: 1; animation: k7-mark-in var(--mark-dur-in) var(--mark-ease) both; } }
+[data-mark-reveal="hover"]:focus-within .k7-mark, [data-mark-reveal="hover"][data-lab-hover] .k7-mark { --mc: var(--mark-color); --mark-dashes: 1; }
+[data-mark-reveal="hover"] .k7-mark:is(:hover, :focus-visible, [data-mark="hover"]) { --mc: var(--mark-color-hover); --mark-dashes: 1; }
+@media (hover: none) { [data-mark-reveal="hover"] .k7-mark { --mc: var(--mark-color); --mark-dashes: 1; } }
+/* forced colours draw no background layer: the explained label shows the outline (i) after it (17.2) */
+.k7-mark__i { display: none; }
+@media (forced-colors: active) { .k7-mark { background: none; text-decoration: underline dashed; } .k7-mark__i { display: inline-block; } }
+
+/* stills (9.2): the sweep and the breath exist only in motion; under reduced motion they rest (the shimmer stops, the pulse stops) */
+@media (prefers-reduced-motion: reduce) {
+  [data-ui="v7"] [data-live] { animation: none !important; }
+  .k7-mark[data-mark-new] { animation: none; }
+  [data-mark-reveal="hover"]:hover .k7-mark { animation: none; }
+}

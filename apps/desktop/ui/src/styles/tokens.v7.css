@@ -274,6 +274,18 @@
   --gap-row: 10px;
   --gutter: 30px;
   --gm: 22px;
+  --pad-chip-mode: 10px;
+  --pad-sel-start: 7px;
+  --pad-sel-end: 5px;
+  --gap-sel: 4px;
+  --pad-need-start: 7px;
+  --pad-need-end: 9px;
+  --pad-field: 12px;
+  --pad-field-search: 6px;
+  --pad-field-y: 8px;
+  --gap-label: 6px;
+  --on-danger: #ffffff;
+  --seg-item-h: 26px;
   --kbd-h: 20px;
   --switch-w: 32px;
   --switch-h: 20px;

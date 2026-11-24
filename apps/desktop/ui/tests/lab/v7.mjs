@@ -92,7 +92,7 @@ export const ROLES = {
   /* where a mark may show at rest (section 17): feedforward (the composer's text, a reply's guess), an AskCard, a blank */
   MarkContext: ['[data-mark-context]', kit('Composer'), kit('AskCard'), '.ui-composer', '.ui-request', '.ui-blank', '.ui-ff', '.ui-assume'],
   /* a mark that shows only on hover or focus (an info label) */
-  InfoMark: ['[data-kit~="Mark"][data-mark="info"]'],
+  InfoMark: ['[data-kit~="Mark"][data-mark-kind="info"]'],
   /* live things a still must show at rest (section 9.2, P4): a status phrase's shimmer, a breath; [data-motion] strips are exempt */
   Live: ['[data-live]', '.ui-dot--run', '.ui-presence__shimmer'],
   /* the shells a corner control is never concentric with: they are the window's own regions */

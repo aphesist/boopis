@@ -1,0 +1,166 @@
+/* The v7 kit's controls (DESIGN-SYSTEM.md v7 12.2 and 21.2 rows 21 to 29; the approved renders' kit.css). Tokens only.
+   Hover rules sit under (hover: hover) and (pointer: fine) (R-state-3); hover in over --dur-1, out over --dur-out, press
+   over --dur-press as scale(.96) with no travel (9.2, R-state-4). */
+
+/* ── Button (21) ── */
+.k7-btn {
+  position: relative; isolation: isolate; overflow: hidden;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--gap-s); flex: none;
+  height: var(--ctl); padding: 0 var(--pad-btn); border-radius: var(--r-pill);
+  font-size: var(--fs-m); line-height: var(--lh-m); letter-spacing: var(--track); color: var(--text); white-space: nowrap;
+  background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line);
+  transition: background-color var(--dur-out) var(--ease-out), color var(--dur-out) var(--ease-out), transform var(--dur-press) var(--ease-sharp);
+}
+.k7-btn[data-size="32"] { height: var(--ctl-card); padding: 0 var(--pad-btn-card); }
+.k7-btn[data-size="28"] { height: var(--ctl-s); padding: 0 var(--pad-btn-s); font-size: var(--fs-s); line-height: var(--lh-s); }
+.k7-btn[data-variant="primary"] { background: var(--selected); color: var(--text-on-light); box-shadow: none; }
+.k7-btn[data-variant="tint"] { background: var(--fill-2); box-shadow: none; }
+.k7-btn[data-variant="ghost"] { background: transparent; box-shadow: none; color: var(--text-dim); }
+.k7-btn[data-variant="danger"] { background: var(--red); color: var(--on-danger); box-shadow: none; }
+@media (hover: hover) and (pointer: fine) {
+  .k7-btn:not(:disabled):hover { transition-duration: var(--dur-1); background: var(--bg-4); }
+  .k7-btn[data-variant="primary"]:not(:disabled):hover { background: var(--selected-hover); }
+  .k7-btn:is([data-variant="tint"], [data-variant="ghost"]):not(:disabled):hover { background: var(--hover); }
+  .k7-btn[data-variant="ghost"]:not(:disabled):hover { color: var(--text); }
+  .k7-btn[data-variant="danger"]:not(:disabled):hover { background: var(--red); }
+}
+.k7-btn:not(:disabled):active { transform: scale(.96); }
+/* disabled: a 13% ink fill with 30% text (R-state-6, Grok) */
+.k7-btn:disabled { background: var(--selected-off); color: var(--icon-off); box-shadow: none; cursor: default; }
+.k7-btn__label { position: relative; }
+.k7-btn > .k7-ic { position: relative; }
+/* the split button: the primary and its menu half, one pill */
+.k7-split { display: inline-flex; flex: none; gap: var(--gap-hair); }
+.k7-split > .k7-split__main { border-radius: var(--r-pill) 0 0 var(--r-pill); }
+.k7-split > .k7-split__menu { border-radius: 0 var(--r-pill) var(--r-pill) 0; padding: 0 var(--pad-btn-s); }
+/* hold to confirm (owner decision: 1 s, --dur-hold): the fill sweeps from the start; released early it drains */
+.k7-btn__sweep { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: currentColor; opacity: .16;
+  transform-origin: 0 50%; transform: scaleX(var(--hold, 0)); transition: transform var(--dur-1) var(--ease-out); }
+[data-holding] > .k7-btn__sweep { transform: scaleX(1); transition: transform var(--dur-hold) linear; }
+[data-held] > .k7-btn__sweep { transform: scaleX(1); transition: none; }
+
+/* ── IconButton (22): circles ── */
+.k7-ib {
+  display: inline-grid; place-items: center; flex: none; width: var(--ctl); height: var(--ctl); border-radius: var(--r-pill);
+  color: var(--icon); background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line), var(--shadow-inline);
+  transition: background-color var(--dur-out) var(--ease-out), color var(--dur-out) var(--ease-out), transform var(--dur-press) var(--ease-sharp);
+}
+.k7-ib[data-variant="tinted"] { width: var(--ctl-s); height: var(--ctl-s); background: var(--fill-2); box-shadow: inset 0 0 0 var(--hl) var(--line); color: var(--icon-quiet); }
+.k7-ib[data-variant="ghost"] { width: var(--ctl-s); height: var(--ctl-s); background: transparent; box-shadow: none; color: var(--icon-quiet); }
+.k7-ib[data-variant="inverted"] { width: var(--ctl-s); height: var(--ctl-s); background: var(--selected); box-shadow: none; color: var(--text-on-light); }
+.k7-ib[aria-pressed="true"] { color: var(--accent-text); }
+@media (hover: hover) and (pointer: fine) {
+  .k7-ib:not(:disabled):hover { transition-duration: var(--dur-1); background: var(--bg-4); }
+  .k7-ib:is([data-variant="tinted"], [data-variant="ghost"]):not(:disabled):hover { background: var(--hover); color: var(--icon); }
+  .k7-ib[data-variant="inverted"]:not(:disabled):hover { background: var(--selected-hover); }
+}
+.k7-ib:not(:disabled):active { transform: scale(.96); }
+.k7-ib:disabled { color: var(--icon-off); cursor: default; }
+
+/* ── Kbd (27): 20 tall, 6% fill, radius 4, 12 --text-dim (R-kbd-1); a pill in a pill (R-kbd-2) ── */
+.k7-keys { display: inline-flex; align-items: center; gap: var(--gap-xs); flex: none; }
+.k7-kbd {
+  display: inline-grid; place-items: center; min-width: var(--kbd-h); height: var(--kbd-h); padding: 0 var(--pad-kbd); box-sizing: border-box;
+  border-radius: var(--r-xs); background: var(--hover); font-family: var(--sans); font-size: var(--fs-xs); line-height: var(--lh-xs);
+  color: var(--text-dim); letter-spacing: 0; white-space: nowrap;
+}
+.k7-kbd[data-in="pill"] { border-radius: var(--r-pill); }
+
+/* ── Chip (28): 28 pills, 13, --fill-2; on is the inverted ink pill; a mode chip is outlined, --current when on ── */
+.k7-chip {
+  position: relative; isolation: isolate; overflow: hidden;
+  display: inline-flex; align-items: center; gap: var(--gap-s); flex: none; height: var(--ctl-s); padding: 0 var(--pad-chip);
+  border-radius: var(--r-pill); font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text); white-space: nowrap;
+  background: var(--fill-2); transition: background-color var(--dur-out) var(--ease-out), transform var(--dur-press) var(--ease-sharp);
+}
+.k7-chip[data-chosen] { background: var(--selected); color: var(--text-on-light); }
+.k7-chip[data-variant="mode"] { padding: 0 var(--pad-chip-mode); color: var(--text-dim); background: transparent; box-shadow: inset 0 0 0 var(--hl) var(--line); font-size: var(--fs-xs); line-height: var(--lh-xs); }
+.k7-chip[data-variant="mode"][data-chosen] { color: var(--text); background: var(--current); box-shadow: none; }
+@media (hover: hover) and (pointer: fine) {
+  .k7-chip:hover { transition-duration: var(--dur-1); background: var(--hover); }
+  .k7-chip[data-chosen]:hover { background: var(--selected-hover); }
+  .k7-chip[data-variant="mode"][data-chosen]:hover { background: var(--current); }
+}
+.k7-chip:active { transform: scale(.96); }
+.k7-chip__label, .k7-chip > .k7-ic { position: relative; }
+
+/* ── Segmented (23): a pill track at --fill-2, inset 2; the thumb a pill (--current dark, a raised white pill light) ── */
+.k7-seg {
+  position: relative; display: inline-grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: var(--gap-hair);
+  padding: var(--pad-seg); border-radius: var(--r-pill); background: var(--fill-2); flex: none;
+}
+.k7-seg__thumb {
+  position: absolute; top: var(--pad-seg); left: var(--pad-seg); height: var(--seg-item-h); border-radius: var(--r-pill);
+  width: calc((100% - 2 * var(--pad-seg) - (var(--n) - 1) * var(--gap-hair)) / var(--n));
+  transform: translateX(calc(var(--i) * (100% + var(--gap-hair)))); background: var(--seg-on); box-shadow: var(--seg-on-sh);
+  transition: transform var(--dur-slide) var(--spring);
+}
+.k7-seg__item {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; height: var(--seg-item-h); padding: 0 var(--pad-chip);
+  border-radius: var(--r-pill); font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text-dim); white-space: nowrap;
+  transition: color var(--dur-out) var(--ease-out);
+}
+.k7-seg__item:is([aria-checked="true"], [aria-selected="true"]) { color: var(--text); }
+@media (hover: hover) and (pointer: fine) { .k7-seg__item:hover { color: var(--text); transition-duration: var(--dur-1); } }
+
+/* ── SelectorItem (24): a quiet current value that opens a Menu; transparent until hover, radius 10 ── */
+.k7-sel {
+  display: inline-flex; align-items: center; gap: var(--gap-sel); flex: none; height: var(--ctl-s); padding: 0 var(--pad-sel-end) 0 var(--pad-sel-start);
+  border-radius: var(--r-field); font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text-dim); white-space: nowrap;
+  transition: background-color var(--dur-out) var(--ease-out), color var(--dur-out) var(--ease-out);
+}
+.k7-sel[data-variant="line"] { font-size: var(--fs-xs); line-height: var(--lh-xs); letter-spacing: var(--track); }
+.k7-sel__chev { width: var(--icon-s); height: var(--icon-s); color: var(--icon-quiet); }
+.k7-sel[aria-expanded="true"] { background: var(--hover); color: var(--text); }
+@media (hover: hover) and (pointer: fine) { .k7-sel:hover { background: var(--hover); transition-duration: var(--dur-1); } }
+.k7-sel[data-need] { color: var(--accent-text); background: var(--accent-soft); padding: 0 var(--pad-need-end) 0 var(--pad-need-start); }
+.k7-ticks { display: inline-flex; gap: var(--gap-xs); }
+.k7-ticks > i { width: var(--pad-row-y); height: var(--pad-row-y); border-radius: var(--r-pill); background: var(--mark-off); }
+.k7-ticks > i[data-on] { background: var(--text-dim); }
+
+/* ── Switch (25): 32 x 20; on: the accent with a white knob; off: 4% (light: a grey track and a raised white knob) ── */
+.k7-switch {
+  position: relative; flex: none; width: var(--switch-w); height: var(--switch-h); border-radius: var(--r-pill);
+  background: var(--track-off); box-shadow: inset 0 0 0 var(--hl) var(--line-strong); transition: background-color var(--dur-1) var(--ease-out);
+}
+.k7-switch__knob {
+  position: absolute; top: var(--gap-hair); left: var(--gap-hair); width: var(--knob-d); height: var(--knob-d); border-radius: var(--r-pill);
+  background: var(--knob); box-shadow: var(--knob-sh); transition: transform var(--dur-slide) var(--spring), background-color var(--dur-1) var(--ease-out);
+}
+.k7-switch[aria-checked="true"] { background: var(--accent); box-shadow: none; }
+.k7-switch[aria-checked="true"] > .k7-switch__knob { transform: translateX(calc(var(--switch-w) - var(--knob-d) - 2 * var(--gap-hair))); background: var(--on-accent); }
+.k7-switch:disabled { background: var(--fill-4); cursor: default; }
+.k7-switch:disabled > .k7-switch__knob { background: var(--icon-off); box-shadow: none; }
+.k7-switch[aria-checked="true"]:disabled { background: var(--selected-off); }
+
+/* ── Field (26): 36, radius 10, transparent with --line-field (3:1); a search field is a pill at --fill-2 ── */
+.k7-field { display: flex; flex-direction: column; gap: var(--gap-label); min-width: 0; }
+.k7-field__label { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
+.k7-field__opt { color: var(--text-quiet); }
+.k7-field__box {
+  display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl); padding: 0 var(--pad-field); box-sizing: border-box;
+  border-radius: var(--r-field); background: transparent; box-shadow: inset 0 0 0 var(--hl) var(--line-field); color: var(--text);
+  transition: box-shadow var(--dur-out) var(--ease-out);
+}
+.k7-field__box[data-kind="search"] { border-radius: var(--r-pill); background: var(--fill-2); box-shadow: inset 0 0 0 var(--hl) var(--line); padding: 0 var(--pad-field-search) 0 var(--pad-field); }
+.k7-field__box[data-kind="multiline"] { align-items: flex-start; padding: var(--pad-field-y) var(--pad-field); }
+.k7-field__glyph { width: var(--icon-s); height: var(--icon-s); color: var(--icon-quiet); }
+.k7-field__input { flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text); outline: none; resize: none; }
+.k7-field__input::placeholder { color: var(--text-quiet); }
+.k7-field__input.k7-mono { font-family: var(--mono); font-size: var(--fs-xs); }
+@media (hover: hover) and (pointer: fine) { .k7-field__box:hover { box-shadow: inset 0 0 0 var(--hl) var(--text-quiet); transition-duration: var(--dur-1); } }
+.k7-field__box:focus-within { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-off); }
+.k7-field[data-error] .k7-field__box { box-shadow: inset 0 0 0 var(--hl) var(--red); }
+.k7-field__error { margin: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--red-text); }
+.k7-field[data-disabled] .k7-field__box { box-shadow: inset 0 0 0 var(--hl) var(--line); }
+.k7-field[data-disabled] :is(.k7-field__input, .k7-field__label) { color: var(--text-faint); }
+
+/* ── Tooltip (29): elevated, radius 6, padding 4 6, 12/16; enter 100 ms from scale(.98) ── */
+.k7-tip, [data-ui="v7"] .ui-tip {
+  display: inline-flex; align-items: center; gap: var(--gap-s); padding: var(--pad-tip-y) var(--pad-tip-x); border-radius: var(--r-tip);
+  background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--float-line), var(--shadow-pop);
+  font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text); white-space: nowrap; letter-spacing: var(--track);
+}
+[data-ui="v7"] .ui-tip { transition: opacity var(--dur-pop) var(--ease-sharp), transform var(--dur-pop) var(--ease-sharp); }
+[data-ui="v7"] .ui-tip:not(.is-in) { transform: translateY(var(--tip-dy, 0)) scale(.98); }
+[data-ui="v7"] .ui-tip .ui-kbd { min-width: var(--kbd-h); height: var(--kbd-h); padding: 0 var(--pad-kbd); border-radius: var(--r-xs); background: var(--hover); box-shadow: none; font-family: var(--sans); font-size: var(--fs-xs); color: var(--text-dim); }

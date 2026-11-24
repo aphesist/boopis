@@ -26,7 +26,7 @@ describe('the kit is pure', () => {
   /* what the kit may import outside itself: the DOM and key helpers, the log, the event bus (re-reading tokens on hx:theme), the colour
      maths, the token source, the vendored elements, and two shared tables that state rules from outside the app (the model names, and
      the engine's mention rule the host reads too) */
-  const ALLOWED = [/^\.\.?\/(?!\.\.)/, /^\.\.\/core\/(dom|keys|log|bus|types)$/, /^\.\.\/\.\.\/core\/(dom|keys|log|bus|types)$/, /^\.\.\/styles\/colour$/, /^(\.\.\/)+vendor\//, /^(\.\.\/)+shared\/data\/(model-names|room-mentions)\.json$/, /^node:/];
+  const ALLOWED = [/^\.\.?\/(?!\.\.)/, /^\.\.\/core\/(dom|keys|log|bus|types)$/, /^\.\.\/\.\.\/core\/(dom|keys|log|bus|types)$/, /^(\.\.\/){1,2}styles\/colour$/, /^(\.\.\/)+vendor\//, /^(\.\.\/)+shared\/data\/(model-names|room-mentions)\.json$/, /^node:/];
   it('imports nothing from the app', () => {
     const bad: string[] = [];
     for (const p of KIT_TS) for (const m of read(p).matchAll(/(?:^|\n)\s*(?:import|export)[^'"\n]*?from\s+'([^']+)'/g)) {

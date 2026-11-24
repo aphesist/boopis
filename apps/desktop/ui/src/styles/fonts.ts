@@ -27,9 +27,12 @@ const LOADERS: Record<string, Loader> = {
 const loaded = new Set<string>(['Libre Franklin', 'IBM Plex Mono', 'System']);
 
 /** load a family once; the browser applies it when the stylesheet lands (fonts are swap-loaded) */
-export function ensureFont(name: string | null | undefined): void {
-  if (!name || loaded.has(name)) return;
+export function ensureFont(name: string | null | undefined): void { void loadFont(name); }
+/** the same, and a promise that settles once the family's stylesheets are in (the v7 kit's Geist, before a still is taken) */
+export function loadFont(name: string | null | undefined): Promise<void> {
+  if (!name || loaded.has(name)) return Promise.resolve();
   loaded.add(name);
   const load = LOADERS[name];
-  if (load) void load().catch(() => loaded.delete(name));
+  if (!load) return Promise.resolve();
+  return load().then(() => undefined, () => { loaded.delete(name); });
 }

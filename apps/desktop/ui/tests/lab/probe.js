@@ -62,7 +62,10 @@
   function tokens(names, ground) {
     ground = ground || document.documentElement;
     const de = document.documentElement;
-    const key = [de.getAttribute('data-hx-preset'), de.getAttribute('data-hx-theme'), de.getAttribute('data-hx-corners'), de.getAttribute('data-hx-density'), de.style.cssText].join('|');
+    /* a v7 root (the kit's stories: data-ui="v7" on the body) themes by its own attributes and accent properties */
+    const v7 = document.querySelector('[data-ui="v7"]');
+    const key = [de.getAttribute('data-hx-preset'), de.getAttribute('data-hx-theme'), de.getAttribute('data-hx-corners'), de.getAttribute('data-hx-density'), de.style.cssText,
+      v7 ? [v7.getAttribute('data-theme'), v7.getAttribute('data-radii'), v7.getAttribute('data-shadow'), v7.style.cssText].join(',') : ''].join('|');
     const hit = tokenCache.get(ground);
     if (hit && hit.key === key) return hit;
     const p = document.createElement('i');

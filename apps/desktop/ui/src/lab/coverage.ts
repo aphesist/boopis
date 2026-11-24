@@ -10,7 +10,8 @@ export const NOT_COMPONENTS: Readonly<Record<string, string>> = {
   hydrate: 'wires markup that the stories already draw', liven: 'an orb\'s motion policy (orbs are drawn still in the lab)', glance: 'eye steps under reduced motion (behaviour)',
   shape: 'a cached token reader', scrollClass: 'the scroll area\'s class, drawn by components/scroll', listbox: 'drawn by components/listbox',
   squircle: 'the corner engine every story runs through (the concentric check reads its paths)',
-  scrollEdges: 'the edge-fade flags every scroller in every story gets (the scrollbar check reads them, R-scroll-9)'
+  scrollEdges: 'the edge-fade flags every scroller in every story gets (the scrollbar check reads them, R-scroll-9)',
+  kit: 'the v7 kit: each of its components is covered as kit.<name> by its own story under stories/kit (coverage.test.ts, "the v7 kit")'
 };
 /** html templates that are only strings (no factory), and why some need no story of their own */
 export const HTML_ONLY_EXCUSED: Readonly<Record<string, string>> = {

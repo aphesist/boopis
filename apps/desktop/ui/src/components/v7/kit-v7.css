@@ -1,0 +1,6 @@
+/* The v7 kit's stylesheet: its tokens (generated, styles/tokens.v7.css; declared on a v7 root) and its components'
+   CSS. Loaded after the v6 kit (styles/index.ts); nothing here applies outside a [data-ui="v7"] root but the kit's own
+   k7- classes. */
+@import '../../styles/tokens.v7.css';
+@import './base.css';
+@import './controls.css';

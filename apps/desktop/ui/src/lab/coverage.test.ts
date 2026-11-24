@@ -3,7 +3,7 @@
    story, and every story has its minimum states. A new component ships with stories; an exception goes in
    coverage.ts with its reason. */
 import { describe, expect, it } from 'vitest';
-import { ui, variants } from '@boopis/ui';
+import { kit, ui, variants } from '@boopis/ui';
 import { STORIES } from './registry';
 import { AREAS } from './types';
 import { EMPTY_APPLIES, ERROR_APPLIES, HTML_ONLY_EXCUSED, MIN_COMPONENT, MIN_SURFACE_STATES, MOD_SURFACES, NOT_COMPONENTS, PAGES, STATE_EXCUSED, SURFACES } from './coverage';
@@ -17,6 +17,17 @@ const missing = (want: readonly string[]): string[] => want.filter((w) => !cover
 const applies = (list: readonly string[], covers: readonly string[]): boolean => covers.some((c) => list.includes(c) || list.includes(c.replace(/:.*/, ':*')));
 
 describe('the lab covers', () => {
+  /* the v7 kit (DESIGN-SYSTEM.md v7 21.2; LAB-v7 section 2): every template is a component, covered as kit.<name> by a story
+     under stories/kit with its typical and long states */
+  it('the v7 kit: every component, in a story of its own under stories/kit', () => {
+    const want = Object.keys(kit.html).map((k) => 'kit.' + k);
+    expect(missing(want), 'v7 components with no story under src/lab/stories/kit').toEqual([]);
+    for (const s of STORIES.filter((x) => x.id.startsWith('kit/'))) {
+      const tags = new Set(Object.values(s.states).flatMap((st) => st.tags));
+      expect(['typical', 'long'].filter((t) => !tags.has(t as never)), s.id + ' lacks states').toEqual([]);
+      expect(s.covers.every((c) => c.startsWith('kit.') || c.startsWith('pattern:')), s.id + ' covers only kit components').toBe(true);
+    }
+  });
   it('every library component (an export of `ui`)', () => {
     const want = Object.keys(ui).filter((k) => !(k in NOT_COMPONENTS)).map((k) => 'ui.' + k);
     expect(missing(want), 'components with no story; add one under src/lab/stories, or excuse it in coverage.ts').toEqual([]);

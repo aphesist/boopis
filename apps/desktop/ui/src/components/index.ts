@@ -44,6 +44,7 @@ import { arrive, codeOf, markdown as markdownEl, streamMarkdown, wireMarkdown } 
 import { copyText } from './clipboard';
 import { presence as presenceEl, presencePill, presenceWords, presenceLayout } from './presence';
 import type { SegElement } from './wire';
+import { kit } from './v7';
 
 export const version = '1.0.0';
 
@@ -112,7 +113,7 @@ const modelRoute = (text: string, o?: ModelOpts): HTMLElement => frag(routeHTML(
 export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
   ...factories, legend, keys, inline, scrollClass, scrollEdges,
-  markdown, copyText, presence,
+  markdown, copyText, presence, kit,
   hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, composer, card,
   hold: Object.assign(holdElement, { wire: wireHold }),
   /** a Claude Code mod's element tree, drawn with the library (MODS.md section 2) */
@@ -121,6 +122,9 @@ export const ui = {
 export type Ui = typeof ui;
 export { html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, menu, popover, layer, listbox, modelEntries, tooltip, toast, composer, card, wireHold, holdElement };
 export type { SegElement } from './wire';
+/* the v7 kit (DESIGN-SYSTEM.md v7 section 21), on a v7 root */
+export { kit, kitVariants } from './v7';
+export type * from './v7';
 export { fileChip } from './composer';
 export type { FileChipOpts } from './composer';
 /* runtime pieces the app's modules and host wire (the orbs' engine, the card layer's factory, the first run's moments) */
