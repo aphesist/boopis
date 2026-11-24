@@ -143,6 +143,13 @@ and a request that still reaches Google is an `errors` finding, in `lab:check` a
 replaced the v6 screens. While it is off, a v7 finding gets no crop in the report (a crop is a full-page screenshot, and the run
 would spend its time on findings that do not block). Every other check but `visual` blocks as before.
 
+**The kit's stories** (`src/lab/stories/kit/`, one per v7 component) draw on a v7 root (the frame's body, `data-ui="v7"`), and
+`check.mjs` runs them in v7's two themes, `dark` and `light` (`--kit-presets`), not the v6 presets; their token checks read
+`tokens.v7.css` too. `__lab.accent(hex)`, `__lab.corners('b' | 'c')` and `__lab.shadow('a' | 'b' | 'c')` set section 18's
+customization. On a kit story `concentric.strict` replaces v6's `concentric` (LAB-v7 section 4: the tightened rule, floor 6).
+`LAB_V7_BLOCKING: "kit"` (ci.yml) makes every v7 finding on a kit story or in `src/components/v7/` block, and keeps the v6 screens'
+v7 findings reported.
+
 **Not yet in the matrix.** LAB-v7's axes beyond today's (dark and light, corners B and C, three accents, three densities) need the
 v7 theme, which kit-v7 builds; until then the matrix is the v6 presets and widths. The contrast check already walks `ACCENTS` when
 the theme exposes `__lab.accent`; kit-v7 adds the light and the dark accent once the owner names their values, and the theme,

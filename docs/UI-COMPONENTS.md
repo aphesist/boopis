@@ -11,6 +11,67 @@ Status words: **one** (one kit component, every instance migrated, the per-scree
 **debt** (instances left, each named below and allowlisted in `kit.guard.test.ts`, which fails on a new copy and on an
 allowlisted one that is gone); **other branch** (owned by a parallel branch; nothing redone here).
 
+## The v7 kit (DESIGN-SYSTEM.md v7 section 21, w31/design-system-v7 at 8ec7ede3)
+
+The owner's v7 kit is built beside the v6 one, in `apps/desktop/ui/src/components/v7/`, exported from `@boopis/ui` as `kit`
+(`kit.<name>(opts)` an element already wired, `kit.html.<name>(opts)` its markup). It draws on a v7 root (`data-ui="v7"`,
+`kit.applyTheme(el, { theme, accent, radii, shadow })`), whose tokens are `styles/tokens.v7.css`, generated from the design's
+`tokens.v7.json` by `scripts/build-tokens-v7.mjs`. Every component's root carries `data-kit="<Name>"` (a part `data-kit-part`), which
+the lab's v7 checks read. Wave C moves the screens onto it; until then today's screens keep the v6 kit, and the v6 components that
+a v7 one replaces stay as they are (the list is under "Left for wave C").
+
+| # | Component | `kit.` | Story | Variants built |
+|---|---|---|---|---|
+| 1 | WindowChrome | `windowChrome` (`titlePill`, `searchHint` inside) | `kit/window-chrome` | rail A, compact B; title idle, running; search hint S5, button S1, pill S2, off |
+| 2 | Page | `page`, `section` | `kit/page` | column, settings page with its scope; empty |
+| 3 | Pane | `pane` | `kit/pane` | details (bot, session), tools (Diff, Files, Terminal, PR, side chat); overlay |
+| 4 | Dialog | `dialog` | `kit/dialog` | large (Settings), form (commit, new bot, import, confirm); error |
+| 5 | Menu | `menu`, `openMenu` | `kit/menu` | menu, quick, palette / @ $, snooze, split, options; open, flipped |
+| 6 | Card | `card` (and its Row) | `kit/card` | settings, pane, danger zone collapsed and open |
+| 7 | Block | `block` | `kit/block` | the corner rule's specimen |
+| 8 | ToolRow | `toolRow` | `kit/tool-row` | edit, command, read, search; running, done, failed, waiting |
+| 9 | AskCard | `askCard` | `kit/ask-card` | standalone, attached, question, choices, lapsed; asked, needs, answered, hold at 50% |
+| 10 | FilesCard | `filesCard` | `kit/files-card` | 1 file, 12 files; collapsed, open |
+| 11 | Queue | `queue` | `kit/queue` | list 1, 3, 9; held; editing |
+| 12 | Notice | `notice` | `kit/notice` | composer, page, floating; neutral, amber, accent, red; 0 to 2 actions; dismiss |
+| 13 | SystemLine | `systemLine` | `kit/system-line` | info, steer, hand-off, error with its action |
+| 14 | Bubble | `bubble` | `kit/bubble` | user, agent, a bot's fill, room byline, brand tile, you wash, code |
+| 15 | DiffView | `diffView` | `kit/diff-view` | stacked, split; comment, comment focused |
+| 16 | Well | `well` | `kit/well` | code in a Block and a bubble, terminal |
+| 17 | ListRow | `listRow`, `list` | `kit/list-row` | session, bot, item, compact; current, needs you, working |
+| 18 | SectionHead | `sectionHead` | `kit/section-head` | plain, count, disclosure; collapsed |
+| 19 | MenuRow | `menuRow` | `kit/menu-row` | glyph, description, kbd, danger, check |
+| 20 | OptionRow | `optionRow` | `kit/option-row` | permission step, import pick |
+| 21 | Button | `button` | `kit/button` | secondary, primary, ghost, tint, danger, split; 36, 32, 28; hold |
+| 22 | IconButton | `iconButton` | `kit/icon-button` | floating, tinted, ghost, inverted |
+| 23 | Segmented | `segmented` | `kit/segmented` | inline 2 to 4, page head, tab bar |
+| 24 | SelectorItem | `selectorItem` | `kit/selector-item` | line, launch, field; ticks; "+ Choose a model" |
+| 25 | Switch | `switch` | `kit/switch` | on, off, disabled |
+| 26 | Field | `field` | `kit/field` | text, search pill, multi-line; error, disabled |
+| 27 | Kbd | `kbd` | `kit/kbd` | in text, in a pill |
+| 28 | Chip | `chip` | `kit/chip` | answer, filter, mode |
+| 29 | Tooltip | `tooltip` (the runtime `[data-tip]`, restyled on a v7 root) | `kit/tooltip` | name, name and keys |
+| 30 | InlineChip | `inlineChip` | `kit/inline-chip` | mention, you, reference, code, model, countdown; 13, 14, 15 |
+| 31 | Mark | `mark`, `markReveal` | `kit/mark` | feedforward, blank (waiting, opened, filled, lapsed), info label |
+| 32 | StatusWord | `statusWord` | `kit/status-word` | neutral, amber, red, ok; dot, pulse |
+| 33 | Badge | `badge` | `kit/badge` | neutral, amber |
+| 34 | StatusLine | `statusLine` | `kit/status-line` | bot, session, system; working, waiting |
+| 35 | Avatar | `avatar` | `kit/avatar` | orb 16 to 96, brand tile, stack, logomark |
+| 36 | Disclosure | `disclosure` | `kit/disclosure` | steps, work log |
+| 37 | TurnFoot | `turnFoot` | `kit/turn-foot` | bot, session (actions on hover) |
+| 38 | TimeSeparator | `timeSeparator` | `kit/time-separator` | a gap, NEW |
+| 39 | Composer | `composer` | `kit/composer` | session, bot, room, dock, notch; typed, multi-line, running, held, no model, quick menu |
+| 40 | Rail | `rail` | `kit/rail` | A, B; current, needs you, working; groups |
+| 41 | Dock | `dock` | `kit/dock` | row, compact, open (stack, card); hover, focus, many |
+| 42 | Notch | `notch` | `kit/notch` | the slab and its composer (the notch spec is not in this repository) |
+| — | EmptyState | `emptyState` | `kit/empty-state` | one line, at most one action |
+
+**The retired names** (21.3: QueueStrip, LimitNotice, Toast, Banner, ScopePicker, SettingsLine, SteerLine, CheckpointBar, ChoiceCards,
+LaunchCard, ReferenceChip) exist nowhere in the v7 kit. **Left for wave C** (v6 code the screens still draw with, reported by the
+lab's `kit.single` and not blocking until the screens move): the v6 toast (`components/toast.ts`, `ui.toast`, its CSS and tests, and
+every screen that confirms with it; the v7 Notice's floating placement replaces it), the store story's "Banner" text, and the v6
+kit as a whole (`ui.*`), which the v7 kit replaces component by component as each screen moves.
+
 ## The kit as a package
 
 - **Decision: the existing `src/components` promoted, imported as `@boopis/ui`** (a path alias in `tsconfig.json`,

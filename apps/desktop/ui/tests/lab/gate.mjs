@@ -2,7 +2,8 @@
 
    The v7 checks (rules.mjs rows with `v7: true`) are report-only until the v7 kit lands: today's v6 screens fail them by design and
    the kit replaces those screens. The switch is LAB_V7_BLOCKING: unset or 0, a v7 finding is printed and counted but does not fail
-   the job; 1, it blocks like every other check. kit-v7 sets LAB_V7_BLOCKING: "1" in .github/workflows/ci.yml when it is done.
+   the job; "kit", it blocks on the v7 kit's own stories (src/lab/stories/kit/) and source (src/components/v7/), which are built to
+   pass it, and is reported for the v6 screens wave C moves; 1, it blocks everywhere. ci.yml sets "kit" since kit-v7.
 
    node tests/lab/gate.mjs [lab-report/summary.json] [--orbs lab-report-orbs/summary.json] */
 import { existsSync, readFileSync } from 'node:fs';
@@ -12,6 +13,9 @@ import { CHECKS } from './rules.mjs';
 
 const UI_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 export const V7_BLOCKING = process.env.LAB_V7_BLOCKING === '1';
+export const V7_KIT = process.env.LAB_V7_BLOCKING === 'kit';
+/** a finding on the v7 kit: its stories, or its own source files */
+const onKit = (f) => (typeof f.story === 'string' && f.story.startsWith('kit/')) || (typeof f.file === 'string' && f.file.startsWith('src/components/v7/'));
 const argv = process.argv.slice(2);
 const opt = (n) => { const i = argv.indexOf('--' + n); return i >= 0 ? argv[i + 1] : null; };
 const first = argv[0] && !argv[0].startsWith('--') ? argv[0] : null;
@@ -24,9 +28,10 @@ for (const r of reports) {
 const v7 = (f) => !!CHECKS[f.check]?.v7;
 const count = (list) => { const by = {}; for (const f of list) by[f.check] = (by[f.check] ?? 0) + 1; return Object.entries(by).map(([k, v]) => k + ' ' + v).join(', '); };
 const visual = findings.filter((f) => f.check === 'visual');
-const v7s = findings.filter((f) => f.check !== 'visual' && v7(f));
-const bad = findings.filter((f) => f.check !== 'visual' && (V7_BLOCKING || !v7(f)));
-console.log(`lab gate: ${bad.length} failures that block, ${V7_BLOCKING ? 'v7 checks blocking' : v7s.length + ' v7 findings reported only (LAB_V7_BLOCKING is off)'}, ${visual.length} screenshot differences (reported only)`);
+const blocksV7 = (f) => V7_BLOCKING || (V7_KIT && onKit(f));
+const v7s = findings.filter((f) => f.check !== 'visual' && v7(f) && !blocksV7(f));
+const bad = findings.filter((f) => f.check !== 'visual' && (!v7(f) || blocksV7(f)));
+console.log(`lab gate: ${bad.length} failures that block, ${V7_BLOCKING ? 'v7 checks blocking' : v7s.length + ' v7 findings reported only (' + (V7_KIT ? 'the kit\'s block; the v6 screens\' are reported' : 'LAB_V7_BLOCKING is off') + ')'}, ${visual.length} screenshot differences (reported only)`);
 if (v7s.length) console.log('  v7: ' + count(v7s));
 if (bad.length) console.log('  blocking: ' + count(bad));
 for (const f of bad.slice(0, 80)) console.log('  ' + f.check + ' | ' + (f.story ? f.story + ' / ' + f.state + ' | ' + (f.el ?? '') : f.file + ':' + (f.line ?? '')) + ' | ' + f.msg);

@@ -14,9 +14,9 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: "0"
-  # The v7 lab checks (docs/UI-LAB.md, "The v7 checks") report without failing while today's v6 screens stand: tests/lab/gate.mjs
-  # blocks on them only when this is "1". w32/kit-v7 turns it on when the kit has replaced those screens.
-  LAB_V7_BLOCKING: "0"
+  # The v7 lab checks (docs/UI-LAB.md, "The v7 checks"): tests/lab/gate.mjs blocks on them for the v7 kit's own stories and source
+  # ("kit") and reports them for today's v6 screens; "1" blocks everywhere, once wave C has moved the screens onto the kit.
+  LAB_V7_BLOCKING: "kit"
   # The toolchain CI builds with (see docs/RELEASING.md). RUSTUP_TOOLCHAIN overrides rust-toolchain.toml's "stable".
   RUSTUP_TOOLCHAIN: "1.97.0"
   # ubuntu-22.04 on purpose: hx-sandbox needs unprivileged user namespaces, which 24.04 restricts with AppArmor.
@@ -442,8 +442,8 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit == 'true'
       # the whole matrix: about 40 minutes at two at a time. The run itself always finishes; the next step decides
       - run: pnpm lab:check --jobs 2
-      # every check but the screenshot comparison blocks; the v7 checks are reported and block only with LAB_V7_BLOCKING=1 (docs/UI-LAB.md)
-      - name: every check but the screenshot comparison passes (v7 checks report-only until LAB_V7_BLOCKING is 1)
+      # every check but the screenshot comparison blocks; the v7 checks block on the v7 kit (LAB_V7_BLOCKING=kit) and are reported for the v6 screens (docs/UI-LAB.md)
+      - name: every check but the screenshot comparison passes (v7 checks block on the kit, report on the v6 screens)
         run: node tests/lab/gate.mjs lab-report/summary.json
       - uses: actions/upload-artifact@v4
         if: always()
@@ -458,8 +458,8 @@ jobs:
   lab-orbs:
     # The v7 orb checks (docs/UI-LAB.md, "The orb checks"; ORBS.md G5 to G7): every story state that draws an orb, read from the orbs'
     # own canvas pixels frame by frame on a paused clock. orb.rest: a bot at rest changes 0 pixels; orb.edges: no shimmer, no lone
-    # flipping pixel, no canvas that jumps or refits. Report-only like every v7 check until LAB_V7_BLOCKING is "1" (kit-v7, with
-    # orb3 3.0.2 in place of today's orb2).
+    # flipping pixel, no canvas that jumps or refits. Blocking on the kit's stories and reported on the v6 screens, like every v7 check;
+    # the orbs are orb3 3.0.2 (ADR-0051).
     runs-on: ubuntu-22.04
     timeout-minutes: 90
     defaults:
@@ -488,7 +488,7 @@ jobs:
       - run: pnpm exec playwright install-deps chromium
         if: steps.pw-cache.outputs.cache-hit == 'true'
       - run: pnpm lab:orbs --jobs 2
-      - name: the orb checks (report-only until LAB_V7_BLOCKING is 1)
+      - name: the orb checks (blocking on the kit's stories, reported on the v6 screens)
         run: node tests/lab/gate.mjs lab-report-orbs/summary.json
       - uses: actions/upload-artifact@v4
         if: always()
