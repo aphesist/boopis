@@ -18,8 +18,13 @@ function fakeCanvas(): { canvas: unknown; calls: string[] } {
   return { canvas, calls };
 }
 
-describe('orb2 in a worker, as the vendored file is', () => {
+describe('orb3 in a worker, as the vendored file is', () => {
+  /* orb3 draws each frame into a canvas of its own (3x, scaled down: ORBS.md G6), an OffscreenCanvas in a worker: here a recording one,
+     whose 2D options the shim sets */
+  const asked: unknown[] = [];
+  let ssCalls: string[] = [];
   beforeAll(async () => {
+    (globalThis as unknown as { OffscreenCanvas: unknown }).OffscreenCanvas = class { width: number; height: number; constructor(w: number, h: number) { this.width = w; this.height = h; } getContext(_t: string, o?: unknown): unknown { asked.push(o); const f = fakeCanvas(); ssCalls = f.calls; return (f.canvas as { getContext(): unknown }).getContext(); } };
     installShim({ dpr: 2, reduced: false, dark: true });
     await import('../../../vendor/orb-avatar.min.js');
   });
@@ -40,11 +45,16 @@ describe('orb2 in a worker, as the vendored file is', () => {
     expect((canvas as { width: number }).width).toBeGreaterThan(80);     /* the build chose a backing size from its width and the dpr */
     const draw = o._update as (dt: number, now: number) => void;
     draw.call(o, 1 / 60, performance.now() / 1000 + 1);
-    expect(calls.length).toBeGreaterThan(20);
-    expect(calls).toContain('fill');
-    const before = calls.length;
+    expect(ssCalls.length).toBeGreaterThan(20);     /* the body and the face, drawn into the supersampling canvas */
+    expect(ssCalls).toContain('fill');
+    expect(calls).toContain('drawImage');           /* and scaled down onto the element's canvas */
+    const before = ssCalls.length + calls.length;
     draw.call(o, 1 / 60, performance.now() / 1000 + 1.02);
-    expect(calls.length).toBeGreaterThan(before);
+    expect(ssCalls.length + calls.length).toBeGreaterThan(before);
+  });
+  it("orb3's own canvas keeps its 2D context on the CPU (willReadFrequently, as the element's)", () => {
+    expect(asked.length).toBeGreaterThan(0);
+    expect(asked.every((x) => (x as { willReadFrequently?: boolean } | undefined)?.willReadFrequently === true)).toBe(true);
   });
   it('the page can change reduced motion and the colour scheme under it', () => {
     expect(() => setMedia({ reduced: true, dark: false })).not.toThrow();
@@ -52,11 +62,11 @@ describe('orb2 in a worker, as the vendored file is', () => {
   });
 });
 
-describe('the page element\'s copy of orb2\'s shadow template', () => {
+describe('the page element\'s copy of orb3\'s shadow template', () => {
   it('is the one the vendored build writes', () => {
-    const m = /\.innerHTML=`(<style>.*?<\/slot>)`/s.exec(VENDOR);
+    const m = /\.innerHTML=['`](<style>.*?<\/slot>)['`]/s.exec(VENDOR);
     expect(m).not.toBeNull();
-    const vendor = m![1]!.replace('${(100*le).toFixed(2)}', (100 * 3.2 / 2.08).toFixed(2)).replace('${(100*le).toFixed(2)}', (100 * 3.2 / 2.08).toFixed(2));
+    const vendor = m![1]!;
     expect(vendor).toBe(SHADOW_HTML);
     expect(SHADOW_HTML).toContain(SHADOW_CSS);
   });

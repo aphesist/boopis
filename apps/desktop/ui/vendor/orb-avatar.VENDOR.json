@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "source": "https://github.com/aphesist/orb2",
+  "sha": "bfa4e8c83e5a22acdef51563eb0e30eff2c77c31",
+  "version": "3.0.2",
+  "licence": "MIT",
+  "files": {
+    "orb-avatar.min.js": { "from": "orb-avatar.min.js", "sha256": "e0d5a1fea252bdc84b19949594f40e5f693e7d95d38c60319fc9770c89e0b454" },
+    "orb-avatar.d.ts": { "from": "orb-avatar.d.ts", "sha256": "1297c36d142f7edacfab0022354886cd30af3467c1ad5cd6be5fbc141cf56c8f" },
+    "orb-avatar.LICENSE": { "from": "LICENSE", "sha256": "f5317193ae43c8d920b79087c76127e0564ebabfe95e8e8b1955977ef7a4b894" }
+  }
+}

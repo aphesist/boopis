@@ -40,7 +40,7 @@ function rowHTML(o: DockOpts, kind: DockKind): string {
     return '<button class="k7-reset k7-dock__orb"' + attrs({
       type: 'button', 'data-bot': b.id, 'aria-label': (b.name ?? '') + ', ' + stateOf(b)[0], 'aria-current': o.current === b.id ? 'true' : null,
       'data-focus': o.focus === b.id ? '' : null, 'data-awake': o.hover === b.id ? '' : null, tabindex: o.focus === b.id || (!o.focus && i === 0) ? '0' : '-1', style: '--s:' + s + 'px'
-    }) + '>' + orbHtml(b, { size: s, state: b.needs ? 'needs' : b.working ? 'working' : b.resting ? 'sleeping' : undefined }) + (b.needs ? '<span class="k7-flag" aria-hidden="true"></span>' : '') + '</button>';
+    }) + '>' + orbHtml(b, { size: s, rest: true, state: b.needs ? 'needs' : b.working ? 'working' : b.resting ? 'sleeping' : undefined }) + (b.needs ? '<span class="k7-flag" aria-hidden="true"></span>' : '') + '</button>';
   };
   const needs = o.bots.filter((b) => b.needs);
   const hovered = o.bots.find((b) => b.id === o.hover);

@@ -11,6 +11,7 @@ import { on } from '../../core/bus';
 import { onReducedChange, reduced } from '../../core/dom';
 import { logger } from '../../core/log';
 import { installOrbRuntime, setHoldBridge } from '../orb-runtime';
+import { definePose } from '../orb-pose';
 import { ORB_CALLS } from './protocol';
 import type { FromWorker, RectLike, StyleSnap, ToWorker } from './protocol';
 
@@ -25,9 +26,10 @@ const supported = (): boolean =>
 /** `?orbs=main` forces the main-thread orbs (the perf harness compares the two in one build) */
 const forced = (): OrbMode | null => { try { const v = new URLSearchParams(location.search).get('orbs'); return v === 'main' || v === 'worker' ? v : null; } catch { return null; } };
 
-const LE = 3.2 / 2.08;     /* orb2's canvas-to-box ratio (`le` in the build) */
-/* orb2's shadow template, as the build writes it: guarded by orb-worker.test.ts, which reads it from the vendored file */
-export const SHADOW_CSS = `:host{display:inline-block;position:relative;width:64px;aspect-ratio:1;flex:none;vertical-align:middle;line-height:0;-webkit-tap-highlight-color:transparent}canvas{position:absolute;left:50%;top:50%;width:${(100 * LE).toFixed(2)}%;height:${(100 * LE).toFixed(2)}%;transform:translate(-50%,-50%);pointer-events:none}i,slot{display:none}`;
+const DE = 3.2 / 2.08;     /* orb3's canvas-to-box ratio (`de` in the build) */
+/* orb3's shadow template, as the build writes it: guarded by orb-worker.test.ts, which reads it from the vendored file. orb3 sizes and
+   places its canvas itself, snapped to device pixels (`_snap`), so the page's element does that for the canvas it keeps (`snap`) */
+export const SHADOW_CSS = `:host{display:inline-block;position:relative;width:64px;aspect-ratio:1;flex:none;vertical-align:middle;line-height:0;-webkit-tap-highlight-color:transparent}canvas{position:absolute;left:0;top:0;pointer-events:none}i,slot{display:none}`;
 export const SHADOW_HTML = `<style>${SHADOW_CSS}</style><canvas part="canvas"></canvas><i></i><slot name="shape"></slot><slot></slot>`;
 
 /* ───────── the channel ───────── */
@@ -44,7 +46,7 @@ const prefersDark = (): boolean => { try { return matchMedia('(prefers-color-sch
 const env = (): { dpr: number; reduced: boolean; dark: boolean } => ({ dpr: window.devicePixelRatio || 1, reduced: reduced(), dark: prefersDark() });
 
 /* ───────── the element ───────── */
-interface Proxy extends HTMLElement { _id: number; _made: boolean; _vis: boolean; _w: number; _targeted: boolean; resolveStyle(): StyleSnap }
+interface Proxy extends HTMLElement { _id: number; _made: boolean; _vis: boolean; _w: number; _targeted: boolean; resolveStyle(): StyleSnap; snap(): void }
 const proxies = new Map<number, Proxy>();
 let nextId = 1;
 const COLOUR_ATTRS = new Set(['color', 'eye-color']);
@@ -54,7 +56,7 @@ let io: IntersectionObserver | null = null, ro: ResizeObserver | null = null;
 const byEl = new WeakMap<Element, Proxy>();
 function observers(): { io: IntersectionObserver; ro: ResizeObserver } {
   io ??= new IntersectionObserver((es) => { for (const e of es) { const p = byEl.get(e.target); if (p && p._made && e.isIntersecting !== p._vis) { p._vis = e.isIntersecting; post({ t: 'vis', id: p._id, v: p._vis }); } } }, { rootMargin: '120px' });
-  ro ??= new ResizeObserver((es) => { for (const e of es) { const p = byEl.get(e.target); if (p && p._made) { p._w = e.contentRect.width; post({ t: 'size', id: p._id, w: p._w }); } } });
+  ro ??= new ResizeObserver((es) => { for (const e of es) { const p = byEl.get(e.target); if (p && p._made) { p._w = e.contentRect.width; post({ t: 'size', id: p._id, w: p._w }); p.snap(); } } });
   return { io, ro };
 }
 const rectOf = (el: Element): RectLike => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height }; };
@@ -141,6 +143,17 @@ function buildElementClass(observed: string[]): CustomElementConstructor {
     /* the page's view of the internals the harness and orb-runtime read on the main-thread element */
     get _visible(): boolean { return this._vis; }
     get _cw(): number { return this._canvas.width; }
+    /** orb3's `_snap` for the page's canvas: as wide as the backing store the worker sizes (the box times DE times the pixel ratio,
+        rounded), centred on the box and set on whole device pixels, so its edges do not shimmer (ORBS.md G6) */
+    snap(): void {
+      const dpr = window.devicePixelRatio || 1, w = this._w;
+      if (!w || !this.isConnected) return;
+      const e = Math.max(0, Math.round(w * DE * dpr)), r = this.getBoundingClientRect();
+      const x = r.left * dpr, y = r.top * dpr, a = w * dpr, st = this._canvas.style;
+      st.width = st.height = e / dpr + 'px';
+      st.left = (Math.round(x + a / 2 - e / 2) - x) / dpr + 'px';
+      st.top = (Math.round(y + a / 2 - e / 2) - y) / dpr + 'px';
+    }
   }
   for (const m of ORB_CALLS) {
     if (m in OrbProxy.prototype) continue;
@@ -155,6 +168,7 @@ type OrbStatics = { observedAttributes?: string[]; quality?: unknown; qualityLev
 /** load the vendored build on this thread as it always was */
 async function loadMain(): Promise<void> {
   await import('../../../vendor/orb-avatar.min.js');
+  definePose((window as unknown as { OrbAvatar?: Parameters<typeof definePose>[0] }).OrbAvatar);
   installOrbRuntime();
 }
 
@@ -188,6 +202,7 @@ export async function setupOrbs(): Promise<OrbMode> {
       const w = await startWorker();
       const statics = await loadStatics();
       if (!statics) throw new Error('the vendored build defined no <orb-avatar>');
+      definePose(statics as Parameters<typeof definePose>[0]);   /* the page's statics list the reaction too */
       worker = w;
       w.onmessage = (e: MessageEvent<FromWorker>): void => { if (e.data.t === 'quality') orbState.level = e.data.level; };
       w.onerror = (e): void => { log.error('the orb worker failed', e.message); };
@@ -199,6 +214,10 @@ export async function setupOrbs(): Promise<OrbMode> {
       setHoldBridge({ hold: () => post({ t: 'hold' }), release: () => post({ t: 'release' }) });
       onReducedChange(() => post({ t: 'env', ...env() }));
       addEventListener('resize', () => post({ t: 'env', ...env() }), { passive: true });
+      /* orb3 re-snaps its canvas to device pixels on every scroll and resize; the page's elements do it for theirs */
+      const snapAll = (): void => { for (const p of proxies.values()) p.snap(); };
+      addEventListener('scroll', snapAll, { capture: true, passive: true });
+      addEventListener('resize', snapAll, { passive: true });
       on('hx:theme', () => { for (const p of proxies.values()) (p as unknown as { recolour(): void }).recolour(); });
       orbState.mode = 'worker';
       log.info('orbs draw in a worker');

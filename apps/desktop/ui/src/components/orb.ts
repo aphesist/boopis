@@ -10,6 +10,7 @@ import { attrs, frag, onReducedChange, reduced } from '../core/dom';
 import { botState } from './bot-state';
 import type { BotLike } from './bot-state';
 import { lookAttrs, lookOf } from './look';
+import { FACE_SCALE_MAX, HOME, REST_REACTION } from './orb-pose';
 import type { Look } from './look';
 
 export { lumHex } from './look';
@@ -18,6 +19,8 @@ export type OrbEl = OrbAvatar;
 export interface OrbOpts {
   size?: number | undefined; render?: number | undefined; state?: string | undefined; flag?: boolean | undefined;
   motion?: 'calm' | 'lively' | 'off' | undefined; live?: boolean | undefined; still?: boolean | undefined; mode?: string | undefined;
+  /** a rest surface (the dock, the Bots sidebar, the rail; ORBS.md §23): idle is the still rest pose at the home, jelly 0 */
+  rest?: boolean | undefined;
 }
 
 /** call an orb method if the element has been upgraded (a not-yet-defined element has none) */
@@ -34,10 +37,13 @@ export function orbHtml(b: BotLike, o: OrbOpts = {}): string {
   const still = orbIsStill(o, size);
   const look = lookAttrs(lookOf(b));   /* the one resolver: the bot's own look, else its name's */
   const render = o.render && o.render !== size ? o.render : null;
-  return '<span class="ui-orb"' + attrs({ 'data-bot': b.id, 'data-render': render ? '' : null, style: '--o:' + size + (render ? ';--r:' + render : ''), 'data-size': size >= 40 ? 'l' : null }) + '>' +
-    '<orb-avatar' + attrs({ size: render ?? size, shape: look.shape, color: look.color, 'eye-color': look['eye-color'],
-      reaction: s.reaction, 'idle-motion': o.motion ?? 'calm', mode: o.mode ?? 'drift', static: still, jelly: !still && reduced() ? '.12' : null,
-      'data-glance': still ? null : '', label: b.name, 'aria-hidden': 'true' }) + '></orb-avatar>' +
+  /* orb3 (ORBS.md §23): every bot carries the home orientation, which holds only at rest; at rest on a rest surface it wears the pose */
+  const rest = !!o.rest, atRest = rest && s.reaction === 'idle';
+  return '<span class="ui-orb"' + attrs({ 'data-bot': b.id, 'data-render': render ? '' : null, style: '--o:' + size + (render ? ';--r:' + render : ''), 'data-size': size >= 40 ? 'l' : null, 'data-orb-rest': rest ? '' : null }) + '>' +
+    '<orb-avatar' + attrs({ size: render ?? size, shape: look.shape, color: look.color, 'eye-color': look['eye-color'], home: HOME, 'face-scale': size <= FACE_SCALE_MAX ? '1.25' : null,
+      reaction: atRest ? REST_REACTION : s.reaction, 'idle-motion': atRest ? 'off' : o.motion ?? 'calm', mode: rest ? 'drift' : o.mode ?? 'drift', static: still && !rest,
+      jelly: rest ? '0' : !still && reduced() ? '.12' : !still ? '.25' : null,
+      'data-glance': still || atRest ? null : '', label: b.name, 'aria-hidden': 'true' }) + '></orb-avatar>' +
     (o.flag && s.attention ? '<span class="ui-dot ui-dot--flag" aria-hidden="true"></span>' : '') + '</span>';
 }
 export const orb = (b: BotLike, o?: OrbOpts): HTMLElement => frag(orbHtml(b, o));

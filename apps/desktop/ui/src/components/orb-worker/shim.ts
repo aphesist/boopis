@@ -77,10 +77,12 @@ export class ShimElement {
 /* media queries the build asks about: set from the page */
 const media = { reduced: false, dark: true };
 interface MQ { matches: boolean; media: string; addEventListener(t: string, f: () => void): void; removeEventListener(t: string, f: () => void): void }
-const mqs: Array<{ q: MQ; kind: 'reduced' | 'dark'; fns: Array<() => void> }> = [];
+const mqs: Array<{ q: MQ; kind: 'reduced' | 'dark' | 'other'; fns: Array<() => void> }> = [];
 function matchMedia(query: string): MQ {
   const kind = /reduced-motion/.test(query) ? 'reduced' : /color-scheme/.test(query) ? 'dark' : null;
-  const rec = { kind: (kind ?? 'dark') as 'reduced' | 'dark', fns: [] as Array<() => void>, q: null as unknown as MQ };
+  /* a query the worker cannot answer (orb3 watches `(resolution: Ndppx)` and re-arms on each change) never changes here: the page
+     sends the pixel ratio itself (setDpr) */
+  const rec = { kind: (kind ?? 'other') as 'reduced' | 'dark' | 'other', fns: [] as Array<() => void>, q: null as unknown as MQ };
   const mq: MQ = {
     media: query,
     get matches(): boolean { return kind === 'reduced' ? media.reduced : kind === 'dark' ? (/dark/.test(query) ? media.dark : !media.dark) : false; },
@@ -93,7 +95,7 @@ function matchMedia(query: string): MQ {
 export function setMedia(next: { reduced: boolean; dark: boolean }): void {
   const reducedChanged = next.reduced !== media.reduced, darkChanged = next.dark !== media.dark;
   media.reduced = next.reduced; media.dark = next.dark;
-  for (const m of mqs) if ((m.kind === 'reduced' && reducedChanged) || (m.kind === 'dark' && darkChanged)) for (const f of [...m.fns]) f();
+  for (const m of [...mqs]) if ((m.kind === 'reduced' && reducedChanged) || (m.kind === 'dark' && darkChanged)) for (const f of [...m.fns]) f();
 }
 
 const registry = new Map<string, CustomElementConstructor>();
@@ -128,7 +130,19 @@ export function installShim(env: { dpr: number; reduced: boolean; dark: boolean 
   g['document'] = { documentElement: docEl, querySelector: () => null, createElement: () => ({}) };
   if (typeof g['CustomEvent'] === 'undefined') g['CustomEvent'] = class { type: string; detail: unknown; constructor(t: string, i?: { detail?: unknown }) { this.type = t; this.detail = i?.detail; } };
   if (typeof g['addEventListener'] !== 'function') g['addEventListener'] = (): void => { /* a worker scope has its own; a test's does not */ };
+  cpuCanvases();
   ensureRaf();
+}
+/* orb3 draws each frame into a canvas of its own at 3x and scales it down (ORBS.md G6), made with `new OffscreenCanvas` where
+   there is one. Its 2D context must stay on the CPU in the worker too (provideCanvas: WebKitGTK's GPU 2D context in a worker
+   crashes its web process), so every OffscreenCanvas's 2D context is asked for with `willReadFrequently`; the vendored file is
+   left as it is */
+function cpuCanvases(): void {
+  const OC = g['OffscreenCanvas'] as { prototype: { getContext: (t: string, o?: unknown) => unknown; __cpu?: boolean } } | undefined;
+  if (!OC || OC.prototype.__cpu) return;
+  const get = OC.prototype.getContext;
+  OC.prototype.getContext = function (this: unknown, t: string, o?: unknown): unknown { return get.call(this, t, t === '2d' ? { ...(o as object | undefined), willReadFrequently: true } : o); };
+  OC.prototype.__cpu = true;
 }
 export const orbClass = (): CustomElementConstructor | undefined => registry.get('orb-avatar');
 export function setDpr(dpr: number): void { g['devicePixelRatio'] = dpr; }

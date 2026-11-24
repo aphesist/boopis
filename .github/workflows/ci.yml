@@ -138,6 +138,8 @@ jobs:
             export CONTRAPROVA_REPO="https://x-access-token:${CONTRAPROVA_TOKEN}@github.com/aphesist/contraprova.git"
           fi
           scripts/vendor-contraprova.sh --check
+      - name: vendored orb-avatar is a byte-exact copy of its pinned orb3 commit (ADR-0051)
+        run: scripts/vendor-orb.sh --check
 
   rust:
     runs-on: ubuntu-22.04

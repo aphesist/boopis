@@ -84,6 +84,8 @@ export interface OrbShapeOptions {
 }
 
 export interface OrbReactionDef {
+  /** orb 3: a resting face (like `idle`): while it shows with `idle-motion="off"` and no look target, the bot holds its `home` orientation. */
+  rest?: boolean;
   label?: string;
   blink?: boolean;
   hidden?: boolean;
@@ -118,6 +120,20 @@ export interface OrbShapeChangeDetail { from: OrbBodyShape; to: OrbBodyShape; }
 export interface OrbEyeShapeChangeDetail { from: OrbEyeShape; to: OrbEyeShape; }
 export interface OrbPokeDetail { count: number; reaction: OrbPokeReaction; }
 export interface OrbEmoteDetail { name: OrbEmote; }
+
+/** The element's attributes (all optional strings, as in HTML). */
+export interface OrbAvatarAttributes {
+  shape?: string; 'eye-shape'?: string; reaction?: string; mode?: OrbMode; color?: string; 'eye-color'?: string;
+  size?: string; morph?: string; jelly?: string; 'face-scale'?: string; alive?: string; 'idle-motion'?: 'lively' | 'calm' | 'off';
+  'idle-time'?: string; 'sleep-after'?: string; emotes?: string; extras?: string; shadow?: string; static?: string; label?: string;
+  follow?: string; 'particle-color'?: string; 'spark-color'?: string;
+  /** Rest or fixed look, "yaw pitch" in degrees (default "0 3"). */
+  gaze?: string;
+  /** orb 3: the character's home orientation at rest, "yaw pitch roll" in degrees (default "0 0 0"). It holds while the bot
+   *  rests (idle motion off, no look target, the idle face or a reaction defined with `rest: true`); any other state turns
+   *  the whole bot out of it into its front-facing life over 0.4 s, and back at rest. Recommended: "38 22 -24". */
+  home?: string;
+}
 
 export declare class OrbAvatar extends HTMLElement {
   reaction: OrbReaction;

@@ -31,7 +31,7 @@ describe('the orb runtime patch', () => {
     expect(src).toContain('_update(');
     expect(src).toContain('customElements.define("orb-avatar"');
     for (const f of ['_sig', '_slot', '_target', '_override', '_customSeq', '_tp', '_btp', '_jx', '_jv', '_blinkAt', '_dblBlinkAt', '_spinAt', '_pokeAt']) expect(src, f).toContain('this.' + f + '=');
-    expect(src).toMatch(/Qt\+t\._slot&1/);   /* the ladder's own frame skip, keyed on the slot */
+    expect(src).toMatch(/[A-Za-z$_]{1,3}\+t\._slot&1/);   /* the ladder's own frame skip, keyed on the slot (its counter is renamed by each build) */
   });
 
   it('repaints a canvas in the same task that resized it, and only then', () => {

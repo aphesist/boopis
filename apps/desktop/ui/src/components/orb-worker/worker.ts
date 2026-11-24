@@ -5,6 +5,7 @@
 import vendorUrl from '../../../vendor/orb-avatar.min.js?url';
 import { installShim, orbClass, provideCanvas, setDpr, setMedia, ShimElement } from './shim';
 import { holdOutsideDock, installOrbRuntime, releaseOutsideDock } from '../orb-runtime';
+import { definePose } from '../orb-pose';
 import type { FromWorker, RectLike, StyleSnap, ToWorker } from './protocol';
 
 interface OrbInst extends ShimElement {
@@ -23,7 +24,8 @@ async function boot(): Promise<void> {
   installShim(env);
   await import(/* @vite-ignore */ vendorUrl);
   const C = orbClass();
-  if (!C) throw new Error('orb2 did not define <orb-avatar> in the worker');
+  if (!C) throw new Error('orb3 did not define <orb-avatar> in the worker');
+  definePose((globalThis as unknown as { OrbAvatar?: Parameters<typeof definePose>[0] }).OrbAvatar);
   if (!installOrbRuntime()) throw new Error('orb2 has no _fit/_update to patch');
   /* a 2D context on an OffscreenCanvas is the whole point: without one the page keeps the main-thread orbs */
   if (typeof OffscreenCanvas === 'undefined' || !new OffscreenCanvas(2, 2).getContext('2d', { willReadFrequently: true })) throw new Error('no 2D OffscreenCanvas in this worker');

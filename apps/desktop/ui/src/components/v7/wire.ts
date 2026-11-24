@@ -146,9 +146,26 @@ function wireComposer(c: HTMLElement): void {
   });
 }
 
+/** a bot at rest on a rest surface wakes under the pointer (the lively idle, its 3D turns and glances) and settles back into the pose
+    when it leaves (ORBS.md, per-surface policy); a bot in a state keeps its state */
+function wireRestOrb(w: HTMLElement): void {
+  const o = w.querySelector('orb-avatar');
+  if (!o) return;
+  w.addEventListener('pointerenter', (e) => {
+    if (e.pointerType === 'touch' || o.getAttribute('reaction') !== 'pose') return;
+    w.dataset['awake'] = '';
+    o.setAttribute('reaction', 'idle'); o.setAttribute('idle-motion', 'lively');
+  });
+  w.addEventListener('pointerleave', () => {
+    if (!('awake' in w.dataset)) return;
+    delete w.dataset['awake'];
+    o.setAttribute('reaction', 'pose'); o.setAttribute('idle-motion', 'off');
+  });
+}
+
 const WIRES: ReadonlyArray<readonly [string, (el: HTMLElement) => void]> = [
   ['.k7-seg', wireSegmented], ['.k7-switch', (el) => wireSwitch(el as HTMLButtonElement)], ['.k7-chip', (el) => wireChip(el as HTMLButtonElement)],
-  ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark], ['.k7-info', wireInfo], ['.k7-composer', wireComposer], ['.k7-dock', paintDock]
+  ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark], ['.k7-info', wireInfo], ['.k7-composer', wireComposer], ['.k7-dock', paintDock], ['.ui-orb[data-orb-rest]', wireRestOrb]
 ];
 /** wire every kit component under root (and root itself) once */
 export function wire<T extends Element>(root: T): T {
