@@ -20,7 +20,7 @@ pnpm lab:check --story dock/dock --state "one bot"
 pnpm lab:check --quick                # two presets (catalog, bone), one width (1440): the fast loop while fixing
 pnpm lab:check --draw-only            # only that every state draws without an error
 pnpm lab:check --update               # accept the screenshots as the new goldens
-pnpm lab:check --strict               # exit 1 on any failure (CI blocks on every check but visual: docs/RELEASING.md)
+pnpm lab:check --strict               # exit 1 on any failure (CI blocks through tests/lab/gate.mjs: "What CI blocks on")
 ```
 
 Other flags: `--presets catalog,bone`, `--widths 390,1440`, `--jobs 3`, `--dpr 1.6` (the owner's fractional scale as the device pixel ratio; add `--no-visual`, the goldens are at 1), `--no-visual`, `--no-axe`, `--no-stability`.
@@ -87,6 +87,73 @@ are about 5. A slip smaller than a block is the geometry checks' to catch; the t
 motion is random by design). Goldens are taken in the lab's own Chromium; another machine's font rasteriser can differ,
 which shows as visual failures there and nowhere else. The lab never fetches a font: the Google Fonts stylesheet `tokens.css`
 imports is served from `@fontsource` (`/__gfonts`), the faces the app bundles, so a page's load never waits on the network.
+
+## The v7 checks
+
+LAB-v7 (`docs/design/v7/LAB-v7.md` on `w31/design-system-v7`) turns every defect class the owner found on the v7 boards into a
+blocking check, before the v7 kit exists, so the kit (`w32/kit-v7`) is built against them. The in-page rules are ported from the
+design's render QA (`docs/design/v7/render-qa.cjs`), the orb rules from the bots' character probes (`ORBS.md`, `probes/tools/rec.cjs`
+and `edges.py` on `w31/bot-character`). Each check has its own id, so a v6 story's v7 exception never hides a v6 regression.
+
+**The story interface.** A v7 check never names a class: it names kit components, and `tests/lab/v7.mjs` (`ROLES`) says which
+elements are each one. Every component matches `[data-kit~="<Name>"]` on its root (`[data-kit-part~="<Name>"]` for a part: a
+Segmented item, a dock's row, a diff row), which the v7 kit sets; until it is built, the list also names today's v6 class for the
+same job (`.ui-btn` for Button, `.ui-menu__item` for MenuRow, ...), so the checks run now on every v6 story. kit-v7 deletes each v6
+selector with the class it retires. The same file lists the kit's 42 components (`KIT_V7`), the merged names (`RETIRED`), the
+accents of the contrast matrix and the surfaces where a bot is at rest.
+
+| Check | LAB-v7 name | Rule | What fails | Where |
+|---|---|---|---|---|
+| `geometry.wrap` | geometry.wrap | R-row-1, R-type-11 | a Segmented item, Chip, Button, Badge, Kbd, SelectorItem, title pill, InlineChip, StatusWord, Tooltip, MenuRow or countdown on more than one line, or its text wider than its box without an ellipsis | `probe-v7.js` |
+| `geometry.row` | geometry.row | R-row-1 | in a MenuRow, ListRow, OptionRow, Row, queue or file row: a text run on two lines (a two-line label is two elements), cut without an ellipsis, or past the row's padding edge | `probe-v7.js` |
+| `geometry.escape` | geometry.contain (extended) | R-corner-4, R-overflow-1 | the visible part of an element, after its own clipping ancestors, outside its story cell, or outside the window (a fixed layer on both axes) | `probe-v7.js` |
+| `geometry.padding` | geometry.padding | R-space-3 | Card, Block, ToolRow, FilesCard, AskCard, Queue, Notice, Menu, Tooltip, Chip, Button, Badge, Bubble, ListRow, OptionRow, Row: left padding not right, or top not bottom, within 0.5 px | `probe-v7.js` |
+| `geometry.align` | geometry.align | R-space-4 | the rows of a Card, steps, queue, menu, file, diff and sidebar rows, the thread's agent-side blocks: left edges more than 0.5 px apart; a DiffView comment off the code column | `probe-v7.js` |
+| `concentric.strict` | concentric (tightened) | R-corner-10 | a control in a container's corner zone: radius not outer − inset (floor 6), insets unequal by more than 0.5 px, or past the container's edge, measured after CSS zoom; a pill in a pill on equal insets passes. At rest only controls with a shell; under forced hover, focus and pressed, all | `probe-v7.js` |
+| `inline-baseline` | inline-baseline | R-inline-1 | probe.js's check (above), its chips extended to the v7 InlineChip, Badge, Mark and countdown | `probe.js` |
+| `mark.rest` | mark.rest | section 17 | a dashed underline at rest outside feedforward (the composer, a reply's guess), an AskCard or a blank; an info label's mark at rest | `probe-v7.js` |
+| `sweep` | sweep | 9.2, P4 | in a still (reduced motion): a gradient clipped to text (a shimmer frozen mid-sweep) or a looping animation (a breath frozen mid-cycle); `[data-motion]` strips are exempt | `probe-v7.js` |
+| `same-component` | same-component | 21, 21.4 | a dock without the one component's geometry (`data-dk`, `data-geom`, `data-pad`), a row or compact dock whose width is not its content plus twice the padding, or a dock, composer, title pill or AskCard drawn with another geometry than the one most renders share (compared across every state at the first preset and 1440) | `probe-v7.js`, `check.mjs` |
+| `contrast.accent` | contrast | R-a11y-1, 18 | `--accent-text` and `--focus` under 4.5:1 on `--bg-1` or `--bg-3`, `--on-accent` on `--accent`, in every preset (and every accent of `ACCENTS`, once the theme exposes `__lab.accent(hex)`); or the theme does not define them. Reported against `src/styles/tokens.css` | `check.mjs`, `static-v7.mjs` |
+| `kit.single` | kit.single | 21 | a merged name (QueueStrip, LimitNotice, Toast, Banner, ScopePicker, SettingsLine, SteerLine, CheckpointBar, ChoiceCards, LaunchCard, ReferenceChip) in the UI's source, in any spelling; a kit component without `src/lab/stories/kit/<name>.stories.ts` | `static-v7.mjs` |
+| `tokens.loose` | the token check | R-space-1 | a literal padding, margin, gap or inset (px, rem; not 0 or the 1px hairline) in the UI's CSS outside the token files. Colours, font sizes and radii stay `tokens.static`'s | `static-v7.mjs` |
+| `orb.rest` | orb flicker | 10, 21.4, ORBS G5 | a bot at rest (on the dock, the Bots sidebar or the rail, a rest reaction, not hovered, no attribute changed for 1.5 s) changes any canvas pixel between frames | `orbs.mjs` |
+| `orb.edges` | edge checks | ORBS G6, G7 | on any orb: shimmer (edge pixels that step out and back while the shape holds), a lone flipping pixel, a canvas that jumps or refits. A-B-A inside real motion is reported, not blocking | `orbs.mjs` |
+
+```sh
+pnpm lab:check [--area dock]       # every check above but the orbs, in the whole matrix; lab-report/summary.json
+pnpm lab:gate                      # what CI decides on that report: blocking findings, minus the known pre-v7 exceptions
+pnpm lab:orbs [--story dock/dock]  # the orb checks; lab-report-orbs/summary.json
+node tests/lab/gate.mjs lab-report-orbs/summary.json
+pnpm lab:static [--all]            # kit.single, tokens.loose and the accent tokens, from the source alone (seconds)
+pnpm exec vitest run src/lab/v7-checks.test.ts   # the checks' own proof: each fires on its defect and passes its counterpart
+```
+
+**The orb run.** `pnpm lab:orbs` loads each state with full motion, the orbs on the main thread (`?orbs=main`, so their canvases
+can be read) and Playwright's clock installed and paused, then reads 48 frames 32 ms apart (two orb updates each) from every orb's
+own canvas, as the character probes do: exact pixels, no screenshot. Math.random is seeded; the frames still differ from run to run
+by a pixel here and there, so an orb story is excused whole (every state) in the allowlist.
+
+**Fonts.** The lab draws only the bundled `@fontsource` faces: the stylesheet's Google Fonts URL is answered from them (`serve.mjs`),
+and a request that still reaches Google is an `errors` finding, in `lab:check` and in `lab:orbs`.
+
+**The known pre-v7 exceptions.** Today's v6 stories legitimately fail v7 rules. They are listed in `tests/lab/v7-allowlist.json`:
+per v7 check, the story and its states (an orb story whole), and for the source checks the file and the finding. The rules are not
+weakened: `tests/lab/gate.mjs` blocks on every finding whose check is not `visual` unless the list names it, so a new story, a new
+state, a check that newly fails or a new file fails CI. The list may name v7 checks only. An entry that matched nothing in a run is
+printed as stale: remove it. `node tests/lab/gate.mjs --write [--orbs lab-report-orbs/summary.json]` rewrites the list from the
+reports of a full run (never from a narrowed one). **kit-v7 empties this file**: each component it lands removes its stories' entries.
+
+**Not yet in the matrix.** LAB-v7's axes beyond today's (dark and light, corners B and C, three accents, three densities) need the
+v7 theme, which kit-v7 builds; until then the matrix is the v6 presets and widths. The contrast check already walks `ACCENTS` when
+the theme exposes `__lab.accent`; kit-v7 adds the light and the dark accent once the owner names their values, and the theme,
+corners and density hooks to `check.mjs`.
+
+## What CI blocks on
+
+The `lab` job runs `pnpm lab:check --jobs 2`, then `node tests/lab/gate.mjs`: it fails on any finding whose check is not `visual`
+and that `v7-allowlist.json` does not name. The `lab-orbs` job runs `pnpm lab:orbs --jobs 2` and the same gate on its report. The
+`ui` job runs `src/lab/v7-checks.test.ts` with the unit tests, and the inline-chips runs at DPR 2 and 1.6 through the gate.
 
 ## Read the report
 

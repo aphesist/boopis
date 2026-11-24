@@ -26,6 +26,8 @@ import { createHash } from 'node:crypto';
 import { labRoute, localFonts, typeOf, UI_ROOT } from './serve.mjs';
 import { CHECKS, AREAS, AREA_TITLES, BRAND_ALLOW, STANDING_ALLOW, areaOf, ruleCoverage } from './rules.mjs';
 import { scan } from './static-scan.mjs';
+import { scanV7 } from './static-v7.mjs';
+import { V7_TARGETS, ACCENT_PAIRS, ACCENTS } from './v7.mjs';
 import { writeReport } from './report.mjs';
 
 const require = createRequire(import.meta.url);
@@ -34,6 +36,7 @@ const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch').default ?? require('pixelmatch');
 const AXE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const PROBE = join(UI_ROOT, 'tests', 'lab', 'probe.js');
+const PROBE_V7 = join(UI_ROOT, 'tests', 'lab', 'probe-v7.js');
 const DIST = join(UI_ROOT, 'dist-e2e');
 const GOLDEN = join(UI_ROOT, 'tests', 'lab-golden');
 const REPORT = join(UI_ROOT, 'lab-report');
@@ -58,8 +61,14 @@ const AXE_ON = !flag('no-axe');
 const STABLE = !flag('no-stability');
 const DRAW_ONLY = flag('draw-only');
 const FORCES = ['hover', 'focus', 'active'];
-const FORCED_CHECKS = ['geometry.contain', 'concentric', 'tokens.computed', 'overlay'];
+const FORCED_CHECKS = ['geometry.contain', 'concentric', 'tokens.computed', 'overlay', 'concentric.strict'];
+/* the v7 checks (probe-v7.js, LAB-v7 section 4); same-component is compared across renders below */
+const V7_CHECKS = ['geometry.wrap', 'geometry.row', 'geometry.escape', 'geometry.padding', 'geometry.align', 'concentric.strict', 'mark.rest', 'sweep'];
 const MAX_CROPS = 900;
+/* the known pre-v7 exceptions (gate.mjs): a finding the list excuses gets no crop. A crop is a full-page screenshot, and the v6
+   stories' v7 findings would spend the run's time (and its 900 crops) on what the gate does not block on */
+const KNOWN = (() => { try { return JSON.parse(readFileSync(join(UI_ROOT, 'tests', 'lab', 'v7-allowlist.json'), 'utf8')).stories ?? []; } catch { return []; } })();
+const known = (x) => !!CHECKS[x.check]?.v7 && KNOWN.some((e) => e.check === x.check && e.story === x.story && (e.states === '*' || e.states.includes(x.state)));
 if (AREA && AREA.some((a) => !AREAS.includes(a))) { console.error('unknown area: ' + AREA.join(',') + ' (areas: ' + AREAS.join(', ') + ')'); process.exit(2); }
 
 /* ───────── build and serve ───────── */
@@ -105,7 +114,7 @@ function record(row, f, where) {
 }
 async function cropFor(page, x, f) {
   if (!x.isNew) return; x.isNew = false;
-  if (!f.rect || crops >= MAX_CROPS || x.severity === 'warn') return;
+  if (!f.rect || crops >= MAX_CROPS || x.severity === 'warn' || known(x)) return;
   const vw = page.viewportSize();
   const box = f.container ?? f.rect;
   const pad = 24;
@@ -129,6 +138,9 @@ async function openState(browser, origin, row, o = {}) {
   page.errorsSeen = [];
   page.on('console', (m) => { if (m.type() === 'error') page.errorsSeen.push('console: ' + m.text().slice(0, 300)); });
   page.on('pageerror', (e) => page.errorsSeen.push('pageerror: ' + e.message.slice(0, 300)));
+  /* the faces come from the bundled @fontsource packages (serve.mjs answers the stylesheet's Google URL from them): a request that
+     still reaches Google is an error, since CI's fetch would then draw other faces (an inline-baseline failure seen only on CI) */
+  page.on('request', (r) => { if (/fonts\.(googleapis|gstatic)\.com/.test(r.url())) page.errorsSeen.push('fetched a font from Google, not the bundled @fontsource faces: ' + r.url().slice(0, 200)); });
   const url = origin + '/lab.html?frame=1&story=' + encodeURIComponent(row.story) + '&state=' + encodeURIComponent(row.state) + '&preset=catalog';
   await page.goto(url);
   await page.waitForFunction(() => document.documentElement.dataset.labReady, null, { timeout: 30000 }).catch(() => {});
@@ -170,7 +182,20 @@ async function redraw(page, row) {
   }
 }
 /* The checks read the resting state: a colour still travelling from the previous preset (a CSS transition that the 80 ms settle did not outlast) is not a value the design set, so running transitions are finished first (animations that loop are left alone) */
-const probe = (page, checks, overlay) => page.evaluate(([c, t, ov, b]) => { for (const a of document.getAnimations()) if (typeof CSSTransition !== 'undefined' && a instanceof CSSTransition) { try { a.finish(); } catch { /* already done */ } } return window.__labProbe.run({ checks: c, tokenNames: t, overlay: ov, brandAllow: b }); }, [checks, TOKEN_NAMES, overlay, BRAND_ALLOW]);
+/* probe.js's checks, then probe-v7.js's (injected here when a reload dropped it): one list of findings, and the v7 run's
+   same-component signatures when `sigs` asks for them */
+const probe = async (page, checks, overlay, sigs = false) => {
+  if (!(await page.evaluate(() => !!window.__labProbeV7))) await page.addScriptTag({ path: PROBE_V7 });
+  const v7 = checks ? V7_CHECKS.filter((c) => checks.includes(c)) : V7_CHECKS;
+  return page.evaluate(([c, t, ov, b, v7c, forced, targets, pairs, sg]) => {
+    for (const a of document.getAnimations()) if (typeof CSSTransition !== 'undefined' && a instanceof CSSTransition) { try { a.finish(); } catch { /* already done */ } }
+    const r = window.__labProbe.run({ checks: c, tokenNames: t, overlay: ov, brandAllow: b });
+    const r7 = v7c.length || sg ? window.__labProbeV7.run({ checks: v7c, forced, targets, accentPairs: pairs, signatures: sg }) : { findings: [], sigs: [] };
+    return { ...r, findings: [...(r.findings || []), ...r7.findings], sigs: r7.sigs };
+  }, [checks, TOKEN_NAMES, overlay, BRAND_ALLOW, v7, !!checks, V7_TARGETS, ACCENT_PAIRS, sigs]);
+};
+/* same-component: every render's geometry per component class, at the first preset and 1440, at rest */
+const sigMap = new Map();   // class -> geometry -> [{ row, el }]
 
 async function axeRun(page) {
   if (!(await page.evaluate(() => !!window.axe))) await page.addScriptTag({ content: AXE });
@@ -270,16 +295,24 @@ async function checkRow(browser, origin, row, log) {
         if (!row.app && row.width && row.width + 48 > w) continue;   /* a fixed-width cell wider than this window: not meaningful */
         await setWidth(page, row, w);
         const where = preset + '/' + w;
-        const rest = await probe(page, null, row.overlayDecl);
+        const rest = await probe(page, null, row.overlayDecl, preset === PRESETS[0] && w === 1440 && !skip('same-component'));
+        for (const [cls, geom, el] of rest.sigs || []) { let m = sigMap.get(cls); if (!m) sigMap.set(cls, (m = new Map())); let l = m.get(geom); if (!l) m.set(geom, (l = [])); if (!l.some((x) => x.row === row)) l.push({ row, el }); }
         if (rest.overlapMs != null) { overlapCost.n++; overlapCost.sum += rest.overlapMs; overlapCost.max = Math.max(overlapCost.max, rest.overlapMs); }
+        /* a crop is a full-page screenshot, which resizes the window for a moment, and an open layer closes on a resize (layer.ts):
+           after a crop, a state with an overlay is drawn again before anything else measures it */
+        const reopen = async (before) => { if (row.overlay && crops !== before) await redraw(page, row); };
+        let c0 = crops;
         for (const f of rest.findings || []) { if (skip(f.check, f)) continue; const x = record(row, f, where); await cropFor(page, x, f); }
+        await reopen(c0);
         if (w === 1440 || (w === 390 && preset === 'catalog')) {
           for (const fs of FORCES) {
+            c0 = crops;
             await page.evaluate((s) => window.__lab.force(null, s, true), fs);
             await settle(page, 40);
             const r = await probe(page, FORCED_CHECKS, row.overlayDecl);
             for (const f of r.findings || []) { if (skip(f.check, f)) continue; const x = record(row, f, where + '/' + fs); await cropFor(page, x, f); }
             await page.evaluate(() => window.__lab.clearForced());
+            await reopen(c0);
           }
         }
         if (w === 1440 && AXE_ON && !whole('axe')) {
@@ -375,6 +408,30 @@ async function mockShots(browser, origin, list) {
   return out;
 }
 
+/* contrast.accent: a theme's derived accent tokens, once per preset (and per accent of the matrix, when the theme can set one:
+   `__lab.accent(hex)`, which kit-v7 adds with the v7 theme). A property of the theme, not of a story: reported against the token file */
+async function accentContrast() {
+  const row = rows.find((r) => !r.app);
+  if (!row) return [];
+  const { ctx, page, ready } = await openState(await liveBrowser(), srv.origin, row);
+  const out = [];
+  try {
+    if (!ready) return [];
+    await page.addScriptTag({ path: PROBE_V7 });
+    const accents = (await page.evaluate(() => typeof window.__lab.accent === 'function')) ? ACCENTS : [null];
+    for (const preset of PRESETS) for (const a of accents) {
+      await page.evaluate(([p, hex]) => { window.__lab.preset(p); if (hex) window.__lab.accent(hex); }, [preset, a && a.hex]);
+      await settle(page, 60);
+      const r = await page.evaluate((pairs) => window.__labProbeV7.run({ checks: ['contrast.accent'], accentPairs: pairs, targets: {} }), ACCENT_PAIRS);
+      for (const f of r.findings) {
+        const msg = preset + (a ? ' / ' + a.id : '') + ': ' + f.msg;
+        out.push({ check: 'contrast.accent', area: 'components', file: 'src/styles/tokens.css', line: 0, msg, snippet: '', key: 'contrast.accent|' + msg.replace(/[\d.]+:1/, 'N:1') });
+      }
+    }
+  } finally { await ctx.close(); }
+  return out;
+}
+
 /* ───────── run ───────── */
 const free = (() => { try { const s = statfsSync(UI_ROOT); return s.bavail * s.bsize; } catch { return Infinity; } })();
 if (VISUAL && free < 400e6) { console.warn('lab: less than 400 MB free on the disk; screenshots (visual) are off for this run'); VISUAL = false; }
@@ -422,9 +479,21 @@ await Promise.all(Array.from({ length: Math.max(1, JOBS) }, async () => {
   }
 }));
 
+/* same-component: a component class drawn with more than one geometry. The geometry most renders share is the reference; every
+   render that differs is a finding on its state (LAB-v7: the dock, the composer, the title pill and the AskCard are one geometry) */
+for (const [cls, m] of sigMap) {
+  if (m.size < 2) continue;
+  const ranked = [...m.entries()].sort((a, b) => b[1].length - a[1].length || (a[0] < b[0] ? -1 : 1));
+  const [refGeom, refRows] = ranked[0];
+  for (const [geom, l] of ranked.slice(1)) for (const { row, el } of l) {
+    if ((row.allow || {})['same-component']) continue;
+    record(row, { check: 'same-component', el, msg: cls + ' is drawn as [' + geom + '], ' + refRows.length + ' other render' + (refRows.length > 1 ? 's' : '') + ' (' + refRows[0].row.story + ' / ' + refRows[0].row.state + ') as [' + refGeom + ']', key: 'same-component|' + cls + '|' + geom }, PRESETS[0] + '/1440');
+  }
+}
+
 /* the static scan belongs to every run that is not narrowed to a story */
 flushHashes();
-const staticFindings = STORY || STATE ? [] : scan().filter((f) => !AREA || AREA.includes(f.area));
+const staticFindings = STORY || STATE ? [] : [...scan(), ...scanV7(), ...await accentContrast()].filter((f) => !AREA || AREA.includes(f.area));
 const list = [...findings.values()].map(({ isNew, ...x }) => x).filter((x) => !AREA || AREA.includes(x.area));
 const failing = list.filter((x) => x.severity !== 'warn');
 const mocks = [...new Map(failing.filter((x) => x.mock).map((x) => [x.mock.url + '|' + (x.mock.crop ?? ''), x.mock])).values()];

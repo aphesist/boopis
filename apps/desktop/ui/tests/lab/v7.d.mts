@@ -1,0 +1,12 @@
+export const KIT_V7: readonly string[];
+export const KIT_V7_EXTRA: readonly string[];
+export const RETIRED: Readonly<Record<string, string>>;
+export function kebab(name: string): string;
+export function retiredPattern(name: string): RegExp;
+export const ROLES: Readonly<Record<string, readonly string[]>>;
+export function sel(...names: string[]): string;
+export const V7_TARGETS: Record<string, unknown>;
+export const ACCENTS: ReadonlyArray<{ id: string; hex: string }>;
+export const ACCENT_PAIRS: ReadonlyArray<readonly [string, string]>;
+export const ORB_REST_SURFACES: string;
+export const ORB_REST_REACTIONS: readonly string[];

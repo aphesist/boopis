@@ -836,7 +836,7 @@
      chip's own text does the same for the chip. No pixels are read, so a fallback font (CI's) moves both probes alike.
      (b)'s tolerance is one device pixel because a box's top and bottom each round to the device pixel grid when painted, so a box
      centred exactly in layout can paint up to one device pixel off; anything past that is a slip the eye sees. */
-  const INLINE_CHIP = '.ui-mention, .ui-ff, .ui-path, .ui-code, .ui-blank, .ui-md .ui-file';
+  const INLINE_CHIP = '.ui-mention, .ui-ff, .ui-path, .ui-code, .ui-blank, .ui-md .ui-file, .ui-badge, [data-kit~="InlineChip"], [data-kit~="Badge"], [data-kit~="Mark"], [data-kit-part~="Countdown"]';   /* v7: InlineChip and Badge in running text (R-inline-1, LAB-v7 4) */
   const RUNNING = /^(block|inline|list-item|flow-root|table-cell|inline-block|run-in)$/;
   function inlineBaseline(els, cs) {
     const res = [];
