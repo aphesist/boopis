@@ -104,7 +104,8 @@ export async function keyWalk(env) {
     check('5', 'Enter opens the steps', x0 !== null && x0 !== x1, x0 + ' -> ' + x1);
     await press('o', 400); check('5', 'o closes the steps', (await exp()) === x0);
     await press('c', 400); check('5', 'c copies (toast)', await ev(() => /copied/i.test((document.querySelector('.k7-notify[data-in]') || document.querySelector('.ui-toast.is-in') || {}).textContent || '')));
-    await press('b', 500); check('5', 'b opens the blank popover', (await layer()).pop || await ev(() => !!document.querySelector('[data-hx-attention][aria-expanded="true"]')));
+    /* the blank is the kit's question (AskCard): B goes to its answers */
+    await press('b', 500); check('5', 'b goes to the blank\'s answers', await ev(() => !!document.activeElement?.closest('[data-blank]')));
     await press('1', 300); const picked = await where(); await press('Enter', 600);
     check('6', '1 picks a blank option, Enter confirms', /alias/i.test(picked.label) && await ev(() => !!document.querySelector('#hx-view-session [data-answered]') && !__hx.ui.popover.current), picked.label);
     await ev(() => document.querySelector('#hx-view-session [data-hx-turn]').focus()); await press('e', 500); const ed = await where();
@@ -117,7 +118,8 @@ export async function keyWalk(env) {
   page = await s.fresh();
   await s.safe('6', async () => {
     await press('Control+g', 100); await press('m', 300); await press('b', 500);
-    await press('Escape', 400); check('6', 'Esc closes the popover, focus back on its blank', !(await layer()).pop && (await where()).region === 'messages' && /blank/.test((await where()).cls), await where());
+    /* the blank is the kit's question in the thread: B is on its first answer, and there is no popover to close */
+    check('6', 'b puts the focus on the blank\'s first answer', (await where()).region === 'messages' && await ev(() => !!document.activeElement?.closest('[data-blank]')), await where());
     await press('Alt+2', 600);
     /* the Bots chat's approval is the kit's AskCard (v7): its hold chip carries data-holding, then data-held */
     const holdSel = '#hx-view-bots [data-kit~="AskCard"] [data-hold]';
@@ -142,17 +144,19 @@ export async function keyWalk(env) {
   await s.safe('7', async () => {
     await press('Control+g', 100); await press('i', 300);
     const pressed = (re) => ev((re) => { const b = [...document.querySelectorAll('#hx-view-session [data-hx-composer] button')].find((x) => new RegExp(re, 'i').test(x.getAttribute('aria-label') + ' ' + x.textContent)); return b ? (b.getAttribute('aria-pressed') || b.getAttribute('aria-checked') || b.textContent.trim()) : null; }, re);
-    const g0 = await pressed('govern'); await press('Alt+g'); const g1 = await pressed('govern'); check('7', 'alt+G toggles governed', g0 !== g1, g0 + ' -> ' + g1);
+    /* the line shows what board S20 shows; governed mode is the provider's state (alt+G toggles it where the session has no permission scale) */
+    const gov = () => ev(() => __hx.data().details.governance.get().governed);
+    const g0 = await gov(); await press('Alt+g'); const g1 = await gov(); check('7', 'alt+G toggles governed', g0 !== g1, g0 + ' -> ' + g1);
     await press('Alt+g');
-    const s0 = await pressed('smart'); await press('Alt+s'); const s1 = await pressed('smart'); check('7', 'alt+S toggles smart', s0 !== s1, s0 + ' -> ' + s1);
+    const smart = () => ev(() => __hx.data().details.governance.get().smart);
+    const s0 = await smart(); await press('Alt+s'); const s1 = await smart(); check('7', 'alt+S toggles smart', s0 !== s1, s0 + ' -> ' + s1);
     await press('Alt+s');
     await press('Alt+a', 400); const a = await layer(); check('7', 'alt+A attach', a.menu || a.pop); await press('Escape', 300);
     await ev(() => document.querySelector('#hx-view-session [data-hx-focus="composer"]').focus());
-    const mic = () => ev(() => { const m = document.querySelector('#hx-view-session .ui-composer__mic'); return m ? m.getAttribute('aria-pressed') : 'no mic'; });
+    const mic = () => ev(() => { const m = document.querySelector('#hx-view-session [data-mic]'); return m ? m.getAttribute('aria-pressed') : 'no mic'; });
     await press('Alt+v', 400); const v1 = await mic(); await press('Escape', 400); const v2 = await mic();
     check('7', 'alt+V taps to listen, Esc stops', v1 === 'true' && v2 !== 'true' && (await where()).region === 'composer', v1 + ' -> ' + v2);
-    await page.keyboard.down('Alt'); await page.keyboard.down('KeyV'); await page.waitForTimeout(650); const held = await mic(); await page.keyboard.up('KeyV'); await page.keyboard.up('Alt'); await page.waitForTimeout(300);
-    check('7', 'alt+V held talks while held', held === 'true' && (await mic()) !== 'true', held + ' -> ' + (await mic()));
+    /* the kit's mic is a switch: a press, or alt+V, turns dictation on and off (the v6 composer's talk-while-held is not the kit's) */
     await ev(() => { const i = document.querySelector('#hx-view-session [data-hx-focus="composer"]'); i.textContent = ''; i.dispatchEvent(new Event('input', { bubbles: true })); });
     await page.waitForTimeout(300);
     await ev(() => document.querySelector('#hx-view-session [data-hx-focus="composer"]').focus()); await page.waitForTimeout(100);
@@ -171,19 +175,20 @@ export async function keyWalk(env) {
   page = await s.fresh();
   await s.safe('7', async () => {
     await press('Control+g', 100); await press('i', 300);
-    const chip = () => ev(() => { const b = [...document.querySelectorAll('#hx-view-session .ui-composer__chips button')].find((x) => x.hasAttribute('aria-haspopup')); return { hidden: b.hidden, text: b.textContent.trim(), label: b.getAttribute('aria-label') }; });
+    /* the session composer's line (board S20): the model item says who answers next and opens the kit's menu */
+    const chip = () => ev(() => { const b = document.querySelector('#hx-view-session .ss-composer [data-line="model"]'); return { hidden: !b || b.hidden, text: (b?.textContent ?? '').trim(), label: b?.getAttribute('aria-label') ?? '' }; });
     const c0 = await chip();
-    check('7', 'the model chip is always shown and says Smart answers next', !c0.hidden && /^Smart/.test(c0.text) && /^Smart.*who answers next/.test(c0.label), c0);
+    check('7', 'the line\'s model item is always shown and says Smart answers next', !c0.hidden && /^Smart/.test(c0.text) && /^Who answers next: Smart/.test(c0.label), c0);
     await press('Alt+m', 500);
-    const first = await ev(() => { const it = document.querySelector('.ui-listbox .ui-option'); return it ? { label: it.textContent.trim(), checked: it.getAttribute('aria-selected'), role: it.closest('[role="listbox"]').getAttribute('role'), foot: !!document.querySelector('.ui-listbox .ui-menu__foot') } : null; });
-    check('7', 'alt+M opens the menu, Automatic (Smart) first and chosen, with a hint', (await layer()).menu && first && first.role === 'listbox' && /^Automatic \(Smart\)/.test(first.label) && first.checked === 'true' && first.foot, first);
+    const first = await ev(() => { const m = document.querySelector('.k7-menu[data-floating]'), it = m?.querySelector('[data-kit~="MenuRow"]'); return it ? { label: it.textContent.trim(), checked: it.getAttribute('aria-checked'), role: m.getAttribute('role'), foot: m.querySelectorAll('.k7-menu__head').length > 0 } : null; });
+    check('7', 'alt+M opens the menu, Automatic (Smart) first and chosen, with a hint', (await layer()).menu && first && first.role === 'menu' && /^Automatic \(Smart\)/.test(first.label) && first.checked === 'true' && first.foot, first);
     await press('Escape', 300);
     check('7', 'Esc changes nothing', /^Smart/.test((await chip()).text) && !(await layer()).menu && (await where()).region === 'composer', await where());
     await press('Alt+m', 500);
-    await page.click('.ui-listbox .ui-option >> text=Haiku'); await page.waitForTimeout(400);
+    await page.click('.k7-menu[data-floating] [data-kit~="MenuRow"] >> text=Haiku'); await page.waitForTimeout(400);
     const c1 = await chip();
-    check('7', 'picking a model makes it answer next and turns Smart off', !/^Smart/.test(c1.text) && /Haiku/.test(c1.text), c1);
-    await press('Alt+m', 500); await page.click('.ui-listbox .ui-option >> text=Automatic'); await page.waitForTimeout(400);
+    check('7', 'picking a model makes it answer next and turns Smart off', !/^Smart/.test(c1.text) && /haiku/i.test(c1.text), c1);
+    await press('Alt+m', 500); await page.click('.k7-menu[data-floating] [data-kit~="MenuRow"] >> text=Automatic'); await page.waitForTimeout(400);
     check('7', 'choosing Automatic turns Smart back on', /^Smart/.test((await chip()).text) && (await where()).region === 'composer', await where());
     await press('Alt+s', 300);
     check('7', 'alt+S turns Smart off', !/^Smart/.test((await chip()).text), await chip());

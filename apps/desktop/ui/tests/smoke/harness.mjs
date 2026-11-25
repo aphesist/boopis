@@ -24,7 +24,7 @@ export function scenario(env) {
     press: async (k, w) => { await page.keyboard.press(k); await page.waitForTimeout(w == null ? 260 : w); },
     st: () => page.evaluate(() => ({ tab: __hx.state.tab, left: __hx.state.left, right: __hx.state.right, dock: __hx.state.dock })),
     where: () => page.evaluate(WHERE),
-    layer: () => page.evaluate(() => ({ pal: !document.getElementById('hx-palette').hidden, settings: document.getElementById('hx-settings').open, sheet: document.getElementById('hx-keys-sheet').open, pop: !!__hx.ui.popover.current, menu: !!document.querySelector('.ui-menu, .ui-listbox') })),
+    layer: () => page.evaluate(() => ({ pal: !document.getElementById('hx-palette').hidden, settings: document.getElementById('hx-settings').open, sheet: document.getElementById('hx-keys-sheet').open, pop: !!__hx.ui.popover.current, menu: !!document.querySelector('.ui-menu, .ui-listbox, .k7-menu[data-floating]') })),
     dockMode: () => page.evaluate(() => (document.querySelector('#hx-dock [data-mode]') || {}).dataset?.mode),
     title: () => page.evaluate(() => document.querySelector('#hx-btn-title .k7-title__name').textContent),
     async safe(sec, fn) { try { await fn(); } catch (e) { check(sec, 'script', false, String(e.message).split('\n')[0]); if (process.env.SMOKE_STACK) console.error(e.message); } }

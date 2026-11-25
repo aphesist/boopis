@@ -13,7 +13,7 @@ export async function liveSessions(env) {
   const s = scenario(env);
   await s.safe('live', async () => {
     const page = await s.fresh({ q: 'provider=live-replay&frames=session', settle: 1500 });
-    const boot = await page.evaluate(() => ({ rows: document.querySelectorAll('#hx-list-session .ui-row').length, booting: document.getElementById('hx-app').classList.contains('is-booting'), dock: !!document.querySelector('#hx-dock .dk') }));
+    const boot = await page.evaluate(() => ({ rows: document.querySelectorAll('#hx-list-session [data-kit~="ListRow"]').length, booting: document.getElementById('hx-app').classList.contains('is-booting'), dock: !!document.querySelector('#hx-dock .dk') }));
     check('live', 'boots on recorded frames with no console errors and lists the recorded sessions', page.errors.length === 0 && !boot.booting && boot.dock && boot.rows === 2, { errors: page.errors, ...boot });
 
     await page.keyboard.press('Control+i');
@@ -42,7 +42,7 @@ export async function liveSessions(env) {
       await page.keyboard.press('Enter');
       await page.waitForTimeout(1800);
     }
-    const after = await page.evaluate(() => ({ asked: window.__hxReplay.requests.map((r) => r.method).filter((m) => m === 'prompt.submit').length, blank: !!document.querySelector('.ss-q hx-card, hx-card[kind="blank"]'), question: document.body.textContent.includes('Keep the old alias?'), waits: window.__hx.dock().state.waits, output: [...document.querySelectorAll('.ssr-term')].map((n) => n.textContent).join('\n') }));
+    const after = await page.evaluate(() => ({ asked: window.__hxReplay.requests.map((r) => r.method).filter((m) => m === 'prompt.submit').length, blank: !!document.querySelector('.ss-col [data-blank][data-kit~="AskCard"]'), question: document.body.textContent.includes('Keep the old alias?'), waits: window.__hx.dock().state.waits, output: [...document.querySelectorAll('.ssr-term')].map((n) => n.textContent).join('\n') }));
     check('live', 'a turn plays back: its blank is asked in the conversation and waits in the dock, and its tool output reaches the Output panel', after.asked === 1 && after.blank && after.question && after.waits >= 1 && /\$ ship src\/a\.py/.test(after.output) && /PASS/.test(after.output), after);
 
     const dock = await text(page, '#hx-dock');

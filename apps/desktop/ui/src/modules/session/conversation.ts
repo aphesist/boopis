@@ -472,9 +472,9 @@ function onTurnKey(e: KeyboardEvent): void {
   if (key === 'Home') return go(0);
   if (key === 'End' || (key === 'G' && e.shiftKey)) return go(list.length - 1);
   if (key === 'Enter' || key === 'o') { const d = t.querySelector<HTMLElement>('.k7-disc__sum'); if (d) { e.preventDefault(); d.click(); } return; }
-  if (key === 'c') { e.preventDefault(); void copyText(user ? '> ' + user.text : turnText(id) || t.innerText); return; }
+  if (key === 'c') { e.preventDefault(); void copyText(user ? '> ' + user.text : turnText(id) || t.innerText); kit.notify('Copied'); return; }
   if (key === 'e' && user) { e.preventDefault(); VIEW.composer?.setValue(user.text); VIEW.composer?.focus(); return; }
-  if (key === 'd' && !user) { e.preventDefault(); openPanel('changes'); return; }
+  if (key === 'd') { e.preventDefault(); openPanel('changes'); return; }
   if (key === 'b') { const b = t.querySelector<HTMLElement>('[data-blank] [data-kit~="Chip"]'); if (b) { e.preventDefault(); b.focus(); } }
 }
 

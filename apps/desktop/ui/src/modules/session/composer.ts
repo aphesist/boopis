@@ -161,14 +161,20 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
     const menu = kit.openMenu(box, o);
     const says = trigger.tagName === 'BUTTON';
     /* the layer writes aria-expanded on what the menu is placed against: here that is the box, so it is said on the control instead */
-    const mo = new MutationObserver(() => {
-      const v = box.getAttribute('aria-expanded'); if (v === null) return;
-      box.removeAttribute('aria-expanded');
-      if (v === 'false') { if (says) trigger.setAttribute('aria-expanded', 'false'); mo.disconnect(); }
-    });
     box.removeAttribute('aria-expanded');
     if (says) trigger.setAttribute('aria-expanded', 'true');
-    mo.observe(box, { attributes: true, attributeFilter: ['aria-expanded'] });
+    const host = menu?.parentNode;
+    if (menu && host) {
+      const gone = new MutationObserver(() => {
+        if (menu.isConnected) return;
+        gone.disconnect();
+        box.removeAttribute('aria-expanded');
+        if (says) trigger.setAttribute('aria-expanded', 'false');
+        /* the menu gave the focus back to the box, which takes none: it goes to the text */
+        requestAnimationFrame(() => { const a = document.activeElement; if (!a || a === document.body || a === box) text()?.focus(); });
+      });
+      gone.observe(host, { childList: true });
+    }
     return menu;
   }
 
@@ -301,6 +307,8 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
      council), alt+A (attach), alt+V (talk); ArrowUp in an empty composer brings your last message back */
   slot.addEventListener('keydown', (e) => {
     if (!(e.target as Element).closest('.k7-composer__text')) return;
+    /* Esc while dictating stops it (KEYMAP section 7) */
+    if (e.key === 'Escape' && slot.querySelector('[data-mic]')?.getAttribute('aria-pressed') === 'true') { e.preventDefault(); e.stopPropagation(); slot.querySelector<HTMLElement>('[data-mic]')?.click(); return; }
     if (e.key === 'ArrowUp' && !e.altKey && !e.shiftKey && !e.ctrlKey && !e.metaKey && !value().trim()) { const last = o.lastMessage(); if (last) { e.preventDefault(); api.setValue(last); } return; }
     if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     if (e.code === 'KeyG') { e.preventDefault(); const item = lineItem('careful'); if (controls) openCarefulFor(item, 'above'); else toggleGoverned(item); }

@@ -5,10 +5,10 @@ import { check, scenario } from './harness.mjs';
 export async function mentions(env) {
   const s = scenario(env);
   const page = await s.fresh();
-  const box = '.ss-composer [data-hx-composer] .ui-composer__input';
+  const box = '.ss-composer .k7-composer__text';   /* the session's composer is the kit's (boards S20, S23) */
   const value = () => page.evaluate((sel) => (document.querySelector(sel)?.textContent ?? '').replace(/ /g, ' '), box);
-  const menuOpen = () => page.evaluate(() => !!document.querySelector('.ui-listbox'));
-  const inBox = () => page.evaluate((sel) => !!document.activeElement?.closest(sel.replace(' .ui-composer__input', '')), box);
+  const menuOpen = () => page.evaluate(() => !!document.querySelector('.k7-menu[data-floating]'));
+  const inBox = () => page.evaluate((sel) => !!document.activeElement?.closest(sel.replace(' .k7-composer__text', '')), box);
   const clear = async () => { await page.click(box); await page.keyboard.press('Control+a'); await page.keyboard.press('Delete'); await page.waitForTimeout(150); };
   await s.safe('mention', async () => {
     await clear();
@@ -29,7 +29,7 @@ export async function mentions(env) {
 
     await clear();
     await page.keyboard.type('fix this @', { delay: 20 }); await page.waitForTimeout(250);
-    const first = await page.evaluate(() => (document.querySelector('.ui-listbox .ui-option .ui-menu__label')?.textContent ?? '').trim());
+    const first = await page.evaluate(() => (document.querySelector('.k7-menu[data-floating] .k7-mrow__name')?.textContent ?? '').trim());
     const letters = (first.split(/\s+/).find((w) => /^[a-z]/i.test(w)) ?? '').slice(0, 2).toLowerCase();
     await page.keyboard.type(letters, { delay: 20 }); await page.waitForTimeout(150);
     check('mention', 'typing letters keeps the suggestions open', await menuOpen());
@@ -40,7 +40,7 @@ export async function mentions(env) {
     await clear();
     await page.keyboard.type('ask @', { delay: 20 }); await page.waitForTimeout(250);
     await page.keyboard.press('ArrowDown'); await page.waitForTimeout(150);
-    const onOption = await page.evaluate(() => !!document.activeElement?.closest('.ui-listbox'));
+    const onOption = await page.evaluate(() => !!document.activeElement?.closest('.k7-menu[data-floating]'));
     check('mention', 'the down arrow moves into the suggestions', onOption);
     await page.keyboard.press('Enter'); await page.waitForTimeout(300);
     const v2 = await value();

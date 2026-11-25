@@ -75,7 +75,7 @@ export function inlineChip(o: InlineChipOpts): string {
     }
     case 'cite': return '<a class="k7-chip-in k7-cite"' + a({ href: o.href, target: o.href ? '_blank' : null, rel: o.href ? 'noopener noreferrer' : null }) + '><i class="k7-cite__ic" aria-hidden="true"></i>' + esc(o.text ?? '') + '</a>';
     case 'code': return '<code class="k7-chip-in k7-code"' + a() + '>' + esc(o.text ?? '') + '</code>';
-    case 'model': return '<span class="k7-chip-in k7-model"' + a() + '>' + markHTML(o.model ?? null, { size: 14, label: false }) + esc(o.text ?? (typeof o.model === 'string' ? o.model : '')) + '</span>';
+    case 'model': return '<span class="k7-chip-in k7-model"' + a() + '>' + markHTML(o.model ?? null, { size: 14, label: false }) + said(o.text ?? (typeof o.model === 'string' ? o.model : '')) + '</span>';   /* in a composer its own text is the words typed ("@Claude Sonnet"), as every chip's */
     case 'countdown': return '<span class="k7-chip-in k7-cap k7-count"' + partAttrs('Countdown', { 'data-kit': 'InlineChip', 'data-kind': 'countdown', role: 'timer', 'aria-live': 'off', ...(o.attrs ?? {}) }) + '>' + esc(o.text ?? '') + '</span>';
   }
 }
