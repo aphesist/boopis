@@ -507,6 +507,7 @@ export function mountView(root: HTMLElement): void {
   if (first) VIEW.current = first.id;
   /* the app opens on a new session: the row of the session that was last worked in keeps its mark */
   if (first && isDraft(first.id)) VIEW.from = sessions().list.get().find((x) => !isDraft(x.id))?.id ?? null;
+  changed();   /* the list was drawn before the view knew which session is open */
   data().details.follow(VIEW.current);
   NEW = mountNew(root, {
     actions: {

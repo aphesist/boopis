@@ -14,7 +14,7 @@
 
    Flags: --all, --theme dark|light, --out <dir> (default test-results/boards), --origin <url> (a dev server already running:
    `pnpm dev`), --approved <dir> (the approved images, as the archive branch lays them out; else `git show origin/w33/boards-archive:`),
-   --threshold <0..1> (pixelmatch's colour threshold, default 0.1), --max <percent> (exit 1 when a board differs more), --json. */
+   --threshold <0..1> (pixelmatch's colour threshold, default 0.015: a grey step of 4 levels counts), --max <percent> (exit 1 when a board differs more), --json. */
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import { createServer as netServer } from 'node:net';
@@ -36,7 +36,9 @@ const VALUED = new Set(['theme', 'out', 'origin', 'approved', 'threshold', 'max'
 const ids = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && VALUED.has(args[i - 1].slice(2))));
 const OUT = resolve(opt('out', join(UI_ROOT, 'test-results', 'boards')));
 const THEMES = opt('theme') ? [opt('theme')] : ['dark', 'light'];
-const THRESHOLD = Number(opt('threshold', '0.1'));
+/* pixelmatch's colour threshold. Its usual 0.1 lets a grey step of up to 26 levels pass, and this design is made of smaller ones (a
+   current row is 8% of ink over its ground, a tinted control 4%, a hairline less): at 0.015 a step of 4 levels counts */
+const THRESHOLD = Number(opt('threshold', '0.015'));
 const { w: W, h: H, dpr: DPR } = MAP.viewport;
 mkdirSync(OUT, { recursive: true });
 

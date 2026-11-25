@@ -101,7 +101,7 @@ function snapOf(s: State): Snap {
   const lo = (a: number): number => Math.ceil(Math.max(Math.round(a) * D, Math.round(a * D), a * D) - e);
   const hi = (b: number): number => Math.floor(Math.min(Math.round(b) * D, Math.round(b * D), b * D) + e);
   const L = lo(s.x), T = lo(s.y), w = (hi(s.x + s.w) - L) / D, h = (hi(s.y + s.h) - T) / D;
-  return { ox: Math.round((L / D - s.x) * 1000) / 1000, oy: Math.round((T / D - s.y) * 1000) / 1000, w: Math.round(w * 1000) / 1000, h: Math.round(h * 1000) / 1000, D, t: Math.max(1, Math.floor(D + 1e-6)) / D, t2: Math.max(1, Math.floor(2 * D + 1e-6)) / D };
+  return { ox: Math.round((L / D - s.x) * 1000) / 1000, oy: Math.round((T / D - s.y) * 1000) / 1000, w: Math.round(w * 1000) / 1000, h: Math.round(h * 1000) / 1000, D, t: 1 / Math.max(1, D)   /* the line is one device pixel (v7's --hl; the approved boards' kit.js paint): 0.5 px on a 2x screen, never the whole CSS px */, t2: Math.max(1, Math.floor(2 * D + 1e-6)) / D };
 }
 
 function build(s: State, g: Snap): Built {
