@@ -41,7 +41,7 @@ a v7 one replaces stay as they are (the list is under "Left for wave C").
 | 17 | ListRow | `listRow`, `list` | `kit/list-row` | session, bot, item, compact; current, needs you, working |
 | 18 | SectionHead | `sectionHead` | `kit/section-head` | plain, count, disclosure; collapsed |
 | 19 | MenuRow | `menuRow` | `kit/menu-row` | glyph, description, kbd, danger, check |
-| 20 | OptionRow | `optionRow` | `kit/option-row` | permission step, import pick |
+| 20 | OptionRow | `optionRow` | `kit/option-row` | permission step, import pick; disabled (a step that cannot be honoured: its line says why) |
 | 21 | Button | `button` | `kit/button` | secondary, primary, ghost, tint, danger, split; 36, 32, 28; hold |
 | 22 | IconButton | `iconButton` | `kit/icon-button` | floating, tinted, ghost, inverted |
 | 23 | Segmented | `segmented` | `kit/segmented` | inline 2 to 4, page head, tab bar |
@@ -58,13 +58,14 @@ a v7 one replaces stay as they are (the list is under "Left for wave C").
 | 34 | StatusLine | `statusLine` | `kit/status-line` | bot, session, system; working, waiting |
 | 35 | Avatar | `avatar` | `kit/avatar` | orb 16 to 96, brand tile, stack, logomark |
 | 36 | Disclosure | `disclosure` | `kit/disclosure` | steps, work log |
-| 37 | TurnFoot | `turnFoot` | `kit/turn-foot` | bot, session (actions on hover) |
+| 37 | TurnFoot | `turnFoot` | `kit/turn-foot` | bot, session (actions on hover; `actions` names them, e.g. the S0 rewind) |
 | 38 | TimeSeparator | `timeSeparator` | `kit/time-separator` | a gap, NEW |
 | 39 | Composer | `composer` | `kit/composer` | session, bot, room, dock, notch; typed, multi-line, running, held, no model, quick menu |
 | 40 | Rail | `rail` | `kit/rail` | A, B; current, needs you, working; groups |
 | 41 | Dock | `dock` | `kit/dock` | row, compact, open (stack, card); hover, focus, many |
 | 42 | Notch | `notch` | `kit/notch` | the slab and its composer (the notch spec is not in this repository) |
 | — | EmptyState | `emptyState` | `kit/empty-state` | one line, at most one action |
+| — | Session S0 patterns | `modules/session/s0.ts` | `kit/session-launch`, `kit/session-rewind`, `kit/session-lines` | the new session's canvas and launch row, the four-row How careful menu, the rewind foot and sheet, the thread's own lines (wave C, `w33/session-s0`) |
 
 **The retired names** (21.3: QueueStrip, LimitNotice, Toast, Banner, ScopePicker, SettingsLine, SteerLine, CheckpointBar, ChoiceCards,
 LaunchCard, ReferenceChip) exist nowhere in the v7 kit. **Left for wave C** (v6 code the screens still draw with, reported by the
