@@ -194,7 +194,7 @@ export function rewindSheet(r: RewindResult, title: string, on: { onConfirm(): v
   const node = kit.dialog({ title, body: rewindBody(r), actions: can ? [{ label: 'Cancel', variant: 'ghost' }, { label: 'Rewind', variant: 'primary' }] : [{ label: 'Close', variant: 'ghost' }], attrs: v7Attrs() });
   asV7(node);
   const prev = document.activeElement as HTMLElement | null;
-  const close = (): void => { node.remove(); document.removeEventListener('keydown', key, true); on.closed?.(); prev?.focus?.(); };
+  const close = (): void => { const wrap = node.parentElement?.classList.contains('ss-s0-sheet') ? node.parentElement : null; node.remove(); wrap?.remove(); document.removeEventListener('keydown', key, true); on.closed?.(); prev?.focus?.(); };
   const key = (e: KeyboardEvent): void => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
   node.addEventListener('click', (e) => {
     const t = e.target as Element;
@@ -208,6 +208,25 @@ export function rewindSheet(r: RewindResult, title: string, on: { onConfirm(): v
   return { el: node, close };
 }
 export function showSheet(s: RewindSheet): void {
-  (document.getElementById('hx-app') ?? document.body).append(s.el);
+  /* the kit's scrim and dialog, over the whole window (the sheet is modal: Esc, its ×, Cancel or a press on the scrim closes it) */
+  const over = document.createElement('div');
+  over.className = 'ss-s0-sheet';
+  over.append(s.el);
+  (document.getElementById('hx-app') ?? document.body).append(over);
   requestAnimationFrame(() => { s.el.querySelector<HTMLElement>('.k7-dialog__foot .k7-btn:last-child')?.focus(); });
+}
+
+/* ───────── a word to the person (the v7 Notice, floating: section 21 merged the toast into it) ───────── */
+const SAY_MS = 5000;
+let said: HTMLElement | null = null;
+/** why a choice was refused, or what happened: one floating Notice at a time, dismissed by its × or after a few seconds */
+export function say(text: string): void {
+  said?.remove();
+  const n = kit.notice({ text, place: 'floating', tone: 'neutral', dismiss: true, attrs: { ...v7Attrs(), 'aria-live': 'polite' } });
+  asV7(n);
+  n.classList.add('ss-s0-said');
+  n.querySelector('[aria-label="Dismiss"]')?.addEventListener('click', () => { n.remove(); });
+  (document.getElementById('hx-app') ?? document.body).append(n);
+  said = n;
+  window.setTimeout(() => { if (said === n) { n.remove(); said = null; } }, SAY_MS);
 }

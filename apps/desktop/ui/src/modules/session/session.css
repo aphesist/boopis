@@ -159,3 +159,8 @@
    foot carries no meta of its own, the entry's call number does, so the turn is what is hovered) */
 @media (hover: hover) and (pointer: fine) { [data-hx-turn]:hover .ss-s0-foot .k7-foot__acts { opacity: 1; transition-duration: var(--dur-1); } }
 [data-hx-turn]:focus-within .ss-s0-foot .k7-foot__acts { opacity: 1; }
+/* the floating Notice (s0.ts `say`): bottom centre of the window, above the composer (the kit's floating placement) */
+.ss-s0-said { position: fixed; left: 0; right: 0; bottom: var(--sp-7); margin-inline: auto; width: max-content; max-width: calc(100vw - 2 * var(--sp-5)); z-index: var(--z-toast); }
+/* the rewind sheet over the window: the kit's scrim fills it and centres the dialog */
+.ss-s0-sheet { position: fixed; inset: 0; z-index: var(--z-overlay); }
+.ss-s0-sheet > * { height: 100%; box-sizing: border-box; }

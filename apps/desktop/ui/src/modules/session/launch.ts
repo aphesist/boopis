@@ -7,7 +7,7 @@ import { kit, ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { CarefulStep } from '../../data';
 import type { LaunchView } from './s0';
-import { openCarefulMenu, v7Attrs } from './s0';
+import { openCarefulMenu, say, v7Attrs } from './s0';
 
 const controls = () => data().sessionControls;
 const base = (path: string): string => path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path;
@@ -35,7 +35,7 @@ export function openCarefulFor(anchor: HTMLElement, place: 'above' | 'below'): v
   const started = caps.session.changeModel.ok;
   openCarefulMenu(anchor, {
     current: c.launch.get().careful, avail: started ? caps.session.changeCareful : caps.launch.careful, place,
-    onPick: (step: CarefulStep) => { void c.setCareful(step).then((why) => { if (why) ui.toast(why); }); }
+    onPick: (step: CarefulStep) => { void c.setCareful(step).then((why) => { if (why) say(why); }); }
   });
 }
 
@@ -44,15 +44,15 @@ export function openEffort(anchor: HTMLElement): void {
   if (!c) return;
   const now = c.launch.get().effort;
   const entries = [{ label: 'Default', value: '', desc: 'The profile\'s own', ...(now === null ? { icon: 'check' } : {}) }, ...c.capabilities.get().launch.efforts.map((e) => ({ label: cap1(e), value: e, ...(now === e ? { icon: 'check' } : {}) }))];
-  kit.openMenu(anchor, { label: 'Effort', entries, place: 'below', align: 'center', attrs: v7Attrs(), onSelect: (v) => { const why = c.setLaunch({ effort: v || null }); if (why) ui.toast(why); } });
+  kit.openMenu(anchor, { label: 'Effort', entries, place: 'below', align: 'center', attrs: v7Attrs(), onSelect: (v) => { const why = c.setLaunch({ effort: v || null }); if (why) say(why); } });
 }
 
 export async function openFolder(): Promise<void> {
   const c = controls();
   if (!c) return;
-  if (!c.pickFolder) { ui.toast('Choosing a folder needs the desktop app.'); return; }
+  if (!c.pickFolder) { say('Choosing a folder needs the desktop app.'); return; }
   const folder = await c.pickFolder();
   if (!folder) return;
   const why = c.setLaunch({ folder });
-  if (why) ui.toast(why);
+  if (why) say(why);
 }
