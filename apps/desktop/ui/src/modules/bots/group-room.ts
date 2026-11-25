@@ -34,7 +34,7 @@ import { mountBoard } from './group-board';
 import type { BoardView } from './group-board';
 import { atEnd, followZone } from '../chat/follow-zone';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
-import { composeTools, VOICE_NOT_YET } from '../chat/compose';
+import { composeTools, mentionChips, VOICE_NOT_YET } from '../chat/compose';
 import { approvalCard } from './room';
 import { paintDetails } from './details';
 import { forgetLimit } from './group-details';
@@ -439,7 +439,7 @@ function buildComposer(slot: HTMLElement): void {
       label: 'Members',
       foot: () => (group(S.groupSel)?.lead ? 'An @name brings that bot in now.' : 'Only the bots you name answer. With no name, every member does.'),
       entries: () => { const g = group(S.groupSel); return [...members().map((b) => ({ value: b.handle, label: b.name, ...(b.role ? { desc: b.role } : {}), leadHTML: ui.html.orb({ ...b, state: 'idle', attention: null }, { size: 16, still: true })   })), ...(g ? [{ value: 'all', label: 'all', desc: 'Everyone in ' + g.name, icon: 'bots' }] : [])]; },
-      chips: (t) => { const g = group(S.groupSel); if (!g) return []; const ctx = ctxOf(g, false); return ui.markdown.spans(t, ctx).map((s) => ({ at: s.at, text: s.text, html: mentionChipHTML(s.text, s.target, ctx) })); }
+      chips: (t) => { const g = group(S.groupSel); return g ? mentionChips(t, ctxOf(g, false)) : []; }
     }
   });
   const sendText = (e: Event): void => { send((e as CustomEvent<{ text: string }>).detail.text); window.setTimeout(paintHint, 0); };
@@ -453,13 +453,6 @@ function buildComposer(slot: HTMLElement): void {
     const v = c.value; c.focus(); c.insert((v && !/\s$/.test(v) ? ' ' : '') + '@');
   });
   G.composer = api;
-}
-type Target = ReturnType<typeof ui.markdown.spans>[number]['target'];
-/** a mention as its chip in the composer's text: what the sent message will draw, its text exactly the words typed */
-function mentionChipHTML(words: string, t: Target, ctx: MarkdownCtx): string {
-  if (t.kind === 'you') return kit.html.inlineChip({ kind: 'you', words });
-  if (t.kind === 'all') return kit.html.inlineChip({ kind: 'mention', text: words, members: t.members, words });
-  return kit.html.inlineChip({ kind: 'mention', bot: t.bot, words, ...(t.kind === 'out' ? { out: true, attrs: { 'data-tip': t.bot.name + ' ' + (ctx.outsideNote ?? "isn't in this room") } } : { colour: t.bot.color ?? undefined }) });
 }
 function paintComposer(g: Group): void { G.composer?.paint(g); paintQueue(g); paintHint(); }
 

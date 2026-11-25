@@ -1,5 +1,0 @@
-/* Who is at work (presence.ts): the kit's presence entry sits in the thread like any entry; while the end of the conversation is
-   out of view its pill takes the jump button's place above the composer (the same spot, the same button), and the plain jump
-   button steps aside so the two never stack. */
-.bt-composer-zone > .bt-presence-pill { position: absolute; left: 50%; bottom: calc(100% + var(--sp-3)); translate: -50% 0; background: var(--bg-2); }   /* centred by `translate`, so the button's own press (a transform) never moves it off centre */   /* it floats over the conversation: the view's ground under it, as under its stack's rings */
-.bt-composer-zone > .bt-presence-pill[hidden], .bt-composer-zone[data-away] > .bt-jump { display: none; }

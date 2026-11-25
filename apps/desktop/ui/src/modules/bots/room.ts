@@ -20,11 +20,9 @@ import { mountGroupPane } from './group-room';
 import { mountNewGroupPane } from './new-group';
 import { openSettings } from './settings';
 import { checkClips, watchClips } from './clips';
-import { renderGlance } from './glance';
-import { atEnd } from './ledger';
-import { followZone } from '../chat/follow-zone';
+import { atEnd, followZone } from '../chat/follow-zone';
 import { paintDetails } from './details';
-import { composeTools, VOICE_NOT_YET } from '../chat/compose';
+import { composeTools, mentionChips, VOICE_NOT_YET } from '../chat/compose';
 import { outsideDescription, outsideRoomMark } from './outside';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 
@@ -32,11 +30,6 @@ const bots = () => data().bots;
 const NODE = new Map<string, HTMLElement>();
 const ENTRY = new WeakMap<HTMLElement, { msgs: ThreadMessage[]; who: string }>();
 const toast = (t: string): void => { kit.notify(t); };
-/** a recent session of the open bot is opened: its messages become the thread */
-function openSession(sessionId: string): void {
-  const b = bot(S.sel), sessions = bots().sessions; if (!b || !sessions) return;
-  sessions.open(b.id, sessionId).catch((e: unknown) => { toast(e instanceof Error ? e.message : 'The session could not be opened.'); });
-}
 function newSession(): void {
   const b = bot(S.sel), sessions = bots().sessions; if (!b || !sessions) return;
   sessions.fresh(b.id);
@@ -128,10 +121,11 @@ function renderThread(b: Bot): void {
   const log = S.log as HTMLElement; log.textContent = '';
   NODE.clear(); STATUS = null;
   const msgs = thread(b.id);
-  if (!msgs.length && b.info) log.append(renderGlance(b, openSession));
-  else if (!msgs.length) {
-    /* EmptyState: one line where the conversation would be; the bot's own ideas as answer chips (the AskCard's) to start from */
-    const e = kit.emptyState({ text: 'Nothing here yet. Ask ' + b.name + ' something.' });
+  if (!msgs.length) {
+    /* EmptyState: one line where the conversation would be (why it cannot be messaged, when it cannot); the bot's own ideas as answer
+       chips (the AskCard's) to start from. A live bot's earlier sessions are in its details, under Library (no board draws an empty
+       chat: an owner question) */
+    const e = kit.emptyState({ text: data().info.unavailable['bots.send'] ?? 'Nothing here yet. Ask ' + b.name + ' something.' });
     if (b.ideas.length) {
       const ideas = el('div', { class: 'bt-ideas' }, b.ideas.map((t) => { const btn = kit.chip({ label: t, variant: 'answer' }); btn.addEventListener('click', () => setDraft(t)); return btn; }));
       e.append(ideas);
@@ -153,7 +147,7 @@ function renderThread(b: Bot): void {
 const ctx = (): MarkdownCtx => ({ ...mentionCtx(S.bots.map((x) => ({ ...x, id: x.id, name: x.name }))), kit: true });
 const rootsOf = (id: string): string[] => { const w = data().bots.workspace?.(id); return w ? [w] : []; };
 function msgContent(b: Bot, m: ThreadMessage): HTMLElement {
-  if (m.kind === 'note') return el('p', { class: 'bt-note', role: 'status', text: m.text });
+  if (m.kind === 'note') { const line = kit.systemLine({ text: m.text }); line.setAttribute('role', 'status'); line.classList.add('bt-note'); return line; }   /* what the app says in the thread: the kit's SystemLine */
   if (m.kind === 'approval') return renderCard(b, m);
   /* what the bot did, one row each: a tool call (its name, what it was called on) and a file it wrote or handed over */
   if (m.kind === 'tool') return kit.toolRow({ variant: 'bot', tool: m.tool, target: m.target, ...(m.shell ? { icon: 'terminal' } : {}), ...(m.steps ? { steps: m.steps, open: m.steps.some((x) => x.state === 'now') } : {}) });
@@ -363,7 +357,8 @@ function buildComposer(host: HTMLElement): void {
   const tools = composeTools(slot, {
     botId: () => S.sel,
     mentions: {
-      label: 'Name a teammate', foot: () => (bot(S.sel)?.name ?? 'This bot') + ' reads the name. The bot you name does not see this chat.',
+      label: 'Bots', foot: () => (bot(S.sel)?.name ?? 'This bot') + ' reads the name. The bot you name does not see this chat.',
+      chips: (t) => mentionChips(t, mentionCtx(S.bots.filter((x) => x.id !== S.sel).map((x) => ({ ...x, id: x.id, name: x.name })))),
       entries: () => S.bots.filter((x) => x.id !== S.sel).map((x) => ({ value: x.id, label: x.name, ...(x.role ? { desc: x.role } : {}), leadHTML: ui.html.orb(x, { size: 16, still: true }) }))
     }
   });
@@ -458,7 +453,7 @@ export function onBotsEvent(ev: BotsEvent, handlers: { announce: () => void }): 
          now. Only what differs is written, so an unchanged look costs nothing and a new one morphs. */
       repaintLook(document, b.id, lookOf(b));
       updateRow(b.id);
-      if (b.id === S.sel) { refreshPresence(); if (S.view === 'bot') paintPending(b.id); if (b.info && S.view === 'bot' && !thread(b.id).length && S.log) S.log.replaceChildren(renderGlance(b, openSession)); }
+      if (b.id === S.sel) { refreshPresence(); if (S.view === 'bot') paintPending(b.id); }
       if (hadAttn !== !!b.attention) handlers.announce();
       break;
     }

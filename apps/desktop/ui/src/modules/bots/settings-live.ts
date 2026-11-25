@@ -8,12 +8,11 @@
 import { $, cap1, el, frag } from '../../core/dom';
 import { kit, ui } from '@boopis/ui';
 import { data, NeedsConfirmation } from '../../data';
-import type { ApprovalTier, Bot, BotConfig, BotsAdmin, BotPatch, RoutineDraft } from '../../data';
+import type { ApprovalTier, Bot, BotConfig, BotsAdmin, BotPatch, RoutineDraft, BotCapability } from '../../data';
 import { diffWell } from '../cards/parts';
 import { cronValid, CRON_PRESETS, scheduleWords } from './cron';
 import { deliveryParts } from '../../data/delivery';
 import { openGroup } from './group-room';
-import { inventoryLine } from './glance';
 import { bot, S } from './model';
 import { orbButton } from './orbs';
 import { checkClips } from './clips';
@@ -21,6 +20,18 @@ import { closeSettings, hintOf, lookSection, openSettings, runLimitRow, sectionO
 import { focusConversation, openBot, refreshPresence } from './room';
 import { openNew } from './new-bot';
 import { updateRow } from './list';
+
+const on = (list: readonly BotCapability[] | null): BotCapability[] => (list ?? []).filter((c) => c.enabled);
+const count = (n: number, one: string, many: string): string => n + ' ' + (n === 1 ? one : many);
+
+/** the line that says what a capability list holds: "3 skills on of 5", or that Hermes has not said */
+export function inventoryLine(label: string, one: string, many: string, list: readonly BotCapability[] | null, note: string | undefined): string {
+  if (list === null) return label + ': unknown' + (note ? '. ' + note : '');
+  if (!list.length) return label + ': none';
+  const names = on(list).map((c) => c.label || c.name);
+  return label + ': ' + count(names.length, one, many) + ' on' + (names.length < list.length ? ' of ' + list.length : '') + (names.length && names.length <= 6 ? ' (' + names.join(', ') + ')' : '');
+}
+
 
 const sentence = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 /** what the cap per run means, said where it is set (ADR-0050) */

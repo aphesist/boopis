@@ -64,14 +64,16 @@ describe('a bot changes state while the sidebar shows it', () => {
     expect(w.gone()).toEqual([]);
     w.stop();
   });
-  it('shows the flag when the bot needs you and drops it after, on the same orb', () => {
+  it('shows the amber dot at the row\'s end when the bot needs you and drops it after, on the same orb', () => {
     const row = S.rows.get('atlas')!, orb = row.li.querySelector('orb-avatar')!;
     const w = watchOrbs();
     pushBot('atlas', { state: 'needs', attention: 'approval' });
-    expect(row.li.querySelector('.ui-dot--flag')).not.toBeNull();
+    expect(row.li.querySelector('.k7-dot[data-tone="owe"]')).not.toBeNull();
+    expect(row.li.querySelector('.ui-dot--flag')).toBeNull();   /* board K02: the dot is the row's, the orb carries no flag */
+    expect(row.li.querySelector('.k7-lrow__sub')?.getAttribute('data-tone')).toBe('owe');
     expect(orb.getAttribute('reaction')).toBe('needs');
     pushBot('atlas', { state: 'idle', attention: null });
-    expect(row.li.querySelector('.ui-dot--flag')).toBeNull();
+    expect(row.li.querySelector('.k7-dot')).toBeNull();
     expect(orb.getAttribute('reaction')).toBe('pose');   /* at rest on the sidebar: the rest pose (ORBS.md section 23) */
     expect(row.li.querySelector('orb-avatar')).toBe(orb);
     expect(w.gone()).toEqual([]);
@@ -117,10 +119,10 @@ describe('a group starts and stops replying', () => {
     expect(S.groupRows.get(S.groups[0]!.id)!.li.querySelector('.ui-stack')).not.toBe(stack);
     expect(document.querySelectorAll('.bt-group-rows [data-kit~="ListRow"]')).toHaveLength(1);
   });
-  it('a group row sits before New group, and the list keeps one of each', () => {
+  it('the list keeps one row for the group under one "Groups" heading', () => {
     pushGroup({ working: ['atlas'], busy: true });
     expect(document.querySelectorAll('.bt-group-rows [data-kit~="ListRow"]')).toHaveLength(1);
-    expect(document.querySelectorAll('.bt-groups [data-new-group]')).toHaveLength(1);
-    expect(document.querySelector('.bt-group-rows')?.nextElementSibling?.hasAttribute('data-new-group')).toBe(true);
+    expect(document.querySelectorAll('.bt-groups [data-kit~="SectionHead"]')).toHaveLength(1);
+    expect(document.querySelector('.bt-group-rows')?.previousElementSibling?.textContent).toBe('Groups');
   });
 });

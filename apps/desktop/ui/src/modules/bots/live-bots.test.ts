@@ -12,6 +12,7 @@ import { S } from './model';
 import { openNew } from './new-bot';
 import { openBot } from './room';
 import { registered } from '../../core/registry';
+import { setState } from '../../core/state';
 import './index';
 import { openSettings } from './settings';
 
@@ -91,11 +92,14 @@ function mount(bots: Bot[]): void {
   setProvider(f.provider);
   S.bots = []; S.rows.clear(); S.draftRow = null; S.view = 'bot'; S.sel = null; S.sheetOpen = false; S.sheetFor = null;
   document.body.replaceChildren();
-  const list = document.createElement('div'), root = document.createElement('div');
-  document.body.append(list, root);
+  const list = document.createElement('div'), root = document.createElement('div'), shell = document.createElement('aside');
+  shell.id = 'hx-right-shell';
+  document.body.append(list, root, shell);
   Element.prototype.scrollIntoView = (): void => undefined;
   registered('bots-list')?.mount(list); registered('bots')?.mount(root);
+  setState({ tab: 'bots', right: 'open' });   /* the details pane is open: what the engine reports about a bot is under its Library */
 }
+const library = (): string => { q('#hx-right-bots [data-kit~="Segmented"] [data-value="library"]').click(); return q('#hx-right-bots').textContent ?? ''; };
 beforeEach(() => { vi.stubGlobal('ResizeObserver', class { observe(): void { /* no layout */ } unobserve(): void { /* no layout */ } disconnect(): void { /* no layout */ } }); vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null); vi.useFakeTimers(); vi.stubGlobal('requestAnimationFrame', (fn: FrameRequestCallback) => setTimeout(() => { fn(0); }, 0)); });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 const flush = async (): Promise<void> => { await vi.advanceTimersByTimeAsync(20); await tick(); };
@@ -107,13 +111,13 @@ describe('a live bot’s room shows what Hermes reports and nothing it made up',
   });
   it('has no composer: a teammate cannot be messaged yet, and says so', () => {
     expect(q('.bt-composer-zone').hidden).toBe(true);
-    expect(q('.bt-glance').textContent).toContain('Talking to a teammate arrives with team chat.');
+    expect(q('.bt-log [data-kit~="EmptyState"]').textContent).toContain('Talking to a teammate arrives with team chat.');
   });
-  it('shows the recent sessions, the skills and the toolsets', () => {
-    const g = q('.bt-glance').textContent ?? '';
+  it('keeps its recent sessions, and how many skills and toolsets it has on, in its details under Library', () => {
+    const g = library();
     expect(g).toContain('review billing');
-    expect(g).toContain('Skills: 1 skill on of 2 (git)');
-    expect(g).toContain('Toolsets: 1 toolset on (Terminal)');
+    expect(q('#hx-right-bots [data-settings="role"]').textContent).toContain('1 on of 2');
+    expect(g).toContain('Toolsets');
   });
   it('says its model on the composer\'s line (board 11: the provider\'s mark and the model\'s short name)', () => {
     expect(q('.k7-composer__item[data-line="model"]').textContent?.toLowerCase()).toContain('fake a');
@@ -121,7 +125,7 @@ describe('a live bot’s room shows what Hermes reports and nothing it made up',
   it('a session list Hermes did not answer is shown as unknown with the reason', () => {
     const b = { ...atlas(), info: { ...INFO, sessions: null, notes: { sessions: 'Its schedule and sessions could not be read: no link.' } } };
     f.events.emit({ type: 'bot', bot: b });
-    expect(q('.bt-glance').textContent).toContain('Unknown. Its schedule and sessions could not be read: no link.');
+    expect(library()).toContain('Its sessions are unknown. Its schedule and sessions could not be read: no link.');
   });
   it('opening it asks the provider to read it', () => { expect(f.calls.some((c) => c.fn === 'open' && c.args[0] === 'atlas')).toBe(true); });
 });
@@ -269,19 +273,20 @@ describe('the settings sheet edits the profile and shows each file’s diff firs
     expect(btn.closest('.ui-set__row')?.textContent).toContain('Run limit');
     expect(btn.textContent).toBe('Default (10)');
     btn.click(); await flush();
-    expect(document.querySelector('.ui-menu__title')?.textContent).toBe('Most turns a run may take');
-    const items = [...document.querySelectorAll<HTMLElement>('.ui-menu__item')];
-    expect(items.map((i) => i.textContent?.trim())).toEqual(['Default (10)', '5', '20', '30', '60', '100']);
-    expect(items[0]!.getAttribute('aria-checked')).toBe('true');
+    /* the kit's Menu under its heading: the one kept carries the check */
+    expect(document.querySelector('.k7-menu[data-floating] .k7-menu__head')?.textContent).toBe('Most turns a run may take');
+    const items = [...document.querySelectorAll<HTMLElement>('.k7-menu[data-floating] [data-kit~="MenuRow"]')];
+    expect(items.map((i) => i.querySelector('.k7-mrow__name')?.textContent)).toEqual(['Default (10)', '5', '20', '30', '60', '100']);
+    expect(items.map((i) => !!i.querySelector('svg'))).toEqual([true, false, false, false, false, false]);
     items[3]!.click(); await flush();
     expect(f.calls.filter((c) => c.fn === 'setRunLimit').map((c) => c.args)).toEqual([['atlas', 30]]);
     expect(btn.textContent).toBe('30');
     expect(btn.getAttribute('aria-label')).toBe('Turns a run may take with atlas: 30');
     expect(q('.k7-notify .k7-notice__text').textContent).toContain('atlas runs for up to 30 turns.');
     btn.click(); await flush();
-    const open = [...document.querySelectorAll('.ui-menu')].at(-1)!;
-    expect(open.querySelector('.ui-menu__item[aria-checked="true"]')?.textContent?.trim()).toBe('30');
-    open.querySelectorAll<HTMLElement>('.ui-menu__item')[0]!.click(); await flush();
+    const open = [...document.querySelectorAll('.k7-menu[data-floating]')].at(-1)!;
+    expect([...open.querySelectorAll('[data-kit~="MenuRow"]')].find((r) => r.querySelector('svg'))?.querySelector('.k7-mrow__name')?.textContent).toBe('30');
+    open.querySelectorAll<HTMLElement>('[data-kit~="MenuRow"]')[0]!.click(); await flush();
     expect(f.calls.filter((c) => c.fn === 'setRunLimit').at(-1)!.args[1]).toBeNull();
     expect(btn.textContent).toBe('Default (10)');
   });

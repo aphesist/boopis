@@ -55,7 +55,8 @@ describe('the "made outside boopis" mark', () => {
     mount(mock(['outside']));
     const row = q('.bt-rows [data-kit~="ListRow"][data-value="atlas"]');
     expect(row.querySelector('.bt-outside')).toBeNull();
-    expect(row.getAttribute('aria-label')).toBe('atlas, reviewer');
+    expect(row.getAttribute('aria-label')).toMatch(/^atlas, /);   /* its name, then its line (its last words) */
+    expect(row.getAttribute('aria-label')).not.toMatch(/outside/i);
     expect(row.hasAttribute('aria-describedby')).toBe(false);
     expect(qa('.bt-outside')).toHaveLength(1);
   });
@@ -94,25 +95,27 @@ describe('the "made outside boopis" mark', () => {
 });
 
 describe('the Archived group', () => {
-  const group = (): HTMLElement => q('.bt-archived .ui-group');
-  const head = (): HTMLElement => q('.bt-archived .ui-group__head');
-  const names = (): string[] => qa('.bt-archived .ui-row__title').map((n) => n.textContent ?? '');
+  /* the kit's folding SectionHead with its count, over ListRow items */
+  const head = (): HTMLElement => q('.bt-archived .k7-shead__btn');
+  const count = (): string => q('.bt-archived .k7-shead__count').textContent ?? '';
+  const names = (): string[] => qa('.bt-archived .k7-lrow__title').map((n) => n.textContent ?? '');
   const toast = (): string => document.querySelector('.k7-notify .k7-notice__text')?.textContent ?? '';
   const restoreBtn = (name: string): HTMLButtonElement => q<HTMLButtonElement>('.bt-archived [data-act="restore"][aria-label="Restore ' + name + '"]');
 
   it('sits under the roster with a count, collapsed by default', () => {
     mount(mock());
-    expect(head().textContent).toContain('Archived (2)');
-    expect(group().getAttribute('aria-label')).toBe('Archived (2)');
+    expect(q('.bt-archived .k7-shead__title').textContent).toBe('Archived');
+    expect(count()).toBe('2');
     expect(head().getAttribute('aria-expanded')).toBe('false');
+    expect(q<HTMLElement>('.bt-archived-rows').hidden).toBe(true);
     expect(q('.bt-list').lastElementChild?.previousElementSibling?.classList.contains('bt-archived')).toBe(true);
   });
   it('shows each archived bot by the name it returns to, when it was archived, and Restore', () => {
     mount(mock());
     expect(names()).toEqual(['ledger', 'nina']);
-    expect(qa('.bt-archived .ui-row__sub').map((n) => n.textContent)).toEqual(['Archived yesterday', 'Archived mon']);
-    expect(qa('.bt-archived .ui-row').every((r) => r.hasAttribute('data-archived'))).toBe(true);
-    expect(qa('.bt-archived .ui-row').map((r) => r.getAttribute('aria-label'))).toEqual(['ledger, archived yesterday', 'nina, archived mon']);
+    expect(qa('.bt-archived .k7-lrow__sub').map((n) => n.textContent)).toEqual(['Archived yesterday', 'Archived mon']);
+    expect(qa('.bt-archived [data-kit~="ListRow"]').every((r) => r.hasAttribute('data-archived-bot') && r.dataset['variant'] === 'item')).toBe(true);
+    expect(qa('.bt-archived [data-kit~="ListRow"]').map((r) => r.getAttribute('aria-label'))).toEqual(['ledger, archived yesterday', 'nina, archived mon']);
     expect(restoreBtn('ledger').getAttribute('data-id')).toBe('archived--ledger');
   });
   it('archived bots are not in the roster', () => {
@@ -148,7 +151,7 @@ describe('the Archived group', () => {
     expect(q('.bt-rows [data-kit~="ListRow"][data-value="ledger"]')).toBeTruthy();
     expect(data().bots.snapshot().bots.some((b) => b.id === 'ledger')).toBe(true);
     expect(names()).toEqual(['nina']);
-    expect(head().textContent).toContain('Archived (1)');
+    expect(count()).toBe('1');
     expect(head().getAttribute('aria-expanded')).toBe('true');   // the redraw keeps it as the user left it
     expect(document.activeElement).toBe(q('.bt-rows [data-kit~="ListRow"][data-value="ledger"]'));
   });
@@ -165,13 +168,13 @@ describe('the Archived group', () => {
     const arch = store<readonly ArchivedBot[]>([{ id: 'archived--a', name: 'archived--a', was: 'a', at: '', when: '' }]);
     const p = mock();
     mount({ ...p, bots: { ...p.bots, archived: arch, restore: () => { arch.set([]); return Promise.resolve(); } } });
-    expect(qa('.bt-archived .ui-row__sub').map((n) => n.textContent)).toEqual(['Archived']);   // no date known: says only that
+    expect(qa('.bt-archived .k7-lrow__sub').map((n) => n.textContent)).toEqual(['Archived']);   // no date known: says only that
     restoreBtn('a').click();
     await flush();
     expect(q('.bt-archived').hidden).toBe(true);
     arch.set([{ id: 'archived--b', name: 'archived--b', was: 'b', at: '', when: '5m' }]);
     expect(q('.bt-archived').hidden).toBe(false);
-    expect(qa('.bt-archived .ui-row__sub').map((n) => n.textContent)).toEqual(['Archived 5m ago']);
+    expect(qa('.bt-archived .k7-lrow__sub').map((n) => n.textContent)).toEqual(['Archived 5m ago']);
   });
   it('asks the provider once while a restore is under way', async () => {
     const p = mock();

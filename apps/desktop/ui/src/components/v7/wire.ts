@@ -248,7 +248,7 @@ export interface KitMentions {
 export function composerMentions(c: HTMLElement, src: KitMentions, open: (anchor: HTMLElement, o: { label: string; entries: readonly unknown[]; onSelect(v: string): void }) => HTMLElement | null, close: () => void): void {
   const t = c.querySelector<HTMLElement>('.k7-composer__text');
   if (!t) return;
-  let shown = false;
+  let shown = false, menu: HTMLElement | null = null;   /* the list now open: a list just replaced is still leaving the page, and is never the one chosen from */
   const typing = (): { query: string; node: Text; from: number; to: number } | null => {
     const sel = getSelection();
     const n = sel && sel.rangeCount && sel.isCollapsed ? sel.anchorNode : null;
@@ -267,7 +267,8 @@ export function composerMentions(c: HTMLElement, src: KitMentions, open: (anchor
     const rows = src.entries().filter((e) => e.value.toLowerCase().startsWith(q.query) || e.label.toLowerCase().startsWith(q.query));
     if (!rows.length) { hide(); return; }
     const foot = src.foot?.();
-    shown = !!open(c.querySelector<HTMLElement>('.k7-composer__box') ?? c, {
+    if (shown) { shown = false; close(); }   /* the list is drawn again for what is typed now (the layer would take a second opening on one anchor for a toggle) */
+    menu = open(c.querySelector<HTMLElement>('.k7-composer__box') ?? c, {
       label: src.label,
       entries: [{ heading: src.label }, ...rows.map((e) => ({ label: e.label, value: e.value, ...(e.desc ? { desc: e.desc } : {}), ...(e.leadHTML ? { leadHTML: e.leadHTML } : e.icon ? { icon: e.icon } : {}) })), ...(foot ? ['-', { heading: foot }] : [])],
       onSelect: (v) => {
@@ -281,16 +282,17 @@ export function composerMentions(c: HTMLElement, src: KitMentions, open: (anchor
         t.dispatchEvent(new Event('input', { bubbles: true }));
       }
     });
-    if (shown) (c.querySelector<HTMLElement>('.k7-composer__box') ?? c).setAttribute('data-mentioning', ''); else c.querySelector('.k7-composer__box')?.removeAttribute('data-mentioning');
+    shown = !!menu;
     t.focus();   /* typing goes on in the text: the menu is chosen from with the pointer, or with the arrows once it has focus (ArrowDown) */
   });
   t.addEventListener('keydown', (e) => {
     if (!shown) return;
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); hide(); }
-    else if (e.key === 'ArrowDown' || e.key === 'Tab') { const first = document.querySelector<HTMLElement>('.k7-menu[data-floating] [data-kit~="MenuRow"]'); if (first) { e.preventDefault(); first.focus(); } }
-    else if (e.key === 'Enter' && !e.shiftKey) { const first = document.querySelector<HTMLElement>('.k7-menu[data-floating] [data-kit~="MenuRow"]'); if (first) { e.preventDefault(); e.stopPropagation(); first.click(); } }
+    else if (e.key === 'ArrowDown') { const first = menu?.querySelector<HTMLElement>('[data-kit~="MenuRow"]'); if (first) { e.preventDefault(); first.focus(); } }
+    else if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') { const first = menu?.querySelector<HTMLElement>('[data-kit~="MenuRow"]'); if (first) { e.preventDefault(); e.stopPropagation(); first.click(); } }   /* Enter or Tab takes what the letters name */
   }, true);
-  t.addEventListener('blur', () => { setTimeout(() => { if (!document.activeElement?.closest('.k7-menu[data-floating]')) hide(); }, 0); });
+  /* the list goes when the focus leaves both the text and the list (opening it passes the focus through it for a moment) */
+  t.addEventListener('blur', () => { setTimeout(() => { const a = document.activeElement; if (a !== t && !a?.closest('.k7-menu[data-floating]')) hide(); }, 0); });
 }
 
 /** a bot at rest on a rest surface wakes under the pointer (the lively idle, its 3D turns and glances) and settles back into the pose

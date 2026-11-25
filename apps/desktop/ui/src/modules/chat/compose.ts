@@ -2,10 +2,21 @@
    wire.ts): "+" asks the host for files and sets each into the text as a chip whose words are its "@" reference, the way a typed path is read; the mic
    dictates into the text through the provider's dictation until it is switched off; "@" names what the screen offers. Talking
    to a bot (the voice button with no text) does not exist yet: the button is drawn and says so. */
-import { kit } from '@boopis/ui';
-import type { KitMentions } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
+import type { ComposerChip, KitMentions, MarkdownCtx } from '@boopis/ui';
 import { data } from '../../data';
 
+/** the mentions a draft holds, each as the chip the sent message will draw (the kit's InlineChip with its words): a bot's orb and name
+    in its colour, the room's stack for @all, a bot that is not here muted. `ctx` is the context the conversation draws its messages with */
+export function mentionChips(text: string, ctx: MarkdownCtx): ComposerChip[] {
+  return ui.markdown.spans(text, ctx).map((s) => {
+    const t = s.target, words = s.text;
+    const html = t.kind === 'you' ? kit.html.inlineChip({ kind: 'you', words })
+      : t.kind === 'all' ? kit.html.inlineChip({ kind: 'mention', text: words, members: t.members, words })
+      : kit.html.inlineChip({ kind: 'mention', bot: t.bot, words, ...(t.kind === 'out' ? { out: true, attrs: { 'data-tip': t.bot.name + ' ' + (ctx.outsideNote ?? "isn't in this room") } } : { colour: t.bot.color ?? undefined }) });
+    return { at: s.at, text: words, html };
+  });
+}
 export const VOICE_NOT_YET = 'Talking with voice is not in this build yet';
 
 export interface ComposeTools {
