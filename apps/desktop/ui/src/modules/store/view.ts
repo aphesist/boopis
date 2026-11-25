@@ -18,7 +18,7 @@ import {
   errorCode, ENGINE_PLUGIN_NOTE, REMOTE_WORDS, isRemote, KIND_FILTERS, KIND_GROUP, KIND_LABEL, KIND_SHORT, STATE_WORDS, TIER_TIPS, TIER_WORDS, ageWords, byKind, countsWords, endWord, errorText, filterOf, hostsWords, isFront, licenseWords, markRef, pinWords, plural,
   outOfDate, READ_BADGE, readingWords, reviewSpec, rowLine, scanWords, sourceState, stateOf, upToDateWords
 } from './model';
-import { projectSwitch } from './policy';
+import { projectSwitchV7 } from './policy';
 import { keepFresh, readerFor } from './reading';
 import type { Reading } from './reading';
 
@@ -475,7 +475,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
       store.checkUpdates().then((f) => { say(f.length ? `${plural(f.length, 'update')} found.` : 'Everything is up to date.'); }).then(() => drawInstalled()).catch((e: unknown) => { say(errorText(e)); });
     }, { variant: 'tint', attrs: { id: 'hx-store-check' } });
     const project = deps.project?.() ?? null;
-    const pol = project ? section('This project', projectSwitch(store, project, say, 'hx-store-policy-installed')) : null;
+    const pol = project ? section('This project', projectSwitchV7(store, project, say, 'hx-store-policy-installed')) : null;
     place(page('Installed', el('div', { class: 'hx-store__acts' }, check), live, ...blocks, ...(pol ? [pol] : [])));
     const host = main;
     for (const b of host.querySelectorAll<HTMLElement>('[data-store-update]')) b.addEventListener('click', () => { void startReview(b.dataset['storeUpdate'] ?? '', 'update', 'installed'); });

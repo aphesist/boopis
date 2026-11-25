@@ -246,7 +246,7 @@ function drawAppearance(): void {
   const a = appearance();
   body.append(section('hx-set-theme', 'Theme', [
     { label: 'Theme', control: seg('Theme', MODES.map((m) => [m, MODE_LABELS[m]] as const), a.mode, { id: 'hx-set-mode' }) },
-    { label: 'Accent', explain: 'Any colour. boopis derives its text, focus and mark shades so they stay readable. Empty is the default indigo.', control: kit.html.field({ id: 'hx-set-accent', ariaLabel: 'Accent colour, as a hex value', mono: true, placeholder: '#5b5bd6', value: a.accent ?? '', attrs: { maxlength: '7', spellcheck: 'false', autocomplete: 'off' } }) },
+    { label: 'Accent', explain: 'Any colour. boopis derives its text, focus and mark shades so they stay readable. Empty is the default indigo.', control: kit.html.field({ id: 'hx-set-accent', ariaLabel: 'Accent colour, as a hex value', mono: true, placeholder: 'Default', value: a.accent ?? '', attrs: { maxlength: '7', spellcheck: 'false', autocomplete: 'off' } }) },
     { label: 'Corners', control: seg('Corners', [['b', 'Standard'], ['c', 'Rounder']], a.radii, { id: 'hx-set-radii' }) },
     { label: 'Light shadows', explain: 'How raised surfaces read in the light theme.', control: seg('Light shadows', [['a', 'Standard'], ['b', 'Hairline and half'], ['c', 'Flat']], a.shadow, { id: 'hx-set-shadow' }) },
     { label: 'Density', control: seg('Density', DENSITIES.map((d) => [d, DENSITY_LABELS[d]] as const), density(), { id: 'hx-set-density' }) }
