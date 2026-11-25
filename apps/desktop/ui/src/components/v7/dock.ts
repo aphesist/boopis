@@ -39,7 +39,7 @@ export function dockOrb(b: DockBot, s: number, o: { focus?: boolean; current?: b
   return '<button class="k7-reset k7-dock__orb"' + attrs({
     type: 'button', 'data-bot': b.id, 'aria-label': (b.name ?? '') + ', ' + stateOf(b)[0], 'aria-current': o.current ? 'true' : null,
     'data-focus': o.focus ? '' : null, 'data-awake': o.awake ? '' : null, tabindex: o.tabbable ? '0' : '-1', style: '--s:' + s + 'px', ...(o.attrs ?? {})
-  }) + '>' + ((h: string) => (b.ink ? inkOrb(h) : h))(orbHtml(b, { size: s, ...(o.render ? { render: o.render } : {}), rest: true, state: b.needs ? 'needs' : b.working ? 'working' : b.resting ? 'sleeping' : undefined })) + (b.needs ? '<span class="k7-flag" aria-hidden="true"></span>' : '') + '</button>';
+  }) + '>' + ((h: string) => (b.ink ? inkOrb(h) : h))(orbHtml(b, { size: s, ...(o.render ? { render: o.render } : {}), rest: true, surface: '--dock-bg', state: b.needs ? 'needs' : b.working ? 'working' : b.resting ? 'sleeping' : undefined })) + (b.needs ? '<span class="k7-flag" aria-hidden="true"></span>' : '') + '</button>';
 }
 /** the row's end slot under a hover or focus: the bot's name and its state in words (a tooltip would cover the composer's line) */
 export const dockCap = (name: string, state: string, tone: 'owe' | 'neutral' = 'neutral'): string =>

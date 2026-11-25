@@ -21,7 +21,9 @@ import { setAttention, changed } from './state';
 import { surface } from '../mods/surfaces';
 import { UNKNOWN_MODEL, markAnswered, stampUngoverned, syncDividers } from './attribution';
 import { resolvePaths, wireRefs } from '../chat/refs';
-import { REWIND_BASE, launchCanvas, lineEl, rewindFoot, rewindSheet, showSheet, watchTyping } from './s0';
+import { REWIND_BASE, lineEl, rewindFoot, rewindSheet, showSheet, watchTyping } from './s0';
+import { mountNew } from './new';
+import type { NewScreen } from './new';
 import type { RewindSheet } from './s0';
 import { openCarefulFor, openEffort, openFolder, launchView } from './launch';
 import type { ThreadLine } from '../../data';
@@ -32,7 +34,7 @@ const TURN = new WeakMap<HTMLElement, TurnInfo>();
 
 export const VIEW = {
   root: null as HTMLElement | null, scroll: null as HTMLElement | null, col: null as HTMLElement | null, composer: null as SessionComposer | null,
-  findAnchor: null as HTMLElement | null, current: 's1', blank: null as string | null, diffOpen: false,
+  findAnchor: null as HTMLElement | null, current: 's1', /** the session you were in when a new one was opened: its row keeps its mark while the new session's canvas shows (board S17) */ from: null as string | null, blank: null as string | null, diffOpen: false,
   reveal: null as HTMLElement | null, ship: null as HTMLElement | null, shipData: null as Ship | null, blankCard: null as HTMLElement | null
 };
 /** whether a session has a turn running now: read from its own conversation, never from the view (switching never stops a
@@ -266,29 +268,22 @@ async function undoRewind(shipId: string): Promise<void> {
   else { ui.announce('Rewind undone'); syncFeet(); }
 }
 
-/* ───────── S0: the new session's canvas (S41 A): the launch row until the first message ───────── */
+/* ───────── the new session's screen (boards S17, S41 A): the canvas and its own composer until the first message ───────── */
 let stopWatch: (() => void) | null = null;
-function canvas(): HTMLElement | null {
-  const c = controls();
-  if (!c) return null;
-  const n = launchCanvas(launchView(), {
-    folder: () => { void openFolder(); },
-    model: (a) => { VIEW.composer?.openModelMenu?.(a); },
-    effort: (a) => { openEffort(a); },
-    careful: (a) => { openCarefulFor(a, 'below'); }
-  });
-  n.classList.add('ss-s0-canvas--view');
+let NEW: NewScreen | null = null;
+/** a session that has not started: it has no turn yet and the provider can launch one (its place is the canvas, not a row of the list) */
+export const isDraft = (id: string): boolean => !!controls() && sessions().list.get().some((s) => s.id === id) && !sessions().conversation(id).snapshot().turns.length;
+function showNew(): boolean {
+  if (!controls() || !NEW) return false;
+  NEW.show(launchView());
   stopWatch?.();
-  if (VIEW.composer) stopWatch = watchTyping(n, VIEW.composer.input);
-  return n;
+  const input = NEW.input(), canvas = VIEW.root?.querySelector<HTMLElement>('.ss-new__canvas');
+  if (input && canvas) stopWatch = watchTyping(canvas, input);
+  return true;
 }
+function hideNew(): void { NEW?.hide(); stopWatch?.(); stopWatch = null; }
 /** the canvas again, after a launch setting changed (only while the session has not started) */
-export function redrawCanvas(): void {
-  const col = VIEW.col, old = col?.querySelector('.ss-s0-canvas--view');
-  if (!col || !old) return;
-  const fresh = canvas();
-  if (fresh) old.replaceWith(fresh);
-}
+export function redrawCanvas(): void { if (NEW?.shown) showNew(); }
 
 /* a turn that is still running: a live call number and steps, then the answer arrives on the feed */
 interface Live { t: HTMLElement; ol: HTMLElement; disc: HTMLElement; timeEl: HTMLElement; tick: number; secs: number; model: string; why: string | undefined; count: number; startedAt: number; prose: HTMLElement | null; blankEl: HTMLElement | null }
@@ -362,8 +357,9 @@ export function renderConversation(): void {
   const snap = conv.snapshot().turns;
   const withBlank = snap.find((t): t is AgentTurn => t.role === 'assistant' && !!t.blank);
   VIEW.blank = withBlank?.blank?.answer ?? null;
-  const launch = !snap.length && controls() ? canvas() : null;
-  if (launch) col.append(launch);
+  const launch = !snap.length && showNew();
+  if (!launch) hideNew();
+  if (launch) { /* the new session's screen is drawn over the empty thread */ }
   else if (!snap.length) {
     const s = sessions().list.get().find((x) => x.id === VIEW.current);
     col.append(ui.empty({ title: s?.project ? 'What should change in ' + s.project + '?' : data().info.live ? 'What should change?' : 'What should change in ' + (s ? s.project : 'billing-api') + '?', text: 'Words I will act on get a dashed underline as you type. Click one, or press alt and down arrow on it, to change how I read it.' }));
@@ -381,7 +377,7 @@ function onConversationEvent(ev: ConversationEvent): void {
   const col = VIEW.col; if (!col) return;
   if (ev.type === 'turn-added') {
     col.querySelector('.ui-empty')?.remove();
-    col.querySelector('.ss-s0-canvas--view')?.remove(); stopWatch?.(); stopWatch = null;
+    hideNew();
     if (ev.turn.role === 'user') { col.append(userTurn(ev.turn.text, ev.turn.at, ev.turn.attachments)); if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight; }
     else liveTurn(ev.turn);
   } else if (ev.type === 'step-added') {
@@ -486,11 +482,12 @@ export function selectSession(id: string, opts: { quiet?: boolean; focus?: boole
   if (!opts.quiet) emit('hx:session-select', { id, from: 'list', title: s ? s.title : '', project: s ? s.project : '' });
   emit('hx:title', { title: s ? s.title : '', project: s ? s.project : '', tab: 'session' });
   changed();
-  if (opts.focus && VIEW.composer) VIEW.composer.focus();
+  if (opts.focus) { if (NEW?.shown) NEW.focus(); else VIEW.composer?.focus(); }
 }
 export function newSession(project?: string): void {
   const cur = sessions().list.get().find((s) => s.id === VIEW.current);
   const s = sessions().create(project || (cur ? cur.project : '') || (data().info.live ? '' : 'billing-api'));
+  if (cur && !isDraft(cur.id)) VIEW.from = cur.id;
   selectSession(s.id, { focus: true });
 }
 export function toConversation(): void { const t = turnsEls().find((x) => x.tabIndex === 0) ?? lastTurn(); if (t) rove(t, true); }
@@ -508,7 +505,19 @@ export function mountView(root: HTMLElement): void {
   VIEW.col.addEventListener('focusin', (e) => { const t = (e.target as Element).closest<HTMLElement>('[data-hx-turn]'); if (t && e.target === t) rove(t); });
   const first = sessions().list.get()[0];
   if (first) VIEW.current = first.id;
+  /* the app opens on a new session: the row of the session that was last worked in keeps its mark */
+  if (first && isDraft(first.id)) VIEW.from = sessions().list.get().find((x) => !isDraft(x.id))?.id ?? null;
   data().details.follow(VIEW.current);
+  NEW = mountNew(root, {
+    actions: {
+      folder: () => { void openFolder(); },
+      model: (a) => { VIEW.composer?.openModelMenu?.(a); },
+      effort: (a) => { openEffort(a); },
+      careful: (a) => { openCarefulFor(a, 'below'); },
+      open: (id) => { selectSession(id, { focus: true }); }
+    },
+    send: (text) => { const g = data().details.governance.get(); sessions().send(VIEW.current, text, { governed: g.governed, smart: g.smart, model: g.model, assume: [], attachments: [] }); }
+  });
   renderConversation();
   const c = VIEW.composer = sessionComposer({ draft: sessions().draft(), sessionId: () => VIEW.current });
   const host = el('div', { class: 'ss-composer' }, c);

@@ -151,7 +151,7 @@ export interface LineItem {
 }
 export interface ComposerOpts {
   kind?: U<ComposerKind>; placeholder?: U<string>; text?: U<string>; textHTML?: U<string>; running?: U<boolean>;
-  /** the line under it (12.2, S05): its items; an empty line takes no space */ line?: U<readonly LineItem[]>; hint?: U<string>;
+  /** the line under it (12.2, S05): its items; an empty line takes no space */ line?: U<readonly LineItem[]>; hint?: U<string>; /** a second hint, at the line's end (S17: "ctrl Enter starts it in the background") */ hintEnd?: U<string>;
   /** a bot's own chat: the send in the bot's derived fill (18.1) */ fill?: U<{ fill: string; text: string }>; label?: U<string>; attrs?: U<Attrs>;
 }
 export function composer(o: ComposerOpts): string {
@@ -161,12 +161,12 @@ export function composer(o: ComposerOpts): string {
     ? iconButton({ icon: 'stop', label: 'Stop', variant: 'inverted', attrs: { 'data-send': '' } })
     : typed ? iconButton({ icon: 'arrowup', label: o.running ? 'Queue' : 'Send', variant: 'inverted', keys: 'Enter', attrs: { 'data-send': '', 'data-bot-colour': o.fill ? '' : null, style: o.fill ? '--selected:' + o.fill.fill + ';--text-on-light:' + o.fill.text : null } })
     : iconButton({ icon: 'waveform', label: 'Talk', variant: 'inverted', attrs: { 'data-send': '', 'data-bot-colour': o.fill ? '' : null, style: o.fill ? '--selected:' + o.fill.fill + ';--text-on-light:' + o.fill.text : null } });
-  const line = (o.line ?? []).length || o.hint
+  const line = (o.line ?? []).length || o.hint || o.hintEnd
     ? '<div class="k7-composer__line">' + (o.line ?? []).filter((x) => !x.end).map((x) => x.plain
       ? '<button class="k7-reset k7-composer__item" type="button"' + attrs({ 'aria-label': x.label + ': ' + x.value, 'data-model': x.model ? '' : null, ...(x.attrs ?? {}) }) + '>' + (x.model ? markHTML(x.model, { size: 12, label: false }) : x.icon ? glyph(x.icon) : '') + '<span' + (x.mono ? ' class="k7-mono"' : '') + '>' + esc(x.value) + '</span></button>'
       : selectorItem({ variant: 'line', label: x.label, value: x.value, mono: !!x.mono, need: !!x.need, ...(x.leadHTML ? { leadHTML: x.leadHTML } : {}), chevron: !x.need })).join('') +
       (o.hint ? '<span class="k7-composer__hint">' + esc(o.hint) + '</span>' : '') +
-      '<span class="k7-grow"></span>' + (o.line ?? []).filter((x) => x.end).map((x) => '<span class="' + cls('k7-composer__end', x.mono && 'k7-mono') + '"' + attrs({ 'aria-label': x.label + ': ' + x.value }) + '>' + esc(x.value) + '</span>').join('') + '</div>'
+      '<span class="k7-grow"></span>' + (o.hintEnd ? '<span class="k7-composer__hint">' + esc(o.hintEnd) + '</span>' : '') + (o.line ?? []).filter((x) => x.end).map((x) => '<span class="' + cls('k7-composer__end', x.mono && 'k7-mono') + '"' + attrs({ 'aria-label': x.label + ': ' + x.value }) + '>' + esc(x.value) + '</span>').join('') + '</div>'
     : '';
   return '<div class="k7-composer"' + kitAttrs('Composer', { 'data-kind': k, 'data-typed': typed ? '' : null, 'data-running': o.running ? '' : null, ...(o.attrs ?? {}) }) + '>' +
     '<div class="k7-composer__box" data-sq data-sq-mode="frame" data-mark-context>' +

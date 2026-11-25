@@ -55,7 +55,8 @@ function syncMax(group: HTMLElement, state: WinState | null): void {
   const b = part(group, 'max');
   if (!b) return;
   const { label, icon } = maxLabel(state, (group.dataset['layout'] as ControlsLayout | undefined) ?? 'all', !!document.fullscreenElement);
-  b.innerHTML = ui.icon(icon);
+  /* the glyph keeps the size its button drew it at: the v7 chrome's 16 (the kit's `k7-ic`), the v6 bars' own */
+  b.innerHTML = b.closest('[data-kit~="WindowChrome"], .k7-chrome') ? ui.icon(icon, { size: 'm', class: 'k7-ic' }) : ui.icon(icon);
   b.dataset['tip'] = label;
   b.setAttribute('aria-label', label);
 }

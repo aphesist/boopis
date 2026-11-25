@@ -22,7 +22,7 @@ export function updateTitle(): void {
     const ss = data().sessions.list.get();
     const s = ss.find((x) => x.id === sh.selection.session) ?? ss.find((x) => x.running) ?? ss[0];
     t = t || (s ? s.title : 'New session');
-    lead = { icon: 'terminal' };
+    lead = { icon: 'session' };   /* the boards' session glyph in the pill's 24 circle (sessiontab.js title) */
   } else {
     const b = data().bots.snapshot().bots.find((x) => x.id === sh.selection.bots);
     t = t || (b ? b.name : 'All bots');
@@ -87,7 +87,9 @@ export function updateAttentionDots(): void {
   const sg = sh.seg.tabs;
   if (sg) for (const b of $$('[role="tab"]', sg)) {
     const t = (b.dataset['value'] ?? 'session') as Tab, n = per[t] || 0;
-    const dot = b.querySelector('.k7-seg__dot'); if (dot) dot.toggleAttribute('data-show', n > 0 && t !== state.tab);
+    /* no board draws a dot on the Sessions / Bots pill (S17, 12, 13): what waits on the other side is said in words (the dock's ask
+       pill, a row's "Needs you"); the tab's accessible name still counts it */
+    const dot = b.querySelector('.k7-seg__dot'); if (dot) dot.removeAttribute('data-show');
     b.setAttribute('aria-label', n > 0 && t !== state.tab ? TABNAME[t] + ', needs you' : TABNAME[t]);
   }
 }

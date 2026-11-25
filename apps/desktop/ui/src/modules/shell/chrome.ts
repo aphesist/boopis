@@ -57,7 +57,7 @@ export function drawSideHead(app: HTMLElement): void {
   seg.classList.add('hx-seg');
   $('#hx-seg', app).replaceWith(seg);
   sh.seg.tabs = seg;
-  const add = kit.iconButton({ icon: 'plus', label: 'New session', keys: 'mod+shift+O', attrs: { id: 'hx-btn-new', 'data-tip-pos': 'bottom' } });
+  const add = kit.iconButton({ icon: 'plus', label: 'New session', variant: 'tinted', keys: 'mod+shift+O', attrs: { id: 'hx-btn-new', 'data-tip-pos': 'bottom' } });
   add.classList.add('hx-new');
   $('#hx-btn-new', app).replaceWith(add);
 }
@@ -69,8 +69,8 @@ export function drawSideFoot(app: HTMLElement): void {
   foot.replaceChildren(frag(
     '<button class="k7-reset hx-me" id="hx-btn-account" type="button" aria-haspopup="menu" aria-expanded="false" data-tip-pos="top">' +
       '<span class="hx-avatar" aria-hidden="true"></span><span class="hx-me__name" id="hx-account-name"></span></button>'),
-  kit.iconButton({ icon: 'store', label: 'Store', keys: 'mod+shift+S', attrs: { id: 'hx-btn-store', 'aria-haspopup': 'dialog' } }),
-  kit.iconButton({ icon: 'gear', label: 'Settings', keys: 'mod+,', attrs: { id: 'hx-btn-settings', 'aria-haspopup': 'dialog' } }));
+  kit.iconButton({ icon: 'store', label: 'Store', variant: 'tinted', keys: 'mod+shift+S', attrs: { id: 'hx-btn-store', 'aria-haspopup': 'dialog' } }),
+  kit.iconButton({ icon: 'gear', label: 'Settings', variant: 'tinted', keys: 'mod+,', attrs: { id: 'hx-btn-settings', 'aria-haspopup': 'dialog' } }));
   const me = $('#hx-btn-account', foot);
   $('.hx-avatar', me).innerHTML = ui.icon('user');
   $('#hx-account-name', me).textContent = U.name;

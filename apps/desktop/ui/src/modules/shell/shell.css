@@ -95,10 +95,12 @@ body {
 .hx-side__inner { position: relative; height: 100%; width: var(--sb-w); display: flex; flex-direction: column; padding-top: var(--drag-h); box-sizing: border-box; transition: opacity var(--dur-2) var(--ease-sharp); }
 /* the head: Sessions / Bots and New on one row (screen 13) */
 .hx-side__head { display: flex; flex: none; }
-.hx-side__open { display: flex; align-items: center; gap: var(--sp-2); flex: 1; min-width: 0; padding: var(--sp-2) var(--sp-3) 0 var(--sp-3); }
+/* kit.css `.sb-open` (padding 56 10 12) and its head row (0 6 6): the pill at 16, New a tinted 28 at the other end */
+.hx-side__open { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); flex: 1; min-width: 0; padding: 0 var(--sp-4) var(--gap-s); }
+.hx-side__open > .hx-new { width: var(--ctl-s); height: var(--ctl-s); }
 .hx-seg { margin-inline-end: auto; }
 /* list slot: one panel per tab, cross-faded */
-.hx-side__list { position: relative; flex: 1; min-height: 0; margin-top: var(--sp-3); }
+.hx-side__list { position: relative; flex: 1; min-height: 0; }
 .hx-list {
   position: absolute; inset: 0;   /* a scroll area (.ui-scroll) */
   opacity: 0; visibility: hidden; transform: translateX(var(--list-shift, calc(-1 * var(--sp-2))));
@@ -108,7 +110,10 @@ body {
 .hx-list.is-active { opacity: 1; visibility: visible; transform: none; transition: opacity var(--dur-2) var(--ease-out) calc(var(--dur-out) / 2), transform var(--dur-3) var(--spring), visibility 0s; }
 
 /* the foot: you, Store, Settings (screen 12) */
-.hx-foot { display: flex; align-items: center; gap: var(--sp-1); padding: var(--sp-3); flex: none; }
+/* kit.css `.foot-ctl` in the open sidebar (12 6 0 inside the sidebar's 10 and 12): Store and Settings, tinted 28s 8 apart at the end */
+.hx-foot { display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); flex: none; }
+/* the Sessions side shows no "you" (boards S17 and 13 draw Store and Settings alone there) */
+.hx[data-tab="session"] .hx-foot > .hx-me { display: none; }
 .hx-me {
   display: flex; align-items: center; gap: var(--sp-3); flex: 1; min-width: 0; height: var(--ctl); padding: 0 var(--sp-3) 0 0;
   border-radius: var(--r-pill); color: var(--text); font-size: var(--fs-m); line-height: var(--lh-m); text-align: start;

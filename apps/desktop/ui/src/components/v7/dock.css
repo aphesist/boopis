@@ -12,7 +12,8 @@
 .k7-dock__orb { position: relative; display: inline-grid; place-items: center; flex: none; width: var(--s); height: var(--s); border-radius: var(--r-pill);
   transition: width var(--dur-2) var(--ease-sharp), height var(--dur-2) var(--ease-sharp); }
 .k7-dock__orb[data-focus] { outline: var(--focus-w) solid var(--focus); outline-offset: var(--gap-xs); }
-.k7-dock__orb .k7-flag { right: calc(-1 * var(--hl)); top: var(--hl); bottom: auto; box-shadow: 0 0 0 var(--gap-hair) var(--dock-bg); }
+/* dockv7's `.dk7-flag`: 1 px out at the right, 1 px down */
+.k7-dock__orb .k7-flag { right: calc(-1 * var(--mark-thick)); top: var(--mark-thick); bottom: auto; box-shadow: 0 0 0 var(--gap-hair) var(--dock-bg); }
 .k7-dock[data-dk="compact"] .k7-dock__orb .k7-flag { width: var(--gap-s); height: var(--gap-s); }
 /* the open bot is marked by the accent dot under its orb */
 .k7-dock__orb[aria-current="true"]::after { content: ''; position: absolute; left: 50%; bottom: calc(-1 * var(--gap-row)); width: var(--sp-1); height: var(--sp-1); margin-left: calc(-1 * var(--gap-hair)); border-radius: var(--r-pill); background: var(--accent-text); }

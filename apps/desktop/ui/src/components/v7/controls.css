@@ -7,12 +7,12 @@
   position: relative; isolation: isolate; overflow: hidden;
   display: inline-flex; align-items: center; justify-content: center; gap: var(--gap-s); flex: none;
   height: var(--ctl); padding: 0 var(--pad-btn); border-radius: var(--r-pill);
-  font-size: var(--fs-m); line-height: var(--lh-m); letter-spacing: var(--track); color: var(--text); white-space: nowrap;
+  font-size: var(--fs-m); line-height: 1; letter-spacing: var(--track); color: var(--text); white-space: nowrap;   /* kit.css `.btn`: line-height 1 */
   background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line);
   transition: background-color var(--dur-out) var(--ease-out), color var(--dur-out) var(--ease-out), transform var(--dur-press) var(--ease-sharp);
 }
 .k7-btn[data-size="32"] { height: var(--ctl-card); padding: 0 var(--pad-btn-card); }
-.k7-btn[data-size="28"] { height: var(--ctl-s); padding: 0 var(--pad-btn-s); font-size: var(--fs-s); line-height: var(--lh-s); }
+.k7-btn[data-size="28"] { height: var(--ctl-s); padding: 0 var(--pad-btn-s); font-size: var(--fs-s); }
 .k7-btn[data-variant="primary"] { background: var(--selected); color: var(--text-on-light); box-shadow: none; }
 .k7-btn[data-variant="tint"] { background: var(--fill-2); box-shadow: none; }
 .k7-btn[data-variant="ghost"] { background: transparent; box-shadow: none; color: var(--text-dim); }
@@ -108,13 +108,17 @@
 /* ── SelectorItem (24): a quiet current value that opens a Menu; transparent until hover, radius 10 ── */
 .k7-sel {
   display: inline-flex; align-items: center; gap: var(--gap-sel); flex: none; height: var(--ctl-s); padding: 0 var(--pad-sel-end) 0 var(--pad-sel-start);
-  border-radius: var(--r-field); font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text-dim); white-space: nowrap;
+  border-radius: var(--r-field); font-size: var(--fs-s); line-height: var(--lh-m); color: var(--text-dim); white-space: nowrap;
   transition: background-color var(--dur-out) var(--ease-out), color var(--dur-out) var(--ease-out);
 }
 .k7-sel[data-variant="line"] { font-size: var(--fs-xs); line-height: var(--lh-xs); letter-spacing: var(--track); }
-.k7-sel__chev { width: var(--icon-s); height: var(--icon-s); color: var(--icon-quiet); }
+/* the chevron is the value's own colour (kit.css `.select`: the glyph takes the text's) */
+.k7-sel__chev { width: var(--icon-s); height: var(--icon-s); }
+.k7-sel > svg { flex: none; }
+/* a control that is drawn and does nothing yet (its feature is not built): it keeps its look, and only the pointer says so */
+.k7-sel[aria-disabled="true"] { cursor: default; }
 .k7-sel[aria-expanded="true"] { background: var(--hover); color: var(--text); }
-@media (hover: hover) and (pointer: fine) { .k7-sel:hover { background: var(--hover); transition-duration: var(--dur-1); } }
+@media (hover: hover) and (pointer: fine) { .k7-sel:not([aria-disabled="true"]):hover { background: var(--hover); transition-duration: var(--dur-1); } }
 .k7-sel[data-need] { color: var(--accent-text); background: var(--accent-soft); padding: 0 var(--pad-need-end) 0 var(--pad-need-start); }
 .k7-ticks { display: inline-flex; gap: var(--gap-xs); }
 .k7-ticks > i { width: var(--tick); height: var(--tick); border-radius: var(--r-pill); background: var(--mark-off); }

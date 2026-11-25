@@ -49,6 +49,8 @@ const ICONS: Record<string, readonly [viewBox: string, inner: string | null]> = 
   arrowup: [I16, '<path d="M8 13V3.5M4 7.5l4-4 4 4"/>'],
   user: [I16, '<circle cx="8" cy="5.5" r="2.6"/><path d="M3 13.5a5 5 0 0 1 10 0"/>'],
   terminal: [I16, '<rect x="1.8" y="2.8" width="12.4" height="10.4" rx="2"/><path d="m4.6 6.2 2 1.8-2 1.8M8.4 10h3"/>'],
+  /* the boards' shield (kit.js EXTRA): "How careful" in the launch row and on the session composer's line */
+  shield: [I16, '<path d="M8 1.8 13 3.8v3.8c0 3-2.2 5.4-5 6.6-2.8-1.2-5-3.6-5-6.6V3.8z"/>'],
   store: [I16, '<path d="M2.5 6 3.6 3h8.8l1.1 3"/><path d="M2.5 6h11v1a2 2 0 0 1-3.7 1 2 2 0 0 1-3.6 0A2 2 0 0 1 2.5 7z"/><path d="M3.5 8.8V13h9V8.8"/>']
   };
 

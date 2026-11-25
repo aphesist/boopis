@@ -64,7 +64,7 @@ function computeLayout(): Layout {
   const app = sh.app, el = els();
   const W = app.clientWidth, H = app.clientHeight;
   const r = app.getBoundingClientRect();
-  const s = solveLayout({ W, left: state.left, right: state.right, tab: state.tab, dock: state.dock, sb: probes['sb'] || 288, rail: probes['rail'] || 56, rw: probes['right'] || 340, rr: probes['rrail'] || 28, col: probes['col'] || 720, dockRest: probes['dock'] || 72, dockHeight, inset: insets[state.tab] ?? { left: 0, right: 0 } });
+  const s = solveLayout({ W, left: state.left, right: state.right, tab: state.tab, dock: state.dock, sb: probes['sb'] || 288, rail: probes['rail'] || 56, rw: probes['right'] || 340, rr: probes['rrail'] ?? 28   /* 0 in v7: the closed details pane keeps no strip */, col: probes['col'] || 720, dockRest: probes['dock'] || 72, dockHeight, inset: insets[state.tab] ?? { left: 0, right: 0 } });
   const set = (k: string, v: number): void => { app.style.setProperty(k, Math.round(v * 100) / 100 + 'px'); };
   set('--hx-side-w-to', s.sideW);
   set('--hx-view-left-to', s.viewLeft);

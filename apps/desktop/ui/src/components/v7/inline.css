@@ -60,7 +60,9 @@
 @keyframes k7-pulse { 0%, 60%, 100% { opacity: .35; } 30% { opacity: 1; } }
 
 /* ── Badge (33): 18 tall pill, 11 ── */
+/* the boards' `.badge2`: an inline block on an 18 line, 7 at its sides, 11 */
 .k7-badge { padding-inline: var(--pad-inline); border-radius: var(--r-pill); font-size: var(--fs-2xs); background: var(--fill-2); color: var(--text-dim); }
+.k7-cap.k7-badge { height: auto; line-height: var(--badge-h); padding-block: 0; text-box: normal; }
 .k7-badge[data-tone="owe"] { background: var(--owe-soft); color: var(--owe-text); }
 
 /* ── StatusLine (34): one line, one shimmer (2.2 s, steps(60)); the session's mark breathes (1.4 s) ── */
@@ -85,5 +87,6 @@
 /* ── Avatar (35) ── */
 .k7-avatar { display: inline-grid; place-items: center; flex: none; line-height: 0; }
 .k7-brand { width: var(--gm); height: var(--gm); border-radius: var(--r-pill); background: var(--fill-2); color: var(--text-dim); }
-.k7-logomark { width: var(--logo-box); height: var(--logo-box); color: var(--text-strong); }
-.k7-logomark > boopis-logo { display: block; width: var(--logo-w); }
+/* the logomark over the new session's greeting (kit.css `.ns-mark`; sessionnew.js brand A): a 72 box, the mark at a 44 type size, in ink */
+.k7-logomark { position: relative; width: var(--ns-mark); height: var(--ns-mark); color: var(--text-strong); }
+.k7-logomark > boopis-logo { font-size: var(--ns-logo); color: var(--text-strong); }

@@ -15,7 +15,7 @@ const NO_GATE = 'Needs a gate command in this project.';
 const GATELESS: Record<CarefulStep, Avail> = { supervised: OK, auto_edits: { ok: false, why: NO_GATE }, auto: { ok: false, why: NO_GATE }, full: OK };
 const noop = (): void => undefined;
 const ACT = { folder: noop, model: noop, effort: noop, careful: noop };
-const VIEW: LaunchView = { folder: 'boopis', model: 'Claude Sonnet 4.5', effort: 'Default', careful: 'auto_edits', fellBack: false, waiting: [] };
+const VIEW: LaunchView = { folder: 'boopis', model: 'claude-sonnet-4.5', effort: 'Default', effortTicks: 3, careful: 'auto_edits', fellBack: false, waiting: [] };
 const canvas = (v: Partial<LaunchView>): HTMLElement => launchCanvas({ ...VIEW, ...v }, ACT);
 const menu = (avail: Record<CarefulStep, Avail>, current: CarefulStep): HTMLElement => kit.menu({ label: 'How careful', variant: 'options', entries: carefulEntries({ current, avail }) });
 
@@ -52,7 +52,7 @@ export default [
       'no trusted gate': stage(['variant', 'error'], ({ root }) => { fill(root, canvas({ careful: 'supervised', fellBack: true }), menu(GATELESS, 'supervised')); }, { width: 760 }),
       'no model': stage(['variant', 'empty'], ({ root }) => { fill(root, canvas({ model: null })); }, { width: 760 }),
       'no folder': stage(['empty'], ({ root }) => { fill(root, canvas({ folder: null })); }, { width: 760 }),
-      'waiting on you': stage(['variant'], ({ root }) => { fill(root, canvas({ waiting: [{ title: 'Fix the dock\'s half paint', sub: 'Approval' }, { title: 'Store: de-duplicate items', sub: 'Question' }] })); }, { width: 760 }),
+      'waiting on you': stage(['variant'], ({ root }) => { fill(root, canvas({ waiting: [{ id: 'a', title: 'Fix the dock\'s half paint', sub: 'boopis, w32/dock-paint', word: 'Approval', model: 'claude-sonnet-4.5' }, { id: 'b', title: 'Store: de-duplicate items', sub: 'boopis, main', word: 'Question', model: 'gpt-5.5' }] })); }, { width: 760 }),
       'full access': stage(['variant'], ({ root }) => { fill(root, canvas({ careful: 'full', effort: 'High' })); }, { width: 760 }),
       long: stage(['long'], ({ root }) => { fill(root, canvas({ folder: 'a-project-folder-with-a-very-long-name-indeed', model: 'Claude Sonnet 4.5 (extended context preview)' })); }, { width: 420 })
     }

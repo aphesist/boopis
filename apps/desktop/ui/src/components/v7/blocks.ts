@@ -131,14 +131,15 @@ export const NOTICE_PLACES = ['composer', 'page', 'floating'] as const;
 export const NOTICE_TONES = ['neutral', 'owe', 'accent', 'red'] as const;
 export interface NoticeOpts {
   text: string; place?: U<typeof NOTICE_PLACES[number]>; tone?: U<typeof NOTICE_TONES[number]>; icon?: U<string>;
-  actions?: U<readonly { label: string; primary?: boolean }[]>; dismiss?: U<boolean>; attrs?: U<Attrs>;
+  /** the words that lead the line, in --text (S17: "Approaching the weekly limit", then ", 81% used, resets Wed 09:00") */ title?: U<string>;
+  actions?: U<readonly { label: string; primary?: boolean; ghost?: boolean; value?: string; inert?: string }[]>; dismiss?: U<boolean>; attrs?: U<Attrs>;
 }
 export function notice(o: NoticeOpts): string {
   const place = o.place ?? 'page', tone = o.tone ?? 'neutral';
   return '<div class="k7-notice"' + kitAttrs('Notice', { role: tone === 'red' ? 'alert' : 'status', 'data-place': place, 'data-tone': tone, 'data-sq': '', 'data-sq-mode': place === 'floating' ? 'surface' : 'frame', ...(o.attrs ?? {}) }) + '>' +
-    glyph(o.icon, 'k7-notice__ic') + '<span class="k7-notice__text">' + esc(o.text) + '</span>' +
-    (o.actions ?? []).slice(0, 2).map((a) => button({ label: a.label, variant: a.primary ? 'primary' : 'tint', size: 28 })).join('') +
-    (o.dismiss ? '<button class="k7-reset k7-ib" data-kit="IconButton" data-variant="ghost" type="button" aria-label="Dismiss" data-tip="Dismiss">' + glyph('close') + '</button>' : '') + '</div>';
+    glyph(o.icon, 'k7-notice__ic') + '<span class="k7-notice__text">' + (o.title ? '<span class="k7-notice__title">' + esc(o.title) + '</span>' : '') + esc(o.text) + '</span>' +
+    (o.actions ?? []).slice(0, 2).map((a) => button({ label: a.label, variant: a.primary ? 'primary' : a.ghost ? 'ghost' : 'tint', size: 28, attrs: { 'data-value': a.value ?? null, 'aria-disabled': a.inert ? 'true' : null, 'data-tip': a.inert ?? null } })).join('') +
+    (o.dismiss ? '<button class="k7-reset k7-ib" data-kit="IconButton" data-variant="ghost" data-dismiss type="button" aria-label="Dismiss" data-tip="Dismiss">' + glyph('close') + '</button>' : '') + '</div>';
 }
 
 /* ── SystemLine (13): a centred line about the thread itself: info, steer, hand-off, error with action ── */

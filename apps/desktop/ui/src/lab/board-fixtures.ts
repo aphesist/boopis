@@ -89,14 +89,17 @@ export function boardS17(p: DataProvider): DataProvider {
   const bots = roster(p, { kai: { state: 'working', activity: 'Writing the changelog' } }, ['nina', 'kai', 'boopis', 'moss', 'iris', 'hex']);
   const draft: SessionSummary = { id: 's17-new', project: 'boopis', title: 'New session', when: '' };
   const list = store<readonly SessionSummary[]>([draft, ...SESSIONS]);
-  const empty: Conversation = { turns: [] } as unknown as Conversation;
+  const empty: Conversation = { turns: [] };
+  const started: Conversation = { turns: [{ id: 's17-t1', role: 'user', at: '09:42', text: 'The dock loses its right half while the slab moves. Find why and fix it.' }] };
   const gov = p.details.governance.get();
   return {
     ...p,
-    sessions: { ...p.sessions, list, archived: store(SETTLED), draft: () => '', conversation: () => ({ snapshot: () => empty, subscribe: () => () => undefined }), create: () => draft },
+    /* the new session has no turn yet; every other session has started (one turn stands for its thread) */
+    sessions: { ...p.sessions, list, archived: store(SETTLED), draft: () => '', conversation: (id: string) => ({ snapshot: () => (id === draft.id ? empty : started), subscribe: () => () => undefined }), create: () => draft },
     details: { ...p.details, governance: store({ ...gov, governed: true, smart: false, model: 'sonnet 5.5', cap: '', spent: '' }), choices: store([{ value: 'anthropic/sonnet 5.5', provider: 'anthropic', model: 'sonnet 5.5', providerName: 'Claude' }]) },
     bots: { ...p.bots, snapshot: () => ({ bots, threads: Object.fromEntries(bots.map((b) => [b.id, []])) }) },
-    waits: { ...p.waits, snapshot: () => [] },
+    /* nina's approval is the dock's ask ("nina needs you") */
+    waits: { ...p.waits, snapshot: () => [{ id: 's17-nina', kind: 'approval', bot: 'nina', who: 'nina', title: 'Deploy 0.2.0 to staging?', data: { id: 's17-nina', title: 'Deploy 0.2.0 to staging?', item: ['boopis deploy staging --tag 0.2.0'], from: 'nina' } }] },
     groups: { ...p.groups, snapshot: () => ({ groups: [], threads: {} }) },
     sessionControls: controls(),
     limits: store<LimitNotice | null>(LIMIT)

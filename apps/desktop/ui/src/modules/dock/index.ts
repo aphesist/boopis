@@ -24,7 +24,7 @@ import { kit, lookOf, oc, paintLook, repaintLook, restReact, ui } from '@boopis/
 import type { AskCardOpts, ComposerEl, DockBot } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, ThreadMessage, Wait } from '../../data';
-import { asksOf, askWords, fit, ordered, ownBots, shows } from './model';
+import { asksOf, askWords, BOOPIS_ID, fit, ordered, ownBots, shows } from './model';
 import { dockRoom } from './geometry';
 
 /* the kit's geometry (tokens.v7.json dock.geometry): the row, and open */
@@ -55,7 +55,7 @@ const botById = (id: string | null | undefined): Bot | undefined => S.bots.find(
 const nameOf = (id: string): string => botById(id)?.name ?? id;
 const asks = (): Wait[] => asksOf(S.waits, S.bots);
 const stateWords = (b: Bot): [string, 'owe' | 'neutral'] => { const s = ui.botState(b); return [s.word, s.attention ? 'owe' : 'neutral']; };
-const dockBot = (b: Bot): DockBot => ({ id: b.id, name: b.name, shape: b.shape, color: b.color, state: b.state, attention: b.attention, paused: b.paused, needs: !!ui.botState(b).attention });
+const dockBot = (b: Bot): DockBot => ({ id: b.id, name: b.name, shape: b.shape, color: b.color, state: b.state, attention: b.attention, paused: b.paused, needs: !!ui.botState(b).attention, ink: b.id === BOOPIS_ID });
 const HINT = `Click or Enter opens its card here. Click it again, or Esc, to close. Double-click or ${isMac ? 'Command' : 'Control'}+Enter opens the full chat in the Bots tab.`;
 
 /* ───────── the geometry: one set of attributes, the kit's ───────── */
@@ -290,7 +290,8 @@ function decide(waitId: string, ok: boolean): void {
 }
 
 /* ───────── arrival and departure ───────── */
-const visibleNow = (): boolean => shows({ ownBots: S.bots.length, tab: appState.tab, setting: appState.dock !== 'off' });
+/* the boopis bot is in the row with the others (the boards: "boopis is not special, it is one of your bots"); it alone does not draw the dock */
+const visibleNow = (): boolean => shows({ ownBots: ownBots(S.bots).length, tab: appState.tab, setting: appState.dock !== 'off' });
 /** the dock follows what is in it, the tab and the setting. `animate`: the first bot raises it (the composer moves up first, then the
     slab rises and the orbs pop in left to right) and the last takes it away (an open panel closes, the slab sinks, then the composer
     moves down); a tab switch shows or hides it at once */
@@ -384,7 +385,7 @@ function onBots(): void {
   const d = data();
   d.bots.subscribe((ev) => {
     if (ev.type === 'bot-created') {
-      if (botById(ev.bot.id) || !ownBots([ev.bot]).length) return;
+      if (botById(ev.bot.id)) return;
       const b = { ...ev.bot };
       S.bots.push(b); S.threads[b.id] ??= [];
       addOrb(b);
@@ -466,7 +467,7 @@ function setTimeScale(f: number): void {
 function mount(slot: HTMLElement): void {
   if (S.mounted) return;
   const d = data(), snap = d.bots.snapshot();
-  S.bots = ownBots(snap.bots).map((b) => ({ ...b }));
+  S.bots = snap.bots.filter((b) => b.id !== 'default').map((b) => ({ ...b }));
   S.threads = Object.fromEntries(Object.entries(snap.threads).map(([k, v]) => [k, [...v]]));
   S.waits = [...d.waits.snapshot()];
   build(slot);

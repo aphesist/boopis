@@ -5,6 +5,9 @@
    session view hands it. The canvas is the kit's documented pattern (21.2, "the new session's canvas"). */
 import { on } from '../../core/bus';
 import { kit } from '@boopis/ui';
+import { attrs, esc } from '../../core/dom';
+import { markHTML } from '../../components/model-mark';
+import { shortName } from '../../components/model-name';
 import { themeApi } from '../../styles/theme';
 import { loadFont } from '../../styles/fonts';
 import { CAREFUL, CAREFUL_STEPS } from '../../data/session-s0';
@@ -66,19 +69,23 @@ export function openCarefulMenu(anchor: HTMLElement, o: CarefulMenuOpts): HTMLEl
 /** the step as a selector's ticks: one to four, Supervised to Full access */
 export const ticksOf = (s: CarefulStep): { of: number; on: number } => ({ of: 4, on: CAREFUL_STEPS.indexOf(s) + 1 });
 
-/* ───────── the new session's canvas (S41 A) ───────── */
+/* ───────── the new session's canvas (boards S17 and S41 A; sessionnew.js newSess, kit.css `.ns`) ─────────
+   The "oo" logomark, the greeting, the launch row of quiet selectors (the folder, the worktree, the model with its provider's mark,
+   the effort with its five ticks, how careful with the shield), and the sessions waiting on you, one line each. */
 export interface LaunchView {
   /** the folder's name, null when none is chosen (the canvas then asks for one) */
   folder: string | null;
-  /** the model's readable name, or null when no model is signed in ("+ Choose a model") */
+  /** the model that answers (its mark leads its short name), or null when no model is signed in ("+ Choose a model") */
   model: string | null;
   /** "Default", or the effort's name; null when the engine cannot set it */
   effort: string | null;
+  /** the effort as ticks of five (Default is three) */
+  effortTicks: number;
   careful: CarefulStep;
   /** the person's pick fell back (no trusted gate): the row says so */
   fellBack: boolean;
-  /** the sessions waiting on the person, one line each */
-  waiting: readonly { title: string; sub: string; count?: string }[];
+  /** the sessions waiting on the person, one line each: the model's mark, the title, where it works, what it waits for */
+  waiting: readonly { id: string; title: string; sub: string; word: string; model: string | null }[];
 }
 export interface LaunchActions {
   folder(anchor: HTMLElement): void;
@@ -86,44 +93,42 @@ export interface LaunchActions {
   effort(anchor: HTMLElement): void;
   careful(anchor: HTMLElement): void;
   /** a session waiting on you: open it */
-  open?(index: number): void;
+  open?(id: string): void;
 }
-const GREETING = 'What\'s next for boopis?';
 const NO_FOLDER = 'Add a folder to start';
+/** where a session works is not a choice yet (every session takes a new worktree): the selector is drawn as the board draws it and does nothing */
+const WORKTREE_NOT_YET = 'Choosing between a new worktree and this checkout is not in this build yet';
 export function launchCanvas(v: LaunchView, act: LaunchActions): HTMLElement {
   const c = document.createElement('div');
-  c.className = 'ss-s0-canvas';
+  c.className = 'ss-new__canvas';
   c.setAttribute('data-kit-part', 'NewSession');
-  const mark = kit.avatar({ variant: 'logomark', ...(v.model === null ? { state: 'sleeping', label: 'boopis, asleep' } : { label: 'boopis' }) });
-  const hello = document.createElement('p');
-  hello.className = 'ss-s0-hello';
-  hello.textContent = v.folder === null ? NO_FOLDER : GREETING;
-  const row = document.createElement('div');
-  row.className = 'ss-s0-launch';
-  row.setAttribute('role', 'group');
-  row.setAttribute('aria-label', 'How the session starts');
-  if (v.folder === null) {
-    const add = kit.button({ label: 'Add a project', variant: 'secondary', size: 32, icon: 'folder' });
-    add.addEventListener('click', () => { act.folder(add); });
-    row.append(add);
-  } else {
-    const item = (o: Parameters<typeof kit.selectorItem>[0], fn: (a: HTMLElement) => void): HTMLElement => { const n = kit.selectorItem({ variant: 'launch', ...o }); n.addEventListener('click', () => { fn(n); }); return n; };
-    row.append(item({ label: 'Folder', value: v.folder, icon: 'folder' }, act.folder));
-    row.append(v.model === null
-      ? item({ label: 'Model', value: '+ Choose a model', need: true, chevron: false }, act.model)
-      : item({ label: 'Model', value: v.model }, act.model));
-    if (v.effort !== null) row.append(item({ label: 'Effort', value: v.effort }, act.effort));
-    const careful = item({ label: 'How careful', value: CAREFUL[v.careful].name, ticks: ticksOf(v.careful), ...(v.fellBack ? { attrs: { 'data-tip': 'This project has no trusted gate, so new sessions here start Supervised.' } } : {}) }, act.careful);
-    careful.setAttribute('data-step', v.careful);
-    row.append(careful);
-  }
-  c.append(mark, hello, row);
-  if (v.waiting.length) {
-    const list = kit.list({ label: 'Waiting on you', rows: v.waiting.map((w) => ({ variant: 'compact' as const, title: w.title, sub: w.sub, needs: true, ...(w.count ? { count: w.count } : {}) })) });
-    list.addEventListener('click', (e) => { const r = (e.target as Element).closest('[data-kit~="ListRow"]'); if (r) act.open?.([...list.children].indexOf(r)); });
-    c.append(kit.sectionHead({ title: 'Waiting on you', count: String(v.waiting.length) }), list);
-  }
-  return asV7(c);
+  const hello = '<p class="ss-new__h">' + (v.folder === null ? NO_FOLDER : 'What’s next for ' + esc(v.folder) + '?') + '</p>';
+  const sel = (o: Parameters<typeof kit.html.selectorItem>[0], act0: string): string => kit.html.selectorItem({ variant: 'launch', ...o, attrs: { 'data-launch': act0, ...(o.attrs ?? {}) } });
+  const row = v.folder === null
+    ? kit.html.button({ label: 'Add a project', variant: 'primary', icon: 'folder', attrs: { 'data-launch': 'folder' } })
+    : sel({ label: 'Folder', value: v.folder, icon: 'folder' }, 'folder') +
+      sel({ label: 'Workspace', value: 'New worktree', icon: 'fork', attrs: { 'aria-disabled': 'true', 'data-tip': WORKTREE_NOT_YET } }, 'worktree') +
+      (v.model === null ? sel({ label: 'Model', value: 'Choose a model', icon: 'plus', need: true, chevron: false }, 'model') : sel({ label: 'Model', value: shortName(v.model) || v.model, leadHTML: markHTML(v.model, { size: 14, label: false }) }, 'model')) +
+      (v.effort !== null && v.model !== null ? sel({ label: 'Effort', value: v.effort, ticks: { of: 5, on: v.effortTicks } }, 'effort') : '') +
+      sel({ label: 'How careful', value: CAREFUL[v.careful].name, icon: 'shield', attrs: { 'data-step': v.careful, ...(v.fellBack ? { 'data-tip': 'This project has no trusted gate, so new sessions here start Supervised.' } : {}) } }, 'careful');
+  const waiting = v.waiting.length
+    ? '<div class="ss-new__wait"><h3 class="ssl-h"><span>Waiting on you</span><span class="ssl-h__n k7-mono">' + v.waiting.length + '</span></h3>' +
+      v.waiting.map((w) => '<button class="k7-reset ss-new__row" type="button" data-sq data-sq-mode="frame"' + attrs({ 'data-open': w.id }) + '><span class="ssl-row__mark" aria-hidden="true">' + (w.model ? markHTML(w.model, { size: 16, label: false }) : '') + '</span>' +
+        '<span class="ssl-row__t k7-ell">' + esc(w.title) + '</span><span class="ss-new__sub k7-ell">' + esc(w.sub) + '</span><span class="k7-grow"></span>' + kit.html.badge({ text: w.word, tone: 'owe' }) + '</button>').join('') + '</div>'
+    : '';
+  /* written as markup: the logomark is a custom element, drawn when it is in the page */
+  c.innerHTML = kit.html.avatar({ variant: 'logomark', ...(v.model === null ? { state: 'sleeping', label: 'boopis, asleep' } : { label: 'boopis' }) }) + hello +
+    '<div class="ss-new__launch" role="group" aria-label="How the session starts">' + row + '</div>' + waiting;
+  c.addEventListener('click', (e) => {
+    const t = e.target as Element;
+    const open = t.closest<HTMLElement>('[data-open]');
+    if (open) { act.open?.(open.dataset['open'] as string); return; }
+    const b = t.closest<HTMLElement>('[data-launch]');
+    if (!b || b.getAttribute('aria-disabled') === 'true') return;
+    const k = b.dataset['launch'];
+    if (k === 'folder') act.folder(b); else if (k === 'model') act.model(b); else if (k === 'effort') act.effort(b); else if (k === 'careful') act.careful(b);
+  });
+  return c;
 }
 /** the logomark looks at the composer while you type and lets go 1.2 s after the last key (20.1); focus alone does not move it */
 export function watchTyping(canvas: HTMLElement, input: HTMLElement): () => void {
@@ -192,7 +197,6 @@ export function rewindBody(r: RewindResult): string {
   return kit.html.card({ variant: 'pane', rows }) + more +
     '<p class="k7-type-s ss-s0-why">' + esc(verdict) + ' The rewind is recorded and can be undone.</p>';
 }
-const esc = (s: string): string => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c] as string));
 export interface RewindSheet { el: HTMLElement; close(): void }
 /** the dry-run sheet: the files, the guard's verdict, Rewind or Cancel; a refusal shows why and Close only */
 export function rewindSheet(r: RewindResult, title: string, on: { onConfirm(): void; closed?(): void }): RewindSheet {
