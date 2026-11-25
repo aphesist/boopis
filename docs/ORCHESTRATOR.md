@@ -236,6 +236,7 @@ Resolutions the lead made (by the precedence of section 3 and the owner's leave 
 | Done (7d41b42f) | Board 12 thread (0.02–0.04% outside orbs), the K02 sidebar (0.00%), the held strip (0.00%); the room on the kit composer; "@" menu and capsules; attachment chips; a room details pane (derived); v6 presence, huddle, glance, mentions deleted. The lead looked at 12-room dark, K02 sidebar light, the rail options and the chips crop |
 | Done (0376447f) | A started session: S20 (0.16–0.17% outside orbs; the differences are "Deny" and the Stop button, both decided) and S23 (0.06%). v6 conversation and session composer deleted. Stop button, upright rail switch, gold @all, "hidden until it exists" (capability-driven) built. Coverage map merged. The lead looked at S20 dark, S23 light and both crops |
 | CI on 7d41b42f (run 45702861490) | **desktop-smoke failed, ui smoke failed, lab-orbs 29 errors ("the state never finished drawing")**; other jobs green; lab still running. Regressions are accumulating: the next step starts with health |
+| Note | The owner stopped step 5's builder by accident (25 Nov evening) and asked for a restart; it was resumed with its context, 16 uncommitted files intact |
 | Running | Step 5: health (CI's smoke, desktop-smoke, lab-orbs and broken stories green on the head) and then the dock (K01–K08). CI dispatched on 0376447f |
 | Next (step 6) | The composer completed and the session's leftovers: the primary circle rule, copy on a turn, talk-while-held, undo, drop and paste, effort mid-session, menu placement, S35–S38, the open steps against S10, the session's v6 leftovers (form cards, tasks, council, find, details panel) |
 | Stopped, kept on their branches | `w33/onboarding`, `w33/settings-store` (first-attempt work; logic may be reused, looks are redone) |
@@ -256,9 +257,14 @@ failures are the dock's API, bot settings, the account menu); not run: owner, mo
 concentric, dock, axe, the Python e2e; stale and known to fail: concentric.mjs, corners.mjs, mods.mjs.
 
 **Open questions for the owner**
-00. (Answered 25 Nov: transcription, the mic's dictation, is supposed to work already; bots talking by voice is not
-    planned yet. So the voice circle stays hidden and the primary circle shows the send arrow; the mic must really
-    transcribe: to be verified in the live app at the phase gate, not only in the lab.)
+00. (Answered 25 Nov, corrected by the owner the same evening: transcription, the mic's dictation, is supposed to
+    work already and must be verified in the live app at the phase gate. **The voice button is not hidden**: it is
+    shown as the boards draw it and does not work until the person sets up a voice model: an API key for a voice
+    provider (ElevenLabs, Fish Audio) or a local model on their own hardware with live voice. Until then a press
+    opens "Set up voice" leading to Settings > Models. It is the one exception to "hidden until it exists". The
+    lead's "send arrow when empty" decision is withdrawn. To build: the voice section in Settings (step 7: provider,
+    key through the host's secret store, local option); live voice itself is a feature with no release yet: to be
+    placed in the plan with the owner.)
 0. (Answered 25 Nov: rail switch B, @all gold, dropped room features stay out, Stop and voice both, readable
    colours. Sent to the session builder as kit items.)
 1. (Closed by the lead: hidden until the feature exists; told to the owner.)
