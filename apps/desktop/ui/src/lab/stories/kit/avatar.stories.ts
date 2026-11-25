@@ -15,11 +15,11 @@ export default {
       line(root, ...kit.variants.avatar.size.map((size) => kit.avatar({ bot: KAI, size })));
       line(root, kit.avatar({ variant: 'brand', model: 'claude-sonnet-4.5', label: 'Claude' }), kit.avatar({ variant: 'brand', model: 'gpt-5', label: 'ChatGPT' }), kit.avatar({ variant: 'brand', model: 'gemini-2.5-pro', label: 'Gemini' }));
       line(root, kit.avatar({ variant: 'stack', members: [KAI, NINA, MOSS], size: 24 }), kit.avatar({ variant: 'stack', members: [KAI, NINA, MOSS, IRIS, HEX], size: 16 }));
-      line(root, kit.avatar({ variant: 'logomark' }));
     }, { width: 720 }),
+    /* the logomark is the wordmark's two eyes alone (S41 A, <boopis-logo mark>): it has no body by design; asleep with no model */
+    logomark: stage(['variant'], ({ root }) => { line(root, kit.avatar({ variant: 'logomark' }), kit.avatar({ variant: 'logomark', state: 'sleeping', label: 'boopis, asleep' })); }),
     states: stage(['variant'], ({ root }) => {
       line(root, kit.avatar({ bot: { ...NINA, state: 'idle' }, size: 40 }), kit.avatar({ bot: { ...KAI, state: 'working' }, size: 40 }), kit.avatar({ bot: { ...NINA, state: 'needs', attention: 'approval' }, size: 40, flag: true }), kit.avatar({ bot: { ...NIMBUS, state: 'sleeping' }, size: 40 }), kit.avatar({ bot: BOOPIS, size: 40, ink: true }));
-      line(root, kit.avatar({ variant: 'logomark', state: 'sleeping', label: 'boopis, asleep' }));
     }, { allow: { 'orb.edges': ORB3_SHIMMER } }),
     /* ORBS.md section 23: the rest pose at the home (still, 0 changed pixels), then the state table's faces, each on the alive-idle engine */
     'rest and states': stage(['variant'], ({ root }) => {
