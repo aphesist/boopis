@@ -30,7 +30,7 @@ const govView = (tiers: ModelsView['tiers'], why: string | null): ModelsView => 
 const models: Story = {
   id: 'settings/models', title: 'Settings: Models', area: 'settings', kind: 'surface', v7: true, covers: ['surface:settings-models-governed'],
   states: {
-    'governed mode, available': stage(['variant'], draw(govView(OK_TIERS, null)), { width: 680 }),
+    'governed mode, available': stage(['typical', 'variant'], draw(govView(OK_TIERS, null)), { width: 680 }),
     'governed mode, unavailable: no frontier model': stage(['variant', 'error'], draw(govView([{ name: 'free', model: 'nous/nous/welcome' }], 'tier \'free\' runs nous/nous/welcome, which is not a frontier model: it is not in a family on that list')), { width: 680 }),
     'governed mode, a ladder with cheap tiers marked': stage(['variant', 'long'], draw(govView(CHEAP_TIERS, 'tier \'haiku\' runs ' + CP + '/haiku, which is not a frontier model: it is not in a family on that list')), { width: 680 }),
     'governed mode, the heavy switches: Fable off, then on': stage(['variant'], ({ root }) => {
