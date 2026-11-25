@@ -1,7 +1,8 @@
 # Orchestrator's memory: the v7 rebuild of boopis
 
-This file is the lead's memory. The lead reads it at the start of every working turn and after every context
-summary, and updates it after every step. Builders read `docs/design/v7/REPASS.md` on `w33/repass` (their rules);
+This file is the lead's notebook (the owner: "keep updating that file every time something happens"; the owner does
+not need to be sent it). The lead reads it at the start of every working turn and after every context summary, and
+writes in it every time something happens: a decision, a report, a finding, a change of plan. Builders read `docs/design/v7/REPASS.md` on `w33/repass` (their rules);
 this file holds the wider picture: the goal, what went wrong, the plan, the guards and the current state.
 
 Last updated: 25 November 2026.
@@ -161,6 +162,8 @@ Until a 0.3.0 feature exists, its control on a 0.2.0 screen is disabled with a r
 - Mentions: "@" opens a menu like the skills menu with the mentionable bots of the session or group; the choice
   becomes the same capsule (icon and name) in the composer as in the chat.
 - Attachments: chips ("probably"); a crop goes to the owner to confirm.
+- A stale board was caught: board 12's final render draws the Bots sidebar without the switch; K02 (later) is the
+  reference for the open sidebar. The builder was corrected mid-step.
 - Keybinds get their own pass. Ctrl+Enter steers with the queued message in a running session (S06).
 
 ## 10. State
