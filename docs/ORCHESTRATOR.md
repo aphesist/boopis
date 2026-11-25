@@ -256,7 +256,9 @@ failures are the dock's API, bot settings, the account menu); not run: owner, mo
 concentric, dock, axe, the Python e2e; stale and known to fail: concentric.mjs, corners.mjs, mods.mjs.
 
 **Open questions for the owner**
-00. Asked 25 Nov: is talking with voice (the voice circle on every board) a planned feature, and for which release?
+00. (Answered 25 Nov: transcription, the mic's dictation, is supposed to work already; bots talking by voice is not
+    planned yet. So the voice circle stays hidden and the primary circle shows the send arrow; the mic must really
+    transcribe: to be verified in the live app at the phase gate, not only in the lab.)
 0. (Answered 25 Nov: rail switch B, @all gold, dropped room features stay out, Stop and voice both, readable
    colours. Sent to the session builder as kit items.)
 1. (Closed by the lead: hidden until the feature exists; told to the owner.)
