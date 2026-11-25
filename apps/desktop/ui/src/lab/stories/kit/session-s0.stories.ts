@@ -40,14 +40,14 @@ export default [
     id: 'kit/session-launch', title: 'Session: the launch row', area: 'composer', kind: 'component', covers: ['pattern:session-launch'],
     states: {
       typical: launchTypical,
-      ...forced(launchTypical, '.ss-s0-launch [data-step]'),
+      ...forced(launchTypical, '.ss-new__launch [data-step]'),
       'how careful, open': stage(['variant'], async ({ root }) => {
         const c = canvas({});
         fill(root, c);
         await frames(2);
         const anchor = c.querySelector<HTMLElement>('[data-step]');
         if (anchor) kit.openMenu(anchor, { label: 'How careful', variant: 'options', entries: carefulEntries({ current: 'auto_edits', avail: ALL }), place: 'below', align: 'center' });
-      }, { width: 760, overlay: { anchor: '.ss-s0-launch [data-step]', layer: '.k7-menu[data-floating]' } }),
+      }, { width: 760, overlay: { anchor: '.ss-new__launch [data-step]', layer: '.k7-menu[data-floating]' } }),
       'the four rows': stage(['variant'], ({ root }) => { fill(root, menu(ALL, 'auto_edits')); }, { width: 420 }),
       'no trusted gate': stage(['variant', 'error'], ({ root }) => { fill(root, canvas({ careful: 'supervised', fellBack: true }), menu(GATELESS, 'supervised')); }, { width: 760 }),
       'no model': stage(['variant', 'empty'], ({ root }) => { fill(root, canvas({ model: null })); }, { width: 760 }),

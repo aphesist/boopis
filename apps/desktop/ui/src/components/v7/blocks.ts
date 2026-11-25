@@ -92,19 +92,24 @@ export type ListRowVariant = typeof LIST_ROW_VARIANTS[number];
 export interface ListRowOpts {
   variant?: U<ListRowVariant>; title: string; sub?: U<string>; bot?: U<BotLike>; markText?: U<string>; markHTML?: U<string>; action?: U<string>;
   current?: U<boolean>; needs?: U<boolean | string>; working?: U<boolean>; count?: U<string>; time?: U<string>; /** the boopis bot, in ink */ ink?: U<boolean>;
+  /** a session's row (the boards' `.sess-row`): the mark of the model that answers in it leads, its branch is the sub line's mono part */ model?: U<ModelRef>; branch?: U<string>;
   /** a bot row's lead in place of one orb: a room's member stack (OrbStack, 24 in rows; screen 12) */ leadHTML?: U<string>; /** the end slot's own words (a bot made outside boopis) */ endHTML?: U<string>; attrs?: U<Attrs>;
 }
 export function listRow(o: ListRowOpts): string {
-  const v = o.variant ?? 'session';
+  const v = o.variant ?? 'session', rowOfSession = v === 'session' || v === 'compact';
   const needsWords = typeof o.needs === 'string' ? o.needs : null;
-  const sub = needsWords ? '<span class="k7-lrow__sub" data-tone="owe">' + esc(needsWords) + '</span>' : o.sub ? '<span class="k7-lrow__sub">' + esc(o.sub) + '</span>' : '';
-  const lead = v === 'bot' ? (o.leadHTML ?? ((h: string) => (o.ink ? inkOrb(h) : h))(orbHtml(o.bot ?? { name: o.title }, { size: 36, rest: true, flag: !!o.needs, state: o.bot?.state && o.bot.state !== 'idle' ? undefined : o.needs ? 'needs' : o.working ? 'working' : undefined })   /* the bot's own state when it says one (compute, replying...), else the row's flags */))
+  const sub = needsWords ? '<span class="k7-lrow__sub" data-tone="owe">' + esc(needsWords) + '</span>'
+    : v === 'session' && (o.branch || o.time || o.sub) ? '<span class="k7-lrow__sub">' + (o.branch ? '<span class="k7-mono">' + esc(o.branch) + '</span>' : '') + (o.sub ? '<span>' + esc(o.sub) + '</span>' : '') + (o.time ? '<span>' + esc(o.time) + '</span>' : '') + '</span>'
+    : o.sub ? '<span class="k7-lrow__sub">' + esc(o.sub) + '</span>' : '';
+  const lead = v === 'bot' ? (o.leadHTML ?? ((h: string) => (o.ink ? inkOrb(h) : h))(orbHtml(o.bot ?? { name: o.title }, { size: 36, rest: true, surface: '--bg-1', flag: !!o.needs, state: o.bot?.state && o.bot.state !== 'idle' ? undefined : o.needs ? 'needs' : o.working ? 'working' : undefined })   /* the bot's own state when it says one (compute, replying...), else the row's flags */))
     : v === 'item' ? '<span class="k7-lrow__mark" aria-hidden="true">' + (o.markHTML ?? esc(o.markText ?? o.title.slice(0, 2))) + '</span>'
-    : o.working ? '<span class="k7-dot" data-pulse data-live aria-hidden="true"></span>' : '';
+    : o.model ? '<span class="k7-lrow__lead" aria-hidden="true">' + markHTML(o.model, { size: 16, label: false }) + '</span>' : '';
+  /* a session's row ends with what it waits on you for (the amber badge), or the working dot, or nothing */
   const end = (o.endHTML ?? '') + (o.needs && v !== 'bot' ? badge({ text: o.count ?? 'needs you', tone: 'owe' }) : o.count ? badge({ text: o.count }) : '') +
-    (o.time ? '<span class="k7-lrow__time k7-mono">' + esc(o.time) + '</span>' : '') + (v === 'item' && o.action ? button({ label: o.action, variant: 'tint', size: 28 }) : '');
+    (rowOfSession && o.working && !o.needs ? '<span class="k7-dot" data-live aria-hidden="true"></span>' : '') +
+    (o.time && v !== 'session' ? '<span class="k7-lrow__time k7-mono">' + esc(o.time) + '</span>' : '') + (v === 'item' && o.action ? button({ label: o.action, variant: 'tint', size: 28 }) : '');
   const text = v === 'compact'
-    ? '<span class="k7-lrow__one"><span class="k7-lrow__title">' + esc(o.title) + '</span>' + (o.sub ? '<span class="k7-lrow__sub">' + esc(o.sub) + '</span>' : '') + '</span>'
+    ? '<span class="k7-lrow__title">' + esc(o.title) + '</span>' + (o.sub ? ' <span class="k7-lrow__sub">' + esc(o.sub) + '</span>' : '') + '<span class="k7-grow"></span>'
     : '<span class="k7-lrow__text"><span class="k7-lrow__title">' + esc(o.title) + '</span>' + (sub ? ' ' + sub : '') + '</span>';   /* a space between the parts: the row's text reads as words (its name holds them, WCAG 2.5.3) */
   /* an item row carries its action, so it is a list item, not an option (no control inside a control) */
   const item = v === 'item';
@@ -120,8 +125,9 @@ export function list(o: ListOpts): string {
 /* ── SectionHead (18): with count, with disclosure; collapsed ── */
 export interface SectionHeadOpts { title: string; count?: U<string>; disclosure?: U<boolean>; collapsed?: U<boolean>; value?: U<string>; attrs?: U<Attrs> }
 export function sectionHead(o: SectionHeadOpts): string {
+  /* a folding head (the inbox's Settled): the chevron at its end, pointing right while it is folded, down when open */
   const inner = '<span class="k7-shead__title">' + esc(o.title) + '</span>' + (o.count ? '<span class="k7-shead__count k7-mono">' + esc(o.count) + '</span>' : '') +
-    (o.value ? '<span class="k7-shead__value">' + esc(o.value) + '</span>' : '') + (o.disclosure ? glyph('chevron-down', 'k7-chev') : '');
+    (o.value ? '<span class="k7-shead__value">' + esc(o.value) + '</span>' : '') + (o.disclosure ? '<span class="k7-grow"></span>' + glyph('chevron', 'k7-shead__chev') : '');
   return o.disclosure
     ? '<h3 class="k7-shead"' + kitAttrs('SectionHead', { 'data-collapsed': o.collapsed ? '' : null, ...(o.attrs ?? {}) }) + '><button class="k7-reset k7-shead__btn" type="button" aria-expanded="' + String(!o.collapsed) + '">' + inner + '</button></h3>'
     : '<h3 class="k7-shead"' + kitAttrs('SectionHead', o.attrs ?? null) + '>' + inner + '</h3>';

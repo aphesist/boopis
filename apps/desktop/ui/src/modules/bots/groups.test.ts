@@ -2,7 +2,6 @@
 /* Team chat in the Bots tab, and a live bot's composer, over the provider interface: the tests say what the user sees and what
    is asked of the provider, never how the engine answers (that is `host/live/groups.test.ts` and `bots.test.ts`). */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ui } from '@boopis/ui';
 import { setProvider } from '../../data';
 import type { Bot, BotInfo, BotsEvent, DataProvider, Group, GroupsSource } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
@@ -413,26 +412,26 @@ describe('a member’s message that addresses the person (@user, the engine’s 
 });
 
 describe('a bot’s own chat: "@" names a teammate', () => {
-  /* not yet again: a bot's chat takes the kit's one-row Composer (board 11), which has no "@" list; the teammates' list returns with
-     the composer's mention board (S32 draws the session's). Until then typing "@name" is plain text */
-  it.skip('offers the other bots, says that naming one brings it nowhere, and draws the mention as the sent message will', async () => {
+  it('offers the other bots in the kit\'s Menu over the composer, says that naming one brings it nowhere, and writes the name where it was typed', async () => {
     mount(withGroups());
     const { emit } = await import('../../core/bus');
     emit('hx:bot-select', { id: 'atlas', from: 'test' }); await flush();
-    const c = S.composer as unknown as HTMLElement & { input: HTMLElement; value: string; setValue(t: string): void };
+    const c = S.composer!;
     c.setValue(''); c.input.focus();
-    c.input.textContent = '@';
-    const r = document.createRange(); r.setStart(c.input.firstChild!, 1); r.collapse(true); getSelection()!.removeAllRanges(); getSelection()!.addRange(r);
-    c.input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: '@' }));
+    c.input.textContent = 'ask @n';
+    const r = document.createRange(); r.setStart(c.input.firstChild!, 6); r.collapse(true); getSelection()!.removeAllRanges(); getSelection()!.addRange(r);
+    c.input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: 'n' }));
     await flush();
-    const rows = [...document.querySelectorAll('.ui-listbox .ui-option .ui-menu__label')].map((x) => (x.textContent ?? '').trim());
-    expect(rows).not.toContain('atlas');
-    expect(rows).toContain('nina');
-    expect(document.querySelector('.ui-listbox .ui-menu__foot')?.textContent).toBe('atlas reads the name. The bot you name does not see this chat.');
-    ui.listbox.close(false);
-    c.setValue('ask @nina first');
-    expect(c.input.querySelector('[data-chip] .ui-orb')?.getAttribute('data-bot')).toBe('nina');
-    expect(c.value).toBe('ask @nina first');
+    const menu = q('.k7-menu[data-floating]');
+    const rows = [...menu.querySelectorAll<HTMLElement>('[data-kit~="MenuRow"]')];
+    const names = rows.map((x) => x.querySelector('.k7-mrow__name')?.textContent);
+    expect(names).toContain('nina');
+    expect(names).not.toContain('atlas');   /* the bot you are talking to is not offered */
+    expect(names.every((n) => (n ?? '').startsWith('n'))).toBe(true);   /* what was typed after the "@" narrows the list */
+    expect(menu.textContent).toContain('atlas reads the name. The bot you name does not see this chat.');
+    rows.find((x) => x.dataset['value'] === 'nina')!.click();
+    await flush();
+    expect(c.value).toBe('ask @nina ');
   });
 });
 

@@ -99,26 +99,31 @@
 .k7-orow[aria-disabled="true"] .k7-orow__name { color: var(--text-faint); }
 .k7-orow:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
 
-/* ── ListRow (17) ── */
-.k7-list { display: flex; flex-direction: column; gap: var(--gap-hair); min-width: 0; }
+/* ── ListRow (17): the boards' rows (kit.css `.sess-row`, `.sb-row`, `.item`). A session's: at least 44 tall, 5 10, radius 10, the open one at
+   --current: the model's 16 mark, the title 14/18, under it 12 --text-dim (the branch in mono, when it moved), an amber Badge or the
+   working dot at its end. Compact (a line of "Waiting on you"): 36, one line. A bot's: 54, radius 12. An item's: 60 ── */
+.k7-list { display: flex; flex-direction: column; min-width: 0; }
 .k7-lrow {
   --sq-bg: transparent; background: var(--sq-bg); position: relative;
-  display: flex; align-items: center; gap: var(--gap-row); min-width: 0; min-height: var(--session-h); padding: 0 var(--gap-row); box-sizing: border-box;
+  display: flex; align-items: center; gap: var(--gap-row); min-width: 0; min-height: var(--session-h); padding: var(--pad-kbd) var(--gap-row); box-sizing: border-box;
   border-radius: var(--r-field); color: var(--text); cursor: pointer; transition: background-color var(--dur-out) var(--ease-out);
 }
-.k7-lrow[data-variant="bot"] { height: var(--row-h-2); border-radius: var(--r-tile); }
-.k7-lrow[data-variant="item"] { height: var(--item-h); gap: var(--sp-3); border-radius: var(--r-tile); }
-.k7-lrow[data-variant="compact"] { min-height: var(--compact-h); }
+.k7-lrow[data-variant="bot"] { height: var(--row-h-2); padding-block: 0; border-radius: var(--r-tile); }
+.k7-lrow[data-variant="item"] { height: var(--item-h); padding-block: 0; gap: var(--sp-3); border-radius: var(--r-tile); }
+.k7-lrow[data-variant="compact"] { min-height: var(--compact-h); padding-block: 0; }
 .k7-lrow[data-current] { --sq-bg: var(--current); }
 @media (hover: hover) and (pointer: fine) { .k7-lrow:not([data-current]):hover { --sq-bg: var(--hover); transition-duration: var(--dur-1); } }
 .k7-lrow:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
+.k7-lrow__lead { display: inline-grid; place-items: center; flex: none; color: var(--text-dim); }
 .k7-lrow__text { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
-.k7-lrow__one { display: flex; align-items: baseline; gap: var(--sp-3); flex: 1 1 auto; min-width: 0; }
 .k7-lrow__title { min-width: 0; font-size: var(--fs-m); line-height: var(--lh-s); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.k7-lrow__one > .k7-lrow__title { flex: 0 1 auto; }
-.k7-lrow__sub { min-width: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.k7-lrow[data-variant="bot"] .k7-lrow__sub, .k7-lrow[data-variant="item"] .k7-lrow__sub { font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); }
+.k7-lrow[data-variant="compact"] > .k7-lrow__title, .k7-lrow[data-variant="compact"] > .k7-lrow__sub { flex: 0 1 auto; }
+.k7-lrow__sub { display: flex; align-items: center; gap: var(--gap-s); min-width: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); white-space: nowrap; }
+.k7-lrow[data-variant="compact"] > .k7-lrow__sub { display: block; overflow: hidden; text-overflow: ellipsis; }
+.k7-lrow[data-variant="bot"] .k7-lrow__sub, .k7-lrow[data-variant="item"] .k7-lrow__sub { display: block; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); }
 .k7-lrow__sub[data-tone="owe"] { color: var(--owe-text); }
+/* renaming a session in its row: the title becomes a field on the same line */
+.k7-lrow__rename { flex: 1 1 auto; min-width: 0; font-size: var(--fs-m); line-height: var(--lh-s); color: var(--text); cursor: text; outline: none; box-shadow: 0 var(--hl) 0 var(--line-field); }
 .k7-lrow__time { flex: none; font-size: var(--fs-2xs); color: var(--text-dim); }
 /* the mark is concentric with its row (R-corner-10: 12 - 10, floor 6), where 12.2 draws it at 12: an owner question */
 .k7-lrow__mark {
@@ -127,13 +132,15 @@
 }
 .k7-lrow .ui-dot--flag { box-shadow: 0 0 0 var(--flag-ring) var(--bg-1); }
 
-/* ── SectionHead (18): 12 --text-dim, a count in mono 11 ── */
-.k7-shead { display: flex; align-items: center; gap: var(--gap-s); margin: 0; padding: var(--sp-3) var(--gap-row) var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 400; color: var(--text-dim); }
-.k7-shead__btn { display: flex; align-items: center; gap: var(--gap-s); min-width: 0; border-radius: var(--r-xs); }
+/* ── SectionHead (18): the boards' `.inbox-h` and `.sb-head`: 12 --text-dim on the 20 line, 12 over it and 4 under, its count in mono 11
+   --text-quiet with the head's own tracking; a folding head carries its chevron at the end, on the line's top ── */
+.k7-shead { display: flex; align-items: center; gap: var(--gap-s); margin: 0; padding: var(--sp-3) var(--gap-row) var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-m); font-weight: 400; color: var(--text-dim); }
+.k7-shead__btn { display: flex; align-items: center; gap: var(--gap-s); flex: 1 1 auto; min-width: 0; border-radius: var(--r-xs); text-align: start; }
 .k7-shead__title { white-space: nowrap; }
-/* counts and values are meta, so --text-dim: --text-quiet is for placeholders and labelling glyphs only (4.2; the renders' quiet counts fail 4.5:1 in light) */
-.k7-shead__count { font-size: var(--fs-2xs); color: var(--text-dim); }
+.k7-shead__count.k7-mono { font-size: var(--fs-2xs); letter-spacing: inherit; color: var(--text-quiet); }
 .k7-shead__value { color: var(--text-dim); }
+.k7-shead__chev { align-self: flex-start; transition: transform var(--dur-1) var(--ease-sharp); }
+[aria-expanded="true"] > .k7-shead__chev { transform: rotate(90deg); }
 
 /* ── Notice (12): the boards' `.notice` (kit.css): one row at least 44 tall, radius 22 with an 8 padding, --bg-3 with a line, 13 --text-dim;
    its glyph 12 in from the start, the words 10 after it (their lead in --text), then its actions (28, ghost) and a transparent 28

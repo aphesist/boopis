@@ -7,37 +7,31 @@
    The board's hover actions (S30: Snooze, Settle) are that board's; until then a row's menu (the context menu, or shift+F10) holds
    Rename, Fork and Settle. */
 import { emit } from '../../core/bus';
-import { attrs, esc, frag } from '../../core/dom';
+import { frag } from '../../core/dom';
 import { kit, ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { SessionSummary } from '../../data';
 import { isDraft, selectSession, toConversation, VIEW } from './conversation';
 import { onChanged } from './state';
 import { modKeyOf } from './keys';
-
-type Section = 'needs' | 'working' | 'pinned' | 'recent';
-const TITLES: Record<Section, string> = { needs: 'Needs you', working: 'Working', pinned: 'Pinned', recent: 'Recent' };
-const ORDER: readonly Section[] = ['needs', 'working', 'pinned', 'recent'];
-/** which section a session is in: an approval stops it (Needs you); a running one works, also with a question open */
-export const sectionOf = (s: SessionSummary): Section => (s.needs === 'approval' ? 'needs' : s.running ? 'working' : s.needs ? 'needs' : s.pinned ? 'pinned' : 'recent');
-export const needWord = (s: SessionSummary): string => (s.needs === 'approval' ? 'Approval' : s.needs === 'question' ? 'Question' : '');
+import { needWord, sectionOf, SECTIONS, SECTION_TITLES } from './sections';
 
 export function mountList(root: HTMLElement): void {
   root.classList.add('ssl');
   let settledOpen = false, renaming: string | null = null;
   const sessions = () => data().sessions;
-  const head = (title: string, n: number, more = ''): string => '<h3 class="ssl-h"' + (more ? '' : '') + '><span>' + esc(title) + '</span><span class="ssl-h__n k7-mono">' + n + '</span><span class="k7-grow"></span>' + more + '</h3>';
+  /* a row is the kit's ListRow, a section's name the kit's SectionHead: this file only orders them */
   function rowHTML(s: SessionSummary, o: { current: boolean; settled: boolean }): string {
     /* the badge is the Needs you section's (board S17: a working session with a question open shows its dot; the canvas lists it under Waiting on you) */
     const need = o.settled || sectionOf(s) !== 'needs' ? '' : needWord(s);
-    const end = need ? kit.html.badge({ text: need, tone: 'owe' }) : s.running && !o.settled ? '<span class="k7-dot" data-pulse data-live aria-hidden="true"></span>' : '';
-    const sub = (s.branch ? '<span class="k7-mono">' + esc(s.branch) + '</span>' : '') + (s.when && !s.running && !need ? '<span>' + esc(s.when) + '</span>' : '');
-    return '<div class="ssl-row" role="option" data-sq data-sq-mode="frame"' + attrs({ 'data-id': s.id, tabindex: o.current ? '0' : '-1', 'aria-selected': String(o.current), 'data-current': o.current ? '' : null, 'data-settled': o.settled ? '' : null, 'data-hx-focus': o.current ? 'list' : null,
-      'aria-label': s.title + (s.branch ? ', ' + s.branch : '') + (need ? ', needs you: ' + need.toLowerCase() : '') + (s.running ? ', working' : '') + (o.settled ? ', settled' : '') }) + '>' +
-      '<span class="ssl-row__mark" aria-hidden="true">' + (s.model ? ui.html.modelMark(s.model, { size: 16, label: false }) : ui.icon('session')) + '</span>' +
-      '<span class="ssl-row__text"><span class="ssl-row__t k7-ell">' + esc(s.title) + '</span>' + (sub ? '<span class="ssl-row__sub">' + sub + '</span>' : '') + '</span>' + end + '</div>';
+    return kit.html.listRow({
+      variant: 'session', title: s.title, current: o.current, ...(s.model ? { model: s.model } : {}), ...(s.branch ? { branch: s.branch } : {}),
+      ...(need ? { needs: true, count: need } : s.running && !o.settled ? { working: true } : s.when ? { time: s.when } : {}),
+      attrs: { 'data-id': s.id, 'data-settled': o.settled ? '' : null, 'data-hx-focus': o.current ? 'list' : null,
+        'aria-label': s.title + (s.branch ? ', ' + s.branch : '') + (need ? ', needs you: ' + need.toLowerCase() : '') + (s.running ? ', working' : '') + (o.settled ? ', settled' : '') }
+    });
   }
-  const rows = (): HTMLElement[] => [...root.querySelectorAll<HTMLElement>('.ssl-row')];
+  const rows = (): HTMLElement[] => [...root.querySelectorAll<HTMLElement>('[data-kit~="ListRow"]')];
   function rove(r: HTMLElement | null | undefined): void { rows().forEach((x) => { x.tabIndex = x === r ? 0 : -1; }); }
   function draw(): void {
     const a = document.activeElement as HTMLElement | null;
@@ -47,22 +41,21 @@ export function mountList(root: HTMLElement): void {
     const list = sessions().list.get().filter((s) => !isDraft(s.id)), settled = sessions().archived.get();
     const cur = isDraft(VIEW.current) ? VIEW.from : VIEW.current;
     let out = '';
-    for (const sec of ORDER) {
+    for (const sec of SECTIONS) {
       const of = list.filter((s) => sectionOf(s) === sec);
-      if (of.length) out += head(TITLES[sec], of.length) + of.map((s) => rowHTML(s, { current: s.id === cur, settled: false })).join('');
+      if (of.length) out += kit.html.sectionHead({ title: SECTION_TITLES[sec], count: String(of.length) }) + of.map((s) => rowHTML(s, { current: s.id === cur, settled: false })).join('');
     }
     if (settled.length) {
-      out += '<h3 class="ssl-h"><button class="k7-reset ssl-h__fold" type="button" aria-expanded="' + String(settledOpen) + '" data-fold><span>Settled</span><span class="ssl-h__n k7-mono">' + settled.length + '</span><span class="k7-grow"></span>' + ui.icon(settledOpen ? 'chevron-down' : 'chevron', { size: 'm', class: 'k7-ic' }) + '</button></h3>' +
-        (settledOpen ? settled.map((s) => rowHTML(s, { current: false, settled: true })).join('') : '');
+      out += kit.html.sectionHead({ title: 'Settled', count: String(settled.length), disclosure: true, collapsed: !settledOpen, attrs: { 'data-fold': '' } }) + (settledOpen ? settled.map((s) => rowHTML(s, { current: false, settled: true })).join('') : '');
     }
     if (!list.length && !settled.length) out = kit.html.emptyState({ text: 'No sessions yet. Start one with New session.' });
     root.setAttribute('role', 'listbox'); root.setAttribute('aria-label', 'Sessions');
     root.innerHTML = out;
     if (!rows().some((r) => r.tabIndex === 0)) rove(rows()[0]);
     if (renaming) startRename(renaming);
-    else if (focusId) { const r = root.querySelector<HTMLElement>('.ssl-row[data-id="' + CSS.escape(focusId) + '"]'); if (r) { rove(r); r.focus({ preventScroll: true }); } }
+    else if (focusId) { const r = root.querySelector<HTMLElement>('[data-kit~="ListRow"][data-id="' + CSS.escape(focusId) + '"]'); if (r) { rove(r); r.focus({ preventScroll: true }); } }
   }
-  const idOf = (n: Element | null): string | null => n?.closest<HTMLElement>('.ssl-row')?.dataset['id'] ?? null;
+  const idOf = (n: Element | null): string | null => n?.closest<HTMLElement>('[data-kit~="ListRow"]')?.dataset['id'] ?? null;
   const settledRow = (id: string): boolean => sessions().archived.get().some((s) => s.id === id);
   function open(id: string): void {
     if (settledRow(id)) { restore(id); return; }
@@ -70,7 +63,7 @@ export function mountList(root: HTMLElement): void {
   }
   root.addEventListener('click', (e) => {
     const t = e.target as Element;
-    if (t.closest('[data-fold]')) { settledOpen = !settledOpen; draw(); root.querySelector<HTMLElement>('[data-fold]')?.focus(); return; }
+    if (t.closest('[data-fold]')) { settledOpen = !settledOpen; draw(); root.querySelector<HTMLElement>('[data-fold] button')?.focus(); return; }
     const id = idOf(t); if (id) open(id);
   });
   function menu(row: HTMLElement): void {
@@ -82,10 +75,10 @@ export function mountList(root: HTMLElement): void {
       onSelect: (v) => { if (v === 'rename') startRename(id); else if (v === 'fork') fork(id); else if (v === 'settle') settle(id); else restore(id); }
     });
   }
-  root.addEventListener('contextmenu', (e) => { const r = (e.target as Element).closest<HTMLElement>('.ssl-row'); if (r) { e.preventDefault(); menu(r); } });
+  root.addEventListener('contextmenu', (e) => { const r = (e.target as Element).closest<HTMLElement>('[data-kit~="ListRow"]'); if (r) { e.preventDefault(); menu(r); } });
   /* ↑ ↓ j k Home End across the sections; Enter opens and keeps focus; Esc to the conversation */
   root.addEventListener('keydown', (e) => {
-    const r = (e.target as Element).closest?.<HTMLElement>('.ssl-row') ?? null;
+    const r = (e.target as Element).closest?.<HTMLElement>('[data-kit~="ListRow"]') ?? null;
     if (e.key === 'Escape' && !renaming) { e.preventDefault(); e.stopPropagation(); toConversation(); return; }
     if (!r || e.target !== r || modKeyOf(e) || e.altKey) return;
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(r.dataset['id'] as string); return; }
@@ -104,16 +97,16 @@ export function mountList(root: HTMLElement): void {
   }
   function startRename(id: string): void {
     renaming = id;
-    const r = root.querySelector<HTMLElement>('.ssl-row[data-id="' + CSS.escape(id) + '"]'), s = sessions().list.get().find((x) => x.id === id);
-    const t = r?.querySelector<HTMLElement>('.ssl-row__t');
+    const r = root.querySelector<HTMLElement>('[data-kit~="ListRow"][data-id="' + CSS.escape(id) + '"]'), s = sessions().list.get().find((x) => x.id === id);
+    const t = r?.querySelector<HTMLElement>('.k7-lrow__title');
     if (!r || !s || !t) { renaming = null; return; }
-    const input = frag<HTMLInputElement>('<input class="ssl-rename" type="text" aria-label="Rename session" spellcheck="false">');
+    const input = frag<HTMLInputElement>('<input class="k7-reset k7-lrow__rename" type="text" aria-label="Rename session" spellcheck="false">');
     input.value = s.title;
     t.replaceWith(input); input.focus(); input.select();
     const done = (save: boolean): void => {
       if (renaming !== id) return; renaming = null;
       if (save && input.value.trim()) { sessions().rename(id, input.value.trim()); if (id === VIEW.current) emit('hx:title', { title: input.value.trim(), project: s.project, tab: 'session' }); }
-      draw(); const nr = root.querySelector<HTMLElement>('.ssl-row[data-id="' + CSS.escape(id) + '"]'); if (nr) { rove(nr); nr.focus(); }
+      draw(); const nr = root.querySelector<HTMLElement>('[data-kit~="ListRow"][data-id="' + CSS.escape(id) + '"]'); if (nr) { rove(nr); nr.focus(); }
     };
     input.addEventListener('click', (e) => { e.stopPropagation(); });
     input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); done(true); } if (e.key === 'Escape') { e.preventDefault(); done(false); } });

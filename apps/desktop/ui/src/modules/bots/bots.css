@@ -299,15 +299,6 @@ orb-avatar.is-live { cursor: pointer; }
    The conversation is the 640 column (the shell's --hx-col-w from v7's --col-w) of the kit's Bubbles: no header in the room (the
    chrome's title pill carries the orb and the name, and opens the details), turns of bubbles 6 apart within a sender and 16 between,
    yours on the right, the bot's on the left; a room's names and orbs in the kit's gutter. */
-/* a bot's room has no header (screen 11): the title pill carries the orb and the name, the details button its settings. What has no
-   other place stays, on the column's top line: the "made outside boopis" mark (owner decision) and New session with the bot (live) */
-.bt-room:not(.bt-group) .bt-presence { position: static; display: flex; justify-content: flex-end; align-items: center; gap: var(--sp-2); padding: 0; background: none; }
-.bt-room:not(.bt-group) .bt-presence:not(:has(.bt-outside, [data-action="new-session"]:not([hidden]))) { display: none; }
-.bt-room:not(.bt-group) :is(.bt-p-orb, .bt-p-name, [data-action="settings"]) { display: none; }
-.bt-room:not(.bt-group) .bt-p-text { flex: 1; }
-.bt-room:not(.bt-group) .bt-p-line { margin: 0; }
-.bt-room:not(.bt-group) .bt-p-line > :not(.bt-outside, .ui-sr) { display: none; }
-.bt-room:not(.bt-group) .bt-presence::after { display: none; }
 .bt-room .bt-col { padding-top: var(--sp-3); }
 .bt-room .bt-log { display: flex; flex-direction: column; gap: var(--sp-4); }
 .bt-room .bt-log > .k7-time + [data-hx-turn] { margin-top: calc(-1 * var(--sp-1)); }

@@ -5,7 +5,7 @@
    session view hands it. The canvas is the kit's documented pattern (21.2, "the new session's canvas"). */
 import { on } from '../../core/bus';
 import { kit, ui } from '@boopis/ui';
-import { attrs, esc } from '../../core/dom';
+import { esc } from '../../core/dom';
 
 const markHTML = (ref: string, o: { size: number; label: false }): string => ui.html.modelMark(ref, o);
 const shortName = (ref: string): string => ui.modelMark.short(ref);
@@ -103,7 +103,7 @@ export function launchCanvas(v: LaunchView, act: LaunchActions): HTMLElement {
   const c = document.createElement('div');
   c.className = 'ss-new__canvas';
   c.setAttribute('data-kit-part', 'NewSession');
-  const hello = '<p class="ss-new__h">' + (v.folder === null ? NO_FOLDER : 'What’s next for ' + esc(v.folder) + '?') + '</p>';
+  const hello = '<p class="k7-type-2xl ss-new__h">' + (v.folder === null ? NO_FOLDER : 'What’s next for ' + esc(v.folder) + '?') + '</p>';
   const sel = (o: Parameters<typeof kit.html.selectorItem>[0], act0: string): string => kit.html.selectorItem({ variant: 'launch', ...o, attrs: { 'data-launch': act0, ...(o.attrs ?? {}) } });
   const row = v.folder === null
     ? kit.html.button({ label: 'Add a project', variant: 'primary', icon: 'folder', attrs: { 'data-launch': 'folder' } })
@@ -113,13 +113,13 @@ export function launchCanvas(v: LaunchView, act: LaunchActions): HTMLElement {
       (v.effort !== null && v.model !== null ? sel({ label: 'Effort', value: v.effort, ticks: { of: 5, on: v.effortTicks } }, 'effort') : '') +
       sel({ label: 'How careful', value: CAREFUL[v.careful].name, icon: 'shield', attrs: { 'data-step': v.careful, ...(v.fellBack ? { 'data-tip': 'This project has no trusted gate, so new sessions here start Supervised.' } : {}) } }, 'careful');
   const waiting = v.waiting.length
-    ? '<div class="ss-new__wait"><h3 class="ssl-h"><span>Waiting on you</span><span class="ssl-h__n k7-mono">' + v.waiting.length + '</span></h3>' +
-      v.waiting.map((w) => '<button class="k7-reset ss-new__row" type="button" data-sq data-sq-mode="frame"' + attrs({ 'data-open': w.id }) + '><span class="ssl-row__mark" aria-hidden="true">' + (w.model ? markHTML(w.model, { size: 16, label: false }) : '') + '</span>' +
-        '<span class="ssl-row__t k7-ell">' + esc(w.title) + '</span><span class="ss-new__sub k7-ell">' + esc(w.sub) + '</span><span class="k7-grow"></span>' + kit.html.badge({ text: w.word, tone: 'owe' }) + '</button>').join('') + '</div>'
+    ? '<div class="ss-new__wait">' + kit.html.sectionHead({ title: 'Waiting on you', count: String(v.waiting.length) }) +
+      v.waiting.map((w) => kit.html.listRow({ variant: 'compact', title: w.title, sub: w.sub, needs: true, count: w.word, ...(w.model ? { model: w.model } : {}), attrs: { 'data-open': w.id, role: 'button', tabindex: '0', 'aria-selected': null } })).join('') + '</div>'
     : '';
   /* written as markup: the logomark is a custom element, drawn when it is in the page */
   c.innerHTML = kit.html.avatar({ variant: 'logomark', ...(v.model === null ? { state: 'sleeping', label: 'boopis, asleep' } : { label: 'boopis' }) }) + hello +
     '<div class="ss-new__launch" role="group" aria-label="How the session starts">' + row + '</div>' + waiting;
+  c.addEventListener('keydown', (e) => { const r = (e.target as Element).closest<HTMLElement>('[data-open]'); if (r && e.target === r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); r.click(); } });
   c.addEventListener('click', (e) => {
     const t = e.target as Element;
     const open = t.closest<HTMLElement>('[data-open]');

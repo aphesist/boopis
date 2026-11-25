@@ -87,7 +87,6 @@
 .ss-find-count { margin: 0; min-height: 1.5em; font: 400 var(--fs-2xs)/1.5 var(--mono); color: var(--text-quiet); }
 
 /* the list's rename field takes the row's place */
-.ssl .ss-rename { width: calc(100% - var(--sp-2)); height: var(--row-h); margin: 0 4px; }
 
 /* ───────────── right panel: the session's own parts inside the library's panel and sections ───────────── */
 .ssr { position: relative; height: 100%; }
@@ -144,12 +143,6 @@
 /* the layer the "@" menu opens from: the composer's box, not interactive */
 
 /* ── wave S0 on the v7 kit (modules/session/s0.ts): each piece is a v7 root of its own until the screen moves (wave C) ── */
-/* the new session's canvas (S41 A, the kit's pattern): the logomark, the greeting, the launch row, Waiting on you */
-.ss-s0-canvas { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); margin: auto; padding-block: var(--sp-7); width: 100%; max-width: var(--col-w); box-sizing: border-box; }
-.ss-s0-canvas > .k7-logomark { margin-block-end: var(--sp-1); }
-.ss-s0-canvas > .k7-list, .ss-s0-canvas > .k7-shead { align-self: stretch; }
-.ss-s0-hello { margin: 0; font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 500; color: var(--text-strong); text-align: center; }
-.ss-s0-launch { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }
 /* a line the thread says about itself (SystemLine): centred in the column */
 .ss-s0-line { display: flex; justify-content: center; padding-block: var(--sp-2); }
 /* the rewind under a finished turn (TurnFoot, session); its actions show on hover and focus, as the kit's */
@@ -165,42 +158,21 @@
 .ss-s0-sheet { position: fixed; inset: 0; z-index: var(--z-overlay); }
 .ss-s0-sheet > * { height: 100%; box-sizing: border-box; }
 
-/* ================================================================ board S17 (docs/design/v7/boards: sessiontab.js inbox, sessionnew.js newSess, kit.css)
-   The Sessions sidebar as an inbox: a section's name 12 --text-dim with its count in mono 11 --text-quiet (12 over it, 4 under), rows
-   at least 44 tall with 5 10 inside and radius 10, the open one at --current: the model's 16 mark, the title 14/18, under it the
-   branch in mono 12 and when it moved, and at the end an amber badge, the working dot, or nothing. */
-.ssl { padding: 0 var(--gap-row); box-sizing: border-box; font-size: var(--fs-m); line-height: var(--lh-m); }
-.ssl-h { display: flex; align-items: center; gap: var(--gap-s); margin: 0; padding: var(--sp-3) var(--gap-row) var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-m); font-weight: 400; color: var(--text-dim); }
-.ssl-h > .ssl-h__n, .ssl-h__fold > .ssl-h__n { font-size: var(--fs-2xs); letter-spacing: inherit; color: var(--text-quiet); }
-.ssl-h__fold { display: flex; align-items: center; gap: var(--gap-s); flex: 1 1 auto; min-width: 0; border-radius: var(--r-xs); text-align: start; color: inherit; font-size: inherit; line-height: inherit; }
-.ssl-h__fold > svg { align-self: flex-start; }   /* the chevron sits at the top of the head's 20 line, where the board's inline glyph does */
-.ssl-row { --sq-bg: transparent; display: flex; align-items: center; gap: var(--gap-row); min-height: var(--session-h); padding: var(--pad-kbd) var(--gap-row); box-sizing: border-box; border-radius: var(--r-field); background: var(--sq-bg); color: var(--text); cursor: pointer; transition: background-color var(--dur-out) var(--ease-out); }
-.ssl-row[data-current] { --sq-bg: var(--current); }
-@media (hover: hover) and (pointer: fine) { .ssl-row:not([data-current]):hover { --sq-bg: var(--hover); transition-duration: var(--dur-1); } }
-.ssl-row:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
-.ssl-row__mark { display: inline-grid; place-items: center; flex: none; color: var(--text-dim); }
-.ssl-row__text { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
-.ssl-row__t { font-size: var(--fs-m); line-height: var(--lh-s); color: var(--text); }
-.ssl-row__sub { display: flex; align-items: center; gap: var(--gap-s); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
-.ssl-row > .k7-dot { animation: none; }
-.ssl-rename { flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; border: 0; background: none; outline: none; font: inherit; font-size: var(--fs-m); line-height: var(--lh-s); letter-spacing: inherit; color: var(--text); box-shadow: 0 var(--hl) 0 var(--line-field); }
+/* ================================================================ board S17 (docs/design/v7/boards: sessiontab.js inbox, sessionnew.js newSess)
+   Placement only: every part is a kit component (ListRow, SectionHead, Badge, SelectorItem, Notice, Composer, the logomark).
+   The Sessions sidebar: the kit's rows and heads on the sidebar's 10 inset. */
+.ssl { padding: 0 var(--gap-row); box-sizing: border-box; }
 .ssl > .k7-empty { padding-inline: 0; }
-
-/* The new session's screen: the canvas between 64 under the window's top and 250 over its foot, its pieces centred; the logomark in
-   its 72 box 16 over the greeting (22/28, 500, ink), 14 over the launch row of 28 selectors 4 apart; Waiting on you 40 under it, 520
-   wide, its rows one line 36 tall. At the foot the composer, 720 wide on the work's centre line, 24 over the dock; a limit's Notice 8 over it. */
+/* The new session's screen: the canvas between 64 under the window's top and 250 over its foot, its pieces centred: the logomark 16 over
+   the greeting, the greeting 14 over the launch row (its selectors 4 apart), Waiting on you 40 under it and 520 wide. At the foot the
+   composer, 720 wide on the work's centre line, 24 over the dock; a limit's Notice 8 over it. */
 .ss-view[data-new] > :is(.ss-scroll, .ss-composer, .ss-find-anchor) { display: none; }
 .ss-view[data-new]::before, .ss-view[data-new]::after { display: none; }
-.ss-new { position: absolute; inset: 0; font-size: var(--fs-m); line-height: var(--lh-m); }
+.ss-new { position: absolute; inset: 0; }
 .ss-new__canvas { position: absolute; left: 0; right: 0; top: calc(var(--ns-top) - var(--drag-h)); bottom: var(--ns-bottom); display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .ss-new__canvas > .k7-logomark { display: grid; place-items: center; margin-bottom: var(--sp-4); }
-.ss-new__h { margin: 0 0 var(--pad-chip); font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 500; color: var(--text-strong); white-space: nowrap; }
+.ss-new__h { margin-bottom: var(--pad-chip); }
 .ss-new__launch { display: flex; justify-content: center; gap: var(--sp-1); }
 .ss-new__wait { margin-top: var(--ns-wait-top); width: var(--ns-wait-w); max-width: 100%; }
-.ss-new__row { --sq-bg: transparent; display: flex; align-items: center; gap: var(--gap-row); width: 100%; min-height: var(--compact-h); padding: 0 var(--gap-row); box-sizing: border-box; border-radius: var(--r-field); background: var(--sq-bg); text-align: start; }
-@media (hover: hover) and (pointer: fine) { .ss-new__row:hover { --sq-bg: var(--hover); } }
-.ss-new__row:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
-.ss-new__row > .ssl-row__t { flex: 0 1 auto; min-width: 0; }
-.ss-new__sub { flex: 0 1 auto; min-width: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
 .ss-new__zone { --hx-dock-space: var(--hx-dock-space-to); position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--hx-dock-space, 0px) + var(--composer-bottom)); width: var(--composer-w); max-width: calc(100% - 2 * var(--sp-5)); }
 .ss-new__notice > .k7-notice { margin-bottom: var(--sp-2); }

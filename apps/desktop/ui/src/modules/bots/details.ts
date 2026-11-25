@@ -15,6 +15,7 @@ import { openSettings } from './settings';
 let host: HTMLElement | null = null;
 let tab: 'activity' | 'library' = 'activity';
 let sig = '';
+let watching = false;
 
 const base = (path: string): string => path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path;
 function schedulesOf(b: Bot): readonly Schedule[] { return data().schedules.list.get().filter((s) => s.bot === b.id); }
@@ -57,9 +58,10 @@ function bodyHTML(b: Bot): string {
 export function paintDetails(_newSession?: () => void): void {
   const shell = document.getElementById('hx-right-shell');
   if (!shell) return;
-  if (!host) {
+  if (!host || host.parentElement !== shell) {
     host = el('div', { class: 'bt-details', id: 'hx-right-bots' });
     shell.append(host);
+    sig = '';
     host.addEventListener('click', (e) => {
       const t = e.target as Element, b = bot(S.sel);
       if (!b || t.closest('.k7-switch')) return;
@@ -72,10 +74,9 @@ export function paintDetails(_newSession?: () => void): void {
       const seg = t.closest('[data-kit~="Segmented"]');
       if (seg) { tab = (e as CustomEvent<{ value: string }>).detail.value === 'library' ? 'library' : 'activity'; sig = ''; paintDetails(); return; }
       const sw = t.closest<HTMLElement>('[data-schedule]');
-      if (sw) data().schedules.setPaused(sw.dataset['schedule'] as string, sw.getAttribute('aria-checked') !== 'true');
+      if (sw) data().schedules.setPaused(sw.dataset['schedule'] as string, !(e as CustomEvent<{ value: boolean }>).detail.value);   /* on is running: off pauses it */
     });
-    data().schedules.list.subscribe(() => { paintDetails(); });
-    on('hx:state', () => { paintDetails(); });
+    if (!watching) { watching = true; data().schedules.list.subscribe(() => { paintDetails(); }); on('hx:state', () => { paintDetails(); }); }
   }
   const b = state.tab === 'bots' && S.view === 'bot' ? bot(S.sel) : undefined;
   const open = !!b && state.right === 'open';
