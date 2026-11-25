@@ -26,7 +26,7 @@ export interface ChromeOpts {
 export interface ChromeParts { toggle?: U<Attrs>; title?: U<Attrs>; search?: U<Attrs>; details?: U<Attrs>; windowGroup?: U<Attrs>; min?: U<Attrs>; max?: U<Attrs>; close?: U<Attrs> }
 export function titlePill(o: { title: string; bot?: U<BotLike>; running?: U<string>; members?: U<readonly BotLike[]>; icon?: U<string>; attrs?: U<Attrs> }): string {
   const lead = o.members && o.members.length ? stack({ members: o.members, size: 24, max: 4, still: true, tip: false })   /* four places, as every row's stack (owner decision, 22 November: one stack, consistently) */
-    : o.bot ? orbHtml({ ...o.bot, state: o.running ? 'working' : 'idle', attention: null }, { size: 24, live: true, motion: 'lively', mode: 'fixed' })   /* the pill's orb faces front and idles (screens.js pill: orb(bot, 24)); the bot's state is said in the rail, the thread and the status line */
+    : o.bot ? orbHtml({ ...o.bot, state: o.running ? 'working' : 'idle', attention: null }, { size: 24, live: true, motion: 'lively', mode: 'fixed', surface: '--bg-3' })   /* the pill's orb faces front and idles (screens.js pill: orb(bot, 24)); the bot's state is said in the rail, the thread and the status line */
     : o.icon ? '<span class="k7-title__ic" aria-hidden="true">' + glyph(o.icon) + '</span>' : '';
   return '<button class="k7-reset k7-title"' + partAttrs('TitlePill', { type: 'button', 'aria-haspopup': 'dialog', 'aria-description': 'Opens the details', 'data-running': o.running ? '' : null, 'data-lead': lead ? '' : null, ...(o.attrs ?? {}) }) + '>' +
     lead + '<span class="k7-title__name">' + esc(o.title) + '</span>' +
@@ -79,7 +79,7 @@ export function pane(o: PaneOpts): string {
       '<div class="k7-pane__tabs">' + segmented({ label: 'Tools', items: tabs, value: o.tab ?? 'diff', variant: 'tabs' }) + '<span class="k7-grow"></span>' + iconButton({ icon: 'close', label: 'Close the tools', variant: 'tinted' }) + '</div>' +
       '<div class="k7-pane__body">' + (o.body ?? '') + '</div></aside>';
   }
-  return '<aside class="k7-pane"' + a + '><div class="k7-pane__head">' + (o.bot ? orbHtml({ ...o.bot, state: 'idle', attention: null }, { size: 64, live: true, motion: 'lively', mode: 'fixed' }) : '') + '<h2 class="k7-pane__name">' + esc(o.title ?? '') + '</h2>' +
+  return '<aside class="k7-pane"' + a + '><div class="k7-pane__head">' + (o.bot ? orbHtml({ ...o.bot, state: 'idle', attention: null }, { size: 64, live: true, motion: 'lively', mode: 'fixed', surface: '--bg-pane' }) : '') + '<h2 class="k7-pane__name">' + esc(o.title ?? '') + '</h2>' +
     segmented({ label: 'Details', items: [{ value: 'activity', label: 'Activity' }, { value: 'library', label: 'Library' }], value: o.tab ?? 'activity' }) + '</div>' +
     '<div class="k7-pane__body">' + (o.body ?? '') + '</div></aside>';   /* no "More" in its corner: board 11 draws none there (the chrome's controls float over the pane's top) */
 }
@@ -109,7 +109,7 @@ export interface RailOpts { size?: U<'a' | 'b'>; bots: readonly RailBot[]; group
 export function rail(o: RailOpts): string {
   const b = o.size === 'b', orb = b ? 28 : 36;
   const tile = (x: RailBot): string => '<button class="k7-reset k7-tile"' + attrs({ type: 'button', 'aria-label': (x.name ?? '') + (x.needs ? ', needs you' : x.working ? ', working' : ''), 'aria-current': x.current ? 'page' : null, 'data-tip': x.name, 'data-tip-pos': 'right', 'data-needs': x.needs ? '' : null, ...(x.attrs ?? {}) }) + '>' +
-    ((h: string) => (x.ink ? inkOrb(h) : h))(orbHtml(x, { size: orb, rest: true, state: x.state && x.state !== 'idle' ? undefined : x.needs ? 'needs' : x.working ? 'working' : undefined })) + (x.needs ? '<span class="k7-flag" aria-hidden="true"></span>' : '') + '</button>';
+    ((h: string) => (x.ink ? inkOrb(h) : h))(orbHtml(x, { size: orb, rest: true, surface: '--bg-1', state: x.state && x.state !== 'idle' ? undefined : x.needs ? 'needs' : x.working ? 'working' : undefined })) + (x.needs ? '<span class="k7-flag" aria-hidden="true"></span>' : '') + '</button>';
   /* a group is the v6 cluster (owner decision, 23 November; a keep-list item in v7), its orbs at 0.42 of the tile's orb as the approved
      boards draw it (ds-v7 screens.js: 15 on the standard rail, 12 on the compact one). DECIDED (owner, 25 November 2026): the cluster is
      at most three orbs in their triangle, as drawn; the members past three are a "+N" chip clear of the orbs, on the cluster's right,

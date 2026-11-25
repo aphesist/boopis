@@ -87,23 +87,17 @@
 .k7-chip:active { transform: scale(.96); }
 .k7-chip__label, .k7-chip > .k7-ic { position: relative; }
 
-/* ── Segmented (23): a pill track at --fill-2, inset 2; the thumb a pill (--current dark, a raised white pill light) ── */
-.k7-seg {
-  position: relative; display: inline-grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: var(--gap-hair);
-  padding: var(--pad-seg); border-radius: var(--r-pill); background: var(--fill-2); flex: none;
-}
-.k7-seg__thumb {
-  position: absolute; top: var(--pad-seg); left: var(--pad-seg); height: var(--seg-item-h); border-radius: var(--r-pill);
-  width: calc((100% - 2 * var(--pad-seg) - (var(--n) - 1) * var(--gap-hair)) / var(--n));
-  transform: translateX(calc(var(--i) * (100% + var(--gap-hair)))); background: var(--seg-on); box-shadow: var(--seg-on-sh);
-  transition: transform var(--dur-slide) var(--spring);
-}
+/* ── Segmented (23): the boards' `.seg` (kit.css): a pill track at --fill-2 on a 2 inset, its items 26 tall with 14 at their sides, each as
+   wide as its word, 2 apart; the chosen one a pill at --seg-on (--current dark; a raised white pill light). The item carries its own
+   fill: items are not equal columns, so no thumb slides between them (the slide waits for a measured thumb) ── */
+.k7-seg { position: relative; display: inline-flex; gap: var(--gap-hair); padding: var(--pad-seg); border-radius: var(--r-pill); background: var(--fill-2); flex: none; }
+.k7-seg__thumb { display: none; }
 .k7-seg__item {
   position: relative; display: inline-flex; align-items: center; justify-content: center; height: var(--seg-item-h); padding: 0 var(--pad-chip);
-  border-radius: var(--r-pill); font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text-dim); white-space: nowrap;
-  transition: color var(--dur-out) var(--ease-out);
+  border-radius: var(--r-pill); font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); white-space: nowrap;
+  transition: color var(--dur-out) var(--ease-out), background-color var(--dur-out) var(--ease-out);
 }
-.k7-seg__item:is([aria-checked="true"], [aria-selected="true"]) { color: var(--text); }
+.k7-seg__item:is([aria-checked="true"], [aria-selected="true"]) { color: var(--text); background: var(--seg-on); box-shadow: var(--seg-on-sh); }
 /* the ring inside the item, so it stays in the track (R-corner-4) */
 .k7-seg__item:focus-visible, .k7-split > .k7-btn:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
 @media (hover: hover) and (pointer: fine) { .k7-seg__item:hover { color: var(--text); transition-duration: var(--dur-1); } }

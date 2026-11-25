@@ -167,7 +167,12 @@ function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEnt
   const entry = turnEntry({ kind: you ? 'user' : 'bot', label: (you ? 'You' : (who as Bot).name) + (m.t ? ', ' + m.t : '') });
   turnBody(entry).append(wrapMsg(b, m, node));
   ENTRY.set(entry, { msgs: [m], who: m.who });
-  if (!you) { turnActs(entry, { name: (who as Bot).name, copy: () => turnText(entry) }); placeActs(entry); }
+  if (!you) {
+    const name = (who as Bot).name;
+    /* board 11 draws two hover actions, copy and "more": more holds the other thing a turn can do today, the copy as Markdown (KEYMAP 5's C) */
+    turnActs(entry, { name, copy: () => turnText(entry), more: (a) => { kit.openMenu(a, { label: 'More', place: 'below', align: 'start', entries: [{ label: 'Copy as Markdown', icon: 'copy', value: 'md' }], onSelect: () => { void ui.copyText('**' + name + '**\n\n' + turnText(entry)); toast('Copied'); } }); } });
+    placeActs(entry);
+  }
   livenIn(entry);
   place(entry);
   checkClips();

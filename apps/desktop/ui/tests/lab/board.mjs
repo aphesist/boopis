@@ -57,9 +57,10 @@ async function serve() {
 }
 
 /* ───────── drawing ───────── */
-const orbBoxes = () => [...document.querySelectorAll('orb-avatar')].map((o) => { const r = o.getBoundingClientRect(); return { shown: o.checkVisibility ? o.checkVisibility({ visibilityProperty: true, opacityProperty: true }) : true, x: r.left, y: r.top, w: r.width, h: r.height, shape: o.getAttribute('shape') || '', color: (o.getAttribute('color') || '').toLowerCase(), reaction: o.getAttribute('reaction') || 'idle' }; }).filter((b) => b.w > 0 && b.h > 0 && b.x < innerWidth && b.y < innerHeight && b.shown);
+const orbBoxes = () => [...document.querySelectorAll('orb-avatar')].map((o) => { const r = o.getBoundingClientRect(); return { shown: o.checkVisibility ? o.checkVisibility({ visibilityProperty: true, opacityProperty: true }) : true, x: r.left, y: r.top, w: r.width, h: r.height, shape: o.getAttribute('shape') || '', color: ((c) => (c.startsWith('var(') ? getComputedStyle(o).getPropertyValue(c.slice(4, -1)).trim() : c))(o.getAttribute('color') || '').toLowerCase(), reaction: o.getAttribute('reaction') || 'idle' }; }).filter((b) => b.w > 0 && b.h > 0 && b.x < innerWidth && b.y < innerHeight && b.shown);
 async function shot(browser, url, wait, ready) {
-  const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, reducedMotion: 'reduce' });
+  /* the board is drawn as it was approved; the app rests its live things (the sweep, the breath) as the boards' `still` does */
+  const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, ...(ready ? { reducedMotion: 'reduce' } : {}) });
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e.message)));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -71,7 +72,6 @@ async function shot(browser, url, wait, ready) {
     if (bad) errors.push(bad);
   }
   await page.waitForTimeout(wait);
-  await page.mouse.move(W - 2, H / 2);   /* the pointer rests where nothing hovers */
   const png = PNG.sync.read(await page.screenshot({ type: 'png' }));
   const orbs = await page.evaluate(orbBoxes);
   await page.close();

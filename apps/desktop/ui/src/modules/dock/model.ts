@@ -6,11 +6,12 @@
    - Its bots are ordered the way the others are: needs you, then working, then the roster's order (the app keeps no pin and no
      recency of its own yet: an owner question).
    - D01 B: the row shows the bots that matter now, as many as fit at most 640 wide, then "N more" (to the Bots tab). */
+import { BOOPIS_ID } from '../../data';
 import type { Bot, Wait } from '../../data';
 import { botState } from '@boopis/ui';
 
 /** the boopis bot is the engine's own (the default profile): never one of yours, so it never counts toward showing the dock */
-export const BOOPIS_ID = 'boopis';
+export { BOOPIS_ID };
 export const ownBots = <B extends Pick<Bot, 'id'>>(bots: readonly B[]): B[] => bots.filter((b) => b.id !== BOOPIS_ID && b.id !== 'default');
 
 export interface ShowInput { ownBots: number; tab: string; setting: boolean }

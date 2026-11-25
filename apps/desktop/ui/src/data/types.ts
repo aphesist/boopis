@@ -4,6 +4,8 @@
 import type { ThreadLine } from './session-s0';
 
 export interface User { name: string; initials: string }
+/** the boopis bot is the engine's own (the default profile): drawn in the theme's ink, and never one of the person's own bots */
+export const BOOPIS_ID = 'boopis';
 
 /* ───────── bots ───────── */
 export type BotState = 'idle' | 'listening' | 'thinking' | 'working' | 'compute' | 'speaking' | 'needs' | 'done' | 'happy' | 'sleeping' | 'error';

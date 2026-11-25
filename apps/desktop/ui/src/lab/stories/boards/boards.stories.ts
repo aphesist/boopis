@@ -23,7 +23,7 @@ const bots: Story = {
         }
       },
       /* the board draws the last reply with its hover actions showing */
-      force: [{ sel: '#hx-view-bots [data-hx-turn][data-kind="bot"]:last-of-type', state: 'hover' }]
+      force: [{ sel: '#hx-view-bots .bt-log > [data-hx-turn][data-kind="bot"]', state: 'hover' }]
     } satisfies State
   }
 };

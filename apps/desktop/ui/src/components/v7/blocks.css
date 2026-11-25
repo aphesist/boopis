@@ -17,7 +17,7 @@
 /* a pane card's row (kit.css `.pane-card .sr`): at least 40 tall, 4 14, its label 14/18, its value 13 (mono too) */
 .k7-card[data-variant="pane"] .k7-row { min-height: var(--pill-h); padding: var(--pad-queue) var(--pad-btn-card); }
 .k7-card[data-variant="pane"] .k7-row__label { line-height: var(--lh-s); letter-spacing: var(--track-s); white-space: normal; }
-.k7-card[data-variant="pane"] .k7-row__value, .k7-card[data-variant="pane"] .k7-row__value.k7-mono { font-size: var(--fs-s); line-height: var(--lh-s); }
+.k7-card[data-variant="pane"] .k7-row__value, .k7-card[data-variant="pane"] .k7-row__value.k7-mono { font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); }   /* a mono value keeps the 13 step's tracking here (kit.css: `.s` after `.mono`) */
 /* the danger zone: collapsed to its heading at the end of a page (the owner's pick 08); open, its rows */
 .k7-card[data-variant="danger"] { padding: 0; }
 .k7-card__head { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-height: var(--session-h); padding: var(--pad-set-y) var(--pad-set-x); box-sizing: border-box; border-radius: var(--r-card); }

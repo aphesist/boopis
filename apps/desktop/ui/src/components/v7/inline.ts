@@ -35,7 +35,7 @@ export function avatar(o: AvatarOpts): string {
 export const botColours = (hex: string): string => '--bot-dark:' + botText(hex, 'dark') + ';--bot-light:' + botText(hex, 'light');
 
 /** the boopis bot (section 10): the squircle in --text-strong, light ink on dark, dark on light, light on the dock; its eyes the ground */
-export const inkOrb = (orb: string): string => orb.replace(/ color="[^"]*"/, ' color="var(--text-strong)"').replace(/ eye-color="[^"]*"/, '').replace('<orb-avatar', '<orb-avatar eye-color="var(--bg-2)"').replace(/ shape="[^"]*"/, ' shape="squircle"');
+export const inkOrb = (orb: string): string => orb.replace(/ color="[^"]*"/, ' color="var(--text-strong)" data-ink').replace(/ shape="[^"]*"/, ' shape="squircle"');   /* its eyes stay cut to its surface, as every orb's (orb.ts `surface`) */
 
 /* ── InlineChip (30): mention, you, reference, code, model, countdown ── */
 export const INLINE_KINDS = ['mention', 'you', 'reference', 'code', 'model', 'countdown'] as const;
@@ -112,7 +112,7 @@ export interface StatusLineOpts {
 export function statusLine(o: StatusLineOpts): string {
   const kind = o.kind ?? 'bot', working = o.working !== false;
   const lead = kind === 'bot'
-    ? (o.members && o.members.length > 1 ? stack({ members: o.members, size: 16, still: true, tip: false }) : o.bot ? orbHtml(o.bot, { size: 16, live: working, state: working ? 'working' : 'idle' }) : '')
+    ? (o.members && o.members.length > 1 ? stack({ members: o.members, size: 16, still: true, tip: false }) : o.bot ? orbHtml(o.bot, { size: 16, live: working, mode: 'fixed', ...(working ? { state: 'working' } : {}) })   /* at rest it keeps the bot's own face (board 11: "Waiting for you" with the needs-you face) */ : '')
     : kind === 'session' ? '<span class="k7-status__mark"' + attrs({ 'data-pulse': working ? '' : null, 'data-live': working ? '' : null }) + '>' + markHTML(o.model ?? null, { size: 16, label: false }) + '</span>' : '';
   return '<div class="k7-status"' + kitAttrs('StatusLine', { 'data-kind': kind, 'data-working': working ? '' : null, role: o.inPill ? null : 'status', 'aria-live': o.inPill ? null : 'polite', ...(o.attrs ?? {}) }) + '>' + lead +
     '<span class="' + cls('k7-status__phrase', working && 'k7-shimmer') + '"' + attrs({ 'data-live': working ? '' : null }) + '>' + esc(o.phrase) + '</span>' +

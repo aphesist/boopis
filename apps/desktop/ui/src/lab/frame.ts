@@ -101,7 +101,7 @@ function applyForces(st: State): void {
 }
 let currentStory: Story | null = null;
 /** a story of the v7 kit (src/lab/stories/kit/) */
-const isKitStory = (s: Story): boolean => s.id.startsWith('kit/') || s.id.startsWith('v7/');
+const isKitStory = (s: Story): boolean => s.id.startsWith('kit/') || s.id.startsWith('v7/') || s.id.startsWith('boards/');
 /** a v7 theme as the app picks it today: the scheme of the v6 preset (the shell's v7 root follows it, modules/shell/chrome.ts) */
 const appPreset = (t: 'dark' | 'light'): string => (t === 'light' ? 'bone' : 'catalog');
 /** a preset id as a v7 theme: dark and light, or a v6 preset's scheme (bone is the light one) */

@@ -21,6 +21,9 @@ export interface OrbOpts {
   motion?: 'calm' | 'lively' | 'off' | undefined; live?: boolean | undefined; still?: boolean | undefined; mode?: string | undefined;
   /** a rest surface (the dock, the Bots sidebar, the rail; ORBS.md §23): idle is the still rest pose at the home, jelly 0 */
   rest?: boolean | undefined;
+  /** the surface the orb sits on, as its token (`--bg-1` the rail and the sidebar, `--bg-3` a pill or a Block, `--bg-pane` the details
+      pane; the ground `--bg-2` when left out): its eyes are cut out, drawn in that surface's colour (the boards' kit.js orb and eyes) */
+  surface?: string | undefined;
 }
 
 /** call an orb method if the element has been upgraded (a not-yet-defined element has none) */
@@ -40,8 +43,9 @@ export function orbHtml(b: BotLike, o: OrbOpts = {}): string {
   /* orb3 (ORBS.md §23): every bot carries the home orientation, which holds only at rest; at rest on a rest surface it wears the pose */
   const rest = !!o.rest, atRest = rest && s.reaction === 'idle';
   return '<span class="ui-orb"' + attrs({ 'data-bot': b.id, 'data-render': render ? '' : null, style: '--o:' + size + (render ? ';--r:' + render : ''), 'data-size': size >= 40 ? 'l' : null, 'data-orb-rest': rest ? '' : null }) + '>' +
-    '<orb-avatar' + attrs({ size: render ?? size, shape: look.shape, color: look.color, 'eye-color': look['eye-color'], home: HOME, 'face-scale': size <= FACE_SCALE_MAX ? '1.25' : null,
-      reaction: atRest ? REST_REACTION : s.reaction, 'idle-motion': atRest ? 'off' : o.motion ?? 'calm', mode: rest ? 'drift' : o.mode ?? 'drift', static: still && !rest,
+    '<orb-avatar' + attrs({ size: render ?? size, shape: look.shape, color: look.color, 'eye-color': look['eye-color'] ?? 'var(' + (o.surface ?? '--bg-2') + ')', 'data-surface': o.surface ?? null, home: HOME, 'face-scale': size <= FACE_SCALE_MAX ? '1.25' : null,
+      /* at rest on a rest surface: the pose, drifting, its idle off; a bot in a state there is awake as the boards draw it (kit.js orb: lively, mode fixed) */
+      reaction: atRest ? REST_REACTION : s.reaction, 'idle-motion': atRest ? 'off' : o.motion ?? (rest ? 'lively' : 'calm'), mode: atRest ? 'drift' : rest ? 'fixed' : o.mode ?? 'drift', static: still && !rest,
       jelly: rest ? '0' : !still && reduced() ? '.12' : !still ? '.25' : null,
       'data-glance': still || atRest ? null : '', label: b.name, 'aria-hidden': 'true' }) + '></orb-avatar>' +
     (o.flag && s.attention ? '<span class="ui-dot ui-dot--flag" aria-hidden="true"></span>' : '') + '</span>';
@@ -63,7 +67,10 @@ export function restReact(o: Element | null | undefined, reaction: string): void
     colour instead of starting again (the same attributes `orbHtml` writes: `lookAttrs`) */
 export function paintLook(o: Element | null | undefined, look: Look): void {
   if (!o) return;
-  for (const [k, v] of Object.entries(lookAttrs(look))) {
+  for (const [k, v0] of Object.entries(lookAttrs(look))) {
+    /* the boopis bot keeps the theme's ink (kit `inkOrb`), and an orb with no eye colour of its own keeps its eyes cut to its surface */
+    if (k === 'color' && o.hasAttribute('data-ink')) continue;
+    const v = k === 'eye-color' && v0 === null ? 'var(' + (o.getAttribute('data-surface') ?? '--bg-2') + ')' : v0;
     if (v === null) { if (o.hasAttribute(k)) o.removeAttribute(k); } else if (o.getAttribute(k) !== v) o.setAttribute(k, v);
   }
 }

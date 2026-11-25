@@ -30,7 +30,7 @@ export function bubbleOf(node: HTMLElement, o: BubbleWrap): HTMLElement {
   return outer;
 }
 
-export interface ActsOpts { name: string; copy: () => string; reply?: () => void; open?: () => void }
+export interface ActsOpts { name: string; copy: () => string; reply?: () => void; open?: () => void; /** the "more" button's menu (board 11 draws it after copy): what else the turn offers */ more?: (anchor: HTMLElement) => void }
 /** the turn's hover actions (screen 11: beside the last bubble): the kit's ghost IconButtons */
 export function turnActs(t: HTMLElement, o: ActsOpts): void {
   if (t.querySelector(':scope > .bt-turn__acts')) return;
@@ -40,6 +40,7 @@ export function turnActs(t: HTMLElement, o: ActsOpts): void {
   acts.append(copy);
   if (o.reply) { const r = o.reply; const b = kit.iconButton({ icon: 'at', label: 'Reply to ' + o.name, tip: 'Reply', variant: 'ghost' }); b.addEventListener('click', () => { r(); }); acts.append(b); }
   if (o.open) { const op = o.open; const b = kit.iconButton({ icon: 'bots', label: 'Open ' + o.name + '’s chat', tip: 'Open chat', variant: 'ghost' }); b.addEventListener('click', () => { op(); }); acts.append(b); }
+  if (o.more) { const m = o.more; const b = kit.iconButton({ icon: 'more', label: 'More for ' + o.name + '’s message', tip: 'More', variant: 'ghost', haspopup: 'menu' }); b.addEventListener('click', () => { m(b); }); acts.append(b); }
   t.append(acts);
 }
 /** the hover actions sit beside the turn's last bubble, on its middle (board 11: `.row` of the bubble and its `.hoverbar`): the

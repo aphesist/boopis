@@ -14,7 +14,7 @@ import type { Attrs, U } from './util';
 const blockAttrs = (name: string, more: Attrs): string => kitAttrs(name, { 'data-block': '', 'data-sq': '', 'data-sq-mode': 'frame', ...more });
 /** an agent card's head: the asker's mark (a model's 16 px mark, or a bot's 16 px orb), a short line, and the state at the end */
 function askerHTML(o: { model?: U<ModelRef>; bot?: U<BotLike> }): string {
-  return o.bot ? orbHtml(o.bot, { size: 16, still: true }) : o.model ? '<span class="k7-head__mark">' + markHTML(o.model, { size: 16, label: false }) + '</span>' : '';
+  return o.bot ? orbHtml(o.bot, { size: 16, still: true, mode: 'fixed', surface: '--bg-3' }) : o.model ? '<span class="k7-head__mark">' + markHTML(o.model, { size: 16, label: false }) + '</span>' : '';
 }
 
 /* ── AskCard (9): standalone (a bot's approval, never expires), attached (in a ToolRow), question (chips), choices (lettered rows),

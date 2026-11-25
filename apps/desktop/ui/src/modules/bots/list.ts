@@ -9,7 +9,7 @@ import { emit } from '../../core/bus';
 import { $, el, frag, reduced } from '../../core/dom';
 import { state } from '../../core/state';
 import { kit, ui } from '@boopis/ui';
-import { data } from '../../data';
+import { BOOPIS_ID, data } from '../../data';
 import { lookOf, oc, paintLook, restReact } from '@boopis/ui';
 import { DRAFT_COLOR, paintOrb } from './paint';
 import { livenIn } from './orbs';
@@ -223,7 +223,7 @@ export function drawRail(): void {
   const sig = size + '|' + S.bots.map((b) => b.id + b.color + b.shape).join() + '|' + S.groups.map((g) => g.id + ':' + g.members.map((m) => m.profile).join('.')).join();
   if (sig === RAIL.sig && host.firstElementChild) { for (const b of S.bots) patchTile(b.id); return; }
   RAIL.sig = sig;
-  const tiles = S.bots.map((b) => { const s = ui.botState(b); const current = S.view === 'bot' && b.id === S.sel; return { ...b, current, needs: !!s.attention && !current   /* the open bot's tile carries no flag (board 11): its ask is in front of you */, working: s.busy, attrs: { 'data-bot': b.id, 'aria-label': ui.botLabel(b) } }; });
+  const tiles = S.bots.map((b) => { const s = ui.botState(b); const current = S.view === 'bot' && b.id === S.sel; return { ...b, current, ink: b.id === BOOPIS_ID, needs: !!s.attention && !current   /* the open bot's tile carries no flag (board 11): its ask is in front of you */, working: s.busy, attrs: { 'data-bot': b.id, 'aria-label': ui.botLabel(b) } }; });
   /* a room's cluster: its members that are bots, the rest in "+N"; its tooltip its name and who is in it (owner decision, 23 November) */
   const groups = S.groups.map((g) => {
     const members = g.members.map((m) => bot(m.profile)).filter((x): x is Bot => !!x);
