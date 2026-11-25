@@ -153,6 +153,15 @@ Until a 0.3.0 feature exists, its control on a 0.2.0 screen is disabled with a r
 - **Commits:** the owner's identity only, no attribution lines, never to develop or main, no PRs, no tags or
   releases without the owner's OK. orb2 pushes need the owner's OK each time.
 - **Machines:** commit and push often; no full lab locally; full CI by dispatch at gates; the disk is tight.
+- **The stop hook's "uncommitted changes" notice:** when the changes are a running builder's work in progress in
+  its worktree, the lead does not commit them from outside (it would break the builder's build or collide with its
+  commits); the lead says so and checks that its own files are committed. The lead commits them only if the
+  builder has stopped.
+- **Before briefing any step:** look up the screen in COVERAGE.md and in section 3's replacement list, and check
+  the order of approval, so the brief names the latest reference. Two stale references were briefed on 25 Nov
+  (board 12's sidebar, board 10's session thread); both were caught mid-step.
+- **This notebook is written at every event,** in the same turn: an owner message with a decision, a builder's
+  report, a finding, a question asked or answered, a change of plan, a CI result.
 
 ## 9. Owner decisions since the rejection (25 Nov 2026)
 
