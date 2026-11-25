@@ -225,6 +225,21 @@
 /* the boards' own margins (kit.css): an AskCard 8 more than a bubble's 6 under what it follows, the status line 12, a time separator 12 over and 6 under */
 .k7-thread > * + .k7-ask { margin-top: calc(var(--gap-s) + var(--sp-2)); }
 .k7-thread > * + .k7-status { margin-top: var(--sp-3); }
+/* a session's thread (boards S20 to S23, kit.css `.thread.sess`): what the agent says and does sits 30 in, under the answering model's
+   mark at the foot of the last bubble of its run (`.gm`); a tool row, the changed files and the turn's foot are as wide as the column.
+   The boards' own margins: the work line 10 under what it follows and 10 over a tool row, 8 over the answer; a tool row 6; the changed
+   files and the turn's foot 8; a question 10; the status line 12 */
+.k7-thread[data-kind="session"] > :is(.k7-disc, .k7-tool, .k7-files, .k7-foot, .k7-ask, .k7-status) { margin-inline-start: var(--gutter); }
+.k7-thread[data-kind="session"] > :is(.k7-tool, .k7-files, .k7-foot) { width: auto; align-self: stretch; }
+.k7-thread[data-kind="session"] > .k7-ask { width: min(100% - var(--gutter), var(--bubble-max)); align-self: flex-start; }
+.k7-thread[data-kind="session"] > * + .k7-disc { margin-top: var(--gap-row); }
+/* a finished turn starts with its work line, at the column's own edge (board S23) */
+.k7-thread[data-kind="session"] > .k7-disc:first-child { margin-inline-start: 0; }
+.k7-thread[data-kind="session"] > .k7-disc + * { margin-top: var(--sp-2); }
+.k7-thread[data-kind="session"] > .k7-disc + .k7-tool { margin-top: var(--gap-row); }
+.k7-thread[data-kind="session"] > :not(.k7-disc) + .k7-tool { margin-top: var(--gap-s); }
+.k7-thread[data-kind="session"] > * + :is(.k7-files, .k7-foot) { margin-top: var(--sp-2); }
+.k7-thread[data-kind="session"] > * + .k7-ask { margin-top: var(--gap-row); }
 
 /* ── Well (16): --bg-0, radius 10, mono 12/18 ── */
 .k7-well { --sq-bg: var(--bg-0); --sq-line: var(--hair); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line); border-radius: var(--r-field); min-width: 0; color: var(--text-dim); }
@@ -242,7 +257,9 @@
 
 /* ── Disclosure (36): a summary in 13 --text-dim with a chevron; its step list ── */
 .k7-disc { display: flex; flex-direction: column; min-width: 0; }
-.k7-disc__sum { display: inline-flex; align-items: center; gap: var(--gap-s); max-width: 100%; align-self: flex-start; min-height: var(--ctl-s); font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); border-radius: var(--r-xs); }
+.k7-disc__sum { display: inline-flex; align-items: center; gap: var(--gap-s); max-width: 100%; align-self: flex-start; font-size: var(--fs-s); line-height: var(--lh-m); color: var(--text-dim); border-radius: var(--r-xs); }
+.k7-disc__chev { flex: none; transition: transform var(--dur-1) var(--ease-sharp); }
+.k7-disc__sum[aria-expanded="true"] > .k7-disc__chev { transform: rotate(90deg); }
 @media (hover: hover) and (pointer: fine) { .k7-disc__sum:hover { color: var(--text); } }
 .k7-disc > .k7-disc__body { display: none; }
 .k7-disc[data-open] > .k7-disc__body { display: block; }
@@ -262,17 +279,24 @@
 .k7-step__time { flex: none; margin-inline-start: auto; font-size: var(--fs-2xs); color: var(--text-quiet); }
 @media (prefers-reduced-motion: reduce) { .k7-step[data-state="now"] .k7-step__dot { animation: none; } }
 
-/* ── TurnFoot (37): model, time and cost, 12 --text-dim; a session's actions as ghost 26 buttons, shown on hover ── */
-.k7-foot { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--line-h); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
-.k7-foot__model { display: inline-flex; align-items: center; gap: var(--sp-1); }
+/* ── TurnFoot (37): under a finished reply. A bot's (kit.css `.meta`): the model's 14 mark and name, the time and the cost, 12 --text-dim,
+   8 apart. A session's (board S23, kit.css `.turnbar`): the checkpoint the turn left ("Checkpoint 3"), its actions as ghost 26 buttons
+   with their glyphs (Undo, Edit from here, Fork: each only where it exists), and at the end the model's 12 mark, its name, the time and
+   the cost in mono 12 --text-dim ── */
+.k7-foot { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--lh-m); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); min-width: 0; }
+.k7-foot__model { display: inline-flex; align-items: center; gap: var(--pad-kbd); }
 .k7-foot__model > svg { color: var(--text-dim); }
 .k7-foot .k7-mono { font-size: var(--fs-xs); }
-.k7-foot__acts { display: inline-flex; gap: var(--sp-1); margin-inline-start: auto; opacity: 0; transition: opacity var(--dur-out) var(--ease-out); }
-.k7-foot:hover .k7-foot__acts, .k7-foot:focus-within .k7-foot__acts, .k7-foot[data-lab-hover] .k7-foot__acts { opacity: 1; transition-duration: var(--dur-1); }
+.k7-foot[data-kind="session"] { gap: var(--sp-1); min-height: var(--line-h); }
+.k7-foot__label { margin-inline-end: var(--gap-s); white-space: nowrap; }
+.k7-foot__acts { display: inline-flex; gap: var(--sp-1); min-width: 0; }
+.k7-foot__btn { display: inline-flex; align-items: center; gap: var(--gap-s); flex: none; height: var(--line-h); padding: 0 var(--gap-row); border-radius: var(--r-pill); font-size: var(--fs-xs); line-height: var(--lh-xs); letter-spacing: var(--track); color: var(--text-dim); white-space: nowrap; }
+.k7-foot__btn > svg { flex: none; }
 .k7-foot__btn:disabled { color: var(--text-faint); cursor: default; }
-.k7-foot__btn { height: var(--line-h); padding: 0 var(--gap-row); border-radius: var(--r-pill); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); white-space: nowrap; }
 @media (hover: hover) and (pointer: fine) { .k7-foot__btn:not(:disabled):hover { background: var(--hover); color: var(--text); } }
-@media (hover: none) { .k7-foot__acts { opacity: 1; } }
+.k7-foot__meta { flex: none; white-space: pre; letter-spacing: 0; }
+.k7-foot__meta > svg { vertical-align: baseline; color: var(--text-dim); }
+.k7-foot__note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── TimeSeparator (38): 12 --text-dim, centred; "NEW" in the accent ── */
 .k7-time { display: flex; align-items: center; justify-content: center; gap: var(--gap-row); margin: var(--sp-3) 0 var(--gap-s); padding: var(--gap-s) 0; font-size: var(--fs-xs); line-height: var(--lh-m); color: var(--text-dim); }

@@ -85,6 +85,7 @@ export interface LaunchView {
   careful: CarefulStep;
   /** the person's pick fell back (no trusted gate): the row says so */
   fellBack: boolean;
+  /** the worktree choice exists (it does not yet: every session takes a new worktree) */ worktree?: boolean;
   /** the sessions waiting on the person, one line each: the model's mark, the title, where it works, what it waits for */
   waiting: readonly { id: string; title: string; sub: string; word: string; model: string | null }[];
 }
@@ -97,8 +98,6 @@ export interface LaunchActions {
   open?(id: string): void;
 }
 const NO_FOLDER = 'Add a folder to start';
-/** where a session works is not a choice yet (every session takes a new worktree): the selector is drawn as the board draws it and does nothing */
-const WORKTREE_NOT_YET = 'Choosing between a new worktree and this checkout is not in this build yet';
 export function launchCanvas(v: LaunchView, act: LaunchActions): HTMLElement {
   const c = document.createElement('div');
   c.className = 'ss-new__canvas';
@@ -108,7 +107,8 @@ export function launchCanvas(v: LaunchView, act: LaunchActions): HTMLElement {
   const row = v.folder === null
     ? kit.html.button({ label: 'Add a project', variant: 'primary', icon: 'folder', attrs: { 'data-launch': 'folder' } })
     : sel({ label: 'Folder', value: v.folder, icon: 'folder' }, 'folder') +
-      sel({ label: 'Workspace', value: 'New worktree', icon: 'fork', attrs: { 'aria-disabled': 'true', 'data-tip': WORKTREE_NOT_YET } }, 'worktree') +
+      /* where a session works is not a choice yet (every session takes a new worktree): the selector shows once it is */
+      (v.worktree ? sel({ label: 'Workspace', value: 'New worktree', icon: 'fork' }, 'worktree') : '') +
       (v.model === null ? sel({ label: 'Model', value: 'Choose a model', icon: 'plus', need: true, chevron: false }, 'model') : sel({ label: 'Model', value: shortName(v.model) || v.model, leadHTML: markHTML(v.model, { size: 14, label: false }) }, 'model')) +
       (v.effort !== null && v.model !== null ? sel({ label: 'Effort', value: v.effort, ticks: { of: 5, on: v.effortTicks } }, 'effort') : '') +
       sel({ label: 'How careful', value: CAREFUL[v.careful].name, icon: 'shield', attrs: { 'data-step': v.careful, ...(v.fellBack ? { 'data-tip': 'This project has no trusted gate, so new sessions here start Supervised.' } : {}) } }, 'careful');

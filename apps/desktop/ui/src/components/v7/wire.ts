@@ -142,23 +142,27 @@ function wireRowAction(r: HTMLElement): void {
       ui:send {text, queue}   ui:steer {text}   ui:stop   ui:voice (no text, not running)
       ui:add                  "+" was pressed (the app picks what to add; `composerInsert` puts it in the text)
       ui:dictate {on}         the mic was switched on or off (aria-pressed says which)
-    `data-voice-off="<why>"` (ComposerOpts.voiceOff): the voice button is drawn and does nothing, its tip says why */
+      ui:refused              Enter while a turn runs where nothing queues (`data-queue-off`): the text stays
+    `data-voice-off` (ComposerOpts.voiceOff): talking does not exist here, so the empty composer has no primary circle; `data-queue-off`:
+    nothing queues here, so there is no send while a turn runs (a control shows only once its feature exists).
+    Stop is a button of its own at the start of the right cluster, there only while `data-running` is set (owner, 25 November: the
+    primary circle never turns into Stop) */
 function wireComposer(c: HTMLElement): void {
   const t = c.querySelector<HTMLElement>('.k7-composer__text'), b = c.querySelector<HTMLButtonElement>('[data-send]');
   if (!t || !b) return;
-  const off = c.getAttribute('data-voice-off');
+  const noVoice = (): boolean => c.hasAttribute('data-voice-off'), noQueue = (): boolean => c.hasAttribute('data-queue-off');
   const sync = (): void => {
     const typed = (t.textContent ?? '').trim().length > 0, running = c.hasAttribute('data-running');
     c.toggleAttribute('data-typed', typed);
-    const [glyphName, label] = typed ? ['arrowup', running ? 'Queue' : 'Send'] : running ? ['stop', 'Stop'] : ['waveform', 'Talk'];
-    if (b.getAttribute('aria-label') !== label) { b.setAttribute('aria-label', label); b.innerHTML = icon(glyphName, { size: 'm', class: 'k7-ic' }); }
-    const idle = !typed && !running && !!off;
-    b.setAttribute('data-tip', idle ? (off as string) : label);
-    if (idle) b.setAttribute('aria-disabled', 'true'); else b.removeAttribute('aria-disabled');
+    const [glyphName, label] = typed ? ['arrowup', running ? 'Queue' : 'Send'] : ['waveform', 'Talk'];
+    if (b.getAttribute('aria-label') !== label) { b.setAttribute('aria-label', label); b.setAttribute('data-tip', label); b.innerHTML = icon(glyphName, { size: 'm', class: 'k7-ic' }); }
+    /* a control shows only once its feature exists: no voice circle where talking does not exist, no send while a turn runs where nothing queues */
+    b.hidden = typed ? running && noQueue() : noVoice();
   };
   const send = (steer: boolean): void => {
     const text = (t.textContent ?? '').trim();
     if (!text) return;
+    if (c.hasAttribute('data-running') && noQueue()) { fire(c, 'ui:refused', {}); return; }
     if (fire(c, steer ? 'ui:steer' : 'ui:send', { text, queue: c.hasAttribute('data-running') && !steer }, true)) { t.textContent = ''; sync(); }
   };
   t.addEventListener('input', sync);
@@ -169,12 +173,25 @@ function wireComposer(c: HTMLElement): void {
   });
   b.addEventListener('click', () => {
     if ((t.textContent ?? '').trim()) { send(false); return; }
-    if (c.hasAttribute('data-running')) fire(c, 'ui:stop', {}); else if (!off) fire(c, 'ui:voice', {});
+    if (!noVoice()) fire(c, 'ui:voice', {});
   });
+  /* Stop is its own button, there while a turn runs (`data-running`, which the app sets and clears in place: composerRunning) */
+  c.querySelector('[data-stop]')?.addEventListener('click', () => { if (c.hasAttribute('data-running')) fire(c, 'ui:stop', {}); });
+  new MutationObserver(sync).observe(c, { attributes: true, attributeFilter: ['data-running', 'data-queue-off', 'data-voice-off'] });
   c.querySelector('[data-plus]')?.addEventListener('click', () => { fire(c, 'ui:add', {}); });
+  /* a word the text is read by (composerMarks): pressing it, or alt ArrowDown with the caret in it, asks what it is read as */
+  const markAt = (n: Node | null): HTMLElement | null => (n instanceof Element ? n : n?.parentElement)?.closest<HTMLElement>(FF) ?? null;
+  const ask = (el: HTMLElement): void => { fire(c, 'ui:mark', { text: el.textContent ?? '', kind: el.getAttribute('data-ff') ?? '', el }); };
+  t.addEventListener('click', (e) => { const m = markAt(e.target as Node); if (m) ask(m); });
+  t.addEventListener('keydown', (e) => { if (e.key !== 'ArrowDown' || !e.altKey) return; const m = markAt(getSelection()?.anchorNode ?? null); if (m) { e.preventDefault(); ask(m); } });
   const mic = c.querySelector<HTMLButtonElement>('[data-mic]');
   mic?.addEventListener('click', () => { const on = mic.getAttribute('aria-pressed') !== 'true'; if (fire(c, 'ui:dictate', { on }, true)) mic.setAttribute('aria-pressed', String(on)); });
   sync();
+}
+/** say that the composer's turn runs, or no longer does, in place (no redraw): Stop shows or goes, the send's name follows */
+export function composerRunning(c: HTMLElement, on: boolean): void {
+  const root = c.matches('.k7-composer') ? c : c.querySelector<HTMLElement>('.k7-composer');
+  if (root && root.hasAttribute('data-running') !== on) root.toggleAttribute('data-running', on);
 }
 /** put `text` into a composer at the caret (at the end when the caret is elsewhere), as if typed: the composer's own input handling follows */
 export function composerInsert(c: HTMLElement, text: string): void {
@@ -233,6 +250,65 @@ export function composerChips(t: HTMLElement, find: (text: string) => readonly C
     for (const x of slots) { x.el.insertAdjacentHTML('beforebegin', x.html); x.el.remove(); }
     if (caret >= 0 && caretNode && sel) { const r = document.createRange(); r.setStart(caretNode, caretOff); r.collapse(true); sel.removeAllRanges(); sel.addRange(r); }
   }
+}
+/** a word of a composer's text that the app reads as something (feedforward, 17; board S20): where it starts in the text, its exact
+    words, what it is read as (`kind`, the app's), and whether that reading is the person's choice (solid) or still a guess (dashed) */
+export interface ComposerMark { at: number; text: string; kind?: string; chosen?: boolean }
+const FF = '.k7-mark[data-ff]';
+/** how far into `t`'s text the caret is (its chips counted by their words), or -1 when the caret is elsewhere */
+function caretAt(t: HTMLElement): number {
+  const sel = typeof getSelection === 'function' ? getSelection() : null;
+  if (!sel || !sel.rangeCount || !sel.isCollapsed || !sel.anchorNode || !t.contains(sel.anchorNode)) return -1;
+  const r = document.createRange(); r.selectNodeContents(t); r.setEnd(sel.anchorNode, sel.anchorOffset);
+  return r.toString().length;
+}
+/** the text nodes of `t` a person can type in (a chip's own words are one unit), each with where it starts */
+function typedRuns(t: HTMLElement): Array<{ node: Text; from: number }> {
+  const out: Array<{ node: Text; from: number }> = [];
+  let at = 0;
+  const walk = (n: Node): void => {
+    if (n.nodeType === 3) { out.push({ node: n as Text, from: at }); at += (n.textContent ?? '').length; return; }
+    if (n instanceof HTMLElement && n.getAttribute('contenteditable') === 'false') { at += (n.textContent ?? '').length; return; }
+    n.childNodes.forEach(walk);
+  };
+  t.childNodes.forEach(walk);
+  return out;
+}
+/** Draw the words a composer's text is read by as the kit's Marks, in place (board S20: "auto margins", "page"): dashed under a guess,
+    solid once the person chose. A mark stays text: it is typed through and deleted as words are. The text is only drawn again when the
+    marks changed (so typing elsewhere moves nothing), never while an input method composes; the caret keeps its place. A press on a
+    mark, or alt ArrowDown with the caret in it, fires `ui:mark` {text, kind, el} on the composer (wireComposer). */
+export function composerMarks(c: HTMLElement, find: (text: string) => readonly ComposerMark[]): void {
+  const t = c.matches('.k7-composer__text') ? c : c.querySelector<HTMLElement>('.k7-composer__text');
+  if (!t) return;
+  const text = t.textContent ?? '';
+  const want = [...find(text)].filter((m) => m.text && text.startsWith(m.text, m.at)).sort((x, y) => x.at - y.at);
+  const have = [...t.querySelectorAll<HTMLElement>(FF)];
+  if (!want.length && !have.length) return;
+  /* the marks already drawn, by where they are now: the same ones are kept as they are (only what they are read as is said again) */
+  const runs = typedRuns(t);
+  const placeOf = (el: HTMLElement): number => runs.find((r) => el.contains(r.node))?.from ?? -1;
+  if (have.length === want.length && have.every((el, i) => { const w = want[i] as ComposerMark; return placeOf(el) === w.at && el.textContent === w.text && el.childNodes.length === 1; })) {
+    have.forEach((el, i) => { const w = want[i] as ComposerMark; el.setAttribute('data-mark', w.chosen ? 'chosen' : 'shown'); if (w.kind) el.setAttribute('data-ff', w.kind); });
+    return;
+  }
+  const caret = caretAt(t);
+  for (const el of have) el.replaceWith(...el.childNodes);
+  t.normalize();
+  for (const w of [...want].reverse()) {
+    const run = typedRuns(t).find((r) => w.at >= r.from && w.at + w.text.length <= r.from + (r.node.textContent ?? '').length);
+    if (!run) continue;   /* a reading that crosses a chip is not drawn */
+    const r = document.createRange(); r.setStart(run.node, w.at - run.from); r.setEnd(run.node, w.at - run.from + w.text.length);
+    const span = document.createElement('span');
+    span.className = 'k7-mark'; span.setAttribute('data-kit', 'Mark'); span.setAttribute('data-mark-kind', 'feedforward'); span.setAttribute('data-mark', w.chosen ? 'chosen' : 'shown'); span.setAttribute('data-ff', w.kind ?? '');
+    r.surroundContents(span);
+  }
+  if (caret < 0) return;
+  const sel = getSelection(), after = typedRuns(t);
+  const hit = after.find((r) => caret >= r.from && caret <= r.from + (r.node.textContent ?? '').length) ?? after[after.length - 1];
+  if (!sel || !hit) return;
+  const back = document.createRange(); back.setStart(hit.node, Math.max(0, Math.min((hit.node.textContent ?? '').length, caret - hit.from))); back.collapse(true);
+  sel.removeAllRanges(); sel.addRange(back);
 }
 /** who or what an "@" can name in a composer */
 export interface KitMentions {

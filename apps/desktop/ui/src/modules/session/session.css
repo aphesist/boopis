@@ -1,9 +1,7 @@
-/* boopis v6 · session tab (owner: session agent)
-   Only what is the session's own: the view and its scroller, where the composer sits, turn focus, the blank's
-   sentence, the inline diff, the panel's terminal well, task list, file rows and environment list, the find box and
-   the list's rename field. Every shared piece (buttons, rows, chips, menus, entries, composer, sections, ladder,
-   measure) is the library's (components/components.css) and is not restyled here. Tokens only: no literal colour,
-   family, radius or off-scale size. */
+/* The Session tab (owner: session agent). Placement only for the screens on the v7 kit (boards S17, S20 and S23): the view and its
+   scroller, where the thread's column and the composer sit, and what a turn's parts keep from each other; every look is the kit's
+   (components/v7). The details panel's own pieces (the terminal well, the task list, file rows, the inline diff) are below, as they
+   were: the panel is a later step's. Tokens only. */
 
 /* ───────────── the view ───────────── */
 .ss-view:not(.hx-view) { position: relative; height: 100%; }   /* inside the shell the slot is the absolutely placed .hx-view */
@@ -23,70 +21,40 @@
 }
 .ss-view::before { content: ""; position: absolute; z-index: 1; left: 0; right: 0; top: 0; height: var(--scroll-fade); pointer-events: none; background: linear-gradient(var(--bg-2), transparent); opacity: 0; }
 .ss-view:has(> .ss-scroll[data-more-top])::before { opacity: 1; }
-.ss-col { width: var(--hx-col-w, min(var(--col-w), calc(100vw - 64px))); margin: 0 auto; padding: var(--sp-6) 0 calc(var(--ss-comp-h, 120px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--sp-5)); }
-/* the room the composer and the dock take at the foot of the thread: a spacer, not a padding, since it is the composer's measured height (R-layout-5) */
+.ss-scroll { padding-bottom: calc(var(--ss-comp-h, 68px) + var(--hx-dock-space, 0px) + var(--composer-bottom) + var(--sp-5)); }
 
-.ss-find-anchor { position: absolute; top: var(--sp-3); right: var(--sp-5); width: 1px; height: 1px; }
-
-/* a turn takes focus as a whole (KEYMAP §5): the ring sits around the entry, never around the view */
-.ss-col [data-hx-turn] { --r-outer: var(--r-s); --pad: var(--sp-1); --corner-size: 24px; border-radius: var(--r-outer); scroll-margin: var(--sp-6); }   /* a corner container: the copy button at the foot of a short entry sits in its corner (R-corner-3) */
-.ss-col [data-hx-turn]:focus { outline: none; }
-.ss-col [data-hx-turn]:focus-visible { outline: 2px solid var(--focus); outline-offset: var(--sp-2); }
-.ss-acts { display: flex; margin: var(--sp-1) 0 var(--corner-inset, 0px) var(--corner-inset, 0px); opacity: 0; transition: opacity var(--dur-1) var(--ease); }
-.ss-col [data-hx-turn]:is(:hover, :focus-within) .ss-acts { opacity: 1; }
-.ss-acts .ui-ib { border-radius: var(--r-corner); }
-.ss-acts .ui-ib:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }   /* flush with the entry's edge: the ring sits inside (R-focus-2, R-corner-4) */
-.ss-parts { display: inline-flex; flex-wrap: wrap; column-gap: var(--sp-3); }
-
-/* the blank in its sentence, and what answering it reveals */
+/* ================================================================ boards S20 and S23 (docs/design/v7/boards: sessiontab.js shell, s2, s4)
+   The thread's column: 640 wide on the work's centre, its first line 72 under the window's top. A turn is the kit's session thread
+   (blocks.css); between turns: 16 from your message to the agent's turn (12 where the turn starts with its work line, board S23), the
+   kit's own for the rest. The composer: 720 wide on the same centre, 24 over the dock (the board's 96 over the window's foot). */
+.ss-col { display: flex; flex-direction: column; width: var(--col-w); max-width: calc(100% - 2 * var(--sp-5)); margin: 0 auto; padding-top: calc(var(--thread-top) - var(--drag-h)); box-sizing: border-box; }
+.ss-turn { position: relative; min-width: 0; }
+.ss-turn + .ss-turn { margin-top: var(--sp-4); }
+.ss-turn[data-turn="user"] + .ss-turn:has(> .k7-disc:first-child) { margin-top: var(--sp-3); }
+.ss-turn:focus { outline: none; }
+.ss-turn:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-off); border-radius: var(--r-xs); }
+.ss-turn .k7-bubble { min-width: 0; max-width: min(var(--bubble-max), 100%); }
+.ss-turn .k7-bubble > .ui-md { font-size: var(--fs-l); line-height: var(--lh-l); }
+.ss-turn .k7-bubble > .ui-md > :first-child { margin-top: 0; }
+.ss-turn .k7-bubble > .ui-md > :last-child { margin-bottom: 0; }
+/* what the kit does not draw yet sits in the same gutter: the form card, the tasks handed to other models, a council */
+.ss-turn > :is(.ss-forms, .ss-children, .ss-council) { margin-inline-start: var(--gutter); }
+.ss-forms { display: flex; flex-direction: column; gap: var(--sp-3); }
 .ss-q { margin: 0; }
-.ss-q hx-card { vertical-align: baseline; }
-.ss-forms { display: flex; flex-direction: column; gap: var(--sp-3); width: 100%; }
-.ss-reveal { width: 100%; opacity: 0; translate: 0 6px; transition: opacity var(--dur-3) var(--spring), translate var(--dur-3) var(--spring); }
-.ss-reveal.is-in { opacity: 1; translate: 0 0; }
-.ss-reveal[hidden] { display: none; }
-.ss-ship { display: flex; flex-direction: column; gap: var(--sp-3); }
+/* what a sent message carried: its files, pictures and folders, each a reference chip under your words */
+.ss-attached { display: flex; flex-wrap: wrap; gap: var(--gap-s); margin: var(--gap-s) 0 0; }
+/* a line about the thread (a setting changed, a rewind, the answering model changed): the kit's SystemLine, centred, 12 over and under */
+.ss-s0-line, .ss-divider { display: flex; justify-content: center; margin-block: var(--sp-3); }
+.ss-col > .k7-empty { margin-top: var(--sp-6); }
 
-/* the inline diff: drawer colour, mono (session only) */
-.ss-add { color: var(--add); }
-.ss-del { color: var(--del); }
-.ss-n { display: inline-flex; gap: var(--sp-2); font-size: var(--fs-2xs); }
-.ss-path { font-size: var(--fs-xs); color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ss-dir { color: var(--text-quiet); }
-.ss-chev { width: 10px; height: 10px; color: var(--text-quiet); transition: transform var(--dur-2) var(--ease); }
-.ss-diff { width: 100%; border-radius: var(--r-m); --sq-bg: var(--bg-0); background: var(--sq-bg); overflow: hidden; }
-.ss-diff--bare { margin: 4px 0 var(--sp-2); }
-.ss-diff-file + .ss-diff-file { box-shadow: inset 0 1px 0 var(--hair); }
-.ss-diff-head {
-  appearance: none; width: 100%; display: flex; align-items: center; gap: var(--sp-2); height: calc(var(--row-h) + 4px); padding: 0 var(--sp-3); margin: 0;
-  border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color var(--dur-1) var(--ease);
-}
-.ss-diff-head:hover { background: var(--hover); }
-.ss-diff-head:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
-.ss-diff-file[data-open="true"] .ss-chev { transform: rotate(90deg); }
-.ss-diff-head .ss-n { margin-left: auto; }
-.ss-diff--bare .ss-diff-head { display: none; }
-.ss-diff-body { display: none; padding: 4px 0 var(--sp-2); font-size: var(--fs-2xs); line-height: 18px; }
-.ss-diff-file[data-open="true"] .ss-diff-body, .ss-diff--bare .ss-diff-body { display: block; }
-.ss-dl { display: grid; grid-template-columns: 34px 14px 1fr; white-space: pre; padding-right: var(--sp-3); min-width: max-content; color: var(--text); }
-.ss-dl .ln { color: var(--text-quiet); text-align: right; padding-right: var(--sp-2); user-select: none; }
-.ss-dl .sg { color: var(--text-quiet); user-select: none; }
-.ss-dl.add { background: color-mix(in srgb, var(--add) 10%, transparent); } .ss-dl.add .sg { color: var(--add); }
-.ss-dl.del { background: color-mix(in srgb, var(--del) 10%, transparent); } .ss-dl.del .sg { color: var(--del); }
-.ss-dl.hunk { display: block; color: var(--text-quiet); padding: 4px var(--sp-3) 2px 48px; }
+.ss-find-anchor { position: absolute; top: var(--sp-3); right: var(--sp-5); width: var(--hl); height: var(--hl); }
+.ss-composer { --hx-dock-space: var(--hx-dock-space-to); position: absolute; z-index: 5; left: 50%; transform: translateX(-50%); bottom: calc(var(--hx-dock-space, 0px) + var(--composer-bottom)); width: var(--composer-w); max-width: calc(100% - 2 * var(--sp-5)); }
+/* a file dragged over the composer: its box takes the focus ring's colour until the file is dropped or leaves */
+.ss-composer .k7-composer[data-drop] .k7-composer__box { --sq-line: var(--focus); }
 
-/* the composer sits on the shell's centre line, its bottom above the dock (LAYOUT §2, §3) */
-.ss-composer {
-  position: fixed; z-index: 5; translate: -50% 0;
-  left: var(--hx-center-x, 50vw); width: var(--hx-col-w, min(var(--composer-w), calc(100vw - 64px)));   /* a registered <length>: its fallback must be a length too, or WebKit drops the declaration */
-  bottom: calc(var(--hx-dock-space, 0px) + var(--composer-gap));
-}
-
-/* find in this conversation */
-.ss-find { width: 300px; display: flex; flex-direction: column; gap: 4px; }
-.ss-find-count { margin: 0; min-height: 1.5em; font: 400 var(--fs-2xs)/1.5 var(--mono); color: var(--text-quiet); }
-
-/* the list's rename field takes the row's place */
+/* find in this conversation: the kit's search Field and a count under it */
+.ss-find { width: var(--pane-w, 300px); display: flex; flex-direction: column; gap: var(--sp-1); }
+.ss-find-count { margin: 0; min-height: var(--lh-xs); font-size: var(--fs-2xs); line-height: var(--lh-xs); font-family: var(--mono); color: var(--text-quiet); }
 
 /* ───────────── right panel: the session's own parts inside the library's panel and sections ───────────── */
 .ssr { position: relative; height: 100%; }
@@ -126,32 +94,8 @@
 .ssr-env dt { color: var(--text-quiet); text-transform: var(--ui-case); }
 .ssr-env dd { margin: 0; font-size: var(--fs-2xs); color: var(--text); overflow-wrap: anywhere; }
 
-@media (max-width: 640px) { .ss-col { width: calc(100% - 32px); } }
-.ss-composer .ui-chip[hidden] { display: none; }   /* the model chip shows only when Smart is off */
-
-/* what a sent message carried: its files, pictures and folders, as the composer's chips without the remove button */
-.ss-attached { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
-/* a file dragged over the composer: its box takes the focus ring's colour until the file is dropped or leaves */
-.ui-composer[data-drop] .ui-composer__box { box-shadow: inset 0 0 0 2px var(--focus); }
-
-/* where the answering model changes: a hairline row with both models, between two turns (a separator, not a turn: it takes no focus) */
-.ss-divider { display: flex; align-items: center; gap: var(--sp-3); margin: var(--sp-4) 0; color: var(--text-quiet); font: 400 var(--fs-xs)/var(--lh) var(--sans); }
-.ss-divider__rule { flex: 1 1 var(--sp-5); height: 1px; background: var(--hair); }
-.ss-divider__who { display: inline-flex; flex: 0 1 auto; min-width: 0; }
-/* a turn the person sent to one model outside governed mode: the quiet mark sits beside the model, before the time */
-.ss-ungov { margin-inline-start: var(--sp-1); }
-/* the layer the "@" menu opens from: the composer's box, not interactive */
-
-/* ── wave S0 on the v7 kit (modules/session/s0.ts): each piece is a v7 root of its own until the screen moves (wave C) ── */
-/* a line the thread says about itself (SystemLine): centred in the column */
-.ss-s0-line { display: flex; justify-content: center; padding-block: var(--sp-2); }
-/* the rewind under a finished turn (TurnFoot, session); its actions show on hover and focus, as the kit's */
-.ss-s0-foot { padding: var(--sp-1) var(--sp-1) var(--sp-3); }   /* room for an action's focus ring inside the turn, and out of its corner (geometry.contain, concentric) */
+/* ── wave S0 on the v7 kit (modules/session/s0.ts) ── */
 .ss-s0-why, .ss-s0-more { margin: var(--sp-2) 0 0; color: var(--text-dim); }
-/* the foot's actions show while the turn they belong to is hovered or holds focus (the kit's TurnFoot reveals on hover; here the
-   foot carries no meta of its own, the entry's call number does, so the turn is what is hovered) */
-@media (hover: hover) and (pointer: fine) { [data-hx-turn]:hover .ss-s0-foot .k7-foot__acts { opacity: 1; transition-duration: var(--dur-1); } }
-[data-hx-turn]:focus-within .ss-s0-foot .k7-foot__acts { opacity: 1; }
 /* the floating Notice (s0.ts `say`): bottom centre of the window, above the composer (the kit's floating placement) */
 .ss-s0-said { position: fixed; left: 0; right: 0; bottom: var(--sp-7); margin-inline: auto; width: max-content; max-width: calc(100vw - 2 * var(--sp-5)); z-index: var(--z-toast); }
 /* the rewind sheet over the window: the kit's scrim fills it and centres the dialog */

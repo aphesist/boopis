@@ -7,12 +7,12 @@ import { kit } from '@boopis/ui';
 import { setProvider } from '../../data';
 import type { DataProvider } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
-import { composeTools, VOICE_NOT_YET } from './compose';
+import { composeTools } from './compose';
 
 const tick = async (): Promise<void> => { for (let i = 0; i < 6; i++) await Promise.resolve(); };
 let slot: HTMLElement, heard: ((t: string) => void) | null, cancelled: number, started: Array<string | null>;
 function mount(running = false): HTMLElement {
-  slot.replaceChildren(kit.composer({ kind: 'bot', placeholder: 'Message kai', voiceOff: VOICE_NOT_YET, running }));
+  slot.replaceChildren(kit.composer({ kind: 'bot', placeholder: 'Message kai', voiceOff: true, running }));
   return slot.querySelector('.k7-composer') as HTMLElement;
 }
 const text = (): HTMLElement => slot.querySelector('.k7-composer__text') as HTMLElement;
@@ -51,27 +51,32 @@ describe('a composer\'s controls', () => {
     expect(mic.getAttribute('aria-pressed')).toBe('false');
     expect(cancelled).toBe(1);
   });
-  it('the voice button with no text is drawn and does nothing, and its tip says why; with text it sends', () => {
+  it('where talking does not exist there is no voice circle; with text the send is there and sends', () => {
     const c = mount();
     const end = slot.querySelector('[data-send]') as HTMLElement;
     const voice = vi.fn(), send = vi.fn();
     c.addEventListener('ui:voice', voice); c.addEventListener('ui:send', (e) => { send((e as CustomEvent<{ text: string }>).detail.text); });
-    expect(end.getAttribute('aria-disabled')).toBe('true');
-    expect(end.getAttribute('data-tip')).toBe(VOICE_NOT_YET);
+    expect(end.hidden).toBe(true);
     end.click();
     expect(voice).not.toHaveBeenCalled();
     kit.composerInsert(c, 'hello');
-    expect(end.hasAttribute('aria-disabled')).toBe(false);
+    expect(end.hidden).toBe(false);
     expect(end.getAttribute('aria-label')).toBe('Send');
     end.click();
     expect(send).toHaveBeenCalledWith('hello');
     expect(text().textContent).toBe('');
   });
-  it('while it runs, the end button with no text is Stop', () => {
+  it('Stop is its own button while it runs (the primary circle never becomes it); idle, a press of it does nothing', () => {
     const c = mount(true);
     const stop = vi.fn();
     c.addEventListener('ui:stop', stop);
-    (slot.querySelector('[data-send]') as HTMLElement).click();
+    const b = slot.querySelector('[data-stop]') as HTMLElement;
+    expect(b.getAttribute('aria-label')).toBe('Stop');
+    expect((slot.querySelector('[data-send]') as HTMLElement).getAttribute('aria-label')).toBe('Talk');
+    b.click();
+    expect(stop).toHaveBeenCalledTimes(1);
+    kit.composerRunning(c, false);
+    b.click();
     expect(stop).toHaveBeenCalledTimes(1);
   });
   it('Enter sends, ctrl Enter is the second way (steer; a new session: start in the background), Shift Enter is a new line', () => {

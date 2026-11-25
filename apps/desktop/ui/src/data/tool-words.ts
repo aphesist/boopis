@@ -37,3 +37,29 @@ export function toolWords(tool: string | null | undefined): string {
   if (m) return 'using ' + serverTool(m[1] ?? '', m[2] ?? '');
   return 'using ' + words(t.replace(/^mcp_/, '')).join(' ');
 }
+
+/* ───────── a turn's work, in one line (the thread's work line: boards 10, S20, S23) ───────── */
+const WORK: ReadonlyArray<readonly [verb: string, one: string, many: string, tools: readonly string[]]> = [
+  ['read', 'file', 'files', ['read_file', 'skill_view', 'web_extract', 'vision_analyze']],
+  ['searched', 'pattern', 'patterns', ['search_files', 'web_search', 'session_search']],
+  ['changed', 'file', 'files', ['write_file', 'patch']],
+  ['ran', 'command', 'commands', ['terminal', 'process', 'execute_code']]
+];
+/** what a turn's steps did, counted by kind in the order they first happened: "Read 6 files, ran 2 commands". Tools it has no word for
+    are counted together ("3 other steps"); steps that are not tool calls at all (a provider that says its steps in words) are "8 steps".
+    `count` is how many steps the turn had when its list is not at hand. Pure. */
+export function workSummary(steps: ReadonlyArray<{ title: string; mono?: boolean | undefined }>, count = steps.length): string {
+  const order: number[] = [], n = new Map<number, number>();
+  let other = 0;
+  for (const s of steps) {
+    const i = s.mono ? WORK.findIndex((w) => w[3].includes(s.title)) : -1;
+    if (i < 0) { other++; continue; }
+    if (!n.has(i)) order.push(i);
+    n.set(i, (n.get(i) ?? 0) + 1);
+  }
+  if (!order.length) { const c = Math.max(count, steps.length); return c + (c === 1 ? ' step' : ' steps'); }
+  const parts = order.map((i) => { const w = WORK[i] as typeof WORK[number], k = n.get(i) ?? 0; return w[0] + ' ' + k + ' ' + (k === 1 ? w[1] : w[2]); });
+  if (other) parts.push(other + (other === 1 ? ' other step' : ' other steps'));
+  const line = parts.join(', ');
+  return line.charAt(0).toUpperCase() + line.slice(1);
+}

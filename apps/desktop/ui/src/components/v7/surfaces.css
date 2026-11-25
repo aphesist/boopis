@@ -20,6 +20,8 @@
 }
 @media (hover: hover) and (pointer: fine) { .k7-title:hover { background: var(--bg-4); transition-duration: var(--dur-1); } }
 .k7-title__name { font-size: var(--fs-l); line-height: var(--lh-l); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* a session's branch after its name (kit.css `.title-pill .sub`): mono 12 --text-dim */
+.k7-title__sub { flex: none; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); letter-spacing: 0; }
 .k7-title .k7-status { font-size: var(--fs-s); line-height: var(--lh-s); min-width: 0; }
 /* the search hint (S5; screens.js chrome): the word in 13 --text-quiet and its two key chips, 8 apart, 36 tall with 10 at its sides and
    2 before the details button; no fill at rest, a pill at --hover on hover and focus; it never fades */

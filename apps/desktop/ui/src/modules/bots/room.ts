@@ -22,7 +22,7 @@ import { openSettings } from './settings';
 import { checkClips, watchClips } from './clips';
 import { atEnd, followZone } from '../chat/follow-zone';
 import { paintDetails } from './details';
-import { composeTools, mentionChips, VOICE_NOT_YET } from '../chat/compose';
+import { composeTools, later, mentionChips } from '../chat/compose';
 import { outsideDescription, outsideRoomMark } from './outside';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 
@@ -283,8 +283,7 @@ function turnKeys(e: KeyboardEvent): void {
    "needs you", the ask, the rule that made it ask ("Rule: ..." in the accent, when the provider names one), what it would run in a
    Well, and the four answers: Hold to allow once (the 1 s hold; the inverted chip), Allow all this turn, Always allow, and Deny
    (esc). The provider can carry out once and deny; "Allow all this turn" and "Always allow" need the rules engine, so they are
-   drawn and do nothing yet (aria-disabled, the reason in their tip). It never expires. Decided, it collapses to its one-row receipt. */
-const NOT_YET = 'Approval rules are not in this build yet';
+   not shown until it exists (`later('approval-rules')`). It never expires. Decided, it collapses to its one-row receipt. */
 /** a bot's approval as its AskCard, wired to the provider: the bot's own chat draws it in the thread, a room under what that member said */
 export const approvalCard = (b: Bot, m: ApprovalMessage): HTMLElement => renderCard(b, m);
 function renderCard(b: Bot, m: ApprovalMessage): HTMLElement {
@@ -293,7 +292,7 @@ function renderCard(b: Bot, m: ApprovalMessage): HTMLElement {
   const card = kit.askCard({
     variant: 'standalone', state: 'needs', bot: { ...asker, state: 'needs' }, who: asker.name + ' asks', ask: m.data.title || 'Approve this step',
     ...(m.data.rule ? { rule: m.data.rule } : m.data.quote ? { sub: m.data.quote } : {}), ...(m.data.item?.length ? { command: m.data.item.join('\n') } : {}),
-    answers: [{ label: 'Hold to allow once', primary: true, hold: true }, { label: 'Allow all this turn', value: 'turn', inert: NOT_YET }, { label: 'Always allow', value: 'always', inert: NOT_YET }, { label: 'Deny', value: 'deny', keys: 'esc', outline: true }]
+    answers: [{ label: 'Hold to allow once', primary: true, hold: true }, ...(later('approval-rules') ? [{ label: 'Allow all this turn', value: 'turn' }, { label: 'Always allow', value: 'always' }] : []), { label: 'Deny', value: 'deny', keys: 'esc', outline: true }]
   });
   card.addEventListener('ui:commit', () => { resolveCard(b.id, m, 'approve'); });
   card.addEventListener('click', (e) => { const c = (e.target as Element).closest<HTMLElement>('[data-kit~="Chip"][data-value="deny"]'); if (c) resolveCard(b.id, m, 'deny'); });
@@ -338,7 +337,7 @@ function buildComposer(host: HTMLElement): void {
   const draw = (b: Bot): void => {
     const keep = slot.firstElementChild ? api.value : '';
     const l = lineOf(b);
-    const c = kit.composer({ kind: 'bot', placeholder: 'Message ' + b.name, label: 'Message ' + b.name, running, line: l.items, voiceOff: VOICE_NOT_YET, ...(b.color ? { fill: kit.botFill(b.color) } : {}), ...(keep ? { text: keep } : {}) });
+    const c = kit.composer({ kind: 'bot', placeholder: 'Message ' + b.name, label: 'Message ' + b.name, running, line: l.items, voiceOff: !later('voice'), ...(b.color ? { fill: kit.botFill(b.color) } : {}), ...(keep ? { text: keep } : {}) });
     slot.replaceChildren(c);
     tools.drawn();
     botId = b.id; sig = l.sig;

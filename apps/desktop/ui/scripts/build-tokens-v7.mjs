@@ -97,6 +97,7 @@ both.push('--file-w: 260px;',                       /* a file card (kit.css .fil
   '--pad-pane-top: 64px;', '--pane-sec-top: 14px;',     /* the details pane (kit.css .pane-in, .pane-sec) */
   '--name-top: 14px;', '--orb-main: 44px;', '--pane-stack: 32px;',   /* a member's name over what it follows in a room (kit.css .gname); the Bots list's main bot (board K02 .sb-main); a room's stack heading its details */
   '--hover-ctl: 28px;', '--step-dot: 7px;',                             /* a hover action beside a bubble (kit.css .hoverbar span) */
+  '--stop-glyph: 10px;', '--r-stop: 2px;',              /* the composer's Stop: a filled rounded square in a tinted 28 circle (owner, 25 November) */
   '--wc-w: 32px;', '--wc-h: 28px;', '--icon-l: 18px;',                 /* a window glyph's cell (kit.css .wc span) */
   '--ns-top: 64px;', '--ns-bottom: 250px;', '--ns-wait-w: 520px;', '--ns-wait-top: 40px;', '--ns-mark: 72px;', '--ns-logo: 44px;');   /* the new session's canvas (kit.css .ns, .ns-wait, .ns-mark; sessionnew.js brand) */
 

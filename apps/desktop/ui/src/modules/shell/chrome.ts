@@ -8,7 +8,7 @@
    the palette, the dialogs) keep v6's tokens until their wave C branches move them; then the root moves up to the body. */
 import { emit } from '../../core/bus';
 import { $, frag } from '../../core/dom';
-import { kit } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
 import { data } from '../../data';
 import { themeApi } from '../../styles/theme';
@@ -81,7 +81,7 @@ export function selectTab(seg: HTMLElement, value: string): void {
 }
 
 /* ── the title pill: the open bot's orb (24), a room's stack, or a session's glyph, then the name ── */
-export interface TitleLead { bot?: BotLike | null; members?: readonly BotLike[] | null; icon?: string | null }
+export interface TitleLead { bot?: BotLike | null; members?: readonly BotLike[] | null; icon?: string | null; /** a session's branch, after its name */ sub?: string | null }
 let leadSig = '';
 export function setTitle(name: string, lead: TitleLead, label: string): void {
   const pill = sh.el?.btnTitle;
@@ -89,6 +89,11 @@ export function setTitle(name: string, lead: TitleLead, label: string): void {
   const sig = lead.members?.length ? 'm:' + lead.members.map((m) => m.id + (m.color ?? '') + (m.shape ?? '')).join() : lead.bot ? 'b:' + lead.bot.id + (lead.bot.color ?? '') + (lead.bot.shape ?? '') : 'i:' + (lead.icon ?? '');
   const nameEl = pill.querySelector('.k7-title__name');
   if (nameEl && nameEl.textContent !== name) nameEl.textContent = name;
+  /* a session's branch follows its name (board S20) */
+  const subEl = pill.querySelector('.k7-title__sub');
+  if (!lead.sub) subEl?.remove();
+  else if (subEl) { if (subEl.textContent !== lead.sub) subEl.textContent = lead.sub; }
+  else nameEl?.insertAdjacentHTML('afterend', '<span class="k7-title__sub k7-mono">' + ui.esc(lead.sub) + '</span>');
   if (sig !== leadSig) {
     leadSig = sig;
     const next = frag(kit.html.titlePill({ title: name, ...(lead.members?.length ? { members: lead.members } : lead.bot ? { bot: lead.bot } : lead.icon ? { icon: lead.icon } : {}) }));

@@ -178,6 +178,9 @@ export interface BlankData {
   /** the live provider's: the blank's id on the plugin, and the words around an answer that matches no option */
   id?: string;
   free?: readonly [lead: string, tail: string];
+  /** the blank lapsed and the agent went on with this guess (board S23: "(my guess)" in the reply, the question as a card under it;
+      0.2.0 D: no provider sends it yet). Answering still changes it */
+  guess?: string;
 }
 export interface ApprovalWait { id: string; kind: 'approval'; bot: string; who: string; title: string; data: ApprovalData }
 export interface BlankWait { id: string; kind: 'blank'; bot?: undefined; who: string; title: string; data: BlankData }
@@ -504,7 +507,15 @@ export interface ProviderInfo {
   preview: ReadonlySet<PreviewSource>;
   /** features this Hermes does not have, with the reason (`sessions.fork`, ...) */
   unavailable: Readonly<Record<string, string>>;
+  /** what the approved boards draw and no build does yet, switched on. A control is built against this map and is not shown while
+      its feature is absent (the calm rule: a thing shows only when it exists); a lab fixture switches one on so the board's own
+      control is drawn and compared. No provider of the app sets it until the feature is real */
+  later?: ReadonlySet<LaterFeature>;
 }
+/** `voice`: talking to a bot or a session. `approval-rules`: "Allow all this turn", "Always allow". `usage`: buying more usage from a
+    limit notice. `worktree`: a new worktree for a session. `turn-edit`, `turn-fork`: Edit from here and Fork on a finished turn.
+    `queue`: a message queued or steered while a turn runs */
+export type LaterFeature = 'voice' | 'approval-rules' | 'usage' | 'worktree' | 'turn-edit' | 'turn-fork' | 'queue';
 export interface Schedule { id: string; bot: string; what: string; when: string; next: string; paused: boolean }
 
 /* ───────── the composer's feedforward reading ───────── */

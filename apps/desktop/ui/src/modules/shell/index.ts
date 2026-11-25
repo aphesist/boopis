@@ -310,7 +310,7 @@ function wire(): void {
     if (!d) return;
     /* a room's title pill wears its members' stack (screen 12); a bot's its orb (updateTitle) */
     const bots = data().bots.snapshot().bots, members = d.members?.map((id) => bots.find((b) => b.id === id)).filter((b): b is NonNullable<typeof b> => !!b);
-    setTitleOverride((TABS as readonly string[]).includes(d.tab ?? '') ? (d.tab as Tab) : state.tab, d.title || d.text || null, members?.length ? { members } : null);
+    setTitleOverride((TABS as readonly string[]).includes(d.tab ?? '') ? (d.tab as Tab) : state.tab, d.title || d.text || null, members?.length ? { members } : d.sub != null ? { sub: d.sub || null } : null);
     updateTitle();
   });
   on('hx:open-settings', (d) => { if (d) openSettings(d.section); });

@@ -40,6 +40,7 @@ const text = (): HTMLElement => q('.bt-group .k7-composer__text');
 const type = (t: string): void => { const n = text(); n.textContent = t; n.dispatchEvent(new Event('input', { bubbles: true })); };
 const typeAtCaret = (t: string): void => { const n = text(); n.focus(); n.textContent = t; const r = document.createRange(); r.setStart(n.firstChild as Node, t.length); r.collapse(true); getSelection()!.removeAllRanges(); getSelection()!.addRange(r); n.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: t.slice(-1) })); };
 const endButton = (): HTMLButtonElement => q<HTMLButtonElement>('.bt-group .k7-composer [data-send]');
+const stopButton = (): HTMLButtonElement => q<HTMLButtonElement>('.bt-group .k7-composer [data-stop]');
 const openRoom = (): void => { q('.bt-group-rows [data-kit~="ListRow"]').click(); };
 const paneRow = (name: string): HTMLElement => q('#hx-right-bots [data-room="' + name + '"]');
 const withGroups = (): DataProvider => { const m = createMockProvider({ simulate: false, fixtures: ['groups'] }); return { ...m, groups: spyGroups(m.groups) }; };
@@ -324,13 +325,15 @@ describe('a message written while the members are working', () => {
   const held = (): HTMLElement => q('.bt-group .bt-composer-zone [data-kit~="Queue"]');
   beforeEach(() => { mount(withGroups()); openRoom(); });
 
-  it('shows Stop with nothing typed, and Queue once something is', async () => {
+  it('shows Stop beside the mic while the room works, and Queue on the primary circle once something is typed', async () => {
+    expect(document.querySelector('.bt-group .k7-composer')?.hasAttribute('data-running')).toBe(false);
     await busyWith();
-    expect(endButton().getAttribute('aria-label')).toBe('Stop');
+    expect(document.querySelector('.bt-group .k7-composer')?.hasAttribute('data-running')).toBe(true);
+    expect(stopButton().getAttribute('aria-label')).toBe('Stop');
     type('and the changelog?');
     expect(endButton().getAttribute('aria-label')).toBe('Queue');
     type('');
-    expect(endButton().getAttribute('aria-label')).toBe('Stop');
+    expect(endButton().getAttribute('aria-label')).toBe('Talk');
   });
   it('keeps what was typed when the room starts or stops working under it', async () => {
     type('half a thought');
@@ -345,9 +348,9 @@ describe('a message written while the members are working', () => {
     expect(calls.filter((c) => c.fn === 'send').map((c) => c.args)).toEqual([['room-release', 'and the changelog?', 'when-done']]);
     expect(calls.some((c) => c.fn === 'stop')).toBe(false);
   });
-  it('Stop, with nothing typed, stops the room', async () => {
+  it('Stop stops the room', async () => {
     await busyWith();
-    endButton().click();
+    stopButton().click();
     expect(calls.some((c) => c.fn === 'stop')).toBe(true);
   });
   it('shows a held message over the composer (the kit\'s Queue, held), and says what Send now does before it is pressed', async () => {

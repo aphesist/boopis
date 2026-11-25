@@ -5,6 +5,7 @@
 import { cap1 } from '../../core/dom';
 import { kit, ui } from '@boopis/ui';
 import { data } from '../../data';
+import { later } from '../chat/compose';
 import type { CarefulStep } from '../../data';
 import type { LaunchView } from './s0';
 import { openCarefulMenu, say, v7Attrs } from './s0';
@@ -28,6 +29,7 @@ export function launchView(): LaunchView {
     effortTicks: l?.effort ? EFFORT_TICKS[l.effort.toLowerCase()] ?? 3 : 3,
     careful: l?.careful ?? 'auto_edits',
     fellBack: l?.fellBack ?? false,
+    ...(later('worktree') ? { worktree: true } : {}),
     waiting
   };
 }

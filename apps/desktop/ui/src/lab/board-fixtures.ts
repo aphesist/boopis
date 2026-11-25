@@ -2,10 +2,10 @@
    inbox, sessionnew.js newSess, dockv7.js). `pnpm lab:board` draws the app's real modules on it and compares them with the board,
    so every word, look and order here is the board's. Test data: the lab alone reads it. */
 import { store } from '../data/store';
-import type { DataProvider, GroupsEvent } from '../data/provider';
+import type { DataProvider, Feed, GroupsEvent } from '../data/provider';
 import { CAREFUL_STEPS, YES } from '../data/session-s0';
-import type { LaunchSettings, SessionCapabilities, SessionControls } from '../data/session-s0';
-import type { Bot, Conversation, Group, GroupMember, GroupMessage, LimitNotice, Schedule, SessionSummary, ThreadMessage } from '../data/types';
+import type { CarefulStep, LaunchSettings, SessionCapabilities, SessionControls } from '../data/session-s0';
+import type { Bot, Change, Conversation, ConversationEvent, FormSpec, Group, GroupMember, GroupMessage, LimitNotice, LaterFeature, Schedule, SessionSummary, Step, ThreadMessage } from '../data/types';
 
 /* ───────── the bots (kit.js LOOKS, in screens.js ORDER) ───────── */
 type Look = { id: string; shape: string; color: string; role: string; state: string; attention?: string; activity?: string };
@@ -21,6 +21,8 @@ const LOOKS: readonly Look[] = [
 const member = (id: string): GroupMember => ({ id, profile: id, handle: id, name: id });
 const RELEASE_CREW: Group = { id: 'room-release', name: 'release crew', members: ['kai', 'nina', 'moss'].map(member), working: [], busy: false, queued: [] };
 
+/** what the boards draw and no build does yet, switched on so the board's own control is drawn (ProviderInfo.later) */
+const drawn = (p: DataProvider, ...f: LaterFeature[]): DataProvider['info'] => ({ ...p.info, later: new Set(f) });
 function roster(p: DataProvider, over: Readonly<Record<string, Partial<Bot>>>, ids?: readonly string[]): Bot[] {
   const tpl = p.bots.snapshot().bots[0] as Bot;
   const looks = ids ? ids.map((id) => LOOKS.find((l) => l.id === id) as Look) : LOOKS;
@@ -46,7 +48,7 @@ export function board11(p: DataProvider): DataProvider {
   const tpl = p.bots.snapshot().bots[0] as Bot;
   const bots = roster(p, { kai: { state: 'needs', attention: 'approval', spent: '0.12', cfg: { ...tpl.cfg, gov: 'governed', model: 'sonnet 5.5', cap: '1.00', cron: '', workspace: 'worktree' } } });
   return {
-    ...p,
+    ...p, info: drawn(p, 'voice', 'approval-rules'),
     bots: { ...p.bots, snapshot: () => ({ bots, threads: { ...Object.fromEntries(bots.map((b) => [b.id, []])), kai: KAI_THREAD } }), workspace: (id: string) => (id === 'kai' ? '/home/you/code/boopis/.worktrees/notes-0.2' : null) },
     waits: { ...p.waits, snapshot: () => [] },
     groups: { ...p.groups, snapshot: () => ({ groups: [RELEASE_CREW], threads: { [RELEASE_CREW.id]: [] } }) },
@@ -81,7 +83,7 @@ export function board12(p: DataProvider, held = false): DataProvider {
   const crew: Group = { ...RELEASE_CREW, working: ['kai', 'moss'], busy: false, spent: '0.21', queued: held ? [{ id: 'b12-held', text: 'And tag it when staging is green.', t: T12 }] : [] };
   const heard: Array<(e: GroupsEvent) => void> = [];
   return {
-    ...p,
+    ...p, info: drawn(p, 'voice', 'approval-rules'),
     bots: { ...p.bots, snapshot: () => ({ bots, threads: { ...Object.fromEntries(bots.map((b) => [b.id, []])), nina: NINA_ASKS } }), archived: store([]) },
     waits: { ...p.waits, snapshot: () => [] },
     groups: {
@@ -112,7 +114,7 @@ export function board17(p: DataProvider): DataProvider {
   const tpl = p.bots.snapshot().bots[0] as Bot;
   const bots = roster(p, { kai: { state: 'working', activity: 'Running the tests', spent: '0.12', cfg: { ...tpl.cfg, gov: 'governed', model: 'sonnet 5.5', cap: '1.00', cron: '', workspace: 'worktree' } } });
   return {
-    ...p,
+    ...p, info: drawn(p, 'voice'),
     bots: { ...p.bots, snapshot: () => ({ bots, threads: { ...Object.fromEntries(bots.map((b) => [b.id, []])), kai: KAI_WORKING } }) },
     waits: { ...p.waits, snapshot: () => [] },
     groups: { ...p.groups, snapshot: () => ({ groups: [RELEASE_CREW], threads: { [RELEASE_CREW.id]: [] } }) }
@@ -158,7 +160,7 @@ export function boardS17(p: DataProvider): DataProvider {
   const started: Conversation = { turns: [{ id: 's17-t1', role: 'user', at: '09:42', text: 'The dock loses its right half while the slab moves. Find why and fix it.' }] };
   const gov = p.details.governance.get();
   return {
-    ...p,
+    ...p, info: drawn(p, 'voice', 'usage', 'worktree'),
     /* the new session has no turn yet; every other session has started (one turn stands for its thread) */
     sessions: { ...p.sessions, list, archived: store(SETTLED), draft: () => '', conversation: (id: string) => ({ snapshot: () => (id === draft.id ? empty : started), subscribe: () => () => undefined }), create: () => draft },
     details: { ...p.details, governance: store({ ...gov, governed: true, smart: false, model: 'sonnet 5.5', cap: '', spent: '' }), choices: store([{ value: 'anthropic/sonnet 5.5', provider: 'anthropic', model: 'sonnet 5.5', providerName: 'Claude' }]) },
@@ -169,4 +171,47 @@ export function boardS17(p: DataProvider): DataProvider {
     sessionControls: controls(),
     limits: store<LimitNotice | null>(LIMIT)
   };
+}
+
+/* ───────── boards S20 and S23: a started session (sessiontab.js `s2`, `s4`) ───────── */
+const ASK = 'The dock loses its right half while the slab moves. Find why and fix it.';
+const tools = (name: string, n: number): Step[] => Array.from({ length: n }, () => ({ title: name, mono: true, time: '' }));
+const feed = (c: Conversation): Feed<Conversation, ConversationEvent> => ({ snapshot: () => c, subscribe: () => () => undefined });
+/** the change the running turn asks to make: one file, +12 −3, with the answers the engine offers */
+const EDIT_ASK: FormSpec = {
+  id: 's20-edit', kind: 'permission', title: 'Allow this change?', file: 'modules/dock/dock.css', diff: [...Array.from({ length: 12 }, () => '+'), ...Array.from({ length: 3 }, () => '-')].join('\n'), origin: { kind: 'agent', model: 'sonnet 5.5' },
+  schema: { properties: { choice: { type: 'string', title: 'Decision', enum: ['once', 'session', 'deny'], default: 'once' } }, required: ['choice'] }, submit: { label: 'Decide' }, cancel: { label: 'Deny' }
+};
+/** board S17's sessions with the first one open and started, in the state `turns` draws */
+function started(p: DataProvider, turns: Conversation['turns'], careful: CarefulStep, draft: string, more: Partial<DataProvider> = {}): DataProvider {
+  const base = boardS17(p);
+  const c = controls(), caps = c.capabilities.get();
+  return {
+    ...base, info: drawn(p, 'voice', 'turn-edit', 'turn-fork'),
+    sessions: { ...base.sessions, list: store<readonly SessionSummary[]>(SESSIONS), draft: () => draft, conversation: (id: string) => feed(id === 's17-dock' ? { turns } : { turns: [{ id: 's20-o', role: 'user', at: '09:42', text: ASK }] }) },
+    details: { ...base.details, governance: store({ ...base.details.governance.get(), cap: '$0.60', spent: '$0.37' }), context: store({ total: 200000, used: 76000, parts: [] }), environment: store({ ...p.details.environment.get(), branch: 'w32/dock-paint' }) },
+    sessionControls: { ...c, capabilities: store({ ...caps, session: { ...caps.session, changeModel: YES } }), launch: store({ ...c.launch.get(), careful, effort: 'medium' }) },
+    limits: store<LimitNotice | null>(null), ...more
+  };
+}
+export function boardS20(p: DataProvider): DataProvider {
+  return started(p, [
+    { id: 's20-t1', role: 'user', at: '09:42', text: ASK },
+    { id: 's20-t2', role: 'assistant', model: 'sonnet 5.5', time: '', cost: '', stepCount: 8, steps: [...tools('read_file', 6), ...tools('search_files', 2)], status: 'running', bullets: [], forms: [EDIT_ASK], paragraphs: ['Reading the dock’s stage and clip code first.'] }
+  ], 'supervised', 'Don\'t centre with a transform, use auto margins on the page', {
+    /* the words the board marks in the typed feedback: how to centre, and what */
+    feedforward: { catalog: () => [
+      { id: 'centre', pattern: 'auto margins', title: 'Centre it with', options: [{ value: 'margins', label: 'Auto margins', desc: 'Centred by layout' }, { value: 'grid', label: 'A grid', desc: 'place-items: center' }], guess: [], fallback: 'margins', single: true },
+      { id: 'where', pattern: '\\bpage\\b', title: 'Which element', options: [{ value: 'page', label: 'The page', desc: '.dk-page' }, { value: 'stage', label: 'The stage', desc: '.dk-stage' }], guess: [], fallback: 'page', single: true }
+    ] }
+  });
+}
+/** board S23: the turn ended: the work line, the answer with its guess, the changed files, the checkpoint row, the lapsed blank as a question */
+export function boardS23(p: DataProvider): DataProvider {
+  return started(p, [
+    { id: 's23-t1', role: 'user', at: '09:42', text: ASK },
+    { id: 's23-t2', role: 'assistant', model: 'sonnet 5.5', time: '0m 59s', cost: '$0.08', stepCount: 3, steps: [...tools('patch', 2), ...tools('terminal', 1)], status: 'done', bullets: [], kept: ['c1', 'c2', 'c3'],
+      paragraphs: ['Fixed. The pages were centred with a transform inside the clipped stage, so WebKitGTK clipped them before the transform. They are centred by layout now, and the tests pass.'],
+      blank: { question: 'Check the fix on which build?', short: 'Check the fix on which build?', options: ['staging', 'the Linux app'], guess: 'staging', rewrites: { staging: { lead: 'I guessed', tail: 'for the check' } } } }
+  ], 'auto_edits', '', { details: { ...started(p, [], 'auto_edits', '').details, changes: store<readonly Change[]>([['modules/dock/dock.css', 12, 3], ['modules/dock/engine.ts', 2, 2]]) } });
 }

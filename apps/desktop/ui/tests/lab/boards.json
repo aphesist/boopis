@@ -187,6 +187,86 @@
           82
         ]
       }
+    },
+    "S20-running": {
+      "title": "Board S20: a running turn, Supervised: the change waits on its tool row",
+      "board": "screen.html?s=s2",
+      "image": "session/S20-running-supervised-{theme}.jpg",
+      "story": "boards/sessions",
+      "state": "S20 running, supervised",
+      "wait": 1500,
+      "regions": {
+        "chrome": [
+          0,
+          0,
+          1440,
+          56
+        ],
+        "sidebar": [
+          0,
+          56,
+          300,
+          844
+        ],
+        "thread": [
+          300,
+          56,
+          1140,
+          670
+        ],
+        "composer": [
+          300,
+          726,
+          1140,
+          92
+        ],
+        "dock": [
+          300,
+          818,
+          1140,
+          82
+        ]
+      }
+    },
+    "S23-finished": {
+      "title": "Board S23: a finished turn: the work line, the answer, the changed files, the checkpoint row, the lapsed blank",
+      "board": "screen.html?s=s4",
+      "image": "session/S23-finished-turn-{theme}.jpg",
+      "story": "boards/sessions",
+      "state": "S23 a finished turn",
+      "wait": 1500,
+      "regions": {
+        "chrome": [
+          0,
+          0,
+          1440,
+          56
+        ],
+        "sidebar": [
+          0,
+          56,
+          300,
+          844
+        ],
+        "thread": [
+          300,
+          56,
+          1140,
+          670
+        ],
+        "composer": [
+          300,
+          726,
+          1140,
+          92
+        ],
+        "dock": [
+          300,
+          818,
+          1140,
+          82
+        ]
+      }
     }
   }
 }

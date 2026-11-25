@@ -22,14 +22,15 @@ export function updateTitle(): void {
     const ss = data().sessions.list.get();
     const s = ss.find((x) => x.id === sh.selection.session) ?? ss.find((x) => x.running) ?? ss[0];
     t = t || (s ? s.title : 'New session');
-    lead = { icon: 'session' };   /* the boards' session glyph in the pill's 24 circle (sessiontab.js title) */
+    const sub = leadOverride.session ? leadOverride.session.sub : s && !s.draft ? s.branch : null;
+    lead = { icon: 'session', ...(sub ? { sub } : {}) };   /* the boards' session glyph in the pill's 24 circle (sessiontab.js title) */
   } else {
     const b = data().bots.snapshot().bots.find((x) => x.id === sh.selection.bots);
     t = t || (b ? b.name : 'All bots');
     if (!leadOverride.bots) lead = b ? { bot: b } : { icon: 'bots' };
   }
   // the visible words stay in the name, in order (WCAG 2.5.3, label in name); the pill opens the details
-  setTitle(t, lead, t + ', details');
+  setTitle(t, lead, t + (lead.sub ? ', ' + lead.sub : '') + ', details');
   if (el.btnSearch) el.btnSearch.setAttribute('aria-label', 'Search, ' + kbdLabel('mod+K'));
 }
 

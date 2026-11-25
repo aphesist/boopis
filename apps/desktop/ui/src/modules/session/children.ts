@@ -3,7 +3,7 @@
    read-only, under its card; stop it. A card is replaced whole when the engine sends a frame, and a running clock ticks between
    frames. Nothing here talks to the engine: it reads `ChildTask`s and calls the provider's
    `stopChild` and `childTranscript`, which are absent where there is nothing to stop or read (the page build). */
-import { $, el } from '../../core/dom';
+import { el } from '../../core/dom';
 import { ui } from '@boopis/ui';
 import type { ChildOpts } from '@boopis/ui';
 import type { ChildTask, Turn } from '../../data';
@@ -49,9 +49,8 @@ export function childrenBlock(children: readonly ChildTask[], h: ChildHost): HTM
 export function upsertChild(turnId: string, c: ChildTask, h: ChildHost): void {
   const t = h.col()?.querySelector<HTMLElement>('[data-turn-id="' + turnId + '"]');
   if (!t) return;
-  const body = $('.ui-entry__body', t);
-  let box = body.querySelector<HTMLElement>('.ss-children');
-  if (!box) { box = el('div', { class: 'ss-children' }); body.append(box); wire(box, h); }
+  let box = t.querySelector<HTMLElement>('.ss-children');
+  if (!box) { box = el('div', { class: 'ss-children' }); t.append(box); wire(box, h); }
   const was = SEEN.get(c.id);
   SEEN.set(c.id, c);
   const at = box.querySelector<HTMLElement>('[data-child-id="' + CSS.escape(c.id) + '"]');

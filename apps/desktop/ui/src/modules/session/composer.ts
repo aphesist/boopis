@@ -1,265 +1,328 @@
-/* the session's composer: the library's, with the session's chips (governed, and the model), its reading of the request
-   (feedforward) and its keys (KEYMAP section 7: alt+G, alt+S, alt+M; alt+A and alt+V are the library's).
-   The model chip always says who answers next: a model's logo and readable name, or Smart (with what it would pick for the text
-   being typed). The chip, or alt+M, opens the "who answers next" menu (`model-menu.ts`): Automatic (Smart) first, then every model
-   the user can use now, by provider. alt+S turns Smart on or off. Esc changes nothing. */
-import { emit } from '../../core/bus';
-import { cap1, isMac } from '../../core/dom';
-import { ui } from '@boopis/ui';
-import type { ComposerEl, DecisionDetail, AssumptionDetail, DictateDetail, MentionSource } from '@boopis/ui';
+/* The session's composer: the kit's one-row Composer with the session's line under it, as boards S20 and S05 B draw it
+   (docs/design/v7/boards: sessiontab.js `comp`, `underSess`).
 
+   The line says how the session runs, each item its own control: how careful (the S0 scale's menu, alt+G), the branch, the model
+   that answers next with its effort (the "who answers next" menu, alt+M; alt+S turns Smart on or off), and at the end how full the
+   context is and what the session has spent. The quick menu (a press on the line, or "+") turns items off (S05 B). "+" opens the add
+   menu: attach a file or a folder (each a chip in the text, sent with the message), mention a file, start a command. "@" names the
+   model that answers this message only (ADR-0036). The words the text is read by carry the kit's Mark (feedforward): a press on one,
+   or alt ArrowDown in it, opens what it is read as. While a change waits for your answer, what you type declines it with those
+   words (S09). Stop is the composer's own button while a turn runs. */
+import { emit } from '../../core/bus';
+import { LINE_ITEMS, loadLineHidden, saveLineHidden } from '../../core/settings';
+import type { LineItemId } from '../../core/settings';
+import { kit, ui } from '@boopis/ui';
+import type { ComposerChip, LineItem } from '@boopis/ui';
 import { data } from '../../data';
-import type { Attached, GovernanceState } from '../../data';
-import { costAssume, kindOf, makeReader, optionsFor } from './feedforward';
-import { COUNCIL_VALUE, openCouncilForm } from './council';
-import { FOOT_GOVERNED, FOOT_MENTION, FOOT_MENTION_GOVERNED, FOOT_UNGOVERNED, SETTINGS_VALUE, SMART_VALUE, currentChoice, governedUnavailableEntries, mentionEntries, modelEntries, smartPreview } from './model-menu';
-import { bestMention, findMentions, mentionName, mentionQuery, routeMentions } from '../../data/mentions';
+import type { Attached, GovernanceState, SendMeta } from '../../data';
 import { CAREFUL } from '../../data';
-import { openCarefulFor } from './launch';
+import { bestMention, findMentions, mentionName, routeMentions } from '../../data/mentions';
+import { later } from '../chat/compose';
+import { kindOf, makeReader, optionsFor } from './feedforward';
+import { COUNCIL_VALUE, openCouncilForm } from './council';
+import { FOOT_GOVERNED, FOOT_MENTION, FOOT_MENTION_GOVERNED, FOOT_UNGOVERNED, SETTINGS_VALUE, SMART_VALUE, currentChoice, governedUnavailableEntries, modelEntries, smartPreview } from './model-menu';
+import { launchView, openCarefulFor } from './launch';
+import { kTokens } from './shared';
+import { say, v7Attrs } from './s0';
 
 export { SMART_VALUE };
+/** an entry of the kit's Menu */
+type MenuEntry = Parameters<typeof kit.html.menu>[0]['entries'][number];
 const gov = (): GovernanceState => data().details.governance.get();
+const called = (m: string): string => ui.modelMark.called(m);
 
 /** the one way the session changes governance: the provider owns the state, the UI announces the change */
 export function setGovernance(patch: Partial<Pick<GovernanceState, 'governed' | 'smart' | 'model' | 'cap'>>): void {
   const why = data().details.setGovernance(patch);
-  if (why) ui.toast(why);
+  if (why) say(why);
   const g = gov();
   emit('hx:governance', { governed: g.governed, smart: g.smart, model: g.model, cap: g.cap });
 }
 
-export interface SessionComposer extends ComposerEl {
-  /** the "who answers next" menu, against another anchor (the new session's launch row) */
-  openModelMenu?(anchor: HTMLElement): void;
-  /** the assumptions row as it stood when the message was sent */
-  lastAssume(): string[];
-  /** what is attached, handed over for the send: the chips are cleared with it */
-  takeAttachments(): Attached[];
+export interface SessionComposer {
+  el: HTMLElement; readonly input: HTMLElement | null; readonly value: string;
+  setValue(t: string): void; focus(): void; setRunning(on: boolean): void;
+  /** the line, the placeholder and whether a typed message has somewhere to go, read again */ sync(): void;
+}
+export interface SessionComposerOpts {
+  draft: string; sessionId(): string;
+  /** a change waits for your answer: typing declines it with feedback */ waits(): boolean;
+  /** the last turn ended: the next message is a follow-up */ after(): boolean;
+  send(text: string, meta: Pick<SendMeta, 'assume' | 'attachments'>): void; stop(): void;
+  /** your last message, for ArrowUp in an empty composer */ lastMessage(): string | null;
+}
+const NAMES: Readonly<Record<LineItemId, string>> = { careful: 'How careful', branch: 'Branch', model: 'Model and effort', context: 'Context', cost: 'Cost' };
+/** how full the context is, as the line's five ticks */
+export const contextTicks = (used: number, total: number): number => (total > 0 ? Math.max(0, Math.min(5, Math.ceil((used / total) * 5))) : 0);
+
+/** the line's items for the state the providers hold now (pure but for the reads): what S20 draws, less what the quick menu turned off */
+export function lineItems(o: { text: string; attachments: number; sessionId: string; hidden: readonly LineItemId[] }): LineItem[] {
+  const G = gov(), controls = data().sessionControls, d = data().details;
+  const items: Array<readonly [LineItemId, LineItem]> = [];
+  if (controls) {
+    const step = controls.launch.get().careful;
+    items.push(['careful', { label: 'How careful', value: CAREFUL[step].name, icon: 'shield', plain: true, attrs: { 'data-line': 'careful', 'data-step': step, 'data-tip': 'How careful: ' + CAREFUL[step].meaning, 'data-kbd': 'alt+G', 'aria-haspopup': 'menu' } }]);
+  }
+  const branch = d.environment.get().branch;
+  if (branch) items.push(['branch', { label: 'Branch', value: branch, icon: 'fork', mono: true, plain: true, still: true, attrs: { 'data-line': 'branch' } }]);
+  /* who answers next: a model's mark and name, Smart (with what it would pick for the text being typed), or a council */
+  const choices = d.choices.get();
+  const prev = G.smart ? smartPreview(choices, { text: o.text, attachments: o.attachments }) : null;
+  const armed = data().council.armed(o.sessionId), asking = armed?.members.length ?? G.council ?? 0;
+  const name = asking ? 'Council of ' + asking : G.smart ? (prev ? 'Smart: ' + (called(prev.choice.model) || prev.choice.model) : 'Smart') : ui.modelMark.short(G.model) || G.model || 'Choose a model';
+  const tip = G.smart ? 'Smart picks the model for each message' + (prev ? ': ' + prev.reason : '') : 'Who answers next';
+  const effort = controls && controls.capabilities.get().launch.efforts.length ? launchView().effortTicks : null;
+  items.push(['model', {
+    label: 'Who answers next', value: name, plain: true, ...(asking ? { icon: 'bots' } : G.smart || !G.model ? { icon: 'spark' } : { model: G.model }), ...(effort !== null && !asking ? { ticks: effort } : {}),
+    attrs: { 'data-line': 'model', 'data-tip': tip, 'data-kbd': 'alt+M', 'aria-haspopup': 'menu' }
+  }]);
+  const ctx = d.context.get();
+  if (ctx.total > 0) items.push(['context', { label: 'Context', value: kTokens(ctx.used) + ' / ' + kTokens(ctx.total), mono: true, end: true, ticks: contextTicks(ctx.used, ctx.total), attrs: { 'data-line': 'context' } }]);
+  if (G.spent) items.push(['cost', { label: 'Cost', value: G.governed && G.cap ? G.spent + ' of ' + G.cap : G.spent, mono: true, end: true, attrs: { 'data-line': 'cost' } }]);
+  return items.filter(([id]) => !o.hidden.includes(id)).map(([, item]) => item);
+}
+/** the "who answers next" list (model-menu.ts) as the kit's Menu: Automatic first, a council where one can sit, then every model by provider */
+export function modelMenu(o: { current: string; governed: boolean; smart: boolean; sessionId: string }): MenuEntry[] {
+  const choices = data().details.choices.get();
+  const now = o.smart ? SMART_VALUE : currentChoice(choices, o.current)?.value ?? o.current;
+  const out: MenuEntry[] = [];
+  for (const e of modelEntries(choices, { current: o.current, governed: o.governed, council: data().council.can(o.sessionId) })) {
+    if ('options' in e) {
+      out.push({ heading: e.label ?? '' });
+      for (const x of e.options) out.push({ label: x.label ?? '', value: x.value, ...(x.desc ? { desc: x.desc } : {}), leadHTML: ui.html.modelMark(x.value, { size: 16, label: false }), checked: x.value === now, role: 'menuitemradio', ...(x.disabled ? { disabled: true } : {}) });
+    } else out.push({ label: e.label ?? '', value: e.value, ...(e.desc ? { desc: e.desc } : {}), ...(e.icon ? { icon: e.icon } : {}), ...(e.keys ? { keys: e.keys } : {}), ...(e.value === SMART_VALUE ? { checked: now === SMART_VALUE, role: 'menuitemradio' } : {}), ...(e.disabled ? { disabled: true } : {}) });
+  }
+  return [...out, '-', { heading: o.governed ? FOOT_GOVERNED : FOOT_UNGOVERNED }];
 }
 
-export function sessionComposer(opts: { draft: string; sessionId: () => string }): SessionComposer {
+export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): SessionComposer {
   const reader = makeReader(gov);
-  const g0 = gov();
-  const govChip = ui.chip({ label: 'Governed', icon: 'ladder', pressed: g0.governed });
-  const model = ui.chip({ model: g0.model, haspopup: 'menu', expanded: false, class: 'ui-chip--who' });
-  /* "@": a mention names the model that answers this message only (ADR-0036). The kit's "@" (`ui.composer({ mentions })`) suggests
-     the models as it is typed and draws a mention as a chip in the text (kind 'mention'); the assumptions row says what it does. The
-     words are read by `data/mentions.ts`, the same as the send. */
-  const called = (m: string): string => ui.modelMark.called(m);
-  const choicesNow = () => data().details.choices.get();
-  const models: MentionSource = {
-    label: 'Answer this message with',
-    foot: () => (gov().governed ? FOOT_MENTION_GOVERNED : FOOT_MENTION),
-    query: mentionQuery,
-    /* every model the user can pick (the "who answers next" list, without Smart) */
-    entries: () => mentionEntries(choicesNow(), { current: gov().model, governed: gov().governed }),
-    best: (q) => bestMention(q, choicesNow(), called)?.value ?? null,
-    write: (v) => { const pick = choicesNow().find((x) => x.value === v); return pick ? mentionName(pick, called) : null; },
-    find: (t) => findMentions(t, choicesNow(), called).map((m) => ({ at: m.start, text: m.text, kind: 'mention' }))
-  };
-  function mentionHint(t: string): Array<{ label: string; kind: string; text: string }> | null {
-    const r = routeMentions(t, choicesNow(), called);
-    if (r.kind !== 'one') return null;
-    const who = mentionName(r.choice, called);
-    return [{ label: '>to ' + who + ' only' + (gov().governed ? ', ungoverned' : ''), kind: 'mention', text: '' }];
-  }
-  const c = ui.composer({
-    placeholder: 'Describe the change', label: 'Message the coding agent', value: opts.draft,
-    chips: [govChip, model], spend: { spent: g0.spent, cap: g0.cap },
-    hint: (t) => (t ? mentionHint(t) ?? reader.items(t) : []), feedforward: (t) => reader.marks(t), mentions: models
-  }) as SessionComposer;
-  govChip.setAttribute('aria-keyshortcuts', 'Alt+G'); model.setAttribute('aria-keyshortcuts', 'Alt+M Alt+S');
-  const span = (n: HTMLElement): HTMLElement => n.querySelector('span') as HTMLElement;
+  const controls = data().sessionControls;
+  let running = false, hidden = loadLineHidden(), lineSig = '', ph = '';
+  const text = (): HTMLElement | null => slot.querySelector<HTMLElement>('.k7-composer__text');
+  const root = (): HTMLElement | null => slot.querySelector<HTMLElement>('.k7-composer');
+  const value = (): string => text()?.textContent ?? '';
+  /* what is attached: each a chip in the text; the send carries those whose chip is still there */
+  const attached = new Map<string, Attached>();
+  let chipN = 0;
+  const present = (): Attached[] => [...(text()?.querySelectorAll<HTMLElement>('[data-att]') ?? [])].map((n) => attached.get(n.dataset['att'] ?? '')).filter((a): a is Attached => !!a);
 
-  /* the Session tab's permission scale (ADR-0057): with the live controls the governed chip is "How careful", one choice of four,
-     whose menu is the four rows (S01 B); the mock keeps the governed switch */
-  const careful = data().sessionControls;
-  function syncCareful(): boolean {
-    if (!careful) return false;
-    const step = careful.launch.get().careful, name = CAREFUL[step].name;
-    govChip.removeAttribute('aria-pressed'); govChip.setAttribute('aria-haspopup', 'menu');
-    span(govChip).textContent = name;
-    govChip.setAttribute('data-tip', 'How careful: ' + CAREFUL[step].meaning); govChip.setAttribute('data-kbd', 'alt+G');
-    govChip.setAttribute('aria-label', name + ', how careful this session is: ' + CAREFUL[step].meaning);
-    govChip.dataset['step'] = step;
-    return true;
+  const placeholder = (): string => (o.waits() ? 'Send feedback to decline this request' : o.after() ? 'What next?' : 'Describe the change');
+  const line = (): LineItem[] => lineItems({ text: value(), attachments: present().length, sessionId: o.sessionId(), hidden });
+  /* "@": a mention names the model that answers this message only; the menu's foot says what that means */
+  const choicesNow = () => data().details.choices.get();
+  const mentions = {
+    label: 'Answer this message with', foot: () => (gov().governed ? FOOT_MENTION_GOVERNED : FOOT_MENTION),
+    entries: () => choicesNow().map((c) => ({ value: mentionName(c, called), label: called(c.model) || c.model, desc: c.providerName, leadHTML: ui.html.modelMark(c.value, { size: 16, label: false }) })),
+    chips: (t: string): ComposerChip[] => findMentions(t, choicesNow(), called).map((m) => ({ at: m.start, text: m.text, html: kit.html.inlineChip({ kind: 'model', model: m.choice.value, text: m.text.slice(1), words: m.text }) }))
+  };
+  /** to whom the message goes when it names one model: said on the line */
+  const routeHint = (t: string): string => { const r = routeMentions(t, choicesNow(), called); return r.kind === 'one' ? 'to ' + mentionName(r.choice, called) + ' only' + (gov().governed ? ', ungoverned' : '') : ''; };
+  let hintNow = '';
+  function draw(): void {
+    const keep = text()?.innerHTML ?? ui.esc(o.draft);
+    ph = placeholder(); hintNow = routeHint(value() || o.draft);
+    const items = line();
+    lineSig = JSON.stringify([items, hintNow]);
+    slot.replaceChildren(kit.composer({ kind: 'session', placeholder: ph, label: 'Message the coding agent', running, line: items, ...(hintNow ? { hint: hintNow } : {}), voiceOff: !later('voice'), queueOff: !later('queue') && !o.waits(), stopKeys: 'mod+period', ...(keep ? { textHTML: keep } : {}) }));
+    const c = root() as HTMLElement;
+    kit.mentions(c, mentions);
+    c.setAttribute('data-hx-composer', '');
+    text()?.setAttribute('data-hx-focus', 'composer');
+    marks();
   }
+  /** the line alone, again (typing changes what Smart would pick and to whom the message goes): the text and its caret are not touched */
+  function drawLine(): void {
+    const items = line(), hint = routeHint(value()), sig = JSON.stringify([items, hint]);
+    if (sig === lineSig) return;
+    lineSig = sig; hintNow = hint;
+    const fresh = kit.composer({ kind: 'session', line: items, ...(hint ? { hint } : {}) }).querySelector('.k7-composer__line');
+    const old = slot.querySelector('.k7-composer__line');
+    if (fresh && old) old.replaceWith(fresh); else if (fresh) root()?.append(fresh); else old?.remove();
+  }
+  /* the words the text is read by, each where it stands (the reader names them in order) */
+  const marks = (): void => { const t = text(); if (t) kit.composerMarks(t, (s) => { let from = 0; return reader.marks(s).map((m) => { const at = s.indexOf(m.text, from); from = at < 0 ? from : at + m.text.length; return { at, text: m.text, kind: m.kind, chosen: m.confirmed }; }).filter((m) => m.at >= 0); }); };
   function sync(): void {
-    const G = gov();
-    if (syncCareful()) { drawModel(G); c.setSpend(G.spent, G.governed ? G.cap : null); c.refresh(); return; }
-    govChip.setAttribute('aria-pressed', String(G.governed)); span(govChip).textContent = G.governed ? 'Governed' : 'Ungoverned';
-    govChip.setAttribute('data-tip', G.governed ? 'Climbs the model ladder, stops at ' + G.cap : 'Pinned to ' + G.model + ', no cap'); govChip.setAttribute('data-kbd', 'alt+G');
-    govChip.setAttribute('aria-label', G.governed ? 'Governed: starts cheap, climbs the model ladder on failure, stops at the cost cap' : 'Ungoverned: one pinned model, no cost cap');
-    if (G.frontier) {
-      /* governed mode cannot run (ADR-0037): the chip says so, and a press explains and offers Settings */
-      govChip.setAttribute('data-tip', 'Governed mode is unavailable: no frontier model is set up');
-      govChip.setAttribute('aria-label', (G.governed ? 'Governed' : 'Ungoverned') + '. Governed mode is unavailable: ' + (G.frontier.why || 'no frontier model is set up'));
-      govChip.setAttribute('aria-haspopup', 'menu');
-    } else govChip.removeAttribute('aria-haspopup');
-    drawModel(G);
-    c.setSpend(G.spent, G.governed ? G.cap : null);
-    c.refresh();
+    const c = root(); if (!c) { draw(); return; }
+    kit.composerRunning(c, running);
+    c.toggleAttribute('data-queue-off', !later('queue') && !o.waits());
+    const want = placeholder();
+    if (want !== ph) { ph = want; const t = text(); t?.setAttribute('data-placeholder', ph); }
+    drawLine();
   }
-  /* the chip says who answers next */
-  const attachments = (): number => c.querySelector('.ui-composer__files')?.children.length ?? 0;
-  function drawModel(G: GovernanceState): void {
-    const choices = data().details.choices.get();
-    const prev = G.smart ? smartPreview(choices, { text: c.value, attachments: attachments() }) : null;
-    const name = ui.modelMark.called(G.model) || G.model;
-    /* a council is armed for the next message, or is answering this one: the chip says so (the engine's name for its turn is not a model) */
-    const armed = data().council.armed(opts.sessionId());
-    const asking = armed?.members.length ?? G.council ?? 0;
-    const label = asking ? 'Council of ' + asking : G.smart ? (prev ? 'Smart: ' + (ui.modelMark.called(prev.choice.model) || prev.choice.model) : 'Smart') : name || 'Choose a model';
-    const t = document.createElement('template');
-    t.innerHTML = ui.html.chip(asking || G.smart || !G.model ? { label, icon: asking ? 'bots' : 'spark', haspopup: 'menu' } : { model: G.model, label, haspopup: 'menu' });
-    const fresh = t.content.firstElementChild as HTMLElement;
-    model.replaceChildren(...fresh.childNodes);
-    model.classList.toggle('ui-chip--mono', !asking && !G.smart && !!G.model);
-    /* the accessible name starts with the words on the chip (WCAG 2.5.3), then says what it is */
-    model.setAttribute('aria-label', label + ', who answers next' + (armed ? ' (the next message goes to a council)' : asking ? ' (a council is answering)' : G.smart ? (prev ? ' (Smart would pick it for this message: ' + prev.reason + ')' : ' (Smart picks for each message)') : ''));
-    model.setAttribute('data-tip', G.smart ? 'Smart picks the model for each message' + (prev ? ': ' + prev.reason : '') : 'Who answers next'); model.setAttribute('data-kbd', 'alt+M');
-  }
-  c.input.addEventListener('input', () => { if (gov().smart) drawModel(gov()); });
-  /** turning governed mode on: refused with the reason and the way out while no frontier model can run it */
-  function toggleGoverned(anchor: HTMLElement, on: boolean): void {
-    const f = gov().frontier;
-    if (on && f) {
-      ui.menu.open(anchor, governedUnavailableEntries(f), { place: 'above', label: 'Governed mode is unavailable', onSelect: (v) => { if (v === SETTINGS_VALUE) emit('hx:open-settings', { section: 'models', from: 'composer' }); } });
+
+  /* ───────── the line's controls ───────── */
+  function toggleGoverned(anchor: HTMLElement): void {
+    const G = gov(), f = G.frontier;
+    if (!G.governed && f) {
+      /* governed mode cannot run (ADR-0037): it says so and offers the way to a model that can */
+      const entries = governedUnavailableEntries(f).map((e): MenuEntry => (e === '-' ? '-' : 'title' in e ? { heading: e.title ?? '' } : 'foot' in e ? { heading: e.foot ?? '' } : { label: e.label ?? '', ...(e.value != null ? { value: String(e.value) } : {}), ...(e.icon ? { icon: e.icon } : {}) }));
+      kit.openMenu(anchor, { label: 'Governed mode is unavailable', entries, place: 'above', align: 'start', attrs: v7Attrs(), onSelect: (v) => { if (v === SETTINGS_VALUE) emit('hx:open-settings', { section: 'models', from: 'composer' }); } });
       return;
     }
-    setGovernance({ governed: on });
-    c.flashHint();
+    setGovernance({ governed: !G.governed });
+    ui.announce(gov().governed ? 'Governed' : 'Ungoverned');
   }
-  govChip.addEventListener('ui:change', (e) => { e.preventDefault(); if (careful) openCarefulFor(govChip, 'above'); else toggleGoverned(govChip, !gov().governed); });
-  careful?.launch.subscribe(() => { sync(); });
-
-  function openModel(viaKeyboard: boolean, anchor: HTMLElement = model): void {
+  const lineItem = (id: LineItemId): HTMLElement => slot.querySelector<HTMLElement>('[data-line="' + id + '"]') ?? slot.querySelector<HTMLElement>('.k7-composer__box') ?? slot;
+  function openModel(viaKeyboard: boolean, anchor: HTMLElement = lineItem('model')): void {
     const G = gov();
-    const choices = data().details.choices.get();
-    const entries = modelEntries(choices, { current: G.model, governed: G.governed, council: data().council.can(opts.sessionId()) });
-    ui.listbox.open(anchor, entries, {
-      place: 'above', label: 'Who answers next', value: G.smart ? SMART_VALUE : currentChoice(choices, G.model)?.value ?? G.model,
-      foot: G.governed ? FOOT_GOVERNED : FOOT_UNGOVERNED,
-      onClose: viaKeyboard ? () => { c.focus(); } : undefined,
-      onSelect: (v) => { if (v === COUNCIL_VALUE) { requestAnimationFrame(() => { void openCouncilForm(model, opts.sessionId(), () => { drawModel(gov()); c.flashHint(); }); }); return; } setGovernance(v === SMART_VALUE ? { smart: true } : { smart: false, model: v }); c.flashHint(); }
+    kit.openMenu(anchor, {
+      label: 'Who answers next', entries: modelMenu({ current: G.model, governed: G.governed, smart: G.smart, sessionId: o.sessionId() }), place: 'above', align: 'start', attrs: v7Attrs(),
+      onSelect: (v) => {
+        if (v === COUNCIL_VALUE) { requestAnimationFrame(() => { void openCouncilForm(lineItem('model'), o.sessionId(), () => { sync(); }); }); return; }
+        setGovernance(v === SMART_VALUE ? { smart: true } : { smart: false, model: v });
+        if (viaKeyboard) api.focus();
+      }
     });
   }
-  model.addEventListener('click', () => openModel(false));
-  data().details.governance.subscribe(sync);
-  data().details.choices.subscribe(() => { drawModel(gov()); });
-  data().council.subscribe(() => { drawModel(gov()); });
-
-  /* a dashed word, or an assumption: what it is read as */
-  function openReading(anchor: HTMLElement, kind: string | undefined, text: string): void {
-    if (kind === 'preview' || kind === 'mention') return;
-    if (kind === 'governance' || !text || !kind) {
-      ui.menu.open(anchor, [{ title: 'Governance' }, { label: 'Governed', value: 'on', checked: gov().governed, desc: 'Start cheap, climb on failure' }, { label: 'Ungoverned', value: 'off', checked: !gov().governed, desc: 'One pinned model, no cap' }], { place: 'above', onSelect: (v) => { toggleGoverned(anchor, v === 'on'); } });
-      return;
-    }
-    const r = reader.reading(kind, text), k = kindOf(kind);
-    const items = [{ title: k.title + ' "' + text + '"' }, ...optionsFor(k, text).map((o) => ({ label: o.label, value: o.value, desc: o.desc, mono: !!o.mono, checked: o.value === r.value })), { foot: 'Dashed: my guess. Solid: your choice.' }];
-    ui.menu.open(anchor, items, { place: 'above', label: 'How to read ' + text, onSelect: (v) => { r.value = v; r.confirmed = true; c.refresh(); c.flashHint(); requestAnimationFrame(() => c.focus()); } });
+  /** the quick menu (S05 B): which items show under the composer; a check toggles in place */
+  function openQuick(anchor: HTMLElement): void {
+    const menu = kit.openMenu(anchor, {
+      label: 'Quick menu: show under the composer', variant: 'quick', place: 'above', align: 'end', attrs: v7Attrs(),
+      entries: [{ heading: 'Quick menu: show under the composer' }, ...LINE_ITEMS.filter((i) => i !== 'careful' || !!controls).map((i) => ({ label: NAMES[i], value: i, checked: !hidden.includes(i) }))]
+    });
+    menu?.addEventListener('ui:select', (e) => {
+      const v = (e as CustomEvent<{ value: string }>).detail.value as LineItemId;
+      hidden = hidden.includes(v) ? hidden.filter((x) => x !== v) : [...hidden, v];
+      saveLineHidden(hidden);
+      drawLine();
+    });
   }
-  c.addEventListener('ui:decision', (e) => { const d = (e as CustomEvent<DecisionDetail>).detail; openReading(d.el, d.kind, d.text); });
-  c.addEventListener('ui:assumption', (e) => { const d = (e as CustomEvent<AssumptionDetail>).detail; if (d.item) openReading(d.el, d.item.kind, d.item.text); });
-  c.addEventListener('ui:assumption-drop', (e) => {
-    const it = (e as CustomEvent<{ item?: { kind: string; text: string; label: string } }>).detail.item; if (!it) return;
-    if (it.kind === 'governance' || it.kind === 'mention') return;
-    if (it.text) reader.reading(it.kind, it.text).dropped = true;
-    ui.announce('Dropped ' + it.label);
-  });
+  /* a word the text is read by: what it is read as, and the way to leave it as words */
+  function openReading(anchor: HTMLElement, kind: string, word: string): void {
+    if (!kind || !word) return;
+    const r = reader.reading(kind, word), k = kindOf(kind);
+    kit.openMenu(anchor, {
+      label: 'How to read ' + word, place: 'above', align: 'start', attrs: v7Attrs(),
+      entries: [{ heading: k.title + ' "' + word + '"' }, ...optionsFor(k, word).map((x) => ({ label: x.label, value: x.value, desc: x.desc, checked: x.value === r.value, role: 'menuitemradio' })), '-', { label: 'Leave it as words', value: '__drop', icon: 'close' }, { heading: 'Dashed: my guess. Solid: your choice.' }],
+      onSelect: (v) => {
+        if (v === '__drop') { r.dropped = true; ui.announce('Dropped ' + word); } else { r.value = v; r.confirmed = true; }
+        marks(); drawLine(); requestAnimationFrame(() => api.focus());
+      }
+    });
+  }
 
-  /* attach: the host's own dialog picks (desktop app), or a drop on the composer; each becomes a chip, and the send carries them */
-  const attached: Attached[] = [];
+  /* ───────── "+": attach, mention a file, a command, the quick menu ───────── */
   function addAttached(list: readonly Attached[]): void {
+    const t = text(); if (!t) return;
+    t.focus();
     for (const a of list) {
-      if (attached.some((x) => (a.path ? x.path === a.path : x.name === a.name))) continue;
-      attached.push(a);
-      c.addFile(a.name, { kind: a.kind, ...(a.path ? { title: a.path } : {}), onRemove: () => { const i = attached.indexOf(a); if (i >= 0) attached.splice(i, 1); } });
+      if (present().some((x) => (a.path ? x.path === a.path : x.name === a.name))) continue;
+      const id = 'a' + (++chipN);
+      attached.set(id, a);
+      /* a chip in the text (owner, 25 November): its name shows; the file rides with the message, so the chip adds no words */
+      kit.composerInsertChip(t, kit.html.inlineChip({ kind: 'reference', text: a.name, words: '', attrs: { 'data-att': id, 'data-tip': a.path ?? a.name, 'data-att-kind': a.kind } }));
     }
+    drawLine();
   }
-  function pickAttachments(kind: 'file' | 'folder'): void {
-    data().files.pick(kind).then(addAttached).catch((e: unknown) => { ui.toast(e instanceof Error ? e.message : 'Attaching did not work'); }).finally(() => { c.focus(); });
+  function pick(kind: 'file' | 'folder'): void {
+    data().files.pick(kind).then(addAttached).catch((e: unknown) => { say(e instanceof Error ? e.message : 'Attaching did not work'); }).finally(() => { api.focus(); });
   }
-  c.takeAttachments = (): Attached[] => {
-    const out = attached.splice(0);
-    c.querySelector('.ui-composer__files')?.replaceChildren();
-    return out;
-  };
-  const dropArea = (): HTMLElement => c.parentElement ?? c;
-  const over = (x: number, y: number): boolean => { const r = dropArea().getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; };
+  const insert = (s: string): void => { const t = text(); if (!t) return; t.focus(); kit.composerInsert(t, (value() && !/\s$/.test(value()) ? ' ' : '') + s); };
+  /** mention a file: the gateway completes the word; a folder opens, a file is written as its reference */
+  function openMention(word: string): void {
+    void data().files.complete(word, o.sessionId()).then((r) => {
+      const anchor = slot.querySelector<HTMLElement>('[data-plus]') ?? slot;
+      const entries: MenuEntry[] = r.items.length
+        ? [{ heading: 'Mention a file' }, ...r.items.map((i) => ({ label: i.display, value: i.text, ...(i.meta ? { desc: i.meta } : {}), icon: /[:/]$/.test(i.text) ? 'folder' : 'file' }))]
+        : [{ heading: 'Mention a file' }, { heading: r.unavailable ?? 'No files match.' }];
+      kit.openMenu(anchor, { label: 'Mention a file', entries, place: 'above', align: 'start', attrs: v7Attrs(), onSelect: (v) => { if (/\/$/.test(v)) requestAnimationFrame(() => { openMention(v); }); else insert(v + ' '); } });
+    });
+  }
+  function openAdd(anchor: HTMLElement): void {
+    kit.openMenu(anchor, {
+      label: 'Add', place: 'above', align: 'start', attrs: v7Attrs(),
+      entries: [
+        { label: 'Attach a file', value: 'file', icon: 'file' }, { label: 'Add a folder to context', value: 'folder', icon: 'folder' },
+        ...(data().info.live ? [{ label: 'Mention a file', value: '@file:', icon: 'at' }] : []), { label: 'Commands', value: '/', icon: 'slash' },
+        '-', { label: 'Show under the composer', value: 'quick', icon: 'sliders' }
+      ],
+      onSelect: (v) => {
+        requestAnimationFrame(() => {
+          if (v === 'file' || v === 'folder') pick(v);
+          else if (v === '@file:') openMention(v);
+          else if (v === 'quick') openQuick(anchor);
+          else insert(v);
+        });
+      }
+    });
+  }
+
+  /* ───────── events: the slot's, so they hold across a redraw ───────── */
+  slot.addEventListener('ui:add', (e) => { e.preventDefault(); openAdd(slot.querySelector<HTMLElement>('[data-plus]') ?? slot); });
+  slot.addEventListener('ui:send', (e) => {
+    const t = (e as CustomEvent<{ text: string }>).detail.text;
+    const assume = reader.items(t).map((i) => i.label), attachments = present();
+    reader.clear(); attached.clear();
+    o.send(t, { assume, attachments });
+    requestAnimationFrame(sync);
+  });
+  slot.addEventListener('ui:steer', (e) => { e.preventDefault(); const c = root(); if (c) (c.querySelector('[data-send]') as HTMLElement | null)?.click(); });   /* ctrl Enter sends as Enter does until the keys get their own pass (owner, 25 November) */
+  slot.addEventListener('ui:refused', () => { say('The agent is still working. Stop it, or wait for it, then send.'); });
+  slot.addEventListener('ui:stop', () => { o.stop(); });
+  slot.addEventListener('ui:mark', (e) => { const d = (e as CustomEvent<{ text: string; kind: string; el: HTMLElement }>).detail; openReading(d.el, d.kind, d.text); });
+  let stopHearing: (() => void) | null = null;
+  slot.addEventListener('ui:dictate', (e) => {
+    stopHearing?.(); stopHearing = null;
+    if ((e as CustomEvent<{ on: boolean }>).detail.on) stopHearing = data().dictation.start({ botId: null }, (heard) => { const t = text(); if (t) kit.composerInsert(t, (value() && !/\s$/.test(value()) ? ' ' : '') + heard); });
+  });
+  slot.addEventListener('input', () => { marks(); drawLine(); });
+  slot.addEventListener('click', (e) => {
+    const t = e.target as Element;
+    const item = t.closest<HTMLElement>('[data-line]');
+    if (item?.dataset['line'] === 'careful') { if (controls) openCarefulFor(item, 'above'); return; }
+    if (item?.dataset['line'] === 'model') { openModel(false, item); return; }
+    /* a press on the line itself (not on one of its controls) opens the quick menu (S05 B) */
+    const l = t.closest<HTMLElement>('.k7-composer__line');
+    if (l && !t.closest('button')) openQuick(l);
+  });
+  /* KEYMAP section 7: alt+G (how careful, or governed where there is no scale), alt+S (Smart), alt+M (who answers next), alt+C (a
+     council), alt+A (attach), alt+V (talk); ArrowUp in an empty composer brings your last message back */
+  slot.addEventListener('keydown', (e) => {
+    if (!(e.target as Element).closest('.k7-composer__text')) return;
+    if (e.key === 'ArrowUp' && !e.altKey && !e.shiftKey && !e.ctrlKey && !e.metaKey && !value().trim()) { const last = o.lastMessage(); if (last) { e.preventDefault(); api.setValue(last); } return; }
+    if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (e.code === 'KeyG') { e.preventDefault(); const item = lineItem('careful'); if (controls) openCarefulFor(item, 'above'); else toggleGoverned(item); }
+    else if (e.code === 'KeyS') { e.preventDefault(); setGovernance({ smart: !gov().smart }); }
+    else if (e.code === 'KeyC') { e.preventDefault(); requestAnimationFrame(() => { void openCouncilForm(lineItem('model'), o.sessionId(), () => { sync(); }); }); }
+    else if (e.code === 'KeyM') { e.preventDefault(); requestAnimationFrame(() => openModel(true)); }
+    else if (e.code === 'KeyA') { e.preventDefault(); openAdd(slot.querySelector<HTMLElement>('[data-plus]') ?? slot); }
+    else if (e.code === 'KeyV') { e.preventDefault(); slot.querySelector<HTMLElement>('[data-mic]')?.click(); }
+  });
+  /* files dragged in: the desktop app reports where they are and what was dropped (with their paths); the page build knows names only */
+  const over = (x: number, y: number): boolean => { const r = slot.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; };
   const drops = data().files.drops;
   if (drops) {
-    /* the desktop app: the host reports where files are dragged and what was dropped, with their paths */
-    const off = drops.subscribe((e) => {
-      if (!c.isConnected) { off(); return; }
-      if (e.phase === 'drop') { c.removeAttribute('data-drop'); if (over(e.x, e.y)) { addAttached(e.attachments); c.focus(); } return; }
-      c.toggleAttribute('data-drop', e.phase !== 'leave' && over(e.x, e.y));
+    const off = drops.subscribe((ev) => {
+      if (!slot.isConnected) { off(); return; }
+      if (ev.phase === 'drop') { root()?.removeAttribute('data-drop'); if (over(ev.x, ev.y)) addAttached(ev.attachments); return; }
+      root()?.toggleAttribute('data-drop', ev.phase !== 'leave' && over(ev.x, ev.y));
     });
   } else {
-    /* the page build: the browser's drop knows names only */
-    const area = dropArea();
-    area.addEventListener('dragover', (e) => { if (e.dataTransfer?.types.includes('Files')) { e.preventDefault(); c.setAttribute('data-drop', ''); } });
-    area.addEventListener('dragleave', () => { c.removeAttribute('data-drop'); });
-    area.addEventListener('drop', (e) => {
-      c.removeAttribute('data-drop');
+    slot.addEventListener('dragover', (e) => { if (e.dataTransfer?.types.includes('Files')) { e.preventDefault(); root()?.setAttribute('data-drop', ''); } });
+    slot.addEventListener('dragleave', () => { root()?.removeAttribute('data-drop'); });
+    slot.addEventListener('drop', (e) => {
+      root()?.removeAttribute('data-drop');
       const files = [...(e.dataTransfer?.files ?? [])]; if (!files.length) return;
       e.preventDefault();
       addAttached(files.map((f) => ({ name: f.name, kind: /\.(png|jpe?g|gif|webp|bmp)$/i.test(f.name) ? 'image' as const : 'file' as const, bytes: f.size })));
-      c.focus();
     });
   }
-  if (c.attach) {
-    const attach = c.attach;
-    attach.addEventListener('click', () => {
-      const live = data().info.live;
-      /* a live build offers no bots here (they are a preview) and mentions files through the gateway's completion */
-      const bots = live ? [] : data().bots.snapshot().bots.slice(0, 3);
-      ui.menu.open(attach, [
-        { label: 'Attach a file', value: 'file', icon: 'file' }, { label: 'Add a folder to context', value: 'folder', icon: 'folder' }, '-',
-        ...(live ? [{ label: 'Mention a file', value: '@file:', icon: 'at' }] : bots.map((b) => ({ label: 'Ask ' + b.name, value: '@' + b.name, desc: cap1(b.role), icon: 'at' }))), '-',
-        { label: 'Commands', value: '/', icon: 'slash' }
-      ], { place: 'above', label: 'Attach', onSelect: (v) => {
-        requestAnimationFrame(() => {
-          if (v === '@file:') { openMention(v); return; }
-          if (v === 'file' || v === 'folder') { pickAttachments(v); return; }
-          else c.insert((c.value && !/\s$/.test(c.value) ? ' ' : '') + v + (v === '/' ? '' : ' '));
-        });
-      } });
-    });
-  }
-  /* mention a file: the gateway completes the word; a folder opens, a file is inserted as @file:path */
-  function openMention(word: string): void {
-    void data().files.complete(word, opts.sessionId()).then((r) => {
-      const items = r.items.length
-        ? [{ title: 'Mention a file' }, ...r.items.map((i) => ({ label: i.display, value: i.text, mono: true, ...(i.meta ? { desc: i.meta } : {}), icon: /[:/]$/.test(i.text) ? 'folder' : 'file' }))]
-        : [{ title: 'Mention a file' }, { foot: r.unavailable ?? 'No files match.' }];
-      ui.menu.open(c.attach as HTMLElement, items, { place: 'above', label: 'Mention a file', onClose: () => { c.focus(); }, onSelect: (v) => { if (/\/$/.test(v)) requestAnimationFrame(() => { openMention(v); }); else c.insert((c.value && !/\s$/.test(c.value) ? ' ' : '') + v + ' '); } });
-    });
-  }
-  /* dictation: the provider hears; what it heard goes into the text */
-  let stopHearing: (() => void) | null = null;
-  c.addEventListener('ui:dictate', (e) => {
-    stopHearing?.(); stopHearing = null;
-    if ((e as CustomEvent<DictateDetail>).detail.value) {
-      stopHearing = data().dictation.start({ botId: null }, (text) => {
-        if (c.mic.getAttribute('aria-pressed') === 'true') { c.mic.click(); c.insert((c.value && !/\s$/.test(c.value) ? ' ' : '') + text); }
-      });
-    }
-  });
-  /* KEYMAP section 7: alt+G, alt+S, alt+M */
-  const modKey = (e: KeyboardEvent): boolean => (isMac ? e.metaKey : e.ctrlKey);
-  c.addEventListener('keydown', (e) => {
-    if (!e.altKey || modKey(e) || e.shiftKey) return;
-    if (e.code === 'KeyG') { e.preventDefault(); govChip.click(); }
-    else if (e.code === 'KeyS') { e.preventDefault(); setGovernance({ smart: !gov().smart }); c.flashHint(); }
-    else if (e.code === 'KeyC') { e.preventDefault(); requestAnimationFrame(() => { void openCouncilForm(model, opts.sessionId(), () => { drawModel(gov()); c.flashHint(); }); }); }
-    else if (e.code === 'KeyM') { e.preventDefault(); requestAnimationFrame(() => openModel(true)); }
-  });
-  c.addEventListener('ui:send', () => { reader.clear(); });
-  c.openModelMenu = (anchor) => { openModel(false, anchor); };
-  Object.assign(c, { lastAssume: (): string[] => (c.querySelector('.ui-composer__hint') ? [...c.querySelectorAll('.ui-assume')].map((b) => b.textContent ?? '') : []) });
-  sync();
-  return c;
+  const d = data().details;
+  d.governance.subscribe(sync); d.choices.subscribe(sync); d.context.subscribe(sync); d.environment.subscribe(sync);
+  data().council.subscribe(sync);
+  controls?.launch.subscribe(sync); controls?.capabilities.subscribe(sync);
+
+  const api: SessionComposer = {
+    el: slot,
+    get input() { return text(); },
+    get value() { return value(); },
+    setValue(t) { const n = text(); if (!n) return; n.textContent = t; n.dispatchEvent(new Event('input', { bubbles: true })); n.focus(); },
+    focus() { text()?.focus(); },
+    setRunning(on) { running = on; sync(); },
+    sync
+  };
+  draw();
+  return api;
 }
-export { costAssume };
+export { bestMention };

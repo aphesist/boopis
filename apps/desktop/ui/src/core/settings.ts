@@ -16,7 +16,9 @@ export const KEYS = {
   window: 'hx.v6.window',
   size: 'hx.v6.size',
   /** the Session tab's last launch pick (how careful, the folder): a new session starts from it (ADR-0057) */
-  sessionLaunch: 'hx.v7.sessionLaunch'
+  sessionLaunch: 'hx.v7.sessionLaunch',
+  /** what the session composer's line leaves out (its quick menu, board S05 B) */
+  sessionLine: 'hx.v7.sessionLine'
 } as const;
 export type StoreKey = (typeof KEYS)[keyof typeof KEYS];
 
@@ -107,3 +109,9 @@ export const UI_ZOOM: Readonly<Record<UiSize, number>> = { default: 1, larger: 1
 export const isUiSize = (v: unknown): v is UiSize => typeof v === 'string' && (UI_SIZES as readonly string[]).includes(v);
 export const loadUiSize = (): UiSize => { const v = readJSON<Record<string, unknown>>(KEYS.size)?.['size']; return isUiSize(v) ? v : 'default'; };
 export const saveUiSize = (size: UiSize): boolean => writeJSON(KEYS.size, { size });
+
+/** the items of the session composer's line (board S05 B: everything shows; the quick menu turns items off) */
+export const LINE_ITEMS = ['careful', 'branch', 'model', 'context', 'cost'] as const;
+export type LineItemId = (typeof LINE_ITEMS)[number];
+export const loadLineHidden = (): LineItemId[] => { const v = readJSON<Record<string, unknown>>(KEYS.sessionLine)?.['hidden']; return Array.isArray(v) ? LINE_ITEMS.filter((i) => v.includes(i)) : []; };
+export const saveLineHidden = (hidden: readonly LineItemId[]): boolean => writeJSON(KEYS.sessionLine, { hidden: LINE_ITEMS.filter((i) => hidden.includes(i)) });

@@ -34,7 +34,7 @@ import { mountBoard } from './group-board';
 import type { BoardView } from './group-board';
 import { atEnd, followZone } from '../chat/follow-zone';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
-import { composeTools, mentionChips, VOICE_NOT_YET } from '../chat/compose';
+import { composeTools, later, mentionChips } from '../chat/compose';
 import { approvalCard } from './room';
 import { paintDetails } from './details';
 import { forgetLimit } from './group-details';
@@ -418,7 +418,7 @@ function buildComposer(slot: HTMLElement): void {
     const line = lineOf(g);
     /* a room that routes through a lead says who answers first (the engine's rule; the "@" list's foot says what a name does) */
     const lead = g.lead ? g.members.find((m) => m.id === g.lead) : undefined;
-    slot.replaceChildren(kit.composer({ kind: 'room', placeholder: 'Message ' + g.name, label: 'Message ' + g.name, running: g.busy, line, voiceOff: VOICE_NOT_YET, ...(lead ? { hint: lead.name + ' answers first' } : {}), ...(keep ? { text: keep } : {}) }));
+    slot.replaceChildren(kit.composer({ kind: 'room', placeholder: 'Message ' + g.name, label: 'Message ' + g.name, running: g.busy, line, voiceOff: !later('voice'), ...(lead ? { hint: lead.name + ' answers first' } : {}), ...(keep ? { text: keep } : {}) }));
     tools.drawn();
     gid = g.id; running = g.busy; sig = JSON.stringify(line) + (lead?.name ?? '');
     text().setAttribute('data-hx-focus', 'composer');

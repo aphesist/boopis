@@ -4,20 +4,27 @@
 .k7-head__mark { display: inline-grid; place-items: center; flex: none; color: var(--text-dim); }
 
 /* ── ToolRow (8) ── */
-.k7-tool { display: flex; flex-direction: column; gap: var(--sp-2); width: 100%; }
+/* a session's (boards S09 and S20, kit.css `.toolrow`): its head at least 28 tall, 8 between its parts: the model's 14 mark, the tool's
+   glyph, the name in mono 12 medium, an edit's +/−, and at the end what became of it in 12 */
+.k7-tool { display: flex; flex-direction: column; width: 100%; }
 /* a head spans the Block's top: its ring is concentric with the Block (22 - 8 = 14) */
 .k7-tool__head, .k7-files__head { border-radius: calc(var(--r-block) - var(--pad-block)); }
-.k7-tool__head { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl-s); font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); min-width: 0; }
+.k7-tool__head { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl-s); font-size: var(--fs-s); line-height: var(--lh-m); color: var(--text-dim); min-width: 0; }
 .k7-tool__ic { color: var(--icon-quiet); }
 .k7-tool__name { flex: none; font-family: var(--mono); font-size: var(--fs-xs); font-weight: 500; color: var(--text); letter-spacing: 0; }
 .k7-tool__name.k7-shimmer { color: transparent; }
-.k7-tool__target { flex: 1 1 auto; }
+.k7-tool__target { flex: 0 1 auto; }
+.k7-tool__head > .k7-files__counts { font-size: var(--fs-s); }
+.k7-tool__body { margin-top: var(--sp-2); }
+/* a decline's feedback, quoted under the head (S09): 12 --text-dim, 4 under it */
+.k7-tool__note { margin: var(--sp-1) 0 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow-wrap: anywhere; }
 .k7-tool > .k7-tool__body { display: none; }
 .k7-tool[data-open] > .k7-tool__body { display: flex; flex-direction: column; gap: var(--sp-2); }
 .k7-tool__body > .k7-steps { margin: 0; padding-inline: var(--pad-text); }
 /* the attached AskCard is the approval's head, ask and answers set into the tool row's own Block (21.3: same chips, same amber
    word): no surface of its own, so its chips sit on the tool row's 8 inset */
-.k7-ask[data-variant="attached"] { padding: 0; background: none; box-shadow: none; width: auto; }
+.k7-ask[data-variant="attached"] { padding: 0; background: none; box-shadow: none; width: auto; margin-top: var(--gap-s); }
+.k7-ask[data-variant="attached"] > .k7-ask__answers { justify-content: flex-end; }
 
 /* ── AskCard (9): the boards' .qcard (kit.css, botscreens.js `ask`): a Block as wide as a bubble may be, 13; its head 12 --text-dim
    with the asker's 16 orb or mark and the amber word at the end, 4 above the ask (14/20), 8 above the answers; a rule or sub line
@@ -72,17 +79,22 @@
 .k7-file__name { font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); }
 .k7-file__meta { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
 
-/* ── FilesCard (10): rows 26, mono 12 ── */
-.k7-files { display: flex; flex-direction: column; gap: var(--sp-1); width: 100%; }
-.k7-files__head { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl-s); font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); }
-.k7-files__title { flex: 1 1 auto; text-align: start; color: var(--text); }
-.k7-files__counts { display: inline-flex; gap: var(--sp-2); font-size: var(--fs-xs); }
+/* ── FilesCard (10): the boards' `.files-card` (S23): its head in 13 --text-dim, 6 between its parts, the action a tinted 28 at its end;
+   4 under it the rows, 26 tall, mono 12 in --text: a 16 file glyph, the path, its +/− at the end 8 apart ── */
+.k7-files { display: flex; flex-direction: column; width: 100%; }
+.k7-files__head { display: flex; align-items: center; gap: var(--gap-s); min-height: var(--ctl-s); margin-bottom: var(--sp-1); font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text-dim); min-width: 0; }
+.k7-files__fold { display: inline-flex; align-items: center; gap: var(--gap-s); min-width: 0; border-radius: var(--r-xs); }
+.k7-files__title { flex: none; text-align: start; }
+.k7-files__counts { display: inline-flex; gap: var(--gap-s); flex: none; font-size: var(--fs-xs); letter-spacing: 0; }
+.k7-files__head > .k7-files__counts, .k7-files__fold > .k7-files__counts { font-size: var(--fs-s); }
 .k7-files__counts > [data-tone="add"] { color: var(--add); }
 .k7-files__counts > [data-tone="del"] { color: var(--del); }
 .k7-files > .k7-files__list { display: none; }
 .k7-files[data-open] > .k7-files__list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
 .k7-files__row { display: flex; align-items: center; gap: var(--sp-2); height: var(--line-h); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text); min-width: 0; }
-.k7-files__row > .k7-ell { flex: 1 1 auto; }
+.k7-files__row > svg { flex: none; }
+.k7-files__row > .k7-ell { flex: 0 1 auto; }
+.k7-files__row > .k7-files__counts { margin-inline-start: auto; gap: var(--sp-2); }
 
 /* ── Queue (11): radius 22 on a 4 inset, rows 36 radius 18, buttons 28 on 4 ── */
 .k7-queue {
@@ -140,6 +152,13 @@
 }
 .k7-composer__box[data-sq-on]:not(#sq) { box-shadow: var(--sq-shadow); }
 .k7-composer__box > .k7-ib { flex: none; }
+/* Stop (owner, 25 November): there only while a turn runs, at the start of the right cluster; the tinted 28 circle of "+" and the mic with a
+   filled rounded square in --text. It fades and grows in and out over --dur-1 (at once under reduced motion); nothing else moves */
+.k7-composer__stop { display: none; opacity: 0; transform: scale(.9); transition: opacity var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out), display var(--dur-1) allow-discrete; }
+.k7-composer[data-running] .k7-composer__stop { display: inline-grid; opacity: 1; transform: none; }
+@starting-style { .k7-composer[data-running] .k7-composer__stop { opacity: 0; transform: scale(.9); } }
+.k7-composer__stop-glyph { width: var(--stop-glyph); height: var(--stop-glyph); border-radius: var(--r-stop); background: var(--text); }
+@media (prefers-reduced-motion: reduce) { .k7-composer__stop { transition: none; } }
 .k7-composer__text {
   flex: 1 1 auto; min-width: 0; min-height: var(--ctl-s); max-height: var(--composer-max-h); overflow-y: auto; overscroll-behavior: contain; padding: var(--sp-1) var(--pad-text);
   box-sizing: border-box; font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); outline: none; white-space: pre-wrap; overflow-wrap: anywhere;
@@ -157,6 +176,8 @@
 .k7-composer__item[data-model] { gap: var(--pad-kbd); }
 .k7-composer__item > svg { flex: none; color: currentColor; }
 @media (hover: hover) and (pointer: fine) { .k7-composer__item:hover { color: var(--text); } }
-.k7-composer__end { font-size: var(--fs-xs); color: var(--text-dim); }
+.k7-composer__end { display: inline-flex; align-items: center; gap: var(--gap-s); font-size: var(--fs-xs); color: var(--text-dim); }
+span.k7-composer__item { cursor: default; }
+@media (hover: hover) and (pointer: fine) { span.k7-composer__item:hover { color: var(--text-dim); } }
 .k7-composer__hint { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; }
 .k7-composer + .k7-queue, .k7-queue + .k7-composer { margin-top: var(--sp-2); }

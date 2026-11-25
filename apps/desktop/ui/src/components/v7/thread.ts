@@ -14,11 +14,11 @@ import type { Attrs, U } from './util';
 const blockAttrs = (name: string, more: Attrs): string => kitAttrs(name, { 'data-block': '', 'data-sq': '', 'data-sq-mode': 'frame', ...more });
 /** an agent card's head: the asker's mark (a model's 16 px mark, or a bot's 16 px orb), a short line, and the state at the end */
 function askerHTML(o: { model?: U<ModelRef>; bot?: U<BotLike> }): string {
-  return o.bot ? orbHtml(o.bot, { size: 16, still: true, mode: 'fixed', surface: '--bg-3' }) : o.model ? '<span class="k7-head__mark">' + markHTML(o.model, { size: 16, label: false }) + '</span>' : '';
+  return o.bot ? orbHtml(o.bot, { size: 16, still: true, mode: 'fixed', surface: '--bg-3' }) : o.model ? '<span class="k7-head__mark">' + markHTML(o.model, { size: 14, label: false }) + '</span>' : '';   /* a model's mark is 14 in a card's head (sessiontab.js `ask`: cm(fam, 14)) */
 }
 
-/* ── AskCard (9): standalone (a bot's approval, never expires), attached (in a ToolRow), question (chips), choices (lettered rows),
-   lapsed blank (the guess); asked, needs you, answered (one row), lapsed ── */
+/* ── AskCard (9): standalone (a bot's approval, never expires), attached (in a ToolRow: its answers alone, S09), question (chips),
+   choices (lettered rows), lapsed blank (the guess); asked, needs you, answered (one row), lapsed ── */
 export const ASK_VARIANTS = ['standalone', 'attached', 'question', 'choices', 'lapsed'] as const;
 export type AskVariant = typeof ASK_VARIANTS[number];
 export const ASK_STATES = ['asked', 'needs', 'answered', 'lapsed', 'withdrawn'] as const;
@@ -35,12 +35,14 @@ export interface AskCardOpts {
   /** answered: the one-line receipt ("Allowed once", "sent as a correction") */ receipt?: U<string>; something?: U<boolean>; attrs?: U<Attrs>;
 }
 export const APPROVAL_ANSWERS: readonly AskAnswer[] = [{ label: 'Hold to allow once', primary: true, hold: true }, { label: 'Allow all this turn', value: 'turn' }, { label: 'Always allow', value: 'always' }, { label: 'Deny', value: 'deny', keys: 'esc', outline: true }];
+const answerChips = (list: readonly AskAnswer[], more = ''): string => '<div class="k7-ask__answers">' + list.map((x) => chip({ label: x.label, variant: 'answer', chosen: !!x.primary, hold: !!x.hold, attrs: { 'data-value': x.value ?? null, 'data-outline': x.outline ? '' : null, 'aria-keyshortcuts': x.keys ? (x.keys === 'esc' ? 'Escape' : x.keys) : null, 'aria-disabled': x.inert ? 'true' : null, 'data-tip': x.inert ?? null } }).replace('</button>', x.keys ? kbd({ keys: x.keys }) + '</button>' : '</button>')).join('') + more + '</div>';
 export function askCard(o: AskCardOpts): string {
   const v = o.variant ?? 'standalone', st = o.state ?? 'needs';
+  /* attached (S09): the answers alone, at the end of their tool row's Block; the row's own head says what waits and for whom */
+  if (v === 'attached') return '<div class="k7-ask"' + partAttrs('AskCard', { role: 'group', 'aria-label': o.ask, 'data-variant': v, 'data-state': st, ...(o.attrs ?? {}) }) + '>' + answerChips(o.answers ?? APPROVAL_ANSWERS) + '</div>';
   const stateWord = st === 'needs' ? statusWord({ text: 'needs you', tone: 'owe', dot: true }) : st === 'lapsed' ? statusWord({ text: 'lapsed', tone: 'owe' }) : st === 'withdrawn' ? statusWord({ text: 'withdrawn' }) : st === 'answered' ? statusWord({ text: o.receipt ?? 'answered', tone: 'ok' }) : '';
   const head = '<div class="k7-ask__head k7-text">' + askerHTML(o) + '<span class="k7-ask__who k7-ell">' + esc(o.who ?? (v === 'question' || v === 'lapsed' ? 'asked during the turn' : (o.bot?.name ?? 'boopis') + ' asks')) + '</span>' + stateWord + '</div>';
-  /* attached: a part of its ToolRow (its Block holds it), not a second surface; so it is not a second AskCard geometry either */
-  const a = v === 'attached' ? partAttrs('AskCard', { role: 'group', 'aria-label': o.ask, 'data-variant': v, 'data-state': st, ...(o.attrs ?? {}) }) : blockAttrs('AskCard', { role: 'group', 'aria-label': o.ask, 'data-variant': v, 'data-state': st, ...(o.attrs ?? {}) });
+  const a = blockAttrs('AskCard', { role: 'group', 'aria-label': o.ask, 'data-variant': v, 'data-state': st, ...(o.attrs ?? {}) });
   if (st === 'answered' || st === 'withdrawn') {
     /* answered: a one-line receipt, then the card collapses to one row */
     return '<div class="k7-ask k7-block"' + a + '><div class="k7-ask__head k7-text">' + askerHTML(o) + '<span class="k7-ask__who k7-ell">' + esc(o.ask) + '</span>' + stateWord + '</div></div>';
@@ -54,13 +56,15 @@ export function askCard(o: AskCardOpts): string {
     }).join('') + (o.something !== false ? '<button class="k7-reset k7-ask__choice" type="button"><span class="k7-ask__letter" aria-hidden="true">' + glyph('pen') + '</span><span class="k7-ell">Something else</span></button>' : '') + '</div>';
   } else {
     const list: readonly AskAnswer[] = o.answers ?? (v === 'question' || v === 'lapsed' ? (o.choices ?? []).map((c, i) => ({ label: c, primary: i === 0 })) : APPROVAL_ANSWERS);
-    answers = '<div class="k7-ask__answers">' + list.map((x) => chip({ label: x.label, variant: 'answer', chosen: !!x.primary, hold: !!x.hold, attrs: { 'data-value': x.value ?? null, 'data-outline': x.outline ? '' : null, 'aria-keyshortcuts': x.keys ? (x.keys === 'esc' ? 'Escape' : x.keys) : null, 'aria-disabled': x.inert ? 'true' : null, 'data-tip': x.inert ?? null } }).replace('</button>', x.keys ? kbd({ keys: x.keys }) + '</button>' : '</button>')).join('') +
-      (v === 'question' || v === 'lapsed' ? chip({ label: 'Something else', variant: 'answer' }) : '') + '</div>';
+    answers = answerChips(list, v === 'question' || v === 'lapsed' ? chip({ label: 'Something else', variant: 'answer', attrs: { 'data-value': 'else', 'data-outline': '' } }) : '');
   }
   return '<div class="k7-ask k7-block"' + a + '>' + head + body + answers + '</div>';
 }
 
-/* ── ToolRow (8): one tool call; edit, command, read, search; running (shimmer), done, failed (red word), waiting (an attached AskCard) ── */
+/* ── ToolRow (8): one tool call; edit, command, read, search; running (shimmer), done, failed (red word), waiting (an attached AskCard).
+   A session's (boards S09 and S20, kit.css `.toolrow`): the answering model's 14 mark, the tool's glyph, what it is called on in mono, an
+   edit's +/−, and at the end what became of it ("Waiting for you" in amber, "Allowed once 09:43", "Declined 09:44"); while it waits its
+   answers sit under the head, at the Block's end; a decline's feedback is quoted under it ── */
 export const TOOL_KINDS = ['edit', 'command', 'read', 'search'] as const;
 export type ToolKind = typeof TOOL_KINDS[number];
 export const TOOL_STATES = ['running', 'done', 'failed', 'waiting'] as const;
@@ -70,6 +74,7 @@ export interface ToolRowOpts {
   /** `bot`: a bot's tool call as boards 11 and 17 draw it (botscreens.js `.tool`): a glyph (`icon`: the task's, or the terminal's), the tool's name, what it was called on, a chevron */ variant?: U<'session' | 'bot'>; icon?: U<string>;
   kind?: U<ToolKind>; state?: U<ToolState>; tool: string; target?: U<string>; model?: U<ModelRef>; open?: U<boolean>;
   command?: U<string>; steps?: U<readonly StepOpts[]>; ask?: U<AskCardOpts>; attrs?: U<Attrs>;
+  /** an edit's lines added and removed */ add?: U<number>; del?: U<number>; /** what became of it, at the head's end ("Allowed once 09:43") */ word?: U<string>; /** the feedback a decline was sent with, quoted under the head */ note?: U<string>;
 }
 export function toolRow(o: ToolRowOpts): string {
   const k = o.kind ?? 'command', st = o.state ?? 'done';
@@ -81,27 +86,32 @@ export function toolRow(o: ToolRowOpts): string {
       '<b class="k7-btool__name">' + esc(o.tool) + '</b>' + (o.target ? '<span class="k7-btool__target k7-ell">' + esc(o.target) + '</span>' : '') + '<span class="k7-grow"></span>' + glyph('chevron', 'k7-btool__chev') + '</button>' +
       (o.steps || o.command ? '<div class="k7-btool__body" id="' + id + '">' + (o.command ? well({ text: o.command }) : '') + (o.steps ? steps(o.steps) : '') + '</div>' : '') + '</div>';
   }
-  const word = st === 'failed' ? statusWord({ text: 'failed', tone: 'red' }) : st === 'waiting' ? statusWord({ text: 'needs you', tone: 'owe', dot: true }) : '';
-  const head = '<button class="k7-reset k7-tool__head k7-text" type="button"' + attrs({ 'aria-expanded': String(!!o.open), 'aria-controls': id }) + '>' +
-    (o.model ? '<span class="k7-head__mark">' + markHTML(o.model, { size: 16, label: false }) + '</span>' : glyph(TOOL_GLYPH[k], 'k7-tool__ic')) +
-    '<span class="k7-tool__name' + (st === 'running' ? ' k7-shimmer" data-live="' : '') + '">' + esc(o.tool) + '</span>' +
-    (o.target ? '<span class="k7-tool__target k7-ell">' + esc(o.target) + '</span>' : '<span class="k7-grow"></span>') + word + glyph('chevron-down', 'k7-chev') + '</button>';
-  const body = '<div class="k7-tool__body" id="' + id + '">' + (o.command ? well({ text: o.command }) : '') + (o.steps ? steps(o.steps) : '') + '</div>';
-  return '<div class="k7-tool k7-block"' + blockAttrs('ToolRow', { 'data-kind': k, 'data-state': st, 'data-disclose': '', 'data-open': o.open ? '' : null, ...(o.attrs ?? {}) }) + '>' + head + body +
-    (st === 'waiting' && o.ask ? askCard({ ...o.ask, variant: 'attached' }) : '') + '</div>';
+  const word = st === 'failed' ? statusWord({ text: 'failed', tone: 'red' }) : st === 'waiting' ? statusWord({ text: 'Waiting for you', tone: 'owe' }) : o.word ? statusWord({ text: o.word }) : '';
+  const hasBody = !!(o.command || o.steps);
+  const inner = (o.model ? '<span class="k7-head__mark">' + markHTML(o.model, { size: 14, label: false }) + '</span>' : '') + glyph(TOOL_GLYPH[k], 'k7-tool__ic') +
+    '<b class="k7-tool__name' + (st === 'running' ? ' k7-shimmer" data-live="' : '') + '">' + esc(o.tool) + '</b>' +
+    (o.add != null || o.del != null ? '<span class="k7-files__counts k7-mono"><span data-tone="add">+' + (o.add ?? 0) + '</span><span data-tone="del">−' + (o.del ?? 0) + '</span></span>' : '') +
+    (o.target ? '<span class="k7-tool__target k7-ell">' + esc(o.target) + '</span>' : '') + '<span class="k7-grow"></span>' + word + (hasBody ? glyph('chevron-down', 'k7-chev') : '');
+  const head = hasBody ? '<button class="k7-reset k7-tool__head k7-text" type="button"' + attrs({ 'aria-expanded': String(!!o.open), 'aria-controls': id }) + '>' + inner + '</button>' : '<div class="k7-tool__head k7-text">' + inner + '</div>';
+  const body = hasBody ? '<div class="k7-tool__body" id="' + id + '">' + (o.command ? well({ text: o.command }) : '') + (o.steps ? steps(o.steps) : '') + '</div>' : '';
+  return '<div class="k7-tool k7-block"' + blockAttrs('ToolRow', { 'data-kind': k, 'data-state': st, 'data-disclose': hasBody ? '' : null, 'data-open': hasBody && o.open ? '' : null, ...(o.attrs ?? {}) }) + '>' + head + body +
+    (o.note ? '<p class="k7-tool__note k7-text">“' + esc(o.note) + '”</p>' : '') + (st === 'waiting' && o.ask ? askCard({ ...o.ask, variant: 'attached' }) : '') + '</div>';
 }
 
-/* ── FilesCard (10): a turn's changed files; collapsed, open ── */
+/* ── FilesCard (10): a turn's changed files (board S23, kit.css `.files-card`): "2 changed files" with the turn's +/−, an action at the
+   head's end (Open diff), then a row per file: its glyph, its path in mono, its own +/− at the end. A long list folds (`fold`) ── */
 export interface FileRow { path: string; add?: number; del?: number }
-export interface FilesCardOpts { files: readonly FileRow[]; open?: U<boolean>; attrs?: U<Attrs> }
+export interface FilesCardOpts { files: readonly FileRow[]; /** a long list folds under its head: open or closed */ fold?: U<boolean>; open?: U<boolean>; /** the head's action ("Open diff"); its button carries `data-files` */ action?: U<string>; actionAttrs?: U<Attrs>; attrs?: U<Attrs> }
 export function filesCard(o: FilesCardOpts): string {
   const add = o.files.reduce((n, f) => n + (f.add ?? 0), 0), del = o.files.reduce((n, f) => n + (f.del ?? 0), 0);
   const id = idFrom('k7-fc', o.files.map((f) => f.path).join());
   const counts = (a: number, d: number): string => '<span class="k7-files__counts k7-mono"><span data-tone="add">+' + a + '</span><span data-tone="del">−' + d + '</span></span>';
-  return '<div class="k7-files k7-block"' + blockAttrs('FilesCard', { 'data-disclose': '', 'data-open': o.open ? '' : null, ...(o.attrs ?? {}) }) + '>' +
-    '<button class="k7-reset k7-files__head k7-text" type="button"' + attrs({ 'aria-expanded': String(!!o.open), 'aria-controls': id }) + '>' + glyph('file', 'k7-tool__ic') +
-    '<span class="k7-files__title">' + esc('Changed ' + o.files.length + (o.files.length === 1 ? ' file' : ' files')) + '</span>' + counts(add, del) + glyph('chevron-down', 'k7-chev') + '</button>' +
-    '<ul class="k7-files__list" id="' + id + '">' + o.files.map((f) => '<li class="k7-files__row k7-text"' + partAttrs('FileRow') + '><span class="k7-ell k7-mono">' + esc(f.path) + '</span>' + counts(f.add ?? 0, f.del ?? 0) + '</li>').join('') + '</ul></div>';
+  const title = '<span class="k7-files__title">' + esc(o.files.length + (o.files.length === 1 ? ' changed file' : ' changed files')) + '</span>' + counts(add, del);
+  const open = o.fold ? !!o.open : true;
+  return '<div class="k7-files k7-block"' + blockAttrs('FilesCard', { 'data-disclose': o.fold ? '' : null, 'data-open': open ? '' : null, ...(o.attrs ?? {}) }) + '>' +
+    '<div class="k7-files__head k7-text">' + (o.fold ? '<button class="k7-reset k7-files__fold" type="button"' + attrs({ 'aria-expanded': String(open), 'aria-controls': id }) + '>' + title + glyph('chevron-down', 'k7-chev') + '</button>' : title) +
+    '<span class="k7-grow"></span>' + (o.action ? button({ label: o.action, variant: 'tint', size: 28, attrs: { 'data-files': '', ...(o.actionAttrs ?? {}) } }) : '') + '</div>' +
+    '<ul class="k7-files__list" id="' + id + '">' + o.files.map((f) => '<li class="k7-files__row k7-text"' + partAttrs('FileRow') + '>' + glyph('file') + '<span class="k7-ell k7-mono">' + esc(f.path) + '</span>' + counts(f.add ?? 0, f.del ?? 0) + '</li>').join('') + '</ul></div>';
 }
 
 /* ── FileCard: one file a bot wrote or handed over (boards 11 and 17, botscreens.js `.file`): a 32 x 40 file tile, the name, one mono line ── */
@@ -148,37 +158,46 @@ export function diffView(o: DiffViewOpts): string {
     (v === 'split' ? '<div class="k7-diff__body">' : '<div class="k7-diff__body ui-scroll ui-scroll--x" tabindex="0" role="region"' + attrs({ 'aria-label': o.path }) + '>') + body + '</div></div>';
 }
 
-/* ── Composer (39): session, bot, room, dock, notch; with its line; empty, typed, multi-line, running (Enter queues), held, no model ── */
+/* ── Composer (39): session, bot, room, dock, notch; with its line; empty, typed, multi-line, running (Stop joins the right cluster; Enter
+   queues), held, no model ── */
 export const COMPOSER_KINDS = ['session', 'bot', 'room', 'dock', 'notch'] as const;
 export type ComposerKind = typeof COMPOSER_KINDS[number];
 export interface LineItem {
   label: string; value: string; mono?: boolean; need?: boolean; end?: boolean; leadHTML?: string;
   /** a plain item, as the boards' lines draw them: a 16 glyph or the model's 12 mark, then the value; no chevron, no fill */ plain?: boolean; icon?: string; model?: ModelRef; attrs?: Attrs;
+  /** five ticks after the value (a model's effort, S05) or, at the line's end, before it (how full the context is) */ ticks?: number; /** a plain item that only says (the branch): not a control */ still?: boolean;
 }
 export interface ComposerOpts {
   kind?: U<ComposerKind>; placeholder?: U<string>; text?: U<string>; textHTML?: U<string>; running?: U<boolean>;
   /** the line under it (12.2, S05): its items; an empty line takes no space */ line?: U<readonly LineItem[]>; hint?: U<string>; /** a second hint, at the line's end (S17: "ctrl Enter starts it in the background") */ hintEnd?: U<string>;
   /** a bot's own chat: the send in the bot's derived fill (18.1) */ fill?: U<{ fill: string; text: string }>; label?: U<string>; attrs?: U<Attrs>;
-  /** talking to it is not possible here: the voice button is drawn and does nothing, and its tip says this */ voiceOff?: U<string>;
+  /** talking to it does not exist here yet: with no text there is no primary circle (a control shows only once its feature exists) */ voiceOff?: U<boolean>;
+  /** nothing queues here yet: while a turn runs there is no send (the app lifts this while a typed message has somewhere to go) */ queueOff?: U<boolean>;
+  /** the key Stop's tip shows (the shell's mod+. unless said) */ stopKeys?: U<string>;
 }
+const ticks5 = (on: number): string => '<span class="k7-ticks" aria-hidden="true">' + Array.from({ length: 5 }, (_, i) => '<i' + (i < on ? ' data-on' : '') + '></i>').join('') + '</span>';
 export function composer(o: ComposerOpts): string {
   const k = o.kind ?? 'session', typed = !!(o.text || o.textHTML);
   const ph = o.placeholder ?? (o.running ? 'Queue a message, or ctrl Enter to steer' : k === 'room' ? 'Message the room' : k === 'bot' || k === 'dock' ? 'Message the bot' : 'Ask boopis');
-  const send = o.running && !typed
-    ? iconButton({ icon: 'stop', label: 'Stop', variant: 'inverted', attrs: { 'data-send': '' } })
-    : typed ? iconButton({ icon: 'arrowup', label: o.running ? 'Queue' : 'Send', variant: 'inverted', keys: 'Enter', attrs: { 'data-send': '', 'data-bot-colour': o.fill ? '' : null, style: o.fill ? '--selected:' + o.fill.fill + ';--text-on-light:' + o.fill.text : null } })
-    : iconButton({ icon: 'waveform', label: 'Talk', variant: 'inverted', attrs: { 'data-send': '', 'data-bot-colour': o.fill ? '' : null, style: o.fill ? '--selected:' + o.fill.fill + ';--text-on-light:' + o.fill.text : null } });
+  /* the primary circle: voice when empty, send once there is text ("Queue" while it runs); it never becomes Stop (owner, 25 November) */
+  const fillAttrs = { 'data-bot-colour': o.fill ? '' : null, style: o.fill ? '--selected:' + o.fill.fill + ';--text-on-light:' + o.fill.text : null };
+  const send = typed ? iconButton({ icon: 'arrowup', label: o.running ? 'Queue' : 'Send', variant: 'inverted', keys: 'Enter', attrs: { 'data-send': '', ...fillAttrs } })
+    : iconButton({ icon: 'waveform', label: 'Talk', variant: 'inverted', attrs: { 'data-send': '', ...fillAttrs } });
+  /* Stop (owner, 25 November): a tinted 28 circle with a filled rounded square, at the start of the right cluster while a turn runs:
+     [stop] [mic] [primary]. It is there only then, takes its own place (the text gives the width), and is the one way Stop is shown */
+  const stop = '<button class="k7-reset k7-ib k7-composer__stop"' + kitAttrs('IconButton') + attrs({ type: 'button', 'data-variant': 'tinted', 'data-stop': '', 'aria-label': 'Stop', 'data-tip': 'Stop', 'data-kbd': o.stopKeys ?? 'mod+period', 'aria-keyshortcuts': o.stopKeys === 'esc' ? 'Escape' : 'Control+.' }) + '><span class="k7-composer__stop-glyph" aria-hidden="true"></span></button>';
   const line = (o.line ?? []).length || o.hint || o.hintEnd
     ? '<div class="k7-composer__line">' + (o.line ?? []).filter((x) => !x.end).map((x) => x.plain
-      ? '<button class="k7-reset k7-composer__item" type="button"' + attrs({ 'aria-label': x.label + ': ' + x.value, 'data-model': x.model ? '' : null, ...(x.attrs ?? {}) }) + '>' + (x.model ? markHTML(x.model, { size: 12, label: false }) : x.icon ? glyph(x.icon) : '') + '<span' + (x.mono ? ' class="k7-mono"' : '') + '>' + esc(x.value) + '</span></button>'
+      ? (x.still ? '<span class="k7-composer__item"' + attrs({ 'aria-label': x.label + ': ' + x.value, ...(x.attrs ?? {}) }) : '<button class="k7-reset k7-composer__item" type="button"' + attrs({ 'aria-label': x.label + ': ' + x.value, 'data-model': x.model ? '' : null, ...(x.attrs ?? {}) })) + '>' +
+        (x.model ? markHTML(x.model, { size: 12, label: false }) : x.icon ? glyph(x.icon) : '') + '<span' + (x.mono ? ' class="k7-mono"' : '') + '>' + esc(x.value) + '</span>' + (x.ticks != null ? ticks5(x.ticks) : '') + (x.still ? '</span>' : '</button>')
       : selectorItem({ variant: 'line', label: x.label, value: x.value, mono: !!x.mono, need: !!x.need, ...(x.leadHTML ? { leadHTML: x.leadHTML } : {}), chevron: !x.need })).join('') +
       (o.hint ? '<span class="k7-composer__hint">' + esc(o.hint) + '</span>' : '') +
-      '<span class="k7-grow"></span>' + (o.hintEnd ? '<span class="k7-composer__hint">' + esc(o.hintEnd) + '</span>' : '') + (o.line ?? []).filter((x) => x.end).map((x) => '<span class="' + cls('k7-composer__end', x.mono && 'k7-mono') + '"' + attrs({ 'aria-label': x.label + ': ' + x.value }) + '>' + esc(x.value) + '</span>').join('') + '</div>'
+      '<span class="k7-grow"></span>' + (o.hintEnd ? '<span class="k7-composer__hint">' + esc(o.hintEnd) + '</span>' : '') + (o.line ?? []).filter((x) => x.end).map((x) => '<span class="' + cls('k7-composer__end', x.mono && x.ticks == null && 'k7-mono') + '"' + attrs({ 'aria-label': x.label + ': ' + x.value, ...(x.attrs ?? {}) }) + '>' + (x.ticks != null ? ticks5(x.ticks) + '<span class="k7-mono">' + esc(x.value) + '</span>' : esc(x.value)) + '</span>').join('') + '</div>'
     : '';
-  return '<div class="k7-composer"' + kitAttrs('Composer', { 'data-kind': k, 'data-typed': typed ? '' : null, 'data-running': o.running ? '' : null, 'data-voice-off': o.voiceOff ?? null, ...(o.attrs ?? {}) }) + '>' +
+  return '<div class="k7-composer"' + kitAttrs('Composer', { 'data-kind': k, 'data-typed': typed ? '' : null, 'data-running': o.running ? '' : null, 'data-voice-off': o.voiceOff ? '' : null, 'data-queue-off': o.queueOff ? '' : null, ...(o.attrs ?? {}) }) + '>' +
     '<div class="k7-composer__box" data-sq data-sq-mode="frame" data-mark-context>' +
     iconButton({ icon: 'plus', label: 'Add a file', variant: 'tinted', attrs: { 'data-plus': '' } }) +
     '<div class="k7-composer__text" contenteditable="plaintext-only" role="textbox" aria-multiline="true"' + attrs({ 'aria-label': o.label ?? ph, 'data-placeholder': ph }) + '>' + (o.textHTML ?? esc(o.text ?? '')) + '</div>' +
-    (k === 'notch' ? '' : iconButton({ icon: 'mic', label: 'Dictate', variant: 'tinted', pressed: false, keys: 'alt+V', attrs: { 'data-mic': '' } })) + send + '</div>' + line + '</div>';   /* the mic is a tinted 28 circle, as "+" is (kit.css `.composer .ib.s`) */
+    stop + (k === 'notch' ? '' : iconButton({ icon: 'mic', label: 'Dictate', variant: 'tinted', pressed: false, keys: 'alt+V', attrs: { 'data-mic': '' } })) + send + '</div>' + line + '</div>';   /* the mic is a tinted 28 circle, as "+" is (kit.css `.composer .ib.s`) */
 }
 export { mark };
