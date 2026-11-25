@@ -34,6 +34,28 @@ Block's text rows (4 at the start only), and every orb (eyes cut to its surface'
 boards: `kit.fileCard` (a file a bot wrote), `kit.toolRow({ variant: 'bot' })` (a bot's tool call) and the boards' named sizes in
 `scripts/build-tokens-v7.mjs`.
 
+**What each component the converted screens use is, and its board** (boards 11, 17 and S17; `pnpm lab:board`):
+
+| Component | Variants and states on these boards | Board source |
+|---|---|---|
+| `kit.windowChrome`, `kit.titlePill` | a bot's orb, a session's glyph; the search hint; the window glyphs | screens.js `chrome`, `pill` |
+| `kit.rail` | tiles, the open one, the flag, a room's cluster and its "+N" (owner, 25 November), the foot | screens.js `rail`, kit.js `cluster` |
+| `kit.pane` (details) | the head (64 orb, name, Activity / Library), `k7-pane__sec`, `k7-pane__none` | botscreens.js `pane` |
+| `kit.card({ variant: 'pane' })`, its Row | a value, a value with a lead (`valueHTML`), a second line (`k7-row__sub`), a control (Switch), a row that is a control (`action`) | kit.css `.pane-card .sr` |
+| `kit.segmented` | items as wide as their words; the chosen one carries the fill | kit.css `.seg` |
+| `kit.bubble`, `kit.timeSeparator`, `kit.statusLine` | yours in the bot's fill, the bot's; the time; working (the sweep) and waiting (at rest) | kit.css `.b`, `.sep`, `.activity` |
+| `kit.toolRow({ variant: 'bot' })` | closed; open on its Steps (done, now, to do, each with its end words); `icon` for a shell | kit.css `.tool`, `.steps` |
+| `kit.fileCard` | a file; `opens` makes it a control | kit.css `.file` |
+| `kit.askCard` | approval: head, ask, `rule`, four answers (`inert` for one that cannot be taken yet, `outline` for Deny) | botscreens.js `approval` |
+| `kit.composer` | bot, session; its line (plain items, the cost, hints at both ends); `voiceOff`; events `ui:send`, `ui:steer`, `ui:stop`, `ui:voice`, `ui:add`, `ui:dictate`; `kit.mentions` (an "@" Menu), `kit.composerInsert` | screens.js `composer`, kit.css `.composer-under` |
+| `kit.listRow` | session (the model's mark, title, branch and time, Badge or dot), compact (one line), bot, item; `kit.sectionHead` with a count, folding | kit.css `.sess-row`, `.inbox-h` |
+| `kit.selectorItem({ variant: 'launch' })` | a glyph, a model's mark or the five ticks, the value, the chevron; `aria-disabled` for one that cannot be chosen yet | kit.css `.select`, sessionnew.js `launch` |
+| `kit.notice` | a limit: glyph, `title` and words, a ghost action, dismiss | kit.css `.notice` |
+| `kit.avatar({ variant: 'logomark' })`, `.k7-type-2xl` | the new session's mark and greeting | kit.css `.ns-mark`, `.ns-h` |
+| `kit.dock` | the row: orbs, the flag, the ask pill | dockv7.js |
+
+A module composes these and places them; its CSS holds placement only (`bots.css` "board 11", `session.css` "board S17").
+
 | # | Component | `kit.` | Story | Variants built |
 |---|---|---|---|---|
 | 1 | WindowChrome | `windowChrome` (`titlePill`, `searchHint` inside) | `kit/window-chrome` | rail A, compact B; title idle, running; search hint S5, button S1, pill S2, off |

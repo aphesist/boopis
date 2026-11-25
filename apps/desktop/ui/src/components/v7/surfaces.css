@@ -52,7 +52,7 @@
 .k7-pane[data-variant="tools"] { width: var(--tools-w); }
 .k7-pane:not([data-open]) { display: none; }
 .k7-pane[data-overlay] { box-shadow: inset var(--hl) 0 0 var(--hair), var(--shadow-modal); }
-.k7-pane__head { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); padding: var(--pane-top) var(--sp-4) 0; }
+.k7-pane__head { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); padding: var(--pad-pane-top) var(--sp-4) 0; }
 .k7-pane__name { margin: 0; font-size: var(--fs-l); line-height: var(--lh-l); font-weight: 500; color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* the body's sections (kit.css `.pane-in`, `.pane-sec`): 4 between its pieces, a section's name 12 --text-dim with 14 over it and 6 under */
 .k7-pane__body { display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-1) var(--sp-4) var(--sp-4); min-height: 0; }
