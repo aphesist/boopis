@@ -4,6 +4,8 @@
      /v6/design-system/hx/...    the specimen's `hx/` (the mock's root) and `ui/` (its components) as it was published
      /__gfonts?family=...        Google Fonts requests of the mock, answered from the bundled @fontsource files
      /__frames/<name>.frames.json   the recorded gateway frames (tests/fixtures/frames), for the live-replay provider
+     /__boards/...               the approved v7 boards' own sources (docs/design/v7/boards/src), read only, for `pnpm lab:board`;
+                                 the orb library the boards load is the app's vendored one (the boards' folder does not carry it)
    The mock's pages ask Google for their fonts; every HTML page served from /v6/ has those links rewritten to /__gfonts,
    so the lab never reaches the network and a pixel difference is never a font difference. */
 import { existsSync, readFileSync, statSync } from 'node:fs';
@@ -15,6 +17,8 @@ export const UI_ROOT = resolve(HERE, '..', '..');
 export const V6 = resolve(UI_ROOT, '..', '..', '..', 'design', 'v6');
 const FONTS = join(UI_ROOT, 'node_modules', '@fontsource');
 const FRAMES = join(UI_ROOT, 'tests', 'fixtures', 'frames');
+export const BOARDS = resolve(UI_ROOT, '..', '..', '..', 'docs', 'design', 'v7', 'boards', 'src');
+const ORB = join(UI_ROOT, 'vendor', 'orb-avatar.min.js');
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.map': 'application/json', '.md': 'text/plain' };
 export const typeOf = (file) => TYPES[extname(file)] || 'application/octet-stream';
@@ -60,6 +64,8 @@ export function labRoute(rawUrl) {
   };
   if (path.startsWith('/__fonts/')) return file(FONTS, path.slice('/__fonts/'.length));
   if (path.startsWith('/__frames/')) return file(FRAMES, path.slice('/__frames/'.length));
+  if (/^\/__boards\/lib\/orb-avatar[^/]*\.js$/.test(path)) return [200, 'text/javascript', readFileSync(ORB)];
+  if (path.startsWith('/__boards/')) { const g = normalize(join(BOARDS, path.slice('/__boards/'.length))); return !g.startsWith(BOARDS) ? [403, 'text/plain', 'forbidden'] : existsSync(g) && statSync(g).isFile() ? [200, typeOf(g), readFileSync(g)] : [404, 'text/plain', 'not found']; }
   if (path === '/v6/__index.html') return [200, 'text/html', v6IndexPage()];
   if (path.startsWith('/v6/design-system/hx/')) return file(V6, path.slice('/v6/design-system/hx/'.length));
   if (path.startsWith('/v6/design-system/ui/')) return file(join(V6, 'components'), path.slice('/v6/design-system/ui/'.length));
