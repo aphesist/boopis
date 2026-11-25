@@ -61,7 +61,7 @@ a v7 one replaces stay as they are (the list is under "Left for wave C").
 | 37 | TurnFoot | `turnFoot` | `kit/turn-foot` | bot, session (actions on hover) |
 | 38 | TimeSeparator | `timeSeparator` | `kit/time-separator` | a gap, NEW |
 | 39 | Composer | `composer` | `kit/composer` | session, bot, room, dock, notch; typed, multi-line, running, held, no model, quick menu |
-| 40 | Rail | `rail` | `kit/rail` | A, B; current, needs you, working; groups |
+| 40 | Rail | `rail` | `kit/rail` | A, B; current, needs you, working; groups (the rooms' clusters: up to three overlapping orbs and "+N" on the right, at 15 and 12 on the compact rail; decided, owner, 25 November 2026) |
 | 41 | Dock | `dock` | `kit/dock` | row, compact, open (stack, card); hover, focus, many |
 | 42 | Notch | `notch` | `kit/notch` | the slab and its composer (the notch spec is not in this repository) |
 | — | EmptyState | `emptyState` | `kit/empty-state` | one line, at most one action |
