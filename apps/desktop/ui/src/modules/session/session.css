@@ -16,7 +16,7 @@
    behind the composer or the dock. The top edge fades the same way once the conversation is scrolled. */
 .ss-view::after {
   content: ""; position: absolute; z-index: 1; left: 0; right: 0; bottom: 0; pointer-events: none;
-  height: calc(var(--ss-comp-h, 120px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--scroll-fade));
+  height: calc(var(--ss-comp-h, 68px) + var(--hx-dock-space, 0px) + var(--composer-bottom) + var(--scroll-fade));
   background: linear-gradient(to bottom, transparent, var(--bg-2) var(--scroll-fade));
 }
 .ss-view::before { content: ""; position: absolute; z-index: 1; left: 0; right: 0; top: 0; height: var(--scroll-fade); pointer-events: none; background: linear-gradient(var(--bg-2), transparent); opacity: 0; }
