@@ -586,7 +586,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     },
     diff: (id) => details.diffFiles(id),
     create(project) {
-      const s: SessionSummary = { id: 'new-' + nextId('s'), project: project ?? '', title: 'New session', when: 'now' };
+      const s: SessionSummary = { id: 'new-' + nextId('s'), project: project ?? '', title: 'New session', when: 'now', draft: true };
       const c = convo(s.id);
       c.hydrated = true; // empty, and not on the gateway until the first message
       list.set([s, ...list.get()]);

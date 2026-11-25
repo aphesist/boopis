@@ -39,6 +39,28 @@ opens its frame alone: `lab.html?frame=1&story=<id>&state=<name>&preset=<id>[&fo
 `data-lab-focus`, `data-lab-active`), so a state can show hover and focus without a pointer, in the gallery and under
 Playwright alike (`src/lab/force.ts`). Components need nothing for it. Shadow roots (orbs, the logo) stay at rest.
 
+## A screen against its approved board: `pnpm lab:board`
+
+The approved v7 boards (`docs/design/v7/boards/`) are the binding reference for how each screen looks. `pnpm lab:board` proves a
+screen is its board:
+
+```sh
+pnpm lab:board 11-botchat              # one board, dark and light
+pnpm lab:board --all                   # every board of tests/lab/boards.json
+pnpm lab:board S17-newsession --theme dark --origin http://127.0.0.1:5173   # against a dev server already running
+```
+
+For each board, at 1440 x 900 and a device pixel ratio of 2 (the approved images' size), it draws the board from its own source
+(served at `/__boards/`, with the app's vendored orb library), draws the app's lab story for it (`src/lab/stories/boards/`: the real
+modules on the board's own content, `src/lab/board-fixtures.ts`), and writes to `test-results/boards/`: a sheet (board | app), a
+difference image, and `report.json`. It prints the difference as a percentage of the window, of each region the board's row names,
+and of the window without the orbs (a live orb is caught mid-behaviour, so two renders of one board differ there); it compares the
+orbs as boxes (how many, where, their look and reaction); and it checks the board's source against the approved image in
+`origin/w33/boards-archive` (or `--approved <dir>`), so the reference is known to be what the owner approved.
+
+`tests/lab/boards.json` maps a board to its story: a later screen adds a fixture, a state in `boards.stories.ts` and a row there.
+A screen is done when its difference is the orbs' alone, in dark and light. `--max <percent>` makes it a gate.
+
 ## The checks
 
 `tests/lab/rules.mjs` lists each check with the rules of `design/v6/design-system/RULES.md` it verifies (its main rule

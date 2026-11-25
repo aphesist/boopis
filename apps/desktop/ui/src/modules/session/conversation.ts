@@ -272,7 +272,7 @@ async function undoRewind(shipId: string): Promise<void> {
 let stopWatch: (() => void) | null = null;
 let NEW: NewScreen | null = null;
 /** a session that has not started: it has no turn yet and the provider can launch one (its place is the canvas, not a row of the list) */
-export const isDraft = (id: string): boolean => !!controls() && sessions().list.get().some((s) => s.id === id) && !sessions().conversation(id).snapshot().turns.length;
+export const isDraft = (id: string): boolean => !!controls() && !!sessions().list.get().find((s) => s.id === id)?.draft && !sessions().conversation(id).snapshot().turns.length;
 function showNew(): boolean {
   if (!controls() || !NEW) return false;
   NEW.show(launchView());
@@ -377,7 +377,7 @@ function onConversationEvent(ev: ConversationEvent): void {
   const col = VIEW.col; if (!col) return;
   if (ev.type === 'turn-added') {
     col.querySelector('.ui-empty')?.remove();
-    hideNew();
+    hideNew(); changed();   /* the session has started: it takes its row in the list */
     if (ev.turn.role === 'user') { col.append(userTurn(ev.turn.text, ev.turn.at, ev.turn.attachments)); if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight; }
     else liveTurn(ev.turn);
   } else if (ev.type === 'step-added') {

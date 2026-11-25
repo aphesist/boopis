@@ -10,3 +10,9 @@ looks.** A screen in the app is done when it matches its board, in dark and ligh
 - The orb library is not copied here. Point `screen.html` at the app's vendored `orb-avatar` to render.
 
 The written spec is `../DESIGN-SYSTEM.md` and `../SESSION-TAB.md`. Where the spec and a board differ, ask the owner.
+
+## Comparing the app with a board
+
+`pnpm lab:board <board>` in `apps/desktop/ui` draws a board from these sources beside the app's own screen on the same content
+and measures the difference (docs/UI-LAB.md, "A screen against its approved board"). `apps/desktop/ui/tests/lab/boards.json`
+lists which boards have a screen in the app so far.

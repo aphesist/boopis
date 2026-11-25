@@ -75,8 +75,12 @@ export function railProblems(): string[] {
     const marks = [...it.querySelectorAll<HTMLElement>('.ui-orb, .ui-stack__more, .k7-rail__more')].map(box).filter((m) => m.width > 0);
     if (!marks.length) { out.push(name + ' shows nothing'); continue; }
     const left = Math.min(...marks.map((m) => m.left)), right = Math.max(...marks.map((m) => m.right)), top = Math.min(...marks.map((m) => m.top)), bottom = Math.max(...marks.map((m) => m.bottom));
-    if (Math.abs((left + right) / 2 - (r.left + r.right) / 2) > 1) out.push(name + ': its orbs are ' + ((left + right) / 2 - (r.left + r.right) / 2).toFixed(1) + 'px off the tile\'s middle');
-    if (Math.abs((top + bottom) / 2 - (r.top + r.bottom) / 2) > 1) out.push(name + ': its orbs are ' + ((top + bottom) / 2 - (r.top + r.bottom) / 2).toFixed(1) + 'px off the tile\'s middle');
+    /* a bot's orb is on its tile's middle. A room's cluster is where the approved boards put it (kit.js cluster, board 11): its box, 2.5
+       orbs wide, is on the tile's middle, and its orbs sit on a 14/20 line inside it, 3.8 px low; so what the orbs cover is up to 4 px
+       off the middle, and never outside the tile (checked below) */
+    const off = it.querySelector('.k7-rail__tri') ? 4 : 1;
+    if (Math.abs((left + right) / 2 - (r.left + r.right) / 2) > off) out.push(name + ': its orbs are ' + ((left + right) / 2 - (r.left + r.right) / 2).toFixed(1) + 'px off the tile\'s middle');
+    if (Math.abs((top + bottom) / 2 - (r.top + r.bottom) / 2) > off) out.push(name + ': its orbs are ' + ((top + bottom) / 2 - (r.top + r.bottom) / 2).toFixed(1) + 'px off the tile\'s middle');
     if (left < r.left - 0.5 || right > r.right + 0.5 || top < r.top - 0.5 || bottom > r.bottom + 0.5) out.push(name + ': its orbs reach outside the tile');
   }
   return out;

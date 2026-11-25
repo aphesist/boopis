@@ -87,7 +87,7 @@ function controls(): SessionControls {
 export function boardS17(p: DataProvider): DataProvider {
   /* the dock's bots as the board draws them (dockv7.js BOTS): nina needs you, kai works, hex rests */
   const bots = roster(p, { kai: { state: 'working', activity: 'Writing the changelog' } }, ['nina', 'kai', 'boopis', 'moss', 'iris', 'hex']);
-  const draft: SessionSummary = { id: 's17-new', project: 'boopis', title: 'New session', when: '' };
+  const draft: SessionSummary = { id: 's17-new', project: 'boopis', title: 'New session', when: '', draft: true };
   const list = store<readonly SessionSummary[]>([draft, ...SESSIONS]);
   const empty: Conversation = { turns: [] };
   const started: Conversation = { turns: [{ id: 's17-t1', role: 'user', at: '09:42', text: 'The dock loses its right half while the slab moves. Find why and fix it.' }] };

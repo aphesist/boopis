@@ -314,7 +314,7 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
     diff: (_id, answers): readonly DiffFile[] => M.diffFor(answers.blank),
     create(project) {
       const cur = sessionList.get();
-      const s: SessionSummary = { id: 'n' + Date.now().toString(36), project: project ?? cur[0]?.project ?? 'billing-api', title: 'New session', when: 'now' };
+      const s: SessionSummary = { id: 'n' + Date.now().toString(36), project: project ?? cur[0]?.project ?? 'billing-api', title: 'New session', when: 'now', draft: true };
       sessionList.set([s, ...cur]);
       return s;
     },

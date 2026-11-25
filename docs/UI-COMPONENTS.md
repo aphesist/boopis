@@ -20,6 +20,20 @@ The owner's v7 kit is built beside the v6 one, in `apps/desktop/ui/src/component
 the lab's v7 checks read. Wave C moves the screens onto it; until then today's screens keep the v6 kit, and the v6 components that
 a v7 one replaces stay as they are (the list is under "Left for wave C").
 
+**The boards bind the kit (the repass, 25 November 2026).** Where a kit component and the approved boards' own `kit.css` or `kit.js`
+(`docs/design/v7/boards/src/`) differ, the component is corrected to the boards: their CSS is ported, not reinterpreted, and
+`pnpm lab:board` measures the result (docs/UI-LAB.md). Corrected so far, with boards 11 and S17: the WindowChrome's controls (the
+search hint 36 tall with its key chips, the window glyphs in 32 x 28 cells, the title pill 0 14 0 8 and centred on the work), glyphs
+(the stroke scales with the glyph; the sidebar toggles' filled half is never drawn), the Rail (its 24 hairline, its foot of three 32
+tinted buttons, a room's three orbs on the boards' circle), the Segmented (items as wide as their words; the chosen one carries the
+fill), the Pane (its head, sections and pane cards), the AskCard (the boards' `.qcard`: head, ask, rule line, 28 chips 6 apart, the
+outlined Deny with its key), the Composer (the mic a tinted circle; the line under it 12 apart on a 12 inset, plain items, a hint
+at each end), the Notice (the boards' `.notice`), the SelectorItem (the boards' `.select`), the Badge (the boards' `.badge2`), the
+Button (line-height 1), the logomark (72 box, 44 type size), the StatusLine and TimeSeparator (the thread's own 20 line), the
+Block's text rows (4 at the start only), and every orb (eyes cut to its surface's colour; the boopis bot in ink). New from the
+boards: `kit.fileCard` (a file a bot wrote), `kit.toolRow({ variant: 'bot' })` (a bot's tool call) and the boards' named sizes in
+`scripts/build-tokens-v7.mjs`.
+
 | # | Component | `kit.` | Story | Variants built |
 |---|---|---|---|---|
 | 1 | WindowChrome | `windowChrome` (`titlePill`, `searchHint` inside) | `kit/window-chrome` | rail A, compact B; title idle, running; search hint S5, button S1, pill S2, off |

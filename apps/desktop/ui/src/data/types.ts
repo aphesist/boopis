@@ -287,6 +287,9 @@ export interface SessionSummary {
   /** what it waits on you for: an approval stops it (the inbox's "Needs you"), a question does not (it works on with its guess) */
   needs?: 'approval' | 'question';
   pinned?: boolean;
+  /** made here and not started: nothing was sent yet (the provider that made it says so). Its place is the new session's canvas,
+      not a row of the list; it is a session like any other once it has a turn */
+  draft?: boolean;
 }
 /** a usage limit that is close: said above the composer ("Approaching the weekly limit, 81% used, resets Wed 09:00") */
 export interface LimitNotice { id: string; title: string; detail: string }
