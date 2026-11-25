@@ -129,7 +129,7 @@ export function openGroup(id: string | null): void {
   renderHead(g);
   renderLog(g);
   renderComposer(g);
-  emit('hx:title', { tab: 'bots', title: g.name });
+  emit('hx:title', { tab: 'bots', title: g.name, members: g.members.map((m) => m.profile) });
   /* the room's messages are read as it opens; a thread that arrives is drawn in place */
   void groups().open(g.id).catch((e: unknown) => { toast('This group could not be read: ' + sentence(e)); });
 }
@@ -527,7 +527,7 @@ export function onGroupsEvent(ev: GroupsEvent): void {
       Object.assign(g, ev.group);
       drawGroups();
       if (g.id === S.groupSel && S.view === 'group') {
-        if ((renamed || members) && !G.renaming) { renderHead(g); emit('hx:title', { tab: 'bots', title: g.name }); }
+        if ((renamed || members) && !G.renaming) { renderHead(g); emit('hx:title', { tab: 'bots', title: g.name, members: g.members.map((m) => m.profile) }); }
         renderComposer(g); paintPending(g);
       }
       break;

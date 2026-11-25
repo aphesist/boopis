@@ -305,7 +305,13 @@ function wire(): void {
     if (d.from !== 'history') { if (state.tab !== 'session') setState({ tab: 'session' }); pushHistory({ tab: 'session', sel: d.id }); }
     updateTitle();
   });
-  on('hx:title', (d) => { if (!d) return; setTitleOverride((TABS as readonly string[]).includes(d.tab ?? '') ? (d.tab as Tab) : state.tab, d.title || d.text || null); updateTitle(); });
+  on('hx:title', (d) => {
+    if (!d) return;
+    /* a room's title pill wears its members' stack (screen 12); a bot's its orb (updateTitle) */
+    const bots = data().bots.snapshot().bots, members = d.members?.map((id) => bots.find((b) => b.id === id)).filter((b): b is NonNullable<typeof b> => !!b);
+    setTitleOverride((TABS as readonly string[]).includes(d.tab ?? '') ? (d.tab as Tab) : state.tab, d.title || d.text || null, members?.length ? { members } : null);
+    updateTitle();
+  });
   on('hx:open-settings', (d) => { if (d) openSettings(d.section); });
   on('hx:open-store', (d) => { openStore(d?.screen); });
   on('hx:open-panel', (d) => { if (d && d.from !== 'shell' && state.right !== 'open') setState({ right: 'open' }); });

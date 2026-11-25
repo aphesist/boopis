@@ -168,6 +168,9 @@
 .k7-bubble[data-kind="user"] { --sq-bg: var(--bubble-user); --sq-line: transparent; align-self: flex-end; color: var(--bubble-user-text); background: var(--sq-bg); }
 .k7-bubble[data-kind="user"][data-sq-on]:not(#sq)::before { background: var(--sq-bg); }
 .k7-bubble > p { margin: 0; }
+/* what sits in your bubble (a mention's capsule, inline code) reads in the bubble's own ink: on the solid ink of light, or on a bot's
+   fill (18.1), the theme's text would vanish */
+.k7-bubble[data-kind="user"] { --text: var(--bubble-user-text); --text-strong: var(--bubble-user-text); --text-dim: var(--bubble-user-text); }
 .k7-bubble > .k7-well { margin: var(--sp-2) 0; }
 .k7-bubble > p + p { margin-top: var(--sp-2); }
 /* a message to you: the amber edge in the gutter, glowing, and the amber wash under its words (owner decision, recoloured by 09 A) */
