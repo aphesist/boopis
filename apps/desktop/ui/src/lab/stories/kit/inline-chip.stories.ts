@@ -2,7 +2,7 @@
 import { kit } from '@boopis/ui';
 import { put, stage } from '../../story';
 import type { Story } from '../../types';
-import { KAI, NINA } from './_bots';
+import { KAI, MOSS, NINA } from './_bots';
 
 const chips = (): string =>
   'Ask ' + kit.html.inlineChip({ kind: 'mention', bot: KAI, colour: KAI.color }) + ' or ' + kit.html.inlineChip({ kind: 'mention', bot: NINA, colour: NINA.color }) +
@@ -16,6 +16,20 @@ export default {
   states: {
     typical: stage(['typical', 'variant', 'size'], ({ root }) => { put(root, at('s'), at('m'), at('l')); }, { width: 720 }),
     'wrapping line': stage(['long'], ({ root }) => { put(root, at('l')); }, { width: 320 }),
-    long: stage(['long'], ({ root }) => { put(root, '<p class="k7-type-l">See ' + kit.html.inlineChip({ kind: 'reference', text: 'apps/desktop/ui/src/components/v7/inline.ts:120' }) + ' first.</p>'); }, { width: 640 })
+    long: stage(['long'], ({ root }) => { put(root, '<p class="k7-type-l">See ' + kit.html.inlineChip({ kind: 'reference', text: 'apps/desktop/ui/src/components/v7/inline.ts:120' }) + ' first.</p>'); }, { width: 640 }),
+
+    /* board 12: a member's mention in a message (a control: it opens the bot), the whole room, a bot that is not here, a source */
+    'in a message: mentions and a source': stage(['variant', 'owner'], ({ root }) => {
+      put(root, '<p class="k7-type-l">' + kit.html.inlineChip({ kind: 'mention', bot: KAI, colour: KAI.color, action: true, label: 'kai. Open its chat' }) + ' write the notes, ' + kit.html.inlineChip({ kind: 'mention', text: '@all', members: [KAI, NINA, MOSS], action: true, label: '@all: kai, nina and moss' }) + ' read them, ' +
+        kit.html.inlineChip({ kind: 'mention', bot: MOSS, out: true, label: "moss isn't in this room" }) + ' cannot. See ' + kit.html.inlineChip({ kind: 'cite', text: 'WebKit bug 27611', href: 'https://bugs.webkit.org/show_bug.cgi?id=27611' }) + '.</p>');
+    }, { width: 560 }),
+    'a mention hovered, a source hovered': stage(['hover'], ({ root }) => {
+      put(root, '<p class="k7-type-l">' + kit.html.inlineChip({ kind: 'mention', bot: KAI, colour: KAI.color, action: true, label: 'kai. Open its chat' }) + ' and ' + kit.html.inlineChip({ kind: 'cite', text: 'WebKit bug 27611', href: 'https://bugs.webkit.org/show_bug.cgi?id=27611' }) + '</p>');
+    }, { width: 360, force: [{ sel: 'button.k7-mention', state: 'hover' }, { sel: '.k7-cite', state: 'hover' }] }),
+    'a mention focused': stage(['focus'], ({ root }) => { put(root, '<p class="k7-type-l">Ask ' + kit.html.inlineChip({ kind: 'mention', bot: NINA, colour: NINA.color, action: true, label: 'nina. Open its chat' }) + ' first.</p>'); }, { width: 360, force: [{ sel: 'button.k7-mention', state: 'focus' }] }),
+    /* in a composer's text (owner, 25 November): each chip one unit, its own text the words that are sent */
+    'in a composer: chips of the text': stage(['variant', 'owner'], ({ root }) => {
+      put(root, '<p class="k7-type-m">' + kit.html.inlineChip({ kind: 'mention', bot: KAI, colour: KAI.color, words: '@kai' }) + ' check ' + kit.html.inlineChip({ kind: 'reference', text: '@notes.md', words: '@/home/you/notes.md' }) + ' with ' + kit.html.inlineChip({ kind: 'mention', text: '@all', members: [KAI, NINA, MOSS], words: '@all' }) + ' and tell ' + kit.html.inlineChip({ kind: 'you', words: '@user' }) + '</p>');
+    }, { width: 560 })
   }
 } satisfies Story;

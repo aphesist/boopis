@@ -2,8 +2,8 @@
    (w27/chat-motion, scenarios.md: one bot, several, the mixes, joining and leaving, a reply landing, attention, a failed turn, the
    pill when the end is out of view, narrow, 125%, long names), each drawn in a thread under the owner's message, as the rooms draw
    it. A state that moves plays its sequence once while it draws and ends still (the checker sees the end); `window.__labReplay()`
-   plays it again (the clips). "playground" is interactive: its buttons add, change, land, ask and stop bots. The room's own
-   wiring, on the mock provider, is `chat/presence-rooms`. */
+   plays it again (the clips). "playground" is interactive: its buttons add, change, land, ask and stop bots. The Bots
+   tab's chats and rooms no longer use it (board 12: who is replying is the v7 kit's StatusLine); the session keeps it until its step. */
 import { ui } from '@boopis/ui';
 import type { BotLike, PresenceActor, PresenceElement, PresenceStatus } from '@boopis/ui';
 import { fill, stage } from '../../story';

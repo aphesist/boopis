@@ -1,8 +1,8 @@
 /* The app's surfaces already on the v7 kit (w33/shell-bots; DESIGN-SYSTEM.md v7 7, 12, 19 and 21; screens 11 to 13): the floating
    chrome, the open sidebar's head and foot, the Bots roster and its rooms, the rail, a bot's chat and a room. Each state boots the
    whole app and scopes the checks to the part that is v7 already, so the v7 rules block on it (LAB_V7_BLOCKING "kit" counts
-   stories/v7/ as the kit's); what is still v6 inside a view (the composer, the Archived group, a room's header, huddles, the
-   presence entry) is left to the bots/ and shell/ stories. They run in v7's two themes, dark and light. */
+   stories/v7/ as the kit's). Since the repass's board 12 a bot's chat and a room are the kit's throughout (the composer, the
+   Archived group, who is replying); the approved boards themselves are stories/boards/. They run in v7's two themes, dark and light. */
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
 import { railRoster, railSettled } from '../../rail-fixtures';
 import { ORB3_MOTION } from '../kit/_bots';
