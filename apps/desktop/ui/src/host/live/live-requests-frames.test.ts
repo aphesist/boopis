@@ -36,7 +36,7 @@ beforeEach(async () => {
   secrets = new ReplaySecrets();
   const client = new GatewayClient(host);
   await client.connect();
-  provider = createLiveProvider({ client, mock: createMockProvider({ simulate: false }), secrets, pickFolder: null });
+  provider = createLiveProvider({ defaultFolder: '/work/proj', client, mock: createMockProvider({ simulate: false }), secrets, pickFolder: null });
   await provider.ready;
   conv = [];
   provider.sessions.conversation(SID).subscribe((e) => conv.push(e));

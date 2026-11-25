@@ -28,7 +28,7 @@ async function open(over: { secrets?: SecretsBridge } = {}): Promise<void> {
   secrets = new ReplaySecrets();
   const client = new GatewayClient(host);
   await client.connect();
-  provider = createLiveProvider({ client, now: () => NOW, mock: createMockProvider({ simulate: false }), secrets: over.secrets ?? secrets, pickFolder: null });
+  provider = createLiveProvider({ defaultFolder: '/work/proj', client, now: () => NOW, mock: createMockProvider({ simulate: false }), secrets: over.secrets ?? secrets, pickFolder: null });
   await provider.ready;
   waits = []; conv = [];
   provider.waits.subscribe((e) => waits.push(e));

@@ -54,7 +54,7 @@ export function environmentFrom(info: InfoWire | null, describe: DescribeWire | 
   return {
     cwd: homeRelative(info?.cwd ?? describe?.session?.cwd ?? ''),
     branch: info?.branch ?? '',
-    sandbox: describe?.hx ? 'hx sandbox' + (describe.kernel?.ok === false ? ' (kernel down)' : '') : '',
+    sandbox: describe?.hx && describe.hx.ok !== false ? 'hx sandbox' + (describe.kernel?.ok === false ? ' (kernel down)' : '') : '',
     runtime: info ? 'boopis engine' + version + release : '',
     harness: describe?.version ? 'boopis ' + describe.version : '',
     gate: ''

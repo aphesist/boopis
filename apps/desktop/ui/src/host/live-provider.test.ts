@@ -4,7 +4,7 @@ import type { ConversationEvent, WaitsEvent } from '../data';
 import { GatewayClient } from './gateway';
 import { createLiveProvider } from './live-provider';
 import type { LiveProvider } from './live-provider';
-import { FakeHost, recorded } from './testing';
+import { FakeHost, S0_CREATE_PARAMS, recorded } from './testing';
 
 const SESSION = 'local-7531bd0308f85f14ae9d7cf7ca71d18ec98ee0c17f81376bfa99e83db2f0753c';
 const NOW = new Date(2026, 10, 18, 15, 30, 0);
@@ -34,12 +34,12 @@ function gateway(f: Record<string, unknown>): void {
 
 async function setup(handler: (f: Record<string, unknown>) => void = gateway, plugin = false): Promise<void> {
   host = new FakeHost();
-  if (plugin) host.describe = { instance_id: 'inst', capabilities: ['event-replay-v1', 'plugin-rpc-v1'] };
+  if (plugin) host.describe = { instance_id: 'inst', capabilities: ['event-replay-v1', 'plugin-rpc-v1'], session_create: { parameters: S0_CREATE_PARAMS } };
   host.autoReply = handler;
   listCalls = 0;
   client = new GatewayClient(host);
   await client.connect();
-  provider = createLiveProvider({ client, now: () => NOW, mock: createMockProvider({ simulate: false }) });
+  provider = createLiveProvider({ defaultFolder: '/work/proj', client, now: () => NOW, mock: createMockProvider({ simulate: false }) });
   await provider.ready;
 }
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
@@ -310,61 +310,114 @@ describe('the live provider: the conversation stream, from recorded frames', () 
     };
     provider.sessions.send(created.id, 'start', META);
     await tick();
-    expect(host.last('session.create')?.['params']).toMatchObject({ source: 'gui' });
-    expect(host.last('prompt.submit')?.['params']).toMatchObject({ session_id: 'local-new', text: 'start' });
+    /* with no plugin loaded there is no Session tab session: nothing is created, and the message says why (fail closed) */
+    expect(host.last('session.create')).toBeUndefined();
+    expect(host.last('prompt.submit')).toBeUndefined();
   });
 
   describe('a new session and its toolsets', () => {
     /* the plugin is loaded in this Hermes: its capability is announced, and its methods answer */
     beforeEach(async () => {
+      localStorage.clear();   /* the last step picked is remembered for the next session: each test starts with none */
       host = new FakeHost();
-      host.describe = { instance_id: 'inst', capabilities: ['event-replay-v1', 'plugin-rpc-v1'] };
+      host.describe = { instance_id: 'inst', capabilities: ['event-replay-v1', 'plugin-rpc-v1'], session_create: { parameters: S0_CREATE_PARAMS } };
       host.autoReply = (f) => { if (String(f['method']).startsWith('plugin.boopis.')) host.result(f['id'], {}); else gateway(f); };
       client = new GatewayClient(host);
       await client.connect();
-      provider = createLiveProvider({ client, now: () => NOW, mock: createMockProvider({ simulate: false }) });
+      provider = createLiveProvider({ defaultFolder: '/work/proj', client, now: () => NOW, mock: createMockProvider({ simulate: false }) });
       await provider.ready;
     });
-    const created = (governed: boolean | null): string => {
+    const created = (step: 'supervised' | 'auto_edits' | 'auto' | 'full' | null): string => {
       const s = provider.sessions.create('');
-      if (governed !== null) { provider.details.follow(s.id); provider.details.setGovernance({ governed }); }
+      if (step !== null) { provider.details.follow(s.id); expect(provider.sessionControls?.setLaunch({ careful: step })).toBeNull(); }
       return s.id;
     };
     const answer = (modeSet: (f: Record<string, unknown>) => void): void => {
       host.autoReply = (f) => {
         if (f['method'] === 'session.create') host.result(f['id'], { session_id: 'local-new', stored_session_id: 'local-new', messages: [], message_count: 0, info: { model: 'fake-a' } });
         else if (f['method'] === 'plugin.boopis.mode.set') modeSet(f);
-        else if (f['method'] === 'session.close') host.result(f['id'], { closed: true });
+        else if (f['method'] === 'session.detach') host.result(f['id'], { detached: true });
+        else if (String(f['method']).startsWith('plugin.boopis.')) host.result(f['id'], {});
         else gateway(f);
       };
     };
-    const order = (): string[] => host.sent.map((s) => String(s.frame['method'])).filter((m) => ['session.create', 'plugin.boopis.mode.set', 'prompt.submit', 'session.close'].includes(m));
+    const order = (): string[] => host.sent.map((s) => String(s.frame['method'])).filter((m) => ['session.create', 'plugin.boopis.mode.set', 'config.get', 'prompt.submit', 'session.detach'].includes(m));
 
-    it('a governed session is created with only the boopis toolset, and its mode is set before anything is sent', async () => {
-      const id = created(true);
+    it('a governed step creates the session with the launch settings and only the boopis toolset, then sets the step before anything is sent', async () => {
+      const id = created('supervised');
       answer((f) => { host.result(f['id'], {}); });
       provider.sessions.send(id, 'start', META);
       await tick();
-      expect(host.last('session.create')?.['params']).toEqual({ source: 'gui', toolsets: ['boopis'] });
-      expect(host.last('plugin.boopis.mode.set')?.['params']).toEqual({ session_id: 'local-new', mode: 'governed' });
-      expect(order()).toEqual(['session.create', 'plugin.boopis.mode.set', 'prompt.submit']);
+      expect(host.last('session.create')?.['params']).toEqual({ source: 'gui', cwd: '/work/proj', cwd_explicit: true, client: { name: 'boopis', version: '0.2.0' }, toolsets: ['boopis'] });
+      expect(host.last('plugin.boopis.mode.set')?.['params']).toEqual({ session_id: 'local-new', mode: 'governed', careful: 'supervised', surface: 'session' });
+      /* the yolo check runs after the create and before every submit of a governed step */
+      expect(order()).toEqual(['session.create', 'plugin.boopis.mode.set', 'config.get', 'config.get', 'prompt.submit']);
     });
 
-    it('a session whose mode was never chosen is governed too while the plugin default is unknown, so it never loses the toolset', async () => {
+    it('a session nobody chose a step for starts on Auto-accept edits, behind the trusted gate (owner pick S02 B)', async () => {
       const id = created(null);
       answer((f) => { host.result(f['id'], {}); });
       provider.sessions.send(id, 'start', META);
       await tick();
-      expect(host.last('session.create')?.['params']).toEqual({ source: 'gui', toolsets: ['boopis'] });
+      expect(host.last('session.create')?.['params']).toEqual({ source: 'gui', cwd: '/work/proj', cwd_explicit: true, client: { name: 'boopis', version: '0.2.0' }, toolsets: ['boopis'] });
+      expect(host.last('plugin.boopis.mode.set')?.['params']).toMatchObject({ mode: 'governed', careful: 'auto_edits', surface: 'session' });
     });
 
-    it('an ungoverned session gets no toolsets of ours', async () => {
-      const id = created(false);
+    it('Full access is ungoverned and still has only the boopis toolset: every write goes through ship', async () => {
+      const id = created('full');
       answer((f) => { host.result(f['id'], {}); });
       provider.sessions.send(id, 'start', META);
       await tick();
-      expect(host.last('session.create')?.['params']).toEqual({ source: 'gui' });
-      expect(host.last('plugin.boopis.mode.set')?.['params']).toEqual({ session_id: 'local-new', mode: 'ungoverned' });
+      expect(host.last('session.create')?.['params']).toEqual({ source: 'gui', cwd: '/work/proj', cwd_explicit: true, client: { name: 'boopis', version: '0.2.0' }, toolsets: ['boopis'] });
+      expect(host.last('plugin.boopis.mode.set')?.['params']).toEqual({ session_id: 'local-new', mode: 'ungoverned', careful: 'full', surface: 'session' });
+      expect(order()).toEqual(['session.create', 'plugin.boopis.mode.set', 'prompt.submit']);
+    });
+
+    it('never sends a title, yolo or checkpoints at create, and only the names the engine takes', async () => {
+      host.describe = { instance_id: 'inst', capabilities: ['plugin-rpc-v1'], session_create: { parameters: ['source', 'cwd', 'toolsets'] } };
+      client = new GatewayClient(host);
+      await client.connect();
+      provider = createLiveProvider({ defaultFolder: '/work/proj', client, now: () => NOW, mock: createMockProvider({ simulate: false }) });
+      await provider.ready;
+      const id = created('full');
+      answer((f) => { host.result(f['id'], {}); });
+      provider.sessions.send(id, 'start', META);
+      await tick();
+      expect(host.last('session.create')?.['params']).toEqual({ source: 'gui', cwd: '/work/proj', toolsets: ['boopis'] });
+    });
+
+    it('an engine that takes no folder or toolsets at create starts no Session tab session', async () => {
+      host.describe = { instance_id: 'inst', capabilities: ['plugin-rpc-v1'], session_create: { parameters: ['source', 'model'] } };
+      client = new GatewayClient(host);
+      await client.connect();
+      provider = createLiveProvider({ defaultFolder: '/work/proj', client, now: () => NOW, mock: createMockProvider({ simulate: false }) });
+      await provider.ready;
+      expect(provider.sessionControls?.capabilities.get().launch.create.ok).toBe(false);
+      const id = provider.sessions.create('');
+      const seen: ConversationEvent[] = [];
+      provider.sessions.conversation(id).subscribe((e) => seen.push(e));
+      provider.sessions.send(id, 'start', META);
+      await tick();
+      expect(host.last('session.create')).toBeUndefined();
+      const finished = seen.find((e) => e.type === 'turn-finished');
+      expect(finished && 'paragraphs' in finished ? finished.paragraphs.join(' ') : '').toMatch(/cannot start a session in a folder/);
+    });
+
+    it('a yolo another app switched on is switched back before the message goes, and nothing goes when it cannot be', async () => {
+      const id = created('supervised');
+      host.autoReply = (f) => {
+        if (f['method'] === 'session.create') host.result(f['id'], { session_id: 'local-new', stored_session_id: 'local-new', messages: [], message_count: 0, info: { model: 'fake-a' } });
+        else if (f['method'] === 'config.get') host.result(f['id'], { value: '1' });
+        else if (f['method'] === 'config.set') host.error(f['id'], -32000, 'refused');
+        else if (String(f['method']).startsWith('plugin.boopis.')) host.result(f['id'], {});
+        else if (f['method'] === 'session.detach') host.result(f['id'], {});
+        else gateway(f);
+      };
+      provider.sessions.send(id, 'start', META);
+      await tick(); await tick();
+      expect(host.last('config.set')?.['params']).toEqual({ session_id: 'local-new', key: 'yolo', value: 'off' });
+      expect(host.last('session.detach')?.['params']).toEqual({ session_id: 'local-new', end_reason: 'launch_failed' });
+      expect(host.last('prompt.submit')).toBeUndefined();
     });
 
     /* The race that lost a reply on a runner. The gateway announces a new session (`sessions.changed`) while the UI is still
@@ -373,7 +426,7 @@ describe('the live provider: the conversation stream, from recorded frames', () 
        every row, and `session.resume` made a second conversation that took over the gateway id: the events of the reply
        went to it, and the one on screen never saw them. Frames as the real gateway sends them. */
     it('a list refresh between the creation and the binding of a session does not give its events to a second conversation', async () => {
-      const id = created(true);
+      const id = created('supervised');
       let finishMode: () => void = () => undefined;
       host.autoReply = (f) => {
         const method = f['method'];
@@ -405,18 +458,18 @@ describe('the live provider: the conversation stream, from recorded frames', () 
     });
 
     it('a mode that cannot be set is fatal: the session is closed, nothing is sent, the error is shown, a retry starts fresh', async () => {
-      const id = created(true);
+      const id = created('supervised');
       answer((f) => { host.error(f['id'], -32000, 'hx.mode.locked: the mode is locked'); });
       const seen: ConversationEvent[] = [];
       provider.sessions.conversation(id).subscribe((e) => seen.push(e));
       provider.sessions.send(id, 'start', META);
       await tick();
       await tick();
-      expect(order()).toEqual(['session.create', 'plugin.boopis.mode.set', 'session.close']);
-      expect(host.last('session.close')?.['params']).toEqual({ session_id: 'local-new' });
+      expect(order()).toEqual(['session.create', 'plugin.boopis.mode.set', 'session.detach']);
+      expect(host.last('session.detach')?.['params']).toEqual({ session_id: 'local-new', end_reason: 'launch_failed' });
       expect(host.last('prompt.submit')).toBeUndefined();
       const finished = seen.find((e) => e.type === 'turn-finished');
-      expect(finished && 'paragraphs' in finished ? finished.paragraphs.join(' ') : '').toMatch(/mode could not be set.*hx\.mode\.locked/);
+      expect(finished && 'paragraphs' in finished ? finished.paragraphs.join(' ') : '').toMatch(/permissions could not be set.*hx\.mode\.locked/);
 
       answer((f) => { host.result(f['id'], {}); });   // the plugin answers on the retry: the session starts, governed
       provider.sessions.send(id, 'again', META);
@@ -427,11 +480,12 @@ describe('the live provider: the conversation stream, from recorded frames', () 
   });
 
   it('a session made here keeps its id in the list after the gateway names it, and the composer starts empty', async () => {
+    await setup((f) => { if (String(f['method']).startsWith('plugin.boopis.')) host.result(f['id'], {}); else gateway(f); }, true);
     expect(provider.sessions.draft()).toBe('');
     const created = provider.sessions.create('');
     host.autoReply = (f) => {
       if (f['method'] === 'session.create') host.result(f['id'], { session_id: 'local-new', stored_session_id: 'local-new', messages: [], message_count: 0, info: {} });
-      else if (f['method'] === 'plugin.boopis.mode.set') host.result(f['id'], {});
+      else if (String(f['method']).startsWith('plugin.boopis.')) host.result(f['id'], {});
       else if (f['method'] === 'session.list') host.result(f['id'], { sessions: (f['params'] as { include_hidden?: boolean }).include_hidden ? [] : [{ id: 'local-new', title: 'start', started_at: NOW.getTime() / 1000 }] });
       else gateway(f);
     };

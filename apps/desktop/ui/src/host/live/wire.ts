@@ -21,8 +21,13 @@ export interface StatsWire {
   rollbacks?: number; blanks?: number; approvals?: number;
 }
 export interface DescribeWire {
-  session?: { session_id: string; mode: 'governed' | 'ungoverned'; locked: boolean; cwd: string | null } | null;
-  version?: string; capabilities?: string[]; hx?: { version?: string } | null; kernel?: { ok?: boolean } | null;
+  session?: {
+    session_id: string; mode: 'governed' | 'ungoverned'; locked: boolean; cwd: string | null;
+    /** the Session tab's permission step and surface, whether a turn runs, whether files can be rewound (ADR-0057, ADR-0058) */
+    careful?: string | null; careful_next?: string | null; surface?: string; running?: boolean; continued_from?: string | null; rewind?: { ok?: boolean; why?: string } | null;
+  } | null;
+  version?: string; capabilities?: string[]; hx?: { ok?: boolean; why?: string; version?: string } | null; kernel?: { ok?: boolean } | null;
+  approvals?: { mode?: string | null } | null;
   config?: { mode?: 'governed' | 'ungoverned'; cost_cap_usd?: number | null };
   /** the frontier list, whether the ladder is all frontier, and, for a session that has begun, whether its own model is (ADR-0037) */
   frontier?: {

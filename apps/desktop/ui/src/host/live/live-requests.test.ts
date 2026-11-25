@@ -44,7 +44,7 @@ async function open(): Promise<void> {
   };
   const client = new GatewayClient(host);
   await client.connect();
-  provider = createLiveProvider({ client, mock: createMockProvider({ simulate: false }), secrets, pickFolder: null });
+  provider = createLiveProvider({ defaultFolder: '/work/proj', client, mock: createMockProvider({ simulate: false }), secrets, pickFolder: null });
   await provider.ready;
   conv = [];
   provider.sessions.conversation(SID).subscribe((e) => conv.push(e));
@@ -199,7 +199,7 @@ describe('a resumed session', () => {
     ];
     const client2 = new GatewayClient(host);
     await client2.connect();
-    const gone = createLiveProvider({ client: client2, mock: createMockProvider({ simulate: false }), secrets, pickFolder: null });
+    const gone = createLiveProvider({ defaultFolder: '/work/proj', client: client2, mock: createMockProvider({ simulate: false }), secrets, pickFolder: null });
     await gone.ready;
     gone.sessions.conversation(SID).subscribe(() => undefined);
     gone.sessions.send(SID, 'again', { governed: false, smart: false, model: '', assume: [] });

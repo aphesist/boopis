@@ -93,7 +93,8 @@ export function transcriptToTurns(rows: readonly TranscriptMessage[], idPrefix: 
     const a: AgentTurn = {
       id, role: 'assistant', model: council ? combiner : rec ? answeredBy(rec) : '', ...(rec?.ungoverned ? { ungoverned: true } : {}), ...(council ? { ...(council.members.length ? { why: 'Council of ' + council.members.length } : {}), council } : {}),
       ...(rec?.children ? { children: rec.children.map((c, i): ChildTask => ({ ...c, id: id + ':k' + i })) } : {}),
-      time: '', cost: '', stepCount: agent.steps.length, steps: agent.steps, paragraphs: agent.texts.flatMap((t) => paragraphs(t)), bullets: [], status: 'done'
+      time: '', cost: '', stepCount: agent.steps.length, steps: agent.steps, paragraphs: agent.texts.flatMap((t) => paragraphs(t)), bullets: [], status: 'done',
+      ...(rec?.turnId ? { engineTurn: rec.turnId } : {})
     };
     turns.push(a);
     agent = null;

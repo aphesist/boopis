@@ -28,7 +28,7 @@ beforeEach(async () => {
   };
   const client = new GatewayClient(host);
   await client.connect();
-  provider = createLiveProvider({ client, mock: createMockProvider({ simulate: false }) });
+  provider = createLiveProvider({ defaultFolder: '/work/proj', client, mock: createMockProvider({ simulate: false }) });
   await provider.ready;
   conv = [];
   provider.sessions.conversation(SID).subscribe((e) => conv.push(e));

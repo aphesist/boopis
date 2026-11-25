@@ -2303,15 +2303,24 @@
      "prices.refresh",
      "blank.fill",
      "checkpoint.list",
-     "checkpoint.diff"
+     "checkpoint.diff",
+     "checkpoint.rewind",
+     "careful.set",
+     "continue.arm",
+     "continue.chain"
     ],
-    "hx": null,
+    "hx": {
+     "ok": true
+    },
     "kernel": null,
     "config": {
      "mode": "governed",
      "cost_cap_usd": null,
      "errors": [],
      "ladder_errors": []
+    },
+    "approvals": {
+     "mode": "manual"
     }
    }
   }

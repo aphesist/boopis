@@ -6,7 +6,7 @@ import type { ChildTask, ConversationEvent } from '../../data';
 import { GatewayClient } from '../gateway';
 import { createLiveProvider } from '../live-provider';
 import type { LiveProvider } from '../live-provider';
-import { FakeHost } from '../testing';
+import { FakeHost, S0_CREATE_PARAMS } from '../testing';
 import { childTime, foldChild, statusOf } from './children';
 import { rosterOf, sendRoster } from './dispatch';
 
@@ -85,11 +85,11 @@ const lastChild = (): ChildTask => ([...conv].reverse().find((e): e is Extract<C
 
 beforeEach(async () => {
   host = new FakeHost();
-  host.describe = { instance_id: 'inst', capabilities: ['event-replay-v1', 'plugin-rpc-v1'] };
+  host.describe = { instance_id: 'inst', capabilities: ['event-replay-v1', 'plugin-rpc-v1'], session_create: { parameters: S0_CREATE_PARAMS } };
   host.autoReply = gateway;
   const client = new GatewayClient(host);
   await client.connect();
-  provider = createLiveProvider({ client, mock: createMockProvider({ simulate: false }) });
+  provider = createLiveProvider({ defaultFolder: '/work/proj', client, mock: createMockProvider({ simulate: false }) });
   await provider.ready;
   const s = provider.sessions.create(null);
   conv = [];

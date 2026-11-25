@@ -19,6 +19,8 @@ const PLUGIN = 'plugin.boopis.';
 /** one recorded turn: the model that answered ('provider/model'), the tiers a governed turn ran on, and the engine's rows */
 export interface TurnRecord {
   model: string; route: readonly string[]; ungoverned: boolean; rowIds: readonly number[];
+  /** the engine's id of the turn (`turns.models`), which the plugin records on the ships the turn kept */
+  turnId?: string;
   /** what the turn showed besides its answer, as the plugin kept it (ADR-0034, ADR-0035); absent when the turn showed none */
   council?: CouncilTurn;
   children?: readonly RestoredChild[];
@@ -90,7 +92,7 @@ export function bookFrom(res: unknown): TurnBook {
     if (typeof t['model'] !== 'string' || !t['model'] || !Array.isArray(t['row_ids'])) continue;
     const rowIds = (t['row_ids'] as unknown[]).filter((n): n is number => typeof n === 'number');
     const council = councilFromWire(t['council']), children = childrenFromWire(t['children']);
-    const rec: TurnRecord = { model: t['model'], route: Array.isArray(t['route']) ? (t['route'] as unknown[]).filter((x): x is string => typeof x === 'string') : [], ungoverned: t['ungoverned'] === true, rowIds, ...(council ? { council } : {}), ...(children ? { children } : {}) };
+    const rec: TurnRecord = { model: t['model'], route: Array.isArray(t['route']) ? (t['route'] as unknown[]).filter((x): x is string => typeof x === 'string') : [], ungoverned: t['ungoverned'] === true, rowIds, ...(typeof t['turn_id'] === 'string' && t['turn_id'] ? { turnId: t['turn_id'] } : {}), ...(council ? { council } : {}), ...(children ? { children } : {}) };
     for (const id of rowIds) book.set(id, rec);
   }
   return book;

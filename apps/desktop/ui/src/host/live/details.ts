@@ -88,6 +88,14 @@ export interface LiveDetails {
   start(): Promise<void>;
   /** tests: every read in flight and every scheduled refresh done */
   settled(): Promise<void>;
+  /** the session the panels follow */
+  followedId(): string;
+  /** whether governed mode can run for this session (ADR-0037): null when nothing is known to stop it */
+  frontierView(uiId: string): { available: boolean; why: string } | null;
+  /** read the session's own state again (its describe: the step, whether it can rewind) */
+  refreshSession(uiId: string): void;
+  /** something the capability map reads changed (a read landed, the followed session changed) */
+  onChanged?: (() => void) | undefined;
 }
 
 export function createDetails(deps: DetailsDeps): LiveDetails {
@@ -218,6 +226,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     if (want('info') && pluginOk && m.info?.cwd) m.inventory = await read<InventoryWire>(PLUGIN + 'compat.inventory', { cwd: m.info.cwd });
     if (uiId === followed) publishFollowed([...parts, 'info']);
     deps.onRefreshed?.(uiId);
+    api.onChanged?.();
   }
   const pending = new Map<string, Set<Part>>();
   let flushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -268,6 +277,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
       if (id === followed) return;
       followed = id;
       const m = model(id);
+      api.onChanged?.();
       publishFollowed(['todos', 'diff', 'output', 'stats', 'usage', 'info', 'cascade']);
       if (deps.gwId(id)) void track(refresh(id, ALL)); else m.describe ??= null;
     },
@@ -321,7 +331,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     setSetting(key, on) { if (key === 'governed') void source.setGovernance({ governed: on }); else log.warn('the sandbox network switch is not wired yet'); }
   };
 
-  return {
+  const api: LiveDetails = {
     source, run: runSource, unavailable, model, start, diffFiles: (id) => diffFilesFrom(model(id).diff),
     files: {
       async complete(word, uiId) {
@@ -422,6 +432,10 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     councilContext(uiId) { const m = model(uiId); return { options, ladder: ladderOf(m), current: modelOf(m), governed: governedOf(m), running: m.running }; },
     chosen(uiId) { const m = model(uiId); return { governed: m.wantGoverned, model: m.wantModel }; },
     governedAtCreation(uiId) { const m = model(uiId); return pluginOk && (m.wantGoverned ?? ((defaultMode ?? 'governed') === 'governed' && frontierOf(m)?.available !== false)); },
-    async settled() { flush(); while (inflight.size) await Promise.allSettled([...inflight]); }
+    async settled() { flush(); while (inflight.size) await Promise.allSettled([...inflight]); },
+    followedId: () => followed,
+    frontierView(uiId) { const f = frontierOf(model(uiId)); return f ? { available: f.available, why: f.available ? '' : 'Governed steps run only on frontier models (' + f.sentence + '). ' + f.why } : null; },
+    refreshSession(uiId) { if (deps.gwId(uiId)) void track(refresh(uiId, ['info'])); }
   };
+  return api;
 }

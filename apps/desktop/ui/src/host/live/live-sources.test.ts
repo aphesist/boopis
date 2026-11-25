@@ -20,7 +20,7 @@ async function open(frames: readonly RecordedFrame[]): Promise<void> {
   host = new ReplayHost(frames);
   const client = new GatewayClient(host);
   await client.connect();
-  provider = createLiveProvider({ client, now: () => NOW });
+  provider = createLiveProvider({ defaultFolder: '/work/proj', client, now: () => NOW });
   await provider.ready;
 }
 const count = (method: string): number => host.requests.filter((r) => r.method === method).length;
@@ -198,7 +198,7 @@ describe('the Connectors section\'s controls over the host', () => {
     host = new ReplayHost(fixtures.session);
     const client = new GatewayClient(host);
     await client.connect();
-    provider = createLiveProvider({ client, now: () => NOW, connectors: { setEnabled: (n, on) => { calls.push(`enable:${n}:${String(on)}`); return Promise.resolve(); }, signin: (n) => { calls.push('signin:' + n); return Promise.resolve({}); } } });
+    provider = createLiveProvider({ defaultFolder: '/work/proj', client, now: () => NOW, connectors: { setEnabled: (n, on) => { calls.push(`enable:${n}:${String(on)}`); return Promise.resolve(); }, signin: (n) => { calls.push('signin:' + n); return Promise.resolve({}); } } });
     await provider.ready;
     provider.details.follow(SID);
     await tick(); await provider.settled();
@@ -215,7 +215,7 @@ describe('the Connectors section\'s controls over the host', () => {
     host = new ReplayHost(fixtures.session);
     const client = new GatewayClient(host);
     await client.connect();
-    provider = createLiveProvider({ client, now: () => NOW, connectors: { setEnabled: () => Promise.reject(new Error('refused')), signin: () => Promise.reject(new Error('refused')) } });
+    provider = createLiveProvider({ defaultFolder: '/work/proj', client, now: () => NOW, connectors: { setEnabled: () => Promise.reject(new Error('refused')), signin: () => Promise.reject(new Error('refused')) } });
     await provider.ready;
     provider.details.follow(SID);
     await tick(); await provider.settled();

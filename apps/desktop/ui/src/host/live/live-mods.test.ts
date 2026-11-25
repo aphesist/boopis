@@ -21,7 +21,7 @@ async function open(): Promise<void> {
   host = new ReplayHost(fixtures.mods);
   const client = new GatewayClient(host);
   await client.connect();
-  provider = createLiveProvider({ client, now: () => new Date(2026, 10, 19, 1, 0, 0), mock: createMockProvider({ simulate: false }), secrets: new ReplaySecrets(), pickFolder: null });
+  provider = createLiveProvider({ defaultFolder: '/work/proj', client, now: () => new Date(2026, 10, 19, 1, 0, 0), mock: createMockProvider({ simulate: false }), secrets: new ReplaySecrets(), pickFolder: null });
   await provider.ready;
   states = []; events = [];
   provider.mods.session(SID).subscribe((s) => states.push(s));

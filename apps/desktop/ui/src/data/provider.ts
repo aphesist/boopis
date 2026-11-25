@@ -6,6 +6,7 @@
    The mock provider (mock-provider.ts) serves today's v6 mock data through these; the live provider (Hermes gateway
    and the boopis plugin) implements the same interfaces. Nothing in a module may fabricate data a provider
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
+import type { SessionControls } from './session-s0';
 import type {
   ApprovalTier, ArchivedBot, Turn, Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment, ArchivedGroup,
   Attached, KanbanBoardInfo, KanbanView, DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome, ModelChoice, CouncilSource, Group, GroupMessage,
@@ -416,4 +417,6 @@ export interface DataProvider {
   store: StoreProvider;
   /** the kanban boards behind a group (the live provider's; the mock has none, so a group's board view says so) */
   kanban?: KanbanSource;
+  /** the Session tab's launch settings, permission scale and rewind (the live provider's; the mock has none) */
+  sessionControls?: SessionControls;
 }
