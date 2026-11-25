@@ -93,6 +93,18 @@
 @media (hover: hover) and (pointer: fine) { .k7-tile:not([aria-current]):hover { background: var(--hover); transition-duration: var(--dur-1); } }
 .k7-flag { position: absolute; right: var(--gap-s); bottom: var(--gap-s); width: var(--dot); height: var(--dot); border-radius: var(--r-pill); background: var(--owe); box-shadow: 0 0 0 var(--flag-ring) var(--bg-1); }
 .k7-rail__rule { flex: none; width: var(--sp-6); margin: var(--gap-s) 0; border: 0; height: var(--hl); background: var(--hair); }
+/* a room's cluster and its "+N" (decided, owner, 25 November 2026): the chip clear of the orbs, on the cluster's right, on its middle, a filled
+   pill in the line stack's counter colours, set in the kit's smallest type step and scaled to half a cluster orb's height, so the compact
+   rail's is smaller than the standard one's. Where the engine cannot divide two lengths (no typed arithmetic) it stays at that type step */
+.k7-rail__cluster { display: inline-flex; align-items: center; gap: var(--gap-hair); line-height: 0; }
+.k7-rail__more::before { content: attr(data-more); }
+.k7-rail__more {
+  --more-h: calc(var(--fs-2xs) + 2 * var(--gap-hair));
+  display: inline-block; flex: none; height: var(--more-h); padding: 0 var(--gap-xs); box-sizing: border-box; border-radius: var(--r-pill);
+  background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--hair); color: var(--text-dim);
+  font: 500 var(--fs-2xs) / var(--more-h) var(--mono); letter-spacing: 0; font-variant-numeric: tabular-nums; white-space: nowrap;
+  zoom: calc(var(--s) / 2 / var(--more-h));   /* zoom, not scale: the chip takes the room it shows, so the cluster and its chip stay centred in the tile */
+}
 .k7-rail__foot { flex: none; display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); }
 
 /* ── Notch (42): the slab's black shape flush to the top, its composer on a 12 inset ── */

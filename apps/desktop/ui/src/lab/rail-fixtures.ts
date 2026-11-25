@@ -72,7 +72,7 @@ export function railProblems(): string[] {
     prev = r; prevName = name;
     if (Math.abs((r.left + r.right) / 2 - axis) > 1) out.push(name + ' is ' + ((r.left + r.right) / 2 - axis).toFixed(1) + 'px off the rail\'s middle');
     if (!it.classList.contains('k7-tile')) continue;
-    const marks = [...it.querySelectorAll<HTMLElement>('.ui-orb, .ui-stack__more')].map(box).filter((m) => m.width > 0);
+    const marks = [...it.querySelectorAll<HTMLElement>('.ui-orb, .ui-stack__more, .k7-rail__more')].map(box).filter((m) => m.width > 0);
     if (!marks.length) { out.push(name + ' shows nothing'); continue; }
     const left = Math.min(...marks.map((m) => m.left)), right = Math.max(...marks.map((m) => m.right)), top = Math.min(...marks.map((m) => m.top)), bottom = Math.max(...marks.map((m) => m.bottom));
     if (Math.abs((left + right) / 2 - (r.left + r.right) / 2) > 1) out.push(name + ': its orbs are ' + ((left + right) / 2 - (r.left + r.right) / 2).toFixed(1) + 'px off the tile\'s middle');

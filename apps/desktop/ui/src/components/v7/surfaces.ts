@@ -111,9 +111,16 @@ export function rail(o: RailOpts): string {
   const tile = (x: RailBot): string => '<button class="k7-reset k7-tile"' + attrs({ type: 'button', 'aria-label': (x.name ?? '') + (x.needs ? ', needs you' : x.working ? ', working' : ''), 'aria-current': x.current ? 'page' : null, 'data-tip': x.name, 'data-tip-pos': 'right', 'data-needs': x.needs ? '' : null, ...(x.attrs ?? {}) }) + '>' +
     ((h: string) => (x.ink ? inkOrb(h) : h))(orbHtml(x, { size: orb, rest: true, state: x.state && x.state !== 'idle' ? undefined : x.needs ? 'needs' : x.working ? 'working' : undefined })) + (x.needs ? '<span class="k7-flag" aria-hidden="true"></span>' : '') + '</button>';
   /* a group is the v6 cluster (owner decision, 23 November; a keep-list item in v7), its orbs at 0.42 of the tile's orb as the approved
-     boards draw it (ds-v7 screens.js: 15 on the standard rail, 12 on the compact one). DECIDED (owner, 25 November 2026): this rendering
-     stays as it is, up to three overlapping orbs and the "+N" chip on the right, at 15 and 12; the geometry is not to change */
-  const groups = (o.groups ?? []).map((g) => '<button class="k7-reset k7-tile" type="button"' + attrs({ 'aria-label': g.name + ': ' + g.members.map((m) => m.name).join(', '), 'aria-current': g.current ? 'page' : null, 'data-tip': g.name, 'data-tip-pos': 'right', ...(g.attrs ?? {}) }) + '>' + stack({ members: g.members, size: Math.round(orb * 0.42), shape: 'cluster', still: true, tip: false, extra: g.extra ?? 0 }) + '</button>').join('');
+     boards draw it (ds-v7 screens.js: 15 on the standard rail, 12 on the compact one). DECIDED (owner, 25 November 2026): the cluster is
+     at most three orbs in their triangle, as drawn; the members past three are a "+N" chip clear of the orbs, on the cluster's right,
+     on its middle (a row's items share its centre), a filled pill (the line stack's counter: --bg-3, --text-dim, a hairline) no taller than half a cluster orb, so it scales
+     with the rail's size (surfaces.css .k7-rail__more) */
+  const groups = (o.groups ?? []).map((g) => {
+    const shown = g.members.slice(0, 3), more = g.members.length - shown.length + Math.max(0, Math.floor(g.extra ?? 0));
+    return '<button class="k7-reset k7-tile" type="button"' + attrs({ 'aria-label': g.name + ': ' + g.members.map((m) => m.name).join(', '), 'aria-current': g.current ? 'page' : null, 'data-tip': g.name, 'data-tip-pos': 'right', ...(g.attrs ?? {}) }) + '>' +
+      '<span class="k7-rail__cluster" style="--s:' + Math.round(orb * 0.42) + 'px">' + (shown.length ? stack({ members: shown, size: Math.round(orb * 0.42), shape: 'cluster', max: 3, still: true, tip: false }) : '') +
+      (more ? '<span class="k7-rail__more"' + partAttrs('RailMore', { 'aria-hidden': 'true', 'data-more': '+' + more }) + '></span>' : '')   /* drawn, not written (as the line stack's): the tile's name says every member */ + '</span></button>';
+  }).join('');
   return '<nav class="k7-rail"' + kitAttrs('Rail', { 'data-size': b ? 'b' : 'a', 'aria-label': 'Bots', ...(o.attrs ?? {}) }) + '>' + o.bots.map(tile).join('') +
     (groups ? '<hr class="k7-rail__rule">' + groups : '') + '<span class="k7-grow"></span><div class="k7-rail__foot">' +
     iconButton({ icon: 'plus', label: 'New bot', variant: 'ghost', attrs: { 'data-tip-pos': 'right', ...(o.foot?.newBot ?? {}) } }) + iconButton({ icon: 'store', label: 'Store', variant: 'ghost', attrs: { 'data-tip-pos': 'right', ...(o.foot?.store ?? {}) } }) + iconButton({ icon: 'gear', label: 'Settings', variant: 'ghost', attrs: { 'data-tip-pos': 'right', ...(o.foot?.settings ?? {}) } }) + '</div></nav>';

@@ -70,10 +70,12 @@ describe('the rail', () => {
     const cl = q('.ui-stack--cluster', release);
     expect([...cl.querySelectorAll('orb-avatar')].map((o) => o.getAttribute('label'))).toEqual(S.groups[0]!.members.map((m) => m.name));
     for (const o of cl.querySelectorAll('orb-avatar')) expect(o.hasAttribute('static')).toBe(true);
-    /* six members: three orbs and "+3", the four places of the cluster */
+    /* six members: three orbs in their triangle, and "+3" beside the cluster, clear of it (decided, owner, 25 November 2026) */
     const six = q('.ui-stack--cluster', paper);
     expect(six.querySelectorAll('orb-avatar')).toHaveLength(3);
-    expect(q('.ui-stack__more', six).getAttribute('data-more')).toBe('+3');
+    expect(six.querySelector('.ui-stack__more')).toBeNull();
+    expect(q('.k7-rail__more', paper).getAttribute('data-more')).toBe('+3');
+    expect(q('.k7-rail__more', paper).previousElementSibling).toBe(six);
   });
   it('says a room\'s name and who is in it, and the cluster adds no tooltip of its own', () => {
     const release = q('.k7-tile[data-gid="room-release"]', rail());
@@ -90,7 +92,7 @@ describe('the rail', () => {
     drawRail();
     const tile = q('.k7-tile[data-gid="room-release"]', rail());
     expect(tile.querySelectorAll('orb-avatar')).toHaveLength(1);
-    expect(q('.ui-stack__more', tile).getAttribute('data-more')).toBe('+2');
+    expect(q('.k7-rail__more', tile).getAttribute('data-more')).toBe('+2');
   });
   it('marks the open bot\'s tile, and follows a bot\'s state in place, on the same orb', async () => {
     const { openBot } = await import('./room');

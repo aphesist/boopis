@@ -1,5 +1,5 @@
-/* Rail (21.2 row 40; LAB-v7: A, B; current, needs you, working). The rooms' clusters as drawn here are decided (owner, 25 November 2026):
-   up to three overlapping orbs and "+N" on the right, at 15 and 12 on the compact rail. */
+/* Rail (21.2 row 40; LAB-v7: A, B; current, needs you, working). The rooms' clusters are decided (owner, 25 November 2026): at most three
+   orbs in their triangle (15, or 12 on the compact rail), the rest a "+N" chip clear of them on the right, a filled pill half an orb tall. */
 import { kit } from '@boopis/ui';
 import { line, stage } from '../../story';
 import type { Story } from '../../types';
