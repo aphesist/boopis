@@ -22,15 +22,33 @@ table at the end true.
   - **attachments are chips** (25 November): a file added with "+" is a reference chip in the composer's text, not "@path" words;
   - **the collapsed rail has no tab button yet** (25 November: "there could be a button there when it's closed, maybe"): options
     are shown to the owner as a sheet; the keys and the palette switch tabs meanwhile;
-  - **keys get their own pass** (25 November): ctrl Enter is left as it is (it sends), and S17's hint as drawn.
+  - **keys get their own pass** (25 November): ctrl Enter is left as it is (it sends), and S17's hint as drawn;
+  - **a started session is boards S20 to S23** (25 November, from the coverage map `COVERAGE.md`): boards 10 and 13 are an earlier
+    draft and are replaced wherever they differ (the model's mark in the gutter, a change approved on its tool row, the composer's line
+    of S05 B, the checkpoint row). They are not compared;
+  - **Stop and voice both stay in the composer** (25 November, evening): while a turn or a room runs, Stop is a button of its own at
+    the start of the right cluster, `[stop] [mic] [primary]`: a tinted 28 circle with a filled rounded square. The primary circle never
+    becomes Stop. Boards drawn while something runs differ from the app by exactly this button;
+  - **the collapsed rail carries the tab switch, upright** (25 November, option B): Sessions over Bots in the switch's own track under
+    the sidebar toggle. On the Sessions tab the rail shows no bots ("the Sessions tab shows no bots except the dock"): the switch, and
+    at the foot New session, Store and Settings. Boards 11 and 17's rail differs from the app by this control;
+  - **"@all" is named in the attention amber** (25 November), in a message and in a composer; a member's mention keeps its colour;
+  - **one word for refusing: "Deny"** (with esc), also where S20 draws "Decline" (consistency across the app overrides a board);
+  - **the session composer's "+" opens the add menu** (Attach a file, Add a folder to context, Mention a file, Commands); in a bot's
+    chat and a room, where only files can be added, "+" opens the file picker;
+  - confirmed (25 November): member name colours stay the kit's contrast-safe derivation; the huddle fold, the "to nina" line and the
+    presence tool words stay out; file chips keep the bare file name.
 
 ## The rules (the owner's)
 1. **It matches.** A screen is done when the app's real screen, on the board's content at 1440 × 900 @2x, is the same as the
    board in dark and light. `pnpm lab:board <board>` proves it (docs/UI-LAB.md); the builder also looks at the sheet.
    No v6 part stays inside a converted screen.
-2. **It works.** Every control does its job wherever the app has the capability; nothing that worked in v6 is lost. A control
-   is disabled only when the feature does not exist yet, with a tooltip saying why, and it is listed for the owner. Each wired
-   control has a behaviour test.
+2. **It works.** Every control does its job wherever the app has the capability; nothing that worked in v6 is lost. **A control
+   whose feature does not exist yet is not shown** (25 November: a thing shows only when it exists). It is still built, against a
+   capability: the provider's `info.later` (`data/types.ts` `LaterFeature`, read by `modules/chat/compose.ts` `later()`), or what
+   the engine offers (a form's own choices, the session's capability map). No provider of the app switches a `later` feature on;
+   the board's lab fixture does, so `lab:board` still compares the whole board. The hidden controls are listed for the owner. Each
+   wired control has a behaviour test.
 3. **It is the kit.** Every look lives in the kit (`src/components/v7`, `kit.*`). Screens (`src/modules/*`) compose and place
    kit components; module CSS holds placement only. A kit component is fixed or extended only where it differs from the boards
    or lacks a drawn variant, never forked. `docs/UI-COMPONENTS.md` lists every component, its variants and its board.
@@ -52,7 +70,7 @@ table at the end true.
 | 1 | 11 bot chat, S17 new session | matches; controls wired; the dock's small differences left for the dock step |
 | 2 | 17 bot working | matches |
 | 3 | 12 group room; K02 the Bots sidebar and a held message | matches (the room 0.02 to 0.04% outside the orbs: a member's name keeps the kit's readable colour where the board's is another; the sidebar and the held message 0.00%); the room is the kit's throughout, its v6 header, presence, huddles and held strip are gone; controls wired and tested; owner questions in the step's report |
-| 4 | 10, 13, S20–S23, S35–S38: a started session's conversation and composer | |
+| 4 | S20, S23 (10 and 13 replaced; S21, S22, S35–S38 not yet): a started session's conversation and composer | S20 and S23 match but for the owner's decisions ("Deny" with esc, Stop while a turn runs); the thread, the composer and its line are the kit's; controls wired and tested; what v6 did, the hidden controls and the owner questions are in the step's report. Still v6 inside it: the form card for forms with fields, the tasks handed to other models, a council |
 | 5 | 16, K01–K08: the dock | |
 | 6 | S18, S19, S24–S34, S39–S41: the session's panels, menus, commit, inbox, settings | |
 | 7 | 14, 15: Settings, Store, Connectors | |

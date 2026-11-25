@@ -164,26 +164,9 @@ export function lineEl(l: ThreadLine, onUndo?: (shipId: string) => void): HTMLEl
   return asV7(w);
 }
 
-/* ───────── the rewind on a finished turn (TurnFoot, session) and its sheet (Dialog, form) ───────── */
-export const REWIND_HERE = 'Rewind files to here';
+/* ───────── the rewind's sheet (Dialog, form) ───────── */
 export const REWIND_BASE = 'Rewind to before this session';
-export function rewindFoot(o: { first: boolean; avail: Avail; onRewind(to: 'here' | 'base'): void }): HTMLElement {
-  /* every turn that kept a change goes back to after it; the first one also to before the session (checkpoint-rewind.md 8): one
-     action per foot, so a narrow column never pushes the second out of the turn */
-  const tip = o.avail.ok ? {} : { disabled: true, tip: o.avail.why };
-  const w = document.createElement('div');
-  w.className = 'ss-s0-foot';
-  const list: readonly (readonly [string, 'here' | 'base'])[] = [[REWIND_HERE, 'here'], ...(o.first ? [[REWIND_BASE, 'base'] as const] : [])];
-  for (const [label, value] of list) {
-    const f = kit.turnFoot({ kind: 'session', actions: [{ label, value, ...tip }] });
-    f.addEventListener('click', (e) => {
-      const b = (e.target as Element).closest<HTMLButtonElement>('.k7-foot__btn');
-      if (b && !b.disabled && o.avail.ok) o.onRewind(value);
-    });
-    w.append(f);
-  }
-  return asV7(w);
-}
+/* the rewind itself is the turn's foot ("Checkpoint N", Undo: conversation.ts `footCan`, `undoTurn`; board S23); this file keeps its sheet */
 
 const ACTION_WORD = { restore: 'put back', delete: 'removed', recreate: 'brought back' } as const;
 const MAX_FILES = 12;

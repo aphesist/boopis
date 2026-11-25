@@ -1,5 +1,5 @@
 {
-  "about": "Board to story, one row per approved board: `pnpm lab:board <id>` draws the board from its own source and the app's lab story, and compares them. `board` is the page under docs/design/v7/boards/src with its parameters (the theme is added), `image` the approved image in the archive (origin/w33/boards-archive), `story` and `state` the lab story that feeds the app's real modules the board's content, `regions` the parts of the window as [x, y, width, height] in CSS px. A row with `scope` is the reference for the regions it names only (another row's board is the reference for the rest: board 12's sidebar is K02's, the owner's later decision); a region of six numbers [x, y, width, height, dx, dy] says the app's part sits dx, dy from the board's (a later board moved what is around it).",
+  "about": "Board to story, one row per approved board: `pnpm lab:board <id>` draws the board from its own source and the app's lab story, and compares them. `board` is the page under docs/design/v7/boards/src with its parameters (the theme is added), `image` the approved image in the archive (origin/w33/boards-archive), `story` and `state` the lab story that feeds the app's real modules the board's content, `regions` the parts of the window as [x, y, width, height] in CSS px. A row with `scope` is the reference for the regions it names only (another row's board is the reference for the rest: board 12's sidebar is K02's, the owner's later decision); a region of six numbers [x, y, width, height, dx, dy] says the app's part sits dx, dy from the board's (a later board moved what is around it). A row's `note` says an owner-decided difference between the app and its board: not a failure.",
   "viewport": {
     "w": 1440,
     "h": 900,
@@ -43,7 +43,8 @@
           356,
           844
         ]
-      }
+      },
+      "note": "Owner-decided difference (25 November): the app's collapsed rail carries the tab switch, upright, under the sidebar toggle; the board draws none, so the rail region differs by that control and what it moves."
     },
     "12-room": {
       "title": "Board 12: a group room (the title pill, the thread, the composer)",
@@ -75,7 +76,8 @@
         "chrome",
         "thread",
         "composer"
-      ]
+      ],
+      "note": "Owner-decided difference (25 November): while members reply the composer carries Stop at the start of its right cluster; the board draws none."
     },
     "K02-12-sidebar": {
       "title": "Board K02-12: the open Bots sidebar (the switch, the main bot at 44, rows of 28, Groups, the foot)",
@@ -113,7 +115,8 @@
           0,
           -4
         ]
-      }
+      },
+      "note": "Owner-decided difference (25 November): the room is busy, so its composer carries Stop; the held message's own region is measured."
     },
     "17-working": {
       "title": "Board 17: a bot working through a task",
@@ -146,7 +149,8 @@
           1352,
           110
         ]
-      }
+      },
+      "note": "Owner-decided difference (25 November): the app's collapsed rail carries the tab switch, upright, under the sidebar toggle; the board draws none, so the rail region differs by that control and what it moves. The bot is working, so the composer also carries Stop at the start of its right cluster (owner, 25 November)."
     },
     "S17-newsession": {
       "title": "Board S17: a new session, the sidebar open, the dock",
@@ -226,7 +230,8 @@
           1140,
           82
         ]
-      }
+      },
+      "note": "Owner-decided differences (25 November): the turn runs, so the composer carries Stop at the start of its right cluster; the tool row's refusal reads \"Deny\" with its esc key where the board draws \"Decline\" (one word across the app)."
     },
     "S23-finished": {
       "title": "Board S23: a finished turn: the work line, the answer, the changed files, the checkpoint row, the lapsed blank",
@@ -266,7 +271,8 @@
           1140,
           82
         ]
-      }
+      },
+      "note": "The fixture switches on what is not built yet (Edit from here, Fork: `info.later`), which the app does not show; the lapsed blank's guess is the fixture's (`blank.guess`)."
     }
   }
 }

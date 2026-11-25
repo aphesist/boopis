@@ -5,7 +5,7 @@
 import { kit } from '@boopis/ui';
 import { fill, forced, frames, stage } from '../../story';
 import type { Story } from '../../types';
-import { carefulEntries, launchCanvas, lineEl, rewindBody, rewindFoot, rewindSheet } from '../../../modules/session/s0';
+import { carefulEntries, launchCanvas, lineEl, rewindBody, rewindSheet } from '../../../modules/session/s0';
 import type { LaunchView } from '../../../modules/session/s0';
 import type { Avail, CarefulStep, RewindResult, ThreadLine } from '../../../data/session-s0';
 
@@ -33,7 +33,7 @@ const LINES: ThreadLine[] = [
   { kind: 'checkpoint', id: 'l3', afterTurn: 't2', at: '14:02', action: 'rewound', to: { shipId: 's1', label: 'after turn 3' }, files: 4, rewindShipId: 'r1', undoShipId: 's3' },
   { kind: 'checkpoint', id: 'l4', afterTurn: 't2', at: '14:03', action: 'undone', to: { shipId: 's3', label: 'after turn 4' }, files: 4, rewindShipId: 'r2', undoShipId: null }
 ];
-const footTypical = stage(['typical', 'variant'], ({ root }) => { fill(root, rewindFoot({ first: false, avail: OK, onRewind: noop }), rewindFoot({ first: true, avail: OK, onRewind: noop })); }, { width: 640 });
+/* the rewind on a finished turn is the turn's foot (kit/turn-foot: "Checkpoint N", Undo; board S23) */
 
 export default [
   {
@@ -63,9 +63,6 @@ export default [
       typical: stage(['typical', 'variant'], ({ root }) => { fill(root, sheet(PLAN, 'Rewind files to after turn 3')); }, { width: 640 }),
       refused: stage(['error'], ({ root }) => { fill(root, sheet(REFUSED, 'Rewind files to after turn 3')); }, { width: 640 }),
       'nothing to do': stage(['empty'], ({ root }) => { fill(root, sheet({ status: 'nothing_to_do', isolation: 'shared_unchanged', files: [] }, 'Rewind to before this session')); }, { width: 640 }),
-      'on a finished turn': footTypical,
-      ...forced(footTypical, '.k7-foot__btn'),
-      'not now': stage(['variant'], ({ root }) => { fill(root, rewindFoot({ first: false, avail: { ok: false, why: 'Rewind when this turn has finished.' }, onRewind: noop })); }, { width: 640 }),
       long: stage(['long'], ({ root }) => {
         const many: RewindResult = { ...PLAN, files: Array.from({ length: 30 }, (_, i) => ({ path: 'src/a/deeply/nested/folder/with/a/long/name/file-' + i + '.ts', action: 'restore' as const })) };
         fill(root, sheet(many, 'Rewind files to after turn 12'));
