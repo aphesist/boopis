@@ -66,7 +66,7 @@ export function inlineChip(o: InlineChipOpts): string {
       const name = o.bot?.name ?? o.text ?? '', tag = o.action && o.words == null ? 'button' : 'span';
       const lead = o.members?.length ? kitStack(o.members, 16, { surface: '--bg-3' }) : o.bot ? orbHtml(atRest(o.bot), { size: 16, still: true, mode: 'fixed', surface: '--bg-3' }) : '';
       const shown = o.words != null ? '<span class="k7-sr">' + esc(o.words) + '</span><span class="k7-mention__name" aria-hidden="true"' + attrs({ 'data-name': o.members?.length ? (o.text ?? name) : name }) + '></span>' : '<span class="k7-mention__name">' + esc(o.members?.length ? (o.text ?? name) : name) + '</span>';
-      return '<' + tag + ' class="' + cls(tag === 'button' && 'k7-reset', 'k7-chip-in k7-mention') + '"' + a({ type: tag === 'button' ? 'button' : null, 'aria-label': o.label, 'data-out': o.out ? '' : null, 'data-bot-colour': o.colour && !o.out ? '' : null, style: o.colour && !o.out ? botColours(o.colour) : null }) + '>' + lead + shown + '</' + tag + '>';
+      return '<' + tag + ' class="' + cls(tag === 'button' && 'k7-reset', 'k7-chip-in k7-mention') + '"' + a({ type: tag === 'button' ? 'button' : null, 'aria-label': o.label, 'data-out': o.out ? '' : null, 'data-all': o.members?.length ? '' : null, 'data-bot-colour': o.colour && !o.out ? '' : null, style: o.colour && !o.out ? botColours(o.colour) : null }) + '>' + lead + shown + '</' + tag + '>';
     }
     case 'you': return '<span class="k7-chip-in k7-cap k7-you"' + a() + '>' + glyph('user', 'k7-you__ic') + said(o.text ?? 'you') + '</span>';
     case 'reference': {

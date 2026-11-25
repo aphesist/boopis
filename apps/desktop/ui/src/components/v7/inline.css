@@ -24,6 +24,10 @@
 button.k7-mention { cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { button.k7-mention:hover > .k7-mention__name { text-decoration: underline; text-underline-offset: var(--gap-xs); } }
 .k7-mention[data-out] { color: var(--text-dim); }
+/* @all (owner, 25 November): the whole room is named in the attention amber, the "you" capsule's own text colour, in a message and in a
+   composer; a member's mention keeps its bot's colour. On light's solid ink bubble it takes the amber itself, which reads there */
+.k7-mention[data-all], [data-theme="light"] .k7-mention[data-all] { color: var(--owe-text); }
+[data-theme="light"] .k7-bubble[data-kind="user"]:not([data-bot-colour]) .k7-mention[data-all] { color: var(--owe); }
 .k7-mention[data-out] > .ui-orb { opacity: .6; }
 /* in a composer's text a chip is one unit: its words are there for the send and the reader, its name is drawn (data-name) */
 .k7-chip-in > .k7-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
