@@ -44,7 +44,7 @@
           844
         ]
       },
-      "note": "Owner-decided difference (25 November): the app's collapsed rail carries the tab switch, upright, under the sidebar toggle; the board draws none, so the rail region differs by that control and what it moves."
+      "note": "Owner-decided difference (25 November): the app's collapsed rail carries the tab switch, upright, under the sidebar toggle; the board draws none, so the rail region differs by that control and by the tiles it moves down."
     },
     "12-room": {
       "title": "Board 12: a group room (the title pill, the thread, the composer)",
@@ -77,7 +77,7 @@
         "thread",
         "composer"
       ],
-      "note": "Owner-decided difference (25 November): while members reply the composer carries Stop at the start of its right cluster; the board draws none."
+      "note": "The fixture's room is not marked busy, so its composer draws no Stop; while members reply to a message sent here it does, at the start of the right cluster (owner, 25 November), which the board does not draw."
     },
     "K02-12-sidebar": {
       "title": "Board K02-12: the open Bots sidebar (the switch, the main bot at 44, rows of 28, Groups, the foot)",
@@ -116,7 +116,7 @@
           -4
         ]
       },
-      "note": "Owner-decided difference (25 November): the room is busy, so its composer carries Stop; the held message's own region is measured."
+      "note": "The held message's own region is measured; the busy room's composer beside it carries Stop (owner, 25 November)."
     },
     "17-working": {
       "title": "Board 17: a bot working through a task",
@@ -150,7 +150,7 @@
           110
         ]
       },
-      "note": "Owner-decided difference (25 November): the app's collapsed rail carries the tab switch, upright, under the sidebar toggle; the board draws none, so the rail region differs by that control and what it moves. The bot is working, so the composer also carries Stop at the start of its right cluster (owner, 25 November)."
+      "note": "Owner-decided difference (25 November): the app's collapsed rail carries the tab switch, upright, under the sidebar toggle; the board draws none, so the rail region differs by that control and by the tiles it moves down. The fixture's bot is working by its state alone (no run of this window), so the composer draws no Stop; a run started here does (owner, 25 November)."
     },
     "S17-newsession": {
       "title": "Board S17: a new session, the sidebar open, the dock",
