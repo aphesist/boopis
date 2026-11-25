@@ -21,8 +21,9 @@ type Loader = () => Promise<unknown>;
 const all = (...l: Loader[]): Loader => () => Promise.all(l.map((f) => f()));
 
 const LOADERS: Record<string, Loader> = {
-  Geist: all(() => import('@fontsource/geist/latin-400.css'), () => import('@fontsource/geist/latin-500.css'), () => import('@fontsource/geist/latin-600.css'), () => import('@fontsource/geist/latin-400-italic.css'), () => import('@fontsource/geist/latin-600-italic.css')),
-  'Geist Mono': all(() => import('@fontsource/geist-mono/latin-400.css'), () => import('@fontsource/geist-mono/latin-500.css'), () => import('@fontsource/geist-mono/latin-600.css')),
+  /* Geist's upright 400 to 600 and Geist Mono's 400 and 500 are imported above, with the app */
+  Geist: all(() => import('@fontsource/geist/latin-400-italic.css'), () => import('@fontsource/geist/latin-600-italic.css')),
+  'Geist Mono': all(() => import('@fontsource/geist-mono/latin-600.css')),
   'IBM Plex Sans': all(() => import('@fontsource/ibm-plex-sans/latin-400.css'), () => import('@fontsource/ibm-plex-sans/latin-500.css'), () => import('@fontsource/ibm-plex-sans/latin-600.css'), () => import('@fontsource/ibm-plex-sans/latin-400-italic.css'), () => import('@fontsource/ibm-plex-sans/latin-600-italic.css')),
   'Instrument Sans': all(() => import('@fontsource/instrument-sans/latin-400.css'), () => import('@fontsource/instrument-sans/latin-500.css'), () => import('@fontsource/instrument-sans/latin-600.css'), () => import('@fontsource/instrument-sans/latin-400-italic.css'), () => import('@fontsource/instrument-sans/latin-600-italic.css')),
   'Public Sans': all(() => import('@fontsource/public-sans/latin-400.css'), () => import('@fontsource/public-sans/latin-500.css'), () => import('@fontsource/public-sans/latin-600.css'), () => import('@fontsource/public-sans/latin-400-italic.css'), () => import('@fontsource/public-sans/latin-600-italic.css')),
@@ -30,7 +31,7 @@ const LOADERS: Record<string, Loader> = {
   'Source Code Pro': all(() => import('@fontsource/source-code-pro/latin-400.css'), () => import('@fontsource/source-code-pro/latin-500.css'))
 };
 
-const loaded = new Set<string>(['Libre Franklin', 'IBM Plex Mono', 'System']);   /* Geist and Geist Mono's upright faces load with the app; their italic and 600 faces on demand */
+const loaded = new Set<string>(['Libre Franklin', 'IBM Plex Mono', 'System']);
 
 /** load a family once; the browser applies it when the stylesheet lands (fonts are swap-loaded) */
 export function ensureFont(name: string | null | undefined): void { void loadFont(name); }
