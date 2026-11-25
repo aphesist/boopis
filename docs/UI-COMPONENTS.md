@@ -42,7 +42,19 @@ a chip set into a composer's text), the SystemLine (13 on the 20 line, a 16 glyp
 phrase's baseline), the Queue (held: the clock, Send now's tip, an Edit that shows with the pointer or the focus), the stacks
 (`kitStack`: neighbours a whole two thirds of an orb apart, no room around them), the Pane (a room's stack heads its details) and
 the Composer (mentions and files as chips in the text: `kit.mentions({ chips })`, `kit.composerChips`, `kit.composerInsertChip`;
-the "@" list under its heading, kept open while you type). New: `kit.sidebarFoot` (you, Store, Settings).
+the "@" list under its heading, kept open while you type). New: `kit.sidebarFoot` (you, Store, Settings). Corrected with boards
+S20 and S23 (a started session; S05 and S09 for its parts): the ToolRow, a session's (the boards' `.toolrow`: the model's 14 mark, the
+tool's glyph, the name in mono, an edit's +/−, what became of it at the head's end; its answers under the head, a decline's feedback
+quoted), the AskCard's attached variant (its answers alone; a model's mark 14 in a card's head; "Something else" outlined), the
+FilesCard (the boards' `.files-card`: "N changed files" with the turn's +/−, an action at the head's end, a row per file; a long list
+folds), the Disclosure (the boards' `.worklog`: the chevron leads and turns down), the TurnFoot, a session's (the boards' `.turnbar`:
+"Checkpoint N", its actions as ghost buttons with glyphs, the model with its time and cost at the end), the Bubble's gutter in a session
+thread (`.k7-thread[data-kind="session"]`: the boards' `.thread.sess` margins), the title pill (`sub`: a session's branch), the
+Composer (the session's line of S05 B: plain items, a model's effort ticks, the context's ticks and the cost at the end, items that fold
+in a narrow composer; `kit.composerMarks`, the words a text is read by, as Marks; `kit.composerRunning`). By the owner's decisions of
+25 November: the Composer's own Stop at the start of the right cluster while a turn runs (the primary circle never becomes it);
+`voiceOff` and `queueOff` leave out the voice circle and the send where the feature does not exist; the Segmented's `upright`
+(the collapsed rail's tab switch, `kit.rail({ tabs })`); "@all" in the attention amber.
 
 **What each component the converted screens use is, and its board** (boards 11, 17 and S17; `pnpm lab:board`):
 
@@ -73,6 +85,16 @@ the "@" list under its heading, kept open while you type). New: `kit.sidebarFoot
 | `kit.askCard` in a room | a member's approval in the gutter under what it said | botscreens.js `room12` |
 | `kit.queue({ variant: 'held' })` | the clock, "N message(s) wait until the discussion ends", Send now (its tip says what it stops), Edit on hover or focus | K02 kit.css `.queue-held` |
 | `kit.composer({ kind: 'room' })` | "Message <room>", its line ("@" N members, the cost), a hint (who answers first); mentions and files as chips; the "@" Menu under its heading | botscreens.js `room12` `comp`, sessiontab2.js `s11` (the composer's lists) |
+| `kit.bubble({ brand })` in a session | yours in ink; the agent's in the 30 gutter, the answering model's mark (a 22 circle) at the foot of the bubble; an unknown model: the gutter without the mark | sessiontab.js `shell` `.thread.sess`, kit.js `.gm` |
+| `kit.disclosure({ variant: 'worklog' })` | "Read 6 files, searched 2 patterns" while it works, "Worked for 59s: ..." once it ended; closed, open on its steps (done, now, failed, an escalation); hover, focus, no steps, narrow | kit.css `.worklog`, S20, S23 |
+| `kit.toolRow` (a session's) | a change or a command waiting on its row with its answers (Deny esc, Always allow this session, Hold to allow once: the ones the engine offers); allowed ("Allowed once 09:43"); denied with the feedback quoted; with steps it opens; hover, focus, narrow | kit.css `.toolrow`, S09, S20 |
+| `kit.filesCard` | the count and the turn's +/−, Open diff, a row per file; one file, many (folded, unfolded), empty, long paths, narrow; the action hovered and focused | kit.css `.files-card`, S23 |
+| `kit.turnFoot({ kind: 'session' })` | "Checkpoint N", Undo (the rewind; disabled with why where it cannot run), Edit from here and Fork once they exist, the model's 12 mark with its name, time and cost; a route, why it was picked, "ungoverned"; hover, focus, narrow | kit.css `.turnbar`, S23 |
+| `kit.askCard` in a session | a question ("asked during the turn", its options, Something else: your own words in a Field); an approval with no fields (the hold, Deny); lapsed (a change whose approval ran out, S09) | sessiontab.js `ask`, S23 |
+| `kit.statusLine({ kind: 'session' })` | the model's mark and "Waiting for your approval" at rest; while it works the phrase sweeps and `count` is the turn's clock | sessiontab.js `status`, S20 |
+| `kit.composer({ kind: 'session' })` | the line (How careful, the branch, who answers next with the effort's ticks, the context's ticks, the cost); Stop while a turn runs; the words the text is read by as Marks; a model mention as a chip; attachments as chips; narrow: the branch and the context fold | sessiontab.js `comp`, `underSess`; S05 B, S20 |
+| `kit.titlePill({ sub })` | a session's glyph, its name, its branch in mono | sessiontab.js `title` |
+| `kit.rail({ tabs })`, `kit.segmented({ upright })` | the tab switch stood on its end: Sessions over Bots as glyph items in the track, the open tab filled; on the Sessions tab no bots, "+" is New session; hover, focus, both rail sizes | owner, 25 November (option B); no board |
 | `kit.pane({ members })` | a room's details: its stack, its name, pane cards (members; name, members, run limit, board, archive) | no board (it follows botscreens.js `pane`): an owner question |
 
 A module composes these and places them; its CSS holds placement only (`bots.css` "boards 11, 17 and 12", `session.css` "board S17").
@@ -86,9 +108,9 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 5 | Menu | `menu`, `openMenu` | `kit/menu` | menu, quick, palette / @ $, snooze, split, options; open, flipped |
 | 6 | Card | `card` (and its Row) | `kit/card` | settings, pane, danger zone collapsed and open |
 | 7 | Block | `block` | `kit/block` | the corner rule's specimen |
-| 8 | ToolRow | `toolRow` | `kit/tool-row` | edit, command, read, search; running, done, failed, waiting |
+| 8 | ToolRow | `toolRow` | `kit/tool-row` | edit, command, read, search; running, done, failed, waiting; a session's (S20): a change waiting with its answers, a command waiting, allowed, denied with feedback; an answer hovered, focused; narrow |
 | 9 | AskCard | `askCard` | `kit/ask-card` | standalone, attached, question, choices, lapsed; asked, needs, answered, hold at 50% |
-| 10 | FilesCard | `filesCard` | `kit/files-card` | 1 file, 12 files; collapsed, open |
+| 10 | FilesCard | `filesCard` | `kit/files-card` | 1 file, 2 files (S23) with Open diff, 12 files folded and unfolded, empty, long, narrow; the action hovered, focused |
 | 11 | Queue | `queue` | `kit/queue` | list 1, 3, 9; held (with Edit: at rest, hovered, focused, narrow); editing |
 | 12 | Notice | `notice` | `kit/notice` | composer, page, floating; neutral, amber, accent, red; 0 to 2 actions; dismiss |
 | 13 | SystemLine | `systemLine` | `kit/system-line` | info, steer, hand-off, error with its action |
@@ -101,7 +123,7 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 20 | OptionRow | `optionRow` | `kit/option-row` | permission step, import pick; disabled (a step that cannot be honoured: its line says why) |
 | 21 | Button | `button` | `kit/button` | secondary, primary, ghost, tint, danger, split; 36, 32, 28; hold |
 | 22 | IconButton | `iconButton` | `kit/icon-button` | floating, tinted, ghost, inverted |
-| 23 | Segmented | `segmented` | `kit/segmented` | inline 2 to 4, page head, tab bar |
+| 23 | Segmented | `segmented` | `kit/segmented` | inline 2 to 4, page head, tab bar; upright (the collapsed rail's switch: glyph items, the attention dot, hover, focus) |
 | 24 | SelectorItem | `selectorItem` | `kit/selector-item` | line, launch, field; ticks; "+ Choose a model" |
 | 25 | Switch | `switch` | `kit/switch` | on, off, disabled |
 | 26 | Field | `field` | `kit/field` | text, search pill, multi-line; error, disabled |
@@ -114,10 +136,10 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 33 | Badge | `badge` | `kit/badge` | neutral, amber |
 | 34 | StatusLine | `statusLine` | `kit/status-line` | bot, session, system; working, waiting |
 | 35 | Avatar | `avatar` | `kit/avatar` | orb 16 to 96, brand tile, stack, logomark |
-| 36 | Disclosure | `disclosure` | `kit/disclosure` | steps, work log |
-| 37 | TurnFoot | `turnFoot` | `kit/turn-foot` | bot, session (actions on hover; `actions` names them, e.g. the S0 rewind) |
+| 36 | Disclosure | `disclosure` | `kit/disclosure` | steps, work log; closed, open; the summary hovered, focused; no steps; narrow |
+| 37 | TurnFoot | `turnFoot` | `kit/turn-foot` | bot (model, time, cost); session (S23: the checkpoint, the actions that exist, the model with its time and cost): only Undo, none, Undo disabled, a route with why and "ungoverned", an action hovered and focused, narrow |
 | 38 | TimeSeparator | `timeSeparator` | `kit/time-separator` | a gap, NEW |
-| 39 | Composer | `composer` | `kit/composer` | session, bot, room, dock, notch; typed, multi-line, running, held, no model, quick menu; a room's line and hint; chips in the text (and narrow); the "@" list open |
+| 39 | Composer | `composer` | `kit/composer` | session, bot, room, dock, notch; typed, multi-line, running (Stop beside the mic; with text; idle; Stop hovered, focused; narrow), held, no model, quick menu; voice not built and nothing queues (no primary circle); a session's line and marks (S20; an item hovered, focused; narrow: it folds; no line); a room's line and hint; chips in the text (and narrow); the "@" list open |
 | 40 | Rail | `rail` | `kit/rail` | A, B; current, needs you, working; groups (decided, owner, 25 November 2026: a room's cluster is at most three orbs in their triangle, at 15, or 12 on the compact rail; the members past three are a "+N" chip clear of the orbs on the cluster's right, a filled pill in the line stack's counter colours, half a cluster orb tall, so the compact rail's is smaller) |
 | 41 | Dock | `dock` | `kit/dock` | row, compact, open (stack, card); hover, focus, many |
 | 42 | Notch | `notch` | `kit/notch` | the slab and its composer (the notch spec is not in this repository) |
@@ -143,9 +165,13 @@ Notice, `kit.notify`). Their stories are `src/lab/stories/v7/` (blocking on the 
 and K02** a bot's chat, a room and the Bots sidebar are the kit's throughout: the composers (the kit's Composer; "@" a kit Menu,
 mentions and files chips in the text), who is replying (StatusLine), a room's held messages (Queue), its own controls in the
 details pane (Pane), the Archived group (SectionHead and ListRow items), a live bot's empty thread (EmptyState; its sessions are
-in its details). The v6 room header, presence entry, huddle fold, held strip, ledger lines and glance are deleted. **Still v6 in
-the Bots tab:** the bot settings sheet, the new-bot and new-group forms, a room's kanban board view; and outside it the session's
-conversation and composer (`ui.composer`, `ui.presence`, `components/mentions.ts`), the palette, and Settings, Store and Keyboard.
+in its details). The v6 room header, presence entry, huddle fold, held strip, ledger lines and glance are deleted. **Since boards S20 and S23** a started session is the
+kit's too (`modules/session/conversation.ts`, `turn.ts`, `composer.ts`): the thread, the composer and its line, their menus (the kit's
+Menu), the model-change line (SystemLine), find (the kit's search Field). **Still v6 in the Bots tab:** the bot settings sheet, the
+new-bot and new-group forms, a room's kanban board view; **in a session:** the form card for forms with fields (`hx-card`: credentials,
+sign-ins, plans), the tasks handed to other models (`children.ts`, `ui.child`), a council (`council.ts`), the details panel, find's
+popover shell; and outside them the dock's own composer (`ui.composer`, `components/mentions.ts`), the palette, and Settings, Store and
+Keyboard.
 
 ## The kit as a package
 
