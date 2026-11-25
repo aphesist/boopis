@@ -18,7 +18,17 @@ from . import gate as gate_mod
 from . import results as out
 from .checkpoint import Checkpoint, CheckpointError, commit_checkpoint
 from .common import T_DISCARD, T_RESTORE, Abort, emit, file_entries, log, read_text, record
+from .digest import record_fields
 from .evidence import unchanged_files_named
+
+
+def chain_base(state: SessionState) -> str | None:
+    """Where this session's checkpoint chain starts when it continues another in the same folder."""
+    link = state.continued
+    if link is None or link.get("cwd") != state.cwd:
+        return None
+    base = link.get("base_commit")
+    return base if isinstance(base, str) and base else None
 
 
 def after_apply(
@@ -128,7 +138,8 @@ def _gate_andrecord(
         rt,
         "ship.applied",
         actor,
-        {"ship_id": ship_id, "files": file_entries(applied.files), "task_id": task_id, "journal_id": ship_id},
+        {"ship_id": ship_id, "files": file_entries(applied.files), "task_id": task_id, "journal_id": ship_id}
+        | ({"turn_id": state.track.turn_id} if state.track.turn_id else {}),
     )
     touched = {f.path: ("" if f.deleted else read_text(root / f.path)) for f in applied.files}
     digest = hashlib.sha256(
@@ -196,13 +207,15 @@ def _keep(
         warnings.append(f"the journal was not discarded ({exc.code}); the changes stand")
     checkpoint: Checkpoint | None = None
     try:
-        checkpoint = commit_checkpoint(root, state.session_id, applied.files, f"boopis ship {ship_id}")
+        checkpoint = commit_checkpoint(
+            root, state.session_id, applied.files, f"boopis ship {ship_id}", base=chain_base(state)
+        )
         record(
             state,
             rt,
             "checkpoint.committed",
             "plugin",
-            {"ship_id": ship_id, "ref": checkpoint.ref, "commit": checkpoint.commit},
+            {"ship_id": ship_id, "ref": checkpoint.ref, "commit": checkpoint.commit} | record_fields(root),
         )
     except CheckpointError as exc:
         warnings.append(f"no checkpoint: {exc}")

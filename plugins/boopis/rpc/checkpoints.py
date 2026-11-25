@@ -25,7 +25,8 @@ def session_id_of(params: Mapping[str, Any], session_id: str | None) -> str:
 
 
 def checkpoints_of(events: Sequence[LedgerEvent]) -> list[dict[str, Any]]:
-    """Every kept ship, oldest first: ``{ship_id, commit, ref, files, ts}`` (``task_id`` when the ship had one)."""
+    """Every kept ship, oldest first: ``{ship_id, commit, ref, files, ts, kind}`` (``kind`` ``ship`` or ``rewind``),
+    with ``task_id``, ``turn_id`` and ``rewind_to`` when the ship had them."""
     applied = {e["payload"]["ship_id"]: e for e in events if e["type"] == "ship.applied"}
     out: list[dict[str, Any]] = []
     for event in events:
@@ -40,8 +41,10 @@ def checkpoints_of(events: Sequence[LedgerEvent]) -> list[dict[str, Any]]:
             "files": [f["path"] for f in ship["payload"]["files"]] if ship else [],
             "ts": event["ts"],
         }
-        if ship is not None and "task_id" in ship["payload"]:
-            entry["task_id"] = ship["payload"]["task_id"]
+        entry["kind"] = "rewind" if ship is not None and ship["payload"].get("kind") == "rewind" else "ship"
+        for key in ("task_id", "turn_id", "rewind_to"):
+            if ship is not None and key in ship["payload"]:
+                entry[key] = ship["payload"][key]
         out.append(entry)
     return out
 
@@ -57,9 +60,44 @@ def folder_of(state_cwd: str, events: Sequence[LedgerEvent]) -> str:
 
 
 def checkpoint_list(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
+    """The kept ships of the session, each with its ``session_id``; with ``chain: true`` those of every engine session
+    of its thread (``continue.chain``), oldest first."""
     sid = session_id_of(params, session_id)
+    chain = params.get("chain", False)
+    if not isinstance(chain, bool):
+        raise InvalidParamsError("chain must be a boolean", data={"found": repr(chain)})
     rt = runtime()
-    return {"checkpoints": checkpoints_of(rt.ledger(rt.state(sid)).read())}
+    if not chain:
+        return {"checkpoints": [c | {"session_id": sid} for c in checkpoints_of(rt.ledger(rt.state(sid)).read())]}
+    from .continuation import chain_of
+
+    out: list[dict[str, Any]] = []
+    for part, events in chain_of(rt, sid):
+        out.extend(c | {"session_id": part} for c in checkpoints_of(events))
+    return {"checkpoints": out}
+
+
+def checkpoint_rewind(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
+    """``checkpoint.rewind {session_id, ship_id | null, dry_run?, expect_head?}`` (docs/specs/checkpoint-rewind.md
+    section 3): files only in S0, so ``conversation: true`` is invalid."""
+    from ..ship.rewind import rewind
+
+    sid = session_id_of(params, session_id)
+    if "ship_id" not in params:
+        raise InvalidParamsError("ship_id is required (a kept ship's id, or null for before the session's changes)")
+    ship_id = params["ship_id"]
+    if ship_id is not None and (not isinstance(ship_id, str) or not ship_id):
+        raise InvalidParamsError("ship_id must be a ship id or null", data={"found": repr(ship_id)})
+    dry_run = params.get("dry_run", False)
+    if not isinstance(dry_run, bool):
+        raise InvalidParamsError("dry_run must be a boolean")
+    expect = params.get("expect_head")
+    if expect is not None and (not isinstance(expect, str) or not expect):
+        raise InvalidParamsError("expect_head must be a ship id or a commit")
+    if params.get("conversation", False) is not False:
+        raise InvalidParamsError("rewinding the conversation is not available yet: only files can be rewound")
+    rt = runtime()
+    return rewind(rt, rt.state(sid), ship_id, dry_run=dry_run, expect_head=expect)
 
 
 def checkpoint_diff(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:

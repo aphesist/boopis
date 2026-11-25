@@ -280,9 +280,12 @@ def test_a_passing_ship_applies_checkpoints_and_records(make_session: MakeSessio
     assert decided["actor"] == "gate"
     assert decided["payload"]["verdict"] == "pass"
     assert decided["payload"]["enforcement"] == "sandboxed"
-    assert next(e for e in events if e["type"] == "checkpoint.committed")["payload"] == {
+    committed = next(e for e in events if e["type"] == "checkpoint.committed")["payload"]
+    assert {k: committed[k] for k in ("ship_id", "ref", "commit")} == {
         "ship_id": result["ship_id"], "ref": ref, "commit": commit,
     }  # fmt: skip
+    # the folder's state after the ship, which proves a later rewind overwrites nobody's work (checkpoint-rewind.md 4)
+    assert len(committed["folder_digest"]) == 64 and ["src/a.py", "100644"] == committed["folder_entries"][0][:2]
     assert SessionLedger(rt.ledger_path(SID)).verify()[0] is True
     assert live_journals(rt) == [], "the journal is discarded after a pass"
     done = [p for _, ev, p in ctx.emitted if ev == "ship.completed"]

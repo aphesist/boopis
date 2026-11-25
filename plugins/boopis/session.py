@@ -78,6 +78,13 @@ class SessionState:
     track: TurnTrack = field(default_factory=TurnTrack)  # who answers the current turn, and the one-turn exception
     run: RunBudget = field(default_factory=RunBudget)  # the current turn's spend against a bot's cap per run
     origin: TurnOrigin | None = None  # who started the current turn (``bots.origin``), said on a bot's approval cards
+    careful: str = ""  # the permission step (``policy.careful``); "" when nobody set one (today's behaviour)
+    surface: str = "cli"  # who opened it: the Session tab (``session``), a bot, or anything else (``cli``)
+    careful_next: str | None = None  # a step change held while a turn runs; applied when it ends
+    running: bool = False  # a turn of the session's own model is running (``pre_llm_call`` to ``on_session_end``)
+    continued: dict[str, Any] | None = None  # this session continues another (``continue.arm``): its link
+    continue_block: str | None = None  # the carried history, for the first user message (``pre_llm_call``)
+    rewound: dict[str, Any] | None = None  # files rewound since the model last looked: the next turn's notice
 
     @property
     def effective_mode(self) -> Mode:
@@ -239,6 +246,11 @@ class Runtime:
         nothing records a cwd from there: unknown stays unknown."""
         return self.state(session_id).cwd
 
+    def live_states(self) -> list[SessionState]:
+        """Every session this process holds now."""
+        with self._registry_lock:
+            return list(self._sessions.values())
+
     def forget(self, session_id: str) -> SessionState | None:
         self.cascades.forget(session_id)
         self.roster.forget(session_id)
@@ -278,6 +290,7 @@ class Runtime:
             origin=caller.state.origin,
             board_folder=self.boards() if bot is not None else None,
         )
+        base = replace(base, careful=caller.state.careful, surface=caller.state.surface)
         if caller.link is None:
             return replace(base, mode="ungoverned") if caller.state.track.active else base
         return replace(base, role="worker", ship_closed=caller.link.closed_reason())
@@ -303,6 +316,14 @@ class Runtime:
             if mode in ("governed", "ungoverned"):
                 state.mode = mode
                 state.locked = True
+            payload = opened[-1]["payload"]
+            if isinstance(payload.get("surface"), str):
+                state.surface = payload["surface"]
+            if isinstance(payload.get("careful"), str):
+                state.careful = payload["careful"]
+            for event in events:  # a step changed in place since (``careful.set``)
+                if event["type"] == "mode.changed" and event["payload"].get("scope") == "careful":
+                    state.careful = str(event["payload"].get("to") or state.careful)
 
     def _ledger_for(self, state: SessionState) -> SessionLedger:
         if state.ledger is None:
@@ -346,6 +367,8 @@ class Runtime:
         ladder: Mapping[str, Any] | None = None,
         gate_enabled: bool | None = None,
         start_tier: str | None = None,
+        careful: str | None = None,
+        surface: str | None = None,
     ) -> SessionState:
         state = self.state(session_id)
         with state.lock:
@@ -355,6 +378,10 @@ class Runtime:
                     data={"session_id": session_id, "mode": state.mode},
                 )
             state.mode = mode
+            if careful is not None:
+                state.careful = careful
+            if surface is not None:
+                state.surface = surface
             if ladder is not None:
                 state.ladder = ladder
             if gate_enabled is not None:
@@ -472,4 +499,11 @@ class Runtime:
             payload["gate_command_sha256"] = hashlib.sha256(gate.encode("utf-8")).hexdigest()
         if state.project is not None and state.project.trust != "absent":
             payload["project_trust"] = state.project.trust
+        if state.careful:
+            payload["careful"] = state.careful
+        if state.surface != "cli":
+            payload["surface"] = state.surface
+        if state.continued is not None:
+            payload["parent_session_id"] = state.continued["parent_session_id"]
+            payload["continued"] = {k: v for k, v in state.continued.items() if k != "parent_session_id"}
         self._ledger_for(state).append("session.opened", "plugin", payload)

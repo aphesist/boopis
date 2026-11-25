@@ -14,6 +14,10 @@ Order, first to last:
    role (orchestrator, worker) only its own boopis tools. It has no shell (``terminal``) at all, and its
    ``read_file`` and ``search_files`` reach only the workspace. No ``allow`` rule can widen it. Outside
    governed mode the cascade tool ``dispatch`` is refused: it has no cascade to run;
+4a. the permission scale (``policy/careful.py``, ADR-0057): on the Session tab's surface the engine's direct-write
+   tools are refused at every step and an unknown step runs read-only tools only; Supervised asks before every
+   ``ship`` and ``exec``, Auto-accept edits before every ``exec``; Auto and Full access skip step 7's network ask, and
+   Full access turns every ask into allow (blocks stay blocks);
 4b. for a session that runs for a bot, the bot's capability tier (``policy/tiers.py``): Block refuses, Ask asks a
    human at the engine's approval gate, Allow goes on (it never widens anything below);
 5. an ``ask`` rule asks a human;
@@ -33,6 +37,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from ..util.log import get_logger
+from . import careful
 from .data import Defaults, load_defaults
 from .denied import denied_read
 from .governed import governed_decision, outside_workspace
@@ -69,7 +74,7 @@ def _parsed(texts: tuple[str, ...]) -> tuple[Rule, ...]:
 def check(call: ToolCall, session: SessionPolicy) -> Decision:
     """Allow, block, ask a human, or modify. Never raises."""
     try:
-        decision = _check(call, session, load_defaults())
+        decision = careful.lift(_check(call, session, load_defaults()), session)
         if decision.kind == "allow" and call.tool == "kanban_create":
             from .kanban import decide as decide_card
 
@@ -126,6 +131,9 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
         return block(
             f"`{call.tool}` runs the governed model cascade and is available in governed mode only.", "ungoverned"
         )
+    step = careful.step_decision(call, session, defaults)
+    if step is not None:
+        return step
     if session.bot is not None:
         from .tiers import decide as decide_tier
 
@@ -138,7 +146,7 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
     for rule in _parsed(session.allow):
         if match_rule(rule, call, root, defaults, deny_like=False) is Match.YES:
             return ALLOW
-    if session.mode == "governed" and call.tool in defaults.network_tools:
+    if session.mode == "governed" and call.tool in defaults.network_tools and not careful.skips_network_ask(session):
         return _ask(
             "network", call, session
         )  # a read-only tool that sends data out: a human, or an allow rule, decides

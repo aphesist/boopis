@@ -103,3 +103,5 @@ class SessionPolicy:
     asked_by: str = ""  # who asked for the running turn, said on a bot's approval cards (``bots.origin``)
     origin: TurnOrigin | None = None  # where the running turn came from (``bots.origin``), for a bot's kanban cards
     board_folder: Callable[[str | None], str | None] | None = None  # a board's ``default_workdir``, ``bots.boards``
+    careful: str = ""  # the permission step (``policy.careful``): supervised, auto_edits, auto, full; "" unset
+    surface: str = "cli"  # who opened the session: the Session tab (``session``), a bot, or anything else (``cli``)
