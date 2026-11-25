@@ -46,6 +46,10 @@ that exists in the system."
    - **Dock K01–K08** (second set, one dock component) replace board 16's dock.
    - **Onboarding round 3** (`O-P*`, `O-S*`, `O-H*`, `O-B*`) replaces rounds 1 and 2.
    - **S17–S41** (session-boards) replace the earlier Session cards S1–S20 where both draw a screen.
+   - **S20–S23 replace boards 10 and 13** for a started session (thread, title pill, composer line). Boards 10–16
+     were approved at 06:25 on 23 Nov, the Session boards at 08:11–09:06 with the owner's picks. The lead briefed
+     the session builder with board 10 first and corrected it mid-step when the coverage map showed the conflict.
+   - The order boards were sent in is in `scratchpad/sent-files.json` (every file sent to the owner, with times).
 4. **The written spec:** `docs/design/v7/DESIGN-SYSTEM.md`, `SESSION-TAB.md`, `ORBS.md`, `ONBOARDING.md`,
    `docs/specs/*`. Where text and board differ, the board wins and the difference goes to the owner.
 5. **What v6 did.** Behaviour that worked is kept unless a decision removed it.
@@ -176,6 +180,37 @@ Until a 0.3.0 feature exists, its control on a 0.2.0 screen is disabled with a r
 - Member name colours: the kit's contrast-safe ones. File chips: the bare file name (lead's decision, unanswered).
 - Keybinds get their own pass. Ctrl+Enter steers with the queued message in a running session (S06).
 
+## 9b. The coverage map and the lead's resolutions (25 Nov)
+
+`docs/design/v7/COVERAGE.md` (branch `w33/coverage` 6507482d, to be merged into `w33/repass`): 427 rows in 19 areas:
+191 on a board, 37 decided, 197 derived, 2 unknown; 17 derived review batches; 34 conflicts. Top derived items: the
+command palette, everyday composer states, the bot settings sheet, New bot and New group, the form cards, the
+Settings pages no board draws, models and sign-ins, session parts with no board (council, menus, the rewind sheet,
+the details sections), the Store beyond its front page, narrow widths and failure screens.
+
+Resolutions the lead made (by the precedence of section 3 and the owner's leave to decide):
+- A started session follows S20–S23, not boards 10 and 13 (conflicts 1, 6). The Sessions sidebar is S17's inbox (2).
+- No bots in the Sessions tab outside the dock (3). The collapsed rail on Sessions holds the toggle, the upright
+  switch, "+" for New session, Store and Settings; nothing else (derived, lead's design).
+- The hand-off line is a SystemLine variant, shown when the provider reports a hand-off (4). K02-11's thread is not
+  a reference; board 11 is (5).
+- "+" in a session opens the add menu (attach as a chip, folder, mention a file, commands); in a bot's chat and a
+  room it opens the file picker. A click on the composer's line opens its quick menu (8, pick S05).
+- Keys: the owner's pick S06 stands (Ctrl+Enter steers, Enter while running queues); the keybind pass settles the
+  rest (9). The default step is Auto-accept edits (10, pick S02).
+- One word for refusing everywhere: "Deny" (11). A session's answers are S20's; a bot's are boards 11 and 12's.
+- Bots ask only through approvals; a bot's question on dock K03 is stale content (12).
+- Rewind takes S23's CheckpointBar look; "Undo" is the rewind with its dry-run sheet (13).
+- **A control whose feature does not exist yet is hidden, not disabled** (24): built against the capability map,
+  shown in the lab with the capability on. This replaces "disabled with a tooltip" and closes open question 1.
+- Settings nav follows the latest board, O-X02: General, Models, Connectors, Approvals, Sessions, Bots, Appearance,
+  Keyboard; Diagnostics inside General (15, 16). The open dock is one fixed size, 640 × 432 (20).
+- Still to decide when their step comes: the session details pane's sections (14), what General holds (17),
+  Settings > Sessions' Worktrees and Git groups (19), the dock's order without pins (21), where a floating notice
+  sits (31: currently the top of the work), where mods draw in v7 (32), first run's extra states (27).
+- For the owner in the next batch, not blocking: "you" in the Sessions foot (28), the Store's item marks (30: the
+  owner's brand tiles of 23 Nov against board 15's grey tiles; the lead keeps the brand tiles), light contrast (33).
+
 ## 10. State
 
 | Thing | Where |
@@ -198,8 +233,7 @@ line, presence detail (tool-in-use words, the needs-you row).
 **Open questions for the owner**
 0. (Answered 25 Nov: rail switch B, @all gold, dropped room features stay out, Stop and voice both, readable
    colours. Sent to the session builder as kit items.)
-1. In 0.2.0, a control whose feature comes in 0.3.0 (worktree selector, "Get more usage"): disabled with a reason
-   (current), or hidden?
+1. (Closed by the lead: hidden until the feature exists; told to the owner.)
 2. The rail's orb size: board 11 (matched) against the recorded "rail 36".
 3. From the first repass report: no attention dot on the Sessions / Bots pill; no "you" in the Sessions sidebar
    foot; short model names ("sonnet 5.5"); where a bot's role is shown.
