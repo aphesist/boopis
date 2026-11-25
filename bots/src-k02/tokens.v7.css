@@ -1,0 +1,267 @@
+/* Generated from tokens.v7.json by build-v7-css.mjs. A proposal: nothing in the app reads it yet. */
+:root, [data-theme="dark"] { color-scheme: dark;
+  --ink: #f5f5f5;
+  --bg-1: #0e0e0e;
+  --bg-2: #121212;
+  --bg-pane: #161616;
+  --bg-3: #1f1f1f;
+  --bg-4: #2c2c2c;
+  --bg-0: #171717;
+  --chip: #f5f5f514;
+  --text-strong: #f5f5f5;
+  --text: #f5f5f5;
+  --text-dim: #f5f5f5a8;
+  --text-quiet: #f5f5f58a;
+  --text-faint: #f5f5f561;
+  --icon: #f5f5f5e6;
+  --icon-quiet: #f5f5f58a;
+  --icon-off: #f5f5f54d;
+  --mark-off: #f5f5f561;
+  --fill-4: #f5f5f505;
+  --fill-2: #f5f5f50a;
+  --hover: #f5f5f50f;
+  --current: #f5f5f514;
+  --fill-active: #f5f5f533;
+  --hair: #f5f5f50a;
+  --line: #f5f5f50f;
+  --line-strong: #f5f5f51a;
+  --line-field: #f5f5f561;
+  --float-line: #f5f5f50f;
+  --composer-line: #f5f5f51a;
+  --spec: #ffffff08;
+  --spec-strong: #ffffff1f;
+  --selected: #f5f5f5;
+  --selected-hover: #dbdbdb;
+  --text-on-light: #121212;
+  --selected-off: #f5f5f521;
+  --accent: #5b5bd6;
+  --accent-text: #8b8dff;
+  --accent-soft: #5b5bd61f;
+  --focus: #8b8dff;
+  --red: #cf2b35;
+  --red-text: #ff6463;
+  --red-soft: #fc2c3e12;
+  --warn: #c8770c;
+  --warn-text: #e28600;
+  --owe: #c8770c;
+  --owe-text: #e28600;
+  --owe-soft: #f6941214;
+  --ok: #0e9f5a;
+  --ok-text: #00ba69;
+  --add: #00ba69;
+  --del: #ff6463;
+  --bubble-agent: #f5f5f50a;
+  --bubble-user: #f5f5f52e;
+  --bubble-user-text: #f5f5f5;
+  --find: #ffd60a38;
+  --scrim: #000000b2;
+  --shadow-inline: none;
+  --shadow-pop: none;
+  --shadow-modal: none;
+  --shadow-window: none;
+}
+[data-theme="light"] { color-scheme: light;
+  --ink: #1c1c1c;
+  --bg-1: #f5f5f5;
+  --bg-2: #fcfcfc;
+  --bg-pane: #ffffff;
+  --bg-3: #ffffff;
+  --bg-4: #f1f1f1;
+  --bg-0: #f7f7f7;
+  --chip: #1c1c1c0f;
+  --text-strong: #1c1c1c;
+  --text: #1c1c1c;
+  --text-dim: #1c1c1cad;
+  --text-quiet: #1c1c1c8f;
+  --text-faint: #1c1c1c66;
+  --icon: #1c1c1ce6;
+  --icon-quiet: #1c1c1c8f;
+  --icon-off: #1c1c1c4d;
+  --mark-off: #1c1c1c6b;
+  --fill-4: #1c1c1c05;
+  --fill-2: #1c1c1c0f;
+  --hover: #1c1c1c0f;
+  --current: #1c1c1c14;
+  --fill-active: #1c1c1c33;
+  --hair: #1c1c1c14;
+  --line: #1c1c1c1f;
+  --line-strong: #1c1c1c2e;
+  --line-field: #1c1c1c6b;
+  --float-line: #1c1c1c0d;
+  --composer-line: #1c1c1c14;
+  --spec: #ffffff00;
+  --spec-strong: #ffffff00;
+  --selected: #1c1c1c;
+  --selected-hover: #333333;
+  --text-on-light: #fcfcfc;
+  --selected-off: #1c1c1c21;
+  --accent: #5b5bd6;
+  --accent-text: #4546c8;
+  --accent-soft: #5b5bd614;
+  --focus: #4546c8;
+  --red: #cf2b35;
+  --red-text: #c4232f;
+  --red-soft: #cf2b3512;
+  --warn: #c8770c;
+  --warn-text: #a35600;
+  --owe: #c8770c;
+  --owe-text: #a35600;
+  --owe-soft: #c8770c14;
+  --ok: #0e9f5a;
+  --ok-text: #087a43;
+  --add: #087a43;
+  --del: #c4232f;
+  --bubble-agent: #1c1c1c0f;
+  --bubble-user: #1c1c1c;
+  --bubble-user-text: #fcfcfc;
+  --find: #ffd60a59;
+  --scrim: #00000080;
+  --shadow-inline: 0 4px 12px -1px #1c1c1c14, 0 2px 4px -2px #1c1c1c0f, 0 0 0 1px #1c1c1c03;
+  --shadow-pop: 0 10px 20px -3px #1c1c1c1a, 0 4px 6px -4px #1c1c1c1a, 0 0 0 1px #1c1c1c03;
+  --shadow-modal: 0 20px 32px -5px #1c1c1c1a, 0 8px 12px -6px #1c1c1c1a, 0 0 0 1px #1c1c1c03;
+  --shadow-window: 0 22px 70px 4px #1c1c1c8f, 0 0 0 0.5px #1c1c1c1a;
+}
+:root {
+  --dock-bg: #000000;
+  --on-accent: #ffffff;
+  --sans: 'Geist', system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+  --track: 0.01em;
+  --track-s: 0.015em;
+  --fs-2xs: 11px;
+  --lh-2xs: 16px;
+  --fs-xs: 12px;
+  --lh-xs: 16px;
+  --fs-s: 13px;
+  --lh-s: 18px;
+  --fs-m: 14px;
+  --lh-m: 20px;
+  --fs-l: 15px;
+  --lh-l: 22px;
+  --fs-xl: 17px;
+  --lh-xl: 24px;
+  --fs-2xl: 22px;
+  --lh-2xl: 28px;
+  --fs-3xl: 26px;
+  --lh-3xl: 32px;
+  --r-pill: 9999px;
+  --r-composer: 22px;
+  --r-block: 22px;
+  --r-bubble: 18px;
+  --r-dialog: 20px;
+  --r-menu: 16px;
+  --r-card: 14px;
+  --r-tile: 12px;
+  --r-field: 10px;
+  --r-nav: 8px;
+  --r-tip: 6px;
+  --r-xs: 4px;
+  --r-slab: 30px;
+  --r-floor: 6px;
+  --corner-smoothing: 0.6;
+  --pad-menu: 6px;
+  --pad-palette: 6px;
+  --composer-pad: 8px;
+  --pad-dialog: 10px;
+  --pad-card: 8px;
+  --pad-bubble: 8px;
+  --pad-seg: 2px;
+  --pad-tile: 9px;
+  --pad-dock: 12px;
+  --pad-block: calc(var(--r-block) - var(--ctl-s) / 2);
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --row-h: 32px;
+  --row-h-2: 54px;
+  --ctl: 36px;
+  --ctl-card: 32px;
+  --ctl-s: 28px;
+  --hit-min: 28px;
+  --composer-h: 44px;
+  --pill-h: 40px;
+  --chrome-y: 10px;
+  --drag-h: 56px;
+  --sb-rail-w: 88px;
+  --right-w: 356px;
+  --bubble-max: 560px;
+  --col-w: 640px;
+  --dialog-l: 900px;
+  --dialog-form: 460px;
+  --palette-w: 640px;
+  --set-nav-w: 220px;
+  --ease-sharp: cubic-bezier(.165, .84, .44, 1);
+  --spring: cubic-bezier(.22, 1, .36, 1);
+  --ease-drawer: cubic-bezier(.32, .72, 0, 1);
+  --ease-out: ease-out;
+  --ease-io: ease-in-out;
+  --dur-press: 50ms;
+  --dur-1: 120ms;
+  --dur-out: 100ms;
+  --dur-pop: 100ms;
+  --dur-2: 200ms;
+  --dur-dot: 130ms;
+  --dur-slide: 200ms;
+  --dur-3: 300ms;
+  --dur-hold: 1000ms;
+  --dur-breathe: 1.4s;
+  --dur-shimmer: 2.2s;
+  --dur-hold-phrase: 800ms;
+  --mark-dash: 3px;
+  --mark-gap: 2px;
+  --mark-thick: 1px;
+  --mark-offset: 3px;
+  --mark-color: var(--mark-off);
+  --mark-color-hover: var(--text-dim);
+  --mark-color-open: var(--text);
+  --mark-color-chosen: var(--accent);
+  --mark-dur-in: 180ms;
+  --mark-dur-out: 120ms;
+  --mark-ease: var(--ease-sharp);
+  --mark-color-waiting: var(--owe);
+  --mark-color-guess: var(--mark-color);
+  --shadow-composer: 0 2px 8px -1px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.03), 0 0 0 1px rgba(228,228,228,.04);
+  --hl: 0.5px;
+}
+/* options (the boards) */
+[data-font="inter"] { --sans: 'Inter', system-ui, sans-serif; }
+[data-font="figtree"] { --sans: 'Figtree', system-ui, sans-serif; }
+[data-font="geist"] { --sans: 'Geist', system-ui, sans-serif; }
+[data-radii="a"] { --corner-smoothing: 0; }
+[data-radii="c"] { --r-bubble: 22px; --r-dialog: 24px; --r-menu: 18px; --r-card: 16px; --r-tile: 16px; --r-field: 12px; --r-nav: 10px; --r-tip: 8px; --r-composer: 22px; }
+[data-theme="light"][data-shadow="b"], [data-theme="light"] [data-shadow="b"] {
+  --shadow-inline: 0 2px 6px -1px #1c1c1c0d, 0 0 0 0.5px #1c1c1c1f; --shadow-pop: 0 6px 14px -3px #1c1c1c12, 0 0 0 0.5px #1c1c1c24;
+  --shadow-modal: 0 12px 24px -6px #1c1c1c14, 0 0 0 0.5px #1c1c1c24; --float-line: #1c1c1c1f; }
+[data-theme="light"][data-shadow="c"], [data-theme="light"] [data-shadow="c"] {
+  --shadow-inline: 0 0 0 0.5px #1c1c1c24; --shadow-pop: 0 0 0 0.5px #1c1c1c2e; --shadow-modal: 0 0 0 0.5px #1c1c1c2e; --float-line: #1c1c1c2e; }
+[data-accent="ink"] { --on-accent: var(--text-on-light); --accent: var(--selected); --accent-text: var(--text); --focus: var(--text-dim); --accent-soft: var(--current); }
+[data-theme="dark"] [data-accent="brass"], [data-theme="dark"][data-accent="brass"] { --accent: #c8a66a; --accent-text: #d9bd88; --focus: #c8a66a; --accent-soft: #c8a66a1f; }
+[data-theme="light"] [data-accent="brass"], [data-theme="light"][data-accent="brass"] { --accent: #8a6a2c; --accent-text: #7a5c22; --focus: #8a6a2c; --accent-soft: #8a6a2c1a; }
+/* the colour of what the person owes, resolved where the theme is declared */
+/* board 09's attention options; the owner picked amber (--owe from the tokens) */
+[data-attention="red"] { --owe: var(--red); --owe-text: var(--red-text); --owe-soft: var(--red-soft); }
+/* the five indigo candidates (preview P1): fill, then the text shades per theme */
+[data-accent="iris"] { --accent: #5b5bd6; --on-accent: #fff; }
+[data-accent="indigo"] { --accent: #4f46e5; --on-accent: #fff; }
+[data-accent="ultramarine"] { --accent: #3e4fd8; --on-accent: #fff; }
+[data-accent="violet"] { --accent: #5e4ad9; --on-accent: #fff; }
+[data-accent="soft"] { --accent: #6366f1; --on-accent: #fff; }
+[data-theme="dark"] [data-accent="iris"], [data-theme="dark"][data-accent="iris"] { --accent-text: #8b8dff; --focus: #8b8dff; --accent-soft: #5b5bd61f; }
+[data-theme="light"] [data-accent="iris"], [data-theme="light"][data-accent="iris"] { --accent-text: #4546c8; --focus: #4546c8; --accent-soft: #5b5bd614; }
+[data-theme="dark"] [data-accent="indigo"], [data-theme="dark"][data-accent="indigo"] { --accent-text: #8f8cff; --focus: #8f8cff; --accent-soft: #4f46e51f; }
+[data-theme="light"] [data-accent="indigo"], [data-theme="light"][data-accent="indigo"] { --accent-text: #4338ca; --focus: #4338ca; --accent-soft: #4f46e514; }
+[data-theme="dark"] [data-accent="ultramarine"], [data-theme="dark"][data-accent="ultramarine"] { --accent-text: #7d8cff; --focus: #7d8cff; --accent-soft: #3e4fd81f; }
+[data-theme="light"] [data-accent="ultramarine"], [data-theme="light"][data-accent="ultramarine"] { --accent-text: #3241c4; --focus: #3241c4; --accent-soft: #3e4fd814; }
+[data-theme="dark"] [data-accent="violet"], [data-theme="dark"][data-accent="violet"] { --accent-text: #9d8cff; --focus: #9d8cff; --accent-soft: #5e4ad91f; }
+[data-theme="light"] [data-accent="violet"], [data-theme="light"][data-accent="violet"] { --accent-text: #4d3bc4; --focus: #4d3bc4; --accent-soft: #5e4ad914; }
+[data-theme="dark"] [data-accent="soft"], [data-theme="dark"][data-accent="soft"] { --accent-text: #9497ff; --focus: #9497ff; --accent-soft: #6366f11f; }
+[data-theme="light"] [data-accent="soft"], [data-theme="light"][data-accent="soft"] { --accent-text: #4f4fd8; --focus: #4f4fd8; --accent-soft: #6366f114; }
+[data-accent="blue"] { --accent: #116dd2; --on-accent: #fff; }
+[data-theme="dark"] [data-accent="blue"], [data-theme="dark"][data-accent="blue"] { --accent-text: #4d9bff; --focus: #4d9bff; }
+[data-theme="light"] [data-accent="blue"], [data-theme="light"][data-accent="blue"] { --accent: #1680f3; --accent-text: #0b6dd3; --focus: #0b6dd3; }
+[data-theme="dark"], :root { --seg-on: var(--current); --seg-on-sh: none; --card-line: var(--hair); }
+[data-theme="light"] { --seg-on: var(--bg-3); --seg-on-sh: inset 0 0 0 var(--hl) var(--line), var(--shadow-inline); --card-line: var(--float-line); }
