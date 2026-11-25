@@ -67,7 +67,7 @@ if (want('axe')) {
   const STATES = [
     ['session', {}, null], ['bots', {}, (p) => p.keyboard.press('Alt+2')], ['details panel', {}, (p) => p.keyboard.press('Control+i')],
     ['bots settings sheet', {}, async (p) => { await p.keyboard.press('Alt+2'); await p.waitForTimeout(500); await p.keyboard.press('Control+i'); }],
-    ['bots archived group expanded', { q: 'fixture=outside' }, async (p) => { await p.keyboard.press('Alt+2'); await p.waitForTimeout(500); await p.click('.bt-rows [data-kit~="ListRow"][data-value="sage"]'); await p.click('.bt-archived .ui-group__head'); await p.locator('.bt-archived .ui-row-wrap').first().hover(); }],
+    ['bots archived group expanded', { q: 'fixture=outside' }, async (p) => { await p.keyboard.press('Alt+2'); await p.waitForTimeout(500); await p.click('.bt-rows [data-kit~="ListRow"][data-value="sage"]'); await p.click('.bt-archived .k7-shead__btn'); await p.locator('.bt-archived [data-kit~="ListRow"]').first().hover(); }],
     ['bots rail with the archived group', {}, async (p) => { await p.keyboard.press('Alt+2'); await p.evaluate(() => __hx.setState({ left: 'rail' })); }],
     ['palette', {}, (p) => p.keyboard.press('Control+k')], ['settings', {}, (p) => p.keyboard.press('Control+Comma')],
     ['settings models', {}, async (p) => { await p.keyboard.press('Control+Comma'); await p.waitForTimeout(300); await p.click('#hx-dtab-models'); }],

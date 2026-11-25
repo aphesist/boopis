@@ -9,6 +9,10 @@ looks.** A screen in the app is done when it matches its board, in dark and ligh
 - `src/jobs-*.json` list every rendered board with its parameters.
 - The orb library is not copied here. Point `screen.html` at the app's vendored `orb-avatar` to render.
 
+- `src-k02/` is the source of the later board K02 (the owner's 23 November picks for the Bots sidebar: the main bot at 44, rows
+  of 28, the switch in the sidebar; `bots/K02-*.jpg` in the archive): only the files it changed, the rest are `src/`'s
+  (`screen.html?s=room&sidebar=open&queue=1&main=44`). Where it and `src/` disagree on the Bots sidebar, K02 is the later decision.
+
 The written spec is `../DESIGN-SYSTEM.md` and `../SESSION-TAB.md`. Where the spec and a board differ, ask the owner.
 
 ## Comparing the app with a board

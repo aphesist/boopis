@@ -58,6 +58,11 @@ and of the window without the orbs (a live orb is caught mid-behaviour, so two r
 orbs as boxes (how many, where, their look and reaction); and it checks the board's source against the approved image in
 `origin/w33/boards-archive` (or `--approved <dir>`), so the reference is known to be what the owner approved.
 
+A row with `scope` is the reference for the regions it names only, and is measured over those: board 12 is the room's (chrome,
+thread, composer) while the sidebar beside it is board K02's, a row of its own (`K02-12-sidebar`, source `/__boards/k02/`:
+`docs/design/v7/boards/src-k02` over `src`). A region of six numbers `[x, y, w, h, dx, dy]` says the app's part sits `dx, dy` from
+the board's (`K02-12-held`: K02 drew the composer 4 lower than board 12 did).
+
 `tests/lab/boards.json` maps a board to its story: a later screen adds a fixture, a state in `boards.stories.ts` and a row there.
 A screen is done when its difference is the orbs' alone, in dark and light. `--max <percent>` makes it a gate.
 

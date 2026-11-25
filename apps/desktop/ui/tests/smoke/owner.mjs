@@ -136,25 +136,25 @@ export async function ownerDecisions(env) {
   /* archived bots: a collapsed group under the roster, with a count; open, each shows its name, when it was archived and Restore */
   page = await s.fresh();
   await page.keyboard.press('Alt+2'); await page.waitForTimeout(500);
-  const ag = () => ev(() => { const h = document.querySelector('.bt-archived .ui-group__head'); const rows = [...document.querySelectorAll('.bt-archived .ui-row')]; return { head: h && h.textContent, open: h && h.getAttribute('aria-expanded'), visible: rows.filter((r) => r.offsetParent !== null).length, names: rows.map((r) => r.querySelector('.ui-row__title').textContent), subs: rows.map((r) => r.querySelector('.ui-row__sub').textContent), bots: document.querySelectorAll('.bt-rows [data-kit~="ListRow"]').length, rail: getComputedStyle(document.querySelector('.bt-archived')).display }; });
+  const ag = () => ev(() => { const h = document.querySelector('.bt-archived .k7-shead__btn'); const rows = [...document.querySelectorAll('.bt-archived [data-kit~="ListRow"]')]; return { head: h && h.textContent, open: h && h.getAttribute('aria-expanded'), visible: rows.filter((r) => r.offsetParent !== null).length, names: rows.map((r) => r.querySelector('.k7-lrow__title').textContent), subs: rows.map((r) => r.querySelector('.k7-lrow__sub').textContent), bots: document.querySelectorAll('.bt-rows [data-kit~="ListRow"]').length, rail: getComputedStyle(document.querySelector('.bt-archived')).display }; });
   const a0 = await ag();
-  check('owner', 'the Archived group sits under the roster with its count, collapsed: no archived bot shows', /^Archived \(2\)$/.test((a0.head ?? '').trim()) && a0.open === 'false' && a0.visible === 0, a0);
-  await page.click('.bt-archived .ui-group__head'); await page.waitForTimeout(300);
+  check('owner', 'the Archived group sits under the roster with its count, collapsed: no archived bot shows', /^Archived\s*2$/.test((a0.head ?? '').trim()) && a0.open === 'false' && a0.visible === 0, a0);
+  await page.click('.bt-archived .k7-shead__btn'); await page.waitForTimeout(300);
   const a1 = await ag();
-  check('owner', 'opened, each archived bot shows its name and when it was archived, and has Restore', a1.open === 'true' && a1.visible === 2 && a1.names.join() === 'ledger,nina' && a1.subs.join() === 'Archived yesterday,Archived mon' && (await page.locator('.bt-archived .ui-row-wrap').first().evaluate((li) => { li.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); return !!li.querySelector('[data-act="restore"][aria-label="Restore ledger"]'); })), a1);
+  check('owner', 'opened, each archived bot shows its name and when it was archived, and has Restore', a1.open === 'true' && a1.visible === 2 && a1.names.join() === 'ledger,nina' && a1.subs.join() === 'Archived yesterday,Archived mon' && (await page.locator('.bt-archived [data-kit~="ListRow"]').first().evaluate((li) => { li.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); return !!li.querySelector('[data-act="restore"][aria-label="Restore ledger"]'); })), a1);
   await page.reload(); await page.waitForTimeout(800);
   await page.keyboard.press('Alt+2'); await page.waitForTimeout(500);
   const a2 = await ag();
   check('owner', 'the group stays open after a reload: it is remembered per user', a2.open === 'true' && a2.visible === 2, a2);
   /* a refusal: nina's name is in use, so the archived nina stays */
-  await page.locator('.bt-archived .ui-row-wrap >> nth=1').hover();
+  await page.locator('.bt-archived [data-kit~="ListRow"] >> nth=1').hover();
   await page.click('.bt-archived [data-act="restore"][aria-label="Restore nina"]'); await page.waitForTimeout(500);
-  const refused = await ev(() => ({ toast: document.querySelector('.k7-notify .k7-notice__text')?.textContent, archived: document.querySelectorAll('.bt-archived .ui-row').length, nina: [...document.querySelectorAll('.bt-rows [data-kit~="ListRow"]')].filter((r) => r.dataset.value === 'nina').length }));
+  const refused = await ev(() => ({ toast: document.querySelector('.k7-notify .k7-notice__text')?.textContent, archived: document.querySelectorAll('.bt-archived [data-kit~="ListRow"]').length, nina: [...document.querySelectorAll('.bt-rows [data-kit~="ListRow"]')].filter((r) => r.dataset.value === 'nina').length }));
   check('owner', 'restoring a bot whose name is in use is refused in words, and nothing moves', /^Could not restore nina: there is a teammate called nina already; archive or delete it, then restore$/.test(refused.toast ?? '') && refused.archived === 2 && refused.nina === 1, refused);
-  await page.locator('.bt-archived .ui-row-wrap >> nth=0').hover();
+  await page.locator('.bt-archived [data-kit~="ListRow"] >> nth=0').hover();
   await page.click('.bt-archived [data-act="restore"][aria-label="Restore ledger"]'); await page.waitForTimeout(600);
-  const back = await ev(() => ({ toast: document.querySelector('.k7-notify .k7-notice__text')?.textContent, head: document.querySelector('.bt-archived .ui-group__head')?.textContent.trim(), ledger: !!document.querySelector('.bt-rows [data-kit~="ListRow"][data-value="ledger"]'), dock: !!document.querySelector('#hx-dock .dk-bot[data-id="ledger"]'), focus: document.activeElement?.dataset?.value }));
-  check('owner', 'Restore brings the bot back into the roster and the dock, says so, and the group counts one fewer', back.toast === 'Restored ledger' && back.head === 'Archived (1)' && back.ledger && back.dock && back.focus === 'ledger', back);
+  const back = await ev(() => ({ toast: document.querySelector('.k7-notify .k7-notice__text')?.textContent, head: document.querySelector('.bt-archived .k7-shead__btn')?.textContent.trim(), ledger: !!document.querySelector('.bt-rows [data-kit~="ListRow"][data-value="ledger"]'), dock: !!document.querySelector('#hx-dock .dk-bot[data-id="ledger"]'), focus: document.activeElement?.dataset?.value }));
+  check('owner', 'Restore brings the bot back into the roster and the dock, says so, and the group counts one fewer', back.toast === 'Restored ledger' && /^Archived\s*1$/.test(back.head ?? '') && back.ledger && back.dock && back.focus === 'ledger', back);
 
   /* the palette's "Restore bot…" lists the archived bots alone and restores the chosen one (or says why not) */
   page = await s.fresh();

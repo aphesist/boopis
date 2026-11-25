@@ -32,7 +32,17 @@ at each end), the Notice (the boards' `.notice`), the SelectorItem (the boards' 
 Button (line-height 1), the logomark (72 box, 44 type size), the StatusLine and TimeSeparator (the thread's own 20 line), the
 Block's text rows (4 at the start only), and every orb (eyes cut to its surface's colour; the boopis bot in ink). New from the
 boards: `kit.fileCard` (a file a bot wrote), `kit.toolRow({ variant: 'bot' })` (a bot's tool call) and the boards' named sizes in
-`scripts/build-tokens-v7.mjs`.
+`scripts/build-tokens-v7.mjs`. Corrected with boards 12 and K02 (the room and the Bots sidebar): the ListRow (a bot's orb 28 and
+the amber dot at the row's end in place of a flag on the orb; a new `head` variant, the main bot at 44 over its name; `actionAttrs`
+on an item's action), the Bubble (a member's name on the 20 line, 14 under what it follows; a message to you is the amber wash
+alone, no edge bar; the gutter's orb at rest, its eyes cut to the ground), the InlineChip (a mention is set in the line as the
+boards' `.mention`, a control where it opens the bot, the room's stack for @all, muted for a bot that is not here; the "you"
+capsule and the reference pill on the boards' own 18 line; inline code on the line's own height; new `cite`, a source; `words`,
+a chip set into a composer's text), the SystemLine (13 on the 20 line, a 16 glyph), the StatusLine (a room's stack on the
+phrase's baseline), the Queue (held: the clock, Send now's tip, an Edit that shows with the pointer or the focus), the stacks
+(`kitStack`: neighbours a whole two thirds of an orb apart, no room around them), the Pane (a room's stack heads its details) and
+the Composer (mentions and files as chips in the text: `kit.mentions({ chips })`, `kit.composerChips`, `kit.composerInsertChip`;
+the "@" list under its heading, kept open while you type). New: `kit.sidebarFoot` (you, Store, Settings).
 
 **What each component the converted screens use is, and its board** (boards 11, 17 and S17; `pnpm lab:board`):
 
@@ -53,14 +63,25 @@ boards: `kit.fileCard` (a file a bot wrote), `kit.toolRow({ variant: 'bot' })` (
 | `kit.notice` | a limit: glyph, `title` and words, a ghost action, dismiss | kit.css `.notice` |
 | `kit.avatar({ variant: 'logomark' })`, `.k7-type-2xl` | the new session's mark and greeting | kit.css `.ns-mark`, `.ns-h` |
 | `kit.dock` | the row: orbs, the flag, the ask pill | dockv7.js |
+| `kit.listRow` (the Bots list) | `head` (the main bot at 44 over its name), `bot` (a 28 orb at rest, the name, one line; "Needs you: ..." in amber with the amber dot at the end; a room's row led by its members' stack at 24), `item` (an archived bot or room with Restore); hover, focus, pressed, current, long names | K02 screens.js `sidebarOpen`, kit.css `.sb-main`, `.sb-row` |
+| `kit.sectionHead` | "Groups"; "Archived" with its count, folding | K02 kit.css `.sb-head` |
+| `kit.sidebarFoot` | you (a 32 circle at --current, the name), Store, Settings; hover, focus, the menu open, a long name, without the account (the Sessions side) | botscreens.js `sidebarG` `.foot-ctl` |
+| `kit.bubble` in a room | yours in ink with mention chips; a member's with its name in its colour over the first of its run and its 20 orb in the gutter; a message to you (the "you" capsule, the amber wash) | botscreens.js `room12` `said`, kit.css `.gname`, `.gutter` |
+| `kit.inlineChip` | `mention` (a bot, the room's stack, a bot that is not here; a control in a message; `words` in a composer), `you`, `code`, `cite` (a source), `reference` (a path that opens; a file in a composer) | kit.css `.mention`, `.you`, `.cite`, `.refchip`, `.b code` |
+| `kit.systemLine` | a line the room says; `icon: 'clock'` for a routine made; `action` (Let them continue) | kit.css `.sysline` |
+| `kit.statusLine` (a room) | the members' stack at 16 and "kai and moss are replying" | botscreens.js `room12` `.activity` |
+| `kit.askCard` in a room | a member's approval in the gutter under what it said | botscreens.js `room12` |
+| `kit.queue({ variant: 'held' })` | the clock, "N message(s) wait until the discussion ends", Send now (its tip says what it stops), Edit on hover or focus | K02 kit.css `.queue-held` |
+| `kit.composer({ kind: 'room' })` | "Message <room>", its line ("@" N members, the cost), a hint (who answers first); mentions and files as chips; the "@" Menu under its heading | botscreens.js `room12` `comp`, sessiontab2.js `s11` (the composer's lists) |
+| `kit.pane({ members })` | a room's details: its stack, its name, pane cards (members; name, members, run limit, board, archive) | no board (it follows botscreens.js `pane`): an owner question |
 
-A module composes these and places them; its CSS holds placement only (`bots.css` "board 11", `session.css` "board S17").
+A module composes these and places them; its CSS holds placement only (`bots.css` "boards 11, 17 and 12", `session.css` "board S17").
 
 | # | Component | `kit.` | Story | Variants built |
 |---|---|---|---|---|
 | 1 | WindowChrome | `windowChrome` (`titlePill`, `searchHint` inside) | `kit/window-chrome` | rail A, compact B; title idle, running; search hint S5, button S1, pill S2, off |
 | 2 | Page | `page`, `section` | `kit/page` | column, settings page with its scope; empty |
-| 3 | Pane | `pane` | `kit/pane` | details (bot, session), tools (Diff, Files, Terminal, PR, side chat); overlay |
+| 3 | Pane | `pane` | `kit/pane` | details (bot, session, room), tools (Diff, Files, Terminal, PR, side chat); overlay |
 | 4 | Dialog | `dialog` | `kit/dialog` | large (Settings), form (commit, new bot, import, confirm); error |
 | 5 | Menu | `menu`, `openMenu` | `kit/menu` | menu, quick, palette / @ $, snooze, split, options; open, flipped |
 | 6 | Card | `card` (and its Row) | `kit/card` | settings, pane, danger zone collapsed and open |
@@ -68,13 +89,13 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 8 | ToolRow | `toolRow` | `kit/tool-row` | edit, command, read, search; running, done, failed, waiting |
 | 9 | AskCard | `askCard` | `kit/ask-card` | standalone, attached, question, choices, lapsed; asked, needs, answered, hold at 50% |
 | 10 | FilesCard | `filesCard` | `kit/files-card` | 1 file, 12 files; collapsed, open |
-| 11 | Queue | `queue` | `kit/queue` | list 1, 3, 9; held; editing |
+| 11 | Queue | `queue` | `kit/queue` | list 1, 3, 9; held (with Edit: at rest, hovered, focused, narrow); editing |
 | 12 | Notice | `notice` | `kit/notice` | composer, page, floating; neutral, amber, accent, red; 0 to 2 actions; dismiss |
 | 13 | SystemLine | `systemLine` | `kit/system-line` | info, steer, hand-off, error with its action |
 | 14 | Bubble | `bubble` | `kit/bubble` | user, agent, a bot's fill, room byline, brand tile, you wash, code |
 | 15 | DiffView | `diffView` | `kit/diff-view` | stacked, split; comment, comment focused |
 | 16 | Well | `well` | `kit/well` | code in a Block and a bubble, terminal |
-| 17 | ListRow | `listRow`, `list` | `kit/list-row` | session, bot, item, compact; current, needs you, working |
+| 17 | ListRow | `listRow`, `list` | `kit/list-row` | session, bot, head, item, compact; current, needs you, working; the Bots list (hover, focus, pressed, the main bot open, narrow with long names, no rows, archived items) |
 | 18 | SectionHead | `sectionHead` | `kit/section-head` | plain, count, disclosure; collapsed |
 | 19 | MenuRow | `menuRow` | `kit/menu-row` | glyph, description, kbd, danger, check |
 | 20 | OptionRow | `optionRow` | `kit/option-row` | permission step, import pick; disabled (a step that cannot be honoured: its line says why) |
@@ -87,7 +108,7 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 27 | Kbd | `kbd` | `kit/kbd` | in text, in a pill |
 | 28 | Chip | `chip` | `kit/chip` | answer, filter, mode |
 | 29 | Tooltip | `tooltip` (the runtime `[data-tip]`, restyled on a v7 root) | `kit/tooltip` | name, name and keys |
-| 30 | InlineChip | `inlineChip` | `kit/inline-chip` | mention, you, reference, code, model, countdown; 13, 14, 15 |
+| 30 | InlineChip | `inlineChip` | `kit/inline-chip` | mention (a bot, the room, a bot that is not here; hover, focus), you, reference, code, cite, model, countdown; 13, 14, 15; chips of a composer's text |
 | 31 | Mark | `mark`, `markReveal` | `kit/mark` | feedforward, blank (waiting, opened, filled, lapsed), info label |
 | 32 | StatusWord | `statusWord` | `kit/status-word` | neutral, amber, red, ok; dot, pulse |
 | 33 | Badge | `badge` | `kit/badge` | neutral, amber |
@@ -96,10 +117,11 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 36 | Disclosure | `disclosure` | `kit/disclosure` | steps, work log |
 | 37 | TurnFoot | `turnFoot` | `kit/turn-foot` | bot, session (actions on hover; `actions` names them, e.g. the S0 rewind) |
 | 38 | TimeSeparator | `timeSeparator` | `kit/time-separator` | a gap, NEW |
-| 39 | Composer | `composer` | `kit/composer` | session, bot, room, dock, notch; typed, multi-line, running, held, no model, quick menu |
+| 39 | Composer | `composer` | `kit/composer` | session, bot, room, dock, notch; typed, multi-line, running, held, no model, quick menu; a room's line and hint; chips in the text (and narrow); the "@" list open |
 | 40 | Rail | `rail` | `kit/rail` | A, B; current, needs you, working; groups (decided, owner, 25 November 2026: a room's cluster is at most three orbs in their triangle, at 15, or 12 on the compact rail; the members past three are a "+N" chip clear of the orbs on the cluster's right, a filled pill in the line stack's counter colours, half a cluster orb tall, so the compact rail's is smaller) |
 | 41 | Dock | `dock` | `kit/dock` | row, compact, open (stack, card); hover, focus, many |
 | 42 | Notch | `notch` | `kit/notch` | the slab and its composer (the notch spec is not in this repository) |
+| — | SidebarFoot | `sidebarFoot` | `kit/sidebar-foot` | you, Store, Settings; hover, focus, pressed, the menu open, a long name, no account, narrow |
 | — | EmptyState | `emptyState` | `kit/empty-state` | one line, at most one action |
 | — | Session S0 patterns | `modules/session/s0.ts` | `kit/session-launch`, `kit/session-rewind`, `kit/session-lines` | the new session's canvas and launch row, the four-row How careful menu, the rewind foot and sheet, the thread's own lines (wave C, `w33/session-s0`) |
 
@@ -117,11 +139,13 @@ roster's rows and its rooms' rows (ListRow, SectionHead "Groups", New group a gh
 compact under 1200 px, rest-pose orbs); a bot's and a room's messages (Bubble, with the bot's derived fill in its own chat and a
 member's byline and orb in a room, the message to you washed amber, TimeSeparator, the turn's hover actions as ghost IconButtons); a
 bot's approval (AskCard, approval variant: Hold to allow once and Deny); the shell's and the Bots tab's confirmations (the floating
-Notice, `kit.notify`). Their stories are `src/lab/stories/v7/` (blocking on the v7 rules). **Still v6 in those surfaces:** the
-composers (`ui.composer`: its mentions, voice and queue machinery have no kit counterpart yet), a room's header (rename, members,
-run limit, board, archive) and its huddles, the presence entry ("who is at work"), the Archived group, the bot settings sheet (the
-details pane is not drawn yet), the new-bot and new-group forms, the session list's rows (w33/session-s0), the palette, and Settings,
-Store and Keyboard (w33/settings-store).
+Notice, `kit.notify`). Their stories are `src/lab/stories/v7/` (blocking on the v7 rules). **Since the repass's boards 11, 17, 12
+and K02** a bot's chat, a room and the Bots sidebar are the kit's throughout: the composers (the kit's Composer; "@" a kit Menu,
+mentions and files chips in the text), who is replying (StatusLine), a room's held messages (Queue), its own controls in the
+details pane (Pane), the Archived group (SectionHead and ListRow items), a live bot's empty thread (EmptyState; its sessions are
+in its details). The v6 room header, presence entry, huddle fold, held strip, ledger lines and glance are deleted. **Still v6 in
+the Bots tab:** the bot settings sheet, the new-bot and new-group forms, a room's kanban board view; and outside it the session's
+conversation and composer (`ui.composer`, `ui.presence`, `components/mentions.ts`), the palette, and Settings, Store and Keyboard.
 
 ## The kit as a package
 
