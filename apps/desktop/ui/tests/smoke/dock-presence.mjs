@@ -175,7 +175,7 @@ export async function dockPresence(env) {
     await wait(600);
     const tapped = await page.evaluate(() => ({ attr: document.querySelector('#hx-dock .dk').hasAttribute('data-reveal'), op: +getComputedStyle(document.querySelector('#hx-dock .dk-foot-ctl')).opacity }));
     check('presence', 'a tap on the dock reveals them', tapped.attr && tapped.op === 1, tapped);
-    await page.evaluate(() => { const o = { bubbles: true, pointerType: 'touch', pointerId: 8, clientX: 300, clientY: 200, isPrimary: true }; document.querySelector('#hx-where-title').dispatchEvent(new PointerEvent('pointerdown', o)); });
+    await page.evaluate(() => { const o = { bubbles: true, pointerType: 'touch', pointerId: 8, clientX: 300, clientY: 200, isPrimary: true }; document.querySelector('#hx-btn-title .k7-title__name').dispatchEvent(new PointerEvent('pointerdown', o)); });
     await wait(600);
     const away = await page.evaluate(() => document.querySelector('#hx-dock .dk').hasAttribute('data-reveal'));
     check('presence', 'and a tap elsewhere puts them away', !away, away);

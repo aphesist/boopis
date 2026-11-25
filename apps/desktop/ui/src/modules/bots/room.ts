@@ -491,8 +491,14 @@ export function onBotsEvent(ev: BotsEvent, handlers: { announce: () => void }): 
       const list = thread(ev.botId), i = list.findIndex((x) => x.id === ev.messageId), m = list[i];
       if (!m || m.kind !== 'approval') return;
       list[i] = { ...m, resolved: ev.resolved, resolvedAt: ev.resolvedAt };
-      const card = NODE.get(ev.messageId)?.querySelector<HTMLElement & { update?: (p: Record<string, unknown>) => void; state?: string }>('hx-card');
-      if (card && typeof card.update === 'function' && card.state !== ev.resolved) card.update({ state: ev.resolved });
+      /* the AskCard collapses to its one-row receipt, in place (everywhere it was decided: here, the dock, another client) */
+      const node = NODE.get(ev.messageId), b = bot(ev.botId), now = list[i];
+      if (node && node.isConnected && b && now && now.kind === 'approval') {
+        const hadFocus = node.contains(document.activeElement);
+        const line = resolvedLine(b, now);
+        node.replaceWith(line); NODE.set(ev.messageId, line);
+        if (hadFocus) { line.tabIndex = -1; line.focus({ preventScroll: true }); }
+      }
       break;
     }
     case 'thread': {

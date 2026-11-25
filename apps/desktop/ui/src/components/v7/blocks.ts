@@ -100,11 +100,11 @@ export function listRow(o: ListRowOpts): string {
     (o.time ? '<span class="k7-lrow__time k7-mono">' + esc(o.time) + '</span>' : '') + (v === 'item' && o.action ? button({ label: o.action, variant: 'tint', size: 28 }) : '');
   const text = v === 'compact'
     ? '<span class="k7-lrow__one"><span class="k7-lrow__title">' + esc(o.title) + '</span>' + (o.sub ? '<span class="k7-lrow__sub">' + esc(o.sub) + '</span>' : '') + '</span>'
-    : '<span class="k7-lrow__text"><span class="k7-lrow__title">' + esc(o.title) + '</span>' + sub + '</span>';
+    : '<span class="k7-lrow__text"><span class="k7-lrow__title">' + esc(o.title) + '</span>' + (sub ? ' ' + sub : '') + '</span>';   /* a space between the parts: the row's text reads as words (its name holds them, WCAG 2.5.3) */
   /* an item row carries its action, so it is a list item, not an option (no control inside a control) */
   const item = v === 'item';
   return '<div class="k7-lrow"' + kitAttrs('ListRow', { role: item ? 'listitem' : 'option', tabindex: item ? null : o.current ? '0' : '-1', 'data-variant': v, 'aria-selected': item ? null : o.current ? 'true' : 'false', 'data-current': o.current ? '' : null, 'data-needs': o.needs ? '' : null, 'data-working': o.working ? '' : null, 'data-sq': '', 'data-sq-mode': 'frame', ...(o.attrs ?? {}) }) + '>' +
-    lead + text + end + '</div>';
+    lead + text + (end ? ' ' + end : '') + '</div>';
 }
 /** rows as a list: one tab stop, arrows move (12.2 List) */
 export interface ListOpts { label: string; rows: readonly ListRowOpts[]; attrs?: U<Attrs> }
