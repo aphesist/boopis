@@ -8,7 +8,9 @@ import { UI_ROOT } from './serve.mjs';
 import { areaOfPath } from './rules.mjs';
 
 const SRC = join(UI_ROOT, 'src');
-const SKIP = [/^styles\/tokens\.(css|json)$/, /^vendor\//, /\.test\.ts$/, /^lab\//, /^host\/bindings\.ts$/, /^data\/(mock-data|bot-catalog)\.ts$/, /^components\/look\.ts$/, /\.d\.ts$/, /^host\/fixtures\//, /^components\/squircle-golden\.json$/];
+/* the v7 tokens (generated, and their JSON source) are token files too; components/v7/theme.ts holds the v7 surfaces the accent and a
+   bot's fill are measured against (section 18; from tokens.v7.json) and the white or ink text those rules choose */
+const SKIP = [/^styles\/tokens\.(css|json)$/, /^styles\/tokens\.v7\.(css|json)$/, /^components\/v7\/theme\.ts$/, /^vendor\//, /\.test\.ts$/, /^lab\//, /^host\/bindings\.ts$/, /^data\/(mock-data|bot-catalog)\.ts$/, /^components\/look\.ts$/, /\.d\.ts$/, /^host\/fixtures\//, /^components\/squircle-golden\.json$/];
 /* where a literal is data, not styling: the theme runtime's presets and contrast maths, the mod colour mapper's literal guard, a bot's look */
 const DATA_FILES = [/^styles\/theme\.ts$/, /^components\/mod-colors\.ts$/, /^modules\/bots\/(paint|new-bot|names)\.ts$/, /^vendor\//];
 

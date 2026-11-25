@@ -301,7 +301,8 @@ async function checkRow(browser, origin, row, log) {
         await setWidth(page, row, w);
         const where = preset + '/' + w;
         const rest = await probe(page, null, row.overlayDecl, preset === presetsOf(row)[0] && w === 1440 && !skip('same-component'));
-        for (const [cls, geom, el] of rest.sigs || []) { let m = sigMap.get(cls); if (!m) sigMap.set(cls, (m = new Map())); let l = m.get(geom); if (!l) m.set(geom, (l = [])); if (!l.some((x) => x.row === row)) l.push({ row, el }); }
+        /* the v7 kit's renders are compared among themselves: the v6 screens that draw the same job differently are wave C's */
+        for (const [cls0, geom, el] of rest.sigs || []) { const cls = (isKit(row) ? 'kit ' : '') + cls0; let m = sigMap.get(cls); if (!m) sigMap.set(cls, (m = new Map())); let l = m.get(geom); if (!l) m.set(geom, (l = [])); if (!l.some((x) => x.row === row)) l.push({ row, el }); }
         if (rest.overlapMs != null) { overlapCost.n++; overlapCost.sum += rest.overlapMs; overlapCost.max = Math.max(overlapCost.max, rest.overlapMs); }
         /* a crop is a full-page screenshot, which resizes the window for a moment, and an open layer closes on a resize (layer.ts):
            after a crop, a state with an overlay is drawn again before anything else measures it */
