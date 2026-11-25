@@ -111,18 +111,9 @@ body {
 
 /* the foot: you, Store, Settings (screen 12) */
 /* kit.css `.foot-ctl` in the open sidebar (12 6 0 inside the sidebar's 10 and 12): Store and Settings, tinted 28s 8 apart at the end */
-.hx-foot { display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); flex: none; }
+.hx-foot { padding: var(--sp-3) var(--sp-4); flex: none; }
 /* the Sessions side shows no "you" (boards S17 and 13 draw Store and Settings alone there) */
-.hx[data-tab="session"] .hx-foot > .hx-me { display: none; }
-.hx-me {
-  display: flex; align-items: center; gap: var(--sp-3); flex: 1; min-width: 0; height: var(--ctl); padding: 0 var(--sp-3) 0 0;
-  border-radius: var(--r-pill); color: var(--text); font-size: var(--fs-m); line-height: var(--lh-m); text-align: start;
-  transition: background-color var(--dur-out) var(--ease-out);
-}
-@media (hover: hover) and (pointer: fine) { .hx-me:hover { background: var(--hover); transition-duration: var(--dur-1); } }
-.hx-me__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hx-avatar { display: grid; place-items: center; flex: none; width: var(--ctl); height: var(--ctl); border-radius: var(--r-pill); background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line); color: var(--icon); }
-.hx-avatar > svg { width: var(--icon-s); height: var(--icon-s); }
+.hx[data-tab="session"] .hx-foot .k7-sfoot__me { display: none; }
 
 /* the rail: the kit's Rail, shown while the sidebar is collapsed to it */
 .hx-rail { position: absolute; inset: 0 auto 0 0; width: var(--hx-rail-w); opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease-out), visibility 0s linear var(--dur-out); }

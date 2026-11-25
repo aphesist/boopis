@@ -9,6 +9,8 @@
      4. the orbs are compared as boxes: how many each side has, and how far each is from its counterpart,
      5. the board's own render is compared with the approved image (the archive's JPEG) when one is at hand, which proves the source
         still draws what the owner approved.
+   A row with `scope` is the reference for the regions it names only (the others have a later board of their own, compared by its
+   own row); a region of six numbers [x, y, w, h, dx, dy] says the app's part sits dx, dy from the board's.
 
    Live things rest: both pages run with reduced motion, and the boards' own `still` class holds their marks.
 
@@ -102,6 +104,26 @@ function countIn(diff, rect, skip = []) {
   }
   return { n, total, pct: total ? (100 * n) / total : 0 };
 }
+/** a rect of CSS px cut out of a screenshot */
+function crop(png, [x, y, w, h]) {
+  const out = new PNG({ width: Math.round(w * DPR), height: Math.round(h * DPR) });
+  PNG.bitblt(png, out, Math.round(x * DPR), Math.round(y * DPR), out.width, out.height, 0, 0);
+  return out;
+}
+/** one named part of the window, the board's against the app's: `rect` is [x, y, w, h] on the board and, when the app's part sits
+    elsewhere (a later board moved what is around it), [x, y, w, h, dx, dy] with the app's offset. Counts the differing pixels,
+    and again with every orb's box left out */
+function regionDiff(b, a, rect, threshold = THRESHOLD) {
+  const [x, y, w, h, dx = 0, dy = 0] = rect;
+  const bc = crop(b.png, [x, y, w, h]), ac = crop(a.png, [x + dx, y + dy, w, h]);
+  const out = new PNG({ width: bc.width, height: bc.height });
+  const n = pixelmatch(bc.data, ac.data, out.data, bc.width, bc.height, { threshold, includeAA: true, alpha: 0.25, diffColor: [255, 0, 96] });
+  const inside = (o, ox, oy) => o.x + o.w > ox && o.x < ox + w && o.y + o.h > oy && o.y < oy + h;
+  const orbRects = [...(b.orbs ?? []).filter((o) => inside(o, x, y)).map((o) => [o.x - x - 1, o.y - y - 1, o.w + 2, o.h + 2]), ...(a.orbs ?? []).filter((o) => inside(o, x + dx, y + dy)).map((o) => [o.x - x - dx - 1, o.y - y - dy - 1, o.w + 2, o.h + 2])];
+  const noOrbs = countIn(out, [0, 0, w, h], orbRects);
+  return { n, total: bc.width * bc.height, pct: (100 * n) / (bc.width * bc.height), noOrbs };
+}
+const sum = (list) => { const n = list.reduce((t, r) => t + r.n, 0), total = list.reduce((t, r) => t + r.total, 0); return { n, total, pct: total ? (100 * n) / total : 0 }; };
 function sideBySide(a, b) {
   const gap = 16, out = new PNG({ width: a.width + gap + b.width, height: Math.max(a.height, b.height) });
   for (let i = 0; i < out.data.length; i += 4) { out.data[i] = 255; out.data[i + 1] = 0; out.data[i + 2] = 96; out.data[i + 3] = 255; }
@@ -157,10 +179,16 @@ try {
       const a = await shot(browser, appUrl, row.appWait ?? 2200, true);
       const { n, out } = diffOf(b.png, a.png);
       const orbRects = [...b.orbs, ...a.orbs].map((o) => [o.x - 1, o.y - 1, o.w + 2, o.h + 2]);
-      const whole = { n, total: b.png.width * b.png.height, pct: (100 * n) / (b.png.width * b.png.height) };
-      const noOrbs = countIn(out, [0, 0, W, H], orbRects);
-      const regions = Object.fromEntries(Object.entries(row.regions ?? {}).map(([name, rect]) => [name, countIn(out, rect)]));
-      const orbs = matchOrbs(b.orbs, a.orbs);
+      const regions = Object.fromEntries(Object.entries(row.regions ?? {}).map(([name, rect]) => [name, regionDiff(b, a, rect)]));
+      /* a board that is the reference for some parts only (`scope`: the names of those regions) is measured over those parts: its
+         other parts have a board of their own (board 12's sidebar is K02's) */
+      const scoped = row.scope ? row.scope.map((k) => [k, row.regions[k]]) : null;
+      const whole = scoped ? sum(scoped.map(([k]) => regions[k])) : { n, total: b.png.width * b.png.height, pct: (100 * n) / (b.png.width * b.png.height) };
+      const noOrbs = scoped ? sum(scoped.map(([k]) => regions[k].noOrbs)) : countIn(out, [0, 0, W, H], orbRects);
+      const within = (o, [x, y, w, h]) => o.x + o.w / 2 >= x && o.x + o.w / 2 < x + w && o.y + o.h / 2 >= y && o.y + o.h / 2 < y + h;
+      const orbs = scoped
+        ? matchOrbs(b.orbs.filter((o) => scoped.some(([, r]) => within(o, r))), scoped.flatMap(([, r]) => a.orbs.filter((o) => within(o, [r[0] + (r[4] ?? 0), r[1] + (r[5] ?? 0), r[2], r[3]])).map((o) => ({ ...o, x: o.x - (r[4] ?? 0), y: o.y - (r[5] ?? 0) }))))
+        : matchOrbs(b.orbs, a.orbs);
       const name = id + '-' + theme;
       writeFileSync(join(OUT, name + '.png'), PNG.sync.write(sideBySide(b.png, a.png)));
       writeFileSync(join(OUT, name + '.diff.png'), PNG.sync.write(out));
@@ -172,12 +200,12 @@ try {
           /* a JPEG's own noise is under this threshold; what is left is a real difference between the source and the approved image */
           const tmp = new PNG({ width: ap.width, height: ap.height });
           const m = pixelmatch(ap.data, b.png.data, tmp.data, ap.width, ap.height, { threshold: 0.2, includeAA: true });
-          const am = pixelmatch(ap.data, a.png.data, tmp.data, ap.width, ap.height, { threshold: 0.2, includeAA: true });
-          approved = { source: (100 * m) / (ap.width * ap.height), app: (100 * am) / (ap.width * ap.height) };
+          const am = scoped ? sum(scoped.map(([, r]) => regionDiff({ png: ap }, a, r, 0.2))).pct : (100 * pixelmatch(ap.data, a.png.data, tmp.data, ap.width, ap.height, { threshold: 0.2, includeAA: true })) / (ap.width * ap.height);
+          approved = { source: (100 * m) / (ap.width * ap.height), app: am };
         }
       }
       worst = Math.max(worst, whole.pct);
-      report.push({ id, theme, title: row.title, whole, noOrbs, regions, orbs: { board: b.orbs.length, app: a.orbs.length, unmatched: orbs.rows.filter((r) => !r.app).length, extra: orbs.extra.length, moved: orbs.rows.filter((r) => r.app && (Math.abs(r.dx) > 0.5 || Math.abs(r.dy) > 0.5 || Math.abs(r.dw) > 0.5)).map((r) => ({ shape: r.board.shape, at: [Math.round(r.board.x), Math.round(r.board.y)], size: r.board.w, dx: r.dx, dy: r.dy, dw: r.dw })), look: orbs.rows.filter((r) => r.app && (!r.colour || !r.reaction)).map((r) => ({ shape: r.board.shape, at: [Math.round(r.board.x), Math.round(r.board.y)], board: r.board.color + ' ' + r.board.reaction, app: r.app.color + ' ' + r.app.reaction })) }, approved, errors: { board: b.errors, app: a.errors }, files: { sheet: join(OUT, name + '.png'), diff: join(OUT, name + '.diff.png') } });
+      report.push({ id, theme, title: row.title, scope: row.scope ?? null, whole, noOrbs, regions, orbs: { board: orbs.rows.length, app: orbs.rows.filter((r) => r.app).length + orbs.extra.length, unmatched: orbs.rows.filter((r) => !r.app).length, extra: orbs.extra.length, moved: orbs.rows.filter((r) => r.app && (Math.abs(r.dx) > 0.5 || Math.abs(r.dy) > 0.5 || Math.abs(r.dw) > 0.5)).map((r) => ({ shape: r.board.shape, at: [Math.round(r.board.x), Math.round(r.board.y)], size: r.board.w, dx: r.dx, dy: r.dy, dw: r.dw })), look: orbs.rows.filter((r) => r.app && (!r.colour || !r.reaction)).map((r) => ({ shape: r.board.shape, at: [Math.round(r.board.x), Math.round(r.board.y)], board: r.board.color + ' ' + r.board.reaction, app: r.app.color + ' ' + r.app.reaction })) }, approved, errors: { board: b.errors, app: a.errors }, files: { sheet: join(OUT, name + '.png'), diff: join(OUT, name + '.diff.png') } });
     }
   }
 } finally { await browser.close(); await srv.close(); }
@@ -188,7 +216,7 @@ else {
   const f = (v) => v.toFixed(2).padStart(6) + '%';
   for (const r of report) {
     console.log('\n' + r.id + ' (' + r.theme + ')  ' + r.title);
-    console.log('  the window      ' + f(r.whole.pct) + '   without the orbs ' + f(r.noOrbs.pct));
+    console.log('  ' + (r.scope ? 'its parts       ' : 'the window      ') + f(r.whole.pct) + '   without the orbs ' + f(r.noOrbs.pct) + (r.scope ? '   (this board is the reference for: ' + r.scope.join(', ') + ')' : ''));
     for (const [k, v] of Object.entries(r.regions)) console.log('  ' + k.padEnd(15) + ' ' + f(v.pct));
     console.log('  orbs            board ' + r.orbs.board + ', app ' + r.orbs.app + (r.orbs.unmatched ? ', ' + r.orbs.unmatched + ' of the board\'s missing' : '') + (r.orbs.extra ? ', ' + r.orbs.extra + ' more in the app' : '') + (r.orbs.moved.length ? ', ' + r.orbs.moved.length + ' off their place' : ', all in place'));
     for (const m of r.orbs.moved) console.log('    ' + m.shape + ' ' + m.size + ' at ' + m.at.join(',') + ': dx ' + m.dx + ' dy ' + m.dy + ' dsize ' + m.dw);

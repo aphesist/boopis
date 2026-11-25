@@ -2,10 +2,10 @@
    inbox, sessionnew.js newSess, dockv7.js). `pnpm lab:board` draws the app's real modules on it and compares them with the board,
    so every word, look and order here is the board's. Test data: the lab alone reads it. */
 import { store } from '../data/store';
-import type { DataProvider } from '../data/provider';
+import type { DataProvider, GroupsEvent } from '../data/provider';
 import { CAREFUL_STEPS, YES } from '../data/session-s0';
 import type { LaunchSettings, SessionCapabilities, SessionControls } from '../data/session-s0';
-import type { Bot, Conversation, Group, GroupMember, LimitNotice, Schedule, SessionSummary, ThreadMessage } from '../data/types';
+import type { Bot, Conversation, Group, GroupMember, GroupMessage, LimitNotice, Schedule, SessionSummary, ThreadMessage } from '../data/types';
 
 /* ───────── the bots (kit.js LOOKS, in screens.js ORDER) ───────── */
 type Look = { id: string; shape: string; color: string; role: string; state: string; attention?: string; activity?: string };
@@ -51,6 +51,45 @@ export function board11(p: DataProvider): DataProvider {
     waits: { ...p.waits, snapshot: () => [] },
     groups: { ...p.groups, snapshot: () => ({ groups: [RELEASE_CREW], threads: { [RELEASE_CREW.id]: [] } }) },
     schedules: { ...p.schedules, list: store<readonly Schedule[]>([KAI_SCHEDULE]) }
+  };
+}
+
+/* ───────── board 12: the release crew's room, the Bots sidebar open ─────────
+   The room is botscreens.js room12; the sidebar is board K02's (src-k02 screens.js sidebarOpen, the later owner decision: the
+   switch, the main bot at 44, rows of 28 orbs, "Groups"). Its rows say what each bot last did (kai is writing, nina waits on you,
+   the others their last words, hex sleeps). The room's row says "nina: the deploy is ready" while the thread ends with moss: the
+   two boards are not one moment, so the list's snapshot knows the room's latest message and the thread that is read as the room
+   opens is the one board 12 draws. */
+const T12 = 'Today 11:20';
+const CREW_THREAD: readonly GroupMessage[] = [
+  { kind: 'text', id: 'b12-1', who: 'you', t: T12, text: '@kai write the notes, @nina ship 0.2.0 to staging when they\'re in.' },
+  { kind: 'text', id: 'b12-2', who: 'kai', t: T12, round: 0, text: 'Notes are in `CHANGELOG.md`, two sections. The dock fix is the headline ([WebKit bug 27611](https://bugs.webkit.org/show_bug.cgi?id=27611)).' },
+  { kind: 'note', id: 'b12-3', t: T12, text: 'Created routine Weekly changelog', about: 'routine' },
+  { kind: 'text', id: 'b12-4', who: 'nina', t: T12, round: 0, text: '@user staging needs your approval before I deploy.' },
+  { kind: 'text', id: 'b12-5', who: 'moss', t: T12, round: 0, text: 'The two flaky tests are quarantined, so the gate is green.' }
+];
+const NINA_ASKS: readonly ThreadMessage[] = [{ kind: 'approval', id: 'b12-ask', who: 'nina', t: T12, data: { id: 'b12-ask', title: 'Deploy 0.2.0 to staging', rule: 'Deploys need my OK', from: 'nina' } }];
+export function board12(p: DataProvider): DataProvider {
+  const bots = roster(p, {
+    kai: { state: 'working', activity: 'Writing the changelog' },
+    moss: { last: { t: T12, text: 'Found 2 flaky tests' } }, iris: { last: { t: T12, text: 'Checked the new composer' } }, nimbus: { last: { t: T12, text: 'Sorted 14 emails' } }
+  });
+  const crew: Group = { ...RELEASE_CREW, working: ['kai', 'moss'], busy: true, spent: '0.21' };
+  const heard: Array<(e: GroupsEvent) => void> = [];
+  return {
+    ...p,
+    bots: { ...p.bots, snapshot: () => ({ bots, threads: { ...Object.fromEntries(bots.map((b) => [b.id, []])), nina: NINA_ASKS } }), archived: store([]) },
+    waits: { ...p.waits, snapshot: () => [] },
+    groups: {
+      ...p.groups,
+      snapshot: () => ({ groups: [crew], threads: { [crew.id]: [{ kind: 'text', id: 'b12-0', who: 'nina', t: T12, text: 'the deploy is ready' }] } }),
+      subscribe: (fn) => { heard.push(fn); return () => { heard.splice(heard.indexOf(fn), 1); }; },
+      open: (id) => { for (const fn of [...heard]) fn({ type: 'thread', groupId: id, messages: CREW_THREAD }); return Promise.resolve(); },
+      note: () => null, archived: store([])
+    },
+    /* nothing of this board is archived, its files are not on this computer, and the person is "you" */
+    files: { ...p.files, paths: p.files.paths ? { ...p.files.paths, resolve: () => Promise.resolve([]) } : p.files.paths } as DataProvider['files'],
+    user: store({ ...p.user.get(), name: 'you' })
   };
 }
 

@@ -8,7 +8,7 @@
    the palette, the dialogs) keep v6's tokens until their wave C branches move them; then the root moves up to the body. */
 import { emit } from '../../core/bus';
 import { $, frag } from '../../core/dom';
-import { kit, ui } from '@boopis/ui';
+import { kit } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
 import { data } from '../../data';
 import { themeApi } from '../../styles/theme';
@@ -62,20 +62,11 @@ export function drawSideHead(app: HTMLElement): void {
   $('#hx-btn-new', app).replaceWith(add);
 }
 
-/** the foot: you (the account menu), Store and Settings */
+/** the foot: you (the account menu), Store and Settings: the kit's SidebarFoot */
 export function drawSideFoot(app: HTMLElement): void {
   const U = data().user.get();
   const foot = $('#hx-foot', app);
-  foot.replaceChildren(frag(
-    '<button class="k7-reset hx-me" id="hx-btn-account" type="button" aria-haspopup="menu" aria-expanded="false" data-tip-pos="top">' +
-      '<span class="hx-avatar" aria-hidden="true"></span><span class="hx-me__name" id="hx-account-name"></span></button>'),
-  kit.iconButton({ icon: 'store', label: 'Store', variant: 'tinted', keys: 'mod+shift+S', attrs: { id: 'hx-btn-store', 'aria-haspopup': 'dialog' } }),
-  kit.iconButton({ icon: 'gear', label: 'Settings', variant: 'tinted', keys: 'mod+,', attrs: { id: 'hx-btn-settings', 'aria-haspopup': 'dialog' } }));
-  const me = $('#hx-btn-account', foot);
-  $('.hx-avatar', me).innerHTML = ui.icon('user');
-  $('#hx-account-name', me).textContent = U.name;
-  me.setAttribute('aria-label', 'Account, ' + U.name);
-  me.dataset['tip'] = U.name;
+  foot.replaceChildren(kit.sidebarFoot({ name: U.name, parts: { account: { id: 'hx-btn-account' }, store: { id: 'hx-btn-store' }, settings: { id: 'hx-btn-settings' } } }));
 }
 
 /** select a tab of the kit's Segmented without telling anyone (the state did it) */

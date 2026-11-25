@@ -3,7 +3,7 @@
    draws the board from its source beside this state and measures the difference; a screen is done when they are the same, dark
    and light. Later boards add a fixture, a state here and a row in boards.json. */
 import type { AppCtx, State, Story } from '../../types';
-import { board11, board17, boardS17 } from '../../board-fixtures';
+import { board11, board12, board17, boardS17 } from '../../board-fixtures';
 
 const MOCK = { url: '/__boards/screen.html?s=bot11', note: 'the approved v7 board itself, drawn from its source' };
 
@@ -24,6 +24,19 @@ const bots: Story = {
       },
       /* the board draws the last reply with its hover actions showing */
       force: [{ sel: '#hx-view-bots .bt-log > [data-hx-turn][data-kind="bot"]', state: 'hover' }]
+    } satisfies State,
+    '12 a group room, the sidebar open': {
+      tags: ['variant', 'owner'],
+      note: 'board 12: the open Bots sidebar (the "+", the boopis bot, the bots\' rows, the room\'s row open, you, Store, Settings), the title pill with the members, the room\'s thread (mentions, bylines and gutter orbs, the system line, the message to you, the approval, who is replying) and the one-row composer with its line',
+      app: {
+        provider: { sessions: 'none', patch: board12 },
+        setup: async (c: AppCtx) => {
+          c.hx.setState({ tab: 'bots', left: 'open', right: 'closed' });
+          await c.wait(300);
+          await c.click('#hx-list-bots [data-gid="room-release"]');
+          await c.wait(900);
+        }
+      }
     } satisfies State,
     '17 a bot working': {
       tags: ['variant', 'owner'],

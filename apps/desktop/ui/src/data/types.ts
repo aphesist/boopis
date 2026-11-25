@@ -152,6 +152,8 @@ export interface Group {
   busy: boolean;
   /** the messages held back until the members have finished, oldest first; the user can take each back or send it at once */
   queued: readonly GroupQueued[];
+  /** what the room's conversation has cost so far, as shown ("0.21"); absent when the room does not say (never summed up here) */
+  spent?: string | null;
 }
 /** a message written while the room was busy: kept in boopis, not yet in the room */
 export interface GroupQueued { id: string; text: string; t: string }
@@ -165,7 +167,7 @@ export interface ArchivedGroup { id: string; name: string; members: readonly Gro
     the room names them */
 export interface GroupText { kind: 'text'; id: string; who: string; t: string; text: string; round?: number | null; to?: readonly string[] }
 /** a line the app says in the thread: a member that could not reply, a conversation paused at its limit (`more` then names what Continue lets run) */
-export interface GroupNote { kind: 'note'; id: string; t: string; text: string; more?: string }
+export interface GroupNote { kind: 'note'; id: string; t: string; text: string; more?: string; /** what the line is about, when the room says: a routine a member made (its line leads with the clock) */ about?: 'routine' }
 export type GroupMessage = GroupText | GroupNote;
 
 /* ───────── what waits on the user ───────── */

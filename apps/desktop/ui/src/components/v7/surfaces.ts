@@ -2,12 +2,11 @@
    Notch. The Dock is dock.ts. */
 import type { BotLike } from '../bot-state';
 import { orbHtml } from '../orb';
-import { stack } from '../stack';
 import { slabPath } from '../squircle-path';
 import { button, iconButton, kbd, segmented } from './controls';
 import type { SegItem } from './controls';
 import { emptyState, sectionHead } from './blocks';
-import { inkOrb, statusLine } from './inline';
+import { inkOrb, kitStack, statusLine } from './inline';
 import { composer } from './thread';
 import { attrs, cls, esc, glyph, kitAttrs, partAttrs } from './util';
 import type { Attrs, U } from './util';
@@ -25,7 +24,7 @@ export interface ChromeOpts {
 }
 export interface ChromeParts { toggle?: U<Attrs>; title?: U<Attrs>; search?: U<Attrs>; details?: U<Attrs>; windowGroup?: U<Attrs>; min?: U<Attrs>; max?: U<Attrs>; close?: U<Attrs> }
 export function titlePill(o: { title: string; bot?: U<BotLike>; running?: U<string>; members?: U<readonly BotLike[]>; icon?: U<string>; attrs?: U<Attrs> }): string {
-  const lead = o.members && o.members.length ? stack({ members: o.members, size: 24, max: 4, still: true, tip: false })   /* four places, as every row's stack (owner decision, 22 November: one stack, consistently) */
+  const lead = o.members && o.members.length ? kitStack(o.members, 24, { max: 4, surface: '--bg-3' })   /* four places, as every row's stack (owner decision, 22 November: one stack, consistently) */
     : o.bot ? orbHtml({ ...o.bot, state: o.running ? 'working' : 'idle', attention: null }, { size: 24, live: true, motion: 'lively', mode: 'fixed', surface: '--bg-3' })   /* the pill's orb faces front and idles (screens.js pill: orb(bot, 24)); the bot's state is said in the rail, the thread and the status line */
     : o.icon ? '<span class="k7-title__ic" aria-hidden="true">' + glyph(o.icon) + '</span>' : '';
   return '<button class="k7-reset k7-title"' + partAttrs('TitlePill', { type: 'button', 'aria-haspopup': 'dialog', 'aria-description': 'Opens the details', 'data-running': o.running ? '' : null, 'data-lead': lead ? '' : null, ...(o.attrs ?? {}) }) + '>' +
@@ -134,6 +133,18 @@ function railCluster(members: readonly BotLike[], size: number): string {
     const a = -Math.PI / 2 + (i * 2 * Math.PI) / members.length;
     return '<span style="--x:' + (c + r * Math.cos(a) - size / 2) + 'px;--y:' + (c + r * Math.sin(a) - size / 2) + 'px">' + orbHtml({ ...m, state: 'idle', attention: null }, { size, rest: true }) + '</span>';
   }).join('') + '</span>';
+}
+
+/* ── SidebarFoot: the open sidebar's foot (board 12, botscreens.js sidebarG `.foot-ctl`): you at the start (the account: a 32 circle at
+   --current with the user glyph, the name 13 --text-dim; `account: false` leaves it out, as the Sessions side does), Store and
+   Settings (tinted 28s) at the end ── */
+export interface SidebarFootOpts { name: string; account?: U<boolean>; /** the app's handles on its three controls */ parts?: U<{ account?: Attrs; store?: Attrs; settings?: Attrs }>; attrs?: U<Attrs> }
+export function sidebarFoot(o: SidebarFootOpts): string {
+  return '<div class="k7-sfoot"' + kitAttrs('SidebarFoot', o.attrs ?? null) + '>' +
+    (o.account === false ? '' : '<button class="k7-reset k7-sfoot__me" type="button"' + attrs({ 'aria-label': 'Account, ' + o.name, 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'data-tip': o.name, 'data-tip-pos': 'top', ...(o.parts?.account ?? {}) }) + '>' +
+      '<span class="k7-sfoot__avatar" aria-hidden="true">' + glyph('user') + '</span><span class="k7-sfoot__name k7-ell">' + esc(o.name) + '</span></button>') + '<span class="k7-grow"></span>' +
+    iconButton({ icon: 'store', label: 'Store', variant: 'tinted', keys: 'mod+shift+S', attrs: { 'aria-haspopup': 'dialog', ...(o.parts?.store ?? {}) } }) +
+    iconButton({ icon: 'gear', label: 'Settings', variant: 'tinted', keys: 'mod+,', attrs: { 'aria-haspopup': 'dialog', ...(o.parts?.settings ?? {}) } }) + '</div>';
 }
 
 /* ── Notch (42): the notch's own surface. The notch spec is not in this repository (an owner question); what the kit can draw from

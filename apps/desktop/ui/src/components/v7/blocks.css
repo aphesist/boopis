@@ -110,6 +110,11 @@
 }
 .k7-lrow[data-variant="bot"] { height: var(--row-h-2); padding-block: 0; border-radius: var(--r-tile); }
 .k7-lrow[data-variant="item"] { height: var(--item-h); padding-block: 0; gap: var(--sp-3); border-radius: var(--r-tile); }
+/* the head (board K02, kit.css `.sb-main`): the main bot's 44 orb over its name (13/18), 6 apart, 6 over and 12 under; a row like the
+   others to the pointer and the keys (hover, current, focus), though no board draws those states on it (an owner question) */
+.k7-lrow[data-variant="head"] { flex-direction: column; justify-content: flex-start; gap: var(--gap-s); min-height: 0; padding: var(--gap-s) 0 var(--sp-3); border-radius: var(--r-tile); }
+.k7-lrow[data-variant="head"] > .k7-lrow__title { max-width: 100%; padding-inline: var(--gap-row); box-sizing: border-box; font-size: var(--fs-s); line-height: var(--lh-s); }
+.k7-lrow[data-variant="head"] > .k7-dot { position: absolute; inset-block-start: var(--sp-2); inset-inline-end: var(--gap-row); }
 .k7-lrow[data-variant="compact"] { min-height: var(--compact-h); padding-block: 0; }
 .k7-lrow[data-current] { --sq-bg: var(--current); }
 @media (hover: hover) and (pointer: fine) { .k7-lrow:not([data-current]):hover { --sq-bg: var(--hover); transition-duration: var(--dur-1); } }
@@ -168,11 +173,12 @@
 @media (prefers-reduced-motion: no-preference) { .k7-notice[data-enter] { animation: k7-enter var(--dur-1) var(--ease-sharp); } }
 @keyframes k7-enter { from { opacity: 0; transform: translateY(var(--sp-1)) scale(.98); } }
 
-/* ── SystemLine (13): a centred pill at --fill-2, 26 (32 with an action, its button on a 3 inset), 12 ── */
+/* ── SystemLine (13): the boards' `.sysline`: a centred pill at --fill-2, 26 (32 with an action, its button on a 3 inset), a 16 glyph and 13 --text-dim, 6 apart ── */
 .k7-sys {
   align-self: center; display: inline-flex; align-items: center; gap: var(--gap-s); max-width: 100%; height: var(--line-h); padding: 0 var(--pad-line); box-sizing: border-box;
-  border-radius: var(--r-pill); background: var(--fill-2); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); white-space: nowrap;
+  border-radius: var(--r-pill); background: var(--fill-2); font-size: var(--fs-s); line-height: var(--lh-m); color: var(--text-dim); white-space: nowrap;
 }
+.k7-sys > svg { flex: none; }
 .k7-sys__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .k7-sys[data-variant="error"] .k7-sys__text { color: var(--red-text); }
 .k7-sys[data-act] { height: var(--line-h-act); padding: 0 var(--pad-line-act) 0 var(--sp-3); }
@@ -209,13 +215,16 @@
 /* the thread's gutter: a room's byline and orb, a session's brand tile (S09), 30 px in */
 .k7-gutter { position: relative; display: flex; flex-direction: column; align-items: flex-start; padding-inline-start: var(--gutter); min-width: 0; }
 .k7-gutter__orb { position: absolute; inset-inline-start: 0; bottom: var(--gap-hair); line-height: 0; }
-.k7-byline { margin: 0 0 var(--gap-xs) var(--gap-hair); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--bot-dark, var(--text-dim)); }
+.k7-byline { margin: 0 0 var(--gap-xs) var(--gap-hair); font-size: var(--fs-xs); line-height: var(--lh-m); color: var(--bot-dark, var(--text-dim)); }   /* kit.css `.gname`: 12 on the 20 line, 32 in, 3 over its bubble */
 [data-theme="light"] .k7-byline { color: var(--bot-light, var(--text-dim)); }
 /* a thread (the Page's column): 6 between bubbles of one sender, 16 between senders and around blocks */
 .k7-thread { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
 .k7-thread > * + * { margin-top: var(--gap-s); }
 .k7-thread > .k7-bubble[data-kind="agent"] + .k7-bubble[data-kind="user"], .k7-thread > .k7-bubble[data-kind="user"] + :not(.k7-bubble[data-kind="user"]),
-.k7-thread > :not(.k7-bubble, .k7-btool, .k7-file) + .k7-bubble, .k7-thread > .k7-gutter:has(> .k7-byline) { margin-top: var(--sp-4); }
+.k7-thread > :not(.k7-bubble, .k7-btool, .k7-file) + .k7-bubble { margin-top: var(--sp-4); }
+/* a member's name starts its run 14 under what it follows (kit.css `.gname`); a system line keeps 12 over and under it (`.sysline`) */
+.k7-thread > .k7-gutter:has(> .k7-byline) { margin-top: var(--pane-sec-top); }
+.k7-thread > .k7-sys { margin-block: var(--sp-3); }
 /* the boards' own margins (kit.css): an AskCard 8 more than a bubble's 6 under what it follows, the status line 12, a time separator 12 over and 6 under */
 .k7-thread > * + .k7-ask { margin-top: calc(var(--gap-s) + var(--sp-2)); }
 .k7-thread > * + .k7-status { margin-top: var(--sp-3); }

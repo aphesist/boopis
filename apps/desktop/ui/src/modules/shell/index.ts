@@ -18,7 +18,7 @@ import { themeApi } from '../../styles/theme';
 import { openKeys, openMenu, openSettings, openStore, SETTINGS_SECTIONS, wireDialogs } from './dialogs';
 import { collectEls, els, sh } from './ctx';
 import { reportAttention, seedAttention, setTitleOverride, updateAttentionDots, updateTitle } from './attention';
-import { newThing, toast, toggleDockExpand, toggleLightDark, togglePanel } from './actions';
+import { newThing, openNewMenu, toast, toggleDockExpand, toggleLightDark, togglePanel } from './actions';
 import { wireWindowControls } from './window';
 import { wireUiSize } from './ui-size';
 import { go, pushHistory } from './history';
@@ -50,8 +50,9 @@ function applyState(): void {
   if (sh.seg.tabs) selectTab(sh.seg.tabs, state.tab);
   for (const v of $$('.hx-view', app)) setActive_(v, v.dataset['view'] === state.tab);
   for (const l of $$('.hx-list', app)) setActive_(l, l.dataset['list'] === state.tab);
-  const newLabel = state.tab === 'bots' ? 'New bot' : 'New session';
+  const newLabel = state.tab === 'bots' ? 'New bot or group' : 'New session';
   el.btnNew.dataset['tip'] = newLabel; el.btnNew.setAttribute('aria-label', newLabel);
+  if (state.tab === 'bots') el.btnNew.setAttribute('aria-haspopup', 'menu'); else el.btnNew.removeAttribute('aria-haspopup');
   // sidebar toggle
   const open = state.left === 'open';
   el.btnLeft.dataset['tip'] = open ? 'Hide sidebar' : 'Show sidebar';
@@ -228,7 +229,7 @@ function wire(): void {
 
   // tabs (both the pill and the rail): the library moves the thumb and the focus, the shell owns the state
   sh.seg.tabs?.addEventListener('ui:change', (e) => { e.preventDefault(); setState({ tab: (e as CustomEvent<{ value: string }>).detail.value }); });
-  el.btnNew.addEventListener('click', () => newThing());
+  el.btnNew.addEventListener('click', () => openNewMenu(el.btnNew));
   el.btnStore.addEventListener('click', () => openStore());
 
   // account (the library toggles the menu when its anchor is pressed again)

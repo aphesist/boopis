@@ -19,39 +19,61 @@ export interface AvatarOpts {
   members?: U<readonly BotLike[]>; model?: U<ModelRef>; label?: U<string>;
   /** on a rest surface (the dock, the Bots sidebar, the rail): idle is the still rest pose (ORBS.md section 23) */ rest?: U<boolean>;
   /** the boopis bot: drawn in the theme's ink, its eyes the ground (section 10) */ ink?: U<boolean>; attrs?: U<Attrs>;
+  /** a stack: the token of the surface it sits on (the orbs' eyes are cut to it), how many places it has ("+N" the last), and members it cannot draw */ surface?: U<string>; max?: U<number>; extra?: U<number>;
 }
 export function avatar(o: AvatarOpts): string {
   const v = o.variant ?? 'orb';
   const a = (extra: Attrs = {}): string => kitAttrs('Avatar', { 'data-variant': v, ...extra, ...(o.attrs ?? {}) });
   if (v === 'brand') return '<span class="k7-avatar k7-brand"' + a({ role: o.label ? 'img' : null, 'aria-label': o.label, 'aria-hidden': o.label ? null : 'true' }) + '>' + markHTML(o.model ?? null, { size: 14, label: false }) + '</span>';
   if (v === 'logomark') return '<span class="k7-avatar k7-logomark"' + a() + '><boopis-logo mark' + attrs({ label: o.label ?? 'boopis', state: o.state === 'sleeping' ? 'sleeping' : null }) + '></boopis-logo></span>';
-  if (v === 'stack') return '<span class="k7-avatar"' + a() + '>' + stack({ members: o.members ?? [], size: o.size ?? 24, still: true, ...(o.label ? { label: o.label } : {}) }) + '</span>';
+  if (v === 'stack') return '<span class="k7-avatar"' + a() + '>' + kitStack(o.members ?? [], o.size ?? 24, { ...(o.label ? { label: o.label } : {}), ...(o.rest ? { rest: true } : {}), ...(o.surface ? { surface: o.surface } : {}), max: o.max ?? 4, ...(o.extra ? { extra: o.extra } : {}) }) + '</span>';
   const size = o.size ?? 36;
   const orb = orbHtml(o.bot ?? { id: 'boopis', name: 'boopis' }, { size, state: o.state, still: o.still, live: o.live, flag: o.flag, rest: o.rest });
   return '<span class="k7-avatar"' + a({ 'data-size': size }) + '>' + (o.ink ? inkOrb(orb) : orb) + '</span>';
 }
 
+/** members as the boards stack them (kit.js `stack`): each at rest, two thirds of an orb apart in whole pixels, the first underneath;
+    `surface` is the token of what they sit on (their eyes are cut to it), `rest` the rest pose of a rest surface (the sidebar's rows) */
+export function kitStack(members: readonly BotLike[], size: number, o: { surface?: string; rest?: boolean; label?: string; max?: number; extra?: number } = {}): string {
+  return stack({ members: members.map((m) => ({ ...m, state: 'idle', attention: null })), size, still: !o.rest, tip: false, step: Math.round((size * 2) / 3), orb: { mode: 'fixed', ...(o.rest ? { rest: true } : {}), ...(o.surface ? { surface: o.surface } : {}) }, ...(o.label ? { label: o.label } : {}), ...(o.max ? { max: o.max } : {}), ...(o.extra ? { extra: o.extra } : {}) });
+}
 /** a bot's colour as text in each theme (theme.ts botText), for the CSS to pick */
 export const botColours = (hex: string): string => '--bot-dark:' + botText(hex, 'dark') + ';--bot-light:' + botText(hex, 'light');
 
 /** the boopis bot (section 10): the squircle in --text-strong, light ink on dark, dark on light, light on the dock; its eyes the ground */
 export const inkOrb = (orb: string): string => orb.replace(/ color="[^"]*"/, ' color="var(--text-strong)" data-ink').replace(/ shape="[^"]*"/, ' shape="squircle"');   /* its eyes stay cut to its surface, as every orb's (orb.ts `surface`) */
 
-/* ── InlineChip (30): mention, you, reference, code, model, countdown ── */
-export const INLINE_KINDS = ['mention', 'you', 'reference', 'code', 'model', 'countdown'] as const;
+/* ── InlineChip (30): mention, you, reference, code, cite, model, countdown ── */
+export const INLINE_KINDS = ['mention', 'you', 'reference', 'code', 'cite', 'model', 'countdown'] as const;
 export type InlineKind = typeof INLINE_KINDS[number];
-export interface InlineChipOpts { kind: InlineKind; text?: U<string>; bot?: U<BotLike & { color?: string }>; colour?: U<string>; model?: U<ModelRef>; attrs?: U<Attrs> }
+export interface InlineChipOpts {
+  kind: InlineKind; text?: U<string>; bot?: U<BotLike>; colour?: U<string>; model?: U<ModelRef>; attrs?: U<Attrs>;
+  /** a mention of the whole room (`@all`): its members' orbs lead, stacked */ members?: U<readonly BotLike[]>;
+  /** a mention of a bot that is not here: muted, and it opens nothing */ out?: U<boolean>;
+  /** the chip is a control (a message's mention opens the bot; a reference its file): a button, named by `label` */ action?: U<boolean>; label?: U<string>;
+  /** a chip set into a composer's text: one unit (not editable inside), its text exactly `words` (what is sent), its name drawn */ words?: U<string>;
+  /** a source: where its words lead */ href?: U<string>;
+}
+/** a bot as a still mark shows it: its look, at rest whatever it is doing (the boards' small orbs keep the plain face) */
+const atRest = <T extends BotLike>(b: T): T => ({ ...b, state: 'idle', attention: null });
 export function inlineChip(o: InlineChipOpts): string {
-  const a = (extra: Attrs = {}): string => kitAttrs('InlineChip', { 'data-kind': o.kind, ...extra, ...(o.attrs ?? {}) });
+  const a = (extra: Attrs = {}): string => kitAttrs('InlineChip', { 'data-kind': o.kind, ...(o.words != null ? { contenteditable: 'false', 'data-words': o.words } : {}), ...extra, ...(o.attrs ?? {}) });
+  /* in a composer the chip's own text is the words as typed (read out, selected and sent); what shows is drawn from data-name */
+  const said = (shown: string): string => (o.words != null ? '<span class="k7-sr">' + esc(o.words) + '</span><span aria-hidden="true"' + attrs({ 'data-name': shown }) + '></span>' : esc(shown));
   switch (o.kind) {
     case 'mention': {
       /* a bot's name in the bot's colour (Grok 9.3: the room's named uses join the card ring); its colour is data (R-colour-8) */
-      const name = o.bot?.name ?? o.text ?? '';
-      return '<span class="k7-chip-in k7-mention"' + a({ 'data-bot-colour': o.colour ? '' : null, style: o.colour ? botColours(o.colour) : null }) + '>' +
-        (o.bot ? orbHtml(o.bot, { size: 16, still: true }) : '') + '<span class="k7-mention__name">' + esc(name) + '</span></span>';
+      const name = o.bot?.name ?? o.text ?? '', tag = o.action && o.words == null ? 'button' : 'span';
+      const lead = o.members?.length ? kitStack(o.members, 16, { surface: '--bg-3' }) : o.bot ? orbHtml(atRest(o.bot), { size: 16, still: true, mode: 'fixed', surface: '--bg-3' }) : '';
+      const shown = o.words != null ? '<span class="k7-sr">' + esc(o.words) + '</span><span class="k7-mention__name" aria-hidden="true"' + attrs({ 'data-name': o.members?.length ? (o.text ?? name) : name }) + '></span>' : '<span class="k7-mention__name">' + esc(o.members?.length ? (o.text ?? name) : name) + '</span>';
+      return '<' + tag + ' class="' + cls(tag === 'button' && 'k7-reset', 'k7-chip-in k7-mention') + '"' + a({ type: tag === 'button' ? 'button' : null, 'aria-label': o.label, 'data-out': o.out ? '' : null, 'data-bot-colour': o.colour && !o.out ? '' : null, style: o.colour && !o.out ? botColours(o.colour) : null }) + '>' + lead + shown + '</' + tag + '>';
     }
-    case 'you': return '<span class="k7-chip-in k7-cap k7-you"' + a() + '>' + glyph('user', 'k7-you__ic') + esc(o.text ?? 'you') + '</span>';
-    case 'reference': return '<span class="k7-chip-in k7-cap k7-ref"' + a() + '>' + esc(o.text ?? '') + '</span>';
+    case 'you': return '<span class="k7-chip-in k7-cap k7-you"' + a() + '>' + glyph('user', 'k7-you__ic') + said(o.text ?? 'you') + '</span>';
+    case 'reference': {
+      const tag = o.action && o.words == null ? 'button' : 'span';
+      return '<' + tag + ' class="' + cls(tag === 'button' && 'k7-reset', 'k7-chip-in k7-cap k7-ref') + '"' + a({ type: tag === 'button' ? 'button' : null, 'aria-label': o.label }) + '>' + said(o.text ?? '') + '</' + tag + '>';
+    }
+    case 'cite': return '<a class="k7-chip-in k7-cite"' + a({ href: o.href, target: o.href ? '_blank' : null, rel: o.href ? 'noopener noreferrer' : null }) + '><i class="k7-cite__ic" aria-hidden="true"></i>' + esc(o.text ?? '') + '</a>';
     case 'code': return '<code class="k7-chip-in k7-code"' + a() + '>' + esc(o.text ?? '') + '</code>';
     case 'model': return '<span class="k7-chip-in k7-model"' + a() + '>' + markHTML(o.model ?? null, { size: 14, label: false }) + esc(o.text ?? (typeof o.model === 'string' ? o.model : '')) + '</span>';
     case 'countdown': return '<span class="k7-chip-in k7-cap k7-count"' + partAttrs('Countdown', { 'data-kit': 'InlineChip', 'data-kind': 'countdown', role: 'timer', 'aria-live': 'off', ...(o.attrs ?? {}) }) + '>' + esc(o.text ?? '') + '</span>';
@@ -112,7 +134,7 @@ export interface StatusLineOpts {
 export function statusLine(o: StatusLineOpts): string {
   const kind = o.kind ?? 'bot', working = o.working !== false;
   const lead = kind === 'bot'
-    ? (o.members && o.members.length > 1 ? stack({ members: o.members, size: 16, still: true, tip: false }) : o.bot ? orbHtml(o.bot, { size: 16, live: working, mode: 'fixed', ...(working ? { state: 'working' } : {}) })   /* at rest it keeps the bot's own face (board 11: "Waiting for you" with the needs-you face) */ : '')
+    ? (o.members && o.members.length > 1 ? kitStack(o.members, 16) : o.bot ? orbHtml(o.bot, { size: 16, live: working, mode: 'fixed', ...(working ? { state: 'working' } : {}) })   /* at rest it keeps the bot's own face (board 11: "Waiting for you" with the needs-you face) */ : '')
     : kind === 'session' ? '<span class="k7-status__mark"' + attrs({ 'data-pulse': working ? '' : null, 'data-live': working ? '' : null }) + '>' + markHTML(o.model ?? null, { size: 16, label: false }) + '</span>' : '';
   return '<div class="k7-status"' + kitAttrs('StatusLine', { 'data-kind': kind, 'data-working': working ? '' : null, role: o.inPill ? null : 'status', 'aria-live': o.inPill ? null : 'polite', ...(o.attrs ?? {}) }) + '>' + lead +
     '<span class="' + cls('k7-status__phrase', working && 'k7-shimmer') + '"' + attrs({ 'data-live': working ? '' : null }) + '>' + esc(o.phrase) + '</span>' +

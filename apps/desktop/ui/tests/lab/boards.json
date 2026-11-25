@@ -1,5 +1,5 @@
 {
-  "about": "Board to story, one row per approved board: `pnpm lab:board <id>` draws the board from its own source and the app's lab story, and compares them. `board` is the page under docs/design/v7/boards/src with its parameters (the theme is added), `image` the approved image in the archive (origin/w33/boards-archive), `story` and `state` the lab story that feeds the app's real modules the board's content, `regions` the parts of the window as [x, y, width, height] in CSS px.",
+  "about": "Board to story, one row per approved board: `pnpm lab:board <id>` draws the board from its own source and the app's lab story, and compares them. `board` is the page under docs/design/v7/boards/src with its parameters (the theme is added), `image` the approved image in the archive (origin/w33/boards-archive), `story` and `state` the lab story that feeds the app's real modules the board's content, `regions` the parts of the window as [x, y, width, height] in CSS px. A row with `scope` is the reference for the regions it names only (another row's board is the reference for the rest: board 12's sidebar is K02's, the owner's later decision); a region of six numbers [x, y, width, height, dx, dy] says the app's part sits dx, dy from the board's (a later board moved what is around it).",
   "viewport": {
     "w": 1440,
     "h": 900,
@@ -42,6 +42,76 @@
           56,
           356,
           844
+        ]
+      }
+    },
+    "12-room": {
+      "title": "Board 12: a group room (the title pill, the thread, the composer)",
+      "board": "screen.html?s=room12",
+      "image": "v7/12-group-room-sidebar-open-{theme}.jpg",
+      "story": "boards/bots",
+      "state": "12 a group room, the sidebar open",
+      "regions": {
+        "chrome": [
+          300,
+          0,
+          1140,
+          56
+        ],
+        "thread": [
+          300,
+          56,
+          1140,
+          734
+        ],
+        "composer": [
+          300,
+          790,
+          1140,
+          110
+        ]
+      },
+      "scope": [
+        "chrome",
+        "thread",
+        "composer"
+      ]
+    },
+    "K02-12-sidebar": {
+      "title": "Board K02-12: the open Bots sidebar (the switch, the main bot at 44, rows of 28, Groups, the foot)",
+      "board": "k02/screen.html?s=room&sidebar=open&queue=1&main=44",
+      "image": "bots/K02-12-room-main44-{theme}.jpg",
+      "story": "boards/bots",
+      "state": "12 a group room, the sidebar open",
+      "scope": [
+        "sidebar"
+      ],
+      "regions": {
+        "sidebar": [
+          0,
+          0,
+          300,
+          900
+        ]
+      }
+    },
+    "K02-12-held": {
+      "title": "Board K02-12: a message held above the room's composer",
+      "board": "k02/screen.html?s=room&sidebar=open&queue=1&main=44",
+      "image": "bots/K02-12-room-main44-{theme}.jpg",
+      "story": "boards/bots",
+      "state": "12 a message held",
+      "scope": [
+        "held message"
+      ],
+      "regions": {
+        "held message": [
+          510,
+          752,
+          720,
+          48,
+          0,
+          -4
         ]
       }
     },

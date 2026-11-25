@@ -10,12 +10,13 @@
 :where(.bt-view, .bt-list) :where(button.bt-opt, button.bt-sugg, button.bt-p-sched) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
 
 /* ================================================================ sidebar list (v7: the kit's ListRows; the rail is the kit's Rail, list.ts) */
-.bt-list { padding: 0 var(--sp-2) var(--sp-3); }
-.bt-rows, .bt-group-rows { display: flex; flex-direction: column; gap: var(--gap-hair); }
-
-/* the Archived group under the roster: a library group (14.4), set off from the rows above it as groups are; in the rail there is no room for its words, and the palette's "Restore bot…" reaches the same bots */
-.bt-archived { margin-top: 12px; }
-.bt-archived[hidden] { display: none; }
+/* board K02 (kit.css `.sb-open`): the rows 10 in from the sidebar's sides, one under the other with nothing between; "Groups" and the rooms' rows after the bots' */
+.bt-groups:not(:has(.k7-lrow)) { display: none; }
+.bt-list { padding: 0 var(--gap-row) var(--sp-3); }
+.bt-rows, .bt-group-rows { display: flex; flex-direction: column; }
+/* the Archived group, set off from the rows above it (no board draws it) */
+.bt-archived { margin-top: var(--sp-3); }
+.bt-archived[hidden], .bt-archived-rows[hidden] { display: none; }
 
 /* "made outside boopis": the library's badge (.ui-badge) in a row's end slot and in the header's line */
 .bt-outside + .ui-state { margin-left: 4px; }
@@ -245,9 +246,6 @@ orb-avatar.is-live { cursor: pointer; }
 [data-margin="off"] .bt-note { margin-left: 0; }
 
 /* ================================================================ groups (team chat) */
-.bt-groups { margin-top: var(--sp-3); }
-.bt-groups > .k7-shead { padding: var(--sp-3) var(--sp-3) var(--sp-1); }
-.bt-group-add { align-self: flex-start; margin: var(--sp-1) 0 0; }
 .bt-groups { display: flex; flex-direction: column; }
 /* a group's members (the kit's stack) sit on the sidebar's frame; in the rail a group is a cluster of them (stack.ts), the row's
    one item, centred like an orb: as tall as it is wide, never wider than two orbs, so it keeps --sp-1 or more inside the row's

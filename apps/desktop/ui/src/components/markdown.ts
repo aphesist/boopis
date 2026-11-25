@@ -24,6 +24,7 @@ import type { BotLike } from './bot-state';
 import { html } from './html';
 import { icon } from './icons';
 import { orbHtml } from './orb';
+import { inlineChip } from './v7/inline';
 import rule from '../../../../shared/data/room-mentions.json';
 
 /** the engine's mention pattern (hosted_room_discussion._MENTION_RE, re.IGNORECASE), unchanged, as the shared rule states it */
@@ -54,6 +55,9 @@ export interface MarkdownCtx {
   fold?: number | undefined;
   /** links to https only (a mod's tree: MODS section 2); http stays words */
   httpsOnly?: boolean | undefined;
+  /** drawn on a v7 screen: mentions, the person's capsule, inline code, paths and links are the v7 kit's InlineChips (mention, you,
+      code, reference, cite), as the approved boards draw them in a bubble */
+  kit?: boolean | undefined;
 }
 
 /** the handles a text mentions, as the engine matches them (case folded, in order, once each) */
@@ -105,8 +109,9 @@ export function pathCandidate(code: string): string | null {
 /** what the host says a path is */
 export interface PathTarget { path: string; abs: string; kind: 'file' | 'folder' }
 /** a resolved path as a button: the code chip with a file or folder glyph, its folders cut from the left so the name shows */
-export function pathHTML(t: PathTarget, label?: string): string {
+export function pathHTML(t: PathTarget, label?: string, kit = false): string {
   const shown = label ?? t.path;
+  if (kit) return inlineChip({ kind: 'reference', text: shown, action: true, label: t.abs + '. Open it, or press the menu key for more', attrs: { 'data-path': t.path, 'data-abs': t.abs, 'data-kind': t.kind, 'data-tip': t.abs, 'aria-haspopup': 'menu' } });
   const trimmed = shown.replace(/\/$/, '');
   const cut = trimmed.lastIndexOf('/') + 1;
   const dir = shown.slice(0, cut), base = shown.slice(cut);
@@ -116,17 +121,17 @@ export function pathHTML(t: PathTarget, label?: string): string {
 /** turn the path candidates under `root` that the host resolved into buttons (the others stay code) */
 export function upgradePaths(root: ParentNode, resolved: ReadonlyMap<string, PathTarget>): number {
   let n = 0;
-  for (const c of root.querySelectorAll<HTMLElement>('code.ui-code[data-path]')) {
+  for (const c of root.querySelectorAll<HTMLElement>('code[data-path]')) {
     const t = resolved.get(c.dataset['path'] ?? ''); if (!t) continue;
     const tpl = document.createElement('template');
-    tpl.innerHTML = pathHTML(t, c.textContent ?? t.path);
+    tpl.innerHTML = pathHTML(t, c.textContent ?? t.path, c.classList.contains('k7-code'));
     const b = tpl.content.firstElementChild; if (!b) continue;
     c.replaceWith(b); n++;
   }
   return n;
 }
 /** the candidates under `root` still waiting for the host */
-export const pathCandidates = (root: ParentNode): string[] => [...new Set([...root.querySelectorAll<HTMLElement>('code.ui-code[data-path]')].map((c) => c.dataset['path'] ?? '').filter(Boolean))];
+export const pathCandidates = (root: ParentNode): string[] => [...new Set([...root.querySelectorAll<HTMLElement>('code[data-path]')].map((c) => c.dataset['path'] ?? '').filter(Boolean))];
 
 /* ───────────── mentions ───────────── */
 /** a mention: the bot's still orb and its name in a capsule; a button (the surface opens the bot's chat, and its card) */
@@ -163,7 +168,15 @@ export function mentionTarget(handle: string, ctx: MarkdownCtx): MentionTarget |
   const o = ctx.outside?.(handle);
   return o ? { kind: 'out', bot: o } : null;
 }
-const targetHTML = (t: MentionTarget, word: string, ctx: MarkdownCtx): string => (t.kind === 'all' ? everyoneHTML(word, t.members) : t.kind === 'bot' ? mentionHTML(t.bot) : t.kind === 'you' ? youHTML() : mentionOutsideHTML(t.bot, ctx.outsideNote));
+/** the same targets as the v7 kit's InlineChips (board 12): a member's orb and name in its colour (a control: it opens the bot), the
+    room's stack for @all, the amber "you" capsule, a bot that is not here muted */
+function kitTargetHTML(t: MentionTarget, word: string, ctx: MarkdownCtx): string {
+  if (t.kind === 'you') return inlineChip({ kind: 'you' });
+  if (t.kind === 'all') return inlineChip({ kind: 'mention', text: word, members: t.members, action: true, label: word + ': ' + t.members.map((m) => m.name).join(', '), attrs: { 'data-mention': '@all' } });
+  if (t.kind === 'out') { const said = t.bot.name + ' ' + (ctx.outsideNote ?? "isn't in this room"); return inlineChip({ kind: 'mention', bot: t.bot, out: true, label: said, attrs: { tabindex: '0', 'data-tip': said } }); }
+  return inlineChip({ kind: 'mention', bot: t.bot, colour: t.bot.color ?? undefined, action: true, label: t.bot.name + (t.bot.role ? ', ' + t.bot.role : '') + '. Open its chat', attrs: { 'data-mention': t.bot.id, 'aria-haspopup': 'dialog' } });
+}
+const targetHTML = (t: MentionTarget, word: string, ctx: MarkdownCtx): string => (ctx.kit ? kitTargetHTML(t, word, ctx) : t.kind === 'all' ? everyoneHTML(word, t.members) : t.kind === 'bot' ? mentionHTML(t.bot) : t.kind === 'you' ? youHTML() : mentionOutsideHTML(t.bot, ctx.outsideNote));
 const hasMentions = (ctx: MarkdownCtx): boolean => !!(ctx.mention || ctx.everyone || ctx.outside || ctx.you);
 /** whether a text addresses the person: a room's member wrote `@user` (the engine's handle for them), and no member answers to it */
 export const addressesYou = (text: string, ctx: MarkdownCtx): boolean => !!ctx.you && mentionSpans(text, ctx).some((s) => s.target.kind === 'you');
@@ -194,7 +207,7 @@ export function mentionChip(s: MentionSpan, note = "isn't in this room"): { cls:
 
 /* ───────────── inline ───────────── */
 const linkHost = (href: string): string => href.replace(/^https?:\/\//i, '').replace(/[/?#].*$/, '');
-const linkHTML = (label: string, href: string): string => '<a class="ui-link"' + attrs({ href, target: '_blank', rel: 'noopener noreferrer', 'data-tip': linkHost(href) }) + '>' + label + '</a>';
+const v6LinkHTML = (label: string, href: string): string => '<a class="ui-link"' + attrs({ href, target: '_blank', rel: 'noopener noreferrer', 'data-tip': linkHost(href) }) + '>' + label + '</a>';
 const SAFE_URL = /^https?:\/\/[^\s<>"'`]+$/i;
 const PH = (k: string, i: number): string => '\u0000' + k + i + '\u0000';
 
@@ -208,8 +221,9 @@ export function inlineHTML(src: string, ctx: MarkdownCtx = {}): string {
   s = s.replace(/(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/g, (_m, _t: string, body: string) => {
     const code = body.length > 2 && body.startsWith(' ') && body.endsWith(' ') ? body.slice(1, -1) : body;
     const p = pathCandidate(code);
-    return hold('<code class="ui-code"' + attrs({ 'data-path': p }) + '>' + esc(code) + '</code>');
+    return hold('<code class="' + (ctx.kit ? 'k7-chip-in k7-code' : 'ui-code') + '"' + attrs({ 'data-path': p }) + '>' + esc(code) + '</code>');
   });
+  const linkHTML = (label: string, href: string): string => (ctx.kit ? inlineChip({ kind: 'cite', text: '', href, attrs: { 'data-tip': linkHost(href) } }).replace('</a>', label + '</a>') : v6LinkHTML(label, href));
   /* images: an attachment chip (nothing remote is loaded), a link to it when it is on the web */
   s = s.replace(/!\[([^\]\n]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_m, alt: string, href: string) => {
     const name = alt.trim() || href.replace(/[?#].*$/, '').split('/').pop() || 'image';

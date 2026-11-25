@@ -61,7 +61,7 @@ export async function resolvePaths(root: ParentNode, roots: readonly string[]): 
   const atEnd = !!sc && sc.scrollHeight - sc.scrollTop - sc.clientHeight < 48;
   ui.markdown.upgradePaths(root, map);
   if (sc && atEnd) sc.scrollTop = sc.scrollHeight;
-  for (const b of root.querySelectorAll<HTMLElement>('.ui-path')) {
+  for (const b of root.querySelectorAll<HTMLElement>('[data-path][data-abs]')) {
     const r = RESOLVED.get(key(b.dataset['path'] ?? '', roots));
     if (r?.rel != null) b.dataset['rel'] = r.rel;
   }
@@ -137,7 +137,7 @@ export function wireRefs(root: HTMLElement, o: RefsOpts): void {
     ui.popover.open(b, mentionCard(r, o), { label: r.bot.name, focus: false, onClose: () => { carded = null; } });
   };
   const later = (b: HTMLElement): void => { cancel(); timer = window.setTimeout(() => { if (b.isConnected && (b.matches(':hover') || b.matches(':focus-visible'))) showCard(b); }, HOVER_MS); };
-  const target = (e: Event): HTMLElement | null => (e.target as Element | null)?.closest<HTMLElement>('.ui-mention[data-mention], .ui-path[data-abs]') ?? null;
+  const target = (e: Event): HTMLElement | null => (e.target as Element | null)?.closest<HTMLElement>('[data-mention], [data-path][data-abs]') ?? null;
   root.addEventListener('click', (e) => {
     const t = target(e); if (!t) return;
     e.preventDefault();

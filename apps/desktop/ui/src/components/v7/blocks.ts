@@ -86,11 +86,13 @@ export function menu(o: MenuOpts): string {
     '<div class="' + cls('k7-menu__list', scrollClass({ inset: 'both' })) + '">' + o.entries.map(entryHTML).join('') + '</div></div>';
 }
 
-/* ── ListRow (17): session (44, two lines), bot (54, orb 36), item (60, a 40 mark, the action a 28 pill), compact (36, one line) ── */
-export const LIST_ROW_VARIANTS = ['session', 'bot', 'item', 'compact'] as const;
+/* ── ListRow (17): session (44, two lines), bot (54, its orb 28: board K02, the owner's "Grok sizes", 23 November; a room's row leads
+   with its members' stack), head (the main bot at 44 over its name, first in the Bots list: K02), item (60, a 40 mark, the action a
+   28 pill), compact (36, one line) ── */
+export const LIST_ROW_VARIANTS = ['session', 'bot', 'head', 'item', 'compact'] as const;
 export type ListRowVariant = typeof LIST_ROW_VARIANTS[number];
 export interface ListRowOpts {
-  variant?: U<ListRowVariant>; title: string; sub?: U<string>; bot?: U<BotLike>; markText?: U<string>; markHTML?: U<string>; action?: U<string>;
+  variant?: U<ListRowVariant>; title: string; sub?: U<string>; bot?: U<BotLike>; markText?: U<string>; markHTML?: U<string>; action?: U<string>; /** the app's handles on an item's action */ actionAttrs?: U<Attrs>;
   current?: U<boolean>; needs?: U<boolean | string>; working?: U<boolean>; count?: U<string>; time?: U<string>; /** the boopis bot, in ink */ ink?: U<boolean>;
   /** a session's row (the boards' `.sess-row`): the mark of the model that answers in it leads, its branch is the sub line's mono part */ model?: U<ModelRef>; branch?: U<string>;
   /** a bot row's lead in place of one orb: a room's member stack (OrbStack, 24 in rows; screen 12) */ leadHTML?: U<string>; /** the end slot's own words (a bot made outside boopis) */ endHTML?: U<string>; attrs?: U<Attrs>;
@@ -101,13 +103,20 @@ export function listRow(o: ListRowOpts): string {
   const sub = needsWords ? '<span class="k7-lrow__sub" data-tone="owe">' + esc(needsWords) + '</span>'
     : v === 'session' && (o.branch || o.time || o.sub) ? '<span class="k7-lrow__sub">' + (o.branch ? '<span class="k7-mono">' + esc(o.branch) + '</span>' : '') + (o.sub ? '<span>' + esc(o.sub) + '</span>' : '') + (o.time ? '<span>' + esc(o.time) + '</span>' : '') + '</span>'
     : o.sub ? '<span class="k7-lrow__sub">' + esc(o.sub) + '</span>' : '';
-  const lead = v === 'bot' ? (o.leadHTML ?? ((h: string) => (o.ink ? inkOrb(h) : h))(orbHtml(o.bot ?? { name: o.title }, { size: 36, rest: true, surface: '--bg-1', flag: !!o.needs, state: o.bot?.state && o.bot.state !== 'idle' ? undefined : o.needs ? 'needs' : o.working ? 'working' : undefined })   /* the bot's own state when it says one (compute, replying...), else the row's flags */))
+  if (v === 'head') {
+    /* board K02's `.sb-main` (src-k02 screens.js sidebarOpen): the bot's 44 orb at rest over its name; it opens that bot as a row does */
+    const orb = orbHtml(o.bot ?? { name: o.title }, { size: 44, rest: true, surface: '--bg-1', state: o.bot?.state && o.bot.state !== 'idle' ? undefined : o.needs ? 'needs' : o.working ? 'working' : undefined });
+    return '<div class="k7-lrow"' + kitAttrs('ListRow', { role: 'option', tabindex: o.current ? '0' : '-1', 'data-variant': v, 'aria-selected': o.current ? 'true' : 'false', 'data-current': o.current ? '' : null, 'data-needs': o.needs ? '' : null, 'data-working': o.working ? '' : null, 'data-sq': '', 'data-sq-mode': 'frame', ...(o.attrs ?? {}) }) + '>' +
+      (o.ink ? inkOrb(orb) : orb) + '<span class="k7-lrow__title">' + esc(o.title) + '</span>' + (o.needs ? '<span class="k7-dot" data-tone="owe" aria-hidden="true"></span>' : '') + '</div>';
+  }
+  const lead = v === 'bot' ? (o.leadHTML ?? ((h: string) => (o.ink ? inkOrb(h) : h))(orbHtml(o.bot ?? { name: o.title }, { size: 28, rest: true, surface: '--bg-1', state: o.bot?.state && o.bot.state !== 'idle' ? undefined : o.needs ? 'needs' : o.working ? 'working' : undefined })   /* the bot's own state when it says one (compute, replying...), else the row's flags */))
     : v === 'item' ? '<span class="k7-lrow__mark" aria-hidden="true">' + (o.markHTML ?? esc(o.markText ?? o.title.slice(0, 2))) + '</span>'
     : o.model ? '<span class="k7-lrow__lead" aria-hidden="true">' + markHTML(o.model, { size: 16, label: false }) + '</span>' : '';
   /* a session's row ends with what it waits on you for (the amber badge), or the working dot, or nothing */
-  const end = (o.endHTML ?? '') + (o.needs && v !== 'bot' ? badge({ text: o.count ?? 'needs you', tone: 'owe' }) : o.count ? badge({ text: o.count }) : '') +
+  /* a bot's row that waits on you ends with the amber dot (the boards' `.sb-row .dot.owe`); its orb carries no flag there */
+  const end = (o.endHTML ?? '') + (o.needs && v === 'bot' ? '<span class="k7-dot" data-tone="owe" aria-hidden="true"></span>' : o.needs ? badge({ text: o.count ?? 'needs you', tone: 'owe' }) : o.count ? badge({ text: o.count }) : '') +
     (rowOfSession && o.working && !o.needs ? '<span class="k7-dot" data-live aria-hidden="true"></span>' : '') +
-    (o.time && v !== 'session' ? '<span class="k7-lrow__time k7-mono">' + esc(o.time) + '</span>' : '') + (v === 'item' && o.action ? button({ label: o.action, variant: 'tint', size: 28 }) : '');
+    (o.time && v !== 'session' ? '<span class="k7-lrow__time k7-mono">' + esc(o.time) + '</span>' : '') + (v === 'item' && o.action ? button({ label: o.action, variant: 'tint', size: 28, ...(o.actionAttrs ? { attrs: o.actionAttrs } : {}) }) : '');
   const text = v === 'compact'
     ? '<span class="k7-lrow__title">' + esc(o.title) + '</span>' + (o.sub ? ' <span class="k7-lrow__sub">' + esc(o.sub) + '</span>' : '') + '<span class="k7-grow"></span>'
     : '<span class="k7-lrow__text"><span class="k7-lrow__title">' + esc(o.title) + '</span>' + (sub ? ' ' + sub : '') + '</span>';   /* a space between the parts: the row's text reads as words (its name holds them, WCAG 2.5.3) */
@@ -178,7 +187,7 @@ export function bubble(o: BubbleOpts): string {
   }) + '>' + (o.html != null ? (/^\s*<(p|div|pre|ul|ol|blockquote)\b/.test(o.html) ? o.html : '<p>' + o.html + '</p>') : o.text != null ? '<p>' + esc(o.text) + '</p>' : '') + '</div>';
   if (o.byline) {
     return '<div class="k7-gutter" data-kit-part="Gutter"><div class="k7-byline" data-bot-colour style="' + botColours(o.byline.colour) + '">' + esc(o.byline.bot.name ?? '') + '</div>' + body +
-      '<span class="k7-gutter__orb">' + orbHtml(o.byline.bot, { size: 20, still: true }) + '</span></div>';
+      '<span class="k7-gutter__orb">' + orbHtml({ ...o.byline.bot, state: 'idle', attention: null }, { size: 20, still: true, mode: 'fixed', surface: '--bg-2' }) + '</span></div>';
   }
   if (o.gutter && !o.brand) return '<div class="k7-gutter" data-kit-part="Gutter">' + body + '</div>';
   if (o.brand) return '<div class="k7-gutter" data-kit-part="Gutter">' + body + '<span class="k7-gutter__orb"><span class="k7-avatar k7-brand" data-kit="Avatar" data-variant="brand" aria-hidden="true">' + markHTML(o.brand, { size: 14, label: false }) + '</span></span></div>';

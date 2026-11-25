@@ -54,6 +54,10 @@ export interface StackOpts {
   /** the stack's own tooltip (the label); `false` inside a control whose tooltip already names the members (the rail's group row) */
   tip?: U<boolean>;
   class?: U<string>;
+  /** the v7 kit's stacks (the approved boards' kit.js `stack`): neighbours a whole number of pixels apart, two thirds of an orb
+      rounded (16 for 24, 11 for 16), and how each orb is drawn (at rest on a rest surface, its eyes cut to the surface it sits on) */
+  step?: U<number>;
+  orb?: U<Pick<import('./orb').OrbOpts, 'rest' | 'surface' | 'mode'>>;
 }
 
 /** "atlas", "atlas and nina", "atlas, nina and kai" */
@@ -101,7 +105,7 @@ export function stack(o: StackOpts): string {
   const label = o.label ?? namesList(members.map((b) => b.name ?? b.id ?? ''));
   const box = cluster ? clusterLayout(shown + (more ? 1 : 0), o.size) : null;
   const place = (i: number): string | null => { const p = box?.at[i]; return p ? '--x:' + p.x + 'px;--y:' + p.y + 'px;--dx:' + p.dx + 'px;--dy:' + p.dy + 'px' : null; };
-  return '<span' + attrs({ class: 'ui-stack' + (cluster ? ' ui-stack--cluster' : '') + (o.class ? ' ' + o.class : ''), style: '--s:' + o.size + 'px;--places:' + max + (box ? ';--w:' + box.w + 'px;--h:' + box.h + 'px' : ''), role: 'img', 'aria-label': label, 'data-tip': o.tip === false ? null : label, tabindex: more && o.focusable ? '0' : null, 'data-count': String(members.length + extra) }) + '>' +
-    members.slice(0, shown).map((b, i) => '<span' + attrs({ class: 'ui-stack__one', style: place(i) }) + '>' + orbHtml(b, { size: o.size, still: o.still ?? undefined }) + '</span>').join('') +
+  return '<span' + attrs({ class: 'ui-stack' + (cluster ? ' ui-stack--cluster' : '') + (o.class ? ' ' + o.class : ''), style: '--s:' + o.size + 'px;--places:' + max + (o.step != null && !cluster ? ';--stack-step:' + (o.step - o.size) + 'px' : '') + (box ? ';--w:' + box.w + 'px;--h:' + box.h + 'px' : ''), role: 'img', 'aria-label': label, 'data-tip': o.tip === false ? null : label, tabindex: more && o.focusable ? '0' : null, 'data-count': String(members.length + extra) }) + '>' +
+    members.slice(0, shown).map((b, i) => '<span' + attrs({ class: 'ui-stack__one', style: place(i) }) + '>' + orbHtml(b, { size: o.size, still: o.still ?? undefined, ...(o.orb ?? {}) }) + '</span>').join('') +
     (more ? '<span class="ui-stack__more"' + attrs({ style: place(shown), ...corner(box?.at[shown]), 'data-digits': box ? digits(more) : null, 'data-more': '+' + more, 'aria-hidden': 'true' }) + '></span>' : '') + '</span>';
 }

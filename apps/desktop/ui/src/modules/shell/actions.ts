@@ -7,6 +7,7 @@ import { themeApi } from '../../styles/theme';
 import { kit } from '@boopis/ui';
 import type { NotifyOpts } from '@boopis/ui';
 import type { Tab } from '../../core/types';
+import { data } from '../../data';
 import { sh } from './ctx';
 
 export const toast = (m: string, o?: NotifyOpts): void => { kit.notify(m, o); };
@@ -16,6 +17,18 @@ export function newThing(tab?: Tab): void {
   if (t !== state.tab) setState({ tab: t });
   emit('hx:new', { tab: t });
   if (t === 'bots') emit('hx:new-bot', { from: 'shell' }); else emit('hx:new-session', { from: 'shell' });
+}
+/** the sidebar's "+": a new session on the Sessions tab; on the Bots tab the kit's Menu of what can be made there, a bot or a group
+    of them (board 12 draws the "+" and no other way to a new group: an owner question). A group where group chat cannot run says
+    why and cannot be chosen. mod+shift+O still makes the tab's own new thing at once. */
+export function openNewMenu(anchor: HTMLElement): void {
+  if (state.tab !== 'bots') { newThing(); return; }
+  const why = data().groups.note();
+  kit.openMenu(anchor, {
+    label: 'New', place: 'below', align: 'end',
+    entries: [{ label: 'New bot', value: 'bot', icon: 'plus', keys: 'mod+shift+O' }, { label: 'New group', value: 'group', icon: 'bots', ...(why ? { desc: why, disabled: true } : {}) }],
+    onSelect: (v) => { if (v === 'group') emit('hx:new-group', { from: 'shell' }); else newThing('bots'); }
+  });
 }
 export function openPanel(panel: string): void {
   setState({ right: 'open' });

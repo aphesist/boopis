@@ -150,7 +150,7 @@ function renderThread(b: Bot): void {
   requestAnimationFrame(() => { if (S.scroll) S.scroll.scrollTop = S.scroll.scrollHeight; });
 }
 /* what the bot writes: the kit's markdown; its mentions of teammates open their chats, its paths open where the bot works */
-const ctx = (): MarkdownCtx => mentionCtx(S.bots.map((x) => ({ ...x, id: x.id, name: x.name })));
+const ctx = (): MarkdownCtx => ({ ...mentionCtx(S.bots.map((x) => ({ ...x, id: x.id, name: x.name }))), kit: true });
 const rootsOf = (id: string): string[] => { const w = data().bots.workspace?.(id); return w ? [w] : []; };
 function msgContent(b: Bot, m: ThreadMessage): HTMLElement {
   if (m.kind === 'note') return el('p', { class: 'bt-note', role: 'status', text: m.text });

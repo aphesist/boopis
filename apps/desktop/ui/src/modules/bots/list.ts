@@ -1,10 +1,13 @@
-/* The Bots sidebar on the v7 kit (DESIGN-SYSTEM.md v7 7, 12.2, 19; screen 12) and the rail (21.2 row 40; screen 11).
-   The open sidebar: a row for each bot, the kit's ListRow (bot, 54: its 36 orb at rest, its name, one line of what it does:
-   "Needs you: ..." in amber when it waits on you, else what it is doing, else its role), then "Groups" (the kit's SectionHead)
-   and a row for each room (its members' stack, its name, who is in it), New group, and the Archived group. One tab stop per
-   list, the arrows (and j k) move, Enter or a click opens the bot and focus stays in the list (KEYMAP 4). The rail: the kit's
-   Rail, the bots' tiles (54 on 88; 44 on 64 under 1200 px of window, Automatic), the rooms as clusters under a hairline, New bot,
-   Store and Settings at its foot. A live update never draws an orb again: rows and tiles are written in place. */
+/* The Bots sidebar as board K02 draws it (docs/design/v7/boards/src-k02: screens.js sidebarOpen, the owner's 23 November picks) and
+   the rail as board 11 does (screens.js rail). The open sidebar, under the shell's Sessions / Bots switch and "+": the boopis bot at
+   44 over its name (the kit's ListRow, head), a row for each bot (ListRow, bot, 54: its 28 orb at rest, its name, one line: "Needs
+   you: ..." in amber with the amber dot at the row's end when it waits on you, else what it is doing, else its last words, else what
+   it is for), "Groups" and a row for each room (its members' stack at 24, its name, who spoke last and what they said), and, only
+   when something is archived, the Archived group (a folding SectionHead over ListRow items, each with Restore). New bot and New
+   group are the "+" menu's (the shell's, actions.ts `openNewMenu`). One tab stop per list, the arrows (and j k) move, Enter or a
+   click opens and focus stays in the list (KEYMAP 4). The rail: the kit's Rail, the bots' tiles (54 on 88; 44 on 64 under 1200 px
+   of window, Automatic), the rooms as clusters under a hairline, New bot, Store and Settings at its foot. A live update never
+   draws an orb again: rows and tiles are written in place. */
 import { emit } from '../../core/bus';
 import { $, el, frag, reduced } from '../../core/dom';
 import { state } from '../../core/state';
@@ -18,8 +21,7 @@ import type { ArchivedBot, ArchivedGroup, Bot, Group } from '../../data';
 import { loadBots, saveBots } from '../../core/settings';
 import { archivedWhen, restoreBot, restoredWords } from '../../data/restore';
 import { focusConversation, openBot } from './room';
-import { openGroup, stackOf, namesOf } from './group-room';
-import { openNewGroup } from './new-group';
+import { openGroup, namesOf } from './group-room';
 import { checkClips, watchClips } from './clips';
 import { OUTSIDE_SHORT, outsideDescription, outsideRowMark } from './outside';
 
@@ -37,6 +39,8 @@ export function mountList(root: HTMLElement): void {
   const ul = el('div', { class: 'k7-list bt-rows', role: 'listbox', 'aria-label': 'Bots' });
   if (data().info.preview.has('bots')) wrap.append(el('p', { class: 'bt-preview', role: 'note', text: 'Preview: sample bots' }));
   for (const b of S.bots) ul.append(makeRow(b));
+  /* the boopis bot heads the list, whatever the roster's order */
+  const head = S.rows.get(BOOPIS_ID); if (head) ul.prepend(head.li);
   const groupsHost = el('div', { class: 'bt-groups' });
   const archived = el('div', { class: 'bt-archived' });
   wrap.append(ul, groupsHost, archived, outsideDescription(LIST_DESC));
@@ -75,22 +79,25 @@ function wireList(list: HTMLElement, choose: (value: string) => void): void {
     if (k === 'Escape') { e.preventDefault(); e.stopPropagation(); focusConversation(); }
   });
 }
-/** the row's one line: what it waits on you for (with the ask's own words), what it is doing, or what it is for */
+const oneLine = (t: string): string => t.replace(/\s+/g, ' ').trim();
+/** the row's one line: what it waits on you for (in its own words, else the ask's), what it is doing, its last words, or what it is for */
 function lineOf(b: Bot): { sub: string; needs: string | null } {
   const s = ui.botState(b);
   if (s.attention) {
     const ask = [...thread(b.id)].reverse().find((m) => m.kind === 'approval' && !m.resolved);
     const title = ask && ask.kind === 'approval' ? ask.data.title : '';
-    return { sub: '', needs: 'Needs you' + (title ? ': ' + title.charAt(0).toLowerCase() + title.slice(1) : '') };
+    const what = b.activity || (title ? title.charAt(0).toLowerCase() + title.slice(1) : '');
+    return { sub: '', needs: 'Needs you' + (what ? ': ' + what : '') };
   }
   if (s.busy) return { sub: b.activity || s.word.charAt(0).toUpperCase() + s.word.slice(1), needs: null };
   if (s.key !== 'idle') return { sub: s.word.charAt(0).toUpperCase() + s.word.slice(1), needs: null };
-  return { sub: b.role, needs: null };
+  const said = [...thread(b.id)].reverse().find((m) => m.kind === 'text' && m.who !== 'you');
+  return { sub: oneLine(said && said.kind === 'text' ? said.text : b.last?.text ?? '') || b.role, needs: null };
 }
 function rowHTML(b: Bot): string {
   const s = ui.botState(b), outside = !!b.madeOutside, line = lineOf(b);
   return kit.html.listRow({
-    variant: 'bot', title: b.name, sub: line.sub, bot: b, needs: line.needs ?? false, working: s.busy, current: S.view === 'bot' && b.id === S.sel,
+    variant: b.id === BOOPIS_ID ? 'head' : 'bot', ink: b.id === BOOPIS_ID, title: b.name, sub: line.sub, bot: b, needs: line.needs ?? false, working: s.busy, current: S.view === 'bot' && b.id === S.sel,
     ...(outside ? { endHTML: outsideRowMark() } : {}),
     attrs: { 'data-value': b.id, 'aria-label': rowLabel(b, line, outside), 'aria-describedby': outside ? LIST_DESC : null }
   });
@@ -122,8 +129,8 @@ function patchRow(row: HTMLElement, next: HTMLElement): void {
   mirror(row, next, ROW_ATTRS);
   const text = row.querySelector('.k7-lrow__text'), nextText = next.querySelector('.k7-lrow__text');
   if (text && nextText && text.innerHTML !== nextText.innerHTML) text.innerHTML = nextText.innerHTML;
-  /* the end slot (the "outside" mark), after the text */
-  const ends = (n: Element): Element[] => { const out: Element[] = []; let x = n.querySelector('.k7-lrow__text')?.nextElementSibling; while (x) { out.push(x); x = x.nextElementSibling; } return out; };
+  /* the end slot (the "outside" mark, the amber dot of a bot that waits on you), after the text */
+  const ends = (n: Element): Element[] => { const out: Element[] = []; let x = (n.querySelector('.k7-lrow__text') ?? n.querySelector('.k7-lrow__title'))?.nextElementSibling; while (x) { out.push(x); x = x.nextElementSibling; } return out; };
   const had = ends(row), want = ends(next);
   if (had.map((x) => x.outerHTML).join() !== want.map((x) => x.outerHTML).join()) { for (const x of had) x.remove(); row.append(...want); }
 }
@@ -134,8 +141,6 @@ export function updateRow(id: string): void {
   const next = frag(rowHTML(b));
   patchRow(r.btn, next);
   const orb = r.btn.querySelector<HTMLElement>('orb-avatar');
-  const flag = r.btn.querySelector('.ui-dot--flag'), nextFlag = next.querySelector('.ui-dot--flag');
-  if (nextFlag && !flag) r.btn.querySelector('.ui-orb')?.append(nextFlag); else if (flag && !nextFlag) flag.remove();
   if (orb) { paintLook(orb, lookOf(b)); restReact(orb, ui.botState(b).reaction); }
   patchTile(id);
   checkClips();
@@ -164,7 +169,6 @@ export function paintDraftRow(): void {
 export function markSelected(): void {
   for (const [id, r] of S.rows) setCurrent(r.btn, S.view === 'bot' && id === S.sel);
   for (const [id, r] of S.groupRows) setCurrent(r.btn, S.view === 'group' && id === S.groupSel);
-  S.groupsEl?.querySelector('[data-new-group]')?.toggleAttribute('aria-current', S.view === 'new-group');
   for (const t of RAIL.host?.querySelectorAll<HTMLElement>('.k7-tile') ?? []) {
     const on = (t.dataset['bot'] && S.view === 'bot' && t.dataset['bot'] === S.sel) || (t.dataset['gid'] && S.view === 'group' && t.dataset['gid'] === S.groupSel);
     if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
@@ -256,18 +260,15 @@ export function syncRail(): void {
 }
 
 /* ───────── the Archived group (owner decision, 19 November 2026) ─────────
-   Under the roster, collapsed until the user opens it and kept as they left it (`hx.v6.bots`). Each archived bot shows its name,
-   when it was archived and Restore. Restore is the provider's: a name that is in use again is refused and the row stays.
-   (Still the v6 kit's collapsible group: the v7 kit has no archived row; an owner question.) */
+   Under the rows, only while something is archived; folded until the user opens it and kept as they left it (`hx.v6.bots`). The
+   kit's folding SectionHead with its count, over ListRow items: an archived bot (its name, when it was archived) or room (who was
+   in it), each with Restore. Restore is the provider's: a name that is in use again is refused and the row stays. No board draws
+   it (an owner question); the palette's "Restore bot…" reaches the same bots. */
 let archivedOpen = false;
 const pending = new Set<string>();
 function archivedRow(a: ArchivedBot): string {
   const name = a.was || a.name, sub = archivedWhen(a.when);
-  return ui.html.row({
-    title: name, sub, archived: true, value: a.id,
-    acts: ui.html.iconButton({ icon: 'unarchive', label: 'Restore ' + name, size: 's', attrs: { 'data-act': 'restore', 'data-id': a.id } }),
-    attrs: { 'data-id': a.id, 'data-archived-bot': '', 'aria-label': name + ', ' + sub.toLowerCase() }
-  });
+  return kit.html.listRow({ variant: 'item', title: name, sub, action: 'Restore', actionAttrs: { 'data-act': 'restore', 'data-id': a.id, 'aria-label': 'Restore ' + name }, attrs: { 'data-id': a.id, 'data-archived-bot': '', 'aria-label': name + ', ' + sub.toLowerCase() } });
 }
 export function drawArchived(): void {
   const host = S.archivedEl; if (!host) return;
@@ -276,17 +277,14 @@ export function drawArchived(): void {
   host.hidden = !list.length && !glist.length;
   if (host.hidden) return;
   const total = list.length + glist.length;
-  const g = ui.group({ label: 'Archived (' + total + ')', collapsible: true, expanded: archivedOpen, id: 'bt-archived', rows: list.map(archivedRow).join('') + glist.map(archivedGroupRow).join('') });
-  host.append(g);
+  host.innerHTML = kit.html.sectionHead({ title: 'Archived', count: String(total), disclosure: true, collapsed: !archivedOpen, attrs: { id: 'bt-archived' } }) +
+    '<div class="k7-list bt-archived-rows" role="list" aria-label="Archived"' + (archivedOpen ? '' : ' hidden') + '>' + list.map(archivedRow).join('') + glist.map(archivedGroupRow).join('') + '</div>';
+  kit.wire(host);
   checkClips();
 }
 function mountArchived(host: HTMLElement): void {
-  host.addEventListener('ui:change', (e) => {
-    if (!(e.target as Element).closest('.ui-group__head')) return;
-    archivedOpen = !!(e as CustomEvent<{ value: boolean }>).detail.value;
-    saveBots({ archivedOpen });
-  });
   host.addEventListener('click', (e) => {
+    if ((e.target as Element).closest('.k7-shead__btn')) { archivedOpen = !archivedOpen; saveBots({ archivedOpen }); drawArchived(); host.querySelector<HTMLElement>('.k7-shead__btn')?.focus(); return; }
     const g = (e.target as Element).closest<HTMLElement>('[data-act="restore-group"]');
     if (g?.dataset['id']) { const gid = g.dataset['id']; data().groups.restore(gid).then(() => { notify('Restored a group'); openGroup(gid); }).catch((err: unknown) => { notify('Could not restore it: ' + (err instanceof Error ? err.message : String(err))); }); return; }
     const b = (e.target as Element).closest<HTMLElement>('[data-act="restore"]');
@@ -295,8 +293,7 @@ function mountArchived(host: HTMLElement): void {
   });
   host.addEventListener('keydown', (e) => {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
-    if (e.key === 'j' || e.key === 'k') { e.preventDefault(); (e.target as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: e.key === 'j' ? 'ArrowDown' : 'ArrowUp', bubbles: true })); }
-    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); focusConversation(); }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); focusConversation(); }
   });
   S.offArchived = data().bots.archived.subscribe(drawArchived);
   drawArchived();
@@ -315,18 +312,27 @@ async function restoreArchivedBot(id: string, button: HTMLElement): Promise<void
   } finally { pending.delete(id); button.removeAttribute('aria-disabled'); }
 }
 
-/* ───────── the Groups under the roster (team chat) ─────────
-   "Groups" (the kit's SectionHead), a row for each room (the kit's ListRow: its members' stack at 24, its name, its last words or
-   who is in it) and New group. The block follows the groups in place (`drawGroups`), so a live update never blanks a stack's orbs.
-   In the rail a room is its cluster under a hairline (the Rail's). */
+/* ───────── the rooms under the bots (team chat) ─────────
+   "Groups" (the kit's SectionHead), only while there is a room, then a row for each: the kit's ListRow with its members' stack at
+   24, its name, and its last words after who said them (board K02: "nina: the deploy is ready"), or who is in it while nothing
+   was said. The block follows the groups in place (`drawGroups`), so a live update never blanks a stack's orbs. In the rail a
+   room is its cluster under a hairline (the Rail's). */
 function lastWords(g: Group): string {
   const t = [...(S.groupThreads[g.id] ?? [])].reverse().find((m) => m.kind === 'text');
-  return t && t.kind === 'text' ? t.text.replace(/\s+/g, ' ').trim() : '';
+  if (!t || t.kind !== 'text') return '';
+  const by = t.who === 'you' ? null : g.members.find((m) => m.id === t.who || m.profile === t.who);
+  return (by ? by.name + ': ' : '') + oneLine(t.text);
+}
+/** a room's members as its row's lead: the kit's stack at 24, still, as board K02 draws it (four places, "+N" the last; members that are
+    no longer bots count in it) */
+function rowStack(g: Group): string {
+  const members = g.members.map((m) => bot(m.profile)).filter((x): x is Bot => !!x);
+  return kit.html.avatar({ variant: 'stack', members, size: 24, surface: '--bg-1', max: 4, extra: g.members.length - members.length, label: namesOf(g.members) });
 }
 function groupRow(g: Group): string {
   const busy = g.busy, line = lastWords(g) || namesOf(g.members), who = line + (busy ? ', replying' : '');
   return kit.html.listRow({
-    variant: 'bot', title: g.name, sub: line, leadHTML: stackOf(g.members, 'row', true), working: !!busy,
+    variant: 'bot', title: g.name, sub: line, leadHTML: rowStack(g), working: !!busy,
     current: S.view === 'group' && g.id === S.groupSel,
     attrs: { 'data-value': g.id, 'data-gid': g.id, 'aria-label': g.name + ', ' + who }
   });
@@ -335,10 +341,7 @@ function groupRow(g: Group): string {
 const stackSig = (g: Group): string => g.members.map((m) => (bot(m.profile) ? '' : '?') + m.profile).join();
 function groupsSkeleton(host: HTMLElement): HTMLElement {
   const list = el('div', { class: 'k7-list bt-group-rows', role: 'listbox', 'aria-label': 'Groups' });
-  const add = kit.button({ label: 'New group', icon: 'plus', variant: 'ghost', size: 32, attrs: { 'data-new-group': '' } });
-  add.classList.add('bt-group-add');
-  add.addEventListener('click', () => { openNewGroup(); });
-  host.append(frag(kit.html.sectionHead({ title: 'Groups' })), list, add);
+  host.append(frag(kit.html.sectionHead({ title: 'Groups' })), list);
   wireList(list, (id) => { if (id && group(id)) openGroup(id); });
   return list;
 }
@@ -369,9 +372,5 @@ function mountGroups(host: HTMLElement): void {
   S.offGroupsArchived = data().groups.archived.subscribe(drawArchived);
 }
 function archivedGroupRow(a: ArchivedGroup): string {
-  return ui.html.row({
-    title: a.name, sub: 'Group · ' + namesOf(a.members), archived: true, value: a.id,
-    acts: ui.html.iconButton({ icon: 'unarchive', label: 'Restore ' + a.name, size: 's', attrs: { 'data-act': 'restore-group', 'data-id': a.id } }),
-    attrs: { 'data-id': a.id, 'data-archived-group': '', 'aria-label': a.name + ', archived group' }
-  });
+  return kit.html.listRow({ variant: 'item', title: a.name, sub: 'Group of ' + namesOf(a.members), markHTML: ui.icon('bots'), action: 'Restore', actionAttrs: { 'data-act': 'restore-group', 'data-id': a.id, 'aria-label': 'Restore ' + a.name }, attrs: { 'data-id': a.id, 'data-archived-group': '', 'aria-label': a.name + ', archived group' } });
 }

@@ -218,7 +218,7 @@ const mdBot = (m: GroupMember): MdBot => { const b = bot(m.profile); return { ..
 const outsiders = (g: Group): Array<MdBot & { handle: string }> => S.bots.filter((b) => !g.members.some((m) => m.profile === b.id)).map((b) => ({ ...b, id: b.id, name: b.name, handle: b.id }));
 /* `you`: in what a member writes, `@user` is the person (the engine's handle for them in a room): their own capsule, and the message
    marked for them. What the person writes (their messages, their draft) addresses nobody by it */
-const ctxOf = (g: Group, you = true): MarkdownCtx => ({ ...mentionCtx(g.members.map(mdBot), { everyone: true, outside: outsiders(g) }), ...(you ? { you } : {}) });
+const ctxOf = (g: Group, you = true): MarkdownCtx => ({ ...mentionCtx(g.members.map(mdBot), { everyone: true, outside: outsiders(g) }), ...(you ? { you } : {}), kit: true });
 /** a member's message that addresses the person by the engine's handle for them (`@user`, markdown.ts) */
 const toYou = (g: Group) => (m: GroupMessage): boolean => m.kind === 'text' && m.who !== 'you' && ui.markdown.toYou(m.text, ctxOf(g));
 /** the quiet hint under a draft that names a bot that is not here: "nimbus isn't in this room: send it to their chat, or send without them" */
