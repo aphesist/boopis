@@ -17,7 +17,7 @@ import type { AppCtx, State, Story } from '../../types';
 import { recommendedItems } from './recommended-items';
 import { connectorItems } from './connector-items';
 
-const MOCK = { url: '/v6/__index.html', note: 'the owner has not drawn a store view: it is composed from the kit, for review' };
+const MOCK = { url: '/v6/__index.html', note: 'the Store on the v7 kit (wave C): composed from kit components; the approved boards (ds-v7 screen 15) are not in this repository' };
 const FX = (fixtureFile as unknown as { items: StoreItem[] }).items;
 
 /* the host's own sentences for a source that could not be read (store/reasons.rs) */
@@ -63,14 +63,16 @@ const withStore = (o: MockStoreOptions = {}) => (p: DataProvider): DataProvider 
 const until = async (c: AppCtx, ok: () => boolean, ms = 5000): Promise<void> => { for (let t = 0; t < ms && !ok(); t += 50) await c.wait(50); };
 const open = async (c: AppCtx): Promise<void> => {
   document.body.focus(); await c.key('S', { ctrlKey: true, shiftKey: true });
-  await until(c, () => !!document.querySelector('#hx-store [data-store-status]') && !!document.querySelector('#hx-store [data-store-open], #hx-store .ui-empty'));
+  await until(c, () => !!document.querySelector('#hx-store [data-store-status]') && !!document.querySelector('#hx-store [data-store-open], #hx-store [data-kit~="EmptyState"]'));
   await c.wait(400);
 };
 const tab = async (c: AppCtx, value: 'browse' | 'installed' | 'sources'): Promise<void> => {
-  await c.click(`#hx-store [role=tab][data-value="${value}"], #hx-store .ui-seg__opt[data-value="${value}"]`); await c.wait(400);
+  await c.click(`#hx-store .k7-dialog__navrow[data-value="${value}"]`); await c.wait(400);
 };
+/* the window behind the store is still the v6 shell (wave C's shell-bots moves it, and the dock with it): its dock is not the kit's yet */
+const SHELL = { 'same-component': { reason: 'the v6 dock behind the dialog: the shell and the dock move to the v7 kit on their own branches (wave C)', el: 'hx-dock-slot' } } as const;
 const st = (tags: State['tags'], o: MockStoreOptions | null, setup: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State =>
-  ({ tags, app: { provider: { patch: withStore(o ?? {}) }, setup }, ...extra });
+  ({ tags, app: { provider: { patch: withStore(o ?? {}) }, setup }, allow: SHELL, ...extra });
 
 /* every state a source row has after a read, at once: read just now, two that could not be read, one off, built in, GitHub, the
    placeholder, and one the person added (being read and waiting are 'sources, being read') */
@@ -82,18 +84,18 @@ const addLong = async (c: AppCtx): Promise<void> => {
 };
 
 const dialog: Story = {
-  id: 'store/dialog', title: 'Store: the dialog', area: 'store', kind: 'surface', covers: ['surface:store-dialog'], scope: '#hx-store', mock: MOCK,
+  id: 'store/dialog', title: 'Store: the dialog', area: 'store', kind: 'surface', v7: true, covers: ['surface:store-dialog'], scope: '#hx-store', mock: MOCK,
   states: {
     'browse (the front page)': st(['typical'], null, open),
     'browse, many items': st(['many', 'scroll'], null, async (c) => {
       await open(c);
       await until(c, () => [...document.querySelectorAll('#hx-store .hx-store__list button')].some((b) => b.textContent === 'Show more'));
-      const body = c.$('#hx-store-body'); body.scrollTop = body.scrollHeight; await c.wait(300);
+      const body = c.$('#hx-store .k7-dialog__page'); body.scrollTop = body.scrollHeight; await c.wait(300);
     }),
     'browse, connectors': st(['variant'], null, async (c) => { await open(c); await c.click('#hx-store [role=radio][data-value="connector"]'); await c.wait(400); }),
     'browse, long names': st(['long'], null, async (c) => {
       await open(c);
-      const q = c.$('#hx-store-q input, input#hx-store-q') as HTMLInputElement;
+      const q = c.$('input#hx-store-q') as HTMLInputElement;
       q.value = 'long name'; q.dispatchEvent(new Event('input', { bubbles: true })); await c.wait(500);
     }),
     'browse, the sources being read': st(['loading'], { start: 'unread', reads: { 'engine-plugins': NEVER } }, open),
@@ -107,7 +109,7 @@ const dialog: Story = {
     'an item\'s page': st(['variant'], null, async (c) => { await open(c); await c.click('#hx-store [data-store-open="mcp-registry:lab/item-0"]'); await c.wait(400); }),
     'the review card': st(['open'], null, async (c) => {
       await open(c); await c.click('#hx-store [data-store-open="mcp-registry:lab/item-0"]'); await c.wait(400);
-      await c.click('#hx-store .hx-store__sheet .ui-btn--primary'); await c.wait(600);
+      await c.click('#hx-store [data-store-primary]'); await c.wait(600);
     })
   }
 };

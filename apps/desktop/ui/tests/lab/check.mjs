@@ -51,7 +51,7 @@ const quick = flag('quick');
 const PRESETS = opt('presets', quick ? 'catalog,bone' : 'catalog,graphite,bone,typewriter').split(',');
 /* the v7 kit's stories (src/lab/stories/kit/) run in v7's two themes, not the v6 presets (LAB-v7 section 3) */
 const KIT_PRESETS = opt('kit-presets', 'dark,light').split(',');
-const isKit = (row) => typeof row.story === 'string' && row.story.startsWith('kit/');
+const isKit = (row) => !!row.v7 || (typeof row.story === 'string' && row.story.startsWith('kit/'));
 const presetsOf = (row) => (isKit(row) ? KIT_PRESETS : PRESETS);
 const WIDTHS = opt('widths', quick ? '1440' : '390,1200,1440,1920').split(',').map(Number);
 const AREA = opt('area', '') ? opt('area', '').split(',').map(areaOf) : null;
@@ -109,7 +109,7 @@ function record(row, f, where) {
   const key = row.story + '|' + row.state + '|' + f.key;
   let x = findings.get(key);
   if (!x) {
-    x = { story: row.story, state: row.state, area: f.region ?? row.area, kind: row.kind, check: f.check, rule: CHECKS[f.check]?.rule ?? null, severity: CHECKS[f.check]?.severity ?? 'fail', msg: f.msg, el: f.el ?? '', label: f.label ?? '', where: [], crop: null, mock: row.mock, rect: f.rect ?? null, extra: f.extra ?? null };
+    x = { story: row.story, state: row.state, ...(row.v7 ? { v7: true } : {}), area: f.region ?? row.area, kind: row.kind, check: f.check, rule: CHECKS[f.check]?.rule ?? null, severity: CHECKS[f.check]?.severity ?? 'fail', msg: f.msg, el: f.el ?? '', label: f.label ?? '', where: [], crop: null, mock: row.mock, rect: f.rect ?? null, extra: f.extra ?? null };
     findings.set(key, x);
     x.isNew = true;
   }

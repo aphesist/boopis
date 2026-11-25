@@ -131,6 +131,9 @@ export interface Story {
   /** what the checks look at in an app state (a stage state is checked as its cell) */
   scope?: string;
   mock?: MockRef;
+  /** a screen moved onto the v7 kit (wave C): drawn and checked as the kit's stories are, in v7's two themes, with the v7 checks
+      blocking (gate.mjs); an app state also sets the v6 theme to the same scheme, for the parts of the window still on v6 */
+  v7?: boolean;
   states: Readonly<Record<string, State>>;
 }
 

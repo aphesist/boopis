@@ -12,19 +12,19 @@ import type { StageCtx, State, Story } from '../../types';
 import { recommendedItems } from './recommended-items';
 import { connectorItems } from './connector-items';
 
-const MOCK = { url: '/v6/__index.html', note: 'the owner has not drawn a store view: it is composed from the kit, for review' };
+const MOCK = { url: '/v6/__index.html', note: 'the Store on the v7 kit (wave C): composed from kit components; the approved boards (ds-v7 screen 15) are not in this repository' };
 const NOW = Date.parse('2026-11-21T10:00:00Z');
 type Drive = (c: { root: HTMLElement; wait(ms: number): Promise<void>; view: ReturnType<typeof mountStore>; store: StoreProvider }) => Promise<void> | void;
 
 interface Opts { mock?: MockStoreOptions | (() => MockStoreOptions); patch?(s: StoreProvider): StoreProvider; project?: string | null; screen?: StoreScreen; item?: string }
 const view = (tags: State['tags'], drive: Drive | null, o: Opts = {}): State => ({
-  tags, scope: '.hx-store', mock: MOCK,
+  tags, scope: '.hx-store', mock: MOCK, width: 900,
   render: async (ctx: StageCtx) => {
     const base = createMockStore(typeof o.mock === 'function' ? o.mock() : { ...(o.mock ?? {}) });
     const store = o.patch ? o.patch(base) : base;
     const project = o.project === undefined ? null : o.project;
     const host = document.createElement('div'); host.className = 'lab-fill'; ctx.root.append(host);
-    const v = mountStore(host, { store, toast: () => undefined, project: () => project, settle: 0, now: () => NOW, enter: false });
+    const v = mountStore(host, { store, notify: () => undefined, project: () => project, settle: 0, now: () => NOW, enter: false });
     if (o.screen || o.item) v.show(o.screen ?? 'browse', o.item);
     await ctx.wait(120);
     if (drive) await drive({ root: ctx.root, wait: ctx.wait, view: v, store });
@@ -68,7 +68,7 @@ const clock = { t: NOW - 8 * 3600_000 };
 const LONG = 'A connector with an extremely long name that goes on and on without any sensible place to stop, ending in a_very_long_unbroken_identifier_that_must_not_push_the_row_wider_than_the_window';
 
 const browse: Story = {
-  id: 'store/browse', title: 'Store: browse', area: 'store', kind: 'surface', covers: ['surface:store'], scope: '.hx-store', mock: MOCK,
+  id: 'store/browse', title: 'Store: browse', area: 'store', kind: 'surface', v7: true, covers: ['surface:store'], scope: '.hx-store', mock: MOCK,
   states: {
     'front page (Recommended)': view(['typical'], null),
     'search results': view(['variant'], (c) => type(c, 'firecrawl')),
@@ -93,12 +93,12 @@ const browse: Story = {
     'a row focused from the search (down arrow)': view(['focus'], async (c) => {
       const i = c.root.querySelector<HTMLInputElement>('#hx-store-q'); i?.focus(); i?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })); await c.wait(60);
     }),
-    'row hover': { ...view(['hover'], null), force: [{ sel: '.ui-row--item', state: 'hover' as const }] },
+    'row hover': { ...view(['hover'], null), force: [{ sel: '[data-kit~="ListRow"][data-store-open]', state: 'hover' as const }] },
     'no sources on': view(['empty'], async (c) => { for (const s of c.store.sources.get()) await c.store.setSourceEnabled(s.id, false); await click(c, '[role=radio][data-value="skill"]'); })
   }
 };
 const detail: Story = {
-  id: 'store/detail', title: 'Store: detail', area: 'store', kind: 'surface', covers: ['surface:store-detail'], scope: '.hx-store', mock: MOCK,
+  id: 'store/detail', title: 'Store: detail', area: 'store', kind: 'surface', v7: true, covers: ['surface:store-detail'], scope: '.hx-store', mock: MOCK,
   states: {
     'a recommended connector': view(['typical'], null, { item: 'boopis:firecrawl' }),
     'a connector with its service\'s mark and a key': view(['variant'], null, { item: 'boopis:github', mock: { extraItems: connectorItems() } }),
@@ -115,35 +115,36 @@ const detail: Story = {
   }
 };
 const review: Story = {
-  id: 'store/review', title: 'Store: review card', area: 'store', kind: 'surface', covers: ['surface:store-review'], scope: '.hx-store', mock: MOCK,
+  id: 'store/review', title: 'Store: review card', area: 'store', kind: 'surface', v7: true, covers: ['surface:store-review'], scope: '.hx-store', mock: MOCK,
   states: {
-    'a connector with a key': view(['typical'], (c) => click(c, '.hx-store__sheet .ui-btn--primary, .hx-store__sheet button[class*="primary"]', 250), { item: 'boopis:firecrawl', mock: { empty: true } }),
-    'an engine plugin (strong warning)': view(['variant'], (c) => click(c, '.hx-store__sheet button[class*="primary"]', 250), { item: 'engine-plugins:example-metrics', mock: { empty: true } }),
-    'not reviewed (strong warning)': view(['variant'], (c) => click(c, '.hx-store__sheet button[class*="primary"]', 250), { item: 'github:example-org/changelog-skills' }),
-    'a hosted connector (standing caution)': view(['variant'], (c) => click(c, '.hx-store__sheet button[class*="primary"]', 250), { item: 'mcp-registry:com.example/tickets', patch: hosted }),
-    'in a project (scope choice)': view(['variant'], (c) => click(c, '.hx-store__sheet button[class*="primary"]', 250), { item: 'boopis:release-notes', project: '~/work/api' }),
-    'an update with its diff': view(['variant'], async (c) => { await c.store.checkUpdates(); c.view.show('browse', 'anthropic:example-lint-kit'); await c.wait(150); await click(c, '.hx-store__sheet button[class*="primary"]', 250); }),
-    'could not be checked': view(['error'], (c) => click(c, '.hx-store__sheet button[class*="primary"]', 250), { item: 'boopis:release-notes', patch: (s) => ({ ...s, review: () => Promise.reject({ code: 'hx.store.digest_mismatch', message: 'What was downloaded is not what the catalogue promised, so it was thrown away and nothing was installed.' }) }) }),
-    'long name': view(['long'], (c) => click(c, '.hx-store__sheet button[class*="primary"]', 250), { item: 'boopis:release-notes', patch: (s) => ({ ...s, review: async (id, scope) => { const r = await s.review(id, scope); return { ...r, plan: { ...r.plan, title: LONG } }; } }) })
+    'a connector with a key': view(['typical'], (c) => click(c, '[data-store-primary]', 250), { item: 'boopis:firecrawl', mock: { empty: true } }),
+    'an engine plugin (strong warning)': view(['variant'], (c) => click(c, '[data-store-primary]', 250), { item: 'engine-plugins:example-metrics', mock: { empty: true } }),
+    'not reviewed (strong warning)': view(['variant'], (c) => click(c, '[data-store-primary]', 250), { item: 'github:example-org/changelog-skills' }),
+    'a hosted connector (standing caution)': view(['variant'], (c) => click(c, '[data-store-primary]', 250), { item: 'mcp-registry:com.example/tickets', patch: hosted }),
+    'in a project (scope choice)': view(['variant'], (c) => click(c, '[data-store-primary]', 250), { item: 'boopis:release-notes', project: '~/work/api' }),
+    'an update with its diff': view(['variant'], async (c) => { await c.store.checkUpdates(); c.view.show('browse', 'anthropic:example-lint-kit'); await c.wait(150); await click(c, '[data-store-primary]', 250); }),
+    'could not be checked': view(['error'], (c) => click(c, '[data-store-primary]', 250), { item: 'boopis:release-notes', patch: (s) => ({ ...s, review: () => Promise.reject({ code: 'hx.store.digest_mismatch', message: 'What was downloaded is not what the catalogue promised, so it was thrown away and nothing was installed.' }) }) }),
+    'long name': view(['long'], (c) => click(c, '[data-store-primary]', 250), { item: 'boopis:release-notes', patch: (s) => ({ ...s, review: async (id, scope) => { const r = await s.review(id, scope); return { ...r, plan: { ...r.plan, title: LONG } }; } }) })
   }
 };
 const installed: Story = {
-  id: 'store/installed', title: 'Store: installed', area: 'store', kind: 'surface', covers: ['surface:store-installed'], scope: '.hx-store', mock: MOCK,
+  id: 'store/installed', title: 'Store: installed', area: 'store', kind: 'surface', v7: true, covers: ['surface:store-installed'], scope: '.hx-store', mock: MOCK,
   states: {
     installed: view(['typical'], null, { screen: 'installed' }),
     'nothing installed': view(['empty'], null, { screen: 'installed', mock: { empty: true } }),
     'an update is available': view(['variant'], (c) => c.store.checkUpdates().then(() => c.view.show('installed')), { screen: 'installed' }),
-    'taken down by its source (banner)': view(['error'], null, { screen: 'installed', patch: killListed }),
+    'taken down by its source (a red Notice)': view(['error'], null, { screen: 'installed', patch: killListed }),
     'in a governed project (the switch is on)': view(['variant'], null, { screen: 'installed', project: '~/work/api' }),
     'in an ordinary project (the switch is off)': view(['variant'], null, { screen: 'installed', project: '~/work/site' }),
-    'remove: its keys': view(['variant'], (c) => click(c, '[data-store-remove="boopis:firecrawl"]', 250), { screen: 'installed' }),
+    'remove: its keys': view(['variant'], async (c) => { await click(c, '[data-store-more="boopis:firecrawl"]'); (document.querySelector('[data-kit~="MenuRow"][data-value="remove"]') as HTMLElement | null)?.click(); await c.wait(250); }, { screen: 'installed' }),
+    'a row\'s menu (Details, Roll back, Remove)': { ...view(['open'], (c) => click(c, '[data-store-more="anthropic:example-lint-kit"]'), { screen: 'installed' }), overlay: { layer: '[data-kit~="Menu"][data-floating]', anchor: '[data-store-more="anthropic:example-lint-kit"]' } },
     'long name': view(['long'], null, { screen: 'installed', patch: (s) => { const w = s.installed as unknown as { update(fn: (l: readonly InstallReceipt[]) => readonly InstallReceipt[]): void }; w.update((l) => l.map((r) => ({ ...r, title: LONG }))); return s; } }),
-    'switch focus': { ...view(['focus'], null, { screen: 'installed' }), force: [{ sel: '.ui-switch', state: 'focus' as const }] },
-    'button pressed': { ...view(['active'], null, { screen: 'installed' }), force: [{ sel: '.ui-btn', state: 'active' as const }] }
+    'switch focus': { ...view(['focus'], null, { screen: 'installed' }), force: [{ sel: '[data-kit~="Switch"]', state: 'focus' as const }] },
+    'button pressed': { ...view(['active'], null, { screen: 'installed' }), force: [{ sel: '[data-kit~="Button"]', state: 'active' as const }] }
   }
 };
 const sources: Story = {
-  id: 'store/sources', title: 'Store: sources', area: 'store', kind: 'surface', covers: ['surface:store-sources'], scope: '.hx-store', mock: MOCK,
+  id: 'store/sources', title: 'Store: sources', area: 'store', kind: 'surface', v7: true, covers: ['surface:store-sources'], scope: '.hx-store', mock: MOCK,
   states: {
     sources: view(['typical'], null, { screen: 'sources' }),
     'a source added by you': view(['variant'], async (c) => { await c.store.addSource({ url: 'https://github.com/example-org/skills' }); c.view.show('sources'); }, { screen: 'sources' }),

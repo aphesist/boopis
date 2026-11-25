@@ -1,11 +1,7 @@
-/* Settings > Connectors (host/connectors.ts): placement only. The rows are the kit's settings rows with an item's tile in the
-   lead, boopis's collection is the kit's item rows (the Store's), the search is the kit's field. */
-.hx-conn { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; min-width: 0; }
-.hx-conn__find { padding-block-start: var(--sp-2); }
-.hx-conn__find[hidden] { display: none; }
-/* the collection's rows reach the section's edges (no list inset: a dialog has no sidebar axis) */
-.hx-conn__rows { padding: 0; }
-/* a row's controls differ in height (a word, a switch, buttons): they share its centre and wrap under the text when narrow */
-.hx-conn__installed .ui-set__row { flex-wrap: wrap; }
-.hx-conn .ui-set__label { overflow-wrap: anywhere; }
-.hx-conn__acts { align-items: center; flex-wrap: wrap; flex: 0 1 auto; max-width: 100%; }
+/* Settings > Connectors (host/connectors.ts) on the v7 kit: placement only. The rows are the kit's Cards and Rows, boopis's
+   collection the kit's ListRows (the Store's item rows), the search the kit's Field. */
+.hx-conn { min-width: 0; }
+.hx-conn__find[hidden], .hx-conn [hidden] { display: none; }
+.hx-conn__flow, .hx-conn__result { display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; }
+.hx-conn__result:empty { display: none; }
+.hx-conn__back { align-self: flex-start; }

@@ -14,7 +14,8 @@ export const KEYS = {
   boards: 'hx.v6.boards',
   preview: 'hx.v6.preview',
   window: 'hx.v6.window',
-  size: 'hx.v6.size'
+  size: 'hx.v6.size',
+  appearance: 'hx.v7.theme'
 } as const;
 export type StoreKey = (typeof KEYS)[keyof typeof KEYS];
 

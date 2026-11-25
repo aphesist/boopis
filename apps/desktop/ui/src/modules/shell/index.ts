@@ -8,20 +8,21 @@ import { ariaKeys } from '../../core/keys';
 import { logger } from '../../core/log';
 import { callProvided, registered, SLOTS } from '../../core/registry';
 import type { SlotName } from '../../core/registry';
-import { followScheme, followWindowWidth, prefs, saveState, setMounting, setState, setStateHooks, state, toggle, urlQuery } from '../../core/state';
+import { followScheme, followWindowWidth, prefs, setMounting, setState, setStateHooks, state, toggle, urlQuery } from '../../core/state';
 import { TABS } from '../../core/settings';
 import type { Tab } from '../../core/types';
 import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import { themeApi } from '../../styles/theme';
-import { openKeys, openMenu, openSettings, openStore, SETTINGS_SECTIONS, wireDialogs } from './dialogs';
+import { openKeys, openMenu, openSettings, openStore, wireDialogs } from './dialogs';
+import { syncSettings } from '../settings';
 import { collectEls, els, sh } from './ctx';
 import { reportAttention, seedAttention, setTitleOverride, updateAttentionDots, updateTitle } from './attention';
 import { newThing, toast, toggleDockExpand, toggleLightDark, togglePanel } from './actions';
 import { wireWindowControls } from './window';
 import { wireUiSize } from './ui-size';
 import { go, pushHistory } from './history';
-import { classifyKey, keysTableHTML } from './keymap';
+import { classifyKey } from './keymap';
 import { computeNow, layoutNow, markResized, queueLayout, setDockHeight, setInset } from './layout';
 import { closePalette, movePal, openPalette, paletteActive, renderPalette, resetActive, runPal, setActive } from './palette';
 import { cycleRegion, focusRegion, leaderActive, leaderKey, nextAttention, regionOf, rememberFocus, startLeader } from './regions';
@@ -70,12 +71,9 @@ function applyState(): void {
   el.btnRight.setAttribute('aria-expanded', String(ropen));
   el.btnRight.disabled = state.tab !== 'session';
   // settings controls (the account menu reads state when it opens)
-  const sDock = document.getElementById('hx-set-dock') as HTMLInputElement | null; if (sDock) sDock.checked = state.dock === 'on';
   app.dataset['orbGrow'] = state.orbGrow ? 'on' : 'off';
-  const sGrow = document.getElementById('hx-set-orb-grow') as HTMLInputElement | null; if (sGrow) sGrow.checked = state.orbGrow;
   app.dataset['dockCentre'] = state.dockCentred ? 'on' : 'off';
-  const sCentre = document.getElementById('hx-set-dock-centre') as HTMLInputElement | null; if (sCentre) sCentre.checked = state.dockCentred;
-  if (sh.seg.collapse) sh.seg.collapse.select(prefs.collapse);
+  syncSettings();
   updateTitle();
   updateAttentionDots();
 }
@@ -180,12 +178,6 @@ export function boot(): void {
   for (const b of $$('[role="tab"]', sh.seg.rail)) b.dataset['tipPos'] = 'right';
   $('#hx-seg').replaceWith(sh.seg.tabs);
   $('#hx-rail-seg').replaceWith(sh.seg.rail);
-  sh.seg.collapse = ui.segmented({ mode: 'radio', size: 's', labelledby: 'hx-set-collapse-l', value: prefs.collapse, options: [{ value: 'rail', label: 'Rail' }, { value: 'closed', label: 'Hide' }] });
-  $('#hx-set-collapse').replaceWith(sh.seg.collapse);
-  // Settings' sections: the library's tab bar, concentric with the dialog's corner band
-  $('#hx-dtabs').outerHTML = ui.html.tabs({ label: 'Settings sections', class: 'hx-dtabs', scroll: true, value: 'general',
-    tabs: SETTINGS_SECTIONS.map(([value, label]) => ({ value, label, id: 'hx-dtab-' + value, controls: 'hx-dpanel-' + value })) });
-  ui.hydrate($('#hx-settings'));
 
   // user
   const U = data().user.get();
@@ -199,7 +191,6 @@ export function boot(): void {
   $$('kbd[data-kbd]', app).forEach((k) => { k.outerHTML = ui.html.keys(k.dataset['kbd'], k.hasAttribute('data-fit') ? { fit: true } : undefined); });
   el.btnNew.setAttribute('aria-keyshortcuts', ariaKeys('mod+shift+O'));
   el.btnSearch.setAttribute('aria-keyshortcuts', ariaKeys('mod+K'));
-  $('#hx-keys').innerHTML = keysTableHTML('');
   // shortcuts for assistive tech
   for (const n of $$('[data-kbd]', app)) n.setAttribute('aria-keyshortcuts', ariaKeys(n.dataset['kbd'] ?? ''));
 
@@ -259,10 +250,6 @@ function wire(): void {
   on('hx:theme', (d) => {
     followScheme(d && d.scheme === 'light' ? 'light' : 'dark');
     queueLayout(false);   // corners and density change sizes
-  });
-  sh.seg.collapse?.addEventListener('ui:change', (e) => {
-    prefs.collapse = (e as CustomEvent<{ value: string }>).detail.value === 'closed' ? 'closed' : 'rail'; saveState();
-    if (state.left !== 'open') setState({ left: prefs.collapse });
   });
 
   // palette

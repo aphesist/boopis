@@ -1,6 +1,6 @@
-/* A project's switch "no engine plugins and no plugin hooks" (docs/STORE.md 5.8): a settings row with a switch, on by default for
+/* A project's switch "no engine plugins and no plugin hooks" (docs/STORE.md 5.8): a settings Row with a Switch (the v7 kit), on by default for
    a governed project, and the words that say which it is. It is the plugin's setting, read and written through the provider. */
-import { ui } from '@boopis/ui';
+import { kit } from '@boopis/ui';
 import type { ProjectPolicy, StoreProvider } from '../../data';
 import { errorText } from './model';
 
@@ -13,17 +13,18 @@ export function policyHint(p: ProjectPolicy): string {
 
 const seen = new Map<string, ProjectPolicy>();   // the last answer per project, so a redrawn panel shows it at once
 
-/** the row for `project`, filled when the plugin answers; `say` reports a failure in words */
+/** the row for `project` (a Card with one Row: the label, its explanation behind the label, the Switch), filled when the plugin
+    answers; `say` reports a failure in words */
 export function projectSwitch(store: Pick<StoreProvider, 'projectPolicy' | 'setProjectPolicy'>, project: string, say: (text: string) => void, id = 'hx-store-policy'): HTMLElement {
   const host = document.createElement('div');
   host.dataset['storePolicy'] = project;
   const draw = (p: ProjectPolicy | null, problem?: string): void => {
-    host.innerHTML = ui.html.setRow({ label: POLICY_LABEL, hint: p ? policyHint(p) : (problem ?? 'Reading this project\'s setting.'), ...(p ? { for: id } : {}), control: p ? ui.html.switch({ id, checked: p.effective, label: POLICY_LABEL + (p.effective ? ' is on' : ' is off') }) : '' });
-    ui.hydrate(host);
-    const sw = host.querySelector<HTMLInputElement>('input[role=switch]');
-    sw?.addEventListener('change', () => {
-      const want = sw.checked;
-      store.setProjectPolicy(project, want).then((n) => { seen.set(project, n); draw(n); say(want ? 'Engine plugins and plugin hooks are off for this project.' : 'Engine plugins and plugin hooks are allowed here once approved.'); }).catch((e: unknown) => { sw.checked = !want; say(errorText(e)); });
+    host.innerHTML = kit.html.card({ rows: [{ label: POLICY_LABEL, explain: p ? policyHint(p) : undefined, value: p ? undefined : (problem ?? 'Reading'), control: p ? kit.html.switch({ id, checked: p.effective, label: POLICY_LABEL }) : '' }] });
+    kit.wire(host);
+    const sw = host.querySelector<HTMLButtonElement>('[role=switch]');
+    sw?.addEventListener('ui:change', (e) => {
+      const want = (e as CustomEvent<{ value: boolean }>).detail.value;
+      store.setProjectPolicy(project, want).then((n) => { seen.set(project, n); draw(n); say(want ? 'Engine plugins and plugin hooks are off for this project.' : 'Engine plugins and plugin hooks are allowed here once approved.'); }).catch((err: unknown) => { sw.setAttribute('aria-checked', String(!want)); say(errorText(err)); });
     });
   };
   draw(seen.get(project) ?? null);

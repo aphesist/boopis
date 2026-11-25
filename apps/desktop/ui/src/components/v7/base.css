@@ -52,7 +52,8 @@
 /* info labels: hidden at rest; revealed by hovering the row or card that holds them, or focusing the label */
 [data-mark-reveal="hover"] .k7-mark { --mc: transparent; --mark-dashes: 0; }
 @media (hover: hover) and (pointer: fine) { [data-mark-reveal="hover"]:hover .k7-mark { --mc: var(--mark-color); --mark-dashes: 1; animation: k7-mark-in var(--mark-dur-in) var(--mark-ease) both; } }
-[data-mark-reveal="hover"]:focus-within .k7-mark, [data-mark-reveal="hover"][data-lab-hover] .k7-mark { --mc: var(--mark-color); --mark-dashes: 1; }
+/* focus reveals the label it lands on (the rule below), never every label of a row whose switch has the focus (17.1: "focusing the label") */
+[data-mark-reveal="hover"][data-lab-hover] .k7-mark { --mc: var(--mark-color); --mark-dashes: 1; }
 [data-mark-reveal="hover"] .k7-mark:is(:hover, :focus-visible, [data-mark="hover"]) { --mc: var(--mark-color-hover); --mark-dashes: 1; }
 @media (hover: none) { [data-mark-reveal="hover"] .k7-mark { --mc: var(--mark-color); --mark-dashes: 1; } }
 /* forced colours draw no background layer: the explained label shows the outline (i) after it (17.2) */

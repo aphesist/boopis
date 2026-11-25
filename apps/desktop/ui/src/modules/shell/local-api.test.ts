@@ -49,8 +49,8 @@ describe('Settings, Local API', () => {
     const sec = document.createElement('section'); document.body.append(sec);
     const bridge = fake(ON);
     renderLocalApi(sec, OFF, bridge);
-    const sw = sec.querySelector<HTMLInputElement>('#hx-set-local-api')!;
-    sw.checked = true; sw.dispatchEvent(new Event('change', { bubbles: true }));
+    const sw = sec.querySelector<HTMLButtonElement>('#hx-set-local-api')!;
+    sw.click();
     await tick();
     expect(bridge.calls).toContain('setEnabled:true');
     expect(sec.querySelector('#hx-local-api-rotate')).not.toBeNull();
@@ -60,8 +60,8 @@ describe('Settings, Local API', () => {
     const sec = document.createElement('section'); document.body.append(sec);
     const bridge = fake(new Error('boopis could not open the endpoint.'));
     renderLocalApi(sec, OFF, bridge);
-    const sw = sec.querySelector<HTMLInputElement>('#hx-set-local-api')!;
-    sw.checked = true; sw.dispatchEvent(new Event('change', { bubbles: true }));
+    const sw = sec.querySelector<HTMLButtonElement>('#hx-set-local-api')!;
+    sw.click();
     await tick(); await tick();
     expect(bridge.calls).toEqual(['setEnabled:true', 'status']);
   });

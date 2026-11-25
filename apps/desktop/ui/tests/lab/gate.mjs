@@ -14,8 +14,8 @@ import { CHECKS } from './rules.mjs';
 const UI_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 export const V7_BLOCKING = process.env.LAB_V7_BLOCKING === '1';
 export const V7_KIT = process.env.LAB_V7_BLOCKING === 'kit';
-/** a finding on the v7 kit: its stories, or its own source files */
-const onKit = (f) => (typeof f.story === 'string' && f.story.startsWith('kit/')) || (typeof f.file === 'string' && f.file.startsWith('src/components/v7/'));
+/** a finding on the v7 kit: its stories, a screen's story moved onto it (`v7: true`), or its own source files */
+const onKit = (f) => !!f.v7 || (typeof f.story === 'string' && f.story.startsWith('kit/')) || (typeof f.file === 'string' && f.file.startsWith('src/components/v7/'));
 const argv = process.argv.slice(2);
 const opt = (n) => { const i = argv.indexOf('--' + n); return i >= 0 ? argv[i + 1] : null; };
 const first = argv[0] && !argv[0].startsWith('--') ? argv[0] : null;

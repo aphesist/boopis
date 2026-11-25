@@ -153,6 +153,7 @@
 .k7-field__box[data-kind="multiline"] { align-items: flex-start; padding: var(--pad-field-y) var(--pad-field); }
 .k7-field__glyph { width: var(--icon-s); height: var(--icon-s); color: var(--icon-quiet); }
 .k7-field__input { flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text); outline: none; resize: none; }
+.k7-field__input:focus-visible { outline: none; }   /* the box carries the ring (below), never the input inside it */
 .k7-field__input::placeholder { color: var(--text-quiet); }
 .k7-field__input.k7-mono { font-family: var(--mono); font-size: var(--fs-xs); }
 @media (hover: hover) and (pointer: fine) { .k7-field__box:hover { box-shadow: inset 0 0 0 var(--hl) var(--text-quiet); transition-duration: var(--dur-1); } }

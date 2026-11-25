@@ -33,6 +33,26 @@ function wireSegmented(seg: HTMLElement): void {
   });
 }
 
+/** a large Dialog's nav: a row chosen (click, Enter, Space) becomes the current page and fires ui:change {value} (its data-value)
+    on the nav, cancelable; Up and Down move between the rows, Home and End to the ends */
+function wireNav(nav: HTMLElement): void {
+  const rows = (): HTMLButtonElement[] => [...nav.querySelectorAll<HTMLButtonElement>('.k7-dialog__navrow')];
+  nav.addEventListener('click', (e) => {
+    const b = (e.target as Element).closest<HTMLButtonElement>('.k7-dialog__navrow');
+    if (!b || b.getAttribute('aria-current') === 'page') return;
+    if (!fire(nav, 'ui:change', { value: b.dataset['value'] ?? '' }, true)) return;
+    for (const x of rows()) { if (x === b) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); }
+  });
+  nav.addEventListener('keydown', (e) => {
+    const list = rows(), i = list.indexOf(document.activeElement as HTMLButtonElement);
+    if (i < 0) return;
+    const n = ({ ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: list.length - 1 } as Record<string, number>)[e.key];
+    if (n == null) return;
+    e.preventDefault();
+    list[(n + list.length) % list.length]?.focus();
+  });
+}
+
 /** Switch: applies at once (R-switch-1) */
 function wireSwitch(sw: HTMLButtonElement): void {
   sw.addEventListener('click', () => {
@@ -164,7 +184,7 @@ function wireRestOrb(w: HTMLElement): void {
 }
 
 const WIRES: ReadonlyArray<readonly [string, (el: HTMLElement) => void]> = [
-  ['.k7-seg', wireSegmented], ['.k7-switch', (el) => wireSwitch(el as HTMLButtonElement)], ['.k7-chip', (el) => wireChip(el as HTMLButtonElement)],
+  ['.k7-seg', wireSegmented], ['.k7-dialog__nav', wireNav], ['.k7-switch', (el) => wireSwitch(el as HTMLButtonElement)], ['.k7-chip', (el) => wireChip(el as HTMLButtonElement)],
   ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark], ['.k7-info', wireInfo], ['.k7-composer', wireComposer], ['.k7-dock', paintDock], ['.ui-orb[data-orb-rest]', wireRestOrb]
 ];
 /** wire every kit component under root (and root itself) once */

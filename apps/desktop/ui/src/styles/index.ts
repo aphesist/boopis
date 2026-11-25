@@ -6,6 +6,7 @@ import '../host/first-run.css';
 import '../host/connectors.css';
 import '../modules/shell/shell.css';
 import '../modules/cards/cards.css';
+import '../modules/settings/settings.css';
 import '../modules/store/store.css';
 import '../modules/session/session.css';
 import '../modules/session/children.css';

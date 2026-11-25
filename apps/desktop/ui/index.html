@@ -81,52 +81,12 @@
     </div>
   </div>
 
-  <dialog class="hx-dialog" id="hx-settings" aria-labelledby="hx-settings-title">
-    <div class="hx-dialog__card ui-nest">
-      <header class="hx-dialog__head">
-        <h2 id="hx-settings-title">Settings</h2>
-        <div id="hx-dtabs"></div>
-        <button class="ui-ib ui-corner" type="button" id="hx-settings-close" aria-label="Close settings" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
-      </header>
-      <div class="hx-dialog__body ui-scroll ui-scroll--stable ui-scroll--inset-end" tabindex="0" role="region" aria-labelledby="hx-settings-title">   <!-- focusable: a panel with nothing to focus (Keyboard) still scrolls from the keyboard -->
-        <div class="hx-dpanel" id="hx-dpanel-general" role="tabpanel" aria-labelledby="hx-dtab-general">
-          <section class="ui-set" aria-labelledby="hx-set-layout">
-            <h3 class="ui-set__head" id="hx-set-layout">Layout</h3>
-            <div class="ui-set__row">
-              <label class="ui-set__label" for="hx-set-dock"><span>Show the dock</span><small>Bots and widgets at the bottom edge. Everything in it is also in the sidebar.</small></label>
-              <input class="ui-switch" type="checkbox" id="hx-set-dock" role="switch" data-ui="switch" checked>
-            </div>
-            <div class="ui-set__row">
-              <label class="ui-set__label" for="hx-set-dock-centre"><span>Keep the dock centred in the window</span><small>It stays in the middle of the window while the sidebar and the details panel open and close.</small></label>
-              <input class="ui-switch" type="checkbox" id="hx-set-dock-centre" role="switch" data-ui="switch">
-            </div>
-            <div class="ui-set__row">
-              <span class="ui-set__label" id="hx-set-collapse-l"><span>When the sidebar collapses</span><small>A rail keeps the tabs and the new button in reach.</small></span>
-              <div id="hx-set-collapse"></div>
-            </div>
-          </section>
-        </div>
-        <div class="hx-dpanel" id="hx-dpanel-models" role="tabpanel" aria-labelledby="hx-dtab-models" hidden></div>
-        <div class="hx-dpanel" id="hx-dpanel-connectors" role="tabpanel" aria-labelledby="hx-dtab-connectors" hidden></div>
-        <div class="hx-dpanel" id="hx-dpanel-appearance" role="tabpanel" aria-labelledby="hx-dtab-appearance" hidden></div>
-        <div class="hx-dpanel" id="hx-dpanel-keys" role="tabpanel" aria-labelledby="hx-dtab-keys" hidden>
-          <section class="ui-set" id="hx-set-keys" aria-labelledby="hx-set-keys-h">
-            <h3 class="ui-set__head" id="hx-set-keys-h">Keyboard shortcuts</h3>
-            <div class="hx-keys" id="hx-keys"></div>
-          </section>
-        </div>
-      </div>
-    </div>
+  <dialog class="hx-dialog7" id="hx-settings" aria-label="Settings">   <!-- the v7 kit's large Dialog, drawn by modules/settings -->
+    <div class="hx-dialog7__host" id="hx-settings-body"></div>
   </dialog>
 
-  <dialog class="hx-dialog hx-store-dialog" id="hx-store" aria-labelledby="hx-store-title">
-    <div class="hx-dialog__card ui-nest">
-      <header class="hx-dialog__head">
-        <h2 id="hx-store-title">Store</h2>
-        <button class="ui-ib ui-corner" type="button" id="hx-store-close" aria-label="Close the store" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
-      </header>
-      <div class="hx-dialog__body ui-scroll ui-scroll--stable ui-scroll--inset-end" tabindex="0" role="region" aria-labelledby="hx-store-title" id="hx-store-body"></div>
-    </div>
+  <dialog class="hx-dialog7 hx-store-dialog" id="hx-store" aria-label="Store">   <!-- the v7 kit's large Dialog, drawn by modules/store/view.ts -->
+    <div class="hx-dialog7__host" id="hx-store-body"></div>
   </dialog>
 
   <dialog class="hx-dialog hx-keysheet" id="hx-keys-sheet" aria-labelledby="hx-keys-title">

@@ -6,7 +6,7 @@ import { setProvider } from '../data';
 import { createMockProvider } from '../data/mock-provider';
 import { formsHost } from '../modules/cards/forms-host';
 import { useFormsHost } from '../modules/cards/forms-host';
-import { ui } from '@boopis/ui';
+import { kit } from '@boopis/ui';
 import { describeConnector, installLines, mountConnectors, textValues } from './connectors';
 import type { ConnectorInfo, ConnectorInstall, ConnectorRequest, ConnectorReview, ConnectorsBridge } from './connectors-bridge';
 
@@ -50,10 +50,20 @@ async function mount(f: Fake): Promise<{ panel: HTMLElement; toasts: string[] }>
   const panel = document.createElement('div');
   document.body.append(panel);
   const toasts: string[] = [];
-  await mountConnectors(panel, { bridge: f, toast: (t) => { toasts.push(t); }, settle: 0 });
+  await mountConnectors(panel, { bridge: f, notify: (t) => { toasts.push(t); }, settle: 0 });
   return { panel, toasts };
 }
 const click = (root: Element, sel: string): void => { const b = root.querySelector<HTMLElement>(sel); if (!b) throw new Error('no ' + sel); b.click(); };
+/** a connector's overflow Menu, and one of its rows (Test, Remove) */
+const pick = (root: Element, name: string, value: 'test' | 'remove'): void => {
+  click(root, `[data-conn-more="${name}"]`);
+  const row = document.querySelector<HTMLElement>(`[data-kit~="Menu"][data-floating] [data-value="${value}"]`);
+  if (!row) throw new Error('no ' + value + ' in the menu of ' + name);
+  row.click();
+};
+/** what a person can read: the text, and the explanations behind the rows' info labels */
+const read = (root: Element | null | undefined): string => root ? (root.textContent ?? '') + ' ' + [...root.querySelectorAll('[data-explain]')].map((n) => n.getAttribute('data-explain')).join(' ') : '';
+const sw = (root: Element, name?: string): HTMLButtonElement => root.querySelector<HTMLButtonElement>(name ? `[data-conn-switch="${name}"]` : '[data-conn-switch]') as HTMLButtonElement;
 function fill(root: Element, name: string, value: string): void {
   const input = root.querySelector<HTMLInputElement>(`[data-name="${name}"]`);
   if (!input) throw new Error('no field ' + name);
@@ -98,32 +108,33 @@ describe('the Connectors tab', () => {
   it('lists what Hermes has, with a switch, Test and Remove for its own and no control for a plugin\'s, and Sign in where one is owed', async () => {
     const f = fake([info(), info({ name: 'linear', url: 'https://mcp.linear.example/mcp', command: null, args: [], auth: 'oauth', oauth_tokens_present: false, status: 'configured', tools: null }), info({ name: 'fromplugin', plugin: 'acme' })]);
     const { panel } = await mount(f);
-    const rows = [...panel.querySelectorAll('.ui-set__row')].map((r) => r.querySelector('.ui-set__label span')?.textContent);
-    expect(rows.slice(0, 3)).toEqual(['fakemcp', 'linear', 'fromplugin']);
-    expect(panel.querySelectorAll('input[role=switch]')).toHaveLength(2);
+    const rows = [...panel.querySelectorAll('#hx-conn-have [data-kit-part~="Row"]')].map((r) => r.querySelector('.k7-row__label')?.textContent);
+    expect(rows).toEqual(['fakemcp', 'linear', 'fromplugin']);
+    expect(panel.querySelectorAll('[role=switch][data-conn-switch]')).toHaveLength(2);
     expect(panel.querySelector('[data-conn-signin="linear"]')).toBeTruthy();
     expect(panel.querySelector('[data-conn-signin="fakemcp"]')).toBeNull();
-    expect(panel.querySelector('[data-conn-test="fromplugin"]')).toBeNull();
-    expect(panel.textContent).toContain('Provided by the plugin acme');
-    expect(panel.querySelector('[data-conn-remove="fakemcp"]')?.getAttribute('aria-label')).toBe('Remove fakemcp');
+    expect(panel.querySelector('[data-conn-more="fromplugin"]')).toBeNull();
+    expect(read(panel)).toContain('Provided by the plugin acme');
+    pick(panel, 'fakemcp', 'remove');
+    expect(panel.querySelector('hx-card')).toBeTruthy();
   });
 
   it('lists the collection one row per connector, and offers each way with where it reaches and its pin, then a URL and a command', async () => {
     const { panel } = await mount(fake());
     expect(panel.textContent).toContain('No connectors yet');
-    const coll = panel.querySelector('#hx-conn-coll-h')?.parentElement as HTMLElement;
-    expect(coll.querySelectorAll('.ui-row--item')).toHaveLength(1);
+    const coll = panel.querySelector('#hx-conn-coll') as HTMLElement;
+    expect(coll.querySelectorAll('[data-kit~="ListRow"]')).toHaveLength(1);
     expect(coll.textContent).toContain('Firecrawl');
     expect(coll.textContent).toContain('Scrape the web.');
     expect(coll.textContent).toContain('local · hosted');
     expect(coll.querySelector('[data-add-entry="firecrawl"]')?.getAttribute('aria-haspopup')).toBe('menu');
     click(coll, '[data-add-entry="firecrawl"]');
-    const menu = document.querySelector('.ui-menu') as HTMLElement;
+    const menu = document.querySelector('[data-kit~="Menu"][data-floating]') as HTMLElement;
     expect(menu.getAttribute('aria-label')).toBe('Ways to add Firecrawl');
     expect(menu.textContent).toContain('Reaches: Only this computer (127.0.0.1). Pinned to firecrawl-mcp@3.40.0.');
     expect(menu.textContent).toContain('Reaches: mcp.firecrawl.dev.');
-    ui.menu.close();
-    const add = panel.querySelector('#hx-conn-add-h')?.parentElement?.textContent ?? '';
+    kit.closeMenu();
+    const add = panel.querySelector('#hx-conn-add')?.textContent ?? '';
     expect(add).toContain('Other ways to add');
     expect(add).toContain('From a URL');
     expect(add).toContain('From a command');
@@ -139,29 +150,20 @@ describe('the Connectors tab', () => {
     click(panel, '[data-add-entry="exa"]');
     await tick();
     expect(f.calls).toContain('inputs:catalog:exa:hosted');
-    expect(document.querySelector('.ui-menu')).toBeNull();
+    expect(document.querySelector('[data-kit~="Menu"][data-floating]')).toBeNull();
   });
 
   it('narrows the installed list and the collection as you type, and says when nothing matches', async () => {
     const f = fake([info({ name: 'github', url: 'https://api.githubcopilot.com/mcp/', command: null, args: [] }), info({ name: 'notes' })]);
     const { panel } = await mount(f);
-    const q = panel.querySelector<HTMLInputElement>('#hx-conn-q input, input#hx-conn-q') as HTMLInputElement;
+    const q = panel.querySelector<HTMLInputElement>('input#hx-conn-q') as HTMLInputElement;
     q.value = 'scrape'; q.dispatchEvent(new Event('input', { bubbles: true }));
     expect(panel.querySelector('[data-add-entry="firecrawl"]')).toBeTruthy();
-    expect(panel.querySelector('#hx-conn-installed-h')?.parentElement?.textContent).toContain('None installed matches');
+    expect(panel.querySelector('#hx-conn-installed')?.textContent).toContain('No installed connector matches');
     q.value = 'github'; q.dispatchEvent(new Event('input', { bubbles: true }));
-    expect(panel.querySelector('[data-conn-test="github"]')).toBeTruthy();
-    expect(panel.querySelector('[data-conn-test="notes"]')).toBeNull();
-    expect(panel.querySelector('#hx-conn-coll-h')?.parentElement?.textContent).toContain('Nothing in boopis\'s collection matches “github”');
-  });
-
-  it('draws each installed connector with its tile: the service it runs, else its monogram', async () => {
-    const f = fake([info({ name: 'github', url: 'https://api.githubcopilot.com/mcp/', command: null, args: [] }), info({ name: 'github-copy', command: 'npx', args: ['-y', 'other-mcp@1.0.0'] })]);
-    const { panel } = await mount(f);
-    const tile = (n: string): Element | null | undefined => panel.querySelector(`[data-conn-test="${n}"]`)?.closest('.ui-set__row')?.querySelector('.ui-imark');
-    expect(tile('github')?.getAttribute('data-mark')).toBe('github');
-    expect(tile('github-copy')?.getAttribute('data-mark')).toBeNull();
-    expect(tile('github-copy')?.textContent).toBe('GC');
+    expect(panel.querySelector('[data-conn-more="github"]')).toBeTruthy();
+    expect(panel.querySelector('[data-conn-more="notes"]')).toBeNull();
+    expect(panel.querySelector('#hx-conn-coll')?.textContent).toContain('Nothing in boopis\'s collection matches “github”');
   });
 
   it('says the list could not be read, and draws no list, when the host cannot read it', async () => {
@@ -174,16 +176,12 @@ describe('the Connectors tab', () => {
   it('switches a server through the host, and puts the switch back when the host refuses', async () => {
     const f = fake([info()]);
     const { panel, toasts } = await mount(f);
-    const sw = panel.querySelector<HTMLInputElement>('input[role=switch]') as HTMLInputElement;
-    sw.checked = false;
-    sw.dispatchEvent(new Event('change', { bubbles: true }));
+    sw(panel).click();
     await tick();
     expect(f.calls).toContain('enable:fakemcp:false');
     expect(toasts.at(-1)).toContain('fakemcp is off');
     f.setEnabled = () => Promise.reject(new Error('Hermes refused it'));
-    const sw2 = panel.querySelector<HTMLInputElement>('input[role=switch]') as HTMLInputElement;
-    sw2.checked = false;
-    sw2.dispatchEvent(new Event('change', { bubbles: true }));
+    sw(panel).click();
     await tick();
     expect(toasts.at(-1)).toBe('Hermes refused it');
   });
@@ -191,7 +189,7 @@ describe('the Connectors tab', () => {
   it('tests a server and writes Hermes\'s answer where it can be read', async () => {
     const f = fake([info()]);
     const { panel } = await mount(f);
-    click(panel, '[data-conn-test="fakemcp"]');
+    pick(panel, 'fakemcp', 'test');
     await tick();
     expect(panel.querySelector('[data-conn-status]')?.textContent).toBe('fakemcp: connected, 2 tools: echo, ping.');
   });
@@ -201,7 +199,7 @@ describe('removing', () => {
   it('asks what to do with its keys when it has some, and sends the answer', async () => {
     const f = fake([info({ name: 'keyed', secrets: ['secret://connector.keyed/key'] })]);
     const { panel, toasts } = await mount(f);
-    click(panel, '[data-conn-remove="keyed"]');
+    pick(panel, 'keyed', 'remove');
     const options = [...panel.querySelectorAll('.cd-opt')].map((o) => o.textContent);
     expect(options.join('|')).toContain('Keep them in my keychain');
     expect(options.join('|')).toContain('Delete them too');
@@ -214,7 +212,7 @@ describe('removing', () => {
   it('asks nothing about keys when it has none, and keeps them when the answer is not delete', async () => {
     const f = fake([info()]);
     const { panel } = await mount(f);
-    click(panel, '[data-conn-remove="fakemcp"]');
+    pick(panel, 'fakemcp', 'remove');
     expect(panel.querySelectorAll('.cd-opt')).toHaveLength(0);
     await formsHost().submit('connector.remove.fakemcp', { values: {}, secrets: {} });
     await tick();
@@ -225,7 +223,7 @@ describe('removing', () => {
     const f = fake([info()]);
     f.remove = () => Promise.reject(new Error('fakemcp comes from the plugin p'));
     const { panel } = await mount(f);
-    click(panel, '[data-conn-remove="fakemcp"]');
+    pick(panel, 'fakemcp', 'remove');
     await expect(formsHost().submit('connector.remove.fakemcp', { values: {}, secrets: {} })).rejects.toThrow('comes from the plugin p');
   });
 });
@@ -256,7 +254,7 @@ describe('adding', () => {
     const f = fake();
     const { panel } = await mount(f);
     click(panel, '[data-add-entry="firecrawl"]');
-    (document.querySelector('.ui-menu [data-value="hosted"]') as HTMLElement).click();
+    (document.querySelector('[data-kit~="Menu"][data-floating] [data-value="hosted"]') as HTMLElement).click();
     await tick();
     expect(f.calls).toContain('inputs:catalog:firecrawl:hosted');
     fill(panel, 'name', 'fc');
@@ -346,7 +344,7 @@ describe('adding', () => {
     button?.click();
     await tick(8);
     expect(f.calls).toContain('signin:linear');
-    expect(panel.querySelector('#hx-conn-installed-h'), 'back to the list after the sign-in').toBeTruthy();
+    expect(panel.querySelector<HTMLElement>('#hx-conn-installed')?.hidden, 'back to the list after the sign-in').toBe(false);
   });
 
   it('cancels a running sign-in through the host when the card is cancelled', async () => {
@@ -368,11 +366,11 @@ describe('adding', () => {
     const { panel } = await mount(f);
     click(panel, '[data-add-command]');
     await tick();
-    expect(panel.querySelector('#hx-conn-installed-h')?.closest('section')?.hidden).toBe(true);
+    expect(panel.querySelector<HTMLElement>('#hx-conn-installed')?.hidden).toBe(true);
     const back = [...panel.querySelectorAll('button')].find((b) => b.textContent === 'Back to connectors');
     back?.click();
     await tick();
-    expect(panel.querySelector('#hx-conn-installed-h')?.closest('section')?.hidden).toBe(false);
+    expect(panel.querySelector<HTMLElement>('#hx-conn-installed')?.hidden).toBe(false);
   });
 });
 
@@ -382,15 +380,15 @@ describe('connectors for one bot', () => {
     document.body.append(panel);
     const asked: string[] = [];
     await mountConnectors(panel, {
-      bridge: main, toast: () => { /* not read here */ }, settle: 0,
+      bridge: main, notify: () => { /* not read here */ }, settle: 0,
       bots: () => Object.keys(bots).map((id) => ({ id, name: id[0]?.toUpperCase() + id.slice(1) })),
       bridgeFor: (bot) => { asked.push(bot); return bots[bot] as Fake; }
     });
     return { panel, asked };
   }
   const choose = async (panel: HTMLElement, value: string): Promise<void> => {
-    const sel = panel.querySelector('#hx-conn-for') as HTMLElement;
-    sel.dispatchEvent(new CustomEvent('ui:change', { detail: { value }, bubbles: true }));
+    click(panel, '#hx-conn-for');
+    (document.querySelector(`[data-kit~="Menu"][data-floating] [data-value="${value}"]`) as HTMLElement).click();
     await tick(4);
   };
 
@@ -408,12 +406,10 @@ describe('connectors for one bot', () => {
     expect(asked).toContain('kai');
     expect(panel.textContent).toContain('kaimcp');
     expect(panel.textContent).not.toContain('mainmcp');
-    expect(panel.textContent).toContain('Only Kai has these');
-    click(panel, '[data-conn-test="kaimcp"]');
+    expect(read(panel)).toContain('Only Kai has these');
+    pick(panel, 'kaimcp', 'test');
     await tick();
-    const sw = panel.querySelector<HTMLInputElement>('input[role=switch]') as HTMLInputElement;
-    sw.checked = false;
-    sw.dispatchEvent(new Event('change', { bubbles: true }));
+    sw(panel, 'kaimcp').click();
     await tick();
     expect(kai.calls).toEqual(expect.arrayContaining(['test:kaimcp', 'enable:kaimcp:false']));
     expect(main.calls.filter((c) => c.startsWith('test:') || c.startsWith('enable:'))).toEqual([]);
@@ -441,7 +437,7 @@ describe('connectors for one bot', () => {
     const bots: Record<string, Fake> = { kai };
     const panel = document.createElement('div');
     document.body.append(panel);
-    const m = await mountConnectors(panel, { bridge: main, toast: () => { /* unused */ }, settle: 0, bots: () => Object.keys(bots).map((id) => ({ id, name: id })), bridgeFor: (b) => bots[b] as Fake });
+    const m = await mountConnectors(panel, { bridge: main, notify: () => { /* unused */ }, settle: 0, bots: () => Object.keys(bots).map((id) => ({ id, name: id })), bridgeFor: (b) => bots[b] as Fake });
     await choose(panel, 'kai');
     expect(panel.textContent).toContain('kaimcp');
     delete bots['kai'];

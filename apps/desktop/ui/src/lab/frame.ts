@@ -101,7 +101,7 @@ function applyForces(st: State): void {
 }
 let currentStory: Story | null = null;
 /** a story of the v7 kit (src/lab/stories/kit/) */
-const isKitStory = (s: Story): boolean => s.id.startsWith('kit/');
+const isKitStory = (s: Story): boolean => s.id.startsWith('kit/') || !!s.v7;
 /** a preset id as a v7 theme: dark and light, or a v6 preset's scheme (bone is the light one) */
 const v7Theme = (id: string | null): 'dark' | 'light' => (id === 'light' || id === 'bone' ? 'light' : 'dark');
 function scopeOf(s: Story, st: State): Element | null {
@@ -122,7 +122,9 @@ export async function startFrame(): Promise<void> {
      underneath; their presets are v7's two themes (a v6 preset id maps to its scheme), with the accent and corners of
      section 18 settable by the checker */
   const v7 = isKitStory(s);
-  if (v7) { kit.applyTheme(document.body, { theme: v7Theme(preset) }); await Promise.all([loadFont('Geist'), loadFont('Geist Mono')]); }
+  /* a screen on the v7 kit (`v7: true`) that boots the app also puts the v6 theme in the same scheme, for the parts still on v6 */
+  const v6Too = (id: string | null): void => { if (v7 && !s.id.startsWith('kit/')) themeApi.preset(v7Theme(id) === 'light' ? 'bone' : 'catalog'); };
+  if (v7) { v6Too(preset); kit.applyTheme(document.body, { theme: v7Theme(preset) }); await Promise.all([loadFont('Geist'), loadFont('Geist Mono')]); }
   else if (preset) themeApi.preset(preset);
   const dir = q.get('dir') ?? st.dir;
   if (dir) document.documentElement.dir = dir;
@@ -146,7 +148,7 @@ export async function startFrame(): Promise<void> {
     async rerender(): Promise<void> { if (st.app) return; await renderCell(st, document.querySelector('.lab-stage') as HTMLElement); applyForces(st); await frames(3); },
     force: (sel: string | null, which: Forced, onOff = true) => force(scopeOf(s, st) ?? document, sel, which, onOff),
     clearForced: () => { clearForced(document); for (const f of st.force ?? []) force(document, f.sel, f.state); },
-    preset: (id: string) => (v7 ? kit.applyTheme(document.body, { theme: v7Theme(id) }) : themeApi.preset(id)),
+    preset: (id: string) => { if (v7) { v6Too(id); kit.applyTheme(document.body, { theme: v7Theme(id) }); } else themeApi.preset(id); },
     /** v7 only: a custom accent (section 18; null for the default Iris), corners B or C, light shadows A, B or C */
     ...(v7 ? {
       accent: (hex: string | null) => kit.applyTheme(document.body, { accent: hex }),

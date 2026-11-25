@@ -1,0 +1,26 @@
+/* The large dialogs on the v7 kit (Settings, the Store: DESIGN-SYSTEM.md v7 7 "Dialogs", 12.1 Dialog): a native modal <dialog>
+   (the top layer, Esc, the inert page) that is a v7 root (styles/theme-v7.ts `followTheme`) and holds the kit's large Dialog,
+   which fills it. The dialog itself draws nothing: its scrim is the kit's --scrim, never blurred. Placement only. */
+.hx-dialog7 { padding: 0; border: 0; background: transparent; color: var(--text); width: min(var(--dialog-l), calc(100% - 2 * var(--sp-4))); height: min(680px, calc(100% - 2 * var(--sp-6))); max-width: none; max-height: none; overflow: visible; }
+.hx-dialog7::backdrop { background: var(--scrim); }
+.hx-dialog7__host { height: 100%; min-width: 0; }
+.hx-dialog7__host:focus { outline: none; }
+.hx-dialog7__host > .k7-dialog { width: 100%; height: 100%; }
+.hx-dialog7 .k7-dialog__page { min-height: 0; }
+/* a narrow window (under 720 px: the large Dialog's 900 does not fit beside a 220 nav): the dialog takes the window less 8 on each side
+   and its nav rows wrap in a band above the page. The design draws the dialog at 900 only: an owner question */
+@media (max-width: 719.98px) {
+  .hx-dialog7, .hx-store-dialog { width: calc(100% - 2 * var(--sp-2)); height: calc(100% - 2 * var(--sp-2)); }
+  .hx-dialog7 .k7-dialog[data-variant="large"] { flex-direction: column; }
+  .hx-dialog7 .k7-dialog__nav { flex-direction: row; flex-wrap: wrap; width: auto; padding: var(--r-card) var(--sp-7) 0 var(--sp-2);   /* clear of the close button in the corner */ }
+  .hx-dialog7 .k7-page[data-variant="settings"] { padding-inline: var(--sp-3); }
+}
+
+/* Settings' pages (modules/settings): placement only */
+.hx-dpanel[hidden] { display: none; }
+/* the accent's hex Field in its Row: a fixed width at the row's end */
+.hx-dpanel .k7-row > [data-kit~="Field"] { flex: 0 0 9em; }
+/* Keyboard: a shortcut's key chips, "or" and "then" in words between them */
+.hx-keyspec { display: inline-flex; align-items: center; flex: none; gap: var(--sp-1); }
+.hx-keyspec__word { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
+.hx-set-note { margin: 0; padding: 0 var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }

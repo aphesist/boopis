@@ -17,15 +17,17 @@ beforeAll(() => { setProvider(createMockProvider()); });
 function mount(o: Parameters<typeof createMockStore>[0] = {}, project: string | null = null): { root: HTMLElement; view: StoreView; store: ReturnType<typeof createMockStore> } {
   const root = document.createElement('div'); document.body.append(root);
   const store = createMockStore(o);
-  const view = mountStore(root, { store, toast: () => undefined, project: () => project, settle: 0, enter: false });
+  const view = mountStore(root, { store, notify: () => undefined, project: () => project, settle: 0, enter: false });
   return { root, view, store };
 }
-const text = (root: HTMLElement): string => root.textContent ?? '';
+/* what a person can read: the text, and the explanations behind the rows' info labels */
+const text = (root: HTMLElement): string => (root.textContent ?? '') + ' ' + [...root.querySelectorAll('[data-explain]')].map((n) => n.getAttribute('data-explain')).join(' ');
+const sw = (root: HTMLElement, sel: string): HTMLButtonElement => root.querySelector<HTMLButtonElement>(sel) as HTMLButtonElement;
 
 describe('the store view', () => {
   it('opens on Recommended, then each kind, with a missing review said in words and no ratings or counts', async () => {
     const { root } = mount(); await tick(20);
-    const heads = [...root.querySelectorAll('.hx-store__group > .ui-set__head')].map((h) => h.textContent);
+    const heads = [...root.querySelectorAll('.hx-store__list > .k7-section > [data-kit~="SectionHead"]')].map((h) => h.textContent);
     expect(heads).toEqual(['Recommended', 'Skills', 'Connectors', 'Plugins', 'Mods', 'Engine plugins']);
     expect(text(root)).toContain('not reviewed');
     expect(text(root)).not.toMatch(/stars?|downloads|installs\b|rating/i);
@@ -53,14 +55,14 @@ describe('the store view', () => {
   it('a removed item and an unpinned one cannot be installed', async () => {
     const { root, view } = mount();
     view.show('browse', 'engine-plugins:example-old-sync'); await tick(20);
-    expect(text(root)).toContain('Taken down'); expect(root.querySelector('.hx-store__sheet .ui-btn--primary')).toBeNull();
+    expect(text(root)).toContain('Taken down'); expect(root.querySelector('[data-store-primary]')).toBeNull();
     view.show('browse', 'github:example-org/loose-skill'); await tick(20);
-    expect(text(root)).toContain('will not install it'); expect(root.querySelector('.hx-store__sheet .ui-btn--primary')).toBeNull();
+    expect(text(root)).toContain('will not install it'); expect(root.querySelector('[data-store-primary]')).toBeNull();
   });
   it('reviews, then installs on the hold, then lists it as installed', async () => {
     const { root, view, store } = mount({ empty: true });
     view.show('browse', 'skills-hub:example-org/sql-review'); await tick(20);
-    root.querySelector<HTMLElement>('.hx-store__sheet .ui-btn--primary')?.click(); await tick(30);
+    root.querySelector<HTMLElement>('[data-store-primary]')?.click(); await tick(30);
     const card = root.querySelector('hx-card') as HTMLElement & { holdButton(): unknown };
     expect(card).not.toBeNull();
     expect(text(root)).toContain('Plan hash'); expect(text(root)).toContain('Not reviewed'.slice(0, 0) + 'Install');
@@ -75,9 +77,9 @@ describe('the store view', () => {
     const { root, view, store } = mount({ empty: true }, '~/work/api');
     const bad = { ...store, install: () => Promise.reject({ code: 'hx.store.plan_changed', message: 'What would be installed changed since the card was shown, so nothing was installed. Review it again.' }) };
     const host = document.createElement('div'); document.body.append(host);
-    const v2 = mountStore(host, { store: bad, toast: () => undefined, project: () => '~/work/api', settle: 0, enter: false });
+    const v2 = mountStore(host, { store: bad, notify: () => undefined, project: () => '~/work/api', settle: 0, enter: false });
     v2.show('browse', 'anthropic:example-lint-kit'); await tick(20);
-    host.querySelector<HTMLElement>('.hx-store__sheet .ui-btn--primary')?.click(); await tick(40);
+    host.querySelector<HTMLElement>('[data-store-primary]')?.click(); await tick(40);
     expect(host.textContent).toContain('This project has engine plugins and plugin hooks turned off');
     expect(host.querySelector('[role=radio][data-value="bot-project"]')).toBeNull();
     const card = host.querySelector('hx-card') as never;
@@ -85,37 +87,40 @@ describe('the store view', () => {
     expect(host.textContent).toContain('Review again');
     void root; void view;
   });
-  it('Installed has switches, an update with its diff, Roll back and Remove', async () => {
+  it('Installed has switches, an update with its diff, and Details, Roll back and Remove in each row\'s menu', async () => {
     const { root, view, store } = mount();
     await store.checkUpdates();
     view.show('installed'); await tick(20);
-    expect(root.querySelectorAll('input[role=switch][name]').length).toBe(2);
+    expect(root.querySelectorAll('[role=switch][data-store-switch]').length).toBe(2);
     expect(root.querySelector('[data-store-update="anthropic:example-lint-kit"]')).not.toBeNull();
-    expect(root.querySelector('[data-store-rollback]')).not.toBeNull();
-    expect(root.querySelector('[data-store-remove]')).not.toBeNull();
-    const sw = root.querySelector<HTMLInputElement>('input[role=switch][name="boopis:firecrawl"]') as HTMLInputElement;
-    sw.checked = false; sw.dispatchEvent(new Event('change', { bubbles: true })); await tick(10);
+    (root.querySelector('[data-store-more="anthropic:example-lint-kit"]') as HTMLElement).click(); await tick(10);
+    const menu = [...document.querySelectorAll('[data-kit~="MenuRow"]')].map((n) => n.textContent);
+    expect(menu).toEqual(expect.arrayContaining(['Details', 'Roll back', 'Remove']));
+    (document.querySelector('[data-kit~="MenuRow"][data-value="remove"]') as HTMLElement).click(); await tick(10);
+    expect(root.querySelector('hx-card')).not.toBeNull();
+    view.show('installed'); await tick(20);
+    sw(root, '[data-store-switch="boopis:firecrawl"]').click(); await tick(10);
     expect(store.installed.get().find((r) => r.item_id === 'boopis:firecrawl')?.enabled).toBe(false);
   });
   it('keeps the focus on a switch after turning it, though the screen redraws with the new state', async () => {
     const { root, view } = mount(); view.show('installed'); await tick(30);
-    const find = (): HTMLInputElement => root.querySelector<HTMLInputElement>('input[role=switch][name="boopis:firecrawl"]') as HTMLInputElement;
+    const find = (): HTMLButtonElement => sw(root, '[data-store-switch="boopis:firecrawl"]');
     document.body.append(root);
     const before = find(); before.focus();
-    before.checked = false; before.dispatchEvent(new Event('change', { bubbles: true })); await tick(30);
+    before.click(); await tick(30);
     expect(find()).not.toBe(before);
     expect(document.activeElement).toBe(find());
     view.show('sources'); await tick(30);
-    const src = root.querySelector<HTMLInputElement>('input[role=switch][name="mcp-registry"]') as HTMLInputElement;
-    src.focus(); src.checked = false; src.dispatchEvent(new Event('change', { bubbles: true })); await tick(30);
-    expect(document.activeElement).toBe(root.querySelector('input[role=switch][name="mcp-registry"]'));
+    const src = sw(root, '[data-store-src="mcp-registry"]');
+    src.focus(); src.click(); await tick(30);
+    expect(document.activeElement).toBe(root.querySelector('[data-store-src="mcp-registry"]'));
   });
   it('shows the project switch on by default for a governed project', async () => {
     const { root, view } = mount({}, '~/work/api');
     view.show('installed'); await tick(30);
-    const sw = root.querySelector<HTMLInputElement>('#hx-store-policy-installed') as HTMLInputElement;
+    const policy = sw(root, '#hx-store-policy-installed');
     expect(text(root)).toContain('No engine plugins and no plugin hooks');
-    expect(sw.checked).toBe(true);
+    expect(policy.getAttribute('aria-checked')).toBe('true');
   });
   it('Sources shows a source that is off with the reason, and adds and removes your own', async () => {
     const { root, view, store } = mount();
@@ -123,42 +128,40 @@ describe('the store view', () => {
     view.show('sources'); await tick(20);
     expect(text(root)).toMatch(/A catalogue[\s\S]*Off until its terms are checked/);
     await store.addSource({ url: 'https://github.com/example-org/skills' }); await tick(30);
-    expect(root.querySelector('[data-store-src-remove]')).not.toBeNull();
+    expect(root.querySelector('[data-store-src-more]')).not.toBeNull();
   });
   it('says offline with the saved copy\'s age, and shows a failure as the host\'s sentence', async () => {
     const { root } = mount({ offline: true }); await tick(20);
     expect(text(root)).toMatch(/You are offline\. This is the last copy boopis saved/);
     const bad = document.createElement('div'); document.body.append(bad);
     const s = createMockStore();
-    mountStore(bad, { store: { ...s, browse: () => Promise.reject({ code: 'hx.store.source_unreachable', message: 'boopis could not reach that source. What you see is the last copy it saved.' }) }, toast: () => undefined, enter: false }); await tick(20);
+    mountStore(bad, { store: { ...s, browse: () => Promise.reject({ code: 'hx.store.source_unreachable', message: 'boopis could not reach that source. What you see is the last copy it saved.' }) }, notify: () => undefined, enter: false }); await tick(20);
     expect(bad.textContent).toContain('boopis could not reach that source');
     expect(bad.textContent).not.toContain('hx.store');
   });
-  it('draws each item as a row with its tile and one word at its end, and opens its page from the row', async () => {
+  it('draws each item as a ListRow with its mark and one word at its end, and opens its page from the row', async () => {
     const { root } = mount(); await tick(20);
-    const row = root.querySelector<HTMLElement>('.ui-row--item[data-value="mcp-registry:com.example/tickets"]') as HTMLElement;
-    expect(row.querySelector('.ui-imark')).not.toBeNull();
-    expect(row.querySelector('.ui-row__end')?.textContent).toBe('needs a key');
-    expect(root.querySelector('.ui-row--item[data-value="engine-plugins:example-old-sync"] .ui-row__end')?.getAttribute('data-tone')).toBe('attention');
+    const row = root.querySelector<HTMLElement>('[data-kit~="ListRow"][data-store-open="mcp-registry:com.example/tickets"]') as HTMLElement;
+    expect(row.querySelector('.k7-lrow__mark')).not.toBeNull();
+    expect(row.querySelector('[data-kit~="Badge"]')?.textContent).toBe('needs a key');
     row.click(); await tick(20);
-    expect(root.querySelector('.hx-store__hero .hx-store__title')?.textContent).toBe('Tickets');
-    expect(root.querySelector('.hx-store__hero .ui-imark[data-size="40"]')).not.toBeNull();
+    expect(root.querySelector('.hx-store__hero .k7-lrow__title')?.textContent).toBe('Tickets');
     const facts = [...root.querySelectorAll('.hx-store__fact > dt')].map((d) => d.textContent);
     expect(facts.indexOf('Keys')).toBeLessThan(facts.indexOf('Contents'));   /* what it needs comes before what it adds */
-    expect(root.querySelector('.ui-row[aria-current]')).toBeNull();
+    expect(root.querySelector('[data-store-open][aria-selected="true"]')).toBeNull();
   });
   it('the keyboard: down from the search to the first row, on across the lists, up to the search again', async () => {
     const { root } = mount(); await tick(20);
     const q = root.querySelector<HTMLInputElement>('#hx-store-q input, input#hx-store-q') as HTMLInputElement;
     q.focus();
     q.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
-    const lists = [...root.querySelectorAll<HTMLElement>('[data-ui="rows"]')];
-    const first = lists[0]?.querySelector<HTMLElement>('.ui-row');
+    const lists = [...root.querySelectorAll<HTMLElement>('.hx-store__rows')];
+    const first = lists[0]?.querySelector<HTMLElement>('[role=option]');
     expect(document.activeElement).toBe(first);
-    const lastOfFirst = [...(lists[0] as HTMLElement).querySelectorAll<HTMLElement>('.ui-row')].pop() as HTMLElement;
+    const lastOfFirst = [...(lists[0] as HTMLElement).querySelectorAll<HTMLElement>('[role=option]')].pop() as HTMLElement;
     lastOfFirst.focus();
     lastOfFirst.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
-    expect(document.activeElement).toBe(lists[1]?.querySelector('.ui-row'));
+    expect(document.activeElement).toBe(lists[1]?.querySelector('[role=option]'));
     first?.focus();
     first?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
     expect(document.activeElement).toBe(q);
@@ -171,11 +174,11 @@ describe('the store view', () => {
     expect(clear.textContent).toBe('Clear the search');
     clear.click(); await tick(30);
     expect(q().value).toBe('');
-    expect(root.querySelectorAll('.ui-row--item').length).toBeGreaterThan(3);
+    expect(root.querySelectorAll('[data-kit~="ListRow"][data-store-open]').length).toBeGreaterThan(3);
     q().value = 'firecrawl'; q().dispatchEvent(new Event('input', { bubbles: true })); await tick(250);
-    expect(root.querySelector('.hx-store__group > .ui-set__head')?.textContent).toBe('1 result for “firecrawl”');
+    expect(root.querySelector('.hx-store__list [data-kit~="SectionHead"]')?.textContent).toBe('1 result for “firecrawl”');
     q().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); await tick(20);
-    expect(root.querySelector('.hx-store__title')?.textContent).toBe('Firecrawl');
+    expect(root.querySelector('.hx-store__hero .k7-lrow__title')?.textContent).toBe('Firecrawl');
   });
   it('a search narrowed to a kind that finds nothing offers the host\'s count in every kind instead', async () => {
     const { root } = mount(); await tick(20);
@@ -187,11 +190,15 @@ describe('the store view', () => {
     expect(widen.textContent).toBe('Show the 1 result in every kind and source');
     expect(root.querySelector('[data-store-clear]')).toBeNull();
     widen.click(); await tick(30);
-    expect(root.querySelectorAll('.ui-row--item')).toHaveLength(1);
+    expect(root.querySelectorAll('[data-kit~="ListRow"][data-store-open]')).toHaveLength(1);
   });
-  it('Installed draws each item with its tile', async () => {
-    const { root, view } = mount(); await tick(20);
+  it('a taken-down item is a red Notice with Remove', async () => {
+    const { root, view, store } = mount(); await tick(20);
+    const w = store.installed as unknown as { update(fn: (l: readonly import('../../data').InstallReceipt[]) => readonly import('../../data').InstallReceipt[]): void };
+    w.update((l) => l.map((r, i) => (i === 0 ? { ...r, kill_listed: { reason: 'Its source took it down', by: 'source' as const } } : r)));
     view.show('installed'); await tick(20);
-    expect(root.querySelectorAll('.ui-set__row .ui-set__lead .ui-imark').length).toBeGreaterThan(0);
+    const n = root.querySelector('[data-kit~="Notice"][data-tone="red"]');
+    expect(n?.textContent).toContain('Its source took it down');
+    expect(n?.querySelector('button')?.textContent).toBe('Remove');
   });
 });

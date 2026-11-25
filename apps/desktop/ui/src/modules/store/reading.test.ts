@@ -117,10 +117,11 @@ describe('the store view while the sources are read', () => {
     const root = document.createElement('div'); document.body.append(root);
     const store = createMockStore(o);
     const toasts: string[] = [];
-    const view = mountStore(root, { store, toast: (t) => { toasts.push(t); }, project: () => null, settle: 0, enter: false, now: () => NOW });
+    const view = mountStore(root, { store, notify: (t) => { toasts.push(t); }, project: () => null, settle: 0, enter: false, now: () => NOW });
     return { root, view, store, toasts };
   };
-  const text = (root: HTMLElement): string => root.textContent ?? '';
+  /* what a person can read: the text, and the explanations behind the rows' info labels */
+  const text = (root: HTMLElement): string => (root.textContent ?? '') + ' ' + [...root.querySelectorAll('[data-explain]')].map((n) => n.getAttribute('data-explain')).join(' ');
 
   it('Browse says the sources were not read, reads them when the store opens, and lists their items as each one is read', async () => {
     const { root, view } = mount({ start: 'unread', now: () => NOW, reads: { 'engine-plugins': { ms: 30 }, 'skills-hub': { ms: 30 }, anthropic: { ms: 30 }, 'mcp-registry': { ms: 30 } } });
@@ -217,7 +218,7 @@ describe('the sources that fall due while the store stays open', () => {
     const clock = { t: NOW };
     const root = document.createElement('div'); document.body.append(root);
     const store = createMockStore({ now: () => clock.t, reads: { 'mcp-registry': { ms: 40 } } });
-    const view = mountStore(root, { store, toast: () => undefined, project: () => null, settle: 0, enter: false, now: () => clock.t, every: 15 });
+    const view = mountStore(root, { store, notify: () => undefined, project: () => null, settle: 0, enter: false, now: () => clock.t, every: 15 });
     await tick(30);
     expect(root.textContent).not.toContain('Reading the sources');
     clock.t = NOW + 2 * HOUR;
@@ -232,20 +233,22 @@ describe('the sources that fall due while the store stays open', () => {
     const store = createMockStore({ now: () => NOW, reads: {} });
     const seen: string[] = [];
     const wrapped = { ...store, refresh: (id?: string) => { seen.push(String(id)); return store.refresh(id); } };
-    const view = mountStore(root, { store: wrapped, toast: () => undefined, project: () => null, settle: 0, enter: false, now: () => clock.t, every: 10 });
+    const view = mountStore(root, { store: wrapped, notify: () => undefined, project: () => null, settle: 0, enter: false, now: () => clock.t, every: 10 });
     await tick(60); view.stop();
     expect(seen).toEqual([]);
   });
 });
 
 describe('the progress of a read, source by source, on Browse', () => {
+  const text = (root: HTMLElement): string => (root.textContent ?? '') + ' ' + [...root.querySelectorAll('[data-explain]')].map((n) => n.getAttribute('data-explain')).join(' ');
   const mount = (o: MockStoreOptions): { root: HTMLElement; view: ReturnType<typeof mountStore>; store: ReturnType<typeof createMockStore> } => {
     const root = document.createElement('div'); document.body.append(root);
     const store = createMockStore(o);
-    const view = mountStore(root, { store, toast: () => undefined, project: () => null, settle: 0, enter: false, now: () => NOW });
+    const view = mountStore(root, { store, notify: () => undefined, project: () => null, settle: 0, enter: false, now: () => NOW });
     return { root, view, store };
   };
-  const rows = (root: HTMLElement): string[] => [...root.querySelectorAll('#hx-store-reading ~ .ui-set__row, .hx-store__reading .ui-set__row')].map((r) => (r.textContent ?? '').replace(/\s+/g, ' ').trim());
+  /* a row of the read as a person reads it: its explanation (what the source is doing), then its label and its value */
+  const rows = (root: HTMLElement): string[] => [...root.querySelectorAll('.hx-store__reading [data-kit-part~="Row"]')].map((r) => ((r.querySelector('[data-explain]')?.getAttribute('data-explain') ?? '') + ' ' + (r.textContent ?? '')).replace(/\s+/g, ' ').trim());
 
   it('lists every source of the read with whether it is waiting, being read, read, or could not be read', async () => {
     const { root, view } = mount({ start: 'unread', now: () => NOW, reads: { 'engine-plugins': { ms: 20 }, 'skills-hub': { ms: 20, error: HUB_DOWN }, anthropic: { ms: 120 }, 'mcp-registry': { ms: 20 } } });
@@ -255,13 +258,13 @@ describe('the progress of a read, source by source, on Browse', () => {
     expect(rows(root)[0]).toMatch(/Reading it now/);
     expect(rows(root)[0]).toMatch(/Reading$/);
     expect(rows(root)[3]).toMatch(/Waiting for its turn to be read.*Waiting$/);
-    expect(root.querySelector('.hx-store__note .ui-progress [role=progressbar]')).not.toBeNull();
+    expect(root.querySelector('.hx-store__reading [data-kit~="StatusLine"]')?.textContent).toMatch(/of 4/);
     await vi.waitFor(() => { expect(rows(root)[1]).toContain(HUB_DOWN); }, { timeout: 2000, interval: 3 });
     expect(rows(root)[1]).toMatch(/Could not read$/);
     expect(rows(root)[0]).toMatch(/items?\. Read just now\..*Read$/);
     await run;
     await vi.waitFor(() => { expect(root.querySelector('.hx-store__reading')?.children.length).toBe(0); }, { timeout: 2000 });
-    expect(root.querySelector('.hx-store__note .ui-progress')).toBeNull();
+    expect(root.querySelector('.hx-store__reading [data-kit~="StatusLine"]')).toBeNull();
   });
   it('says why the list is still out of date after a read that could not reach a source, and offers the reasons and another try', async () => {
     const { root, view } = mount({ start: 'unread', now: () => NOW, reads: { 'skills-hub': { ms: 5, error: HUB_DOWN }, 'mcp-registry': { ms: 5, error: REG_DOWN } } });
@@ -272,8 +275,8 @@ describe('the progress of a read, source by source, on Browse', () => {
     expect(buttons).toContain('Read the sources again');
     expect(buttons).toContain('Show why');
     [...root.querySelectorAll('button')].find((b) => b.textContent === 'Show why')?.click();
-    await vi.waitFor(() => { expect(root.textContent).toContain(HUB_DOWN); }, { timeout: 2000 });
-    expect(root.textContent).toContain(REG_DOWN);
+    await vi.waitFor(() => { expect(text(root)).toContain(HUB_DOWN); }, { timeout: 2000 });
+    expect(text(root)).toContain(REG_DOWN);
   });
   it('checks the fix: pressing the button on an out-of-date list reads again, and the line then says the list is current', async () => {
     const reads: Record<string, { ms?: number; error?: string }> = { 'skills-hub': { ms: 5, error: HUB_DOWN } };

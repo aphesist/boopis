@@ -63,7 +63,10 @@ export function deriveAccent(hex: string, mode: Mode): AccentTokens {
   return { '--accent': fill, '--accent-text': text, '--focus': text, '--on-accent': on, '--accent-soft': fill + SOFT[mode], '--accent-mark': mark };
 }
 
-export interface ThemeOpts { theme?: Mode | undefined; accent?: string | null | undefined; radii?: 'b' | 'c' | undefined; shadow?: 'a' | 'b' | 'c' | undefined }
+export interface ThemeOpts {
+  theme?: Mode | undefined; accent?: string | null | undefined; radii?: 'b' | 'c' | undefined; shadow?: 'a' | 'b' | 'c' | undefined;
+  /** no `hx:theme` event: a root that follows a theme already announced (a dialog mirroring the app's theme) */ quiet?: boolean | undefined;
+}
 /** make an element a v7 root in a theme (the lab's kit stories; the app's root in wave C) */
 export function applyTheme(root: HTMLElement, o: ThemeOpts = {}): void {
   root.setAttribute('data-ui', 'v7');
@@ -80,7 +83,7 @@ export function applyTheme(root: HTMLElement, o: ThemeOpts = {}): void {
     for (const k of keys) root.style.setProperty(k, t[k]);
   }
   /* orbs re-read the colours they resolved (the boopis bot's ink, cut-out eyes): the app's one theme event */
-  emit('hx:theme', { preset: 'v7-' + mode, scheme: mode });
+  if (!o.quiet) emit('hx:theme', { preset: 'v7-' + mode, scheme: mode });
 }
 
 /** section 18.1: a bot's derived fill for your bubble and the send button in its own chat. White text when 4.5:1 is

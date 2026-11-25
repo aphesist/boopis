@@ -141,7 +141,7 @@ export { setCardFactory } from './card-registry';
 export type { CardFactory, CardSize } from './card-registry';
 export { holdOf } from './hold';
 export { isKnownModel } from './model-mark';
-export { serviceMarkOf, publisherMarkOf, monogram, serviceMarks, serviceMark, packageOf } from './item-mark';
+export { serviceMarkOf, publisherMarkOf, monogram, serviceMarks, serviceMark, packageOf, itemGlyphHTML } from './item-mark';
 export type { ItemRef, ItemMarkOpts, ItemMarkSize, ServiceMark } from './item-mark';
 export { modViewUpdate } from './mod-view';
 export type { ModEvent, ModRoot } from './mod-view';

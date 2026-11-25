@@ -135,6 +135,12 @@ export interface ItemMarkOpts { size?: ItemMarkSize | undefined; class?: string 
 const svgOf = (m: ServiceMark, cls: string): string =>
   '<svg class="' + cls + '" viewBox="' + esc(m.viewBox) + '" fill="currentColor" data-brand style="--mk-l:' + esc(m.light) + ';--mk-d:' + esc(m.dark) + '" aria-hidden="true" focusable="false">' + m.body + '</svg>';
 
+/** the glyph alone, for a v7 ListRow's mark: the service's or proven publisher's mark in its colours, else the monogram's letters */
+export function itemGlyphHTML(ref: ItemRef): string {
+  const t = tileMarkOf(ref);
+  return t ? svgOf(t.mark, 'k7-glyph') : esc(monogram(ref.name, ref.collection ?? ''));
+}
+
 /** the tile: the service's mark, else the monogram */
 export function itemMarkHTML(ref: ItemRef, o: ItemMarkOpts = {}): string {
   const size = o.size ?? 24, t = tileMarkOf(ref), m = t?.mark ?? null;

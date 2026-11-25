@@ -3,16 +3,18 @@
    card: exactly what will be added, the command and its arguments, the hosts it reaches, the pinned version, the config diff,
    the keys it needs as secret fields), and, when the server signs in with OAuth, a `signin` card. Every change goes through the
    host, which validates it again and drives Hermes's own mechanisms; this view knows no Hermes file and holds no key (a key
-   goes from its field to the host's keychain and no further). It draws the design system's settings rows and cards; the owner
-   has not drawn a connectors view, so it is composed from those patterns, for review (DESIGN-SYSTEM.md 14.21).
+   goes from its field to the host's keychain and no further). It is drawn with the v7 kit (DESIGN-SYSTEM.md v7 21): a settings
+   Page of SectionHeads and Cards. The forms stay the card family's form card (owner decision: forms are one card family).
 
    The redesign (the owner, 23 November 2026: "it's hard to actually find stuff in the screen"): a search over everything on the
-   tab; each installed connector with its tile and its state as a word at the row's end beside its switch; boopis's collection
-   as one list row per connector (the Store's item row: its tile, its publisher and what it does, the ways it can run), where
-   choosing a connector with several ways opens a menu that says what each one does and reaches; then the other ways to add. */
+   tab (the search Field); each installed connector a Row (its name, its state as the value or a StatusWord, where it runs behind
+   the label's mark, its Switch, Test and Remove in its overflow Menu); boopis's collection as one ListRow per connector (the
+   Store's item row: its mark, its publisher and what it does, the ways it can run as a Badge), where choosing a connector with
+   several ways opens a Menu that says what each one does and reaches; then the other ways to add. */
 import { STORE_ITEM, storeItem } from '../core/engine-words';
+import { esc } from '../core/dom';
 import { unlessEngine } from './errors';
-import { ui } from '@boopis/ui';
+import { itemGlyphHTML, kit, ui } from '@boopis/ui';
 import { reduced } from '../core/dom';
 import { logger } from '../core/log';
 import '../modules/cards';
@@ -28,7 +30,8 @@ const log = logger('connectors');
 
 export interface ConnectorsDeps {
   bridge: ConnectorsBridge;
-  toast: (text: string) => void;
+  /** a line the person should see now (the floating Notice) */
+  notify: (text: string) => void;
   /** opens the store view ("Browse the store"); absent: the row is left out */
   openStore?: () => void;
   /** the bots a connector can be set up for, asked each time the tab shows; absent or empty: the choice is not drawn and the main profile's connectors are the only ones */
@@ -126,6 +129,10 @@ const sink = (h: Handlers): FormsSource => ({
   can: { signin: !!h.signin, upload: false, folder: false }, pickerItems: () => [], pickFolder: () => Promise.resolve(null)
 });
 
+/** a row of a kit Menu (v7 21.2 rows 5, 19) */
+type MenuEntry = Parameters<typeof kit.openMenu>[1]['entries'][number];
+const h = (html: string): HTMLElement => kit.wire(document.createRange().createContextualFragment(html).firstElementChild as HTMLElement);
+
 /** Put the tab into `panel`. `refresh` asks the host again and drops any form that was open; call it each time the tab shows. */
 export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps): Promise<{ refresh: () => Promise<void> }> {
   /* who the tab is about: null is the main profile, else a bot's profile name. Every list, switch, test, add and removal goes to that one. */
@@ -133,29 +140,31 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   const br = (): ConnectorsBridge => (target !== null && deps.bridgeFor ? deps.bridgeFor(target) : deps.bridge);
   const settle = deps.settle ?? (reduced() ? 200 : 700);
   panel.classList.add('hx-conn');
+  const pageEl = h(kit.html.page({ variant: 'settings', title: 'Connectors', body: '' }));
+  const body = pageEl.querySelector('.k7-page__body') as HTMLElement;
   const find = el('div', { class: 'hx-conn__find', role: 'search' });
-  const forBot = el('section', { class: 'ui-set', 'aria-labelledby': 'hx-conn-for-h', hidden: '' });
-  const installed = el('section', { class: 'ui-set hx-conn__installed', 'aria-labelledby': 'hx-conn-installed-h' });
-  const collection = el('section', { class: 'ui-set', 'aria-labelledby': 'hx-conn-coll-h' });
-  const add = el('section', { class: 'ui-set', 'aria-labelledby': 'hx-conn-add-h' });
-  const flow = el('section', { class: 'ui-set', 'aria-label': 'Add a connector', hidden: '' });
-  panel.append(find, forBot, installed, collection, add, flow);
+  const forBot = el('div', { class: 'k7-section', hidden: '' });
+  const installed = el('div', { class: 'k7-section hx-conn__installed', id: 'hx-conn-installed' });
+  const collection = el('div', { class: 'k7-section', id: 'hx-conn-coll' });
+  const add = el('div', { class: 'k7-section', id: 'hx-conn-add' });
+  const flow = el('div', { class: 'hx-conn__flow', 'aria-label': 'Add a connector', role: 'region', hidden: '' });
+  const live = el('p', { class: 'k7-sr', role: 'status', 'aria-live': 'polite', 'data-conn-status': '' });
+  body.append(find, live, forBot, installed, collection, add, flow);
+  panel.replaceChildren(pageEl);
   let catalog: ConnectorCatalogEntry[] = [];
   let busy = false;
   let query = '';
   let have: ConnectorInfo[] = [];
   /* one search over the tab: it narrows the installed connectors and the collection as you type */
-  const search = ui.search({ size: 'm', label: 'Find a connector', placeholder: 'Find a connector by name, publisher or what it does', id: 'hx-conn-q' });
+  const search = h(kit.html.field({ id: 'hx-conn-q', kind: 'search', ariaLabel: 'Find a connector', placeholder: 'Find a connector by name, publisher or what it does' }));
   find.append(search);
   const qInput = search.querySelector<HTMLInputElement>('input');
   qInput?.addEventListener('input', () => { query = qInput.value; drawInstalledRows(); drawCollection(); });
-  qInput?.addEventListener('keydown', (e) => { if (e.key === 'ArrowDown') { const r = collection.querySelector<HTMLElement>('.ui-row[tabindex="0"], .ui-row'); if (r) { e.preventDefault(); r.focus(); } } });
+  qInput?.addEventListener('keydown', (e) => { if (e.key === 'ArrowDown') { const r = collection.querySelector<HTMLElement>('[role=option][tabindex="0"], [role=option]'); if (r) { e.preventDefault(); r.focus(); } } });
 
-  const say = (text: string): void => {
-    const s = installed.querySelector('[data-conn-status]');
-    if (s) s.textContent = text;
-  };
+  const say = (text: string): void => { live.textContent = text; deps.notify(text); };
   const release = (): void => { useFormsHost(null); };
+  const head = (title: string): string => kit.html.sectionHead({ title });
   const showList = async (): Promise<void> => {
     release();
     flow.hidden = true;
@@ -174,9 +183,10 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     find.hidden = true;
     forBot.hidden = true;
     flow.hidden = false;
-    const back = ui.button({ label: 'Back to connectors', size: 's', variant: 'ghost' });
+    const back = h(kit.html.button({ label: 'Back to connectors', variant: 'ghost', size: 32, icon: 'back' }));
+    back.classList.add('hx-conn__back');
     back.addEventListener('click', () => { void showList(); });
-    flow.replaceChildren(el('div', { style: 'display:grid;gap:var(--sp-3)' }, ...kids, back));
+    flow.replaceChildren(back, ...kids);
   };
   const card = (spec: FormSpec, handlers: Handlers): HTMLElement => {
     useFormsHost(sink(handlers));
@@ -192,11 +202,17 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     if (!bots.length || !deps.bridgeFor) { target = null; forBot.hidden = true; forBot.replaceChildren(); return; }
     if (target !== null && !bots.some((b) => b.id === target)) target = null;
     forBot.hidden = false;
-    forBot.innerHTML = ui.html.setHead({ id: 'hx-conn-for-h', label: 'For' }) +
-      ui.html.setRow({ label: 'Connectors for', hint: target === null ? 'The main profile. Each bot keeps connectors of its own: pick a bot to see and change its.' : `Only ${bots.find((b) => b.id === target)?.name ?? target} has these. The main profile and the other bots are not changed.`, control: '<span data-conn-for></span>' });
-    const pick = ui.select({ id: 'hx-conn-for', label: 'Connectors for', entries: [{ value: '', label: 'The main profile' }, ...bots.map((b) => ({ value: b.id, label: b.name }))], value: target ?? '' });
-    forBot.querySelector('[data-conn-for]')?.replaceWith(pick);
-    pick.addEventListener('ui:change', (e) => { const v = (e as CustomEvent<{ value: string }>).detail.value; target = v || null; void showList(); });
+    const name = target === null ? 'The main profile' : bots.find((b) => b.id === target)?.name ?? target;
+    forBot.innerHTML = head('For') + kit.html.card({ rows: [{
+      label: 'Connectors for', explain: target === null ? 'The main profile. Each bot keeps connectors of its own: pick a bot to see and change its.' : `Only ${name} has these. The main profile and the other bots are not changed.`,
+      control: kit.html.selectorItem({ variant: 'field', label: 'Connectors for', value: name, attrs: { id: 'hx-conn-for' } })
+    }] });
+    kit.wire(forBot);
+    const pick = forBot.querySelector<HTMLElement>('#hx-conn-for') as HTMLElement;
+    pick.addEventListener('click', () => {
+      const entries: MenuEntry[] = [{ value: '', label: 'The main profile', checked: target === null, role: 'menuitemradio' as const }, ...bots.map((b) => ({ value: b.id, label: b.name, checked: target === b.id, role: 'menuitemradio' as const }))];
+      kit.openMenu(pick, { label: 'Connectors for', entries, align: 'start', onSelect: (v) => { target = v || null; void showList(); } });
+    });
   }
 
   /* ───────── installed ───────── */
@@ -209,80 +225,94 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   function drawInstalledRows(): void {
     const keep = document.activeElement instanceof HTMLElement && installed.contains(document.activeElement) ? document.activeElement.id : '';
     const shown = have.filter((c) => matches(query, c.name, c.url, c.command, ...c.args, c.plugin));
-    let rows: string[];
-    if (listError) rows = [ui.html.setRow({ label: 'Connectors', hint: `boopis could not read the list, so it is not shown: ${listError}` })];
-    else if (!have.length) rows = [ui.html.setRow({ label: 'No connectors yet', hint: catalog.length ? 'Pick one from boopis\'s collection below, or add your own.' : 'boopis has no connectors yet. Add one below.' })];
-    else if (!shown.length) rows = [ui.html.setRow({ label: 'None installed matches', hint: `No installed connector matches “${query.trim()}”.` })];
-    else rows = shown.map((c) => {
+    let inner: string;
+    if (listError) inner = kit.html.notice({ text: `boopis could not read the list, so it is not shown: ${listError}`, tone: 'red', place: 'page' });
+    else if (!have.length) inner = kit.html.emptyState({ text: catalog.length ? 'No connectors yet. Pick one from boopis\'s collection below, or add your own.' : 'No connectors yet. Add one below.' });
+    else if (!shown.length) inner = kit.html.emptyState({ text: `No installed connector matches “${query.trim()}”.` });
+    else inner = kit.html.card({ attrs: { id: 'hx-conn-have' }, rows: shown.map((c) => {
       const v = describeConnector(c);
       const id = 'hx-conn-' + c.name.replace(/[^a-z0-9_-]/gi, '_');
-      /* the state is a word at the row's end, beside the switch: what it is doing, in the system's state vocabulary */
-      const word = '<span class="ui-state hx-conn__state"' + (v.tone ? ' data-tone="' + v.tone + '"' : '') + '>' + ui.esc(v.word) + '</span>';
-      const controls = c.plugin ? word : [
+      /* the state: a plain value at rest; a StatusWord when the person owes something (a sign-in: amber), it failed (red) or it is busy */
+      const word = v.tone ? kit.html.statusWord({ text: v.word, tone: v.tone === 'attention' ? (c.status === 'failed' ? 'red' : 'owe') : 'neutral', dot: true, pulse: v.tone === 'busy' }) : '';
+      const control = c.plugin ? '' : [
         word,
-        v.canSignIn ? ui.html.button({ label: 'Sign in', size: 's', variant: 'primary', attrs: { 'data-conn-signin': c.name, 'aria-label': 'Sign in to ' + c.name } }) : '',
-        ui.html.switch({ id, name: c.name, checked: c.enabled, label: c.name + (c.enabled ? ' is on' : ' is off') }),
-        ui.html.button({ label: 'Test', size: 's', attrs: { 'data-conn-test': c.name, 'aria-label': 'Test ' + c.name } }),
-        ui.html.button({ label: 'Remove', size: 's', variant: 'ghost', attrs: { 'data-conn-remove': c.name, 'aria-label': 'Remove ' + c.name } })
+        v.canSignIn ? kit.html.button({ label: 'Sign in', variant: 'tint', size: 28, attrs: { 'data-conn-signin': c.name, 'aria-label': 'Sign in to ' + c.name } }) : '',
+        kit.html.switch({ id, checked: c.enabled, label: c.name, attrs: { 'data-conn-switch': c.name } }),
+        kit.html.iconButton({ icon: 'more', label: 'More for ' + c.name, variant: 'tinted', haspopup: 'menu', tip: 'More', attrs: { 'data-conn-more': c.name } })
       ].join('');
       /* an installed connector is the user's item: its own name is shown as it is (ADR-0031's store exception) */
-      return storeItem(ui.html.setRow({ label: c.name, hint: v.where, lead: ui.html.itemMark(connectorRef(c)), ...(c.plugin ? {} : { for: id }), control: '<span class="ui-set__actions hx-conn__acts">' + controls + '</span>' }));
-    });
-    installed.innerHTML = ui.html.setHead({ id: 'hx-conn-installed-h', label: 'Installed' }) + rows.join('') + '<p class="ui-field__hint" role="status" aria-live="polite" data-conn-status></p>';
-    ui.hydrate(installed);
-    const byName = new Map(have.map((c) => [c.name, c]));
-    for (const sw of installed.querySelectorAll<HTMLInputElement>('input[role=switch]')) sw.addEventListener('change', () => { void toggle(sw.name, sw); });
-    for (const b of installed.querySelectorAll<HTMLElement>('[data-conn-test]')) b.addEventListener('click', () => { void test(b.dataset['connTest'] ?? ''); });
+      return { label: c.name, labelHTML: storeItem(esc(c.name)), explain: v.where, ...(v.tone ? {} : { value: v.word }), control };
+    }) });
+    installed.innerHTML = head('Installed') + inner;
+    kit.wire(installed);
+    for (const sw of installed.querySelectorAll<HTMLButtonElement>('[data-conn-switch]')) sw.addEventListener('ui:change', (e) => { void toggle(sw.dataset['connSwitch'] ?? '', (e as CustomEvent<{ value: boolean }>).detail.value, sw); });
     for (const b of installed.querySelectorAll<HTMLElement>('[data-conn-signin]')) b.addEventListener('click', () => { void signinFlow(b.dataset['connSignin'] ?? ''); });
-    for (const b of installed.querySelectorAll<HTMLElement>('[data-conn-remove]')) b.addEventListener('click', () => { const c = byName.get(b.dataset['connRemove'] ?? ''); if (c) removeFlow(c); });
+    const byName = new Map(have.map((c) => [c.name, c]));
+    for (const b of installed.querySelectorAll<HTMLElement>('[data-conn-more]')) b.addEventListener('click', () => {
+      const c = byName.get(b.dataset['connMore'] ?? ''); if (!c) return;
+      kit.openMenu(b, { label: 'More for ' + c.name, align: 'end', entries: [{ label: 'Test', value: 'test' }, '-', { label: 'Remove', value: 'remove', danger: true }],
+        onSelect: (v) => { if (v === 'test') void test(c.name); else removeFlow(c); } });
+    });
     if (keep) installed.querySelector<HTMLElement>('#' + CSS.escape(keep))?.focus({ preventScroll: true });
   }
 
-  /* ───────── boopis's collection: one row per connector ───────── */
+  /* ───────── boopis's collection: one ListRow per connector ───────── */
   function drawCollection(): void {
     collection.hidden = !catalog.length || !flow.hidden;
     if (!catalog.length) { collection.replaceChildren(); return; }
     const added = new Set(have.map((c) => c.name));
     const shown = catalog.filter((c) => matches(query, c.name, c.publisher, c.description, ...c.variants.map((v) => v.label)));
-    const rows = shown.map((c) => {
+    const rows = shown.map((c, i) => {
       const w = collectionRow(c, added);
       /* a collection item keeps its own name and publisher, whatever they say (ADR-0031's store exception) */
-      return ui.html.itemRow({ ref: { name: c.name, collection: c.id }, title: c.name, sub: w.sub, end: w.end, value: c.id, attrs: { 'data-add-entry': c.id, [STORE_ITEM]: '', 'aria-haspopup': c.variants.length > 1 ? 'menu' : null } });
+      return kit.html.listRow({ variant: 'item', title: c.name, sub: w.sub, markHTML: itemGlyphHTML({ name: c.name, collection: c.id }), count: w.end,
+        attrs: { role: 'option', tabindex: i === 0 ? '0' : '-1', 'aria-selected': 'false', 'data-add-entry': c.id, [STORE_ITEM]: '', 'aria-haspopup': c.variants.length > 1 ? 'menu' : null } });
     });
-    const none = query.trim() && !shown.length ? '<p class="ui-field__hint" role="status">' + ui.esc(`Nothing in boopis's collection matches “${query.trim()}”. Try another word, browse the store, or add it from a URL or a command below.`) + '</p>' : '';
-    collection.innerHTML = ui.html.setHead({ id: 'hx-conn-coll-h', label: 'From boopis\'s collection' }) +
-      (rows.length ? '<ul class="ui-rows hx-conn__rows" data-ui="rows" aria-labelledby="hx-conn-coll-h">' + rows.join('') + '</ul>' : '') + none;
-    ui.hydrate(collection);
+    const none = query.trim() && !shown.length ? kit.html.emptyState({ text: `Nothing in boopis's collection matches “${query.trim()}”.` }) : '';
+    collection.innerHTML = head('From boopis\'s collection') + (rows.length ? '<div class="k7-list hx-conn__rows" role="listbox" aria-label="From boopis\'s collection">' + rows.join('') + '</div>' : '') + none;
+    kit.wire(collection);
     tipsIfClipped(clipSpots(collection));   /* measured at once, so every draw of the list carries the same tooltips */
   }
   /* a cut name or line is checked again whenever the collection's width changes */
   watchCuts(collection);
-  /* choosing a connector: one way to run adds it at once; several open a menu that says what each one does and where it reaches */
-  collection.addEventListener('ui:select', (e) => {
-    e.preventDefault();   /* adding is not choosing: no row is marked current */
-    const d = (e as CustomEvent<{ value?: string; item?: HTMLElement }>).detail;
-    const c = catalog.find((x) => x.id === d.value); if (!c) return;
+  /* choosing a connector: one way to run adds it at once; several open a Menu that says what each one does and where it reaches */
+  const choose = (row: HTMLElement): void => {
+    const c = catalog.find((x) => x.id === row.dataset['addEntry']); if (!c) return;
     const only = c.variants.length === 1 ? c.variants[0] : undefined;
     if (only) { void addFlow('catalog', { id: c.id, variant: only.id }); return; }
-    const row = d.item ?? collection.querySelector<HTMLElement>('[data-add-entry="' + CSS.escape(c.id) + '"]');
-    if (!row) return;
     row.setAttribute('aria-expanded', 'true');
-    ui.menu.open(row, [{ title: 'Add ' + c.name }, ...c.variants.map((v) => ({ label: v.label, value: v.id, desc: `${v.summary} Reaches: ${v.reaches}.${v.pinned ? ' Pinned to ' + v.pinned + '.' : ''}` }))], {
+    kit.openMenu(row, {
       label: 'Ways to add ' + c.name, align: 'start',
-      onSelect: (v: string) => { void addFlow('catalog', { id: c.id, variant: v }); },
-      onClose: () => { row.setAttribute('aria-expanded', 'false'); }
+      entries: [{ heading: 'Add ' + c.name }, ...c.variants.map((v) => ({ label: v.label, value: v.id, desc: `${v.summary} Reaches: ${v.reaches}.${v.pinned ? ' Pinned to ' + v.pinned + '.' : ''}` }))],
+      onSelect: (v) => { void addFlow('catalog', { id: c.id, variant: v }); }
     });
+    const m = document.querySelector('[data-kit~="Menu"][data-floating]');
+    const done = (): void => { if (!m?.isConnected) { row.setAttribute('aria-expanded', 'false'); return; } requestAnimationFrame(done); };
+    requestAnimationFrame(done);
+  };
+  collection.addEventListener('click', (e) => { const r = (e.target as Element).closest<HTMLElement>('[data-add-entry]'); if (r) choose(r); });
+  collection.addEventListener('keydown', (e) => {
+    const r = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('[data-add-entry]'); if (!r) return;
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(r); return; }
+    const all = [...collection.querySelectorAll<HTMLElement>('[data-add-entry]')], i = all.indexOf(r);
+    const n = ({ ArrowDown: i + 1, ArrowUp: i - 1 } as Record<string, number>)[e.key];
+    if (n == null) return;
+    e.preventDefault();
+    if (n < 0) { qInput?.focus(); return; }
+    const next = all[n]; if (!next) return;
+    for (const x of all) x.tabIndex = x === next ? 0 : -1;
+    next.focus();
   });
 
-  async function toggle(name: string, sw: HTMLInputElement): Promise<void> {
-    if (busy) { sw.checked = !sw.checked; return; }
+  async function toggle(name: string, on: boolean, sw: HTMLButtonElement): Promise<void> {
+    if (busy) { sw.setAttribute('aria-checked', String(!on)); return; }
     busy = true;
     try {
-      await br().setEnabled(name, sw.checked);
-      deps.toast(`${name} is ${sw.checked ? 'on' : 'off'}. Open sessions keep the tools they started with; new ones use this.`);
+      await br().setEnabled(name, on);
+      deps.notify(`${name} is ${on ? 'on' : 'off'}. Open sessions keep the tools they started with; new ones use this.`);
     } catch (e) {
-      sw.checked = !sw.checked;
-      deps.toast(message(e));
+      sw.setAttribute('aria-checked', String(!on));
+      deps.notify(message(e));
     } finally { busy = false; }
     await drawInstalled();
   }
@@ -324,7 +354,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
       async submit(_id, outcome) {
         try {
           const r = await br().remove(c.name, outcome.values['keys'] === 'delete');
-          deps.toast([`Removed ${c.name}.`, ...r.notes.slice(0, 1)].join(' '));
+          deps.notify([`Removed ${c.name}.`, ...r.notes.slice(0, 1)].join(' '));
         } catch (e) { throw new Error(message(e)); }
         later(() => { void showList(); });
       },
@@ -335,7 +365,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   /* ───────── add ───────── */
   async function addFlow(source: ConnectorSource, entry?: { id: string; variant: string }): Promise<void> {
     let form;
-    try { form = await br().inputs(source, entry?.id, entry?.variant); } catch (e) { deps.toast(message(e)); return; }
+    try { form = await br().inputs(source, entry?.id, entry?.variant); } catch (e) { deps.notify(message(e)); return; }
     const model = fromConnectorForm(form as ConnectorFormIn);
     const request = (values: Readonly<Record<string, unknown>>): ConnectorRequest => ({ source, values: { ...textValues(values), ...(entry ? { connector: entry.id, variant: entry.variant } : {}) } });
     showFlow(card({ ...model.spec, receipt: 'Checked. The review is next.' }, {
@@ -349,7 +379,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   }
 
   function reviewFlow(request: ConnectorRequest, hash: string, name: string, model: ReturnType<typeof fromConnectorForm>): void {
-    const result = el('div', { style: 'display:grid;gap:var(--sp-3)', 'aria-live': 'polite' });
+    const result = el('div', { class: 'hx-conn__result', 'aria-live': 'polite' });
     showFlow(card({ ...model.spec, name }, {
       async submit(_id, outcome) {
         let report: ConnectorInstall;
@@ -361,15 +391,14 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   }
 
   function drawResult(into: HTMLElement, r: ConnectorInstall, request: ConnectorRequest): void {
-    const list = el('ul', { style: 'margin:0;padding-left:1.2em;color:var(--text-dim)' });
-    for (const line of installLines(r)) list.append(el('li', {}, line));
-    const kids: Node[] = [el('h3', { class: 'ui-set__head' }, r.test?.ok ? `${r.name} is ready` : `${r.name} is added`), list];
+    const kids: Node[] = [h(kit.html.sectionHead({ title: r.test?.ok ? `${r.name} is ready` : `${r.name} is added` })), h(kit.html.card({ rows: installLines(r).map((line) => ({ label: line, explain: line })) }))];
     if (r.signin_needed) {
       let host = r.name;
       try { if (request.values['url']) host = new URL(request.values['url']).host; } catch { /* the name stands */ }
       kids.push(signinCard(r.name, r.name, host, () => { void showList(); }));
     } else {
-      const done = ui.button({ label: 'Done', variant: 'primary', size: 's' });
+      const done = h(kit.html.button({ label: 'Done', variant: 'primary', size: 32 }));
+      done.classList.add('hx-conn__back');
       done.addEventListener('click', () => { void showList(); });
       kids.push(done);
     }
@@ -379,12 +408,12 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
 
   /* ───────── the add rows ───────── */
   function drawAdd(): void {
-    const rows: string[] = [];
-    if (deps.openStore) rows.unshift(ui.html.setRow({ label: 'From the store', hint: 'Recommended connectors, and every other source boopis can read, to search and review.', control: ui.html.button({ label: 'Browse the store', size: 's', variant: 'primary', attrs: { 'data-add-store': '' } }) }));
-    rows.push(ui.html.setRow({ label: 'From a URL', hint: 'A remote MCP server. https only; keys go to your keychain.', control: ui.html.button({ label: 'Add', size: 's', attrs: { 'data-add-url': '', 'aria-label': 'Add a connector from a URL' } }) }));
-    rows.push(ui.html.setRow({ label: 'From a command', hint: 'A local program that speaks MCP. It runs on this computer as you.', control: ui.html.button({ label: 'Add', size: 's', attrs: { 'data-add-command': '', 'aria-label': 'Add a connector from a command' } }) }));
-    add.innerHTML = ui.html.setHead({ id: 'hx-conn-add-h', label: catalog.length ? 'Other ways to add' : 'Add' }) + rows.join('');
-    ui.hydrate(add);
+    const rows: Array<{ label: string; explain: string; control: string }> = [];
+    if (deps.openStore) rows.push({ label: 'From the store', explain: 'Recommended connectors, and every other source boopis can read, to search and review.', control: kit.html.button({ label: 'Browse the store', size: 28, variant: 'tint', attrs: { 'data-add-store': '' } }) });
+    rows.push({ label: 'From a URL', explain: 'A remote MCP server. https only; keys go to your keychain.', control: kit.html.button({ label: 'Add', size: 28, variant: 'tint', attrs: { 'data-add-url': '', 'aria-label': 'Add a connector from a URL' } }) });
+    rows.push({ label: 'From a command', explain: 'A local program that speaks MCP. It runs on this computer as you.', control: kit.html.button({ label: 'Add', size: 28, variant: 'tint', attrs: { 'data-add-command': '', 'aria-label': 'Add a connector from a command' } }) });
+    add.innerHTML = head(catalog.length ? 'Other ways to add' : 'Add') + kit.html.card({ rows });
+    kit.wire(add);
     add.querySelector('[data-add-store]')?.addEventListener('click', () => { deps.openStore?.(); });
     add.querySelector('[data-add-url]')?.addEventListener('click', () => { void addFlow('url'); });
     add.querySelector('[data-add-command]')?.addEventListener('click', () => { void addFlow('command'); });
