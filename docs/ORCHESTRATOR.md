@@ -186,6 +186,11 @@ Until a 0.3.0 feature exists, its control on a 0.2.0 screen is disabled with a r
 - Huddle fold, "to nina" line, presence tool words: left out ("if those features make no sense in the newer design").
 - Stop stays, and voice stays too. The lead's design: Stop is a 28 tinted circle with a filled rounded square, at
   the left of the composer's right cluster ([stop] [mic] [primary]); positions never shift; no red.
+- (Lead, after step 4) The composer's primary circle is always present. With no voice feature it shows the send
+  arrow, quiet when the composer is empty and inverted ink when there is text; the voice glyph returns when voice
+  exists. A session turn gets the same hover actions as a bot's (copy, more). Talk-while-held dictation and a working
+  undo come back in the composer step. Receipts say "Denied". Undo under a turn rewinds to before that turn;
+  "Checkpoint N" counts kept ships.
 - Member name colours: the kit's contrast-safe ones. File chips: the bare file name (lead's decision, unanswered).
 - Keybinds get their own pass. Ctrl+Enter steers with the queued message in a running session (S06).
 
@@ -229,7 +234,10 @@ Resolutions the lead made (by the precedence of section 3 and the owner's leave 
 | Builders' rules and step table | `docs/design/v7/REPASS.md` on `w33/repass` |
 | Done | Boards 11, 17, S17: match (0.05–0.19%, live orbs and the dock's half pixel) and wired |
 | Done (7d41b42f) | Board 12 thread (0.02–0.04% outside orbs), the K02 sidebar (0.00%), the held strip (0.00%); the room on the kit composer; "@" menu and capsules; attachment chips; a room details pane (derived); v6 presence, huddle, glance, mentions deleted. The lead looked at 12-room dark, K02 sidebar light, the rail options and the chips crop |
-| Running | The coverage map (COVERAGE.md); a started session: boards 10 and S20, then S23. CI dispatched on 7d41b42f for an early signal (lab goldens are expected to fail until phase 2's gate) |
+| Done (0376447f) | A started session: S20 (0.16–0.17% outside orbs; the differences are "Deny" and the Stop button, both decided) and S23 (0.06%). v6 conversation and session composer deleted. Stop button, upright rail switch, gold @all, "hidden until it exists" (capability-driven) built. Coverage map merged. The lead looked at S20 dark, S23 light and both crops |
+| CI on 7d41b42f (run 45702861490) | **desktop-smoke failed, ui smoke failed, lab-orbs 29 errors ("the state never finished drawing")**; other jobs green; lab still running. Regressions are accumulating: the next step starts with health |
+| Running | Step 5: health (CI's smoke, desktop-smoke, lab-orbs and broken stories green on the head) and then the dock (K01–K08). CI dispatched on 0376447f |
+| Next (step 6) | The composer completed and the session's leftovers: the primary circle rule, copy on a turn, talk-while-held, undo, drop and paste, effort mid-session, menu placement, S35–S38, the open steps against S10, the session's v6 leftovers (form cards, tasks, council, find, details panel) |
 | Stopped, kept on their branches | `w33/onboarding`, `w33/settings-store` (first-attempt work; logic may be reused, looks are redone) |
 | Paused by the owner | The launch film (`w28/launch-video`, uncommitted edits in `w28-launch`) |
 
@@ -239,7 +247,16 @@ in the Bots composers; a room's cost and room-level approvals have no provider d
 **Dropped by the board 12 step because no board draws them (asked of the owner):** the huddle fold, the "to nina"
 line, presence detail (tool-in-use words, the needs-you row).
 
+**Lost or changed in step 4, to restore or confirm:** talk-while-held dictation (gone); the composer's own undo
+(gone, browser undo may break when marks redraw); the hover copy button on a session turn (gone); "Open PR" and the
+ship verdict unreachable (they belong to S2); the assumptions row replaced by the mark's menu; every form kind but
+approvals is still the v6 card; tasks, council, find and the details panel are still v6.
+**Tests at 0376447f:** unit 1918 pass; smoke mention 16/16, boot 3/3, live 9/10, forms 27/33, keys 102/114 (the
+failures are the dock's API, bot settings, the account menu); not run: owner, mods, controls, store, corners,
+concentric, dock, axe, the Python e2e; stale and known to fail: concentric.mjs, corners.mjs, mods.mjs.
+
 **Open questions for the owner**
+00. Asked 25 Nov: is talking with voice (the voice circle on every board) a planned feature, and for which release?
 0. (Answered 25 Nov: rail switch B, @all gold, dropped room features stay out, Stop and voice both, readable
    colours. Sent to the session builder as kit items.)
 1. (Closed by the lead: hidden until the feature exists; told to the owner.)
