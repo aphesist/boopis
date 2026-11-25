@@ -1,0 +1,62 @@
+{
+ "long@dark": {
+  "sha": "63258e8edbc1601a33535424d351eb8f58c75f7b",
+  "w": 1416,
+  "h": 644
+ },
+ "long@light": {
+  "sha": "f8c9486b09d34a0fa47d79b17de9541323cfef0c",
+  "w": 1416,
+  "h": 644
+ },
+ "the-tab-switch-a-tab-focused@dark": {
+  "sha": "f813c24faf0bfdc955cf636eba8b3698289062d1",
+  "w": 1416,
+  "h": 658
+ },
+ "the-tab-switch-a-tab-focused@light": {
+  "sha": "88106ba6994e881c967f5eff443bbbb2364bbec8",
+  "w": 1416,
+  "h": 658
+ },
+ "the-tab-switch-a-tab-hovered@dark": {
+  "sha": "63c157d0862b9f2ff9785ad42ed5d720eb40de20",
+  "w": 1416,
+  "h": 658
+ },
+ "the-tab-switch-a-tab-hovered@light": {
+  "sha": "43d12bb3d1222e7f14f9f74d01b2e48d4b3df0c9",
+  "w": 1416,
+  "h": 658
+ },
+ "the-tab-switch-bots@dark": {
+  "sha": "d1983939fae28516539ab89f90bde519c4b8a275",
+  "w": 1416,
+  "h": 797
+ },
+ "the-tab-switch-bots@light": {
+  "sha": "5845d3f144cd255a1ebad782b132e751a220acd0",
+  "w": 1416,
+  "h": 797
+ },
+ "the-tab-switch-sessions-no-bots@dark": {
+  "sha": "9eb21638886b93b3223976c6c36621c36ad25ba1",
+  "w": 1416,
+  "h": 298
+ },
+ "the-tab-switch-sessions-no-bots@light": {
+  "sha": "a9e35274470a7c7580cd44d772a4ebefa79e0687",
+  "w": 1416,
+  "h": 298
+ },
+ "typical@dark": {
+  "sha": "c36f06c94ef8cafe6856b4606047e325fae18da6",
+  "w": 1416,
+  "h": 723
+ },
+ "typical@light": {
+  "sha": "30122db22450b79fbfec89120ea110bf757ffe7b",
+  "w": 1416,
+  "h": 723
+ }
+}

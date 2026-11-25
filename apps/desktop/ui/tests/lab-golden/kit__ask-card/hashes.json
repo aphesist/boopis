@@ -1,0 +1,122 @@
+{
+ "answered@dark": {
+  "sha": "449b780681cddce3db33de018d38bb68898c18b5",
+  "w": 584,
+  "h": 112
+ },
+ "answered@light": {
+  "sha": "b9b35788bfa494958df3494c6dad90f04aaacf72",
+  "w": 584,
+  "h": 112
+ },
+ "asked@dark": {
+  "sha": "e624402151d71541ec9b0ed75b13ebfc363a5af2",
+  "w": 584,
+  "h": 116
+ },
+ "asked@light": {
+  "sha": "d39bd2e0b55385f8f1f3033f31e851d97c60c7be",
+  "w": 584,
+  "h": 116
+ },
+ "attached@dark": {
+  "sha": "8d0bf5a9c290d9687d4e8d3b569ed4bb907f2f09",
+  "w": 584,
+  "h": 102
+ },
+ "attached@light": {
+  "sha": "70eef4c9bf60952da400adbe50c154c50f7ba596",
+  "w": 584,
+  "h": 102
+ },
+ "choices@dark": {
+  "sha": "db48be2c608d4d62f9bbbb4caec67004bfbdc63e",
+  "w": 584,
+  "h": 238
+ },
+ "choices@light": {
+  "sha": "20c2455dc12ae15a87d79c3ca6a47a062334fdc7",
+  "w": 584,
+  "h": 238
+ },
+ "focus@dark": {
+  "sha": "dd504a38b6f14191c0df572fc2ccec2ba444c67f",
+  "w": 584,
+  "h": 182
+ },
+ "focus@light": {
+  "sha": "69c58462514840a5e166b76eb6993ca69e0b2e0c",
+  "w": 584,
+  "h": 182
+ },
+ "hold-to-allow-in-progress@dark": {
+  "sha": "db6f96f4e9918805c8faa6036cb30db026bfd388",
+  "w": 584,
+  "h": 136
+ },
+ "hold-to-allow-in-progress@light": {
+  "sha": "601989e298c1faaca1f0b8dbeec15a6faa485eb2",
+  "w": 584,
+  "h": 136
+ },
+ "hover@dark": {
+  "sha": "87cebcf35815519c1fd11206ed14aa9f604af375",
+  "w": 584,
+  "h": 182
+ },
+ "hover@light": {
+  "sha": "e8b94b282576c6fb029ba6cb8ae05df94ef763ee",
+  "w": 584,
+  "h": 182
+ },
+ "lapsed-blank@dark": {
+  "sha": "d1b1ff96814c1fb5ebc37cd69f4408ae9ba8d30a",
+  "w": 584,
+  "h": 136
+ },
+ "lapsed-blank@light": {
+  "sha": "77788fb8022d353018648d482bc6beb71617bb9a",
+  "w": 584,
+  "h": 136
+ },
+ "long@dark": {
+  "sha": "34dc37973b2577fa23e9d9463192340967195f26",
+  "w": 464,
+  "h": 190
+ },
+ "long@light": {
+  "sha": "48ef2616385631aca716a2f6340c56bacc36341c",
+  "w": 464,
+  "h": 190
+ },
+ "pressed@dark": {
+  "sha": "11a2dcace0a6cb03c2773c0a7ba3774ca0775925",
+  "w": 584,
+  "h": 182
+ },
+ "pressed@light": {
+  "sha": "1cca529a47de3a085dd90b3d62d2b6ae35034ae0",
+  "w": 584,
+  "h": 182
+ },
+ "question@dark": {
+  "sha": "80913b4b611cb84a9ebf1a25b6c0cd59253db3f9",
+  "w": 584,
+  "h": 116
+ },
+ "question@light": {
+  "sha": "0b9bdc629ec280e377752461ab7997fd0e4877e8",
+  "w": 584,
+  "h": 116
+ },
+ "typical@dark": {
+  "sha": "11a2dcace0a6cb03c2773c0a7ba3774ca0775925",
+  "w": 584,
+  "h": 182
+ },
+ "typical@light": {
+  "sha": "1cca529a47de3a085dd90b3d62d2b6ae35034ae0",
+  "w": 584,
+  "h": 182
+ }
+}

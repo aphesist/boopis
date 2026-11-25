@@ -11,7 +11,7 @@
 .k7-tool__head, .k7-files__head { border-radius: calc(var(--r-block) - var(--pad-block)); }
 .k7-tool__head { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl-s); font-size: var(--fs-s); line-height: var(--lh-m); color: var(--text-dim); min-width: 0; }
 .k7-tool__ic { color: var(--icon-quiet); }
-.k7-tool__name { flex: none; font-family: var(--mono); font-size: var(--fs-xs); font-weight: 500; color: var(--text); letter-spacing: 0; }
+.k7-tool__name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: var(--fs-xs); font-weight: 500; color: var(--text); letter-spacing: 0; }
 .k7-tool__name.k7-shimmer { color: transparent; }
 .k7-tool__target { flex: 0 1 auto; }
 .k7-tool__head > .k7-files__counts { font-size: var(--fs-s); }
@@ -90,6 +90,8 @@
 .k7-files__counts > [data-tone="add"] { color: var(--add); }
 .k7-files__counts > [data-tone="del"] { color: var(--del); }
 .k7-files > .k7-files__list { display: none; }
+/* folded (or with no rows) the head is the card's last row: its action keeps the Block's own 8 from every edge */
+.k7-files:not([data-open]) > .k7-files__head, .k7-files__head:has(+ .k7-files__list:empty) { margin-bottom: 0; }
 .k7-files[data-open] > .k7-files__list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
 .k7-files__row { display: flex; align-items: center; gap: var(--sp-2); height: var(--line-h); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text); min-width: 0; }
 .k7-files__row > svg { flex: none; }
@@ -143,7 +145,7 @@
 .k7-diff__text { outline: none; }
 
 /* ── Composer (39): a 44 pill (radius 22 as it grows), --bg-3, --composer-line, --shadow-composer; + left; mic then voice/send ── */
-.k7-composer { display: flex; flex-direction: column; width: 100%; min-width: 0; min-height: 0; }
+.k7-composer { display: flex; flex-direction: column; width: 100%; min-width: 0; min-height: 0; container: k7-composer / inline-size; }
 .k7-composer__box {
   --sq-bg: var(--bg-3); --sq-line: var(--composer-line); --sq-shadow: var(--shadow-composer);
   background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line), var(--sq-shadow);
@@ -176,8 +178,14 @@
 .k7-composer__item[data-model] { gap: var(--pad-kbd); }
 .k7-composer__item > svg { flex: none; color: currentColor; }
 @media (hover: hover) and (pointer: fine) { .k7-composer__item:hover { color: var(--text); } }
-.k7-composer__end { display: inline-flex; align-items: center; gap: var(--gap-s); font-size: var(--fs-xs); color: var(--text-dim); }
+.k7-composer__end { display: inline-flex; align-items: center; gap: var(--gap-s); flex: 0 1 auto; min-width: 0; overflow: hidden; font-size: var(--fs-xs); color: var(--text-dim); }   /* where the line runs out of room its end gives way, inside the composer */
+.k7-composer__end.k7-mono { display: block; text-overflow: ellipsis; }
+.k7-composer__end > .k7-mono { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 span.k7-composer__item { cursor: default; }
+/* a narrow composer leaves out what folds first (S05 B: the branch and the context); the quick menu still lists them */
+@container k7-composer (max-width: 600px) { .k7-composer__line > [data-fold] { display: none; } }
+.k7-composer__line > .k7-composer__item { min-width: 0; }
+.k7-composer__item > span:not(.k7-ticks) { overflow: hidden; text-overflow: ellipsis; }
 @media (hover: hover) and (pointer: fine) { span.k7-composer__item:hover { color: var(--text-dim); } }
 .k7-composer__hint { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; }
 .k7-composer + .k7-queue, .k7-queue + .k7-composer { margin-top: var(--sp-2); }

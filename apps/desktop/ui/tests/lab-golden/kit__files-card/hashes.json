@@ -1,0 +1,102 @@
+{
+ "empty@dark": {
+  "sha": "3ec5f1c1599f9db56594836307e35fd4254bf0be",
+  "w": 634,
+  "h": 68
+ },
+ "empty@light": {
+  "sha": "af13cb9bf7b401e793f674bfb7fecb09a1a19644",
+  "w": 634,
+  "h": 68
+ },
+ "long@dark": {
+  "sha": "658723f696d6a1460d7898f112d95e4c285f4b58",
+  "w": 444,
+  "h": 98
+ },
+ "long@light": {
+  "sha": "8a064b2546aca8329146f0f7e9d6f25f002d72e8",
+  "w": 444,
+  "h": 98
+ },
+ "many-folded@dark": {
+  "sha": "beaf33583b2f978eab257ee9c1008f75b5de90d6",
+  "w": 634,
+  "h": 68
+ },
+ "many-folded@light": {
+  "sha": "0656949d1e004c13b78b523fea562428ed7e541b",
+  "w": 634,
+  "h": 68
+ },
+ "many-unfolded@dark": {
+  "sha": "dce4a334f88417ee94eeba80546fb15738a91a57",
+  "w": 634,
+  "h": 384
+ },
+ "many-unfolded@light": {
+  "sha": "4588ffc6d48876e80d635f17209d82a7f246ee0f",
+  "w": 634,
+  "h": 384
+ },
+ "narrow@dark": {
+  "sha": "9f60d0f30bbb58245c7b2c53ad7feac4bddd4e60",
+  "w": 352,
+  "h": 124
+ },
+ "narrow@light": {
+  "sha": "eaf534b4ae95275754c250e714ef56c06090f059",
+  "w": 352,
+  "h": 124
+ },
+ "open@dark": {
+  "sha": "3377af0d777a9bb3d34ea150b7587b384c39fd52",
+  "w": 584,
+  "h": 384
+ },
+ "open@light": {
+  "sha": "55034ec93832ad79a386e31e9ee5739f6c5d71f2",
+  "w": 584,
+  "h": 384
+ },
+ "the-action-focused@dark": {
+  "sha": "db3edd92bf18807992a9e63da273ad2dbcff71f9",
+  "w": 634,
+  "h": 98
+ },
+ "the-action-focused@light": {
+  "sha": "85c7eb80b2cfa9d04d01c015c3fc9bfabdc4cc13",
+  "w": 634,
+  "h": 98
+ },
+ "the-action-hovered@dark": {
+  "sha": "3bead33fdd2bcc92b2422ebb09bfa3ee00e22573",
+  "w": 634,
+  "h": 98
+ },
+ "the-action-hovered@light": {
+  "sha": "ebb0965e815424db2af505468d1147ae18a09439",
+  "w": 634,
+  "h": 98
+ },
+ "two-files-s23@dark": {
+  "sha": "c59b88235b829bd2fefd3beedcc57c5435c8b9dd",
+  "w": 634,
+  "h": 124
+ },
+ "two-files-s23@light": {
+  "sha": "2b5bf0addad91e37a25aab7fdc659206049bc73f",
+  "w": 634,
+  "h": 124
+ },
+ "typical@dark": {
+  "sha": "76cc4e2e53402f81fe6181ce52dd3484f2cc9c0a",
+  "w": 584,
+  "h": 98
+ },
+ "typical@light": {
+  "sha": "e87e132fe1352d1d53b951916a047d914b5d5462",
+  "w": 584,
+  "h": 98
+ }
+}

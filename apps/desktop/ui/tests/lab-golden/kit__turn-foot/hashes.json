@@ -1,0 +1,102 @@
+{
+ "a-route-why-it-was-picked-ungoverned@dark": {
+  "sha": "e87803fc1d140f3f54dc577c87c5762d70ce9b33",
+  "w": 634,
+  "h": 50
+ },
+ "a-route-why-it-was-picked-ungoverned@light": {
+  "sha": "a5c82abe7eddc55b20e19dddd086d3e7672f23a7",
+  "w": 634,
+  "h": 50
+ },
+ "a-session-s23@dark": {
+  "sha": "9692aa5d30e1d8d180248bf7253dd803f99b3816",
+  "w": 634,
+  "h": 50
+ },
+ "a-session-s23@light": {
+  "sha": "0e60176ec9fe5ef53d261d383cceaefea31127c1",
+  "w": 634,
+  "h": 50
+ },
+ "an-action-focused@dark": {
+  "sha": "9ee68baaf4d64d6f93643e294bee74f485152ea9",
+  "w": 634,
+  "h": 50
+ },
+ "an-action-focused@light": {
+  "sha": "82c06360c984a62631b3f0488a30a13fc4a9ab14",
+  "w": 634,
+  "h": 50
+ },
+ "an-action-hovered@dark": {
+  "sha": "c626bd036338a1c27b80a18c9c257ea16c0e9c3b",
+  "w": 634,
+  "h": 50
+ },
+ "an-action-hovered@light": {
+  "sha": "faa7e116ac98268b97c7c309d711b8dff950bfc5",
+  "w": 634,
+  "h": 50
+ },
+ "hover@dark": {
+  "sha": "7aaac05d47064654f320b103887ce398f7757f3d",
+  "w": 584,
+  "h": 50
+ },
+ "hover@light": {
+  "sha": "adbb6da9530a5fe068f095417729e764b56056a5",
+  "w": 584,
+  "h": 50
+ },
+ "long@dark": {
+  "sha": "6fb31be0af96782f7a5036576cde4d8dee24a66d",
+  "w": 384,
+  "h": 44
+ },
+ "long@light": {
+  "sha": "92c95c1524f832de73eee00fa6cd3503af226334",
+  "w": 384,
+  "h": 44
+ },
+ "narrow@dark": {
+  "sha": "cd079bdaafbe06e46818be6d954d0f58d87b82ea",
+  "w": 352,
+  "h": 50
+ },
+ "narrow@light": {
+  "sha": "b0467d6f7cb36dab30c58d156577f4cf52ef3950",
+  "w": 352,
+  "h": 50
+ },
+ "only-what-exists-undo-alone-then-nothing@dark": {
+  "sha": "510b7f0d3f6a3c0beba10cca3cdfa46ae51417a7",
+  "w": 634,
+  "h": 92
+ },
+ "only-what-exists-undo-alone-then-nothing@light": {
+  "sha": "b1fa76fef984694b54ff19d5552bbbfba2218080",
+  "w": 634,
+  "h": 92
+ },
+ "typical@dark": {
+  "sha": "81d9dac40855f1a55c14933392b679cdb4ef5bc7",
+  "w": 584,
+  "h": 86
+ },
+ "typical@light": {
+  "sha": "bf118782b18d83d53a1d032e33937c48347e39e6",
+  "w": 584,
+  "h": 86
+ },
+ "undo-that-cannot-run@dark": {
+  "sha": "370d085d9ecb02571d95aaac1ee142dc629e10f1",
+  "w": 634,
+  "h": 50
+ },
+ "undo-that-cannot-run@light": {
+  "sha": "ff5f8c023dab0f01190d2769fc46536ddf5b329c",
+  "w": 634,
+  "h": 50
+ }
+}

@@ -6,6 +6,7 @@ import type { Story } from '../../types';
 import { KAI, LONG_BOT, MOSS, NINA } from './_bots';
 
 const LINE = [{ label: 'Mode', value: 'Governed' }, { label: 'Model', value: 'Smart' }, { label: 'Branch', value: 'w32/kit-v7', mono: true }, { label: 'Context', value: '76k / 200k', end: true, mono: true }, { label: 'Cost', value: '$0.37 of $0.60', end: true, mono: true }];
+const S20 = [{ label: 'How careful', value: 'Supervised', icon: 'shield', plain: true }, { label: 'Branch', value: 'w32/dock-paint', icon: 'fork', mono: true, plain: true, still: true, fold: true }, { label: 'Who answers next', value: 'sonnet 5.5', model: 'sonnet 5.5', plain: true, ticks: 3 }, { label: 'Context', value: '76k / 200k', mono: true, end: true, ticks: 2, fold: true }, { label: 'Cost', value: '$0.37 of $0.60', mono: true, end: true }];
 const empty = stage(['typical', 'empty'], ({ root }) => { fill(root, kit.composer({ line: LINE })); }, { width: 720 });
 export default {
   id: 'kit/composer', title: 'Composer', area: 'composer', kind: 'component', covers: ['kit.composer'],
@@ -46,6 +47,26 @@ export default {
       t.focus(); t.textContent = '@'; const r = document.createRange(); r.setStart(t.firstChild as Node, 1); r.collapse(true); getSelection()?.removeAllRanges(); getSelection()?.addRange(r);
       t.dispatchEvent(new Event('input', { bubbles: true }));
       await frames(3);
-    }, { width: 720 })
+    }, { width: 720 }),
+    /* owner, 25 November: Stop is its own button at the start of the right cluster while a turn runs; the primary circle never becomes it */
+    'running: Stop beside the mic': stage(['loading', 'owner'], ({ root }) => { fill(root, kit.composer({ kind: 'session', running: true, line: S20 })); }, { width: 720 }),
+    'running, with text: Stop, the mic, Queue': stage(['loading', 'variant'], ({ root }) => { fill(root, kit.composer({ kind: 'bot', running: true, text: 'and the changelog?' })); }, { width: 720 }),
+    'idle: no Stop': stage(['variant'], ({ root }) => { fill(root, kit.composer({ kind: 'bot', text: 'and the changelog?' })); }, { width: 720 }),
+    'Stop hovered': stage(['hover'], ({ root }) => { fill(root, kit.composer({ kind: 'room', running: true })); }, { width: 720, force: [{ sel: '[data-stop]', state: 'hover' }] }),
+    'Stop focused': stage(['focus'], ({ root }) => { fill(root, kit.composer({ kind: 'room', running: true })); }, { width: 720, force: [{ sel: '[data-stop]', state: 'focus' }] }),
+    'running, narrow': stage(['size'], ({ root }) => { fill(root, kit.composer({ kind: 'dock', running: true, text: 'a message long enough to wrap in a narrow composer' })); }, { width: 328, ground: 'dock' }),
+    /* a thing shows only once it exists: no voice circle where talking is not built, no send while a turn runs where nothing queues */
+    'voice not built: no primary circle until there is text': stage(['variant'], ({ root }) => { fill(root, kit.composer({ kind: 'session', voiceOff: true, line: S20 })); fill(root, kit.composer({ kind: 'session', voiceOff: true, text: 'Describe the change' })); }, { width: 720 }),
+    'running where nothing queues: Stop and the mic': stage(['variant'], ({ root }) => { fill(root, kit.composer({ kind: 'session', running: true, voiceOff: true, queueOff: true, text: 'wait' })); }, { width: 720 }),
+    /* boards S05 B and S20: the session's line, and the words the text is read by */
+    'a session, S20: the line and the marks': stage(['variant', 'owner'], ({ root }) => {
+      const c = kit.composer({ kind: 'session', placeholder: 'Send feedback to decline this request', text: 'Don\'t centre with a transform, use auto margins on the page', line: S20 });
+      fill(root, c);
+      kit.composerMarks(c, (t) => [{ at: t.indexOf('auto margins'), text: 'auto margins' }, { at: t.indexOf('page'), text: 'page', chosen: true }]);
+    }, { width: 720 }),
+    'a line item hovered': stage(['hover'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20 })); }, { width: 720, force: [{ sel: 'button.k7-composer__item', state: 'hover' }] }),
+    'a line item focused': stage(['focus'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20 })); }, { width: 720, force: [{ sel: 'button.k7-composer__item', state: 'focus' }] }),
+    'the line, narrow': stage(['size'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20 })); }, { width: 390 }),
+    'no line': stage(['empty'], ({ root }) => { fill(root, kit.composer({ kind: 'session' })); }, { width: 720 })
   }
 } satisfies Story;

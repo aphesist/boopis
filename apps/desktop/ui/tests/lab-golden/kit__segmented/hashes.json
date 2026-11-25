@@ -1,0 +1,132 @@
+{
+ "chosen-diff@dark": {
+  "sha": "a8193c120586a2ec2ef8da26c6be1708f7434e58",
+  "w": 1416,
+  "h": 54
+ },
+ "chosen-diff@light": {
+  "sha": "bf1101a55e082acedcc81a94d4e5b6f17408b7e4",
+  "w": 1416,
+  "h": 54
+ },
+ "chosen-files@dark": {
+  "sha": "5bb193f72b3e3253f3dbebc15230fb590143bba7",
+  "w": 1416,
+  "h": 54
+ },
+ "chosen-files@light": {
+  "sha": "a40f5b1892adfe8cdc33bb7be271870459506e33",
+  "w": 1416,
+  "h": 54
+ },
+ "chosen-pr@dark": {
+  "sha": "fda4f8f88d677bda5df47cde5e5a265fbd4e9cc9",
+  "w": 1416,
+  "h": 54
+ },
+ "chosen-pr@light": {
+  "sha": "5adc55fbdffc0978d680a9deb9fdccc130896df6",
+  "w": 1416,
+  "h": 54
+ },
+ "chosen-terminal@dark": {
+  "sha": "447b831d08f1339f0a9d0f3eae0bf2f2b5627bbe",
+  "w": 1416,
+  "h": 54
+ },
+ "chosen-terminal@light": {
+  "sha": "c2455d75ea697a9fb9bb821f880f19ca03489c1c",
+  "w": 1416,
+  "h": 54
+ },
+ "focus@dark": {
+  "sha": "fcc7aa5205aeea993aadc71e33bf2f263109802e",
+  "w": 1416,
+  "h": 192
+ },
+ "focus@light": {
+  "sha": "b250c636c8022a5b7ecfed09dba375d24441fc02",
+  "w": 1416,
+  "h": 192
+ },
+ "hover@dark": {
+  "sha": "dd29fb68edbec20b616a3268e9e976006b52678e",
+  "w": 1416,
+  "h": 192
+ },
+ "hover@light": {
+  "sha": "836155bb544ae4a60b36d238026f6722c1835dc9",
+  "w": 1416,
+  "h": 192
+ },
+ "long@dark": {
+  "sha": "e1c88d8769327cbef177e92d17c959d959bd2a36",
+  "w": 1416,
+  "h": 54
+ },
+ "long@light": {
+  "sha": "065ce46c7b8c5fb59fba274b78abe61a01fc9449",
+  "w": 1416,
+  "h": 54
+ },
+ "pressed@dark": {
+  "sha": "f424bc4cad8a3a06f36d96966903d188f9bf9cb0",
+  "w": 1416,
+  "h": 192
+ },
+ "pressed@light": {
+  "sha": "5b7a769b38b390066ba5f52d3e99c6f69f84be16",
+  "w": 1416,
+  "h": 192
+ },
+ "typical@dark": {
+  "sha": "f424bc4cad8a3a06f36d96966903d188f9bf9cb0",
+  "w": 1416,
+  "h": 192
+ },
+ "typical@light": {
+  "sha": "5b7a769b38b390066ba5f52d3e99c6f69f84be16",
+  "w": 1416,
+  "h": 192
+ },
+ "upright-focused@dark": {
+  "sha": "846f312501b6ee1865ab181c40c0517a0f328fb7",
+  "w": 1416,
+  "h": 86
+ },
+ "upright-focused@light": {
+  "sha": "0288292b1638f85bb765163397e6b85177cccd18",
+  "w": 1416,
+  "h": 86
+ },
+ "upright-hovered@dark": {
+  "sha": "54481ebcc292554cef1589a89b36b2a76cc68d88",
+  "w": 1416,
+  "h": 86
+ },
+ "upright-hovered@light": {
+  "sha": "1be77866d6dd45e0c25cdabfe5b739f3e491fcc1",
+  "w": 1416,
+  "h": 86
+ },
+ "upright-the-other-side-needs-you@dark": {
+  "sha": "83ff0f5ff9cc9a83458d681bf390231c50aa138e",
+  "w": 1416,
+  "h": 86
+ },
+ "upright-the-other-side-needs-you@light": {
+  "sha": "9016d7537b1c1be980ce4245b8b018e4a240cd1f",
+  "w": 1416,
+  "h": 86
+ },
+ "upright@dark": {
+  "sha": "917fab3450b7736de270f00c6e7c2e8b012e7fa4",
+  "w": 1416,
+  "h": 86
+ },
+ "upright@light": {
+  "sha": "5f53fe66868f19cc64a1568321f70f4d040a13b4",
+  "w": 1416,
+  "h": 86
+ }
+}

@@ -64,7 +64,7 @@ export function lineItems(o: { text: string; attachments: number; sessionId: str
     items.push(['careful', { label: 'How careful', value: CAREFUL[step].name, icon: 'shield', plain: true, attrs: { 'data-line': 'careful', 'data-step': step, 'data-tip': 'How careful: ' + CAREFUL[step].meaning, 'data-kbd': 'alt+G', 'aria-haspopup': 'menu' } }]);
   }
   const branch = d.environment.get().branch;
-  if (branch) items.push(['branch', { label: 'Branch', value: branch, icon: 'fork', mono: true, plain: true, still: true, attrs: { 'data-line': 'branch' } }]);
+  if (branch) items.push(['branch', { label: 'Branch', value: branch, icon: 'fork', mono: true, plain: true, still: true, fold: true, attrs: { 'data-line': 'branch' } }]);
   /* who answers next: a model's mark and name, Smart (with what it would pick for the text being typed), or a council */
   const choices = d.choices.get();
   const prev = G.smart ? smartPreview(choices, { text: o.text, attachments: o.attachments }) : null;
@@ -77,7 +77,7 @@ export function lineItems(o: { text: string; attachments: number; sessionId: str
     attrs: { 'data-line': 'model', 'data-tip': tip, 'data-kbd': 'alt+M', 'aria-haspopup': 'menu' }
   }]);
   const ctx = d.context.get();
-  if (ctx.total > 0) items.push(['context', { label: 'Context', value: kTokens(ctx.used) + ' / ' + kTokens(ctx.total), mono: true, end: true, ticks: contextTicks(ctx.used, ctx.total), attrs: { 'data-line': 'context' } }]);
+  if (ctx.total > 0) items.push(['context', { label: 'Context', value: kTokens(ctx.used) + ' / ' + kTokens(ctx.total), mono: true, end: true, fold: true, ticks: contextTicks(ctx.used, ctx.total), attrs: { 'data-line': 'context' } }]);
   if (G.spent) items.push(['cost', { label: 'Cost', value: G.governed && G.cap ? G.spent + ' of ' + G.cap : G.spent, mono: true, end: true, attrs: { 'data-line': 'cost' } }]);
   return items.filter(([id]) => !o.hidden.includes(id)).map(([, item]) => item);
 }

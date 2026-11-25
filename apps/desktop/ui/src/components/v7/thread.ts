@@ -166,6 +166,7 @@ export interface LineItem {
   label: string; value: string; mono?: boolean; need?: boolean; end?: boolean; leadHTML?: string;
   /** a plain item, as the boards' lines draw them: a 16 glyph or the model's 12 mark, then the value; no chevron, no fill */ plain?: boolean; icon?: string; model?: ModelRef; attrs?: Attrs;
   /** five ticks after the value (a model's effort, S05) or, at the line's end, before it (how full the context is) */ ticks?: number; /** a plain item that only says (the branch): not a control */ still?: boolean;
+  /** in a narrow composer this item is left out first (board S05 B: "the branch and the context fold into the quick menu first") */ fold?: boolean;
 }
 export interface ComposerOpts {
   kind?: U<ComposerKind>; placeholder?: U<string>; text?: U<string>; textHTML?: U<string>; running?: U<boolean>;
@@ -188,11 +189,11 @@ export function composer(o: ComposerOpts): string {
   const stop = '<button class="k7-reset k7-ib k7-composer__stop"' + kitAttrs('IconButton') + attrs({ type: 'button', 'data-variant': 'tinted', 'data-stop': '', 'aria-label': 'Stop', 'data-tip': 'Stop', 'data-kbd': o.stopKeys ?? 'mod+period', 'aria-keyshortcuts': o.stopKeys === 'esc' ? 'Escape' : 'Control+.' }) + '><span class="k7-composer__stop-glyph" aria-hidden="true"></span></button>';
   const line = (o.line ?? []).length || o.hint || o.hintEnd
     ? '<div class="k7-composer__line">' + (o.line ?? []).filter((x) => !x.end).map((x) => x.plain
-      ? (x.still ? '<span class="k7-composer__item"' + attrs({ 'aria-label': x.label + ': ' + x.value, ...(x.attrs ?? {}) }) : '<button class="k7-reset k7-composer__item" type="button"' + attrs({ 'aria-label': x.label + ': ' + x.value, 'data-model': x.model ? '' : null, ...(x.attrs ?? {}) })) + '>' +
+      ? (x.still ? '<span class="k7-composer__item"' + attrs({ 'aria-label': x.label + ': ' + x.value, 'data-fold': x.fold ? '' : null, ...(x.attrs ?? {}) }) : '<button class="k7-reset k7-composer__item" type="button"' + attrs({ 'aria-label': x.label + ': ' + x.value, 'data-model': x.model ? '' : null, 'data-fold': x.fold ? '' : null, ...(x.attrs ?? {}) })) + '>' +
         (x.model ? markHTML(x.model, { size: 12, label: false }) : x.icon ? glyph(x.icon) : '') + '<span' + (x.mono ? ' class="k7-mono"' : '') + '>' + esc(x.value) + '</span>' + (x.ticks != null ? ticks5(x.ticks) : '') + (x.still ? '</span>' : '</button>')
       : selectorItem({ variant: 'line', label: x.label, value: x.value, mono: !!x.mono, need: !!x.need, ...(x.leadHTML ? { leadHTML: x.leadHTML } : {}), chevron: !x.need })).join('') +
       (o.hint ? '<span class="k7-composer__hint">' + esc(o.hint) + '</span>' : '') +
-      '<span class="k7-grow"></span>' + (o.hintEnd ? '<span class="k7-composer__hint">' + esc(o.hintEnd) + '</span>' : '') + (o.line ?? []).filter((x) => x.end).map((x) => '<span class="' + cls('k7-composer__end', x.mono && x.ticks == null && 'k7-mono') + '"' + attrs({ 'aria-label': x.label + ': ' + x.value, ...(x.attrs ?? {}) }) + '>' + (x.ticks != null ? ticks5(x.ticks) + '<span class="k7-mono">' + esc(x.value) + '</span>' : esc(x.value)) + '</span>').join('') + '</div>'
+      '<span class="k7-grow"></span>' + (o.hintEnd ? '<span class="k7-composer__hint">' + esc(o.hintEnd) + '</span>' : '') + (o.line ?? []).filter((x) => x.end).map((x) => '<span class="' + cls('k7-composer__end', x.mono && x.ticks == null && 'k7-mono') + '"' + attrs({ 'aria-label': x.label + ': ' + x.value, 'data-fold': x.fold ? '' : null, ...(x.attrs ?? {}) }) + '>' + (x.ticks != null ? ticks5(x.ticks) + '<span class="k7-mono">' + esc(x.value) + '</span>' : esc(x.value)) + '</span>').join('') + '</div>'
     : '';
   return '<div class="k7-composer"' + kitAttrs('Composer', { 'data-kind': k, 'data-typed': typed ? '' : null, 'data-running': o.running ? '' : null, 'data-voice-off': o.voiceOff ? '' : null, 'data-queue-off': o.queueOff ? '' : null, ...(o.attrs ?? {}) }) + '>' +
     '<div class="k7-composer__box" data-sq data-sq-mode="frame" data-mark-context>' +

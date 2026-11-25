@@ -108,7 +108,7 @@
    with their glyphs, the open one filled; the attention dot sits on the item's corner */
 .k7-seg[data-upright] { flex-direction: column; }
 .k7-seg[data-upright] > .k7-seg__item { width: var(--ctl-s); height: var(--ctl-s); padding: 0; }
-.k7-seg[data-upright] .k7-seg__dot { position: absolute; top: var(--gap-hair); inset-inline-end: var(--gap-hair); margin: 0; }
+.k7-seg[data-upright] .k7-seg__dot { position: absolute; top: var(--pad-kbd); inset-inline-end: var(--pad-kbd); margin: 0; }   /* inside the item's circle */
 
 /* ── SelectorItem (24): a quiet current value that opens a Menu; transparent until hover, radius 10 ── */
 .k7-sel {

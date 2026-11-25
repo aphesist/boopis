@@ -4,6 +4,7 @@ import { fill, forced, stage } from '../../story';
 import type { Story } from '../../types';
 import { NINA } from './_bots';
 
+const S20 = [{ label: 'Deny', value: 'deny', outline: true, keys: 'esc' }, { label: 'Always allow this session', value: 'session' }, { label: 'Hold to allow once', value: 'once', primary: true, hold: true }];
 const col = (...n: HTMLElement[]): HTMLElement => { const t = document.createElement('div'); t.className = 'k7-thread'; t.setAttribute('data-kit-part', 'Steps'); t.append(...n); return t; };
 const typical = stage(['typical', 'variant'], ({ root }) => {
   fill(root, col(
@@ -20,6 +21,15 @@ export default {
     open: stage(['open'], ({ root }) => { fill(root, kit.toolRow({ kind: 'command', tool: 'Terminal', target: 'ran 2 commands', open: true, command: '$ pnpm test\n  1268 passed' })); fill(root, kit.toolRow({ kind: 'read', tool: 'Release 0.2.0', target: 'step 3 of 5', open: true, steps: [{ text: 'Bump the version', time: '0:04' }, { text: 'Write the notes', time: '0:31' }, { text: 'Build the installers', state: 'now' }, { text: 'Tag the release', state: 'todo' }] })); }, { width: 560 }),
     waiting: stage(['variant'], ({ root }) => { fill(root, kit.toolRow({ kind: 'command', tool: 'Terminal', target: 'deploy to staging', state: 'waiting', ask: { bot: NINA, ask: 'Run the deploy to staging', sub: 'Rule: “Ask before deploys”', command: 'fly deploy --app billing-staging' } })); }, { width: 560 }),
     error: stage(['error'], ({ root }) => { fill(root, kit.toolRow({ kind: 'command', tool: 'Terminal', target: 'pnpm build', state: 'failed', open: true, command: '$ pnpm build\nerror TS2339: Property keys does not exist' })); }, { width: 560 }),
-    long: stage(['long'], ({ root }) => { fill(root, kit.toolRow({ kind: 'edit', tool: 'Edit', target: 'src/billing/integrations/stripe/webhooks/handlers/invoice_payment_succeeded.ts' })); }, { width: 420 })
+    long: stage(['long'], ({ root }) => { fill(root, kit.toolRow({ kind: 'edit', tool: 'Edit', target: 'src/billing/integrations/stripe/webhooks/handlers/invoice_payment_succeeded.ts' })); }, { width: 420 }),
+    /* boards S09 and S20: a change waiting on its row, then what became of it */
+    'a change waiting, S20': stage(['variant', 'owner'], ({ root }) => { fill(root, kit.toolRow({ kind: 'edit', state: 'waiting', tool: 'modules/dock/dock.css', model: 'sonnet 5.5', add: 12, del: 3, ask: { ask: 'Allow this change?', answers: S20 } })); }, { width: 610 }),
+    'a command waiting': stage(['variant'], ({ root }) => { fill(root, kit.toolRow({ kind: 'command', state: 'waiting', tool: 'pnpm test --filter billing', model: 'sonnet 5.5', ask: { ask: 'Allow this command?', answers: [S20[0] as typeof S20[number], S20[2] as typeof S20[number]] } })); }, { width: 610 }),
+    'allowed, and denied with feedback': stage(['variant', 'success'], ({ root }) => {
+      fill(root, col(kit.toolRow({ kind: 'edit', tool: 'modules/dock/dock.css', model: 'sonnet 5.5', add: 12, del: 3, word: 'Allowed once 09:43' }), kit.toolRow({ kind: 'edit', tool: 'modules/dock/dock.css', model: 'sonnet 5.5', add: 12, del: 3, word: 'Denied 09:44', note: 'Keep the transform, fix the clip instead' })));
+    }, { width: 610 }),
+    'an answer hovered': stage(['hover'], ({ root }) => { fill(root, kit.toolRow({ kind: 'edit', state: 'waiting', tool: 'modules/dock/dock.css', model: 'sonnet 5.5', add: 12, del: 3, ask: { ask: 'Allow this change?', answers: S20 } })); }, { width: 610, force: [{ sel: '.k7-tool .k7-chip', state: 'hover' }] }),
+    'an answer focused': stage(['focus'], ({ root }) => { fill(root, kit.toolRow({ kind: 'edit', state: 'waiting', tool: 'modules/dock/dock.css', model: 'sonnet 5.5', add: 12, del: 3, ask: { ask: 'Allow this change?', answers: S20 } })); }, { width: 610, force: [{ sel: '.k7-tool .k7-chip', state: 'focus' }] }),
+    'waiting, narrow: the answers wrap': stage(['size', 'long'], ({ root }) => { fill(root, kit.toolRow({ kind: 'edit', state: 'waiting', tool: 'src/billing/integrations/stripe/webhooks/handlers/invoice_payment_succeeded.ts', model: 'sonnet 5.5', add: 120, del: 48, ask: { ask: 'Allow this change?', answers: S20 } })); }, { width: 328 })
   }
 } satisfies Story;

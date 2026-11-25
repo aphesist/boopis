@@ -3,6 +3,7 @@ import { kit } from '@boopis/ui';
 import { forced, line, stage } from '../../story';
 import type { Story } from '../../types';
 
+const UP = [{ value: 'session', label: 'Sessions', icon: 'session', keys: 'alt+1' }, { value: 'bots', label: 'Bots', icon: 'bots', keys: 'alt+2' }];
 const two = [{ value: 'activity', label: 'Activity' }, { value: 'library', label: 'Library' }];
 const three = [{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }];
 const four = [{ value: 'diff', label: 'Diff' }, { value: 'files', label: 'Files' }, { value: 'terminal', label: 'Terminal' }, { value: 'pr', label: 'PR' }];
@@ -19,6 +20,11 @@ export default {
     typical,
     ...forced(typical, '.k7-seg__item'),
     ...each,
-    long: stage(['long'], ({ root }) => { line(root, kit.segmented({ label: 'How careful', items: [{ value: 's', label: 'Supervised' }, { value: 'a', label: 'Auto-accept edits' }], value: 'a' })); })
+    long: stage(['long'], ({ root }) => { line(root, kit.segmented({ label: 'How careful', items: [{ value: 's', label: 'Supervised' }, { value: 'a', label: 'Auto-accept edits' }], value: 'a' })); }),
+    /* owner, 25 November: the switch stood on its end, for the collapsed rail (Sessions over Bots) */
+    upright: stage(['variant', 'owner'], ({ root }) => { line(root, kit.segmented({ label: 'View', variant: 'tabs', upright: true, items: UP, value: 'session' }), kit.segmented({ label: 'View', variant: 'tabs', upright: true, items: UP, value: 'bots' })); }),
+    'upright, the other side needs you': stage(['variant'], ({ root }) => { line(root, kit.segmented({ label: 'View', variant: 'tabs', upright: true, items: [UP[0] as typeof UP[number], { ...(UP[1] as typeof UP[number]), dot: true }], value: 'session' })); }),
+    'upright, hovered': stage(['hover'], ({ root }) => { line(root, kit.segmented({ label: 'View', variant: 'tabs', upright: true, items: UP, value: 'session' })); }, { force: [{ sel: '.k7-seg__item[aria-selected="false"]', state: 'hover' }] }),
+    'upright, focused': stage(['focus'], ({ root }) => { line(root, kit.segmented({ label: 'View', variant: 'tabs', upright: true, items: UP, value: 'session' })); }, { force: [{ sel: '.k7-seg__item[aria-selected="true"]', state: 'focus' }] })
   }
 } satisfies Story;

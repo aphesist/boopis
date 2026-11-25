@@ -10,6 +10,10 @@ export default {
     typical: stage(['typical'], ({ root }) => { fill(root, kit.disclosure({ summary: 'Read 6 files, ran 2 commands', steps: STEPS })); }, { width: 560 }),
     open: stage(['open'], ({ root }) => { fill(root, kit.disclosure({ summary: 'Read 6 files, ran 2 commands', steps: STEPS, open: true })); }, { width: 560 }),
     'work log': stage(['variant', 'open'], ({ root }) => { fill(root, kit.disclosure({ variant: 'worklog', summary: 'Worked for 59s: read 6 files, ran the tests', steps: [...STEPS.slice(0, 2), { text: 'Ran the tests', state: 'failed', time: '0:31' }], open: true })); }, { width: 560 }),
-    long: stage(['long'], ({ root }) => { fill(root, kit.disclosure({ summary: 'Worked for 12m 40s: read 214 files, ran 31 commands and changed 18 files across the billing service', steps: STEPS })); }, { width: 360 })
+    long: stage(['long'], ({ root }) => { fill(root, kit.disclosure({ summary: 'Worked for 12m 40s: read 214 files, ran 31 commands and changed 18 files across the billing service', steps: STEPS })); }, { width: 360 }),
+    'the summary hovered': stage(['hover'], ({ root }) => { fill(root, kit.disclosure({ variant: 'worklog', summary: 'Read 6 files, searched 2 patterns', steps: STEPS })); }, { width: 560, force: [{ sel: '.k7-disc__sum', state: 'hover' }] }),
+    'the summary focused': stage(['focus'], ({ root }) => { fill(root, kit.disclosure({ variant: 'worklog', summary: 'Read 6 files, searched 2 patterns', steps: STEPS })); }, { width: 560, force: [{ sel: '.k7-disc__sum', state: 'focus' }] }),
+    'no steps': stage(['empty'], ({ root }) => { fill(root, kit.disclosure({ variant: 'worklog', summary: '6 steps', steps: [] })); }, { width: 560 }),
+    narrow: stage(['size'], ({ root }) => { fill(root, kit.disclosure({ variant: 'worklog', summary: 'Worked for 59s: changed 2 files, ran 1 command', steps: STEPS, open: true })); }, { width: 328 })
   }
 } satisfies Story;
