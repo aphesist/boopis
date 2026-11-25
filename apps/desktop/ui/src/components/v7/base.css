@@ -8,9 +8,10 @@
   color: var(--text); -webkit-font-smoothing: antialiased; caret-color: var(--focus);
 }
 [data-ui="v7"] ::selection { background: var(--accent-soft); color: var(--text-strong); }
-/* a visible 2 px ring in --focus everywhere (section 14) */
-[data-ui="v7"] :focus { outline: none; }
-[data-ui="v7"] :focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-off); }
+/* a visible 2 px ring in --focus everywhere (section 14). At the root's weight only (:where), so a component's own ring (inside a
+   track, inside a row) wins over it, the kit's and, inside an app surface already on the kit, a v6 component's that has not moved yet */
+[data-ui="v7"] :where(:focus) { outline: none; }
+[data-ui="v7"] :where(:focus-visible) { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-off); }
 
 /* glyphs: the kit's icon set at 16, one stroke */
 .k7-ic { width: var(--icon-s); height: var(--icon-s); flex: none; }

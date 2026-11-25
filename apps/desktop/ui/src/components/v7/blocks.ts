@@ -93,7 +93,7 @@ export function listRow(o: ListRowOpts): string {
   const v = o.variant ?? 'session';
   const needsWords = typeof o.needs === 'string' ? o.needs : null;
   const sub = needsWords ? '<span class="k7-lrow__sub" data-tone="owe">' + esc(needsWords) + '</span>' : o.sub ? '<span class="k7-lrow__sub">' + esc(o.sub) + '</span>' : '';
-  const lead = v === 'bot' ? (o.leadHTML ?? ((h: string) => (o.ink ? inkOrb(h) : h))(orbHtml(o.bot ?? { name: o.title }, { size: 36, rest: true, flag: !!o.needs, state: o.needs ? 'needs' : o.working ? 'working' : undefined })))
+  const lead = v === 'bot' ? (o.leadHTML ?? ((h: string) => (o.ink ? inkOrb(h) : h))(orbHtml(o.bot ?? { name: o.title }, { size: 36, rest: true, flag: !!o.needs, state: o.bot?.state && o.bot.state !== 'idle' ? undefined : o.needs ? 'needs' : o.working ? 'working' : undefined })   /* the bot's own state when it says one (compute, replying...), else the row's flags */))
     : v === 'item' ? '<span class="k7-lrow__mark" aria-hidden="true">' + (o.markHTML ?? esc(o.markText ?? o.title.slice(0, 2))) + '</span>'
     : o.working ? '<span class="k7-dot" data-pulse data-live aria-hidden="true"></span>' : '';
   const end = (o.endHTML ?? '') + (o.needs && v !== 'bot' ? badge({ text: o.count ?? 'needs you', tone: 'owe' }) : o.count ? badge({ text: o.count }) : '') +

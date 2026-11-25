@@ -361,7 +361,6 @@ export function drawGroups(): void {
     if (had && had.li.dataset['stack'] === sig && had.li.isConnected) { patchRow(had.btn, row); want.push(had.li); continue; }
     had?.li.remove();
     row.dataset['stack'] = sig;
-    livenIn(row);
     S.groupRows.set(g.id, { li: row, btn: row });
     want.push(row);
   }

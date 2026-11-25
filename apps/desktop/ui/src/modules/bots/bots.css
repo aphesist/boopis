@@ -52,7 +52,7 @@
 /* the thread: library entries; the turn is the focus stop (the ring comes from ui-root) */
 .bt-who-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bt-log { display: flex; flex-direction: column; }
-.bt-log > [data-hx-turn] { border-radius: var(--r-s); }
+.bt-log > [data-hx-turn]:not(.bt-turn) { border-radius: var(--r-s); }
 .bt-cardslot { width: min(100%, 520px); min-width: 0; --r-card: var(--r-s); }   /* the card sits flush in the entry's bottom corners, so it takes the entry's radius (--r-s, set on .bt-log > [data-hx-turn] below, no padding between: its --r-in is that radius; the stamp follows) and not its own 20 (R-corner-3, R-corner-8); min-width 0 lets a card narrower than its content shrink inside a narrow column */
 .bt-resolved { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--text-dim); }
 .bt-resolved-ico { display: inline-grid; color: var(--text-quiet); }
@@ -69,8 +69,8 @@
 .bt-board-status { margin: 0; }
 .bt-board-body { display: grid; gap: var(--sp-3); }
 /* ───────── the ledger (ledger.ts): whom a message is for, unread, the actions in the margin (who is at work: presence.css) ───────── */
-.bt-log > [data-hx-turn] { --r-outer: var(--r-s); --pad: var(--sp-1); --corner-size: 24px; }   /* a corner container: the actions in the margin sit in its corner (R-corner-3) */
-.bt-log > [data-hx-turn]:has(.bt-acts) { min-height: calc(var(--ctl-s) + var(--sp-6) + var(--sp-4)); }   /* the margin holds the name, the time and the actions: a one-line reply is as tall as that */
+.bt-log > [data-hx-turn]:not(.bt-turn) { --r-outer: var(--r-s); --pad: var(--sp-1); --corner-size: 24px; }   /* a corner container: the actions in the margin sit in its corner (R-corner-3) */
+.bt-log > [data-hx-turn]:not(.bt-turn):has(.bt-acts) { min-height: calc(var(--ctl-s) + var(--sp-6) + var(--sp-4)); }   /* the margin holds the name, the time and the actions: a one-line reply is as tall as that */
 .bt-log > [data-hx-turn] .ui-entry__body:not(:has(.bt-cardslot)) { padding: var(--sp-1) var(--sp-1) var(--sp-1) 0; box-sizing: border-box; }   /* what sits at the body's edge keeps its focus ring inside the entry */
 .bt-log > [data-hx-turn] .ui-callno:has(.bt-acts) { align-self: stretch; }
 .bt-to b { font-weight: 400; color: var(--text-dim); }
@@ -85,7 +85,7 @@
 .bt-acts .ui-ib:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }
 [data-margin="off"] .bt-acts { margin: var(--corner-inset, 0px) var(--corner-inset, 0px) var(--corner-inset, 0px) auto; }
 [data-margin="off"] .bt-log > [data-hx-turn] .ui-entry__body:not(:has(.bt-cardslot)) { padding-left: var(--sp-1); }
-.bt-log > [data-hx-turn]:has(.bt-cardslot) { --pad: 0px; }   /* a card sits flush in the entry's bottom corners (see .bt-cardslot) */
+.bt-log > [data-hx-turn]:not(.bt-turn):has(.bt-cardslot) { --pad: 0px; }   /* a card sits flush in the entry's bottom corners (see .bt-cardslot) */
 
 /* the composer (the library's) sits on centerX, above the dock */
 .bt-composer-zone {
@@ -310,7 +310,7 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-room .bt-col { padding-top: var(--sp-3); }
 .bt-room .bt-log { display: flex; flex-direction: column; gap: var(--sp-4); }
 .bt-room .bt-log > .k7-time + [data-hx-turn] { margin-top: calc(-1 * var(--sp-1)); }
-.bt-turn { position: relative; display: flex; flex-direction: column; min-width: 0; border-radius: var(--r-bubble); }
+.bt-turn { position: relative; display: flex; flex-direction: column; min-width: 0; }
 .bt-turn > .bt-turn__body { gap: var(--gap-s); }
 .bt-turn > .bt-turn__body > * + * { margin-top: 0; }
 .bt-turn:focus-visible { outline-offset: var(--focus-off); }
@@ -335,3 +335,7 @@ orb-avatar.is-live { cursor: pointer; }
 #hx-view-bots { background: var(--bg-2); }
 /* the conversation's column: v7's 640 (--col-w) inside the layout's column, on its centre line */
 .bt-room .bt-col { width: min(var(--hx-col-w, var(--col-w)), var(--col-w)); margin-left: calc(var(--hx-col-left, 0px) - var(--hx-view-left, 0px) + (var(--hx-col-w, var(--col-w)) - min(var(--hx-col-w, var(--col-w)), var(--col-w))) / 2); }
+/* the turn's actions keep their ring inside themselves: a turn has no padding to hold it */
+.bt-turn__acts .k7-ib:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
+/* inline code in a bubble takes the kit's InlineChip code metrics (12.2: 13 on --chip), so it never makes its line taller (R-inline-1) */
+.k7-bubble .ui-code { font-size: var(--fs-s); line-height: 1; padding: var(--pad-code-y) var(--pad-code-x); }
