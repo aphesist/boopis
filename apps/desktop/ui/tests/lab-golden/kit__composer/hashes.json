@@ -65,7 +65,7 @@
   "h": 96
  },
  "chips-in-the-text-a-mention-the-room-a-file@light": {
-  "sha": "307970b1e474aa92e62b5c9f7a1f93055c3cfa42",
+  "sha": "a52d23ce0093147018691ac2d814c0f89997025a",
   "w": 744,
   "h": 96
  },
@@ -95,7 +95,7 @@
   "h": 104
  },
  "focus@light": {
-  "sha": "e23aed07ce84dd63fd45e91f9218bde603e8b9e8",
+  "sha": "b4082c3a45427f99091959e11d5157d31468eece",
   "w": 744,
   "h": 104
  },
@@ -105,7 +105,7 @@
   "h": 164
  },
  "held@light": {
-  "sha": "1e9a0f8eaa5404f2f81eb5218f49c21e0051b4e7",
+  "sha": "507da46d17dee7b77e1db958a1f15e3ddc50d99a",
   "w": 744,
   "h": 164
  },
@@ -140,7 +140,7 @@
   "h": 144
  },
  "multi-line@dark": {
-  "sha": "7acafd6e97007b0414eb3471d60de236e2ea09f8",
+  "sha": "c055fe919688f4bca2c71fc99f67514a0dc3ed40",
   "w": 744,
   "h": 144
  },
@@ -160,12 +160,12 @@
   "h": 68
  },
  "no-model@dark": {
-  "sha": "155c63369e17184f571de863355cb5d664cf5f4e",
+  "sha": "dd45eae9c45dd433057855ba9036db28476f8097",
   "w": 744,
   "h": 104
  },
  "no-model@light": {
-  "sha": "ea563a457165958cd23e2743be12aa94b1fd18e5",
+  "sha": "b9a9d0dd318f8a799bb7d3c9255407f834168389",
   "w": 744,
   "h": 104
  },
@@ -280,12 +280,12 @@
   "h": 96
  },
  "the-list-open@dark": {
-  "sha": "fb1bede57882b691630906e4f97f48c1c1ce1d2f",
+  "sha": "0be1aa27a2654ce3e45c8fd8e601286f72544d24",
   "w": 744,
   "h": 316
  },
  "the-list-open@light": {
-  "sha": "c185e89a83e2d9c9738231d2f85073c9cc01c883",
+  "sha": "bf322673f23570b9b46035cf0c925958d7162a1b",
   "w": 744,
   "h": 316
  },
@@ -305,7 +305,7 @@
   "h": 104
  },
  "typical@light": {
-  "sha": "fb1ede878e814c647757c658811d9c32c14dc467",
+  "sha": "fab20fa1fae53fe01f3eddc6a50d2127e03e1dcc",
   "w": 744,
   "h": 104
  },

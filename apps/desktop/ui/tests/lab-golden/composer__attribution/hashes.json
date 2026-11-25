@@ -19,15 +19,25 @@
   "w": 1180,
   "h": 872
  },
+ "a-council-is-answering-the-line-says-so@bone": {
+  "sha": "7734cadb545d1cad240ba21a146b883ce1174925",
+  "w": 1152,
+  "h": 856
+ },
+ "a-council-is-answering-the-line-says-so@catalog": {
+  "sha": "c4b57d5a87cca7546a892e7108a0f33121b57b71",
+  "w": 1152,
+  "h": 856
+ },
  "a-mention-chip-in-the-composer@bone": {
-  "sha": "85687a814593ef9407dd02c540e92fd4ffe7fc4c",
-  "w": 1180,
-  "h": 872
+  "sha": "b09233149911e59bb2a06f67ba9e3f479ee7eb46",
+  "w": 1152,
+  "h": 856
  },
  "a-mention-chip-in-the-composer@catalog": {
-  "sha": "c74c6900a73f233bcd6d7d400fd8cf2828f2d7cb",
-  "w": 1180,
-  "h": 872
+  "sha": "638410038c8237e8044324897546591dc7c6b6a7",
+  "w": 1152,
+  "h": 856
  },
  "a-mention-chip-in-the-composer@graphite": {
   "sha": "fdd7479524a8e49f4d3a72780f8aca72dc83c25f",
@@ -40,14 +50,14 @@
   "h": 872
  },
  "after-a-resume-a-council-turn-with-its-members@bone": {
-  "sha": "5a5b76fb03c6acd0d93b5afcfa91e825851b5271",
-  "w": 1180,
-  "h": 872
+  "sha": "7da204860af4c7696946b53784f067b50e9ae555",
+  "w": 1152,
+  "h": 856
  },
  "after-a-resume-a-council-turn-with-its-members@catalog": {
-  "sha": "b5f3691e6e980da6d384d64df7118e29cb29521b",
-  "w": 1180,
-  "h": 872
+  "sha": "3ac112fc349de417a7d09ca01ee6b257509cbddf",
+  "w": 1152,
+  "h": 856
  },
  "after-a-resume-a-council-turn-with-its-members@graphite": {
   "sha": "c283f2cb5181d339b0b5a9795528fe3e833558c9",
@@ -60,14 +70,14 @@
   "h": 872
  },
  "after-a-resume-one-reply-of-unknown-model@bone": {
-  "sha": "4ca2c441c1ad03e9e273d1352f987efa7b1302ca",
-  "w": 1180,
-  "h": 872
+  "sha": "ec050317171d0e1b0ea43750993f3d8601c7f896",
+  "w": 1152,
+  "h": 856
  },
  "after-a-resume-one-reply-of-unknown-model@catalog": {
-  "sha": "112dd520e8b2d3f9674f5a3d9837f39b8094b30d",
-  "w": 1180,
-  "h": 872
+  "sha": "dd91a67e4c7c6819c210b1832a230ac281e1459b",
+  "w": 1152,
+  "h": 856
  },
  "after-a-resume-one-reply-of-unknown-model@graphite": {
   "sha": "76f56fdb11e692b4e12f31b64ab26c256c23880b",
@@ -80,14 +90,14 @@
   "h": 872
  },
  "governed-a-mention-chip@bone": {
-  "sha": "c712f8e9e2fee3ed9c1754eac1c84b967445deb5",
-  "w": 1180,
-  "h": 872
+  "sha": "1296fefbe3c5abc2e8a987071c07ba0acb198809",
+  "w": 1152,
+  "h": 856
  },
  "governed-a-mention-chip@catalog": {
-  "sha": "4655d7289131782e70b1204247ab7337d86d8505",
-  "w": 1180,
-  "h": 872
+  "sha": "037916a8a00732ec0d7ee4be0daebfee1cd0f80f",
+  "w": 1152,
+  "h": 856
  },
  "governed-a-mention-chip@graphite": {
   "sha": "34172bb7c18ba04381a9486b9d8cc9d03c958590",
@@ -100,14 +110,14 @@
   "h": 872
  },
  "governed-the-menu-says-the-message-runs-without-governance@bone": {
-  "sha": "bae846ecb2ac27d479850f1409e9493257a88351",
-  "w": 1180,
-  "h": 872
+  "sha": "04d93bf09507fcc3a7f7bb331b6476ea3ec790b7",
+  "w": 1152,
+  "h": 856
  },
  "governed-the-menu-says-the-message-runs-without-governance@catalog": {
-  "sha": "a64e5a3ebde8454169cc06d9e54bf3e4182b294f",
-  "w": 1180,
-  "h": 872
+  "sha": "8497df6e19a8defcfd51a41aeef79044edac5286",
+  "w": 1152,
+  "h": 856
  },
  "governed-the-menu-says-the-message-runs-without-governance@graphite": {
   "sha": "5bd511cdeb5a39e6e6a5bda1c6cc6cc98e503785",
@@ -120,14 +130,14 @@
   "h": 872
  },
  "governed-the-tier-route-then-an-ungoverned-turn@bone": {
-  "sha": "a5ec488880c25d9278fb334a648349428c261bcd",
-  "w": 1180,
-  "h": 872
+  "sha": "487bbe517500b98a5b5dca758e99ecaabac66a20",
+  "w": 1152,
+  "h": 856
  },
  "governed-the-tier-route-then-an-ungoverned-turn@catalog": {
-  "sha": "7b61eca138fb4f86d94d8eabb375caf605e73c6b",
-  "w": 1180,
-  "h": 872
+  "sha": "f0ba7c959f229e7d58cf01eb5279960a799b520c",
+  "w": 1152,
+  "h": 856
  },
  "governed-the-tier-route-then-an-ungoverned-turn@graphite": {
   "sha": "7ee48a16f1d893f7c79a97cfbf26baf83f5710e6",
@@ -140,14 +150,14 @@
   "h": 872
  },
  "the-menu@bone": {
-  "sha": "c4f26ddfc2b4ac25e388c45a057713829ebfdfdc",
-  "w": 1180,
-  "h": 872
+  "sha": "47a4d51629b7b1c86623586e744decb71fca05af",
+  "w": 1152,
+  "h": 856
  },
  "the-menu@catalog": {
-  "sha": "024e9c15640c2dfd635836ef9e0a28c092aebb79",
-  "w": 1180,
-  "h": 872
+  "sha": "6d4ca52e85c60b2efcbe32e049a8e0e59553db6c",
+  "w": 1152,
+  "h": 856
  },
  "the-menu@graphite": {
   "sha": "8317a31611161c81acc2d376ecde67f17adbc811",
@@ -160,14 +170,14 @@
   "h": 872
  },
  "three-models-with-dividers@bone": {
-  "sha": "b2e2776fc574507946e1211cf23fece3092cf435",
-  "w": 1180,
-  "h": 872
+  "sha": "0573cb0f04978039c4490deb79383cca7b5628d5",
+  "w": 1152,
+  "h": 856
  },
  "three-models-with-dividers@catalog": {
-  "sha": "72649034820b6c827d4e0ae12c49ad6d46d339ea",
-  "w": 1180,
-  "h": 872
+  "sha": "6bdfe0189f70fb147aa7abb03ec8eb0ad0bee143",
+  "w": 1152,
+  "h": 856
  },
  "three-models-with-dividers@graphite": {
   "sha": "e81a2f4241937514d225651ee8512aeb9812eb92",
@@ -180,14 +190,14 @@
   "h": 872
  },
  "two-mentions-in-one-message@bone": {
-  "sha": "0c0c06e581349644137aa32b329fdf7e85b777d2",
-  "w": 1180,
-  "h": 872
+  "sha": "25902dbfd00b5831a32915a79363df19ea19aa6d",
+  "w": 1152,
+  "h": 856
  },
  "two-mentions-in-one-message@catalog": {
-  "sha": "10164a84d4f9a10f664eda011269422fb9274958",
-  "w": 1180,
-  "h": 872
+  "sha": "bb634e8c5e29af487464c0d996f2bf86e329a93b",
+  "w": 1152,
+  "h": 856
  },
  "two-mentions-in-one-message@graphite": {
   "sha": "25d7d2f4c74466bf8cdba090eb2a5d3a0c986ffe",

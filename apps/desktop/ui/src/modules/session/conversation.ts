@@ -535,7 +535,7 @@ export function mountView(root: HTMLElement): void {
   root.classList.add('ss-view');
   VIEW.scroll = el('div', { class: 'ss-scroll ' + ui.scrollClass({ ground: true }) });
   VIEW.findAnchor = el('span', { class: 'ss-find-anchor', 'aria-hidden': 'true' });
-  VIEW.col = el('div', { class: 'ss-col', role: 'feed', 'aria-label': 'Conversation' });
+  VIEW.col = el('div', { class: 'ss-col', role: 'log', 'aria-label': 'Conversation' });
   VIEW.scroll.append(VIEW.col);
   root.replaceChildren(VIEW.findAnchor, VIEW.scroll);
   VIEW.col.addEventListener('keydown', onTurnKey);

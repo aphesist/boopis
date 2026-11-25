@@ -76,7 +76,15 @@ function openMenu(anchor: HTMLElement, o: blocks.MenuOpts & { place?: 'above' | 
 }
 
 /** "@" in a composer names one of `src`'s entries, chosen from the kit's Menu over it (wire.ts composerMentions) */
-const mentions = (c: HTMLElement, src: KitMentions): void => { composerMentions(c, src, (anchor, o) => openMenu(anchor, { label: o.label, entries: o.entries as blocks.MenuOpts['entries'], place: 'above', align: 'start', onSelect: o.onSelect }), () => { layer.close(); }); };
+/** the "@" list is placed against the composer's box, which is no control: the layer's aria-expanded does not belong on it (the list names itself) */
+function unsaid(box: HTMLElement): void {
+  if (box.dataset['unsaid'] != null) return;
+  box.dataset['unsaid'] = '';
+  new MutationObserver(() => { if (box.hasAttribute('aria-expanded')) box.removeAttribute('aria-expanded'); }).observe(box, { attributes: true, attributeFilter: ['aria-expanded'] });
+}
+const mentions = (c: HTMLElement, src: KitMentions): void => {
+  composerMentions(c, src, (anchor, o) => { unsaid(anchor); const m = openMenu(anchor, { label: o.label, entries: o.entries as blocks.MenuOpts['entries'], place: 'above', align: 'start', onSelect: o.onSelect }); anchor.removeAttribute('aria-expanded'); return m; }, () => { layer.close(); });
+};
 
 export const kit = {
   html, ...factories, composerInsert, composerInsertChip, composerChips, composerMarks, composerRunning, mentions, section: surfaces.section, dockGeometry: DOCK_GEOMETRY,

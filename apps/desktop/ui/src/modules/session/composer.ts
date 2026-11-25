@@ -151,13 +151,34 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
     drawLine();
   }
 
+  /** a menu of the composer opens over the whole composer, placed against its box, never over the text (a second line of text would lie
+      under a menu placed against a button in the row); the control that opened it is what says it is open */
+  function openOver(trigger: HTMLElement, o: Parameters<typeof kit.openMenu>[1]): HTMLElement | null {
+    const box = slot.querySelector<HTMLElement>('.k7-composer__box');
+    if (!box) return kit.openMenu(trigger, o);
+    /* one menu at a time: another of the composer's may be open against the same box (a second opening there would only close it) */
+    if (document.querySelector('.k7-menu[data-floating]')) kit.closeMenu();
+    const menu = kit.openMenu(box, o);
+    const says = trigger.tagName === 'BUTTON';
+    /* the layer writes aria-expanded on what the menu is placed against: here that is the box, so it is said on the control instead */
+    const mo = new MutationObserver(() => {
+      const v = box.getAttribute('aria-expanded'); if (v === null) return;
+      box.removeAttribute('aria-expanded');
+      if (v === 'false') { if (says) trigger.setAttribute('aria-expanded', 'false'); mo.disconnect(); }
+    });
+    box.removeAttribute('aria-expanded');
+    if (says) trigger.setAttribute('aria-expanded', 'true');
+    mo.observe(box, { attributes: true, attributeFilter: ['aria-expanded'] });
+    return menu;
+  }
+
   /* ───────── the line's controls ───────── */
   function toggleGoverned(anchor: HTMLElement): void {
     const G = gov(), f = G.frontier;
     if (!G.governed && f) {
       /* governed mode cannot run (ADR-0037): it says so and offers the way to a model that can */
       const entries = governedUnavailableEntries(f).map((e): MenuEntry => (e === '-' ? '-' : 'title' in e ? { heading: e.title ?? '' } : 'foot' in e ? { heading: e.foot ?? '' } : { label: e.label ?? '', ...(e.value != null ? { value: String(e.value) } : {}), ...(e.icon ? { icon: e.icon } : {}) }));
-      kit.openMenu(anchor, { label: 'Governed mode is unavailable', entries, place: 'above', align: 'start', attrs: v7Attrs(), onSelect: (v) => { if (v === SETTINGS_VALUE) emit('hx:open-settings', { section: 'models', from: 'composer' }); } });
+      openOver(anchor, { label: 'Governed mode is unavailable', entries, place: 'above', align: 'start', attrs: v7Attrs(), onSelect: (v) => { if (v === SETTINGS_VALUE) emit('hx:open-settings', { section: 'models', from: 'composer' }); } });
       return;
     }
     setGovernance({ governed: !G.governed });
@@ -166,7 +187,7 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
   const lineItem = (id: LineItemId): HTMLElement => slot.querySelector<HTMLElement>('[data-line="' + id + '"]') ?? slot.querySelector<HTMLElement>('.k7-composer__box') ?? slot;
   function openModel(viaKeyboard: boolean, anchor: HTMLElement = lineItem('model')): void {
     const G = gov();
-    kit.openMenu(anchor, {
+    openOver(anchor, {
       label: 'Who answers next', entries: modelMenu({ current: G.model, governed: G.governed, smart: G.smart, sessionId: o.sessionId() }), place: 'above', align: 'start', attrs: v7Attrs(),
       onSelect: (v) => {
         if (v === COUNCIL_VALUE) { requestAnimationFrame(() => { void openCouncilForm(lineItem('model'), o.sessionId(), () => { sync(); }); }); return; }
@@ -177,7 +198,7 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
   }
   /** the quick menu (S05 B): which items show under the composer; a check toggles in place */
   function openQuick(anchor: HTMLElement): void {
-    const menu = kit.openMenu(anchor, {
+    const menu = openOver(anchor, {
       label: 'Quick menu: show under the composer', variant: 'quick', place: 'above', align: 'end', attrs: v7Attrs(),
       entries: [{ heading: 'Quick menu: show under the composer' }, ...LINE_ITEMS.filter((i) => i !== 'careful' || !!controls).map((i) => ({ label: NAMES[i], value: i, checked: !hidden.includes(i) }))]
     });
@@ -192,7 +213,7 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
   function openReading(anchor: HTMLElement, kind: string, word: string): void {
     if (!kind || !word) return;
     const r = reader.reading(kind, word), k = kindOf(kind);
-    kit.openMenu(anchor, {
+    openOver(anchor, {
       label: 'How to read ' + word, place: 'above', align: 'start', attrs: v7Attrs(),
       entries: [{ heading: k.title + ' "' + word + '"' }, ...optionsFor(k, word).map((x) => ({ label: x.label, value: x.value, desc: x.desc, checked: x.value === r.value, role: 'menuitemradio' })), '-', { label: 'Leave it as words', value: '__drop', icon: 'close' }, { heading: 'Dashed: my guess. Solid: your choice.' }],
       onSelect: (v) => {
@@ -226,11 +247,11 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
       const entries: MenuEntry[] = r.items.length
         ? [{ heading: 'Mention a file' }, ...r.items.map((i) => ({ label: i.display, value: i.text, ...(i.meta ? { desc: i.meta } : {}), icon: /[:/]$/.test(i.text) ? 'folder' : 'file' }))]
         : [{ heading: 'Mention a file' }, { heading: r.unavailable ?? 'No files match.' }];
-      kit.openMenu(anchor, { label: 'Mention a file', entries, place: 'above', align: 'start', attrs: v7Attrs(), onSelect: (v) => { if (/\/$/.test(v)) requestAnimationFrame(() => { openMention(v); }); else insert(v + ' '); } });
+      openOver(anchor, { label: 'Mention a file', entries, place: 'above', align: 'start', attrs: v7Attrs(), onSelect: (v) => { if (/\/$/.test(v)) requestAnimationFrame(() => { openMention(v); }); else insert(v + ' '); } });
     });
   }
   function openAdd(anchor: HTMLElement): void {
-    kit.openMenu(anchor, {
+    openOver(anchor, {
       label: 'Add', place: 'above', align: 'start', attrs: v7Attrs(),
       entries: [
         { label: 'Attach a file', value: 'file', icon: 'file' }, { label: 'Add a folder to context', value: 'folder', icon: 'folder' },
@@ -274,7 +295,7 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
     if (item?.dataset['line'] === 'model') { openModel(false, item); return; }
     /* a press on the line itself (not on one of its controls) opens the quick menu (S05 B) */
     const l = t.closest<HTMLElement>('.k7-composer__line');
-    if (l && !t.closest('button')) openQuick(l);
+    if (l && !t.closest('button')) openQuick(lineItem('model'));
   });
   /* KEYMAP section 7: alt+G (how careful, or governed where there is no scale), alt+S (Smart), alt+M (who answers next), alt+C (a
      council), alt+A (attach), alt+V (talk); ArrowUp in an empty composer brings your last message back */

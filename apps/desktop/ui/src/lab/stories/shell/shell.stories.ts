@@ -54,9 +54,9 @@ const menus: Story = {
   id: 'shell/menus', title: 'Menus in the app', area: 'shell', kind: 'surface', covers: ['surface:menus', 'surface:popover'], mock: MOCK,
   states: {
     'account menu': st(['typical', 'open'], async (c) => { await c.click('#hx-btn-account'); await c.wait(300); }, {}, { overlay: { anchor: '#hx-btn-account', layer: '.ui-menu' } }),
-    'attach menu': st(['open', 'owner'], async (c) => { await c.click('#hx-view-session .ui-composer__attach'); await c.wait(300); }, {}, { overlay: { anchor: '#hx-view-session .ui-composer__attach', layer: '.ui-menu' } }),
-    'model picker': st(['open'], async (c) => { c.$('#hx-view-session [role="textbox"]').focus(); await c.key('m', { altKey: true }); await c.wait(400); }, {}, { overlay: { anchor: '#hx-view-session .ui-composer [aria-expanded="true"]', layer: '.ui-listbox' } }),
-    'the blank popover': st(['open'], async (c) => { await c.click('#hx-view-session .ui-blank'); await c.wait(400); }, {}, { overlay: { anchor: '#hx-view-session .ui-blank', layer: 'hx-card[data-size="popover"]' } }),
+    'attach menu': st(['open', 'owner'], async (c) => { await c.click('#hx-view-session [data-plus]'); await c.wait(300); }, {}, { overlay: { anchor: '#hx-view-session .k7-composer__box', layer: '.k7-menu[data-floating]' } }),
+    'model picker': st(['open'], async (c) => { c.$('#hx-view-session [role="textbox"]').focus(); await c.key('m', { altKey: true }); await c.wait(400); }, {}, { overlay: { anchor: '#hx-view-session .k7-composer__box', layer: '.k7-menu[data-floating]' } }),
+    'the blank\'s own words': st(['open'], async (c) => { await c.click('#hx-view-session [data-blank] [data-value="else"]'); await c.wait(300); }),
     'account menu, rail': st(['open', 'variant'], async (c) => { c.hx.setState({ left: 'rail' }); await c.wait(500); await c.click('#hx-btn-account'); await c.wait(300); }, {}, { overlay: { anchor: '#hx-btn-account', layer: '.ui-menu' } }),
     'a menu item hover': st(['hover'], async (c) => { await c.click('#hx-btn-account'); await c.wait(300); }, {}, { force: [{ sel: '.ui-menu .ui-menu__item:nth-of-type(2)', state: 'hover' }], overlay: { anchor: '#hx-btn-account', layer: '.ui-menu' } })
   }

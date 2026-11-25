@@ -1,13 +1,13 @@
 {
  "dock-session-send-hover@bone": {
-  "sha": "418c79ec4d0fd379d689f384f9330b51848dde2b",
-  "w": 448,
-  "h": 64
+  "sha": "d9dac6375b9cced0595200d243374e5abf76122c",
+  "w": 648,
+  "h": 68
  },
  "dock-session-send-hover@catalog": {
-  "sha": "5c1f5c93ba19d7ea5c869ec8002d132c51ab484f",
-  "w": 448,
-  "h": 64
+  "sha": "eb738054f50eada34550a47db72f21acad28e6e1",
+  "w": 648,
+  "h": 68
  },
  "dock-session-send-hover@graphite": {
   "sha": "c5046e685f1694ec4f0c6b295ad4bba6f800f0b9",
@@ -20,14 +20,14 @@
   "h": 64
  },
  "dock-session@bone": {
-  "sha": "418c79ec4d0fd379d689f384f9330b51848dde2b",
-  "w": 448,
-  "h": 64
+  "sha": "d9dac6375b9cced0595200d243374e5abf76122c",
+  "w": 648,
+  "h": 68
  },
  "dock-session@catalog": {
-  "sha": "5c1f5c93ba19d7ea5c869ec8002d132c51ab484f",
-  "w": 448,
-  "h": 64
+  "sha": "eb738054f50eada34550a47db72f21acad28e6e1",
+  "w": 648,
+  "h": 68
  },
  "dock-session@graphite": {
   "sha": "c5046e685f1694ec4f0c6b295ad4bba6f800f0b9",
@@ -38,6 +38,16 @@
   "sha": "89bf70a80f4cf91e2b407aad9ff1e37ef2df866d",
   "w": 448,
   "h": 64
+ },
+ "session-add-hover@bone": {
+  "sha": "53fe0e48ac53ce91560cef9eb6283987f96e2b28",
+  "w": 744,
+  "h": 116
+ },
+ "session-add-hover@catalog": {
+  "sha": "badbedcd200a977ff0efcee2f3ba07ce93b334f7",
+  "w": 744,
+  "h": 116
  },
  "session-attach-hover@bone": {
   "sha": "b9374369a07c12540a438c4e971ab079e00ec68d",
@@ -100,14 +110,14 @@
   "h": 165
  },
  "session-empty@bone": {
-  "sha": "92d8363f5b41920fd857ae0217fc93d051d26403",
+  "sha": "7d44683f1f801d25a36be7f928e4818e0f90380f",
   "w": 744,
-  "h": 117
+  "h": 96
  },
  "session-empty@catalog": {
-  "sha": "862caebeb4161df36711b92ebea11e396e6168dd",
+  "sha": "052e02d7224414143e81c16ef83581f7b6fc53e9",
   "w": 744,
-  "h": 117
+  "h": 96
  },
  "session-empty@graphite": {
   "sha": "da699192e3badb046ae0aa4c5b8d09d71e72d586",
@@ -120,14 +130,14 @@
   "h": 123
  },
  "session-send-hover@bone": {
-  "sha": "7196dc1f3b63b2eb2604ff2ebea2a72c26c4c488",
+  "sha": "819ac7b0eb80e2dbc46b71da9e2643d24b026c2f",
   "w": 744,
-  "h": 149
+  "h": 116
  },
  "session-send-hover@catalog": {
-  "sha": "58f516aba09946112b9301086ab51203a4a07187",
+  "sha": "755a69e9ed29c64bae6cdc4965bf15b33959d73f",
   "w": 744,
-  "h": 149
+  "h": 116
  },
  "session-send-hover@graphite": {
   "sha": "d516c3aadf446165c551230e7e6498f73f13d797",
@@ -139,15 +149,45 @@
   "w": 744,
   "h": 155
  },
- "session@bone": {
-  "sha": "0b5b0adf61c99908fc622d637330567fb8041aae",
+ "session-the-add-menu@bone": {
+  "sha": "564493d4feed35b705841424c96ab1ce3c69587c",
   "w": 744,
-  "h": 149
+  "h": 116
+ },
+ "session-the-add-menu@catalog": {
+  "sha": "aa585e8ae7f4c96bf4ece119450a46bb51bff091",
+  "w": 744,
+  "h": 116
+ },
+ "session-the-quick-menu@bone": {
+  "sha": "9ab83fbab400b6eff8e1d614dad4c578bed7236f",
+  "w": 744,
+  "h": 116
+ },
+ "session-the-quick-menu@catalog": {
+  "sha": "04f0ca66956b38d2b7d6eaaefdd1199b675fc6dd",
+  "w": 744,
+  "h": 116
+ },
+ "session-who-answers-next@bone": {
+  "sha": "e6b6cb89c5f29da7406486c5ce93c94ac0d58b67",
+  "w": 744,
+  "h": 116
+ },
+ "session-who-answers-next@catalog": {
+  "sha": "0a9195e3745d406606d7a921fc82cf1d7edc14aa",
+  "w": 744,
+  "h": 116
+ },
+ "session@bone": {
+  "sha": "824ab1b7f5c383d4d305526e29dafad506a1ad71",
+  "w": 744,
+  "h": 116
  },
  "session@catalog": {
-  "sha": "eb5b4f43f89448953039804b874636ed7202fc85",
+  "sha": "ec5396e3f4219c4968fe5774f549608153b50e3b",
   "w": 744,
-  "h": 149
+  "h": 116
  },
  "session@graphite": {
   "sha": "6b6174b3b639c3e9b922f527d643e38e3699f3d5",

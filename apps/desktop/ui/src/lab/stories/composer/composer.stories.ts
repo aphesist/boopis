@@ -77,16 +77,19 @@ const inApp: Story = {
   id: 'composer/composer-in-app', title: 'Composer in the app', area: 'composer', kind: 'surface', covers: ['surface:composer'], scope: '[data-hx-composer]',
   mock: { url: '/v6/__index.html' },
   states: {
-    session: { tags: ['typical', 'owner'], interact: [{ name: 'hover attach, mic and send', watch: '#hx-view-session [data-hx-composer]', steps: [{ do: 'hover', sel: '#hx-view-session .ui-composer__attach', ms: 600 }, { do: 'hover', sel: '#hx-view-session .ui-composer__mic', ms: 600 }, { do: 'hover', sel: '#hx-view-session .ui-send', ms: 600 }, { do: 'move-away' }], sample: 700 }] },
-    'session, empty': { tags: ['empty'], app: { setup: async (c) => { c.$('[data-hx-composer] .ui-composer__input').textContent = ''; c.$('[data-hx-composer] .ui-composer__input').dispatchEvent(new Event('input', { bubbles: true })); await c.wait(300); } } },   // the composer repaints its assumptions 250 ms after the last input
-    'session, attach hover': { tags: ['hover', 'owner'], force: [{ sel: '#hx-view-session .ui-composer__attach', state: 'hover' }] },
-    'session, send hover': { tags: ['hover', 'owner'], force: [{ sel: '#hx-view-session .ui-send', state: 'hover' }] },
-    'session, attach tooltip': { tags: ['tooltip', 'owner'], overlay: { anchor: '#hx-view-session .ui-composer__attach', layer: '.ui-tip' }, app: { setup: async (c) => { const b = c.$('#hx-view-session .ui-composer__attach'); b.focus(); c.hx.ui.tooltip.show(b); await c.wait(250); } } },
-    'session, attach menu': { tags: ['open', 'owner'], overlay: { anchor: '#hx-view-session .ui-composer__attach', layer: '.ui-menu' }, app: { setup: async (c) => { const b = c.$('#hx-view-session .ui-composer__attach'); b.click(); await c.wait(300); } } },
+    session: { tags: ['typical', 'owner'], scope: '#hx-view-session .ss-composer' },
+    'session, empty': { tags: ['empty'], scope: '#hx-view-session .ss-composer', app: { setup: async (c) => { const t = c.$('#hx-view-session .k7-composer__text'); t.textContent = ''; t.dispatchEvent(new Event('input', { bubbles: true })); await c.wait(300); } } },
+    'session, add hover': { tags: ['hover', 'owner'], scope: '#hx-view-session .ss-composer', force: [{ sel: '#hx-view-session [data-plus]', state: 'hover' }] },
+    'session, send hover': { tags: ['hover', 'owner'], scope: '#hx-view-session .ss-composer', force: [{ sel: '#hx-view-session [data-send]', state: 'hover' }] },
+    'session, the add menu': { tags: ['open', 'owner'], scope: '#hx-view-session .ss-composer', overlay: { anchor: '#hx-view-session .k7-composer__box', layer: '.k7-menu[data-floating]' }, app: { setup: async (c) => { await c.click('#hx-view-session [data-plus]'); await c.wait(300); } } },
+    'session, who answers next': { tags: ['open', 'owner'], scope: '#hx-view-session .ss-composer', overlay: { anchor: '#hx-view-session .k7-composer__box', layer: '.k7-menu[data-floating]' }, app: { setup: async (c) => { await c.click('#hx-view-session [data-line="model"]'); await c.wait(300); } } },
+    'session, the quick menu': { tags: ['open', 'owner'], scope: '#hx-view-session .ss-composer', overlay: { anchor: '#hx-view-session .k7-composer__box', layer: '.k7-menu[data-floating]' }, app: { setup: async (c) => { await c.click('#hx-view-session .k7-composer__line .k7-grow'); await c.wait(300); } } },
     'dock session': { tags: ['typical', 'owner'], scope: '#hx-dock [data-hx-composer]', app: { setup: async (c) => { c.hx.dock()?.openSession('nina'); await c.wait(900); } } },
     'dock session, send hover': { tags: ['hover', 'owner'], scope: '#hx-dock [data-hx-composer]', force: [{ sel: '#hx-dock .ui-send', state: 'hover' }], app: { setup: async (c) => { c.hx.dock()?.openSession('nina'); await c.wait(900); } } }
   }
 };
 for (const s of Object.values(inApp.states)) (s as { app?: State['app'] }).app ??= {};
+/* the mock's draft is two lines long */
+for (const [name, s] of Object.entries(inApp.states)) if (name.startsWith('session') && name !== 'session, empty') (s as { allow?: State['allow'] }).allow = { 'geometry.center': { reason: 'the mock\'s draft runs to a second line: the kit composer keeps its buttons on the last line (thread.css `.k7-composer__box`: align-items flex-end), as its multi-line story draws', el: 'k7-composer__box' } };
 
 export default [composer, inApp];

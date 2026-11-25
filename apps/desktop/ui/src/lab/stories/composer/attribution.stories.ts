@@ -64,22 +64,23 @@ function withModels(turns: Turn[], governed: boolean, council?: number): (p: Dat
 }
 const spec = (turns: Turn[], governed = false, council?: number): ProviderSpec => ({ simulate: false, patch: withModels(turns, governed, council) });
 const app = (tags: State['tags'], provider: ProviderSpec, setup?: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State => ({ tags, app: { provider, ...(setup ? { setup } : {}) }, ...extra });
-/* at 390 the call number of a governed turn (a route of two models, the time, the cost, the steps) wraps to a second row; the check compares an item of the first row with the centre of the whole row */
-const WRAPS = { 'geometry.center': { reason: 'at 390 px the call number wraps to a second row, and the check compares an item of the first row with the centre of both rows; each item is centred in its own row (align-items: center)', el: 'ui-callno' } } as const;
-
+/** the session composer's text (the kit's Composer) */
+const TEXT = '#hx-view-session .ss-composer .k7-composer__text';
 /** types "@" into the session composer the way a person does (the composer opens its menu on the typed character) */
 async function typeAt(c: AppCtx): Promise<void> {
-  (c.$('#hx-view-session [data-hx-composer]') as HTMLElement & { setValue(t: string): void }).setValue('');   /* the mock starts with a draft */
-  c.$('#hx-view-session .ui-composer__input').focus();
+  const t = c.$(TEXT);
+  t.textContent = '';   /* the mock starts with a draft */
+  t.focus();
   document.execCommand('insertText', false, '@');
   await c.wait(400);
 }
 const draft = (text: string) => async (c: AppCtx): Promise<void> => {
-  const comp = c.$('#hx-view-session [data-hx-composer]') as HTMLElement & { setValue(t: string): void };
-  comp.setValue(text);
+  const t = c.$(TEXT);
+  t.textContent = text + ' ';
+  t.dispatchEvent(new Event('input', { bubbles: true }));
   await c.wait(350);
 };
-const MENU = { anchor: '#hx-view-session .ui-composer__anchor', layer: '.ui-listbox' };
+const MENU = { anchor: '#hx-view-session .ss-composer .k7-composer__box', layer: '.k7-menu[data-floating]' };
 
 const story: Story = {
   id: 'composer/attribution', title: 'Who answered, and "@"', area: 'composer', kind: 'surface', covers: ['surface:attribution'], scope: '#hx-view-session',
@@ -87,14 +88,16 @@ const story: Story = {
   states: {
     'three models, with dividers': app(['variant', 'owner'], spec(THREE), async (c) => { await c.wait(400); }),
     'after a resume: one reply of unknown model': app(['variant'], spec(RESUMED), async (c) => { await c.wait(400); }),
-    'governed: the tier route, then an ungoverned turn': app(['variant', 'owner'], spec(GOVERNED, true), async (c) => { await c.wait(400); }, { allow: WRAPS }),
-    'after a resume: a council turn with its members': app(['variant', 'owner'], spec(COUNCIL_RESUMED), async (c) => { await c.wait(400); }, { allow: WRAPS }),
-    'a council is answering: the chip says so': app(['variant', 'owner'], spec(COUNCIL_RESUMED, false, 3), async (c) => { await c.wait(400); }, { allow: WRAPS }),
+    'governed: the tier route, then an ungoverned turn': app(['variant', 'owner'], spec(GOVERNED, true), async (c) => { await c.wait(400); }),
+    'after a resume: a council turn with its members': app(['variant', 'owner'], spec(COUNCIL_RESUMED), async (c) => { await c.wait(400); }),
+    'a council is answering: the line says so': app(['variant', 'owner'], spec(COUNCIL_RESUMED, false, 3), async (c) => { await c.wait(400); }),
     'the "@" menu': app(['open', 'owner'], spec(THREE), async (c) => { await typeAt(c); }, { overlay: MENU }),
     'a mention chip in the composer': app(['typical', 'owner'], spec(THREE), draft('@Claude Haiku rename the helper in src/billing')),
     'two mentions in one message': app(['variant'], spec(THREE), draft('@Claude Haiku rename it, then @GPT-6 Luna review it')),
-    'governed: the "@" menu says the message runs without governance': app(['open', 'owner'], spec(GOVERNED, true), async (c) => { await typeAt(c); }, { overlay: MENU, allow: WRAPS }),
-    'governed: a mention chip': app(['variant', 'owner'], spec(GOVERNED, true), draft('@GPT-6 Luna what does the gate check?'), { allow: WRAPS })
+    'governed: the "@" menu says the message runs without governance': app(['open', 'owner'], spec(GOVERNED, true), async (c) => { await typeAt(c); }, { overlay: MENU }),
+    'governed: a mention chip': app(['variant', 'owner'], spec(GOVERNED, true), draft('@GPT-6 Luna what does the gate check?'))
   }
 };
+/* the mock's draft, and a typed mention, can run to a second line */
+for (const st of Object.values(story.states)) (st as { allow?: State['allow'] }).allow = { 'geometry.center': { reason: 'a message of two lines: the kit composer keeps its buttons on the last line (thread.css `.k7-composer__box`: align-items flex-end), as its multi-line story draws', el: 'k7-composer__box' } };
 export default [story];
