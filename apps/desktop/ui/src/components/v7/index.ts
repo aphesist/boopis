@@ -7,7 +7,8 @@ import * as inline from './inline';
 import * as blocks from './blocks';
 import * as thread from './thread';
 import * as surfaces from './surfaces';
-import { dock, DOCK_GEOMETRY } from './dock';
+import { slabPath } from '../squircle-path';
+import { dock, dockAsk, dockCap, dockMore, dockOrb, dockPanel, DOCK_GEOMETRY } from './dock';
 import { fire } from '../../core/dom';
 import { layer } from '../layer';
 import { glyph } from './util';
@@ -74,7 +75,9 @@ function openMenu(anchor: HTMLElement, o: blocks.MenuOpts & { place?: 'above' | 
 }
 
 export const kit = {
-  html, ...factories, section: surfaces.section, dockGeometry: DOCK_GEOMETRY, wire, wireHold, wireMenu, markReveal, openMenu, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, notify, notifyText, keyNames: controls.keyNames, variants: kitVariants
+  html, ...factories, section: surfaces.section, dockGeometry: DOCK_GEOMETRY,
+  /** the Dock's parts as markup, for the app's live dock, which keeps its orbs connected and writes each part in place */
+  dockParts: { slab: slabPath, orb: dockOrb, cap: dockCap, ask: dockAsk, more: dockMore, panel: dockPanel }, wire, wireHold, wireMenu, markReveal, openMenu, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, notify, notifyText, keyNames: controls.keyNames, variants: kitVariants
 };
 export type Kit = typeof kit;
 export type { ButtonOpts, IconButtonOpts, ChipOpts, SegmentedOpts, SegItem, SelectorItemOpts, SwitchOpts, FieldOpts, KbdOpts, TooltipOpts } from './controls';

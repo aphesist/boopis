@@ -22,7 +22,6 @@ import { sh } from '../shell/ctx';
 import type { Els } from '../shell/ctx';
 import { openPalette } from '../shell/palette';
 import { originVisual } from '../cards/parts';
-import { X } from '../dock/ctx';
 import '../cards';
 import '../dock';
 import './index';
@@ -98,7 +97,7 @@ function places(id: string): Record<string, Element[]> {
   return {
     roster: orbsOf(id, S.rows.get(id)?.li ?? document.createElement('i')),
     /* the dock's own orb of the bot (in its row or kept aside while another page shows), and any copy on the dock */
-    dock: [...orbsOf(id, X.orbs.get(id) ?? document.createElement('i')), ...(X.orbs.get(id)?.matches('.ui-orb') ? [...(X.orbs.get(id) as HTMLElement).querySelectorAll(':scope > orb-avatar')] : []), ...orbsOf(id, document.querySelector('.dk') ?? document.createElement('i'))],
+    dock: orbsOf(id, document.querySelector('.dk') ?? document.createElement('i')),
     'group row': orbsOf(id, document.querySelector('.bt-groups') ?? document.createElement('i')),
     'card origin': orbsOf(id, card),
     palette: orbsOf(id, document.getElementById('hx-palette-list') ?? document.createElement('i'))

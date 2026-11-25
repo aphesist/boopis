@@ -38,16 +38,19 @@ export function callProvided(name: ProviderName, detail: ProvideDetail): boolean
 
 /* ───────── the dock's hooks for the shell (`window.hxDock` of the mock-up): the shell never imports the dock ───────── */
 export interface DockApi {
+  /** 'expanded' opens the asks (v7 has one row and one open size); anything else returns to the row */
   setMode(mode: string): void;
   setOn(on: boolean): void;
-  goPage(id: string): void;
   focus(): void;
   /** KEYMAP section 3: the n-th bot (1-based) as the dock shows them */
   botAt(n: number): string | null;
+  /** a bot's card */
   openSession(id: string): void;
+  /** the stack of asks (D03 C) */
+  openAsks(): void;
   closeSession(): void;
-  readonly state: { mode: string; page: string; card: string | null; pages: ReadonlyArray<{ id: string; on: boolean }>; waits: number; hover: boolean; focusIn: boolean };
-  /** tests slow or speed the springs */
+  readonly state: { shown: boolean; open: 'stack' | 'card' | null; card: string | null; asks: number; row: readonly string[]; more: number; hover: string | null; width: number };
+  /** tests slow or speed the dock's motion */
   timeScale(f: number): void;
   hover(x: number | null): void;
 }

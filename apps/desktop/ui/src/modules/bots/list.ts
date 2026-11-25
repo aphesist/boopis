@@ -8,9 +8,9 @@
 import { emit } from '../../core/bus';
 import { $, el, frag, reduced } from '../../core/dom';
 import { state } from '../../core/state';
-import { kit, REST_REACTION, ui } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
 import { data } from '../../data';
-import { lookOf, oc, paintLook } from '@boopis/ui';
+import { lookOf, oc, paintLook, restReact } from '@boopis/ui';
 import { DRAFT_COLOR, paintOrb } from './paint';
 import { livenIn } from './orbs';
 import { bot, group, initGroups, initModel, railOn, S, thread } from './model';
@@ -74,15 +74,6 @@ function wireList(list: HTMLElement, choose: (value: string) => void): void {
     if (k === 'Enter' || k === ' ') { e.preventDefault(); choose(all[at]?.dataset['value'] ?? ''); return; }
     if (k === 'Escape') { e.preventDefault(); e.stopPropagation(); focusConversation(); }
   });
-}
-/** a bot at rest wears the rest pose on these surfaces (ORBS.md section 23); any other state its own reaction */
-function restReact(o: Element | null | undefined, reaction: string): void {
-  if (!o) return;
-  const atRest = reaction === 'idle', r = atRest ? REST_REACTION : reaction;
-  if ((o as HTMLElement & { _hover?: boolean })._hover) return;
-  if (o.getAttribute('reaction') !== r) o.setAttribute('reaction', r);
-  const motion = atRest ? 'off' : 'calm';
-  if (o.getAttribute('idle-motion') !== motion) o.setAttribute('idle-motion', motion);
 }
 /** the row's one line: what it waits on you for (with the ask's own words), what it is doing, or what it is for */
 function lineOf(b: Bot): { sub: string; needs: string | null } {

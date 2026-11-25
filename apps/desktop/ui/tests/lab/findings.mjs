@@ -101,7 +101,7 @@ ${Object.keys(CHECKS).filter((c) => findings.some((f) => f.check === c)).map((c)
   const tipText = q((f) => f.check === 'overlay' && /text field/.test(f.msg));
   const tipPlace = q((f) => f.check === 'overlay' && /centred|sits /.test(f.msg));
   const flicker = q((f) => f.check === 'stability.interact' && f.area === 'dock');
-  const emptyDock = q((f) => f.story === 'dock/dock' && /no bots/.test(f.state ?? ''));
+  const emptyDock = q((f) => f.story === 'v7/dock' && /no bots/.test(f.state ?? ''));
   const bars = q((f) => f.check === 'scrollbar');
   const tabs = q((f) => /hx-dtab|ui-tabs|ui-seg/.test(f.el ?? '') && /concentric|contain/.test(f.check));
   const native = q((f) => f.check === 'native');

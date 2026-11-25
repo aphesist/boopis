@@ -28,7 +28,7 @@ export function facesDisagree(botId: string): string[] {
     'the roster': document.querySelector('#hx-side .ui-orb[data-bot="' + id + '"] > orb-avatar'),
     'the room header': document.querySelector('#hx-view-bots .bt-presence .ui-orb[data-bot="' + id + '"] > orb-avatar'),
     'the presence entry': document.querySelector('#hx-view-bots .ui-presence .ui-orb[data-bot="' + id + '"] > orb-avatar'),
-    'the dock': document.querySelector('#hx-dock [data-id="' + id + '"] orb-avatar')
+    'the dock': document.querySelector('#hx-dock .k7-dock__orb[data-bot="' + id + '"] orb-avatar')
   };
   const want = face(places['the presence entry'] ?? null);
   if (!want) return ['the presence entry draws no orb for ' + botId];
