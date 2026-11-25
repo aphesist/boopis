@@ -164,6 +164,16 @@ Until a 0.3.0 feature exists, its control on a 0.2.0 screen is disabled with a r
 - Attachments: chips ("probably"); a crop goes to the owner to confirm.
 - A stale board was caught: board 12's final render draws the Bots sidebar without the switch; K02 (later) is the
   reference for the open sidebar. The builder was corrected mid-step.
+- **The lead may make design decisions** where no board decides ("you're on fable so make design decisions on your
+  own, keeping the theme and design philosophy we are aiming for"). So: for derived screens and states the lead
+  decides, records the decision here and in REPASS.md, and shows the result to the owner in the next batch; work
+  does not wait. Options go to the owner only for something large or a real change of direction.
+- Collapsed rail: the tab switch upright (option B): Sessions over Bots, two ghost 28s in a vertical track.
+- "@all" capsule: gold (the attention amber), not the plain text colour.
+- Huddle fold, "to nina" line, presence tool words: left out ("if those features make no sense in the newer design").
+- Stop stays, and voice stays too. The lead's design: Stop is a 28 tinted circle with a filled rounded square, at
+  the left of the composer's right cluster ([stop] [mic] [primary]); positions never shift; no red.
+- Member name colours: the kit's contrast-safe ones. File chips: the bare file name (lead's decision, unanswered).
 - Keybinds get their own pass. Ctrl+Enter steers with the queued message in a running session (S06).
 
 ## 10. State
@@ -186,10 +196,8 @@ in the Bots composers; a room's cost and room-level approvals have no provider d
 line, presence detail (tool-in-use words, the needs-you row).
 
 **Open questions for the owner**
-0. Asked 25 Nov with the board 12 sheets: the rail tab button (A, B or C); restore the huddle fold, "to" line and
-   presence detail or leave them out; how a running room or bot is stopped (the boards draw the voice button, the
-   app shows Stop when busy and empty); member name colours (the board's fixed colours or the contrast-safe ones);
-   file chips with the bare name or a relative path.
+0. (Answered 25 Nov: rail switch B, @all gold, dropped room features stay out, Stop and voice both, readable
+   colours. Sent to the session builder as kit items.)
 1. In 0.2.0, a control whose feature comes in 0.3.0 (worktree selector, "Get more usage"): disabled with a reason
    (current), or hidden?
 2. The rail's orb size: board 11 (matched) against the recorded "rail 36".
