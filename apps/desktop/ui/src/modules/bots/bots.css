@@ -1,7 +1,7 @@
-/* boopis v6 · bots tab (owner: bots agent). Controls come from the shared library (components/components.css,
-   HX.ui); this file holds only what is bots' own: the view's layout bound to the shell's --hx-* properties, the
-   presence header, the new-bot form (stage, name, pickers, suggestions), the sheet's placement and the rail rule.
-   No .ui-* class is re-styled here. Every colour, font and radius is a token; --c on a swatch is an orb colour (data). */
+/* boopis · bots tab. A bot's chat, a room and the Bots sidebar are the v7 kit's (docs/design/v7/REPASS.md): for them this file holds
+   placement only (the last section). What is still v6 keeps its own looks here until its step: the new-bot and new-group forms
+   (stage, name, pickers, suggestions) and the settings sheet. Every colour, font and radius is a token; --c on a swatch is an orb
+   colour (data). */
 
 .bt-list { font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui); color: var(--text); }
 .bt-view { color: var(--text); }   /* the Bots view takes the v7 root's own type (14/20, 0.01em): a board's thread inherits them */
@@ -124,17 +124,6 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-sugg:hover { --sq-line: var(--line); }
 .bt-opt[aria-checked="true"] { --sq-line: var(--brass); }
 
-/* a live bot's room: what Hermes reports about its profile, where a thread would be */
-.bt-glance { margin-left: var(--hx-margin-w, var(--margin-w)); display: grid; gap: var(--sp-2); justify-items: start; }
-[data-margin="off"] .bt-glance { margin-left: 0; }
-.bt-glance-h { padding-inline: 0; margin: var(--sp-3) 0 0; }
-.bt-glance-line { margin: 0; font-size: var(--fs-s); line-height: 1.5; color: var(--text-dim); max-width: 60ch; }
-.bt-glance-note { font-size: var(--fs-xs); color: var(--text-quiet); }
-.bt-glance-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-1); width: 100%; max-width: 60ch; }
-.bt-glance-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); padding-block: var(--sp-1); border-bottom: 1px solid var(--line); min-width: 0; }
-.bt-glance-title { font-size: var(--fs-s); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.bt-glance-meta { font-size: var(--fs-2xs); color: var(--text-quiet); flex: none; }
-
 /* making a live bot: the folder it creates, confirmed first */
 .bt-confirm { display: grid; gap: var(--sp-2); padding: var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); width: 100%; }
 .bt-confirm-line { margin: 0; font-size: var(--fs-s); line-height: 1.5; color: var(--text-dim); }
@@ -160,13 +149,6 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-routine-note { font-size: var(--fs-xs); color: var(--text-quiet); }
 .bt-add-row { display: flex; justify-content: flex-end; margin-top: var(--sp-2); }
 .bt-caps { display: grid; gap: var(--sp-1); }
-
-/* a recent session opens as the thread (a button spanning its row) and the app's own lines sit quietly in the thread */
-.bt-glance-open { font: inherit; color: inherit; text-align: inherit; background: none; border: 0; padding: 0; margin: 0; box-sizing: border-box; display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); width: 100%; min-width: 0; cursor: pointer; }
-.bt-glance-open:hover .bt-glance-title { text-decoration: underline; }
-.bt-glance-open:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-offset); }
-.bt-note { margin: var(--sp-2) 0 var(--sp-2) var(--hx-margin-w, var(--margin-w)); font-size: var(--fs-xs); line-height: 1.5; color: var(--text-quiet); max-width: 60ch; }
-[data-margin="off"] .bt-note { margin-left: 0; }
 
 /* ================================================================ groups (team chat) */
 .bt-groups { display: flex; flex-direction: column; }
