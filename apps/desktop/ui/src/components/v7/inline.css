@@ -64,7 +64,8 @@
 .k7-badge[data-tone="owe"] { background: var(--owe-soft); color: var(--owe-text); }
 
 /* ── StatusLine (34): one line, one shimmer (2.2 s, steps(60)); the session's mark breathes (1.4 s) ── */
-.k7-status { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; font-size: var(--fs-l); line-height: var(--lh-l); color: var(--text-dim); }
+/* kit.css `.activity`: 15 on the thread's own 20 line */
+.k7-status { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; font-size: var(--fs-l); line-height: var(--lh-m); color: var(--text-dim); }
 .k7-status__phrase { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .k7-status__count { font-size: var(--fs-xs); color: var(--text-dim); }
 .k7-status__mark { display: inline-grid; place-items: center; color: var(--text-dim); }

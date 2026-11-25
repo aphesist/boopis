@@ -66,9 +66,9 @@ function applyState(): void {
   el.rightShell.dataset['right'] = state.right;
   el.rightSlot.dataset['right'] = state.right;
   const ropen = state.right === 'open';
-  el.btnRight.dataset['tip'] = state.tab === 'bots' ? 'Details' : ropen ? 'Hide session details' : 'Show session details';
+  el.btnRight.dataset['tip'] = state.tab === 'bots' ? (ropen ? 'Hide details' : 'Show details') : ropen ? 'Hide session details' : 'Show session details';
   el.btnRight.setAttribute('aria-label', el.btnRight.dataset['tip']);
-  el.btnRight.setAttribute('aria-expanded', String(state.tab === 'session' && ropen));
+  el.btnRight.setAttribute('aria-expanded', String(ropen));
   // settings controls (the account menu reads state when it opens)
   const sDock = document.getElementById('hx-set-dock') as HTMLInputElement | null; if (sDock) sDock.checked = state.dock === 'on';
   app.dataset['orbGrow'] = state.orbGrow ? 'on' : 'off';

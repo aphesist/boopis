@@ -113,12 +113,18 @@ export interface BotCatalog {
 export interface ApprovalData {
   id?: string; title: string; quote?: string; item?: readonly string[]; meta?: string; from?: string;
   actions?: readonly string[];
+  /** the approval rule that made the bot ask, by its name ("Pushes to a shared branch"); absent when no rule is known */
+  rule?: string;
 }
 export interface TextMessage { kind: 'text'; id: string; who: string; t: string; text: string; via?: 'bots' | 'dock' }
 export interface ApprovalMessage { kind: 'approval'; id: string; who: string; t: string; data: ApprovalData; resolved?: 'approved' | 'denied'; resolvedAt?: string }
 /** a line the app says in a thread and nobody in it does: a message that was not sent, a reply that failed */
 export interface NoteMessage { kind: 'note'; id: string; who: 'app'; t: string; text: string }
-export type ThreadMessage = TextMessage | ApprovalMessage | NoteMessage;
+/** a tool call the bot made, one row of its thread: the tool's name ("Read") and what it was called on ("14 merged pull requests") */
+export interface ToolMessage { kind: 'tool'; id: string; who: string; t: string; tool: string; target: string }
+/** a file the bot wrote or handed over: its name and one line about it ("41 lines, 2.1 KB") */
+export interface FileMessage { kind: 'file'; id: string; who: string; t: string; name: string; meta: string }
+export type ThreadMessage = TextMessage | ApprovalMessage | NoteMessage | ToolMessage | FileMessage;
 
 /* ───────── bot groups (team chat) ───────── */
 /** one member of a group: a bot, by the profile it is. `handle` is what `@` names in a message */
@@ -270,7 +276,18 @@ export type ModsEvent =
   | { type: 'notify'; sessionId: string; plugin: string; title: string; text: string };
 
 /* ───────── sessions ───────── */
-export interface SessionSummary { id: string; project: string; title: string; when: string; running?: boolean }
+export interface SessionSummary {
+  id: string; project: string; title: string; when: string; running?: boolean;
+  /** the branch or worktree it works on ("w32/dock-paint"); absent when unknown */
+  branch?: string;
+  /** the model that answers in it (an id or a readable name: its provider's mark leads the row); absent when unknown */
+  model?: string;
+  /** what it waits on you for: an approval stops it (the inbox's "Needs you"), a question does not (it works on with its guess) */
+  needs?: 'approval' | 'question';
+  pinned?: boolean;
+}
+/** a usage limit that is close: said above the composer ("Approaching the weekly limit, 81% used, resets Wed 09:00") */
+export interface LimitNotice { id: string; title: string; detail: string }
 export interface Step { title: string; mono?: boolean; meta?: readonly string[]; time: string; kind?: 'step' | 'fail' | 'escalate' }
 export interface Ship { title: string; quote: string; passed: number; rolledBack: number; files: number; add: number; del: number; branch: string }
 /** something attached to a message: a file, a picture or a folder. `path` is absolute on the machine the engine runs on; the page build has only a name. */

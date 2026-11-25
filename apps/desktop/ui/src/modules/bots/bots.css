@@ -3,7 +3,8 @@
    presence header, the new-bot form (stage, name, pickers, suggestions), the sheet's placement and the rail rule.
    No .ui-* class is re-styled here. Every colour, font and radius is a token; --c on a swatch is an orb colour (data). */
 
-.bt-view, .bt-list { font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui); color: var(--text); }
+.bt-list { font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui); color: var(--text); }
+.bt-view { color: var(--text); }   /* the Bots view takes the v7 root's own type (14/20, 0.01em): a board's thread inherits them */
 .bt-preview { margin: 0 0 var(--sp-2); font-size: var(--fs-xs); line-height: 1.5; color: var(--text-quiet); }
 .bt-view [hidden], .bt-list[hidden] { display: none !important; }
 :where(.bt-view, .bt-list) :where(button.bt-opt, button.bt-sugg, button.bt-p-sched) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
@@ -346,3 +347,32 @@ orb-avatar.is-live { cursor: pointer; }
    red edge and wash stand down inside it, and the "you" capsule takes the amber */
 .k7-bubble .ui-md[data-to-you]::before, .k7-bubble .ui-md[data-to-you]::after { content: none; }
 .k7-bubble .ui-mention--you { --red: var(--owe); --red-text: var(--owe-text); --red-soft: var(--owe-soft); }
+
+/* ================================================================ board 11: a bot's chat (docs/design/v7/boards: botscreens.js bot11, kit.css)
+   The thread is the 640 column, centred in the view, its first line 72 under the window's top; a time separator, then turns: 16
+   between you and the bot, 6 between a bot's pieces (bubbles, tool rows, file cards), its AskCard 14 under what it follows, the
+   status line 12 under the last turn. The composer is 720 wide (600 beside the open details pane), centred, 24 over the window's foot. */
+.bt-room:not(.bt-group) .bt-scroll { padding-bottom: calc(var(--bt-composer-h, 68px) + var(--composer-bottom) + var(--sp-5)); }
+.bt-room:not(.bt-group) .bt-col { width: var(--col-w); max-width: calc(100% - 2 * var(--sp-5)); margin: 0 auto; padding-top: calc(var(--thread-top) - var(--drag-h)); }
+.bt-room:not(.bt-group) .bt-log { gap: 0; }
+.bt-room:not(.bt-group) .bt-log > .k7-time { align-self: center; }
+.bt-room:not(.bt-group) .bt-log > .k7-time + [data-hx-turn] { margin-top: 0; }
+.bt-room:not(.bt-group) .bt-log > [data-hx-turn] + [data-hx-turn] { margin-top: var(--sp-4); }
+.bt-room:not(.bt-group) .bt-turn > .bt-turn__body { gap: 0; }
+.bt-room:not(.bt-group) .bt-turn > .bt-turn__body > * + * { margin-top: var(--gap-s); }
+.bt-room:not(.bt-group) .bt-turn > .bt-turn__body > * + .bt-cardslot { margin-top: calc(var(--gap-s) + var(--sp-2)); }
+.bt-room:not(.bt-group) .bt-log > .k7-status { margin-top: var(--sp-3); }
+/* the hover actions: beside the turn's last bubble, on its middle (kit.css `.row` and `.hoverbar`) */
+.bt-turn__row { display: flex; align-items: center; gap: var(--sp-2); align-self: stretch; min-width: 0; }
+.bt-turn__row > .k7-bubble { flex: 0 1 auto; }
+.bt-turn__row > .bt-turn__acts { position: static; display: inline-flex; flex: none; gap: var(--gap-hair); margin-left: var(--gap-s); color: var(--icon-quiet); }
+.bt-turn:is(:hover, :focus-within) > .bt-turn__body > .bt-turn__row > .bt-turn__acts { opacity: 1; }
+.bt-room:not(.bt-group) .bt-composer-zone { left: 50%; width: var(--composer-w); max-width: calc(100% - 2 * var(--sp-5)); bottom: var(--composer-bottom); transform: translateX(-50%); }
+.hx[data-right="open"] .bt-room:not(.bt-group) .bt-composer-zone { width: var(--composer-w-pane); }
+.bt-room:not(.bt-group)::after { height: calc(var(--bt-composer-h, 68px) + var(--composer-bottom) + var(--scroll-fade)); }
+/* the open bot's details pane (details.ts): the kit's Pane fills the window's pane */
+.bt-details { position: absolute; inset: 0; }
+.bt-details > .k7-pane { width: 100%; height: 100%; }
+.bt-details__when { display: block; font-size: var(--fs-xs); line-height: var(--lh-xs); letter-spacing: var(--track); color: var(--text-dim); }
+.bt-details__val { display: inline-flex; align-items: center; gap: var(--pad-kbd); font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text-dim); white-space: nowrap; }
+.bt-details__none { margin: var(--pane-sec-top) var(--sp-1) 0; font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); }

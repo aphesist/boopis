@@ -1,7 +1,6 @@
 /* What the keys, the palette and the menus do. */
 import { emit } from '../../core/bus';
 import { KEYS, readText, writeText } from '../../core/settings';
-import { callProvided } from '../../core/registry';
 import { getDockApi } from '../../core/registry';
 import { setState, state, toggle } from '../../core/state';
 import { themeApi } from '../../styles/theme';
@@ -24,8 +23,8 @@ export function openPanel(panel: string): void {
 }
 /** mod+I: the session's details panel, or the open bot's settings (the bots tab provides that) */
 export function togglePanel(): void {
-  if (state.tab === 'session') { toggle('right'); return; }
-  callProvided('bot-settings', { toggle: true, from: 'keyboard' });
+  /* the details pane is the window's (board 11, S40): the session's details, or the open bot's */
+  toggle('right');
 }
 export const dockMode = (): string | null => { const r = sh.app.querySelector<HTMLElement>('#hx-dock [data-mode]'); return r ? r.dataset['mode'] ?? null : null; };
 export function toggleDockExpand(): void {

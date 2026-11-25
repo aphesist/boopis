@@ -42,3 +42,18 @@ export function turnActs(t: HTMLElement, o: ActsOpts): void {
   if (o.open) { const op = o.open; const b = kit.iconButton({ icon: 'bots', label: 'Open ' + o.name + '’s chat', tip: 'Open chat', variant: 'ghost' }); b.addEventListener('click', () => { op(); }); acts.append(b); }
   t.append(acts);
 }
+/** the hover actions sit beside the turn's last bubble, on its middle (board 11: `.row` of the bubble and its `.hoverbar`): the
+    bubble and the actions share a row; when a later bubble arrives, the row is undone and made again around that one */
+export function placeActs(t: HTMLElement): void {
+  const acts = t.querySelector<HTMLElement>('.bt-turn__acts'); if (!acts) return;
+  const body = turnBody(t);
+  const old = acts.parentElement?.classList.contains('bt-turn__row') ? acts.parentElement : null;
+  const bubbles = [...body.querySelectorAll<HTMLElement>(':scope > .k7-bubble, :scope > .bt-turn__row > .k7-bubble')];
+  const last = bubbles[bubbles.length - 1];
+  if (!last) { t.append(acts); return; }
+  if (old && old.contains(last)) return;
+  if (old) { const b = old.querySelector<HTMLElement>('.k7-bubble'); if (b) old.replaceWith(b); else old.remove(); }
+  const row = el('div', { class: 'bt-turn__row' });
+  last.replaceWith(row);
+  row.append(last, acts);
+}

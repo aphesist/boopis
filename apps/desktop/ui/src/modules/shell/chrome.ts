@@ -15,7 +15,9 @@ import { themeApi } from '../../styles/theme';
 import { sh } from './ctx';
 
 /** the v7 root follows the scheme of the active theme: dark, or light (Bone) */
-export const V7_SURFACES = ['#hx-chrome', '#hx-side', '#hx-view-bots', '#hx-notify', '#hx-dock'] as const;
+/* the app's root is the v7 root (the repass: every screen is drawn from the approved boards, on v7's neutral tokens, never v6's warm
+   theme); the surfaces listed after it were roots of their own before and keep the attributes other code selects on */
+export const V7_SURFACES = ['#hx-app', '#hx-chrome', '#hx-side', '#hx-view-bots', '#hx-notify', '#hx-dock'] as const;
 let lastMode = '';
 export function syncV7Theme(): void {
   const mode = themeApi.scheme() === 'light' ? 'light' : 'dark';

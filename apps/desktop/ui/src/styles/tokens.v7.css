@@ -257,9 +257,9 @@
   --pad-nav-x: 9px;
   --pad-tip-y: 4px;
   --pad-tip-x: 6px;
-  --pad-pill-y: 7.5px;
-  --pad-pill-end: 13.5px;
-  --pad-pill-start: 7.5px;
+  --pad-pill-y: 8px;
+  --pad-pill-end: 14px;
+  --pad-pill-start: 8px;
   --pad-kbd: 5px;
   --pad-inline: 7px;
   --pad-code-y: 1px;
@@ -337,6 +337,24 @@
   --dk-r-compact: 24px;
   --dk-inset: 8px;
   --hl: 1px;
+  --file-w: 260px;
+  --composer-w: 720px;
+  --composer-w-pane: 600px;
+  --composer-bottom: 24px;
+  --composer-above-dock: 96px;
+  --thread-top: 72px;
+  --pane-top: 64px;
+  --pane-sec-top: 14px;
+  --hover-ctl: 28px;
+  --wc-w: 32px;
+  --wc-h: 28px;
+  --icon-l: 18px;
+  --ns-top: 64px;
+  --ns-bottom: 250px;
+  --ns-wait-w: 520px;
+  --ns-wait-top: 40px;
+  --ns-mark: 72px;
+  --ns-logo: 44px;
 }
 /* one device pixel (elevation.hairline) */
 @media (min-resolution: 1.5dppx) { [data-ui="v7"] { --hl: 0.625px; } }

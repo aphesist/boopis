@@ -40,16 +40,16 @@ export function solveLayout(i: LayoutIn): Solved {
   } else if (i.left === 'rail') {
     sideW = phone ? 0 : i.rail; leftPush = sideW;
   }
+  /* the details pane is the window's in both tabs (board 11: a bot's details; S40: a session's); closed, it takes `rr` (nothing in v7) */
   let rightVW = i.rr, rightPush = i.rr, rightMode: 'push' | 'overlay' = 'push';
-  if (i.tab === 'bots') { rightVW = 0; rightPush = 0; }   // session details belong to the session tab
-  else if (i.right === 'open') {
+  if (i.right === 'open') {
     rightVW = phone ? W : Math.min(i.rw, W - 40);
     if (wide) rightPush = rightVW; else rightMode = 'overlay';
   }
   const viewLeft = leftPush, viewRight = W - rightPush;
   const cL = viewLeft + (i.inset.left || 0), cR = viewRight - (i.inset.right || 0);
   const centerX = (cL + cR) / 2;
-  const pad = phone ? 16 : 32;
+  const pad = phone ? 16 : 24;   /* the boards' thread: max-width calc(100% - 48px) */
   const colWidth = Math.max(0, Math.min(i.col, cR - cL - pad * 2));
   const colLeft = centerX - colWidth / 2;
   const marginW = colWidth >= 560 ? 112 : 0;       // the call-number margin folds away on narrow columns

@@ -26,7 +26,7 @@ export interface ChromeOpts {
 export interface ChromeParts { toggle?: U<Attrs>; title?: U<Attrs>; search?: U<Attrs>; details?: U<Attrs>; windowGroup?: U<Attrs>; min?: U<Attrs>; max?: U<Attrs>; close?: U<Attrs> }
 export function titlePill(o: { title: string; bot?: U<BotLike>; running?: U<string>; members?: U<readonly BotLike[]>; icon?: U<string>; attrs?: U<Attrs> }): string {
   const lead = o.members && o.members.length ? stack({ members: o.members, size: 24, max: 4, still: true, tip: false })   /* four places, as every row's stack (owner decision, 22 November: one stack, consistently) */
-    : o.bot ? orbHtml(o.bot, { size: 24, live: !!o.running, state: o.running ? 'working' : undefined })
+    : o.bot ? orbHtml({ ...o.bot, state: o.running ? 'working' : 'idle', attention: null }, { size: 24, live: true, motion: 'lively', mode: 'fixed' })   /* the pill's orb faces front and idles (screens.js pill: orb(bot, 24)); the bot's state is said in the rail, the thread and the status line */
     : o.icon ? '<span class="k7-title__ic" aria-hidden="true">' + glyph(o.icon) + '</span>' : '';
   return '<button class="k7-reset k7-title"' + partAttrs('TitlePill', { type: 'button', 'aria-haspopup': 'dialog', 'aria-description': 'Opens the details', 'data-running': o.running ? '' : null, 'data-lead': lead ? '' : null, ...(o.attrs ?? {}) }) + '>' +
     lead + '<span class="k7-title__name">' + esc(o.title) + '</span>' +
@@ -38,15 +38,15 @@ export function searchHint(o: { shows?: U<typeof SEARCH_SHOWS[number]>; attrs?: 
   if (s === 'button') return iconButton({ icon: 'search', label: 'Search', keys: 'mod+K', attrs: o.attrs });
   if (s === 'pill') return '<button class="k7-reset k7-search-pill"' + attrs({ type: 'button', 'aria-label': 'Search, ' + kbdLabel(), ...(o.attrs ?? {}) }) + '>' + glyph('search') + '<span class="k7-grow">Search</span> ' + kbd({ keys: 'mod+K', inPill: true }) + '</button>';
   /* S5: the word and the key chips, no fill at rest; a 28 pill at --hover on hover and focus; its name contains its visible text */
-  return '<button class="k7-reset k7-search-hint"' + attrs({ type: 'button', 'aria-label': 'Search, ' + kbdLabel(), 'aria-keyshortcuts': 'Control+K', ...(o.attrs ?? {}) }) + '>Search ' + kbd({ keys: 'mod+K' }) + '</button>';
+  return '<button class="k7-reset k7-search-hint"' + attrs({ type: 'button', 'aria-label': 'Search, ' + kbdLabel(), 'aria-keyshortcuts': 'Control+K', ...(o.attrs ?? {}) }) + '>Search' + kbd({ keys: 'mod+K' }) + '</button>';
 }
 const kbdLabel = (): string => (/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘K' : 'ctrl K');
 export function windowChrome(o: ChromeOpts): string {
   const p = o.parts ?? {};
   return '<div class="k7-chrome"' + kitAttrs('WindowChrome', { 'data-rail': o.rail ?? 'a', role: 'toolbar', 'aria-label': 'Window', ...(o.attrs ?? {}) }) + '>' +
-    '<div class="k7-chrome__start">' + iconButton({ icon: 'sidebar-left', label: 'Hide sidebar', keys: 'mod+B', attrs: p.toggle }) + '</div>' +
+    '<div class="k7-chrome__start">' + iconButton({ icon: 'sidebar-left', label: 'Hide sidebar', keys: 'mod+B', large: true, attrs: p.toggle }) + '</div>' +
     '<div class="k7-chrome__centre">' + titlePill({ ...o, attrs: p.title }) + '</div>' +
-    '<div class="k7-chrome__end">' + searchHint({ shows: o.search, attrs: p.search }) + iconButton({ icon: 'sidebar-right', label: 'Details', keys: 'mod+.', attrs: p.details }) +
+    '<div class="k7-chrome__end">' + searchHint({ shows: o.search, attrs: p.search }) + iconButton({ icon: 'sidebar-right', label: 'Details', keys: 'mod+.', large: true, attrs: p.details }) +
     (o.windowControls === false ? '' : '<span class="k7-chrome__wc"' + attrs(p.windowGroup ?? {}) + '>' + iconButton({ icon: 'minimize', label: 'Minimize', variant: 'ghost', attrs: p.min }) + iconButton({ icon: 'maximize', label: 'Maximize', variant: 'ghost', attrs: p.max }) + iconButton({ icon: 'close', label: 'Close window', variant: 'ghost', attrs: p.close }) + '</span>') +
     '</div></div>';
 }
@@ -79,9 +79,9 @@ export function pane(o: PaneOpts): string {
       '<div class="k7-pane__tabs">' + segmented({ label: 'Tools', items: tabs, value: o.tab ?? 'diff', variant: 'tabs' }) + '<span class="k7-grow"></span>' + iconButton({ icon: 'close', label: 'Close the tools', variant: 'tinted' }) + '</div>' +
       '<div class="k7-pane__body">' + (o.body ?? '') + '</div></aside>';
   }
-  return '<aside class="k7-pane"' + a + '><div class="k7-pane__head">' + (o.bot ? orbHtml(o.bot, { size: 64 }) : '') + '<h2 class="k7-pane__name">' + esc(o.title ?? '') + '</h2>' +
+  return '<aside class="k7-pane"' + a + '><div class="k7-pane__head">' + (o.bot ? orbHtml({ ...o.bot, state: 'idle', attention: null }, { size: 64, live: true, motion: 'lively', mode: 'fixed' }) : '') + '<h2 class="k7-pane__name">' + esc(o.title ?? '') + '</h2>' +
     segmented({ label: 'Details', items: [{ value: 'activity', label: 'Activity' }, { value: 'library', label: 'Library' }], value: o.tab ?? 'activity' }) + '</div>' +
-    '<div class="k7-pane__body">' + (o.body ?? '') + '</div>' + iconButton({ icon: 'more', label: 'More', variant: 'tinted', haspopup: 'menu', attrs: { 'data-pane-more': '' } }) + '</aside>';
+    '<div class="k7-pane__body">' + (o.body ?? '') + '</div></aside>';   /* no "More" in its corner: board 11 draws none there (the chrome's controls float over the pane's top) */
 }
 
 /* ── Dialog (4): large (Settings: 900, a 220 nav) or form (440 to 520: commit, import, new bot, confirm); enter 200 ms, the scrim,
@@ -118,12 +118,22 @@ export function rail(o: RailOpts): string {
   const groups = (o.groups ?? []).map((g) => {
     const shown = g.members.slice(0, 3), more = g.members.length - shown.length + Math.max(0, Math.floor(g.extra ?? 0));
     return '<button class="k7-reset k7-tile" type="button"' + attrs({ 'aria-label': g.name + ': ' + g.members.map((m) => m.name).join(', '), 'aria-current': g.current ? 'page' : null, 'data-tip': g.name, 'data-tip-pos': 'right', ...(g.attrs ?? {}) }) + '>' +
-      '<span class="k7-rail__cluster" style="--s:' + Math.round(orb * 0.42) + 'px">' + (shown.length ? stack({ members: shown, size: Math.round(orb * 0.42), shape: 'cluster', max: 3, still: true, tip: false }) : '') +
+      '<span class="k7-rail__cluster" style="--s:' + Math.round(orb * 0.42) + 'px">' + railCluster(shown, Math.round(orb * 0.42)) +
       (more ? '<span class="k7-rail__more"' + partAttrs('RailMore', { 'aria-hidden': 'true', 'data-more': '+' + more }) + '></span>' : '')   /* drawn, not written (as the line stack's): the tile's name says every member */ + '</span></button>';
   }).join('');
   return '<nav class="k7-rail"' + kitAttrs('Rail', { 'data-size': b ? 'b' : 'a', 'aria-label': 'Bots', ...(o.attrs ?? {}) }) + '>' + o.bots.map(tile).join('') +
     (groups ? '<hr class="k7-rail__rule">' + groups : '') + '<span class="k7-grow"></span><div class="k7-rail__foot">' +
-    iconButton({ icon: 'plus', label: 'New bot', variant: 'ghost', attrs: { 'data-tip-pos': 'right', ...(o.foot?.newBot ?? {}) } }) + iconButton({ icon: 'store', label: 'Store', variant: 'ghost', attrs: { 'data-tip-pos': 'right', ...(o.foot?.store ?? {}) } }) + iconButton({ icon: 'gear', label: 'Settings', variant: 'ghost', attrs: { 'data-tip-pos': 'right', ...(o.foot?.settings ?? {}) } }) + '</div></nav>';
+    iconButton({ icon: 'plus', label: 'New bot', variant: 'tinted', attrs: { 'data-tip-pos': 'right', ...(o.foot?.newBot ?? {}) } }) + iconButton({ icon: 'store', label: 'Store', variant: 'tinted', attrs: { 'data-tip-pos': 'right', ...(o.foot?.store ?? {}) } }) + iconButton({ icon: 'gear', label: 'Settings', variant: 'tinted', attrs: { 'data-tip-pos': 'right', ...(o.foot?.settings ?? {}) } }) + '</div></nav>';
+}
+/** a room's cluster as the boards place it (kit.js cluster): each member's orb at rest on a circle of 0.62 of an orb around the middle
+    of a box 2.5 orbs wide, the first at the top, then clockwise */
+function railCluster(members: readonly BotLike[], size: number): string {
+  if (!members.length) return '';
+  const r = size * 0.62, c = size * 1.25;
+  return '<span class="k7-rail__tri">' + members.map((m, i) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / members.length;
+    return '<span style="--x:' + (c + r * Math.cos(a) - size / 2) + 'px;--y:' + (c + r * Math.sin(a) - size / 2) + 'px">' + orbHtml({ ...m, state: 'idle', attention: null }, { size, rest: true }) + '</span>';
+  }).join('') + '</span>';
 }
 
 /* ── Notch (42): the notch's own surface. The notch spec is not in this repository (an owner question); what the kit can draw from

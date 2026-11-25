@@ -8,7 +8,7 @@
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type { SessionControls } from './session-s0';
 import type {
-  ApprovalTier, ArchivedBot, Turn, Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment, ArchivedGroup,
+  ApprovalTier, ArchivedBot, Turn, Bot, LimitNotice, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment, ArchivedGroup,
   Attached, KanbanBoardInfo, KanbanView, DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome, ModelChoice, CouncilSource, Group, GroupMessage,
   InstallPlan, InstallReceipt, InstallRequest, ProjectPolicy, StageResult, StoreBrowse, StoreDetail, StoreFilter, StoreScope, StoreSource, UninstallResult, UpdateDiff
 } from './types';
@@ -419,4 +419,6 @@ export interface DataProvider {
   kanban?: KanbanSource;
   /** the Session tab's launch settings, permission scale and rewind (the live provider's; the mock has none) */
   sessionControls?: SessionControls;
+  /** a usage limit that is close, null when none is (a provider that cannot tell leaves it out: nothing is said) */
+  limits?: Watch<LimitNotice | null>;
 }

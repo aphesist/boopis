@@ -64,7 +64,7 @@ const NAMED = {
   '--pad-set-x': 16, '--pad-set-y': 6,                 /* settings rows 16 across (min 44 tall) */
   '--pad-nav-y': 7, '--pad-nav-x': 9,                  /* settings nav row 7 9 */
   '--pad-tip-y': 4, '--pad-tip-x': 6,                  /* tooltip 4 6 */
-  '--pad-pill-y': 7.5, '--pad-pill-end': 13.5, '--pad-pill-start': 7.5,   /* title pill 7.5 13.5 7.5 7.5 */
+  '--pad-pill-y': 8, '--pad-pill-end': 14, '--pad-pill-start': 8,   /* title pill: 0 14 0 8, as the boards' kit.css `.title-pill` writes it */
   '--pad-kbd': 5,                                      /* key chip: 20 tall, 5 across (kit.css) */
   '--pad-inline': 7,                                   /* an inline chip's sides (kit.css .you, .refchip, .badge2) */
   '--pad-code-y': 1, '--pad-code-x': 5,                /* inline code 1 5 */
@@ -89,6 +89,15 @@ both.push('--search-pill-w: 300px;', '--notch-h: 60px;', '--diff-n: 36px;', '--d
   '--rail-b-w: 64px;', '--tile-b: 44px;', '--pane-orb: 64px;', '--dk-row-h: 72px;', '--dk-compact-h: 48px;', '--dk-open-w: 640px;', '--dk-open-h: 432px;',
   '--dk-row-max: 640px;', '--dk-compact-max: 380px;', '--dk-orb: 40px;', '--dk-orb-hover: 52px;', '--dk-orb-near: 46px;', '--dk-orb-compact: 24px;',
   '--dk-gap: 14px;', '--dk-gap-compact: 8px;', '--dk-r-compact: 24px;', '--dk-inset: 8px;', '--hl: 1px;');
+/* the boards' own sizes (docs/design/v7/boards/src: kit.css, screens.js, botscreens.js, sessionnew.js), each named once */
+both.push('--file-w: 260px;',                       /* a file card (kit.css .file) */
+  '--composer-w: 720px;', '--composer-w-pane: 600px;',   /* the composer on the column, and beside an open details pane (botscreens.js comp) */
+  '--composer-bottom: 24px;', '--composer-above-dock: 96px;',   /* its foot: 24 over the window's, 96 where the dock sits under it (sessiontab.js shell) */
+  '--thread-top: 72px;',                            /* the thread's first line under the window's top (screens: padding-top 72) */
+  '--pane-top: 64px;', '--pane-sec-top: 14px;',     /* the details pane (kit.css .pane-in, .pane-sec) */
+  '--hover-ctl: 28px;',                             /* a hover action beside a bubble (kit.css .hoverbar span) */
+  '--wc-w: 32px;', '--wc-h: 28px;', '--icon-l: 18px;',                 /* a window glyph's cell (kit.css .wc span) */
+  '--ns-top: 64px;', '--ns-bottom: 250px;', '--ns-wait-w: 520px;', '--ns-wait-top: 40px;', '--ns-mark: 72px;', '--ns-logo: 44px;');   /* the new session's canvas (kit.css .ns, .ns-wait, .ns-mark; sessionnew.js brand) */
 
 const css = `/* Generated from tokens.v7.json by scripts/build-tokens-v7.mjs. Do not edit: run \`pnpm tokens\`. */
 ${DARK} { color-scheme: dark;

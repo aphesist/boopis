@@ -32,13 +32,13 @@ export function button(o: ButtonOpts): string {
 /* ── IconButton (22): floating 36, tinted 28, ghost (window controls) ── */
 export const ICON_BUTTON_VARIANTS = ['floating', 'tinted', 'ghost', 'inverted'] as const;
 export type IconButtonVariant = typeof ICON_BUTTON_VARIANTS[number];
-export interface IconButtonOpts { icon: string; label: string; variant?: U<IconButtonVariant>; pressed?: U<boolean>; expanded?: U<boolean>; haspopup?: U<string>; disabled?: U<boolean>; keys?: U<string>; tip?: U<string | false>; attrs?: U<Attrs> }
+export interface IconButtonOpts { icon: string; label: string; /** the chrome's 18 px glyph (kit.css `.i.l`) */ large?: U<boolean>; variant?: U<IconButtonVariant>; pressed?: U<boolean>; expanded?: U<boolean>; haspopup?: U<string>; disabled?: U<boolean>; keys?: U<string>; tip?: U<string | false>; attrs?: U<Attrs> }
 export function iconButton(o: IconButtonOpts): string {
   return '<button class="k7-reset k7-ib"' + kitAttrs('IconButton') + attrs({
     type: 'button', 'data-variant': o.variant ?? 'floating', 'aria-label': o.label, 'aria-pressed': o.pressed == null ? null : String(o.pressed),
     'aria-expanded': o.expanded == null ? null : String(o.expanded), 'aria-haspopup': o.haspopup, disabled: !!o.disabled,
     'data-tip': o.tip === false ? null : o.tip ?? o.label, 'data-kbd': o.keys, 'aria-keyshortcuts': o.keys, ...(o.attrs ?? {})
-  }) + '>' + glyph(o.icon) + '</button>';
+  }) + '>' + glyph(o.icon, o.large ? 'k7-ic--l' : undefined) + '</button>';
 }
 
 /* ── Kbd (27): in text (radius 4), in a pill (a pill) ── */

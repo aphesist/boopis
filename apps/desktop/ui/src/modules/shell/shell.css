@@ -63,7 +63,7 @@ body {
    sidebar toggle over the rail, the title pill centred, the search hint, details and the window glyphs). It paints nothing of its
    own: the sidebar's --bg-1 and the ground's --bg-2 run under it to the window's top edge. */
 /* the chrome's height and the open sidebar's width are v7's for the whole window (the layout and every view read them) */
-.hx, .hx-probe { --chrome-h: 56px; --sb-w: 300px; }
+.hx, .hx-probe { --chrome-h: 56px; --sb-w: 300px; --right-w: 356px; --right-rail-w: 0px; --col-w: 640px; }
 .hx-bar {
   position: absolute; inset: 0 0 auto 0; z-index: var(--z-chrome); height: var(--chrome-h);
   user-select: none; pointer-events: none;
@@ -71,6 +71,8 @@ body {
 .hx-bar > .k7-chrome { pointer-events: auto; }
 .hx-bar > .k7-chrome :is(.k7-chrome__start, .k7-chrome__centre, .k7-chrome__end) { pointer-events: auto; }
 .hx-bar .k7-chrome__start { width: var(--hx-rail-w); }
+/* the title pill is centred on the work: between the sidebar (or the rail) and the details pane, where the column is */
+.hx-bar .k7-chrome { --chrome-centre: var(--hx-center-x-to, 50%); }
 .hx-win [hidden] { display: none; }   /* a tiling window manager shows close alone (host/window.ts) */
 /* a layer that covers the whole window (first run, the startup notice) carries the same bar in its own flow, so the window's
    controls and its drag area stay reachable over it (host/window-controls.ts `windowBar`) */
@@ -137,20 +139,22 @@ body {
 .hx-view[data-view="bots"] { --hx-shift: 12px; }
 .hx-view.is-active { --hx-shift: 0px; opacity: 1; visibility: visible; transition: opacity var(--dur-2) var(--ease) calc(var(--dur-out) / 2), --hx-shift var(--dur-3) var(--spring) calc(var(--dur-out) / 4), visibility 0s, --hx-view-left var(--dur-3) var(--spring), --hx-view-right var(--dur-3) var(--spring); }
 
-/* ───────────── right panel (session details; not part of the bots tab) ───────────── */
+/* ───────────── the details pane (boards 11 and S40): from the window's top, 356, --bg-pane; the chrome's controls float over it ───────────── */
 .hx-right {
   position: absolute; z-index: var(--z-right);
-  top: var(--chrome-h); right: 0; bottom: 0;
+  top: 0; right: 0; bottom: 0;
   width: var(--hx-right-vw); overflow: hidden;
   background: transparent;
   transition: background-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease), opacity var(--dur-2) var(--ease) calc(var(--dur-out) / 2), visibility 0s, --hx-right-vw var(--dur-3) var(--spring);
 }
-.hx[data-right="open"] .hx-right { background: var(--bg-1); transition: background-color var(--dur-press) var(--ease), box-shadow var(--dur-2) var(--ease), opacity var(--dur-2) var(--ease), visibility 0s, --hx-right-vw var(--dur-3) var(--spring); }
+.hx[data-right="open"] .hx-right { background: var(--bg-pane); transition: background-color var(--dur-press) var(--ease), box-shadow var(--dur-2) var(--ease), opacity var(--dur-2) var(--ease), visibility 0s, --hx-right-vw var(--dur-3) var(--spring); }
 .hx[data-right="open"][data-right-mode="overlay"] .hx-right { box-shadow: var(--shadow-side-r); }
 /* the slot keeps its open width while it slides, so the panel never reflows; it narrows after closing */
 .hx-right__slot { position: absolute; top: 0; bottom: 0; left: 0; width: var(--right-rail-w); transition: width 0s linear var(--dur-3); }
 .hx[data-right="open"] .hx-right__slot { width: var(--right-w); transition: width 0s; }
-.hx[data-tab="bots"] .hx-right { opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease), visibility 0s linear var(--dur-out), --hx-right-vw var(--dur-3) var(--spring); }
+/* each tab draws its own details into the pane: the session's slot, or the open bot's (modules/bots/details.ts) */
+.hx[data-tab="bots"] .hx-right > #hx-right, .hx[data-tab="session"] .hx-right > .bt-details { display: none; }
+.hx-right > #hx-right { top: var(--chrome-h); }   /* the session's details are v6 still: they keep their place under the chrome until their board (S40) */
 
 /* ───────────── dock slot: the dock draws itself; nothing depends on it ───────────── */
 .hx-dock-slot { position: absolute; z-index: var(--z-dock); left: 0; right: 0; bottom: 0; height: var(--dock-rest-h); pointer-events: none; }
@@ -355,8 +359,6 @@ body {
 /* the rail's width (88, v7 7) for the whole window: the layout reads it from the probe */
 .hx, .hx-probe { --sb-rail-w: 88px; --hx-rail-w: 88px; }
 @media (max-width: 1199px) { .hx, .hx-probe { --sb-rail-w: 64px; --hx-rail-w: 64px; } }
-/* on the Bots tab the ground under the chrome is the Bots view's (a v7 root): the chrome paints it from the view's left edge */
-.hx-bar::before { content: ''; position: absolute; inset: 0 0 0 var(--hx-view-left-to, 0px); background: var(--bg-2); opacity: 0; pointer-events: none; transition: opacity var(--dur-2) var(--ease-sharp); }
-.hx[data-tab="bots"] .hx-bar::before { opacity: 1; }
+/* the app's root is the v7 root: its --bg-2 is the ground under the floating chrome in both tabs */
 /* a phone-wide window has no room for the hint beside the title pill: ctrl K (and the palette's other ways) still open search */
 @media (max-width: 639px) { .hx-bar .k7-search-hint { display: none; } }

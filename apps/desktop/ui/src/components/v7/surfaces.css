@@ -1,31 +1,32 @@
 /* The v7 kit's surfaces (DESIGN-SYSTEM.md v7 7, 12.1, 21.2 and 21.4; the approved renders' kit.css and dockv7.js). Tokens only. */
 
-/* ── WindowChrome (1): a 56 px drag region, floating controls at y = 10 ── */
+/* ── WindowChrome (1): the boards' `.drag` (kit.css, screens.js chrome): a 56 px drag region, its controls from y = 10: the toggle over
+   the rail's middle, the title pill centred on the work (between the sidebar and the details pane), then at the end, 12 from the
+   window's edge and 8 apart: the search hint, the details button, and the window glyphs (32 x 28 cells, 2 apart, 4 further on) ── */
 .k7-chrome { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; height: var(--drag-h); padding: var(--chrome-y) var(--sp-3) 0 0; box-sizing: border-box; -webkit-app-region: drag; }
 .k7-chrome :is(button, [role="button"]) { -webkit-app-region: no-drag; }
 /* the sidebar toggle sits over the rail's middle: (88 - 36) / 2 in, (64 - 36) / 2 on the compact rail */
 .k7-chrome__start { flex: none; width: var(--sb-rail-w); display: flex; justify-content: center; }
 .k7-chrome[data-rail="b"] .k7-chrome__start { width: var(--rail-b-w); }
-.k7-chrome__centre { position: absolute; left: 50%; top: var(--chrome-y); transform: translateX(-50%); max-width: calc(100% - 2 * var(--sb-rail-w) - 2 * var(--ctl) - var(--sp-6)); }
-.k7-chrome__end { grid-column: 3; display: flex; align-items: center; gap: var(--sp-2); height: var(--ctl); }
+.k7-chrome__centre { position: absolute; left: var(--chrome-centre, 50%); top: var(--chrome-y); transform: translateX(-50%); max-width: calc(100% - 2 * var(--sb-rail-w) - 2 * var(--ctl) - var(--sp-6)); }
+.k7-chrome__end { grid-column: 3; display: flex; align-items: flex-start; gap: var(--sp-2); }
 .k7-chrome__wc { display: inline-flex; gap: var(--gap-hair); margin-inline-start: var(--sp-1); }
+.k7-chrome__wc > .k7-ib { width: var(--wc-w); height: var(--wc-h); }
 /* the title pill: 40 tall, the orb 24 and the name 15; it opens the details pane */
 .k7-title {
-  display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--pill-h); max-width: 100%; padding: 0 var(--pad-pill-end) 0 var(--pad-pill-start); box-sizing: border-box;
+  display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--pill-h); font-size: var(--fs-l); max-width: 100%; padding: 0 var(--pad-pill-end) 0 var(--pad-pill-start); box-sizing: border-box;
   border-radius: var(--r-pill); background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line), var(--shadow-inline); color: var(--text); white-space: nowrap;
   transition: background-color var(--dur-out) var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) { .k7-title:hover { background: var(--bg-4); transition-duration: var(--dur-1); } }
 .k7-title__name { font-size: var(--fs-l); line-height: var(--lh-l); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .k7-title .k7-status { font-size: var(--fs-s); line-height: var(--lh-s); min-width: 0; }
-/* the search hint (S5): the word and the key chips, no fill at rest; a 28 pill at --hover on hover and focus; it never fades */
+/* the search hint (S5; screens.js chrome): the word in 13 --text-quiet and its two key chips, 8 apart, 36 tall with 10 at its sides and
+   2 before the details button; no fill at rest, a pill at --hover on hover and focus; it never fades */
 .k7-search-hint {
-  display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--ctl-s); padding: 0 var(--sp-1) 0 var(--sp-3); border-radius: var(--r-pill);
-  font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-quiet); white-space: nowrap; transition: background-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+  display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--ctl); padding: 0 var(--pad-line); margin-inline-end: var(--gap-hair); border-radius: var(--r-pill);
+  font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text-quiet); white-space: nowrap; transition: background-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
 }
-.k7-search-hint .k7-kbd { background: transparent; border-radius: var(--r-pill); }   /* a pill in the 28 pill: 14 - 4 = 10, half its 20 (8.2) */
-/* light's --text-quiet is under the text floor (4.4, section 14): the word takes --text-dim there (an owner question) */
-[data-theme="light"] :is(.k7-search-hint, .k7-search-pill) { color: var(--text-dim); }
 .k7-search-hint:is(:hover, :focus-visible) { background: var(--hover); color: var(--text-dim); }
 .k7-search-pill {
   display: inline-flex; align-items: center; gap: var(--sp-2); width: var(--search-pill-w); height: var(--ctl); padding: 0 var(--sp-2) 0 var(--sp-3); box-sizing: border-box;
@@ -51,10 +52,11 @@
 .k7-pane[data-variant="tools"] { width: var(--tools-w); }
 .k7-pane:not([data-open]) { display: none; }
 .k7-pane[data-overlay] { box-shadow: inset var(--hl) 0 0 var(--hair), var(--shadow-modal); }
-.k7-pane__head { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); padding: var(--pad-chrome) var(--sp-4) var(--sp-4); }
-.k7-pane__name { margin: 0; font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 500; color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.k7-pane__body { display: flex; flex-direction: column; gap: var(--sp-1); padding: 0 var(--sp-4) var(--sp-4); min-height: 0; }
-.k7-pane > [data-pane-more] { position: absolute; top: var(--chrome-y); right: var(--sp-3); }
+.k7-pane__head { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); padding: var(--pane-top) var(--sp-4) 0; }
+.k7-pane__name { margin: 0; font-size: var(--fs-l); line-height: var(--lh-l); font-weight: 500; color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the body's sections (kit.css `.pane-in`, `.pane-sec`): 4 between its pieces, a section's name 12 --text-dim with 14 over it and 6 under */
+.k7-pane__body { display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-1) var(--sp-4) var(--sp-4); min-height: 0; }
+.k7-pane__sec { display: flex; margin: var(--pane-sec-top) var(--sp-1) var(--gap-s); font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: 400; color: var(--text-dim); }
 .k7-pane__tabs { display: flex; align-items: center; gap: var(--sp-1); padding: var(--pad-chrome) var(--sp-3) var(--sp-2); }
 .k7-pane[data-variant="tools"] .k7-pane__body { padding: 0 var(--sp-3) var(--sp-3); }
 .k7-pane__grip { position: absolute; top: 0; bottom: 0; left: 0; width: var(--sp-1); cursor: col-resize; }
@@ -84,15 +86,20 @@
 .k7-dialog__navrow:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
 .k7-dialog__page { flex: 1 1 auto; min-width: 0; overflow-y: auto; overscroll-behavior: contain; }
 
-/* ── Rail (40): A 54 tiles on 88, B 44 on 64; the current tile 8%; the attention flag amber with a 2.5 ring of the rail ── */
-.k7-rail { display: flex; flex-direction: column; align-items: center; gap: var(--gap-s); width: var(--sb-rail-w); min-height: 100%; padding: var(--pad-chrome) 0 var(--sp-3); box-sizing: border-box; background: var(--bg-1); }
+/* ── Rail (40): the boards' `.rail` (kit.css, screens.js rail): 88 wide (64 compact), its first tile 56 down, tiles 54 (44) and 6 apart, the
+   current one 8%; the amber flag 6 in from the tile's lower right with a 2.5 ring of the rail; a 24 hairline at --line-strong before
+   the rooms; the foot at the bottom: three 32 tinted buttons 8 apart, 12 over them and 14 under ── */
+.k7-rail { display: flex; flex-direction: column; align-items: center; gap: var(--gap-s); width: var(--sb-rail-w); min-height: 100%; padding: var(--pad-chrome) 0 0; box-sizing: border-box; background: var(--bg-1); }
 .k7-rail[data-size="b"] { width: var(--rail-b-w); }
 .k7-tile { position: relative; display: grid; place-items: center; flex: none; width: var(--row-h-2); height: var(--row-h-2); border-radius: var(--r-tile); transition: background-color var(--dur-out) var(--ease-out); }
 .k7-rail[data-size="b"] .k7-tile { width: var(--tile-b); height: var(--tile-b); }
 .k7-tile[aria-current="page"] { background: var(--current); }
 @media (hover: hover) and (pointer: fine) { .k7-tile:not([aria-current]):hover { background: var(--hover); transition-duration: var(--dur-1); } }
 .k7-flag { position: absolute; right: var(--gap-s); bottom: var(--gap-s); width: var(--dot); height: var(--dot); border-radius: var(--r-pill); background: var(--owe); box-shadow: 0 0 0 var(--flag-ring) var(--bg-1); }
-.k7-rail__rule { flex: none; width: var(--sp-6); margin: var(--gap-s) 0; border: 0; height: var(--hl); background: var(--hair); }
+.k7-rail__rule { flex: none; width: var(--sp-5); margin: var(--gap-s) 0; border: 0; height: var(--hl); background: var(--line-strong); }
+/* a room's three orbs, as the boards place them (kit.js cluster): on a circle of 0.62 of an orb around the middle of a box 2.5 orbs wide */
+.k7-rail__tri { position: relative; display: inline-block; flex: none; width: calc(2.5 * var(--s)); height: calc(2.5 * var(--s)); line-height: 0; }
+.k7-rail__tri > span { position: absolute; left: var(--x); top: var(--y); }
 /* a room's cluster and its "+N" (decided, owner, 25 November 2026): the chip clear of the orbs, on the cluster's right, on its middle, a filled
    pill in the line stack's counter colours, set in the kit's smallest type step and scaled to half a cluster orb's height, so the compact
    rail's is smaller than the standard one's. Where the engine cannot divide two lengths (no typed arithmetic) it stays at that type step */
@@ -105,7 +112,8 @@
   font: 500 var(--fs-2xs) / var(--more-h) var(--mono); letter-spacing: 0; font-variant-numeric: tabular-nums; white-space: nowrap;
   zoom: calc(var(--s) / 2 / var(--more-h));   /* zoom, not scale: the chip takes the room it shows, so the cluster and its chip stay centred in the tile */
 }
-.k7-rail__foot { flex: none; display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); }
+.k7-rail__foot { flex: none; display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); padding: var(--sp-3) 0 var(--pad-chip); }
+.k7-rail__foot > .k7-ib { width: var(--ctl-card); height: var(--ctl-card); }
 
 /* ── Notch (42): the slab's black shape flush to the top, its composer on a 12 inset ── */
 .k7-notch { position: relative; width: var(--w); height: var(--notch-h); }

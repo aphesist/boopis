@@ -14,7 +14,10 @@
 .k7-row__value { flex: none; font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); white-space: nowrap; }
 .k7-row__value.k7-mono { font-size: var(--fs-xs); }
 .k7-card[data-variant="pane"] { padding: var(--pad-queue) 0; }
-.k7-card[data-variant="pane"] .k7-row { min-height: var(--ctl-card); padding: var(--pad-queue) var(--pad-btn-card); }
+/* a pane card's row (kit.css `.pane-card .sr`): at least 40 tall, 4 14, its label 14/18, its value 13 (mono too) */
+.k7-card[data-variant="pane"] .k7-row { min-height: var(--pill-h); padding: var(--pad-queue) var(--pad-btn-card); }
+.k7-card[data-variant="pane"] .k7-row__label { line-height: var(--lh-s); letter-spacing: var(--track-s); white-space: normal; }
+.k7-card[data-variant="pane"] .k7-row__value, .k7-card[data-variant="pane"] .k7-row__value.k7-mono { font-size: var(--fs-s); line-height: var(--lh-s); }
 /* the danger zone: collapsed to its heading at the end of a page (the owner's pick 08); open, its rows */
 .k7-card[data-variant="danger"] { padding: 0; }
 .k7-card__head { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-height: var(--session-h); padding: var(--pad-set-y) var(--pad-set-x); box-sizing: border-box; border-radius: var(--r-card); }
@@ -27,8 +30,9 @@
 .k7-block { --sq-bg: var(--bg-3); --sq-line: var(--line); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line);
   position: relative; border-radius: var(--r-block); padding: var(--pad-block); box-sizing: border-box; min-width: 0; }
 .k7-block[data-sq-on]:not(#sq) { box-shadow: none; }
-/* a text row inside indents 4 more, so text keeps its 12; a row that starts with a control does not */
-.k7-text { padding-inline: var(--pad-text); }
+/* a text row inside starts 4 further in, so text keeps its 12 from the Block's start; a row that starts with a control does not
+   (kit.css: `.qcard > *, .blk > *, .toolrow > * { padding-left: 4px }`, the start only: a row's end keeps the Block's own 8) */
+.k7-text { padding-inline-start: var(--pad-text); }
 
 /* ── Menu (5): --bg-3, radius 16, inset 6, --float-line, --shadow-pop in light; enter 100 ms from scale(.98) ── */
 .k7-menu, .k7-pop {
@@ -191,7 +195,10 @@
 .k7-thread { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
 .k7-thread > * + * { margin-top: var(--gap-s); }
 .k7-thread > .k7-bubble[data-kind="agent"] + .k7-bubble[data-kind="user"], .k7-thread > .k7-bubble[data-kind="user"] + :not(.k7-bubble[data-kind="user"]),
-.k7-thread > :not(.k7-bubble) + .k7-bubble, .k7-thread > .k7-gutter:has(> .k7-byline) { margin-top: var(--sp-4); }
+.k7-thread > :not(.k7-bubble, .k7-btool, .k7-file) + .k7-bubble, .k7-thread > .k7-gutter:has(> .k7-byline) { margin-top: var(--sp-4); }
+/* the boards' own margins (kit.css): an AskCard 8 more than a bubble's 6 under what it follows, the status line 12, a time separator 12 over and 6 under */
+.k7-thread > * + .k7-ask { margin-top: calc(var(--gap-s) + var(--sp-2)); }
+.k7-thread > * + .k7-status { margin-top: var(--sp-3); }
 
 /* ── Well (16): --bg-0, radius 10, mono 12/18 ── */
 .k7-well { --sq-bg: var(--bg-0); --sq-line: var(--hair); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line); border-radius: var(--r-field); min-width: 0; color: var(--text-dim); }
@@ -238,7 +245,7 @@
 @media (hover: none) { .k7-foot__acts { opacity: 1; } }
 
 /* ── TimeSeparator (38): 12 --text-dim, centred; "NEW" in the accent ── */
-.k7-time { display: flex; align-items: center; justify-content: center; gap: var(--gap-row); padding: var(--gap-s) 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
+.k7-time { display: flex; align-items: center; justify-content: center; gap: var(--gap-row); margin: var(--sp-3) 0 var(--gap-s); padding: var(--gap-s) 0; font-size: var(--fs-xs); line-height: var(--lh-m); color: var(--text-dim); }
 .k7-time[data-unread] { color: var(--accent-text); letter-spacing: .04em; font-size: var(--fs-2xs); }
 .k7-time[data-unread]::before, .k7-time[data-unread]::after { content: ''; flex: 1; height: var(--hl); background: color-mix(in srgb, var(--accent-text) 40%, transparent); }
 

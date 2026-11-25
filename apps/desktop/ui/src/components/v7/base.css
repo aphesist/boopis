@@ -13,8 +13,13 @@
 [data-ui="v7"] :where(:focus) { outline: none; }
 [data-ui="v7"] :where(:focus-visible) { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-off); }
 
-/* glyphs: the kit's icon set at 16, one stroke */
+/* glyphs: the kit's icon set at 16 (18 in the chrome's floating buttons), drawn as the boards draw them (kit.css `.v7 svg.i`): the 1.5
+   stroke is in the glyph's own grid, so it scales with the glyph (a 24-grid gear at 16 is 1 px, a 20-grid plus 1.2), and the filled
+   "on" half of a two-state glyph (the sidebar toggles) is never drawn */
 .k7-ic { width: var(--icon-s); height: var(--icon-s); flex: none; }
+.k7-ic--l { width: var(--icon-l); height: var(--icon-l); }
+[data-ui="v7"] .ui-icon * { vector-effect: none; }
+[data-ui="v7"] .ui-icon .is-fill-on { display: none; }
 .k7-mono { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .k7-dim { color: var(--text-dim); }
 .k7-quiet { color: var(--text-quiet); }

@@ -20,6 +20,7 @@
     "lab:orbs": "node tests/lab/orbs.mjs",
     "lab:static": "node tests/lab/static-v7.mjs",
     "lab:gate": "node tests/lab/gate.mjs",
+    "lab:board": "node tests/lab/board.mjs",
     "perf:webkit": "node tests/perf/run.mjs",
     "tokens": "node scripts/build-tokens.mjs && node scripts/build-tokens-v7.mjs",
     "tokens:check": "node scripts/build-tokens.mjs --check && node scripts/build-tokens-v7.mjs --check",

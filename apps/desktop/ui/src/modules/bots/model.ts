@@ -20,7 +20,7 @@ export const S = {
   listRoot: null as HTMLElement | null, listWrap: null as HTMLElement | null, rowsEl: null as HTMLElement | null, viewRoot: null as HTMLElement | null, rows: new Map<string, Row>(),
   room: null as HTMLElement | null, newPane: null as HTMLElement | null, sheet: null as HTMLElement | null, presence: null as (HTMLElement & { _hover?: boolean; _held?: boolean }) | null, presenceEl: null as HTMLElement | null,
   scroll: null as HTMLElement | null, log: null as HTMLElement | null, zone: null as HTMLElement | null, pLine: null as HTMLElement | null, pActs: null as HTMLElement | null,
-  composer: null as import('../../components').ComposerEl | null, transient: null as string | null, typing: false,
+  composer: null as import('./room').RoomComposer | null, transient: null as string | null, typing: false,
   follow: null as Follower | null,
   /** the new-bot preview's own follower, disposed when the form is built again */
   newFollow: null as Follower | null,

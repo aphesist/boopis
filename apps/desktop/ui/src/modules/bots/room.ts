@@ -1,31 +1,30 @@
-/* the bot's room: the presence header, the thread (KEYMAP sections 3 and 5: every entry is a turn, with data-hx-turn
-   and a roving tabindex), approval cards (the card layer only), and the library's composer (KEYMAP section 7).
-   Everything that changes comes from the provider's events; everything the user does is a provider command. */
+/* A bot's chat, as board 11 draws it (docs/design/v7/boards: botscreens.js bot11): no header of its own (the chrome's title pill
+   names the bot and opens the details pane), the thread on the 640 column (the time separator, your bubbles in the bot's fill,
+   the bot's bubbles, its tool rows and file cards, its approval as an AskCard, the status line while it works or waits for you),
+   and the kit's one-row Composer with its line (Governed, the model, the spend) centred 24 px above the window's foot.
+   Every entry is a turn (KEYMAP sections 3 and 5: data-hx-turn and a roving tabindex). Everything that changes comes from the
+   provider's events; everything the user does is a provider command. */
 import { emit } from '../../core/bus';
-import { el, esc, reduced } from '../../core/dom';
+import { cap1, el, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
 import { kit, lookOf, repaintLook, ui } from '@boopis/ui';
-import { bubbleOf, turnActs, turnBody, turnEntry } from './turn';
-import type { MarkdownCtx, MenuItem } from '@boopis/ui';
+import { bubbleOf, placeActs, turnActs, turnBody, turnEntry } from './turn';
+import type { MarkdownCtx } from '@boopis/ui';
 import { data } from '../../data';
 import type { ApprovalMessage, Bot, BotsEvent, ThreadMessage } from '../../data';
-import { cronValid, cronWords, scheduleWords } from './cron';
-import { bot, initModel, S, stateOf, thread } from './model';
-import { gentleFollow, orbButton, livenIn, setReact } from './orbs';
+import { bot, initModel, S, thread } from './model';
+import { livenIn } from './orbs';
 import { markSelected, updateRow } from './list';
 import { openNew } from './new-bot';
 import { mountGroupPane } from './group-room';
 import { mountNewGroupPane } from './new-group';
-import { openSettings, toggleSettings } from './settings';
+import { openSettings } from './settings';
 import { checkClips, watchClips } from './clips';
 import { renderGlance } from './glance';
-import { outsideDescription, outsideRoomMark } from './outside';
-import { arrival, atEnd } from './ledger';
+import { atEnd } from './ledger';
 import { followZone } from '../chat/follow-zone';
-import { botActor, placeInLog, roomPresence } from './presence';
-import type { RoomPresence } from './presence';
+import { paintDetails } from './details';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
-import { botMentions } from './mentions';
 
 const bots = () => data().bots;
 const NODE = new Map<string, HTMLElement>();
@@ -41,10 +40,7 @@ function newSession(): void {
   sessions.fresh(b.id);
   S.composer?.focus();
 }
-function paintNewSession(): void {
-  const btn = S.pActs?.querySelector<HTMLElement>('[data-action="new-session"]'); if (!btn) return;
-  btn.hidden = !(S.sel && thread(S.sel).length);
-}
+const paintNewSession = (): void => { paintDetails(newSession); };
 
 /* ───────── view ───────── */
 export function mountView(root: HTMLElement): void {
@@ -67,14 +63,13 @@ export function mountView(root: HTMLElement): void {
 function buildRoom(): void {
   const scroll = el('div', { class: 'bt-scroll ' + ui.scrollClass({ ground: true }) });
   const col = el('div', { class: 'bt-col' });
-  const presence = el('header', { class: 'bt-presence' });
   const log = el('div', { class: 'bt-log', role: 'log', 'aria-label': 'Messages' });
   if (data().info.preview.has('bots')) col.append(el('p', { class: 'bt-preview', role: 'note', text: 'Preview. These bots are sample data and are not connected to boopis yet.' }));
-  col.append(presence, log);
+  col.append(log);
   scroll.append(col);
   const zone = el('div', { class: 'bt-composer-zone' });
   (S.room as HTMLElement).append(scroll, zone);
-  S.scroll = scroll; S.presenceEl = presence; S.log = log; S.zone = zone;
+  S.scroll = scroll; S.log = log; S.zone = zone;
   log.addEventListener('keydown', turnKeys);
   wireRefs(log, { bot: (id) => { const x = bot(id); return x ? { bot: { ...x, id: x.id, name: x.name }, state: x.state, model: x.info?.model ?? null } : null; } });
   log.addEventListener('focusin', (e) => { const t = (e.target as Element).closest<HTMLElement>('[data-hx-turn]'); if (t) rove(t); });
@@ -82,8 +77,6 @@ function buildRoom(): void {
   /* a live bot cannot be messaged yet: no composer, rather than one that sends nowhere */
   zone.hidden = !!data().info.unavailable['bots.send'];
   followZone(zone, () => S.scroll, () => S.viewRoot, '--bt-composer-h')();
-  S.follow = gentleFollow(() => S.presence, 0.45);
-  PRES = roomPresence({ log: () => S.log, scroll: () => S.scroll, zone, jump: () => null, onJump: () => { S.scroll?.scrollTo({ top: S.scroll.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); S.composer?.focus(); } });
 }
 
 export function openBot(id: string | null): void {
@@ -96,60 +89,27 @@ export function openBot(id: string | null): void {
   S.room.hidden = false; (S.newPane as HTMLElement).hidden = true;
   if (S.groupPane) S.groupPane.hidden = true;
   if (S.newGroupPane) S.newGroupPane.hidden = true;
-  renderPresence(b);
   renderThread(b);
   paintComposer(b);
+  paintDetails(newSession);
   S.composer?.setRunning(S.runs.has(b.id));
   emit('hx:title', { tab: 'bots', title: b.name });
   if (b.info) void data().bots.admin?.open(b.id).catch(() => undefined);   /* its model, routines and sessions are read as it opens */
   if (S.sheetOpen && S.sheetFor !== b.id) openSettings(b.id, null, { keepFocus: true });
 }
 
-/* header: orb 40 in the margin (lively, a quiet button), name 16/600, role 12 quiet, state; settings on the right */
-function renderPresence(b: Bot): void {
-  const p = S.presenceEl as HTMLElement; p.textContent = '';
-  const ob = orbButton(b, 40, b.name, { motion: 'lively', state: b.state });
-  S.presence = ob.orb;
-  const name = el('h1', { class: 'bt-p-name', text: b.name });
-  const line = el('p', { class: 'bt-p-line' });
-  const acts = el('div', { class: 'bt-p-actions' });
-  p.append(el('div', { class: 'bt-p-orb' }, ob), el('div', { class: 'bt-p-text' }, [name, line]), acts);
-  S.pLine = line; S.pActs = acts;
-  if (bots().sessions) { const ns = ui.iconButton({ icon: 'plus', label: 'New session with ' + b.name, tip: 'New session', action: 'new-session' }); ns.addEventListener('click', newSession); acts.append(ns); }
-  acts.append(ui.iconButton({ icon: 'gear', label: 'Bot settings', keys: 'mod+I', action: 'settings' }));
-  acts.querySelector('[data-action="settings"]')?.addEventListener('click', () => toggleSettings());
-  refreshPresence();
-  paintNewSession();
-  checkClips();
-}
+/** what the room says about the open bot outside the thread: the composer's line, the status line and the details pane */
 export function refreshPresence(): void {
-  const b = bot(S.sel); if (!b || !S.pLine) return;
-  const s = stateOf(b, S.transient);
-  if (S.presence) setReact(S.presence, s.reaction);
-  const line = S.pLine; line.textContent = '';
-  line.append(el('span', { class: 'bt-p-role', text: b.role }));
-  if (b.madeOutside) line.append(outsideRoomMark('bt-outside-room'), outsideDescription('bt-outside-room'));
-  if (s.key !== 'idle') {
-    const st = el('span', { class: 'bt-p-state' });
-    if (s.attention) st.insertAdjacentHTML('beforeend', ui.html.dot('attention'));
-    else if (s.busy) st.insertAdjacentHTML('beforeend', ui.html.dot('run'));
-    st.insertAdjacentHTML('beforeend', '<span class="ui-state"' + (s.tone !== 'none' ? ' data-tone="' + s.tone + '"' : '') + '>' + esc(s.busy && b.activity && !S.transient ? b.activity : s.word) + '</span>');
-    line.append(st);
-  }
-  if (b.info) {
-    if (b.info.model) line.append(el('button', { class: 'bt-p-sched ui-mono', type: 'button', 'data-tip': 'Model', onclick: () => openSettings(b.id, 'model'), html: ui.html.model(b.info.model, { size: 12, mono: false }) }));
-    const next = b.info.jobs?.find((j) => j.enabled);
-    if (next) line.append(el('button', { class: 'bt-p-sched ui-mono', type: 'button', 'data-tip': 'Schedule', onclick: () => openSettings(b.id, 'schedule') },
-      [el('span', { html: ui.icon('clock') }), el('span', { text: scheduleWords(next.schedule) + (b.info.jobs && b.info.jobs.filter((j) => j.enabled).length > 1 ? ' and ' + (b.info.jobs.filter((j) => j.enabled).length - 1) + ' more' : '') })]));
-  } else if (b.cfg.cron) line.append(el('button', { class: 'bt-p-sched ui-mono', type: 'button', 'data-tip': 'Schedule', onclick: () => openSettings(b.id, 'schedule') },
-    [el('span', { html: ui.icon('clock') }), el('span', { text: cronValid(b.cfg.cron) ? cronWords(b.cfg.cron) : 'schedule incomplete' })]));
+  const b = bot(S.sel); if (!b) return;
   paintToolbar(b);
+  paintStatus(b.id);
+  paintDetails(newSession);
 }
 
 /* ───────── thread ───────── */
 function renderThread(b: Bot): void {
   const log = S.log as HTMLElement; log.textContent = '';
-  NODE.clear(); PEND.for = null;
+  NODE.clear(); STATUS = null;
   const msgs = thread(b.id);
   if (!msgs.length && b.info) log.append(renderGlance(b, openSession));
   else if (!msgs.length) {
@@ -169,7 +129,7 @@ function renderThread(b: Bot): void {
     for (const m of msgs) { entry = renderMsg(b, m, prev, entry); prev = m; }
   }
   syncTurns();
-  paintPending(b.id);
+  paintStatus(b.id);
   requestAnimationFrame(() => { if (S.scroll) S.scroll.scrollTop = S.scroll.scrollHeight; });
 }
 /* what the bot writes: the kit's markdown; its mentions of teammates open their chats, its paths open where the bot works */
@@ -178,6 +138,9 @@ const rootsOf = (id: string): string[] => { const w = data().bots.workspace?.(id
 function msgContent(b: Bot, m: ThreadMessage): HTMLElement {
   if (m.kind === 'note') return el('p', { class: 'bt-note', role: 'status', text: m.text });
   if (m.kind === 'approval') return renderCard(b, m);
+  /* what the bot did, one row each: a tool call (its name, what it was called on) and a file it wrote or handed over */
+  if (m.kind === 'tool') return kit.toolRow({ variant: 'bot', tool: m.tool, target: m.target });
+  if (m.kind === 'file') return kit.fileCard({ name: m.name, meta: m.meta });
   if (m.who === 'you') { const r = el('p', { class: 'bt-request' }); r.innerHTML = ui.markdown.plain(m.text, ctx()); return r; }
   const md = ui.markdown(m.text, ctx());
   void resolvePaths(md, rootsOf(m.who === 'you' ? b.id : (bot(m.who)?.id ?? b.id)));
@@ -191,11 +154,12 @@ function wrapMsg(b: Bot, m: ThreadMessage, node: HTMLElement): HTMLElement {
 function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEntry: HTMLElement | null, put?: (n: HTMLElement) => void): HTMLElement | null {
   const node = msgContent(b, m);
   NODE.set(m.id, node);
-  const place = (n: HTMLElement): void => { if (put) put(n); else placeInLog(S.log as HTMLElement, n); };
+  const place = (n: HTMLElement): void => { if (put) put(n); else placeInLog(n); };
   if (m.kind === 'note') { place(node); return null; }
   if (prev && prev.who === m.who && prevEntry && prevEntry.isConnected) {
     turnBody(prevEntry).append(wrapMsg(b, m, node));
     ENTRY.get(prevEntry)?.msgs.push(m);
+    placeActs(prevEntry);
     return prevEntry;
   }
   const you = m.who === 'you', who = you ? null : (bot(m.who) ?? b);
@@ -203,7 +167,7 @@ function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEnt
   const entry = turnEntry({ kind: you ? 'user' : 'bot', label: (you ? 'You' : (who as Bot).name) + (m.t ? ', ' + m.t : '') });
   turnBody(entry).append(wrapMsg(b, m, node));
   ENTRY.set(entry, { msgs: [m], who: m.who });
-  if (!you) turnActs(entry, { name: (who as Bot).name, copy: () => turnText(entry) });
+  if (!you) { turnActs(entry, { name: (who as Bot).name, copy: () => turnText(entry) }); placeActs(entry); }
   livenIn(entry);
   place(entry);
   checkClips();
@@ -217,36 +181,38 @@ function appendMsg(id: string, m: ThreadMessage, streaming: boolean): void {
   const log = S.log as HTMLElement;
   log.querySelector('.bt-empty')?.remove();
   const follow = S.scroll ? atEnd(S.scroll) : true;
-  /* the bot at work writes: its reply takes the presence entry's place; anything else lands above it */
-  const pres = m.who !== 'you' && m.kind === 'text' ? PRES?.el ?? null : null;   /* an approval card lands above it: the entry then says "needs you" */
-  const tail = PRES?.el ?? null, lastEl = tail ? tail.previousElementSibling : log.lastElementChild;
-  const lastEntry = !pres && lastEl && lastEl.matches('[data-hx-turn]') ? (lastEl as HTMLElement) : null;
-  const entry = renderMsg(bot(id) as Bot, m, pres ? null : prev, lastEntry, pres && PRES ? (n) => { (PRES as RoomPresence).land(n, id); } : undefined);
+  const lastEl = STATUS && STATUS.isConnected ? STATUS.previousElementSibling : log.lastElementChild;
+  const lastEntry = lastEl && lastEl.matches('[data-hx-turn]') ? (lastEl as HTMLElement) : null;
+  renderMsg(bot(id) as Bot, m, prev, lastEntry);
   syncTurns();
   const node = NODE.get(m.id);
   if (streaming) log.setAttribute('aria-busy', 'true');
-  if (node && S.follow && !S.typing) requestAnimationFrame(() => { const r = node.getBoundingClientRect(); S.follow?.glance(r.left + Math.min(r.width, 160) / 2, r.top + 12, 1200); });
-  if (entry && m.kind === 'text') arrival(entry, m.who === 'you' ? null : node ?? null);
-  else if (!reduced() && node) node.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  if (!reduced() && node) node.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  paintStatus(id);
   if (follow || m.who === 'you') S.scroll?.scrollTo({ top: S.scroll.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' });
 }
-/* ───────── the bot at work: the presence entry where its reply will land, until the reply's first words arrive ───────── */
-let PRES: RoomPresence | null = null;
-const PEND = { for: null as string | null, since: 0 };
-function paintPending(id: string): void {
-  const b = bot(id); const log = S.log;
+/* ───────── the status line (board 11 "Waiting for you", board 17 "Running the tests"): the kit's StatusLine at the thread's tail,
+   the bot's 16 px orb and one phrase, while it works on a reply (the sweep) or waits for your answer (at rest) ───────── */
+let STATUS: HTMLElement | null = null;
+/** a node goes before the status line: replies land above it */
+function placeInLog(n: Node): void { const log = S.log as HTMLElement; if (STATUS && STATUS.isConnected) STATUS.before(n); else log.append(n); }
+function paintStatus(id: string): void {
+  if (id !== S.sel || S.view !== 'bot') return;
+  const b = bot(id), log = S.log; if (!log) return;
   const list = thread(id), last = list[list.length - 1];
-  const replying = !!last && last.who !== 'you' && last.kind === 'text' && log?.getAttribute('aria-busy') === 'true';
-  const want = !!b && !!log && S.runs.has(id) && !replying;
-  if (!want) {
-    /* a turn that ended in an error shows the error face for a moment; any other end lets the entry go */
-    PRES?.end(b && PEND.for === id && PRES.el && ui.botState(b).key === 'error' ? botActor(b, PEND.since) : null);
-    PEND.for = null;
-    return;
-  }
-  if (PEND.for !== id || !PRES?.el) { PEND.since = Date.now(); PEND.for = id; }
-  PRES?.paint([botActor(b, PEND.since)]);
+  const waits = !!b && list.some((m) => m.kind === 'approval' && !m.resolved);
+  const replying = !!last && last.who !== 'you' && last.kind === 'text' && log.getAttribute('aria-busy') === 'true';
+  const works = !!b && S.runs.has(id) && !replying;
+  const phrase = waits ? 'Waiting for you' : works ? cap1((b as Bot).activity || ui.botState(b as Bot).word || 'Working') : '';
+  const sig = phrase + '|' + (waits ? 'w' : 'r');
+  if (!phrase || !b) { STATUS?.remove(); STATUS = null; return; }
+  if (STATUS && STATUS.isConnected && STATUS.dataset['sig'] === sig) return;
+  /* written into the page as markup: an orb made in a template and moved in is not painted by its worker */
+  STATUS?.remove();
+  log.insertAdjacentHTML('beforeend', kit.html.statusLine({ kind: 'bot', bot: waits ? { ...b, state: 'needs' } : b, phrase, working: !waits, attrs: { 'data-sig': sig } }));
+  STATUS = log.lastElementChild as HTMLElement;
 }
+const paintPending = paintStatus;
 
 /* roving tabindex across turns: the focused (or latest) turn is the one tab stop */
 const turns = (): HTMLElement[] => (S.log ? [...S.log.querySelectorAll<HTMLElement>('[data-hx-turn]')] : []);
@@ -260,11 +226,11 @@ export function focusTurn(t: HTMLElement | undefined): void { if (!t) return; ro
 export function focusConversation(): void {
   const t = turns();
   if (t.length) focusTurn(t[t.length - 1]);
-  else S.presenceEl?.querySelector<HTMLElement>('.bt-orb-btn')?.focus();
+  else S.composer?.focus();
 }
 export const allTurns = turns;
 function turnText(t: HTMLElement): string {
-  return (ENTRY.get(t)?.msgs ?? []).map((m) => (m.kind === 'approval' ? '> ' + (m.data.title || 'approval') : m.kind === 'note' ? '' : m.text)).join('\n\n');
+  return (ENTRY.get(t)?.msgs ?? []).map((m) => (m.kind === 'approval' ? '> ' + (m.data.title || 'approval') : m.kind === 'tool' ? m.tool + ' ' + m.target : m.kind === 'file' ? m.name : m.kind === 'note' ? '' : m.text)).join('\n\n');
 }
 function turnKeys(e: KeyboardEvent): void {
   const t = (e.target as Element).closest<HTMLElement>('[data-hx-turn]');
@@ -291,21 +257,22 @@ function turnKeys(e: KeyboardEvent): void {
 }
 
 /* ───────── approval: the card layer only ───────── */
-/* A bot's approval is the kit's AskCard, approval variant (12.2, 19; screens 11 and 12): the bot's orb and "nina asks" with
-   "needs you", the ask, its quote as the sub line, what it would run in a Well, and the answers the provider can carry out: Hold to
-   allow once (the 1 s hold, owner decision; the inverted chip) and Deny (esc). "Allow all this turn" and "Always allow" need the
-   rules engine (w34/rules-engine), so they are not offered (12.2: "governed sessions and budget pauses offer once and deny only").
-   It never expires. Decided, it collapses to its one-row receipt. */
+/* A bot's approval is the kit's AskCard, approval variant, as board 11 draws it: the bot's 16 px orb and "kai asks" with the amber
+   "needs you", the ask, the rule that made it ask ("Rule: ..." in the accent, when the provider names one), what it would run in a
+   Well, and the four answers: Hold to allow once (the 1 s hold; the inverted chip), Allow all this turn, Always allow, and Deny
+   (esc). The provider can carry out once and deny; "Allow all this turn" and "Always allow" need the rules engine, so they are
+   drawn and do nothing yet (aria-disabled, the reason in their tip). It never expires. Decided, it collapses to its one-row receipt. */
+const NOT_YET = 'Approval rules are not in this build yet';
 function renderCard(b: Bot, m: ApprovalMessage): HTMLElement {
   if (m.resolved) return resolvedLine(b, m);
   const asker = bot(m.data.from ?? m.who) ?? b;
   const card = kit.askCard({
-    variant: 'standalone', state: 'needs', bot: asker, who: asker.name + ' asks', ask: m.data.title || 'Approve this step',
-    ...(m.data.quote ? { sub: m.data.quote } : {}), ...(m.data.item?.length ? { command: m.data.item.join('\n') } : {}),
-    answers: [{ label: 'Hold to allow once', primary: true, hold: true }, { label: 'Deny', keys: 'esc' }]
+    variant: 'standalone', state: 'needs', bot: { ...asker, state: 'needs' }, who: asker.name + ' asks', ask: m.data.title || 'Approve this step',
+    ...(m.data.rule ? { rule: m.data.rule } : m.data.quote ? { sub: m.data.quote } : {}), ...(m.data.item?.length ? { command: m.data.item.join('\n') } : {}),
+    answers: [{ label: 'Hold to allow once', primary: true, hold: true }, { label: 'Allow all this turn', value: 'turn', inert: NOT_YET }, { label: 'Always allow', value: 'always', inert: NOT_YET }, { label: 'Deny', value: 'deny', keys: 'esc', outline: true }]
   });
   card.addEventListener('ui:commit', () => { resolveCard(b.id, m, 'approve'); });
-  card.addEventListener('click', (e) => { const c = (e.target as Element).closest<HTMLElement>('[data-kit~="Chip"]'); if (c && !c.hasAttribute('data-hold')) resolveCard(b.id, m, 'deny'); });
+  card.addEventListener('click', (e) => { const c = (e.target as Element).closest<HTMLElement>('[data-kit~="Chip"][data-value="deny"]'); if (c) resolveCard(b.id, m, 'deny'); });
   /* KEYMAP section 6: on a card, x denies (and Esc, the Deny chip's key) */
   card.addEventListener('keydown', (e) => { if ((e.key === 'Escape' || e.key === 'x') && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); resolveCard(b.id, m, 'deny'); } });
   return el('div', { class: 'bt-cardslot' }, card);
@@ -323,120 +290,111 @@ function resolveCard(id: string, m: ApprovalMessage, action: string): void {
   bots().decide(id, m.id, ok ? 'approved' : 'denied');
 }
 
-/* ───────── composer: the library's (KEYMAP section 7) ─────────
-   The library's composer talks: the mic shows the open bot's orb listening, and while you talk the presence orb (and
-   every .ui-orb[data-bot] of that bot) takes orb2's listening reaction. The bot's chips go in its chips slot:
-   Governed (alt+G toggles governance), and its channels (opens settings). A typed "@" suggests the teammates, and a
-   teammate's `@name` is drawn as the capsule the sent message will show (mentions.ts); naming one brings it nowhere,
-   which the list's foot says. */
-const teammates = botMentions({
-  label: 'Name a teammate',
-  foot: () => (bot(S.sel)?.name ?? 'This bot') + ' reads the name. The bot you name does not see this chat.',
-  named: () => S.bots.filter((x) => x.id !== S.sel).map((x) => ({ ...x, id: x.id, name: x.name, handle: x.id })),
-  ctx
-});
+/* ───────── the composer: the kit's one-row pill and the line under it (board 11) ─────────
+   "+", the text, the mic, then the voice button that becomes send once there is text, in the bot's derived fill (18.1). The line
+   under it says how the bot runs: Governed (alt+G toggles governance), its model (alt+M opens the picker when it is not governed)
+   and, at the end, what this run has spent against its cap. Enter sends; while the bot works the button is Stop. */
+export interface RoomComposer { el: HTMLElement; input: HTMLElement; readonly value: string; setValue(t: string): void; focus(): void; setRunning(on: boolean): void }
 function buildComposer(host: HTMLElement): void {
-  /* the meter is the open bot's current run against its cap per run; paintToolbar fills it, and hides it for a bot with no cap */
-  const c = ui.composer({ placeholder: 'Message', label: 'Message', attach: true, spend: { spent: '—', cap: '—' }, bot: bot(S.sel) ?? null, orbs: () => [S.presence], mentions: teammates });
-  c.classList.add('bt-composer');
-  host.append(c);
-  const input = c.input;
-  input.setAttribute('data-hx-focus', 'composer');
-  c.addEventListener('ui:send', (e) => { send((e as CustomEvent<{ text: string }>).detail.text); });
-  c.addEventListener('ui:stop', () => stopRun());
-  input.addEventListener('input', () => typingChanged(c.value));
-  input.addEventListener('focus', () => typingChanged(c.value));
-  input.addEventListener('blur', () => { S.typing = false; settleTransient(); });
-  input.addEventListener('keydown', (e) => {
-    const code = e.code;
+  const slot = el('div', { class: 'bt-composer' });
+  host.append(slot);
+  let running = false, botId = '', sig = '';
+  const text = (): HTMLElement => slot.querySelector<HTMLElement>('.k7-composer__text') as HTMLElement;
+  const lineOf = (b: Bot): { items: Parameters<typeof kit.composer>[0]['line']; sig: string } => {
+    const gov = b.cfg.gov === 'governed';
+    const run = S.spend[b.id], cap = run?.cap ?? (b.cfg.cap ? '$' + b.cfg.cap : null), spent = run?.spent ?? (b.spent ? '$' + b.spent : null);
+    const model = b.info?.model ?? b.cfg.model;
+    const items = [
+      { label: 'Governance', value: gov ? 'Governed' : 'Not governed', icon: 'ladder', plain: true, attrs: { 'data-line': 'gov', 'data-kbd': 'alt+G', 'aria-pressed': String(gov) } },
+      ...(model ? [{ label: 'Model', value: ui.modelMark.short(model) || model, model, plain: true, attrs: { 'data-line': 'model', 'data-kbd': 'alt+M' } }] : []),
+      ...(cap && spent ? [{ label: 'Spend', value: spent + ' of ' + cap, mono: true, end: true }] : spent && run?.spent ? [{ label: 'Spend', value: spent, mono: true, end: true }] : [])
+    ];
+    return { items, sig: JSON.stringify(items) };
+  };
+  const draw = (b: Bot): void => {
+    const keep = slot.firstElementChild ? api.value : '';
+    const l = lineOf(b);
+    const c = kit.composer({ kind: 'bot', placeholder: 'Message ' + b.name, label: 'Message ' + b.name, running, line: l.items, ...(b.color ? { fill: kit.botFill(b.color) } : {}), ...(keep ? { text: keep } : {}) });
+    slot.replaceChildren(c);
+    botId = b.id; sig = l.sig;
+    text().setAttribute('data-hx-focus', 'composer');
+  };
+  const api: RoomComposer & { paint(b: Bot): void } = {
+    el: slot,
+    get input() { return text(); },
+    get value() { return text().textContent ?? ''; },
+    setValue(t) { const n = text(); n.textContent = t; n.dispatchEvent(new Event('input', { bubbles: true })); },
+    focus() { text().focus(); },
+    setRunning(on) { if (running === on) return; running = on; const b = bot(S.sel); if (b) draw(b); },
+    paint(b) { if (b.id !== botId || lineOf(b).sig !== sig) draw(b); }
+  };
+  slot.addEventListener('ui:send', (e) => { send((e as CustomEvent<{ text: string }>).detail.text); });
+  slot.addEventListener('click', (e) => {
+    const t = e.target as Element;
+    if (running && t.closest('[data-send]') && !api.value.trim()) { stopRun(); return; }
+    const item = t.closest<HTMLElement>('[data-line]'), b = bot(S.sel);
+    if (!item || !b) return;
+    if (item.dataset['line'] === 'gov') setGov(b, b.cfg.gov === 'governed' ? 'ungoverned' : 'governed');
+    else if (item.dataset['line'] === 'model') openModelMenu(item);
+  });
+  slot.addEventListener('input', () => typingChanged(api.value));
+  slot.addEventListener('focusin', () => typingChanged(api.value));
+  slot.addEventListener('focusout', () => { S.typing = false; settleTransient(); });
+  slot.addEventListener('keydown', (e) => {
+    if (!(e.target as Element).closest('.k7-composer__text')) return;
     /* ↑ in an empty composer: edit your last message */
-    if (e.key === 'ArrowUp' && !e.altKey && !e.shiftKey && !e.ctrlKey && !e.metaKey && !c.value.trim()) {
+    if (e.key === 'ArrowUp' && !e.altKey && !e.shiftKey && !e.ctrlKey && !e.metaKey && !api.value.trim()) {
       const last = [...thread(S.sel as string)].reverse().find((m) => m.who === 'you' && m.kind === 'text');
-      if (last && last.kind === 'text') { e.preventDefault(); c.setValue(last.text); c.focus(); }
+      if (last && last.kind === 'text') { e.preventDefault(); api.setValue(last.text); api.focus(); }
       return;
     }
     if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
-      if (code === 'KeyG') { e.preventDefault(); const b = bot(S.sel); if (b) setGov(b, b.cfg.gov === 'governed' ? 'ungoverned' : 'governed'); return; }
-      if (code === 'KeyM') { e.preventDefault(); openModelMenu(); return; }
-      if (code === 'KeyA') { e.preventDefault(); c.attach?.click(); return; }
+      if (e.code === 'KeyG') { e.preventDefault(); const b = bot(S.sel); if (b) setGov(b, b.cfg.gov === 'governed' ? 'ungoverned' : 'governed'); return; }
+      if (e.code === 'KeyM') { e.preventDefault(); openModelMenu(slot.querySelector<HTMLElement>('[data-line="model"]') ?? text()); }
     }
   });
-  S.composer = c;
+  S.composer = api;
+  PAINT = (b) => { api.paint(b); };
 }
-/** the bot's governance, as the composer chip, alt+G and the settings sheet all change it */
+let PAINT: ((b: Bot) => void) | null = null;
+/** the bot's governance, as the composer's line, alt+G and the settings sheet all change it */
 export function setGov(b: Bot, gov: 'governed' | 'ungoverned'): void {
   b.cfg.gov = gov;
   bots().update(b.id, { cfg: { gov } });
   refreshPresence();
   if (S.sheetOpen) openSettings(b.id, null, { keepFocus: true });
 }
-function openModelMenu(): void {
-  const b = bot(S.sel), c = S.composer; if (!b || !c) return;
-  const anchor = c.chips.querySelector<HTMLElement>('[data-value="model"]') ?? c.input;
-  const items: MenuItem[] = [{ label: 'Governed', desc: 'Starts cheap, climbs the ladder', value: 'governed', checked: b.cfg.gov === 'governed' },
-    ...bots().catalog().models.map((m): MenuItem => ({ label: m, mono: true, value: m, model: m, checked: b.cfg.gov !== 'governed' && b.cfg.model === m }))];
-  ui.menu.open(anchor, items, {
-    label: 'Model', place: 'above',
-    onClose: () => setTimeout(() => { const f = document.activeElement; if (!f || f === document.body || !f.isConnected || f.closest('.ui-menu')) c.focus(); }, 0),
+/** the model picker (the kit's Menu): Governed, then each model the catalog offers */
+function openModelMenu(anchor: HTMLElement): void {
+  const b = bot(S.sel); if (!b) return;
+  const gov = b.cfg.gov === 'governed';
+  kit.openMenu(anchor, {
+    label: 'Model', place: 'above', align: 'start',
+    entries: [{ label: 'Governed', desc: 'Starts cheap, climbs the ladder', value: 'governed', ...(gov ? { icon: 'check' } : {}) },
+      ...bots().catalog().models.map((m) => ({ label: ui.modelMark.called(m) || m, value: 'm:' + m, ...(!gov && b.cfg.model === m ? { icon: 'check' } : {}) }))],
     onSelect: (v) => {
-      if (v === 'governed') { b.cfg.gov = 'governed'; bots().update(b.id, { cfg: { gov: 'governed' } }); } else { b.cfg.gov = 'ungoverned'; b.cfg.model = v; bots().update(b.id, { cfg: { gov: 'ungoverned', model: v } }); }
+      if (v === 'governed') { b.cfg.gov = 'governed'; bots().update(b.id, { cfg: { gov: 'governed' } }); } else { b.cfg.gov = 'ungoverned'; b.cfg.model = v.slice(2); bots().update(b.id, { cfg: { gov: 'ungoverned', model: v.slice(2) } }); }
       refreshPresence(); if (S.sheetOpen) openSettings(b.id, null, { keepFocus: true });
-      setTimeout(() => c.focus(), 0);
+      setTimeout(() => S.composer?.focus(), 0);
     }
   });
 }
 function setDraft(t: string): void { const c = S.composer; if (!c) return; c.setValue(t); c.focus(); typingChanged(t); }
-function paintComposer(b: Bot): void {
-  const c = S.composer as (NonNullable<typeof S.composer> & { _bot?: string }) | null; if (!c) return;
-  if (c._bot !== b.id) { c.setBot(b); c._bot = b.id; }
-  if (!c.listening) c.input.setAttribute('data-placeholder', 'Message ' + b.name);
-  c.input.setAttribute('aria-label', 'Message ' + b.name);
-  paintToolbar(b);
-}
-export function paintToolbar(b: Bot): void {
-  const c = S.composer as (NonNullable<typeof S.composer> & { _chipSig?: string }) | null; if (!c) return;
-  const gov = b.cfg.gov === 'governed';
-  const chans = data().bots.catalog().channels.filter((ch) => b.cfg.channels[ch.id] && ch.id !== 'app').map((ch) => ch.name);
-  /* rebuild the chips only when what they say changes (an open menu may be anchored to one) */
-  const sig = [b.id, gov, b.cfg.model, chans.join(',')].join('|');
-  /* what this run spent is the plugin's own count, unknown until it says; against the bot's cap when it has one (no limit unless the owner sets one) */
-  const run = S.spend[b.id], cap = run?.cap ?? (b.cfg.cap ? '$' + b.cfg.cap : null);
-  if (cap) c.setSpend(run?.spent ?? '—', cap); else if (run?.spent) c.setSpend(run.spent, null);
-  { const capEl = c.querySelector<HTMLElement>('.ui-capacity'); if (capEl) capEl.hidden = !cap && !run?.spent; }
-  if (c._chipSig === sig) return;
-  c._chipSig = sig;
-  /* Governed is a toggle (off reads struck through); an ungoverned bot also shows its one model, which opens the picker */
-  const gchip = ui.chip({ label: 'Governed', icon: 'ladder', pressed: gov, value: gov ? 'model' : 'governed', tip: 'Governance', attrs: { 'data-kbd': 'alt+G' } });
-  gchip.addEventListener('ui:change', (e) => { e.preventDefault(); setGov(b, gov ? 'ungoverned' : 'governed'); });
-  const kids: HTMLElement[] = [gchip];
-  if (!gov) { const mc = ui.chip({ model: b.cfg.model, haspopup: 'menu', value: 'model', tip: 'Model', attrs: { 'data-kbd': 'alt+M' } }); mc.addEventListener('click', openModelMenu); kids.push(mc); }
-  if (chans.length) { const ch = ui.chip({ label: 'Also on ' + chans.join(', '), tip: 'Channels' }); ch.addEventListener('click', () => openSettings(b.id, 'channels')); kids.push(ch); }
-  c.chips.replaceChildren(...kids);
-}
+function paintComposer(b: Bot): void { PAINT?.(b); }
+export function paintToolbar(b: Bot): void { if (b.id === S.sel) PAINT?.(b); }
 function typingChanged(text: string): void {
   const has = !!(text && String(text).trim());
   S.typing = has;
-  if (has) {
-    if (S.transient !== 'listening' && !S.runs.has(S.sel as string)) { S.transient = 'listening'; refreshPresence(); }
-    const inp = S.composer?.input;
-    if (inp && S.follow) {
-      let r: { left: number; top: number; width: number; height: number } = inp.getBoundingClientRect();
-      const sel = getSelection(); if (sel && sel.rangeCount && sel.anchorNode && inp.contains(sel.anchorNode)) { const rr = sel.getRangeAt(0).getBoundingClientRect(); if (rr.width || rr.left) r = { left: rr.left, top: rr.top, width: 0, height: rr.height || r.height }; }
-      S.follow.hold(r.left + r.width / 2, r.top + r.height / 2);
-    }
-  } else settleTransient();
+  if (has) { if (S.transient !== 'listening' && !S.runs.has(S.sel as string)) S.transient = 'listening'; } else settleTransient();
 }
-function settleTransient(): void {
-  if (S.transient === 'listening') { S.transient = null; refreshPresence(); }
-  S.follow?.release();
-}
+function settleTransient(): void { if (S.transient === 'listening') S.transient = null; }
 
 /* ───────── a run: the bot thinking, replying and working on what you asked ─────────
    One run per bot, so bots keep working while you switch; mod+. or Esc in the composer stops the open bot's run.
    A message can come from this tab or from the dock: either way the provider owns the thread and the reply. */
 function send(text: string): void {
   const b = bot(S.sel); if (!b) return;
-  S.typing = false; S.follow?.release();
+  S.typing = false;
   bots().send(b.id, text, 'bots');
 }
 export function stopRun(quiet?: boolean, id?: string): boolean {

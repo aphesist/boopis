@@ -95,6 +95,14 @@ function parse(raw: string): string {
   return words.join(' ');
 }
 
+/** the model's name beside its provider's mark, as the v7 boards write it ("sonnet 5.5" after the Claude mark, board 11 and S17): the
+    readable name without its family's brand word, which the mark already says, in lower case */
+export function shortName(ref: ModelRef | null | undefined): string {
+  const name = modelName(ref);
+  const brand = FAMILIES.find((f) => f.re.test(splitRef(ref).model.toLowerCase()))?.brand;
+  return (brand && name.toLowerCase().startsWith(brand.toLowerCase() + ' ') ? name.slice(brand.length + 1) : name).toLowerCase();
+}
+
 /** the provider's service or plan, as the secondary text under a model: 'Claude subscription'. The table first; else the
     engine's own name for it (`model.options`); else the slug read as words. */
 export function providerName(slug: string | null | undefined, engineName?: string | null): string {

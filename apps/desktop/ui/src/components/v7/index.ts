@@ -23,7 +23,7 @@ const html = {
   card: blocks.card, block: blocks.block, menu: blocks.menu, menuRow: blocks.menuRow, optionRow: blocks.optionRow, listRow: blocks.listRow, sectionHead: blocks.sectionHead,
   notice: blocks.notice, systemLine: blocks.systemLine, bubble: blocks.bubble, well: blocks.well, disclosure: blocks.disclosure, turnFoot: blocks.turnFoot,
   timeSeparator: blocks.timeSeparator, emptyState: blocks.emptyState, list: blocks.list,
-  toolRow: thread.toolRow, askCard: thread.askCard, filesCard: thread.filesCard, queue: thread.queue, diffView: thread.diffView, composer: thread.composer,
+  toolRow: thread.toolRow, askCard: thread.askCard, filesCard: thread.filesCard, fileCard: thread.fileCard, queue: thread.queue, diffView: thread.diffView, composer: thread.composer,
   windowChrome: surfaces.windowChrome, titlePill: surfaces.titlePill, page: surfaces.page, pane: surfaces.pane, dialog: surfaces.dialog, rail: surfaces.rail, notch: surfaces.notch, dock
 };
 type Html = typeof html;
@@ -83,7 +83,7 @@ export type Kit = typeof kit;
 export type { ButtonOpts, IconButtonOpts, ChipOpts, SegmentedOpts, SegItem, SelectorItemOpts, SwitchOpts, FieldOpts, KbdOpts, TooltipOpts } from './controls';
 export type { ChromeOpts, ChromeParts, PageOpts, PaneOpts, DialogOpts, RailOpts, RailBot, RailGroup, NotchOpts } from './surfaces';
 export type { DockOpts, DockBot, DockKind } from './dock';
-export type { ToolRowOpts, AskCardOpts, AskAnswer, FilesCardOpts, FileRow, QueueOpts, DiffViewOpts, DiffLine, DiffComment, ComposerOpts, LineItem } from './thread';
+export type { ToolRowOpts, AskCardOpts, AskAnswer, FilesCardOpts, FileCardOpts, FileRow, QueueOpts, DiffViewOpts, DiffLine, DiffComment, ComposerOpts, LineItem } from './thread';
 export type { CardOpts, RowOpts, BlockOpts, MenuOpts, MenuEntry, MenuRowOpts, OptionRowOpts, ListRowOpts, ListOpts, SectionHeadOpts, NoticeOpts, SystemLineOpts, BubbleOpts, WellOpts, DisclosureOpts, StepOpts, TurnFootOpts, TimeSeparatorOpts, EmptyStateOpts } from './blocks';
 export type { AvatarOpts, InlineChipOpts, MarkOpts, StatusWordOpts, BadgeOpts, StatusLineOpts } from './inline';
 export type { NotifyOpts } from './notify';

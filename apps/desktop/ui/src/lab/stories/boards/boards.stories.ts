@@ -1,0 +1,48 @@
+/* The approved boards as lab stories (docs/design/v7/boards; tests/lab/boards.json maps each board to its story): each state boots the
+   whole app, the real modules, on the board's own content (board-fixtures.ts), in the state the board draws. `pnpm lab:board <board>`
+   draws the board from its source beside this state and measures the difference; a screen is done when they are the same, dark
+   and light. Later boards add a fixture, a state here and a row in boards.json. */
+import type { AppCtx, State, Story } from '../../types';
+import { board11, boardS17 } from '../../board-fixtures';
+
+const MOCK = { url: '/__boards/screen.html?s=bot11', note: 'the approved v7 board itself, drawn from its source' };
+
+const bots: Story = {
+  id: 'boards/bots', title: 'Boards: the Bots tab', area: 'bots', kind: 'page', covers: ['page:board-11'], mock: MOCK,
+  states: {
+    '11 a bot\'s chat, the rail, the details': {
+      tags: ['typical', 'owner'],
+      note: 'board 11: the rail with kai open, the title pill, the thread with its approval waiting, the one-row composer and its line, the details pane',
+      app: {
+        provider: { sessions: 'none', patch: board11 },
+        setup: async (c: AppCtx) => {
+          c.hx.setState({ tab: 'bots', left: 'rail', right: 'open' });
+          await c.wait(300);
+          c.hx.emit('hx:bot-select', { id: 'kai', from: 'lab' });
+          await c.wait(900);
+        }
+      },
+      /* the board draws the last reply with its hover actions showing */
+      force: [{ sel: '#hx-view-bots [data-hx-turn][data-kind="bot"]:last-of-type', state: 'hover' }]
+    } satisfies State
+  }
+};
+
+const sessions: Story = {
+  id: 'boards/sessions', title: 'Boards: the Sessions tab', area: 'composer', kind: 'page', covers: ['page:board-S17'], mock: { url: '/__boards/screen.html?s=newSess&mk=a&usage=1', note: MOCK.note },
+  states: {
+    'S17 a new session': {
+      tags: ['typical', 'owner'],
+      note: 'board S17: the open sidebar as an inbox, the logomark and the greeting, the launch row, Waiting on you, the limit notice, the composer and its hint line, the dock',
+      app: {
+        provider: { patch: boardS17 },
+        setup: async (c: AppCtx) => {
+          c.hx.setState({ tab: 'session', left: 'open', right: 'closed' });
+          await c.wait(900);
+        }
+      }
+    } satisfies State
+  }
+};
+
+export default [bots, sessions];

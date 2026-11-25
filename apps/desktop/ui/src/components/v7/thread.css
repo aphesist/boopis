@@ -17,17 +17,26 @@
 .k7-tool__body > .k7-steps { margin: 0; padding-inline: var(--pad-text); }
 /* the attached AskCard is the approval's head, ask and answers set into the tool row's own Block (21.3: same chips, same amber
    word): no surface of its own, so its chips sit on the tool row's 8 inset */
-.k7-ask[data-variant="attached"] { padding: 0; background: none; box-shadow: none; max-width: none; }
+.k7-ask[data-variant="attached"] { padding: 0; background: none; box-shadow: none; width: auto; }
 
-/* ── AskCard (9) ── */
-.k7-ask { display: flex; flex-direction: column; gap: var(--sp-2); width: 100%; max-width: var(--bubble-max); }
-.k7-ask__head { display: flex; align-items: center; gap: var(--gap-s); min-height: var(--ctl-s); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); min-width: 0; }
+/* ── AskCard (9): the boards' .qcard (kit.css, botscreens.js `ask`): a Block as wide as a bubble may be, 13; its head 12 --text-dim
+   with the asker's 16 orb or mark and the amber word at the end, 4 above the ask (14/20), 8 above the answers; a rule or sub line
+   (12 --text-dim, one line) sits 4 under the ask; the answers are 28 chips 6 apart, on the Block's own 8 inset ── */
+.k7-ask { display: flex; flex-direction: column; width: min(100%, var(--bubble-max)); font-size: var(--fs-s); }
+.k7-ask__head { display: flex; align-items: center; gap: var(--gap-s); margin-bottom: var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); min-width: 0; }
 .k7-ask__who { flex: 1 1 auto; }
-.k7-ask__ask { margin: 0; font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); overflow-wrap: anywhere; }
-.k7-ask__sub { margin: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.k7-ask__answers { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-.k7-ask__answers .k7-chip > .k7-keys { margin-inline-start: var(--gap-xs); }
-.k7-ask__answers .k7-chip .k7-kbd { min-width: 0; height: auto; padding: 0; background: none; color: inherit; opacity: .7; }
+.k7-ask__ask { margin: 0 0 var(--sp-2); font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); overflow-wrap: anywhere; }
+.k7-ask__sub { margin: calc(-1 * var(--sp-1)) 0 var(--sp-2); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k7-ask__rule { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
+.k7-ask > .k7-well { margin: 0 0 var(--sp-2); }
+.k7-ask__answers { display: flex; flex-wrap: wrap; gap: var(--gap-s); }
+/* the outlined chip (Deny) and its key: the boards' `.chip.out` and the 18 tall kbd 2 after the word */
+.k7-chip[data-outline] { background: transparent; box-shadow: inset 0 0 0 var(--hl) var(--line-strong); }
+.k7-ask__answers .k7-chip > .k7-keys { margin-inline-start: var(--gap-hair); }
+.k7-ask__answers .k7-chip .k7-kbd { height: var(--badge-h); }
+/* an answer that is drawn and does nothing yet looks as the board draws it; only the pointer says it cannot be taken */
+.k7-ask__answers .k7-chip[aria-disabled="true"] { cursor: default; }
+.k7-ask__answers .k7-chip[aria-disabled="true"]:active { transform: none; }
 /* choices: lettered option rows 36 tall, radius 22 - 8 = 14 (21.3), a 20 letter tile (radius 6, 6% fill; chosen in the accent) */
 .k7-ask__choices { display: flex; flex-direction: column; gap: var(--gap-hair); }
 .k7-ask__choice { display: flex; align-items: center; gap: var(--gap-row); height: var(--ctl); padding: 0 var(--sp-2); border-radius: calc(var(--r-block) - var(--pad-block)); font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); text-align: start; min-width: 0; }
@@ -36,6 +45,29 @@
 .k7-ask__letter { display: grid; place-items: center; flex: none; width: var(--letter); height: var(--letter); border-radius: var(--r-tip); background: var(--hover); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
 .k7-ask__letter > .k7-ic { width: var(--fs-xs); height: var(--fs-xs); }
 .k7-ask__choice[data-chosen] .k7-ask__letter { background: var(--accent); color: var(--on-accent); }
+
+/* ── ToolRow, a bot's (boards 11 and 17, kit.css `.tool`): radius 18, padding 10 12, as wide as a bubble may be; its head 13 --text-dim,
+   the glyph, the tool's name in 500 --text, what it was called on, a chevron at the end ── */
+.k7-btool { --sq-bg: var(--bg-3); --sq-line: var(--line); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line);
+  align-self: flex-start; width: min(100%, var(--bubble-max)); padding: var(--gap-row) var(--sp-3); box-sizing: border-box; border-radius: var(--r-bubble); min-width: 0; }
+.k7-btool[data-sq-on]:not(#sq) { box-shadow: none; }
+.k7-btool__head { display: flex; align-items: center; gap: var(--gap-s); width: 100%; font-size: var(--fs-s); line-height: var(--lh-m); color: var(--text-dim); text-align: start; min-width: 0; border-radius: var(--r-xs); }
+.k7-btool__head:not([aria-expanded]) { cursor: default; }
+.k7-btool__name { flex: none; font-weight: 500; color: var(--text); }
+.k7-btool__target { flex: 0 1 auto; }
+.k7-btool > .k7-btool__body { display: none; }
+.k7-btool[data-open] > .k7-btool__body { display: block; margin-top: var(--sp-2); }
+.k7-btool__body > .k7-steps { margin: 0; }
+
+/* ── FileCard (boards 11 and 17, kit.css `.file`): 260 wide, radius 18, padding 10 12; a 32 x 40 tile at --fill-2 (radius 6) with the
+   file glyph, the name 14/20 and one mono 12 line ── */
+.k7-file { --sq-bg: var(--bg-3); --sq-line: var(--line); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line);
+  align-self: flex-start; display: flex; align-items: center; gap: var(--gap-row); width: var(--file-w); max-width: 100%; padding: var(--gap-row) var(--sp-3); box-sizing: border-box; border-radius: var(--r-bubble); min-width: 0; }
+.k7-file[data-sq-on]:not(#sq) { box-shadow: none; }
+.k7-file__ic { display: grid; place-items: center; flex: none; width: var(--sp-6); height: var(--pill-h); border-radius: var(--r-tip); background: var(--fill-2); color: var(--icon-quiet); }
+.k7-file__text { display: flex; flex-direction: column; min-width: 0; }
+.k7-file__name { font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); }
+.k7-file__meta { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
 
 /* ── FilesCard (10): rows 26, mono 12 ── */
 .k7-files { display: flex; flex-direction: column; gap: var(--sp-1); width: 100%; }
@@ -110,9 +142,13 @@
 .k7-composer[data-kind="notch"] .k7-composer__box { min-height: var(--ctl); padding: var(--gap-s); gap: var(--gap-s); border-radius: var(--r-bubble); }
 .k7-composer[data-kind="notch"] .k7-composer__box > .k7-ib { width: var(--notch-ctl); height: var(--notch-ctl); }
 .k7-composer[data-kind="notch"] .k7-composer__text { min-height: var(--notch-ctl); padding-block: var(--gap-hair); }
-/* the line under it: 12 --text-dim, 8 below, items left and the cost at the end; an empty line takes no space */
-.k7-composer__line { display: flex; align-items: center; gap: var(--sp-1); padding: var(--sp-2) var(--sp-2) 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); min-width: 0; white-space: nowrap; }
-.k7-composer__end { font-size: var(--fs-xs); color: var(--text-dim); padding-inline-end: var(--sp-1); }
-.k7-composer__end + .k7-composer__end { margin-inline-start: var(--sp-3); }
-.k7-composer__hint { padding-inline-start: var(--sp-1); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; }
+/* the line under it (kit.css `.composer-under`): 12 --text-dim, 8 under the pill and 12 in from its sides, its items 12 apart, the cost
+   at the end; an item is a 16 glyph (or the model's 12 mark) and its words, 4 apart (5 after a mark); an empty line takes no space */
+.k7-composer__line { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3) 0; font-size: var(--fs-xs); line-height: var(--lh-m); color: var(--text-dim); min-width: 0; white-space: nowrap; }
+.k7-composer__item { display: inline-flex; align-items: center; gap: var(--sp-1); flex: none; font-size: var(--fs-xs); line-height: var(--lh-m); color: var(--text-dim); white-space: nowrap; border-radius: var(--r-xs); }
+.k7-composer__item[data-model] { gap: var(--pad-kbd); }
+.k7-composer__item > svg { flex: none; color: currentColor; }
+@media (hover: hover) and (pointer: fine) { .k7-composer__item:hover { color: var(--text); } }
+.k7-composer__end { font-size: var(--fs-xs); color: var(--text-dim); }
+.k7-composer__hint { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; }
 .k7-composer + .k7-queue, .k7-queue + .k7-composer { margin-top: var(--sp-2); }

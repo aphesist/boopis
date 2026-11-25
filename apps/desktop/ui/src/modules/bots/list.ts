@@ -223,7 +223,7 @@ export function drawRail(): void {
   const sig = size + '|' + S.bots.map((b) => b.id + b.color + b.shape).join() + '|' + S.groups.map((g) => g.id + ':' + g.members.map((m) => m.profile).join('.')).join();
   if (sig === RAIL.sig && host.firstElementChild) { for (const b of S.bots) patchTile(b.id); return; }
   RAIL.sig = sig;
-  const tiles = S.bots.map((b) => { const s = ui.botState(b); return { ...b, current: S.view === 'bot' && b.id === S.sel, needs: !!s.attention, working: s.busy, attrs: { 'data-bot': b.id, 'aria-label': ui.botLabel(b) } }; });
+  const tiles = S.bots.map((b) => { const s = ui.botState(b); const current = S.view === 'bot' && b.id === S.sel; return { ...b, current, needs: !!s.attention && !current   /* the open bot's tile carries no flag (board 11): its ask is in front of you */, working: s.busy, attrs: { 'data-bot': b.id, 'aria-label': ui.botLabel(b) } }; });
   /* a room's cluster: its members that are bots, the rest in "+N"; its tooltip its name and who is in it (owner decision, 23 November) */
   const groups = S.groups.map((g) => {
     const members = g.members.map((m) => bot(m.profile)).filter((x): x is Bot => !!x);
@@ -238,9 +238,10 @@ function patchTile(id: string): void {
   if (!b || !t) return;
   const s = ui.botState(b);
   t.setAttribute('aria-label', ui.botLabel(b));
-  t.toggleAttribute('data-needs', !!s.attention);
+  const needs = !!s.attention && !(S.view === 'bot' && b.id === S.sel);
+  t.toggleAttribute('data-needs', needs);
   const flag = t.querySelector('.k7-flag');
-  if (s.attention && !flag) t.append(frag('<span class="k7-flag" aria-hidden="true"></span>')); else if (!s.attention && flag) flag.remove();
+  if (needs && !flag) t.append(frag('<span class="k7-flag" aria-hidden="true"></span>')); else if (!needs && flag) flag.remove();
   const orb = t.querySelector<HTMLElement>('orb-avatar');
   if (orb) { paintLook(orb, lookOf(b)); restReact(orb, s.reaction); }
 }
