@@ -339,3 +339,6 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-turn__acts .k7-ib:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
 /* inline code in a bubble takes the kit's InlineChip code metrics (12.2: 13 on --chip), so it never makes its line taller (R-inline-1) */
 .k7-bubble .ui-code { font-size: var(--fs-s); line-height: 1; padding: var(--pad-code-y) var(--pad-code-x); }
+/* a bubble never runs past its turn: up to 560, and never wider than the column (a long path or name wraps or ellipsizes inside) */
+.bt-turn .k7-bubble { min-width: 0; max-width: min(var(--bubble-max), 100%); }
+.bt-turn .k7-gutter > .k7-bubble { max-width: min(var(--bubble-max), 100%); }
