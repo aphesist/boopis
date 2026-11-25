@@ -10,24 +10,24 @@
   "h": 172
  },
  "focus@dark": {
-  "sha": "46ba373ea915ec6805bdb8f372770fd30135d24c",
+  "sha": "5de0ebc5555092887acc1fd0fe62fdde5fcda173",
   "w": 664,
-  "h": 84
+  "h": 108
  },
  "focus@light": {
-  "sha": "ae398afa7293d3df84cc2f03042692f4533a85cb",
+  "sha": "a1f7c60b616f4f0a4238c619f908dc59838bf716",
   "w": 664,
-  "h": 84
+  "h": 108
  },
  "hover@dark": {
-  "sha": "49e561a8a4721a0aec233fb97da703777f1f9366",
+  "sha": "ad3b1edc3e3cc53e598a8ca726d6f7920dc888e1",
   "w": 664,
-  "h": 84
+  "h": 108
  },
  "hover@light": {
-  "sha": "e93f5c7f823c3b9cb465251ed8b69922a268b8f7",
+  "sha": "9e759e03b046d91c53936c51e647b7ab1ce4b8d7",
   "w": 664,
-  "h": 84
+  "h": 108
  },
  "long@dark": {
   "sha": "8a2801eacdea325347662ce0e0dfb3c0e7e52e91",
@@ -40,14 +40,14 @@
   "h": 644
  },
  "not-now@dark": {
-  "sha": "90a08696815cfddde62a5d11f565978fd0e4f390",
+  "sha": "ccc467e540cfc732836d60bd9170998d64c08d98",
   "w": 664,
-  "h": 54
+  "h": 66
  },
  "not-now@light": {
-  "sha": "d938749494d0a381ee4310e9e5e489125e5700e8",
+  "sha": "860b06722fe64c9e8a032aa83d2ed6ff0b306ccd",
   "w": 664,
-  "h": 54
+  "h": 66
  },
  "nothing-to-do@dark": {
   "sha": "531beda520ffbfb7bc94e645f6c602da2b719458",
@@ -60,24 +60,24 @@
   "h": 176
  },
  "on-a-finished-turn@dark": {
-  "sha": "49e561a8a4721a0aec233fb97da703777f1f9366",
+  "sha": "ad3b1edc3e3cc53e598a8ca726d6f7920dc888e1",
   "w": 664,
-  "h": 84
+  "h": 108
  },
  "on-a-finished-turn@light": {
-  "sha": "e93f5c7f823c3b9cb465251ed8b69922a268b8f7",
+  "sha": "9e759e03b046d91c53936c51e647b7ab1ce4b8d7",
   "w": 664,
-  "h": 84
+  "h": 108
  },
  "pressed@dark": {
-  "sha": "49e561a8a4721a0aec233fb97da703777f1f9366",
+  "sha": "ad3b1edc3e3cc53e598a8ca726d6f7920dc888e1",
   "w": 664,
-  "h": 84
+  "h": 108
  },
  "pressed@light": {
-  "sha": "e93f5c7f823c3b9cb465251ed8b69922a268b8f7",
+  "sha": "9e759e03b046d91c53936c51e647b7ab1ce4b8d7",
   "w": 664,
-  "h": 84
+  "h": 108
  },
  "refused@dark": {
   "sha": "a6783d35b799d36031354d3a6812da6d3d2d772f",

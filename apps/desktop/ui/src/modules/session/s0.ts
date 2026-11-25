@@ -24,6 +24,9 @@ let listening = false;
 /** make `el` a v7 root in the app's scheme, and keep it in step when the scheme changes (wave C: until the app's root is v7) */
 export function asV7<T extends HTMLElement>(el: T): T {
   kit.applyTheme(el, { theme: mode() });
+  /* a v7 island on a v6 page is its own ground: its tokens resolve here, not on the page's root (the lab's token check reads
+     [data-ground] as such a place, as it does the dock's black) */
+  el.setAttribute('data-ground', 'v7');
   void loadFont('Geist'); void loadFont('Geist Mono');
   roots.add(new WeakRef(el));
   if (!listening) {
