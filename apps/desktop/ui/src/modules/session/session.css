@@ -142,3 +142,16 @@
 /* a turn the person sent to one model outside governed mode: the quiet mark sits beside the model, before the time */
 .ss-ungov { margin-inline-start: var(--sp-1); }
 /* the layer the "@" menu opens from: the composer's box, not interactive */
+
+/* ── wave S0 on the v7 kit (modules/session/s0.ts): each piece is a v7 root of its own until the screen moves (wave C) ── */
+/* the new session's canvas (S41 A, the kit's pattern): the logomark, the greeting, the launch row, Waiting on you */
+.ss-s0-canvas { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); margin: auto; padding-block: var(--sp-7); width: 100%; max-width: var(--col-w); box-sizing: border-box; }
+.ss-s0-canvas > .k7-logomark { margin-block-end: var(--sp-1); }
+.ss-s0-canvas > .k7-list, .ss-s0-canvas > .k7-shead { align-self: stretch; }
+.ss-s0-hello { margin: 0; font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 500; color: var(--text-strong); text-align: center; }
+.ss-s0-launch { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }
+/* a line the thread says about itself (SystemLine): centred in the column */
+.ss-s0-line { display: flex; justify-content: center; padding-block: var(--sp-2); }
+/* the rewind under a finished turn (TurnFoot, session); its actions show on hover and focus, as the kit's */
+.ss-s0-foot { padding-block-start: var(--sp-1); }
+.ss-s0-why, .ss-s0-more { margin: var(--sp-2) 0 0; color: var(--text-dim); }

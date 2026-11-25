@@ -21,6 +21,10 @@ import { setAttention, changed } from './state';
 import { surface } from '../mods/surfaces';
 import { UNKNOWN_MODEL, markAnswered, stampUngoverned, syncDividers } from './attribution';
 import { resolvePaths, wireRefs } from '../chat/refs';
+import { REWIND_BASE, launchCanvas, lineEl, rewindFoot, rewindSheet, showSheet, watchTyping } from './s0';
+import type { RewindSheet } from './s0';
+import { openCarefulFor, openEffort, openFolder, launchView } from './launch';
+import type { ThreadLine } from '../../data';
 
 /** per-turn data the keyboard and the clipboard need */
 interface TurnInfo { md(): string; kind: 'user' | 'agent'; text?: string | undefined }
@@ -194,7 +198,97 @@ function assistantTurn(a: AgentTurn): HTMLElement {
   if (a.council) p.before(councilBlock(a.council));
   if (VIEW.blank) showShip(false);
   if (VIEW.diffOpen) refreshDiff();
+  placeFoot(t, a);
   return t;
+}
+
+/* ───────── S0: the lines about the thread, the rewind on a finished turn and its sheet (ADR-0058) ───────── */
+const controls = () => data().sessionControls;
+/** the first agent turn that kept a ship offers "Rewind to before this session" too */
+function firstKept(): string | null {
+  const t = sessions().conversation(VIEW.current).snapshot().turns.find((x): x is AgentTurn => x.role === 'assistant' && !!x.kept?.length);
+  return t?.id ?? null;
+}
+function placeFoot(t: HTMLElement, a: AgentTurn): void {
+  t.querySelectorAll(':scope .ss-s0-foot').forEach((n) => n.remove());
+  const c = controls();
+  if (!c || !a.kept?.length || a.status === 'running') return;
+  const avail = c.capabilities.get().session.rewind;
+  const list = sessions().conversation(VIEW.current).snapshot().turns.filter((x): x is AgentTurn => x.role === 'assistant');
+  const n = list.findIndex((x) => x.id === a.id) + 1;
+  const last = a.kept[a.kept.length - 1] as string;
+  const body = $('.ui-entry__body', t);
+  if (firstKept() === a.id) body.append(rewindFoot({ first: true, avail, onRewind: () => { void openRewind(null, REWIND_BASE); } }));
+  body.append(rewindFoot({ first: false, avail, onRewind: () => { void openRewind(last, 'Rewind files to after turn ' + n); } }));
+}
+function syncFoot(col: HTMLElement, turnId: string): void {
+  const t = col.querySelector<HTMLElement>('[data-turn-id="' + turnId + '"]');
+  const a = sessions().conversation(VIEW.current).snapshot().turns.find((x): x is AgentTurn => x.role === 'assistant' && x.id === turnId);
+  if (t && a) placeFoot(t, a);
+}
+function syncFeet(): void {
+  const col = VIEW.col; if (!col) return;
+  for (const t of sessions().conversation(VIEW.current).snapshot().turns) if (t.role === 'assistant' && t.status !== 'running') syncFoot(col, t.id);
+}
+function placeLine(col: HTMLElement, l: ThreadLine): void {
+  col.querySelector('.ss-s0-line[data-line-id="' + l.id + '"]')?.remove();
+  const node = lineEl(l, (ship) => { void undoRewind(ship); });
+  const after = l.afterTurn ? col.querySelector<HTMLElement>('[data-turn-id="' + l.afterTurn + '"]') : null;
+  if (!after) { if (l.afterTurn) col.append(node); else col.prepend(node); return; }
+  let at: Element = after;
+  while (at.nextElementSibling?.classList.contains('ss-s0-line')) at = at.nextElementSibling;
+  at.after(node);
+}
+let sheet: RewindSheet | null = null;
+async function openRewind(shipId: string | null, title: string): Promise<void> {
+  const c = controls(), id = VIEW.current;
+  if (!c) return;
+  sheet?.close();
+  const head = c.head(id) ?? undefined;
+  const plan = await c.rewind(id, shipId, { dryRun: true, ...(head ? { expectHead: head } : {}) });
+  sheet = rewindSheet(plan, title, {
+    onConfirm: () => {
+      void c.rewind(id, shipId, head ? { expectHead: head } : {}).then((r) => {
+        sheet?.close();
+        if (r.status === 'refused') { sheet = rewindSheet(r, title, { onConfirm: () => undefined }); showSheet(sheet); }
+        else { ui.announce('Files rewound'); syncFeet(); }
+      });
+    },
+    closed: () => { sheet = null; }
+  });
+  showSheet(sheet);
+}
+async function undoRewind(shipId: string): Promise<void> {
+  const c = controls(), id = VIEW.current;
+  if (!c) return;
+  const head = c.head(id) ?? undefined;
+  const r = await c.rewind(id, shipId, { undo: true, ...(head ? { expectHead: head } : {}) });
+  if (r.status === 'refused') { sheet?.close(); sheet = rewindSheet(r, 'Undo the rewind', { onConfirm: () => undefined }); showSheet(sheet); }
+  else { ui.announce('Rewind undone'); syncFeet(); }
+}
+
+/* ───────── S0: the new session's canvas (S41 A): the launch row until the first message ───────── */
+let stopWatch: (() => void) | null = null;
+function canvas(): HTMLElement | null {
+  const c = controls();
+  if (!c) return null;
+  const n = launchCanvas(launchView(), {
+    folder: () => { void openFolder(); },
+    model: (a) => { VIEW.composer?.openModelMenu?.(a); },
+    effort: (a) => { openEffort(a); },
+    careful: (a) => { openCarefulFor(a, 'below'); }
+  });
+  n.classList.add('ss-s0-canvas--view');
+  stopWatch?.();
+  if (VIEW.composer) stopWatch = watchTyping(n, VIEW.composer.input);
+  return n;
+}
+/** the canvas again, after a launch setting changed (only while the session has not started) */
+export function redrawCanvas(): void {
+  const col = VIEW.col, old = col?.querySelector('.ss-s0-canvas--view');
+  if (!col || !old) return;
+  const fresh = canvas();
+  if (fresh) old.replaceWith(fresh);
 }
 
 /* a turn that is still running: a live call number and steps, then the answer arrives on the feed */
@@ -249,6 +343,7 @@ function finishLive(id: string, ev: Extract<ConversationEvent, { type: 'turn-fin
   $('.ss-acts button', t).addEventListener('click', () => { void copyText(mdOf(p)); });
   VIEW.composer?.setRunning(false); surface.onWorking?.(false);
   rove(t);
+  syncFoot(VIEW.col as HTMLElement, id);
   if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
   ui.announce(ev.stopped ? 'Stopped' : 'Answer ready');
 }
@@ -268,7 +363,9 @@ export function renderConversation(): void {
   const snap = conv.snapshot().turns;
   const withBlank = snap.find((t): t is AgentTurn => t.role === 'assistant' && !!t.blank);
   VIEW.blank = withBlank?.blank?.answer ?? null;
-  if (!snap.length) {
+  const launch = !snap.length && controls() ? canvas() : null;
+  if (launch) col.append(launch);
+  else if (!snap.length) {
     const s = sessions().list.get().find((x) => x.id === VIEW.current);
     col.append(ui.empty({ title: s?.project ? 'What should change in ' + s.project + '?' : data().info.live ? 'What should change?' : 'What should change in ' + (s ? s.project : 'billing-api') + '?', text: 'Words I will act on get a dashed underline as you type. Click one, or press alt and down arrow on it, to change how I read it.' }));
   } else for (const t of snap) { if (t.role === 'user') col.append(userTurn(t.text, t.at, t.attachments)); else if (t.status === 'running') liveTurn(t); else col.append(assistantTurn(t)); }
@@ -285,6 +382,7 @@ function onConversationEvent(ev: ConversationEvent): void {
   const col = VIEW.col; if (!col) return;
   if (ev.type === 'turn-added') {
     col.querySelector('.ui-empty')?.remove();
+    col.querySelector('.ss-s0-canvas--view')?.remove(); stopWatch?.(); stopWatch = null;
     if (ev.turn.role === 'user') { col.append(userTurn(ev.turn.text, ev.turn.at, ev.turn.attachments)); if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight; }
     else liveTurn(ev.turn);
   } else if (ev.type === 'step-added') {
@@ -432,6 +530,8 @@ export function mountView(root: HTMLElement): void {
   });
   followZone(host, () => VIEW.scroll, () => root, '--ss-comp-h')();
   requestAnimationFrame(() => c.focus());
+  const c0 = controls();
+  if (c0) { c0.capabilities.subscribe(() => { syncFeet(); redrawCanvas(); }); c0.launch.subscribe(() => { redrawCanvas(); }); }
   provide('stop', (d) => { if (d.tab !== 'session' || !isRunning(VIEW.current)) return false; sessions().stop(VIEW.current); return true; });
   provide('find', (d) => (d.tab === 'session' ? openFind() : false));
   on('hx:nav', (d) => {

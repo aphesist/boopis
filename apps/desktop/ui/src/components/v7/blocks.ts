@@ -58,9 +58,13 @@ export function menuRow(o: MenuRowOpts): string {
 }
 
 /* ── OptionRow (20): a two-line radio row (a permission step, an import pick) ── */
-export interface OptionRowOpts { label: string; meaning: string; chosen?: U<boolean>; value?: U<string>; ticks?: U<{ of: number; on: number }>; attrs?: U<Attrs> }
+export interface OptionRowOpts {
+  label: string; meaning: string; chosen?: U<boolean>; value?: U<string>; ticks?: U<{ of: number; on: number }>;
+  /** a choice that cannot be made now: it stays in its place, and its second line says why (`meaning` carries the reason) */
+  disabled?: U<boolean>; attrs?: U<Attrs>;
+}
 export function optionRow(o: OptionRowOpts): string {
-  return '<button class="k7-reset k7-orow"' + kitAttrs('OptionRow', { type: 'button', role: 'menuitemradio', tabindex: '-1', 'aria-checked': String(!!o.chosen), 'data-value': o.value ?? o.label, ...(o.attrs ?? {}) }) + '>' +
+  return '<button class="k7-reset k7-orow"' + kitAttrs('OptionRow', { type: 'button', role: 'menuitemradio', tabindex: '-1', 'aria-checked': String(!!o.chosen), 'aria-disabled': o.disabled ? 'true' : null, 'data-value': o.value ?? o.label, ...(o.attrs ?? {}) }) + '>' +
     '<span class="k7-orow__ring" aria-hidden="true"></span><span class="k7-orow__text"><span class="k7-orow__name">' + esc(o.label) +
     (o.ticks ? '<span class="k7-ticks" aria-hidden="true">' + Array.from({ length: o.ticks.of }, (_, i) => '<i' + (i < (o.ticks?.on ?? 0) ? ' data-on' : '') + '></i>').join('') + '</span>' : '') +
     '</span><span class="k7-orow__meaning">' + esc(o.meaning) + '</span></span></button>';
@@ -200,12 +204,17 @@ export function disclosure(o: DisclosureOpts): string {
 }
 
 /* ── TurnFoot (37): under a finished reply: model, time, cost; a session's Undo, Edit from here, Fork on hover ── */
-export interface TurnFootOpts { kind?: U<'bot' | 'session'>; model?: U<ModelRef>; modelName?: U<string>; time?: U<string>; cost?: U<string>; attrs?: U<Attrs> }
+export interface TurnFootAction { label: string; value: string; disabled?: U<boolean>; tip?: U<string> }
+export interface TurnFootOpts {
+  kind?: U<'bot' | 'session'>; model?: U<ModelRef>; modelName?: U<string>; time?: U<string>; cost?: U<string>;
+  /** a session's actions (default Undo, Edit from here, Fork); each button carries `data-value` */ actions?: U<readonly TurnFootAction[]>; attrs?: U<Attrs>;
+}
 export function turnFoot(o: TurnFootOpts): string {
   const k = o.kind ?? 'bot';
   const meta = (o.model ? '<span class="k7-foot__model">' + markHTML(o.model, { size: 14, label: false }) + esc(o.modelName ?? '') + '</span>' : '') +
     (o.time ? '<span class="k7-mono">' + esc(o.time) + '</span>' : '') + (o.cost ? '<span class="k7-mono">' + esc(o.cost) + '</span>' : '');
-  const acts = k === 'session' ? '<span class="k7-foot__acts">' + ['Undo', 'Edit from here', 'Fork'].map((l) => '<button class="k7-reset k7-foot__btn" type="button">' + esc(l) + '</button>').join('') + '</span>' : '';
+  const list: readonly TurnFootAction[] = o.actions ?? ['Undo', 'Edit from here', 'Fork'].map((l) => ({ label: l, value: l }));
+  const acts = k === 'session' ? '<span class="k7-foot__acts">' + list.map((x) => '<button class="k7-reset k7-foot__btn" type="button"' + attrs({ 'data-value': x.value, disabled: !!x.disabled, 'data-tip': x.tip }) + '>' + esc(x.label) + '</button>').join('') + '</span>' : '';
   return '<div class="k7-foot"' + kitAttrs('TurnFoot', { 'data-kind': k, ...(o.attrs ?? {}) }) + '>' + meta + acts + '</div>';
 }
 

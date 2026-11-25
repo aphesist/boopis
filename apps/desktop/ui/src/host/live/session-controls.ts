@@ -107,7 +107,11 @@ export function createControls(deps: ControlsDeps): LiveControls {
   const capsOf = (uiId: string): SessionCapabilities => capabilitiesFrom(inputFor(uiId));
   const capabilities = store<SessionCapabilities>(capsOf(''));
   const launchView = (uiId: string): LaunchSettings => {
-    const l = launchOf(uiId), { step, fellBack } = launchStep(l.pick, capsOf(uiId));
+    const l = launchOf(uiId);
+    /* a started session's step is its own, as the plugin says it */
+    const own = (details.model(uiId).describe?.session as SessionDescribe | null | undefined)?.careful;
+    if (deps.started(uiId) && isStep(own)) return { folder: details.model(uiId).info?.cwd ?? l.folder, careful: own, effort: l.effort, fellBack: false };
+    const { step, fellBack } = launchStep(l.pick, capsOf(uiId));
     return { folder: l.folder, careful: step, effort: l.effort, fellBack };
   };
   const launch = store<LaunchSettings>({ folder: null, careful: DEFAULT_CAREFUL, effort: null, fellBack: false });

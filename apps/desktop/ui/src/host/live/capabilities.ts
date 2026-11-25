@@ -52,13 +52,13 @@ const NEEDS_GATE = new Set<CarefulStep>(['auto_edits', 'auto']);
 
 /** why a gate cannot let changes apply on their own in this folder, or null when it can */
 function gateWhy(i: CapsInput): string | null {
-  if (!i.launchFolder && !i.started) return 'Choose a folder first: this step needs the project\'s gate.';
+  if (!i.launchFolder && !i.started) return 'Choose a folder first.';
   const f = i.folder;
-  if (!f?.folder) return 'The project\'s gate could not be read.';
+  if (!f?.folder) return 'This project\'s gate could not be read.';
   if (f.folder.error) return 'The folder could not be read: ' + f.folder.error + '.';
-  if (!f.folder.gate?.command) return 'This project has no gate command, so changes cannot apply on their own.';
-  if (!f.folder.gate.trusted) return 'This project\'s gate command is not trusted yet, so changes cannot apply on their own.';
-  if (f.sandbox && f.sandbox.ok === false) return 'The gate cannot run here: ' + (f.sandbox.why ?? 'its sandbox is not available') + '.';
+  if (!f.folder.gate?.command) return 'Needs a gate command in this project.';
+  if (!f.folder.gate.trusted) return 'Needs you to trust this project\'s gate.';
+  if (f.sandbox && f.sandbox.ok === false) return 'The gate cannot run here: ' + (f.sandbox.why ?? 'no sandbox') + '.';
   return null;
 }
 

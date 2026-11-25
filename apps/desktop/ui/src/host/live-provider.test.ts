@@ -393,7 +393,7 @@ describe('the live provider: the conversation stream, from recorded frames', () 
       provider = createLiveProvider({ defaultFolder: '/work/proj', client, now: () => NOW, mock: createMockProvider({ simulate: false }) });
       await provider.ready;
       expect(provider.sessionControls?.capabilities.get().launch.create.ok).toBe(false);
-      const id = provider.sessions.create('');
+      const id = provider.sessions.create('').id;
       const seen: ConversationEvent[] = [];
       provider.sessions.conversation(id).subscribe((e) => seen.push(e));
       provider.sessions.send(id, 'start', META);
