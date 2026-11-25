@@ -2,7 +2,7 @@
 import { kit } from '@boopis/ui';
 import { fill, stage } from '../../story';
 import type { Story } from '../../types';
-import { KAI, LONG_BOT, MOSS, NINA } from './_bots';
+import { KAI, LONG_BOT, MOSS, NINA, ORB3_MOTION } from './_bots';
 
 const all = (): HTMLElement => {
   const w = document.createElement('div'); w.className = 'k7-list'; w.setAttribute('role', 'listbox'); w.setAttribute('aria-label', 'Rows');
@@ -20,8 +20,8 @@ const all = (): HTMLElement => {
 export default {
   id: 'kit/list-row', title: 'ListRow', area: 'components', kind: 'component', covers: ['kit.listRow', 'kit.list'],
   states: {
-    typical: stage(['typical', 'variant'], ({ root }) => { fill(root, all()); }, { width: 380 }),
-    hover: stage(['hover'], ({ root }) => { fill(root, all()); }, { width: 380, force: [{ sel: '[data-kit~="ListRow"]', state: 'hover' }] }),
+    typical: stage(['typical', 'variant'], ({ root }) => { fill(root, all()); }, { width: 380, allow: { 'orb.edges': ORB3_MOTION } }),
+    hover: stage(['hover'], ({ root }) => { fill(root, all()); }, { width: 380, force: [{ sel: '[data-kit~="ListRow"]', state: 'hover' }], allow: { 'orb.edges': ORB3_MOTION } }),
     long: stage(['long'], ({ root }) => {
       fill(root, kit.list({ label: 'Long rows', rows: [{ variant: 'session', title: 'Reconcile the invoices against the ledger before the quarterly close', sub: '/home/someone/code/billing' },
         { variant: 'bot', title: LONG_BOT.name, sub: 'Watching the staging deploy and its health checks', bot: LONG_BOT }] }));

@@ -2,7 +2,7 @@
 import { kit } from '@boopis/ui';
 import { fill, forced, stage } from '../../story';
 import type { Story } from '../../types';
-import { KAI } from './_bots';
+import { KAI, ORB3_MOTION } from './_bots';
 
 const typical = stage(['typical', 'variant'], ({ root }) => { fill(root, kit.windowChrome({ title: 'kai', bot: KAI })); }, { width: 1200 });
 export default {
@@ -11,7 +11,7 @@ export default {
     typical,
     ...forced(typical, '.k7-search-hint, [data-kit-part~="TitlePill"]'),
     'compact rail': stage(['variant'], ({ root }) => { fill(root, kit.windowChrome({ title: 'kai', bot: KAI, rail: 'b' })); }, { width: 1000 }),
-    'title running': stage(['variant', 'loading'], ({ root }) => { fill(root, kit.windowChrome({ title: 'kai', bot: KAI, running: 'Writing the changelog' })); }, { width: 1200 }),
+    'title running': stage(['variant', 'loading'], ({ root }) => { fill(root, kit.windowChrome({ title: 'kai', bot: KAI, running: 'Writing the changelog' })); }, { width: 1200, allow: { 'orb.edges': ORB3_MOTION } }),
     'search pill': stage(['variant'], ({ root }) => { fill(root, kit.windowChrome({ title: 'Fix the flaky billing test', search: 'pill' })); }, { width: 1200 }),
     'search button': stage(['variant'], ({ root }) => { fill(root, kit.windowChrome({ title: 'Fix the flaky billing test', search: 'button', windowControls: false })); }, { width: 1200 }),
     long: stage(['long'], ({ root }) => { fill(root, kit.windowChrome({ title: 'Reconcile the invoices against the ledger before the quarterly close and the audit', running: 'Running the tests' })); }, { width: 1200 })
