@@ -174,11 +174,22 @@ Until a 0.3.0 feature exists, its control on a 0.2.0 screen is disabled with a r
 | Boards | `origin/w33/boards-archive`; sources also in `docs/design/v7/boards/src/` on `w33/repass` |
 | Builders' rules and step table | `docs/design/v7/REPASS.md` on `w33/repass` |
 | Done | Boards 11, 17, S17: match (0.05–0.19%, live orbs and the dock's half pixel) and wired |
-| Running | Board 12 with the K02 sidebar, mentions, attachment chips, the rail button options |
+| Done (7d41b42f) | Board 12 thread (0.02–0.04% outside orbs), the K02 sidebar (0.00%), the held strip (0.00%); the room on the kit composer; "@" menu and capsules; attachment chips; a room details pane (derived); v6 presence, huddle, glance, mentions deleted. The lead looked at 12-room dark, K02 sidebar light, the rail options and the chips crop |
+| Running | The coverage map (COVERAGE.md); a started session: boards 10 and S20, then S23. CI dispatched on 7d41b42f for an early signal (lab goldens are expected to fail until phase 2's gate) |
 | Stopped, kept on their branches | `w33/onboarding`, `w33/settings-store` (first-attempt work; logic may be reused, looks are redone) |
 | Paused by the owner | The launch film (`w28/launch-video`, uncommitted edits in `w28-launch`) |
 
+**Not verified at 7d41b42f:** smoke tests updated blind; the reworked bots stories not run; no real engine.
+**Known gaps:** the sidebar does not resize (the spec says 88–400; the app never had it); no drop or paste of files
+in the Bots composers; a room's cost and room-level approvals have no provider data yet.
+**Dropped by the board 12 step because no board draws them (asked of the owner):** the huddle fold, the "to nina"
+line, presence detail (tool-in-use words, the needs-you row).
+
 **Open questions for the owner**
+0. Asked 25 Nov with the board 12 sheets: the rail tab button (A, B or C); restore the huddle fold, "to" line and
+   presence detail or leave them out; how a running room or bot is stopped (the boards draw the voice button, the
+   app shows Stop when busy and empty); member name colours (the board's fixed colours or the contrast-safe ones);
+   file chips with the bare name or a relative path.
 1. In 0.2.0, a control whose feature comes in 0.3.0 (worktree selector, "Get more usage"): disabled with a reason
    (current), or hidden?
 2. The rail's orb size: board 11 (matched) against the recorded "rail 36".
