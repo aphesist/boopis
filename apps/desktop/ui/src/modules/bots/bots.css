@@ -31,84 +31,14 @@
   margin-left: calc(var(--hx-col-left, 0px) - var(--hx-view-left, 0px));
 }
 
-/* the presence header: orb 40 in the margin, name 16/600, role 12 quiet, state; settings on the right */
-.bt-presence {
-  position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: calc(var(--hx-margin-w, var(--margin-w)) - var(--sp-1)) minmax(0, 1fr) auto;
-  align-items: center; padding: var(--sp-6) var(--sp-1) var(--sp-5); background: var(--bg-2);   /* --sp-1 at the sides holds the orb's and the settings button's focus ring inside the header (R-corner-4); the name stays on the margin's edge */
-}
-[data-margin="off"] .bt-presence { grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--sp-3); }
-.bt-p-orb { width: 40px; height: 40px; display: grid; place-items: center; }
-.bt-orb-btn:focus-visible { outline-offset: 2px; }   /* a 2px ring 2px off the orb reaches 4px, --sp-1: the header's side padding holds it */
-.bt-p-text { min-width: 0; }
-.bt-p-name {
-  margin: 0; font-size: var(--fs-l); font-weight: 600; line-height: var(--lh-tight); color: var(--text-strong);
-  /* a long name wraps to two lines at most (hyphens first, anywhere if it must), then an ellipsis; the tooltip has it whole */
-  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere;
-}
-.bt-p-line { margin: var(--sp-1) 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-xs); color: var(--text-quiet); }
-.bt-p-state { display: inline-flex; align-items: center; gap: 6px; }
-.bt-p-sched { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-2xs); color: var(--text-quiet); border-radius: var(--r-xs); min-height: var(--hit-min); padding: 0 4px; margin: 0 -4px; transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease); }
-.bt-p-sched:hover { color: var(--text); background: var(--hover); transition-duration: var(--dur-1); }
-.bt-p-sched .ui-icon { width: 12px; height: 12px; }
-
-/* the thread: library entries; the turn is the focus stop (the ring comes from ui-root) */
-.bt-who-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the thread: each turn is a focus stop (the ring comes from the root) */
 .bt-log { display: flex; flex-direction: column; }
-.bt-log > [data-hx-turn]:not(.bt-turn) { border-radius: var(--r-s); }
-.bt-cardslot { width: min(100%, 520px); min-width: 0; --r-card: var(--r-s); }   /* the card sits flush in the entry's bottom corners, so it takes the entry's radius (--r-s, set on .bt-log > [data-hx-turn] below, no padding between: its --r-in is that radius; the stamp follows) and not its own 20 (R-corner-3, R-corner-8); min-width 0 lets a card narrower than its content shrink inside a narrow column */
-.bt-resolved { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--text-dim); }
-.bt-resolved-ico { display: inline-grid; color: var(--text-quiet); }
-.bt-resolved-ico.is-ok { color: var(--ok); }
-.bt-resolved-ico .ui-icon { width: 14px; height: 14px; }
-.bt-resolved time { font-size: var(--fs-2xs); color: var(--text-quiet); }
-.bt-empty { justify-items: start; text-align: left; padding: 0; margin-left: var(--hx-margin-w, var(--margin-w)); }
-[data-margin="off"] .bt-empty { margin-left: 0; }
-.bt-ideas { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
-
+.bt-empty { justify-items: start; text-align: left; padding: 0; }
 /* a group's kanban board takes the thread's place: the board's chooser and its state line, then a section of rows for each column */
 .bt-board { display: grid; gap: var(--sp-3); padding-bottom: var(--sp-6); }
 .bt-board-bar { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 .bt-board-status { margin: 0; }
 .bt-board-body { display: grid; gap: var(--sp-3); }
-/* ───────── the ledger (ledger.ts): whom a message is for, unread, the actions in the margin (who is at work: presence.css) ───────── */
-.bt-log > [data-hx-turn]:not(.bt-turn) { --r-outer: var(--r-s); --pad: var(--sp-1); --corner-size: 24px; }   /* a corner container: the actions in the margin sit in its corner (R-corner-3) */
-.bt-log > [data-hx-turn]:not(.bt-turn):has(.bt-acts) { min-height: calc(var(--ctl-s) + var(--sp-6) + var(--sp-4)); }   /* the margin holds the name, the time and the actions: a one-line reply is as tall as that */
-.bt-log > [data-hx-turn] .ui-entry__body:not(:has(.bt-cardslot)) { padding: var(--sp-1) var(--sp-1) var(--sp-1) 0; box-sizing: border-box; }   /* what sits at the body's edge keeps its focus ring inside the entry */
-.bt-log > [data-hx-turn] .ui-callno:has(.bt-acts) { align-self: stretch; }
-.bt-to b { font-weight: 400; color: var(--text-dim); }
-.bt-to.is-you b { color: var(--text-strong); }
-.bt-unread { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-5) 0 0; font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); }
-.bt-unread::after { content: ''; flex: 1; height: 1px; background: var(--line); }
-.bt-unread + [data-hx-turn] { margin-top: var(--sp-3); }
-.bt-jump { position: absolute; left: 50%; bottom: calc(100% + var(--sp-3)); transform: translateX(-50%); }
-.bt-jump[hidden] { display: none; }
-.bt-acts { display: flex; gap: 0; margin: auto 0 var(--corner-inset, 0px) var(--corner-inset, 0px); opacity: 0; transition: opacity var(--dur-1) var(--ease); }
-.bt-log > [data-hx-turn]:is(:hover, :focus-within) .bt-acts { opacity: 1; }
-.bt-acts .ui-ib:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }
-[data-margin="off"] .bt-acts { margin: var(--corner-inset, 0px) var(--corner-inset, 0px) var(--corner-inset, 0px) auto; }
-[data-margin="off"] .bt-log > [data-hx-turn] .ui-entry__body:not(:has(.bt-cardslot)) { padding-left: var(--sp-1); }
-.bt-log > [data-hx-turn]:not(.bt-turn):has(.bt-cardslot) { --pad: 0px; }   /* a card sits flush in the entry's bottom corners (see .bt-cardslot) */
-
-/* the composer (the library's) sits on centerX, above the dock */
-.bt-composer-zone {
-  position: absolute; z-index: 3;
-  left: calc(var(--hx-center-x, 50vw) - var(--hx-view-left, 0px)); width: var(--hx-col-w, var(--col-w)); max-width: calc(100% - 2 * var(--gutter));
-  bottom: calc(var(--hx-dock-space, 0px) + var(--composer-gap));
-  transform: translateX(-50%);
-}
-/* the conversation's edges (R-scroll-9; .ui-scroll--ground). Its foot lies under the composer and the dock, so a strip of the
-   room's ground lies over everything from the top of the composer's zone (the hint, who works next, the held messages, the
-   composer) to the window's foot, faded in over --scroll-fade above it: nothing shows behind the composer, its lines or the dock,
-   and an entry read to the end sits --sp-5 above the zone however the zone grows (followZone, ledger.ts). The head pinned at the
-   top fades what passes under it the same way, once the room is scrolled. */
-.bt-room::after {
-  content: ''; position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; pointer-events: none;
-  height: calc(var(--bt-composer-h, 96px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--scroll-fade));
-  background: linear-gradient(to bottom, transparent, var(--bg-2) var(--scroll-fade));
-}
-.bt-presence::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: var(--scroll-fade); background: linear-gradient(var(--bg-2), transparent); pointer-events: none; opacity: 0; }
-.bt-scroll[data-more-top] .bt-presence::after { opacity: 1; }
-
 /* ================================================================ new bot (bots' own form) */
 .bt-new-scroll { padding-bottom: calc(var(--hx-dock-space, 0px) + var(--sp-6)); }
 .bt-new-col { position: relative; padding: var(--sp-6) 0; }
@@ -189,13 +119,6 @@ orb-avatar.is-live { cursor: pointer; }
   .bt-sheet { width: 100%; }
   .bt-sheet-corner { display: none; }
 }
-/* a narrow window: a group's head buttons take a row of their own under the name, so the name and its members are never squeezed
-   to a letter (the head has five, the board's text button among them; the kit has no board glyph to make it an icon) */
-@media (max-width: 640px) {
-  .bt-presence.bt-ghead { grid-template-columns: auto minmax(0, 1fr); row-gap: var(--sp-2); }
-  .bt-presence.bt-ghead > .bt-p-actions { grid-column: 1 / -1; justify-self: end; }
-}
-
 /* drawn corners (DESIGN-SYSTEM.md §8; bound at start-up with HX.ui.squircle.auto): the line is --sq-line */
 .bt-sugg { --sq-line: var(--hair); }
 .bt-sugg:hover { --sq-line: var(--line); }
@@ -247,15 +170,6 @@ orb-avatar.is-live { cursor: pointer; }
 
 /* ================================================================ groups (team chat) */
 .bt-groups { display: flex; flex-direction: column; }
-/* a group's members (the kit's stack) sit on the sidebar's frame; in the rail a group is a cluster of them (stack.ts), the row's
-   one item, centred like an orb: as tall as it is wide, never wider than two orbs, so it keeps --sp-1 or more inside the row's
-   fill and its ring. The groups sit under a rule there, where the open sidebar has its "Groups" heading: a hairline as wide as a
-   row (R-line-4: a divider stops at the content inset, 8px in), --sp-2 above and below it */
-.bt-ghead .bt-p-orb { width: auto; min-width: 40px; }
-.bt-gname { width: min(360px, 100%); font-size: var(--fs-l); font-weight: 600; }
-.bt-working { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-2); min-height: calc(var(--fs-xs) * 1.5); font-size: var(--fs-xs); line-height: 1.5; color: var(--text-dim); }
-.bt-working:empty { display: none; }
-.bt-working--note { color: var(--text-quiet); }
 .bt-members { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); margin-top: var(--sp-4); width: 100%; }
 [data-margin="off"] .bt-members { grid-template-columns: minmax(0, 1fr); }
 .bt-member {
@@ -271,96 +185,67 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-new-col .bt-go-row { margin-top: var(--sp-4); }
 .bt-new-col > .bt-p-name { margin: 0 0 var(--sp-2); }
 
-/* ───────── the huddle (huddle.ts): the members' own rounds, folded into one entry with compact messages on a spine ───────── */
-.bt-stack { display: inline-flex; align-items: center; }
-.bt-stack > * + * { margin-left: calc(var(--sp-1) * -1); }
-.bt-huddle-entry .ui-callno__who { gap: 0; }
-.bt-huddle-entry .ui-disclosure { align-self: flex-start; max-width: 100%; }
-.bt-huddle__body { display: flex; flex-direction: column; gap: var(--sp-5); width: 100%; min-width: 0; padding-top: var(--sp-2); }
-.bt-huddle__body[hidden] { display: none; }
-.bt-hmsg { position: relative; min-width: 0; }
-.bt-hmsg:not(:last-child)::after { content: ''; position: absolute; left: var(--sp-2); top: calc(var(--sp-5) + var(--sp-1)); bottom: calc(var(--sp-5) * -1); width: 1px; background: var(--line); }
-.bt-hmsg__head { display: flex; align-items: center; gap: var(--sp-1); min-height: 20px; font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
-.bt-hmsg__name { font: 500 var(--fs-s)/1 var(--sans); letter-spacing: 0; color: var(--text-strong); }
-.bt-hmsg__to b { font-weight: 400; color: var(--text-dim); }
-.bt-hmsg > .ui-md { margin-top: var(--sp-1); padding-left: var(--sp-5); box-sizing: border-box; }
-.bt-huddle__body > .bt-unread { margin: 0; }
-.bt-hint { margin: 0 0 var(--sp-2); text-align: center; font: 400 var(--fs-xs)/var(--lh-small) var(--sans); color: var(--text-quiet); }
-.bt-hint[hidden] { display: none; }
-/* the messages a group holds back while its members work (group-queue.ts): the kit's group and rows, above the composer */
-.bt-queue { margin: 0 0 var(--sp-2); }
-.bt-queue[hidden] { display: none; }
-.bt-outside { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-1); }
-.bt-outside__row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); margin: 0; font: 400 var(--fs-xs)/var(--lh-small) var(--sans); color: var(--text-quiet); }
-
-/* ================================================================ v7: the Bots chat and rooms on the kit (DESIGN-SYSTEM.md v7 19)
-   The conversation is the 640 column (the shell's --hx-col-w from v7's --col-w) of the kit's Bubbles: no header in the room (the
-   chrome's title pill carries the orb and the name, and opens the details), turns of bubbles 6 apart within a sender and 16 between,
-   yours on the right, the bot's on the left; a room's names and orbs in the kit's gutter. */
-.bt-room .bt-col { padding-top: var(--sp-3); }
-.bt-room .bt-log { display: flex; flex-direction: column; gap: var(--sp-4); }
-.bt-room .bt-log > .k7-time + [data-hx-turn] { margin-top: calc(-1 * var(--sp-1)); }
+/* ================================================================ boards 11, 17 and 12: a bot's chat and a room (docs/design/v7/boards:
+   botscreens.js bot11, work17, room12; kit.css). Placement only: every look here is the kit's.
+   The thread is the 640 column, centred in the view, its first line 72 under the window's top: a time separator, then turns (each
+   one focus stop). In a bot's chat: 16 between you and the bot, 6 between its pieces (bubbles, tool rows, file cards), its AskCard
+   14 under what it follows. In a room: a member's name 14 under what it follows, a line the room says 12 over and under it, a
+   member's approval in the gutter 14 under what that member said. The status line is 12 under the last of them. The composer is
+   720 wide (600 beside the open details pane), centred, 24 over the window's foot; what is said about it (a hint, held messages)
+   sits over it, 8 apart. */
+#hx-view-bots { background: var(--bg-2); }   /* the Bots view's ground runs up under the floating chrome (shell.css) */
+.bt-room .bt-scroll { padding-bottom: calc(var(--bt-composer-h, 68px) + var(--composer-bottom) + var(--sp-5)); }
+.bt-room .bt-col { width: var(--col-w); max-width: calc(100% - 2 * var(--sp-5)); margin: 0 auto; padding-top: calc(var(--thread-top) - var(--drag-h)); }
+.bt-log > .k7-time { align-self: center; }
+.bt-log > .k7-time[data-unread] { align-self: stretch; }
+.bt-log > [data-hx-turn] + [data-hx-turn] { margin-top: var(--sp-4); }
+.bt-log > .k7-status { margin-top: var(--sp-3); }
 .bt-turn { position: relative; display: flex; flex-direction: column; min-width: 0; }
-.bt-turn > .bt-turn__body { gap: var(--gap-s); }
-.bt-turn > .bt-turn__body > * + * { margin-top: 0; }
 .bt-turn:focus-visible { outline-offset: var(--focus-off); }
+.bt-turn > .bt-turn__body > * + * { margin-top: var(--gap-s); }
+.bt-turn > .bt-turn__body > * + .bt-cardslot { margin-top: calc(var(--gap-s) + var(--sp-2)); }
 .bt-request { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bt-turn .k7-bubble > .ui-md { font-size: var(--fs-l); line-height: var(--lh-l); }
 .bt-turn .k7-bubble > .ui-md > :first-child { margin-top: 0; }
 .bt-turn .k7-bubble > .ui-md > :last-child { margin-bottom: 0; }
-/* the hover actions beside a bot's last bubble (screen 11: copy, then what exists) */
-/* in a bot's chat beside the last bubble (copy); in a room, under the member's bubbles, on their line (copy, reply, open its chat) */
-.bt-turn__acts { position: absolute; bottom: var(--sp-1); left: calc(var(--bubble-max) + var(--sp-2)); display: flex; gap: var(--gap-hair); opacity: 0; transition: opacity var(--dur-1) var(--ease-out); }
-.bt-group .bt-turn__acts { position: static; align-self: flex-start; margin: var(--gap-xs) 0 0 var(--gutter); }
-.bt-turn:is(:hover, :focus-within) > .bt-turn__acts { opacity: 1; }
-@media (max-width: 1100px) { .bt-turn__acts { position: static; align-self: flex-start; margin-top: var(--gap-xs); } }
-.bt-room .bt-cardslot, .bt-turn .bt-cardslot { width: 100%; max-width: var(--bubble-max); }
-.bt-room .bt-resolved { display: block; }
-.bt-room .bt-empty { margin-left: 0; padding: var(--sp-6) 0; }
-.bt-ideas { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
-/* whom a message is for (owner decision: "to you"): after the member's name, or on your turn's top line */
-.k7-byline > .bt-to { color: var(--text-dim); }
-.bt-turn__to { align-self: flex-end; margin-bottom: var(--gap-xs); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
-/* the Bots view is a v7 root (modules/shell/chrome.ts); its ground runs up under the floating chrome (shell.css) */
-#hx-view-bots { background: var(--bg-2); }
-/* the conversation's column: v7's 640 (--col-w) inside the layout's column, on its centre line */
-.bt-room .bt-col { width: min(var(--hx-col-w, var(--col-w)), var(--col-w)); margin-left: calc(var(--hx-col-left, 0px) - var(--hx-view-left, 0px) + (var(--hx-col-w, var(--col-w)) - min(var(--hx-col-w, var(--col-w)), var(--col-w))) / 2); }
-/* the turn's actions keep their ring inside themselves: a turn has no padding to hold it */
-.bt-turn__acts .k7-ib:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
-/* inline code in a bubble takes the kit's InlineChip code metrics (12.2: 13 on --chip), so it never makes its line taller (R-inline-1) */
-.k7-bubble .ui-code { font-size: var(--fs-s); line-height: 1; padding: var(--pad-code-y) var(--pad-code-x); }
 /* a bubble never runs past its turn: up to 560, and never wider than the column (a long path or name wraps or ellipsizes inside) */
 .bt-turn .k7-bubble { min-width: 0; max-width: min(var(--bubble-max), 100%); }
-.bt-turn .k7-gutter > .k7-bubble { max-width: min(var(--bubble-max), 100%); }
-/* a message to you (owner decision, recoloured amber by v7's 15.2): the kit's Bubble draws the edge and the wash; the v6 markdown's own
-   red edge and wash stand down inside it, and the "you" capsule takes the amber */
-.k7-bubble .ui-md[data-to-you]::before, .k7-bubble .ui-md[data-to-you]::after { content: none; }
-.k7-bubble .ui-mention--you { --red: var(--owe); --red-text: var(--owe-text); --red-soft: var(--owe-soft); }
-
-/* ================================================================ board 11: a bot's chat (docs/design/v7/boards: botscreens.js bot11, kit.css)
-   The thread is the 640 column, centred in the view, its first line 72 under the window's top; a time separator, then turns: 16
-   between you and the bot, 6 between a bot's pieces (bubbles, tool rows, file cards), its AskCard 14 under what it follows, the
-   status line 12 under the last turn. The composer is 720 wide (600 beside the open details pane), centred, 24 over the window's foot. */
-.bt-room:not(.bt-group) .bt-scroll { padding-bottom: calc(var(--bt-composer-h, 68px) + var(--composer-bottom) + var(--sp-5)); }
-.bt-room:not(.bt-group) .bt-col { width: var(--col-w); max-width: calc(100% - 2 * var(--sp-5)); margin: 0 auto; padding-top: calc(var(--thread-top) - var(--drag-h)); }
-.bt-room:not(.bt-group) .bt-log { gap: 0; }
-.bt-room:not(.bt-group) .bt-log > .k7-time { align-self: center; }
-.bt-room:not(.bt-group) .bt-log > .k7-time + [data-hx-turn] { margin-top: 0; }
-.bt-room:not(.bt-group) .bt-log > [data-hx-turn] + [data-hx-turn] { margin-top: var(--sp-4); }
-.bt-room:not(.bt-group) .bt-turn > .bt-turn__body { gap: 0; }
-.bt-room:not(.bt-group) .bt-turn > .bt-turn__body > * + * { margin-top: var(--gap-s); }
-.bt-room:not(.bt-group) .bt-turn > .bt-turn__body > * + .bt-cardslot { margin-top: calc(var(--gap-s) + var(--sp-2)); }
-.bt-room:not(.bt-group) .bt-log > .k7-status { margin-top: var(--sp-3); }
-/* the hover actions: beside the turn's last bubble, on its middle (kit.css `.row` and `.hoverbar`) */
+.bt-cardslot { width: 100%; max-width: var(--bubble-max); min-width: 0; }
+.bt-resolved { display: block; }
+.bt-room .bt-empty { padding: var(--sp-6) 0; }
+.bt-ideas { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+/* the hover actions: beside the turn's last bubble, on its middle (kit.css `.row` and `.hoverbar`), shown while the turn is hovered or holds the focus */
 .bt-turn__row { display: flex; align-items: center; gap: var(--sp-2); align-self: stretch; min-width: 0; }
 .bt-turn__row > .k7-bubble { flex: 0 1 auto; }
-.bt-turn__row > .bt-turn__acts { position: static; display: inline-flex; flex: none; gap: var(--gap-hair); margin-left: var(--gap-s); color: var(--icon-quiet); }
-.bt-turn:is(:hover, :focus-within) > .bt-turn__body > .bt-turn__row > .bt-turn__acts { opacity: 1; }
-.bt-room:not(.bt-group) .bt-composer-zone { left: 50%; width: var(--composer-w); max-width: calc(100% - 2 * var(--sp-5)); bottom: var(--composer-bottom); transform: translateX(-50%); }
-.hx[data-right="open"] .bt-room:not(.bt-group) .bt-composer-zone { width: var(--composer-w-pane); }
-.bt-room:not(.bt-group)::after { height: calc(var(--bt-composer-h, 68px) + var(--composer-bottom) + var(--scroll-fade)); }
-/* the open bot's details pane (details.ts): the kit's Pane fills the window's pane */
+.bt-turn__acts { display: inline-flex; flex: none; gap: var(--gap-hair); margin-left: var(--gap-s); color: var(--icon-quiet); opacity: 0; transition: opacity var(--dur-1) var(--ease-out); }
+.bt-turn:is(:hover, :focus-within) .bt-turn__acts { opacity: 1; }
+.bt-turn__acts .k7-ib:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }   /* a turn has no padding to hold the ring */
+/* a room (board 12) */
+.bt-group .bt-log > [data-hx-turn] + [data-hx-turn][data-kind="bot"] { margin-top: 0; }   /* the member's name keeps its own 14 (the kit's gutter) */
+.bt-group .bt-log > .k7-sys { margin-block: var(--sp-3); }
+.bt-group .bt-turn .k7-gutter { align-self: stretch; }
+/* a member's bubble keeps its own width (up to 560 in the gutter): its hover actions hang beside it, past the column when it is wide */
+.bt-group .bt-turn__row { position: relative; align-self: flex-start; max-width: 100%; }
+.bt-group .bt-turn__row > .bt-turn__acts { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); }
+.bt-group .bt-log > .bt-ask { margin-top: var(--gap-s); align-self: stretch; }
+.bt-group .bt-ask > .bt-cardslot { margin-top: var(--sp-2); }
+.bt-outside { align-self: flex-start; margin-left: var(--gutter); }
+/* the composer and what sits over it */
+.bt-composer-zone { position: absolute; z-index: 3; left: 50%; width: var(--composer-w); max-width: calc(100% - 2 * var(--sp-5)); bottom: var(--composer-bottom); transform: translateX(-50%); display: flex; flex-direction: column; }
+.hx[data-right="open"] .bt-composer-zone { width: var(--composer-w-pane); }
+.bt-zone-slot { margin-bottom: var(--sp-2); }
+.bt-zone-slot[hidden], .bt-jump[hidden] { display: none; }
+.bt-jump { align-self: center; margin-bottom: var(--sp-2); }
+/* the conversation's foot lies under the composer: a strip of the room's ground lies over everything from the top of the composer's
+   zone to the window's foot, faded in over --scroll-fade above it, so nothing shows behind the composer or its lines (R-scroll-9) */
+.bt-room::after {
+  content: ''; position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; pointer-events: none;
+  height: calc(var(--bt-composer-h, 68px) + var(--composer-bottom) + var(--scroll-fade));
+  background: linear-gradient(to bottom, transparent, var(--bg-2) var(--scroll-fade));
+}
+/* the details pane (details.ts, group-details.ts): the kit's Pane fills the window's pane */
 .bt-details { position: absolute; inset: 0; }
 .bt-details > .k7-pane { width: 100%; height: 100%; }
+.bt-details .k7-row > .k7-field { flex: 0 1 60%; min-width: 0; }
 /* the line over the thread for what no board places yet (the made-outside mark, New session with a live bot); nothing when there is neither */
 .bt-topline { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl-s); margin-bottom: var(--sp-2); }

@@ -68,6 +68,9 @@ export const section = (title: string, cardHTML: string, count?: string): string
 export interface PaneOpts {
   variant?: U<'details' | 'tools'>; open?: U<boolean>; overlay?: U<boolean>; title?: U<string>; bot?: U<BotLike>; tab?: U<string>; sideChat?: U<boolean>;
   body?: U<string>; label?: U<string>; attrs?: U<Attrs>;
+  /** details of a room: its members' stack (at 32, the orbs still) heads the pane in place of one orb, and there is no Activity |
+      Library (a room has no library); no board draws a room's details (an owner question): it follows a bot's */
+  members?: U<readonly BotLike[]>;
 }
 export function pane(o: PaneOpts): string {
   const v = o.variant ?? 'details';
@@ -76,6 +79,10 @@ export function pane(o: PaneOpts): string {
     const tabs: SegItem[] = [{ value: 'diff', label: 'Diff' }, { value: 'files', label: 'Files' }, { value: 'terminal', label: 'Terminal' }, { value: 'pr', label: 'PR' }, ...(o.sideChat ? [{ value: 'chat', label: 'Side chat' }] : [])];
     return '<aside class="k7-pane"' + a + '><div class="k7-pane__grip" role="separator" aria-orientation="vertical" aria-label="Resize the tools" tabindex="0" aria-valuenow="520" aria-valuemin="356" aria-valuemax="900"></div>' +
       '<div class="k7-pane__tabs">' + segmented({ label: 'Tools', items: tabs, value: o.tab ?? 'diff', variant: 'tabs' }) + '<span class="k7-grow"></span>' + iconButton({ icon: 'close', label: 'Close the tools', variant: 'tinted' }) + '</div>' +
+      '<div class="k7-pane__body">' + (o.body ?? '') + '</div></aside>';
+  }
+  if (o.members) {
+    return '<aside class="k7-pane"' + a + '><div class="k7-pane__head">' + kitStack(o.members, 32, { max: 6, surface: '--bg-pane' }) + '<h2 class="k7-pane__name">' + esc(o.title ?? '') + '</h2></div>' +
       '<div class="k7-pane__body">' + (o.body ?? '') + '</div></aside>';
   }
   return '<aside class="k7-pane"' + a + '><div class="k7-pane__head">' + (o.bot ? orbHtml({ ...o.bot, state: 'idle', attention: null }, { size: 64, live: true, motion: 'lively', mode: 'fixed', surface: '--bg-pane' }) : '') + '<h2 class="k7-pane__name">' + esc(o.title ?? '') + '</h2>' +

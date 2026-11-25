@@ -409,5 +409,5 @@ export function blockHTML(b: Block, ctx: MarkdownCtx = {}): string {
 
 /** a whole text to HTML: the prose wrapper and its blocks */
 export function markdownHTML(text: string, ctx: MarkdownCtx = {}, o: { class?: string } = {}): string {
-  return '<div class="' + cx('ui-prose ui-md', o.class) + '"' + (addressesYou(text, ctx) ? ' data-to-you' : '') + '>' + splitBlocks(text).map((b) => blockHTML(b, ctx)).join('') + '</div>';
+  return '<div class="' + cx('ui-prose ui-md', o.class) + '"' + (!ctx.kit && addressesYou(text, ctx) ? ' data-to-you' : '')   /* on a v7 screen the kit's Bubble carries the wash */ + '>' + splitBlocks(text).map((b) => blockHTML(b, ctx)).join('') + '</div>';
 }

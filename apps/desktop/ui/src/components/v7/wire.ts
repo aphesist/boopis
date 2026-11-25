@@ -185,14 +185,66 @@ export function composerInsert(c: HTMLElement, text: string): void {
   if (r) { r.deleteContents(); r.insertNode(document.createTextNode(text)); r.collapse(false); } else t.append(text);
   t.dispatchEvent(new Event('input', { bubbles: true }));
 }
+/** a chip set into a composer's text at the caret (a file added with "+": the kit's InlineChip with `words`), then a space: one unit
+    for the caret and Backspace, its words what is sent. `html` is trusted kit markup */
+export function composerInsertChip(c: HTMLElement, html: string): void {
+  const t = c.matches('.k7-composer__text') ? c : c.querySelector<HTMLElement>('.k7-composer__text');
+  if (!t) return;
+  const sel = typeof getSelection === 'function' ? getSelection() : null;
+  const r = sel && sel.rangeCount && t.contains(sel.anchorNode) ? sel.getRangeAt(0) : null;
+  const mark = document.createElement('span'), space = document.createTextNode(' ');
+  if (r) { r.deleteContents(); r.insertNode(space); r.insertNode(mark); } else t.append(mark, space);
+  /* written into the page as markup, in place: an orb made in a template and moved in is not painted by its worker */
+  mark.insertAdjacentHTML('beforebegin', html); mark.remove();
+  const after = document.createRange(); after.setStart(space, 1); after.collapse(true);
+  sel?.removeAllRanges(); sel?.addRange(after);
+  t.dispatchEvent(new Event('input', { bubbles: true }));
+}
+/** a mention in a composer's text, to draw as its chip: where it starts in the text, its exact words, and the chip (kit markup with `words`) */
+export interface ComposerChip { at: number; text: string; html: string }
+/** Draw the finished mentions of a composer's text as chips, in place. Each run of typed text is read by `find`; a mention the caret
+    is still inside, or right after, stays words (it is being typed) and becomes its chip once something follows it. A chip is one
+    unit (not editable inside): the caret steps over it and one Backspace takes it out; its own text is the words typed, so what the
+    composer sends is the same text, byte for byte. Nothing is drawn while an input method composes. */
+export function composerChips(t: HTMLElement, find: (text: string) => readonly ComposerChip[]): void {
+  const sel = typeof getSelection === 'function' ? getSelection() : null;
+  for (const n of [...t.childNodes]) {
+    if (n.nodeType !== 3) continue;
+    const text = n.textContent ?? '';
+    if (!text.trim()) continue;
+    const caret = sel && sel.rangeCount && sel.isCollapsed && sel.anchorNode === n ? sel.anchorOffset : -1;
+    const marks = [...find(text)].sort((x, y) => x.at - y.at).filter((m) => m.text && text.startsWith(m.text, m.at) && !(caret > m.at && caret <= m.at + m.text.length));
+    if (!marks.length) continue;
+    const parts: Node[] = [], slots: Array<{ el: HTMLElement; html: string }> = [];
+    let i = 0, caretNode: Text | null = null, caretOff = 0;
+    const words = (from: number, to: number): void => {
+      if (to <= from && !(caret === from && !caretNode)) return;
+      const tn = document.createTextNode(text.slice(from, to)); parts.push(tn);
+      if (caret >= from && caret <= to && !caretNode) { caretNode = tn; caretOff = caret - from; }
+    };
+    for (const m of marks) {
+      if (m.at < i) continue;
+      words(i, m.at);
+      const slot = document.createElement('span'); parts.push(slot); slots.push({ el: slot, html: m.html });
+      i = m.at + m.text.length;
+    }
+    words(i, text.length);
+    (n as ChildNode).replaceWith(...parts);
+    for (const x of slots) { x.el.insertAdjacentHTML('beforebegin', x.html); x.el.remove(); }
+    if (caret >= 0 && caretNode && sel) { const r = document.createRange(); r.setStart(caretNode, caretOff); r.collapse(true); sel.removeAllRanges(); sel.addRange(r); }
+  }
+}
 /** who or what an "@" can name in a composer */
 export interface KitMentions {
-  /** the menu's name ("Name a teammate") and the line at its foot */ label: string; foot?: () => string;
+  /** the menu's name ("Members", "Bots": its heading) and the line at its foot */ label: string; foot?: () => string;
   /** what can be named now: `value` is written after the "@", `label` and `desc` are shown, `leadHTML` leads the row (an orb, a mark) */
   entries(): readonly { value: string; label: string; desc?: string; leadHTML?: string; icon?: string }[];
+  /** the mentions a text holds, each drawn in the composer as the chip a sent message shows (composerChips); none: a mention stays words */
+  chips?(text: string): readonly ComposerChip[];
 }
-/** "@" in a composer: typing "@" and a few letters opens the kit's Menu over the composer with what matches; choosing a row writes
-    "@value " in place of what was typed; Escape, or a space, closes it. One open menu at a time (the kit's layer) */
+/** "@" in a composer (owner, 25 November: as the composer's lists of boards S31 and S32): typing "@" and a few letters opens the kit's
+    Menu over the composer, under its heading, with what matches; choosing a row writes "@value " in place of what was typed, and a
+    finished mention is drawn as its chip (`src.chips`); Escape, or a space, closes it. One open menu at a time (the kit's layer) */
 export function composerMentions(c: HTMLElement, src: KitMentions, open: (anchor: HTMLElement, o: { label: string; entries: readonly unknown[]; onSelect(v: string): void }) => HTMLElement | null, close: () => void): void {
   const t = c.querySelector<HTMLElement>('.k7-composer__text');
   if (!t) return;
@@ -206,7 +258,10 @@ export function composerMentions(c: HTMLElement, src: KitMentions, open: (anchor
     return m ? { query: (m[2] ?? '').toLowerCase(), node: n as Text, from: before.length - (m[2] ?? '').length - 1, to: before.length } : null;
   };
   const hide = (): void => { if (shown) { shown = false; close(); } };
-  t.addEventListener('input', () => {
+  const chips = (): void => { if (src.chips) composerChips(t, src.chips); };
+  t.addEventListener('compositionend', chips);
+  t.addEventListener('input', (e) => {
+    if (!(e as InputEvent).isComposing) chips();
     const q = typing();
     if (!q) { hide(); return; }
     const rows = src.entries().filter((e) => e.value.toLowerCase().startsWith(q.query) || e.label.toLowerCase().startsWith(q.query));
@@ -214,7 +269,7 @@ export function composerMentions(c: HTMLElement, src: KitMentions, open: (anchor
     const foot = src.foot?.();
     shown = !!open(c.querySelector<HTMLElement>('.k7-composer__box') ?? c, {
       label: src.label,
-      entries: [...rows.map((e) => ({ label: e.label, value: e.value, ...(e.desc ? { desc: e.desc } : {}), ...(e.leadHTML ? { leadHTML: e.leadHTML } : e.icon ? { icon: e.icon } : {}) })), ...(foot ? ['-', { heading: foot }] : [])],
+      entries: [{ heading: src.label }, ...rows.map((e) => ({ label: e.label, value: e.value, ...(e.desc ? { desc: e.desc } : {}), ...(e.leadHTML ? { leadHTML: e.leadHTML } : e.icon ? { icon: e.icon } : {}) })), ...(foot ? ['-', { heading: foot }] : [])],
       onSelect: (v) => {
         shown = false;
         const now = typing() ?? q;
@@ -226,6 +281,7 @@ export function composerMentions(c: HTMLElement, src: KitMentions, open: (anchor
         t.dispatchEvent(new Event('input', { bubbles: true }));
       }
     });
+    if (shown) (c.querySelector<HTMLElement>('.k7-composer__box') ?? c).setAttribute('data-mentioning', ''); else c.querySelector('.k7-composer__box')?.removeAttribute('data-mentioning');
     t.focus();   /* typing goes on in the text: the menu is chosen from with the pointer, or with the arrows once it has focus (ArrowDown) */
   });
   t.addEventListener('keydown', (e) => {

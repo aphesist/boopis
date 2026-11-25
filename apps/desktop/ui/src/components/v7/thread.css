@@ -96,7 +96,12 @@
 .k7-queue__text { flex: 1 1 auto; }
 .k7-queue__edit { flex: 1 1 auto; min-width: 0; outline: none; border-radius: var(--r-xs); box-shadow: 0 0 0 var(--hl) var(--line-field); padding: 0 var(--sp-1); }
 .k7-queue__edit:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-off); }
-.k7-queue[data-variant="held"] .k7-queue__text { color: var(--text-dim); }
+/* held (board K02): the clock 16 and the line in --text, 8 apart, Send now 4 in from the end */
+.k7-queue[data-variant="held"] .k7-queue__row > svg { flex: none; }
+@media (hover: hover) and (pointer: fine) { .k7-queue[data-variant="held"] .k7-queue__row:hover { background: none; } }
+/* its Edit (the list rows' own) shows with the pointer over the row or the focus in it: at rest the row is as the board draws it */
+.k7-queue[data-variant="held"] [data-queue="edit"] { opacity: 0; transition: opacity var(--dur-1) var(--ease-out); }
+.k7-queue[data-variant="held"] .k7-queue__row:is(:hover, :focus-within) [data-queue="edit"] { opacity: 1; }
 
 /* ── DiffView (15): one grid [36 gutter][16 sign][code]; the comment on the code column; 12 sides ── */
 .k7-diff { --sq-bg: var(--bg-3); --sq-line: var(--line); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line); border-radius: var(--r-bubble); min-width: 0; overflow: hidden; }

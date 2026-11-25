@@ -13,7 +13,7 @@ import { fire } from '../../core/dom';
 import { layer } from '../layer';
 import { glyph } from './util';
 import { applyTheme, botFill, deriveAccent } from './theme';
-import { composerInsert, composerMentions, markReveal, wire, wireHold, wireMenu } from './wire';
+import { composerChips, composerInsert, composerInsertChip, composerMentions, markReveal, wire, wireHold, wireMenu } from './wire';
 import type { KitMentions } from './wire';
 import { notify, notifyText } from './notify';
 
@@ -79,7 +79,7 @@ function openMenu(anchor: HTMLElement, o: blocks.MenuOpts & { place?: 'above' | 
 const mentions = (c: HTMLElement, src: KitMentions): void => { composerMentions(c, src, (anchor, o) => openMenu(anchor, { label: o.label, entries: o.entries as blocks.MenuOpts['entries'], place: 'above', align: 'start', onSelect: o.onSelect }), () => { layer.close(); }); };
 
 export const kit = {
-  html, ...factories, composerInsert, mentions, section: surfaces.section, dockGeometry: DOCK_GEOMETRY,
+  html, ...factories, composerInsert, composerInsertChip, composerChips, mentions, section: surfaces.section, dockGeometry: DOCK_GEOMETRY,
   /** the Dock's parts as markup, for the app's live dock, which keeps its orbs connected and writes each part in place */
   dockParts: { slab: slabPath, orb: dockOrb, cap: dockCap, ask: dockAsk, more: dockMore, panel: dockPanel }, wire, wireHold, wireMenu, markReveal, openMenu, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, notify, notifyText, keyNames: controls.keyNames, variants: kitVariants
 };
@@ -91,5 +91,5 @@ export type { ToolRowOpts, AskCardOpts, AskAnswer, FilesCardOpts, FileCardOpts, 
 export type { CardOpts, RowOpts, BlockOpts, MenuOpts, MenuEntry, MenuRowOpts, OptionRowOpts, ListRowOpts, ListOpts, SectionHeadOpts, NoticeOpts, SystemLineOpts, BubbleOpts, WellOpts, DisclosureOpts, StepOpts, TurnFootOpts, TimeSeparatorOpts, EmptyStateOpts } from './blocks';
 export type { AvatarOpts, InlineChipOpts, MarkOpts, StatusWordOpts, BadgeOpts, StatusLineOpts } from './inline';
 export type { NotifyOpts } from './notify';
-export type { KitMentions } from './wire';
+export type { KitMentions, ComposerChip } from './wire';
 export type { ThemeOpts, Mode as KitMode, AccentTokens } from './theme';

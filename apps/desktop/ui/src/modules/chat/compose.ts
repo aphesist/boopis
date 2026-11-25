@@ -1,5 +1,5 @@
 /* What a composer's own controls do, the same in a bot's chat, a room and a new session (the kit's Composer fires the events,
-   wire.ts): "+" asks the host for files and writes each into the text as an "@" reference, the way a typed path is read; the mic
+   wire.ts): "+" asks the host for files and sets each into the text as a chip whose words are its "@" reference, the way a typed path is read; the mic
    dictates into the text through the provider's dictation until it is switched off; "@" names what the screen offers. Talking
    to a bot (the voice button with no text) does not exist yet: the button is drawn and says so. */
 import { kit } from '@boopis/ui';
@@ -20,8 +20,9 @@ export function composeTools(slot: HTMLElement, o: ComposeTools): { drawn(): voi
   slot.addEventListener('ui:add', () => {
     void data().files.pick('file').then((files) => {
       const c = text(); if (!c || !files.length) return;
-      kit.composerInsert(c, files.map((f) => '@' + (f.path ?? f.name)).join(' ') + ' ');
       c.focus();
+      /* each file is a chip in the text (owner, 25 November; the boards' reference chip, S32): its name shows, its words are the "@" reference the engine reads */
+      for (const f of files) kit.composerInsertChip(c, kit.html.inlineChip({ kind: 'reference', text: '@' + f.name, words: '@' + (f.path ?? f.name), attrs: { 'data-tip': f.path ?? f.name } }));
     });
   });
   slot.addEventListener('ui:dictate', (e) => {

@@ -1,7 +1,7 @@
 /* The run-limit menu, one for a group's header (the most rounds `boopis run --group` lets a discussion take) and a bot's settings
    sheet (the most turns `boopis run --bot` lets one task take): "Default (n)", then 5, 20, 30, 60 and 100, the one kept checked
    (a number kept by the command line that is not among them is listed too). */
-import { ui } from '@boopis/ui';
+import { kit } from '@boopis/ui';
 
 export const LIMIT_CHOICES: readonly number[] = [5, 20, 30, 60, 100];
 
@@ -23,10 +23,10 @@ export const limitWords = (kept: number | null, fallback: number): string => (ke
 
 export function openLimitMenu(anchor: HTMLElement, o: LimitMenu): void {
   const choices = o.kept !== null && !LIMIT_CHOICES.includes(o.kept) ? [...LIMIT_CHOICES, o.kept].sort((a, b) => a - b) : LIMIT_CHOICES;
-  const items = [
-    { title: o.title },
-    { label: limitWords(null, o.fallback), value: 'default', checked: o.kept === null },
-    ...choices.map((n) => ({ label: String(n), value: String(n), mono: true, checked: o.kept === n }))
-  ];
-  ui.menu.open(anchor, items, { align: 'end', label: o.label, onSelect: (v) => { o.onPick(v === 'default' ? null : Number(v)); } });
+  /* the kit's Menu under its heading: the one kept carries the check */
+  kit.openMenu(anchor, {
+    label: o.label, place: 'below', align: 'end',
+    entries: [{ heading: o.title }, { label: limitWords(null, o.fallback), value: 'default', ...(o.kept === null ? { icon: 'check' } : {}) }, ...choices.map((n) => ({ label: String(n), value: String(n), ...(o.kept === n ? { icon: 'check' } : {}) }))],
+    onSelect: (v) => { o.onPick(v === 'default' ? null : Number(v)); }
+  });
 }

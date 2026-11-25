@@ -291,6 +291,8 @@ function turnKeys(e: KeyboardEvent): void {
    (esc). The provider can carry out once and deny; "Allow all this turn" and "Always allow" need the rules engine, so they are
    drawn and do nothing yet (aria-disabled, the reason in their tip). It never expires. Decided, it collapses to its one-row receipt. */
 const NOT_YET = 'Approval rules are not in this build yet';
+/** a bot's approval as its AskCard, wired to the provider: the bot's own chat draws it in the thread, a room under what that member said */
+export const approvalCard = (b: Bot, m: ApprovalMessage): HTMLElement => renderCard(b, m);
 function renderCard(b: Bot, m: ApprovalMessage): HTMLElement {
   if (m.resolved) return resolvedLine(b, m);
   const asker = bot(m.data.from ?? m.who) ?? b;
@@ -366,6 +368,7 @@ function buildComposer(host: HTMLElement): void {
     }
   });
   slot.addEventListener('ui:send', (e) => { send((e as CustomEvent<{ text: string }>).detail.text); });
+  slot.addEventListener('ui:steer', (e) => { send((e as CustomEvent<{ text: string }>).detail.text); });   /* ctrl Enter sends as Enter does until the keys get their own pass (owner, 25 November); it never drops what was typed */
   slot.addEventListener('ui:stop', () => { stopRun(); });
   slot.addEventListener('click', (e) => {
     const t = e.target as Element;

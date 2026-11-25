@@ -206,12 +206,9 @@
 .k7-bubble[data-kind="user"] { --text: var(--bubble-user-text); --text-strong: var(--bubble-user-text); --text-dim: var(--bubble-user-text); }
 .k7-bubble > .k7-well { margin: var(--sp-2) 0; }
 .k7-bubble > p + p { margin-top: var(--sp-2); }
-/* a message to you: the amber edge in the gutter, glowing, and the amber wash under its words (owner decision, recoloured by 09 A) */
-.k7-bubble[data-to-you] { --sq-bg: color-mix(in srgb, var(--owe) 8%, var(--bubble-agent)); }
-.k7-bubble[data-to-you]::after {
-  content: ''; position: absolute; inset-block: var(--sp-1); inset-inline-start: calc(-1 * var(--sp-3)); width: var(--gap-hair); border-radius: var(--r-pill);
-  background: var(--owe); box-shadow: 0 0 var(--sp-2) color-mix(in srgb, var(--owe) 80%, transparent); pointer-events: none;
-}
+/* a message to you (board 12): the amber wash under its words (--owe-soft over the agent's fill, no sheen), with the "you" capsule in it */
+.k7-bubble[data-to-you] { --sq-bg: linear-gradient(var(--owe-soft), var(--owe-soft)), linear-gradient(var(--bubble-agent), var(--bubble-agent)); background: var(--sq-bg); }
+.k7-bubble[data-to-you][data-sq-on]:not(#sq)::before { background: var(--sq-bg); }
 /* the thread's gutter: a room's byline and orb, a session's brand tile (S09), 30 px in */
 .k7-gutter { position: relative; display: flex; flex-direction: column; align-items: flex-start; padding-inline-start: var(--gutter); min-width: 0; }
 .k7-gutter__orb { position: absolute; inset-inline-start: 0; bottom: var(--gap-hair); line-height: 0; }
@@ -223,7 +220,7 @@
 .k7-thread > .k7-bubble[data-kind="agent"] + .k7-bubble[data-kind="user"], .k7-thread > .k7-bubble[data-kind="user"] + :not(.k7-bubble[data-kind="user"]),
 .k7-thread > :not(.k7-bubble, .k7-btool, .k7-file) + .k7-bubble { margin-top: var(--sp-4); }
 /* a member's name starts its run 14 under what it follows (kit.css `.gname`); a system line keeps 12 over and under it (`.sysline`) */
-.k7-thread > .k7-gutter:has(> .k7-byline) { margin-top: var(--pane-sec-top); }
+.k7-thread > .k7-gutter:has(> .k7-byline) { margin-top: var(--name-top); }
 .k7-thread > .k7-sys { margin-block: var(--sp-3); }
 /* the boards' own margins (kit.css): an AskCard 8 more than a bubble's 6 under what it follows, the status line 12, a time separator 12 over and 6 under */
 .k7-thread > * + .k7-ask { margin-top: calc(var(--gap-s) + var(--sp-2)); }

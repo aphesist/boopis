@@ -69,7 +69,7 @@ button.k7-mention { cursor: pointer; }
 .k7-word[data-tone="red"] { color: var(--red-text); }
 .k7-word[data-tone="ok"] { color: var(--ok-text); }
 /* the kit's stacks sit on their box's own edge (the boards' kit.js `stack`): no room around them for a ring they do not draw */
-.k7-avatar > .ui-stack, .k7-status > .ui-stack, .k7-mention > .ui-stack { padding: 0; }
+.k7-avatar > .ui-stack, .k7-status > .ui-stack, .k7-mention > .ui-stack, .k7-pane__head > .ui-stack, .k7-title > .ui-stack { padding: 0; }
 .k7-dot { width: var(--dot); height: var(--dot); border-radius: var(--r-pill); flex: none; background: var(--text-dim); }
 .k7-dot[data-tone="owe"] { background: var(--owe); }
 .k7-word[data-tone="owe"] .k7-dot { background: var(--owe); }
@@ -81,12 +81,14 @@ button.k7-mention { cursor: pointer; }
 /* ── Badge (33): 18 tall pill, 11 ── */
 /* the boards' `.badge2`: an inline block on an 18 line, 7 at its sides, 11 */
 .k7-badge { padding-inline: var(--pad-inline); border-radius: var(--r-pill); font-size: var(--fs-2xs); background: var(--fill-2); color: var(--text-dim); }
-.k7-cap.k7-badge { height: auto; line-height: var(--badge-h); padding-block: 0; text-box: normal; }
+.k7-cap.k7-badge, .k7-cap.k7-you, .k7-cap.k7-ref { height: auto; line-height: var(--badge-h); padding-block: 0; text-box: normal; }   /* the boards' own boxes (`.badge2`, `.you`, `.refchip`): an 18 line, no trim */
 .k7-badge[data-tone="owe"] { background: var(--owe-soft); color: var(--owe-text); }
 
 /* ── StatusLine (34): one line, one shimmer (2.2 s, steps(60)); the session's mark breathes (1.4 s) ── */
 /* kit.css `.activity`: 15 on the thread's own 20 line */
 .k7-status { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; font-size: var(--fs-l); line-height: var(--lh-m); color: var(--text-dim); }
+/* who is replying, as a stack (board 12): the boards set the stack's orbs on the phrase's baseline, 3 under the stack's own top */
+.k7-status > .ui-stack { margin-top: var(--gap-xs); margin-bottom: calc(-1 * var(--gap-xs)); }
 .k7-status__phrase { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .k7-status__count { font-size: var(--fs-xs); color: var(--text-dim); }
 .k7-status__mark { display: inline-grid; place-items: center; color: var(--text-dim); }

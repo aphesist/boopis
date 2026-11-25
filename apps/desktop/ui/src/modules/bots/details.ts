@@ -9,7 +9,8 @@ import { state } from '../../core/state';
 import { kit, ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, Schedule } from '../../data';
-import { bot, S } from './model';
+import { bot, group, S } from './model';
+import { onRoomPaneBlur, onRoomPaneClick, onRoomPaneKey, roomPaneHTML, roomPaneSig } from './group-details';
 import { openSettings } from './settings';
 
 let host: HTMLElement | null = null;
@@ -63,12 +64,15 @@ export function paintDetails(_newSession?: () => void): void {
     shell.append(host);
     sig = '';
     host.addEventListener('click', (e) => {
+      if (S.view === 'group') { onRoomPaneClick(e, () => { sig = ''; paintDetails(); }); return; }
       const t = e.target as Element, b = bot(S.sel);
       if (!b || t.closest('.k7-switch')) return;
       const set = t.closest<HTMLElement>('[data-settings]'), ses = t.closest<HTMLElement>('[data-session]');
       if (set) openSettings(b.id, set.dataset['settings'] ?? null);
       else if (ses) void data().bots.sessions?.open(b.id, ses.dataset['session'] as string).catch((err: unknown) => { kit.notify(err instanceof Error ? err.message : 'The session could not be opened.'); });
     });
+    host.addEventListener('keydown', (e) => { if (S.view === 'group') onRoomPaneKey(e); });
+    host.addEventListener('focusout', (e) => { if (S.view === 'group') onRoomPaneBlur(e); });
     host.addEventListener('ui:change', (e) => {
       const t = e.target as HTMLElement;
       const seg = t.closest('[data-kit~="Segmented"]');
@@ -77,6 +81,18 @@ export function paintDetails(_newSession?: () => void): void {
       if (sw) data().schedules.setPaused(sw.dataset['schedule'] as string, !(e as CustomEvent<{ value: boolean }>).detail.value);   /* on is running: off pauses it */
     });
     if (!watching) { watching = true; data().schedules.list.subscribe(() => { paintDetails(); }); on('hx:state', () => { paintDetails(); }); }
+  }
+  /* a room's details: its members and what the room itself can be told (group-details.ts) */
+  const g = state.tab === 'bots' && S.view === 'group' ? group(S.groupSel) : undefined;
+  if (g) {
+    host.hidden = state.right !== 'open';
+    if (host.hidden) return;
+    const next = roomPaneSig(g);
+    if (next === sig || host.contains(document.activeElement) && document.activeElement?.matches('input')) return;
+    sig = next;
+    host.innerHTML = roomPaneHTML(g, () => { paintDetails(); });
+    kit.wire(host);
+    return;
   }
   const b = state.tab === 'bots' && S.view === 'bot' ? bot(S.sel) : undefined;
   const open = !!b && state.right === 'open';

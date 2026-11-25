@@ -14,7 +14,7 @@ import { leadOrb, repaintOrbs } from './orbs';
 import { drawGroups, makeRow, mountList, syncListVisibility, syncRail, syncRoving } from './list';
 import { allTurns, focusTurn, mountView, onBotsEvent, openBot, stopRun } from './room';
 import { openNew } from './new-bot';
-import { onGroupsEvent, openGroup, repaintWorking, stopTalk } from './group-room';
+import { onGroupsEvent, openGroup, repaintRoom, stopTalk } from './group-room';
 import { openNewGroup } from './new-group';
 import { closeSettings, openSettings, toggleSettings } from './settings';
 import { ui as uiLib } from '@boopis/ui';
@@ -55,7 +55,7 @@ function subscribeBots(): () => void {
       return;
     }
     onBotsEvent(ev, { announce: announceAttention });
-    repaintWorking();
+    repaintRoom();
   });
 }
 function subscribeGroups(): () => void {

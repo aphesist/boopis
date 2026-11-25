@@ -19,19 +19,19 @@ export const turnBody = (t: HTMLElement): HTMLElement => (t.querySelector<HTMLEl
 export interface BubbleWrap {
   kind: 'user' | 'agent'; fill?: { fill: string; text: string } | null; toYou?: boolean;
   /** a room: the member's name and orb, on the first bubble of its run */ byline?: { bot: BotLike; colour: string } | null;
+  /** a room: a member's later bubble sits in the same gutter, without the name and the orb */ gutter?: boolean;
 }
 /** a message's content (markdown, the request's words) in the kit's Bubble; returns what goes in the turn */
 export function bubbleOf(node: HTMLElement, o: BubbleWrap): HTMLElement {
-  const html = kit.html.bubble({ kind: o.kind, text: '', ...(o.fill ? { fill: o.fill } : {}), ...(o.toYou ? { toYou: true } : {}), ...(o.byline ? { byline: o.byline } : {}) });
+  const html = kit.html.bubble({ kind: o.kind, text: '', ...(o.fill ? { fill: o.fill } : {}), ...(o.toYou ? { toYou: true } : {}), ...(o.byline ? { byline: o.byline } : o.gutter ? { gutter: true } : {}) });
   const outer = frag(html);
   const bubble = outer.matches('[data-kit~="Bubble"]') ? outer : outer.querySelector<HTMLElement>('[data-kit~="Bubble"]');
   bubble?.replaceChildren(node);
-  if (!o.byline && o.kind === 'agent') outer.classList.add('bt-bubble');
   return outer;
 }
 
 export interface ActsOpts { name: string; copy: () => string; reply?: () => void; open?: () => void; /** the "more" button's menu (board 11 draws it after copy): what else the turn offers */ more?: (anchor: HTMLElement) => void }
-/** the turn's hover actions (screen 11: beside the last bubble): the kit's ghost IconButtons */
+/** the turn's hover actions (board 11: beside the last bubble): the kit's ghost IconButtons; a room's turn adds reply ("@") and open the member's chat */
 export function turnActs(t: HTMLElement, o: ActsOpts): void {
   if (t.querySelector(':scope > .bt-turn__acts')) return;
   const acts = el('div', { class: 'bt-turn__acts' });
@@ -49,7 +49,7 @@ export function placeActs(t: HTMLElement): void {
   const acts = t.querySelector<HTMLElement>('.bt-turn__acts'); if (!acts) return;
   const body = turnBody(t);
   const old = acts.parentElement?.classList.contains('bt-turn__row') ? acts.parentElement : null;
-  const bubbles = [...body.querySelectorAll<HTMLElement>(':scope > .k7-bubble, :scope > .bt-turn__row > .k7-bubble')];
+  const bubbles = [...body.querySelectorAll<HTMLElement>('.k7-bubble')];   /* a room's bubbles sit in the kit's gutter: the row is made there */
   const last = bubbles[bubbles.length - 1];
   if (!last) { t.append(acts); return; }
   if (old && old.contains(last)) return;

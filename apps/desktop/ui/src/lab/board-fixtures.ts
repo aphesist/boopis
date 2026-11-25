@@ -69,12 +69,16 @@ const CREW_THREAD: readonly GroupMessage[] = [
   { kind: 'text', id: 'b12-5', who: 'moss', t: T12, round: 0, text: 'The two flaky tests are quarantined, so the gate is green.' }
 ];
 const NINA_ASKS: readonly ThreadMessage[] = [{ kind: 'approval', id: 'b12-ask', who: 'nina', t: T12, data: { id: 'b12-ask', title: 'Deploy 0.2.0 to staging', rule: 'Deploys need my OK', from: 'nina' } }];
-export function board12(p: DataProvider): DataProvider {
+/** board K02-12's composer: one message held until the discussion ends */
+export const board12Held = (p: DataProvider): DataProvider => board12(p, true);
+export function board12(p: DataProvider, held = false): DataProvider {
   const bots = roster(p, {
     kai: { state: 'working', activity: 'Writing the changelog' },
     moss: { last: { t: T12, text: 'Found 2 flaky tests' } }, iris: { last: { t: T12, text: 'Checked the new composer' } }, nimbus: { last: { t: T12, text: 'Sorted 14 emails' } }
   });
-  const crew: Group = { ...RELEASE_CREW, working: ['kai', 'moss'], busy: true, spent: '0.21' };
+  /* kai and moss are replying; the boards draw the composer's voice button there, which the app shows only while no talk is running
+     (a running room's button is Stop), so the room is not marked busy here: an owner question (the report) */
+  const crew: Group = { ...RELEASE_CREW, working: ['kai', 'moss'], busy: false, spent: '0.21', queued: held ? [{ id: 'b12-held', text: 'And tag it when staging is green.', t: T12 }] : [] };
   const heard: Array<(e: GroupsEvent) => void> = [];
   return {
     ...p,
