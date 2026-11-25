@@ -18,7 +18,7 @@
   .hx-dialog7 .k7-row { flex-wrap: wrap; justify-content: flex-end; row-gap: var(--sp-2); }
   /* a Segmented wider than its row keeps the row's width and ellipsises its labels (the whole label is its accessible name) */
   .hx-dialog7 .k7-row > .k7-seg { flex: 0 1 auto; max-width: 100%; box-sizing: border-box; }
-  .hx-dialog7 .k7-row > .k7-seg > .k7-seg__item { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-inline: var(--sp-2); line-height: var(--seg-item-h); text-align: center; }
+  .hx-dialog7 .k7-row > .k7-seg > .k7-seg__item { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: var(--sp-1) var(--sp-2); box-sizing: border-box; text-align: center; }   /* 26 = 18 + 4 above and below */
 }
 
 /* Settings' pages (modules/settings): placement only */

@@ -55,7 +55,7 @@ export function buildSettings(d: HTMLDialogElement): void {
   host.innerHTML = kit.html.dialog({
     variant: 'large', title: 'Settings', scrim: false, id: 'hx-settings-dlg', attrs: { role: null, 'aria-modal': null },
     nav: SETTINGS_SECTIONS.map(([value, label, icon]) => ({ label, icon, current: value === 'general', attrs: { 'data-value': value, id: 'hx-dtab-' + value, 'aria-controls': 'hx-dpanel-' + value } })),
-    body: SETTINGS_SECTIONS.map(([value, label]) => '<div class="hx-dpanel" id="hx-dpanel-' + value + '" role="region" aria-label="' + label + '"' + (value === 'general' ? '' : ' hidden') + '>' + (value === 'connectors' || value === 'models' ? '' : pageHTML(label)) + '</div>').join('')
+    body: SETTINGS_SECTIONS.map(([value, label]) => '<div class="hx-dpanel" id="hx-dpanel-' + value + '"' + (value === 'general' ? '' : ' hidden') + '>' + (value === 'connectors' || value === 'models' ? '' : pageHTML(label)) + '</div>').join('')
   });
   kit.wire(host);
   $('[data-dialog-close]', host).id = 'hx-settings-close';
