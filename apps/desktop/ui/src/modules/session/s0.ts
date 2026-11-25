@@ -158,10 +158,15 @@ export function lineEl(l: ThreadLine, onUndo?: (shipId: string) => void): HTMLEl
 /* ───────── the rewind on a finished turn (TurnFoot, session) and its sheet (Dialog, form) ───────── */
 export const REWIND_HERE = 'Rewind files to here';
 export const REWIND_BASE = 'Rewind to before this session';
-export function rewindFoot(o: { first: boolean; avail: Avail; onRewind(): void }): HTMLElement {
-  const label = o.first ? REWIND_BASE : REWIND_HERE;
-  const f = kit.turnFoot({ kind: 'session', actions: [{ label, value: 'rewind', disabled: !o.avail.ok, ...(o.avail.ok ? {} : { tip: o.avail.why }) }] });
-  f.querySelector('[data-value="rewind"]')?.addEventListener('click', () => { if (o.avail.ok) o.onRewind(); });
+export function rewindFoot(o: { first: boolean; avail: Avail; onRewind(to: 'here' | 'base'): void }): HTMLElement {
+  /* every turn that kept a change goes back to after it; the first one also to before the session (checkpoint-rewind.md 8) */
+  const tip = o.avail.ok ? {} : { disabled: true, tip: o.avail.why };
+  const actions = [{ label: REWIND_HERE, value: 'here', ...tip }, ...(o.first ? [{ label: REWIND_BASE, value: 'base', ...tip }] : [])];
+  const f = kit.turnFoot({ kind: 'session', actions });
+  f.addEventListener('click', (e) => {
+    const b = (e.target as Element).closest<HTMLButtonElement>('.k7-foot__btn');
+    if (b && !b.disabled && o.avail.ok) o.onRewind(b.dataset['value'] === 'base' ? 'base' : 'here');
+  });
   const w = document.createElement('div');
   w.className = 'ss-s0-foot';
   w.append(f);
@@ -174,10 +179,11 @@ const MAX_FILES = 12;
 export function rewindBody(r: RewindResult): string {
   if (r.status === 'refused') return '<p class="k7-type-s ss-s0-why">' + kit.html.statusWord({ text: 'Refused', tone: 'red' }) + ' ' + esc(r.why ?? 'The rewind was refused.') + '</p>';
   if (r.status === 'nothing_to_do') return '<p class="k7-type-s">Nothing to rewind: the files are already as they were then.</p>';
-  const rows = r.files.slice(0, MAX_FILES).map((f) => ({ label: f.path, value: ACTION_WORD[f.action], mono: true }));
+  /* the path in mono, as the kit's file rows draw it (FilesCard); what happens to it in words */
+  const rows = r.files.slice(0, MAX_FILES).map((f) => ({ label: f.path, labelHTML: '<span class="k7-mono k7-ell">' + esc(f.path) + '</span>', value: ACTION_WORD[f.action] }));
   const more = r.files.length > MAX_FILES ? '<p class="k7-type-s ss-s0-more">And ' + (r.files.length - MAX_FILES) + ' more files.</p>' : '';
   const verdict = r.isolation === 'own_worktree' ? 'This folder is this session\'s own worktree.' : 'Nothing else changed in this folder since this session\'s last change.';
-  return kit.html.card({ variant: 'pane', rows: rows.map((x) => ({ ...x, label: x.label })) }) + more +
+  return kit.html.card({ variant: 'pane', rows }) + more +
     '<p class="k7-type-s ss-s0-why">' + esc(verdict) + ' The rewind is recorded and can be undone.</p>';
 }
 const esc = (s: string): string => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c] as string));

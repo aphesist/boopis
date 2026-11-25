@@ -1,21 +1,21 @@
 {
  "body@dark": {
-  "sha": "092f966a44d53f65e81533e1545ad0a2672031aa",
+  "sha": "8192bc066ba5c1f11e5dbcef540f40ef32c2e14a",
   "w": 544,
   "h": 172
  },
  "body@light": {
-  "sha": "5320c518cfa4701b558cf21b505cc03dc6d68656",
+  "sha": "44ca08494c0a6dbf129014401d3ef27779c78b50",
   "w": 544,
   "h": 172
  },
  "focus@dark": {
-  "sha": "bf568c326aa8ba5ca792f6f5bfa4d86d1f106901",
+  "sha": "46ba373ea915ec6805bdb8f372770fd30135d24c",
   "w": 664,
   "h": 84
  },
  "focus@light": {
-  "sha": "6990898bc2f96a6d680c55644eb952fcafa72b9c",
+  "sha": "ae398afa7293d3df84cc2f03042692f4533a85cb",
   "w": 664,
   "h": 84
  },
@@ -30,12 +30,12 @@
   "h": 84
  },
  "long@dark": {
-  "sha": "f6ab0389ca38f0557eb2236533db7e6be1c926e1",
+  "sha": "8a2801eacdea325347662ce0e0dfb3c0e7e52e91",
   "w": 664,
   "h": 644
  },
  "long@light": {
-  "sha": "6121b2909f7a3fb519742b62ec5e3ac6efbbc8f2",
+  "sha": "f3a33a54bea479f4bd31057a932b3afb83f06e76",
   "w": 664,
   "h": 644
  },
@@ -90,12 +90,12 @@
   "h": 220
  },
  "typical@dark": {
-  "sha": "15e195a76f7872698df6798647991b16a01aa0f6",
+  "sha": "518a9f2dd2d65b6d358189281adaffa8bd730f43",
   "w": 664,
   "h": 318
  },
  "typical@light": {
-  "sha": "166c76a89bc593fec9c84d5c3f100824d089b3d5",
+  "sha": "fd94d372e8637869fa05f04d2b614579508e7d35",
   "w": 664,
   "h": 318
  }

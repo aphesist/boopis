@@ -155,3 +155,7 @@
 /* the rewind under a finished turn (TurnFoot, session); its actions show on hover and focus, as the kit's */
 .ss-s0-foot { padding-block-start: var(--sp-1); }
 .ss-s0-why, .ss-s0-more { margin: var(--sp-2) 0 0; color: var(--text-dim); }
+/* the foot's actions show while the turn they belong to is hovered or holds focus (the kit's TurnFoot reveals on hover; here the
+   foot carries no meta of its own, the entry's call number does, so the turn is what is hovered) */
+@media (hover: hover) and (pointer: fine) { [data-hx-turn]:hover .ss-s0-foot .k7-foot__acts { opacity: 1; transition-duration: var(--dur-1); } }
+[data-hx-turn]:focus-within .ss-s0-foot .k7-foot__acts { opacity: 1; }

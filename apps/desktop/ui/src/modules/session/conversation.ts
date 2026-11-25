@@ -218,8 +218,7 @@ function placeFoot(t: HTMLElement, a: AgentTurn): void {
   const n = list.findIndex((x) => x.id === a.id) + 1;
   const last = a.kept[a.kept.length - 1] as string;
   const body = $('.ui-entry__body', t);
-  if (firstKept() === a.id) body.append(rewindFoot({ first: true, avail, onRewind: () => { void openRewind(null, REWIND_BASE); } }));
-  body.append(rewindFoot({ first: false, avail, onRewind: () => { void openRewind(last, 'Rewind files to after turn ' + n); } }));
+  body.append(rewindFoot({ first: firstKept() === a.id, avail, onRewind: (to) => { if (to === 'base') void openRewind(null, REWIND_BASE); else void openRewind(last, 'Rewind files to after turn ' + n); } }));
 }
 function syncFoot(col: HTMLElement, turnId: string): void {
   const t = col.querySelector<HTMLElement>('[data-turn-id="' + turnId + '"]');
