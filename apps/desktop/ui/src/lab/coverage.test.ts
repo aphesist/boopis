@@ -92,7 +92,7 @@ describe('every story', () => {
   it('covers the owner\'s cases: the composer with text and its send button, the dock with zero, one and many bots', () => {
     const composer = STORIES.find((s) => s.id === 'composer/composer');
     expect(Object.keys(composer?.states ?? {})).toEqual(expect.arrayContaining(['with text', 'send hover', 'send focus', 'send pressed', 'attach hover', 'attach tooltip', 'compact, with text']));
-    const dock = STORIES.find((s) => s.id === 'dock/dock');
-    expect(Object.keys(dock?.states ?? {})).toEqual(expect.arrayContaining(['no bots (the empty shape)', 'one bot', '120 bots']));
+    const dock = STORIES.find((s) => s.id === 'v7/dock');
+    expect(Object.keys(dock?.states ?? {})).toEqual(expect.arrayContaining(['no bots of your own (no dock)', 'one bot', '120 bots (N more)']));
   });
 });

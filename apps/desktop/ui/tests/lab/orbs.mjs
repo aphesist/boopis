@@ -11,7 +11,7 @@
                  jumps on the screen or refits its backing store. Each must be 0 (G6, G7). A-B-A inside real motion (the shape went
                  out and came back, or moved on by more than 0.15 of its perimeter) is reported in the summary and does not block.
 
-   pnpm lab:orbs [--story dock/dock] [--state "one bot"] [--frames 48] [--jobs 3]
+   pnpm lab:orbs [--story v7/dock] [--state "one bot"] [--frames 48] [--jobs 3]
    Writes lab-report-orbs/summary.json (the lab's summary shape: findings[] with check, story, state, el, msg); gate.mjs reads it. */
 import { createRequire } from 'node:module';
 import { createServer } from 'node:http';

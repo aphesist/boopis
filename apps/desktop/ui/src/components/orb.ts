@@ -48,6 +48,17 @@ export function orbHtml(b: BotLike, o: OrbOpts = {}): string {
 }
 export const orb = (b: BotLike, o?: OrbOpts): HTMLElement => frag(orbHtml(b, o));
 
+/** a drawn orb on a rest surface (the dock, the Bots sidebar, the rail; ORBS.md section 23) follows its bot's reaction in place: at rest
+    the pose, still; any other state its own reaction, alive. An orb the pointer woke (wireRestOrb) is left to it until it settles */
+export function restReact(o: Element | null | undefined, reaction: string): void {
+  if (!o) return;
+  const atRest = reaction === 'idle', r = atRest ? REST_REACTION : reaction;
+  if ((o as HTMLElement & { _hover?: boolean })._hover) return;
+  if (o.getAttribute('reaction') !== r) o.setAttribute('reaction', r);
+  const motion = atRest ? 'off' : 'calm';
+  if (o.getAttribute('idle-motion') !== motion) o.setAttribute('idle-motion', motion);
+}
+
 /** paint a drawn orb in a look: only the attributes that change are written, so orb2 morphs the body and fades the
     colour instead of starting again (the same attributes `orbHtml` writes: `lookAttrs`) */
 export function paintLook(o: Element | null | undefined, look: Look): void {

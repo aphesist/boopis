@@ -1,23 +1,12 @@
-/* boopis v6 · dock (owner: dock agent)
-   One pitch-black slab flush to the window's bottom edge, drawn as a single SVG path from the sprung width and height
-   (dock.js). Content lives in views anchored to the slab's bottom centre; the foot (Arrange, the page nub, Minimise)
-   sits inside the slab's last 24px. No tab on the top edge, no side lanes (owner, v10).
+/* The dock on the v7 kit (DESIGN-SYSTEM.md v7 21.4). The Dock itself is the kit's (components/v7/dock.css: the black slab and its
+   flares, the row, the open panel, the ask pill, the end slot); this file places it and moves it.
 
-   Built on the shared library (components/components.css): the root carries data-ground="dock", which re-derives
-   every role (--text, --text-dim, --line, --hover, --selected, --brass, --red-text…) for the black ground, so
-   nothing here defines a colour. Buttons, icon buttons, rows, ladder, capacity, measure, page dots, switches, setting
-   rows, dots, orbs, empty states, tooltips and cards are the library's; this file only places them. */
+   `.dk` is a 0x0 anchor on the bottom edge, on the column's centre line (or the window's middle with "Keep the dock centred in
+   the window"). The Dock is centred on it by layout (insets of 100vw on both sides and auto margins), never by a -50% translation
+   (WebKitGTK repainted such a child with only its left half; modules/dock/clip.guard.test.ts). Nothing is clipped with `clip` or
+   `clip-path`: the open panel clips by its own overflow as the slab grows and shrinks. */
 
 .dk {
-  --dock-orb: 40;                 /* unitless: orb size in the row (40 at a 54px pitch) */
-  --dock-gap: 14px;
-  --dock-pad-x: 16px;
-  --dock-top: 12px;
-  --dock-band: 24px;              /* the foot's height: every normal and expanded view keeps it free */
-  --dock-band-x: var(--sp-6);
-  --dock-maxw: 860px;
-  --ui-ring: var(--dock-bg);      /* the attention flag's ring is the slab behind it */
-
   position: fixed;
   bottom: 0;
   --hx-center-x: var(--hx-center-x-to);
@@ -27,281 +16,33 @@
   height: 0;
   z-index: var(--z-dock);
   pointer-events: none;
-  font-family: var(--sans);
-  font-size: var(--fs-s);
-  line-height: var(--lh-ui);
-  color: var(--text);
-  -webkit-font-smoothing: antialiased;
 }
-.dk.is-self-centred { transition: left var(--dur-3) var(--spring); }
-/* "Keep the dock centred in the window" (the owner's setting): on the window's middle, whatever the bars do, and never animated
-   there (the room around it: input.ts fitRow) */
+/* "Keep the dock centred in the window" (the owner's setting): on the window's middle, whatever the bars do, never animated there */
 .hx[data-dock-centre="on"] .dk { left: 50vw; transition: none; }
-.dk.is-snap { transition: none; }
-.dk[data-mode="off"].is-gone { visibility: hidden; }
-.dk-mono, .dk-time, .dk-ctx-num, .dk-ctx-of, .dk-sched-when, .dk-runx-more, .dk-tile-sub {
-  font-family: var(--mono);
-  letter-spacing: var(--track-mono);
-  font-variant-numeric: tabular-nums;
+
+.dk > .k7-dock {
+  position: absolute;
+  bottom: 0;
+  left: -100vw;
+  right: -100vw;
+  margin-inline: auto;
+  pointer-events: auto;
+  /* the slab's one motion (200 ms, --ease-sharp): its width follows its content, its height the open size, and it rises and sinks */
+  transition: width var(--dur-2) var(--ease-sharp), height var(--dur-2) var(--ease-sharp), translate var(--dur-2) var(--ease-sharp);
+  translate: 0 calc(100% + var(--dk-f));
 }
+.dk[data-in] > .k7-dock { translate: 0 0; }
+.dk.is-snap > .k7-dock, .dk.is-snap .k7-dock__orb, .dk.is-snap .k7-dock__orb > .ui-orb { transition: none; }
 
-/* ---------- the slab ---------- */
-.dk-shape { position: absolute; bottom: 0; left: 0; overflow: visible; pointer-events: none; display: block; }
-.dk-shape path { fill: var(--dock-bg); pointer-events: auto; }
+/* a live orb is drawn at the hover size and held at 40; a hover scales it on the compositor (`--g`: 1, 46/40 or 52/40), crisp */
+.dk .k7-dock__orb > .ui-orb { transform: scale(var(--g, 1)); transition: transform var(--dur-2) var(--ease-sharp); }
+.dk .k7-dock__orb[hidden] { display: none; }
+/* a long name in the end slot is cut (and whole in the orb's accessible name) */
+.dk .k7-dock__cap > b { max-width: calc(var(--dk-orb) * 4); overflow: hidden; text-overflow: ellipsis; }
 
-/* ---------- stage: a 0×0 anchor at the slab's bottom centre ----------
-   What sits on the anchor (each page, the foot) is centred on it by layout, never by a transform: insets of 100vw on both
-   sides and auto margins put a box of any width the window can show with its middle on the anchor. While the slab moves the
-   stage is clipped (engine.ts paint), and WebKitGTK (2.52, accelerated) repaints a transformed child of the clipped stage that
-   has no compositing layer of its own with the clip taken in the child's own space, before its translateX(-50%): only the
-   part left of the anchor was painted again, and the arrange panel lost its right half (Done, the end of its line, the tiles
-   from "Needs you") from the moment its entrances ended until the slab settled (the owner's recording, 0.1.9). A box placed
-   by layout is clipped where it is. tests/e2e/dock_webkit.py watches both halves of the panel as it opens and closes. */
-.dk-stage { position: absolute; left: 0; bottom: 0; width: 0; height: 0; }
-.dk-page { position: absolute; left: -100vw; right: -100vw; bottom: 0; margin-inline: auto; width: max-content; pointer-events: auto; touch-action: none; }
-.dk-page[hidden] { display: none; }
-.dk-page.is-out { pointer-events: none; }
-.dk-view { position: relative; box-sizing: border-box; max-width: var(--dock-room, none); }
-.dk-view[hidden] { display: none; }
-.dk-view.is-leaving { position: absolute; pointer-events: none; }
-.dk-view [data-k].is-handed { visibility: hidden; }
-/* the edge fade over a page that moves sideways (engine.ts paintEdges): the slab's black at both sides over --scroll-fade */
-.dk-edges { position: absolute; left: 0; bottom: 0; overflow: visible; pointer-events: none; display: none; }
-.dk[data-scrolling] .dk-edges { display: block; }
-.dk-edge-solid { stop-color: var(--dock-bg); }
-.dk-edge-clear { stop-color: var(--dock-bg); stop-opacity: 0; }   /* the key lives on in the view that took it; stays until this view is shown again (engine.ts unhand) */
-:where(.dk) button:not([class*="ui-"]) { font: inherit; color: inherit; background: none; border: 0; margin: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.dk :focus { outline: none; }
-.dk :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-/* while the slab and its content travel, a focus ring waits for its element to arrive (engine.ts paint) */
-.dk[data-moving] :focus-visible { outline-color: transparent; }
-.dk[data-moving] [data-sq-on]:focus-visible::after { opacity: 0; }
+/* the open panel takes the room above the row and clips by its own overflow while the slab grows from the row and back */
+.dk .k7-dock__panel { overflow-x: hidden; }
+.dk .k7-dock__panel > .dk-composer { flex: none; }
 
-/* ---------- the foot: Arrange · the page nub · Minimise, inside the slab's last 24px, always the slab's width ----------
-   The nub is the library's page dots (the current page a short brass pill, the others --mark-off dots, a page that
-   owes you something a red dot). It is a quiet affordance: clicking a dot pages, and so do swipes, [ ] and 1-9. */
-.dk-foot { position: absolute; left: -100vw; right: -100vw; bottom: 0; margin-inline: auto; width: max-content; height: var(--dock-band); box-sizing: border-box; padding: 0 var(--sp-1); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); pointer-events: none; transition: opacity var(--dur-1) var(--ease), visibility 0s; }
-.dk-foot > * { pointer-events: auto; flex: none; }
-/* The configuration controls (Arrange, Minimise) show only while the pointer is over the dock or focus is inside it (and for a
-   moment after a tap on a touch screen: `data-reveal`, set by input.ts). At rest they are transparent and take no pointer, but
-   stay in the tab order and in the accessibility tree, so the keyboard and a screen reader reach them (focus-within shows them).
-   They fade with the hover tokens; the page nub is navigation, not configuration, and stays while there is more than one page. */
-.dk-foot > .dk-foot-ctl { display: inline-flex; opacity: 0; pointer-events: none; transition: opacity var(--dur-out) var(--ease); }
-.dk:is(:focus-within, [data-reveal]) .dk-foot > .dk-foot-ctl { opacity: 1; pointer-events: auto; transition-duration: var(--dur-1); }
-@media (hover: hover) and (pointer: fine) {   /* hover only where a pointer hovers (R-state-3); a touch screen has focus and the tap */
-  .dk:hover .dk-foot > .dk-foot-ctl { opacity: 1; pointer-events: auto; transition-duration: var(--dur-1); }
-}
-.dk-foot.is-off { opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease), visibility 0s var(--dur-out); }
-.dk-dots { display: flex; align-items: center; transition: opacity var(--dur-2) var(--ease), visibility 0s; }
-/* one page: nothing to go to, so no nub (hidden from the accessibility tree too, once it has faded) */
-.dk-dots.is-solo { opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease), visibility 0s var(--dur-out); }
-/* the dots stay 10px to look at; each answers a pointer over the foot's full 24px height */
-.dk-dots .ui-pages__dot::after { content: ""; position: absolute; left: 0; right: 0; top: -7px; bottom: -7px; }
-
-/* ---------- orbs: a slot per view (empty, sized by --o); the live library orb (.ui-orb) is in the orb layer and follows it ----------
-   The layer is a 0x0 point at the Bots page's bottom centre (the stage's origin), so a page that slides or fades takes its orbs
-   along. Each orb sits in a .dk-op, a 0x0 point at its centre that layer.ts moves by `transform` (the slot's place, the
-   row's magnification, the roster's scroll); the orb itself is only played the slot's FLIP and entrance (`transform`, `opacity`).
-   Nothing in it takes the pointer: the slot's button under it does. */
-.dk-orb { position: relative; display: block; flex: none; width: calc(var(--o, 40) * 1px); height: calc(var(--o, 40) * 1px); }
-.dk-orbs { position: absolute; left: 50%; bottom: 0; width: 0; height: 0; pointer-events: none; contain: layout; }
-.dk-op { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
-.dk-op[data-away] { visibility: hidden; }
-.dk-op > .ui-orb { position: absolute; left: calc(var(--o) * -.5px); top: calc(var(--o) * -.5px); margin: 0; pointer-events: none; }
-/* what the slot's place used to decide for the orb inside it */
-.dk-op > .ui-orb[data-in="min"] .ui-dot--flag { display: none; }   /* one attention dot for the pill, not one per 10px orb */
-.dk-op > .ui-orb:is([data-in="exp"], [data-in="strip"]) .ui-dot--flag { width: 6px; height: 6px; }
-/* the switcher's orb grows under the pointer or the keys (layer.ts sets data-hot: the button it sits on is not its parent) */
-.dk[data-grow] .dk-op > .ui-orb[data-in="strip"] { transition: scale var(--dur-1) var(--ease); }
-.dk[data-grow] .dk-op > .ui-orb[data-in="strip"][data-hot] { scale: 1.22; }
-.dk-mini-orb { display: block; flex: none; line-height: 0; cursor: pointer; }
-.dk-sub { color: var(--text-quiet); font-size: var(--fs-xs); }
-.dk-dim { color: var(--text-dim); }
-.dk-preview { font-size: var(--fs-2xs); color: var(--text-quiet); text-transform: var(--ui-case); white-space: nowrap; }
-
-/* ===== bots · normal ===== */
-.dk-v-bots-norm { padding: var(--dock-top) var(--dock-pad-x) var(--dock-band); }
-.dk-row { display: flex; align-items: flex-end; gap: var(--dock-gap); --o: var(--dock-orb); }
-.dk-bot { position: relative; align-self: flex-end; flex: none; width: calc(var(--dock-orb) * 1px); height: calc(var(--dock-orb) * 1px); border-radius: var(--r-pill); transform-origin: 50% 100%; }
-.dk-bot:focus-visible { outline-offset: 3px; }
-/* while the pointer is over the row the orbs are scaled every frame from script (magnification): each gets its own layer for exactly that long */
-.dk[data-mag] :is(.dk-bot, .dk-add) { will-change: transform; }
-.dk[data-mag] .dk-op { will-change: transform; }
-.dk-add { align-self: flex-end; flex: none; width: var(--ctl-s); height: calc(var(--dock-orb) * 1px); display: grid; place-items: center; color: var(--text-strong); border-radius: var(--r-s); transform-origin: 50% 100%; transition: background-color var(--dur-1) var(--ease); --sq-bg: transparent; background: var(--sq-bg); }
-.dk-add:hover { --sq-bg: var(--hover); background: var(--sq-bg); }
-
-/* ===== minimal pill (all pages) ===== */
-.dk-v-min { height: var(--ctl-s); padding: 0 var(--sp-2); display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); line-height: 1; white-space: nowrap; }
-.dk-v-min .dk-pillbtn { position: absolute; inset: 0; border-radius: calc(var(--ctl-s) / 2) calc(var(--ctl-s) / 2) 0 0; z-index: 1; }   /* the pill restores, and only that; R = h / 2 */
-.dk-mini { display: flex; align-items: center; gap: 5px; --o: 10; }
-.dk-att { display: inline-flex; }
-.dk-v-min .dk-ladder .ui-ladder { --st: 4px; gap: 5px; }
-.dk-v-min .dk-time { min-width: 0; }
-.dk-v-min [data-k^="s:bot:"] { max-width: 14ch; overflow: hidden; text-overflow: ellipsis; }
-
-/* ===== bots · roster (expanded): library rows in a four-column grid ===== */
-/* The expanded roster never grows past the window: the slab stops --sp-5 below the title bar and the roster scrolls inside
-   it (an inner scroller: R-scroll-4, 8; `.ui-scroll--stable` keeps the gutter, so the grid never reflows when the bar
-   comes, and the end padding is the side padding less the bar, so the grid stays centred). The roster's own --sp-1 of
-   padding, given back by its margin, keeps a row's focus ring inside the box that scrolls it. */
-.dk-v-bots-exp { padding: var(--sp-4) calc(var(--dock-pad-x) - var(--scroll-size)) var(--dock-band-x) var(--dock-pad-x); width: 640px; display: flex; flex-direction: column; max-height: calc(100vh - var(--chrome-h) - var(--sp-5)); }
-.dk-roster { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-1) var(--sp-2); --o: 26; }
-.dk-v-bots-exp .dk-roster { flex: 0 1 auto; min-height: 0; align-content: start; padding: var(--sp-1); margin: calc(-1 * var(--sp-1)); touch-action: pan-y; }
-/* the library lead is a 16px column for 20px orbs; these are 26px, so the column takes the orb's width and the row's
-   8px gap sits between orb and label, as in the bots list. orb2 paints up to a quarter of its size past its box
-   (6.5px here) and that stays inside the gap. */
-.dk-roster .ui-row__lead { width: calc(var(--o) * 1px); height: calc(var(--o) * 1px); }
-/* the row's top and bottom inset around the lead equal its 12px left padding, so the "new bot" ring sits in the row's corner with equal insets (R-corner-3) */
-.dk-roster .ui-row--2 { height: calc(var(--o) * 1px + 2 * var(--sp-3)); }
-.dk-add-ring { position: relative; width: 26px; height: 26px; display: grid; place-items: center; color: var(--text-strong); flex: none; }
-.dk-add-ring-o { position: absolute; inset: 0; border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--line-strong); }
-
-/* ===== bots · session: head, last messages (library entries), open cards, the library composer, switcher ===== */
-.dk-v-bots-card { width: 456px; padding: var(--sp-4) var(--sp-4) var(--dock-band-x); display: flex; flex-direction: column; gap: var(--sp-3); }
-.dk-card-head { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: var(--sp-3); align-items: center; }
-.dk-card-head .dk-orb { --o: 40; cursor: pointer; }
-.dk-card-who { min-width: 0; }
-/* orb, name and state on one line; a long name ellipsises first, the state and the head's buttons stay */
-.dk-card-line { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
-.dk-card-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-m); font-weight: 600; color: var(--text-strong); }
-.dk-card-state { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--text-quiet); white-space: nowrap; }
-.dk-card-state[data-tone="attention"] .dk-card-word { color: var(--red-text); }
-.dk-card-role { margin-top: 2px; font-size: var(--fs-xs); color: var(--text-quiet); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dk-card-acts { display: flex; gap: 2px; align-self: start; margin-right: -6px; }
-.dk-sess-log { max-height: min(220px, 26vh); border-radius: var(--r-s); }   /* a tab stop, so the keyboard can scroll it */
-.dk-sess-log .ui-entry + .ui-entry { margin-top: var(--sp-3); }
-.dk-sess-log .ui-entry__body { font-size: var(--fs-s); gap: var(--sp-2); max-width: 100%; }
-.dk-sess-log .ui-entry__body p { margin: 0; }
-.dk-sess-log .ui-request { font-size: var(--fs-s); }
-.dk-sess-empty { margin: 0; font-size: var(--fs-s); color: var(--text-quiet); }
-.dk-composer .ui-composer__input { max-height: 120px; }
-.dk .dk-composer .ui-composer__input:focus-visible { outline: none; }   /* the composer's frame answers focus (library) */
-.dk-rule { display: block; height: 1px; margin: 0; border: 0; background: var(--hair); }
-.dk-strip { position: relative; display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); padding-top: var(--sp-3); --o: 18; }
-/* the divider is a line, not a container: drawn apart from the strip's box so a focus ring on an end orb is not "outside" a shape (R-corner-4) */
-.dk-strip::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--hair); }
-.dk-strip-bot { position: relative; width: 24px; height: 24px; }
-/* grow on (HX.state.orbGrow): in the switcher a hovered or focused orb grows, and the open session's orb stays grown
-   as its selection mark instead of the ring. A transform: the row never reflows (under reduced motion it is instant) */
-.dk[data-grow] .dk-strip-bot .ui-orb { transition: transform var(--dur-1) var(--ease); }
-.dk[data-grow] .dk-strip-bot:is(:hover, :focus-visible) .ui-orb { transform: scale(1.22); }
-.dk[data-grow] .dk-strip-bot[aria-current="true"] { box-shadow: none; }
-.dk[data-grow] .dk-strip-bot[aria-current="true"] .ui-orb { transform: scale(1.33); }
-
-/* ===== run ===== */
-.dk-v-run-norm { padding: var(--dock-top) var(--sp-4) var(--dock-band); display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; column-gap: var(--sp-4); width: 640px; max-width: var(--dock-maxw); }
-.dk-ladder { display: inline-flex; align-items: center; }
-.dk-run-open { display: flex; flex-direction: column; align-items: flex-start; text-align: left; min-width: 0; border-radius: var(--r-s); }
-.dk-run-title { font-size: var(--fs-s); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.dk-run-model { font-size: var(--fs-xs); color: var(--text-quiet); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }   /* cut, like the title above it: a long model line never runs under the time beside it */
-.dk-run-model .dk-mono { font-size: var(--fs-2xs); color: var(--text-dim); }
-.dk-run-open:hover .dk-run-title { color: var(--text-strong); }
-.dk-time { font-size: var(--fs-2xs); color: var(--text); min-width: 7ch; text-align: right; white-space: nowrap; }
-.dk-cost { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-.dk-v-run-exp { padding: var(--sp-4) var(--sp-4) var(--dock-band-x); width: 520px; }
-.dk-runx-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-4); align-items: start; }
-.dk-runx-head .dk-run-title { font-size: var(--fs-m); font-weight: 600; color: var(--text-strong); }
-.dk-ladderx { margin-top: var(--sp-4); }
-.dk-v-run-exp .dk-rule { margin-top: var(--sp-4); }
-.dk-runx-spend { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--sp-4); row-gap: 6px; margin-top: 14px; }
-.dk-runx-more { flex-basis: 100%; font-size: var(--fs-2xs); color: var(--text-quiet); }
-.dk-settings { margin-top: var(--sp-2); }
-
-/* ===== needs you: the canonical cards, mini in the normal view, compact expanded ===== */
-.dk-v-wait-norm { padding: var(--sp-3) var(--sp-3) var(--dock-band); width: 392px; max-width: var(--dock-maxw); }
-.dk-v-wait-exp { padding: var(--sp-3) var(--sp-3) var(--dock-band-x); width: 392px; }
-/* a card at the top of the slab sits in its corner: inner = max(floor, outer − gap) (6px under the 22px corner) */
-.dk-v-wait-norm, .dk-v-wait-exp { --r-outer: var(--r-l); --pad: var(--sp-3); --r-card: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); }
-.dk-cards { display: flex; flex-direction: column; gap: 6px; }
-.dk-empty { padding: var(--sp-1) 0; }
-
-/* ===== scheduled ===== */
-.dk-v-sched-norm { padding: 14px var(--sp-4) var(--dock-band); width: 560px; max-width: var(--dock-maxw); }
-.dk-v-sched-exp { padding: var(--sp-4) var(--sp-4) var(--dock-band-x); width: 580px; }
-.dk-sched { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.dk-sched-row { display: grid; grid-template-columns: 18px 64px minmax(0, 1fr) auto; column-gap: var(--sp-3); align-items: center; min-height: calc(var(--ctl) + 4px); border-radius: var(--r-s); }
-.dk-sched-bot { color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* long names keep the columns */
-.dk-sched-what { color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; min-width: 0; border-radius: var(--r-s); }
-button.dk-sched-what:hover { color: var(--text-strong); }
-.dk-sched-when { font-size: var(--fs-2xs); color: var(--text-quiet); white-space: nowrap; text-align: right; }
-.dk-sched-when b { font-weight: 400; color: var(--text); }
-.dk-sched-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--sp-2); font-size: var(--fs-m); font-weight: 600; color: var(--text-strong); }
-.dk-sched-head span { font-family: var(--mono); font-size: var(--fs-2xs); font-weight: 400; color: var(--text-quiet); }
-.dk-sched-row[data-paused] .dk-sched-what, .dk-sched-row[data-paused] .dk-sched-when { color: var(--text-quiet); }
-.dk-sched-end { display: grid; justify-items: end; align-items: center; }
-.dk-sched-end > * { grid-area: 1 / 1; }
-.dk-sched-acts { display: flex; gap: 6px; opacity: 0; pointer-events: none; transition: opacity var(--dur-1) var(--ease); }
-.dk-sched-end .dk-sched-when { transition: opacity var(--dur-1) var(--ease); }
-.dk-sched-row:hover .dk-sched-acts, .dk-sched-row:focus-within .dk-sched-acts { opacity: 1; pointer-events: auto; }
-.dk-sched-row:hover .dk-sched-end .dk-sched-when, .dk-sched-row:focus-within .dk-sched-end .dk-sched-when { opacity: 0; }
-@media (hover: none) { .dk-sched-acts { opacity: 1; pointer-events: auto; } .dk-sched-end .dk-sched-when { opacity: 0; } }
-
-/* ===== context: the library's measure (dots) and legend ===== */
-.dk-v-ctx-norm { padding: var(--dock-top) var(--sp-4) var(--dock-band); display: grid; grid-template-columns: auto auto 1fr auto; column-gap: 14px; align-items: center; width: 560px; }
-.dk-ctx-num { font-size: var(--fs-2xs); color: var(--text); white-space: nowrap; }
-.dk-ctx-of { font-size: var(--fs-2xs); color: var(--text-quiet); white-space: nowrap; }
-.dk-ctx-dots, .dk-ctx-grid { display: flex; }
-.dk-v-ctx-exp { padding: var(--sp-4) var(--sp-4) var(--dock-band-x); width: 480px; }
-.dk-ctxx-head { display: flex; align-items: baseline; gap: var(--sp-3); margin-bottom: var(--sp-3); }
-.dk-ctxx-head .dk-ctx-num { font-size: var(--fs-m); color: var(--text-strong); }
-.dk-ctx-legend { margin-top: var(--sp-4); }
-.dk-ctx-acts { margin-top: var(--sp-4); }
-
-/* ===== edit: arrange pages ===== */
-.dk-v-edit { padding: var(--sp-4); width: 588px; }
-.dk-edit-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); }
-.dk-edit-head h2 { margin: 0; font-size: var(--fs-m); line-height: var(--lh-ui); font-weight: 600; color: var(--text-strong); }
-.dk-edit-head p { margin: 2px 0 0; font-size: var(--fs-xs); color: var(--text-quiet); }
-.dk-tiles { list-style: none; margin: 14px 0 0; padding: 0; display: flex; gap: var(--sp-2); }
-.dk-tile { position: relative; width: 104px; height: 92px; border-radius: var(--r-m); display: flex; flex-direction: column; justify-content: space-between; padding: 10px 10px var(--sp-2); box-sizing: border-box; cursor: grab; touch-action: none; user-select: none; }
-.dk-tile-o { position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--line); pointer-events: none; transition: box-shadow var(--dur-1) var(--ease); }
-.dk-tile:hover .dk-tile-o { box-shadow: inset 0 0 0 1px var(--line-strong); }
-.dk-tile > * { position: relative; }
-.dk-tile > .dk-tile-o, .dk-tile > .dk-tile-move { position: absolute; }
-.dk-tile.is-drag { cursor: grabbing; z-index: 2; background: var(--dock-bg); box-shadow: var(--shadow-pop); }
-.dk-tile-name { font-size: var(--fs-s); color: var(--text); }
-.dk-tile[data-off] .dk-tile-name, .dk-tile[data-off] .dk-tile-sub { color: var(--text-quiet); }
-.dk-tile[data-off] .dk-tile-glyph > :not(.dk-tile-sub) { opacity: .5; }
-.dk-tile-glyph { display: flex; align-items: center; gap: 3px; height: 16px; }
-.dk-tile-glyph > i { display: block; width: 6px; height: 6px; border-radius: var(--r-pill); }
-.dk-tile-sub { font-size: var(--fs-2xs); color: var(--text-dim); margin-left: 2px; }
-.dk-tile-foot { display: flex; align-items: center; justify-content: space-between; height: 24px; }
-.dk-tile-dot { width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--mark-off); }
-.dk-tile-dot[aria-current="true"] { width: 14px; background: var(--brass); }
-.dk-tile-dot[data-off] { background: transparent; box-shadow: inset 0 0 0 1px var(--mark-off); }
-.dk-tile-show { margin-right: -6px; }
-.dk-tile-move { top: 6px; right: 6px; display: flex; opacity: 0; transition: opacity var(--dur-1) var(--ease); }
-.dk-tile:hover .dk-tile-move, .dk-tile:focus-within .dk-tile-move { opacity: 1; }
-.dk-edit-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
-.dk-edit-foot p { margin: 0; font-family: var(--mono); font-size: var(--fs-2xs); color: var(--text-quiet); }
-
-/* interface case (theme customizer): interface labels only, never names, titles or data */
-.dk-tile-name, .dk-edit-head h2, .dk-edit-head p, .dk-sched-head, .dk-ui { text-transform: var(--ui-case); }
-
-/* phones and narrow columns: the dock keeps its edge, the row shrinks (dock.js sets --dock-orb) */
-@media (max-width: 520px) {
-  .dk { --dock-pad-x: 10px; --dock-top: 12px; }
-  .dk-v-run-norm { grid-template-columns: auto minmax(0, 1fr) auto auto; width: calc(100vw - 24px); column-gap: var(--sp-3); }
-  .dk-v-run-norm .dk-cost { display: none; }
-  .dk-v-wait-norm, .dk-v-sched-norm, .dk-v-ctx-norm { width: calc(100vw - 24px); }
-  .dk-v-bots-card, .dk-v-run-exp, .dk-v-wait-exp, .dk-v-sched-exp, .dk-v-ctx-exp, .dk-v-bots-exp, .dk-v-edit { width: calc(100vw - 24px); }
-  .dk-roster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dk-v-bots-card { padding-left: var(--sp-3); padding-right: var(--sp-3); }
-  .dk-strip { gap: 4px; }
-  .dk-tiles { flex-wrap: wrap; }
-}
-
-/* reduced motion: no CSS transitions at all. (A 1ms duration is not "none": with transition-property's initial `all`
-   it made every property of every element transition, the slab's path `d` and size included, so the black shape
-   trailed its content by several frames: the owner's "empty black tab above a row of tiny dots".) */
-@media (prefers-reduced-motion: reduce) {
-  .dk, .dk *, .dk *::before, .dk *::after { transition: none !important; }
-}
-
-/* drawn corners (DESIGN-SYSTEM.md §8; bound at start-up with HX.ui.squircle.auto). A tile is a surface (not clipped),
-   so its drag shadow stays; its outline becomes the drawn line. The run model carries its provider's mark. */
-.dk-tile { --sq-bg: transparent; --sq-line: var(--line); }
-.dk-tile:hover { --sq-line: var(--line-strong); }
-.dk-tile.is-drag { --sq-bg: var(--dock-bg); }
-.dk-tile[data-sq-on] .dk-tile-o { box-shadow: none; }
-.dk-run-model .ui-model { font-size: inherit; }
+/* the session's composer steps aside while the dock shows the stack or a card (fades out, focus in the dock), until Esc */
+.hx[data-dock-open] .ss-composer { opacity: 0; pointer-events: none; transition: opacity var(--dur-1) var(--ease); }

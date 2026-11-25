@@ -3,8 +3,8 @@
    stack, or a session's glyph, and the name; it opens the details), the search hint (S5: "Search ctrl K", it opens the palette),
    the details button and the thin window glyphs. The open sidebar's head is the Sessions / Bots pill and New (screen 13); its
    foot is you, Store and Settings (screen 12). Each surface already on the kit is a v7 root (`data-ui="v7"` and `data-theme`): the
-   chrome, the sidebar and the rail, the Bots tab's view and the floating Notice's layer, in the theme the scheme of the v6 preset
-   picks, until Settings > Appearance moves to v7's own themes (w33/settings-store). The surfaces still on v6 (the session, the dock,
+   chrome, the sidebar and the rail, the Bots tab's view, the floating Notice's layer and the dock, in the theme the scheme of the v6 preset
+   picks, until Settings > Appearance moves to v7's own themes (w33/settings-store). The surfaces still on v6 (the session,
    the palette, the dialogs) keep v6's tokens until their wave C branches move them; then the root moves up to the body. */
 import { emit } from '../../core/bus';
 import { $, frag } from '../../core/dom';
@@ -15,7 +15,7 @@ import { themeApi } from '../../styles/theme';
 import { sh } from './ctx';
 
 /** the v7 root follows the scheme of the active theme: dark, or light (Bone) */
-export const V7_SURFACES = ['#hx-chrome', '#hx-side', '#hx-view-bots', '#hx-notify'] as const;
+export const V7_SURFACES = ['#hx-chrome', '#hx-side', '#hx-view-bots', '#hx-notify', '#hx-dock'] as const;
 let lastMode = '';
 export function syncV7Theme(): void {
   const mode = themeApi.scheme() === 'light' ? 'light' : 'dark';
