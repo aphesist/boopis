@@ -25,7 +25,7 @@ export interface ChromeOpts {
 }
 export interface ChromeParts { toggle?: U<Attrs>; title?: U<Attrs>; search?: U<Attrs>; details?: U<Attrs>; windowGroup?: U<Attrs>; min?: U<Attrs>; max?: U<Attrs>; close?: U<Attrs> }
 export function titlePill(o: { title: string; bot?: U<BotLike>; running?: U<string>; members?: U<readonly BotLike[]>; icon?: U<string>; attrs?: U<Attrs> }): string {
-  const lead = o.members && o.members.length ? stack({ members: o.members, size: 24, still: true, tip: false })
+  const lead = o.members && o.members.length ? stack({ members: o.members, size: 24, max: 4, still: true, tip: false })   /* four places, as every row's stack (owner decision, 22 November: one stack, consistently) */
     : o.bot ? orbHtml(o.bot, { size: 24, live: !!o.running, state: o.running ? 'working' : undefined })
     : o.icon ? '<span class="k7-title__ic" aria-hidden="true">' + glyph(o.icon) + '</span>' : '';
   return '<button class="k7-reset k7-title"' + partAttrs('TitlePill', { type: 'button', 'aria-haspopup': 'dialog', 'aria-description': 'Opens the details', 'data-running': o.running ? '' : null, 'data-lead': lead ? '' : null, ...(o.attrs ?? {}) }) + '>' +

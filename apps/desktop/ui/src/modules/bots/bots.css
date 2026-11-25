@@ -342,3 +342,7 @@ orb-avatar.is-live { cursor: pointer; }
 /* a bubble never runs past its turn: up to 560, and never wider than the column (a long path or name wraps or ellipsizes inside) */
 .bt-turn .k7-bubble { min-width: 0; max-width: min(var(--bubble-max), 100%); }
 .bt-turn .k7-gutter > .k7-bubble { max-width: min(var(--bubble-max), 100%); }
+/* a message to you (owner decision, recoloured amber by v7's 15.2): the kit's Bubble draws the edge and the wash; the v6 markdown's own
+   red edge and wash stand down inside it, and the "you" capsule takes the amber */
+.k7-bubble .ui-md[data-to-you]::before, .k7-bubble .ui-md[data-to-you]::after { content: none; }
+.k7-bubble .ui-mention--you { --red: var(--owe); --red-text: var(--owe-text); --red-soft: var(--owe-soft); }

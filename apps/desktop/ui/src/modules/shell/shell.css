@@ -358,3 +358,5 @@ body {
 /* on the Bots tab the ground under the chrome is the Bots view's (a v7 root): the chrome paints it from the view's left edge */
 .hx-bar::before { content: ''; position: absolute; inset: 0 0 0 var(--hx-view-left-to, 0px); background: var(--bg-2); opacity: 0; pointer-events: none; transition: opacity var(--dur-2) var(--ease-sharp); }
 .hx[data-tab="bots"] .hx-bar::before { opacity: 1; }
+/* a phone-wide window has no room for the hint beside the title pill: ctrl K (and the palette's other ways) still open search */
+@media (max-width: 639px) { .hx-bar .k7-search-hint { display: none; } }
