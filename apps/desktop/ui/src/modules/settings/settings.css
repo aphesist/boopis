@@ -14,6 +14,11 @@
   .hx-dialog7 .k7-dialog[data-variant="large"] { flex-direction: column; }
   .hx-dialog7 .k7-dialog__nav { flex-direction: row; flex-wrap: wrap; width: auto; padding: var(--r-card) var(--sp-7) 0 var(--sp-2);   /* clear of the close button in the corner */ }
   .hx-dialog7 .k7-page[data-variant="settings"] { padding-inline: var(--sp-3); }
+  /* a row's control that does not fit beside its label goes under it, at the row's end */
+  .hx-dialog7 .k7-row { flex-wrap: wrap; justify-content: flex-end; row-gap: var(--sp-2); }
+  /* a Segmented wider than its row keeps the row's width and ellipsises its labels (the whole label is its accessible name) */
+  .hx-dialog7 .k7-row > .k7-seg { flex: 0 1 auto; max-width: 100%; box-sizing: border-box; }
+  .hx-dialog7 .k7-row > .k7-seg > .k7-seg__item { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-inline: var(--sp-2); line-height: var(--seg-item-h); text-align: center; }
 }
 
 /* Settings' pages (modules/settings): placement only */
@@ -24,3 +29,9 @@
 .hx-keyspec { display: inline-flex; align-items: center; flex: none; gap: var(--sp-1); }
 .hx-keyspec__word { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
 .hx-set-note { margin: 0; padding: 0 var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
+/* Models > Providers (host/providers-view.ts): the search and its filter Chips, the blocks of Rows, a form in place of the list */
+#hx-set-providers, .hx-prov-body, .hx-prov-tail, .hx-prov-flow { display: flex; flex-direction: column; gap: var(--sp-5); min-width: 0; }
+.hx-prov-bar { display: flex; flex-direction: column; gap: var(--sp-3); padding: 0 0 var(--sp-2); }
+.hx-prov-bar[hidden], .hx-prov-body[hidden], .hx-prov-flow[hidden], .hx-prov-tail[hidden] { display: none; }
+.hx-prov-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.hx-prov-back { align-self: flex-start; }

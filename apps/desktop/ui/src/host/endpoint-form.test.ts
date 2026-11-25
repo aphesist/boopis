@@ -32,7 +32,7 @@ function harness(test: () => Promise<EndpointTest>) {
     show: (...kids) => { host.replaceChildren(...kids); },
     back: () => { log.backs += 1; },
     later: (fn) => { fn(); },
-    toast: (t) => { log.toasts.push(t); }
+    notify: (t) => { log.toasts.push(t); }
   };
   return { log, host, flow: startEndpointFlow(flowUi, bridge) };
 }

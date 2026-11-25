@@ -23,7 +23,7 @@ export interface FlowUi {
   back(): void;
   /** run `fn` once the card's receipt has shown */
   later(fn: () => void): void;
-  toast(text: string): void;
+  notify(text: string): void;
 }
 
 const text = (v: unknown): string => (typeof v === 'string' ? v : '');
@@ -69,7 +69,7 @@ export function startEndpointFlow(ui: FlowUi, bridge: ProvidersBridge, opts: End
         let saved: ProviderState;
         try { saved = await bridge.addEndpoint(request); } catch (e) { forget(); throw new Error(e instanceof Error ? e.message : 'The endpoint was not saved.'); }
         forget();
-        ui.later(() => { ui.toast(saved.status === 'error' ? (saved.detail ?? 'Saved, but it has a problem.') : 'Saved. Choose it from your model list.'); opts.saved?.(saved); ui.back(); });
+        ui.later(() => { ui.notify(saved.status === 'error' ? (saved.detail ?? 'Saved, but it has a problem.') : 'Saved. Choose it from your model list.'); opts.saved?.(saved); ui.back(); });
       },
       cancel() { forget(); ui.back(); return Promise.resolve(); }
     }));

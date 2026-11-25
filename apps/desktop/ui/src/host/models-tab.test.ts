@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 /* Settings > Models against fakes: the plan Hermes reports, the ladder the host read, and "Change models". */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { kit } from '@boopis/ui';
 import { governedRows, ladderRows, mountModels } from './models-tab';
 import { registerSigninCard } from './providers-view';
 import type { EndpointRequest, ProviderState, ProvidersBridge } from './providers-bridge';
@@ -35,7 +36,15 @@ const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
 function deps(over: Partial<ModelsDeps> = {}): ModelsDeps & { calls: string[] } {
   const calls: string[] = [];
-  return { calls, plan: () => Promise.resolve(free), ladder: () => Promise.resolve(SET), change: () => { calls.push('change'); return Promise.resolve(); }, closeSettings: () => { calls.push('close'); }, toast: (t) => { calls.push('toast:' + t); }, ...over };
+  return { calls, plan: () => Promise.resolve(free), ladder: () => Promise.resolve(SET), change: () => { calls.push('change'); return Promise.resolve(); }, closeSettings: () => { calls.push('close'); }, notify: (t) => { calls.push('toast:' + t); }, ...over };
+}
+/** what a person can read under `root`: its text, and the explanations behind its labels' marks */
+function read(root: Element | null | undefined): string {
+  return root ? (root.textContent ?? '') + ' ' + [...root.querySelectorAll('[data-explain]')].map((n) => n.getAttribute('data-explain')).join(' ') : '';
+}
+/** rows as a settings Card, for the pure row builders */
+function card(rows: Parameters<typeof kit.html.card>[0]['rows']): HTMLElement {
+  const d = document.createElement('div'); d.innerHTML = kit.html.card({ rows }); return d;
 }
 beforeEach(() => { document.body.replaceChildren(); });
 
@@ -43,35 +52,33 @@ describe('Settings > Models', () => {
   it('shows the free plan Hermes reported and the ladder tier by tier, in the settings rows and the ladder list', async () => {
     const panel = document.createElement('div');
     await mountModels(panel, deps());
-    const heads = [...panel.querySelectorAll('h3')].map((h) => h.textContent);
+    const heads = [...panel.querySelectorAll('.k7-page__body > .k7-section > [data-kit~="SectionHead"]')].map((h) => h.textContent);
     expect(heads).toEqual(['Plan', 'Governed mode', 'Model ladder', 'Providers', 'Change']);
-    expect(panel.textContent).toContain('Free (Nous · free tier)');
-    expect(panel.textContent).toContain('nous/welcome');
-    const rows = [...panel.querySelectorAll('.ui-ladder--list > li')];
+    expect(read(panel)).toContain('Free (Nous · free tier)');
+    expect(read(panel)).toContain('nous/welcome');
+    const rows = [...panel.querySelectorAll('#hx-set-ladder [data-tier]')];
     expect(rows).toHaveLength(2);
-    expect(rows[0]?.querySelector('.ui-ladder__name')?.textContent).toContain('A 3B');
-    expect(rows[0]?.querySelector('.ui-ladder__rule')?.textContent).toBe('small');
-    expect(rows[1]?.querySelector('.ui-ladder__rule')?.textContent).toBe('big');
-    expect(rows[0]?.getAttribute('aria-current'), 'the first tier is where a task starts').toBe('step');
-    expect(panel.textContent).toContain('moves to the next only when its gate fails');
-    expect(panel.querySelector('[role=img][aria-label^="Model ladder"], ol[aria-label="Model ladder"]')).toBeTruthy();
+    expect(rows[0]?.querySelector('.k7-row__label')?.textContent).toBe('openrouter/a-3b:free');
+    expect(rows[0]?.querySelector('.k7-row__value')?.textContent).toBe('small');
+    expect(rows[1]?.querySelector('.k7-row__value')?.textContent).toBe('big');
+    expect(read(panel)).toContain('moves to the next only when its gate fails');
   });
 
   it('says the ladder is the built-in one when none is saved, and lists no tiers it was not told of', async () => {
     const panel = document.createElement('div');
     await mountModels(panel, deps({ ladder: () => Promise.resolve({ state: 'default', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY }) }));
-    expect(panel.querySelector('.ui-ladder--list')).toBeNull();
-    expect(panel.textContent).toContain('No ladder is saved here, so boopis uses its built-in Claude ladder');
+    expect(panel.querySelector('#hx-set-ladder [data-tier]')).toBeNull();
+    expect(read(panel)).toContain('No ladder is saved here, so boopis uses its built-in Claude ladder');
   });
 
   it('says a saved ladder it cannot read is not shown, and that Hermes could not be asked when it could not', async () => {
     const odd = document.createElement('div');
     await mountModels(odd, deps({ ladder: () => Promise.resolve({ state: 'unreadable', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY }) }));
-    expect(odd.textContent).toContain('does not read as a list of named tiers');
-    expect(odd.querySelector('.ui-ladder--list')).toBeNull();
+    expect(read(odd)).toContain('does not read as a list of named tiers');
+    expect(odd.querySelector('#hx-set-ladder [data-tier]')).toBeNull();
     const down = document.createElement('div');
     await mountModels(down, deps({ ladder: () => Promise.reject(new Error('hermes is not installed')) }));
-    expect(down.textContent).toContain('The ladder could not be read, so it is not shown: hermes is not installed');
+    expect(read(down)).toContain('The ladder could not be read, so it is not shown: hermes is not installed');
     expect(down.querySelector('#hx-models-change'), 'the button is still there: choosing models does not need the read').toBeTruthy();
   });
 
@@ -86,11 +93,11 @@ describe('Settings > Models', () => {
     const panel = document.createElement('div');
     let ladder: ModelsView = { state: 'default', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY };
     const m = await mountModels(panel, deps({ ladder: () => Promise.resolve(ladder) }));
-    expect(panel.querySelectorAll('.ui-ladder--list > li')).toHaveLength(0);
+    expect(panel.querySelectorAll('#hx-set-ladder [data-tier]')).toHaveLength(0);
     ladder = SET;
     await m.refresh();
-    expect(panel.querySelectorAll('.ui-ladder--list > li')).toHaveLength(2);
-    expect(panel.querySelectorAll('section'), 'redrawn in place, not appended').toHaveLength(5);
+    expect(panel.querySelectorAll('#hx-set-ladder [data-tier]')).toHaveLength(2);
+    expect(panel.querySelectorAll('.k7-page__body > .k7-section'), 'redrawn in place, not appended').toHaveLength(5);
   });
 
   it('"Change models" asks the question again and steps the dialog aside; a refusal is said and the dialog stays', async () => {
@@ -110,7 +117,7 @@ describe('Settings > Models', () => {
   });
 
   it('rows are plain text with no markup from a tier name or model', () => {
-    const rows = ladderRows({ state: 'set', tiers: [{ name: '<b>x</b>', model: 'a"b/c' }], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY }).join('');
+    const rows = card(ladderRows({ state: 'set', tiers: [{ name: '<b>x</b>', model: 'a"b/c' }], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY })).innerHTML;
     expect(rows).not.toContain('<b>x</b>');
     expect(rows).toContain('&lt;b&gt;x&lt;/b&gt;');
   });
@@ -136,7 +143,7 @@ describe('change models', () => {
 describe('Settings > Models: governed mode (ADR-0037)', () => {
   const view = (governed: ModelsView['governed'], over: Partial<ModelsView> = {}): ModelsView => ({ ...SET, claude: CLAUDE.ready, governed, ...over });
   const NO: ModelsView['governed'] = { ...GOV_OK, available: false, why: 'tier \'haiku\' runs claude-subscription-directsdk-experimental/haiku, which is not a frontier model: it is not in a family on that list', tiers: [{ name: 'haiku', model: 'claude-subscription-directsdk-experimental/haiku', frontier: false, heavy: false }, { name: 'opus', model: 'claude-subscription-directsdk-experimental/opus', frontier: true, heavy: false }] };
-  const text = (rows: string[]): string => { const d = document.createElement('div'); d.innerHTML = rows.join(''); return d.textContent ?? ''; };
+  const text = (rows: Parameters<typeof card>[0]): string => read(card(rows));
 
   it('lists the models governed mode allows, as the host read them, and says it is available', () => {
     const t = text(governedRows(view(GOV_OK)));
@@ -159,7 +166,7 @@ describe('Settings > Models: governed mode (ADR-0037)', () => {
     expect(d.calls).toContain('change');
   });
   it('marks a saved tier that governed mode will not run', () => {
-    const rows = ladderRows(view(NO, { tiers: NO.tiers.map((x) => ({ name: x.name, model: x.model })) })).join('');
+    const rows = read(card(ladderRows(view(NO, { tiers: NO.tiers.map((x) => ({ name: x.name, model: x.model })) }))));
     expect(rows).toContain('haiku, not used in governed mode');
     expect(rows).not.toContain('opus, not used');
   });
@@ -171,7 +178,7 @@ describe('Settings > Models: governed mode (ADR-0037)', () => {
 describe('Settings > Models: the heavy models\' switches (ADR-0037)', () => {
   const fableView = (on: boolean, blocked: string | null = null): ModelsView => ({ ...SET, state: 'set', claude: CLAUDE.ready, claude_plugin: true, heavy: [choice('fable', { applies: true, on, blocked }), choice('grok')] });
   const grokView = (on: boolean): ModelsView => ({ ...SET, state: on ? 'set' : 'default', tiers: on ? [{ name: 'grok', model: 'xai/grok-4.7' }] : [], claude: CLAUDE.missing, heavy: [choice('fable'), choice('grok', { applies: true, on })], governed: on ? { ...GOV_OK, tiers: [{ name: 'grok', model: 'xai/grok-4.7', frontier: true, heavy: true }] } : { ...GOV_OK, available: false, why: 'no ladder is saved, and the only frontier model an xAI key reaches is Grok 4.7 or later, a heavy model that governed mode runs only when you turn it on. Turn on Grok below' } });
-  const text = (v: ModelsView): string => { const d = document.createElement('div'); d.innerHTML = governedRows(v).join(''); return d.textContent ?? ''; };
+  const text = (v: ModelsView): string => read(card(governedRows(v)));
 
   it('says plainly why Fable is off by default: usage credits from the first request on a Pro plan, and token-heavy', () => {
     const t = text(fableView(false));
@@ -181,9 +188,7 @@ describe('Settings > Models: the heavy models\' switches (ADR-0037)', () => {
     expect(t).toContain('never adds it by itself');
   });
   it('lives in the governed section, not the Claude one, and marks the heavy models in the allowed list', () => {
-    const d = document.createElement('div');
-    d.innerHTML = governedRows(fableView(false)).join('');
-    expect(d.textContent?.match(/Heavy: only when you turn it on/g)).toHaveLength(3); // Fable, Carbon and Grok
+    expect(text(fableView(false)).match(/Heavy: only when you turn it on/g)).toHaveLength(3); // Fable, Carbon and Grok
   });
   it('shows Carbon as a switch like the others once the saved ladder is a Gemini one, with its reason, and no separate row about it', () => {
     const v: ModelsView = { ...SET, heavy: [choice('fable'), choice('grok'), choice('carbon', { applies: true })] };
@@ -192,7 +197,7 @@ describe('Settings > Models: the heavy models\' switches (ADR-0037)', () => {
     expect(t).toContain('72.6%');
     expect(t).toContain('never adds it by itself');
     expect(t).not.toContain('Gemini 4 Carbon on the ladder');
-    expect(governedRows(v).join('')).toContain('id="hx-heavy-carbon"');
+    expect(card(governedRows(v)).querySelector('#hx-heavy-carbon')).toBeTruthy();
     // off the Gemini ladder there is no switch to show, and Neon never has one
     expect(text(fableView(false))).not.toContain('Use Gemini 4 Carbon');
     expect(text(v)).not.toMatch(/Neon[^.]*switch/);
@@ -207,33 +212,30 @@ describe('Settings > Models: the heavy models\' switches (ADR-0037)', () => {
     let view = fableView(false);
     const panel = document.createElement('div');
     await mountModels(panel, deps({ ladder: () => Promise.resolve(view), setHeavy: (id, on) => { calls.push(`${id}:${String(on)}`); view = fableView(on); return Promise.resolve(); } }));
-    const sw = (): HTMLInputElement => panel.querySelector<HTMLInputElement>('#hx-heavy-fable') as HTMLInputElement;
-    expect(sw().checked).toBe(false);
-    sw().checked = true; sw().dispatchEvent(new Event('change'));
+    const sw = (): HTMLButtonElement => panel.querySelector<HTMLButtonElement>('#hx-heavy-fable') as HTMLButtonElement;
+    expect(sw().getAttribute('aria-checked')).toBe('false');
+    sw().click();
     await tick(); await tick();
     expect(calls).toEqual(['fable:true']);
-    expect(sw().checked).toBe(true);
-    sw().checked = false; sw().dispatchEvent(new Event('change'));
+    expect(sw().getAttribute('aria-checked')).toBe('true');
+    sw().click();
     await tick(); await tick();
     expect(calls).toEqual(['fable:true', 'fable:false']);
-    expect(sw().checked).toBe(false);
+    expect(sw().getAttribute('aria-checked')).toBe('false');
 
     const d = deps({ ladder: () => Promise.resolve(fableView(false)), setHeavy: () => Promise.reject(new Error('Your Claude Code does not serve Fable yet (it needs 2.1.321).')) });
     const p2 = document.createElement('div');
     await mountModels(p2, d);
-    const s2 = p2.querySelector<HTMLInputElement>('#hx-heavy-fable') as HTMLInputElement;
-    s2.checked = true; s2.dispatchEvent(new Event('change'));
+    (p2.querySelector<HTMLButtonElement>('#hx-heavy-fable') as HTMLButtonElement).click();
     await tick(); await tick();
     expect(d.calls.some((c) => c.includes('2.1.321'))).toBe(true);
   });
   it('is off and cannot be turned on while the host says it cannot (an old Claude Code), with the reason shown', () => {
-    const d = document.createElement('div');
-    d.innerHTML = governedRows(fableView(false, 'Your Claude Code does not serve Fable yet (it needs 2.1.321). Update it with `claude update`.')).join('');
-    expect(d.querySelector<HTMLInputElement>('#hx-heavy-fable')?.disabled).toBe(true);
-    expect(d.textContent).toContain('needs 2.1.321');
+    const d = card(governedRows(fableView(false, 'Your Claude Code does not serve Fable yet (it needs 2.1.321). Update it with `claude update`.')));
+    expect(d.querySelector<HTMLButtonElement>('#hx-heavy-fable')?.disabled).toBe(true);
+    expect(read(d)).toContain('needs 2.1.321');
     // but one that is on can always be turned off
-    d.innerHTML = governedRows(fableView(true, 'whatever')).join('');
-    expect(d.querySelector<HTMLInputElement>('#hx-heavy-fable')?.disabled).toBe(false);
+    expect(card(governedRows(fableView(true, 'whatever'))).querySelector<HTMLButtonElement>('#hx-heavy-fable')?.disabled).toBe(false);
   });
   it('with an xAI key alone, governed mode is unavailable in words, and the Grok switch is right there', async () => {
     const t = text(grokView(false));
@@ -246,18 +248,17 @@ describe('Settings > Models: the heavy models\' switches (ADR-0037)', () => {
     let view = grokView(false);
     const panel = document.createElement('div');
     await mountModels(panel, deps({ ladder: () => Promise.resolve(view), setHeavy: (id, on) => { calls.push(`${id}:${String(on)}`); view = grokView(on); return Promise.resolve(); } }));
-    const sw = panel.querySelector<HTMLInputElement>('#hx-heavy-grok') as HTMLInputElement;
-    sw.checked = true; sw.dispatchEvent(new Event('change'));
+    (panel.querySelector<HTMLButtonElement>('#hx-heavy-grok') as HTMLButtonElement).click();
     await tick(); await tick();
     expect(calls).toEqual(['grok:true']);
     expect(panel.textContent).toContain('Available');
-    expect(panel.querySelector<HTMLInputElement>('#hx-heavy-grok')?.checked).toBe(true);
+    expect(panel.querySelector<HTMLButtonElement>('#hx-heavy-grok')?.getAttribute('aria-checked')).toBe('true');
     expect(panel.textContent).toContain('heavy: on the ladder because you chose it');
   });
   it('without a way to ask the host the switches stay off', async () => {
     const panel = document.createElement('div');
     await mountModels(panel, deps({ ladder: () => Promise.resolve(fableView(false)) }));
-    expect(panel.querySelector<HTMLInputElement>('#hx-heavy-fable')?.disabled).toBe(true);
+    expect(panel.querySelector<HTMLButtonElement>('#hx-heavy-fable')?.disabled).toBe(true);
   });
 });
 
@@ -300,8 +301,11 @@ async function providersPanel(bridge: ProvidersBridge, extra: Partial<ModelsDeps
   return panel;
 }
 const section = (panel: HTMLElement): HTMLElement => panel.querySelector('[aria-labelledby="hx-set-providers-h"]') as HTMLElement;
-const heads = (panel: HTMLElement): string[] => [...section(panel).querySelectorAll('h3')].map((h) => h.textContent ?? '');
-const rowOf = (panel: HTMLElement, label: string): HTMLElement | undefined => [...section(panel).querySelectorAll<HTMLElement>('.ui-set__row')].find((r) => r.querySelector('.ui-set__label > span')?.textContent === label);
+const heads = (panel: HTMLElement): string[] => [...section(panel).querySelectorAll('[data-kit~="SectionHead"]')].map((h) => h.querySelector('.k7-shead__title')?.textContent ?? '');
+const rowOf = (panel: HTMLElement, label: string): HTMLElement | undefined => [...section(panel).querySelectorAll<HTMLElement>('[data-way-row]')].find((r) => r.querySelector('.k7-row__label')?.textContent === label);
+const labelsOf = (panel: HTMLElement): string[] => [...section(panel).querySelectorAll('[data-way-row] .k7-row__label')].map((x) => x.textContent ?? '');
+const actions = (row: HTMLElement): string[] => [...row.querySelectorAll('[data-do]')].map((b) => b.textContent ?? '');
+const more = (row: HTMLElement): string => row.querySelector('[data-prov-more]')?.getAttribute('data-prov-actions') ?? '';
 const type = (el: HTMLInputElement, v: string): void => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
 
 describe('Settings > Models: Providers', () => {
@@ -312,11 +316,11 @@ describe('Settings > Models: Providers', () => {
     expect(h).toContain('On this computer');
     expect(h).toContain('Your own endpoint');
     const claude = rowOf(panel, 'Claude subscription') as HTMLElement;
-    expect(claude.querySelector('.ui-set__value')?.textContent).toBe('Not signed in');
+    expect(claude.querySelector('[data-status]')?.textContent).toBe('Not signed in');
     const key = rowOf(panel, 'Anthropic API key') as HTMLElement;
-    expect(key.querySelector('.ui-set__value')?.textContent).toBe('No key');
-    expect([...key.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Add key']);
-    expect(key.querySelector('button')?.getAttribute('aria-label')).toBe('Add key, Anthropic API key');
+    expect(key.querySelector('[data-status]')?.textContent).toBe('No key');
+    expect(actions(key)).toEqual(['Add key']);
+    expect(key.querySelector('[data-do]')?.getAttribute('aria-label')).toBe('Add key, Anthropic API key');
   });
 
   it('says every state in words: connected with the plan, a problem with its reason, not installed, a runtime not yet checked', async () => {
@@ -324,13 +328,14 @@ describe('Settings > Models: Providers', () => {
       : s.way === 'anthropic.key' ? { ...s, status: 'error' as const, code: 'hx.provider.key_rejected', detail: 'Anthropic refused the key.' }
         : s.way === 'openai.key' ? { ...s, status: 'connected' as const, models_count: 7 } : s);
     const panel = await providersPanel(fakeProviders({ list: () => Promise.resolve(list) }));
-    expect(rowOf(panel, 'Claude subscription')?.querySelector('.ui-set__value')?.textContent).toBe('Connected (Claude Max)');
+    expect(rowOf(panel, 'Claude subscription')?.querySelector('[data-status]')?.textContent).toBe('Connected (Claude Max)');
     const bad = rowOf(panel, 'Anthropic API key') as HTMLElement;
-    expect(bad.querySelector('.ui-set__value')?.textContent).toBe('Key refused');
-    expect(bad.textContent).toContain('Anthropic refused the key.');
-    expect([...bad.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Change key', 'Remove']);
-    expect(rowOf(panel, 'OpenAI API key')?.textContent).toContain('7 models found.');
-    expect(rowOf(panel, 'Ollama on this computer')?.querySelector('.ui-set__value')?.textContent).toBe('Not checked');
+    expect(bad.querySelector('[data-status]')?.textContent).toBe('Key refused');
+    expect(read(bad)).toContain('Anthropic refused the key.');
+    expect(actions(bad)).toEqual(['Change key']);
+    expect(more(bad)).toBe('remove:Remove');
+    expect(read(rowOf(panel, 'OpenAI API key'))).toContain('7 models found.');
+    expect(rowOf(panel, 'Ollama on this computer')?.querySelector('[data-status]')?.textContent).toBe('Not checked');
   });
 
   it('never shows a state by colour alone: every status is a non-empty word beside its row', async () => {
@@ -343,8 +348,9 @@ describe('Settings > Models: Providers', () => {
 
   it('collapses the labs under More providers, and search and filters still reach them', async () => {
     const panel = await providersPanel(fakeProviders());
-    const more = section(panel).querySelector<HTMLButtonElement>('#hx-prov-more') as HTMLButtonElement;
-    expect(more.textContent).toMatch(/^More providers \(\d+\)$/);
+    const more = section(panel).querySelector<HTMLButtonElement>('#hx-prov-more button') as HTMLButtonElement;
+    expect(more.querySelector('.k7-shead__title')?.textContent).toBe('More providers');
+    expect(more.querySelector('.k7-shead__count')?.textContent).toMatch(/^\d+$/);
     expect(more.getAttribute('aria-expanded')).toBe('false');
     const tail = section(panel).querySelector<HTMLElement>('#hx-prov-tail') as HTMLElement;
     expect(tail.hidden).toBe(true);
@@ -368,17 +374,17 @@ describe('Settings > Models: Providers', () => {
   it('filters by how a lab is reached, and Connected lists only what is connected', async () => {
     const list = baseline().map((s) => (s.way === 'deepseek.key' ? { ...s, status: 'connected' as const } : s));
     const panel = await providersPanel(fakeProviders({ list: () => Promise.resolve(list) }));
-    const pick = (v: string): void => { (section(panel).querySelector(`.ui-chips [data-value="${v}"]`) as HTMLElement).click(); };
+    const pick = (v: string): void => { (section(panel).querySelector(`.hx-prov-chips [data-value="${v}"]`) as HTMLElement).click(); };
     pick('connected');
-    const labels = [...section(panel).querySelectorAll('.ui-set__label > span')].map((x) => x.textContent);
+    const labels = labelsOf(panel);
     expect(labels).toContain('DeepSeek API key');
     expect(labels).not.toContain('Anthropic API key');
     pick('signin');
-    expect([...section(panel).querySelectorAll('.ui-set__label > span')].map((x) => x.textContent)).toContain('Claude subscription');
-    expect(section(panel).textContent).not.toContain('Anthropic API key');
+    expect(labelsOf(panel)).toContain('Claude subscription');
+    expect(labelsOf(panel)).not.toContain('Anthropic API key');
     pick('local');
     expect(heads(panel)).toContain('On this computer');
-    expect(section(panel).textContent).not.toContain('Claude subscription');
+    expect(labelsOf(panel)).not.toContain('Claude subscription');
     pick('custom');
     expect(heads(panel)).toContain('Your own endpoint');
     expect(rowOf(panel, 'Your own endpoint')?.querySelector('button')?.textContent ?? [...section(panel).querySelectorAll('button')].map((b) => b.textContent).join()).toContain('Add endpoint');
@@ -386,10 +392,10 @@ describe('Settings > Models: Providers', () => {
 
   it('shows the terms notes as quiet lines under their rows', async () => {
     const panel = await providersPanel(fakeProviders());
-    const notes = [...section(panel).querySelectorAll('[data-note]')].map((n) => n.textContent ?? '');
-    expect(notes.some((n) => n.includes('Google has no sign-in'))).toBe(true);
-    expect(notes.some((n) => n.includes('GLM Coding Plan'))).toBe(true);
-    expect(notes.some((n) => n.includes('Kimi Code'))).toBe(true);
+    const notes = read(section(panel));
+    expect(notes).toContain('Google has no sign-in');
+    expect(notes).toContain('GLM Coding Plan');
+    expect(notes).toContain('Kimi Code');
   });
 
   it('asks the runtimes once when drawn and again on Check again, never when typing, filtering or redrawing', async () => {
@@ -397,7 +403,7 @@ describe('Settings > Models: Providers', () => {
     const panel = await providersPanel(b);
     expect(b.calls.filter((c) => c === 'probe')).toHaveLength(1);
     type(section(panel).querySelector<HTMLInputElement>('#hx-prov-q') as HTMLInputElement, 'ollama');
-    (section(panel).querySelector('.ui-chips [data-value="local"]') as HTMLElement).click();
+    (section(panel).querySelector('.hx-prov-chips [data-value="local"]') as HTMLElement).click();
     expect(b.calls.filter((c) => c === 'probe')).toHaveLength(1);
     (section(panel).querySelector('[data-do="recheck"]') as HTMLElement).click();
     await tick();
@@ -410,9 +416,9 @@ describe('Settings > Models: Providers', () => {
     const panel = await providersPanel(b);
     expect(heads(panel)[1]).toBe('Found on this computer');
     const row = rowOf(panel, 'Ollama on this computer') as HTMLElement;
-    expect(row.querySelector('.ui-set__value')?.textContent).toBe('Running on this computer');
-    expect(row.textContent).toContain('llama3.2:latest, qwen3:8b');
-    expect([...section(panel).querySelectorAll('.ui-set__label > span')].filter((x) => x.textContent === 'Ollama on this computer')).toHaveLength(1);
+    expect(row.querySelector('[data-status]')?.textContent).toBe('Running on this computer');
+    expect(read(row)).toContain('llama3.2:latest, qwen3:8b');
+    expect(labelsOf(panel).filter((x) => x === 'Ollama on this computer')).toHaveLength(1);
     (row.querySelector('[data-do="use"]') as HTMLElement).click();
     await tick(); await tick(); await tick();
     expect(b.added).toHaveLength(1);
@@ -440,7 +446,7 @@ describe('Settings > Models: Providers', () => {
   it('says it could not be read when the host cannot list, rather than drawing rows', async () => {
     const panel = await providersPanel(fakeProviders({ list: () => Promise.reject(new Error('provider_list is not built yet')) }));
     expect(section(panel).textContent).toContain('Not read: provider_list is not built yet');
-    expect(section(panel).querySelectorAll('.ui-set__row')).toHaveLength(0);
+    expect(section(panel).querySelectorAll('[data-way-row]')).toHaveLength(0);
   });
 
   it('offers the user\'s own grok program only while the xAI sign-in is not connected', async () => {
@@ -494,7 +500,8 @@ describe('Settings > Models: Providers', () => {
     const list = baseline().map((s) => (s.way === 'deepseek.key' ? { ...s, status: 'connected' as const } : s));
     const b = fakeProviders({ list: () => Promise.resolve(list) });
     const panel = await providersPanel(b);
-    (rowOf(panel, 'DeepSeek API key')?.querySelector('[data-do="remove"]') as HTMLElement).click();
+    (rowOf(panel, 'DeepSeek API key')?.querySelector('[data-prov-more]') as HTMLElement).click();
+    (document.querySelector('[data-kit~="Menu"][data-floating] [data-value="remove"]') as HTMLElement).click();
     expect(section(panel).textContent).toContain('Remove DeepSeek API key?');
     expect(b.calls.some((c) => c.startsWith('remove:'))).toBe(false);
   });

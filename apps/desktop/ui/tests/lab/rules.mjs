@@ -64,7 +64,7 @@ export function areaOfPath(p) {
   if (/modules\/(cards|mods)|components\/mod-/.test(p)) return 'cards';
   if (/modules\/dock/.test(p)) return 'dock';
   if (/modules\/store|host\/live\/store|host\/store-bridge/.test(p)) return 'store';
-  if (/host\/|styles\/theme-panel/.test(p)) return 'settings';
+  if (/host\/|styles\/theme-v7|modules\/settings/.test(p)) return 'settings';
   return 'components';
 }
 

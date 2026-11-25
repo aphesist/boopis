@@ -16,7 +16,6 @@ const bridge = (s: LocalApiStatus): LocalApiBridge => ({ status: () => Promise.r
 
 const draw = (s: LocalApiStatus): Render => async ({ root }) => {
   const cell = fill(root);
-  cell.style.maxWidth = '640px';
   const sec = document.createElement('div');
   sec.className = 'k7-section';
   sec.setAttribute('role', 'group'); sec.setAttribute('aria-labelledby', 'hx-set-local-api-h');
@@ -26,7 +25,7 @@ const draw = (s: LocalApiStatus): Render => async ({ root }) => {
 };
 
 const force = (sel: string, state: Force['state']): readonly Force[] => [{ sel, state }];
-const S = (tags: State['tags'], s: LocalApiStatus, extra: Partial<State> = {}): State => ({ tags, render: draw(s), ...extra });
+const S = (tags: State['tags'], s: LocalApiStatus, extra: Partial<State> = {}): State => ({ tags, render: draw(s), width: 680, ...extra });
 
 const story: Story = {
   id: 'settings/local-api', title: 'Local API (Settings, General)', area: 'settings', kind: 'component', v7: true, covers: [],

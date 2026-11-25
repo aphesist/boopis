@@ -331,7 +331,7 @@ export const themeApi = {
   parseColor
 };
 
-/* the customizer panel reads and edits the theme through these (theme-panel.ts) */
+/* the theme's internals, for its tests (the v6 customizer that read them is gone: Settings > Appearance is v7's, styles/theme-v7.ts) */
 export const themeInternals = {
   get theme(): Theme { return theme; },
   apply, effective, fontOf, blank

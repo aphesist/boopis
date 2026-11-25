@@ -443,7 +443,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     if (r.restart_needed) rows.push({ label: 'The engine restarts when no turn is running.' });
     const head = h(storeItem(kit.html.sectionHead({ title: `${r.title ?? r.item_id} is installed` })));
     const acts = el('div', { class: 'hx-store__acts' }, button('See what is installed', () => { show('installed'); }, { variant: 'primary' }), button('Back to the store', () => { show(from === 'installed' ? 'installed' : 'browse'); }, { variant: 'ghost' }));
-    into.replaceChildren(head, cardOf(rows, { class: 'hx-store__lines' }), acts);
+    into.replaceChildren(head, cardOf(rows, { 'data-store-receipt': '' }), acts);
   }
 
   /* ───────── installed ───────── */

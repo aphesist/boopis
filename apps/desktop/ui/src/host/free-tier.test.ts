@@ -133,10 +133,10 @@ describe('where it is shown', () => {
   });
   it('Settings: rows with the plan, the model, the limit with its reset and the empty-gauge note', () => {
     const plan = planView({ status: status(), options: null, limit: limitFromSurface(surface()) }, NOW);
-    const html = planRows(plan, NOW).join('');
+    const html = JSON.stringify(planRows(plan, NOW));
     for (const word of ['Plan', 'Free (Nous · free tier)', 'Model', 'nous/welcome', 'Limit', 'rate limited', 'in about 5 minutes', 'Usage']) expect(html).toContain(word);
     const sec = planSection(plan, NOW);
-    expect(sec.querySelector('h3')?.textContent).toBe('Plan');
+    expect(sec.querySelector('[data-kit~="SectionHead"]')?.textContent).toBe('Plan');
   });
   it('Settings: mounting asks Hermes, redraws on refresh and says so when Hermes cannot be asked', async () => {
     const panel = document.createElement('div');
@@ -145,7 +145,7 @@ describe('where it is shown', () => {
     expect(panel.textContent).toContain('boopis\'s engine is not connected');
     answer = planView({ status: status(), options: null, limit: null }, NOW);
     await mounted.refresh();
-    expect(panel.querySelectorAll('section')).toHaveLength(1);
-    expect(panel.textContent).toContain('nous/welcome');
+    expect(panel.querySelectorAll('.k7-section')).toHaveLength(1);
+    expect((panel.textContent ?? '') + [...panel.querySelectorAll('[data-explain]')].map((n) => n.getAttribute('data-explain')).join(' ')).toContain('nous/welcome');
   });
 });

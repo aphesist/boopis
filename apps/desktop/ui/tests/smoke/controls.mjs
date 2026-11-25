@@ -72,21 +72,19 @@ export async function controls(env, AXE) {
     });
   }
 
-  /* Settings > Appearance: the font select opens inside the modal dialog (outside it the list would be inert and hidden) */
+  /* Settings > Appearance on the v7 kit: the theme's choices are the kit's Segmented controls and the accent a text Field (no colour
+     chooser of the platform); choosing Light applies the light theme to the dialog and the window */
   const page = await s.fresh({ q: 'preset=catalog' });
   await s.safe('controls', async () => {
     await page.addScriptTag({ content: AXE });
     await page.keyboard.press('Control+Shift+Comma'); await page.waitForTimeout(700);
-    await page.click('#hxt-sans'); await page.waitForTimeout(350);
-    const f = await page.evaluate(() => { const lb = document.querySelector('.ui-listbox'); const r = lb?.getBoundingClientRect(); const top = r && document.elementFromPoint(r.left + r.width / 2, r.top + 20); return { inDialog: !!lb?.closest('dialog'), options: lb?.querySelectorAll('[role="option"]').length, onTop: !!(top && lb.contains(top)), native: document.querySelectorAll('select').length }; });
-    check('controls', 'Appearance: the font select opens inside the dialog, on top, and there is no native <select> left', f.inDialog && f.options > 3 && f.onTop && f.native === 0, f);
+    const f = await page.evaluate(() => ({ segs: document.querySelectorAll('#hx-dpanel-appearance [data-kit~="Segmented"]').length, native: document.querySelectorAll('select, input[type="color"]').length, accent: !!document.querySelector('#hx-set-accent') }));
+    check('controls', 'Appearance: the kit\'s Segmented controls and the accent Field, and no native <select> or colour chooser', f.segs >= 4 && f.native === 0 && f.accent, f);
     const bad = await AXE_RUN(page);
-    check('controls', 'axe: Appearance with the font list open', bad.length === 0, bad);
-    await page.locator('.ui-listbox .ui-option').nth(2).click(); await page.waitForTimeout(400);
-    const picked = await page.evaluate(() => ({ text: document.querySelector('#hxt-sans .ui-select__v').textContent, family: getComputedStyle(document.documentElement).getPropertyValue('--sans').slice(0, 40) }));
-    check('controls', 'choosing a font in the list applies it', picked.text.length > 0 && !/^\s*$/.test(picked.family), picked);
-    const swatch = await page.evaluate(() => ({ native: document.querySelectorAll('input[type="color"]').length, swatches: document.querySelectorAll('button.hxt-swatch').length, paint: getComputedStyle(document.querySelector('button.hxt-swatch')).backgroundColor }));
-    check('controls', 'colour rows draw a swatch button, never the platform colour chooser', swatch.native === 0 && swatch.swatches > 10 && swatch.paint !== 'rgba(0, 0, 0, 0)', swatch);
+    check('controls', 'axe: Appearance', bad.length === 0, bad);
+    await page.click('#hx-set-mode [data-value="light"]'); await page.waitForTimeout(400);
+    const light = await page.evaluate(() => ({ dialog: document.getElementById('hx-settings').getAttribute('data-theme'), app: document.documentElement.getAttribute('data-hx-theme') }));
+    check('controls', 'choosing Light puts the dialog and the window in the light theme', light.dialog === 'light' && light.app === 'light', light);
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   });
 

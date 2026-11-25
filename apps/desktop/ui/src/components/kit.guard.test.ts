@@ -70,8 +70,7 @@ const GROUPS: Group[] = [
   /* switches: ui.html.switch (R-switch-1 to 3); there is no checkbox (R-check-1) */
   { name: 'switch or checkbox markup', where: 'ts', re: /type="checkbox"|type:\s*'checkbox'/ },
   /* buttons and text controls: ui.html.button, iconButton, input, field */
-  { name: 'button markup', where: 'ts', re: /class="ui-btn\b|class:\s*'ui-btn\b|class="ui-ib\b|class:\s*'ui-ib\b/,
-    allow: { 'src/styles/theme-panel.ts': 'Import file is a <label> styled as a small button so it opens the file chooser (pending: a file button in the kit)' } },
+  { name: 'button markup', where: 'ts', re: /class="ui-btn\b|class:\s*'ui-btn\b|class="ui-ib\b|class:\s*'ui-ib\b/ },
   { name: 'text control markup', where: 'ts', re: /class="ui-input\b|class:\s*'ui-input\b/,
     allow: { 'src/modules/cards/form.ts': 'the form card renders its own controls from the schema (one card family; pending: ui.html.input there)' } },
   { name: 'hand-built button styling', where: 'css', re: /appearance:\s*none/,

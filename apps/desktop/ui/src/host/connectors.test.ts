@@ -127,7 +127,7 @@ describe('the Connectors tab', () => {
     expect(coll.textContent).toContain('Firecrawl');
     expect(coll.textContent).toContain('Scrape the web.');
     expect(coll.textContent).toContain('local · hosted');
-    expect(coll.querySelector('[data-add-entry="firecrawl"]')?.getAttribute('aria-haspopup')).toBe('menu');
+    expect(coll.querySelector('[data-add-entry="firecrawl"]')?.getAttribute('data-ways')).toBe('2');
     click(coll, '[data-add-entry="firecrawl"]');
     const menu = document.querySelector('[data-kit~="Menu"][data-floating]') as HTMLElement;
     expect(menu.getAttribute('aria-label')).toBe('Ways to add Firecrawl');

@@ -29,7 +29,7 @@ function files(dir) {
 }
 const blank = (m) => m.replace(/[^\n]/g, ' ');
 const stripComments = (s, css) => (css ? s.replace(/\/\*[\s\S]*?\*\//g, blank) : s.replace(/\/\*[\s\S]*?\*\//g, blank).replace(/(^|[^:'"`\\])\/\/[^\n]*/g, (m, a) => a + ' '.repeat(m.length - a.length)));
-const area = (rel) => (/modules\/session|components\/composer/.test(rel) ? 'composer' : /modules\/shell|components\/(toast|tooltip|layer)/.test(rel) ? 'shell' : /modules\/bots/.test(rel) ? 'bots' : /modules\/(cards|mods)|components\/mod-/.test(rel) ? 'cards' : /modules\/dock/.test(rel) ? 'dock' : /modules\/store|host\/live\/store|host\/store-bridge/.test(rel) ? 'store' : /host\/|styles\/theme-panel/.test(rel) ? 'settings' : 'components');
+const area = (rel) => (/modules\/session|components\/composer/.test(rel) ? 'composer' : /modules\/shell|components\/(toast|tooltip|layer)/.test(rel) ? 'shell' : /modules\/bots/.test(rel) ? 'bots' : /modules\/(cards|mods)|components\/mod-/.test(rel) ? 'cards' : /modules\/dock/.test(rel) ? 'dock' : /modules\/store|host\/live\/store|host\/store-bridge/.test(rel) ? 'store' : /host\/|styles\/theme-v7|modules\/settings/.test(rel) ? 'settings' : 'components');
 
 /* a literal length that is spacing: a px or rem number other than 0 and the hairline 1px */
 const SPACE_PROP = /(?:^|[;{\s])(padding(?:-(?:top|right|bottom|left|inline|block)(?:-(?:start|end))?)?|margin(?:-(?:top|right|bottom|left|inline|block)(?:-(?:start|end))?)?|gap|row-gap|column-gap|inset(?:-(?:inline|block)(?:-(?:start|end))?)?)\s*:\s*([^;}]+)/g;

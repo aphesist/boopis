@@ -160,7 +160,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   find.append(search);
   const qInput = search.querySelector<HTMLInputElement>('input');
   qInput?.addEventListener('input', () => { query = qInput.value; drawInstalledRows(); drawCollection(); });
-  qInput?.addEventListener('keydown', (e) => { if (e.key === 'ArrowDown') { const r = collection.querySelector<HTMLElement>('[role=option][tabindex="0"], [role=option]'); if (r) { e.preventDefault(); r.focus(); } } });
+  qInput?.addEventListener('keydown', (e) => { if (e.key === 'ArrowDown') { const r = collection.querySelector<HTMLElement>('[data-add-entry][tabindex="0"], [data-add-entry]'); if (r) { e.preventDefault(); r.focus(); } } });
 
   const say = (text: string): void => { live.textContent = text; deps.notify(text); };
   const release = (): void => { useFormsHost(null); };
@@ -266,10 +266,10 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
       const w = collectionRow(c, added);
       /* a collection item keeps its own name and publisher, whatever they say (ADR-0031's store exception) */
       return kit.html.listRow({ variant: 'item', title: c.name, sub: w.sub, markHTML: itemGlyphHTML({ name: c.name, collection: c.id }), count: w.end,
-        attrs: { role: 'option', tabindex: i === 0 ? '0' : '-1', 'aria-selected': 'false', 'data-add-entry': c.id, [STORE_ITEM]: '', 'aria-haspopup': c.variants.length > 1 ? 'menu' : null } });
+        attrs: { role: 'button', tabindex: i === 0 ? '0' : '-1', 'aria-selected': null, 'data-add-entry': c.id, [STORE_ITEM]: '', 'data-ways': String(c.variants.length), 'aria-haspopup': c.variants.length > 1 ? 'menu' : null } });
     });
     const none = query.trim() && !shown.length ? kit.html.emptyState({ text: `Nothing in boopis's collection matches “${query.trim()}”.` }) : '';
-    collection.innerHTML = head('From boopis\'s collection') + (rows.length ? '<div class="k7-list hx-conn__rows" role="listbox" aria-label="From boopis\'s collection">' + rows.join('') + '</div>' : '') + none;
+    collection.innerHTML = head('From boopis\'s collection') + (rows.length ? '<div class="k7-list hx-conn__rows" role="group" aria-label="From boopis\'s collection">' + rows.join('') + '</div>' : '') + none;
     kit.wire(collection);
     tipsIfClipped(clipSpots(collection));   /* measured at once, so every draw of the list carries the same tooltips */
   }
@@ -280,15 +280,11 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     const c = catalog.find((x) => x.id === row.dataset['addEntry']); if (!c) return;
     const only = c.variants.length === 1 ? c.variants[0] : undefined;
     if (only) { void addFlow('catalog', { id: c.id, variant: only.id }); return; }
-    row.setAttribute('aria-expanded', 'true');
     kit.openMenu(row, {
       label: 'Ways to add ' + c.name, align: 'start',
       entries: [{ heading: 'Add ' + c.name }, ...c.variants.map((v) => ({ label: v.label, value: v.id, desc: `${v.summary} Reaches: ${v.reaches}.${v.pinned ? ' Pinned to ' + v.pinned + '.' : ''}` }))],
       onSelect: (v) => { void addFlow('catalog', { id: c.id, variant: v }); }
     });
-    const m = document.querySelector('[data-kit~="Menu"][data-floating]');
-    const done = (): void => { if (!m?.isConnected) { row.setAttribute('aria-expanded', 'false'); return; } requestAnimationFrame(done); };
-    requestAnimationFrame(done);
   };
   collection.addEventListener('click', (e) => { const r = (e.target as Element).closest<HTMLElement>('[data-add-entry]'); if (r) choose(r); });
   collection.addEventListener('keydown', (e) => {

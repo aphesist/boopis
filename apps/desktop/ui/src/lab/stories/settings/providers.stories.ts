@@ -32,20 +32,20 @@ const endpoint = (slug: string, status: ProviderState['status'], base: string, d
 interface Opts { list?: ProviderState[]; probe?: ProviderState[]; fail?: string; login?: ProvidersDeps['login']; after?: (el: HTMLElement) => void | Promise<void> }
 /** the section in a settings sheet's own markup, read from a fake host */
 const draw = (o: Opts = {}): Render => async ({ root }) => {
-  const el = document.createElement('section');
-  el.className = 'ui-set';
-  el.setAttribute('aria-labelledby', 'hx-set-providers-h');
+  const el = document.createElement('div');
+  el.className = 'k7-section'; el.id = 'hx-set-providers';
+  el.setAttribute('role', 'group'); el.setAttribute('aria-labelledby', 'hx-set-providers-h');
   fill(root, el);
   const b = bridge(o.fail ? () => Promise.reject(new Error(o.fail)) : () => Promise.resolve(o.list ?? baseline()), o.probe);
-  const view = mountProviders(el, { bridge: b, toast: () => undefined, settle: 0, ...(o.login ? { login: o.login } : {}) });
+  const view = mountProviders(el, { bridge: b, notify: () => undefined, settle: 0, ...(o.login ? { login: o.login } : {}) });
   await view.ready;
   await frames(2);
   if (o.after) { await o.after(el); await frames(3); if (el.querySelector('[data-prov-flow]:not([hidden])')) await new Promise((r) => setTimeout(r, 900)); }
 };
 const type = (el: HTMLElement, q: string): void => { const i = el.querySelector<HTMLInputElement>('#hx-prov-q'); if (i) { i.value = q; i.dispatchEvent(new Event('input', { bubbles: true })); } };
-const pick = (el: HTMLElement, v: string): void => { el.querySelector<HTMLElement>(`.ui-chips [data-value="${v}"]`)?.click(); };
+const pick = (el: HTMLElement, v: string): void => { el.querySelector<HTMLElement>(`.hx-prov-chips [data-value="${v}"]`)?.click(); };
 const press = (el: HTMLElement, sel: string): void => { el.querySelector<HTMLElement>(sel)?.click(); };
-const W = 520;
+const W = 680;   /* the settings page's column in the 900 dialog */
 const st = (tags: State['tags'], o: Opts, extra: Partial<State> = {}): State => ({ tags, render: draw(o), width: W, ...extra });
 
 const MIXED = baseline({
@@ -73,7 +73,7 @@ const CLAUDE_ROWS = {
 };
 
 const providers: Story = {
-  id: 'settings/providers', title: 'Settings: Providers', area: 'settings', kind: 'surface', covers: ['surface:settings-providers'],
+  id: 'settings/providers', title: 'Settings: Providers', area: 'settings', kind: 'surface', v7: true, covers: ['surface:settings-providers'],
   states: {
     typical: st(['typical'], { list: MIXED, probe: [OLLAMA] }),
     'nothing set up': st(['empty'], {}),
@@ -87,7 +87,7 @@ const providers: Story = {
     'Claude: too old': st(['variant'], CLAUDE_ROWS.old),
     'Claude: billed per use': st(['variant'], CLAUDE_ROWS.metered),
     'found on this computer': st(['variant'], { probe: ALL_LOCAL }),
-    'more providers, open': st(['open'], {}, { render: draw({ list: MIXED, after: (el) => { press(el, '#hx-prov-more'); } }) }),
+    'more providers, open': st(['open'], {}, { render: draw({ list: MIXED, after: (el) => { press(el, '#hx-prov-more button'); } }) }),
     'search: a lab in the tail': st(['variant'], {}, { render: draw({ after: (el) => { type(el, 'meta'); } }) }),
     'search: no match': st(['empty'], {}, { render: draw({ after: (el) => { type(el, 'no such lab'); } }) }),
     'filter: connected': st(['variant'], {}, { render: draw({ list: MIXED, after: (el) => { pick(el, 'connected'); } }) }),
@@ -100,9 +100,10 @@ const providers: Story = {
     narrow: st(['size'], { list: MIXED, probe: [OLLAMA] }, { width: 340 }),
     'a key row hovered': st(['hover'], { list: MIXED }, { force: [{ sel: '[data-do="key"]', state: 'hover' }] }),
     'a key row focused': st(['focus'], { list: MIXED }, { force: [{ sel: '[data-do="key"]', state: 'focus' }] }),
-    'the filter focused': st(['focus'], { list: MIXED }, { force: [{ sel: '.ui-chip[aria-checked="true"]', state: 'focus' }] }),
+    'the filter focused': st(['focus'], { list: MIXED }, { force: [{ sel: '.hx-prov-chips [aria-checked="true"]', state: 'focus' }] }),
     'a key form in place': st(['open'], {}, { render: draw({ after: (el) => { press(el, '[data-do="key"][data-way="google.key"]'); } }) }),
-    'remove asks first': st(['open'], {}, { render: draw({ list: MIXED, after: (el) => { press(el, '[data-do="remove"][data-way="openai.key"]'); } }) }),
+    'remove asks first': st(['open'], {}, { render: draw({ list: MIXED, after: (el) => { press(el, '[data-prov-more="openai.key"]'); document.querySelector<HTMLElement>('[data-kit~="Menu"][data-floating] [data-value="remove"]')?.click(); } }) }),
+    'a row\'s other actions (its menu)': { ...st(['open'], {}, { render: draw({ list: MIXED, after: (el) => { press(el, '[data-prov-more="openai.key"]'); } }) }), overlay: { anchor: '[data-prov-more="openai.key"]', layer: '[data-kit~="Menu"][data-floating]' } },
     'the endpoint form, first step': st(['open'], {}, { render: draw({ after: (el) => { press(el, '[data-do="endpoint"]'); } }) }),
     'the endpoint form, models found': st(['success'], {}, { render: draw({ after: async (el) => {
       press(el, '[data-do="endpoint"]');

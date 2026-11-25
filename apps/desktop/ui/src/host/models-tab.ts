@@ -1,13 +1,14 @@
 /* Settings > Models: the plan (`mountPlan`), governed mode and its heavy switches, the ladder the plugin runs governed work on
    (which model at which tier), the Providers section (ADR-0039: every lab's sign-in, key, runtime on this computer and
    endpoint of your own, drawn from the catalogue by `providers-view.ts`), and "Change models", which asks setup's models question again through the same first-run view and
-   forms. Everything shown is read now, from the host; what could not be read is said so, never filled in. The rows are the
-   design system's settings rows and ladder list. */
-import { ui } from '@boopis/ui';
+   forms. Everything shown is read now, from the host; what could not be read is said so, never filled in. It is a settings Page on
+   the v7 kit: SectionHeads over Cards of Rows (label, value, control; the explanation behind the label's mark). */
+import { kit } from '@boopis/ui';
 import { changeModels } from './change-models';
 import { currentPlan } from './free-tier';
 import type { PlanView } from './free-tier';
-import { mountPlan } from './plan-view';
+import { mountPlan, pageBody, setSection } from './plan-view';
+import type { SetRow } from './plan-view';
 import { loadModelsView, setHeavy } from './setup-bridge';
 import type { ModelsView } from './setup-bridge';
 import { tauriChatgptBridge } from './chatgpt-signin';
@@ -28,7 +29,8 @@ export interface ModelsDeps {
   change: () => Promise<unknown>;
   /** the settings dialog is modal and would cover the question, so it steps aside first */
   closeSettings: () => void;
-  toast: (text: string) => void;
+  /** a line the person should see now (the floating Notice) */
+  notify: (text: string) => void;
   /** boopis's own ChatGPT sign-in; without it the section shows the state and offers nothing */
   chatgpt?: ChatgptBridge;
   /** turn a heavy model (`fable`, `grok`) on or off for the saved ladder; rejects with the host's sentence */
@@ -39,14 +41,12 @@ export interface ModelsDeps {
   providers?: ProvidersBridge;
 }
 export const realModelsDeps = (closeSettings: () => void): ModelsDeps => ({
-  plan: currentPlan, ladder: loadModelsView, change: () => changeModels(), closeSettings, toast: (t) => { ui.toast(t); },
+  plan: currentPlan, ladder: loadModelsView, change: () => changeModels(), closeSettings, notify: (t) => { kit.notify(t); },
   chatgpt: tauriChatgptBridge(), setHeavy, providers: tauriProvidersBridge(),
   login: async (provider) => (await import('./connectors-bridge')).tauriConnectorsBridge().login(provider)
 });
 
 const SCOPE = 'A task starts at the first tier and moves to the next only when its gate fails.';
-
-const esc = (t: string): string => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
 
 /** a tier's second line: its name, and when governed mode will not run it, that, or that it is a heavy model the user chose (ADR-0037) */
 const tierRule = (view: ModelsView, t: { name: string; model: string }): string => {
@@ -54,104 +54,90 @@ const tierRule = (view: ModelsView, t: { name: string; model: string }): string 
   if (g?.frontier === false) return `${t.name}, not used in governed mode`;
   return g?.heavy ? `${t.name}, heavy: on the ladder because you chose it` : t.name;
 };
+const tint = (label: string, id: string): string => kit.html.button({ label, size: 28, variant: 'tint', attrs: { id } });
 
 /** The heavy models' switches (ADR-0037), one for each heavy model the saved ladder can take: Fable on either Claude choice, Grok on an
     xAI key. Each says in the user's terms why it is off by default; turning it on makes it the ladder's top tier, off takes it away.
-    What the host says cannot be turned on (an old Claude Code) is shown under the switch and the switch stays off. */
-export function heavyRows(view: ModelsView): string[] {
-  return view.heavy.filter((c) => c.applies).map((c) => ui.html.setRow({
-    label: esc(c.label),
-    hint: esc(c.reason) + (c.blocked && !c.on ? ' ' + esc(c.blocked) : '') + ' Applies to sessions you start after this.',
-    control: ui.html.switch({ id: `hx-heavy-${c.id}`, checked: c.on, disabled: !c.on && c.blocked !== null, label: c.label })
+    What the host says cannot be turned on (an old Claude Code) is the row's value and the switch stays off. */
+export function heavyRows(view: ModelsView): SetRow[] {
+  return view.heavy.filter((c) => c.applies).map((c) => ({
+    label: c.label,
+    ...(c.blocked && !c.on ? { value: 'Cannot turn on' } : {}),
+    explain: c.reason + (c.blocked && !c.on ? ' ' + c.blocked : '') + ' Applies to sessions you start after this.',
+    control: kit.html.switch({ id: `hx-heavy-${c.id}`, checked: c.on, disabled: !c.on && c.blocked !== null, label: c.label })
   }));
 }
 
 /** Governed mode's section (ADR-0037): the models it allows, each also in any later version, and whether the saved ladder lets it run.
-    When it cannot, the row says why in one sentence and offers the way to get a model (Change models, the same question as setup's).
-    The heavy models (Fable, Carbon, Grok) are on a ladder only when their switch, right under the status, is on. The allowed list and the
-    heavy mark are the plugin's data file as the host reads it, never typed here. */
-export function governedRows(view: ModelsView | { error: string }): string[] {
-  if ('error' in view) return [ui.html.setRow({ label: 'Governed mode', hint: `Not read: ${view.error}` })];
+    When it cannot, the status row says why behind its label and offers the way to get a model (Change models, the same question as
+    setup's). The heavy models (Fable, Carbon, Grok) are on a ladder only when their switch, right under the status, is on. The allowed
+    list and the heavy mark are the plugin's data file as the host reads it, never typed here. */
+export function governedRows(view: ModelsView | { error: string }): SetRow[] {
+  if ('error' in view) return [{ label: 'Governed mode', value: 'Not read', explain: `Not read: ${view.error}` }];
   const g = view.governed;
-  const status = g.available
-    ? ui.html.setRow({ label: 'Status', hint: view.state === 'set' ? 'Every tier of the saved ladder is a frontier model.' : 'No ladder is saved, so boopis uses its built-in one: Opus, on your Anthropic key.', control: '<span class="ui-set__value">Available</span>' })
-    : ui.html.setRow({
-      label: 'Status',
-      hint: `${g.why ?? 'No frontier model is set up.'} To use governed mode, sign in with your Claude subscription (Opus), sign in with ChatGPT or add an OpenAI key, on a plan or key that includes GPT-6.1 Terra, Sol or Astra, add a Gemini key for Gemini 4 Hydrogen or Neon, or turn on Grok with an xAI key. Sessions that are not governed can use any model.`,
-      control: '<span class="ui-set__value">Unavailable</span>' + ui.html.button({ label: 'Change models', size: 's', attrs: { id: 'hx-governed-change' } })
-    });
+  const status: SetRow = g.available
+    ? { label: 'Status', value: 'Available', explain: view.state === 'set' ? 'Every tier of the saved ladder is a frontier model.' : 'No ladder is saved, so boopis uses its built-in one: Opus, on your Anthropic key.' }
+    : {
+      label: 'Status', value: 'Unavailable',
+      explain: `${g.why ?? 'No frontier model is set up.'} To use governed mode, sign in with your Claude subscription (Opus), sign in with ChatGPT or add an OpenAI key, on a plan or key that includes GPT-6.1 Terra, Sol or Astra, add a Gemini key for Gemini 4 Hydrogen or Neon, or turn on Grok with an xAI key. Sessions that are not governed can use any model.`,
+      control: tint('Change models', 'hx-governed-change')
+    };
   return [
-    ui.html.setRow({ label: 'Allowed models', hint: 'Governed mode runs every tier and the session itself only on these, or a later version of them. Anything else stays available outside governed mode. A heavy model is token-heavy or costly: it is never on a ladder boopis writes, only when you turn it on below or name it yourself.' }),
-    ...g.allowed.map((name) => ui.html.setRow({
-      label: esc(name),
-      hint: g.heavy.includes(name) ? 'Heavy: only when you turn it on.' : undefined,
-      control: '<span class="ui-set__value">or later</span>'
-    })),
+    { label: 'Allowed models', explain: 'Governed mode runs every tier and the session itself only on these, or a later version of them. Anything else stays available outside governed mode. A heavy model is token-heavy or costly: it is never on a ladder boopis writes, only when you turn it on below or name it yourself.' },
+    ...g.allowed.map((name): SetRow => ({ label: name, value: 'or later', ...(g.heavy.includes(name) ? { explain: 'Heavy: only when you turn it on.' } : {}) })),
     status,
     ...heavyRows(view)
   ];
 }
 
-/** the ladder section's rows for what the host read, or for why it could not */
-export function ladderRows(view: ModelsView | { error: string }): string[] {
-  if ('error' in view) return [ui.html.setRow({ label: 'Tiers', hint: `The ladder could not be read, so it is not shown: ${view.error}` })];
-  if (view.state === 'set') {
-    return [
-      ui.html.setRow({ label: 'Tiers', hint: `Cheapest first. ${SCOPE}` }),
-      '<div class="hx-ladder">' + ui.html.ladder({ variant: 'list', current: 0, label: 'Model ladder', stations: view.tiers.map((t) => [t.model, tierRule(view, t)] as const) }) + '</div>'
-    ];
-  }
-  if (view.state === 'default') return [ui.html.setRow({ label: 'Tiers', hint: 'No ladder is saved here, so boopis uses its built-in Claude ladder: Opus. Change models saves one of your own.' })];
-  return [ui.html.setRow({ label: 'Tiers', hint: 'A ladder is saved, but it does not read as a list of named tiers, so none is shown. Change models saves a new one.' })];
+/** the ladder section's rows for what the host read, or for why it could not: one Row per tier, cheapest first (the model, then its
+    tier as the value) */
+export function ladderRows(view: ModelsView | { error: string }): SetRow[] {
+  if ('error' in view) return [{ label: 'Tiers', value: 'Not read', explain: `The ladder could not be read, so it is not shown: ${view.error}` }];
+  if (view.state === 'set') return [{ label: 'Tiers', value: 'Cheapest first', explain: `Cheapest first. ${SCOPE}` }, ...view.tiers.map((t): SetRow => ({ label: t.model, value: tierRule(view, t), attrs: { 'data-tier': t.name } }))];
+  if (view.state === 'default') return [{ label: 'Tiers', value: 'Built in', explain: 'No ladder is saved here, so boopis uses its built-in Claude ladder: Opus. Change models saves one of your own.' }];
+  return [{ label: 'Tiers', value: 'Not shown', explain: 'A ladder is saved, but it does not read as a list of named tiers, so none is shown. Change models saves a new one.' }];
 }
 
-const section = (panel: HTMLElement, id: string): HTMLElement => {
-  const el = document.createElement('section');
-  el.className = 'ui-set';
-  el.setAttribute('aria-labelledby', id);
-  panel.append(el);
-  return el;
-};
-
-/** Put the tab into `panel`. `refresh` asks the host again; call it each time the tab is shown. */
+/** Put the page into `panel`. `refresh` asks the host again; call it each time the page is shown. */
 export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise<{ refresh: () => Promise<void> }> {
   const plan = await mountPlan(panel, deps.plan);
-  const governed = section(panel, 'hx-set-governed-h');
-  const ladder = section(panel, 'hx-set-ladder-h');
-  const providersEl = section(panel, 'hx-set-providers-h');
-  const change = section(panel, 'hx-set-change-h');
-  change.innerHTML = ui.html.setHead({ id: 'hx-set-change-h', label: 'Change' }) + ui.html.setRow({
-    label: 'Models', hint: 'Ask the models question again: how to connect, then which provider. Nothing changes until you answer.',
-    control: ui.html.button({ label: 'Change models', size: 's', attrs: { id: 'hx-models-change' } })
-  });
-  ui.hydrate(change);
+  const body = pageBody(panel, 'Models');
+  let governed = setSection('hx-set-governed', 'Governed mode', []);
+  let ladder = setSection('hx-set-ladder', 'Model ladder', []);
+  const providersEl = document.createElement('div');
+  providersEl.className = 'k7-section'; providersEl.id = 'hx-set-providers';
+  providersEl.setAttribute('role', 'group'); providersEl.setAttribute('aria-labelledby', 'hx-set-providers-h');
+  const change = setSection('hx-set-change', 'Change', [{ label: 'Models', explain: 'Ask the models question again: how to connect, then which provider. Nothing changes until you answer.', control: tint('Change models', 'hx-models-change') }]);
+  body.append(governed, ladder, providersEl, change);
   const askAgain = (): void => {
-    void deps.change().then(() => { deps.closeSettings(); }).catch((e: unknown) => { deps.toast(e instanceof Error ? e.message : 'That did not work'); });
+    void deps.change().then(() => { deps.closeSettings(); }).catch((e: unknown) => { deps.notify(e instanceof Error ? e.message : 'That did not work'); });
   };
   change.querySelector('#hx-models-change')?.addEventListener('click', askAgain);
   /* the Providers section reads the host when it is drawn, and asks the runtimes on this computer then: never in the background */
   let providers: ProvidersView | null = null;
   if (deps.providers) {
     providers = mountProviders(providersEl, {
-      bridge: deps.providers, toast: deps.toast,
+      bridge: deps.providers, notify: deps.notify,
       ...(deps.login ? { login: deps.login } : {}), ...(deps.chatgpt ? { chatgpt: deps.chatgpt } : {})
     });
   } else {
-    providersEl.innerHTML = ui.html.setHead({ id: 'hx-set-providers-h', label: 'Providers' }) + ui.html.setRow({ label: 'Providers', hint: 'Not read: the host is not connected.' });
+    providersEl.innerHTML = kit.html.sectionHead({ title: 'Providers', attrs: { id: 'hx-set-providers-h' } }) + kit.html.notice({ text: 'Not read: the host is not connected.', tone: 'neutral', place: 'page' });
   }
-  /* one read of the host feeds governed mode and the ladder */
+  /* one read of the host feeds governed mode and the ladder; each is redrawn in place */
   const drawAll = async (): Promise<void> => {
     let view: ModelsView | { error: string };
     try { view = await deps.ladder(); } catch (e) { view = { error: e instanceof Error ? e.message : 'unknown error' }; }
-    governed.innerHTML = ui.html.setHead({ id: 'hx-set-governed-h', label: 'Governed mode' }) + governedRows(view).join('');
-    ladder.innerHTML = ui.html.setHead({ id: 'hx-set-ladder-h', label: 'Model ladder' }) + ladderRows(view).join('');
-    for (const s of [governed, ladder]) ui.hydrate(s);
+    const g = setSection('hx-set-governed', 'Governed mode', governedRows(view));
+    const l = setSection('hx-set-ladder', 'Model ladder', ladderRows(view));
+    governed.replaceWith(g); ladder.replaceWith(l); governed = g; ladder = l;
     governed.querySelector('#hx-governed-change')?.addEventListener('click', askAgain);
-    for (const sw of governed.querySelectorAll<HTMLInputElement>('input[id^="hx-heavy-"]')) {
+    for (const sw of governed.querySelectorAll<HTMLButtonElement>('[id^="hx-heavy-"]')) {
       const id = sw.id.slice('hx-heavy-'.length);
-      if (!deps.setHeavy) { sw.setAttribute('disabled', ''); continue; }
-      sw.addEventListener('change', () => {
-        deps.setHeavy?.(id, sw.checked).then(() => drawAll(), (e: unknown) => { deps.toast(e instanceof Error ? e.message : 'That did not work'); return drawAll(); });
+      if (!deps.setHeavy) { sw.disabled = true; continue; }
+      sw.addEventListener('ui:change', (e) => {
+        const on = (e as CustomEvent<{ value: boolean }>).detail.value;
+        deps.setHeavy?.(id, on).then(() => drawAll(), (err: unknown) => { deps.notify(err instanceof Error ? err.message : 'That did not work'); return drawAll(); });
       });
     }
   };

@@ -107,12 +107,13 @@ describe('the Settings row of the Claude subscription', () => {
       copy: (t) => { copied.push(t); return Promise.resolve(); }, open: (u) => { opened.push(u); return Promise.resolve(); }
     });
     await view.ready;
-    expect(el.querySelector('[data-install]')?.textContent).toBe('In PowerShell: irm https://claude.ai/install.ps1 | iex');
+    expect(el.querySelector('[data-way-row="anthropic.signin"] [data-explain]')?.getAttribute('data-explain')).toContain('In PowerShell: irm https://claude.ai/install.ps1 | iex');
     el.querySelector<HTMLButtonElement>('[data-do="copy"][data-way="anthropic.signin"]')?.click();
     await Promise.resolve(); await Promise.resolve();
     expect(copied).toEqual(['irm https://claude.ai/install.ps1 | iex']);
     expect(toasts).toEqual(['Copied. Paste it into PowerShell and run it, then choose Check again.']);
-    el.querySelector<HTMLButtonElement>('[data-do="guide"][data-way="anthropic.signin"]')?.click();
+    el.querySelector<HTMLButtonElement>('[data-prov-more="anthropic.signin"]')?.click();
+    document.querySelector<HTMLElement>('[data-kit~="Menu"][data-floating] [data-value="guide"]')?.click();
     expect(opened).toEqual(['https://code.claude.com/docs/en/setup']);
   });
   it('shows a command in the host\'s words as code, not as raw backticks', async () => {
@@ -120,9 +121,9 @@ describe('the Settings row of the Claude subscription', () => {
     document.body.append(el);
     const view = mountProviders(el, { bridge: bridge([STATES.old]), toast: () => undefined });
     await view.ready;
-    const hint = el.querySelector('.ui-set__label small');
-    expect(hint?.innerHTML).toContain('<code class="ui-code">claude update</code>');
-    expect(hint?.textContent).not.toContain('`');
+    const hint = el.querySelector('[data-way-row="anthropic.signin"] [data-explain]')?.getAttribute('data-explain') ?? '';
+    expect(hint).toContain('claude update');
+    expect(hint).not.toContain('`');
   });
   it('Sign in runs Claude Code\'s own sign-in, keeps the button off while it is open, and reads the state again after', async () => {
     const el = document.createElement('section');

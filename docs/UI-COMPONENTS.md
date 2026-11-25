@@ -72,6 +72,13 @@ lab's `kit.single` and not blocking until the screens move): the v6 toast (`comp
 every screen that confirms with it; the v7 Notice's floating placement replaces it), the store story's "Banner" text, and the v6
 kit as a whole (`ui.*`), which the v7 kit replaces component by component as each screen moves.
 
+**Moved in wave C, `w33/settings-store`:** Settings (the large Dialog and its pages, `modules/settings`), the Store (`modules/store`) and
+Connectors (`host/connectors.ts`), with Models' plan, ladder and Providers, are on the v7 kit; their stories are drawn and checked as
+the kit's are (`v7: true` on a story: v7's two themes, the v7 checks blocking). The floating Notice at run time is `kit.notify`
+(`components/v7/notify.ts`); these screens use it in place of the toast. What they still draw with the v6 kit: the form card family
+(the review, remove and add cards: one card family, owner decision), the branded sign-in buttons (ADR-0040) and the sign-in cards,
+first run's providers hub (onboarding moves it), the shortcut sheet (`#hx-keys-sheet`).
+
 ## The kit as a package
 
 - **Decision: the existing `src/components` promoted, imported as `@boopis/ui`** (a path alias in `tsconfig.json`,

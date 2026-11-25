@@ -266,12 +266,13 @@ export async function keyWalk(env) {
     await press('Control+Comma', 400);
     const inside = []; for (let i = 0; i < 8; i++) { await press('Tab', 80); inside.push(await ev(() => !!document.activeElement.closest('#hx-settings'))); }
     check('10', 'dialog Tab cycles inside', inside.every(Boolean), inside.join());
-    await page.focus('#hx-dtab-general'); await press('ArrowRight', 300); check('10', 'settings tabs move with left and right', await ev(() => document.getElementById('hx-dtab-models').getAttribute('aria-selected') === 'true'));
-    check('10', 'Settings > Models in the page build says the engine is not connected, and offers nothing it cannot do', await ev(() => { const p = document.getElementById('hx-dpanel-models'); return !p.hidden && /boopis's engine is not connected/.test(p.textContent) && !document.getElementById('hx-models-change') && !document.getElementById('hx-set-ladder-h'); }));
-    await press('ArrowRight', 300); check('10', 'the Models tab is followed by Connectors, which in the page build says it needs the desktop app and offers nothing', await ev(() => { const p = document.getElementById('hx-dpanel-connectors'); return document.getElementById('hx-dtab-connectors').getAttribute('aria-selected') === 'true' && !p.hidden && /desktop app/.test(p.textContent) && !p.querySelector('button, input'); }));
-    await press('ArrowRight', 300); check('10', 'the Connectors tab is followed by Appearance', await ev(() => document.getElementById('hx-dtab-appearance').getAttribute('aria-selected') === 'true'));
-    await press('ArrowLeft', 300); await press('ArrowLeft', 300); await press('ArrowLeft', 300); await page.focus('#hx-dpanel-general .ui-seg [aria-checked="true"]'); await press('ArrowRight', 300);
-    check('10', 'segmented control left and right', await ev(() => document.querySelector('#hx-dpanel-general .ui-seg [aria-checked="true"]').dataset.value === 'closed'));
+    const cur = (id) => document.getElementById(id).getAttribute('aria-current') === 'page';
+    await page.focus('#hx-dtab-general'); await press('ArrowDown', 200); await press('Enter', 300); check('10', 'the settings nav: Down moves to the next section, Enter opens it', await ev(cur, 'hx-dtab-models'));
+    check('10', 'Settings > Models in the page build says the engine is not connected, and offers nothing it cannot do', await ev(() => { const p = document.getElementById('hx-dpanel-models'); return !p.hidden && /boopis's engine is not connected/.test(p.textContent) && !document.getElementById('hx-models-change') && !document.getElementById('hx-set-ladder'); }));
+    await press('ArrowDown', 200); await press('Enter', 300); check('10', 'Models is followed by Connectors, which in the page build says it needs the desktop app and offers nothing', await ev(() => { const p = document.getElementById('hx-dpanel-connectors'); return document.getElementById('hx-dtab-connectors').getAttribute('aria-current') === 'page' && !p.hidden && /desktop app/.test(p.textContent) && !p.querySelector('button, input'); }));
+    await press('ArrowDown', 200); await press('Enter', 300); check('10', 'Connectors is followed by Appearance', await ev(cur, 'hx-dtab-appearance'));
+    await press('Home', 200); await press('Enter', 300); await page.focus('#hx-set-collapse [aria-checked="true"]'); await press('ArrowRight', 300);
+    check('10', 'segmented control left and right', await ev(() => document.querySelector('#hx-set-collapse [aria-checked="true"]').dataset.value === 'closed'));
     await press('Escape', 300); check('10', 'Esc closes the dialog, focus returns', !(await layer()).settings && (await where()).id !== null, await where());
   });
   await s.close();

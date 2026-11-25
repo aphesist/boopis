@@ -6,8 +6,11 @@
    "More providers" collapsed, which search and any filter still reach. A status is always a word, never colour alone. Terms
    notes are quiet lines under their row. A button opens a form card in place of the list (as Connectors does), with a way back.
 
-   Built from the kit only: `setRow`/`setHead`, `search`, `segmented`, `button`, and the one form card family. No CSS of its own. */
-import { ui } from '@boopis/ui';
+   Settings draws it on the v7 kit (`planHtml7`: SectionHeads over Cards of Rows, the status a StatusWord, a row's first action a
+   Button and its others in an overflow Menu, the explanation and the terms notes behind the label's mark, "More providers" a
+   SectionHead with its disclosure); first run's hub (`layout`) keeps its own arrangement on the v6 kit until it moves (wave C's
+   onboarding). The forms are the one form card family. No CSS of its own. */
+import { kit, ui } from '@boopis/ui';
 import '../modules/cards';
 import { useFormsHost } from '../modules/cards/forms-host';
 import { esc } from '../core/dom';
@@ -46,7 +49,10 @@ export interface ProvidersDeps {
   login?: (provider: string) => Promise<ConnectorLogin>;
   /** boopis's own ChatGPT sign-in, whose card mounts for `openai.signin` */
   chatgpt?: ChatgptBridge;
-  toast: (text: string) => void;
+  /** a line the person should see now (Settings: the floating Notice) */
+  notify?: (text: string) => void;
+  /** the same, for first run's hub (its own name for it until it moves to the v7 kit) */
+  toast?: (text: string) => void;
   /** how long a card's receipt shows before the list is drawn again (ms) */
   settle?: number;
   /** cards for other sign-ins, by way id; the registry's are used when absent */
@@ -244,6 +250,56 @@ export function planHtml(p: Plan, canSignin: (w: Way) => boolean, tailOpen: bool
   return out.join('');
 }
 
+/* ───────── drawing on the v7 kit (Settings) ───────── */
+type SetRow = Parameters<typeof kit.html.card>[0]['rows'][number];
+/** a status as a StatusWord: ok when connected, red for a real failure, else neutral (a word, never colour alone) */
+const statusHtml = (state: ProviderState | null | undefined, word: string): string =>
+  kit.html.statusWord({ text: word, tone: state?.status === 'connected' ? 'ok' : failed(state) ? 'red' : 'neutral', attrs: { 'data-status': state?.status ?? 'unread' } });
+/** a row's actions: the first one a Button (a lab's sign-in its own branded button, ADR-0040), the others in its overflow Menu */
+function actionsHtml(actions: readonly Action[], way: string, label: string): string {
+  const [first, ...rest] = actions;
+  if (!first) return '';
+  const brand = first.do === 'signin' ? brandOf(way) : null;
+  const main = brand ? ui.html.signinButton({ brand, attrs: { 'data-do': first.do, 'data-way': way } })
+    : kit.html.button({ label: first.label, size: 28, variant: first.ghost ? 'ghost' : 'tint', attrs: { 'data-do': first.do, 'data-way': way, 'aria-label': `${first.label}, ${label}` } });
+  const more = rest.length ? kit.html.iconButton({ icon: 'more', label: 'More for ' + label, variant: 'tinted', haspopup: 'menu', tip: 'More', attrs: { 'data-prov-more': way, 'data-prov-actions': rest.map((a) => a.do + ':' + a.label).join('|') } }) : '';
+  return main + more;
+}
+/** a way as a settings Row: its label, its status word, its actions; what it is, its state's detail, its install line and its terms
+    notes behind the label's mark */
+export function row7(r: Row, canSignin: (w: Way) => boolean): SetRow {
+  const actions = actionsFor(r.way, r.state, canSignin(r.way));
+  const notes = r.way.notes.filter(rowNote).map((n) => n.text);
+  const install = r.state?.install ? `In ${r.state.install.shell}: ${r.state.install.command}` : '';
+  /* the explanation is plain text: a command the host wrote between backticks is said as the command itself */
+  const explain = [hintOf(r.way, r.state), install, ...notes].filter(Boolean).join(' ').replace(/`([^`]+)`/g, '$1');
+  return {
+    label: r.way.label, attrs: { 'data-way-row': r.way.id }, ...(explain ? { explain } : {}),
+    control: (r.way.kind === 'custom' ? '' : statusHtml(r.state, statusWord(r.state))) + actionsHtml(actions, r.way.id, r.way.label)
+  };
+}
+function endpointRow7(s: ProviderState): SetRow {
+  const slug = s.way.slice('custom.'.length);
+  const explain = [s.base_url, s.detail].filter(Boolean).join(' ');
+  return { label: slug, attrs: { 'data-way-row': s.way }, ...(explain ? { explain } : {}), control: statusHtml(s, statusWord(s)) + actionsHtml([{ do: 'remove', label: 'Remove', ghost: true }], s.way, slug) };
+}
+const block7 = (b: Block, canSignin: (w: Way) => boolean): string =>
+  '<div class="k7-section" data-prov-block="' + esc(b.id) + '">' + kit.html.sectionHead({ title: b.head, attrs: { id: 'hx-prov-h-' + b.id } }) +
+  kit.html.card({ rows: [...b.rows.map((r) => row7(r, canSignin)), ...(b.endpoints ?? []).map(endpointRow7)] }) + '</div>';
+/** the list's markup for a plan on the v7 kit; `tailOpen` says whether "More providers" is expanded */
+export function planHtml7(p: Plan, canSignin: (w: Way) => boolean, tailOpen: boolean): string {
+  if (p.empty) return kit.html.emptyState({ text: 'No provider matches. Try another word, or choose All.' }).replace('class="k7-empty"', 'class="k7-empty" data-prov-none');
+  const out: string[] = [];
+  if (p.found.length) out.push(block7({ id: 'found', head: 'Found on this computer', rows: p.found }, canSignin));
+  out.push(...p.main.map((b) => block7(b, canSignin)));
+  if (p.more.length) {
+    const n = p.more.reduce((c, b) => c + b.rows.length, 0);
+    out.push(kit.html.sectionHead({ title: 'More providers', count: String(n), disclosure: true, collapsed: !tailOpen, attrs: { id: 'hx-prov-more' } }));
+    out.push(`<div class="hx-prov-tail" id="hx-prov-tail"${tailOpen ? '' : ' hidden'}>${p.more.map((b) => block7(b, canSignin)).join('')}</div>`);
+  }
+  return out.join('');
+}
+
 const message = (e: unknown): string => (e instanceof Error ? e.message : 'That did not work');
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<Record<string, string>> = {}, ...kids: (Node | string)[]): HTMLElementTagNameMap[K] => {
   const n = document.createElement(tag);
@@ -290,12 +346,23 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   let abort: () => void = () => undefined;
   let card: { destroy: () => void } | null = null;
 
-  host.innerHTML = (deps.layout?.bare ? '' : ui.html.setHead({ id: 'hx-set-providers-h', label: deps.layout?.title ?? 'Providers', level: deps.layout?.level ?? 3 })) +
-    '<div data-prov-bar' + (deps.layout?.bare ? ' hidden' : '') + ' style="display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center;padding:var(--sp-2) 0">' +
-    ui.html.search({ size: 'm', as: 'input', id: 'hx-prov-q', label: 'Search providers', placeholder: 'Search providers' }) +
-    ui.html.chipGroup({ options: FILTERS, value: 'all', label: 'Show providers' }) + '</div>' +
-    '<p class="ui-field__hint" role="status" data-prov-status></p><div data-prov-body></div><div data-prov-flow hidden></div>';
-  ui.hydrate(host);
+  const tell = (text: string): void => { (deps.notify ?? deps.toast ?? (() => undefined))(text); };
+  /* Settings (no layout): the v7 kit; first run's hub: its own arrangement on the v6 kit */
+  const v7 = !deps.layout;
+  if (v7) {
+    host.innerHTML = kit.html.sectionHead({ title: 'Providers', attrs: { id: 'hx-set-providers-h' } }) +
+      '<div class="hx-prov-bar" data-prov-bar>' + kit.html.field({ id: 'hx-prov-q', kind: 'search', ariaLabel: 'Search providers', placeholder: 'Search providers' }) +
+      '<div class="hx-prov-chips" role="radiogroup" aria-label="Show providers">' + FILTERS.map((f) => kit.html.chip({ label: f.label, variant: 'filter', chosen: f.value === 'all', value: f.value, attrs: { role: 'radio', 'aria-pressed': null, 'aria-checked': String(f.value === 'all') } })).join('') + '</div></div>' +
+      '<p role="status" data-prov-status hidden></p><div class="hx-prov-body" data-prov-body></div><div class="hx-prov-flow" data-prov-flow hidden></div>';
+    kit.wire(host);
+  } else {
+    host.innerHTML = (deps.layout?.bare ? '' : ui.html.setHead({ id: 'hx-set-providers-h', label: deps.layout?.title ?? 'Providers', level: deps.layout?.level ?? 3 })) +
+      '<div data-prov-bar' + (deps.layout?.bare ? ' hidden' : '') + ' style="display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center;padding:var(--sp-2) 0">' +
+      ui.html.search({ size: 'm', as: 'input', id: 'hx-prov-q', label: 'Search providers', placeholder: 'Search providers' }) +
+      ui.html.chipGroup({ options: FILTERS, value: 'all', label: 'Show providers' }) + '</div>' +
+      '<p class="ui-field__hint" role="status" data-prov-status></p><div data-prov-body></div><div data-prov-flow hidden></div>';
+    ui.hydrate(host);
+  }
   const bar = host.querySelector<HTMLElement>('[data-prov-bar]') as HTMLElement;
   const body = host.querySelector<HTMLElement>('[data-prov-body]') as HTMLElement;
   const flow = host.querySelector<HTMLElement>('[data-prov-flow]') as HTMLElement;
@@ -310,15 +377,20 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   };
   const canSignin = (w: Way): boolean => (w.signin?.flow === 'cli' ? !!deps.login : signinMount(w) !== null);
 
-  const say = (): void => {
-    status.textContent = [readError && `Not read: ${readError}`, probeError && `Could not look for runtimes on this computer: ${probeError}`].filter(Boolean).join(' ');
+  const say = (): HTMLElement | null => {
+    const text = [readError && `Not read: ${readError}`, probeError && `Could not look for runtimes on this computer: ${probeError}`].filter(Boolean).join(' ');
+    status.textContent = text;
+    /* on the v7 kit what could not be read is a page Notice above the list, not a line that only a screen reader hears */
+    if (!v7 || !text) return null;
+    const n = document.createElement('div'); n.innerHTML = kit.html.notice({ text, tone: readError ? 'red' : 'neutral', place: 'page' });
+    return n.firstElementChild as HTMLElement;
   };
   const draw = (): void => {
     deps.onStates?.(states);
-    if (readError && !states.size) { body.innerHTML = ''; say(); return; }
-    body.innerHTML = (deps.layout?.planHtml ?? planHtml)(plan(states, filter, query), canSignin, tailOpen);
-    ui.hydrate(body);
-    say();
+    if (readError && !states.size) { body.innerHTML = ''; const n = say(); if (n) body.append(n); return; }
+    body.innerHTML = v7 ? planHtml7(plan(states, filter, query), canSignin, tailOpen) : (deps.layout?.planHtml ?? planHtml)(plan(states, filter, query), canSignin, tailOpen);
+    if (v7) kit.wire(body); else ui.hydrate(body);
+    const n = say(); if (n) body.prepend(n);
   };
 
   const read = async (probe: boolean): Promise<void> => {
@@ -341,9 +413,10 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   const show = (...kids: Node[]): void => {
     flowOpen = true;
     bar.hidden = true; body.hidden = true; flow.hidden = false;
-    const backBtn = ui.button({ label: deps.layout?.back ?? 'Back to providers', size: 's', variant: 'ghost' });
+    const backBtn = v7 ? kit.button({ label: 'Back to providers', size: 32, variant: 'ghost', icon: 'back' }) : ui.button({ label: deps.layout?.back ?? 'Back to providers', size: 's', variant: 'ghost' });
     backBtn.addEventListener('click', back);
-    flow.replaceChildren(el('div', { style: 'display:grid;gap:var(--sp-3);padding:var(--sp-3) 0' }, ...kids, backBtn));
+    if (v7) { backBtn.classList.add('hx-prov-back'); flow.replaceChildren(backBtn, ...kids); }
+    else flow.replaceChildren(el('div', { style: 'display:grid;gap:var(--sp-3);padding:var(--sp-3) 0' }, ...kids, backBtn));
   };
   const later = (fn: () => void): void => { window.setTimeout(() => { if (flowOpen) fn(); }, settle); };
   const cardOf = (spec: FormSpec, handlers: FlowHandlers): HTMLElement => {
@@ -352,7 +425,7 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
     queueMicrotask(() => { c.querySelector<HTMLElement>('.cd-form .ui-input, .cd-form .cd-opt[tabindex="0"], .cd-form .ui-switch')?.focus(); });
     return c;
   };
-  const flowUi: FlowUi = { card: cardOf, show, back, later, toast: deps.toast };
+  const flowUi: FlowUi = { card: cardOf, show, back, later, notify: tell };
 
   const keyFlow = (r: Row, changing: boolean): void => {
     show(cardOf(keyForm(r.entry, r.way, changing), {
@@ -377,7 +450,8 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   const signinFlow = (w: Way): void => {
     const mount = signinMount(w);
     if (!mount) return;
-    const hostEl = el('div', { style: 'display:grid;gap:var(--sp-3)' }, el('p', { style: 'margin:0' }, w.label), ...w.notes.map((n) => el('p', { class: 'ui-field__hint' }, n.text)));
+    const hostEl = v7 ? el('div', { class: 'hx-prov-flow' }) : el('div', { style: 'display:grid;gap:var(--sp-3)' }, el('p', { style: 'margin:0' }, w.label), ...w.notes.map((n) => el('p', { class: 'ui-field__hint' }, n.text)));
+    if (v7) hostEl.innerHTML = kit.html.sectionHead({ title: w.label }) + (w.notes.length ? kit.html.card({ rows: w.notes.map((n) => ({ label: n.text, explain: n.text })) }) : '');
     show(hostEl);
     card = mount(hostEl, () => { later(back); });
   };
@@ -386,19 +460,19 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
     const id = w.signin?.login ?? 'claude-code';
     if (!login) return;
     btn.disabled = true;
-    deps.toast('Finish signing in to Claude in your browser.');
+    tell('Finish signing in to Claude in your browser.');
     login(id).then((r) => {
-      if (!r.ok) deps.toast(r.timed_out ? 'The Claude sign-in took too long and was stopped. Choose Sign in to try again.' : 'The Claude sign-in did not finish. Choose Sign in to try again.');
+      if (!r.ok) tell(r.timed_out ? 'The Claude sign-in took too long and was stopped. Choose Sign in to try again.' : 'The Claude sign-in did not finish. Choose Sign in to try again.');
       return read(false);
-    }, (e: unknown) => { deps.toast(message(e)); btn.disabled = false; });
+    }, (e: unknown) => { tell(message(e)); btn.disabled = false; });
   };
   /** Use a runtime that answered (`local-runtime.ts`): LM Studio through the engine's own provider, the others as endpoints under the
       catalogue's own name; the first model it listed becomes the person's model. */
   const useLocal = async (r: Row): Promise<void> => {
     try {
       const use = await useLocalRuntime(bridge, r.way, r.state?.base_url ?? r.way.base_url?.default ?? '');
-      deps.toast(localUseNote(r.entry, use));
-    } catch (e) { deps.toast(message(e)); }
+      tell(localUseNote(r.entry, use));
+    } catch (e) { tell(message(e)); }
     await read(false);
   };
 
@@ -409,23 +483,36 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   body.addEventListener('click', (ev) => {
     const t = (ev.target as HTMLElement).closest<HTMLButtonElement>('button');
     if (!t) return;
-    if (t.id === 'hx-prov-more') { tailOpen = !tailOpen; t.setAttribute('aria-expanded', String(tailOpen)); body.querySelector<HTMLElement>('#hx-prov-tail')?.toggleAttribute('hidden', !tailOpen); return; }
+    if (t.id === 'hx-prov-more' || t.closest('#hx-prov-more')) {
+      tailOpen = !tailOpen; t.setAttribute('aria-expanded', String(tailOpen)); t.closest('#hx-prov-more')?.toggleAttribute('data-collapsed', !tailOpen);
+      body.querySelector<HTMLElement>('#hx-prov-tail')?.toggleAttribute('hidden', !tailOpen); return;
+    }
+    /* a row's overflow Menu: its other actions, each one the row's own */
+    if (t.dataset['provMore']) {
+      const way = t.dataset['provMore'];
+      const entries = (t.dataset['provActions'] ?? '').split('|').filter(Boolean).map((x) => { const [d, ...l] = x.split(':'); return { label: l.join(':'), value: d ?? '', danger: d === 'remove' }; });
+      kit.openMenu(t, { label: t.getAttribute('aria-label') ?? 'More', align: 'end', entries, onSelect: (v) => { run(v as Do, way, t); } });
+      return;
+    }
     const act = t.dataset['do'] as Do | undefined;
     const wayId = t.dataset['way'] ?? '';
     if (!act) return;
+    run(act, wayId, t);
+  });
+  function run(act: Do, wayId: string, t: HTMLButtonElement): void {
     const r = rowFor(wayId);
     switch (act) {
       case 'key': if (r) keyFlow(r, r.state?.status !== 'needs_key'); break;
       case 'endpoint': abort = startEndpointFlow(flowUi, bridge).abort; break;
       case 'signin': case 'continue': if (r?.way.signin?.flow === 'cli') claudeSignin(t, r.way); else if (r) signinFlow(r.way); break;
-      case 'signout': bridge.signOut(wayId).then(() => read(false), (e: unknown) => { deps.toast(message(e)); }); break;
+      case 'signout': bridge.signOut(wayId).then(() => read(false), (e: unknown) => { tell(message(e)); }); break;
       case 'recheck': void read(true); break;
       case 'copy': {
         const hint = r?.state?.install;
-        if (hint) copyText(hint.command).then(() => { deps.toast(`Copied. Paste it into ${hint.shell} and run it, then choose Check again.`); }, () => { deps.toast('Could not copy: select the command and copy it.'); });
+        if (hint) copyText(hint.command).then(() => { tell(`Copied. Paste it into ${hint.shell} and run it, then choose Check again.`); }, () => { tell('Could not copy: select the command and copy it.'); });
         break;
       }
-      case 'guide': { const hint = r?.state?.install; if (hint) openPage(hint.page).catch((e: unknown) => { deps.toast(message(e)); }); break; }
+      case 'guide': { const hint = r?.state?.install; if (hint) openPage(hint.page).catch((e: unknown) => { tell(message(e)); }); break; }
       case 'use': if (r) void useLocal(r); break;
       case 'remove': {
         if (r) removeFlow(wayId, r.way.label, 'Its key leaves your keychain. A ladder tier that names it stays as it is, and governed mode says why it cannot run.');
@@ -433,9 +520,19 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
         break;
       }
     }
-  });
+  }
   host.querySelector<HTMLInputElement>('#hx-prov-q')?.addEventListener('input', (e) => { query = (e.target as HTMLInputElement).value; draw(); });
-  bar.addEventListener('ui:change', (e) => { filter = (e as CustomEvent<{ value: string }>).detail.value as Filter; draw(); });
+  bar.addEventListener('ui:change', (e) => {
+    if (v7) {
+      /* the filter Chips are one choice: the chosen one inverted */
+      e.preventDefault();
+      const c = (e.target as Element).closest<HTMLElement>('[data-value]'); const v = c?.dataset['value'];
+      if (!c || !v || v === filter) return;
+      for (const x of bar.querySelectorAll<HTMLElement>('.hx-prov-chips [data-value]')) { const on = x === c; x.toggleAttribute('data-chosen', on); x.setAttribute('aria-checked', String(on)); }
+      filter = v as Filter; draw(); return;
+    }
+    filter = (e as CustomEvent<{ value: string }>).detail.value as Filter; draw();
+  });
 
   const ready = read(true);
   return {
