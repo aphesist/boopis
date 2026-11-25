@@ -556,7 +556,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     started: (id) => convos.get(id)?.gwId != null || (typeof id === 'string' && !id.startsWith('new-') && list.get().some((s) => s.id === id)),
     running: (id) => convos.get(id)?.running != null,
     addLine: (id, line) => { addLine(convo(id), line); },
-    continueOn, head: (id) => convos.get(id)?.head ?? null, defaultFolder: opts.defaultFolder ?? null,
+    continueOn, head: (id) => convos.get(id)?.head ?? null, modelOf: (id) => details.currentModel(id) || convos.get(id)?.model || '', defaultFolder: opts.defaultFolder ?? null,
     pickFolder: opts.pickFolder !== undefined ? opts.pickFolder : hasHostDialogs() ? tauriPickFolder : null
   });
   details.onChanged = () => { controls.refresh(); };

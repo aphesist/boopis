@@ -222,11 +222,12 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
         }
       }));
     }
-    await Promise.all(jobs);
-    if (want('info') && pluginOk && m.info?.cwd) m.inventory = await read<InventoryWire>(PLUGIN + 'compat.inventory', { cwd: m.info.cwd });
-    if (uiId === followed) publishFollowed([...parts, 'info']);
-    deps.onRefreshed?.(uiId);
-    api.onChanged?.();
+    try {
+      await Promise.all(jobs);
+      if (want('info') && pluginOk && m.info?.cwd) m.inventory = await read<InventoryWire>(PLUGIN + 'compat.inventory', { cwd: m.info.cwd });
+      if (uiId === followed) publishFollowed([...parts, 'info']);
+      deps.onRefreshed?.(uiId);
+    } finally { api.onChanged?.(); }   /* the capability map reads what landed, also when another read failed */
   }
   const pending = new Map<string, Set<Part>>();
   let flushTimer: ReturnType<typeof setTimeout> | null = null;

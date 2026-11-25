@@ -37,6 +37,8 @@ export interface ControlsDeps {
   /** continue the thread on a new engine session with this step; resolves with why not, or null */
   continueOn(uiId: string, step: CarefulStep, because: string): Promise<string | null>;
   head(uiId: string): string | null;
+  /** the model the session answers with now ('provider/model' or the engine's id), '' when unknown */
+  modelOf(uiId: string): string;
   /** the folder a new session starts in when nothing else says (Settings > Sessions' default) */
   defaultFolder?: string | null;
   pickFolder: (() => Promise<string | null>) | null;
@@ -202,7 +204,7 @@ export function createControls(deps: ControlsDeps): LiveControls {
       const cwd = m.info?.cwd ?? m.describe?.session?.cwd ?? null;
       if (!cwd) return { refused: 'the session\'s folder is not known' };
       const p = caps.engine.createParams;
-      const now = splitValue(details.currentModel(uiId));
+      const now = splitValue(deps.modelOf(uiId));
       const params: Record<string, unknown> = { source: 'gui', cwd, toolsets: ['boopis'] };
       if (p.has('cwd_explicit')) params['cwd_explicit'] = true;
       if (p.has('client')) params['client'] = CLIENT;
