@@ -6,7 +6,10 @@
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
 import { railRoster, railSettled } from '../../rail-fixtures';
 
-const st = (tags: State['tags'], provider: ProviderSpec, setup: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State => ({ tags, app: { provider, setup }, ...extra });
+/* the dock and the session's turns are v6 still (w33/dock, w33/session-s0): the page-wide same-component comparison meets them in every
+   app state, outside these stories' scope */
+const V6_ELSEWHERE = { 'same-component': { el: 'hx-dock', reason: 'the dock is still the v6 dock (w33/dock moves it onto the kit\'s Dock); same-component compares the whole page, outside this story\'s scope' } } as const;
+const st = (tags: State['tags'], provider: ProviderSpec, setup: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State => ({ tags, app: { provider: { sessions: 'none', ...provider }, setup }, allow: V6_ELSEWHERE, ...extra });   /* no session: its turns are v6 (w33/session-s0) */
 const MOCK = { url: '/v6/__index.html', note: 'the v6 mock has no v7 surfaces: the approved v7 boards are screens 11, 12 and 13 (ds-v7)' };
 const bots = async (c: AppCtx): Promise<void> => { c.hx.setState({ tab: 'bots' }); await c.wait(500); };
 const pick = (id: string) => async (c: AppCtx): Promise<void> => { await bots(c); c.hx.emit('hx:bot-select', { id, from: 'lab' }); await c.wait(600); };
@@ -22,7 +25,7 @@ const rail = (open?: string) => async (c: AppCtx): Promise<void> => {
 const chrome: Story = {
   id: 'v7/chrome', title: 'Chrome (v7)', area: 'shell', kind: 'surface', covers: ['surface:title-bar'], scope: '#hx-chrome', mock: MOCK,
   states: {
-    'a session': st(['typical'], {}, async (c) => { await c.wait(300); }, { note: 'the toggle, the title pill with the session\'s glyph, the search hint, details and the window glyphs (board 05 A, P2 S5)' }),
+    'the Sessions tab': st(['typical'], {}, async (c) => { await c.wait(300); }, { note: 'the toggle, the title pill with a session\'s glyph ("New session"), the search hint, details and the window glyphs (board 05 A, P2 S5)' }),
     'a bot open': st(['typical', 'owner'], {}, pick('nina'), { note: 'the title pill carries the bot\'s orb (24) and name (15); it opens the details' }),
     'a room open': st(['variant'], { fixtures: ['groups'] }, room, { note: 'a room\'s title pill: its members\' stack and its name (screen 12)' }),
     'a long name': st(['long'], { fixtures: ['long'] }, pick('cassiopeia-staging-deploy-guardian')),
@@ -78,7 +81,7 @@ const roomStory: Story = {
   states: {
     'release crew': st(['typical', 'owner'], { fixtures: ['groups'] }, room, { note: 'each member\'s name in its colour above its first bubble and its orb at that bubble\'s foot; yours in ink (screen 12)' }),
     'a long group name': st(['long'], { fixtures: ['groups', 'long'] }, room),
-    'paper past (six members)': st(['many', 'variant'], { fixtures: ['groups', 'paper-past'] }, async (c) => { await bots(c); await c.click('.bt-group-rows > [data-kit~="ListRow"]:nth-of-type(2)'); await c.wait(700); })
+    'release crew, larger (112%)': st(['size', 'variant'], { fixtures: ['groups'] }, room, { zoom: 1.12 })
   }
 };
 

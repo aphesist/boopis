@@ -332,9 +332,9 @@ function lastWords(g: Group): string {
   return t && t.kind === 'text' ? t.text.replace(/\s+/g, ' ').trim() : '';
 }
 function groupRow(g: Group): string {
-  const busy = g.busy, who = namesOf(g.members) + (busy ? ', replying' : '');
+  const busy = g.busy, line = lastWords(g) || namesOf(g.members), who = line + (busy ? ', replying' : '');
   return kit.html.listRow({
-    variant: 'bot', title: g.name, sub: lastWords(g) || namesOf(g.members), leadHTML: stackOf(g.members, 'row', true), working: !!busy,
+    variant: 'bot', title: g.name, sub: line, leadHTML: stackOf(g.members, 'row', true), working: !!busy,
     current: S.view === 'group' && g.id === S.groupSel,
     attrs: { 'data-value': g.id, 'data-gid': g.id, 'aria-label': g.name + ', ' + who }
   });

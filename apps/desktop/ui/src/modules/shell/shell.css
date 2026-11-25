@@ -79,7 +79,6 @@ body {
 .hx-win { display: flex; gap: var(--gap-hair); }
 /* the title pill's glyph (a session): a 24 circle at --fill-2, where a bot's orb sits */
 .k7-title__ic { display: grid; place-items: center; width: var(--sp-5); height: var(--sp-5); border-radius: var(--r-pill); background: var(--fill-2); color: var(--icon); flex: none; }
-.k7-title:not([data-lead]) { padding-inline-start: var(--pad-pill-end); }
 
 /* ───────────── left sidebar ─────────────
    v7: 300 open (--sb-open-w), --bg-1, from the window's top: its head starts under the chrome's toggle row; the rail (88, or 64

@@ -319,9 +319,11 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-turn .k7-bubble > .ui-md > :first-child { margin-top: 0; }
 .bt-turn .k7-bubble > .ui-md > :last-child { margin-bottom: 0; }
 /* the hover actions beside a bot's last bubble (screen 11: copy, then what exists) */
-.bt-turn__acts { position: absolute; bottom: 0; left: calc(var(--bubble-max) + var(--sp-2)); display: flex; gap: var(--gap-hair); opacity: 0; transition: opacity var(--dur-1) var(--ease-out); }
+/* in a bot's chat beside the last bubble (copy); in a room, under the member's bubbles, on their line (copy, reply, open its chat) */
+.bt-turn__acts { position: absolute; bottom: var(--sp-1); left: calc(var(--bubble-max) + var(--sp-2)); display: flex; gap: var(--gap-hair); opacity: 0; transition: opacity var(--dur-1) var(--ease-out); }
+.bt-group .bt-turn__acts { position: static; align-self: flex-start; margin: var(--gap-xs) 0 0 var(--gutter); }
 .bt-turn:is(:hover, :focus-within) > .bt-turn__acts { opacity: 1; }
-@media (max-width: 1100px) { .bt-turn__acts { position: static; align-self: flex-start; } }
+@media (max-width: 1100px) { .bt-turn__acts { position: static; align-self: flex-start; margin-top: var(--gap-xs); } }
 .bt-room .bt-cardslot, .bt-turn .bt-cardslot { width: 100%; max-width: var(--bubble-max); }
 .bt-room .bt-resolved { display: block; }
 .bt-room .bt-empty { margin-left: 0; padding: var(--sp-6) 0; }

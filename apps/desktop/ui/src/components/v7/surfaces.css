@@ -92,8 +92,8 @@
 .k7-tile[aria-current="page"] { background: var(--current); }
 @media (hover: hover) and (pointer: fine) { .k7-tile:not([aria-current]):hover { background: var(--hover); transition-duration: var(--dur-1); } }
 .k7-flag { position: absolute; right: var(--gap-s); bottom: var(--gap-s); width: var(--dot); height: var(--dot); border-radius: var(--r-pill); background: var(--owe); box-shadow: 0 0 0 var(--flag-ring) var(--bg-1); }
-.k7-rail__rule { width: var(--sp-6); margin: var(--gap-s) 0; border: 0; height: var(--hl); background: var(--hair); }
-.k7-rail__foot { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); }
+.k7-rail__rule { flex: none; width: var(--sp-6); margin: var(--gap-s) 0; border: 0; height: var(--hl); background: var(--hair); }
+.k7-rail__foot { flex: none; display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); }
 
 /* ── Notch (42): the slab's black shape flush to the top, its composer on a 12 inset ── */
 .k7-notch { position: relative; width: var(--w); height: var(--notch-h); }

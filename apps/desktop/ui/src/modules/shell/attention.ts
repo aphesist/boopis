@@ -26,7 +26,7 @@ export function updateTitle(): void {
   } else {
     const b = data().bots.snapshot().bots.find((x) => x.id === sh.selection.bots);
     t = t || (b ? b.name : 'All bots');
-    if (!leadOverride.bots && b) lead = { bot: b };
+    if (!leadOverride.bots) lead = b ? { bot: b } : { icon: 'bots' };
   }
   // the visible words stay in the name, in order (WCAG 2.5.3, label in name); the pill opens the details
   setTitle(t, lead, t + ', details');
