@@ -531,6 +531,7 @@ export function toConversation(): void { const t = turnsEls().find((x) => x.tabI
 
 export function mountView(root: HTMLElement): void {
   VIEW.root = root;
+  ASKS.clear();
   root.classList.add('ss-view');
   VIEW.scroll = el('div', { class: 'ss-scroll ' + ui.scrollClass({ ground: true }) });
   VIEW.findAnchor = el('span', { class: 'ss-find-anchor', 'aria-hidden': 'true' });

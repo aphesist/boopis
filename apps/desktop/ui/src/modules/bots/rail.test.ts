@@ -86,6 +86,31 @@ describe('the rail', () => {
     expect(release.getAttribute('aria-label')).toBe('release crew, atlas, nina and kai');
     expect(q('.k7-rail__tri', release).hasAttribute('data-tip')).toBe(false);
   });
+  it('carries the tab switch, upright: the open tab is chosen, and a press switches the tab (owner, 25 November)', async () => {
+    const { drawRail } = await import('./list');
+    drawRail();
+    const tab = (v: string): HTMLElement => q('[data-rail-tabs] [data-value="' + v + '"]', rail());
+    expect(tab('bots').getAttribute('aria-selected')).toBe('true');
+    tab('session').click();
+    expect(state.tab).toBe('session');
+    setState({ tab: 'bots' });
+  });
+  it('shows no bots on the Sessions tab: the switch, and at the foot New session, Store and Settings', async () => {
+    const { drawRail } = await import('./list');
+    const { on } = await import('../../core/bus');
+    setState({ tab: 'session' });
+    drawRail();
+    expect(rail().querySelectorAll('.k7-tile')).toHaveLength(0);
+    expect(q('[data-rail-tabs] [data-value="session"]', rail()).getAttribute('aria-selected')).toBe('true');
+    expect([...rail().querySelectorAll('.k7-rail__foot button')].map((b) => b.getAttribute('aria-label'))).toEqual(['New session', 'Store', 'Settings']);
+    const made = vi.fn();
+    on('hx:new-session', made);
+    q('.k7-rail__foot [data-rail-act="new"]', rail()).click();
+    expect(made).toHaveBeenCalledTimes(1);
+    setState({ tab: 'bots' });
+    drawRail();
+    expect(rail().querySelectorAll('.k7-tile').length).toBeGreaterThan(0);
+  });
   it('draws a room whose members are no longer bots as what is left, with the rest in "+N"', async () => {
     const { drawRail } = await import('./list');
     const g = S.groups[0]!;
