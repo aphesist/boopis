@@ -59,16 +59,16 @@ describe('the "made outside boopis" mark', () => {
     expect(row.hasAttribute('aria-describedby')).toBe(false);
     expect(qa('.bt-outside')).toHaveLength(1);
   });
-  it('the room header of such a bot shows it too, reachable by keyboard, with the same sentence as its tooltip and its description', () => {
+  it('the room of such a bot shows it too, on the line over the thread, reachable by keyboard, with the same sentence as its tooltip and its description', () => {
     mount(mock(['outside']));
     openBot('sage');
-    const mark = q('.bt-p-line .bt-outside');
+    const mark = q('.bt-topline .bt-outside');
     expect(mark.textContent).toBe(OUTSIDE_LABEL);
     expect(mark.getAttribute('data-tip')).toBe(OUTSIDE_WORDS);
     expect(mark.tabIndex).toBe(0);
     expect(document.getElementById(mark.getAttribute('aria-describedby') ?? '')?.textContent).toBe(OUTSIDE_WORDS);
     openBot('atlas');
-    expect(document.querySelector('.bt-p-line .bt-outside')).toBeNull();
+    expect(document.querySelector('.bt-topline .bt-outside')).toBeNull();
   });
   it('saving any boopis setting for it creates the store, and the mark goes, in the roster and in the header', () => {
     mount(mock(['outside']));

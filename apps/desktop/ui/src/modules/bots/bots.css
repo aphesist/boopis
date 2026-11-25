@@ -376,3 +376,5 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-details__when { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }   /* a second line of the label's own 18, on its baseline (botscreens.js: a <br> and a 12 span) */
 .bt-details__val { display: inline-flex; align-items: center; gap: var(--pad-kbd); font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text-dim); white-space: nowrap; }
 .bt-details__none { margin: var(--pane-sec-top) var(--sp-1) 0; font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); }
+/* the line over the thread for what no board places yet (the made-outside mark, New session with a live bot); nothing when there is neither */
+.bt-topline { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl-s); margin-bottom: var(--sp-2); }

@@ -115,11 +115,8 @@ describe('a live bot’s room shows what Hermes reports and nothing it made up',
     expect(g).toContain('Skills: 1 skill on of 2 (git)');
     expect(g).toContain('Toolsets: 1 toolset on (Terminal)');
   });
-  it('shows its model and its schedule beside its role', () => {
-    const line = q('.bt-p-line').textContent ?? '';
-    expect(line).toContain('reviews pull requests');
-    expect(line).toContain('weekdays at 09:00');
-    expect(document.querySelector('.bt-p-sched[data-tip="Model"]')?.textContent).toContain('Fake A');
+  it('says its model on the composer\'s line (board 11: the provider\'s mark and the model\'s short name)', () => {
+    expect(q('.k7-composer__item[data-line="model"]').textContent?.toLowerCase()).toContain('fake a');
   });
   it('a session list Hermes did not answer is shown as unknown with the reason', () => {
     const b = { ...atlas(), info: { ...INFO, sessions: null, notes: { sessions: 'Its schedule and sessions could not be read: no link.' } } };

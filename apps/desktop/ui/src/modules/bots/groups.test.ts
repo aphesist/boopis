@@ -413,7 +413,9 @@ describe('a member’s message that addresses the person (@user, the engine’s 
 });
 
 describe('a bot’s own chat: "@" names a teammate', () => {
-  it('offers the other bots, says that naming one brings it nowhere, and draws the mention as the sent message will', async () => {
+  /* not yet again: a bot's chat takes the kit's one-row Composer (board 11), which has no "@" list; the teammates' list returns with
+     the composer's mention board (S32 draws the session's). Until then typing "@name" is plain text */
+  it.skip('offers the other bots, says that naming one brings it nowhere, and draws the mention as the sent message will', async () => {
     mount(withGroups());
     const { emit } = await import('../../core/bus');
     emit('hx:bot-select', { id: 'atlas', from: 'test' }); await flush();
@@ -454,7 +456,7 @@ describe('a live bot’s room has a live composer', () => {
     expect(document.querySelectorAll('.bt-log [data-hx-turn]')).toHaveLength(2);
     expect(q('.bt-note').textContent).toContain('not sent');
     expect(q('.bt-log').textContent).toContain('Looks fine.');
-    expect(q('.bt-ghead, .bt-presence [data-action="new-session"]')).toBeTruthy();
+    expect(q('.bt-topline [data-action="new-session"]')).toBeTruthy();
     q('[data-action="new-session"]').click();
     expect(l.fresh).toEqual([id]);
   });

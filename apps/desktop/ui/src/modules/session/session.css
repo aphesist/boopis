@@ -172,8 +172,8 @@
 .ssl { padding: 0 var(--gap-row); box-sizing: border-box; font-size: var(--fs-m); line-height: var(--lh-m); }
 .ssl-h { display: flex; align-items: center; gap: var(--gap-s); margin: 0; padding: var(--sp-3) var(--gap-row) var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-m); font-weight: 400; color: var(--text-dim); }
 .ssl-h > .ssl-h__n, .ssl-h__fold > .ssl-h__n { font-size: var(--fs-2xs); letter-spacing: inherit; color: var(--text-quiet); }
-.ssl-h__fold { display: flex; align-items: center; gap: var(--gap-s); flex: 1 1 auto; min-width: 0; border-radius: var(--r-xs); text-align: start; color: inherit; font-size: inherit; line-height: var(--lh-xs); }
-.ssl-h:has(> .ssl-h__fold) { padding-block: calc(var(--sp-3) + var(--gap-hair)) calc(var(--sp-1) + var(--gap-hair)); }   /* the fold's 16 line in the head's 20 */
+.ssl-h__fold { display: flex; align-items: center; gap: var(--gap-s); flex: 1 1 auto; min-width: 0; border-radius: var(--r-xs); text-align: start; color: inherit; font-size: inherit; line-height: inherit; }
+.ssl-h__fold > svg { align-self: flex-start; }   /* the chevron sits at the top of the head's 20 line, where the board's inline glyph does */
 .ssl-row { --sq-bg: transparent; display: flex; align-items: center; gap: var(--gap-row); min-height: var(--session-h); padding: var(--pad-kbd) var(--gap-row); box-sizing: border-box; border-radius: var(--r-field); background: var(--sq-bg); color: var(--text); cursor: pointer; transition: background-color var(--dur-out) var(--ease-out); }
 .ssl-row[data-current] { --sq-bg: var(--current); }
 @media (hover: hover) and (pointer: fine) { .ssl-row:not([data-current]):hover { --sq-bg: var(--hover); transition-duration: var(--dur-1); } }

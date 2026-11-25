@@ -176,13 +176,12 @@ describe('a bot looks the same in every place', () => {
     }
     expect(places('kai')['group row']!.length, 'the group row shows its first members').toBeGreaterThan(0);
 
-    /* 3. the room's header, and the group's header: the same looks */
+    /* 3. a bot's room (it has no header of its own since board 11: the chrome's title pill and the details pane carry its orb; whatever
+       orb of it the room draws, an ask's or the status line's, wears the same look), and the group's header: the same looks */
     for (const id of TEAM) {
       emit('hx:bot-select', { id, from: 'test' });
       await flush();
-      const head = orbsOf(id, document.querySelector('#room .bt-presence, #room .bt-p') ?? document.getElementById('room') as HTMLElement);
-      expect(head.length, id + ' in its room').toBeGreaterThan(0);
-      for (const o of head) expect(lookOn(o), id + ' in its room').toBe(want(LOOKS[id]!));
+      for (const o of orbsOf(id, document.getElementById('room') as HTMLElement)) expect(lookOn(o), id + ' in its room').toBe(want(LOOKS[id]!));
     }
     openGroup(PAPER_PAST.id);
     await flush();

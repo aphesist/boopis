@@ -24,6 +24,7 @@ import { renderGlance } from './glance';
 import { atEnd } from './ledger';
 import { followZone } from '../chat/follow-zone';
 import { paintDetails } from './details';
+import { outsideDescription, outsideRoomMark } from './outside';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 
 const bots = () => data().bots;
@@ -40,7 +41,18 @@ function newSession(): void {
   sessions.fresh(b.id);
   S.composer?.focus();
 }
-const paintNewSession = (): void => { paintDetails(newSession); };
+function paintNewSession(): void {
+  paintDetails(newSession);
+  const top = S.pActs, b = bot(S.sel); if (!top) return;
+  const fresh = !!b && !!bots().sessions && thread(b.id).length > 0, outside = !!b?.madeOutside;
+  const sig = (b?.id ?? '') + '|' + fresh + '|' + outside;
+  if (top.dataset['sig'] === sig) return;
+  top.dataset['sig'] = sig;
+  top.replaceChildren();
+  top.hidden = !fresh && !outside;
+  if (outside) top.append(outsideRoomMark('bt-outside-room'), outsideDescription('bt-outside-room'));
+  if (fresh && b) { const ns = kit.button({ label: 'New session', variant: 'ghost', size: 28, icon: 'plus', attrs: { 'data-action': 'new-session', 'aria-label': 'New session with ' + b.name } }); ns.addEventListener('click', newSession); top.append(el('span', { class: 'k7-grow' }), ns); }
+}
 
 /* ───────── view ───────── */
 export function mountView(root: HTMLElement): void {
@@ -65,7 +77,11 @@ function buildRoom(): void {
   const col = el('div', { class: 'bt-col' });
   const log = el('div', { class: 'bt-log', role: 'log', 'aria-label': 'Messages' });
   if (data().info.preview.has('bots')) col.append(el('p', { class: 'bt-preview', role: 'note', text: 'Preview. These bots are sample data and are not connected to boopis yet.' }));
-  col.append(log);
+  /* what a bot's chat must still offer and no board draws yet (owner questions): the "made outside boopis" mark (owner decision,
+     19 November) and New session with a live bot. They sit on one quiet line over the thread, only when there is one to show */
+  const top = el('div', { class: 'bt-topline', hidden: true });
+  col.append(top, log);
+  S.pActs = top;
   scroll.append(col);
   const zone = el('div', { class: 'bt-composer-zone' });
   (S.room as HTMLElement).append(scroll, zone);
@@ -91,7 +107,7 @@ export function openBot(id: string | null): void {
   if (S.newGroupPane) S.newGroupPane.hidden = true;
   renderThread(b);
   paintComposer(b);
-  paintDetails(newSession);
+  paintNewSession();
   S.composer?.setRunning(S.runs.has(b.id));
   emit('hx:title', { tab: 'bots', title: b.name });
   if (b.info) void data().bots.admin?.open(b.id).catch(() => undefined);   /* its model, routines and sessions are read as it opens */
@@ -103,7 +119,7 @@ export function refreshPresence(): void {
   const b = bot(S.sel); if (!b) return;
   paintToolbar(b);
   paintStatus(b.id);
-  paintDetails(newSession);
+  paintNewSession();
 }
 
 /* ───────── thread ───────── */

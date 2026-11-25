@@ -67,11 +67,12 @@ describe('the rail', () => {
       expect(o.closest('.ui-orb')?.hasAttribute('data-orb-rest')).toBe(true);
     }
     const release = q('.k7-tile[data-gid="room-release"]', rail()), paper = q('.k7-tile[data-gid="room-paper"]', rail());
-    const cl = q('.ui-stack--cluster', release);
+    /* the boards' cluster (kit.js cluster): each member's orb at rest in its place on the circle */
+    const cl = q('.k7-rail__tri', release);
     expect([...cl.querySelectorAll('orb-avatar')].map((o) => o.getAttribute('label'))).toEqual(S.groups[0]!.members.map((m) => m.name));
-    for (const o of cl.querySelectorAll('orb-avatar')) expect(o.hasAttribute('static')).toBe(true);
+    for (const o of cl.querySelectorAll('orb-avatar')) expect(o.closest('.ui-orb')?.hasAttribute('data-orb-rest')).toBe(true);
     /* six members: three orbs in their triangle, and "+3" beside the cluster, clear of it (decided, owner, 25 November 2026) */
-    const six = q('.ui-stack--cluster', paper);
+    const six = q('.k7-rail__tri', paper);
     expect(six.querySelectorAll('orb-avatar')).toHaveLength(3);
     expect(six.querySelector('.ui-stack__more')).toBeNull();
     expect(q('.k7-rail__more', paper).getAttribute('data-more')).toBe('+3');
@@ -83,7 +84,7 @@ describe('the rail', () => {
     expect(release.getAttribute('data-tip-state')).toBe('atlas, nina and kai');
     expect(release.getAttribute('data-tip-pos')).toBe('right');
     expect(release.getAttribute('aria-label')).toBe('release crew, atlas, nina and kai');
-    expect(q('.ui-stack', release).hasAttribute('data-tip')).toBe(false);
+    expect(q('.k7-rail__tri', release).hasAttribute('data-tip')).toBe(false);
   });
   it('draws a room whose members are no longer bots as what is left, with the rest in "+N"', async () => {
     const { drawRail } = await import('./list');
@@ -104,6 +105,10 @@ describe('the rail', () => {
     const b = S.bots[1]!;
     onBotsEvent({ type: 'bot', bot: { ...b, state: 'needs', attention: 'approval' } }, { announce: () => undefined });
     expect(q('.k7-tile[data-bot="' + id + '"] orb-avatar', rail())).toBe(orb);
-    expect(q('.k7-tile[data-bot="' + id + '"]', rail()).querySelector('.k7-flag')).not.toBeNull();
+    /* the open bot's tile carries no flag (board 11: its ask is in front of you); another bot's does */
+    expect(q('.k7-tile[data-bot="' + id + '"]', rail()).querySelector('.k7-flag')).toBeNull();
+    const other = S.bots[2]!;
+    onBotsEvent({ type: 'bot', bot: { ...other, state: 'needs', attention: 'approval' } }, { announce: () => undefined });
+    expect(q('.k7-tile[data-bot="' + other.id + '"]', rail()).querySelector('.k7-flag')).not.toBeNull();
   });
 });

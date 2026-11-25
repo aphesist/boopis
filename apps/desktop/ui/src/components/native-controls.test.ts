@@ -36,8 +36,7 @@ const ALLOW: readonly Allow[] = [
   { rule: 'checkbox-radio', file: 'src/components/html.ts', why: 'ui.switch: appearance none, drawn by .ui-switch (14.16 "a native checkbox with role=switch")' },
   { rule: 'checkbox-radio', file: 'src/styles/theme-panel.ts', why: 'the preset cards: a visually hidden radio inside a themed card, so the group keeps arrow-key behaviour' },
   { rule: 'checkbox-radio', file: 'src/modules/shell/dialogs.ts', why: 'reads the radios\' state for the dialog\'s Tab loop; draws nothing' },
-  { rule: 'checkbox-radio', file: 'index.html', why: 'the shell\'s Dock switch: ui.switch markup' },
-  { rule: 'title-tooltip', file: 'src/modules/dock/views.ts', why: 'the dock belongs to another change; its long-name title moves to data-tip there (docs/UI-CONTROLS.md)' }
+  { rule: 'checkbox-radio', file: 'index.html', why: 'the shell\'s Dock switch: ui.switch markup' }
 ];
 
 function* walk(dir: string): Generator<string> {

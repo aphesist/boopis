@@ -4,10 +4,11 @@
    is a kit component (`kit.*` from `@boopis/ui`) on a v7 root; this file only composes them and wires them to what the
    session view hands it. The canvas is the kit's documented pattern (21.2, "the new session's canvas"). */
 import { on } from '../../core/bus';
-import { kit } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
 import { attrs, esc } from '../../core/dom';
-import { markHTML } from '../../components/model-mark';
-import { shortName } from '../../components/model-name';
+
+const markHTML = (ref: string, o: { size: number; label: false }): string => ui.html.modelMark(ref, o);
+const shortName = (ref: string): string => ui.modelMark.short(ref);
 import { themeApi } from '../../styles/theme';
 import { loadFont } from '../../styles/fonts';
 import { CAREFUL, CAREFUL_STEPS } from '../../data/session-s0';

@@ -27,17 +27,21 @@ describe('the layout (LAYOUT.md): the dock is always centred with the chatbox', 
     expect(mid.rightMode).toBe('overlay');
     expect(mid.rightPush).toBe(28);
   });
-  it('the Bots tab has no details strip', () => {
-    const s = solveLayout({ ...base, tab: 'bots' });
-    expect(s.rightVW).toBe(0);
-    expect(s.viewRight).toBe(1440);
+  it('the details pane is the window\'s in both tabs: a bot\'s details push the Bots view as a session\'s push the Session view (board 11)', () => {
+    const s = solveLayout({ ...base, tab: 'bots', right: 'open' });
+    expect(s.rightVW).toBe(340);
+    expect(s.viewRight).toBe(1440 - 340);
+    /* closed, v7 keeps no strip (shell.css sets --right-rail-w to 0) */
+    const closed = solveLayout({ ...base, tab: 'bots', rr: 0 });
+    expect(closed.rightVW).toBe(0);
+    expect(closed.viewRight).toBe(1440);
   });
   it('an inset (the bot settings sheet) moves the centre away from it', () => {
     const plain = solveLayout({ ...base, tab: 'bots' }).centerX;
     expect(solveLayout({ ...base, tab: 'bots', inset: { left: 0, right: 340 } }).centerX).toBe(plain - 170);
   });
   it('the column never outgrows the room, and the margin folds away on a narrow column', () => {
-    expect(solveLayout({ ...base, W: 700, left: 'closed' }).colWidth).toBe(700 - 28 - 64);
+    expect(solveLayout({ ...base, W: 700, left: 'closed' }).colWidth).toBe(700 - 28 - 48);   /* the boards' thread: max-width calc(100% - 48px) */
     expect(solveLayout(base).marginW).toBe(112);
     expect(solveLayout({ ...base, W: 700, left: 'closed' }).marginW).toBe(112);
     expect(solveLayout({ ...base, W: 600, left: 'closed' }).marginW).toBe(0);
