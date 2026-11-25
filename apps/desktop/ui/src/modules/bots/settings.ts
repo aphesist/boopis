@@ -3,7 +3,7 @@
    to the conversation (the shell; the sheet stays open), mod+I or the close button closes it. */
 import { emit } from '../../core/bus';
 import { $, cap1, el, esc, frag, reduced } from '../../core/dom';
-import { ui } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { ApprovalTier, Bot, BotConfig, Choice } from '../../data';
 import { APPROVAL_TIERS } from '../../data/types';
@@ -47,7 +47,7 @@ export function runLimitRow(b: Bot): HTMLElement {
     if (!cur) return;
     openLimitMenu(btn, {
       title: 'Most turns a run may take', label: 'Turns a run may take with ' + b.name, kept: cur.turns, fallback: cur.fallback,
-      onPick: (v) => { data().bots.setRunLimit(b.id, v).then((now) => { show(now); ui.toast(now.turns === null ? b.name + ' runs for up to ' + now.fallback + ' turns.' : b.name + ' runs for up to ' + now.turns + ' turns.'); }).catch((e: unknown) => { ui.toast('The limit was not saved: ' + said(e)); }); }
+      onPick: (v) => { data().bots.setRunLimit(b.id, v).then((now) => { show(now); kit.notify(now.turns === null ? b.name + ' runs for up to ' + now.fallback + ' turns.' : b.name + ' runs for up to ' + now.turns + ' turns.'); }).catch((e: unknown) => { kit.notify('The limit was not saved: ' + said(e)); }); }
     });
   });
   return row;
@@ -223,6 +223,6 @@ function archiveBot(id: string): void {
   data().bots.archive(id);   /* the provider answers with 'bot-archived': the list and the view drop it */
   closeSettings(true);
   openBot((S.bots[Math.min(i, S.bots.length - 1)] as Bot).id);
-  ui.toast('Archived ' + gone.name);
+  kit.notify('Archived ' + gone.name);
   focusConversation();
 }

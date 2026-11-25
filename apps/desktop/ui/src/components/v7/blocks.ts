@@ -86,16 +86,17 @@ export const LIST_ROW_VARIANTS = ['session', 'bot', 'item', 'compact'] as const;
 export type ListRowVariant = typeof LIST_ROW_VARIANTS[number];
 export interface ListRowOpts {
   variant?: U<ListRowVariant>; title: string; sub?: U<string>; bot?: U<BotLike>; markText?: U<string>; markHTML?: U<string>; action?: U<string>;
-  current?: U<boolean>; needs?: U<boolean | string>; working?: U<boolean>; count?: U<string>; time?: U<string>; /** the boopis bot, in ink */ ink?: U<boolean>; attrs?: U<Attrs>;
+  current?: U<boolean>; needs?: U<boolean | string>; working?: U<boolean>; count?: U<string>; time?: U<string>; /** the boopis bot, in ink */ ink?: U<boolean>;
+  /** a bot row's lead in place of one orb: a room's member stack (OrbStack, 24 in rows; screen 12) */ leadHTML?: U<string>; /** the end slot's own words (a bot made outside boopis) */ endHTML?: U<string>; attrs?: U<Attrs>;
 }
 export function listRow(o: ListRowOpts): string {
   const v = o.variant ?? 'session';
   const needsWords = typeof o.needs === 'string' ? o.needs : null;
   const sub = needsWords ? '<span class="k7-lrow__sub" data-tone="owe">' + esc(needsWords) + '</span>' : o.sub ? '<span class="k7-lrow__sub">' + esc(o.sub) + '</span>' : '';
-  const lead = v === 'bot' ? ((h: string) => (o.ink ? inkOrb(h) : h))(orbHtml(o.bot ?? { name: o.title }, { size: 36, rest: true, flag: !!o.needs, state: o.needs ? 'needs' : o.working ? 'working' : undefined }))
+  const lead = v === 'bot' ? (o.leadHTML ?? ((h: string) => (o.ink ? inkOrb(h) : h))(orbHtml(o.bot ?? { name: o.title }, { size: 36, rest: true, flag: !!o.needs, state: o.needs ? 'needs' : o.working ? 'working' : undefined })))
     : v === 'item' ? '<span class="k7-lrow__mark" aria-hidden="true">' + (o.markHTML ?? esc(o.markText ?? o.title.slice(0, 2))) + '</span>'
     : o.working ? '<span class="k7-dot" data-pulse data-live aria-hidden="true"></span>' : '';
-  const end = (o.needs && v !== 'bot' ? badge({ text: o.count ?? 'needs you', tone: 'owe' }) : o.count ? badge({ text: o.count }) : '') +
+  const end = (o.endHTML ?? '') + (o.needs && v !== 'bot' ? badge({ text: o.count ?? 'needs you', tone: 'owe' }) : o.count ? badge({ text: o.count }) : '') +
     (o.time ? '<span class="k7-lrow__time k7-mono">' + esc(o.time) + '</span>' : '') + (v === 'item' && o.action ? button({ label: o.action, variant: 'tint', size: 28 }) : '');
   const text = v === 'compact'
     ? '<span class="k7-lrow__one"><span class="k7-lrow__title">' + esc(o.title) + '</span>' + (o.sub ? '<span class="k7-lrow__sub">' + esc(o.sub) + '</span>' : '') + '</span>'

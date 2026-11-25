@@ -45,23 +45,25 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('groups in the list', () => {
-  it('lists each group with its members, and a New group row after them', () => {
+  it('lists each group with its members under "Groups", and New group after them', () => {
     mount(withGroups());
-    const rows = [...document.querySelectorAll('.bt-groups .ui-row')];
-    expect(rows).toHaveLength(2);
+    const rows = [...document.querySelectorAll('.bt-group-rows [data-kit~="ListRow"]')];
+    expect(rows).toHaveLength(1);
     expect(rows[0]!.textContent).toContain('release crew');
     expect(rows[0]!.getAttribute('aria-label')).toMatch(/^release crew, /);
-    expect(rows[1]!.textContent).toContain('New group');
+    expect(q('.bt-groups [data-kit~="SectionHead"]').textContent).toBe('Groups');
+    expect(q('.bt-group-rows').nextElementSibling?.textContent).toContain('New group');
   });
   it('shows only New group when there are no groups', () => {
     mount({ ...createMockProvider({ simulate: false }) });
-    expect(document.querySelectorAll('.bt-groups .ui-row')).toHaveLength(1);
+    expect(document.querySelectorAll('.bt-group-rows [data-kit~="ListRow"]')).toHaveLength(0);
+    expect(document.querySelectorAll('.bt-groups [data-new-group]')).toHaveLength(1);
   });
 });
 
 describe('a bot that is not in the room, named in it', () => {
   beforeEach(async () => {
-    (Range.prototype as unknown as { getBoundingClientRect: () => DOMRect }).getBoundingClientRect = () => ({ x: 0, y: 0, width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0, toJSON: () => ({}) }); mount(withGroups()); q('.bt-groups .ui-row').click(); await flush(); });
+    (Range.prototype as unknown as { getBoundingClientRect: () => DOMRect }).getBoundingClientRect = () => ({ x: 0, y: 0, width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0, toJSON: () => ({}) }); mount(withGroups()); q('.bt-group-rows [data-kit~="ListRow"]').click(); await flush(); });
   it('says so under a member’s message and offers it in that bot’s own chat, without sending it anywhere', async () => {
     const { onGroupsEvent } = await import('./group-room');
     const g = provider.groups.snapshot().groups[0]!;
@@ -87,7 +89,7 @@ describe('a bot that is not in the room, named in it', () => {
 });
 
 describe('a group’s thread', () => {
-  beforeEach(() => { mount(withGroups()); q('.bt-groups .ui-row').click(); });
+  beforeEach(() => { mount(withGroups()); q('.bt-group-rows [data-kit~="ListRow"]').click(); });
   it('opens in the room, reads its messages, and names the members under its name', async () => {
     await flush();
     expect(calls.some((c) => c.fn === 'open')).toBe(true);
@@ -99,7 +101,7 @@ describe('a group’s thread', () => {
     const entries = [...document.querySelectorAll<HTMLElement>('.bt-group [data-hx-turn]')];
     expect(entries.length).toBe(4);
     expect(entries[0]!.getAttribute('aria-label') ?? entries[0]!.textContent).toMatch(/You/);
-    expect(entries.slice(1).map((e) => e.querySelector('.bt-who-name')?.textContent)).toEqual(['atlas', 'nina', 'kai'].map((n) => provider.bots.snapshot().bots.find((b) => b.id === n)!.name));
+    expect(entries.slice(1).map((e) => e.querySelector('.k7-byline')?.firstChild?.textContent)).toEqual(['atlas', 'nina', 'kai'].map((n) => provider.bots.snapshot().bots.find((b) => b.id === n)!.name));
   });
   it('draws the members as stacked orbs in the header', () => {
     expect(document.querySelector('.bt-group .bt-ghead .ui-stack')).not.toBeNull();
@@ -190,7 +192,7 @@ describe('a group’s thread', () => {
     await flush();
     expect(calls.find((c) => c.fn === 'rename')!.args).toEqual(['room-release', 'launch crew']);
     expect(q('.bt-group .bt-p-name').textContent).toBe('launch crew');
-    expect(q('.bt-groups .ui-row').textContent).toContain('launch crew');
+    expect(q('.bt-group-rows [data-kit~="ListRow"]').textContent).toContain('launch crew');
     q('.bt-ghead [aria-label^="Rename"]').click();
     q<HTMLInputElement>('.bt-gname').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(q('.bt-group .bt-p-name').textContent).toBe('launch crew');
@@ -219,9 +221,9 @@ describe('a group’s thread', () => {
     q('.bt-ghead [aria-label^="Archive"]').click();
     await flush();
     expect(calls.some((c) => c.fn === 'archive')).toBe(true);
-    expect(document.querySelectorAll('.bt-groups .ui-row')).toHaveLength(1);
+    expect(document.querySelectorAll('.bt-group-rows [data-kit~="ListRow"]')).toHaveLength(0);
     expect(q('.bt-archived').textContent).toContain('release crew');
-    expect(q('.ui-toast').textContent).toContain('Undo');
+    expect(q('.k7-notify').textContent).toContain('Undo');
   });
 });
 
@@ -239,7 +241,7 @@ describe('a message written while the members are working', () => {
     c.setValue(t);
     c.querySelector('.ui-composer__input')?.dispatchEvent(new Event('input', { bubbles: true }));
   };
-  beforeEach(() => { mount(withGroups()); q('.bt-groups .ui-row').click(); });
+  beforeEach(() => { mount(withGroups()); q('.bt-group-rows [data-kit~="ListRow"]').click(); });
 
   it('shows Stop with nothing typed, and Send when done once something is', async () => {
     await busyWith();
@@ -283,7 +285,7 @@ describe('a message written while the members are working', () => {
   it('takes a held message back: its words return to the composer and it is no longer held', async () => {
     const m = createMockProvider({ simulate: true, fixtures: ['groups'] });
     mount({ ...m, groups: spyGroups(m.groups) });
-    q('.bt-groups .ui-row').click();
+    q('.bt-group-rows [data-kit~="ListRow"]').click();
     const composer = q<HTMLElement & { value: string }>('.bt-group .ui-composer');
     composer.dispatchEvent(new CustomEvent('ui:send', { detail: { text: 'first' } }));
     await flush();
@@ -328,7 +330,7 @@ describe('making a group', () => {
     await flush();
     expect(calls.find((c) => c.fn === 'create')!.args).toEqual([{ name: 'night shift', bots: [members[0]!.dataset['id'], members[1]!.dataset['id']] }]);
     expect(q('.bt-group .bt-p-name').textContent).toBe('night shift');
-    expect(document.querySelectorAll('.bt-groups .ui-row')).toHaveLength(3);
+    expect(document.querySelectorAll('.bt-group-rows [data-kit~="ListRow"]')).toHaveLength(2);
   });
   it('says why when it is not made, and keeps the form', async () => {
     const m = createMockProvider({ simulate: false, fixtures: ['groups'] });
@@ -341,7 +343,7 @@ describe('making a group', () => {
     expect(q('.bt-new:not([hidden]) .bt-confirm-err').textContent).toContain('The room worker is off.');
   });
   it('changing members says it makes a new group and archives this one, then asks for it', async () => {
-    q('.bt-groups .ui-row').click();
+    q('.bt-group-rows [data-kit~="ListRow"]').click();
     q('.bt-ghead [aria-label^="Change the members"]').click();
     expect(q('.bt-new:not([hidden])').textContent).toMatch(/archives this one/);
     const picked = [...document.querySelectorAll<HTMLElement>('.bt-new:not([hidden]) .bt-member')].filter((m) => m.getAttribute('aria-checked') === 'true');
@@ -373,7 +375,7 @@ function liveBot(p: DataProvider): { provider: DataProvider; events: ReturnType<
   return { provider: { ...p, info: { ...p.info, live: true }, bots: source }, events, sent, opened, fresh };
 }
 describe('a member’s message that addresses the person (@user, the engine’s handle for them in a room)', () => {
-  beforeEach(async () => { mount(withGroups()); q('.bt-groups .ui-row').click(); await flush(); });
+  beforeEach(async () => { mount(withGroups()); q('.bt-group-rows [data-kit~="ListRow"]').click(); await flush(); });
   it('draws @user as the person’s capsule, marks the message, says “to you”, and never folds it into a huddle', async () => {
     const { onGroupsEvent } = await import('./group-room');
     const g = provider.groups.snapshot().groups[0]!, [a, b] = g.members;
@@ -391,7 +393,7 @@ describe('a member’s message that addresses the person (@user, the engine’s 
     const { onGroupsEvent } = await import('./group-room');
     const g = provider.groups.snapshot().groups[0]!;
     onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'text', id: 'u1', who: 'you', t: '10:09', text: 'tell @user it is fine' } });
-    const mine = [...document.querySelectorAll<HTMLElement>('.bt-group .ui-request')].pop()!;
+    const mine = [...document.querySelectorAll<HTMLElement>('.bt-group .bt-request')].pop()!;
     expect(mine.textContent).toBe('tell @user it is fine');
     expect(mine.querySelector('.ui-mention--you')).toBeNull();
   });
@@ -463,7 +465,7 @@ describe('a group’s kanban board', () => {
     boards: () => Promise.resolve([{ slug: 'release-crew', name: 'Release crew', archived: false, counts: { running: 1 } }]),
     view: () => Promise.resolve({ board: { slug: 'release-crew', name: 'Release crew', archived: false, counts: { running: 1 } }, tasks: [{ id: 't1', title: 'Cut the tag', status: 'running', assignee: 'atlas', priority: 0, createdAt: null, startedAt: null, completedAt: null, problem: null }] })
   });
-  beforeEach(() => { mount({ ...withGroups(), kanban: kanban() }); q('.bt-groups .ui-row').click(); });
+  beforeEach(() => { mount({ ...withGroups(), kanban: kanban() }); q('.bt-group-rows [data-kit~="ListRow"]').click(); });
   const board = (): HTMLButtonElement => [...document.querySelectorAll<HTMLButtonElement>('.bt-ghead button')].find((b) => /^(Board|Back to the thread)$/.test(b.textContent ?? ''))!;
 
   it('is reached from the room\'s header, takes the thread\'s place and gives it back', async () => {
@@ -488,7 +490,7 @@ describe('a group’s kanban board', () => {
   });
   it('says there is no board where the build cannot read one', async () => {
     mount({ ...withGroups() });
-    q('.bt-groups .ui-row').click();
+    q('.bt-group-rows [data-kit~="ListRow"]').click();
     board().click();
     await flush();
     expect(q('.bt-board').textContent).toContain('No board here');

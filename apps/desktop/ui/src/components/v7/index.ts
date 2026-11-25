@@ -13,6 +13,7 @@ import { layer } from '../layer';
 import { glyph } from './util';
 import { applyTheme, botFill, deriveAccent } from './theme';
 import { markReveal, wire, wireHold, wireMenu } from './wire';
+import { notify, notifyText } from './notify';
 
 const html = {
   button: controls.button, iconButton: controls.iconButton, kbd: controls.kbd, chip: controls.chip, segmented: controls.segmented,
@@ -73,7 +74,7 @@ function openMenu(anchor: HTMLElement, o: blocks.MenuOpts & { place?: 'above' | 
 }
 
 export const kit = {
-  html, ...factories, section: surfaces.section, dockGeometry: DOCK_GEOMETRY, wire, wireHold, wireMenu, markReveal, openMenu, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, keyNames: controls.keyNames, variants: kitVariants
+  html, ...factories, section: surfaces.section, dockGeometry: DOCK_GEOMETRY, wire, wireHold, wireMenu, markReveal, openMenu, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, notify, notifyText, keyNames: controls.keyNames, variants: kitVariants
 };
 export type Kit = typeof kit;
 export type { ButtonOpts, IconButtonOpts, ChipOpts, SegmentedOpts, SegItem, SelectorItemOpts, SwitchOpts, FieldOpts, KbdOpts, TooltipOpts } from './controls';
@@ -82,4 +83,5 @@ export type { DockOpts, DockBot, DockKind } from './dock';
 export type { ToolRowOpts, AskCardOpts, AskAnswer, FilesCardOpts, FileRow, QueueOpts, DiffViewOpts, DiffLine, DiffComment, ComposerOpts, LineItem } from './thread';
 export type { CardOpts, RowOpts, BlockOpts, MenuOpts, MenuEntry, MenuRowOpts, OptionRowOpts, ListRowOpts, ListOpts, SectionHeadOpts, NoticeOpts, SystemLineOpts, BubbleOpts, WellOpts, DisclosureOpts, StepOpts, TurnFootOpts, TimeSeparatorOpts, EmptyStateOpts } from './blocks';
 export type { AvatarOpts, InlineChipOpts, MarkOpts, StatusWordOpts, BadgeOpts, StatusLineOpts } from './inline';
+export type { NotifyOpts } from './notify';
 export type { ThemeOpts, Mode as KitMode, AccentTokens } from './theme';

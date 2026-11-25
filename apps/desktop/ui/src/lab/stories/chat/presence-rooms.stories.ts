@@ -11,8 +11,8 @@ const MOCK = { url: '/v6/__index.html', note: 'the mock opens on the session; it
 const st = (tags: State['tags'], provider: ProviderSpec, setup: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State => ({ tags, app: { provider, setup }, ...extra });
 const bots = async (c: AppCtx): Promise<void> => { c.hx.setState({ tab: 'bots' }); await c.wait(500); };
 const pick = (id: string) => async (c: AppCtx): Promise<void> => { await bots(c); c.hx.emit('hx:bot-select', { id, from: 'lab' }); await c.wait(700); };
-const openGroup = async (c: AppCtx): Promise<void> => { await bots(c); await c.click('.bt-groups .ui-row'); await c.wait(700); };
-const openPaper = async (c: AppCtx): Promise<void> => { await bots(c); await c.click('.bt-groups li:nth-of-type(2) .ui-row'); await c.wait(700); };
+const openGroup = async (c: AppCtx): Promise<void> => { await bots(c); await c.click('.bt-group-rows > [data-kit~="ListRow"]'); await c.wait(700); };
+const openPaper = async (c: AppCtx): Promise<void> => { await bots(c); await c.click('.bt-group-rows > [data-kit~="ListRow"]:nth-of-type(2)'); await c.wait(700); };
 const own = (id: string, patch: Parameters<typeof withBotAt>[2]): ProviderSpec => ({ simulate: false, patch: (p) => withBotAt(liveShaped(p, true), id, patch) });
 const grp = (patch: ProviderSpec['patch']): ProviderSpec => ({ fixtures: ['groups'], simulate: false, ...(patch ? { patch } : {}) });
 const paper = (patch: ProviderSpec['patch']): ProviderSpec => ({ fixtures: ['groups', 'paper-past'], simulate: false, ...(patch ? { patch } : {}) });

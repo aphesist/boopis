@@ -280,7 +280,7 @@ describe('the settings sheet edits the profile and shows each file’s diff firs
     expect(f.calls.filter((c) => c.fn === 'setRunLimit').map((c) => c.args)).toEqual([['atlas', 30]]);
     expect(btn.textContent).toBe('30');
     expect(btn.getAttribute('aria-label')).toBe('Turns a run may take with atlas: 30');
-    expect(q('.ui-toast').textContent).toContain('atlas runs for up to 30 turns.');
+    expect(q('.k7-notify .k7-notice__text').textContent).toContain('atlas runs for up to 30 turns.');
     btn.click(); await flush();
     const open = [...document.querySelectorAll('.ui-menu')].at(-1)!;
     expect(open.querySelector('.ui-menu__item[aria-checked="true"]')?.textContent?.trim()).toBe('30');
@@ -320,8 +320,8 @@ describe('deleting asks, archives by default, and says what goes', () => {
     label('Delete').click(); await flush();
     label('Archive instead').click(); await flush();
     expect(f.calls.some((c) => c.fn === 'archive' && c.args[0] === 'atlas')).toBe(true);
-    expect(document.querySelector('.ui-toast')?.textContent).toContain('Archived atlas');
-    expect(document.querySelector('.ui-toast button')?.textContent).toBe('Undo');
+    expect(document.querySelector('.k7-notify .k7-notice__text')?.textContent).toContain('Archived atlas');
+    expect(document.querySelector('.k7-notify [data-kit~="Button"]')?.textContent).toBe('Undo');
     expect(S.bots.map((b) => b.id)).toEqual(['nina']);
   });
   it('archiving the last bot opens the new-bot form', async () => {

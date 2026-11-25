@@ -29,7 +29,7 @@ describe('"Restore bot…" in the palette', () => {
   const list = (): HTMLElement => document.getElementById('hx-palette-list') as HTMLElement;
   const rows = (): string[] => [...list().querySelectorAll('.hx-pal-row')].map((r) => r.querySelector('.hx-pal-row__label')?.textContent ?? '');
   const heads = (): string[] => [...list().querySelectorAll('.hx-pal-group')].map((r) => r.textContent ?? '');
-  const toast = (): string => document.querySelector('.ui-toast')?.textContent ?? '';
+  const toast = (): string => document.querySelector('.k7-notify .k7-notice__text')?.textContent ?? '';
   const flush = async (): Promise<void> => { await vi.advanceTimersByTimeAsync(20); for (let i = 0; i < 8; i++) await Promise.resolve(); };
   const type = (text: string): void => { input().value = text; renderPalette(); };
   const run = (label: string): void => { runPal([...list().querySelectorAll('.hx-pal-row')].findIndex((r) => r.querySelector('.hx-pal-row__label')?.textContent === label)); };

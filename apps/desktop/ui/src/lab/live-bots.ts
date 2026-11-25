@@ -112,14 +112,14 @@ export function teamGroups(p: DataProvider): DataProvider {
     sidebar, and in the rail the stack stays inside the row; the problems, in words */
 export function groupRowOverlaps(): string[] {
   const out: string[] = [];
-  for (const row of document.querySelectorAll<HTMLElement>('.bt-groups .ui-row[data-gid]')) {
+  for (const row of document.querySelectorAll<HTMLElement>('.bt-group-rows [data-gid]')) {
     const st = row.querySelector('.ui-stack')?.getBoundingClientRect();
     if (!st) continue;
     const r = row.getBoundingClientRect(), name = row.getAttribute('data-gid');
     if (st.left < r.left - 0.5 || st.right > r.right + 0.5) out.push(name + ': its stack reaches outside the row');
-    for (const t of row.querySelectorAll<HTMLElement>('.ui-row__title, .ui-row__sub')) {
+    for (const t of row.querySelectorAll<HTMLElement>('.k7-lrow__title, .k7-lrow__sub')) {
       const tr = t.getBoundingClientRect();
-      if (tr.width > 0 && getComputedStyle(t).display !== 'none' && tr.left < st.right - 0.5) out.push(name + ': its ' + (t.classList.contains('ui-row__title') ? 'name' : 'members line') + ' starts ' + (st.right - tr.left).toFixed(1) + 'px under its stack');
+      if (tr.width > 0 && getComputedStyle(t).display !== 'none' && tr.left < st.right - 0.5) out.push(name + ': its ' + (t.classList.contains('k7-lrow__title') ? 'name' : 'members line') + ' starts ' + (st.right - tr.left).toFixed(1) + 'px under its stack');
     }
   }
   return out;

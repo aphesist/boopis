@@ -13,7 +13,7 @@ const st = (tags: State['tags'], provider: ProviderSpec, setup: (c: AppCtx) => P
 const live = (withThread = false): ProviderSpec => ({ simulate: false, patch: (p) => liveShaped(p, withThread) });
 const grp: ProviderSpec = { fixtures: ['groups'] };
 const paper: ProviderSpec = { fixtures: ['groups', 'paper-past'] };
-const openPaper = async (c: AppCtx): Promise<void> => { await bots(c); await c.click('.bt-groups li:nth-of-type(2) .ui-row'); await c.wait(500); };
+const openPaper = async (c: AppCtx): Promise<void> => { await bots(c); await c.click('.bt-group-rows > [data-kit~="ListRow"]:nth-of-type(2)'); await c.wait(500); };
 /** the sample thread cut after the huddle (the last of the bots' own rounds), so the talk is live; `extra` more rounds are added */
 const huddleLive = (extra = 0): ProviderSpec => ({ ...paper, patch: (p) => withGroupThread(p, (t) => {
   const end = t.findIndex((m) => m.kind === 'text' && m.who === 'you' && m.id !== t[0]?.id);
@@ -22,7 +22,7 @@ const huddleLive = (extra = 0): ProviderSpec => ({ ...paper, patch: (p) => withG
   return [...cut, ...more];
 }) });
 const openHuddle = async (c: AppCtx): Promise<void> => { await openPaper(c); await c.click('#hx-view-bots .bt-huddle-entry .ui-disclosure'); await c.wait(400); };
-const openGroup = async (c: AppCtx): Promise<void> => { await bots(c); await c.click('.bt-groups .ui-row'); await c.wait(500); };
+const openGroup = async (c: AppCtx): Promise<void> => { await bots(c); await c.click('.bt-group-rows > [data-kit~="ListRow"]'); await c.wait(500); };
 /** types into a composer the way a person does: the caret at the end, then each character as its own edit (a typed "@" opens the
     list, which the setup waits for). On a loaded machine the room may still be settling when the typing starts and the keys land
     nowhere, so the setup checks what the text says and types again from an empty draft (at most three times) */
@@ -93,12 +93,12 @@ const roster: Story = {
     'rail with a group': st(['variant'], grp, async (c) => { await bots(c); c.hx.setState({ left: 'rail' }); await c.wait(500); }),
     'groups: one, two, three and six members, a long name': st(['many', 'long'], { patch: teamGroups }, groupsLaidOut, { note: 'each stack in a slot as wide as four places, so the names line up and none starts under a stack (the setup fails if one does); six members are three orbs and "+3"' }),
     'rail with those groups': st(['many', 'variant'], { patch: teamGroups }, async (c) => { await bots(c); c.hx.setState({ left: 'rail' }); await c.wait(500); const bad = groupRowOverlaps(); if (bad.length) throw new Error(bad.join('; ')); }),
-    'those groups, a row hovered': st(['hover'], { patch: teamGroups }, groupsLaidOut, { force: [{ sel: '.bt-groups .ui-row[data-gid="g-paper-past-"]', state: 'hover' }] }),
-    'those groups, the current one': st(['variant'], { patch: teamGroups }, async (c) => { await groupsLaidOut(c); await c.click('.bt-groups .ui-row[data-gid="g-paper-past-"]'); await c.wait(500); const bad = groupRowOverlaps(); if (bad.length) throw new Error(bad.join('; ')); }),
+    'those groups, a row hovered': st(['hover'], { patch: teamGroups }, groupsLaidOut, { force: [{ sel: '.bt-group-rows [data-gid="g-paper-past-"]', state: 'hover' }] }),
+    'those groups, the current one': st(['variant'], { patch: teamGroups }, async (c) => { await groupsLaidOut(c); await c.click('.bt-group-rows [data-gid="g-paper-past-"]'); await c.wait(500); const bad = groupRowOverlaps(); if (bad.length) throw new Error(bad.join('; ')); }),
     'the owner\'s six, their records read after the roster': st(['owner', 'variant'], team, recordsRead, { note: 'the six were drawn with the looks their names give, then their saved records arrived: every row wears the saved look (the setup fails if any orb does not)' }),
     'live updates of several bots': st(['variant'], { fixtures: ['groups'], patch: drivable }, bots, { interact: [LIVE_UPDATES] }),
-    'row hover': st(['hover'], {}, bots, { force: [{ sel: '#hx-list-bots li:nth-of-type(2) .ui-row', state: 'hover' }] }),
-    'row focus': st(['focus'], {}, bots, { force: [{ sel: '#hx-list-bots .ui-row', state: 'focus' }] })
+    'row hover': st(['hover'], {}, bots, { force: [{ sel: '#hx-list-bots .bt-rows > [data-kit~="ListRow"]:nth-of-type(2)', state: 'hover' }] }),
+    'row focus': st(['focus'], {}, bots, { force: [{ sel: '#hx-list-bots .bt-rows > [data-kit~="ListRow"]', state: 'focus' }] })
   }
 };
 

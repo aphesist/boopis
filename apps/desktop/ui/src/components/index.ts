@@ -177,3 +177,4 @@ export { REMOVE_MENTION } from './mentions';
 export type { MentionMark, MentionSource } from './mentions';
 export { EVERYONE_HANDLES, HUMAN_HANDLE, MENTION_SOURCE } from './markdown';
 export type { CardKind, CardOpts, CardLike, CardData } from './card-registry';
+export { REST_REACTION } from './orb-pose';

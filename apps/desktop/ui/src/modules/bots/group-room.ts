@@ -5,23 +5,24 @@
    provider's events; everything the user does is a provider command. What a group is in this build (who answers, what the
    members see of each other) is the provider's `nature`, said in the room and never made up here. */
 import { emit } from '../../core/bus';
-import { $, el, esc, frag, reduced } from '../../core/dom';
+import { el, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { EVERYONE_HANDLES, ui } from '@boopis/ui';
-import type { BotLike, MarkdownCtx, MdBot } from '@boopis/ui';
+import { EVERYONE_HANDLES, kit, ui } from '@boopis/ui';
+import type { BotLike, MarkdownCtx, MdBot, NotifyOpts } from '@boopis/ui';
 import { data } from '../../data';
 import type { Group, GroupMember, GroupMessage, GroupText, GroupsEvent, MemberActivity } from '../../data';
 import { namesText } from '../cards/parts';
 import { bot, group, groupThread, initGroups, S } from './model';
 import { livenIn, orbHTML } from './orbs';
 import { markSelected, drawGroups } from './list';
+import { bubbleOf, turnActs, turnBody, turnEntry } from './turn';
 import { checkClips } from './clips';
 import { closeSettings } from './settings';
 import { openNewGroup } from './new-group';
 import { openLimitMenu } from './run-limit';
 import { mountBoard } from './group-board';
 import type { BoardView } from './group-board';
-import { arrival, atEnd, entryActs, glanceAt, jumpButton, listWords, placeToLine, setJump, toLine, unreadDivider } from './ledger';
+import { arrival, atEnd, glanceAt, jumpButton, listWords, placeToLine, setJump, toLine, unreadDivider } from './ledger';
 import { followZone } from '../chat/follow-zone';
 import { memberActor, placeInLog, roomPresence } from './presence';
 import type { RoomPresence } from './presence';
@@ -33,7 +34,7 @@ import type { GroupQueue } from './group-queue';
 import { botMentions } from './mentions';
 
 const groups = () => data().groups;
-const toast = (t: string, o?: Parameters<typeof ui.toast>[1]): void => { ui.toast(t, o); };
+const toast = (t: string, o?: NotifyOpts): void => { kit.notify(t, o); };
 const NODE = new Map<string, HTMLElement>();
 const sentence = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
@@ -43,7 +44,7 @@ export const memberBot = (m: GroupMember): BotLike => bot(m.profile) ?? { id: m.
     one overlap step, the members in the group's order (the first underneath), "+N" the last member. One orb size per place:
     STACK says which. The members that are bots of the user; `still` for an aria-hidden slot (a row's lead), where nothing takes
     focus. Who is at work is the presence entry's own live stack (presence.ts), drawn the same way. */
-export const STACK = { row: { size: 16, max: 4 }, rail: { size: 16, max: 4 }, head: { size: 32, max: 4 } } as const;
+export const STACK = { row: { size: 24, max: 4 }, rail: { size: 16, max: 4 }, head: { size: 32, max: 4 } } as const;
 export function stackOf(members: readonly GroupMember[], place: keyof typeof STACK, still?: boolean): string {
   const ids = members.map((m) => m.profile).filter((id) => bot(id));
   const { size, max } = STACK[place];
@@ -346,26 +347,28 @@ function renderMsg(g: Group, m: GroupMessage, prev: GroupMessage | null, prevEnt
   const you = m.who === 'you';
   const to = recipients(g, m), toKey = to.join(',');
   let node: HTMLElement;
-  if (you) { node = frag(ui.html.request('')); node.innerHTML = ui.markdown.plain(m.text, ctxOf(g, false)); }
+  if (you) { node = el('p', { class: 'bt-request' }); node.innerHTML = ui.markdown.plain(m.text, ctxOf(g, false)); }
   else node = ui.markdown(m.text, ctx);
   NODE.set(m.id, node);
   const away = you ? null : outsideNote(g, m);
   const info = prevEntry ? ENTRY.get(prevEntry) : undefined;
+  /* the kit's Bubble: yours in ink (a room is not one bot's chat, 18.1), a member's on --bubble-agent; a message to you gets the
+     amber wash and edge (owner decision, 09 A); the first of a member's run carries its name in its colour and its orb (19) */
+  const member = you ? undefined : memberOf(g, m.who);
+  const toYouNow = !you && toYou(g)(m);
+  const wrap = (byline: boolean): HTMLElement => bubbleOf(node, you ? { kind: 'user' } : { kind: 'agent', toYou: toYouNow, byline: byline && member ? { bot: memberBot(member), colour: memberBot(member).color || '' } : null });
   if (prev && prev.kind === 'text' && prev.who === m.who && prevEntry && prevEntry.isConnected && info && info.to === toKey) {
-    $('.ui-entry__body', prevEntry).append(node, ...(away ? [away] : []));
+    turnBody(prevEntry).append(wrap(false), ...(away ? [away] : []));
     info.msgs.push(m);
     if (!you) void resolvePaths(node, rootsOf(g, m.who));
     return prevEntry;
   }
-  const member = you ? undefined : memberOf(g, m.who);
-  const who = member ? orbHTML(memberBot(member), 20, { state: 'idle' }) + '<span class="bt-who-name">' + esc(member.name) + '</span>' : esc(you ? 'You' : m.who);
   const name = you ? 'You' : (member?.name ?? m.who);
-  const entry = frag(ui.html.entry({ kind: you ? 'user' : 'bot', who, callno: m.t ? [m.t] : [], label: name + (to.length ? ', to ' + listWords(to) : '') + (m.t ? ', ' + m.t : '') }));
-  $('.ui-entry__body', entry).append(node, ...(away ? [away] : []));
+  const entry = turnEntry({ kind: you ? 'user' : 'bot', label: name + (to.length ? ', to ' + listWords(to) : '') + (m.t ? ', ' + m.t : '') });
+  turnBody(entry).append(wrap(true), ...(away ? [away] : []));
   placeToLine(entry, toLine(to));
-  entry.setAttribute('data-hx-turn', ''); entry.tabIndex = -1;
   ENTRY.set(entry, { msgs: [m], who: m.who, to: toKey });
-  entryActs(entry, {
+  turnActs(entry, {
     name,
     copy: () => (ENTRY.get(entry)?.msgs ?? []).map((x) => x.text).join('\n\n'),
     ...(member ? { reply: () => { replyTo(g, m.who); }, open: () => { emit('hx:bot-select', { id: member.profile, from: 'group' }); } } : {})
@@ -404,7 +407,7 @@ function appendMsg(g: Group, m: GroupMessage): void {
   else if (node && !reduced()) node.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
   if (follow || (m.kind === 'text' && m.who === 'you')) { sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); markSeen(g); }
   else if (m.kind === 'text' && m.who !== 'you') {
-    if (!U.divider && node) { U.divider = unreadDivider(); (entry && entry.contains(node) && $('.ui-entry__body', entry).firstElementChild === node ? entry : node).before(U.divider); }
+    if (!U.divider && node) { U.divider = unreadDivider(); (entry && entry.contains(node) && turnBody(entry).firstElementChild?.contains(node) ? entry : node).before(U.divider); }
     U.unread++; if (forYou(m)) U.you++;
     setJump(U.jump, U.unread, U.you);
   }

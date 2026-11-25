@@ -5,11 +5,12 @@ import { callProvided } from '../../core/registry';
 import { getDockApi } from '../../core/registry';
 import { setState, state, toggle } from '../../core/state';
 import { themeApi } from '../../styles/theme';
-import { ui } from '@boopis/ui';
+import { kit } from '@boopis/ui';
+import type { NotifyOpts } from '@boopis/ui';
 import type { Tab } from '../../core/types';
 import { sh } from './ctx';
 
-export const toast = (m: string, o?: Parameters<typeof ui.toast>[1]): void => { ui.toast(m, o); };
+export const toast = (m: string, o?: NotifyOpts): void => { kit.notify(m, o); };
 
 export function newThing(tab?: Tab): void {
   const t = tab ?? state.tab;

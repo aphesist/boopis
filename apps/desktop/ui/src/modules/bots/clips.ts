@@ -9,7 +9,7 @@ import { tipsIfClipped } from '../../core/clip';
 let raf = 0;
 function runChecks(): void {
   const spots: Array<readonly [HTMLElement | null | undefined, HTMLElement | null | undefined, string]> = [];
-  if (!railOn()) for (const [id, r] of S.rows) { const b = bot(id); if (b) spots.push([r.btn, r.li.querySelector<HTMLElement>('.ui-row__title'), b.name]); }
+  if (!railOn()) for (const [id, r] of S.rows) { const b = bot(id); if (b) spots.push([r.btn, r.li.querySelector<HTMLElement>('.k7-lrow__title'), b.name]); }
   if (S.draftRow && !railOn()) spots.push([S.draftRow.btn, S.draftRow.name, S.draftRow.name.textContent ?? '']);
   const root = S.viewRoot;
   if (root) {

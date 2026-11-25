@@ -5,7 +5,7 @@ import { esc } from '../../core/dom';
 import { callProvided, getDockApi, hasProvider } from '../../core/registry';
 import { setState, state, toggle } from '../../core/state';
 import { themeApi } from '../../styles/theme';
-import { ui } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
 import { data } from '../../data';
 import { archivedWhen, restoreBot, restoredWords } from '../../data/restore';
 import { updateTitle } from './attention';
@@ -39,7 +39,7 @@ function paletteItems(): Item[] {
   if (pal.scope === 'archived') {
     for (const a of archivedBots) {
       out.push({ group: 'archived', label: a.was || a.name, meta: archivedWhen(a.when), icon: ICON('unarchive'), keys: 'archived restore bot',
-        run: () => { const back = pal.ret as HTMLElement | null; void restoreBot(data().bots, a.id).then((r) => { ui.toast(restoredWords(r)); back?.focus?.(); }); } });
+        run: () => { const back = pal.ret as HTMLElement | null; void restoreBot(data().bots, a.id).then((r) => { kit.notify(restoredWords(r)); back?.focus?.(); }); } });
     }
   }
   const cmd = (label: string, kbd: string, run: () => void, icon?: string, keys?: string): void => { out.push({ group: 'commands', label, kbd, run, icon: icon || '', keys: keys || '' }); };

@@ -23,9 +23,13 @@ export function toLine(names: readonly string[], prefix = 'to'): HTMLElement | n
   const you = names.length === 1 && names[0] === 'you';
   return el('span', { class: 'bt-to' + (you ? ' is-you' : ''), html: esc(prefix) + ' <b>' + esc(listWords(names)) + '</b>' });
 }
-/** put a "to" line in an entry's call number, before its time */
+/** put a "to" line in an entry: on a v7 turn after the member's name above its first bubble (or, for your own, on the turn's top
+    line, at its end); on a v6 entry in its call number, before its time */
 export function placeToLine(entry: HTMLElement, line: HTMLElement | null): void {
   if (!line) return;
+  const byline = entry.querySelector('.k7-byline');
+  if (byline) { byline.append(' ', line); return; }
+  if (entry.classList.contains('bt-turn')) { entry.prepend(el('div', { class: 'bt-turn__to' }, line)); return; }
   const callno = entry.querySelector('.ui-callno'); if (!callno) return;
   const lines = [...callno.children].filter((c) => !c.classList.contains('ui-callno__who') && !c.classList.contains('bt-acts'));
   const time = lines[lines.length - 1];

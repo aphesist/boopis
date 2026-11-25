@@ -8,17 +8,13 @@
 .bt-view [hidden], .bt-list[hidden] { display: none !important; }
 :where(.bt-view, .bt-list) :where(button.bt-opt, button.bt-sugg, button.bt-p-sched) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
 
-/* ================================================================ sidebar list: the rail keeps its own row rule */
-.bt-list { padding: 0 0 var(--sp-3); }
-.bt-list.is-rail .ui-row { height: var(--rail-row); padding: 0; justify-content: center; }   /* the rail's pitch (shell.css), "+" included */
-.bt-list.is-rail .ui-row__lead { width: 24px; height: 24px; }
-.bt-list.is-rail .ui-row__lead > .ui-orb { margin: 0; }
-.bt-list.is-rail :is(.ui-row__text, .ui-row__end) { display: none; }
-.bt-row--draft .ui-row__title, .bt-row--draft .ui-row__sub { text-transform: var(--ui-case); }
+/* ================================================================ sidebar list (v7: the kit's ListRows; the rail is the kit's Rail, list.ts) */
+.bt-list { padding: 0 var(--sp-2) var(--sp-3); }
+.bt-rows, .bt-group-rows { display: flex; flex-direction: column; gap: var(--gap-hair); }
 
 /* the Archived group under the roster: a library group (14.4), set off from the rows above it as groups are; in the rail there is no room for its words, and the palette's "Restore bot…" reaches the same bots */
 .bt-archived { margin-top: 12px; }
-.bt-archived[hidden], .bt-list.is-rail .bt-archived { display: none; }
+.bt-archived[hidden] { display: none; }
 
 /* "made outside boopis": the library's badge (.ui-badge) in a row's end slot and in the header's line */
 .bt-outside + .ui-state { margin-left: 4px; }
@@ -249,18 +245,13 @@ orb-avatar.is-live { cursor: pointer; }
 
 /* ================================================================ groups (team chat) */
 .bt-groups { margin-top: var(--sp-3); }
-.bt-groups-h { margin: 0 0 var(--sp-1); }
-.bt-list.is-rail .bt-groups-h { display: none; }
+.bt-groups > .k7-shead { padding: var(--sp-3) var(--sp-3) var(--sp-1); }
+.bt-group-add { align-self: flex-start; margin: var(--sp-1) 0 0; }
+.bt-groups { display: flex; flex-direction: column; }
 /* a group's members (the kit's stack) sit on the sidebar's frame; in the rail a group is a cluster of them (stack.ts), the row's
    one item, centred like an orb: as tall as it is wide, never wider than two orbs, so it keeps --sp-1 or more inside the row's
    fill and its ring. The groups sit under a rule there, where the open sidebar has its "Groups" heading: a hairline as wide as a
    row (R-line-4: a divider stops at the content inset, 8px in), --sp-2 above and below it */
-.bt-list.is-rail .ui-row__lead:has(> .ui-stack) { width: auto; height: auto; }
-.bt-list.is-rail .ui-row__lead > .ui-stack { margin-left: 0; min-width: 0; }
-.bt-list.is-rail .bt-groups { margin-top: var(--sp-2); }
-.bt-list.is-rail .bt-groups::before { content: ''; display: block; height: 1px; margin: 0 8px var(--sp-2); background: var(--hair); }
-.bt-group-add { display: inline-grid; place-items: center; width: 20px; height: 20px; color: var(--icon); }
-.bt-group-add .ui-icon { width: 16px; height: 16px; }
 .bt-ghead .bt-p-orb { width: auto; min-width: 40px; }
 .bt-gname { width: min(360px, 100%); font-size: var(--fs-l); font-weight: 600; }
 .bt-working { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-2); min-height: calc(var(--fs-xs) * 1.5); font-size: var(--fs-xs); line-height: 1.5; color: var(--text-dim); }
@@ -307,7 +298,15 @@ orb-avatar.is-live { cursor: pointer; }
    The conversation is the 640 column (the shell's --hx-col-w from v7's --col-w) of the kit's Bubbles: no header in the room (the
    chrome's title pill carries the orb and the name, and opens the details), turns of bubbles 6 apart within a sender and 16 between,
    yours on the right, the bot's on the left; a room's names and orbs in the kit's gutter. */
-.bt-room .bt-presence { display: none; }
+/* a bot's room has no header (screen 11): the title pill carries the orb and the name, the details button its settings. What has no
+   other place stays, on the column's top line: the "made outside boopis" mark (owner decision) and New session with the bot (live) */
+.bt-room:not(.bt-group) .bt-presence { position: static; display: flex; justify-content: flex-end; align-items: center; gap: var(--sp-2); padding: 0; background: none; }
+.bt-room:not(.bt-group) .bt-presence:not(:has(.bt-outside, [data-action="new-session"]:not([hidden]))) { display: none; }
+.bt-room:not(.bt-group) :is(.bt-p-orb, .bt-p-name, [data-action="settings"]) { display: none; }
+.bt-room:not(.bt-group) .bt-p-text { flex: 1; }
+.bt-room:not(.bt-group) .bt-p-line { margin: 0; }
+.bt-room:not(.bt-group) .bt-p-line > :not(.bt-outside, .ui-sr) { display: none; }
+.bt-room:not(.bt-group) .bt-presence::after { display: none; }
 .bt-room .bt-col { padding-top: var(--sp-3); }
 .bt-room .bt-log { display: flex; flex-direction: column; gap: var(--sp-4); }
 .bt-room .bt-log > .k7-time + [data-hx-turn] { margin-top: calc(-1 * var(--sp-1)); }
@@ -327,3 +326,6 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-room .bt-resolved { display: block; }
 .bt-room .bt-empty { margin-left: 0; padding: var(--sp-6) 0; }
 .bt-ideas { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+/* whom a message is for (owner decision: "to you"): after the member's name, or on your turn's top line */
+.k7-byline > .bt-to { color: var(--text-dim); }
+.bt-turn__to { align-self: flex-end; margin-bottom: var(--gap-xs); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }

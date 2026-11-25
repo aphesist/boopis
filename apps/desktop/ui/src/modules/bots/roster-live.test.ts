@@ -50,16 +50,16 @@ function watchOrbs(): { gone(): string[]; stop(): void } {
 }
 
 describe('a bot changes state while the sidebar shows it', () => {
-  it('keeps the row, its button and its live orb: only the state word and the orb\'s reaction change', () => {
+  it('keeps the row and its live orb: only its line and the orb\'s reaction change', () => {
     const row = S.rows.get('atlas')!, orb = row.li.querySelector('orb-avatar')!, wrap = row.li.querySelector('.ui-orb')!;
     const w = watchOrbs();
     pushBot('atlas', { state: 'working', activity: 'reading the diff' });
     expect(S.rows.get('atlas')!.li).toBe(row.li);
-    expect(row.li.querySelector('.ui-row')).toBe(row.btn);
+    expect(row.li).toBe(row.btn);
     expect(row.li.querySelector('orb-avatar')).toBe(orb);
     expect(row.li.querySelector('.ui-orb')).toBe(wrap);
     expect(orb.getAttribute('reaction')).toBe('working');
-    expect(row.btn.textContent).toContain('working');
+    expect(row.btn.textContent).toContain('reading the diff');
     expect(row.btn.getAttribute('aria-label')).toMatch(/working$/);
     expect(w.gone()).toEqual([]);
     w.stop();
@@ -72,7 +72,7 @@ describe('a bot changes state while the sidebar shows it', () => {
     expect(orb.getAttribute('reaction')).toBe('needs');
     pushBot('atlas', { state: 'idle', attention: null });
     expect(row.li.querySelector('.ui-dot--flag')).toBeNull();
-    expect(orb.getAttribute('reaction')).toBe('idle');
+    expect(orb.getAttribute('reaction')).toBe('pose');   /* at rest on the sidebar: the rest pose (ORBS.md section 23) */
     expect(row.li.querySelector('orb-avatar')).toBe(orb);
     expect(w.gone()).toEqual([]);
     w.stop();
@@ -94,7 +94,7 @@ describe('a bot changes state while the sidebar shows it', () => {
 });
 
 describe('a group starts and stops replying', () => {
-  it('keeps the rows and their stacks of orbs: only the running dot comes and goes', () => {
+  it('keeps the rows and their stacks of orbs: only the working state comes and goes', () => {
     const row = S.groupRows.get(S.groups[0]!.id)!, stack = row.li.querySelector('.ui-stack')!, orbs = [...row.li.querySelectorAll('orb-avatar')];
     expect(orbs.length).toBeGreaterThan(1);
     const w = watchOrbs();
@@ -103,9 +103,9 @@ describe('a group starts and stops replying', () => {
     expect(row.li.querySelector('.ui-stack')).toBe(stack);
     expect([...row.li.querySelectorAll('orb-avatar')]).toEqual(orbs);
     expect(row.btn.getAttribute('aria-label')).toMatch(/replying$/);
-    expect(row.li.querySelector('.ui-row__end')).not.toBeNull();
+    expect(row.li.hasAttribute('data-working')).toBe(true);
     pushGroup({ working: [], busy: false });
-    expect(row.li.querySelector('.ui-row__end')).toBeNull();
+    expect(row.li.hasAttribute('data-working')).toBe(false);
     expect(row.li.querySelector('.ui-stack')).toBe(stack);
     expect(w.gone()).toEqual([]);
     w.stop();
@@ -115,11 +115,12 @@ describe('a group starts and stops replying', () => {
     const members = S.groups[0]!.members;
     pushGroup({ members: members.slice(0, 2) });
     expect(S.groupRows.get(S.groups[0]!.id)!.li.querySelector('.ui-stack')).not.toBe(stack);
-    expect(document.querySelectorAll('.bt-group-rows .ui-row')).toHaveLength(2);
+    expect(document.querySelectorAll('.bt-group-rows [data-kit~="ListRow"]')).toHaveLength(1);
   });
   it('a group row sits before New group, and the list keeps one of each', () => {
     pushGroup({ working: ['atlas'], busy: true });
-    const rows = [...document.querySelectorAll('.bt-group-rows .ui-row')];
-    expect(rows.map((r) => r.hasAttribute('data-new-group'))).toEqual([false, true]);
+    expect(document.querySelectorAll('.bt-group-rows [data-kit~="ListRow"]')).toHaveLength(1);
+    expect(document.querySelectorAll('.bt-groups [data-new-group]')).toHaveLength(1);
+    expect(document.querySelector('.bt-group-rows')?.nextElementSibling?.hasAttribute('data-new-group')).toBe(true);
   });
 });

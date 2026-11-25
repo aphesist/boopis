@@ -4,14 +4,14 @@ import { emit } from '../../core/bus';
 import { $, esc } from '../../core/dom';
 import { getDockApi } from '../../core/registry';
 import { setState, state } from '../../core/state';
-import { ui } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { RegionName } from '../../core/bus';
 import type { Tab } from '../../core/types';
 import { els, sh } from './ctx';
 import { updateTitle } from './attention';
 
-const toast = (m: string): void => { ui.toast(m); };
+const toast = (m: string): void => { kit.notify(m); };
 export const REGION_ORDER: readonly RegionName[] = ['bar', 'list', 'messages', 'composer', 'panel', 'dock'];
 export const REGION_NAME: Record<RegionName, string> = { bar: 'Title bar', list: 'Sidebar list', messages: 'Conversation', composer: 'Composer', panel: 'Details panel', dock: 'Dock' };
 const lastInRegion: Partial<Record<RegionName, Element>> = {};
@@ -31,7 +31,7 @@ function regionRoot(r: RegionName): HTMLElement | null {
   const app = sh.app;
   switch (r) {
     case 'bar': return app.querySelector<HTMLElement>('.hx-bar');
-    case 'list': return state.left === 'closed' || (state.left === 'rail' && !app.querySelector('.hx-list.is-active[data-rail="ok"]')) ? null : app.querySelector<HTMLElement>('.hx-list.is-active');
+    case 'list': return state.left === 'closed' ? null : state.left === 'rail' ? app.querySelector<HTMLElement>('#hx-rail .k7-rail') : app.querySelector<HTMLElement>('.hx-list.is-active');
     case 'messages': return activeView();
     case 'composer': return composerIn(activeView());
     case 'panel': return panelRoot();

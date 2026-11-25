@@ -37,14 +37,14 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.stubGlobal('requestAnimationFrame', (fn: FrameRequestCallback) => setTimeout(() => { fn(0); }, 0));
   localStorage.clear();
-  document.querySelector('.ui-toast')?.remove();
+  document.querySelector('.k7-notify .k7-notice__text')?.remove();
 });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('the "made outside boopis" mark', () => {
   it('a bot with no record of boopis’s own carries it in the roster, with its words in the row’s name and description', () => {
     mount(mock(['outside']));
-    const row = q('.ui-row[data-value="sage"]');
+    const row = q('.bt-rows [data-kit~="ListRow"][data-value="sage"]');
     expect(row.querySelector('.bt-outside')?.textContent).toBe('outside');
     expect(row.getAttribute('aria-label')).toBe('sage, reads release notes, outside');
     const desc = row.getAttribute('aria-describedby') ?? '';
@@ -53,7 +53,7 @@ describe('the "made outside boopis" mark', () => {
   });
   it('a bot boopis made carries nothing, and its name is only its own words', () => {
     mount(mock(['outside']));
-    const row = q('.ui-row[data-value="atlas"]');
+    const row = q('.bt-rows [data-kit~="ListRow"][data-value="atlas"]');
     expect(row.querySelector('.bt-outside')).toBeNull();
     expect(row.getAttribute('aria-label')).toBe('atlas, reviewer');
     expect(row.hasAttribute('aria-describedby')).toBe(false);
@@ -76,7 +76,7 @@ describe('the "made outside boopis" mark', () => {
     expect(qa('.bt-outside')).toHaveLength(2);
     data().bots.update('sage', { cfg: { cap: '1.00' } });
     expect(document.querySelector('.bt-outside')).toBeNull();
-    expect(q('.ui-row[data-value="sage"]').getAttribute('aria-label')).toBe('sage, reads release notes');
+    expect(q('.bt-rows [data-kit~="ListRow"][data-value="sage"]').getAttribute('aria-label')).toBe('sage, reads release notes');
   });
   it('a setting that is Hermes’s own, such as the role, is not a store of boopis’s and keeps the mark', () => {
     mount(mock(['outside']));
@@ -97,7 +97,7 @@ describe('the Archived group', () => {
   const group = (): HTMLElement => q('.bt-archived .ui-group');
   const head = (): HTMLElement => q('.bt-archived .ui-group__head');
   const names = (): string[] => qa('.bt-archived .ui-row__title').map((n) => n.textContent ?? '');
-  const toast = (): string => document.querySelector('.ui-toast')?.textContent ?? '';
+  const toast = (): string => document.querySelector('.k7-notify .k7-notice__text')?.textContent ?? '';
   const restoreBtn = (name: string): HTMLButtonElement => q<HTMLButtonElement>('.bt-archived [data-act="restore"][aria-label="Restore ' + name + '"]');
 
   it('sits under the roster with a count, collapsed by default', () => {
@@ -117,7 +117,7 @@ describe('the Archived group', () => {
   });
   it('archived bots are not in the roster', () => {
     mount(mock());
-    expect(qa('.bt-rows > li .ui-row').some((r) => r.getAttribute('aria-label')?.startsWith('ledger'))).toBe(false);
+    expect(qa('.bt-rows > [data-kit~="ListRow"]').some((r) => r.getAttribute('aria-label')?.startsWith('ledger'))).toBe(false);
   });
   it('opens and closes, and remembers which, per user, the way the layout does (through core/settings)', () => {
     mount(mock());
@@ -145,12 +145,12 @@ describe('the Archived group', () => {
     restoreBtn('ledger').click();
     await flush();
     expect(toast()).toBe('Restored ledger');
-    expect(q('.bt-rows .ui-row[data-value="ledger"]')).toBeTruthy();
+    expect(q('.bt-rows [data-kit~="ListRow"][data-value="ledger"]')).toBeTruthy();
     expect(data().bots.snapshot().bots.some((b) => b.id === 'ledger')).toBe(true);
     expect(names()).toEqual(['nina']);
     expect(head().textContent).toContain('Archived (1)');
     expect(head().getAttribute('aria-expanded')).toBe('true');   // the redraw keeps it as the user left it
-    expect(document.activeElement).toBe(q('.bt-rows .ui-row[data-value="ledger"]'));
+    expect(document.activeElement).toBe(q('.bt-rows [data-kit~="ListRow"][data-value="ledger"]'));
   });
   it('a name that is in use is refused with the same words, and the archived bot stays where it is', async () => {
     mount(mock());

@@ -30,7 +30,7 @@ import { botMentions } from './mentions';
 const bots = () => data().bots;
 const NODE = new Map<string, HTMLElement>();
 const ENTRY = new WeakMap<HTMLElement, { msgs: ThreadMessage[]; who: string }>();
-const toast = (t: string): void => { ui.toast(t); };
+const toast = (t: string): void => { kit.notify(t); };
 /** a recent session of the open bot is opened: its messages become the thread */
 function openSession(sessionId: string): void {
   const b = bot(S.sel), sessions = bots().sessions; if (!b || !sessions) return;

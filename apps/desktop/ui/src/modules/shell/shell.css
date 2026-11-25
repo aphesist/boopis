@@ -349,3 +349,7 @@ body[data-ui="v7"] { --chrome-h: var(--drag-h); --sb-w: var(--sb-open-w); }
 .hxt-preset:has(input:checked) { --sq-line: var(--brass); }
 .hxt-preset[data-sq-on]:has(input:checked)::after { clip-path: var(--sq-ring, var(--sq-edge)); }
 
+/* the compact rail (board 06 B: 64, tiles 44) is Automatic under 1200 px of window width (7); the layout reads --sb-rail-w */
+@media (max-width: 1199px) { body[data-ui="v7"] { --sb-rail-w: var(--rail-b-w); } }
+/* the floating Notice (the retired toast's place, R-toast-1 "the top of the work"): under the chrome, on the column's centre line */
+.hx > .k7-notify { --hx-center-x: var(--hx-center-x-to); top: calc(var(--chrome-h) + var(--sp-2)); left: var(--hx-center-x, 50%); transform: translateX(-50%); max-width: calc(100% - 2 * var(--sp-4)); }

@@ -54,32 +54,30 @@ export function railRoster(bots: RailBots, groups: RailGroups) {
   };
 }
 
-/** what is wrong with the rail as drawn, in words: the switch, New bot and the list each below the one before, nothing over
-    another; every row's orb (or a group's cluster) centred on the sidebar's x = 28 axis and inside its row; the bots, then the
-    groups, then New group, top to bottom */
+/** what is wrong with the rail as drawn (the kit's Rail, DESIGN-SYSTEM.md v7 7): the tiles, then the rule and the rooms' clusters, then
+    the foot, top to bottom, nothing over another; every tile's orb (or a room's cluster) centred in its tile, and every tile centred on
+    the rail's middle */
 export function railProblems(): string[] {
   const out: string[] = [];
-  const side = document.querySelector<HTMLElement>('#hx-side'), seg = document.querySelector<HTMLElement>('.hx-rail__seg');
-  const add = document.querySelector<HTMLElement>('.hx-rail__new'), list = document.querySelector<HTMLElement>('#hx-list-bots');
-  if (!side || !seg || !add || !list) return ['the rail has no switch, New bot or list'];
+  const rail = document.querySelector<HTMLElement>('#hx-rail .k7-rail');
+  if (!rail) return ['the rail is not drawn'];
   const box = (e: Element): DOMRect => e.getBoundingClientRect();
-  const s = box(seg), a = box(add), l = box(list), axis = box(side).left + 28;
-  if (a.top < s.bottom - 0.5) out.push('New bot starts ' + (s.bottom - a.top).toFixed(1) + 'px over the switch');
-  if (l.top < a.bottom - 0.5) out.push('the list starts ' + (a.bottom - l.top).toFixed(1) + 'px under New bot');
-  for (const [name, r] of [['the switch', s], ['New bot', a]] as const) if (Math.abs((r.left + r.right) / 2 - axis) > 1) out.push(name + ' is ' + ((r.left + r.right) / 2 - axis).toFixed(1) + 'px off the axis');
-  const rows = [...list.querySelectorAll<HTMLElement>('.bt-rows .ui-row, .bt-group-rows .ui-row')];
+  const rr = box(rail), axis = (rr.left + rr.right) / 2;
+  const items = [...rail.querySelectorAll<HTMLElement>('.k7-tile, .k7-rail__rule, .k7-rail__foot')];
   let prev: DOMRect | null = null, prevName = '';
-  for (const row of rows) {
-    const r = box(row), name = row.getAttribute('aria-label') ?? row.dataset['gid'] ?? 'a row';
+  for (const it of items) {
+    const r = box(it), name = it.getAttribute('aria-label') ?? (it.classList.contains('k7-rail__foot') ? 'the foot' : 'the rule');
     if (!r.height) { out.push(name + ' takes no room'); continue; }
     if (prev && r.top < prev.bottom - 0.5) out.push(name + ' starts ' + (prev.bottom - r.top).toFixed(1) + 'px over ' + prevName);
     prev = r; prevName = name;
-    const marks = [...row.querySelectorAll<HTMLElement>('.ui-row__lead .ui-orb, .ui-row__lead .ui-stack__more, .ui-row__lead .ui-icon')].map(box).filter((b) => b.width > 0);
-    if (!marks.length) { out.push(name + ' shows nothing in the rail'); continue; }
-    const left = Math.min(...marks.map((b) => b.left)), right = Math.max(...marks.map((b) => b.right)), top = Math.min(...marks.map((b) => b.top)), bottom = Math.max(...marks.map((b) => b.bottom));
-    if (Math.abs((left + right) / 2 - axis) > 1) out.push(name + ': its orbs are ' + ((left + right) / 2 - axis).toFixed(1) + 'px off the axis');
-    if (Math.abs((top + bottom) / 2 - (r.top + r.bottom) / 2) > 1) out.push(name + ': its orbs are ' + ((top + bottom) / 2 - (r.top + r.bottom) / 2).toFixed(1) + 'px off the row\'s middle');
-    if (left < r.left - 0.5 || right > r.right + 0.5 || top < r.top - 0.5 || bottom > r.bottom + 0.5) out.push(name + ': its orbs reach outside the row');
+    if (Math.abs((r.left + r.right) / 2 - axis) > 1) out.push(name + ' is ' + ((r.left + r.right) / 2 - axis).toFixed(1) + 'px off the rail\'s middle');
+    if (!it.classList.contains('k7-tile')) continue;
+    const marks = [...it.querySelectorAll<HTMLElement>('.ui-orb, .ui-stack__more')].map(box).filter((m) => m.width > 0);
+    if (!marks.length) { out.push(name + ' shows nothing'); continue; }
+    const left = Math.min(...marks.map((m) => m.left)), right = Math.max(...marks.map((m) => m.right)), top = Math.min(...marks.map((m) => m.top)), bottom = Math.max(...marks.map((m) => m.bottom));
+    if (Math.abs((left + right) / 2 - (r.left + r.right) / 2) > 1) out.push(name + ': its orbs are ' + ((left + right) / 2 - (r.left + r.right) / 2).toFixed(1) + 'px off the tile\'s middle');
+    if (Math.abs((top + bottom) / 2 - (r.top + r.bottom) / 2) > 1) out.push(name + ': its orbs are ' + ((top + bottom) / 2 - (r.top + r.bottom) / 2).toFixed(1) + 'px off the tile\'s middle');
+    if (left < r.left - 0.5 || right > r.right + 0.5 || top < r.top - 0.5 || bottom > r.bottom + 0.5) out.push(name + ': its orbs reach outside the tile');
   }
   return out;
 }

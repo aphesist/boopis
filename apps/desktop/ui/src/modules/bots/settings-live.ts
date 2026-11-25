@@ -6,7 +6,7 @@
    - archive keeps everything and is undone from the toast; delete says what goes, and asks twice.
    Nothing is shown that Hermes did not report: a list it did not answer says so. */
 import { $, cap1, el, frag } from '../../core/dom';
-import { ui } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
 import { data, NeedsConfirmation } from '../../data';
 import type { ApprovalTier, Bot, BotConfig, BotsAdmin, BotPatch, RoutineDraft } from '../../data';
 import { diffWell } from '../cards/parts';
@@ -262,7 +262,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     save.addEventListener('click', () => {
       save.disabled = true; keep.disabled = true; err.hidden = true;
       admin.save(b.id, patch(), confirmModel || ask ? { confirmModel: true } : {})
-        .then(() => { ui.toast('Saved ' + b.name); if (live()) openSettings(b.id, null, { keepFocus: true }); refreshPresence(); })
+        .then(() => { kit.notify('Saved ' + b.name); if (live()) openSettings(b.id, null, { keepFocus: true }); refreshPresence(); })
         .catch((e: unknown) => {
           if (e instanceof NeedsConfirmation) { showReview(false, e.message); return; }
           save.disabled = false; keep.disabled = false; err.textContent = sentence(e); err.hidden = false;
@@ -298,7 +298,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
       if (!sure.hasAttribute('data-armed')) { sure.setAttribute('data-armed', ''); sureLabel.textContent = 'Click again to delete'; setTimeout(() => { if (sure.isConnected) { sure.removeAttribute('data-armed'); sureLabel.textContent = 'Delete permanently'; } }, 4000); return; }
       sure.disabled = true; cancel.disabled = true; instead.disabled = true; err.hidden = true;
       const name = b.name, id = b.id;
-      admin.remove(id, id).then(() => { afterGone(); ui.toast('Deleted ' + name); })
+      admin.remove(id, id).then(() => { afterGone(); kit.notify('Deleted ' + name); })
         .catch((e: unknown) => { sure.disabled = false; cancel.disabled = false; instead.disabled = false; err.textContent = 'It was not deleted: ' + sentence(e); err.hidden = false; });
     });
     requestAnimationFrame(() => { gone.scrollIntoView({ block: 'nearest' }); instead.focus({ preventScroll: true }); });
@@ -309,7 +309,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     try {
       const done = await admin.archive(id);
       afterGone();
-      ui.toast('Archived ' + name, { action: { label: 'Undo', onClick: () => { done.undo().then(() => { ui.toast('Restored ' + name); }).catch((e: unknown) => { ui.toast('Could not restore ' + name + ': ' + sentence(e)); }); } } });
+      kit.notify('Archived ' + name, { action: { label: 'Undo', onClick: () => { done.undo().then(() => { kit.notify('Restored ' + name); }).catch((e: unknown) => { kit.notify('Could not restore ' + name + ': ' + sentence(e)); }); } } });
     } catch (e) {
       archive.disabled = false; archive.removeAttribute('data-armed'); archLabel.textContent = 'Archive ' + name;
       gone.hidden = false; review.hidden = true;

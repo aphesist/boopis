@@ -27,25 +27,29 @@ export function drawChrome(app: HTMLElement): void {
       title: { id: 'hx-btn-title' },
       search: { id: 'hx-btn-search', 'aria-haspopup': 'dialog', 'aria-expanded': 'false' },
       details: { id: 'hx-btn-right', 'aria-controls': 'hx-right-shell', 'aria-expanded': 'false', 'data-kbd': 'mod+I' },
-      windowGroup: { class: 'k7-chrome__wc hx-win', role: 'group', 'aria-label': 'Window' },
+      windowGroup: { role: 'group', 'aria-label': 'Window' },
       min: { id: 'hx-btn-min', 'data-win': 'min' }, max: { id: 'hx-btn-max', 'data-win': 'max', 'aria-label': 'Full screen', 'data-tip': 'Full screen' },
       close: { id: 'hx-btn-close', 'data-win': 'close' }
     }
   }));
+  host.querySelector('.k7-chrome__wc')?.classList.add('hx-win');
 }
 
 /** the open sidebar's head: Sessions / Bots (the kit's Segmented, a tab list over the two lists) and New, a floating 36 circle */
 export function drawSideHead(app: HTMLElement): void {
   const seg = kit.segmented({
-    label: 'View', variant: 'tabs', value: 'session', attrs: { id: 'hx-seg', class: 'k7-seg hx-seg' },
+    label: 'View', variant: 'tabs', value: 'session', attrs: { id: 'hx-seg' },
     items: [
       { value: 'session', label: 'Sessions', controls: 'hx-list-session', id: 'hx-tab-session', keys: 'alt+1', dot: false },
       { value: 'bots', label: 'Bots', controls: 'hx-list-bots', id: 'hx-tab-bots', keys: 'alt+2', dot: false }
     ]
   });
+  seg.classList.add('hx-seg');
   $('#hx-seg', app).replaceWith(seg);
   sh.seg.tabs = seg;
-  $('#hx-btn-new', app).replaceWith(kit.iconButton({ icon: 'plus', label: 'New session', keys: 'mod+shift+O', attrs: { id: 'hx-btn-new', class: 'k7-reset k7-ib hx-new', 'data-tip-pos': 'bottom' } }));
+  const add = kit.iconButton({ icon: 'plus', label: 'New session', keys: 'mod+shift+O', attrs: { id: 'hx-btn-new', 'data-tip-pos': 'bottom' } });
+  add.classList.add('hx-new');
+  $('#hx-btn-new', app).replaceWith(add);
 }
 
 /** the foot: you (the account menu), Store and Settings */
@@ -87,11 +91,11 @@ export function setTitle(name: string, lead: TitleLead, label: string): void {
   if (sig !== leadSig) {
     leadSig = sig;
     const next = frag(kit.html.titlePill({ title: name, ...(lead.members?.length ? { members: lead.members } : lead.bot ? { bot: lead.bot } : lead.icon ? { icon: lead.icon } : {}) }));
-    const btn = next;
     const old = pill.querySelector('.k7-title__name')?.previousElementSibling;
     if (old) old.remove();
-    const newLead = btn?.querySelector('.k7-title__name')?.previousElementSibling;
-    if (newLead) pill.prepend(newLead);
+    /* the lead's markup is written into the page (an orb made in a template and moved in is not painted by its worker) */
+    const newLead = next.querySelector('.k7-title__name')?.previousElementSibling;
+    if (newLead) pill.insertAdjacentHTML('afterbegin', newLead.outerHTML);
     pill.toggleAttribute('data-lead', !!newLead);
   }
   pill.setAttribute('aria-label', label);
