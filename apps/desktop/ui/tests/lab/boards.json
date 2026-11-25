@@ -1,6 +1,10 @@
 {
   "about": "Board to story, one row per approved board: `pnpm lab:board <id>` draws the board from its own source and the app's lab story, and compares them. `board` is the page under docs/design/v7/boards/src with its parameters (the theme is added), `image` the approved image in the archive (origin/w33/boards-archive), `story` and `state` the lab story that feeds the app's real modules the board's content, `regions` the parts of the window as [x, y, width, height] in CSS px.",
-  "viewport": { "w": 1440, "h": 900, "dpr": 2 },
+  "viewport": {
+    "w": 1440,
+    "h": 900,
+    "dpr": 2
+  },
   "boards": {
     "11-botchat": {
       "title": "Board 11: a bot's chat, the rail, the details pane",
@@ -9,11 +13,69 @@
       "story": "boards/bots",
       "state": "11 a bot's chat, the rail, the details",
       "regions": {
-        "chrome": [0, 0, 1440, 56],
-        "rail": [0, 56, 88, 844],
-        "thread": [88, 56, 996, 734],
-        "composer": [88, 790, 996, 110],
-        "details pane": [1084, 56, 356, 844]
+        "chrome": [
+          0,
+          0,
+          1440,
+          56
+        ],
+        "rail": [
+          0,
+          56,
+          88,
+          844
+        ],
+        "thread": [
+          88,
+          56,
+          996,
+          734
+        ],
+        "composer": [
+          88,
+          790,
+          996,
+          110
+        ],
+        "details pane": [
+          1084,
+          56,
+          356,
+          844
+        ]
+      }
+    },
+    "17-working": {
+      "title": "Board 17: a bot working through a task",
+      "board": "screen.html?s=work17",
+      "image": "v7/17-bot-working-{theme}.jpg",
+      "story": "boards/bots",
+      "state": "17 a bot working",
+      "regions": {
+        "chrome": [
+          0,
+          0,
+          1440,
+          56
+        ],
+        "rail": [
+          0,
+          56,
+          88,
+          844
+        ],
+        "thread": [
+          88,
+          56,
+          1352,
+          734
+        ],
+        "composer": [
+          88,
+          790,
+          1352,
+          110
+        ]
       }
     },
     "S17-newsession": {
@@ -24,11 +86,36 @@
       "state": "S17 a new session",
       "wait": 1500,
       "regions": {
-        "chrome": [0, 0, 1440, 56],
-        "sidebar": [0, 56, 300, 844],
-        "canvas": [300, 56, 1140, 614],
-        "notice and composer": [300, 670, 1140, 148],
-        "dock": [300, 818, 1140, 82]
+        "chrome": [
+          0,
+          0,
+          1440,
+          56
+        ],
+        "sidebar": [
+          0,
+          56,
+          300,
+          844
+        ],
+        "canvas": [
+          300,
+          56,
+          1140,
+          614
+        ],
+        "notice and composer": [
+          300,
+          670,
+          1140,
+          148
+        ],
+        "dock": [
+          300,
+          818,
+          1140,
+          82
+        ]
       }
     }
   }

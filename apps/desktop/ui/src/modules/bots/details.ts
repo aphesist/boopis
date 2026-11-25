@@ -10,6 +10,7 @@ import { kit, ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, Schedule } from '../../data';
 import { bot, S } from './model';
+import { openSettings } from './settings';
 
 let host: HTMLElement | null = null;
 let tab: 'activity' | 'library' = 'activity';
@@ -18,22 +19,36 @@ let sig = '';
 const base = (path: string): string => path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path;
 function schedulesOf(b: Bot): readonly Schedule[] { return data().schedules.list.get().filter((s) => s.bot === b.id); }
 
+const count = (n: number, one: string, many: string): string => n + ' ' + (n === 1 ? one : many);
+/** Library: what the engine reports the bot has (the live provider's `info`): its recent sessions, each opening that session, and its
+    skills and toolsets by count; a bot the provider knows nothing more about has nothing here */
+function libraryHTML(b: Bot): string {
+  const info = b.info;
+  if (!info) return '<p class="k7-pane__none">Nothing in ' + esc(b.name) + '’s library yet.</p>';
+  const sessions = info.sessions ?? [];
+  const on = (list: readonly { enabled: boolean }[] | null): string => (list === null ? 'unknown' : count(list.filter((x) => x.enabled).length, 'on', 'on') + ' of ' + list.length);
+  return (sessions.length
+    ? '<h3 class="k7-pane__sec">Recent sessions</h3>' + kit.html.card({ variant: 'pane', rows: sessions.map((x) => ({ label: x.title || 'Untitled session', value: x.when, action: 'opens the session', attrs: { 'data-session': x.id } })) })
+    : '<p class="k7-pane__none">' + esc(info.sessions === null ? 'Its sessions are unknown. ' + (info.notes.sessions ?? '') : b.name + ' has not run a session yet.') + '</p>') +
+    '<h3 class="k7-pane__sec">It can use</h3>' + kit.html.card({ variant: 'pane', rows: [{ label: 'Skills', value: on(info.skills), action: 'opens its settings', attrs: { 'data-settings': 'role' } }, { label: 'Toolsets', value: on(info.toolsets), action: 'opens its settings', attrs: { 'data-settings': 'role' } }] });
+}
 function bodyHTML(b: Bot): string {
-  if (tab === 'library') return '<p class="bt-details__none">Nothing in ' + esc(b.name) + '’s library yet.</p>';
+  if (tab === 'library') return libraryHTML(b);
   const rows = schedulesOf(b);
   const upcoming = rows.length
     ? '<h3 class="k7-pane__sec">Upcoming</h3>' + kit.html.card({ variant: 'pane', rows: rows.map((s) => ({
-      label: s.what, labelHTML: esc(s.what) + '<br><span class="bt-details__when">' + esc(s.when) + '</span>',
+      label: s.what, labelHTML: esc(s.what) + '<br><span class="k7-row__sub">' + esc(s.when) + '</span>',
       control: kit.html.switch({ label: s.what, checked: !s.paused, attrs: { 'data-schedule': s.id } })
     })) })
     : '';
   const model = b.info?.model ?? b.cfg.model;
   const run = S.spend[b.id], cap = run?.cap ?? (b.cfg.cap ? '$' + b.cfg.cap : null), spent = run?.spent ?? (b.spent ? '$' + b.spent : null);
   const where = data().bots.workspace?.(b.id);
+  /* each row opens the bot's settings where its value is set: the pane is the pointer's way to them (board 11 draws no other) */
   const work = [
-    ...(model ? [{ label: 'Model', control: '<span class="bt-details__val">' + ui.html.modelMark(model, { size: 14, label: false }) + esc(ui.modelMark.short(model) || model) + '</span>' }] : []),
-    ...(spent ? [{ label: 'Spend', value: cap ? spent + ' of ' + cap : spent, mono: true }] : []),
-    { label: 'Workspace', value: b.cfg.workspace + (where ? ' ' + base(where) : ''), mono: true }
+    ...(model ? [{ label: 'Model', valueHTML: ui.html.modelMark(model, { size: 14, label: false }) + esc(ui.modelMark.short(model) || model), value: ui.modelMark.short(model) || model, action: 'opens its settings', attrs: { 'data-settings': 'model' } }] : []),
+    ...(spent ? [{ label: 'Spend', value: cap ? spent + ' of ' + cap : spent, mono: true, action: 'opens its settings', attrs: { 'data-settings': 'model' } }] : []),
+    { label: 'Workspace', value: b.cfg.workspace + (where ? ' ' + base(where) : ''), mono: true, action: 'opens its settings', attrs: { 'data-settings': 'workspace' } }
   ];
   return upcoming + '<h3 class="k7-pane__sec">Work</h3>' + kit.html.card({ variant: 'pane', rows: work });
 }
@@ -45,6 +60,13 @@ export function paintDetails(_newSession?: () => void): void {
   if (!host) {
     host = el('div', { class: 'bt-details', id: 'hx-right-bots' });
     shell.append(host);
+    host.addEventListener('click', (e) => {
+      const t = e.target as Element, b = bot(S.sel);
+      if (!b || t.closest('.k7-switch')) return;
+      const set = t.closest<HTMLElement>('[data-settings]'), ses = t.closest<HTMLElement>('[data-session]');
+      if (set) openSettings(b.id, set.dataset['settings'] ?? null);
+      else if (ses) void data().bots.sessions?.open(b.id, ses.dataset['session'] as string).catch((err: unknown) => { kit.notify(err instanceof Error ? err.message : 'The session could not be opened.'); });
+    });
     host.addEventListener('ui:change', (e) => {
       const t = e.target as HTMLElement;
       const seg = t.closest('[data-kit~="Segmented"]');

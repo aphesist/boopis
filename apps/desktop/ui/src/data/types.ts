@@ -123,7 +123,12 @@ export interface ApprovalMessage { kind: 'approval'; id: string; who: string; t:
 /** a line the app says in a thread and nobody in it does: a message that was not sent, a reply that failed */
 export interface NoteMessage { kind: 'note'; id: string; who: 'app'; t: string; text: string }
 /** a tool call the bot made, one row of its thread: the tool's name ("Read") and what it was called on ("14 merged pull requests") */
-export interface ToolMessage { kind: 'tool'; id: string; who: string; t: string; tool: string; target: string }
+export interface ToolMessage {
+  kind: 'tool'; id: string; who: string; t: string; tool: string; target: string;
+  /** a shell (its row leads with the terminal glyph); else a task */ shell?: boolean;
+  /** a task's steps, in order: done, the one running now, those to do; each with what it says at its end ("0:12", "3 of 5 suites") */
+  steps?: readonly { text: string; state: 'done' | 'now' | 'todo' | 'failed'; time?: string }[];
+}
 /** a file the bot wrote or handed over: its name and one line about it ("41 lines, 2.1 KB") */
 export interface FileMessage { kind: 'file'; id: string; who: string; t: string; name: string; meta: string }
 export type ThreadMessage = TextMessage | ApprovalMessage | NoteMessage | ToolMessage | FileMessage;

@@ -95,7 +95,7 @@ both.push('--file-w: 260px;',                       /* a file card (kit.css .fil
   '--composer-bottom: 24px;', '--composer-above-dock: 96px;',   /* its foot: 24 over the window's, 96 where the dock sits under it (sessiontab.js shell) */
   '--thread-top: 72px;',                            /* the thread's first line under the window's top (screens: padding-top 72) */
   '--pane-top: 64px;', '--pane-sec-top: 14px;',     /* the details pane (kit.css .pane-in, .pane-sec) */
-  '--hover-ctl: 28px;',                             /* a hover action beside a bubble (kit.css .hoverbar span) */
+  '--hover-ctl: 28px;', '--step-dot: 7px;',                             /* a hover action beside a bubble (kit.css .hoverbar span) */
   '--wc-w: 32px;', '--wc-h: 28px;', '--icon-l: 18px;',                 /* a window glyph's cell (kit.css .wc span) */
   '--ns-top: 64px;', '--ns-bottom: 250px;', '--ns-wait-w: 520px;', '--ns-wait-top: 40px;', '--ns-mark: 72px;', '--ns-logo: 44px;');   /* the new session's canvas (kit.css .ns, .ns-wait, .ns-mark; sessionnew.js brand) */
 

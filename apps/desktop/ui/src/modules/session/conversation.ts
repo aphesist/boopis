@@ -25,7 +25,7 @@ import { REWIND_BASE, lineEl, rewindFoot, rewindSheet, showSheet, watchTyping } 
 import { mountNew } from './new';
 import type { NewScreen } from './new';
 import type { RewindSheet } from './s0';
-import { openCarefulFor, openEffort, openFolder, launchView } from './launch';
+import { openModel, openCarefulFor, openEffort, openFolder, launchView } from './launch';
 import type { ThreadLine } from '../../data';
 
 /** per-turn data the keyboard and the clipboard need */
@@ -512,13 +512,19 @@ export function mountView(root: HTMLElement): void {
   NEW = mountNew(root, {
     actions: {
       folder: () => { void openFolder(); },
-      model: (a) => { VIEW.composer?.openModelMenu?.(a); },
+      model: (a) => { openModel(a); },
       effort: (a) => { openEffort(a); },
       careful: (a) => { openCarefulFor(a, 'below'); },
       open: (id) => { selectSession(id, { focus: true }); }
     },
-    send: (text) => { const g = data().details.governance.get(); sessions().send(VIEW.current, text, { governed: g.governed, smart: g.smart, model: g.model, assume: [], attachments: [] }); }
+    /* ctrl Enter starts it in the background: the session starts and takes its row, and a new session's canvas stays in front */
+    send: (text, background) => {
+      const g = data().details.governance.get();
+      sessions().send(VIEW.current, text, { governed: g.governed, smart: g.smart, model: g.model, assume: [], attachments: [] });
+      if (background) newSession();
+    }
   });
+  data().details.governance.subscribe(() => { redrawCanvas(); });
   renderConversation();
   const c = VIEW.composer = sessionComposer({ draft: sessions().draft(), sessionId: () => VIEW.current });
   const host = el('div', { class: 'ss-composer' }, c);

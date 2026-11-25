@@ -14,15 +14,16 @@ import type { Attrs, U } from './util';
 export const CARD_VARIANTS = ['settings', 'pane', 'danger'] as const;
 export type CardVariant = typeof CARD_VARIANTS[number];
 export interface RowOpts {
-  label: string; labelHTML?: U<string>; value?: U<string>; mono?: U<boolean>; control?: U<string>;
+  label: string; labelHTML?: U<string>; value?: U<string>; /** the value with a lead (a model's mark, then its name) */ valueHTML?: U<string>; mono?: U<boolean>; control?: U<string>;
   /** a label that explains itself: the mark (17.1), revealed on the row's hover or focus */ explain?: U<string>; id?: U<string>; attrs?: U<Attrs>;
+  /** the whole row is one control (a pane card's row opens where its value is set): what pressing it does, said to a screen reader */ action?: U<string>;
 }
 export function row(o: RowOpts): string {
   const label = o.explain
     ? '<span class="k7-row__label">' + '<button class="k7-reset k7-mark k7-info" type="button" data-kit="Mark" data-mark-kind="info" aria-haspopup="dialog"' + attrs({ 'data-explain': o.explain, id: o.id }) + '>' + esc(o.label) + '<span class="k7-mark__i" aria-hidden="true">' + glyph('info') + '</span></button></span>'
     : '<span class="k7-row__label"' + attrs({ id: o.id }) + '>' + textOr(o.label, o.labelHTML) + '</span>';
-  return '<div class="k7-row"' + partAttrs('Row', { 'data-mark-reveal': o.explain ? 'hover' : null, ...(o.attrs ?? {}) }) + '>' + label +
-    (o.value ? '<span class="' + cls('k7-row__value', o.mono && 'k7-mono') + '">' + esc(o.value) + '</span>' : '') + (o.control ?? '') + '</div>';
+  return '<div class="k7-row"' + partAttrs('Row', { 'data-mark-reveal': o.explain ? 'hover' : null, ...(o.action ? { role: 'button', tabindex: '0', 'data-action': '', 'aria-label': o.label + (o.value ? ': ' + o.value : '') + ', ' + o.action } : {}), ...(o.attrs ?? {}) }) + '>' + label +
+    (o.valueHTML ? '<span class="k7-row__value k7-row__value--lead">' + o.valueHTML + '</span>' : o.value ? '<span class="' + cls('k7-row__value', o.mono && 'k7-mono') + '">' + esc(o.value) + '</span>' : '') + (o.control ?? '') + '</div>';
 }
 export interface CardOpts { variant?: U<CardVariant>; rows: readonly RowOpts[]; open?: U<boolean>; title?: U<string>; attrs?: U<Attrs> }
 export function card(o: CardOpts): string {
@@ -194,7 +195,7 @@ export function well(o: WellOpts): string {
 export interface StepOpts { text: string; state?: U<'done' | 'now' | 'todo' | 'failed'>; icon?: U<string>; time?: U<string> }
 export function steps(items: readonly StepOpts[], id?: string): string {
   return '<ol class="k7-steps"' + partAttrs('Steps', { id }) + '>' + items.map((s) => '<li class="k7-step" data-state="' + (s.state ?? 'done') + '">' +
-    '<span class="k7-step__ic" aria-hidden="true">' + glyph(s.icon ?? (s.state === 'done' || !s.state ? 'check' : s.state === 'failed' ? 'close' : 'play')) + '</span>' +
+    '<span class="k7-step__ic" aria-hidden="true">' + (s.icon ? glyph(s.icon) : s.state === 'done' || !s.state ? glyph('check') : s.state === 'failed' ? glyph('close') : '<span class="k7-step__dot"' + (s.state === 'now' ? ' data-live' : '') + '></span>') + '</span>' +
     '<span class="k7-step__text">' + esc(s.text) + '</span>' + (s.time ? '<span class="k7-step__time k7-mono">' + esc(s.time) + '</span>' : '') + '</li>').join('') + '</ol>';
 }
 export interface DisclosureOpts { summary: string; variant?: U<'steps' | 'worklog'>; open?: U<boolean>; steps?: U<readonly StepOpts[]>; attrs?: U<Attrs> }

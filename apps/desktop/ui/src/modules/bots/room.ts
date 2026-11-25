@@ -24,6 +24,7 @@ import { renderGlance } from './glance';
 import { atEnd } from './ledger';
 import { followZone } from '../chat/follow-zone';
 import { paintDetails } from './details';
+import { composeTools, VOICE_NOT_YET } from '../chat/compose';
 import { outsideDescription, outsideRoomMark } from './outside';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 
@@ -155,8 +156,14 @@ function msgContent(b: Bot, m: ThreadMessage): HTMLElement {
   if (m.kind === 'note') return el('p', { class: 'bt-note', role: 'status', text: m.text });
   if (m.kind === 'approval') return renderCard(b, m);
   /* what the bot did, one row each: a tool call (its name, what it was called on) and a file it wrote or handed over */
-  if (m.kind === 'tool') return kit.toolRow({ variant: 'bot', tool: m.tool, target: m.target });
-  if (m.kind === 'file') return kit.fileCard({ name: m.name, meta: m.meta });
+  if (m.kind === 'tool') return kit.toolRow({ variant: 'bot', tool: m.tool, target: m.target, ...(m.shell ? { icon: 'terminal' } : {}), ...(m.steps ? { steps: m.steps, open: m.steps.some((x) => x.state === 'now') } : {}) });
+  /* a file opens on this computer when the host can open paths (the desktop app): found in the bot's workspace, opened with its default app */
+  if (m.kind === 'file') {
+    const paths = data().files.paths;
+    const card = kit.fileCard({ name: m.name, meta: m.meta, opens: !!paths });
+    if (paths) card.addEventListener('click', () => { void paths.resolve([m.name], rootsOf(b.id)).then(([hit]) => (hit ? paths.open(hit.abs) : Promise.reject(new Error(m.name + ' was not found in ' + b.name + '’s workspace.')))).catch((e: unknown) => { toast(e instanceof Error ? e.message : m.name + ' could not be opened.'); }); });
+    return card;
+  }
   if (m.who === 'you') { const r = el('p', { class: 'bt-request' }); r.innerHTML = ui.markdown.plain(m.text, ctx()); return r; }
   const md = ui.markdown(m.text, ctx());
   void resolvePaths(md, rootsOf(m.who === 'you' ? b.id : (bot(m.who)?.id ?? b.id)));
@@ -223,7 +230,7 @@ function paintStatus(id: string): void {
   const list = thread(id), last = list[list.length - 1];
   const waits = !!b && list.some((m) => m.kind === 'approval' && !m.resolved);
   const replying = !!last && last.who !== 'you' && last.kind === 'text' && log.getAttribute('aria-busy') === 'true';
-  const works = !!b && S.runs.has(id) && !replying;
+  const works = !!b && (S.runs.has(id) || ui.botState(b).busy) && !replying;
   const phrase = waits ? 'Waiting for you' : works ? cap1((b as Bot).activity || ui.botState(b as Bot).word || 'Working') : '';
   const sig = phrase + '|' + (waits ? 'w' : 'r');
   if (!phrase || !b) { STATUS?.remove(); STATUS = null; return; }
@@ -335,8 +342,9 @@ function buildComposer(host: HTMLElement): void {
   const draw = (b: Bot): void => {
     const keep = slot.firstElementChild ? api.value : '';
     const l = lineOf(b);
-    const c = kit.composer({ kind: 'bot', placeholder: 'Message ' + b.name, label: 'Message ' + b.name, running, line: l.items, ...(b.color ? { fill: kit.botFill(b.color) } : {}), ...(keep ? { text: keep } : {}) });
+    const c = kit.composer({ kind: 'bot', placeholder: 'Message ' + b.name, label: 'Message ' + b.name, running, line: l.items, voiceOff: VOICE_NOT_YET, ...(b.color ? { fill: kit.botFill(b.color) } : {}), ...(keep ? { text: keep } : {}) });
     slot.replaceChildren(c);
+    tools.drawn();
     botId = b.id; sig = l.sig;
     text().setAttribute('data-hx-focus', 'composer');
   };
@@ -349,10 +357,18 @@ function buildComposer(host: HTMLElement): void {
     setRunning(on) { if (running === on) return; running = on; const b = bot(S.sel); if (b) draw(b); },
     paint(b) { if (b.id !== botId || lineOf(b).sig !== sig) draw(b); }
   };
+  /* "@" names a teammate: this bot reads the name; the bot named does not see this chat (the menu's foot says so) */
+  const tools = composeTools(slot, {
+    botId: () => S.sel,
+    mentions: {
+      label: 'Name a teammate', foot: () => (bot(S.sel)?.name ?? 'This bot') + ' reads the name. The bot you name does not see this chat.',
+      entries: () => S.bots.filter((x) => x.id !== S.sel).map((x) => ({ value: x.id, label: x.name, ...(x.role ? { desc: x.role } : {}), leadHTML: ui.html.orb(x, { size: 16, still: true }) }))
+    }
+  });
   slot.addEventListener('ui:send', (e) => { send((e as CustomEvent<{ text: string }>).detail.text); });
+  slot.addEventListener('ui:stop', () => { stopRun(); });
   slot.addEventListener('click', (e) => {
     const t = e.target as Element;
-    if (running && t.closest('[data-send]') && !api.value.trim()) { stopRun(); return; }
     const item = t.closest<HTMLElement>('[data-line]'), b = bot(S.sel);
     if (!item || !b) return;
     if (item.dataset['line'] === 'gov') setGov(b, b.cfg.gov === 'governed' ? 'ungoverned' : 'governed');

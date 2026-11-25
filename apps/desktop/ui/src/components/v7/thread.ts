@@ -67,7 +67,7 @@ export const TOOL_STATES = ['running', 'done', 'failed', 'waiting'] as const;
 export type ToolState = typeof TOOL_STATES[number];
 const TOOL_GLYPH: Record<ToolKind, string> = { edit: 'pen', command: 'terminal', read: 'file', search: 'search' };
 export interface ToolRowOpts {
-  /** `bot`: a bot's tool call as boards 11 and 17 draw it (botscreens.js `.tool`): the terminal glyph, the tool's name, what it was called on, a chevron */ variant?: U<'session' | 'bot'>;
+  /** `bot`: a bot's tool call as boards 11 and 17 draw it (botscreens.js `.tool`): a glyph (`icon`: the task's, or the terminal's), the tool's name, what it was called on, a chevron */ variant?: U<'session' | 'bot'>; icon?: U<string>;
   kind?: U<ToolKind>; state?: U<ToolState>; tool: string; target?: U<string>; model?: U<ModelRef>; open?: U<boolean>;
   command?: U<string>; steps?: U<readonly StepOpts[]>; ask?: U<AskCardOpts>; attrs?: U<Attrs>;
 }
@@ -77,8 +77,8 @@ export function toolRow(o: ToolRowOpts): string {
   if (o.variant === 'bot') {
     const open = !!o.open && !!(o.steps || o.command);
     return '<div class="k7-btool"' + kitAttrs('ToolRow', { 'data-variant': 'bot', 'data-state': st, 'data-sq': '', 'data-sq-mode': 'frame', 'data-disclose': o.steps || o.command ? '' : null, 'data-open': open ? '' : null, ...(o.attrs ?? {}) }) + '>' +
-      '<button class="k7-reset k7-btool__head" type="button"' + attrs({ 'aria-expanded': o.steps || o.command ? String(open) : null, 'aria-controls': o.steps || o.command ? id : null }) + '>' + glyph('session') +
-      '<b class="k7-btool__name">' + esc(o.tool) + '</b>' + (o.target ? '<span class="k7-btool__target k7-ell">' + esc(o.target) + '</span>' : '') + '<span class="k7-grow"></span>' + glyph(open ? 'chevron-down' : 'chevron') + '</button>' +
+      '<button class="k7-reset k7-btool__head" type="button"' + attrs({ 'aria-expanded': o.steps || o.command ? String(open) : null, 'aria-controls': o.steps || o.command ? id : null }) + '>' + glyph(o.icon ?? 'session') +
+      '<b class="k7-btool__name">' + esc(o.tool) + '</b>' + (o.target ? '<span class="k7-btool__target k7-ell">' + esc(o.target) + '</span>' : '') + '<span class="k7-grow"></span>' + glyph('chevron', 'k7-btool__chev') + '</button>' +
       (o.steps || o.command ? '<div class="k7-btool__body" id="' + id + '">' + (o.command ? well({ text: o.command }) : '') + (o.steps ? steps(o.steps) : '') + '</div>' : '') + '</div>';
   }
   const word = st === 'failed' ? statusWord({ text: 'failed', tone: 'red' }) : st === 'waiting' ? statusWord({ text: 'needs you', tone: 'owe', dot: true }) : '';
@@ -105,9 +105,9 @@ export function filesCard(o: FilesCardOpts): string {
 }
 
 /* ── FileCard: one file a bot wrote or handed over (boards 11 and 17, botscreens.js `.file`): a 32 x 40 file tile, the name, one mono line ── */
-export interface FileCardOpts { name: string; meta?: U<string>; attrs?: U<Attrs> }
+export interface FileCardOpts { name: string; meta?: U<string>; /** it opens the file: a control (Enter and Space press it) */ opens?: U<boolean>; attrs?: U<Attrs> }
 export function fileCard(o: FileCardOpts): string {
-  return '<div class="k7-file"' + kitAttrs('FileCard', { 'data-sq': '', 'data-sq-mode': 'frame', ...(o.attrs ?? {}) }) + '><span class="k7-file__ic" aria-hidden="true">' + glyph('file') + '</span>' +
+  return '<div class="k7-file"' + kitAttrs('FileCard', { 'data-sq': '', 'data-sq-mode': 'frame', ...(o.opens ? { role: 'button', tabindex: '0', 'data-action': '', 'aria-label': 'Open ' + o.name } : {}), ...(o.attrs ?? {}) }) + '><span class="k7-file__ic" aria-hidden="true">' + glyph('file') + '</span>' +
     '<span class="k7-file__text"><span class="k7-file__name k7-ell">' + esc(o.name) + '</span>' + (o.meta ? '<span class="k7-file__meta k7-mono k7-ell">' + esc(o.meta) + '</span>' : '') + '</span></div>';
 }
 
@@ -153,6 +153,7 @@ export interface ComposerOpts {
   kind?: U<ComposerKind>; placeholder?: U<string>; text?: U<string>; textHTML?: U<string>; running?: U<boolean>;
   /** the line under it (12.2, S05): its items; an empty line takes no space */ line?: U<readonly LineItem[]>; hint?: U<string>; /** a second hint, at the line's end (S17: "ctrl Enter starts it in the background") */ hintEnd?: U<string>;
   /** a bot's own chat: the send in the bot's derived fill (18.1) */ fill?: U<{ fill: string; text: string }>; label?: U<string>; attrs?: U<Attrs>;
+  /** talking to it is not possible here: the voice button is drawn and does nothing, and its tip says this */ voiceOff?: U<string>;
 }
 export function composer(o: ComposerOpts): string {
   const k = o.kind ?? 'session', typed = !!(o.text || o.textHTML);
@@ -168,10 +169,10 @@ export function composer(o: ComposerOpts): string {
       (o.hint ? '<span class="k7-composer__hint">' + esc(o.hint) + '</span>' : '') +
       '<span class="k7-grow"></span>' + (o.hintEnd ? '<span class="k7-composer__hint">' + esc(o.hintEnd) + '</span>' : '') + (o.line ?? []).filter((x) => x.end).map((x) => '<span class="' + cls('k7-composer__end', x.mono && 'k7-mono') + '"' + attrs({ 'aria-label': x.label + ': ' + x.value }) + '>' + esc(x.value) + '</span>').join('') + '</div>'
     : '';
-  return '<div class="k7-composer"' + kitAttrs('Composer', { 'data-kind': k, 'data-typed': typed ? '' : null, 'data-running': o.running ? '' : null, ...(o.attrs ?? {}) }) + '>' +
+  return '<div class="k7-composer"' + kitAttrs('Composer', { 'data-kind': k, 'data-typed': typed ? '' : null, 'data-running': o.running ? '' : null, 'data-voice-off': o.voiceOff ?? null, ...(o.attrs ?? {}) }) + '>' +
     '<div class="k7-composer__box" data-sq data-sq-mode="frame" data-mark-context>' +
-    iconButton({ icon: 'plus', label: 'Add', variant: 'tinted', haspopup: 'menu', expanded: false, attrs: { 'data-plus': '' } }) +
+    iconButton({ icon: 'plus', label: 'Add a file', variant: 'tinted', attrs: { 'data-plus': '' } }) +
     '<div class="k7-composer__text" contenteditable="plaintext-only" role="textbox" aria-multiline="true"' + attrs({ 'aria-label': o.label ?? ph, 'data-placeholder': ph }) + '>' + (o.textHTML ?? esc(o.text ?? '')) + '</div>' +
-    (k === 'notch' ? '' : iconButton({ icon: 'mic', label: 'Dictate', variant: 'tinted', keys: 'alt+V' })) + send + '</div>' + line + '</div>';   /* the mic is a tinted 28 circle, as "+" is (kit.css `.composer .ib.s`) */
+    (k === 'notch' ? '' : iconButton({ icon: 'mic', label: 'Dictate', variant: 'tinted', pressed: false, keys: 'alt+V', attrs: { 'data-mic': '' } })) + send + '</div>' + line + '</div>';   /* the mic is a tinted 28 circle, as "+" is (kit.css `.composer .ib.s`) */
 }
 export { mark };

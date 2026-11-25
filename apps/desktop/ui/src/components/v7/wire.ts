@@ -133,26 +133,108 @@ function wireInfo(b: HTMLElement): void {
   b.addEventListener('click', open);
 }
 
-/** Composer (12.2): the voice button becomes send with text (200 ms cross-fade, --dur-2); Enter sends (queues while it runs, S06 B),
-    ctrl Enter steers; Shift Enter is a new line. Fires ui:send {text, queue} and ui:steer {text} */
+/** a Row that is a control (RowOpts.action): Enter and Space press it */
+function wireRowAction(r: HTMLElement): void {
+  r.addEventListener('keydown', (e) => { if (e.target === r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); r.click(); } });
+}
+/** Composer (12.2). Enter sends (queues while it runs, S06 B), ctrl Enter steers, Shift Enter is a new line; the end button is voice
+    with no text, send with text, stop while it runs. It fires, each cancelable where an action follows:
+      ui:send {text, queue}   ui:steer {text}   ui:stop   ui:voice (no text, not running)
+      ui:add                  "+" was pressed (the app picks what to add; `composerInsert` puts it in the text)
+      ui:dictate {on}         the mic was switched on or off (aria-pressed says which)
+    `data-voice-off="<why>"` (ComposerOpts.voiceOff): the voice button is drawn and does nothing, its tip says why */
 function wireComposer(c: HTMLElement): void {
   const t = c.querySelector<HTMLElement>('.k7-composer__text'), b = c.querySelector<HTMLButtonElement>('[data-send]');
   if (!t || !b) return;
+  const off = c.getAttribute('data-voice-off');
   const sync = (): void => {
     const typed = (t.textContent ?? '').trim().length > 0, running = c.hasAttribute('data-running');
     c.toggleAttribute('data-typed', typed);
     const [glyphName, label] = typed ? ['arrowup', running ? 'Queue' : 'Send'] : running ? ['stop', 'Stop'] : ['waveform', 'Talk'];
-    if (b.getAttribute('aria-label') !== label) { b.setAttribute('aria-label', label); b.setAttribute('data-tip', label); b.innerHTML = icon(glyphName, { size: 'm', class: 'k7-ic' }); }
+    if (b.getAttribute('aria-label') !== label) { b.setAttribute('aria-label', label); b.innerHTML = icon(glyphName, { size: 'm', class: 'k7-ic' }); }
+    const idle = !typed && !running && !!off;
+    b.setAttribute('data-tip', idle ? (off as string) : label);
+    if (idle) b.setAttribute('aria-disabled', 'true'); else b.removeAttribute('aria-disabled');
+  };
+  const send = (steer: boolean): void => {
+    const text = (t.textContent ?? '').trim();
+    if (!text) return;
+    if (fire(c, steer ? 'ui:steer' : 'ui:send', { text, queue: c.hasAttribute('data-running') && !steer }, true)) { t.textContent = ''; sync(); }
   };
   t.addEventListener('input', sync);
   t.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
+    if (e.key !== 'Enter' || e.shiftKey || e.isComposing || e.defaultPrevented) return;
     e.preventDefault();
-    const text = (t.textContent ?? '').trim();
-    if (!text) return;
-    const steer = e.ctrlKey || e.metaKey;
-    if (fire(c, steer ? 'ui:steer' : 'ui:send', { text, queue: c.hasAttribute('data-running') && !steer }, true)) { t.textContent = ''; sync(); }
+    send(e.ctrlKey || e.metaKey);
   });
+  b.addEventListener('click', () => {
+    if ((t.textContent ?? '').trim()) { send(false); return; }
+    if (c.hasAttribute('data-running')) fire(c, 'ui:stop', {}); else if (!off) fire(c, 'ui:voice', {});
+  });
+  c.querySelector('[data-plus]')?.addEventListener('click', () => { fire(c, 'ui:add', {}); });
+  const mic = c.querySelector<HTMLButtonElement>('[data-mic]');
+  mic?.addEventListener('click', () => { const on = mic.getAttribute('aria-pressed') !== 'true'; if (fire(c, 'ui:dictate', { on }, true)) mic.setAttribute('aria-pressed', String(on)); });
+  sync();
+}
+/** put `text` into a composer at the caret (at the end when the caret is elsewhere), as if typed: the composer's own input handling follows */
+export function composerInsert(c: HTMLElement, text: string): void {
+  const t = c.matches('.k7-composer__text') ? c : c.querySelector<HTMLElement>('.k7-composer__text');
+  if (!t) return;
+  const sel = typeof getSelection === 'function' ? getSelection() : null;
+  const r = sel && sel.rangeCount && t.contains(sel.anchorNode) ? sel.getRangeAt(0) : null;
+  if (r) { r.deleteContents(); r.insertNode(document.createTextNode(text)); r.collapse(false); } else t.append(text);
+  t.dispatchEvent(new Event('input', { bubbles: true }));
+}
+/** who or what an "@" can name in a composer */
+export interface KitMentions {
+  /** the menu's name ("Name a teammate") and the line at its foot */ label: string; foot?: () => string;
+  /** what can be named now: `value` is written after the "@", `label` and `desc` are shown, `leadHTML` leads the row (an orb, a mark) */
+  entries(): readonly { value: string; label: string; desc?: string; leadHTML?: string; icon?: string }[];
+}
+/** "@" in a composer: typing "@" and a few letters opens the kit's Menu over the composer with what matches; choosing a row writes
+    "@value " in place of what was typed; Escape, or a space, closes it. One open menu at a time (the kit's layer) */
+export function composerMentions(c: HTMLElement, src: KitMentions, open: (anchor: HTMLElement, o: { label: string; entries: readonly unknown[]; onSelect(v: string): void }) => HTMLElement | null, close: () => void): void {
+  const t = c.querySelector<HTMLElement>('.k7-composer__text');
+  if (!t) return;
+  let shown = false;
+  const typing = (): { query: string; node: Text; from: number; to: number } | null => {
+    const sel = getSelection();
+    const n = sel && sel.rangeCount && sel.isCollapsed ? sel.anchorNode : null;
+    if (!n || n.nodeType !== 3 || !t.contains(n)) return null;
+    const before = (n.textContent ?? '').slice(0, sel?.anchorOffset ?? 0);
+    const m = /(^|\s)@([\w.-]*)$/.exec(before);
+    return m ? { query: (m[2] ?? '').toLowerCase(), node: n as Text, from: before.length - (m[2] ?? '').length - 1, to: before.length } : null;
+  };
+  const hide = (): void => { if (shown) { shown = false; close(); } };
+  t.addEventListener('input', () => {
+    const q = typing();
+    if (!q) { hide(); return; }
+    const rows = src.entries().filter((e) => e.value.toLowerCase().startsWith(q.query) || e.label.toLowerCase().startsWith(q.query));
+    if (!rows.length) { hide(); return; }
+    const foot = src.foot?.();
+    shown = !!open(c.querySelector<HTMLElement>('.k7-composer__box') ?? c, {
+      label: src.label,
+      entries: [...rows.map((e) => ({ label: e.label, value: e.value, ...(e.desc ? { desc: e.desc } : {}), ...(e.leadHTML ? { leadHTML: e.leadHTML } : e.icon ? { icon: e.icon } : {}) })), ...(foot ? ['-', { heading: foot }] : [])],
+      onSelect: (v) => {
+        shown = false;
+        const now = typing() ?? q;
+        const text = now.node.textContent ?? '';
+        now.node.textContent = text.slice(0, now.from) + '@' + v + ' ' + text.slice(now.to);
+        const r = document.createRange(); r.setStart(now.node, now.from + v.length + 2); r.collapse(true);
+        const sel = getSelection(); sel?.removeAllRanges(); sel?.addRange(r);
+        t.focus();
+        t.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
+    t.focus();   /* typing goes on in the text: the menu is chosen from with the pointer, or with the arrows once it has focus (ArrowDown) */
+  });
+  t.addEventListener('keydown', (e) => {
+    if (!shown) return;
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); hide(); }
+    else if (e.key === 'ArrowDown' || e.key === 'Tab') { const first = document.querySelector<HTMLElement>('.k7-menu[data-floating] [data-kit~="MenuRow"]'); if (first) { e.preventDefault(); first.focus(); } }
+    else if (e.key === 'Enter' && !e.shiftKey) { const first = document.querySelector<HTMLElement>('.k7-menu[data-floating] [data-kit~="MenuRow"]'); if (first) { e.preventDefault(); e.stopPropagation(); first.click(); } }
+  }, true);
+  t.addEventListener('blur', () => { setTimeout(() => { if (!document.activeElement?.closest('.k7-menu[data-floating]')) hide(); }, 0); });
 }
 
 /** a bot at rest on a rest surface wakes under the pointer (the lively idle, its 3D turns and glances) and settles back into the pose
@@ -174,7 +256,7 @@ function wireRestOrb(w: HTMLElement): void {
 
 const WIRES: ReadonlyArray<readonly [string, (el: HTMLElement) => void]> = [
   ['.k7-seg', wireSegmented], ['.k7-switch', (el) => wireSwitch(el as HTMLButtonElement)], ['.k7-chip', (el) => wireChip(el as HTMLButtonElement)],
-  ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark], ['.k7-info', wireInfo], ['.k7-composer', wireComposer], ['.k7-dock', paintDock], ['.ui-orb[data-orb-rest]', wireRestOrb]
+  ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark], ['.k7-info', wireInfo], ['.k7-composer', wireComposer], ['.k7-row[data-action]', wireRowAction], ['.k7-file[data-action]', wireRowAction], ['.k7-dock', paintDock], ['.ui-orb[data-orb-rest]', wireRestOrb]
 ];
 /** wire every kit component under root (and root itself) once */
 export function wire<T extends Element>(root: T): T {

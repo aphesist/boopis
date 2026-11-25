@@ -13,6 +13,13 @@
 .k7-row__label { flex: 1 1 auto; min-width: 0; font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .k7-row__value { flex: none; font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); white-space: nowrap; }
 .k7-row__value.k7-mono { font-size: var(--fs-xs); }
+/* a value with a lead (kit.css: a `.row.s.dim` of a 14 mark and the name, 5 apart), and a label's second line (12 --text-dim on the label's line) */
+.k7-row__value--lead { display: inline-flex; align-items: center; gap: var(--pad-kbd); }
+.k7-row__sub { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
+/* a row that is a control: the pointer, the 6% fill under it (the boards' `.sr.hov`), the ring inside the card */
+.k7-row[data-action] { cursor: pointer; transition: background-color var(--dur-out) var(--ease-out); }
+@media (hover: hover) and (pointer: fine) { .k7-row[data-action]:hover { background: var(--hover); transition-duration: var(--dur-1); } }
+.k7-row[data-action]:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
 .k7-card[data-variant="pane"] { padding: var(--pad-queue) 0; }
 /* a pane card's row (kit.css `.pane-card .sr`): at least 40 tall, 4 14, its label 14/18, its value 13 (mono too) */
 .k7-card[data-variant="pane"] .k7-row { min-height: var(--pill-h); padding: var(--pad-queue) var(--pad-btn-card); }
@@ -226,17 +233,21 @@
 @media (hover: hover) and (pointer: fine) { .k7-disc__sum:hover { color: var(--text); } }
 .k7-disc > .k7-disc__body { display: none; }
 .k7-disc[data-open] > .k7-disc__body { display: block; }
-.k7-steps { display: flex; flex-direction: column; gap: var(--gap-hair); margin: var(--sp-1) 0 0; padding: 0; list-style: none; }
-.k7-step { display: flex; align-items: center; gap: var(--sp-2); height: var(--ctl-s); font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text-dim); min-width: 0; }
+/* the boards' `.steps` and `.step` (kit.css): rows 28 tall 2 apart, 13 with its tracking; a 16 slot for the check (--ok-text), the running
+   dot (7, breathing) or the dot of a step to do (6, --mark-off); the running step in --text, those to do in --text-quiet; what a step
+   says at its end in mono 11 --text-quiet */
+.k7-steps { display: flex; flex-direction: column; gap: var(--gap-hair); margin: var(--sp-2) 0 0; padding: 0; list-style: none; }
+.k7-step { display: flex; align-items: center; gap: var(--sp-2); height: var(--ctl-s); font-size: var(--fs-s); line-height: var(--lh-m); letter-spacing: var(--track-s); color: var(--text-dim); min-width: 0; }
 .k7-step__ic { display: inline-grid; place-items: center; width: var(--icon-s); flex: none; color: var(--text-quiet); }
+.k7-step__dot { width: var(--gap-s); height: var(--gap-s); border-radius: var(--r-pill); background: var(--mark-off); }
 .k7-step[data-state="done"] .k7-step__ic { color: var(--ok-text); }
 .k7-step[data-state="failed"] .k7-step__ic, .k7-step[data-state="failed"] { color: var(--red-text); }
 .k7-step[data-state="now"] { color: var(--text); }
-.k7-step[data-state="now"] .k7-step__ic { animation: k7-pulse var(--dur-breathe) var(--ease-io) infinite; }
-.k7-step[data-state="todo"] { color: var(--text-dim); }
-.k7-step__text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.k7-step__time { flex: none; font-size: var(--fs-2xs); color: var(--text-dim); }
-@media (prefers-reduced-motion: reduce) { .k7-step[data-state="now"] .k7-step__ic { animation: none; } }
+.k7-step[data-state="now"] .k7-step__dot { width: var(--step-dot); height: var(--step-dot); background: var(--text-dim); animation: k7-pulse var(--dur-breathe) var(--ease-io) infinite; }
+.k7-step[data-state="todo"] { color: var(--text-quiet); }
+.k7-step__text { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k7-step__time { flex: none; margin-inline-start: auto; font-size: var(--fs-2xs); color: var(--text-quiet); }
+@media (prefers-reduced-motion: reduce) { .k7-step[data-state="now"] .k7-step__dot { animation: none; } }
 
 /* ── TurnFoot (37): model, time and cost, 12 --text-dim; a session's actions as ghost 26 buttons, shown on hover ── */
 .k7-foot { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--line-h); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }

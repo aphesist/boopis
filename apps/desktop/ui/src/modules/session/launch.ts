@@ -3,7 +3,7 @@
    from the provider's `sessionControls` (the capability map, the launch settings) and the details' governance; a change is
    a command on it, and why it was refused is said, never swallowed. */
 import { cap1 } from '../../core/dom';
-import { kit } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { CarefulStep } from '../../data';
 import type { LaunchView } from './s0';
@@ -42,6 +42,16 @@ export function openCarefulFor(anchor: HTMLElement, place: 'above' | 'below'): v
     current: c.launch.get().careful, avail: started ? caps.session.changeCareful : caps.launch.careful, place,
     onPick: (step: CarefulStep) => { void c.setCareful(step).then((why) => { if (why) say(why); }); }
   });
+}
+
+/** who answers the new session: Automatic (Smart picks a tier for each message), or one of the models the person can use now */
+export const SMART = '__smart';
+export function openModel(anchor: HTMLElement): void {
+  const d = data().details, g = d.governance.get();
+  const now = g.smart || !g.model ? SMART : g.model;
+  const entries = [{ label: 'Automatic', desc: now === SMART ? 'Smart, now' : 'Smart picks for each message', value: SMART, icon: 'spark' },
+    ...d.choices.get().map((c) => ({ label: ui.modelMark.short(c.model) || c.model, value: c.value, leadHTML: ui.html.modelMark(c.value, { size: 16, label: false }), desc: ui.modelMark.same(c.value, now) ? c.providerName + ', now' : c.providerName }))];
+  kit.openMenu(anchor, { label: 'Model', entries, place: 'below', align: 'center', attrs: v7Attrs(), onSelect: (v) => { const why = d.setGovernance(v === SMART ? { smart: true } : { smart: false, model: v }); if (why) say(why); } });
 }
 
 export function openEffort(anchor: HTMLElement): void {

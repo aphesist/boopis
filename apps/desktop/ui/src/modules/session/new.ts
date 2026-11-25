@@ -7,6 +7,7 @@ import { kit } from '@boopis/ui';
 import { data } from '../../data';
 import type { LaunchActions, LaunchView } from './s0';
 import { launchCanvas } from './s0';
+import { composeTools, VOICE_NOT_YET } from '../chat/compose';
 
 export interface NewScreen {
   /** draw it (again) for these launch settings and show it */
@@ -34,7 +35,8 @@ export function mountNew(root: HTMLElement, o: { actions: LaunchActions; send(te
   function drawComposer(v: LaunchView): void {
     const ph = v.folder === null ? 'Add a folder to start' : v.model === null ? 'Choose a model to start' : 'What should change? @ files, $ skills, / commands';
     const keep = text()?.textContent ?? data().sessions.draft();
-    composerSlot.replaceChildren(kit.composer({ kind: 'session', placeholder: ph, label: 'Message', hint: HINT, hintEnd: HINT_END, ...(keep ? { text: keep } : {}) }));
+    composerSlot.replaceChildren(kit.composer({ kind: 'session', placeholder: ph, label: 'Message', hint: HINT, hintEnd: HINT_END, voiceOff: VOICE_NOT_YET, ...(keep ? { text: keep } : {}) }));
+    tools.drawn();
     text()?.setAttribute('data-hx-focus', 'composer');
   }
   function drawNotice(): void {
@@ -42,6 +44,7 @@ export function mountNew(root: HTMLElement, o: { actions: LaunchActions; send(te
     if (!n || n.id === dismissed) { noticeSlot.replaceChildren(); return; }
     noticeSlot.replaceChildren(kit.notice({ icon: 'clock', title: n.title, text: ', ' + n.detail, place: 'page', actions: [{ label: 'Get more usage', ghost: true, value: 'more', inert: NOT_YET }], dismiss: true, attrs: { 'data-limit': n.id } }));
   }
+  const tools = composeTools(composerSlot, { botId: () => null });
   noticeSlot.addEventListener('click', (e) => { if ((e.target as Element).closest('[data-dismiss]')) { dismissed = noticeSlot.querySelector<HTMLElement>('[data-limit]')?.dataset['limit'] ?? null; drawNotice(); } });
   composerSlot.addEventListener('ui:send', (e) => { o.send((e as CustomEvent<{ text: string }>).detail.text, false); });
   composerSlot.addEventListener('ui:steer', (e) => { o.send((e as CustomEvent<{ text: string }>).detail.text, true); });   /* ctrl Enter: in the background */

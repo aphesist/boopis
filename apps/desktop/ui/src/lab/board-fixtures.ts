@@ -54,6 +54,28 @@ export function board11(p: DataProvider): DataProvider {
   };
 }
 
+/* ───────── board 17: kai works through a task of five steps ───────── */
+const T17 = 'Today 14:02';
+const KAI_WORKING: readonly ThreadMessage[] = [
+  { kind: 'text', id: 'b17-1', who: 'you', t: T17, text: 'Prepare the 0.2.0 release: notes, tests, tag, and staging.' },
+  { kind: 'text', id: 'b17-2', who: 'kai', t: T17, text: 'On it. Five steps; I’ll tell you when staging is up.' },
+  { kind: 'tool', id: 'b17-3', who: 'kai', t: T17, tool: 'Release 0.2.0', target: 'step 3 of 5', steps: [
+    { text: 'Read 14 merged pull requests', state: 'done', time: '0:12' }, { text: 'Wrote CHANGELOG.md, 41 lines', state: 'done', time: '0:48' },
+    { text: 'Run the tests', state: 'now', time: '3 of 5 suites' }, { text: 'Tag 0.2.0', state: 'todo' }, { text: 'Deploy to staging (asks first)', state: 'todo' }] },
+  { kind: 'tool', id: 'b17-4', who: 'kai', t: T17, tool: 'Terminal', target: 'ran 2 commands', shell: true },
+  { kind: 'file', id: 'b17-5', who: 'kai', t: T17, name: 'CHANGELOG.md', meta: '41 lines, 2.1 KB' }
+];
+export function board17(p: DataProvider): DataProvider {
+  const tpl = p.bots.snapshot().bots[0] as Bot;
+  const bots = roster(p, { kai: { state: 'working', activity: 'Running the tests', spent: '0.12', cfg: { ...tpl.cfg, gov: 'governed', model: 'sonnet 5.5', cap: '1.00', cron: '', workspace: 'worktree' } } });
+  return {
+    ...p,
+    bots: { ...p.bots, snapshot: () => ({ bots, threads: { ...Object.fromEntries(bots.map((b) => [b.id, []])), kai: KAI_WORKING } }) },
+    waits: { ...p.waits, snapshot: () => [] },
+    groups: { ...p.groups, snapshot: () => ({ groups: [RELEASE_CREW], threads: { [RELEASE_CREW.id]: [] } }) }
+  };
+}
+
 /* ───────── board S17: a new session, the inbox, the dock ───────── */
 const SESSIONS: readonly SessionSummary[] = [
   { id: 's17-dock', project: 'boopis', title: 'Fix the dock\'s half paint', when: '', branch: 'w32/dock-paint', model: 'sonnet 5.5', needs: 'approval' },

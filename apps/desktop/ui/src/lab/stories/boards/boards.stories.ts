@@ -3,7 +3,7 @@
    draws the board from its source beside this state and measures the difference; a screen is done when they are the same, dark
    and light. Later boards add a fixture, a state here and a row in boards.json. */
 import type { AppCtx, State, Story } from '../../types';
-import { board11, boardS17 } from '../../board-fixtures';
+import { board11, board17, boardS17 } from '../../board-fixtures';
 
 const MOCK = { url: '/__boards/screen.html?s=bot11', note: 'the approved v7 board itself, drawn from its source' };
 
@@ -24,6 +24,19 @@ const bots: Story = {
       },
       /* the board draws the last reply with its hover actions showing */
       force: [{ sel: '#hx-view-bots .bt-log > [data-hx-turn][data-kind="bot"]', state: 'hover' }]
+    } satisfies State,
+    '17 a bot working': {
+      tags: ['variant', 'owner'],
+      note: 'board 17: kai works through five steps: the task\'s row open on its steps, the shell\'s row, the file, the status line; no details pane, the composer 720',
+      app: {
+        provider: { sessions: 'none', patch: board17 },
+        setup: async (c: AppCtx) => {
+          c.hx.setState({ tab: 'bots', left: 'rail', right: 'closed' });
+          await c.wait(300);
+          c.hx.emit('hx:bot-select', { id: 'kai', from: 'lab' });
+          await c.wait(900);
+        }
+      }
     } satisfies State
   }
 };
