@@ -167,7 +167,7 @@ def main() -> int:
         def composer_or_setup() -> str | None:
             if setup_showing():  # the UI holds back the session until setup has finished
                 raise SystemExit(f"first-run setup is showing instead of a session: {text().strip()[:200]!r}")
-            return find(".ui-composer__input")
+            return find(".ss-composer .k7-composer__text")  # the session's composer is the kit's (boards S20, S23)
 
         composer = wait_for(composer_or_setup, "the composer")
         call("POST", f"{s}/element/{composer}/value", {"text": f"@@reply {REPLY}@@"})
@@ -256,23 +256,23 @@ def hide_and_return(s: str, display_file: Path, agent_text) -> None:
     long_reply = "Hidden " + ("streaming while the window is away. " * 240)
     marker = "window-came-back"
     prompt = "@@reply " + long_reply + marker + "@@"
-    # the first turn has ended (the send button is not Stop), then the long prompt goes in and Enter sends it
+    # the first turn has ended (the composer no longer says a turn runs), then the long prompt goes in and Enter sends it
     wait_for(
         lambda: js(
-            "const b = document.querySelector('.ui-send'); return !!b && b.getAttribute('aria-label') === 'Send'"
+            "const c = document.querySelector('.ss-composer .k7-composer'); return !!c && !c.hasAttribute('data-running')"
         ),
         "the first turn to end",
         60,
     )
     js(
-        "const c = document.querySelector('.ui-composer__input'); c.focus();"
+        "const c = document.querySelector('.ss-composer .k7-composer__text'); c.focus();"
         f"document.execCommand('insertText', false, {json.dumps(prompt)}); return true;"
     )
-    composer = call("POST", f"{s}/element", {"using": "css selector", "value": ".ui-composer__input"})["value"]
+    composer = call("POST", f"{s}/element", {"using": "css selector", "value": ".ss-composer .k7-composer__text"})["value"]
     call("POST", f"{s}/element/{next(iter(composer.values()))}/value", {"text": "\ue007"})
     wait_for(
         lambda: (
-            js("return document.querySelector('.ui-send')?.getAttribute('aria-label') === 'Stop'")
+            js("return !!document.querySelector('.ss-composer .k7-composer[data-running] [data-stop]')")
             or marker in agent_text()
         ),
         "the long prompt to start a turn",
