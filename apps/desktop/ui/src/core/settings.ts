@@ -14,7 +14,9 @@ export const KEYS = {
   boards: 'hx.v6.boards',
   preview: 'hx.v6.preview',
   window: 'hx.v6.window',
-  size: 'hx.v6.size'
+  size: 'hx.v6.size',
+  /** the Session tab's last launch pick (how careful, the folder): a new session starts from it (ADR-0057) */
+  sessionLaunch: 'hx.v7.sessionLaunch'
 } as const;
 export type StoreKey = (typeof KEYS)[keyof typeof KEYS];
 

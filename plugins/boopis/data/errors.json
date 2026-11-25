@@ -27,6 +27,7 @@
     {"code": "hx.txn.invalid_root", "rpc_code": -32000, "description": "The workspace root cannot be opened as a directory."},
     {"code": "hx.txn.limit_exceeded", "rpc_code": -32000, "description": "The transaction exceeds a size or count limit."},
     {"code": "hx.txn.conflict", "rpc_code": -32000, "description": "A touched file changed between validation and write. Nothing was written."},
+    {"code": "hx.txn.changed_since", "rpc_code": -32000, "description": "A file an edit expected by its hash (`expect_sha256`) is not as expected: it changed since the caller looked. `data.paths` lists them. Nothing was written."},
     {"code": "hx.txn.workspace_busy", "rpc_code": -32000, "description": "Another transaction holds the workspace lock."},
     {"code": "hx.txn.apply_failed", "rpc_code": -32000, "description": "A write failed after the transaction started. The workspace was restored from the journal; data.restored is true."},
     {"code": "hx.txn.journal_not_found", "rpc_code": -32000, "description": "No journal with that id exists in the journal directory."},

@@ -7,7 +7,7 @@ import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import { renderDiff } from './diff';
 import { setGovernance } from './composer';
-import { VIEW } from './conversation';
+import { VIEW, isRunning } from './conversation';
 import { modKeyOf } from './keys';
 import { copyText, counts, kTokens, partsEl, splitPath } from './shared';
 import { onChanged } from './state';
@@ -138,7 +138,7 @@ export function mountRight(root: HTMLElement): void {
       section('context', 'Context', mono(kTokens(c.used) + ' / ' + kTokens(c.total)), contextBody()),
       section('tasks', 'Tasks', mono(done + ' of ' + todos.length), tasksBody()),
       section('changes', 'Changes', '<span class="ss-n ui-mono"><span class="ss-add">+' + add + '</span><span class="ss-del">−' + del + '</span></span>', changesBody()),
-      section('output', 'Output', mono(passed ? passed + ' passed' : VIEW.running || !data().info.live ? 'running' : out ? 'done' : 'empty'), outputBody()),
+      section('output', 'Output', mono(passed ? passed + ' passed' : isRunning(VIEW.current) || !data().info.live ? 'running' : out ? 'done' : 'empty'), outputBody()),
       section('governance', 'Governance', mono(G.governed ? 'governed' : 'ungoverned'), governanceBody()),
       section('connectors', 'Connectors', mono(onN + ' on'), connectorsBody()),
       section('environment', 'Environment', mono(data().info.live && !d().environment.get().sandbox ? 'sandbox unknown' : 'sandboxed'), envBody())

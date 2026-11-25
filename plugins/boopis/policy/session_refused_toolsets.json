@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "_comment": "The engine toolsets that write the workspace directly, refused in the Session tab at every permission step (docs/specs/session-launch.md section 5.5): there every change goes through ship. Names are Hermes v0.23.2's (toolsets.py). A later 'add a toolset' control reads this list; a refused toolset is never offered. describe returns it as session_refused_toolsets.",
+  "toolsets": ["terminal", "file", "code_execution", "computer_use", "debugging", "coding"],
+  "prefixes": ["hermes-"]
+}

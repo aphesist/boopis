@@ -10,7 +10,9 @@ export class FakeHost implements HostBridge {
   sent: { connectionId: number; frame: Record<string, unknown> }[] = [];
   private onFrame: (f: unknown) => void = () => undefined;
   disconnected: number[] = [];
-  describe: unknown = { instance_id: 'inst', capabilities: ['event-replay-v1'] };
+  describe: unknown = { instance_id: 'inst', capabilities: ['event-replay-v1'], session_create: { parameters: S0_CREATE_PARAMS } };
+  /** the method of each request, so a plugin describe answer can carry what a current plugin says (`s0Describe`) */
+  private methods = new Map<unknown, { method: string; params: unknown }>();
   failConnect: unknown = null;
   /** called with each frame the client sends, so a test can answer requests */
   autoReply: ((frame: Record<string, unknown>) => void) | null = null;
@@ -23,6 +25,7 @@ export class FakeHost implements HostBridge {
   send(connectionId: number, frame: unknown): Promise<void> {
     const f = frame as Record<string, unknown>;
     this.sent.push({ connectionId, frame: f });
+    if (typeof f['method'] === 'string' && f['id'] !== undefined) this.methods.set(f['id'], { method: f['method'], params: f['params'] });
     this.autoReply?.(f);
     return Promise.resolve();
   }
@@ -30,12 +33,28 @@ export class FakeHost implements HostBridge {
 
   /** the gateway sends a frame */
   emit(frame: unknown): void { this.onFrame(frame); }
-  result(id: unknown, result: unknown): void { this.emit({ jsonrpc: '2.0', id, result }); }
+  result(id: unknown, result: unknown): void {
+    const asked = this.methods.get(id);
+    this.emit({ jsonrpc: '2.0', id, result: asked?.method === 'plugin.boopis.describe' ? s0Describe(asked.params, result) : result });
+  }
   error(id: unknown, code: number, message: string, data?: unknown): void { this.emit({ jsonrpc: '2.0', id, error: { code, message, ...(data !== undefined ? { data } : {}) } }); }
   event(type: string, session_id: string, payload: Record<string, unknown> = {}, seq = 0): void {
     this.emit({ jsonrpc: '2.0', method: 'event', params: { type, session_id, payload, seq, replay_epoch: 'e1' } });
   }
   last(method: string): Record<string, unknown> | undefined { return [...this.sent].reverse().find((s) => s.frame['method'] === method)?.frame; }
+}
+
+/** what `session.create` takes on the engine the frames were recorded on (session-launch.md 3.1) */
+export const S0_CREATE_PARAMS = ['checkpoints', 'client', 'cwd', 'cwd_explicit', 'model', 'provider', 'reasoning', 'request_id', 'skills', 'source', 'title', 'toolsets', 'yolo'];
+/** a plugin describe answer as a current plugin gives it, under what a test's fake said: the S0 fields (its RPC, hx, the
+    engine's approvals mode) and, for a folder, a trusted gate whose sandbox runs. A test that says otherwise wins */
+export function s0Describe(params: unknown, said: unknown): unknown {
+  const r = (said && typeof said === 'object' ? said : {}) as Record<string, unknown>;
+  const caps = Array.isArray(r['capabilities']) ? r['capabilities'] as string[] : [];
+  const out: Record<string, unknown> = { hx: { ok: true }, approvals: { mode: 'manual' }, ...r, capabilities: [...new Set([...caps, 'careful.set', 'continue.arm', 'continue.chain', 'checkpoint.rewind'])] };
+  const cwd = (params as { cwd?: unknown } | null)?.cwd;
+  if (typeof cwd === 'string') { out['folder'] ??= { cwd, gate: { command: true, trusted: true } }; out['sandbox'] ??= { ok: true }; }
+  return out;
 }
 
 /* the frames recorded against a real gateway and the plugin (tests/e2e/record_ui_frames.py) */

@@ -1,0 +1,102 @@
+{
+ "body@dark": {
+  "sha": "8192bc066ba5c1f11e5dbcef540f40ef32c2e14a",
+  "w": 544,
+  "h": 172
+ },
+ "body@light": {
+  "sha": "44ca08494c0a6dbf129014401d3ef27779c78b50",
+  "w": 544,
+  "h": 172
+ },
+ "focus@dark": {
+  "sha": "f19e434de5a0837aaa898c08a521c023fe0b95a5",
+  "w": 664,
+  "h": 134
+ },
+ "focus@light": {
+  "sha": "5acd2aef28daddb9f16e8175aed8eefb6e5684e9",
+  "w": 664,
+  "h": 134
+ },
+ "hover@dark": {
+  "sha": "57fec07357f1b660a15283fe9e8cc1339a2f1fde",
+  "w": 664,
+  "h": 134
+ },
+ "hover@light": {
+  "sha": "8eb4c80306683e4f75a58cd428dcb6cd2bfeae8e",
+  "w": 664,
+  "h": 134
+ },
+ "long@dark": {
+  "sha": "8a2801eacdea325347662ce0e0dfb3c0e7e52e91",
+  "w": 664,
+  "h": 644
+ },
+ "long@light": {
+  "sha": "f3a33a54bea479f4bd31057a932b3afb83f06e76",
+  "w": 664,
+  "h": 644
+ },
+ "not-now@dark": {
+  "sha": "ccc467e540cfc732836d60bd9170998d64c08d98",
+  "w": 664,
+  "h": 66
+ },
+ "not-now@light": {
+  "sha": "860b06722fe64c9e8a032aa83d2ed6ff0b306ccd",
+  "w": 664,
+  "h": 66
+ },
+ "nothing-to-do@dark": {
+  "sha": "531beda520ffbfb7bc94e645f6c602da2b719458",
+  "w": 664,
+  "h": 176
+ },
+ "nothing-to-do@light": {
+  "sha": "8ddee9342cd616001df4d8272cb08272ab1ecf59",
+  "w": 664,
+  "h": 176
+ },
+ "on-a-finished-turn@dark": {
+  "sha": "57fec07357f1b660a15283fe9e8cc1339a2f1fde",
+  "w": 664,
+  "h": 134
+ },
+ "on-a-finished-turn@light": {
+  "sha": "8eb4c80306683e4f75a58cd428dcb6cd2bfeae8e",
+  "w": 664,
+  "h": 134
+ },
+ "pressed@dark": {
+  "sha": "57fec07357f1b660a15283fe9e8cc1339a2f1fde",
+  "w": 664,
+  "h": 134
+ },
+ "pressed@light": {
+  "sha": "8eb4c80306683e4f75a58cd428dcb6cd2bfeae8e",
+  "w": 664,
+  "h": 134
+ },
+ "refused@dark": {
+  "sha": "a6783d35b799d36031354d3a6812da6d3d2d772f",
+  "w": 664,
+  "h": 220
+ },
+ "refused@light": {
+  "sha": "1c92c545b90f53d3efe51b687da56f16f5491f21",
+  "w": 664,
+  "h": 220
+ },
+ "typical@dark": {
+  "sha": "518a9f2dd2d65b6d358189281adaffa8bd730f43",
+  "w": 664,
+  "h": 318
+ },
+ "typical@light": {
+  "sha": "fd94d372e8637869fa05f04d2b614579508e7d35",
+  "w": 664,
+  "h": 318
+ }
+}

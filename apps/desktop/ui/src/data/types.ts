@@ -1,6 +1,7 @@
 /* The entities the UI reads. They are plain data (no functions, no DOM): the mock provider fills them from
    mock-data.ts today and the live provider (Hermes gateway and the boopis plugin's streams) fills the same
    shapes later. A field that is `null` is unknown and the UI shows it as unknown (AGENTS.md invariant 5). */
+import type { ThreadLine } from './session-s0';
 
 export interface User { name: string; initials: string }
 
@@ -322,9 +323,19 @@ export interface AgentTurn {
   status: 'done' | 'running' | 'stopped';
   /** a council turn: the members' answers and the combiner (`host/live/council.ts`); absent on every other turn */
   council?: CouncilTurn | undefined;
+  /** when a running turn started (ms since the epoch): a redraw continues its clock from here (session-launch.md 2.2) */
+  startedAt?: number | undefined;
+  /** the ships this turn kept, oldest first (`checkpoint.list`): what "Rewind files to here" goes back to */
+  kept?: readonly string[] | undefined;
+  /** the engine's id of the turn, when the plugin recorded it (a resumed turn): how its kept ships are found */
+  engineTurn?: string | undefined;
 }
 export type Turn = UserTurn | AgentTurn;
-export interface Conversation { turns: readonly Turn[] }
+export interface Conversation {
+  turns: readonly Turn[];
+  /** the lines about the thread itself (a setting changed, a rewind), each after the turn it follows (ADR-0057, ADR-0058) */
+  lines?: readonly ThreadLine[] | undefined;
+}
 export type ConversationEvent =
   | { type: 'turn-added'; turn: Turn }
   | { type: 'step-added'; turnId: string; step: Step }
@@ -344,6 +355,10 @@ export type ConversationEvent =
   | { type: 'child-updated'; turnId: string; child: ChildTask }
   /** the running turn's answer so far (the live provider streams it; the mock sends the whole answer with `turn-finished`) */
   | { type: 'turn-text'; turnId: string; paragraphs: readonly string[] }
+  /** a line about the thread itself arrived, or one changed (a rewind's undo is spent): replaced by id */
+  | { type: 'line'; line: ThreadLine }
+  /** a running turn kept a ship: it can now be rewound to */
+  | { type: 'turn-kept'; turnId: string; kept: readonly string[] }
   /** the whole conversation changed under the reader (a transcript loaded, or events were lost): read the snapshot again */
   | { type: 'reset' };
 

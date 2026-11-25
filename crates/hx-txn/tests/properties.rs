@@ -86,7 +86,7 @@ fn edit(files: &[(String, String, u32)]) -> impl Strategy<Value = Edit> + use<> 
             .prop_map(|(path, old, new)| Edit::Replace { path, old, new, replace_all: true }),
         4 => (any_path.clone(), content(), prop::bool::weighted(0.85))
             .prop_map(|(path, content, overwrite)| Edit::Create { path, content, overwrite }),
-        2 => any_path.clone().prop_map(|path| Edit::Delete { path }),
+        2 => any_path.clone().prop_map(|path| Edit::Delete { path, expect_sha256: None }),
         2 => (found, word.clone()).prop_map(|((path, old), new)| Edit::Diff {
             path: Some(path),
             diff: format!("@@ -1 +1 @@\n-{old}\n+{new}\n"),
@@ -94,7 +94,7 @@ fn edit(files: &[(String, String, u32)]) -> impl Strategy<Value = Edit> + use<> 
         2 => (link_path, content(), prop::bool::weighted(0.85))
             .prop_map(|(path, content, overwrite)| Edit::Create { path, content, overwrite }),
         1 => (escape_path(), content()).prop_map(|(path, content)| Edit::Create { path, content, overwrite: true }),
-        1 => escape_path().prop_map(|path| Edit::Delete { path }),
+        1 => escape_path().prop_map(|path| Edit::Delete { path, expect_sha256: None }),
     ]
 }
 
@@ -159,9 +159,14 @@ fn params(w: &World, edits: &[Edit]) -> ApplyParams {
                 content,
                 overwrite,
             },
-            Edit::Delete { path } => Edit::Delete {
+            Edit::Delete {
+                path,
+                expect_sha256,
+            } => Edit::Delete {
                 path: path.replace("/ABS", &abs),
+                expect_sha256,
             },
+            put @ Edit::Put { .. } => put,
             Edit::Diff { path, diff } => Edit::Diff {
                 path: path.map(|p| p.replace("/ABS", &abs)),
                 diff,

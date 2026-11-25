@@ -82,7 +82,10 @@
 .k7-orow__text { display: flex; flex-direction: column; min-width: 0; }
 .k7-orow__name { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); white-space: nowrap; }
 .k7-orow__meaning { font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (hover: hover) and (pointer: fine) { .k7-orow:not([aria-checked="true"]):hover { background: var(--hover); transition-duration: var(--dur-1); } }
+@media (hover: hover) and (pointer: fine) { .k7-orow:not([aria-checked="true"], [aria-disabled="true"]):hover { background: var(--hover); transition-duration: var(--dur-1); } }
+/* a step that cannot be chosen now: it keeps its place, its name goes faint and its second line says why (MenuRow's disabled colour) */
+.k7-orow[aria-disabled="true"] { cursor: default; }
+.k7-orow[aria-disabled="true"] .k7-orow__name { color: var(--text-faint); }
 .k7-orow:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
 
 /* ── ListRow (17) ── */
@@ -229,8 +232,9 @@
 .k7-foot .k7-mono { font-size: var(--fs-xs); }
 .k7-foot__acts { display: inline-flex; gap: var(--sp-1); margin-inline-start: auto; opacity: 0; transition: opacity var(--dur-out) var(--ease-out); }
 .k7-foot:hover .k7-foot__acts, .k7-foot:focus-within .k7-foot__acts, .k7-foot[data-lab-hover] .k7-foot__acts { opacity: 1; transition-duration: var(--dur-1); }
+.k7-foot__btn:disabled { color: var(--text-faint); cursor: default; }
 .k7-foot__btn { height: var(--line-h); padding: 0 var(--gap-row); border-radius: var(--r-pill); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); white-space: nowrap; }
-@media (hover: hover) and (pointer: fine) { .k7-foot__btn:hover { background: var(--hover); color: var(--text); } }
+@media (hover: hover) and (pointer: fine) { .k7-foot__btn:not(:disabled):hover { background: var(--hover); color: var(--text); } }
 @media (hover: none) { .k7-foot__acts { opacity: 1; } }
 
 /* ── TimeSeparator (38): 12 --text-dim, centred; "NEW" in the accent ── */

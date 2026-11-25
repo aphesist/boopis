@@ -93,17 +93,21 @@ def _mode(path: Path) -> str:
     return "100755" if os.access(path, os.X_OK) and not path.is_dir() else "100644"
 
 
-def commit_checkpoint(root: Path, session_id: str, files: Sequence[FileChange], message: str) -> Checkpoint:
+def commit_checkpoint(
+    root: Path, session_id: str, files: Sequence[FileChange], message: str, base: str | None = None
+) -> Checkpoint:
     """Commit this ship's ``files`` (as they are in the working tree now) onto the session's checkpoint
-    chain. Raises ``CheckpointError`` when ``root`` is not a git work tree, git has no identity, or
-    anything else fails; nothing is left half-written."""
+    chain. ``base`` is where a chain with no checkpoint yet starts instead of ``HEAD``: a session that continues
+    another in the same folder starts on that session's last checkpoint, so the two chains are one. Raises
+    ``CheckpointError`` when ``root`` is not a git work tree, git has no identity, or anything else fails; nothing
+    is left half-written."""
     try:
         _git(root, ["rev-parse", "--is-inside-work-tree"])
         top = Path(_git(root, ["rev-parse", "--show-toplevel"]))
     except CheckpointError as exc:
         raise CheckpointError(f"not a git work tree ({exc})") from exc
     ref = checkpoint_ref(session_id)
-    parent = _rev(root, ref) or _rev(root, "HEAD")
+    parent = _rev(root, ref) or (_rev(root, base) if base else None) or _rev(root, "HEAD")
     with tempfile.TemporaryDirectory(prefix="hx-index-") as tmp:
         env = {"GIT_INDEX_FILE": str(Path(tmp) / "index")}
         if parent is not None:
@@ -152,6 +156,16 @@ def diff_between(root: Path, base: str, head: str) -> str:
         ["diff", "--no-color", "--no-ext-diff", "--no-renames", "--no-textconv", "-U3", base, head, "--"],
         strip=False,  # a trailing blank context line is a line of the diff
     )
+
+
+def run_git(root: Path, args: Sequence[str], *, strip: bool = True) -> str:
+    """``git`` with this module's hardening (no hooks, no fsmonitor, no prompts, no system config), for the rewind."""
+    return _git(root, args, strip=strip)
+
+
+def rev_of(root: Path, name: str) -> str | None:
+    """The commit ``name`` resolves to in ``root``'s repository, None when it does not."""
+    return _rev(root, name)
 
 
 def parent_of(root: Path, commit: str) -> str | None:

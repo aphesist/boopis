@@ -1,121 +1,121 @@
 {
  "band-and-status@bone": {
-  "sha": "a69a4a5a729dc724dbe121e604efb98370530d72",
+  "sha": "2b80685b858ae8f3286cb3d599de96aaf1854bb2",
   "w": 744,
   "h": 779
  },
  "band-and-status@catalog": {
-  "sha": "e3716e6c2fadff03ead49c6346871fe3fe99c21b",
+  "sha": "5f36ef842cbdd8a899517561c2eb444d9917e78e",
   "w": 744,
   "h": 779
  },
  "band-and-status@graphite": {
-  "sha": "27835be4ac76b61a409e18d046c3797a3b897129",
+  "sha": "f887192593e3645eaa0cd59fdb6f3074d643a4fe",
   "w": 744,
   "h": 779
  },
  "band-and-status@typewriter": {
-  "sha": "63197e2e7978b6f8f6e652f0bfb422d40fe736ba",
+  "sha": "2380a81f8fd69ac864ae4ce4d8f2a0e197913585",
   "w": 744,
-  "h": 779
+  "h": 193
  },
  "pane-in-the-details-panel@bone": {
-  "sha": "71660477a6d5e4f9bef21c90af530cdf44e0a76f",
+  "sha": "340cfdb9d1ec124cb941e17846a7d76566d13844",
   "w": 888,
   "h": 872
  },
  "pane-in-the-details-panel@catalog": {
-  "sha": "96a5e18e32ab0aab8c51b8869539e877dd777cd1",
+  "sha": "a9abf60da18e051947feed1b89336864fd06c93d",
   "w": 895,
   "h": 872
  },
  "pane-in-the-details-panel@graphite": {
-  "sha": "11e3cef2e88799ae3be6efa9304be7cde455602d",
-  "w": 894,
+  "sha": "d079f621536f409a19429bdb52311aad0bacec0b",
+  "w": 886,
   "h": 872
  },
  "pane-in-the-details-panel@typewriter": {
-  "sha": "0baa073146e94a6b96d1367b2f2da504e2a8fe46",
+  "sha": "28e7008e572e884a537f3772a8f97acef28cd110",
   "w": 312,
   "h": 872
  },
  "the-conversation-with-placed-rows@bone": {
-  "sha": "9e0f4c2b11cc77e336a0d34db596c92c92ca3db6",
+  "sha": "d2040987aeafec1891840db68e212d7db65f3d80",
   "w": 1180,
   "h": 872
  },
  "the-conversation-with-placed-rows@catalog": {
-  "sha": "483aade93d11283cd162e111556191bd6ba130d8",
+  "sha": "98685a2a6a82bef307cd6890aa77b2b77e311f97",
   "w": 1180,
   "h": 872
  },
  "the-conversation-with-placed-rows@graphite": {
-  "sha": "23177c47fa5845106bc5b299b3fd332f6442e920",
+  "sha": "f5578648499e2cd629a481bb923921609d62ec0a",
   "w": 1180,
   "h": 872
  },
  "the-conversation-with-placed-rows@typewriter": {
-  "sha": "a920e85aad54b71f6caf64e0a513e5bf85e679bd",
+  "sha": "4f79cf418bc8a5f0cc114a0f8779dad1263ed740",
   "w": 1180,
   "h": 872
  },
  "theme-card-hover@bone": {
-  "sha": "548f253c289b844b113725dd123347542fb1bdcc",
+  "sha": "e2a41688a1d842641e3c3365ddeb2566107bed08",
   "w": 1180,
   "h": 872
  },
  "theme-card-hover@catalog": {
-  "sha": "de01632ce214795acd34bd0bed1ff7c5425b769c",
+  "sha": "df5686c4c2f6382169c4499363eb8857731d6efb",
   "w": 1180,
   "h": 872
  },
  "theme-card-hover@graphite": {
-  "sha": "1510feded3f9f57cf67bbfb7357c4920c6ea785b",
+  "sha": "c6744880fb5b8d067cab16d2f4b16bff693e29c6",
   "w": 1180,
   "h": 872
  },
  "theme-card-hover@typewriter": {
-  "sha": "29ce148b5b989b033318b10ac3e517f59057713d",
+  "sha": "7eec557fd087c9cfee26d65eff6068329d4b75f1",
   "w": 1180,
   "h": 872
  },
  "toast-with-n@bone": {
-  "sha": "399e29ba9895dca328cc1df6f1ecdbc3f24a939f",
+  "sha": "ba82d2194927653bbe4e68569eb92fec3ef4320f",
   "w": 291,
   "h": 64
  },
  "toast-with-n@catalog": {
-  "sha": "9d1d8ad5222e64fbeac5692fc30a72c85d575312",
+  "sha": "aa2016d93eb601c451c9e098e7dbab8b0d721c0a",
   "w": 306,
   "h": 64
  },
  "toast-with-n@graphite": {
-  "sha": "12a092e25eadf9eca5bfef0782767ebf960bb85b",
+  "sha": "9d2d151de2264ef30134f01188cfd2d61e6ab077",
   "w": 303,
   "h": 64
  },
  "toast-with-n@typewriter": {
-  "sha": "e6e50bd5d93f20d2937a8fdbfac7fdd3807da610",
+  "sha": "34160f30815cce01c028a83707e186031a0bcf62",
   "w": 333,
   "h": 64
  },
  "whole-window@bone": {
-  "sha": "1584e1b10414a3a74228a2433e8c971fcec304fc",
+  "sha": "6004dc9ea359b8d47a95a08ee31357e80cbe3cbd",
   "w": 1440,
   "h": 900
  },
  "whole-window@catalog": {
-  "sha": "c6f0da679682d0f5c36e1afd687454048c94692b",
+  "sha": "6aa49ccf726906115a7be06df41bdfc682314173",
   "w": 1440,
   "h": 900
  },
  "whole-window@graphite": {
-  "sha": "888c7f2a66e474a86029bd949759c136d00e684f",
+  "sha": "7901f1265403bea29cc1eab512f169a18d72f48d",
   "w": 1440,
   "h": 900
  },
  "whole-window@typewriter": {
-  "sha": "9e93daf1e2aeefe1e547654131fe1871ad565a1d",
+  "sha": "2396666f3aedb4305e10acda9a04bff381116a81",
   "w": 1440,
   "h": 900
  }

@@ -15,7 +15,9 @@ from ..hooks import runtime
 from ..ledger import compute_stats, refresh
 from ..version import PLUGIN_VERSION, PROTOCOL
 from .blanks import blank_fill
-from .checkpoints import checkpoint_diff, checkpoint_list
+from .careful import careful_set
+from .checkpoints import checkpoint_diff, checkpoint_list, checkpoint_rewind
+from .continuation import continue_arm, continue_chain
 
 Handler = Callable[..., Any]
 CAPABILITIES = (
@@ -37,6 +39,10 @@ CAPABILITIES = (
     "blank.fill",
     "checkpoint.list",
     "checkpoint.diff",
+    "checkpoint.rewind",
+    "careful.set",
+    "continue.arm",
+    "continue.chain",
     "form.submit",
     "form.cancel",
     "form.list",
@@ -113,17 +119,45 @@ def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
     ladder_now = None
     now_state = None
     if isinstance(sid, str) and sid:
+        from ..ship.rewind import rewind_view
+
         state = rt.state(sid)
-        session = {"session_id": sid, "mode": state.mode, "locked": state.locked, "cwd": state.cwd or None}
+        session = {
+            "session_id": sid,
+            "mode": state.mode,
+            "locked": state.locked,
+            "cwd": state.cwd or None,
+            "careful": state.careful or None,
+            "careful_next": state.careful_next,
+            "surface": state.surface,
+            "running": state.running,
+            "continued_from": state.continued["parent_session_id"] if state.continued else None,
+            "rewind": rewind_view(rt, state),
+        }
         ladder_errors = _ladder_errors(rt, state)
         ladder_now = _effective_ladder(rt, state)
         now_state = state
+    extra: dict[str, Any] = {}
+    cwd = params.get("cwd")
+    if cwd is not None:
+        from .careful import folder_view, sandbox_view
+
+        if not isinstance(cwd, str):
+            raise InvalidParamsError("cwd must be a string", data={"found": repr(cwd)})
+        extra["folder"] = folder_view(rt, cwd)
+        extra["sandbox"] = sandbox_view(rt)
+    from ..governance.host import approvals_mode
+    from .careful import hx_view
+
     return {
+        **extra,
         "session": session,
         "version": PLUGIN_VERSION,
         "protocol": PROTOCOL,
         "capabilities": list(CAPABILITIES),
-        "hx": None,  # the hx binary is not wired in this part
+        "hx": hx_view(rt),
+        "session_refused_toolsets": _refused_toolsets(),
+        "approvals": {"mode": approvals_mode()},
         "kernel": _kernel(rt),
         "config": {
             "mode": loaded.value.mode,
@@ -133,6 +167,15 @@ def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
         },
         "frontier": _frontier(rt, loaded.value, now_state, ladder_now),
     }
+
+
+def _refused_toolsets() -> dict[str, Any]:
+    """The engine toolsets the Session tab never loads (``policy/session_refused_toolsets.json``)."""
+    import json
+    from pathlib import Path
+
+    data = json.loads((Path(__file__).resolve().parent.parent / "policy" / "session_refused_toolsets.json").read_text())
+    return {"toolsets": list(data["toolsets"]), "prefixes": list(data["prefixes"])}
 
 
 def _effective_ladder(rt: Any, state: Any) -> Any:
@@ -211,7 +254,13 @@ def mode_set(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
     start = params.get("start_tier")
     if start is not None and (not isinstance(start, str) or not start):
         raise InvalidParamsError("start_tier must be the name of a tier", data={"found": repr(start)})
-    runtime().set_mode(sid, mode, ladder=ladder, gate_enabled=enabled, start_tier=start)
+    from .careful import check_pair, check_step
+
+    careful, surface = check_step(params.get("careful"), params.get("surface"))
+    check_pair(mode, careful)
+    runtime().set_mode(
+        sid, mode, ladder=ladder, gate_enabled=enabled, start_tier=start, careful=careful, surface=surface
+    )
     return {}
 
 
@@ -402,6 +451,10 @@ def handlers() -> dict[str, Handler]:
         "blank.fill": blank_fill,
         "checkpoint.list": checkpoint_list,
         "checkpoint.diff": checkpoint_diff,
+        "checkpoint.rewind": checkpoint_rewind,
+        "careful.set": careful_set,
+        "continue.arm": continue_arm,
+        "continue.chain": continue_chain,
     }
 
 

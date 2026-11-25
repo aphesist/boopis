@@ -50,6 +50,12 @@ pub enum Error {
         /// The file that changed.
         path: String,
     },
+    /// A file an edit expected by its hash is not as expected (`expect_sha256`).
+    #[error("{} path(s) changed since the caller looked: {}", paths.len(), paths.join(", "))]
+    ChangedSince {
+        /// The paths, as the caller spelled them.
+        paths: Vec<String>,
+    },
     /// Another transaction holds the workspace lock.
     #[error("another transaction holds the workspace lock")]
     WorkspaceBusy,
@@ -129,6 +135,7 @@ impl Error {
             Error::InvalidRoot { .. } => codes::HX_TXN_INVALID_ROOT,
             Error::LimitExceeded(_) => codes::HX_TXN_LIMIT_EXCEEDED,
             Error::Conflict { .. } => codes::HX_TXN_CONFLICT,
+            Error::ChangedSince { .. } => codes::HX_TXN_CHANGED_SINCE,
             Error::WorkspaceBusy => codes::HX_TXN_WORKSPACE_BUSY,
             Error::ApplyFailed { .. } => codes::HX_TXN_APPLY_FAILED,
             Error::JournalNotFound(_) => codes::HX_TXN_JOURNAL_NOT_FOUND,
@@ -152,9 +159,9 @@ impl From<Error> for AppError {
                 "failures",
                 serde_json::to_value(failures).unwrap_or_default(),
             ),
-            Error::ScopeViolation { paths } | Error::ProtectedPath { paths } => {
-                app.with("paths", paths)
-            }
+            Error::ScopeViolation { paths }
+            | Error::ProtectedPath { paths }
+            | Error::ChangedSince { paths } => app.with("paths", paths),
             Error::ApplyFailed { .. } => app.with("restored", true),
             Error::Conflict { path } => app.with("path", path),
             Error::JournalNotFound(id)

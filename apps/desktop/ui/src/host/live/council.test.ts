@@ -135,7 +135,7 @@ function gateway(f: Record<string, unknown>): void {
 beforeEach(async () => {
   host = new FakeHost(); host.autoReply = gateway; calls = []; userMap = null;
   const client = new GatewayClient(host); await client.connect();
-  provider = createLiveProvider({ client, mock: createMockProvider({ simulate: false }) });
+  provider = createLiveProvider({ defaultFolder: '/work/proj', client, mock: createMockProvider({ simulate: false }) });
   await provider.ready;
 });
 const CHOICE: CouncilChoice = { members: [{ provider: C, model: 'opus' }, { provider: 'openai-codex', model: 'gpt-6-luna' }], combiner: { provider: C, model: 'sonnet' } };

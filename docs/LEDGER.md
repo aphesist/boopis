@@ -27,19 +27,19 @@ The harness adds the types below. They go upstream into contraprova's `EVENT_TYP
 
 | type | required payload | notes |
 |---|---|---|
-| `session.opened` | `session_id`, `mode` (`governed`/`ungoverned`), `cwd`, `hermes_version`, `plugin_version` | `profile`, `ladder` (the tier ladder as data), `gate_command_sha256`, `price_table` |
-| `session.closed` | `session_id`, `reason` | |
+| `session.opened` | `session_id`, `mode` (`governed`/`ungoverned`), `cwd`, `hermes_version`, `plugin_version` | `profile`, `ladder` (the tier ladder as data), `gate_command_sha256`, `price_table`, `careful`, `surface` (ADR-0057), `parent_session_id`, `continued: {because, messages_carried, messages_omitted, tokens_est, cwd, base_commit}` (a continuation) |
+| `session.closed` | `session_id`, `reason` | `next_session_id` (with `reason: "continued"`) |
 | `tool.called` | `tool_call_id`, `tool`, `status` (`ok`/`error`/`blocked`), `duration_ms` | `args_sha256`, `error_code`, `task_id`. Arguments are hashed, never stored |
-| `ship.applied` | `ship_id`, `files` (list of `{path, sha256_before, sha256_after}`) | `task_id`, `journal_id` |
+| `ship.applied` | `ship_id`, `files` (list of `{path, sha256_before, sha256_after}`) | `task_id`, `journal_id`, `turn_id`; a rewind (ADR-0058, no task): `kind: "rewind"`, `rewind_to` (a ship id or `"base"`), `from_commit`, `to_commit`, `decided_by: "user"`, `surface` |
 | `ship.restored` | `ship_id`, `reason` | restored byte and metadata exact |
-| `checkpoint.committed` | `ship_id`, `ref`, `commit` | |
+| `checkpoint.committed` | `ship_id`, `ref`, `commit` | `folder_digest` (SHA-256 of `HEAD` and every changed and untracked file's path, mode and bytes hash: what proves a rewind overwrites nobody's work), `folder_entries` (those entries, when 200 or fewer) |
 | `approval.requested` | `approval_id`, `kind`, `summary`, `rule` | `task_id`, `teammate` |
 | `approval.decided` | `approval_id`, `decision` (`approve`/`deny`/`timeout`), `decided_by`, `surface` | |
 | `blank.opened` | `blank_id`, `question`, `options` (list of strings), `blocks` (list of strings: the steps that wait for the answer; empty = nothing blocked) | `task_id` |
 | `blank.filled` | `blank_id`, `answer`, `decided_by` | |
 | `blank.lapsed` | `blank_id` | became an end-of-turn question |
 | `feedforward.set` | `turn_id`, `decision`, `value`, `source` (`config`/`convention`/`model`/`user`) | |
-| `mode.changed` | `from`, `to` | |
+| `mode.changed` | `from`, `to` | `scope` (`turn`: the one-turn exception; `careful`: a permission step changed in place, ADR-0057) |
 | `budget.blocked` | `cap_usd`, `price_table` | dollars beyond the cap value are computed, never stored. Extra fields: `reason` (`cap_reached`, `unpriced`, `run_cap_paused`, `run_cap_stopped`, `month_budget`) and `scope` (`run`: a bot's cap per run, `month`: the team's monthly budget; absent: the session's `cost_cap_usd`), ADR-0050 |
 
 ### Pending upstream: form events

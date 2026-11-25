@@ -89,6 +89,7 @@ The whitespace-normalised fuzzy tier is **report-only**: when the only differenc
 - On case-insensitive file systems two spellings differing in case are treated as two files by the planner. Protected globs match case-insensitively to stay fail-closed.
 - Text edits need UTF-8; other files can be deleted and restored but not edited.
 - A concurrent edit by another program between planning and writing is detected (size and mtime) and reported as `hx.txn.conflict`, but the check is not atomic with the write.
+- `put` (bytes as base64, a git mode, an expected hash) and `delete`'s `expect_sha256` are the plugin's rewind (docs/specs/checkpoint-rewind.md section 5), never offered to a model: each path's hash is checked under the workspace lock while the transaction is planned, and a path that is not as expected fails the whole transaction with `hx.txn.changed_since` before anything is written.
 
 ## Testing
 

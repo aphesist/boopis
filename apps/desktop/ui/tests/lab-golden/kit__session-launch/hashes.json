@@ -1,0 +1,122 @@
+{
+ "focus@dark": {
+  "sha": "176c981d1e01f6eb5aedf6d5b20ec77e5b540612",
+  "w": 784,
+  "h": 276
+ },
+ "focus@light": {
+  "sha": "71431f7f378e934dcaa539b16c1b1365bf362b85",
+  "w": 784,
+  "h": 276
+ },
+ "full-access@dark": {
+  "sha": "79a83bf95676a1033dc91873bff45f8cf8485fd6",
+  "w": 784,
+  "h": 276
+ },
+ "full-access@light": {
+  "sha": "6e0fad0d11a2bd9c1ad173c00ea9da1db7f0bf13",
+  "w": 784,
+  "h": 276
+ },
+ "hover@dark": {
+  "sha": "f40de46f5a39dc46d250ca1dd1735738683eb9a8",
+  "w": 784,
+  "h": 276
+ },
+ "hover@light": {
+  "sha": "8b630ca5e623a4bc5632f9e970e4a02c44b92c5a",
+  "w": 784,
+  "h": 276
+ },
+ "how-careful-open@dark": {
+  "sha": "ed102dfc1a3f2e5a5aee5abcc2e6f7b7d4e88351",
+  "w": 784,
+  "h": 276
+ },
+ "how-careful-open@light": {
+  "sha": "764341fe2b28c42b14c5034530f1e7802ded9e50",
+  "w": 784,
+  "h": 276
+ },
+ "long@dark": {
+  "sha": "cab77f755d2cc9bacc45c2cd56a6e0a8356680f2",
+  "w": 444,
+  "h": 340
+ },
+ "long@light": {
+  "sha": "f5b07a75e748b109f1b25ae141c01d497eccd5ce",
+  "w": 444,
+  "h": 340
+ },
+ "no-folder@dark": {
+  "sha": "f8727287654fcbd28b0486de70317a4f721eb424",
+  "w": 784,
+  "h": 280
+ },
+ "no-folder@light": {
+  "sha": "59f96f41a26b624e74fa56794768a25f2408866c",
+  "w": 784,
+  "h": 280
+ },
+ "no-model@dark": {
+  "sha": "764075b8bde46d6a844249a78bd8abc7a9188595",
+  "w": 784,
+  "h": 276
+ },
+ "no-model@light": {
+  "sha": "f06effdfc70e2b860d9f216299408fc4341da5cc",
+  "w": 784,
+  "h": 276
+ },
+ "no-trusted-gate@dark": {
+  "sha": "b96e7569d53c84cc148857c05bbbccb9a11fe382",
+  "w": 784,
+  "h": 577
+ },
+ "no-trusted-gate@light": {
+  "sha": "460ddfc2e59de6aabd1eeb5bf8bfe556527a949e",
+  "w": 784,
+  "h": 577
+ },
+ "pressed@dark": {
+  "sha": "d248663c7129a381d96eb0dd07d03cedfa54a79e",
+  "w": 784,
+  "h": 276
+ },
+ "pressed@light": {
+  "sha": "6ddf7aa91007899fa114ab0c8d84f5225b6a7453",
+  "w": 784,
+  "h": 276
+ },
+ "the-four-rows@dark": {
+  "sha": "a3b3b43d5c69bab4bce5514b7048506d3e13d821",
+  "w": 444,
+  "h": 325
+ },
+ "the-four-rows@light": {
+  "sha": "d6540e44239e8efcf7c69cff44f6ba2591f53bd2",
+  "w": 444,
+  "h": 325
+ },
+ "typical@dark": {
+  "sha": "15718e534cd70b8dcdd5b5fd73c71667ca5d55c7",
+  "w": 784,
+  "h": 276
+ },
+ "typical@light": {
+  "sha": "fb880f799708098c248347e851bb1c91ef7d1831",
+  "w": 784,
+  "h": 276
+ },
+ "waiting-on-you@dark": {
+  "sha": "b7abd18369e31a95943553bea092d5fe259dfba0",
+  "w": 784,
+  "h": 406
+ },
+ "waiting-on-you@light": {
+  "sha": "2a3636a455420bbd9a616dfa53c1f576a2e3f755",
+  "w": 784,
+  "h": 406
+ }
+}

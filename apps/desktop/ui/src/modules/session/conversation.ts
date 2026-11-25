@@ -21,6 +21,10 @@ import { setAttention, changed } from './state';
 import { surface } from '../mods/surfaces';
 import { UNKNOWN_MODEL, markAnswered, stampUngoverned, syncDividers } from './attribution';
 import { resolvePaths, wireRefs } from '../chat/refs';
+import { REWIND_BASE, launchCanvas, lineEl, rewindFoot, rewindSheet, showSheet, watchTyping } from './s0';
+import type { RewindSheet } from './s0';
+import { openCarefulFor, openEffort, openFolder, launchView } from './launch';
+import type { ThreadLine } from '../../data';
 
 /** per-turn data the keyboard and the clipboard need */
 interface TurnInfo { md(): string; kind: 'user' | 'agent'; text?: string | undefined }
@@ -29,9 +33,11 @@ const TURN = new WeakMap<HTMLElement, TurnInfo>();
 export const VIEW = {
   root: null as HTMLElement | null, scroll: null as HTMLElement | null, col: null as HTMLElement | null, composer: null as SessionComposer | null,
   findAnchor: null as HTMLElement | null, current: 's1', blank: null as string | null, diffOpen: false,
-  reveal: null as HTMLElement | null, ship: null as HTMLElement | null, shipData: null as Ship | null, blankCard: null as HTMLElement | null,
-  running: false
+  reveal: null as HTMLElement | null, ship: null as HTMLElement | null, shipData: null as Ship | null, blankCard: null as HTMLElement | null
 };
+/** whether a session has a turn running now: read from its own conversation, never from the view (switching never stops a
+    turn: every bound session keeps streaming into its conversation, session-launch.md 2.2) */
+export const isRunning = (id: string): boolean => sessions().conversation(id).snapshot().turns.some((t) => t.role === 'assistant' && t.status === 'running');
 const sessions = () => data().sessions;
 /** what the cards of handed-off tasks ask of the session: its column, and the provider's stop and read (absent where it has none) */
 const childHost = (): ChildHost => ({ col: () => VIEW.col, now: Date.now, stop: sessions().stopChild ? (id) => sessions().stopChild?.(VIEW.current, id) : undefined, transcript: sessions().childTranscript ? (id) => sessions().childTranscript?.(VIEW.current, id) ?? Promise.reject(new Error('unavailable')) : undefined });
@@ -192,7 +198,96 @@ function assistantTurn(a: AgentTurn): HTMLElement {
   if (a.council) p.before(councilBlock(a.council));
   if (VIEW.blank) showShip(false);
   if (VIEW.diffOpen) refreshDiff();
+  placeFoot(t, a);
   return t;
+}
+
+/* ───────── S0: the lines about the thread, the rewind on a finished turn and its sheet (ADR-0058) ───────── */
+const controls = () => data().sessionControls;
+/** the first agent turn that kept a ship offers "Rewind to before this session" too */
+function firstKept(): string | null {
+  const t = sessions().conversation(VIEW.current).snapshot().turns.find((x): x is AgentTurn => x.role === 'assistant' && !!x.kept?.length);
+  return t?.id ?? null;
+}
+function placeFoot(t: HTMLElement, a: AgentTurn): void {
+  t.querySelectorAll(':scope .ss-s0-foot').forEach((n) => n.remove());
+  const c = controls();
+  if (!c || !a.kept?.length || a.status === 'running') return;
+  const avail = c.capabilities.get().session.rewind;
+  const list = sessions().conversation(VIEW.current).snapshot().turns.filter((x): x is AgentTurn => x.role === 'assistant');
+  const n = list.findIndex((x) => x.id === a.id) + 1;
+  const last = a.kept[a.kept.length - 1] as string;
+  const body = $('.ui-entry__body', t);
+  body.append(rewindFoot({ first: firstKept() === a.id, avail, onRewind: (to) => { if (to === 'base') void openRewind(null, REWIND_BASE); else void openRewind(last, 'Rewind files to after turn ' + n); } }));
+}
+function syncFoot(col: HTMLElement, turnId: string): void {
+  const t = col.querySelector<HTMLElement>('[data-turn-id="' + turnId + '"]');
+  const a = sessions().conversation(VIEW.current).snapshot().turns.find((x): x is AgentTurn => x.role === 'assistant' && x.id === turnId);
+  if (t && a) placeFoot(t, a);
+}
+function syncFeet(): void {
+  const col = VIEW.col; if (!col) return;
+  for (const t of sessions().conversation(VIEW.current).snapshot().turns) if (t.role === 'assistant' && t.status !== 'running') syncFoot(col, t.id);
+}
+function placeLine(col: HTMLElement, l: ThreadLine): void {
+  col.querySelector('.ss-s0-line[data-line-id="' + l.id + '"]')?.remove();
+  const node = lineEl(l, (ship) => { void undoRewind(ship); });
+  const after = l.afterTurn ? col.querySelector<HTMLElement>('[data-turn-id="' + l.afterTurn + '"]') : null;
+  if (!after) { if (l.afterTurn) col.append(node); else col.prepend(node); return; }
+  let at: Element = after;
+  while (at.nextElementSibling?.classList.contains('ss-s0-line')) at = at.nextElementSibling;
+  at.after(node);
+}
+let sheet: RewindSheet | null = null;
+async function openRewind(shipId: string | null, title: string): Promise<void> {
+  const c = controls(), id = VIEW.current;
+  if (!c) return;
+  sheet?.close();
+  const head = c.head(id) ?? undefined;
+  const plan = await c.rewind(id, shipId, { dryRun: true, ...(head ? { expectHead: head } : {}) });
+  sheet = rewindSheet(plan, title, {
+    onConfirm: () => {
+      void c.rewind(id, shipId, head ? { expectHead: head } : {}).then((r) => {
+        sheet?.close();
+        if (r.status === 'refused') { sheet = rewindSheet(r, title, { onConfirm: () => undefined }); showSheet(sheet); }
+        else { ui.announce('Files rewound'); syncFeet(); }
+      });
+    },
+    closed: () => { sheet = null; }
+  });
+  showSheet(sheet);
+}
+async function undoRewind(shipId: string): Promise<void> {
+  const c = controls(), id = VIEW.current;
+  if (!c) return;
+  const head = c.head(id) ?? undefined;
+  const r = await c.rewind(id, shipId, { undo: true, ...(head ? { expectHead: head } : {}) });
+  if (r.status === 'refused') { sheet?.close(); sheet = rewindSheet(r, 'Undo the rewind', { onConfirm: () => undefined }); showSheet(sheet); }
+  else { ui.announce('Rewind undone'); syncFeet(); }
+}
+
+/* ───────── S0: the new session's canvas (S41 A): the launch row until the first message ───────── */
+let stopWatch: (() => void) | null = null;
+function canvas(): HTMLElement | null {
+  const c = controls();
+  if (!c) return null;
+  const n = launchCanvas(launchView(), {
+    folder: () => { void openFolder(); },
+    model: (a) => { VIEW.composer?.openModelMenu?.(a); },
+    effort: (a) => { openEffort(a); },
+    careful: (a) => { openCarefulFor(a, 'below'); }
+  });
+  n.classList.add('ss-s0-canvas--view');
+  stopWatch?.();
+  if (VIEW.composer) stopWatch = watchTyping(n, VIEW.composer.input);
+  return n;
+}
+/** the canvas again, after a launch setting changed (only while the session has not started) */
+export function redrawCanvas(): void {
+  const col = VIEW.col, old = col?.querySelector('.ss-s0-canvas--view');
+  if (!col || !old) return;
+  const fresh = canvas();
+  if (fresh) old.replaceWith(fresh);
 }
 
 /* a turn that is still running: a live call number and steps, then the answer arrives on the feed */
@@ -200,14 +295,17 @@ interface Live { t: HTMLElement; ol: HTMLElement; disc: HTMLElement; timeEl: HTM
 const live = new Map<string, Live>();
 function liveTurn(a: AgentTurn): void {
   const id = 'ss-steps-' + randomId('');
-  const ol = ui.steps({ items: [], id });
-  const t = turn({ kind: 'agent', callno: [...metaLines(a.model, a.why), '0s'], steps: { count: 0, id, open: true }, label: modelSay(a.model) + ', working', body: [ol], md: () => '' });
+  /* a turn drawn again (its session switched back to) shows the steps and the text it has, and its clock goes on from its start */
+  const ol = ui.steps({ items: a.steps as Step[], id });
+  const startedAt = a.startedAt ?? Date.now(), secs = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+  const t = turn({ kind: 'agent', callno: [...metaLines(a.model, a.why), secs + 's'], steps: { count: a.steps.length, id, open: true }, label: modelSay(a.model) + ', working', body: [ol], md: () => '' });
   t.setAttribute('aria-busy', 'true');
   if (a.council) $('.ui-entry__body', t).append(councilBlock(a.council));
   const disc = $('.ui-disclosure', t), timeEl = timeLine(t);
   $('span', disc).textContent = 'Working'; disc.prepend(frag(ui.html.dot('run')));
-  const L: Live = { t, ol, disc, timeEl, tick: 0, secs: 0, model: a.model, why: a.why, count: 0, startedAt: Date.now(), prose: null, blankEl: null };
-  L.tick = window.setInterval(() => { L.secs++; timeEl.textContent = L.secs + 's'; }, 1000);
+  const L: Live = { t, ol, disc, timeEl, tick: 0, secs, model: a.model, why: a.why, count: a.steps.length, startedAt, prose: null, blankEl: null };
+  L.tick = window.setInterval(() => { L.secs = Math.max(0, Math.floor((Date.now() - L.startedAt) / 1000)); timeEl.textContent = L.secs + 's'; }, 1000);
+  if (a.paragraphs.length) { const p = prose(a.paragraphs); placeProse(t, p); L.prose = p; }
   live.set(a.id, L);
   if (a.blank) addLiveBlank(L, a);
   t.dataset['turnId'] = a.id;
@@ -216,7 +314,7 @@ function liveTurn(a: AgentTurn): void {
   if (a.children?.length) $('.ui-entry__body', t).append(childrenBlock(a.children, childHost()));
   (VIEW.col as HTMLElement).append(t);
   syncDividers(VIEW.col as HTMLElement);
-  VIEW.composer?.setRunning(true); VIEW.running = true; surface.onWorking?.(true);
+  VIEW.composer?.setRunning(true); surface.onWorking?.(true);
   if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
 }
 /* a blank opened while the turn runs: its sentence sits under the steps and stays there when the answer arrives */
@@ -242,8 +340,9 @@ function finishLive(id: string, ev: Extract<ConversationEvent, { type: 'turn-fin
   TURN.set(t, { md: () => mdOf(p), kind: 'agent' });
   $('.ui-callno', t).append(el('span', { class: 'ss-acts' }, ui.iconButton({ icon: 'copy', label: 'Copy answer', size: 's', keys: 'C' })));
   $('.ss-acts button', t).addEventListener('click', () => { void copyText(mdOf(p)); });
-  VIEW.composer?.setRunning(false); VIEW.running = false; surface.onWorking?.(false);
+  VIEW.composer?.setRunning(false); surface.onWorking?.(false);
   rove(t);
+  syncFoot(VIEW.col as HTMLElement, id);
   if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
   ui.announce(ev.stopped ? 'Stopped' : 'Answer ready');
 }
@@ -263,10 +362,15 @@ export function renderConversation(): void {
   const snap = conv.snapshot().turns;
   const withBlank = snap.find((t): t is AgentTurn => t.role === 'assistant' && !!t.blank);
   VIEW.blank = withBlank?.blank?.answer ?? null;
-  if (!snap.length) {
+  const launch = !snap.length && controls() ? canvas() : null;
+  if (launch) col.append(launch);
+  else if (!snap.length) {
     const s = sessions().list.get().find((x) => x.id === VIEW.current);
     col.append(ui.empty({ title: s?.project ? 'What should change in ' + s.project + '?' : data().info.live ? 'What should change?' : 'What should change in ' + (s ? s.project : 'billing-api') + '?', text: 'Words I will act on get a dashed underline as you type. Click one, or press alt and down arrow on it, to change how I read it.' }));
   } else for (const t of snap) { if (t.role === 'user') col.append(userTurn(t.text, t.at, t.attachments)); else if (t.status === 'running') liveTurn(t); else col.append(assistantTurn(t)); }
+  for (const l of conv.snapshot().lines ?? []) placeLine(col, l);
+  const running = snap.some((t) => t.role === 'assistant' && t.status === 'running');
+  VIEW.composer?.setRunning(running); surface.onWorking?.(running);
   syncDividers(col);
   rove(lastTurn());
   setAttention(!VIEW.blank && openBlankOf(snap) ? 1 : 0);
@@ -277,6 +381,7 @@ function onConversationEvent(ev: ConversationEvent): void {
   const col = VIEW.col; if (!col) return;
   if (ev.type === 'turn-added') {
     col.querySelector('.ui-empty')?.remove();
+    col.querySelector('.ss-s0-canvas--view')?.remove(); stopWatch?.(); stopWatch = null;
     if (ev.turn.role === 'user') { col.append(userTurn(ev.turn.text, ev.turn.at, ev.turn.attachments)); if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight; }
     else liveTurn(ev.turn);
   } else if (ev.type === 'step-added') {
@@ -301,6 +406,8 @@ function onConversationEvent(ev: ConversationEvent): void {
   else if (ev.type === 'turn-model') { const L = live.get(ev.turnId); if (L) { L.model = ev.model; setModelLines(L.t, ev.model, L.why); markAnswered(L.t, ev.model); stampUngoverned(L.t, L.t.hasAttribute('data-ungoverned')); if (VIEW.col) syncDividers(VIEW.col); } }
   else if (ev.type === 'council') { const b = col.querySelector<HTMLElement>('[data-turn-id="' + ev.turnId + '"] .ss-council'); if (b) drawCouncil(b, ev.council); }
   else if (ev.type === 'turn-finished') finishLive(ev.turnId, ev);
+  else if (ev.type === 'line') placeLine(col, ev.line);
+  else if (ev.type === 'turn-kept') syncFoot(col, ev.turnId);
   else if (ev.type === 'blank-answered') {
     const first = !VIEW.blank;
     VIEW.blank = ev.answer;
@@ -371,7 +478,7 @@ function placeRow(node: HTMLElement, o: { quiet: boolean }): void {
 }
 
 export function selectSession(id: string, opts: { quiet?: boolean; focus?: boolean } = {}): void {
-  if (VIEW.running) sessions().stop(VIEW.current);
+  /* switching never stops a turn: the running session keeps streaming into its conversation (session-launch.md 2.2) */
   VIEW.current = id;
   data().details.follow(id);
   if (VIEW.col) { renderConversation(); if (VIEW.scroll) VIEW.scroll.scrollTop = 0; }
@@ -422,7 +529,9 @@ export function mountView(root: HTMLElement): void {
   });
   followZone(host, () => VIEW.scroll, () => root, '--ss-comp-h')();
   requestAnimationFrame(() => c.focus());
-  provide('stop', (d) => { if (d.tab !== 'session' || !VIEW.running) return false; sessions().stop(VIEW.current); return true; });
+  const c0 = controls();
+  if (c0) { c0.capabilities.subscribe(() => { syncFeet(); redrawCanvas(); }); c0.launch.subscribe(() => { redrawCanvas(); }); }
+  provide('stop', (d) => { if (d.tab !== 'session' || !isRunning(VIEW.current)) return false; sessions().stop(VIEW.current); return true; });
   provide('find', (d) => (d.tab === 'session' ? openFind() : false));
   on('hx:nav', (d) => {
     if (d.region !== 'messages') return;

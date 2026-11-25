@@ -214,6 +214,7 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
         rt.roster.note_message(session_id, str(kw.get("user_message") or ""))  # what the user named (delegation guard)
         state = _locked(rt, session_id, model=str(kw.get("model") or ""))
         state.origin = origin.read(kw)  # who started this turn: the owner, a room, a2a, a card, a schedule (S2)
+        state.running = True  # until on_session_end; a rewind waits for it (``ship.rewind``)
         budget.run.begin(state.run, str(kw.get("turn_id") or ""))  # every turn is a new run
         capped = _cost_cap(rt, state, state.provider, state.model) or _turn_budgets(rt, state)
         if capped is not None:
@@ -225,11 +226,11 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
             state.track.armed_at = None
             return _block(busy)
         said = origin.context(state.origin, bot.name if bot is not None else "this session")
-        label = "\n\n".join(x for x in (said, _busy_note(rt, bot)) if x) or None
+        label = "\n\n".join(x for x in (said, _busy_note(rt, bot), *_session_notes(state)) if x) or None
         if turns.begin(rt, state, str(kw.get("turn_id") or "")):
-            return _with_label(label, {"context": turns.CONTEXT})
+            return _answer(state, label, {"context": turns.CONTEXT})
         if state.mode != "governed":
-            return _with_label(label, None)
+            return _answer(state, label, None)
         from .governance.frontier import session_refusal
 
         refused = session_refusal(state.provider, state.model)  # ADR-0037: the orchestrator is frontier too
@@ -242,7 +243,7 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
             return _block(engine_plugins)
         from .governance.lifecycle import turn_directive
 
-        return _with_label(label, turn_directive(rt, state, str(kw.get("user_message") or "")))
+        return _answer(state, label, turn_directive(rt, state, str(kw.get("user_message") or "")))
     except Exception:  # noqa: BLE001
         _log.error("pre_llm_call failed closed", exc_info=True)
         return _block("boopis could not evaluate the cost cap, so this turn was blocked.")
@@ -319,6 +320,30 @@ def _card_ended(kw: Mapping[str, Any]) -> None:
         claims.release(runtime().root / "profiles" / profile, work=f"kanban:{task}")
     except Exception:  # noqa: BLE001 - an observer; a claim left behind goes stale with its process
         _log.error("a card's claim was not released", exc_info=True)
+
+
+def _session_notes(state: SessionState) -> list[str]:
+    """What the model is told once on this turn's user message (never the system prompt: caching): the history a
+    continued session carries (its first turn), and the files rewound since its last turn. Spent by ``_answer`` when
+    the turn runs."""
+    notes: list[str] = []
+    with state.lock:
+        if state.continue_block:
+            notes.append(state.continue_block)
+        if state.rewound is not None:
+            from .ship.rewind import notice_text
+
+            notes.append(notice_text(state.rewound))
+    return notes
+
+
+def _answer(state: SessionState, label: str | None, answer: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The turn's answer; a turn that runs has now told the model its notes, so they are spent."""
+    if answer is None or answer.get("action") != "block":
+        with state.lock:
+            state.continue_block = None
+            state.rewound = None
+    return _with_label(label, answer)
 
 
 def _with_label(label: str | None, answer: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -499,7 +524,12 @@ def on_session_end(**kw: Any) -> None:
         if rt.is_worker(session_id):
             return
         reason = "interrupted" if kw.get("interrupted") else "failed" if kw.get("failed") else "completed"
-        turns.end(rt, rt.state(session_id), reason)
+        state = rt.state(session_id)
+        state.running = False
+        turns.end(rt, state, reason)
+        from .rpc.careful import apply_held
+
+        apply_held(rt, state)  # a step change made while the turn ran applies now
         _release(rt, session_id)
     except Exception:  # noqa: BLE001
         _log.error("the end of a turn was not recorded", exc_info=True)

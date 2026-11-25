@@ -8,7 +8,7 @@ import type { AgentTurn } from '../data';
 import { GatewayClient } from './gateway';
 import { createLiveProvider } from './live-provider';
 import type { LiveProvider } from './live-provider';
-import { FakeHost } from './testing';
+import { FakeHost, S0_CREATE_PARAMS } from './testing';
 
 const SESSION = 'local-attrib-1';
 const P = 'claude-subscription-directsdk-experimental';
@@ -21,7 +21,7 @@ const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 interface Opts { governed?: boolean; refuseSubmit?: boolean; messages?: unknown[]; turns?: unknown[]; armed?: boolean }
 async function setup(o: Opts = {}): Promise<{ host: FakeHost; provider: LiveProvider; frames: () => string[] }> {
   const host = new FakeHost();
-  host.describe = { instance_id: 'inst', capabilities: ['event-replay-v1', 'plugin-rpc-v1'] };
+  host.describe = { instance_id: 'inst', capabilities: ['event-replay-v1', 'plugin-rpc-v1'], session_create: { parameters: S0_CREATE_PARAMS } };
   host.autoReply = (f) => {
     const id = f['id'], m = String(f['method']);
     switch (m) {
@@ -44,7 +44,7 @@ async function setup(o: Opts = {}): Promise<{ host: FakeHost; provider: LiveProv
   };
   const client = new GatewayClient(host);
   await client.connect();
-  const provider = createLiveProvider({ client, now: () => NOW, mock: createMockProvider({ simulate: false }) });
+  const provider = createLiveProvider({ defaultFolder: '/work/proj', client, now: () => NOW, mock: createMockProvider({ simulate: false }) });
   await provider.ready;
   provider.sessions.conversation(SESSION);
   await tick();

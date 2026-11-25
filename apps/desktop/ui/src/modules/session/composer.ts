@@ -14,6 +14,8 @@ import { costAssume, kindOf, makeReader, optionsFor } from './feedforward';
 import { COUNCIL_VALUE, openCouncilForm } from './council';
 import { FOOT_GOVERNED, FOOT_MENTION, FOOT_MENTION_GOVERNED, FOOT_UNGOVERNED, SETTINGS_VALUE, SMART_VALUE, currentChoice, governedUnavailableEntries, mentionEntries, modelEntries, smartPreview } from './model-menu';
 import { bestMention, findMentions, mentionName, mentionQuery, routeMentions } from '../../data/mentions';
+import { CAREFUL } from '../../data';
+import { openCarefulFor } from './launch';
 
 export { SMART_VALUE };
 const gov = (): GovernanceState => data().details.governance.get();
@@ -27,6 +29,8 @@ export function setGovernance(patch: Partial<Pick<GovernanceState, 'governed' | 
 }
 
 export interface SessionComposer extends ComposerEl {
+  /** the "who answers next" menu, against another anchor (the new session's launch row) */
+  openModelMenu?(anchor: HTMLElement): void;
   /** the assumptions row as it stood when the message was sent */
   lastAssume(): string[];
   /** what is attached, handed over for the send: the chips are cleared with it */
@@ -67,8 +71,22 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
   govChip.setAttribute('aria-keyshortcuts', 'Alt+G'); model.setAttribute('aria-keyshortcuts', 'Alt+M Alt+S');
   const span = (n: HTMLElement): HTMLElement => n.querySelector('span') as HTMLElement;
 
+  /* the Session tab's permission scale (ADR-0057): with the live controls the governed chip is "How careful", one choice of four,
+     whose menu is the four rows (S01 B); the mock keeps the governed switch */
+  const careful = data().sessionControls;
+  function syncCareful(): boolean {
+    if (!careful) return false;
+    const step = careful.launch.get().careful, name = CAREFUL[step].name;
+    govChip.removeAttribute('aria-pressed'); govChip.setAttribute('aria-haspopup', 'menu');
+    span(govChip).textContent = name;
+    govChip.setAttribute('data-tip', 'How careful: ' + CAREFUL[step].meaning); govChip.setAttribute('data-kbd', 'alt+G');
+    govChip.setAttribute('aria-label', name + ', how careful this session is: ' + CAREFUL[step].meaning);
+    govChip.dataset['step'] = step;
+    return true;
+  }
   function sync(): void {
     const G = gov();
+    if (syncCareful()) { drawModel(G); c.setSpend(G.spent, G.governed ? G.cap : null); c.refresh(); return; }
     govChip.setAttribute('aria-pressed', String(G.governed)); span(govChip).textContent = G.governed ? 'Governed' : 'Ungoverned';
     govChip.setAttribute('data-tip', G.governed ? 'Climbs the model ladder, stops at ' + G.cap : 'Pinned to ' + G.model + ', no cap'); govChip.setAttribute('data-kbd', 'alt+G');
     govChip.setAttribute('aria-label', G.governed ? 'Governed: starts cheap, climbs the model ladder on failure, stops at the cost cap' : 'Ungoverned: one pinned model, no cost cap');
@@ -112,13 +130,14 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     setGovernance({ governed: on });
     c.flashHint();
   }
-  govChip.addEventListener('ui:change', (e) => { e.preventDefault(); toggleGoverned(govChip, !gov().governed); });
+  govChip.addEventListener('ui:change', (e) => { e.preventDefault(); if (careful) openCarefulFor(govChip, 'above'); else toggleGoverned(govChip, !gov().governed); });
+  careful?.launch.subscribe(() => { sync(); });
 
-  function openModel(viaKeyboard: boolean): void {
+  function openModel(viaKeyboard: boolean, anchor: HTMLElement = model): void {
     const G = gov();
     const choices = data().details.choices.get();
     const entries = modelEntries(choices, { current: G.model, governed: G.governed, council: data().council.can(opts.sessionId()) });
-    ui.listbox.open(model, entries, {
+    ui.listbox.open(anchor, entries, {
       place: 'above', label: 'Who answers next', value: G.smart ? SMART_VALUE : currentChoice(choices, G.model)?.value ?? G.model,
       foot: G.governed ? FOOT_GOVERNED : FOOT_UNGOVERNED,
       onClose: viaKeyboard ? () => { c.focus(); } : undefined,
@@ -238,6 +257,7 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     else if (e.code === 'KeyM') { e.preventDefault(); requestAnimationFrame(() => openModel(true)); }
   });
   c.addEventListener('ui:send', () => { reader.clear(); });
+  c.openModelMenu = (anchor) => { openModel(false, anchor); };
   Object.assign(c, { lastAssume: (): string[] => (c.querySelector('.ui-composer__hint') ? [...c.querySelectorAll('.ui-assume')].map((b) => b.textContent ?? '') : []) });
   sync();
   return c;

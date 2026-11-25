@@ -450,8 +450,9 @@ def test_describe(make_runtime: MakeRuntime) -> None:
     assert {"describe", "mode.set", "ledger.tail", "ledger.verify", "ledger.stats", "cascade.state"} <= set(
         d["capabilities"]
     )
-    assert d["hx"] is None
+    assert d["hx"] == {"ok": False, "why": "the hx binary was not found, so nothing can be shipped"}
     assert d["kernel"] is None
+    assert d["approvals"] == {"mode": None}  # outside the engine its configuration cannot be read: unknown
 
 
 def test_ledger_tail_verify_stats(make_runtime: MakeRuntime) -> None:

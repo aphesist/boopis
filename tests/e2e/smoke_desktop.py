@@ -145,6 +145,15 @@ def main() -> int:
 
         wait_for(lambda: find("#hx-btn-new"), "the UI to load (the host connected to Hermes)")
         print("ui loaded; connected to the gateway")
+        # A Session tab session works in a project folder the person picked (ADR-0057: `session.create` carries `cwd`,
+        # and nothing starts without one). The folder chooser is the system's own dialog, which a driver cannot answer,
+        # so the pick is the one the app remembers from last time (`hx.v7.sessionLaunch`): the stack's work folder.
+        remember = {"v": 1, "folder": info["workdir"]}
+        call(
+            "POST",
+            f"{s}/execute/sync",
+            {"script": "localStorage.setItem('hx.v7.sessionLaunch', arguments[0])", "args": [json.dumps(remember)]},
+        )
         # The sidebar button may sit in a collapsed rail at this window size: click it from the page, as a user's
         # pointer or the keyboard shortcut would.
         call("POST", f"{s}/execute/sync", {"script": "document.querySelector('#hx-btn-new').click()", "args": []})

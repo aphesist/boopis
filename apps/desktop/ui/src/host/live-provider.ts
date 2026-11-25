@@ -44,13 +44,16 @@ import type { SecretsBridge } from './secrets';
 import type { GatewayClient, GatewayEvent } from './gateway';
 import type { RpcMethods } from '../vendor/hermes-shared/gateway-contract.generated';
 import { bindTurn, loadTurnBook } from './live/attribution';
+import { createControls } from './live/session-controls';
+import type { LiveControls } from './live/session-controls';
+import { checkpointsFrom, headOf, keptByTurn, rewindLabel, rewindLines } from './live/checkpoints';
+import type { CarefulStep, NewLine, ThreadLine } from '../data/session-s0';
+import type { Step } from '../data/types';
 import { approvalToWait, choiceFor, clock, elapsed, failedStep, paragraphs, reduceLedger, sessionRowToSummary, sessionTitle, toolStep, transcriptToTurns } from './map';
 import type { LedgerTotals } from './map';
 
 const log = logger('live');
 
-/** the toolsets of a governed session: only the plugin's tools (docs/ARCHITECTURE.md section 4); fixed at `session.create` */
-const GOVERNED_TOOLSETS = ['boopis'];
 
 /** the sources still served by the mock provider, shown to the user as previews (`info.preview`) or empty:
  *  the feedforward catalog (the plugin's feedforward RPC is not built). Everything the Sessions section reads is live, and
@@ -83,9 +86,12 @@ export interface LiveOptions {
   botsBridge?: BotsBridge | null;
   /** the host's room settings; defaults to the desktop app's commands, none outside it */
   roomsBridge?: RoomsBridge | null;
+  /** the project folder a new session starts in when the person has picked none (Settings > Sessions' default; tests) */
+  defaultFolder?: string | null;
 }
 
-interface Running { /** the tiers the ladder ran this turn on, as 'provider/model', in order */ tiers: string[]; turn: AgentTurn; text: string; steps: AgentTurn['steps'][number][]; startedAt: number }
+/* a running turn: its steps and text are the turn's own (one copy), so a redraw of a session switched back to shows what it has */
+interface Running { /** the tiers the ladder ran this turn on, as 'provider/model', in order */ tiers: string[]; turn: AgentTurn; text: string; steps: Step[]; startedAt: number }
 interface Convo {
   uiId: string;
   /** the gateway's id for the session once it is live there */
@@ -103,6 +109,14 @@ interface Convo {
   running: Running | null;
   /** the council running this turn (set when its message goes out, spent when the turn finishes) */
   council: CouncilChoice | null;
+  /** the lines about the thread itself (a setting changed, a rewind) */
+  lines: ThreadLine[];
+  /** the last kept ship (what a rewind expects), null when none is */
+  head: string | null;
+  /** a step change made while a turn ran: it continues the thread when the turn ends */
+  held: { step: CarefulStep; because: string } | null;
+  /** the permission step the engine session was made with (or changed to), null when unknown */
+  step: CarefulStep | null;
 }
 
 export interface LiveProvider extends DataProvider {
@@ -127,7 +141,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   const creating = new Set<Promise<string>>();
   const convo = (uiId: string): Convo => {
     let c = convos.get(uiId);
-    if (!c) { c = { uiId, gwId: null, generation: 0, turns: [], events: emitter<ConversationEvent>(), hydrated: false, model: '', why: null, once: null, running: null, council: null }; convos.set(uiId, c); }
+    if (!c) { c = { uiId, gwId: null, generation: 0, turns: [], events: emitter<ConversationEvent>(), hydrated: false, model: '', why: null, once: null, running: null, council: null, lines: [], head: null, held: null, step: null }; convos.set(uiId, c); }
     return c;
   };
   const bind = (c: Convo, gwId: string): void => { c.gwId = gwId; byGw.set(gwId, c.uiId); };
@@ -165,6 +179,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     void modsHost.attach(c.uiId);   /* the mods already loaded in a resumed session */
     c.model = res.info.model && !isCouncilReport((res.info as { provider?: string }).provider, res.info.model) ? res.info.model : '';
     c.turns = transcriptToTurns(res.messages, c.uiId + ':', await loadTurnBook(client, res.session_id));   /* each past turn has its own recorded model, or none */
+    await loadCheckpoints(c, res.session_id);
     c.hydrated = true;
     if (c.turns.some((t) => t.role === 'user')) details.model(c.uiId).started = true;
     details.model(c.uiId).todos = todosFromResume(res);
@@ -183,24 +198,35 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     await resume(c);
     return c.gwId ?? c.uiId;
   }
-  async function createLive(c: Convo): Promise<string> {
-    const governed = details.governedAtCreation(c.uiId);
-    /* the toolset is fixed here for good (Hermes's prompt cache): a governed session has only the boopis tools, so no
-       Hermes tool the plugin would have to police ever reaches the model. The generated contract's create params do not
-       list `toolsets` yet (the gateway's canonical ones do), hence the raw call. */
-    await sendRoster(client, details.source.choices.get());   /* the models a message can send a task to, fixed with the session's tools (a governed session has no delegate_task: it is harmless there) */
-    const res = await client.requestRaw('session.create', { source: 'gui', ...(governed ? { toolsets: GOVERNED_TOOLSETS } : {}) }) as RpcMethods['session.create']['result'];
-    const want = details.chosen(c.uiId);
-    if (want.governed !== null || governed) {
-      /* the mode must match the toolset, and a failure is fatal for this session: it is closed and never bound, so
-         nothing is sent to it and a retry makes a fresh one. Running a session whose mode is unknown is not an option. */
-      try { await client.requestRaw('plugin.boopis.mode.set', { session_id: res.session_id, mode: governed ? 'governed' : 'ungoverned' }); }
-      catch (e) {
-        log.error('the mode could not be set; the session was closed', e);
-        await client.request('session.close', { session_id: res.session_id }).catch((closeErr: unknown) => { log.warn('the session could not be closed', closeErr); });
-        throw new Error('The session was not started: its ' + (governed ? 'governed' : 'ungoverned') + ' mode could not be set (' + (e instanceof Error ? e.message : String(e)) + ').');
-      }
+  /** a session that never became the person's: detached with why (`session.detach`, which the canonical gateway serves) */
+  async function detach(gw: string, why: string): Promise<void> {
+    await client.requestRaw('session.detach', { session_id: gw, end_reason: why }).catch((e: unknown) => { log.warn('the session could not be detached', e); });
+  }
+  /** `session.create` with the launch settings, `mode.set` with the step, the yolo check: a failure detaches the new session,
+      which is never bound, so nothing is sent to it (session-launch.md 3.3; fail closed) */
+  async function makeSession(c: Convo, made: { params: Record<string, unknown> } | { refused: string }, step?: CarefulStep): Promise<RpcMethods['session.create']['result']> {
+    await controls.prepare(c.uiId);
+    if ('refused' in made) throw new Error('The session was not started: ' + made.refused);
+    /* the toolset is fixed here for good (prompt caching): only the boopis tools, at every step, so every change goes through
+       ship and the engine's own write tools never reach the model (session-launch.md 5.5) */
+    await sendRoster(client, details.source.choices.get());   /* the models a message can send a task to, fixed with the session's tools */
+    const res = await client.requestRaw('session.create', made.params) as RpcMethods['session.create']['result'];
+    const mode = controls.modeParams(c.uiId, res.session_id);
+    if (step) { mode['careful'] = step; mode['mode'] = step === 'full' ? 'ungoverned' : 'governed'; }
+    try {
+      await client.requestRaw('plugin.boopis.mode.set', mode);
+      c.step = mode['careful'] as CarefulStep;
+      if (mode['mode'] === 'governed') await controls.yoloCheck(c.uiId, res.session_id);
+    } catch (e) {
+      log.error('the session could not be set up; it was detached', e);
+      await detach(res.session_id, 'launch_failed');
+      throw new Error('The session was not started: its permissions could not be set (' + (e instanceof Error ? e.message : String(e)) + ').');
     }
+    return res;
+  }
+  async function createLive(c: Convo): Promise<string> {
+    await controls.prepare(c.uiId);
+    const res = await makeSession(c, controls.createParams(c.uiId));
     bind(c, res.session_id);
     details.onHandle(c.uiId, res);
     c.model = res.info.model && !isCouncilReport((res.info as { provider?: string }).provider, res.info.model) ? res.info.model : '';
@@ -218,16 +244,18 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     if (c.running) return c.running;
     /* a council turn: the combiner is the model that answers (the engine's own name for the turn, the preset's, is not a model) */
     const council = c.council ? startedCouncil(c.council) : undefined;
-    const turn: AgentTurn = { id: nextId('t'), role: 'assistant', model: c.council ? valueOfSlot(c.council.combiner) : c.once?.model || c.model || details.currentModel(c.uiId), ...(c.once?.ungoverned ? { ungoverned: true } : {}), ...(c.council ? { why: 'Council of ' + c.council.members.length } : c.why ? { why: c.why } : {}), ...(council ? { council } : {}), time: '0s', cost: '', stepCount: 0, steps: [], paragraphs: [], bullets: [], status: 'running' };
+    const steps: Step[] = [], startedAt = Date.now();
+    const turn: AgentTurn = { id: nextId('t'), role: 'assistant', model: c.council ? valueOfSlot(c.council.combiner) : c.once?.model || c.model || details.currentModel(c.uiId), ...(c.once?.ungoverned ? { ungoverned: true } : {}), ...(c.council ? { why: 'Council of ' + c.council.members.length } : c.why ? { why: c.why } : {}), ...(council ? { council } : {}), time: '0s', cost: '', stepCount: 0, steps, paragraphs: [], bullets: [], status: 'running', startedAt };
     c.turns.push(turn);
-    c.running = { turn, tiers: [], text: '', steps: [], startedAt: Date.now() };
+    c.running = { turn, tiers: [], text: '', steps, startedAt };
     c.why = null;
     c.events.emit({ type: 'turn-added', turn });
     patchSession(c.uiId, { running: true, when: 'now' });
     return c.running;
   }
-  function addStep(c: Convo, r: Running, step: AgentTurn['steps'][number]): void {
+  function addStep(c: Convo, r: Running, step: Step): void {
     r.steps.push(step);
+    r.turn.stepCount = r.steps.length;
     c.events.emit({ type: 'step-added', turnId: r.turn.id, step });
   }
   function finishTurn(c: Convo, text: string | null, stopped: boolean, answered?: string): AgentTurn | null {
@@ -242,6 +270,8 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     const done: AgentTurn = { ...r.turn, model, ...(r.turn.council ? { council: finishedCouncil(r.turn.council) } : {}), time, stepCount: r.steps.length, steps: r.steps, paragraphs: paras, status: stopped ? 'stopped' : 'done' };
     if (i >= 0) c.turns[i] = done;
     c.running = null; setCouncil(c, null);
+    const held = c.held;
+    if (held) { c.held = null; void continueOn(c.uiId, held.step, held.because).then((why) => { if (why) addLine(c, { kind: 'settings', text: why, cost: null }); }); }
     if (done.council) c.events.emit({ type: 'council', turnId: r.turn.id, council: done.council });
     c.events.emit({ type: 'turn-finished', turnId: r.turn.id, time, cost: '', stepCount: r.steps.length, paragraphs: paras, stopped, model, ...(r.turn.why ? { why: r.turn.why } : {}) });
     patchSession(c.uiId, { running: false });
@@ -329,7 +359,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       case 'message.delta': {
         const r = startTurn(c);
         const t = p['text'];
-        if (typeof t === 'string' && t) { r.text += t; c.events.emit({ type: 'turn-text', turnId: r.turn.id, paragraphs: paragraphs(r.text) }); }
+        if (typeof t === 'string' && t) { r.text += t; r.turn.paragraphs = paragraphs(r.text); c.events.emit({ type: 'turn-text', turnId: r.turn.id, paragraphs: r.turn.paragraphs }); }
         break;
       }
       case 'message.complete': {
@@ -353,6 +383,17 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
         }
         break;
       }
+      case 'plugin.boopis.ship.completed': {
+        /* a kept ship of the running turn: the turn can now be rewound to it */
+        const id = typeof p['ship_id'] === 'string' ? p['ship_id'] : '';
+        if (!id || p['status'] !== 'shipped') break;
+        c.head = id;
+        const t = raisingTurn(c);
+        if (t && !t.kept?.includes(id)) { t.kept = [...(t.kept ?? []), id]; c.events.emit({ type: 'turn-kept', turnId: t.id, kept: t.kept }); }
+        spendUndo(c);
+        break;
+      }
+      case 'plugin.boopis.checkpoint.rewound': onRewound(c, p); break;
       case 'approval.request': {
         const w = approvalToWait(ev);
         if (!w || waitList.some((x) => x.id === w.id)) break;
@@ -433,6 +474,103 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   let ledgerTotals: LedgerTotals = { tokens: 0, trips: 0 };
   const ledgerSubs = new Set<(t: LedgerTotals) => void>();
 
+  /* ───────── the Session tab's S0: launch settings, the permission step, rewind (ADR-0057, ADR-0058) ───────── */
+  function addLine(c: Convo, line: NewLine): ThreadLine {
+    let after: string | null = null;
+    for (let i = c.turns.length - 1; i >= 0; i--) { const t = c.turns[i]; if (t?.role === 'assistant') { after = t.id; break; } }
+    const full = { ...line, id: 'id' in line && typeof (line as { id?: unknown }).id === 'string' ? (line as { id: string }).id : nextId('l'), afterTurn: after } as ThreadLine;
+    c.lines.push(full);
+    c.events.emit({ type: 'line', line: full });
+    return full;
+  }
+  /** a later change makes the undo of an earlier rewind meaningless to offer: its line loses Undo */
+  function spendUndo(c: Convo): void {
+    for (const [i, l] of c.lines.entries()) {
+      if (l.kind !== 'checkpoint' || l.undoShipId === null || l.rewindShipId === c.head) continue;
+      const spent: ThreadLine = { ...l, undoShipId: null };
+      c.lines[i] = spent; c.events.emit({ type: 'line', line: spent });
+    }
+  }
+  function onRewound(c: Convo, p: Record<string, unknown>): void {
+    const id = typeof p['rewind_ship_id'] === 'string' ? p['rewind_ship_id'] : '';
+    if (!id || c.lines.some((l) => l.kind === 'checkpoint' && l.rewindShipId === id)) return;
+    const files = Array.isArray(p['files']) ? p['files'].length : 0;
+    const undo = (p['undo'] as { ship_id?: unknown } | undefined)?.ship_id;
+    const was = c.head;
+    const to = typeof p['to_ship'] === 'string' ? p['to_ship'] : pendingTarget.get(id) ?? null;
+    pendingTarget.delete(id);
+    const undone = undoing.delete(id);
+    c.head = id;
+    spendUndo(c);
+    addLine(c, { kind: 'checkpoint', at: clock(now()), action: undone ? 'undone' : 'rewound', to: { shipId: to, label: rewindLabel(c.turns, to) }, files, rewindShipId: id, undoShipId: typeof undo === 'string' ? undo : was } as NewLine);
+  }
+  /* what the person asked a rewind for, kept until its event (or its answer) arrives: the target, and whether it was an undo */
+  const pendingTarget = new Map<string, string | null>();
+  const undoing = new Set<string>();
+  async function loadCheckpoints(c: Convo, gw: string): Promise<void> {
+    let entries: ReturnType<typeof checkpointsFrom> = [];
+    try { entries = checkpointsFrom(await client.requestRaw('plugin.boopis.checkpoint.list', { session_id: gw, chain: true })); }
+    catch (e) { log.info('the session\'s kept changes were not read: it offers no rewind', e); }
+    const kept = keptByTurn(c.turns, entries);
+    for (const t of c.turns) if (t.role === 'assistant' && kept.has(t.id)) t.kept = kept.get(t.id);
+    c.lines = rewindLines(c.turns, entries);
+    c.head = headOf(entries);
+  }
+  /** carry the thread onto a new engine session with this step: the history (the plugin renders it, cut to a budget), the
+      link in both ledgers, the parent hidden and detached. A failure leaves the thread on the parent with its settings */
+  async function continueOn(uiId: string, step: CarefulStep, because: string): Promise<string | null> {
+    const c = convo(uiId), parent = c.gwId;
+    if (!parent) return controls.setLaunch({ careful: step });
+    if (c.running) { c.held = { step, because }; addLine(c, { kind: 'settings', text: 'Settings change to ' + because + ' when this turn ends', cost: null }); return null; }
+    let fresh: string | null = null;
+    try {
+      const tr = (await client.requestRaw('session.transcript', { session_id: parent, order: 'oldest', limit: 500 })) as { rows?: { role?: string; text?: string | null; content?: unknown }[] };
+      const rows = (tr.rows ?? []).filter((r) => (r.role === 'user' || r.role === 'assistant')).map((r) => ({ role: r.role as string, text: r.text ?? (typeof r.content === 'string' ? r.content : '') })).filter((r) => r.text);
+      const made = controls.continueParams(uiId);
+      const res = await makeSession(c, made, step);
+      fresh = res.session_id;
+      const armed = (await client.requestRaw('plugin.boopis.continue.arm', { session_id: fresh, parent_session_id: parent, because: [because], rows })) as { tokens_est?: number } | null;
+      const title = list.get().find((x) => x.id === uiId)?.title;
+      if (title && title !== 'New session') await client.request('session.title', { session_id: fresh, title }).catch((e: unknown) => { log.warn('the title was not carried over', e); });
+      await hideParent(uiId, parent);
+      await detach(parent, 'continued');
+      byGw.delete(parent);
+      bind(c, fresh);
+      details.onHandle(uiId, res);
+      details.onBound(uiId);
+      const tokens = typeof armed?.tokens_est === 'number' ? armed.tokens_est : null;
+      addLine(c, { kind: 'settings', text: 'Settings changed: continued with ' + because, cost: tokens ? 'The next reply reads about ' + tokens.toLocaleString('en-US') + ' tokens without the cache (cost unknown)' : null });
+      return null;
+    } catch (e) {
+      if (fresh) await detach(fresh, 'launch_failed');
+      return 'Settings were not changed: ' + (e instanceof Error ? e.message : String(e));
+    }
+  }
+  async function hideParent(uiId: string, gw: string): Promise<void> {
+    const m = details.model(uiId);
+    await client.requestRaw('session.mutate', { session_id: gw, request_id: 'hide-' + crypto.randomUUID(), expected_revision: m.revision ?? 0, expected_generation: m.generation ?? 0, operation: 'sidebar', payload: { hidden: true } })
+      .catch((e: unknown) => { log.warn('the continued session was not hidden from the list', e); });
+  }
+  const controls: LiveControls = createControls({
+    client, details, gwId: (id) => convos.get(id)?.gwId ?? null,
+    started: (id) => convos.get(id)?.gwId != null || (typeof id === 'string' && !id.startsWith('new-') && list.get().some((s) => s.id === id)),
+    running: (id) => convos.get(id)?.running != null,
+    addLine: (id, line) => { addLine(convo(id), line); },
+    continueOn, head: (id) => convos.get(id)?.head ?? null, modelOf: (id) => details.currentModel(id) || convos.get(id)?.model || '', defaultFolder: opts.defaultFolder ?? null,
+    pickFolder: opts.pickFolder !== undefined ? opts.pickFolder : hasHostDialogs() ? tauriPickFolder : null
+  });
+  details.onChanged = () => { controls.refresh(); };
+  const rewindControl = controls.rewind;
+  controls.rewind = async (uiId, shipId, o = {}) => {
+    const r = await rewindControl(uiId, shipId, o);
+    if (r.status === 'rewound' && r.rewindShipId) {
+      if (o.undo) undoing.add(r.rewindShipId);
+      pendingTarget.set(r.rewindShipId, shipId);
+      onRewound(convo(uiId), { rewind_ship_id: r.rewindShipId, files: r.files, to_ship: shipId, ...(r.undo ? { undo: { ship_id: r.undo.shipId } } : {}) });
+    }
+    return r;
+  };
+
   /* ───────── the sources ───────── */
   const sessions: SessionsSource = {
     list, archived,
@@ -441,10 +579,10 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       const c = convo(id);
       if (!c.hydrated && !c.gwId) {
         c.hydrated = true;
-        if (!list.get().some((s) => s.id === id)) return feed(() => ({ turns: [...c.turns] }), c.events); // not a gateway session (the UI's placeholder): nothing to load
+        if (!list.get().some((s) => s.id === id)) return feed(() => ({ turns: [...c.turns], lines: [...c.lines] }), c.events); // not a gateway session (the UI's placeholder): nothing to load
         resume(c).catch((e: unknown) => { c.hydrated = false; log.warn('could not load session ' + id, e); });
       }
-      return feed(() => ({ turns: [...c.turns] }), c.events);
+      return feed(() => ({ turns: [...c.turns], lines: [...c.lines] }), c.events);
     },
     diff: (id) => details.diffFiles(id),
     create(project) {
@@ -522,6 +660,8 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
         })
         .then(async (gw) => { if (asked) { const choice = await councilHost.start(id); setCouncil(c, choice); if (choice) override = COUNCIL_OVERRIDE; } return gw; })
         .then(async (gw) => {
+          const step = c.step ?? (details.model(id).describe?.session?.careful as CarefulStep | null | undefined) ?? null;
+          if (step ? step !== 'full' : details.model(id).describe?.session?.mode === 'governed') await controls.yoloCheck(id, gw);   /* nothing approves the plugin's cards without a person (5.6) */
           const refs = attachments.length ? await stageAttachments((m, p) => client.requestRaw(m, p), gw, attachments) : [];   /* files, pictures and folders go first (live/attachments.ts) */
           return client.requestRaw('prompt.submit', { session_id: gw, text: withRefs(text, refs), submission_id: 'sub-' + crypto.randomUUID(), ...(override ? { model_override: override } : {}) }); /* the gateway requires submission_id; the vendored contract does not list it yet */
         })
@@ -571,17 +711,17 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   Object.assign(details.unavailable, liveBots.unavailable);
   const liveGroups = createLiveGroups({ client, bots: () => liveBots.source.snapshot().bots, now, bridge: opts.roomsBridge !== undefined ? opts.roomsBridge : inTauri() ? tauriRoomsBridge() : null, ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}) });
   const liveStore = createLiveStore({ bridge: opts.storeBridge !== undefined ? opts.storeBridge : inTauri() ? tauriStoreBridge() : null, plugin: (method, params) => client.requestRaw('plugin.boopis.' + method, params) });
-  const ready = Promise.all([refreshList(), details.start(), liveBots.ready, liveGroups.ready]).then(() => undefined);
+  const ready = Promise.all([refreshList(), details.start().then(() => controls.start()), liveBots.ready, liveGroups.ready]).then(() => undefined);
   const flag = readFlag('feedforward');
   return {
     ...mock,
     info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable },
-    ready, sessions, waits, user, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
+    ready, sessions, waits, user, sessionControls: controls, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
     details: details.source, run: details.run, mods: modsHost.source, store: liveStore, kanban: liveKanban(),
     council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id), paths: hostPaths() },
     dictation: { start: () => () => undefined }, // nothing hears you yet: the mock's transcript is invented text
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },
-    settled: async () => { await liveStore.settled(); await details.settled(); await liveBots.settled(); await liveGroups.settled(); },
+    settled: async () => { await liveStore.settled(); await details.settled(); await controls.settled(); await liveBots.settled(); await liveGroups.settled(); },
     ledger: { totals: () => ledgerTotals, subscribe(fn) { ledgerSubs.add(fn); return () => { ledgerSubs.delete(fn); }; } }
   };
 }

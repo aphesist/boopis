@@ -96,6 +96,10 @@ def test_register_wires_hooks_rpc_and_the_prompt_section() -> None:
         "store.policy.get",
         "store.policy.set",
         "bots.delete",
+        "checkpoint.rewind",
+        "careful.set",
+        "continue.arm",
+        "continue.chain",
     }
     assert set(ctx.rpc) == own | set(compat.RPC_METHODS)
     assert list(ctx.sections) == ["boopis"]

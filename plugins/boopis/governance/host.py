@@ -66,3 +66,17 @@ def active_parent() -> Any:
     except Exception:  # noqa: BLE001
         _log.warning("no active parent agent could be found", exc_info=True)
         return None
+
+
+def approvals_mode() -> str | None:
+    """``approvals.mode`` of the active profile (Hermes's approval gate: ``off`` approves every ask without a person),
+    lowercased; ``manual`` when unset; None when it cannot be read (unknown, never a guess)."""
+    try:
+        section = _config().get("approvals")
+        mode = cast(Mapping[str, Any], section).get("mode") if isinstance(section, Mapping) else None
+        if mode is False:  # YAML reads a bare ``off`` as false
+            return "off"
+        return str(mode).strip().lower() or "manual" if mode is not None else "manual"
+    except Exception:  # noqa: BLE001
+        _log.warning("could not read approvals.mode", exc_info=True)
+        return None

@@ -142,3 +142,25 @@
 /* a turn the person sent to one model outside governed mode: the quiet mark sits beside the model, before the time */
 .ss-ungov { margin-inline-start: var(--sp-1); }
 /* the layer the "@" menu opens from: the composer's box, not interactive */
+
+/* ── wave S0 on the v7 kit (modules/session/s0.ts): each piece is a v7 root of its own until the screen moves (wave C) ── */
+/* the new session's canvas (S41 A, the kit's pattern): the logomark, the greeting, the launch row, Waiting on you */
+.ss-s0-canvas { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); margin: auto; padding-block: var(--sp-7); width: 100%; max-width: var(--col-w); box-sizing: border-box; }
+.ss-s0-canvas > .k7-logomark { margin-block-end: var(--sp-1); }
+.ss-s0-canvas > .k7-list, .ss-s0-canvas > .k7-shead { align-self: stretch; }
+.ss-s0-hello { margin: 0; font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 500; color: var(--text-strong); text-align: center; }
+.ss-s0-launch { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }
+/* a line the thread says about itself (SystemLine): centred in the column */
+.ss-s0-line { display: flex; justify-content: center; padding-block: var(--sp-2); }
+/* the rewind under a finished turn (TurnFoot, session); its actions show on hover and focus, as the kit's */
+.ss-s0-foot { padding: var(--sp-1) var(--sp-1) var(--sp-3); }   /* room for an action's focus ring inside the turn, and out of its corner (geometry.contain, concentric) */
+.ss-s0-why, .ss-s0-more { margin: var(--sp-2) 0 0; color: var(--text-dim); }
+/* the foot's actions show while the turn they belong to is hovered or holds focus (the kit's TurnFoot reveals on hover; here the
+   foot carries no meta of its own, the entry's call number does, so the turn is what is hovered) */
+@media (hover: hover) and (pointer: fine) { [data-hx-turn]:hover .ss-s0-foot .k7-foot__acts { opacity: 1; transition-duration: var(--dur-1); } }
+[data-hx-turn]:focus-within .ss-s0-foot .k7-foot__acts { opacity: 1; }
+/* the floating Notice (s0.ts `say`): bottom centre of the window, above the composer (the kit's floating placement) */
+.ss-s0-said { position: fixed; left: 0; right: 0; bottom: var(--sp-7); margin-inline: auto; width: max-content; max-width: calc(100vw - 2 * var(--sp-5)); z-index: var(--z-toast); }
+/* the rewind sheet over the window: the kit's scrim fills it and centres the dialog */
+.ss-s0-sheet { position: fixed; inset: 0; z-index: var(--z-overlay); }
+.ss-s0-sheet > * { height: 100%; box-sizing: border-box; }
