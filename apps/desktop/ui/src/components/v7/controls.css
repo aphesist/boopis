@@ -104,6 +104,11 @@
 /* the attention dot after the label (v7 15.2: a tab's dot is amber); it takes no room while hidden */
 .k7-seg__dot { width: var(--gap-s); height: var(--gap-s); margin-inline-start: var(--gap-s); border-radius: var(--r-pill); background: var(--owe); flex: none; }
 .k7-seg__dot:not([data-show]) { display: none; }
+/* upright (the collapsed rail's switch; owner, 25 November: "the switch, upright"): the same track stood on its end, its items 28 circles
+   with their glyphs, the open one filled; the attention dot sits on the item's corner */
+.k7-seg[data-upright] { flex-direction: column; }
+.k7-seg[data-upright] > .k7-seg__item { width: var(--ctl-s); height: var(--ctl-s); padding: 0; }
+.k7-seg[data-upright] .k7-seg__dot { position: absolute; top: var(--gap-hair); inset-inline-end: var(--gap-hair); margin: 0; }
 
 /* ── SelectorItem (24): a quiet current value that opens a Menu; transparent until hover, radius 10 ── */
 .k7-sel {

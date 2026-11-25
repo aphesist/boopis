@@ -8,9 +8,9 @@
    click opens and focus stays in the list (KEYMAP 4). The rail: the kit's Rail, the bots' tiles (54 on 88; 44 on 64 under 1200 px
    of window, Automatic), the rooms as clusters under a hairline, New bot, Store and Settings at its foot. A live update never
    draws an orb again: rows and tiles are written in place. */
-import { emit } from '../../core/bus';
+import { emit, on } from '../../core/bus';
 import { $, el, frag, reduced } from '../../core/dom';
-import { state } from '../../core/state';
+import { setState, state } from '../../core/state';
 import { kit, ui } from '@boopis/ui';
 import { BOOPIS_ID, data } from '../../data';
 import { lookOf, oc, paintLook, restReact } from '@boopis/ui';
@@ -213,10 +213,13 @@ function mountRail(): void {
     if (t.dataset['bot']) { openBot(t.dataset['bot']); emit('hx:bot-select', { id: t.dataset['bot'], from: 'bots-rail' }); return; }
     if (t.dataset['gid']) { openGroup(t.dataset['gid']); return; }
     const act = t.dataset['railAct'];
-    if (act === 'new') emit('hx:new-bot', { from: 'rail' });
+    if (act === 'new') { if (state.tab === 'session') emit('hx:new-session', {}); else emit('hx:new-bot', { from: 'rail' }); }
     else if (act === 'store') emit('hx:open-store', {});
     else if (act === 'settings') emit('hx:open-settings', { section: 'general', from: 'rail' });
   });
+  /* the tab switch, upright (owner, 25 November): the open sidebar's own switch, on the same tab state */
+  RAIL.host.addEventListener('ui:change', (e) => { if (!(e.target as Element).closest('[data-rail-tabs]')) return; e.preventDefault(); setState({ tab: (e as CustomEvent<{ value: string }>).detail.value as typeof state.tab }); });
+  on('hx:tab', () => { drawRail(); });
   window.addEventListener('resize', () => { if (RAIL.sig && !RAIL.sig.startsWith(railSize())) drawRail(); });
   drawRail();
 }
@@ -224,7 +227,8 @@ function mountRail(): void {
 export function drawRail(): void {
   const host = RAIL.host; if (!host) return;
   const size = railSize();
-  const sig = size + '|' + S.bots.map((b) => b.id + b.color + b.shape).join() + '|' + S.groups.map((g) => g.id + ':' + g.members.map((m) => m.profile).join('.')).join();
+  const sessions = state.tab === 'session';
+  const sig = size + '|' + state.tab + '|' + S.bots.map((b) => b.id + b.color + b.shape).join() + '|' + S.groups.map((g) => g.id + ':' + g.members.map((m) => m.profile).join('.')).join();
   if (sig === RAIL.sig && host.firstElementChild) { for (const b of S.bots) patchTile(b.id); return; }
   RAIL.sig = sig;
   const tiles = S.bots.map((b) => { const s = ui.botState(b); const current = S.view === 'bot' && b.id === S.sel; return { ...b, current, ink: b.id === BOOPIS_ID, needs: !!s.attention && !current   /* the open bot's tile carries no flag (board 11): its ask is in front of you */, working: s.busy, attrs: { 'data-bot': b.id, 'aria-label': ui.botLabel(b) } }; });
@@ -233,7 +237,10 @@ export function drawRail(): void {
     const members = g.members.map((m) => bot(m.profile)).filter((x): x is Bot => !!x);
     return { name: g.name, members, extra: g.members.length - members.length, current: S.view === 'group' && g.id === S.groupSel, attrs: { 'data-gid': g.id, 'aria-label': g.name + ', ' + namesOf(g.members), 'data-tip-state': namesOf(g.members) } };
   });
-  const rail = kit.rail({ size, bots: tiles, groups, foot: { newBot: { 'data-rail-act': 'new', 'data-kbd': 'mod+shift+O' }, store: { 'data-rail-act': 'store' }, settings: { 'data-rail-act': 'settings', 'data-kbd': 'mod+,' } } });
+  /* on the Sessions tab the rail shows no bots (owner: "the Sessions tab shows no bots except the dock"): the switch, and at the foot New
+     session, Store and Settings */
+  const tabs = { value: state.tab, items: [{ value: 'session', label: 'Sessions', icon: 'session', keys: 'alt+1', controls: 'hx-list-session' }, { value: 'bots', label: 'Bots', icon: 'bots', keys: 'alt+2', controls: 'hx-list-bots' }] };
+  const rail = kit.rail({ size, bots: sessions ? [] : tiles, groups: sessions ? [] : groups, tabs, newLabel: sessions ? 'New session' : 'New bot', foot: { newBot: { 'data-rail-act': 'new', 'data-kbd': 'mod+shift+O' }, store: { 'data-rail-act': 'store' }, settings: { 'data-rail-act': 'settings', 'data-kbd': 'mod+,' } } });
   host.replaceChildren(rail);
 }
 /** a bot's tile follows its state in place: its name and state in words, the flag, the orb's reaction */

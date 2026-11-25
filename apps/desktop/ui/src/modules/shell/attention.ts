@@ -85,8 +85,8 @@ export function attentionFor(tab: Tab): number {
 }
 export function updateAttentionDots(): void {
   const per: Record<Tab, number> = { session: attentionFor('session'), bots: attentionFor('bots') };
-  const sg = sh.seg.tabs;
-  if (sg) for (const b of $$('[role="tab"]', sg)) {
+  /* the open sidebar's switch and the collapsed rail's upright one say the same of each tab */
+  for (const sg of [sh.seg.tabs, document.querySelector<HTMLElement>('#hx-rail [data-rail-tabs]')]) if (sg) for (const b of $$('[role="tab"]', sg)) {
     const t = (b.dataset['value'] ?? 'session') as Tab, n = per[t] || 0;
     /* no board draws a dot on the Sessions / Bots pill (S17, 12, 13): what waits on the other side is said in words (the dock's ask
        pill, a row's "Needs you"); the tab's accessible name still counts it */

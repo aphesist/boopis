@@ -94,6 +94,8 @@
    the rooms; the foot at the bottom: three 32 tinted buttons 8 apart, 12 over them and 14 under ── */
 .k7-rail { display: flex; flex-direction: column; align-items: center; gap: var(--gap-s); width: var(--sb-rail-w); min-height: 100%; padding: var(--pad-chrome) 0 0; box-sizing: border-box; background: var(--bg-1); }
 .k7-rail[data-size="b"] { width: var(--rail-b-w); }
+/* the tab switch, upright, heads the rail 6 under the sidebar toggle's row, 6 over the first tile */
+.k7-rail > .k7-seg { margin-bottom: var(--gap-s); }
 .k7-tile { position: relative; display: grid; place-items: center; flex: none; width: var(--row-h-2); height: var(--row-h-2); border-radius: var(--r-tile); transition: background-color var(--dur-out) var(--ease-out); }
 .k7-rail[data-size="b"] .k7-tile { width: var(--tile-b); height: var(--tile-b); }
 .k7-tile[aria-current="page"] { background: var(--current); }

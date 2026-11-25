@@ -111,7 +111,11 @@ export function dialog(o: DialogOpts): string {
 /* ── Rail (40): the bots' tiles; A 54 on 88, B 44 on 64 (automatic under 1200 px); current, needs you, working ── */
 export interface RailBot extends BotLike { current?: boolean; needs?: boolean; working?: boolean; /** the boopis bot, in ink */ ink?: boolean; /** the app's handles on the tile */ attrs?: Attrs }
 export interface RailGroup { name: string; members: readonly BotLike[]; /** members that are no longer bots, counted in "+N" (owner decision, 23 November) */ extra?: number; current?: boolean; attrs?: Attrs }
-export interface RailOpts { size?: U<'a' | 'b'>; bots: readonly RailBot[]; groups?: U<readonly RailGroup[]>; /** the app's handles on the foot's three buttons */ foot?: U<{ newBot?: Attrs; store?: Attrs; settings?: Attrs }>; attrs?: U<Attrs> }
+export interface RailOpts {
+  size?: U<'a' | 'b'>; bots: readonly RailBot[]; groups?: U<readonly RailGroup[]>; /** the app's handles on the foot's three buttons */ foot?: U<{ newBot?: Attrs; store?: Attrs; settings?: Attrs }>; attrs?: U<Attrs>;
+  /** the tab switch, upright, under the sidebar toggle (owner, 25 November: option B): the open sidebar's own Segmented stood on its end */ tabs?: U<{ value: string; items: readonly SegItem[]; attrs?: Attrs }>;
+  /** what the foot's "+" makes ("New bot"; "New session" on the Sessions tab, whose rail shows no bots) */ newLabel?: U<string>;
+}
 export function rail(o: RailOpts): string {
   const b = o.size === 'b', orb = b ? 28 : 36;
   const tile = (x: RailBot): string => '<button class="k7-reset k7-tile"' + attrs({ type: 'button', 'aria-label': (x.name ?? '') + (x.needs ? ', needs you' : x.working ? ', working' : ''), 'aria-current': x.current ? 'page' : null, 'data-tip': x.name, 'data-tip-pos': 'right', 'data-needs': x.needs ? '' : null, ...(x.attrs ?? {}) }) + '>' +
@@ -127,9 +131,10 @@ export function rail(o: RailOpts): string {
       '<span class="k7-rail__cluster" style="--s:' + Math.round(orb * 0.42) + 'px">' + railCluster(shown, Math.round(orb * 0.42)) +
       (more ? '<span class="k7-rail__more"' + partAttrs('RailMore', { 'aria-hidden': 'true', 'data-more': '+' + more }) + '></span>' : '')   /* drawn, not written (as the line stack's): the tile's name says every member */ + '</span></button>';
   }).join('');
-  return '<nav class="k7-rail"' + kitAttrs('Rail', { 'data-size': b ? 'b' : 'a', 'aria-label': 'Bots', ...(o.attrs ?? {}) }) + '>' + o.bots.map(tile).join('') +
+  const tabs = o.tabs ? segmented({ label: 'View', variant: 'tabs', upright: true, value: o.tabs.value, items: o.tabs.items, attrs: { 'data-rail-tabs': '', ...(o.tabs.attrs ?? {}) } }) : '';
+  return '<nav class="k7-rail"' + kitAttrs('Rail', { 'data-size': b ? 'b' : 'a', 'data-tabs': o.tabs ? '' : null, 'aria-label': o.newLabel === 'New session' ? 'Sessions' : 'Bots', ...(o.attrs ?? {}) }) + '>' + tabs + o.bots.map(tile).join('') +
     (groups ? '<hr class="k7-rail__rule">' + groups : '') + '<span class="k7-grow"></span><div class="k7-rail__foot">' +
-    iconButton({ icon: 'plus', label: 'New bot', variant: 'tinted', attrs: { 'data-tip-pos': 'right', ...(o.foot?.newBot ?? {}) } }) + iconButton({ icon: 'store', label: 'Store', variant: 'tinted', attrs: { 'data-tip-pos': 'right', ...(o.foot?.store ?? {}) } }) + iconButton({ icon: 'gear', label: 'Settings', variant: 'tinted', attrs: { 'data-tip-pos': 'right', ...(o.foot?.settings ?? {}) } }) + '</div></nav>';
+    iconButton({ icon: 'plus', label: o.newLabel ?? 'New bot', variant: 'tinted', attrs: { 'data-tip-pos': 'right', ...(o.foot?.newBot ?? {}) } }) + iconButton({ icon: 'store', label: 'Store', variant: 'tinted', attrs: { 'data-tip-pos': 'right', ...(o.foot?.store ?? {}) } }) + iconButton({ icon: 'gear', label: 'Settings', variant: 'tinted', attrs: { 'data-tip-pos': 'right', ...(o.foot?.settings ?? {}) } }) + '</div></nav>';
 }
 /** a room's cluster as the boards place it (kit.js cluster): each member's orb at rest on a circle of 0.62 of an orb around the middle
     of a box 2.5 orbs wide, the first at the top, then clockwise */
