@@ -51,7 +51,7 @@ export function regionOf(node: Element | null): RegionName | null {
   return null;
 }
 function defaultTarget(r: RegionName, root: HTMLElement): HTMLElement {
-  if (r === 'bar') return els().btnSearch;
+  if (r === 'bar') return els().btnSearch ?? els().btnTitle;
   if (r === 'composer') return root;
   const pref = root.querySelector<HTMLElement>('[data-hx-focus="' + r + '"]');
   if (visible(pref)) return pref;

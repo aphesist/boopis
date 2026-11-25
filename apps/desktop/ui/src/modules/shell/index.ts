@@ -12,6 +12,7 @@ import { followScheme, followWindowWidth, prefs, saveState, setMounting, setStat
 import { TABS } from '../../core/settings';
 import type { Tab } from '../../core/types';
 import { ui } from '@boopis/ui';
+import { drawChrome, drawSideFoot, drawSideHead, selectTab, syncV7Theme } from './chrome';
 import { data } from '../../data';
 import { themeApi } from '../../styles/theme';
 import { openKeys, openMenu, openSettings, openStore, SETTINGS_SECTIONS, wireDialogs } from './dialogs';
@@ -27,7 +28,7 @@ import { closePalette, movePal, openPalette, paletteActive, renderPalette, reset
 import { cycleRegion, focusRegion, leaderActive, leaderKey, nextAttention, regionOf, rememberFocus, startLeader } from './regions';
 import { getLayout } from '../../core/state';
 /* drawn corners (DESIGN-SYSTEM.md section 8): the shell's surfaces; sheets and menus float, so they are surfaces */
-ui.squircle.auto('.hx-me, .hx-pal-row');
+ui.squircle.auto('.hx-pal-row');
 ui.squircle.auto('.hx-dialog__card, .hx-palette__box, .hx-goto, .hxt-preset', { mode: 'surface' });
 
 const log = logger('shell');
@@ -45,30 +46,29 @@ function applyState(): void {
   app.dataset['left'] = state.left;
   app.dataset['right'] = state.right;
   app.dataset['dock'] = state.dock;
-  // tabs: the pill and the rail are ui.segmented; select() is quiet (no ui:change)
-  for (const sg of [sh.seg.tabs, sh.seg.rail]) if (sg) sg.select(state.tab);
+  // tabs: the kit's Segmented; selecting it from the state is quiet (no ui:change)
+  if (sh.seg.tabs) selectTab(sh.seg.tabs, state.tab);
   for (const v of $$('.hx-view', app)) setActive_(v, v.dataset['view'] === state.tab);
   for (const l of $$('.hx-list', app)) setActive_(l, l.dataset['list'] === state.tab);
   const newLabel = state.tab === 'bots' ? 'New bot' : 'New session';
-  $('.hx-new__label', el.btnNew).textContent = newLabel;
-  const railNew = $('.hx-rail__new', app); railNew.dataset['tip'] = newLabel; railNew.setAttribute('aria-label', newLabel);
+  el.btnNew.dataset['tip'] = newLabel; el.btnNew.setAttribute('aria-label', newLabel);
   // sidebar toggle
   const open = state.left === 'open';
   el.btnLeft.dataset['tip'] = open ? 'Hide sidebar' : 'Show sidebar';
   el.btnLeft.setAttribute('aria-label', el.btnLeft.dataset['tip']);
   el.btnLeft.setAttribute('aria-expanded', String(open));
-  $('.hx-rail', app).setAttribute('aria-hidden', String(state.left !== 'rail'));
-  $('.hx-rail', app).inert = state.left !== 'rail';
-  for (const n of $$('.hx-seg, .hx-new, .hx-foot__gear', app)) n.inert = state.left === 'rail';
+  const rail = $('.hx-rail', app);
+  rail.setAttribute('aria-hidden', String(state.left !== 'rail'));
+  rail.inert = state.left !== 'rail';
+  $('.hx-side__inner', app).inert = state.left !== 'open';
   el.side.inert = state.left === 'closed';
-  // right
+  // right: the session's details panel, or the open bot's details (the title pill opens the same)
   el.rightShell.dataset['right'] = state.right;
   el.rightSlot.dataset['right'] = state.right;
   const ropen = state.right === 'open';
-  el.btnRight.dataset['tip'] = ropen ? 'Hide session details' : 'Show session details';
+  el.btnRight.dataset['tip'] = state.tab === 'bots' ? 'Details' : ropen ? 'Hide session details' : 'Show session details';
   el.btnRight.setAttribute('aria-label', el.btnRight.dataset['tip']);
-  el.btnRight.setAttribute('aria-expanded', String(ropen));
-  el.btnRight.disabled = state.tab !== 'session';
+  el.btnRight.setAttribute('aria-expanded', String(state.tab === 'session' && ropen));
   // settings controls (the account menu reads state when it opens)
   const sDock = document.getElementById('hx-set-dock') as HTMLInputElement | null; if (sDock) sDock.checked = state.dock === 'on';
   app.dataset['orbGrow'] = state.orbGrow ? 'on' : 'off';
@@ -157,9 +157,10 @@ export function boot(): void {
   if (sh.booted) return;
   const app = $('#hx-app');
   sh.app = app;
-  // the search field, twice from the library: the title bar's button that opens the palette, and the palette's own field
-  $('#hx-btn-search', app).outerHTML = ui.html.search({ as: 'button', size: 's', id: 'hx-btn-search', class: 'hx-cmd', label: 'Search and commands', keys: 'mod+K',
-    textHTML: '<span class="hx-cmd__project" id="hx-where-project"></span> <span class="hx-cmd__title" id="hx-where-title"></span>', attrs: { 'aria-haspopup': 'dialog', 'aria-expanded': 'false' } });
+  // the floating chrome, the sidebar's head and foot: the v7 kit (chrome.ts)
+  drawChrome(app);
+  drawSideHead(app);
+  drawSideFoot(app);
   $('#hx-palette-input', app).outerHTML = ui.html.search({ size: 'l', id: 'hx-palette-input', label: 'Search sessions, bots and commands', placeholder: 'Search sessions, bots and commands', keys: 'esc',
     attrs: { role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'hx-palette-list', 'aria-autocomplete': 'list' } });
   $('#hx-keys-filter', app).outerHTML = ui.html.search({ size: 'm', id: 'hx-keys-filter', class: 'hx-keys-filter', label: 'Filter shortcuts', placeholder: 'Filter' });
@@ -169,17 +170,6 @@ export function boot(): void {
   // icons: one set, from the library
   $$('[data-icon]', app).forEach((n) => { n.outerHTML = ui.icon(n.dataset['icon'] ?? ''); });
 
-  // the tabs: a pill in the sidebar and the same choice, vertical, in the rail
-  const opt = (v: 'session' | 'bots', extra: Record<string, unknown>) => ({ value: v, dot: false, tip: v === 'session' ? 'Sessions' : 'Bots', keys: v === 'session' ? 'alt+1' : 'alt+2', ...extra });
-  sh.seg.tabs = ui.segmented({ label: 'View', fill: true, value: state.tab, class: 'hx-seg', controls: { session: 'hx-list-session', bots: 'hx-list-bots' },
-    options: [opt('session', { label: 'Session' }), opt('bots', { label: 'Bots' })] });
-  sh.seg.rail = ui.segmented({ label: 'View', vertical: true, value: state.tab, class: 'hx-rail__seg', controls: { session: 'hx-list-session', bots: 'hx-list-bots' },
-    options: [opt('session', { icon: 'session', ariaLabel: 'Session' }), opt('bots', { icon: 'bots', ariaLabel: 'Bots' })] });
-  sh.seg.tabs.id = 'hx-seg';
-  for (const b of $$('[role="tab"]', sh.seg.tabs)) b.id = 'hx-tab-' + b.dataset['value'];
-  for (const b of $$('[role="tab"]', sh.seg.rail)) b.dataset['tipPos'] = 'right';
-  $('#hx-seg').replaceWith(sh.seg.tabs);
-  $('#hx-rail-seg').replaceWith(sh.seg.rail);
   sh.seg.collapse = ui.segmented({ mode: 'radio', size: 's', labelledby: 'hx-set-collapse-l', value: prefs.collapse, options: [{ value: 'rail', label: 'Rail' }, { value: 'closed', label: 'Hide' }] });
   $('#hx-set-collapse').replaceWith(sh.seg.collapse);
   // Settings' sections: the library's tab bar, concentric with the dialog's corner band
@@ -187,18 +177,9 @@ export function boot(): void {
     tabs: SETTINGS_SECTIONS.map(([value, label]) => ({ value, label, id: 'hx-dtab-' + value, controls: 'hx-dpanel-' + value })) });
   ui.hydrate($('#hx-settings'));
 
-  // user
-  const U = data().user.get();
-  // the initial is drawn by CSS (::after), so it is not text the button's accessible name has to repeat
-  $$('.hx-avatar', app).forEach((a) => { a.dataset['initial'] = (U.initials || U.name || '?').slice(0, 1); });
-  $('#hx-account-name').textContent = U.name;
-  el.btnAccount.setAttribute('aria-label', 'Account, ' + U.name);
-  el.btnAccount.dataset['tip'] = U.name;
-
   // keyboard chips in static markup
   $$('kbd[data-kbd]', app).forEach((k) => { k.outerHTML = ui.html.keys(k.dataset['kbd'], k.hasAttribute('data-fit') ? { fit: true } : undefined); });
   el.btnNew.setAttribute('aria-keyshortcuts', ariaKeys('mod+shift+O'));
-  el.btnSearch.setAttribute('aria-keyshortcuts', ariaKeys('mod+K'));
   $('#hx-keys').innerHTML = keysTableHTML('');
   // shortcuts for assistive tech
   for (const n of $$('[data-kbd]', app)) n.setAttribute('aria-keyshortcuts', ariaKeys(n.dataset['kbd'] ?? ''));
@@ -209,6 +190,7 @@ export function boot(): void {
   // test hooks: ?preset=graphite or ?theme=light pick a preset at load
   const qp = urlQuery.get('preset') || (urlQuery.get('theme') === 'light' ? 'bone' : null);
   if (qp && themeApi.presets[qp]) { themeApi.preset(qp); state.theme = themeApi.scheme(); }
+  syncV7Theme();
 
   applyState();
   computeNow();
@@ -238,17 +220,16 @@ function wire(): void {
   });
   // chrome
   el.btnLeft.addEventListener('click', () => toggle('left'));
-  el.btnBack.addEventListener('click', () => go(-1));
-  el.btnFwd.addEventListener('click', () => go(1));
-  el.btnSearch.addEventListener('click', () => openPalette({}));
-  el.btnRight.addEventListener('click', () => toggle('right'));
+  el.btnSearch?.addEventListener('click', () => openPalette({}));
+  el.btnRight.addEventListener('click', () => togglePanel());
+  el.btnTitle.addEventListener('click', () => togglePanel());
   wireWindowControls();
   wireUiSize();
 
   // tabs (both the pill and the rail): the library moves the thumb and the focus, the shell owns the state
-  for (const sg of [sh.seg.tabs, sh.seg.rail]) sg?.addEventListener('ui:change', (e) => setState({ tab: (e as CustomEvent<{ value: string }>).detail.value }));
+  sh.seg.tabs?.addEventListener('ui:change', (e) => { e.preventDefault(); setState({ tab: (e as CustomEvent<{ value: string }>).detail.value }); });
   el.btnNew.addEventListener('click', () => newThing());
-  $('.hx-rail__new', app).addEventListener('click', () => newThing());
+  el.btnStore.addEventListener('click', () => openStore());
 
   // account (the library toggles the menu when its anchor is pressed again)
   el.btnAccount.addEventListener('click', openMenu);
@@ -257,6 +238,8 @@ function wire(): void {
   // settings, shortcuts sheet
   wireDialogs();
   on('hx:theme', (d) => {
+    /* a v6 preset (Settings > Appearance, the lab's presets) picks the v7 root's theme by its scheme; the root's own event is not followed again */
+    if (!String(d?.preset ?? '').startsWith('v7-')) syncV7Theme();
     followScheme(d && d.scheme === 'light' ? 'light' : 'dark');
     queueLayout(false);   // corners and density change sizes
   });

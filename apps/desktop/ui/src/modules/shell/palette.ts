@@ -179,13 +179,13 @@ export function openPalette(opts: { scope?: string; query?: string } = {}): void
   el.palette.hidden = false;
   renderPalette();
   el.palInput.focus();
-  el.btnSearch.setAttribute('aria-expanded', 'true');
+  el.btnSearch?.setAttribute('aria-expanded', 'true');
 }
 export function closePalette(keepFocus?: boolean): void {
   const el = els();
   if (el.palette.hidden) return;
   el.palette.hidden = true;
-  el.btnSearch.setAttribute('aria-expanded', 'false');
+  el.btnSearch?.setAttribute('aria-expanded', 'false');
   if (!keepFocus && pal.ret && (pal.ret as HTMLElement).focus) (pal.ret as HTMLElement).focus();
 }
 export function resetActive(): void { pal.active = 0; }

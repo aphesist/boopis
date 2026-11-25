@@ -2,15 +2,16 @@
    and a roving tabindex), approval cards (the card layer only), and the library's composer (KEYMAP section 7).
    Everything that changes comes from the provider's events; everything the user does is a provider command. */
 import { emit } from '../../core/bus';
-import { $, el, esc, frag, reduced } from '../../core/dom';
+import { el, esc, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { lookOf, repaintLook, ui } from '@boopis/ui';
+import { kit, lookOf, repaintLook, ui } from '@boopis/ui';
+import { bubbleOf, turnActs, turnBody, turnEntry } from './turn';
 import type { MarkdownCtx, MenuItem } from '@boopis/ui';
 import { data } from '../../data';
 import type { ApprovalMessage, Bot, BotsEvent, ThreadMessage } from '../../data';
 import { cronValid, cronWords, scheduleWords } from './cron';
 import { bot, initModel, S, stateOf, thread } from './model';
-import { gentleFollow, orbButton, orbHTML, livenIn, setReact } from './orbs';
+import { gentleFollow, orbButton, livenIn, setReact } from './orbs';
 import { markSelected, updateRow } from './list';
 import { openNew } from './new-bot';
 import { mountGroupPane } from './group-room';
@@ -19,7 +20,7 @@ import { openSettings, toggleSettings } from './settings';
 import { checkClips, watchClips } from './clips';
 import { renderGlance } from './glance';
 import { outsideDescription, outsideRoomMark } from './outside';
-import { arrival, atEnd, entryActs } from './ledger';
+import { arrival, atEnd } from './ledger';
 import { followZone } from '../chat/follow-zone';
 import { botActor, placeInLog, roomPresence } from './presence';
 import type { RoomPresence } from './presence';
@@ -152,15 +153,19 @@ function renderThread(b: Bot): void {
   const msgs = thread(b.id);
   if (!msgs.length && b.info) log.append(renderGlance(b, openSession));
   else if (!msgs.length) {
-    const e = ui.empty({ title: 'Nothing here yet', text: 'Ask ' + b.name + ' something, or give it a schedule so it works on its own.' });
+    /* EmptyState: one line where the conversation would be; the bot's own ideas as answer chips (the AskCard's) to start from */
+    const e = kit.emptyState({ text: 'Nothing here yet. Ask ' + b.name + ' something.' });
     if (b.ideas.length) {
-      const ideas = el('div', { class: 'bt-ideas' }, b.ideas.map((t) => { const btn = ui.button({ label: t }); btn.addEventListener('click', () => setDraft(t)); return btn; }));
+      const ideas = el('div', { class: 'bt-ideas' }, b.ideas.map((t) => { const btn = kit.chip({ label: t, variant: 'answer' }); btn.addEventListener('click', () => setDraft(t)); return btn; }));
       e.append(ideas);
     }
     e.classList.add('bt-empty');
     log.append(e);
   } else {
     let prev: ThreadMessage | null = null, entry: HTMLElement | null = null;
+    /* a time separator heads the thread (12 --text-dim, centred); there is no other on a gap the data can tell */
+    const first = msgs.find((m) => m.t);
+    if (first) log.append(kit.timeSeparator({ text: first.t }));
     for (const m of msgs) { entry = renderMsg(b, m, prev, entry); prev = m; }
   }
   syncTurns();
@@ -173,10 +178,15 @@ const rootsOf = (id: string): string[] => { const w = data().bots.workspace?.(id
 function msgContent(b: Bot, m: ThreadMessage): HTMLElement {
   if (m.kind === 'note') return el('p', { class: 'bt-note', role: 'status', text: m.text });
   if (m.kind === 'approval') return renderCard(b, m);
-  if (m.who === 'you') { const r = frag(ui.html.request('')); r.innerHTML = ui.markdown.plain(m.text, ctx()); return r; }
+  if (m.who === 'you') { const r = el('p', { class: 'bt-request' }); r.innerHTML = ui.markdown.plain(m.text, ctx()); return r; }
   const md = ui.markdown(m.text, ctx());
   void resolvePaths(md, rootsOf(m.who === 'you' ? b.id : (bot(m.who)?.id ?? b.id)));
   return md;
+}
+/** a text message in the kit's Bubble: yours in this bot's derived fill (its own chat, 18.1), the bot's on --bubble-agent */
+function wrapMsg(b: Bot, m: ThreadMessage, node: HTMLElement): HTMLElement {
+  if (m.kind !== 'text') return node;
+  return m.who === 'you' ? bubbleOf(node, { kind: 'user', fill: b.color ? kit.botFill(b.color) : null }) : bubbleOf(node, { kind: 'agent' });
 }
 function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEntry: HTMLElement | null, put?: (n: HTMLElement) => void): HTMLElement | null {
   const node = msgContent(b, m);
@@ -184,21 +194,16 @@ function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEnt
   const place = (n: HTMLElement): void => { if (put) put(n); else placeInLog(S.log as HTMLElement, n); };
   if (m.kind === 'note') { place(node); return null; }
   if (prev && prev.who === m.who && prevEntry && prevEntry.isConnected) {
-    $('.ui-entry__body', prevEntry).append(node);
+    turnBody(prevEntry).append(wrapMsg(b, m, node));
     ENTRY.get(prevEntry)?.msgs.push(m);
     return prevEntry;
   }
   const you = m.who === 'you', who = you ? null : (bot(m.who) ?? b);
-  const entry = frag(ui.html.entry({
-    kind: you ? 'user' : 'bot',
-    who: you ? esc('You') : orbHTML(who as Bot, 20, { state: 'idle' }) + '<span class="bt-who-name">' + esc((who as Bot).name) + '</span>',
-    callno: m.t ? [m.t] : [],
-    label: (you ? 'You' : (who as Bot).name) + (m.t ? ', ' + m.t : '')
-  }));
-  $('.ui-entry__body', entry).append(node);
-  entry.setAttribute('data-hx-turn', ''); entry.tabIndex = -1;
+  /* no avatar per message in a 1:1 (19): the turn is its bubbles; its name and time are in its accessible name */
+  const entry = turnEntry({ kind: you ? 'user' : 'bot', label: (you ? 'You' : (who as Bot).name) + (m.t ? ', ' + m.t : '') });
+  turnBody(entry).append(wrapMsg(b, m, node));
   ENTRY.set(entry, { msgs: [m], who: m.who });
-  if (!you) entryActs(entry, { name: (who as Bot).name, copy: () => turnText(entry) });
+  if (!you) turnActs(entry, { name: (who as Bot).name, copy: () => turnText(entry) });
   livenIn(entry);
   place(entry);
   checkClips();
@@ -286,19 +291,27 @@ function turnKeys(e: KeyboardEvent): void {
 }
 
 /* ───────── approval: the card layer only ───────── */
+/* A bot's approval is the kit's AskCard, approval variant (12.2, 19; screens 11 and 12): the bot's orb and "nina asks" with
+   "needs you", the ask, its quote as the sub line, what it would run in a Well, and the answers the provider can carry out: Hold to
+   allow once (the 1 s hold, owner decision; the inverted chip) and Deny (esc). "Allow all this turn" and "Always allow" need the
+   rules engine (w34/rules-engine), so they are not offered (12.2: "governed sessions and budget pauses offer once and deny only").
+   It never expires. Decided, it collapses to its one-row receipt. */
 function renderCard(b: Bot, m: ApprovalMessage): HTMLElement {
-  if (m.resolved) return resolvedLine(m);
-  const card = ui.card('approval', { ...m.data, from: b.id, source: 'bots', bot: b.id }, { size: 'inline' });
-  card.addEventListener('hx:card-action', (e) => { const a = e.detail.action; if (a) resolveCard(b.id, m, a); });
+  if (m.resolved) return resolvedLine(b, m);
+  const asker = bot(m.data.from ?? m.who) ?? b;
+  const card = kit.askCard({
+    variant: 'standalone', state: 'needs', bot: asker, who: asker.name + ' asks', ask: m.data.title || 'Approve this step',
+    ...(m.data.quote ? { sub: m.data.quote } : {}), ...(m.data.item?.length ? { command: m.data.item.join('\n') } : {}),
+    answers: [{ label: 'Hold to allow once', primary: true, hold: true }, { label: 'Deny', keys: 'esc' }]
+  });
+  card.addEventListener('ui:commit', () => { resolveCard(b.id, m, 'approve'); });
+  card.addEventListener('click', (e) => { const c = (e.target as Element).closest<HTMLElement>('[data-kit~="Chip"]'); if (c && !c.hasAttribute('data-hold')) resolveCard(b.id, m, 'deny'); });
+  card.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); resolveCard(b.id, m, 'deny'); } });
   return el('div', { class: 'bt-cardslot' }, card);
 }
-function resolvedLine(m: ApprovalMessage): HTMLElement {
-  const ok = m.resolved === 'approved';
-  return el('div', { class: 'bt-resolved' }, [
-    el('span', { class: 'bt-resolved-ico' + (ok ? ' is-ok' : ''), html: ui.icon(ok ? 'check' : 'close') }),
-    el('span', { text: (ok ? 'You approved: ' : 'You denied: ') + (m.data.title || 'the request') }),
-    el('time', { class: 'ui-mono', text: m.resolvedAt ?? '' })
-  ]);
+function resolvedLine(b: Bot, m: ApprovalMessage): HTMLElement {
+  const ok = m.resolved === 'approved', asker = bot(m.data.from ?? m.who) ?? b;
+  return el('div', { class: 'bt-cardslot bt-resolved' }, kit.askCard({ state: 'answered', bot: asker, ask: m.data.title || 'the request', receipt: (ok ? 'allowed once' : 'denied') + (m.resolvedAt ? ' ' + m.resolvedAt : '') }));
 }
 /** an approval decided here: the provider decides it everywhere (the dock, the thread) */
 function resolveCard(id: string, m: ApprovalMessage, action: string): void {

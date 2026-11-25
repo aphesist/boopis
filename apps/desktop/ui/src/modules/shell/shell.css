@@ -22,7 +22,7 @@
 html, body { height: 100%; }
 body {
   margin: 0;
-  background: var(--bg-1);
+  background: var(--bg-2);
   color: var(--text);
   font: 400 var(--fs-s)/var(--lh-ui) var(--sans);
   -webkit-font-smoothing: antialiased;
@@ -34,13 +34,11 @@ body {
 /* ───────────── frame ───────────── */
 .hx {
   position: relative; height: 100%; overflow: hidden;
-  background: var(--bg-1);
+  background: var(--bg-2);
 }
 /* the users of the layout travel, by what they read. Each animates its own copy on --dur-3 / --spring (the shell's one curve). */
 .hx-side { --hx-side-w: var(--hx-side-w-to); transition: --hx-side-w var(--dur-3) var(--spring); }
 .hx-right { --hx-right-vw: var(--hx-right-vw-to); }
-.hx-corner--left { --hx-view-left: var(--hx-view-left-to); }
-.hx-corner--right { --hx-view-right: var(--hx-view-right-to); }
 .hx-view { --hx-view-left: var(--hx-view-left-to); --hx-view-right: var(--hx-view-right-to); }
 :is(.bt-scroll, .bt-new-scroll, .ss-view, .ss-col, .ssr-strip, .hx-stub-col, .hx-stub-empty, .hx-stub-rail) { --hx-dock-space: var(--hx-dock-space-to); transition: --hx-dock-space var(--dur-3) var(--spring); }
 :is(.bt-col, .bt-new-col) { --hx-col-w: var(--hx-col-w-to); --hx-col-left: var(--hx-col-left-to); --hx-view-left: var(--hx-view-left-to); transition: --hx-col-w var(--dur-3) var(--spring), --hx-col-left var(--dur-3) var(--spring), --hx-view-left var(--dur-3) var(--spring); }
@@ -60,131 +58,75 @@ body {
 
 /* icon buttons */
 
-/* ───────────── title bar ───────────── */
+/* ───────────── the chrome (v7: no bar) ─────────────
+   DESIGN-SYSTEM.md v7 7 and 19: a 56 px drag region over the window's top, the kit's WindowChrome floating in it at y = 10 (the
+   sidebar toggle over the rail, the title pill centred, the search hint, details and the window glyphs). It paints nothing of its
+   own: the sidebar's --bg-1 and the ground's --bg-2 run under it to the window's top edge. */
+body[data-ui="v7"] { --chrome-h: var(--drag-h); --sb-w: var(--sb-open-w); }
 .hx-bar {
-  position: absolute; inset: 0 0 auto 0; z-index: var(--z-chrome);
-  height: var(--chrome-h); box-sizing: border-box;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 6px 0 14px;
-  background: var(--bg-1);
-  user-select: none;
+  position: absolute; inset: 0 0 auto 0; z-index: var(--z-chrome); height: var(--chrome-h);
+  user-select: none; pointer-events: none;
 }
-.hx-bar__lead, .hx-bar__end { display: flex; align-items: center; gap: 2px; }
-.hx-bar__end { gap: 10px; }
-.hx-win { display: flex; gap: 2px; }
+.hx-bar > .k7-chrome { pointer-events: auto; }
+.hx-bar > .k7-chrome :is(.k7-chrome__start, .k7-chrome__centre, .k7-chrome__end) { pointer-events: auto; }
+.hx[data-left="open"] .hx-bar .k7-chrome__start { width: var(--sb-rail-w); }
 .hx-win [hidden] { display: none; }   /* a tiling window manager shows close alone (host/window.ts) */
 /* a layer that covers the whole window (first run, the startup notice) carries the same bar in its own flow, so the window's
    controls and its drag area stay reachable over it (host/window-controls.ts `windowBar`) */
-.hx-bar--layer { position: relative; inset: auto; z-index: auto; flex: none; justify-content: flex-end; }
+.hx-bar--layer { position: relative; inset: auto; z-index: auto; flex: none; display: flex; align-items: center; justify-content: flex-end; height: var(--chrome-h); padding: 0 var(--sp-2); pointer-events: auto; }
+.hx-bar__end { display: flex; align-items: center; gap: var(--sp-2); }
+.hx-win { display: flex; gap: var(--gap-hair); }
+/* the title pill's glyph (a session): a 24 circle at --fill-2, where a bot's orb sits */
+.k7-title__ic { display: grid; place-items: center; width: var(--sp-5); height: var(--sp-5); border-radius: var(--r-pill); background: var(--fill-2); color: var(--icon); flex: none; }
+.k7-title:not([data-lead]) { padding-inline-start: var(--pad-pill-end); }
 
-/* the command centre: where you are, and the way to anywhere else */
-.hx-cmd { position: absolute; left: 50%; top: 7px; translate: -50% 0; width: clamp(240px, 34vw, 480px); }   /* the library's search field (.ui-search--s), placed */
-.hx-cmd__project { color: var(--text-quiet); flex: none; }
-.hx-cmd__project:not(:empty)::after { content: "/"; margin-left: 6px; color: var(--text-faint); }
-.hx-cmd__title { color: var(--text); overflow: hidden; text-overflow: ellipsis; }
-
-/* ───────────── left sidebar ───────────── */
+/* ───────────── left sidebar ─────────────
+   v7: 300 open (--sb-open-w), --bg-1, from the window's top: its head starts under the chrome's toggle row; the rail (88, or 64
+   compact) is the kit's Rail with the bots' tiles (the bots module draws it into #hx-rail). */
 .hx-side {
   position: absolute; z-index: var(--z-sidebar);
-  top: var(--chrome-h); left: 0; bottom: 0;
+  top: 0; left: 0; bottom: 0;
   width: var(--hx-side-w);
   background: var(--bg-1);
   overflow: hidden;
 }
-.hx-side__inner { position: relative; height: 100%; width: var(--sb-w); display: flex; flex-direction: column; }
-/* the head holds the open sidebar's column (the pill, New) and the rail's (the vertical pill, "+") in one cell: the list starts
-   under the taller of the two that is in the flow. The rail's column leaves the flow while the sidebar is open, and the open one
-   never moves (it fades in place). The rail's row: a 40px pitch (LAYOUT.md), shared with the bots' rail rows (bots.css). */
-.hx-side__head { display: grid; flex: none; }
-.hx-side__head > * { grid-area: 1 / 1; }
-.hx-side__open { display: flex; flex-direction: column; align-self: start; min-width: 0; }
-.hx { --rail-row: calc(var(--row-h-2) - 4px); }
-
-/* the mark: title bar, top left, centred on the sidebar's icon axis (x = 28) so it sits above the rail's icons. The logo's
-   mark, static (`still`: it labels, so nothing moves), in the ink of the frame; 18px wide, inside the 16 to 20px the
-   design system sets for the title bar (DESIGN-SYSTEM.md section 12). */
-.hx-mark { display: grid; place-items: center; width: var(--ctl-s); height: var(--ctl-s); margin-right: 6px; color: var(--text-strong); flex: none; }
-.hx-mark > boopis-logo { width: 18px; }
-
-/* Session | Bots */
-
-/* New session */
-.hx-new__label { flex: 1; }
-
-/* the tabs pill and the New button are library pieces (HX.ui.segmented, .ui-btn--ghost); the shell only places them */
-.hx-seg { margin: 12px 12px 0; flex: none; width: auto; align-self: stretch; }
-/* the New button's key chip is placed by the library (.ui-btn:has(.ui-btn__kbd): the chip at half of what the height leaves around an 18px chip, its radius from the button's corner, R-corner-3); the shell only sets the start */
-.hx-new { justify-content: flex-start; margin: 8px 8px 0; padding-inline-start: 12px; flex: none; color: var(--text); }
-.hx-new .ui-icon { width: 16px; height: 16px; color: var(--icon); }
-.hx-new__label { flex: 1; text-align: left; }
-
+.hx-side__inner { position: relative; height: 100%; width: var(--sb-w); display: flex; flex-direction: column; padding-top: var(--drag-h); box-sizing: border-box; transition: opacity var(--dur-2) var(--ease-sharp); }
+/* the head: Sessions / Bots and New on one row (screen 13) */
+.hx-side__head { display: flex; flex: none; }
+.hx-side__open { display: flex; align-items: center; gap: var(--sp-2); flex: 1; min-width: 0; padding: var(--sp-2) var(--sp-3) 0 var(--sp-3); }
+.hx-seg { margin-inline-end: auto; }
 /* list slot: one panel per tab, cross-faded */
-.hx-side__list { position: relative; flex: 1; min-height: 0; margin-top: 12px; transition: opacity var(--dur-2) var(--ease) var(--dur-out), visibility 0s; }
+.hx-side__list { position: relative; flex: 1; min-height: 0; margin-top: var(--sp-3); }
 .hx-list {
   position: absolute; inset: 0;   /* a scroll area (.ui-scroll) */
-  opacity: 0; visibility: hidden; transform: translateX(var(--list-shift, -8px));
-  transition: opacity var(--dur-out) var(--ease), transform var(--dur-2) var(--ease), visibility 0s linear var(--dur-2);
+  opacity: 0; visibility: hidden; transform: translateX(var(--list-shift, calc(-1 * var(--sp-2))));
+  transition: opacity var(--dur-out) var(--ease-out), transform var(--dur-2) var(--ease-sharp), visibility 0s linear var(--dur-2);
 }
-.hx-list[data-list="bots"] { --list-shift: 8px; }
-.hx-list.is-active { opacity: 1; visibility: visible; transform: none; transition: opacity var(--dur-2) var(--ease) calc(var(--dur-out) / 2), transform var(--dur-3) var(--spring), visibility 0s; }
+.hx-list[data-list="bots"] { --list-shift: var(--sp-2); }
+.hx-list.is-active { opacity: 1; visibility: visible; transform: none; transition: opacity var(--dur-2) var(--ease-out) calc(var(--dur-out) / 2), transform var(--dur-3) var(--spring), visibility 0s; }
 
-/* account */
-.hx-foot { display: flex; align-items: center; gap: 4px; height: 52px; padding: 0 8px; flex: none; box-shadow: inset 0 1px 0 var(--hair); }
+/* the foot: you, Store, Settings (screen 12) */
+.hx-foot { display: flex; align-items: center; gap: var(--sp-1); padding: var(--sp-3); flex: none; }
 .hx-me {
-  --r-outer: var(--r-s); --pad: var(--sp-2);   /* a container (.ui-nest): the avatar sits at --pad from the start and both edges, with --r-in */
-  display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; height: calc(24px + 2 * var(--pad));
-  padding: 0 var(--pad); border: 0; border-radius: var(--r-outer); --sq-bg: transparent; background: var(--sq-bg); cursor: pointer;
-  color: var(--text); font-size: var(--fs-s); text-align: left;
-  transition: background-color var(--dur-1) var(--ease);
+  display: flex; align-items: center; gap: var(--sp-3); flex: 1; min-width: 0; height: var(--ctl); padding: 0 var(--sp-3) 0 0;
+  border-radius: var(--r-pill); color: var(--text); font-size: var(--fs-m); line-height: var(--lh-m); text-align: start;
+  transition: background-color var(--dur-out) var(--ease-out);
 }
-@media (hover: hover) and (pointer: fine) { .hx-me:hover { --sq-bg: var(--hover); background: var(--sq-bg); } }
-.hx-me__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: opacity var(--dur-1) var(--ease); }
-.hx-avatar {
-  display: inline-grid; place-items: center; flex: none;
-  width: 24px; height: 24px; border-radius: var(--r-in);
-  background: var(--selected); color: var(--text-on-light);
-  font: 600 var(--fs-2xs)/1 var(--sans); text-transform: uppercase;
-}
-.hx-avatar::after { content: attr(data-initial); }   /* the initial is drawn, not text: the account button's name does not have to repeat it */
-.hx-foot__gear { transition: opacity var(--dur-1) var(--ease), color var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease); }
+@media (hover: hover) and (pointer: fine) { .hx-me:hover { background: var(--hover); transition-duration: var(--dur-1); } }
+.hx-me__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hx-avatar { display: grid; place-items: center; flex: none; width: var(--ctl); height: var(--ctl); border-radius: var(--r-pill); background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line); color: var(--icon); }
+.hx-avatar > svg { width: var(--icon-s); height: var(--icon-s); }
 
-/* rail: the mark, the avatar and every icon stay on the x = 28 axis */
-.hx-rail {
-  position: absolute; top: 12px; left: 0; width: var(--sb-rail-w);
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease), visibility 0s linear var(--dur-out);
-}
-
-.hx[data-left="rail"] .hx-rail { opacity: 1; visibility: visible; transition: opacity var(--dur-2) var(--ease) var(--dur-out), visibility 0s; }
-/* In the rail its column is in the head's flow, at the same place (12px down, on the axis), so the list starts under "+" and never
-   under it: the vertical pill is taller than the open one, and the list began 22px up, with "+" drawn over the first bot and the list
-   over the lower half of "+" (the owner's report, 0.1.9). "+" then has a row of its own, of the rail's pitch: the list starts half
-   of what the row leaves around "+" below it, so "+" and the first orb are one row apart, as every orb is from the next. */
-.hx[data-left="rail"] .hx-rail { position: relative; top: auto; margin-top: 12px; align-self: start; justify-self: start; }
-.hx[data-left="rail"] .hx-side__list { margin-top: calc((var(--rail-row) - var(--ctl-s)) / 2); }
-.hx[data-left="rail"] :is(.hx-seg, .hx-new, .hx-me__name, .hx-foot__gear) { opacity: 0; visibility: hidden; transition: opacity var(--dur-press) var(--ease), visibility 0s linear var(--dur-press); }
-.hx[data-left="rail"] .hx-side__list { opacity: 0; visibility: hidden; transition: opacity var(--dur-press) var(--ease), visibility 0s linear var(--dur-press); }
-.hx[data-left="rail"] .hx-side__list:has(> .hx-list.is-active[data-rail="ok"]) { opacity: 1; visibility: visible; width: var(--sb-rail-w); }
-/* in the rail every orb stays on the x = 28 axis, so the list scrolls without a bar or a gutter (the bar would push the axis) */
-.hx[data-left="rail"] .hx-list { overflow-y: auto; --scroll-gutter: 0px; }
-.hx[data-left="rail"] .hx-list::-webkit-scrollbar { display: none; }
-/* in the rail the account button is its avatar: the name takes no width (it still fades, and the button's aria-label and
-   tooltip keep the name), so the button is --pad + 24 + --pad wide and centred on the x = 28 axis like every rail item */
-.hx[data-left="rail"] .hx-me { flex: none; gap: 0; }
-.hx[data-left="rail"] .hx-me__name { max-width: 0; }
-
-/* concave corners where the ground meets the cabinet */
-.hx-corner {
-  position: absolute; pointer-events: none; z-index: calc(var(--z-sidebar) - 1); --c: var(--bg-1);
-  top: var(--chrome-h); width: var(--r-l); height: var(--r-l);
-  opacity: 0; transition: opacity var(--dur-1) var(--ease), --hx-view-left var(--dur-3) var(--spring), --hx-view-right var(--dur-3) var(--spring);
-}
-.hx-corner--left { left: var(--hx-view-left); }
-.hx-corner--right { right: var(--hx-view-right); z-index: calc(var(--z-right) - 1); }
-.hx[data-lcorner="on"] .hx-corner--left, .hx[data-rcorner="on"] .hx-corner--right { opacity: 1; }
+/* the rail: the kit's Rail, shown while the sidebar is collapsed to it */
+.hx-rail { position: absolute; inset: 0 auto 0 0; width: var(--sb-rail-w); opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease-out), visibility 0s linear var(--dur-out); }
+.hx-rail > .k7-rail { height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.hx-rail > .k7-rail::-webkit-scrollbar { display: none; }
+.hx[data-left="rail"] .hx-rail { opacity: 1; visibility: visible; transition: opacity var(--dur-2) var(--ease-out) var(--dur-out), visibility 0s; }
+.hx[data-left="rail"] .hx-side__inner { opacity: 0; visibility: hidden; transition: opacity var(--dur-press) var(--ease-out), visibility 0s linear var(--dur-press); }
 
 /* ───────────── ground and views ───────────── */
 .hx-ground { position: absolute; top: var(--chrome-h); left: 0; right: 0; bottom: 0; background: var(--bg-2); }
+/* v7: the ground meets the sidebar on a straight edge; the concave corners of v6 are gone */
 /* No transform, filter or will-change on views: modules place fixed-position children on the viewport. */
 .hx-view {
   position: absolute; top: 0; bottom: 0;

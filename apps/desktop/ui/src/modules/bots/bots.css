@@ -302,3 +302,28 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-queue[hidden] { display: none; }
 .bt-outside { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-1); }
 .bt-outside__row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); margin: 0; font: 400 var(--fs-xs)/var(--lh-small) var(--sans); color: var(--text-quiet); }
+
+/* ================================================================ v7: the Bots chat and rooms on the kit (DESIGN-SYSTEM.md v7 19)
+   The conversation is the 640 column (the shell's --hx-col-w from v7's --col-w) of the kit's Bubbles: no header in the room (the
+   chrome's title pill carries the orb and the name, and opens the details), turns of bubbles 6 apart within a sender and 16 between,
+   yours on the right, the bot's on the left; a room's names and orbs in the kit's gutter. */
+.bt-room .bt-presence { display: none; }
+.bt-room .bt-col { padding-top: var(--sp-3); }
+.bt-room .bt-log { display: flex; flex-direction: column; gap: var(--sp-4); }
+.bt-room .bt-log > .k7-time + [data-hx-turn] { margin-top: calc(-1 * var(--sp-1)); }
+.bt-turn { position: relative; display: flex; flex-direction: column; min-width: 0; border-radius: var(--r-bubble); }
+.bt-turn > .bt-turn__body { gap: var(--gap-s); }
+.bt-turn > .bt-turn__body > * + * { margin-top: 0; }
+.bt-turn:focus-visible { outline-offset: var(--focus-off); }
+.bt-request { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bt-turn .k7-bubble > .ui-md { font-size: var(--fs-l); line-height: var(--lh-l); }
+.bt-turn .k7-bubble > .ui-md > :first-child { margin-top: 0; }
+.bt-turn .k7-bubble > .ui-md > :last-child { margin-bottom: 0; }
+/* the hover actions beside a bot's last bubble (screen 11: copy, then what exists) */
+.bt-turn__acts { position: absolute; bottom: 0; left: calc(var(--bubble-max) + var(--sp-2)); display: flex; gap: var(--gap-hair); opacity: 0; transition: opacity var(--dur-1) var(--ease-out); }
+.bt-turn:is(:hover, :focus-within) > .bt-turn__acts { opacity: 1; }
+@media (max-width: 1100px) { .bt-turn__acts { position: static; align-self: flex-start; } }
+.bt-room .bt-cardslot, .bt-turn .bt-cardslot { width: 100%; max-width: var(--bubble-max); }
+.bt-room .bt-resolved { display: block; }
+.bt-room .bt-empty { margin-left: 0; padding: var(--sp-6) 0; }
+.bt-ideas { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }

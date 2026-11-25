@@ -19,27 +19,35 @@ export const SEARCH_SHOWS = ['hint', 'button', 'pill', 'off'] as const;
 export interface ChromeOpts {
   rail?: U<typeof CHROME_RAILS[number]>; title: string; bot?: U<BotLike>; running?: U<string>; search?: U<typeof SEARCH_SHOWS[number]>;
   /** the window's buttons (the shell's controller decides which show, host/window-controls.ts); off on a tiling desktop */ windowControls?: U<boolean>; attrs?: U<Attrs>;
+  /** a room's title: its members' stack (24, a third's overlap) in place of the orb (screen 12) */ members?: U<readonly BotLike[]>;
+  /** a place with no bot (a session): its glyph in the pill's lead (screen 13) */ icon?: U<string>;
+  /** the app's own handles on each control (ids, data-win, aria-controls): the shell wires them */ parts?: U<ChromeParts>;
 }
-export function titlePill(o: { title: string; bot?: U<BotLike>; running?: U<string> }): string {
-  return '<button class="k7-reset k7-title"' + partAttrs('TitlePill', { type: 'button', 'aria-haspopup': 'dialog', 'aria-description': 'Opens the details', 'data-running': o.running ? '' : null }) + '>' +
-    (o.bot ? orbHtml(o.bot, { size: 24, live: !!o.running, state: o.running ? 'working' : undefined }) : '') + '<span class="k7-title__name">' + esc(o.title) + '</span>' +
+export interface ChromeParts { toggle?: U<Attrs>; title?: U<Attrs>; search?: U<Attrs>; details?: U<Attrs>; windowGroup?: U<Attrs>; min?: U<Attrs>; max?: U<Attrs>; close?: U<Attrs> }
+export function titlePill(o: { title: string; bot?: U<BotLike>; running?: U<string>; members?: U<readonly BotLike[]>; icon?: U<string>; attrs?: U<Attrs> }): string {
+  const lead = o.members && o.members.length ? stack({ members: o.members, size: 24, still: true, tip: false })
+    : o.bot ? orbHtml(o.bot, { size: 24, live: !!o.running, state: o.running ? 'working' : undefined })
+    : o.icon ? '<span class="k7-title__ic" aria-hidden="true">' + glyph(o.icon) + '</span>' : '';
+  return '<button class="k7-reset k7-title"' + partAttrs('TitlePill', { type: 'button', 'aria-haspopup': 'dialog', 'aria-description': 'Opens the details', 'data-running': o.running ? '' : null, 'data-lead': lead ? '' : null, ...(o.attrs ?? {}) }) + '>' +
+    lead + '<span class="k7-title__name">' + esc(o.title) + '</span>' +
     (o.running ? statusLine({ kind: 'system', phrase: o.running, inPill: true }) : '') + '</button>';
 }
-export function searchHint(o: { shows?: U<typeof SEARCH_SHOWS[number]> }): string {
+export function searchHint(o: { shows?: U<typeof SEARCH_SHOWS[number]>; attrs?: U<Attrs> }): string {
   const s = o.shows ?? 'hint';
   if (s === 'off') return '';
-  if (s === 'button') return iconButton({ icon: 'search', label: 'Search', keys: 'mod+K' });
-  if (s === 'pill') return '<button class="k7-reset k7-search-pill" type="button" aria-label="Search, ' + esc(kbdLabel()) + '">' + glyph('search') + '<span class="k7-grow">Search</span> ' + kbd({ keys: 'mod+K', inPill: true }) + '</button>';
+  if (s === 'button') return iconButton({ icon: 'search', label: 'Search', keys: 'mod+K', attrs: o.attrs });
+  if (s === 'pill') return '<button class="k7-reset k7-search-pill"' + attrs({ type: 'button', 'aria-label': 'Search, ' + kbdLabel(), ...(o.attrs ?? {}) }) + '>' + glyph('search') + '<span class="k7-grow">Search</span> ' + kbd({ keys: 'mod+K', inPill: true }) + '</button>';
   /* S5: the word and the key chips, no fill at rest; a 28 pill at --hover on hover and focus; its name contains its visible text */
-  return '<button class="k7-reset k7-search-hint" type="button" aria-label="Search, ' + esc(kbdLabel()) + '" aria-keyshortcuts="Control+K">Search ' + kbd({ keys: 'mod+K' }) + '</button>';
+  return '<button class="k7-reset k7-search-hint"' + attrs({ type: 'button', 'aria-label': 'Search, ' + kbdLabel(), 'aria-keyshortcuts': 'Control+K', ...(o.attrs ?? {}) }) + '>Search ' + kbd({ keys: 'mod+K' }) + '</button>';
 }
 const kbdLabel = (): string => (/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘K' : 'ctrl K');
 export function windowChrome(o: ChromeOpts): string {
+  const p = o.parts ?? {};
   return '<div class="k7-chrome"' + kitAttrs('WindowChrome', { 'data-rail': o.rail ?? 'a', role: 'toolbar', 'aria-label': 'Window', ...(o.attrs ?? {}) }) + '>' +
-    '<div class="k7-chrome__start">' + iconButton({ icon: 'sidebar-left', label: 'Hide sidebar', keys: 'mod+B' }) + '</div>' +
-    '<div class="k7-chrome__centre">' + titlePill(o) + '</div>' +
-    '<div class="k7-chrome__end">' + searchHint({ shows: o.search }) + iconButton({ icon: 'sidebar-right', label: 'Details', keys: 'mod+.' }) +
-    (o.windowControls === false ? '' : '<span class="k7-chrome__wc">' + iconButton({ icon: 'minimize', label: 'Minimize', variant: 'ghost' }) + iconButton({ icon: 'maximize', label: 'Maximize', variant: 'ghost' }) + iconButton({ icon: 'close', label: 'Close window', variant: 'ghost' }) + '</span>') +
+    '<div class="k7-chrome__start">' + iconButton({ icon: 'sidebar-left', label: 'Hide sidebar', keys: 'mod+B', attrs: p.toggle }) + '</div>' +
+    '<div class="k7-chrome__centre">' + titlePill({ ...o, attrs: p.title }) + '</div>' +
+    '<div class="k7-chrome__end">' + searchHint({ shows: o.search, attrs: p.search }) + iconButton({ icon: 'sidebar-right', label: 'Details', keys: 'mod+.', attrs: p.details }) +
+    (o.windowControls === false ? '' : '<span class="k7-chrome__wc"' + attrs(p.windowGroup ?? {}) + '>' + iconButton({ icon: 'minimize', label: 'Minimize', variant: 'ghost', attrs: p.min }) + iconButton({ icon: 'maximize', label: 'Maximize', variant: 'ghost', attrs: p.max }) + iconButton({ icon: 'close', label: 'Close window', variant: 'ghost', attrs: p.close }) + '</span>') +
     '</div></div>';
 }
 
@@ -95,18 +103,19 @@ export function dialog(o: DialogOpts): string {
 }
 
 /* ── Rail (40): the bots' tiles; A 54 on 88, B 44 on 64 (automatic under 1200 px); current, needs you, working ── */
-export interface RailBot extends BotLike { current?: boolean; needs?: boolean; working?: boolean; /** the boopis bot, in ink */ ink?: boolean }
-export interface RailOpts { size?: U<'a' | 'b'>; bots: readonly RailBot[]; groups?: U<readonly { name: string; members: readonly BotLike[] }[]>; attrs?: U<Attrs> }
+export interface RailBot extends BotLike { current?: boolean; needs?: boolean; working?: boolean; /** the boopis bot, in ink */ ink?: boolean; /** the app's handles on the tile */ attrs?: Attrs }
+export interface RailGroup { name: string; members: readonly BotLike[]; current?: boolean; attrs?: Attrs }
+export interface RailOpts { size?: U<'a' | 'b'>; bots: readonly RailBot[]; groups?: U<readonly RailGroup[]>; /** the app's handles on the foot's three buttons */ foot?: U<{ newBot?: Attrs; store?: Attrs; settings?: Attrs }>; attrs?: U<Attrs> }
 export function rail(o: RailOpts): string {
   const b = o.size === 'b', orb = b ? 28 : 36;
-  const tile = (x: RailBot): string => '<button class="k7-reset k7-tile"' + attrs({ type: 'button', 'aria-label': (x.name ?? '') + (x.needs ? ', needs you' : x.working ? ', working' : ''), 'aria-current': x.current ? 'page' : null, 'data-tip': x.name, 'data-tip-pos': 'right', 'data-needs': x.needs ? '' : null }) + '>' +
+  const tile = (x: RailBot): string => '<button class="k7-reset k7-tile"' + attrs({ type: 'button', 'aria-label': (x.name ?? '') + (x.needs ? ', needs you' : x.working ? ', working' : ''), 'aria-current': x.current ? 'page' : null, 'data-tip': x.name, 'data-tip-pos': 'right', 'data-needs': x.needs ? '' : null, ...(x.attrs ?? {}) }) + '>' +
     ((h: string) => (x.ink ? inkOrb(h) : h))(orbHtml(x, { size: orb, rest: true, state: x.needs ? 'needs' : x.working ? 'working' : undefined })) + (x.needs ? '<span class="k7-flag" aria-hidden="true"></span>' : '') + '</button>';
   /* a group is the v6 cluster (owner decision, 23 November; a keep-list item in v7), its orbs at 0.42 of the tile's orb as the approved
      boards draw it (ds-v7 screens.js: 15 on the standard rail, 12 on the compact one) */
-  const groups = (o.groups ?? []).map((g) => '<button class="k7-reset k7-tile" type="button"' + attrs({ 'aria-label': g.name + ': ' + g.members.map((m) => m.name).join(', '), 'data-tip': g.name, 'data-tip-pos': 'right' }) + '>' + stack({ members: g.members, size: Math.round(orb * 0.42), shape: 'cluster', still: true, tip: false }) + '</button>').join('');
+  const groups = (o.groups ?? []).map((g) => '<button class="k7-reset k7-tile" type="button"' + attrs({ 'aria-label': g.name + ': ' + g.members.map((m) => m.name).join(', '), 'aria-current': g.current ? 'page' : null, 'data-tip': g.name, 'data-tip-pos': 'right', ...(g.attrs ?? {}) }) + '>' + stack({ members: g.members, size: Math.round(orb * 0.42), shape: 'cluster', still: true, tip: false }) + '</button>').join('');
   return '<nav class="k7-rail"' + kitAttrs('Rail', { 'data-size': b ? 'b' : 'a', 'aria-label': 'Bots', ...(o.attrs ?? {}) }) + '>' + o.bots.map(tile).join('') +
     (groups ? '<hr class="k7-rail__rule">' + groups : '') + '<span class="k7-grow"></span><div class="k7-rail__foot">' +
-    iconButton({ icon: 'plus', label: 'New bot', variant: 'ghost' }) + iconButton({ icon: 'store', label: 'Store', variant: 'ghost' }) + iconButton({ icon: 'gear', label: 'Settings', variant: 'ghost' }) + '</div></nav>';
+    iconButton({ icon: 'plus', label: 'New bot', variant: 'ghost', attrs: { 'data-tip-pos': 'right', ...(o.foot?.newBot ?? {}) } }) + iconButton({ icon: 'store', label: 'Store', variant: 'ghost', attrs: { 'data-tip-pos': 'right', ...(o.foot?.store ?? {}) } }) + iconButton({ icon: 'gear', label: 'Settings', variant: 'ghost', attrs: { 'data-tip-pos': 'right', ...(o.foot?.settings ?? {}) } }) + '</div></nav>';
 }
 
 /* ── Notch (42): the notch's own surface. The notch spec is not in this repository (an owner question); what the kit can draw from

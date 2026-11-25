@@ -73,7 +73,7 @@ export function chip(o: ChipOpts): string {
 /* ── Segmented (23): inline, page head (scope), tab bar ── */
 export const SEGMENTED_VARIANTS = ['inline', 'head', 'tabs'] as const;
 export type SegmentedVariant = typeof SEGMENTED_VARIANTS[number];
-export interface SegItem { value: string; label: string; controls?: U<string> }
+export interface SegItem { value: string; label: string; controls?: U<string>; /** the attention dot (amber, R-tab-3 in v7's 15.2): something on that side needs you */ dot?: U<boolean>; id?: U<string>; tip?: U<string>; keys?: U<string> }
 export interface SegmentedOpts { items: readonly SegItem[]; value: string; label: string; variant?: U<SegmentedVariant>; attrs?: U<Attrs> }
 export function segmented(o: SegmentedOpts): string {
   const tabs = o.variant === 'tabs';
@@ -85,8 +85,8 @@ export function segmented(o: SegmentedOpts): string {
       const on = it.value === o.value;
       return '<button class="k7-reset k7-seg__item"' + partAttrs('SegmentedItem', {
         type: 'button', role: tabs ? 'tab' : 'radio', 'aria-selected': tabs ? String(on) : null, 'aria-checked': tabs ? null : String(on),
-        'aria-controls': it.controls, tabindex: on ? '0' : '-1', 'data-value': it.value
-      }) + '>' + esc(it.label) + '</button>';
+        'aria-controls': it.controls, tabindex: on ? '0' : '-1', 'data-value': it.value, id: it.id, 'data-tip': it.tip, 'data-kbd': it.keys, 'aria-keyshortcuts': it.keys
+      }) + '>' + esc(it.label) + (it.dot != null ? '<span class="k7-seg__dot"' + attrs({ 'aria-hidden': 'true', 'data-show': it.dot ? '' : null }) + '></span>' : '') + '</button>';
     }).join('') + '</div>';
 }
 

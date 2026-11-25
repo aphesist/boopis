@@ -77,7 +77,7 @@ export const kit = {
 };
 export type Kit = typeof kit;
 export type { ButtonOpts, IconButtonOpts, ChipOpts, SegmentedOpts, SegItem, SelectorItemOpts, SwitchOpts, FieldOpts, KbdOpts, TooltipOpts } from './controls';
-export type { ChromeOpts, PageOpts, PaneOpts, DialogOpts, RailOpts, RailBot, NotchOpts } from './surfaces';
+export type { ChromeOpts, ChromeParts, PageOpts, PaneOpts, DialogOpts, RailOpts, RailBot, RailGroup, NotchOpts } from './surfaces';
 export type { DockOpts, DockBot, DockKind } from './dock';
 export type { ToolRowOpts, AskCardOpts, AskAnswer, FilesCardOpts, FileRow, QueueOpts, DiffViewOpts, DiffLine, DiffComment, ComposerOpts, LineItem } from './thread';
 export type { CardOpts, RowOpts, BlockOpts, MenuOpts, MenuEntry, MenuRowOpts, OptionRowOpts, ListRowOpts, ListOpts, SectionHeadOpts, NoticeOpts, SystemLineOpts, BubbleOpts, WellOpts, DisclosureOpts, StepOpts, TurnFootOpts, TimeSeparatorOpts, EmptyStateOpts } from './blocks';

@@ -6,28 +6,31 @@ import { kbdLabel } from '../../core/keys';
 import type { Tab } from '../../core/types';
 import { data } from '../../data';
 import { els, sh } from './ctx';
+import { setTitle } from './chrome';
+import type { TitleLead } from './chrome';
 
 /* ───────── title: project / session, or bots / bot ───────── */
 const titleOverride: Record<Tab, string | null> = { session: null, bots: null };
-export function setTitleOverride(tab: Tab, title: string | null): void { titleOverride[tab] = title; }
+const leadOverride: Record<Tab, TitleLead | null> = { session: null, bots: null };
+export function setTitleOverride(tab: Tab, title: string | null, lead?: TitleLead | null): void { titleOverride[tab] = title; leadOverride[tab] = lead ?? null; }
+/** the title pill: the open session (its glyph and title), the open bot (its orb and name) or a room (its stack and name) */
 export function updateTitle(): void {
   const el = els();
-  if (!el || !el.whereTitle) return;
-  let project = '', t: string | null = titleOverride[state.tab];
+  if (!el || !el.btnTitle) return;
+  let t: string | null = titleOverride[state.tab], lead: TitleLead = leadOverride[state.tab] ?? {};
   if (state.tab === 'session') {
     const ss = data().sessions.list.get();
     const s = ss.find((x) => x.id === sh.selection.session) ?? ss.find((x) => x.running) ?? ss[0];
-    project = s ? s.project : '';
     t = t || (s ? s.title : 'New session');
+    lead = { icon: 'terminal' };
   } else {
     const b = data().bots.snapshot().bots.find((x) => x.id === sh.selection.bots);
-    project = 'Bots';
     t = t || (b ? b.name : 'All bots');
+    if (!leadOverride.bots && b) lead = { bot: b };
   }
-  el.whereProject.textContent = project;
-  el.whereTitle.textContent = t;
-  // the visible words (the project, the title and the shortcut) stay in the name, in order (WCAG 2.5.3, label in name)
-  el.btnSearch.setAttribute('aria-label', 'Search and commands. Current: ' + (project ? project + ' ' : '') + t + ' ' + kbdLabel('mod+K'));
+  // the visible words stay in the name, in order (WCAG 2.5.3, label in name); the pill opens the details
+  setTitle(t, lead, t + ', details');
+  if (el.btnSearch) el.btnSearch.setAttribute('aria-label', 'Search, ' + kbdLabel('mod+K'));
 }
 
 /* ───────── attention ─────────
@@ -37,7 +40,7 @@ export function updateTitle(): void {
    sources add their unique ids when they send them, or their count. */
 interface Count { count: number; tab: Tab; ids: readonly string[] | null }
 const attention = new Map<string, Count>();
-const TABNAME: Record<Tab, string> = { session: 'Session', bots: 'Bots' };
+const TABNAME: Record<Tab, string> = { session: 'Sessions', bots: 'Bots' };
 const OWNER: Record<Tab, string> = { session: 'session', bots: 'bots' };
 const MIRRORS = new Set(['cards', 'dock']);
 export function tabForSource(src: string, tab: string | undefined): Tab {
@@ -81,9 +84,10 @@ export function attentionFor(tab: Tab): number {
 }
 export function updateAttentionDots(): void {
   const per: Record<Tab, number> = { session: attentionFor('session'), bots: attentionFor('bots') };
-  for (const sg of [sh.seg.tabs, sh.seg.rail]) if (sg) for (const b of $$('[role="tab"]', sg)) {
+  const sg = sh.seg.tabs;
+  if (sg) for (const b of $$('[role="tab"]', sg)) {
     const t = (b.dataset['value'] ?? 'session') as Tab, n = per[t] || 0;
-    const dot = b.querySelector('.ui-dot'); if (dot) dot.toggleAttribute('data-show', n > 0);
+    const dot = b.querySelector('.k7-seg__dot'); if (dot) dot.toggleAttribute('data-show', n > 0 && t !== state.tab);
     b.setAttribute('aria-label', n > 0 && t !== state.tab ? TABNAME[t] + ', needs you' : TABNAME[t]);
   }
 }

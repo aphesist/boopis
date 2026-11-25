@@ -31,7 +31,7 @@ export function go(delta: number): void {
 }
 export function updateNav(): void {
   const el = els();
-  if (!el || !el.btnBack) return;
+  if (!el || !el.btnBack || !el.btnFwd) return;
   el.btnBack.disabled = hist.i <= 0;
   el.btnFwd.disabled = hist.i >= hist.stack.length - 1;
 }
