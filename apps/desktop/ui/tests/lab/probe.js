@@ -58,7 +58,7 @@
   /* token values as they resolve on a ground: the root, or an element that re-derives tokens (the dock's black,
      [data-ground]), so a colour derived on the dock is still a token */
   const tokenCache = new Map();
-  const groundOf = (e) => (e && e.closest && e.closest('[data-ui="v7"] [data-theme], [data-ground], [data-hx-preset]:not(html)')) || document.documentElement;   /* a v7 island in the other theme (the dock's dark inside) is its own ground */
+  const groundOf = (e) => (e && e.closest && e.closest('[data-ui="v7"] [data-theme], [data-ui="v7"][data-theme], [data-ground], [data-hx-preset]:not(html)')) || document.documentElement;   /* an app surface on the kit (data-ui and data-theme on it, w33) is its own ground */   /* a v7 island in the other theme (the dock's dark inside) is its own ground */
   function tokens(names, ground) {
     ground = ground || document.documentElement;
     const de = document.documentElement;

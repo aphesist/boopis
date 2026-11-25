@@ -329,3 +329,7 @@ orb-avatar.is-live { cursor: pointer; }
 /* whom a message is for (owner decision: "to you"): after the member's name, or on your turn's top line */
 .k7-byline > .bt-to { color: var(--text-dim); }
 .bt-turn__to { align-self: flex-end; margin-bottom: var(--gap-xs); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
+/* the Bots view is a v7 root (modules/shell/chrome.ts); its ground runs up under the floating chrome (shell.css) */
+#hx-view-bots { background: var(--bg-2); }
+/* the conversation's column: v7's 640 (--col-w) inside the layout's column, on its centre line */
+.bt-room .bt-col { width: min(var(--hx-col-w, var(--col-w)), var(--col-w)); margin-left: calc(var(--hx-col-left, 0px) - var(--hx-view-left, 0px) + (var(--hx-col-w, var(--col-w)) - min(var(--hx-col-w, var(--col-w)), var(--col-w))) / 2); }

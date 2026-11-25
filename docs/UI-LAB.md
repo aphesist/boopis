@@ -147,7 +147,9 @@ would spend its time on findings that do not block). Every other check but `visu
 `check.mjs` runs them in v7's two themes, `dark` and `light` (`--kit-presets`), not the v6 presets; their token checks read
 `tokens.v7.css` too. `__lab.accent(hex)`, `__lab.corners('b' | 'c')` and `__lab.shadow('a' | 'b' | 'c')` set section 18's
 customization. On a kit story `concentric.strict` replaces v6's `concentric` (LAB-v7 section 4: the tightened rule, floor 6).
-`LAB_V7_BLOCKING: "kit"` (ci.yml) makes every v7 finding on a kit story or in `src/components/v7/` block, and keeps the v6 screens'
+**The app's v7 surfaces** (`src/lab/stories/v7/`: the chrome, the sidebar's head, foot and roster, the rail, a bot's chat and a room,
+w33/shell-bots) boot the whole app in v7's two themes, as the kit's stories do, and scope their checks to the part that is on the kit.
+`LAB_V7_BLOCKING: "kit"` (ci.yml) makes every v7 finding on a kit story, a `v7/` story or in `src/components/v7/` block, and keeps the v6 screens'
 v7 findings reported.
 
 **Not yet in the matrix.** LAB-v7's axes beyond today's (dark and light, corners B and C, three accents, three densities) need the

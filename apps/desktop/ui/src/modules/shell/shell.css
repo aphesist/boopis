@@ -62,14 +62,15 @@ body {
    DESIGN-SYSTEM.md v7 7 and 19: a 56 px drag region over the window's top, the kit's WindowChrome floating in it at y = 10 (the
    sidebar toggle over the rail, the title pill centred, the search hint, details and the window glyphs). It paints nothing of its
    own: the sidebar's --bg-1 and the ground's --bg-2 run under it to the window's top edge. */
-body[data-ui="v7"] { --chrome-h: var(--drag-h); --sb-w: var(--sb-open-w); }
+/* the chrome's height and the open sidebar's width are v7's for the whole window (the layout and every view read them) */
+.hx, .hx-probe { --chrome-h: 56px; --sb-w: 300px; }
 .hx-bar {
   position: absolute; inset: 0 0 auto 0; z-index: var(--z-chrome); height: var(--chrome-h);
   user-select: none; pointer-events: none;
 }
 .hx-bar > .k7-chrome { pointer-events: auto; }
 .hx-bar > .k7-chrome :is(.k7-chrome__start, .k7-chrome__centre, .k7-chrome__end) { pointer-events: auto; }
-.hx[data-left="open"] .hx-bar .k7-chrome__start { width: var(--sb-rail-w); }
+.hx-bar .k7-chrome__start { width: var(--hx-rail-w); }
 .hx-win [hidden] { display: none; }   /* a tiling window manager shows close alone (host/window.ts) */
 /* a layer that covers the whole window (first run, the startup notice) carries the same bar in its own flow, so the window's
    controls and its drag area stay reachable over it (host/window-controls.ts `windowBar`) */
@@ -118,7 +119,7 @@ body[data-ui="v7"] { --chrome-h: var(--drag-h); --sb-w: var(--sb-open-w); }
 .hx-avatar > svg { width: var(--icon-s); height: var(--icon-s); }
 
 /* the rail: the kit's Rail, shown while the sidebar is collapsed to it */
-.hx-rail { position: absolute; inset: 0 auto 0 0; width: var(--sb-rail-w); opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease-out), visibility 0s linear var(--dur-out); }
+.hx-rail { position: absolute; inset: 0 auto 0 0; width: var(--hx-rail-w); opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease-out), visibility 0s linear var(--dur-out); }
 .hx-rail > .k7-rail { height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .hx-rail > .k7-rail::-webkit-scrollbar { display: none; }
 .hx[data-left="rail"] .hx-rail { opacity: 1; visibility: visible; transition: opacity var(--dur-2) var(--ease-out) var(--dur-out), visibility 0s; }
@@ -349,7 +350,12 @@ body[data-ui="v7"] { --chrome-h: var(--drag-h); --sb-w: var(--sb-open-w); }
 .hxt-preset:has(input:checked) { --sq-line: var(--brass); }
 .hxt-preset[data-sq-on]:has(input:checked)::after { clip-path: var(--sq-ring, var(--sq-edge)); }
 
-/* the compact rail (board 06 B: 64, tiles 44) is Automatic under 1200 px of window width (7); the layout reads --sb-rail-w */
-@media (max-width: 1199px) { body[data-ui="v7"] { --sb-rail-w: var(--rail-b-w); } }
 /* the floating Notice (the retired toast's place, R-toast-1 "the top of the work"): under the chrome, on the column's centre line */
-.hx > .k7-notify { --hx-center-x: var(--hx-center-x-to); top: calc(var(--chrome-h) + var(--sp-2)); left: var(--hx-center-x, 50%); transform: translateX(-50%); max-width: calc(100% - 2 * var(--sp-4)); }
+.hx-notify { position: absolute; inset: 0; z-index: var(--z-toast); pointer-events: none; }
+.hx-notify > .k7-notify { --hx-center-x: var(--hx-center-x-to); top: calc(var(--drag-h) + var(--sp-2)); left: var(--hx-center-x, 50%); transform: translateX(-50%); max-width: calc(100% - 2 * var(--sp-4)); }
+/* the rail's width (88, v7 7) for the whole window: the layout reads it from the probe */
+.hx, .hx-probe { --sb-rail-w: 88px; --hx-rail-w: 88px; }
+@media (max-width: 1199px) { .hx, .hx-probe { --sb-rail-w: 64px; --hx-rail-w: 64px; } }
+/* on the Bots tab the ground under the chrome is the Bots view's (a v7 root): the chrome paints it from the view's left edge */
+.hx-bar::before { content: ''; position: absolute; inset: 0 0 0 var(--hx-view-left-to, 0px); background: var(--bg-2); opacity: 0; pointer-events: none; transition: opacity var(--dur-2) var(--ease-sharp); }
+.hx[data-tab="bots"] .hx-bar::before { opacity: 1; }

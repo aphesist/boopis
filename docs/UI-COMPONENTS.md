@@ -69,8 +69,22 @@ a v7 one replaces stay as they are (the list is under "Left for wave C").
 **The retired names** (21.3: QueueStrip, LimitNotice, Toast, Banner, ScopePicker, SettingsLine, SteerLine, CheckpointBar, ChoiceCards,
 LaunchCard, ReferenceChip) exist nowhere in the v7 kit. **Left for wave C** (v6 code the screens still draw with, reported by the
 lab's `kit.single` and not blocking until the screens move): the v6 toast (`components/toast.ts`, `ui.toast`, its CSS and tests, and
-every screen that confirms with it; the v7 Notice's floating placement replaces it), the store story's "Banner" text, and the v6
-kit as a whole (`ui.*`), which the v7 kit replaces component by component as each screen moves.
+every screen that still confirms with it; the v7 Notice's floating placement replaces it, `kit.notify`), the store story's "Banner"
+text, and the v6 kit as a whole (`ui.*`), which the v7 kit replaces component by component as each screen moves.
+
+**Moved by w33/shell-bots** (the app is a v7 root: `data-ui="v7"` and `data-theme` on the body and `#hx-app`, in the scheme of the
+active theme, `modules/shell/chrome.ts`): the title bar is the kit's WindowChrome (the title pill with the open bot's orb, a room's
+stack or a session's glyph; the search hint; details; the window glyphs; back and forward are keys and palette entries only); the open
+sidebar's head (Sessions / Bots, the kit's Segmented with the amber attention dot, and New) and foot (you, Store, Settings); the Bots
+roster's rows and its rooms' rows (ListRow, SectionHead "Groups", New group a ghost Button); the rail (the kit's Rail in `#hx-rail`,
+compact under 1200 px, rest-pose orbs); a bot's and a room's messages (Bubble, with the bot's derived fill in its own chat and a
+member's byline and orb in a room, the message to you washed amber, TimeSeparator, the turn's hover actions as ghost IconButtons); a
+bot's approval (AskCard, approval variant: Hold to allow once and Deny); the shell's and the Bots tab's confirmations (the floating
+Notice, `kit.notify`). Their stories are `src/lab/stories/v7/` (blocking on the v7 rules). **Still v6 in those surfaces:** the
+composers (`ui.composer`: its mentions, voice and queue machinery have no kit counterpart yet), a room's header (rename, members,
+run limit, board, archive) and its huddles, the presence entry ("who is at work"), the Archived group, the bot settings sheet (the
+details pane is not drawn yet), the new-bot and new-group forms, the session list's rows (w33/session-s0), the palette, and Settings,
+Store and Keyboard (w33/settings-store).
 
 ## The kit as a package
 

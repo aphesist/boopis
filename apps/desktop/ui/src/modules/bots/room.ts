@@ -306,7 +306,8 @@ function renderCard(b: Bot, m: ApprovalMessage): HTMLElement {
   });
   card.addEventListener('ui:commit', () => { resolveCard(b.id, m, 'approve'); });
   card.addEventListener('click', (e) => { const c = (e.target as Element).closest<HTMLElement>('[data-kit~="Chip"]'); if (c && !c.hasAttribute('data-hold')) resolveCard(b.id, m, 'deny'); });
-  card.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); resolveCard(b.id, m, 'deny'); } });
+  /* KEYMAP section 6: on a card, x denies (and Esc, the Deny chip's key) */
+  card.addEventListener('keydown', (e) => { if ((e.key === 'Escape' || e.key === 'x') && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); resolveCard(b.id, m, 'deny'); } });
   return el('div', { class: 'bt-cardslot' }, card);
 }
 function resolvedLine(b: Bot, m: ApprovalMessage): HTMLElement {

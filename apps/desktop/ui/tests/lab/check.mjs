@@ -52,7 +52,9 @@ const PRESETS = opt('presets', quick ? 'catalog,bone' : 'catalog,graphite,bone,t
 /* the v7 kit's stories (src/lab/stories/kit/) run in v7's two themes, not the v6 presets (LAB-v7 section 3) */
 const KIT_PRESETS = opt('kit-presets', 'dark,light').split(',');
 const isKit = (row) => typeof row.story === 'string' && row.story.startsWith('kit/');
-const presetsOf = (row) => (isKit(row) ? KIT_PRESETS : PRESETS);
+/* a v7 surface of the app (stories/v7/: the shell, the rail, the Bots chat and rooms on the kit): v7's themes and v7's rules, as the kit's */
+const isV7 = (row) => isKit(row) || (typeof row.story === 'string' && row.story.startsWith('v7/'));
+const presetsOf = (row) => (isV7(row) ? KIT_PRESETS : PRESETS);
 const WIDTHS = opt('widths', quick ? '1440' : '390,1200,1440,1920').split(',').map(Number);
 const AREA = opt('area', '') ? opt('area', '').split(',').map(areaOf) : null;
 const STORY = opt('story', '');
@@ -290,7 +292,7 @@ async function checkRow(browser, origin, row, log) {
     /* an allowance is a reason (the whole check) or { reason, el } (only findings whose element description contains el) */
     const whole = (c) => typeof allow[c] === 'string';
     /* a kit story is held to the tightened corner rule (concentric.strict, R-corner-10, LAB-v7 section 4), which replaces v6's concentric */
-    const skip = (c, f) => { if (c === 'concentric' && isKit(row)) return true; if (f && STANDING_ALLOW.some((s) => s.check === c && String(f.el ?? '').includes(s.el))) return true; const a = allow[c]; if (!a) return false; if (typeof a === 'string') return true; return !!f && String(f.el ?? '').includes(a.el); };
+    const skip = (c, f) => { if (c === 'concentric' && isV7(row)) return true; if (f && STANDING_ALLOW.some((s) => s.check === c && String(f.el ?? '').includes(s.el))) return true; const a = allow[c]; if (!a) return false; if (typeof a === 'string') return true; return !!f && String(f.el ?? '').includes(a.el); };
     if (DRAW_ONLY) { for (const e of page.errorsSeen) record(row, { check: 'errors', msg: e, key: 'errors|' + e.slice(0, 120) }, 'load'); return; }
     for (const preset of presetsOf(row)) {
       await page.evaluate((p) => window.__lab.preset(p), preset);
@@ -302,7 +304,7 @@ async function checkRow(browser, origin, row, log) {
         const where = preset + '/' + w;
         const rest = await probe(page, null, row.overlayDecl, preset === presetsOf(row)[0] && w === 1440 && !skip('same-component'));
         /* the v7 kit's renders are compared among themselves: the v6 screens that draw the same job differently are wave C's */
-        for (const [cls0, geom, el] of rest.sigs || []) { const cls = (isKit(row) ? 'kit ' : '') + cls0; let m = sigMap.get(cls); if (!m) sigMap.set(cls, (m = new Map())); let l = m.get(geom); if (!l) m.set(geom, (l = [])); if (!l.some((x) => x.row === row)) l.push({ row, el }); }
+        for (const [cls0, geom, el] of rest.sigs || []) { const cls = (isV7(row) ? 'kit ' : '') + cls0; let m = sigMap.get(cls); if (!m) sigMap.set(cls, (m = new Map())); let l = m.get(geom); if (!l) m.set(geom, (l = [])); if (!l.some((x) => x.row === row)) l.push({ row, el }); }
         if (rest.overlapMs != null) { overlapCost.n++; overlapCost.sum += rest.overlapMs; overlapCost.max = Math.max(overlapCost.max, rest.overlapMs); }
         /* a crop is a full-page screenshot, which resizes the window for a moment, and an open layer closes on a resize (layer.ts):
            after a crop, a state with an overlay is drawn again before anything else measures it */

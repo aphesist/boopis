@@ -101,8 +101,14 @@ function rowHTML(b: Bot): string {
   return kit.html.listRow({
     variant: 'bot', title: b.name, sub: line.sub, bot: b, needs: line.needs ?? false, working: s.busy, current: S.view === 'bot' && b.id === S.sel,
     ...(outside ? { endHTML: outsideRowMark() } : {}),
-    attrs: { 'data-value': b.id, 'aria-label': ui.botLabel(b, outside ? OUTSIDE_SHORT : undefined), 'aria-describedby': outside ? LIST_DESC : null }
+    attrs: { 'data-value': b.id, 'aria-label': rowLabel(b, line, outside), 'aria-describedby': outside ? LIST_DESC : null }
   });
+}
+/** the row's name holds its visible words in order (WCAG 2.5.3): the name, its line, "outside"; then the state when the line does not say it */
+function rowLabel(b: Bot, line: { sub: string; needs: string | null }, outside: boolean): string {
+  const s = ui.botState(b), words = line.needs ?? line.sub;
+  const state = s.key !== 'idle' && !words.toLowerCase().includes(s.word.toLowerCase()) ? s.word : '';
+  return [b.name, words, outside ? OUTSIDE_SHORT : '', state].filter(Boolean).join(', ');
 }
 export function makeRow(b: Bot): HTMLElement {
   const row = frag(rowHTML(b));

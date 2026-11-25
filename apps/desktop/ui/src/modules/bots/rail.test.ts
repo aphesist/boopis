@@ -49,7 +49,7 @@ describe('the shell\'s rail', () => {
     const css = read('../shell/shell.css').replace(/\/\*[\s\S]*?\*\//g, '');
     expect(css).toMatch(/\.hx\[data-left="rail"\] \.hx-rail \{ opacity: 1; visibility: visible;/);
     expect(css).toMatch(/\.hx\[data-left="rail"\] \.hx-side__inner \{ opacity: 0; visibility: hidden;/);
-    expect(css).toMatch(/@media \(max-width: 1199px\) \{ body\[data-ui="v7"\] \{ --sb-rail-w: var\(--rail-b-w\); \} \}/);
+    expect(css).toMatch(/@media \(max-width: 1199px\) \{ \.hx, \.hx-probe \{ --sb-rail-w: 64px; --hx-rail-w: 64px; \} \}/);
   });
 });
 

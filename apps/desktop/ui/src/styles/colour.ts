@@ -29,7 +29,8 @@ export function rgbaOf(token: string, scope?: 'dock'): RGBA {
     probe.setAttribute('aria-hidden', 'true');
     probe.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;visibility:hidden;pointer-events:none';
   }
-  let host: HTMLElement = document.body || document.documentElement;
+  /* the v6 theme's tokens as the root holds them: the body is a v7 root since wave C (its own tokens of the same names) */
+  let host: HTMLElement = document.documentElement;
   if (scope === 'dock') {
     if (!dockScope) { dockScope = document.createElement('div'); dockScope.setAttribute('data-ground', 'dock'); dockScope.setAttribute('aria-hidden', 'true'); dockScope.style.cssText = probe.style.cssText; }
     host.appendChild(dockScope); host = dockScope;

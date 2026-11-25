@@ -57,7 +57,7 @@ export async function mentions(env) {
   await s.safe('mention', async () => {
     const room = await s.fresh({ q: 'fixture=groups&fixture=paper-past' });
     await room.evaluate(() => { __hx.setState({ tab: 'bots' }); }); await room.waitForTimeout(400);
-    await room.click('.bt-groups li:nth-of-type(2) .ui-row'); await room.waitForTimeout(500);
+    await room.click('.bt-group-rows > [data-kit~="ListRow"]:nth-of-type(2)'); await room.waitForTimeout(500);
     const rbox = '.bt-group .ui-composer__input';
     const rvalue = () => room.evaluate((sel) => (document.querySelector(sel)?.textContent ?? '').replace(/\u00a0/g, ' '), rbox);
     const rchips = () => room.evaluate((sel) => [...document.querySelectorAll(sel + ' [data-chip]')].map((c) => c.textContent), rbox);

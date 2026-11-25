@@ -103,7 +103,7 @@ export async function keyWalk(env) {
     const x0 = await exp(); await press('Enter', 400); const x1 = await exp();
     check('5', 'Enter opens the steps', x0 !== null && x0 !== x1, x0 + ' -> ' + x1);
     await press('o', 400); check('5', 'o closes the steps', (await exp()) === x0);
-    await press('c', 400); check('5', 'c copies (toast)', await ev(() => /copied/i.test((document.querySelector('.ui-toast.is-in') || {}).textContent || '')));
+    await press('c', 400); check('5', 'c copies (toast)', await ev(() => /copied/i.test((document.querySelector('.k7-notify[data-in]') || document.querySelector('.ui-toast.is-in') || {}).textContent || '')));
     await press('b', 500); check('5', 'b opens the blank popover', (await layer()).pop || await ev(() => !!document.querySelector('[data-hx-attention][aria-expanded="true"]')));
     await press('1', 300); const picked = await where(); await press('Enter', 600);
     check('6', '1 picks a blank option, Enter confirms', /alias/i.test(picked.label) && await ev(() => !!document.querySelector('#hx-view-session [data-answered]') && !__hx.ui.popover.current), picked.label);
@@ -119,21 +119,22 @@ export async function keyWalk(env) {
     await press('Control+g', 100); await press('m', 300); await press('b', 500);
     await press('Escape', 400); check('6', 'Esc closes the popover, focus back on its blank', !(await layer()).pop && (await where()).region === 'messages' && /blank/.test((await where()).cls), await where());
     await press('Alt+2', 600);
-    const holdSel = '#hx-view-bots [data-ui="hold"]';
+    /* the Bots chat's approval is the kit's AskCard (v7): its hold chip carries data-holding, then data-held */
+    const holdSel = '#hx-view-bots [data-kit~="AskCard"] [data-hold]';
     await page.focus(holdSel);
     await page.keyboard.down('Space'); await page.waitForTimeout(500);
-    const mid = await ev((q) => document.querySelector(q).dataset.state, holdSel);
+    const mid = await ev((q) => { const b = document.querySelector(q); return b.dataset.state || (b.hasAttribute('data-holding') ? 'holding' : 'idle'); }, holdSel);
     await page.keyboard.up('Space'); await page.waitForTimeout(400);
-    const early = await ev((q) => document.querySelector(q) && document.querySelector(q).dataset.state, holdSel);
+    const early = await ev((q) => { const b = document.querySelector(q); return b && (b.dataset.state || (b.hasAttribute('data-held') ? 'done' : 'idle')); }, holdSel);
     check('6', 'releasing Space early cancels', mid === 'holding' && early !== 'done', mid + ' -> ' + early);
     await page.focus(holdSel); await page.keyboard.down('Space'); await page.waitForTimeout(1150); await page.keyboard.up('Space'); await page.waitForTimeout(500);
-    check('6', 'holding Space for 1 s approves', await ev(() => { const b = document.querySelector('#hx-view-bots [data-ui="hold"]'); return !b || b.dataset.state === 'done' || /approved/i.test(document.querySelector('#hx-view-bots').textContent); }));
+    check('6', 'holding Space for 1 s approves', await ev(() => { const b = document.querySelector('#hx-view-bots [data-kit~="AskCard"] [data-hold]'); return !b || b.hasAttribute('data-held') || /approved|allowed/i.test(document.querySelector('#hx-view-bots').textContent); }));
     page = await s.fresh(); await press('Alt+2', 600);
     await page.focus(holdSel); await press('x', 500);
-    check('6', 'x denies', await ev(() => /denied|deny/i.test((document.querySelector('#hx-view-bots hx-card') || document.querySelector('#hx-view-bots')).textContent) && !document.querySelector('#hx-view-bots [data-ui="hold"][data-state="idle"]')));
+    check('6', 'x denies', await ev(() => /denied/i.test(document.querySelector('#hx-view-bots').textContent) && !document.querySelector('#hx-view-bots [data-kit~="AskCard"][data-state="needs"] [data-hold]')));
     page = await s.fresh(); await press('Alt+2', 600);
     await page.focus(holdSel); await press('Enter', 200); await press('Enter', 600);
-    check('6', 'Enter twice approves', await ev(() => { const b = document.querySelector('#hx-view-bots [data-ui="hold"]'); return !b || b.dataset.state === 'done'; }));
+    check('6', 'Enter twice approves', await ev(() => { const b = document.querySelector('#hx-view-bots [data-kit~="AskCard"][data-state="needs"] [data-hold]'); return !b || b.hasAttribute('data-held'); }));
   });
 
   /* section 7: the composer */

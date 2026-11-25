@@ -2,8 +2,11 @@
    the kit's WindowChrome: the sidebar toggle over the rail, the title pill centred on the window (the open bot's orb, a room's
    stack, or a session's glyph, and the name; it opens the details), the search hint (S5: "Search ctrl K", it opens the palette),
    the details button and the thin window glyphs. The open sidebar's head is the Sessions / Bots pill and New (screen 13); its
-   foot is you, Store and Settings (screen 12). The whole app is a v7 root (`data-ui="v7"` on the body), in the theme the
-   scheme of the v6 preset picks, until Settings > Appearance moves to v7's own themes (w33/settings-store). */
+   foot is you, Store and Settings (screen 12). Each surface already on the kit is a v7 root (`data-ui="v7"` and `data-theme`): the
+   chrome, the sidebar and the rail, the Bots tab's view and the floating Notice's layer, in the theme the scheme of the v6 preset
+   picks, until Settings > Appearance moves to v7's own themes (w33/settings-store). The surfaces still on v6 (the session, the dock,
+   the palette, the dialogs) keep v6's tokens until their wave C branches move them; then the root moves up to the body. */
+import { emit } from '../../core/bus';
 import { $, frag } from '../../core/dom';
 import { kit, ui } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
@@ -12,10 +15,15 @@ import { themeApi } from '../../styles/theme';
 import { sh } from './ctx';
 
 /** the v7 root follows the scheme of the active theme: dark, or light (Bone) */
+export const V7_SURFACES = ['#hx-chrome', '#hx-side', '#hx-view-bots', '#hx-notify'] as const;
+let lastMode = '';
 export function syncV7Theme(): void {
   const mode = themeApi.scheme() === 'light' ? 'light' : 'dark';
-  if (document.body.getAttribute('data-ui') === 'v7' && document.body.getAttribute('data-theme') === mode) return;
-  kit.applyTheme(document.body, { theme: mode });
+  for (const sel of V7_SURFACES) { const n = document.querySelector<HTMLElement>(sel); if (n) { n.setAttribute('data-ui', 'v7'); n.setAttribute('data-theme', mode); } }
+  if (mode === lastMode) return;
+  lastMode = mode;
+  /* orbs re-read the colours they resolved (the boopis bot's ink, the cut-out eyes): the app's one theme event, as kit.applyTheme says it */
+  emit('hx:theme', { preset: 'v7-' + mode, scheme: mode });
 }
 
 export function drawChrome(app: HTMLElement): void {

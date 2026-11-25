@@ -95,7 +95,7 @@ export function cycleRegion(dir: 1 | -1): void {
 export function rememberFocus(target: Element): void { const r = regionOf(target); if (r) lastInRegion[r] = target; }
 
 /* ───────── things that need you (F8) ───────── */
-const ATTN = '[data-hx-attention], button.ss-blank, button.cd-blank:has(.cd-stamp), button.cd-hold[data-hold]';
+const ATTN = '[data-hx-attention], button.ss-blank, button.cd-blank:has(.cd-stamp), button.cd-hold[data-hold], [data-kit~="AskCard"][data-state="needs"] [data-hold]';   /* the last: a bot's approval, the kit's AskCard (v7) */
 function attentionTargets(): Array<{ n: HTMLElement; tab: Tab }> {
   const order: Tab[] = [state.tab, state.tab === 'session' ? 'bots' : 'session'];
   const out: Array<{ n: HTMLElement; tab: Tab }> = [];
