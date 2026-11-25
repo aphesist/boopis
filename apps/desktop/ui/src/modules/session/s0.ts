@@ -162,17 +162,20 @@ export function lineEl(l: ThreadLine, onUndo?: (shipId: string) => void): HTMLEl
 export const REWIND_HERE = 'Rewind files to here';
 export const REWIND_BASE = 'Rewind to before this session';
 export function rewindFoot(o: { first: boolean; avail: Avail; onRewind(to: 'here' | 'base'): void }): HTMLElement {
-  /* every turn that kept a change goes back to after it; the first one also to before the session (checkpoint-rewind.md 8) */
+  /* every turn that kept a change goes back to after it; the first one also to before the session (checkpoint-rewind.md 8): one
+     action per foot, so a narrow column never pushes the second out of the turn */
   const tip = o.avail.ok ? {} : { disabled: true, tip: o.avail.why };
-  const actions = [{ label: REWIND_HERE, value: 'here', ...tip }, ...(o.first ? [{ label: REWIND_BASE, value: 'base', ...tip }] : [])];
-  const f = kit.turnFoot({ kind: 'session', actions });
-  f.addEventListener('click', (e) => {
-    const b = (e.target as Element).closest<HTMLButtonElement>('.k7-foot__btn');
-    if (b && !b.disabled && o.avail.ok) o.onRewind(b.dataset['value'] === 'base' ? 'base' : 'here');
-  });
   const w = document.createElement('div');
   w.className = 'ss-s0-foot';
-  w.append(f);
+  const list: readonly (readonly [string, 'here' | 'base'])[] = [[REWIND_HERE, 'here'], ...(o.first ? [[REWIND_BASE, 'base'] as const] : [])];
+  for (const [label, value] of list) {
+    const f = kit.turnFoot({ kind: 'session', actions: [{ label, value, ...tip }] });
+    f.addEventListener('click', (e) => {
+      const b = (e.target as Element).closest<HTMLButtonElement>('.k7-foot__btn');
+      if (b && !b.disabled && o.avail.ok) o.onRewind(value);
+    });
+    w.append(f);
+  }
   return asV7(w);
 }
 

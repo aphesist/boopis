@@ -1,36 +1,36 @@
 {
  "band-and-status@bone": {
-  "sha": "27e3ea5a0543c733ba7d4ffb3b5a03c0b40a00bf",
+  "sha": "2b80685b858ae8f3286cb3d599de96aaf1854bb2",
   "w": 744,
   "h": 779
  },
  "band-and-status@catalog": {
-  "sha": "d76560c9f2188f7f2854f77037653df58831e80f",
+  "sha": "5f36ef842cbdd8a899517561c2eb444d9917e78e",
   "w": 744,
   "h": 779
  },
  "band-and-status@graphite": {
-  "sha": "724fc6d2d1d560af2cf2d85d59ba556532943353",
+  "sha": "f887192593e3645eaa0cd59fdb6f3074d643a4fe",
   "w": 744,
   "h": 779
  },
  "band-and-status@typewriter": {
-  "sha": "1416f325031e04ff40e21b81340ec888f53a8747",
+  "sha": "2380a81f8fd69ac864ae4ce4d8f2a0e197913585",
   "w": 744,
   "h": 193
  },
  "pane-in-the-details-panel@bone": {
-  "sha": "43d13c5e0364bffbb951a81f8886acc6fc68edab",
-  "w": 312,
+  "sha": "340cfdb9d1ec124cb941e17846a7d76566d13844",
+  "w": 888,
   "h": 872
  },
  "pane-in-the-details-panel@catalog": {
-  "sha": "1257883eb78f9835a7604ff244023446a7482e62",
+  "sha": "a9abf60da18e051947feed1b89336864fd06c93d",
   "w": 895,
   "h": 872
  },
  "pane-in-the-details-panel@graphite": {
-  "sha": "bdefd9fd95522b0e331f8f69800d4a47249e91de",
+  "sha": "d079f621536f409a19429bdb52311aad0bacec0b",
   "w": 886,
   "h": 872
  },
@@ -40,82 +40,82 @@
   "h": 872
  },
  "the-conversation-with-placed-rows@bone": {
-  "sha": "6f87dcdb4f498366333418bb1d8a38d980619a46",
+  "sha": "d2040987aeafec1891840db68e212d7db65f3d80",
   "w": 1180,
   "h": 872
  },
  "the-conversation-with-placed-rows@catalog": {
-  "sha": "c86bc8a3cf195c4b51432e6c8d50bc120f4156eb",
+  "sha": "98685a2a6a82bef307cd6890aa77b2b77e311f97",
   "w": 1180,
   "h": 872
  },
  "the-conversation-with-placed-rows@graphite": {
-  "sha": "dc71f6ba3d8d2a9c2b1dc6655bb53f5c4ac59ef5",
+  "sha": "f5578648499e2cd629a481bb923921609d62ec0a",
   "w": 1180,
   "h": 872
  },
  "the-conversation-with-placed-rows@typewriter": {
-  "sha": "271affc35bdbb75a16a99eefb6ac6f6ad2c23168",
+  "sha": "4f79cf418bc8a5f0cc114a0f8779dad1263ed740",
   "w": 1180,
   "h": 872
  },
  "theme-card-hover@bone": {
-  "sha": "777ab845296548b8bd5658cb86f83c3565ea9fe8",
+  "sha": "e2a41688a1d842641e3c3365ddeb2566107bed08",
   "w": 1180,
   "h": 872
  },
  "theme-card-hover@catalog": {
-  "sha": "0ad3a10d7877d3b8d065b1d4a857f56cbb3b05d8",
+  "sha": "df5686c4c2f6382169c4499363eb8857731d6efb",
   "w": 1180,
   "h": 872
  },
  "theme-card-hover@graphite": {
-  "sha": "ca38c436e8a5cdf3453d7649b47d5791af31287b",
+  "sha": "c6744880fb5b8d067cab16d2f4b16bff693e29c6",
   "w": 1180,
   "h": 872
  },
  "theme-card-hover@typewriter": {
-  "sha": "e62377d8b7b9eaf814b2e1922271bcb0ad082d59",
+  "sha": "7eec557fd087c9cfee26d65eff6068329d4b75f1",
   "w": 1180,
   "h": 872
  },
  "toast-with-n@bone": {
-  "sha": "4e9ce791ec39de7942db200f8c0dbea499231433",
+  "sha": "ba82d2194927653bbe4e68569eb92fec3ef4320f",
   "w": 291,
   "h": 64
  },
  "toast-with-n@catalog": {
-  "sha": "5cb9a3aefce492206614e83ccbb1f30ccd116c3c",
+  "sha": "aa2016d93eb601c451c9e098e7dbab8b0d721c0a",
   "w": 306,
   "h": 64
  },
  "toast-with-n@graphite": {
-  "sha": "ba281b0d4cb25db69867cfb52261682dcf310212",
-  "w": 287,
+  "sha": "9d2d151de2264ef30134f01188cfd2d61e6ab077",
+  "w": 303,
   "h": 64
  },
  "toast-with-n@typewriter": {
-  "sha": "f003a9635a0b4a2db3f95ffe0e0cab8001ad32fa",
+  "sha": "34160f30815cce01c028a83707e186031a0bcf62",
   "w": 333,
   "h": 64
  },
  "whole-window@bone": {
-  "sha": "4ee8e655c61705bf8e8bba7b83805ea6be4b0c4b",
+  "sha": "6004dc9ea359b8d47a95a08ee31357e80cbe3cbd",
   "w": 1440,
   "h": 900
  },
  "whole-window@catalog": {
-  "sha": "ca12910485f6712913e2af45d1ca1f07c2c0c5d8",
+  "sha": "6aa49ccf726906115a7be06df41bdfc682314173",
   "w": 1440,
   "h": 900
  },
  "whole-window@graphite": {
-  "sha": "2eda8a3c86b99faa1213932959921099cf99cd4f",
+  "sha": "7901f1265403bea29cc1eab512f169a18d72f48d",
   "w": 1440,
   "h": 900
  },
  "whole-window@typewriter": {
-  "sha": "dd1c3b88bfef2eff028c9cbd45b6974eabc68119",
+  "sha": "2396666f3aedb4305e10acda9a04bff381116a81",
   "w": 1440,
   "h": 900
  }
