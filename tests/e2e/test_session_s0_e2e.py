@@ -241,8 +241,9 @@ def test_a_rewind_on_a_real_folder_puts_the_bytes_back_and_can_be_undone(
     )
     assert done["status"] == "rewound", done
     assert (project / "a.txt").read_text() == "one\n" and (project / "b.txt").read_text() == "bee\n"
-    assert gateway.events_of("plugin.boopis.checkpoint.rewound", s.id), (
-        "the rewind is announced to the session's clients"
+    # the rewind is announced to the session's clients (an event: it may land just after the answer)
+    gateway.wait_event(
+        lambda e: e.get("type") == "plugin.boopis.checkpoint.rewound" and e.get("session_id") == s.id, 30
     )
     after = gateway.result("plugin.boopis.checkpoint.list", {"session_id": s.id})["checkpoints"]
     assert after[-1]["kind"] == "rewind" and after[-1]["rewind_to"] == first
