@@ -1,0 +1,43 @@
+/* Onboarding revision 3: the setup pages before the app, the canvas steps, the hand-off, boopis's chat. Revision 2's parts
+   (ob2.css) are unchanged; these only place them. Product UI is the kit's. */
+
+/* ---- (a) the setup pages: the Page's intro variant on the whole window (Grok-Bot 001 to 008) ---- */
+.ob3-pre .ob-h { margin-top: 196px; }
+.ob3-card { width: 520px; margin: 28px 0 0; }
+.ob3-pre .ob3-notice { width: 520px; margin: 20px 0 -8px; }
+.ob3-tryscene { height: 300px; }
+.ob3-trycomp { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); display: flex; flex-direction: column; }
+.ob3-trycomp .ob3-notice { position: absolute; left: 0; top: calc(100% + 8px); width: 640px; margin: 0; }
+.ob3-menu { position: absolute; width: 268px; z-index: 6; }
+.ob3-rc { margin-top: 24px; }
+.ob3-rcs { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 24px; }
+.ob3-rcs .ob-rcpt { align-self: center; margin: 0; }
+.ob3-new { margin-top: 28px; width: 420px; padding: 14px 16px; border-radius: var(--r-block); background: var(--bg-3); box-shadow: inset 0 0 0 0.5px var(--line); text-align: center; display: flex; flex-direction: column; gap: 2px; }
+
+/* ---- (b) the canvas steps: one centre line for the mark, the heading, the line, the buttons and the Block ---- */
+.ob3-nss { margin: -6px 0 16px; text-align: center; }
+.ob3-pair { gap: 8px; justify-content: center; }
+.ob3-gap { height: 16px; flex: none; }
+.ob3-nsq { width: 440px; margin: 0; }
+.ob3-chips { gap: 6px; justify-content: center; margin-top: 24px; }
+
+/* ---- (c) the hand-off: the line and Later, centred under the heading ---- */
+.ob3-auto { align-items: center; gap: 8px; }
+.ob3-auto .btn { width: 140px; }
+
+/* ---- (d) boopis's chat: its head, the team card, the goal tiles in the chat ---- */
+.ob3-chathead { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 8px 0 20px; text-align: center; }
+.ob3-chathead .nm { font-size: var(--fs-l); line-height: var(--lh-l); color: var(--text-strong); margin-top: 6px; }
+.ob3-ch-orb { display: grid; place-items: center; width: 88px; height: 72px; }
+.ob3-team { margin-top: 8px; padding: 8px; }   /* content on the 8 inset: the chips (radius 14) and tiles concentric with the Block's 22 */
+.ob3-tms { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 12px 0 16px; }
+.ob3-tm { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.ob3-tm .chip { background: var(--fill-2); color: var(--text); }
+.ob3-goals { margin-top: 8px; padding: 8px; }
+.ob3-goals .hd { margin-bottom: 8px; height: 32px; padding: 0 6px; }
+.ob3-goals .ob-foot > .xs, .ob3-team .ob-foot > .xs { padding-right: 6px; }
+.ob3-frees { gap: 6px; }
+.ob3-goals .ob-gts { grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 0; }
+.ob3-goals .ob-gt { height: 100px; border-radius: calc(var(--r-bubble) - 8px); padding: 14px; }
+.ob3-goals .ob-foot { margin-top: 8px; }
+.ob3-team .ob-foot { margin-top: 0; }

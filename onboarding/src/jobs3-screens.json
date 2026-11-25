@@ -1,0 +1,530 @@
+[
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P01&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P01-hello-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P01&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P01-hello-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P01&engine=busy&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P01b-hello-engine-getting-ready-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P01&engine=busy&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P01b-hello-engine-getting-ready-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P02&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P02-settings-boopis-needs-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P02&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P02-settings-boopis-needs-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P03&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P03-model-found-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P03&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P03-model-found-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P03&st=none&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P03b-model-nothing-found-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P03&st=none&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P03b-model-nothing-found-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P03&st=waiting&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P03c-model-signing-in-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P03&st=waiting&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P03c-model-signing-in-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P03&st=failed&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P03d-error-sign-in-failed-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P03&st=failed&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P03d-error-sign-in-failed-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P03&st=offline&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P03e-error-offline-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P03&st=offline&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P03e-error-offline-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P04&phase=shown&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P04a-try-it-marks-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P04&phase=shown&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P04a-try-it-marks-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P04&phase=open&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P04b-try-it-mark-open-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P04&phase=open&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P04b-try-it-mark-open-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P04&phase=ask&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P04c-try-it-keep-it-on-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P04&phase=ask&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P04c-try-it-keep-it-on-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P04&phase=open&rec=1&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P04d-try-it-recorded-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3P04&phase=open&rec=1&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-P04d-try-it-recorded-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3S01&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-S01-add-a-folder-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3S01&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-S01-add-a-folder-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3S02&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-S02-worktree-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3S02&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-S02-worktree-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3S03&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-S03-how-careful-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3S03&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-S03-how-careful-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3S04&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-S04-ready-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3S04&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-S04-ready-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3H01&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-H01-handoff-auto-switch-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3H01&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-H01-handoff-auto-switch-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3H01&v=prompt&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-H01b-handoff-prompt-option-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3H01&v=prompt&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-H01b-handoff-prompt-option-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B01&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B01-boopis-greets-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B01&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B01-boopis-greets-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B02&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B02-what-bots-are-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B02&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B02-what-bots-are-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B03&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B03-goals-tiles-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B03&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B03-goals-tiles-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B03&picks=two&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B03b-goals-two-picks-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B03&picks=two&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B03b-goals-two-picks-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B04&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B04-where-bots-work-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B04&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B04-where-bots-work-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B05&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B05-your-name-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B05&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B05-your-name-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B06&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B06-starter-team-and-connectors-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B06&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B06-starter-team-and-connectors-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B07&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B07-approval-rules-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B07&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B07-approval-rules-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B08&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B08-build-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B08&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B08-build-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B09&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B09-reach-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B09&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B09-reach-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B10&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B10-first-job-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3B10&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-B10-first-job-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3X01&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-X01-resume-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3X01&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-X01-resume-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3X02&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-X02-settings-getting-started-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3X02&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-X02-settings-getting-started-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3X03&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-X03-returning-user-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3X03&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-X03-returning-user-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3X04&theme=dark",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-X04-bots-later-first-open-dark.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?s=o3X04&theme=light",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/screens/O-X04-bots-later-first-open-light.jpg",
+"w": 1440,
+"h": 900,
+"wait": 1400,
+"full": false
+}
+]

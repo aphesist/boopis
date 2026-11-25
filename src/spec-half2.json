@@ -1,0 +1,18 @@
+[
+{"base":"session/S10a-empty-tab","title":"S10 the empty Session tab","can":"Add a project (a folder picker; nothing is copied), import existing sessions, or type straight into the composer. The empty state is one line."},
+{"base":"session/S10b-import-sessions","title":"S10 importing Claude Code and Codex sessions","can":"Pick the sessions found on this computer, by project; they come in with their history and continue on a new engine session."},
+{"base":"session/S11a-slash-commands","title":"S11 / commands in the composer","can":"Type / for /model, /side, /clear, /compact and the session's skill and plugin commands; the kit's menu, above the composer, arrows and Enter to pick."},
+{"base":"session/S11b-files-and-skills","title":"S11 @ files and $ skills","can":"Type @ to put a worktree file in the message as a chip (R-inline-1); type $ to pick a skill."},
+{"base":"session/S12-side-chat","title":"S12 side chat","can":"Ask on the side (/side or /btw) in a tab of the right panel, with its own composer; Add to chat brings an answer into the main thread. The main turn keeps running and its context is untouched."},
+{"base":"session/S13-panel-files","title":"S13 the right panel: Files","can":"Browse and search the session's worktree; changed files carry their counts; a file opens read-only or goes into the message as an @ chip."},
+{"base":"session/S14-panel-terminal","title":"S14 the right panel: Terminal","can":"A real shell in the session's worktree, its path and branch in the head, new tabs with +; select output to attach it to the message as a chip."},
+{"base":"session/S15-panel-pr","title":"S15 the right panel: PR","can":"The session's pull request: title, branch, checks, reviews; open it on GitHub or update it from the session."},
+{"base":"session/S16-usage-limits","title":"S16 usage limits and the context tick","can":"The composer's line shows the context as dots with its count and the weekly quota; at the limit one notice offers the fallback model or resuming at the reset time."},
+{"base":"session/S17-after-restart","title":"S17 continued after a restart","can":"A session running when the app closed continues with one line; its queued message is still queued (the engine's store)."},
+{"base":"session/S18a-engine-stopped","title":"S18 error: the engine stopped","can":"One line in the thread with one way out: start the engine again."},
+{"base":"session/S18b-no-model","title":"S18 error: no model for this session","can":"The launch step names the missing model in its row with Choose a model; nothing starts until one is set."},
+{"base":"session/S18c-gate-failed","title":"S18 error: the gate failed","can":"The turn's gate card says failed in red with the failing check and Fix and retry; nothing was written to the workspace."},
+{"base":"session/S19a-settings-scope-segmented","title":"S19 option A (recommended): Settings > Sessions, the scope as a segmented control","can":"Set the defaults for new sessions, how Enter behaves, the blank wait, the work log, and the inbox's settle and restart rules, for this device or this project."},
+{"base":"session/S19b-settings-scope-select","title":"S19 option B: the scope as a select beside the title","can":"The same page; the scope names the project directly, which scales to several projects but hides that the page has a device level, hence A."},
+{"base":"session/S20-session-details","title":"S20 the session's details","can":"The title pill opens the session's details: change the model, effort or how careful (which makes the S8 line), see the context, cost and the PR; Pin, Fork and Settle are in the overflow."}
+]

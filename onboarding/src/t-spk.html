@@ -1,0 +1,7 @@
+<!doctype html><html data-theme="dark"><meta charset="utf-8"><link rel="stylesheet" href="tokens.v7.css"><link rel="stylesheet" href="kit.css"><link rel="stylesheet" href="ob2.css">
+<script src="lib/boopis-logo.js"></script><script src="ob2-speaker.js"></script>
+<body style="background:#121212;margin:0"><div id="r" class="v7" style="display:flex;flex-wrap:wrap;gap:20px;padding:20px"></div><script>
+const P=['rest','you','down','left','right','upLeft','tiltLeft','turnLeft','turnRight'];
+document.getElementById('r').innerHTML=P.map(p=>`<div style="text-align:center;color:#888;font:12px monospace;outline:1px solid #333">${OB2S.spk(96,{pose:p})}<div>${p}</div></div>`).join('');
+setTimeout(()=>OB2S.settle(),100);
+</script></body></html>

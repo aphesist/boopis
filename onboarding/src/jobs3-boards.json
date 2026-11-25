@@ -1,0 +1,44 @@
+[
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?b=o01",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/boards/O01-structure-one-first-run.jpg",
+"w": 1940,
+"h": 900,
+"wait": 2200
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?b=o02",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/boards/O02-approvals-placement.jpg",
+"w": 1940,
+"h": 900,
+"wait": 2200
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?b=o03",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/boards/O03-goal-tiles.jpg",
+"w": 1940,
+"h": 900,
+"wait": 2200
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?b=o04",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/boards/O04-speaker-logomark.jpg",
+"w": 1940,
+"h": 900,
+"wait": 2200
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?b=c01",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/boards/C01-own-parts-and-motion.jpg",
+"w": 1940,
+"h": 900,
+"wait": 2200
+},
+{
+"url": "file:///tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/src/ob3.html?b=c02",
+"out": "/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/onboarding-v3/boards/C02-kit-and-orb2-map.jpg",
+"w": 1940,
+"h": 900,
+"wait": 2200
+}
+]
