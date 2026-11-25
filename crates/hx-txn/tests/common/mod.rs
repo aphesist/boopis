@@ -187,5 +187,8 @@ pub fn create(path: &str, content: &str) -> Edit {
 }
 
 pub fn delete(path: &str) -> Edit {
-    Edit::Delete { path: path.into() }
+    Edit::Delete {
+        path: path.into(),
+        expect_sha256: None,
+    }
 }

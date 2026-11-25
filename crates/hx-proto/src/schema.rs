@@ -126,6 +126,7 @@ pub fn add_core(b: &mut SchemaBuilder) {
     b.error_data::<AbortedBeforeWriteData>(codes::HX_TXN_ABORTED_BEFORE_WRITE);
     b.error_data::<PathsData>(codes::HX_TXN_SCOPE_VIOLATION);
     b.error_data::<PathsData>(codes::HX_TXN_PROTECTED_PATH);
+    b.error_data::<PathsData>(codes::HX_TXN_CHANGED_SINCE);
     b.error_data::<ApplyFailedData>(codes::HX_TXN_APPLY_FAILED);
     for code in [
         codes::HX_TXN_JOURNAL_NOT_FOUND,

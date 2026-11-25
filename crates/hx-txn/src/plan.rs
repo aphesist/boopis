@@ -62,6 +62,9 @@ pub struct PlannedFile {
     pub original: Original,
     /// What happens to it.
     pub outcome: Outcome,
+    /// The permission bits a write sets, when an edit (`put`) decided them; otherwise a write
+    /// keeps the original's.
+    pub mode: Option<u32>,
 }
 
 impl PlannedFile {
@@ -124,6 +127,16 @@ impl Plan {
     }
 }
 
+/// What a `put` or `delete` expects the file to be before it runs.
+enum Expect {
+    /// Anything (a delete without `expect_sha256`).
+    Any,
+    /// The file must not exist.
+    Absent,
+    /// The file's SHA-256, lowercase hex.
+    Sha(String),
+}
+
 enum OpKind {
     Replace {
         old: String,
@@ -134,7 +147,14 @@ enum OpKind {
         content: String,
         overwrite: bool,
     },
-    Delete,
+    Delete {
+        expect: Expect,
+    },
+    Put {
+        bytes: Vec<u8>,
+        exec: bool,
+        expect: Expect,
+    },
     Patch {
         hunks: Vec<diff::Hunk>,
         kind: PatchKind,
@@ -159,6 +179,8 @@ struct VFile {
     original: Original,
     content: Content,
     missing_dirs: Vec<String>,
+    /// Set by a `put`: whether the result is executable.
+    exec: Option<bool>,
 }
 
 impl VFile {
@@ -246,7 +268,49 @@ fn expand(edits: &[Edit], failures: &mut Vec<EditFailure>) -> Vec<Op> {
                     },
                 );
             }
-            Edit::Delete { path } => push(path, OpKind::Delete),
+            Edit::Delete {
+                path,
+                expect_sha256,
+            } => push(
+                path,
+                OpKind::Delete {
+                    expect: expect_sha256.as_ref().map_or(Expect::Any, |h| expect_of(h)),
+                },
+            ),
+            Edit::Put {
+                path,
+                content_b64,
+                mode,
+                expect_sha256,
+            } => {
+                let exec = match mode.as_str() {
+                    "100644" => Some(false),
+                    "100755" => Some(true),
+                    _ => None,
+                };
+                match (decode_b64(content_b64), exec) {
+                    (Some(bytes), Some(exec)) => push(
+                        path,
+                        OpKind::Put {
+                            bytes,
+                            exec,
+                            expect: expect_of(expect_sha256),
+                        },
+                    ),
+                    (None, _) => failures.push(edit_failure(
+                        i,
+                        path,
+                        FailureKind::Unsupported,
+                        "`content_b64` is not standard base64",
+                    )),
+                    (_, None) => failures.push(edit_failure(
+                        i,
+                        path,
+                        FailureKind::Unsupported,
+                        "`mode` must be 100644 or 100755",
+                    )),
+                }
+            }
             Edit::Diff { path, diff: text } => match diff::parse(text) {
                 Err(message) => failures.push(edit_failure(
                     i,
@@ -259,6 +323,48 @@ fn expand(edits: &[Edit], failures: &mut Vec<EditFailure>) -> Vec<Op> {
         }
     }
     ops
+}
+
+fn expect_of(text: &str) -> Expect {
+    if text == "absent" {
+        Expect::Absent
+    } else {
+        Expect::Sha(text.to_ascii_lowercase())
+    }
+}
+
+/// Standard base64 with padding (RFC 4648 section 4); `None` for anything else.
+fn decode_b64(text: &str) -> Option<Vec<u8>> {
+    fn value(c: u8) -> Option<u32> {
+        match c {
+            b'A'..=b'Z' => Some(u32::from(c - b'A')),
+            b'a'..=b'z' => Some(u32::from(c - b'a') + 26),
+            b'0'..=b'9' => Some(u32::from(c - b'0') + 52),
+            b'+' => Some(62),
+            b'/' => Some(63),
+            _ => None,
+        }
+    }
+    let raw = text.as_bytes();
+    if !raw.len().is_multiple_of(4) {
+        return None;
+    }
+    let mut out = Vec::with_capacity(raw.len() / 4 * 3);
+    for (n, chunk) in raw.chunks(4).enumerate() {
+        let last = n == raw.len() / 4 - 1;
+        let pad = chunk.iter().rev().take_while(|&&c| c == b'=').count();
+        if pad > 2 || (pad > 0 && !last) {
+            return None;
+        }
+        let mut acc = 0u32;
+        for &c in &chunk[..4 - pad] {
+            acc = (acc << 6) | value(c)?;
+        }
+        acc <<= 6 * u32::try_from(pad).ok()?;
+        let bytes = acc.to_be_bytes();
+        out.extend_from_slice(&bytes[1..4 - pad]);
+    }
+    Some(out)
 }
 
 fn expand_diff(
@@ -410,14 +516,19 @@ fn apply_op(vf: &mut VFile, kind: &OpKind, limits: &Limits) -> std::result::Resu
             }
             Content::New(content.clone().into_bytes())
         }
-        OpKind::Delete => {
+        OpKind::Delete { .. } => {
             if vf.current().is_none() && !matches!(vf.original, Original::Symlink { .. }) {
                 return Err(Failure::new(
                     FailureKind::NotFound,
                     "the file does not exist",
                 ));
             }
+            vf.exec = None;
             Content::Absent
+        }
+        OpKind::Put { bytes, exec, .. } => {
+            vf.exec = Some(*exec);
+            Content::New(bytes.clone())
         }
         OpKind::Patch {
             hunks,
@@ -461,17 +572,48 @@ fn apply_op(vf: &mut VFile, kind: &OpKind, limits: &Limits) -> std::result::Resu
     Ok(())
 }
 
-fn outcome(vf: &VFile) -> Outcome {
-    match &vf.content {
+/// The permission bits a `put` asks for: the original's, with the executable bits set or
+/// cleared as `exec` says (a new executable is 0755; a new plain file keeps the default).
+fn put_mode(original: &Original, exec: Option<bool>) -> Option<u32> {
+    let exec = exec?;
+    let was = match original {
+        Original::File { meta, .. } => meta.mode,
+        _ => None,
+    };
+    match (was, exec) {
+        (Some(m), true) if m & 0o100 == 0 => Some(m | ((m & 0o444) >> 2)),
+        (Some(m), false) if m & 0o111 != 0 => Some(m & !0o111),
+        (Some(m), _) => Some(m),
+        (None, true) => Some(0o755),
+        (None, false) => None,
+    }
+}
+
+fn outcome(vf: &VFile) -> (Outcome, Option<u32>) {
+    let mode = put_mode(&vf.original, vf.exec);
+    let out = match &vf.content {
         Content::Original => Outcome::Unchanged,
         Content::Absent => match vf.original {
             Original::Absent => Outcome::Unchanged,
             _ => Outcome::Delete,
         },
         Content::New(b) => match &vf.original {
-            Original::File { bytes, .. } if bytes == b => Outcome::Unchanged,
+            Original::File { bytes, meta }
+                if bytes == b && (mode.is_none() || mode == meta.mode) =>
+            {
+                Outcome::Unchanged
+            }
             _ => Outcome::Write(b.clone()),
         },
+    };
+    (out, mode)
+}
+
+/// The SHA-256 of what a path holds at this point of the transaction, `None` when absent.
+fn current_sha(vf: &VFile) -> Option<String> {
+    match (&vf.content, &vf.original) {
+        (Content::Original, Original::Symlink { target }) => Some(sha(target.as_bytes())),
+        _ => vf.current().map(sha),
     }
 }
 
@@ -500,7 +642,7 @@ fn resolve_ops(
         check_cancel(cancel)?;
         let follow = !matches!(
             op.kind,
-            OpKind::Delete
+            OpKind::Delete { .. }
                 | OpKind::Patch {
                     kind: PatchKind::Delete,
                     ..
@@ -526,6 +668,7 @@ fn apply_ops(
     ops: &[Op],
     input: &PlanInput<'_>,
     failures: &mut Vec<EditFailure>,
+    changed_since: &mut Vec<String>,
 ) -> Result<BTreeMap<String, VFile>> {
     let PlanInput {
         root,
@@ -548,6 +691,7 @@ fn apply_ops(
                             original,
                             content,
                             missing_dirs: r.missing_dirs(),
+                            exec: None,
                         },
                     );
                 }
@@ -557,10 +701,24 @@ fn apply_ops(
                 }
             }
         }
-        if let Some(vf) = files.get_mut(&key)
-            && let Err(f) = apply_op(vf, &op.kind, limits)
-        {
-            failures.push(failure(op, f));
+        if let Some(vf) = files.get_mut(&key) {
+            let expect = match &op.kind {
+                OpKind::Put { expect, .. } | OpKind::Delete { expect } => expect,
+                _ => &Expect::Any,
+            };
+            let now = current_sha(vf);
+            let as_expected = match expect {
+                Expect::Any => true,
+                Expect::Absent => now.is_none(),
+                Expect::Sha(h) => now.as_deref() == Some(h.as_str()),
+            };
+            if !as_expected {
+                changed_since.push(op.requested.clone());
+                continue;
+            }
+            if let Err(f) = apply_op(vf, &op.kind, limits) {
+                failures.push(failure(op, f));
+            }
         }
     }
     Ok(files)
@@ -603,8 +761,14 @@ pub fn build(input: &PlanInput<'_>) -> Result<Plan> {
         .collect();
     scope.check(spelled.iter().map(|(a, b)| (a.as_str(), b.as_str())))?;
 
-    let files = apply_ops(&ops, input, &mut failures)?;
+    let mut changed_since: Vec<String> = Vec::new();
+    let files = apply_ops(&ops, input, &mut failures, &mut changed_since)?;
 
+    if !changed_since.is_empty() {
+        return Err(Error::ChangedSince {
+            paths: changed_since,
+        });
+    }
     if !failures.is_empty() {
         failures.sort_by_key(|f| f.edit_index);
         return Err(Error::AbortedBeforeWrite { failures });
@@ -613,7 +777,7 @@ pub fn build(input: &PlanInput<'_>) -> Result<Plan> {
     let mut created: BTreeSet<(usize, String)> = BTreeSet::new();
     let mut out = Vec::with_capacity(files.len());
     for (path, vf) in files {
-        let outcome = outcome(&vf);
+        let (outcome, mode) = outcome(&vf);
         if matches!(outcome, Outcome::Write(_)) && matches!(vf.original, Original::Absent) {
             created.extend(
                 vf.missing_dirs
@@ -625,6 +789,7 @@ pub fn build(input: &PlanInput<'_>) -> Result<Plan> {
             path,
             original: vf.original,
             outcome,
+            mode,
         });
     }
     Ok(Plan {

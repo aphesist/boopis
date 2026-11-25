@@ -37,6 +37,25 @@ pub enum Edit {
     Delete {
         /// The file to delete; it must exist.
         path: String,
+        /// The SHA-256 (hex) the file must have now, checked under the workspace lock; a file
+        /// that differs fails the whole transaction with `hx.txn.changed_since`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        expect_sha256: Option<String>,
+    },
+    /// Write exactly these bytes with this mode, creating parent directories. Internal to the
+    /// plugin's rewind (never offered to a model): it restores files byte- and mode-exact,
+    /// including files that are not UTF-8.
+    Put {
+        /// The file to write.
+        path: String,
+        /// The full content, standard base64 with padding.
+        content_b64: String,
+        /// The git file mode: `100644`, or `100755` for an executable.
+        mode: String,
+        /// The SHA-256 (hex) the file must have now, or `absent` when it must not exist; checked
+        /// under the workspace lock, a mismatch fails the whole transaction with
+        /// `hx.txn.changed_since`.
+        expect_sha256: String,
     },
     /// Apply unified-diff hunks. The diff may carry file headers (`--- a/x`, `+++ b/x`,
     /// `/dev/null` for create or delete) and several files.

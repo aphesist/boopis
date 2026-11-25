@@ -540,10 +540,10 @@ fn execute(root: &Dir, journal: &Journal, plan: &Plan, faults: &Faults) -> Resul
         let ctx = |what: &str| format!("{what} `{}`", f.path);
         match &f.outcome {
             Outcome::Write(bytes) => {
-                let mode = match &f.original {
+                let mode = f.mode.or(match &f.original {
                     Original::File { meta, .. } => meta.mode,
                     _ => None,
-                };
+                });
                 fsops::write_atomic(
                     root,
                     path,

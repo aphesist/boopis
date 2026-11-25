@@ -822,16 +822,48 @@ class DeleteEdit:
     """Delete a file. A symlink is removed itself, not its target."""
 
     path: str
+    expect_sha256: str | None = None
 
     def to_wire(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
         out['op'] = 'delete'
         out['path'] = self.path
+        if self.expect_sha256 is not None:
+            out['expect_sha256'] = self.expect_sha256
         return out
 
     @classmethod
     def from_wire(cls, data: Mapping[str, Any]) -> "DeleteEdit":
         return cls(
+            path=data['path'],
+            expect_sha256=(None if data['expect_sha256'] is None else data['expect_sha256']) if 'expect_sha256' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PutEdit:
+    """Write exactly these bytes with this mode, creating parent directories. Internal to the plugin's rewind (never offered to a model): it restores files byte- and mode-exact, including files that are not UTF-8."""
+
+    content_b64: str
+    expect_sha256: str
+    mode: str
+    path: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['op'] = 'put'
+        out['content_b64'] = self.content_b64
+        out['expect_sha256'] = self.expect_sha256
+        out['mode'] = self.mode
+        out['path'] = self.path
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "PutEdit":
+        return cls(
+            content_b64=data['content_b64'],
+            expect_sha256=data['expect_sha256'],
+            mode=data['mode'],
             path=data['path'],
         )
 
@@ -3050,12 +3082,13 @@ def _bundle_item_from_wire(data: Mapping[str, Any]) -> BundleItem:
     return cast(BundleItem, _bundle_item_variants[data['method']].from_wire(data))
 
 
-Edit = ReplaceEdit | CreateEdit | DeleteEdit | DiffEdit
+Edit = ReplaceEdit | CreateEdit | DeleteEdit | PutEdit | DiffEdit
 
 _edit_variants: dict[str, Any] = {
     'replace': ReplaceEdit,
     'create': CreateEdit,
     'delete': DeleteEdit,
+    'put': PutEdit,
     'diff': DiffEdit,
 }
 
@@ -3118,6 +3151,7 @@ ERROR_DATA: dict[str, type] = {
     'hx.sandbox.unavailable': UnavailableData,
     'hx.txn.aborted_before_write': AbortedBeforeWriteData,
     'hx.txn.apply_failed': ApplyFailedData,
+    'hx.txn.changed_since': PathsData,
     'hx.txn.invalid_state': JournalData,
     'hx.txn.journal_busy': JournalData,
     'hx.txn.journal_corrupt': JournalData,

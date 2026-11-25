@@ -960,6 +960,13 @@
         {
           "description": "Delete a file. A symlink is removed itself, not its target.",
           "properties": {
+            "expect_sha256": {
+              "description": "The SHA-256 (hex) the file must have now, checked under the workspace lock; a file\nthat differs fails the whole transaction with `hx.txn.changed_since`.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "op": {
               "const": "delete",
               "type": "string"
@@ -972,6 +979,39 @@
           "required": [
             "op",
             "path"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "Write exactly these bytes with this mode, creating parent directories. Internal to the\nplugin's rewind (never offered to a model): it restores files byte- and mode-exact,\nincluding files that are not UTF-8.",
+          "properties": {
+            "content_b64": {
+              "description": "The full content, standard base64 with padding.",
+              "type": "string"
+            },
+            "expect_sha256": {
+              "description": "The SHA-256 (hex) the file must have now, or `absent` when it must not exist; checked\nunder the workspace lock, a mismatch fails the whole transaction with\n`hx.txn.changed_since`.",
+              "type": "string"
+            },
+            "mode": {
+              "description": "The git file mode: `100644`, or `100755` for an executable.",
+              "type": "string"
+            },
+            "op": {
+              "const": "put",
+              "type": "string"
+            },
+            "path": {
+              "description": "The file to write.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "path",
+            "content_b64",
+            "mode",
+            "expect_sha256"
           ],
           "type": "object"
         },
@@ -4014,6 +4054,11 @@
     "hx.txn.apply_failed": {
       "data": {
         "$ref": "#/$defs/ApplyFailedData"
+      }
+    },
+    "hx.txn.changed_since": {
+      "data": {
+        "$ref": "#/$defs/PathsData"
       }
     },
     "hx.txn.invalid_state": {
