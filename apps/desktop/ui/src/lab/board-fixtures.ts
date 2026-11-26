@@ -178,7 +178,7 @@ export function boardS17(p: DataProvider): DataProvider {
     launch row, the block that offers the sign-ins, "Choose a model to start" in the composer; no usage notice */
 export function boardS37(p: DataProvider): DataProvider {
   const base = boardS17(p);
-  return { ...base, info: drawn(p, 'worktree'), details: { ...base.details, governance: store({ ...base.details.governance.get(), model: '', smart: false }), choices: store([]) }, limits: store<LimitNotice | null>(null) };
+  return { ...base, info: drawn(p, 'worktree'), details: { ...base.details, governance: store({ ...base.details.governance.get(), model: '', smart: false }), choices: store([]) }, limits: store<typeof LIMIT | null>(null) };
 }
 /** board S41 (st `noproject`): nothing yet: no session, no folder: "Add a folder to start" on the canvas and in the composer */
 export function boardS41(p: DataProvider): DataProvider {
@@ -187,7 +187,7 @@ export function boardS41(p: DataProvider): DataProvider {
   return {
     ...base, info: drawn(p),
     sessions: { ...base.sessions, list: store<readonly SessionSummary[]>([draft]), archived: store([]), conversation: () => ({ snapshot: () => ({ turns: [] }), subscribe: () => () => undefined }), create: () => draft },
-    sessionControls: { ...c, launch: store({ ...c.launch.get(), folder: null }) }, limits: store<LimitNotice | null>(null)
+    sessionControls: { ...c, launch: store({ ...c.launch.get(), folder: null }) }, limits: store<typeof LIMIT | null>(null)
   };
 }
 
