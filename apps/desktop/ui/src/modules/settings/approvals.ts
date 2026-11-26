@@ -82,7 +82,7 @@ export function approvalsPage(rules: RulesSource | undefined = data().rules): Pa
       return;
     }
     const v = view;
-    const outside = v.changedOutside ? kit.html.notice({ tone: 'owe', icon: 'shield', title: 'The rules file changed outside boopis.', text: ' Changes wait until you choose which rules to keep.', actions: [{ label: 'Use the new rules', value: 'accept', primary: true }, { label: 'Keep mine', value: 'discard' }], attrs: { 'data-outside': '' } }) : '';
+    const outside = v.changedOutside ? kit.html.notice({ tone: 'owe', icon: 'shield', title: 'The rules changed outside boopis', text: '', actions: [{ label: 'Use the new rules', value: 'accept', primary: true }, { label: 'Keep mine', value: 'discard' }], attrs: { 'data-outside': '' } }) : '';
     const drafts = v.rules.filter(isDraft), asks = v.rules.filter((r) => r.type === 'ask'), allowed = v.rules.filter((r) => r.type === 'exception' && !isDraft(r));
     const on = asks.filter((r) => r.enabled).length;
     const change = last ? kit.html.systemLine({ icon: 'sliders', text: last.what, action: 'Undo', attrs: { 'data-last': '' } }) : '';

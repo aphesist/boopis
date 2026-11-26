@@ -66,9 +66,11 @@ export function menuRow(o: MenuRowOpts): string {
   return '<button class="k7-reset k7-mrow"' + kitAttrs('MenuRow', {
     type: 'button', role, tabindex: '-1', 'aria-checked': o.checked == null ? null : String(o.checked), 'aria-disabled': o.disabled ? 'true' : null,
     'data-danger': o.danger ? '' : null, 'data-value': o.value ?? o.label, ...(o.attrs ?? {})
-  }) + '>' + (o.checked != null ? '<span class="k7-mrow__check" aria-hidden="true">' + (o.checked ? glyph('check') : '') + '</span>' : (o.leadHTML ?? glyph(o.icon))) +
+  }) + '>' +
+    /* a choice with its own lead (a colour, 7a's Accent): the lead first, its check at the row's end; else the check leads */
+    (o.checked != null && o.leadHTML ? o.leadHTML : o.checked != null ? '<span class="k7-mrow__check" aria-hidden="true">' + (o.checked ? glyph('check') : '') + '</span>' : (o.leadHTML ?? glyph(o.icon))) +
     '<span class="k7-mrow__name">' + esc(o.label) + '</span>' + (o.desc ? '<span class="k7-mrow__desc">' + esc(o.desc) + '</span>' : '<span class="k7-grow"></span>') +
-    (o.keys ? kbd({ keys: o.keys }) : '') + '</button>';
+    (o.keys ? kbd({ keys: o.keys }) : '') + (o.checked != null && o.leadHTML ? '<span class="k7-mrow__check" aria-hidden="true">' + (o.checked ? glyph('check') : '') + '</span>' : '') + '</button>';
 }
 
 /* ── OptionRow (20): a two-line radio row (a permission step, an import pick, who answers next): the name, and what it means on a second

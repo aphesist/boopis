@@ -2,6 +2,7 @@
    detection, the Local API, Diagnostics, the providers and connectors views), as one seam. The real one asks Tauri; the lab and the
    tests replace parts of it (`setSettingsHost`), so every page and state can be drawn without a host. */
 import { inTauri } from '../../host/bridge';
+import { tauriLocalApiBridge } from '../../host/local-api';
 import type { LocalApiBridge } from '../../host/local-api';
 
 export interface DiagnosticsHost {
@@ -75,7 +76,7 @@ export async function localApiHost(): Promise<LocalApiBridge | null> {
   const given = settingsHost.localApi();
   if (given) return given;
   if (!settingsHost.desktop() || settingsHost.localApi !== real.localApi) return null;
-  return (await import('../../host/local-api')).tauriLocalApiBridge();
+  return tauriLocalApiBridge();
 }
 /** the lab and the tests: replace parts of the host (and `resetSettingsHost` after) */
 export function setSettingsHost(parts: Partial<SettingsHost>): void { Object.assign(settingsHost, parts); }

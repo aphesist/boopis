@@ -18,6 +18,7 @@ import { currentPage, mountSettings, openSettings, PAGES, resetSettings } from '
 import { resetSettingsHost, setSettingsHost } from './host';
 import { catches } from './approvals';
 import { modelWords } from './voice';
+import { VOICE_LATER, voiceNeedsSetup, voiceSetUp, voiceTool } from '../chat/compose';
 
 const tick = (n = 3): Promise<void> => new Promise((r) => { let i = 0; const go = (): void => { if (++i >= n) r(); else setTimeout(go, 0); }; setTimeout(go, 0); });
 let dlg: HTMLDialogElement, rules: FakeRules, speech: FakeSpeech;
@@ -325,6 +326,15 @@ describe('Models › Voice and speech', () => {
     expect(document.body.innerHTML).not.toContain('sk_secret');
     expect(s.ready.get()).toBe(true);
     expect(page().querySelector('[data-voice="change-key"]')).not.toBeNull();
+    /* the voice circle: no longer "needs a voice model"; pressed, it says talking comes later */
+    expect(voiceSetUp()).toBe(true);
+    expect(voiceNeedsSetup()).toBe(false);
+    const slot = document.createElement('div');
+    slot.innerHTML = '<div class="k7-composer"><button data-send></button></div>';
+    document.body.append(slot);
+    voiceTool(slot, () => null);
+    slot.dispatchEvent(new CustomEvent('ui:voice', { detail: { setup: false } }));
+    expect(document.querySelector('.k7-notice[data-floating]')?.textContent).toContain(VOICE_LATER);
   });
   it('a server on this computer is its speech address', async () => {
     const s = fakeSpeech();

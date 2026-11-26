@@ -146,8 +146,9 @@ export async function dockPresence(env) {
     check('presence', 'compact when idle is off by default: the row is the row', !row.setting && !row.compact && row.kind === 'row' && Math.abs(row.h - 72) <= 0.5 && row.orb === 40 && row.canvas === 40, row);
     /* the switch in Settings, General */
     await page.keyboard.press('Control+Comma'); await wait(500);
-    const sw = await page.evaluate(() => { const i = document.getElementById('hx-set-dock-compact'); if (!i) return null; const l = document.querySelector('label[for="hx-set-dock-compact"]'); return { on: i.checked, words: l?.querySelector('span')?.textContent }; });
-    await page.click('#hx-set-dock-compact'); await wait(200);
+    const SW = '#hx-set-general [data-set="dock-compact"]';
+    const sw = await page.evaluate((q) => { const i = document.querySelector(q); if (!i) return null; return { on: i.getAttribute('aria-checked') === 'true', words: i.closest('.k7-row')?.querySelector('.k7-row__label')?.firstChild?.textContent }; }, SW);
+    await page.click(SW); await wait(200);
     const set = await page.evaluate(() => ({ state: __hx.state.dockCompact, stored: /"dockCompact"\s*:\s*true/.test(localStorage.getItem('hx.v6.shell') || '') }));
     check('presence', 'Settings, General has "Compact dock when idle": off, and switching it on is kept', !!sw && sw.on === false && sw.words === 'Compact dock when idle' && set.state && set.stored, { sw, set });
     await page.keyboard.press('Escape'); await wait(400);

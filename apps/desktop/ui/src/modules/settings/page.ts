@@ -27,7 +27,7 @@ export function fill(host: HTMLElement, html: string): void {
 /** scroll a part into view in the dialog's page, and move the focus to it */
 export function revealPart(el: Element | null): void {
   if (!(el instanceof HTMLElement)) return;
-  el.scrollIntoView?.({ block: 'start' });
+  el.scrollIntoView?.({ block: 'nearest' });
   const f = el.matches('input, textarea, button, [tabindex]') ? el : el.querySelector<HTMLElement>('input, textarea, button, [tabindex="0"]');
   f?.focus({ preventScroll: true });
 }

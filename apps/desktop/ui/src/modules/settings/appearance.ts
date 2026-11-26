@@ -9,6 +9,7 @@ import { setState, state } from '../../core/state';
 import { ACCENTS, UI_SIZES, loadLook } from '../../core/settings';
 import type { AccentId, UiSize } from '../../core/settings';
 import { setLook } from '../../styles/v7-look';
+import { themeApi } from '../../styles/theme';
 import { canZoom, onUiSizeChange, setUiSize, uiSize, uiZoomPercent } from '../shell/ui-size';
 import { pageEl, fill } from './page';
 import type { Page } from './page';
@@ -16,7 +17,7 @@ import { openSelect, section, segHTML, selectHTML, switchHTML } from './rows';
 import type { RowOpts } from './rows';
 
 const THEMES = [{ value: 'system', label: 'Follow system' }, { value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }] as const;
-const themeNow = (): string => (loadLook().followSystem ? 'system' : state.theme);
+const themeNow = (): string => (loadLook().followSystem ? 'system' : themeApi.scheme());
 const dot = (hex: string): string => kit.html.swatchDot(hex);
 const accentNow = (): (typeof ACCENTS)[number] => ACCENTS.find((a) => a.id === loadLook().accent) ?? ACCENTS[0];
 
