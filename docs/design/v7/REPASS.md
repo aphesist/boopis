@@ -64,6 +64,37 @@ table at the end true.
 6. **Nothing invented.** Where no board covers something, it is an owner question; the nearest drawn state is kept meanwhile.
 7. Where a lab rule flags what a board draws, the board wins: the rule is adjusted, with a line naming the board.
 
+## Health: the app works, and every step proves it
+Four conversion steps landed without a full run and the app's own checks were red (26 November: the smoke could not start, 29 lab
+stories never drew, the built app's smoke could not type). From now on **every step ends with the local suite below run in the
+foreground and CI's non-lab jobs green on its final SHA.** A check of v6 markup that no longer exists is rewritten to check the same
+behaviour on the new markup, never deleted or skipped; a check goes only with a behaviour an owner decision removed, and the step's
+report says so.
+
+Run it, in `apps/desktop/ui` (docs/UI-LAB.md and apps/desktop/AGENTS.md say what each part covers):
+
+```sh
+pnpm typecheck && pnpm test                    # strict types; the unit and behaviour tests (jsdom)
+pnpm test:smoke                                # the built app in Chromium, every part (or one: pnpm test:smoke keys)
+python3 ../../../tests/e2e/dock_webkit.py --dist dist-e2e   # the dock in a real WebKitGTK (xvfb-run, WebKitWebDriver, Pillow)
+pnpm lab:static                                # the kit's source rules; no finding may be in a converted file
+pnpm lab:orbs --story <each story you touched> && node tests/lab/gate.mjs lab-report-orbs/summary.json
+pnpm lab:board --all                           # every converted board against the approved image's source
+(cd ../../../plugins/boopis && uvx ruff check . ../../tests/e2e && uvx ruff format --check . ../../tests/e2e)
+gh api repos/aphesist/boopis/actions/workflows/ci.yml/dispatches -f ref=<branch>   # then every job but `lab` green
+```
+
+- What runs green (26 November, step 5): typecheck; the unit tests; every smoke part (boot, themes, keys, owner, live, forms, mods,
+  controls, mention, store, corners with concentric, dock-empty, dock-motion, dock-presence, lab-probe, axe); the dock in WebKitGTK;
+  `lab:orbs` on the kit's and the converted screens' stories; ruff and pyright on the plugin and `tests/e2e`. `lab:static` reports only
+  v6 files (`components.css` and the unconverted modules).
+- CI's jobs: identity, checks, rust, hx, plugin, runtime, installer (both), appimage, e2e, desktop-window (both), desktop-smoke, ui and
+  lab-orbs must be green. **`lab` is the exception until step 9**: it takes 75 to 90 minutes and its v6 goldens differ wherever a
+  screen is converted. Read its blocking findings by cause: fix what is a defect of a converted screen, leave the golden differences
+  of unconverted v6 screens, and list both in the step's report.
+- A lab story whose state "never finished drawing" is a bug, in the story or in the app: `lab:orbs` now prints what its setup threw.
+- Not in CI, run by hand when their subject changes: `tests/readme-shots.mjs` (the README's images), `pnpm test:parity` (v6 only).
+
 ## Status
 | Step | Boards | State |
 |---|---|---|
