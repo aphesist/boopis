@@ -134,8 +134,8 @@ describe('the Connectors tab', () => {
     f.catalog = () => Promise.resolve([{ id: 'exa', name: 'Exa', publisher: 'Exa', description: 'Web search.', license: 'MIT', verified: '2026-11-19', variants: [{ id: 'hosted', label: 'Hosted', summary: 'Exa runs it.', reaches: 'mcp.exa.ai', pinned: null, default: true }] },
       { id: 'firecrawl', name: 'Firecrawl', publisher: 'Firecrawl', description: 'Scrape.', license: 'MIT', verified: '2026-11-19', variants: [{ id: 'local', label: 'Local', summary: 'Here.', reaches: 'x', pinned: null, default: true }] }]);
     const { panel } = await mount(f);
-    expect(panel.querySelector('[data-add-entry="firecrawl"]')?.textContent).toContain('added');
-    expect(panel.querySelector('[data-add-entry="exa"]')?.textContent).not.toContain('Exa ·');   /* the publisher is the name: said once */
+    expect(panel.querySelector('[data-add-entry="firecrawl"]')?.closest('.k7-row')?.textContent).toContain('added');
+    expect(panel.querySelector('[data-add-entry="exa"]')?.closest('.k7-row')?.textContent).not.toContain('Exa ·');   /* the publisher is the name: said once */
     click(panel, '[data-add-entry="exa"]');
     await tick();
     expect(f.calls).toContain('inputs:catalog:exa:hosted');

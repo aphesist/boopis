@@ -12,16 +12,17 @@ import { actionsHTML, buttonHTML, esc, said, section, switchHTML } from './rows'
 const copy = async (text: string): Promise<void> => {
   try { await navigator.clipboard.writeText(text); kit.notify('Copied'); } catch { kit.notify('Copy is blocked here'); }
 };
-const mono = (text: string, id: string): string => '<span class="k7-row__value k7-mono hx-set__mono" id="' + id + '" data-tip="' + esc(text) + '">' + esc(text) + '</span>';
+/** a path or an address on the row's second line, in mono, over what it is for */
+const monoSub = (text: string, id: string, hint: string): string => '<span class="k7-mono" id="' + id + '">' + esc(text) + '</span><br>' + esc(hint);
 
 /** the section's markup for a status */
 export function localApiHTML(s: LocalApiStatus): string {
   const on = s.running;
   return section('Local API', [
     { label: 'Let other apps on this computer connect', sub: describeStatus(s), control: switchHTML('local-api', 'Let other apps on this computer connect', s.enabled && (on || !!s.problem)) },
-    ...(on && s.url ? [{ label: 'Address', sub: 'Only this computer can reach it.', control: mono(s.url, 'hx-local-api-url') + actionsHTML(buttonHTML('Copy', { variant: 'ghost', attrs: { 'data-copy': 'url', 'aria-label': 'Copy the address' } })) }] : []),
+    ...(on && s.url ? [{ label: 'Address', subHTML: monoSub(s.url, 'hx-local-api-url', 'Only this computer can reach it.'), control: actionsHTML(buttonHTML('Copy', { variant: 'ghost', attrs: { 'data-copy': 'url', 'aria-label': 'Copy the address' } })) }] : []),
     ...(on && s.token_file ? [
-      { label: 'Token file', sub: 'Readable by you alone. A new token is made every time boopis starts.', control: mono(s.token_file, 'hx-local-api-file') + actionsHTML(buttonHTML('Copy path', { variant: 'ghost', attrs: { 'data-copy': 'file', 'aria-label': 'Copy the token file\'s path' } })) },
+      { label: 'Token file', subHTML: monoSub(s.token_file, 'hx-local-api-file', 'Readable by you alone. A new token is made every time boopis starts.'), control: actionsHTML(buttonHTML('Copy path', { variant: 'ghost', attrs: { 'data-copy': 'file', 'aria-label': 'Copy path of the token file' } })) },
       { label: 'Rotate token', sub: 'Makes a new token. Apps that are connected are disconnected and read the file again.', control: buttonHTML('Rotate token', { attrs: { 'data-rotate': '' } }) }
     ] : [])
   ], { 'data-part': 'local-api' });

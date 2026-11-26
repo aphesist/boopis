@@ -60,7 +60,8 @@ export function keyNames(k: string): string[] {
     a hold with "hold", the alternatives with "or" (Settings › Keyboard, 7a: read only) */
 export function kbdSpec(spec: string): string {
   const word = (w: string): string => '<span class="k7-keyspec__word">' + w + '</span>';
-  return '<span class="k7-keyspec"' + kitAttrs('Kbd', { 'data-variant': 'spec' }) + '>' + spec.split(' | ').map((alt) => alt.split(' ').map((step) =>
+  /* the chips are each a Kbd (one line each); the binding as a whole wraps between them in a narrow row */
+  return '<span class="k7-keyspec"' + partAttrs('KbdSpec', {}) + '>' + spec.split(' | ').map((alt) => alt.split(' ').map((step) =>
     step.startsWith('hold:') ? word('hold') + kbd({ keys: step.slice(5) }) : kbd({ keys: step })).join(word('then'))).join(word('or')) + '</span>';
 }
 export function kbd(o: KbdOpts): string {

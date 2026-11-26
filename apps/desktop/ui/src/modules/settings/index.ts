@@ -62,7 +62,7 @@ export function mountSettings(d: HTMLDialogElement): void {
 function drawFrame(): void {
   const d = dialog; if (!d) return;
   const nav = shownPages().map((p) => ({ label: p.label, icon: p.icon, value: p.id, current: p.id === current, attrs: { id: 'hx-set-nav-' + p.id, 'aria-controls': 'hx-settings-page' } }));
-  const frame = kit.dialog({ variant: 'large', title: 'Settings', body: '', nav, scrim: false, id: 'hx-settings-card', pageAttrs: { id: 'hx-settings-page', role: 'region', tabindex: '-1', 'aria-label': 'Settings' } });
+  const frame = kit.dialog({ variant: 'large', title: 'Settings', body: '', nav, scrim: false, id: 'hx-settings-card', pageAttrs: { id: 'hx-settings-page', role: 'region', tabindex: '0', 'aria-label': 'Settings' } });   /* the scroller reads from the keyboard; each page is its own section, named by its title */
   d.replaceChildren(frame);
   const card = d.querySelector<HTMLElement>('.k7-dialog') as HTMLElement;
   card.querySelector('[data-dialog-close]')?.addEventListener('click', () => { closeDialog(d); });
@@ -100,7 +100,6 @@ export function show(section?: string, o: { find?: string; focus?: string } = {}
     host.appendChild(page.el);
   } else void page.refresh?.().catch((e: unknown) => { log.warn('the page did not refresh: ' + def.id, e); });
   for (const [id, p] of built) p.el.hidden = id !== def.id;
-  host.setAttribute('aria-label', def.label);
   host.scrollTop = 0;
   d.toggleAttribute('data-side', def.id === 'appearance');
   if (o.find || o.focus) void page.reveal?.(o);

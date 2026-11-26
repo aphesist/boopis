@@ -37,8 +37,9 @@ export const valueHTML = (text: string, attrs?: Record<string, string>): string 
 
 /** buttons at a row's end, 28 tall, 8 apart */
 export const actionsHTML = (...buttons: string[]): string => '<span class="hx-set__acts">' + buttons.filter(Boolean).join('') + '</span>';
-export const buttonHTML = (label: string, o: { variant?: 'secondary' | 'primary' | 'ghost' | 'tint' | 'danger'; attrs?: Record<string, string | null> } = {}): string =>
-  kit.html.button({ label, variant: o.variant ?? 'secondary', size: 28, ...(o.attrs ? { attrs: o.attrs } : {}) });
+/** a button in a row: tinted by default (a card is raised: a raised button on it would paint the same, R-colour), 28 tall */
+export const buttonHTML = (label: string, o: { variant?: 'primary' | 'ghost' | 'tint' | 'danger'; attrs?: Record<string, string | null> } = {}): string =>
+  kit.html.button({ label, variant: o.variant ?? 'tint', size: 28, ...(o.attrs ? { attrs: o.attrs } : {}) });
 
 export interface SelectChoice { value: string; label: string; desc?: string; leadHTML?: string }
 /** open a select's Menu under it: the choices, the current one checked; a pick calls `onPick` */

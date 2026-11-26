@@ -68,7 +68,7 @@ export function heavyRows(view: ModelsView): RowOpts[] {
 }
 
 const value = (text: string): string => '<span class="k7-row__value">' + esc(text) + '</span>';
-const button = (label: string, id: string): string => kit.html.button({ label, size: 28, attrs: { id } });
+const button = (label: string, id: string): string => kit.html.button({ label, size: 28, variant: 'tint', attrs: { id } });   /* tinted: a card is raised */
 
 /** Governed mode's section (ADR-0037): the models it allows, each also in any later version, and whether the saved ladder lets it run.
     When it cannot, the row says why in one sentence and offers the way to get a model (Change models, the same question as setup's).

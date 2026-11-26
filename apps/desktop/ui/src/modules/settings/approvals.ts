@@ -47,7 +47,7 @@ export function approvalsPage(rules: RulesSource | undefined = data().rules): Pa
     readOnce = true;
   };
   const ruleRow = (r: Rule): RowOpts => ({
-    label: r.text,
+    label: r.text, wrap: true,
     leadHTML: kit.html.switch({ checked: r.enabled, label: r.text, attrs: { 'data-rule-switch': r.id } }),
     ...(forWhom(r) ? { sub: forWhom(r) } : {}),
     control: '<span class="k7-row__value">' + esc(r.edited ? 'edited default' : SOURCE_WORDS[r.source]) + '</span>' +

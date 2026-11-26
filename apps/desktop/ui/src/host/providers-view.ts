@@ -210,7 +210,7 @@ const button = (a: Action, way: string, label: string, calm = false): string => 
   return plainButton(calm ? { ...a, primary: false } : a, way, label);
 };
 const plainButton = (a: Action, way: string, label: string): string => kit.html.button({
-  label: a.label, size: 28, variant: a.primary ? 'primary' : a.ghost ? 'ghost' : 'secondary',
+  label: a.label, size: 28, variant: a.primary ? 'primary' : a.ghost ? 'ghost' : 'tint',
   attrs: { 'data-do': a.do, 'data-way': way, 'aria-label': `${a.label}, ${label}` }
 });
 /** a state's word at the row's end (a word, never colour alone): a real failure in red, a calm step in amber */
@@ -219,7 +219,7 @@ const word = (state: ProviderState | null | undefined): string => kit.html.statu
 export const withCode = (text: string): string => text.split('`').map((part, i) => (i % 2 ? kit.html.inlineChip({ kind: 'code', text: part }) : esc(part))).join('');
 const acts = (html: string): string => '<span class="hx-set__acts">' + html + '</span>';
 /** the command line under a row: where to paste it, then the command as the kit's inline code */
-const installLine = (hint: InstallHint): string => `<p class="k7-page__note" data-install>In ${esc(hint.shell)}: ${kit.html.inlineChip({ kind: 'code', text: hint.command })}</p>`;
+const installLine = (hint: InstallHint): string => `<p class="k7-page__note" data-install>In ${esc(hint.shell)}: <span class="k7-mono">${esc(hint.command)}</span></p>`;
 
 /** a way's row; `calm`: no row action is the primary one */
 export function rowOpts(r: Row, canSignin: (w: Way) => boolean, calm = false): RowOpts {

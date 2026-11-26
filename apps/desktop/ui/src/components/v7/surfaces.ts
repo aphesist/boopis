@@ -117,7 +117,7 @@ export function dialog(o: DialogOpts): string {
   /* the large dialog's close is a ghost (board 14: `.d-close` with no fill); a form's a tinted capsule */
   const close = iconButton({ icon: 'close', label: 'Close', variant: v === 'large' ? 'ghost' : 'tinted', keys: 'esc', attrs: { 'data-dialog-close': '' } });
   const inner = v === 'large'
-    ? '<nav class="k7-dialog__nav" aria-label="' + esc(o.title) + '">' + (o.nav ?? []).map((n) => '<button class="k7-reset k7-dialog__navrow" type="button"' + attrs({ 'aria-current': n.current ? 'page' : null, 'data-page': n.value, ...(n.attrs ?? {}) }) + '>' + glyph(n.icon) + '<span class="k7-ell">' + esc(n.label) + '</span></button>').join('') + '</nav>' +
+    ? '<nav class="k7-dialog__nav" aria-label="' + esc(o.title) + '">' + (o.nav ?? []).map((n) => '<button class="k7-reset k7-dialog__navrow" type="button"' + attrs({ 'aria-current': n.current ? 'page' : null, 'data-page': n.value, 'aria-label': n.label, ...(n.attrs ?? {}) }) + '>' + glyph(n.icon) + '<span class="k7-ell">' + esc(n.label) + '</span></button>').join('') + '</nav>' +
       '<div class="k7-dialog__page"' + attrs(o.pageAttrs ?? {}) + '>' + o.body + '</div>'
     : '<h2 class="k7-dialog__title" id="' + esc(id) + '-t">' + esc(o.title) + '</h2><div class="k7-dialog__body">' + o.body + '</div>' +
       ((o.actions ?? []).length ? '<div class="k7-dialog__foot">' + (o.actions ?? []).map((x) => button({ label: x.label, variant: x.variant ?? 'secondary', size: 32, menuLabel: x.label + ' options', ...(x.tip ? { tip: x.tip } : {}), ...(x.disabled ? { attrs: { 'aria-disabled': 'true', 'data-disabled': '' } } : {}) })).join('') + '</div>' : '');

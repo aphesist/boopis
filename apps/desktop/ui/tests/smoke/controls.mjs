@@ -78,21 +78,19 @@ export async function controls(env, AXE) {
     });
   }
 
-  /* Settings > Appearance: the font select opens inside the modal dialog (outside it the list would be inert and hidden) */
+  /* Settings > Appearance (board 14's rows on the kit): the accent select opens its Menu inside the modal dialog, on top, the choice applies */
   const page = await s.fresh({ q: 'preset=catalog' });
   await s.safe('controls', async () => {
     await page.addScriptTag({ content: AXE });
     await page.keyboard.press('Control+Shift+Comma'); await page.waitForTimeout(700);
-    await page.click('#hxt-sans'); await page.waitForTimeout(350);
-    const f = await page.evaluate(() => { const lb = document.querySelector('.ui-listbox'); const r = lb?.getBoundingClientRect(); const top = r && document.elementFromPoint(r.left + r.width / 2, r.top + 20); return { inDialog: !!lb?.closest('dialog'), options: lb?.querySelectorAll('[role="option"]').length, onTop: !!(top && lb.contains(top)), native: document.querySelectorAll('select').length }; });
-    check('controls', 'Appearance: the font select opens inside the dialog, on top, and there is no native <select> left', f.inDialog && f.options > 3 && f.onTop && f.native === 0, f);
+    await page.click('#hx-set-appearance [data-select="accent"]'); await page.waitForTimeout(350);
+    const f = await page.evaluate(() => { const m = document.querySelector('.k7-menu[data-floating]'); const r = m?.getBoundingClientRect(); const top = r && document.elementFromPoint(r.left + r.width / 2, r.top + 20); return { inDialog: !!m?.closest('dialog'), rows: m?.querySelectorAll('[role^="menuitem"]').length, onTop: !!(top && m.contains(top)), native: document.querySelectorAll('select, input[type="color"]').length }; });
+    check('controls', 'Appearance: the accent menu opens inside the dialog, on top, and nothing the platform draws is left', f.inDialog && f.rows === 5 && f.onTop && f.native === 0, f);
     const bad = await AXE_RUN(page);
-    check('controls', 'axe: Appearance with the font list open', bad.length === 0, bad);
-    await page.locator('.ui-listbox .ui-option').nth(2).click(); await page.waitForTimeout(400);
-    const picked = await page.evaluate(() => ({ text: document.querySelector('#hxt-sans .ui-select__v').textContent, family: getComputedStyle(document.documentElement).getPropertyValue('--sans').slice(0, 40) }));
-    check('controls', 'choosing a font in the list applies it', picked.text.length > 0 && !/^\s*$/.test(picked.family), picked);
-    const swatch = await page.evaluate(() => ({ native: document.querySelectorAll('input[type="color"]').length, swatches: document.querySelectorAll('button.hxt-swatch').length, paint: getComputedStyle(document.querySelector('button.hxt-swatch')).backgroundColor }));
-    check('controls', 'colour rows draw a swatch button, never the platform colour chooser', swatch.native === 0 && swatch.swatches > 10 && swatch.paint !== 'rgba(0, 0, 0, 0)', swatch);
+    check('controls', 'axe: Appearance with the accent menu open', bad.length === 0, bad);
+    await page.locator('.k7-menu[data-floating] [role^="menuitem"]').nth(1).click(); await page.waitForTimeout(400);
+    const picked = await page.evaluate(() => ({ text: document.querySelector('#hx-set-appearance [data-select="accent"] .k7-sel__value').textContent, accent: getComputedStyle(document.getElementById('hx-app')).getPropertyValue('--accent').trim() }));
+    check('controls', 'choosing an accent applies it to the app', picked.text === 'Indigo' && picked.accent === '#4f46e5', picked);
     await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   });
 
@@ -101,11 +99,11 @@ export async function controls(env, AXE) {
   await s.safe('controls', async () => {
     const seen = [];
     await walk.keyboard.press('Control+Comma'); await walk.waitForTimeout(500);
-    for (const tab of ['general', 'models', 'connectors', 'appearance', 'keys']) {
-      await walk.click('#hx-dtab-' + tab); await walk.waitForTimeout(400);
+    for (const tab of ['general', 'sessions', 'bots', 'models', 'connectors', 'appearance', 'keys']) {
+      await walk.click('#hx-set-nav-' + tab); await walk.waitForTimeout(400);
       seen.push([tab, await walk.evaluate((q) => document.querySelectorAll(q).length, NATIVE)]);
     }
-    check('controls', 'no native select, colour, number, date, time or range field in any Settings tab', seen.every((x) => x[1] === 0), seen);
+    check('controls', 'no native select, colour, number, date, time or range field on any Settings page', seen.every((x) => x[1] === 0), seen);
     await walk.keyboard.press('Escape');
     await walk.keyboard.press('Alt+2'); await walk.waitForTimeout(500);
     await walk.keyboard.press('Control+i'); await walk.waitForTimeout(500);

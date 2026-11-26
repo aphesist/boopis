@@ -36,7 +36,9 @@
 .k7-dock__panel > .k7-dock__head { position: sticky; top: 0; z-index: 1; background: var(--dock-bg); }
 .k7-dock__title { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); padding-inline-start: var(--sp-1); }
 .k7-dock__count { font-size: var(--fs-2xs); color: var(--text-dim); }
-.k7-dock__name { font-size: var(--fs-m); line-height: var(--lh-m); font-weight: 500; margin-inline-start: var(--gap-hair); }
+.k7-dock__name { font-size: var(--fs-m); line-height: var(--lh-m); font-weight: 500; margin-inline-start: var(--gap-hair);
+  /* a long name stays on the head's one line, cut with an ellipsis (whole in the card's name), never wrapping over the log (lab, pages/window at 390) */
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* the card's messages take the room the card has: its ask and its composer stay at the card's foot, 12 over the row as K04 draws
    them, and a card with no messages yet is empty above them (the lead, 26 November) */
 .k7-dock__log { flex: 1 0 auto; padding: var(--sp-1) var(--sp-1) 0; }

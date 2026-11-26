@@ -18,6 +18,7 @@ export interface RowOpts {
   /** a second line under the label, 12 --text-dim (a routine's time, what a connector holds): the label is then two lines by design */ sub?: U<string>;
   /** the second line as markup (inline code in the host's words, 7a) in place of `sub` */ subHTML?: U<string>;
   /** a control before the label (board O-B07: a rule's Switch leads its words) */ leadHTML?: U<string>;
+  /** the label wraps rather than being cut: the owner's own words (a rule, a binding's action) */ wrap?: U<boolean>;
   /** a label that explains itself: the mark (17.1), revealed on the row's hover or focus */ explain?: U<string>; id?: U<string>; attrs?: U<Attrs>;
   /** the whole row is one control (a pane card's row opens where its value is set): what pressing it does, said to a screen reader */ action?: U<string>;
   /** the whole row is a checkbox, its check in the accent at its end when on (board 14's "Under the composer": `chk`); it fires
@@ -26,7 +27,7 @@ export interface RowOpts {
 export function row(o: RowOpts): string {
   const label = o.explain
     ? '<span class="k7-row__label">' + '<button class="k7-reset k7-mark k7-info" type="button" data-kit="Mark" data-mark-kind="info" aria-haspopup="dialog"' + attrs({ 'data-explain': o.explain, id: o.id }) + '>' + esc(o.label) + '<span class="k7-mark__i" aria-hidden="true">' + glyph('info') + '</span></button></span>'
-    : '<span class="k7-row__label"' + attrs({ id: o.id, 'data-wrap-ok': o.sub || o.subHTML ? '' : null }) + '>' + textOr(o.label, o.labelHTML) + (o.subHTML ? '<br><span class="k7-row__sub">' + o.subHTML + '</span>' : o.sub ? '<br><span class="k7-row__sub">' + esc(o.sub) + '</span>' : '') + '</span>';
+    : '<span class="k7-row__label"' + attrs({ id: o.id, 'data-wrap-ok': o.sub || o.subHTML || o.wrap ? '' : null }) + '>' + textOr(o.label, o.labelHTML) + (o.subHTML ? '<br><span class="k7-row__sub">' + o.subHTML + '</span>' : o.sub ? '<br><span class="k7-row__sub">' + esc(o.sub) + '</span>' : '') + '</span>';
   const check = o.check == null ? {} : { role: 'checkbox', tabindex: '0', 'aria-checked': String(!!o.check), 'data-check': '', 'data-action': '' };
   return '<div class="k7-row"' + partAttrs('Row', { 'data-mark-reveal': o.explain ? 'hover' : null, ...(o.action ? { role: 'button', tabindex: '0', 'data-action': '', 'aria-label': o.label + (o.value ? ': ' + o.value : '') + ', ' + o.action } : {}), ...check, ...(o.attrs ?? {}) }) + '>' + (o.leadHTML ?? '') + label + ' ' +   /* a word break between the label and the value, for the row's name (a flex row: it takes no room) */
     (o.valueHTML ? '<span class="k7-row__value k7-row__value--lead">' + o.valueHTML + '</span>' : o.value ? '<span class="' + cls('k7-row__value', o.mono && 'k7-mono') + '">' + esc(o.value) + '</span>' : '') + (o.control ?? '') +

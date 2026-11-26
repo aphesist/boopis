@@ -205,8 +205,8 @@ export async function ownerDecisions(env) {
     if (process.env.SMOKE_SHOTS && where === 'a bot\'s chat') await page.screenshot({ path: process.env.SMOKE_SHOTS + '/voice-notice.png' });
     if (where === 'a session') {
       await page.keyboard.press('Enter'); await page.waitForTimeout(700);
-      const set = await ev(() => ({ open: document.getElementById('hx-settings').open, models: document.querySelector('#hx-dtab-models')?.getAttribute('aria-selected'), notice: !!document.querySelector('.k7-notice[data-floating].is-in') }));
-      check('owner', '"Set up voice" opens Settings at Models, and the Notice is gone', set.open && set.models === 'true' && !set.notice, set);
+      const set = await ev(() => ({ open: document.getElementById('hx-settings').open, models: document.querySelector('#hx-set-nav-models')?.getAttribute('aria-current'), notice: !!document.querySelector('.k7-notice[data-floating].is-in') }));
+      check('owner', '"Set up voice" opens Settings at Models, and the Notice is gone', set.open && set.models === 'page' && !set.notice, set);
       await page.keyboard.press('Escape'); await page.waitForTimeout(400);
     } else { await page.keyboard.press('Escape'); await page.waitForTimeout(300); check('owner', `Esc closes it, the focus back on the circle · ${where}`, await ev((q) => !document.querySelector('.k7-notice[data-floating].is-in') && document.activeElement === document.querySelector(q), circle)); }
   }

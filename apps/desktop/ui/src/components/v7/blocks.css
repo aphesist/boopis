@@ -26,6 +26,13 @@
    the label wraps rather than cut what it explains; a row that is a checkbox ends in the accent check (`chk`), nothing when off */
 .k7-card[data-variant="settings"] .k7-row__label[data-wrap-ok] { white-space: normal; overflow: visible; }
 .k7-card[data-variant="settings"] .k7-row__sub { display: block; margin-top: 1px; font-size: var(--fs-s); line-height: var(--lh-s); }
+.k7-row__sub .k7-code { white-space: nowrap; }   /* a command in a hint stays whole on its line */
+.k7-row__sub .k7-mono, .k7-page__note .k7-mono { overflow-wrap: anywhere; }   /* a path or a command breaks where it must, never under a control */
+/* a settings row in a narrow card: its controls go under its label, at the end, rather than over it (derived) */
+.k7-card[data-variant="settings"] .k7-row { flex-wrap: wrap; }
+.k7-card[data-variant="settings"] .k7-row > .k7-row__label { flex-basis: 10em; }
+/* a row that is a control (a check) keeps its fill inside the card's corner: 8 in, as the card's padding, on the corner concentric with the card's */
+.k7-card[data-variant="settings"] .k7-row[data-action] { margin-inline: var(--pad-card); padding-inline: calc(var(--pad-set-x) - var(--pad-card)); border-radius: calc(var(--r-card) - var(--pad-card)); }
 .k7-card[data-variant="settings"] .k7-row__label[data-wrap-ok] > br { display: none; }
 .k7-row__check { display: inline-flex; flex: none; width: var(--icon-s); color: var(--accent-text); visibility: hidden; }
 .k7-row[aria-checked="true"] > .k7-row__check { visibility: visible; }

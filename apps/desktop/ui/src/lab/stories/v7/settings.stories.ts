@@ -7,6 +7,7 @@ import type { FakeRules } from '../../settings-fixtures';
 import { setSettingsHost } from '../../../modules/settings/host';
 import type { DataProvider, RulesSource, SpeechSource } from '../../../data';
 import type { LocalApiStatus } from '../../../host/local-api';
+import { boardS20 } from '../../board-fixtures';
 
 const ON: LocalApiStatus = { enabled: true, running: true, url: 'http://127.0.0.1:47821', token_file: '/home/you/.local/share/dev.aphesist.boopis/client-token', streams: 1, version: 1, problem: null };
 const desktop = (): void => {
@@ -28,6 +29,8 @@ const st = (tags: State['tags'], section: string, o: { rules?: RulesSource | nul
 });
 const click = (sel: string) => async (c: AppCtx): Promise<void> => { await c.click(sel); };
 const rules = (o: Parameters<typeof fakeRules>[0] = {}): FakeRules => fakeRules(o);
+/** the Session tab's launch controls, as the live provider has them (the mock has none): Sessions' How careful shows */
+const launch = (p: DataProvider): DataProvider => { const b = boardS20(p); return { ...p, ...(b.sessionControls ? { sessionControls: b.sessionControls } : {}) }; };
 
 const story: Story = {
   id: 'v7/settings', title: 'Settings (7a, on the kit)', area: 'settings', kind: 'surface', scope: '#hx-settings',
@@ -39,9 +42,9 @@ const story: Story = {
     'general, the nav focused': st(['focus'], 'general', {}, { force: [{ sel: '#hx-settings .k7-dialog__navrow[aria-current]', state: 'focus' }] }),
     'general, a check focused': st(['focus'], 'general', {}, { force: [{ sel: '#hx-settings [data-check]', state: 'focus' }] }),
     'general, search shows as: its menu open': st(['open'], 'general', { then: click('#hx-settings [data-select="search-as"]') }, { overlay: { anchor: '#hx-settings [data-select="search-as"]', layer: '[data-kit~="Menu"]' } }),
-    'sessions, this device': st(['typical'], 'sessions'),
-    'sessions, this project': st(['variant'], 'sessions', { then: click('#hx-settings [data-scope] [data-value="project"]') }),
-    'sessions, how careful: its menu open': st(['open'], 'sessions', { then: click('#hx-settings [data-select="careful"]') }, { overlay: { anchor: '#hx-settings [data-select="careful"]', layer: '[data-kit~="Menu"]' } }),
+    'sessions, this device': st(['typical'], 'sessions', { patch: launch }),
+    'sessions, this project': st(['variant'], 'sessions', { patch: launch, then: click('#hx-settings [data-scope] [data-value="project"]') }),
+    'sessions, how careful: its menu open': st(['open'], 'sessions', { patch: launch, then: click('#hx-settings [data-select="careful"]') }, { overlay: { anchor: '#hx-settings [data-select="careful"]', layer: '[data-kit~="Menu"]' } }),
     bots: st(['typical', 'many'], 'bots'),
     'bots, none': st(['empty'], 'bots', { patch: (p) => ({ ...p, bots: { ...p.bots, snapshot: () => ({ ...p.bots.snapshot(), bots: [] }) } }) }),
     'models (the page build), voice not chosen, the model ready': st(['typical'], 'models', { focus: 'voice' }),

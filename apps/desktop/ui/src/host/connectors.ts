@@ -234,7 +234,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
         word,
         v.canSignIn ? kit.html.button({ label: 'Sign in', size: 28, variant: 'primary', attrs: { 'data-conn-signin': c.name, 'aria-label': 'Sign in to ' + c.name } }) : '',
         kit.html.switch({ checked: c.enabled, label: c.name + (c.enabled ? ' is on' : ' is off'), attrs: { 'data-conn-switch': c.name } }),
-        kit.html.button({ label: 'Test', size: 28, attrs: { 'data-conn-test': c.name, 'aria-label': 'Test ' + c.name } }),
+        kit.html.button({ label: 'Test', size: 28, variant: 'tint', attrs: { 'data-conn-test': c.name, 'aria-label': 'Test ' + c.name } }),
         kit.html.button({ label: 'Remove', size: 28, variant: 'ghost', attrs: { 'data-conn-remove': c.name, 'aria-label': 'Remove ' + c.name } })
       ].join('');
       /* an installed connector is the user's item: its own name is shown as it is (ADR-0031's store exception), after its tile */
@@ -259,7 +259,9 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     /* a collection item keeps its own name and publisher, whatever they say (ADR-0031's store exception); the row adds it */
     const rows = shown.map((c): RowOpts => {
       const w = collectionRow(c, added);
-      return { label: c.name, labelHTML: '<span class="hx-set__tile">' + ui.html.itemMark({ name: c.name, collection: c.id }) + '</span>' + ui.esc(c.name), ...(w.sub ? { sub: w.sub } : {}), value: w.end, action: c.variants.length > 1 ? 'chooses how to add it' : 'adds it', attrs: { 'data-add-entry': c.id, [STORE_ITEM]: '', 'aria-haspopup': c.variants.length > 1 ? 'menu' : null } };
+      const several = c.variants.length > 1;
+      return { label: c.name, labelHTML: '<span class="hx-set__tile">' + ui.html.itemMark({ name: c.name, collection: c.id }) + '</span>' + ui.esc(c.name), ...(w.sub ? { sub: w.sub } : {}),
+        control: '<span class="hx-set__acts"><span class="k7-row__value">' + ui.esc(w.end) + '</span>' + kit.html.button({ label: 'Add', size: 28, variant: 'tint', attrs: { 'data-add-entry': c.id, 'aria-label': 'Add ' + c.name, 'aria-haspopup': several ? 'menu' : null } }) + '</span>', attrs: { [STORE_ITEM]: '' } };
     });
     const none = query.trim() && !shown.length ? '<p class="k7-page__note" role="status">' + ui.esc(`Nothing in boopis's collection matches “${query.trim()}”. Try another word, browse the store, or add it from a URL or a command below.`) + '</p>' : '';
     collection.innerHTML = head('hx-conn-coll-h', 'From boopis\'s collection') + (rows.length ? kit.html.card({ variant: 'settings', rows, attrs: { 'aria-labelledby': 'hx-conn-coll-h' } }) : '') + none;
@@ -390,8 +392,8 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   function drawAdd(): void {
     const rows: RowOpts[] = [];
     if (deps.openStore) rows.push({ label: 'From the store', sub: 'Recommended connectors, and every other source boopis can read, to search and review.', control: kit.html.button({ label: 'Browse the store', size: 28, variant: 'primary', attrs: { 'data-add-store': '' } }) });
-    rows.push({ label: 'From a URL', sub: 'A remote MCP server. https only; keys go to your keychain.', control: kit.html.button({ label: 'Add', size: 28, attrs: { 'data-add-url': '', 'aria-label': 'Add a connector from a URL' } }) });
-    rows.push({ label: 'From a command', sub: 'A local program that speaks MCP. It runs on this computer as you.', control: kit.html.button({ label: 'Add', size: 28, attrs: { 'data-add-command': '', 'aria-label': 'Add a connector from a command' } }) });
+    rows.push({ label: 'From a URL', sub: 'A remote MCP server. https only; keys go to your keychain.', control: kit.html.button({ label: 'Add', size: 28, variant: 'tint', attrs: { 'data-add-url': '', 'aria-label': 'Add a connector from a URL' } }) });
+    rows.push({ label: 'From a command', sub: 'A local program that speaks MCP. It runs on this computer as you.', control: kit.html.button({ label: 'Add', size: 28, variant: 'tint', attrs: { 'data-add-command': '', 'aria-label': 'Add a connector from a command' } }) });
     add.innerHTML = head('hx-conn-add-h', catalog.length ? 'Other ways to add' : 'Add') + kit.html.card({ variant: 'settings', rows });
     kit.wire(add);
     add.querySelector('[data-add-store]')?.addEventListener('click', () => { deps.openStore?.(); });

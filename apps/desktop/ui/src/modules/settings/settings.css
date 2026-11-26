@@ -14,8 +14,7 @@
 .hx-set__part { display: contents; }
 .hx-set__part[hidden] { display: none; }
 /* a row's end: its value or word, then its buttons, 8 apart, never wrapping under the label */
-.hx-set__acts { display: inline-flex; flex: none; align-items: center; gap: var(--sp-2); }
-.hx-set__mono { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hx-set__acts { display: inline-flex; flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--sp-2); min-width: 0; }
 .hx-set__tile { display: inline-flex; vertical-align: middle; margin-inline-end: var(--sp-2); }
 /* a row's Edit and Remove show with the pointer or the focus on it (board O-B07) */
 .hx-set__hover { display: inline-flex; gap: var(--gap-xs); opacity: 0; }
@@ -34,5 +33,3 @@
 /* a rule's editor and a draft sit under their card, the page's gap above */
 [data-page="approvals"] .k7-block { display: grid; gap: var(--sp-3); }
 [data-page="approvals"] .k7-block .hx-set__acts { justify-content: flex-end; }
-/* the keyboard's long names wrap rather than cut */
-[data-page="keys"] .k7-row__label { white-space: normal; overflow: visible; }

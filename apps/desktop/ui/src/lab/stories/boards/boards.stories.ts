@@ -280,6 +280,9 @@ const settings: Story = {
   states: {
     '14 settings, General': {
       tags: ['typical', 'owner'],
+      /* board 14 draws both (rule 7): the nav 12 down and 8 in (kit.css `.setnav`, its rows at --r-nav), and the close a ghost 28 circle 10 in
+         (`.d-close` with no fill) in the dialog's 14 corner */
+      allow: { concentric: 'board 14 draws the nav 12 down and 8 in, and the ghost close 10 in from the 14 corner (kit.css .setnav, .d-close): REPASS rule 7' },
       note: 'board 14: the dialog over kai\'s chat: the nav with its icons (S39\'s order, Diagnostics last), General: Layout (Show the dock, When the sidebar collapses, Rail size, Show search, Search shows as), Under the composer (the line\'s items, checked), Appearance (Theme, Accent, Corners)',
       app: {
         provider: { sessions: 'none', patch: (p) => withSettings(board11(p), { rules: fakeRules(), speech: fakeSpeech() }) },
@@ -296,6 +299,9 @@ const settings: Story = {
     } satisfies State,
     'S39 settings, Sessions': {
       tags: ['variant', 'owner'],
+      /* board S39 draws both, as 14 (rule 7): the nav 12 down and 8 in (kit.css `.setnav`, its rows at --r-nav), and the close a ghost 28 circle 10 in
+         (`.d-close` with no fill) in the dialog's 14 corner */
+      allow: { concentric: 'board 14 draws the nav 12 down and 8 in, and the ghost close 10 in from the 14 corner (kit.css .setnav, .d-close): REPASS rule 7' },
       note: 'board S39 (its scope picked on S04: a Segmented in the page head): Sessions over a session at work, "This project" chosen',
       app: {
         provider: { patch: (p) => withSettings(boardS20(p), { rules: fakeRules(), speech: fakeSpeech() }) },

@@ -71,7 +71,7 @@ if (want('axe')) {
     ['bots archived group expanded', { q: 'fixture=outside' }, async (p) => { await p.keyboard.press('Alt+2'); await p.waitForTimeout(500); await p.click('.bt-rows [data-kit~="ListRow"][data-value="sage"]'); await p.click('.bt-archived .k7-shead__btn'); await p.locator('.bt-archived [data-kit~="ListRow"]').first().hover(); }],
     ['bots rail with the archived group', {}, async (p) => { await p.keyboard.press('Alt+2'); await p.evaluate(() => __hx.setState({ left: 'rail' })); }],
     ['palette', {}, (p) => p.keyboard.press('Control+k')], ['settings', {}, (p) => p.keyboard.press('Control+Comma')],
-    ['settings models', {}, async (p) => { await p.keyboard.press('Control+Comma'); await p.waitForTimeout(300); await p.click('#hx-dtab-models'); }],
+    ['settings models', {}, async (p) => { await p.keyboard.press('Control+Comma'); await p.waitForTimeout(300); await p.click('#hx-set-nav-models'); }],
     ['appearance', {}, (p) => p.keyboard.press('Control+Shift+Comma')], ['keys sheet', {}, (p) => p.keyboard.press('Control+Slash')],
     ['store', {}, (p) => p.keyboard.press('Control+Shift+S')],
     ['store installed', {}, async (p) => { await p.keyboard.press('Control+Shift+S'); await p.waitForSelector('#hx-store-body [role=tab]'); await p.getByRole('tab', { name: 'Installed' }).click(); }],

@@ -65,6 +65,7 @@ const NAMED = {
   '--pad-chip': 14,                                    /* chip 0 14 */
   '--pad-set-x': 16, '--pad-set-y': 6,                 /* settings rows 16 across (min 44 tall) */
   '--pad-nav-y': 7, '--pad-nav-x': 9,                  /* settings nav row 7 9 */
+  '--pad-set-page': 28, '--pad-set-gap': 22,               /* a settings page: 22 28 28 8, its sections' heads 22 apart (board 14, kit.css .setbody, .set-head) */
   '--pad-tip-y': 4, '--pad-tip-x': 6,                  /* tooltip 4 6 */
   '--pad-pill-y': 8, '--pad-pill-end': 14, '--pad-pill-start': 8,   /* title pill: 0 14 0 8, as the boards' kit.css `.title-pill` writes it */
   '--pad-kbd': 5,                                      /* key chip: 20 tall, 5 across (kit.css) */
