@@ -754,27 +754,26 @@ impl<E: Engine> Service<E> {
                 .map(|r| text(&r, "session_id"))
                 .filter(|s| !s.is_empty())
         };
-        let (live, kept, again) = match resumed {
-            Some(live) => (live, stored.to_owned(), true),
-            None => {
-                let res = self
-                    .engine
-                    .request(profile, "session.create", json!({"source": "gui"}))
-                    .await
-                    .map_err(|e| failed("start a conversation", &e))?;
-                let live = text(&res, "session_id");
-                if live.is_empty() {
-                    return Err(ApiError::new(
-                        502,
-                        "engine_unavailable",
-                        "The engine started no conversation. Try again.",
-                    ));
-                }
-                let kept = Some(text(&res, "stored_session_id"))
-                    .filter(|s| !s.is_empty())
-                    .unwrap_or_else(|| live.clone());
-                (live, kept, false)
+        let (live, kept, again) = if let Some(live) = resumed {
+            (live, stored.to_owned(), true)
+        } else {
+            let res = self
+                .engine
+                .request(profile, "session.create", json!({"source": "gui"}))
+                .await
+                .map_err(|e| failed("start a conversation", &e))?;
+            let live = text(&res, "session_id");
+            if live.is_empty() {
+                return Err(ApiError::new(
+                    502,
+                    "engine_unavailable",
+                    "The engine started no conversation. Try again.",
+                ));
             }
+            let kept = Some(text(&res, "stored_session_id"))
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| live.clone());
+            (live, kept, false)
         };
         self.feed
             .note_session(profile, &live, Source::Gui, Some(&kept), None);
@@ -1205,11 +1204,12 @@ impl<E: Engine> Service<E> {
                 json!({"session_id": row.session_id, "description": row.description}),
             )
             .await;
-        match drafted.ok().as_ref().and_then(boopis_rules::card_draft) {
-            Some(rule) => keeper(rule),
-            None => tracing::info!(
+        if let Some(rule) = drafted.ok().as_ref().and_then(boopis_rules::card_draft) {
+            keeper(rule);
+        } else {
+            tracing::info!(
                 "an Always answer from outside the window kept no draft: the plugin drafted none"
-            ),
+            );
         }
     }
 

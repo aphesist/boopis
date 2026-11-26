@@ -13,7 +13,7 @@ pub fn folder(root: &Path) -> PathBuf {
     root.join("boopis").join("parked")
 }
 
-/// Whether `id` is a parked step's id (the plugin's UUIDv7 shape).
+/// Whether `id` is a parked step's id (the plugin's `UUIDv7` shape).
 #[must_use]
 pub fn id_ok(id: &str) -> bool {
     let b = id.as_bytes();

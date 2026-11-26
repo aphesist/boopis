@@ -2379,7 +2379,7 @@ pub async fn parked_answer(
             match state.rules.keep_draft(&root, &rule) {
                 Ok(v) => draft_id = v["id"].clone(),
                 Err(e) => {
-                    tracing::info!(error = %e, "a parked step's draft exception could not be kept")
+                    tracing::info!(error = %e, "a parked step's draft exception could not be kept");
                 }
             }
         }
