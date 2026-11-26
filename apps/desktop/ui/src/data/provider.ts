@@ -381,7 +381,9 @@ export type DictationEvent =
 /** the mic: what a person says, transcribed into the composer's text. It is not the voice circle and needs no voice model (owner,
     26 November: "the microphone button is simply a transcription button") */
 export interface DictationSource {
-  /** start a dictation (for the open bot, null in a session); `onEvent` gets what it reports; the returned function cancels it */
+  /** start a dictation (for the open bot, null in a session); `onEvent` gets what it reports; the returned function stops listening: the microphone
+      closes at once, and one last `final` (what was still being said) may follow, or an `error`; the composer waits up to 3 s for it
+      and takes it although its mic is off. Nothing else follows a stop */
   start(opts: { botId: string | null }, onEvent: (e: DictationEvent) => void): Unsubscribe;
 }
 /** talking to a bot or a session, live (a composer's voice circle, pressed with no text). It is a capability: a provider has it once a

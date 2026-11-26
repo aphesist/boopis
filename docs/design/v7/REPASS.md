@@ -48,8 +48,9 @@ table at the end true.
     transcribes it into text. that is simple and should already exist. the 'talk' button, meaning talking to the bots themselves,
     doesn't come from the microphone button."). The mic writes what you say into the composer's text and must work in the live app; it
     has nothing to do with a voice model, never says "set up voice" and never leads to Settings, Models: that Notice is the voice
-    circle's alone. Transcription is being built in the host (`w33/transcription`); until it lands the live provider's dictation
-    hears nothing. The kit's Composer draws what a dictation reports (`DataProvider.dictation`, `DictationEvent` in
+    circle's alone. Transcription is built (the host's local whisper.cpp, the model fetched on first use, ADR-0059; crate
+    `crates/boopis-dictation`, `apps/desktop/ui/src/host/dictation.ts`; merged from `w33/transcription` in `e5f4c171`). It was tested on a
+    recording on three systems, **not yet on a real microphone**. The kit's Composer draws what a dictation reports (`DataProvider.dictation`, `DictationEvent` in
     `data/provider.ts`; `components/v7/compose.ts`): the speech model being fetched once, with its progress in the placeholder
     ("Getting the speech model 12 of 57 MB"); listening; the words arriving in the text; an error in plain words in a Notice at
     the mic ("No microphone found", "Microphone access is off for boopis", "The speech model could not be downloaded") with "Try

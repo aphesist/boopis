@@ -362,7 +362,7 @@ export type DictationEvent =
   | { kind: 'final'; text: string }                      // a finished stretch: it stays in the text; more may follow
   | { kind: 'error'; reason: string; retry?: boolean };  // one plain sentence; `retry: false` when trying again cannot help
 export interface DictationSource {
-  start(opts: { botId: string | null }, onEvent: (e: DictationEvent) => void): () => void;   // the returned function cancels
+  start(opts: { botId: string | null }, onEvent: (e: DictationEvent) => void): () => void;   // the returned function stops listening; one last `final` may follow
 }
 ```
 
@@ -374,8 +374,11 @@ export interface DictationSource {
 | `final` | the words stay, the composer's own input handling follows (marks, chips, the send arrow), and it listens again |
 | `error` | the mic switches off (`ui:dictate {on: false}`, so the app cancels the source), and a Notice at the mic says `reason` with "Try again" (it switches the mic on again), or with no action when `retry` is `false` |
 
-The app starts a source on `ui:dictate {on: true}` and hands its events on (`modules/chat/compose.ts` `dictate`); events that arrive
-while the mic is off are dropped. A provider with no `dictation` draws the mic with `micOff`: a press says "Dictation is not available
+The app starts a source on `ui:dictate {on: true}` and hands its events on (`modules/chat/compose.ts` `dictate`). The function a source
+returns means "stop listening", not "throw it away": when the mic goes off the microphone closes at once, and what was still being
+said may arrive as one last `final` (or an `error`, or nothing). The composer takes that `final` although its mic is off and waits up
+to 3 s for it (`LAST_WORDS` in `components/v7/compose.ts`), then lets go; any other event that arrives while the mic is off is dropped.
+The live source is the host's (`host/dictation.ts`: local whisper.cpp, the model fetched on first use, ADR-0059). A provider with no `dictation` draws the mic with `micOff`: a press says "Dictation is not available
 in this build" (`micTool`). Stories: `kit/composer` "dictation: getting the speech model", "the words arriving", "it failed", "not in
 this build", and "listening".
 
