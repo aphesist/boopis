@@ -194,6 +194,18 @@ Until a 0.3.0 feature exists, its control on a 0.2.0 screen is disabled with a r
 - Member name colours: the kit's contrast-safe ones. File chips: the bare file name (lead's decision, unanswered).
 - Keybinds get their own pass. Ctrl+Enter steers with the queued message in a running session (S06).
 
+**The lead's dock decisions (26 Nov, after step 5; to show the owner in the batch):**
+- K02: a hovered bot at 52 or 46 drops the 1.25 face scale, as the board's still draws.
+- The Well inside an ask follows the boards' corner (10), per rule 6 (the board wins over a lab rule).
+- The ask's words sit 6 above the Well in the dock as K03/K04 draw; other cards keep their own boards' 8.
+- A card with no messages keeps the composer at the foot of the card, over the row; the space above stays empty.
+- Row order stays needs-you, working, the rest; K05's still contradicts its own rule and is not followed.
+- "Always for staging": the label names the scope when the rules engine supplies one ("Always for <scope>"),
+  otherwise "Always allow"; both hidden until the rules exist (phase 3).
+- ctrl J for the compact row goes to the keys pass.
+- Removed with the v6 dock (spec 21.4 and "bots ask only through approvals"): a form answered from the dock,
+  `[` `]` pages, up/down for size, the minimised pill, the session part.
+
 ## 9b. The coverage map and the lead's resolutions (25 Nov)
 
 `docs/design/v7/COVERAGE.md` (branch `w33/coverage` 6507482d, to be merged into `w33/repass`): 427 rows in 19 areas:
@@ -237,12 +249,14 @@ Resolutions the lead made (by the precedence of section 3 and the owner's leave 
 | Done (0376447f) | A started session: S20 (0.16–0.17% outside orbs; the differences are "Deny" and the Stop button, both decided) and S23 (0.06%). v6 conversation and session composer deleted. Stop button, upright rail switch, gold @all, "hidden until it exists" (capability-driven) built. Coverage map merged. The lead looked at S20 dark, S23 light and both crops |
 | CI on 7d41b42f (run 45702861490) | **desktop-smoke failed, ui smoke failed, lab-orbs 29 errors ("the state never finished drawing")**; other jobs green; lab still running. Regressions are accumulating: the next step starts with health |
 | Note | The owner stopped step 5's builder by accident (25 Nov evening) and asked for a restart; a stopped builder cannot be resumed, so a new builder was started on the same brief, told to review the 16 uncommitted files the first one left, with the voice decision added |
-| Running | Step 5: health (CI's smoke, desktop-smoke, lab-orbs and broken stories green on the head) and then the dock (K01–K08). CI dispatched on 0376447f |
-| Next (step 6) | The composer completed and the session's leftovers: the primary circle rule, copy on a turn, talk-while-held, undo, drop and paste, effort mid-session, menu placement, S35–S38, the open steps against S10, the session's v6 leftovers (form cards, tasks, council, find, details panel) |
+| Done (2890ee9a, 26 Nov) | Step 5 by the restarted builder. **Health:** smoke 447/448 (the one is a 2 ms frame budget, green on CI), unit 1944, `dock_webkit.py` 25/25, lab:orbs clean on the touched stories; CI run 45736911632: every non-lab job green (ui, desktop-smoke, lab-orbs, e2e, appimage, installers). **Voice:** the circle is always shown; with no voice model a press opens the Notice "Voice needs a voice model" with "Set up voice" (Settings > Models); `DataProvider.voice` is the capability, no provider sets it. **Dock K01–K08:** K01, K07 0.01%; K08 0.11%; K02 0.20% (face scale); K05 0.40% (order rule against the board's own drawing); K06 0.66% (owner's Stop); K04 1.8% ("Always allow", Well corner); K03 10% (moss's question drawn as an approval, by the owner's "bots ask only through approvals", plus the order). Orbs drawn at their shown size; dock on the device pixel; "Compact dock when idle" setting (off). The lead looked at all eight boards in both themes (crops in scratchpad/repass/crops, sheets dock-K01-K08-{dark,light}.png) and the voice notice: they match as reported |
+| Not proven at 2890ee9a | **The full lab:** no completed report since 0376447f (1146 blocking findings in 35 stories then; three causes fixed but unconfirmed). Run 45736911632's lab job was still running when the builder stopped. README images not regenerated; goldens for new states not regenerated; kit/dock stories not extended; `components/composer.ts` and `mentions.ts` (v6) still in the tree, used only by their own stories and tests |
+| Running (26 Nov) | **Step 6a:** step 5's leftovers (read the lab report by cause, delete the v6 composer and mentions, kit/dock stories, the lead's dock decisions below) and the composer completed (talk-while-held, undo, drop and paste, hover actions on a session turn, effort mid-session with the S33 line, the S05 quick menu and menu placement, S37 no model, the fold under 900 px) |
+| Next (step 6b) | The session's leftovers: S36 engine stopped, S38 gate failed, the steps against S10, form cards, tasks, council, find, the details panel. Then step 7 (Settings with the voice section, Store, Connectors, palette, dialogs) |
 | Stopped, kept on their branches | `w33/onboarding`, `w33/settings-store` (first-attempt work; logic may be reused, looks are redone) |
 | Paused by the owner | The launch film (`w28/launch-video`, uncommitted edits in `w28-launch`) |
 
-**Not verified at 7d41b42f:** smoke tests updated blind; the reworked bots stories not run; no real engine.
+**Not verified at 7d41b42f (superseded by the 2890ee9a rows above):** smoke tests updated blind; the reworked bots stories not run; no real engine.
 **Known gaps:** the sidebar does not resize (the spec says 88–400; the app never had it); no drop or paste of files
 in the Bots composers; a room's cost and room-level approvals have no provider data yet.
 **Dropped by the board 12 step because no board draws them (asked of the owner):** the huddle fold, the "to nina"
