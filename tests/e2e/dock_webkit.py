@@ -26,7 +26,9 @@ So:
 
 Phases:
 
-- core (the default bots): the pointer lands on the dock (a bot grows, the row's end names it), moves along it, leaves;
+- core (the default bots): first, a snapshot shows what the page has just drawn (WebKitWebDriver's screenshot can be a
+  frame behind the page: `Page.presented`); the pointer lands on the dock (a bot grows, the row's end names it), moves
+  along it, leaves;
   a bot's card opens, another takes its place, it closes; the asks open and fold (twice: the slab goes between its two
   sizes each time); a bot is made;
 - panel: what the open dock holds (a bot's card, then the asks) keeps both its halves while the slab grows and while it
@@ -293,10 +295,48 @@ class Page:
             [list(w) for w in wanted],
         )
 
+    def presented(self) -> None:
+        """Wait until the page has drawn two frames. WebKitWebDriver's screenshot is the view's last presented frame,
+        which can still be the one from before the script that just ran (a colour set on a square read back the old
+        colour 14 times in 60 here, 32 in 60 with the machine loaded, and none in 80 after two frames): CI run
+        45786440506 judged nina and kai blank in such a snapshot, the row's band the picture from before the fold in
+        all its pixels."""
+        self.call(
+            "POST",
+            f"/session/{self.sid}/execute/async",
+            {
+                "script": "const done = arguments[arguments.length - 1];"
+                " requestAnimationFrame(() => requestAnimationFrame(() => done(true)));",
+                "args": [],
+            },
+        )
+
     def shot(self) -> Any:
+        """The window as the page has drawn it: never a frame from before the last script (`presented`)."""
         image = importlib.import_module("PIL.Image")
+        self.presented()
         png = base64.b64decode(self.call("GET", f"/session/{self.sid}/screenshot")["value"])
         return image.open(io.BytesIO(png)).convert("RGB")
+
+    def screen_follows(self, flips: int = 24) -> list[int]:
+        """The flips (of `flips`) where a snapshot did not show what the page had just drawn: a square at the window's
+        corner set to red or blue, then `shot`. Every check below reads the page's boxes and judges a snapshot by them,
+        so a snapshot one frame behind the page reads an orb that has just moved as blank."""
+        missed = []
+        for i in range(flips):
+            colour = (255, 0, 0) if i % 2 else (0, 0, 255)
+            self.run(
+                "let e = document.getElementById('dock-webkit-probe');"
+                "if (!e) { e = document.createElement('div'); e.id = 'dock-webkit-probe';"
+                " e.style.cssText = 'position:fixed;left:0;top:0;width:24px;height:24px;z-index:2147483647';"
+                " document.body.append(e); }"
+                "e.style.background = 'rgb(' + arguments[0].join(',') + ')';",
+                list(colour),
+            )
+            if self.shot().getpixel((12, 12)) != colour:
+                missed.append(i)
+        self.run("document.getElementById('dock-webkit-probe')?.remove()")
+        return missed
 
     def close(self) -> None:
         with contextlib.suppress(Exception):
@@ -520,6 +560,11 @@ class Run:
         chops = importlib.import_module("PIL.ImageChops")
         same = chops.difference(a, b).histogram()[0] / max(1, a.width * a.height)
         out.append(f"the row's band is the picture from before the act in {same:.0%} of its pixels")
+        whole = chops.difference(img.convert("L"), shot_were.convert("L"))
+        out.append(
+            f"the whole snapshot is the picture from before the act in "
+            f"{whole.histogram()[0] / max(1, img.width * img.height):.2%} of its pixels (differs in {whole.getbbox()})"
+        )
         mine = {o["id"]: o for o in now}.get(orb["id"])
         if mine:
             out.append(f"the next snapshot holds {lit_at(p.shot(), mine)} lit pixels of it")
@@ -536,6 +581,8 @@ class Run:
 def core(run: Run) -> None:
     p = run.page
     p.open("x=1")
+    missed = p.screen_follows()
+    run.check("a snapshot shows the page as it has just drawn it", not missed, f"behind the page in flips {missed}")
     p.move(300, 300)
     time.sleep(0.5)
     s = p.slab()

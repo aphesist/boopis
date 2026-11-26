@@ -36,7 +36,12 @@ export async function controls(env, AXE) {
       const tr = await trigger.evaluate((b) => ({ role: b.getAttribute('role'), popup: b.getAttribute('aria-haspopup'), expanded: b.getAttribute('aria-expanded'), mark: !!b.querySelector('svg.ui-mm'), text: b.textContent.trim() }));
       check('controls', `${name}: the model field is a combobox button with the provider's mark, not a <select>`, tr.role === 'combobox' && tr.popup === 'listbox' && tr.expanded === 'false' && tr.mark && /sonnet/i.test(tr.text), tr);
 
-      await trigger.click(); await page.waitForTimeout(350);
+      await trigger.click();
+      /* wait for the surface's fill to be set (the listbox paints it after its open transition starts), not a fixed time: a slow runner read it unset. Bounded; a listbox that never fills is read as it is and fails below */
+      await page.waitForFunction(() => {
+        const sf = document.querySelector('.ui-listbox'), c = sf && getComputedStyle(sf, '::before').backgroundColor;
+        return !!c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent';
+      }, null, { timeout: 5000 }).catch(() => {});
       const open = await page.evaluate(() => {
         const surface = document.querySelector('.ui-listbox'); if (!surface) return null;
         const lb = surface.querySelector('[role="listbox"]'), cs = getComputedStyle(lb), fill = getComputedStyle(surface, '::before').backgroundColor, probe = document.createElement('i');
