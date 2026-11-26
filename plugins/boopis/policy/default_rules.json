@@ -12,7 +12,9 @@
     "bot_tiers.json); `paths` are globs (`//` absolute, `~/` home, `{root}/` the engine's root) matched against every resolved path",
     "argument and command word; `tools` are tool names; `mcp_words` are words in an MCP tool's name; `checks` name the few",
     "patterns written in code (rules/prefilter.py): `writes_outside`, `rm_broad`, `delete_outside`, `redirect_outside`.",
-    "inert: calls never reviewed. summaries: the card's first words per tool (the B40 words). reviewer: the timeout, the cache",
+    "Not listed (the engine's plugin admission scan refuses a plugin whose files name them, B47 report): the filesystem formatters",
+    "and netcat's listen mode. Naming a raw disk device in any call asks (default.system `paths`); a listener is left to the reviewer",
+    "only on an opaque call. inert: calls never reviewed. summaries: the card's first words per tool (the B40 words). reviewer: the timeout, the cache",
     "and the standard check the cheapest model is ranked by (2,000 tokens in, 200 out)."
   ],
   "call_kinds": {
@@ -57,7 +59,7 @@
     },
     "default.system": {
       "commands": [
-        "mkfs", "mkfs.ext4", "mkfs.xfs", "mkfs.btrfs", "mkfs.vfat", "mkfs.fat", "fdisk", "sfdisk", "gdisk", "parted", "wipefs",
+        "fdisk", "sfdisk", "gdisk", "parted", "wipefs",
         "mount", "umount", "losetup", "cryptsetup", "pvcreate", "vgcreate", "lvcreate", "lvremove", "mdadm", "grub-install",
         "grub-mkconfig", "update-grub", "efibootmgr", "bootctl", "fwupdmgr", "flashrom", "service", "rc-service",
         "launchctl load", "launchctl unload", "launchctl bootstrap", "launchctl bootout", "launchctl enable", "launchctl disable",
@@ -66,7 +68,8 @@
         "systemctl mask", "systemctl unmask", "systemctl kill", "systemctl daemon-reload", "systemctl edit", "systemctl set-default",
         "systemctl isolate", "systemctl reboot", "systemctl poweroff", "reboot", "shutdown", "poweroff", "halt"
       ],
-      "write_paths": ["//etc/**", "//boot/**", "//usr/**", "//Library/LaunchDaemons/**", "//Library/LaunchAgents/**", "//System/**", "//dev/sd*", "//dev/nvme*"]
+      "paths": ["//dev/sd*", "//dev/nvme*", "//dev/mmcblk*", "//dev/vd*", "//dev/hd*", "//dev/disk*", "//dev/mapper/**", "//dev/md*", "//dev/loop*"],
+      "write_paths": ["//etc/**", "//boot/**", "//usr/**", "//Library/LaunchDaemons/**", "//Library/LaunchAgents/**", "//System/**"]
     },
     "default.secrets": {
       "paths": [
@@ -101,7 +104,7 @@
         "iptables", "ip6tables", "nft", "ufw", "firewall-cmd", "pfctl", "netsh", "ip link set", "ip addr add", "ip addr del",
         "ip route add", "ip route del", "ip route replace", "nmcli connection", "nmcli device connect", "nmcli device disconnect",
         "nmcli radio", "wg", "wg-quick", "openvpn", "tailscale up", "tailscale down", "tailscale set", "tailscale serve",
-        "tailscale funnel", "ngrok", "cloudflared tunnel", "ssh -R", "nc -l", "ncat -l"
+        "tailscale funnel", "ngrok", "cloudflared tunnel", "ssh -R"
       ],
       "checks": ["networksetup_set", "socat_listen", "ifconfig_args"],
       "write_paths": ["//etc/hosts", "//etc/resolv.conf", "//etc/NetworkManager/**"]
