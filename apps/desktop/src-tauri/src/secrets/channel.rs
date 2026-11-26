@@ -35,12 +35,17 @@ pub const PROTOCOL: &str = "hx-host-secrets-v1";
 pub const TOKEN_ENV: &str = "BOOPIS_HOST_SECRETS_TOKEN";
 /// The environment variable that names the socket for the plugin.
 pub const SOCKET_ENV: &str = "BOOPIS_HOST_SECRETS_SOCKET";
+/// The engine's launch marker (B47, H4): a non-secret per-run value in the gateway's launch environment, which the plugin
+/// does not remove, so every process the engine starts inherits it and the local API knows it for a bot's.
+pub const ENGINE_LAUNCH_ENV: &str = boopis_peer::ENGINE_LAUNCH_ENV;
 
 /// The channel's credentials: its socket and the token. `Debug` never shows the token.
 #[derive(Clone)]
 pub struct Auth {
     socket: PathBuf,
     token: String,
+    /// The engine's launch marker's value (not a secret: it only names this run's launches).
+    launch: String,
 }
 
 impl std::fmt::Debug for Auth {
@@ -67,9 +72,11 @@ impl Auth {
     /// # Errors
     /// `Io` when no random bytes are available.
     pub fn mint_in(socket_dir: &Path) -> Result<Self> {
+        let marker = token()?;
         Ok(Self {
             socket: socket_dir.join("host.sock"),
             token: token()?,
+            launch: marker.get(..16).unwrap_or(marker.as_str()).to_owned(),
         })
     }
 
@@ -86,12 +93,14 @@ impl Auth {
         format!("{TOKEN_ENV}={}", self.token)
     }
 
-    /// What the gateway gets in its environment, and no other process: the socket and the token.
+    /// What the gateway gets in its environment, and no other process: the socket and the token, and the engine's
+    /// launch marker (B47, H4), which every process the engine starts inherits.
     #[must_use]
     pub fn launch_env(&self) -> Vec<(String, String)> {
         vec![
             (SOCKET_ENV.to_owned(), self.socket.display().to_string()),
             (TOKEN_ENV.to_owned(), self.token.clone()),
+            (ENGINE_LAUNCH_ENV.to_owned(), self.launch.clone()),
         ]
     }
 }
@@ -586,7 +595,11 @@ mod tests {
         let auth = Auth::mint_in(Path::new("/run/x")).unwrap();
         assert!(!format!("{auth:?}").contains(&token_of(&auth)));
         let env = auth.launch_env();
-        assert_eq!(env.len(), 2);
+        assert_eq!(env.len(), 3);
+        assert!(
+            env.iter()
+                .any(|(k, v)| k == ENGINE_LAUNCH_ENV && v.len() == 16 && v != &token_of(&auth))
+        );
         assert_eq!(
             auth.token_entry(),
             format!("{TOKEN_ENV}={}", token_of(&auth))

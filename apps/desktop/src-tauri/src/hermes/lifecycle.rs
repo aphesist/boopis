@@ -156,6 +156,8 @@ impl Supervisor {
         let (Some(peers), Some(pid)) = (&self.channel, identity.pid) else {
             return;
         };
+        // B47, H4: the local API refuses an owner-voice request from any process under this gateway
+        peers.note_engine(pid);
         if identity.state == "ready" && !peers.record_gateway(pid) {
             tracing::debug!(
                 pid,

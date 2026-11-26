@@ -9,7 +9,8 @@
 //!   [`workers`]: kanban workers; [`cron`]: scheduled runs' results;
 //! - [`wire`], [`http`], [`token`]: the endpoint, its checks and its token file;
 //! - [`activity`]: what the plugin pushes from the engine's tool hooks (B45);
-//! - [`audit`], [`scrub`], [`look`]: the record of who answered, the secret scrubber, the default look.
+//! - [`audit`], [`scrub`], [`look`]: the record of who answered, the secret scrubber, the default look;
+//! - [`owner`]: B47's H4, an answer or a message in the owner's voice refused from a bot's process.
 
 pub mod activity;
 pub mod approvals;
@@ -23,6 +24,7 @@ pub mod feed;
 pub mod http;
 pub mod look;
 pub mod model;
+pub mod owner;
 pub mod presence;
 pub mod room_log;
 pub mod rooms;
@@ -91,6 +93,8 @@ pub struct LocalApi {
     cancel: CancellationToken,
     /// The engine's root home, where the plugin reads where the activity socket is (B45); `None` when unknown.
     engine_root: Option<PathBuf>,
+    /// Who holds a client's connection (B47, H4).
+    owner: Arc<dyn owner::OwnerCheck>,
     /// The socket the plugin pushes to, while the app runs (B45).
     #[cfg(unix)]
     activity: std::sync::Mutex<Option<activity::Listener>>,
@@ -120,6 +124,7 @@ impl LocalApi {
         limits: &ApiLimits,
         rooms: &RoomLimits,
         engine_root: Option<PathBuf>,
+        owner: Arc<dyn owner::OwnerCheck>,
     ) -> Arc<Self> {
         let feed = Feed::new(audit::Audit::under(&dir), limits.clone());
         let engine = Arc::new(Hubbed::new(handle, limits.engine_wait));
@@ -139,6 +144,7 @@ impl LocalApi {
             problem: std::sync::Mutex::new(None),
             cancel: CancellationToken::new(),
             engine_root,
+            owner,
             #[cfg(unix)]
             activity: std::sync::Mutex::new(None),
         })
@@ -191,12 +197,17 @@ impl LocalApi {
             );
         }
         self.feed.never_say(vec![tok.expose().to_owned()]);
-        let server = Server::start(self.service.clone(), tok, self.limits.clone())
-            .await
-            .map_err(|e| {
-                files.remove();
-                format!("boopis could not open the endpoint: {e}")
-            })?;
+        let server = Server::start(
+            self.service.clone(),
+            tok,
+            self.limits.clone(),
+            self.owner.clone(),
+        )
+        .await
+        .map_err(|e| {
+            files.remove();
+            format!("boopis could not open the endpoint: {e}")
+        })?;
         if let Err(e) = files.write_endpoint(&server.addr().to_string(), model::API_VERSION) {
             server.stop();
             files.remove();

@@ -12,6 +12,7 @@ use super::audit::Audit;
 use super::engine::scripted::Scripted;
 use super::feed::Feed;
 use super::http::Server;
+use super::owner::{Fixed, OwnerCheck};
 use super::service::Service;
 use super::token::{Files, Token};
 use crate::config::ApiLimits;
@@ -109,6 +110,11 @@ fn limits() -> ApiLimits {
 }
 
 async fn rig_with(limits: ApiLimits) -> Rig {
+    rig_owned(limits, Arc::new(Fixed(boopis_peer::Verdict::Owner))).await
+}
+
+/// A rig whose connections `owner` judges (B47, H4): the other rigs' clients are the owner's.
+async fn rig_owned(limits: ApiLimits, owner: Arc<dyn OwnerCheck>) -> Rig {
     let dir = tempfile::tempdir().unwrap();
     let feed = Feed::new(Audit::under(dir.path()), limits.clone());
     let (scripted, store) = engine();
@@ -126,6 +132,7 @@ async fn rig_with(limits: ApiLimits) -> Rig {
         service.clone(),
         Token::from_text(TOKEN.into()),
         limits,
+        owner,
     )
     .unwrap();
     service.feed().never_say(vec![TOKEN.to_owned()]);
@@ -1304,6 +1311,7 @@ async fn the_snapshots_are_full_from_the_first_request_without_a_stream() {
         service.clone(),
         Token::from_text(TOKEN.into()),
         limits,
+        Arc::new(Fixed(boopis_peer::Verdict::Owner)),
     )
     .unwrap();
     let port = server.addr().port();
@@ -1607,4 +1615,162 @@ async fn nothing_reaches_the_microphone() {
     for word in ["dictat", "microphone", "audio", "transcri"] {
         assert!(!model.contains(word), "the feed's model names {word:?}");
     }
+}
+
+// ---------------------------------------------------------------- B47, H4: owner-voice routes from a bot's process
+
+/// What a client the host refuses learns: one code, no detail of the check.
+fn assert_owner_surface_unproven(status: u16, body: &str) {
+    assert_eq!(status, 403, "{body}");
+    let v = json_of(body);
+    assert_eq!(v["error"]["code"], "owner_surface_unproven", "{body}");
+    assert_eq!(v["error"]["message"], "Answer this in boopis.");
+    for word in ["ancestry", "environment", "cgroup", "gateway", "pid"] {
+        assert!(!body.contains(word), "{word} in {body}");
+    }
+}
+
+fn audit_text(r: &Rig) -> String {
+    std::fs::read_to_string(r._dir.path().join("audit").join("client-answers.jsonl"))
+        .unwrap_or_default()
+}
+
+/// Every owner-voice route, refused from a bot's process (by each rule) and from a client that cannot be proved the
+/// owner's (each reason), with nothing reaching the engine and the row still pending.
+#[tokio::test]
+async fn an_owner_voice_request_from_a_bot_s_process_is_refused_and_nothing_reaches_the_engine() {
+    use boopis_peer::{Rule, Unproven, Verdict};
+    for verdict in [
+        Verdict::Bot(Rule::Ancestry),
+        Verdict::Bot(Rule::Environment),
+        Verdict::Bot(Rule::Group),
+        Verdict::Unproven(Unproven::NoGateway),
+        Verdict::Unproven(Unproven::NotFound),
+        Verdict::Unproven(Unproven::Unreadable),
+        Verdict::Unproven(Unproven::Unsupported),
+        Verdict::Unproven(Unproven::Timeout),
+    ] {
+        let r = rig_owned(
+            ApiLimits {
+                write_rate: (100, 100),
+                ..limits()
+            },
+            Arc::new(Fixed(verdict)),
+        )
+        .await;
+        ask(&r, "p1", "rm -rf build");
+        for (path, body) in [
+            ("/v1/approvals/p1", json!({"choice": "once"})),
+            ("/v1/approvals/p1", json!({"choice": "deny"})),
+            ("/v1/bots/kai/say", json!({"text": "approve it"})),
+            ("/v1/bots/nina/retry", json!({})),
+            ("/v1/rooms/g-paper/say", json!({"text": "go"})),
+        ] {
+            let (status, _, resp) =
+                raw(r.server.addr(), &post(&r, path, &body.to_string(), "")).await;
+            assert_owner_surface_unproven(status, &resp);
+        }
+        for method in [
+            "approval.respond",
+            "prompt.submit",
+            "groups.send",
+            "command.dispatch",
+        ] {
+            assert!(
+                r.scripted.of(method).is_empty(),
+                "{verdict:?} reached {method}"
+            );
+        }
+        let (_, _, list) = raw(r.server.addr(), &get(&r, "/v1/approvals", "")).await;
+        assert_eq!(json_of(&list)["approvals"][0]["state"], "pending");
+        let audit = audit_text(&r);
+        let expected = super::owner::refusal_outcome(verdict);
+        assert!(audit.contains(&expected), "{verdict:?}: {audit}");
+        assert!(audit.contains("\"prompt_id\":\"p1\""), "{audit}");
+        assert!(
+            !audit.contains("approve it"),
+            "never the message text: {audit}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn stops_and_reads_stay_open_to_a_bot_s_process() {
+    let r = rig_owned(
+        limits(),
+        Arc::new(Fixed(boopis_peer::Verdict::Bot(
+            boopis_peer::Rule::Ancestry,
+        ))),
+    )
+    .await;
+    for path in [
+        "/v1",
+        "/v1/bots",
+        "/v1/presence",
+        "/v1/approvals",
+        "/v1/rooms",
+    ] {
+        let (status, _, body) = raw(r.server.addr(), &get(&r, path, "")).await;
+        assert_eq!(status, 200, "{path} {body}");
+    }
+    let (status, _, body) = raw(
+        r.server.addr(),
+        &post(&r, "/v1/rooms/g-paper/stop", "{}", ""),
+    )
+    .await;
+    assert_ne!(status, 403, "{body}");
+    assert_ne!(
+        json_of(&body)["error"]["code"],
+        "owner_surface_unproven",
+        "{body}"
+    );
+}
+
+#[tokio::test]
+async fn the_owner_s_own_client_still_answers() {
+    let r = rig().await;
+    ask(&r, "p1", "rm -rf build");
+    let (status, _, body) = raw(
+        r.server.addr(),
+        &post(
+            &r,
+            "/v1/approvals/p1",
+            &json!({"choice": "once"}).to_string(),
+            "",
+        ),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(r.scripted.of("approval.respond").len(), 1);
+}
+
+/// The real check over this machine (Linux): the test process is the client, and no gateway is identified yet, so an
+/// answer is refused (the spec's test 12); once a gateway that is not this process's ancestor is identified, it passes.
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn the_system_check_refuses_until_a_gateway_is_identified_and_then_answers_the_owner() {
+    let peers = Arc::new(crate::secrets::PeerPolicy::new());
+    let r = rig_owned(
+        limits(),
+        Arc::new(super::owner::SystemCheck::new(peers.clone())),
+    )
+    .await;
+    ask(&r, "p1", "rm -rf build");
+    let answer = post(
+        &r,
+        "/v1/approvals/p1",
+        &json!({"choice": "once"}).to_string(),
+        "",
+    );
+    let (status, _, body) = raw(r.server.addr(), &answer).await;
+    assert_owner_surface_unproven(status, &body);
+    let mut unrelated = std::process::Command::new("sleep")
+        .arg("20")
+        .spawn()
+        .unwrap();
+    peers.note_engine(unrelated.id());
+    let (status, _, body) = raw(r.server.addr(), &answer).await;
+    let _ = unrelated.kill();
+    let _ = unrelated.wait();
+    assert_eq!(status, 200, "{body}");
 }

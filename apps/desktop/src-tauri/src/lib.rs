@@ -615,6 +615,8 @@ pub fn run() {
                 &limits.api,
                 &limits.rooms,
                 Some(engine_root),
+                // B47, H4: an owner-voice request is refused from a process under a gateway the host identified
+                Arc::new(local_api::owner::SystemCheck::new(peers.clone())),
             );
             let api_feed = local_api.feed().clone();
             let update_gate = endpoint::Gate::default();
