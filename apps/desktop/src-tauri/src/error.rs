@@ -91,6 +91,9 @@ pub enum Error {
     /// A bot could not be made, changed or prepared, with its own stable code (`hx.bots.*`, ADR-0042).
     #[error("{1}")]
     Bots(&'static str, String),
+    /// The rules list refused a change, with its own stable code (`hx.rules.*`, ADR-0060).
+    #[error("{1}")]
+    Rules(&'static str, String),
 }
 
 /// A specialised `Result`.
@@ -157,7 +160,8 @@ impl Error {
             | Self::Connector(code, _)
             | Self::Store(code, _)
             | Self::Provider(code, _)
-            | Self::Bots(code, _) => code,
+            | Self::Bots(code, _)
+            | Self::Rules(code, _) => code,
         }
     }
 }

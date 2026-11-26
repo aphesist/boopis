@@ -34,6 +34,7 @@ pub mod providers;
 pub mod renderer;
 pub mod resources;
 pub mod rooms;
+pub mod rules;
 pub mod runtime;
 pub mod secrets;
 pub mod settings;
@@ -162,6 +163,14 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::bot_run_limit_set,
             commands::dictation_start,
             commands::dictation_stop,
+            commands::rules_get,
+            commands::rules_put,
+            commands::rules_set_enabled,
+            commands::rules_remove,
+            commands::rules_undo,
+            commands::rules_restore_defaults,
+            commands::rules_accept_outside,
+            commands::rules_reviewer_set,
         ])
         .events(collect_events![
             ConnectionStateEvent,
@@ -651,6 +660,7 @@ pub fn run() {
                 carries_runtime,
                 connectors: std::sync::Mutex::default(),
                 bots: Arc::new(bots::engine::Service::new(supervisor.clone())),
+                rules: rules::RulesHost::default(),
                 store,
                 bundle: setup::install::Bundle::locate(
                     resource_dir.as_deref(),

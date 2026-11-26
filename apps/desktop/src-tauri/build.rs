@@ -99,6 +99,14 @@ const COMMANDS: &[&str] = &[
     "bot_run_limit_set",
     "dictation_start",
     "dictation_stop",
+    "rules_get",
+    "rules_put",
+    "rules_set_enabled",
+    "rules_remove",
+    "rules_undo",
+    "rules_restore_defaults",
+    "rules_accept_outside",
+    "rules_reviewer_set",
 ];
 
 fn main() {

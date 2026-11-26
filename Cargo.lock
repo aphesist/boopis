@@ -492,6 +492,7 @@ dependencies = [
  "async-trait",
  "boopis-dictation",
  "boopis-peer",
+ "boopis-rules",
  "dirs 6.0.0",
  "flate2",
  "futures-util",

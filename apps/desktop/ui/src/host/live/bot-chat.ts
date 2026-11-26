@@ -11,6 +11,7 @@
 
    The thread is the one session open. Starting over (`fresh`) or opening another replaces it; a bot that is replying is
    never switched away from, because its reply would land in the wrong thread. */
+import { ruleCard } from './rules';
 import { logger } from '../../core/log';
 import type { BotsEvent } from '../../data/provider';
 import type { ApprovalMessage, NoteMessage, TextMessage, ThreadMessage } from '../../data/types';
@@ -237,7 +238,8 @@ export function createBotChat(deps: ChatDeps) {
         if (c.thread.some((x) => x.id === mid)) break;
         const gen = typeof p['execution_generation'] === 'number' ? p['execution_generation'] : c.generation;
         c.approvals.set(mid, { prompt: id, generation: gen });
-        const m: ApprovalMessage = { kind: 'approval', id: mid, who: botId, t: t(), data: { id: mid, title: command || what || 'Approval needed', quote: command, meta: what, from: botId, item: [] } };
+        /* a rules card carries its rule and its scope (host/live/rules.ts, ADR-0060) */
+        const m: ApprovalMessage = { kind: 'approval', id: mid, who: botId, t: t(), data: { id: mid, title: command || what || 'Approval needed', quote: command, meta: what, from: botId, item: [], ...(ruleCard(what) ?? {}) } };
         add(botId, c, m);
         deps.live(botId, { state: 'needs', activity: '', attention: 'approval' });
         break;

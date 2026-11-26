@@ -82,6 +82,8 @@ pub struct AppState {
     pub connectors: std::sync::Mutex<std::collections::HashMap<std::path::PathBuf, Arc<Engine>>>,
     /// The bots: what each one's home needs, and the repair once per run (ADR-0042).
     pub bots: Arc<crate::bots::engine::Service>,
+    /// The rules list's writer (ADR-0060): the digest it last wrote, removed rules kept for Undo.
+    pub rules: crate::rules::RulesHost,
     /// Where the app's links wait while the host puts this app's code in place for the gateway (`setup::update`).
     pub update_gate: crate::endpoint::Gate,
     /// The automatic update was started in this run (once per run).
@@ -2035,4 +2037,137 @@ pub async fn bot_run_limit_set(
 pub fn bots_notice(state: State<'_, AppState>) -> std::result::Result<Option<String>, HostError> {
     let root = state.supervisor.environment().hermes_root();
     Ok(crate::bots::take_notice(&root)?)
+}
+
+// ---------------------------------------------------------------- the rules list (ADR-0060, docs/specs/rules-engine.md)
+
+fn rules_root(state: &State<'_, AppState>) -> std::path::PathBuf {
+    state.supervisor.environment().hermes_root()
+}
+
+/// The rules list for every bot, `<root>/boopis/rules.json` (made with the owner's defaults the first time), as
+/// `{rules, reviewer_status, changed_outside}`.
+///
+/// Errors: `hx.rules.unreadable` when the file cannot be read or a newer boopis wrote it.
+#[tauri::command]
+#[specta::specta]
+pub fn rules_get(state: State<'_, AppState>) -> std::result::Result<Json, HostError> {
+    Ok(Json(state.rules.get(&rules_root(&state))?))
+}
+
+/// Add a rule or edit one (by its `id`), against the revision the window read. Returns `{revision, id}`.
+///
+/// Errors: `hx.rules.conflict` (a stale revision, or a change from outside not yet looked at), `hx.rules.invalid` (a text
+/// that is not one line of 1 to 200 characters, an unknown type, kind or source).
+#[tauri::command]
+#[specta::specta]
+pub fn rules_put(
+    state: State<'_, AppState>,
+    rule: Json,
+    expected_revision: u32,
+) -> std::result::Result<Json, HostError> {
+    Ok(Json(state.rules.put(
+        &rules_root(&state),
+        &rule.0,
+        u64::from(expected_revision),
+    )?))
+}
+
+/// Switch a rule on or off. Returns `{revision}`.
+///
+/// Errors: as `rules_put`, and `hx.rules.not_found`.
+#[tauri::command]
+#[specta::specta]
+pub fn rules_set_enabled(
+    state: State<'_, AppState>,
+    id: String,
+    enabled: bool,
+    expected_revision: u32,
+) -> std::result::Result<Json, HostError> {
+    Ok(Json(state.rules.set_enabled(
+        &rules_root(&state),
+        &id,
+        enabled,
+        u64::from(expected_revision),
+    )?))
+}
+
+/// Remove a rule (a default stays removed). Returns `{revision, undo_token}`; `rules_undo` puts it back for 30 s.
+///
+/// Errors: as `rules_set_enabled`.
+#[tauri::command]
+#[specta::specta]
+pub fn rules_remove(
+    state: State<'_, AppState>,
+    id: String,
+    expected_revision: u32,
+) -> std::result::Result<Json, HostError> {
+    Ok(Json(state.rules.remove(
+        &rules_root(&state),
+        &id,
+        u64::from(expected_revision),
+    )?))
+}
+
+/// Put back the rule a `rules_remove` took out. Returns `{revision}`.
+///
+/// Errors: `hx.rules.not_found` for a token that is unknown or older than 30 s.
+#[tauri::command]
+#[specta::specta]
+pub fn rules_undo(
+    state: State<'_, AppState>,
+    undo_token: String,
+) -> std::result::Result<Json, HostError> {
+    Ok(Json(state.rules.undo(&rules_root(&state), &undo_token)?))
+}
+
+/// Put the shipped defaults back (their text, on, every bot; removed ones added again); `ids` names some, none is all.
+/// Returns `{revision}`.
+#[tauri::command]
+#[specta::specta]
+pub fn rules_restore_defaults(
+    state: State<'_, AppState>,
+    ids: Option<Vec<String>>,
+) -> std::result::Result<Json, HostError> {
+    Ok(Json(
+        state
+            .rules
+            .restore_defaults(&rules_root(&state), ids.as_deref())?,
+    ))
+}
+
+/// Keep a change made to the rules outside boopis (after the owner looked at it). Returns what `rules_get` returns.
+#[tauri::command]
+#[specta::specta]
+pub fn rules_accept_outside(state: State<'_, AppState>) -> std::result::Result<Json, HostError> {
+    Ok(Json(state.rules.accept_outside(&rules_root(&state))?))
+}
+
+/// Choose the reviewer: `auto` (the cheapest connected model, as the plugin's `rules.reviewer.rank` ranks them; the
+/// window passes its pick) or `pinned`, with its route; the route is written into every bot's own engine settings
+/// (`auxiliary.boopis_reviewer`). Returns `{reviewer, problems}`: the bots the route could not be written for.
+///
+/// Errors: `hx.rules.invalid` for another mode or half a route.
+#[tauri::command]
+#[specta::specta]
+pub async fn rules_reviewer_set(
+    state: State<'_, AppState>,
+    mode: String,
+    provider: Option<String>,
+    model: Option<String>,
+) -> std::result::Result<Json, HostError> {
+    let root = rules_root(&state);
+    let reviewer = state
+        .rules
+        .set_reviewer(&root, &mode, provider.as_deref(), model.as_deref())?;
+    let problems = crate::rules::write_route(
+        state.bots.engine(),
+        &root,
+        reviewer["provider"].as_str(),
+        reviewer["model"].as_str(),
+    )
+    .await;
+    Ok(Json(
+        serde_json::json!({"reviewer": reviewer, "problems": problems}),
+    ))
 }

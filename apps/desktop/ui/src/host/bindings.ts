@@ -399,6 +399,53 @@ export const commands = {
 	 *  nothing.
 	 */
 	dictationStop: (id: number, options?: InvokeOptions) => __TAURI_INVOKE<void>("dictation_stop", { id }, options),
+	/**
+	 * The rules list for every bot, `<root>/boopis/rules.json` (made with the owner's defaults the first time), as
+	 * `{rules, reviewer_status, changed_outside}`.
+	 * 
+	 * Errors: `hx.rules.unreadable` when the file cannot be read or a newer boopis wrote it.
+	 */
+	rulesGet: (options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_get", undefined, options),
+	/**
+	 * Add a rule or edit one (by its `id`), against the revision the window read. Returns `{revision, id}`.
+	 * 
+	 * Errors: `hx.rules.conflict` (a stale revision, or a change from outside not yet looked at), `hx.rules.invalid` (a text
+	 * that is not one line of 1 to 200 characters, an unknown type, kind or source).
+	 */
+	rulesPut: (rule: Json, expectedRevision: number, options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_put", { rule, expectedRevision }, options),
+	/**
+	 * Switch a rule on or off. Returns `{revision}`.
+	 * 
+	 * Errors: as `rules_put`, and `hx.rules.not_found`.
+	 */
+	rulesSetEnabled: (id: string, enabled: boolean, expectedRevision: number, options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_set_enabled", { id, enabled, expectedRevision }, options),
+	/**
+	 * Remove a rule (a default stays removed). Returns `{revision, undo_token}`; `rules_undo` puts it back for 30 s.
+	 * 
+	 * Errors: as `rules_set_enabled`.
+	 */
+	rulesRemove: (id: string, expectedRevision: number, options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_remove", { id, expectedRevision }, options),
+	/**
+	 * Put back the rule a `rules_remove` took out. Returns `{revision}`.
+	 * 
+	 * Errors: `hx.rules.not_found` for a token that is unknown or older than 30 s.
+	 */
+	rulesUndo: (undoToken: string, options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_undo", { undoToken }, options),
+	/**
+	 * Put the shipped defaults back (their text, on, every bot; removed ones added again); `ids` names some, none is all.
+	 * Returns `{revision}`.
+	 */
+	rulesRestoreDefaults: (ids: string[] | null, options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_restore_defaults", { ids }, options),
+	/**  Keep a change made to the rules outside boopis (after the owner looked at it). Returns what `rules_get` returns. */
+	rulesAcceptOutside: (options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_accept_outside", undefined, options),
+	/**
+	 * Choose the reviewer: `auto` (the cheapest connected model, as the plugin's `rules.reviewer.rank` ranks them; the
+	 * window passes its pick) or `pinned`, with its route; the route is written into every bot's own engine settings
+	 * (`auxiliary.boopis_reviewer`). Returns `{reviewer, problems}`: the bots the route could not be written for.
+	 * 
+	 * Errors: `hx.rules.invalid` for another mode or half a route.
+	 */
+	rulesReviewerSet: (mode: string, provider: string | null, model: string | null, options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_reviewer_set", { mode, provider, model }, options),
 };
 
 /** Events */

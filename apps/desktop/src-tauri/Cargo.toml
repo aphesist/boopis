@@ -80,6 +80,8 @@ serde_norway = "0.9.42"
 boopis-dictation = { path = "../../../crates/boopis-dictation" }
 # B47, H4: who holds a local API connection's client end, and whether that is a bot's process. Standard library only.
 boopis-peer = { path = "../../../crates/boopis-peer" }
+# The rules list's writer (ADR-0060): rules.json, its defaults, validation, revisions and atomic writes.
+boopis-rules = { path = "../../../crates/boopis-rules" }
 
 # The Linux webview (ADR-0025): GDK's monitor refresh rate and the web view's settings object, through safe wrappers, and
 # `dlsym` for the one preference the `webkit2gtk` crate has no binding for. Versions match what Tauri's wry already uses.
