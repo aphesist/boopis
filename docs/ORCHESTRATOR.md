@@ -206,10 +206,22 @@ Until a 0.3.0 feature exists, its control on a 0.2.0 screen is disabled with a r
 - Removed with the v6 dock (spec 21.4 and "bots ask only through approvals"): a form answered from the dock,
   `[` `]` pages, up/down for size, the minimised pill, the session part.
 
+**Owner, 26 Nov (after the transcription finding):** "the microphone button is simply a transcription button. it
+reads your voice and transcribes it into text. that is simple and should already exist. the 'talk' button, meaning,
+talking to the bots themselves, don't come from the microphone button." So: the mic is plain speech-to-text and must
+work in the live app, with no setup screen and no link to voice; talk is the voice circle only. The lead's "mic shows
+a setup Notice" below is **withdrawn**; the proposal "transcription as a 0.2.0 feature" is answered: build it now.
+
+**The lead's transcription decisions (26 Nov):** local and private (no key, audio never leaves the machine, never
+on disk); native capture in the host (cpal), not the web view; whisper.cpp (whisper-rs), multilingual base
+quantized (about 57 MB) fetched on first use with a pinned hash and progress; recording only from the person's own
+press (no local API, mod, bot or deep link); seam `start(onEvent): stop` with preparing / listening / partial /
+final / error; UI adapter in one file `host/dictation.ts`. Kit side (states drawn with existing parts) by 6b.
+
 **The lead's decisions after 6a (26 Nov):**
-- The mic with no speech model behaves as the voice circle does: shown, a press starts nothing and opens a Notice
+- (WITHDRAWN by the owner the same day, see above.) The mic with no speech model behaves as the voice circle does: shown, a press starts nothing and opens a Notice
   ("Dictation needs a speech model", "Set up voice") leading to Settings > Models. Capability-driven.
-- Proposed to the owner (not decided): build transcription as a 0.2.0 feature in the same voice section, a local
+- (ANSWERED: build it now, see above.) Proposed to the owner: build transcription as a 0.2.0 feature in the same voice section, a local
   model on the person's hardware first (no key, private) and a provider key as the other option.
 - K04's bubble: the kit's derived fill stays (one rule for every bot colour); the board's value was typed by hand.
 - A pasted file with no path: a Notice asks to save it and add it with "+" (copy to be read in the copy pass).
@@ -267,6 +279,7 @@ Resolutions the lead made (by the precedence of section 3 and the owner's leave 
 | Seen by the lead on 6a's sheets (to fix in 6b) | S41: with no sessions the app's sidebar loses the Sessions / Bots switch and the "+" (the board keeps them) and the title reads "New session" for the board's "Sessions". The model menu is about 160 px wide and cuts its rows' text ("Picks a …", "Not on …"). At 880 px wide the sidebar covers the thread and the title pill collides with the search hint: narrow widths are not done (phase 2 step 5) |
 | Not proven at ca44785a | The full lab (in progress); effort/model change against a real engine (fake gateway only); a pasted file, hold-to-talk and undo in WebKitGTK (Chromium only); `dock_webkit.py` flaked once in nine runs (24/25, check not captured) |
 | Running (26 Nov, builder started on ca44785a; S33, S37 and the derived composer states sent to the owner; the transcription finding told) | **Step 6b:** S41's empty sidebar and title, the model menu's width, the mic without a speech model (Notice, as the voice circle), S36 engine stopped, S38 gate failed, the steps against S10, the session details pane S40 (replacing the v6 details panel; the Diff/Files/Terminal/PR tabs are 0.3.0 and stay hidden), the room details pane's and the small lab findings |
+| Running in parallel (26 Nov) | **Transcription in the host:** branch `w33/transcription` (worktree `/home/user/hx-wt/w33-transcription`, from ca44785a), host files and `ui/src/host/dictation.ts` only; uses `CARGO_TARGET_DIR=/home/user/hx-wt/w33-session-s0/target` (disk has about 2 GB free). 6b was sent a correction: item 3 is now the kit mic's states (preparing, listening, transcribing, failed), no setup Notice. To merge into w33/repass by the lead when both report; a real microphone can only be tried by the owner on a test build |
 | Next (step 6c) | The session's last v6 parts: form cards, tasks handed to other models, a council, find. Then step 7 (Settings with the voice and speech section, Store, Connectors, palette, dialogs) |
 | Stopped, kept on their branches | `w33/onboarding`, `w33/settings-store` (first-attempt work; logic may be reused, looks are redone) |
 | Paused by the owner | The launch film (`w28/launch-video`, uncommitted edits in `w28-launch`) |
