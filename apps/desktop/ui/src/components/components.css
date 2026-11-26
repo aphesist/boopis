@@ -493,7 +493,10 @@ button.ui-group__head { cursor: pointer; }
 .ui-menu__item .ui-keys, .ui-option .ui-keys { margin-left: auto; align-self: center; }
 /* an item that ends in key chips or a stamp: the end padding is the chip's inset from the top and bottom, (row - chip) / 2, and the chip's radius the item's less that (R-corner-3, R-corner-4) */
 .ui-menu__item:has(.ui-keys, .ui-stamp), .ui-option:has(.ui-keys, .ui-stamp) { --kbd-inset: calc((var(--row-h) - 18px) / 2); padding-inline-end: var(--kbd-inset); }
-:is(.ui-menu__item, .ui-option) :is(.ui-kbd, .ui-stamp) { border-radius: var(--r-pill); }   /* an 18px chip at (row - 18) / 2 inside the item's corner: the item's radius less that inset is half the chip, a capsule (R-corner-9) */
+:is(.ui-menu__item, .ui-option) :is(.ui-kbd, .ui-stamp) { border-radius: max(var(--r-floor), calc(var(--r-in) - var(--kbd-inset) - 1px)); }
+/* an 18px chip at (row - 18) / 2 inside the item's corner takes the item's radius less that inset (R-corner-3), a pixel under it so it
+   lands on a radius token (the corner rule allows a pixel; 7 is no token): 8 in a v6 menu (item radius 16), the floor 6 in a v7 one
+   (item radius 14), until step 7 puts these menus on the kit (6f) */
 :is(.ui-menu__item, .ui-option) .ui-stamp { height: 18px; }
 .ui-menu__list { max-height: min(calc(100vh - 2 * var(--float-margin) - 2 * var(--pad-menu)), calc(var(--float-room, 100vh) - 2 * var(--pad-menu))); border-radius: var(--r-in); }   /* a long menu scrolls inside its surface (R-float-4, R-select-2) */
 .ui-menu__item .ui-stamp { margin-left: auto; align-self: center; }

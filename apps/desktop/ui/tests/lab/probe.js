@@ -897,7 +897,8 @@
         for (const k of n.childNodes) {
           if (holder) return;
           if (k.nodeType === 3 && k.data.trim()) { holder = n; firstText = k; return; }
-          if (k.nodeType !== 1 || k.matches(SR) || k.matches('svg, orb-avatar, canvas, .ui-orb, .ui-dot')) continue;
+          /* a mention's lead (an orb, or @all's stack and its "+N" count) is its mark, not its text (6f: the count's own small mono face was read as the mention's words) */
+          if (k.nodeType !== 1 || k.matches(SR) || k.matches('svg, orb-avatar, canvas, .ui-orb, .ui-dot, .ui-stack')) continue;
           const b = getComputedStyle(k, '::before').content;
           if (b && b !== 'none' && b !== 'normal' && b !== '""' && !k.firstChild) { holder = k; return; }
           visit(k);
@@ -947,7 +948,12 @@
                text's line), whose room over the cap height and under the baseline differs by a little over half a CSS pixel with the
                boards' fonts: under a pixel is theirs, and the boards win (REPASS rule 7) */
             const boards = chip.matches('[data-kit~="InlineChip"]') ? 0.75 * dpr : 0.5;
-            if (Math.abs(top - bottom) * dpr > boards) problems.push('(d) ' + r1(top) + 'px above its cap height and ' + r1(bottom) + 'px below its baseline');
+            /* the boards' own 18 boxes (kit.css `.you`, `.refchip`, `.badge2`: `display: inline-block; line-height: 18px`, boards 12 and K02)
+               are an 18 line with no trim, the kit's `.k7-you`, `.k7-ref`, `.k7-badge` as drawn: the room over the cap and under the baseline
+               is the face's own (1.2px apart at 13px), not a box set off-centre. Their baseline (a), centring (b) and line (c) still hold
+               (REPASS rule 7, 6f) */
+            const boardBox = chip.matches('.k7-cap.k7-you, .k7-cap.k7-ref, .k7-cap.k7-badge');
+            if (!boardBox && Math.abs(top - bottom) * dpr > boards) problems.push('(d) ' + r1(top) + 'px above its cap height and ' + r1(bottom) + 'px below its baseline');
           }
           /* (d) left and right: the content's extent inside the box */
           const parts = [];
@@ -956,10 +962,12 @@
               if (k === ownProbe) continue;
               if (k.nodeType === 3) { if (!k.data.trim()) continue; const r = document.createRange(); r.selectNodeContents(k); let clip = null;   /* what a box between the text and the chip cuts away (a path's folders, cut from the left) is not content */
                 for (let pe = k.parentElement; pe && pe !== chip; pe = pe.parentElement) if (getComputedStyle(pe).overflowX !== 'visible') { const z = pe.getBoundingClientRect(); clip = clip ? { left: Math.max(clip.left, z.left), right: Math.min(clip.right, z.right) } : { left: z.left, right: z.right }; }
+                /* a chip that cuts its own text (a long path's reference, `overflow: clip` with an ellipsis, 6f) shows it up to its content box */
+                if (c.overflowX !== 'visible') { const z = chip.getBoundingClientRect(), zl = z.left + px(c.borderLeftWidth) + px(c.paddingLeft), zr = z.right - px(c.borderRightWidth) - px(c.paddingRight); clip = clip ? { left: Math.max(clip.left, zl), right: Math.min(clip.right, zr) } : { left: zl, right: zr }; }
                 for (const q0 of r.getClientRects()) { const q = clip ? { left: Math.max(q0.left, clip.left), right: Math.min(q0.right, clip.right), top: q0.top, bottom: q0.bottom, width: q0.width } : q0; if (q.width > 0 && q.right > q.left && q.top < b.bottom && q.bottom > b.top) parts.push({ q, mark: false }); }
                 continue; }
               if (k.nodeType !== 1 || k.matches(SR) || !shown(k)) continue;
-              if (k.matches('svg, orb-avatar, canvas, .ui-orb, .ui-dot, .ui-icon, .ui-mention__stack, .ui-stamp') || ![...k.childNodes].some((n) => n !== ownProbe)) { const q = k.getBoundingClientRect(); if (q.width > 0 && q.top < b.bottom && q.bottom > b.top) parts.push({ q, mark: k.matches('.ui-orb, orb-avatar, .ui-mention__stack') }); continue; }
+              if (k.matches('svg, orb-avatar, canvas, .ui-orb, .ui-dot, .ui-icon, .ui-mention__stack, .ui-stack, .ui-stamp') || ![...k.childNodes].some((n) => n !== ownProbe)) { const q = k.getBoundingClientRect(); if (q.width > 0 && q.top < b.bottom && q.bottom > b.top) parts.push({ q, mark: k.matches('.ui-orb, orb-avatar, .ui-mention__stack') }); continue; }
               walk(k);
             }
           };

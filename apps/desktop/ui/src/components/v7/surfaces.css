@@ -35,6 +35,7 @@
   border-radius: var(--r-pill); background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line), var(--shadow-inline); font-size: var(--fs-s); color: var(--text-quiet); text-align: start;
 }
 .k7-search-pill .k7-kbd { border-radius: var(--r-pill); }
+.k7-search-pill__label { flex: 1 1 auto; min-width: 0; }   /* the word takes what is left, as the kit's grow does (its own name, so a rule can name it) */
 
 /* ── Page (2) ── */
 .k7-page { display: block; min-width: 0; background: var(--bg-2); color: var(--text); }
@@ -136,6 +137,8 @@
   font: 500 var(--fs-2xs) / var(--more-h) var(--mono); letter-spacing: 0; font-variant-numeric: tabular-nums; white-space: nowrap;
   zoom: calc(var(--s) / 2 / var(--more-h));   /* zoom, not scale: the chip takes the room it shows, so the cluster and its chip stay centred in the tile */
 }
+/* on an AskCard (--bg-3) the chip a step up, never raised on raised (R-colour-4; 6f) */
+.k7-ask__more { background: var(--bg-4); }
 .k7-rail__foot { flex: none; display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); padding: var(--sp-3) 0 var(--pad-chip); }
 .k7-rail__foot > .k7-ib { width: var(--ctl-card); height: var(--ctl-card); }
 

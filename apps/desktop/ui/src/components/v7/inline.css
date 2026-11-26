@@ -21,6 +21,8 @@
 [data-theme="light"] .k7-mention { color: var(--bot-light, var(--text)); }
 [data-theme="light"] .k7-bubble[data-kind="user"]:not([data-bot-colour]) .k7-mention { color: var(--bot-dark, var(--text)); }
 .k7-mention > .ui-orb, .k7-mention > .ui-stack { display: inline-block; vertical-align: -3px; margin-inline-end: var(--gap-xs); }
+.k7-mention > .ui-stack { display: inline-flex; height: var(--s); }
+.k7-composer__text .k7-mention .ui-stack__more { --stack-fill: var(--bg-4); background: var(--bg-4); }   /* in a composer the box is --bg-3: the "+N" a step up, never raised on raised (R-colour-4) */   /* @all's stack is its orbs' height, as one orb is: its "+N" never makes the line taller (R-inline-1 (c)) */
 button.k7-mention { cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { button.k7-mention:hover > .k7-mention__name { text-decoration: underline; text-underline-offset: var(--gap-xs); } }
 .k7-mention[data-out] { color: var(--text-dim); }
@@ -35,7 +37,8 @@ button.k7-mention { cursor: pointer; }
 .k7-composer__text > .k7-chip-in { user-select: all; cursor: default; }
 /* in a narrow composer a long chip is never cut by the box: a name wraps with the words, a file's pill ends in an ellipsis (its
    box then sits on the line by its foot, so it is set down by what lies under its words) */
-.k7-composer__text > .k7-mention { white-space: normal; overflow-wrap: anywhere; }
+.k7-composer__text > .k7-mention { white-space: nowrap; }   /* the orb and the name are one unit: never a lone orb at a line's end (6f) */
+.k7-composer__text > .k7-mention > .k7-mention__name { white-space: normal; overflow-wrap: anywhere; }
 .k7-composer__text > .k7-ref { max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: calc(-1 * var(--pad-kbd)); }
 .k7-you {
   padding-inline: var(--pad-inline); border-radius: var(--r-pill); font-size: var(--fs-s);
@@ -46,9 +49,15 @@ button.k7-mention { cursor: pointer; }
 .k7-ref {
   padding-inline: var(--pad-inline); border-radius: var(--r-pill); background: var(--fill-2);
   box-shadow: inset 0 0 0 var(--hl) var(--line-strong); font-family: var(--mono); font-size: var(--fs-xs); color: var(--text); letter-spacing: 0;
+  /* never wider than the line it sits in (a long path in a narrow bubble): the end is cut with an ellipsis, the whole path in its name.
+     `clip`, not `hidden`, so the box keeps its text's baseline on the line (R-inline-1 (a)) */
+  max-width: 100%; overflow: clip; text-overflow: ellipsis;
 }
 .k7-code {
-  font-family: var(--mono); font-size: var(--fs-s); line-height: inherit; background: var(--chip); padding: var(--pad-code-y) var(--pad-code-x);   /* kit.css `.b code`: 13 mono on the line's own height, 1 5 */
+  font-family: var(--mono); font-size: var(--fs-s); background: var(--chip); padding: var(--pad-code-y) var(--pad-code-x);   /* kit.css `.b code`: 13 mono, 1 5 */
+  /* its own line no taller than its text: the mono face's ascent and descent are not the sans face's, so on the line's own height its
+     inline box stood a device pixel past the line (R-inline-1 (c)); what it paints (its content area) is the same */
+  line-height: 1;
   border-radius: var(--r-xs); letter-spacing: 0; -webkit-box-decoration-break: clone; box-decoration-break: clone; white-space: normal; overflow-wrap: anywhere;
 }
 /* a source (kit.css `.cite`): its words underlined in --line-strong, a 12 tile (radius 3, --bg-4) where the site's mark would be */

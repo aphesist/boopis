@@ -153,7 +153,7 @@ body {
 /* the shell paints the pane's ground (above); the kit's Pane inside it paints none of its own, only its hairline */
 .hx-right .k7-pane { background: none; }
 /* the session's diff is the tools' width (board S24; the kit's `--tools-w`): the pane's own width while it shows (modules/session/details.ts) */
-html[data-right-tools] :is(.hx, .hx-probe) { --right-w: 520px; }
+html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /* never wider than the window: under 520 the diff is the window's width (its overlay) */
 
 /* ───────────── dock slot: the dock draws itself; nothing depends on it ───────────── */
 .hx-dock-slot { position: absolute; z-index: var(--z-dock); left: 0; right: 0; bottom: 0; height: var(--dock-rest-h); pointer-events: none; }

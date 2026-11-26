@@ -10,14 +10,18 @@
    corner of a card, concentric with the controls at its edge (DESIGN-SYSTEM §8.2) ───────────── */
 .mod-band, .mod-inline {
   --r-outer: var(--r-m); --pad: var(--pad-menu); --corner-size: 24px;   /* a container (.ui-nest) whose corner controls are 24px: inset 8, radius 12 */
-  box-sizing: border-box; border-radius: var(--r-outer); padding: var(--pad) var(--corner-inset) var(--pad) var(--pad);
+  --mod-row-h: 32px;   /* a row and an inline pane's head: the 24px control centred in it */
+  /* the control at the end of a row sits --corner-inset from the side and, centred in its row, as far from the top and the bottom
+     (concentric with the drawer, R-corner-3: the v7 composer's --r-m is 20, so the inset is 8 on every side of that corner) */
+  box-sizing: border-box; border-radius: var(--r-outer);
+  padding: max(0px, calc(var(--corner-inset) - (var(--mod-row-h) - var(--corner-size)) / 2)) var(--corner-inset) max(0px, calc(var(--corner-inset) - (var(--mod-row-h) - var(--corner-size)) / 2)) var(--pad);
   --sq-bg: var(--bg-0); background: var(--sq-bg); --sq-line: var(--hair); box-shadow: inset 0 0 0 1px var(--hair);
   font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); text-transform: none;
 }
 .mod-band *, .mod-inline * { box-sizing: border-box; }
 
 /* a row: its mod, what it says, the fold. 32px, so the composer under it stays the loudest thing */
-.mod-row { display: grid; grid-template-columns: var(--mod-who-w, 112px) minmax(0, 1fr) auto; align-items: center; column-gap: var(--sp-3); min-height: 32px; padding-left: 10px; }
+.mod-row { display: grid; grid-template-columns: var(--mod-who-w, 112px) minmax(0, 1fr) auto; align-items: center; column-gap: var(--sp-3); min-height: var(--mod-row-h); padding-left: 10px; }
 .mod-row + .mod-row { box-shadow: inset 0 1px 0 var(--hair); }
 .mod-row__who .mv-by { max-width: 100%; }
 .mod-row__who { min-width: 0; overflow: hidden; font: 400 var(--fs-xs)/1 var(--sans); color: var(--text-dim); }
@@ -32,7 +36,7 @@
 .mod-row .mv-root .ui-btn--s { height: calc(var(--ctl-s) - 4px); border-radius: var(--r-in); }
 
 /* an inline pane (narrow windows): a head, then the tree in its own scroll */
-.mod-inline__head { display: flex; align-items: center; gap: var(--sp-1); height: 32px; padding-left: 10px; }
+.mod-inline__head { display: flex; align-items: center; gap: var(--sp-1); height: var(--mod-row-h); padding-left: 10px; }
 .mod-inline__head .mv-by { color: var(--text-dim); font-size: var(--fs-xs); }
 .mod-inline__title { flex: 1; min-width: 0; margin-left: var(--sp-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--fs-s)/1 var(--sans); color: var(--text-strong); }
 .mod-inline__body { padding: var(--sp-1) 10px var(--sp-3); max-height: min(28vh, 260px); }   /* a scroll area (.ui-scroll) */

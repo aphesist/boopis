@@ -334,6 +334,7 @@
 .k7-foot__acts { display: inline-flex; flex-wrap: wrap; gap: var(--sp-1); min-width: 0; }
 .k7-foot__btn { display: inline-flex; align-items: center; gap: var(--gap-s); flex: none; height: var(--line-h); padding: 0 var(--gap-row); border-radius: var(--r-pill); font-size: var(--fs-xs); line-height: var(--lh-xs); letter-spacing: var(--track); color: var(--text-dim); white-space: nowrap; }
 .k7-foot__btn > svg { flex: none; }
+.k7-foot__btn:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }   /* the ring inside the pill: the foot ends a turn, and a ring outside it stood past the turn's edge (the SystemLine's action does the same) */
 .k7-foot__btn[aria-disabled="true"] { color: var(--text-faint); cursor: default; }
 @media (hover: hover) and (pointer: fine) { .k7-foot__btn:not([aria-disabled="true"]):hover { background: var(--hover); color: var(--text); } }
 .k7-foot__meta { flex: none; white-space: pre; letter-spacing: 0; }

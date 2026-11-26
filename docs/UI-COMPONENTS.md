@@ -110,12 +110,12 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 5 | Menu | `menu`, `openMenu` | `kit/menu` | menu, quick, palette / @ $, snooze, split, options (board S19's two-line rows: the name, what it means on a second line that is never cut; a row may lead its name with a mark or a glyph and end it with its keys: a session's "who answers next" and the new session's model menu), list (rows with a description beside the name, 360: boards S31, S32); open, flipped. An open Menu gives a row whose description is cut its whole words as a tooltip. `foot` (6e, derived): what follows the rows (a council's combiner and "Ask the council") |
 | 6 | Card | `card` (and its Row) | `kit/card` | settings, pane, danger zone collapsed and open |
 | 7 | Block | `block` | `kit/block` | the corner rule's specimen; `offer` (S37: what is missing, said kindly, over the ways to get it, each a Button led by a provider's mark); narrow |
-| 8 | ToolRow | `toolRow` | `kit/tool-row` | edit, command, read, search; running, done, failed, waiting; a session's (S20): a change waiting with its answers, a command waiting, allowed, denied with feedback; an answer hovered, focused; narrow. 6e, derived: `row` (a row of a Block: a council's member, no frame of its own), `icon: ''` (no glyph: the model's mark alone), `wordTone`, `wordTip` (why, in the word's Tooltip, reached by the keyboard), `end` (a control at the head's end: a task's ghost Stop), `after` (what stands under the head: a task's transcript Disclosure); stories `composer/council`, `composer/children` |
+| 8 | ToolRow | `toolRow` | `kit/tool-row` | edit, command, read, search; running, done, failed, waiting; a session's (S20): a change waiting with its answers, a command waiting, allowed, denied with feedback; an answer hovered, focused; narrow. 6e, derived: `row` (a row of a Block: a council's member, no frame of its own), `icon: ''` (no glyph: the model's mark alone), `wordTone`, `wordTip` (why, in the word's Tooltip, reached by the keyboard), `end` (a control at the head's end: a task's ghost Stop), `after` (what stands under the head: a task's transcript Disclosure); stories `composer/council`, `composer/children`. 6f (the lead): `text` (a name that is words, not a command or a path: a model's name, a council's members and its head, a task handed to another model, in the row's regular face; a tool's name stays mono as S20, S23 and 17 draw it), story state "a model's name, in words" |
 | 9 | AskCard | `askCard` | `kit/ask-card`; forms: `cards/form-*`, `cards/form-questions`, `cards/form-askers` | standalone, attached, question, choices, lapsed, form (6d, derived: fields, effect, error, busy, a row's action, the asker drawn by the app, the head's word and countdown); asked, needs, answered, hold at 50%. An answer can be `ghost` (6e: Edit on a permission) |
 | 10 | FilesCard | `filesCard` | `kit/files-card` | 1 file, 2 files (S23) with Open diff, 12 files folded and unfolded, empty, long, narrow; the action hovered, focused; `check` (board S38): how a check on the change went: its glyph and name, the verdict as a StatusWord, the one action, what it printed in a Well in the verdict's colour, the files, a note. 6e: a row's `word` (what happens to the file, in words: the rewind's dry run), the head's own `title` ("3 files"), `check.live` (the verdict shimmers while the check runs again: a failed turn retrying) |
 | 11 | Queue | `queue` | `kit/queue` | list 1, 3, 9; held (with Edit: at rest, hovered, focused, narrow); editing |
 | 12 | Notice | `notice` | `kit/notice` | composer, page, floating; neutral, amber, accent, red; 0 to 2 actions; dismiss |
-| 13 | SystemLine | `systemLine` | `kit/system-line` | info (with `meta`: what a changed setting costs, in mono at its end, S33), steer, hand-off, error (the glyph and the words in red, S36) with its action (the tint Button, `.sysline.act .btn`). A stopped engine's line is `modules/chat/engine.ts` in a session, a bot's chat and a room. `word` (6e, derived): a StatusWord before the words (an escalation the cap stopped: "capped" in amber, `cards/escalation`) |
+| 13 | SystemLine | `systemLine` | `kit/system-line` | info (with `meta`: what a changed setting costs, in mono at its end, S33), steer, hand-off, error (the glyph and the words in red, S36) with its action (the tint Button, `.sysline.act .btn`). A stopped engine's line is `modules/chat/engine.ts` in a session, a bot's chat and a room. `word` (6e, derived): a StatusWord before the words (an escalation the cap stopped: "capped" in amber, `cards/escalation`). 6f: the hand-off's `to` takes several bots, drawn as the kit's stack at 16 (derived: a room's lead gives a message to more than one member); a room draws the engine's `room.assignment` as this line (`modules/bots/group-room.ts` `handoffLine`, story `bots/group` "the lead hands the message on", state "a hand-off to two members") |
 | 14 | Bubble | `bubble` | `kit/bubble` | user, agent, a bot's fill, room byline, brand tile, you wash, code |
 | 15 | DiffView | `diffView` | `kit/diff-view` | stacked, split; comment, comment focused; its body a named group in a form (6d: no landmark); a file of the tools' Diff that folds by its head (board S24: the chevron, the path, its counts), open and closed, its head hovered and focused |
 | 16 | Well | `well` | `kit/well` | code in a Block and a bubble, terminal; `thread` (6e, derived): a compact thread as markup, at most `--well-thread-h` then it scrolls (a handed-off task's transcript, a council's answers) |
@@ -175,8 +175,8 @@ details pane (Pane), the Archived group (SectionHead and ListRow items), a live 
 in its details). The v6 room header, presence entry, huddle fold, held strip, ledger lines and glance are deleted. **Since boards S20 and S23** a started session is the
 kit's too (`modules/session/conversation.ts`, `turn.ts`, `composer.ts`): the thread, the composer and its line, their menus (the kit's
 Menu), the model-change line (SystemLine), find (the kit's search Field). **Still v6 in the Bots tab:** the bot settings sheet, the
-new-bot and new-group forms, a room's kanban board view; **in a session:** the tasks handed to other models (`children.ts`, `ui.child`), a council (`council.ts`), find's
-popover shell; and outside them the palette, and Settings, Store and Keyboard. The v6 composer and its mentions (`components/composer.ts`,
+new-bot and new-group forms, a room's kanban board view; **in a session:** nothing since step 6f (the council, the tasks handed to other models and find at 6e; the card kinds approval, blank and
+connector at 6f); and outside them the palette, and Settings, Store and Keyboard. The v6 composer and its mentions (`components/composer.ts`,
 `mentions.ts`, `.ui-composer`, `.ui-ff`, the story `composer/composer`) were deleted at step 6a: every composer is `kit.composer`.
 **Since board S40** (step 6c) the session's right panel is the kit's Pane (`modules/session/details.ts`): its details as S40 draws them,
 with what the lead kept in them until Settings holds it (the context's parts and Compact in a Disclosure, the cap, Environment and
@@ -386,7 +386,7 @@ in this build" (`micTool`). Stories: `kit/composer` "dictation: getting the spee
 this build", and "listening".
 
 ### Menus, tooltips and popovers — one
-- `menu.open` (account, model picker, composer, room, form pickers, right panel), `popover.open` (the blank), the
+- `menu.open` (account, model picker, composer, room, form pickers, right panel), `popover.open`, the
   delegated tooltip (`[data-tip]`). The tooltip's content was built twice (`html.tip` and `tooltip.ts`); both use
   `tipBody` now. **Other branch:** overlay placement is `w12/corners`'.
 
@@ -400,8 +400,7 @@ this build", and "listening".
   margin). The design system names only the large empty state (R-empty-1); a "note" variant is the next step.
 
 ### Progress — one
-- `progressDots`/`setProgress` (the first run, R-data-1), `measure`, `ladder`, `pages`, `capacity`. The cards' diff and
-  week dots (`.cd-diffdots`, `.cd-week`) are the card layer's data marks, not progress.
+- `progressDots`/`setProgress` (the first run, R-data-1), `measure`, `ladder`, `pages`, `capacity`.
 
 ### Scroll containers — one
 - `.ui-scroll` with `x`, `both`, `bare`, `inset-end`, `inset-both`, `stable`: the conversation, the Bots room and new
@@ -411,7 +410,10 @@ this build", and "listening".
   the x = 28 axis.
 
 ### Cards — card layer, with debt
-- `hx-card` (the cards module) is the one card family. A form's card is a bare host round the kit's AskCard block (6d). **Debt:** the bots module's confirm and review
+- `hx-card` (the cards module) hosts one kind, the form: a bare host round the kit's AskCard block (6d). The v6 kinds are gone: ship,
+  teammate, escalation, error and schedule at 6e, approval, blank and connector at 6f (with the queue, the blank's popover and option
+  group, the name fitting and `ui.blank`); what `modules/cards/` keeps is the host (`card.ts`), the form (`form.ts`, `form-model.ts`,
+  `forms-host.ts`), the thread's own lines (`asks.ts`) and what they read (`parts.ts`, with the config diff's well a bot's settings show). **Debt:** the bots module's confirm and review
   boxes (`.bt-confirm`, `.bt-review`) draw a native 1px border at `--r-m` rather than a card or well; the suggestion
   tiles (`.bt-sugg`), the theme presets (`.hxt-preset`) and the dock tiles (`.dk-tile`) are their own surfaces.
 

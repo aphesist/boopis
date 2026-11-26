@@ -78,6 +78,14 @@ export const BRAND_ALLOW = [
 /** Allowances that hold in every state, for an element whose case the rule itself leaves out. check.mjs's skip() honours each one for any
     state of any story: `el` is matched against the finding's element description, as a story's `{ el, reason }` allowance is. */
 export const STANDING_ALLOW = [
+  /* the light theme's quiet words, as the light boards draw them (tokens.v7.css `--text-quiet: #1c1c1c8f`, the boards' own token): 3.9:1
+     on --bg-2, under axe's 4.5. Board 11 light: the chrome's search hint ("Search" and its keys); board P2: the search pill's "Search";
+     board 17 light: a card of steps' times and the steps not yet begun (kit.css `.step .t`, `.step.todo`). The board wins (REPASS rule 7,
+     6f); the owner's question is the light theme's quiet token, not these pieces. Dark passes. */
+  { check: 'axe', el: '.k7-search-hint color-contrast', reason: 'board 11 light: the search hint in the quiet token' },
+  { check: 'axe', el: 'k7-search-pill__label color-contrast', reason: 'board P2: the search pill\'s word in the quiet token' },
+  { check: 'axe', el: '.k7-step__time', reason: 'board 17 light: a step\'s time in the quiet token (kit.css `.step .t`)' },
+  { check: 'axe', el: '.k7-step__text color-contrast', reason: 'board 17 light: a step not yet begun in the quiet token (kit.css `.step.todo`); a step begun or done is --text-dim or --text, which pass' },
   { check: 'geometry.target', el: 'ui-pages__dot', reason: 'the dock\'s page dots: R-a11y-2 names them, each has a 24 px tall hit area around its mark, and a 24 px wide one would cover its neighbour at the 10 px pitch of the nub (14.12)' }
 ];
 

@@ -107,6 +107,10 @@ table at the end true.
     with why in its Tooltip. Find is a floating FindBar with the matches washed in a token. A bot's proposed team change is an AskCard
     holding the kit's TeamPlan (O-B06's block), applied by the hold; a step a rule paused is an AskCard "<bot>'s step waited for you".
     Edit before approving and Settings › Approvals' Open are built and hidden behind capabilities (`approval-edit`, `rules-settings`);
+  - **the lead's decision for 6f** (27 November, from the 6e sheets): in the running council Block the header "Council · N models" and each
+    member's model name were mono; a model's name is set in the regular face everywhere (the answers Disclosure, menus, askers), so the
+    head and the members are too, and so is a task handed to another model (the kit's ToolRow `text`). Mono stays where boards 17, S20
+    and S23 use it: commands and paths (a tool row's name);
   - confirmed (25 November): member name colours stay the kit's contrast-safe derivation; the huddle fold, the "to nina" line and the
     presence tool words stay out; file chips keep the bare file name.
 

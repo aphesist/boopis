@@ -13,6 +13,7 @@
 .k7-tool__ic { color: var(--icon-quiet); }
 .k7-tool__name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: var(--fs-xs); font-weight: 500; color: var(--text); letter-spacing: 0; }
 .k7-tool__name.k7-shimmer { color: transparent; }
+@media (prefers-reduced-motion: reduce) { .k7-tool__name.k7-shimmer { color: var(--text-dim); } }   /* the still sweep's rest colour: the name above outranks the kit's own reduced-motion rule, and a running member's name vanished */
 /* a name that is words (a model's): the row's own face and size, as a model is named in a Disclosure, a menu or an asker (6f) */
 .k7-tool__name[data-face="text"] { font-family: inherit; font-size: inherit; letter-spacing: inherit; }
 .k7-tool__target { flex: 0 1 auto; }
@@ -41,7 +42,7 @@
 .k7-ask__answers { display: flex; flex-wrap: wrap; gap: var(--gap-s); }
 .k7-ask__answers > .k7-chip[data-end] { margin-inline-start: auto; }   /* K03, K04: Deny at the row's end */
 /* a field in the card's corner (your own answer to a question) is concentric with the Block: 22 - 8 */
-.k7-ask > .k7-field .k7-field__box { border-radius: calc(var(--r-block) - var(--pad-block)); }
+.k7-ask > .k7-field .k7-field__box { --field-r: calc(var(--r-block) - var(--pad-block)); }
 /* the outlined chip (Deny) and its key: the boards' `.chip.out` and the 18 tall kbd 2 after the word */
 .k7-chip[data-outline] { background: transparent; box-shadow: inset 0 0 0 var(--hl) var(--line-strong); }
 /* a ghost answer (6e: Edit on a permission): no fill and no line until it is hovered */
@@ -65,7 +66,7 @@
    primary's words shimmer (the kit's working state) and nothing in it answers a press */
 .k7-ask__fields { display: flex; flex-direction: column; gap: var(--sp-2); margin: 0 0 var(--sp-2); min-width: 0; }
 .k7-ask__fields :is(.k7-field__label, .k7-field__hint, .k7-field__error) { padding-inline: var(--sp-1); }   /* words on the text inset, 4 in from the controls */
-.k7-ask__fields .k7-field__box { border-radius: calc(var(--r-block) - var(--pad-block)); }
+.k7-ask__fields .k7-field__box { --field-r: calc(var(--r-block) - var(--pad-block)); }
 .k7-ask__fields > .k7-orows { display: flex; flex-direction: column; gap: var(--gap-hair); }
 .k7-ask__fields > .k7-orows > .k7-orow { width: 100%; }
 .k7-ask :is(.k7-ask__answers, .k7-ask__choices) + .k7-ask__fields { margin: var(--sp-2) 0 0; }
@@ -73,7 +74,8 @@
 .k7-ask__effect { margin: 0 0 var(--sp-2); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow-wrap: anywhere; }
 .k7-ask__error { margin: 0 0 var(--sp-2); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--red-text); overflow-wrap: anywhere; }
 .k7-ask__count { flex: none; font-variant-numeric: tabular-nums; }
-.k7-ask__head > .k7-btn { flex: none; margin-block: calc(-1 * var(--gap-s)); }
+.k7-ask__head:last-child:has(> .k7-btn) { margin-bottom: 0; }
+.k7-ask__head > .k7-btn { flex: none; }   /* an answered row's action (Open, Ask again; derived, 6d) gives the row its height: 8 round it on every side, concentric with the block's corner (R-corner-3; 6f) */
 .k7-ask[data-busy] .k7-chip[data-busy] { cursor: progress; }
 /* several askers (the owner's rule for the rail's "+N", 25 November): up to three 16 orbs overlapped, then a small filled chip clear of them */
 .k7-ask__askers { display: inline-flex; align-items: center; gap: var(--gap-hair); flex: none; line-height: 0; --s: var(--icon-s); }
@@ -167,6 +169,10 @@
 /* ── DiffView (15): one grid [36 gutter][16 sign][code]; the comment on the code column; 12 sides ── */
 .k7-diff { --sq-bg: var(--bg-3); --sq-line: var(--line); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line); border-radius: var(--r-bubble); min-width: 0; overflow: hidden; }
 .k7-diff[data-sq-on]:not(#sq) { box-shadow: none; }
+/* a DiffView held by a Well (a setup form's config change, 6d) is the Well's content: the Well draws the frame, and the diff takes its corner */
+.k7-well > .k7-diff { --sq-bg: transparent; --sq-line: transparent; background: none; box-shadow: none; border-radius: inherit; }
+.k7-well > .k7-diff > .k7-diff__body { border-end-start-radius: inherit; border-end-end-radius: inherit; }   /* the lines end in the Well's lower corners */
+.k7-well > .k7-diff > .k7-diff__body:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }   /* its ring inside the Well that clips it */
 .k7-diff__head { display: flex; align-items: center; gap: var(--sp-2); height: var(--ctl-card); padding: var(--sp-1) var(--sp-3); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text); }
 .k7-diff__head > .k7-ell { flex: 1 1 auto; }
 /* a file of the tools' Diff folds by its head (board S24: `.dv-h`, 40 tall): the chevron turns down while it is open */

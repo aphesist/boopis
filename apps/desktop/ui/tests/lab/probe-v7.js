@@ -20,7 +20,7 @@
 (() => {
   const r1 = (n) => Math.round(n * 10) / 10;
   const px = (v) => parseFloat(v) || 0;
-  const SKIP = 'svg, canvas, orb-avatar, boopis-logo, script, style, template, .hx-probe, #__lab_probe, .ui-sr, .sr-only';
+  const SKIP = 'svg, canvas, orb-avatar, boopis-logo, script, style, template, .hx-probe, #__lab_probe, .ui-sr, .k7-sr, .sr-only';   /* .k7-sr: the kit's screen-reader text (6f), clipped to nothing as .ui-sr is */
   const vis = (el) => { const r = el.getBoundingClientRect(); if (!(r.width > 0.5 && r.height > 0.5)) return false; return !el.checkVisibility || el.checkVisibility({ opacityProperty: true, visibilityProperty: true }); };
   const matches = (el, s) => { if (!s) return false; try { return el.matches(s); } catch { return false; } };
   const all = (root, s) => { if (!s) return []; try { return [...root.querySelectorAll(s)]; } catch { return []; } };
@@ -82,6 +82,9 @@
     /* geometry.wrap */
     if (want.has('geometry.wrap')) for (const el of all(scope, T.wrap)) {
       if (!inScope(el) || !text(el)) continue;
+      /* a source runs with its sentence and wraps with it: the boards' `.cite` is `display: inline` and is not among their nowrap pieces
+         (kit.css: `.chip, .btn, .badge2, .kbd, .refchip, .you ... { white-space: nowrap }`), boards 12 and K02 (REPASS rule 7, 6f) */
+      if (el.matches('.k7-cite')) continue;
       const cs = getComputedStyle(el);
       const n = lines(el);
       if (n > 1) add('geometry.wrap', el, 'a single-line control on ' + n + ' lines');

@@ -165,7 +165,7 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-new-col .bt-name-row { width: min(360px, 100%); }
 .bt-new-col .bt-name-note { text-align: left; margin-inline: 0; }
 .bt-new-col .bt-go-row { margin-top: var(--sp-4); }
-.bt-new-col > .bt-p-name { margin: 0 0 var(--sp-2); }
+.bt-new-col > .bt-p-name { margin: 0 0 var(--sp-2); font-size: var(--fs-xl); font-weight: 600; line-height: var(--lh-ui); color: var(--text-strong); }   /* the page's one display line, in the display size (not the browser's h1) */
 
 /* ================================================================ boards 11, 17 and 12: a bot's chat and a room (docs/design/v7/boards:
    botscreens.js bot11, work17, room12; kit.css). Placement only: every look here is the kit's.
