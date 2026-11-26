@@ -127,6 +127,14 @@ gh api repos/aphesist/boopis/actions/workflows/ci.yml/dispatches -f ref=<branch>
   `corners` budget (200 bound elements, at most 2 ms a frame) measured 2.1 to 2.4 ms here on the step's first commit and on its last,
   so it says nothing of the step; CI's `desktop-smoke` and `ui` are where it is judged. `tests/e2e/dock_webkit.py` held 25 of 25 in six
   runs of nine (two never started: the WebKit driver answered 500; one held 24).
+- Step 6b (26 November): the same on `bb101dbb` (this note and the tables are the only later change), with `lab:board --all` on 23
+  boards (S36 and S38 added). The unit tests 2026 of 2026; the smoke 447 of 448 (the one is the machine's `corners` budget again: 2.1
+  and 2.6 ms in two runs); `tests/e2e/dock_webkit.py` 25 of 25 twice; `lab:static` 553 findings, the same set as at `ca44785a`;
+  `lab:orbs` 0 findings on the touched stories. CI run 45754565610 on `ca44785a` (6a's last commit): every job green but `lab`,
+  whose gate counts 501 blocking findings (1109 at step 6a's first reading): by cause, the v6 details strip and panel 132
+  (`modules/session/right.ts`, not converted: S40), the room's details pane 98, a second render that differs 50 (the switch's
+  "needs you" name), inline chips 41, the kit Pane's rows and a bot's tool row and file tile 29, the kit's Steps and chrome under axe
+  14, S23's foot at 390 wide 7, and 90 on screens still on v6 (cards, mods, store, menus, dialogs). None was fixed at step 6b.
 - The lab's report is read by cause, not by story (step 6a, CI run 45736911632 on `2890ee9a`: 1109 blocking findings). A cause is fixed
   where it is a defect of a converted screen or of the kit; where a rule flags what a board draws or the owner decided, the rule is
   adjusted in `tests/lab/probe.js`, `probe-v7.js` or `v7.mjs` with a comment naming the board (rule 7); a cause of a screen still on v6
