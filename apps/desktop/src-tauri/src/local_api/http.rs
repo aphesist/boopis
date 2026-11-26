@@ -512,7 +512,6 @@ async fn route<E: Engine>(
                 .unwrap_or_default();
             Ok(json!({ "jobs": jobs }))
         }
-        (Method::Post, ["v1", "plans", ..] | ["v1", "jobs"]) => Err(method_not_allowed()),
         (Method::Get, ["v1", "approvals"]) => Ok(
             json!({"approvals": feed.approvals(head.param("all").is_some_and(|v| v == "1" || v == "true"))}),
         ),
@@ -615,7 +614,9 @@ async fn route<E: Engine>(
                 "bots" | "presence" | "notifications" | "approvals" | "rooms" | "events",
             ]
             | ["v1", "bots", _, "conversation"]
-            | ["v1", "rooms", _, "log"],
+            | ["v1", "rooms", _, "log"]
+            | ["v1", "plans", ..]
+            | ["v1", "jobs"],
         ) => Err(method_not_allowed()),
         _ => Err(not_found()),
     }
