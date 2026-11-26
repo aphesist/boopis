@@ -54,10 +54,7 @@ button.k7-mention { cursor: pointer; }
   max-width: 100%; overflow: clip; text-overflow: ellipsis;
 }
 .k7-code {
-  font-family: var(--mono); font-size: var(--fs-s); background: var(--chip); padding: var(--pad-code-y) var(--pad-code-x);   /* kit.css `.b code`: 13 mono, 1 5 */
-  /* its own line no taller than its text: the mono face's ascent and descent are not the sans face's, so on the line's own height its
-     inline box stood a device pixel past the line (R-inline-1 (c)); what it paints (its content area) is the same */
-  line-height: 1;
+  font-family: var(--mono); font-size: var(--fs-s); line-height: inherit; background: var(--chip); padding: var(--pad-code-y) var(--pad-code-x);   /* kit.css `.b code`: 13 mono on the line's own height, 1 5 */
   border-radius: var(--r-xs); letter-spacing: 0; -webkit-box-decoration-break: clone; box-decoration-break: clone; white-space: normal; overflow-wrap: anywhere;
 }
 /* a source (kit.css `.cite`): its words underlined in --line-strong, a 12 tile (radius 3, --bg-4) where the site's mark would be */

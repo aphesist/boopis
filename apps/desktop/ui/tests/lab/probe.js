@@ -1010,7 +1010,11 @@
         }
         endProbe.remove();
         const grew = Math.max(withChip[0] - without[0], withChip[1] - without[1]);
-        if (grew * dpr > 0.5) problems.push('(c) it makes its line ' + dev(grew) + ' device px taller');
+        /* boards 12 and 11 (kit.css `.b code`: 13 mono with `line-height: inherit`): inline code on the line's own height, whose mono face
+           stands a device pixel past a line of the sans face, as the boards draw it (lab:board 12 moves by that pixel without it): the
+           board wins (REPASS rule 7, 6f) */
+        const boardCode = chip.matches('.k7-code') && grew * dpr <= 1.5;
+        if (grew * dpr > 0.5 && !boardCode) problems.push('(c) it makes its line ' + dev(grew) + ' device px taller');
       } finally {
         lineProbe.remove(); ownProbe?.remove();
       }
