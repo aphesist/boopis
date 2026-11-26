@@ -364,7 +364,10 @@ describe('Composer: the mic', () => {
     kit.composerDictation(c, { kind: 'listening' });
     expect([c.dataset['dictation'], t.getAttribute('data-placeholder')]).toEqual(['listening', 'nina is listening']);
     mic().click();
-    expect([c.hasAttribute('data-dictation'), t.getAttribute('data-placeholder')]).toEqual([false, 'Message nina']);
+    /* off: the placeholder is the composer's own again at once; the last words said may still arrive for about 3 s */
+    expect([c.dataset['dictation'], c.hasAttribute('data-listening'), t.getAttribute('data-placeholder')]).toEqual(['transcribing', false, 'Message nina']);
+    vi.advanceTimersByTime(3000);
+    expect(c.hasAttribute('data-dictation')).toBe(false);
   });
   it('the words arrive in the text: each partial replaces the last, the final one stays (after a space where the text has none) and wakes the composer once', () => {
     mount({ kind: 'bot', placeholder: 'Message nina', text: 'Ship it' });
@@ -383,8 +386,85 @@ describe('Composer: the mic', () => {
     kit.composerDictation(c, { kind: 'final', text: 'today' });          /* the next stretch follows the last */
     expect(t.textContent).toBe('Ship it and update the changelog today');
     mic().click();
-    kit.composerDictation(c, { kind: 'final', text: 'too late' });       /* the mic is off: nothing more is written */
+    vi.advanceTimersByTime(3000);
+    kit.composerDictation(c, { kind: 'final', text: 'too late' });       /* the mic is off and its last words had their time: nothing more is written */
     expect(t.textContent).toBe('Ship it and update the changelog today');
+  });
+  const caretAtEnd = (): void => { const end = document.createRange(); end.selectNodeContents(t); end.collapse(false); getSelection()?.removeAllRanges(); getSelection()?.addRange(end); };
+  it('the words said right before the mic was switched off are kept: the composer takes that dictation\'s last final, and only that', () => {
+    mount({ kind: 'bot', placeholder: 'Message nina', text: 'Ship it' });
+    let inputs = 0;
+    t.addEventListener('input', () => { inputs++; });
+    caretAtEnd();
+    mic().click();
+    kit.composerDictation(c, { kind: 'listening' });
+    kit.composerDictation(c, { kind: 'partial', text: 'and ask' });
+    mic().click();                                                        /* let go in the middle of a sentence */
+    expect([pressed(), c.hasAttribute('data-listening'), c.dataset['dictation'], t.textContent]).toEqual(['false', false, 'transcribing', 'Ship it and ask']);
+    kit.composerDictation(c, { kind: 'partial', text: 'and ask no' });    /* a partial that was on its way changes nothing */
+    expect(t.textContent).toBe('Ship it and ask');
+    kit.composerDictation(c, { kind: 'final', text: 'and ask not what your country can do' });
+    expect([t.textContent, inputs, c.hasAttribute('data-dictation')]).toEqual(['Ship it and ask not what your country can do', 1, false]);
+    kit.composerDictation(c, { kind: 'final', text: 'a second one' });    /* it let go: nothing more */
+    expect(t.textContent).toBe('Ship it and ask not what your country can do');
+  });
+  it('a short thing said and let go before any word showed is written when its final arrives; with none in 3 s what stands stays', () => {
+    mount({ kind: 'bot', placeholder: 'Message nina' });
+    let inputs = 0;
+    t.addEventListener('input', () => { inputs++; });
+    caretAtEnd();
+    mic().click();
+    kit.composerDictation(c, { kind: 'listening' });
+    mic().click();
+    kit.composerDictation(c, { kind: 'final', text: 'Yes.' });
+    expect([t.textContent, inputs]).toEqual(['Yes.', 1]);
+    /* a source that sends no last words (the mock, a host that heard nothing more): the partial that stands becomes text after 3 s */
+    mic().click();
+    kit.composerDictation(c, { kind: 'partial', text: 'and then' });
+    mic().click();
+    vi.advanceTimersByTime(2900);
+    expect([c.dataset['dictation'], inputs]).toEqual(['transcribing', 1]);
+    vi.advanceTimersByTime(200);
+    expect([t.textContent, inputs, c.hasAttribute('data-dictation')]).toEqual(['Yes. and then', 2, false]);
+    /* words the person erased while waiting are not written back */
+    mic().click();
+    kit.composerDictation(c, { kind: 'partial', text: 'oops' });
+    mic().click();
+    t.textContent = '';
+    kit.composerDictation(c, { kind: 'final', text: 'oops, no' });
+    expect(t.textContent).toBe('');
+  });
+  it('a new press while the last words are awaited starts a fresh dictation: a late final of the old one does not land in it', () => {
+    mount({ kind: 'bot', placeholder: 'Message nina' }); listen();
+    caretAtEnd();
+    mic().click();
+    kit.composerDictation(c, { kind: 'partial', text: 'one' });
+    mic().click();                                                        /* off: waiting for the last words of "one" */
+    mic().click();                                                        /* on again before they came */
+    expect(heard.map((d) => d.on)).toEqual([true, false, true]);
+    expect([pressed(), t.textContent, c.dataset['dictation']]).toEqual(['true', 'one', 'listening']);   /* what stood stays; the wait is over */
+    kit.composerDictation(c, { kind: 'final', text: 'one more thing from before' });   /* the old dictation's, late: not this one's words */
+    expect(t.textContent).toBe('one');
+    kit.composerDictation(c, { kind: 'listening' });                      /* the new one says it listens: its words are taken from here */
+    kit.composerDictation(c, { kind: 'partial', text: 'two' });
+    expect(t.textContent).toBe('one two');
+    kit.composerDictation(c, { kind: 'final', text: 'two.' });
+    expect(t.textContent).toBe('one two.');
+    vi.advanceTimersByTime(3000);                                         /* the old wait's timer does nothing to the new dictation */
+    expect([pressed(), t.textContent]).toEqual(['true', 'one two.']);
+  });
+  it('an error that arrives after the mic was switched off still opens its Notice, and what was heard stays', () => {
+    mount({ kind: 'bot', placeholder: 'Message nina' });
+    caretAtEnd();
+    mic().click();
+    kit.composerDictation(c, { kind: 'partial', text: 'and so' });
+    mic().click();
+    kit.composerDictation(c, { kind: 'error', reason: 'Dictation failed' });
+    const n = [...document.querySelectorAll<HTMLElement>('.k7-notice[data-floating]')].pop() as HTMLElement;
+    expect(n.querySelector('.k7-notice__text')?.textContent).toBe('Dictation failed');
+    expect([t.textContent, pressed(), c.hasAttribute('data-dictation')]).toEqual(['and so', 'false', false]);
+    kit.composerDictation(c, { kind: 'final', text: 'after the error' });   /* nothing more is taken */
+    expect(t.textContent).toBe('and so');
   });
   it('said with the caret before other words, a stretch ends with a space; with the caret elsewhere it goes to the end of the text', () => {
     mount({ kind: 'bot', placeholder: 'Message nina', text: 'the changelog' });

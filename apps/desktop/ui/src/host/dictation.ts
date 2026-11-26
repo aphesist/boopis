@@ -1,4 +1,4 @@
-/* Dictation: the microphone button of a composer, heard and written down by the host (ADR-0052). This file is the UI's whole
+/* Dictation: the microphone button of a composer, heard and written down by the host (ADR-0059). This file is the UI's whole
    side of it. The page never touches a microphone (no getUserMedia): on the person's press the composer starts the provider's
    `DictationSource` (data/provider.ts), which is this, and it asks the host with `dictation_start` and hands on what the host
    sends on a Channel. Audio stays in the host's process; nothing here ever holds a sample.
@@ -9,12 +9,11 @@
    title, so the code becomes one short sentence here (REASONS) and the host's own words go to the log. After an `error`
    nothing more is sent.
 
-   The returned function cancels: the host closes the microphone at once and nothing more is handed on, as the provider's
-   contract says (the composer drops what arrives once its mic is off). So that the words on screen are not left half
-   written, the stretch being spoken is settled first: the last `partial` is handed on once more as a `final`, inside the
-   cancel itself, while the composer still listens. What the host writes down after that (the same stretch with its last
-   second of words, about a second later) is not shown: showing it needs a composer that takes one more `final` after its
-   mic is off. */
+   The returned function stops the dictation: the host closes the microphone at once. What was still being said is written
+   down by the host about a second later and handed on as one last `final`, which the composer takes although its mic is
+   off (components/v7/compose.ts); where the host has no more words than the composer already shows, those are handed on
+   as that `final`, so the composer never waits for nothing. Nothing else follows a stop, and a new dictation started
+   meanwhile silences the stopped one, so its last words cannot land in the new one. */
 import { Channel } from '@tauri-apps/api/core';
 import { commands } from './bindings';
 import type { DictationEvent as WireEvent } from './bindings';
@@ -76,19 +75,16 @@ function fromWire(e: WireEvent): DictationEvent | null {
   }
 }
 
-/** what a cancel does with the stretch that was being spoken. `settle` (what the composer of today needs: it drops every event
-    once its mic is off) hands the last partial on as a final inside the cancel, and nothing after. `follow` hands on nothing at
-    the cancel and then the host's own last `final`, which has the last second of words the partial lacks: for a composer that
-    takes one more `final` after its mic is off */
-export type AfterCancel = 'settle' | 'follow';
-
 /** the provider's dictation, over the host. The bridge is made on the first press, so nothing reaches for the host before one.
     `opts.botId` only tells the UI whose orbs listen: the host hears the same either way */
-export function hostDictation(bridge: () => DictationBridge = tauriDictationBridge, afterCancel: AfterCancel = 'settle'): DictationSource {
+export function hostDictation(bridge: () => DictationBridge = tauriDictationBridge): DictationSource {
   let made: DictationBridge | null = null;
+  /** ends the dictation before this one, if it is still handing on its last words */
+  let silence: (() => void) | null = null;
   return {
     start(_opts, onEvent) {
       const host = (made ??= bridge());
+      silence?.();
       let id: number | null = null, cancelled = false, over = false, standing = '';
       const say = (e: DictationEvent): void => { try { onEvent(e); } catch (err) { log.error('a dictation event could not be handled', err); } };
       const askStop = (): void => { if (id !== null && !over) host.stop(id).catch((err: unknown) => { log.warn('the host did not take the stop', err); }); };
@@ -96,13 +92,20 @@ export function hostDictation(bridge: () => DictationBridge = tauriDictationBrid
       const onWire = (wire: WireEvent): void => {
         if (over) return;
         const e = fromWire(wire);
-        if (!e) { if (wire.kind === 'ended') over = true; return; }
-        if (cancelled && e.kind !== 'final') return;   /* after a cancel only the last words may still come (`follow`) */
+        if (!e) {
+          if (wire.kind !== 'ended') return;
+          over = true;
+          if (cancelled && standing) say({ kind: 'final', text: standing });   /* the host had no more words: what stands is all of them */
+          return;
+        }
+        if (cancelled && e.kind !== 'final' && e.kind !== 'error') return;   /* after a stop only the last words, or why there are none */
         if (e.kind === 'error') over = true;   /* after an error nothing more is sent */
         standing = e.kind === 'partial' ? e.text : e.kind === 'final' ? '' : standing;
+        if (cancelled && e.kind === 'final') over = true;   /* the last words: nothing more is handed on */
         say(e);
       };
       /* with no host behind the page (a browser, a test) even making the Channel throws: that is a host that cannot be asked */
+      silence = () => { over = true; };
       let asked: Promise<number>;
       try { asked = host.start(onWire); } catch (err) { asked = Promise.reject(err instanceof Error ? err : new Error(String(err))); }
       asked.then((got) => {
@@ -113,9 +116,6 @@ export function hostDictation(bridge: () => DictationBridge = tauriDictationBrid
         if (cancelled) return;
         cancelled = true;
         askStop();
-        if (over || afterCancel === 'follow') return;   /* following: the host's last final, then its end mark, close it */
-        if (standing) say({ kind: 'final', text: standing });   /* the words on screen stay, as words that were said */
-        over = true;
       };
     }
   };

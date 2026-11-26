@@ -64,10 +64,12 @@ describe('the provider\'s dictation over the host', () => {
     host.send(wire('partial', { text: 'ask not' }));
     cancel();
     expect(host.calls).toEqual(['start', 'stop:4']);
-    /* cancelled: what the host still sends (the same stretch, written down after the stop) is not handed on */
+    expect(got).toHaveLength(7);   /* nothing is said at the stop itself */
+    /* the microphone is closed; the host writes down what was still being said: its last words are handed on, and nothing after */
+    host.send(wire('partial', { text: 'a partial that was already on its way' }));
     host.send(wire('final', { text: 'ask not what your country can do for you.' }));
+    host.send(wire('final', { text: 'a second final' }));
     host.send(wire('ended'));
-    host.send(wire('partial', { text: 'a stray event after the end' }));
     expect(got).toEqual([
       { kind: 'preparing', done: 12582912, total: 59707625 },
       { kind: 'preparing', done: 59707625, total: 59707625 },
@@ -76,42 +78,57 @@ describe('the provider\'s dictation over the host', () => {
       { kind: 'partial', text: 'and so my fellow' },
       { kind: 'final', text: 'And so, my fellow Americans,' },
       { kind: 'partial', text: 'ask not' },
-      { kind: 'final', text: 'ask not' }   /* the words on screen are settled inside the cancel itself, while the composer still listens */
+      { kind: 'final', text: 'ask not what your country can do for you.' }
     ]);
-    cancel();   /* a second cancel asks nothing and says nothing */
+    cancel();   /* a second stop asks nothing and says nothing */
     expect(host.calls).toEqual(['start', 'stop:4']);
-    expect(got).toHaveLength(8);
   });
 
-  it('settles nothing at a cancel when no words stand: after a final, or before any', async () => {
+  it('hands the standing words on as the last final when the host ends with no more, and nothing when none stood', async () => {
     const host = fakeHost();
     const got: DictationEvent[] = [];
-    const cancel = hostDictation(host.bridge).start(BOT, (e) => got.push(e));
+    const source = hostDictation(host.bridge);
+    const cancel = source.start(BOT, (e) => got.push(e));
     host.answer(2);
     await tick();
     host.send(wire('listening'));
     host.send(wire('partial', { text: 'one' }));
-    host.send(wire('final', { text: 'One.' }));
     cancel();
-    expect(got).toEqual([{ kind: 'listening' }, { kind: 'partial', text: 'one' }, { kind: 'final', text: 'One.' }]);
+    host.send(wire('ended'));   /* the host heard nothing it could add */
+    expect(got).toEqual([{ kind: 'listening' }, { kind: 'partial', text: 'one' }, { kind: 'final', text: 'one' }]);
+    const again: DictationEvent[] = [];
+    const stop = source.start(BOT, (e) => again.push(e));
+    host.send(wire('listening'));
+    host.send(wire('final', { text: 'Two.' }));
+    stop();
+    host.send(wire('ended'));
+    expect(again).toEqual([{ kind: 'listening' }, { kind: 'final', text: 'Two.' }]);
+    /* and an error that comes after a stop is still said */
+    const failed: DictationEvent[] = [];
+    const end = source.start(BOT, (e) => failed.push(e));
+    end();
+    host.send(wire('error', { reason: 'failed', message: 'Dictation stopped working. Press the mic to try again.', retry: true }));
+    host.send(wire('final', { text: 'never' }));
+    expect(failed).toEqual([{ kind: 'error', reason: 'Dictation failed' }]);
   });
 
-  it('can follow the host\'s last words after a cancel instead, for a composer that takes them', async () => {
-    const host = fakeHost();
-    const got: DictationEvent[] = [];
-    const cancel = hostDictation(host.bridge, 'follow').start(BOT, (e) => got.push(e));
-    host.answer(5);
+  it('a new dictation silences the stopped one before it: its late last words do not arrive in the new one', async () => {
+    const got: DictationEvent[] = [], next: DictationEvent[] = [];
+    const sends: Array<(e: WireEvent) => void> = [];
+    let id = 0;
+    const bridge = (): DictationBridge => ({ start: (onEvent) => { sends.push(onEvent); return Promise.resolve(++id); }, stop: () => Promise.resolve() });
+    const source = hostDictation(bridge);
+    const cancel = source.start(BOT, (e) => got.push(e));
     await tick();
-    host.send(wire('listening'));
-    host.send(wire('partial', { text: 'ask not' }));
+    sends[0]?.(wire('partial', { text: 'one' }));
     cancel();
-    expect(got).toHaveLength(2);   /* nothing is settled at the cancel */
-    host.send(wire('partial', { text: 'a partial that was already on its way' }));
-    host.send(wire('final', { text: 'Ask not what your country can do for you.' }));
-    host.send(wire('ended'));
-    host.send(wire('final', { text: 'after the end' }));
-    expect(got.slice(2)).toEqual([{ kind: 'final', text: 'Ask not what your country can do for you.' }]);
-    expect(host.calls).toEqual(['start', 'stop:5']);
+    source.start(BOT, (e) => next.push(e));   /* pressed again before the last words came */
+    sends[0]?.(wire('final', { text: 'one more thing' }));
+    sends[0]?.(wire('ended'));
+    sends[1]?.(wire('listening'));
+    sends[1]?.(wire('final', { text: 'two' }));
+    expect(got).toEqual([{ kind: 'partial', text: 'one' }]);
+    expect(next).toEqual([{ kind: 'listening' }, { kind: 'final', text: 'two' }]);
   });
 
   it('cancels a dictation the person let go of before the host had answered', async () => {
