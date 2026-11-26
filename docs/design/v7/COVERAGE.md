@@ -55,7 +55,7 @@ are not built. The picks are in `PLAN-session-waves.md` and `PLAN-w31-foundation
 | 3. Bots: a bot's chat | 26 | 7 | 0 | 19 | 0 |
 | 4. Bots: rooms | 24 | 8 | 0 | 16 | 0 |
 | 5. Session: new session and launch | 16 | 9 | 3 | 4 | 0 |
-| 6. Session: a running and finished session | 41 | 23 | 3 | 15 | 0 |
+| 6. Session: a running and finished session | 42 | 23 | 4 | 15 | 0 |
 | 7. Session: panels, commit, inbox, menus | 22 | 12 | 1 | 9 | 0 |
 | 8. Composer | 45 | 24 | 5 | 16 | 0 |
 | 9. Dock | 22 | 13 | 4 | 5 | 0 |
@@ -69,7 +69,7 @@ are not built. The picks are in `PLAN-session-waves.md` and `PLAN-w31-foundation
 | 17. Errors, empty, offline, engine states | 18 | 8 | 1 | 9 | 0 |
 | 18. Notch (macOS) | 18 | 14 | 3 | 0 | 1 |
 | 19. Narrow widths and density | 14 | 1 | 3 | 9 | 1 |
-| **All** | **429** | **191** | **37** | **199** | **2** |
+| **All** | **430** | **191** | **38** | **199** | **2** |
 
 A `board` row can still hold a derived part or a conflict: its Reference cell says so.
 
@@ -255,6 +255,7 @@ A `board` row can still hold a derived part or a conflict: its Reference cell sa
 | A ship that asks first ("Write 2 files to the workspace?", Deny, Hold to approve) | yes, `cards/approval` | board `v7/10-session-chat-*.jpg`; see conflict 1 | works today | done (step 4) as the kit AskCard with the hold and Deny (board 10's "Ship" block is replaced); not compared with a board |
 | A ship that passed; a ship rolled back; View diff | yes, `cards/ship` states `passed`, `rolled-back` | derived: S38 card and S23 files card; kit FilesCard, StatusWord | works today | partly (step 4): the changed files as the FilesCard, Open diff opens the Changes panel; the ship card's verdict line is gone with the mock-only card (owner question) |
 | The answering model changed: the divider; a turn sent to one model outside governed mode (the "ungoverned" mark) | yes, `modules/session/attribution.ts`, story `composer/attribution` | derived: `session/S33` SystemLine; `session/S23` turn foot (the model's mark and name) | works today | done (step 4): a SystemLine between the turns; "ungoverned" a Badge in the turn's foot |
+| A session's answer hovered: copy and more (the copy as Markdown) | yes, `modules/session/conversation.ts` `answerActs`, story `kit/hover-bar` | decided: the same copy and "more" hover actions a bot's message has, on a session's turns (owner; the step 6a brief); drawn for a bot on `v7/11-bot-chat-rail-*.jpg` | works today | built at step 6a (the kit's one HoverBar; your own message has none, as in a bot's chat: an owner question) |
 | A turn of unknown model after a resume ("Model unknown") | yes, `composer/attribution` | derived: S23 turn foot without a mark | works today | done (step 4): "Model unknown" in the foot, no mark in the gutter |
 | A council: the form (members, the combiner), a turn running, combining, done, answers open, a member failed, none reported | yes, `modules/session/council.ts`, story `composer/council` | derived: no board draws a council; nearest `session/S19` menu (the form) and `v7/17` tool row with steps (the members); kit Menu, OptionRow, Disclosure | works today | not started (no step) |
 | Tasks handed to other models: a card each (running, queued, done, error), its transcript open, Stop | yes, `modules/session/children.ts`, story `composer/children` | derived: no board; nearest `v7/17` tool row; kit ToolRow, Disclosure, StatusWord | works today | not started (no step) |

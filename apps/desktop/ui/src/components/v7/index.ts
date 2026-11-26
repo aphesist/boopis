@@ -23,7 +23,7 @@ const html = {
   selectorItem: controls.selectorItem, switch: controls.switchHTML, field: controls.field, tooltip: controls.tooltip,
   inlineChip: inline.inlineChip, mark: inline.mark, statusWord: inline.statusWord, badge: inline.badge, statusLine: inline.statusLine, avatar: inline.avatar,
   card: blocks.card, block: blocks.block, menu: blocks.menu, menuRow: blocks.menuRow, optionRow: blocks.optionRow, listRow: blocks.listRow, sectionHead: blocks.sectionHead,
-  notice: blocks.notice, systemLine: blocks.systemLine, bubble: blocks.bubble, well: blocks.well, disclosure: blocks.disclosure, turnFoot: blocks.turnFoot,
+  notice: blocks.notice, systemLine: blocks.systemLine, bubble: blocks.bubble, well: blocks.well, disclosure: blocks.disclosure, turnFoot: blocks.turnFoot, hoverBar: blocks.hoverBar,
   timeSeparator: blocks.timeSeparator, emptyState: blocks.emptyState, list: blocks.list,
   toolRow: thread.toolRow, askCard: thread.askCard, filesCard: thread.filesCard, fileCard: thread.fileCard, queue: thread.queue, diffView: thread.diffView, composer: thread.composer,
   windowChrome: surfaces.windowChrome, titlePill: surfaces.titlePill, page: surfaces.page, pane: surfaces.pane, dialog: surfaces.dialog, rail: surfaces.rail, sidebarFoot: surfaces.sidebarFoot, notch: surfaces.notch, dock
@@ -103,7 +103,7 @@ const mentions = (c: HTMLElement, src: KitMentions): void => {
 };
 
 export const kit = {
-  html, ...factories, composerInsert, composerInsertChip, composerChips, composerMarks, composerRunning, composerSet, composerUndo, composerDropping, mentions, section: surfaces.section, dockGeometry: DOCK_GEOMETRY,
+  html, ...factories, composerInsert, composerInsertChip, composerChips, composerMarks, composerRunning, composerSet, composerUndo, composerDropping, hoverBeside: blocks.hoverBeside, mentions, section: surfaces.section, dockGeometry: DOCK_GEOMETRY,
   /** the Dock's parts as markup, for the app's live dock, which keeps its orbs connected and writes each part in place */
   dockParts: { slab: slabPath, orb: dockOrb, cap: dockCap, ask: dockAsk, more: dockMore, panel: dockPanel }, wire, wireHold, wireMenu, markReveal, openMenu, openNotice, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, notify, notifyText, keyNames: controls.keyNames, variants: kitVariants
 };
@@ -112,7 +112,7 @@ export type { ButtonOpts, IconButtonOpts, ChipOpts, SegmentedOpts, SegItem, Sele
 export type { ChromeOpts, ChromeParts, PageOpts, PaneOpts, DialogOpts, RailOpts, RailBot, RailGroup, SidebarFootOpts, NotchOpts } from './surfaces';
 export type { DockOpts, DockBot, DockKind } from './dock';
 export type { ToolRowOpts, AskCardOpts, AskAnswer, FilesCardOpts, FileCardOpts, FileRow, QueueOpts, DiffViewOpts, DiffLine, DiffComment, ComposerOpts, LineItem } from './thread';
-export type { CardOpts, RowOpts, BlockOpts, MenuOpts, MenuEntry, MenuRowOpts, OptionRowOpts, ListRowOpts, ListOpts, SectionHeadOpts, NoticeOpts, SystemLineOpts, BubbleOpts, WellOpts, DisclosureOpts, StepOpts, TurnFootOpts, TimeSeparatorOpts, EmptyStateOpts } from './blocks';
+export type { CardOpts, RowOpts, BlockOpts, MenuOpts, MenuEntry, MenuRowOpts, OptionRowOpts, ListRowOpts, ListOpts, SectionHeadOpts, NoticeOpts, SystemLineOpts, BubbleOpts, WellOpts, DisclosureOpts, StepOpts, TurnFootOpts, HoverBarOpts, HoverAction, TimeSeparatorOpts, EmptyStateOpts } from './blocks';
 export type { AvatarOpts, InlineChipOpts, MarkOpts, StatusWordOpts, BadgeOpts, StatusLineOpts } from './inline';
 export type { NotifyOpts } from './notify';
 export type { KitMentions, ComposerChip, ComposerMark } from './wire';

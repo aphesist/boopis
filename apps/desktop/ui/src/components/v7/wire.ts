@@ -380,6 +380,10 @@ export function composerMentions(c: HTMLElement, src: KitMentions, open: (anchor
   t.addEventListener('blur', () => { setTimeout(() => { const a = document.activeElement; if (a !== t && !a?.closest('.k7-menu[data-floating]')) hide(); }, 0); });
 }
 
+/** HoverBar: a press on one of its actions says which (`ui:act` {value, el}: `el` is the button, what a menu opens against) */
+function wireHoverBar(bar: HTMLElement): void {
+  bar.addEventListener('click', (e) => { const b = (e.target as Element).closest<HTMLElement>('[data-act]'); if (b && bar.contains(b)) fire(bar, 'ui:act', { value: b.dataset['act'] ?? '', el: b }); });
+}
 /** a bot at rest on a rest surface wakes under the pointer (the lively idle, its 3D turns and glances) and settles back into the pose
     when it leaves (ORBS.md, per-surface policy); a bot in a state keeps its state */
 function wireRestOrb(w: HTMLElement): void {
@@ -399,7 +403,7 @@ function wireRestOrb(w: HTMLElement): void {
 
 const WIRES: ReadonlyArray<readonly [string, (el: HTMLElement) => void]> = [
   ['.k7-seg', wireSegmented], ['.k7-switch', (el) => wireSwitch(el as HTMLButtonElement)], ['.k7-chip', (el) => wireChip(el as HTMLButtonElement)],
-  ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark], ['.k7-info', wireInfo], ['.k7-composer', wireComposer], ['.k7-row[data-action]', wireRowAction], ['.k7-file[data-action]', wireRowAction], ['.k7-dock', paintDock], ['.ui-orb[data-orb-rest]', wireRestOrb]
+  ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark], ['.k7-info', wireInfo], ['.k7-composer', wireComposer], ['.k7-row[data-action]', wireRowAction], ['.k7-file[data-action]', wireRowAction], ['.k7-hoverbar', wireHoverBar], ['.k7-dock', paintDock], ['.ui-orb[data-orb-rest]', wireRestOrb]
 ];
 /** wire every kit component under root (and root itself) once */
 export function wire<T extends Element>(root: T): T {

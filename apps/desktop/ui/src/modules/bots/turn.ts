@@ -31,30 +31,26 @@ export function bubbleOf(node: HTMLElement, o: BubbleWrap): HTMLElement {
 }
 
 export interface ActsOpts { name: string; copy: () => string; reply?: () => void; open?: () => void; /** the "more" button's menu (board 11 draws it after copy): what else the turn offers */ more?: (anchor: HTMLElement) => void }
-/** the turn's hover actions (board 11: beside the last bubble): the kit's ghost IconButtons; a room's turn adds reply ("@") and open the member's chat */
+/** the turn's hover actions (board 11: beside the last bubble): the kit's HoverBar; a room's turn adds reply ("@") and open the member's chat */
 export function turnActs(t: HTMLElement, o: ActsOpts): void {
-  if (t.querySelector(':scope > .bt-turn__acts')) return;
-  const acts = el('div', { class: 'bt-turn__acts' });
-  const copy = kit.iconButton({ icon: 'copy', label: 'Copy ' + o.name + '’s message', tip: 'Copy', variant: 'ghost', keys: 'C' });
-  copy.addEventListener('click', () => { void ui.copyText(o.copy()); });
-  acts.append(copy);
-  if (o.reply) { const r = o.reply; const b = kit.iconButton({ icon: 'at', label: 'Reply to ' + o.name, tip: 'Reply', variant: 'ghost' }); b.addEventListener('click', () => { r(); }); acts.append(b); }
-  if (o.open) { const op = o.open; const b = kit.iconButton({ icon: 'bots', label: 'Open ' + o.name + '’s chat', tip: 'Open chat', variant: 'ghost' }); b.addEventListener('click', () => { op(); }); acts.append(b); }
-  if (o.more) { const m = o.more; const b = kit.iconButton({ icon: 'more', label: 'More for ' + o.name + '’s message', tip: 'More', variant: 'ghost', haspopup: 'menu' }); b.addEventListener('click', () => { m(b); }); acts.append(b); }
-  t.append(acts);
+  if (t.querySelector('.k7-hoverbar')) return;
+  const bar = kit.hoverBar({ label: 'Actions on ' + o.name + '’s message', actions: [
+    { value: 'copy', icon: 'copy', label: 'Copy ' + o.name + '’s message', tip: 'Copy', keys: 'C' },
+    ...(o.reply ? [{ value: 'reply', icon: 'at', label: 'Reply to ' + o.name, tip: 'Reply' }] : []),
+    ...(o.open ? [{ value: 'open', icon: 'bots', label: 'Open ' + o.name + '’s chat', tip: 'Open chat' }] : []),
+    ...(o.more ? [{ value: 'more', icon: 'more', label: 'More for ' + o.name + '’s message', tip: 'More', menu: true }] : [])
+  ] });
+  bar.addEventListener('ui:act', (e) => {
+    const d = (e as CustomEvent<{ value: string; el: HTMLElement }>).detail;
+    if (d.value === 'copy') void ui.copyText(o.copy()); else if (d.value === 'reply') o.reply?.(); else if (d.value === 'open') o.open?.(); else if (d.value === 'more') o.more?.(d.el);
+  });
+  t.append(bar);
 }
-/** the hover actions sit beside the turn's last bubble, on its middle (board 11: `.row` of the bubble and its `.hoverbar`): the
-    bubble and the actions share a row; when a later bubble arrives, the row is undone and made again around that one */
+/** the hover actions sit beside the turn's last bubble, on its middle (the kit's `hoverBeside`): when a later bubble arrives, the bar
+    moves to that one */
 export function placeActs(t: HTMLElement): void {
-  const acts = t.querySelector<HTMLElement>('.bt-turn__acts'); if (!acts) return;
-  const body = turnBody(t);
-  const old = acts.parentElement?.classList.contains('bt-turn__row') ? acts.parentElement : null;
-  const bubbles = [...body.querySelectorAll<HTMLElement>('.k7-bubble')];   /* a room's bubbles sit in the kit's gutter: the row is made there */
+  const bar = t.querySelector<HTMLElement>('.k7-hoverbar'); if (!bar) return;
+  const bubbles = [...turnBody(t).querySelectorAll<HTMLElement>('.k7-bubble')];   /* a room's bubbles sit in the kit's gutter: the row is made there */
   const last = bubbles[bubbles.length - 1];
-  if (!last) { t.append(acts); return; }
-  if (old && old.contains(last)) return;
-  if (old) { const b = old.querySelector<HTMLElement>('.k7-bubble'); if (b) old.replaceWith(b); else old.remove(); }
-  const row = el('div', { class: 'bt-turn__row' });
-  last.replaceWith(row);
-  row.append(last, acts);
+  if (last) kit.hoverBeside(bar, last);
 }

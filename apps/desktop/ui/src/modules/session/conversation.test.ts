@@ -100,6 +100,39 @@ describe('the thread', () => {
   });
 });
 
+describe('an answer\'s hover actions (the ones a bot\'s message has)', () => {
+  const done = (): void => boot([{ id: 'u1', role: 'user', at: '09:42', text: 'Fix it.' }, agent({ status: 'done', paragraphs: ['Fixed. The pages are **centred** by layout now.'] })]);
+  it('the answer carries the kit\'s HoverBar beside its bubble: copy and more; your own message has none, as in a bot\'s chat', () => {
+    done();
+    const bar = q('[data-turn="agent"] .k7-hoverbar');
+    expect([...bar.querySelectorAll('button')].map((b) => b.getAttribute('data-tip'))).toEqual(['Copy', 'More']);
+    expect(bar.parentElement?.classList.contains('k7-hoverrow')).toBe(true);
+    expect(bar.previousElementSibling?.matches('[data-kit~="Bubble"]')).toBe(true);
+    expect(root.querySelector('[data-turn="user"] .k7-hoverbar')).toBeNull();
+  });
+  it('copy takes the answer as it reads; more offers the copy as Markdown', async () => {
+    done();
+    const copied: string[] = [];
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: (t: string) => { copied.push(t); return Promise.resolve(); } } });
+    q('[data-turn="agent"] .k7-hoverbar [data-act="copy"]').click();
+    await tick();
+    expect(copied[0]).toBe('Fixed. The pages are centred by layout now.');
+    q('[data-turn="agent"] .k7-hoverbar [data-act="more"]').click();
+    const menus = document.querySelectorAll<HTMLElement>('.k7-menu[data-floating]');   /* an earlier test's menu may still be leaving the page: the one now open is the last */
+    const rows = [...(menus[menus.length - 1] as HTMLElement).querySelectorAll<HTMLElement>('[data-kit~="MenuRow"]')];
+    expect(rows.map((r) => r.querySelector('.k7-mrow__name')?.textContent)).toEqual(['Copy as Markdown']);
+    rows[0]?.click();
+    await tick();
+    expect(copied[1]).toBe('Fixed. The pages are **centred** by layout now.');
+  });
+  it('a turn drawn again (a stream, a step) keeps one bar', () => {
+    boot([{ id: 'u1', role: 'user', at: '09:42', text: 'Fix it.' }, agent()]);
+    ev.emit({ type: 'text', turnId: 'a1', text: ' More.' } as never);
+    ev.emit({ type: 'end', turnId: 'a1' } as never);
+    expect(root.querySelectorAll('[data-turn="agent"] .k7-hoverbar').length).toBeLessThanOrEqual(1);
+  });
+});
+
 describe('a change that waits', () => {
   const waiting = (): void => boot([{ id: 'u1', role: 'user', at: '09:42', text: 'Fix it.' }, agent({ forms: [EDIT] })]);
   it('the hold allows it once, and the row says so', async () => {

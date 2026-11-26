@@ -198,6 +198,7 @@ function partsOf(a: AgentTurn): Part[] {
         const tail = md?.lastElementChild?.tagName === 'P' ? md.lastElementChild : null;
         if (tail) tail.insertAdjacentHTML('beforeend', ' <span class="ss-q">' + q + '</span>'); else { const p = el('p', { class: 'ss-q' }); p.innerHTML = q; b.append(p); }
       }
+      if (b !== outer) kit.hoverBeside(answerActs(a.id), b);
       return outer;
     }]);
   };
@@ -255,6 +256,20 @@ function filesCard(files: Array<{ path: string; add: number; del: number }>): HT
   return c;
 }
 const turnText = (id: string): string => { const b = turnNode(id)?.querySelector<HTMLElement>('[data-part="text"] [data-kit~="Bubble"], [data-part="text"][data-kit~="Bubble"]'); return b ? mdOf(b) : ''; };
+
+/** the answer's hover actions, the ones a bot's message has (owner; board 11's `.hoverbar`: copy, more): the kit's HoverBar beside the
+    answer's bubble. Copy takes the answer as it reads (what C on the turn copies); "more" holds the copy as Markdown, the words as
+    the model wrote them */
+function answerActs(id: string): HTMLElement {
+  const bar = kit.hoverBar({ label: 'Actions on this answer', actions: [{ value: 'copy', icon: 'copy', label: 'Copy this answer', tip: 'Copy' }, { value: 'more', icon: 'more', label: 'More for this answer', tip: 'More', menu: true }] });
+  const bubble = (): HTMLElement | null => turnNode(id)?.querySelector<HTMLElement>('[data-part="text"] [data-kit~="Bubble"]') ?? null;
+  bar.addEventListener('ui:act', (e) => {
+    const d = (e as CustomEvent<{ value: string; el: HTMLElement }>).detail;
+    if (d.value === 'copy') { const b = bubble(); void copyText((b?.innerText ?? b?.textContent ?? '').trim()); kit.notify('Copied'); return; }
+    kit.openMenu(d.el, { label: 'More', place: 'below', align: 'start', attrs: v7Attrs(), entries: [{ label: 'Copy as Markdown', icon: 'copy', value: 'md' }], onSelect: () => { const t = TURNS.get(id); void copyText(t ? proseText(t.paragraphs, t.bullets) : ''); kit.notify('Copied'); } });
+  });
+  return bar;
+}
 
 /** draw an agent turn (again) from the view's copy of it */
 function drawAgent(id: string): void {

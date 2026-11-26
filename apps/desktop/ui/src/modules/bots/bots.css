@@ -196,19 +196,10 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-resolved { display: block; }
 .bt-room .bt-empty { padding: var(--sp-6) 0; }
 .bt-ideas { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
-/* the hover actions: beside the turn's last bubble, on its middle (kit.css `.row` and `.hoverbar`), shown while the turn is hovered or holds the focus */
-.bt-turn__row { display: flex; align-items: center; gap: var(--sp-2); align-self: stretch; min-width: 0; }
-.bt-turn__row > .k7-bubble { flex: 0 1 auto; }
-.bt-turn__acts { display: inline-flex; flex: none; gap: var(--gap-hair); margin-left: var(--gap-s); color: var(--icon-quiet); opacity: 0; transition: opacity var(--dur-1) var(--ease-out); }
-.bt-turn:is(:hover, :focus-within) .bt-turn__acts { opacity: 1; }
-.bt-turn__acts .k7-ib:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }   /* a turn has no padding to hold the ring */
 /* a room (board 12) */
 .bt-group .bt-log > [data-hx-turn] + [data-hx-turn][data-kind="bot"] { margin-top: 0; }   /* the member's name keeps its own 14 (the kit's gutter) */
 .bt-group .bt-log > .k7-sys { margin-block: var(--sp-3); }
 .bt-group .bt-turn .k7-gutter { align-self: stretch; }
-/* a member's bubble keeps its own width (up to 560 in the gutter): its hover actions hang beside it, past the column when it is wide */
-.bt-group .bt-turn__row { position: relative; align-self: flex-start; max-width: 100%; }
-.bt-group .bt-turn__row > .bt-turn__acts { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); }
 .bt-group .bt-log > .bt-ask { margin-top: var(--gap-s); align-self: stretch; }
 .bt-group .bt-ask > .bt-cardslot { margin-top: var(--sp-2); }
 .bt-outside { align-self: flex-start; margin-left: var(--gutter); }

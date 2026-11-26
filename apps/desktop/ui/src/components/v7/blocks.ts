@@ -5,7 +5,7 @@ import { markHTML } from '../model-mark';
 import type { ModelRef } from '../model-mark';
 import { orbHtml } from '../orb';
 import { scrollClass } from '../scroll';
-import { kbd, button } from './controls';
+import { kbd, button, iconButton } from './controls';
 import { badge, botColours, inkOrb, statusWord } from './inline';
 import { attrs, cls, esc, glyph, idFrom, kitAttrs, partAttrs, textOr } from './util';
 import type { Attrs, U } from './util';
@@ -245,6 +245,28 @@ export function turnFoot(o: TurnFootOpts): string {
   const meta = (o.model ? '<span class="k7-foot__model">' + markHTML(o.model, { size: 14, label: false }) + esc(o.modelName ?? '') + '</span>' : o.modelName ? '<span class="k7-foot__model">' + esc(o.modelName) + '</span>' : '') + extra +
     (o.time ? '<span class="k7-mono">' + esc(o.time) + '</span>' : '') + (o.cost ? '<span class="k7-mono">' + esc(o.cost) + '</span>' : '');
   return '<div class="k7-foot"' + kitAttrs('TurnFoot', { 'data-kind': k, ...(o.attrs ?? {}) }) + '>' + meta + '</div>';
+}
+
+/* ── HoverBar: what a turn offers while the pointer or the focus is on it (board 11's `.hoverbar`: copy, more), beside its last bubble
+   on that bubble's middle. One part for every thread: a bot's message, a room's member, a session's answer. Each action is a ghost
+   IconButton carrying `data-act`; a press fires `ui:act` {value, el} on the bar (wire.ts) ── */
+export interface HoverAction { value: string; icon: string; /** its accessible name ("Copy kai's message") */ label: string; /** the tip, when shorter than the name ("Copy") */ tip?: U<string>; keys?: U<string>; /** it opens a menu */ menu?: U<boolean> }
+export interface HoverBarOpts { /** the group's name ("Actions on kai's message") */ label: string; actions: readonly HoverAction[]; attrs?: U<Attrs> }
+export function hoverBar(o: HoverBarOpts): string {
+  return '<div class="k7-hoverbar"' + kitAttrs('HoverBar', { role: 'group', 'aria-label': o.label, ...(o.attrs ?? {}) }) + '>' +
+    o.actions.map((a) => iconButton({ icon: a.icon, label: a.label, tip: a.tip ?? a.label, variant: 'ghost', keys: a.keys, haspopup: a.menu ? 'menu' : undefined, attrs: { 'data-act': a.value } })).join('') + '</div>';
+}
+/** stand a HoverBar beside `bubble`, on its middle: the two share a row (the boards' `.row` of a bubble and its `.hoverbar`). A bar that
+    stood beside another bubble leaves that one as it was (a turn's later bubble takes the bar) */
+export function hoverBeside(bar: HTMLElement, bubble: HTMLElement): void {
+  const old = bar.parentElement?.classList.contains('k7-hoverrow') ? bar.parentElement : null;
+  if (old && old.contains(bubble)) return;
+  bar.remove();
+  if (old) { const was = old.firstElementChild; if (was) old.replaceWith(was); else old.remove(); }
+  const row = document.createElement('div');
+  row.className = 'k7-hoverrow';
+  bubble.replaceWith(row);
+  row.append(bubble, bar);
 }
 
 /* ── TimeSeparator (38): only after a gap; "NEW" in the accent ── */
