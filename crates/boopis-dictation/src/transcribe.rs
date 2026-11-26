@@ -17,8 +17,8 @@ use crate::model::{self, ModelSpec};
 use crate::segment::Job;
 use crate::{Error, Result};
 
-/// Which partial requests are no longer worth finishing: every one up to an id, once words for good are waiting behind
-/// it. Shared between the dictation, which raises it, and the transcriber, which looks at it while it works.
+/// Which partial requests are no longer wanted: every one up to an id, once words for good are waiting behind it. Shared
+/// between the dictation, which raises it, and the speech thread, which skips such a request instead of starting it.
 #[derive(Debug, Clone, Default)]
 pub struct Moot(Arc<AtomicU64>);
 
@@ -33,16 +33,12 @@ impl Moot {
     pub fn is(&self, job: &Job) -> bool {
         !job.last && job.id <= self.0.load(Ordering::Relaxed)
     }
-
-    fn watch(&self, job: &Job) -> impl FnMut() -> bool + 'static {
-        let (mark, id, partial) = (self.0.clone(), job.id, !job.last);
-        move || partial && id <= mark.load(Ordering::Relaxed)
-    }
 }
 
 /// Turns stretches of speech into words. Used by one thread at a time.
 pub trait Transcriber: Send {
-    /// The words of `job`'s audio (empty when there are none). A partial that became `moot` may be given up early.
+    /// The words of `job`'s audio (empty when there are none). The words of a partial that became `moot` meanwhile are
+    /// not wanted and may be answered with an error.
     ///
     /// # Errors
     /// [`Error::Failed`] when the model could not do it, or the job was given up.
@@ -238,7 +234,9 @@ impl Transcriber for Loaded {
             #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)] // 768
             params.set_audio_ctx(SHORT_WINDOW as i32);
         }
-        params.set_abort_callback_safe(moot.watch(job));
+        // No abort callback: whisper-rs 0.16.0's safe wrapper for it hands whisper.cpp a pointer to one type and reads it
+        // back as another, so the callback answers from memory that is not its own (a final was aborted that way once
+        // in CI). A partial that became moot is skipped before it starts (`session::Worker`) and dropped when it ends.
         if let Err(e) = self.state.full(params, audio) {
             return Err(Error::Failed(if moot.is(job) {
                 "a partial was given up for the words that follow it".to_owned()
@@ -326,10 +324,6 @@ mod tests {
         assert!(!moot.is(&job(2, true)), "words for good are never given up");
         moot.upto(2);
         assert!(moot.is(&job(3, false)), "the mark never goes back");
-        let mut watch = moot.watch(&job(3, false));
-        assert!(watch());
-        let mut watch = moot.watch(&job(3, true));
-        assert!(!watch());
     }
 
     #[test]

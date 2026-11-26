@@ -25,7 +25,7 @@ pub struct Job {
     pub audio: Vec<f32>,
     /// The last words already written down, as context for the model.
     pub prompt: String,
-    /// Whether these are the stretch's words for good. A partial may be given up when a final is waiting.
+    /// Whether these are the stretch's words for good. A partial that has not started is skipped when a final is waiting.
     pub last: bool,
     /// Which stretch of the dictation this audio is (0, 1, ...): requests for the same stretch hear the same language.
     pub stretch: u64,

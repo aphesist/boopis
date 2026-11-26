@@ -53,6 +53,7 @@ Written here, because no crate does them in the shape the composer needs: `segme
 - **One whisper.cpp for every processor.** `.cargo/config.toml` at the repository root pins the x86-64 instruction set
   (AVX2, FMA, F16C, BMI2), and `transcribe::check_processor` refuses to load a model where they are missing, so an older
   computer gets a sentence instead of an illegal instruction.
+- **whisper-rs's abort callback is not used.** In 0.16.0 its safe wrapper (`set_abort_callback_safe`) hands whisper.cpp a pointer to one type and reads it back as another, so the callback answers from memory that is not its own; a final was aborted that way once in CI. A partial that became moot is skipped before it starts and dropped when it ends, never interrupted.
 - **Numbers are data.** `Tuning` and `fetch::Policy`; nothing in the code decides a duration.
 
 ## Build
