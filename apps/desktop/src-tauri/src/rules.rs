@@ -41,6 +41,10 @@ impl std::fmt::Debug for RulesHost {
     }
 }
 
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "the store's errors are mapped with map_err(host_error)"
+)]
 fn host_error(e: RulesError) -> Error {
     let code = match &e {
         RulesError::Conflict { .. } => "hx.rules.conflict",
@@ -173,8 +177,8 @@ impl RulesHost {
     /// # Errors
     /// `hx.rules.not_found` for a token that is unknown or too old; the store's.
     pub fn undo(&self, root: &Path, token: &str) -> Result<Value, Error> {
-        let taken = lock(&self.undo).remove(token);
-        let Some((_, rule)) = taken.filter(|(at, _)| at.elapsed() < UNDO_FOR) else {
+        let kept = lock(&self.undo).remove(token);
+        let Some((_, rule)) = kept.filter(|(at, _)| at.elapsed() < UNDO_FOR) else {
             return Err(host_error(RulesError::NotFound));
         };
         self.guard(root)?;
