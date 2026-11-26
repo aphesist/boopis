@@ -1118,3 +1118,38 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - The pin is orb3 3.0.2, `bfa4e8c83e5a22acdef51563eb0e30eff2c77c31`.
 
 **Consequences.** The bots look the same everywhere the owner approved them, and an upstream change reaches the app only by a new pin.
+
+## ADR-0052 Dictation is heard on this computer: native capture, whisper.cpp, a model fetched once, and only the person's press opens the microphone (proposed, 26 November 2026)
+**Status.** Proposed: built on `w33/transcription` and proven with a recording through the real model; not yet tried with a person at a real microphone on any of the three systems.
+
+**Context.**
+- The owner: "the microphone button is simply a transcription button. it reads your voice and transcribes it into text. that is simple and should already exist." It did not: the live provider's dictation was a stub, nothing in the host heard audio, and only the mock invented a transcript.
+- The owner writes English and Portuguese. Dictated text is often private, and a composer is a place for it.
+- The app runs in WebKitGTK on Linux, WebView2 on Windows and WKWebView on macOS. A web view's own `getUserMedia` differs in each (WebKitGTK needs its media stream switched on and its own permission answer), and what it records would then have to cross into the host anyway.
+- Talking to a bot (the voice circle, a voice model with a key) is another feature and is not decided here.
+
+**Decision.**
+1. **Local, with no key and no account.** Speech is turned into text in the app's own process. Audio is never sent anywhere and never written to disk, a log or a socket. No cloud transcription, not even as a fallback.
+2. **The host captures, natively.** `crates/boopis-dictation` reads the system's default input device through `cpal` (ALSA on Linux, where PipeWire and PulseAudio answer as the default device, with no second backend; WASAPI on Windows; Core Audio on macOS). The page never opens a microphone.
+3. **whisper.cpp on the CPU** (through `whisper-rs`), with the multilingual `base` model quantized to 5 bits (`ggml-base-q5_1`, 59,707,625 bytes), the language heard by the model itself. `boopis_dictation::model::MODELS` is the table a larger model is added to, and `AppSettings.speech_model` names a row (read at start; no control for it yet).
+4. **The model is fetched on first use, never bundled**: from the whisper.cpp model repository on `huggingface.co` at a pinned commit, over HTTPS with the host's one TLS setup, redirects followed only to that repository's own hosts, to `<app data>/speech/`. It is written to a `.part` file, continued after a cut connection or a restart, and given its name only when its SHA-256 is the pinned one (`422f1ae4…8898`). It is hashed again every time it is loaded, and whisper.cpp reads the bytes that were hashed, not the file. A file that is not the model is deleted and reported; nothing unverified is ever loaded.
+5. **Only the person's own press starts the microphone.** The one way in is the `dictation_start` command, which the capability file allows to the main window alone and which checks the calling window. The local API, the command line, the gateway proxy, bots, mods and deep links have no way to it, and two tests keep it so (the local API's `nothing_reaches_the_microphone`; the host's `nothing_but_the_command_reaches_the_microphone`, which reads the host's own sources). It stops when the composer says so, when the window closes or its page loads again, when its events cannot be delivered, and at a hard cap of 5 minutes with a plain sentence. One dictation at a time.
+6. **Words appear while the person speaks.** Speech is cut into stretches at pauses (0.7 s) and at 24 s; the stretch being spoken is written down again every 2 s when the last attempt has come back (a `partial`, which replaces the last), and a finished stretch for good (a `final`). A slow computer gets fewer partials, never a queue of them, and a partial is given up when a final waits behind it.
+7. **One whisper.cpp for every processor.** `.cargo/config.toml` names the x86-64 instruction set (AVX2, FMA, F16C, BMI2: processors since about 2013) instead of the build machine's own, and the loader refuses a processor without them with a sentence. Left to itself whisper.cpp compiles for the machine that builds it, so an installer from a CI runner would stop an older computer with an illegal instruction.
+8. **Licences.** `cpal` is Apache-2.0 and whisper.cpp is MIT, both on the list of `docs/STANDARDS.md` section 5. `whisper-rs` and `whisper-rs-sys`, the bindings, are under the **Unlicense**, a public-domain dedication with a permissive fallback, which that list does not name: this record admits it for these two crates. The model's weights are OpenAI's Whisper under MIT; boopis does not distribute them.
+
+**Alternatives considered.**
+- *The web view's microphone* (`getUserMedia`, a worklet, samples sent to the host): three engines to make behave alike, a permission prompt boopis does not control on Linux, and audio in the page, where a mod's script also runs.
+- *A cloud transcription API*: needs a key or an account, sends the person's voice off the computer, and fails offline. Refused outright.
+- *The Web Speech API*: absent in WebKitGTK, and a cloud service where it exists.
+- *Bundling the model*: 57 MB more in every installer for a button many will never press, and a larger model would multiply it.
+- *A separate process for capture and transcription*: more isolation, and a second binary, a protocol and a lifecycle. The crate boundary plus the source guard is the lighter version of the same rule; it can become a process later without changing the UI's seam.
+- *The system's own speech recognisers* (SFSpeechRecognizer, Windows Speech): none on Linux, three behaviours, and on macOS a service that may leave the device.
+
+**Consequences.**
+- The first press fetches 57 MB (the composer says so, with progress); every press after it works offline.
+- The app links ALSA's library on Linux (`alsa-lib` is a dependency of the Arch package; an AppImage takes the system's `libasound.so.2`, which the AppImage tools never bundle) and compiles whisper.cpp in every build that compiles the host: CMake, a C++ compiler and libclang, and on Linux `libasound2-dev`, in every CI job that builds it.
+- The model is in memory (about 150 MB) only around a dictation: it is loaded on the first one, on its own thread, and dropped 2 minutes after the last. Nothing is loaded at start.
+- A person who denied the microphone, or whose system has none, reads a sentence that says what to do (`no-microphone`, `permission-denied`); macOS asks once, in the app's name, with the sentence in `packaging/macos/Info.plist`.
+- Quality is the `base` model's: good for clear speech in the languages the owner writes, weaker on names, code words and noise. A larger model is a row in the table and a setting.
+- What is proven is that a recording becomes the right words through the whole pipeline (CI's `dictation` job, `crates/boopis-dictation/tests/speech.rs`); a real microphone, and each system's permission prompt, are tried by hand (`docs/RELEASING.md`, "Dictation").

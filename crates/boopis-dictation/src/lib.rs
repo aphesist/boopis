@@ -132,7 +132,7 @@ impl Error {
             Self::PermissionDenied(_) => format!("boopis is not allowed to use the microphone. {} Then press the mic again.", where_to_allow()),
             Self::Silent => format!("boopis hears nothing from the microphone. Check that it is not muted. {}", where_to_allow()),
             Self::ModelFetch(_) => "boopis could not get its speech model, which it fetches once. Check the connection and press the mic again: it goes on from where it stopped.".to_owned(),
-            Self::ModelMismatch(_) => "The speech model that arrived was not the file boopis expects, so it was deleted. Press the mic to fetch it again.".to_owned(),
+            Self::ModelMismatch(_) => "The speech model on this computer was not the file boopis expects, so it was deleted. Press the mic to fetch it again.".to_owned(),
             Self::Busy => "boopis is still writing down the last dictation. Try again in a moment.".to_owned(),
             Self::TooLong(cap) => format!("Dictation stops after {}. Press the mic to go on.", plain_duration(*cap)),
             Self::Processor(_) => "Dictation needs a processor with AVX2, which this computer does not have.".to_owned(),

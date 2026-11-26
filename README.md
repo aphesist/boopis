@@ -194,10 +194,11 @@ The app on its own mock data, in your theme. Light and dark follow your GitHub s
 
 ## Build from source
 
-You need Rust (1.97 or newer; `rust-toolchain.toml` picks it), Node with pnpm, and Python 3 with `ruff`, `pyright` and `pytest` for the plugin. On Linux, Tauri needs its prerequisites:
+You need Rust (1.97 or newer; `rust-toolchain.toml` picks it), Node with pnpm, and Python 3 with `ruff`, `pyright` and `pytest` for the plugin. On Linux, Tauri needs its prerequisites, and dictation needs ALSA's headers, CMake and clang (whisper.cpp is compiled from source):
 
 ```sh
-sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
+sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config \
+  libasound2-dev cmake clang
 ```
 
 The checks that gate every change:

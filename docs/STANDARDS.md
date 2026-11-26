@@ -71,7 +71,7 @@ Every service, tool, store, module and function in this repository follows this 
   - capabilities list exactly the commands each window uses;
   - every command validates its input as untrusted;
   - the webview never receives tickets, tokens or keys.
-- **Dependencies:** `cargo-deny` (advisories, licences, bans) and `pip-audit`/`pnpm audit` in CI. Licences allowed: MIT, Apache-2.0, BSD, ISC, MPL-2.0, Zlib, Unicode. GPL family only with an ADR.
+- **Dependencies:** `cargo-deny` (advisories, licences, bans) and `pip-audit`/`pnpm audit` in CI. Licences allowed: MIT, Apache-2.0, BSD, ISC, MPL-2.0, Zlib, Unicode; the Unlicense for the two crates ADR-0052 names (`whisper-rs`, `whisper-rs-sys`). GPL family only with an ADR.
 
 ## 6. Performance budgets
 
