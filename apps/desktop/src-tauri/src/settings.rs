@@ -22,6 +22,11 @@ pub struct AppSettings {
     /// Added without a version bump: a file from before has none and gets `auto`.
     #[serde(default)]
     pub gpu: crate::gpu::Policy,
+    /// Which speech model dictation uses, by its name in `boopis_dictation::model::MODELS`; `None` is the default
+    /// (`base-q5_1`). Read at startup, so a change needs a restart. There is no control for it in the app yet: it is the
+    /// seam for a larger model (ADR-0052). Added without a version bump: a file from before has none.
+    #[serde(default)]
+    pub speech_model: Option<String>,
 }
 
 impl Default for AppSettings {
@@ -31,6 +36,7 @@ impl Default for AppSettings {
             profile: None,
             notifications: true,
             gpu: crate::gpu::Policy::Auto,
+            speech_model: None,
         }
     }
 }
@@ -59,6 +65,18 @@ impl AppSettings {
                     "settings.profile: expected [a-z0-9_-]{{1,64}}, found {p:?}"
                 )));
             }
+        }
+        if let Some(m) = &self.speech_model
+            && !boopis_dictation::model::MODELS.iter().any(|k| k.id == m)
+        {
+            let known: Vec<&str> = boopis_dictation::model::MODELS
+                .iter()
+                .map(|k| k.id)
+                .collect();
+            return Err(Error::Config(format!(
+                "settings.speech_model: expected one of {}, found {m:?}",
+                known.join(", ")
+            )));
         }
         Ok(())
     }
@@ -93,6 +111,12 @@ impl AppSettings {
                 .and_then(|g| g.as_str())
                 .and_then(crate::gpu::Policy::parse)
                 .unwrap_or_default(),
+            // a name this build does not know (a file a newer build wrote) is the default, not an error at start
+            speech_model: v
+                .get("speech_model")
+                .and_then(|m| m.as_str())
+                .filter(|m| boopis_dictation::model::MODELS.iter().any(|k| k.id == *m))
+                .map(str::to_owned),
         };
         settings.validate()?;
         Ok(settings)
@@ -119,8 +143,31 @@ mod tests {
                 version: 1,
                 profile: Some("work".into()),
                 notifications: false,
-                gpu: crate::gpu::Policy::Auto
+                gpu: crate::gpu::Policy::Auto,
+                speech_model: None,
             }
+        );
+    }
+
+    #[test]
+    fn the_speech_model_is_one_the_build_knows_or_the_default() {
+        let s = AppSettings::migrate(Some(&json!({"version": 1, "speech_model": "base-q5_1"})))
+            .unwrap();
+        assert_eq!(s.speech_model.as_deref(), Some("base-q5_1"));
+        // a file from before, and a name from a newer build, read as the default
+        let old = AppSettings::migrate(Some(&json!({"version": 1}))).unwrap();
+        assert_eq!(old.speech_model, None);
+        let newer =
+            AppSettings::migrate(Some(&json!({"version": 1, "speech_model": "large-v9"}))).unwrap();
+        assert_eq!(newer.speech_model, None);
+        // what the UI sends is checked, and the error names the key and the names that exist
+        let wrong = AppSettings {
+            speech_model: Some("../../etc/passwd".into()),
+            ..AppSettings::default()
+        };
+        let e = wrong.validate().unwrap_err();
+        assert!(
+            e.to_string().contains("settings.speech_model") && e.to_string().contains("base-q5_1")
         );
     }
 

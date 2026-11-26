@@ -381,6 +381,24 @@ export const commands = {
 	 *  Errors: `hx.invalid_params` for a cap outside 1 to 1000, `hx.bots.not_found` for a bot that is not there.
 	 */
 	botRunLimitSet: (name: string, maxTurns: number | null, options?: InvokeOptions) => __TAURI_INVOKE<BotRunLimitView_Serialize>("bot_run_limit_set", { name, maxTurns }, options),
+	/**
+	 *  Start a dictation: the person pressed a composer's mic. The microphone is opened by the host (never by the page), what
+	 *  is said is written down on this computer, and the events arrive on `events` (`DictationEvent`): `preparing` while the
+	 *  speech model is fetched, once; `listening`; `partial` and `final` words; `error` with a reason and a plain sentence;
+	 *  `ended`, always last. Returns the id `dictation_stop` takes. While another dictation runs, this one gets `error` with
+	 *  `busy` and ends.
+	 * 
+	 *  Only the main window may call it, and only a call starts the microphone: nothing in the host listens on its own.
+	 * 
+	 *  Errors: `hx.invalid_params` from any other window.
+	 */
+	dictationStart: (events: Channel<DictationEvent>, options?: InvokeOptions) => __TAURI_INVOKE<number>("dictation_start", { events }, options),
+	/**
+	 *  Stop the dictation `id` (the person let go of the mic, switched it off or pressed Esc): the microphone closes at once,
+	 *  what was said is still written down (a last `final`), then `ended` comes. An id that is not the running dictation does
+	 *  nothing.
+	 */
+	dictationStop: (id: number, options?: InvokeOptions) => __TAURI_INVOKE<void>("dictation_stop", { id }, options),
 };
 
 /** Events */
@@ -434,6 +452,12 @@ export type AppSettings_Deserialize = {
 	 *  Added without a version bump: a file from before has none and gets `auto`.
 	 */
 	gpu?: GpuPolicy,
+	/**
+	 *  Which speech model dictation uses, by its name in `boopis_dictation::model::MODELS`; `None` is the default
+	 *  (`base-q5_1`). Read at startup, so a change needs a restart. There is no control for it in the app yet: it is the
+	 *  seam for a larger model (ADR-0052). Added without a version bump: a file from before has none.
+	 */
+	speech_model?: string | null,
 };
 
 /**  What the host remembers. */
@@ -449,6 +473,12 @@ export type AppSettings_Serialize = {
 	 *  Added without a version bump: a file from before has none and gets `auto`.
 	 */
 	gpu: GpuPolicy,
+	/**
+	 *  Which speech model dictation uses, by its name in `boopis_dictation::model::MODELS`; `None` is the default
+	 *  (`base-q5_1`). Read at startup, so a change needs a restart. There is no control for it in the app yet: it is the
+	 *  seam for a larger model (ADR-0052). Added without a version bump: a file from before has none.
+	 */
+	speech_model: string | null,
 };
 
 /**  One attached path. */
@@ -1058,6 +1088,42 @@ export type Detected_Serialize = {
 	/**  What told us (`SWAYSOCK`, `XDG_CURRENT_DESKTOP`, a process name, the platform), for Diagnostics. */
 	evidence: string,
 };
+
+/**
+ *  One event of a dictation, on the channel `dictation_start` was given. One shape for every kind: the fields a kind does
+ *  not use are empty (`0`, `""`, `false`).
+ */
+export type DictationEvent = {
+	/**  Which event this is. */
+	kind: DictationKind,
+	/**  `preparing`: bytes of the speech model on disk so far. */
+	done: number | null,
+	/**  `preparing`: the speech model's size in bytes. */
+	total: number | null,
+	/**  `partial` and `final`: the words. */
+	text: string,
+	/**  `error`: `no-microphone`, `permission-denied`, `model-download-failed`, `busy`, `too-long` or `failed`. */
+	reason: string,
+	/**  `error`: what to tell the person, in plain words. */
+	message: string,
+	/**  `error`: whether pressing the mic again can help. */
+	retry: boolean,
+};
+
+/**  What a dictation is doing. */
+export type DictationKind = 
+/**  The speech model is being fetched, once: `done` of `total` bytes. */
+"preparing" | 
+/**  The microphone is open. */
+"listening" | 
+/**  `text` is the stretch being spoken, so far; each one replaces the last. */
+"partial" | 
+/**  `text` is a finished stretch of speech; it stays. */
+"final" | 
+/**  It could not start or stopped by itself: `reason`, `message`, `retry`. */
+"error" | 
+/**  The dictation is over; nothing follows. */
+"ended";
 
 /**  One change to Hermes's configuration, as shown in the consent form. */
 export type DiffLine = DiffLine_Serialize | DiffLine_Deserialize;

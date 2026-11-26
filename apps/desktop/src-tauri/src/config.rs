@@ -74,6 +74,37 @@ pub struct Limits {
     pub api: ApiLimits,
     /// How rooms hold a message while their members work (`rooms/hold.rs`).
     pub rooms: RoomLimits,
+    /// Dictation's numbers (ADR-0052).
+    pub dictation: DictationLimits,
+}
+
+/// Dictation's numbers (ADR-0052, `dictation.rs`): how a dictation listens and how the speech model is fetched.
+#[derive(Debug, Clone)]
+pub struct DictationLimits {
+    /// How a dictation listens: the cap, the pause that ends a stretch, how often words appear, how long the model stays
+    /// in memory.
+    pub tuning: boopis_dictation::Tuning,
+    /// How the one-time fetch of the speech model retries and follows redirects.
+    pub fetch: boopis_dictation::fetch::Policy,
+    /// The longest a connection to the model repository may take.
+    pub connect_timeout: std::time::Duration,
+    /// The longest the repository may take to start answering.
+    pub response_timeout: std::time::Duration,
+    /// The longest one try may spend receiving the model. What arrived is kept, and the next try goes on from it.
+    pub body_timeout: std::time::Duration,
+}
+
+impl Default for DictationLimits {
+    fn default() -> Self {
+        use std::time::Duration;
+        Self {
+            tuning: boopis_dictation::Tuning::default(),
+            fetch: boopis_dictation::fetch::Policy::default(),
+            connect_timeout: Duration::from_secs(15),
+            response_timeout: Duration::from_secs(30),
+            body_timeout: Duration::from_mins(20),
+        }
+    }
 }
 
 /// How a message written while a room's members work is held (`rooms/hold.rs`, `rooms/discussion.rs`).
@@ -298,6 +329,7 @@ impl Default for Limits {
             store: StoreLimits::default(),
             api: ApiLimits::default(),
             rooms: RoomLimits::default(),
+            dictation: DictationLimits::default(),
         }
     }
 }

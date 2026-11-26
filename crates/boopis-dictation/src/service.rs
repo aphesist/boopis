@@ -9,7 +9,7 @@
 //! 3. runs the [`crate::session`] until it is stopped, capped or fails.
 
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use crate::capture::Microphone;
@@ -47,14 +47,14 @@ struct Inner {
     parts: Parts,
     /// The dictation that runs, if one does.
     active: Mutex<Option<Active>>,
-    next_id: AtomicU64,
+    next_id: AtomicU32,
     warm: Arc<Warm>,
     /// The model fetch in progress, shared by every dictation that waits for it.
     fetching: Mutex<Option<Arc<Fetching>>>,
 }
 
 struct Active {
-    id: u64,
+    id: u32,
     stop: Arc<AtomicBool>,
     over: Arc<AtomicBool>,
 }
@@ -73,7 +73,7 @@ impl Dictation {
             inner: Arc::new(Inner {
                 parts,
                 active: Mutex::new(None),
-                next_id: AtomicU64::new(1),
+                next_id: AtomicU32::new(1),
                 warm: Arc::new(Warm::default()),
                 fetching: Mutex::new(None),
             }),
@@ -82,7 +82,7 @@ impl Dictation {
 
     /// Start a dictation whose events go to `sink`, and answer its id. While another one runs (or still writes down its
     /// last words) the new one gets `busy` and ends at once; the running one is not disturbed.
-    pub fn start(&self, sink: &Sink) -> u64 {
+    pub fn start(&self, sink: &Sink) -> u32 {
         let id = self.inner.next_id.fetch_add(1, Ordering::Relaxed);
         let refuse = |e: Error| {
             sink(e.event());
@@ -123,7 +123,7 @@ impl Dictation {
 
     /// Stop the dictation `id`: the microphone closes, what was said is written down, then it ends. An id that is not
     /// the running one does nothing.
-    pub fn stop(&self, id: u64) {
+    pub fn stop(&self, id: u32) {
         if let Ok(active) = self.inner.active.lock()
             && let Some(a) = active.as_ref()
             && a.id == id

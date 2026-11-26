@@ -103,6 +103,8 @@
     "allow-room-send-now",
     "allow-room-held",
     "allow-bot-run-limit-get",
-    "allow-bot-run-limit-set"
+    "allow-bot-run-limit-set",
+    "allow-dictation-start",
+    "allow-dictation-stop"
   ]
 }

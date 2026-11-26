@@ -97,6 +97,8 @@ const COMMANDS: &[&str] = &[
     "room_held",
     "bot_run_limit_get",
     "bot_run_limit_set",
+    "dictation_start",
+    "dictation_stop",
 ];
 
 fn main() {

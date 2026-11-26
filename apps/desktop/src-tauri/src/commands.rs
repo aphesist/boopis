@@ -86,6 +86,9 @@ pub struct AppState {
     pub update_gate: crate::endpoint::Gate,
     /// The automatic update was started in this run (once per run).
     pub updating: std::sync::atomic::AtomicBool,
+    /// Dictation (ADR-0052): the one holder of the microphone. Only `dictation_start` and `dictation_stop` use it, and the
+    /// app's own shutdown paths in `lib.rs`.
+    pub dictation: boopis_dictation::service::Dictation,
 }
 
 /// Where the bots live and what each gets: the root home, and boopis plus the plugins the bundled runtime carries.
@@ -1213,6 +1216,45 @@ pub async fn chatgpt_sign_out(
     state: State<'_, AppState>,
 ) -> std::result::Result<crate::chatgpt::SignedOut, HostError> {
     Ok(state.chatgpt.sign_out().await?)
+}
+
+// ---------------------------------------------------------------- dictation (ADR-0052)
+
+/// Start a dictation: the person pressed a composer's mic. The microphone is opened by the host (never by the page), what
+/// is said is written down on this computer, and the events arrive on `events` (`DictationEvent`): `preparing` while the
+/// speech model is fetched, once; `listening`; `partial` and `final` words; `error` with a reason and a plain sentence;
+/// `ended`, always last. Returns the id `dictation_stop` takes. While another dictation runs, this one gets `error` with
+/// `busy` and ends.
+///
+/// Only the main window may call it, and only a call starts the microphone: nothing in the host listens on its own.
+///
+/// Errors: `hx.invalid_params` from any other window.
+#[tauri::command]
+#[specta::specta]
+pub fn dictation_start(
+    webview: tauri::Webview,
+    state: State<'_, AppState>,
+    events: Channel<crate::dictation::DictationEvent>,
+) -> std::result::Result<u32, HostError> {
+    if webview.label() != "main" {
+        return Err(Error::InvalidInput("dictation starts from the main window".into()).into());
+    }
+    // a channel that cannot deliver (the page is gone) answers false, which stops the dictation
+    let sink: boopis_dictation::Sink = Arc::new(move |event| {
+        events
+            .send(crate::dictation::DictationEvent::from(event))
+            .is_ok()
+    });
+    Ok(state.dictation.start(&sink))
+}
+
+/// Stop the dictation `id` (the person let go of the mic, switched it off or pressed Esc): the microphone closes at once,
+/// what was said is still written down (a last `final`), then `ended` comes. An id that is not the running dictation does
+/// nothing.
+#[tauri::command]
+#[specta::specta]
+pub fn dictation_stop(state: State<'_, AppState>, id: u32) {
+    state.dictation.stop(id);
 }
 
 // ---------------------------------------------------------------- the store (docs/STORE.md, docs/PROTOCOL.md 1a)

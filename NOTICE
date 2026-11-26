@@ -25,7 +25,7 @@ boopis includes or distributes the following third-party work, each under its ow
 - The fonts the interface embeds (Fontsource packages of Geist, IBM Plex, Instrument Sans, JetBrains Mono and
   Libre Franklin): SIL Open Font License 1.1.
 - whisper.cpp 1.8.3 and its ggml library, compiled into the desktop app for dictation (through the whisper-rs and
-  whisper-rs-sys crates, which are in the public domain under the Unlicense): MIT License, Copyright (c) 2023-2026 The ggml
+  whisper-rs-sys crates, which are in the public domain under the Unlicense): MIT License, Copyright (c) 2023-2024 The ggml
   authors. The speech model itself (OpenAI's Whisper `base`, MIT License, in the ggml format from the whisper.cpp model
   repository) is not distributed with boopis: the app fetches it on first use and checks its SHA-256.
 - cpal, compiled into the desktop app for the microphone: Apache License 2.0.
