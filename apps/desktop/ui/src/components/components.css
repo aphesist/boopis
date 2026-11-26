@@ -1012,11 +1012,6 @@ hx-card[data-accent] .cd-mini { --sq-line: color-mix(in srgb, var(--cd-accent) 3
 /* the first-run welcome's logo: the hero (letters="play" needs a 32px type size); sized from the spacing scale, inked like the frame */
 .ui-logo--welcome { display: block; justify-self: center; font-size: calc(var(--sp-6) * 3); color: var(--text-strong); }
 
-  --r-outer: var(--r-s); --pad: var(--sp-2); --corner-size: 24px;
-  position: relative; display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; padding: var(--pad) var(--sp-3) var(--sp-3); border-radius: var(--r-outer);
-  --sq-bg: var(--bg-3); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair); font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text);
-}
-
 /* ───────────── item marks (item-mark.ts; docs/UI-COMPONENTS.md, "Item marks") ─────────────
    What a store item or a connector is, at a glance: a raised tile with a continuous corner holding the service's or a proven
    publisher's mark (in its brand's colours) or a monogram. 24 in a row's lead, 40 at the head of an item's page. The corner is the floor at 24 (a 24px

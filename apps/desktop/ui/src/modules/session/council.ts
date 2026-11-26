@@ -102,10 +102,10 @@ export function councilFormNode(form: CouncilForm, submit: (c: CouncilChoice) =>
     const n = members.size, can = n >= MIN_COUNCIL && !!combiner;
     const entries: MenuEntry[] = page === 'members'
       ? [{ heading: 'Members, choose any' }, ...options.map((c) => ({ label: ui.modelMark.called(c.model) || c.model, meaning: c.providerName, leadHTML: mark(c.model), value: c.value, chosen: members.has(c.value), check: true, attrs: { role: 'menuitemcheckbox' } })),
-        '-', { heading: (n < MIN_COUNCIL ? 'Choose at least ' + MIN_COUNCIL + ' members. ' : plural(n, 'member answers', 'members answer') + ', then ' + nameOfValue(combiner) + ' combines them. ') + COST_NOTE }]
+        { heading: (n < MIN_COUNCIL ? 'Choose at least ' + MIN_COUNCIL + ' members. ' : plural(n, 'member answers', 'members answer') + ', then ' + nameOfValue(combiner) + ' combines them. ') + COST_NOTE }]
       : [{ heading: 'Combiner: writes the answer and keeps the tools' }, ...options.map((c) => ({ label: ui.modelMark.called(c.model) || c.model, meaning: c.providerName, leadHTML: mark(c.model), value: c.value, chosen: c.value === combiner }))];
     const foot = page === 'members'
-      ? kit.html.selectorItem({ variant: 'line', label: 'Combiner', value: nameOfValue(combiner), leadHTML: combiner ? mark(slotOf(combiner).model) : undefined, attrs: { 'data-combiner': '' } }) + '<span class="k7-grow"></span>' +
+      ? '<span class="k7-menu__head" aria-hidden="true">Combiner</span>' + kit.html.selectorItem({ variant: 'line', label: 'Combiner', value: nameOfValue(combiner), leadHTML: combiner ? mark(slotOf(combiner).model) : undefined, attrs: { 'data-combiner': '' } }) + '<span class="k7-grow"></span>' +
         kit.html.button({ label: 'Ask the council', variant: 'primary', size: 28, disabled: !can, attrs: { 'data-ask': '' } })
       : kit.html.button({ label: 'Back to the members', variant: 'ghost', size: 28, icon: 'back', attrs: { 'data-back': '' } });
     const fresh = kit.menu({ label: 'Ask a council', variant: 'options', entries, foot, attrs: { ...v7Attrs(), 'data-page': page, 'data-remembered': form.remembered ? '' : null } });

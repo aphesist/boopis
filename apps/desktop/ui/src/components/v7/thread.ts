@@ -28,6 +28,7 @@ export interface AskAnswer {
   label: string; primary?: boolean; hold?: boolean; keys?: string;
   /** what the answer is called to the app (data-value) */ value?: string;
   /** the outlined chip (the boards' Deny) */ outline?: boolean;
+  /** a ghost chip: no fill and no line, the quietest answer (6e: Edit on a permission) */ ghost?: boolean;
   /** at the row's end, the others at its start (the dock's cards, K03 and K04: Deny at the end) */ end?: boolean;
   /** drawn as the board draws it, and it does nothing yet: the reason, said in its tip */ inert?: string;
   /** what the answer does, to the app (data-action: a form's submit, defer, cancel) */ action?: string;
@@ -50,7 +51,7 @@ export interface AskCardOpts {
   /** an answered row's action at its end, as kit markup ("Open" on a form put off for later) */ rowAction?: U<string>;
 }
 export const APPROVAL_ANSWERS: readonly AskAnswer[] = [{ label: 'Hold to allow once', primary: true, hold: true }, { label: 'Allow all this turn', value: 'turn' }, { label: 'Always allow', value: 'always' }, { label: 'Deny', value: 'deny', keys: 'esc', outline: true }];
-const answerChips = (list: readonly AskAnswer[], more = '', busy = false): string => '<div class="k7-ask__answers"' + (busy ? ' inert' : '') + '>' + list.map((x) => chip({ label: x.label, variant: 'answer', chosen: !!x.primary && !busy, hold: !!x.hold && !(busy && x.primary), attrs: { 'data-value': x.value ?? null, 'data-action': x.action ?? null, 'data-outline': x.outline ? '' : null, 'data-end': x.end ? '' : null, 'aria-keyshortcuts': x.keys ? (x.keys === 'esc' ? 'Escape' : x.keys) : null, 'aria-disabled': x.inert ? 'true' : null, 'data-tip': x.inert ?? null, 'data-busy': busy && x.primary ? '' : null, 'aria-busy': busy && x.primary ? 'true' : null } }).replace('<span class="k7-chip__label">', busy && x.primary ? '<span class="k7-chip__label k7-shimmer">' : '<span class="k7-chip__label">').replace('</button>', x.keys ? kbd({ keys: x.keys }) + '</button>' : '</button>')).join('') + more + '</div>';
+const answerChips = (list: readonly AskAnswer[], more = '', busy = false): string => '<div class="k7-ask__answers"' + (busy ? ' inert' : '') + '>' + list.map((x) => chip({ label: x.label, variant: 'answer', chosen: !!x.primary && !busy, hold: !!x.hold && !(busy && x.primary), attrs: { 'data-value': x.value ?? null, 'data-action': x.action ?? null, 'data-outline': x.outline ? '' : null, 'data-ghost': x.ghost ? '' : null, 'data-end': x.end ? '' : null, 'aria-keyshortcuts': x.keys ? (x.keys === 'esc' ? 'Escape' : x.keys) : null, 'aria-disabled': x.inert ? 'true' : null, 'data-tip': x.inert ?? null, 'data-busy': busy && x.primary ? '' : null, 'aria-busy': busy && x.primary ? 'true' : null } }).replace('<span class="k7-chip__label">', busy && x.primary ? '<span class="k7-chip__label k7-shimmer">' : '<span class="k7-chip__label">').replace('</button>', x.keys ? kbd({ keys: x.keys }) + '</button>' : '</button>')).join('') + more + '</div>';
 export function askCard(o: AskCardOpts): string {
   const v = o.variant ?? 'standalone', st = o.state ?? 'needs';
   /* attached (S09): the answers alone, at the end of their tool row's Block; the row's own head says what waits and for whom */

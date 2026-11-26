@@ -38,7 +38,7 @@ describe('a failed turn (S38)', () => {
   it('passed collapses to the one-row receipt', () => {
     const c = failedTurn(F, 'passed');
     expect(c.getAttribute('data-state')).toBe('answered');
-    expect(c.textContent).toContain('npm test passed on retry');
+    expect(c.textContent).toContain('npm test passed when it ran again');
   });
 });
 

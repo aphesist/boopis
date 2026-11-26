@@ -31,7 +31,7 @@ import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 const bots = () => data().bots;
 const NODE = new Map<string, HTMLElement>();
 const ENTRY = new WeakMap<HTMLElement, { msgs: ThreadMessage[]; who: string }>();
-const toast = (t: string): void => { kit.notify(t); };
+const notify = (t: string): void => { kit.notify(t); };   /* what happened, in a word: the kit's floating Notice */
 function newSession(): void {
   const b = bot(S.sel), sessions = bots().sessions; if (!b || !sessions) return;
   sessions.fresh(b.id);
@@ -145,7 +145,7 @@ function renderThread(b: Bot): void {
   /* what the host holds for the owner in this bot's thread (6e): the team changes it proposed, its steps a rule paused */
   HELD = el('div', { class: 'bt-held', hidden: true });
   log.append(HELD);
-  mountHeld(HELD, b, () => S.bots, toast);
+  mountHeld(HELD, b, () => S.bots, notify);
   syncTurns();
   paintStatus(b.id);
   requestAnimationFrame(() => { if (S.scroll) S.scroll.scrollTop = S.scroll.scrollHeight; });
@@ -162,7 +162,7 @@ function msgContent(b: Bot, m: ThreadMessage): HTMLElement {
   if (m.kind === 'file') {
     const paths = data().files.paths;
     const card = kit.fileCard({ name: m.name, meta: m.meta, opens: !!paths });
-    if (paths) card.addEventListener('click', () => { void paths.resolve([m.name], rootsOf(b.id)).then(([hit]) => (hit ? paths.open(hit.abs) : Promise.reject(new Error(m.name + ' was not found in ' + b.name + '’s workspace.')))).catch((e: unknown) => { toast(e instanceof Error ? e.message : m.name + ' could not be opened.'); }); });
+    if (paths) card.addEventListener('click', () => { void paths.resolve([m.name], rootsOf(b.id)).then(([hit]) => (hit ? paths.open(hit.abs) : Promise.reject(new Error(m.name + ' was not found in ' + b.name + '’s workspace.')))).catch((e: unknown) => { notify(e instanceof Error ? e.message : m.name + ' could not be opened.'); }); });
     return card;
   }
   if (m.who === 'you') { const r = el('p', { class: 'bt-request' }); r.innerHTML = ui.markdown.plain(m.text, ctx()); return r; }
@@ -194,7 +194,7 @@ function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEnt
   if (!you) {
     const name = (who as Bot).name;
     /* board 11 draws two hover actions, copy and "more": more holds the other thing a turn can do today, the copy as Markdown (KEYMAP 5's C) */
-    turnActs(entry, { name, copy: () => turnText(entry), more: (a) => { kit.openMenu(a, { label: 'More', place: 'below', align: 'start', entries: [{ label: 'Copy as Markdown', icon: 'copy', value: 'md' }], onSelect: () => { void ui.copyText('**' + name + '**\n\n' + turnText(entry)); toast('Copied'); } }); } });
+    turnActs(entry, { name, copy: () => turnText(entry), more: (a) => { kit.openMenu(a, { label: 'More', place: 'below', align: 'start', entries: [{ label: 'Copy as Markdown', icon: 'copy', value: 'md' }], onSelect: () => { void ui.copyText('**' + name + '**\n\n' + turnText(entry)); notify('Copied'); } }); } });
     placeActs(entry);
   }
   livenIn(entry);
@@ -277,7 +277,7 @@ function turnKeys(e: KeyboardEvent): void {
     e.preventDefault();
     const who = info?.who === 'you' ? 'You' : info?.who, md = '**' + who + '**\n\n' + turnText(t);
     try { navigator.clipboard.writeText(md).catch(() => { /* blocked */ }); } catch { /* clipboard blocked */ }
-    toast('Copied');
+    notify('Copied');
     return;
   }
   if (k === 'e' && info?.who === 'you') {
@@ -300,7 +300,7 @@ export const approvalCard = (b: Bot, m: ApprovalMessage): HTMLElement => renderC
 export function approvalAnswers(editing = false): AskAnswer[] {
   if (editing) return [{ label: 'Hold to approve edited', primary: true, hold: true, value: 'edited' }, { label: 'Cancel', value: 'unedit', keys: 'esc', outline: true }];
   return [{ label: 'Hold to allow once', primary: true, hold: true }, ...(later('approval-rules') ? [{ label: 'Allow all this turn', value: 'turn' }, { label: 'Always allow', value: 'always' }] : []),
-    ...(later('approval-edit') ? [{ label: 'Edit', value: 'edit' }] : []), { label: 'Deny', value: 'deny', keys: 'esc', outline: true }];
+    ...(later('approval-edit') ? [{ label: 'Edit', value: 'edit', ghost: true }] : []), { label: 'Deny', value: 'deny', keys: 'esc', outline: true }];
 }
 function renderCard(b: Bot, m: ApprovalMessage): HTMLElement {
   if (m.resolved) return resolvedLine(b, m);
@@ -318,7 +318,7 @@ function renderCard(b: Bot, m: ApprovalMessage): HTMLElement {
     card.addEventListener('ui:commit', () => {
       if (!editing) { resolveCard(b.id, m, 'approve'); return; }
       const v = card.querySelector<HTMLTextAreaElement>('[data-edited]')?.value ?? value;
-      if (bots().decideEdited) bots().decideEdited?.(b.id, m.id, v); else toast('An edited request cannot be sent in this build.');
+      if (bots().decideEdited) bots().decideEdited?.(b.id, m.id, v); else notify('An edited request cannot be sent in this build.');
     });
     card.addEventListener('click', (e) => {
       const c = (e.target as Element).closest<HTMLElement>('[data-kit~="Chip"][data-value]'); if (!c || c.hasAttribute('data-hold')) return;
@@ -483,7 +483,7 @@ function send(text: string): void {
 export function stopRun(quiet?: boolean, id?: string): boolean {
   const target = id ?? (S.sel as string);
   const was = bots().stop(target);
-  if (was && !quiet) { const b = bot(target); toast('Stopped ' + (b ? b.name : 'the bot')); }
+  if (was && !quiet) { const b = bot(target); notify('Stopped ' + (b ? b.name : 'the bot')); }
   return was;
 }
 

@@ -4,7 +4,7 @@
    Disclosure), a member that failed (its reason in its Tooltip), and none reported (red, "Ask again"). The states draw the real pieces
    from the shapes the engine's `moa.*` events fill in; the live provider's own tests play the frames. */
 import { kit } from '@boopis/ui';
-import { put, stage } from '../../story';
+import { fill, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_TITLE, PARAGRAPH, UNBROKEN } from '../../fixtures';
 import { councilAnswers, councilBlock, councilFoot, councilFormNode } from '../../../modules/session/council';
@@ -44,21 +44,21 @@ const form = (f: CouncilForm): HTMLElement => { const w = document.createElement
 export default [{
   id: 'composer/council', title: 'Council', area: 'composer', kind: 'surface', covers: ['surface:council'],
   states: {
-    'the form': stage(['typical', 'open'], ({ root }) => { put(root, form(FORM)); }, { width: 420 }),
-    'the form, remembered': stage(['variant'], ({ root }) => { put(root, form({ ...FORM, remembered: true })); }, { width: 420 }),
-    'the form, one member': stage(['error'], ({ root }) => { put(root, form({ ...FORM, choice: { ...FORM.choice, members: [M[0]] } })); }, { width: 420 }),
-    'the form, choosing the combiner': stage(['variant', 'open'], ({ root }) => { put(root, form(FORM)); root.querySelector<HTMLElement>('[data-combiner]')?.click(); }, { width: 420 }),
-    'the form, long names': stage(['long'], ({ root }) => { put(root, form({ ...FORM, options: [...OPTIONS, ch('custom', LONG_TITLE, UNBROKEN.slice(0, 60))] })); }, { width: 420 }),
-    'the form, a row hovered': stage(['hover'], ({ root }) => { put(root, form(FORM)); }, { width: 420, force: [{ sel: '[data-kit~="OptionRow"]:nth-of-type(2)', state: 'hover' }] }),
-    'running': stage(['loading'], ({ root }) => { put(root, turn(running)); }, { width: W }),
-    'combining': stage(['loading', 'variant'], ({ root }) => { put(root, turn(combining)); }, { width: W }),
-    'combining, a member failed': stage(['error'], ({ root }) => { put(root, turn(failedRunning)); }, { width: W }),
-    'a failed member\'s reason': stage(['focus', 'error'], ({ root }) => { put(root, turn(failedRunning)); }, { width: W, force: [{ sel: '[data-kit~="StatusWord"][data-tip]', state: 'focus' }] }),
-    'done': stage(['typical', 'success'], ({ root }) => { put(root, turn(done3)); }, { width: W }),
-    'done, answers open': stage(['open'], ({ root }) => { put(root, turn(done3, { open: true })); }, { width: W }),
-    'done, a member failed, answers open': stage(['error', 'open'], ({ root }) => { put(root, turn(failed, { open: true })); }, { width: W }),
-    'done, five members': stage(['many'], ({ root }) => { put(root, turn(five)); }, { width: W }),
-    'resumed: a cut answer, one never answered': stage(['variant', 'open'], ({ root }) => { put(root, turn(resumed, { open: true })); }, { width: W }),
-    'none reported': stage(['empty', 'error'], ({ root }) => { put(root, turn(none)); }, { width: W })
+    'the form': stage(['typical', 'open'], ({ root }) => { fill(root, form(FORM)); }, { width: 420 }),
+    'the form, remembered': stage(['variant'], ({ root }) => { fill(root, form({ ...FORM, remembered: true })); }, { width: 420 }),
+    'the form, one member': stage(['error'], ({ root }) => { fill(root, form({ ...FORM, choice: { ...FORM.choice, members: [M[0]] } })); }, { width: 420 }),
+    'the form, choosing the combiner': stage(['variant', 'open'], ({ root }) => { fill(root, form(FORM)); root.querySelector<HTMLElement>('[data-combiner]')?.click(); }, { width: 420 }),
+    'the form, long names': stage(['long'], ({ root }) => { fill(root, form({ ...FORM, options: [...OPTIONS, ch('custom', LONG_TITLE, UNBROKEN.slice(0, 60))] })); }, { width: 420 }),
+    'the form, a row hovered': stage(['hover'], ({ root }) => { fill(root, form(FORM)); }, { width: 420, force: [{ sel: '[data-kit~="OptionRow"]:nth-of-type(2)', state: 'hover' }] }),
+    'running': stage(['loading'], ({ root }) => { fill(root, turn(running)); }, { width: W }),
+    'combining': stage(['loading', 'variant'], ({ root }) => { fill(root, turn(combining)); }, { width: W }),
+    'combining, a member failed': stage(['error'], ({ root }) => { fill(root, turn(failedRunning)); }, { width: W }),
+    'a failed member\'s reason': stage(['focus', 'error'], ({ root }) => { fill(root, turn(failedRunning)); }, { width: W, force: [{ sel: '[data-kit~="StatusWord"][data-tip]', state: 'focus' }] }),
+    'done': stage(['typical', 'success'], ({ root }) => { fill(root, turn(done3)); }, { width: W }),
+    'done, answers open': stage(['open'], ({ root }) => { fill(root, turn(done3, { open: true })); }, { width: W }),
+    'done, a member failed, answers open': stage(['error', 'open'], ({ root }) => { fill(root, turn(failed, { open: true })); }, { width: W }),
+    'done, five members': stage(['many'], ({ root }) => { fill(root, turn(five)); }, { width: W }),
+    'resumed: a cut answer, one never answered': stage(['variant', 'open'], ({ root }) => { fill(root, turn(resumed, { open: true })); }, { width: W }),
+    'none reported': stage(['empty', 'error'], ({ root }) => { fill(root, turn(none)); }, { width: W })
   }
 } satisfies Story] satisfies Story[];

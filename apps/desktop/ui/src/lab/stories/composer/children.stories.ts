@@ -2,7 +2,7 @@
    that started them (the model's mark and name, the task, its StatusWord: queued, running with its clock, done, error with why in its
    Tooltip, stopped), what it reported quoted under it, a Disclosure over its transcript in a Well, and a ghost Stop while it runs.
    Drawn by the session's own module (modules/session/children.ts) on the session's thread. */
-import { put, stage } from '../../story';
+import { fill, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_TITLE, UNBROKEN } from '../../fixtures';
 import { CUT_NOTE, childrenBlock, resetChildren } from '../../../modules/session/children';
@@ -35,18 +35,18 @@ export default [
   {
     id: 'composer/children', title: 'Tasks handed to other models', area: 'composer', kind: 'component', covers: ['surface:children'],
     states: {
-      typical: stage(['typical', 'many'], ({ root }) => { put(root, turn(FOUR)); }, { width: W }),
-      queued: stage(['variant'], ({ root }) => { put(root, turn([task({ id: 'q', model: 'claude-haiku-5-5', goal: 'Summarise the README', status: 'queued', startedAt: null, subagentId: '' })])); }, { width: W }),
-      running: stage(['loading'], ({ root }) => { put(root, turn([FOUR[0] as ChildTask])); }, { width: W }),
-      'stop hovered': stage(['hover'], ({ root }) => { put(root, turn([FOUR[0] as ChildTask])); }, { width: W, force: [{ sel: '[data-action="stop"]', state: 'hover' }] }),
-      done: stage(['success'], ({ root }) => { put(root, turn([FOUR[1] as ChildTask])); }, { width: W }),
-      'transcript open': stage(['open'], async ({ root }) => { put(root, turn([FOUR[1] as ChildTask])); await openFirst(root); }, { width: W }),
-      'transcript could not be read': stage(['error', 'open'], async ({ root }) => { put(root, turn([FOUR[1] as ChildTask], host({ fail: true }))); await openFirst(root); }, { width: W }),
-      error: stage(['error'], ({ root }) => { put(root, turn([FOUR[2] as ChildTask])); }, { width: W }),
-      'error, its reason': stage(['error', 'focus'], ({ root }) => { put(root, turn([FOUR[2] as ChildTask])); }, { width: W, force: [{ sel: '[data-kit~="StatusWord"][data-tip]', state: 'focus' }] }),
-      'after a resume': stage(['variant'], ({ root }) => { put(root, turn([{ ...(FOUR[1] as ChildTask), summary: 'Added 0042_integer_cents.sql and a rollback; every row moves.', cut: true }, { ...(FOUR[3] as ChildTask), childSession: '' }], host({ stop: false }))); }, { width: W, note: 'read back from the turn book: none can be stopped; a report longer than the book keeps ends with' + CUT_NOTE }),
-      'nothing to open or stop (the page build)': stage(['empty'], ({ root }) => { put(root, turn([FOUR[0] as ChildTask], host({ stop: false, open: false }))); }, { width: W }),
-      long: stage(['long'], ({ root }) => { put(root, turn([task({ id: 'l', model: 'claude-sonnet-5-5-20261101-extended-context-preview', goal: LONG_TITLE + ' ' + UNBROKEN, status: 'running', now: UNBROKEN }), task({ id: 'm', model: 'gpt-6-luna', goal: LONG_TITLE, status: 'done', seconds: 599, summary: LONG_TITLE + ' ' + UNBROKEN })])); }, { width: 420 })
+      typical: stage(['typical', 'many'], ({ root }) => { fill(root, turn(FOUR)); }, { width: W }),
+      queued: stage(['variant'], ({ root }) => { fill(root, turn([task({ id: 'q', model: 'claude-haiku-5-5', goal: 'Summarise the README', status: 'queued', startedAt: null, subagentId: '' })])); }, { width: W }),
+      running: stage(['loading'], ({ root }) => { fill(root, turn([FOUR[0] as ChildTask])); }, { width: W }),
+      'stop hovered': stage(['hover'], ({ root }) => { fill(root, turn([FOUR[0] as ChildTask])); }, { width: W, force: [{ sel: '[data-action="stop"]', state: 'hover' }] }),
+      done: stage(['success'], ({ root }) => { fill(root, turn([FOUR[1] as ChildTask])); }, { width: W }),
+      'transcript open': stage(['open'], async ({ root }) => { fill(root, turn([FOUR[1] as ChildTask])); await openFirst(root); }, { width: W }),
+      'transcript could not be read': stage(['error', 'open'], async ({ root }) => { fill(root, turn([FOUR[1] as ChildTask], host({ fail: true }))); await openFirst(root); }, { width: W }),
+      error: stage(['error'], ({ root }) => { fill(root, turn([FOUR[2] as ChildTask])); }, { width: W }),
+      'error, its reason': stage(['error', 'focus'], ({ root }) => { fill(root, turn([FOUR[2] as ChildTask])); }, { width: W, force: [{ sel: '[data-kit~="StatusWord"][data-tip]', state: 'focus' }] }),
+      'after a resume': stage(['variant'], ({ root }) => { fill(root, turn([{ ...(FOUR[1] as ChildTask), summary: 'Added 0042_integer_cents.sql and a rollback; every row moves.', cut: true }, { ...(FOUR[3] as ChildTask), childSession: '' }], host({ stop: false }))); }, { width: W, note: 'read back from the turn book: none can be stopped; a report longer than the book keeps ends with' + CUT_NOTE }),
+      'nothing to open or stop (the page build)': stage(['empty'], ({ root }) => { fill(root, turn([FOUR[0] as ChildTask], host({ stop: false, open: false }))); }, { width: W }),
+      long: stage(['long'], ({ root }) => { fill(root, turn([task({ id: 'l', model: 'claude-sonnet-5-5-20261101-extended-context-preview', goal: LONG_TITLE + ' ' + UNBROKEN, status: 'running', now: UNBROKEN }), task({ id: 'm', model: 'gpt-6-luna', goal: LONG_TITLE, status: 'done', seconds: 599, summary: LONG_TITLE + ' ' + UNBROKEN })])); }, { width: 420 })
     }
   }
 ] satisfies Story[];

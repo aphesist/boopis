@@ -7,10 +7,10 @@ import { findRanges } from '../../../modules/session/find';
 
 const bar = (count: string, value = 'cents'): HTMLElement => kit.findBar({ id: 'lab-find', value, count });
 const thread = (q: string): HTMLElement => {
-  const box = document.createElement('div'); box.style.position = 'relative';
+  const box = document.createElement('div'); box.style.position = 'relative'; box.style.paddingTop = '56px';
   const t = document.createElement('div'); t.className = 'k7-thread'; t.dataset['kind'] = 'session';
   t.append(kit.bubble({ kind: 'user', text: 'Move the invoices to integer cents.' }), kit.bubble({ kind: 'agent', brand: 'claude-sonnet-5-5', text: 'Done: money.ts keeps cents as integers, and prorate() rounds once, in cents, at the end. The invoice total is cents too.' }));
-  const b = bar('', q); b.style.position = 'absolute'; b.style.top = '0'; b.style.right = '0';
+  const b = bar('', q); b.style.position = 'absolute'; b.style.top = '0'; b.style.right = '0'; b.style.zIndex = '3';
   box.append(b, t);
   const hits = findRanges(t, q), H = (globalThis as { Highlight?: new (...r: Range[]) => unknown }).Highlight, hl = (CSS as unknown as { highlights?: { set(k: string, v: unknown): void } }).highlights;
   if (H && hl && hits.length) { hl.set('k7-find', new H(...hits)); hl.set('k7-find-now', new H(hits[1] ?? (hits[0] as Range))); }

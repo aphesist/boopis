@@ -4,7 +4,7 @@
    and the approval card's Edit (shown with `approval-edit`, which no provider has: the engine cannot take an edited request) and its
    receipts ("You allowed it always · exception drafted" with Open, once Settings › Approvals exists: `rules-settings`). */
 import { kit } from '@boopis/ui';
-import { put, stage } from '../../story';
+import { fill, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_TITLE, UNBROKEN } from '../../fixtures';
 import { data } from '../../../data';
@@ -41,29 +41,29 @@ const approval = (m: ApprovalMessage, f: readonly LaterFeature[]): HTMLElement =
 export default [{
   id: 'bots/held', title: 'Held for you: a team plan, a paused step, an approval edited', area: 'bots', kind: 'surface', covers: ['surface:held'],
   states: {
-    'plan proposed': stage(['typical'], ({ root }) => { put(root, plan(PLAN)); }, { width: W }),
-    'plan, hold hovered': stage(['hover'], ({ root }) => { put(root, plan(PLAN)); }, { width: W, force: [{ sel: '[data-value="apply"]', state: 'hover' }] }),
-    'plan with a permanent action': stage(['variant'], ({ root }) => { put(root, plan(DISBAND)); }, { width: W }),
-    'plan with problems': stage(['error'], ({ root }) => { put(root, plan(PROBLEMS)); }, { width: W }),
-    'plan, change it': stage(['open'], ({ root }) => { put(root, plan(PLAN, { changing: 'Leave iris out for now' })); }, { width: W }),
-    'plan, applying': stage(['loading'], ({ root }) => { put(root, plan(PLAN, { busy: true })); }, { width: W }),
-    'plan, refused': stage(['error'], ({ root }) => { put(root, plan(PLAN, { error: 'The team changed since this plan was made. Ask for a new one.' })); }, { width: W }),
-    'plan applied, with Undo': stage(['success'], ({ root }) => { put(root, plan({ ...PLAN, state: 'applied' })); }, { width: W }),
-    'plan, changes asked': stage(['variant'], ({ root }) => { put(root, plan({ ...PLAN, state: 'rejected', words: 'Leave iris out for now' })); }, { width: W }),
-    'plan expired': stage(['expired'], ({ root }) => { put(root, plan({ ...PLAN, state: 'expired' })); }, { width: W }),
-    'plan failed': stage(['error'], ({ root }) => { put(root, plan({ ...PLAN, state: 'failed', report: 'moss could not be made: its folder is taken' })); }, { width: W }),
-    'plan put off': stage(['variant'], ({ root }) => { put(root, plan(PLAN, { later: true })); }, { width: W }),
-    'plan, long': stage(['long'], ({ root }) => { put(root, plan({ ...PLAN, title: LONG_TITLE, reason: UNBROKEN, actions: [{ mark: '+', target: UNBROKEN.slice(0, 40), what: LONG_TITLE }] })); }, { width: 420 }),
-    'plan, nothing in it': stage(['empty'], ({ root }) => { put(root, plan({ ...PLAN, actions: [], notes: [] })); }, { width: W }),
-    'step waited': stage(['typical'], ({ root }) => { put(root, parked()); }, { width: W }),
-    'step waited, with approval rules': stage(['variant'], ({ root }) => { put(root, parked({}, ['approval-rules'])); }, { width: W }),
-    'step allowed once': stage(['success'], ({ root }) => { put(root, parked({ answered: { choice: 'once', drafted: false } })); }, { width: W }),
-    'step allowed always, exception drafted': stage(['success', 'variant'], ({ root }) => { put(root, parked({ answered: { choice: 'always', drafted: true } }, ['rules-settings'])); }, { width: W }),
-    'step denied': stage(['disabled'], ({ root }) => { put(root, parked({ answered: { choice: 'deny', drafted: false } })); }, { width: W }),
-    'approval with Edit': stage(['variant'], ({ root }) => { put(root, approval(ASK, ['approval-rules', 'approval-edit'])); }, { width: W }),
-    'approval, editing': stage(['open'], ({ root }) => { const t = approval(ASK, ['approval-edit']); put(root, t); t.querySelector<HTMLElement>('[data-value="edit"]')?.click(); }, { width: W }),
-    'approval approved, edited': stage(['success'], ({ root }) => { put(root, approval({ ...ASK, resolved: 'approved', how: 'edited', resolvedAt: '11:22' }, [])); }, { width: W }),
-    'approval allowed always, exception drafted': stage(['success', 'variant'], ({ root }) => { put(root, approval({ ...ASK, resolved: 'approved', how: 'always', drafted: true, resolvedAt: '11:22' }, ['rules-settings'])); }, { width: W }),
-    'approval denied': stage(['disabled'], ({ root }) => { put(root, approval({ ...ASK, resolved: 'denied', resolvedAt: '11:22' }, [])); }, { width: W })
+    'plan proposed': stage(['typical'], ({ root }) => { fill(root, plan(PLAN)); }, { width: W }),
+    'plan, hold hovered': stage(['hover'], ({ root }) => { fill(root, plan(PLAN)); }, { width: W, force: [{ sel: '[data-value="apply"]', state: 'hover' }] }),
+    'plan with a permanent action': stage(['variant'], ({ root }) => { fill(root, plan(DISBAND)); }, { width: W }),
+    'plan with problems': stage(['error'], ({ root }) => { fill(root, plan(PROBLEMS)); }, { width: W }),
+    'plan, change it': stage(['open'], ({ root }) => { fill(root, plan(PLAN, { changing: 'Leave iris out for now' })); }, { width: W }),
+    'plan, applying': stage(['loading'], ({ root }) => { fill(root, plan(PLAN, { busy: true })); }, { width: W }),
+    'plan, refused': stage(['error'], ({ root }) => { fill(root, plan(PLAN, { error: 'The team changed since this plan was made. Ask for a new one.' })); }, { width: W }),
+    'plan applied, with Undo': stage(['success'], ({ root }) => { fill(root, plan({ ...PLAN, state: 'applied' })); }, { width: W }),
+    'plan, changes asked': stage(['variant'], ({ root }) => { fill(root, plan({ ...PLAN, state: 'rejected', words: 'Leave iris out for now' })); }, { width: W }),
+    'plan expired': stage(['expired'], ({ root }) => { fill(root, plan({ ...PLAN, state: 'expired' })); }, { width: W }),
+    'plan failed': stage(['error'], ({ root }) => { fill(root, plan({ ...PLAN, state: 'failed', report: 'moss could not be made: its folder is taken' })); }, { width: W }),
+    'plan put off': stage(['variant'], ({ root }) => { fill(root, plan(PLAN, { later: true })); }, { width: W }),
+    'plan, long': stage(['long'], ({ root }) => { fill(root, plan({ ...PLAN, title: LONG_TITLE, reason: UNBROKEN, actions: [{ mark: '+', target: UNBROKEN.slice(0, 40), what: LONG_TITLE }] })); }, { width: 420 }),
+    'plan, nothing in it': stage(['empty'], ({ root }) => { fill(root, plan({ ...PLAN, actions: [], notes: [] })); }, { width: W }),
+    'step waited': stage(['typical'], ({ root }) => { fill(root, parked()); }, { width: W }),
+    'step waited, with approval rules': stage(['variant'], ({ root }) => { fill(root, parked({}, ['approval-rules'])); }, { width: W }),
+    'step allowed once': stage(['success'], ({ root }) => { fill(root, parked({ answered: { choice: 'once', drafted: false } })); }, { width: W }),
+    'step allowed always, exception drafted': stage(['success', 'variant'], ({ root }) => { fill(root, parked({ answered: { choice: 'always', drafted: true } }, ['rules-settings'])); }, { width: W }),
+    'step denied': stage(['disabled'], ({ root }) => { fill(root, parked({ answered: { choice: 'deny', drafted: false } })); }, { width: W }),
+    'approval with Edit': stage(['variant'], ({ root }) => { fill(root, approval(ASK, ['approval-rules', 'approval-edit'])); }, { width: W }),
+    'approval, editing': stage(['open'], ({ root }) => { const t = approval(ASK, ['approval-edit']); fill(root, t); t.querySelector<HTMLElement>('[data-value="edit"]')?.click(); }, { width: W }),
+    'approval approved, edited': stage(['success'], ({ root }) => { fill(root, approval({ ...ASK, resolved: 'approved', how: 'edited', resolvedAt: '11:22' }, [])); }, { width: W }),
+    'approval allowed always, exception drafted': stage(['success', 'variant'], ({ root }) => { fill(root, approval({ ...ASK, resolved: 'approved', how: 'always', drafted: true, resolvedAt: '11:22' }, ['rules-settings'])); }, { width: W }),
+    'approval denied': stage(['disabled'], ({ root }) => { fill(root, approval({ ...ASK, resolved: 'denied', resolvedAt: '11:22' }, [])); }, { width: W })
   }
 } satisfies Story] satisfies Story[];

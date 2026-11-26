@@ -170,6 +170,19 @@ export async function keyWalk(env) {
     const stop = await ev(() => { const e = new KeyboardEvent('keydown', { key: '.', code: 'Period', ctrlKey: true, bubbles: true, cancelable: true }); window.dispatchEvent(e); return e.defaultPrevented; });
     check('7', 'mod+. is answered by the session while it runs', stop);
     await press('Control+f', 400); check('1', 'mod+F find (the session provides it)', await ev(() => { const a = document.activeElement; return !!a && !!a.closest('#hx-view-session, .ui-pop, #hx-app') && a.matches('input, [role="searchbox"], [type="search"]'); }));
+    /* 6e: find is the kit's FindBar at the conversation's top right: what is typed is counted and washed in the thread, Enter moves to
+       the next match, "No matches" is said, and esc closes it and puts the focus back in the thread */
+    await page.keyboard.type('line'); await page.waitForTimeout(250);
+    const f1 = await ev(() => { const b = document.querySelector('#hx-view-session [data-kit~="FindBar"]'); return { bar: !!b, count: b?.querySelector('.k7-find__count')?.textContent ?? '', hl: typeof CSS !== 'undefined' && 'highlights' in CSS ? CSS.highlights.has('k7-find') : null }; });
+    check('1', 'find: the FindBar counts the matches and washes them', f1.bar && /^1 of \d+$/.test(f1.count) && f1.hl !== false, f1);
+    await press('Enter', 150);
+    const f2 = await ev(() => document.querySelector('#hx-view-session .k7-find__count')?.textContent ?? '');
+    check('1', 'find: Enter goes to the next match', /^(2|1) of \d+$/.test(f2) && f2 !== f1.count || /^1 of 1$/.test(f2), { before: f1.count, after: f2 });
+    await page.keyboard.type('zzqq'); await page.waitForTimeout(200);
+    check('1', 'find: none found says "No matches"', (await ev(() => document.querySelector('#hx-view-session .k7-find__count')?.textContent)) === 'No matches');
+    await press('Escape', 200);
+    const f3 = await ev(() => ({ bar: !!document.querySelector('#hx-view-session [data-kit~="FindBar"]'), inThread: !!document.activeElement?.closest('#hx-view-session [data-hx-turn]'), hl: typeof CSS !== 'undefined' && 'highlights' in CSS ? CSS.highlights.has('k7-find') : false }));
+    check('1', 'find: esc closes it, the washes go, the focus is back in the thread', !f3.bar && f3.inThread && !f3.hl, f3);
   });
 
   /* section 7 (its rows are the kit's two-line option rows, board S19): alt+M (or the model chip) opens "who answers next"; the first entry is Automatic (Smart); the chip always says who answers */

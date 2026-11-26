@@ -42,6 +42,9 @@
 .k7-ask > .k7-field .k7-field__box { border-radius: calc(var(--r-block) - var(--pad-block)); }
 /* the outlined chip (Deny) and its key: the boards' `.chip.out` and the 18 tall kbd 2 after the word */
 .k7-chip[data-outline] { background: transparent; box-shadow: inset 0 0 0 var(--hl) var(--line-strong); }
+/* a ghost answer (6e: Edit on a permission): no fill and no line until it is hovered */
+.k7-chip[data-ghost] { background: transparent; box-shadow: none; }
+@media (hover: hover) and (pointer: fine) { .k7-chip[data-ghost]:hover { background: var(--hover); } }
 .k7-ask__answers .k7-chip > .k7-keys { margin-inline-start: var(--gap-hair); }
 .k7-ask__answers .k7-chip .k7-kbd { height: var(--badge-h); }
 /* an answer that is drawn and does nothing yet looks as the board draws it; only the pointer says it cannot be taken */

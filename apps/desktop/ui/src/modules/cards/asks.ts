@@ -27,7 +27,7 @@ export type FailedState = 'failed' | 'retrying' | 'passed';
 export interface FailedTurn { /** the check that failed ("npm test") */ gate: string; output?: readonly string[] | undefined; /** what became of it, in one sentence */ note?: string | undefined; /** the model the retry runs on */ retryWith?: string | undefined; /** when it passed ("09:52") */ at?: string | undefined }
 export function failedTurn(f: FailedTurn, state: FailedState, on: { retry?: () => void; stop?: () => void } = {}): HTMLElement {
   if (state === 'passed') {
-    return kit.askCard({ variant: 'form', state: 'answered', ask: f.gate + ' passed on retry' + (f.retryWith ? ' on ' + named(f.retryWith) : ''), word: { text: 'passed' + (f.at ? ' ' + f.at : ''), tone: 'ok' }, ...(f.retryWith ? { model: f.retryWith } : { lead: '' }), attrs: { 'data-failed': 'passed' } });
+    return kit.askCard({ variant: 'form', state: 'answered', ask: f.gate + ' passed when it ran again' + (f.retryWith ? ' on ' + named(f.retryWith) : ''), word: { text: 'passed' + (f.at ? ' ' + f.at : ''), tone: 'ok' }, ...(f.retryWith ? { model: f.retryWith } : { lead: '' }), attrs: { 'data-failed': 'passed' } });
   }
   const retrying = state === 'retrying';
   const action = retrying ? (on.stop ? 'Stop' : '') : on.retry ? (f.retryWith ? 'Retry on ' + named(f.retryWith) : 'Retry') : '';
