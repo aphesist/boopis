@@ -569,6 +569,8 @@
             if (v === 0 || v >= 999 || T.radii.has(r1(v)) || Math.abs(v - pill) < 0.6) continue;
             const ctx = ['--r-in', '--r-outer', '--r', '--r-card'].map((n) => px(s.getPropertyValue(n))).filter(Boolean);
             if (ctx.some((c) => Math.abs(c - v) < 0.6)) continue;
+            /* board 12 (kit.css `.cite i`): a source's small tile, 12 square with a 3 radius, as the board draws it (REPASS rule 7) */
+            if (e.matches('.k7-cite__ic') && Math.abs(v - 3) < 0.6) continue;
             stray('tokens.computed', e, 'border-radius', v + 'px');
             break;
           }
