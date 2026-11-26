@@ -258,3 +258,27 @@ describe('HoverBar: what a turn offers under the pointer or the focus', () => {
   });
 });
 
+
+describe('Menu: a row cut by the menu\'s width', () => {
+  it('says its description whole in its tooltip; a row that fits, or has a tooltip of its own, is left alone', () => {
+    /* jsdom lays nothing out: the second row's description is the one that does not fit */
+    const sw = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollWidth'), cw = Object.getOwnPropertyDescriptor(Element.prototype, 'clientWidth');
+    Object.defineProperty(Element.prototype, 'scrollWidth', { configurable: true, get(this: Element) { return (this.textContent ?? '').length * 7; } });
+    Object.defineProperty(Element.prototype, 'clientWidth', { configurable: true, get() { return 180; } });
+    try {
+      const anchor = put(kit.button({ label: 'Model' }));
+      const m = kit.openMenu(anchor, { label: 'Who answers next', variant: 'list', entries: [
+        { label: 'Claude Sonnet 5.5', desc: 'Tier 2 of 3' },
+        { label: 'Automatic (Smart)', desc: 'Picks a tier for each message: the cheapest by default, a stronger one for design' },
+        { label: 'High', desc: 'This version of the engine cannot change the effort while a session runs.', disabled: true, attrs: { 'data-tip': 'Not now' } }
+      ] });
+      const rows = [...(m as HTMLElement).querySelectorAll<HTMLElement>('[data-kit~="MenuRow"]')];
+      expect((m as HTMLElement).dataset['variant']).toBe('list');
+      expect(rows.map((r) => r.dataset['tip'] ?? null)).toEqual([null, 'Picks a tier for each message: the cheapest by default, a stronger one for design', 'Not now']);
+    } finally {
+      kit.closeMenu();
+      if (sw) Object.defineProperty(Element.prototype, 'scrollWidth', sw);
+      if (cw) Object.defineProperty(Element.prototype, 'clientWidth', cw);
+    }
+  });
+});

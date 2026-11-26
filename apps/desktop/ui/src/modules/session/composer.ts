@@ -208,7 +208,7 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
   function openModel(viaKeyboard: boolean, anchor: HTMLElement = lineItem('model')): void {
     const G = gov();
     openOver(anchor, {
-      label: 'Who answers next', entries: modelMenu({ current: G.model, governed: G.governed, smart: G.smart, sessionId: o.sessionId() }), place: 'above', align: 'start', attrs: v7Attrs(),
+      label: 'Who answers next', variant: 'list', entries: modelMenu({ current: G.model, governed: G.governed, smart: G.smart, sessionId: o.sessionId() }), place: 'above', align: 'start', attrs: v7Attrs(),
       onSelect: (v) => {
         /* the effort changes in place (a started session's thread gets its line, S33); a refusal is said */
         if (v.startsWith(EFFORT_VALUE)) { void controls?.setEffort(v.slice(EFFORT_VALUE.length)).then((why) => { if (why) say(why); sync(); }); return; }

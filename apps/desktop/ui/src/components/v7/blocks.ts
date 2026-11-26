@@ -76,8 +76,9 @@ export function optionRow(o: OptionRowOpts): string {
     '</span><span class="k7-orow__meaning">' + esc(o.meaning) + '</span></span></button>';
 }
 
-/* ── Menu (5): menu, quick menu (checks), palette (/ @ $), snooze, split-button menu, option menu (four rows) ── */
-export const MENU_VARIANTS = ['menu', 'quick', 'palette', 'snooze', 'split', 'options'] as const;
+/* ── Menu (5): menu, quick menu (checks), palette (/ @ $), snooze, split-button menu, option menu (four rows), and a list whose rows
+   say what they are beside their name (boards S31 and S32: 360 wide, the name whole and the description cut where the row ends) ── */
+export const MENU_VARIANTS = ['menu', 'quick', 'palette', 'snooze', 'split', 'options', 'list'] as const;
 export type MenuVariant = typeof MENU_VARIANTS[number];
 export type MenuEntry = MenuRowOpts | OptionRowOpts | '-' | { heading: string };
 export interface MenuOpts { label: string; entries: readonly MenuEntry[]; variant?: U<MenuVariant>; query?: U<string>; attrs?: U<Attrs> }

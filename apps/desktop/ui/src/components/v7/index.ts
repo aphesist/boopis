@@ -73,7 +73,16 @@ function openMenu(anchor: HTMLElement, o: blocks.MenuOpts & { place?: 'above' | 
     layer.close();
   });
   (node.querySelector<HTMLElement>('[aria-checked="true"]') ?? node.querySelector<HTMLElement>('[data-kit~="MenuRow"], [data-kit~="OptionRow"]'))?.focus({ preventScroll: true });
+  tipCutRows(node);
   return node;
+}
+/** a row whose second words are cut where the row ends (a MenuRow's description, an OptionRow's meaning) says them whole in its tooltip:
+    nothing a menu says is lost to its width. A row that has a tooltip of its own keeps it */
+function tipCutRows(menu: HTMLElement): void {
+  for (const d of menu.querySelectorAll<HTMLElement>('.k7-mrow__desc, .k7-orow__meaning')) {
+    const row = d.closest<HTMLElement>('[data-kit~="MenuRow"], [data-kit~="OptionRow"]');
+    if (row && !row.dataset['tip'] && d.scrollWidth > d.clientWidth + 1) { row.dataset['tip'] = d.textContent ?? ''; row.dataset['tipPos'] = 'right'; }
+  }
 }
 
 /** a Notice opened against an anchor: what a control that cannot act yet needs, in one line, with the one action that gets there (the

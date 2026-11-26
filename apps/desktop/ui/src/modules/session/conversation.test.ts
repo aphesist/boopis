@@ -321,6 +321,9 @@ describe('the composer', () => {
     const menus = document.querySelectorAll<HTMLElement>('.k7-menu[data-floating]');   /* the add menu is still leaving the page: the list now open is the last */
     const rows = [...(menus[menus.length - 1] as HTMLElement).querySelectorAll<HTMLElement>('[data-kit~="MenuRow"]')];
     expect(rows[0]?.textContent).toContain('Automatic (Smart)');
+    /* its rows say what they are beside their name: the kit's list Menu, wide enough for them (boards S31, S32) */
+    expect((menus[menus.length - 1] as HTMLElement).dataset['variant']).toBe('list');
+    expect(rows[0]?.querySelector('.k7-mrow__desc')?.textContent).toMatch(/^Picks a tier for each message/);
     rows.find((r) => r.dataset['value'] && r.dataset['value'] !== '__smart' && r.dataset['value'] !== '__council' && r.getAttribute('aria-disabled') !== 'true')?.click();
     expect(set).toHaveBeenCalledWith(expect.objectContaining({ smart: false }));
   });

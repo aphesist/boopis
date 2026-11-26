@@ -106,7 +106,7 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 2 | Page | `page`, `section` | `kit/page` | column, settings page with its scope; empty |
 | 3 | Pane | `pane` | `kit/pane` | details (bot, session, room), tools (Diff, Files, Terminal, PR, side chat); overlay |
 | 4 | Dialog | `dialog` | `kit/dialog` | large (Settings), form (commit, new bot, import, confirm); error |
-| 5 | Menu | `menu`, `openMenu` | `kit/menu` | menu, quick, palette / @ $, snooze, split, options; open, flipped |
+| 5 | Menu | `menu`, `openMenu` | `kit/menu` | menu, quick, palette / @ $, snooze, split, options, list (rows with a description, 360: boards S31, S32; a session's "who answers next"); open, flipped. An open Menu gives a row whose description is cut its whole words as a tooltip |
 | 6 | Card | `card` (and its Row) | `kit/card` | settings, pane, danger zone collapsed and open |
 | 7 | Block | `block` | `kit/block` | the corner rule's specimen; `offer` (S37: what is missing, said kindly, over the ways to get it, each a Button led by a provider's mark); narrow |
 | 8 | ToolRow | `toolRow` | `kit/tool-row` | edit, command, read, search; running, done, failed, waiting; a session's (S20): a change waiting with its answers, a command waiting, allowed, denied with feedback; an answer hovered, focused; narrow |
