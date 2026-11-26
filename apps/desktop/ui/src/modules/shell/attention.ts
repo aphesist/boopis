@@ -2,7 +2,6 @@
 import { $$ } from '../../core/dom';
 import { state } from '../../core/state';
 import { TABS } from '../../core/settings';
-import { kbdLabel } from '../../core/keys';
 import type { Tab } from '../../core/types';
 import { data } from '../../data';
 import { els, sh } from './ctx';
@@ -31,7 +30,8 @@ export function updateTitle(): void {
   }
   // the visible words stay in the name, in order (WCAG 2.5.3, label in name); the pill opens the details
   setTitle(t, lead, t + (lead.sub ? ', ' + lead.sub : '') + ', details');
-  if (el.btnSearch) el.btnSearch.setAttribute('aria-label', 'Search, ' + kbdLabel('mod+K'));
+  /* the search hint's name is its visible words in their order: "Search" and the keys as they are drawn */
+  if (el.btnSearch) el.btnSearch.setAttribute('aria-label', ['Search', ...[...el.btnSearch.querySelectorAll('kbd')].map((k) => k.textContent ?? '')].join(' ').trim());
 }
 
 /* ───────── attention ─────────

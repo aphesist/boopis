@@ -288,7 +288,9 @@
           const msg = (clipper ? 'cut by ' + describe(clipper) + ': ' : '') + 'reaches outside ' + describe(c) + (far > 0.5 ? ' by ' + r1(far) + 'px' : ' at its rounded corner') + (ring ? ' (with its ' + r1(ring) + 'px ring)' : '') + ' [' + why.join(',') + ']';
           add('geometry.contain', e, msg, { container: rectOf(c) });
         }
-        if (want.has('concentric')) {
+        /* boards 11 and S17 (screens.js `chrome`, the search hint: "Search" and its key chips in a 36 row, padding 0 10): the chips (radius 4) stand at its end, 10 in and 8
+           down: the boards win over the concentric corner (REPASS rule 7) */
+        if (want.has('concentric') && !e.matches('.k7-search-hint .k7-kbd')) {
           /* the floor is the corners setting's (--r-floor: 4 sharp, 8 default, 12 round; v7's 6), not a constant (R-corner-3: max(--r-floor, R - gap)) */
           const FLOOR = px(ccs.getPropertyValue('--r-floor')) || px(getComputedStyle(document.documentElement).getPropertyValue('--r-floor')) || 8;   /* the container's: a v7 root sets 6 */
           const corners = [['top-left', er.left - cr.left, er.top - cr.top, 0], ['top-right', cr.right - er.right, er.top - cr.top, 1], ['bottom-right', cr.right - er.right, cr.bottom - er.bottom, 2], ['bottom-left', er.left - cr.left, cr.bottom - er.bottom, 3]];
@@ -333,6 +335,9 @@
         for (const k of kids) {
           const kr = k.getBoundingClientRect();
           const kcs = getComputedStyle(k);
+          /* boards 11 and S17 (screens.js `chrome`, kit.css `.wc`): the window's own glyphs stand in their 32 by 28 cells 4 above the middle of
+             the chrome's end row, beside the 36 controls: the boards win (REPASS rule 7) */
+          if (k.matches('.k7-chrome__wc')) continue;
           if (kcs.alignSelf === 'flex-start' || kcs.alignSelf === 'flex-end' || kcs.alignSelf === 'baseline' || (/^(auto|normal)$/.test(kcs.alignSelf) && /baseline/.test(s.alignItems))) continue;
           const off = (kr.top + kr.bottom) / 2 - mid;
           if (Math.abs(off) > 1) { add('geometry.center', k, 'sits ' + r1(Math.abs(off)) + 'px ' + (off > 0 ? 'below' : 'above') + ' the centre of its row ' + describe(e)); }

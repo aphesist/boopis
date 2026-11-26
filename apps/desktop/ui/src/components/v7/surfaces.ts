@@ -3,7 +3,7 @@
 import type { BotLike } from '../bot-state';
 import { orbHtml } from '../orb';
 import { slabPath } from '../squircle-path';
-import { button, iconButton, kbd, segmented } from './controls';
+import { button, iconButton, kbd, keyNames, segmented } from './controls';
 import type { SegItem } from './controls';
 import { emptyState, sectionHead } from './blocks';
 import { inkOrb, kitStack, statusLine } from './inline';
@@ -35,11 +35,12 @@ export function searchHint(o: { shows?: U<typeof SEARCH_SHOWS[number]>; attrs?: 
   const s = o.shows ?? 'hint';
   if (s === 'off') return '';
   if (s === 'button') return iconButton({ icon: 'search', label: 'Search', keys: 'mod+K', attrs: o.attrs });
-  if (s === 'pill') return '<button class="k7-reset k7-search-pill"' + attrs({ type: 'button', 'aria-label': 'Search, ' + kbdLabel(), ...(o.attrs ?? {}) }) + '>' + glyph('search') + '<span class="k7-grow">Search</span> ' + kbd({ keys: 'mod+K', inPill: true }) + '</button>';
+  if (s === 'pill') return '<button class="k7-reset k7-search-pill"' + attrs({ type: 'button', 'aria-label': 'Search ' + kbdLabel(), ...(o.attrs ?? {}) }) + '>' + glyph('search') + '<span class="k7-grow">Search</span> ' + kbd({ keys: 'mod+K', inPill: true }) + '</button>';
   /* S5: the word and the key chips, no fill at rest; a 28 pill at --hover on hover and focus; its name contains its visible text */
-  return '<button class="k7-reset k7-search-hint"' + attrs({ type: 'button', 'aria-label': 'Search, ' + kbdLabel(), 'aria-keyshortcuts': 'Control+K', ...(o.attrs ?? {}) }) + '>Search ' + kbd({ keys: 'mod+K' }) + '</button>';   /* the space is a word break for the name (the button is a flex row: it takes no room) */
+  return '<button class="k7-reset k7-search-hint"' + attrs({ type: 'button', 'aria-label': 'Search ' + kbdLabel(), 'aria-keyshortcuts': 'Control+K', ...(o.attrs ?? {}) }) + '>Search ' + kbd({ keys: 'mod+K' }) + '</button>';   /* the space is a word break for the name (the button is a flex row: it takes no room) */
 }
-const kbdLabel = (): string => (/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘K' : 'ctrl K');
+/** the keys as they are drawn, so the visible words are in the control's name in their order (WCAG 2.5.3) */
+const kbdLabel = (): string => keyNames('mod+K').join(' ');
 export function windowChrome(o: ChromeOpts): string {
   const p = o.parts ?? {};
   return '<div class="k7-chrome"' + kitAttrs('WindowChrome', { 'data-rail': o.rail ?? 'a', role: 'toolbar', 'aria-label': 'Window', ...(o.attrs ?? {}) }) + '>' +

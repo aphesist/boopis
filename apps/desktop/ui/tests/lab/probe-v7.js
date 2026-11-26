@@ -166,6 +166,8 @@
     /* concentric.strict (R-corner-10). At rest a control with no shell of its own is skipped: it is checked when forced (hover) */
     if (want.has('concentric.strict')) for (const kid of all(scope, T.corner)) {
       if (!inScope(kid)) continue;
+      /* boards 11 and S17 (screens.js `chrome`): the key chips at the end of the search hint, as the boards draw them (REPASS rule 7) */
+      if (kid.matches('.k7-search-hint .k7-kbd')) continue;
       if (!o.forced && !shelled(kid)) continue;
       if (px(getComputedStyle(kid).borderTopRightRadius) === 0 && px(getComputedStyle(kid).borderTopLeftRadius) === 0) continue;
       let box = kid.parentElement;
