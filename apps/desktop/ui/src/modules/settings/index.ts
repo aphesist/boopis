@@ -11,6 +11,7 @@ import { logger } from '../../core/log';
 import { later } from '../chat/compose';
 import { settingsHost } from './host';
 import type { Page } from './page';
+import { closeDialog } from './page';
 import { generalPage } from './general';
 import { sessionsPage } from './sessions';
 import { botsPage } from './bots';
@@ -54,8 +55,7 @@ const pageHost = (): HTMLElement | null => dialog?.querySelector<HTMLElement>('.
 
 /** draw the dialog's frame into the shell's <dialog> (once; the nav is drawn again on every open, as pages come and go) */
 export function mountSettings(d: HTMLDialogElement): void {
-  dialog = d;
-  d.setAttribute('data-ui', 'v7');
+  dialog = d;   /* a v7 root in the app's theme: the shell's syncV7Theme writes its data-ui and data-theme (V7_SURFACES) */
   drawFrame();
   d.addEventListener('close', () => { d.removeAttribute('data-side'); });
 }
@@ -65,7 +65,7 @@ function drawFrame(): void {
   const frame = kit.dialog({ variant: 'large', title: 'Settings', body: '', nav, scrim: false, id: 'hx-settings-card', pageAttrs: { id: 'hx-settings-page', role: 'region', tabindex: '-1', 'aria-label': 'Settings' } });
   d.replaceChildren(frame);
   const card = d.querySelector<HTMLElement>('.k7-dialog') as HTMLElement;
-  card.querySelector('[data-dialog-close]')?.addEventListener('click', () => { d.close(); });
+  card.querySelector('[data-dialog-close]')?.addEventListener('click', () => { closeDialog(d); });
   const navEl = card.querySelector<HTMLElement>('.k7-dialog__nav') as HTMLElement;
   navEl.addEventListener('click', (e) => { const b = (e.target as Element).closest<HTMLElement>('[data-page]'); if (b) show(b.dataset['page'] ?? 'general'); });
   /* the nav is one list: up and down move through it and open the page (a press or Enter opens one too) */

@@ -8,6 +8,7 @@ import type { Bot } from '../../data';
 import { kit } from '@boopis/ui';
 import { fill, pageEl } from './page';
 import type { Page } from './page';
+import { closeDialog } from './page';
 import { buttonHTML, section } from './rows';
 
 /** a bot's line: its cap, governed or not, and how many kinds of action ask or are blocked (its tiers) */
@@ -34,7 +35,7 @@ export function botsPage(): Page {
     const b = (e.target as Element).closest<HTMLElement>('[data-bot-open]');
     if (!b) return;
     const id = b.dataset['botOpen'] ?? '';
-    (body.closest('dialog') as HTMLDialogElement | null)?.close();
+    closeDialog(body.closest('dialog'));
     emit('hx:bot-select', { id, from: 'settings' });
     setTimeout(() => { emit('hx:bot-settings', { open: true, from: 'settings' }); }, 0);
   });

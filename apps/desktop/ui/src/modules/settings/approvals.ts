@@ -4,7 +4,7 @@
      wrote); changes wait until one is chosen. The file unreadable: "Rules can't be read. Every action asks." (the spec's words);
    - "Drafts" first when "Always allow" kept any: each draft's words in a Field to finish, with what it lets through, then "Save rule"
      (it becomes active) and Discard;
-   - "Your bots ask you before": a row per ask rule (its Switch, its words, where it came from as a quiet word); Edit opens the row on its
+   - "Your approval rules, for every bot" (O-B07's head): a row per ask rule (its Switch, its words, where it came from as a quiet word); Edit opens the row on its
      words in a Field with "What this catches" (the kinds of action it is checked against) and Save; Remove takes it out. "Add a rule"
      opens an empty one; its kinds are the reviewer's reading of its words (`rules.kinds`). Exceptions that are active follow under
      "Bots go ahead without asking";
@@ -90,7 +90,7 @@ export function approvalsPage(rules: RulesSource | undefined = data().rules): Pa
     fill(body,
       outside +
       (drafts.length ? sectionOf('Drafts', drafts.map(draftHTML).join(''), { 'data-part': 'drafts', id: 'hx-set-drafts' }) : '') +
-      (asks.length ? rulesCard('Your bots ask you before', asks, 'asks', on + ' on') : sectionOf('Your bots ask you before', kit.html.emptyState({ text: 'Nothing asks. Bots do everything.' }), { 'data-part': 'asks' })) +
+      (asks.length ? rulesCard('Your approval rules, for every bot', asks, 'asks', on + ' on') : sectionOf('Your approval rules, for every bot', kit.html.emptyState({ text: 'Nothing asks. Bots do everything.' }), { 'data-part': 'asks' })) +
       (adding ? editor(null) : '<div class="hx-set__acts">' + buttonHTML('Add a rule', { attrs: { 'data-rule-add': '' } }) + '</div>') +
       rulesCard('Bots go ahead without asking', allowed, 'allowed') +
       '<p class="k7-page__note">Anything not on the list runs on its own. A check that fails holds the action.</p>' +

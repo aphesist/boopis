@@ -14,6 +14,6 @@ export default {
     long: stage(['long'], ({ root }) => { line(root, kit.kbd({ keys: 'mod+shift+alt+Backspace' })); }),
     /* 7a, Settings › Keyboard: a binding as the keymap writes it */
     'a binding: alternatives, a sequence, a hold': stage(['variant'], ({ root }) => { line(root, kit.kbdSpec('mod+G I | / | i')); line(root, kit.kbdSpec('hold:space | enter enter')); line(root, kit.kbdSpec('up | down | k | j')); }),
-    'a binding, long, in a narrow row': stage(['long', 'narrow'], ({ root }) => { line(root, kit.kbdSpec('left | right | up | down | home | end')); }, { width: 220 })
+    'a binding, long, in a narrow row': stage(['long'], ({ root }) => { line(root, kit.kbdSpec('left | right | up | down | home | end')); }, { width: 220 })
   }
 } satisfies Story;

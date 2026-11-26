@@ -41,7 +41,7 @@
 .k7-page { display: block; min-width: 0; background: var(--bg-2); color: var(--text); }
 .k7-page__column { width: var(--col-w); max-width: calc(100% - 2 * var(--sp-5)); margin: 0 auto; padding: var(--sp-5) 0; }
 .k7-page[data-variant="settings"] { padding: var(--sp-5) calc(var(--sp-6) - var(--sp-1)) calc(var(--sp-6) - var(--sp-1)) var(--sp-2); background: transparent; }   /* board 14's `.setbody`: 22 28 28 8, and its title 2 down */
-.k7-page[data-variant="settings"] > .k7-page__head { margin-bottom: calc(var(--sp-4) + var(--gap-hair)); }   /* `.set-title`: 18 under it */
+.k7-page[data-variant="settings"] > .k7-page__head { margin-bottom: calc(var(--sp-5) - var(--gap-hair)); }   /* `.set-title`: its 18 under it collapses into the first `.set-head`'s 22 (the head is not its first-of-type) */
 .k7-page[data-variant="settings"] > .k7-page__body { gap: calc(var(--sp-5) - var(--gap-hair)); }   /* `.set-head`: 22 over each section's head */
 .k7-page__head { display: flex; align-items: center; gap: var(--sp-4); margin-bottom: var(--sp-4); }
 .k7-page__title { flex: 1 1 auto; margin: 0; font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 500; color: var(--text); }
@@ -105,7 +105,14 @@
 .k7-dialog__navrow[aria-current="page"] { background: var(--current); }
 @media (hover: hover) and (pointer: fine) { .k7-dialog__navrow:not([aria-current]):hover { background: var(--hover); } }
 .k7-dialog__navrow:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
-.k7-dialog__page { flex: 1 1 auto; min-width: 0; overflow-y: auto; overscroll-behavior: contain;
+/* a narrow window (derived, no board draws one): the nav becomes a row over the page, scrolling sideways, its rows as wide as their words */
+@media (max-width: 719px) {
+  .k7-dialog[data-variant="large"] { flex-direction: column; }
+  .k7-dialog__nav { flex-direction: row; width: auto; overflow-x: auto; padding: var(--sp-3) calc(var(--ctl) + var(--pad-dialog)) 0 var(--sp-2); scrollbar-width: none; }
+  .k7-dialog__navrow { flex: none; }
+  .k7-dialog[data-variant="large"] .k7-page[data-variant="settings"] { padding-inline: var(--sp-4); }
+}
+.k7-dialog__page { flex: 1 1 auto; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
   /* board 14's `.setbody`: the page fades out over its last 28 as it scrolls under the dialog's foot */
   -webkit-mask-image: linear-gradient(#000 calc(100% - var(--sp-6) + var(--sp-1)), transparent); mask-image: linear-gradient(#000 calc(100% - var(--sp-6) + var(--sp-1)), transparent); }
 

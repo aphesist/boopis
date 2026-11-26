@@ -8,6 +8,7 @@ import { logger } from '../../core/log';
 import { settingsHost } from './host';
 import { pageEl } from './page';
 import type { Page } from './page';
+import { closeDialog } from './page';
 import { mountVoice } from './voice';
 
 const log = logger('settings-models');
@@ -19,14 +20,14 @@ export function modelsPage(): Page {
   body.append(models, speech);
   let tab: { refresh: () => Promise<void> } | null = null;
   const mounting = (settingsHost.desktop()
-    ? import('../../host/models-tab').then((m) => m.mountModels(models, m.realModelsDeps(() => { (el.closest('dialog') as HTMLDialogElement | null)?.close(); })))
+    ? import('../../host/models-tab').then((m) => m.mountModels(models, m.realModelsDeps(() => { closeDialog(el.closest('dialog')); })))
     : import('../../host/plan-view').then((m) => m.mountPlan(models))
   ).then((m) => { tab = m; }).catch((e: unknown) => { log.warn('the models tab did not mount', e); kit.notify('The models could not be read'); });
   const voice = mountVoice(speech);
   /** type into the provider search once it is there (it mounts on its own time) */
   const find = (name: string, tries = 40): void => {
     const q = models.querySelector<HTMLInputElement>('#hx-prov-q');
-    if (q) { q.value = name; q.dispatchEvent(new Event('input', { bubbles: true })); q.scrollIntoView({ block: 'center' }); return; }
+    if (q) { q.value = name; q.dispatchEvent(new Event('input', { bubbles: true })); q.scrollIntoView?.({ block: 'center' }); return; }
     if (tries > 0 && el.isConnected) setTimeout(() => { find(name, tries - 1); }, 100);
   };
   return {

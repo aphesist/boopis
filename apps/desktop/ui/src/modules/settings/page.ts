@@ -27,7 +27,14 @@ export function fill(host: HTMLElement, html: string): void {
 /** scroll a part into view in the dialog's page, and move the focus to it */
 export function revealPart(el: Element | null): void {
   if (!(el instanceof HTMLElement)) return;
-  el.scrollIntoView({ block: 'start' });
+  el.scrollIntoView?.({ block: 'start' });
   const f = el.matches('input, textarea, button, [tabindex]') ? el : el.querySelector<HTMLElement>('input, textarea, button, [tabindex="0"]');
   f?.focus({ preventScroll: true });
+}
+
+/** close the dialog a page is in (a <dialog>; where the platform has no close, its open attribute goes) */
+export function closeDialog(d: HTMLDialogElement | Element | null): void {
+  if (!(d instanceof HTMLElement)) return;
+  const dlg = d as HTMLDialogElement;
+  if (typeof dlg.close === 'function') dlg.close(); else { dlg.removeAttribute('open'); dlg.dispatchEvent(new Event('close')); }
 }

@@ -7,6 +7,8 @@ import { store } from '../../../data/store';
 import type { Todo } from '../../../data/types';
 import { board11, board12, board12Held, board17, boardDock, boardS17, boardS20, boardS23, boardS33, boardS36, boardS37, boardS38, boardS40, boardS41, engineStopped } from '../../board-fixtures';
 import type { DockBoard } from '../../board-fixtures';
+import { fakeRules, fakeSpeech, withSettings } from '../../settings-fixtures';
+import { saveChrome, saveLineHidden } from '../../../core/settings';
 
 const MOCK = { url: '/__boards/screen.html?s=bot11', note: 'the approved v7 board itself, drawn from its source' };
 
@@ -264,4 +266,49 @@ const dock: Story = {
   }
 };
 
-export default [bots, sessions, dock];
+/* Settings (boards 14 and S39): the dialog over the board's own screen. Board 14 is General over kai's chat (the rail, no dock); S39 is
+   Sessions over a session at work, its scope on "This project". What the boards draw and the app does not have (S39's rows but How
+   careful; 14's Under the composer words) is compared by the page's frame: the nav, the title and the scope, the sections' places */
+const settingsOver = (section: string, then?: (c: AppCtx) => Promise<void>) => async (c: AppCtx): Promise<void> => {
+  c.hx.emit('hx:open-settings', { section, from: 'lab' });
+  await c.wait(700);
+  if (then) { await then(c); await c.wait(500); }
+  (document.activeElement as HTMLElement | null)?.blur();   /* the boards draw the dialog at rest */
+};
+const settings: Story = {
+  id: 'boards/settings', title: 'Boards: Settings', area: 'settings', kind: 'page', covers: ['page:board-14', 'page:board-S39'], mock: { url: '/__boards/screen.html?s=settings', note: MOCK.note },
+  states: {
+    '14 settings, General': {
+      tags: ['typical', 'owner'],
+      note: 'board 14: the dialog over kai\'s chat: the nav with its icons (S39\'s order, Diagnostics last), General: Layout (Show the dock, When the sidebar collapses, Rail size, Show search, Search shows as), Under the composer (the line\'s items, checked), Appearance (Theme, Accent, Corners)',
+      app: {
+        provider: { sessions: 'none', patch: (p) => withSettings(board11(p), { rules: fakeRules(), speech: fakeSpeech() }) },
+        setup: async (c: AppCtx) => {
+          saveChrome({ rail: 'auto', search: true, searchAs: 'button' });
+          saveLineHidden(['model', 'cost']);
+          c.hx.setState({ tab: 'bots', left: 'rail', right: 'closed' });
+          await c.wait(300);
+          c.hx.emit('hx:bot-select', { id: 'kai', from: 'lab' });
+          await c.wait(700);
+          await settingsOver('general')(c);
+        }
+      }
+    } satisfies State,
+    'S39 settings, Sessions': {
+      tags: ['variant', 'owner'],
+      note: 'board S39 (its scope picked on S04: a Segmented in the page head): Sessions over a session at work, "This project" chosen',
+      app: {
+        provider: { patch: (p) => withSettings(boardS20(p), { rules: fakeRules(), speech: fakeSpeech() }) },
+        setup: async (c: AppCtx) => {
+          c.hx.setState({ tab: 'session', left: 'open', right: 'closed' });
+          await c.wait(300);
+          await c.click('[data-kit~="ListRow"][data-id="s17-dock"]');
+          await c.wait(900);
+          await settingsOver('sessions', async (cc) => { await cc.click('#hx-settings [data-scope] [data-value="project"]'); })(c);
+        }
+      }
+    } satisfies State
+  }
+};
+
+export default [bots, sessions, dock, settings];

@@ -8,6 +8,7 @@ import { logger } from '../../core/log';
 import { settingsHost } from './host';
 import { fill, pageEl } from './page';
 import type { Page } from './page';
+import { closeDialog } from './page';
 
 const log = logger('settings-connectors');
 
@@ -18,7 +19,7 @@ export function connectorsPage(): Page {
     fill(body, kit.html.emptyState({ text: 'Connectors are added in the desktop app. This page cannot reach boopis’s engine.' }));
     return { el };
   }
-  const openStore = (): void => { (el.closest('dialog') as HTMLDialogElement | null)?.close(); emit('hx:open-store', { screen: 'browse' }); };
+  const openStore = (): void => { closeDialog(el.closest('dialog')); emit('hx:open-store', { screen: 'browse' }); };
   const mounting = Promise.all([import('../../host/connectors'), import('../../host/connectors-bridge')])
     .then(([v, bridge]) => v.mountConnectors(body, { bridge: bridge.tauriConnectorsBridge(), bridgeFor: (bot) => bridge.tauriConnectorsBridge(bot), bots: () => data().bots.snapshot().bots.map((b) => ({ id: b.id, name: b.name })), toast: (t) => { kit.notify(t); }, openStore }))
     .then((m) => { view = m; })
