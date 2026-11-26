@@ -67,8 +67,8 @@ export async function mods(env, AXE) {
     check('mods', 'dismissing a toast shows the next at once, and the last has no count', t3.text === 'Context is at 78%' && t3.more === '' && t3.shown, t3);
 
     /* the theme card previews live; the dock stays black */
-    const pv = await page.evaluate(() => ({ previewing: __hx.theme.previewing(), brass: getComputedStyle(document.documentElement).getPropertyValue('--brass').trim(), card: document.querySelector('hx-card[data-mod-theme] .cd-lead')?.textContent, live: document.querySelector('hx-card[data-previewing] .cd-live')?.textContent, dock: getComputedStyle(document.querySelector('#hx-dock .k7-dock__slab path')).fill, saved: localStorage.getItem('hx.v6.theme') }));
-    check('mods', 'the theme card asks "Apply name\'s colours?" and the whole app previews them, "Previewing" showing', pv.previewing && pv.brass === '#b8a4f0' && /Apply test-runner.s colours\?/.test(pv.card) && pv.live === 'Previewing', pv);
+    const pv = await page.evaluate(() => ({ previewing: __hx.theme.previewing(), brass: getComputedStyle(document.documentElement).getPropertyValue('--brass').trim(), card: document.querySelector('hx-card[data-mod-theme] .k7-ask__ask')?.textContent, live: document.querySelector('hx-card[data-previewing] .k7-ask__head .k7-word')?.textContent, dock: getComputedStyle(document.querySelector('#hx-dock .k7-dock__slab path')).fill, saved: localStorage.getItem('hx.v6.theme') }));
+    check('mods', 'the theme card asks "Apply name\'s colours?" and the whole app previews them, "Previewing" showing', pv.previewing && pv.brass === '#b8a4f0' && /Apply test-runner.s colours\?/.test(pv.card) && pv.live === 'previewing', pv);
     check('mods', 'a preview is never saved, and the dock stays pitch black in it', !/b8a4f0/.test(pv.saved ?? '') && pv.dock === 'rgb(0, 0, 0)', pv);
 
     /* continuous corners: only leaf controls are clipped, never a container of a mod's drawing */
@@ -99,13 +99,14 @@ export async function mods(env, AXE) {
     const waits0 = await page.evaluate(() => __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length);
     await page.click('.mod-pane .ui-btn:has-text("Ask which")'); await page.waitForTimeout(1200);
     const ask = await page.evaluate(() => ({
-      inline: [...document.querySelectorAll('.ss-col hx-card[data-kind="form"]')].filter((c) => c.querySelector('.cd-by[data-origin="mod"]')).map((c) => c.querySelector('.cd-lead')?.textContent),
-      by: document.querySelector('.ss-col hx-card[data-kind="form"] .cd-by[data-origin="mod"]')?.textContent.replace(/\s+/g, ' ').trim(),
-      waits: __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length, dockCards: [...document.querySelectorAll('#hx-dock hx-card')].filter((c) => c.querySelector('.cd-by[data-origin="mod"], .cd-mini__who')).length
+      inline: [...document.querySelectorAll('.ss-col hx-card[data-kind="form"]')].filter((c) => c.querySelector('[data-kit~="AskCard"][data-origin="mod"]')).map((c) => c.querySelector('.k7-ask__ask')?.textContent),
+      by: document.querySelector('.ss-col hx-card[data-kind="form"] [data-kit~="AskCard"][data-origin="mod"] .k7-ask__who')?.textContent.replace(/\s+/g, ' ').trim(),
+      glyph: !!document.querySelector('.ss-col hx-card[data-kind="form"] [data-kit~="AskCard"][data-origin="mod"] .k7-ask__head > .k7-ic'),
+      waits: __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length, dockCards: [...document.querySelectorAll('#hx-dock hx-card')].filter((c) => c.querySelector('[data-origin="mod"]')).length
     }));
-    check('mods', 'the mod\'s question is a choice form with its glyph and "test-runner mod", in the conversation', ask.inline.includes('Which tests should I re-run?') && /test-runner/.test(ask.by ?? ''), ask);
+    check('mods', 'the mod\'s question is a choice form with its glyph and "test-runner mod", in the conversation', ask.inline.includes('Which tests should I re-run?') && /test-runner mod asks/.test(ask.by ?? '') && ask.glyph, ask);
     check('mods', 'and it waits on you (one more wait in the provider\'s own count, not the DOM)', ask.waits === waits0 + 1, { waits0, waits: ask.waits });
-    const card = await page.$('.ss-col hx-card[data-kind="form"]:has(.cd-by[data-origin="mod"]) .cd-opt');
+    const card = await page.$('.ss-col hx-card[data-kind="form"]:has([data-origin="mod"]) :is(.k7-orow, .k7-seg__item, .k7-ask__choice, .k7-ask__answers .k7-chip:not([data-action]))');
     if (card) { await card.click(); await page.keyboard.press('Enter'); }
     await page.waitForTimeout(1600);
     const done = await page.evaluate(() => ({ sub: window.__hxReplay.requests.filter((r) => r.method === 'plugin.boopis.form.submit').map((r) => r.params.values), waits: __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length }));
@@ -122,13 +123,12 @@ export async function mods(env, AXE) {
   await s.safe('mods', async () => {
     const page = await s.fresh({ q: URL, settle: 1500 });
     await send(page);
-    /* Keep commits; Esc (Later) restores; opening it again previews it again; another theme chosen ends it without bringing the old one back */
+    /* Keep commits; Later restores (Esc is Reject's key since 6d); opening it again previews it again; another theme chosen ends it without bringing the old one back */
     const card = 'hx-card[data-mod-theme]';
     const st = () => page.evaluate(() => ({ previewing: __hx.theme.previewing(), brass: getComputedStyle(document.documentElement).getPropertyValue('--brass').trim(), preset: document.documentElement.dataset.hxPreset }));
-    await page.focus(card + ' [data-action="submit"]');
-    await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+    await page.click(card + ' [data-action="defer"]'); await page.waitForTimeout(300);
     const later = await st();
-    check('mods', 'Esc on the card (Later) restores the theme, and the card says it stays as it was', !later.previewing && later.brass !== '#b8a4f0' && /Later\. The theme stays as it was/.test(await text(page, card)), later);
+    check('mods', 'Later on the card restores the theme, and the card says it stays as it was', !later.previewing && later.brass !== '#b8a4f0' && /Later\. The theme stays as it was/.test(await text(page, card)), later);
     await page.click(card + ' [data-action="reopen"]'); await page.waitForTimeout(300);
     check('mods', 'opening it again previews it again', (await st()).previewing && (await st()).brass === '#b8a4f0');
     await page.evaluate(() => __hx.theme.preset('graphite')); await page.waitForTimeout(200);
@@ -166,9 +166,9 @@ export async function mods(env, AXE) {
     const card = 'hx-card[data-mod-theme="low-light"]';
     await page.evaluate((c) => document.querySelector(c)?.scrollIntoView(), card);
     await page.waitForTimeout(300);
-    const css = () => page.evaluate(() => { const g = (t) => document.documentElement.style.getPropertyValue(t); return { previewing: __hx.theme.previewing(), text: g('--text'), quiet: g('--text-quiet'), brass: g('--brass'), ground: g('--bg-2'), say: document.querySelector('hx-card[data-mod-theme="low-light"] .cd-text')?.textContent ?? '', live: document.querySelector('hx-card[data-previewing] .cd-live')?.textContent ?? '', failing: __hx.theme.contrast().filter((c) => c.scope === 'app' && c.min >= 4.5 && !c.pass).map((c) => c.label + ' ' + c.ratio) }; });
+    const css = () => page.evaluate(() => { const g = (t) => document.documentElement.style.getPropertyValue(t); return { previewing: __hx.theme.previewing(), text: g('--text'), quiet: g('--text-quiet'), brass: g('--brass'), ground: g('--bg-2'), say: document.querySelector('hx-card[data-mod-theme="low-light"] .k7-ask__sub')?.textContent ?? '', live: document.querySelector('hx-card[data-previewing] .k7-ask__head .k7-word')?.textContent ?? '', failing: __hx.theme.contrast().filter((c) => c.scope === 'app' && c.min >= 4.5 && !c.pass).map((c) => c.label + ' ' + c.ratio) }; });
     const pv = await css();
-    check('mods', 'a colour that would make text hard to read is not applied: the theme\'s own text stays, and the rest applies', pv.previewing && pv.text === '' && pv.quiet === '' && pv.brass === '#c8e0ff' && pv.ground === '#201e31' && pv.live === 'Previewing', pv);
+    check('mods', 'a colour that would make text hard to read is not applied: the theme\'s own text stays, and the rest applies', pv.previewing && pv.text === '' && pv.quiet === '' && pv.brass === '#c8e0ff' && pv.ground === '#201e31' && pv.live === 'previewing', pv);
     check('mods', 'the card lists what it skipped, in plain words', /Skipped 2 colours that would make text hard to read: text on surface, quiet text\./.test(pv.say), pv.say);
     check('mods', 'in the real cascade every pair that carries text still holds while it previews', pv.failing.length === 0, pv.failing);
     await page.click(card + ' [data-action="submit"]'); await page.waitForTimeout(400);
