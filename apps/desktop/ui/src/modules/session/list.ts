@@ -7,7 +7,7 @@
    The board's hover actions (S30: Snooze, Settle) are that board's; until then a row's menu (the context menu, or shift+F10) holds
    Rename, Fork and Settle. */
 import { emit } from '../../core/bus';
-import { frag } from '../../core/dom';
+import { esc, frag } from '../../core/dom';
 import { kit, ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { SessionSummary } from '../../data';
@@ -28,9 +28,13 @@ export function mountList(root: HTMLElement): void {
       variant: 'session', title: s.title, current: o.current, ...(s.model ? { model: s.model } : {}), ...(s.branch ? { branch: s.branch } : {}),
       ...(need ? { needs: true, count: need } : s.running && !o.settled ? { working: true } : s.when ? { time: s.when } : {}),
       attrs: { 'data-id': s.id, 'data-settled': o.settled ? '' : null, 'data-hx-focus': o.current ? 'list' : null,
-        'aria-label': s.title + (s.branch ? ', ' + s.branch : '') + (need ? ', needs you: ' + need.toLowerCase() : '') + (s.running ? ', working' : '') + (o.settled ? ', settled' : '') }
+        /* the name holds the row's visible words (WCAG 2.5.3): its title, its branch, then the count or when it ran, as drawn */
+        'aria-label': s.title + (s.branch ? ', ' + s.branch : '') + (need ? ', needs you: ' + need.toLowerCase() : s.running && !o.settled ? ', working' : s.when ? ', ' + s.when : '') + (o.settled ? ', settled' : '') }
     });
   }
+  /* a section's rows are a listbox of their own, named by the section; its head sits outside it (a listbox holds options only), as the
+     Bots list's do. The panel itself stays the Sessions tab's (index.html: a tabpanel) */
+  const listOf = (title: string, rowsHTML: string): string => '<div class="k7-list" role="listbox" aria-label="' + esc(title) + ' sessions">' + rowsHTML + '</div>';
   const rows = (): HTMLElement[] => [...root.querySelectorAll<HTMLElement>('[data-kit~="ListRow"]')];
   function rove(r: HTMLElement | null | undefined): void { rows().forEach((x) => { x.tabIndex = x === r ? 0 : -1; }); }
   function draw(): void {
@@ -43,13 +47,12 @@ export function mountList(root: HTMLElement): void {
     let out = '';
     for (const sec of SECTIONS) {
       const of = list.filter((s) => sectionOf(s) === sec);
-      if (of.length) out += kit.html.sectionHead({ title: SECTION_TITLES[sec], count: String(of.length) }) + of.map((s) => rowHTML(s, { current: s.id === cur, settled: false })).join('');
+      if (of.length) out += kit.html.sectionHead({ title: SECTION_TITLES[sec], count: String(of.length) }) + listOf(SECTION_TITLES[sec], of.map((s) => rowHTML(s, { current: s.id === cur, settled: false })).join(''));
     }
     if (settled.length) {
-      out += kit.html.sectionHead({ title: 'Settled', count: String(settled.length), disclosure: true, collapsed: !settledOpen, attrs: { 'data-fold': '' } }) + (settledOpen ? settled.map((s) => rowHTML(s, { current: false, settled: true })).join('') : '');
+      out += kit.html.sectionHead({ title: 'Settled', count: String(settled.length), disclosure: true, collapsed: !settledOpen, attrs: { 'data-fold': '' } }) + (settledOpen ? listOf('Settled', settled.map((s) => rowHTML(s, { current: false, settled: true })).join('')) : '');
     }
     if (!list.length && !settled.length) out = kit.html.emptyState({ text: 'No sessions yet. Start one with New session.' });
-    root.setAttribute('role', 'listbox'); root.setAttribute('aria-label', 'Sessions');
     root.innerHTML = out;
     if (!rows().some((r) => r.tabIndex === 0)) rove(rows()[0]);
     if (renaming) startRename(renaming);

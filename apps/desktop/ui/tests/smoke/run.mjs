@@ -39,7 +39,7 @@ if (want('themes')) {
   const s = scenario(env);
   for (const preset of ['catalog', 'graphite', 'bone', 'typewriter']) {
     const page = await s.fresh({ q: 'preset=' + preset });
-    const r = await page.evaluate(() => ({ preset: document.documentElement.dataset.hxPreset, scheme: __hx.theme.scheme(), contrast: __hx.theme.contrast().filter((c) => !c.pass).map((c) => c.label + ' ' + c.ratio), dockBlack: getComputedStyle(document.querySelector('#hx-dock .dk-shape path')).fill }));
+    const r = await page.evaluate(() => ({ preset: document.documentElement.dataset.hxPreset, scheme: __hx.theme.scheme(), contrast: __hx.theme.contrast().filter((c) => !c.pass).map((c) => c.label + ' ' + c.ratio), dockBlack: getComputedStyle(document.querySelector('#hx-dock .k7-dock__slab path')).fill }));
     check('themes', `${preset}: applies, every contrast pair holds, the dock stays black`, r.preset === preset && r.scheme === (preset === 'bone' ? 'light' : 'dark') && r.contrast.length === 0 && r.dockBlack === 'rgb(0, 0, 0)' && page.errors.length === 0, r);
   }
   const page = await s.fresh();
@@ -66,7 +66,8 @@ if (want('axe')) {
   const s = scenario(env);
   const STATES = [
     ['session', {}, null], ['bots', {}, (p) => p.keyboard.press('Alt+2')], ['details panel', {}, (p) => p.keyboard.press('Control+i')],
-    ['bots settings sheet', {}, async (p) => { await p.keyboard.press('Alt+2'); await p.waitForTimeout(500); await p.keyboard.press('Control+i'); }],
+    ['bot details', {}, async (p) => { await p.keyboard.press('Alt+2'); await p.waitForTimeout(500); await p.keyboard.press('Control+i'); }],
+    ['bots settings sheet', {}, async (p) => { await p.keyboard.press('Alt+2'); await p.waitForTimeout(500); await p.evaluate(() => __hx.emit('hx:bot-settings', { open: true, from: 'keyboard' })); await p.waitForFunction(() => { const x = document.querySelector('.bt-sheet'); return !!x && !x.hidden; }); }],
     ['bots archived group expanded', { q: 'fixture=outside' }, async (p) => { await p.keyboard.press('Alt+2'); await p.waitForTimeout(500); await p.click('.bt-rows [data-kit~="ListRow"][data-value="sage"]'); await p.click('.bt-archived .k7-shead__btn'); await p.locator('.bt-archived [data-kit~="ListRow"]').first().hover(); }],
     ['bots rail with the archived group', {}, async (p) => { await p.keyboard.press('Alt+2'); await p.evaluate(() => __hx.setState({ left: 'rail' })); }],
     ['palette', {}, (p) => p.keyboard.press('Control+k')], ['settings', {}, (p) => p.keyboard.press('Control+Comma')],
@@ -74,10 +75,11 @@ if (want('axe')) {
     ['appearance', {}, (p) => p.keyboard.press('Control+Shift+Comma')], ['keys sheet', {}, (p) => p.keyboard.press('Control+Slash')],
     ['store', {}, (p) => p.keyboard.press('Control+Shift+S')],
     ['store installed', {}, async (p) => { await p.keyboard.press('Control+Shift+S'); await p.waitForSelector('#hx-store-body [role=tab]'); await p.getByRole('tab', { name: 'Installed' }).click(); }],
-    ['account menu', {}, (p) => p.click('#hx-btn-account')], ['model picker', {}, async (p) => { await p.keyboard.press('Control+g'); await p.keyboard.press('i'); await p.waitForTimeout(200); await p.keyboard.press('Alt+m'); }],
+    ['account menu', {}, async (p) => { await p.keyboard.press('Alt+2'); await p.waitForTimeout(500); await p.click('#hx-btn-account'); }], ['model picker', {}, async (p) => { await p.keyboard.press('Control+g'); await p.keyboard.press('i'); await p.waitForTimeout(200); await p.keyboard.press('Alt+m'); }],
     ['blank popover', {}, async (p) => { await p.keyboard.press('Control+g'); await p.keyboard.press('m'); await p.waitForTimeout(200); await p.keyboard.press('b'); }],
     ['dock with no bots', { q: 'fixture=none' }, null],
-    ['dock expanded + session', {}, async (p) => { await p.keyboard.press('Control+g'); await p.keyboard.press('d'); await p.waitForTimeout(300); await p.keyboard.press('Space'); }],
+    ['dock: a bot\'s card open over the session', {}, async (p) => { await p.keyboard.press('Control+g'); await p.keyboard.press('d'); await p.waitForTimeout(300); await p.keyboard.press('Space'); }],
+    ['dock: the asks open', {}, (p) => p.evaluate(() => __hx.dock().openAsks())],
     ['rail', {}, (p) => p.evaluate(() => __hx.setState({ left: 'rail' }))],
     ['bone (light)', { q: 'preset=bone' }, null], ['graphite', { q: 'preset=graphite' }, null], ['typewriter', { q: 'preset=typewriter' }, null],
     ['phone 390', { w: 390, h: 844 }, null]

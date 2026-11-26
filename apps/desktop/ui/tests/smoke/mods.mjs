@@ -2,7 +2,7 @@
    hx worker, their events captured as the plugin emitted them and spliced into a recorded session). Checks the owner's decisions
    of 19 November 2026 in a real engine: the surfaces, panes in the details panel from 1200px and inline below it, dot progress in
    the band, the composer rising 22px by a transform, one toast at a time with "+N", the theme card with its live preview and
-   every way the preview ends, a mod's question in the conversation and in the dock, and the refusals. */
+   every way the preview ends, a mod's question in the conversation, and the refusals. */
 import { check, scenario } from './harness.mjs';
 
 const URL = 'provider=live-replay&frames=mods';
@@ -39,7 +39,8 @@ export async function mods(env, AXE) {
     const st = await page.evaluate(() => ({
       status: [...document.querySelectorAll('.ss-mods--status .mod-status__i')].map((n) => n.textContent),
       band: document.querySelector('.ss-mods--band .mod-row')?.textContent ?? '',
-      bandInset: getComputedStyle(document.querySelector('.ss-mods--band .mod-band') ?? document.body).boxShadow,
+      /* the band's hairline: its inset shadow, or, once its corner is drawn (data-sq-on), the drawn edge in the same ink */
+      bandInset: (() => { const b = document.querySelector('.ss-mods--band .mod-band'); if (!b) return 'none'; const sh = getComputedStyle(b).boxShadow; if (sh !== 'none') return sh; const e = getComputedStyle(b, '::after'); return b.hasAttribute('data-sq-on') && e.content !== 'none' && !/rgba\(0, 0, 0, 0\)|transparent/.test(e.backgroundColor) ? 'edge ' + e.backgroundColor : 'none'; })(),
       toast: document.querySelector('.ui-toast .mod-toast')?.textContent ?? '', toastMore: document.querySelector('.ui-toast .mod-toast__more')?.textContent ?? '',
       logs: [...document.querySelectorAll('[data-mod-log] .mv-by__n')].map((n) => n.textContent),
       glyphs: document.querySelectorAll('[data-mod-log] svg.mv-by__g').length
@@ -51,7 +52,7 @@ export async function mods(env, AXE) {
 
     /* the composer rose 22px: the layout moved by the status line's height and the move was a transform, never a layout animation */
     const top1 = await composerTop(page);
-    const rise = await page.evaluate(() => window.__anims.filter((a) => a.frames.some((f) => 'transform' in f) && /ui-composer|ss-mods--band/.test(a.cls || '')));
+    const rise = await page.evaluate(() => window.__anims.filter((a) => a.frames.some((f) => 'transform' in f) && /ui-composer|ss-composer__slot|ss-mods--band/.test(a.cls || '')));
     const room1 = await dockSpace(page);
     check('mods', 'the status line lifts the composer 22px (the room the dock now keeps is its own)', Math.abs((top0 - top1) - (room1 - room0) - 22) <= 1, { top0, top1, room0, room1 });
     check('mods', 'the rise is a FLIP on transform over --dur-3 (translateY(22px) to 0), with no top, bottom or height', rise.length >= 1 && rise.every((a) => a.frames.every((f) => Object.keys(f).every((k) => k === 'transform' || k === 'offset')) && a.frames[0].transform === 'translateY(22px)' && a.frames[1].transform === 'translateY(0)') && rise[0].duration > 100, rise);
@@ -66,7 +67,7 @@ export async function mods(env, AXE) {
     check('mods', 'dismissing a toast shows the next at once, and the last has no count', t3.text === 'Context is at 78%' && t3.more === '' && t3.shown, t3);
 
     /* the theme card previews live; the dock stays black */
-    const pv = await page.evaluate(() => ({ previewing: __hx.theme.previewing(), brass: getComputedStyle(document.documentElement).getPropertyValue('--brass').trim(), card: document.querySelector('hx-card[data-mod-theme] .cd-lead')?.textContent, live: document.querySelector('hx-card[data-previewing] .cd-live')?.textContent, dock: getComputedStyle(document.querySelector('#hx-dock .dk-shape path')).fill, saved: localStorage.getItem('hx.v6.theme') }));
+    const pv = await page.evaluate(() => ({ previewing: __hx.theme.previewing(), brass: getComputedStyle(document.documentElement).getPropertyValue('--brass').trim(), card: document.querySelector('hx-card[data-mod-theme] .cd-lead')?.textContent, live: document.querySelector('hx-card[data-previewing] .cd-live')?.textContent, dock: getComputedStyle(document.querySelector('#hx-dock .k7-dock__slab path')).fill, saved: localStorage.getItem('hx.v6.theme') }));
     check('mods', 'the theme card asks "Apply name\'s colours?" and the whole app previews them, "Previewing" showing', pv.previewing && pv.brass === '#b8a4f0' && /Apply test-runner.s colours\?/.test(pv.card) && pv.live === 'Previewing', pv);
     check('mods', 'a preview is never saved, and the dock stays pitch black in it', !/b8a4f0/.test(pv.saved ?? '') && pv.dock === 'rgb(0, 0, 0)', pv);
 
@@ -94,21 +95,21 @@ export async function mods(env, AXE) {
     const sel = await page.evaluate(() => window.__hxReplay.requests.filter((r) => r.method === 'plugin.boopis.mod.select').map((r) => r.params.value));
     check('mods', 'a choice in a Select goes back as ui.select with its value', sel.join() === 'failing', sel);
 
-    /* a mod's question: a form with the mod as its origin, in the conversation and in the dock's own queue */
-    const waits0 = await page.evaluate(() => __hx.dock().state.waits);
+    /* a mod's question: a form with the mod as its origin, in the conversation and among what waits on you (the v7 dock carries your bots' approvals only) */
+    const waits0 = await page.evaluate(() => __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length);
     await page.click('.mod-pane .ui-btn:has-text("Ask which")'); await page.waitForTimeout(1200);
     const ask = await page.evaluate(() => ({
       inline: [...document.querySelectorAll('.ss-col hx-card[data-kind="form"]')].filter((c) => c.querySelector('.cd-by[data-origin="mod"]')).map((c) => c.querySelector('.cd-lead')?.textContent),
       by: document.querySelector('.ss-col hx-card[data-kind="form"] .cd-by[data-origin="mod"]')?.textContent.replace(/\s+/g, ' ').trim(),
-      waits: __hx.dock().state.waits, dockCards: [...document.querySelectorAll('#hx-dock hx-card')].filter((c) => c.querySelector('.cd-by[data-origin="mod"], .cd-mini__who')).length
+      waits: __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length, dockCards: [...document.querySelectorAll('#hx-dock hx-card')].filter((c) => c.querySelector('.cd-by[data-origin="mod"], .cd-mini__who')).length
     }));
     check('mods', 'the mod\'s question is a choice form with its glyph and "test-runner mod", in the conversation', ask.inline.includes('Which tests should I re-run?') && /test-runner/.test(ask.by ?? ''), ask);
-    check('mods', 'and the dock\'s own model counts it (one more wait), not the DOM', ask.waits === waits0 + 1, { waits0, waits: ask.waits });
+    check('mods', 'and it waits on you (one more wait in the provider\'s own count, not the DOM)', ask.waits === waits0 + 1, { waits0, waits: ask.waits });
     const card = await page.$('.ss-col hx-card[data-kind="form"]:has(.cd-by[data-origin="mod"]) .cd-opt');
     if (card) { await card.click(); await page.keyboard.press('Enter'); }
     await page.waitForTimeout(1600);
-    const done = await page.evaluate(() => ({ sub: window.__hxReplay.requests.filter((r) => r.method === 'plugin.boopis.form.submit').map((r) => r.params.values), waits: __hx.dock().state.waits }));
-    check('mods', 'answering it sends form.submit through the plugin and the dock drops it', done.sub.length === 1 && done.waits === waits0, done);
+    const done = await page.evaluate(() => ({ sub: window.__hxReplay.requests.filter((r) => r.method === 'plugin.boopis.form.submit').map((r) => r.params.values), waits: __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length }));
+    check('mods', 'answering it sends form.submit through the plugin and it waits no more', done.sub.length === 1 && done.waits === waits0, done);
 
     /* Reject, and every way a preview ends */
     await page.evaluate(() => document.querySelector('hx-card[data-mod-theme] [data-action="cancel"]')?.scrollIntoView());

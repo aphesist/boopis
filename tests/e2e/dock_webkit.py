@@ -1,43 +1,44 @@
 """The dock in a real WebKitGTK: its content never disappears while it moves.
 
-    python3 tests/e2e/dock_webkit.py [--dist apps/desktop/ui/dist-e2e] [--phases core,presence,arrange,pages]
-                                     [--frames DIR]
+    python3 tests/e2e/dock_webkit.py [--dist apps/desktop/ui/dist-e2e] [--phases core,panel,presence] [--frames DIR]
 
-The owner's recording ("dock still has the same flickering problem") shows the dock's content (the orbs, the "+", the
-options row) gone, with only the black slab left, for as long as the pointer is over the dock and when a session closes.
-Chromium never showed it: the stage the content sits in is a 0x0 anchor that was clipped with `clip-path: polygon(...)`
-while the slab moved, and WebKitGTK drew nothing inside it. Nothing in the DOM was wrong, so only pixels can tell, in
-the engine Tauri really uses.
+The owner's recording ("dock still has the same flickering problem") shows the dock's content (the orbs and what stood
+beside them) gone, with only the black slab left, for as long as the pointer is over the dock and when a session closes.
+Chromium never showed it: the stage the content sat in was a 0x0 anchor clipped with `clip-path: polygon(...)` while the
+slab moved, and WebKitGTK drew nothing inside it. Nothing in the DOM was wrong, so only pixels can tell, in the engine
+Tauri really uses. The v7 dock (DESIGN-SYSTEM.md v7 21.4: the row of your bots, and one open size for a bot's card or
+the asks) keeps the rules that fault taught (`modules/dock/index.ts`, `clip.guard.test.ts`): nothing is clipped with
+`clip` or `clip-path`, nothing is centred by a -50% translation, and a live orb is made once, in place and never
+hidden with `display: none`.
 
 It serves the UI's e2e build (`pnpm exec vite build --mode e2e`, the mock provider), starts WebKitWebDriver under Xvfb,
-and drives the dock with real pointer actions. The springs are slowed ten times (`__hx.dock().timeScale(0.1)`), so a
-motion that takes 300 ms takes 3 s and a snapshot every 300 ms or so sees all of it. In every snapshot where the slab is
-tall enough to hold content, the slab's body must hold lit pixels (the dock is #000, the content is not).
+and drives the dock with real pointer actions. The dock's motion is slowed ten times (`__hx.dock().timeScale(0.1)`), so
+a motion that takes 200 ms takes 2 s and a snapshot every 300 ms or so sees all of it. In every snapshot where the slab
+shows enough of itself to hold content, the slab's body must hold lit pixels (the dock is #000, the content is not).
 
 The bots' orbs get two more checks. An orb is an <orb-avatar> that draws on an OffscreenCanvas a worker owns, and
 WebKitGTK drops the picture of such a canvas that is taken out of the page and put back, until the worker's next commit.
-The dock used to move each live orb into the slot of the view showing, so its orbs blinked empty whenever they changed
-place. Now every live orb stays connected in one layer and follows its slot (modules/dock/layer.ts), so:
-- no live orb may be taken out of the page while the dock moves (a MutationObserver in the page: deterministic, and it
+So:
+- no live orb may be taken out of the row while the dock moves (a MutationObserver in the page: deterministic, and it
   fails on a build that moves the orbs, whatever the machine's timing);
 - in every snapshot, each orb that is fully opaque, wholly inside the slab and big enough to judge must hold lit pixels
   over its centre (the picture itself, where the blank lasts long enough for a snapshot to see it).
 
 Phases:
 
-- core (the default bots): the pointer lands on the dock (it lifts), moves along it, leaves; a bot's session opens
-  and closes; the dock expands, collapses, minimises and comes back (twice: every orb changes place each time), and
-  changes page and back; a bot is made;
-- presence (a first install, `?fixture=fresh`): no dock at all; the first bot rises in; on another first install the
-  first session starts and the dock rises with the run alone; a bot is then made and the dock grows to take the roster;
-- arrange: the "Dock pages" panel opens and closes. The owner's recording of 0.1.9 shows it losing its right half
-  (Done, the end of its line, the tiles from "Needs you") for the last 300 ms of the opening, with the slab still
-  whole: WebKitGTK repainted a page centred with translateX(-50%) inside the clipped stage with the clip taken before
-  the transform, so only what lay left of the centre line was painted again. So in every snapshot of this phase, the
-  panel's head and its tiles' names must hold content right of the centre line wherever they hold some left of it;
-- pages: the dock's other pages, in the transitions the owner's second recording of 0.1.9 shows losing their right
-  half the same way ("Nothing needs you", "Nothing scheduled", Run): the slab growing from the orb row into a page, a
-  page expanding and collapsing, and a switch between two pages. The view each shows is judged like the arrange panel.
+- core (the default bots): the pointer lands on the dock (a bot grows, the row's end names it), moves along it, leaves;
+  a bot's card opens, another takes its place, it closes; the asks open and fold (twice: the slab goes between its two
+  sizes each time); a bot is made;
+- panel: what the open dock holds (a bot's card, then the asks) keeps both its halves while the slab grows and while it
+  folds. 0.1.9 lost the right half of a panel for the last 300 ms of its opening, with the slab still whole: WebKitGTK
+  repainted content centred with translateX(-50%) inside a clipped stage with the clip taken before the transform, so
+  only what lay left of the centre line was painted again. So in every snapshot of this phase, the panel must hold
+  content right of the dock's centre line wherever it holds some left of it;
+- presence (a first install, `?fixture=fresh`): no dock at all; a session alone draws none; the first bot makes it rise
+  in; a second bot joins the row in place.
+
+Gone with the v7 dock, and with them their phases: the expanded roster, the minimised pill, the pages (Run, Needs you,
+Scheduled) and the "Dock pages" arrange panel.
 
 Needs `xvfb-run`, `WebKitWebDriver` (Debian and Ubuntu: `webkit2gtk-driver`) and Pillow. Exit 0 when every phase
 holds, 1 when content went missing or a phase saw too few frames to say, 3 when a prerequisite is missing.
@@ -68,12 +69,11 @@ from typing import Any
 HERE = Path(__file__).parent
 DEFAULT_DIST = HERE.parent.parent / "apps" / "desktop" / "ui" / "dist-e2e"
 SLOW = 0.1  # the springs' time scale
-SLOWEST = 0.02  # the slowest time scale the dock takes (`timeScale` clamps to it)
 MIN_SLAB = 40  # px: a slab shorter than this has no room to judge
 MIN_LIT = 60  # pixels in the slab's body brighter than the slab itself: any real content has hundreds
 MIN_JUDGED = 3  # snapshots a phase must judge, or it saw too little to say
-FLARE = 14  # px: the slab's concave flares, which its box includes on each side
-MIN_ORB = 16  # px: an orb smaller than this (the minimised pill's 10px ones) has no centre to judge
+FLARE = 30  # px: the slab's concave flares, which its box includes on each side
+MIN_ORB = 16  # px: an orb smaller than this has no centre to judge
 ORB_LIT = 3  # luminance above which a pixel of an orb is drawn: the slab is 0, and the darkest orb is well above 3
 MIN_ORB_LIT = 12  # pixels drawn in an orb's centre (a drawn orb has hundreds: its body, its eyes)
 MIN_ORB_SNAPS = 3  # orb judgements a phase must make, or it saw too few orbs to say
@@ -83,13 +83,10 @@ ORB_MOVED = (
 LIT = 40  # luminance above which a pixel is content (the slab is 0; the page behind it is below 30)
 MIN_HALF = 150  # lit pixels in a box's left half, at its fullest, before its halves are judged (the head: ~1000)
 HALF_RATIO = 0.25  # the share of its fullest right half a box's right must hold wherever its left holds half its own
-TILE_NAMES = 30  # px: the top of the tiles' row, where their names are (the bots row's orbs never reach it)
-# the arrange panel's boxes that hold content on both sides of the centre line, and how much of each counts from its top
-# (0: all of it)
-PANEL = ((".dk-v-edit .dk-edit-head", 0), (".dk-v-edit .dk-tiles", TILE_NAMES))
-# the view the current page shows (a page that slides in or out moves between a snapshot's two reads: not judged then)
-VIEW = ((".dk-page:not([hidden]):not(.is-out) > .dk-view:not([hidden]):not(.is-leaving)", 0),)
+# the open dock's panel (a bot's card, the asks): it holds content on both sides of the dock's centre line
+PANEL = ((".k7-dock__panel:not([inert])", 0),)
 NEW_BOT = "{name: 'orbit', role: 'watches the build', shape: 'star', color: '#e8b04a', eyes: 'pill'}"
+NEW_BOT_2 = "{name: 'comet', role: 'reads the logs', shape: 'circle', color: '#4ac6a0', eyes: 'pill'}"
 SEND = "{governed: true, smart: true, model: 'sonnet 5.5', assume: []}"
 
 
@@ -185,16 +182,18 @@ class Page:
         self.run(
             "window.__orbsOut = [];"
             "new MutationObserver((ms) => { for (const m of ms) for (const n of m.removedNodes)"
-            " if (n.nodeType === 1 && n.matches('.ui-orb') && m.target.matches('.dk-op, .dk-orb'))"
-            "  window.__orbsOut.push(n.dataset.bot); })"
+            " if (n.nodeType === 1 && n.matches('.ui-orb, orb-avatar') && m.target.closest('.k7-dock__orb'))"
+            "  window.__orbsOut.push(m.target.closest('.k7-dock__orb').dataset.bot); })"
             ".observe(document.querySelector('#hx-dock'), {childList: true, subtree: true});"
         )
         self.run("__hx.dock().timeScale(arguments[0])", SLOW)
 
     def slab(self) -> dict:
+        """The slab as drawn (its path's box, flares included), cut to the window: it rises from below the edge."""
         return self.run(
-            "const r = document.querySelector('#hx-dock .dk-shape path').getBoundingClientRect();"
-            "return {l: r.left, t: r.top, r: r.right, b: r.bottom, w: innerWidth, h: innerHeight}"
+            "const r = document.querySelector('#hx-dock .k7-dock__slab path').getBoundingClientRect();"
+            "return {l: r.left, t: r.top, r: r.right, b: Math.min(r.bottom, innerHeight),"
+            " w: innerWidth, h: innerHeight}"
         )
 
     def move(self, x: float, y: float, ms: int = 0) -> None:
@@ -228,9 +227,9 @@ class Page:
         """Every live orb that is drawn on a slot now: its box, and how opaque it is with every ancestor counted."""
         return self.run(
             "const out = [];"
-            # the orb layer's orbs (an earlier build, served with --dist, kept each orb inside the slot it sat in)
-            "for (const w of document.querySelectorAll('#hx-dock .dk-op > .ui-orb, #hx-dock .dk-orb > .ui-orb')) {"
-            " if (w.closest('[data-away]')) continue;"
+            # the row's orbs, each in its own button (a bot past what fits is out of the row: `data-out`)
+            "for (const w of document.querySelectorAll("
+            " '#hx-dock .k7-dock__row .k7-dock__orb:not([data-out]) > .ui-orb')) {"
             " let a = 1;"
             " for (let e = w; e && e !== document.documentElement; e = e.parentElement)"
             "  a *= parseFloat(getComputedStyle(e).opacity);"
@@ -245,12 +244,13 @@ class Page:
         """The dock's boxes that `wanted` names (a selector, and how many px of it from its top count; 0 for all) and
         that are drawn now, each with the dock's centre line `cx`."""
         return self.run(
-            "const cx = document.querySelector('#hx-dock .dk-stage').getBoundingClientRect().left, out = [];"
+            "const k = document.querySelector('#hx-dock .k7-dock').getBoundingClientRect();"
+            "const cx = (k.left + k.right) / 2, out = [];"
             "for (const [s, band] of arguments[0]) for (const e of document.querySelectorAll('#hx-dock ' + s)) {"
             " if (e.closest('[hidden]')) continue;"
             " const r = e.getBoundingClientRect();"
             " const b = band ? Math.min(r.bottom, r.top + band) : r.bottom;"
-            " const id = s + (e.dataset.view ? ' ' + e.dataset.view : '');"
+            " const id = s + (e.dataset.open ? ' ' + e.dataset.open : '');"
             " if (r.width && r.height) out.push({id, l: r.left, t: r.top, r: r.right, b, cx});"
             "}"
             "return out;",
@@ -276,10 +276,10 @@ class Page:
 def lit_pixels(img: Any, a: dict, b: dict) -> tuple[int, float] | None:
     """(lit pixels, slab height) in the slab's body across one snapshot; None when it is too small to judge."""
     left, top = (
-        max(a["l"], b["l"]) + 40,
+        max(a["l"], b["l"]) + FLARE + 10,
         max(a["t"], b["t"]) + 10,
     )  # past the flares, under the top edge
-    right, bottom = min(a["r"], b["r"]) - 40, min(a["b"], b["b"]) - 2
+    right, bottom = min(a["r"], b["r"]) - FLARE - 10, min(a["b"], b["b"]) - 2
     height = min(a["b"] - a["t"], b["b"] - b["t"])
     if height < MIN_SLAB or right - left < 40 or bottom - top < 10:
         return None
@@ -377,8 +377,8 @@ class Run:
         """Do `act`, then snapshot the dock for `seconds`.
 
         Every snapshot that can be judged must show content, and so must every orb that can be judged; no live orb may
-        leave the page meanwhile. `expect_orbs` is False for a phase with no orb to see (none on the page showing, or
-        only the minimised pill's 10px ones). Each box `halves` names (`Page.boxes`) is judged against its own fullest
+        leave the page meanwhile. `expect_orbs` is False for a phase with no orb to see. Each box `halves` names
+        (`Page.boxes`) is judged against its own fullest
         snapshot in the watch: wherever its left half holds at least half of its fullest left, its right half must
         hold HALF_RATIO of its fullest right (a fade lowers both together; a right half that was not painted does not
         follow its left), in no two judged snapshots in a row short of it, and at least MIN_JUDGED snapshots must judge
@@ -463,141 +463,73 @@ def core(run: Run) -> None:
     p.move(300, 300)
     time.sleep(0.5)
     s = p.slab()
-    cx, y = (s["l"] + s["r"]) / 2, s["t"] + (s["b"] - s["t"]) * 0.4
+    cx, y = (s["l"] + s["r"]) / 2, s["t"] + (s["b"] - s["t"]) * 0.5
     run.watch("rest", 3)
     run.watch("the pointer lands on the dock", 4, lambda: p.move(cx - 20, y, 200))
     run.watch("the pointer moves along the dock", 3, lambda: p.move(cx + 60, y, 300))
     run.watch("the pointer leaves", 4, lambda: p.move(300, 300, 100))
-    run.watch("a session opens", 4, lambda: p.run("__hx.dock().openSession('nina')"))
-    run.watch("another session opens in its place", 4, lambda: p.run("__hx.dock().openSession('atlas')"))
-    run.watch("the session closes", 4, lambda: p.run("__hx.dock().closeSession()"))
     for turn in ("", " again"):
-        run.watch(f"the dock expands{turn}", 4, lambda: p.run("__hx.dock().setMode('expanded')"))
-        run.watch(f"the dock collapses{turn}", 4, lambda: p.run("__hx.dock().setMode('normal')"))
-        run.watch(f"the dock minimises{turn}", 4, lambda: p.run("__hx.dock().setMode('minimal')"), expect_orbs=False)
-        run.watch(f"the dock comes back{turn}", 6, lambda: p.run("__hx.dock().setMode('normal')"))
-    run.watch(
-        "another page and back",
-        5,
-        lambda: (p.run("__hx.dock().goPage('run')"), time.sleep(2.5), p.run("__hx.dock().goPage('bots')")),
-    )
+        run.watch(f"a bot's card opens{turn}", 4, lambda: p.run("__hx.dock().openSession('nina')"))
+        run.watch(f"another bot's card takes its place{turn}", 4, lambda: p.run("__hx.dock().openSession('atlas')"))
+        run.watch(f"the card closes{turn}", 4, lambda: p.run("__hx.dock().closeSession()"))
+        run.watch(f"the asks open{turn}", 4, lambda: p.run("__hx.dock().openAsks()"))
+        run.watch(f"the asks fold{turn}", 4, lambda: p.run("__hx.dock().setMode('normal')"))
     run.watch("a bot is made", 4, lambda: p.run(f"__hx.data().bots.create({NEW_BOT})"))
 
 
-def gone(p: Page) -> dict:
+def panel(run: Run) -> None:
+    p = run.page
+    p.open("x=1")
+    p.move(300, 300)
+    for name, script, seconds in (
+        ("a bot's card keeps both halves as it opens", "__hx.dock().openSession('nina')", 6),
+        ("and as it folds", "__hx.dock().closeSession()", 4),
+        ("the asks keep both halves as they open", "__hx.dock().openAsks()", 6),
+        ("and as they fold", "__hx.dock().setMode('normal')", 4),
+    ):
+        run.watch(name, seconds, lambda script=script: p.run(script), halves=PANEL if "open" in name else ())
+
+
+def presence_state(p: Page) -> dict:
     return p.run(
-        "const d = document.querySelector('#hx-dock .dk');"
-        "return {mode: d.dataset.mode, gone: d.classList.contains('is-gone'), inert: d.inert,"
-        " path: d.querySelector('.dk-shape path').getAttribute('d'), parts: d.dataset.parts}"
+        "const d = document.querySelector('#hx-dock .dk'), s = __hx.dock().state;"
+        "return {shown: s.shown, 'in': d.hasAttribute('data-in'), inert: d.inert, mode: d.dataset.mode,"
+        " hidden: getComputedStyle(d).visibility === 'hidden', setting: __hx.state.dock,"
+        " bots: [...d.querySelectorAll('.k7-dock__orb:not([data-out])')].map((b) => b.dataset.bot)}"
     )
 
 
 def presence(run: Run) -> None:
     p = run.page
     p.open("fixture=fresh")
-    g = gone(p)
+    g = presence_state(p)
     run.check(
-        "a first install shows no dock",
-        g["mode"] == "off" and g["gone"] and g["inert"] and not g["path"],
+        "a first install shows no dock (and the setting is still on)",
+        not g["shown"] and not g["in"] and g["inert"] and g["hidden"] and g["setting"] == "on",
         g,
     )
-    run.watch(
-        "the first bot rises in",
-        5,
-        lambda: p.run(f"__hx.data().bots.create({NEW_BOT})"),
-    )
-    g = gone(p)
-    run.check(
-        "the dock has the bots part, and no session part",
-        g["mode"] != "off" and g["parts"] == "bots",
-        g,
-    )
+    p.run(f"const d = __hx.data(); d.sessions.send(d.sessions.create(null).id, 'fix the rounding', {SEND})")
+    time.sleep(1.5)
+    g = presence_state(p)
+    run.check("a session alone draws no dock", not g["shown"] and g["hidden"] and g["inert"], g)
 
     p.open("fixture=fresh")
-    run.watch(
-        "the first session rises in",
-        5,
-        lambda: p.run(
-            f"const d = __hx.data(); d.sessions.send(d.sessions.create(null).id, 'fix the rounding', {SEND})"
-        ),
-        expect_orbs=False,
-    )
-    g = gone(p)
+    run.watch("the first bot rises in", 5, lambda: p.run(f"__hx.data().bots.create({NEW_BOT})"))
+    g = presence_state(p)
     run.check(
-        "the dock has the session part, and no roster",
-        g["mode"] != "off" and g["parts"] == "session",
+        "the dock is the row, with the bot in it",
+        g["shown"] and g["in"] and not g["inert"] and not g["hidden"] and g["bots"] == ["orbit"],
         g,
     )
-    run.watch(
-        "a bot is made, and the dock grows to take it",
-        5,
-        lambda: p.run(f"__hx.data().bots.create({NEW_BOT})"),
-        expect_orbs=False,  # the dock stays on the run page: the new bot's orb is on a page that is not showing
-    )
-
-
-def arrange(run: Run) -> None:
-    p = run.page
-    p.open("x=1")
-    p.move(300, 300)
-    run.watch(
-        "the arrange panel opens",
-        9,
-        lambda: p.run("__hx.dock().setMode('edit')"),
-        expect_orbs=False,
-        halves=PANEL,
-    )
-    # the panel fades out in 100 ms: slowed fifty times (the slowest the dock allows), several snapshots see it go
-    p.run("__hx.dock().timeScale(arguments[0])", SLOWEST)
-    run.watch(
-        "the arrange panel closes",
-        8,
-        lambda: p.run("__hx.dock().setMode('normal')"),
-        expect_orbs=False,  # few orbs are judged as they come back; core watches them, and a blank one still fails
-        halves=PANEL,
-    )
-    p.run("__hx.dock().timeScale(arguments[0])", SLOW)
-
-
-def pages(run: Run) -> None:
-    p = run.page
-    p.open("x=1")
-    p.move(300, 300)
-
-    def go(script: str) -> Any:
-        return lambda: p.run(script)
-
-    def quickly(script: str) -> None:  # a setup step, at full speed, then the springs slow again
-        p.run("__hx.dock().timeScale(4);" + script)
-        time.sleep(1.2)
-        p.run("__hx.dock().timeScale(arguments[0])", SLOW)
-
-    # Run as the mock has it, then Needs you empty as the owner had it ("Nothing needs you"; with cards the view held)
-    quickly("__hx.dock().goPage('wait')")
-    for name, script, seconds in (
-        ("needs you to run", "__hx.dock().goPage('run')", 8),
-        ("run expands", "__hx.dock().setMode('expanded')", 6),
-        ("run collapses", "__hx.dock().setMode('normal')", 6),
-    ):
-        run.watch(name, seconds, go(script), expect_orbs=False, halves=VIEW)
-    quickly(
-        "const d = __hx.data(); for (const w of [...d.waits.snapshot()]) d.waits.resolve(w.id, 'approved');"
-        "__hx.dock().goPage('bots');"
-    )
-    for name, script, seconds in (
-        ("the slab grows from the row into needs you", "__hx.dock().goPage('wait')", 8),
-        ("needs you expands", "__hx.dock().setMode('expanded')", 6),
-        ("needs you collapses", "__hx.dock().setMode('normal')", 6),
-        ("needs you to scheduled", "__hx.dock().goPage('sched')", 8),
-        ("scheduled to needs you", "__hx.dock().goPage('wait')", 8),
-    ):
-        run.watch(name, seconds, go(script), expect_orbs=False, halves=VIEW)
+    run.watch("a second bot joins the row in place", 4, lambda: p.run(f"__hx.data().bots.create({NEW_BOT_2})"))
+    g = presence_state(p)
+    run.check("both bots are in the row", g["bots"] == ["orbit", "comet"], g)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dist", type=Path, default=DEFAULT_DIST)
-    ap.add_argument("--phases", default="core,presence,arrange,pages")
+    ap.add_argument("--phases", default="core,panel,presence")
     ap.add_argument(
         "--frames",
         type=Path,
@@ -626,12 +558,10 @@ def main() -> int:
         phases = set(args.phases.split(","))
         if "core" in phases:
             core(run)
+        if "panel" in phases:
+            panel(run)
         if "presence" in phases:
             presence(run)
-        if "arrange" in phases:
-            arrange(run)
-        if "pages" in phases:
-            pages(run)
     finally:
         page.close()
     bad = [r for r in run.rows if not r[3]]

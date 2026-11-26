@@ -3,7 +3,10 @@
       legacy `clip`, under which WebKitGTK 2.52 (accelerated) repainted a transformed child with the clip taken before its
       transform (0.1.9: the dock's pages lost the half right of the centre line), are written nowhere in the app: the v7 dock's
       open panel clips by its own overflow;
-   2. nothing in the dock is centred with a -50% transform: the Dock is centred on its anchor by layout. */
+   2. nothing in the dock is centred with a -50% transform: the Dock is centred on its anchor by layout;
+   3. a bot's orb in the row is never hidden with `hidden` or `display: none`: an orb with no box is not drawn, and WebKitGTK showed
+      the bots that join the row (when the asks open and the pill makes room) as empty circles until their worker's next commit.
+      A bot past what fits is `data-out`: out of the flow, not seen, inert, and still drawn. */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -46,5 +49,17 @@ describe('nothing in the dock is centred with a transform', () => {
     expect(rule).toMatch(/left:\s*-100vw/);
     expect(rule).toMatch(/right:\s*-100vw/);
     expect(rule).not.toMatch(/transform|translate\s*:\s*-50%/);
+  });
+});
+
+describe('a bot past what fits stays drawn', () => {
+  it('the row never hides an orb with `hidden` or `display: none`', () => {
+    const ts = read('src/modules/dock/index.ts'), css = read('src/modules/dock/dock.css') + read('src/components/v7/dock.css');
+    expect(ts).not.toMatch(/\.hidden\s*=/);
+    expect(css.split('\n').filter((l) => /k7-dock__orb[^{]*\{[^}]*display:\s*none/.test(l))).toEqual([]);
+    const out = /^\.dk \.k7-dock__orb\[data-out\] \{([^}]*)\}/m.exec(css)?.[1] ?? '';
+    expect(out).toMatch(/position:\s*absolute/);
+    expect(out).toMatch(/opacity:\s*0/);
+    expect(out).not.toMatch(/display|visibility/);
   });
 });

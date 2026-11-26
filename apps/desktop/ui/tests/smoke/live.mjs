@@ -42,13 +42,11 @@ export async function liveSessions(env) {
       await page.keyboard.press('Enter');
       await page.waitForTimeout(1800);
     }
-    const after = await page.evaluate(() => ({ asked: window.__hxReplay.requests.map((r) => r.method).filter((m) => m === 'prompt.submit').length, blank: !!document.querySelector('.ss-col [data-blank][data-kit~="AskCard"]'), question: document.body.textContent.includes('Keep the old alias?'), waits: window.__hx.dock().state.waits, output: [...document.querySelectorAll('.ssr-term')].map((n) => n.textContent).join('\n') }));
-    check('live', 'a turn plays back: its blank is asked in the conversation and waits in the dock, and its tool output reaches the Output panel', after.asked === 1 && after.blank && after.question && after.waits >= 1 && /\$ ship src\/a\.py/.test(after.output) && /PASS/.test(after.output), after);
+    const after = await page.evaluate(() => ({ asked: window.__hxReplay.requests.map((r) => r.method).filter((m) => m === 'prompt.submit').length, blank: !!document.querySelector('.ss-col [data-blank][data-kit~="AskCard"]'), question: document.body.textContent.includes('Keep the old alias?'), waits: window.__hx.data().waits.snapshot().filter((w) => w.kind === 'blank').length, dockAsks: window.__hx.dock().state.asks, output: [...document.querySelectorAll('.ssr-term')].map((n) => n.textContent).join('\n') }));
+    check('live', 'a turn plays back: its blank is asked in the conversation and waits on you (a session\'s blank is the session\'s: the v7 dock carries your bots\' approvals only), and its tool output reaches the Output panel', after.asked === 1 && after.blank && after.question && after.waits >= 1 && after.dockAsks === 0 && /\$ ship src\/a\.py/.test(after.output) && /PASS/.test(after.output), after);
 
     const dock = await text(page, '#hx-dock');
     check('live', 'the dock shows no mock content, and nothing in it is marked a preview', leaks(dock).length === 0 && !/Preview/.test(dock), { leaks: leaks(dock), preview: /Preview/.test(dock) });
-    const previews = await page.evaluate(() => document.querySelectorAll('#hx-dock .dk-preview').length);
-    check('live', 'the dock marks no page as a preview: its bots and schedules are Hermes\u2019s', previews === 0, previews);
 
     await page.keyboard.press('Alt+2');
     await page.waitForTimeout(700);

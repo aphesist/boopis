@@ -36,7 +36,10 @@
 
 /* a live orb is drawn at the hover size and held at 40; a hover scales it on the compositor (`--g`: 1, 46/40 or 52/40), crisp */
 .dk .k7-dock__orb > .ui-orb { transform: scale(var(--g, 1)); transition: transform var(--dur-2) var(--ease-sharp); }
-.dk .k7-dock__orb[hidden] { display: none; }
+/* a bot past what fits is out of the row: no room, not seen, inert (index.ts), but still drawn. Never `hidden` or `display: none`:
+   an orb is not drawn while it has no box, and WebKitGTK showed the two bots that join the row when the asks open as empty circles
+   until their worker's next commit (tests/e2e/dock_webkit.py, "the asks keep both halves as they open") */
+.dk .k7-dock__orb[data-out] { position: absolute; left: 0; top: 0; opacity: 0; pointer-events: none; }
 /* a long name in the end slot is cut (and whole in the orb's accessible name) */
 .dk .k7-dock__cap > b { max-width: calc(var(--dk-orb) * 4); overflow: hidden; text-overflow: ellipsis; }
 

@@ -1,35 +1,41 @@
-/* When the dock shows (owner, 19 November 2026): "make it so the dock only really appears after a bot is either created or a
-   session is started. also remove the visible configuration buttons for the dock, they should only appear on hover."
-   - a first install (`?fixture=fresh`: no bots, no session) has no dock, and the user's "Show the dock" setting is untouched;
-   - the first bot rises in; so does the first session (the run alone, no roster); a part joining a dock that shows grows it
-     in place, with nothing rebuilt; the last bot going, with no session, takes it away; the setting off hides it whatever it
-     holds; reduced motion fades instead of travelling;
-   - the options and minimise controls are transparent at rest and show on hover, on focus and after a tap, and are never
-     removed from the keyboard or the accessibility tree; the page nub stays while there is more than one page.
-   (The unit side is `modules/dock/presence.test.ts`; the real WebKitGTK is `tests/e2e/dock_webkit.py`.) */
+/* When the dock shows (DESIGN-SYSTEM.md v7 21.4; the owner: hidden until you have a bot of your own, the Sessions tab's alone,
+   "Show the dock" in Settings):
+   - a first install (`?fixture=fresh`: no bots) has no dock, and the "Show the dock" setting is untouched; a session alone
+     never draws it (the v7 dock has no session part: the session shows its own run);
+   - the first bot raises it: the composer makes room first (the shell's 72), then the slab rises from below the window's edge
+     with its bot in it; a second bot joins in place, with nothing rebuilt; the last bot going takes it away (an open card
+     closes first) and the composer comes back down; reduced motion fades instead of travelling;
+   - it is the Sessions tab's: the Bots tab hides it at once and coming back shows it at once;
+   - the setting off (mod+J, Settings, the account menu) hides it whatever it holds and gives its room back; on brings it back.
+   Gone with the v7 dock: the session part and its Run page, the hover-only options and minimise controls, the page nub.
+   (The unit side is `modules/dock/model.test.ts`; the real WebKitGTK is `tests/e2e/dock_webkit.py`.) */
 import { check, scenario } from './harness.mjs';
 
 const BOT = { name: 'orbit', role: 'watches the build', shape: 'star', color: '#e8b04a', eyes: 'pill' };
+const BOT2 = { name: 'comet', role: 'reads the logs', shape: 'circle', color: '#4ac6a0', eyes: 'pill' };
 const SEND = { governed: true, smart: true, model: 'sonnet 5.5', assume: [] };
 
 const STATE = () => {
-  const d = document.querySelector('#hx-dock .dk');
-  const path = d.querySelector('.dk-shape path').getBoundingClientRect();
-  const live = (sel) => [...d.querySelectorAll(sel)].filter((e) => !e.closest('[hidden]') && e.getClientRects().length > 0);
+  const d = document.querySelector('#hx-dock .dk'), k = d.querySelector('.k7-dock'), r = k.getBoundingClientRect();
+  const live = (sel) => [...d.querySelectorAll(sel)].filter((e) => !e.closest('[hidden], [data-out]') && e.getClientRects().length > 0);
+  const box = document.querySelector('.ss-composer .k7-composer__box');
   return {
-    mode: d.dataset.mode, parts: d.dataset.parts, gone: d.classList.contains('is-gone'), inert: d.inert, hidden: d.getAttribute('aria-hidden'),
-    d: d.querySelector('.dk-shape path').getAttribute('d'), h: path.height, w: path.width, setting: __hx.state.dock, page: __hx.dock().state.page,
-    bots: live('.dk-bot').length, add: live('.dk-add').length, roster: live('.dk-roster').length,
-    dots: [...d.querySelectorAll('.ui-pages__dot')].map((x) => x.dataset.value),
+    mode: d.dataset.mode, shown: __hx.dock().state.shown, in: d.hasAttribute('data-in'), vis: getComputedStyle(d).visibility, inert: d.inert, hidden: d.getAttribute('aria-hidden'),
+    top: r.top, h: r.height, w: r.width, innerH: innerHeight, onEdge: Math.abs(r.bottom - innerHeight) <= 1, setting: __hx.state.dock, open: __hx.dock().state.open,
+    bots: live('.k7-dock__orb').map((b) => b.dataset.bot), drawn: live('.k7-dock__orb orb-avatar').length,
+    room: parseFloat(document.getElementById('hx-app').style.getPropertyValue('--hx-dock-space-to')) || 0, gap: box ? Math.round(innerHeight - box.getBoundingClientRect().bottom) : null,
     stored: (() => { try { return /"dock"\s*:\s*"off"/.test(localStorage.getItem('hx.v6.shell') || '') ? 'off' : 'not off'; } catch { return null; } })()
   };
 };
+/* the slab's top edge and the composer's bottom gap on every frame */
 const REC = () => {
   window.__rec = []; window.__on = true;
-  const tick = () => { const p = document.querySelector('#hx-dock .dk-shape path').getBoundingClientRect(); window.__rec.push({ t: performance.now(), h: p.height }); if (window.__on) requestAnimationFrame(tick); };
+  const tick = () => { const p = document.querySelector('#hx-dock .k7-dock').getBoundingClientRect(), d = document.querySelector('#hx-dock .dk'), c = document.querySelector('.ss-composer .k7-composer__box'); window.__rec.push({ t: performance.now(), top: p.top, vis: getComputedStyle(d).visibility === 'visible' && d.hasAttribute('data-in'), gap: c ? innerHeight - c.getBoundingClientRect().bottom : 0 }); if (window.__on) requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
 };
 const STOP = () => { window.__on = false; return window.__rec; };
+const gone = (m) => !m.shown && !m.in && m.vis === 'hidden' && m.inert && m.hidden === 'true' && m.bots.length === 0;
+const there = (m) => m.shown && m.in && m.vis === 'visible' && !m.inert && m.hidden === null && m.onEdge && Math.abs(m.h - 72) <= 0.5;
 
 export async function dockPresence(env) {
   const s = scenario(env);
@@ -39,90 +45,81 @@ export async function dockPresence(env) {
     const st = () => page.evaluate(STATE);
     const wait = (ms) => page.waitForTimeout(ms);
     let m = await st();
-    check('presence', 'a first install shows no dock: it is off, gone, inert and hidden from the accessibility tree, with no slab', m.mode === 'off' && m.gone && m.inert && m.hidden === 'true' && m.d === '' && m.h === 0 && m.parts === '', m);
-    check('presence', 'and the "Show the dock" setting is still on, and nothing stored says otherwise (an empty dock is not a dock turned off)', m.setting === 'on' && m.stored !== 'off', { setting: m.setting, stored: m.stored });
-    const gap = () => page.evaluate(() => { const c = document.querySelector('.ss-composer'); return c ? Math.round(innerHeight - c.getBoundingClientRect().bottom) : null; });
-    const noDock = await gap();
+    const noDock = m.gap;
+    check('presence', 'a first install shows no dock: not drawn, inert, hidden from the accessibility tree, below the window\'s edge', gone(m) && m.top >= m.innerH && m.room === 0, m);
+    check('presence', 'and the "Show the dock" setting is still on, and nothing stored says otherwise (no dock is not a dock turned off)', m.setting === 'on' && m.stored !== 'off' && m.mode !== 'off', { setting: m.setting, stored: m.stored, mode: m.mode });
+
+    /* ───────── a session alone never draws it ───────── */
+    await page.evaluate((a) => { const d = __hx.data(); const n = d.sessions.create(null); d.sessions.send(n.id, 'fix the rounding\nin src/billing', a); }, SEND);
+    await wait(1200);
+    m = await st();
+    check('presence', 'a started session alone draws no dock (the v7 dock is your bots\'; the session shows its own run)', gone(m) && m.room === 0, m);
     check('presence', 'no console errors', page.errors.length === 0, page.errors);
 
-    /* ───────── the first bot: the dock rises in ───────── */
+    /* ───────── the first bot: the composer makes room, then the dock rises in ───────── */
+    page = await s.fresh({ q: 'fixture=fresh', settle: 1500 });
     await page.evaluate(REC);
     await page.evaluate((b) => __hx.data().bots.create(b), BOT);
     await wait(1400);
     const rec = await page.evaluate(STOP);
     m = await st();
-    const hs = rec.map((r) => r.h), final = hs.at(-1);
-    const grown = hs.filter((h) => h > 0.5);
+    check('presence', 'the first bot makes the dock rise: the row, 72 tall on the window\'s edge, with the bot drawn in it', there(m) && m.bots.join() === 'orbit' && m.drawn === 1 && m.mode === 'normal', m);
+    const seen = rec.filter((r) => r.vis), tops = seen.map((r) => r.top), final = tops.at(-1);
     let mono = true, over = 0;
-    for (let i = 1; i < hs.length; i++) { if (hs[i] < hs[i - 1] - 0.5) mono = false; over = Math.max(over, hs[i] - final); }
-    check('presence', 'the first bot makes the dock rise: bots part only, normal, a slab with a bot and its "+" and no Run page', m.mode === 'normal' && m.parts === 'bots' && !m.gone && m.h > 60 && m.bots === 1 && m.add === 1 && !m.dots.includes('run'), m);
-    check('presence', 'it rises on its spring: many frames, never down, no overshoot, not a pop', grown.length >= 8 && mono && over <= 1.5 && grown[0] < 0.5 * final, { frames: grown.length, mono, over, first: grown[0], final });
+    for (let i = 1; i < tops.length; i++) { if (tops[i] > tops[i - 1] + 0.5) mono = false; over = Math.max(over, final - tops[i]); }
+    check('presence', 'it rises from below the window\'s edge: many frames, never back down, no overshoot, not a pop', seen.length >= 8 && mono && over <= 1.5 && tops[0] > final + 0.5 * 72, { frames: seen.length, mono, over, first: tops[0], final });
+    const gap0 = rec[0].gap, firstUp = rec.findIndex((r) => r.gap > gap0 + 1), firstSeen = rec.findIndex((r) => r.vis);
+    check('presence', 'the composer makes room first (it starts up before the slab shows), and ends 72 higher', firstUp >= 0 && firstUp <= firstSeen && m.gap - noDock === 72 && m.room === 72, { firstUp, firstSeen, gap: m.gap, noDock });
 
-    /* ───────── the last bot goes, with no session: the dock leaves ───────── */
+    /* ───────── a second bot joins in place; nothing is rebuilt ───────── */
+    await page.evaluate(() => { window.__first = document.querySelector('#hx-dock .k7-dock__orb[data-bot="orbit"]'); window.__firstOrb = window.__first.querySelector('orb-avatar'); });
+    await page.evaluate((b) => __hx.data().bots.create(b), BOT2); await wait(900);
+    m = await st();
+    const same = await page.evaluate(() => { const b = document.querySelector('#hx-dock .k7-dock__orb[data-bot="orbit"]'); return b === window.__first && b.querySelector('orb-avatar') === window.__firstOrb; });
+    check('presence', 'a second bot joins the row in place: both drawn, the first bot\'s button and orb the same elements', there(m) && m.bots.join() === 'orbit,comet' && m.drawn === 2 && same, { bots: m.bots, same });
+
+    /* ───────── it is the Sessions tab's ───────── */
+    await page.keyboard.press('Alt+2'); await wait(120);
+    m = await st();
+    check('presence', 'the Bots tab hides it at once (no travel), and keeps no room for it', gone({ ...m, bots: [] }) && !m.shown, m);
+    await page.keyboard.press('Alt+1'); await wait(700);
+    m = await st();
+    check('presence', 'back on the Sessions tab it is there again with its bots', there(m) && m.bots.length === 2 && m.drawn === 2, m);
+
+    /* ───────── the last bot goes: an open card closes, the dock leaves, the composer comes down ───────── */
+    await page.evaluate(() => __hx.data().bots.archive('comet')); await wait(700);
+    await page.evaluate(() => __hx.dock().openSession('orbit')); await wait(700);
+    const opened = (await st()).open;
     await page.evaluate(() => __hx.data().bots.archive('orbit'));
     await wait(1600);
     m = await st();
-    check('presence', 'the last bot archived, with no session, takes the dock away (off, gone, empty, the setting untouched)', m.mode === 'off' && m.gone && m.inert && m.h === 0 && m.parts === '' && m.setting === 'on' && m.stored !== 'off', m);
+    check('presence', 'the last bot archived takes the dock away (its open card closed first), the setting untouched, the composer back down', opened === 'card' && gone(m) && m.open === null && m.setting === 'on' && m.stored !== 'off' && m.room === 0 && m.gap === noDock, { opened, ...m });
     await page.evaluate((b) => __hx.data().bots.create(b), BOT);
     await wait(1400);
     m = await st();
-    const withDock = await gap();
-    check('presence', 'the shell keeps room for the dock only while it shows: the composer sits higher with it than without', noDock != null && withDock != null && withDock - noDock >= 40, { noDock, withDock });
-    check('presence', 'a bot made again brings it back', m.mode === 'normal' && !m.gone && !m.inert && m.hidden === null && m.bots === 1 && m.h > 60, m);
-
-    /* ───────── the first session: the run alone, no roster ───────── */
-    page = await s.fresh({ q: 'fixture=fresh', settle: 1500 });
-    await page.evaluate(REC);
-    await page.evaluate((a) => { const d = __hx.data(); const n = d.sessions.create(null); d.sessions.send(n.id, 'fix the rounding\nin src/billing', a); }, SEND);
-    await wait(1400);
-    const rec2 = await page.evaluate(STOP);
-    m = await st();
-    const h2 = rec2.map((r) => r.h).filter((h) => h > 0.5);
-    check('presence', 'a blank new session is not a started one: the dock only rose with the message', m.mode === 'normal' && m.parts === 'session' && !m.gone && m.h > 60, m);
-    check('presence', 'with a session and no bots only the session part shows: the Run page, no roster, no "+", no Bots or Scheduled page', m.page === 'run' && m.bots === 0 && m.add === 0 && m.roster === 0 && !m.dots.includes('bots') && !m.dots.includes('sched') && m.dots.includes('run'), m);
-    check('presence', 'the session\'s dock rises on a spring too', h2.length >= 8 && h2.every((h, i) => !i || h >= h2[i - 1] - 0.5), h2.length);
-    const title = await page.evaluate(() => document.querySelector('#hx-dock .dk-v-run-norm .dk-run-title')?.textContent);
-    check('presence', 'it shows the session\'s own title', title === 'fix the rounding', title);
-
-    /* ───────── a bot joins a dock that shows: it grows, nothing is rebuilt ───────── */
-    await page.evaluate(() => { window.__run = document.querySelector('#hx-dock .dk-run-open'); window.__sec = document.querySelector('#hx-dock .dk-page[data-page="run"]'); });
-    await page.evaluate(REC);
-    await page.evaluate((b) => __hx.data().bots.create(b), BOT);
-    await wait(1400);
-    const rec3 = await page.evaluate(STOP);
-    m = await st();
-    const same = await page.evaluate(() => ({ run: document.querySelector('#hx-dock .dk-run-open') === window.__run, sec: document.querySelector('#hx-dock .dk-page[data-page="run"]') === window.__sec }));
-    const hs3 = rec3.map((r) => r.h), jump = Math.max(0, ...hs3.slice(1).map((h, i) => Math.abs(h - hs3[i])));
-    check('presence', 'a bot made grows the dock to hold the roster too: both parts, still on the Run page, the Bots dot joined the nub', m.parts === 'bots session' && m.page === 'run' && m.dots.includes('bots') && m.dots.includes('run') && m.bots === 0 && !m.gone, m);
-    check('presence', 'nothing was rebuilt (the run\'s button and page are the same elements) and the slab did not pop', same.run && same.sec && jump < 20, { same, jump });
-    await page.evaluate(() => __hx.dock().goPage('bots')); await wait(900);
-    m = await st();
-    check('presence', 'the Bots page then shows the bot and its "+"', m.bots === 1 && m.add === 1, m);
-    await page.evaluate(() => __hx.data().bots.archive('orbit')); await wait(1400);
-    m = await st();
-    check('presence', 'the last bot archived with a session still there: the dock stays, back to the session part, on the Run page', m.mode === 'normal' && m.parts === 'session' && m.page === 'run' && m.bots === 0 && m.h > 60 && !m.gone, m);
+    check('presence', 'a bot made again brings it back', there(m) && m.bots.join() === 'orbit' && m.gap - noDock === 72, m);
 
     /* ───────── the setting off hides whatever there is ───────── */
-    await page.evaluate(() => __hx.setState({ dock: 'off' })); await wait(1200);
+    await page.keyboard.press('Control+j'); await wait(1200);
     m = await st();
-    check('presence', 'the setting off takes the dock away', m.mode === 'off' && m.gone && m.setting === 'off', m);
-    await page.evaluate((b) => __hx.data().bots.create(b), BOT); await wait(900);
+    check('presence', 'mod+J ("Show the dock" off) takes the dock away and gives its room back', m.setting === 'off' && m.mode === 'off' && !m.shown && m.vis === 'hidden' && m.inert && m.room === 0 && m.gap === noDock, m);
+    await page.evaluate((b) => __hx.data().bots.create(b), BOT2); await wait(900);
     m = await st();
-    check('presence', 'a bot made while it is off stays hidden', m.mode === 'off' && m.gone && m.parts === 'bots session', m);
-    await page.evaluate(() => __hx.setState({ dock: 'on' })); await wait(1500);
+    check('presence', 'a bot made while it is off stays hidden', m.mode === 'off' && !m.shown && m.vis === 'hidden', m);
+    await page.keyboard.press('Control+j'); await wait(1500);
     m = await st();
-    check('presence', 'the setting on brings it back with both parts', m.mode !== 'off' && !m.gone && m.parts === 'bots session' && m.h > 20, m);
+    check('presence', 'mod+J again brings it back with both bots', there(m) && m.setting === 'on' && m.bots.length === 2 && m.drawn === 2, m);
     check('presence', 'no console errors through all of it', page.errors.length === 0, page.errors);
 
-    /* ───────── a first install with the setting off: bots and sessions change nothing until it is on ───────── */
+    /* ───────── a first install with the setting off: a bot changes nothing until it is on ───────── */
     page = await s.fresh({ q: 'fixture=fresh', settle: 1200 });
     await page.evaluate(() => __hx.setState({ dock: 'off' })); await wait(300);
     await page.evaluate((b) => __hx.data().bots.create(b), BOT); await wait(900);
     m = await st();
-    check('presence', 'with the setting off a first bot shows nothing', m.mode === 'off' && m.gone && m.parts === 'bots', m);
+    check('presence', 'with the setting off a first bot shows nothing', m.mode === 'off' && !m.shown && m.vis === 'hidden', m);
     await page.evaluate(() => __hx.setState({ dock: 'on' })); await wait(1500);
     m = await st();
-    check('presence', 'and turning it on shows the dock', m.mode !== 'off' && !m.gone && m.bots === 1, m);
+    check('presence', 'and turning it on shows the dock', there(m) && m.bots.join() === 'orbit', m);
 
     /* ───────── reduced motion: it fades, it does not travel ───────── */
     page = await s.fresh({ q: 'fixture=fresh', settle: 1200, reduced: true });
@@ -131,54 +128,11 @@ export async function dockPresence(env) {
     await wait(900);
     const rec4 = await page.evaluate(STOP);
     m = await st();
-    const first = rec4.find((r) => r.h > 0.5);
-    check('presence', 'reduced motion: the first bot\'s dock is at its size in its first frame (no travel)', m.mode === 'normal' && !!first && Math.abs(first.h - m.h) < 1.5, { first: first && first.h, final: m.h });
+    const first = rec4.find((r) => r.vis);
+    check('presence', 'reduced motion: the first bot\'s dock is in its place in its first frame (no travel)', there(m) && !!first && Math.abs(first.top - m.top) < 1.5, { first: first && first.top, final: m.top });
     await page.evaluate(() => __hx.data().bots.archive('orbit')); await wait(900);
     m = await st();
-    check('presence', 'reduced motion: the last bot archived takes it away', m.mode === 'off' && m.gone, m);
-
-    /* ───────── the controls: hover, focus, touch, and never out of the tree ───────── */
-    page = await s.fresh({ settle: 1500 });
-    const ctl = () => page.evaluate(() => {
-      const root = document.querySelector('#hx-dock .dk');
-      const one = (sel) => { const b = root.querySelector(sel), w = b.closest('.dk-foot-ctl'), cs = getComputedStyle(w), bs = getComputedStyle(b);
-        return { op: +cs.opacity, pe: cs.pointerEvents, vis: bs.visibility, disp: bs.display, label: b.getAttribute('aria-label'), tab: b.tabIndex, inert: !!b.closest('[inert]'), hiddenAttr: !!b.closest('[hidden], [aria-hidden="true"]') }; };
-      const dots = root.querySelector('.dk-dots'), ds = getComputedStyle(dots);
-      return { options: one('[data-act="customise"]'), minimise: one('[data-act="down"]'), dots: { op: +ds.opacity, vis: ds.visibility, n: dots.querySelectorAll('.ui-pages__dot').length } };
-    });
-    await page.mouse.move(700, 300); await wait(600);
-    let c = await ctl();
-    check('presence', 'at rest the options and minimise controls are transparent and take no pointer', c.options.op === 0 && c.minimise.op === 0 && c.options.pe === 'none' && c.minimise.pe === 'none', c);
-    check('presence', 'but they are in the accessibility tree and the tab order: named, shown by the engine, not removed, not inert', [c.options, c.minimise].every((x) => x.label && x.vis === 'visible' && x.disp !== 'none' && x.tab >= 0 && !x.inert && !x.hiddenAttr), c);
-    check('presence', 'the page nub (navigation) is visible at rest while there is more than one page', c.dots.n > 1 && c.dots.op === 1 && c.dots.vis === 'visible', c.dots);
-    const box = await page.evaluate(() => { const r = document.querySelector('#hx-dock .dk-shape path').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height * 0.4 }; });
-    await page.mouse.move(box.x, box.y, { steps: 6 }); await wait(700);
-    c = await ctl();
-    check('presence', 'the pointer over the dock shows them, faded in', c.options.op === 1 && c.minimise.op === 1 && c.options.pe === 'auto', c);
-    await page.mouse.move(700, 300, { steps: 4 }); await wait(700);
-    c = await ctl();
-    check('presence', 'and off the dock they fade out again', c.options.op === 0 && c.minimise.op === 0, c);
-    await page.evaluate(() => __hx.dock().focus()); await page.waitForTimeout(700);
-    c = await ctl();
-    check('presence', 'keyboard focus inside the dock shows them (focus-within)', c.options.op === 1 && c.minimise.op === 1, c);
-    const actNow = () => page.evaluate(() => { const a = document.activeElement; return { act: a && a.dataset && a.dataset.act, within: !!a.closest('#hx-dock') }; });
-    await page.keyboard.press('Tab'); await wait(200);
-    const t1 = await actNow();
-    await page.keyboard.press('Tab'); await page.keyboard.press('Tab'); await wait(200);
-    const t2 = await actNow();
-    check('presence', 'Tab reaches the options control, then (past the page nub) the minimise control, by keyboard', t1.within && t1.act === 'customise' && t2.within && t2.act === 'down', { t1, t2 });
-    await page.evaluate(() => { document.activeElement.blur(); }); await page.mouse.move(700, 300); await wait(700);
-    c = await ctl();
-    check('presence', 'blurred and away, they are hidden again', c.options.op === 0, c);
-    /* a tap: touch has no hover; a pointer-down of type touch on the dock reveals them, and a press outside puts them away */
-    await page.evaluate(() => { const p = document.querySelector('#hx-dock .dk-shape path'); const r = p.getBoundingClientRect(); const o = { bubbles: true, pointerType: 'touch', pointerId: 7, clientX: r.left + r.width / 2, clientY: r.top + 20, isPrimary: true }; p.dispatchEvent(new PointerEvent('pointerdown', o)); p.dispatchEvent(new PointerEvent('pointerup', o)); });
-    await wait(600);
-    const tapped = await page.evaluate(() => ({ attr: document.querySelector('#hx-dock .dk').hasAttribute('data-reveal'), op: +getComputedStyle(document.querySelector('#hx-dock .dk-foot-ctl')).opacity }));
-    check('presence', 'a tap on the dock reveals them', tapped.attr && tapped.op === 1, tapped);
-    await page.evaluate(() => { const o = { bubbles: true, pointerType: 'touch', pointerId: 8, clientX: 300, clientY: 200, isPrimary: true }; document.querySelector('#hx-btn-title .k7-title__name').dispatchEvent(new PointerEvent('pointerdown', o)); });
-    await wait(600);
-    const away = await page.evaluate(() => document.querySelector('#hx-dock .dk').hasAttribute('data-reveal'));
-    check('presence', 'and a tap elsewhere puts them away', !away, away);
+    check('presence', 'reduced motion: the last bot archived takes it away', gone(m), m);
     check('presence', 'no console errors', page.errors.length === 0, page.errors);
   });
   await s.close();

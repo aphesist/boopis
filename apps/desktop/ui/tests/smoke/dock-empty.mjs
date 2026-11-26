@@ -1,76 +1,61 @@
-/* The dock with no bots. It used to be a lone "+", and that was a visual bug (owner, Linux): the row was 60px with its
-   padding and the slab around it a tall black tombstone (its two top corners met, R = half the width) with the foot's controls
-   (Arrange, the page nub, Minimise) spilling out of its sides. Since 19 November 2026 (owner: the dock only really appears
-   after a bot is created or a session is started) there is no such dock, and this part says what there is instead:
-   - a first install (`?fixture=fresh`: no bots and no session) has no dock at all, so no empty slab and no lone "+";
-   - a dock with a session and no bots (`?fixture=none`) is the session part alone: no roster, no "+", and its slab keeps the
-     geometry rules the tombstone broke (never narrower than its foot, the corners keep their radius, a flat top, flush to the
-     window's edge, every foot control inside the slab's body).
-   The part stays because both halves are still ways the dock can go wrong. Geometry assertions, plus a screenshot in test-results/. */
+/* The dock with no bots, and the row's own geometry. It used to be a lone "+" in a tall black tombstone (owner, Linux), then a
+   session part with no roster; the v7 dock (DESIGN-SYSTEM.md v7 21.4, board K06) settles it: with no bot of your own there is
+   NO dock in the Sessions tab, and the composer keeps no room for it. This part says what there is instead:
+   - a first install (`?fixture=fresh`) and a workspace with sessions and no bots (`?fixture=none`) show no dock at all: not
+     drawn, inert, out of the accessibility tree, below the window's edge, and "Show the dock" is still on;
+   - with bots the slab keeps the geometry the tombstone broke: 72 tall, flush to the window's edge, as wide as its content (at
+     most 640), a flat top between its two corners, and everything in the row inside the slab's body, 30 from its sides (nothing
+     in a corner zone); there is no "+" in it (new bots are made in the Bots tab).
+   Geometry assertions, plus a screenshot in test-results/. */
 import { join } from 'node:path';
 import { check, scenario } from './harness.mjs';
 import { OUT } from '../lib.mjs';
 
+const STATE = () => {
+  const d = document.querySelector('#hx-dock .dk'), k = d.querySelector('.k7-dock'), cs = getComputedStyle(d), r = k.getBoundingClientRect();
+  const box = document.querySelector('.ss-composer .k7-composer__box');
+  return {
+    shown: __hx.dock().state.shown, in: d.hasAttribute('data-in'), vis: cs.visibility, inert: d.inert, aria: d.getAttribute('aria-hidden'), top: r.top, innerH: innerHeight,
+    setting: __hx.state.dock, stored: (() => { try { return /"dock"\s*:\s*"off"/.test(localStorage.getItem('hx.v6.shell') || '') ? 'off' : 'not off'; } catch { return null; } })(),
+    room: parseFloat(document.getElementById('hx-app').style.getPropertyValue('--hx-dock-space-to')) || 0, gap: box ? Math.round(innerHeight - box.getBoundingClientRect().bottom) : null,
+    focusable: d.querySelectorAll('button:not([tabindex="-1"])').length && !d.inert
+  };
+};
 const MEASURE = () => {
-  const r = (e) => { const b = e.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, w: b.width, h: b.height, cx: (b.left + b.right) / 2 }; };
-  const root = document.querySelector('#hx-dock .dk');
-  const shape = root.querySelector('.dk-shape'), foot = root.querySelector('.dk-foot');
-  const live = (sel) => [...root.querySelectorAll(sel)].filter((e) => !e.closest('[hidden]') && e.getClientRects().length > 0);
-  const flare = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--r-l')) || 14;
-  const slab = shape.getBoundingClientRect();
-  const body = { l: slab.left + flare, r: slab.right - flare, t: slab.top, b: slab.bottom, w: slab.width - 2 * flare, h: slab.height, cx: (slab.left + slab.right) / 2 };
-  const kids = [...foot.children].map((c) => ({ cls: c.className.toString().slice(0, 24), ...r(c) })).filter((k) => k.w > 0);
-  return { n: live('.dk-bot').length, add: live('.dk-add').length, roster: live('.dk-roster').length, flare, body, foot: r(foot), kids, d: shape.querySelector('path').getAttribute('d'), mode: root.dataset.mode, parts: root.dataset.parts, innerH: innerHeight };
+  const r = (e) => { const b = e.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, w: b.width, h: b.height }; };
+  const root = document.querySelector('#hx-dock .dk'), k = root.querySelector('.k7-dock'), svg = k.querySelector('.k7-dock__slab');
+  const live = (sel) => [...root.querySelectorAll(sel)].filter((e) => !e.closest('[hidden], [data-out]') && e.getClientRects().length > 0);
+  const items = live('.k7-dock__row > *').map((e) => ({ cls: e.className.toString().replace('k7-reset ', '').slice(0, 20), ...r(e) }));
+  return { body: r(k), svg: r(svg), d: svg.querySelector('path').getAttribute('d'), items, orbs: live('.k7-dock__orb').length, add: live('[aria-label*="New bot"], .dk-add, [data-act="add"]').length, geom: k.dataset.geom, kind: k.dataset.dk, innerH: innerHeight };
 };
 
 export async function dockEmpty(env) {
   const s = scenario(env);
   await s.safe('dock-empty', async () => {
+    const withBots = await (await s.fresh({ settle: 1200 })).evaluate(STATE);
     for (const reduced of [false, true]) {
       const tag = reduced ? 'reduced motion' : 'motion';
-
-      /* a first install: no dock, not a dock with nothing in it */
-      const first = await s.fresh({ q: 'fixture=fresh', settle: 1500, reduced });
-      const f = await first.evaluate(() => {
-        const root = document.querySelector('#hx-dock .dk'), cs = getComputedStyle(root), p = root.querySelector('.dk-shape path').getBoundingClientRect();
-        return { mode: root.dataset.mode, gone: root.classList.contains('is-gone'), vis: cs.visibility, inert: root.inert, aria: root.getAttribute('aria-hidden'), d: root.querySelector('.dk-shape path').getAttribute('d'), area: p.width * p.height, setting: __hx.state.dock };
-      });
-      check('dock', `${tag}: a first install shows no dock (off, gone, hidden, inert, no slab drawn)`, f.mode === 'off' && f.gone && f.vis === 'hidden' && f.inert && f.aria === 'true' && f.d === '' && f.area === 0, f);
-      check('dock', `${tag}: and it is not the setting: "Show the dock" is still on`, f.setting === 'on', f);
-
-      /* a session and no bots: the session part alone */
-      const page = await s.fresh({ q: 'fixture=none', settle: 1500, reduced });
-      const m = await page.evaluate(MEASURE);
-      check('dock', `${tag}: a session and no bots shows the session part alone, in the normal mode`, m.mode === 'normal' && m.parts === 'session', { mode: m.mode, parts: m.parts });
-      check('dock', `${tag}: no roster, no "+" and no bot anywhere in it (a lone "+" can no longer exist)`, m.n === 0 && m.add === 0 && m.roster === 0, { n: m.n, add: m.add, roster: m.roster });
-      const need = m.kids.reduce((a, k) => a + k.w, 0);
-      check('dock', `${tag}: the slab is at least as wide as the foot's three controls (${m.body.w.toFixed(0)}px for ${need.toFixed(0)}px)`, m.body.w >= need + 8 && Math.abs(m.foot.w - m.body.w) < 1.5, { body: m.body.w, need, foot: m.foot.w });
-      check('dock', `${tag}: every foot control sits inside the slab's body, none spills out of its sides`, m.kids.length === 3 && m.kids.every((k) => k.l >= m.body.l - 0.5 && k.r <= m.body.r + 0.5), m.kids.map((k) => [k.cls, Math.round(k.l - m.body.l), Math.round(m.body.r - k.r)]));
-      check('dock', `${tag}: no tombstone, the top corners keep their radius and a flat top lies between them`, m.body.w > 2 * m.flare + 8 && m.body.h <= 80, { w: m.body.w, h: m.body.h, flare: m.flare });
-      check('dock', `${tag}: the slab is as tall as with bots (76px), flush to the window's edge`, Math.abs(m.body.h - 76) <= 1 && Math.abs(m.body.b - m.innerH) <= 1, { h: m.body.h, bottom: m.body.b, innerH: m.innerH });
-      check('dock', `${tag}: the page nub and Minimise sit right of Arrange, in order, with room between them`, m.kids[0].r < m.kids[1].l && m.kids[1].r < m.kids[2].l, m.kids.map((k) => [Math.round(k.l), Math.round(k.r)]));
-      if (!reduced) {
-        await page.mouse.move(m.body.cx, m.body.t + 30); await page.waitForTimeout(500);   /* the controls show on hover: this is the dock as it is used */
-        await page.screenshot({ path: join(OUT, 'dock-empty.png'), clip: { x: Math.max(0, m.body.cx - 360), y: m.body.t - 60, width: 720, height: m.body.h + 60 } });
+      for (const [fixture, what] of [['fresh', 'a first install'], ['none', 'sessions and no bots']]) {
+        const page = await s.fresh({ q: 'fixture=' + fixture, settle: 1500, reduced });
+        const f = await page.evaluate(STATE);
+        check('dock', `${tag}: ${what} shows no dock (not drawn, hidden, inert, out of the accessibility tree, below the window's edge)`, !f.shown && !f.in && f.vis === 'hidden' && f.inert && f.aria === 'true' && f.top >= f.innerH, f);
+        check('dock', `${tag}: ${what}: it is not the setting ("Show the dock" is still on, nothing stored says otherwise)`, f.setting === 'on' && f.stored !== 'off', f);
+        check('dock', `${tag}: ${what}: the composer keeps no room for a dock (72 lower than with bots: board K06)`, f.room === 0 && withBots.room === 72 && f.gap !== null && withBots.gap - f.gap === 72, { room: f.room, gap: f.gap, withBots: withBots.gap });
+        check('dock', `${tag}: ${what}: no console errors`, page.errors.length === 0, page.errors);
       }
-      check('dock', `${tag}: no console errors`, first.errors.length === 0 && page.errors.length === 0, [...first.errors, ...page.errors]);
     }
 
-    /* the pill stays narrower than the foot, and a dock that returns from the pill to normal is as wide as before */
-    const page = await s.fresh({ q: 'fixture=none', settle: 1200 });
-    const w = await page.evaluate(async () => {
-      const d = __hx.dock(), width = () => document.querySelector('#hx-dock .dk-shape').getBoundingClientRect().width, out = {};
-      out.normal = width();
-      d.setMode('minimal'); await new Promise((r) => setTimeout(r, 700)); out.minimal = width();
-      d.setMode('normal'); await new Promise((r) => setTimeout(r, 700)); out.back = width();
-      return out;
-    });
-    check('dock', 'the pill is narrower than the dock, and normal after it is the dock\'s width again', w.minimal < w.normal && Math.abs(w.back - w.normal) < 1, w);
-
-    /* the dock with bots is unchanged: the row sets the slab, the foot is narrower */
-    const withBots = await s.fresh({ settle: 1200 });
-    const b = await withBots.evaluate(MEASURE);
-    check('dock', 'with the default bots the slab is still the row\'s width (the foot is narrower)', b.n > 5 && b.add === 1 && b.body.w > 400 && Math.abs(b.foot.w - b.body.w) < 1.5, { n: b.n, body: b.body.w });
+    /* the dock with the default bots: the row's geometry */
+    const page = await s.fresh({ settle: 1200 });
+    const m = await page.evaluate(MEASURE);
+    check('dock', 'with bots the dock is the row: the kit\'s Dock in its row geometry, with bots in it and no "+"', m.kind === 'row' && m.geom === 'fit,72,30,30' && m.orbs > 3 && m.add === 0, { kind: m.kind, geom: m.geom, orbs: m.orbs, add: m.add });
+    check('dock', 'the slab is 72 tall, flush to the window\'s edge, and as wide as its content (at most 640)', Math.abs(m.body.h - 72) <= 0.5 && Math.abs(m.body.b - m.innerH) <= 0.5 && m.body.w <= 640.5 && m.body.w > 200, m.body);
+    const left = Math.min(...m.items.map((k) => k.l)) - m.body.l, right = m.body.r - Math.max(...m.items.map((k) => k.r));
+    check('dock', 'its width is its content\'s: the first and last things in the row sit 30 from the slab\'s sides, out of the corner zones', Math.abs(left - 30) <= 0.5 && Math.abs(right - 30) <= 0.5, { left, right });
+    check('dock', 'everything in the row is inside the slab\'s body, top to bottom', m.items.every((k) => k.t >= m.body.t && k.b <= m.body.b + 0.5 && k.l >= m.body.l && k.r <= m.body.r), m.items.map((k) => [k.cls, Math.round(k.t - m.body.t), Math.round(m.body.b - k.b)]));
+    check('dock', 'no tombstone: the slab\'s drawn path is the body plus its two 30 flares, with a flat top between the corners', Math.abs(m.svg.w - (m.body.w + 60)) <= 0.5 && m.body.w > 2 * 30 + 8 && /^M0 72/.test(m.d), { svg: m.svg.w, body: m.body.w, d: m.d.slice(0, 24) });
+    await page.screenshot({ path: join(OUT, 'dock-row.png'), clip: { x: Math.max(0, (m.body.l + m.body.r) / 2 - 400), y: m.body.t - 60, width: 800, height: m.body.h + 60 } });
+    check('dock', 'no console errors', page.errors.length === 0, page.errors);
   });
   await s.close();
 }

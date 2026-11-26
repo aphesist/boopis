@@ -40,7 +40,8 @@ export async function controls(env, AXE) {
       const open = await page.evaluate(() => {
         const surface = document.querySelector('.ui-listbox'); if (!surface) return null;
         const lb = surface.querySelector('[role="listbox"]'), cs = getComputedStyle(lb), fill = getComputedStyle(surface, '::before').backgroundColor, probe = document.createElement('i');
-        probe.style.cssText = 'position:fixed;background:var(--bg-1);color:var(--current)'; document.body.append(probe);
+        /* the probe reads the tokens where the listbox is drawn (the app's root is a v7 root: its --bg-1 is the v7 surface) */
+        probe.style.cssText = 'position:fixed;background:var(--bg-1);color:var(--current)'; (surface.parentElement ?? document.body).append(probe);
         const frame = getComputedStyle(probe).backgroundColor; probe.style.background = 'var(--current)'; const current = getComputedStyle(probe).backgroundColor; probe.remove();
         const f = document.activeElement, fs = getComputedStyle(f), r = lb.getBoundingClientRect();
         return {

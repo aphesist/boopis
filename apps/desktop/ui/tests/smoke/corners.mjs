@@ -16,7 +16,7 @@ export async function corners(env) {
     check('corners', 'no stylesheet uses corner-shape: the corner is a path in every engine', css === 0, css);
     const modes = await page.evaluate((leaf) => ({ clipped: [...document.querySelectorAll('[data-sq-mode="clip"]')].filter((e) => !e.matches(leaf)).length, any: [...document.querySelectorAll('[data-sq-on]')].length, nonLeafClip: [...document.querySelectorAll('[data-sq-on]')].filter((e) => !e.matches(leaf) && getComputedStyle(e).clipPath !== 'none' && !/slab|concave/.test(e.dataset.sqMode)).length }), LEAF);
     check('corners', 'only leaf controls are clipped: a container never clips what overflows it', modes.clipped === 0 && modes.nonLeafClip === 0 && modes.any > 20, modes);
-    const frame = await page.evaluate(() => { const b = document.querySelector('.ss-composer__box, .ui-composer__box'); return { before: getComputedStyle(b, '::before').content, bg: getComputedStyle(b).backgroundColor, clip: getComputedStyle(b).clipPath, mode: b.dataset.sqMode }; });
+    const frame = await page.evaluate(() => { const b = document.querySelector('.ss-composer .k7-composer__box'); return { before: getComputedStyle(b, '::before').content, bg: getComputedStyle(b).backgroundColor, clip: getComputedStyle(b).clipPath, mode: b.dataset.sqMode }; });
     check('corners', 'a bound surface draws its corner as a layer (::before) and keeps its content unclipped', frame.mode === 'frame' && frame.clip === 'none' && frame.before !== 'none', frame);
 
     /* the budget: 200 bound buttons changing height every frame */
@@ -36,7 +36,8 @@ export async function corners(env) {
     /* the dock's morphs and a card's height animation */
     const morph = await page.evaluate(async () => {
       const q = __hx.ui.squircle, a = q.stats(), d = __hx.dock();
-      for (const m of ['expanded', 'normal', 'minimal', 'normal', 'expanded', 'normal']) { d.setMode(m); await new Promise((r) => setTimeout(r, 650)); }
+      /* v7: the dock's morphs are the row to its one open size and back (a bot's card, the asks) */
+      for (const m of [() => d.openSession(d.botAt(1)), () => d.closeSession(), () => d.openAsks(), () => d.setMode('normal'), () => d.openSession(d.botAt(2)), () => d.closeSession()]) { m(); await new Promise((r) => setTimeout(r, 650)); }
       const card = __hx.ui.card('form', { id: 'perf', kind: 'question', title: 'q', origin: { kind: 'host' }, schema: { properties: { a: { type: 'string', title: 'A' } }, required: ['a'] } }, { size: 'inline' });
       const h = document.createElement('div'); h.style.cssText = 'position:fixed;left:20px;top:20px;width:520px;z-index:9999'; h.append(card); document.body.append(h);
       await new Promise((r) => setTimeout(r, 300));
@@ -54,7 +55,7 @@ export async function corners(env) {
       page.on('console', (m) => { if (m.type() === 'error') page.errors.push(m.text()); });
       await page.goto(env.srv.origin + '/index.html'); await page.evaluate(() => { try { localStorage.clear(); } catch { /* blocked */ } });
       await page.goto(env.srv.origin + '/index.html'); await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(1500);
-      const r = await page.evaluate(() => { const b = (s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; }; return { left: __hx.state.left, side: b('.hx-side'), comp: b('.ss-composer'), dock: b('#hx-dock .dk-shape'), hscroll: document.documentElement.scrollWidth > innerWidth, W: innerWidth }; });
+      const r = await page.evaluate(() => { const b = (s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; }; return { left: __hx.state.left, side: b('.hx-side'), comp: b('.ss-composer'), dock: b('#hx-dock .k7-dock__slab'), hscroll: document.documentElement.scrollWidth > innerWidth, W: innerWidth }; });
       const overlap = r.comp && r.dock ? Math.min(r.comp.b, r.dock.b) - Math.max(r.comp.t, r.dock.t) : 0;
       const wantSide = w >= 900;
       check('corners', `${w}x${h}@${d}: the sidebar follows the width, the dock never covers the composer, nothing scrolls sideways`, (wantSide ? r.left === 'open' && r.side && r.side.r - r.side.l > 200 : r.left !== 'open') && overlap <= 0 && !r.hscroll && !page.errors.length, { ...r, overlap });

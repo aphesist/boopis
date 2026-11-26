@@ -2,7 +2,7 @@
    1. the form card family on the mock provider: every kind in every state, the keyboard rules, accessible errors, hold to
       approve, the secret that never stays in the page, axe with zero violations;
    2. forms raised by the plugin, over the recorded frames of a real gateway and plugin (`?provider=live-replay&frames=forms`):
-      they appear inline in the conversation and in the dock's queue, answering in one place resolves both, and a secret
+      they appear inline in the conversation and among what waits on you (the provider's waits: the v7 dock carries your bots' approvals only, DESIGN-SYSTEM.md v7 21.4, so a form is answered where it was raised), and a secret
       reaches the keychain and nowhere else (not the DOM, not one RPC payload). */
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
@@ -150,19 +150,12 @@ export async function liveForms(env) {
     await page.waitForTimeout(1800);
     const raised = await page.evaluate(() => ({
       inline: [...document.querySelectorAll('.ss-forms hx-card[data-kind="form"]')].map((c) => c.data.kind),
-      dock: __hx.dock().state.waits, waits: __hx.data().waits.snapshot().map((w) => w.kind + ':' + w.data.kind),
+      dock: __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length, dockAsks: __hx.dock().state.asks, waits: __hx.data().waits.snapshot().map((w) => w.kind + ':' + w.data.kind),
       origin: [...document.querySelectorAll('.ss-forms hx-card .cd-by')].map((n) => n.dataset.origin)
     }));
     check('forms-live', 'forms the plugin raised appear inline in the conversation, where the turn raised them', raised.inline.join() === 'credential,question,setup', raised);
-    check('forms-live', 'and as waits in the dock\'s queue, next to approvals and blanks', raised.dock === 3 && raised.waits.join() === 'form:credential,form:question,form:setup', raised);
+    check('forms-live', 'and they wait on you, next to approvals and blanks (none of them in the dock: its asks are your bots\' approvals)', raised.dock === 3 && raised.dockAsks === 0 && raised.waits.join() === 'form:credential,form:question,form:setup', raised);
     check('forms-live', 'each says who is asking: the agent, with its model', raised.origin.every((o) => o === 'agent'), raised.origin);
-
-    /* the dock shows them as aligned rows */
-    await page.evaluate(() => { __hx.dock().setMode('normal'); __hx.dock().goPage('wait'); });
-    await page.waitForTimeout(1200);
-    const rows = await page.evaluate(() => { const r = [...document.querySelectorAll('#hx-dock .cd-mini')].map((m) => ({ lead: m.querySelector('.cd-mini__lead').getBoundingClientRect().width, text: m.querySelector('.cd-mini__text').getBoundingClientRect().left, status: m.querySelector('.cd-mini__status').getBoundingClientRect().right })); return r; });
-    const aligned = rows.length >= 3 && rows.every((r) => Math.abs(r.lead - rows[0].lead) < 0.5 && Math.abs(r.text - rows[0].text) < 0.5 && Math.abs(r.status - rows[0].status) < 0.5);
-    check('forms-live', 'the dock queue lines its rows up: a fixed lead mark, one text column, a fixed status column', aligned, rows);
 
     /* answer the credential INLINE, with a secret */
     const inlineKey = page.locator('.ss-forms hx-card').filter({ hasText: 'openai' }).first();
@@ -181,26 +174,24 @@ export async function liveForms(env) {
     check('forms-live', 'the secret is in no RPC payload and not in the DOM, before or after the answer', !k1.all && !k1.dom, { rpc: k1.all, dom: k1.dom });
     check('forms-live', 'answering inline resolves the inline card (a receipt)', k1.state.every((s) => s === 'done'), k1.state);
     await page.waitForTimeout(1300);
-    check('forms-live', 'and the dock\'s queue drops it', await page.evaluate(() => __hx.dock().state.waits === 2 && !document.querySelector('#hx-dock hx-card[data-kind="form"] input[data-secret]')));
+    check('forms-live', 'and it no longer waits on you', await page.evaluate(() => __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length === 2 && !document.querySelector('#hx-dock input[data-secret]')));
 
-    /* answer the question IN THE DOCK */
-    await page.evaluate(() => __hx.dock().setMode('expanded'));
-    await page.waitForTimeout(1200);
-    const dockQ = page.locator('#hx-dock hx-card[data-kind="form"][data-size="compact"]').filter({ hasText: 'Keep the old alias?' }).first();
-    await dockQ.locator('.cd-opt').first().click();
-    await dockQ.locator('[data-action="submit"]').click();
+    /* answer the question, inline (the dock's Needs-you page went with v7: a session's form is answered in the session) */
+    const inlineQ = page.locator('.ss-forms hx-card[data-kind="form"]').filter({ hasText: 'Keep the old alias?' }).first();
+    await inlineQ.locator('.cd-opt').first().click();
+    await inlineQ.locator('[data-action="submit"]').click();
     await page.waitForTimeout(600);
     const q = await page.evaluate(() => ({ req: window.__hxReplay.requests.filter((r) => r.method === 'plugin.boopis.form.submit').map((r) => r.params.values), inline: [...document.querySelectorAll('.ss-forms hx-card')].filter((c) => c.data.kind === 'question').map((c) => c.state) }));
-    check('forms-live', 'answering in the dock sends the answer, and resolves the inline card too', q.req.some((v) => v.answer === 'yes') && q.inline.every((s) => s === 'done'), q);
+    check('forms-live', 'answering the question sends the answer and the card becomes a receipt', q.req.some((v) => v.answer === 'yes') && q.inline.every((s) => s === 'done'), q);
     await page.waitForTimeout(1300);
-    check('forms-live', 'one form is left in the dock', await page.evaluate(() => __hx.dock().state.waits === 1));
+    check('forms-live', 'one form is left waiting', await page.evaluate(() => __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length === 1));
 
     /* cancel the third inline */
     const inlineSetup = page.locator('.ss-forms hx-card').filter({ hasText: 'gate command' }).first();
     await inlineSetup.locator('[data-action="cancel"]').click();
     await page.waitForTimeout(1600);
-    const c3 = await page.evaluate(() => ({ cancel: window.__hxReplay.requests.some((r) => r.method === 'plugin.boopis.form.cancel'), waits: __hx.dock().state.waits }));
-    check('forms-live', 'cancelling sends form.cancel and clears the queue', c3.cancel && c3.waits === 0, c3);
+    const c3 = await page.evaluate(() => ({ cancel: window.__hxReplay.requests.some((r) => r.method === 'plugin.boopis.form.cancel'), waits: __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length }));
+    check('forms-live', 'cancelling sends form.cancel and nothing waits any more', c3.cancel && c3.waits === 0, c3);
     check('forms-live', 'nothing in the run logged a console error', page.errors.length === 0, page.errors);
   });
   await s.close();
@@ -221,7 +212,7 @@ export async function liveRequests(env) {
     };
     const cards = () => page.evaluate(() => ({
       inline: [...document.querySelectorAll('.ss-forms hx-card[data-kind="form"]')].map((c) => ({ title: c.data.title, kind: c.data.kind, state: c.state, origin: c.querySelector('.cd-by')?.dataset.origin })),
-      dock: __hx.dock().state.waits,
+      dock: __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length,
       waits: __hx.data().waits.snapshot().map((w) => w.kind + ':' + w.data.kind)
     }));
 
@@ -229,7 +220,7 @@ export async function liveRequests(env) {
     await say('use the skill');
     let c = await cards();
     check('forms-requests', 'a secret request is a credential form, inline in the turn that raised it, from the session', c.inline.length === 1 && c.inline[0].kind === 'credential' && c.inline[0].title === 'boopis needs BOOPIS_TEST_TOKEN' && c.inline[0].origin === 'hermes', c);
-    check('forms-requests', 'and in the dock\'s queue', c.dock === 1 && c.waits.join() === 'form:credential', c);
+    check('forms-requests', 'and it waits on you', c.dock === 1 && c.waits.join() === 'form:credential', c);
     const card = page.locator('.ss-forms hx-card').first();
     const field = await card.locator('input[data-secret]').evaluate((i) => ({ type: i.type, autocomplete: i.autocomplete }));
     check('forms-requests', 'the value is typed in a masked field', field.type === 'password' && field.autocomplete === 'off', field);
@@ -247,9 +238,9 @@ export async function liveRequests(env) {
     }), TYPED);
     check('forms-requests', 'the value goes in the response frame of the request\'s own id', k.responses.length === 1 && String(k.responses[0].id).startsWith('srq-') && k.responses[0].result.value === TYPED, k.responses);
     check('forms-requests', 'and in no call to the gateway, not the keychain, and not the page, before or after the answer', !k.calls && k.keychain === 0 && !k.dom, { calls: k.calls, keychain: k.keychain, dom: k.dom });
-    check('forms-requests', 'the card becomes a receipt, and the dock drops it', k.states.every((x) => x === 'done') && /\bSent\b/.test(k.receipt) && /^boopis needs/.test(k.receipt), k);
+    check('forms-requests', 'the card becomes a receipt', k.states.every((x) => x === 'done') && /\bSent\b/.test(k.receipt) && /^boopis needs/.test(k.receipt), k);
     await page.waitForTimeout(1300);
-    check('forms-requests', 'the dock\'s queue is empty', (await cards()).dock === 0);
+    check('forms-requests', 'nothing waits on you any more', (await cards()).dock === 0);
 
     /* a sudo request the gateway withdraws when the turn is interrupted */
     await say('run sudo');

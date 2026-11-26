@@ -16,7 +16,7 @@ const card = (id: string) => async (c: AppCtx): Promise<void> => { c.hx.dock()?.
 const asks = async (c: AppCtx): Promise<void> => { c.hx.dock()?.openAsks(); await c.wait(700); };
 /** the pointer on the n-th orb of the row (a hover is the row's own: it reads where the pointer is) */
 const hover = (n: number) => async (c: AppCtx): Promise<void> => {
-  const o = document.querySelectorAll<HTMLElement>('#hx-dock .k7-dock__orb:not([hidden])')[n];
+  const o = document.querySelectorAll<HTMLElement>('#hx-dock .k7-dock__orb:not([data-out])')[n];
   const r = o?.getBoundingClientRect();
   if (r) c.hx.dock()?.hover(r.left + r.width / 2);
   await c.wait(500);

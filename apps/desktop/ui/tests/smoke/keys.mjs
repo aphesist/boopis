@@ -31,8 +31,9 @@ export async function keyWalk(env) {
     await press('Control+i', 500); check('1', 'mod+I details (Session)', (await st()).right === 'open'); await press('Control+i', 500);
     await press('Control+j', 600); check('1', 'mod+J dock off', (await st()).dock === 'off');
     await press('Control+j', 900); check('1', 'mod+J dock on', (await st()).dock === 'on');
-    await press('Control+Shift+j', 900); check('1', 'mod+shift+J expanded', (await dockMode()) === 'expanded');
-    await press('Control+Shift+j', 900); check('1', 'mod+shift+J normal', (await dockMode()) === 'normal');
+    /* v7: the dock has one row and one open size; mod+shift+J opens what waits on you (the stack of asks) and folds it again */
+    await press('Control+Shift+j', 900); check('1', 'mod+shift+J opens the asks in the dock', (await dockMode()) === 'expanded' && (await ev(() => __hx.dock().state.open)) === 'stack', await dockMode());
+    await press('Control+Shift+j', 900); check('1', 'mod+shift+J folds it to the row', (await dockMode()) === 'normal' && (await ev(() => __hx.dock().state.open)) === null, await dockMode());
     await press('Control+Comma', 400); check('1', 'mod+, Settings', (await layer()).settings);
     await press('Escape', 300); check('1', 'Esc closes Settings', !(await layer()).settings);
     await press('Control+Shift+Comma', 400); check('1', 'mod+shift+, Appearance', await ev(() => !document.getElementById('hx-dpanel-appearance').hidden && document.getElementById('hx-settings').open)); await press('Escape', 300);
@@ -194,40 +195,47 @@ export async function keyWalk(env) {
     check('7', 'alt+S turns Smart off', !/^Smart/.test((await chip()).text), await chip());
   });
 
-  /* section 8: the dock (Enter and Space open the bot's session in the dock; mod+Enter the full chat) */
+  /* section 8: the dock (v7: the row of your bots; Enter and Space open a bot's card in the dock, mod+Enter the full chat).
+     Gone with the v7 dock (DESIGN-SYSTEM.md v7 21.4: one page, no minimal mode): "[" and "]" between pages, up and down for its size */
   page = await s.fresh();
   await s.safe('8', async () => {
-    const sessionOpen = () => ev(() => { const v = document.querySelector('#hx-dock .dk-v-bots-card'); return !!v && !v.hidden && v.getClientRects().length > 0; });
-    const pageNow = () => ev(() => (document.querySelector('#hx-dock .ui-pages__dot[aria-selected="true"]') || {}).dataset?.value || null);
+    const card = () => ev(() => { const d = __hx.dock().state, p = document.querySelector('#hx-dock .k7-dock__panel[data-open="card"]'); return d.open === 'card' && !!p && p.getClientRects().length > 0 ? d.card : null; });
     await press('Control+g', 100); await press('d', 400);
-    const d0 = await where(); check('8', 'focus lands on a dock bot', d0.region === 'dock', d0.label);
+    const d0 = await where(); check('8', 'focus lands on a dock bot', d0.region === 'dock' && d0.cls.includes('k7-dock__orb'), d0.label);
     await press('ArrowRight'); const d1 = await where(); check('8', 'right moves to the next bot', d1.label !== d0.label && d1.region === 'dock', d1.label);
     await press('End'); const e = await where(); await press('Home'); const h = await where(); check('8', 'Home and End', e.label !== h.label, h.label + ' / ' + e.label);
-    await press('Space', 1000); check('8', 'Space opens the session in the dock', (await sessionOpen()) && (await st()).tab === 'session', await dockMode());
-    await press('Escape', 1200); check('8', 'Esc closes the session, focus on the orb', !(await sessionOpen()) && (await where()).region === 'dock', await where());
-    await press('Enter', 1000); check('8', 'Enter opens the session too', (await sessionOpen()) && (await st()).tab === 'session');
-    const comp = await ev(() => { const i = document.querySelector('#hx-dock .dk-v-bots-card [data-hx-focus="composer"], #hx-dock .dk-v-bots-card [contenteditable="true"]'); if (i) i.focus(); return !!i; });
+    const first = await ev(() => document.activeElement.dataset.bot);
+    await press('Space', 1000); check('8', 'Space opens the bot\'s card in the dock', (await card()) === first && (await st()).tab === 'session', await dockMode());
+    await press('Escape', 1200); check('8', 'Esc closes the card, focus on its orb', !(await card()) && (await where()).region === 'dock' && (await ev(() => document.activeElement.dataset.bot)) === first, await where());
+    await press('Enter', 1000); check('8', 'Enter opens the card too', (await card()) === first && (await st()).tab === 'session');
+    const comp = await ev(() => { const i = document.querySelector('#hx-dock .k7-dock__panel [role="textbox"], #hx-dock .k7-dock__panel [contenteditable]'); if (i) i.focus(); return !!i; });
+    check('8', 'the card has a composer', comp);
     if (comp) {
-      await press('Alt+v', 400); const on = await ev(() => { const m = document.querySelector('#hx-dock .ui-composer__mic'); return m && m.getAttribute('aria-pressed'); });
-      await press('Escape', 400); const off = await ev(() => { const m = document.querySelector('#hx-dock .ui-composer__mic'); return m && m.getAttribute('aria-pressed'); });
-      check('7', 'alt+V talks in the dock session; Esc stops', on === 'true' && off !== 'true' && (await sessionOpen()), on + ' -> ' + off);
+      const mic = () => ev(() => { const m = document.querySelector('#hx-dock [data-mic], #hx-dock .ui-composer__mic'); return m ? m.getAttribute('aria-pressed') : 'no mic'; });
+      await press('Alt+v', 400); const on = await mic();
+      await press('Escape', 400); const off = await mic();
+      check('7', 'alt+V talks in the bot\'s card; Esc stops and the card stays', on === 'true' && off !== 'true' && !!(await card()), on + ' -> ' + off);
       await press('Escape', 1200);
     }
-    await press('Escape', 900);
+    check('8', 'Esc from the card\'s composer folds the dock', !(await card()), await dockMode());
     await press('Control+g', 100); await press('d', 400); await press('ArrowRight');
     const who = (await where()).label; await press('Control+Enter', 800);
     check('8', 'mod+Enter opens the full chat', (await st()).tab === 'bots' && who.toLowerCase().startsWith((await title()).toLowerCase()), who + ' / ' + (await title()));
     page = await s.fresh();
-    await press('Control+g', 100); await press('d', 400);
-    const dots = await ev(() => document.querySelectorAll('#hx-dock .ui-pages__dot').length);
-    const p0 = await pageNow(); await press('BracketRight', 900); const p1 = await pageNow();
-    check('8', '] next page', dots < 2 || p0 !== p1, dots + ' pages: ' + p0 + ' -> ' + p1);
-    await press('BracketLeft', 900); check('8', '[ previous page', dots < 2 || (await pageNow()) === p0, await pageNow());
     await press('Control+g', 100); await press('d', 400); await press('2', 600);
     const second = await ev(() => __hx.dock().botAt(2));
-    check('8', '2 focuses bot 2', await ev((id) => !!document.activeElement.closest('#hx-dock') && document.activeElement.dataset.id === id, second), second + ' / ' + (await where()).label);
-    await press('ArrowDown', 900); const m1 = await dockMode(); await press('ArrowUp', 900); const m2 = await dockMode();
-    check('8', 'down and up change the dock size', m1 !== m2, m1 + ' / ' + m2);
+    check('8', '2 focuses bot 2', await ev((id) => !!document.activeElement.closest('#hx-dock') && document.activeElement.dataset.bot === id, second), second + ' / ' + (await where()).label);
+    /* the ask pill is the row's last stop (board DK1: a focused bot takes the ring, the pill stays): Enter opens the asks, Esc folds them and returns to it */
+    await press('End', 300);
+    const pill = await ev(() => !!document.activeElement.closest('.k7-dock__ask'));
+    await press('Enter', 900); const open = await ev(() => ({ open: __hx.dock().state.open, on: !!document.activeElement.closest('[data-kit~="AskCard"] [data-hold]') }));
+    /* Esc on an ask is its Deny (the chip says "esc"); from the head it folds the asks, and nothing is decided */
+    await ev(() => document.querySelector('#hx-dock .k7-dock__head [data-act="close"]').focus());
+    await press('Escape', 900); const back = await ev(() => ({ open: __hx.dock().state.open, pill: !!document.activeElement.closest('.k7-dock__ask'), asks: __hx.dock().state.asks }));
+    check('8', 'End reaches the ask pill; Enter opens the asks on the first one\'s hold; Esc from the head folds them and returns to the pill', pill && open.open === 'stack' && open.on && back.open === null && back.pill && back.asks === 1, { pill, open, back });
+    await press('ArrowLeft', 300);
+    check('8', 'left of the pill is "N more", which goes to the Bots tab', await ev(() => document.activeElement.dataset.act === 'more'));
+    await press('Enter', 600); check('8', 'Enter on "N more" opens the Bots tab', (await st()).tab === 'bots');
   });
 
   /* grow on hover, on and off: the hovered row orb grows only when orbGrow is on */
@@ -236,9 +244,9 @@ export async function keyWalk(env) {
     await s.safe('8', async () => {
       if (!grow) await ev(() => __hx.setState({ orbGrow: false }));
       await page.waitForTimeout(300);
-      const w = () => ev(() => { const o = document.querySelectorAll('#hx-dock .dk-bot')[3]; const r = (o.querySelector('.ui-orb') || o).getBoundingClientRect(); return Math.round(r.width * 10) / 10; });
+      const w = () => ev(() => { const o = document.querySelectorAll('#hx-dock .k7-dock__orb:not([data-out])')[3]; const r = (o.querySelector('.ui-orb') || o).getBoundingClientRect(); return Math.round(r.width * 10) / 10; });
       const rest = await w();
-      await page.hover('#hx-dock .dk-bot >> nth=3'); await page.waitForTimeout(700);
+      await page.hover('#hx-dock .k7-dock__orb:not([data-out]) >> nth=3'); await page.waitForTimeout(700);
       const hov = await w();
       check('8', 'grow ' + (grow ? 'on: the hovered orb grows' : 'off: the hovered orb keeps its size'), grow ? hov > rest + 2 : Math.abs(hov - rest) < 1, rest + ' -> ' + hov);
     });
@@ -253,7 +261,11 @@ export async function keyWalk(env) {
     const x0 = await ev(() => document.activeElement.getAttribute('aria-expanded')); await press('Enter', 400); const x1 = await ev(() => document.activeElement.getAttribute('aria-expanded'));
     check('9', 'Enter toggles a section', x0 !== x1, x0 + ' -> ' + x1);
     await press('Escape', 300); check('9', 'Esc to the conversation, the panel stays', (await where()).region === 'messages' && (await st()).right === 'open');
-    await press('Alt+2', 500); await press('Control+i', 600); check('9', 'mod+I opens the bot settings sheet', await ev(() => !!document.querySelector('[data-hx-panel]:not([hidden])')));
+    /* on Bots, mod+I is the open bot's details (board 11's pane); its settings sheet opens from a row of it */
+    await press('Control+i', 500); await press('Alt+2', 500); await press('Control+i', 600);
+    check('9', 'mod+I opens the bot\'s details on Bots', await ev(() => { const p = document.querySelector('#hx-right-bots > [data-kit~="Pane"]'); return !!p && p.getClientRects().length > 0 && __hx.state.right === 'open'; }));
+    await ev(() => __hx.emit('hx:bot-settings', { open: true, from: 'keyboard' })); await page.waitForTimeout(600);
+    check('9', 'the bot\'s settings sheet opens beside it', await ev(() => { const p = document.querySelector('.bt-sheet[data-hx-panel]'); return !!p && !p.hidden && p.getClientRects().length > 0; }));
   });
 
   /* section 10: the palette, menus and dialogs */
@@ -265,6 +277,8 @@ export async function keyWalk(env) {
     await press('Shift+Tab'); check('10', 'palette shift+Tab moves back', (await ev(() => document.getElementById('hx-palette-input').getAttribute('aria-activedescendant'))) === a0);
     await page.keyboard.type('>light'); await page.waitForTimeout(200); await press('Enter', 400); check('10', 'palette Enter runs the command', (await ev(() => __hx.theme.scheme())) === 'light');
     await ev(() => __hx.theme.preset('catalog'));
+    /* "you" is in the Bots sidebar's foot (boards S17 and 13 draw Store and Settings alone on the Sessions side) */
+    await press('Alt+2', 500);
     await page.focus('#hx-btn-account'); await press('Enter', 300);
     const m0 = await where(); await press('ArrowDown'); const m1 = await where(); await press('End'); const me = await where(); await press('Home'); const mh = await where();
     check('10', 'menu down, Home, End', m0.label !== m1.label && me.label !== mh.label, [m0.label, m1.label, mh.label, me.label].join(' | '));
