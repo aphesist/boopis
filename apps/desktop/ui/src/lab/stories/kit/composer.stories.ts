@@ -75,13 +75,31 @@ export default {
       if (b) kit.openNotice(b, { icon: 'waveform', title: 'Voice needs a voice model', text: '', action: 'Set up voice' });
       await wait(200);
     }, { width: 720, overlay: { anchor: '[data-send]', layer: '.k7-notice[data-floating]' } }),
-    /* the mic likewise (the lead, 26 November): with no speech model nothing can hear, so it is drawn the same, its name and tip say
-       what it needs, and a press, a hold or alt+V opens the same Notice at the mic */
-    'no speech model yet: what the mic opens': stage(['open', 'owner'], async ({ root, wait }) => {
-      fill(root, kit.composer({ kind: 'bot', voiceSetup: true, micSetup: true }));
+    /* the mic is transcription (owner, 26 November): what its dictation reports is drawn with what the composer has. Derived, no board:
+       the speech model being fetched once (its progress in the placeholder), the words arriving in the text, an error at the mic with
+       "Try again", and a build with no dictation at all */
+    'dictation: getting the speech model': stage(['loading', 'owner'], ({ root }) => {
+      const c = kit.composer({ kind: 'bot', placeholder: 'Message nina', hears: 'nina' }); fill(root, c);
+      c.querySelector<HTMLElement>('[data-mic]')?.click();
+      kit.composerDictation(c, { kind: 'preparing', done: 12 * 1048576, total: 57 * 1048576 });
+    }, { width: 720 }),
+    'dictation: the words arriving': stage(['variant', 'owner'], ({ root }) => {
+      const c = kit.composer({ kind: 'session', line: S20, text: 'Fix the dock,' }); fill(root, c);
+      c.querySelector<HTMLElement>('[data-mic]')?.click();
+      kit.composerDictation(c, { kind: 'partial', text: 'and update the change' });
+    }, { width: 720 }),
+    'dictation: it failed': stage(['error', 'open', 'owner'], async ({ root, wait }) => {
+      const c = kit.composer({ kind: 'bot', placeholder: 'Message nina', hears: 'nina' }); fill(root, c);
+      await wait(100);
+      c.querySelector<HTMLElement>('[data-mic]')?.click();
+      kit.composerDictation(c, { kind: 'error', reason: 'Microphone access is off for boopis' });
+      await wait(200);
+    }, { width: 720, overlay: { anchor: '[data-mic]', layer: '.k7-notice[data-floating]' } }),
+    'dictation: not in this build': stage(['open', 'disabled', 'owner'], async ({ root, wait }) => {
+      fill(root, kit.composer({ kind: 'bot', voiceSetup: true, micOff: true }));
       await wait(100);
       const b = root.querySelector<HTMLElement>('[data-mic]');
-      if (b) kit.openNotice(b, { icon: 'mic', title: 'Dictation needs a speech model', text: '', action: 'Set up voice' });
+      if (b) kit.openNotice(b, { icon: 'mic', title: 'Dictation is not available in this build', text: '' });
       await wait(200);
     }, { width: 720, overlay: { anchor: '[data-mic]', layer: '.k7-notice[data-floating]' } }),
     /* a thing shows only once it exists: no send while a turn runs where nothing queues */

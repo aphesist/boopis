@@ -766,15 +766,13 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   const liveStore = createLiveStore({ bridge: opts.storeBridge !== undefined ? opts.storeBridge : inTauri() ? tauriStoreBridge() : null, plugin: (method, params) => client.requestRaw('plugin.boopis.' + method, params) });
   const ready = Promise.all([refreshList(), details.start().then(() => controls.start()), liveBots.ready, liveGroups.ready]).then(() => undefined);
   const flag = readFlag('feedforward');
-  /* what the mock invents and the desktop app does not have is left out, not stubbed: no `dictation` (the host has no transcription yet,
-     so nothing would hear: the mic says what it needs instead of pretending to listen) */
-  const { dictation: _invented, ...base } = mock;
   return {
-    ...base,
+    ...mock,
     info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable },
     ready, sessions, waits, user, engine, sessionControls: controls, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
     details: details.source, run: details.run, mods: modsHost.source, store: liveStore, kanban: liveKanban(),
     council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id), paths: hostPaths() },
+    dictation: { start: () => () => undefined }, // nothing hears you yet: the mock's transcript is invented text
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },
     settled: async () => { await liveStore.settled(); await details.settled(); await controls.settled(); await liveBots.settled(); await liveGroups.settled(); },
     ledger: { totals: () => ledgerTotals, subscribe(fn) { ledgerSubs.add(fn); return () => { ledgerSubs.delete(fn); }; } }

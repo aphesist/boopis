@@ -443,7 +443,12 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
   };
   const feedforward: FeedforwardSource = { catalog: () => M.DECISIONS };
   const dictation: DictationSource = {
-    start(_o, onTranscript) { const t = window.setTimeout(() => onTranscript('and update the changelog'), 2200); return () => clearTimeout(t); }
+    /* the page build hears nothing: it reports what a real source does (listening, the words so far, the finished stretch) with invented words */
+    start(_o, onEvent) {
+      onEvent({ kind: 'listening' });
+      const timers = [window.setTimeout(() => onEvent({ kind: 'partial', text: 'and update' }), 1200), window.setTimeout(() => onEvent({ kind: 'final', text: 'and update the changelog' }), 2200)];
+      return () => { timers.forEach((t) => clearTimeout(t)); };
+    }
   };
   const files: FilesSource = {
     pick: (kind) => Promise.resolve([kind === 'file' ? { name: 'invoices-sample.csv', kind: 'file' as const } : { name: 'src/billing/fixtures', kind: 'folder' as const }]),

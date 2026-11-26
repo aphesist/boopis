@@ -19,7 +19,7 @@ import { data } from '../../data';
 import type { Attached, GovernanceState, SendMeta } from '../../data';
 import { CAREFUL } from '../../data';
 import { bestMention, findMentions, mentionName, routeMentions } from '../../data/mentions';
-import { composerFiles, later, micNeedsSetup, micTool, voiceNeedsSetup, voiceTool } from '../chat/compose';
+import { composerFiles, dictate, later, micUnavailable, micTool, voiceNeedsSetup, voiceTool } from '../chat/compose';
 import { kindOf, makeReader, optionsFor } from './feedforward';
 import { COUNCIL_VALUE, openCouncilForm } from './council';
 import { FOOT_GOVERNED, FOOT_MENTION, FOOT_MENTION_GOVERNED, FOOT_UNGOVERNED, SETTINGS_VALUE, SMART_VALUE, currentChoice, governedUnavailableEntries, modelEntries, smartPreview } from './model-menu';
@@ -138,7 +138,7 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
     ph = placeholder(); hintNow = routeHint(value() || o.draft);
     const items = line();
     lineSig = JSON.stringify([items, hintNow]);
-    slot.replaceChildren(kit.composer({ kind: 'session', placeholder: ph, label: 'Message the coding agent', running, line: items, ...(hintNow ? { hint: hintNow } : {}), voiceSetup: voiceNeedsSetup(), micSetup: micNeedsSetup(), queueOff: !later('queue') && !o.waits(), stopKeys: 'mod+period', ...(keep ? { textHTML: keep } : {}) }));
+    slot.replaceChildren(kit.composer({ kind: 'session', placeholder: ph, label: 'Message the coding agent', running, line: items, ...(hintNow ? { hint: hintNow } : {}), voiceSetup: voiceNeedsSetup(), micOff: micUnavailable(), queueOff: !later('queue') && !o.waits(), stopKeys: 'mod+period', ...(keep ? { textHTML: keep } : {}) }));
     const c = root() as HTMLElement;
     kit.mentions(c, mentions);
     c.setAttribute('data-hx-composer', '');
@@ -311,12 +311,12 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
   slot.addEventListener('ui:refused', () => { say('The agent is still working. Stop it, or wait for it, then send.'); });
   slot.addEventListener('ui:stop', () => { o.stop(); });
   voiceTool(slot, () => null);   /* the voice circle: it talks once a voice model is set up, and says what it needs until then */
-  micTool(slot);                 /* the mic likewise: it dictates once a speech model is set up */
+  micTool(slot);                 /* a build with no dictation says so at the mic */
   slot.addEventListener('ui:mark', (e) => { const d = (e as CustomEvent<{ text: string; kind: string; el: HTMLElement }>).detail; openReading(d.el, d.kind, d.text); });
   let stopHearing: (() => void) | null = null;
   slot.addEventListener('ui:dictate', (e) => {
     stopHearing?.(); stopHearing = null;
-    if ((e as CustomEvent<{ on: boolean }>).detail.on) stopHearing = data().dictation?.start({ botId: null }, (heard) => { const t = text(); if (t) kit.composerInsert(t, (value() && !/\s$/.test(value()) ? ' ' : '') + heard); }) ?? null;
+    if ((e as CustomEvent<{ on: boolean }>).detail.on) stopHearing = dictate(slot, null);   /* the words arrive in the text where the caret stands (the kit's Composer) */
   });
   slot.addEventListener('input', () => { marks(); drawLine(); });
   slot.addEventListener('click', (e) => {

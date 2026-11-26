@@ -69,7 +69,7 @@ in a narrow composer; `kit.composerMarks`, the words a text is read by, as Marks
 | `kit.toolRow({ variant: 'bot' })` | closed; open on its Steps (done, now, to do, each with its end words); `icon` for a shell | kit.css `.tool`, `.steps` |
 | `kit.fileCard` | a file; `opens` makes it a control | kit.css `.file` |
 | `kit.askCard` | approval: head, ask, `rule`, four answers (`inert` for one that cannot be taken yet, `outline` for Deny) | botscreens.js `approval` |
-| `kit.composer` | bot, session; its line (plain items, the cost, hints at both ends); `voiceSetup`; `micSetup` (no speech model: the mic says so and starts nothing); `hears`; events `ui:send`, `ui:steer`, `ui:stop`, `ui:voice {setup}`, `ui:add`, `ui:dictate {on, mode}`, `ui:dictate-setup`, `ui:files {files, via}`; `kit.mentions` (an "@" Menu), `kit.composerInsert`, `kit.composerSet`. Its own editing is `components/v7/compose.ts`, the same in every composer: undo and redo across chips and marks, a chip as one unit, paste, a file dragged over it (`data-drop`, `kit.composerDropping`) and dropped or pasted, the mic (a press, alt+V, held; `data-listening`) | screens.js `composer`, kit.css `.composer-under`; the drop and listening states have no board (derived) |
+| `kit.composer` | bot, session; its line (plain items, the cost, hints at both ends); `voiceSetup`; `micOff` (a build with no dictation: the mic starts nothing and says so); `hears`; events `ui:send`, `ui:steer`, `ui:stop`, `ui:voice {setup}`, `ui:add`, `ui:dictate {on, mode}`, `ui:dictate-unavailable`, `ui:files {files, via}`; `kit.composerDictation(composer, event)` draws what a dictation reports (see "The mic's dictation" below); `kit.mentions` (an "@" Menu), `kit.composerInsert`, `kit.composerSet`. Its own editing is `components/v7/compose.ts`, the same in every composer: undo and redo across chips and marks, a chip as one unit, paste, a file dragged over it (`data-drop`, `kit.composerDropping`) and dropped or pasted, the mic (a press, alt+V, held; `data-listening`) | screens.js `composer`, kit.css `.composer-under`; the drop and listening states have no board (derived) |
 | `kit.listRow` | session (the model's mark, title, branch and time, Badge or dot), compact (one line), bot, item; `kit.sectionHead` with a count, folding | kit.css `.sess-row`, `.inbox-h` |
 | `kit.selectorItem({ variant: 'launch' })` | a glyph, a model's mark or the five ticks, the value, the chevron; `aria-disabled` for one that cannot be chosen yet | kit.css `.select`, sessionnew.js `launch` |
 | `kit.notice` | a limit: glyph, `title` and words, a ghost action, dismiss | kit.css `.notice` |
@@ -342,6 +342,37 @@ changed most is that it is now the kit's component, one markup for both fields a
 - Settings, the shortcut sheet (`.hx-dialog`), the palette, the bot settings sheet (`.ui-panel` with a concave corner),
   popovers (`ui.popover`). R-dialog-1 to 6 hold. The dialog markup is the page's own (`index.html`); its body is a
   stable scroll area with the track inset at the foot.
+
+### The mic's dictation
+
+The mic is transcription (owner, 26 November): it writes what you say into the composer's text. A dictation source reports its
+states as events, and the kit's Composer draws each with what it already has (the placeholder line, the text, a Notice at the mic).
+The shape, in `data/provider.ts` (the kit's `DictationState` in `components/v7/compose.ts` is the same):
+
+```ts
+export type DictationEvent =
+  | { kind: 'preparing'; done: number; total: number }   // the speech model is being fetched, once: bytes done of the total
+  | { kind: 'listening' }                                // the microphone is open and it hears
+  | { kind: 'partial'; text: string }                    // the words so far of what is being said; each replaces the last partial
+  | { kind: 'final'; text: string }                      // a finished stretch: it stays in the text; more may follow
+  | { kind: 'error'; reason: string; retry?: boolean };  // one plain sentence; `retry: false` when trying again cannot help
+export interface DictationSource {
+  start(opts: { botId: string | null }, onEvent: (e: DictationEvent) => void): () => void;   // the returned function cancels
+}
+```
+
+| Event | What the composer shows |
+|---|---|
+| `preparing` | `data-dictation="preparing"`; the placeholder reads "Getting the speech model 12 of 57 MB" (megabytes from the bytes) |
+| `listening` | `data-dictation="listening"`; the placeholder says who listens ("nina is listening", "Listening") |
+| `partial` | `data-dictation="transcribing"`; the words stand in the text where the caret is (at its end when the caret is elsewhere), after a space where the words before have none; the next partial replaces them |
+| `final` | the words stay, the composer's own input handling follows (marks, chips, the send arrow), and it listens again |
+| `error` | the mic switches off (`ui:dictate {on: false}`, so the app cancels the source), and a Notice at the mic says `reason` with "Try again" (it switches the mic on again), or with no action when `retry` is `false` |
+
+The app starts a source on `ui:dictate {on: true}` and hands its events on (`modules/chat/compose.ts` `dictate`); events that arrive
+while the mic is off are dropped. A provider with no `dictation` draws the mic with `micOff`: a press says "Dictation is not available
+in this build" (`micTool`). Stories: `kit/composer` "dictation: getting the speech model", "the words arriving", "it failed", "not in
+this build", and "listening".
 
 ### Menus, tooltips and popovers — one
 - `menu.open` (account, model picker, composer, room, form pickers, right panel), `popover.open` (the blank), the

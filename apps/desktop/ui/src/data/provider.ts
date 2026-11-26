@@ -365,15 +365,29 @@ export interface EngineSource { state: Watch<EngineState>; restart?: () => Promi
 
 /* ───────── helpers the composer asks for ───────── */
 export interface FeedforwardSource { catalog(): readonly DecisionKind[] }
-/** the mic: what a person says, written into the composer's text. A capability: a provider has it once a speech model can hear */
+/** what a dictation reports while it runs, in the order a source may send them (the kit's Composer draws each: components/v7/compose.ts):
+    `preparing` the speech model is being fetched, once, before the first dictation (bytes `done` of `total`; repeat it as it grows);
+    `listening` the microphone is open and it hears; `partial` the words so far of what is being said (each replaces the last partial);
+    `final` a finished stretch, which is written into the text (then more partials and finals may follow, until it is cancelled);
+    `error` it could not start or go on: `reason` is one plain sentence for the person ("No microphone found", "Microphone access is
+    off for boopis", "The speech model could not be downloaded"), and `retry: false` says trying again cannot help. After `error` the
+    source sends nothing more, and the composer cancels it */
+export type DictationEvent =
+  | { kind: 'preparing'; done: number; total: number }
+  | { kind: 'listening' }
+  | { kind: 'partial'; text: string }
+  | { kind: 'final'; text: string }
+  | { kind: 'error'; reason: string; retry?: boolean };
+/** the mic: what a person says, transcribed into the composer's text. It is not the voice circle and needs no voice model (owner,
+    26 November: "the microphone button is simply a transcription button") */
 export interface DictationSource {
-  /** start listening; `onTranscript` gets what was heard; the returned function cancels */
-  start(opts: { botId: string | null }, onTranscript: (text: string) => void): Unsubscribe;
+  /** start a dictation (for the open bot, null in a session); `onEvent` gets what it reports; the returned function cancels it */
+  start(opts: { botId: string | null }, onEvent: (e: DictationEvent) => void): Unsubscribe;
 }
 /** talking to a bot or a session, live (a composer's voice circle, pressed with no text). It is a capability: a provider has it once a
     voice model is set up (Settings, Models: a voice provider's key through the host's secret store, or a local model with live voice).
     Until then every composer still draws the circle, and pressing it says what voice needs (modules/chat/compose.ts `voiceTool`).
-    Dictation (the mic) is another thing with a capability of its own (`dictation`) */
+    Dictation (the mic) is another thing: transcription into the text (`dictation`) */
 export interface VoiceSource {
   /** start talking with the open bot (null in a session); the returned function ends it */
   start(opts: { botId: string | null }): Unsubscribe;
@@ -428,8 +442,7 @@ export interface DataProvider {
   feedforward: FeedforwardSource;
   /** the link to boopis's engine (absent where there is none: the page build) */
   engine?: EngineSource;
-  /** dictation (the mic), once a speech model can hear it (absent until then: the mic then says what it needs, modules/chat/compose.ts
-      `micTool`). The desktop app has no transcription yet, so its provider has none; the page build's mock invents a transcript */
+  /** dictation (the mic). Absent only in a build that has none: the mic then says "Dictation is not available in this build" */
   dictation?: DictationSource;
   /** live voice, once a voice model is set up (absent until then: the voice circle then says what it needs) */
   voice?: VoiceSource;
