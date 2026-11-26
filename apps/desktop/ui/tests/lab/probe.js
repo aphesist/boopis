@@ -290,7 +290,9 @@
         }
         /* boards 11 and S17 (screens.js `chrome`, the search hint: "Search" and its key chips in a 36 row, padding 0 10): the chips (radius 4) stand at its end, 10 in and 8
            down: the boards win over the concentric corner (REPASS rule 7) */
-        if (want.has('concentric') && !e.matches('.k7-search-hint .k7-kbd')) {
+        /* the composer's Stop is the owner's (25 November): a tinted 28 circle with a filled rounded square. The square is the control's
+           glyph, drawn as a shape, not a surface set into the circle's corner */
+        if (want.has('concentric') && !e.matches('.k7-search-hint .k7-kbd, .k7-composer__stop-glyph')) {
           /* the floor is the corners setting's (--r-floor: 4 sharp, 8 default, 12 round; v7's 6), not a constant (R-corner-3: max(--r-floor, R - gap)) */
           const FLOOR = px(ccs.getPropertyValue('--r-floor')) || px(getComputedStyle(document.documentElement).getPropertyValue('--r-floor')) || 8;   /* the container's: a v7 root sets 6 */
           const corners = [['top-left', er.left - cr.left, er.top - cr.top, 0], ['top-right', cr.right - er.right, er.top - cr.top, 1], ['bottom-right', cr.right - er.right, cr.bottom - er.bottom, 2], ['bottom-left', er.left - cr.left, cr.bottom - er.bottom, 3]];
@@ -323,6 +325,9 @@
       for (const e of els) {
         const s = cs.get(e);
         if (!/flex/.test(s.display) || /column/.test(s.flexDirection) || e.matches('svg, orb-avatar')) continue;
+        /* a row that sets its items on its last line is not a centred row: the kit Composer's box keeps its buttons beside the last line
+           of a draft of several lines (thread.css `.k7-composer__box`: align-items flex-end; one line, the boards': they are centred) */
+        if (/^(flex-)?end$/.test(s.alignItems)) continue;
         const r = e.getBoundingClientRect();
         if (r.height > 64 || r.height < 8) continue;
         const kids = [...e.children].filter((k) => shown(k) && !/absolute|fixed/.test(getComputedStyle(k).position) && !k.matches('.ui-sr'));
@@ -931,7 +936,11 @@
              its baseline (a) and its centring on the line (b) are still held */
           if (O && /^inline-/.test(c.display)) {
             const top = O.top - b.top, bottom = b.bottom - O.bottom;
-            if (Math.abs(top - bottom) * dpr > 0.5) problems.push('(d) ' + r1(top) + 'px above its cap height and ' + r1(bottom) + 'px below its baseline');
+            /* the kit's chips are the boards' own (kit.css `.mention`, `.you`, `.refchip`, boards 12 and K02: 18 and 20 tall on the
+               text's line), whose room over the cap height and under the baseline differs by a little over half a CSS pixel with the
+               boards' fonts: under a pixel is theirs, and the boards win (REPASS rule 7) */
+            const boards = chip.matches('[data-kit~="InlineChip"]') ? 0.75 * dpr : 0.5;
+            if (Math.abs(top - bottom) * dpr > boards) problems.push('(d) ' + r1(top) + 'px above its cap height and ' + r1(bottom) + 'px below its baseline');
           }
           /* (d) left and right: the content's extent inside the box */
           const parts = [];
