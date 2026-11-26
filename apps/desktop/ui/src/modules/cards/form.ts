@@ -256,7 +256,7 @@ function formHTML(c: Ctx): string {
   }
   const busy = c.s === 'submitting';
   const owed = !!formT(d).stamp;
-  const head: Partial<AskCardOpts> = { who: askerWords(o), ...lead, ...(owed ? {} : { word: { text: d.preview ? 'previewing' : '' } }), ...(d.expires || d.expiresAt ? { countdown: String(d.expires ?? '') } : {}), busy, ...(st.error ? { error: st.error } : {}) };
+  const head: Partial<AskCardOpts> = { who: askerWords(o), ...lead, ...(owed ? {} : { word: { text: d.preview ? 'previewing' : '' } }), ...((d.expires || d.expiresAt) && !busy ? { countdown: String(d.expires ?? '') } : {}), busy, ...(st.error ? { error: st.error } : {}) };
   const shape = questionShape(d);
   if (shape) {
     const [name, p] = props(d)[0] as [string, FieldSchema];

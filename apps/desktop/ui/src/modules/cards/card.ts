@@ -90,7 +90,10 @@ export class HxCard extends HTMLElement {
     if (!this.kind) return;
     LIVE.add(this);
     /* a form is the kit's block: on a page that is not yet v7 (the store, connectors, first run) its card is a v7 island */
-    if (this.kind === 'form' && !this.hasAttribute('data-ui') && !this.parentElement?.closest('[data-ui="v7"]')) asV7(this);
+    if (this.kind === 'form' && !this.hasAttribute('data-ui') && !this.parentElement?.closest('[data-ui="v7"]')) {
+      /* on the dock's ground it is the dock's: dark in both themes (the v7 dock is black) */
+      if (this.dataset['ground'] === 'dock') kit.applyTheme(this, { theme: 'dark' }); else asV7(this);
+    }
     if (this.kind === 'approval' || this.kind === 'form') { this.tick(); this.timer = this.timer || window.setInterval(() => this.tick(), 1000); }
     if (this.state === 'holding' && typeof this.data.progress === 'number') requestAnimationFrame(() => { const h = this.holdBtn(); const c = holdOf(h); if (c) c.show(this.data.progress ?? 0); });
     watchFit(this);
