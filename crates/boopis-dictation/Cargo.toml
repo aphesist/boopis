@@ -26,5 +26,11 @@ cpal = { version = "=0.18.2", default-features = false }
 # to `tracing`. How it is compiled for every processor: `.cargo/config.toml` at the repository root.
 whisper-rs = { version = "=0.16.0", default-features = false, features = ["tracing_backend"] }
 
+# The resampling to the model's 16 kHz: an FFT resampler with its own anti-aliasing filter. MIT or Apache-2.0; realfft and
+# rustfft, which it brings, are MIT or Apache-2.0 too.
+rubato = "=0.16.2"
+
 [dev-dependencies]
 tempfile.workspace = true
+# Reads the test recording (tests/speech.rs). Apache-2.0; not in the app.
+hound = "=3.5.1"

@@ -3,6 +3,8 @@
 
 use std::time::Duration;
 
+use rubato::{FftFixedIn, Resampler as _};
+
 use crate::Error;
 
 /// The rate the speech model reads, in Hz.
@@ -61,128 +63,116 @@ pub fn downmix<T: Copy>(
     }
 }
 
-/// A streaming resampler from one rate to another, mono: a Hann-windowed sinc, band-limited to just under the lower
-/// rate's Nyquist frequency, so a 48 kHz microphone's content above 8 kHz does not fold into the speech band.
+/// Input frames handed to rubato per conversion step: small enough that the tail padded at the end is a few
+/// milliseconds, large enough that the FFT is not all overhead.
+const CHUNK: usize = 1024;
+
+/// A streaming resampler from one rate to another, mono. The conversion is rubato's FFT resampler (band-limited, so a
+/// 48 kHz microphone's content above 8 kHz does not fold into the speech band); this wrapper carries its state across
+/// blocks of any size and gives back the tail at the end.
 ///
-/// Feed blocks of any size with [`Resampler::push`]; call [`Resampler::finish`] once for the tail.
-#[derive(Debug, Clone)]
+/// Feed blocks with [`Resampler::push`]; call [`Resampler::finish`] once for the tail.
+///
+/// Adapted from voxtype's `src/audio/resampler.rs` (`StreamResampler`), MIT License, Copyright (c) 2025 Peter Jackson
+/// (`LICENSE-voxtype` beside this crate's manifest): the chunking, the count of frames in and out, and the flush that
+/// pads the last chunk and returns exactly what is still owed are its design.
 pub struct Resampler {
-    /// Input samples per output sample.
-    step: f64,
-    /// The low-pass cutoff, in cycles per input sample.
-    cutoff: f64,
-    /// Input samples the kernel reaches on each side.
-    half: usize,
-    /// Input not yet fully used, starting at absolute index `base`.
-    buf: Vec<f32>,
-    base: u64,
-    /// The index of the next output sample.
-    next: u64,
-    /// Same rate in and out: samples pass through untouched.
-    through: bool,
+    /// rubato's resampler; `None` when both rates are the same and samples pass through untouched.
+    inner: Option<FftFixedIn<f32>>,
+    /// Input not yet a whole chunk.
+    pending: Vec<f32>,
+    /// Output samples per input sample.
+    ratio: f64,
+    /// Input frames taken and output frames given so far: the difference is what the end still owes.
+    frames_in: u64,
+    frames_out: u64,
 }
 
-/// Zero crossings of the sinc kept on each side of its centre (at the cutoff's own period).
-const LOBES: f64 = 12.0;
-/// The cutoff as a share of the lower rate's Nyquist frequency.
-const BAND: f64 = 0.92;
+impl std::fmt::Debug for Resampler {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Resampler")
+            .field("ratio", &self.ratio)
+            .field("pending", &self.pending.len())
+            .finish_non_exhaustive()
+    }
+}
 
 impl Resampler {
-    /// A resampler from `from` Hz to `to` Hz. A rate of 0 is taken as 1.
+    /// A resampler from `from` Hz to `to` Hz. A rate of 0 is taken as 1; a pair rubato cannot serve passes the audio
+    /// through unconverted and says so in the log.
     #[must_use]
     pub fn new(from: u32, to: u32) -> Self {
-        let (from, to) = (f64::from(from.max(1)), f64::from(to.max(1)));
-        let step = from / to;
-        // cycles per input sample: half the lower of the two rates, relative to the input rate
-        let cutoff = 0.5 * BAND * (to / from).min(1.0);
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        // a few dozen samples for any real rate
-        let half = (LOBES / (2.0 * cutoff)).ceil() as usize;
+        let (from, to) = (from.max(1), to.max(1));
+        let inner = if from == to {
+            None
+        } else {
+            FftFixedIn::<f32>::new(from as usize, to as usize, CHUNK, 1, 1)
+                .inspect_err(|e| tracing::error!(from, to, error = %e, "no resampler for these rates; the audio passes unconverted"))
+                .ok()
+        };
         Self {
-            step,
-            cutoff,
-            half,
-            buf: Vec::new(),
-            base: 0,
-            next: 0,
-            #[allow(clippy::float_cmp)] // two integer rates, compared exactly
-            through: from == to,
+            inner,
+            pending: Vec::with_capacity(CHUNK * 2),
+            ratio: f64::from(to) / f64::from(from),
+            frames_in: 0,
+            frames_out: 0,
         }
     }
 
-    /// Feed `input`; every output sample it completes is appended to `out`.
+    /// Feed `input`; the output of every whole chunk it completes is appended to `out`.
     pub fn push(&mut self, input: &[f32], out: &mut Vec<f32>) {
-        if self.through {
+        let Some(inner) = self.inner.as_mut() else {
             out.extend_from_slice(input);
             return;
+        };
+        self.pending.extend_from_slice(input);
+        self.frames_in += input.len() as u64;
+        let before = out.len();
+        while self.pending.len() >= CHUNK {
+            let chunk: Vec<f32> = self.pending.drain(..CHUNK).collect();
+            match inner.process(&[chunk], None) {
+                Ok(mut converted) => out.extend(converted.pop().unwrap_or_default()),
+                // a lost chunk is 1024 frames of audio; the next one recovers by itself
+                Err(e) => {
+                    tracing::warn!(error = %e, "a resampling step failed; a chunk was dropped");
+                }
+            }
         }
-        self.buf.extend_from_slice(input);
-        self.drain(out, false);
+        self.frames_out += (out.len() - before) as u64;
     }
 
-    /// The tail: the output samples that needed input past the end, computed with silence there.
+    /// The tail: what is still in the last partial chunk and in the filter's delay, padded with silence and cut to
+    /// exactly what the input accounts for.
     pub fn finish(&mut self, out: &mut Vec<f32>) {
-        if !self.through {
-            self.drain(out, true);
-            self.buf.clear();
-        }
-    }
-
-    #[allow(
-        clippy::cast_precision_loss,
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        clippy::cast_possible_wrap
-    )] // sample indexes of a dictation capped at minutes: far inside f64's and i64's exact range
-    fn drain(&mut self, out: &mut Vec<f32>, to_the_end: bool) {
-        let end = self.base as i64 + self.buf.len() as i64; // one past the last input sample held
-        let half = self.half as i64;
-        loop {
-            let centre = self.next as f64 * self.step;
-            let mid = centre.floor() as i64;
-            let ready = if to_the_end {
-                mid < end
-            } else {
-                mid + half < end
-            };
-            if !ready {
+        let Some(inner) = self.inner.as_mut() else {
+            return;
+        };
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )] // frame counts of minutes of audio
+        let expected = (self.frames_in as f64 * self.ratio).round() as u64;
+        let owed = usize::try_from(expected.saturating_sub(self.frames_out)).unwrap_or(0);
+        let mut tail = Vec::with_capacity(owed);
+        let mut pending = std::mem::take(&mut self.pending);
+        // the bound is a safety stop: the filter's delay is about one chunk
+        for _ in 0..3 {
+            if tail.len() >= owed {
                 break;
             }
-            let mut acc = 0.0_f64;
-            for i in (mid - half + 1)..=(mid + half) {
-                if i < self.base as i64 || i >= end {
-                    continue; // before the start and past the end is silence
+            pending.resize(CHUNK, 0.0);
+            match inner.process(&[std::mem::take(&mut pending)], None) {
+                Ok(mut converted) => tail.extend(converted.pop().unwrap_or_default()),
+                Err(e) => {
+                    tracing::warn!(error = %e, "the resampler's tail was dropped");
+                    break;
                 }
-                let x = f64::from(self.buf[(i - self.base as i64) as usize]);
-                acc += x * self.kernel(centre - i as f64);
             }
-            out.push(acc as f32);
-            self.next += 1;
         }
-        // input the next output sample no longer reaches is dropped
-        let keep_from = ((self.next as f64 * self.step).floor() as i64 - half + 1).max(0);
-        let drop = (keep_from - self.base as i64).clamp(0, self.buf.len() as i64) as usize;
-        if drop > 0 {
-            self.buf.drain(..drop);
-            self.base += drop as u64;
-        }
-    }
-
-    /// The windowed sinc at `t` input samples from its centre.
-    #[allow(clippy::cast_precision_loss)] // the kernel's half width, a few dozen
-    fn kernel(&self, t: f64) -> f64 {
-        let half = self.half as f64;
-        if t.abs() >= half {
-            return 0.0;
-        }
-        let x = 2.0 * self.cutoff * t;
-        let sinc = if x.abs() < 1e-9 {
-            1.0
-        } else {
-            (std::f64::consts::PI * x).sin() / (std::f64::consts::PI * x)
-        };
-        let window = 0.5 * (1.0 + (std::f64::consts::PI * t / half).cos());
-        2.0 * self.cutoff * sinc * window
+        tail.truncate(owed);
+        self.frames_out += tail.len() as u64;
+        out.extend(tail);
     }
 }
 
@@ -287,7 +277,7 @@ mod tests {
         for _ in 0..500 {
             r.push(&[0.1; 480], &mut out);
         }
-        assert!(r.buf.len() < 2 * r.half + 480 + 8, "kept {}", r.buf.len());
+        assert!(r.pending.len() < CHUNK, "kept {}", r.pending.len());
     }
 
     #[test]

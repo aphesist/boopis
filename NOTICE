@@ -29,6 +29,11 @@ boopis includes or distributes the following third-party work, each under its ow
   authors. The speech model itself (OpenAI's Whisper `base`, MIT License, in the ggml format from the whisper.cpp model
   repository) is not distributed with boopis: the app fetches it on first use and checks its SHA-256.
 - cpal, compiled into the desktop app for the microphone: Apache License 2.0.
+- rubato (with realfft and rustfft), compiled into the desktop app to resample the microphone's audio: MIT License or
+  Apache License 2.0.
+- voxtype (github.com/peteonrails/voxtype): the streaming wrapper around rubato in crates/boopis-dictation/src/audio.rs is
+  adapted from its src/audio/resampler.rs. MIT License, Copyright (c) 2025 Peter Jackson; the licence text is
+  crates/boopis-dictation/LICENSE-voxtype.
 - crates/boopis-dictation/tests/fixtures/jfk.wav, a test recording of President Kennedy's 1961 inaugural address (whisper.cpp's
   own sample): a work of the United States government, in the public domain.
 

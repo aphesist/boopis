@@ -73,47 +73,22 @@ fn speech_folder() -> Option<PathBuf> {
 
 /// A 16-bit PCM WAV file as mono floats and its sample rate.
 fn read_wav(path: &Path) -> (Vec<f32>, u32) {
-    let bytes = std::fs::read(path).unwrap();
-    assert!(
-        bytes.len() > 44 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WAVE",
-        "not a WAV file"
+    let mut reader = hound::WavReader::open(path).unwrap();
+    let spec = reader.spec();
+    assert_eq!(
+        (spec.sample_format, spec.bits_per_sample),
+        (hound::SampleFormat::Int, 16),
+        "16-bit PCM only"
     );
-    let u16_at = |at: usize| u16::from_le_bytes([bytes[at], bytes[at + 1]]);
-    let u32_at =
-        |at: usize| u32::from_le_bytes([bytes[at], bytes[at + 1], bytes[at + 2], bytes[at + 3]]);
-    let (mut at, mut format, mut data) = (12, None, None);
-    while at + 8 <= bytes.len() {
-        let size = u32_at(at + 4) as usize;
-        let body = at + 8;
-        match &bytes[at..at + 4] {
-            b"fmt " => {
-                format = Some((
-                    u16_at(body),
-                    u16_at(body + 2),
-                    u32_at(body + 4),
-                    u16_at(body + 14),
-                ));
-            }
-            b"data" => data = Some(&bytes[body..(body + size).min(bytes.len())]),
-            _ => {}
-        }
-        at = body + size + (size & 1);
-    }
-    let (tag, channels, rate, bits) = format.expect("no fmt chunk");
-    assert_eq!((tag, bits), (1, 16), "16-bit PCM only");
-    let pcm: Vec<i16> = data
-        .expect("no data chunk")
-        .chunks_exact(2)
-        .map(|b| i16::from_le_bytes([b[0], b[1]]))
-        .collect();
+    let pcm: Vec<i16> = reader.samples::<i16>().map(|s| s.unwrap()).collect();
     let mut mono = Vec::new();
     downmix(
         &pcm,
-        usize::from(channels),
+        usize::from(spec.channels),
         |s| f32::from(s) / 32_768.0,
         &mut mono,
     );
-    (mono, rate)
+    (mono, spec.sample_rate)
 }
 
 /// A recording played as a microphone gives audio: in 10 ms blocks, at once or in real time, and then over.
