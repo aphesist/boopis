@@ -8,28 +8,30 @@ import { ariaKeys } from '../../core/keys';
 import { logger } from '../../core/log';
 import { callProvided, registered, SLOTS } from '../../core/registry';
 import type { SlotName } from '../../core/registry';
-import { followScheme, followWindowWidth, prefs, saveState, setMounting, setState, setStateHooks, state, toggle, urlQuery } from '../../core/state';
-import { TABS } from '../../core/settings';
+import { followScheme, followWindowWidth, prefs, setMounting, setState, setStateHooks, state, toggle, urlQuery } from '../../core/state';
+import { loadLook, TABS } from '../../core/settings';
 import type { Tab } from '../../core/types';
 import { ui } from '@boopis/ui';
-import { drawChrome, drawSideFoot, drawSideHead, selectTab, syncV7Theme } from './chrome';
+import { applyChromePrefs, drawChrome, drawSideFoot, drawSideHead, selectTab, syncV7Theme } from './chrome';
+import { mountSettings } from '../settings';
+import { applyLook } from '../../styles/v7-look';
 import { data } from '../../data';
 import { themeApi } from '../../styles/theme';
-import { openKeys, openMenu, openSettings, openStore, SETTINGS_SECTIONS, wireDialogs } from './dialogs';
+import { openKeys, openMenu, openSettings, openStore, wireDialogs } from './dialogs';
 import { collectEls, els, sh } from './ctx';
 import { reportAttention, seedAttention, setTitleOverride, updateAttentionDots, updateTitle } from './attention';
 import { newThing, openNewMenu, toast, toggleDockExpand, toggleLightDark, togglePanel } from './actions';
 import { wireWindowControls } from './window';
 import { wireUiSize } from './ui-size';
 import { go, pushHistory } from './history';
-import { classifyKey, keysTableHTML } from './keymap';
+import { classifyKey } from './keymap';
 import { computeNow, layoutNow, markResized, queueLayout, setDockHeight, setInset } from './layout';
 import { closePalette, movePal, openPalette, paletteActive, renderPalette, resetActive, runPal, setActive } from './palette';
 import { cycleRegion, focusRegion, leaderActive, leaderKey, nextAttention, regionOf, rememberFocus, startLeader } from './regions';
 import { getLayout } from '../../core/state';
 /* drawn corners (DESIGN-SYSTEM.md section 8): the shell's surfaces; sheets and menus float, so they are surfaces */
 ui.squircle.auto('.hx-pal-row');
-ui.squircle.auto('.hx-dialog__card, .hx-palette__box, .hx-goto, .hxt-preset', { mode: 'surface' });
+ui.squircle.auto('.hx-dialog__card, .hx-palette__box, .hx-goto', { mode: 'surface' });
 
 const log = logger('shell');
 
@@ -70,14 +72,9 @@ function applyState(): void {
   el.btnRight.dataset['tip'] = state.tab === 'bots' ? (ropen ? 'Hide details' : 'Show details') : ropen ? 'Hide session details' : 'Show session details';
   el.btnRight.setAttribute('aria-label', el.btnRight.dataset['tip']);
   el.btnRight.setAttribute('aria-expanded', String(ropen));
-  // settings controls (the account menu reads state when it opens)
-  const sDock = document.getElementById('hx-set-dock') as HTMLInputElement | null; if (sDock) sDock.checked = state.dock === 'on';
+  /* the dock's growth and centring (Settings › General and Appearance follow `hx:state` themselves) */
   app.dataset['orbGrow'] = state.orbGrow ? 'on' : 'off';
-  const sGrow = document.getElementById('hx-set-orb-grow') as HTMLInputElement | null; if (sGrow) sGrow.checked = state.orbGrow;
   app.dataset['dockCentre'] = state.dockCentred ? 'on' : 'off';
-  const sCentre = document.getElementById('hx-set-dock-centre') as HTMLInputElement | null; if (sCentre) sCentre.checked = state.dockCentred;
-  const sCompact = document.getElementById('hx-set-dock-compact') as HTMLInputElement | null; if (sCompact) sCompact.checked = state.dockCompact;
-  if (sh.seg.collapse) sh.seg.collapse.select(prefs.collapse);
   updateTitle();
   updateAttentionDots();
 }
@@ -172,17 +169,12 @@ export function boot(): void {
   // icons: one set, from the library
   $$('[data-icon]', app).forEach((n) => { n.outerHTML = ui.icon(n.dataset['icon'] ?? ''); });
 
-  sh.seg.collapse = ui.segmented({ mode: 'radio', size: 's', labelledby: 'hx-set-collapse-l', value: prefs.collapse, options: [{ value: 'rail', label: 'Rail' }, { value: 'closed', label: 'Hide' }] });
-  $('#hx-set-collapse').replaceWith(sh.seg.collapse);
-  // Settings' sections: the library's tab bar, concentric with the dialog's corner band
-  $('#hx-dtabs').outerHTML = ui.html.tabs({ label: 'Settings sections', class: 'hx-dtabs', scroll: true, value: 'general',
-    tabs: SETTINGS_SECTIONS.map(([value, label]) => ({ value, label, id: 'hx-dtab-' + value, controls: 'hx-dpanel-' + value })) });
-  ui.hydrate($('#hx-settings'));
+  /* Settings: the kit's large dialog in the shell's <dialog> (modules/settings) */
+  mountSettings($<HTMLDialogElement>('#hx-settings', app));
 
   // keyboard chips in static markup
   $$('kbd[data-kbd]', app).forEach((k) => { k.outerHTML = ui.html.keys(k.dataset['kbd'], k.hasAttribute('data-fit') ? { fit: true } : undefined); });
   el.btnNew.setAttribute('aria-keyshortcuts', ariaKeys('mod+shift+O'));
-  $('#hx-keys').innerHTML = keysTableHTML('');
   // shortcuts for assistive tech
   for (const n of $$('[data-kbd]', app)) n.setAttribute('aria-keyshortcuts', ariaKeys(n.dataset['kbd'] ?? ''));
 
@@ -193,6 +185,9 @@ export function boot(): void {
   const qp = urlQuery.get('preset') || (urlQuery.get('theme') === 'light' ? 'bone' : null);
   if (qp && themeApi.presets[qp]) { themeApi.preset(qp); state.theme = themeApi.scheme(); }
   syncV7Theme();
+  /* the v7 look and the chrome's choices (Settings › Appearance and General) */
+  applyLook(loadLook(), (scheme) => { if (state.theme !== scheme) setState({ theme: scheme }); });
+  applyChromePrefs(app);
 
   applyState();
   computeNow();
@@ -222,7 +217,8 @@ function wire(): void {
   });
   // chrome
   el.btnLeft.addEventListener('click', () => toggle('left'));
-  el.btnSearch?.addEventListener('click', () => openPalette({}));
+  /* search in the chrome: by delegation, since Settings › General can redraw it as a hint, a button or a pill */
+  $('#hx-chrome', app).addEventListener('click', (e) => { if ((e.target as Element).closest('#hx-btn-search')) openPalette({}); });
   el.btnRight.addEventListener('click', () => togglePanel());
   el.btnTitle.addEventListener('click', () => togglePanel());
   wireWindowControls();
@@ -245,10 +241,7 @@ function wire(): void {
     followScheme(d && d.scheme === 'light' ? 'light' : 'dark');
     queueLayout(false);   // corners and density change sizes
   });
-  sh.seg.collapse?.addEventListener('ui:change', (e) => {
-    prefs.collapse = (e as CustomEvent<{ value: string }>).detail.value === 'closed' ? 'closed' : 'rail'; saveState();
-    if (state.left !== 'open') setState({ left: prefs.collapse });
-  });
+  on('hx:chrome', () => { applyChromePrefs(app); queueLayout(true); });
 
   // palette
   el.palInput.addEventListener('input', () => { resetActive(); renderPalette(); });
@@ -314,7 +307,7 @@ function wire(): void {
     setTitleOverride((TABS as readonly string[]).includes(d.tab ?? '') ? (d.tab as Tab) : state.tab, d.title || d.text || null, members?.length ? { members } : d.sub != null ? { sub: d.sub || null } : null);
     updateTitle();
   });
-  on('hx:open-settings', (d) => { if (d) openSettings(d.section, d.find); });
+  on('hx:open-settings', (d) => { if (d) openSettings(d.section, d.find, d.focus); });
   on('hx:open-store', (d) => { openStore(d?.screen); });
   /* a part of the session's panel was asked for: the panel opens, and the window is laid out again (the diff is wider than the details) */
   on('hx:open-panel', (d) => { if (d && d.from !== 'shell' && state.right !== 'open') setState({ right: 'open' }); else queueLayout(true); });

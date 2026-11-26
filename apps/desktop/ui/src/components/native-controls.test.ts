@@ -17,7 +17,7 @@ const RULES: readonly Rule[] = [
   { id: 'select', what: 'a native <select>, <option> or <datalist> (its popup is the platform\'s)', instead: 'ui.select / ui.field({ kind: \'select\' | \'model\' }) from components/select.ts', re: /<(?:select|option|datalist)\b|createElement\(\s*['"](?:select|option|datalist)['"]|\bel\(\s*['"](?:select|option|datalist)['"]/i },
   { id: 'select-css', what: 'a stylesheet rule for a native select or option', instead: '.ui-select and .ui-option in components.css', re: /(?:^|[\s,>}])(?:select|option)(?:\.|\s*[{,:[])/m, kinds: ['.css'] },
   { id: 'date-time', what: 'a date, time or month field (a platform picker)', instead: 'a text field with a format hint, or a select', re: TYPE('date|time|datetime-local|month|week'), kinds: ['.ts', '.html'] },
-  { id: 'colour', what: 'a colour field (the platform\'s colour chooser)', instead: 'a swatch button and a hex field (styles/theme-panel.ts)', re: TYPE('color'), kinds: ['.ts', '.html'] },
+  { id: 'colour', what: 'a colour field (the platform\'s colour chooser)', instead: 'the kit\'s Swatches, a choice of named colours (Settings › Appearance\'s accent)', re: TYPE('color'), kinds: ['.ts', '.html'] },
   { id: 'range', what: 'a range slider', instead: 'a segmented control, or a text field', re: TYPE('range'), kinds: ['.ts', '.html'] },
   { id: 'number', what: 'a number field (spin buttons)', instead: 'a text field with inputmode="decimal" or "numeric" (modules/cards/form.ts)', re: TYPE('number'), kinds: ['.ts', '.html'] },
   { id: 'file', what: 'a file input (the platform\'s chooser)', instead: 'keep the input hidden behind a button of the library', re: TYPE('file'), kinds: ['.ts', '.html'] },
@@ -32,11 +32,8 @@ const RULES: readonly Rule[] = [
 interface Allow { rule: string; file: string; why: string }
 const ALLOW: readonly Allow[] = [
   { rule: 'file', file: 'src/modules/cards/form.ts', why: 'the form card\'s upload: the input is hidden and the library\'s "Choose a file" button opens the OS chooser, which cannot be themed' },
-  { rule: 'file', file: 'src/styles/theme-panel.ts', why: 'Import file: the OS chooser behind a library button; the input has no look of its own (shell.css .hxt-file)' },
   { rule: 'checkbox-radio', file: 'src/components/html.ts', why: 'ui.switch: appearance none, drawn by .ui-switch (14.16 "a native checkbox with role=switch")' },
-  { rule: 'checkbox-radio', file: 'src/styles/theme-panel.ts', why: 'the preset cards: a visually hidden radio inside a themed card, so the group keeps arrow-key behaviour' },
-  { rule: 'checkbox-radio', file: 'src/modules/shell/dialogs.ts', why: 'reads the radios\' state for the dialog\'s Tab loop; draws nothing' },
-  { rule: 'checkbox-radio', file: 'index.html', why: 'the shell\'s Dock switch: ui.switch markup' }
+  { rule: 'checkbox-radio', file: 'src/modules/shell/dialogs.ts', why: 'reads the radios\' state for the dialog\'s Tab loop; draws nothing' }
 ];
 
 function* walk(dir: string): Generator<string> {

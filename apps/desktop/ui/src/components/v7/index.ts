@@ -21,13 +21,13 @@ import { notify, notifyText } from './notify';
 
 const html = {
   button: controls.button, iconButton: controls.iconButton, kbd: controls.kbd, chip: controls.chip, segmented: controls.segmented,
-  selectorItem: controls.selectorItem, switch: controls.switchHTML, field: controls.field, tooltip: controls.tooltip, swatches: controls.swatches,
+  selectorItem: controls.selectorItem, switch: controls.switchHTML, swatchDot: controls.swatchDot, kbdSpec: controls.kbdSpec, field: controls.field, tooltip: controls.tooltip, swatches: controls.swatches,
   inlineChip: inline.inlineChip, mark: inline.mark, statusWord: inline.statusWord, badge: inline.badge, statusLine: inline.statusLine, avatar: inline.avatar,
   card: blocks.card, block: blocks.block, menu: blocks.menu, menuRow: blocks.menuRow, optionRow: blocks.optionRow, listRow: blocks.listRow, sectionHead: blocks.sectionHead,
   notice: blocks.notice, systemLine: blocks.systemLine, bubble: blocks.bubble, well: blocks.well, steps: blocks.steps, disclosure: blocks.disclosure, turnFoot: blocks.turnFoot, hoverBar: blocks.hoverBar,
   timeSeparator: blocks.timeSeparator, emptyState: blocks.emptyState, list: blocks.list, findBar: blocks.findBar,
   toolRow: thread.toolRow, askCard: thread.askCard, filesCard: thread.filesCard, fileCard: thread.fileCard, queue: thread.queue, diffView: thread.diffView, composer: thread.composer, teamPlan: thread.teamPlan,
-  windowChrome: surfaces.windowChrome, titlePill: surfaces.titlePill, page: surfaces.page, pane: surfaces.pane, dialog: surfaces.dialog, rail: surfaces.rail, sidebarFoot: surfaces.sidebarFoot, notch: surfaces.notch, dock
+  windowChrome: surfaces.windowChrome, titlePill: surfaces.titlePill, searchHint: surfaces.searchHint, page: surfaces.page, pane: surfaces.pane, dialog: surfaces.dialog, rail: surfaces.rail, sidebarFoot: surfaces.sidebarFoot, notch: surfaces.notch, dock
 };
 type Html = typeof html;
 type Factories = { [K in keyof Html]: (o: Parameters<Html[K]>[0]) => HTMLElement };

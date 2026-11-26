@@ -158,10 +158,11 @@ describe('what S40 draws no place for, kept in the pane (the lead, 26 November)'
     expect(rows('Environment').map((r) => r[0])).toEqual(['Folder', 'Branch', 'Sandbox', 'Runtime', 'Harness', 'Gate']);
     expect(rows('Environment')[2]).toEqual(['Sandbox', 'bubblewrap, network off']);
   });
-  it('Connectors: a switch turns one on or off for this session, a sign-in starts, the store opens, and the project\'s switch is the plugin\'s setting', async () => {
+  it('Connectors: a switch turns one on or off for this session, a sign-in starts, the store opens; the project\'s switch moved to Settings (7a)', async () => {
     boot();
     await tick();
-    expect(rows('Connectors').map((r) => r[0])).toEqual(expect.arrayContaining(['Github', 'Postgres', 'Linear', 'Browse the store', 'No engine plugins and no plugin hooks']));
+    expect(rows('Connectors').map((r) => r[0])).toEqual(expect.arrayContaining(['Github', 'Postgres', 'Linear', 'Browse the store']));
+    expect(rows('Connectors').map((r) => r[0])).not.toContain('No engine plugins and no plugin hooks');
     q<HTMLButtonElement>('[data-conn="github"]').click();
     expect(calls).toContainEqual(['connector', 'github', false]);
     q<HTMLButtonElement>('[data-signin="linear"]').click();
@@ -169,12 +170,7 @@ describe('what S40 draws no place for, kept in the pane (the lead, 26 November)'
     const opened = vi.fn(); on('hx:open-store', opened);
     q('[data-pane="store"]').click();
     expect(opened).toHaveBeenCalledWith(expect.objectContaining({ screen: 'browse' }));
-    const sw = q<HTMLButtonElement>('[data-policy]');
-    expect(sw.getAttribute('aria-checked')).toBe('true');
-    sw.click();
-    expect(calls).toContainEqual(['policy', '~/code/billing-api', false]);
-    await tick();
-    expect(q('[data-policy]').getAttribute('aria-checked')).toBe('false');
+    expect(document.querySelector('[data-policy]')).toBeNull();
   });
   it('a connector switch is drawn and inert where this engine cannot change connectors', () => {
     const base = createMockProvider({ simulate: false });

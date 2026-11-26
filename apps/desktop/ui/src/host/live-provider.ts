@@ -39,6 +39,7 @@ import { commands, events } from './bindings';
 import { parkedSource, teamPlansSource } from './live/held';
 import type { HeldDeps } from './live/held';
 import { enableRules, keepDraft } from './live/rules';
+import { liveRules, liveSpeech } from './live/settings-sources';
 import type { RulesDeps } from './live/rules';
 import type { FormEntry } from './live/forms';
 import { tauriSecrets } from './secrets';
@@ -798,6 +799,11 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     ...(held ? { teamPlans: teamPlansSource(held), parked: parkedSource(held) } : {}),
     council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id), paths: hostPaths() },
     dictation: hostDictation(), // the host hears and writes it down (host/dictation.ts, ADR-0059)
+    /* Settings › Approvals and Models › Voice and speech: the host's rules, its speech model and the voice choice (desktop only) */
+    ...(inTauri() ? {
+      rules: liveRules({ commands, plugin: rulesDeps.plugin, onOutside: (fn) => { let off: (() => void) | null = null, gone = false; void events.rulesChangedOutsideEvent.listen(() => { fn(); }).then((u) => { if (gone) u(); else off = u; }); return () => { gone = true; off?.(); }; } }),
+      speech: liveSpeech(commands)
+    } : {}),
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },
     settled: async () => { await liveStore.settled(); await details.settled(); await controls.settled(); await liveBots.settled(); await liveGroups.settled(); },
     ledger: { totals: () => ledgerTotals, subscribe(fn) { ledgerSubs.add(fn); return () => { ledgerSubs.delete(fn); }; } }

@@ -59,6 +59,7 @@ describe('the capability and the draft', () => {
     expect(later.has('approval-rules')).toBe(false);
     expect(await enableRules(deps(['rules-v1']), later)).toBe(true);
     expect(later.has('approval-rules')).toBe(true);
+    expect(later.has('rules-settings')).toBe(true);
   });
   it('always allow keeps the drafted exception as a draft, against the revision read', async () => {
     const d = deps(['rules-v1']);

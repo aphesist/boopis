@@ -40,10 +40,14 @@
 /* ── Page (2) ── */
 .k7-page { display: block; min-width: 0; background: var(--bg-2); color: var(--text); }
 .k7-page__column { width: var(--col-w); max-width: calc(100% - 2 * var(--sp-5)); margin: 0 auto; padding: var(--sp-5) 0; }
-.k7-page[data-variant="settings"] { padding: var(--sp-5) var(--sp-6) var(--sp-6) var(--sp-2); background: transparent; }
+.k7-page[data-variant="settings"] { padding: var(--sp-5) calc(var(--sp-6) - var(--sp-1)) calc(var(--sp-6) - var(--sp-1)) var(--sp-2); background: transparent; }   /* board 14's `.setbody`: 22 28 28 8, and its title 2 down */
+.k7-page[data-variant="settings"] > .k7-page__head { margin-bottom: calc(var(--sp-4) + var(--gap-hair)); }   /* `.set-title`: 18 under it */
+.k7-page[data-variant="settings"] > .k7-page__body { gap: calc(var(--sp-5) - var(--gap-hair)); }   /* `.set-head`: 22 over each section's head */
 .k7-page__head { display: flex; align-items: center; gap: var(--sp-4); margin-bottom: var(--sp-4); }
 .k7-page__title { flex: 1 1 auto; margin: 0; font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 500; color: var(--text); }
 .k7-page__body { display: flex; flex-direction: column; gap: var(--sp-5); min-width: 0; }
+/* a quiet line in a settings page (7a: what a list does not say in its rows, a status while a part is read) */
+.k7-page__note { margin: 0 var(--sp-1); font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); }
 .k7-section { display: flex; flex-direction: column; min-width: 0; }
 .k7-section > .k7-shead { padding: 0 var(--sp-1) var(--sp-2); }
 
@@ -95,13 +99,15 @@
 /* the close button: 28, 10 in from a 20 corner, a capsule (R-corner-9) */
 .k7-dialog > [data-dialog-close] { position: absolute; top: var(--pad-dialog); right: var(--pad-dialog); }
 .k7-dialog[data-variant="large"] { --sq-bg: var(--bg-pane); flex-direction: row; gap: 0; width: var(--dialog-l); padding: 0; border-radius: var(--r-card); }
-.k7-dialog__nav { display: flex; flex-direction: column; gap: var(--gap-hair); flex: none; width: var(--set-nav-w); padding: var(--r-card) var(--sp-2);   /* its rows start a corner's radius down, out of the corner zone (R-corner-10) */ box-sizing: border-box; }
+.k7-dialog__nav { display: flex; flex-direction: column; gap: var(--gap-hair); flex: none; width: var(--set-nav-w); padding: var(--sp-3) var(--sp-2);   /* board 14's `.setnav`: 12 down, 8 in */ box-sizing: border-box; }
 .k7-dialog__navrow { display: flex; align-items: center; gap: var(--pad-nav-x); height: var(--row-h); padding: 0 var(--pad-nav-x); border-radius: var(--r-nav); font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text); text-align: start; }
 .k7-dialog__navrow > .k7-ic { color: var(--icon); }
 .k7-dialog__navrow[aria-current="page"] { background: var(--current); }
 @media (hover: hover) and (pointer: fine) { .k7-dialog__navrow:not([aria-current]):hover { background: var(--hover); } }
 .k7-dialog__navrow:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
-.k7-dialog__page { flex: 1 1 auto; min-width: 0; overflow-y: auto; overscroll-behavior: contain; }
+.k7-dialog__page { flex: 1 1 auto; min-width: 0; overflow-y: auto; overscroll-behavior: contain;
+  /* board 14's `.setbody`: the page fades out over its last 28 as it scrolls under the dialog's foot */
+  -webkit-mask-image: linear-gradient(#000 calc(100% - var(--sp-6) + var(--sp-1)), transparent); mask-image: linear-gradient(#000 calc(100% - var(--sp-6) + var(--sp-1)), transparent); }
 
 /* ── Rail (40): the boards' `.rail` (kit.css, screens.js rail): 88 wide (64 compact), its first tile 56 down, tiles 54 (44) and 6 apart, the
    current one 8%; the amber flag 6 in from the tile's lower right with a 2.5 ring of the rail; a 24 hairline at --line-strong before

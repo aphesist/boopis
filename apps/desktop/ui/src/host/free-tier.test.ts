@@ -133,10 +133,11 @@ describe('where it is shown', () => {
   });
   it('Settings: rows with the plan, the model, the limit with its reset and the empty-gauge note', () => {
     const plan = planView({ status: status(), options: null, limit: limitFromSurface(surface()) }, NOW);
-    const html = planRows(plan, NOW).join('');
+    const html = JSON.stringify(planRows(plan, NOW));
     for (const word of ['Plan', 'Free (Nous · free tier)', 'Model', 'nous/welcome', 'Limit', 'rate limited', 'in about 5 minutes', 'Usage']) expect(html).toContain(word);
     const sec = planSection(plan, NOW);
-    expect(sec.querySelector('h3')?.textContent).toBe('Plan');
+    expect(sec.querySelector('.k7-shead__title')?.textContent).toBe('Plan');
+    expect(sec.querySelector('[data-kit~="Card"]')).not.toBeNull();
   });
   it('Settings: mounting asks Hermes, redraws on refresh and says so when Hermes cannot be asked', async () => {
     const panel = document.createElement('div');

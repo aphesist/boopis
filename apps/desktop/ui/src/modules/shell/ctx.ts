@@ -1,6 +1,5 @@
 /* The shell's shared handles: its elements, the selection per tab, the history, the attention counts. */
 import { $ } from '../../core/dom';
-import type { SegElement } from '@boopis/ui';
 import type { Tab } from '../../core/types';
 
 export interface Els {
@@ -14,7 +13,7 @@ export interface Els {
 export const sh = {
   app: null as unknown as HTMLElement,
   el: null as unknown as Els,
-  seg: { tabs: null as HTMLElement | null, collapse: null as SegElement | null },
+  seg: { tabs: null as HTMLElement | null },
   selection: { session: null, bots: null } as Record<Tab, string | null>,
   booted: false
 };

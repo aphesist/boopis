@@ -6,7 +6,7 @@ import { setProvider } from '../data';
 import { createMockProvider } from '../data/mock-provider';
 import { formsHost } from '../modules/cards/forms-host';
 import { useFormsHost } from '../modules/cards/forms-host';
-import { ui } from '@boopis/ui';
+import { kit } from '@boopis/ui';
 import { describeConnector, installLines, mountConnectors, textValues } from './connectors';
 import type { ConnectorInfo, ConnectorInstall, ConnectorRequest, ConnectorReview, ConnectorsBridge } from './connectors-bridge';
 
@@ -98,9 +98,9 @@ describe('the Connectors tab', () => {
   it('lists what Hermes has, with a switch, Test and Remove for its own and no control for a plugin\'s, and Sign in where one is owed', async () => {
     const f = fake([info(), info({ name: 'linear', url: 'https://mcp.linear.example/mcp', command: null, args: [], auth: 'oauth', oauth_tokens_present: false, status: 'configured', tools: null }), info({ name: 'fromplugin', plugin: 'acme' })]);
     const { panel } = await mount(f);
-    const rows = [...panel.querySelectorAll('.ui-set__row')].map((r) => r.querySelector('.ui-set__label span')?.textContent);
+    const rows = [...panel.querySelectorAll('.hx-conn__installed .k7-row')].map((r) => r.querySelector('.k7-row__label')?.childNodes[1]?.textContent);
     expect(rows.slice(0, 3)).toEqual(['fakemcp', 'linear', 'fromplugin']);
-    expect(panel.querySelectorAll('input[role=switch]')).toHaveLength(2);
+    expect(panel.querySelectorAll('[data-kit~="Switch"]')).toHaveLength(2);
     expect(panel.querySelector('[data-conn-signin="linear"]')).toBeTruthy();
     expect(panel.querySelector('[data-conn-signin="fakemcp"]')).toBeNull();
     expect(panel.querySelector('[data-conn-test="fromplugin"]')).toBeNull();
@@ -112,17 +112,17 @@ describe('the Connectors tab', () => {
     const { panel } = await mount(fake());
     expect(panel.textContent).toContain('No connectors yet');
     const coll = panel.querySelector('#hx-conn-coll-h')?.parentElement as HTMLElement;
-    expect(coll.querySelectorAll('.ui-row--item')).toHaveLength(1);
+    expect(coll.querySelectorAll('[data-add-entry]')).toHaveLength(1);
     expect(coll.textContent).toContain('Firecrawl');
     expect(coll.textContent).toContain('Scrape the web.');
     expect(coll.textContent).toContain('local · hosted');
     expect(coll.querySelector('[data-add-entry="firecrawl"]')?.getAttribute('aria-haspopup')).toBe('menu');
     click(coll, '[data-add-entry="firecrawl"]');
-    const menu = document.querySelector('.ui-menu') as HTMLElement;
+    const menu = document.querySelector('[data-kit~="Menu"]') as HTMLElement;
     expect(menu.getAttribute('aria-label')).toBe('Ways to add Firecrawl');
     expect(menu.textContent).toContain('Reaches: Only this computer (127.0.0.1). Pinned to firecrawl-mcp@3.40.0.');
     expect(menu.textContent).toContain('Reaches: mcp.firecrawl.dev.');
-    ui.menu.close();
+    kit.closeMenu();
     const add = panel.querySelector('#hx-conn-add-h')?.parentElement?.textContent ?? '';
     expect(add).toContain('Other ways to add');
     expect(add).toContain('From a URL');
@@ -139,7 +139,7 @@ describe('the Connectors tab', () => {
     click(panel, '[data-add-entry="exa"]');
     await tick();
     expect(f.calls).toContain('inputs:catalog:exa:hosted');
-    expect(document.querySelector('.ui-menu')).toBeNull();
+    expect(document.querySelector('[data-kit~="Menu"]')).toBeNull();
   });
 
   it('narrows the installed list and the collection as you type, and says when nothing matches', async () => {
@@ -158,7 +158,7 @@ describe('the Connectors tab', () => {
   it('draws each installed connector with its tile: the service it runs, else its monogram', async () => {
     const f = fake([info({ name: 'github', url: 'https://api.githubcopilot.com/mcp/', command: null, args: [] }), info({ name: 'github-copy', command: 'npx', args: ['-y', 'other-mcp@1.0.0'] })]);
     const { panel } = await mount(f);
-    const tile = (n: string): Element | null | undefined => panel.querySelector(`[data-conn-test="${n}"]`)?.closest('.ui-set__row')?.querySelector('.ui-imark');
+    const tile = (n: string): Element | null | undefined => panel.querySelector(`[data-conn-test="${n}"]`)?.closest('.k7-row')?.querySelector('.ui-imark');
     expect(tile('github')?.getAttribute('data-mark')).toBe('github');
     expect(tile('github-copy')?.getAttribute('data-mark')).toBeNull();
     expect(tile('github-copy')?.textContent).toBe('GC');
@@ -174,18 +174,16 @@ describe('the Connectors tab', () => {
   it('switches a server through the host, and puts the switch back when the host refuses', async () => {
     const f = fake([info()]);
     const { panel, toasts } = await mount(f);
-    const sw = panel.querySelector<HTMLInputElement>('input[role=switch]') as HTMLInputElement;
-    sw.checked = false;
-    sw.dispatchEvent(new Event('change', { bubbles: true }));
+    panel.querySelector<HTMLButtonElement>('[data-conn-switch]')?.click();
     await tick();
     expect(f.calls).toContain('enable:fakemcp:false');
     expect(toasts.at(-1)).toContain('fakemcp is off');
     f.setEnabled = () => Promise.reject(new Error('Hermes refused it'));
-    const sw2 = panel.querySelector<HTMLInputElement>('input[role=switch]') as HTMLInputElement;
-    sw2.checked = false;
-    sw2.dispatchEvent(new Event('change', { bubbles: true }));
+    const sw2 = panel.querySelector<HTMLButtonElement>('[data-conn-switch]') as HTMLButtonElement;
+    sw2.click();
     await tick();
     expect(toasts.at(-1)).toBe('Hermes refused it');
+    expect(sw2.getAttribute('aria-checked'), 'the switch went back').toBe('true');
   });
 
   it('tests a server and writes Hermes\'s answer where it can be read', async () => {
@@ -256,7 +254,7 @@ describe('adding', () => {
     const f = fake();
     const { panel } = await mount(f);
     click(panel, '[data-add-entry="firecrawl"]');
-    (document.querySelector('.ui-menu [data-value="hosted"]') as HTMLElement).click();
+    (document.querySelector('[data-kit~="Menu"] [data-value="hosted"]') as HTMLElement).click();
     await tick();
     expect(f.calls).toContain('inputs:catalog:firecrawl:hosted');
     fill(panel, 'name', 'fc');
@@ -411,9 +409,7 @@ describe('connectors for one bot', () => {
     expect(panel.textContent).toContain('Only Kai has these');
     click(panel, '[data-conn-test="kaimcp"]');
     await tick();
-    const sw = panel.querySelector<HTMLInputElement>('input[role=switch]') as HTMLInputElement;
-    sw.checked = false;
-    sw.dispatchEvent(new Event('change', { bubbles: true }));
+    panel.querySelector<HTMLButtonElement>('[data-conn-switch]')?.click();
     await tick();
     expect(kai.calls).toEqual(expect.arrayContaining(['test:kaimcp', 'enable:kaimcp:false']));
     expect(main.calls.filter((c) => c.startsWith('test:') || c.startsWith('enable:'))).toEqual([]);

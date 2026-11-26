@@ -45,6 +45,17 @@ function wireSwitch(sw: HTMLButtonElement): void {
   });
 }
 
+/** a Row that is a checkbox (board 14's "Under the composer"): a press toggles it and fires ui:change {value}; Space and Enter press it
+    (it is a row action, wireRowAction) */
+function wireCheckRow(r: HTMLElement): void {
+  const toggle = (): void => {
+    const on = r.getAttribute('aria-checked') !== 'true';
+    if (!fire(r, 'ui:change', { value: on }, true)) return;
+    r.setAttribute('aria-checked', String(on));
+  };
+  r.addEventListener('click', toggle);
+}
+
 /** a filter or mode Chip toggles; an answer chip only reports (its card decides) */
 function wireChip(c: HTMLButtonElement): void {
   if (c.dataset['variant'] === 'answer' || c.hasAttribute('data-hold')) return;
@@ -404,7 +415,7 @@ function wireRestOrb(w: HTMLElement): void {
 
 const WIRES: ReadonlyArray<readonly [string, (el: HTMLElement) => void]> = [
   ['.k7-seg', wireSegmented], ['.k7-switch', (el) => wireSwitch(el as HTMLButtonElement)], ['.k7-chip', (el) => wireChip(el as HTMLButtonElement)],
-  ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark], ['.k7-info', wireInfo], ['.k7-composer', wireComposer], ['.k7-row[data-action]', wireRowAction], ['.k7-file[data-action]', wireRowAction], ['.k7-hoverbar', wireHoverBar], ['.k7-dock', paintDock], ['.ui-orb[data-orb-rest]', wireRestOrb]
+  ['[data-hold]', wireHold], ['[data-disclose]', wireDisclosure], ['[data-kit~="Menu"]', wireMenu], ['.k7-mark', wireMark], ['.k7-info', wireInfo], ['.k7-composer', wireComposer], ['.k7-row[data-action]', wireRowAction], ['.k7-row[data-check]', wireCheckRow], ['.k7-file[data-action]', wireRowAction], ['.k7-hoverbar', wireHoverBar], ['.k7-dock', paintDock], ['.ui-orb[data-orb-rest]', wireRestOrb]
 ];
 /** wire every kit component under root (and root itself) once */
 export function wire<T extends Element>(root: T): T {

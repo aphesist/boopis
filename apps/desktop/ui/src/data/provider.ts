@@ -6,6 +6,7 @@
    The mock provider (mock-provider.ts) serves today's v6 mock data through these; the live provider (Hermes gateway
    and the boopis plugin) implements the same interfaces. Nothing in a module may fabricate data a provider
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
+import type { RulesSource, SpeechSource } from './settings-host';
 import type { SessionControls } from './session-s0';
 import type {
   ApprovalTier, ArchivedBot, Turn, Bot, LimitNotice, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment, ArchivedGroup,
@@ -457,6 +458,10 @@ export interface DataProvider {
   dictation?: DictationSource;
   /** live voice, once a voice model is set up (absent until then: the voice circle then says what it needs) */
   voice?: VoiceSource;
+  /** the rules list for Settings › Approvals (the desktop app with the plugin's `rules-v1`; absent elsewhere: the page is hidden) */
+  rules?: RulesSource;
+  /** the dictation model and the voice choice for Settings › Models (the desktop app; absent elsewhere: the section is hidden) */
+  speech?: SpeechSource;
   files: FilesSource;
   mods: ModsSource;
   /** asking a council: several models answer one message and one combines them (ADR-0035) */

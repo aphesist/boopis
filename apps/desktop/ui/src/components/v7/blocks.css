@@ -22,6 +22,14 @@
 .k7-row[data-action] { cursor: pointer; transition: background-color var(--dur-out) var(--ease-out); }
 @media (hover: hover) and (pointer: fine) { .k7-row[data-action]:hover { background: var(--hover); transition-duration: var(--dur-1); } }
 .k7-row[data-action]:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
+/* a settings card (board 14, kit.css `.sr .lb small`): a label's second line is the page's one hint, 13 on 18, 1 under the label, and
+   the label wraps rather than cut what it explains; a row that is a checkbox ends in the accent check (`chk`), nothing when off */
+.k7-card[data-variant="settings"] .k7-row__label[data-wrap-ok] { white-space: normal; overflow: visible; }
+.k7-card[data-variant="settings"] .k7-row__sub { display: block; margin-top: 1px; font-size: var(--fs-s); line-height: var(--lh-s); }
+.k7-card[data-variant="settings"] .k7-row__label[data-wrap-ok] > br { display: none; }
+.k7-row__check { display: inline-flex; flex: none; width: var(--icon-s); color: var(--accent-text); visibility: hidden; }
+.k7-row[aria-checked="true"] > .k7-row__check { visibility: visible; }
+.k7-row[data-check]:focus-visible { outline-offset: calc(-1 * var(--focus-w)); border-radius: var(--r-nav); }
 .k7-card[data-variant="pane"] { padding: var(--pad-queue) 0; }
 /* a pane card's row (kit.css `.pane-card .sr`): at least 40 tall, its words 14 from the card's sides, its label 14/18, its value 13
    (mono too). The row itself stands 4 from the card's sides, as from its top and foot, on the corner concentric with the card's: a row

@@ -84,7 +84,7 @@ export function parkedCard(s: ParkedStep, asker: Bot | null, v: ParkedView = {})
     const r = parkedReceipt(v.answered);
     const open = v.answered.drafted && later('rules-settings') ? kit.html.button({ label: 'Open', variant: 'ghost', size: 28, attrs: { 'data-open-draft': '' } }) : '';
     const row = kit.askCard({ variant: 'form', state: 'answered', ask: r.text, word: { text: r.word }, rowAction: open, ...l, attrs: { 'data-parked': s.id, 'aria-label': name + '’s step: ' + r.text } });
-    row.querySelector('[data-open-draft]')?.addEventListener('click', () => { emit('hx:open-settings', { section: 'approvals' }); });
+    row.querySelector('[data-open-draft]')?.addEventListener('click', () => { emit('hx:open-settings', { section: 'approvals', focus: 'drafts' }); });
     return row;
   }
   const can = (c: string): boolean => !s.choices.length || s.choices.includes(c);

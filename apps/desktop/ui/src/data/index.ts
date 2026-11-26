@@ -13,3 +13,4 @@ export { NeedsConfirmation } from './confirm';
 export { BOOPIS_ID } from './types';
 export type * from './session-s0';
 export { CAREFUL, CAREFUL_STEPS, DEFAULT_CAREFUL } from './session-s0';
+export type * from './settings-host';

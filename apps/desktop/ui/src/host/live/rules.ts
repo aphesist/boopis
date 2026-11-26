@@ -8,7 +8,8 @@
        (Asked for by @nina, …)
      `ruleCard` gives the card its `rule` (the rule's words, verbatim) and its `scope` (what a standing answer covers: the
      words after “·”), so the dock's second answer reads "Always for git push". A card that is not one gets neither.
-   - `approval-rules` is switched on only when the plugin says it has the rules engine (`rules-v1` in `describe`).
+   - `approval-rules` (and `rules-settings`, Settings › Approvals) is switched on only when the plugin says it has the rules
+     engine (`rules-v1` in `describe`).
    - "Allow all this turn" is the engine's `session` answer (the plugin's key is scoped to the turn); "Always allow" is
      `once`, then the plugin drafts the narrowest exception (`rules.draft`, which writes nothing) and the host saves it as
      a **draft** (`rules_put`, `state: draft`): a draft is never applied, and Settings shows it for the owner to finish.
@@ -61,7 +62,8 @@ export async function enableRules(deps: RulesDeps, later: Set<LaterFeature>): Pr
   try {
     const d = await deps.plugin('describe', {}) as { capabilities?: unknown };
     const caps = Array.isArray(d?.capabilities) ? d.capabilities : [];
-    if (caps.includes('rules-v1') && deps.host) { later.add('approval-rules'); return true; }
+    /* the standing answers, and Settings › Approvals where a drafted exception is finished (step 7a: the page exists) */
+    if (caps.includes('rules-v1') && deps.host) { later.add('approval-rules'); later.add('rules-settings'); return true; }
   } catch { /* the plugin's describe could not be read: the standing answers stay hidden */ }
   return false;
 }

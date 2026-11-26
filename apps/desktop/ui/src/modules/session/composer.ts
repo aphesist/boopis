@@ -10,8 +10,8 @@
    model that answers this message only (ADR-0036). The words the text is read by carry the kit's Mark (feedforward): a press on one,
    or alt ArrowDown in it, opens what it is read as. While a change waits for your answer, what you type declines it with those
    words (S09). Stop is the composer's own button while a turn runs. */
-import { emit } from '../../core/bus';
-import { LINE_ITEMS, loadLineHidden, saveLineHidden } from '../../core/settings';
+import { emit, on } from '../../core/bus';
+import { LINE_ITEMS, LINE_NAMES, loadLineHidden, saveLineHidden } from '../../core/settings';
 import type { LineItemId } from '../../core/settings';
 import { kit, ui } from '@boopis/ui';
 import type { ComposerChip, LineItem } from '@boopis/ui';
@@ -53,7 +53,6 @@ export interface SessionComposerOpts {
   send(text: string, meta: Pick<SendMeta, 'assume' | 'attachments'>): void; stop(): void;
   /** your last message, for ArrowUp in an empty composer */ lastMessage(): string | null;
 }
-const NAMES: Readonly<Record<LineItemId, string>> = { careful: 'How careful', branch: 'Branch', model: 'Model and effort', context: 'Context', cost: 'Cost' };
 /** how full the context is, as the line's five ticks */
 export const contextTicks = (used: number, total: number): number => (total > 0 ? Math.max(0, Math.min(5, Math.ceil((used / total) * 5))) : 0);
 
@@ -254,7 +253,7 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
   function openQuick(anchor: HTMLElement): void {
     const menu = openOver(anchor, {
       label: 'Quick menu: show under the composer', variant: 'quick', place: 'above', align: 'end', attrs: v7Attrs(),
-      entries: [{ heading: 'Quick menu: show under the composer' }, ...LINE_ITEMS.filter((i) => i !== 'careful' || !!controls).map((i) => ({ label: NAMES[i], value: i, checked: !hidden.includes(i), ...(folded(i) ? { desc: folded(i) as string } : {}) }))]
+      entries: [{ heading: 'Quick menu: show under the composer' }, ...LINE_ITEMS.filter((i) => i !== 'careful' || !!controls).map((i) => ({ label: LINE_NAMES[i], value: i, checked: !hidden.includes(i), ...(folded(i) ? { desc: folded(i) as string } : {}) }))]
     });
     menu?.addEventListener('ui:select', (e) => {
       const v = (e as CustomEvent<{ value: string }>).detail.value as LineItemId;
@@ -374,6 +373,8 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
   data().council.subscribe(sync);
   controls?.launch.subscribe(sync); controls?.capabilities.subscribe(sync);
 
+  /* Settings › General › Under the composer turns the same items on and off: the line follows */
+  const offLine = on('hx:session-line', () => { if (!slot.isConnected) { offLine(); return; } hidden = loadLineHidden(); drawLine(); });
   const api: SessionComposer = {
     el: slot,
     get input() { return text(); },

@@ -6,7 +6,7 @@ import { KAI, ORB3_MOTION } from './_bots';
 
 const typical = stage(['typical', 'variant'], ({ root }) => { fill(root, kit.windowChrome({ title: 'kai', bot: KAI })); }, { width: 1200 });
 export default {
-  id: 'kit/window-chrome', title: 'WindowChrome', area: 'shell', kind: 'component', covers: ['kit.windowChrome', 'kit.titlePill'],
+  id: 'kit/window-chrome', title: 'WindowChrome', area: 'shell', kind: 'component', covers: ['kit.windowChrome', 'kit.titlePill', 'kit.searchHint'],
   states: {
     typical,
     ...forced(typical, '.k7-search-hint, [data-kit-part~="TitlePill"]'),

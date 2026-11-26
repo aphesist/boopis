@@ -11,6 +11,7 @@ import { $, frag } from '../../core/dom';
 import { kit, ui } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
 import { data } from '../../data';
+import { loadChrome } from '../../core/settings';
 import { themeApi } from '../../styles/theme';
 import { sh } from './ctx';
 
@@ -28,14 +29,30 @@ export function syncV7Theme(): void {
   emit('hx:theme', { preset: 'v7-' + mode, scheme: mode });
 }
 
+/** the search control's handles (the shell wires the click once, by delegation on the chrome) */
+const SEARCH_PARTS = { id: 'hx-btn-search', 'aria-haspopup': 'dialog', 'aria-expanded': 'false' };
+const searchShows = (): 'hint' | 'button' | 'pill' | 'off' => { const c = loadChrome(); return c.search ? c.searchAs : 'off'; };
+/** Settings › General › Layout (board 14): the rail's size (written on the window's root and the layout's probe, which read its width)
+    and how search shows (the hint, a button, a pill, or none: ctrl K and the palette's other ways still open it) */
+export function applyChromePrefs(app: HTMLElement): void {
+  const c = loadChrome();
+  for (const n of [app, document.querySelector<HTMLElement>('.hx-probe')]) { if (!n) continue; if (c.rail === 'auto') n.removeAttribute('data-rail-size'); else n.setAttribute('data-rail-size', c.rail); }
+  const old = app.querySelector<HTMLElement>('#hx-btn-search, [data-search-slot]');
+  const shows = searchShows();
+  const next = shows === 'off' ? frag('<span data-search-slot hidden></span>') : frag(kit.html.searchHint({ shows, attrs: SEARCH_PARTS }));
+  if (shows !== 'off') kit.wire(next);
+  if (old) old.replaceWith(next);
+  if (sh.el) sh.el.btnSearch = shows === 'off' ? null : (next as HTMLButtonElement);
+}
+
 export function drawChrome(app: HTMLElement): void {
   const host = $('#hx-chrome', app);
   host.replaceChildren(kit.windowChrome({
-    title: '', search: 'hint',
+    title: '', search: searchShows() === 'off' ? 'hint' : searchShows(),
     parts: {
       toggle: { id: 'hx-btn-left', 'aria-controls': 'hx-side', 'aria-expanded': 'true', 'data-kbd': 'mod+B', 'data-tip-pos': 'bottom' },
       title: { id: 'hx-btn-title' },
-      search: { id: 'hx-btn-search', 'aria-haspopup': 'dialog', 'aria-expanded': 'false' },
+      search: SEARCH_PARTS,
       details: { id: 'hx-btn-right', 'aria-controls': 'hx-right-shell', 'aria-expanded': 'false', 'data-kbd': 'mod+I' },
       windowGroup: { role: 'group', 'aria-label': 'Window' },
       min: { id: 'hx-btn-min', 'data-win': 'min' }, max: { id: 'hx-btn-max', 'data-win': 'max', 'aria-label': 'Full screen', 'data-tip': 'Full screen' },

@@ -6,8 +6,10 @@
    "More providers" collapsed, which search and any filter still reach. A status is always a word, never colour alone. Terms
    notes are quiet lines under their row. A button opens a form card in place of the list (as Connectors does), with a way back.
 
-   Built from the kit only: `setRow`/`setHead`, `search`, `segmented`, `button`, and the one form card family. No CSS of its own. */
-import { ui } from '@boopis/ui';
+   Built from the v7 kit only (step 7a): a section head and a settings Card of rows per lab, the search Field, filter Chips, Buttons and
+   StatusWords, and the one form card family. A lab's own sign-in button keeps its brand (ADR-0040). No CSS of its own. */
+import { kit, ui } from '@boopis/ui';
+import type { RowOpts } from '@boopis/ui';
 import '../modules/cards';
 import { useFormsHost } from '../modules/cards/forms-host';
 import { esc } from '../core/dom';
@@ -207,40 +209,49 @@ const button = (a: Action, way: string, label: string, calm = false): string => 
   if (brand) return ui.html.signinButton({ brand, attrs: { 'data-do': a.do, 'data-way': way } });
   return plainButton(calm ? { ...a, primary: false } : a, way, label);
 };
-const plainButton = (a: Action, way: string, label: string): string => ui.html.button({
-  label: a.label, size: 's', ...(a.primary ? { variant: 'primary' as const } : a.ghost ? { variant: 'ghost' as const } : {}),
+const plainButton = (a: Action, way: string, label: string): string => kit.html.button({
+  label: a.label, size: 28, variant: a.primary ? 'primary' : a.ghost ? 'ghost' : 'secondary',
   attrs: { 'data-do': a.do, 'data-way': way, 'aria-label': `${a.label}, ${label}` }
 });
+/** a state's word at the row's end (a word, never colour alone): a real failure in red, a calm step in amber */
+const word = (state: ProviderState | null | undefined): string => kit.html.statusWord({ text: statusWord(state), tone: failed(state) ? 'red' : state?.status === 'connected' ? 'ok' : state?.status === 'error' ? 'owe' : 'neutral', attrs: { 'data-status': state?.status ?? 'unread' } });
+/** the host's words with `a command` as the kit's inline code, never raw backticks */
+export const withCode = (text: string): string => text.split('`').map((part, i) => (i % 2 ? kit.html.inlineChip({ kind: 'code', text: part }) : esc(part))).join('');
+const acts = (html: string): string => '<span class="hx-set__acts">' + html + '</span>';
+/** the command line under a row: where to paste it, then the command as the kit's inline code */
+const installLine = (hint: InstallHint): string => `<p class="k7-page__note" data-install>In ${esc(hint.shell)}: ${kit.html.inlineChip({ kind: 'code', text: hint.command })}</p>`;
 
-/** `calm`: no row action is the primary one (the hub's one primary action is Continue) */
-export function rowHtml(r: Row, canSignin: (w: Way) => boolean, calm = false): string {
+/** a way's row; `calm`: no row action is the primary one */
+export function rowOpts(r: Row, canSignin: (w: Way) => boolean, calm = false): RowOpts {
   const actions = actionsFor(r.way, r.state, canSignin(r.way));
   /* the add-an-endpoint row is an action, not a state: it says no word */
-  const word = r.way.kind === 'custom' ? '' : `<span class="ui-set__value" data-status="${esc(r.state?.status ?? 'unread')}">${esc(statusWord(r.state))}</span>`;
-  const control = `<span style="display:inline-flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;justify-content:flex-end">${word}${actions.map((a) => button(a, r.way.id, r.way.label, calm)).join('')}</span>`;
-  const notes = r.way.notes.filter(rowNote).map((n) => `<p class="ui-field__hint" data-note="${esc(n.id)}">${esc(n.text)}</p>`).join('');
-  const install = r.state?.install ? installLineHtml(r.state.install, 'ui-field__hint') : '';
-  return ui.html.setRow({ label: r.way.label, hint: hintOf(r.way, r.state), control }) + install + notes;
+  const control = acts((r.way.kind === 'custom' ? '' : word(r.state)) + actions.map((a) => button(a, r.way.id, r.way.label, calm)).join(''));
+  const sub = hintOf(r.way, r.state);
+  return { label: r.way.label, ...(sub ? { subHTML: withCode(sub) } : {}), control, attrs: { 'data-row-way': r.way.id } };
 }
-function endpointRowHtml(s: ProviderState, calm = false): string {
+/** what stays in view under a row: its terms notes and the install command */
+const rowNotes = (r: Row): string => (r.state?.install ? installLine(r.state.install) : '') + r.way.notes.filter(rowNote).map((n) => `<p class="k7-page__note" data-note="${esc(n.id)}">${esc(n.text)}</p>`).join('');
+function endpointRow(s: ProviderState, calm = false): RowOpts {
   const slug = s.way.slice('custom.'.length);
-  const control = `<span style="display:inline-flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;justify-content:flex-end"><span class="ui-set__value" data-status="${esc(s.status)}">${esc(statusWord(s))}</span>${button({ do: 'remove', label: 'Remove', ghost: true }, s.way, slug, calm)}</span>`;
-  return ui.html.setRow({ label: slug, hint: [s.base_url, s.detail].filter(Boolean).join(' '), control });
+  const sub = [s.base_url, s.detail].filter(Boolean).join(' ');
+  return { label: slug, ...(sub ? { sub } : {}), control: acts(word(s) + button({ do: 'remove', label: 'Remove', ghost: true }, s.way, slug, calm)), attrs: { 'data-row-way': s.way } };
 }
-export const head = (id: string, label: string, level: 2 | 3 = 3): string => ui.html.setHead({ id: 'hx-prov-h-' + id, label, level });
-export const blockHtml = (b: Block, canSignin: (w: Way) => boolean, calm = false, level: 2 | 3 = 3): string =>
-  head(b.id, b.head, level) + b.rows.map((r) => rowHtml(r, canSignin, calm)).join('') + (b.endpoints ?? []).map((e) => endpointRowHtml(e, calm)).join('');
+/** a lab's section: its head, a card of its ways, then the notes of the ways that have them */
+export const blockHtml = (b: Block, canSignin: (w: Way) => boolean, calm = false): string =>
+  kit.section(b.head, kit.html.card({ variant: 'settings', rows: [...b.rows.map((r) => rowOpts(r, canSignin, calm)), ...(b.endpoints ?? []).map((e) => endpointRow(e, calm))], attrs: { 'data-block': b.id } }) + b.rows.map(rowNotes).join(''));
+/** a single row's markup in its own card (the lab draws one way at a time) */
+export const rowHtml = (r: Row, canSignin: (w: Way) => boolean, calm = false): string => kit.html.card({ variant: 'settings', rows: [rowOpts(r, canSignin, calm)] }) + rowNotes(r);
 
 /** the list's markup for a plan; `tailOpen` says whether "More providers" is expanded */
 export function planHtml(p: Plan, canSignin: (w: Way) => boolean, tailOpen: boolean): string {
-  if (p.empty) return '<p class="ui-field__hint" role="status" data-prov-none>No provider matches. Try another word, or choose All.</p>';
+  if (p.empty) return '<p class="k7-page__note" role="status" data-prov-none>No provider matches. Try another word, or choose All.</p>';
   const out: string[] = [];
-  if (p.found.length) out.push(head('found', 'Found on this computer') + p.found.map((r) => rowHtml(r, canSignin)).join(''));
+  if (p.found.length) out.push(blockHtml({ id: 'found', head: 'Found on this computer', rows: p.found }, canSignin));
   out.push(...p.main.map((b) => blockHtml(b, canSignin)));
   if (p.more.length) {
     const n = p.more.reduce((c, b) => c + b.rows.length, 0);
-    out.push('<div style="margin-top:var(--sp-4)">' + ui.html.button({ label: `More providers (${String(n)})`, size: 's', variant: 'ghost', attrs: { id: 'hx-prov-more', 'aria-expanded': String(tailOpen), 'aria-controls': 'hx-prov-tail' } }) + '</div>');
-    out.push(`<div id="hx-prov-tail"${tailOpen ? '' : ' hidden'}>${p.more.map((b) => blockHtml(b, canSignin)).join('')}</div>`);
+    out.push('<div class="hx-set__more">' + kit.html.button({ label: `More providers (${String(n)})`, size: 28, variant: 'ghost', attrs: { id: 'hx-prov-more', 'aria-expanded': String(tailOpen), 'aria-controls': 'hx-prov-tail' } }) + '</div>');
+    out.push(`<div id="hx-prov-tail" class="hx-set__part"${tailOpen ? '' : ' hidden'}>${p.more.map((b) => blockHtml(b, canSignin)).join('')}</div>`);
   }
   return out.join('');
 }
@@ -291,12 +302,12 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   let abort: () => void = () => undefined;
   let card: { destroy: () => void } | null = null;
 
-  host.innerHTML = (deps.layout?.bare ? '' : ui.html.setHead({ id: 'hx-set-providers-h', label: deps.layout?.title ?? 'Providers', level: deps.layout?.level ?? 3 })) +
-    '<div data-prov-bar' + (deps.layout?.bare ? ' hidden' : '') + ' style="display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center;padding:var(--sp-2) 0">' +
-    ui.html.search({ size: 'm', as: 'input', id: 'hx-prov-q', label: 'Search providers', placeholder: 'Search providers' }) +
-    ui.html.chipGroup({ options: FILTERS, value: 'all', label: 'Show providers' }) + '</div>' +
-    '<p class="ui-field__hint" role="status" data-prov-status></p><div data-prov-body></div><div data-prov-flow hidden></div>';
-  ui.hydrate(host);
+  host.innerHTML = (deps.layout?.bare ? '' : kit.html.sectionHead({ title: deps.layout?.title ?? 'Providers', attrs: { id: 'hx-set-providers-h' } })) +
+    '<div class="hx-set__bar" data-prov-bar' + (deps.layout?.bare ? ' hidden' : '') + '>' +
+    kit.html.field({ id: 'hx-prov-q', kind: 'search', ariaLabel: 'Search providers', placeholder: 'Search providers' }) +
+    '<span class="hx-set__chips" role="group" aria-label="Show providers">' + FILTERS.map((f) => kit.html.chip({ label: f.label, value: f.value, chosen: f.value === 'all' })).join('') + '</span></div>' +
+    '<p class="k7-page__note" role="status" data-prov-status></p><div class="hx-set__part" data-prov-body></div><div data-prov-flow hidden></div>';
+  kit.wire(host);
   const bar = host.querySelector<HTMLElement>('[data-prov-bar]') as HTMLElement;
   const body = host.querySelector<HTMLElement>('[data-prov-body]') as HTMLElement;
   const flow = host.querySelector<HTMLElement>('[data-prov-flow]') as HTMLElement;
@@ -318,7 +329,7 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
     deps.onStates?.(states);
     if (readError && !states.size) { body.innerHTML = ''; say(); return; }
     body.innerHTML = (deps.layout?.planHtml ?? planHtml)(plan(states, filter, query), canSignin, tailOpen);
-    ui.hydrate(body);
+    if (deps.layout) ui.hydrate(body); else kit.wire(body);
     say();
   };
 
@@ -342,9 +353,9 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   const show = (...kids: Node[]): void => {
     flowOpen = true;
     bar.hidden = true; body.hidden = true; flow.hidden = false;
-    const backBtn = ui.button({ label: deps.layout?.back ?? 'Back to providers', size: 's', variant: 'ghost' });
+    const backBtn = kit.button({ label: deps.layout?.back ?? 'Back to providers', size: 28, variant: 'ghost' });
     backBtn.addEventListener('click', back);
-    flow.replaceChildren(el('div', { style: 'display:grid;gap:var(--sp-3);padding:var(--sp-3) 0' }, ...kids, backBtn));
+    flow.replaceChildren(el('div', { class: 'hx-set__flow' }, ...kids, backBtn));
   };
   const later = (fn: () => void): void => { window.setTimeout(() => { if (flowOpen) fn(); }, settle); };
   const cardOf = (spec: FormSpec, handlers: FlowHandlers): HTMLElement => {
@@ -378,7 +389,7 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   const signinFlow = (w: Way): void => {
     const mount = signinMount(w);
     if (!mount) return;
-    const hostEl = el('div', { style: 'display:grid;gap:var(--sp-3)' }, el('p', { style: 'margin:0' }, w.label), ...w.notes.map((n) => el('p', { class: 'ui-field__hint' }, n.text)));
+    const hostEl = el('div', { class: 'hx-set__flow' }, el('p', { class: 'hx-set__lead' }, w.label), ...w.notes.map((n) => el('p', { class: 'k7-page__note' }, n.text)));
     show(hostEl);
     card = mount(hostEl, () => { later(back); });
   };
@@ -436,7 +447,14 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
     }
   });
   host.querySelector<HTMLInputElement>('#hx-prov-q')?.addEventListener('input', (e) => { query = (e.target as HTMLInputElement).value; draw(); });
-  bar.addEventListener('ui:change', (e) => { filter = (e as CustomEvent<{ value: string }>).detail.value as Filter; draw(); });
+  /* the filter is one choice of the Chips: the pressed one is the only one pressed */
+  bar.addEventListener('ui:change', (e) => {
+    const c = (e.target as Element).closest<HTMLElement>('[data-kit~="Chip"]'); if (!c) return;
+    e.preventDefault();
+    filter = (c.dataset['value'] ?? 'all') as Filter;
+    for (const x of bar.querySelectorAll<HTMLElement>('[data-kit~="Chip"]')) { const on = x === c; x.setAttribute('aria-pressed', String(on)); x.toggleAttribute('data-chosen', on); }
+    draw();
+  });
 
   const ready = read(true);
   return {

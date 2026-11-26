@@ -52,6 +52,10 @@ const ICONS: Record<string, readonly [viewBox: string, inner: string | null]> = 
   terminal: [I16, '<rect x="1.8" y="2.8" width="12.4" height="10.4" rx="2"/><path d="m4.6 6.2 2 1.8-2 1.8M8.4 10h3"/>'],
   /* the boards' shield (kit.js EXTRA): "How careful" in the launch row and on the session composer's line */
   shield: [I16, '<path d="M8 1.8 13 3.8v3.8c0 3-2.2 5.4-5 6.6-2.8-1.2-5-3.6-5-6.6V3.8z"/>'],
+  /* the boards' Settings nav (kit.js EXTRA, board 14): Connectors, Appearance, Keyboard */
+  plug: [I16, '<path d="M6 2v3M10 2v3M4.5 5h7v2.5a3.5 3.5 0 0 1-7 0zM8 11v3"/>'],
+  palette: [I16, '<path d="M8 2a6 6 0 1 0 0 12c.9 0 1.3-.6 1.1-1.3-.3-.9.3-1.7 1.2-1.7H12a2 2 0 0 0 2-2A6 6 0 0 0 8 2z"/><circle class="is-fill" cx="5.2" cy="7" r=".9"/><circle class="is-fill" cx="8" cy="5" r=".9"/><circle class="is-fill" cx="10.8" cy="7" r=".9"/>'],
+  keyboard: [I16, '<rect x="1.8" y="3.8" width="12.4" height="8.4" rx="1.8"/><path d="M4.5 6.5h.01M7 6.5h.01M9.5 6.5h.01M12 6.5h.01M5 9.5h6"/>'],
   store: [I16, '<path d="M2.5 6 3.6 3h8.8l1.1 3"/><path d="M2.5 6h11v1a2 2 0 0 1-3.7 1 2 2 0 0 1-3.6 0A2 2 0 0 1 2.5 7z"/><path d="M3.5 8.8V13h9V8.8"/>']
   };
 

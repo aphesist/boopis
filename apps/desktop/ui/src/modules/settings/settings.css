@@ -1,0 +1,38 @@
+/* Settings (boards 14 and S39): placement only. The dialog's look is the kit's Dialog (large), its rows the kit's Card; this places the
+   kit's dialog in the shell's <dialog> (64 under the window's top as the boards draw it, centred; on Appearance at the right edge with no
+   scrim, so a change shows on the app) and lays out what a row holds at its end. */
+.hx-dialog.hx-settings { padding: 0; border: 0; background: transparent; color: inherit; overflow: visible;
+  width: min(var(--dialog-l), calc(100% - 2 * var(--sp-4))); height: min(700px, calc(100% - var(--drag-h) - var(--sp-2) - var(--sp-4))); max-width: none; max-height: none;
+  margin: calc(var(--drag-h) + var(--sp-2)) auto auto; }   /* boards 14 and S39: 900 by 700, 64 from the window's top */
+.hx-dialog.hx-settings::backdrop { background: var(--scrim); }
+.hx-dialog.hx-settings[data-side] { margin-right: var(--sp-3); }
+.hx-dialog.hx-settings[data-side]::backdrop { background: transparent; }
+.hx-settings > .k7-dialog { width: 100%; height: 100%; }
+.hx-settings .k7-dialog__page:focus { outline: none; }
+.hx-settings .k7-dialog__page > [hidden] { display: none; }
+/* a part of a page (a section drawn on its own time) takes the page's own gaps */
+.hx-set__part { display: contents; }
+.hx-set__part[hidden] { display: none; }
+/* a row's end: its value or word, then its buttons, 8 apart, never wrapping under the label */
+.hx-set__acts { display: inline-flex; flex: none; align-items: center; gap: var(--sp-2); }
+.hx-set__mono { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hx-set__tile { display: inline-flex; vertical-align: middle; margin-inline-end: var(--sp-2); }
+/* a row's Edit and Remove show with the pointer or the focus on it (board O-B07) */
+.hx-set__hover { display: inline-flex; gap: var(--gap-xs); opacity: 0; }
+.k7-row:hover .hx-set__hover, .k7-row:focus-within .hx-set__hover, .k7-row[data-open] .hx-set__hover { opacity: 1; }
+@media (hover: none) { .hx-set__hover { opacity: 1; } }
+/* a Field in a row (a key, an address) takes the room the label leaves */
+.hx-settings .k7-row > .k7-field { flex: 0 1 calc(var(--set-nav-w) + var(--sp-7)); min-width: 0; }
+/* the providers' search and filters, and a form card's flow in place of a list */
+.hx-set__bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.hx-set__bar > .k7-field { flex: 1 1 calc(var(--set-nav-w) + var(--sp-6)); }
+.hx-set__chips { display: inline-flex; flex-wrap: wrap; gap: var(--gap-xs); }
+.hx-set__flow { display: grid; gap: var(--sp-3); }
+.hx-set__lead { margin: 0; }
+.hx-set__list { margin: 0; padding-inline-start: var(--sp-5); }
+.hx-set__more { display: flex; }
+/* a rule's editor and a draft sit under their card, the page's gap above */
+[data-page="approvals"] .k7-block { display: grid; gap: var(--sp-3); }
+[data-page="approvals"] .k7-block .hx-set__acts { justify-content: flex-end; }
+/* the keyboard's long names wrap rather than cut */
+[data-page="keys"] .k7-row__label { white-space: normal; overflow: visible; }

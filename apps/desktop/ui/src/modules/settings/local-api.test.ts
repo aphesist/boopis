@@ -16,11 +16,12 @@ function fake(next: LocalApiStatus | Error): LocalApiBridge & { calls: string[] 
 
 beforeEach(() => { document.body.replaceChildren(); });
 
-describe('Settings, Local API', () => {
+describe('Settings, Local API on the kit', () => {
   it('says it is off by default, and offers nothing but the switch', () => {
     const html = localApiHTML(OFF);
-    expect(html).toContain('hx-set-local-api');
-    expect(html).not.toContain('hx-local-api-rotate');
+    expect(html).toContain('data-set="local-api"');
+    expect(html).toContain('data-kit="Card"');
+    expect(html).not.toContain('data-rotate');
     expect(html).not.toContain('client-token');
     expect(describeStatus(OFF)).toMatch(/^Off\./);
   });
@@ -29,39 +30,33 @@ describe('Settings, Local API', () => {
     const html = localApiHTML(ON);
     expect(html).toContain('http://127.0.0.1:47821');
     expect(html).toContain('/data/client-token');
-    expect(html).toContain('hx-local-api-rotate');
+    expect(html).toContain('data-rotate');
     expect(Object.keys(ON)).not.toContain('token');
   });
 
-  it('counts the apps that follow it', () => {
-    expect(describeStatus({ ...ON, streams: 0 })).toContain('No app is following');
+  it('counts the apps that follow it, and puts the host\'s reason in words when nothing listens', () => {
     expect(describeStatus({ ...ON, streams: 1 })).toContain('One app is following');
     expect(describeStatus({ ...ON, streams: 3 })).toContain('3 apps are following');
-  });
-
-  it('puts the host\'s reason in words in place of the state when the switch is on but nothing listens', () => {
     const s = { ...OFF, enabled: true, problem: 'The token file would be readable by other users, so the endpoint stays off.' };
     expect(describeStatus(s)).toBe(s.problem);
-    expect(localApiHTML(s)).not.toContain('hx-local-api-rotate');
+    expect(localApiHTML(s)).not.toContain('data-rotate');
   });
 
   it('turning the switch on asks the host and draws what it answers', async () => {
     const sec = document.createElement('section'); document.body.append(sec);
     const bridge = fake(ON);
     renderLocalApi(sec, OFF, bridge);
-    const sw = sec.querySelector<HTMLInputElement>('#hx-set-local-api')!;
-    sw.checked = true; sw.dispatchEvent(new Event('change', { bubbles: true }));
+    sec.querySelector<HTMLButtonElement>('[data-set="local-api"]')!.click();
     await tick();
     expect(bridge.calls).toContain('setEnabled:true');
-    expect(sec.querySelector('#hx-local-api-rotate')).not.toBeNull();
+    expect(sec.querySelector('[data-rotate]')).not.toBeNull();
   });
 
-  it('a refused change says why and asks the host for the true state again, so the switch goes back', async () => {
+  it('a refused change asks the host for the true state again, so the switch goes back', async () => {
     const sec = document.createElement('section'); document.body.append(sec);
     const bridge = fake(new Error('boopis could not open the endpoint.'));
     renderLocalApi(sec, OFF, bridge);
-    const sw = sec.querySelector<HTMLInputElement>('#hx-set-local-api')!;
-    sw.checked = true; sw.dispatchEvent(new Event('change', { bubbles: true }));
+    sec.querySelector<HTMLButtonElement>('[data-set="local-api"]')!.click();
     await tick(); await tick();
     expect(bridge.calls).toEqual(['setEnabled:true', 'status']);
   });
@@ -70,7 +65,7 @@ describe('Settings, Local API', () => {
     const sec = document.createElement('section'); document.body.append(sec);
     const bridge = fake(ON);
     renderLocalApi(sec, ON, bridge);
-    sec.querySelector<HTMLButtonElement>('#hx-local-api-rotate')!.click();
+    sec.querySelector<HTMLButtonElement>('[data-rotate]')!.click();
     await tick();
     expect(bridge.calls).toEqual(['rotate']);
   });

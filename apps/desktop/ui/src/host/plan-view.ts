@@ -1,38 +1,34 @@
-/* The models plan as a Settings section: the same rows the design system's settings use (`setRow`), filled only with what
+/* The models plan as a Settings section: the kit's settings Card of rows (board 14's `.sr`), filled only with what
    Hermes reported (free-tier.ts). It has no tab of its own here: Settings > Models mounts it (`mountPlan`), and Diagnostics
    carries the same facts as text (`planLines`, in the report). Refreshing asks Hermes again; nothing is cached or guessed. */
-import { ui } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
+import type { RowOpts } from '@boopis/ui';
+import { frag } from '../core/dom';
 import { currentPlan, inWords, resetText } from './free-tier';
 import type { PlanView } from './free-tier';
 
 const PLAN_WORD: Readonly<Record<PlanView['kind'], string>> = { free: 'Free', none: 'None in use', unknown: 'Not reported' };
 
 /** the rows of the section for one view */
-export function planRows(view: PlanView, now = Date.now()): string[] {
-  const rows = [
-    ui.html.setRow({ label: 'Plan', hint: view.detail, control: '<span class="ui-set__value">' + esc(view.label ? `${PLAN_WORD[view.kind]} (${view.label})` : PLAN_WORD[view.kind]) + '</span>' })
+export function planRows(view: PlanView, now = Date.now()): RowOpts[] {
+  const rows: RowOpts[] = [
+    { label: 'Plan', ...(view.detail ? { sub: view.detail } : {}), value: view.label ? `${PLAN_WORD[view.kind]} (${view.label})` : PLAN_WORD[view.kind] }
   ];
-  if (view.model) rows.push(ui.html.setRow({ label: 'Model', control: '<span class="ui-set__value">' + esc(ui.modelMark.called(view.model) || view.model) + '</span>' }));
+  if (view.model) rows.push({ label: 'Model', value: ui.modelMark.called(view.model) || view.model });
   if (view.limit) {
     const when = resetText(view.limit.resetsAtMs, now);
-    rows.push(ui.html.setRow({ label: 'Limit', hint: [view.limit.message, when].filter(Boolean).join(' ') || null, control: '<span class="ui-set__value">' + esc(view.limit.code.replace(/^free_tier_/, '').replace(/_/g, ' ')) + '</span>' }));
+    const sub = [view.limit.message, when].filter(Boolean).join(' ');
+    rows.push({ label: 'Limit', ...(sub ? { sub } : {}), value: view.limit.code.replace(/^free_tier_/, '').replace(/_/g, ' ') });
   }
-  for (const g of view.gauges) {
-    rows.push(ui.html.setRow({ label: g.title, hint: `${g.provider}${g.resetsAtMs === null ? '' : `, resets ${inWords(g.resetsAtMs - now)}`}`, control: '<span class="ui-set__value">' + String(g.usedPercent) + '% used</span>' }));
-  }
-  if (view.gaugesNote) rows.push(ui.html.setRow({ label: 'Usage', hint: view.gaugesNote }));
-  if (view.checking) rows.push(ui.html.setRow({ label: 'Quick check', hint: 'The account service asked for a short browser check. It runs in the background and appears only if it needs you.' }));
+  for (const g of view.gauges) rows.push({ label: g.title, sub: `${g.provider}${g.resetsAtMs === null ? '' : `, resets ${inWords(g.resetsAtMs - now)}`}`, value: String(g.usedPercent) + '% used' });
+  if (view.gaugesNote) rows.push({ label: 'Usage', sub: view.gaugesNote });
+  if (view.checking) rows.push({ label: 'Quick check', sub: 'The account service asked for a short browser check. It runs in the background and appears only if it needs you.' });
   return rows;
 }
-const esc = (t: string): string => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
 
 /** build the section for a view */
 export function planSection(view: PlanView, now = Date.now()): HTMLElement {
-  const sec = document.createElement('section');
-  sec.className = 'ui-set';
-  sec.setAttribute('aria-labelledby', 'hx-set-plan-h');
-  sec.innerHTML = ui.html.setHead({ id: 'hx-set-plan-h', label: 'Plan' }) + planRows(view, now).join('');
-  return sec;
+  return kit.wire(frag(kit.section('Plan', kit.html.card({ variant: 'settings', rows: planRows(view, now), attrs: { 'data-part': 'plan' } }))));
 }
 
 /** Put the plan into a Settings panel (Settings > Models) and refresh it: it asks Hermes now, and says so when Hermes cannot
@@ -45,7 +41,6 @@ export async function mountPlan(panel: HTMLElement, ask: () => Promise<PlanView 
     const next = planSection((await ask()) ?? unknown);
     section.replaceWith(next);
     section = next;
-    ui.hydrate(next);
   };
   await refresh();
   return { get section() { return section; }, refresh };

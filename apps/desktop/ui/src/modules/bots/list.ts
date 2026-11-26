@@ -8,6 +8,7 @@
    click opens and focus stays in the list (KEYMAP 4). The rail: the kit's Rail, the bots' tiles (54 on 88; 44 on 64 under 1200 px
    of window, Automatic), the rooms as clusters under a hairline, New bot, Store and Settings at its foot. A live update never
    draws an orb again: rows and tiles are written in place. */
+import { loadChrome } from '../../core/settings';
 import { emit, on } from '../../core/bus';
 import { $, el, frag, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
@@ -203,8 +204,9 @@ export function syncListVisibility(): void {
 
 /* ───────── the rail (the kit's Rail, in the shell's #hx-rail) ───────── */
 const RAIL = { host: null as HTMLElement | null, sig: '' };
-/** Automatic (the default of Settings > General > Layout > Rail size, 7): compact under 1200 px of window, standard from 1200 */
-const railSize = (): 'a' | 'b' => (typeof window !== 'undefined' && window.innerWidth < 1200 ? 'b' : 'a');
+/** Settings > General > Layout > Rail size (board 14): Standard, Compact, or Automatic (the default: compact under 1200 px of window,
+    standard from 1200) */
+const railSize = (): 'a' | 'b' => { const r = loadChrome().rail; return r !== 'auto' ? r : typeof window !== 'undefined' && window.innerWidth < 1200 ? 'b' : 'a'; };
 function mountRail(): void {
   RAIL.host = document.getElementById('hx-rail');
   RAIL.sig = '';
@@ -223,6 +225,7 @@ function mountRail(): void {
   /* the tab switch, upright (owner, 25 November): the open sidebar's own switch, on the same tab state */
   RAIL.host.addEventListener('ui:change', (e) => { if (!(e.target as Element).closest('[data-rail-tabs]')) return; e.preventDefault(); setState({ tab: (e as CustomEvent<{ value: string }>).detail.value as typeof state.tab }); });
   on('hx:tab', () => { drawRail(); });
+  on('hx:chrome', () => { drawRail(); });
   window.addEventListener('resize', () => { if (RAIL.sig && !RAIL.sig.startsWith(railSize())) drawRail(); });
   drawRail();
 }

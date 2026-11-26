@@ -56,6 +56,13 @@ export function keyNames(k: string): string[] {
     return p.length === 1 ? p.toUpperCase() : p;
   });
 }
+/** a binding as the keymap writes it ("mod+G L | g", "hold:space"): each alternative's chips, a sequence's steps with a quiet "then",
+    a hold with "hold", the alternatives with "or" (Settings › Keyboard, 7a: read only) */
+export function kbdSpec(spec: string): string {
+  const word = (w: string): string => '<span class="k7-keyspec__word">' + w + '</span>';
+  return '<span class="k7-keyspec"' + kitAttrs('Kbd', { 'data-variant': 'spec' }) + '>' + spec.split(' | ').map((alt) => alt.split(' ').map((step) =>
+    step.startsWith('hold:') ? word('hold') + kbd({ keys: step.slice(5) }) : kbd({ keys: step })).join(word('then'))).join(word('or')) + '</span>';
+}
 export function kbd(o: KbdOpts): string {
   return '<span class="k7-keys"' + attrs(o.attrs ?? {}) + '>' + keyNames(o.keys).map((n) => '<kbd class="k7-kbd"' + kitAttrs('Kbd', { 'data-in': o.inPill ? 'pill' : null }) + '>' + esc(n) + '</kbd>').join(' ') + '</span>';
 }
@@ -102,14 +109,17 @@ export interface SelectorItemOpts {
   /** the value's own quiet mark, e.g. a model's provider mark */ mono?: U<boolean>;
   /** the four-step ticks (how careful: S01 B) */ ticks?: U<{ of: number; on: number }>;
   /** "+ Choose a model": the kind inline action in the accent (S41) */ need?: U<boolean>; chevron?: U<boolean>; attrs?: U<Attrs>;
+  /** a colour before the value (board 14's Accent: a 12 circle of the accent) */ swatch?: U<string>;
 }
+/** a colour as a 12 circle beside its name (board 14's Accent select and its menu's rows) */
+export const swatchDot = (hex: string): string => '<span class="k7-swatch-dot" aria-hidden="true" style="background:' + esc(hex) + '"></span>';
 export function selectorItem(o: SelectorItemOpts): string {
   const v = o.variant ?? 'line';
   const ticks = o.ticks ? '<span class="k7-ticks" aria-hidden="true">' + Array.from({ length: o.ticks.of }, (_, i) => '<i' + (i < (o.ticks?.on ?? 0) ? ' data-on' : '') + '></i>').join('') + '</span>' : '';
   return '<button class="k7-reset k7-sel"' + kitAttrs('SelectorItem') + attrs({
     type: 'button', 'data-variant': v, 'aria-haspopup': 'menu', 'aria-expanded': String(!!o.open), 'aria-label': o.label ? o.label + ': ' + o.value : null,
     'data-need': o.need ? '' : null, ...(o.attrs ?? {})
-  }) + '>' + (o.leadHTML ?? glyph(o.icon)) + ticks + '<span class="' + cls('k7-sel__value', o.mono && 'k7-mono') + '">' + esc(o.value) + '</span>' + (o.chevron === false ? '' : glyph('chevron-down', 'k7-sel__chev')) + '</button>';
+  }) + '>' + (o.swatch ? swatchDot(o.swatch) : o.leadHTML ?? glyph(o.icon)) + ticks + '<span class="' + cls('k7-sel__value', o.mono && 'k7-mono') + '">' + esc(o.value) + '</span>' + (o.chevron === false ? '' : glyph('chevron-down', 'k7-sel__chev')) + '</button>';
 }
 
 /* ── Switch (25): on (accent), off, focus, disabled ── */

@@ -350,7 +350,7 @@ function resolvedLine(b: Bot, m: ApprovalMessage): HTMLElement {
   /* "Always allow" kept a draft: Open goes to where it is finished, Settings › Approvals, once that screen exists (`rules-settings`) */
   const open = m.drafted && later('rules-settings') ? kit.html.button({ label: 'Open', variant: 'ghost', size: 28, attrs: { 'data-open-draft': '' } }) : '';
   const line = kit.askCard({ variant: 'form', state: 'answered', bot: asker, ask: r.text, word: { text: r.word }, rowAction: open, attrs: { 'aria-label': (m.data.title || 'The request') + ': ' + r.text } });
-  line.querySelector('[data-open-draft]')?.addEventListener('click', () => { emit('hx:open-settings', { section: 'approvals' }); });
+  line.querySelector('[data-open-draft]')?.addEventListener('click', () => { emit('hx:open-settings', { section: 'approvals', focus: 'drafts' }); });
   return el('div', { class: 'bt-cardslot bt-resolved' }, line);
 }
 /** an approval decided here: the provider decides it everywhere (the dock, the thread) */

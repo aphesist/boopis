@@ -202,70 +202,21 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
 .hx-dialog::backdrop { background: var(--scrim); transition: background-color var(--dur-2) var(--ease); }
 .hx-dialog[open] { animation: hx-drop var(--dur-2) var(--ease); }
 /* Appearance: the dialog steps aside to the right edge and drops its scrim, so changes show on the whole app */
-.hx-dialog.is-side { width: min(420px, calc(100% - 24px)); height: calc(100% - 24px); margin: 12px 12px 12px auto; }
-.hx-dialog.is-side::backdrop { background: transparent; }
 .hx-dialog__card { --r-outer: var(--r-l); --pad: var(--pad-dialog); display: flex; flex-direction: column; height: 100%; box-sizing: border-box; border-radius: var(--r-outer); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop); overflow: hidden; }
 .hx-dialog__card:focus { outline: none; }
 .hx-dialog__head { display: flex; align-items: center; gap: 16px; height: 52px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--hair); flex: none; }
 .hx-dialog__head h2 { margin: 0; font-size: var(--fs-l); font-weight: 600; color: var(--text-strong); text-transform: var(--ui-case); }
 .hx-dialog__head .ui-ib { margin-left: auto; }   /* the close is a .ui-corner: --r-corner, on the head's band (R-dialog-1, R-corner-5) */
 .hx-dialog__body { flex: 1; min-height: 0; padding: 4px calc(20px - var(--scroll-gutter, 0px)) 24px 20px; }   /* a scroll area (.ui-scroll) */
-.hx-dialog.is-side .hx-dtabs { margin-right: -6px; }
 
 /* ───────────── theme customizer (theme.js renders it into the Appearance panel) ───────────── */
-.hxt-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-.hxt-select { width: 180px; flex: none; }
-.hxt-preset {
-  --r-outer: var(--r-m); --pad: var(--sp-3);   /* a container (.ui-nest): the swatches sit at --pad from the top and the start, with --r-in */
-  position: relative; display: grid; align-content: start; gap: var(--sp-1); padding: var(--pad); cursor: pointer;
-  border-radius: var(--r-outer); background: var(--bg-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line);
-  font-family: var(--sans); transition: box-shadow var(--dur-1) var(--ease);
-}
-.hxt-preset input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.hxt-preset:hover { box-shadow: inset 0 0 0 1px var(--line-strong); }
-.hxt-preset:has(input:checked) { box-shadow: inset 0 0 0 2px var(--brass); }
-.hxt-preset:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 /* the strip spans the card's content box, so its last chip sits at --pad from the card's end as the first sits at --pad from its start and the top (R-corner-3); 22px chips left 16px at 390 */
-.hxt-preset__chips { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: center; gap: 0; margin-bottom: var(--sp-1); }
-.hxt-preset__chips i { height: 22px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 12%, transparent); }
-.hxt-preset__chips i:first-child { border-radius: var(--r-in) 0 0 var(--r-in); }
-.hxt-preset__chips i:last-child { border-radius: 0 var(--r-in) var(--r-in) 0; }
-.hxt-preset__name { font-size: var(--fs-s); font-weight: 600; color: var(--text-strong); }
-.hxt-preset[data-hx-case="lower"] .hxt-preset__name { text-transform: lowercase; }
-.hxt-preset__note { font-size: var(--fs-xs); color: var(--text-dim); }
-.hxt-row .ui-input { min-height: 0; height: var(--ctl-s); padding: 0 8px; }
-.hxt-json { min-height: 120px; resize: vertical; overflow: auto; }
-.hxt-file { position: relative; }
-.hxt-file input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.hxt-file:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
-.hxt-end { margin-left: auto; }
-.hxt-hint { margin: 4px 0 4px; font-size: var(--fs-xs); line-height: 1.5; color: var(--text-dim); }
-.hxt-group { margin: 16px 0 2px; font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); text-transform: var(--ui-case); }
-.hxt-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 84px 52px; align-items: center; gap: 10px; min-height: 40px; padding: 4px 0; border-bottom: 1px solid var(--hair); }
 /* the swatch shows the colour (--sw, set from the theme); it is a button that moves to the hex field, never a platform colour chooser */
-.hxt-swatch { width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--r-s); background: var(--sw, transparent); cursor: pointer; box-shadow: inset 0 0 0 1px var(--line-strong); }
-.hxt-swatch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.hxt-row__label { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--fs-s); color: var(--text); }
-.hxt-row__label > span { display: inline-flex; align-items: center; gap: 6px; }
-.hxt-row__label small { font-size: var(--fs-xs); color: var(--text-quiet); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hxt-flag { width: 6px; height: 6px; border-radius: var(--r-pill); background: var(--warn); flex: none; }
-.hxt-undo { visibility: hidden; }
-.hxt-row.is-changed .hxt-undo { visibility: visible; }
-.hxt-row.is-changed .hxt-hex { color: var(--text-strong); }
-.hxt-contrast { list-style: none; margin: 8px 0 0; padding: 0; }
-.hxt-contrast li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--hair); font-size: var(--fs-s); color: var(--text); }
-.hxt-contrast li.is-fail span:first-child::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 8px; vertical-align: 1px; border-radius: var(--r-pill); background: var(--warn); }
-.hxt-ratio { font: 400 var(--fs-2xs)/1.6 var(--mono); color: var(--text-quiet); white-space: nowrap; }
-.hxt-json-label { display: block; margin: 8px 0 6px; font-size: var(--fs-xs); color: var(--text-dim); }
-.hxt-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.hxt-msg { min-height: 18px; margin: 8px 0 0; font-size: var(--fs-xs); color: var(--text-dim); }
-.hxt-msg.is-error { color: var(--red-text); }
 
 /* interface case: Typewriter sets lowercase; content (titles, names, messages) is never transformed */
 :is(.hx-new__label, .hx-pal-row[data-kind="command"] .hx-pal-row__label) { text-transform: var(--ui-case); }
 /* Settings > Keyboard: the same groups as the shortcut sheet, in one column (the rows are .hx-keygroup's; a second grid here split the
    groups into two columns and drew every row's line twice) */
-.hx-keys { margin: 4px 0 0; }
 
 
 .hx-probe { position: absolute; left: -9999px; top: 0; visibility: hidden; pointer-events: none; }
@@ -299,8 +250,6 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
   .hx-palette__box { top: 8px; }
   .hx-dialog__head { gap: 8px; padding-left: 12px; }
   .hx-dialog__head h2 { display: none; }
-  .hxt-row { grid-template-columns: 28px minmax(0, 1fr) 76px; }
-  .hxt-undo { grid-column: 2 / -1; justify-self: start; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -325,7 +274,6 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
 .hx-kthen { display: inline-block; width: 4px; }
 .hx-keys-empty, .hx-keys-note { font-size: var(--fs-xs); color: var(--text-dim); }
 .hx-keys-note { margin: 4px 0 0; }
-.hx-keys .hx-keygroup:first-child h3 { margin-top: 16px; }
 .hx-goto {
   position: absolute; z-index: var(--z-toast); top: calc(var(--chrome-h) + 12px); left: 50%; translate: -50% 0;
   display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; max-width: calc(100% - 32px); box-sizing: border-box;
@@ -347,10 +295,6 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
    radius for good (a Settings dialog 30px in Typewriter, which wants 36). The surfaces animate with their own keyframes. */
 .hx-dialog__card, .hx-palette__box, .hx-goto { transition-property: none; }
 .hx-goto { --sq-bg: var(--bg-3); --sq-line: var(--line); }
-.hxt-preset { --sq-bg: var(--bg-2); --sq-line: var(--line); }
-.hxt-preset:hover { --sq-line: var(--line-strong); }
-.hxt-preset:has(input:checked) { --sq-line: var(--brass); }
-.hxt-preset[data-sq-on]:has(input:checked)::after { clip-path: var(--sq-ring, var(--sq-edge)); }
 
 /* the floating Notice (the retired toast's place, R-toast-1 "the top of the work"): under the chrome, on the column's centre line */
 .hx-notify { position: absolute; inset: 0; z-index: var(--z-toast); pointer-events: none; }

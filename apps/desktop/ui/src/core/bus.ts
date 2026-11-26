@@ -34,7 +34,12 @@ export interface EventMap {
   'hx:nav': { action: 'first' | 'last'; region: RegionName | null };
   'hx:region': { region: RegionName };
   /** a surface asks the shell to open Settings at a section (`models`) */
-  'hx:open-settings': { section: string; from?: string; /** Models: what its provider search starts with ("Claude"), so the person lands on that lab's sign-in */ find?: string };
+  /** the chrome's choices changed (Settings › General: the rail's size, how search shows) */
+  'hx:chrome': Record<string, never>;
+  /** what the session composer's line shows changed in Settings › General (`core/settings` `saveLineHidden`) */
+  'hx:session-line': Record<string, never>;
+  'hx:open-settings': { section: string; from?: string; /** Models: what its provider search starts with ("Claude"), so the person lands on that lab's sign-in */ find?: string;
+    /** a part of the page to scroll to and focus: `voice` (Models › Voice and speech), `drafts` (Approvals' drafted exceptions) */ focus?: string };
   'hx:bot-settings': { open?: boolean; toggle?: boolean; from?: string };
   'hx:view-inset': { tab?: Tab; left?: number; right?: number; source?: string };
   'hx:toast': { text?: string; message?: string };

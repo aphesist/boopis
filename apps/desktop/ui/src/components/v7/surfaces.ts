@@ -52,13 +52,13 @@ export function windowChrome(o: ChromeOpts): string {
 }
 
 /* ── Page (2): the ground and its 640 column, or a settings page (its head: the title and a Segmented scope) ── */
-export interface PageOpts { variant?: U<'column' | 'settings'>; title?: U<string>; scope?: U<{ items: readonly SegItem[]; value: string }>; body?: U<string>; empty?: U<{ text: string; action?: string }>; attrs?: U<Attrs> }
+export interface PageOpts { variant?: U<'column' | 'settings'>; title?: U<string>; scope?: U<{ items: readonly SegItem[]; value: string; /** the Segmented's own attributes (its name) */ attrs?: Attrs }>; body?: U<string>; empty?: U<{ text: string; action?: string }>; attrs?: U<Attrs> }
 export function page(o: PageOpts): string {
   const v = o.variant ?? 'column';
   const body = o.empty ? emptyState(o.empty) : (o.body ?? '');
   if (v === 'settings') {
     return '<section class="k7-page"' + kitAttrs('Page', { 'data-variant': 'settings', 'aria-label': o.title, ...(o.attrs ?? {}) }) + '><header class="k7-page__head"><h2 class="k7-page__title">' + esc(o.title ?? '') + '</h2>' +
-      (o.scope ? segmented({ label: 'Scope', items: o.scope.items, value: o.scope.value, variant: 'head' }) : '') + '</header><div class="k7-page__body">' + body + '</div></section>';
+      (o.scope ? segmented({ label: 'Scope', items: o.scope.items, value: o.scope.value, variant: 'head', ...(o.scope.attrs ? { attrs: o.scope.attrs } : {}) }) : '') + '</header><div class="k7-page__body">' + body + '</div></section>';
   }
   return '<main class="k7-page"' + kitAttrs('Page', { 'data-variant': 'column', ...(o.attrs ?? {}) }) + '><div class="k7-page__column k7-thread" data-kit-part="Thread">' + body + '</div></main>';
 }
@@ -108,15 +108,17 @@ export function pane(o: PaneOpts): string {
 /* ── Dialog (4): large (Settings: 900, a 220 nav) or form (440 to 520: commit, import, new bot, confirm); enter 200 ms, the scrim,
    close 28 at 10 in (a capsule) ── */
 export interface DialogOpts {
-  variant?: U<'large' | 'form'>; title: string; body: string; nav?: U<readonly { label: string; icon?: string; current?: boolean }[]>;
+  variant?: U<'large' | 'form'>; title: string; body: string; nav?: U<readonly { label: string; icon?: string; current?: boolean; /** the page it opens (Settings: `data-page`) */ value?: string; attrs?: Attrs }[]>;
+  /** `large`: the page's own attributes (its id, a label naming the page shown) */ pageAttrs?: U<Attrs>;
   actions?: U<readonly { label: string; variant?: 'primary' | 'ghost' | 'danger' | 'split'; /** it cannot be taken now, and its Tooltip says why (6e: a rewind where it cannot run) */ disabled?: boolean; tip?: string }[]>; scrim?: U<boolean>; id?: U<string>; attrs?: U<Attrs>;
 }
 export function dialog(o: DialogOpts): string {
   const v = o.variant ?? 'form', id = o.id ?? 'k7-dlg-' + o.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const close = iconButton({ icon: 'close', label: 'Close', variant: 'tinted', keys: 'esc', attrs: { 'data-dialog-close': '' } });
+  /* the large dialog's close is a ghost (board 14: `.d-close` with no fill); a form's a tinted capsule */
+  const close = iconButton({ icon: 'close', label: 'Close', variant: v === 'large' ? 'ghost' : 'tinted', keys: 'esc', attrs: { 'data-dialog-close': '' } });
   const inner = v === 'large'
-    ? '<nav class="k7-dialog__nav" aria-label="' + esc(o.title) + '">' + (o.nav ?? []).map((n) => '<button class="k7-reset k7-dialog__navrow" type="button"' + attrs({ 'aria-current': n.current ? 'page' : null }) + '>' + glyph(n.icon) + '<span class="k7-ell">' + esc(n.label) + '</span></button>').join('') + '</nav>' +
-      '<div class="k7-dialog__page">' + o.body + '</div>'
+    ? '<nav class="k7-dialog__nav" aria-label="' + esc(o.title) + '">' + (o.nav ?? []).map((n) => '<button class="k7-reset k7-dialog__navrow" type="button"' + attrs({ 'aria-current': n.current ? 'page' : null, 'data-page': n.value, ...(n.attrs ?? {}) }) + '>' + glyph(n.icon) + '<span class="k7-ell">' + esc(n.label) + '</span></button>').join('') + '</nav>' +
+      '<div class="k7-dialog__page"' + attrs(o.pageAttrs ?? {}) + '>' + o.body + '</div>'
     : '<h2 class="k7-dialog__title" id="' + esc(id) + '-t">' + esc(o.title) + '</h2><div class="k7-dialog__body">' + o.body + '</div>' +
       ((o.actions ?? []).length ? '<div class="k7-dialog__foot">' + (o.actions ?? []).map((x) => button({ label: x.label, variant: x.variant ?? 'secondary', size: 32, menuLabel: x.label + ' options', ...(x.tip ? { tip: x.tip } : {}), ...(x.disabled ? { attrs: { 'aria-disabled': 'true', 'data-disabled': '' } } : {}) })).join('') + '</div>' : '');
   const dlg = '<div class="k7-dialog"' + kitAttrs('Dialog', { role: 'dialog', 'aria-modal': 'true', 'data-variant': v, id, 'aria-labelledby': v === 'form' ? id + '-t' : null, 'aria-label': v === 'large' ? o.title : null, 'data-sq': '', 'data-sq-mode': 'surface', ...(o.attrs ?? {}) }) + '>' + inner + close + '</div>';

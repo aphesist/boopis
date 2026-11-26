@@ -6,7 +6,7 @@
    exists). Under them what S40 draws no place for and Settings will hold (the lead, 26 November: kept here as plain rows until
    step 7, so nothing is lost): the Context row opens what fills the context with "Compact conversation"; the Cost row changes
    the cap; "Environment" (folder, branch, sandbox, runtime, harness, gate); "Connectors" (each with its switch or its sign-in,
-   the store, and the project's "no engine plugins and no plugin hooks").
+   the store; the project's "no engine plugins and no plugin hooks" moved to Settings › Sessions, This project, at step 7a).
 
    Its diff, as board S24 draws the tools' Diff tab, shown alone (no strip of tabs until a second tab exists): the turn's changed
    files, each a kit DiffView that folds; a FilesCard's "Open diff" (or D on a turn) opens it. Review comments, the scope and
@@ -21,16 +21,15 @@ import { kit, ui } from '@boopis/ui';
 import type { DiffLine } from '@boopis/ui';
 import { data } from '../../data';
 import { CAREFUL } from '../../data';
-import type { DiffFile, ProjectPolicy } from '../../data';
+import type { DiffFile } from '../../data';
 import { later } from '../chat/compose';
 import { answersNext, openEffortMenu, openWhoAnswers, setGovernance } from './composer';
 import { VIEW, selectSession } from './conversation';
 import { launchView, openCarefulFor } from './launch';
 import { kTokens } from './shared';
-import { say, v7Attrs } from './s0';
+import { v7Attrs } from './s0';
 import { onChanged } from './state';
 import { surface } from '../mods/surfaces';
-import { POLICY_LABEL, policyHint } from '../store/policy';
 
 export type PanelKind = 'details' | 'diff';
 const P = {
@@ -124,21 +123,16 @@ function environmentCard(): string {
   if (!rows.length && !note('environment')) return '';
   return '<h3 class="k7-pane__sec" data-pane-part="environment">Environment</h3>' + (rows.length ? kit.html.card({ variant: 'pane', rows }) : '') + note('environment');
 }
-const POLICIES = new Map<string, ProjectPolicy | string>();   /* the last answer per project (or why it could not be read), so a redraw shows it at once */
 function connectorsCard(): string {
-  const can = d().can.get(), list = d().connectors.get(), cwd = d().environment.get().cwd;
+  const can = d().can.get(), list = d().connectors.get();
   const rows = list.map((c) => ({
     label: cap1(c.name), sub: c.hint ?? c.tools + ' tools',
     control: c.state === 'sign in'
       ? kit.html.button({ label: 'Sign in', size: 28, variant: 'tint', ...(can.signIn ? {} : { disabled: true }), attrs: { 'data-signin': c.name } })
       : kit.html.switch({ label: cap1(c.name), checked: c.state === 'on', ...(can.connectors ? {} : { disabled: true }), attrs: { 'data-conn': c.name } })
   }));
-  const pol = cwd ? POLICIES.get(cwd) : undefined;
-  const policy = !cwd ? [] : [typeof pol === 'object'
-    ? { label: POLICY_LABEL, sub: policyHint(pol), control: kit.html.switch({ label: POLICY_LABEL, checked: pol.effective, attrs: { 'data-policy': cwd } }) }
-    : { label: POLICY_LABEL, sub: pol ?? 'Reading this project’s setting.' }];
   const none = !list.length && data().info.live ? '<p class="k7-pane__note">No connectors are set up yet.</p>' : '';
-  return '<h3 class="k7-pane__sec" data-pane-part="connectors">Connectors</h3>' + kit.html.card({ variant: 'pane', rows: [...rows, { label: 'Browse the store', action: 'opens the store', attrs: { 'data-pane': 'store' } }, ...policy] }) + none;
+  return '<h3 class="k7-pane__sec" data-pane-part="connectors">Connectors</h3>' + kit.html.card({ variant: 'pane', rows: [...rows, { label: 'Browse the store', action: 'opens the store', attrs: { 'data-pane': 'store' } }] }) + none;
 }
 /** the details pane's markup for the open session (pure but for its reads): the tests and the lab read it as the app draws it */
 export function detailsHTML(o: { overlay?: boolean; strip?: Parameters<typeof kit.html.pane>[0]['strip'] } = {}): string {
@@ -203,19 +197,11 @@ export function mountDetails(root: HTMLElement): void {
     const body = root.querySelector<HTMLElement>('.k7-pane__body');
     if (body) { body.classList.add('ui-scroll'); body.scrollTop = scroll; }
     root.querySelector<HTMLElement>('[data-pane="model"], [data-pane-close]')?.setAttribute('data-hx-focus', 'panel');
-    readPolicy();
     /* the focus stays on the control it was on across a redraw */
     if (held) {
       const key = held.dataset['pane'] ? '[data-pane="' + held.dataset['pane'] + '"]' : held.dataset['conn'] ? '[data-conn="' + CSS.escape(held.dataset['conn']) + '"]' : held.dataset['file'] ? '[data-file="' + CSS.escape(held.dataset['file']) + '"] > button' : held.hasAttribute('data-pane-more') ? '[data-pane-more]' : '[data-pane-close]';
       root.querySelector<HTMLElement>(key)?.focus({ preventScroll: true });
     }
-  }
-  /** the project's "no engine plugins and no plugin hooks", read once per project and kept */
-  function readPolicy(): void {
-    const cwd = d().environment.get().cwd;
-    if (!cwd || POLICIES.has(cwd) || P.kind !== 'details') return;
-    POLICIES.set(cwd, 'Reading this project’s setting.');
-    data().store.projectPolicy(cwd).then((p) => { POLICIES.set(cwd, p); draw(); }).catch((e: unknown) => { POLICIES.set(cwd, e instanceof Error ? e.message : 'This project’s setting could not be read.'); draw(); });
   }
 
   root.addEventListener('click', (e) => {
@@ -239,15 +225,8 @@ export function mountDetails(root: HTMLElement): void {
   });
   root.addEventListener('ui:change', (e) => {
     const t = e.target as HTMLElement, v = (e as CustomEvent<{ value: boolean | string }>).detail.value;
-    const conn = t.closest<HTMLElement>('[data-conn]'), pol = t.closest<HTMLElement>('[data-policy]');
+    const conn = t.closest<HTMLElement>('[data-conn]');
     if (conn) { d().setConnector(conn.dataset['conn'] as string, v === true); return; }
-    if (pol) {
-      const project = pol.dataset['policy'] as string, want = v === true;
-      data().store.setProjectPolicy(project, want)
-        .then((n) => { POLICIES.set(project, n); draw(); say(want ? 'Engine plugins and plugin hooks are off for this project.' : 'Engine plugins and plugin hooks are allowed here once approved.'); })
-        .catch((err: unknown) => { last = ''; draw(); say(err instanceof Error ? err.message : 'The setting could not be changed.'); });
-      return;
-    }
     /* the strip: the session's details, or a mod's pane */
     if (t.closest('.k7-pane__tabs')) { surface.panelTabs?.()?.select(String(v)); draw(); requestAnimationFrame(() => { root.querySelector<HTMLElement>('.k7-pane__tabs [aria-selected="true"], .k7-pane__tabs [aria-checked="true"]')?.focus(); }); }
   });

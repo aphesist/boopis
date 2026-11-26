@@ -30,8 +30,11 @@ export function mentionChips(text: string, ctx: MarkdownCtx): ComposerChip[] {
     is built against this and is not shown while it says no: a thing shows only once it exists */
 export const later = (f: LaterFeature): boolean => data().info.later?.has(f) ?? false;
 
+/** a voice is set up in Settings › Models (a provider with its key, or a local server) while talking itself is not built yet */
+export const voiceSetUp = (): boolean => !data().voice && (data().speech?.ready.get() ?? false);
 /** no voice model is set up yet: a composer's voice circle says so (`ComposerOpts.voiceSetup`) */
-export const voiceNeedsSetup = (): boolean => !data().voice;
+export const voiceNeedsSetup = (): boolean => !data().voice && !voiceSetUp();
+export const VOICE_LATER = 'Your voice is set up. Talking to bots arrives in a later update.';
 /** what the voice circle does, in every composer (the kit fires ui:voice when it is pressed with no text): with a voice model set up
     it starts talking (the provider's `voice`; pressed again, it ends); with none it starts nothing and opens a small Notice at the
     circle that says so, whose one action opens Settings at Models. Live voice itself is not built here. Returns what ends a talk */
@@ -42,7 +45,10 @@ export function voiceTool(slot: HTMLElement, botId: () => string | null): () => 
     const v = data().voice;
     if (v) { if (end) stop(); else end = v.start({ botId: botId() }); return; }
     const at = slot.querySelector<HTMLElement>('.k7-composer [data-send]');
-    if (at) kit.openNotice(at, { icon: 'waveform', title: 'Voice needs a voice model', text: '', action: 'Set up voice', onAction: () => { emit('hx:open-settings', { section: 'models', from: 'voice' }); } });
+    if (!at) return;
+    /* set up, but live talking has no release yet (an owner question): the circle says so and starts nothing */
+    if (voiceSetUp()) { kit.openNotice(at, { icon: 'waveform', title: VOICE_LATER, text: '' }); return; }
+    kit.openNotice(at, { icon: 'waveform', title: 'Voice needs a voice model', text: '', action: 'Set up voice', onAction: () => { emit('hx:open-settings', { section: 'models', from: 'voice', focus: 'voice' }); } });
   });
   return stop;
 }

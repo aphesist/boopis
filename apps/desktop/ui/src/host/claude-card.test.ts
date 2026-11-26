@@ -120,8 +120,8 @@ describe('the Settings row of the Claude subscription', () => {
     document.body.append(el);
     const view = mountProviders(el, { bridge: bridge([STATES.old]), toast: () => undefined });
     await view.ready;
-    const hint = el.querySelector('.ui-set__label small');
-    expect(hint?.innerHTML).toContain('<code class="ui-code">claude update</code>');
+    const hint = el.querySelector('.k7-row__sub');
+    expect(hint?.querySelector('[data-kit~="InlineChip"][data-kind="code"]')?.textContent).toBe('claude update');
     expect(hint?.textContent).not.toContain('`');
   });
   it('Sign in runs Claude Code\'s own sign-in, keeps the button off while it is open, and reads the state again after', async () => {

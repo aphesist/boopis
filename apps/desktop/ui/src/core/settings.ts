@@ -18,7 +18,11 @@ export const KEYS = {
   /** the Session tab's last launch pick (how careful, the folder): a new session starts from it (ADR-0057) */
   sessionLaunch: 'hx.v7.sessionLaunch',
   /** what the session composer's line leaves out (its quick menu, board S05 B) */
-  sessionLine: 'hx.v7.sessionLine'
+  sessionLine: 'hx.v7.sessionLine',
+  /** the chrome's own choices (Settings › General, board 14): the rail's size and how search shows */
+  chrome: 'hx.v7.chrome',
+  /** the v7 look (Settings › Appearance, board 14): the accent and the corners */
+  look: 'hx.v7.look'
 } as const;
 export type StoreKey = (typeof KEYS)[keyof typeof KEYS];
 
@@ -113,5 +117,40 @@ export const saveUiSize = (size: UiSize): boolean => writeJSON(KEYS.size, { size
 /** the items of the session composer's line (board S05 B: everything shows; the quick menu turns items off) */
 export const LINE_ITEMS = ['careful', 'branch', 'model', 'context', 'cost'] as const;
 export type LineItemId = (typeof LINE_ITEMS)[number];
+/** each item's name, in the quick menu and in Settings › General › Under the composer (one list, the spec's S05 row) */
+export const LINE_NAMES: Readonly<Record<LineItemId, string>> = { careful: 'How careful', branch: 'Branch', model: 'Model and effort', context: 'Context', cost: 'Cost' };
 export const loadLineHidden = (): LineItemId[] => { const v = readJSON<Record<string, unknown>>(KEYS.sessionLine)?.['hidden']; return Array.isArray(v) ? LINE_ITEMS.filter((i) => v.includes(i)) : []; };
 export const saveLineHidden = (hidden: readonly LineItemId[]): boolean => writeJSON(KEYS.sessionLine, { hidden: LINE_ITEMS.filter((i) => hidden.includes(i)) });
+
+/* ───────── the chrome (Settings › General › Layout, board 14): the rail's size and how search shows ───────── */
+export const RAIL_SIZES = ['auto', 'a', 'b'] as const;
+export type RailSize = (typeof RAIL_SIZES)[number];
+/** how search shows in the chrome when it shows (the owner: "Search default S5 … button and pill as Settings options") */
+export const SEARCH_AS = ['hint', 'button', 'pill'] as const;
+export type SearchAs = (typeof SEARCH_AS)[number];
+export interface ChromePrefs { rail: RailSize; search: boolean; searchAs: SearchAs }
+export const loadChrome = (): ChromePrefs => {
+  const o = readJSON<Record<string, unknown>>(KEYS.chrome) ?? {};
+  const rail = RAIL_SIZES.find((r) => r === o['rail']) ?? 'auto';
+  const searchAs = SEARCH_AS.find((r) => r === o['searchAs']) ?? 'hint';
+  return { rail, search: o['search'] !== false, searchAs };
+};
+export const saveChrome = (p: ChromePrefs): boolean => writeJSON(KEYS.chrome, { rail: p.rail, search: p.search, searchAs: p.searchAs });
+
+/* ───────── the v7 look (Settings › Appearance, board 14, P1): the accent and the corners ───────── */
+/** the accents a person chooses from: Iris, the owner's pick (P1), then the other candidates board P1 drew, each fill as P1 wrote it;
+    the text, focus and on-accent shades are derived per theme (kit theme.ts `deriveAccent`, section 18) */
+export const ACCENTS = [
+  { id: 'iris', label: 'Iris', hex: '#5b5bd6' }, { id: 'indigo', label: 'Indigo', hex: '#4f46e5' }, { id: 'ultramarine', label: 'Ultramarine', hex: '#3e4fd8' },
+  { id: 'violet', label: 'Violet-indigo', hex: '#5e4ad9' }, { id: 'soft', label: 'Soft indigo', hex: '#6366f1' }
+] as const;
+export type AccentId = (typeof ACCENTS)[number]['id'];
+export const CORNERS_V7 = ['standard', 'rounder'] as const;
+export type CornersV7 = (typeof CORNERS_V7)[number];
+/** `followSystem`: the theme follows the system's light or dark (board 14's "Follow system"); off, the theme is the one chosen */
+export interface LookPrefs { accent: AccentId; corners: CornersV7; followSystem: boolean }
+export const loadLook = (): LookPrefs => {
+  const o = readJSON<Record<string, unknown>>(KEYS.look) ?? {};
+  return { accent: ACCENTS.find((a) => a.id === o['accent'])?.id ?? 'iris', corners: o['corners'] === 'rounder' ? 'rounder' : 'standard', followSystem: o['followSystem'] === true };
+};
+export const saveLook = (p: LookPrefs): boolean => writeJSON(KEYS.look, { accent: p.accent, corners: p.corners, followSystem: p.followSystem });
