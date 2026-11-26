@@ -135,7 +135,6 @@
    Placement only: every part is a kit component (ListRow, SectionHead, Badge, SelectorItem, Notice, Composer, the logomark).
    The Sessions sidebar: the kit's rows and heads on the sidebar's 10 inset. */
 .ssl { padding: 0 var(--gap-row); box-sizing: border-box; }
-.ssl > .k7-empty { padding-inline: 0; }
 /* The new session's screen: the canvas between 64 under the window's top and 250 over its foot, its pieces centred: the logomark 16 over
    the greeting, the greeting 14 over the launch row (its selectors 4 apart), Waiting on you 40 under it and 520 wide. At the foot the
    composer, 720 wide on the work's centre line, 24 over the dock; a limit's Notice 8 over it. */

@@ -280,10 +280,11 @@ export function timeSeparator(o: TimeSeparatorOpts): string {
   return '<div class="k7-time"' + kitAttrs('TimeSeparator', { role: 'separator', 'aria-label': o.text, 'data-unread': o.unread ? '' : null }) + '><span>' + esc(o.text) + '</span></div>';
 }
 
-/* ── EmptyState: one line (at most 80 characters) and at most one action, where the content would be ── */
-export interface EmptyStateOpts { text: string; action?: U<string> }
+/* ── EmptyState: one line (at most 80 characters) and at most one action, where the content would be. In a list (`place: 'list'`,
+   board S41's "No sessions yet") the line starts where the list's rows and heads start their words ── */
+export interface EmptyStateOpts { text: string; action?: U<string>; place?: U<'list'> }
 export function emptyState(o: EmptyStateOpts): string {
-  return '<div class="k7-empty"' + kitAttrs('EmptyState') + '><p class="k7-empty__text">' + esc(o.text) + '</p>' + (o.action ? button({ label: o.action, variant: 'secondary', size: 32 }) : '') + '</div>';
+  return '<div class="k7-empty"' + kitAttrs('EmptyState', { 'data-place': o.place ?? null }) + '><p class="k7-empty__text">' + esc(o.text) + '</p>' + (o.action ? button({ label: o.action, variant: 'secondary', size: 32 }) : '') + '</div>';
 }
 
 export { statusWord };

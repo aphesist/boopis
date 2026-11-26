@@ -524,8 +524,12 @@ function placeRow(node: HTMLElement, o: { quiet: boolean }): void {
   if (!o.quiet && VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
 }
 
-/** what the title pill says of a session: its name, and the branch it works on once it has started (board S20) */
-const titleOf = (s: SessionSummary | undefined): { title: string; project: string; tab: 'session'; sub: string } => ({ title: s?.title ?? '', project: s?.project ?? '', tab: 'session', sub: s && !isDraft(s.id) ? s.branch ?? '' : '' });
+/** what the title pill says of a session: its name, and the branch it works on once it has started (board S20). With no folder to
+    start one in, nothing is open yet and the pill names the tab, "Sessions" (board S41; a new session with a folder is S17's "New session") */
+const NOTHING_OPEN = 'Sessions';
+const noFolder = (s: SessionSummary | undefined): boolean => !!controls() && (!s || isDraft(s.id)) && launchView().folder === null;
+const titleOf = (s: SessionSummary | undefined): { title: string; project: string; tab: 'session'; sub: string } => ({ title: noFolder(s) ? NOTHING_OPEN : s?.title ?? (controls() ? 'New session' : ''), project: s?.project ?? '', tab: 'session', sub: s && !isDraft(s.id) ? s.branch ?? '' : '' });
+const openSession = (): SessionSummary | undefined => sessions().list.get().find((x) => x.id === VIEW.current);
 export function selectSession(id: string, opts: { quiet?: boolean; focus?: boolean } = {}): void {
   /* switching never stops a turn: the running session keeps streaming into its conversation (session-launch.md 2.2) */
   VIEW.current = id;
@@ -607,7 +611,8 @@ export function mountView(root: HTMLElement): void {
   followZone(host, () => VIEW.scroll, () => root, '--ss-comp-h')();
   requestAnimationFrame(() => c.focus());
   const c0 = controls();
-  if (c0) { c0.capabilities.subscribe(() => { syncFeet(); redrawCanvas(); }); c0.launch.subscribe(() => { redrawCanvas(); }); }
+  /* a folder chosen (or lost) changes what the pill says of a session that has not started */
+  if (c0) { c0.capabilities.subscribe(() => { syncFeet(); redrawCanvas(); }); c0.launch.subscribe(() => { redrawCanvas(); if (NEW?.shown) emit('hx:title', titleOf(openSession())); }); }
   data().details.changes.subscribe(() => { const id = lastAgent(); if (id) drawAgent(id); });
   provide('stop', (d) => { if (d.tab !== 'session' || !isRunning(VIEW.current)) return false; sessions().stop(VIEW.current); return true; });
   provide('find', (d) => (d.tab === 'session' ? openFind() : false));
@@ -618,6 +623,5 @@ export function mountView(root: HTMLElement): void {
   });
   on('hx:new-session', (d) => newSession(d.project));
   on('hx:session-select', (d) => { if (d.id && d.from !== 'list' && d.id !== VIEW.current && sessions().list.get().some((x) => x.id === d.id)) selectSession(d.id, { quiet: true }); });
-  const cur = sessions().list.get().find((s) => s.id === VIEW.current);
-  emit('hx:title', titleOf(cur));
+  emit('hx:title', titleOf(openSession()));
 }

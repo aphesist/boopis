@@ -53,7 +53,7 @@ export function mountList(root: HTMLElement): void {
     if (settled.length) {
       out += kit.html.sectionHead({ title: 'Settled', count: String(settled.length), disclosure: true, collapsed: !settledOpen, attrs: { 'data-fold': '' } }) + (settledOpen ? listOf('Settled', settled.map((s) => rowHTML(s, { current: false, settled: true })).join('')) : '');
     }
-    if (!list.length && !settled.length) out = kit.html.emptyState({ text: 'No sessions yet. Start one with New session.' });
+    if (!list.length && !settled.length) out = kit.html.emptyState({ text: 'No sessions yet', place: 'list' });   /* board S41: the switch and "+" stay over it (the shell's head) */
     root.innerHTML = out;
     if (!rows().some((r) => r.tabIndex === 0)) rove(rows()[0]);
     if (renaming) startRename(renaming);

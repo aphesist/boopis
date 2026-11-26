@@ -25,11 +25,11 @@ const rail = (open?: string) => async (c: AppCtx): Promise<void> => {
 const chrome: Story = {
   id: 'v7/chrome', title: 'Chrome (v7)', area: 'shell', kind: 'surface', covers: ['surface:title-bar'], scope: '#hx-chrome', mock: MOCK,
   states: {
-    'the Sessions tab': st(['typical'], {}, async (c) => { await c.wait(300); }, { note: 'the toggle, the title pill with a session\'s glyph ("New session"), the search hint, details and the window glyphs (board 05 A, P2 S5)' }),
+    'the Sessions tab': st(['typical'], {}, async (c) => { await c.wait(300); }, { note: 'the toggle, the title pill with a session\'s glyph (this fixture has no session, so it names the tab: "Sessions", board S41), the search hint, details and the window glyphs (board 05 A, P2 S5)' }),
     'a bot open': st(['typical', 'owner'], {}, pick('nina'), { note: 'the title pill carries the bot\'s orb (24) and name (15); it opens the details' }),
     'a room open': st(['variant'], { fixtures: ['groups'] }, room, { note: 'a room\'s title pill: its members\' stack and its name (screen 12)' }),
     'a long name': st(['long'], { fixtures: ['long'] }, pick('cassiopeia-staging-deploy-guardian')),
-    'no bots, no sessions': st(['empty'], { sessions: 'none', bots: 'none' }, async (c) => { await c.wait(300); }),
+    'no bots, no sessions': st(['empty'], { sessions: 'none', bots: 'none' }, async (c) => { await c.wait(300); }, { note: 'nothing open: the title pill names the tab, "Sessions" (board S41)' }),
     'the search hint hovered': st(['hover'], {}, async (c) => { await c.wait(300); }, { force: [{ sel: '#hx-btn-search', state: 'hover' }] }),
     'the search hint focused': st(['focus'], {}, async (c) => { await c.wait(300); }, { force: [{ sel: '#hx-btn-search', state: 'focus' }] }),
     'the title pill pressed': st(['active'], {}, pick('kai'), { force: [{ sel: '#hx-btn-title', state: 'active' }] })

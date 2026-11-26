@@ -366,7 +366,7 @@
       "note": "The fixture switches on the worktree selector the board draws (\"New worktree\": `info.later`), which the app does not show until that choice exists. The block's buttons go to Settings, Models, at that lab's sign-in."
     },
     "S41-noproject": {
-      "title": "Board S41: no project: \"Add a folder to start\" on the canvas and in the composer",
+      "title": "Board S41: no project, no sessions: \"No sessions yet\", the title \"Sessions\", \"Add a folder to start\" on the canvas and in the composer",
       "board": "screen.html?s=newSess&mk=a&st=noproject",
       "image": "session/S41-no-project-{theme}.jpg",
       "story": "boards/sessions",
@@ -404,12 +404,7 @@
           82
         ]
       },
-      "scope": [
-        "canvas",
-        "composer",
-        "dock"
-      ],
-      "note": "S41 is measured for the canvas and the composer under it (\"Add a folder to start\"). The canvas differs by \"Import sessions\", which is not shown until importing exists. The sidebar's \"No sessions yet\" and the title pill's \"Sessions\" are S41's too and are not converted yet (step 6b): the app says \"No sessions yet. Start one with New session.\" in the middle of the sidebar and titles the pill \"New session\"."
+      "note": "The canvas differs by \"Import sessions\", which is not shown until importing exists (the one button left stands on the centre line). The sidebar (the switch, \"+\", \"No sessions yet\") and the title pill (\"Sessions\") are the board's."
     },
     "K01-rest": {
       "title": "Board K01: the dock at rest under a running session",
