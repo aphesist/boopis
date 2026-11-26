@@ -135,15 +135,16 @@ export function createLiveGroups(deps: GroupsDeps) {
     const to = Array.isArray(p['recipient_member_ids']) ? p['recipient_member_ids'].filter((x): x is string => typeof x === 'string' && !!x) : [];
     return { ...(round !== null ? { round } : {}), ...(to.length ? { to } : {}) };
   }
-  /** the room's lead passing a message on (`room.assignment`): a quiet line, "kai gave this to nina and moss" */
+  /** the room's lead passing a message on (`room.assignment`): a hand-off, "kai gave this to nina and moss" (the lead keeping it is a quiet line) */
   function assignmentNote(r: Rec, e: RoomEvent, t: string): GroupMessage | null {
     const p = e.payload ?? {};
     const lead = typeof p['lead_member_id'] === 'string' ? p['lead_member_id'] : '';
     const ids = Array.isArray(p['member_ids']) ? p['member_ids'].filter((x): x is string => typeof x === 'string') : [];
     if (!lead) return null;
-    const others = ids.filter((x) => x !== lead).map((x) => nameOf(r, x));
-    const text = p['fallback'] === true || !others.length ? nameOf(r, lead) + ' is answering this one.' : nameOf(r, lead) + ' gave this to ' + listWords(others) + '.';
-    return { kind: 'note', id: e.event_id, t, text };
+    const to = ids.filter((x) => x !== lead);
+    /* the lead kept it (it answers itself, or the engine fell back to it): no work changed hands, so it is a plain line */
+    if (p['fallback'] === true || !to.length) return { kind: 'note', id: e.event_id, t, text: nameOf(r, lead) + ' is answering this one.' };
+    return { kind: 'note', id: e.event_id, t, text: nameOf(r, lead) + ' gave this to ' + listWords(to.map((x) => nameOf(r, x))) + '.', handoff: { from: lead, to } };
   }
   function messageOf(r: Rec, e: RoomEvent): GroupMessage | null {
     const p = e.payload ?? {};

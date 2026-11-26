@@ -1,13 +1,12 @@
 /* The conversation's pieces: the call-number entry, the request, steps, the blank (14.5 to 14.9). */
 import { html, ui } from '@boopis/ui';
-import { put, stage, forced, line } from '../../story';
+import { put, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_NAME, LONG_TITLE, MULTILINE, PARAGRAPH, RTL, STEPS_SEED, UNBROKEN } from '../../fixtures';
 
 const CONV = { url: '/v6/design-system/index.html#c-conversation', crop: '#c-conversation' };
 const W = 720;
 
-const blankTypical = stage(['typical', 'variant'], ({ root }) => { put(root, '<p>Keeping ' + html.code('prorate') + ' ' + html.blank({}) + ' that forwards to ' + html.code('prorateCents') + '.</p>', '<p>Keeping it ' + html.blank({ answer: 'as a deprecated alias' }) + '.</p>'); }, { width: 608 });
 
 export default [
   {
@@ -42,14 +41,6 @@ export default [
       many: stage(['many'], ({ root }) => { put(root, ui.steps({ items: Array.from({ length: 120 }, (_, i) => ({ title: 'step ' + i, time: i + 's', kind: i % 23 === 0 ? 'fail' as const : 'step' as const })) })); }, { width: 608 }),
       error: stage(['error'], ({ root }) => { put(root, ui.steps({ items: [{ title: 'npm test', mono: true, kind: 'fail', meta: ['invoice.test.ts', 'rolled back'], time: '4.2s' }, { title: 'escalated to sonnet 5.5', kind: 'escalate', time: '' }] })); }, { width: 608 }),
       long: stage(['long'], ({ root }) => { put(root, ui.steps({ items: [{ title: UNBROKEN, mono: true, meta: [LONG_TITLE, UNBROKEN], time: '12m 04s' }] })); }, { width: 608 })
-    }
-  },
-  {
-    id: 'composer/blank', title: 'Blank', area: 'composer', kind: 'component', covers: ['ui.blank'], mock: CONV,
-    states: {
-      typical: blankTypical, ...forced(blankTypical, '.ui-blank'),
-      long: stage(['long'], ({ root }) => { line(root, ui.blank({ answer: LONG_TITLE + ' ' + UNBROKEN })); }, { width: 608 }),
-      empty: stage(['empty'], ({ root }) => { line(root, ui.blank({})); })
     }
   }
 ] satisfies Story[];

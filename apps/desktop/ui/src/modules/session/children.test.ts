@@ -24,6 +24,7 @@ describe('a task\'s row', () => {
   it('its model and task, Stop only while it runs, the transcript when it has a session', () => {
     const r = childRow(task({}), host());
     expect(r.target).toBe('Review the diff');
+    expect(r.text, 'the model\'s name is words, in the regular face (6f)').toBe(true);
     expect(r.end).toContain('data-action="stop"');
     expect(r.after).toContain('Transcript');
     expect(childRow(task({ status: 'done', seconds: 3, summary: 'Two errors' }), host())).toMatchObject({ note: 'Two errors' });

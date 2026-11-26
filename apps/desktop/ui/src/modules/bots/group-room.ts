@@ -21,7 +21,7 @@ import { setState, state } from '../../core/state';
 import { EVERYONE_HANDLES, kit, ui } from '@boopis/ui';
 import type { BotLike, MarkdownCtx, MdBot, NotifyOpts } from '@boopis/ui';
 import { data } from '../../data';
-import type { ApprovalMessage, Bot, Group, GroupMember, GroupMessage, GroupText, GroupsEvent, MemberActivity } from '../../data';
+import type { ApprovalMessage, Bot, Group, GroupMember, GroupMessage, GroupNote, GroupText, GroupsEvent, MemberActivity } from '../../data';
 import { namesText } from '../cards/parts';
 import { bot, group, groupThread, initGroups, S, thread } from './model';
 import { livenIn } from './orbs';
@@ -254,11 +254,19 @@ function renderLog(g: Group): void {
     markSeen(g);
   });
 }
+/** the lead handing the user's message to other members (board K02-12's line, COVERAGE conflict 4): the lead's orb, a chevron, then the
+    member it went to, or the members stacked; the words name them all */
+function handoffLine(g: Group, text: string, h: NonNullable<GroupNote['handoff']>): HTMLElement {
+  const bot = (id: string): BotLike | null => { const m = memberOf(g, id); return m ? memberBot(m) : null; };
+  const from = bot(h.from), to = h.to.map(bot).filter((b): b is BotLike => !!b);
+  return kit.systemLine({ variant: 'handoff', text, ...(from ? { from } : {}), ...(to.length ? { to: to.length === 1 ? to[0] as BotLike : to } : {}), attrs: { 'data-handoff': '' } });
+}
 /** a message into the thread; returns the turn it is in (the previous one, when the same member wrote it) or null for a line */
 function renderMsg(g: Group, m: GroupMessage, prev: GroupMessage | null, prevEntry: HTMLElement | null): HTMLElement | null {
   if (m.kind === 'note') {
     /* what the room says: a routine a member made leads with the clock; a discussion paused at its limit offers to let it run on */
-    const line = kit.systemLine({ text: m.text, ...(m.about === 'routine' ? { icon: 'clock' } : {}), ...(m.more ? { action: 'Let them continue', attrs: { 'data-more': m.more } } : {}) });
+    const line = m.handoff ? handoffLine(g, m.text, m.handoff)
+      : kit.systemLine({ text: m.text, ...(m.about === 'routine' ? { icon: 'clock' } : {}), ...(m.more ? { action: 'Let them continue', attrs: { 'data-more': m.more } } : {}) });
     line.setAttribute('role', 'status');
     NODE.set(m.id, line);
     placeInLog(line);

@@ -37,7 +37,6 @@ export const DRAWERS: Partial<Record<ComponentName, Drawer>> = {
   ladder: t('ladder', { stations: [['qwen3-coder', 'first try'], ['sonnet 5.5', 'after 2 fails'], ['opus 5.5', 'by request']], current: 1 }, undefined, { width: 320 }),
   measure: t('measure', { used: 76000, total: 200000 }, undefined, { width: 320 }),
   disclosure: t('disclosure', { label: '6 steps' }),
-  blank: t('blank', {}, (a, v) => (a === 'answered' ? (v ? { answer: 'as a deprecated alias' } : {}) : {})),
   entry: t('entry', { who: 'you', callno: ['14:01'], body: '<p>A message.</p>' }, undefined, { width: 720 }),
   pages: t('pages', { pages: [{ id: 'a', label: 'Bots' }, { id: 'b', label: 'Runs' }], current: 'a' }, (a, v) => (a === 'attention' ? { pages: [{ id: 'a', label: 'Bots' }, { id: 'b', label: 'Runs', attention: v }] } : { [a]: v }), { ground: 'dock' }),
   modelMark: { draw: (p) => ui.html.modelMark('sonnet 5.5', p as { color?: 'mono' | 'brand' }), base: {} }

@@ -2,82 +2,37 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { setProvider, data } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
-import { accentOf, byline, expiryText, mini, namesText, originOf, originText, originVisual } from './parts';
-import type { Ctx } from './types';
+import { diffWell, expiryText, namesText, originOf } from './parts';
 
 beforeAll(() => { setProvider(createMockProvider({ simulate: false })); });
 const ids = (): string[] => data().bots.snapshot().bots.map((b) => b.id);
 
-describe('the origin slot', () => {
+describe('what a form reads from its data', () => {
   it('reads older data ({from}, {model}) as an origin, and a named origin as itself', () => {
     expect(originOf({ from: 'nina' })).toEqual({ kind: 'teammate', ids: ['nina'], via: null });
     expect(originOf({ from: 'nina', via: 'atlas' })).toEqual({ kind: 'teammate', ids: ['nina'], via: 'atlas' });
     expect(originOf({ model: 'sonnet 5.5' })).toEqual({ kind: 'agent', model: 'sonnet 5.5', route: 'sonnet 5.5' });
+    expect(originOf({ model: 'qwen3-coder → sonnet 5.5' })).toEqual({ kind: 'agent', model: 'sonnet 5.5', route: 'qwen3-coder → sonnet 5.5' });
     expect(originOf({ origin: { kind: 'plugin' } })).toEqual({ kind: 'plugin' });
+    expect(originOf({ origin: { kind: 'mod', plugin: 'test-runner' } })).toEqual({ kind: 'mod', plugin: 'test-runner' });
     expect(originOf({ origin: { kind: 'teammate', ids: ['nobody'] } })).toBeNull();
     expect(originOf({})).toBeNull();
   });
-  it('says every name, for one, two, several and relayed', () => {
+  it('says every name, for one, two and several', () => {
     const [a, b, c] = ids();
     expect(namesText([a as string, b as string])).toBe(`${a} and ${b}`);
     expect(namesText([a as string, b as string, c as string])).toBe(`${a}, ${b} and ${c}`);
-    expect(originText({ kind: 'teammate', ids: [a as string], via: b as string })).toBe(`${a}, via ${b}`);
-    expect(originText({ kind: 'agent', model: 'sonnet 5.5' })).toBe('sonnet 5.5');
-    expect(originText({ kind: 'mcp', server: 'sentry', trust: 'trusted' })).toBe('sentry MCP server, trusted');
-    expect(originText({ kind: 'hermes' })).toBe('Session');
-    expect(originText({ kind: 'agent', model: '' })).toBe('The agent');
-  });
-  it('draws a mod as its puzzle glyph and "name mod", the name first and "mod" quiet (DESIGN-SYSTEM.md 14.29)', () => {
-    const o = originOf({ origin: { kind: 'mod', plugin: 'test-runner' } });
-    expect(o).toEqual({ kind: 'mod', plugin: 'test-runner' });
-    expect(originText(o)).toBe('test-runner mod');
-    expect(originVisual(o, 20)).toContain('cd-glyph');
-    expect(originVisual(o, 20)).toContain('viewBox="0 0 16 16"');
-    const by = byline({ origin: o, size: 'inline' });
-    expect(by).toContain('data-origin="mod"');
-    expect(by).toContain('<span class="cd-names__first">test-runner</span><span class="cd-names__via"> mod</span>');
-    expect(by).toContain('data-full="test-runner mod"');
-  });
-  it('draws one orb for one teammate and a stack with +N and every name for several', () => {
-    const all = ids();
-    expect(originVisual({ kind: 'teammate', ids: [all[0] as string], via: null }, 20)).toContain('orb-avatar');
-    const stack = originVisual({ kind: 'teammate', ids: all.slice(0, 5), via: null }, 20);
-    expect(stack).toContain('ui-stack__more');
-    expect(stack).toContain('role="img"');
-    expect(stack).toContain('aria-label="' + namesText(all.slice(0, 5)));
-  });
-  it('draws the agent as its provider\'s mark, a system source as a glyph and an MCP server as its initial', () => {
-    expect(originVisual(originOf({ model: 'qwen3-coder → sonnet 5.5' }), 20)).toContain('data-family="claude"');
-    expect(originVisual({ kind: 'plugin' }, 20)).toContain('cd-glyph');
-    expect(originVisual({ kind: 'mcp', server: 'sentry' }, 20)).toContain('data-initial="S"');
-  });
-  it('names every card in its byline, with a screen-reader list when names are hidden behind +N', () => {
-    const all = ids();
-    const h = byline({ origin: { kind: 'teammate', ids: all.slice(0, 6), via: null }, size: 'inline' });
-    expect(h).toContain('data-origin="joint"');
-    expect(h).toContain('and 5 others');
-    expect(h).toContain('ui-sr');
-    expect(byline({ origin: { kind: 'teammate', ids: [all[0] as string], via: all[1] as string }, size: 'compact' })).toContain('data-origin="relay"');
-    expect(byline({ origin: null, size: 'inline' })).toBe('');
-  });
-  it('lends one teammate\'s colour as the accent, and nobody\'s for several', () => {
-    const b = data().bots.snapshot().bots[0];
-    expect(accentOf({ kind: 'teammate', ids: [b?.id as string], via: null })).toBeTruthy();
-    expect(accentOf({ kind: 'teammate', ids: ids().slice(0, 2), via: null })).toBe('');
-    expect(accentOf({ kind: 'agent', model: 'x' })).toBe('');
-  });
-  it('lays a one-row card out in aligned columns: lead mark, text, status (dot and meta)', () => {
-    const c = { id: 'x', owe: 'needs you', origin: { kind: 'agent', model: 'sonnet 5.5' } } as unknown as Ctx;
-    const h = mini(c, { text: 'Add a key', meta: '5 min' });
-    expect(h.indexOf('cd-mini__lead')).toBeLessThan(h.indexOf('cd-mini__text'));
-    expect(h.indexOf('cd-mini__text')).toBeLessThan(h.indexOf('cd-mini__status'));
-    expect(h).toContain('cd-mini__dot');
-    expect(h).toContain('cd-mini__meta');
-    expect(h).toContain('needs you');
   });
   it('counts down in seconds, then minutes', () => {
     expect(expiryText(45000, false)).toBe('Expires in 45 s');
     expect(expiryText(10 * 60000, true)).toBe('10 min');
     expect(expiryText(0, false)).toBe('Expires now');
+  });
+  it('draws a config diff line by line, each saying added or removed to a screen reader', () => {
+    const h = diffWell('+ model: sonnet\n- model: haiku\n  cap: 5', 'nina.yaml');
+    expect(h).toContain('data-d="add"');
+    expect(h).toContain('data-d="del"');
+    expect(h).toContain('added: ');
+    expect(h).toContain('aria-label="Changes to nina.yaml"');
   });
 });

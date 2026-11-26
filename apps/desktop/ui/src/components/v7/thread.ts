@@ -129,6 +129,8 @@ export interface ToolRowOpts {
   /** a control at the head's end, after the word, as kit markup (a running task's ghost Stop); only on a head that is not itself a control */ end?: U<string>;
   /** what stands under the head, as kit markup (a Disclosure over a task's transcript) */ after?: U<string>;
   /** a row of a Block (a council's member): no frame of its own, its head on the corner concentric with the Block's */ row?: U<boolean>;
+  /** the name is words, not a command or a path (a model's name: a council's member, a task handed to another model): the regular face,
+      as model names are everywhere else; a tool's name stays mono as boards S20, S23 and 17 draw it (6f, the lead) */ text?: U<boolean>;
 }
 export function toolRow(o: ToolRowOpts): string {
   const k = o.kind ?? 'command', st = o.state ?? 'done';
@@ -146,7 +148,7 @@ export function toolRow(o: ToolRowOpts): string {
   /* a session's row leads with its tool's glyph; `icon` names another, and '' none (a council's member is its model's mark alone) */
   const lead = o.icon === '' ? '' : glyph(o.icon ?? TOOL_GLYPH[k], 'k7-tool__ic');
   const inner = (o.model ? '<span class="k7-head__mark">' + markHTML(o.model, { size: 14, label: false }) + '</span>' : '') + lead +
-    '<b class="k7-tool__name' + (st === 'running' ? ' k7-shimmer" data-live="' : '') + '">' + esc(o.tool) + '</b>' +
+    '<b class="k7-tool__name' + (st === 'running' ? ' k7-shimmer" data-live="' : '') + '"' + (o.text ? ' data-face="text"' : '') + '>' + esc(o.tool) + '</b>' +
     (o.add != null || o.del != null ? '<span class="k7-files__counts k7-mono"><span data-tone="add">+' + (o.add ?? 0) + '</span><span data-tone="del">−' + (o.del ?? 0) + '</span></span>' : '') +
     (o.target ? '<span class="k7-tool__target k7-ell">' + esc(o.target) + '</span>' : '') + '<span class="k7-grow"></span>' + word + (hasBody ? glyph('chevron-down', 'k7-chev') : '');
   const head = hasBody ? '<button class="k7-reset k7-tool__head k7-text" type="button"' + attrs({ 'aria-expanded': String(!!o.open), 'aria-controls': id }) + '>' + inner + '</button>' : '<div class="k7-tool__head k7-text">' + inner + (o.end ?? '') + '</div>';

@@ -16,6 +16,10 @@ describe('ToolRow (6e)', () => {
     expect(r.hasAttribute('data-sq')).toBe(false);
     expect(r.querySelector('.k7-tool__ic')).toBeNull();
   });
+  it('a name that is words (a model\'s) takes the regular face; a tool\'s name stays mono (6f)', () => {
+    expect(put(kit.toolRow({ tool: 'opus 5.5', text: true })).querySelector('.k7-tool__name')?.getAttribute('data-face')).toBe('text');
+    expect(put(kit.toolRow({ tool: 'Edited dock.css' })).querySelector('.k7-tool__name')?.hasAttribute('data-face')).toBe(false);
+  });
   it('its word takes a tone, and a Tooltip the keyboard reaches', () => {
     const r = put(kit.toolRow({ tool: 'gpt', state: 'failed', wordTip: 'the request timed out' }));
     const w = r.querySelector<HTMLElement>('[data-kit~="StatusWord"]') as HTMLElement;

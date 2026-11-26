@@ -50,7 +50,7 @@ const questions: Story = {
 };
 
 const askers: Story = {
-  id: 'cards/form-askers', title: 'Form: who is asking', area: 'cards', kind: 'card', covers: ['card:form', 'form:origin'],
+  id: 'cards/form-askers', title: 'Form: who is asking', area: 'cards', kind: 'card', covers: ['card:form', 'ui.card', 'form:origin'],
   states: {
     typical: { tags: ['typical'], width: 608, render: draw(FORM_SPECS['approval'] as Record<string, unknown>) },
     'the agent of a session': { tags: ['variant'], width: 608, render: draw(FORM_SPECS['credential'] as Record<string, unknown>) },

@@ -31,6 +31,8 @@ describe('the Block', () => {
     expect(b.querySelector('[data-council-head]')?.textContent).toContain('Council · 2 models');
     expect(b.querySelector('[data-council-head] .k7-shimmer')?.textContent).toBe('asking');
     expect(b.querySelectorAll('[data-kit~="ToolRow"][data-row]').length).toBe(2);
+    /* the head and the members' model names are words, in the regular face (6f): mono stays for commands and paths */
+    expect(b.querySelectorAll('.k7-tool__name[data-face="text"]').length).toBe(3);
     expect(councilWord({ ...run, phase: 'combining' })).toEqual({ text: 'combining', tone: 'neutral', live: true });
   });
   it('none reported: red, and "Ask again" asks again', () => {

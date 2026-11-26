@@ -32,8 +32,7 @@
    (radius, size, ring); a row along an edge that holds corner controls at its ends: .ui-corners (the inset). Never set a
    radius or an inset in a corner by hand. A squircle-drawn container also exposes its drawn radius as --r-outer when it
    declared none (squircle.ts), so its children nest the same way. */
-:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-codeblock, .ui-file, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m,
-  hx-card[data-size="inline"], hx-card[data-size="compact"], hx-card[data-size="popover"]) {
+:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-codeblock, .ui-file, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m) {
   --corner-size: var(--ctl-s);
   --r-in: min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))));
   --r-corner: min(var(--r-in), calc(var(--corner-size) / 2));
@@ -763,7 +762,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
    The text's line height reaches the chip as a length (`--text-line`, the parent's 1lh); a chip takes its full size where the line has
    room for it and shrinks with a dense line (13px at 1.35), keeping a hairline (--pad-row) clear of the line's edges, never below 16px */
 @property --text-line { syntax: '<length>'; inherits: true; initial-value: 20px; }
-:has(> :is(.ui-mention, .ui-path, .ui-blank)) { --text-line: 1lh; }
+:has(> :is(.ui-mention, .ui-path)) { --text-line: 1lh; }
 :is(.ui-mention__name, .ui-path__dir, .ui-path__base) { align-self: baseline; line-height: var(--chip-h); }
 @supports (text-box: trim-both cap alphabetic) and (height: 1cap) {
   :is(.ui-mention__name, .ui-path__dir, .ui-path__base) { line-height: 1; text-box: trim-both cap alphabetic; padding-block: calc((var(--chip-h) - 1cap) / 2); }
@@ -880,13 +879,6 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 
 /* the blank: a dotted red line under the gap, then the stamp, inside the sentence it belongs to */
 .ui-entry { --r-in-entry: var(--r-in); }   /* the entry's own inner radius, kept under a name that the cards inside (containers of their own) do not redefine */
-.ui-entry .ui-blank { border-radius: var(--r-in-entry, var(--r-xs)); }
-.ui-blank > .ui-stamp { border-radius: inherit; }   /* the stamp ends the blank, flush with its edge: the blank's own curve (R-corner-3) */   /* the blank ends the entry's last line, --pad from its corner: concentric with it, so its 4px ring stays inside the entry's curve (R-corner-3, R-corner-4) */
-.ui-blank { appearance: none; display: inline-flex; align-items: baseline; gap: 8px; vertical-align: baseline; padding: 0; margin: 0 0 0 4px; border: 0; border-radius: var(--r-xs); background: none; font: inherit; color: var(--text); cursor: pointer; max-width: 100%; min-width: 0; text-align: start; overflow-wrap: anywhere; }   /* a long answer wraps inside the line instead of widening the window (R-overflow-1) */
-.ui-blank > .ui-stamp { height: min(20px, calc(var(--text-line) - 2 * var(--pad-row))); }   /* the stamp in the sentence, within its line */
-.ui-blank__gap { display: inline-block; min-width: 7ch; border-bottom: 1px dotted var(--red); }
-@media (hover: hover) and (pointer: fine) { .ui-blank:hover .ui-blank__gap { border-bottom-style: solid; } }
-.ui-blank[data-answered] .ui-blank__gap { min-width: 0; border-bottom: 1px dashed var(--text-quiet); }
 
 /* a file chip is a pill container (its radius is half its height) whose remove button, a 24px square, sits in its end corner at
    the equal inset: --corner-inset on all three sides it touches. A long name ellipsises inside the box (R-overflow-1). */
@@ -997,16 +989,6 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-toast { --sq-line: var(--hair); --sq-bg: var(--bg-3); }
 .ui-toast[data-sq-on] { box-shadow: var(--shadow-pop); }
 .ui-menu__item:focus-visible, .ui-option:focus-visible { --sq-line: transparent; }
-/* the card layer (HX.ui.card): the expanded blank floats, so it is a surface; the free answer is a field */
-hx-card[data-size="popover"] { --sq-line: var(--line); --sq-bg: var(--cd-surface); }
-hx-card[data-size="popover"][data-sq-on] { box-shadow: var(--shadow-pop); }
-.cd-free { --sq-line: var(--line-field); }
-.cd-free:focus-within { --sq-line: var(--focus); }
-.cd-free[data-sq-on]:focus-within { outline: none; }   /* a frame is not clipped: the drawn line is the ring, not a second native one */
-/* one teammate's accent ring (cards.js sets --cd-accent): the inset ring becomes the drawn line */
-hx-card[data-accent]:is([data-size="inline"], [data-size="compact"], [data-size="popover"]) { --sq-line: color-mix(in srgb, var(--cd-accent) 42%, transparent); }
-hx-card[data-accent][data-resolved]:is([data-size="inline"], [data-size="compact"]) { --sq-line: color-mix(in srgb, var(--cd-accent) 22%, transparent); }
-hx-card[data-accent] .cd-mini { --sq-line: color-mix(in srgb, var(--cd-accent) 36%, transparent); }
 
 
 /* the first-run welcome's logo: the hero (letters="play" needs a 32px type size); sized from the spacing scale, inked like the frame */

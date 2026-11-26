@@ -152,6 +152,18 @@ describe('talking to a group', () => {
     await g.source.continueTalk('r1', 'd1');
     expect(e.calls.find((c) => c.method === 'groups.continue')!.params).toEqual({ room_id: 'r1', discussion_event_id: 'd1' });
   });
+  it('carries the lead passing a message on as a hand-off; the lead keeping it is a plain line', async () => {
+    const { e, g } = await open((x) => { x.rooms.push(room('r1', 'crew', ['kai', 'nina', 'moss'])); });
+    e.push('r1', 'room.assignment', { lead_member_id: 'kai', member_ids: ['kai', 'nina'] });
+    e.push('r1', 'room.assignment', { lead_member_id: 'kai', member_ids: ['nina', 'moss'] });
+    e.push('r1', 'room.assignment', { lead_member_id: 'kai', member_ids: ['kai'], fallback: true });
+    await g.source.open('r1');
+    const [one, two, kept] = g.source.snapshot().threads['r1']!;
+    expect(one).toMatchObject({ kind: 'note', text: expect.stringMatching(/^kai gave this to Nina\.$/i), handoff: { from: 'kai', to: ['nina'] } });
+    expect(two).toMatchObject({ handoff: { from: 'kai', to: ['nina', 'moss'] } });
+    expect(kept).toMatchObject({ kind: 'note', text: expect.stringMatching(/^kai is answering this one\.$/i) });
+    expect(kept).not.toHaveProperty('handoff');
+  });
   it('reads the log again when the engine says the room moved', async () => {
     const { e, g } = await open((x) => { x.rooms.push(room('r1', 'crew', ['atlas', 'nina'])); });
     await g.source.open('r1');

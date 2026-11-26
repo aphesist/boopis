@@ -45,7 +45,6 @@ export const variants = {
   pages: { interactive: [false, true], attention: [false, true] },
   progress: { determinate: [false, true] },
   entry: { kind: ['user', 'agent', 'bot', 'mod'] },
-  blank: { answered: [false, true] },
   disclosure: { expanded: [false, true] },
   steps: { kind: ['step', 'fail', 'escalate'] },
   modelMark: { color: ['mono', 'brand'] },

@@ -222,6 +222,19 @@ describe('a group’s thread', () => {
     await flush();
     expect(more).toHaveBeenCalledWith(g.id, 'round-3');
   });
+  it('a hand-off is the kit\'s hand-off line: the lead\'s orb, a chevron, the member it went to, or the members stacked (6f)', async () => {
+    const { onGroupsEvent } = await import('./group-room');
+    const g = provider.groups.snapshot().groups[0]!;
+    const [a, b, c] = g.members;
+    onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'note', id: 'h1', t: '10:07', text: a!.name + ' gave this to ' + b!.name + '.', handoff: { from: a!.id, to: [b!.id] } } });
+    onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'note', id: 'h2', t: '10:08', text: 'two', handoff: { from: a!.id, to: [b!.id, c?.id ?? b!.id] } } });
+    const [one, two] = [...document.querySelectorAll<HTMLElement>('.bt-group .bt-log > [data-handoff]')];
+    expect(one!.getAttribute('data-variant')).toBe('handoff');
+    expect(one!.textContent).toBe(a!.name + ' gave this to ' + b!.name + '.');
+    expect(one!.querySelectorAll('orb-avatar').length).toBe(2);
+    expect(one!.querySelector('.k7-sys__chev')).not.toBeNull();
+    expect(two!.querySelector('.k7-stack, [class*="stack"]')).not.toBeNull();
+  });
   it('says that a member is also running a kanban task, which is a second session of the same bot', async () => {
     const { repaintRoom } = await import('./group-room');
     const g = provider.groups.snapshot().groups[0]!;

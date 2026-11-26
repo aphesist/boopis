@@ -37,7 +37,7 @@ const plural = (n: number, one: string, many: string): string => n + ' ' + (n ==
 /** what a member's row says: running while the members answer, done, failed (red, the reason in its Tooltip), no answer once the
     council went on without it (amber) */
 export function memberRow(m: CouncilMember, phase: CouncilTurn['phase']): ToolRowOpts {
-  const base = { tool: nameOf(m.slot), model: m.slot.model, icon: '', row: true, attrs: { 'data-member': m.slot.provider + '/' + m.slot.model } } as const;
+  const base = { tool: nameOf(m.slot), model: m.slot.model, icon: '', row: true, text: true, attrs: { 'data-member': m.slot.provider + '/' + m.slot.model } } as const;
   if (m.state === 'failed') return { ...base, state: 'failed', wordTip: m.reason || FAILED_TIP };
   if (m.state === 'answered') return { ...base, state: 'done', word: 'done' };
   if (phase === 'members') return { ...base, state: 'running', word: 'running' };
@@ -59,7 +59,7 @@ export function councilBlock(c: CouncilTurn, o: { again?: (() => void) | undefin
   const w = councilWord(c), n = sitting(c);
   const word = kit.html.statusWord({ text: w.text, tone: w.tone }).replace(/>([^<]*)<\/span>$/, w.live ? '><span class="k7-shimmer" data-live>$1</span></span>' : '>$1</span>');
   const none = w.tone === 'red';
-  const head = '<div class="k7-tool__head k7-text" data-council-head><b class="k7-tool__name">' + ui.esc('Council · ' + plural(n, 'model', 'models')) + '</b><span class="k7-grow"></span>' + word +
+  const head = '<div class="k7-tool__head k7-text" data-council-head><b class="k7-tool__name" data-face="text">' + ui.esc('Council · ' + plural(n, 'model', 'models')) + '</b><span class="k7-grow"></span>' + word +
     (none && o.again ? kit.html.button({ label: 'Ask again', variant: 'ghost', size: 28, attrs: { 'data-again': '' } }) : '') + '</div>';
   const rows = c.members.map((m) => kit.html.toolRow(memberRow(m, c.phase))).join('');
   const block = kit.block({ body: head + rows + (none ? '<p class="k7-tool__note k7-text">' + ui.esc(NONE_SAID) + '</p>' : ''), attrs: { role: 'group', 'aria-label': 'Council of ' + n, 'data-council': c.phase, 'aria-busy': w.live ? 'true' : null } });

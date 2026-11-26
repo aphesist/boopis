@@ -9,7 +9,6 @@ import { AREAS } from './types';
 import { EMPTY_APPLIES, ERROR_APPLIES, HTML_ONLY_EXCUSED, MIN_COMPONENT, MIN_SURFACE_STATES, MOD_SURFACES, NOT_COMPONENTS, PAGES, STATE_EXCUSED, SURFACES } from './coverage';
 import { KINDS } from '../modules/cards/kinds';
 import { FORM_KINDS } from '../modules/cards/form-model';
-import { CARD_STATES } from './stories/cards/cards.stories';
 import { DRAWERS, VARIANTS_ELSEWHERE } from './variant-drawers';
 
 const covered = new Set(STORIES.flatMap((s) => s.covers));
@@ -36,10 +35,8 @@ describe('the lab covers', () => {
     const want = Object.keys(ui.html).filter((k) => !(k in ui) && !(k in HTML_ONLY_EXCUSED)).map((k) => 'html.' + k);
     expect(missing(want)).toEqual([]);
   });
-  it('every card kind, in every state the card layer has', () => {
-    const kinds = Object.keys(KINDS).filter((k) => k !== 'form');
-    expect(missing(kinds.map((k) => 'card:' + k))).toEqual([]);
-    for (const k of kinds) expect(CARD_STATES[k], 'the card story\'s states for ' + k).toEqual(KINDS[k as keyof typeof KINDS].states);
+  it('the card host: it draws the form alone (the v6 kinds are the kit\'s since step 6f), and the form has its stories', () => {
+    expect(Object.keys(KINDS)).toEqual(['form']);
     expect(covered.has('card:form')).toBe(true);
   });
   it('every component that exports variants: a variants story draws each axis, or its own story does', () => {

@@ -9,8 +9,8 @@
    drew the saved look; the roster row kept the orb it had drawn and the dock copied only the state, so both kept the
    name's look. The test walks that sequence. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { lookFor } from '@boopis/ui';
-import { setProvider } from '../../data';
+import { kit, lookFor } from '@boopis/ui';
+import { data, setProvider } from '../../data';
 import type { DataProvider, Group } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
 import { createLiveBots } from '../../host/live/bots';
@@ -21,7 +21,6 @@ import { emit } from '../../core/bus';
 import { sh } from '../shell/ctx';
 import type { Els } from '../shell/ctx';
 import { openPalette } from '../shell/palette';
-import { originVisual } from '../cards/parts';
 import '../cards';
 import '../dock';
 import './index';
@@ -127,7 +126,9 @@ async function mount(): Promise<void> {
 /** what the page shows now in every other place (redrawn each time, as they are when they open) */
 function drawTransient(): void {
   const card = document.getElementById('one-look-card') as HTMLElement;
-  card.innerHTML = [...TEAM, OUTSIDE].map((id) => originVisual({ kind: 'teammate', ids: [id], via: null }, 20)).join('') + originVisual({ kind: 'teammate', ids: [...TEAM], via: null }, 20, 6);
+  /* an ask's lead, as the form's AskCard draws it (form.ts askerLead): one asker's orb, several askers' stack */
+  const bots = data().bots.snapshot().bots, one = (id: string) => bots.find((b) => b.id === id) ?? { id, name: id };
+  card.innerHTML = [...TEAM, OUTSIDE].map((id) => kit.html.avatar({ bot: one(id), size: 16 })).join('') + kit.html.avatar({ variant: 'stack', members: TEAM.map(one), size: 16, max: 6 });
   openPalette({ scope: 'bots' });
 }
 

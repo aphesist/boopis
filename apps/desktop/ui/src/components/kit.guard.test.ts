@@ -73,8 +73,7 @@ const GROUPS: Group[] = [
   { name: 'button markup', where: 'ts', re: /class="ui-btn\b|class:\s*'ui-btn\b|class="ui-ib\b|class:\s*'ui-ib\b/,
     allow: { 'src/styles/theme-panel.ts': 'Import file is a <label> styled as a small button so it opens the file chooser (pending: a file button in the kit)' } },
   { name: 'text control markup', where: 'ts', re: /class="ui-input\b|class:\s*'ui-input\b/ },
-  { name: 'hand-built button styling', where: 'css', re: /appearance:\s*none/,
-    allow: { 'src/modules/cards/cards.css': 'the card layer\'s own surfaces: the token, the mini card, the option row (pending: rows and option rows in the kit)' } },
+  { name: 'hand-built button styling', where: 'css', re: /appearance:\s*none/ },
   /* the quiet mark: ui.html.badge */
   { name: 'badge styling', where: 'css', re: /border-radius:\s*var\(--r-pill\)[^}]*font:[^}]*var\(--mono\)/ },
   /* floating surfaces and messages the kit draws: menus, tooltips, toasts, empty states */

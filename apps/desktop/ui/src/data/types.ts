@@ -174,7 +174,10 @@ export interface ArchivedGroup { id: string; name: string; members: readonly Gro
     the room names them */
 export interface GroupText { kind: 'text'; id: string; who: string; t: string; text: string; round?: number | null; to?: readonly string[] }
 /** a line the app says in the thread: a member that could not reply, a conversation paused at its limit (`more` then names what Continue lets run) */
-export interface GroupNote { kind: 'note'; id: string; t: string; text: string; more?: string; /** what the line is about, when the room says: a routine a member made (its line leads with the clock) */ about?: 'routine' }
+export interface GroupNote { kind: 'note'; id: string; t: string; text: string; more?: string; /** what the line is about, when the room says: a routine a member made (its line leads with the clock) */ about?: 'routine';
+  /** a hand-off: the room's lead passed the user's message on to other members (the engine's `room.assignment`); member ids. The
+      thread draws it as the kit's hand-off line (board K02-12: the lead's orb, a chevron, whom it went to) */
+  handoff?: { from: string; to: readonly string[] } }
 export type GroupMessage = GroupText | GroupNote;
 
 /* ───────── what waits on the user ───────── */

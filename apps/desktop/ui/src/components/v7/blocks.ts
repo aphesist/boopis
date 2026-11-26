@@ -6,7 +6,7 @@ import type { ModelRef } from '../model-mark';
 import { orbHtml } from '../orb';
 import { scrollClass } from '../scroll';
 import { kbd, button, iconButton } from './controls';
-import { badge, botColours, inkOrb, markStack, statusWord } from './inline';
+import { badge, botColours, inkOrb, kitStack, markStack, statusWord } from './inline';
 import { attrs, cls, esc, glyph, idFrom, kitAttrs, partAttrs, textOr } from './util';
 import type { Attrs, U } from './util';
 
@@ -172,10 +172,11 @@ export function notice(o: NoticeOpts): string {
 
 /* ── SystemLine (13): a centred line about the thread itself: info (with what it cost at its end, S33), steer, hand-off, error with action ── */
 export const SYSTEM_LINE_VARIANTS = ['info', 'steer', 'handoff', 'error'] as const;
-export interface SystemLineOpts { variant?: U<typeof SYSTEM_LINE_VARIANTS[number]>; text: string; /** a StatusWord before the words (6e, derived: an escalation the cap stopped, "capped" in amber) */ word?: U<{ text: string; tone?: U<import('./inline').StatusTone> }>; /** what follows the words in mono, at the line's end (board S33: a changed setting's extra cost, "+$0.04") */ meta?: U<string>; icon?: U<string>; from?: U<BotLike>; to?: U<BotLike>; message?: U<string>; action?: U<string>; attrs?: U<Attrs> }
+export interface SystemLineOpts { variant?: U<typeof SYSTEM_LINE_VARIANTS[number]>; text: string; /** a StatusWord before the words (6e, derived: an escalation the cap stopped, "capped" in amber) */ word?: U<{ text: string; tone?: U<import('./inline').StatusTone> }>; /** what follows the words in mono, at the line's end (board S33: a changed setting's extra cost, "+$0.04") */ meta?: U<string>; icon?: U<string>; from?: U<BotLike>; /** a hand-off's receiver; several are the kit's stack at 16 (6f: a room's lead gives a message to more than one member) */ to?: U<BotLike | readonly BotLike[]>; message?: U<string>; action?: U<string>; attrs?: U<Attrs> }
+const isMany = (t: BotLike | readonly BotLike[]): t is readonly BotLike[] => Array.isArray(t);
 export function systemLine(o: SystemLineOpts): string {
   const v = o.variant ?? 'info';
-  const lead = v === 'handoff' ? (o.from ? orbHtml(o.from, { size: 16, still: true }) : '') + glyph('chevron', 'k7-sys__chev') + (o.to ? orbHtml(o.to, { size: 16, still: true }) : '') : glyph(o.icon);
+  const lead = v === 'handoff' ? (o.from ? orbHtml(o.from, { size: 16, still: true }) : '') + glyph('chevron', 'k7-sys__chev') + (!o.to ? '' : isMany(o.to) ? kitStack(o.to, 16, { max: 3 }) : orbHtml(o.to, { size: 16, still: true })) : glyph(o.icon);
   const pill = '<div class="k7-sys"' + kitAttrs('SystemLine', { role: 'note', 'data-variant': v, 'data-act': o.action ? '' : null, ...(o.attrs ?? {}) }) + '>' + lead +
     (o.word ? statusWord({ text: o.word.text, tone: o.word.tone }) : '') + '<span class="k7-sys__text">' + esc(o.text) + '</span>' + (o.meta ? '<span class="k7-sys__meta k7-mono">' + esc(o.meta) + '</span>' : '') + (o.action ? button({ label: o.action, variant: 'tint', size: 28, attrs: { 'data-line': '' } }) : '') + '</div>';   /* kit.css `.sysline.act .btn`: the tint button (S36) */
   return v === 'steer' && o.message ? '<div class="k7-sys-wrap">' + pill + '<div class="k7-sys__msg">' + esc(o.message) + '</div></div>' : pill;

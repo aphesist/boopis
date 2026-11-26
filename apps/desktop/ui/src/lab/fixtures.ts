@@ -46,19 +46,6 @@ export const TEAM_SIX = [
 export const BOT_LIKE = { id: 'nina', name: 'nina', shape: 'triangle', color: '#f23b5a', eyes: 'pill', state: 'needs', attention: 'approval' } as const;
 export const BOT_LONG = { id: LONG_NAME, name: LONG_NAME, shape: 'star', color: '#e8b04a', eyes: 'pill', state: 'working', attention: null } as const;
 
-/* ───────── the classic card kinds (cards.test.html `G`) ───────── */
-export const CARD_DATA: Readonly<Record<string, CardData>> = {
-  approval: { from: 'nina', title: 'deploy to staging', quote: 'billing/cents → staging, dry run first', item: ['staging · invoices-api', 'read-only on invoices · 1 migration'], meta: 'expires in 9 min · ~$0.02' },
-  blank: { question: 'should I keep the old export name `prorate` as a deprecated alias?', short: 'keep `prorate` as an alias?', options: ['as a deprecated alias', 'for one release', 'removed now'] },
-  connector: { name: 'linear', host: 'linear.app', tools: 9, scopes: ['issues', 'projects', 'comments'] }
-};
-/** the same kinds with every string as long as it gets */
-export const CARD_LONG: Readonly<Record<string, CardData>> = {
-  approval: { from: LONG_NAME, title: LONG_TITLE, quote: URLISH, item: [UNBROKEN, 'read-only on invoices · 1 migration · 4 tables · 2 indexes rebuilt'], meta: 'expires in 9 min · ~$0.02' },
-  blank: { question: LONG_TITLE + '? ' + UNBROKEN, short: LONG_TITLE, options: [LONG_TITLE, UNBROKEN, 'removed now'] },
-  connector: { name: 'linear-enterprise-self-hosted-connector-' + LONG_NAME, host: 'linear.internal.example.com', tools: 142, scopes: ['issues', 'projects', 'comments', 'cycles', 'roadmaps', 'webhooks', 'admin:read'] }
-};
-
 /* ───────── forms (cards.test.html `F`, as their senders send them; FORMS.md section 2) ───────── */
 export const FORM_SPECS: Readonly<Record<string, CardData>> = {
   credential: { id: 'f-openai', kind: 'credential', origin: { kind: 'agent', model: 'sonnet 5.5' }, title: 'Add your OpenAI key', why: 'The embeddings step calls text-embedding-3-small, and your OpenAI provider has no key yet. I’ll keep working on the parts that don’t need it.', effect: 'Saves to your keychain and connects the OpenAI provider. sonnet 5.5 never sees the key.', provider: 'OpenAI', expires: 'expires in 30 min',

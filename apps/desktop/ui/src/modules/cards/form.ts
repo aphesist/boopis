@@ -228,7 +228,7 @@ export const formKind: Kind = {
   resolved: (c) => ['done', 'expired', 'cancelled'].includes(c.s),
   say: (c) => ({ done: 'Done: ', deferred: 'Later: ', expired: 'Expired: ', cancelled: 'Cancelled: ', submitting: '', open: 'Open: ', invalid: '', holding: '' } as Record<string, string>)[c.s] + c.plain + (c.s === 'done' && c.d['receiptText'] ? (/[.?!]$/.test(c.plain) ? ' ' : '. ') + String(c.d['receiptText']) : ''),
   text: (c) => { const o = originOf(c.d); const w = o ? askerWords(o).replace(/ asks?$| ask$/, '') : ''; return (o && o.kind !== 'agent' ? cap(w) + ': ' : '') + cap(c.d.title); },
-  render(c) { return { head: '', body: '', foot: '', whole: formHTML(c) }; },
+  render: formHTML,
   mini(c) {
     const d = spec(c.d), live = LIVE_FORM.includes(c.s) || c.s === 'submitting', o = originOf(c.d);
     if (live) return H.askCard({ variant: 'form', state: 'answered', ask: plain(cap(d.title)), word: formT(d).stamp ? { text: 'needs you', tone: 'owe' } : { text: 'open' }, ...askerLead(o), attrs: { 'data-form-row': '' } });

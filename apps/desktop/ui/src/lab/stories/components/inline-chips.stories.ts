@@ -42,11 +42,9 @@ const request = (text: string) => ({ root }: { root: HTMLElement }): void => {
   if (b) b.innerHTML = ui.markdown.plain(text, ROOM);
   put(root, e);
 };
-/** a paragraph of markdown with every inline kind, and the blank at its end */
+/** a paragraph of markdown with every inline kind (the v6 blank went with its card at step 6f: the kit's Mark draws a blank, kit/mark) */
 const paragraph = (text: string) => ({ root }: { root: HTMLElement }): void => {
   const m = ui.markdown(text + '\n\n![the pot, in the accounts](pot.png)', ROOM); paths(m);
-  const p = document.createElement('p'); p.innerHTML = 'Which year does the pot hang from? ' + html.blank() + ' and the answer so far: ' + html.blank({ answer: '1300' });
-  m.append(p);
   const e = ui.entry({ kind: 'agent', who: 'nina', callno: ['09:15'], label: 'nina, 09:15' });
   e.querySelector('.ui-entry__body')?.append(m);
   put(root, e);
@@ -54,8 +52,6 @@ const paragraph = (text: string) => ({ root }: { root: HTMLElement }): void => {
 /** the same paragraph in dense interface text (13px at 1.35, a card's or the dock's), where the 20px capsule does not fit the line */
 const dense = (text: string) => ({ root }: { root: HTMLElement }): void => {
   const m = ui.markdown(text, ROOM); paths(m);
-  const p = document.createElement('p'); p.innerHTML = 'Which year does the pot hang from? ' + html.blank() + ' and the answer so far: ' + html.blank({ answer: '1300' });
-  m.append(p);
   put(root, m);
 };
 const W = 340;   /* narrow enough that every width the lab uses (390 and up) draws the state */

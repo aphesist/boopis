@@ -45,7 +45,7 @@ export function childRow(c: ChildTask, h: Pick<ChildHost, 'now' | 'stop' | 'tran
   const summary = c.summary ? c.summary + (c.cut ? CUT_NOTE : '') : '';
   const open = OPEN.has(c.id);
   return {
-    kind: 'command', icon: '', tool: shortModel(c.model), target: c.goal || 'a task', ...(c.model ? { model: c.model } : {}),
+    kind: 'command', icon: '', text: true, tool: shortModel(c.model), target: c.goal || 'a task', ...(c.model ? { model: c.model } : {}),
     state: c.status === 'running' ? 'running' : c.status === 'failed' ? 'failed' : 'done', word: w.text, wordTone: w.tone,
     ...(c.status === 'failed' ? { wordTip: summary || 'It stopped with an error, and said nothing of why.' } : c.status === 'running' && c.now ? { wordTip: 'Now: ' + c.now } : {}),
     ...(c.status === 'done' && summary ? { note: summary } : {}),

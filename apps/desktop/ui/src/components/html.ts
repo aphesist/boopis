@@ -206,11 +206,6 @@ const steps = (items: readonly StepItem[], o?: { id?: U<string>; hidden?: U<bool
   '<ol class="ui-steps"' + attrs({ id: o?.id, hidden: o?.hidden, 'aria-label': 'Steps' }) + '>' + items.map((s) =>
     '<li class="ui-step" data-kind="' + esc(s.kind ?? 'step') + '"><span class="ui-step__mark"><i></i></span><span class="ui-step__title' + (s.mono ? ' ui-mono' : '') + '">' + esc(s.title) +
     (s.meta ? '<span class="ui-step__meta">' + s.meta.map((m) => '<span>' + esc(m) + '</span>').join('') + '</span>' : '') + '</span><span class="ui-step__time">' + esc(s.time ?? '') + '</span></li>').join('') + '</ol>';
-/** the blank inside a sentence: a button; the card layer owns the popover */
-const blank = (o: { answer?: U<string> } = {}): string => {
-  const a = o.answer ?? '';
-  return '<button type="button" class="ui-blank"' + attrs({ 'data-answered': a ? '' : null, 'aria-haspopup': 'dialog', 'aria-expanded': 'false', 'aria-label': a ? 'Answer: ' + a + '. Change it' : 'Answer the open question, waiting for you' }) + '><span class="ui-blank__gap">' + esc(a) + '</span>' + (a ? '' : stamp('waiting for you', { attrs: { 'aria-hidden': 'true' } })) + '</button>';
-};
 function section(o: { label: string; meta?: U<string>; open?: U<boolean>; body?: U<string>; id?: U<string>; name?: U<string> }): string {
   const id = o.id || nid('sec');
   return '<div class="ui-sec" role="group"' + attrs({ 'aria-labelledby': id + '-h', 'data-name': o.name }) + '><button type="button" class="ui-sec__head" data-ui="section" id="' + id + '-h" aria-expanded="' + (!!o.open) + '" aria-controls="' + id + '">' +
@@ -306,6 +301,6 @@ const tip = (label: string, k?: string, state?: { text: string; tone?: string })
 
 export const html = {
   icon, keys, kbd, combo, comboKbds, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
-  orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, select: selectHTML, setRow, setHead, setSection, empty, toast, tip, mod,
+  orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, section, menuItems, field, select: selectHTML, setRow, setHead, setSection, empty, toast, tip, mod,
   scroll, tabs, search, tipBody, badge, input, signinButton, stack, itemMark: itemMarkHTML, publisher: publisherHTML, itemRow
 };

@@ -63,8 +63,6 @@
 .mod-toast__t { min-width: 0; overflow-wrap: anywhere; }
 
 /* ───────────── the mod as an origin (cards.js draws it; these are its details) ───────────── */
-.cd-by[data-origin="mod"] .cd-names__first { font-weight: 500; }
-.cd-by[data-origin="mod"] .cd-names__via { color: var(--text-quiet); font-weight: 400; }
 
 /* ───────────── narrow ───────────── */
 @media (max-width: 560px) {

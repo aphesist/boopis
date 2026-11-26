@@ -42,13 +42,12 @@ interface Snap { ox: number; oy: number; w: number; h: number; t: number; t2: nu
 export interface SquircleStats { bound: number; cached: number; smoothing: number; frames: number; lastMs: number; maxMs: number; totalMs: number; snaps: number; snapMs: number }
 
 const FOCUSABLE = 'button, a[href], input, select, textarea, [tabindex]';
-const SURFACE = '.ui-menu, .ui-listbox, .ui-pop, .ui-tip, .ui-toast, hx-card[data-size="popover"]';
+const SURFACE = '.ui-menu, .ui-listbox, .ui-pop, .ui-tip, .ui-toast';
 /** the leaf controls: nothing inside them reaches past their edge */
 const LEAF = '.ui-btn, .ui-ib, .ui-send, .ui-seg__thumb, .ui-file';
-/** the library's surfaces and the card layer's; modules add theirs with `auto()` or `data-sq` */
+/** the library's surfaces and the config diff's well (cards parts.ts diffWell); modules add theirs with `auto()` or `data-sq` */
 const SELECTOR = '[data-sq], .ui-btn, .ui-ib, .ui-send, .ui-seg, .ui-seg__thumb, .ui-tab, .ui-search--s, .ui-row, .ui-menu__item, .ui-option, .ui-request, .ui-file, ' +
-  '.ui-slab, .ui-concave, ' + SURFACE + ', hx-card[data-size="inline"]:not([data-kind="blank"]):not([data-kind="escalation"]):not([data-kind="form"]), ' +
-  'hx-card[data-size="compact"]:not([data-kind="form"]), .cd-well, .cd-mini, .cd-opt, .cd-free';
+  '.ui-slab, .ui-concave, ' + SURFACE + ', .cd-well';
 const PATH_CACHE_MAX = 800;
 const RADIUS_TOKENS = ['--r-xs', '--r-s', '--r-m', '--r-l', '--r-floor', '--corner-smoothing'] as const;
 

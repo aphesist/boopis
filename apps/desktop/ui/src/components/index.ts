@@ -69,7 +69,6 @@ const factories = {
   entry: make<EntryOpts, HTMLElement>(html.entry),
   disclosure: make<Parameters<typeof html.disclosure>[0], HTMLButtonElement>(html.disclosure),
   steps: make<{ items: readonly StepItem[]; id?: string; hidden?: boolean }, HTMLOListElement>((o) => html.steps(o.items, o)),
-  blank: make<{ answer?: string } | undefined, HTMLButtonElement>((o) => html.blank(o ?? {})),
   section: make<Parameters<typeof html.section>[0]>(html.section),
   scroll: make<Parameters<typeof html.scroll>[0]>(html.scroll),
   tabs: make<Parameters<typeof html.tabs>[0], SegElement>(html.tabs),

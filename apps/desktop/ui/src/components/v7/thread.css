@@ -13,6 +13,8 @@
 .k7-tool__ic { color: var(--icon-quiet); }
 .k7-tool__name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: var(--fs-xs); font-weight: 500; color: var(--text); letter-spacing: 0; }
 .k7-tool__name.k7-shimmer { color: transparent; }
+/* a name that is words (a model's): the row's own face and size, as a model is named in a Disclosure, a menu or an asker (6f) */
+.k7-tool__name[data-face="text"] { font-family: inherit; font-size: inherit; letter-spacing: inherit; }
 .k7-tool__target { flex: 0 1 auto; }
 .k7-tool__head > .k7-files__counts { font-size: var(--fs-s); }
 .k7-tool__body { margin-top: var(--sp-2); }

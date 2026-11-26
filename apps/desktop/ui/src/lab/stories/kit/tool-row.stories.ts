@@ -30,6 +30,8 @@ export default {
     }, { width: 610 }),
     'an answer hovered': stage(['hover'], ({ root }) => { fill(root, kit.toolRow({ kind: 'edit', state: 'waiting', tool: 'modules/dock/dock.css', model: 'sonnet 5.5', add: 12, del: 3, ask: { ask: 'Allow this change?', answers: S20 } })); }, { width: 610, force: [{ sel: '.k7-tool .k7-chip', state: 'hover' }] }),
     'an answer focused': stage(['focus'], ({ root }) => { fill(root, kit.toolRow({ kind: 'edit', state: 'waiting', tool: 'modules/dock/dock.css', model: 'sonnet 5.5', add: 12, del: 3, ask: { ask: 'Allow this change?', answers: S20 } })); }, { width: 610, force: [{ sel: '.k7-tool .k7-chip', state: 'focus' }] }),
+    /* 6f: a name that is words (a model handed a task) takes the regular face; the tool rows above keep mono for commands and paths */
+    'a model\'s name, in words': stage(['variant'], ({ root }) => { fill(root, col(kit.toolRow({ kind: 'command', icon: '', text: true, tool: 'opus 5.5', model: 'claude-opus-5-5', target: 'Review the diff', state: 'running', word: 'running 12s' }), kit.toolRow({ kind: 'command', icon: '', text: true, tool: 'gpt 6', model: 'gpt-6-luna', target: 'Write the release notes', word: 'done 41s' }))); }, { width: 560 }),
     'waiting, narrow: the answers wrap': stage(['size', 'long'], ({ root }) => { fill(root, kit.toolRow({ kind: 'edit', state: 'waiting', tool: 'src/billing/integrations/stripe/webhooks/handlers/invoice_payment_succeeded.ts', model: 'sonnet 5.5', add: 120, del: 48, ask: { ask: 'Allow this change?', answers: S20 } })); }, { width: 328 })
   }
 } satisfies Story;
