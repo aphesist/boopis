@@ -28,8 +28,8 @@ describe('the kinds are templates', () => {
   });
   it('says a permission receipt in the scope the user chose', () => {
     expect(receiptText(spec({}, [], { kind: 'permission' }), '', 'session')).toBe(PERMISSION['session']?.[1]);
-    expect(receiptText(spec({}, [], { kind: 'credential', provider: 'OpenAI' }), '', '')).toBe('Saved to your keychain. The OpenAI provider is connected');
-    expect(receiptText(spec({}, [], { kind: 'question' }), 'yes', '')).toBe('Answered: yes');
+    expect(receiptText(spec({}, [], { kind: 'credential', provider: 'OpenAI' }), '', '')).toBe('You saved the key for OpenAI');
+    expect(receiptText(spec({}, [], { kind: 'question' }), 'yes', '')).toBe('You answered: yes');
   });
   it('names an option by its enumNames when there is one', () => {
     expect(optLabel({ enum: ['a', 'b'], enumNames: ['Alpha', 'Beta'] }, 'b')).toBe('Beta');

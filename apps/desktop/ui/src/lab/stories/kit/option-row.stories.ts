@@ -16,6 +16,7 @@ export default {
     'import pick': stage(['variant'], ({ root }) => { line(root, kit.menu({ label: 'Import', variant: 'options', entries: [{ label: 'From Claude Code', meaning: '12 sessions in ~/.claude', chosen: true }, { label: 'From Codex', meaning: '3 sessions in ~/.codex' }] })); }),
     hover: stage(['hover'], ({ root }) => { line(root, steps()); }, { force: [{ sel: '[data-kit~="OptionRow"]:nth-child(3)', state: 'hover' }] }),
     focus: stage(['focus'], ({ root }) => { line(root, steps()); }, { force: [{ sel: '[data-kit~="OptionRow"]:nth-child(3)', state: 'focus' }] }),
+    'check (choose any)': stage(['variant'], ({ root }) => { line(root, kit.menu({ label: 'Suites', variant: 'options', entries: [{ label: 'invoice.test.ts', meaning: '', check: true, chosen: true }, { label: 'prorate.test.ts', meaning: '', check: true }] })); }),
     long: stage(['long'], ({ root }) => { line(root, kit.menu({ label: 'Import', variant: 'options', entries: [{ label: 'From a folder', meaning: '/home/someone/code/a-project-with-a-very-long-name/sessions' }] })); })
   }
 } satisfies Story;

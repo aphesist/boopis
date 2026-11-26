@@ -47,8 +47,8 @@ const SURFACE = '.ui-menu, .ui-listbox, .ui-pop, .ui-tip, .ui-toast, hx-card[dat
 const LEAF = '.ui-btn, .ui-ib, .ui-send, .ui-seg__thumb, .ui-file';
 /** the library's surfaces and the card layer's; modules add theirs with `auto()` or `data-sq` */
 const SELECTOR = '[data-sq], .ui-btn, .ui-ib, .ui-send, .ui-seg, .ui-seg__thumb, .ui-tab, .ui-search--s, .ui-row, .ui-menu__item, .ui-option, .ui-request, .ui-file, ' +
-  '.ui-slab, .ui-concave, ' + SURFACE + ', hx-card[data-size="inline"]:not([data-kind="blank"]):not([data-kind="escalation"]), ' +
-  'hx-card[data-size="compact"], .cd-well, .cd-mini, .cd-opt, .cd-free, .cd-preview';
+  '.ui-slab, .ui-concave, ' + SURFACE + ', hx-card[data-size="inline"]:not([data-kind="blank"]):not([data-kind="escalation"]):not([data-kind="form"]), ' +
+  'hx-card[data-size="compact"]:not([data-kind="form"]), .cd-well, .cd-mini, .cd-opt, .cd-free';
 const PATH_CACHE_MAX = 800;
 const RADIUS_TOKENS = ['--r-xs', '--r-s', '--r-m', '--r-l', '--r-floor', '--corner-smoothing'] as const;
 

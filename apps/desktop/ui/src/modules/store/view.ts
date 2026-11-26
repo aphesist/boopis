@@ -18,6 +18,7 @@ import {
 import { projectSwitch } from './policy';
 import { keepFresh, readerFor } from './reading';
 import type { Reading } from './reading';
+import { focusForm } from '../cards/form';
 
 export type StoreScreen = 'browse' | 'installed' | 'sources';
 export interface StoreDeps {
@@ -73,7 +74,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
   const card = (spec: FormSpec, sink: FormsSource): HTMLElement => {
     useFormsHost(sink);
     const c = ui.card('form', spec as unknown as Record<string, unknown>, { size: 'inline', enter: deps.enter ?? true });
-    queueMicrotask(() => { c.querySelector<HTMLElement>('.cd-form .ui-input, .cd-form .cd-opt[tabindex="0"], .cd-form .ui-switch, .cd-form [data-hold]')?.focus(); });
+    queueMicrotask(() => { focusForm(c); });
     return c;
   };
   const say = (text: string): void => { const s = main.querySelector('[data-store-status]'); if (s) s.textContent = text; deps.toast(text); };
@@ -531,7 +532,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     else void drawSources();
   }
   tabs.addEventListener('ui:change', (e) => { show((e as CustomEvent<{ value: StoreScreen }>).detail.value); });
-  const keep = (fn: () => void) => (): void => { if (root.isConnected && main.querySelector('[data-store-status]') && !main.querySelector('.cd-form')) fn(); };
+  const keep = (fn: () => void) => (): void => { if (root.isConnected && main.querySelector('[data-store-status]') && !main.querySelector('hx-card[data-kind="form"] .k7-ask__answers')) fn(); };
   store.installed.subscribe(keep(() => { if (screen === 'installed') void drawInstalled(); }));
   store.sources.subscribe(keep(() => { if (screen === 'sources') void drawSources(); }));
   reader.state.subscribe(keep(() => { if (screen === 'sources') void drawSources(); }));

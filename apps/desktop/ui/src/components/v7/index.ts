@@ -21,10 +21,10 @@ import { notify, notifyText } from './notify';
 
 const html = {
   button: controls.button, iconButton: controls.iconButton, kbd: controls.kbd, chip: controls.chip, segmented: controls.segmented,
-  selectorItem: controls.selectorItem, switch: controls.switchHTML, field: controls.field, tooltip: controls.tooltip,
+  selectorItem: controls.selectorItem, switch: controls.switchHTML, field: controls.field, tooltip: controls.tooltip, swatches: controls.swatches,
   inlineChip: inline.inlineChip, mark: inline.mark, statusWord: inline.statusWord, badge: inline.badge, statusLine: inline.statusLine, avatar: inline.avatar,
   card: blocks.card, block: blocks.block, menu: blocks.menu, menuRow: blocks.menuRow, optionRow: blocks.optionRow, listRow: blocks.listRow, sectionHead: blocks.sectionHead,
-  notice: blocks.notice, systemLine: blocks.systemLine, bubble: blocks.bubble, well: blocks.well, disclosure: blocks.disclosure, turnFoot: blocks.turnFoot, hoverBar: blocks.hoverBar,
+  notice: blocks.notice, systemLine: blocks.systemLine, bubble: blocks.bubble, well: blocks.well, steps: blocks.steps, disclosure: blocks.disclosure, turnFoot: blocks.turnFoot, hoverBar: blocks.hoverBar,
   timeSeparator: blocks.timeSeparator, emptyState: blocks.emptyState, list: blocks.list,
   toolRow: thread.toolRow, askCard: thread.askCard, filesCard: thread.filesCard, fileCard: thread.fileCard, queue: thread.queue, diffView: thread.diffView, composer: thread.composer,
   windowChrome: surfaces.windowChrome, titlePill: surfaces.titlePill, page: surfaces.page, pane: surfaces.pane, dialog: surfaces.dialog, rail: surfaces.rail, sidebarFoot: surfaces.sidebarFoot, notch: surfaces.notch, dock
@@ -127,7 +127,7 @@ export const kit = {
   dockParts: { slab: slabPath, orb: dockOrb, cap: dockCap, ask: dockAsk, more: dockMore, panel: dockPanel }, wire, wireHold, wireMenu, markReveal, openMenu, openNotice, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, notify, notifyText, keyNames: controls.keyNames, variants: kitVariants
 };
 export type Kit = typeof kit;
-export type { ButtonOpts, IconButtonOpts, ChipOpts, SegmentedOpts, SegItem, SelectorItemOpts, SwitchOpts, FieldOpts, KbdOpts, TooltipOpts } from './controls';
+export type { ButtonOpts, IconButtonOpts, ChipOpts, SegmentedOpts, SegItem, SelectorItemOpts, SwitchOpts, FieldOpts, KbdOpts, TooltipOpts, SwatchesOpts } from './controls';
 export type { ChromeOpts, ChromeParts, PageOpts, PaneOpts, DialogOpts, RailOpts, RailBot, RailGroup, SidebarFootOpts, NotchOpts } from './surfaces';
 export type { DockOpts, DockBot, DockKind } from './dock';
 export type { ToolRowOpts, AskCardOpts, AskAnswer, FilesCardOpts, FileCardOpts, FileRow, QueueOpts, DiffViewOpts, DiffLine, DiffComment, ComposerOpts, LineItem } from './thread';

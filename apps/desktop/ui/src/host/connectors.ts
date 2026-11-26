@@ -23,6 +23,7 @@ import { clipSpots, tipsIfClipped, watchCuts } from '../core/clip';
 import { connectorSigninForm, fromConnectorForm } from './forms';
 import type { ConnectorFormIn } from './forms';
 import type { ConnectorCatalogEntry, ConnectorInfo, ConnectorInstall, ConnectorRequest, ConnectorSource, ConnectorsBridge } from './connectors-bridge';
+import { focusForm } from '../modules/cards/form';
 
 const log = logger('connectors');
 
@@ -181,7 +182,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   const card = (spec: FormSpec, handlers: Handlers): HTMLElement => {
     useFormsHost(sink(handlers));
     const c = ui.card('form', spec as unknown as Record<string, unknown>, { size: 'inline' });
-    queueMicrotask(() => { c.querySelector<HTMLElement>('.cd-form .ui-input, .cd-form .cd-opt[tabindex="0"], .cd-form .ui-switch, .cd-form [data-action="signin"]')?.focus(); });
+    queueMicrotask(() => { focusForm(c); });
     return c;
   };
   const later = (fn: () => void): void => { window.setTimeout(fn, settle); };

@@ -36,6 +36,7 @@ import { windowBar } from './window-controls';
 import type { WindowControls } from './window-controls';
 import { esc, reduced } from '../core/dom';
 import { logger } from '../core/log';
+import { focusForm } from '../modules/cards/form';
 
 const log = logger('first-run');
 
@@ -519,7 +520,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
     const formCard = (model: FormModel): HTMLElement => {
       useFormsHost(hostForms());
       const c = ui.card('form', model.spec as unknown as Record<string, unknown>, { size: 'inline' });
-      queueMicrotask(() => { c.querySelector<HTMLElement>('.cd-form .ui-input, .cd-form .cd-opt[tabindex="0"], .cd-form .ui-switch')?.focus(); });
+      queueMicrotask(() => { focusForm(c); });
       return c;
     };
     /* while a call runs: one card with the heading and a dot indicator. It travels until the host says how far the unpack has

@@ -65,9 +65,6 @@
 /* ───────────── the mod as an origin (cards.js draws it; these are its details) ───────────── */
 .cd-by[data-origin="mod"] .cd-names__first { font-weight: 500; }
 .cd-by[data-origin="mod"] .cd-names__via { color: var(--text-quiet); font-weight: 400; }
-.cd-swatches { display: flex; flex-wrap: wrap; gap: var(--sp-3); padding: var(--sp-3); }   /* equal on every side, so a swatch in the well's corner sits at equal insets (R-corner-3) */
-.cd-swatch { display: flex; flex-direction: column; gap: 6px; font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); text-transform: none; }
-.cd-swatch i { display: block; width: 40px; height: 24px; border-radius: var(--r-floor); box-shadow: inset 0 0 0 1px var(--line); }
 
 /* ───────────── narrow ───────────── */
 @media (max-width: 560px) {
@@ -87,11 +84,6 @@
 /* the dismiss is a 24px corner control: while the toast holds one its corner size is 24 (inset 8, radius 12) */
 .ui-toast:has(> .mod-toast__x) { --corner-size: 24px; }
 .ui-toast > .mod-toast__x { flex: none; }
-
-/* ───────────── the theme card while it previews: the colours are on the whole app ───────────── */
-.cd-live { display: none; align-items: center; gap: 6px; margin-left: auto; align-self: flex-start; font: 400 var(--fs-2xs)/16px var(--mono); letter-spacing: var(--track-mono); color: var(--text-dim); text-transform: none; }
-.cd-live > i { display: block; width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--text-dim); }
-hx-card[data-previewing] .cd-live { display: inline-flex; }
 
 /* a mod's toast is as wide as its words (a fixed box at the centre line would otherwise shrink to half the window) */
 .ui-toast:has(.mod-toast) { width: max-content; }

@@ -76,7 +76,7 @@ describe('what the recording says, drawn', () => {
     expect(rig.band.querySelector('.mod-band .mv-root')?.textContent).toContain('Running tests');
     expect([...rig.status.querySelectorAll('.mod-status__i')].map((n) => n.textContent)).toEqual(['test-runner 1 failing', 'token-meter 12.4k tokens this turn']);
     expect([...rig.col.querySelectorAll('[data-mod-log]')].map((n) => n.textContent)).toEqual([expect.stringContaining('the cache for money.test.ts is stale'), expect.stringContaining('token-meter is watching this session')]);
-    expect(rig.col.querySelector('hx-card[data-kind="form"] .cd-swatches')).toBeTruthy();
+    expect(rig.col.querySelector('hx-card[data-kind="form"] .k7-swatches')).toBeTruthy();
   });
   it('names each mod as its glyph and its name, the band after the mod that drew it, and a band with no name as "Mods" when several are loaded', () => {
     follow();
@@ -423,15 +423,13 @@ describe('the theme card, and every way its preview ends', () => {
   it('offers no card when the app can use none of the colours', () => {
     expect(themeCard({ plugin: 'x', colors: { 'surface-0': '#101010' }, label: null })).toBeNull();
   });
-  it('asks "Apply name’s colours?" with Later, Reject and Keep, the mod as its origin, and shows "Previewing"', () => {
+  it('asks "Apply name’s colours?" with Keep, Later and Reject, the mod as its origin, and says "previewing"', () => {
     const c = offer(DUSK);
-    expect(c.querySelector('.cd-lead')?.textContent).toBe('Apply dusk’s colours?');
-    expect(c.querySelector('.cd-by .cd-names__first')?.textContent).toBe('dusk');
-    expect(c.querySelector('.cd-by .cd-names__via')?.textContent).toBe(' mod');
-    expect([...c.querySelectorAll('.cd-foot button')].map((b) => b.textContent)).toEqual(['Later', 'Reject', 'Keep']);
-    expect(c.querySelector('.cd-live')?.textContent).toBe('Previewing');
+    expect(c.querySelector('.k7-ask__ask')?.textContent).toBe('Apply dusk’s colours?');
+    expect(c.querySelector('.k7-ask__who')?.textContent).toBe('dusk mod asks');
+    expect([...c.querySelectorAll('.k7-ask__answers .k7-chip__label')].map((b) => b.textContent)).toEqual(['Keep', 'Later', 'Reject']);
+    expect(c.querySelector('.k7-ask__head .k7-word')?.textContent).toBe('previewing');   // not owed: no "needs you", the preview said instead
     expect(c.hasAttribute('data-previewing')).toBe(true);
-    expect(c.querySelector('.ui-stamp')?.textContent).toBe('');   // not owed: no stamp
   });
   it('previews the whole app while the card is open and on screen, and never saves it', () => {
     const c = offer(DUSK);
@@ -454,12 +452,12 @@ describe('the theme card, and every way its preview ends', () => {
     it('is not applied while the card previews, the rest is, and the card says which it skipped in plain words', () => {
       const c = offer(DARK_TEXT);
       expect([themeApi.previewing(), brass(), root.style.getPropertyValue('--bg-2'), text(), root.style.getPropertyValue('--text-quiet')]).toEqual([true, '#b8a4f0', '#201e31', '', '']);
-      expect(c.querySelector('.cd-text')?.textContent).toContain('Skipped 2 colours that would make text hard to read: text on surface, quiet text.');
-      expect(c.querySelector('.cd-live')?.textContent).toBe('Previewing');
+      expect(c.querySelector('.k7-ask__sub')?.textContent).toContain('Skipped 2 colours that would make text hard to read: text on surface, quiet text.');
+      expect(c.querySelector('.k7-ask__head .k7-word')?.textContent).toBe('previewing');
     });
     it('says nothing about skipping when every colour holds', () => {
       const c = offer(DUSK);
-      expect(c.querySelector('.cd-text')?.textContent).not.toContain('Skipped');
+      expect(c.querySelector('.k7-ask__sub')?.textContent ?? '').not.toContain('Skipped');
     });
     it('Keep stores only what was applied, and the receipt says what was left out', async () => {
       const c = offer(DARK_TEXT);
@@ -477,7 +475,7 @@ describe('the theme card, and every way its preview ends', () => {
       const d = offer(DARK_TEXT, 'dusk2');
       d.querySelector<HTMLElement>('[data-action="submit"]')?.focus();
       d.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
-      expect([themeApi.previewing(), brass(), d.state]).toEqual([false, '', 'deferred']);
+      expect([themeApi.previewing(), brass(), d.state]).toEqual([false, '', 'cancelled']);   // Esc is Reject's key (REPASS.md 6d)
     });
     it('another theme chosen ends the preview, and a card opened again checks again', () => {
       const c = offer(DARK_TEXT);
@@ -511,10 +509,9 @@ describe('the theme card, and every way its preview ends', () => {
     expect(c.textContent).toContain('Rejected. The theme is back as it was');
     expect(localStorage.getItem('hx.v6.theme') ?? '').not.toContain('b8a4f0');
   });
-  it('Esc (Later) restores it too, says the theme stays as it was, and opening the card again previews it again', () => {
+  it('Later restores it too, says the theme stays as it was, and opening the card again previews it again', () => {
     const c = offer(DUSK);
-    c.querySelector<HTMLElement>('[data-action="submit"]')?.focus();
-    c.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    click(c, 'defer');
     expect([themeApi.previewing(), brass(), c.state]).toEqual([false, '', 'deferred']);
     expect(c.textContent).toContain('Later. The theme stays as it was');
     click(c, 'reopen');

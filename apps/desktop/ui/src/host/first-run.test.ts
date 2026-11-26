@@ -39,7 +39,7 @@ class Fake implements SetupBridge {
 }
 const tick = (): Promise<void> => (vi.isFakeTimers() ? vi.advanceTimersByTimeAsync(0) : new Promise((r) => setTimeout(r, 0))).then(() => undefined);
 const click = async (text: string) => {
-  const b = [...document.querySelectorAll('button')].find((x) => x.textContent === text);
+  const b = [...document.querySelectorAll('button')].find((x) => (x.querySelector('.k7-chip__label, .k7-btn__label')?.textContent ?? x.textContent) === text);
   expect(b, 'button ' + text).toBeTruthy();
   b?.click();
   await tick();
@@ -90,7 +90,7 @@ describe('first run', () => {
       await click('Set up');
       const card = document.querySelector('hx-card[data-kind="form"]');
       expect(card, 'the form is drawn by the form card').toBeTruthy();
-      expect(card?.querySelector('.cd-diff')?.textContent).toContain('tools.tool_search.enabled');
+      expect(card?.querySelector('.k7-diff')?.textContent).toContain('tools.tool_search.enabled');
       expect(card?.querySelector('[data-action="defer"]'), 'setup has nowhere to wait: no "Later"').toBeNull();
       await click('Go');
       await vi.advanceTimersByTimeAsync(900);
@@ -148,13 +148,13 @@ describe('first run', () => {
       await vi.advanceTimersByTimeAsync(0);
       await click('Set up');
       /* two steps: how to connect, then which provider; nothing goes to the host until the second is answered */
-      const ways = document.querySelectorAll<HTMLElement>('.cd-opt');
+      const ways = document.querySelectorAll<HTMLElement>('.k7-orow');
       expect([...ways].map((o) => o.textContent?.replace(/\d$/, ''))).toEqual(['Use an API key', 'A model you already set up']);
       ways[1]?.click();
       await click('Continue');
       await vi.advanceTimersByTimeAsync(900);
       expect(bridge.answers).toHaveLength(1);
-      const labs = document.querySelectorAll<HTMLElement>('.cd-opt');
+      const labs = document.querySelectorAll<HTMLElement>('.k7-orow');
       expect([...labs].map((o) => o.textContent?.replace(/\d$/, ''))).toEqual(['fake-a on main']);
       await click('Use this');
       await vi.advanceTimersByTimeAsync(900);
@@ -181,7 +181,7 @@ describe('first run', () => {
       await vi.advanceTimersByTimeAsync(0);
       await click('Set up');
       /* step 1: free is first and already chosen; the host's own words (the free tier's terms) are on the card */
-      const ways = [...document.querySelectorAll<HTMLElement>('.cd-opt')];
+      const ways = [...document.querySelectorAll<HTMLElement>('.k7-orow')];
       expect(ways.map((o) => o.textContent?.replace(/\d$/, ''))).toEqual(['Free models (no account)', 'Use an API key']);
       expect(ways.map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false']);
       expect(document.body.textContent).toContain('portal.nousresearch.com/terms');
@@ -201,7 +201,7 @@ describe('first run', () => {
       void runFirstRun(bridge);
       await vi.advanceTimersByTimeAsync(0);
       await click('Set up');
-      const options = [...document.querySelectorAll<HTMLElement>('.cd-opt')];
+      const options = [...document.querySelectorAll<HTMLElement>('.k7-orow')];
       expect(options.map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false', 'true']);
       options[1]?.click();
       await click('Go');
@@ -218,7 +218,7 @@ describe('first run', () => {
       void runFirstRun(bridge);
       await vi.advanceTimersByTimeAsync(0);
       await click('Set up');
-      document.querySelectorAll<HTMLElement>('.cd-opt')[0]?.click();
+      document.querySelectorAll<HTMLElement>('.k7-orow, .k7-seg__item')[0]?.click();
       await click('Go');
       await vi.advanceTimersByTimeAsync(200);
       expect(document.querySelector('hx-card [role=alert]')?.textContent).toContain('setup.json is not valid');
@@ -371,13 +371,13 @@ describe('first run', () => {
       await vi.advanceTimersByTimeAsync(0);
       await click('Set up');
       const card = document.querySelector('hx-card[data-kind="form"]');
-      const lines = [...(card?.querySelectorAll('.cd-contents .cd-well__line') ?? [])].map((l) => l.textContent);
-      expect(lines).toEqual(['1. Install itnpm install -g @anthropic-ai/claude-code', '2. Sign inclaude auth login']);
+      const lines = (card?.querySelector('.k7-ask__fields [data-kit~="Well"] pre')?.textContent ?? '').split('\n');
+      expect(lines).toEqual(['1. Install it  npm install -g @anthropic-ai/claude-code', '2. Sign in  claude auth login']);
       expect(document.body.textContent).not.toContain('Sign in with');
       await click('Check again');
       await vi.advanceTimersByTimeAsync(900);
       expect(bridge.answers[1]).toEqual({ answer: { form_id: 'setup.claude', cancelled: false, values: {}, secrets: {} }, reconsider: false });
-      expect(document.querySelector('hx-card[data-kind="form"] .cd-contents')).toBeTruthy();
+      expect(document.querySelector('hx-card[data-kind="form"] .k7-ask__fields [data-kit~="Well"]')).toBeTruthy();
     } finally { vi.useRealTimers(); }
   });
 
@@ -393,7 +393,7 @@ describe('first run', () => {
       await click('Set up');
       const card = document.querySelector('hx-card[data-kind="form"]');
       expect(card?.textContent).toContain('claude-subscription-directsdk 0.3.5');
-      expect(card?.querySelector('.cd-pinned')?.textContent).toContain('6313fad5ddf2c060e7b16782f4860c0d5cdbfcac');
+      expect(card?.querySelector('.k7-ask__item')?.textContent).toContain('6313fad5ddf2c060e7b16782f4860c0d5cdbfcac');
       expect(card?.textContent).toContain('hermes plugins install claude-subscription-directsdk --no-enable');
       expect(bridge.answers, 'showing it answers nothing').toHaveLength(1);
       await click('Install the plugin');
@@ -418,9 +418,9 @@ describe('first run: the models question in two steps (ADR-0039)', () => {
   const IDS = ['free', 'openrouter-free', 'anthropic', 'claude-subscription', 'chatgpt-subscription', 'gemini', 'xai'];
   const NAMES = ['Free models (Nous free tier, no account)', 'OpenRouter free models (needs a free OpenRouter key)', 'Claude: Opus (needs an Anthropic API key)', 'Claude subscription (your Claude Code login)', 'ChatGPT subscription (sign in with your ChatGPT account)', 'Gemini (a free API key from Google AI Studio)', 'xAI: an API key from xAI'];
   const ladder = (): NonNullable<SetupStatus['form']> => form('setup.ladder', 'choice', { type: 'object', required: ['choice'], properties: { choice: { type: 'string', enum: IDS, enumNames: NAMES, default: 'free' } } });
-  const names = (): (string | undefined)[] => [...document.querySelectorAll<HTMLElement>('.cd-opt')].map((o) => o.textContent?.replace(/\d$/, ''));
+  const names = (): (string | undefined)[] => [...document.querySelectorAll<HTMLElement>('.k7-orow')].map((o) => o.textContent?.replace(/\d$/, ''));
   const pickWay = async (label: string): Promise<void> => {
-    const row = [...document.querySelectorAll<HTMLElement>('.cd-opt')].find((o) => o.textContent?.replace(/\d$/, '') === label);
+    const row = [...document.querySelectorAll<HTMLElement>('.k7-orow')].find((o) => o.textContent?.replace(/\d$/, '') === label);
     expect(row, label).toBeTruthy();
     row?.click();
     await click('Continue');
@@ -453,7 +453,7 @@ describe('first run: the models question in two steps (ADR-0039)', () => {
       expect(bridge.answers).toHaveLength(1);
       await pickWay('Use an API key');
       expect(names()).toEqual(['Claude: Opus (needs an Anthropic API key)', 'Gemini (a free API key from Google AI Studio)', 'OpenRouter free models (needs a free OpenRouter key)', 'xAI: an API key from xAI']);   /* the catalogue's rank order */
-      const labs = document.querySelectorAll<HTMLElement>('.cd-opt');
+      const labs = document.querySelectorAll<HTMLElement>('.k7-orow');
       labs[1]?.click();
       await click('Use this');
       await vi.advanceTimersByTimeAsync(900);

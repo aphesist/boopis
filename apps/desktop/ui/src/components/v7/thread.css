@@ -55,6 +55,33 @@
 .k7-ask__letter { display: grid; place-items: center; flex: none; width: var(--letter); height: var(--letter); border-radius: var(--r-tip); background: var(--hover); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
 .k7-ask__letter > .k7-ic { width: var(--fs-xs); height: var(--fs-xs); }
 .k7-ask__choice[data-chosen] .k7-ask__letter { background: var(--accent); color: var(--on-accent); }
+/* the form variant (6d, derived: a form is the AskCard's own block, REPASS.md 6d): what it asks for stacked 8 apart under the ask, what
+   submitting does in one quiet line over the answers, why the last answer did not go in the Field's error words; while it sends, the
+   primary's words shimmer (the kit's working state) and nothing in it answers a press */
+.k7-ask__fields { display: flex; flex-direction: column; gap: var(--sp-2); margin: 0 0 var(--sp-2); min-width: 0; }
+.k7-ask__fields :is(.k7-field__label, .k7-field__hint, .k7-field__error) { padding-inline: var(--sp-1); }   /* words on the text inset, 4 in from the controls */
+.k7-ask__fields .k7-field__box { border-radius: calc(var(--r-block) - var(--pad-block)); }
+.k7-ask__fields > .k7-orows { display: flex; flex-direction: column; gap: var(--gap-hair); }
+.k7-ask__fields > .k7-orows > .k7-orow { width: 100%; }
+.k7-ask :is(.k7-ask__answers, .k7-ask__choices) + .k7-ask__fields { margin: var(--sp-2) 0 0; }
+.k7-ask__head > .k7-logomark { --ns-mark: var(--icon-s); --ns-logo: var(--fs-2xs); }
+.k7-ask__effect { margin: 0 0 var(--sp-2); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow-wrap: anywhere; }
+.k7-ask__error { margin: 0 0 var(--sp-2); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--red-text); overflow-wrap: anywhere; }
+.k7-ask__count { flex: none; font-variant-numeric: tabular-nums; }
+.k7-ask__head > .k7-btn { flex: none; margin-block: calc(-1 * var(--gap-s)); }
+.k7-ask[data-busy] .k7-chip[data-busy] { cursor: progress; }
+/* several askers (the owner's rule for the rail's "+N", 25 November): up to three 16 orbs overlapped, then a small filled chip clear of them */
+.k7-ask__askers { display: inline-flex; align-items: center; gap: var(--gap-hair); flex: none; line-height: 0; --s: var(--icon-s); }
+/* an item the form is about (O-B06's connector block, O-P03c's provider): its tile, its name, what it can reach on a second line */
+.k7-ask__item { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; padding: 0 var(--gap-hair); }
+.k7-ask__tile { display: grid; place-items: center; flex: none; width: var(--ctl); height: var(--ctl); border-radius: var(--r-field); background: var(--fill-2); box-shadow: inset 0 0 0 var(--hl) var(--line); font: 500 var(--fs-xs) / 1 var(--mono); color: var(--text-dim); }
+.k7-ask__tile > :is(svg, .k7-ic, .k7-head__mark) { width: var(--icon-s); height: var(--icon-s); }
+.k7-ask__head > .k7-ask__tile { width: var(--icon-s); height: var(--icon-s); border-radius: var(--r-tip); font-size: var(--fs-2xs); }
+.k7-ask__item-text { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+.k7-ask__item-name { font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); }
+.k7-ask__item-line { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow-wrap: anywhere; }
+/* the files a form takes (the composer's attachment chips) and "+ Add files" after them */
+.k7-ask__files { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap-s); }
 
 /* ── ToolRow, a bot's (boards 11 and 17, kit.css `.tool`): radius 18, padding 10 12, as wide as a bubble may be; its head 13 --text-dim,
    the glyph, the tool's name in 500 --text, what it was called on, a chevron at the end ── */

@@ -23,6 +23,7 @@ import { localUseNote, useLocalRuntime } from './local-runtime';
 import { commands } from './bindings';
 import type { ConnectorLogin, InstallHint } from './bindings';
 import { brandOf } from './signin-brands';
+import { focusForm } from '../modules/cards/form';
 
 export type Filter = 'all' | 'connected' | 'signin' | 'key' | 'local' | 'custom';
 export const FILTERS: ReadonlyArray<{ value: Filter; label: string }> = [
@@ -349,7 +350,7 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   const cardOf = (spec: FormSpec, handlers: FlowHandlers): HTMLElement => {
     useFormsHost(sink(handlers));
     const c = ui.card('form', spec as unknown as Record<string, unknown>, { size: 'inline' });
-    queueMicrotask(() => { c.querySelector<HTMLElement>('.cd-form .ui-input, .cd-form .cd-opt[tabindex="0"], .cd-form .ui-switch')?.focus(); });
+    queueMicrotask(() => { focusForm(c); });
     return c;
   };
   const flowUi: FlowUi = { card: cardOf, show, back, later, toast: deps.toast };

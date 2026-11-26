@@ -72,10 +72,11 @@ export interface OptionRowOpts {
   leadHTML?: U<string>; icon?: U<string>; keys?: U<string>;
   /** a choice that cannot be made now: it stays in its place, and its second line says why (`meaning` carries the reason) */
   disabled?: U<boolean>; attrs?: U<Attrs>;
+  /** one of several that can all be chosen: a check box in place of the ring (6d, derived: a form's "choose any") */ check?: U<boolean>;
 }
 export function optionRow(o: OptionRowOpts): string {
   return '<button class="k7-reset k7-orow"' + kitAttrs('OptionRow', { type: 'button', role: 'menuitemradio', tabindex: '-1', 'aria-checked': String(!!o.chosen), 'aria-disabled': o.disabled ? 'true' : null, 'data-value': o.value ?? o.label, ...(o.attrs ?? {}) }) + '>' +
-    '<span class="k7-orow__ring" aria-hidden="true"></span><span class="k7-orow__text"><span class="k7-orow__name">' + (o.leadHTML ?? (o.icon ? glyph(o.icon) : '')) + '<span class="k7-orow__label">' + esc(o.label) + '</span>' +
+    (o.check ? '<span class="k7-orow__ring" data-check aria-hidden="true">' + glyph('check') + '</span>' : '<span class="k7-orow__ring" aria-hidden="true"></span>') + '<span class="k7-orow__text"><span class="k7-orow__name">' + (o.leadHTML ?? (o.icon ? glyph(o.icon) : '')) + '<span class="k7-orow__label">' + esc(o.label) + '</span>' +
     (o.ticks ? '<span class="k7-ticks" aria-hidden="true">' + Array.from({ length: o.ticks.of }, (_, i) => '<i' + (i < (o.ticks?.on ?? 0) ? ' data-on' : '') + '></i>').join('') + '</span>' : '') +
     (o.keys ? '<span class="k7-grow"></span>' + kbd({ keys: o.keys }) : '') + '</span><span class="k7-orow__meaning" data-wrap-ok>' + esc(o.meaning) + '</span></span></button>';
 }

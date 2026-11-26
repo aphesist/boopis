@@ -29,7 +29,7 @@ export interface Ctx {
   d: Data; s: string; size: CardSize; id: string; at: string; q: CardOpts['queue']; card: HxCard;
   plain: string; tone: string; owe: string; origin: KnownOrigin | null;
 }
-export interface Render { side?: string; head: string; body: string; foot: string }
+export interface Render { side?: string; head: string; body: string; foot: string; /** a kind drawn whole by the kit (a form: the AskCard's block), in place of the v6 regions */ whole?: string }
 export interface Kind {
   /** the origin a kind has when its data names none (a connector's is its server) */
   origin?(c: Pick<Ctx, 'd' | 's'>): KnownOrigin | null;

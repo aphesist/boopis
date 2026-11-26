@@ -57,12 +57,16 @@ hx-card[data-size="popover"] {
   border-radius: var(--r-outer);
   padding: var(--pad);
 }
+/* a form is the kit's AskCard block (form.ts, REPASS.md 6d): its card is a bare host and the block draws everything, at the AskCard's
+   own width (the conversation's, or the dock's) */
+hx-card[data-kind="form"]:is([data-size="inline"], [data-size="compact"], [data-size="mini"]) { display: block; width: auto; max-width: none; padding: 0; background: none; border-radius: 0; }
+hx-card[data-kind="form"][data-size="compact"] .k7-ask, hx-card[data-kind="form"][data-size="mini"] .k7-ask { width: 100%; }
 /* the inner blocks fit the card: the well, the buttons and chips, the stamp, the connector tile, the option rows.
    Where a card is not a container (a one-row mini, the blank in its sentence, the escalation rule) --r-in is unset
    and each piece keeps its own step. */
 hx-card[data-kind="blank"][data-size="inline"], hx-card[data-kind="escalation"][data-size="inline"] { --r-in: initial; }
 hx-card .ui-input, hx-card .ui-switch:not(:checked) { background: var(--cd-well); }   /* a field is inset against the card, never inset on inset (R-colour-4) */
-hx-card .cd-well, hx-card .cd-foot .ui-btn, hx-card .cd-collapsed .ui-btn, hx-card .cd-rule .ui-btn, hx-card .cd-opt, hx-card .cd-free { border-radius: var(--r-in, var(--r-s)); }
+hx-card .cd-well, hx-card .cd-foot .ui-btn, hx-card .cd-rule .ui-btn, hx-card .cd-opt, hx-card .cd-free { border-radius: var(--r-in, var(--r-s)); }
 hx-card .ui-code, hx-card .ui-stamp, hx-card .cd-tile { border-radius: var(--r-in, var(--r-xs)); }
 hx-card[data-size="inline"] { width: min(100%, 520px); --cd-orb: 24px; }
 hx-card[data-size="compact"] { width: 100%; max-width: 360px; --cd-orb: 20px; }
@@ -92,7 +96,7 @@ hx-card[data-side] { grid-template-columns: var(--cd-orb) minmax(0, 1fr); }
 .cd-text { color: var(--text); text-wrap: pretty; }
 .cd-note { color: var(--text-quiet); font-size: var(--fs-xs); line-height: var(--lh); text-wrap: pretty; }
 /* prose that can carry a name: a 40-letter name breaks inside the word instead of pushing the card wider */
-.cd-lead, .cd-quote, .cd-text, .cd-note, .cd-effect, .cd-receipt > span, .cd-collapsed__what, .cd-collapsed__how, .cd-opt__text,
+.cd-lead, .cd-quote, .cd-text, .cd-note, .cd-receipt > span,
 hx-card .ui-field__label, hx-card .ui-field__hint { overflow-wrap: anywhere; min-width: 0; }
 .cd-dim { color: var(--text-dim); }
 .cd-mono { font-family: var(--mono); letter-spacing: var(--track-mono); font-weight: 400; }
@@ -358,7 +362,7 @@ hx-card[data-kind="escalation"][data-size="inline"] { container-type: inline-siz
 hx-card[data-size="inline"] .cd-by[data-origin="teammate"] .cd-by__label { white-space: normal; }
 hx-card[data-size="inline"] .cd-by[data-origin="teammate"] .cd-names__first { white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .cd-glyph { width: 16px; height: 16px; flex: none; color: var(--icon); }
-.cd-by .cd-tile, .cd-mini .cd-tile, .cd-collapsed .cd-tile { width: var(--cd-orb); height: var(--cd-orb); font-size: var(--fs-2xs); }
+.cd-by .cd-tile, .cd-mini .cd-tile { width: var(--cd-orb); height: var(--cd-orb); font-size: var(--fs-2xs); }
 /* several teammates: the kit's stack (ui.html.stack), its discs on the card's surface so the overlap reads */
 /* one teammate lends the card its colour: a 1px ring and a 5% tint (text contrast is unchanged in every preset) */
 hx-card[data-accent]:is([data-size="inline"], [data-size="compact"]) {
@@ -374,51 +378,7 @@ hx-card[data-accent] .cd-mini {
 .cd-mini__who { display: inline-block; vertical-align: top; max-width: var(--cd-who-max, 50%); overflow: hidden; color: var(--text-strong); font-weight: 500; text-transform: none; }
 .cd-mini__who.cd-mono, .cd-mini__who .cd-mono { font-weight: 400; }
 
-/* ------------------------------------------------------------------ forms (FORMS.md): one renderer, kinds are templates */
-hx-card[data-kind="form"] { container-type: inline-size; }
-hx-card[data-kind="form"][data-size="inline"] { width: min(100%, var(--measure)); }
-.cd-form { display: flex; flex-direction: column; gap: var(--sp-3); margin: 0; }
-.cd-field { min-width: 0; }
-.cd-opt-label { color: var(--text-quiet); font-weight: 400; }
-.cd-err:empty { display: none; }
-.cd-effect { margin: 0; padding-top: var(--sp-3); border-top: 1px solid var(--hair); color: var(--text-dim); font-size: var(--fs-xs); line-height: var(--lh); text-wrap: pretty; text-transform: none; }
-/* the secret field: masked, paste-friendly, never echoed */
-.cd-secret { display: flex; align-items: center; gap: var(--sp-2); }
-.cd-secret .ui-input { flex: 1; min-width: 0; letter-spacing: .08em; }
-.cd-secret .ui-btn { align-self: stretch; height: auto; min-height: var(--ctl); }
-.cd-saved { display: flex; align-items: center; gap: var(--sp-2); margin: 0; color: var(--text-dim); font-size: var(--fs-xs); }
-.cd-saved[hidden] { display: none; }
-.cd-signin { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); }
-.cd-signin .cd-note { text-transform: none; }
-/* the app's pickers (mock): a field that opens a menu */
-.cd-picker { display: flex; align-items: center; gap: var(--sp-2); text-align: left; cursor: pointer; }
-.cd-picker__v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: none; }
-.cd-picker .cd-mono { font-size: var(--fs-xs); }
-.cd-picker[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--focus); }
-/* a file drop */
-.cd-drop { --r-outer: var(--r-s); --pad: var(--sp-2); padding: var(--pad); display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); min-height: calc(var(--ctl-s) + 2 * var(--pad)); box-shadow: none; outline: 1px dashed var(--line-field); outline-offset: -1px; }
-.cd-drop > .ui-btn { border-radius: var(--r-in, var(--r-s)); }   /* the button in the drop's corner takes the corner's inner radius (R-corner-3) */
-.cd-drop[data-over] { background: var(--hover); outline-color: var(--focus); }
-.cd-drop__hint { color: var(--text-quiet); font-size: var(--fs-xs); text-transform: var(--ui-case); }
-.cd-filechip { display: inline-flex; align-items: center; gap: var(--sp-2); min-width: 0; flex: 1 1 auto; }
-.cd-filechip__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cd-filechip .cd-mono { color: var(--text-quiet); font-size: var(--fs-2xs); }
-/* options inside a form: radio rows (a dot) and checkbox rows (a box with a check) */
-.cd-form .cd-opts { margin: 0 calc(-1 * var(--sp-2)); }
-.cd-opt__text { flex: 1 1 auto; min-width: 0; text-transform: none; }
-/* a several-choice row (R-check-1): the check glyph shows at rest in --mark-off and turns brass when chosen; never a ring (one choice,
-   R-check-2) and never a square box */
-.cd-opt__check { display: grid; place-items: center; width: 16px; flex: none; color: var(--mark-off); }
-.cd-opt__check .cd-ico { width: 14px; height: 14px; }
-.cd-opt[aria-checked="true"] .cd-opt__check { color: var(--brass); }
-.cd-any { margin-left: var(--sp-1); font-weight: 400; color: var(--text-quiet); }
-.cd-opts[aria-invalid="true"] { box-shadow: inset 0 0 0 1px var(--red); border-radius: var(--r-in, var(--r-s)); }
-/* previews per option, side by side; stacked when the card is narrow */
-.cd-pick { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: var(--sp-3); align-items: stretch; }
-.cd-preview { --sq-bg: var(--cd-well); background: var(--sq-bg); border-radius: var(--r-in, var(--r-s)); padding: var(--sp-2) var(--sp-3); min-height: calc(var(--row-h) * 3); display: flex; flex-direction: column; gap: var(--sp-2); }
-.cd-preview .cd-out { margin: 0; color: var(--text); }
-@container (max-width: 460px) { .cd-pick { grid-template-columns: minmax(0, 1fr); } }
-/* setup: the config diff it will write */
+/* ------------------------------------------------------------------ a config diff in a well (parts.ts diffWell: a bot's settings)
 .cd-diff { font-family: var(--mono); font-size: var(--fs-2xs); line-height: var(--lh); letter-spacing: var(--track-mono); color: var(--text-dim); padding-block: var(--sp-2); }
 .cd-diff__file { color: var(--text-quiet); margin-bottom: var(--sp-1); }
 .cd-diff__l { display: flex; gap: var(--sp-2); white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 calc(-1 * var(--sp-1)); padding: 0 var(--sp-1);   /* the band sits 8px from the well's side, as far as the well's padding is above and below it (R-corner-3) */ border-radius: var(--r-floor); }
@@ -427,16 +387,3 @@ hx-card[data-kind="form"][data-size="inline"] { width: min(100%, var(--measure))
 .cd-diff__l[data-d="add"] > span:first-child { color: var(--add); }
 .cd-diff__l[data-d="del"] { color: var(--text-dim); background: color-mix(in srgb, var(--del) 12%, transparent); }
 .cd-diff__l[data-d="del"] > span:first-child { color: var(--del); }
-/* plan: a numbered list, because it is a sequence */
-.cd-plan { margin: 0; padding-left: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-1); color: var(--text); }
-.cd-plan li::marker { color: var(--text-quiet); font-family: var(--mono); font-size: var(--fs-2xs); }
-.cd-contents .cd-pinned span:first-child { color: var(--text-quiet); }
-/* a resolved, deferred or expired form collapses to one line that stays readable in the transcript */
-hx-card[data-kind="form"]:is([data-state="done"], [data-state="deferred"], [data-state="expired"], [data-state="cancelled"]) { --pad: var(--sp-3); }
-.cd-collapsed .ui-btn { align-self: stretch; height: auto; min-height: var(--ctl-s); }   /* the action fills the row, so its corner insets are the card's --pad on every side when the line takes two lines (R-corner-3) */
-.cd-collapsed { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl-s); min-width: 0; }
-.cd-collapsed__text { flex: 1 1 auto; min-width: 0; margin: 0; display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--sp-2); color: var(--text-dim); line-height: var(--lh-ui); }
-.cd-collapsed__what { color: var(--text); text-transform: none; }
-.cd-collapsed__how { text-transform: var(--ui-case); }
-.cd-collapsed__at { flex: none; color: var(--text-quiet); font-size: var(--fs-2xs); }
-.cd-collapsed .cd-ico { color: var(--text); }

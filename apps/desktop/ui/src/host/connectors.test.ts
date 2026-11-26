@@ -202,7 +202,7 @@ describe('removing', () => {
     const f = fake([info({ name: 'keyed', secrets: ['secret://connector.keyed/key'] })]);
     const { panel, toasts } = await mount(f);
     click(panel, '[data-conn-remove="keyed"]');
-    const options = [...panel.querySelectorAll('.cd-opt')].map((o) => o.textContent);
+    const options = [...panel.querySelectorAll('.k7-orow, .k7-seg__item, .k7-chip')].map((o) => o.textContent);
     expect(options.join('|')).toContain('Keep them in my keychain');
     expect(options.join('|')).toContain('Delete them too');
     await formsHost().submit('connector.remove.keyed', { values: { keys: 'delete' }, secrets: {} });

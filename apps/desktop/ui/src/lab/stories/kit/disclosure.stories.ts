@@ -5,8 +5,9 @@ import type { Story } from '../../types';
 
 const STEPS = [{ text: 'Read CHANGELOG.md', time: '0:02' }, { text: 'Read 6 pull requests', time: '0:09' }, { text: 'Writing the notes', state: 'now' as const }, { text: 'Open a pull request', state: 'todo' as const }];
 export default {
-  id: 'kit/disclosure', title: 'Disclosure', area: 'composer', kind: 'component', covers: ['kit.disclosure'],
+  id: 'kit/disclosure', title: 'Disclosure', area: 'composer', kind: 'component', covers: ['kit.disclosure', 'kit.steps'],
   states: {
+    'steps alone, not started (a plan in a form)': stage(['variant'], ({ root }) => { fill(root, kit.steps([{ text: 'Move src/billing to integer cents', state: 'todo' }, { text: 'Round once per invoice', state: 'todo' }, { text: 'Open a draft PR', state: 'todo' }])); }, { width: 560 }),
     typical: stage(['typical'], ({ root }) => { fill(root, kit.disclosure({ summary: 'Read 6 files, ran 2 commands', steps: STEPS })); }, { width: 560 }),
     open: stage(['open'], ({ root }) => { fill(root, kit.disclosure({ summary: 'Read 6 files, ran 2 commands', steps: STEPS, open: true })); }, { width: 560 }),
     'work log': stage(['variant', 'open'], ({ root }) => { fill(root, kit.disclosure({ variant: 'worklog', summary: 'Worked for 59s: read 6 files, ran the tests', steps: [...STEPS.slice(0, 2), { text: 'Ran the tests', state: 'failed', time: '0:31' }], open: true })); }, { width: 560 }),

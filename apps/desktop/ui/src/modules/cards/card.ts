@@ -13,7 +13,7 @@
    it never jumps (the one height animation; under reduced motion it snaps). */
 import { emit } from '../../core/bus';
 import { nid, reduced } from '../../core/dom';
-import { holdOf, wireHold } from '@boopis/ui';
+import { holdOf, kit, wireHold } from '@boopis/ui';
 import { data as provider } from '../../data';
 import type { CardKind, CardOpts, CardSize } from '@boopis/ui';
 import { bot, expiryText, KINDS, parts } from './kinds';
@@ -24,6 +24,7 @@ import type { FormState } from './form';
 import { animate, easeToken, motion } from './motion';
 import type { Ctx, Data, Kind } from './types';
 import { blankValue, wireBlankOptions } from './options';
+import { asV7 } from '../session/s0';
 
 export interface CardActionDetail { kind: CardKind; action: string; data: Data; state: string; value: string | null | undefined; card: HxCard }
 export interface CardStateDetail { kind: CardKind; state: string; prev: string; data: Data; card: HxCard }
@@ -88,6 +89,8 @@ export class HxCard extends HTMLElement {
   connectedCallback(): void {
     if (!this.kind) return;
     LIVE.add(this);
+    /* a form is the kit's block: on a page that is not yet v7 (the store, connectors, first run) its card is a v7 island */
+    if (this.kind === 'form' && !this.hasAttribute('data-ui') && !this.parentElement?.closest('[data-ui="v7"]')) asV7(this);
     if (this.kind === 'approval' || this.kind === 'form') { this.tick(); this.timer = this.timer || window.setInterval(() => this.tick(), 1000); }
     if (this.state === 'holding' && typeof this.data.progress === 'number') requestAnimationFrame(() => { const h = this.holdBtn(); const c = holdOf(h); if (c) c.show(this.data.progress ?? 0); });
     watchFit(this);
@@ -126,6 +129,8 @@ export class HxCard extends HTMLElement {
     this.inlineOnly = this.size === 'inline' && !!this.K.inline;
     if (this.size === 'mini') this.innerHTML = '<div data-r="row"></div>';
     else if (this.inlineOnly) this.innerHTML = kind === 'blank' ? '<span data-r="row"></span>' : '<div data-r="row"></div>';
+    /* a form is the kit's AskCard block, drawn whole (form.ts): it names itself (a group labelled by its ask) */
+    else if (kind === 'form') this.innerHTML = '<div data-r="whole"></div>';
     else {
       this.innerHTML = '<div class="cd-side" data-r="side"></div><div class="cd-main"><div data-r="head"></div><div data-r="body"></div><div data-r="foot"></div></div>';
       if (this.size === 'popover') { this.setAttribute('role', 'dialog'); this.setAttribute('aria-modal', 'true'); }
@@ -232,7 +237,7 @@ export class HxCard extends HTMLElement {
     if (key === 'hold') t = live('[data-hold]');
     else if (key.indexOf('opt') === 0) t = live('[data-opt="' + key.slice(3) + '"]');
     else if (key) t = live('[data-action="' + key + '"]');
-    t = t || live('.cd-foot button') || live('.cd-mini, .cd-blank') || live('button');
+    t = t || live('.cd-foot button') || live('.k7-ask__answers .k7-chip') || live('.cd-mini, .cd-blank') || live('button');
     if (t) t.focus({ preventScroll: true });
     else { this.tabIndex = -1; this.focus({ preventScroll: true }); }
   }
@@ -258,7 +263,7 @@ export class HxCard extends HTMLElement {
     for (const a of this.querySelectorAll('[data-hx-attention]')) a.removeAttribute('data-hx-attention');
     if (owe || (this.kind === 'blank' && this.state === 'open' && this.size !== 'popover')) {
       const live = (sel: string): HTMLElement | undefined => Array.from(this.querySelectorAll<HTMLElement & { disabled?: boolean }>(sel)).find((x) => !x.closest('.cd-ghost') && !x.disabled);
-      const t = (this.kind === 'form' ? live('.cd-form .ui-input, .cd-form .cd-opt[tabindex="0"], .cd-form .ui-switch, .cd-form [data-action="signin"]') : undefined) || live('[data-hold]') || live('.cd-blank') || live('.cd-mini') || live('.ui-btn--primary') || live('.cd-foot button, .cd-rule button');
+      const t = (this.kind === 'form' ? live('.k7-ask__fields input:not([type=file]), .k7-ask__fields textarea, .k7-ask__fields [role=radio][tabindex="0"], .k7-ask__fields [role=checkbox], .k7-ask__fields .k7-sel, .k7-ask__choice, [data-action="signin"]') : undefined) || live('[data-hold]') || live('.cd-blank') || live('.cd-mini') || live('.ui-btn--primary') || live('.cd-foot button, .cd-rule button');
       if (t) t.setAttribute('data-hx-attention', '');
     }
     this.toggleAttribute('data-resolved', !!(K.resolved && K.resolved(c)));
@@ -275,6 +280,16 @@ export class HxCard extends HTMLElement {
 
   private hydrateCard(): void {
     const hold = this.holdBtn();
+    if (hold && !hold.dataset['cdWired'] && this.kind === 'form') {
+      /* a form's hold is the kit's (an AskCard's hold chip: kit wire.ts wireHold, wired with the block); holding is a card state too */
+      hold.dataset['cdWired'] = '1';
+      if (!hold.closest('[data-kit~="AskCard"]')) kit.wireHold(hold);
+      hold.addEventListener('ui:commit', (e) => { if (!this.act('approve')) e.preventDefault(); });
+      new MutationObserver(() => {
+        if (hold.hasAttribute('data-holding') && (this.state === 'open' || this.state === 'invalid')) this.setState('holding');
+        else if (!hold.hasAttribute('data-holding') && this.state === 'holding') this.setState('open');
+      }).observe(hold, { attributes: true, attributeFilter: ['data-holding'] });
+    }
     if (hold && !hold.dataset['cdWired']) {
       hold.dataset['cdWired'] = '1';
       wireHold(hold, { announce: (t) => this.announce(t) });
@@ -336,7 +351,7 @@ export class HxCard extends HTMLElement {
     const action = b.dataset['action'] ?? '';
     if (action === 'answer') value = blankValue(this);
     /* a form's own buttons run the form (its submit sends one event with the answer, not two) */
-    if (this.kind === 'form' && ['submit', 'paste', 'choose-file', 'remove-file', 'signin'].includes(action)) { this.K.act?.(this, action, { el: b }); return; }
+    if (this.kind === 'form' && ['submit', 'signin', 'scope', 'change'].includes(action)) { this.K.act?.(this, action, { el: b, value: b.dataset['value'] }); return; }
     this.act(b.dataset['action'] ?? '', { value, el: b });
   }
 

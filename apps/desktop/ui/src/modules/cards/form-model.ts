@@ -8,26 +8,27 @@ export interface KindTemplate {
   done: string | ((f: FormSpec, answer: string, raw: string) => string); cancelled?: string;
 }
 export const PERMISSION: Readonly<Record<string, readonly [label: string, receipt: string]>> = {
-  once: ['Allow once', 'Allowed once'],
-  session: ['Allow for this session', 'Allowed for this session'],
-  always: ['Always allow in this project', 'Always allowed in this project'],
-  deny: ['Deny', 'Denied']
+  once: ['Allow once', 'You allowed it once'],
+  session: ['Allow this session', 'You allowed it for this session'],
+  always: ['Always allow', 'You always allow it in this project'],
+  deny: ['Deny', 'You denied it']
 };
+/* the receipts are what you did, said back in one row ("You saved the key for OpenAI", REPASS.md 6d) */
 export const FORM_KINDS: Readonly<Record<string, KindTemplate>> = {
-  credential: { stamp: 'needs you', submit: 'Save key', busy: 'Saving to your keychain', done: (f) => f.receipt || 'Saved to your keychain' + (f.provider ? '. The ' + f.provider + ' provider is connected' : '') },
-  question: { stamp: 'waiting for you', submit: 'Answer', busy: 'Sending your answer', done: (_f, v) => 'Answered' + (v ? ': ' + v : '') },
-  approval: { stamp: 'needs you', submit: 'Hold to approve', hold: true, cancel: 'Deny', busy: 'Approving', done: () => 'Approved', cancelled: 'Denied' },
-  permission: { stamp: 'needs you', submit: 'Allow once', busy: 'Writing the rule', done: (_f, _v, raw) => PERMISSION[raw]?.[1] ?? 'Answered' },
-  signin: { stamp: 'needs you', submit: null, busy: 'Waiting for your browser', done: (f) => 'Signed in' + (f.provider ? ' to ' + f.provider : '') },
-  setup: { stamp: 'needs you', submit: 'Write config', busy: 'Writing the config', done: (f) => 'Wrote ' + (f.file || 'the config') },
-  connector: { stamp: 'needs you', submit: 'Install', hold: true, busy: 'Installing', done: (f) => f.receipt || 'Installed ' + (f.name || 'the connector') },
-  choice: { stamp: 'waiting for you', submit: 'Use this', busy: 'Saving', done: (_f, v) => 'Chose ' + v },
-  plan: { stamp: 'needs you', submit: 'Approve plan', cancel: 'Reject', busy: 'Starting the work', done: () => 'Plan approved', cancelled: 'Plan rejected' },
+  credential: { stamp: 'needs you', submit: 'Save key', busy: 'Saving to your keychain', done: (f) => f.receipt || 'You saved the key' + (f.provider ? ' for ' + f.provider : '') },
+  question: { stamp: 'needs you', submit: 'Answer', busy: 'Sending your answer', done: (_f, v) => (v ? 'You answered: ' + v : 'You answered') },
+  approval: { stamp: 'needs you', submit: 'Approve', hold: true, cancel: 'Deny', busy: 'Approving', done: () => 'You approved it', cancelled: 'Denied' },
+  permission: { stamp: 'needs you', submit: 'Allow once', busy: 'Writing the rule', done: (_f, _v, raw) => PERMISSION[raw]?.[1] ?? 'You answered', cancelled: 'Denied' },
+  signin: { stamp: 'needs you', submit: null, busy: 'Waiting for your browser', done: (f) => 'You signed in' + (f.provider ? ' to ' + f.provider : '') },
+  setup: { stamp: 'needs you', submit: 'Apply', hold: true, busy: 'Writing the config', done: (f) => 'You applied ' + (f.file || 'the config') },
+  connector: { stamp: 'needs you', submit: 'Add', hold: true, busy: 'Adding', done: (f) => f.receipt || 'You added ' + (f.name || 'the connector') },
+  choice: { stamp: 'needs you', submit: 'Use this', busy: 'Saving', done: (_f, v) => 'You chose ' + v },
+  plan: { stamp: 'needs you', submit: 'Approve plan', hold: true, cancel: 'Reject', busy: 'Starting the work', done: () => 'You approved the plan', cancelled: 'Rejected' },
   /** an endpoint of the person's own (ADR-0039): the card's first step is Test, the second saves what Test found */
-  endpoint: { stamp: 'needs you', submit: 'Test', busy: 'Asking the server', done: (f) => f.receipt || 'Saved', cancelled: 'Cancelled' },
+  endpoint: { stamp: 'needs you', submit: 'Test', busy: 'Asking the server', done: (f) => f.receipt || 'You saved the endpoint', cancelled: 'Cancelled' },
   feedback: { stamp: '', submit: 'Send', cancel: false, busy: 'Saving', done: () => 'Thanks. Stored for you only' },
-  /** a mod's colours (MODS.md section 3): not owed, so no stamp; Keep applies them, Reject leaves the theme as it is */
-  theme: { stamp: '', submit: 'Keep', cancel: 'Reject', busy: 'Applying', done: (f) => f.receipt || 'Kept', cancelled: 'Rejected' }
+  /** a mod's colours (MODS.md section 3): not owed, so no StatusWord; Keep applies them, Reject leaves the theme as it is */
+  theme: { stamp: '', submit: 'Keep', cancel: 'Reject', busy: 'Applying', done: (f) => f.receipt || 'You kept the colours', cancelled: 'Rejected' }
 };
 /** a form the UI answers itself: a theme card is Keep or Reject in the app's own theme, and no provider hears of it */
 export const isLocalForm = (d: Pick<FormSpec, 'kind'>): boolean => d.kind === 'theme';
@@ -88,10 +89,10 @@ export function answerText(d: FormSpec, vals: Values, teammateName: (id: string)
     if (p['x-secret'] || p['x-signin']) continue;
     const v = vals[name];
     if (isEmpty(v)) continue;
+    if (p['x-upload']) return (Array.isArray(v) ? v : [v]).map((x) => String((x as { name?: unknown }).name ?? '')).join(', ');
     if (Array.isArray(v)) return v.map((x) => optLabel(p, x)).join(', ');
     if (p['x-picker'] === 'teammate') { const n = teammateName(String(v)); if (n) return n; }
     if (p.type === 'boolean') return (p.title || name) + (v ? ' on' : ' off');
-    if (p['x-upload']) return String((v as { name?: unknown }).name ?? '');
     return p.enum ? optLabel(p, v) : String(v);
   }
   return '';

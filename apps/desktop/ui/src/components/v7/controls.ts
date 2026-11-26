@@ -121,17 +121,28 @@ export function switchHTML(o: SwitchOpts): string {
 /* ── Field (26): text, search (a pill), multi-line ── */
 export const FIELD_KINDS = ['text', 'search', 'multiline'] as const;
 export type FieldKind = typeof FIELD_KINDS[number];
-export interface FieldOpts { id: string; kind?: U<FieldKind>; label?: U<string>; optional?: U<boolean>; value?: U<string>; placeholder?: U<string>; error?: U<string>; disabled?: U<boolean>; keys?: U<string>; mono?: U<boolean>; rows?: U<number>; /** the accessible name where no label shows */ ariaLabel?: U<string>; attrs?: U<Attrs> }
+export interface FieldOpts { id: string; kind?: U<FieldKind>; label?: U<string>; optional?: U<boolean>; value?: U<string>; placeholder?: U<string>; error?: U<string>; disabled?: U<boolean>; keys?: U<string>; mono?: U<boolean>; rows?: U<number>; /** the accessible name where no label shows */ ariaLabel?: U<string>; attrs?: U<Attrs>;
+  /** a secret (a key, a token): typed unseen, with Show and Hide at the box's end (6d, derived: a form's credential) */ secret?: U<boolean>;
+  /** what the field is for, in one quiet line under it (6d, derived: a form field's description) */ hint?: U<string>;
+  /** a Field whose control is another kit part (OptionRows, a Segmented, a SelectorItem, a Switch, Swatches), as markup: the Field keeps its
+      label (named `<id>-label`, for the control's aria-labelledby), its hint and its error line (6d) */ control?: U<string>;
+  /** the label and the control on one line (a Switch) */ inline?: U<boolean>;
+  /** a single-line field's kind of text, for the platform's keyboard and checks */ inputType?: U<'email' | 'url'> }
 export function field(o: FieldOpts): string {
-  const k = o.kind ?? 'text', err = o.error ? o.id + '-err' : null;
-  const common = attrs({ id: o.id, placeholder: o.placeholder, disabled: !!o.disabled, 'aria-invalid': o.error ? 'true' : null, 'aria-describedby': err, 'aria-label': o.label ? null : o.ariaLabel ?? o.placeholder, ...(o.attrs ?? {}) });
+  const k = o.kind ?? 'text', err = o.error ? o.id + '-err' : null, hint = o.hint ? o.id + '-hint' : null;
+  const common = attrs({ id: o.id, placeholder: o.placeholder, disabled: !!o.disabled, 'aria-invalid': o.error ? 'true' : null, 'aria-describedby': [hint, err].filter(Boolean).join(' ') || null, 'aria-label': o.label ? null : o.ariaLabel ?? o.placeholder, ...(o.secret ? { autocomplete: 'off', spellcheck: 'false', autocapitalize: 'off' } : {}), ...(o.attrs ?? {}) });
   const control = k === 'multiline'
     ? '<textarea class="' + cls('k7-field__input', o.mono && 'k7-mono') + '" rows="' + (o.rows ?? 3) + '"' + common + '>' + esc(o.value ?? '') + '</textarea>'
-    : '<input class="' + cls('k7-field__input', o.mono && 'k7-mono') + '" type="' + (k === 'search' ? 'search' : 'text') + '"' + attrs({ value: o.value }) + common + '>';
-  const box = '<span class="k7-field__box"' + attrs({ 'data-kind': k }) + '>' + (k === 'search' ? glyph('search', 'k7-field__glyph') : '') + control + (o.keys ? kbd({ keys: o.keys, inPill: k === 'search' }) : '') + '</span>';
-  return '<div class="k7-field"' + kitAttrs('Field', { 'data-kind': k, 'data-error': o.error ? '' : null, 'data-disabled': o.disabled ? '' : null }) + '>' +
-    (o.label ? '<label class="k7-field__label" for="' + esc(o.id) + '">' + esc(o.label) + (o.optional ? ' <span class="k7-field__opt">(Optional)</span>' : '') + '</label>' : '') +
-    box + (o.error ? '<p class="k7-field__error" id="' + err + '">' + esc(o.error) + '</p>' : '') + '</div>';
+    : '<input class="' + cls('k7-field__input', (o.mono || o.secret) && 'k7-mono') + '" type="' + (o.secret ? 'password' : k === 'search' ? 'search' : o.inputType ?? 'text') + '"' + attrs({ value: o.value }) + common + '>';
+  /* a secret's Show and Hide: a ghost Button at the box's end, pressed while the secret shows */
+  const reveal = o.secret ? button({ label: 'Show', variant: 'ghost', size: 28, attrs: { 'data-reveal': '', 'aria-pressed': 'false', 'aria-controls': o.id, 'aria-label': 'Show ' + (o.label ?? 'the secret').toLowerCase() } }) : '';
+  const box = '<span class="k7-field__box"' + attrs({ 'data-kind': k, 'data-secret': o.secret ? '' : null }) + '>' + (k === 'search' ? glyph('search', 'k7-field__glyph') : '') + control + reveal + (o.keys ? kbd({ keys: o.keys, inPill: k === 'search' }) : '') + '</span>';
+  const opt = o.optional ? ' <span class="k7-field__opt">(Optional)</span>' : '';
+  const label = o.control != null
+    ? (o.label ? '<span class="k7-field__label" id="' + esc(o.id) + '-label">' + esc(o.label) + opt + '</span>' : '')
+    : (o.label ? '<label class="k7-field__label" for="' + esc(o.id) + '">' + esc(o.label) + opt + '</label>' : '');
+  return '<div class="k7-field"' + kitAttrs('Field', { 'data-kind': o.control != null ? 'control' : k, 'data-inline': o.inline ? '' : null, 'data-error': o.error ? '' : null, 'data-disabled': o.disabled ? '' : null }) + '>' +
+    (o.inline ? '<span class="k7-field__line">' + label + (o.control ?? '') + '</span>' : label + (o.control ?? box)) + (o.hint ? '<p class="k7-field__hint" id="' + hint + '">' + esc(o.hint) + '</p>' : '') + (o.error ? '<p class="k7-field__error" id="' + err + '">' + esc(o.error) + '</p>' : '') + '</div>';
 }
 
 /* ── Tooltip (29): the name, then the keys. A [data-tip] control shows it on hover and focus (tooltip.ts places it); this
@@ -139,6 +150,20 @@ export function field(o: FieldOpts): string {
 export interface TooltipOpts { label: string; keys?: U<string> }
 export function tooltip(o: TooltipOpts): string {
   return '<span class="k7-tip" role="tooltip"' + kitAttrs('Tooltip') + '><span>' + esc(o.label) + '</span>' + (o.keys ? kbd({ keys: o.keys }) : '') + '</span>';
+}
+
+/* ── Swatches (6d, derived from P1's accent candidates): colours as a row of circles, each named; `choose` makes it one choice (a radio
+   group, the chosen circle ringed in the focus colour), else it only shows them ── */
+export interface SwatchesOpts { label: string; items: readonly { label: string; hex: string; value?: U<string> }[]; choose?: U<boolean>; value?: U<string>; attrs?: U<Attrs> }
+export function swatches(o: SwatchesOpts): string {
+  const pick = !!o.choose;
+  return '<div class="k7-swatches"' + kitAttrs('Swatches', { role: pick ? 'radiogroup' : 'list', 'aria-label': o.label, ...(o.attrs ?? {}) }) + '>' + o.items.map((it, i) => {
+    const v = it.value ?? it.hex, on = pick && o.value === v;
+    const dot = '<i class="k7-swatches__dot" aria-hidden="true" style="background:' + esc(it.hex) + '"></i>';
+    return pick
+      ? '<button class="k7-reset k7-swatches__item"' + partAttrs('Swatch', { type: 'button', role: 'radio', 'aria-checked': String(on), tabindex: on || (o.value == null && i === 0) ? '0' : '-1', 'data-value': v, 'aria-label': it.label, 'data-tip': it.label }) + '>' + dot + '</button>'
+      : '<span class="k7-swatches__item"' + partAttrs('Swatch', { role: 'listitem', 'aria-label': it.label + ' ' + it.hex, 'data-tip': it.label }) + '>' + dot + '</span>';
+  }).join('') + '</div>';
 }
 
 export { textOr };

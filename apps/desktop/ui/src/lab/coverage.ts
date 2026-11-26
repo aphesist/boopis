@@ -44,6 +44,7 @@ export const MIN_SURFACE_STATES = 3;
 export const STATE_EXCUSED: Readonly<Record<string, Readonly<Partial<Record<Tag, string>>>>> = {
   'components/keys': { empty: 'a key needs a key' },
   'cards/form-theme': { error: 'a theme card cannot be invalid: Keep or Reject' },
+  'cards/form-permission': { error: 'a permission is the AskCard: it has no field to get wrong' },
   'cards/form-signin': { error: 'a sign-in has no field to get wrong; its failure is the host\'s' },
   'cards/form-connector': { error: 'an install has no field; its failure is the receipt' }
 };
