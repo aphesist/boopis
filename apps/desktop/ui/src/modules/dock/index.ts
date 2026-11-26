@@ -217,7 +217,7 @@ let idleTimer = 0;
 function setCompact(on: boolean): void {
   if (S.compact === on || (on && S.open)) return;
   S.compact = on;
-  if (on) S.hover = null;
+  if (on) { awake(S.hover, false); S.hover = null; }
   setKind(on ? 'compact' : 'row');
   layoutRow();
 }
@@ -351,7 +351,7 @@ function openPanel(open: NonNullable<Open>, focus = true): void {
   S.open = open;
   drawPanel();
   setKind('open');
-  S.hover = null;
+  awake(S.hover, false); S.hover = null;
   layoutRow();
   document.getElementById('hx-app')?.setAttribute('data-dock-open', open.kind);
   if (focus) {
@@ -417,7 +417,7 @@ function follow(animate: boolean): void {
   } else {
     if (S.open) closePanel(false);
     clearTimeout(idleTimer);
-    S.hover = null; S.focus = null;
+    awake(S.hover, false); S.hover = null; S.focus = null;
     const done = (): void => { if (my !== S.seq) return; S.shown = false; X.root.style.visibility = 'hidden'; X.root.setAttribute('inert', ''); X.root.setAttribute('aria-hidden', 'true'); emitDock(); };
     if (!animate) { X.root.classList.add('is-snap'); delete X.root.dataset['in']; void X.root.offsetWidth; X.root.classList.remove('is-snap'); done(); return; }
     delete X.root.dataset['in'];
@@ -450,7 +450,18 @@ function emitDock(): void {
 
 /* ───────── input ───────── */
 function visibleOrbs(): HTMLButtonElement[] { return S.rank.slice(0, S.fitN).map((id) => X.orbs.get(id)).filter((b): b is HTMLButtonElement => !!b); }
-function setHover(id: string | null): void { if (S.hover === id) return; S.hover = id; layoutRow(); }
+function setHover(id: string | null): void { if (S.hover === id) return; awake(S.hover, false); S.hover = id; awake(id, true); layoutRow(); }
+/** a hovered bot comes alive out of its pose, and settles back into it when the pointer leaves (ORBS.md section 23: a hover is a state
+    like any other, and the home pose holds only at rest). A bot already in a state keeps it. Reduced motion: it stays as it is */
+function awake(id: string | null, on: boolean): void {
+  const b = botById(id), o = id ? X.orbs.get(id)?.querySelector<HTMLElement & { _hover?: boolean }>('orb-avatar') : null;
+  if (!b || !o) return;
+  const r = X.composers.get(b.id)?.listening ? 'listening' : ui.botState(b).reaction;
+  if (!on) { if (o._hover) { o._hover = false; restReact(o, r); } return; }   /* only a bot this woke is put back */
+  if (r !== 'idle' || reduced()) return;
+  o._hover = true;   /* restReact leaves a woken orb alone until the pointer has left */
+  o.setAttribute('reaction', 'idle'); o.setAttribute('idle-motion', 'lively');
+}
 /** the last orb a pointer clicked, and when: a double-click opens that bot's full chat, wherever its second click lands (the first
     click opened the card, and the row under the pointer has moved since) */
 let lastClick: { id: string; t: number } | null = null;

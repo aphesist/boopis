@@ -98,6 +98,21 @@ describe('the row', () => {
     expect(orb('kai').style.getPropertyValue('--s')).toBe('40px');
     expect(q('#hx-dock .k7-dock__cap').textContent).toBe('kai' + 'idle');
   });
+  it('a bot at rest holds the pose; hovered it comes alive, and settles back when the pointer leaves; a bot in a state keeps its state', () => {
+    mount({ needs: ['nina'], working: ['moss'] });
+    const face = (id: string): string => { const o = q('orb-avatar', orb(id)); return o.getAttribute('reaction') + ' ' + o.getAttribute('idle-motion'); };
+    expect(face('kai')).toBe('pose off');
+    expect(face('nina').startsWith('pose')).toBe(false);
+    const working = face('moss');
+    expect(working.startsWith('pose')).toBe(false);
+    orb('kai').dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
+    expect(face('kai')).toBe('idle lively');
+    orb('moss').dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
+    expect(face('kai')).toBe('pose off');
+    expect(face('moss')).toBe(working);
+    q('#hx-dock .k7-dock__row').dispatchEvent(new MouseEvent('pointerleave'));
+    expect(face('moss')).toBe(working);
+  });
   it('the ask pill says who needs you, or how many', () => {
     mount({ needs: ['nina', 'moss'] });
     expect(q('#hx-dock .k7-dock__ask').textContent).toBe('2 need you');

@@ -310,7 +310,8 @@
           1140,
           82
         ]
-      }
+      },
+      "note": "The hovered bot and its neighbour keep the face scale the dock's bots wear at rest (ORBS.md: 1.25 for orbs of 44 and under, the row at 40): a face that shrank as its bot grew would pop. The board's still draws them at 52 and 46 with no face scale; the difference is inside those two orbs."
     },
     "K03-asks": {
       "title": "Board K03: the asks open (the stack over the row, 640 x 432)",
@@ -330,7 +331,7 @@
           442
         ]
       },
-      "note": "The board's second ask is a question with three answers, which is stale (owner: bots ask only through approvals): the app draws moss's ask as an approval, so that card differs by its Well and its answers."
+      "note": "The board's second ask is a question with three answers, which is stale (owner: bots ask only through approvals): the app draws moss's ask as an approval, so that card differs by its Well and its answers. The board keeps its fixed order with moss fourth; the app's order is needs you first, so moss is second. The standing answer reads \"Always allow\" where the board writes \"Always for staging\" (the rules engine names the scope; it is shown only with `approval-rules`). The Well keeps the kit's concentric corner (14) where the board draws 10."
     },
     "K04-card": {
       "title": "Board K04: a bot's card (its head, its messages, its ask, its composer)",
@@ -349,7 +350,8 @@
           1140,
           442
         ]
-      }
+      },
+      "note": "The standing answer reads \"Always allow\" where the board writes \"Always for staging\" (the rules engine names the scope; it is shown only with `approval-rules`, which this fixture switches on). The Well keeps the kit's concentric corner (14) where the board draws 10."
     },
     "K05-many": {
       "title": "Board K05: many bots (the six that fit, then \"13 more\")",
@@ -388,7 +390,8 @@
           1140,
           174
         ]
-      }
+      },
+      "note": "The session's turn runs, so its composer carries Stop (owner, 25 November), which the board does not draw; the region is measured to show the composer 24 from the window's foot with no dock under it."
     },
     "K07-centred": {
       "title": "Board K07: the dock centred in the window",
