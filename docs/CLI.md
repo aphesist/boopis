@@ -199,6 +199,10 @@ A second `apply` of the same file finds nothing to do. Things are done in this o
 boards, jobs. An action that fails is reported, what needs it is skipped, and the rest goes on, so running it again finishes
 the job. Exit 1 when any action failed or the plan has problems.
 
+`apply` is the owner's alone (B47, H5, ADR-0062): run by a process the engine started (its environment, or an ancestor's,
+holds the engine's launch marker `BOOPIS_ENGINE_LAUNCH`), every form of it, `--dry-run` included, exits 2 with "A bot
+cannot change the team. The owner applies plans in boopis." before the file is read. `check` and `export` stay open.
+
 What each part does:
 
 - **Bots**, by name. A new bot is made the way the Bots form makes it: its profile, boopis's record (look, Governed switch),

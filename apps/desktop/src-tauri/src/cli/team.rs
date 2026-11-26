@@ -24,7 +24,12 @@ pub struct Ctx<'a> {
     pub err: &'a mut dyn Write,
     /// Standard input (for `-`).
     pub stdin: &'a dyn Fn() -> std::io::Result<String>,
+    /// Why the caller is a bot's process (`boopis_peer::this_process_is_a_bot`), `None` for the owner's own (B47, H5).
+    pub bot_caller: Option<&'static str>,
 }
+
+/// What a bot reads when it runs an owner-only command (B47, H5).
+pub const BOT_REFUSAL: &str = "A bot cannot change the team. The owner applies plans in boopis.";
 
 fn fail(ctx: &mut Ctx<'_>, line: &str) {
     let _ = writeln!(ctx.err, "boopis: {line}");
@@ -60,7 +65,15 @@ pub async fn team(args: &[String], ctx: &mut Ctx<'_>) -> i32 {
     };
     match sub.as_str() {
         "check" => check(rest, ctx),
-        "apply" => apply_cmd(rest, ctx).await,
+        "apply" => {
+            // B47, H5: every form of apply is the owner's; a process the engine started is refused before anything is read
+            if let Some(rule) = ctx.bot_caller {
+                tracing::info!(rule, "boopis team apply refused a bot's process (B47)");
+                fail(ctx, BOT_REFUSAL);
+                return 2;
+            }
+            apply_cmd(rest, ctx).await
+        }
         "export" => export_cmd(rest, ctx).await,
         other => {
             fail(

@@ -213,6 +213,38 @@ fn judge_one(table: &dyn Table, gateways: &[Pinned], groups: &[String], pid: u32
     Verdict::Owner
 }
 
+/// Whether the calling process is a bot's (an owner-only command's self-check, H5): its own environment holds the
+/// engine's launch marker (`own_marker`), or an ancestor was started with it (every gateway the host launches carries it,
+/// so a process under a gateway has one even after clearing its own environment). An ancestor that cannot be read ends
+/// the walk without a verdict: the command has no host state, so only what it can see says bot.
+#[must_use]
+pub fn bot_caller(table: &dyn Table, own_marker: bool, own_pid: u32) -> Option<Rule> {
+    if own_marker {
+        return Some(Rule::Environment);
+    }
+    let mut at = own_pid;
+    for _ in 0..MAX_HOPS {
+        match table.parent(at) {
+            Some(parent) if parent > 1 && parent != at => at = parent,
+            _ => return None,
+        }
+        if table.has_var(at, ENGINE_LAUNCH_ENV) == Some(true) {
+            return Some(Rule::Ancestry);
+        }
+    }
+    None
+}
+
+/// [`bot_caller`] for this very process, over the operating system's table.
+#[must_use]
+pub fn this_process_is_a_bot() -> Option<Rule> {
+    bot_caller(
+        &Os,
+        std::env::var_os(ENGINE_LAUNCH_ENV).is_some(),
+        std::process::id(),
+    )
+}
+
 /// The operating system's table.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Os;

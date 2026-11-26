@@ -9,6 +9,10 @@ struct Out {
 }
 
 async fn go(model: &Model, args: &[&str]) -> Out {
+    go_as(model, args, None).await
+}
+
+async fn go_as(model: &Model, args: &[&str], bot_caller: Option<&'static str>) -> Out {
     let args: Vec<String> = args.iter().map(|s| (*s).to_owned()).collect();
     let (mut out, mut err) = (Vec::new(), Vec::new());
     let stdin = || Ok(String::new());
@@ -18,6 +22,7 @@ async fn go(model: &Model, args: &[&str]) -> Out {
             out: &mut out,
             err: &mut err,
             stdin: &stdin,
+            bot_caller,
         };
         team(&args, &mut ctx).await
     };
@@ -130,4 +135,30 @@ async fn check_reads_a_file_without_the_engine_and_usage_is_code_two() {
     assert_eq!(go(&model, &["nope"]).await.code, 2);
     assert_eq!(go(&model, &["apply"]).await.code, 2);
     assert_eq!(go(&model, &["apply", "x", "--wat"]).await.code, 2);
+}
+
+/// B47, H5: a process the engine started cannot apply a team, in any form, and nothing is read or changed.
+#[tokio::test]
+async fn a_bot_s_process_cannot_apply_a_team() {
+    for rule in ["environment", "ancestry"] {
+        for args in [
+            vec!["apply", &file()[..]],
+            vec!["apply", &file()[..], "--dry-run"],
+            vec!["apply", &file()[..], "--prune", "--json"],
+        ] {
+            let model = Model::new(base());
+            let o = go_as(&model, &args, Some(rule)).await;
+            assert_eq!(o.code, 2, "{args:?}: {}{}", o.out, o.err);
+            assert!(o.err.contains(BOT_REFUSAL), "{}", o.err);
+            assert!(model.ran().is_empty(), "{args:?}");
+        }
+    }
+    // checking a file changes nothing, so a bot may still do it
+    let model = Model::new(base());
+    assert_eq!(
+        go_as(&model, &["check", &file()], Some("environment"))
+            .await
+            .code,
+        0
+    );
 }

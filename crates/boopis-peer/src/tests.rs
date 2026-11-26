@@ -190,6 +190,21 @@ fn a_parent_chain_that_loops_is_refused() {
 }
 
 #[test]
+fn an_owner_only_command_knows_a_bot_caller_by_its_marker_or_an_ancestor_s() {
+    use super::bot_caller;
+    let mut t = table();
+    assert_eq!(bot_caller(&t, false, 300), None, "the owner's terminal");
+    assert_eq!(bot_caller(&t, true, 300), Some(Rule::Environment));
+    // the gateway was launched with the marker; its tool cleared its own environment (env -i)
+    t.procs.get_mut(&GATEWAY).unwrap().env = Some(vec![format!("{ENGINE_LAUNCH_ENV}=n0nce")]);
+    assert_eq!(bot_caller(&t, false, 201), Some(Rule::Ancestry));
+    assert_eq!(bot_caller(&t, false, 300), None);
+    // an ancestor that cannot be read says nothing either way
+    t.procs.get_mut(&200).unwrap().parent = None;
+    assert_eq!(bot_caller(&t, false, 201), None);
+}
+
+#[test]
 fn the_words_the_audit_records() {
     assert_eq!(Rule::Ancestry.word(), "ancestry");
     assert_eq!(Rule::Environment.word(), "environment");
