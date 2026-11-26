@@ -48,23 +48,30 @@ from .data import Defaults
 from .rules import ResolvedPath, path_spec_matches, paths_of, resolve_path
 from .types import Decision, SessionPolicy, ToolCall, block
 
-__all__ = ["RULE", "denied_locations", "denied_read"]
+__all__ = ["MAX_STRING", "RULE", "TOKENS", "PathScan", "denied_locations", "denied_read"]
 
 RULE = "denied_read_paths"  # the rule's name in the ledger and in ``Decision.rule``
 SOCKET_ENV = "BOOPIS_HOST_SECRETS_SOCKET"  # the host's secret socket (``hostsecrets.channel.SOCKET_ENV``)
 _REASON = "denied_read"
 _MESSAGE = (
-    "Blocked: this call would read a path that the agent is never allowed to read (boopis's own host channel or "
-    "journal key). Nothing was read. Do not retry it another way; work on the project's files instead."
+    "Blocked: this call would read a path that the agent is never allowed to read (boopis's own host channel, the "
+    "engine's control socket or the journal key). Nothing was read. Do not retry it another way; work on the project's "
+    "files instead."
 )
 _GLOB_CHARS = re.compile(r"[*?\[]")
 _ESCAPE = re.compile(r"([*?\[])")
-_TOKENS = re.compile(r"[\s;|&<>()'\"`=,{}]+")
-_MAX_STRING = 1024
+TOKENS = re.compile(r"[\s;|&<>()'\"`=,{}]+")
+MAX_STRING = 1024
 _MAX_SCRIPT = 100_000
 _MAX_DEPTH = 4
 _JOURNAL_KEY = ("boopis", "journals", ".hx-journal-key")  # <profile home>/boopis/journals/.hx-journal-key (hx-txn)
 _RENDEZVOUS = ("boopis", "host-channel.json")  # what older hosts wrote in <hermes home>/boopis/
+_CLIENT_ENDPOINT = "client-endpoint"  # the local API's address (B47 H1)
+_CONTROL_SOCKET = "gateway.sock"  # the engine's control socket in a home (B47 H1)
+_CONTROL_POINTER = "gateway.sock.path"  # the pointer the engine leaves when it binds elsewhere
+_ACTIVITY_POINTER = ("boopis", "activity.json")  # names the host's activity socket, under the engine's root
+_HOST_SOCKETS = ("host-ops.sock", "team-ops.sock", "activity.sock")  # beside the secret socket
+_MAX_POINTER = 4096
 _CLIENT_TOKEN = "client-token"  # noqa: S105 - a file name, not a secret: the local API's token, in the app's data folder, beside the engine's root (ADR-0045)
 
 
@@ -81,11 +88,21 @@ def denied_locations(home: str, root: str, env: Mapping[str, str]) -> tuple[str,
     for base in homes:
         found.append(os.path.join(base, *_JOURNAL_KEY))
         found.append(os.path.join(base, *_RENDEZVOUS))
+        # B47 H1: the engine's control socket mints tickets for any process of the owner; a home too long for a socket
+        # path makes the engine bind elsewhere and leave a pointer, whose target is denied too
+        found.append(os.path.join(base, _CONTROL_SOCKET))
+        found.append(os.path.join(base, _CONTROL_POINTER))
+        found.extend(_pointer_target(os.path.join(base, _CONTROL_POINTER)))
     if root:
-        found.append(os.path.join(os.path.dirname(os.path.abspath(root)), _CLIENT_TOKEN))  # the local API's token
+        app_data = os.path.dirname(os.path.abspath(root))
+        found.append(os.path.join(app_data, _CLIENT_TOKEN))  # the local API's token
+        found.append(os.path.join(app_data, _CLIENT_ENDPOINT))  # and where to send it (B47 H1)
+        found.append(os.path.join(root, *_ACTIVITY_POINTER))
     socket = env.get(SOCKET_ENV, "").strip()
     if socket:
         found.append(socket)
+        # the host's other channels live in the secret socket's folder (B47 H1)
+        found.extend(os.path.join(os.path.dirname(socket), name) for name in _HOST_SOCKETS)
     out: dict[str, None] = {}
     for loc in found:
         for form in (os.path.abspath(os.path.expanduser(loc)), os.path.realpath(os.path.expanduser(loc))):
@@ -93,13 +110,25 @@ def denied_locations(home: str, root: str, env: Mapping[str, str]) -> tuple[str,
     return tuple(out)
 
 
+def _pointer_target(pointer: str) -> list[str]:
+    """The socket a ``gateway.sock.path`` pointer names, when it names an absolute path; nothing otherwise."""
+    try:
+        with open(pointer, encoding="utf-8") as f:
+            text = f.read(_MAX_POINTER).strip()
+    except (OSError, UnicodeDecodeError):
+        return []
+    return [text] if text.startswith("/") and "\0" not in text and "\n" not in text else []
+
+
 def denied_read(call: ToolCall, defaults: Defaults, session: SessionPolicy) -> Decision | None:
     """A block when ``call`` would read a denied path, else None. An error is ``check``'s to turn into a block."""
-    scan = _Scan((*defaults.denied_read_defaults, *session.denied_read), session, defaults)
+    scan = PathScan((*defaults.denied_read_defaults, *session.denied_read), session, defaults)
     return block(_MESSAGE, _REASON, RULE) if scan.call(call) else None
 
 
-class _Scan:
+class PathScan:
+    """One call judged against globs and concrete places (``policy.protections`` reuses it for governance files)."""
+
     def __init__(self, globs: tuple[str, ...], session: SessionPolicy, defaults: Defaults) -> None:
         self._globs = globs
         self._root = session.cwd
@@ -146,7 +175,7 @@ class _Scan:
             return False
         if key in d.denied_read_keys:
             return "\0" not in text and self._path(text, folder=True)
-        if len(text) > _MAX_STRING or "\n" in text or "\0" in text or not _pathlike(text):
+        if len(text) > MAX_STRING or "\n" in text or "\0" in text or not _pathlike(text):
             return False
         return self._path(text, folder=False)
 
@@ -217,7 +246,7 @@ class _Scan:
                     if piece and self._path(piece, folder=True, base=cwd):
                         return True
         # also when it parsed: quotes and ``$(...)`` can hide a word from the split
-        return any(t and _pathlike(t) and self._path(t, folder=False) for t in _TOKENS.split(text))
+        return any(t and _pathlike(t) and self._path(t, folder=False) for t in TOKENS.split(text))
 
 
 def _pathlike(text: str) -> bool:

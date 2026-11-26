@@ -6,7 +6,8 @@
 Order, first to last:
 
 0. a call that would read a ``denied_read_paths`` path blocks, in both modes, before anything can allow it (a hard deny,
-   never an ask: ``policy/denied.py``);
+   never an ask: ``policy/denied.py``); then, for a session that runs for a bot, the host protections (B47,
+   ``policy/protections.py``): a call that would answer for the owner or change a governance file blocks;
 1. an invalid configuration allows read-only tools only;
 2. a ``deny`` rule blocks (any source; deny beats ask beats allow);
 3. a write to a protected path blocks;
@@ -28,6 +29,9 @@ Order, first to last:
 8. otherwise the configured default (``allow`` unless set) applies;
 9. a bot's ``kanban_create`` that would be allowed is filed as one card per job, ordered by ``parents``, in the
    project's folder (``policy/kanban.py``): a ``modify``, or a refusal when its text waits for work it does not name.
+
+A bot whose engine settings approve cards without a person (B47 H7, ``protections.approvals_problem``) has every ask
+refused instead.
 
 Any exception blocks (fail closed).
 """
@@ -75,6 +79,10 @@ def check(call: ToolCall, session: SessionPolicy) -> Decision:
     """Allow, block, ask a human, or modify. Never raises."""
     try:
         decision = careful.lift(_check(call, session, load_defaults()), session)
+        if decision.kind == "approve" and session.bot is not None and session.approvals_problem:
+            from .protections import approvals_off_block
+
+            return approvals_off_block(session.approvals_problem)
         if decision.kind == "allow" and call.tool == "kanban_create":
             from .kanban import decide as decide_card
 
@@ -89,6 +97,12 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
     denied = denied_read(call, defaults, session)
     if denied is not None:
         return denied
+    if session.bot is not None:
+        from .protections import decide as protect
+
+        protected_by_host = protect(call, session, defaults)
+        if protected_by_host is not None:
+            return protected_by_host
     if session.config_error:
         confined = session.mode == "governed" and call.tool in defaults.workspace_confined_tools
         if call.tool in defaults.read_only_tools and call.tool not in defaults.network_tools:

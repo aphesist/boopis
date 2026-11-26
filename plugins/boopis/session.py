@@ -171,6 +171,12 @@ class Runtime:
             self._defaults_given.add(name)
         return rules_for(home, root)
 
+    def approvals_problem(self) -> str:
+        """Why this bot profile's engine settings would approve a card without a person (B47 H7), ``""`` when none."""
+        from .policy.protections import approvals_problem
+
+        return approvals_problem(self.home)
+
     def boards(self) -> Callable[[str | None], str | None]:
         """A kanban board's ``default_workdir``, asked of the engine's CLI in the root home and kept a minute."""
         if self.board_folders is None:
@@ -286,6 +292,7 @@ class Runtime:
         base = replace(
             base,
             bot=bot,
+            approvals_problem=self.approvals_problem() if bot is not None else "",
             asked_by=asked_by(caller.state.origin),
             origin=caller.state.origin,
             board_folder=self.boards() if bot is not None else None,

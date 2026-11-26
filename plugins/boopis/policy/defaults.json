@@ -278,13 +278,39 @@
     "//**/.hx-journal-key",
     "//**/boopis/journals/**"
   ],
-  "denied_read_paths_comment": "Paths no tool of the agent may read: the desktop host's secret socket, the rendezvous file older hosts wrote (it held the channel token), the key that vouches for hx's journals, and the local API's token (beside the engine's root in the app's data folder: whoever reads it can answer the owner's approvals, ADR-0045, ADR-0050). Absolute globs (`//` prefix), like protected_extra's; the host's own peer check does not depend on this list.",
+  "denied_read_paths_comment": "Paths no tool of the agent may read: the desktop host's secret socket, the rendezvous file older hosts wrote (it held the channel token), the key that vouches for hx's journals, the local API's token (beside the engine's root in the app's data folder: whoever reads it can answer the owner's approvals, ADR-0045, ADR-0050), and (B47, H1) the local API's address file, the engine's control socket and its pointer (it mints tickets for any process of the owner), the host-ops and activity sockets and the activity pointer. Absolute globs (`//` prefix), like protected_extra's; the host's own peer check does not depend on this list.",
   "denied_read_paths": [
     "//**/boopis/host.sock",
     "//**/boopis/**/host.sock",
     "//**/boopis/host-channel.json",
     "//**/.hx-journal-key",
-    "//**/dev.aphesist.boopis/client-token"
+    "//**/dev.aphesist.boopis/client-token",
+    "//**/dev.aphesist.boopis/client-endpoint",
+    "//**/gateway.sock",
+    "//**/gateway.sock.path",
+    "//**/boopis/host-ops.sock",
+    "//**/boopis/**/host-ops.sock",
+    "//**/boopis/team-ops.sock",
+    "//**/boopis/**/team-ops.sock",
+    "//**/boopis/activity.sock",
+    "//**/boopis/**/activity.sock",
+    "//**/boopis/activity.json"
+  ],
+  "governance_write_paths_comment": "Files a bot's session may not change by any tool (B47, H2, docs/specs/host-protections.md section 4): the rules list, a bot's record and the once-only records, the team's budget, the engine's settings, and the app's audit trail, plans and held room messages. Reading them stays allowed. The engine's config.yaml at the root and the plugin's installed copies are computed from the engine's root (policy/protections.py), so a project that holds boopis's source is not caught. The owner's own sessions are not judged by this list.",
+  "governance_write_paths": [
+    "//**/boopis/rules.json",
+    "//**/boopis/rules.json.lock",
+    "//**/boopis/rules.json.tmp",
+    "//**/profiles/*/boopis/bot.json",
+    "//**/boopis/bot-defaults.json",
+    "//**/boopis/bot-skills.json",
+    "//**/boopis/bot-toolsets.json",
+    "//**/boopis/budget.json",
+    "//**/profiles/*/config.yaml",
+    "//**/dev.aphesist.boopis/audit/**",
+    "//**/dev.aphesist.boopis/house/**",
+    "//**/dev.aphesist.boopis/room-holds.json",
+    "//**/dev.aphesist.boopis/local-api.json"
   ],
   "denied_read_path_keys": [
     "path",

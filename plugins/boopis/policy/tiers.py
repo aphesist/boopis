@@ -64,6 +64,7 @@ class TierData:
     presets: Mapping[str, Mapping[str, str]]
     answer_markers: tuple[str, ...] = ()
     answer_slash: tuple[str, ...] = ()
+    answer_pairs: tuple[tuple[str, str], ...] = ()
     answer_text_keys: frozenset[str] = frozenset()
 
     def category(self, cid: str) -> Category | None:
@@ -89,6 +90,7 @@ def load() -> TierData:
     return TierData(
         answer_markers=tuple(str(m).lower() for m in answer.get("markers", ())),
         answer_slash=tuple(str(m).lower() for m in answer.get("slash", ())),
+        answer_pairs=tuple((str(a).lower(), str(b).lower()) for a, b in answer.get("pairs", ())),
         answer_text_keys=frozenset(answer.get("text_keys", ())),
         categories=cats,
         quiet_tools=frozenset(raw["quiet_tools"]),
@@ -217,10 +219,7 @@ def decide(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
     bot = session.bot
     if bot is None:
         return None
-    data = load()
-    refused = owner_answer(call, defaults, data, bot.name)
-    if refused is not None:
-        return refused
+    data = load()  # the owner-answer guard ran before this, in step 0 (``policy.protections``)
     tiers = effective(bot, data)
     cats = categories(call, defaults, session.cwd, data)
     judged: list[tuple[str, str]] = [(c, tiers.get(c, "ask")) for c in cats]
@@ -256,14 +255,17 @@ def owner_answer(call: ToolCall, defaults: Defaults, data: TierData, bot: str) -
     ``form.submit``, the local API's approvals route or its token, a ticket from the engine's CLI), or a message whose
     first word answers an approval on a chat platform, is refused. A best effort over the words of a call, not a
     boundary: the boundary is that a bot holds no ticket and cannot read the local API's token
-    (``denied_read_paths``)."""
+    (``denied_read_paths``), and the host's peer check on the local API (B47, H4). B47 (H3) adds the engine's control
+    socket, owner-only commands and the local API's owner-voice routes (``pairs``: both words, in order)."""
     for key, value in call.args.items():
         if not isinstance(value, str) or not value:
             continue
-        low = value.lower()
+        low = " ".join(value.lower().split())
         if key in defaults.denied_read_script_keys or key in ("url", "uri", "endpoint"):
-            hit = next((m for m in data.answer_markers if m in low), None)
-            if hit is not None:
+            hit = any(m in low for m in data.answer_markers) or any(
+                a in low and b in low[low.index(a) + len(a) :] for a, b in data.answer_pairs
+            )
+            if hit:
                 return _owner_answer_block(bot, call.tool)
         if key in data.answer_text_keys:
             first = low.lstrip().split(maxsplit=1)
