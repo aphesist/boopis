@@ -382,6 +382,23 @@
       },
       "note": "The fixture switches on the worktree selector the board draws (\"New worktree\": `info.later`), which the app does not show until that choice exists. The block's buttons go to Settings, Models, at that lab's sign-in."
     },
+    "S38-gate": {
+      "title": "Board S38: the gate failed: the card with the failing check and \"Fix and retry\"",
+      "board": "screen.html?s=s18&opt=c",
+      "image": "session/S38-error-gate-failed-{theme}.jpg",
+      "story": "boards/sessions",
+      "state": "S38 the gate failed",
+      "wait": 1500,
+      "regions": {
+        "chrome": [0, 0, 1440, 56],
+        "sidebar": [0, 56, 300, 844],
+        "gate card": [570, 238, 630, 142, 0, -2],
+        "composer": [300, 726, 1140, 92],
+        "dock": [300, 818, 1140, 82]
+      },
+      "scope": ["chrome", "sidebar", "gate card", "composer", "dock"],
+      "note": "S38 is the reference for the card a failed gate leaves under the answer (the check's glyph and name, \"failed\" in red, \"Fix and retry\", what the check printed in its Well, the note) and for the composer under it; the card is measured where the app draws it, 2 higher than the board's. The thread above it is S23's: the work line stands where S23 draws it (S38's still sets it 2 higher and 30 further in) and the finished turn keeps its foot under the card. The fixture's note is the board's sentence (\"Nothing was written: the change stays in the journal, not the workspace.\"); the live app says what its engine does: the files were written, checked, and put back."
+    },
     "S41-noproject": {
       "title": "Board S41: no project, no sessions: \"No sessions yet\", the title \"Sessions\", \"Add a folder to start\" on the canvas and in the composer",
       "board": "screen.html?s=newSess&mk=a&st=noproject",

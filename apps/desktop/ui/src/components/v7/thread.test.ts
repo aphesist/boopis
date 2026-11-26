@@ -282,3 +282,24 @@ describe('Menu: a row cut by the menu\'s width', () => {
     }
   });
 });
+
+describe('FilesCard: how a check on the change went (board S38)', () => {
+  it('draws the check\'s name, its verdict as a StatusWord in its tone, the one action, what it printed in a Well, the files and the note', () => {
+    const c = put(kit.filesCard({ files: [{ path: 'modules/dock/dock.css' }], action: 'Fix and retry', check: { title: 'Gate', word: 'failed', tone: 'red', output: 'FAIL centred.test.ts\n  expected 720 to be 744', note: 'Nothing was kept: every file is back as it was.' } }));
+    expect(c.dataset['check']).toBe('red');
+    expect(c.querySelector('.k7-files__name')?.textContent).toBe('Gate');
+    const w = c.querySelector<HTMLElement>('[data-kit="StatusWord"]');
+    expect([w?.textContent, w?.dataset['tone']]).toEqual(['failed', 'red']);
+    expect([...c.querySelectorAll('button')].map((b) => [b.textContent?.trim(), b.dataset['variant']])).toEqual([['Fix and retry', 'tint']]);
+    expect(c.querySelector('[data-kit="Well"] pre')?.textContent).toBe('FAIL centred.test.ts\n  expected 720 to be 744');
+    expect([...c.querySelectorAll('.k7-files__row')].map((r) => r.textContent)).toEqual(['modules/dock/dock.css']);
+    expect(c.querySelector('.k7-files__note')?.textContent).toBe('Nothing was kept: every file is back as it was.');
+    expect(c.querySelector('.k7-files__counts')).toBeNull();   /* a check counts no lines */
+  });
+  it('with nothing printed and no action it is the head and the note alone', () => {
+    const c = put(kit.filesCard({ files: [], check: { title: 'Gate', word: 'failed', tone: 'red', note: 'Nothing was kept.' } }));
+    expect(c.querySelector('[data-kit="Well"]')).toBeNull();
+    expect(c.querySelector('button')).toBeNull();
+    expect(c.querySelector('.k7-files__list')).toBeNull();
+  });
+});

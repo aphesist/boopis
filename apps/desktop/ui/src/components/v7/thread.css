@@ -100,6 +100,16 @@
 .k7-files__row > svg { flex: none; }
 .k7-files__row > .k7-ell { flex: 0 1 auto; }
 .k7-files__row > .k7-files__counts { margin-inline-start: auto; gap: var(--sp-2); }
+/* board S38 (sessiontab2.js `s18` c): how a check on the change went. The head is the check's glyph, its name in the ink at 500 and the
+   verdict; under it what the check printed in a Well in the verdict's colour (8 under the head; the boards' own corner of 10, as every
+   Well they draw: the lead's decision of 26 November), then one quiet note 6 under it */
+.k7-files[data-check] > .k7-files__head { gap: var(--sp-2); margin-bottom: 0; color: var(--text); }
+.k7-files__name { flex: none; font-weight: 500; }
+.k7-files[data-check] > .k7-well { margin-top: var(--sp-2); border-radius: var(--r-field); }
+.k7-files[data-check="red"] > .k7-well { color: var(--red-text); }
+.k7-files[data-check] > .k7-well > .k7-well__pre { padding-inline-start: var(--sp-1); }   /* kit.css `.files-card > *`: the card's parts start 4 in, its Well's words with them */
+.k7-files[data-check] > .k7-files__list { margin-top: var(--sp-1); }
+.k7-files__note { margin: var(--gap-s) 0 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
 
 /* ── Queue (11): radius 22 on a 4 inset, rows 36 radius 18, buttons 28 on 4 ── */
 .k7-queue {

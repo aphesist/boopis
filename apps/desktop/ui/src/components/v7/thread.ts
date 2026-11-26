@@ -8,6 +8,7 @@ import { button, chip, iconButton, kbd, selectorItem } from './controls';
 import { steps, well } from './blocks';
 import type { StepOpts } from './blocks';
 import { mark, statusWord } from './inline';
+import type { StatusTone } from './inline';
 import { attrs, cls, esc, glyph, idFrom, kitAttrs, partAttrs } from './util';
 import type { Attrs, U } from './util';
 
@@ -104,8 +105,23 @@ export function toolRow(o: ToolRowOpts): string {
 /* ── FilesCard (10): a turn's changed files (board S23, kit.css `.files-card`): "2 changed files" with the turn's +/−, an action at the
    head's end (Open diff), then a row per file: its glyph, its path in mono, its own +/− at the end. A long list folds (`fold`) ── */
 export interface FileRow { path: string; add?: number; del?: number }
-export interface FilesCardOpts { files: readonly FileRow[]; /** a long list folds under its head: open or closed */ fold?: U<boolean>; open?: U<boolean>; /** the head's action ("Open diff"); its button carries `data-files` */ action?: U<string>; actionAttrs?: U<Attrs>; attrs?: U<Attrs> }
+export interface FilesCardOpts {
+  files: readonly FileRow[]; /** a long list folds under its head: open or closed */ fold?: U<boolean>; open?: U<boolean>; /** the head's action ("Open diff"); its button carries `data-files` */ action?: U<string>; actionAttrs?: U<Attrs>; attrs?: U<Attrs>;
+  /** board S38 (sessiontab2.js `s18` c): the same card says how a check on the change went (the gate): in its head the check's glyph and
+      name and the verdict as a StatusWord in its tone, at the end the one way on ("Fix and retry"); under it what the check printed, in
+      a Well in the verdict's colour, and one note. The files the check ran on follow where there are any */
+  check?: U<{ icon?: U<string>; title: string; word: string; tone?: U<StatusTone>; output?: U<string>; note?: U<string> }>;
+}
 export function filesCard(o: FilesCardOpts): string {
+  if (o.check) {
+    const c = o.check;
+    return '<div class="k7-files k7-block"' + blockAttrs('FilesCard', { 'data-check': c.tone ?? 'neutral', 'data-open': '', ...(o.attrs ?? {}) }) + '>' +
+      '<div class="k7-files__head k7-text">' + glyph(c.icon ?? 'terminal') + '<span class="k7-files__name">' + esc(c.title) + '</span>' + statusWord({ text: c.word, tone: c.tone }) +
+      '<span class="k7-grow"></span>' + (o.action ? button({ label: o.action, variant: 'tint', size: 28, attrs: { 'data-files': '', ...(o.actionAttrs ?? {}) } }) : '') + '</div>' +
+      (c.output ? well({ text: c.output, label: c.title + ' output' }) : '') +
+      (o.files.length ? '<ul class="k7-files__list">' + o.files.map((f) => '<li class="k7-files__row k7-text"' + partAttrs('FileRow') + '>' + glyph('file') + '<span class="k7-ell k7-mono">' + esc(f.path) + '</span></li>').join('') + '</ul>' : '') +
+      (c.note ? '<p class="k7-files__note k7-text">' + esc(c.note) + '</p>' : '') + '</div>';
+  }
   const add = o.files.reduce((n, f) => n + (f.add ?? 0), 0), del = o.files.reduce((n, f) => n + (f.del ?? 0), 0);
   const id = idFrom('k7-fc', o.files.map((f) => f.path).join());
   const counts = (a: number, d: number): string => '<span class="k7-files__counts k7-mono"><span data-tone="add">+' + a + '</span><span data-tone="del">−' + d + '</span></span>';

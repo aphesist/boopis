@@ -122,6 +122,17 @@ interface Convo {
   step: CarefulStep | null;
 }
 
+/** what became of a change whose gate failed, as the engine does it: the files were written, checked, and put back */
+export const GATE_RESTORED = 'Nothing was kept: every file is back as it was.';
+/** what the failing check printed, from the ship tool's answer (the plugin's `output`; else the answer's own words), at most 12 lines */
+export function gateOutput(result: unknown): string[] {
+  if (typeof result !== 'string' || !result.trim()) return [];
+  let text = result;
+  try { const j = JSON.parse(result) as { output?: unknown; reason?: unknown }; text = typeof j.output === 'string' && j.output.trim() ? j.output : typeof j.reason === 'string' ? j.reason : result; } catch { /* not JSON: its own words */ }
+  const lines = text.split('\n').map((l) => l.replace(/\s+$/, '')).filter((l) => l.trim());
+  return lines.length > 12 ? [...lines.slice(0, 12), '… ' + (lines.length - 12) + ' more lines'] : lines;
+}
+
 export interface LiveProvider extends DataProvider {
   /** ledger totals from `plugin.boopis.ledger.appended`; not yet wired into `details.ledger` (mock) */
   ledger: { totals(): LedgerTotals; subscribe(fn: (t: LedgerTotals) => void): () => void };
@@ -358,7 +369,13 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
         break;
       }
       case 'tool.start': addStep(c, startTurn(c), toolStep(p)); break;
-      case 'tool.complete': if (p['is_error'] === true) addStep(c, startTurn(c), failedStep(p)); break;
+      case 'tool.complete': {
+        if (p['is_error'] === true) addStep(c, startTurn(c), failedStep(p));
+        /* the ship's own answer says what the failing check printed (the plugin's `output`): it follows the event that said the gate failed */
+        const t = p['name'] === 'ship' ? raisingTurn(c) : null;
+        if (t?.gate && !t.gate.output.length) { const out = gateOutput(p['result_text']); if (out.length) { t.gate = { ...t.gate, output: out }; c.events.emit({ type: 'turn-gate', turnId: t.id, gate: t.gate }); } }
+        break;
+      }
       case 'message.delta': {
         const r = startTurn(c);
         const t = p['text'];
@@ -389,9 +406,16 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       case 'plugin.boopis.ship.completed': {
         /* a kept ship of the running turn: the turn can now be rewound to it */
         const id = typeof p['ship_id'] === 'string' ? p['ship_id'] : '';
-        if (!id || p['status'] !== 'shipped') break;
-        c.head = id;
         const t = raisingTurn(c);
+        /* the gate did not pass: the engine put every file back (board S38); a later ship of the turn that passes takes the card away */
+        if (id && p['status'] === 'restored' && t) {
+          const g = (p['gate'] ?? {}) as { gates?: unknown }, files = Array.isArray(p['files']) ? (p['files'] as { path?: unknown }[]).map((f) => (typeof f.path === 'string' ? f.path : '')).filter(Boolean) : [];
+          t.gate = { checks: Array.isArray(g.gates) ? g.gates.filter((x): x is string => typeof x === 'string') : [], output: [], files, note: GATE_RESTORED };
+          c.events.emit({ type: 'turn-gate', turnId: t.id, gate: t.gate });
+        }
+        if (!id || p['status'] !== 'shipped') break;
+        if (t?.gate) { t.gate = undefined; c.events.emit({ type: 'turn-gate', turnId: t.id, gate: null }); }
+        c.head = id;
         if (t && !t.kept?.includes(id)) { t.kept = [...(t.kept ?? []), id]; c.events.emit({ type: 'turn-kept', turnId: t.id, kept: t.kept }); }
         spendUndo(c);
         break;

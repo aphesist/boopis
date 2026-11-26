@@ -14,7 +14,7 @@ import { el, isMac, reduced } from '../../core/dom';
 import { provide } from '../../core/registry';
 import { kit, ui } from '@boopis/ui';
 import { data } from '../../data';
-import type { AgentTurn, ConversationEvent, FormSpec, FormStatus, SessionSummary, ThreadLine, Turn, UserTurn } from '../../data';
+import type { AgentTurn, GateFail, ConversationEvent, FormSpec, FormStatus, SessionSummary, ThreadLine, Turn, UserTurn } from '../../data';
 import { clock } from '../../host/map';
 import { sessionComposer } from './composer';
 import type { SessionComposer } from './composer';
@@ -224,6 +224,9 @@ function partsOf(a: AgentTurn): Part[] {
     else out.push(['tool:' + f.id, JSON.stringify([status ?? 'open', st.choice, st.at, st.note]), () => wireAsk(kit.toolRow(toolRow(f, last, st)), f)]);
   }
   if (a.children?.length) out.push(['children', 'children', () => childrenBlock(a.children ?? [], childHost())]);
+  /* a ship that did not pass its gate (board S38): the check and its verdict, what it printed, what became of the change, and the one
+     way on, which asks the agent to fix what the gate found and ship again (on the last turn, once it ended) */
+  if (a.gate && !running) out.push(['gate', JSON.stringify([a.gate, isLast]), () => gateCard(a.gate as GateFail, isLast)]);
   /* the last finished turn that changed files lists them (board S23); their diff opens in the Changes panel */
   const files = isLast && !running && (a.ship || a.kept?.length) ? data().details.changes.get() : [];
   if (files.length) out.push(['files', JSON.stringify(files), () => filesCard(files.map((c) => ({ path: c[0], add: c[1], del: c[2] })))]);
@@ -255,6 +258,19 @@ const elapsed = (a: AgentTurn): string => Math.max(0, Math.floor((Date.now() - (
 function filesCard(files: Array<{ path: string; add: number; del: number }>): HTMLElement {
   const c = kit.filesCard({ files, action: 'Open diff', actionAttrs: { 'data-action': 'view-diff' }, ...(files.length > 8 ? { fold: true, open: false } : {}) });
   c.querySelector('[data-files]')?.addEventListener('click', () => { openPanel('changes'); });
+  return c;
+}
+/** what "Fix and retry" sends as your next message: the agent reads the failing check in its own context */
+export const FIX_AND_RETRY = 'The gate failed. Fix what it found and ship the change again.';
+/** board S38: the gate failed. The kit's FilesCard in its check form: "Gate", "failed" in red, what the failing check printed, what
+    became of the change. "Fix and retry" is on the session's last turn only (an earlier failure is history) and sends the ask above */
+function gateCard(g: GateFail, last: boolean): HTMLElement {
+  const c = kit.filesCard({ files: g.files.map((path) => ({ path })), check: { title: 'Gate', word: 'failed', tone: 'red', ...(g.output.length ? { output: g.output.join('\n') } : {}), note: g.note }, ...(last ? { action: 'Fix and retry', actionAttrs: { 'data-action': 'fix-retry' } } : {}), attrs: { 'data-checks': g.checks.join(' ') || null } });
+  c.querySelector('[data-files]')?.addEventListener('click', () => {
+    if (isRunning(VIEW.current)) return;
+    const gv = data().details.governance.get();
+    sessions().send(VIEW.current, FIX_AND_RETRY, { governed: gv.governed, smart: gv.smart, model: gv.model, assume: [], attachments: [] });
+  });
   return c;
 }
 const turnText = (id: string): string => { const b = turnNode(id)?.querySelector<HTMLElement>('[data-part="text"] [data-kit~="Bubble"], [data-part="text"][data-kit~="Bubble"]'); return b ? mdOf(b) : ''; };
@@ -456,6 +472,7 @@ function onConversationEvent(ev: ConversationEvent): void {
     ui.announce(ev.stopped ? 'Stopped' : 'Answer ready');
   } else if (ev.type === 'line') { placeLine(col, ev.line); syncDividers(col); }
   else if (ev.type === 'turn-kept') change(ev.turnId, (a) => ({ ...a, kept: ev.kept }));
+  else if (ev.type === 'turn-gate') change(ev.turnId, (a) => ({ ...a, gate: ev.gate ?? undefined }));
   else if (ev.type === 'blank-answered') {
     VIEW.blank = ev.answer;
     setAttention(0); changed();
@@ -598,7 +615,7 @@ export function mountView(root: HTMLElement): void {
     draft: sessions().draft(), sessionId: () => VIEW.current,
     waits: () => !!waitingAsk(),
     /** what the placeholder says of the thread: a change waits for your answer, the last turn ended, or nothing yet */
-    after: () => { const last = conv().snapshot().turns.at(-1); return !!last && last.role === 'assistant' && last.status !== 'running'; },   /* your own message with no answer yet is not an ended turn (S36: "Message") */
+    after: () => { const last = conv().snapshot().turns.at(-1); return !!last && last.role === 'assistant' && last.status !== 'running' && !last.gate; },   /* your own message with no answer yet is not an ended turn (S36: "Message"), nor is a change the gate did not pass (S38) */
     send: (text, meta) => {
       /* typing while a change waits declines it with these words (S09); the words are then the next message */
       declineWith(text);

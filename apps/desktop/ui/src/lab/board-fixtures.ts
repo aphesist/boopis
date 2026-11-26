@@ -258,6 +258,16 @@ export function boardS36(p: DataProvider): DataProvider {
   return { ...base, info: { ...base.info, later: new Set() }, engine: { state, restart: () => { state.set({ stopped: false, restarting: false, why: null }); return Promise.resolve(); } } };
 }
 
+/** board S38 (sessiontab2.js `s18` c): the gate failed on the turn's change: the card with the failing check and "Fix and retry". The
+    note is the board's own sentence; the live app says what its engine does (the files are put back) */
+export function boardS38(p: DataProvider): DataProvider {
+  const base = started(p, [
+    { id: 's38-t1', role: 'user', at: '09:42', text: ASK },
+    { id: 's38-t2', role: 'assistant', model: 'sonnet 5.5', time: '0m 59s', cost: '', stepCount: 3, steps: [...tools('patch', 2), ...tools('terminal', 1)], status: 'done', bullets: [], paragraphs: ['I changed the centring; the gate ran the tests.'],
+      gate: { checks: ['tests'], output: ['FAIL centred.test.ts > the dock does not move', '  expected 720 to be 744'], files: [], note: 'Nothing was written: the change stays in the journal, not the workspace.' } }
+  ], 'auto_edits', '');
+  return { ...base, info: { ...base.info, later: new Set() } };
+}
 /** a board's content with the engine stopped (derived from S36: the same line under a bot's chat and a room) */
 export const engineStopped = (make: (p: DataProvider) => DataProvider) => (p: DataProvider): DataProvider => {
   const state = store<EngineState>({ stopped: true, restarting: false, why: 'boopis\'s engine stopped answering.' });

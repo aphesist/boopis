@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createMockProvider } from '../data/mock-provider';
 import type { ConversationEvent, WaitsEvent } from '../data';
 import { GatewayClient } from './gateway';
-import { createLiveProvider } from './live-provider';
+import { createLiveProvider, gateOutput } from './live-provider';
 import type { LiveProvider } from './live-provider';
 import { FakeHost, S0_CREATE_PARAMS, recorded } from './testing';
 
@@ -66,6 +66,36 @@ describe('the live provider: sessions', () => {
   it('keeps the mock for the sources it names, and says so', () => {
     expect(provider.details).toBeDefined();
     expect(provider.bots).toBeDefined();
+  });
+});
+
+describe('the live provider: a ship the gate did not pass (board S38)', () => {
+  it('the turn says so: the checks, the files the engine put back, then what the failing check printed; a ship that passes afterwards takes it away', async () => {
+    const conv = provider.sessions.conversation(SESSION);
+    await tick();
+    const seen: ConversationEvent[] = [];
+    conv.subscribe((e) => { seen.push(e); });
+    host.event('message.start', SESSION, {});
+    host.event('tool.start', SESSION, { name: 'ship', tool_id: 't1' });
+    host.event('plugin.boopis.ship.completed', SESSION, { ship_id: 's1', status: 'restored', files: [{ path: 'calc.py' }], gate: { verdict: 'block', gates: ['tests'] } });
+    const gates = (): unknown[] => seen.filter((e) => e.type === 'turn-gate').map((e) => (e as { gate: unknown }).gate);
+    expect(gates()).toEqual([{ checks: ['tests'], output: [], files: ['calc.py'], note: 'Nothing was kept: every file is back as it was.' }]);
+    host.event('tool.complete', SESSION, { name: 'ship', tool_id: 't1', result_text: JSON.stringify({ status: 'restored', output: 'FAIL test_calc.py::test_add\n  assert 3 == 4\n', note: 'Every file is back.' }) });
+    expect(gates()[1]).toMatchObject({ output: ['FAIL test_calc.py::test_add', '  assert 3 == 4'] });
+    const turn = conv.snapshot().turns.at(-1);
+    expect(turn?.role === 'assistant' && turn.gate?.output.length).toBe(2);
+    host.event('plugin.boopis.ship.completed', SESSION, { ship_id: 's2', status: 'shipped', files: [{ path: 'calc.py' }], gate: { verdict: 'pass', gates: ['tests'] } });
+    expect(gates()[2]).toBeNull();
+    const after = conv.snapshot().turns.at(-1);
+    expect(after?.role === 'assistant' && after.gate).toBeUndefined();
+    expect(after?.role === 'assistant' && after.kept).toEqual(['s2']);
+  });
+  it('reads the failing check from the ship\'s answer: its `output`, else its reason, else its own words; at most 12 lines', () => {
+    expect(gateOutput(JSON.stringify({ output: 'a\nb\n' }))).toEqual(['a', 'b']);
+    expect(gateOutput(JSON.stringify({ reason: 'the scope gate blocked src/x' }))).toEqual(['the scope gate blocked src/x']);
+    expect(gateOutput('FAIL plain words')).toEqual(['FAIL plain words']);
+    expect(gateOutput(Array.from({ length: 20 }, (_, i) => 'l' + i).join('\n')).at(-1)).toBe('… 8 more lines');
+    expect(gateOutput(null)).toEqual([]);
   });
 });
 

@@ -3,7 +3,7 @@
    draws the board from its source beside this state and measures the difference; a screen is done when they are the same, dark
    and light. Later boards add a fixture, a state here and a row in boards.json. */
 import type { AppCtx, State, Story } from '../../types';
-import { board11, board12, board12Held, board17, boardDock, boardS17, boardS20, boardS23, boardS33, boardS36, boardS37, boardS41, engineStopped } from '../../board-fixtures';
+import { board11, board12, board12Held, board17, boardDock, boardS17, boardS20, boardS23, boardS33, boardS36, boardS37, boardS38, boardS41, engineStopped } from '../../board-fixtures';
 import type { DockBoard } from '../../board-fixtures';
 
 const MOCK = { url: '/__boards/screen.html?s=bot11', note: 'the approved v7 board itself, drawn from its source' };
@@ -96,7 +96,7 @@ const bots: Story = {
 };
 
 const sessions: Story = {
-  id: 'boards/sessions', title: 'Boards: the Sessions tab', area: 'composer', kind: 'page', covers: ['page:board-S17', 'page:board-S20', 'page:board-S23', 'page:board-S33', 'page:board-S36', 'page:board-S37', 'page:board-S41'], mock: { url: '/__boards/screen.html?s=newSess&mk=a&usage=1', note: MOCK.note },
+  id: 'boards/sessions', title: 'Boards: the Sessions tab', area: 'composer', kind: 'page', covers: ['page:board-S17', 'page:board-S20', 'page:board-S23', 'page:board-S33', 'page:board-S36', 'page:board-S37', 'page:board-S38', 'page:board-S41'], mock: { url: '/__boards/screen.html?s=newSess&mk=a&usage=1', note: MOCK.note },
   states: {
     'S17 a new session': {
       tags: ['typical', 'owner'],
@@ -164,6 +164,20 @@ const sessions: Story = {
       note: 'board S36: the engine stopped mid-session: after your message, one line in red, "boopis\'s engine stopped", with "Start it again"',
       app: {
         provider: { patch: boardS36 },
+        setup: async (c: AppCtx) => {
+          c.hx.setState({ tab: 'session', left: 'open', right: 'closed' });
+          await c.wait(300);
+          await c.click('[data-kit~="ListRow"][data-id="s17-dock"]');
+          await c.wait(900);
+          (document.activeElement as HTMLElement | null)?.blur();   /* the board draws the composer at rest */
+        }
+      }
+    } satisfies State,
+    'S38 the gate failed': {
+      tags: ['error', 'owner'],
+      note: 'board S38: the gate failed on the turn\'s change: the card with "Gate", "failed" in red and "Fix and retry", what the failing check printed, and what became of the change',
+      app: {
+        provider: { patch: boardS38 },
         setup: async (c: AppCtx) => {
           c.hx.setState({ tab: 'session', left: 'open', right: 'closed' });
           await c.wait(300);
