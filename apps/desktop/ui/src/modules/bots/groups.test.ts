@@ -333,7 +333,7 @@ describe('a message written while the members are working', () => {
     type('and the changelog?');
     expect(endButton().getAttribute('aria-label')).toBe('Queue');
     type('');
-    expect(endButton().getAttribute('aria-label')).toBe('Talk');
+    expect(endButton().getAttribute('aria-label')).toBe('Talk: set up a voice model first');   /* the voice circle again: no voice model is set up in the mock */
   });
   it('keeps what was typed when the room starts or stops working under it', async () => {
     type('half a thought');

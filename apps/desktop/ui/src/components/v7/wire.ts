@@ -5,6 +5,7 @@ import { esc, fire, frag, reduced, tokenMs } from '../../core/dom';
 import { layer } from '../layer';
 import { icon } from '../icons';
 import { paintDock } from './dock';
+import { VOICE_SETUP } from './thread';
 
 /* which behaviours an element has: an element can carry two (a chip that holds) */
 const WIRED = new WeakMap<Element, Set<string>>();
@@ -139,25 +140,28 @@ function wireRowAction(r: HTMLElement): void {
 }
 /** Composer (12.2). Enter sends (queues while it runs, S06 B), ctrl Enter steers, Shift Enter is a new line; the end button is voice
     with no text, send with text, stop while it runs. It fires, each cancelable where an action follows:
-      ui:send {text, queue}   ui:steer {text}   ui:stop   ui:voice (no text, not running)
+      ui:send {text, queue}   ui:steer {text}   ui:stop   ui:voice {setup} (the circle pressed with no text; `setup`: no voice model yet)
       ui:add                  "+" was pressed (the app picks what to add; `composerInsert` puts it in the text)
       ui:dictate {on}         the mic was switched on or off (aria-pressed says which)
       ui:refused              Enter while a turn runs where nothing queues (`data-queue-off`): the text stays
-    `data-voice-off` (ComposerOpts.voiceOff): talking does not exist here, so the empty composer has no primary circle; `data-queue-off`:
-    nothing queues here, so there is no send while a turn runs (a control shows only once its feature exists).
+    The voice circle is never hidden (owner, 26 November): `data-voice-setup` (ComposerOpts.voiceSetup) says no voice model is set up
+    yet, in the circle's name and tip, and ui:voice fires all the same (the app then says what voice needs). `data-queue-off`: nothing
+    queues here, so there is no send while a turn runs (a control shows only once its feature exists).
     Stop is a button of its own at the start of the right cluster, there only while `data-running` is set (owner, 25 November: the
     primary circle never turns into Stop) */
 function wireComposer(c: HTMLElement): void {
   const t = c.querySelector<HTMLElement>('.k7-composer__text'), b = c.querySelector<HTMLButtonElement>('[data-send]');
   if (!t || !b) return;
-  const noVoice = (): boolean => c.hasAttribute('data-voice-off'), noQueue = (): boolean => c.hasAttribute('data-queue-off');
+  const setUp = (): boolean => c.hasAttribute('data-voice-setup'), noQueue = (): boolean => c.hasAttribute('data-queue-off');
   const sync = (): void => {
     const typed = (t.textContent ?? '').trim().length > 0, running = c.hasAttribute('data-running');
     c.toggleAttribute('data-typed', typed);
-    const [glyphName, label] = typed ? ['arrowup', running ? 'Queue' : 'Send'] : ['waveform', 'Talk'];
+    const [glyphName, label] = typed ? ['arrowup', running ? 'Queue' : 'Send'] : ['waveform', setUp() ? VOICE_SETUP : 'Talk'];
     if (b.getAttribute('aria-label') !== label) { b.setAttribute('aria-label', label); b.setAttribute('data-tip', label); b.innerHTML = icon(glyphName, { size: 'm', class: 'k7-ic' }); }
-    /* a control shows only once its feature exists: no voice circle where talking does not exist, no send while a turn runs where nothing queues */
-    b.hidden = typed ? running && noQueue() : noVoice();
+    /* pressed with no voice model, the circle opens what says so (a dialog of one action) */
+    if (!typed && setUp()) b.setAttribute('aria-haspopup', 'dialog'); else b.removeAttribute('aria-haspopup');
+    /* the voice circle always shows; there is no send while a turn runs where nothing queues (a control shows only once its feature exists) */
+    b.hidden = typed && running && noQueue();
   };
   const send = (steer: boolean): void => {
     const text = (t.textContent ?? '').trim();
@@ -173,11 +177,11 @@ function wireComposer(c: HTMLElement): void {
   });
   b.addEventListener('click', () => {
     if ((t.textContent ?? '').trim()) { send(false); return; }
-    if (!noVoice()) fire(c, 'ui:voice', {});
+    fire(c, 'ui:voice', { setup: setUp() });
   });
   /* Stop is its own button, there while a turn runs (`data-running`, which the app sets and clears in place: composerRunning) */
   c.querySelector('[data-stop]')?.addEventListener('click', () => { if (c.hasAttribute('data-running')) fire(c, 'ui:stop', {}); });
-  new MutationObserver(sync).observe(c, { attributes: true, attributeFilter: ['data-running', 'data-queue-off', 'data-voice-off'] });
+  new MutationObserver(sync).observe(c, { attributes: true, attributeFilter: ['data-running', 'data-queue-off', 'data-voice-setup'] });
   c.querySelector('[data-plus]')?.addEventListener('click', () => { fire(c, 'ui:add', {}); });
   /* a word the text is read by (composerMarks): pressing it, or alt ArrowDown with the caret in it, asks what it is read as */
   const markAt = (n: Node | null): HTMLElement | null => (n instanceof Element ? n : n?.parentElement)?.closest<HTMLElement>(FF) ?? null;

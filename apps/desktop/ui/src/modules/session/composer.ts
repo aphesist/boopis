@@ -17,7 +17,7 @@ import { data } from '../../data';
 import type { Attached, GovernanceState, SendMeta } from '../../data';
 import { CAREFUL } from '../../data';
 import { bestMention, findMentions, mentionName, routeMentions } from '../../data/mentions';
-import { later } from '../chat/compose';
+import { later, voiceNeedsSetup, voiceTool } from '../chat/compose';
 import { kindOf, makeReader, optionsFor } from './feedforward';
 import { COUNCIL_VALUE, openCouncilForm } from './council';
 import { FOOT_GOVERNED, FOOT_MENTION, FOOT_MENTION_GOVERNED, FOOT_UNGOVERNED, SETTINGS_VALUE, SMART_VALUE, currentChoice, governedUnavailableEntries, modelEntries, smartPreview } from './model-menu';
@@ -124,7 +124,7 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
     ph = placeholder(); hintNow = routeHint(value() || o.draft);
     const items = line();
     lineSig = JSON.stringify([items, hintNow]);
-    slot.replaceChildren(kit.composer({ kind: 'session', placeholder: ph, label: 'Message the coding agent', running, line: items, ...(hintNow ? { hint: hintNow } : {}), voiceOff: !later('voice'), queueOff: !later('queue') && !o.waits(), stopKeys: 'mod+period', ...(keep ? { textHTML: keep } : {}) }));
+    slot.replaceChildren(kit.composer({ kind: 'session', placeholder: ph, label: 'Message the coding agent', running, line: items, ...(hintNow ? { hint: hintNow } : {}), voiceSetup: voiceNeedsSetup(), queueOff: !later('queue') && !o.waits(), stopKeys: 'mod+period', ...(keep ? { textHTML: keep } : {}) }));
     const c = root() as HTMLElement;
     kit.mentions(c, mentions);
     c.setAttribute('data-hx-composer', '');
@@ -287,6 +287,7 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
   slot.addEventListener('ui:steer', (e) => { e.preventDefault(); const c = root(); if (c) (c.querySelector('[data-send]') as HTMLElement | null)?.click(); });   /* ctrl Enter sends as Enter does until the keys get their own pass (owner, 25 November) */
   slot.addEventListener('ui:refused', () => { say('The agent is still working. Stop it, or wait for it, then send.'); });
   slot.addEventListener('ui:stop', () => { o.stop(); });
+  voiceTool(slot, () => null);   /* the voice circle: it talks once a voice model is set up, and says what it needs until then */
   slot.addEventListener('ui:mark', (e) => { const d = (e as CustomEvent<{ text: string; kind: string; el: HTMLElement }>).detail; openReading(d.el, d.kind, d.text); });
   let stopHearing: (() => void) | null = null;
   slot.addEventListener('ui:dictate', (e) => {

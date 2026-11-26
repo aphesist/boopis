@@ -509,13 +509,14 @@ export interface ProviderInfo {
   unavailable: Readonly<Record<string, string>>;
   /** what the approved boards draw and no build does yet, switched on. A control is built against this map and is not shown while
       its feature is absent (the calm rule: a thing shows only when it exists); a lab fixture switches one on so the board's own
-      control is drawn and compared. No provider of the app sets it until the feature is real */
+      control is drawn and compared. No provider of the app sets it until the feature is real. Voice is not one of them (owner,
+      26 November): its circle always shows, and works once a voice model is set up (`DataProvider.voice`) */
   later?: ReadonlySet<LaterFeature>;
 }
-/** `voice`: talking to a bot or a session. `approval-rules`: "Allow all this turn", "Always allow". `usage`: buying more usage from a
+/** `approval-rules`: "Allow all this turn", "Always allow". `usage`: buying more usage from a
     limit notice. `worktree`: a new worktree for a session. `turn-edit`, `turn-fork`: Edit from here and Fork on a finished turn.
     `queue`: a message queued or steered while a turn runs */
-export type LaterFeature = 'voice' | 'approval-rules' | 'usage' | 'worktree' | 'turn-edit' | 'turn-fork' | 'queue';
+export type LaterFeature = 'approval-rules' | 'usage' | 'worktree' | 'turn-edit' | 'turn-fork' | 'queue';
 export interface Schedule { id: string; bot: string; what: string; when: string; next: string; paused: boolean }
 
 /* ───────── the composer's feedforward reading ───────── */

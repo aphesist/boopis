@@ -36,6 +36,14 @@ table at the end true.
   - **one word for refusing: "Deny"** (with esc), also where S20 draws "Decline" (consistency across the app overrides a board);
   - **the session composer's "+" opens the add menu** (Attach a file, Add a folder to context, Mention a file, Commands); in a bot's
     chat and a room, where only files can be added, "+" opens the file picker;
+  - **the voice button is never hidden** (26 November: "there should be an API key option there, so it's not supposed to be hidden, it
+    just will not come out functioning from the get go"): every composer's primary circle is as the boards draw it, the voice glyph
+    when the composer is empty and the send arrow when there is text. Voice works once the person sets up a voice model: an API key
+    for a voice provider (ElevenLabs, Fish Audio) or a local model on their own hardware with live voice. Until then a press starts
+    nothing and opens a small Notice at the circle, "Voice needs a voice model", whose one action, "Set up voice", opens Settings at
+    Models; the circle's name and tooltip say it needs setting up. The capability is the provider's `voice` (`data/provider.ts`); the
+    voice section of Settings, Models (the provider, its key through the host's secret store, the local option) is the Settings
+    step's, and live voice itself is not built yet. Dictation (the mic) is another thing and works already;
   - confirmed (25 November): member name colours stay the kit's contrast-safe derivation; the huddle fold, the "to nina" line and the
     presence tool words stay out; file chips keep the bare file name.
 
@@ -48,7 +56,8 @@ table at the end true.
    capability: the provider's `info.later` (`data/types.ts` `LaterFeature`, read by `modules/chat/compose.ts` `later()`), or what
    the engine offers (a form's own choices, the session's capability map). No provider of the app switches a `later` feature on;
    the board's lab fixture does, so `lab:board` still compares the whole board. The hidden controls are listed for the owner. Each
-   wired control has a behaviour test.
+   wired control has a behaviour test. **The one named exception is the voice circle** (owner, 26 November, above): it always
+   shows, and says what it needs until a voice model is set up.
 3. **It is the kit.** Every look lives in the kit (`src/components/v7`, `kit.*`). Screens (`src/modules/*`) compose and place
    kit components; module CSS holds placement only. A kit component is fixed or extended only where it differs from the boards
    or lacks a drawn variant, never forked. `docs/UI-COMPONENTS.md` lists every component, its variants and its board.

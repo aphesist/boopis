@@ -53,7 +53,7 @@ thread (`.k7-thread[data-kind="session"]`: the boards' `.thread.sess` margins), 
 Composer (the session's line of S05 B: plain items, a model's effort ticks, the context's ticks and the cost at the end, items that fold
 in a narrow composer; `kit.composerMarks`, the words a text is read by, as Marks; `kit.composerRunning`). By the owner's decisions of
 25 November: the Composer's own Stop at the start of the right cluster while a turn runs (the primary circle never becomes it);
-`voiceOff` and `queueOff` leave out the voice circle and the send where the feature does not exist; the Segmented's `upright`
+`queueOff` leaves out the send while a turn runs where nothing queues; the voice circle always shows, and `voiceSetup` makes its name and tip say that it needs a voice model (owner, 26 November; pressed, the app opens `kit.openNotice` at it: "Voice needs a voice model", "Set up voice"); the Segmented's `upright`
 (the collapsed rail's tab switch, `kit.rail({ tabs })`); "@all" in the attention amber.
 
 **What each component the converted screens use is, and its board** (boards 11, 17 and S17; `pnpm lab:board`):
@@ -69,7 +69,7 @@ in a narrow composer; `kit.composerMarks`, the words a text is read by, as Marks
 | `kit.toolRow({ variant: 'bot' })` | closed; open on its Steps (done, now, to do, each with its end words); `icon` for a shell | kit.css `.tool`, `.steps` |
 | `kit.fileCard` | a file; `opens` makes it a control | kit.css `.file` |
 | `kit.askCard` | approval: head, ask, `rule`, four answers (`inert` for one that cannot be taken yet, `outline` for Deny) | botscreens.js `approval` |
-| `kit.composer` | bot, session; its line (plain items, the cost, hints at both ends); `voiceOff`; events `ui:send`, `ui:steer`, `ui:stop`, `ui:voice`, `ui:add`, `ui:dictate`; `kit.mentions` (an "@" Menu), `kit.composerInsert` | screens.js `composer`, kit.css `.composer-under` |
+| `kit.composer` | bot, session; its line (plain items, the cost, hints at both ends); `voiceSetup`; events `ui:send`, `ui:steer`, `ui:stop`, `ui:voice {setup}`, `ui:add`, `ui:dictate`; `kit.mentions` (an "@" Menu), `kit.composerInsert` | screens.js `composer`, kit.css `.composer-under` |
 | `kit.listRow` | session (the model's mark, title, branch and time, Badge or dot), compact (one line), bot, item; `kit.sectionHead` with a count, folding | kit.css `.sess-row`, `.inbox-h` |
 | `kit.selectorItem({ variant: 'launch' })` | a glyph, a model's mark or the five ticks, the value, the chevron; `aria-disabled` for one that cannot be chosen yet | kit.css `.select`, sessionnew.js `launch` |
 | `kit.notice` | a limit: glyph, `title` and words, a ghost action, dismiss | kit.css `.notice` |
@@ -139,7 +139,7 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 36 | Disclosure | `disclosure` | `kit/disclosure` | steps, work log; closed, open; the summary hovered, focused; no steps; narrow |
 | 37 | TurnFoot | `turnFoot` | `kit/turn-foot` | bot (model, time, cost); session (S23: the checkpoint, the actions that exist, the model with its time and cost): only Undo, none, Undo disabled, a route with why and "ungoverned", an action hovered and focused, narrow |
 | 38 | TimeSeparator | `timeSeparator` | `kit/time-separator` | a gap, NEW |
-| 39 | Composer | `composer` | `kit/composer` | session, bot, room, dock, notch; typed, multi-line, running (Stop beside the mic; with text; idle; Stop hovered, focused; narrow), held, no model, quick menu; voice not built and nothing queues (no primary circle); a session's line and marks (S20; an item hovered, focused; narrow: it folds; no line); a room's line and hint; chips in the text (and narrow); the "@" list open |
+| 39 | Composer | `composer` | `kit/composer` | session, bot, room, dock, notch; typed, multi-line, running (Stop beside the mic; with text; idle; Stop hovered, focused; narrow), held, no model, quick menu; no voice model yet (the voice circle as ever, its name saying so; what it opens: the Notice with "Set up voice"); nothing queues (no send while a turn runs); a session's line and marks (S20; an item hovered, focused; narrow: it folds; no line); a room's line and hint; chips in the text (and narrow); the "@" list open |
 | 40 | Rail | `rail` | `kit/rail` | A, B; current, needs you, working; groups (decided, owner, 25 November 2026: a room's cluster is at most three orbs in their triangle, at 15, or 12 on the compact rail; the members past three are a "+N" chip clear of the orbs on the cluster's right, a filled pill in the line stack's counter colours, half a cluster orb tall, so the compact rail's is smaller) |
 | 41 | Dock | `dock` | `kit/dock` | row, compact, open (stack, card); hover, focus, many |
 | 42 | Notch | `notch` | `kit/notch` | the slab and its composer (the notch spec is not in this repository) |

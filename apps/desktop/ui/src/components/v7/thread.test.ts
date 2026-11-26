@@ -39,10 +39,41 @@ describe('Composer: Stop', () => {
     await tick();
     expect(sendOf(c).getAttribute('aria-label')).toBe('Send');
   });
-  it('what does not exist is not shown: no voice circle where talking is not built, no send while a turn runs where nothing queues', async () => {
-    const c = put(kit.composer({ kind: 'session', running: true, voiceOff: true, queueOff: true })), send = vi.fn(), refused = vi.fn();
+  it('the voice circle always shows (owner, 26 November): with no voice model it says so in its name and tip, and a press still asks', async () => {
+    for (const kind of ['session', 'bot', 'room', 'dock'] as const) {
+      const c = put(kit.composer({ kind, voiceSetup: true })), voice = vi.fn();
+      c.addEventListener('ui:voice', (e) => { voice((e as CustomEvent<{ setup: boolean }>).detail.setup); });
+      const b = sendOf(c);
+      expect(b.hidden).toBe(false);
+      expect(b.querySelector('svg')).not.toBeNull();
+      expect(b.getAttribute('aria-label')).toBe('Talk: set up a voice model first');
+      expect(b.getAttribute('data-tip')).toBe('Talk: set up a voice model first');
+      expect(b.getAttribute('aria-haspopup')).toBe('dialog');
+      b.click();
+      expect(voice).toHaveBeenCalledWith(true);
+      /* with text it is the send, and says nothing of voice; emptied, it is the voice circle again */
+      kit.composerInsert(c, 'hello');
+      expect(b.getAttribute('aria-label')).toBe('Send');
+      expect(b.hasAttribute('aria-haspopup')).toBe(false);
+      (c.querySelector('.k7-composer__text') as HTMLElement).textContent = '';
+      (c.querySelector('.k7-composer__text') as HTMLElement).dispatchEvent(new Event('input', { bubbles: true }));
+      expect(b.getAttribute('aria-label')).toBe('Talk: set up a voice model first');
+    }
+    /* a voice model set up: the same circle, named Talk, and the press says so */
+    const c = put(kit.composer({ kind: 'bot' })), voice = vi.fn();
+    c.addEventListener('ui:voice', (e) => { voice((e as CustomEvent<{ setup: boolean }>).detail.setup); });
+    expect(sendOf(c).getAttribute('aria-label')).toBe('Talk');
+    expect(sendOf(c).hasAttribute('aria-haspopup')).toBe(false);
+    sendOf(c).click();
+    expect(voice).toHaveBeenCalledWith(false);
+    c.setAttribute('data-voice-setup', '');   /* the voice model goes: the name follows in place */
+    await tick();
+    expect(sendOf(c).getAttribute('aria-label')).toBe('Talk: set up a voice model first');
+  });
+  it('what does not exist is not shown: no send while a turn runs where nothing queues (the voice circle stays)', async () => {
+    const c = put(kit.composer({ kind: 'session', running: true, voiceSetup: true, queueOff: true })), send = vi.fn(), refused = vi.fn();
     c.addEventListener('ui:send', send); c.addEventListener('ui:refused', refused);
-    expect(sendOf(c).hidden).toBe(true);
+    expect(sendOf(c).hidden).toBe(false);
     kit.composerInsert(c, 'wait');
     expect(sendOf(c).hidden).toBe(true);
     (c.querySelector('.k7-composer__text') as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));

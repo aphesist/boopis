@@ -25,7 +25,7 @@ import type { AskCardOpts, DockBot } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, ThreadMessage, Wait } from '../../data';
 import { asksOf, askWords, BOOPIS_ID, fit, ordered, ownBots, shows } from './model';
-import { composeTools, later, mentionChips } from '../chat/compose';
+import { composeTools, mentionChips, voiceNeedsSetup } from '../chat/compose';
 import { mentionCtx } from '../chat/refs';
 import { dockRoom } from './geometry';
 
@@ -223,7 +223,7 @@ function composerFor(id: string): CardComposer | null {
     draw() {
       const x = botById(id); if (!x) return;
       const keep = text()?.textContent ?? '';
-      slot.replaceChildren(kit.composer({ kind: 'dock', placeholder: 'Message ' + x.name, label: 'Message ' + x.name, running: S.runs.has(id), voiceOff: !later('voice'), ...(x.color ? { fill: kit.botFill(x.color) } : {}), ...(keep ? { text: keep } : {}) }));
+      slot.replaceChildren(kit.composer({ kind: 'dock', placeholder: 'Message ' + x.name, label: 'Message ' + x.name, running: S.runs.has(id), voiceSetup: voiceNeedsSetup(), ...(x.color ? { fill: kit.botFill(x.color) } : {}), ...(keep ? { text: keep } : {}) }));
       tools.drawn();
     },
     stop() { tools.stop(); if (made.listening) listen(false); }

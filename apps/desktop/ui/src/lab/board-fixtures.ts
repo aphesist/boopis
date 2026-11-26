@@ -48,7 +48,7 @@ export function board11(p: DataProvider): DataProvider {
   const tpl = p.bots.snapshot().bots[0] as Bot;
   const bots = roster(p, { kai: { state: 'needs', attention: 'approval', spent: '0.12', cfg: { ...tpl.cfg, gov: 'governed', model: 'sonnet 5.5', cap: '1.00', cron: '', workspace: 'worktree' } } });
   return {
-    ...p, info: drawn(p, 'voice', 'approval-rules'),
+    ...p, info: drawn(p, 'approval-rules'),
     bots: { ...p.bots, snapshot: () => ({ bots, threads: { ...Object.fromEntries(bots.map((b) => [b.id, []])), kai: KAI_THREAD } }), workspace: (id: string) => (id === 'kai' ? '/home/you/code/boopis/.worktrees/notes-0.2' : null) },
     waits: { ...p.waits, snapshot: () => [] },
     groups: { ...p.groups, snapshot: () => ({ groups: [RELEASE_CREW], threads: { [RELEASE_CREW.id]: [] } }) },
@@ -83,7 +83,7 @@ export function board12(p: DataProvider, held = false): DataProvider {
   const crew: Group = { ...RELEASE_CREW, working: ['kai', 'moss'], busy: false, spent: '0.21', queued: held ? [{ id: 'b12-held', text: 'And tag it when staging is green.', t: T12 }] : [] };
   const heard: Array<(e: GroupsEvent) => void> = [];
   return {
-    ...p, info: drawn(p, 'voice', 'approval-rules'),
+    ...p, info: drawn(p, 'approval-rules'),
     bots: { ...p.bots, snapshot: () => ({ bots, threads: { ...Object.fromEntries(bots.map((b) => [b.id, []])), nina: NINA_ASKS } }), archived: store([]) },
     waits: { ...p.waits, snapshot: () => [] },
     groups: {
@@ -114,7 +114,7 @@ export function board17(p: DataProvider): DataProvider {
   const tpl = p.bots.snapshot().bots[0] as Bot;
   const bots = roster(p, { kai: { state: 'working', activity: 'Running the tests', spent: '0.12', cfg: { ...tpl.cfg, gov: 'governed', model: 'sonnet 5.5', cap: '1.00', cron: '', workspace: 'worktree' } } });
   return {
-    ...p, info: drawn(p, 'voice'),
+    ...p, info: drawn(p),
     bots: { ...p.bots, snapshot: () => ({ bots, threads: { ...Object.fromEntries(bots.map((b) => [b.id, []])), kai: KAI_WORKING } }) },
     waits: { ...p.waits, snapshot: () => [] },
     groups: { ...p.groups, snapshot: () => ({ groups: [RELEASE_CREW], threads: { [RELEASE_CREW.id]: [] } }) }
@@ -160,7 +160,7 @@ export function boardS17(p: DataProvider): DataProvider {
   const started: Conversation = { turns: [{ id: 's17-t1', role: 'user', at: '09:42', text: 'The dock loses its right half while the slab moves. Find why and fix it.' }] };
   const gov = p.details.governance.get();
   return {
-    ...p, info: drawn(p, 'voice', 'usage', 'worktree'),
+    ...p, info: drawn(p, 'usage', 'worktree'),
     /* the new session has no turn yet; every other session has started (one turn stands for its thread) */
     sessions: { ...p.sessions, list, archived: store(SETTLED), draft: () => '', conversation: (id: string) => ({ snapshot: () => (id === draft.id ? empty : started), subscribe: () => () => undefined }), create: () => draft },
     details: { ...p.details, governance: store({ ...gov, governed: true, smart: false, model: 'sonnet 5.5', cap: '', spent: '' }), choices: store([{ value: 'anthropic/sonnet 5.5', provider: 'anthropic', model: 'sonnet 5.5', providerName: 'Claude' }]) },
@@ -187,7 +187,7 @@ function started(p: DataProvider, turns: Conversation['turns'], careful: Careful
   const base = boardS17(p);
   const c = controls(), caps = c.capabilities.get();
   return {
-    ...base, info: drawn(p, 'voice', 'turn-edit', 'turn-fork'),
+    ...base, info: drawn(p, 'turn-edit', 'turn-fork'),
     sessions: { ...base.sessions, list: store<readonly SessionSummary[]>(SESSIONS), draft: () => draft, conversation: (id: string) => feed(id === 's17-dock' ? { turns } : { turns: [{ id: 's20-o', role: 'user', at: '09:42', text: ASK }] }) },
     details: { ...base.details, governance: store({ ...base.details.governance.get(), cap: '$0.60', spent: '$0.37' }), context: store({ total: 200000, used: 76000, parts: [] }), environment: store({ ...p.details.environment.get(), branch: 'w32/dock-paint' }) },
     sessionControls: { ...c, capabilities: store({ ...caps, session: { ...caps.session, changeModel: YES } }), launch: store({ ...c.launch.get(), careful, effort: 'medium' }) },

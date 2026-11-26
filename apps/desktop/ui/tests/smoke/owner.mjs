@@ -188,5 +188,26 @@ export async function ownerDecisions(env) {
   await ev(() => __hx.data().bots.update('sage', { cfg: { cap: '1.00' } })); await page.waitForTimeout(300);
   const gone = await ev(() => document.querySelectorAll('.bt-outside').length);
   check('owner', 'saving a boopis setting for it creates the store and the mark goes, in the roster and in the header', gone === 0, gone);
+
+  /* the voice button is never hidden (owner, 26 November): every composer draws it while it is empty; with no voice model set up a
+     press starts nothing and opens a Notice at it, whose one action opens Settings at Models */
+  for (const [where, sel, go] of [['a session', '.ss-composer', null], ['a bot\'s chat', '#hx-view-bots .bt-composer-zone', () => page.keyboard.press('Alt+2')], ['a bot\'s card in the dock', '#hx-dock .k7-dock__panel', async () => { await page.keyboard.press('Alt+1'); await page.waitForTimeout(400); await ev(() => __hx.dock().openSession(__hx.dock().botAt(2))); }]]) {
+    if (where === 'a session') page = await s.fresh();
+    if (go) { await go(); await page.waitForTimeout(900); }
+    const circle = sel + ' [data-kit~="Composer"] [data-send]', text = sel + ' .k7-composer__text';
+    await page.click(text); await page.keyboard.press('Control+a'); await page.keyboard.press('Delete'); await page.waitForTimeout(200);
+    const at = await ev((q) => { const b = document.querySelector(q), r = b.getBoundingClientRect(); return { shown: r.width > 0 && getComputedStyle(b).visibility !== 'hidden', name: b.getAttribute('aria-label'), tip: b.getAttribute('data-tip'), glyph: !!b.querySelector('svg') }; }, circle);
+    await page.click(circle); await page.waitForTimeout(400);
+    const n = await ev((q) => { const n = document.querySelector('.k7-notice[data-floating]'), b = document.querySelector(q); if (!n) return null; const r = n.getBoundingClientRect(), c = b.getBoundingClientRect(); return { words: n.querySelector('.k7-notice__text').textContent, acts: [...n.querySelectorAll('[data-kit~="Button"]')].map((x) => x.textContent.trim()), above: r.bottom <= c.top + 0.5, inWindow: r.left >= 0 && r.right <= innerWidth, focus: !!document.activeElement.closest('.k7-notice') }; }, circle);
+    check('owner', `the voice circle shows in ${where} and says it needs setting up`, at.shown && at.glyph && /set up a voice model/.test(at.name) && at.tip === at.name, at);
+    check('owner', `pressed with no voice model, it opens the Notice over the composer: one action, "Set up voice" · ${where}`, !!n && n.words === 'Voice needs a voice model' && n.acts.join() === 'Set up voice' && n.above && n.inWindow && n.focus, n);
+    if (process.env.SMOKE_SHOTS && where === 'a bot\'s chat') await page.screenshot({ path: process.env.SMOKE_SHOTS + '/voice-notice.png' });
+    if (where === 'a session') {
+      await page.keyboard.press('Enter'); await page.waitForTimeout(700);
+      const set = await ev(() => ({ open: document.getElementById('hx-settings').open, models: document.querySelector('#hx-dtab-models')?.getAttribute('aria-selected'), notice: !!document.querySelector('.k7-notice[data-floating].is-in') }));
+      check('owner', '"Set up voice" opens Settings at Models, and the Notice is gone', set.open && set.models === 'true' && !set.notice, set);
+      await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+    } else { await page.keyboard.press('Escape'); await page.waitForTimeout(300); check('owner', `Esc closes it, the focus back on the circle · ${where}`, await ev((q) => !document.querySelector('.k7-notice[data-floating].is-in') && document.activeElement === document.querySelector(q), circle)); }
+  }
   await s.close();
 }

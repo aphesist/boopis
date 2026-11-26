@@ -75,6 +75,21 @@ function openMenu(anchor: HTMLElement, o: blocks.MenuOpts & { place?: 'above' | 
   return node;
 }
 
+/** a Notice opened against an anchor: what a control that cannot act yet needs, in one line, with the one action that gets there (the
+    voice circle with no voice model: "Set up voice"). It is the Menu's layer: one open at a time, Esc or an outside press closes it and
+    focus returns to the anchor. The action closes it and calls `onAction` */
+function openNotice(anchor: HTMLElement, o: Pick<blocks.NoticeOpts, 'text' | 'title' | 'icon' | 'tone'> & { action: string; label?: string; place?: 'above' | 'below'; align?: 'start' | 'end' | 'center'; onAction?: () => void }): HTMLElement | null {
+  const node = wire(frag(blocks.notice({ text: o.text, title: o.title, icon: o.icon, tone: o.tone, place: 'floating', actions: [{ label: o.action, value: 'act' }], dismiss: true, attrs: { role: 'dialog', 'aria-label': o.label ?? o.title ?? o.text, 'data-floating': '' } })));
+  if (!layer.open(anchor, node, { place: o.place ?? 'above', align: o.align ?? 'end' })) return null;
+  node.addEventListener('click', (e) => {
+    const t = e.target as Element;
+    if (t.closest('[data-dismiss]')) { layer.close(); return; }
+    if (t.closest('[data-value="act"]')) { layer.close(false); o.onAction?.(); }
+  });
+  node.querySelector<HTMLElement>('[data-value="act"]')?.focus({ preventScroll: true });
+  return node;
+}
+
 /** "@" in a composer names one of `src`'s entries, chosen from the kit's Menu over it (wire.ts composerMentions) */
 /** the "@" list is placed against the composer's box, which is no control: the layer's aria-expanded does not belong on it (the list names itself) */
 function unsaid(box: HTMLElement): void {
@@ -89,7 +104,7 @@ const mentions = (c: HTMLElement, src: KitMentions): void => {
 export const kit = {
   html, ...factories, composerInsert, composerInsertChip, composerChips, composerMarks, composerRunning, mentions, section: surfaces.section, dockGeometry: DOCK_GEOMETRY,
   /** the Dock's parts as markup, for the app's live dock, which keeps its orbs connected and writes each part in place */
-  dockParts: { slab: slabPath, orb: dockOrb, cap: dockCap, ask: dockAsk, more: dockMore, panel: dockPanel }, wire, wireHold, wireMenu, markReveal, openMenu, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, notify, notifyText, keyNames: controls.keyNames, variants: kitVariants
+  dockParts: { slab: slabPath, orb: dockOrb, cap: dockCap, ask: dockAsk, more: dockMore, panel: dockPanel }, wire, wireHold, wireMenu, markReveal, openMenu, openNotice, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, notify, notifyText, keyNames: controls.keyNames, variants: kitVariants
 };
 export type Kit = typeof kit;
 export type { ButtonOpts, IconButtonOpts, ChipOpts, SegmentedOpts, SegItem, SelectorItemOpts, SwitchOpts, FieldOpts, KbdOpts, TooltipOpts } from './controls';

@@ -22,7 +22,7 @@ import { openSettings } from './settings';
 import { checkClips, watchClips } from './clips';
 import { atEnd, followZone } from '../chat/follow-zone';
 import { paintDetails } from './details';
-import { composeTools, later, mentionChips } from '../chat/compose';
+import { composeTools, later, mentionChips, voiceNeedsSetup } from '../chat/compose';
 import { outsideDescription, outsideRoomMark } from './outside';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 
@@ -337,7 +337,7 @@ function buildComposer(host: HTMLElement): void {
   const draw = (b: Bot): void => {
     const keep = slot.firstElementChild ? api.value : '';
     const l = lineOf(b);
-    const c = kit.composer({ kind: 'bot', placeholder: 'Message ' + b.name, label: 'Message ' + b.name, running, line: l.items, voiceOff: !later('voice'), ...(b.color ? { fill: kit.botFill(b.color) } : {}), ...(keep ? { text: keep } : {}) });
+    const c = kit.composer({ kind: 'bot', placeholder: 'Message ' + b.name, label: 'Message ' + b.name, running, line: l.items, voiceSetup: voiceNeedsSetup(), ...(b.color ? { fill: kit.botFill(b.color) } : {}), ...(keep ? { text: keep } : {}) });
     slot.replaceChildren(c);
     tools.drawn();
     botId = b.id; sig = l.sig;

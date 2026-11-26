@@ -58,9 +58,9 @@
 .k7-menu__sigil { color: var(--text-dim); }
 /* floating: placed by the kit's one placement primitive (place.ts) */
 .k7-menu[data-floating] { max-width: calc(100vw - 2 * var(--sp-2)); }
-.k7-menu[data-floating], .k7-pop { position: fixed; z-index: var(--z-menu); opacity: 0; transform: scale(.98); transform-origin: top left;
+.k7-menu[data-floating], .k7-notice[data-floating], .k7-pop { position: fixed; z-index: var(--z-menu); opacity: 0; transform: scale(.98); transform-origin: top left;
   transition: opacity var(--dur-pop) var(--ease-sharp), transform var(--dur-pop) var(--ease-sharp); }
-.k7-menu[data-floating].is-in, .k7-pop.is-in { opacity: 1; transform: none; }
+.k7-menu[data-floating].is-in, .k7-notice[data-floating].is-in, .k7-pop.is-in { opacity: 1; transform: none; }
 .k7-pop { width: var(--pop-w); padding: var(--pad-field-y) var(--pad-field); font-size: var(--fs-s); line-height: var(--lh-s); }
 
 /* ── MenuRow (19): 32, padding 6 8, radius 10 (16 - 6), a 16 glyph, 14 label; hover and keyboard focus the 6% fill ── */

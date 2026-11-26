@@ -360,6 +360,14 @@ export interface DictationSource {
   /** start listening; `onTranscript` gets what was heard; the returned function cancels */
   start(opts: { botId: string | null }, onTranscript: (text: string) => void): Unsubscribe;
 }
+/** talking to a bot or a session, live (a composer's voice circle, pressed with no text). It is a capability: a provider has it once a
+    voice model is set up (Settings, Models: a voice provider's key through the host's secret store, or a local model with live voice).
+    Until then every composer still draws the circle, and pressing it says what voice needs (modules/chat/compose.ts `voiceTool`).
+    Dictation (the mic) is another thing, and works without it */
+export interface VoiceSource {
+  /** start talking with the open bot (null in a session); the returned function ends it */
+  start(opts: { botId: string | null }): Unsubscribe;
+}
 /** a drag over the window: `x` and `y` in CSS pixels; `attachments` only on `drop` */
 export interface FileDrag { phase: 'enter' | 'over' | 'leave' | 'drop'; x: number; y: number; attachments: readonly Attached[] }
 export interface FilesSource {
@@ -409,6 +417,8 @@ export interface DataProvider {
   schedules: SchedulesSource;
   feedforward: FeedforwardSource;
   dictation: DictationSource;
+  /** live voice, once a voice model is set up (absent until then: the voice circle then says what it needs) */
+  voice?: VoiceSource;
   files: FilesSource;
   mods: ModsSource;
   /** asking a council: several models answer one message and one combines them (ADR-0035) */

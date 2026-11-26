@@ -1,7 +1,9 @@
 /* What a composer's own controls do, the same in a bot's chat, a room and a new session (the kit's Composer fires the events,
    wire.ts): "+" asks the host for files and sets each into the text as a chip whose words are its "@" reference, the way a typed path is read; the mic
-   dictates into the text through the provider's dictation until it is switched off; "@" names what the screen offers. Talking
-   to a bot (the voice button with no text) does not exist yet: the button is not shown until it does (`later('voice')`). */
+   dictates into the text through the provider's dictation until it is switched off; "@" names what the screen offers. The voice
+   circle (the primary button with no text) is always there (owner, 26 November): it talks once a voice model is set up (the
+   provider's `voice`), and until then says what it needs, with the way to Settings, Models (`voiceTool`). */
+import { emit } from '../../core/bus';
 import { kit, ui } from '@boopis/ui';
 import type { ComposerChip, KitMentions, MarkdownCtx } from '@boopis/ui';
 import { data } from '../../data';
@@ -21,6 +23,23 @@ export function mentionChips(text: string, ctx: MarkdownCtx): ComposerChip[] {
 /** whether a feature the boards draw and no build does yet is switched on (the provider's `info.later`: a lab fixture's alone). A control
     is built against this and is not shown while it says no: a thing shows only once it exists */
 export const later = (f: LaterFeature): boolean => data().info.later?.has(f) ?? false;
+
+/** no voice model is set up yet: a composer's voice circle says so (`ComposerOpts.voiceSetup`) */
+export const voiceNeedsSetup = (): boolean => !data().voice;
+/** what the voice circle does, in every composer (the kit fires ui:voice when it is pressed with no text): with a voice model set up
+    it starts talking (the provider's `voice`; pressed again, it ends); with none it starts nothing and opens a small Notice at the
+    circle that says so, whose one action opens Settings at Models. Live voice itself is not built here. Returns what ends a talk */
+export function voiceTool(slot: HTMLElement, botId: () => string | null): () => void {
+  let end: (() => void) | null = null;
+  const stop = (): void => { end?.(); end = null; };
+  slot.addEventListener('ui:voice', () => {
+    const v = data().voice;
+    if (v) { if (end) stop(); else end = v.start({ botId: botId() }); return; }
+    const at = slot.querySelector<HTMLElement>('.k7-composer [data-send]');
+    if (at) kit.openNotice(at, { icon: 'waveform', title: 'Voice needs a voice model', text: '', action: 'Set up voice', onAction: () => { emit('hx:open-settings', { section: 'models', from: 'voice' }); } });
+  });
+  return stop;
+}
 
 export interface ComposeTools {
   /** who dictation is for (the open bot), null in a session */ botId(): string | null;
@@ -44,8 +63,9 @@ export function composeTools(slot: HTMLElement, o: ComposeTools): { drawn(): voi
     cancel?.();
     cancel = data().dictation.start({ botId: o.botId() }, (heard) => { const c = text(); if (c) kit.composerInsert(c, heard); });
   });
+  const endTalk = voiceTool(slot, o.botId);
   return {
     drawn() { stop(); const c = slot.querySelector<HTMLElement>('.k7-composer'); if (c && o.mentions) kit.mentions(c, o.mentions); },
-    stop
+    stop() { stop(); endTalk(); }
   };
 }

@@ -55,9 +55,15 @@ export default {
     'Stop hovered': stage(['hover'], ({ root }) => { fill(root, kit.composer({ kind: 'room', running: true })); }, { width: 720, force: [{ sel: '[data-stop]', state: 'hover' }] }),
     'Stop focused': stage(['focus'], ({ root }) => { fill(root, kit.composer({ kind: 'room', running: true })); }, { width: 720, force: [{ sel: '[data-stop]', state: 'focus' }] }),
     'running, narrow': stage(['size'], ({ root }) => { fill(root, kit.composer({ kind: 'dock', running: true, text: 'a message long enough to wrap in a narrow composer' })); }, { width: 328, ground: 'dock' }),
-    /* a thing shows only once it exists: no voice circle where talking is not built, no send while a turn runs where nothing queues */
-    'voice not built: no primary circle until there is text': stage(['variant'], ({ root }) => { fill(root, kit.composer({ kind: 'session', voiceOff: true, line: S20 })); fill(root, kit.composer({ kind: 'session', voiceOff: true, text: 'Describe the change' })); }, { width: 720 }),
-    'running where nothing queues: Stop and the mic': stage(['variant'], ({ root }) => { fill(root, kit.composer({ kind: 'session', running: true, voiceOff: true, queueOff: true, text: 'wait' })); }, { width: 720 }),
+    /* the voice circle always shows (owner, 26 November): with no voice model it is drawn the same and its name and tip say what it needs */
+    'no voice model yet: the voice circle as ever, then the send': stage(['variant', 'owner'], ({ root }) => { fill(root, kit.composer({ kind: 'session', voiceSetup: true, line: S20 })); fill(root, kit.composer({ kind: 'session', voiceSetup: true, text: 'Describe the change' })); }, { width: 720 }),
+    'no voice model yet: what the circle opens': stage(['open', 'owner'], ({ root }) => {
+      fill(root, kit.composer({ kind: 'bot', voiceSetup: true }));
+      const b = root.querySelector<HTMLElement>('[data-send]');
+      if (b) kit.openNotice(b, { icon: 'waveform', title: 'Voice needs a voice model', text: '', action: 'Set up voice' });
+    }, { width: 720, overlay: { anchor: '[data-send]', layer: '.k7-notice[data-floating]' } }),
+    /* a thing shows only once it exists: no send while a turn runs where nothing queues */
+    'running where nothing queues: Stop and the mic': stage(['variant'], ({ root }) => { fill(root, kit.composer({ kind: 'session', running: true, voiceSetup: true, queueOff: true, text: 'wait' })); }, { width: 720 }),
     /* boards S05 B and S20: the session's line, and the words the text is read by */
     'a session, S20: the line and the marks': stage(['variant', 'owner'], ({ root }) => {
       const c = kit.composer({ kind: 'session', placeholder: 'Send feedback to decline this request', text: 'Don\'t centre with a transform, use auto margins on the page', line: S20 });
