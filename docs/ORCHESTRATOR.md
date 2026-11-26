@@ -206,6 +206,25 @@ Until a 0.3.0 feature exists, its control on a 0.2.0 screen is disabled with a r
 - Removed with the v6 dock (spec 21.4 and "bots ask only through approvals"): a form answered from the dock,
   `[` `]` pages, up/down for size, the minimised pill, the session part.
 
+**The lead's fates for the v6 details panel (26 Nov, COVERAGE conflict 14; to show the owner):**
+- The collapsed context strip goes (the context is on the composer's line).
+- S40's pane: head (title, folder, branch); Session (Model, Effort, How careful, Workspace) with the menus that
+  exist; Use (Context, Cost, Pull request hidden until 0.3.0).
+- Context: its row opens the breakdown by parts with "Compact conversation" (kit Disclosure in the pane; derived);
+  `/compact` stays a command.
+- Cost: its row carries "Change cap" (derived).
+- Tasks (the agent's todo list): the Steps card in the thread, as board 17 draws a working bot's steps.
+- Changes: "Open diff" opens the right panel on the diff as S24 draws its Diff tab, alone (no tab strip until a
+  second tab exists; review features are 0.3.0).
+- Output: a command's output lives in its tool row in the open work line (kit Well); the panel's Output goes.
+- Governed and the ladder: the model menu already says them. The project's "no plugins and hooks" switch, the
+  per-session connector switches and Environment detail (sandbox, runtime, harness, gate) move to Settings
+  (step 7: project policy, Connectors, Diagnostics); the pane keeps one "Environment" section of plain rows.
+- Pin, Settle, Fork: whatever works today stays reachable from the session row's and the title's menu.
+- A mod's pane stays a tab; the overlay under 900 px stays; palette commands are re-pointed.
+- Model menu: S19's two-line rows (nothing cut). "Fix and retry" sends the fix request as the next message.
+  The engine line under a bot's chat and a room stays. Partial dictation text stands as plain text.
+
 **Owner, 26 Nov (after the transcription finding):** "the microphone button is simply a transcription button. it
 reads your voice and transcribes it into text. that is simple and should already exist. the 'talk' button, meaning,
 talking to the bots themselves, don't come from the microphone button." So: the mic is plain speech-to-text and must
@@ -285,9 +304,14 @@ Resolutions the lead made (by the precedence of section 3 and the owner's leave 
 | **Found in 6a, verified by the lead** | **Transcription does not exist in the live app.** `host/live-provider.ts` has `dictation: { start: () => () => undefined }`; nothing on main or develop hears audio; only the mock writes a transcript. The owner believed it worked ("at least transcription is supposed to be a thing already"). Told to the owner 26 Nov with a proposal (below). REPASS.md's "works already" is wrong and is corrected in 6b |
 | Seen by the lead on 6a's sheets (to fix in 6b) | S41: with no sessions the app's sidebar loses the Sessions / Bots switch and the "+" (the board keeps them) and the title reads "New session" for the board's "Sessions". The model menu is about 160 px wide and cuts its rows' text ("Picks a …", "Not on …"). At 880 px wide the sidebar covers the thread and the title pill collides with the search hint: narrow widths are not done (phase 2 step 5) |
 | Not proven at ca44785a | The full lab (in progress); effort/model change against a real engine (fake gateway only); a pasted file, hold-to-talk and undo in WebKitGTK (Chromium only); `dock_webkit.py` flaked once in nine runs (24/25, check not captured) |
-| Running (26 Nov, builder started on ca44785a; S33, S37 and the derived composer states sent to the owner; the transcription finding told) | **Step 6b:** S41's empty sidebar and title, the model menu's width, the mic without a speech model (Notice, as the voice circle), S36 engine stopped, S38 gate failed, the steps against S10, the session details pane S40 (replacing the v6 details panel; the Diff/Files/Terminal/PR tabs are 0.3.0 and stay hidden), the room details pane's and the small lab findings |
+| Done (bb32bb41, 26 Nov) | **Step 6b, items 1 to 6 of 8.** S41 (0.63/0.47%; chrome, sidebar, composer 0.00; the switch was never lost in the app, the fixture sheet misled the lead; the difference left is the hidden "Import sessions"); the model menu as a kit Menu `list` variant, 360 wide (derived; descriptions still cut, with a tooltip); the mic's states in the kit (preparing, listening, partial, final, error) and the setup Notice removed per the owner; S36 engine stopped (line 0.00%, "Start it again" calls the host's real `hermes_retry`; derived under a bot's chat and a room); S38 gate failed (card 0.00/0.01%, kit FilesCard `check`; failed and rolled back are one state in the engine); the open work line to S10's geometry with human words. Unit 2026; smoke 447/448 (machine budget); CI run 45768380782: all non-lab jobs green, lab running. The lead looked at S36 dark, S38 light, S41 light and the derived batch |
+| Not done in 6b | **S40** (the v6 details panel, `modules/session/right.ts`, untouched; the builder left an inventory with proposed fates) and **the lab findings** (501 blocking on ca44785a: details strip 105 + panel 27, room details pane 98, `stability.render` 50, inline chips 41, kit Pane rows 15, tool-row head and FileCard tile 14, axe contrast on Steps 14, S23 foot at 390 7, small kit 12, bots stories 17, pages/window 9, screens still v6 90) |
+| **Intermittent, real** | `dock_webkit.py` failed once on CI (run 45765615125, 23/25): "the asks fold" and "and as they fold": nina and kai's orbs blank (under 12 lit pixels) in the first frame after the panel folds, on WebKitGTK. Passed on the re-run. A paint defect, not a test problem: first item of 6c, by cause |
+| Seen by the lead on 6b's shots | The model menu still cuts its descriptions; a failed step reads "terminal failed" (a raw tool name) |
+| Dictation seam (final, from 6b) | `DictationSource.start({ botId }, onEvent): cancel`; events preparing {done,total}, listening, partial {text}, final {text}, error {reason: a sentence, retry?}. Sent to the transcription builder, who merges `origin/w33/repass` into its branch |
+| Running (26 Nov) | **Step 6c:** the dock's blank orbs after a fold; S40 the details pane with the lead's fates (section 9); the model menu's two-line rows; the failed step's words; the lab findings by cause |
+| Next (step 6d) | The session's last v6 parts: form cards with fields, a council, find, the `ship` card kind. Then step 7 (Settings with per-project policy, per-session connectors, Diagnostics; Store; Connectors; palette; dialogs) |
 | Running in parallel (26 Nov) | **Transcription in the host:** branch `w33/transcription` (worktree `/home/user/hx-wt/w33-transcription`, from ca44785a), host files and `ui/src/host/dictation.ts` only; uses `CARGO_TARGET_DIR=/home/user/hx-wt/w33-session-s0/target` (disk has about 2 GB free). 6b was sent a correction: item 3 is now the kit mic's states (preparing, listening, transcribing, failed), no setup Notice. To merge into w33/repass by the lead when both report; a real microphone can only be tried by the owner on a test build |
-| Next (step 6c) | The session's last v6 parts: form cards, tasks handed to other models, a council, find. Then step 7 (Settings with the voice and speech section, Store, Connectors, palette, dialogs) |
 | Stopped, kept on their branches | `w33/onboarding`, `w33/settings-store` (first-attempt work; logic may be reused, looks are redone) |
 | Paused by the owner | The launch film (`w28/launch-video`, uncommitted edits in `w28-launch`) |
 
