@@ -361,6 +361,9 @@
 /* its rule over it is a line, not a surface: the foot paints nothing of its own, so what sits at its end is set in the menu's corner */
 .k7-menu__foot::before { content: ""; position: absolute; inset: 0 0 auto; height: var(--hl); background: var(--hair); }
 .k7-menu__foot > .k7-grow { flex: 1 1 auto; }
+/* the foot never runs past the menu: where a face is wider (CI's fonts), the select gives way (its value ends in an ellipsis), never the button at the end (6f) */
+.k7-menu__foot > .k7-sel { flex: 0 1 auto; min-width: 0; }
+.k7-menu__foot > .k7-btn { flex: none; }
 /* the control at the foot's end is concentric with the menu's corner (R-corner-3; 6f): 8 at 8 in (16 - 8) */
 .k7-menu__foot > :is(.k7-sel, .k7-btn):focus-visible { outline-offset: calc(-1 * var(--focus-w)); }   /* the rings inside: 2 from the foot's sides */
 .k7-menu__foot > .k7-btn:last-child { border-radius: max(var(--r-floor), calc(var(--r-menu) - var(--pad-menu) - var(--gap-hair))); }

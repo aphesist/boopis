@@ -932,7 +932,10 @@
         if (ownProbe) {
           O = ownProbe.getBoundingClientRect();
           const da = O.bottom - baseLine;
-          if (Math.abs(da) * dpr > 0.5) problems.push('(a) its text\'s baseline is ' + dev(Math.abs(da)) + ' device px ' + (da > 0 ? 'below' : 'above') + ' the line\'s');
+          /* board 12 (kit.css `.cite`, inline and wrapping with its sentence): a source's tile can end a line and its words start the next,
+             as the board draws "(WebKit bug 27611)": then its words stand on the next line's baseline, not the one its tile ends (rule 7, 6f) */
+          const citeWraps = chip.matches('.k7-cite') && chip.getClientRects().length > 1;
+          if (Math.abs(da) * dpr > 0.5 && !citeWraps) problems.push('(a) its text\'s baseline is ' + dev(Math.abs(da)) + ' device px ' + (da > 0 ? 'below' : 'above') + ' the line\'s');
         }
         if (painted) {
           /* (b) its box is centred on the line's cap band */

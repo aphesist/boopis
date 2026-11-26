@@ -136,7 +136,7 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 27 | Kbd | `kbd` | `kit/kbd` | in text, in a pill |
 | 28 | Chip | `chip` | `kit/chip` | answer, filter, mode |
 | 29 | Tooltip | `tooltip` (the runtime `[data-tip]`, restyled on a v7 root) | `kit/tooltip` | name, name and keys |
-| 30 | InlineChip | `inlineChip` | `kit/inline-chip` | mention (a bot, the room, a bot that is not here; hover, focus), you, reference, code, cite, model, countdown; 13, 14, 15; chips of a composer's text 6f: a reference never leaves its line (clipped with an ellipsis, `overflow: clip` so its baseline holds); a source's tile stays with its first word (`k7-cite__lead`); a mention's orb and name never part in a composer; @all's stack is its orbs' height |
+| 30 | InlineChip | `inlineChip` | `kit/inline-chip` | mention (a bot, the room, a bot that is not here; hover, focus), you, reference, code, cite, model, countdown; 13, 14, 15; chips of a composer's text 6f: a reference never leaves its line (clipped with an ellipsis, `overflow: clip` so its baseline holds); a mention's orb and name never part in a composer; @all's stack is its orbs' height |
 | 31 | Mark | `mark`, `markReveal` | `kit/mark` | feedforward, blank (waiting, opened, filled, lapsed), info label |
 | 32 | StatusWord | `statusWord` | `kit/status-word` | neutral, amber, red, ok; dot, pulse |
 | 33 | Badge | `badge` | `kit/badge` | neutral, amber |

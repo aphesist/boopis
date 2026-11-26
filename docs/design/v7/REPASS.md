@@ -208,18 +208,18 @@ gh api repos/aphesist/boopis/actions/workflows/ci.yml/dispatches -f ref=<branch>
   Field's input drawing a second ring under forced focus, an answered row's action (centred, concentric), a DiffView framed twice in a
   Well, a Menu's foot (its rows the menu, its button concentric and still under press), a running ToolRow's name invisible under reduced
   motion, a long path's reference leaving its line, @all's stack making its line taller and its "+N" raised on raised, a mention's orb
-  parting from its name, a source's tile left alone at a line's end, a check's long name pushing its action out, the turn foot's ring past
+  parting from its name, a check's long name pushing its action out, the turn foot's ring past
   the turn, the hx-card host taking its content's width in a page column; on screens: the mod drawer's corner, the v6 menus' key chips,
-  the new group's title, the diff pane at 390, the store's and the keys sheet's v6 search padding, a roster row's outside mark. Rules
+  the new group's title, the diff pane at 390, the dock card's head at 390 (it stays at the top while its log scrolls), a menu foot's select giving way before its button on CI's wider fonts, a mod toast's count, the store's and the keys sheet's v6 search padding, a roster row's outside mark. Rules
   adjusted where the boards draw what they flag (rule 7, each with a line naming the board): the light theme's `--text-quiet` (boards
   11, P2, 17; a section head's count, K02), a StatusWord's amber and red, the boards' untrimmed 18 boxes (`.you`, `.refchip`,
-  `.badge2`), a source wrapping with its sentence, inline code's pixel; and three probe corrections where a finding was wrong (the kit's
+  `.badge2`), a source wrapping with its sentence (board 12 ends a line with its tile: "(WebKit bug 27611)"; keeping the tile with its word moved the board by 0.11%, so it was undone), inline code's pixel; and three probe corrections where a finding was wrong (the kit's
   `.k7-sr` text is not visible; @all's stack is a mention's mark, not its words; a chip that clips its own content is measured to its
   content box, and drawn text that wraps is read on its last line). One story allowance: the connector asker's 16 tile in a form's head
-  stands where an orb stands. Left, by cause (not fixed here): the dock's open card at 390 (its head scrolls under the thread's text:
-  2 findings, `composer/composer-in-app`, `pages/window`), the v6 bots settings sheet's run-limit menu at 390 (1, `bots/settings-sheet`),
-  the first run's consent diff ring under forced focus (1, `settings/first-run`, step 8's page). CI's lab on 6f's last commit: below
-  (the run is in the step's report).
+  stands where an orb stands. CI's lab on `8a91350f` (run 45846824653): 17 blocking (904 before), every other job green; fixed after it: the council foot on CI's
+  fonts (10), the dock head at 390 (3), the wrapped source (1), the mod toast's count (1). Left, by cause (not fixed here): the v6 bots
+  settings sheet's run-limit menu at 390 (1, `bots/settings-sheet`, step 7), the first run's consent diff ring under forced focus (1,
+  `settings/first-run`, step 8's page). CI's lab on 6f's last commit is in the step's report.
 - The lab's report is read by cause, not by story (step 6a, CI run 45736911632 on `2890ee9a`: 1109 blocking findings). A cause is fixed
   where it is a defect of a converted screen or of the kit; where a rule flags what a board draws or the owner decided, the rule is
   adjusted in `tests/lab/probe.js`, `probe-v7.js` or `v7.mjs` with a comment naming the board (rule 7); a cause of a screen still on v6

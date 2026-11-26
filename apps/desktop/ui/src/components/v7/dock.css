@@ -32,6 +32,8 @@
 .k7-dock[data-dk="open"] { height: var(--dk-open-h); }
 .k7-dock__panel { display: flex; flex-direction: column; gap: var(--sp-2); flex: 1 1 0; min-height: 0; padding: var(--dk-inset) var(--dk-inset) 0; overflow-y: auto; overscroll-behavior: contain; }
 .k7-dock__head { display: flex; align-items: center; gap: var(--sp-2); flex: none; height: var(--composer-h); padding: 0 var(--sp-2); }
+/* where the card is taller than the room (a phone's width) its log scrolls under the head, which stays at the top on the dock's ground (6f) */
+.k7-dock__panel > .k7-dock__head { position: sticky; top: 0; z-index: 1; background: var(--dock-bg); }
 .k7-dock__title { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); padding-inline-start: var(--sp-1); }
 .k7-dock__count { font-size: var(--fs-2xs); color: var(--text-dim); }
 .k7-dock__name { font-size: var(--fs-m); line-height: var(--lh-m); font-weight: 500; margin-inline-start: var(--gap-hair); }

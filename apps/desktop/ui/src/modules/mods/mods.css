@@ -82,7 +82,7 @@
 .mod-status--ghost { position: absolute; left: 0; right: 0; bottom: 0; pointer-events: none; }
 
 /* ───────────── the toast queue: a quiet "+N" while others wait, and a way to dismiss ───────────── */
-.mod-toast__more { flex: none; margin-left: calc(var(--sp-2) * -1); font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); font-variant-numeric: tabular-nums; color: var(--text-quiet); text-transform: none; }
+.mod-toast__more { flex: none; margin-left: calc(var(--sp-2) * -1); font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); font-variant-numeric: tabular-nums; color: var(--text-dim); text-transform: none; }
 /* the dismiss is a 24px corner control: while the toast holds one its corner size is 24 (inset 8, radius 12) */
 .ui-toast:has(> .mod-toast__x) { --corner-size: 24px; }
 .ui-toast > .mod-toast__x { flex: none; }
