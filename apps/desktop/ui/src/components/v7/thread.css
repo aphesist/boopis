@@ -191,6 +191,9 @@
 span.k7-composer__item { cursor: default; }
 /* a narrow composer leaves out what folds first (S05 B: the branch and the context); the quick menu still lists them */
 @container k7-composer (max-width: 600px) { .k7-composer__line > [data-fold] { display: none; } }
+/* the same in a window under 900 wide, whatever room the composer has (decided with S05: "under 900 px the branch and the context fold
+   into the quick menu first"): the quick menu then says what they hold */
+@media (max-width: 899px) { .k7-composer__line > [data-fold] { display: none; } }
 .k7-composer__line > .k7-composer__item { min-width: 0; }
 .k7-composer__item > span:not(.k7-ticks) { overflow: hidden; text-overflow: ellipsis; }
 @media (hover: hover) and (pointer: fine) { span.k7-composer__item:hover { color: var(--text-dim); } }

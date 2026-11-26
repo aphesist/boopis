@@ -8,6 +8,7 @@ import { store } from '../../data/store';
 import { emitter } from '../../data/store';
 import type { AgentTurn, Conversation, ConversationEvent, DataProvider, FormSpec, Turn } from '../../data';
 import type { SessionCapabilities, SessionControls } from '../../data/session-s0';
+import { kit } from '@boopis/ui';
 import { VIEW, mountView } from './conversation';
 
 const EDIT: FormSpec = { id: 'f1', kind: 'permission', title: 'Allow this change?', file: 'modules/dock/dock.css', diff: '+a\n-b', schema: { properties: { choice: { type: 'string', enum: ['once', 'session', 'deny'] } } } };
@@ -271,6 +272,19 @@ describe('the composer', () => {
     expect(line()).toEqual(['branch', 'model', 'context']);
     idle();
     expect(line()).toEqual(['branch', 'model', 'context']);
+  });
+  it('where the line has folded the branch and the context away (a window under 900 wide), the quick menu says what they hold', () => {
+    idle();
+    const real = window.getComputedStyle.bind(window);
+    const spy = vi.spyOn(window, 'getComputedStyle').mockImplementation((el: Element, pseudo?: string | null) => (el.hasAttribute('data-fold') ? { display: 'none' } as CSSStyleDeclaration : real(el, pseudo)));
+    q('.ss-composer .k7-composer__line .k7-grow').click();
+    const menus = document.querySelectorAll<HTMLElement>('.k7-menu[data-floating]'), menu = menus[menus.length - 1] as HTMLElement;
+    const rows = Object.fromEntries([...menu.querySelectorAll<HTMLElement>('[data-kit~="MenuRow"]')].map((r) => [r.dataset['value'] ?? '', r.querySelector('.k7-mrow__desc')?.textContent ?? null]));
+    expect(rows['branch']).toBe(p.details.environment.get().branch);
+    expect(rows['context']).toMatch(/\d+k \/ \d+k/);
+    expect([rows['model'], rows['cost']]).toEqual([null, null]);   /* they still show on the line */
+    spy.mockRestore();
+    kit.closeMenu();
   });
   it('"+" opens the add menu; the model item opens who answers next, and a pick changes it', () => {
     idle();

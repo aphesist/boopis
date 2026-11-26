@@ -4,7 +4,8 @@
    The line says how the session runs, each item its own control: how careful (the S0 scale's menu, alt+G), the branch, the model
    that answers next with its effort (the "who answers next" menu, alt+M, which holds the effort's levels too; alt+S turns Smart on or
    off; a change of either while the session runs leaves its line in the thread, S33), and at the end how full the
-   context is and what the session has spent. The quick menu (a press on the line, or "+") turns items off (S05 B). "+" opens the add
+   context is and what the session has spent. The quick menu (a press on the line, or "+") turns items off (S05 B); where the line has
+   no room (under 900 wide) the branch and the context fold into it first, and it says what they hold. "+" opens the add
    menu: attach a file or a folder (each a chip in the text, sent with the message), mention a file, start a command. "@" names the
    model that answers this message only (ADR-0036). The words the text is read by carry the kit's Mark (feedforward): a press on one,
    or alt ArrowDown in it, opens what it is read as. While a change waits for your answer, what you type declines it with those
@@ -217,11 +218,18 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
       }
     });
   }
+  /** what an item holds when the line has folded it away (a narrow composer, a window under 900 wide: the branch and the context go
+      first, S05): the quick menu says it beside the item's name, so nothing is lost with the room. Null for an item that shows */
+  function folded(id: LineItemId): string | null {
+    const el = slot.querySelector<HTMLElement>('.k7-composer__line > [data-line="' + id + '"][data-fold]');
+    if (!el || getComputedStyle(el).display !== 'none') return null;
+    return lineItems({ text: value(), attachments: present().length, sessionId: o.sessionId(), hidden: [] }).find((x) => x.attrs?.['data-line'] === id)?.value ?? null;
+  }
   /** the quick menu (S05 B): which items show under the composer; a check toggles in place */
   function openQuick(anchor: HTMLElement): void {
     const menu = openOver(anchor, {
       label: 'Quick menu: show under the composer', variant: 'quick', place: 'above', align: 'end', attrs: v7Attrs(),
-      entries: [{ heading: 'Quick menu: show under the composer' }, ...LINE_ITEMS.filter((i) => i !== 'careful' || !!controls).map((i) => ({ label: NAMES[i], value: i, checked: !hidden.includes(i) }))]
+      entries: [{ heading: 'Quick menu: show under the composer' }, ...LINE_ITEMS.filter((i) => i !== 'careful' || !!controls).map((i) => ({ label: NAMES[i], value: i, checked: !hidden.includes(i), ...(folded(i) ? { desc: folded(i) as string } : {}) }))]
     });
     menu?.addEventListener('ui:select', (e) => {
       const v = (e as CustomEvent<{ value: string }>).detail.value as LineItemId;
