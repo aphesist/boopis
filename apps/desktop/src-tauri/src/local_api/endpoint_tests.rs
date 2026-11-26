@@ -1774,3 +1774,39 @@ async fn the_system_check_refuses_until_a_gateway_is_identified_and_then_answers
     let _ = unrelated.wait();
     assert_eq!(status, 200, "{body}");
 }
+
+/// team-ops.md acceptance 17: the plans are read through the local API, and nothing there applies one.
+#[tokio::test]
+async fn plans_and_jobs_are_read_only_here() {
+    let r = rig().await;
+    let house = r.dir.path().join("house");
+    r.service.set_house_dir(house.clone());
+    let made = boopis_hostops::plans::PlanStore::under(&house)
+        .propose(
+            &boopis_hostops::plans::Proposal {
+                base_export_hash: "b".into(),
+                actions: vec![json!({"mark": "+", "target": "bot kai", "what": "new", "op": {"op": "create_bot", "name": "kai"}})],
+                reason: "a coder".into(),
+                ..boopis_hostops::plans::Proposal::default()
+            },
+            boopis_hostops::now_ms(),
+        )
+        .unwrap();
+    let hash = made["plan_hash"].as_str().unwrap().to_owned();
+    let (status, _, body) = raw(r.server.addr(), &get(&r, "/v1/plans", "")).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(json_of(&body)["plans"][0]["plan_hash"], hash.as_str());
+    let (status, _, body) = raw(r.server.addr(), &get(&r, &format!("/v1/plans/{hash}"), "")).await;
+    assert_eq!(status, 200);
+    assert!(json_of(&body).get("fragment").is_none());
+    for path in [
+        "/v1/plans".to_owned(),
+        format!("/v1/plans/{hash}"),
+        format!("/v1/plans/{hash}/apply"),
+    ] {
+        let (status, _, _) = raw(r.server.addr(), &post(&r, &path, "{}", "")).await;
+        assert_eq!(status, 405, "{path}");
+    }
+    let (status, _, body) = raw(r.server.addr(), &get(&r, "/v1/jobs", "")).await;
+    assert_eq!((status, json_of(&body)["jobs"].clone()), (200, json!([])));
+}

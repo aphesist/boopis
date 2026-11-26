@@ -156,6 +156,8 @@ pub struct Service<E: Engine> {
     pub(super) cron_seen: std::sync::Mutex<super::cron::Seen>,
     /// Where an `always` answer's draft is kept (H6).
     draft_keeper: std::sync::OnceLock<DraftKeeper>,
+    /// `<app data>/house`, where team plans and jobs are kept (ADR-0061), for the read-only routes.
+    house: std::sync::OnceLock<std::path::PathBuf>,
 }
 
 /// Keeps a drafted exception (a rule value, `state: draft`) in the rules list.
@@ -241,6 +243,7 @@ impl<E: Engine> Service<E> {
             workers: std::sync::Mutex::new(HashMap::new()),
             cron_seen: std::sync::Mutex::new(HashMap::new()),
             draft_keeper: std::sync::OnceLock::new(),
+            house: std::sync::OnceLock::new(),
         })
     }
 
@@ -1217,6 +1220,17 @@ impl<E: Engine> Service<E> {
             .await
             .inspect_err(|e| tracing::debug!(error = %e, method, "a plugin call failed"))
             .ok()
+    }
+
+    /// Where team plans and jobs are kept (`<app data>/house`), for the local API's read-only routes. Set once.
+    pub fn set_house_dir(&self, dir: std::path::PathBuf) {
+        let _ = self.house.set(dir);
+    }
+
+    /// `<app data>/house`, once set.
+    #[must_use]
+    pub fn house_dir(&self) -> Option<&std::path::Path> {
+        self.house.get().map(std::path::PathBuf::as_path)
     }
 
     /// Where an `always` answer's drafted exception is kept (the app's rules writer, so its record of what it wrote stays

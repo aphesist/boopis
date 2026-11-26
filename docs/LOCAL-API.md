@@ -77,6 +77,9 @@ Every success is `200` with a JSON object. Every failure is the error object abo
 | `POST /v1/bots/<name>/retry` | `{session?: "latest" \| "<stored id>"}` | `{retried: {profile, session_id, created: false}}`: the conversation's last turn is taken back and the owner's last message is sent again, the engine's own retry. See below |
 | `POST /v1/bots/<name>/stop` | `{session_id?}` | `{stopped: [session id]}`: the bot's running turns are interrupted (`session.interrupt` on its own link), or only that session (a live or stored id). See below |
 | `GET /v1/rooms` | | `{rooms: [{id, name, members: [profile]}]}` |
+| `GET /v1/plans?state=proposed\|all` | | `{plans: [{plan_hash, title, reason, counts: {bots, rooms, boards, jobs}, state, created_at, expires_at, undoes}]}` (at most 50): team plans the house bot proposed (ADR-0061). Read only: there is no route that applies, undoes or rejects a plan (`405`); only the owner's hold in boopis does |
+| `GET /v1/plans/<plan_hash>` | | the plan's `actions` (`{mark, target, what}`), `problems`, `notes`, `state`, `report`; never the fragment or the merged file |
+| `GET /v1/jobs` | | `{jobs: [{id, title, state, steps, spend: {usd_est, turns}, started, at}]}`: the house bot's open jobs |
 | `GET /v1/rooms/<id>/log?after=<seq>&limit=<n>` | | `RoomLog`: the room's log as lines, who is at work, what it holds. See below |
 | `POST /v1/rooms/<id>/say` | `{text, now?: false}` | `{ok: true, status: "sent" \| "held", event_id, held: [Held]}`: through the room hold. See below |
 | `POST /v1/rooms/<id>/stop` | `{}` | `{stopped: true, cancelled, held: [Held]}`: the room's running and queued work is stopped (`groups.stop`) |

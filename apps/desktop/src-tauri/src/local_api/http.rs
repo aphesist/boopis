@@ -465,6 +465,7 @@ async fn route<E: Engine>(
                           "POST /v1/bots/<name>/say", "GET /v1/bots/<name>/conversation", "POST /v1/bots/<name>/stop",
                           "POST /v1/bots/<name>/retry",
                           "GET /v1/rooms", "GET /v1/rooms/<id>/log", "POST /v1/rooms/<id>/say", "POST /v1/rooms/<id>/stop",
+                          "GET /v1/plans", "GET /v1/plans/<plan_hash>", "GET /v1/jobs",
                           "GET /v1/events"]
         })),
         (Method::Get, ["v1", "bots"]) => {
@@ -484,6 +485,34 @@ async fn route<E: Engine>(
                 .clamp(1, 200);
             Ok(json!({"notifications": feed.notifications(after, limit)}))
         }
+        // Team plans and jobs (ADR-0061, team-ops.md 6): read only. There is no route that applies, undoes or rejects a plan.
+        (Method::Get, ["v1", "plans"]) => {
+            let all = head.param("state") == Some("all");
+            let plans = shared
+                .service
+                .house_dir()
+                .map(|d| {
+                    boopis_hostops::plans::PlanStore::under(d).list(all, boopis_hostops::now_ms())
+                })
+                .unwrap_or_default();
+            Ok(json!({ "plans": plans }))
+        }
+        (Method::Get, ["v1", "plans", hash]) if boopis_hostops::plans::is_hash(hash) => shared
+            .service
+            .house_dir()
+            .and_then(|d| {
+                boopis_hostops::plans::PlanStore::under(d).public(hash, boopis_hostops::now_ms())
+            })
+            .ok_or_else(not_found),
+        (Method::Get, ["v1", "jobs"]) => {
+            let jobs = shared
+                .service
+                .house_dir()
+                .map(|d| boopis_hostops::jobs::Jobs::at(&d.join("jobs.jsonl")).get(None))
+                .unwrap_or_default();
+            Ok(json!({ "jobs": jobs }))
+        }
+        (Method::Post, ["v1", "plans", ..] | ["v1", "jobs"]) => Err(method_not_allowed()),
         (Method::Get, ["v1", "approvals"]) => Ok(
             json!({"approvals": feed.approvals(head.param("all").is_some_and(|v| v == "1" || v == "true"))}),
         ),

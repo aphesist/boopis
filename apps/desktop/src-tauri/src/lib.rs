@@ -662,6 +662,7 @@ pub fn run() {
                     }
                 }));
             }
+            local_api.service().set_house_dir(house.dir().to_path_buf());
             // A change to the rules made outside boopis is said to the windows once (rules-engine.md 11).
             tauri::async_runtime::spawn(rules_host.clone().watch(
                 supervisor.environment().hermes_root(),
