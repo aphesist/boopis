@@ -172,7 +172,7 @@ export async function keyWalk(env) {
     await press('Control+f', 400); check('1', 'mod+F find (the session provides it)', await ev(() => { const a = document.activeElement; return !!a && !!a.closest('#hx-view-session, .ui-pop, #hx-app') && a.matches('input, [role="searchbox"], [type="search"]'); }));
   });
 
-  /* section 7: alt+M (or the model chip) opens "who answers next"; the first entry is Automatic (Smart); the chip always says who answers */
+  /* section 7 (its rows are the kit's two-line option rows, board S19): alt+M (or the model chip) opens "who answers next"; the first entry is Automatic (Smart); the chip always says who answers */
   page = await s.fresh();
   await s.safe('7', async () => {
     await press('Control+g', 100); await press('i', 300);
@@ -181,15 +181,15 @@ export async function keyWalk(env) {
     const c0 = await chip();
     check('7', 'the line\'s model item is always shown and says Smart answers next', !c0.hidden && /^Smart/.test(c0.text) && /^Who answers next: Smart/.test(c0.label), c0);
     await press('Alt+m', 500);
-    const first = await ev(() => { const m = document.querySelector('.k7-menu[data-floating]'), it = m?.querySelector('[data-kit~="MenuRow"]'); return it ? { label: it.textContent.trim(), checked: it.getAttribute('aria-checked'), role: m.getAttribute('role'), foot: m.querySelectorAll('.k7-menu__head').length > 0 } : null; });
+    const first = await ev(() => { const m = document.querySelector('.k7-menu[data-floating]'), it = m?.querySelector('[data-kit~="MenuRow"], [data-kit~="OptionRow"]'); return it ? { label: it.querySelector('.k7-orow__label, .k7-mrow__name')?.textContent.trim() ?? it.textContent.trim(), checked: it.getAttribute('aria-checked'), role: m.getAttribute('role'), foot: m.querySelectorAll('.k7-menu__head').length > 0 } : null; });
     check('7', 'alt+M opens the menu, Automatic (Smart) first and chosen, with a hint', (await layer()).menu && first && first.role === 'menu' && /^Automatic \(Smart\)/.test(first.label) && first.checked === 'true' && first.foot, first);
     await press('Escape', 300);
     check('7', 'Esc changes nothing', /^Smart/.test((await chip()).text) && !(await layer()).menu && (await where()).region === 'composer', await where());
     await press('Alt+m', 500);
-    await page.click('.k7-menu[data-floating] [data-kit~="MenuRow"] >> text=Haiku'); await page.waitForTimeout(400);
+    await page.click('.k7-menu[data-floating] :is([data-kit~="MenuRow"], [data-kit~="OptionRow"]) >> text=Haiku'); await page.waitForTimeout(400);
     const c1 = await chip();
     check('7', 'picking a model makes it answer next and turns Smart off', !/^Smart/.test(c1.text) && /haiku/i.test(c1.text), c1);
-    await press('Alt+m', 500); await page.click('.k7-menu[data-floating] [data-kit~="MenuRow"] >> text=Automatic'); await page.waitForTimeout(400);
+    await press('Alt+m', 500); await page.click('.k7-menu[data-floating] :is([data-kit~="MenuRow"], [data-kit~="OptionRow"]) >> text=Automatic'); await page.waitForTimeout(400);
     check('7', 'choosing Automatic turns Smart back on', /^Smart/.test((await chip()).text) && (await where()).region === 'composer', await where());
     await press('Alt+s', 300);
     check('7', 'alt+S turns Smart off', !/^Smart/.test((await chip()).text), await chip());
