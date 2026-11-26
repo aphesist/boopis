@@ -36,7 +36,7 @@ pub enum Reason {
     PermissionDenied,
     /// The speech model could not be fetched, or what arrived was not the model.
     ModelDownloadFailed,
-    /// Another dictation is still running or finishing.
+    /// Another dictation is listening.
     Busy,
     /// The dictation reached its time cap.
     TooLong,
@@ -79,8 +79,8 @@ pub enum Error {
     /// What was fetched, or what is on disk, is not the model: its size or hash differs. The file was deleted.
     #[error("the speech model is not the expected file: {0}")]
     ModelMismatch(String),
-    /// Another dictation is running.
-    #[error("another dictation is running")]
+    /// Another dictation is listening.
+    #[error("another dictation is listening")]
     Busy,
     /// The time cap was reached.
     #[error("the dictation reached its cap of {} s", .0.as_secs())]
@@ -133,7 +133,7 @@ impl Error {
             Self::Silent => format!("boopis hears nothing from the microphone. Check that it is not muted. {}", where_to_allow()),
             Self::ModelFetch(_) => "boopis could not get its speech model, which it fetches once. Check the connection and press the mic again: it goes on from where it stopped.".to_owned(),
             Self::ModelMismatch(_) => "The speech model on this computer was not the file boopis expects, so it was deleted. Press the mic to fetch it again.".to_owned(),
-            Self::Busy => "boopis is still writing down the last dictation. Try again in a moment.".to_owned(),
+            Self::Busy => "boopis is already listening for another message. Stop that dictation, then press the mic again.".to_owned(),
             Self::TooLong(cap) => format!("Dictation stops after {}. Press the mic to go on.", plain_duration(*cap)),
             Self::Processor(_) => "Dictation needs a processor with AVX2, which this computer does not have.".to_owned(),
             Self::Failed(_) => "Dictation stopped working. Press the mic to try again.".to_owned(),
@@ -226,7 +226,8 @@ pub struct Tuning {
     pub max_stretch: Duration,
     /// Speech shorter than this in a stretch is taken for a noise and not written down.
     pub min_speech: Duration,
-    /// A microphone that gives only digital silence for this long, from the start, is reported and closed.
+    /// A microphone that gives only digital silence for this long, from the start, is reported and closed (3 s; 8 s on
+    /// macOS).
     pub silence_probe: Duration,
     /// The level (RMS of a 20 ms frame, full scale 1.0) under which a frame is never speech.
     pub speech_floor: f32,
@@ -246,7 +247,9 @@ impl Default for Tuning {
             partial_every: Duration::from_secs(2),
             max_stretch: Duration::from_secs(24),
             min_speech: Duration::from_millis(160),
-            silence_probe: Duration::from_secs(3),
+            // macOS gives silence while its own question about the microphone is on screen: longer there, so a person
+            // who is reading it is not told the microphone is silent
+            silence_probe: Duration::from_secs(if cfg!(target_os = "macos") { 8 } else { 3 }),
             speech_floor: 0.003,
             speech_ratio: 3.0,
             model_idle: Duration::from_mins(2),

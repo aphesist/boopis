@@ -340,14 +340,86 @@ fn a_second_dictation_is_busy_and_the_first_goes_on() {
     r.dictation.stop(id);
     seen.extend(to_the_end(&first_rx));
     assert_eq!(finals(&seen).len(), 1, "{seen:?}");
-    eventually("free again", || !r.dictation.active());
-    // and now a new one starts
+    // the end was said: a press that answers it starts at once, with no wait for the thread behind it
     let (third, third_rx) = listener();
     let id = r.dictation.start(&third);
     let mut seen = Vec::new();
     until(&third_rx, &mut seen, |e| *e == Event::Listening);
+    assert_eq!(seen, vec![Event::Listening]);
     r.dictation.stop(id);
     to_the_end(&third_rx);
+}
+
+/// A model that takes its time over each stretch, as a real one does.
+struct SlowModel {
+    loads: AtomicUsize,
+}
+
+struct SlowScribe;
+
+impl Transcriber for SlowScribe {
+    fn transcribe(&mut self, job: &Job, _moot: &Moot) -> Result<String> {
+        std::thread::sleep(Duration::from_millis(150));
+        Ok(format!(
+            "stretch {}",
+            if job.last { "done" } else { "so far" }
+        ))
+    }
+}
+
+impl Recognizer for SlowModel {
+    fn load(&self) -> Result<Box<dyn Transcriber>> {
+        self.loads.fetch_add(1, Ordering::Relaxed);
+        Ok(Box::new(SlowScribe))
+    }
+}
+
+#[test]
+fn a_press_right_after_a_stop_listens_at_once_and_its_words_follow_the_others() {
+    let dir = tempfile::tempdir().unwrap();
+    let spec: &'static ModelSpec = Box::leak(Box::new(spec_for(&content())));
+    std::fs::write(spec.path(dir.path()), content()).unwrap();
+    let mic = Mic::with(vec![Ok(speech(1.0)), Ok(speech(1.0))]);
+    let model = Arc::new(SlowModel {
+        loads: AtomicUsize::new(0),
+    });
+    let dictation = Dictation::new(Parts {
+        spec,
+        dir: dir.path().to_owned(),
+        tuning: quick_tuning(),
+        policy: quick(),
+        microphone: mic.clone(),
+        recognizer: model.clone(),
+        transport: Arc::new(Scripted::new(vec![])),
+    });
+    // talk, let go, and talk again before the first words are written down
+    let (first, first_rx) = listener();
+    let one = dictation.start(&first);
+    let mut seen = Vec::new();
+    until(&first_rx, &mut seen, |e| *e == Event::Listening);
+    std::thread::sleep(Duration::from_millis(400)); // the tape's second of speech is taken in a few milliseconds
+    dictation.stop(one);
+    let (second, second_rx) = listener();
+    let two = dictation.start(&second);
+    let mut again = Vec::new();
+    until(&second_rx, &mut again, |e| *e == Event::Listening);
+    assert_eq!(again, vec![Event::Listening], "not busy");
+    std::thread::sleep(Duration::from_millis(400));
+    dictation.stop(two);
+    seen.extend(to_the_end(&first_rx));
+    again.extend(to_the_end(&second_rx));
+    assert_eq!(finals(&seen), vec!["stretch done"], "{seen:?}");
+    assert_eq!(finals(&again), vec!["stretch done"], "{again:?}");
+    assert!(reasons(&seen).is_empty() && reasons(&again).is_empty());
+    assert_eq!(
+        model.loads.load(Ordering::Relaxed),
+        1,
+        "the model was handed over, not loaded twice"
+    );
+    assert_eq!(mic.opened.load(Ordering::Relaxed), 2);
+    eventually("both microphones are closed", || {
+        mic.closed.load(Ordering::Relaxed) == 2
+    });
 }
 
 #[test]

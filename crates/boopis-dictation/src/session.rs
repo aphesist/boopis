@@ -4,7 +4,7 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, TryRecvError};
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::{Arc, Condvar, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
 use crate::audio::{AudioSource, MODEL_RATE, Read, Resampler};
@@ -13,19 +13,51 @@ use crate::transcribe::{Moot, Recognizer, Transcriber};
 use crate::{Error, Event, Result, Sink, Tuning};
 
 /// The speech model kept in memory between dictations, and dropped when none has used it for a while
-/// ([`Tuning::model_idle`]): loaded it holds about 150 MB.
+/// ([`Tuning::model_idle`]): loaded it holds about 150 MB. One dictation has it at a time; the next one, started while the
+/// last still writes down its final words, waits for it here instead of loading a second copy.
 #[derive(Default)]
 pub struct Warm {
-    /// A count that changes with every take and put, and the model while no dictation holds it.
-    slot: Mutex<(u64, Option<Box<dyn Transcriber>>)>,
+    slot: Mutex<Slot>,
+    back: Condvar,
 }
 
+#[derive(Default)]
+struct Slot {
+    /// Changes with every take and put, so the idle timer of an older put does nothing.
+    stamp: u64,
+    /// The model, while no dictation has it.
+    model: Option<Box<dyn Transcriber>>,
+    /// A dictation has the model, or is loading it.
+    lent: bool,
+}
+
+/// The longest a dictation waits for the one before it to hand the model over, before it loads its own.
+const HANDOVER: Duration = Duration::from_secs(30);
+
 impl Warm {
-    /// The model, if it is in memory and free.
+    /// The model if it is in memory; `None` when the caller has to load it. While another dictation has it, this waits
+    /// for it to come back. Either way the caller now holds the turn, and ends it with [`Warm::put`] or [`Warm::gave_up`].
     fn take(&self) -> Option<Box<dyn Transcriber>> {
+        let deadline = Instant::now() + HANDOVER;
         let mut slot = self.slot.lock().ok()?;
-        slot.0 += 1;
-        slot.1.take()
+        while slot.lent && slot.model.is_none() {
+            let left = deadline.saturating_duration_since(Instant::now());
+            if left.is_zero() {
+                break;
+            }
+            slot = self.back.wait_timeout(slot, left).ok()?.0;
+        }
+        slot.stamp += 1;
+        slot.lent = true;
+        slot.model.take()
+    }
+
+    /// The caller's turn is over and it has no model to give back (it did not load).
+    fn gave_up(&self) {
+        if let Ok(mut slot) = self.slot.lock() {
+            slot.lent = false;
+        }
+        self.back.notify_all();
     }
 
     /// Give the model back, to be dropped after `idle` unless a dictation takes it first.
@@ -33,18 +65,20 @@ impl Warm {
         let Ok(mut slot) = self.slot.lock() else {
             return;
         };
-        slot.0 += 1;
-        slot.1 = Some(transcriber);
-        let stamp = slot.0;
+        slot.stamp += 1;
+        slot.model = Some(transcriber);
+        slot.lent = false;
+        let stamp = slot.stamp;
         drop(slot);
+        self.back.notify_all();
         let warm = self.clone();
         let spawned = std::thread::Builder::new()
             .name("boopis-speech-idle".into())
             .spawn(move || {
                 std::thread::sleep(idle);
                 if let Ok(mut slot) = warm.slot.lock()
-                    && slot.0 == stamp
-                    && slot.1.take().is_some()
+                    && slot.stamp == stamp
+                    && slot.model.take().is_some()
                 {
                     tracing::info!(
                         "the speech model left memory after a while without a dictation"
@@ -55,14 +89,14 @@ impl Warm {
             && let Ok(mut slot) = self.slot.lock()
         {
             // nobody would drop it later: drop it now
-            slot.1 = None;
+            slot.model = None;
         }
     }
 
     /// Whether the model is in memory and free.
     #[must_use]
     pub fn loaded(&self) -> bool {
-        self.slot.lock().is_ok_and(|s| s.1.is_some())
+        self.slot.lock().is_ok_and(|s| s.model.is_some())
     }
 }
 
@@ -129,8 +163,9 @@ impl Worker {
                         break;
                     }
                 }
-                if let Some(t) = transcriber {
-                    warm.put(t, idle);
+                match transcriber {
+                    Some(t) => warm.put(t, idle),
+                    None => warm.gave_up(),
                 }
             })
             .map_err(|e| Error::Failed(format!("starting the speech thread: {e}")))?;

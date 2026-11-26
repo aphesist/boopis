@@ -154,8 +154,11 @@ fn finish(spec: &ModelSpec, dir: &Path, part: &Path) -> Result<()> {
             spec.file, spec.sha256
         )));
     }
-    // on disk before it has its name, so a crash never leaves a half-written file under the model's name
-    std::fs::File::open(part)
+    // on disk before it has its name, so a crash never leaves a half-written file under the model's name. Opened for
+    // writing: Windows refuses to flush a file through a handle that may only read it.
+    std::fs::OpenOptions::new()
+        .write(true)
+        .open(part)
         .and_then(|f| f.sync_all())
         .and_then(|()| std::fs::rename(part, spec.path(dir)))
         .map_err(|e| Error::ModelFetch(format!("placing {}: {e}", spec.file)))

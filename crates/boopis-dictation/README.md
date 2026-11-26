@@ -10,7 +10,7 @@ microphone is a `Dictation` somebody was handed.
 
 | Module | What |
 |---|---|
-| `service` | `Dictation`: `start(&sink) -> id`, `stop(id)`, `stop_all()`. One dictation at a time; a second one gets `busy`. Fetches the model on first use, opens the microphone, runs the session on its own thread |
+| `service` | `Dictation`: `start(&sink) -> id`, `stop(id)`, `stop_all()`. One dictation listens at a time; a second one gets `busy`, unless the first was already stopped and only writes down its last words (then the new one listens at once and the model is handed over). Fetches the model on first use, opens the microphone, runs the session on its own thread |
 | `session` | one dictation: source, resampler, segmenter, the speech thread (`Worker`), and `Warm`, which keeps the model in memory between dictations and drops it after `Tuning::model_idle` |
 | `segment` | the state machine, with no thread or clock in it: stretches cut at pauses, partials while speaking, the cap, a silent microphone. Time is counted in samples |
 | `audio` | `AudioSource` (what a session reads), the resampler to 16 kHz, the level of a frame, the downmix |
@@ -51,7 +51,7 @@ sudo apt-get install -y libasound2-dev cmake clang     # Arch: alsa-lib cmake cl
 ## Test
 
 ```sh
-cargo test -p boopis-dictation                         # 52 unit tests: no network, no microphone, no model
+cargo test -p boopis-dictation                         # 53 unit tests: no network, no microphone, no model
 HX_DICTATION_MODEL=/path/to/ggml-base-q5_1.bin cargo test -p boopis-dictation --test speech -- --nocapture
 ```
 

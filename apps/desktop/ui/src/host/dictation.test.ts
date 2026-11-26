@@ -142,6 +142,18 @@ describe('dictation over the host', () => {
     expect(host.calls).toEqual(['start']);
   });
 
+  it('says the same when there is no host at all, and never throws at the composer', async () => {
+    const got: DictationEvent[] = [];
+    let ended = 0;
+    const noHost = (): DictationBridge => ({ start: () => { throw new TypeError('window.__TAURI_INTERNALS__ is undefined'); }, stop: () => Promise.resolve() });
+    const stop = createDictation(noHost).start((e) => got.push(e), () => { ended++; });
+    expect(got).toEqual([]);   /* the press itself returns; the error comes as an event */
+    await tick();
+    expect(got).toEqual([{ kind: 'error', reason: 'failed', message: COULD_NOT_START, retry: true }]);
+    expect(ended).toBe(1);
+    stop();
+  });
+
   it('keeps going when the composer\'s handler throws', async () => {
     const host = fakeHost();
     let n = 0;

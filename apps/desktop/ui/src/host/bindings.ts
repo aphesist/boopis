@@ -385,8 +385,8 @@ export const commands = {
 	 *  Start a dictation: the person pressed a composer's mic. The microphone is opened by the host (never by the page), what
 	 *  is said is written down on this computer, and the events arrive on `events` (`DictationEvent`): `preparing` while the
 	 *  speech model is fetched, once; `listening`; `partial` and `final` words; `error` with a reason and a plain sentence;
-	 *  `ended`, always last. Returns the id `dictation_stop` takes. While another dictation runs, this one gets `error` with
-	 *  `busy` and ends.
+	 *  `ended`, always last. Returns the id `dictation_stop` takes. While another dictation listens, this one gets `error`
+	 *  with `busy` and ends.
 	 * 
 	 *  Only the main window may call it, and only a call starts the microphone: nothing in the host listens on its own.
 	 * 

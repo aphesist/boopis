@@ -80,8 +80,10 @@ impl Dictation {
         }
     }
 
-    /// Start a dictation whose events go to `sink`, and answer its id. While another one runs (or still writes down its
-    /// last words) the new one gets `busy` and ends at once; the running one is not disturbed.
+    /// Start a dictation whose events go to `sink`, and answer its id. While another one listens the new one gets `busy`
+    /// and ends at once, and the one that listens is not disturbed. One that was stopped and still writes down its last
+    /// words is no obstacle: the new one opens the microphone at once and its words follow the other's (the model is
+    /// handed over, [`crate::session::Warm`]).
     pub fn start(&self, sink: &Sink) -> u32 {
         let id = self.inner.next_id.fetch_add(1, Ordering::Relaxed);
         let refuse = |e: Error| {
@@ -94,15 +96,22 @@ impl Dictation {
         };
         if active
             .as_ref()
-            .is_some_and(|a| !a.over.load(Ordering::Relaxed))
+            .is_some_and(|a| !a.over.load(Ordering::Relaxed) && !a.stop.load(Ordering::Relaxed))
         {
             drop(active);
             return refuse(Error::Busy);
         }
         let stop = Arc::new(AtomicBool::new(false));
         let over = Arc::new(AtomicBool::new(false));
-        let (inner, thread_stop, thread_over, thread_sink) =
-            (self.inner.clone(), stop.clone(), over.clone(), sink.clone());
+        // `over` is set before `Ended` is handed on, so a press that answers the end is never told `busy`
+        let (ended, to) = (over.clone(), sink.clone());
+        let thread_sink: Sink = Arc::new(move |event| {
+            if event == Event::Ended {
+                ended.store(true, Ordering::Relaxed);
+            }
+            to(event)
+        });
+        let (inner, thread_stop, thread_over) = (self.inner.clone(), stop.clone(), over.clone());
         let spawned = std::thread::Builder::new()
             .name("boopis-dictation".into())
             .spawn(move || {
@@ -141,7 +150,7 @@ impl Dictation {
         }
     }
 
-    /// Whether a dictation runs or is still writing down its last words.
+    /// Whether the latest dictation runs or is still writing down its last words.
     #[must_use]
     pub fn active(&self) -> bool {
         self.inner

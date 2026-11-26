@@ -92,11 +92,15 @@ export function createDictation(bridge: () => DictationBridge = tauriDictationBr
       const end = (): void => { if (over) return; over = true; onEnd?.(); };
       const say = (e: DictationEvent): void => { try { onEvent(e); } catch (err) { log.error('a dictation event could not be handled', err); } };
       const askStop = (): void => { if (id !== null && !over) host.stop(id).catch((err: unknown) => { log.warn('the host did not take the stop', err); }); };
-      host.start((wire) => {
+      const onWire = (wire: WireEvent): void => {
         if (over) return;
         const e = fromWire(wire);
         if (e) say(e); else if (wire.kind === 'ended') end();
-      }).then((got) => {
+      };
+      /* with no host behind the page (a browser, a test) even making the Channel throws: that is a host that cannot be asked */
+      let asked: Promise<number>;
+      try { asked = host.start(onWire); } catch (err) { asked = Promise.reject(err instanceof Error ? err : new Error(String(err))); }
+      asked.then((got) => {
         id = got;
         if (stopped) askStop();   /* the person let go before the host had answered */
       }, (err: unknown) => {
