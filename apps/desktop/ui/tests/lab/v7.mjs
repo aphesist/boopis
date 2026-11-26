@@ -138,7 +138,9 @@ export const ACCENTS = [{ id: 'iris', hex: '#5b5bd6' }];
 /** derived accent tokens and the surfaces each must hold 4.5:1 on (DESIGN-SYSTEM.md section 18) */
 export const ACCENT_PAIRS = [['--accent-text', '--bg-1'], ['--accent-text', '--bg-3'], ['--focus', '--bg-1'], ['--focus', '--bg-3'], ['--on-accent', '--accent']];
 
-/** the surfaces where a bot is at rest (21.4, ORBS.md section 23): the dock, the Bots sidebar, the rail. A rest orb changes 0 pixels */
-export const ORB_REST_SURFACES = sel('Dock', 'Rail', 'Sidebar') + ', #hx-list-bots, [data-orb-rest]';
+/** the surfaces where a bot is at rest (21.4, ORBS.md section 23): the dock's row, the Bots sidebar, the rail. A rest orb changes 0
+    pixels. The head of a bot's card in the open dock is not one: board K04 (dock/K04-bot-card, dockv7.js `card`) draws that orb as a
+    chat's bot, alive, like the header of the bot's own chat */
+export const ORB_REST_SURFACES = '[data-kit-part~="DockRow"], ' + sel('Rail', 'Sidebar') + ', #hx-list-bots, [data-orb-rest]';
 /** reactions that are rest: orb3's home pose; v6 has none, so its idle bot on a rest surface is held to rest too */
 export const ORB_REST_REACTIONS = ['pose', 'k06', 'idle'];

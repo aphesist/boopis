@@ -105,6 +105,7 @@
 /* a room's three orbs, as the boards place them (kit.js cluster): on a circle of 0.62 of an orb around the middle of a box 2.5 orbs wide */
 /* each orb sits on the middle of a 14/20 line in its place, as the boards' inline orbs do: that is the cluster's 3.8 px drop in its tile */
 .k7-rail__tri { position: relative; display: inline-block; flex: none; width: calc(2.5 * var(--s)); height: calc(2.5 * var(--s)); font-size: var(--fs-m); line-height: var(--lh-m); }
+.k7-rail__tri[data-one] { width: var(--s); height: var(--s); }   /* one member left: the box is its orb */
 .k7-rail__tri > span { position: absolute; left: var(--x); top: var(--y); }
 .k7-rail__tri > span > .ui-orb { display: inline-block; vertical-align: middle; }
 .k7-rail__tri > span > .ui-orb > orb-avatar { display: block; }

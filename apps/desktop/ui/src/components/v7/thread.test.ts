@@ -173,6 +173,20 @@ describe('the upright switch and @all (owner, 25 November)', () => {
     expect(changed).toHaveBeenLastCalledWith('bots');
   });
   it('a rail without the switch is as it was', () => { expect(put(kit.rail({ bots: [] })).querySelector('[data-rail-tabs]')).toBeNull(); });
+  it('a room\'s cluster: its members on the circle around the box\'s middle; a room with one member left is that one orb, its box the orb\'s', () => {
+    const tri = (n: number): HTMLElement => put(kit.rail({ bots: [], groups: [{ name: 'crew', members: ['atlas', 'nina', 'kai'].slice(0, n).map((name) => ({ name })) }] })).querySelector('.k7-rail__tri') as HTMLElement;
+    const at = (t: HTMLElement): { x: number; y: number }[] => [...t.querySelectorAll<HTMLElement>(':scope > span')].map((s) => ({ x: parseFloat(s.style.getPropertyValue('--x')), y: parseFloat(s.style.getPropertyValue('--y')) }));
+    const one = tri(1);
+    expect(one.hasAttribute('data-one')).toBe(true);
+    expect(at(one)).toEqual([{ x: 0, y: 0 }]);
+    /* the standard rail's cluster orb is 15 (0.42 of 36), its box 37.5: an orb on the middle starts at 18.75 - 7.5 */
+    const three = tri(3), mid = 15 * 1.25 - 15 / 2, pts = at(three);
+    expect(three.hasAttribute('data-one')).toBe(false);
+    expect(pts).toHaveLength(3);
+    expect(pts[0]!.y).toBeCloseTo(mid - 15 * 0.62, 5);   /* the first at the top */
+    expect(pts.reduce((a, p) => a + p.x, 0) / 3).toBeCloseTo(mid, 5);
+    expect(pts.reduce((a, p) => a + p.y, 0) / 3).toBeCloseTo(mid, 5);
+  });
   it('@all is marked as the whole room\'s mention; a member\'s is not', () => {
     document.body.innerHTML = kit.html.inlineChip({ kind: 'mention', text: '@all', members: [{ name: 'kai' }, { name: 'nina' }] }) + kit.html.inlineChip({ kind: 'mention', bot: { name: 'kai' } });
     const [all, one] = [...document.querySelectorAll('.k7-mention')];

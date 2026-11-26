@@ -4,7 +4,7 @@
    Each state loads with full motion, the orbs on the main thread (`?orbs=main`, so their canvases can be read) and Playwright's clock
    installed and paused: time moves only by `runFor`, 32 ms a frame (two orb updates exactly), whatever a frame costs to read. After
    1.5 s, FRAMES frames are read from every orb's own canvas pixels (exact: no screenshot, no encoding):
-     orb.rest    an orb at rest (on the dock, the Bots sidebar or the rail, its reaction a rest one, not hovered, no attribute
+     orb.rest    an orb at rest (in the dock's row, the Bots sidebar or the rail, its reaction a rest one, not hovered, no attribute
                  changed for 1.5 s) changes 0 pixels between frames (G5)
      orb.edges   for every orb: shimmer, silhouette pixels that step out and back (A-B-A, alpha moved by more than 24 and came back
                  within 4) while the shape holds or creeps; lone flips, A-B-A pixels whose four neighbours held still; a canvas that
@@ -137,7 +137,11 @@ async function checkRow(browser, origin, row) {
     await page.goto(origin + '/lab.html?frame=1&orbs=main&story=' + encodeURIComponent(row.story) + '&state=' + encodeURIComponent(row.state) + '&preset=catalog', { waitUntil: 'domcontentloaded' });
     for (let i = 0; i < 400 && !(await page.evaluate(() => document.documentElement.dataset.labReady).catch(() => null)); i++) await page.clock.runFor(50);
     const ready = await page.evaluate(() => document.documentElement.dataset.labReady);
-    if (ready !== '1') return { orbs: 0, findings: [], error: 'the state never finished drawing' };
+    if (ready !== '1') {
+      /* say why: the lab frame keeps what the state's setup threw (frame.ts `fail`) */
+      const why = await page.evaluate(() => String(window.__labError || '').split('\n')[0].slice(0, 300)).catch(() => '');
+      return { orbs: 0, findings: [], error: 'the state never finished drawing' + (why ? ': ' + why : '') };
+    }
     await page.clock.runFor(300);
     const orbs = await page.evaluate(SETUP, [MAX_ORBS, ORB_REST_SURFACES, ORB_REST_REACTIONS]);
     if (!orbs.length) return { orbs: 0, findings: [] };

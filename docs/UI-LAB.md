@@ -144,7 +144,7 @@ accents of the contrast matrix and the surfaces where a bot is at rest.
 | `contrast.accent` | contrast | R-a11y-1, 18 | `--accent-text` and `--focus` under 4.5:1 on `--bg-1` or `--bg-3`, `--on-accent` on `--accent`, in every preset (and every accent of `ACCENTS`, once the theme exposes `__lab.accent(hex)`); or the theme does not define them. Reported against `src/styles/tokens.css` | `check.mjs`, `static-v7.mjs` |
 | `kit.single` | kit.single | 21 | a merged name (QueueStrip, LimitNotice, Toast, Banner, ScopePicker, SettingsLine, SteerLine, CheckpointBar, ChoiceCards, LaunchCard, ReferenceChip) in the UI's source, in any spelling; a kit component without `src/lab/stories/kit/<name>.stories.ts` | `static-v7.mjs` |
 | `tokens.loose` | the token check | R-space-1 | a literal padding, margin, gap or inset (px, rem; not 0 or the 1px hairline) in the UI's CSS outside the token files. Colours, font sizes and radii stay `tokens.static`'s | `static-v7.mjs` |
-| `orb.rest` | orb flicker | 10, 21.4, ORBS G5 | a bot at rest (on the dock, the Bots sidebar or the rail, a rest reaction, not hovered, no attribute changed for 1.5 s) changes any canvas pixel between frames | `orbs.mjs` |
+| `orb.rest` | orb flicker | 10, 21.4, ORBS G5 | a bot at rest (in the dock's row, the Bots sidebar or the rail; the head of a bot's card in the open dock is a chat's bot, alive, as board K04 draws it, a rest reaction, not hovered, no attribute changed for 1.5 s) changes any canvas pixel between frames | `orbs.mjs` |
 | `orb.edges` | edge checks | ORBS G6, G7 | on any orb: shimmer (edge pixels that step out and back while the shape holds), a lone flipping pixel, a canvas that jumps or refits. A-B-A inside real motion is reported, not blocking | `orbs.mjs` |
 
 ```sh

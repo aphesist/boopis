@@ -37,7 +37,7 @@ export function searchHint(o: { shows?: U<typeof SEARCH_SHOWS[number]>; attrs?: 
   if (s === 'button') return iconButton({ icon: 'search', label: 'Search', keys: 'mod+K', attrs: o.attrs });
   if (s === 'pill') return '<button class="k7-reset k7-search-pill"' + attrs({ type: 'button', 'aria-label': 'Search, ' + kbdLabel(), ...(o.attrs ?? {}) }) + '>' + glyph('search') + '<span class="k7-grow">Search</span> ' + kbd({ keys: 'mod+K', inPill: true }) + '</button>';
   /* S5: the word and the key chips, no fill at rest; a 28 pill at --hover on hover and focus; its name contains its visible text */
-  return '<button class="k7-reset k7-search-hint"' + attrs({ type: 'button', 'aria-label': 'Search, ' + kbdLabel(), 'aria-keyshortcuts': 'Control+K', ...(o.attrs ?? {}) }) + '>Search' + kbd({ keys: 'mod+K' }) + '</button>';
+  return '<button class="k7-reset k7-search-hint"' + attrs({ type: 'button', 'aria-label': 'Search, ' + kbdLabel(), 'aria-keyshortcuts': 'Control+K', ...(o.attrs ?? {}) }) + '>Search ' + kbd({ keys: 'mod+K' }) + '</button>';   /* the space is a word break for the name (the button is a flex row: it takes no room) */
 }
 const kbdLabel = (): string => (/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘K' : 'ctrl K');
 export function windowChrome(o: ChromeOpts): string {
@@ -137,11 +137,12 @@ export function rail(o: RailOpts): string {
     iconButton({ icon: 'plus', label: o.newLabel ?? 'New bot', variant: 'tinted', attrs: { 'data-tip-pos': 'right', ...(o.foot?.newBot ?? {}) } }) + iconButton({ icon: 'store', label: 'Store', variant: 'tinted', attrs: { 'data-tip-pos': 'right', ...(o.foot?.store ?? {}) } }) + iconButton({ icon: 'gear', label: 'Settings', variant: 'tinted', attrs: { 'data-tip-pos': 'right', ...(o.foot?.settings ?? {}) } }) + '</div></nav>';
 }
 /** a room's cluster as the boards place it (kit.js cluster): each member's orb at rest on a circle of 0.62 of an orb around the middle
-    of a box 2.5 orbs wide, the first at the top, then clockwise */
+    of a box 2.5 orbs wide, the first at the top, then clockwise. A room with one member left has nothing to circle: the box is that
+    one orb's (`data-one`), so the orb, and the orb with its "+N", stay on the tile's middle (no board draws a room of one) */
 function railCluster(members: readonly BotLike[], size: number): string {
   if (!members.length) return '';
-  const r = size * 0.62, c = size * 1.25;
-  return '<span class="k7-rail__tri">' + members.map((m, i) => {
+  const one = members.length === 1, r = one ? 0 : size * 0.62, c = one ? size / 2 : size * 1.25;
+  return '<span class="k7-rail__tri"' + attrs({ 'data-one': one ? '' : null }) + '>' + members.map((m, i) => {
     const a = -Math.PI / 2 + (i * 2 * Math.PI) / members.length;
     return '<span style="--x:' + (c + r * Math.cos(a) - size / 2) + 'px;--y:' + (c + r * Math.sin(a) - size / 2) + 'px">' + orbHtml({ ...m, state: 'idle', attention: null }, { size, rest: true }) + '</span>';
   }).join('') + '</span>';
