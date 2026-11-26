@@ -142,8 +142,10 @@
 .ss-new { position: absolute; inset: 0; }
 .ss-new__canvas { position: absolute; left: 0; right: 0; top: calc(var(--ns-top) - var(--drag-h)); bottom: var(--ns-bottom); display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .ss-new__canvas > .k7-logomark { display: grid; place-items: center; margin-bottom: var(--sp-4); }
-.ss-new__h { margin-bottom: var(--pad-chip); }
-.ss-new__launch { display: flex; justify-content: center; gap: var(--sp-1); }
+.ss-new__h { margin-bottom: var(--pad-chip); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* a row that does not fit (a long folder name, a narrow window) wraps, and a selector is never wider than the row */
+.ss-new__launch { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); max-width: 100%; }
+.ss-new__launch > .k7-sel { flex: 0 1 auto; min-width: 0; max-width: 100%; }
 .ss-new__canvas > .k7-block[data-variant="offer"] { margin-top: var(--ns-offer-top); }
 .ss-new__wait { margin-top: var(--ns-wait-top); width: var(--ns-wait-w); max-width: 100%; }
 .ss-new__zone { --hx-dock-space: var(--hx-dock-space-to); position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--hx-dock-space, 0px) + var(--composer-bottom)); width: var(--composer-w); max-width: calc(100% - 2 * var(--sp-5)); }

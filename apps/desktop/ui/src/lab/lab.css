@@ -46,6 +46,7 @@ html:has(.lab-stage), body:has(.lab-stage) { margin: 0; background: var(--bg-2);
 .k7-lab-push { height: calc(100vh - 140px); }
 .k7-lab-dock { display: flex; justify-content: center; align-items: flex-end; width: 700px; padding-top: var(--sp-5); }
 [data-kit~="Notch"] { margin-inline: var(--sp-6); }
+.k7-lab-view { position: relative; width: 100%; height: 640px; }
 .k7-lab-canvas { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); }
 .k7-lab-canvas > .k7-list, .k7-lab-canvas > .k7-shead, .k7-lab-canvas > .k7-notice, .k7-lab-canvas > .k7-composer { align-self: stretch; }
 .k7-lab-launch { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }

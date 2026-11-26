@@ -120,6 +120,8 @@
 /* the chevron is the value's own colour (kit.css `.select`: the glyph takes the text's) */
 .k7-sel__chev { width: var(--icon-s); height: var(--icon-s); }
 .k7-sel > svg { flex: none; }
+/* a long value is cut inside its selector where the selector has no more room (a long folder name in a narrow window) */
+.k7-sel__value { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* a control that is drawn and does nothing yet (its feature is not built): it keeps its look, and only the pointer says so */
 .k7-sel[aria-disabled="true"] { cursor: default; }
 .k7-sel[aria-expanded="true"] { background: var(--hover); color: var(--text); }

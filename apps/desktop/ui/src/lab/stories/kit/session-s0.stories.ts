@@ -16,7 +16,9 @@ const GATELESS: Record<CarefulStep, Avail> = { supervised: OK, auto_edits: { ok:
 const noop = (): void => undefined;
 const ACT = { folder: noop, model: noop, effort: noop, careful: noop };
 const VIEW: LaunchView = { folder: 'boopis', model: 'claude-sonnet-4.5', effort: 'Default', effortTicks: 3, careful: 'auto_edits', fellBack: false, waiting: [] };
-const canvas = (v: Partial<LaunchView>): HTMLElement => launchCanvas({ ...VIEW, ...v }, ACT);
+/** the canvas in a box that stands for the session view (it is placed against the view: `.ss-new__canvas` fills it between the chrome
+    and the composer's zone), so the story's cell holds it */
+const canvas = (v: Partial<LaunchView>): HTMLElement => { const view = document.createElement('div'); view.className = 'k7-lab-view'; view.append(launchCanvas({ ...VIEW, ...v }, ACT)); return view; };
 const menu = (avail: Record<CarefulStep, Avail>, current: CarefulStep): HTMLElement => kit.menu({ label: 'How careful', variant: 'options', entries: carefulEntries({ current, avail }) });
 
 const launchTypical = stage(['typical', 'variant'], ({ root }) => { fill(root, canvas({})); }, { width: 760 });
