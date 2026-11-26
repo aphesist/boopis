@@ -72,20 +72,29 @@ export async function dockMotion(env) {
     await run('the card closes', () => page.evaluate(() => __hx.dock().closeSession()));
     const asks = await run('the asks open (the ask pill)', () => page.click('#hx-dock .k7-dock__ask'), { focus: true });
     check('motion', 'the asks open at the same fixed size', Math.abs(asks.h1 - 432) <= 0.5 && Math.abs(asks.w1 - 640) <= 0.5, { w: asks.w1, h: asks.h1 });
-    await run('the asks fold (Esc)', () => page.keyboard.press('Escape'), { focus: true });
+    /* Esc on an ask is its Deny; the asks fold from their head's close button and nothing is decided, so the pill is still there for the sweep */
+    await run('the asks fold (the close button)', () => page.click('#hx-dock .k7-dock__head [aria-label="Close the asks"]'), { focus: true });
+    check('motion', 'folding the asks decides nothing: the ask pill is back at the row\'s end', await page.evaluate(() => __hx.dock().state.asks > 0 && !!document.querySelector('#hx-dock .k7-dock__ask')));
     const y = await page.evaluate(() => { const r = document.querySelector('#hx-dock .k7-dock__row').getBoundingClientRect(); return (r.top + r.bottom) / 2; });
-    const sweep = await run('a hover sweep across the row', async () => { for (let x = 300; x < 1150; x += 25) { await page.mouse.move(x, y); await page.waitForTimeout(16); } await page.mouse.move(700, 300); }, { wait: 600 });
+    /* the dock's own clock runs four times slower for the sweep (its 200 ms are 800): a busy machine's frame cannot swallow the ease */
+    await page.evaluate(() => __hx.dock().timeScale(0.25));
+    const sweep = await run('a hover sweep across the row', async () => { for (let x = 300; x < 1150; x += 25) { await page.mouse.move(x, y); await page.waitForTimeout(16); } await page.mouse.move(700, 300); }, { wait: 1600 });
+    await page.evaluate(() => __hx.dock().timeScale(1));
     /* the row's width follows its content (a hovered bot grows, the end slot names it) and eases: it changes, and no frame takes most of the change at once */
-    check('motion', 'a hover sweep: the slab keeps its height, and its width eases with the row (no frame takes most of the change)', sweep.total <= 0.5 && sweep.rangeW > 4 && sweep.maxStepW <= 0.7 * sweep.rangeW, { maxStepW: sweep.maxStepW, rangeW: sweep.rangeW, total: sweep.total });
+    check('motion', 'a hover sweep: the slab keeps its height, and its width eases with the row (no frame takes most of the change)', sweep.total <= 0.5 && sweep.rangeW > 4 && sweep.maxStepW <= 0.7 * sweep.rangeW, { maxStepW: sweep.maxStepW, rangeW: sweep.rangeW, total: sweep.total, maxGap: sweep.maxGap, frames: sweep.frames });
+    check('motion', 'the pointer gone, no bot is hovered and the pill is back', await page.evaluate(() => __hx.dock().state.hover === null && !!document.querySelector('#hx-dock .k7-dock__ask')));
 
-    /* a bot made and a bot archived: the others stay put */
-    const row0 = await page.evaluate(() => ({ n: document.querySelectorAll('#hx-dock .k7-dock__orb').length, more: __hx.dock().state.more }));
+    /* a bot made and a bot archived: the others stay put (the bots already in the row keep their order; the new one takes the place
+       its rank gives it; how many fit is the row's own business: "N more" is measured for the longest count it could say) */
+    const rowNow = () => page.evaluate(() => { const d = __hx.dock().state; return { n: document.querySelectorAll('#hx-dock .k7-dock__orb').length, more: d.more, row: d.row }; });
+    const samePrefix = (a, b) => { const k = Math.min(a.length, b.length); return k > 0 && a.slice(0, k).join() === b.slice(0, k).join(); };
+    const row0 = await rowNow();
     await run('a bot is made', () => page.evaluate(() => __hx.data().bots.create({ name: 'orbit', role: 'watches the build', shape: 'star', color: '#e8b04a', eyes: 'pill' })), { wait: 1200 });
-    const row1 = await page.evaluate(() => ({ n: document.querySelectorAll('#hx-dock .k7-dock__orb').length, more: __hx.dock().state.more }));
-    check('motion', 'a bot made: the dock holds one more bot (counted in "N more" while it is idle)', row1.n === row0.n + 1 && row1.more === row0.more + 1, { row0, row1 });
+    const row1 = await rowNow();
+    check('motion', 'a bot made: the dock holds one more bot (in the row by its rank, or counted in "N more"), and the others keep their order', row1.n === row0.n + 1 && row1.row.length + row1.more === row1.n && Math.abs(row1.row.length - row0.row.length) <= 1 && samePrefix(row0.row, row1.row.filter((id) => id !== 'orbit')), { row0, row1 });
     await run('a bot is archived', () => page.evaluate(() => __hx.data().bots.archive('orbit')), { wait: 1200 });
-    const row2 = await page.evaluate(() => ({ n: document.querySelectorAll('#hx-dock .k7-dock__orb').length, more: __hx.dock().state.more }));
-    check('motion', 'a bot archived: the row is back to what it was', row2.n === row0.n && row2.more === row0.more, { row2 });
+    const row2 = await rowNow();
+    check('motion', 'a bot archived: the row is back to what it was', row2.n === row0.n && row2.more === row0.more && row2.row.join() === row0.row.join(), { row0, row2 });
     check('motion', 'no console errors', page.errors.length === 0, page.errors);
   });
   await s.close();
