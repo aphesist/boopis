@@ -1,5 +1,5 @@
 /* The conversation's pieces: the call-number entry, the request, steps, the blank (14.5 to 14.9). */
-import { fileChip, html, ui } from '@boopis/ui';
+import { html, ui } from '@boopis/ui';
 import { put, stage, forced, line } from '../../story';
 import type { Story } from '../../types';
 import { LONG_NAME, LONG_TITLE, MULTILINE, PARAGRAPH, RTL, STEPS_SEED, UNBROKEN } from '../../fixtures';
@@ -20,10 +20,6 @@ export default [
           ui.entry({ kind: 'agent', callno: ['claude-subscription-directsdk-experimental/haiku', '→ claude-subscription-directsdk-experimental/opus', '3m 42s', '$0.00'], steps: { count: 6, id: 'lab-steps2' }, body: '<p>' + html.inline(PARAGRAPH) + '</p>' }),
           ui.entry({ kind: 'bot', who: 'nina', callno: ['14:08'], body: '<p>Tests are green on billing/cents.</p>' }),
           ui.entry({ kind: 'mod', who: html.mod('sunset'), callno: ['14:09'], body: '<p>A mod wrote this row.</p>' }));
-      }, { width: W }),
-      'a sent message with files': stage(['variant'], ({ root }) => {
-        const chips = '<div class="ss-attached">' + [fileChip('invoices-sample.csv', { kind: 'file' }), fileChip('screenshot.png', { kind: 'image' }), fileChip('src/billing', { kind: 'folder' }), fileChip(UNBROKEN, { kind: 'file' })].map((n) => n.outerHTML).join('') + '</div>';
-        put(root, ui.entry({ kind: 'user', who: 'you', callno: ['14:01'], body: html.request('what is wrong with these totals?') + chips }));
       }, { width: W }),
       long: stage(['long'], ({ root }) => { put(root, ui.entry({ kind: 'bot', who: LONG_NAME, callno: ['14:08', 'claude-sonnet-5-5-20261101-extended-context-preview'], body: '<p>' + UNBROKEN + ' ' + LONG_TITLE + '</p>' })); }, { width: W }),
       empty: stage(['empty'], ({ root }) => { put(root, ui.entry({ kind: 'agent', callno: ['sonnet 5.5'], body: '' })); }, { width: W }),

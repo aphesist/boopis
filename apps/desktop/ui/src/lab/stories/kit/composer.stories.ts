@@ -2,18 +2,29 @@
    (Enter queues), held, no model). */
 import { kit } from '@boopis/ui';
 import { fill, forced, frames, stage } from '../../story';
-import type { Story } from '../../types';
+import type { State, Story } from '../../types';
 import { KAI, LONG_BOT, MOSS, NINA } from './_bots';
+import { LONG_TITLE, RTL, UNBROKEN } from '../../fixtures';
 
 const LINE = [{ label: 'Mode', value: 'Governed' }, { label: 'Model', value: 'Smart' }, { label: 'Branch', value: 'w32/kit-v7', mono: true }, { label: 'Context', value: '76k / 200k', end: true, mono: true }, { label: 'Cost', value: '$0.37 of $0.60', end: true, mono: true }];
 const S20 = [{ label: 'How careful', value: 'Supervised', icon: 'shield', plain: true }, { label: 'Branch', value: 'w32/dock-paint', icon: 'fork', mono: true, plain: true, still: true, fold: true }, { label: 'Who answers next', value: 'sonnet 5.5', model: 'sonnet 5.5', plain: true, ticks: 3 }, { label: 'Context', value: '76k / 200k', mono: true, end: true, ticks: 2, fold: true }, { label: 'Cost', value: '$0.37 of $0.60', mono: true, end: true }];
+const TYPED = 'proration drifts by a cent on long invoices';
+const typedState = stage(['variant', 'owner'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20, text: TYPED })); }, { width: 720 });
+/** a button's tooltip, shown (the runtime's, as a focus shows it) */
+const tip = (sel: string): State => stage(['tooltip', 'owner'], async ({ root, wait, ui }) => {
+  fill(root, kit.composer({ kind: 'session', line: S20, text: TYPED }));
+  const b = root.querySelector<HTMLElement>(sel); if (b) { b.focus(); ui.tooltip.show(b); }
+  await wait(300);
+}, { width: 720, overlay: { anchor: sel, layer: '.ui-tip' }, force: [{ sel, state: 'focus' }] });
+/** a draft of more than one line: the one row keeps its buttons on the last line (thread.css `.k7-composer__box`: align-items flex-end) */
+const LINES = { 'geometry.center': { reason: 'a draft of more than one line: the kit composer keeps its buttons on the last line (thread.css `.k7-composer__box`: align-items flex-end), as its multi-line state draws', el: 'k7-composer__box' } } as const;
 const empty = stage(['typical', 'empty'], ({ root }) => { fill(root, kit.composer({ line: LINE })); }, { width: 720 });
 export default {
   id: 'kit/composer', title: 'Composer', area: 'composer', kind: 'component', covers: ['kit.composer'],
   states: {
     typical: empty,
     ...forced(empty, '[data-kit~="Composer"] [data-kit~="IconButton"]'),
-    typed: stage(['variant'], ({ root }) => { fill(root, kit.composer({ line: LINE, textHTML: 'Deploy to ' + kit.html.mark({ text: 'staging', state: 'shown' }) + ' after ' + kit.html.mark({ text: 'the tests pass', state: 'shown' }) })); }, { width: 720 }),
+    'typed, with marks': stage(['variant'], ({ root }) => { fill(root, kit.composer({ line: LINE, textHTML: 'Deploy to ' + kit.html.mark({ text: 'staging', state: 'shown' }) + ' after ' + kit.html.mark({ text: 'the tests pass', state: 'shown' }) })); }, { width: 720 }),
     'multi-line': stage(['variant'], ({ root }) => { fill(root, kit.composer({ line: LINE, text: 'First, read the billing module.\nThen find where the rounding happens twice.\nFix it once, at the end, and run the tests.' })); }, { width: 720 }),
     running: stage(['loading'], ({ root }) => { fill(root, kit.composer({ running: true, line: LINE, hint: 'Enter queues, ctrl Enter steers' })); }, { width: 720 }),
     held: stage(['variant'], ({ root }) => { fill(root, kit.queue({ variant: 'held' })); fill(root, kit.composer({ kind: 'room', running: true, line: [{ label: 'Members', value: '3 members' }, { label: 'Cost', value: '$0.12', end: true, mono: true }] })); }, { width: 720 }),
@@ -73,6 +84,23 @@ export default {
     'a line item hovered': stage(['hover'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20 })); }, { width: 720, force: [{ sel: 'button.k7-composer__item', state: 'hover' }] }),
     'a line item focused': stage(['focus'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20 })); }, { width: 720, force: [{ sel: 'button.k7-composer__item', state: 'focus' }] }),
     'the line, narrow': stage(['size'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20 })); }, { width: 390 }),
-    'no line': stage(['empty'], ({ root }) => { fill(root, kit.composer({ kind: 'session' })); }, { width: 720 })
+    'no line': stage(['empty'], ({ root }) => { fill(root, kit.composer({ kind: 'session' })); }, { width: 720 }),
+    /* the owner's cases (the v6 composer's, on the kit's): the send with text at rest, hovered, focused and pressed; "+" hovered; each
+       button's tooltip, clear of the text; the dock's composer with text */
+    typed: typedState,
+    'the send hovered': { ...typedState, tags: ['hover', 'owner'], force: [{ sel: '[data-send]', state: 'hover' }] },
+    'the send focused': { ...typedState, tags: ['focus', 'owner'], force: [{ sel: '[data-send]', state: 'focus' }] },
+    'the send pressed': { ...typedState, tags: ['active', 'owner'], force: [{ sel: '[data-send]', state: 'active' }] },
+    'add hovered': { ...typedState, tags: ['hover', 'owner'], force: [{ sel: '[data-plus]', state: 'hover' }] },
+    'the mic hovered': { ...typedState, tags: ['hover'], force: [{ sel: '[data-mic]', state: 'hover' }] },
+    'the add tooltip': tip('[data-plus]'),
+    'the mic tooltip': tip('[data-mic]'),
+    'the send tooltip': tip('[data-send]'),
+    'dock, typed': stage(['variant', 'owner'], ({ root }) => { fill(root, kit.composer({ kind: 'dock', placeholder: 'Message nina', text: 'can you stage it first?' })); }, { width: 400, ground: 'dock' }),
+    /* drafts no board draws (derived: the one row grows with its text, the buttons stay on the last line) */
+    'a long unbroken word': stage(['long'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20, text: UNBROKEN + ' ' + UNBROKEN })); }, { width: 720, allow: LINES }),
+    'a tall draft scrolls': stage(['long', 'scroll'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20, text: Array.from({ length: 30 }, (_, i) => 'line ' + (i + 1) + ' ' + LONG_TITLE).join('\n') })); }, { width: 720, allow: LINES }),
+    'right to left': stage(['rtl'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20, text: RTL })); }, { width: 720, dir: 'rtl' }),
+    'typed, narrow (390)': stage(['size', 'owner'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20, text: TYPED })); }, { width: 358, allow: LINES })
   }
 } satisfies Story;

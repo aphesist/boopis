@@ -73,14 +73,14 @@ export const ROLES = {
   TitlePill: [part('TitlePill')],
   InlineChip: [kit('InlineChip'), '.ui-mention', '.ui-path', '.ui-md .ui-code', '.ui-md .ui-file'],
   Countdown: [part('Countdown'), '.ui-blank [data-countdown]'],
-  Mark: [kit('Mark'), '.ui-ff', '.ui-blank__gap'],
+  Mark: [kit('Mark'), '.ui-blank__gap'],
   StatusWord: [kit('StatusWord'), '.ui-stamp'],
   Badge: [kit('Badge'), '.ui-badge'],
   StatusLine: [kit('StatusLine')],
   Avatar: [kit('Avatar'), '.ui-orb'],
   Disclosure: [kit('Disclosure'), '.ui-disclosure'],
   TurnFoot: [kit('TurnFoot')],
-  Composer: [kit('Composer'), '.ui-composer'],
+  Composer: [kit('Composer')],
   Rail: [kit('Rail'), '.hx-rail'],
   Dock: [kit('Dock'), '#hx-dock'],
   QueueRow: [part('QueueRow')],
@@ -92,7 +92,7 @@ export const ROLES = {
   Sidebar: [part('Sidebar'), '.hx-list'],
   Thread: [part('Thread')],
   /* where a mark may show at rest (section 17): feedforward (the composer's text, a reply's guess), an AskCard, a blank */
-  MarkContext: ['[data-mark-context]', kit('Composer'), kit('AskCard'), '.ui-composer', '.ui-request', '.ui-blank', '.ui-ff', '.ui-assume'],
+  MarkContext: ['[data-mark-context]', kit('Composer'), kit('AskCard'), '.ui-request', '.ui-blank'],
   /* a mark that shows only on hover or focus (an info label) */
   InfoMark: ['[data-kit~="Mark"][data-mark-kind="info"]'],
   /* live things a still must show at rest (section 9.2, P4): a status phrase's shimmer, a breath; [data-motion] strips are exempt */

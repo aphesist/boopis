@@ -79,46 +79,6 @@
   "w": 364,
   "h": 178
  },
- "in-the-room-composer@bone": {
-  "sha": "bbaf590400ee3c0797ab9a4815b8d8bb4c45ecb1",
-  "w": 364,
-  "h": 81
- },
- "in-the-room-composer@catalog": {
-  "sha": "45ea536ac0af02c938953ea677fc2e9cb0ae15e4",
-  "w": 364,
-  "h": 81
- },
- "in-the-room-composer@graphite": {
-  "sha": "32625b406c8aba205d4243dae8c3432b0c1a024f",
-  "w": 364,
-  "h": 81
- },
- "in-the-room-composer@typewriter": {
-  "sha": "316c694e3914b2a5d9dd91046f80f4e1cfe6e80c",
-  "w": 364,
-  "h": 93
- },
- "in-the-session-composer@bone": {
-  "sha": "c2dd90f8e59680f312aaa1fb17347ae3ddde0bac",
-  "w": 364,
-  "h": 81
- },
- "in-the-session-composer@catalog": {
-  "sha": "10d3a4c453ffec5391074d1dba7f1920ad9880c1",
-  "w": 364,
-  "h": 81
- },
- "in-the-session-composer@graphite": {
-  "sha": "f521805b37c2b8d3356a420db243c7c8f8cee0cc",
-  "w": 364,
-  "h": 81
- },
- "in-the-session-composer@typewriter": {
-  "sha": "8340eb3c6fb7d7c6dd5153682b74aeaace98e978",
-  "w": 364,
-  "h": 93
- },
  "long@bone": {
   "sha": "a76771a080280a094f3143b409a2527e53e8b9ce",
   "w": 364,

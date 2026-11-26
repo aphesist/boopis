@@ -5,7 +5,7 @@
   "h": 96
  },
  "a-line-item-focused@light": {
-  "sha": "807ae27c6fa4e0b7b32e55ea40fb1eb2f4d8ab7f",
+  "sha": "70599d41fc67bc8d3ecdb17f5df7638588c15cb9",
   "w": 744,
   "h": 96
  },
@@ -18,6 +18,16 @@
   "sha": "61fb9c28e28d55ecd0e75001573c9a60c32716fb",
   "w": 744,
   "h": 96
+ },
+ "a-long-unbroken-word@dark": {
+  "sha": "e5d589c5fb65a8dfe846bc6904b408be8a228163",
+  "w": 744,
+  "h": 156
+ },
+ "a-long-unbroken-word@light": {
+  "sha": "a69e73512a88fa1934dbe5f8bc488bbc30044631",
+  "w": 744,
+  "h": 156
  },
  "a-room-a-member-answers-first@dark": {
   "sha": "93fe4dc067603c27bb1b0306d447ee3733664a12",
@@ -46,6 +56,26 @@
  },
  "a-session-s20-the-line-and-the-marks@light": {
   "sha": "3d905f418c6796c17a220eee47873ebfe9bb01f7",
+  "w": 744,
+  "h": 96
+ },
+ "a-tall-draft-scrolls@dark": {
+  "sha": "54f86b179edb1828b7af1b38a33be1ad1c357139",
+  "w": 744,
+  "h": 272
+ },
+ "a-tall-draft-scrolls@light": {
+  "sha": "26d44ae047340dc1433b5b72a1c81c185c9c83fc",
+  "w": 744,
+  "h": 272
+ },
+ "add-hovered@dark": {
+  "sha": "27080383cd7d8b9d307845e61db4d6472571300f",
+  "w": 744,
+  "h": 96
+ },
+ "add-hovered@light": {
+  "sha": "4826fa9977f7b92eafbc31b502ca48edcbd213be",
   "w": 744,
   "h": 96
  },
@@ -79,6 +109,16 @@
   "w": 344,
   "h": 108
  },
+ "dock-typed@dark": {
+  "sha": "c7a494de03564af8d83b48f38a53d4f5eccbb940",
+  "w": 424,
+  "h": 68
+ },
+ "dock-typed@light": {
+  "sha": "dabf94b807eda0616f65f7581af0c542ff8b0487",
+  "w": 424,
+  "h": 68
+ },
  "dock@dark": {
   "sha": "a2a2846acb2c341ee4eb14b1fa36cfb10f8b1e5a",
   "w": 648,
@@ -105,7 +145,7 @@
   "h": 164
  },
  "held@light": {
-  "sha": "507da46d17dee7b77e1db958a1f15e3ddc50d99a",
+  "sha": "1e9a0f8eaa5404f2f81eb5218f49c21e0051b4e7",
   "w": 744,
   "h": 164
  },
@@ -169,6 +209,26 @@
   "w": 744,
   "h": 104
  },
+ "no-voice-model-yet-the-voice-circle-as-ever-then-the-send@dark": {
+  "sha": "120fe016b50577e6ee8975b943b72ee500531379",
+  "w": 744,
+  "h": 156
+ },
+ "no-voice-model-yet-the-voice-circle-as-ever-then-the-send@light": {
+  "sha": "f5399162344b90eda77c2cd97b1242389413a5e1",
+  "w": 744,
+  "h": 156
+ },
+ "no-voice-model-yet-what-the-circle-opens@dark": {
+  "sha": "54f08575941d5e5b9a71006d8488f9e4c6b1c370",
+  "w": 744,
+  "h": 68
+ },
+ "no-voice-model-yet-what-the-circle-opens@light": {
+  "sha": "69eb8ed8e22ff4001e10a86f9f67c49208009b1a",
+  "w": 744,
+  "h": 68
+ },
  "notch@dark": {
   "sha": "e3d781bf45b01d0a312ec6af3a2546102ee8e6aa",
   "w": 444,
@@ -198,6 +258,16 @@
   "sha": "2b66176bb60e811e896661be93ad76fa0da29475",
   "w": 744,
   "h": 104
+ },
+ "right-to-left@dark": {
+  "sha": "8fed6e068bf75fe46987132c449c10a1ec944eb9",
+  "w": 744,
+  "h": 96
+ },
+ "right-to-left@light": {
+  "sha": "988c22ca2ceef6bf3c1c42abcbe92cd5f3a7d7d0",
+  "w": 744,
+  "h": 96
  },
  "running-narrow@dark": {
   "sha": "fe7cdf5132d56fb330be08dba0b7a75df0594d88",
@@ -269,6 +339,16 @@
   "w": 744,
   "h": 68
  },
+ "the-add-tooltip@dark": {
+  "sha": "82dfd8c127293c2f8551dcd66b3b08ff1165f693",
+  "w": 755,
+  "h": 96
+ },
+ "the-add-tooltip@light": {
+  "sha": "1b08dd541f4ad7dda065b59d5f36530e9a6556a2",
+  "w": 755,
+  "h": 96
+ },
  "the-line-narrow@dark": {
   "sha": "6fc8efdc82b146c7d15d4590c6ae08e1ab1d274b",
   "w": 414,
@@ -289,15 +369,95 @@
   "w": 744,
   "h": 316
  },
- "typed@dark": {
+ "the-mic-hovered@dark": {
+  "sha": "32f7c4df23202525307052e71e2bd1e3736574a3",
+  "w": 744,
+  "h": 96
+ },
+ "the-mic-hovered@light": {
+  "sha": "e3f0a65354f66b2f7f07584bac84c8935a85ac98",
+  "w": 744,
+  "h": 96
+ },
+ "the-mic-tooltip@dark": {
+  "sha": "1e37c1c8ac85b4f0a7ecd3f870ed59d3638f9762",
+  "w": 744,
+  "h": 96
+ },
+ "the-mic-tooltip@light": {
+  "sha": "d12c2d965cb046d65d310a418c7ccadc115b0bd1",
+  "w": 744,
+  "h": 96
+ },
+ "the-send-focused@dark": {
+  "sha": "46ba778df0ad73e14330097e86b1fd9a52038631",
+  "w": 744,
+  "h": 96
+ },
+ "the-send-focused@light": {
+  "sha": "2020435839ceb47d8efc34af00c5ee0cc80aab11",
+  "w": 744,
+  "h": 96
+ },
+ "the-send-hovered@dark": {
+  "sha": "93b52123bc5ad90538fc4bf4bf295731d993cfed",
+  "w": 744,
+  "h": 96
+ },
+ "the-send-hovered@light": {
+  "sha": "ac327ef500ebb9ca53d9bbf0784797b0de491706",
+  "w": 744,
+  "h": 96
+ },
+ "the-send-pressed@dark": {
+  "sha": "86a5c13e8c611edf74e0a9fb0a34ba0e1bd9ad31",
+  "w": 744,
+  "h": 96
+ },
+ "the-send-pressed@light": {
+  "sha": "d1532362150164c1c39b51df7f0116cd5af4429d",
+  "w": 744,
+  "h": 96
+ },
+ "the-send-tooltip@dark": {
+  "sha": "3dbb0254a984d057363966a3d33fac70bc2617a1",
+  "w": 765,
+  "h": 96
+ },
+ "the-send-tooltip@light": {
+  "sha": "52e4f58accfac722444c3018845764b9edf3a23f",
+  "w": 765,
+  "h": 96
+ },
+ "typed-narrow-390@dark": {
+  "sha": "7b14718bef246c9ea304e5ab9e3a50a4f0f3a82d",
+  "w": 382,
+  "h": 116
+ },
+ "typed-narrow-390@light": {
+  "sha": "ef0123bf2645f85d73832d85bf6a7a65b0a026a2",
+  "w": 382,
+  "h": 116
+ },
+ "typed-with-marks@dark": {
   "sha": "f6efb6c3d9dc173c83fff23c9eb5e6e2acdbac64",
   "w": 744,
   "h": 104
  },
- "typed@light": {
+ "typed-with-marks@light": {
   "sha": "53c63afd03ce6344ec95b4e8279b4da2b51c983e",
   "w": 744,
   "h": 104
+ },
+ "typed@dark": {
+  "sha": "f150a510ba9ebfb1f9cc341cbcc833fab62a0e34",
+  "w": 744,
+  "h": 96
+ },
+ "typed@light": {
+  "sha": "9f0f70a3e3820d25b492b2bf43399ce49ce03170",
+  "w": 744,
+  "h": 96
  },
  "typical@dark": {
   "sha": "b6fff70c4cd62a58a71eb9e19783691fe250790e",

@@ -170,8 +170,8 @@ kit's too (`modules/session/conversation.ts`, `turn.ts`, `composer.ts`): the thr
 Menu), the model-change line (SystemLine), find (the kit's search Field). **Still v6 in the Bots tab:** the bot settings sheet, the
 new-bot and new-group forms, a room's kanban board view; **in a session:** the form card for forms with fields (`hx-card`: credentials,
 sign-ins, plans), the tasks handed to other models (`children.ts`, `ui.child`), a council (`council.ts`), the details panel, find's
-popover shell; and outside them the dock's own composer (`ui.composer`, `components/mentions.ts`), the palette, and Settings, Store and
-Keyboard.
+popover shell; and outside them the palette, and Settings, Store and Keyboard. The v6 composer and its mentions (`components/composer.ts`,
+`mentions.ts`, `.ui-composer`, `.ui-ff`, the story `composer/composer`) were deleted at step 6a: every composer is `kit.composer`.
 
 ## The kit as a package
 

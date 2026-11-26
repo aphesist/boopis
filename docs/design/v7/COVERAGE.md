@@ -301,7 +301,7 @@ A `board` row can still hold a derived part or a conflict: its Reference cell sa
 |---|---|---|---|---|
 | The one-row composer, empty: "+", the placeholder, the mic, the voice button | yes, kit `composer`, story `kit/composer` | board `v7/11-bot-chat-rail-*.jpg` (the pick: `v7/07-composer.jpg` C) | works today | matched, step 1 |
 | Typed: the voice button becomes send in the same slot | yes | board `session/S20-running-supervised-*.jpg` | works today | matched, step 1 |
-| Several lines; a long unbroken word; a tall draft that scrolls | yes, story `composer/composer` | derived: no board draws more than one line; kit Composer | works today | not started (no step) |
+| Several lines; a long unbroken word; a tall draft that scrolls | yes, story `kit/composer` ("multi-line", "a long unbroken word", "a tall draft scrolls") | derived: no board draws more than one line; kit Composer | works today | built at step 6a (derived) |
 | A bot's composer: "Message kai", send in the bot's colour, the line (Governed, the model, spend of cap) | yes | board `v7/11-bot-chat-rail-*.jpg`; decided: "in a specific bot's own chat they take that bot's colour by default (contrast-safe), with a setting to disable" (PLAN-w31-foundations) | works today | matched, step 1 |
 | The boopis bot's and a room's composer in ink | yes | decided: "your bubble + send button are ink by default and in group chats / the boopis bot's chat" (PLAN-w31-foundations); drawn on `v7/12` | works today | matched, step 3 |
 | A room's composer: "Message release crew", the line ("@ 3 members", the cost) | yes | board `v7/12-group-room-sidebar-open-*.jpg` | works today | matched, step 3 |
@@ -339,8 +339,8 @@ A `board` row can still hold a derived part or a conflict: its Reference cell sa
 | No model: "Choose a model to start"; no project: "Add a folder to start" | partly | board `session/S37-no-model-*.jpg`, `session/S41-no-project-*.jpg` | works today | not started (steps 4, 6) |
 | The composer during onboarding: "Type your answer, or ask something else" | no | board `onboarding/screens/O-B01-boopis-greets-*.jpg` | 0.2.0 C | not started (step 8) |
 | The composer under 900 px: the branch and the context fold into the quick menu first | no | decided in the spec's S05 row ("under 900 px the branch and the context fold into the quick menu first"); no board | 0.2.0 C | not started (no step) |
-| The composer at 390 px; right-to-left text | yes, story `composer/composer` "narrow (390)", "rtl" | derived: no board; kit Composer | works today | not started (no step) |
-| Tooltips on "+", the mic and send | yes, story `composer/composer` | derived: no board draws a tooltip; kit Tooltip | works today | not started (no step) |
+| The composer at 390 px; right-to-left text | yes, story `kit/composer` "typed, narrow (390)", "right to left" | derived: no board; kit Composer | works today | built at step 6a (derived) |
+| Tooltips on "+", the mic and send | yes, story `kit/composer` ("the add tooltip", "the mic tooltip", "the send tooltip") | derived: no board draws a tooltip; kit Tooltip | works today | built at step 6a (derived) |
 | The composer steps aside while the dock's stack or a card is open | unknown: not checked in `modules/dock/index.ts` | board `dock/K03-asks-open-*.jpg`, `dock/K04-bot-card-*.jpg` | works today | matched, step 5 (K03, K04; `data-dock-open`) |
 
 ## 9. Dock

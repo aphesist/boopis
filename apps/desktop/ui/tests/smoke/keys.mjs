@@ -211,7 +211,7 @@ export async function keyWalk(env) {
     const comp = await ev(() => { const i = document.querySelector('#hx-dock .k7-dock__panel [role="textbox"], #hx-dock .k7-dock__panel [contenteditable]'); if (i) i.focus(); return !!i; });
     check('8', 'the card has a composer', comp);
     if (comp) {
-      const mic = () => ev(() => { const m = document.querySelector('#hx-dock [data-mic], #hx-dock .ui-composer__mic'); return m ? m.getAttribute('aria-pressed') : 'no mic'; });
+      const mic = () => ev(() => { const m = document.querySelector('#hx-dock [data-mic]'); return m ? m.getAttribute('aria-pressed') : 'no mic'; });
       await press('Alt+v', 400); const on = await mic();
       await press('Escape', 400); const off = await mic();
       check('7', 'alt+V talks in the bot\'s card; Esc stops and the card stays', on === 'true' && off !== 'true' && !!(await card()), on + ' -> ' + off);

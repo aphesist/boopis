@@ -2,19 +2,17 @@
      html            string templates for modules that build innerHTML
      the factories   button, iconButton, segmented, chip, row, group, ... -> an element, already wired
      hydrate(root)   wires every [data-ui] element under root once
-     select (the themed select), listbox (its list: a chip's picker), modelEntries, menu, popover, layer, tooltip, toast, hold, composer, orb, liven, glance, announce, shape, squircle, modelMark, icon, botState
+     select (the themed select), listbox (its list: a chip's picker), modelEntries, menu, popover, layer, tooltip, toast, hold, orb, liven, glance, announce, shape, squircle, modelMark, icon, botState
    Events bubble from the element and are cancelable where an action follows:
      'ui:change' {value}  segmented, switch, chip, option group
      'ui:commit'          hold to approve finished
      'ui:select' {value, item}  menu item, row
-     'ui:send' {text}     composer;  'ui:stop' composer while running;  'ui:decision' {kind, text, el} feedforward mark
    No colour, family or size lives here: everything visual is in components.css. */
 import { esc, frag } from '../core/dom';
 import { announce } from './announce';
 import { botLabel, botState, STATES } from './bot-state';
 import { card } from './card-registry';
 import type { ChildOpts } from './child';
-import { composer } from './composer';
 import { holdElement, wireHold } from './hold';
 import { html } from './html';
 import type { ButtonOpts, ChipOpts, EntryOpts, FieldOpts, IconButtonOpts, ItemRowOpts, LadderOpts, MeasureOpts, MeasurePart, RowOpts, SegmentedOpts, StepItem } from './html';
@@ -39,7 +37,7 @@ import { tooltip } from './tooltip';
 import { hydrate, hydrateOne } from './wire';
 import { scrollClass } from './scroll';
 import { scrollEdges } from './scroll-edges';
-import { addressesYou, codeHTML, everyoneHTML, inlineHTML, plainHTML, markdownHTML, mentionChip, mentionHandles, mentionHTML, mentionOutsideHTML, mentionsOutside, mentionSpans, mentionTarget, pathCandidate, pathCandidates, pathHTML, resolveMentions, splitBlocks, upgradePaths } from './markdown';
+import { addressesYou, codeHTML, everyoneHTML, inlineHTML, plainHTML, markdownHTML, mentionHandles, mentionHTML, mentionOutsideHTML, mentionsOutside, mentionSpans, mentionTarget, pathCandidate, pathCandidates, pathHTML, resolveMentions, splitBlocks, upgradePaths } from './markdown';
 import { arrive, codeOf, markdown as markdownEl, streamMarkdown, wireMarkdown } from './md-view';
 import { copyText } from './clipboard';
 import { presence as presenceEl, presencePill, presenceWords, presenceLayout } from './presence';
@@ -96,7 +94,7 @@ const factories = {
 const markdown = Object.assign(markdownEl, {
   html: markdownHTML, inline: inlineHTML, plain: plainHTML, code: codeHTML, blocks: splitBlocks, stream: streamMarkdown, arrive, wire: wireMarkdown, codeOf,
   mention: mentionHTML, outside: mentionOutsideHTML, outsiders: mentionsOutside, everyone: everyoneHTML, handles: mentionHandles, resolve: resolveMentions,
-  target: mentionTarget, spans: mentionSpans, chip: mentionChip, toYou: addressesYou,
+  target: mentionTarget, spans: mentionSpans, toYou: addressesYou,
   path: pathHTML, pathCandidate, candidates: pathCandidates, upgradePaths
 });
 /** `ui.presence({actors})` is who is at work in a conversation, one entry where their replies land (presence.ts); `.pill` is the same, small, for the jump button */
@@ -114,19 +112,17 @@ export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
   ...factories, legend, keys, inline, scrollClass, scrollEdges,
   markdown, copyText, presence, kit,
-  hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, composer, card,
+  hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, card,
   hold: Object.assign(holdElement, { wire: wireHold }),
   /** a Claude Code mod's element tree, drawn with the library (MODS.md section 2) */
   modView: Object.assign(modView, { update: modViewUpdate, validate: validateTree, limits: MOD_LIMITS, sanitizeSvg, h: modH, colors: modColors })
 };
 export type Ui = typeof ui;
-export { html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, menu, popover, layer, listbox, modelEntries, tooltip, toast, composer, card, wireHold, holdElement };
+export { html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, menu, popover, layer, listbox, modelEntries, tooltip, toast, card, wireHold, holdElement };
 export type { SegElement } from './wire';
 /* the v7 kit (DESIGN-SYSTEM.md v7 section 21), on a v7 root */
 export { kit, kitVariants } from './v7';
 export type * from './v7';
-export { fileChip } from './composer';
-export type { FileChipOpts } from './composer';
 /* runtime pieces the app's modules and host wire (the orbs' engine, the card layer's factory, the first run's moments) */
 export { oc, startGlance, paintLook, repaintLook, restReact } from './orb';
 export type { OrbOpts } from './orb';
@@ -168,13 +164,10 @@ export type { TabDef, TabsOpts } from './tabs';
 export { CHILD_STATUSES, STATUS_WORD as CHILD_STATUS_WORDS } from './child';
 export type { ChildOpts, ChildStatus } from './child';
 export type { ScrollAxis, ScrollOpts, ScrollHtmlOpts } from './scroll';
-export type { ComposerEl, ComposerOpts, DecisionDetail, AssumptionDetail, DictateDetail, SendDetail } from './composer';
 export type { ItemRowOpts, PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
 export type { ModelRef, ModelOpts, MarkOpts, ModelFamily } from './model-mark';
 export type { BotLike } from './bot-state';
 export type { MarkdownCtx, MdBot, PathTarget, Block as MarkdownBlock, MentionSpan, MentionTarget } from './markdown';
-export { REMOVE_MENTION } from './mentions';
-export type { MentionMark, MentionSource } from './mentions';
 export { EVERYONE_HANDLES, HUMAN_HANDLE, MENTION_SOURCE } from './markdown';
 export type { CardKind, CardOpts, CardLike, CardData } from './card-registry';
 export { REST_REACTION } from './orb-pose';

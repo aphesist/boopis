@@ -50,7 +50,6 @@ export const variants = {
   blank: { answered: [false, true] },
   disclosure: { expanded: [false, true] },
   steps: { kind: ['step', 'fail', 'escalate'] },
-  composer: { running: [false, true] },
   modelMark: { color: ['mono', 'brand'] },
   orb: { size: [16, 24, 40], still: [false, true] }
 } as const;

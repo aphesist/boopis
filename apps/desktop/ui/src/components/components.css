@@ -32,7 +32,7 @@
    (radius, size, ring); a row along an edge that holds corner controls at its ends: .ui-corners (the inset). Never set a
    radius or an inset in a corner by hand. A squircle-drawn container also exposes its drawn radius as --r-outer when it
    declared none (squircle.ts), so its children nest the same way. */
-:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-codeblock, .ui-composer__box, .ui-file, .ui-child, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m,
+:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-codeblock, .ui-file, .ui-child, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m,
   hx-card[data-size="inline"], hx-card[data-size="compact"], hx-card[data-size="popover"]) {
   --corner-size: var(--ctl-s);
   --r-in: min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))));
@@ -373,12 +373,6 @@
 .ui-code {
   font-family: var(--mono); font-size: var(--fs-xs); font-weight: 400; letter-spacing: var(--track-mono); padding: 1px 5px; border-radius: var(--r-xs);
   background: var(--chip); color: var(--text); overflow-wrap: anywhere; -webkit-box-decoration-break: clone; box-decoration-break: clone;
-}
-/* the composer's model mention is one unit of the text (it never wraps): an inline-block whose words stand on the sentence's baseline,
-   its box trimmed to the cap height and the baseline (`text-box`) with a step of room over and under, so it is centred on the words
-   whatever the font (the inline-baseline check) */
-@supports (text-box: trim-both cap alphabetic) {
-  .ui-ff[data-kind="mention"] { display: inline-block; text-box: trim-both cap alphabetic; padding-block: var(--sp-1); }
 }
 .ui-kbd {
   display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box;
@@ -769,7 +763,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
    The text's line height reaches the chip as a length (`--text-line`, the parent's 1lh); a chip takes its full size where the line has
    room for it and shrinks with a dense line (13px at 1.35), keeping a hairline (--pad-row) clear of the line's edges, never below 16px */
 @property --text-line { syntax: '<length>'; inherits: true; initial-value: 20px; }
-:has(> :is(.ui-mention, .ui-path, .ui-blank, .ui-ff[data-kind="mention"])) { --text-line: 1lh; }
+:has(> :is(.ui-mention, .ui-path, .ui-blank)) { --text-line: 1lh; }
 :is(.ui-mention__name, .ui-path__dir, .ui-path__base) { align-self: baseline; line-height: var(--chip-h); }
 @supports (text-box: trim-both cap alphabetic) and (height: 1cap) {
   :is(.ui-mention__name, .ui-path__dir, .ui-path__base) { line-height: 1; text-box: trim-both cap alphabetic; padding-block: calc((var(--chip-h) - 1cap) / 2); }
@@ -795,12 +789,6 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 @media (hover: hover) and (pointer: fine) { .ui-mention:hover { box-shadow: inset 0 0 0 1px var(--line-strong); transition-duration: var(--dur-1); } }
 .ui-mention:focus-visible, .ui-mention[aria-expanded="true"] { outline: var(--focus-w) solid var(--focus); outline-offset: 1px; }
 .ui-mention:active { background: var(--bg-4); }
-/* the same capsule set into the composer's text (a bot, the room, a bot outside it): its words stay in the text for the send and the
-   screen reader (.ui-sr), its face is the sent capsule's, the name drawn from data-name so the text holds only what was typed */
-.ui-mention__name[data-name]::before { content: attr(data-name); }
-.ui-ff.ui-mention { color: var(--text-strong); }
-.ui-ff.ui-mention--out { color: var(--text-dim); }
-@media (hover: hover) and (pointer: fine) { .ui-ff.ui-mention--out:hover { color: var(--text-dim); } }
 /* `@user` in a room: the person, as a capsule of their own (markdown.ts `youHTML`), never a bot's: no orb but the attention dot, the
    word "you" in attention text, the capsule's ring in attention red with its glow (R-colour-2: a bot that writes it is waiting on the
    person). The ground shows through it, so the word is attention text on the ground (5.4) */
@@ -810,7 +798,6 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 }
 @media (hover: hover) and (pointer: fine) { .ui-mention--you:hover { box-shadow: inset 0 0 0 1px var(--red), 0 0 var(--sp-2) color-mix(in srgb, var(--red) 70%, transparent); } }
 .ui-mention--you:active { background: transparent; }
-.ui-ff.ui-mention--you { color: var(--red-text); }
 /* a message addressed to the person (`data-to-you`, markdown.ts): an edge in attention red in the gutter beside it, glowing, and a wash
    of --red-soft from that edge under the words (they hold 4.5:1 on it: theme.ts PAIRS); it stays while the message shows, so a bot
    waiting on the person stands out in a long room. As it arrives the glow flashes once (`data-arrived`, md-view.ts `arrive`), on
@@ -901,37 +888,6 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 @media (hover: hover) and (pointer: fine) { .ui-blank:hover .ui-blank__gap { border-bottom-style: solid; } }
 .ui-blank[data-answered] .ui-blank__gap { min-width: 0; border-bottom: 1px dashed var(--text-quiet); }
 
-/* ───────────── composer: card stock, its actions set into its corner ─────────────
-   A container (DESIGN-SYSTEM.md §8): radius --r-outer (--r-composer where a context sets it, else --r-m), inset --pad
-   (--composer-pad, 6px). The corner rule derives the rest: the bar is a .ui-corners row (inset --corner-inset from the
-   sides and the bottom), attach and send are .ui-corner controls (--r-corner: a 28px circle concentric with the box),
-   everything else at the edge takes --r-corner too. Nothing here depends on the page's box-sizing (the session view sets
-   border-box on everything inside it): the bar has no fixed height, its 28px controls give it one. Full: the text, then the bar (attach, chips … spend, then the actions: mic, send).
-   Compact (data-compact: the dock session, any composer that is only text): one row, the text and the actions; the
-   group sits on the text's line, in the bottom-right corner, and stays on the last line as the text grows. */
-.ui-composer { display: flex; flex-direction: column; width: 100%; font: 400 var(--fs-m)/var(--lh) var(--sans); color: var(--text); }
-.ui-composer__hint {
-  display: flex; align-items: baseline; min-width: 0;   /* a row: when it runs out of width the assumptions shrink, each to its own ellipsis, and none is cut at the edge */
-  margin-bottom: 8px; padding: 0 14px; font: 400 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet);   /* the text inset of the field below (14px), so the hint starts where the typing does */
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: var(--ui-case);
-  opacity: 0; translate: 0 3px; transition: opacity var(--dur-2) var(--ease), translate var(--dur-2) var(--ease);
-}
-.ui-composer[data-hinting] .ui-composer__hint { opacity: 1; translate: 0 0; }
-.ui-composer__hint > * { flex: none; }
-.ui-composer__hint-label { margin-right: 4px; text-transform: var(--ui-case); }
-.ui-composer__hint > .ui-assume { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.ui-assume { appearance: none; border: 0; margin: 0; padding: 0 2px; background: none; font: inherit; color: inherit; cursor: pointer; border-radius: var(--r-xs); transition: color var(--dur-1) var(--ease); }
-@media (hover: hover) and (pointer: fine) { .ui-assume:hover { color: var(--text); } }
-.ui-assume:focus-visible { color: var(--text); outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }
-.ui-composer:not([data-hinting]) .ui-composer__hint { pointer-events: none; }
-.ui-composer__box {
-  --r-outer: var(--r-composer, var(--r-m)); --pad: var(--composer-pad, 6px);
-  position: relative; display: flex; flex-direction: column; min-width: 0; padding: 0; border-radius: var(--r-outer);
-  --sq-bg: var(--bg-3); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair); cursor: text; transition: box-shadow var(--dur-1) var(--ease);
-}
-.ui-composer__box:focus-within, .ui-composer[data-listening] .ui-composer__box { box-shadow: inset 0 0 0 1px var(--line-field); }   /* the frame answers focus at 3:1; the caret is brass */
-.ui-composer__files { display: flex; flex-wrap: wrap; gap: 6px; padding: var(--corner-inset) var(--corner-inset) 0; }
-.ui-composer__files:empty { display: none; }
 /* a file chip is a pill container (its radius is half its height) whose remove button, a 24px square, sits in its end corner at
    the equal inset: --corner-inset on all three sides it touches. A long name ellipsises inside the box (R-overflow-1). */
 .ui-file { --r-outer: calc(var(--ctl-s) / 2); --pad: 2px; --corner-size: 24px; display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; max-width: 100%; min-width: 0; height: var(--ctl-s); padding: 0 var(--corner-inset) 0 8px; border-radius: var(--r-outer); background: var(--bg-0); font: 400 var(--fs-2xs)/1 var(--mono); color: var(--text-dim); }
@@ -940,42 +896,6 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-file > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ui-file .ui-ib { flex: none; border-radius: var(--r-corner); }
 .ui-file .ui-ib:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }   /* the chip's own corner holds the button: the ring sits inside (R-focus-2, R-corner-4) */
-.ui-composer__input { min-height: calc(2 * 1.6em); max-height: 220px; padding: 12px 14px 4px; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; caret-color: var(--brass); }
-.ui-composer__input:focus-visible { outline: none; }
-.ui-composer__input[data-empty="true"]::before { content: attr(data-placeholder); color: var(--text-quiet); pointer-events: none; text-transform: var(--ui-case); }
-.ui-composer__bar { display: flex; align-items: center; gap: 2px; min-width: 0; padding-top: 6px; }
-.ui-composer__chips { display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; }
-.ui-composer__spacer { flex: 1; }
-.ui-composer__bar .ui-capacity { margin-right: 6px; }
-/* the actions group: mic, then send (Stop while a turn runs); every control at the edge fits the box */
-.ui-composer__acts { display: inline-flex; align-items: center; gap: 2px; flex: none; }
-.ui-composer__bar :is(.ui-ib, .ui-chip, .ui-send) { border-radius: var(--r-corner); }
-/* compact: one row; the input's padding centres one line on the 28px actions, so the row is the actions plus the inset */
-.ui-composer[data-compact] .ui-composer__box { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
-.ui-composer[data-compact] .ui-composer__files { grid-column: 1 / -1; }
-.ui-composer[data-compact] .ui-composer__input { min-height: 1.6em; align-self: center; padding: 0 6px 0 14px; margin-block: var(--corner-inset); }   /* one line, centred on the actions' row by the grid, not by a padding sum (R-type-11, R-space-1); the inset is a margin, so the field's own box is the text line and a tip beside the actions can stand 8px from them without covering it (R-tip-2, R-float-1); a press on the box around it still focuses it */
-.ui-composer[data-compact] .ui-composer__bar { align-self: end; }
-.ui-composer[data-compact] .ui-composer__bar { padding-block: var(--corner-inset); padding-inline-start: 0; }
-.ui-composer[data-compact] :is(.ui-composer__chips, .ui-composer__spacer, .ui-capacity) { display: none; }
-/* what the "@" list opens against: the box itself, as a quiet layer (a text box may not carry the list's expanded state) */
-.ui-composer__anchor { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; }
-/* listening (the mic): pressed, the field's line, and the target bot's orb listening in the mic's place */
-.ui-composer__mic[aria-pressed="true"] { background: var(--current); }
-.ui-composer__mic > .ui-orb { display: none; pointer-events: none; }
-.ui-composer[data-listening] .ui-composer__mic:has(> .ui-orb) > .ui-icon { display: none; }
-.ui-composer[data-listening] .ui-composer__mic > .ui-orb { display: inline-grid; }
-/* feedforward: dashed is my reading of what you wrote, solid brass is your choice */
-.ui-ff { border-bottom: 1px dashed var(--text-dim); cursor: pointer; transition: border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease); }
-@media (hover: hover) and (pointer: fine) { .ui-ff:hover { border-bottom-color: var(--text-strong); color: var(--text-strong); } }
-.ui-ff[data-confirmed] { border-bottom-style: solid; border-bottom-color: var(--brass); }
-/* a chip in the text (mentions.ts): one unit for the caret, never dashed (it is the person's own word, not a reading of it) */
-.ui-ff[data-chip] { border-bottom: 0; }
-/* a mention ("@Claude Haiku"): the model that answers this message only, set in the text as a quiet capsule */
-.ui-ff[data-kind="mention"] { border-bottom: 0; border-radius: var(--r-pill); padding: 0 var(--sp-1); margin: 0 -1px; background: var(--bg-4); box-shadow: inset 0 0 0 1px var(--hair); color: var(--text-strong); }
-@media (hover: hover) and (pointer: fine) { .ui-ff[data-kind="mention"]:hover { box-shadow: inset 0 0 0 1px var(--line); } }
-@media (max-width: 640px) { .ui-composer__bar .ui-capacity { display: none; } }
-/* who answers next, at phone width: the provider's mark (or Smart's spark) and the chevron; the name is in the chip's aria-label and its tooltip, so the row keeps clear of the box's corner (R-corner-3, R-corner-4) */
-@media (max-width: 640px) { .ui-composer__bar .ui-chip--who > span { display: none; } }
 
 /* ───────────── panel and section: the right panel, the bot settings sheet ───────────── */
 .ui-panel { position: relative; display: flex; flex-direction: column; height: 100%; background: var(--bg-1); font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); }
@@ -1021,7 +941,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
   .ui-dot--run { animation: none; opacity: 1; }
   .ui-sec[data-flash] > .ui-sec__head { animation: none; }
   .ui-btn:active, .ui-ib:active, .ui-send:active { transform: none; }
-  :is(.ui-menu, .ui-pop, .ui-toast, .ui-tip, .ui-composer__hint) { translate: none; transform: none; }
+  :is(.ui-menu, .ui-pop, .ui-toast, .ui-tip) { translate: none; transform: none; }
   .ui-toast { translate: -50% 0; }
   .ui-toast[data-static] { translate: none; }
   .ui-stack--cluster > * { transition: none; }
@@ -1069,8 +989,6 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-btn[data-armed], .ui-hold[data-armed] { --sq-line: var(--line-strong); }
 .ui-hold { --sq-line: var(--hair); }
 .ui-seg { --sq-line: var(--hair); }
-.ui-composer__box { --sq-line: var(--hair); }
-.ui-composer__box:focus-within, .ui-composer[data-listening] .ui-composer__box { --sq-line: var(--line-field); }
 .ui-menu, .ui-pop, .ui-listbox { --sq-line: var(--line); --sq-bg: var(--bg-1); }
 .ui-menu[data-sq-on], .ui-pop[data-sq-on], .ui-listbox[data-sq-on] { box-shadow: var(--shadow-pop); }
 .ui-tip { --sq-line: var(--hair); --sq-bg: var(--bg-3); }

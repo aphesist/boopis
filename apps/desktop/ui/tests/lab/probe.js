@@ -522,7 +522,7 @@
           const nearBottom = ar.top > H - 160;
           if ((ideal === 'top') !== nearBottom && !a.getAttribute('data-tip-pos')) add('overlay', l, 'opens ' + (ideal === 'top' ? 'above' : 'below') + ' its anchor; the system opens tooltips below, above only within 160px of the window bottom');
         }
-        const host = a.closest('[data-hx-composer], .ui-composer, .ui-field, hx-card, .ui-pop, dialog, .hx-palette__box, form') || a.parentElement;
+        const host = a.closest('[data-hx-composer], .ui-field, hx-card, .ui-pop, dialog, .hx-palette__box, form') || a.parentElement;
         if (l.matches('.ui-listbox') && a.matches('.ui-select, [role="combobox"]')) { /* a select's list opens under its own field */ }
         for (const f of host ? host.querySelectorAll('input:not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable="true"], [role="textbox"], [role="combobox"]') : []) {
           if (f === a || !shown(f)) continue;
@@ -579,7 +579,7 @@
             const scroller = /auto|scroll/.test(s.overflowY) ? e : (e.parentElement && /auto|scroll/.test(getComputedStyle(e.parentElement).overflowY) ? e.parentElement : null);
             if (prop === 'padding-bottom' && scroller) {
               const r = scroller.getBoundingClientRect();
-              if ([...document.querySelectorAll('.ui-composer, .bt-composer-zone, #hx-dock')].some((f) => { const q = f.getBoundingClientRect(); return q.height > 0 && q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.bottom - n; })) continue;
+              if ([...document.querySelectorAll('[data-kit~="Composer"], .bt-composer-zone, #hx-dock')].some((f) => { const q = f.getBoundingClientRect(); return q.height > 0 && q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.bottom - n; })) continue;
             }
             stray('tokens.spacing', e, prop, v);
           }
@@ -848,7 +848,7 @@
      chip's own text does the same for the chip. No pixels are read, so a fallback font (CI's) moves both probes alike.
      (b)'s tolerance is one device pixel because a box's top and bottom each round to the device pixel grid when painted, so a box
      centred exactly in layout can paint up to one device pixel off; anything past that is a slip the eye sees. */
-  const INLINE_CHIP = '.ui-mention, .ui-ff, .ui-path, .ui-code, .ui-blank, .ui-md .ui-file, .ui-badge, [data-kit~="InlineChip"], [data-kit~="Badge"], [data-kit~="Mark"], [data-kit-part~="Countdown"]';   /* v7: InlineChip and Badge in running text (R-inline-1, LAB-v7 4) */
+  const INLINE_CHIP = '.ui-mention, .ui-path, .ui-code, .ui-blank, .ui-md .ui-file, .ui-badge, [data-kit~="InlineChip"], [data-kit~="Badge"], [data-kit~="Mark"], [data-kit-part~="Countdown"]';   /* v7: InlineChip and Badge in running text (R-inline-1, LAB-v7 4) */
   const RUNNING = /^(block|inline|list-item|flow-root|table-cell|inline-block|run-in)$/;
   function inlineBaseline(els, cs) {
     const res = [];

@@ -1,13 +1,12 @@
 // @vitest-environment jsdom
 /* "@" in a composer (the owner, 0.1.9: "the @ designs are not appearing when i write the @ in the box. it stays as a text"; 25 November:
-   a menu like the composer's lists, and the pick a real capsule in the text): the v7 kit's composer, which the Bots tab's chats and
-   rooms use, and the v6 machinery the session's composer keeps until its own step, typed the way a person types: each character
-   at the caret, then its input. */
+   a menu like the composer's lists, and the pick a real capsule in the text): the v7 kit's one composer, which a bot's chat, a
+   room, the dock's card and a session use, typed the way a person types: each character at the caret, then its input. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { kit, MENTION_SOURCE, ui } from '@boopis/ui';
-import type { ComposerEl, MarkdownCtx, MdBot } from '@boopis/ui';
+import type { MarkdownCtx, MdBot } from '@boopis/ui';
 import { mentionChips } from '../chat/compose';
-import { bestMention, findMentions, mentionName, mentionQuery } from '../../data/mentions';
+import { findMentions, mentionName } from '../../data/mentions';
 import type { ModelChoice } from '../../data';
 
 type Named = MdBot & { handle: string; role: string };
@@ -20,36 +19,14 @@ const ctx: MarkdownCtx = {
   outside: (h) => (h.toLowerCase() === 'sol' ? SOL : null)
 };
 
-let c: ComposerEl;
 const setAt = (n: Node, o: number): void => { const r = document.createRange(); r.setStart(n, o); r.collapse(true); const s = getSelection(); s?.removeAllRanges(); s?.addRange(r); };
-/** each character at the caret (a new text node after a chip), with the input events a browser sends */
-function type(chars: string, o: { composing?: boolean } = {}): void {
-  for (const ch of chars) {
-    const input = c.input, s = getSelection();
-    let node: Node | null | undefined = s?.anchorNode, off = s?.anchorOffset ?? 0;
-    if (!node || !input.contains(node)) { node = input; off = input.childNodes.length; }
-    input.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: o.composing ? 'insertCompositionText' : 'insertText', data: ch, isComposing: !!o.composing }));
-    if (node.nodeType === 3) { (node as Text).insertData(off, ch); setAt(node, off + 1); }
-    else { const t = document.createTextNode(ch); node.insertBefore(t, node.childNodes[off] ?? null); setAt(t, 1); }
-    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: o.composing ? 'insertCompositionText' : 'insertText', data: ch, isComposing: !!o.composing }));
-  }
-}
-const key = (k: string, init: KeyboardEventInit = {}): boolean => (document.activeElement ?? c.input).dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...init }));
-const settle = async (): Promise<void> => { await vi.advanceTimersByTimeAsync(300); };
-const chips = (): HTMLElement[] => [...c.input.querySelectorAll<HTMLElement>('[data-chip]')];
-function mount(o: Parameters<typeof ui.composer>[0]): void {
-  document.body.replaceChildren();
-  c = ui.composer({ attach: false, ...o });
-  document.body.append(c);
-  c.input.focus();
-}
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.stubGlobal('requestAnimationFrame', (fn: FrameRequestCallback) => setTimeout(() => { fn(0); }, 0));
   (Element.prototype as unknown as { scrollIntoView: () => void }).scrollIntoView = (): void => undefined;
 });
-afterEach(() => { ui.listbox.close(false); vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 /* ───────── the v7 kit's composer (a bot's chat, a room): "@" opens the kit's Menu and a finished mention is a chip in the text ───────── */
 describe('the kit\'s composer: mentions as chips in the text', () => {
@@ -169,28 +146,25 @@ describe('the kit\'s composer: mentions as chips in the text', () => {
     expect(t.textContent).toBe('@/home/you/notes.md ');
     expect(k.hasAttribute('data-typed')).toBe(true);
   });
-});
-
-describe('the session’s models: the same machinery', () => {
-  const HAIKU = { value: 'anthropic/claude-haiku-4-5', model: 'claude-haiku-4-5' } as unknown as ModelChoice;
-  const called = (m: string): string => ui.modelMark.called(m);
-  beforeEach(() => {
-    mount({ mentions: {
-      label: 'Answer this message with', query: mentionQuery, entries: () => [{ value: HAIKU.value, label: mentionName(HAIKU, called) }],
-      best: (q) => bestMention(q, [HAIKU], called)?.value ?? null, write: (v) => (v === HAIKU.value ? mentionName(HAIKU, called) : null),
-      find: (t) => findMentions(t, [HAIKU], called).map((m) => ({ at: m.start, text: m.text, kind: 'mention' }))
-    } });
-  });
-  it('draws a model’s mention as one chip of its words, and one Backspace takes it out', async () => {
-    const name = mentionName(HAIKU, called);
-    type('@cl'); await settle();
-    key('Tab'); await settle();
-    expect(c.value).toBe('@' + name + ' ');
-    const [m] = chips();
-    expect(m?.dataset['kind']).toBe('mention');
+  it('a session names a model the same way: "@cl" and Tab write its name, drawn as one chip of its words', async () => {
+    const HAIKU = { value: 'anthropic/claude-haiku-4-5', model: 'claude-haiku-4-5' } as unknown as ModelChoice;
+    const called = (m: string): string => ui.modelMark.called(m), name = mentionName(HAIKU, called);
+    document.body.replaceChildren();
+    k = kit.composer({ kind: 'session' });
+    document.body.append(k);
+    t = k.querySelector<HTMLElement>('.k7-composer__text') as HTMLElement;
+    t.tabIndex = 0;
+    kit.mentions(k, {
+      label: 'Answer this message with', entries: () => [{ value: name, label: called(HAIKU.model) || HAIKU.model }],
+      chips: (text) => findMentions(text, [HAIKU], called).map((m) => ({ at: m.start, text: m.text, html: kit.html.inlineChip({ kind: 'model', model: m.choice.value, text: m.text.slice(1), words: m.text }) }))
+    });
+    t.focus();
+    typeK('@cl'); await settleK();
+    t.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    expect(t.textContent).toBe('@' + name + ' ');
+    const [m] = kchips();
+    expect(m?.getAttribute('data-kind')).toBe('model');
     expect(m?.textContent).toBe('@' + name);
-    setAt(c.input, 1);
-    key('Backspace');
-    expect(c.value).toBe(' ');
+    expect(m?.getAttribute('contenteditable')).toBe('false');
   });
 });

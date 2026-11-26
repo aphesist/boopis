@@ -205,7 +205,7 @@ export function composer(o: ComposerOpts): string {
   return '<div class="k7-composer"' + kitAttrs('Composer', { 'data-kind': k, 'data-typed': typed ? '' : null, 'data-running': o.running ? '' : null, 'data-voice-setup': o.voiceSetup ? '' : null, 'data-queue-off': o.queueOff ? '' : null, ...(o.attrs ?? {}) }) + '>' +
     '<div class="k7-composer__box" data-sq data-sq-mode="frame" data-mark-context>' +
     iconButton({ icon: 'plus', label: 'Add a file', variant: 'tinted', attrs: { 'data-plus': '' } }) +
-    '<div class="k7-composer__text" contenteditable="plaintext-only" role="textbox" aria-multiline="true"' + attrs({ 'aria-label': o.label ?? ph, 'data-placeholder': ph }) + '>' + (o.textHTML ?? esc(o.text ?? '')) + '</div>' +
+    '<div class="k7-composer__text" contenteditable="plaintext-only" tabindex="0" role="textbox" aria-multiline="true"' + attrs({ 'aria-label': o.label ?? ph, 'data-placeholder': ph }) + '>' + (o.textHTML ?? esc(o.text ?? '')) + '</div>' +
     stop + (k === 'notch' ? '' : iconButton({ icon: 'mic', label: 'Dictate', variant: 'tinted', pressed: false, keys: 'alt+V', attrs: { 'data-mic': '' } })) + send + '</div>' + line + '</div>';   /* the mic is a tinted 28 circle, as "+" is (kit.css `.composer .ib.s`) */
 }
 export { mark };

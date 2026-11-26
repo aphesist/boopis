@@ -1,10 +1,10 @@
 /* Chips set into running text, on their line: the person's "you" capsule, a bot's mention, the room's (`@all`), a bot outside the
-   room, a model mention and feedforward marks in the composer, inline code, a path the host found, the blank and an attachment chip.
-   Each kind is drawn where it is met: in a bot's message, in the person's request bubble, in a paragraph of markdown and in the
-   composer. The `inline-baseline` check (tests/lab/probe.js) measures every chip here against its line: the owner saw nina's
+   room, inline code, a path the host found, the blank and an attachment chip. Each kind is drawn where it is met: in a bot's message,
+   in the person's request bubble and in a paragraph of markdown (a composer's chips and marks are the kit's: `kit/composer`,
+   `kit/inline-chip`). The `inline-baseline` check (tests/lab/probe.js) measures every chip here against its line: the owner saw nina's
    "[you] staging needs your approval before I deploy." with the capsule riding off the sentence's line. */
 import { ui, html } from '@boopis/ui';
-import type { MarkdownCtx, MdBot, MentionSource } from '@boopis/ui';
+import type { MarkdownCtx, MdBot } from '@boopis/ui';
 import { put, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_TITLE } from '../../fixtures';
@@ -58,25 +58,6 @@ const dense = (text: string) => ({ root }: { root: HTMLElement }): void => {
   m.append(p);
   put(root, m);
 };
-/** the room's composer: "@" names a member, the room or the person, drawn as the capsule the sent message will show */
-const roomMentions: MentionSource = {
-  label: 'Bring in', query: () => null, entries: () => [], best: () => null, write: () => null,
-  find: (t) => ui.markdown.spans(t, ROOM).map((s) => ({ at: s.at, text: s.text, kind: 'bot', ...ui.markdown.chip(s) }))
-};
-/** the session's composer: "@" names the model that answers this message, a quiet capsule; feedforward marks read the text */
-const MODELS = ['@Claude Haiku'];
-const modelMentions: MentionSource = {
-  label: 'Answer this message with', query: () => null, entries: () => [], best: () => null, write: () => null,
-  find: (t) => MODELS.flatMap((w) => { const at = t.indexOf(w); return at >= 0 ? [{ at, text: w, kind: 'mention' }] : []; })
-};
-const feedforward = (t: string): Array<{ text: string; kind: string; confirmed?: boolean; at: number }> =>
-  [['integer cents', false], ['src/billing', true]].flatMap(([w, confirmed]) => { const at = t.indexOf(w as string); return at >= 0 ? [{ text: w as string, kind: 'scope', confirmed: confirmed as boolean, at }] : []; });
-const composer = (value: string, which: 'room' | 'session') => ({ root }: { root: HTMLElement }): void => {
-  put(root, which === 'room'
-    ? ui.composer({ placeholder: 'Message the group', label: 'Message the group', attach: false, mentions: roomMentions, value })
-    : ui.composer({ placeholder: 'Message', label: 'Message', attach: false, mentions: modelMentions, feedforward, value }));
-};
-
 const W = 340;   /* narrow enough that every width the lab uses (390 and up) draws the state */
 const story: Story = {
   id: 'components/inline-chips', title: 'Inline chips', area: 'components', kind: 'component', covers: [],
@@ -86,8 +67,6 @@ const story: Story = {
     'in a request bubble': stage(['variant'], request('@nina ' + ALL), { width: W, ground: 'ground' }),
     'in a paragraph': stage(['variant'], paragraph(ALL + ' ' + NINA), { width: W, ground: 'frame' }),
     'in dense text': stage(['variant'], dense(ALL + ' ' + NINA), { width: W, ground: 'frame' }),
-    'in the room composer': stage(['variant'], composer('@user @nina and @all: is @rex needed for the deploy?', 'room'), { width: W, ground: 'ground' }),
-    'in the session composer': stage(['variant'], composer('@Claude Haiku move src/billing to integer cents', 'session'), { width: W, ground: 'ground' }),
     long: stage(['long'], botMessage(NINA + ' ' + LONG_TITLE + ' @nina @moss `' + LONG_TITLE + '` ' + PATH), { width: W, ground: 'ground' })
   }
 };

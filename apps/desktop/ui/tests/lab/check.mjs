@@ -2,7 +2,7 @@
    (rules.mjs, probe.js), in Chromium. Writes lab-report/index.html (every failure with a crop and the mock's
    counterpart) and lab-report/summary.json. docs/UI-LAB.md.
 
-   pnpm lab:check [--area composer,dock] [--story composer/composer] [--state "attach hover"]
+   pnpm lab:check [--area composer,dock] [--story kit/composer] [--state "add hovered"]
                   [--quick] [--presets catalog,bone] [--widths 1440] [--jobs 3]
                   [--update] [--no-visual] [--no-axe] [--no-stability] [--strict]
 

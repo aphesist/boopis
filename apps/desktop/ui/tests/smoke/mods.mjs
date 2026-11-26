@@ -52,7 +52,7 @@ export async function mods(env, AXE) {
 
     /* the composer rose 22px: the layout moved by the status line's height and the move was a transform, never a layout animation */
     const top1 = await composerTop(page);
-    const rise = await page.evaluate(() => window.__anims.filter((a) => a.frames.some((f) => 'transform' in f) && /ui-composer|ss-composer__slot|ss-mods--band/.test(a.cls || '')));
+    const rise = await page.evaluate(() => window.__anims.filter((a) => a.frames.some((f) => 'transform' in f) && /k7-composer|ss-composer__slot|ss-mods--band/.test(a.cls || '')));
     const room1 = await dockSpace(page);
     check('mods', 'the status line lifts the composer 22px (the room the dock now keeps is its own)', Math.abs((top0 - top1) - (room1 - room0) - 22) <= 1, { top0, top1, room0, room1 });
     check('mods', 'the rise is a FLIP on transform over --dur-3 (translateY(22px) to 0), with no top, bottom or height', rise.length >= 1 && rise.every((a) => a.frames.every((f) => Object.keys(f).every((k) => k === 'transform' || k === 'offset')) && a.frames[0].transform === 'translateY(22px)' && a.frames[1].transform === 'translateY(0)') && rise[0].duration > 100, rise);
@@ -213,7 +213,7 @@ export async function mods(env, AXE) {
     /* reduced motion reduces and never freezes: no travel, a short crossfade */
     const page = await s.fresh({ q: URL, reduced: true, settle: 1500 });
     await send(page);
-    const a = await page.evaluate(() => ({ travel: window.__anims.filter((x) => x.frames.some((f) => 'transform' in f) && /ui-composer|ss-mods--band/.test(x.cls || '')).length, fade: window.__anims.filter((x) => x.duration === 120 && x.frames.some((f) => 'opacity' in f)).length, ghost: window.__anims.some((x) => /mod-ghost/.test(x.cls || '')) }));
+    const a = await page.evaluate(() => ({ travel: window.__anims.filter((x) => x.frames.some((f) => 'transform' in f) && /k7-composer|ss-mods--band/.test(x.cls || '')).length, fade: window.__anims.filter((x) => x.duration === 120 && x.frames.some((f) => 'opacity' in f)).length, ghost: window.__anims.some((x) => /mod-ghost/.test(x.cls || '')) }));
     check('mods', 'under reduced motion the composer does not travel: a ghost crossfades over 120ms', a.travel === 0 && a.fade >= 2 && a.ghost, a);
   });
 

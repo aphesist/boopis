@@ -194,16 +194,6 @@ export function mentionSpans(text: string, ctx: MarkdownCtx): MentionSpan[] {
   }
   return out;
 }
-/** A mention set into the composer's text: the capsule a sent mention is drawn as, as a chip of the text. Its text is exactly the words
-    typed (the "@" and the handle, which the send carries), kept for the caret, the copy and the screen reader; what shows is the
-    capsule's own face (the orb and the name, the room's orbs and the word). Not a button: the text box is the control. */
-export function mentionChip(s: MentionSpan, note = "isn't in this room"): { cls: string; html: string; tip?: string } {
-  const t = s.target;
-  if (t.kind === 'you') return { cls: 'ui-mention ui-mention--you', html: html.dot('attention') + '<span class="ui-sr">' + esc(s.text) + '</span><span class="ui-mention__name" aria-hidden="true" data-name="you"></span>' };
-  if (t.kind === 'all') return { cls: 'ui-mention ui-mention--all', html: stackHTML(t.members) + '<span class="ui-mention__name">' + esc(s.text) + '</span>' };
-  const face = orbHtml(t.bot, { size: 16, still: true }) + '<span class="ui-sr">' + esc(s.text) + '</span><span class="ui-mention__name" aria-hidden="true"' + attrs({ 'data-name': t.bot.name }) + '></span>';
-  return t.kind === 'out' ? { cls: 'ui-mention ui-mention--out', html: face, tip: t.bot.name + ' ' + note } : { cls: 'ui-mention', html: face };
-}
 
 /* ───────────── inline ───────────── */
 const linkHost = (href: string): string => href.replace(/^https?:\/\//i, '').replace(/[/?#].*$/, '');
