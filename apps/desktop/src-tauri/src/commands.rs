@@ -1278,6 +1278,7 @@ fn model_view(info: &boopis_dictation::service::ModelInfo) -> Json {
 /// null (the model hears which language is spoken). Reads the speech folder; fetches and opens nothing.
 #[tauri::command]
 #[specta::specta]
+#[must_use]
 pub fn dictation_model(state: State<'_, AppState>) -> Json {
     model_view(&state.dictation.model())
 }

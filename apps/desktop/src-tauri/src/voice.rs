@@ -1,7 +1,7 @@
 //! Voice (talking to bots) as the host keeps it: which provider speaks, and for a server on this computer, its address.
 //! Settings › Models › Voice writes it; live talking is not built yet, so nothing in the host reads it today.
 //!
-//! **No key lives here.** An ElevenLabs or Fish Audio key goes from its field to the OS keychain through `secret_set`
+//! **No key lives here.** An `ElevenLabs` or Fish Audio key goes from its field to the OS keychain through `secret_set`
 //! (service `boopis.voice.<provider>`, account `api_key`) and is never read back into the page, written to this file,
 //! logged or sent in an event. This file holds only the choice and the local server's address, in the host's
 //! `settings.json` under `voice`.
@@ -18,7 +18,7 @@ pub const STORE_KEY: &str = "voice";
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum VoiceProvider {
-    /// ElevenLabs, with the owner's API key in the keychain.
+    /// `ElevenLabs`, with the owner's API key in the keychain.
     Elevenlabs,
     /// Fish Audio, with the owner's API key in the keychain.
     FishAudio,
