@@ -105,3 +105,28 @@ def test_a_parked_step_tells_the_host(monkeypatch: pytest.MonkeyPatch) -> None:
         "parked": "0193-x",
         "cron": "a1b2c3",
     }
+
+
+def test_the_reviewer_reads_a_new_rule_s_kinds_within_the_known_list() -> None:
+    from boopis.rules.data import load
+    from boopis.rules.kinds import read_kinds
+    from boopis.rules.reviewer import ReviewerFailure
+    from boopis.rules.store import Reviewer
+
+    route = Reviewer("pinned", "anthropic", "claude-haiku")
+    seen: list[dict[str, Any]] = []
+
+    class Result:
+        provider, model = "anthropic", "claude-haiku"
+        parsed: dict[str, Any] = {"kinds": ["messages", "nonsense", "network"]}
+
+    def llm(**kw: Any) -> Result:
+        seen.append(kw)
+        return Result()
+
+    tables = load()
+    got = read_kinds(llm, route, "Ask before emailing anyone outside the team", tables)
+    assert set(got) == {"messages", "network"} and got == [k for k in tables.all_kinds if k in got]
+    assert seen[0]["purpose"] == "reviewer" and "emailing" in seen[0]["input"][1]["text"]
+    with pytest.raises(ReviewerFailure):
+        read_kinds(None, route, "x", tables)

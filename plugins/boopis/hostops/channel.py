@@ -141,3 +141,23 @@ def probe(timeout: float = PROBE_TIMEOUT_S) -> bool:
 def available() -> bool:
     """Whether the host answered the probe in this gateway."""
     return bool(getattr(_slot(), "answered", False))
+
+
+def require_owner_grant(params: Any, purpose: str) -> None:
+    """A plugin call that loosens a rule needs the owner's one-time grant (B47 H5, ``host-protections.md`` section 8).
+
+    The window asks the host for one (``owner_grant``) and passes it as ``owner_grants: {purpose: grant}``; it is
+    redeemed here with the host, once. Where this gateway has no host-ops channel (Windows; a gateway the app did not
+    start) the call keeps today's behaviour, a gap written in ``plugins/boopis/AGENTS.md``."""
+    from ..errors import OwnerGrantRequiredError
+
+    if capture_environment() is None:
+        return
+    grants = params.get("owner_grants") if isinstance(params, dict) else None
+    grant = grants.get(purpose) if isinstance(grants, dict) else None  # pyright: ignore[reportUnknownMemberType]
+    if not isinstance(grant, str) or not grant:
+        raise OwnerGrantRequiredError("only the owner changes that, in boopis")
+    try:
+        HostOps().ask("grant.redeem", {"grant": grant, "purpose": purpose}, key=f"{purpose}/{grant[:16]}")
+    except HostOpsError:
+        raise OwnerGrantRequiredError("only the owner changes that, in boopis") from None

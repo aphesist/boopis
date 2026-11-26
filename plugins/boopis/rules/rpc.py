@@ -6,6 +6,7 @@ them writes ``rules.json``: the host is its only writer (its Tauri commands, fro
   reviewer call is made only with ``review: true``.
 - ``rules.grant {session_id, parked_id, grant}``: the host's re-run of a parked step (section 8.3): the step may run
   once in that session. ``grant`` is a one-time owner grant, redeemed with the host (``grant.redeem``) before anything.
+- ``rules.kinds {text}``: the reviewer's reading of a new rule's kinds, for the save dialog; decides and writes nothing.
 - ``rules.reviewer.rank {}``: the connected models ranked by the cost of a standard check (the cheapest is the reviewer
   in ``auto`` mode); the unpriced ones listed apart.
 """
@@ -103,9 +104,26 @@ def rules_grant(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
     return {"ok": True, "tool": step.get("tool"), "action": step.get("action")}
 
 
+def rules_kinds(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
+    from .data import load
+    from .kinds import read_kinds
+    from .reviewer import ReviewerFailure
+    from .store import read
+
+    text = params.get("text")
+    if not isinstance(text, str) or not text.strip() or len(text) > 200 or "\n" in text:
+        raise InvalidParamsError("text is the rule's one line, up to 200 characters")
+    rt = _runtime()
+    try:
+        return {"kinds": read_kinds(rt.reviewer(), read(rt.root).reviewer, text, load())}
+    except ReviewerFailure as exc:
+        return {"kinds": None, "held": exc.reason}
+
+
 HANDLERS = {
     "rules.draft": rules_draft,
     "rules.explain": rules_explain,
     "rules.reviewer.rank": rules_reviewer_rank,
     "rules.grant": rules_grant,
+    "rules.kinds": rules_kinds,
 }

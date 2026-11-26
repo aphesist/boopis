@@ -377,6 +377,19 @@ describe('the settings sheet edits the real profile, and shows the diff first', 
     expect(h.main.calls.some((c) => c.method === 'profiles.configure')).toBe(false);
     expect(botOf(bots, 'atlas')).toMatchObject({ shape: 'star', cfg: { gov: 'ungoverned', cap: '1.00' } });
   });
+  it('passes the owner’s one-time grants when it changes a bot’s tiers or cap (B47 H5)', async () => {
+    const h = new FakeHermes();
+    const { bridge } = modelHost(h);
+    const asked: string[] = [];
+    bridge.ownerGrant = (purpose) => { asked.push(purpose); return Promise.resolve('g-' + purpose); };
+    const { bots } = await open(h, bridge);
+    await bots.source.admin!.saveOwn('atlas', { cfg: { gov: 'ungoverned', cap: '1.00', approvals: { push: 'block' } } });
+    expect(asked).toEqual(['bots.write.approvals', 'bots.write.cap']);
+    expect(h.main.calls.filter((c) => c.method === 'plugin.boopis.bots.write').at(-1)!.params).toMatchObject({ owner_grants: { 'bots.write.approvals': 'g-bots.write.approvals', 'bots.write.cap': 'g-bots.write.cap' } });
+    asked.length = 0;
+    await bots.source.admin!.saveOwn('atlas', { look: { shape: 'star' } });
+    expect(asked).toEqual([]);
+  });
   it('turns Governed on only on a frontier model, and says why it will not otherwise', async () => {
     const { h, bots } = await open();
     await expect(bots.source.admin!.saveOwn('atlas', { cfg: { gov: 'governed' } })).rejects.toThrow('atlas runs on fake-a. Governed mode needs a frontier model.');

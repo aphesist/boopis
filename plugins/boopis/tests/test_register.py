@@ -89,6 +89,7 @@ def test_register_wires_hooks_rpc_and_the_prompt_section() -> None:
         "rules.explain",
         "rules.reviewer.rank",
         "rules.grant",
+        "rules.kinds",
         "store.prepare",
         "store.confirm",
         "store.uninstall",

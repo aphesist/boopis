@@ -18,10 +18,12 @@ pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="the channel is 
 
 
 @pytest.fixture(autouse=True)
-def fresh(monkeypatch: pytest.MonkeyPatch) -> None:
+def fresh(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.delenv(ch.SOCKET_ENV, raising=False)
     monkeypatch.delenv(ch.TOKEN_ENV, raising=False)
     monkeypatch.delitem(sys.modules, ch.SLOT, raising=False)
+    yield
+    sys.modules.pop(ch.SLOT, None)  # the slot a test filled must not make later tests a gateway with a host
 
 
 Answer = Callable[[dict[str, Any]], dict[str, Any] | None]

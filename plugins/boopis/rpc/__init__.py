@@ -79,6 +79,7 @@ CAPABILITIES = (
     "rules.explain",
     "rules.reviewer.rank",
     "rules.grant",
+    "rules.kinds",
 )
 DEFAULT_TAIL_LIMIT = 200
 MAX_TAIL_LIMIT = 1000
@@ -427,6 +428,9 @@ def budget_set(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
 
     if "monthly_usd" not in params:
         raise InvalidParamsError("monthly_usd is required (dollars like '50.00', or null to clear the budget)")
+    from ..hostops.channel import require_owner_grant
+
+    require_owner_grant(dict(params), "budget.set")
     rt = runtime()
     doc = month.write_budget(rt.root, params["monthly_usd"])
     return {"monthly_usd": doc["monthly_usd"]}

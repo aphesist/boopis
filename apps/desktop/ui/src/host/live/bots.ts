@@ -503,6 +503,13 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
         }
         if (Object.keys(settings).length) body['settings'] = settings;
         if (approvals) body['approvals'] = approvals;
+        /* B47 H5: the plugin changes a bot's tiers or cap only with the owner's one-time grant, which the host gives this window */
+        const purposes = [...(approvals ? ['bots.write.approvals' as const] : []), ...('cap' in settings ? ['bots.write.cap' as const] : [])];
+        if (purposes.length && deps.bridge?.ownerGrant) {
+          const grants: Record<string, string> = {};
+          for (const p of purposes) grants[p] = await deps.bridge.ownerGrant(p);
+          body['owner_grants'] = grants;
+        }
       }
       const res = await plug<{ record: PluginBot['record'] }>('bots.write', body);
       const tiers = r.plugin?.tiers && patch.cfg?.approvals ? { ...r.plugin.tiers, ...patch.cfg.approvals } : r.plugin?.tiers;   /* what was just enforced; the next read says it again */
