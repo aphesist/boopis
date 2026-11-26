@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-rules-restore-defaults"
+description = "Enables the rules_restore_defaults command without any pre-configured scope."
+commands.allow = ["rules_restore_defaults"]
+
+[[permission]]
+identifier = "deny-rules-restore-defaults"
+description = "Denies the rules_restore_defaults command without any pre-configured scope."
+commands.deny = ["rules_restore_defaults"]

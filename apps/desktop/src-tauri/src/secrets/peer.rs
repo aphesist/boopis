@@ -136,6 +136,9 @@ const MAX_GATEWAYS: usize = 4;
 struct State {
     gateways: Vec<Proc>,
     launchers: Vec<Proc>,
+    /// Every gateway the host identified at the engine's control socket, whoever started it (B47, H4): a process under
+    /// one of these is a bot's, so the local API refuses it an owner-voice request. Not a rule of this channel.
+    engines: Vec<Proc>,
 }
 
 /// The rules, and what the host has recorded to apply them to.
@@ -219,6 +222,39 @@ impl PeerPolicy {
         let extra = s.gateways.len().saturating_sub(MAX_GATEWAYS);
         s.gateways.drain(..extra);
         true
+    }
+
+    /// Notes the engine's gateway process, whoever started it: the pid the kernel reported on the engine's control socket
+    /// (B47, H4). Unlike [`PeerPolicy::record_gateway`] it needs no token: a gateway an earlier run of the host left
+    /// running still starts bots' tools, and the local API must know them. It admits nothing to this channel.
+    pub fn note_engine(&self, pid: u32) {
+        let Some(proc) = self.procs.describe(pid) else {
+            return;
+        };
+        let Ok(mut s) = self.state.lock() else {
+            return;
+        };
+        s.engines.retain(|g| g.pid != pid);
+        s.engines.push(proc);
+        let extra = s.engines.len().saturating_sub(MAX_GATEWAYS);
+        s.engines.drain(..extra);
+    }
+
+    /// The gateways [`PeerPolicy::note_engine`] noted, pinned by pid and start time, for the local API's owner check.
+    #[must_use]
+    pub fn engines(&self) -> Vec<boopis_peer::Pinned> {
+        self.state.lock().map_or_else(
+            |_| Vec::new(),
+            |s| {
+                s.engines
+                    .iter()
+                    .map(|p| boopis_peer::Pinned {
+                        pid: p.pid,
+                        start: p.start,
+                    })
+                    .collect()
+            },
+        )
     }
 
     /// Notes a `hermes` process the host spawned to start a gateway (rule B), until the guard is dropped.

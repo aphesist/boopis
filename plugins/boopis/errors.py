@@ -24,6 +24,12 @@ class BoopisError(Exception):
         self.data: dict[str, Any] = dict(data or {})
 
 
+class OwnerGrantRequiredError(BoopisError):
+    """A call that loosens a rule came without a valid one-time owner grant (B47 H5, ``host-protections.md``)."""
+
+    code = "hx.host.owner_grant_required"
+
+
 class ConfigError(BoopisError):
     code = "hx.config.invalid"
 

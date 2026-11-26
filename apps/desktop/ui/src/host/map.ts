@@ -1,6 +1,7 @@
 /* Pure mappings from gateway frames and rows to the UI's entities (`data/types.ts`). No state, no I/O, so each one is
    tested against recorded frames. A field the gateway does not send is empty or `null` and the UI shows it as
    unknown (AGENTS.md invariant 5): nothing here invents a model name, a cost or a project. */
+import { ruleCard, ruleChoice } from './live/rules';
 import type { SessionListRow, TranscriptMessage } from '../vendor/hermes-shared/gateway-contract.generated';
 import type { AgentTurn, ApprovalWait, ChildTask, SessionSummary, Step, Turn, UserTurn, WaitOutcome } from '../data/types';
 import type { GatewayEvent } from './gateway';
@@ -128,12 +129,15 @@ export function approvalToWait(ev: GatewayEvent): ApprovalWait | null {
   if (!id) return null;
   const command = str(p['command']);
   const why = str(p['description']);
-  return { id, kind: 'approval', bot: '', who: 'agent', title: command || why || 'Approval needed', data: { id, title: command || why, quote: command, meta: why, from: 'agent', item: [] } };
+  /* a card the rules engine raised carries its rule and what a standing answer covers (host/live/rules.ts, ADR-0060) */
+  const card = ruleCard(why);
+  return { id, kind: 'approval', bot: '', who: 'agent', title: command || why || 'Approval needed', data: { id, title: command || why, quote: command, meta: why, from: 'agent', item: [], ...(card ?? {}) } };
 }
 
-/** the gateway's choice for the UI's outcome: approved is "once", anything else is a denial (fail closed) */
-export function choiceFor(outcome: WaitOutcome): 'once' | 'deny' {
-  return outcome === 'approved' ? 'once' : 'deny';
+/** the gateway's choice for the UI's outcome: approved is "once", "Allow all this turn" (`turn`) is the engine's `session`,
+    "Always allow" (`always`) is "once" with a drafted exception, anything else is a denial (fail closed) */
+export function choiceFor(outcome: WaitOutcome): 'once' | 'session' | 'deny' {
+  return ruleChoice(outcome);
 }
 
 /** what a ledger event adds to the running totals the details panel shows; unknown shapes add nothing */

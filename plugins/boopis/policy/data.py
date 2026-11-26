@@ -29,6 +29,7 @@ class Defaults:
     aliases: Mapping[str, tuple[str, ...]]
     protected_defaults: tuple[str, ...]
     denied_read_defaults: tuple[str, ...]  # paths no tool may read (``denied_read_paths``): hard deny, never an ask
+    governance_write_defaults: tuple[str, ...]  # files a bot's session may not change (B47 H2, ``policy/protections``)
     denied_read_keys: frozenset[str]  # argument names whose values are paths, folders or globs
     denied_read_text_keys: frozenset[str]  # argument names that hold prose, contents or a search pattern: never a path
     denied_read_script_keys: frozenset[str]  # argument names that hold a command line or code, read word by word
@@ -69,6 +70,7 @@ def load_defaults() -> Defaults:
         aliases=_tuples(raw["aliases"]),
         protected_defaults=protected_patterns() + tuple(raw["protected_extra"]),
         denied_read_defaults=tuple(raw["denied_read_paths"]),
+        governance_write_defaults=tuple(raw["governance_write_paths"]),
         denied_read_keys=frozenset(raw["denied_read_path_keys"]),
         denied_read_text_keys=frozenset(raw["denied_read_text_keys"]),
         denied_read_script_keys=frozenset(raw["denied_read_script_keys"]),

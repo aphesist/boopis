@@ -8,7 +8,7 @@ import { logger } from '../core/log';
 import { createMockProvider } from '../data/mock-provider';
 import type { DataProvider, EngineSource, EngineState, SessionsSource, WaitsEvent, WaitsSource } from '../data/provider';
 import { emitter, feed, store } from '../data/store';
-import type { AgentTurn, BlankData, CouncilChoice, BlankWait, ConversationEvent, FormStatus, FormWait, SendMeta, SessionSummary, Turn, User, UserTurn, Wait, WaitOutcome } from '../data/types';
+import type { AgentTurn, BlankData, CouncilChoice, BlankWait, ConversationEvent, FormStatus, FormWait, SendMeta, SessionSummary, Turn, User, UserTurn, Wait, WaitOutcome, LaterFeature } from '../data/types';
 import { readFlag } from '../core/settings';
 import { createDetails } from './live/details';
 import { applyMoa, COUNCIL_OVERRIDE, createCouncil, isCouncilReport, finishedCouncil, startedCouncil, valueOfSlot } from './live/council';
@@ -35,6 +35,9 @@ import type { RoomsBridge } from './rooms-bridge';
 import type { BotsBridge } from './bots-bridge';
 import { ui } from '@boopis/ui';
 import { inTauri } from './bridge';
+import { commands } from './bindings';
+import { enableRules, keepDraft } from './live/rules';
+import type { RulesDeps } from './live/rules';
 import type { FormEntry } from './live/forms';
 import { tauriSecrets } from './secrets';
 import { dropsFromHost, pickAttachments } from './attach';
@@ -327,7 +330,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       }
     }
   });
-  const approvalRoute = new Map<string, { gwSession: string; generation: number }>();
+  const approvalRoute = new Map<string, { gwSession: string; generation: number; description?: string }>();
 
   /* a task handed to another model: the engine's `subagent.*` frames, folded into the turn that started it (live/children.ts) */
   function childFrame(c: Convo, type: string, p: Record<string, unknown>): void {
@@ -426,7 +429,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
         const w = approvalToWait(ev);
         if (!w || waitList.some((x) => x.id === w.id)) break;
         const gen = typeof p['execution_generation'] === 'number' ? p['execution_generation'] : 0;
-        approvalRoute.set(w.id, { gwSession: ev.session_id ?? '', generation: gen });
+        approvalRoute.set(w.id, { gwSession: ev.session_id ?? '', generation: gen, description: typeof p['description'] === 'string' ? p['description'] : '' });
         waitList.push(w);
         waitsEv.emit({ type: 'added', wait: w });
         break;
@@ -756,20 +759,32 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       const route = approvalRoute.get(id);
       if (!route) return;
       client.requestRaw('approval.respond', { session_id: route.gwSession, execution_generation: route.generation, prompt_id: id, choice: choiceFor(outcome) }) /* canonical shape, verified in S0; the vendored contract lags it */
-        .then(() => { settle(id, outcome); })
+        .then(() => {
+          settle(id, outcome);
+          /* "Always allow": the call ran once; the narrowest exception is kept as a draft for the owner to finish (ADR-0060) */
+          if (outcome === 'always') keepDraft(rulesDeps, route.gwSession, route.description ?? '').catch((e: unknown) => { log.warn('the exception could not be drafted', e); });
+        })
         .catch((e: unknown) => { log.error('the approval was not delivered', e); });
     }
   };
 
-  const liveBots = createLiveBots({ client, now, ...(opts.linkTo ? { linkTo: opts.linkTo } : {}), ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}), bridge: opts.botsBridge !== undefined ? opts.botsBridge : inTauri() ? tauriBotsBridge() : null, notify: (text) => { ui.toast.whenReady(text); } });
+  /* the rules engine's seam (ADR-0060): the dock and a bot's thread keep an "Always allow" draft through it */
+  const rulesDeps: RulesDeps = {
+    plugin: (method, params) => client.requestRaw('plugin.boopis.' + method, params),
+    host: inTauri() ? { get: () => commands.rulesGet(), put: (rule, revision) => commands.rulesPut(rule, revision) } : null
+  };
+  const liveBots = createLiveBots({ client, now, rules: rulesDeps, ...(opts.linkTo ? { linkTo: opts.linkTo } : {}), ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}), bridge: opts.botsBridge !== undefined ? opts.botsBridge : inTauri() ? tauriBotsBridge() : null, notify: (text) => { ui.toast.whenReady(text); } });
   Object.assign(details.unavailable, liveBots.unavailable);
   const liveGroups = createLiveGroups({ client, bots: () => liveBots.source.snapshot().bots, now, bridge: opts.roomsBridge !== undefined ? opts.roomsBridge : inTauri() ? tauriRoomsBridge() : null, ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}) });
   const liveStore = createLiveStore({ bridge: opts.storeBridge !== undefined ? opts.storeBridge : inTauri() ? tauriStoreBridge() : null, plugin: (method, params) => client.requestRaw('plugin.boopis.' + method, params) });
+  /* the rules engine (ADR-0060): its standing answers are shown only once the plugin says it has it (host/live/rules.ts) */
+  const later = new Set<LaterFeature>();
   const ready = Promise.all([refreshList(), details.start().then(() => controls.start()), liveBots.ready, liveGroups.ready]).then(() => undefined);
+  void ready.then(() => enableRules(rulesDeps, later));
   const flag = readFlag('feedforward');
   return {
     ...mock,
-    info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable },
+    info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable, later },
     ready, sessions, waits, user, engine, sessionControls: controls, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
     details: details.source, run: details.run, mods: modsHost.source, store: liveStore, kanban: liveKanban(),
     council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id), paths: hostPaths() },

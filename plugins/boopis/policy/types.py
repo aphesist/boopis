@@ -11,6 +11,7 @@ from ..config.model import Fallback, Mode
 if TYPE_CHECKING:
     from ..bots.origin import TurnOrigin
     from ..bots.rules import BotRules
+    from ..rules.store import RulesDoc
 
 DecisionKind = Literal["allow", "block", "approve", "modify"]
 Role = Literal["orchestrator", "worker"]
@@ -31,6 +32,7 @@ class ToolCall:
     principal: str = ""  # who asks, when it is not the agent: ``mod:<plugin>`` (docs/MODS.md section 4)
     capability: str = ""  # the capability the call needs (docs/AUTOMATION.md section 3), for a principal
     subject: str = ""  # what the capability applies to: a path, a URL
+    turn_id: str = ""  # the engine's turn (``pre_tool_call``'s ``turn_id``): a rules card's "Allow all this turn" scope
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,5 +105,10 @@ class SessionPolicy:
     asked_by: str = ""  # who asked for the running turn, said on a bot's approval cards (``bots.origin``)
     origin: TurnOrigin | None = None  # where the running turn came from (``bots.origin``), for a bot's kanban cards
     board_folder: Callable[[str | None], str | None] | None = None  # a board's ``default_workdir``, ``bots.boards``
+    rules: RulesDoc | None = None  # the global rules list (``rules.store``), for a bot's session; None: no rules step
+    reviewer: Callable[..., Any] | None = None  # the engine's ``ctx.llm.complete_structured``, for the rules reviewer
+    redact: Callable[[str], str] | None = None  # the redactor the reviewer's action passes through
+    park: Callable[..., None] | None = None  # parks a scheduled run's refused step (``rules.park``)
+    approvals_problem: str = ""  # a bot profile's engine settings approve cards without a person (B47 H7): asks refuse
     careful: str = ""  # the permission step (``policy.careful``): supervised, auto_edits, auto, full; "" unset
     surface: str = "cli"  # who opened the session: the Session tab (``session``), a bot, or anything else (``cli``)

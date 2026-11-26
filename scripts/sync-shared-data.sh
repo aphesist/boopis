@@ -20,6 +20,7 @@ FILES=(
   "apps/shared/data/frontier-models.json:required"  # which models may do governed work (governance/frontier.py)
   "apps/shared/data/providers.json:required"  # the never-frontier rule for custom endpoints and local runtimes (governance/frontier.py)
   "apps/shared/data/tool-args.json:required"  # the arguments that say what a tool call touches (activity.py; the host's toolwords.rs)
+  "apps/shared/data/default-rules.json:required"  # the owner's default rules (rules/store.py; the host's crates/boopis-rules)
   # hx-pack's redact.rules.json joins this list when plugin code reads it. Not yet: `hermes plugins validate`'s
   # security scan flags it (its examples contain a private-key header and os.environ text), and hx redacts
   # everything the plugin sends through `redact.apply`.

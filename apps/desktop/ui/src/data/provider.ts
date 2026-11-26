@@ -14,6 +14,9 @@ import type {
 } from './types';
 
 export type Unsubscribe = () => void;
+/** an answer to a bot's approval card: once, deny, or a rules card's two standing answers */
+export type BotDecision = 'approved' | 'denied' | 'turn' | 'always';
+
 export interface Watch<T> { get(): T; subscribe(fn: (value: T) => void): Unsubscribe }
 export interface Feed<S, E> { snapshot(): S; subscribe(fn: (event: E) => void): Unsubscribe }
 
@@ -178,8 +181,9 @@ export interface BotsSource extends Feed<BotsSnapshot, BotsEvent> {
   stop(botId: string): boolean;
   /** the folder the bot works in, as the engine said (paths in its messages resolve there); null while unknown */
   workspace?(botId: string): string | null;
-  /** decide an approval card in a thread (the dock decides through `waits`) */
-  decide(botId: string, messageId: string, decision: 'approved' | 'denied'): void;
+  /** decide an approval card in a thread (the dock decides through `waits`): `turn` and `always` are a rules card's
+      standing answers (allow all this turn; always, kept as a draft for the owner to finish), as the dock sends them */
+  decide(botId: string, messageId: string, decision: BotDecision): void;
   /** changes the role, the settings or the look (shape and colour, never the eyes); the change comes back as a `bot` event */
   update(id: string, patch: { role?: string; cfg?: Partial<BotConfig>; look?: { shape?: string; color?: string } }): void;
   create(draft: BotDraft & { instructions: string }): Bot;

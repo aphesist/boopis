@@ -377,6 +377,19 @@ describe('the settings sheet edits the real profile, and shows the diff first', 
     expect(h.main.calls.some((c) => c.method === 'profiles.configure')).toBe(false);
     expect(botOf(bots, 'atlas')).toMatchObject({ shape: 'star', cfg: { gov: 'ungoverned', cap: '1.00' } });
   });
+  it('passes the owner’s one-time grants when it changes a bot’s tiers or cap (B47 H5)', async () => {
+    const h = new FakeHermes();
+    const { bridge } = modelHost(h);
+    const asked: string[] = [];
+    bridge.ownerGrant = (purpose) => { asked.push(purpose); return Promise.resolve('g-' + purpose); };
+    const { bots } = await open(h, bridge);
+    await bots.source.admin!.saveOwn('atlas', { cfg: { gov: 'ungoverned', cap: '1.00', approvals: { push: 'block' } } });
+    expect(asked).toEqual(['bots.write.approvals', 'bots.write.cap']);
+    expect(h.main.calls.filter((c) => c.method === 'plugin.boopis.bots.write').at(-1)!.params).toMatchObject({ owner_grants: { 'bots.write.approvals': 'g-bots.write.approvals', 'bots.write.cap': 'g-bots.write.cap' } });
+    asked.length = 0;
+    await bots.source.admin!.saveOwn('atlas', { look: { shape: 'star' } });
+    expect(asked).toEqual([]);
+  });
   it('turns Governed on only on a frontier model, and says why it will not otherwise', async () => {
     const { h, bots } = await open();
     await expect(bots.source.admin!.saveOwn('atlas', { cfg: { gov: 'governed' } })).rejects.toThrow('atlas runs on fake-a. Governed mode needs a frontier model.');
@@ -702,6 +715,32 @@ describe('a conversation with a teammate is a session of its own profile', () =>
     expect(h.links.get('atlas')!.calls.find((c) => c.method === 'approval.respond')!.params).toMatchObject({ session_id: 'gw-atlas', prompt_id: 'a1', choice: 'once', execution_generation: 3 });
     expect(events.find((e) => e.type === 'message-resolved')).toMatchObject({ resolved: 'approved' });
     expect(botOf(bots, 'atlas')!.attention).toBeNull();
+  });
+  it('a thread card takes the dock’s standing answers: turn is session, always is once and keeps a draft', async () => {
+    for (const [answer, choice] of [['turn', 'session'], ['always', 'once'], ['denied', 'deny']] as const) {
+      const h = new FakeHermes();
+      const drafts: unknown[][] = [];
+      const rules = {
+        plugin: async (method: string, params: Record<string, unknown>) => { drafts.push([method, params]); return { text: 'Allow make deploy for atlas', excepts: ['user.1'] }; },
+        host: { get: async () => ({ rules: { revision: 4 } }), put: async (rule: unknown, rev: number) => { drafts.push(['put', rule, rev]); return { id: 'x1' }; } }
+      };
+      const bots = createLiveBots({ client: h.main as unknown as GatewayClient, linkTo: h.linkTo, now: () => NOW, pollMs: null, bridge: null, rules });
+      const events: BotsEvent[] = [];
+      bots.source.subscribe((e) => events.push(e));
+      await bots.ready; await bots.settled();
+      bots.source.send('atlas', 'deploy', 'bots');
+      await tickAll();
+      bots.source.decide('atlas', 'ap-a1', answer);
+      await tickAll();
+      expect(h.links.get('atlas')!.calls.find((c) => c.method === 'approval.respond')!.params).toMatchObject({ choice });
+      expect(events.find((e) => e.type === 'message-resolved')).toMatchObject({ resolved: answer === 'denied' ? 'denied' : 'approved' });
+      if (answer === 'always') {
+        expect(drafts[0]).toEqual(['rules.draft', { session_id: 'gw-atlas', description: 'ships it' }]);
+        expect(drafts[1]).toMatchObject(['put', { state: 'draft', type: 'exception' }, 4]);
+      } else {
+        expect(drafts).toEqual([]);
+      }
+    }
   });
   it('stops the reply with session.interrupt, and only while one is running', async () => {
     const { h, bots } = await open();

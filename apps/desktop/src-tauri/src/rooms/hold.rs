@@ -350,8 +350,34 @@ pub async fn submit(
     prefix: &str,
     limits: &RoomLimits,
 ) -> Result<Outcome> {
+    submit_as(
+        rpc,
+        store,
+        watch,
+        text,
+        how,
+        &super::new_event_id(prefix),
+        limits,
+    )
+    .await
+}
+
+/// [`submit`] with the event id given: the host-ops channel's `room.say` derives it from its idempotency key, so the
+/// engine's `groups.send` (idempotent by event id) makes one message for one key.
+///
+/// # Errors
+/// As [`submit`].
+pub async fn submit_as(
+    rpc: &dyn Rpc,
+    store: &Store,
+    watch: &mut Watch,
+    text: &str,
+    how: How,
+    id: &str,
+    limits: &RoomLimits,
+) -> Result<Outcome> {
     let text = check_text(text, limits)?;
-    let id = super::new_event_id(prefix);
+    let id = id.to_owned();
     watch.read(rpc).await?;
     if how == How::Now {
         if watch.busy(limits) {

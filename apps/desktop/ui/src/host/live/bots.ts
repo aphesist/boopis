@@ -31,6 +31,8 @@ import type { GatewayClient, GatewayEvent } from '../gateway';
 import { whenLabel } from '../map';
 import { isUnknownMethod } from './wire';
 import { createBotChat } from './bot-chat';
+import { keepDraft } from './rules';
+import type { RulesDeps } from './rules';
 import { botFrom, botName, capabilitiesFrom, isArchived, jobFrom, modelLabel, sessionFrom, sortJobs, splitModel } from './map-bots';
 import type { Known, PluginBot } from './map-bots';
 
@@ -48,6 +50,8 @@ export interface BotsDeps {
   bridge?: BotsBridge | null;
   /** shows the one notice the host's repair left (a toast in the app) */
   notify?: (text: string) => void;
+  /** the rules engine's seam (host/live/rules.ts): a thread card's "Always allow" keeps its draft through it */
+  rules?: RulesDeps;
 }
 export interface LiveBots {
   source: BotsSource;
@@ -115,7 +119,8 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
   const chat = createBotChat({
     link: (id) => link(id), emit: (ev) => { events.emit(ev); }, now,
     live(id, st) { const r = recs.get(id); if (!r) return; if (st) r.live = st; else delete r.live; events.emit({ type: 'bot', bot: toBot(r) }); },
-    changed(id) { const r = recs.get(id); if (r?.loaded) void track(loadLinked(id, r)); }
+    changed(id) { const r = recs.get(id); if (r?.loaded) void track(loadLinked(id, r)); },
+    ...(deps.rules ? { keepDraft: (sid: string, description: string) => keepDraft(deps.rules as RulesDeps, sid, description) } : {})
   });
 
   /* ───────── a teammate's own link ───────── */
@@ -498,6 +503,13 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
         }
         if (Object.keys(settings).length) body['settings'] = settings;
         if (approvals) body['approvals'] = approvals;
+        /* B47 H5: the plugin changes a bot's tiers or cap only with the owner's one-time grant, which the host gives this window */
+        const purposes = [...(approvals ? ['bots.write.approvals' as const] : []), ...('cap' in settings ? ['bots.write.cap' as const] : [])];
+        if (purposes.length && deps.bridge?.ownerGrant) {
+          const grants: Record<string, string> = {};
+          for (const p of purposes) grants[p] = await deps.bridge.ownerGrant(p);
+          body['owner_grants'] = grants;
+        }
       }
       const res = await plug<{ record: PluginBot['record'] }>('bots.write', body);
       const tiers = r.plugin?.tiers && patch.cfg?.approvals ? { ...r.plugin.tiers, ...patch.cfg.approvals } : r.plugin?.tiers;   /* what was just enforced; the next read says it again */

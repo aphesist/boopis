@@ -14,7 +14,10 @@
     "owner_answer: what no bot may do in any tier: answer an approval, a clarify or a form meant for the owner (ADR-0050, S2).",
     "`markers` are looked for in command lines, code and URLs (the gateway's answer methods, the local API's approvals route and",
     "its token, a ticket minted from the engine's CLI); `slash` are chat commands that answer an approval, refused at the start of",
-    "a message a people tool sends (`text_keys`).",
+    "a message a people tool sends (`text_keys`). B47 (H3, docs/specs/host-protections.md section 5) adds the engine's control",
+    "socket and the local API's address by name, owner-only commands of boopis's and the engine's own CLI (`config set approvals`,",
+    "`--yolo`, a plugin switched off), and `pairs`: both words in a command line, code or URL, in order (the local API's routes",
+    "that speak in the owner's voice). Whitespace is collapsed before matching. Policy step 0 (`policy/protections.py`).",
     "kanban: how a bot files a card (ADR-0050, T1, policy/kanban.py). `depends_on` are the words that say a card waits for other work",
     "(case-insensitive regular expressions over its title and body): such a card needs `parents`, because the dispatcher starts a card",
     "without parents at once whatever its text says. `key_max` bounds the idempotency key boopis derives for a room turn's card."
@@ -134,8 +137,13 @@
   "owner_answer": {
     "markers": [
       "approval.respond", "clarify.respond", "groups.approve", "secret.respond", "sudo.respond", "form.submit",
-      "form.cancel", "/v1/approvals", "client-token", "connect --ticket", "gateway attach"
+      "form.cancel", "/v1/approvals", "client-token", "connect --ticket", "gateway attach",
+      "gateway.sock", "client-endpoint", "host-ops.sock",
+      "boopis team apply", "boopis team undo",
+      "config set approvals", "config set plugins", "config set auxiliary.boopis_reviewer",
+      "plugins disable boopis", "plugins remove boopis", "plugins uninstall boopis", "--yolo"
     ],
+    "pairs": [["/v1/bots/", "/say"], ["/v1/bots/", "/retry"], ["/v1/rooms/", "/say"]],
     "slash": ["/approve", "/deny", "/always", "/yes", "/no"],
     "text_keys": ["message", "text", "content", "body", "reply"]
   },

@@ -4,8 +4,11 @@
 
 pub mod apply;
 pub mod export;
+pub mod held;
 pub mod plan;
 pub mod spec;
 
+#[cfg(test)]
+mod held_tests;
 #[cfg(test)]
 pub(crate) mod tests;

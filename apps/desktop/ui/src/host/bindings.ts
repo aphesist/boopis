@@ -399,6 +399,107 @@ export const commands = {
 	 *  nothing.
 	 */
 	dictationStop: (id: number, options?: InvokeOptions) => __TAURI_INVOKE<void>("dictation_stop", { id }, options),
+	/**
+	 *  The rules list for every bot, `<root>/boopis/rules.json` (made with the owner's defaults the first time), as
+	 *  `{rules, reviewer_status, changed_outside}`.
+	 * 
+	 *  Errors: `hx.rules.unreadable` when the file cannot be read or a newer boopis wrote it.
+	 */
+	rulesGet: (options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_get", undefined, options),
+	/**
+	 *  Add a rule or edit one (by its `id`), against the revision the window read. Returns `{revision, id}`.
+	 * 
+	 *  Errors: `hx.rules.conflict` (a stale revision, or a change from outside not yet looked at), `hx.rules.invalid` (a text
+	 *  that is not one line of 1 to 200 characters, an unknown type, kind or source).
+	 */
+	rulesPut: (rule: Json, expectedRevision: number, options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_put", { rule, expectedRevision }, options),
+	/**
+	 *  Switch a rule on or off. Returns `{revision}`.
+	 * 
+	 *  Errors: as `rules_put`, and `hx.rules.not_found`.
+	 */
+	rulesSetEnabled: (id: string, enabled: boolean, expectedRevision: number, options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_set_enabled", { id, enabled, expectedRevision }, options),
+	/**
+	 *  Remove a rule (a default stays removed). Returns `{revision, undo_token}`; `rules_undo` puts it back for 30 s.
+	 * 
+	 *  Errors: as `rules_set_enabled`.
+	 */
+	rulesRemove: (id: string, expectedRevision: number, options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_remove", { id, expectedRevision }, options),
+	/**
+	 *  Put back the rule a `rules_remove` took out. Returns `{revision}`.
+	 * 
+	 *  Errors: `hx.rules.not_found` for a token that is unknown or older than 30 s.
+	 */
+	rulesUndo: (undoToken: string, options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_undo", { undoToken }, options),
+	/**
+	 *  Put the shipped defaults back (their text, on, every bot; removed ones added again); `ids` names some, none is all.
+	 *  Returns `{revision}`.
+	 */
+	rulesRestoreDefaults: (ids: string[] | null, options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_restore_defaults", { ids }, options),
+	/**  Keep a change made to the rules outside boopis (after the owner looked at it). Returns what `rules_get` returns. */
+	rulesAcceptOutside: (options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_accept_outside", undefined, options),
+	/**
+	 *  Choose the reviewer: `auto` (the cheapest connected model, as the plugin's `rules.reviewer.rank` ranks them; the
+	 *  window passes its pick) or `pinned`, with its route; the route is written into every bot's own engine settings
+	 *  (`auxiliary.boopis_reviewer`). Returns `{reviewer, problems}`: the bots the route could not be written for.
+	 * 
+	 *  Errors: `hx.rules.invalid` for another mode or half a route.
+	 */
+	rulesReviewerSet: (mode: string, provider: string | null, model: string | null, options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_reviewer_set", { mode, provider, model }, options),
+	/**
+	 *  A one-time owner grant (60 s, one use) for a plugin call that loosens a rule: `bots.write.approvals`,
+	 *  `bots.write.cap` or `budget.set`. The window passes it in that call; the plugin redeems it with the host.
+	 * 
+	 *  Errors: `hx.invalid_params` for a purpose that takes no grant.
+	 */
+	ownerGrant: (purpose: string, options?: InvokeOptions) => __TAURI_INVOKE<string>("owner_grant", { purpose }, options),
+	/**
+	 *  The team plans: the proposals that wait for the owner, or with `all` every plan kept (at most 50, newest first), as
+	 *  `{plans: [{plan_hash, title, reason, counts, state, created_at, expires_at, undoes}]}`.
+	 */
+	teamPlansList: (all: boolean, options?: InvokeOptions) => __TAURI_INVOKE<Json>("team_plans_list", { all }, options),
+	/**
+	 *  One plan as its card shows it: `{plan_hash, title, reason, job_id, actions: [{mark, target, what}], problems, notes,
+	 *  counts, state, created_at, expires_at, report, answered_by, undoes, words, permanent}`. Never the fragment.
+	 * 
+	 *  Errors: `hx.team.plan_not_found`.
+	 */
+	teamPlanGet: (planHash: string, options?: InvokeOptions) => __TAURI_INVOKE<Json>("team_plan_get", { planHash }, options),
+	/**
+	 *  Apply a plan: only the plan card's hold-to-approve calls this. The checks run first (expired, stale, tampered,
+	 *  problems), then the snapshot, then the actions; returns the plan with its report (`state` `applied` or `failed`).
+	 * 
+	 *  Errors: `hx.team.plan_not_found`, `plan_not_open`, `plan_expired`, `plan_stale`, `plan_tampered`, `plan_problems`,
+	 *  `hx.team.unreadable`, `hx.host.unavailable`.
+	 */
+	teamPlanApply: (planHash: string, options?: InvokeOptions) => __TAURI_INVOKE<Json>("team_plan_apply", { planHash }, options),
+	/**
+	 *  Say no to a plan; `words` are kept for the bot to read. Returns the plan (`state: rejected`).
+	 * 
+	 *  Errors: `hx.team.plan_not_found`, `hx.team.plan_not_open`.
+	 */
+	teamPlanReject: (planHash: string, words: string | null, options?: InvokeOptions) => __TAURI_INVOKE<Json>("team_plan_reject", { planHash, words }, options),
+	/**
+	 *  Plan the way back from an applied plan: a new proposal (`undoes` names this one), applied by the same hold.
+	 * 
+	 *  Errors: `hx.team.plan_not_found`, `hx.team.plan_not_open` (not applied), `hx.team.unreadable`.
+	 */
+	teamPlanUndo: (planHash: string, options?: InvokeOptions) => __TAURI_INVOKE<Json>("team_plan_undo", { planHash }, options),
+	/**  The house bot's jobs: one (`job_id`) or the open ones, as `{jobs: [{id, title, state, steps, spend, started, at}]}`. */
+	houseJobs: (jobId: string | null, options?: InvokeOptions) => __TAURI_INVOKE<Json>("house_jobs", { jobId }, options),
+	/**
+	 *  The parked steps: a scheduled run's step a rule refused, waiting for the owner, as `{parked: [{id, bot, profile,
+	 *  session_id, summary, action, rules, held, at, expires_at, choices}]}` (never the step's arguments). Expired ones go.
+	 */
+	parkedList: (options?: InvokeOptions) => __TAURI_INVOKE<Json>("parked_list", undefined, options),
+	/**
+	 *  Answer a parked step: `deny` deletes it and nothing runs; `once` re-runs it in the run's own session with a one-time
+	 *  grant for exactly that step; `always` does the same and keeps the narrowest exception as a draft for Settings. Returns
+	 *  `{state: "denied"}` or `{state: "rerun", session_id, resumed, draft_id}`.
+	 * 
+	 *  Errors: `hx.invalid_params` for an unknown step or choice; `hx.engine.unavailable` when the re-run could not start.
+	 */
+	parkedAnswer: (id: string, choice: string, options?: InvokeOptions) => __TAURI_INVOKE<Json>("parked_answer", { id, choice }, options),
 };
 
 /** Events */
@@ -408,8 +509,10 @@ export const events = {
 	connectorRestartEvent: makeEvent<ConnectorRestartEvent, ConnectorRestartEvent>("connector-restart-event"),
 	engineUpdateEvent: makeEvent<EngineUpdateEvent, EngineUpdateEvent>("engine-update-event"),
 	fileDragEvent: makeEvent<FileDragEvent_Serialize, FileDragEvent_Deserialize>("file-drag-event"),
+	plansChangedEvent: makeEvent<PlansChangedEvent, PlansChangedEvent>("plans-changed-event"),
 	providerSigninEvent: makeEvent<ProviderSigninEvent, ProviderSigninEvent>("provider-signin-event"),
 	roomHeldEvent: makeEvent<RoomHeldEvent, RoomHeldEvent>("room-held-event"),
+	rulesChangedOutsideEvent: makeEvent<RulesChangedOutsideEvent, RulesChangedOutsideEvent>("rules-changed-outside-event"),
 	setupProgress: makeEvent<SetupProgress, SetupProgress>("setup-progress"),
 	windowStateEvent: makeEvent<WindowStateEvent, WindowStateEvent>("window-state-event"),
 };
@@ -2204,6 +2307,14 @@ export type PickedFolder = {
 	home_relative: boolean,
 };
 
+/**  A plan changed: proposed, applied, failed, rejected, expired, or an undo was planned. The plans list shows these. */
+export type PlansChangedEvent = {
+	/**  The plan. */
+	plan_hash: string,
+	/**  Its state now. */
+	state: string,
+};
+
 /**  The operating system. */
 export type Platform = 
 /**  Linux and the other Unix desktops. */
@@ -2715,6 +2826,15 @@ export type Rule =
 "nvidia_wayland_fixed" | 
 /**  The session type could not be told: nothing is assumed. */
 "session_unknown";
+
+/**
+ *  The rules list was changed outside boopis (`rules-engine.md` 11: the content's digest is not the one the host wrote).
+ *  Settings reads `rules_get` (`changed_outside`) and offers to keep or discard it; further changes wait until then.
+ */
+export type RulesChangedOutsideEvent = {
+	/**  The new content's digest (SHA-256 of the bytes). */
+	digest: string,
+};
 
 /**  The session the webview will draw into. */
 export type Session = 

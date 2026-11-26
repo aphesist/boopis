@@ -6,7 +6,8 @@
 Order, first to last:
 
 0. a call that would read a ``denied_read_paths`` path blocks, in both modes, before anything can allow it (a hard deny,
-   never an ask: ``policy/denied.py``);
+   never an ask: ``policy/denied.py``); then, for a session that runs for a bot, the host protections (B47,
+   ``policy/protections.py``): a call that would answer for the owner or change a governance file blocks;
 1. an invalid configuration allows read-only tools only;
 2. a ``deny`` rule blocks (any source; deny beats ask beats allow);
 3. a write to a protected path blocks;
@@ -18,8 +19,10 @@ Order, first to last:
    tools are refused at every step and an unknown step runs read-only tools only; Supervised asks before every
    ``ship`` and ``exec``, Auto-accept edits before every ``exec``; Auto and Full access skip step 7's network ask, and
    Full access turns every ask into allow (blocks stay blocks);
-4b. for a session that runs for a bot, the bot's capability tier (``policy/tiers.py``): Block refuses, Ask asks a
-   human at the engine's approval gate, Allow goes on (it never widens anything below);
+4b. for a session that runs for a bot, the bot's capability tier (``policy/tiers.py``): Block refuses; then the rules
+   engine (``rules/gate.py``, ADR-0060): this bot's exceptions remove what they except, a global rule that applies is a
+   card naming it (a reviewer failure holds the call at a card), and the bot's Ask row left is its own card; Allow goes
+   on (it never widens anything below and never switches a global rule off);
 5. an ``ask`` rule asks a human;
 6. an ``allow`` rule allows;
 7. in governed mode a network tool (``web_search``, ``web_extract``, ``vision_analyze``, ...) that no rule allowed asks
@@ -28,6 +31,9 @@ Order, first to last:
 8. otherwise the configured default (``allow`` unless set) applies;
 9. a bot's ``kanban_create`` that would be allowed is filed as one card per job, ordered by ``parents``, in the
    project's folder (``policy/kanban.py``): a ``modify``, or a refusal when its text waits for work it does not name.
+
+A bot whose engine settings approve cards without a person (B47 H7, ``protections.approvals_problem``) has every ask
+refused instead.
 
 Any exception blocks (fail closed).
 """
@@ -75,6 +81,10 @@ def check(call: ToolCall, session: SessionPolicy) -> Decision:
     """Allow, block, ask a human, or modify. Never raises."""
     try:
         decision = careful.lift(_check(call, session, load_defaults()), session)
+        if decision.kind == "approve" and session.bot is not None and session.approvals_problem:
+            from .protections import approvals_off_block
+
+            return approvals_off_block(session.approvals_problem)
         if decision.kind == "allow" and call.tool == "kanban_create":
             from .kanban import decide as decide_card
 
@@ -89,6 +99,12 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
     denied = denied_read(call, defaults, session)
     if denied is not None:
         return denied
+    if session.bot is not None:
+        from .protections import decide as protect
+
+        protected_by_host = protect(call, session, defaults)
+        if protected_by_host is not None:
+            return protected_by_host
     if session.config_error:
         confined = session.mode == "governed" and call.tool in defaults.workspace_confined_tools
         if call.tool in defaults.read_only_tools and call.tool not in defaults.network_tools:
@@ -138,7 +154,24 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
         from .tiers import decide as decide_tier
 
         tier = decide_tier(call, session, defaults)
-        if tier is not None:
+        if tier is not None and tier.kind == "block":
+            return tier
+        if session.rules is not None:
+            # the rules engine (ADR-0060): an exception for this bot, then a global rule's card, then the bot's Ask row
+            from ..rules.gate import decide as decide_rules
+
+            ruled = decide_rules(
+                call,
+                session,
+                defaults,
+                tier,
+                llm=session.reviewer,
+                redact=session.redact or (lambda s: s),
+                park=session.park,
+            )
+            if ruled is not None:
+                return ruled
+        elif tier is not None:
             return tier
     for rule in _parsed(session.ask):
         if match_rule(rule, call, root, defaults, deny_like=True) is not Match.NO:

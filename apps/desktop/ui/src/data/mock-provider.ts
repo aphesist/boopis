@@ -4,7 +4,7 @@
    visual parity tests; the app never falls back to it when the live provider fails (STANDARDS section 1, rule 4). */
 import { hhmm, reduced } from '../core/dom';
 import type {
-  BotsEvent, BotsSource, BotsSnapshot, DataProvider, DetailsSource, DictationSource, FeedforwardSource, FilesSource, FormsSource, ModsSource, PathsSource, RunSource, SchedulesSource, SessionsSource, WaitsEvent, WaitsSource
+  BotDecision, BotsEvent, BotsSource, BotsSnapshot, DataProvider, DetailsSource, DictationSource, FeedforwardSource, FilesSource, FormsSource, ModsSource, PathsSource, RunSource, SchedulesSource, SessionsSource, WaitsEvent, WaitsSource
 } from './provider';
 import { botIdBase } from './bot-id';
 import { createModsModel } from './mods-model';
@@ -157,7 +157,8 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
     waitsEv.emit({ type: 'resolved', id, outcome });
   }
 
-  function decide(botId: string, messageId: string, decision: 'approved' | 'denied'): void {
+  function decide(botId: string, messageId: string, answer: BotDecision): void {
+    const decision = answer === 'denied' ? 'denied' : 'approved';
     const list = threadOf(botId), k = list.findIndex((m) => m.id === messageId);
     const m = list[k];
     if (!m || m.kind !== 'approval' || m.resolved) return;

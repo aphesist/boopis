@@ -154,7 +154,14 @@ pub struct Service<E: Engine> {
     pub(super) workers: std::sync::Mutex<HashMap<String, Worker>>,
     /// Each scheduled job's last run, as the bot's cron list last said (B42).
     pub(super) cron_seen: std::sync::Mutex<super::cron::Seen>,
+    /// Where an `always` answer's draft is kept (H6).
+    draft_keeper: std::sync::OnceLock<DraftKeeper>,
+    /// `<app data>/house`, where team plans and jobs are kept (ADR-0061), for the read-only routes.
+    house: std::sync::OnceLock<std::path::PathBuf>,
 }
+
+/// Keeps a drafted exception (a rule value, `state: draft`) in the rules list.
+pub type DraftKeeper = Arc<dyn Fn(Value) + Send + Sync>;
 
 pub(super) fn text(v: &Value, key: &str) -> String {
     v.get(key)
@@ -235,6 +242,8 @@ impl<E: Engine> Service<E> {
             room_cursors: tokio::sync::Mutex::new(HashMap::new()),
             workers: std::sync::Mutex::new(HashMap::new()),
             cron_seen: std::sync::Mutex::new(HashMap::new()),
+            draft_keeper: std::sync::OnceLock::new(),
+            house: std::sync::OnceLock::new(),
         })
     }
 
@@ -641,6 +650,160 @@ impl<E: Engine> Service<E> {
         })
     }
 
+    /// Give a bot a message from boopis (the host-ops channel's `bot.say`, `docs/specs/team-ops.md` 4.3): always in a new
+    /// session (never the owner's open one), the text already labelled by the host, submitted under `submission_id`
+    /// (derived from the call's idempotency key), and never drawn in a window as the owner's own words.
+    ///
+    /// # Errors
+    /// `400 empty_text`, `413 text_too_long`, `404 no_such_bot`, or the engine's failure.
+    pub async fn say_as_house(
+        &self,
+        profile: &str,
+        message: &str,
+        submission_id: &str,
+    ) -> Result<Said, ApiError> {
+        let message = message.trim();
+        if message.is_empty() {
+            return Err(ApiError::new(
+                400,
+                "empty_text",
+                "There is nothing to say: text is empty.",
+            ));
+        }
+        if message.contains('\0') {
+            return Err(ApiError::new(
+                413,
+                "text_too_long",
+                "The text is too long to send in one message.",
+            ));
+        }
+        if !self.knows_bot(profile).await {
+            return Err(ApiError::new(
+                404,
+                "no_such_bot",
+                "There is no bot with that name.",
+            ));
+        }
+        let res = self
+            .engine
+            .request(profile, "session.create", json!({"source": "gui"}))
+            .await
+            .map_err(|e| failed("start a conversation", &e))?;
+        let live = text(&res, "session_id");
+        if live.is_empty() {
+            return Err(ApiError::new(
+                502,
+                "engine_unavailable",
+                "The engine started no conversation. Try again.",
+            ));
+        }
+        let kept = Some(text(&res, "stored_session_id"))
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| live.clone());
+        self.feed
+            .note_session(profile, &live, Source::Gui, Some(&kept), None);
+        self.engine
+            .request(
+                profile,
+                "prompt.submit",
+                json!({"session_id": live, "text": message, "submission_id": submission_id}),
+            )
+            .await
+            .map_err(|e| failed("deliver the message", &e))?;
+        Ok(Said {
+            profile: profile.to_owned(),
+            session_id: kept,
+            created: true,
+        })
+    }
+
+    /// Re-run a parked step the owner approved (`rules-engine.md` 8.3): resume the scheduled run's session (a fresh one
+    /// when it cannot be resumed), install the one-time grant for exactly that step (`rules.grant`, which redeems the
+    /// owner's `grant` with the host), then submit the fixed `[Approved step]` message. Returns `{session_id, resumed}`.
+    ///
+    /// # Errors
+    /// `404 no_such_bot`; `403 grant_refused` when the plugin would not take the grant (nothing was submitted); the engine's
+    /// failure.
+    pub async fn rerun_parked(
+        &self,
+        profile: &str,
+        stored: &str,
+        parked_id: &str,
+        grant: &str,
+        message: &str,
+        fresh_message: &str,
+    ) -> Result<Value, ApiError> {
+        if !self.knows_bot(profile).await {
+            return Err(ApiError::new(
+                404,
+                "no_such_bot",
+                "There is no bot with that name.",
+            ));
+        }
+        let resumed = if stored.is_empty() {
+            None
+        } else {
+            self.engine
+                .request(
+                    profile,
+                    "session.resume",
+                    json!({"session_id": stored, "omit_messages": true}),
+                )
+                .await
+                .ok()
+                .map(|r| text(&r, "session_id"))
+                .filter(|s| !s.is_empty())
+        };
+        let (live, kept, again) = if let Some(live) = resumed {
+            (live, stored.to_owned(), true)
+        } else {
+            let res = self
+                .engine
+                .request(profile, "session.create", json!({"source": "gui"}))
+                .await
+                .map_err(|e| failed("start a conversation", &e))?;
+            let live = text(&res, "session_id");
+            if live.is_empty() {
+                return Err(ApiError::new(
+                    502,
+                    "engine_unavailable",
+                    "The engine started no conversation. Try again.",
+                ));
+            }
+            let kept = Some(text(&res, "stored_session_id"))
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| live.clone());
+            (live, kept, false)
+        };
+        self.feed
+            .note_session(profile, &live, Source::Gui, Some(&kept), None);
+        self.engine
+            .request(
+                profile,
+                "plugin.boopis.rules.grant",
+                json!({"session_id": live, "parked_id": parked_id, "grant": grant}),
+            )
+            .await
+            .map_err(|e| {
+                tracing::info!(error = %e, "the plugin did not take a parked step's grant");
+                ApiError::new(
+                    403,
+                    "grant_refused",
+                    "boopis could not let the step run again. Run the job again from its schedule.",
+                )
+            })?;
+        let text_out = if again { message } else { fresh_message };
+        self.engine
+            .request(
+                profile,
+                "prompt.submit",
+                json!({"session_id": live, "text": text_out, "submission_id": format!("parked-{parked_id}")}),
+            )
+            .await
+            .map_err(|e| failed("deliver the message", &e))?;
+        Ok(json!({"session_id": kept, "resumed": again}))
+    }
+
     /// Open a stored conversation of `profile` without sending anything (`session.resume`): its live id. A bot that is
     /// answering in it is `409 bot_busy` (`instead` says what else the caller can do).
     async fn open(&self, profile: &str, stored: &str, instead: &str) -> Result<String, ApiError> {
@@ -982,7 +1145,7 @@ impl<E: Engine> Service<E> {
             .request(
                 &row.profile,
                 "approval.respond",
-                json!({"session_id": row.session_id, "execution_generation": row.execution_generation, "prompt_id": row.prompt_id, "choice": choice}),
+                json!({"session_id": row.session_id, "execution_generation": row.execution_generation, "prompt_id": row.prompt_id, "choice": super::approvals::delivered(choice)}),
             )
             .await;
         let delivery = match &result {
@@ -1004,6 +1167,9 @@ impl<E: Engine> Service<E> {
             }
         };
         self.feed.finish_answer(&row, &delivery);
+        if choice == "always" && matches!(delivery, Delivery::Delivered) {
+            self.keep_draft(&row).await;
+        }
         match delivery {
             Delivery::Delivered => self
                 .feed
@@ -1020,6 +1186,58 @@ impl<E: Engine> Service<E> {
                 },
                 |e| failed("deliver the answer", &e),
             )),
+        }
+    }
+
+    /// An `always` answer from outside the window (H6): the plugin drafts the narrowest exception for the card
+    /// (`rules.draft`, which writes nothing) and the host keeps it as a **draft**, never applied until the owner finishes it
+    /// in Settings. The card was answered `once` whatever happens here.
+    async fn keep_draft(&self, row: &Approval) {
+        let Some(keeper) = self.draft_keeper.get() else {
+            return;
+        };
+        let drafted = self
+            .engine
+            .request(
+                &row.profile,
+                "plugin.boopis.rules.draft",
+                json!({"session_id": row.session_id, "description": row.description}),
+            )
+            .await;
+        if let Some(rule) = drafted.ok().as_ref().and_then(boopis_rules::card_draft) {
+            keeper(rule);
+        } else {
+            tracing::info!(
+                "an Always answer from outside the window kept no draft: the plugin drafted none"
+            );
+        }
+    }
+
+    /// One of the plugin's RPCs (`plugin.boopis.<method>`) on `profile`'s link; `None` when it failed.
+    pub async fn plugin_call(&self, profile: &str, method: &str, params: Value) -> Option<Value> {
+        self.engine
+            .request(profile, &format!("plugin.boopis.{method}"), params)
+            .await
+            .inspect_err(|e| tracing::debug!(error = %e, method, "a plugin call failed"))
+            .ok()
+    }
+
+    /// Where team plans and jobs are kept (`<app data>/house`), for the local API's read-only routes. Set once.
+    pub fn set_house_dir(&self, dir: std::path::PathBuf) {
+        let _ = self.house.set(dir);
+    }
+
+    /// `<app data>/house`, once set.
+    #[must_use]
+    pub fn house_dir(&self) -> Option<&std::path::Path> {
+        self.house.get().map(std::path::PathBuf::as_path)
+    }
+
+    /// Where an `always` answer's drafted exception is kept (the app's rules writer, so its record of what it wrote stays
+    /// true). Set once; without it no draft is kept.
+    pub fn set_draft_keeper(&self, keeper: DraftKeeper) {
+        if self.draft_keeper.set(keeper).is_err() {
+            tracing::debug!("the local API's draft keeper was set twice; the first stays");
         }
     }
 

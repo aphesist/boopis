@@ -147,7 +147,7 @@ class HostChannel:
                 conn.settimeout(self._timeout)
                 conn.connect(rv.socket)
                 conn.sendall(line.encode("utf-8"))
-                raw = _read_line(conn)
+                raw = read_line(conn)
         except TimeoutError:
             raise ChannelError("timeout", "hx.secrets.unavailable", "the host did not answer in time") from None
         except OSError as exc:
@@ -171,7 +171,8 @@ class HostChannel:
         return reply.get("found") is True
 
 
-def _read_line(conn: socket.socket) -> bytes:
+def read_line(conn: socket.socket) -> bytes:
+    """One line of a host channel's answer (at most 64 KiB), without its newline."""
     buf = b""
     while b"\n" not in buf and len(buf) < MAX_REPLY_BYTES:
         chunk = conn.recv(4096)

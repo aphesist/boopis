@@ -3,8 +3,10 @@
 //! - a row exists only because the engine asked (an event on a link of the host, or the poll of a waiting session);
 //! - **first answer wins**: a row moves from pending to answering under the inbox's lock before the engine is called, so a
 //!   second client is told who was first; a failed delivery puts the row back so someone else can answer;
-//! - the boopis window answers `once` or `deny` only, so every other client does too: a standing grant (`session`,
-//!   `always`) is made in the window, never remotely;
+//! - from outside the window an approval is answered `once` or `deny`; a card the rules engine raised may also be answered
+//!   `session` (all of that rule's matches in this turn: the plugin's key is scoped to the turn) or `always`, which the
+//!   engine is given as `once` while the drafted exception is kept **disabled** for the owner to finish in the app
+//!   (`host-protections.md` H6). A standing grant never becomes active from outside the window;
 //! - the choice must be one the engine offered, and an answer that names a generation must name the row's;
 //! - nothing is auto-approved: no default choice, no "all", no timeout that approves.
 //!
@@ -14,8 +16,16 @@ use std::collections::BTreeMap;
 
 use super::model::{Answered, Approval, ApprovalState};
 
-/// The choices boopis accepts from outside its window.
+/// The choices boopis accepts from outside its window, for any approval.
 pub const REMOTE_CHOICES: [&str; 2] = ["once", "deny"];
+/// The choices it also accepts for a card the rules engine raised (H6).
+pub const RULE_CARD_CHOICES: [&str; 2] = ["session", "always"];
+
+/// The choice the engine is given for `choice`: `always` from outside the window is `once` (its standing part is a draft).
+#[must_use]
+pub fn delivered(choice: &str) -> &str {
+    if choice == "always" { "once" } else { choice }
+}
 /// Rows kept at most.
 pub const MAX_ROWS: usize = 256;
 /// How long an answered or expired row is kept for `GET /v1/approvals?all=1`.
@@ -73,7 +83,7 @@ impl Refusal {
             Self::AlreadyAnswered(None) => "Already answered. The first answer stands.".into(),
             Self::Expired => "This approval has expired. Ask the bot to try again.".into(),
             Self::Policy(c) => format!(
-                "boopis accepts only once or deny from outside its window, not {c:?}. Grant a standing permission in boopis."
+                "boopis accepts only once or deny from outside its window (and session or always on a boopis rule's card), not {c:?}. Grant a standing permission in boopis."
             ),
             Self::NotOffered(c) => format!("The engine did not offer {c:?} for this approval."),
             Self::Generation { expected } => format!(
@@ -114,9 +124,11 @@ impl Inbox {
     /// Add what the engine asked for, or refresh a row it already asked: returns the row when it is new or changed.
     /// A row that was answered stays answered.
     pub fn upsert(&mut self, mut row: Approval) -> Option<Approval> {
+        let rule_card = boopis_rules::rule_card(&row.description).is_some();
         row.answerable_with = REMOTE_CHOICES
             .iter()
-            .filter(|c| row.choices.iter().any(|o| o == *c))
+            .chain(RULE_CARD_CHOICES.iter().filter(|_| rule_card))
+            .filter(|c| row.choices.iter().any(|o| o == delivered(c)))
             .map(|c| (*c).to_owned())
             .collect();
         let k = key(&row.profile, &row.id);
@@ -211,9 +223,12 @@ impl Inbox {
         }) {
             return Err(Refusal::Expired);
         }
-        if !REMOTE_CHOICES.contains(&choice) {
+        let rule_card = RULE_CARD_CHOICES.contains(&choice)
+            && boopis_rules::rule_card(&row.description).is_some();
+        if !REMOTE_CHOICES.contains(&choice) && !rule_card {
             return Err(Refusal::Policy(choice.to_owned()));
         }
+        let choice = delivered(choice);
         if !row.choices.iter().any(|c| c == choice) {
             return Err(Refusal::NotOffered(choice.to_owned()));
         }
@@ -457,6 +472,40 @@ mod tests {
             ApprovalState::Pending,
             "a refusal takes nothing"
         );
+    }
+
+    /// H6: a rules card may be answered `session` or `always` from outside; `always` needs `once` offered (it is delivered
+    /// as `once`).
+    #[test]
+    fn a_rules_card_takes_session_and_always_and_always_is_once() {
+        let card =
+            "kai asks: Run a command · git push\ngit push --force\nRule: “Ask before a force-push”";
+        let mut inbox = Inbox::new();
+        for (id, choice) in [("p1", "session"), ("p2", "always")] {
+            let mut r = row(id);
+            r.description = card.into();
+            inbox.upsert(r);
+            let taken = inbox
+                .begin("kai", id, choice, None, who("endpoint"), 2_000)
+                .unwrap();
+            assert_eq!(taken.answered_by.unwrap().choice.as_deref(), Some(choice));
+        }
+        let mut r = row("p3");
+        r.description = card.into();
+        r.choices = vec!["always".into(), "deny".into()];
+        inbox.upsert(r);
+        assert_eq!(
+            inbox
+                .begin("kai", "p3", "always", None, who("endpoint"), 2_000)
+                .unwrap_err()
+                .code(),
+            "choice_not_offered",
+            "always is delivered as once, which the engine did not offer"
+        );
+        assert_eq!(delivered("always"), "once");
+        let shown = inbox.get("kai", "p3").unwrap().answerable_with.clone();
+        assert_eq!(shown, ["deny"], "always is not offered when once is not");
+        assert_eq!(delivered("session"), "session");
     }
 
     #[test]

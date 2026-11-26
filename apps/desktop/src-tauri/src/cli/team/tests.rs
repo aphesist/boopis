@@ -9,6 +9,19 @@ struct Out {
 }
 
 async fn go(model: &Model, args: &[&str]) -> Out {
+    go_as(model, args, None).await
+}
+
+async fn go_as(model: &Model, args: &[&str], bot_caller: Option<&'static str>) -> Out {
+    go_in(model, args, bot_caller, None).await
+}
+
+async fn go_in(
+    model: &Model,
+    args: &[&str],
+    bot_caller: Option<&'static str>,
+    house: Option<&Path>,
+) -> Out {
     let args: Vec<String> = args.iter().map(|s| (*s).to_owned()).collect();
     let (mut out, mut err) = (Vec::new(), Vec::new());
     let stdin = || Ok(String::new());
@@ -18,6 +31,8 @@ async fn go(model: &Model, args: &[&str]) -> Out {
             out: &mut out,
             err: &mut err,
             stdin: &stdin,
+            bot_caller,
+            house,
         };
         team(&args, &mut ctx).await
     };
@@ -130,4 +145,69 @@ async fn check_reads_a_file_without_the_engine_and_usage_is_code_two() {
     assert_eq!(go(&model, &["nope"]).await.code, 2);
     assert_eq!(go(&model, &["apply"]).await.code, 2);
     assert_eq!(go(&model, &["apply", "x", "--wat"]).await.code, 2);
+}
+
+/// B47, H5: a process the engine started cannot apply a team, in any form, and nothing is read or changed.
+#[tokio::test]
+async fn a_bot_s_process_cannot_apply_a_team() {
+    for rule in ["environment", "ancestry"] {
+        for args in [
+            vec!["apply", &file()[..]],
+            vec!["apply", &file()[..], "--dry-run"],
+            vec!["apply", &file()[..], "--prune", "--json"],
+        ] {
+            let model = Model::new(base());
+            let o = go_as(&model, &args, Some(rule)).await;
+            assert_eq!(o.code, 2, "{args:?}: {}{}", o.out, o.err);
+            assert!(o.err.contains(BOT_REFUSAL), "{}", o.err);
+            assert!(model.ran().is_empty(), "{args:?}");
+        }
+    }
+    // checking a file changes nothing, so a bot may still do it
+    let model = Model::new(base());
+    assert_eq!(
+        go_as(&model, &["check", &file()], Some("environment"))
+            .await
+            .code,
+        0
+    );
+}
+
+/// team-ops.md acceptance 16: `team plan` prints the hash, `apply --hash` applies it, a bot's process gets exit 2.
+#[tokio::test]
+async fn a_plan_is_applied_by_its_hash_and_never_by_a_bot() {
+    let dir = tempfile::tempdir().unwrap();
+    let house = dir.path().join("house");
+    let fragment = dir.path().join("kai.yaml");
+    std::fs::write(&fragment, "bots:\n  kai:\n    role: writes code\n").unwrap();
+    let model = Model::new(base());
+    let o = go_in(
+        &model,
+        &["plan", fragment.to_str().unwrap(), "--json"],
+        None,
+        Some(&house),
+    )
+    .await;
+    assert_eq!(o.code, 0, "{}{}", o.out, o.err);
+    let v: serde_json::Value = serde_json::from_str(o.out.trim()).unwrap();
+    let hash = v["plan_hash"].as_str().unwrap().to_owned();
+    for rule in ["environment", "ancestry"] {
+        for args in [vec!["apply", "--hash", &hash[..]], vec!["undo", &hash[..]]] {
+            let o = go_in(&model, &args, Some(rule), Some(&house)).await;
+            assert_eq!(o.code, 2, "{args:?}");
+            assert!(o.err.contains(BOT_REFUSAL));
+        }
+    }
+    assert!(model.ran().is_empty());
+    let o = go_in(
+        &model,
+        &["apply", "--hash", &hash, "--json"],
+        None,
+        Some(&house),
+    )
+    .await;
+    assert_eq!(o.code, 0, "{}{}", o.out, o.err);
+    assert_eq!(model.ran(), ["CreateBot"]);
+    let v: serde_json::Value = serde_json::from_str(o.out.trim()).unwrap();
+    assert_eq!(v["answered_by"]["surface"], "cli");
 }

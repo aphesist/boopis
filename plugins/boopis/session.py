@@ -42,6 +42,7 @@ from .hx import HxClient
 from .ledger import PriceBook, SessionLedger, build_book, ledger_filename, load_catalogue, project_costs, usage_records
 from .ledger.store import LedgerEvent
 from .policy import SessionPolicy
+from .rules.store import RulesDoc
 from .turns import TurnTrack
 from .util.log import get_logger
 from .version import PLUGIN_VERSION
@@ -171,6 +172,49 @@ class Runtime:
             self._defaults_given.add(name)
         return rules_for(home, root)
 
+    def rules(self) -> RulesDoc:
+        """The global rules list of this root (``rules.store``), read again when ``rules.json`` changes."""
+        from .rules.store import read
+
+        return read(self.root)
+
+    def reviewer(self) -> Callable[..., Any] | None:
+        """The engine's structured completion for the rules reviewer (``ctx.llm``, public plugin API), or None."""
+        llm = getattr(self.ctx, "llm", None)
+        call = getattr(llm, "complete_structured", None) if llm is not None else None
+        return call if callable(call) else None
+
+    def redactor(self) -> Callable[[str], str]:
+        """What the reviewer's action passes through: the engine's own redactor, forced (public), else hx's."""
+        engine = getattr(self.ctx, "redact_text", None)
+        if callable(engine):
+            return lambda text: str(engine(text, force=True))
+        from .util.redact import redact_or_withhold
+
+        return lambda text: redact_or_withhold(self.hx_client(), text)
+
+    def parker(self) -> Callable[..., None]:
+        """Parks a scheduled run's refused step under this root (``rules.park``)."""
+        from .rules.park import park
+
+        root = self.root
+
+        def parker(call: Any, session: Any, matched: Any, held: str) -> None:
+            from . import activity
+            from .rules.data import load
+            from .rules.gate import summary
+
+            pid = park(root, call, session, matched, held)
+            activity.rule_refused(call.session_id or "", [r.id for r in matched], summary(call, load()), pid)
+
+        return parker
+
+    def approvals_problem(self) -> str:
+        """Why this bot profile's engine settings would approve a card without a person (B47 H7), ``""`` when none."""
+        from .policy.protections import approvals_problem
+
+        return approvals_problem(self.home)
+
     def boards(self) -> Callable[[str | None], str | None]:
         """A kanban board's ``default_workdir``, asked of the engine's CLI in the root home and kept a minute."""
         if self.board_folders is None:
@@ -286,6 +330,11 @@ class Runtime:
         base = replace(
             base,
             bot=bot,
+            approvals_problem=self.approvals_problem() if bot is not None else "",
+            rules=self.rules() if bot is not None else None,
+            reviewer=self.reviewer() if bot is not None else None,
+            redact=self.redactor() if bot is not None else None,
+            park=self.parker() if bot is not None else None,
             asked_by=asked_by(caller.state.origin),
             origin=caller.state.origin,
             board_folder=self.boards() if bot is not None else None,

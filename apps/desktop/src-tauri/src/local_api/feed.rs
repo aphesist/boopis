@@ -1222,10 +1222,14 @@ impl Feed {
             .then(|| super::toolwords::detail(tool.as_deref().unwrap_or_default(), p.args.as_ref()))
             .flatten()
             .map(|d| self.clip(&d));
+        if p.kind == Kind::RuleRefused {
+            self.on_rule_refused(p);
+            return;
+        }
         let event = match p.kind {
             Kind::ToolStart => "tool.start",
             Kind::ToolEnd => "tool.complete",
-            Kind::TurnEnd => "message.complete",
+            Kind::TurnEnd | Kind::RuleRefused => "message.complete",
         };
         let mut inner = lock(&self.inner);
         if p.profile != "default" && !inner.roster.iter().any(|e| e.name == p.profile) {
@@ -1395,6 +1399,31 @@ impl Feed {
             title,
             body,
             false,
+        );
+    }
+
+    /// A scheduled run's step was refused by a rule and parked (`rules-engine.md` 8.3): a notification that the owner can
+    /// approve it from boopis. The datagram is unauthenticated, so it only ever says what the plugin said; the card itself is
+    /// read from the parked file by the host.
+    fn on_rule_refused(&self, p: &super::activity::Pushed) {
+        let mut inner = lock(&self.inner);
+        if p.profile != "default" && !inner.roster.iter().any(|e| e.name == p.profile) {
+            return;
+        }
+        let who = Self::display(&inner, &p.profile);
+        let title = format!(
+            "{who}'s scheduled run stopped before a step: {}",
+            self.clip(p.tool.trim())
+        );
+        self.notify(
+            &mut inner,
+            NoteKind::Approval,
+            &p.profile,
+            &Where::session(&p.session_id),
+            Source::Cron,
+            title,
+            "It needs your OK. Approve it in boopis and it runs again.".to_owned(),
+            true,
         );
     }
 

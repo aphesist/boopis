@@ -45,6 +45,13 @@ def bots_read(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
 
 
 def bots_write(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
+    from ..hostops.channel import require_owner_grant
+
+    settings = params.get("settings")
+    if params.get("approvals") is not None:
+        require_owner_grant(dict(params), "bots.write.approvals")
+    if isinstance(settings, Mapping) and "cap" in settings:
+        require_owner_grant(dict(params), "bots.write.cap")
     record = service().write(_name(params), params.get("look"), params.get("settings"), params.get("approvals"))
     return {"record": record}
 

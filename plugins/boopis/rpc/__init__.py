@@ -74,9 +74,22 @@ CAPABILITIES = (
     "store.removed.set",
     "store.policy.get",
     "store.policy.set",
+    "rules-v1",
+    "rules.draft",
+    "rules.explain",
+    "rules.reviewer.rank",
+    "rules.grant",
+    "rules.kinds",
 )
 DEFAULT_TAIL_LIMIT = 200
 MAX_TAIL_LIMIT = 1000
+
+
+def _host_capabilities() -> list[str]:
+    """What the host adds: ``host-ops-v1`` once the host-ops channel answered at load."""
+    from ..hostops import CAPABILITY, available
+
+    return [CAPABILITY] if available() else []
 
 
 def _session_id(params: Mapping[str, Any], session_id: str | None) -> str:
@@ -154,7 +167,7 @@ def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
         "session": session,
         "version": PLUGIN_VERSION,
         "protocol": PROTOCOL,
-        "capabilities": list(CAPABILITIES),
+        "capabilities": [*CAPABILITIES, *_host_capabilities()],
         "hx": hx_view(rt),
         "session_refused_toolsets": _refused_toolsets(),
         "approvals": {"mode": approvals_mode()},
@@ -415,6 +428,9 @@ def budget_set(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
 
     if "monthly_usd" not in params:
         raise InvalidParamsError("monthly_usd is required (dollars like '50.00', or null to clear the budget)")
+    from ..hostops.channel import require_owner_grant
+
+    require_owner_grant(dict(params), "budget.set")
     rt = runtime()
     doc = month.write_budget(rt.root, params["monthly_usd"])
     return {"monthly_usd": doc["monthly_usd"]}
@@ -424,9 +440,11 @@ def handlers() -> dict[str, Handler]:
     from ..bots.rpc import HANDLERS as BOT_HANDLERS
     from ..forms.rpc import form_cancel, form_list, form_submit
     from ..mods.rpc import HANDLERS as MOD_HANDLERS
+    from ..rules.rpc import HANDLERS as RULES_HANDLERS
     from ..store.rpc import HANDLERS as STORE_HANDLERS
 
     return {
+        **RULES_HANDLERS,
         **MOD_HANDLERS,
         **STORE_HANDLERS,
         **BOT_HANDLERS,

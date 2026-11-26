@@ -110,20 +110,43 @@ impl<E: Engine> Service<E> {
                 "There is nothing to say: text is empty.",
             ));
         }
-        self.room(room_id).await?;
         let prefix = if by.surface == "gui" { "ui" } else { "api" };
         let how = if now { How::Now } else { How::WhenDone };
+        self.room_send_as(room_id, message, how, &crate::rooms::new_event_id(prefix))
+            .await
+    }
+
+    /// Send `message` to a room through the hold under the event id `id` (the host-ops channel's `room.say`, whose id comes
+    /// from its idempotency key; the text already carries the host's label).
+    ///
+    /// # Errors
+    /// As `room_send`.
+    pub async fn room_send_as(
+        &self,
+        room_id: &str,
+        message: &str,
+        how: How,
+        id: &str,
+    ) -> std::result::Result<RoomSent, ApiError> {
+        if message.trim().is_empty() {
+            return Err(ApiError::new(
+                400,
+                "empty_text",
+                "There is nothing to say: text is empty.",
+            ));
+        }
+        self.room(room_id).await?;
         let mut watches = self.watches.lock().await;
         let watch = watches
             .entry(room_id.to_owned())
             .or_insert_with(|| Watch::new(room_id));
-        let out = hold::submit(
+        let out = hold::submit_as(
             &self.rpc(),
             &self.holds,
             watch,
             message,
             how,
-            prefix,
+            id,
             &self.room_limits,
         )
         .await

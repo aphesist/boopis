@@ -23,6 +23,7 @@ pub mod frontier;
 pub mod gateway;
 pub mod gpu;
 pub mod hermes;
+pub mod house;
 pub mod kanban;
 pub mod local;
 pub mod local_api;
@@ -34,6 +35,7 @@ pub mod providers;
 pub mod renderer;
 pub mod resources;
 pub mod rooms;
+pub mod rules;
 pub mod runtime;
 pub mod secrets;
 pub mod settings;
@@ -162,6 +164,23 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::bot_run_limit_set,
             commands::dictation_start,
             commands::dictation_stop,
+            commands::rules_get,
+            commands::rules_put,
+            commands::rules_set_enabled,
+            commands::rules_remove,
+            commands::rules_undo,
+            commands::rules_restore_defaults,
+            commands::rules_accept_outside,
+            commands::rules_reviewer_set,
+            commands::owner_grant,
+            commands::team_plans_list,
+            commands::team_plan_get,
+            commands::team_plan_apply,
+            commands::team_plan_reject,
+            commands::team_plan_undo,
+            commands::house_jobs,
+            commands::parked_list,
+            commands::parked_answer,
         ])
         .events(collect_events![
             ConnectionStateEvent,
@@ -172,6 +191,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             FileDragEvent,
             EngineUpdateEvent,
             RoomHeldEvent,
+            house::PlansChangedEvent,
+            rules::RulesChangedOutsideEvent,
             commands::ConnectorRestartEvent
         ])
 }
@@ -481,6 +502,11 @@ pub fn run() {
             let channel_auth = secrets::Auth::mint()
                 .inspect_err(|e| tracing::warn!(error = %e, "no plugin secret channel"))
                 .ok();
+            // The host-ops channel (ADR-0061): its own token and socket, handed to the same gateways beside the secret
+            // channel's, and served to the same one process.
+            let ops_auth = house::Auth::mint()
+                .inspect_err(|e| tracing::warn!(error = %e, "no host-ops channel"))
+                .ok();
             let peers = Arc::new(match &channel_auth {
                 Some(auth) => secrets::PeerPolicy::new().holding(auth.token_entry()),
                 None => secrets::PeerPolicy::new(),
@@ -489,7 +515,11 @@ pub fn run() {
             let engine_root = environment.hermes_root();
             let mut supervisor = hermes::Supervisor::new(environment, limits.clone());
             if let Some(auth) = &channel_auth {
-                supervisor = supervisor.with_secret_channel(auth.launch_env(), peers.clone());
+                let mut env = auth.launch_env();
+                if let Some(ops) = &ops_auth {
+                    env.extend(ops.launch_env());
+                }
+                supervisor = supervisor.with_secret_channel(env, peers.clone());
             }
             let supervisor = Arc::new(supervisor);
             // Find Hermes while the UI loads, so the first connect does not pay for `hermes --version` (about 0.2 s).
@@ -609,14 +639,36 @@ pub fn run() {
             tauri::async_runtime::spawn(xai.clone().run_refresher());
             // The local API (`ADR-0045`): presence, notifications and approvals for other clients, and the opt-in endpoint.
             let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
+            let house = house::House::new(&app_data, Some(app.handle().clone()));
+            let ops_data = app_data.clone();
             let local_api = local_api::LocalApi::new(
                 app.handle().clone(),
                 app_data,
                 &limits.api,
                 &limits.rooms,
                 Some(engine_root),
+                // B47, H4: an owner-voice request is refused from a process under a gateway the host identified
+                Arc::new(local_api::owner::SystemCheck::new(peers.clone())),
             );
             let api_feed = local_api.feed().clone();
+            // H6: an "Always" answer from outside the window keeps its drafted exception through the app's own rules writer,
+            // as a draft, so the writer's record of what it wrote stays true.
+            let rules_host = Arc::new(rules::RulesHost::default());
+            {
+                let (keeper, root) = (rules_host.clone(), supervisor.environment().hermes_root());
+                local_api.service().set_draft_keeper(Arc::new(move |rule| {
+                    if let Err(e) = keeper.keep_draft(&root, &rule) {
+                        tracing::info!(error = %e, "an Always answer's draft exception could not be kept");
+                    }
+                }));
+            }
+            local_api.service().set_house_dir(house.dir().to_path_buf());
+            // A change to the rules made outside boopis is said to the windows once (rules-engine.md 11).
+            tauri::async_runtime::spawn(rules_host.clone().watch(
+                supervisor.environment().hermes_root(),
+                app.handle().clone(),
+                std::time::Duration::from_secs(5),
+            ));
             let update_gate = endpoint::Gate::default();
             // Dictation (ADR-0059). Nothing is opened, read or fetched here: the microphone and the speech model wait for
             // the person's first press. The model's name is read once (a change needs a restart).
@@ -649,6 +701,8 @@ pub fn run() {
                 carries_runtime,
                 connectors: std::sync::Mutex::default(),
                 bots: Arc::new(bots::engine::Service::new(supervisor.clone())),
+                rules: rules_host.clone(),
+                house: house.clone(),
                 store,
                 bundle: setup::install::Bundle::locate(
                     resource_dir.as_deref(),
@@ -657,7 +711,24 @@ pub fn run() {
                 update_gate,
                 updating: std::sync::atomic::AtomicBool::new(false),
             });
+            let ops_api = local_api.clone();
             tauri::async_runtime::spawn(async move { local_api.start().await });
+            // The host-ops channel. Like the secret channel, a failure is logged and the app works; the plugin's
+            // `describe` then does not say host-ops-v1.
+            if let (Some(auth), true) = (ops_auth, channel_auth.is_some()) {
+                let ops_peers = peers.clone();
+                tauri::async_runtime::spawn(async move {
+                    let ops: Arc<dyn boopis_hostops::Ops> = Arc::new(house::LiveOps::new(ops_api, house.clone()));
+                    match house::start(&house, &auth, ops_peers, ops, &ops_data).await {
+                        Ok(listener) => {
+                            tracing::info!(socket = %listener.socket().display(), "host-ops channel is up");
+                            std::future::pending::<()>().await; // lives as long as the app: Drop removes the socket
+                            drop(listener);
+                        }
+                        Err(e) => tracing::warn!(error = %e, "the host-ops channel did not start"),
+                    }
+                });
+            }
             // The plugin's door to the keychain. A failure (no socket support, another host running) is logged and
             // shown nowhere else: the app works, only the plugin's secret source stays empty.
             if let Some(auth) = channel_auth {

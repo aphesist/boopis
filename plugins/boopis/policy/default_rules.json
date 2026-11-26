@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "_comment": [
+    "The rules engine's data (docs/specs/rules-engine.md, ADR-0060; code in plugins/boopis/rules/). The default rules' texts are",
+    "data/default-rules.json (a copy of apps/shared/data/default-rules.json). Here:",
+    "call_kinds: what a call can concern, by tool (section 7.1). A terminal line made only of read-only commands is `reads`. An MCP",
+    "tool is `connector_write` (the engine's read-only hint is not on the public plugin API yet). Anything else is `unknown`.",
+    "exact_kinds: the kinds whose calls the pre-filter reads whole (a file tool's resolved path, a message tool, a terminal line",
+    "the splitter parses with no expansion): a pattern miss there means an unedited default does not apply. Every other call is",
+    "opaque: a pattern hit asks, a miss leaves the rule to the reviewer.",
+    "patterns: per unedited default rule. `commands` are a program and words in order, options anywhere (the grammar of",
+    "bot_tiers.json); `paths` are globs (`//` absolute, `~/` home, `{root}/` the engine's root) matched against every resolved path",
+    "argument and command word; `tools` are tool names; `mcp_words` are words in an MCP tool's name; `checks` name the few",
+    "patterns written in code (rules/prefilter.py): `writes_outside`, `rm_broad`, `delete_outside`, `redirect_outside`.",
+    "Not listed (the engine's plugin admission scan refuses a plugin whose files name them, B47 report): the filesystem formatters",
+    "and netcat's listen mode. Naming a raw disk device in any call asks (default.system `paths`); a listener is left to the reviewer",
+    "only on an opaque call. inert: calls never reviewed. summaries: the card's first words per tool (the B40 words). reviewer: the timeout, the cache",
+    "and the standard check the cheapest model is ranked by (2,000 tokens in, 200 out)."
+  ],
+  "call_kinds": {
+    "reads": ["read_file", "search_files", "pack"],
+    "writes": ["write_file", "patch", "ship", "skill_manage", "memory"],
+    "commands": ["terminal", "process_manage", "exec"],
+    "code": ["execute_code"],
+    "network": ["web_search", "web_extract", "vision_analyze", "video_analyze", "x_search", "image_generate", "video_generate", "text_to_speech"],
+    "connector_write": ["manage_connections"],
+    "messages": ["send_message", "react_to_message", "discord", "discord_admin", "feishu_drive_add_comment", "feishu_drive_reply_comment"],
+    "spend": ["browser_vault"],
+    "browser": ["browser_exec", "browser_cdp"],
+    "computer": ["computer_use"],
+    "delegation": ["delegate_task", "dispatch", "cronjob_manage", "kanban_create"]
+  },
+  "browser_prefix": "browser_",
+  "exact_kinds": ["reads", "writes", "messages", "spend", "network", "delegation"],
+  "inert": [
+    "clarify", "ask", "request_input", "request_credential", "todo_list", "skills_list", "skill_view", "session_search",
+    "read_terminal", "close_terminal", "kanban_list", "kanban_show", "show_tip", "set_theme", "gui_tour", "focus_pane",
+    "setup_beat", "desktop_preview", "drive_preview", "annotate_preview", "read_window_below"
+  ],
+  "patterns": {
+    "default.outside_files": {
+      "checks": ["writes_outside", "rm_broad", "delete_outside", "redirect_outside"],
+      "commands": ["find -delete", "dd", "rsync --delete", "git clean -x", "git clean -d", "shred"]
+    },
+    "default.root_packages": {
+      "commands": [
+        "sudo", "pkexec", "su", "doas", "run0",
+        "apt install", "apt remove", "apt purge", "apt autoremove", "apt-get install", "apt-get remove", "apt-get purge",
+        "apt-get autoremove", "aptitude install", "aptitude remove", "aptitude purge", "dpkg -i", "dpkg -r", "dpkg -P",
+        "dnf install", "dnf remove", "yum install", "yum remove", "zypper install", "zypper remove", "rpm -i", "rpm -U", "rpm -e",
+        "pacman -S", "pacman -R", "pacman -U", "yay", "paru", "apk add", "apk del", "snap install", "snap remove",
+        "flatpak install", "flatpak uninstall", "flatpak remove", "brew install", "brew uninstall", "brew remove",
+        "port install", "port uninstall", "nix-env -i", "nix-env -e", "winget install", "winget uninstall", "choco install",
+        "choco uninstall", "scoop install", "scoop uninstall", "npm install -g", "npm install --global", "npm i -g",
+        "npm uninstall -g", "pnpm add -g", "pnpm add --global", "yarn global add", "pip install --user",
+        "pip install --break-system-packages", "pip3 install --user", "pip3 install --break-system-packages",
+        "pip uninstall --break-system-packages", "pipx install", "pipx uninstall", "cargo install", "go install", "gem install"
+      ]
+    },
+    "default.system": {
+      "commands": [
+        "fdisk", "sfdisk", "gdisk", "parted", "wipefs",
+        "mount", "umount", "losetup", "cryptsetup", "pvcreate", "vgcreate", "lvcreate", "lvremove", "mdadm", "grub-install",
+        "grub-mkconfig", "update-grub", "efibootmgr", "bootctl", "fwupdmgr", "flashrom", "service", "rc-service",
+        "launchctl load", "launchctl unload", "launchctl bootstrap", "launchctl bootout", "launchctl enable", "launchctl disable",
+        "sc.exe", "sysctl -w", "modprobe", "insmod", "rmmod",
+        "systemctl start", "systemctl stop", "systemctl restart", "systemctl reload", "systemctl enable", "systemctl disable",
+        "systemctl mask", "systemctl unmask", "systemctl kill", "systemctl daemon-reload", "systemctl edit", "systemctl set-default",
+        "systemctl isolate", "systemctl reboot", "systemctl poweroff", "reboot", "shutdown", "poweroff", "halt"
+      ],
+      "paths": ["//dev/sd*", "//dev/nvme*", "//dev/mmcblk*", "//dev/vd*", "//dev/hd*", "//dev/disk*", "//dev/mapper/**", "//dev/md*", "//dev/loop*"],
+      "write_paths": ["//etc/**", "//boot/**", "//usr/**", "//Library/LaunchDaemons/**", "//Library/LaunchAgents/**", "//System/**"]
+    },
+    "default.secrets": {
+      "paths": [
+        "~/.bashrc", "~/.bash_profile", "~/.bash_login", "~/.profile", "~/.zshrc", "~/.zprofile", "~/.zshenv", "~/.zlogin",
+        "~/.config/fish/config.fish", "~/.config/fish/conf.d/**", "//**/Microsoft.PowerShell_profile.ps1",
+        "~/.ssh", "~/.ssh/**", "~/.gnupg", "~/.gnupg/**", "~/.local/share/keyrings/**", "~/Library/Keychains/**",
+        "//**/.env", "//**/.env.*", "//**/.netrc", "//**/.git-credentials", "~/.aws/credentials", "~/.aws/config",
+        "~/.config/gcloud/**", "~/.azure/**", "~/.kube/config", "~/.docker/config.json", "//**/.npmrc", "//**/.pypirc",
+        "~/.config/gh/hosts.yml", "//**/*.pem", "//**/*.key", "//**/id_rsa*", "//**/id_ed25519*", "//**/id_ecdsa*",
+        "{root}/.env", "{root}/auth.json", "{root}/profiles/*/.env", "{root}/profiles/*/auth.json"
+      ],
+      "path_exceptions": ["//**/.env.example", "//**/.env.sample", "//**/.env.template"],
+      "commands": [
+        "secret-tool lookup", "security find-generic-password", "security find-internet-password", "security dump-keychain",
+        "gpg --export-secret-keys", "pass show", "keyring get"
+      ]
+    },
+    "default.git_cloud": {
+      "commands": [
+        "git push --force", "git push -f", "git push --force-with-lease", "git push --mirror", "git push --delete", "git push -d",
+        "git filter-branch", "git filter-repo", "git branch -D", "git branch -d", "git tag -d", "git update-ref -d",
+        "git reflog expire", "gh repo delete", "glab repo delete", "gh api -X DELETE", "gh api --method DELETE",
+        "kubectl delete", "helm uninstall", "terraform destroy", "pulumi destroy", "fly destroy", "flyctl apps destroy",
+        "heroku apps:destroy", "vercel remove", "gcloud delete", "az delete", "doctl delete"
+      ],
+      "checks": ["git_push_refspec", "aws_delete"],
+      "hint_commands": ["git rebase", "git commit --amend"],
+      "mcp_words": ["delete_repo", "delete_branch", "delete_bucket", "destroy"]
+    },
+    "default.network_config": {
+      "commands": [
+        "iptables", "ip6tables", "nft", "ufw", "firewall-cmd", "pfctl", "netsh", "ip link set", "ip addr add", "ip addr del",
+        "ip route add", "ip route del", "ip route replace", "nmcli connection", "nmcli device connect", "nmcli device disconnect",
+        "nmcli radio", "wg", "wg-quick", "openvpn", "tailscale up", "tailscale down", "tailscale set", "tailscale serve",
+        "tailscale funnel", "ngrok", "cloudflared tunnel", "ssh -R",
+        "nc", "ncat", "netcat"
+      ],
+      "checks": ["networksetup_set", "socat_listen", "ifconfig_args"],
+      "write_paths": ["//etc/hosts", "//etc/resolv.conf", "//etc/NetworkManager/**"]
+    },
+    "default.messages": {
+      "tools": ["send_message", "react_to_message", "discord", "discord_admin", "feishu_drive_add_comment", "feishu_drive_reply_comment"],
+      "mcp_words": ["send", "post", "reply", "comment", "publish", "tweet", "email", "message", "create_issue", "create_pull_request"],
+      "commands": [
+        "mail", "mailx", "sendmail", "mutt", "gh issue create", "gh issue comment", "gh pr create", "gh pr comment", "gh pr review",
+        "gh release create", "npm publish", "pnpm publish", "yarn publish", "cargo publish", "twine upload", "gem push",
+        "docker push", "podman push"
+      ]
+    },
+    "default.purchases": {
+      "tools": ["browser_vault"],
+      "mcp_words": ["purchase", "checkout", "pay", "charge", "order", "buy", "subscribe", "invoice"]
+    }
+  },
+  "summaries": {
+    "terminal": "Run a command", "process_manage": "Manage a process", "exec": "Run code", "execute_code": "Run code",
+    "read_file": "Read a file", "search_files": "Search files", "pack": "Read files", "write_file": "Write a file",
+    "patch": "Change a file", "ship": "Change files", "send_message": "Send a message", "react_to_message": "React to a message",
+    "web_search": "Search the web", "web_extract": "Read a web page", "browser_vault": "Use a saved card",
+    "computer_use": "Use the computer", "delegate_task": "Hand work to a helper", "kanban_create": "File a card",
+    "cronjob_manage": "Change a schedule"
+  },
+  "reviewer": {
+    "task": "boopis_reviewer",
+    "timeout_s": 8,
+    "cache_max": 1024,
+    "cache_ttl_s": 900,
+    "max_string": 4000,
+    "max_action": 12000,
+    "check_tokens": {"input": 2000, "output": 200}
+  },
+  "draft": {"keep_s": 600, "max_pending": 64, "max_text": 200}
+}

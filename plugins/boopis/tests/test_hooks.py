@@ -332,6 +332,31 @@ def test_auxiliary_calls_are_recorded_and_tagged(make_runtime: MakeRuntime) -> N
     assert rt.state(SID).provider == "anthropic"  # and does not change which model the session is on
 
 
+def test_the_reviewer_s_calls_are_recorded_with_their_purpose(make_runtime: MakeRuntime) -> None:
+    rt, ctx = make_runtime()
+    first_prompt(rt, ctx)
+    hooks.post_auxiliary_call(
+        session_id=SID,
+        model="claude-opus-5-5",
+        provider="anthropic",
+        usage=HERMES_USAGE,
+        aux_task="boopis_reviewer",
+        api_duration=0.1,
+    )
+    last = [e for e in events(rt) if e["type"] == "usage.recorded"][-1]
+    assert (last["payload"]["aux_task"], last["payload"]["purpose"]) == ("boopis_reviewer", "reviewer")
+    hooks.post_auxiliary_call(
+        session_id=SID,
+        model="claude-opus-5-5",
+        provider="anthropic",
+        usage=HERMES_USAGE,
+        aux_task="title_generation",
+        api_duration=0.1,
+    )
+    last = [e for e in events(rt) if e["type"] == "usage.recorded"][-1]
+    assert "purpose" not in last["payload"]
+
+
 def test_an_auxiliary_call_on_another_model_does_not_become_the_session_model(make_runtime: MakeRuntime) -> None:
     rt, ctx = make_runtime()
     first_prompt(rt, ctx)

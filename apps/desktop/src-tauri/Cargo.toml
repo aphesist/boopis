@@ -78,6 +78,12 @@ serde_norway = "0.9.42"
 # Dictation (ADR-0059): the microphone and speech to text on this computer, in a crate of its own so it builds and is tested
 # without the web view's toolkit. It brings cpal (Apache-2.0) and whisper.cpp (MIT) through whisper-rs (Unlicense).
 boopis-dictation = { path = "../../../crates/boopis-dictation" }
+# B47, H4: who holds a local API connection's client end, and whether that is a bot's process. Standard library only.
+boopis-peer = { path = "../../../crates/boopis-peer" }
+# The rules list's writer (ADR-0060): rules.json, its defaults, validation, revisions and atomic writes.
+boopis-rules = { path = "../../../crates/boopis-rules" }
+# The host-ops channel (ADR-0061): the shared socket listener, the verbs, the run table, jobs, grants and the stored team plans.
+boopis-hostops = { path = "../../../crates/boopis-hostops" }
 
 # The Linux webview (ADR-0025): GDK's monitor refresh rate and the web view's settings object, through safe wrappers, and
 # `dlsym` for the one preference the `webkit2gtk` crate has no binding for. Versions match what Tauri's wry already uses.

@@ -17,6 +17,7 @@ use tokio_util::sync::CancellationToken;
 use super::engine::Engine;
 use super::feed::Subscription;
 use super::model::{API_VERSION, Event, Stamped};
+use super::owner::{self, OwnerCheck};
 use super::service::{ApiError, Caller, Pick, Service};
 use super::token::Token;
 use super::wire::{self, Bucket, DoorGuard, Head, Method, Reject};
@@ -38,6 +39,8 @@ struct Shared<E: Engine> {
     connections: Arc<Semaphore>,
     streams: Semaphore,
     port: u16,
+    /// Who holds a connection's client end: an owner-voice request from a bot's process is refused (B47, H4).
+    owner: Arc<dyn OwnerCheck>,
 }
 
 /// A running endpoint.
@@ -56,12 +59,13 @@ impl<E: Engine> Server<E> {
         service: Arc<Service<E>>,
         token: Token,
         limits: ApiLimits,
+        owner: Arc<dyn OwnerCheck>,
     ) -> std::io::Result<Self> {
         let listener = match TcpListener::bind((Ipv4Addr::LOCALHOST, limits.preferred_port)).await {
             Ok(l) => l,
             Err(_) => TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await?,
         };
-        Self::serve(listener, service, token, limits)
+        Self::serve(listener, service, token, limits, owner)
     }
 
     /// Serve on a listener the caller bound (the tests bind port 0).
@@ -73,6 +77,7 @@ impl<E: Engine> Server<E> {
         service: Arc<Service<E>>,
         token: Token,
         limits: ApiLimits,
+        owner: Arc<dyn OwnerCheck>,
     ) -> std::io::Result<Self> {
         let addr = listener.local_addr()?;
         let now = Instant::now();
@@ -89,6 +94,7 @@ impl<E: Engine> Server<E> {
             streams: Semaphore::new(limits.max_streams),
             limits,
             port: addr.port(),
+            owner,
         });
         let cancel = CancellationToken::new();
         tokio::spawn(accept_loop(listener, shared.clone(), cancel.clone()));
@@ -162,7 +168,7 @@ async fn accept_loop<E: Engine>(
         let (shared, cancel) = (shared.clone(), cancel.clone());
         tokio::spawn(async move {
             let _permit = permit;
-            serve_one(stream, &shared, &cancel).await;
+            serve_one(stream, peer, &shared, &cancel).await;
         });
     }
 }
@@ -336,6 +342,7 @@ fn authenticate<E: Engine>(head: &Head, shared: &Shared<E>) -> Result<(), Reject
 
 async fn serve_one<E: Engine>(
     mut stream: TcpStream,
+    peer: SocketAddr,
     shared: &Arc<Shared<E>>,
     cancel: &CancellationToken,
 ) {
@@ -347,6 +354,29 @@ async fn serve_one<E: Engine>(
             return;
         }
     };
+    // B47, H4: after the token and the Host, before the body is acted on, an answer or a message in the owner's voice is
+    // refused when any holder of the client's end is a bot's process, or cannot be shown not to be.
+    if owner::owner_voice(head.method, &head.path) {
+        let server = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), shared.port);
+        let verdict = owner::judge_within(
+            shared.owner.clone(),
+            peer,
+            server,
+            owner::OWNER_LOOKUP_DEADLINE,
+        )
+        .await;
+        if !verdict.is_owner() {
+            refuse_owner_voice(&head, verdict, shared);
+            let _ = write_json(
+                &mut stream,
+                403,
+                &error_body(owner::REFUSAL_CODE, owner::REFUSAL_MESSAGE),
+                &[],
+            )
+            .await;
+            return;
+        }
+    }
     let caller = Caller::through("endpoint");
     if head.method == Method::Get && head.path == "/v1/events" {
         events(stream, shared, &head, cancel).await;
@@ -357,6 +387,31 @@ async fn serve_one<E: Engine>(
         Err(e) => (e.status, error_body(e.code, &e.message)),
     };
     let _ = write_json(&mut stream, status, &value, &[]).await;
+}
+
+/// Record a refused owner-voice request: the route's subject (the approval, the bot or the room), the rule that matched or
+/// why the client could not be proved the owner's. Never a pid (that goes to the log at `debug`).
+fn refuse_owner_voice<E: Engine>(head: &Head, verdict: boopis_peer::Verdict, shared: &Shared<E>) {
+    let parts: Vec<&str> = head.path.trim_start_matches('/').split('/').collect();
+    let (profile, prompt_id, choice) = match parts.as_slice() {
+        ["v1", "approvals", id] => (String::new(), (*id).to_owned(), "answer"),
+        ["v1", "bots" | "rooms", subject, what] => ((*subject).to_owned(), String::new(), *what),
+        _ => (String::new(), String::new(), ""),
+    };
+    let outcome = owner::refusal_outcome(verdict);
+    tracing::info!(path = %head.path, outcome = %outcome, "the local API refused an owner-voice request (B47)");
+    let at = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX));
+    shared.service.feed().record(&super::audit::Line {
+        at,
+        profile: profile.chars().take(128).collect(),
+        session_id: String::new(),
+        prompt_id: prompt_id.chars().take(128).collect(),
+        choice: choice.to_owned(),
+        outcome,
+        surface: "endpoint".to_owned(),
+    });
 }
 
 fn segment_ok(s: &str) -> bool {
@@ -410,6 +465,7 @@ async fn route<E: Engine>(
                           "POST /v1/bots/<name>/say", "GET /v1/bots/<name>/conversation", "POST /v1/bots/<name>/stop",
                           "POST /v1/bots/<name>/retry",
                           "GET /v1/rooms", "GET /v1/rooms/<id>/log", "POST /v1/rooms/<id>/say", "POST /v1/rooms/<id>/stop",
+                          "GET /v1/plans", "GET /v1/plans/<plan_hash>", "GET /v1/jobs",
                           "GET /v1/events"]
         })),
         (Method::Get, ["v1", "bots"]) => {
@@ -428,6 +484,33 @@ async fn route<E: Engine>(
                 .unwrap_or(50)
                 .clamp(1, 200);
             Ok(json!({"notifications": feed.notifications(after, limit)}))
+        }
+        // Team plans and jobs (ADR-0061, team-ops.md 6): read only. There is no route that applies, undoes or rejects a plan.
+        (Method::Get, ["v1", "plans"]) => {
+            let all = head.param("state") == Some("all");
+            let plans = shared
+                .service
+                .house_dir()
+                .map(|d| {
+                    boopis_hostops::plans::PlanStore::under(d).list(all, boopis_hostops::now_ms())
+                })
+                .unwrap_or_default();
+            Ok(json!({ "plans": plans }))
+        }
+        (Method::Get, ["v1", "plans", hash]) if boopis_hostops::plans::is_hash(hash) => shared
+            .service
+            .house_dir()
+            .and_then(|d| {
+                boopis_hostops::plans::PlanStore::under(d).public(hash, boopis_hostops::now_ms())
+            })
+            .ok_or_else(not_found),
+        (Method::Get, ["v1", "jobs"]) => {
+            let jobs = shared
+                .service
+                .house_dir()
+                .map(|d| boopis_hostops::jobs::Jobs::at(&d.join("jobs.jsonl")).get(None))
+                .unwrap_or_default();
+            Ok(json!({ "jobs": jobs }))
         }
         (Method::Get, ["v1", "approvals"]) => Ok(
             json!({"approvals": feed.approvals(head.param("all").is_some_and(|v| v == "1" || v == "true"))}),
@@ -528,10 +611,11 @@ async fn route<E: Engine>(
             ["v1"]
             | [
                 "v1",
-                "bots" | "presence" | "notifications" | "approvals" | "rooms" | "events",
+                "bots" | "presence" | "notifications" | "approvals" | "rooms" | "events" | "jobs",
             ]
             | ["v1", "bots", _, "conversation"]
-            | ["v1", "rooms", _, "log"],
+            | ["v1", "rooms", _, "log"]
+            | ["v1", "plans", ..],
         ) => Err(method_not_allowed()),
         _ => Err(not_found()),
     }

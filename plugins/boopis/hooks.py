@@ -90,7 +90,9 @@ def pre_tool_call(tool_name: str = "", args: Mapping[str, Any] | None = None, **
         rt = runtime()
         session_id = str(kw.get("session_id") or "")
         caller = _caller(rt, kw)
-        call = ToolCall(tool_name, args or {}, session_id, str(kw.get("tool_call_id") or ""))
+        call = ToolCall(
+            tool_name, args or {}, session_id, str(kw.get("tool_call_id") or ""), turn_id=str(kw.get("turn_id") or "")
+        )
         decision = _budget_gate(rt, caller, policy.check(call, rt.policy_for(caller)))
         if decision.kind == "block" and call.tool_call_id:
             caller.state.blocked_calls[call.tool_call_id] = "hx.policy.denied"
@@ -477,6 +479,10 @@ def _record_usage(kw: Mapping[str, Any], *, auxiliary: bool) -> None:
     payload["role"] = "auxiliary" if auxiliary else ("worker" if caller.worker else "orchestrator")
     if auxiliary and kw.get("aux_task"):
         payload["aux_task"] = str(kw["aux_task"])
+        if payload["aux_task"] == _reviewer_task():
+            # the rules engine's reviewer (rules-engine.md 7.4): its cost is shown apart in Settings and counts toward
+            # the budget; recorded here only, from the engine's hook, never again from the reviewer's own result
+            payload["purpose"] = "reviewer"
     actor = "plugin" if auxiliary else _actor(caller)
     rt.ledger(state).append("usage.recorded", actor, payload)
     assert state.book is not None
@@ -487,6 +493,12 @@ def _record_usage(kw: Mapping[str, Any], *, auxiliary: bool) -> None:
         else:
             state.spend_usd += costs.billed_usd
     budget.note_usage(rt, state, payload)  # the run's API-equivalent, against a bot's cap per run
+
+
+def _reviewer_task() -> str:
+    from .rules.data import load
+
+    return str(load().reviewer.get("task", ""))
 
 
 def post_api_request(**kw: Any) -> None:

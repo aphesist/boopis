@@ -27,6 +27,8 @@ export interface BotsBridge {
   /** the bot's cap on turns for `boopis run --bot`, kept in its own configuration where the engine reads it */
   runLimit(name: string): Promise<{ turns: number | null; fallback: number }>;
   setRunLimit(name: string, turns: number | null): Promise<{ turns: number | null; fallback: number }>;
+  /** a one-time owner grant (60 s, one use) the plugin redeems with the host before it changes a bot's tiers or cap (B47 H5) */
+  ownerGrant?(purpose: 'bots.write.approvals' | 'bots.write.cap'): Promise<string>;
 }
 
 async function call<T>(p: Promise<T>): Promise<T> {
@@ -41,6 +43,7 @@ export function tauriBotsBridge(api: BotsCommands = commands): BotsBridge {
     release: async (name) => { await call(api.botsRelease(name)); },
     notice: () => call(api.botsNotice()),
     runLimit: async (name) => view(await call(api.botRunLimitGet(name))),
-    setRunLimit: async (name, turns) => view(await call(api.botRunLimitSet(name, turns)))
+    setRunLimit: async (name, turns) => view(await call(api.botRunLimitSet(name, turns))),
+    ownerGrant: (purpose) => call(commands.ownerGrant(purpose))
   };
 }

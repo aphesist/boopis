@@ -63,6 +63,30 @@ def observe(hook: str, kwargs: Mapping[str, Any], result: Any = None) -> None:
         return
 
 
+def rule_refused(session_id: str, rule_ids: list[str], what: str, parked_id: str) -> None:
+    """Tell the host a scheduled run's step was refused and parked (``rules-engine.md`` 8.3): ``rule.refused``, which
+    the host turns into a notification. ``what`` is the card's first words (the B40 summary). Never raises."""
+    try:
+        profile = _profile()
+        if profile is None or not session_id:
+            return
+        event: dict[str, Any] = {
+            "v": VERSION,
+            "kind": "rule.refused",
+            "profile": profile,
+            "session_id": session_id[:128],
+            "tool": what[:128] or "a step",
+            "rules": [r[:64] for r in rule_ids[:8]],
+            "parked": parked_id[:64],
+        }
+        job = _cron_job()
+        if job:
+            event["cron"] = job[:128]
+        _send(_encode(event))
+    except Exception:  # noqa: BLE001 - the host not hearing it is never the run's problem; the parked file stays
+        return
+
+
 def _event(hook: str, kw: Mapping[str, Any], result: Any) -> dict[str, Any] | None:
     session_id = str(kw.get("session_id") or "")
     if hook not in OBSERVED or not session_id:
