@@ -112,6 +112,14 @@ gh api repos/aphesist/boopis/actions/workflows/ci.yml/dispatches -f ref=<branch>
   controls, mention, store, corners with concentric, dock-empty, dock-motion, dock-presence, lab-probe, axe); the dock in WebKitGTK;
   `lab:orbs` on the kit's and the converted screens' stories; ruff and pyright on the plugin and `tests/e2e`. `lab:static` reports only
   v6 files (`components.css` and the unconverted modules).
+- Step 6a (26 November): the same, with `lab:board --all` on 21 boards (S33, S37 and S41 added). One smoke check is the machine's: the
+  `corners` budget (200 bound elements, at most 2 ms a frame) measured 2.1 to 2.4 ms here on the step's first commit and on its last,
+  so it says nothing of the step; CI's `desktop-smoke` and `ui` are where it is judged. `tests/e2e/dock_webkit.py` held 25 of 25 in six
+  runs of nine (two never started: the WebKit driver answered 500; one held 24).
+- The lab's report is read by cause, not by story (step 6a, CI run 45736911632 on `2890ee9a`: 1109 blocking findings). A cause is fixed
+  where it is a defect of a converted screen or of the kit; where a rule flags what a board draws or the owner decided, the rule is
+  adjusted in `tests/lab/probe.js`, `probe-v7.js` or `v7.mjs` with a comment naming the board (rule 7); a cause of a screen still on v6
+  is listed in the step's report for the step that converts it.
 - CI's jobs: identity, checks, rust, hx, plugin, runtime, installer (both), appimage, e2e, desktop-window (both), desktop-smoke, ui and
   lab-orbs must be green. **`lab` is the exception until step 9**: it takes 75 to 90 minutes and its v6 goldens differ wherever a
   screen is converted. Read its blocking findings by cause: fix what is a defect of a converted screen, leave the golden differences
