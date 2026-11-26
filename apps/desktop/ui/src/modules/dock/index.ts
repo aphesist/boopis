@@ -41,7 +41,7 @@ const LOG_N = 4;
 type Open = null | { kind: 'stack' } | { kind: 'card'; id: string };
 const S = {
   bots: [] as Bot[], threads: {} as Record<string, ThreadMessage[]>, waits: [] as Wait[], runs: new Set<string>(),
-  open: null as Open, hover: null as string | null, focus: null as string | null,
+  open: null as Open, hover: null as string | null, focus: null as string | null, /** the ask pill's width at rest (0 without one) */ pillW: 0,
   /** drawn now (risen), and wanted (it is rising or will) */
   shown: false, want: false, seq: 0,
   /** the row is in its compact geometry now (the setting on, and idle) */
@@ -157,6 +157,8 @@ function room(): number {
   const r = dockRoom({ centred: appState.dockCentred, viewportW: L ? L.viewportW : vw, centerX: L ? L.centerX : vw / 2, viewLeft: L ? L.viewLeft : 0, viewRight: L ? L.viewRight : vw, flare: OPEN.F });
   return Math.min(S.compact ? COMPACT.w : ROW.w, r > 0 ? r : vw - 2 * OPEN.F);
 }
+/** the least width a hovered bot's name takes in the end slot (the kit's `--dk-cap-min`) */
+const capMin = (): number => parseFloat(getComputedStyle(X.dock).getPropertyValue('--dk-cap-min')) || 150;
 /** order, fit, sizes and width: every bot's rank is its button's `order`, a bot past the fit is out of the row (`data-out`), the width is the content's */
 function layoutRow(): void {
   const list = ordered(S.bots);
@@ -166,7 +168,13 @@ function layoutRow(): void {
   let moreW = 0;
   if (list.length > 1) { drawMore(list.length); moreW = X.more ? X.more.offsetWidth : 0; }
   const g = row();
-  const f = fit(list.length, { room: room(), pad: g.pad, orb: g.orb, gap: g.gap, grow: S.compact || appState.orbGrow === false ? 0 : GROW_EXTRA, end: X.end?.matches('.k7-dock__cap') ? 0 : endW, more: moreW });
+  /* the end slot's room is the same at rest and under a hover, so a hover never changes which bots show: the ask pill's width (K05:
+     six bots, "13 more" and the pill fill the 640), or with no pill the least a hovered bot's name takes (`--dk-cap-min`). The
+     compact row names nobody */
+  const cap = !!X.end?.matches('.k7-dock__cap');
+  if (!cap) S.pillW = endW;
+  const endRoom = S.compact || S.pillW > 0 ? S.pillW : capMin();
+  const f = fit(list.length, { room: room(), pad: g.pad, orb: g.orb, gap: g.gap, grow: S.compact || appState.orbGrow === false ? 0 : GROW_EXTRA, end: endRoom, more: moreW });
   S.fitN = f.shown;
   drawMore(f.more);
   const vis = list.slice(0, f.shown), hi = vis.findIndex((b) => b.id === S.hover);
@@ -190,6 +198,13 @@ function layoutRow(): void {
     const t = btn === stop ? 0 : -1;
     if (btn.tabIndex !== t) btn.tabIndex = t;
     if (btn === stop) btn.setAttribute('data-hx-focus', 'dock'); else btn.removeAttribute('data-hx-focus');
+  }
+  /* a hovered bot's name takes the room the row has left for it, never more: a row that is full (K05) cuts a long name sooner, and the
+     row never leaves the slab */
+  if (cap && X.end) {
+    const before = [...vis.map((_, i) => sizeOf(i, hi)), ...(f.more ? [X.more ? X.more.offsetWidth : moreW] : [])];
+    const left = Math.max(endRoom, room() - 2 * g.pad - before.reduce((a, b) => a + b, 0) - before.length * g.gap);
+    X.end.style.maxWidth = left + 'px'; X.end.style.minWidth = Math.min(capMin(), left) + 'px';
   }
   const items = [...vis.map((_, i) => sizeOf(i, hi)), ...(f.more ? [X.more ? X.more.offsetWidth : moreW] : []), ...(X.end ? [X.end.offsetWidth] : [])];
   /* as the boards fit it (dockv7.js refit): the content's width, to a whole pixel */
@@ -657,7 +672,7 @@ register('dock', { mount });
 /** for tests: the dock is mounted once in the app's life; a test that mounts it again on a fresh page forgets the last one first */
 export function forgetDock(): void {
   clearTimeout(idleTimer); cancelAnimationFrame(refit);
-  Object.assign(S, { bots: [], threads: {}, waits: [], open: null, hover: null, focus: null, shown: false, want: false, seq: S.seq + 1, compact: false, rank: [], fitN: 0, timeScale: 1, mounted: false, width: 0 });
+  Object.assign(S, { bots: [], threads: {}, waits: [], open: null, hover: null, focus: null, pillW: 0, shown: false, want: false, seq: S.seq + 1, compact: false, rank: [], fitN: 0, timeScale: 1, mounted: false, width: 0 });
   S.runs.clear(); X.orbs.clear(); X.composers.clear();
   X.more = null; X.end = null; X.panel = null; X.path = null; X.svg = null;
   sent = '';

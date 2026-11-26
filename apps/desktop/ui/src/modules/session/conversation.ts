@@ -196,7 +196,8 @@ function partsOf(a: AgentTurn): Part[] {
       if (q) {
         /* the sentence ends the answer's last paragraph (board S23); after a list or code it is a paragraph of its own */
         const tail = md?.lastElementChild?.tagName === 'P' ? md.lastElementChild : null;
-        if (tail) tail.insertAdjacentHTML('beforeend', ' <span class="ss-q">' + q + '</span>'); else { const p = el('p', { class: 'ss-q' }); p.innerHTML = q; b.append(p); }
+        /* the sentence a blank writes into the answer carries its mark (board S23: the guess, dashed): `data-mark-context` says so */
+        if (tail) tail.insertAdjacentHTML('beforeend', ' <span class="ss-q" data-mark-context>' + q + '</span>'); else { const p = el('p', { class: 'ss-q', 'data-mark-context': '' }); p.innerHTML = q; b.append(p); }
       }
       if (b !== outer) kit.hoverBeside(answerActs(a.id), b);
       return outer;

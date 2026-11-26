@@ -41,7 +41,8 @@
    an orb is not drawn while it has no box, and WebKitGTK showed the two bots that join the row when the asks open as empty circles
    until their worker's next commit (tests/e2e/dock_webkit.py, "the asks keep both halves as they open") */
 .dk .k7-dock__orb[data-out] { position: absolute; left: 0; top: 0; opacity: 0; pointer-events: none; }
-/* a long name in the end slot is cut (and whole in the orb's accessible name) */
+/* a long name in the end slot is cut (and whole in the orb's accessible name); the slot never takes more than the room kept for it */
+.dk .k7-dock__cap { overflow: hidden; }
 .dk .k7-dock__cap > b { max-width: calc(var(--dk-orb) * 4); overflow: hidden; text-overflow: ellipsis; }
 
 /* the open panel takes the room above the row and clips by its own overflow while the slab grows from the row and back */

@@ -211,3 +211,9 @@ span.k7-composer__item { cursor: default; }
    the bubble is wide */
 .k7-gutter > .k7-hoverrow { position: relative; align-self: flex-start; max-width: min(var(--bubble-max), 100%); }   /* the row is as wide as its bubble may be, so the bar stands right after the bubble */
 .k7-gutter > .k7-hoverrow > .k7-hoverbar { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); }
+/* a window under 900 wide has no room past the column: the bar stays in the row, beside a short bubble and under a wide one */
+@media (max-width: 899px) {
+  .k7-gutter > .k7-hoverrow { flex-wrap: wrap; row-gap: var(--gap-hair); max-width: 100%; }
+  .k7-gutter > .k7-hoverrow > .k7-bubble { max-width: min(var(--bubble-max), 100%); }
+  .k7-gutter > .k7-hoverrow > .k7-hoverbar { position: static; transform: none; margin-left: 0; }
+}

@@ -267,6 +267,7 @@
 .k7-disc__chev { flex: none; transition: transform var(--dur-1) var(--ease-sharp); }
 .k7-disc__sum[aria-expanded="true"] > .k7-disc__chev { transform: rotate(90deg); }
 @media (hover: hover) and (pointer: fine) { .k7-disc__sum:hover { color: var(--text); } }
+.k7-disc__sum:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }   /* at a turn's edge: the turn has no padding to hold the ring */
 .k7-disc > .k7-disc__body { display: none; }
 .k7-disc[data-open] > .k7-disc__body { display: block; }
 /* the boards' `.steps` and `.step` (kit.css): rows 28 tall 2 apart, 13 with its tracking; a 16 slot for the check (--ok-text), the running

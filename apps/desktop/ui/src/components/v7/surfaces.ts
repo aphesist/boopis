@@ -28,7 +28,7 @@ export function titlePill(o: { title: string; bot?: U<BotLike>; running?: U<stri
     : o.bot ? orbHtml({ ...o.bot, state: o.running ? 'working' : 'idle', attention: null }, { size: 24, live: true, motion: 'lively', mode: 'fixed', surface: '--bg-3' })   /* the pill's orb faces front and idles (screens.js pill: orb(bot, 24)); the bot's state is said in the rail, the thread and the status line */
     : o.icon ? '<span class="k7-title__ic" aria-hidden="true">' + glyph(o.icon) + '</span>' : '';
   return '<button class="k7-reset k7-title"' + partAttrs('TitlePill', { type: 'button', 'aria-haspopup': 'dialog', 'aria-description': 'Opens the details', 'data-running': o.running ? '' : null, 'data-lead': lead ? '' : null, ...(o.attrs ?? {}) }) + '>' +
-    lead + '<span class="k7-title__name">' + esc(o.title) + '</span>' + (o.sub ? '<span class="k7-title__sub k7-mono">' + esc(o.sub) + '</span>' : '') +
+    lead + '<span class="k7-title__name">' + esc(o.title) + '</span>' + (o.sub ? ' <span class="k7-title__sub k7-mono">' + esc(o.sub) + '</span>' : '') +
     (o.running ? statusLine({ kind: 'system', phrase: o.running, inPill: true }) : '') + '</button>';
 }
 export function searchHint(o: { shows?: U<typeof SEARCH_SHOWS[number]>; attrs?: U<Attrs> }): string {

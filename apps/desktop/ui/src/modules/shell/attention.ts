@@ -29,7 +29,7 @@ export function updateTitle(): void {
     if (!leadOverride.bots) lead = b ? { bot: b } : { icon: 'bots' };
   }
   // the visible words stay in the name, in order (WCAG 2.5.3, label in name); the pill opens the details
-  setTitle(t, lead, t + (lead.sub ? ', ' + lead.sub : '') + ', details');
+  setTitle(t, lead, t + (lead.sub ? ' ' + lead.sub : '') + ', details');
   /* the search hint's name is its visible words in their order: "Search" and the keys as they are drawn */
   if (el.btnSearch) el.btnSearch.setAttribute('aria-label', ['Search', ...[...el.btnSearch.querySelectorAll('kbd')].map((k) => k.textContent ?? '')].join(' ').trim());
 }

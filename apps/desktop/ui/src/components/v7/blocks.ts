@@ -106,7 +106,7 @@ export function listRow(o: ListRowOpts): string {
   const v = o.variant ?? 'session', rowOfSession = v === 'session' || v === 'compact';
   const needsWords = typeof o.needs === 'string' ? o.needs : null;
   const sub = needsWords ? '<span class="k7-lrow__sub" data-tone="owe">' + esc(needsWords) + '</span>'
-    : v === 'session' && (o.branch || o.time || o.sub) ? '<span class="k7-lrow__sub">' + (o.branch ? '<span class="k7-mono">' + esc(o.branch) + '</span>' : '') + (o.sub ? '<span>' + esc(o.sub) + '</span>' : '') + (o.time ? '<span>' + esc(o.time) + '</span>' : '') + '</span>'
+    : v === 'session' && (o.branch || o.time || o.sub) ? '<span class="k7-lrow__sub">' + [o.branch ? '<span class="k7-mono">' + esc(o.branch) + '</span>' : '', o.sub ? '<span>' + esc(o.sub) + '</span>' : '', o.time ? '<span>' + esc(o.time) + '</span>' : ''].filter(Boolean).join(' ') + '</span>'   /* a word break between them: the row's name holds its visible words (the line is a flex row: the space takes no room) */
     : o.sub ? '<span class="k7-lrow__sub">' + esc(o.sub) + '</span>' : '';
   if (v === 'head') {
     /* board K02's `.sb-main` (src-k02 screens.js sidebarOpen): the bot's 44 orb at rest over its name; it opens that bot as a row does */

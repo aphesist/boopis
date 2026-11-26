@@ -28,8 +28,9 @@ export function mountList(root: HTMLElement): void {
       variant: 'session', title: s.title, current: o.current, ...(s.model ? { model: s.model } : {}), ...(s.branch ? { branch: s.branch } : {}),
       ...(need ? { needs: true, count: need } : s.running && !o.settled ? { working: true } : s.when ? { time: s.when } : {}),
       attrs: { 'data-id': s.id, 'data-settled': o.settled ? '' : null, 'data-hx-focus': o.current ? 'list' : null,
-        /* the name holds the row's visible words (WCAG 2.5.3): its title, its branch, then the count or when it ran, as drawn */
-        'aria-label': s.title + (s.branch ? ', ' + s.branch : '') + (need ? ', needs you: ' + need.toLowerCase() : s.running && !o.settled ? ', working' : s.when ? ', ' + s.when : '') + (o.settled ? ', settled' : '') }
+        /* the name holds the row's visible words in their order, with nothing between them that is not drawn (WCAG 2.5.3; a comma
+           between the title and the branch broke it): its title, its branch, then its badge or when it ran; what it is doing follows */
+        'aria-label': [s.title, s.branch, need || (s.running && !o.settled ? '' : s.when)].filter(Boolean).join(' ') + (need ? ', needs you' : s.running && !o.settled ? ', working' : '') + (o.settled ? ', settled' : '') }
     });
   }
   /* a section's rows are a listbox of their own, named by the section; its head sits outside it (a listbox holds options only), as the

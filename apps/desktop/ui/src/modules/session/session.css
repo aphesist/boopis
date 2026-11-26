@@ -34,6 +34,8 @@
 .ss-turn:focus { outline: none; }
 .ss-turn:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-off); border-radius: var(--r-xs); }
 .ss-turn .k7-bubble { min-width: 0; max-width: min(var(--bubble-max), 100%); }
+/* an answer's hover actions stay in the column: beside the bubble, and over the end of its padding where the bubble is as wide as it may be */
+.ss-turn .k7-gutter > .k7-hoverrow > .k7-hoverbar { left: min(100%, calc(var(--col-w) - var(--gutter) - 2 * var(--hover-ctl) - var(--gap-hair) - var(--gap-s))); }
 .ss-turn .k7-bubble > .ui-md { font-size: var(--fs-l); line-height: var(--lh-l); }
 .ss-turn .k7-bubble > .ui-md > :first-child { margin-top: 0; }
 .ss-turn .k7-bubble > .ui-md > :last-child { margin-bottom: 0; }

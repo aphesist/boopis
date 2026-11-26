@@ -249,7 +249,9 @@
         sigs.push(['dock:' + kind, [geom, row ? pick(row, 'paddingLeft', 'paddingRight', 'columnGap', 'height') : 'no row'].join(' | '), describe(d)]);
         if (kind !== 'open' && row) {
           const kids = [...row.children].filter((k) => cs(k).position !== 'absolute'), z = zoomOf(d);
-          const content = kids.length ? (kids[kids.length - 1].getBoundingClientRect().right - kids[0].getBoundingClientRect().left) / z : 0, pad = +d.getAttribute('data-pad');
+          /* from the leftmost item to the rightmost as they are laid out: the app's dock orders its bots by their rank (CSS `order`), not by where they stand in the markup */
+          const boxes = kids.map((k) => k.getBoundingClientRect());
+          const content = kids.length ? (Math.max(...boxes.map((b) => b.right)) - Math.min(...boxes.map((b) => b.left))) / z : 0, pad = +d.getAttribute('data-pad');
           if (Math.abs(content + 2 * pad - d.offsetWidth) > 1) add('same-component', d, `the dock does not fit its content: width ${d.offsetWidth} != content ${r1(content)} + 2 x ${pad}`);
         }
       }

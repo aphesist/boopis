@@ -82,7 +82,7 @@ export const ROLES = {
   TurnFoot: [kit('TurnFoot')],
   Composer: [kit('Composer')],
   Rail: [kit('Rail'), '.hx-rail'],
-  Dock: [kit('Dock'), '#hx-dock'],
+  Dock: [kit('Dock')],   /* `#hx-dock` is the app's slot for it since the dock is the kit's (boards K01 to K08): not a dock of its own */
   QueueRow: [part('QueueRow')],
   FileRow: [part('FileRow')],
   DiffRow: [part('DiffRow')],
