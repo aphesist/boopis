@@ -185,7 +185,9 @@ const micOf = (c: HTMLElement): Mic | undefined => { const root = c.matches('.k7
 /** tell the composer what its dictation is doing (the app hands on what the source reports). The composer draws it with what it has:
     the placeholder says "Getting the speech model 12 of 57 MB" and then who listens, the words arrive in the text where the caret
     stood, and an error switches the mic off (what says why, and offers to try again, is `kit.composerDictation`'s Notice at the mic).
-    Events that arrive while the mic is off are dropped */
+    When the mic is switched off while words are still being heard, the composer goes on taking that dictation's events until its
+    last words arrive (one `final`), an error does, or the source has said nothing for about 3 s, and then lets go: what was said
+    right before the release is kept. Otherwise events that arrive while the mic is off are dropped */
 export function composerDictation(c: HTMLElement, ev: DictationState): void { micOf(c)?.say(ev); }
 /** switch a composer's mic on or off, as a press does ("Try again" after an error) */
 export function composerDictate(c: HTMLElement, on: boolean): void { micOf(c)?.turn(on); }
@@ -194,20 +196,26 @@ const mb = (bytes: number): number => Math.max(bytes > 0 ? 1 : 0, Math.round(byt
 export const preparingWords = (done: number, total: number): string => 'Getting the speech model' + (total > 0 ? ' ' + mb(Math.min(done, total)) + ' of ' + mb(total) + ' MB' : '');
 
 const HOLD_TALK = 400;
+/** how long a dictation that was switched off may stay silent before the composer stops waiting for its last words */
+const LAST_WORDS = 3000;
 function wireMic(c: HTMLElement, t: HTMLElement, mic: HTMLButtonElement): void {
   const rest = { label: mic.getAttribute('aria-label') ?? 'Dictate', ph: null as string | null };
   let pressAt = 0, pressStarted = false, keyAt = 0;
   /* what the dictation is doing while the mic is on, the words of a download, and the stretch of text being heard */
   let phase: DictationPhase = 'listening', prep = '', hearing: Text | null = null, shown = '';
+  /* after the mic is switched off: the wait for the last words of the stretch that was being spoken (`tail`); a press that ended such
+     a wait takes no words until its own dictation has said it listens (`fresh`), so the other's late words do not land in it; and
+     the moment a press is starting its dictation (`starting`), whose first report can come before the mic shows on */
+  let tail: ReturnType<typeof setTimeout> | null = null, fresh = false, starting = false;
   const on = (): boolean => mic.getAttribute('aria-pressed') === 'true';
   const who = (): string => { const w = c.getAttribute('data-hears'); return w ? w + ' is listening' : 'Listening'; };
   const words = (): string => (phase === 'preparing' ? prep : who());
   /* the look of listening follows the mic's own state, whoever changed it (the app switches it off when its composer is drawn again) */
   const paint = (): void => {
     const v = on();
-    if (!v) { phase = 'listening'; prep = ''; hearing = null; }
+    if (!v && tail === null) { phase = 'listening'; prep = ''; hearing = null; }
     c.toggleAttribute('data-listening', v);
-    if (v) c.setAttribute('data-dictation', phase); else c.removeAttribute('data-dictation');
+    if (v || tail !== null) c.setAttribute('data-dictation', phase); else c.removeAttribute('data-dictation');
     const label = v ? 'Stop listening' : rest.label;
     if (mic.getAttribute('aria-label') !== label) { mic.setAttribute('aria-label', label); mic.setAttribute('data-tip', label); }
     if (v) { if (rest.ph === null) rest.ph = t.getAttribute('data-placeholder') ?? ''; shown = words(); t.setAttribute('data-placeholder', shown); }
@@ -216,10 +224,23 @@ function wireMic(c: HTMLElement, t: HTMLElement, mic: HTMLButtonElement): void {
   /* this build has no dictation (`data-mic-off`): the mic never switches on, and the app is asked to say so (ui:dictate-unavailable) */
   const off = (): boolean => c.hasAttribute('data-mic-off');
   const sayOff = (): void => { fire(c, 'ui:dictate-unavailable', {}); };
+  /** stop waiting for a switched-off dictation's last words: what stands of them stays in the text, as words that were said */
+  const letGo = (): void => {
+    if (tail === null) return;
+    clearTimeout(tail); tail = null;
+    if (hearing?.isConnected) hear(hearing.data, true);
+    hearing = null; paint();
+  };
+  const wait = (): void => { if (tail !== null) clearTimeout(tail); tail = setTimeout(letGo, LAST_WORDS); };
   const set = (v: boolean, mode: 'toggle' | 'hold' = 'toggle'): void => {
     if (v === on()) return;
     if (v && off()) return;
-    if (!fire(c, 'ui:dictate', { on: v, mode: v ? mode : null }, true)) return;
+    if (v) { fresh = tail !== null; letGo(); }   /* a new press lets go of the last dictation: its events do not mix with this one's */
+    starting = v;
+    const go = fire(c, 'ui:dictate', { on: v, mode: v ? mode : null }, true);
+    starting = false;
+    if (!go) return;
+    if (!v && phase !== 'preparing') { phase = 'transcribing'; wait(); }   /* it was listening: the last words said are still to come */
     mic.setAttribute('aria-pressed', String(v));
     paint();
     announce(v ? who() : 'Stopped listening');
@@ -230,6 +251,8 @@ function wireMic(c: HTMLElement, t: HTMLElement, mic: HTMLButtonElement): void {
   const hear = (text: string, done: boolean): void => {
     const sel = typeof getSelection === 'function' ? getSelection() : null;
     const inText = !!sel && sel.rangeCount > 0 && t.contains(sel.anchorNode);
+    /* last words that arrive after the mic is off move the caret only if it still stands at the end of the words they replace */
+    const stood = !!hearing && hearing.isConnected, atEnd = stood && !!sel && sel.isCollapsed && sel.anchorNode === hearing && sel.anchorOffset === hearing?.length;
     if (!hearing || !hearing.isConnected) {
       composerRemember(t, 'edit');
       hearing = document.createTextNode('');
@@ -239,20 +262,29 @@ function wireMic(c: HTMLElement, t: HTMLElement, mic: HTMLButtonElement): void {
       hearing.splitText(hearing.length);   /* the space stays; what follows it is the stretch that is replaced */
       hearing = hearing.nextSibling as Text;
     }
+    const follow = inText && !!sel && (on() || !stood || atEnd);
     hearing.data = text;
-    if (inText && sel) sel.collapse(hearing, hearing.length);
+    if (follow && sel) sel.collapse(hearing, hearing.length);
     if (done) {
       const after = hearing.nextSibling?.textContent ?? '';
-      if (after && !/^\s/.test(after)) { hearing.data += ' '; if (inText && sel) sel.collapse(hearing, hearing.length); }   /* said in the middle of a text: a space before what follows */
+      if (after && !/^\s/.test(after)) { hearing.data += ' '; if (follow && sel) sel.collapse(hearing, hearing.length); }   /* said in the middle of a text: a space before what follows */
       hearing = null; t.normalize(); t.dispatchEvent(new Event('input', { bubbles: true }));
     }
   };
   MICS.set(c, {
     turn(v) { set(v); },
     say(ev) {
-      if (!on()) return;
+      if (starting) { if (ev.kind === 'listening' || ev.kind === 'preparing') fresh = false; return; }
+      if (!on()) {
+        if (tail === null) return;
+        if (ev.kind === 'final') { if (!hearing || hearing.isConnected) hear(ev.text, true); hearing = null; letGo(); }   /* not where the person erased the words meanwhile */
+        else if (ev.kind === 'error') { letGo(); announce(ev.reason); }
+        else wait();   /* the source is still there: its last words are on their way */
+        return;
+      }
+      if (fresh) { if (ev.kind === 'partial' || ev.kind === 'final') return; fresh = false; }
       const was = phase;
-      if (ev.kind === 'error') { set(false); announce(ev.reason); return; }
+      if (ev.kind === 'error') { set(false); letGo(); announce(ev.reason); return; }
       if (ev.kind === 'preparing') { phase = 'preparing'; prep = preparingWords(ev.done, ev.total); }
       else if (ev.kind === 'listening') phase = 'listening';
       else if (ev.kind === 'partial') { phase = 'transcribing'; hear(ev.text, false); }

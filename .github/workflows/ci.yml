@@ -6,6 +6,11 @@ on:
     branches: [develop, main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      dictation_all_os:
+        description: "Also build and test dictation (whisper.cpp, the microphone crate, the recording through the real speech model) on Windows and macOS"
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -148,7 +153,7 @@ jobs:
       - name: Tauri's Linux prerequisites (the host is part of the workspace)
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config libasound2-dev cmake clang
       - name: allow user namespaces (hx-sandbox tests)
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       - uses: dtolnay/rust-toolchain@1.97.0
@@ -160,6 +165,71 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - name: tests (the host's bindings test is the staleness check for ui/src/host/bindings.ts)
         run: cargo test --workspace
+      - name: when a test failed, what the registry generates (the bindings and the permission files, against what is checked in)
+        if: failure()
+        run: |
+          HX_UPDATE_BINDINGS=1 cargo test -p boopis-host --lib bindings_are_fresh || true
+          git status --short -- apps/desktop/ui/src/host/bindings.ts apps/desktop/src-tauri/permissions
+          git diff -- apps/desktop/ui/src/host/bindings.ts apps/desktop/src-tauri/permissions | head -400
+
+  dictation:
+    # Dictation hears (ADR-0059): crates/boopis-dictation's tests, and tests/speech.rs with the REAL speech model, which plays
+    # a public-domain recording (tests/fixtures/jfk.wav) to a real dictation, as a 16 kHz and as a 48 kHz microphone and
+    # once at the speed it was spoken, and checks the words whisper.cpp wrote. This is the job that proves the microphone
+    # button transcribes; HX_DICTATION_REQUIRE_MODEL makes a skipped model a failure. The model (57 MB) is fetched from the
+    # address the app itself uses, kept in the workflow's cache, and checked against the SHA-256 the app pins on every
+    # run, cached or not. The timings it prints (`TIMING ...`) are this runner's.
+    # Linux on every run. Windows and macOS (WASAPI and Core Audio, MSVC and Apple clang building whisper.cpp) only when
+    # dispatched with `dictation_all_os`: macOS minutes count ten times. No runner has a microphone: the capture test
+    # checks that the device opens or says why not, never that it hears.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(inputs.dictation_all_os && '["ubuntu-22.04", "windows-latest", "macos-latest"]' || '["ubuntu-22.04"]') }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: ALSA's headers, CMake and clang (whisper.cpp is built from source)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev cmake clang
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: "dictation-${{ matrix.os }}" }
+      - uses: actions/cache@v4
+        with:
+          path: dist/speech-model
+          key: speech-model-${{ hashFiles('crates/boopis-dictation/src/model.rs') }}
+          enableCrossOsArchive: true
+      - name: the speech model, from the address and with the hash the app pins (crates/boopis-dictation/src/model.rs)
+        run: |
+          table=crates/boopis-dictation/src/model.rs
+          url=$(sed -n 's/^ *url: "\(.*\)",$/\1/p' "$table" | head -1)
+          sha=$(sed -n 's/^ *sha256: "\(.*\)",$/\1/p' "$table" | head -1)
+          file=$(sed -n 's/^ *file: "\(.*\)",$/\1/p' "$table" | head -1)
+          [ -n "$url" ] && [ -n "$sha" ] && [ -n "$file" ] || { echo "could not read the model table"; exit 1; }
+          mkdir -p dist/speech-model
+          if [ ! -f "dist/speech-model/$file" ]; then
+            curl --fail --location --silent --show-error --retry 3 --output "dist/speech-model/$file" "$url"
+          fi
+          if command -v sha256sum >/dev/null; then found=$(sha256sum "dist/speech-model/$file"); else found=$(shasum -a 256 "dist/speech-model/$file"); fi
+          found=${found%% *}
+          echo "$file: $found (pinned $sha)"
+          [ "$found" = "$sha" ] || { rm -f "dist/speech-model/$file"; echo "the model is not the pinned file; it was deleted"; exit 1; }
+          # the workspace as the system writes it: on Windows the test is not a bash program and reads no /d/a/... path
+          echo "HX_DICTATION_MODEL=${GITHUB_WORKSPACE}/dist/speech-model/$file" >> "$GITHUB_ENV"
+      - run: cargo clippy -p boopis-dictation --all-targets -- -D warnings
+      - name: the crate's tests, and the recording through the real model (a skip is a failure here)
+        env:
+          HX_DICTATION_REQUIRE_MODEL: "1"
+        run: cargo test -p boopis-dictation -- --nocapture --test-threads=1
 
   hx:
     # The hx binary the plugin's unit and end-to-end tests need, built once.
@@ -304,7 +374,7 @@ jobs:
       - name: WebKitGTK headers (the host's first-run test is a Rust test of its library)
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config libasound2-dev cmake clang
       - uses: dtolnay/rust-toolchain@1.97.0
       - uses: Swatinem/rust-cache@v2
         with: { shared-key: e2e-host }

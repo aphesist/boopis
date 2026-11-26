@@ -1534,3 +1534,77 @@ async fn each_stream_gets_a_growing_reply_at_its_own_pace_and_the_words_never_st
     }
     cancel.cancel();
 }
+
+/// ADR-0059: another client reads the bots and answers approvals; it can never start, stop or read the microphone. The API
+/// lists no such address, none that a client might guess answers with either method, and no event of the feed is about it.
+/// (That the service itself is out of this module's reach is `dictation.rs`'s `nothing_but_the_command_reaches_the_microphone`.)
+#[tokio::test]
+async fn nothing_reaches_the_microphone() {
+    const WORDS: [&str; 9] = [
+        "dictat",
+        "microphone",
+        "mic",
+        "audio",
+        "speech",
+        "transcri",
+        "voice",
+        "listen",
+        "record",
+    ];
+    let r = rig_with(ApiLimits {
+        read_rate: (1000, 1000),
+        write_rate: (1000, 1000),
+        ..limits()
+    })
+    .await;
+    let addr = r.server.addr();
+    let (status, _, body) = raw(addr, &get(&r, "/v1", "")).await;
+    assert_eq!(status, 200);
+    let listed: Vec<String> = json_of(&body)["endpoints"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| e.as_str().unwrap().to_lowercase())
+        .collect();
+    assert!(listed.len() > 5, "the API lists its addresses: {listed:?}");
+    for address in &listed {
+        for word in WORDS {
+            // `mic` alone would match nothing else an address says; the others are whole notions
+            assert!(!address.contains(word), "{address:?} names {word:?}");
+        }
+    }
+    for path in [
+        "/v1/dictation",
+        "/v1/dictation/start",
+        "/v1/dictation/stop",
+        "/v1/dictate",
+        "/v1/microphone",
+        "/v1/mic",
+        "/v1/audio",
+        "/v1/speech",
+        "/v1/transcribe",
+        "/v1/transcription",
+        "/v1/voice",
+        "/v1/listen",
+        "/v1/record",
+        "/v1/bots/kai/dictation",
+        "/v1/bots/kai/listen",
+        "/v1/rooms/r1/dictation",
+    ] {
+        assert_eq!(raw(addr, &get(&r, path, "")).await.0, 404, "GET {path}");
+        assert_eq!(
+            raw(addr, &post(&r, path, "{}", "")).await.0,
+            404,
+            "POST {path}"
+        );
+    }
+    // the feed's own vocabulary (`model.rs`): no event of the stream is about audio
+    let model = include_str!("model.rs").to_lowercase();
+    assert!(
+        model.contains("bots.changed"),
+        "the feed's model was not read"
+    );
+    for word in ["dictat", "microphone", "audio", "transcri"] {
+        assert!(!model.contains(word), "the feed's model names {word:?}");
+    }
+}

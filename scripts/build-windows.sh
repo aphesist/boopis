@@ -55,6 +55,8 @@ need cargo "rustup"; need cargo-xwin "cargo install cargo-xwin --locked"; need m
 need clang-cl "LLVM's clang-cl; Debian: ln -s /usr/bin/clang-cl-18 somewhere-on-PATH/clang-cl"; need lld-link "apt-get install lld"
 need llvm-rc "apt-get install llvm"; need uv "https://docs.astral.sh/uv/"; need pnpm "corepack enable, or npm i -g pnpm@10"
 need zstd "apt-get install zstd"; need file "apt-get install file"; need 7z "apt-get install p7zip-full"; need git "git"
+# dictation (ADR-0059): whisper.cpp is compiled from source for the target by whisper-rs-sys, which cargo-xwin drives through CMake
+need cmake "apt-get install cmake"; need ninja "apt-get install ninja-build"
 [ "$missing" = 0 ] || exit 1
 rustup target list --installed 2>/dev/null | grep -qx "$TRIPLE" || { echo "rustup target add $TRIPLE" >&2; exit 1; }
 

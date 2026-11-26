@@ -37,6 +37,7 @@ depends=(
   'hicolor-icon-theme'   # the icons are installed into it
   'libsoup3'
   'dbus'             # the keychain (secret_set) talks to the Secret Service over D-Bus
+  'alsa-lib'         # dictation: the microphone, through ALSA's default device (PipeWire and PulseAudio answer as it)
   'xdg-utils'        # opening links and folders
 )
 optdepends=(
@@ -54,6 +55,8 @@ makedepends=(
   'tar'
   'pkgconf'
   'base-devel'
+  'cmake'              # dictation: whisper.cpp is compiled from source (whisper-rs-sys), with base-devel's g++
+  'clang'              # libclang, for the bindings whisper-rs-sys generates
 )
 options=('!lto' '!debug')
 install=boopis.install

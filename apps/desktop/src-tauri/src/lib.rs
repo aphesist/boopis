@@ -12,6 +12,7 @@ pub mod commands;
 pub mod config;
 pub mod connectors;
 pub mod copilot;
+pub mod dictation;
 pub mod endpoint;
 #[cfg(test)]
 mod engine_words;
@@ -49,6 +50,7 @@ pub mod xai;
 use std::sync::Arc;
 
 use tauri::Manager;
+use tauri_plugin_store::StoreExt;
 use tauri_specta::{Builder, Event, collect_commands, collect_events};
 
 use commands::{
@@ -158,6 +160,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::room_held,
             commands::bot_run_limit_get,
             commands::bot_run_limit_set,
+            commands::dictation_start,
+            commands::dictation_stop,
         ])
         .events(collect_events![
             ConnectionStateEvent,
@@ -184,8 +188,9 @@ pub fn export_bindings(path: &std::path::Path) -> Result<(), String> {
 
 fn init_logging() {
     use tracing_subscriber::EnvFilter;
+    // whisper.cpp writes a page of `info` lines each time the speech model loads (its own log, through `whisper_rs`)
     let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info,boopis_host=info"));
+        .unwrap_or_else(|_| EnvFilter::new("info,boopis_host=info,whisper_rs=warn"));
     let _ = tracing_subscriber::fmt()
         .with_env_filter(filter)
         .with_writer(std::io::stderr)
@@ -372,6 +377,14 @@ pub fn run() {
         .on_window_event(|window, event| {
             if window.label() == "main" {
                 window_events(window, event);
+                // The window that could have asked for a dictation is going away: the microphone closes (ADR-0059).
+                if matches!(
+                    event,
+                    tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed
+                ) && let Some(state) = window.try_state::<AppState>()
+                {
+                    dictation::stop_for_window(&state.dictation);
+                }
             }
             // A window dragged to another monitor may have another refresh rate (ADR-0025); a look at a rate that has
             // not changed is one GDK query.
@@ -395,6 +408,8 @@ pub fn run() {
                 health.signal(health.now_ms(), webview_health::Signal::Loading);
             }
             if let Some(state) = webview.try_state::<AppState>() {
+                // the page that asked for a dictation is gone with its composer: nothing is left to listen for
+                dictation::stop_for_window(&state.dictation);
                 let closed = state.hubs.close_all_connections();
                 if closed > 0 {
                     tracing::info!(closed, "the page is loading again; closed its old connections");
@@ -603,7 +618,20 @@ pub fn run() {
             );
             let api_feed = local_api.feed().clone();
             let update_gate = endpoint::Gate::default();
+            // Dictation (ADR-0059). Nothing is opened, read or fetched here: the microphone and the speech model wait for
+            // the person's first press. The model's name is read once (a change needs a restart).
+            let speech_model = app
+                .store("settings.json")
+                .ok()
+                .and_then(|s| settings::AppSettings::migrate(s.get("app").as_ref()).ok())
+                .and_then(|s| s.speech_model);
+            let dictation = dictation::build(
+                &app.path().app_data_dir().map_err(|e| e.to_string())?,
+                speech_model.as_deref(),
+                &limits.dictation,
+            );
             app.manage(AppState {
+                dictation,
                 local_api: local_api.clone(),
                 chatgpt,
                 copilot,
@@ -652,6 +680,7 @@ pub fn run() {
             if let tauri::RunEvent::Exit = event
                 && let Some(state) = handle.try_state::<AppState>()
             {
+                state.dictation.stop_all();
                 tauri::async_runtime::block_on(state.local_api.shutdown());
                 state.hubs.shutdown();
             }
