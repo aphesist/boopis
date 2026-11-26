@@ -212,6 +212,13 @@ talking to the bots themselves, don't come from the microphone button." So: the 
 work in the live app, with no setup screen and no link to voice; talk is the voice circle only. The lead's "mic shows
 a setup Notice" below is **withdrawn**; the proposal "transcription as a 0.2.0 feature" is answered: build it now.
 
+**Owner, 26 Nov (later):** "you can just use a real transcribing open source system that already exists, like
+voxtype or something. no need to actually build one." Checked: voxtype is MIT, Rust, whisper.cpp plus cpal
+underneath, a Linux-first daemon/CLI (partial macOS, no Windows, no embeddable crate), so it cannot be shipped
+as-is; the builder was told to reuse existing crates and adapt voxtype's code (notice kept) and write only the glue.
+The owner also asked how many steps remain; answered with the count in section 7 (about 9 to 11 builder steps to
+the phase 2 gate and a test build, 7 to 8 for 0.2.0's features, 12 to 15 for 0.3.0; about 2.5 hours a step).
+
 **The lead's transcription decisions (26 Nov):** local and private (no key, audio never leaves the machine, never
 on disk); native capture in the host (cpal), not the web view; whisper.cpp (whisper-rs), multilingual base
 quantized (about 57 MB) fetched on first use with a pinned hash and progress; recording only from the person's own
