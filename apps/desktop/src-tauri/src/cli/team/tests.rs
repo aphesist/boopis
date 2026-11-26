@@ -13,6 +13,15 @@ async fn go(model: &Model, args: &[&str]) -> Out {
 }
 
 async fn go_as(model: &Model, args: &[&str], bot_caller: Option<&'static str>) -> Out {
+    go_in(model, args, bot_caller, None).await
+}
+
+async fn go_in(
+    model: &Model,
+    args: &[&str],
+    bot_caller: Option<&'static str>,
+    house: Option<&Path>,
+) -> Out {
     let args: Vec<String> = args.iter().map(|s| (*s).to_owned()).collect();
     let (mut out, mut err) = (Vec::new(), Vec::new());
     let stdin = || Ok(String::new());
@@ -23,6 +32,7 @@ async fn go_as(model: &Model, args: &[&str], bot_caller: Option<&'static str>) -
             err: &mut err,
             stdin: &stdin,
             bot_caller,
+            house,
         };
         team(&args, &mut ctx).await
     };
@@ -161,4 +171,43 @@ async fn a_bot_s_process_cannot_apply_a_team() {
             .code,
         0
     );
+}
+
+/// team-ops.md acceptance 16: `team plan` prints the hash, `apply --hash` applies it, a bot's process gets exit 2.
+#[tokio::test]
+async fn a_plan_is_applied_by_its_hash_and_never_by_a_bot() {
+    let dir = tempfile::tempdir().unwrap();
+    let house = dir.path().join("house");
+    let fragment = dir.path().join("kai.yaml");
+    std::fs::write(&fragment, "bots:\n  kai:\n    role: writes code\n").unwrap();
+    let model = Model::new(base());
+    let o = go_in(
+        &model,
+        &["plan", fragment.to_str().unwrap(), "--json"],
+        None,
+        Some(&house),
+    )
+    .await;
+    assert_eq!(o.code, 0, "{}{}", o.out, o.err);
+    let v: serde_json::Value = serde_json::from_str(o.out.trim()).unwrap();
+    let hash = v["plan_hash"].as_str().unwrap().to_owned();
+    for rule in ["environment", "ancestry"] {
+        for args in [vec!["apply", "--hash", &hash[..]], vec!["undo", &hash[..]]] {
+            let o = go_in(&model, &args, Some(rule), Some(&house)).await;
+            assert_eq!(o.code, 2, "{args:?}");
+            assert!(o.err.contains(BOT_REFUSAL));
+        }
+    }
+    assert!(model.ran().is_empty());
+    let o = go_in(
+        &model,
+        &["apply", "--hash", &hash, "--json"],
+        None,
+        Some(&house),
+    )
+    .await;
+    assert_eq!(o.code, 0, "{}{}", o.out, o.err);
+    assert_eq!(model.ran(), ["CreateBot"]);
+    let v: serde_json::Value = serde_json::from_str(o.out.trim()).unwrap();
+    assert_eq!(v["answered_by"]["surface"], "cli");
 }

@@ -83,6 +83,13 @@ DEFAULT_TAIL_LIMIT = 200
 MAX_TAIL_LIMIT = 1000
 
 
+def _host_capabilities() -> list[str]:
+    """What the host adds: ``host-ops-v1`` once the host-ops channel answered at load."""
+    from ..hostops import CAPABILITY, available
+
+    return [CAPABILITY] if available() else []
+
+
 def _session_id(params: Mapping[str, Any], session_id: str | None) -> str:
     sid = params.get("session_id") or session_id
     if not isinstance(sid, str) or not sid:
@@ -158,7 +165,7 @@ def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
         "session": session,
         "version": PLUGIN_VERSION,
         "protocol": PROTOCOL,
-        "capabilities": list(CAPABILITIES),
+        "capabilities": [*CAPABILITIES, *_host_capabilities()],
         "hx": hx_view(rt),
         "session_refused_toolsets": _refused_toolsets(),
         "approvals": {"mode": approvals_mode()},

@@ -491,6 +491,7 @@ version = "0.1.10"
 dependencies = [
  "async-trait",
  "boopis-dictation",
+ "boopis-hostops",
  "boopis-peer",
  "boopis-rules",
  "dirs 6.0.0",
@@ -532,6 +533,20 @@ dependencies = [
  "webkit2gtk",
  "windows-sys 0.61.2",
  "zstd",
+]
+
+[[package]]
+name = "boopis-hostops"
+version = "0.1.10"
+dependencies = [
+ "getrandom 0.3.4",
+ "hex",
+ "serde_json",
+ "sha2 0.10.9",
+ "subtle",
+ "tempfile",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

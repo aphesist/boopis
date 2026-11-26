@@ -8,6 +8,7 @@ section 6). The real modules load on first use, and contraprova with the first l
 from __future__ import annotations
 
 import contextlib
+import threading
 from collections.abc import Callable
 from importlib import import_module
 from pathlib import Path
@@ -131,6 +132,10 @@ def register(ctx: Any) -> None:
     from .hostsecrets.channel import capture_environment
 
     capture_environment()  # first: the host's token leaves the process environment before anything can start a child
+    from .hostops import channel as hostops
+
+    if hostops.capture_environment() is not None:  # the host-ops token leaves it too, at the same moment
+        threading.Thread(target=hostops.probe, name="boopis-host-ops-probe", daemon=True).start()
     from .forms.tools import ask_handler, request_credential_handler, request_input_handler
     from .hermes_api import bind
     from .tools import (

@@ -641,6 +641,73 @@ impl<E: Engine> Service<E> {
         })
     }
 
+    /// Give a bot a message from boopis (the host-ops channel's `bot.say`, `docs/specs/team-ops.md` 4.3): always in a new
+    /// session (never the owner's open one), the text already labelled by the host, submitted under `submission_id`
+    /// (derived from the call's idempotency key), and never drawn in a window as the owner's own words.
+    ///
+    /// # Errors
+    /// `400 empty_text`, `413 text_too_long`, `404 no_such_bot`, or the engine's failure.
+    pub async fn say_as_house(
+        &self,
+        profile: &str,
+        message: &str,
+        submission_id: &str,
+    ) -> Result<Said, ApiError> {
+        let message = message.trim();
+        if message.is_empty() {
+            return Err(ApiError::new(
+                400,
+                "empty_text",
+                "There is nothing to say: text is empty.",
+            ));
+        }
+        if message.contains('\0') {
+            return Err(ApiError::new(
+                413,
+                "text_too_long",
+                "The text is too long to send in one message.",
+            ));
+        }
+        if !self.knows_bot(profile).await {
+            return Err(ApiError::new(
+                404,
+                "no_such_bot",
+                "There is no bot with that name.",
+            ));
+        }
+        let res = self
+            .engine
+            .request(profile, "session.create", json!({"source": "gui"}))
+            .await
+            .map_err(|e| failed("start a conversation", &e))?;
+        let live = text(&res, "session_id");
+        if live.is_empty() {
+            return Err(ApiError::new(
+                502,
+                "engine_unavailable",
+                "The engine started no conversation. Try again.",
+            ));
+        }
+        let kept = Some(text(&res, "stored_session_id"))
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| live.clone());
+        self.feed
+            .note_session(profile, &live, Source::Gui, Some(&kept), None);
+        self.engine
+            .request(
+                profile,
+                "prompt.submit",
+                json!({"session_id": live, "text": message, "submission_id": submission_id}),
+            )
+            .await
+            .map_err(|e| failed("deliver the message", &e))?;
+        Ok(Said {
+            profile: profile.to_owned(),
+            session_id: kept,
+            created: true,
+        })
+    }
+
     /// Open a stored conversation of `profile` without sending anything (`session.resume`): its live id. A bot that is
     /// answering in it is `409 bot_busy` (`instead` says what else the caller can do).
     async fn open(&self, profile: &str, stored: &str, instead: &str) -> Result<String, ApiError> {

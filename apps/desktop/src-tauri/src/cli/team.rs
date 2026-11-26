@@ -11,6 +11,7 @@ use serde_json::json;
 use super::args::{Args, Kind};
 use crate::team::apply::{self, Backend};
 use crate::team::export;
+use crate::team::held;
 use crate::team::plan::{self, Plan};
 use crate::team::spec::Team;
 
@@ -26,6 +27,18 @@ pub struct Ctx<'a> {
     pub stdin: &'a dyn Fn() -> std::io::Result<String>,
     /// Why the caller is a bot's process (`boopis_peer::this_process_is_a_bot`), `None` for the owner's own (B47, H5).
     pub bot_caller: Option<&'static str>,
+    /// `<app data>/house`, where team plans are kept (`team plan`, `apply --hash`, `undo`); `None` where there is none.
+    pub house: Option<&'a Path>,
+}
+
+/// The surface an apply or an undo is recorded as: `gui` when the app's hold ran this command (it says so in
+/// `BOOPIS_SURFACE`), the owner's terminal otherwise. Either is the owner's: a bot's process is refused first.
+fn surface() -> &'static str {
+    if std::env::var("BOOPIS_SURFACE").as_deref() == Ok("gui") {
+        "gui"
+    } else {
+        "cli"
+    }
 }
 
 /// What a bot reads when it runs an owner-only command (B47, H5).
@@ -65,15 +78,26 @@ pub async fn team(args: &[String], ctx: &mut Ctx<'_>) -> i32 {
     };
     match sub.as_str() {
         "check" => check(rest, ctx),
-        "apply" => {
-            // B47, H5: every form of apply is the owner's; a process the engine started is refused before anything is read
+        "apply" | "undo" => {
+            // B47, H5: every form of apply, and undo, is the owner's; a process the engine started is refused before
+            // anything is read
             if let Some(rule) = ctx.bot_caller {
-                tracing::info!(rule, "boopis team apply refused a bot's process (B47)");
+                tracing::info!(rule, "boopis team {sub} refused a bot's process (B47)");
                 fail(ctx, BOT_REFUSAL);
                 return 2;
             }
-            apply_cmd(rest, ctx).await
+            if sub == "undo" {
+                undo_cmd(rest, ctx).await
+            } else if rest
+                .iter()
+                .any(|a| a == "--hash" || a.starts_with("--hash="))
+            {
+                apply_hash_cmd(rest, ctx).await
+            } else {
+                apply_cmd(rest, ctx).await
+            }
         }
+        "plan" => plan_cmd(rest, ctx).await,
         "export" => export_cmd(rest, ctx).await,
         other => {
             fail(
@@ -239,6 +263,182 @@ async fn apply_cmd(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
         let _ = writeln!(ctx.out, "{ok} of {} done", report.done.len());
     }
     i32::from(!report.all_ok())
+}
+
+fn print_held(ctx: &mut Ctx<'_>, v: &serde_json::Value, json: bool) {
+    if json {
+        let _ = writeln!(ctx.out, "{v}");
+        return;
+    }
+    let actions = v["plan"]["actions"]
+        .as_array()
+        .or_else(|| v["actions"].as_array())
+        .cloned()
+        .unwrap_or_default();
+    for a in &actions {
+        let _ = writeln!(
+            ctx.out,
+            "{} {}  {}",
+            a["mark"].as_str().unwrap_or(" "),
+            a["target"].as_str().unwrap_or(""),
+            a["what"].as_str().unwrap_or("")
+        );
+    }
+    let _ = writeln!(
+        ctx.out,
+        "plan {} ({})",
+        v["plan_hash"].as_str().unwrap_or(""),
+        v["state"].as_str().unwrap_or("")
+    );
+}
+
+/// A plan's refusal: in words on standard error, and with `--json` as `{ok: false, code, message}` on standard output (what
+/// the app reads when its hold runs this command).
+fn refused(ctx: &mut Ctx<'_>, r: &boopis_hostops::Refusal, json: bool) -> i32 {
+    if json {
+        let _ = writeln!(
+            ctx.out,
+            "{}",
+            json!({"ok": false, "code": r.code, "message": r.message})
+        );
+    }
+    fail(ctx, &format!("{} ({})", r.message, r.code));
+    1
+}
+
+fn house<'a>(ctx: &mut Ctx<'a>) -> Option<&'a Path> {
+    let h = ctx.house;
+    if h.is_none() {
+        fail(ctx, "this machine has no data folder for team plans");
+    }
+    h
+}
+
+/// `boopis team plan <file|-> [--reason TEXT] [--job ID] [--json]`: plan a fragment over the team and keep the proposal.
+async fn plan_cmd(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
+    let a = match Args::read(
+        rest,
+        &[
+            ("json", Kind::Switch),
+            ("reason", Kind::Value),
+            ("job", Kind::Value),
+        ],
+    ) {
+        Ok(a) => a,
+        Err(u) => {
+            fail(ctx, &u.0);
+            return 2;
+        }
+    };
+    let [file] = a.plain.as_slice() else {
+        fail(
+            ctx,
+            &format!("team plan takes one file. {}", super::help::hint("team")),
+        );
+        return 2;
+    };
+    let text = if file == "-" {
+        (ctx.stdin)().map_err(|e| e.to_string())
+    } else {
+        std::fs::read_to_string(file).map_err(|e| format!("{file}: {e}"))
+    };
+    let text = match text {
+        Ok(t) => t,
+        Err(e) => {
+            fail(ctx, &e);
+            return 1;
+        }
+    };
+    let Some(house) = house(ctx) else { return 1 };
+    let reason = a
+        .value("reason")
+        .unwrap_or("Planned with boopis team plan")
+        .to_owned();
+    let job = a.value("job").map(str::to_owned);
+    match held::propose(
+        ctx.backend,
+        house,
+        &text,
+        &reason,
+        job.as_deref(),
+        boopis_hostops::now_ms(),
+    )
+    .await
+    {
+        Ok(v) => {
+            print_held(ctx, &v, a.has("json"));
+            0
+        }
+        Err(r) => refused(ctx, &r, a.has("json")),
+    }
+}
+
+/// `boopis team apply --hash <plan_hash> [--json]`: apply a stored plan after the hold's checks.
+async fn apply_hash_cmd(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
+    let a = match Args::read(rest, &[("json", Kind::Switch), ("hash", Kind::Value)]) {
+        Ok(a) => a,
+        Err(u) => {
+            fail(ctx, &u.0);
+            return 2;
+        }
+    };
+    let Some(hash) = a.value("hash").map(str::to_owned) else {
+        fail(ctx, "team apply --hash needs a plan's hash");
+        return 2;
+    };
+    let Some(house) = house(ctx) else { return 1 };
+    match held::apply_held(
+        ctx.backend,
+        house,
+        &hash,
+        surface(),
+        boopis_hostops::now_ms(),
+    )
+    .await
+    {
+        Ok(v) => {
+            print_held(ctx, &v, a.has("json"));
+            i32::from(v["state"] != "applied")
+        }
+        Err(r) => refused(ctx, &r, a.has("json")),
+    }
+}
+
+/// `boopis team undo <plan_hash> [--json]`: plan the way back from an applied plan; it is applied by its own hash.
+async fn undo_cmd(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {
+    let a = match Args::read(rest, &[("json", Kind::Switch)]) {
+        Ok(a) => a,
+        Err(u) => {
+            fail(ctx, &u.0);
+            return 2;
+        }
+    };
+    let [hash] = a.plain.as_slice() else {
+        fail(
+            ctx,
+            &format!(
+                "team undo takes one plan's hash. {}",
+                super::help::hint("team")
+            ),
+        );
+        return 2;
+    };
+    let Some(house) = house(ctx) else { return 1 };
+    match held::undo(
+        ctx.backend,
+        house,
+        hash,
+        surface(),
+        boopis_hostops::now_ms(),
+    )
+    .await
+    {
+        Ok(v) => {
+            print_held(ctx, &v, a.has("json"));
+            0
+        }
+        Err(r) => refused(ctx, &r, a.has("json")),
+    }
 }
 
 async fn export_cmd(rest: &[String], ctx: &mut Ctx<'_>) -> i32 {

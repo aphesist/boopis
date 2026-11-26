@@ -11,6 +11,8 @@ There are four seams, and each has one protocol:
 | UI and plugin | **`boopis-v1`**: plugin RPC `plugin.boopis.<method>` and events `plugin.boopis.<event>`, carried inside `hermes-gateway-v1` | via the host's proxy |
 | Plugin and `hx` | **`hx-v1`**: JSON-RPC over stdio, newline-delimited (`crates/hx-proto/schema/hx-v1.schema.json`) | child process |
 | Plugin and exec kernel | `hx-kernel-v1`: JSON-RPC over a private socket (never stdout) | Unix socket / named pipe |
+| Plugin and host (secrets) | `hx-host-secrets-v1`: one JSON line each way | Unix socket (`host.sock`) |
+| Plugin and host (ops) | `hx-host-ops-v1`: one JSON line each way (`docs/specs/team-ops.md` section 4, ADR-0061) | Unix socket (`host-ops.sock`) |
 
 ## 1. UI and host (Tauri)
 
@@ -66,6 +68,15 @@ The UI never holds gateway tickets, tokens or keys.
 | `rules_restore_defaults` | `{ids?}` | `{revision}`: shipped text, on, every bot; removed ones added again |
 | `rules_accept_outside` | — | as `rules_get`: the owner keeps a change made outside boopis |
 | `rules_reviewer_set` | `{mode: "auto"\|"pinned", provider?, model?}` | `{reviewer, problems}`: saved in `rules.json` and written into every bot's `auxiliary.boopis_reviewer` through the engine's `config set`; `problems` names the bots it could not be written for |
+| `team_plans_list` | `{all}` | `{plans: [{plan_hash, title, reason, counts: {bots, rooms, boards, jobs}, state, created_at, expires_at, undoes}]}`: the proposals waiting, or every plan kept (at most 50) (ADR-0061, `docs/specs/team-ops.md` 3) |
+| `team_plan_get` | `{plan_hash}` | `{plan_hash, title, reason, job_id, actions: [{mark, target, what}], problems, notes, counts, state, created_at, expires_at, report, answered_by, undoes, words, permanent}`; never the fragment or the merged file |
+| `team_plan_apply` | `{plan_hash}` | the plan with its `report`, `state: applied\|failed`. Only the plan card's hold calls it; the checks (`hx.team.plan_not_found`, `plan_not_open`, `plan_expired`, `plan_stale`, `plan_tampered`, `plan_problems`) run before anything changes, then the snapshot (`house/snapshots/`), then the actions. Runs `boopis team apply --hash` as the window's surface |
+| `team_plan_reject` | `{plan_hash, words?}` | the plan, `state: rejected`; the words are kept for the bot (`jobs.get`) |
+| `team_plan_undo` | `{plan_hash}` | a new proposal (`undoes`) planning the way back to the applied plan's snapshot, kept to what it touched; applied by the same hold |
+| `owner_grant` | `{purpose: "bots.write.approvals"\|"bots.write.cap"\|"budget.set"}` | a one-time grant (60 s, one use) the window passes in that plugin call; the plugin redeems it over host-ops (`grant.redeem`, H5) |
+| `house_jobs` | `{job_id?}` | `{jobs: [{id, title, state, steps, spend: {usd_est, turns}, started, at}]}`: the house bot's jobs (one, or the open ones) |
+
+Event `PlansChangedEvent {plan_hash, state}` (`plans-changed-event`): a plan was proposed, applied, failed, rejected or an undo was planned.
 
 The host reconnects on gateway restarts (after `code_sha` mismatch, idle exit or crash) and replays with `session.events.since` using `seq` and `replay_epoch`. The UI sees host-made `event` frames (type namespace `connection.`, never from the gateway): `connection.state` (`payload.state`: `connecting`, `ready`, `degraded` or `incompatible`; `reconnected: true` after a loss), `connection.replay_gap` (`payload.session_id`: the replay buffer was truncated, reload that transcript), `connection.open_requests` (envelope `session_id`; `payload.open_requests`: the server requests Hermes still has open for that session, copied from the replay's answer unchanged, after the replayed events and only when there are some), `connection.backpressure` (`payload.coalesced`: `message.delta` frames were merged because the window fell behind), and `connection.said` / `connection.said_failed` (envelope `session_id`: the live session; `payload.text` and `payload.stored_session_id`, or `payload.reason` in words when the engine did not take it: a message another surface, the local API, said into that conversation. The engine sends a window nothing for a message submitted elsewhere, so a chat that has the conversation open draws it as the owner's own message, with nothing of where it came from; the host sends it before it submits, so it comes before the reply). The same state is a typed `ConnectionStateEvent`. A window's `client.capabilities` and `runtime.describe` are answered by the host from the handshake it did once.
 
@@ -280,5 +291,6 @@ Stable string codes in `data.code`, listed in `crates/hx-proto/errors.json` (sha
 - `hx.provider.*` (`unknown`, `unsupported`, `key_invalid`, `key_rejected`, `unreachable`, `no_models`, `not_a_model_server`, `endpoint_invalid`, `endpoint_blocked`, `endpoint_exists`, `not_found`, `not_installed`, `cli_failed`, `needs_update`, `metered`, `signin_blocked` (something on the network answered in place of a host-run sign-in's service));
 - `hx.form.*` (`invalid_schema`, `invalid_values`, `not_found`, `resolved`, `timeout`, `secret_missing`, `unsupported`, `limit`);
 - `hx.rules.*` (`conflict`, `invalid`, `unreadable`, `busy`, `not_found`; the host's rules commands, ADR-0060);
+- `hx.team.*` (`unreadable`, `plan_not_found`, `plan_not_open`, `plan_expired`, `plan_stale`, `plan_tampered`, `plan_problems`, `prune_owner_only`; team plans, ADR-0061) and the host-ops channel's `hx.host.rate_limited`, `store_failed`, `in_progress`, `owner_grant_required`, `unavailable`, and `hx.rooms.busy`;
 - `hx.policy.denied` reasons added by B47 (ADR-0062): `governance_write`, `owner_answer`, `approvals_off`; and by the rules engine: `rule_unattended` (a scheduled run's match, refused and parked);
 - `hx.mods.*` (`unavailable`, `load_failed`, `not_a_mod`, `already_loaded`, `no_session`, `worker_failed`, `crashed`, `no_host`, `host_timeout`, `host_failed`, `unsupported`).

@@ -164,22 +164,14 @@ pub fn handle_line(store: &dyn SecretStore, token: &str, line: &str) -> String {
 /// A running channel. Dropping it removes the socket.
 #[derive(Debug)]
 pub struct SecretChannel {
-    socket: PathBuf,
-    task: tokio::task::JoinHandle<()>,
+    listener: boopis_hostops::listen::Listener,
 }
 
 impl SecretChannel {
     /// The socket's path.
     #[must_use]
     pub fn socket(&self) -> &Path {
-        &self.socket
-    }
-}
-
-impl Drop for SecretChannel {
-    fn drop(&mut self) {
-        self.task.abort();
-        let _ = std::fs::remove_file(&self.socket);
+        self.listener.socket()
     }
 }
 
@@ -197,117 +189,64 @@ pub fn default_socket_dir() -> Option<PathBuf> {
         .or_else(|| dirs::data_local_dir().map(|d| d.join("boopis").join("run")))
 }
 
-/// Start the channel on `auth`'s socket. `peers` decides which process may use it (see [`super::peer`]).
+/// Start the channel on `auth`'s socket, on the listener both host channels share (`boopis_hostops::listen`: the `0700`
+/// folder, the `0600` socket, the kernel's peer check before the request is read, one line each way, 2 s, 8 at once).
+/// `peers` decides which process may use it (see [`super::peer`]).
 ///
 /// # Errors
 /// `Io` when the directory or socket cannot be created; `Unavailable` on a platform without a Unix socket.
-#[cfg(unix)]
 pub async fn start(
     store: Arc<dyn SecretStore>,
     auth: &Auth,
     peers: Arc<PeerPolicy>,
 ) -> Result<SecretChannel> {
-    use std::os::unix::fs::{DirBuilderExt, MetadataExt, PermissionsExt};
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-
-    let socket = auth.socket.clone();
-    let socket_dir = socket
-        .parent()
-        .ok_or_else(|| Error::Io("the secret socket has no directory".into()))?;
-    let mut dir = std::fs::DirBuilder::new();
-    dir.recursive(true).mode(0o700);
-    dir.create(socket_dir)?;
-    std::fs::set_permissions(socket_dir, std::fs::Permissions::from_mode(0o700))?;
-    let owner = std::fs::metadata(socket_dir)?.uid();
-    // A leftover socket from a crashed run is removed; one a live host still answers is not ours to take.
-    if socket.exists() {
-        if tokio::net::UnixStream::connect(&socket).await.is_ok() {
-            return Err(Error::Io("another boopis host already runs".into()));
-        }
-        std::fs::remove_file(&socket)?;
-    }
-    let listener = tokio::net::UnixListener::bind(&socket)?;
-    std::fs::set_permissions(&socket, std::fs::Permissions::from_mode(0o600))?;
-    let gate = Arc::new(tokio::sync::Semaphore::new(8));
+    use boopis_hostops::listen;
     let token = auth.token.clone();
-    let task = tokio::spawn(async move {
-        loop {
-            let Ok((mut stream, _)) = listener.accept().await else {
-                return;
-            };
-            let Ok(permit) = gate.clone().acquire_owned().await else {
-                return;
-            };
-            let (store, token, peers) = (store.clone(), token.clone(), peers.clone());
-            tokio::spawn(async move {
-                let _permit = permit;
-                let work = async {
-                    let cred = stream.peer_cred()?;
-                    if cred.uid() != owner {
-                        return Err(std::io::Error::new(
-                            std::io::ErrorKind::PermissionDenied,
-                            "wrong peer",
-                        ));
-                    }
-                    // Decided now, from the kernel's answer, and acted on after the request is read: a refused process
-                    // gets the same reply as a wrong token, so neither factor can be probed apart from the other.
-                    let verdict = peers.admit(cred.pid().and_then(|p| u32::try_from(p).ok()));
-                    let mut buf = Vec::new();
-                    let mut chunk = [0u8; 1024];
-                    while !buf.contains(&b'\n') && buf.len() < 8 * 1024 {
-                        let n = stream.read(&mut chunk).await?;
-                        if n == 0 {
-                            break;
-                        }
-                        buf.extend_from_slice(&chunk[..n]);
-                    }
-                    let line = String::from_utf8_lossy(
-                        buf.split(|b| *b == b'\n').next().unwrap_or_default(),
-                    )
-                    .into_owned();
-                    let answer = if let Err(why) = verdict {
-                        tracing::warn!(pid = ?cred.pid(), ?why, "the secret channel refused a process that is not the gateway");
-                        reply(false, "hx.host.unauthorized", &json!({}))
-                    } else {
-                        // The keychain is a D-Bus round trip: never on an async worker.
-                        tokio::task::spawn_blocking(move || {
-                            handle_line(store.as_ref(), &token, &line)
-                        })
-                        .await
-                        .map_err(std::io::Error::other)?
-                    };
-                    stream.write_all(answer.as_bytes()).await?;
-                    stream.shutdown().await
-                };
-                if let Ok(Err(e)) =
-                    tokio::time::timeout(std::time::Duration::from_secs(2), work).await
-                {
-                    tracing::debug!(error = %e, "secret channel connection ended");
-                }
-            });
+    let admit: listen::Admit = Arc::new(move |pid| match peers.admit(pid) {
+        Ok(()) => true,
+        Err(why) => {
+            tracing::warn!(
+                ?pid,
+                ?why,
+                "the secret channel refused a process that is not the gateway"
+            );
+            false
         }
     });
-    Ok(SecretChannel { socket, task })
-}
-
-/// Windows needs a named pipe with a user-only ACL; until it exists the host reports it and the plugin gets no secrets.
-///
-/// # Errors
-/// Always `Unavailable`.
-#[cfg(not(unix))]
-#[allow(
-    clippy::unused_async,
-    reason = "keeps the signature the same as on Unix, where the socket is bound asynchronously"
-)]
-pub async fn start(
-    _store: Arc<dyn SecretStore>,
-    _auth: &Auth,
-    _peers: Arc<PeerPolicy>,
-) -> Result<SecretChannel> {
-    Err(Error::Unavailable(
-        "the plugin secret channel needs a named pipe on this OS, which is not implemented yet"
-            .into(),
-    ))
+    let handle: listen::Handle = Arc::new(move |line, admitted| {
+        let (store, token) = (store.clone(), token.clone());
+        Box::pin(async move {
+            // A refused process gets the same reply as a wrong token, so neither factor can be probed apart.
+            if !admitted {
+                return reply(false, "hx.host.unauthorized", &json!({}));
+            }
+            // The keychain is a D-Bus round trip: never on an async worker.
+            tokio::task::spawn_blocking(move || handle_line(store.as_ref(), &token, &line))
+                .await
+                .unwrap_or_else(|_| reply(false, "hx.secrets.failed", &json!({})))
+        })
+    });
+    let listener = listen::serve(
+        &auth.socket,
+        listen::Opts {
+            max_line: 8 * 1024,
+            timeout: std::time::Duration::from_secs(2),
+            conns: 8,
+        },
+        admit,
+        handle,
+    )
+    .await
+    .map_err(|e| {
+        if e.kind() == std::io::ErrorKind::Unsupported {
+            Error::Unavailable(
+                "the plugin secret channel needs a named pipe on this OS, which is not implemented yet".into(),
+            )
+        } else {
+            Error::Io(e.to_string())
+        }
+    })?;
+    Ok(SecretChannel { listener })
 }
 
 #[cfg(test)]

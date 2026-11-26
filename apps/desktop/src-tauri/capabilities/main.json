@@ -113,6 +113,13 @@
     "allow-rules-undo",
     "allow-rules-restore-defaults",
     "allow-rules-accept-outside",
-    "allow-rules-reviewer-set"
+    "allow-rules-reviewer-set",
+    "allow-owner-grant",
+    "allow-team-plans-list",
+    "allow-team-plan-get",
+    "allow-team-plan-apply",
+    "allow-team-plan-reject",
+    "allow-team-plan-undo",
+    "allow-house-jobs"
   ]
 }

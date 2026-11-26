@@ -1,0 +1,26 @@
+[package]
+name = "boopis-hostops"
+description = "The host-ops channel between the boopis plugin and the desktop host (hx-host-ops-v1, docs/specs/team-ops.md section 4): the shared local-socket listener, the verbs, idempotency keys, rate limits, the audit trail, owner grants, jobs and the stored team plans."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+serde_json.workspace = true
+sha2.workspace = true
+hex.workspace = true
+tracing.workspace = true
+subtle = "2"
+getrandom = "0.3"
+tokio = { workspace = true, features = ["net", "io-util", "time", "sync", "rt"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { workspace = true, features = ["net", "io-util", "time", "sync", "rt", "macros", "rt-multi-thread"] }

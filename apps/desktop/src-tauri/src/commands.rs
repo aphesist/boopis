@@ -84,6 +84,8 @@ pub struct AppState {
     pub bots: Arc<crate::bots::engine::Service>,
     /// The rules list's writer (ADR-0060): the digest it last wrote, removed rules kept for Undo.
     pub rules: crate::rules::RulesHost,
+    /// Team operations (ADR-0061): the plans the owner's hold applies, owner grants, the house bot's jobs.
+    pub house: Arc<crate::house::House>,
     /// Where the app's links wait while the host puts this app's code in place for the gateway (`setup::update`).
     pub update_gate: crate::endpoint::Gate,
     /// The automatic update was started in this run (once per run).
@@ -2170,4 +2172,131 @@ pub async fn rules_reviewer_set(
     Ok(Json(
         serde_json::json!({"reviewer": reviewer, "problems": problems}),
     ))
+}
+
+// ───────────────────────── team plans, owner grants, jobs (ADR-0061) ─────────────────────────
+
+fn plan_hash_ok(plan_hash: &str) -> std::result::Result<(), HostError> {
+    if boopis_hostops::plans::is_hash(plan_hash) {
+        Ok(())
+    } else {
+        Err(crate::house::host_error(boopis_hostops::Refusal::new(
+            "hx.team.plan_not_found",
+            "There is no such plan. Make a new one.",
+        )))
+    }
+}
+
+/// A one-time owner grant (60 s, one use) for a plugin call that loosens a rule: `bots.write.approvals`,
+/// `bots.write.cap` or `budget.set`. The window passes it in that call; the plugin redeems it with the host.
+///
+/// Errors: `hx.invalid_params` for a purpose that takes no grant.
+#[tauri::command]
+#[specta::specta]
+pub fn owner_grant(
+    state: State<'_, AppState>,
+    purpose: String,
+) -> std::result::Result<String, HostError> {
+    state
+        .house
+        .grant(&purpose)
+        .map_err(crate::house::host_error)
+}
+
+/// The team plans: the proposals that wait for the owner, or with `all` every plan kept (at most 50, newest first), as
+/// `{plans: [{plan_hash, title, reason, counts, state, created_at, expires_at, undoes}]}`.
+#[tauri::command]
+#[specta::specta]
+pub fn team_plans_list(state: State<'_, AppState>, all: bool) -> Json {
+    let plans = state.house.plans().list(all, boopis_hostops::now_ms());
+    Json(serde_json::json!({ "plans": plans }))
+}
+
+/// One plan as its card shows it: `{plan_hash, title, reason, job_id, actions: [{mark, target, what}], problems, notes,
+/// counts, state, created_at, expires_at, report, answered_by, undoes, words, permanent}`. Never the fragment.
+///
+/// Errors: `hx.team.plan_not_found`.
+#[tauri::command]
+#[specta::specta]
+pub fn team_plan_get(
+    state: State<'_, AppState>,
+    plan_hash: String,
+) -> std::result::Result<Json, HostError> {
+    plan_hash_ok(&plan_hash)?;
+    state
+        .house
+        .plans()
+        .public(&plan_hash, boopis_hostops::now_ms())
+        .map(Json)
+        .ok_or_else(|| {
+            crate::house::host_error(boopis_hostops::Refusal::new(
+                "hx.team.plan_not_found",
+                "There is no such plan. Make a new one.",
+            ))
+        })
+}
+
+/// Apply a plan: only the plan card's hold-to-approve calls this. The checks run first (expired, stale, tampered,
+/// problems), then the snapshot, then the actions; returns the plan with its report (`state` `applied` or `failed`).
+///
+/// Errors: `hx.team.plan_not_found`, `plan_not_open`, `plan_expired`, `plan_stale`, `plan_tampered`, `plan_problems`,
+/// `hx.team.unreadable`, `hx.host.unavailable`.
+#[tauri::command]
+#[specta::specta]
+pub async fn team_plan_apply(
+    state: State<'_, AppState>,
+    plan_hash: String,
+) -> std::result::Result<Json, HostError> {
+    plan_hash_ok(&plan_hash)?;
+    crate::house::held_cli(&state.house, &["apply", "--hash", &plan_hash])
+        .await
+        .map(Json)
+        .map_err(crate::house::host_error)
+}
+
+/// Say no to a plan; `words` are kept for the bot to read. Returns the plan (`state: rejected`).
+///
+/// Errors: `hx.team.plan_not_found`, `hx.team.plan_not_open`.
+#[tauri::command]
+#[specta::specta]
+pub fn team_plan_reject(
+    state: State<'_, AppState>,
+    plan_hash: String,
+    words: Option<String>,
+) -> std::result::Result<Json, HostError> {
+    plan_hash_ok(&plan_hash)?;
+    let v = crate::team::held::reject(
+        state.house.dir(),
+        &plan_hash,
+        words.as_deref(),
+        "gui",
+        boopis_hostops::now_ms(),
+    )
+    .map_err(crate::house::host_error)?;
+    state.house.changed(&plan_hash, "rejected");
+    Ok(Json(v))
+}
+
+/// Plan the way back from an applied plan: a new proposal (`undoes` names this one), applied by the same hold.
+///
+/// Errors: `hx.team.plan_not_found`, `hx.team.plan_not_open` (not applied), `hx.team.unreadable`.
+#[tauri::command]
+#[specta::specta]
+pub async fn team_plan_undo(
+    state: State<'_, AppState>,
+    plan_hash: String,
+) -> std::result::Result<Json, HostError> {
+    plan_hash_ok(&plan_hash)?;
+    crate::house::held_cli(&state.house, &["undo", &plan_hash])
+        .await
+        .map(Json)
+        .map_err(crate::house::host_error)
+}
+
+/// The house bot's jobs: one (`job_id`) or the open ones, as `{jobs: [{id, title, state, steps, spend, started, at}]}`.
+#[tauri::command]
+#[specta::specta]
+pub fn house_jobs(state: State<'_, AppState>, job_id: Option<String>) -> Json {
+    let jobs = boopis_hostops::jobs::Jobs::at(&state.house.dir().join("jobs.jsonl"));
+    Json(serde_json::json!({ "jobs": jobs.get(job_id.as_deref()) }))
 }

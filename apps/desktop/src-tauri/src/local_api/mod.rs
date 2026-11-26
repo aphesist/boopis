@@ -377,6 +377,13 @@ impl LocalApi {
         self.service.room_send_now(room_id, id).await
     }
 
+    /// The service the local API's routes use: the host-ops channel acts through it too (`house`), so a room message, a
+    /// stop or a bot's message has one implementation.
+    #[must_use]
+    pub fn service(&self) -> &Arc<Service<Hubbed>> {
+        &self.service
+    }
+
     /// The messages a room holds.
     pub async fn room_held(&self, room_id: &str) -> Vec<crate::rooms::hold::Held> {
         self.service.room_held(room_id).await

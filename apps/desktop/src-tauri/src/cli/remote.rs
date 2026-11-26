@@ -202,12 +202,14 @@ async fn run_async(kind: Kind, args: &[String], resource_dir: Option<&Path>) -> 
         Kind::Team => {
             let carried = carried_plugins(resource_dir);
             let live = Live::new(&host, &carried);
+            let house = host.data_dir().join("house");
             let mut ctx = TeamCtx {
                 backend: &live,
                 out: &mut out,
                 err: &mut err,
                 stdin: &stdin,
                 bot_caller: boopis_peer::this_process_is_a_bot().map(boopis_peer::Rule::word),
+                house: Some(&house),
             };
             team::team(args, &mut ctx).await
         }
@@ -253,6 +255,7 @@ fn check_only(args: &[String]) -> i32 {
         err: &mut err,
         stdin: &stdin,
         bot_caller: boopis_peer::this_process_is_a_bot().map(boopis_peer::Rule::word),
+        house: None,
     };
     // `check` never asks the backend, so a plain current-thread poll of the future is enough.
     futures_util::FutureExt::now_or_never(team::team(args, &mut ctx)).unwrap_or(1)

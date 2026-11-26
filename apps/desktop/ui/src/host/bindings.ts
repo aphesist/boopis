@@ -446,6 +446,47 @@ export const commands = {
 	 *  Errors: `hx.rules.invalid` for another mode or half a route.
 	 */
 	rulesReviewerSet: (mode: string, provider: string | null, model: string | null, options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_reviewer_set", { mode, provider, model }, options),
+	/**
+	 *  A one-time owner grant (60 s, one use) for a plugin call that loosens a rule: `bots.write.approvals`,
+	 *  `bots.write.cap` or `budget.set`. The window passes it in that call; the plugin redeems it with the host.
+	 * 
+	 *  Errors: `hx.invalid_params` for a purpose that takes no grant.
+	 */
+	ownerGrant: (purpose: string, options?: InvokeOptions) => __TAURI_INVOKE<string>("owner_grant", { purpose }, options),
+	/**
+	 *  The team plans: the proposals that wait for the owner, or with `all` every plan kept (at most 50, newest first), as
+	 *  `{plans: [{plan_hash, title, reason, counts, state, created_at, expires_at, undoes}]}`.
+	 */
+	teamPlansList: (all: boolean, options?: InvokeOptions) => __TAURI_INVOKE<Json>("team_plans_list", { all }, options),
+	/**
+	 *  One plan as its card shows it: `{plan_hash, title, reason, job_id, actions: [{mark, target, what}], problems, notes,
+	 *  counts, state, created_at, expires_at, report, answered_by, undoes, words, permanent}`. Never the fragment.
+	 * 
+	 *  Errors: `hx.team.plan_not_found`.
+	 */
+	teamPlanGet: (planHash: string, options?: InvokeOptions) => __TAURI_INVOKE<Json>("team_plan_get", { planHash }, options),
+	/**
+	 *  Apply a plan: only the plan card's hold-to-approve calls this. The checks run first (expired, stale, tampered,
+	 *  problems), then the snapshot, then the actions; returns the plan with its report (`state` `applied` or `failed`).
+	 * 
+	 *  Errors: `hx.team.plan_not_found`, `plan_not_open`, `plan_expired`, `plan_stale`, `plan_tampered`, `plan_problems`,
+	 *  `hx.team.unreadable`, `hx.host.unavailable`.
+	 */
+	teamPlanApply: (planHash: string, options?: InvokeOptions) => __TAURI_INVOKE<Json>("team_plan_apply", { planHash }, options),
+	/**
+	 *  Say no to a plan; `words` are kept for the bot to read. Returns the plan (`state: rejected`).
+	 * 
+	 *  Errors: `hx.team.plan_not_found`, `hx.team.plan_not_open`.
+	 */
+	teamPlanReject: (planHash: string, words: string | null, options?: InvokeOptions) => __TAURI_INVOKE<Json>("team_plan_reject", { planHash, words }, options),
+	/**
+	 *  Plan the way back from an applied plan: a new proposal (`undoes` names this one), applied by the same hold.
+	 * 
+	 *  Errors: `hx.team.plan_not_found`, `hx.team.plan_not_open` (not applied), `hx.team.unreadable`.
+	 */
+	teamPlanUndo: (planHash: string, options?: InvokeOptions) => __TAURI_INVOKE<Json>("team_plan_undo", { planHash }, options),
+	/**  The house bot's jobs: one (`job_id`) or the open ones, as `{jobs: [{id, title, state, steps, spend, started, at}]}`. */
+	houseJobs: (jobId: string | null, options?: InvokeOptions) => __TAURI_INVOKE<Json>("house_jobs", { jobId }, options),
 };
 
 /** Events */
@@ -455,6 +496,7 @@ export const events = {
 	connectorRestartEvent: makeEvent<ConnectorRestartEvent, ConnectorRestartEvent>("connector-restart-event"),
 	engineUpdateEvent: makeEvent<EngineUpdateEvent, EngineUpdateEvent>("engine-update-event"),
 	fileDragEvent: makeEvent<FileDragEvent_Serialize, FileDragEvent_Deserialize>("file-drag-event"),
+	plansChangedEvent: makeEvent<PlansChangedEvent, PlansChangedEvent>("plans-changed-event"),
 	providerSigninEvent: makeEvent<ProviderSigninEvent, ProviderSigninEvent>("provider-signin-event"),
 	roomHeldEvent: makeEvent<RoomHeldEvent, RoomHeldEvent>("room-held-event"),
 	setupProgress: makeEvent<SetupProgress, SetupProgress>("setup-progress"),
@@ -2249,6 +2291,14 @@ export type PickedFolder = {
 	path: string,
 	/**  Whether `path` is relative to the home (starts with `~/`). */
 	home_relative: boolean,
+};
+
+/**  A plan changed: proposed, applied, failed, rejected, expired, or an undo was planned. The plans list shows these. */
+export type PlansChangedEvent = {
+	/**  The plan. */
+	plan_hash: string,
+	/**  Its state now. */
+	state: string,
 };
 
 /**  The operating system. */

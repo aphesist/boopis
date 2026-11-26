@@ -185,6 +185,9 @@ cannot be read is refused before anything is changed (exit 2); `--project none` 
 boopis team check <file>
 boopis team apply <file> [--dry-run] [--prune] [--json]
 boopis team export [--output FILE [--force]] [--json]
+boopis team plan <file|-> [--reason TEXT] [--job ID] [--json]
+boopis team apply --hash <plan_hash> [--json]
+boopis team undo <plan_hash> [--json]
 ```
 
 A team file holds a whole team: bots (role, instructions, model, look, skills, connectors, the Governed switch, `max_turns`, `toolsets`, `project`), rooms
@@ -202,6 +205,14 @@ the job. Exit 1 when any action failed or the plan has problems.
 `apply` is the owner's alone (B47, H5, ADR-0062): run by a process the engine started (its environment, or an ancestor's,
 holds the engine's launch marker `BOOPIS_ENGINE_LAUNCH`), every form of it, `--dry-run` included, exits 2 with "A bot
 cannot change the team. The owner applies plans in boopis." before the file is read. `check` and `export` stay open.
+
+**Plans** (ADR-0061, `docs/specs/team-ops.md` section 3). `plan` merges a fragment of a team file over the team as it is
+(nothing is removed; a fragment writes text, never the name of a file), checks it, plans it, and keeps the proposal in the
+app's data folder (`house/plans/<plan_hash>.json`, 24 hours), printing the plan and its `plan_hash`. `apply --hash` applies a
+kept plan after the same checks the app's hold runs: refused when it expired, when the team changed since it was made, or
+when its file was edited; a snapshot of the team is written first. `undo` plans the way back from an applied plan to its
+snapshot, kept to what that plan touched, as a new proposal applied by its own hash. `apply --hash` and `undo` are the
+owner's (exit 2 for a bot's process, as above); with `--json` a refusal is `{"ok": false, "code", "message"}`.
 
 What each part does:
 

@@ -107,6 +107,13 @@ const COMMANDS: &[&str] = &[
     "rules_restore_defaults",
     "rules_accept_outside",
     "rules_reviewer_set",
+    "owner_grant",
+    "team_plans_list",
+    "team_plan_get",
+    "team_plan_apply",
+    "team_plan_reject",
+    "team_plan_undo",
+    "house_jobs",
 ];
 
 fn main() {
