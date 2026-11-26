@@ -1,12 +1,11 @@
 /* The Session tab (owner: session agent). Placement only for the screens on the v7 kit (boards S17, S20 and S23): the view and its
    scroller, where the thread's column and the composer sit, and what a turn's parts keep from each other; every look is the kit's
-   (components/v7). The details panel's own pieces (the terminal well, the task list, file rows, the inline diff) are below, as they
-   were: the panel is a later step's. Tokens only. */
+   (components/v7). Tokens only. */
 
 /* ───────────── the view ───────────── */
 .ss-view:not(.hx-view) { position: relative; height: 100%; }   /* inside the shell the slot is the absolutely placed .hx-view */
 .ss-view { min-height: 0; overflow: hidden; background: var(--bg-2); font: 400 var(--fs-m)/var(--lh) var(--sans); color: var(--text); }
-.ss-view *, .ss-view *::before, .ss-view *::after, .ssr * { box-sizing: border-box; }
+.ss-view *, .ss-view *::before, .ss-view *::after { box-sizing: border-box; }
 .ss-scroll { position: absolute; inset: 0; }   /* a scroll area (.ui-scroll) */
 /* The conversation's edges (R-scroll-9; .ui-scroll--ground). It used to be a `mask-image` on the scroller: a mask over the
    whole reading area, whose edge moves with every frame of the dock's lift (`--hx-dock-space`), made the browser rebuild the
@@ -51,6 +50,9 @@
 .ss-col > .k7-sys { margin-block: var(--sp-3); }
 .ss-col > .k7-empty { margin-top: var(--sp-6); }
 
+/* beside the open details the composer is 600 (board S40), beside the diff 560 (boards S25 to S27: the tools take 520) */
+.hx[data-right="open"] :is(.ss-composer, .ss-new__zone) { width: var(--composer-w-pane); }
+html[data-right-tools] .hx[data-right="open"] :is(.ss-composer, .ss-new__zone) { width: calc(var(--composer-w-pane) - var(--sp-5) - var(--sp-4)); }
 .ss-find-anchor { position: absolute; top: var(--sp-3); right: var(--sp-5); width: var(--hl); height: var(--hl); }
 .ss-composer { --hx-dock-space: var(--hx-dock-space-to); position: absolute; z-index: 5; left: 50%; transform: translateX(-50%); bottom: calc(var(--hx-dock-space, 0px) + var(--composer-bottom)); width: var(--composer-w); max-width: calc(100% - 2 * var(--sp-5)); }
 
@@ -58,72 +60,17 @@
 .ss-find { width: var(--pane-w, 300px); display: flex; flex-direction: column; gap: var(--sp-1); }
 .ss-find-count { margin: 0; min-height: var(--lh-xs); font-size: var(--fs-2xs); line-height: var(--lh-xs); font-family: var(--mono); color: var(--text-quiet); }
 
-/* the details panel's diff (diff.ts, the Changes section): drawer colour, mono; the panel is a later step's */
-.ss-parts { display: inline-flex; flex-wrap: wrap; column-gap: var(--sp-3); }
-.ss-add { color: var(--add); }
-.ss-del { color: var(--del); }
-.ss-n { display: inline-flex; gap: var(--sp-2); font-size: var(--fs-2xs); }
-.ss-path { font-size: var(--fs-xs); color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ss-dir { color: var(--text-quiet); }
-.ss-chev { width: 10px; height: 10px; color: var(--text-quiet); transition: transform var(--dur-2) var(--ease); }
-.ss-diff { width: 100%; border-radius: var(--r-m); --sq-bg: var(--bg-0); background: var(--sq-bg); overflow: hidden; }
-.ss-diff--bare { margin: 4px 0 var(--sp-2); }
-.ss-diff-file + .ss-diff-file { box-shadow: inset 0 1px 0 var(--hair); }
-.ss-diff-head {
-  appearance: none; width: 100%; display: flex; align-items: center; gap: var(--sp-2); height: calc(var(--row-h) + 4px); padding: 0 var(--sp-3); margin: 0;
-  border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color var(--dur-1) var(--ease);
-}
-.ss-diff-head:hover { background: var(--hover); }
-.ss-diff-head:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
-.ss-diff-file[data-open="true"] .ss-chev { transform: rotate(90deg); }
-.ss-diff-head .ss-n { margin-left: auto; }
-.ss-diff--bare .ss-diff-head { display: none; }
-.ss-diff-body { display: none; padding: 4px 0 var(--sp-2); font-size: var(--fs-2xs); line-height: 18px; }
-.ss-diff-file[data-open="true"] .ss-diff-body, .ss-diff--bare .ss-diff-body { display: block; }
-.ss-dl { display: grid; grid-template-columns: 34px 14px 1fr; white-space: pre; padding-right: var(--sp-3); min-width: max-content; color: var(--text); }
-.ss-dl .ln { color: var(--text-quiet); text-align: right; padding-right: var(--sp-2); user-select: none; }
-.ss-dl .sg { color: var(--text-quiet); user-select: none; }
-.ss-dl.add { background: color-mix(in srgb, var(--add) 10%, transparent); } .ss-dl.add .sg { color: var(--add); }
-.ss-dl.del { background: color-mix(in srgb, var(--del) 10%, transparent); } .ss-dl.del .sg { color: var(--del); }
-.ss-dl.hunk { display: block; color: var(--text-quiet); padding: 4px var(--sp-3) 2px 48px; }
-
-/* ───────────── right panel: the session's own parts inside the library's panel and sections ───────────── */
-.ssr { position: relative; height: 100%; }
-.ssr .ssr-panel { position: absolute; inset: 0; background: transparent; }   /* the shell paints the cabinet surface */
-.ssr-strip { position: absolute; inset: 0 0 var(--hx-dock-space, 0px); display: grid; place-items: center; }
-.ssr-note { margin: var(--sp-2) 0 0; font-size: var(--fs-xs); line-height: 1.5; color: var(--text-quiet); }
-.ssr-actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
-.ssr .ui-measure--grid { margin: 2px 0 var(--sp-3); }
-.ssr .ui-seg { margin-bottom: var(--sp-3); }
-.ssr-tasks { list-style: none; margin: 0; padding: 0; }
-.ssr-task { display: flex; align-items: flex-start; gap: var(--sp-2); padding: 4px 0; font-size: var(--fs-s); line-height: var(--lh-ui); }
-.ssr-task-mark { width: 16px; height: 18px; display: grid; place-items: center; flex: none; color: var(--brass); }
-.ssr-task-mark .ui-icon { width: 14px; height: 14px; }
-.ssr-task-mark > i { width: 8px; height: 8px; border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--line-strong); }
-.ssr-task[data-s="done"] { color: var(--text-quiet); }
-.ssr-file {
-  appearance: none; width: calc(100% + 12px); display: flex; align-items: center; gap: var(--sp-2); min-height: var(--row-h); margin: 0 -6px; padding: 0 6px;
-  border: 0; border-radius: var(--r-s); --sq-bg: none; background: var(--sq-bg); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color var(--dur-1) var(--ease);
-}
-.ssr-file:hover { --sq-bg: var(--hover); background: var(--sq-bg); }
-.ssr-file .ss-n { margin-left: auto; }
-/* the copy button sits in the well's corner: the well is a .ui-nest that declares its radius, inset and the small icon
-   button's size, and the button is a .ui-corner (data-corner="tr") that takes its radius and inset (DESIGN-SYSTEM §8.2) */
-.ssr-term-wrap { position: relative; --r-outer: var(--r-m); --pad: var(--pad-menu); --corner-size: 24px; }   /* the menu's 4px step: no token of its own yet */
-.ssr-term {
-  margin: 0; padding: 10px var(--sp-3); border-radius: var(--r-outer); --sq-bg: var(--bg-0); background: var(--sq-bg);
-  font-size: var(--fs-2xs); line-height: 1.6; color: var(--text-dim); white-space: pre-wrap; overflow-wrap: anywhere;
-}
-.ssr-term .cmd { color: var(--text); }
-.ssr-term .pass { color: var(--ok); }
-.ssr-term .fail { color: var(--red-text); }
-.ssr-term-wrap > .ui-ib { opacity: 0; transition: opacity var(--dur-1) var(--ease); }
-.ssr-term-wrap:is(:hover, :focus-within) > .ui-ib { opacity: 1; }
-.ssr-cap { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-2); font-size: var(--fs-s); color: var(--text-dim); }
-.ssr-cap .ssr-key { flex: 1; }
-.ssr-env { display: grid; grid-template-columns: 72px 1fr; gap: 6px var(--sp-3); margin: 0; font-size: var(--fs-xs); line-height: 1.5; }
-.ssr-env dt { color: var(--text-quiet); text-transform: var(--ui-case); }
-.ssr-env dd { margin: 0; font-size: var(--fs-2xs); color: var(--text); overflow-wrap: anywhere; }
+/* ================================================================ boards S40 and S24: the right panel (modules/session/details.ts)
+   Placement only: the kit's Pane fills the shell's slot from the window's top (the chrome's controls float over it) and scrolls its
+   body; what the Context row opens sits under the Use card, 4 from its pieces; a mod's pane takes the body under the strip. */
+.ss-pane { position: relative; height: 100%; }
+.ss-pane > .k7-pane { position: absolute; inset: 0; width: auto; }
+.ss-pane > .k7-pane > .k7-pane__body { flex: 1 1 0; }   /* it scrolls (the kit's scroll area: details.ts) */
+.ss-pane .k7-pane__body > .k7-disc { margin: var(--sp-2) var(--pad-btn-card) 0 var(--sp-1); }   /* its values end where the card's do */
+.ss-pane .k7-disc__after > .k7-pane__note { margin: 0; }
+.ss-pane__mod { margin: 0 calc(-1 * var(--sp-4)); }
+/* the diff's files, 10 apart (board S24) */
+.ss-pane > .k7-pane[data-variant="tools"] > .k7-pane__body { gap: var(--gap-row); }
 
 /* ── wave S0 on the v7 kit (modules/session/s0.ts) ── */
 .ss-s0-why, .ss-s0-more { margin: var(--sp-2) 0 0; color: var(--text-dim); }

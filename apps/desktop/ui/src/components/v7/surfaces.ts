@@ -65,30 +65,44 @@ export function page(o: PageOpts): string {
 /** a settings section: its heading (4 in from its card) and its card */
 export const section = (title: string, cardHTML: string, count?: string): string => '<div class="k7-section">' + sectionHead({ title, ...(count ? { count } : {}) }) + cardHTML + '</div>';
 
-/* ── Pane (3): details (356) or tools (520, resizable: Diff, Files, Terminal, PR, + Side chat); open, closed, overlay under 900 ── */
+/* ── Pane (3): details (356: a bot's, a room's, a session's) or tools (520, resizable: Diff, Files, Terminal, PR, + Side chat); open,
+   closed, overlay under 900 ── */
 export interface PaneOpts {
-  variant?: U<'details' | 'tools'>; open?: U<boolean>; overlay?: U<boolean>; title?: U<string>; bot?: U<BotLike>; tab?: U<string>; sideChat?: U<boolean>;
+  variant?: U<'details' | 'tools' | 'session'>; open?: U<boolean>; overlay?: U<boolean>; title?: U<string>; bot?: U<BotLike>; tab?: U<string>; sideChat?: U<boolean>;
   body?: U<string>; label?: U<string>; attrs?: U<Attrs>;
   /** details of a room: its members' stack (at 32, the orbs still) heads the pane in place of one orb, and there is no Activity |
       Library (a room has no library); no board draws a room's details (an owner question): it follows a bot's */
   members?: U<readonly BotLike[]>;
+  /** `session` (board S40): the session's name with its overflow at the end (`more`: the menu's button, drawn only where the menu holds
+      something), and under it where it works: the folder and the branch, in mono */
+  folder?: U<string>; branch?: U<string>; more?: U<boolean>;
+  /** `tools`: false draws the one tool there is alone, with no strip of tabs (S24's Diff until a second tab exists); `summary` (markup)
+      then stands where the tabs would, before the close button */
+  tabs?: U<boolean>; summary?: U<string>;
+  /** `details` and `session`: what else shares the pane, as tabs over its head (a mod's pane beside the session's details) */
+  strip?: U<{ label: string; items: readonly SegItem[]; value: string }>;
 }
 export function pane(o: PaneOpts): string {
   const v = o.variant ?? 'details';
   const a = kitAttrs('Pane', { 'data-variant': v, 'data-open': o.open === false ? null : '', 'data-overlay': o.overlay ? '' : null, role: 'complementary', 'aria-label': o.label ?? (v === 'tools' ? 'Tools' : 'Details'), ...(o.attrs ?? {}) });
+  const body = '<div class="k7-pane__body">' + (o.body ?? '') + '</div></aside>';
   if (v === 'tools') {
     const tabs: SegItem[] = [{ value: 'diff', label: 'Diff' }, { value: 'files', label: 'Files' }, { value: 'terminal', label: 'Terminal' }, { value: 'pr', label: 'PR' }, ...(o.sideChat ? [{ value: 'chat', label: 'Side chat' }] : [])];
     return '<aside class="k7-pane"' + a + '><div class="k7-pane__grip" role="separator" aria-orientation="vertical" aria-label="Resize the tools" tabindex="0" aria-valuenow="520" aria-valuemin="356" aria-valuemax="900"></div>' +
-      '<div class="k7-pane__tabs">' + segmented({ label: 'Tools', items: tabs, value: o.tab ?? 'diff', variant: 'tabs' }) + '<span class="k7-grow"></span>' + iconButton({ icon: 'close', label: 'Close the tools', variant: 'tinted' }) + '</div>' +
-      '<div class="k7-pane__body">' + (o.body ?? '') + '</div></aside>';
+      '<div class="k7-pane__tabs">' + (o.tabs === false ? '<div class="k7-pane__summary">' + (o.summary ?? '') + '</div>' : segmented({ label: 'Tools', items: tabs, value: o.tab ?? 'diff', variant: 'tabs' })) + '<span class="k7-grow"></span>' + iconButton({ icon: 'close', label: 'Close the tools', variant: 'tinted', attrs: { 'data-pane-close': '' } }) + '</div>' + body;
+  }
+  const strip = o.strip ? '<div class="k7-pane__tabs">' + segmented({ label: o.strip.label, items: o.strip.items, value: o.strip.value, variant: 'tabs' }) + '</div>' : '';
+  if (v === 'session') {
+    const where = (o.folder ? glyph('folder') + '<span class="k7-mono k7-ell">' + esc(o.folder) + '</span>' : '') + (o.branch ? glyph('fork') + '<span class="k7-mono k7-ell">' + esc(o.branch) + '</span>' : '');
+    return '<aside class="k7-pane"' + a + '>' + strip + (o.title === undefined ? '' : '<div class="k7-pane__head"><div class="k7-pane__title"><h2 class="k7-pane__name">' + esc(o.title) + '</h2>' +
+      (o.more ? iconButton({ icon: 'more', label: 'More for this session', variant: 'tinted', haspopup: 'menu', attrs: { 'data-pane-more': '' } }) : '') + '</div>' +
+      (where ? '<div class="k7-pane__where">' + where + '</div>' : '') + '</div>') + body;
   }
   if (o.members) {
-    return '<aside class="k7-pane"' + a + '><div class="k7-pane__head">' + kitStack(o.members, 32, { max: 6, surface: '--bg-pane' }) + '<h2 class="k7-pane__name">' + esc(o.title ?? '') + '</h2></div>' +
-      '<div class="k7-pane__body">' + (o.body ?? '') + '</div></aside>';
+    return '<aside class="k7-pane"' + a + '>' + strip + '<div class="k7-pane__head">' + kitStack(o.members, 32, { max: 6, surface: '--bg-pane' }) + '<h2 class="k7-pane__name">' + esc(o.title ?? '') + '</h2></div>' + body;
   }
-  return '<aside class="k7-pane"' + a + '><div class="k7-pane__head">' + (o.bot ? orbHtml({ ...o.bot, state: 'idle', attention: null }, { size: 64, live: true, motion: 'lively', mode: 'fixed', surface: '--bg-pane' }) : '') + '<h2 class="k7-pane__name">' + esc(o.title ?? '') + '</h2>' +
-    segmented({ label: 'Details', items: [{ value: 'activity', label: 'Activity' }, { value: 'library', label: 'Library' }], value: o.tab ?? 'activity' }) + '</div>' +
-    '<div class="k7-pane__body">' + (o.body ?? '') + '</div></aside>';   /* no "More" in its corner: board 11 draws none there (the chrome's controls float over the pane's top) */
+  return '<aside class="k7-pane"' + a + '>' + strip + '<div class="k7-pane__head">' + (o.bot ? orbHtml({ ...o.bot, state: 'idle', attention: null }, { size: 64, live: true, motion: 'lively', mode: 'fixed', surface: '--bg-pane' }) : '') + '<h2 class="k7-pane__name">' + esc(o.title ?? '') + '</h2>' +
+    segmented({ label: 'Details', items: [{ value: 'activity', label: 'Activity' }, { value: 'library', label: 'Library' }], value: o.tab ?? 'activity' }) + '</div>' + body;   /* no "More" in its corner: board 11 draws none there (the chrome's controls float over the pane's top) */
 }
 
 /* ── Dialog (4): large (Settings: 900, a 220 nav) or form (440 to 520: commit, import, new bot, confirm); enter 200 ms, the scrim,

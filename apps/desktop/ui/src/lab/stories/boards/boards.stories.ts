@@ -3,7 +3,9 @@
    draws the board from its source beside this state and measures the difference; a screen is done when they are the same, dark
    and light. Later boards add a fixture, a state here and a row in boards.json. */
 import type { AppCtx, State, Story } from '../../types';
-import { board11, board12, board12Held, board17, boardDock, boardS17, boardS20, boardS23, boardS33, boardS36, boardS37, boardS38, boardS41, engineStopped } from '../../board-fixtures';
+import { store } from '../../../data/store';
+import type { Todo } from '../../../data/types';
+import { board11, board12, board12Held, board17, boardDock, boardS17, boardS20, boardS23, boardS33, boardS36, boardS37, boardS38, boardS40, boardS41, engineStopped } from '../../board-fixtures';
 import type { DockBoard } from '../../board-fixtures';
 
 const MOCK = { url: '/__boards/screen.html?s=bot11', note: 'the approved v7 board itself, drawn from its source' };
@@ -96,7 +98,7 @@ const bots: Story = {
 };
 
 const sessions: Story = {
-  id: 'boards/sessions', title: 'Boards: the Sessions tab', area: 'composer', kind: 'page', covers: ['page:board-S17', 'page:board-S20', 'page:board-S23', 'page:board-S33', 'page:board-S36', 'page:board-S37', 'page:board-S38', 'page:board-S41'], mock: { url: '/__boards/screen.html?s=newSess&mk=a&usage=1', note: MOCK.note },
+  id: 'boards/sessions', title: 'Boards: the Sessions tab', area: 'composer', kind: 'page', covers: ['page:board-S17', 'page:board-S20', 'page:board-S23', 'page:board-S33', 'page:board-S36', 'page:board-S37', 'page:board-S38', 'page:board-S40', 'page:board-S41'], mock: { url: '/__boards/screen.html?s=newSess&mk=a&usage=1', note: MOCK.note },
   states: {
     'S17 a new session': {
       tags: ['typical', 'owner'],
@@ -184,6 +186,37 @@ const sessions: Story = {
           await c.click('[data-kit~="ListRow"][data-id="s17-dock"]');
           await c.wait(900);
           (document.activeElement as HTMLElement | null)?.blur();   /* the board draws the composer at rest */
+        }
+      }
+    } satisfies State,
+    'S40 the session\'s details': {
+      tags: ['variant', 'owner'],
+      note: 'board S40: the details pane beside a finished turn: the session\'s name with its overflow, the folder and the branch, Session (Model, Effort, How careful, Workspace) and Use (Context, Cost, Pull request)',
+      app: {
+        provider: { patch: boardS40 },
+        setup: async (c: AppCtx) => {
+          c.hx.setState({ tab: 'session', left: 'open', right: 'closed' });
+          await c.wait(300);
+          await c.click('[data-kit~="ListRow"][data-id="s17-dock"]');
+          await c.wait(600);
+          c.hx.setState({ right: 'open' });
+          await c.wait(900);
+          (document.activeElement as HTMLElement | null)?.blur();   /* the board draws the composer at rest */
+        }
+      }
+    } satisfies State,
+    /* derived (no board draws a session's tasks): the agent's own list on its running turn, as the kit's card of steps of board 17 */
+    'a running turn with its tasks (derived from board 17)': {
+      tags: ['variant'],
+      note: 'derived from board 17\'s card ("Release 0.2.0, step 3 of 5"): the agent\'s list of tasks on the turn that works, the one being done with its dot',
+      app: {
+        provider: { patch: (p) => { const b = boardS20(p); return { ...b, details: { ...b.details, todos: store<readonly Todo[]>([['read the dock\'s stage and clip code', 'done'], ['centre the pages by layout', 'doing'], ['run the dock\'s tests', 'todo'], ['run the WebKit job', 'todo']]) } }; } },
+        setup: async (c: AppCtx) => {
+          c.hx.setState({ tab: 'session', left: 'open', right: 'closed' });
+          await c.wait(300);
+          await c.click('[data-kit~="ListRow"][data-id="s17-dock"]');
+          await c.wait(900);
+          (document.activeElement as HTMLElement | null)?.blur();
         }
       }
     } satisfies State,

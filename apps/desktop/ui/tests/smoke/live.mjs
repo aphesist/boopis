@@ -18,19 +18,29 @@ export async function liveSessions(env) {
 
     await page.keyboard.press('Control+i');
     await page.waitForTimeout(900);
-    const panel = await text(page, '.ssr-panel');
-    const want = { tasks: /round once per invoice/i, changes: /a\.py/, connectors: /fakemcp/i, environment: /\/work\/proj/, governance: /Ungoverned/, runtime: /boopis engine/ };
+    /* the session's details are the kit's pane (board S40): what the recorded session knows is in its rows; its changed files are the
+       diff the panel shows in their place; its tasks are in the thread while a turn runs (below) */
+    const panel = await text(page, '#hx-right');
+    const want = { connectors: /fakemcp/i, environment: /\/work\/proj/, runtime: /boopis engine/ };
     const missing = Object.entries(want).filter(([, re]) => !re.test(panel)).map(([k]) => k);
-    check('live', 'the details panel shows the recorded session (tasks, changes, connectors, environment, governance)', missing.length === 0, { missing, panel: panel.slice(-700) });
-    check('live', 'the details panel says what it cannot do instead of pretending', /compact|fork/i.test(panel) && /unknown|Not available/i.test(panel), panel.slice(0, 600));
-    /* the button itself, by its name: other actions in these panels (the connectors panel's "Browse the store") are enabled on purpose */
+    const ungoverned = await page.evaluate(() => ({ governed: window.__hx.data().details.governance.get().governed, cap: !!document.querySelector('#hx-right [data-pane="cap"]') }));
+    await page.evaluate(() => window.__hx.emit('hx:open-panel', { panel: 'changes', from: 'smoke' }));
+    await page.waitForTimeout(500);
+    const diff = await text(page, '#hx-right');
+    if (!/a\.py/.test(diff)) missing.push('changes');
+    if (ungoverned.governed || ungoverned.cap) missing.push('governance');
+    check('live', 'the details pane shows the recorded session (connectors, environment, no cap for an ungoverned session), and its diff the changed files', missing.length === 0, { missing, ungoverned, panel: panel.slice(-700), diff: diff.slice(0, 300) });
+    check('live', 'the details pane says what it cannot do instead of pretending', /compact|fork/i.test(panel) && /unknown|Not available/i.test(panel), panel.slice(0, 600));
+    /* Compact, by its name, where the Context row opens it */
+    await page.evaluate(() => window.__hx.emit('hx:open-panel', { panel: 'context', from: 'smoke' }));
+    await page.waitForTimeout(400);
     const compact = await page.evaluate(() => {
-      const found = [...document.querySelectorAll('.ssr-panel button')].filter((b) => b.textContent.trim() === 'Compact conversation');
+      const found = [...document.querySelectorAll('#hx-right button')].filter((b) => b.textContent.trim() === 'Compact conversation');
       return { count: found.length, disabled: found.every((b) => b.disabled) };
     });
     check('live', 'Compact conversation is disabled when this Hermes has no session.compress', compact.count === 1 && compact.disabled, compact);
 
-    const session = await text(page, '.ss-view, #hx-list-session, .ssr-panel, [data-hx-composer]');
+    const session = await text(page, '.ss-view, #hx-list-session, #hx-right, [data-hx-composer]');
     check('live', 'the Sessions section shows no mock content', leaks(session).length === 0, leaks(session));
 
     /* send a message: the recorded turn plays back, with its steps, its blank and its todo list */
@@ -42,8 +52,8 @@ export async function liveSessions(env) {
       await page.keyboard.press('Enter');
       await page.waitForTimeout(1800);
     }
-    const after = await page.evaluate(() => ({ asked: window.__hxReplay.requests.map((r) => r.method).filter((m) => m === 'prompt.submit').length, blank: !!document.querySelector('.ss-col [data-blank][data-kit~="AskCard"]'), question: document.body.textContent.includes('Keep the old alias?'), waits: window.__hx.data().waits.snapshot().filter((w) => w.kind === 'blank').length, dockAsks: window.__hx.dock().state.asks, output: [...document.querySelectorAll('.ssr-term')].map((n) => n.textContent).join('\n') }));
-    check('live', 'a turn plays back: its blank is asked in the conversation and waits on you (a session\'s blank is the session\'s: the v7 dock carries your bots\' approvals only), and its tool output reaches the Output panel', after.asked === 1 && after.blank && after.question && after.waits >= 1 && after.dockAsks === 0 && /\$ ship src\/a\.py/.test(after.output) && /PASS/.test(after.output), after);
+    const after = await page.evaluate(() => ({ asked: window.__hxReplay.requests.map((r) => r.method).filter((m) => m === 'prompt.submit').length, blank: !!document.querySelector('.ss-col [data-blank][data-kit~="AskCard"]'), question: document.body.textContent.includes('Keep the old alias?'), waits: window.__hx.data().waits.snapshot().filter((w) => w.kind === 'blank').length, dockAsks: window.__hx.dock().state.asks, tasks: document.querySelector('.ss-col [data-tasks]')?.textContent ?? '', todos: window.__hx.data().details.todos.get().length, output: (() => { const log = [...document.querySelectorAll('.ss-col [data-part="log"]')].pop(); log?.querySelector('.k7-disc__sum[aria-expanded="false"]')?.click(); return [...document.querySelectorAll('.ss-col [data-part="log"] [data-output] pre')].map((n) => n.textContent).join('\n'); })() }));
+    check('live', 'a turn plays back: its blank is asked in the conversation and waits on you (a session\'s blank is the session\'s: the v7 dock carries your bots\' approvals only), its task list is on the turn in the thread, and its tool output is in its open work line', after.asked === 1 && (after.todos === 0 || /round once per invoice/i.test(after.tasks)) && after.blank && after.question && after.waits >= 1 && after.dockAsks === 0 && /\$ ship src\/a\.py/.test(after.output) && /PASS/.test(after.output), after);
 
     const dock = await text(page, '#hx-dock');
     check('live', 'the dock shows no mock content, and nothing in it is marked a preview', leaks(dock).length === 0 && !/Preview/.test(dock), { leaks: leaks(dock), preview: /Preview/.test(dock) });

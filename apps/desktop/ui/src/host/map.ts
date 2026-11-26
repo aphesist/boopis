@@ -63,12 +63,11 @@ export function toolStep(payload: Record<string, unknown> | undefined, time = ''
   return { title: name, mono: true, ...(meta.length ? { meta } : {}), time };
 }
 
-/** the step that records a tool call that failed */
+/** the step that records a tool call that failed: the same tool and what it was asked, so the work line keeps its words ("Ran pnpm test
+    dock") and says the failure beside them */
 export function failedStep(payload: Record<string, unknown> | undefined): Step {
-  const p = obj(payload);
-  const name = str(p['name']) || str(p['tool_name']);
-  const seconds = typeof p['duration_s'] === 'number' ? elapsed(p['duration_s'] * 1000) : '';
-  return { title: name + ' failed', kind: 'fail', time: seconds };
+  const seconds = typeof obj(payload)['duration_s'] === 'number' ? elapsed((obj(payload)['duration_s'] as number) * 1000) : '';
+  return { ...toolStep(payload, seconds), kind: 'fail' };
 }
 
 /** the engine's own note that the model changed ("[Model switched to X via provider Y ...]"): a stored user row, not a message

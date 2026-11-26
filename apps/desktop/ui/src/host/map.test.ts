@@ -47,8 +47,8 @@ describe('tool calls, from recorded frames', () => {
     expect(toolStep(start?.payload)).toEqual({ title: 'hx_echo', mono: true, meta: ['plain-echo'], time: '' });
   });
   it('a failed tool.complete is a fail step with its duration', () => {
-    const step = failedStep({ name: 'terminal', is_error: true, duration_s: 0.125 });
-    expect(step).toEqual({ title: 'terminal failed', kind: 'fail', time: '0s' });
+    const step = failedStep({ name: 'terminal', context: 'pnpm test dock', is_error: true, duration_s: 0.125 });
+    expect(step).toEqual({ title: 'terminal', mono: true, meta: ['pnpm test dock'], kind: 'fail', time: '0s' });
   });
 });
 

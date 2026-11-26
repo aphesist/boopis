@@ -39,7 +39,7 @@ function bodyHTML(b: Bot): string {
   const rows = schedulesOf(b);
   const upcoming = rows.length
     ? '<h3 class="k7-pane__sec">Upcoming</h3>' + kit.html.card({ variant: 'pane', rows: rows.map((s) => ({
-      label: s.what, labelHTML: esc(s.what) + '<br><span class="k7-row__sub">' + esc(s.when) + '</span>',
+      label: s.what, sub: s.when,
       control: kit.html.switch({ label: s.what, checked: !s.paused, attrs: { 'data-schedule': s.id } })
     })) })
     : '';

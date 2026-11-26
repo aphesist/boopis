@@ -18,7 +18,7 @@ import { NO_MODS } from '../../data/mods-model';
 import { inTauri } from '../../host/bridge';
 import type { HxCard } from '../cards';
 import { ctl, docked } from './ctl';
-import { bringForward, decoratePanel, dockedPanes, drawBand, setOnChange, updateTrees } from './panes';
+import { bringForward, panelTabs, dockedPanes, drawBand, setOnChange, updateTrees } from './panes';
 import { placeLog, placePlaced } from './rows';
 import { setStatus } from './status';
 import { themeCard, placeThemeCard, withdraw } from './theme-card';
@@ -150,7 +150,7 @@ function init(): void {
 
 surface.onConversation = follow;
 surface.onWorking = (on) => { working = on; syncProps(); };
-surface.decoratePanel = decoratePanel;
+surface.panelTabs = panelTabs;
 
 /** for the tests: forget the session and every site's state */
 export function resetMods(): void {

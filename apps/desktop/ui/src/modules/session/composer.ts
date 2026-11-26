@@ -83,7 +83,8 @@ export function lineItems(o: { text: string; attachments: number; sessionId: str
   if (G.spent) items.push(['cost', { label: 'Cost', value: G.governed && G.cap ? G.spent + ' of ' + G.cap : G.spent, mono: true, end: true, attrs: { 'data-line': 'cost' } }]);
   return items.filter(([id]) => !o.hidden.includes(id)).map(([, item]) => item);
 }
-/** the "who answers next" list (model-menu.ts) as the kit's Menu: Automatic first, a council where one can sit, then every model by provider */
+/** the "who answers next" list (model-menu.ts) as the kit's option Menu (board S19's rows): Automatic first, a council where one can sit,
+    then every model by provider, each with what it is on a second line; the effort's levels under them */
 export function modelMenu(o: { current: string; governed: boolean; smart: boolean; sessionId: string }): MenuEntry[] {
   const choices = data().details.choices.get();
   const now = o.smart ? SMART_VALUE : currentChoice(choices, o.current)?.value ?? o.current;
@@ -91,8 +92,9 @@ export function modelMenu(o: { current: string; governed: boolean; smart: boolea
   for (const e of modelEntries(choices, { current: o.current, governed: o.governed, council: data().council.can(o.sessionId) })) {
     if ('options' in e) {
       out.push({ heading: e.label ?? '' });
-      for (const x of e.options) out.push({ label: x.label ?? '', value: x.value, ...(x.desc ? { desc: x.desc } : {}), leadHTML: ui.html.modelMark(x.value, { size: 16, label: false }), checked: x.value === now, role: 'menuitemradio', ...(x.disabled ? { disabled: true } : {}) });
-    } else out.push({ label: e.label ?? '', value: e.value, ...(e.desc ? { desc: e.desc } : {}), ...(e.icon ? { icon: e.icon } : {}), ...(e.keys ? { keys: e.keys } : {}), ...(e.value === SMART_VALUE ? { checked: now === SMART_VALUE, role: 'menuitemradio' } : {}), ...(e.disabled ? { disabled: true } : {}) });
+      /* S19's two-line rows: the model's mark and name, and what it is on the second line, whole */
+      for (const x of e.options) out.push({ label: x.label ?? '', value: x.value, meaning: x.desc ?? '', leadHTML: ui.html.modelMark(x.value, { size: 16, label: false }), chosen: x.value === now, ...(x.disabled ? { disabled: true } : {}) });
+    } else out.push({ label: e.label ?? '', value: e.value, meaning: e.desc ?? '', ...(e.icon ? { icon: e.icon } : {}), ...(e.keys ? { keys: e.keys } : {}), chosen: e.value === SMART_VALUE && now === SMART_VALUE, ...(e.disabled ? { disabled: true } : {}) });
   }
   return [...out, ...effortEntries(), '-', { heading: o.governed ? FOOT_GOVERNED : FOOT_UNGOVERNED }];
 }
@@ -106,6 +108,35 @@ function effortEntries(): MenuEntry[] {
   if (!levels.length) return [];
   const can = caps.session.changeModel.ok ? caps.session.changeEffort : caps.launch.effort, now = c.launch.get().effort;
   return ['-', { heading: 'Effort' }, ...levels.map((e): MenuEntry => ({ label: e.charAt(0).toUpperCase() + e.slice(1), value: EFFORT_VALUE + e, checked: now === e, role: 'menuitemradio', ...(can.ok ? {} : { disabled: true, desc: can.why }) }))];
+}
+
+/** open "who answers next" against `anchor`: the composer's line opens it over the composer, the details pane under its Model row. A pick
+    changes who answers the next messages; an effort changes in place (a started session's thread gets its line, S33); a refusal is said */
+export function openWhoAnswers(anchor: HTMLElement, o: { sessionId: string; place: 'above' | 'below'; align: 'start' | 'end'; open?: (anchor: HTMLElement, m: Parameters<typeof kit.openMenu>[1]) => HTMLElement | null; council?: () => void; then?: () => void }): void {
+  const G = gov(), controls = data().sessionControls;
+  (o.open ?? kit.openMenu)(anchor, {
+    label: 'Who answers next', variant: 'options', entries: modelMenu({ current: G.model, governed: G.governed, smart: G.smart, sessionId: o.sessionId }), place: o.place, align: o.align, attrs: v7Attrs(),
+    onSelect: (v) => {
+      if (v.startsWith(EFFORT_VALUE)) { void controls?.setEffort(v.slice(EFFORT_VALUE.length)).then((why) => { if (why) say(why); o.then?.(); }); return; }
+      if (v === COUNCIL_VALUE) { o.council?.(); return; }
+      setGovernance(v === SMART_VALUE ? { smart: true } : { smart: false, model: v });
+      o.then?.();
+    }
+  });
+}
+/** the effort alone (the details pane's Effort row, board S40): the engine's levels, the session's own checked */
+export function openEffortMenu(anchor: HTMLElement, place: 'above' | 'below' = 'below'): void {
+  const controls = data().sessionControls;
+  const entries = effortEntries().slice(1);   /* without the rule that parts it from the models */
+  if (!controls || !entries.length) return;
+  kit.openMenu(anchor, { label: 'Effort', entries, place, align: 'end', attrs: v7Attrs(), onSelect: (v) => { void controls.setEffort(v.slice(EFFORT_VALUE.length)).then((why) => { if (why) say(why); }); } });
+}
+/** who answers next, as the line and the details pane name it: a council, Smart, or the model's short name */
+export function answersNext(sessionId: string): { name: string; model: string | null; icon: string | null } {
+  const G = gov(), asking = data().council.armed(sessionId)?.members.length ?? G.council ?? 0;
+  if (asking) return { name: 'Council of ' + asking, model: null, icon: 'bots' };
+  if (G.smart || !G.model) return { name: G.smart ? 'Smart' : 'Choose a model', model: null, icon: 'spark' };
+  return { name: ui.modelMark.short(G.model) || G.model, model: G.model, icon: null };
 }
 
 export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): SessionComposer {
@@ -206,16 +237,10 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
   }
   const lineItem = (id: LineItemId): HTMLElement => slot.querySelector<HTMLElement>('[data-line="' + id + '"]') ?? slot.querySelector<HTMLElement>('.k7-composer__box') ?? slot;
   function openModel(viaKeyboard: boolean, anchor: HTMLElement = lineItem('model')): void {
-    const G = gov();
-    openOver(anchor, {
-      label: 'Who answers next', variant: 'list', entries: modelMenu({ current: G.model, governed: G.governed, smart: G.smart, sessionId: o.sessionId() }), place: 'above', align: 'start', attrs: v7Attrs(),
-      onSelect: (v) => {
-        /* the effort changes in place (a started session's thread gets its line, S33); a refusal is said */
-        if (v.startsWith(EFFORT_VALUE)) { void controls?.setEffort(v.slice(EFFORT_VALUE.length)).then((why) => { if (why) say(why); sync(); }); return; }
-        if (v === COUNCIL_VALUE) { requestAnimationFrame(() => { void openCouncilForm(lineItem('model'), o.sessionId(), () => { sync(); }); }); return; }
-        setGovernance(v === SMART_VALUE ? { smart: true } : { smart: false, model: v });
-        if (viaKeyboard) api.focus();
-      }
+    openWhoAnswers(anchor, {
+      sessionId: o.sessionId(), place: 'above', align: 'start', open: openOver,
+      council: () => { requestAnimationFrame(() => { void openCouncilForm(lineItem('model'), o.sessionId(), () => { sync(); }); }); },
+      then: () => { sync(); if (viaKeyboard) api.focus(); }
     });
   }
   /** what an item holds when the line has folded it away (a narrow composer, a window under 900 wide: the branch and the context go

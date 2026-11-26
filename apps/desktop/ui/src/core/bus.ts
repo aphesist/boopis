@@ -5,7 +5,8 @@ import type { AppState, Layout, Tab, ThemeScheme } from './types';
 
 const log = logger('bus');
 
-export type PanelName = 'context' | 'tasks' | 'changes' | 'output' | 'governance' | 'connectors' | 'environment';
+/** a part of the session's right panel: its details (S40), a part of them, or the diff (`changes`, S24) */
+export type PanelName = 'details' | 'context' | 'changes' | 'connectors' | 'environment';
 export type RegionName = 'bar' | 'list' | 'messages' | 'composer' | 'panel' | 'dock';
 export type DockMode = 'off' | 'minimal' | 'normal' | 'expanded' | 'edit';
 

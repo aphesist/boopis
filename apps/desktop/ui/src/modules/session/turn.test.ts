@@ -37,6 +37,16 @@ describe('the work line', () => {
     expect([rows[0]?.text, rows[0]?.icon, rows[0]?.time]).toEqual(['Read a.ts', 'session', '0:02']);
     expect(rows[2]?.icon).toBe('ladder');
   });
+  it('a tool call that failed keeps its words: one row, "Ran pnpm test dock", with "failed" and its time', () => {
+    const steps = [{ title: 'patch', mono: true, meta: ['modules/dock/dock.css'], time: '' }, { title: 'terminal', mono: true, meta: ['pnpm test dock'], time: '' }, { title: 'terminal', mono: true, meta: ['pnpm test dock'], kind: 'fail' as const, time: '3s' }];
+    expect(stepRows(turn({ steps, status: 'done' }))).toEqual([
+      { text: 'Changed dock.css', state: 'log', icon: 'pen' },
+      { text: 'Ran pnpm test dock', state: 'log', icon: 'terminal', word: 'failed', time: '3s' }]);
+    /* the failure is the command already counted, never another step, and never the tool's raw name */
+    expect(workLine(turn({ steps, status: 'done', time: '0m 9s' }))).toBe('Worked for 9s: changed 1 file, ran 1 command');
+    /* a failure with no call before it (a transcript read back) is its own row, in the same words */
+    expect(stepRows(turn({ steps: [steps[2] as (typeof steps)[2]], status: 'done' }))[0]).toEqual({ text: 'Ran pnpm test dock', state: 'log', icon: 'terminal', word: 'failed', time: '3s' });
+  });
   it('writes the open work line as board S10 does: reads that follow one another are one row, each change and each command its own, led by its kind\'s glyph', () => {
     const step = (title: string, what?: string): Step => ({ title, mono: true, ...(what ? { meta: [what] } : {}), time: '' });
     const rows = stepRows(turn({ status: 'done', steps: [...Array.from({ length: 6 }, (_, i) => step('read_file', 'src/f' + i + '.ts')), step('patch', 'modules/dock/dock.css'), step('patch', 'modules/dock/engine.ts'), step('terminal', 'pnpm test dock')] }),

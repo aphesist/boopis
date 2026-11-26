@@ -19,7 +19,7 @@ import { clock } from '../../host/map';
 import { sessionComposer } from './composer';
 import type { SessionComposer } from './composer';
 import { copyText, mdOf } from './shared';
-import { openPanel } from './right';
+import { openDiff } from './details';
 import { childrenBlock, resetChildren, upsertChild } from './children';
 import type { ChildHost } from './children';
 import { councilBlock, drawCouncil } from './council';
@@ -34,7 +34,7 @@ import { mountNew } from './new';
 import type { NewScreen } from './new';
 import { openModel, openCarefulFor, openEffort, openFolder, launchView } from './launch';
 import { followEngine } from '../chat/engine';
-import { approvalCard, askShape, footOf, isOpen, lapsedCard, sayTurn, statusOf, stepRows, toolRow, workLine } from './turn';
+import { approvalCard, askShape, footOf, isOpen, lapsedCard, sayTurn, statusOf, stepRows, tasksCard, toolRow, workLine } from './turn';
 import type { AskState } from './turn';
 
 export const VIEW = {
@@ -76,6 +76,7 @@ function turnEl(kind: 'user' | 'agent', id: string, label: string): HTMLElement 
 }
 /* an answer is markdown, drawn by the kit (one renderer for every conversation); its paths open in the session's folder */
 const proseText = (paras: readonly string[], bullets?: readonly string[]): string => [...paras, ...(bullets?.length ? [bullets.map((b) => '- ' + b).join('\n')] : [])].join('\n\n');
+const base = (path: string): string => path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path;
 const roots = (): string[] => { const c = data().details.environment.get().cwd; return c ? [c] : []; };
 function prose(text: string): HTMLElement {
   const p = ui.markdown(text, { kit: true });
@@ -208,17 +209,33 @@ function partsOf(a: AgentTurn): Part[] {
     if (!a.steps.length) return;
     const line = workLine(a);
     /* the list under it is drawn again as steps arrive; whether it is open is the reader's (kept across a redraw) */
-    out.push(['log', line + '|' + a.steps.length + '|' + a.status, () => {
+    out.push(['log', line + '|' + a.steps.length + '|' + a.status + '|' + (isLast ? data().details.output.get().length : 0), () => {
       const open = turnNode(a.id)?.querySelector('[data-part="log"]')?.hasAttribute('data-open') ?? false;
       /* a change says its lines where the session's changed files know them (the last turn's: board S10, "Changed dock.css, +12 −3") */
       const changes = isLast ? data().details.changes.get() : [];
       const counts = (path: string): readonly [number, number] | null => { const c = changes.find((x) => x[0] === path || x[0].endsWith('/' + path) || path.endsWith('/' + x[0])); return c ? [c[1], c[2]] : null; };
-      return kit.disclosure({ variant: 'worklog', summary: line, steps: stepRows(a, counts), open });
+      /* what the session's commands printed stands under its last turn's steps, in the kit's terminal Well (the session keeps one log) */
+      const printed = isLast ? data().details.output.get() : [], env = data().details.environment.get();
+      return kit.disclosure({ variant: 'worklog', summary: line, steps: stepRows(a, counts), open, ...(printed.length ? { after: kit.html.well({ kind: 'terminal', text: printed.join('\n'), path: base(env.cwd), branch: env.branch, label: 'Output', attrs: { 'data-output': '' } }) } : {}) });
+    }]);
+  };
+  /* the agent's own list of what it means to do (its todo list), on the session's last turn: the kit's card of steps, as board 17 draws
+     a working bot's ("Release 0.2.0, step 3 of 5"). Open while the turn works; once it ended it folds and says how many were done. The
+     reader opens and folds it, and that is kept across a redraw */
+  const tasks = (): void => {
+    const todos = isLast ? data().details.todos.get() : [];
+    if (!todos.length) return;
+    out.push(['tasks', JSON.stringify([todos, running]), () => {
+      const was = turnNode(a.id)?.querySelector<HTMLElement>('[data-part="tasks"]');
+      const kept = was && was.dataset['ran'] === String(running) ? was.hasAttribute('data-open') : running;
+      const card = kit.toolRow({ ...tasksCard(todos, running), open: kept });
+      card.dataset['ran'] = String(running);
+      return card;
     }]);
   };
   if (a.council) out.push(['council', 'council', () => councilBlock(a.council as NonNullable<AgentTurn['council']>)]);
   /* while it works or waits: what it said, then what it did (board S20); once it ended: the work, then the answer (board S23) */
-  if (running) { said(); log(); } else { log(); said(); }
+  if (running) { said(); log(); tasks(); } else { log(); tasks(); said(); }
   for (const f of a.forms ?? []) {
     if (askShape(f) !== 'tool') continue;
     const st = formState(f), status = st.status ?? f.resolved;
@@ -230,7 +247,7 @@ function partsOf(a: AgentTurn): Part[] {
   /* a ship that did not pass its gate (board S38): the check and its verdict, what it printed, what became of the change, and the one
      way on, which asks the agent to fix what the gate found and ship again (on the last turn, once it ended) */
   if (a.gate && !running) out.push(['gate', JSON.stringify([a.gate, isLast]), () => gateCard(a.gate as GateFail, isLast)]);
-  /* the last finished turn that changed files lists them (board S23); their diff opens in the Changes panel */
+  /* the last finished turn that changed files lists them (board S23); "Open diff" opens them in the right panel (board S24's Diff) */
   const files = isLast && !running && (a.ship || a.kept?.length) ? data().details.changes.get() : [];
   if (files.length) out.push(['files', JSON.stringify(files), () => filesCard(files.map((c) => ({ path: c[0], add: c[1], del: c[2] })))]);
   const foot = footOf(a, footCan(a));
@@ -260,7 +277,7 @@ const lastAgent = (): string | null => [...TURNS.keys()].pop() ?? null;
 const elapsed = (a: AgentTurn): string => Math.max(0, Math.floor((Date.now() - (a.startedAt ?? Date.now())) / 1000)) + 's';
 function filesCard(files: Array<{ path: string; add: number; del: number }>): HTMLElement {
   const c = kit.filesCard({ files, action: 'Open diff', actionAttrs: { 'data-action': 'view-diff' }, ...(files.length > 8 ? { fold: true, open: false } : {}) });
-  c.querySelector('[data-files]')?.addEventListener('click', () => { openPanel('changes'); });
+  c.querySelector('[data-files]')?.addEventListener('click', () => { openDiff(); });
   return c;
 }
 /** what "Fix and retry" sends as your next message: the agent reads the failing check in its own context */
@@ -511,7 +528,7 @@ function onTurnKey(e: KeyboardEvent): void {
   if (key === 'Enter' || key === 'o') { const d = t.querySelector<HTMLElement>('.k7-disc__sum'); if (d) { e.preventDefault(); d.click(); } return; }
   if (key === 'c') { e.preventDefault(); void copyText(user ? '> ' + user.text : turnText(id) || t.innerText); kit.notify('Copied'); return; }
   if (key === 'e' && user) { e.preventDefault(); VIEW.composer?.setValue(user.text); VIEW.composer?.focus(); return; }
-  if (key === 'd') { e.preventDefault(); openPanel('changes'); return; }
+  if (key === 'd') { e.preventDefault(); openDiff(); return; }
   if (key === 'b') { const b = t.querySelector<HTMLElement>('[data-blank] [data-kit~="Chip"]'); if (b) { e.preventDefault(); b.focus(); } }
 }
 
@@ -635,7 +652,7 @@ export function mountView(root: HTMLElement): void {
   const c0 = controls();
   /* a folder chosen (or lost) changes what the pill says of a session that has not started */
   if (c0) { c0.capabilities.subscribe(() => { syncFeet(); redrawCanvas(); }); c0.launch.subscribe(() => { redrawCanvas(); if (NEW?.shown) emit('hx:title', titleOf(openSession())); }); }
-  data().details.changes.subscribe(() => { const id = lastAgent(); if (id) drawAgent(id); });
+  for (const w of [data().details.changes, data().details.todos, data().details.output]) (w as { subscribe(fn: () => void): unknown }).subscribe(() => { const id = lastAgent(); if (id) drawAgent(id); });
   provide('stop', (d) => { if (d.tab !== 'session' || !isRunning(VIEW.current)) return false; sessions().stop(VIEW.current); return true; });
   provide('find', (d) => (d.tab === 'session' ? openFind() : false));
   on('hx:nav', (d) => {

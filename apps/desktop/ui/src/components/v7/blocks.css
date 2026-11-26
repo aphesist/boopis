@@ -15,15 +15,23 @@
 .k7-row__value.k7-mono { font-size: var(--fs-xs); }
 /* a value with a lead (kit.css: a `.row.s.dim` of a 14 mark and the name, 5 apart), and a label's second line (12 --text-dim on the label's line) */
 .k7-row__value--lead { display: inline-flex; align-items: center; gap: var(--pad-kbd); }
+/* a value that leads somewhere else (a pull request's number, board S40): the accent */
+.k7-row__link { color: var(--accent-text); }
 .k7-row__sub { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
 /* a row that is a control: the pointer, the 6% fill under it (the boards' `.sr.hov`), the ring inside the card */
 .k7-row[data-action] { cursor: pointer; transition: background-color var(--dur-out) var(--ease-out); }
 @media (hover: hover) and (pointer: fine) { .k7-row[data-action]:hover { background: var(--hover); transition-duration: var(--dur-1); } }
 .k7-row[data-action]:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
 .k7-card[data-variant="pane"] { padding: var(--pad-queue) 0; }
-/* a pane card's row (kit.css `.pane-card .sr`): at least 40 tall, 4 14, its label 14/18, its value 13 (mono too) */
-.k7-card[data-variant="pane"] .k7-row { min-height: var(--pill-h); padding: var(--pad-queue) var(--pad-btn-card); }
-.k7-card[data-variant="pane"] .k7-row__label { line-height: var(--lh-s); letter-spacing: var(--track-s); white-space: normal; }
+/* a pane card's row (kit.css `.pane-card .sr`): at least 40 tall, its words 14 from the card's sides, its label 14/18, its value 13
+   (mono too). The row itself stands 4 from the card's sides, as from its top and foot, on the corner concentric with the card's: a row
+   that is a control keeps its fill and its ring inside the card, and every row shares its edges */
+.k7-card[data-variant="pane"] .k7-row { min-height: var(--pill-h); margin-inline: var(--pad-queue); padding: var(--pad-queue) calc(var(--pad-btn-card) - var(--pad-queue)); border-radius: calc(var(--r-card) - var(--pad-queue)); }
+.k7-card[data-variant="pane"] .k7-row:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
+.k7-card[data-variant="pane"] .k7-row__label { line-height: var(--lh-s); letter-spacing: var(--track-s); white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+/* a long value is cut, never its label (a folder's path, a harness's version: whole in the row's tooltip) */
+.k7-card[data-variant="pane"] .k7-row:has(> .k7-row__value) > .k7-row__label { flex: 0 0 auto; max-width: 60%; }
+.k7-card[data-variant="pane"] .k7-row > .k7-row__value { flex: 0 1 auto; min-width: 0; margin-inline-start: auto; overflow: hidden; text-overflow: ellipsis; }
 .k7-card[data-variant="pane"] .k7-row__value, .k7-card[data-variant="pane"] .k7-row__value.k7-mono { font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); }   /* a mono value keeps the 13 step's tracking here (kit.css: `.s` after `.mono`) */
 /* the danger zone: collapsed to its heading at the end of a page (the owner's pick 08); open, its rows */
 .k7-card[data-variant="danger"] { padding: 0; }
@@ -97,7 +105,11 @@
 .k7-orow[aria-checked="true"] .k7-orow__ring { box-shadow: inset 0 0 0 5px var(--accent-mark, var(--accent)); }
 .k7-orow__text { display: flex; flex-direction: column; min-width: 0; }
 .k7-orow__name { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); white-space: nowrap; }
-.k7-orow__meaning { font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the second line says what the choice means, whole: a sentence longer than the menu takes another line (S19 cuts none) */
+.k7-orow__meaning { font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); overflow-wrap: anywhere; }
+.k7-orow__meaning:empty { display: none; }
+.k7-orow__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.k7-orow__name > :is(svg, .ui-model) { flex: none; }
 @media (hover: hover) and (pointer: fine) { .k7-orow:not([aria-checked="true"], [aria-disabled="true"]):hover { background: var(--hover); transition-duration: var(--dur-1); } }
 /* a step that cannot be chosen now: it keeps its place, its name goes faint and its second line says why (MenuRow's disabled colour) */
 .k7-orow[aria-disabled="true"] { cursor: default; }
@@ -239,10 +251,13 @@
    mark at the foot of the last bubble of its run (`.gm`); a tool row, the changed files and the turn's foot are as wide as the column.
    The boards' own margins: the work line 10 under what it follows and 10 over a tool row, 8 over the answer; a tool row 6; the changed
    files and the turn's foot 8; a question 10; the status line 12 */
-.k7-thread[data-kind="session"] > :is(.k7-disc, .k7-tool, .k7-files, .k7-foot, .k7-ask, .k7-status) { margin-inline-start: var(--gutter); }
+.k7-thread[data-kind="session"] > :is(.k7-disc, .k7-tool, .k7-btool, .k7-files, .k7-foot, .k7-ask, .k7-status) { margin-inline-start: var(--gutter); }
 .k7-thread[data-kind="session"] > :is(.k7-tool, .k7-files, .k7-foot) { width: auto; align-self: stretch; }
 .k7-thread[data-kind="session"] > .k7-ask { width: min(100% - var(--gutter), var(--bubble-max)); align-self: flex-start; }
 .k7-thread[data-kind="session"] > * + .k7-disc { margin-top: var(--gap-row); }
+/* a session's card of steps (its tasks) is as wide as the column, as its tool rows are; 8 under the work line */
+.k7-thread[data-kind="session"] > .k7-btool { align-self: stretch; width: auto; }
+.k7-thread[data-kind="session"] > .k7-disc + .k7-btool { margin-top: var(--sp-2); }
 /* a finished turn starts with its work line, at the column's own edge (board S23) */
 .k7-thread[data-kind="session"] > .k7-disc:first-child { margin-inline-start: 0; }
 .k7-thread[data-kind="session"] > .k7-disc + * { margin-top: var(--sp-2); }
@@ -274,6 +289,10 @@
 .k7-disc__sum:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }   /* at a turn's edge: the turn has no padding to hold the ring */
 .k7-disc > .k7-disc__body { display: none; }
 .k7-disc[data-open] > .k7-disc__body { display: block; }
+/* what follows the steps (a work log's output in a Well, a Button): 8 under them, in the steps' own column */
+.k7-disc__after { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-2); margin-top: var(--sp-2); min-width: 0; }
+.k7-disc__after > .k7-well { align-self: stretch; }
+.k7-disc[data-variant="worklog"] > .k7-disc__body > .k7-disc__after { margin-inline-start: calc(var(--icon-s) + var(--gap-s)); }
 /* the boards' `.steps` and `.step` (kit.css): rows 28 tall 2 apart, 13 with its tracking; a 16 slot for the check (--ok-text), the running
    dot (7, breathing) or the dot of a step to do (6, --mark-off); the running step in --text, those to do in --text-quiet; what a step
    says at its end in mono 11 --text-quiet */
@@ -290,6 +309,7 @@
 .k7-step[data-state="now"] .k7-step__dot { width: var(--step-dot); height: var(--step-dot); background: var(--text-dim); animation: k7-pulse var(--dur-breathe) var(--ease-io) infinite; }
 .k7-step[data-state="todo"] { color: var(--text-quiet); }
 .k7-step__text { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k7-step > .k7-word { flex: none; }
 .k7-step__time { flex: none; margin-inline-start: auto; font-size: var(--fs-2xs); color: var(--text-quiet); }
 @media (prefers-reduced-motion: reduce) { .k7-step[data-state="now"] .k7-step__dot { animation: none; } }
 

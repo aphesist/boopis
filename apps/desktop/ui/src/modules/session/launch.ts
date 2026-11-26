@@ -51,9 +51,10 @@ export const SMART = '__smart';
 export function openModel(anchor: HTMLElement): void {
   const d = data().details, g = d.governance.get();
   const now = g.smart || !g.model ? SMART : g.model;
-  const entries = [{ label: 'Automatic', desc: now === SMART ? 'Smart, now' : 'Smart picks for each message', value: SMART, icon: 'spark' },
-    ...d.choices.get().map((c) => ({ label: ui.modelMark.short(c.model) || c.model, value: c.value, leadHTML: ui.html.modelMark(c.value, { size: 16, label: false }), desc: ui.modelMark.same(c.value, now) ? c.providerName + ', now' : c.providerName }))];
-  kit.openMenu(anchor, { label: 'Model', variant: 'list', entries, place: 'below', align: 'center', attrs: v7Attrs(), onSelect: (v) => { const why = d.setGovernance(v === SMART ? { smart: true } : { smart: false, model: v }); if (why) say(why); } });
+  /* S19's two-line rows: the name, and under it whose model it is; the one that answers now is the chosen row */
+  const entries = [{ label: 'Automatic', meaning: 'Smart picks a model for each message', value: SMART, icon: 'spark', chosen: now === SMART },
+    ...d.choices.get().map((c) => ({ label: ui.modelMark.short(c.model) || c.model, value: c.value, leadHTML: ui.html.modelMark(c.value, { size: 16, label: false }), meaning: c.providerName, chosen: now !== SMART && ui.modelMark.same(c.value, now) }))];
+  kit.openMenu(anchor, { label: 'Model', variant: 'options', entries, place: 'below', align: 'center', attrs: v7Attrs(), onSelect: (v) => { const why = d.setGovernance(v === SMART ? { smart: true } : { smart: false, model: v }); if (why) say(why); } });
 }
 
 export function openEffort(anchor: HTMLElement): void {

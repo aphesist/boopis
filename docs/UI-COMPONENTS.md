@@ -104,9 +104,9 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 |---|---|---|---|---|
 | 1 | WindowChrome | `windowChrome` (`titlePill`, `searchHint` inside) | `kit/window-chrome` | rail A, compact B; title idle, running; search hint S5, button S1, pill S2, off |
 | 2 | Page | `page`, `section` | `kit/page` | column, settings page with its scope; empty |
-| 3 | Pane | `pane` | `kit/pane` | details (bot, session, room), tools (Diff, Files, Terminal, PR, side chat); overlay |
+| 3 | Pane | `pane` | `kit/pane` | details (a bot's: board 11; a room's), session (board S40: the name with its overflow, the folder and the branch; a long name; under a strip of tabs when a mod's pane shares it), tools (Diff, Files, Terminal, PR, side chat; one tool alone with no strip of tabs and its summary where they would stand: S24's Diff until a second tab exists); overlay. A pane card's rows stand 4 inside the card on its concentric corner, a long value is cut and never its label, a row may have a second line (`sub`), `k7-pane__note` is a sentence under a card. In the app: `shell/details-panel` (the session's details and its diff), `bots/group-details`, board 11's pane |
 | 4 | Dialog | `dialog` | `kit/dialog` | large (Settings), form (commit, new bot, import, confirm); error |
-| 5 | Menu | `menu`, `openMenu` | `kit/menu` | menu, quick, palette / @ $, snooze, split, options, list (rows with a description, 360: boards S31, S32; a session's "who answers next"); open, flipped. An open Menu gives a row whose description is cut its whole words as a tooltip |
+| 5 | Menu | `menu`, `openMenu` | `kit/menu` | menu, quick, palette / @ $, snooze, split, options (board S19's two-line rows: the name, what it means on a second line that is never cut; a row may lead its name with a mark or a glyph and end it with its keys: a session's "who answers next" and the new session's model menu), list (rows with a description beside the name, 360: boards S31, S32); open, flipped. An open Menu gives a row whose description is cut its whole words as a tooltip |
 | 6 | Card | `card` (and its Row) | `kit/card` | settings, pane, danger zone collapsed and open |
 | 7 | Block | `block` | `kit/block` | the corner rule's specimen; `offer` (S37: what is missing, said kindly, over the ways to get it, each a Button led by a provider's mark); narrow |
 | 8 | ToolRow | `toolRow` | `kit/tool-row` | edit, command, read, search; running, done, failed, waiting; a session's (S20): a change waiting with its answers, a command waiting, allowed, denied with feedback; an answer hovered, focused; narrow |
@@ -116,7 +116,7 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 12 | Notice | `notice` | `kit/notice` | composer, page, floating; neutral, amber, accent, red; 0 to 2 actions; dismiss |
 | 13 | SystemLine | `systemLine` | `kit/system-line` | info (with `meta`: what a changed setting costs, in mono at its end, S33), steer, hand-off, error (the glyph and the words in red, S36) with its action (the tint Button, `.sysline.act .btn`). A stopped engine's line is `modules/chat/engine.ts` in a session, a bot's chat and a room |
 | 14 | Bubble | `bubble` | `kit/bubble` | user, agent, a bot's fill, room byline, brand tile, you wash, code |
-| 15 | DiffView | `diffView` | `kit/diff-view` | stacked, split; comment, comment focused |
+| 15 | DiffView | `diffView` | `kit/diff-view` | stacked, split; comment, comment focused; a file of the tools' Diff that folds by its head (board S24: the chevron, the path, its counts), open and closed, its head hovered and focused |
 | 16 | Well | `well` | `kit/well` | code in a Block and a bubble, terminal |
 | 17 | ListRow | `listRow`, `list` | `kit/list-row` | session, bot, head, item, compact; current, needs you, working; the Bots list (hover, focus, pressed, the main bot open, narrow with long names, no rows, archived items) |
 | 18 | SectionHead | `sectionHead` | `kit/section-head` | plain, count, disclosure; collapsed |
@@ -137,7 +137,7 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 33 | Badge | `badge` | `kit/badge` | neutral, amber |
 | 34 | StatusLine | `statusLine` | `kit/status-line` | bot, session, system; working, waiting |
 | 35 | Avatar | `avatar` | `kit/avatar` | orb 16 to 96, brand tile, stack, logomark |
-| 36 | Disclosure | `disclosure` | `kit/disclosure` | steps, work log; closed, open; the summary hovered, focused; no steps; narrow; the work log open as S10 draws it (rows under its words, each led by its kind's glyph: a step's `log` state) |
+| 36 | Disclosure | `disclosure` | `kit/disclosure` | steps, work log; closed, open; the summary hovered, focused; no steps; narrow; the work log open as S10 draws it (rows under its words, each led by its kind's glyph: a step's `log` state; a step that failed keeps its words and says "failed" as a red StatusWord before its time: `word`); what follows the steps (`after`): a work log's output in the terminal Well, a list of parts with a Button (the context's parts and "Compact conversation") |
 | 37 | TurnFoot | `turnFoot` | `kit/turn-foot` | bot (model, time, cost); session (S23: the checkpoint, the actions that exist, the model with its time and cost): only Undo, none, Undo disabled, a route with why and "ungoverned", an action hovered and focused, narrow |
 | 38 | TimeSeparator | `timeSeparator` | `kit/time-separator` | a gap, NEW |
 | 39 | Composer | `composer` | `kit/composer` | session, bot, room, dock, notch; typed, multi-line, running (Stop beside the mic; with text; idle; Stop hovered, focused; narrow), held, no model, quick menu; no voice model yet (the voice circle as ever, its name saying so; what it opens: the Notice with "Set up voice"); nothing queues (no send while a turn runs); a session's line and marks (S20; an item hovered, focused; narrow: it folds; no line); a room's line and hint; chips in the text (and narrow); the "@" list open |
@@ -171,9 +171,15 @@ in its details). The v6 room header, presence entry, huddle fold, held strip, le
 kit's too (`modules/session/conversation.ts`, `turn.ts`, `composer.ts`): the thread, the composer and its line, their menus (the kit's
 Menu), the model-change line (SystemLine), find (the kit's search Field). **Still v6 in the Bots tab:** the bot settings sheet, the
 new-bot and new-group forms, a room's kanban board view; **in a session:** the form card for forms with fields (`hx-card`: credentials,
-sign-ins, plans), the tasks handed to other models (`children.ts`, `ui.child`), a council (`council.ts`), the details panel, find's
+sign-ins, plans), the tasks handed to other models (`children.ts`, `ui.child`), a council (`council.ts`), find's
 popover shell; and outside them the palette, and Settings, Store and Keyboard. The v6 composer and its mentions (`components/composer.ts`,
 `mentions.ts`, `.ui-composer`, `.ui-ff`, the story `composer/composer`) were deleted at step 6a: every composer is `kit.composer`.
+**Since board S40** (step 6c) the session's right panel is the kit's Pane (`modules/session/details.ts`): its details as S40 draws them,
+with what the lead kept in them until Settings holds it (the context's parts and Compact in a Disclosure, the cap, Environment and
+Connectors as pane cards), and the diff a FilesCard opens (S24's Diff alone: DiffViews that fold). The agent's tasks are the kit's
+card of steps on the session's last turn (the ToolRow's `bot` variant, board 17's card), and what its commands printed is a terminal
+Well at the end of the open work line. The v6 panel (`right.ts`, `diff.ts`, `.ssr-*`, `.ss-diff*`, the collapsed context strip) is deleted;
+a mod's pane is a tab of the kit's Pane (`surface.panelTabs`), its own content still the mods module's.
 
 ## The kit as a package
 
@@ -260,8 +266,8 @@ changed most is that it is now the kit's component, one markup for both fields a
   and `attrs`. R-seg-3 (a control on a dialog's edge band) has no instance today.
 
 ### Tab bars — one
-- `tabs`: Settings' sections (the dialog head, `--r-in-dialog`) and the details panel's mod panes (scrolling strip,
-  `--r-s` on the flat panel head). The two were copies of each other (`.hx-dtab`, `.mod-tab`, identical CSS and two
+- `tabs`: Settings' sections (the dialog head, `--r-in-dialog`). A mod's pane in the session's details is a tab of the kit's Pane
+  (its `strip`, the kit's Segmented tabs) since step 6c. The two v6 tab bars were copies of each other (`.hx-dtab`, `.mod-tab`, identical CSS and two
   keyboard handlers); both deleted. The tabs pill stays `segmented({mode: 'tabs'})`: a different look by rule (R-tab-1).
 
 ### Text fields and search fields — one, with debt
@@ -298,9 +304,8 @@ changed most is that it is now the kit's component, one markup for both fields a
 ### Lists and rows — one, with debt
 - `row` and `group` for the session list, the bots roster and Archived group, the dock roster. The palette's rows are
   `.ui-row` (Finding F10) built as listbox options.
-- **Debt (allowlisted):** the diff file head (`.ss-diff-head`) and the panel's file row (`.ssr-file`) in
-  `session.css`; the card layer's mini card, option row and token in `cards.css`; `.bt-routine`, `.bt-glance-row`,
-  `.dk-sched-row`, `.ssr-task`. They have their own metrics today; the next step is a row variant for each.
+- **Debt (allowlisted):** the card layer's mini card, option row and token in `cards.css`; `.bt-routine`, `.bt-glance-row`,
+  `.dk-sched-row`. (The session panel's diff head, file row and task row went with the v6 panel at step 6c.) They have their own metrics today; the next step is a row variant for each.
 - **Fixed:** Settings > Keyboard laid the keymap's groups in a two-column grid meant for bare `dt`/`dd` and drew each
   row's line twice; it now lists the groups as the shortcut sheet does.
 

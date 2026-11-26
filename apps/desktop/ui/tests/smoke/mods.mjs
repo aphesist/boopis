@@ -77,14 +77,14 @@ export async function mods(env, AXE) {
 
     /* the details panel: a tab per pane after Details; the tabs follow the keys */
     await page.keyboard.press('Control+i'); await page.waitForTimeout(900);
-    const tabs = await page.evaluate(() => [...document.querySelectorAll('.mod-tabs .ui-tab')].map((n) => n.getAttribute('aria-label')));
-    check('mods', 'at 1440 each pane is a tab of the details panel after Details, and none is inline', tabs.join('|') === 'Session details|Tests, test-runner mod|Token usage, token-meter mod' && (await page.evaluate(() => document.querySelectorAll('.mod-inline').length)) === 0, tabs);
-    await page.click('#mod-tab-usage'); await page.waitForTimeout(400);
+    const tabs = await page.evaluate(() => [...document.querySelectorAll('#hx-right .k7-pane__tabs [role="tab"]')].map((n) => n.textContent + (n.dataset.tip ? ', ' + n.dataset.tip : '')));
+    check('mods', 'at 1440 each pane is a tab of the details panel after Details, and none is inline', tabs.join('|') === 'Details|Tests, test-runner mod|Token usage, token-meter mod' && (await page.evaluate(() => document.querySelectorAll('.mod-inline').length)) === 0, tabs);
+    await page.click('#hx-right .k7-pane__tabs [data-value="usage"]'); await page.waitForTimeout(400);
     const chart = await page.evaluate(() => { const f = [...document.querySelectorAll('.mod-pane svg rect')].map((r) => getComputedStyle(r).fill); return { n: f.length, fills: [...new Set(f)] }; });
     check('mods', 'the chart is drawn in theme: claude is the accent as a mark, a literal that holds its contrast is kept', chart.n >= 8 && chart.fills.some((x) => x === 'rgb(184, 164, 240)') && chart.fills.length === 2, chart);
 
     /* the pane and its handlers: a press, a select and an input go back by id */
-    await page.click('#mod-tab-tests'); await page.waitForTimeout(400);
+    await page.click('#hx-right .k7-pane__tabs [data-value="tests"]'); await page.waitForTimeout(400);
     await page.click('.mod-pane .ui-btn:has-text("Re-run")'); await page.waitForTimeout(700);
     const run = await page.evaluate(() => ({ dots: !!document.querySelector('.ss-mods--band .mv-dots[data-indeterminate]'), runner: document.querySelector('.mod-pane')?.textContent.includes('Running tests'), req: window.__hxReplay.requests.filter((r) => r.method === 'plugin.boopis.mod.press').map((r) => r.params) }));
     check('mods', 'Re-run sends the id of its handler to the mod, and the band and the pane redraw: dots, never a bar', run.req.length === 1 && /^0\.h\d+\.\d+$/.test(run.req[0].handler) && run.req[0].session_id.startsWith('local-') && run.dots && run.runner, run);
@@ -197,7 +197,7 @@ export async function mods(env, AXE) {
     for (const w of [1199, 1000, 390]) {
       const page = await s.fresh({ q: URL, w, h: 800, settle: 1500 });
       await send(page);
-      const r = await page.evaluate(() => ({ tabs: document.querySelectorAll('.mod-tabs .ui-tab').length, inline: [...document.querySelectorAll('.ss-mods--band .mod-inline')].map((n) => n.dataset.open), over: document.documentElement.scrollWidth > innerWidth }));
+      const r = await page.evaluate(() => ({ tabs: document.querySelectorAll('#hx-right .k7-pane__tabs [role="tab"]').length, inline: [...document.querySelectorAll('.ss-mods--band .mod-inline')].map((n) => n.dataset.open), over: document.documentElement.scrollWidth > innerWidth }));
       check('mods', `at ${w} the panes are inline above the composer, one open and the other folded`, r.tabs === 0 && r.inline.join() === 'false,true' && !r.over, r);
     }
     const page = await s.fresh({ q: URL, w: 1000, h: 800, settle: 1500 });
@@ -221,7 +221,7 @@ export async function mods(env, AXE) {
     const page = await s.fresh({ q: URL, settle: 1500 });
     await send(page);
     await page.keyboard.press('Control+i'); await page.waitForTimeout(900);
-    await page.click('#mod-tab-tests'); await page.waitForTimeout(500);
+    await page.click('#hx-right .k7-pane__tabs [data-value="tests"]'); await page.waitForTimeout(500);
     await page.addScriptTag({ content: AXE });
     const v = await page.evaluate(async () => { const res = await axe.run({ include: [['.ss-view'], ['#hx-right'], ['#hx-dock']] }, { resultTypes: ['violations'], preload: false, rules: { region: { enabled: false } } }); return res.violations.map((x) => ({ id: x.id, impact: x.impact, n: x.nodes.length, t: x.nodes.slice(0, 3).map((n) => n.target.join(' ') + (n.any[0] ? ' - ' + n.any[0].message.slice(0, 90) : '')) })); });
     check('mods', 'axe (the conversation, the details panel and the dock): the session with the band, the status line, the pane, the toast, a placed row and the theme card', v.length === 0, v);

@@ -5,7 +5,7 @@ import { store } from '../data/store';
 import type { DataProvider, EngineState, Feed, GroupsEvent } from '../data/provider';
 import { CAREFUL_STEPS, YES } from '../data/session-s0';
 import type { CarefulStep, LaunchSettings, SessionCapabilities, SessionControls } from '../data/session-s0';
-import type { Bot, Change, Conversation, ConversationEvent, FormSpec, Group, GroupMember, GroupMessage, LimitNotice, LaterFeature, Schedule, SessionSummary, Step, ThreadMessage } from '../data/types';
+import type { Bot, Change, Conversation, ConversationEvent, DiffFile, FormSpec, Group, GroupMember, GroupMessage, LimitNotice, LaterFeature, Schedule, SessionSummary, Step, ThreadMessage, Todo } from '../data/types';
 
 /* ───────── the bots (kit.js LOOKS, in screens.js ORDER) ───────── */
 type Look = { id: string; shape: string; color: string; role: string; state: string; attention?: string; activity?: string };
@@ -207,7 +207,8 @@ function started(p: DataProvider, turns: Conversation['turns'], careful: Careful
   return {
     ...base, info: drawn(p, 'turn-edit', 'turn-fork'),
     sessions: { ...base.sessions, list: store<readonly SessionSummary[]>(SESSIONS), draft: () => draft, conversation: (id: string) => feed(id === 's17-dock' ? { turns, lines } : { turns: [{ id: 's20-o', role: 'user', at: '09:42', text: ASK }] }) },
-    details: { ...base.details, governance: store({ ...base.details.governance.get(), cap: '$0.60', spent: '$0.37' }), context: store({ total: 200000, used: 76000, parts: [] }), environment: store({ ...p.details.environment.get(), branch: 'w32/dock-paint' }) },
+    /* the boards' session keeps no list of tasks (a turn that has one draws it in the thread: the kit's card of steps) */
+    details: { ...base.details, governance: store({ ...base.details.governance.get(), cap: '$0.60', spent: '$0.37' }), context: store({ total: 200000, used: 76000, parts: [] }), environment: store({ ...p.details.environment.get(), branch: 'w32/dock-paint' }), todos: store<readonly Todo[]>([]) },
     sessionControls: { ...c, capabilities: store({ ...caps, session: { ...caps.session, changeModel: YES } }), launch: store({ ...c.launch.get(), careful, effort: 'medium' }) },
     limits: store<LimitNotice | null>(null), ...more
   };
@@ -226,14 +227,20 @@ export function boardS20(p: DataProvider): DataProvider {
 }
 /** board S23: the turn ended: the work line, the answer with its guess, the changed files, the checkpoint row, the lapsed blank as a question */
 export function boardS23(p: DataProvider): DataProvider {
-  return started(p, [
+  const base = started(p, [
     { id: 's23-t1', role: 'user', at: '09:42', text: ASK },
     /* the steps are the work line's own, as board S10 lists them when it is open */
     { id: 's23-t2', role: 'assistant', model: 'sonnet 5.5', time: '0m 59s', cost: '$0.08', stepCount: 3, steps: [{ title: 'patch', mono: true, meta: ['modules/dock/dock.css'], time: '' }, { title: 'patch', mono: true, meta: ['modules/dock/engine.ts'], time: '' }, { title: 'terminal', mono: true, meta: ['pnpm test dock'], time: '' }], status: 'done', bullets: [], kept: ['c1', 'c2', 'c3'],
       paragraphs: ['Fixed. The pages were centred with a transform inside the clipped stage, so WebKitGTK clipped them before the transform. They are centred by layout now, and the tests pass.'],
       blank: { question: 'Check the fix on which build?', short: 'Check the fix on which build?', options: ['staging', 'the Linux app'], guess: 'staging', rewrites: { staging: { lead: 'I guessed', tail: 'for the check' } } } }
   ], 'auto_edits', '', { details: { ...started(p, [], 'auto_edits', '').details, changes: store<readonly Change[]>([['modules/dock/dock.css', 12, 3], ['modules/dock/engine.ts', 2, 2]]) } });
+  /* "Open diff" shows the turn's two files as board S24 draws them (sessiontab.js `diffView`): the hunk of dock.css, engine.ts folded */
+  return { ...base, sessions: { ...base.sessions, diff: () => S24_DIFF } };
 }
+const S24_DIFF: readonly DiffFile[] = [
+  { path: 'modules/dock/dock.css', add: 12, del: 3, hunks: [['@@ -40,3 +40,4 @@', [' .dk-page {', '-  left: 50%; transform: translateX(-50%);', '+  left: -100vw; right: -100vw;', '+  margin-inline: auto;', ' }']]] },
+  { path: 'modules/dock/engine.ts', add: 2, del: 2, hunks: [['@@ -18,2 +18,2 @@', ['-  page.style.transform = \'translateX(-50%)\';', '-  page.style.left = \'50%\';', '+  page.style.transform = \'\';', '+  page.style.left = \'\';']]] }
+];
 
 /** board S33 (sessiontab.js `s8`): a setting changed between two turns: one line in the thread with what it cost, then the next message
     and its turn at work */
@@ -257,6 +264,24 @@ export function boardS36(p: DataProvider): DataProvider {
   ], 'auto_edits', '');
   const state = store<EngineState>({ stopped: true, restarting: false, why: 'boopis\'s engine stopped answering.' });
   return { ...base, info: { ...base.info, later: new Set() }, engine: { state, restart: () => { state.set({ stopped: false, restarting: false, why: null }); return Promise.resolve(); } } };
+}
+
+/** board S40 (sessiontab2.js `s20`): the session's details open beside its finished turn: its name, the folder and the branch, Session
+    (Model, Effort, How careful, Workspace) and Use (Context, Cost, Pull request). The fixture switches on what the board draws and the
+    app does not have yet (a worktree as the workspace, the pull request: `info.later`), and governs the session so its cost has its cap.
+    It keeps the pane to what S40 draws: no connectors, nothing known of the environment but the folder and the branch */
+export function boardS40(p: DataProvider): DataProvider {
+  const base = started(p, [
+    { id: 's40-t1', role: 'user', at: '09:42', text: ASK },
+    { id: 's40-t2', role: 'assistant', model: 'sonnet 5.5', time: '0m 59s', cost: '', stepCount: 3, steps: [...tools('patch', 2), ...tools('terminal', 1)], status: 'done', bullets: [], paragraphs: ['Fixed. The pages are centred by layout now, and the tests pass.'] }
+  ], 'auto_edits', '');
+  const env = base.details.environment.get();
+  return {
+    ...base, info: { ...base.info, later: new Set<LaterFeature>(['worktree', 'pull-request']) },
+    sessions: { ...base.sessions, list: store<readonly SessionSummary[]>(base.sessions.list.get().map((s) => (s.id === 's17-dock' ? { ...s, pullRequest: '#412' } : s))) },
+    details: { ...base.details, governance: store({ ...base.details.governance.get(), governed: true, smart: false, model: 'sonnet 5.5' }), connectors: store([]), environment: store({ ...env, cwd: '', sandbox: '', runtime: '', harness: '', gate: '' }) },
+    ...(base.sessionControls ? { sessionControls: { ...base.sessionControls, launch: store({ ...base.sessionControls.launch.get(), effort: null }) } } : {})
+  };
 }
 
 /** board S38 (sessiontab2.js `s18` c): the gate failed on the turn's change: the card with the failing check and "Fix and retry". The

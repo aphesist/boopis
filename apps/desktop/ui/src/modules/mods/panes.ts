@@ -1,13 +1,14 @@
 /* Panes and the band (docs/MODS.md section 3; DESIGN-SYSTEM.md 14.29). A pane is a tab in the details panel from 1200px wide;
    below it the pane is inline above the composer, one open at a time and the others folded to a head. The band is one
    collapsible row above the composer. A mod's tree is drawn by `ui.modView`; what the user does goes back by handler id. */
-import { $, el } from '../../core/dom';
+import { el } from '../../core/dom';
 import { logger } from '../../core/log';
 import { ui } from '@boopis/ui';
 import { modViewUpdate } from '@boopis/ui';
 import type { ModRoot } from '@boopis/ui';
 import type { ModBand, ModPane } from '../../data';
 import { surface } from './surfaces';
+import type { PanelTabs } from './surfaces';
 import { ctl, dispatcher, docked, sessionOf } from './ctl';
 
 const log = logger('mods');
@@ -66,42 +67,25 @@ function paneHead(p: ModPane, inline: boolean): HTMLElement {
 }
 
 /* ───────────── the tabs of the details panel ───────────── */
-function tabs(list: readonly ModPane[]): HTMLElement {
-  const bar = ui.tabs({ label: 'Session details and mod panes', class: 'mod-tabs', scroll: true, value: ctl.active, tabs: [
-    { value: 'details', label: 'Details', id: 'mod-tab-details', ariaLabel: 'Session details' },
-    ...list.map((p) => ({ value: p.id, label: p.title, labelHTML: ui.html.mod(p.title), id: 'mod-tab-' + p.id, ariaLabel: p.title + ', ' + p.plugin + ' mod', tip: p.plugin + ' mod' }))
-  ] });
-  /* the panel redraws with the chosen pane; keyboard focus follows the tab into the new strip */
-  bar.addEventListener('ui:change', (e) => {
-    const id = (e as CustomEvent<{ value: string }>).detail.value, focus = bar.contains(document.activeElement);
-    ctl.active = id; surface.redrawRight?.();
-    onChange?.();
-    if (focus) requestAnimationFrame(() => { document.getElementById('mod-tab-' + id)?.focus(); });
-  });
-  return bar;
-}
-
-/** called by the session on every redraw of the details panel; null leaves the panel as it was */
-export function decoratePanel(pnl: HTMLElement): HTMLElement | null {
+/** what shares the session's details panel (`PanelTabs`, surfaces.ts): the panel draws the strip as the kit's tabs
+    (modules/session/details.ts) and asks again on every redraw */
+export function panelTabs(): PanelTabs | null {
   const list = dockedPanes();
   if (!list.length) return null;
   if (ctl.active !== 'details' && !list.some((p) => p.id === ctl.active)) ctl.active = 'details';
-  const head = $('.ui-panel__head', pnl), body = $('.ui-panel__body', pnl);
-  const bar = tabs(list);
-  head.classList.add('mod-head'); head.replaceChildren(bar);
-  /* the strip scrolls when the tabs do not fit: the library keeps the open tab in view and fades the cut edge */
-  body.setAttribute('role', 'tabpanel'); body.setAttribute('aria-labelledby', 'mod-tab-' + ctl.active);
-  body.addEventListener('scroll', () => { ctl.scroll[ctl.active] = body.scrollTop; }, { passive: true });
-  for (const k of [...ctl.roots.keys()]) if (k.endsWith(':dock')) ctl.roots.delete(k);
   const p = ctl.active === 'details' ? undefined : paneById(ctl.active);
-  if (p) {
-    pnl.setAttribute('aria-label', p.title + ', ' + p.plugin + ' mod');
-    const pane = el('div', { class: 'mod-pane' });
-    pane.append(paneHead(p, false), paneBody(p, false));
-    body.replaceChildren(pane);
-  }
-  requestAnimationFrame(() => { body.scrollTop = ctl.scroll[ctl.active] ?? 0; });
-  return pnl;
+  return {
+    items: [{ value: 'details', label: 'Details' }, ...list.map((x) => ({ value: x.id, label: x.title, tip: x.plugin + ' mod' }))],
+    value: ctl.active, label: p ? p.title + ', ' + p.plugin + ' mod' : 'Session details', sig: p ? p.id + ':' + p.opens + ':' + JSON.stringify(p.drawing ?? null) : '',
+    body: () => {
+      for (const k of [...ctl.roots.keys()]) if (k.endsWith(':dock')) ctl.roots.delete(k);
+      if (!p) return null;
+      const pane = el('div', { class: 'mod-pane' });
+      pane.append(paneHead(p, false), paneBody(p, false));
+      return pane;
+    },
+    select: (id) => { ctl.active = id; onChange?.(); }
+  };
 }
 
 /* ───────────── the band, and the inline panes of narrow windows ───────────── */

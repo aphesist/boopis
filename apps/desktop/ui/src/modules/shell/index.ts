@@ -316,7 +316,8 @@ function wire(): void {
   });
   on('hx:open-settings', (d) => { if (d) openSettings(d.section, d.find); });
   on('hx:open-store', (d) => { openStore(d?.screen); });
-  on('hx:open-panel', (d) => { if (d && d.from !== 'shell' && state.right !== 'open') setState({ right: 'open' }); });
+  /* a part of the session's panel was asked for: the panel opens, and the window is laid out again (the diff is wider than the details) */
+  on('hx:open-panel', (d) => { if (d && d.from !== 'shell' && state.right !== 'open') setState({ right: 'open' }); else queueLayout(true); });
   on('hx:attention', (d) => { if (d) reportAttention(d.source || 'unknown', d.count, d.tab, d.ids); });
   on('hx:view-inset', (d) => {
     if (!d) return;

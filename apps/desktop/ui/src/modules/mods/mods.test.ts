@@ -15,7 +15,7 @@ import { state } from '../../core/state';
 import '../cards';
 import { ctl } from './ctl';
 import { resetMods } from './index';
-import { decoratePanel } from './panes';
+import { panelTabs } from './panes';
 import { surface } from './surfaces';
 import { queued, resetToasts, dismiss } from './toasts';
 import { openCards, previewingCard, recheck, themeCard, themeColors, placeThemeCard, swatchesOf } from './theme-card';
@@ -216,15 +216,12 @@ describe('the status line and the composer rising 22px (owner decision, 19 Novem
 });
 
 describe('panes: a tab from 1200px, inline below it (owner decision, 19 November 2026)', () => {
-  const panel = (): HTMLElement => { const p = document.createElement('div'); p.className = 'ui-panel'; p.innerHTML = '<div class="ui-panel__head"><h2>Session details</h2></div><div class="ui-panel__body">details</div>'; document.body.append(p); return p; };
-  const names = (p: HTMLElement): string[] => [...p.querySelectorAll('.mod-tabs .ui-tab')].map((t) => t.getAttribute('aria-label') ?? '');
-
   it('at 1200 a pane is a tab after Details, and nothing is inline', () => {
     width(1200); follow(); pane('tests', 'test-runner'); pane('usage', 'token-meter');
     expect(rig.band.querySelectorAll('.mod-inline').length).toBe(0);
-    const p = decoratePanel(panel());
-    expect(names(p as HTMLElement)).toEqual(['Session details', 'TESTS, test-runner mod', 'USAGE, token-meter mod']);
-    expect(p?.querySelector('[role="tablist"]')?.getAttribute('aria-label')).toBe('Session details and mod panes');
+    const t = panelTabs();
+    expect(t?.items).toEqual([{ value: 'details', label: 'Details' }, { value: 'tests', label: 'TESTS', tip: 'test-runner mod' }, { value: 'usage', label: 'USAGE', tip: 'token-meter mod' }]);
+    expect([t?.value, t?.label, t?.body()]).toEqual(['details', 'Session details', null]);
   });
   it('at 1199 the same panes are inline above the composer, one open and the others folded to a head, and the panel is left as it was', () => {
     width(1199); follow(); pane('tests', 'test-runner'); pane('usage', 'token-meter');
@@ -232,7 +229,7 @@ describe('panes: a tab from 1200px, inline below it (owner decision, 19 November
     expect(secs.map((s) => [s.dataset['pane'], s.dataset['open']])).toEqual([['tests', 'false'], ['usage', 'true']]);
     expect(secs[0]?.querySelector('.mod-inline__body')).toBeNull();
     expect(secs[1]?.querySelector('.mod-inline__body .mv-root')?.getAttribute('data-surface')).toBe('inset');
-    expect(decoratePanel(panel())).toBeNull();
+    expect(panelTabs()).toBeNull();
   });
   it('unfolds one inline pane and folds the other, and moves focus back to its chevron', () => {
     width(1000); follow(); pane('a'); pane('b');
@@ -255,38 +252,32 @@ describe('panes: a tab from 1200px, inline below it (owner decision, 19 November
     width(1100);
     expect(props().every((p) => (p as string[])[1] === 'inline')).toBe(true);
   });
-  it('a pane tab is a tablist: arrows, Home and End move between tabs', () => {
+  it('choosing a tab brings that pane in front: its name is the panel\'s, its tree its body (the strip itself is the kit\'s tabs: modules/session/details.test.ts)', () => {
     width(1300); follow(); pane('a'); pane('b');
-    const p = decoratePanel(panel()) as HTMLElement;
-    const bar = p.querySelector('[role="tablist"]') as HTMLElement;
-    document.body.append(p);
-    /* the keys act on the focused tab (the library's tab bar, one tab stop) */
-    const key = (k: string): void => { const t = bar.querySelector<HTMLElement>('[aria-selected="true"]') as HTMLElement; t.focus(); t.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })); };
-    key('ArrowRight');
-    expect(ctl.active).toBe('a');
-    key('End');
+    panelTabs()?.select('b');
     expect(ctl.active).toBe('b');
-    key('ArrowRight');
-    expect(ctl.active).toBe('details');
-    p.remove();
+    const t = panelTabs();
+    expect([t?.value, t?.label]).toEqual(['b', 'B, m mod']);
+    expect(t?.body()?.querySelector('.mod-pane__body')).not.toBeNull();
+    t?.select('details');
+    expect(panelTabs()?.body()).toBeNull();
   });
   it('draws a pane the plugin refused, or that no mod drew, as a sentence and not as nothing', () => {
     width(1300); follow();
     play('mod.pane', { action: 'open', plugin: 'm', id: 'bad', title: 'Bad' });
     play('mod.render', { component: 'Pane', id: 'bad', kind: 'skipped', reason: 'deeper than 32' });
     ctl.active = 'bad';
-    expect(decoratePanel(panel())?.textContent).toContain('sent a tree the renderer refused');
+    expect(panelTabs()?.body()?.textContent).toContain('sent a tree the renderer refused');
     play('mod.render', { component: 'Pane', id: 'bad', kind: 'default' });
-    expect(decoratePanel(panel())?.textContent).toContain('has not drawn this pane');
+    expect(panelTabs()?.body()?.textContent).toContain('has not drawn this pane');
   });
   it('a pane the user closes goes, and comes back when the mod opens it again', () => {
     width(1300); follow(); pane('a');
     ctl.active = 'a';
-    const p = decoratePanel(panel()) as HTMLElement;
-    p.querySelector<HTMLButtonElement>('.mod-pane__head .ui-ib')?.click();
-    expect(decoratePanel(panel())).toBeNull();
+    panelTabs()?.body()?.querySelector<HTMLButtonElement>('.mod-pane__head .ui-ib')?.click();
+    expect(panelTabs()).toBeNull();
     play('mod.pane', { action: 'open', plugin: 'm', id: 'a', title: 'A' });
-    expect(decoratePanel(panel())).not.toBeNull();
+    expect(panelTabs()).not.toBeNull();
   });
   it('a pane that opens with focus comes forward and opens the details panel', () => {
     width(1300); follow();

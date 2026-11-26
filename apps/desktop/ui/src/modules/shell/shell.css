@@ -150,7 +150,10 @@ body {
 .hx[data-right="open"] .hx-right__slot { width: var(--right-w); transition: width 0s; }
 /* each tab draws its own details into the pane: the session's slot, or the open bot's (modules/bots/details.ts) */
 .hx[data-tab="bots"] .hx-right > #hx-right, .hx[data-tab="session"] .hx-right > .bt-details { display: none; }
-.hx-right > #hx-right { top: var(--chrome-h); }   /* the session's details are v6 still: they keep their place under the chrome until their board (S40) */
+/* the shell paints the pane's ground (above); the kit's Pane inside it paints none of its own, only its hairline */
+.hx-right .k7-pane { background: none; }
+/* the session's diff is the tools' width (board S24; the kit's `--tools-w`): the pane's own width while it shows (modules/session/details.ts) */
+html[data-right-tools] :is(.hx, .hx-probe) { --right-w: 520px; }
 
 /* ───────────── dock slot: the dock draws itself; nothing depends on it ───────────── */
 .hx-dock-slot { position: absolute; z-index: var(--z-dock); left: 0; right: 0; bottom: 0; height: var(--dock-rest-h); pointer-events: none; }

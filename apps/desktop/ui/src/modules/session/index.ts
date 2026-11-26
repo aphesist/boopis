@@ -6,13 +6,10 @@
 import { register } from '../../core/registry';
 import { mountView, newSession, selectSession } from './conversation';
 import { mountList } from './list';
-import { mountRight, openPanel } from './right';
-import { ui } from '@boopis/ui';
-/* drawn corners (DESIGN-SYSTEM.md section 8): the session's own surfaces take the library's continuous corner */
-ui.squircle.auto('.ss-diff, .ssr-file, .ssr-term');
+import { mountDetails, openDetails, openDiff } from './details';
 
 register('session', { mount: (root) => mountView(root) });
 register('session-list', { mount: (root) => mountList(root) });
-register('session-right', { mount: (root) => mountRight(root) });
+register('session-right', { mount: (root) => mountDetails(root) });
 
-export const session = { select: selectSession, newSession, openPanel };
+export const session = { select: selectSession, newSession, openDetails, openDiff };

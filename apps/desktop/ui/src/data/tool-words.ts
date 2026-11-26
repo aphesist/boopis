@@ -51,10 +51,11 @@ export const workKind = (tool: string): WorkKind | null => (WORK.find((w) => w[3
 /** what a turn's steps did, counted by kind in the order they first happened: "Read 6 files, ran 2 commands". Tools it has no word for
     are counted together ("3 other steps"); steps that are not tool calls at all (a provider that says its steps in words) are "8 steps".
     `count` is how many steps the turn had when its list is not at hand. Pure. */
-export function workSummary(steps: ReadonlyArray<{ title: string; mono?: boolean | undefined }>, count = steps.length): string {
+export function workSummary(steps: ReadonlyArray<{ title: string; mono?: boolean | undefined; kind?: string | undefined }>, count = steps.length): string {
   const order: number[] = [], n = new Map<number, number>();
   let other = 0;
   for (const s of steps) {
+    if (s.mono && s.kind === 'fail') continue;   /* a tool call that failed is the call already counted, not another step */
     const i = s.mono ? WORK.findIndex((w) => w[3].includes(s.title)) : -1;
     if (i < 0) { other++; continue; }
     if (!n.has(i)) order.push(i);

@@ -11,6 +11,7 @@ import type { AgentTurn, Conversation, ConversationEvent, DataProvider, FormSpec
 import type { SessionCapabilities, SessionControls } from '../../data/session-s0';
 import { kit } from '@boopis/ui';
 import { VIEW, mountView } from './conversation';
+import { SMART_DESC } from './model-menu';
 
 const EDIT: FormSpec = { id: 'f1', kind: 'permission', title: 'Allow this change?', file: 'modules/dock/dock.css', diff: '+a\n-b', schema: { properties: { choice: { type: 'string', enum: ['once', 'session', 'deny'] } } } };
 const agent = (o: Partial<AgentTurn> = {}): AgentTurn => ({ id: 'a1', role: 'assistant', model: 'sonnet 5.5', time: '', cost: '', stepCount: 0, steps: [], paragraphs: ['Reading the dock first.'], bullets: [], status: 'running', ...o });
@@ -26,6 +27,7 @@ function boot(start: Turn[], more: Partial<DataProvider> = {}): void {
   calls.length = 0;
   p = {
     ...base,
+    details: { ...base.details, todos: store([]) },   /* a session with no list of tasks, unless a test gives it one */
     sessions: { ...base.sessions, list: store([{ id: 's1', project: 'boopis', title: 'Fix the dock', when: '', branch: 'w32/dock-paint' }]), draft: () => '',
       conversation: () => ({ snapshot: (): Conversation => ({ turns }), subscribe: (fn) => ev.subscribe(fn) }),
       send: (...a: unknown[]) => { calls.push(['send', ...a]); }, stop: (...a: unknown[]) => { calls.push(['stop', ...a]); }, answerBlank: (...a: unknown[]) => { calls.push(['blank', ...a]); } },
@@ -92,6 +94,43 @@ describe('the thread', () => {
     ev.emit({ type: 'step-added', turnId: 'a1', step: { title: 'read_file', mono: true, time: '' } });
     expect(q('.k7-disc__sum').textContent).toBe('Read 2 files');
     expect(q('.k7-disc').hasAttribute('data-open')).toBe(true);
+  });
+  it('the last turn lists the agent\'s tasks as the kit\'s card of steps (board 17): open and followed while it works, folded with its count once it ended', () => {
+    const todos = store<readonly (readonly [string, 'done' | 'doing' | 'todo'])[]>([['read the call sites', 'done'], ['convert to cents', 'doing'], ['draft the PR', 'todo']]);
+    const base = createMockProvider({ simulate: false });
+    boot([{ id: 'u1', role: 'user', at: '09:42', text: 'Fix it.' }, agent()], { details: { ...base.details, todos } });
+    const card = q('[data-part="tasks"]');
+    expect([card.dataset['kit'], card.dataset['variant'], card.hasAttribute('data-open')]).toEqual(['ToolRow', 'bot', true]);
+    expect(q('[data-part="tasks"] .k7-btool__head').textContent).toBe('Tasksstep 2 of 3');
+    expect([...card.querySelectorAll<HTMLElement>('.k7-step')].map((x) => [x.textContent, x.dataset['state']])).toEqual([['Read the call sites', 'done'], ['Convert to cents', 'now'], ['Draft the PR', 'todo']]);
+    /* the reader folds it; a task done redraws it as it was left */
+    q<HTMLButtonElement>('[data-part="tasks"] .k7-btool__head').click();
+    todos.set([['read the call sites', 'done'], ['convert to cents', 'done'], ['draft the PR', 'doing']]);
+    expect(q('[data-part="tasks"] .k7-btool__head').textContent).toBe('Tasksstep 3 of 3');
+    expect(q('[data-part="tasks"]').hasAttribute('data-open')).toBe(false);
+    ev.emit({ type: 'turn-finished', turnId: 'a1', time: '12s', cost: '', stepCount: 0, paragraphs: ['Done.'], stopped: false });
+    expect(parts()).toEqual(['tasks', 'text', 'foot']);
+    expect(q('[data-part="tasks"] .k7-btool__head').textContent).toBe('Tasks2 of 3 done');
+    expect(q('[data-part="tasks"]').hasAttribute('data-open')).toBe(false);
+    expect([...q('[data-part="tasks"]').querySelectorAll<HTMLElement>('.k7-step')].map((x) => x.dataset['state'])).toEqual(['done', 'done', 'todo']);
+    /* a session with no list draws no card */
+    todos.set([]);
+    boot([{ id: 'u1', role: 'user', at: '09:42', text: 'Fix it.' }, agent()], { details: { ...base.details, todos } });
+    expect(root.querySelector('[data-part="tasks"]')).toBeNull();
+  });
+  it('the open work line of the last turn ends with what the session\'s commands printed, in the kit\'s terminal Well', () => {
+    const output = store<readonly string[]>(['$ pnpm test dock', ' ✓ geometry.test.ts (12)']);
+    const base = createMockProvider({ simulate: false });
+    boot([{ id: 'u1', role: 'user', at: '09:42', text: 'Fix it.' }, agent({ status: 'done', time: '0m 12s', steps: [{ title: 'terminal', mono: true, meta: ['pnpm test dock'], time: '' }] })], { details: { ...base.details, output } });
+    const well = q('[data-part="log"] .k7-disc__after [data-kit~="Well"]');
+    expect(well.dataset['kind']).toBe('terminal');
+    expect(q('[data-part="log"] .k7-well__pre').textContent).toBe('$ pnpm test dock\n ✓ geometry.test.ts (12)');
+    expect(q('[data-part="log"] .k7-well__pre').getAttribute('aria-label')).toBe('Output');
+    /* it follows the log, and a session that printed nothing has no Well */
+    output.set(['$ pnpm test dock', ' ✓ geometry.test.ts (12)', ' Tests  12 passed']);
+    expect(q('[data-part="log"] .k7-well__pre').textContent).toContain('12 passed');
+    output.set([]);
+    expect(root.querySelector('[data-part="log"] [data-kit~="Well"]')).toBeNull();
   });
   it('E on your message brings it back into the composer', () => {
     boot([{ id: 'u1', role: 'user', at: '09:42', text: 'Fix it.' }, agent({ status: 'done' })]);
@@ -344,11 +383,13 @@ describe('the composer', () => {
     const set = vi.spyOn(p.details, 'setGovernance');
     q('.ss-composer [data-line="model"]').click();
     const menus = document.querySelectorAll<HTMLElement>('.k7-menu[data-floating]');   /* the add menu is still leaving the page: the list now open is the last */
-    const rows = [...(menus[menus.length - 1] as HTMLElement).querySelectorAll<HTMLElement>('[data-kit~="MenuRow"]')];
-    expect(rows[0]?.textContent).toContain('Automatic (Smart)');
-    /* its rows say what they are beside their name: the kit's list Menu, wide enough for them (boards S31, S32) */
-    expect((menus[menus.length - 1] as HTMLElement).dataset['variant']).toBe('list');
-    expect(rows[0]?.querySelector('.k7-mrow__desc')?.textContent).toMatch(/^Picks a tier for each message/);
+    const rows = [...(menus[menus.length - 1] as HTMLElement).querySelectorAll<HTMLElement>('[data-kit~="OptionRow"]')];
+    expect(rows[0]?.querySelector('.k7-orow__label')?.textContent).toBe('Automatic (Smart)');
+    /* its rows are board S19's: the name, and what it is on a second line, whole (the kit's option Menu) */
+    expect((menus[menus.length - 1] as HTMLElement).dataset['variant']).toBe('options');
+    expect(rows[0]?.querySelector('.k7-orow__meaning')?.textContent).toBe(SMART_DESC);
+    expect(rows.filter((r) => r.getAttribute('aria-checked') === 'true').length).toBe(1);
+    expect(rows.find((r) => r.querySelector('.ui-model, [data-model], svg'))).toBeTruthy();   /* a model's mark leads its name */
     rows.find((r) => r.dataset['value'] && r.dataset['value'] !== '__smart' && r.dataset['value'] !== '__council' && r.getAttribute('aria-disabled') !== 'true')?.click();
     expect(set).toHaveBeenCalledWith(expect.objectContaining({ smart: false }));
   });

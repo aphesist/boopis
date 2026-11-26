@@ -4,7 +4,7 @@
 import { ui } from '@boopis/ui';
 import type { AskAnswer, AskCardOpts, StepOpts, ToolRowOpts, TurnFootOpts } from '@boopis/ui';
 import { cap1 } from '../../core/dom';
-import type { AgentTurn, FormSpec, FormStatus, Step } from '../../data';
+import type { AgentTurn, FormSpec, FormStatus, Step, Todo } from '../../data';
 import { toolWords, workKind, workSummary } from '../../data/tool-words';
 import { UNGOVERNED_TIP, UNKNOWN_MODEL } from './attribution';
 
@@ -25,7 +25,7 @@ const baseName = (path: string): string => path.replace(/[\\/]+$/, '').split(/[\
     "Read dock.css", "Changed dock.css, +12 −3" (`counts`: the file's changed lines, where they are known), "Ran pnpm test dock" */
 export function stepRow(s: Step, now = false, counts?: (path: string) => readonly [number, number] | null): StepOpts {
   const more = { ...(s.time ? { time: s.time } : {}) };
-  if (s.kind === 'fail') return { text: [s.title, ...(s.meta ?? [])].join('  '), state: 'failed', ...more };
+  if (s.kind === 'fail' && !s.mono) return { text: [s.title, ...(s.meta ?? [])].join('  '), state: 'failed', ...more };
   if (s.kind === 'escalate') return { text: [s.title, ...(s.meta ?? [])].join('  '), state: now ? 'now' : 'log', icon: 'ladder', ...more };   /* the ladder in the words' colour, as S10's glyphs are */
   const what = s.meta?.[0] ?? '', kind = s.mono ? workKind(s.title) : null;
   if (!s.mono) return { text: [s.title, ...(s.meta ?? [])].join('  '), state: now ? 'now' : 'done', ...more };
@@ -35,8 +35,10 @@ export function stepRow(s: Step, now = false, counts?: (path: string) => readonl
     : kind === 'changed' ? 'Changed ' + (what ? baseName(what) : 'a file') + (n ? ', +' + n[0] + ' −' + n[1] : '')
     : kind === 'ran' ? 'Ran ' + (what || 'a command')
     : cap1(toolWords(s.title)) + (what ? '  ' + what : '');
-  return { text, state: now ? 'now' : 'log', icon: kind === 'changed' ? 'pen' : kind === 'ran' ? 'terminal' : 'session', ...more };
+  /* a tool call that failed keeps its words and its glyph; the failure is the row's word, in red, before its time (S10's row) */
+  return { text, state: now ? 'now' : 'log', icon: kind === 'changed' ? 'pen' : kind === 'ran' ? 'terminal' : 'session', ...(s.kind === 'fail' ? { word: 'failed' } : {}), ...more };
 }
+const sameCall = (a: Step, b: Step): boolean => a.title === b.title && (a.meta?.[0] ?? '') === (b.meta?.[0] ?? '');
 /** the open work line's rows (board S10): reads that follow one another are one row ("Read 6 files"), as are searches; every change and
     every command has its own */
 export function stepRows(a: Pick<AgentTurn, 'steps' | 'status'>, counts?: (path: string) => readonly [number, number] | null): StepOpts[] {
@@ -45,6 +47,9 @@ export function stepRows(a: Pick<AgentTurn, 'steps' | 'status'>, counts?: (path:
   a.steps.forEach((s, i) => {
     const now = a.status === 'running' && i === a.steps.length - 1;
     const kind = s.mono && !s.kind ? workKind(s.title) : null;
+    /* a failure tells of the call just before it: one row, with the failure and its time */
+    const prev = a.steps[i - 1];
+    if (s.kind === 'fail' && s.mono && prev && !prev.kind && sameCall(prev, s) && !run && out.length) { out[out.length - 1] = stepRow(s, false, counts); return; }
     if ((kind === 'read' || kind === 'searched') && !now) {
       if (run && run.kind === kind) { run.n++; out[run.at] = { text: kind === 'read' ? 'Read ' + run.n + ' files' : 'Searched ' + run.n + ' patterns', state: 'log', icon: 'session' }; return; }
       run = { kind, n: 1, at: out.length };
@@ -52,6 +57,18 @@ export function stepRows(a: Pick<AgentTurn, 'steps' | 'status'>, counts?: (path:
     out.push(stepRow(s, now, counts));
   });
   return out;
+}
+
+/** the agent's own list of what it means to do, as the kit's card of steps (board 17: "Release 0.2.0, step 3 of 5"): what is done with
+    its check, the one being done with its dot, the rest waiting. While the turn works the head says the step it is on; once it ended,
+    how many were done (a task left "doing" when the turn ended is no longer being done: it waits) */
+export function tasksCard(todos: readonly Todo[], running = true): ToolRowOpts {
+  const doing = todos.findIndex((t) => t[1] === 'doing'), done = todos.filter((t) => t[1] === 'done').length;
+  const at = doing >= 0 ? doing + 1 : Math.min(todos.length, done + 1);
+  return {
+    variant: 'bot', tool: 'Tasks', target: running ? 'step ' + at + ' of ' + todos.length : done + ' of ' + todos.length + ' done', state: running ? 'running' : 'done',
+    steps: todos.map(([text, st]) => ({ text: cap1(text), state: st === 'done' ? 'done' : st === 'doing' && running ? 'now' : 'todo' })), attrs: { 'data-tasks': '' }
+  };
 }
 
 /* ───────── what waits on the person ───────── */

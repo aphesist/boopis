@@ -256,10 +256,12 @@ export async function keyWalk(env) {
   page = await s.fresh();
   await s.safe('9', async () => {
     await press('Control+g', 100); await press('p', 600);
+    /* the session's details are the kit's pane (board S40): its rows are its stops, and the arrows move between them */
     const s0 = await where(); await press('ArrowDown'); const s1 = await where();
-    check('9', 'down moves to the next section header', s1.region === 'panel' && s0.label !== s1.label, s0.label + ' -> ' + s1.label);
+    check('9', 'down moves to the next row of the details', s1.region === 'panel' && s0.label !== s1.label, s0.label + ' -> ' + s1.label);
+    for (let i = 0; i < 8 && !(await ev(() => document.activeElement.matches('[data-pane="context"]'))); i++) await press('ArrowDown');
     const x0 = await ev(() => document.activeElement.getAttribute('aria-expanded')); await press('Enter', 400); const x1 = await ev(() => document.activeElement.getAttribute('aria-expanded'));
-    check('9', 'Enter toggles a section', x0 !== x1, x0 + ' -> ' + x1);
+    check('9', 'Enter on the Context row opens what fills it', x0 === 'false' && x1 === 'true' && await ev(() => !!document.querySelector('#hx-right [data-pane-open="context"]')), x0 + ' -> ' + x1);
     await press('Escape', 300); check('9', 'Esc to the conversation, the panel stays', (await where()).region === 'messages' && (await st()).right === 'open');
     /* on Bots, mod+I is the open bot's details (board 11's pane); its settings sheet opens from a row of it */
     await press('Control+i', 500); await press('Alt+2', 500); await press('Control+i', 600);

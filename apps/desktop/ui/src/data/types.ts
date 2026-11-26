@@ -300,6 +300,8 @@ export interface SessionSummary {
   /** what it waits on you for: an approval stops it (the inbox's "Needs you"), a question does not (it works on with its guess) */
   needs?: 'approval' | 'question';
   pinned?: boolean;
+  /** its pull request as the details name it ("#412"); no provider knows one yet (`LaterFeature` `pull-request`) */
+  pullRequest?: string;
   /** made here and not started: nothing was sent yet (the provider that made it says so). Its place is the new session's canvas,
       not a row of the list; it is a session like any other once it has a turn */
   draft?: boolean;
@@ -525,8 +527,9 @@ export interface ProviderInfo {
 }
 /** `approval-rules`: "Allow all this turn", "Always allow". `usage`: buying more usage from a
     limit notice. `worktree`: a new worktree for a session. `turn-edit`, `turn-fork`: Edit from here and Fork on a finished turn.
-    `queue`: a message queued or steered while a turn runs */
-export type LaterFeature = 'approval-rules' | 'usage' | 'worktree' | 'turn-edit' | 'turn-fork' | 'queue';
+    `queue`: a message queued or steered while a turn runs. `pull-request`: a session's pull request in its details (board S40).
+    `pin`: pinning a session (the details pane's overflow) */
+export type LaterFeature = 'approval-rules' | 'usage' | 'worktree' | 'turn-edit' | 'turn-fork' | 'queue' | 'pull-request' | 'pin';
 export interface Schedule { id: string; bot: string; what: string; when: string; next: string; paused: boolean }
 
 /* ───────── the composer's feedforward reading ───────── */

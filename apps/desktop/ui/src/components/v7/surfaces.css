@@ -56,9 +56,22 @@
 .k7-pane[data-overlay] { box-shadow: inset var(--hl) 0 0 var(--hair), var(--shadow-modal); }
 .k7-pane__head { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); padding: var(--pad-pane-top) var(--sp-4) 0; }
 .k7-pane__name { margin: 0; font-size: var(--fs-l); line-height: var(--lh-l); font-weight: 500; color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* a session's details (board S40, sessiontab2.js `s20`): its name at the start with its overflow at the end, 58 from the pane's top (under
+   the chrome's controls) and 20 from its sides; under it where it works, 12 --text-dim in mono; 24 from there to the first section's name */
+.k7-pane[data-variant="session"] > .k7-pane__head { align-items: stretch; gap: var(--gap-s); padding: var(--pad-pane-top-session) calc(var(--sp-4) + var(--sp-1)) var(--gap-s); }
+.k7-pane__tabs + .k7-pane__head { padding-top: var(--sp-2); }   /* under a strip of tabs, which already stands clear of the chrome */
+.k7-pane__title { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; min-height: var(--ctl-s); }
+.k7-pane__title > .k7-pane__name { flex: 1 1 auto; min-width: 0; }
+.k7-pane__where { display: flex; align-items: center; gap: var(--gap-s); min-width: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
+.k7-pane__where > svg { flex: none; }
+.k7-pane__where > .k7-mono { min-width: 0; }
+/* a tool shown alone (S24's Diff until a second tab exists): what it holds is said where the tabs would stand */
+.k7-pane__summary { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; padding: 0 var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
 /* the body's sections (kit.css `.pane-in`, `.pane-sec`): 4 between its pieces, a section's name 12 --text-dim with 14 over it and 6 under */
 .k7-pane__body { display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-1) var(--sp-4) var(--sp-4); min-height: 0; }
 .k7-pane__none { margin: var(--pane-sec-top) var(--sp-1) 0; font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); }
+/* a sentence under a card: what a part cannot know, what a control just did (13 --text-dim, 8 under the card) */
+.k7-pane__note { margin: var(--sp-2) var(--sp-1) 0; font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); }
 .k7-pane__sec { display: flex; margin: var(--pane-sec-top) var(--sp-1) var(--gap-s); font-size: var(--fs-xs); line-height: var(--lh-m); font-weight: 400; color: var(--text-dim); }
 .k7-pane__tabs { display: flex; align-items: center; gap: var(--sp-1); padding: var(--pad-chrome) var(--sp-3) var(--sp-2); }
 .k7-pane[data-variant="tools"] .k7-pane__body { padding: 0 var(--sp-3) var(--sp-3); }

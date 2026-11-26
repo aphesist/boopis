@@ -38,9 +38,6 @@
 .mod-inline__body { padding: var(--sp-1) 10px var(--sp-3); max-height: min(28vh, 260px); }   /* a scroll area (.ui-scroll) */
 
 /* ───────────── a pane: a tab in the details panel ───────────── */
-.mod-head { padding-right: 12px; }
-.mod-tabs { margin-left: -6px; }   /* the library's scrolling tab bar (.ui-tabs--scroll), placed in the panel head */
-.mod-tabs .mv-by__g { color: currentColor; opacity: .8; }
 .mod-pane { box-shadow: inset 0 1px 0 var(--hair); }
 .mod-pane__head { display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 12px 0 20px; }
 .mod-pane__head .mv-by { color: var(--text-quiet); font: 400 var(--fs-xs)/1 var(--sans); }

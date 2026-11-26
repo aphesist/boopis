@@ -1,6 +1,8 @@
 /* The shell: the title bar, the sidebar (open, rail, closed) and its session list, the command palette, the menus
    (account, attach, model picker, the blank's popover), the app's toast, the details panel and the keyboard sheet. */
 import { store } from '../../../data/store';
+import type { DataProvider } from '../../../data/provider';
+import { boardS20, boardS23 } from '../../board-fixtures';
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
 
 const MOCK = { url: '/v6/__index.html' };
@@ -69,14 +71,28 @@ const toast: Story = {
     long: st(['long'], async (c) => { c.hx.ui.toast('Archived Reconcile the invoices_v2 backfill against the ledger before the quarterly close and the auditors arrive', { action: { label: 'Undo' }, ms: 60000 }); await c.wait(400); })
   }
 };
+/* The session's right panel on the kit's Pane (modules/session/details.ts): its details as board S40 draws them and what the lead kept in
+   them until Settings holds it (the context's parts with Compact, the cap, Environment, Connectors: derived, no board), and the diff a
+   FilesCard opens (board S24's Diff, alone). The board's own state is `boards/sessions` "S40 the session's details"; a mod's pane as a tab
+   of this panel is `cards/mod-surfaces` "pane in the details panel". Under 1200 wide the shell lays the pane over the work. */
+const openS17 = async (c: AppCtx): Promise<void> => { c.hx.setState({ tab: 'session', left: 'open', right: 'closed' }); await c.wait(300); await c.click('[data-kit~="ListRow"][data-id="s17-dock"]'); await c.wait(600); };
+const paneOpen = async (c: AppCtx): Promise<void> => { c.hx.setState({ right: 'open' }); await c.wait(700); (document.activeElement as HTMLElement | null)?.blur(); };
+/** a running session that has changed nothing yet */
+const unchanged = (p: DataProvider): DataProvider => { const b = boardS20(p); return { ...b, sessions: { ...b.sessions, diff: () => [] } }; };
 const details: Story = {
-  id: 'shell/details-panel', title: 'Details panel', area: 'composer', kind: 'surface', covers: ['surface:details-panel'], scope: '#hx-right-shell', mock: MOCK,
+  id: 'shell/details-panel', title: 'The session\'s details and its diff', area: 'composer', kind: 'surface', covers: ['surface:details-panel'], scope: '#hx-right-shell', mock: { url: '/__boards/screen.html?s=s20', note: 'board S40 (session/S40-session-details-*.jpg); the diff is board S24\'s Diff tab (session/S24-panel-diff-*.jpg)' },
   states: {
-    open: st(['typical'], async (c) => { c.hx.setState({ right: 'open' }); await c.wait(600); }),
-    'every section open': st(['long', 'scroll'], async (c) => { c.hx.setState({ right: 'open' }); await c.wait(600); for (const h of document.querySelectorAll<HTMLElement>('#hx-right-shell .ui-sec__head[aria-expanded="false"]')) h.click(); await c.wait(400); }),
-    closed: st(['variant'], async (c) => { c.hx.setState({ right: 'closed' }); await c.wait(400); }),
-    'section head hover': st(['hover'], async (c) => { c.hx.setState({ right: 'open' }); await c.wait(600); }, {}, { force: [{ sel: '#hx-right-shell .ui-sec__head', state: 'hover' }] }),
-    'from recorded frames (live)': st(['typical'], async (c) => { c.hx.setState({ right: 'open' }); await c.wait(900); }, { replay: 'session' }, { allow: { 'stability.render': 'the recording replays with live timing' } })
+    'a finished session': st(['typical', 'owner'], async (c) => { await openS17(c); await paneOpen(c); }, { patch: boardS23 }),
+    'a running session': st(['variant'], async (c) => { await openS17(c); await paneOpen(c); }, { patch: boardS20 }),
+    'everything the session knows (the mock\'s session: environment, connectors, the project\'s switch)': st(['long', 'scroll'], paneOpen),
+    'a row hovered, a selector focused': st(['hover', 'focus'], paneOpen, {}, { force: [{ sel: '#hx-right .k7-row[data-action]', state: 'hover' }, { sel: '#hx-right .k7-sel', state: 'focus' }] }),
+    'the context open: what fills it, Compact conversation (derived)': st(['open', 'variant'], async (c) => { await paneOpen(c); await c.click('#hx-right [data-pane="context"]'); await c.wait(300); }),
+    'changing the cap (derived)': st(['open'], async (c) => { await paneOpen(c); await c.click('#hx-right [data-pane="cap"]'); await c.wait(300); }, {}, { overlay: { anchor: '#hx-right [data-pane="cap"]', layer: '.k7-menu[data-floating]' } }),
+    'the overflow open': st(['open'], async (c) => { await paneOpen(c); await c.click('#hx-right [data-pane-more]'); await c.wait(300); }, {}, { overlay: { anchor: '#hx-right [data-pane-more]', layer: '.k7-menu[data-floating]' } }),
+    'the diff alone (derived from S24)': st(['variant', 'owner'], async (c) => { await openS17(c); await c.click('.ss-col [data-files]'); await c.wait(700); (document.activeElement as HTMLElement | null)?.blur(); }, { patch: boardS23 }),
+    'the diff, every file open': st(['long', 'scroll'], async (c) => { c.hx.emit('hx:open-panel', { panel: 'changes', from: 'lab' }); await c.wait(700); for (const h of document.querySelectorAll<HTMLElement>('#hx-right .k7-diff:not([data-open]) > .k7-diff__head')) h.click(); await c.wait(300); }),
+    'no changes: the diff says so': st(['empty'], async (c) => { await openS17(c); c.hx.emit('hx:open-panel', { panel: 'changes', from: 'lab' }); await c.wait(700); }, { patch: unchanged }),
+    closed: st(['variant'], async (c) => { c.hx.setState({ right: 'closed' }); await c.wait(400); }, {}, { scope: '#hx-app' })
   }
 };
 const keysSheet: Story = {

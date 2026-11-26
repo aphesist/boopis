@@ -399,6 +399,25 @@
       "scope": ["chrome", "sidebar", "gate card", "composer", "dock"],
       "note": "S38 is the reference for the card a failed gate leaves under the answer (the check's glyph and name, \"failed\" in red, \"Fix and retry\", what the check printed in its Well, the note) and for the composer under it; the card is measured where the app draws it, 2 higher than the board's. The thread above it is S23's: the work line stands where S23 draws it (S38's still sets it 2 higher and 30 further in) and the finished turn keeps its foot under the card. The fixture's note is the board's sentence (\"Nothing was written: the change stays in the journal, not the workspace.\"); the live app says what its engine does: the files were written, checked, and put back."
     },
+    "S40-details": {
+      "title": "Board S40: the session's details: its name, the folder and the branch, Session and Use",
+      "board": "screen.html?s=s20",
+      "image": "session/S40-session-details-{theme}.jpg",
+      "story": "boards/sessions",
+      "state": "S40 the session's details",
+      "wait": 1500,
+      "regions": {
+        "chrome": [0, 0, 1440, 56],
+        "sidebar": [0, 56, 300, 844],
+        "thread": [300, 56, 784, 670],
+        "composer": [300, 726, 784, 92],
+        "dock": [300, 818, 784, 82],
+        "details pane: the head, Session, Use": [1084, 56, 356, 464],
+        "details pane, whole": [1084, 56, 356, 844]
+      },
+      "scope": ["chrome", "sidebar", "composer", "dock", "details pane: the head, Session, Use"],
+      "note": "S40 is the reference for the details pane: its head, Session and Use. The fixture switches on what the board draws and the app does not have yet (a worktree as the workspace, the pull request: `info.later`). Under Use the app's pane keeps Environment and Connectors (the lead's decision, 26 November: plain rows derived from S40's own sections, until Settings holds them), so the whole pane differs from the board by them. The thread is S23's (the work line at the column's edge, the turn's foot), which this board's shorthand draws otherwise."
+    },
     "S41-noproject": {
       "title": "Board S41: no project, no sessions: \"No sessions yet\", the title \"Sessions\", \"Add a folder to start\" on the canvas and in the composer",
       "board": "screen.html?s=newSess&mk=a&st=noproject",

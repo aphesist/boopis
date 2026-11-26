@@ -15,13 +15,14 @@ export const CARD_VARIANTS = ['settings', 'pane', 'danger'] as const;
 export type CardVariant = typeof CARD_VARIANTS[number];
 export interface RowOpts {
   label: string; labelHTML?: U<string>; value?: U<string>; /** the value with a lead (a model's mark, then its name) */ valueHTML?: U<string>; mono?: U<boolean>; control?: U<string>;
+  /** a second line under the label, 12 --text-dim (a routine's time, what a connector holds): the label is then two lines by design */ sub?: U<string>;
   /** a label that explains itself: the mark (17.1), revealed on the row's hover or focus */ explain?: U<string>; id?: U<string>; attrs?: U<Attrs>;
   /** the whole row is one control (a pane card's row opens where its value is set): what pressing it does, said to a screen reader */ action?: U<string>;
 }
 export function row(o: RowOpts): string {
   const label = o.explain
     ? '<span class="k7-row__label">' + '<button class="k7-reset k7-mark k7-info" type="button" data-kit="Mark" data-mark-kind="info" aria-haspopup="dialog"' + attrs({ 'data-explain': o.explain, id: o.id }) + '>' + esc(o.label) + '<span class="k7-mark__i" aria-hidden="true">' + glyph('info') + '</span></button></span>'
-    : '<span class="k7-row__label"' + attrs({ id: o.id }) + '>' + textOr(o.label, o.labelHTML) + '</span>';
+    : '<span class="k7-row__label"' + attrs({ id: o.id, 'data-wrap-ok': o.sub ? '' : null }) + '>' + textOr(o.label, o.labelHTML) + (o.sub ? '<br><span class="k7-row__sub">' + esc(o.sub) + '</span>' : '') + '</span>';
   return '<div class="k7-row"' + partAttrs('Row', { 'data-mark-reveal': o.explain ? 'hover' : null, ...(o.action ? { role: 'button', tabindex: '0', 'data-action': '', 'aria-label': o.label + (o.value ? ': ' + o.value : '') + ', ' + o.action } : {}), ...(o.attrs ?? {}) }) + '>' + label + ' ' +   /* a word break between the label and the value, for the row's name (a flex row: it takes no room) */
     (o.valueHTML ? '<span class="k7-row__value k7-row__value--lead">' + o.valueHTML + '</span>' : o.value ? '<span class="' + cls('k7-row__value', o.mono && 'k7-mono') + '">' + esc(o.value) + '</span>' : '') + (o.control ?? '') + '</div>';
 }
@@ -63,17 +64,20 @@ export function menuRow(o: MenuRowOpts): string {
     (o.keys ? kbd({ keys: o.keys }) : '') + '</button>';
 }
 
-/* ── OptionRow (20): a two-line radio row (a permission step, an import pick) ── */
+/* ── OptionRow (20): a two-line radio row (a permission step, an import pick, who answers next): the name, and what it means on a second
+   line that is never cut (board S19) ── */
 export interface OptionRowOpts {
   label: string; meaning: string; chosen?: U<boolean>; value?: U<string>; ticks?: U<{ of: number; on: number }>;
+  /** what leads the name on its line (a model's mark, a glyph), and the keys that choose it, at the line's end */
+  leadHTML?: U<string>; icon?: U<string>; keys?: U<string>;
   /** a choice that cannot be made now: it stays in its place, and its second line says why (`meaning` carries the reason) */
   disabled?: U<boolean>; attrs?: U<Attrs>;
 }
 export function optionRow(o: OptionRowOpts): string {
   return '<button class="k7-reset k7-orow"' + kitAttrs('OptionRow', { type: 'button', role: 'menuitemradio', tabindex: '-1', 'aria-checked': String(!!o.chosen), 'aria-disabled': o.disabled ? 'true' : null, 'data-value': o.value ?? o.label, ...(o.attrs ?? {}) }) + '>' +
-    '<span class="k7-orow__ring" aria-hidden="true"></span><span class="k7-orow__text"><span class="k7-orow__name">' + esc(o.label) +
+    '<span class="k7-orow__ring" aria-hidden="true"></span><span class="k7-orow__text"><span class="k7-orow__name">' + (o.leadHTML ?? (o.icon ? glyph(o.icon) : '')) + '<span class="k7-orow__label">' + esc(o.label) + '</span>' +
     (o.ticks ? '<span class="k7-ticks" aria-hidden="true">' + Array.from({ length: o.ticks.of }, (_, i) => '<i' + (i < (o.ticks?.on ?? 0) ? ' data-on' : '') + '></i>').join('') + '</span>' : '') +
-    '</span><span class="k7-orow__meaning">' + esc(o.meaning) + '</span></span></button>';
+    (o.keys ? '<span class="k7-grow"></span>' + kbd({ keys: o.keys }) : '') + '</span><span class="k7-orow__meaning">' + esc(o.meaning) + '</span></span></button>';
 }
 
 /* ── Menu (5): menu, quick menu (checks), palette (/ @ $), snooze, split-button menu, option menu (four rows), and a list whose rows
@@ -214,18 +218,24 @@ export function well(o: WellOpts): string {
 
 /* ── Disclosure (36): steps ("Read 6 files"), work log ("Worked for 59s: ..."): the boards' `.worklog` (kit.css): a chevron that turns down
    when it opens, then the summary ── */
-export interface StepOpts { text: string; /** `log`: a line of a work log (board S10), led by its kind's glyph (`icon`) in the words' own colour */ state?: U<'done' | 'now' | 'todo' | 'failed' | 'log'>; icon?: U<string>; time?: U<string> }
+export interface StepOpts {
+  text: string; /** `log`: a line of a work log (board S10), led by its kind's glyph (`icon`) in the words' own colour */ state?: U<'done' | 'now' | 'todo' | 'failed' | 'log'>; icon?: U<string>; time?: U<string>;
+  /** what became of it, after its words (the kit's StatusWord, red): "failed" */ word?: U<string>;
+}
 export function steps(items: readonly StepOpts[], id?: string): string {
   return '<ol class="k7-steps"' + partAttrs('Steps', { id }) + '>' + items.map((s) => '<li class="k7-step" data-state="' + (s.state ?? 'done') + '">' +
     '<span class="k7-step__ic" aria-hidden="true">' + (s.icon ? glyph(s.icon) : s.state === 'done' || !s.state ? glyph('check') : s.state === 'failed' ? glyph('close') : '<span class="k7-step__dot"' + (s.state === 'now' ? ' data-live' : '') + '></span>') + '</span>' +
-    '<span class="k7-step__text">' + esc(s.text) + '</span>' + (s.time ? '<span class="k7-step__time k7-mono">' + esc(s.time) + '</span>' : '') + '</li>').join('') + '</ol>';
+    '<span class="k7-step__text">' + esc(s.text) + '</span>' + (s.word ? statusWord({ text: s.word, tone: 'red' }) : '') + (s.time ? '<span class="k7-step__time k7-mono">' + esc(s.time) + '</span>' : '') + '</li>').join('') + '</ol>';
 }
-export interface DisclosureOpts { summary: string; variant?: U<'steps' | 'worklog'>; open?: U<boolean>; steps?: U<readonly StepOpts[]>; attrs?: U<Attrs> }
+export interface DisclosureOpts {
+  summary: string; variant?: U<'steps' | 'worklog'>; open?: U<boolean>; steps?: U<readonly StepOpts[]>; attrs?: U<Attrs>;
+  /** what follows its steps when it is open, as markup: a work log's output (a Well), what a list of parts can do (a Button) */ after?: U<string>;
+}
 export function disclosure(o: DisclosureOpts): string {
   const id = idFrom('k7-dc', o.summary);
   return '<div class="k7-disc"' + kitAttrs('Disclosure', { 'data-variant': o.variant ?? 'steps', 'data-disclose': '', 'data-open': o.open ? '' : null, ...(o.attrs ?? {}) }) + '>' +
     '<button class="k7-reset k7-disc__sum" type="button"' + attrs({ 'aria-expanded': String(!!o.open), 'aria-controls': id }) + '>' + glyph('chevron', 'k7-disc__chev') + '<span class="k7-ell">' + esc(o.summary) + '</span></button>' +
-    '<div class="k7-disc__body" id="' + id + '">' + steps(o.steps ?? []) + '</div></div>';
+    '<div class="k7-disc__body" id="' + id + '">' + (o.steps?.length || !o.after ? steps(o.steps ?? []) : '') + (o.after ? '<div class="k7-disc__after">' + o.after + '</div>' : '') + '</div></div>';
 }
 
 /* ── TurnFoot (37): under a finished reply. bot: the model, the time, the cost. session (board S23's `.turnbar`): the checkpoint the turn

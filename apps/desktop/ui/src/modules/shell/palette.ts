@@ -57,7 +57,9 @@ function paletteItems(): Item[] {
   if (hasProvider('find')) cmd('Find in this conversation', 'mod+F', () => callProvided('find', { tab: state.tab, from: 'palette' }), ICON('search'), 'search text');
   cmd('Next thing that needs you', 'F8', () => nextAttention(1), ICON('forward'), 'attention blank approval waiting');
   for (const [r, key] of [['list', 'L'], ['messages', 'M'], ['composer', 'I'], ['panel', 'P'], ['dock', 'D']] as Array<[RegionName, string]>) cmd('Focus the ' + REGION_NAME[r].toLowerCase(), 'mod+G ' + key, () => focusRegion(r), ICON('forward'), 'focus region go to keyboard');
-  for (const [p, words] of [['Context', 'tokens window'], ['Connectors', 'mcp tools'], ['Output', 'terminal logs'], ['Environment', 'sandbox runtime'], ['Tasks', 'todo'], ['Changes', 'diff files'], ['Governance', 'models cost ladder']] as Array<[string, string]>) {
+  /* the parts of the session's details that have a place of their own (S40's Context row, the sections kept until Settings holds them),
+     and the diff. Output is in the open work line and the tasks in the thread; the model menu says the ladder */
+  for (const [p, words] of [['Context', 'tokens window compact'], ['Connectors', 'mcp tools'], ['Environment', 'sandbox runtime'], ['Changes', 'diff files']] as Array<[string, string]>) {
     cmd('Open ' + p.toLowerCase(), '', () => openPanel(p.toLowerCase()), ICON('sidebar-right'), 'panel right details ' + words);
   }
   cmd(state.dock === 'on' ? 'Hide the dock' : 'Show the dock', 'mod+J', () => toggle('dock'), ICON('dock'), 'dock bottom');

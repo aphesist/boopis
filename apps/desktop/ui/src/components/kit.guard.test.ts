@@ -75,8 +75,7 @@ const GROUPS: Group[] = [
   { name: 'text control markup', where: 'ts', re: /class="ui-input\b|class:\s*'ui-input\b/,
     allow: { 'src/modules/cards/form.ts': 'the form card renders its own controls from the schema (one card family; pending: ui.html.input there)' } },
   { name: 'hand-built button styling', where: 'css', re: /appearance:\s*none/,
-    allow: { 'src/modules/cards/cards.css': 'the card layer\'s own surfaces: the token, the mini card, the option row (pending: rows and option rows in the kit)',
-      'src/modules/session/session.css': 'the diff file head and the panel\'s file row (pending: the kit\'s row)' } },
+    allow: { 'src/modules/cards/cards.css': 'the card layer\'s own surfaces: the token, the mini card, the option row (pending: rows and option rows in the kit)' } },
   /* the quiet mark: ui.html.badge */
   { name: 'badge styling', where: 'css', re: /border-radius:\s*var\(--r-pill\)[^}]*font:[^}]*var\(--mono\)/ },
   /* floating surfaces and messages the kit draws: menus, tooltips, toasts, empty states */

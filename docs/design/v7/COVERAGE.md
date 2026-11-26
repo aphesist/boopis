@@ -274,24 +274,24 @@ A `board` row can still hold a derived part or a conflict: its Reference cell sa
 
 | Screen or state | Exists today? | Reference | Feature | Repass |
 |---|---|---|---|---|
-| The right panel as one panel with tabs: Diff, Files, Terminal, PR | no, today it is the v6 details panel (`modules/session/right.ts`) | board `session/S24-panel-diff-*.jpg` (the pick: `session/S07-right-panel-tabs.jpg` A) | 0.3.0 S2 | not started (step 6) |
-| Diff: "This turn" scope, the file cards, a hunk, a comment on a line with "Add to message" | partly, an inline diff exists (`modules/session/diff.ts`) | board `session/S24-panel-diff-*.jpg` | 0.3.0 S2 (diff review) | not started (step 6) |
+| The right panel as one panel with tabs: Diff, Files, Terminal, PR | partly: the diff a FilesCard opens (`modules/session/details.ts`), story `shell/details-panel` | board `session/S24-panel-diff-*.jpg` (the pick: `session/S07-right-panel-tabs.jpg` A) | 0.3.0 S2 | the Diff alone, step 6c (the kit Pane's tools with one tool and no strip of tabs: `modules/session/details.ts`); the strip and Files, Terminal, PR are 0.3.0, hidden |
+| Diff: "This turn" scope, the file cards, a hunk, a comment on a line with "Add to message" | partly, `modules/session/details.ts` `diffHTML` | board `session/S24-panel-diff-*.jpg` | 0.3.0 S2 (diff review) | the file cards and their hunks built at step 6c (the kit DiffView that folds; its numbers 0.3.0's board S24 at the kit's 520, where the board draws 600: not compared); the scope, the comment and "Add to message" are 0.3.0, hidden |
 | Diff's scope menu open (This turn, This session, Uncommitted, Branch against its base) | no | board `session/S12-components-panel-diff-terminal.jpg` | 0.3.0 S2 | not started (step 6) |
 | Diff as Split | no | derived: S24 draws the words "Stacked" and "Split", not the split view; kit DiffView | 0.3.0 S2 | not started (no step) |
-| Diff with nothing changed; a very long diff; a binary or deleted file | partly, `diff.ts` | derived: S24; kit DiffView, EmptyState | 0.3.0 S2 | not started (no step) |
+| Diff with nothing changed; a very long diff; a binary or deleted file | partly, `details.ts` | derived: S24; kit DiffView, EmptyState | 0.3.0 S2 | nothing changed says so (EmptyState) and a long diff scrolls in the pane, step 6c (derived); binary and deleted files as the engine's diff gives them |
 | Files: the worktree as a tree, "Find a file", changed counts, the worktree's path | no | board `session/S25-panel-files-*.jpg` | 0.3.0 S2 (the tabbed panel; the plan's tables do not name the tree) | not started (step 6) |
 | Files: a file opened read-only; "Mention" | no | derived: SESSION-TAB.md section 7 names it; no board; kit Well | 0.3.0 S2 | not started (no step) |
-| Terminal: path and branch, output, the prompt, "Select output to attach it to your message" | no (today "Output" shows the logs) | board `session/S26-panel-terminal-*.jpg` | 0.3.0 S2 (terminal) | not started (step 6) |
+| Terminal: path and branch, output, the prompt, "Select output to attach it to your message" | no (today "Output" shows the logs) | board `session/S26-panel-terminal-*.jpg` | 0.3.0 S2 (terminal) | not started (step 6): until then what a session's commands printed is the kit's terminal Well at the end of its open work line (step 6c, the lead's decision) |
 | Terminal: a second shell ("+"), a running command, a long scrollback | no | derived: S26 draws "+" only; kit Well (terminal) | 0.3.0 S2 | not started (no step) |
 | PR: branch to base, title, "#412, open, 2 files", Checks, Review, Open on GitHub, Update from this session | no | board `session/S27-panel-pr-*.jpg` | 0.3.0 S2 (git flows) | not started (step 6) |
 | PR: none yet; merged or closed; a check failed; reviews present | no | derived: S27 draws one state; kit Card, StatusWord, EmptyState | 0.3.0 S2 | not started (no step) |
 | Side chat as a fifth tab: its context line, thread, "Add to chat", Delete, its own composer | no | board `session/S28-side-chat-*.jpg` | 0.3.0 S2 (fork and side chat) | not started (step 6) |
 | Commit: the files with checks, the written message, "No agent credits are added.", the split button and its menu | no | board `session/S29-commit-*.jpg` | 0.3.0 S2 (git flows) | not started (step 6) |
 | Commit: the message being written; a push refused; the gate not passed; nothing to commit | no | derived: S29; "classified errors (stderr never shown)" (PLAN-session-waves S2); kit Dialog form, Notice | 0.3.0 S2 | not started (no step) |
-| The session's details pane: title, project and branch, Session (Model, Effort, How careful, Workspace), Use (Context, Cost, Pull request) | partly, the v6 details panel, story `shell/details-panel` | board `session/S40-session-details-*.jpg`; see conflict 14 | Model, Effort and How careful work today (S0); Pull request 0.3.0 S2 | not started (step 6) |
-| The details pane's overflow: Pin, Fork, Settle | no | decided in SESSION-TAB.md section 16 ("then Pin, Fork and Settle in the overflow"); S40 draws the button closed | Pin and Settle 0.3.0 S1; Fork 0.3.0 S2 | not started (no step) |
-| Today's panel sections: Context (the measure, "Compact conversation"), Connectors, Output, Environment, Tasks, Changes, Governance | yes, `modules/session/right.ts` | derived: no board places them; see conflict 14 | works today | not started (no step) |
-| Today's collapsed panel: the context measure as a strip | yes, `right.ts` `strip` | derived: `session/S20` (the context ticks on the composer's line) | works today | not started (no step) |
+| The session's details pane: title, project and branch, Session (Model, Effort, How careful, Workspace), Use (Context, Cost, Pull request) | yes, `modules/session/details.ts`, story `shell/details-panel`; the board's state `boards/sessions` "S40 the session's details" | board `session/S40-session-details-*.jpg`; see conflict 14 | Model, Effort and How careful work today (S0); Pull request 0.3.0 S2 | matched, step 6c (lab:board S40: the head, Session and Use 0.00%, dark and light); Pull request hidden until it exists (`pull-request`), Workspace says the folder until a worktree is a choice |
+| The details pane's overflow: Pin, Fork, Settle | yes, `details.ts` `overflowEntries` | decided in SESSION-TAB.md section 16 ("then Pin, Fork and Settle in the overflow"); S40 draws the button closed | Pin and Settle 0.3.0 S1; Fork 0.3.0 S2 | built at step 6c: Fork (where the engine can) and Settle; Pin hidden until pinning exists (`pin`) |
+| Today's panel sections: Context (the measure, "Compact conversation"), Connectors, Output, Environment, Tasks, Changes, Governance | yes, `modules/session/details.ts`, `conversation.ts` | derived: no board places them; see conflict 14 | works today | placed by the lead's decisions (REPASS.md, 26 November) and built at step 6c: Context's parts and Compact under its row, the cap on the Cost row, Environment and Connectors kept as derived sections until Settings holds them (step 7), Tasks as the card of steps on the last turn, Changes as the diff, Output in the open work line, Governance in the model menu |
+| Today's collapsed panel: the context measure as a strip | no (removed) | derived: `session/S20` (the context ticks on the composer's line) | works today | removed at step 6c (the lead's decision: the context is on the composer's line) |
 | The inbox with a row hovered and the snooze menu | no | board `session/S30-session-inbox-*.jpg` | 0.3.0 S1 | not started (step 6) |
 | "/" in the composer: Commands, then "Skills and plugins" | partly, the attach menu's "Commands" types "/" | board `session/S31-slash-commands-*.jpg` | unknown: SESSION-TAB.md section 10 describes it; no wave table names it | not started (step 6) |
 | "$" skills, and an "@" file set in the text as a chip | partly, "Mention a file" completes a path (`modules/session/composer.ts`) | board `session/S32-files-and-skills-*.jpg` | unknown: as the row above | not started (step 6) |
@@ -485,7 +485,7 @@ A `board` row can still hold a derived part or a conflict: its Reference cell sa
 | A mod's view: its tree of text, rows, progress dots, buttons | yes, `components/mod-view.ts`, story `cards/mod-view` | derived: no board; kit Block, Row, Button | works today | not started (no step) |
 | The band above the composer, folded and open | yes, `modules/mods/panes.ts`, story `cards/mod-surfaces` "band and status" | derived: no board; nearest `bots/K02-12` (a strip over the composer); see conflict 32 | works today | not started (no step) |
 | The status line under the composer (the composer rises 22 px) | yes, `modules/mods/status.ts` | derived: no board; see conflict 32 | works today | not started (no step) |
-| A mod's pane: a tab in the details panel from 1200 px, inline over the composer below it | yes, `modules/mods/panes.ts` | derived: no board; nearest `session/S28` (a fifth tab); see conflict 32 | works today | not started (no step) |
+| A mod's pane: a tab in the details panel from 1200 px, inline over the composer below it | yes, `modules/mods/panes.ts` | derived: no board; nearest `session/S28` (a fifth tab); see conflict 32 | works today | a tab of the kit's Pane since step 6c (its strip: the kit's tabs; `surface.panelTabs`); the pane's own content is still the mods module's (v6) |
 | Rows a mod places in the conversation (its log lines) | yes, `modules/mods/rows.ts` | derived: `v7/12` SystemLine | works today | not started (no step) |
 | A mod's notice, one at a time, with "+N" | yes, `modules/mods/toasts.ts` | derived: `session/S17` Notice; see conflict 31 | works today | not started (no step) |
 | "Apply <mod>'s colours?" with a live preview of the whole app | yes, `modules/mods/theme-card.ts`, `cards/form-theme` | derived: no board; kit AskCard question, swatches | works today | not started (no step) |
@@ -596,7 +596,7 @@ No board is drawn at any size but 1440 × 900. Every row here is derived or deci
 | Under 1200 px: the compact rail (64, tiles of 44) by itself | partly: the kit has the size; the shell does not switch to it | decided: "44/64 as an option, automatic at small desktop sizes" (PLAN-w31-foundations, pick 06); `v7/06-sidebar-tile.jpg` B | 0.2.0 C | not started (no step) |
 | Under 1200 px: the right panel starts closed; a mod's pane moves inline over the composer | yes, `core/state.ts`, `modules/mods/panes.ts` | derived: no board | works today | not started (no step) |
 | Under 900 px: the sidebar becomes a rail by itself, and opens as a drawer over the work with a scrim | yes, `core/state.ts` `autoLeft`, `modules/shell/layout.ts` | derived: no board; the open sidebar of K02 over a scrim | works today | not started (no step) |
-| Under 900 px: the details pane and the tools panel overlay the work | yes for today's panel | decided in the spec ("pushes the work (overlays under 900)", section 7 and 21.2 component 3); no board | works today | not started (no step) |
+| Under 900 px: the details pane and the tools panel overlay the work | yes for today's panel | decided in the spec ("pushes the work (overlays under 900)", section 7 and 21.2 component 3); no board | works today | holds on the kit's Pane (`data-overlay`), step 6c |
 | Under 900 px: the composer's line folds the branch and the context away | no | decided in the spec's S05 row; no board | 0.2.0 C | not started (no step) |
 | Under 640 px: the sidebar closed, the column's margin folded | yes, `layout.ts` (`phone`) | derived: no board | works today | not started (no step) |
 | A wide window: the column stays 640, centred on the work | yes | derived: the boards' own layout rule (the composer and thread centred on the work) | works today | not started (no step) |
@@ -746,11 +746,11 @@ Both sides as they are written or drawn. None is resolved here.
 13. **Rewind's words.** `session/S23-finished-turn-*.jpg`: "Checkpoint 3", "Undo", "Edit from here", "Fork". The app (S0, from
     `docs/specs/checkpoint-rewind.md`): "Rewind files to here" and "Rewind to before this session", then a dry-run sheet
     that no board draws.
-14. **A session's details.** `session/S40-session-details-*.jpg`: one pane with "Session" (Model, Effort, How careful,
-    Workspace) and "Use" (Context, Cost, Pull request). The app: a panel of seven sections (Context with "Compact
-    conversation", Connectors, Output, Environment, Tasks, Changes, Governance), each a palette command ("Open context" …).
-    `session/S24` to `S27` give Changes to Diff and Output to Terminal; no board places Compact, Connectors, Environment,
-    Tasks or Governance.
+14. **A session's details.** Closed (the lead, 26 November; REPASS.md, "the lead's decisions for a session's details"): the
+    pane is `session/S40`'s (Session, Use); of the v6 panel's seven sections, Context's parts and Compact open under its row,
+    the cap is on the Cost row, Environment and Connectors stay as derived sections until Settings holds them, Tasks are a card
+    of steps in the thread, Changes are `session/S24`'s Diff alone, Output is in the open work line, Governance is the model
+    menu's.
 15. **The Settings nav: three boards, three lists.** `v7/14`: General, Models, Connectors, Approvals, Appearance, Keyboard,
     Diagnostics. `session/S39`: General, Sessions, Bots, Models, Approvals, Connectors, Appearance, Keyboard.
     `onboarding/screens/O-X02`: General, Models, Connectors, Approvals, Sessions, Bots, Appearance, Keyboard. The app:
