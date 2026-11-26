@@ -44,7 +44,12 @@ const dock: Story = {
     'a long-named bot\'s card': st(['open', 'long'], { fixtures: ['long'] }, card('cassiopeia-staging-deploy-guardian')),
     'centred in the window': st(['variant'], {}, async (c) => { c.hx.setState({ dockCentred: true }); await c.wait(600); }),
     'the Bots tab (no dock)': st(['variant', 'owner'], {}, async (c) => { c.hx.setState({ tab: 'bots' }); await c.wait(600); }, { note: 'the dock is the Sessions tab\'s alone', allow: NO_DOCK }),
-    'larger (112%)': st(['size', 'variant'], {}, undefined, { zoom: 1.12 })
+    'a working bot\'s card': st(['open', 'variant'], {}, async (c) => { const id = c.hx.dock()?.botAt(2); if (id) await card(id)(c); }, { note: 'the second bot of the row is at work: its card says so in its head, and its orb is alive' }),
+    'a card with no messages yet': st(['open', 'empty'], { patch: (p) => ({ ...p, bots: { ...p.bots, snapshot: () => { const s = p.bots.snapshot(); return { ...s, threads: Object.fromEntries(s.bots.map((b) => [b.id, []])) }; } }, waits: { ...p.waits, snapshot: () => [] } }) }, card('atlas'), { note: 'no thread and no ask: the head and the composer, on the one open size' }),
+    'compact when idle': st(['variant', 'owner'], {}, async (c) => { c.hx.setState({ dockCompact: true }); c.hx.dock()?.setMode('compact'); await c.wait(600); }, { note: 'board K08, "Compact dock when idle": 48 tall, bots of 24, the ask pill small; a pointer, the focus or a new ask bring the row back' }),
+    'larger (112%)': st(['size', 'variant'], {}, undefined, { zoom: 1.12 }),
+    'larger (125%)': st(['size', 'variant'], {}, undefined, { zoom: 1.25 }),
+    'larger (125%), a card open': st(['size', 'open'], {}, card('nina'), { zoom: 1.25 })
   }
 };
 

@@ -29,13 +29,14 @@
   pointer-events: auto;
   /* the slab's one motion (200 ms, --ease-sharp): its width follows its content, its height the open size, and it rises and sinks */
   transition: width var(--dur-2) var(--ease-sharp), height var(--dur-2) var(--ease-sharp), translate var(--dur-2) var(--ease-sharp);
-  translate: 0 calc(100% + var(--dk-f));
+  translate: var(--dk-nudge, 0px) calc(100% + var(--dk-f));
 }
-.dk[data-in] > .k7-dock { translate: 0 0; }
-.dk.is-snap > .k7-dock, .dk.is-snap .k7-dock__orb, .dk.is-snap .k7-dock__orb > .ui-orb { transition: none; }
+.dk[data-in] > .k7-dock { translate: var(--dk-nudge, 0px) 0; }
+/* a centre line and a width that leave half a pixel: the box is laid out on the whole pixel right of true, and `--dk-nudge` takes
+   back what a device pixel can show of it (index.ts `centre`). Never a -50% translation: clip.guard.test.ts */
+.dk > .k7-dock[data-half] { right: calc(-100vw - 1px); }
+.dk.is-snap > .k7-dock, .dk.is-snap .k7-dock__orb { transition: none; }
 
-/* a live orb is drawn at the hover size and held at 40; a hover scales it on the compositor (`--g`: 1, 46/40 or 52/40), crisp */
-.dk .k7-dock__orb > .ui-orb { transform: scale(var(--g, 1)); transition: transform var(--dur-2) var(--ease-sharp); }
 /* a bot past what fits is out of the row: no room, not seen, inert (index.ts), but still drawn. Never `hidden` or `display: none`:
    an orb is not drawn while it has no box, and WebKitGTK showed the two bots that join the row when the asks open as empty circles
    until their worker's next commit (tests/e2e/dock_webkit.py, "the asks keep both halves as they open") */

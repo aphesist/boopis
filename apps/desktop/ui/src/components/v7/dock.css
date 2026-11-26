@@ -11,6 +11,9 @@
 .k7-dock[data-dk="open"] .k7-dock__row { padding: 0 var(--dk-r); }
 .k7-dock__orb { position: relative; display: inline-grid; place-items: center; flex: none; width: var(--s); height: var(--s); border-radius: var(--r-pill);
   transition: width var(--dur-2) var(--ease-sharp), height var(--dur-2) var(--ease-sharp); }
+/* the orb fills its button and is drawn at the size it shows: a hover grows the button, and the orb with it (never a larger picture scaled down) */
+.k7-dock__orb > .ui-orb { width: 100%; height: 100%; }
+.k7-dock__orb > .ui-orb > orb-avatar { width: 100% !important; height: 100% !important; }   /* over the width its `size` attribute writes on the element itself */
 .k7-dock__orb[data-focus] { outline: var(--focus-w) solid var(--focus); outline-offset: var(--gap-xs); }
 /* dockv7's `.dk7-flag`: 1 px out at the right, 1 px down */
 .k7-dock__orb .k7-flag { right: calc(-1 * var(--mark-thick)); top: var(--mark-thick); bottom: auto; box-shadow: 0 0 0 var(--gap-hair) var(--dock-bg); }
@@ -20,10 +23,10 @@
 /* the ask pill (D03 C): amber, at the row's end; small in the compact dock */
 .k7-dock__ask { display: inline-flex; align-items: center; gap: var(--gap-s); flex: none; height: var(--ctl-card); padding: 0 var(--sp-3); border-radius: var(--r-pill); background: var(--owe-soft); color: var(--owe-text); font-size: var(--fs-s); line-height: var(--lh-s); white-space: nowrap; }
 .k7-dock__ask > .k7-dot { background: var(--owe); }
-.k7-dock[data-dk="compact"] .k7-dock__ask { height: var(--dk-orb-compact); padding: 0 var(--gap-row); font-size: var(--fs-xs); line-height: var(--lh-xs); gap: var(--gap-xs); }
+.k7-dock[data-dk="compact"] .k7-dock__ask { height: var(--dk-orb-compact); padding: 0 var(--gap-row); font-size: var(--fs-xs); line-height: var(--lh-xs); gap: var(--dk-ask-gap-compact); }
 .k7-dock[data-dk="compact"] .k7-dock__ask > .k7-dot { width: var(--gap-s); height: var(--gap-s); }
 /* a hover names the bot and its state in the row's end slot (a tooltip would cover the composer's line) */
-.k7-dock__cap { display: inline-flex; align-items: center; gap: var(--gap-s); flex: none; height: var(--ctl-card); padding: 0 var(--sp-1); font-size: var(--fs-s); line-height: var(--lh-s); white-space: nowrap; }
+.k7-dock__cap { display: inline-flex; align-items: center; gap: var(--gap-s); flex: none; min-width: var(--dk-cap-min); height: var(--ctl-card); padding: 0 var(--sp-1); box-sizing: border-box; font-size: var(--fs-s); line-height: var(--lh-s); white-space: nowrap; }
 .k7-dock__cap > b { font-weight: 500; color: var(--text); }
 /* open: 640 x 432; the panel takes the room above the row, its content on an 8 inset from the top */
 .k7-dock[data-dk="open"] { height: var(--dk-open-h); }
@@ -33,5 +36,12 @@
 .k7-dock__count { font-size: var(--fs-2xs); color: var(--text-dim); }
 .k7-dock__name { font-size: var(--fs-m); line-height: var(--lh-m); font-weight: 500; margin-inline-start: var(--gap-hair); }
 .k7-dock__log { padding: var(--sp-1) var(--sp-1) 0; }
-.k7-dock__panel > .k7-ask { max-width: none; }
+/* K03, K04 (dockv7.js `.dk7-q`): an ask is as wide as the panel, its words 6 over its Well */
+.k7-dock__panel > .k7-ask { width: auto; max-width: none; flex: none; }
+.k7-dock__panel > .k7-ask > .k7-ask__ask { margin-bottom: var(--gap-s); }
+/* K03, K04: the command starts where the ask's words do, 4 inside its Well */
+.k7-dock__panel > .k7-ask > .k7-well > .k7-well__pre { padding-inline-start: var(--sp-1); }
+/* dockv7.js `approval`: Deny's key is the kit's own 20, 4 after the gap */
+.k7-dock__panel > .k7-ask .k7-ask__answers .k7-chip > .k7-keys { margin-inline-start: var(--sp-1); }
+.k7-dock__panel > .k7-ask .k7-ask__answers .k7-chip .k7-kbd { height: var(--kbd-h); }
 .k7-dock__panel > .k7-composer { flex: none; }

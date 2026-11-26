@@ -41,18 +41,19 @@ export const state: AppState = {
   dock: pick('dock', DOCK, 'on'),
   theme: themeApi.scheme(),
   orbGrow: saved.orbGrow !== false,
-  dockCentred: saved.dockCentred === true
+  dockCentred: saved.dockCentred === true,
+  dockCompact: saved.dockCompact === true
 };
 export const prefs: Prefs = { collapse: saved.collapse && COLLAPSE.includes(saved.collapse) ? saved.collapse : 'rail' };
 export const urlQuery = query;
 
 export function saveState(): void {
   /* the sidebar is stored only once the person has set it; while it follows the window it is not */
-  writeJSON(KEYS.shell, { tab: state.tab, left: leftAuto ? undefined : state.left, leftBy: leftAuto ? undefined : 'user', right: state.right, dock: state.dock, theme: state.theme, collapse: prefs.collapse, orbGrow: state.orbGrow, dockCentred: state.dockCentred });
+  writeJSON(KEYS.shell, { tab: state.tab, left: leftAuto ? undefined : state.left, leftBy: leftAuto ? undefined : 'user', right: state.right, dock: state.dock, theme: state.theme, collapse: prefs.collapse, orbGrow: state.orbGrow, dockCentred: state.dockCentred, dockCompact: state.dockCompact });
 }
 
 export interface StatePatch {
-  tab?: string; left?: string; right?: string; dock?: string; orbGrow?: boolean; dockCentred?: boolean;
+  tab?: string; left?: string; right?: string; dock?: string; orbGrow?: boolean; dockCentred?: boolean; dockCompact?: boolean;
   /** 'light' or 'dark' pick the Bone or Card catalog preset; any other value is a preset id */
   theme?: string;
   /** set by back and forward so history is not pushed again */
@@ -71,7 +72,7 @@ export function setStateHooks(h: StateHooks): void { hooks = h; }
 let mounting = false;
 export function setMounting(v: boolean): void { mounting = v; }
 
-const KEYS_OF_STATE: ReadonlyArray<keyof AppState> = ['tab', 'left', 'right', 'dock', 'theme', 'orbGrow', 'dockCentred'];
+const KEYS_OF_STATE: ReadonlyArray<keyof AppState> = ['tab', 'left', 'right', 'dock', 'theme', 'orbGrow', 'dockCentred', 'dockCompact'];
 const has = (a: readonly string[], v: string | undefined): v is string => !!v && a.includes(v);
 
 export function setState(input: StatePatch): Readonly<AppState> {
@@ -85,6 +86,7 @@ export function setState(input: StatePatch): Readonly<AppState> {
   if (has(DOCK, patch.dock)) next.dock = patch.dock as AppState['dock'];
   if (typeof patch.orbGrow === 'boolean') next.orbGrow = patch.orbGrow;
   if (typeof patch.dockCentred === 'boolean') next.dockCentred = patch.dockCentred;
+  if (typeof patch.dockCompact === 'boolean') next.dockCompact = patch.dockCompact;
   if (patch.theme) {
     const id = patch.theme === 'light' ? 'bone' : patch.theme === 'dark' ? 'catalog' : patch.theme;
     if (themeApi.presets[id]) themeApi.preset(id);

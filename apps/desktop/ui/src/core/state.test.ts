@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { resetBus, on } from './bus';
 import { setMounting, setState, state, toggle } from './state';
 
-afterEach(() => { resetBus(); setMounting(false); setState({ tab: 'session', left: 'open', right: 'closed', dock: 'on', orbGrow: true, dockCentred: false }); });
+afterEach(() => { resetBus(); setMounting(false); setState({ tab: 'session', left: 'open', right: 'closed', dock: 'on', orbGrow: true, dockCentred: false, dockCompact: false }); });
 
 describe('setState', () => {
   it('applies valid values, persists, and announces what changed', () => {

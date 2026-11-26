@@ -88,7 +88,7 @@ both.push('--search-pill-w: 300px;', '--notch-h: 60px;', '--diff-n: 36px;', '--d
   '--flag-ring: 2.5px;', '--hold-ring: 2px;', '--focus-w: 2px;', '--focus-off: 2px;', '--mark-gap-ch: 7ch;', '--tools-w: 520px;', '--sb-open-w: 300px;',
   '--rail-b-w: 64px;', '--tile-b: 44px;', '--pane-orb: 64px;', '--dk-row-h: 72px;', '--dk-compact-h: 48px;', '--dk-open-w: 640px;', '--dk-open-h: 432px;',
   '--dk-row-max: 640px;', '--dk-compact-max: 380px;', '--dk-orb: 40px;', '--dk-orb-hover: 52px;', '--dk-orb-near: 46px;', '--dk-orb-compact: 24px;',
-  '--dk-gap: 14px;', '--dk-gap-compact: 8px;', '--dk-r-compact: 24px;', '--dk-inset: 8px;', '--hl: 1px;');
+  '--dk-gap: 14px;', '--dk-gap-compact: 8px;', '--dk-r-compact: 24px;', '--dk-inset: 8px;', '--dk-cap-min: 150px;', '--dk-ask-gap-compact: 5px;', '--hl: 1px;');
 /* the boards' own sizes (docs/design/v7/boards/src: kit.css, screens.js, botscreens.js, sessionnew.js), each named once */
 both.push('--file-w: 260px;',                       /* a file card (kit.css .file) */
   '--composer-w: 720px;', '--composer-w-pane: 600px;',   /* the composer on the column, and beside an open details pane (botscreens.js comp) */

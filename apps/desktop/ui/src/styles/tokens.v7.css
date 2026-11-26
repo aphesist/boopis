@@ -336,6 +336,8 @@
   --dk-gap-compact: 8px;
   --dk-r-compact: 24px;
   --dk-inset: 8px;
+  --dk-cap-min: 150px;
+  --dk-ask-gap-compact: 5px;
   --hl: 1px;
   --file-w: 260px;
   --composer-w: 720px;

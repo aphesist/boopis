@@ -37,6 +37,7 @@
 .k7-ask__rule { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
 .k7-ask > .k7-well { margin: 0 0 var(--sp-2); }
 .k7-ask__answers { display: flex; flex-wrap: wrap; gap: var(--gap-s); }
+.k7-ask__answers > .k7-chip[data-end] { margin-inline-start: auto; }   /* K03, K04: Deny at the row's end */
 /* a field in the card's corner (your own answer to a question) is concentric with the Block: 22 - 8 */
 .k7-ask > .k7-field .k7-field__box { border-radius: calc(var(--r-block) - var(--pad-block)); }
 /* the outlined chip (Deny) and its key: the boards' `.chip.out` and the 18 tall kbd 2 after the word */

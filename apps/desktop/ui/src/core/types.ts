@@ -15,6 +15,8 @@ export interface AppState {
   /** owner setting (22 November 2026: "put an option that centralizes the dock and makes sure it doesn't move with the other
       bars/animations"): the dock sits on the window's middle instead of the column's centre line (Settings > General), default off */
   dockCentred: boolean;
+  /** "Compact dock when idle" (Settings, General; off by default): the dock's row eases to its compact geometry while nothing new needs you (board K08) */
+  dockCompact: boolean;
 }
 
 /** emitted by the shell as `hx:layout` (viewport coordinates) */

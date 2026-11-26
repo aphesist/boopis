@@ -29,17 +29,17 @@ export interface DockOpts {
   kind?: U<DockKind>; bots: readonly DockBot[]; hover?: U<string>; focus?: U<string>; current?: U<string>; more?: U<number>;
   /** open: the stack of asks (D03 C) or a bot's card (`state` its state in words; `composerHTML` the place of the composer when the app
       draws its own there) */ open?: U<{ kind: 'stack'; asks: readonly AskCardOpts[] } | { kind: 'card'; bot: DockBot; state?: string; log: readonly { kind: 'user' | 'agent'; text: string }[]; ask?: AskCardOpts; composerHTML?: string }>;
-  /** the size the orbs are drawn at and scaled from (the app's live dock: the hover size, so a grown orb stays crisp) */ render?: U<number>;
   attrs?: U<Attrs>;
 }
 const stateOf = (b: DockBot): [string, 'owe' | 'neutral'] => (b.needs ? ['needs you', 'owe'] : b.working ? ['working', 'neutral'] : b.resting ? ['resting', 'neutral'] : ['idle', 'neutral']);
 
-/** one orb of the row at size `s` (the app's live dock draws its orbs at `render` px and scales them, so a grown orb stays crisp) */
-export function dockOrb(b: DockBot, s: number, o: { focus?: boolean; current?: boolean; awake?: boolean; tabbable?: boolean; render?: number; attrs?: Attrs } = {}): string {
+/** one orb of the row at size `s`. The orb is drawn at the size it shows (never drawn larger and scaled down: that is soft), and fills
+    its button, so a hover that grows the button (`--s`) grows the orb with it, drawn anew at every size */
+export function dockOrb(b: DockBot, s: number, o: { focus?: boolean; current?: boolean; awake?: boolean; tabbable?: boolean; attrs?: Attrs } = {}): string {
   return '<button class="k7-reset k7-dock__orb"' + attrs({
     type: 'button', 'data-bot': b.id, 'aria-label': (b.name ?? '') + ', ' + stateOf(b)[0], 'aria-current': o.current ? 'true' : null,
     'data-focus': o.focus ? '' : null, 'data-awake': o.awake ? '' : null, tabindex: o.tabbable ? '0' : '-1', style: '--s:' + s + 'px', ...(o.attrs ?? {})
-  }) + '>' + ((h: string) => (b.ink ? inkOrb(h) : h))(orbHtml(b, { size: s, ...(o.render ? { render: o.render } : {}), rest: true, surface: '--dock-bg', state: b.needs ? 'needs' : b.working ? 'working' : b.resting ? 'sleeping' : undefined })) + (b.needs ? '<span class="k7-flag" aria-hidden="true"></span>' : '') + '</button>';
+  }) + '>' + ((h: string) => (b.ink ? inkOrb(h) : h))(orbHtml(b, { size: s, rest: true, surface: '--dock-bg', state: b.needs ? 'needs' : b.working ? 'working' : b.resting ? 'sleeping' : undefined })) + (b.needs ? '<span class="k7-flag" aria-hidden="true"></span>' : '') + '</button>';
 }
 /** the row's end slot under a hover or focus: the bot's name and its state in words (a tooltip would cover the composer's line) */
 export const dockCap = (name: string, state: string, tone: 'owe' | 'neutral' = 'neutral'): string =>
@@ -55,7 +55,7 @@ function rowHTML(o: DockOpts, kind: DockKind): string {
   const hi = o.bots.findIndex((b) => b.id === o.hover);
   const orb = (b: DockBot, i: number): string => {
     const s = g.grow && hi >= 0 ? (i === hi ? g.grow[0] : Math.abs(i - hi) === 1 ? g.grow[1] : g.orb) : g.orb;
-    return dockOrb(b, s, { focus: o.focus === b.id, current: o.current === b.id, awake: o.hover === b.id, tabbable: o.focus === b.id || (!o.focus && i === 0), ...(o.render ? { render: o.render } : {}) });
+    return dockOrb(b, s, { focus: o.focus === b.id, current: o.current === b.id, awake: o.hover === b.id, tabbable: o.focus === b.id || (!o.focus && i === 0) });
   };
   const needs = o.bots.filter((b) => b.needs);
   const hovered = o.bots.find((b) => b.id === o.hover);
@@ -76,7 +76,8 @@ export function dockPanel(open: NonNullable<DockOpts['open']>): string {
   return '<div class="k7-dock__panel"><div class="k7-dock__head">' + orbHtml(b, { size: 28, state: b.needs ? 'needs' : undefined }) + '<span class="k7-dock__name">' + esc(b.name ?? '') + '</span>' + statusWord({ text: open.state ?? stateOf(b)[0], tone: stateOf(b)[1] }) + '<span class="k7-grow"></span>' +
     iconButton({ icon: 'bots', label: 'Open in Bots', variant: 'ghost', keys: 'mod+Enter' }) + iconButton({ icon: 'close', label: 'Close', variant: 'ghost', keys: 'esc' }) + '</div>' +
     '<div class="k7-dock__log k7-thread">' + open.log.map((m) => bubble({ kind: m.kind, text: m.text, ...(m.kind === 'user' && fill ? { fill } : {}) })).join('') + '</div>' +
-    (open.ask ? askCard(open.ask) : '') + (open.composerHTML ?? composer({ kind: 'dock', placeholder: 'Message ' + (b.name ?? 'the bot'), ...(fill ? { fill } : {}) })) + '</div>';
+    /* K04: the card's composer is the dock's own (the white primary circle); the bot's fill is its bubbles' */
+    (open.ask ? askCard(open.ask) : '') + (open.composerHTML ?? composer({ kind: 'dock', placeholder: 'Message ' + (b.name ?? 'the bot') })) + '</div>';
 }
 
 export function dock(o: DockOpts): string {

@@ -76,6 +76,7 @@ function applyState(): void {
   const sGrow = document.getElementById('hx-set-orb-grow') as HTMLInputElement | null; if (sGrow) sGrow.checked = state.orbGrow;
   app.dataset['dockCentre'] = state.dockCentred ? 'on' : 'off';
   const sCentre = document.getElementById('hx-set-dock-centre') as HTMLInputElement | null; if (sCentre) sCentre.checked = state.dockCentred;
+  const sCompact = document.getElementById('hx-set-dock-compact') as HTMLInputElement | null; if (sCompact) sCompact.checked = state.dockCompact;
   if (sh.seg.collapse) sh.seg.collapse.select(prefs.collapse);
   updateTitle();
   updateAttentionDots();
@@ -203,7 +204,7 @@ export function boot(): void {
   for (const name of SLOTS) mountModule(name);
   setMounting(false);
 
-  emit('hx:state', { state, changed: ['tab', 'left', 'right', 'dock', 'theme', 'orbGrow', 'dockCentred'], initial: true });
+  emit('hx:state', { state, changed: ['tab', 'left', 'right', 'dock', 'theme', 'orbGrow', 'dockCentred', 'dockCompact'], initial: true });
   emit('hx:tab', { tab: state.tab, initial: true });
   layoutNow(false);
   requestAnimationFrame(() => requestAnimationFrame(() => { app.classList.remove('is-booting'); emit('hx:ready', { state }); }));

@@ -215,3 +215,39 @@ export function boardS23(p: DataProvider): DataProvider {
       blank: { question: 'Check the fix on which build?', short: 'Check the fix on which build?', options: ['staging', 'the Linux app'], guess: 'staging', rewrites: { staging: { lead: 'I guessed', tail: 'for the check' } } } }
   ], 'auto_edits', '', { details: { ...started(p, [], 'auto_edits', '').details, changes: store<readonly Change[]>([['modules/dock/dock.css', 12, 3], ['modules/dock/engine.ts', 2, 2]]) } });
 }
+
+/* ───────── the dock's key screens, K01 to K08 (dockv7.js `screen`): a session at work, your bots under it ───────── */
+/** the bots as dockv7.js orders them (BOTS: nina needs you, kai works, hex rests) and, for K05, the thirteen that do not fit */
+const DOCK_BOTS = ['nina', 'kai', 'boopis', 'moss', 'iris', 'hex'] as const;
+const MORE_SHAPES = ['circle', 'squircle', 'triangle', 'flower', 'hexagon', 'cloud', 'star', 'diamond', 'drop', 'clover', 'ghost', 'circle', 'squircle'] as const;
+const NINA_ASK = { id: 's17-nina', kind: 'approval' as const, bot: 'nina', who: 'nina', title: 'Deploy 0.2.0 to staging?', data: { id: 's17-nina', title: 'Deploy 0.2.0 to staging?', item: ['boopis deploy staging --tag 0.2.0'], from: 'nina' } };
+/** K03's second ask. The board draws it as a question with three answers, which is stale (owner: bots ask only through approvals):
+    the same words, as moss's approval */
+const MOSS_ASK = { id: 'k03-moss', kind: 'approval' as const, bot: 'moss', who: 'moss', title: 'The WebKit job flaked twice. Quarantine it?', data: { id: 'k03-moss', title: 'The WebKit job flaked twice. Quarantine it?', item: ['boopis ci quarantine webkit-dock'], from: 'moss' } };
+/** nina's last messages, as K04's card draws them */
+const NINA_THREAD: readonly ThreadMessage[] = [
+  { kind: 'text', id: 'k04-1', who: 'you', t: 'Today 09:40', text: 'Ship 0.2.0 when the notes are in.' },
+  { kind: 'text', id: 'k04-2', who: 'nina', t: 'Today 09:41', text: 'The notes are in. Staging is ready.' }
+];
+export type DockBoard = 'rest' | 'asks' | 'many' | 'none';
+/** the session K01 to K08 draw (a turn at work on auto-accept, an empty composer) with the dock's bots: `rest` the six of K01 (also K02,
+    K04, K07 and K08), `asks` with moss asking too (K03), `many` nineteen (K05), `none` boopis alone (K06: no dock) */
+export function boardDock(kind: DockBoard): (p: DataProvider) => DataProvider {
+  return (p) => {
+    const base = started(p, [
+      { id: 'k-t1', role: 'user', at: '09:42', text: ASK },
+      { id: 'k-t2', role: 'assistant', model: 'sonnet 5.5', time: '', cost: '', stepCount: 8, steps: [...tools('read_file', 6), ...tools('search_files', 2)], status: 'running', bullets: [], paragraphs: ['Reading the dock’s stage and clip code first.'] }
+    ], 'auto_edits', '');
+    const tpl = p.bots.snapshot().bots[0] as Bot;
+    const six = roster(p, { kai: { state: 'working', activity: 'Writing the changelog' }, ...(kind === 'asks' ? { moss: { state: 'needs', attention: 'approval', activity: 'quarantine a job' } } : {}) }, DOCK_BOTS);
+    const more: Bot[] = kind === 'many' ? MORE_SHAPES.map((shape, i) => ({ ...tpl, id: 'bot-' + (i + 7), name: 'bot ' + (i + 7), role: 'one of nineteen', shape, color: LOOKS[(i % 5) + 1]?.color ?? '#a6a6ab', state: 'idle', attention: null, activity: '', last: null, ideas: [] })) : [];
+    const bots = kind === 'none' ? roster(p, {}, ['boopis']) : [...six, ...more];
+    const waits = kind === 'none' ? [] : kind === 'asks' ? [NINA_ASK, MOSS_ASK] : [NINA_ASK];
+    return {
+      /* the boards draw "Always for staging" on an approval: the app builds its standing answer against `approval-rules` ("Always allow") */
+      ...base, info: drawn(p, 'approval-rules'),
+      bots: { ...base.bots, snapshot: () => ({ bots, threads: { ...Object.fromEntries(bots.map((b) => [b.id, []])), ...(kind === 'none' ? {} : { nina: NINA_THREAD }) } }) },
+      waits: { ...base.waits, snapshot: () => waits }
+    };
+  };
+}

@@ -13,8 +13,8 @@ import type { Attrs, U } from './util';
 
 const blockAttrs = (name: string, more: Attrs): string => kitAttrs(name, { 'data-block': '', 'data-sq': '', 'data-sq-mode': 'frame', ...more });
 /** an agent card's head: the asker's mark (a model's 16 px mark, or a bot's 16 px orb), a short line, and the state at the end */
-function askerHTML(o: { model?: U<ModelRef>; bot?: U<BotLike> }): string {
-  return o.bot ? orbHtml(o.bot, { size: 16, still: true, mode: 'fixed', surface: '--bg-3' }) : o.model ? '<span class="k7-head__mark">' + markHTML(o.model, { size: 14, label: false }) + '</span>' : '';   /* a model's mark is 14 in a card's head (sessiontab.js `ask`: cm(fam, 14)) */
+function askerHTML(o: { model?: U<ModelRef>; bot?: U<BotLike>; rest?: U<boolean> }): string {
+  return o.bot ? orbHtml(o.bot, o.rest ? { size: 16, rest: true, surface: '--bg-3' } : { size: 16, still: true, mode: 'fixed', surface: '--bg-3' }) : o.model ? '<span class="k7-head__mark">' + markHTML(o.model, { size: 14, label: false }) + '</span>' : '';   /* a model's mark is 14 in a card's head (sessiontab.js `ask`: cm(fam, 14)) */
 }
 
 /* ── AskCard (9): standalone (a bot's approval, never expires), attached (in a ToolRow: its answers alone, S09), question (chips),
@@ -27,20 +27,23 @@ export interface AskAnswer {
   label: string; primary?: boolean; hold?: boolean; keys?: string;
   /** what the answer is called to the app (data-value) */ value?: string;
   /** the outlined chip (the boards' Deny) */ outline?: boolean;
+  /** at the row's end, the others at its start (the dock's cards, K03 and K04: Deny at the end) */ end?: boolean;
   /** drawn as the board draws it, and it does nothing yet: the reason, said in its tip */ inert?: string;
 }
 export interface AskCardOpts {
   variant?: U<AskVariant>; state?: U<AskState>; who?: U<string>; bot?: U<BotLike>; model?: U<ModelRef>;
   ask: string; sub?: U<string>; /** the approval rule that asked, by name: "Rule: “...”" in the accent (board 11) */ rule?: U<string>; command?: U<string>; answers?: U<readonly AskAnswer[]>; choices?: U<readonly string[]>; chosen?: U<number | string>;
   /** answered: the one-line receipt ("Allowed once", "sent as a correction") */ receipt?: U<string>; something?: U<boolean>; attrs?: U<Attrs>;
+  /** the asker's orb at rest, in its pose (the dock's cards: every bot in the dock rests unless its state shows in the row) */ rest?: U<boolean>;
+  /** "needs you" in words alone, without its dot (the dock's cards, K03 and K04: the orb's flag in the row already carries the dot) */ plain?: U<boolean>;
 }
 export const APPROVAL_ANSWERS: readonly AskAnswer[] = [{ label: 'Hold to allow once', primary: true, hold: true }, { label: 'Allow all this turn', value: 'turn' }, { label: 'Always allow', value: 'always' }, { label: 'Deny', value: 'deny', keys: 'esc', outline: true }];
-const answerChips = (list: readonly AskAnswer[], more = ''): string => '<div class="k7-ask__answers">' + list.map((x) => chip({ label: x.label, variant: 'answer', chosen: !!x.primary, hold: !!x.hold, attrs: { 'data-value': x.value ?? null, 'data-outline': x.outline ? '' : null, 'aria-keyshortcuts': x.keys ? (x.keys === 'esc' ? 'Escape' : x.keys) : null, 'aria-disabled': x.inert ? 'true' : null, 'data-tip': x.inert ?? null } }).replace('</button>', x.keys ? kbd({ keys: x.keys }) + '</button>' : '</button>')).join('') + more + '</div>';
+const answerChips = (list: readonly AskAnswer[], more = ''): string => '<div class="k7-ask__answers">' + list.map((x) => chip({ label: x.label, variant: 'answer', chosen: !!x.primary, hold: !!x.hold, attrs: { 'data-value': x.value ?? null, 'data-outline': x.outline ? '' : null, 'data-end': x.end ? '' : null, 'aria-keyshortcuts': x.keys ? (x.keys === 'esc' ? 'Escape' : x.keys) : null, 'aria-disabled': x.inert ? 'true' : null, 'data-tip': x.inert ?? null } }).replace('</button>', x.keys ? kbd({ keys: x.keys }) + '</button>' : '</button>')).join('') + more + '</div>';
 export function askCard(o: AskCardOpts): string {
   const v = o.variant ?? 'standalone', st = o.state ?? 'needs';
   /* attached (S09): the answers alone, at the end of their tool row's Block; the row's own head says what waits and for whom */
   if (v === 'attached') return '<div class="k7-ask"' + partAttrs('AskCard', { role: 'group', 'aria-label': o.ask, 'data-variant': v, 'data-state': st, ...(o.attrs ?? {}) }) + '>' + answerChips(o.answers ?? APPROVAL_ANSWERS) + '</div>';
-  const stateWord = st === 'needs' ? statusWord({ text: 'needs you', tone: 'owe', dot: true }) : st === 'lapsed' ? statusWord({ text: 'lapsed', tone: 'owe' }) : st === 'withdrawn' ? statusWord({ text: 'withdrawn' }) : st === 'answered' ? statusWord({ text: o.receipt ?? 'answered', tone: 'ok' }) : '';
+  const stateWord = st === 'needs' ? statusWord({ text: 'needs you', tone: 'owe', dot: !o.plain }) : st === 'lapsed' ? statusWord({ text: 'lapsed', tone: 'owe' }) : st === 'withdrawn' ? statusWord({ text: 'withdrawn' }) : st === 'answered' ? statusWord({ text: o.receipt ?? 'answered', tone: 'ok' }) : '';
   const head = '<div class="k7-ask__head k7-text">' + askerHTML(o) + '<span class="k7-ask__who k7-ell">' + esc(o.who ?? (v === 'question' || v === 'lapsed' ? 'asked during the turn' : (o.bot?.name ?? 'boopis') + ' asks')) + '</span>' + stateWord + '</div>';
   const a = blockAttrs('AskCard', { role: 'group', 'aria-label': o.ask, 'data-variant': v, 'data-state': st, ...(o.attrs ?? {}) });
   if (st === 'answered' || st === 'withdrawn') {

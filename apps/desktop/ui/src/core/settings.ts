@@ -56,7 +56,7 @@ export type DockSwitch = (typeof DOCK)[number];
 export type CollapseMode = (typeof COLLAPSE)[number];
 
 export interface SavedShell {
-  tab?: Tab; left?: LeftMode; leftBy?: 'user'; right?: RightMode; dock?: DockSwitch; collapse?: CollapseMode; orbGrow?: boolean; dockCentred?: boolean;
+  tab?: Tab; left?: LeftMode; leftBy?: 'user'; right?: RightMode; dock?: DockSwitch; collapse?: CollapseMode; orbGrow?: boolean; dockCentred?: boolean; dockCompact?: boolean;
 }
 export const loadShell = (): SavedShell => {
   const o = readJSON<Record<string, unknown>>(KEYS.shell);

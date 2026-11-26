@@ -49,7 +49,7 @@ export interface DockApi {
   /** the stack of asks (D03 C) */
   openAsks(): void;
   closeSession(): void;
-  readonly state: { shown: boolean; open: 'stack' | 'card' | null; card: string | null; asks: number; row: readonly string[]; more: number; hover: string | null; width: number };
+  readonly state: { shown: boolean; compact: boolean; open: 'stack' | 'card' | null; card: string | null; asks: number; row: readonly string[]; more: number; hover: string | null; width: number };
   /** tests slow or speed the dock's motion */
   timeScale(f: number): void;
   hover(x: number | null): void;

@@ -25,14 +25,16 @@ import type { AskCardOpts, DockBot } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, ThreadMessage, Wait } from '../../data';
 import { asksOf, askWords, BOOPIS_ID, fit, ordered, ownBots, shows } from './model';
-import { composeTools, mentionChips, voiceNeedsSetup } from '../chat/compose';
+import { composeTools, later, mentionChips, voiceNeedsSetup } from '../chat/compose';
 import { mentionCtx } from '../chat/refs';
 import { dockRoom } from './geometry';
 
-/* the kit's geometry (tokens.v7.json dock.geometry): the row, and open */
+/* the kit's geometry (tokens.v7.json dock.geometry): the row, the compact row (board K08) and open */
 const G = kit.dockGeometry;
-const ROW = G.row, OPEN = G.open;
+const ROW = G.row, OPEN = G.open, COMPACT = G.compact;
 const GROW_EXTRA = ROW.grow[0] + 2 * ROW.grow[1] - 3 * ROW.orb;
+/** "Compact dock when idle": how long nothing new has to need you, and nobody point at the dock, before the row eases to compact */
+const IDLE_MS = 10000;
 /** messages a bot's card shows */
 const LOG_N = 4;
 
@@ -42,6 +44,8 @@ const S = {
   open: null as Open, hover: null as string | null, focus: null as string | null,
   /** drawn now (risen), and wanted (it is rising or will) */
   shown: false, want: false, seq: 0,
+  /** the row is in its compact geometry now (the setting on, and idle) */
+  compact: false,
   /** bot ids in the row's order, and how many show */
   rank: [] as string[], fitN: 0,
   timeScale: 1, mounted: false, width: 0
@@ -64,7 +68,7 @@ const HINT = `Click or Enter opens its card here. Click it again, or Esc, to clo
 
 /* ───────── the geometry: one set of attributes, the kit's ───────── */
 /** the dock takes a geometry: its attributes and size variables are the kit's own Dock's for that geometry (`kit.html.dock`) */
-function setKind(kind: 'row' | 'open'): void {
+function setKind(kind: 'row' | 'open' | 'compact'): void {
   if (X.dock.dataset['dk'] === kind) return;
   const tpl = document.createElement('template');
   tpl.innerHTML = kit.html.dock({ kind, bots: [] });
@@ -76,16 +80,18 @@ function setKind(kind: 'row' | 'open'): void {
 /** the slab's path for the box as laid out now: its width follows the content and eases, its height grows to the open size */
 function paintSlab(w: number, h: number): void {
   if (!X.svg || !X.path || !w || !h) return;
-  const F = OPEN.F;
+  /* the corner and the flares are the geometry's (30; 24 in the compact row) and ease with its height between the two */
+  const t = clamp((h - COMPACT.h) / (ROW.h - COMPACT.h), 0, 1), F = COMPACT.F + (OPEN.F - COMPACT.F) * t, R = COMPACT.R + (OPEN.R - COMPACT.R) * t;
   X.svg.setAttribute('viewBox', '0 0 ' + (w + 2 * F) + ' ' + h); X.svg.setAttribute('width', String(w + 2 * F)); X.svg.setAttribute('height', String(h));
-  X.path.setAttribute('d', kit.dockParts.slab(w, h, OPEN.R, F));
+  X.svg.style.left = -F + 'px';
+  X.path.setAttribute('d', kit.dockParts.slab(w, h, R, F));
 }
 
 /* ───────── the row ───────── */
 function orbAttrs(b: Bot): Record<string, string> { return { 'aria-label': ui.botLabel(b), 'aria-describedby': 'dk-hint' }; }
 /** a bot's orb: made once, in place in the row (an orb made in a template and moved in is not painted by its worker) */
 function addOrb(b: Bot): HTMLButtonElement {
-  const html = kit.dockParts.orb(dockBot(b), ROW.orb, { render: ROW.grow[0], attrs: orbAttrs(b) });
+  const html = kit.dockParts.orb(dockBot(b), row().orb, { attrs: orbAttrs(b) });
   if (X.more) X.more.insertAdjacentHTML('beforebegin', html); else X.row.insertAdjacentHTML('beforeend', html);
   const btn = X.row.querySelector<HTMLButtonElement>('.k7-dock__orb[data-bot="' + CSS.escape(b.id) + '"]');
   if (!btn) throw new Error('the dock could not draw ' + b.id);
@@ -103,11 +109,16 @@ function patchOrb(b: Bot): void {
   const o = btn.querySelector('orb-avatar');
   if (o) { paintLook(o, lookOf(b)); restReact(o, X.composers.get(b.id)?.listening ? 'listening' : s.reaction); }
 }
+/** the end slot's own size, watched: the pill changes size with the geometry (small in the compact row) and with its font, sometimes
+    a frame after the row was fitted (where reduced motion cuts every transition to a millisecond): the row is fitted again then */
+let refit = 0;
+const endSize = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { cancelAnimationFrame(refit); refit = requestAnimationFrame(() => { if (S.shown) layoutRow(); }); }) : null;   /* in the next frame: a fit inside the observer's own turn would loop it */
 /** the end slot: the hovered bot's name and state, else the ask pill, else nothing. A bot focused by the keyboard takes the Iris ring
     and the slot keeps the pill (board DK1, "focus"): the pill is the row's last stop, so the keys reach it */
 function drawEnd(): void {
   const who = botById(S.hover), a = asks();
-  const html = who ? kit.dockParts.cap(who.name, ...stateWords(who)) : a.length && S.open?.kind !== 'stack' ? kit.dockParts.ask(askWords(a, nameOf)) : '';
+  /* the pill is the row's at rest: an open card or stack draws the row without it (K03, K04) */
+  const html = who ? kit.dockParts.cap(who.name, ...stateWords(who)) : a.length && !S.open ? kit.dockParts.ask(askWords(a, nameOf)) : '';
   const sig = who ? 'cap:' + who.id + ':' + stateWords(who)[0] : html;
   if (X.end?.dataset['sig'] === sig && (html !== '' || !X.end)) return;
   /* the pill gives way to a hovered bot's name: a keyboard's focus on it goes to the row's first bot, never to the page */
@@ -117,6 +128,7 @@ function drawEnd(): void {
   if (!html) return;
   X.row.insertAdjacentHTML('beforeend', html);
   X.end = X.row.lastElementChild as HTMLElement;
+  endSize?.observe(X.end);
   X.end.dataset['sig'] = sig;
   X.end.style.order = '1001';
   /* one tab stop for the row (a toolbar): the arrows reach the pill */
@@ -133,14 +145,17 @@ function drawMore(n: number): void {
 }
 /** the sizes on the row now: the hovered orb 52, its neighbours 46, the rest 40 ("Grow bots on hover" off: all 40) */
 function sizeOf(i: number, hi: number): number {
+  if (S.compact) return COMPACT.orb;
   if (hi < 0 || appState.orbGrow === false) return ROW.orb;
   return i === hi ? ROW.grow[0] : Math.abs(i - hi) === 1 ? ROW.grow[1] : ROW.orb;
 }
+/** the row's geometry now: the row's, or the compact one's */
+const row = (): { w: number; h: number; pad: number; orb: number; gap: number } => (S.compact ? COMPACT : ROW);
 /** the room the dock may take: at most 640, and the room around its middle between the bars (geometry.ts dockRoom) */
 function room(): number {
   const L = getLayout(), vw = innerWidth;
   const r = dockRoom({ centred: appState.dockCentred, viewportW: L ? L.viewportW : vw, centerX: L ? L.centerX : vw / 2, viewLeft: L ? L.viewLeft : 0, viewRight: L ? L.viewRight : vw, flare: OPEN.F });
-  return Math.min(ROW.w, r > 0 ? r : vw - 2 * OPEN.F);
+  return Math.min(S.compact ? COMPACT.w : ROW.w, r > 0 ? r : vw - 2 * OPEN.F);
 }
 /** order, fit, sizes and width: every bot's rank is its button's `order`, a bot past the fit is out of the row (`data-out`), the width is the content's */
 function layoutRow(): void {
@@ -150,7 +165,8 @@ function layoutRow(): void {
   const endW = X.end ? X.end.offsetWidth : 0;
   let moreW = 0;
   if (list.length > 1) { drawMore(list.length); moreW = X.more ? X.more.offsetWidth : 0; }
-  const f = fit(list.length, { room: room(), pad: ROW.pad, orb: ROW.orb, gap: ROW.gap, grow: appState.orbGrow === false ? 0 : GROW_EXTRA, end: X.end?.matches('.k7-dock__cap') ? 0 : endW, more: moreW });
+  const g = row();
+  const f = fit(list.length, { room: room(), pad: g.pad, orb: g.orb, gap: g.gap, grow: S.compact || appState.orbGrow === false ? 0 : GROW_EXTRA, end: X.end?.matches('.k7-dock__cap') ? 0 : endW, more: moreW });
   S.fitN = f.shown;
   drawMore(f.more);
   const vis = list.slice(0, f.shown), hi = vis.findIndex((b) => b.id === S.hover);
@@ -160,8 +176,8 @@ function layoutRow(): void {
     const show = i < f.shown;
     /* a bot past what fits is out of the row (`data-out`: no room, not seen, inert), never `hidden`: see dock.css */
     if (btn.hasAttribute('data-out') === show) { btn.toggleAttribute('data-out', !show); btn.inert = !show; if (show) btn.removeAttribute('aria-hidden'); else btn.setAttribute('aria-hidden', 'true'); }
-    const s = show ? sizeOf(i, hi) : ROW.orb;
-    if (btn.style.getPropertyValue('--s') !== s + 'px') { btn.style.setProperty('--s', s + 'px'); btn.style.setProperty('--g', String(s / ROW.orb)); }
+    const s = show ? sizeOf(i, hi) : g.orb;
+    if (btn.style.getPropertyValue('--s') !== s + 'px') btn.style.setProperty('--s', s + 'px');
     btn.toggleAttribute('data-awake', show && i === hi);
   });
   /* one tab stop: the focused orb, else the first */
@@ -172,22 +188,57 @@ function layoutRow(): void {
     if (btn === stop) btn.setAttribute('data-hx-focus', 'dock'); else btn.removeAttribute('data-hx-focus');
   }
   const items = [...vis.map((_, i) => sizeOf(i, hi)), ...(f.more ? [X.more ? X.more.offsetWidth : moreW] : []), ...(X.end ? [X.end.offsetWidth] : [])];
-  const content = 2 * ROW.pad + items.reduce((a, b) => a + b, 0) + Math.max(0, items.length - 1) * ROW.gap;
+  /* as the boards fit it (dockv7.js refit): the content's width, to a whole pixel */
+  const content = Math.round(2 * g.pad + items.reduce((a, b) => a + b, 0) + Math.max(0, items.length - 1) * g.gap);
   const w = S.open ? Math.min(OPEN.w, room()) : content;
   if (w !== S.width) { S.width = w; X.dock.style.width = w + 'px'; }
+  centre();
   const cur = S.open?.kind === 'card' ? S.open.id : null;
   for (const [id, btn] of X.orbs) { if (id === cur) btn.setAttribute('aria-current', 'true'); else btn.removeAttribute('aria-current'); }
+}
+
+/** the dock on its centre line, to the device pixel. Its box is laid out on whole pixels (a box laid out on a half pixel has every
+    child snapped on its own: the slab a pixel one way, the pill a pixel the other), so where the centre line and an odd width leave
+    half a pixel, the layout takes the whole pixel right of true (`data-half`: dock.css) and a translation takes back what a device
+    pixel can show of it: half a pixel on a 2x screen, nothing at 1x. The boards centre it the same way (a translation of half its width) */
+function centre(): void {
+  const L = getLayout(), cx = appState.dockCentred || !L ? innerWidth / 2 : L.centerX;
+  const half = Math.abs(((2 * cx - S.width) % 2 + 2) % 2 - 1) < 0.01;
+  const dpr = window.devicePixelRatio || 1, left = cx - S.width / 2;
+  const nudge = half ? Math.round(left * dpr) / dpr - (left + 0.5) : 0;
+  if (X.dock.hasAttribute('data-half') !== half) X.dock.toggleAttribute('data-half', half);
+  const v = nudge ? nudge + 'px' : '';
+  if (X.dock.style.getPropertyValue('--dk-nudge') !== v) { if (v) X.dock.style.setProperty('--dk-nudge', v); else X.dock.style.removeProperty('--dk-nudge'); }
+}
+
+/* ───────── compact when idle (board K08; Settings, General, "Compact dock when idle", off by default) ───────── */
+let idleTimer = 0;
+/** the row and the compact row are one dock in two geometries: 72 tall with bots of 40, or 48 with bots of 24 and the pill small */
+function setCompact(on: boolean): void {
+  if (S.compact === on || (on && S.open)) return;
+  S.compact = on;
+  if (on) S.hover = null;
+  setKind(on ? 'compact' : 'row');
+  layoutRow();
+}
+/** something woke the dock (a pointer on it, the focus in it, a new ask, a panel): the full row, and the count to idle starts again */
+function wake(): void {
+  clearTimeout(idleTimer);
+  if (S.compact) setCompact(false);
+  if (appState.dockCompact && S.shown && !S.open) idleTimer = window.setTimeout(() => { if (appState.dockCompact && !S.open && !X.root.matches(':hover') && !X.root.contains(document.activeElement)) setCompact(true); else wake(); }, IDLE_MS / S.timeScale);
 }
 
 /* ───────── the open dock: the stack, a bot's card ───────── */
 function askOpts(w: Wait): AskCardOpts {
   const b = botById(w.bot), d = w.kind === 'approval' ? w.data : null;
   return {
-    variant: 'standalone', state: 'needs', ...(b ? { bot: b } : {}), who: (b?.name ?? w.who) + ' asks', ask: (d?.title || w.title) || 'Approve this step',
+    /* the asker's small orb is at rest (K03: a still), its state is in the words beside it */
+    variant: 'standalone', state: 'needs', ...(b ? { bot: { ...b, state: 'idle', attention: null } } : {}), who: (b?.name ?? w.who) + ' asks', ask: (d?.title || w.title) || 'Approve this step',
     ...(d?.quote ? { sub: d.quote } : {}), ...(d?.item?.length ? { command: d.item.join('\n') } : {}),
-    /* what the provider can carry out: once, or deny ("Always for staging" needs the rules engine, w34/rules-engine) */
-    answers: [{ label: 'Hold to allow once', primary: true, hold: true }, { label: 'Deny', keys: 'esc' }],
-    attrs: { 'data-wait': w.id }
+    /* what the provider can carry out: once, or deny. "Always for staging" (K03, K04) needs the rules engine: it is built against
+       `approval-rules` and not shown until that exists; Deny is at the row's end, outlined, as the boards draw it */
+    answers: [{ label: 'Hold to allow once', primary: true, hold: true }, ...(later('approval-rules') ? [{ label: 'Always allow', value: 'always', outline: true }] : []), { label: 'Deny', value: 'deny', keys: 'esc', outline: true, end: true }],
+    plain: true, rest: true, attrs: { 'data-wait': w.id }
   };
 }
 function logOf(id: string): { kind: 'user' | 'agent'; text: string }[] {
@@ -223,7 +274,7 @@ function composerFor(id: string): CardComposer | null {
     draw() {
       const x = botById(id); if (!x) return;
       const keep = text()?.textContent ?? '';
-      slot.replaceChildren(kit.composer({ kind: 'dock', placeholder: 'Message ' + x.name, label: 'Message ' + x.name, running: S.runs.has(id), voiceSetup: voiceNeedsSetup(), ...(x.color ? { fill: kit.botFill(x.color) } : {}), ...(keep ? { text: keep } : {}) }));
+      slot.replaceChildren(kit.composer({ kind: 'dock', placeholder: 'Message ' + x.name, label: 'Message ' + x.name, running: S.runs.has(id), voiceSetup: voiceNeedsSetup(), ...(keep ? { text: keep } : {}) }));   /* K04: the dock's own composer, its primary circle white (the bot's fill is its bubbles') */
       tools.drawn();
     },
     stop() { tools.stop(); if (made.listening) listen(false); }
@@ -296,6 +347,7 @@ function openPanel(open: NonNullable<Open>, focus = true): void {
   if (!S.shown) return;
   if (open.kind === 'card' && !botById(open.id)) return;
   if (open.kind === 'stack' && !asks().length) return;
+  clearTimeout(idleTimer); S.compact = false;
   S.open = open;
   drawPanel();
   setKind('open');
@@ -321,6 +373,7 @@ function closePanel(refocus: boolean): void {
   if (p) { p.setAttribute('inert', ''); setTimeout(() => p.remove(), T(ROW_MS)); }
   if (refocus) (was.kind === 'card' ? X.orbs.get(was.id) : (X.end?.matches('.k7-dock__ask') ? X.end : X.orbs.get(S.rank[0] ?? '')))?.focus({ preventScroll: true });
   emitDock();
+  wake();
 }
 /** the 200 ms every change of the slab takes (--dur-2, --ease-sharp) */
 const ROW_MS = 200;
@@ -351,6 +404,7 @@ function follow(animate: boolean): void {
     X.root.removeAttribute('inert'); X.root.removeAttribute('aria-hidden');
     S.shown = true; layoutRow();
     emitDock();
+    wake();
     if (!animate) { X.root.classList.add('is-snap'); X.root.dataset['in'] = ''; void X.root.offsetWidth; X.root.classList.remove('is-snap'); X.root.style.visibility = ''; return; }
     /* reduced motion: in its place at once (no travel, not one frame of it), cross-faded in */
     if (reduced()) { X.root.classList.add('is-snap'); X.root.dataset['in'] = ''; void X.root.offsetWidth; X.root.classList.remove('is-snap'); X.root.style.visibility = ''; X.root.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing: 'linear' }); return; }
@@ -362,6 +416,7 @@ function follow(animate: boolean): void {
     }, T(ROW_MS));
   } else {
     if (S.open) closePanel(false);
+    clearTimeout(idleTimer);
     S.hover = null; S.focus = null;
     const done = (): void => { if (my !== S.seq) return; S.shown = false; X.root.style.visibility = 'hidden'; X.root.setAttribute('inert', ''); X.root.setAttribute('aria-hidden', 'true'); emitDock(); };
     if (!animate) { X.root.classList.add('is-snap'); delete X.root.dataset['in']; void X.root.offsetWidth; X.root.classList.remove('is-snap'); done(); return; }
@@ -383,7 +438,7 @@ function popIn(ids: readonly string[], blink?: string): void {
 let sent = '';
 function emitDock(): void {
   const off = appState.dock === 'off';
-  const h = S.want ? ROW.h : 0;
+  const h = S.want ? ROW.h : 0;   /* the composer keeps the row's room while the dock is compact (K08) */
   const mode = off ? 'off' : S.open ? 'expanded' : 'normal';
   /* the shell reads the dock's mode here (mod+shift+J opens the asks and folds them again; modules/shell/actions.ts) */
   if (X.root.dataset['mode'] !== mode) X.root.dataset['mode'] = mode;
@@ -416,9 +471,9 @@ function onClick(e: MouseEvent): void {
   if (act === 'close') { closePanel(true); return; }
   if (act === 'open-chat' && S.open?.kind === 'card') { openInBots(S.open.id); return; }
   /* an ask's Deny (its hold commits through ui:commit) */
-  const chip = t.closest<HTMLElement>('[data-kit~="AskCard"] [data-kit~="Chip"]');
+  const chip = t.closest<HTMLElement>('[data-kit~="AskCard"] [data-kit~="Chip"][data-value="deny"]');
   const card = chip?.closest<HTMLElement>('[data-wait]');
-  if (chip && card && !chip.hasAttribute('data-hold')) decide(card.dataset['wait'] ?? '', false);
+  if (chip && card) decide(card.dataset['wait'] ?? '', false);
 }
 function onKey(e: KeyboardEvent): void {
   const t = e.target as HTMLElement;
@@ -491,7 +546,7 @@ function onBots(): void {
     }
   });
   d.waits.subscribe((ev) => {
-    if (ev.type === 'added') { if (!S.waits.some((w) => w.id === ev.wait.id)) S.waits.push(ev.wait); }
+    if (ev.type === 'added') { if (!S.waits.some((w) => w.id === ev.wait.id)) { S.waits.push(ev.wait); if (asksOf([ev.wait], S.bots).length) wake(); } }   /* a new ask brings the row back */
     else S.waits = S.waits.filter((w) => w.id !== ev.id);
     const open = S.open;
     if (open?.kind === 'stack') { if (asks().length) drawPanel(); else closePanel(X.root.contains(document.activeElement)); }
@@ -517,7 +572,7 @@ function build(slot: HTMLElement): void {
   root.setAttribute('aria-label', 'Dock');
   slot.appendChild(root);
   X.root = root;
-  root.innerHTML = kit.html.dock({ kind: 'row', bots: [], render: ROW.grow[0] }) + `<span class="ui-sr" id="dk-hint">${HINT}</span>`;
+  root.innerHTML = kit.html.dock({ kind: 'row', bots: [] }) + `<span class="ui-sr" id="dk-hint">${HINT}</span>`;
   X.dock = root.querySelector<HTMLElement>('.k7-dock') as HTMLElement;
   X.row = X.dock.querySelector<HTMLElement>('.k7-dock__row') as HTMLElement;
   X.svg = X.dock.querySelector<SVGSVGElement>('.k7-dock__slab');
@@ -550,6 +605,9 @@ function mount(slot: HTMLElement): void {
   X.root.addEventListener('ui:commit', (e) => { const card = (e.target as Element).closest<HTMLElement>('[data-wait]'); if (card) decide(card.dataset['wait'] ?? '', true); });
   X.row.addEventListener('pointermove', (e) => { if (e.pointerType === 'touch') return; const o = (e.target as Element).closest<HTMLElement>('.k7-dock__orb'); setHover(o ? o.dataset['bot'] ?? null : S.hover); });
   X.row.addEventListener('pointerleave', () => setHover(null));
+  /* pointing at the dock, or the focus coming into it, brings the full row back from compact */
+  X.root.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') wake(); });
+  X.root.addEventListener('focusin', () => wake());
   X.row.addEventListener('focusin', (e) => { const o = (e.target as Element).closest<HTMLElement>('.k7-dock__orb'); const id = o && o.matches(':focus-visible') ? o.dataset['bot'] ?? null : null; for (const b of X.orbs.values()) b.toggleAttribute('data-focus', b === o && !!id); if (S.focus !== id) { S.focus = id; layoutRow(); } });
   X.row.addEventListener('focusout', (e) => { if (X.row.contains(e.relatedTarget as Node | null)) return; for (const b of X.orbs.values()) b.removeAttribute('data-focus'); if (S.focus) { S.focus = null; layoutRow(); } });
   /* a click outside returns the dock to rest; a press inside a menu or popover the dock opened counts as inside */
@@ -564,6 +622,7 @@ function mount(slot: HTMLElement): void {
   on('hx:layout', (l) => { if (typeof l.centerX === 'number') X.root.style.setProperty('--dk-cx', l.centerX + 'px'); layoutRow(); });
   on('hx:state', (ev) => {
     if (ev.changed.includes('orbGrow') || ev.changed.includes('dockCentred')) layoutRow();
+    if (ev.changed.includes('dockCompact')) wake();   /* on: the count to idle starts; off: the full row at once */
     if (ev.changed.includes('tab')) follow(false);
     if (ev.changed.includes('dock') && !ev.initial) follow(true);
     emitDock();
@@ -582,17 +641,26 @@ function mount(slot: HTMLElement): void {
 
 register('dock', { mount });
 
+/** for tests: the dock is mounted once in the app's life; a test that mounts it again on a fresh page forgets the last one first */
+export function forgetDock(): void {
+  clearTimeout(idleTimer); cancelAnimationFrame(refit);
+  Object.assign(S, { bots: [], threads: {}, waits: [], open: null, hover: null, focus: null, shown: false, want: false, seq: S.seq + 1, compact: false, rank: [], fitN: 0, timeScale: 1, mounted: false, width: 0 });
+  S.runs.clear(); X.orbs.clear(); X.composers.clear();
+  X.more = null; X.end = null; X.panel = null; X.path = null; X.svg = null;
+  sent = '';
+}
+
 /** what the shell, the lab and the tests may call */
 setDockApi({
   /* v7 has one row and one open size: 'expanded' opens the asks (when any wait), anything else returns to the row */
-  setMode: (m) => { if (m === 'expanded') openPanel({ kind: 'stack' }); else closePanel(false); },
+  setMode: (m) => { if (m === 'expanded') openPanel({ kind: 'stack' }); else if (m === 'compact') { closePanel(false); clearTimeout(idleTimer); setCompact(true); } else { closePanel(false); wake(); } },
   setOn: (v) => setState({ dock: v ? 'on' : 'off' }),
   focus: () => { (visibleOrbs().find((b) => b.tabIndex === 0) ?? visibleOrbs()[0])?.focus({ preventScroll: true }); },
   botAt: (n) => S.rank.slice(0, S.fitN)[(+n || 0) - 1] ?? null,
   openSession: (id) => openPanel({ kind: 'card', id }, false),
   openAsks: () => openPanel({ kind: 'stack' }, false),
   closeSession: () => closePanel(false),
-  get state() { return { shown: S.shown, open: S.open?.kind ?? null, card: S.open?.kind === 'card' ? S.open.id : null, asks: asks().length, row: S.rank.slice(0, S.fitN), more: S.bots.length - S.fitN, hover: S.hover, width: S.width }; },
+  get state() { return { shown: S.shown, compact: S.compact, open: S.open?.kind ?? null, card: S.open?.kind === 'card' ? S.open.id : null, asks: asks().length, row: S.rank.slice(0, S.fitN), more: S.bots.length - S.fitN, hover: S.hover, width: S.width }; },
   timeScale: setTimeScale,
   hover: (x) => {
     if (x == null) { setHover(null); return; }

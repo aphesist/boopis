@@ -3,7 +3,8 @@
    draws the board from its source beside this state and measures the difference; a screen is done when they are the same, dark
    and light. Later boards add a fixture, a state here and a row in boards.json. */
 import type { AppCtx, State, Story } from '../../types';
-import { board11, board12, board12Held, board17, boardS17, boardS20, boardS23 } from '../../board-fixtures';
+import { board11, board12, board12Held, board17, boardDock, boardS17, boardS20, boardS23 } from '../../board-fixtures';
+import type { DockBoard } from '../../board-fixtures';
 
 const MOCK = { url: '/__boards/screen.html?s=bot11', note: 'the approved v7 board itself, drawn from its source' };
 
@@ -112,4 +113,31 @@ const sessions: Story = {
   }
 };
 
-export default [bots, sessions];
+/* the dock's key screens (dockv7.js `screen`, boards dock/K01 to K08): the session at work, and the dock in the state each draws */
+const openSession = async (c: AppCtx): Promise<void> => {
+  c.hx.setState({ tab: 'session', left: 'open', right: 'closed', dockCentred: false, dockCompact: false });
+  await c.wait(300);
+  await c.click('[data-kit~="ListRow"][data-id="s17-dock"]');
+  await c.wait(900);
+  (document.activeElement as HTMLElement | null)?.blur();   /* the boards draw the composer at rest */
+};
+const k = (kind: DockBoard, note: string, then?: (c: AppCtx) => Promise<void>, more: Partial<State> = {}): State => ({
+  tags: ['variant', 'owner'], note,
+  app: { provider: { patch: boardDock(kind) }, setup: async (c: AppCtx) => { await openSession(c); if (then) { await then(c); await c.wait(700); } } },
+  ...more
+});
+const dock: Story = {
+  id: 'boards/dock', title: 'Boards: the dock', area: 'dock', kind: 'page', covers: ['page:board-K01', 'page:board-K02', 'page:board-K03', 'page:board-K04', 'page:board-K05', 'page:board-K06', 'page:board-K07', 'page:board-K08'], mock: { url: '/__boards/screen.html?s=dockv7&k=rest', note: MOCK.note },
+  states: {
+    'K01 at rest, a session running': k('rest', 'board K01: the row under the composer: nina needs you (the amber flag, the ask pill), kai works, the others rest'),
+    'K02 a bot hovered': k('rest', 'board K02: nina hovered: 52, kai beside her 46, the end slot names her and her state', async (c) => { c.hx.dock()?.hover(c.$('#hx-dock .k7-dock__orb[data-bot="nina"]').getBoundingClientRect().left + 20); }),
+    'K03 the asks open': k('asks', 'board K03: the stack of asks over the row, 640 by 432; the session\'s composer has stepped aside', async (c) => { c.hx.dock()?.openAsks(); }),
+    'K04 a bot\'s card': k('rest', 'board K04: nina\'s card: her head, her last messages (yours in her fill), her ask, her composer; the row under it, nina marked', async (c) => { c.hx.dock()?.openSession('nina'); }),
+    'K05 many bots': k('many', 'board K05: nineteen bots: the six that fit, then "13 more"'),
+    'K06 no bots': k('none', 'board K06: no bot of your own: no dock, and the composer 24 from the window\'s foot'),
+    'K07 centred in the window': k('rest', 'board K07: "Keep the dock centred in the window": on the window\'s middle, not the session\'s column', async (c) => { c.hx.setState({ dockCentred: true }); }),
+    'K08 compact when idle': k('rest', 'board K08: "Compact dock when idle", idle: 48 tall, bots of 24, the ask pill small', async (c) => { c.hx.setState({ dockCompact: true }); c.hx.dock()?.setMode('compact'); })
+  }
+};
+
+export default [bots, sessions, dock];

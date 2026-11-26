@@ -135,5 +135,39 @@ export async function dockPresence(env) {
     check('presence', 'reduced motion: the last bot archived takes it away', gone(m), m);
     check('presence', 'no console errors', page.errors.length === 0, page.errors);
   });
+
+  /* ───────── "Compact dock when idle" (board K08; Settings, General; off by default) ───────── */
+  await s.safe('presence', async () => {
+    const page = await s.fresh({ settle: 1500 });
+    const wait = (ms) => page.waitForTimeout(ms);
+    const geo = () => page.evaluate(() => { const k = document.querySelector('#hx-dock .k7-dock'), r = k.getBoundingClientRect(), o = document.querySelector('#hx-dock .k7-dock__orb:not([data-out])').getBoundingClientRect(), a = document.querySelector('#hx-dock .k7-dock__ask'), box = document.querySelector('.ss-composer .k7-composer__box');
+      return { compact: __hx.dock().state.compact, kind: k.dataset.dk, geom: k.dataset.geom, h: r.height, w: r.width, onEdge: Math.abs(r.bottom - innerHeight) <= 1, orb: o.width, canvas: document.querySelector('#hx-dock .k7-dock__orb:not([data-out]) orb-avatar').getBoundingClientRect().width, pill: a ? a.getBoundingClientRect().height : 0, gap: Math.round(innerHeight - box.getBoundingClientRect().bottom), setting: __hx.state.dockCompact }; });
+    const row = await geo();
+    check('presence', 'compact when idle is off by default: the row is the row', !row.setting && !row.compact && row.kind === 'row' && Math.abs(row.h - 72) <= 0.5 && row.orb === 40 && row.canvas === 40, row);
+    /* the switch in Settings, General */
+    await page.keyboard.press('Control+Comma'); await wait(500);
+    const sw = await page.evaluate(() => { const i = document.getElementById('hx-set-dock-compact'); if (!i) return null; const l = document.querySelector('label[for="hx-set-dock-compact"]'); return { on: i.checked, words: l?.querySelector('span')?.textContent }; });
+    await page.click('#hx-set-dock-compact'); await wait(200);
+    const set = await page.evaluate(() => ({ state: __hx.state.dockCompact, stored: /"dockCompact"\s*:\s*true/.test(localStorage.getItem('hx.v6.shell') || '') }));
+    check('presence', 'Settings, General has "Compact dock when idle": off, and switching it on is kept', !!sw && sw.on === false && sw.words === 'Compact dock when idle' && set.state && set.stored, { sw, set });
+    await page.keyboard.press('Escape'); await wait(400);
+    /* idle: the dock's clock runs four times faster here, so its ten seconds are two and a half */
+    await page.mouse.move(700, 300); await page.evaluate(() => { document.activeElement?.blur(); __hx.dock().timeScale(4); __hx.setState({ dockCompact: false }); __hx.setState({ dockCompact: true }); });
+    await wait(1500);
+    const early = await geo();
+    await wait(1800);
+    const idle = await geo();
+    check('presence', 'idle for its ten seconds, the row eases to compact: 48 tall on the window\'s edge, bots of 24 drawn at 24, the pill small, the composer where it was', !early.compact && idle.compact && idle.kind === 'compact' && idle.geom === 'fit,48,24,24' && Math.abs(idle.h - 48) <= 0.5 && idle.onEdge && idle.orb === 24 && idle.canvas === 24 && idle.pill === 24 && idle.w < row.w && idle.gap === row.gap, { early: early.compact, idle, row: { w: row.w, gap: row.gap } });
+    const y = await page.evaluate(() => innerHeight - 20);
+    await page.mouse.move(720, y); await wait(700);
+    const back = await geo();
+    check('presence', 'pointing at it brings the row back', !back.compact && back.kind === 'row' && Math.abs(back.h - 72) <= 0.5 && back.orb >= 40, back);
+    await page.mouse.move(700, 300); await wait(3200);
+    const again = await geo();
+    await page.evaluate(() => __hx.setState({ dockCompact: false })); await wait(500);
+    const off = await geo();
+    check('presence', 'left alone it is compact again, and the setting switched off returns the row at once', again.compact && !off.compact && Math.abs(off.h - 72) <= 0.5, { again: again.compact, off });
+    check('presence', 'no console errors', page.errors.length === 0, page.errors);
+  });
   await s.close();
 }

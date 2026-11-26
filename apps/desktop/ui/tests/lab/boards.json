@@ -273,6 +273,160 @@
         ]
       },
       "note": "The fixture switches on what is not built yet (Edit from here, Fork: `info.later`), which the app does not show; the lapsed blank's guess is the fixture's (`blank.guess`)."
+    },
+    "K01-rest": {
+      "title": "Board K01: the dock at rest under a running session",
+      "board": "screen.html?s=dockv7&k=rest",
+      "image": "dock/K01-rest-running-{theme}.jpg",
+      "story": "boards/dock",
+      "state": "K01 at rest, a session running",
+      "wait": 1500,
+      "scope": [
+        "dock"
+      ],
+      "regions": {
+        "dock": [
+          300,
+          818,
+          1140,
+          82
+        ]
+      }
+    },
+    "K02-hover": {
+      "title": "Board K02: a bot hovered (52, its neighbour 46, the end slot names it)",
+      "board": "screen.html?s=dockv7&k=hover",
+      "image": "dock/K02-hover-{theme}.jpg",
+      "story": "boards/dock",
+      "state": "K02 a bot hovered",
+      "wait": 1500,
+      "scope": [
+        "dock"
+      ],
+      "regions": {
+        "dock": [
+          300,
+          818,
+          1140,
+          82
+        ]
+      }
+    },
+    "K03-asks": {
+      "title": "Board K03: the asks open (the stack over the row, 640 x 432)",
+      "board": "screen.html?s=dockv7&k=asks",
+      "image": "dock/K03-asks-open-{theme}.jpg",
+      "story": "boards/dock",
+      "state": "K03 the asks open",
+      "wait": 1500,
+      "scope": [
+        "open dock"
+      ],
+      "regions": {
+        "open dock": [
+          300,
+          458,
+          1140,
+          442
+        ]
+      },
+      "note": "The board's second ask is a question with three answers, which is stale (owner: bots ask only through approvals): the app draws moss's ask as an approval, so that card differs by its Well and its answers."
+    },
+    "K04-card": {
+      "title": "Board K04: a bot's card (its head, its messages, its ask, its composer)",
+      "board": "screen.html?s=dockv7&k=card",
+      "image": "dock/K04-bot-card-{theme}.jpg",
+      "story": "boards/dock",
+      "state": "K04 a bot's card",
+      "wait": 1500,
+      "scope": [
+        "open dock"
+      ],
+      "regions": {
+        "open dock": [
+          300,
+          458,
+          1140,
+          442
+        ]
+      }
+    },
+    "K05-many": {
+      "title": "Board K05: many bots (the six that fit, then \"13 more\")",
+      "board": "screen.html?s=dockv7&k=many",
+      "image": "dock/K05-many-bots-{theme}.jpg",
+      "story": "boards/dock",
+      "state": "K05 many bots",
+      "wait": 1500,
+      "scope": [
+        "dock"
+      ],
+      "regions": {
+        "dock": [
+          300,
+          818,
+          1140,
+          82
+        ]
+      },
+      "note": "The board draws moss (resting) before kai (working); the app's order is needs you, then working, then the rest (the lead's decision until the app keeps pins and recency), so kai and moss change places."
+    },
+    "K06-none": {
+      "title": "Board K06: no bot of your own (no dock; the composer 24 from the foot)",
+      "board": "screen.html?s=dockv7&k=none",
+      "image": "dock/K06-no-bots-{theme}.jpg",
+      "story": "boards/dock",
+      "state": "K06 no bots",
+      "wait": 1500,
+      "scope": [
+        "composer and no dock"
+      ],
+      "regions": {
+        "composer and no dock": [
+          300,
+          726,
+          1140,
+          174
+        ]
+      }
+    },
+    "K07-centred": {
+      "title": "Board K07: the dock centred in the window",
+      "board": "screen.html?s=dockv7&k=rest&centre=1",
+      "image": "dock/K07-centred-in-window-{theme}.jpg",
+      "story": "boards/dock",
+      "state": "K07 centred in the window",
+      "wait": 1500,
+      "scope": [
+        "dock"
+      ],
+      "regions": {
+        "dock": [
+          300,
+          818,
+          1140,
+          82
+        ]
+      }
+    },
+    "K08-compact": {
+      "title": "Board K08: the compact dock when idle (48 tall, bots of 24, the ask pill small)",
+      "board": "screen.html?s=dockv7&k=compact",
+      "image": "dock/K08-compact-idle-{theme}.jpg",
+      "story": "boards/dock",
+      "state": "K08 compact when idle",
+      "wait": 1500,
+      "scope": [
+        "dock"
+      ],
+      "regions": {
+        "dock": [
+          300,
+          818,
+          1140,
+          82
+        ]
+      }
     }
   }
 }
