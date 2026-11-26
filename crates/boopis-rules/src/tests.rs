@@ -282,3 +282,18 @@ fn the_time_is_rfc_3339() {
     assert!(t.ends_with('Z') && t.as_bytes()[10] == b'T');
     assert!(t.starts_with("20"));
 }
+
+#[test]
+fn replace_writes_a_whole_list_back_past_the_file_s_revision() {
+    let (_d, s) = store();
+    let (mine, _) = s.ensure(NOW).unwrap();
+    s.set_enabled("default.secrets", false, 0, NOW).unwrap();
+    s.set_enabled("default.secrets", true, 1, NOW).unwrap();
+    assert_eq!(s.replace(&mine, NOW), Ok(3));
+    let (now, _) = s.read().unwrap().unwrap();
+    assert_eq!(ids(&now), ids(&mine));
+    assert!(
+        s.replace(&json!({"schema_version": 99, "rules": []}), NOW)
+            .is_err()
+    );
+}

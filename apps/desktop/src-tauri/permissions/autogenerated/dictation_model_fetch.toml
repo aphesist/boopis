@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-dictation-model-fetch"
+description = "Enables the dictation_model_fetch command without any pre-configured scope."
+commands.allow = ["dictation_model_fetch"]
+
+[[permission]]
+identifier = "deny-dictation-model-fetch"
+description = "Denies the dictation_model_fetch command without any pre-configured scope."
+commands.deny = ["dictation_model_fetch"]

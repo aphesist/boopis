@@ -31,6 +31,8 @@ pub const UNDO_FOR: Duration = Duration::from_secs(30);
 pub struct RulesHost {
     /// The digest of the bytes the host last wrote or read and accepted.
     digest: Mutex<Option<String>>,
+    /// The content those bytes held, so an outside change the owner discards can be put back ("Keep mine").
+    kept: Mutex<Option<Value>>,
     /// Removed rules, by undo token, until [`UNDO_FOR`] passes.
     undo: Mutex<HashMap<String, (Instant, Value)>>,
     /// The digest of the last outside change the windows were told of, so each is said once.
@@ -72,8 +74,9 @@ fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 }
 
 impl RulesHost {
-    fn remember(&self, digest: String) {
+    fn remember(&self, digest: String, doc: Value) {
         *lock(&self.digest) = Some(digest);
+        *lock(&self.kept) = Some(doc);
     }
 
     /// A change made outside boopis since the host last wrote or read the file, not yet said: its digest, once. Nothing is
@@ -120,7 +123,7 @@ impl RulesHost {
         let (doc, digest) = store.ensure(&now_text()).map_err(host_error)?;
         let changed_outside = known.as_ref().is_some_and(|k| *k != digest);
         if known.is_none() {
-            self.remember(digest);
+            self.remember(digest, doc.clone());
         }
         let configured = doc["reviewer"]["provider"]
             .as_str()
@@ -140,15 +143,32 @@ impl RulesHost {
     /// # Errors
     /// As [`RulesHost::get`].
     pub fn accept_outside(&self, root: &Path) -> Result<Value, Error> {
-        if let Some((_, digest)) = Store::under(root).read().map_err(host_error)? {
-            self.remember(digest);
+        if let Some((doc, digest)) = Store::under(root).read().map_err(host_error)? {
+            self.remember(digest, doc);
         }
         self.get(root)
     }
 
+    /// Discard a change made to the rules outside boopis ("Keep mine"): the content the host last wrote or accepted is
+    /// written back, with a revision past the file's. Returns what `rules_get` returns.
+    ///
+    /// # Errors
+    /// `hx.rules.not_found` when the host has nothing of its own to put back (it never read the file in this run); the
+    /// store's.
+    pub fn discard_outside(&self, root: &Path) -> Result<Value, Error> {
+        let Some(mine) = lock(&self.kept).clone() else {
+            return Err(host_error(RulesError::NotFound));
+        };
+        Store::under(root)
+            .replace(&mine, &now_text())
+            .map_err(host_error)?;
+        self.after_write(root);
+        self.get(root)
+    }
+
     fn after_write(&self, root: &Path) {
-        if let Ok(Some((_, digest))) = Store::under(root).read() {
-            self.remember(digest);
+        if let Ok(Some((doc, digest))) = Store::under(root).read() {
+            self.remember(digest, doc);
         }
     }
 
@@ -366,6 +386,34 @@ mod tests {
         assert_eq!(
             host.accept_outside(dir.path()).unwrap()["changed_outside"],
             false
+        );
+    }
+
+    #[test]
+    fn keep_mine_puts_back_what_boopis_wrote_and_lets_changes_through_again() {
+        let dir = tempfile::tempdir().unwrap();
+        let host = RulesHost::default();
+        let before = host.get(dir.path()).unwrap();
+        let count = before["rules"]["rules"].as_array().unwrap().len();
+        let path = Store::under(dir.path()).path().to_owned();
+        let mut doc: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        doc["rules"] = json!([]);
+        std::fs::write(&path, serde_json::to_vec(&doc).unwrap()).unwrap();
+        assert_eq!(host.get(dir.path()).unwrap()["changed_outside"], true);
+        let back = host.discard_outside(dir.path()).unwrap();
+        assert_eq!(back["changed_outside"], false);
+        assert_eq!(back["rules"]["rules"].as_array().unwrap().len(), count);
+        let revision = back["rules"]["revision"].as_u64().unwrap();
+        assert!(
+            host.set_enabled(dir.path(), "default.secrets", false, revision)
+                .is_ok()
+        );
+        assert_eq!(
+            RulesHost::default()
+                .discard_outside(dir.path())
+                .unwrap_err()
+                .code(),
+            "hx.rules.not_found"
         );
     }
 

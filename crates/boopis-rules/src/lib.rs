@@ -430,6 +430,22 @@ impl Store {
         Ok(reviewer)
     }
 
+    /// Write `doc` back in place of the file's content (the owner discarded a change made outside boopis), with the
+    /// revision one past the file's, so a window that read either must read again. Returns the new revision.
+    ///
+    /// # Errors
+    /// [`RulesError::Unreadable`] when `doc` is not a rules file this boopis can hold; the write's.
+    pub fn replace(&self, doc: &Value, now: &str) -> Result<u64, RulesError> {
+        check_doc(doc)?;
+        let (out, _) = self.change(None, now, |current| {
+            let at = revision(current);
+            *current = doc.clone();
+            current["revision"] = json!(at);
+            Ok(true)
+        })?;
+        Ok(revision(&out))
+    }
+
     /// Read, change under the lock and write back. `edit` returns whether it changed anything (the revision goes up only
     /// then). A missing file starts from the defaults.
     fn change<F>(

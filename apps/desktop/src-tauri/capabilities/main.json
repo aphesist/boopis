@@ -106,6 +106,9 @@
     "allow-bot-run-limit-set",
     "allow-dictation-start",
     "allow-dictation-stop",
+    "allow-dictation-model",
+    "allow-dictation-model-fetch",
+    "allow-dictation-model-delete",
     "allow-rules-get",
     "allow-rules-put",
     "allow-rules-set-enabled",
@@ -113,6 +116,7 @@
     "allow-rules-undo",
     "allow-rules-restore-defaults",
     "allow-rules-accept-outside",
+    "allow-rules-discard-outside",
     "allow-rules-reviewer-set",
     "allow-owner-grant",
     "allow-team-plans-list",
@@ -122,6 +126,8 @@
     "allow-team-plan-undo",
     "allow-house-jobs",
     "allow-parked-list",
-    "allow-parked-answer"
+    "allow-parked-answer",
+    "allow-voice-settings-get",
+    "allow-voice-settings-set"
   ]
 }

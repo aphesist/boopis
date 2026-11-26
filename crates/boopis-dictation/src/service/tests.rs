@@ -680,3 +680,61 @@ fn the_model_stays_in_memory_between_dictations_and_leaves_after_a_while() {
     eventually("the model left memory", || !r.dictation.model_loaded());
     assert_eq!(model::DEFAULT.id, "base-q5_1");
 }
+
+#[test]
+fn settings_sees_the_model_absent_fetched_ready_and_deleted() {
+    let r = rig(Setup {
+        server: vec![serve(&content())],
+        model_present: false,
+        ..Setup::default()
+    });
+    let info = r.dictation.model();
+    assert_eq!(info.state, ModelState::Absent);
+    assert_eq!(info.size, r.spec.size);
+    assert!(info.failed.is_none());
+    r.dictation.fetch_model().unwrap();
+    eventually("the model is in place", || {
+        r.dictation.model().state == ModelState::Ready
+    });
+    assert!(r.spec.present(r.dir.path()));
+    // a second Download does nothing: the model is there
+    r.dictation.fetch_model().unwrap();
+    assert_eq!(r.server.asked().len(), 1);
+    r.dictation.delete_model().unwrap();
+    assert_eq!(r.dictation.model().state, ModelState::Absent);
+    assert!(!r.spec.path(r.dir.path()).exists());
+    // deleting a model that is not there is no error
+    r.dictation.delete_model().unwrap();
+}
+
+#[test]
+fn the_model_is_not_deleted_while_a_dictation_listens() {
+    let r = rig(Setup {
+        tapes: vec![Ok(speech(1.0))],
+        ..Setup::default()
+    });
+    let (sink, rx) = listener();
+    let id = r.dictation.start(&sink);
+    let mut seen = Vec::new();
+    until(&rx, &mut seen, |e| *e == Event::Listening);
+    assert_eq!(r.dictation.delete_model(), Err(Error::Busy));
+    assert!(r.spec.present(r.dir.path()));
+    r.dictation.stop(id);
+    to_the_end(&rx);
+    eventually("free again", || !r.dictation.active());
+    r.dictation.delete_model().unwrap();
+}
+
+#[test]
+fn a_failed_download_is_said_in_plain_words() {
+    let r = rig(Setup {
+        server: vec![status(404)],
+        model_present: false,
+        ..Setup::default()
+    });
+    r.dictation.fetch_model().unwrap();
+    eventually("the fetch gave up", || r.dictation.model().failed.is_some());
+    let info = r.dictation.model();
+    assert_eq!(info.state, ModelState::Absent);
+    assert!(info.failed.unwrap().contains("speech model"));
+}

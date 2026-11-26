@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-rules-discard-outside"
+description = "Enables the rules_discard_outside command without any pre-configured scope."
+commands.allow = ["rules_discard_outside"]
+
+[[permission]]
+identifier = "deny-rules-discard-outside"
+description = "Denies the rules_discard_outside command without any pre-configured scope."
+commands.deny = ["rules_discard_outside"]

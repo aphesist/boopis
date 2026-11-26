@@ -44,6 +44,7 @@ pub mod state;
 pub mod store;
 pub mod team;
 pub mod tls;
+pub mod voice;
 pub mod webkit;
 pub mod webview_health;
 pub mod window;
@@ -164,6 +165,9 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::bot_run_limit_set,
             commands::dictation_start,
             commands::dictation_stop,
+            commands::dictation_model,
+            commands::dictation_model_fetch,
+            commands::dictation_model_delete,
             commands::rules_get,
             commands::rules_put,
             commands::rules_set_enabled,
@@ -171,6 +175,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::rules_undo,
             commands::rules_restore_defaults,
             commands::rules_accept_outside,
+            commands::rules_discard_outside,
             commands::rules_reviewer_set,
             commands::owner_grant,
             commands::team_plans_list,
@@ -181,6 +186,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::house_jobs,
             commands::parked_list,
             commands::parked_answer,
+            commands::voice_settings_get,
+            commands::voice_settings_set,
         ])
         .events(collect_events![
             ConnectionStateEvent,

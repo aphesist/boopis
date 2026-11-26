@@ -400,6 +400,27 @@ export const commands = {
 	 */
 	dictationStop: (id: number, options?: InvokeOptions) => __TAURI_INVOKE<void>("dictation_stop", { id }, options),
 	/**
+	 *  The speech model dictation uses, for Settings › Models: `{id, size, state, done, failed, language}`, `state` one of
+	 *  `absent`, `fetching` (`done` of `size` bytes) or `ready`; `failed` says why the last fetch did not finish; `language` is
+	 *  null (the model hears which language is spoken). Reads the speech folder; fetches and opens nothing.
+	 */
+	dictationModel: (options?: InvokeOptions) => __TAURI_INVOKE<Json>("dictation_model", undefined, options),
+	/**
+	 *  Fetch the speech model now, as a first press of the mic would (Settings' Download). Returns at once with the model as
+	 *  `dictation_model` reads it; ask that again for the progress. Nothing happens when it is on disk or already coming.
+	 * 
+	 *  Errors: `hx.host.os` when the fetch cannot start.
+	 */
+	dictationModelFetch: (options?: InvokeOptions) => __TAURI_INVOKE<Json>("dictation_model_fetch", undefined, options),
+	/**
+	 *  Delete the speech model from this computer (Settings' Delete); the next press of the mic fetches it again. Returns the
+	 *  model as `dictation_model` reads it.
+	 * 
+	 *  Errors: `hx.host.os` while a dictation listens or the model is being fetched, or when the file cannot be
+	 *  removed.
+	 */
+	dictationModelDelete: (options?: InvokeOptions) => __TAURI_INVOKE<Json>("dictation_model_delete", undefined, options),
+	/**
 	 *  The rules list for every bot, `<root>/boopis/rules.json` (made with the owner's defaults the first time), as
 	 *  `{rules, reviewer_status, changed_outside}`.
 	 * 
@@ -438,6 +459,13 @@ export const commands = {
 	rulesRestoreDefaults: (ids: string[] | null, options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_restore_defaults", { ids }, options),
 	/**  Keep a change made to the rules outside boopis (after the owner looked at it). Returns what `rules_get` returns. */
 	rulesAcceptOutside: (options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_accept_outside", undefined, options),
+	/**
+	 *  Discard a change made to the rules outside boopis ("Keep mine"): what boopis last wrote or accepted is written back.
+	 *  Returns what `rules_get` returns.
+	 * 
+	 *  Errors: `hx.rules.not_found` when boopis has read nothing of its own this run.
+	 */
+	rulesDiscardOutside: (options?: InvokeOptions) => __TAURI_INVOKE<Json>("rules_discard_outside", undefined, options),
 	/**
 	 *  Choose the reviewer: `auto` (the cheapest connected model, as the plugin's `rules.reviewer.rank` ranks them; the
 	 *  window passes its pick) or `pinned`, with its route; the route is written into every bot's own engine settings
@@ -500,6 +528,21 @@ export const commands = {
 	 *  Errors: `hx.invalid_params` for an unknown step or choice; `hx.engine.unavailable` when the re-run could not start.
 	 */
 	parkedAnswer: (id: string, choice: string, options?: InvokeOptions) => __TAURI_INVOKE<Json>("parked_answer", { id, choice }, options),
+	/**
+	 *  Voice for talking to bots as Settings › Models keeps it: `{provider, local_url}`, `provider` one of `elevenlabs`,
+	 *  `fish_audio`, `local` or null. A provider's key is in the keychain (`secret_exists` with `boopis.voice.<provider>`,
+	 *  `api_key`); it is never in this answer.
+	 */
+	voiceSettingsGet: (options?: InvokeOptions) => __TAURI_INVOKE<Json>("voice_settings_get", undefined, options),
+	/**
+	 *  Keep the voice choice: the provider (`elevenlabs`, `fish_audio`, `local`, or null for none) and the local server's
+	 *  speech address. Validated; nothing is half-written. Returns what `voice_settings_get` returns. A key never comes here:
+	 *  it goes to `secret_set`.
+	 * 
+	 *  Errors: `hx.config.invalid` for another provider, a local server without an address, or an address that is not http
+	 *  or https.
+	 */
+	voiceSettingsSet: (provider: string | null, localUrl: string | null, options?: InvokeOptions) => __TAURI_INVOKE<Json>("voice_settings_set", { provider, localUrl }, options),
 };
 
 /** Events */

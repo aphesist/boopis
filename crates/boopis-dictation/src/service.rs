@@ -164,6 +164,108 @@ impl Dictation {
     pub fn model_loaded(&self) -> bool {
         self.inner.warm.loaded()
     }
+
+    /// The speech model as Settings shows it: which one, its size, and whether it is on disk, being fetched (how far), or
+    /// not there (with why the last fetch failed, when one did). Reads the folder; opens and fetches nothing.
+    #[must_use]
+    pub fn model(&self) -> ModelInfo {
+        let spec = self.inner.parts.spec;
+        let running = self
+            .inner
+            .fetching
+            .lock()
+            .ok()
+            .and_then(|slot| slot.clone());
+        let (fetching, failed) = match running {
+            Some(f) => match f.result.lock().ok().and_then(|r| r.clone()) {
+                None => (Some(f.done.load(Ordering::Relaxed)), None),
+                Some(Err(e)) => (None, Some(e.sentence())),
+                Some(Ok(())) => (None, None),
+            },
+            None => (None, None),
+        };
+        let state = if spec.present(&self.inner.parts.dir) {
+            ModelState::Ready
+        } else if let Some(done) = fetching {
+            ModelState::Fetching { done }
+        } else {
+            ModelState::Absent
+        };
+        ModelInfo {
+            id: spec.id,
+            size: spec.size,
+            state,
+            failed: if state == ModelState::Absent {
+                failed
+            } else {
+                None
+            },
+        }
+    }
+
+    /// Fetch the speech model now (Settings' Download), as a first press of the mic would: the fetch runs on its own
+    /// thread and [`Dictation::model`] says how far it is. Does nothing when the model is on disk or a fetch runs.
+    ///
+    /// # Errors
+    /// [`Error::Failed`] when the fetch thread cannot start.
+    pub fn fetch_model(&self) -> Result<()> {
+        if self.inner.parts.spec.present(&self.inner.parts.dir) {
+            return Ok(());
+        }
+        self.inner.fetching().map(|_| ())
+    }
+
+    /// Delete the speech model from disk (Settings' Delete), with a fetch's partial file. The next press of the mic
+    /// fetches it again.
+    ///
+    /// # Errors
+    /// [`Error::Busy`] while a dictation runs or the model is being fetched; [`Error::Failed`] when the file cannot be
+    /// removed.
+    pub fn delete_model(&self) -> Result<()> {
+        if self.active() || matches!(self.model().state, ModelState::Fetching { .. }) {
+            return Err(Error::Busy);
+        }
+        let parts = &self.inner.parts;
+        for path in [
+            parts.spec.path(&parts.dir),
+            parts.spec.part_path(&parts.dir),
+        ] {
+            match std::fs::remove_file(&path) {
+                Ok(()) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => return Err(Error::Failed(format!("removing the speech model: {e}"))),
+            }
+        }
+        tracing::info!(model = parts.spec.id, "the speech model was deleted");
+        Ok(())
+    }
+}
+
+/// Where the speech model is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModelState {
+    /// Not on this computer: the first press of the mic (or Download) fetches it.
+    Absent,
+    /// Being fetched: `done` bytes on disk so far.
+    Fetching {
+        /// Bytes fetched so far.
+        done: u64,
+    },
+    /// On disk, of the expected size (its content is checked when it is read).
+    Ready,
+}
+
+/// The speech model as Settings shows it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ModelInfo {
+    /// The model's name (`base-q5_1`).
+    pub id: &'static str,
+    /// Its size in bytes.
+    pub size: u64,
+    /// Where it is.
+    pub state: ModelState,
+    /// When it is absent because the last fetch failed: what a person reads about it.
+    pub failed: Option<String>,
 }
 
 impl Inner {

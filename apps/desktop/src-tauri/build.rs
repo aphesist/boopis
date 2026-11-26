@@ -99,6 +99,9 @@ const COMMANDS: &[&str] = &[
     "bot_run_limit_set",
     "dictation_start",
     "dictation_stop",
+    "dictation_model",
+    "dictation_model_fetch",
+    "dictation_model_delete",
     "rules_get",
     "rules_put",
     "rules_set_enabled",
@@ -106,6 +109,7 @@ const COMMANDS: &[&str] = &[
     "rules_undo",
     "rules_restore_defaults",
     "rules_accept_outside",
+    "rules_discard_outside",
     "rules_reviewer_set",
     "owner_grant",
     "team_plans_list",
@@ -116,6 +120,8 @@ const COMMANDS: &[&str] = &[
     "house_jobs",
     "parked_list",
     "parked_answer",
+    "voice_settings_get",
+    "voice_settings_set",
 ];
 
 fn main() {

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-dictation-model-delete"
+description = "Enables the dictation_model_delete command without any pre-configured scope."
+commands.allow = ["dictation_model_delete"]
+
+[[permission]]
+identifier = "deny-dictation-model-delete"
+description = "Denies the dictation_model_delete command without any pre-configured scope."
+commands.deny = ["dictation_model_delete"]

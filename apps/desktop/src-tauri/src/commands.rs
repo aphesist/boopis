@@ -1261,6 +1261,62 @@ pub fn dictation_stop(state: State<'_, AppState>, id: u32) {
     state.dictation.stop(id);
 }
 
+fn model_view(info: &boopis_dictation::service::ModelInfo) -> Json {
+    use boopis_dictation::service::ModelState;
+    let (word, done) = match info.state {
+        ModelState::Absent => ("absent", 0),
+        ModelState::Fetching { done } => ("fetching", done),
+        ModelState::Ready => ("ready", info.size),
+    };
+    Json(serde_json::json!({
+        "id": info.id, "size": info.size, "state": word, "done": done, "failed": info.failed, "language": null,
+    }))
+}
+
+/// The speech model dictation uses, for Settings › Models: `{id, size, state, done, failed, language}`, `state` one of
+/// `absent`, `fetching` (`done` of `size` bytes) or `ready`; `failed` says why the last fetch did not finish; `language` is
+/// null (the model hears which language is spoken). Reads the speech folder; fetches and opens nothing.
+#[tauri::command]
+#[specta::specta]
+pub fn dictation_model(state: State<'_, AppState>) -> Json {
+    model_view(&state.dictation.model())
+}
+
+/// Fetch the speech model now, as a first press of the mic would (Settings' Download). Returns at once with the model as
+/// `dictation_model` reads it; ask that again for the progress. Nothing happens when it is on disk or already coming.
+///
+/// Errors: `hx.host.os` when the fetch cannot start.
+#[tauri::command]
+#[specta::specta]
+pub fn dictation_model_fetch(state: State<'_, AppState>) -> std::result::Result<Json, HostError> {
+    state
+        .dictation
+        .fetch_model()
+        .map_err(|e| Error::Os(e.sentence()))?;
+    Ok(model_view(&state.dictation.model()))
+}
+
+/// Delete the speech model from this computer (Settings' Delete); the next press of the mic fetches it again. Returns the
+/// model as `dictation_model` reads it.
+///
+/// Errors: `hx.host.os` while a dictation listens or the model is being fetched, or when the file cannot be
+/// removed.
+#[tauri::command]
+#[specta::specta]
+pub fn dictation_model_delete(state: State<'_, AppState>) -> std::result::Result<Json, HostError> {
+    state
+        .dictation
+        .delete_model()
+        .map_err(|e| {
+            Error::Os(if e == boopis_dictation::Error::Busy {
+                "The speech model is in use: stop the dictation, or let the download finish, then delete it.".to_owned()
+            } else {
+                e.sentence()
+            })
+        })?;
+    Ok(model_view(&state.dictation.model()))
+}
+
 // ---------------------------------------------------------------- the store (docs/STORE.md, docs/PROTOCOL.md 1a)
 
 /// What the store asks of the app: which bot, its connector engine, its gateway.
@@ -2145,6 +2201,16 @@ pub fn rules_accept_outside(state: State<'_, AppState>) -> std::result::Result<J
     Ok(Json(state.rules.accept_outside(&rules_root(&state))?))
 }
 
+/// Discard a change made to the rules outside boopis ("Keep mine"): what boopis last wrote or accepted is written back.
+/// Returns what `rules_get` returns.
+///
+/// Errors: `hx.rules.not_found` when boopis has read nothing of its own this run.
+#[tauri::command]
+#[specta::specta]
+pub fn rules_discard_outside(state: State<'_, AppState>) -> std::result::Result<Json, HostError> {
+    Ok(Json(state.rules.discard_outside(&rules_root(&state))?))
+}
+
 /// Choose the reviewer: `auto` (the cheapest connected model, as the plugin's `rules.reviewer.rank` ranks them; the
 /// window passes its pick) or `pinned`, with its route; the route is written into every bot's own engine settings
 /// (`auxiliary.boopis_reviewer`). Returns `{reviewer, problems}`: the bots the route could not be written for.
@@ -2390,4 +2456,63 @@ pub async fn parked_answer(
         "resumed": ran["resumed"],
         "draft_id": draft_id,
     })))
+}
+
+// ---------------------------------------------------------------- voice (talking to bots)
+
+/// Voice for talking to bots as Settings › Models keeps it: `{provider, local_url}`, `provider` one of `elevenlabs`,
+/// `fish_audio`, `local` or null. A provider's key is in the keychain (`secret_exists` with `boopis.voice.<provider>`,
+/// `api_key`); it is never in this answer.
+#[tauri::command]
+#[specta::specta]
+pub fn voice_settings_get(app: AppHandle) -> std::result::Result<Json, HostError> {
+    let store = app
+        .store("settings.json")
+        .map_err(|e| Error::Io(e.to_string()))?;
+    Ok(Json(
+        crate::voice::VoiceSettings::from_store(store.get(crate::voice::STORE_KEY).as_ref()).view(),
+    ))
+}
+
+/// Keep the voice choice: the provider (`elevenlabs`, `fish_audio`, `local`, or null for none) and the local server's
+/// speech address. Validated; nothing is half-written. Returns what `voice_settings_get` returns. A key never comes here:
+/// it goes to `secret_set`.
+///
+/// Errors: `hx.config.invalid` for another provider, a local server without an address, or an address that is not http
+/// or https.
+#[tauri::command]
+#[specta::specta]
+pub fn voice_settings_set(
+    app: AppHandle,
+    provider: Option<String>,
+    local_url: Option<String>,
+) -> std::result::Result<Json, HostError> {
+    let provider = provider
+        .map(|p| {
+            serde_json::from_value::<crate::voice::VoiceProvider>(serde_json::Value::String(
+                p.clone(),
+            ))
+            .map_err(|_| {
+                Error::Config(format!(
+                    "voice.provider: expected elevenlabs, fish_audio or local, found {p:?}"
+                ))
+            })
+        })
+        .transpose()?;
+    let value = crate::voice::VoiceSettings {
+        provider,
+        local_url: local_url
+            .map(|u| u.trim().to_owned())
+            .filter(|u| !u.is_empty()),
+    };
+    value.validate()?;
+    let store = app
+        .store("settings.json")
+        .map_err(|e| Error::Io(e.to_string()))?;
+    store.set(
+        crate::voice::STORE_KEY,
+        serde_json::to_value(&value).map_err(|e| Error::Config(e.to_string()))?,
+    );
+    store.save().map_err(|e| Error::Io(e.to_string()))?;
+    Ok(Json(value.view()))
 }
