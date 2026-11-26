@@ -43,6 +43,9 @@ enum Message {
 
 impl Microphone for SystemMicrophone {
     fn open(&self) -> Result<Box<dyn AudioSource>> {
+        // macOS: the system's own answer first. A person who was never asked is asked now, and waited for.
+        #[cfg(target_os = "macos")]
+        access::ensure()?;
         // The stream is not `Send` on every system, so it lives and dies on a thread of its own, which waits until the
         // source is dropped.
         let (ready_tx, ready_rx) = mpsc::channel::<Result<u32>>();
@@ -62,6 +65,79 @@ impl Microphone for SystemMicrophone {
             Ok(Err(e)) => Err(e),
             Err(_) => Err(Error::Failed(
                 "the microphone did not open in time".to_owned(),
+            )),
+        }
+    }
+}
+
+/// macOS's permission for the microphone, asked of the system itself (`AVCaptureDevice`'s authorization status), never
+/// guessed from what the device gives: an unanswered question and a refusal both sound like silence.
+#[cfg(target_os = "macos")]
+mod access {
+    use std::sync::{Mutex, mpsc};
+    use std::time::Duration;
+
+    use block2::RcBlock;
+    use objc2::runtime::Bool;
+    use objc2_av_foundation::{AVAuthorizationStatus, AVCaptureDevice, AVMediaTypeAudio};
+    use objc2_foundation::{NSBundle, NSString};
+
+    use crate::{Error, Result};
+
+    /// How long the system's question may stay unanswered before the dictation gives up (the person can press again).
+    const ANSWER_WAIT: Duration = Duration::from_mins(5);
+
+    /// Allowed: `Ok`. Denied, or restricted by the system: [`Error::PermissionDenied`]. Not asked yet: the system asks, in
+    /// the app's name and with the sentence of its `Info.plist`, and this waits for the answer.
+    #[allow(unsafe_code)] // three calls into AVFoundation, each with its SAFETY note
+    pub(super) fn ensure() -> Result<()> {
+        // SAFETY: a constant string AVFoundation exports, set when the framework is loaded and never written after.
+        let Some(audio) = (unsafe { AVMediaTypeAudio }) else {
+            return Ok(());
+        };
+        // SAFETY: a class method that reads the authorization of this process for one of the two media types it takes,
+        // and returns an integer. Callable from any thread; nothing is retained.
+        let status = unsafe { AVCaptureDevice::authorizationStatusForMediaType(audio) };
+        if status == AVAuthorizationStatus::Authorized {
+            return Ok(());
+        }
+        if status == AVAuthorizationStatus::Denied || status == AVAuthorizationStatus::Restricted {
+            return Err(Error::PermissionDenied(format!(
+                "the system's microphone authorization is {}",
+                if status == AVAuthorizationStatus::Denied {
+                    "denied"
+                } else {
+                    "restricted"
+                }
+            )));
+        }
+        // Not asked yet. Only an app whose bundle says why it wants the microphone may ask (the system ends a process
+        // that asks without the sentence): a bare binary, such as a test, goes on to the device as it is.
+        let reason = NSString::from_str("NSMicrophoneUsageDescription");
+        if NSBundle::mainBundle()
+            .objectForInfoDictionaryKey(&reason)
+            .is_none()
+        {
+            return Ok(());
+        }
+        let (answered, answer) = mpsc::channel::<bool>();
+        let answered = Mutex::new(answered);
+        let handler = RcBlock::new(move |granted: Bool| {
+            if let Ok(answered) = answered.lock() {
+                let _ = answered.send(granted.as_bool());
+            }
+        });
+        tracing::info!("asking the system for the microphone; waiting for the person's answer");
+        // SAFETY: the media type is valid, and the block owns what it captures (a sender behind a mutex), is `'static`
+        // and may be called on any queue, once; AVFoundation copies it and keeps it until then.
+        unsafe { AVCaptureDevice::requestAccessForMediaType_completionHandler(audio, &handler) };
+        match answer.recv_timeout(ANSWER_WAIT) {
+            Ok(true) => Ok(()),
+            Ok(false) => Err(Error::PermissionDenied(
+                "the person answered the system's question with no".to_owned(),
+            )),
+            Err(_) => Err(Error::Failed(
+                "the system's question about the microphone was not answered".to_owned(),
             )),
         }
     }

@@ -29,6 +29,8 @@ boopis includes or distributes the following third-party work, each under its ow
   authors. The speech model itself (OpenAI's Whisper `base`, MIT License, in the ggml format from the whisper.cpp model
   repository) is not distributed with boopis: the app fetches it on first use and checks its SHA-256.
 - cpal, compiled into the desktop app for the microphone: Apache License 2.0.
+- objc2-av-foundation (with the objc2 crates it builds on), compiled into the macOS app to ask the system whether the
+  microphone is allowed: MIT License.
 - rubato (with realfft and rustfft), compiled into the desktop app to resample the microphone's audio: MIT License or
   Apache License 2.0.
 - voxtype (github.com/peteonrails/voxtype): the streaming wrapper around rubato in crates/boopis-dictation/src/audio.rs is

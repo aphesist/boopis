@@ -1,4 +1,4 @@
-//! Dictation for the boopis desktop host (ADR-0052): the microphone, and speech to text on this computer.
+//! Dictation for the boopis desktop host (ADR-0059): the microphone, and speech to text on this computer.
 //!
 //! - **Local.** Audio is read from the system's own audio API ([`capture`]), turned into text by whisper.cpp in this
 //!   process ([`transcribe`]) and dropped. It is never written to disk and never sent anywhere. The only network request
@@ -69,8 +69,8 @@ pub enum Error {
     /// The system refused the microphone.
     #[error("the microphone was refused: {0}")]
     PermissionDenied(String),
-    /// The microphone opened and gave only digital silence: on macOS and Windows that is how a privacy setting that is
-    /// off looks to an app; elsewhere it is a muted input.
+    /// The microphone opened and gave only digital silence: on Windows that is how a privacy setting that is off looks
+    /// to an app; elsewhere it is a muted input.
     #[error("the microphone gives no sound")]
     Silent,
     /// The model could not be fetched (the network, the server, the disk).
@@ -103,9 +103,10 @@ impl Error {
         match self {
             Self::NoMicrophone(_) => Reason::NoMicrophone,
             Self::PermissionDenied(_) => Reason::PermissionDenied,
-            // A silent microphone is a switched-off privacy setting where the system has one, a muted input elsewhere.
+            // On Windows a privacy setting that is off gives silence, and there is nothing to ask. macOS is asked for its
+            // authorization before the device opens (`capture::access`), so silence there is a muted input, as on Linux.
             Self::Silent => {
-                if cfg!(any(target_os = "macos", target_os = "windows")) {
+                if cfg!(target_os = "windows") {
                     Reason::PermissionDenied
                 } else {
                     Reason::NoMicrophone
@@ -226,8 +227,7 @@ pub struct Tuning {
     pub max_stretch: Duration,
     /// Speech shorter than this in a stretch is taken for a noise and not written down.
     pub min_speech: Duration,
-    /// A microphone that gives only digital silence for this long, from the start, is reported and closed (3 s; 8 s on
-    /// macOS).
+    /// A microphone that gives only digital silence for this long, from the start, is reported and closed.
     pub silence_probe: Duration,
     /// The level (RMS of a 20 ms frame, full scale 1.0) under which a frame is never speech.
     pub speech_floor: f32,
@@ -247,9 +247,7 @@ impl Default for Tuning {
             partial_every: Duration::from_secs(2),
             max_stretch: Duration::from_secs(24),
             min_speech: Duration::from_millis(160),
-            // macOS gives silence while its own question about the microphone is on screen: longer there, so a person
-            // who is reading it is not told the microphone is silent
-            silence_probe: Duration::from_secs(if cfg!(target_os = "macos") { 8 } else { 3 }),
+            silence_probe: Duration::from_secs(3),
             speech_floor: 0.003,
             speech_ratio: 3.0,
             model_idle: Duration::from_mins(2),

@@ -1,7 +1,7 @@
 # boopis-dictation
 
 The microphone button's other half: it hears a person and writes down what they said, on this computer. The desktop host
-(`apps/desktop/src-tauri`, `src/dictation.rs`) is its only user. Why it is built this way: ADR-0052 (`docs/DECISIONS.md`).
+(`apps/desktop/src-tauri`, `src/dictation.rs`) is its only user. Why it is built this way: ADR-0059 (`docs/DECISIONS.md`).
 
 It is a crate of its own so that it builds and is tested without the web view's toolkit, and so that the only way to the
 microphone is a `Dictation` somebody was handed.
@@ -30,6 +30,7 @@ The owner's rule (26 November 2026): use what already exists; write only the glu
 | Part | From |
 |---|---|
 | Speech to text | whisper.cpp 1.8.3 (MIT), through the `whisper-rs` crate. Nothing of the recognition is ours |
+| macOS's microphone permission | AVFoundation's own authorization status and question, through `objc2-av-foundation` (MIT); `capture::access` |
 | The microphone | the `cpal` crate (Apache-2.0): ALSA, WASAPI, Core Audio. Ours: the thread that holds the stream, and reading its errors as `no-microphone` or `permission-denied` |
 | Resampling to 16 kHz | the `rubato` crate (MIT or Apache-2.0), an FFT resampler. The wrapper that feeds it blocks of any size and flushes the tail is adapted from voxtype's `src/audio/resampler.rs` (MIT, Copyright (c) 2025 Peter Jackson; `LICENSE-voxtype`) |
 | Hashing, addresses | `sha2`, `hex`, `url` |
