@@ -114,7 +114,7 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 10 | FilesCard | `filesCard` | `kit/files-card` | 1 file, 2 files (S23) with Open diff, 12 files folded and unfolded, empty, long, narrow; the action hovered, focused |
 | 11 | Queue | `queue` | `kit/queue` | list 1, 3, 9; held (with Edit: at rest, hovered, focused, narrow); editing |
 | 12 | Notice | `notice` | `kit/notice` | composer, page, floating; neutral, amber, accent, red; 0 to 2 actions; dismiss |
-| 13 | SystemLine | `systemLine` | `kit/system-line` | info, steer, hand-off, error with its action |
+| 13 | SystemLine | `systemLine` | `kit/system-line` | info (with `meta`: what a changed setting costs, in mono at its end, S33), steer, hand-off, error with its action |
 | 14 | Bubble | `bubble` | `kit/bubble` | user, agent, a bot's fill, room byline, brand tile, you wash, code |
 | 15 | DiffView | `diffView` | `kit/diff-view` | stacked, split; comment, comment focused |
 | 16 | Well | `well` | `kit/well` | code in a Block and a bubble, terminal |

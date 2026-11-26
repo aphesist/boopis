@@ -158,14 +158,14 @@ export function notice(o: NoticeOpts): string {
     (o.dismiss ? '<button class="k7-reset k7-ib" data-kit="IconButton" data-variant="ghost" data-dismiss type="button" aria-label="Dismiss" data-tip="Dismiss">' + glyph('close') + '</button>' : '') + '</div>';
 }
 
-/* ── SystemLine (13): a centred line about the thread itself: info, steer, hand-off, error with action ── */
+/* ── SystemLine (13): a centred line about the thread itself: info (with what it cost at its end, S33), steer, hand-off, error with action ── */
 export const SYSTEM_LINE_VARIANTS = ['info', 'steer', 'handoff', 'error'] as const;
-export interface SystemLineOpts { variant?: U<typeof SYSTEM_LINE_VARIANTS[number]>; text: string; icon?: U<string>; from?: U<BotLike>; to?: U<BotLike>; message?: U<string>; action?: U<string>; attrs?: U<Attrs> }
+export interface SystemLineOpts { variant?: U<typeof SYSTEM_LINE_VARIANTS[number]>; text: string; /** what follows the words in mono, at the line's end (board S33: a changed setting's extra cost, "+$0.04") */ meta?: U<string>; icon?: U<string>; from?: U<BotLike>; to?: U<BotLike>; message?: U<string>; action?: U<string>; attrs?: U<Attrs> }
 export function systemLine(o: SystemLineOpts): string {
   const v = o.variant ?? 'info';
   const lead = v === 'handoff' ? (o.from ? orbHtml(o.from, { size: 16, still: true }) : '') + glyph('chevron', 'k7-sys__chev') + (o.to ? orbHtml(o.to, { size: 16, still: true }) : '') : glyph(o.icon);
   const pill = '<div class="k7-sys"' + kitAttrs('SystemLine', { role: 'note', 'data-variant': v, 'data-act': o.action ? '' : null, ...(o.attrs ?? {}) }) + '>' + lead +
-    '<span class="k7-sys__text">' + esc(o.text) + '</span>' + (o.action ? button({ label: o.action, variant: 'secondary', size: 28, attrs: { 'data-line': '' } }) : '') + '</div>';
+    '<span class="k7-sys__text">' + esc(o.text) + '</span>' + (o.meta ? '<span class="k7-sys__meta k7-mono">' + esc(o.meta) + '</span>' : '') + (o.action ? button({ label: o.action, variant: 'secondary', size: 28, attrs: { 'data-line': '' } }) : '') + '</div>';
   return v === 'steer' && o.message ? '<div class="k7-sys-wrap">' + pill + '<div class="k7-sys__msg">' + esc(o.message) + '</div></div>' : pill;
 }
 

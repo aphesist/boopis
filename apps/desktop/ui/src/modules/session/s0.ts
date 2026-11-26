@@ -149,17 +149,20 @@ export function watchTyping(canvas: HTMLElement, input: HTMLElement): () => void
 
 /* ───────── the lines the thread says about itself (SystemLine) ───────── */
 export function lineText(l: ThreadLine): string {
-  if (l.kind === 'settings') return l.text + (l.cost ? ' · ' + l.cost : '');
+  if (l.kind === 'settings') return l.text;
   const files = l.files + (l.files === 1 ? ' file' : ' files');
   return l.action === 'undone' ? 'Rewind undone · ' + files : 'Files rewound to ' + l.to.label + ' · ' + files;
 }
 export function lineEl(l: ThreadLine, onUndo?: (shipId: string) => void): HTMLElement {
   const undo = l.kind === 'checkpoint' && l.undoShipId !== null && onUndo ? l.undoShipId : null;
-  const n = kit.systemLine({ variant: 'info', text: lineText(l), icon: l.kind === 'settings' ? 'sliders' : 'back', ...(undo ? { action: 'Undo' } : {}), attrs: { 'data-line-id': l.id } });
+  /* a changed setting says what it costs on the next reply at its end, in mono (board S33: "+$0.04"), and in full in its tip */
+  const cost = l.kind === 'settings' ? l.cost : null;
+  const n = kit.systemLine({ variant: 'info', text: lineText(l), ...(cost ? { meta: cost } : {}), icon: l.kind === 'settings' ? 'sliders' : 'back', ...(undo ? { action: 'Undo' } : {}), attrs: { 'data-line-id': l.id, ...(l.kind === 'settings' && l.costWhy ? { 'data-tip': l.costWhy, tabindex: '0' } : {}) } });
   if (undo && onUndo) n.querySelector('[data-line]')?.addEventListener('click', () => { onUndo(undo); });
   const w = document.createElement('div');
   w.className = 'ss-s0-line';
   w.setAttribute('data-line-id', l.id);
+  if (l.kind === 'settings' && l.what) w.setAttribute('data-line-what', l.what);
   w.append(n);
   return asV7(w);
 }

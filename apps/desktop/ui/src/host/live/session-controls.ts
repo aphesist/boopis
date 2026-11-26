@@ -20,6 +20,7 @@ import type { GatewayClient } from '../gateway';
 import { capabilitiesFrom, launchStep, stepName } from './capabilities';
 import type { FolderDescribe, PluginDescribe, SessionDescribe } from './capabilities';
 import type { LiveDetails } from './details';
+import { mutateEffort } from './model-switch';
 import { splitValue } from './models';
 import { isUnknownMethod } from './wire';
 
@@ -174,6 +175,22 @@ export function createControls(deps: ControlsDeps): LiveControls {
       }
       return deps.continueOn(id, step, stepName(step));
     },
+    async setEffort(effort) {
+      const id = followed(), gw = deps.gwId(id);
+      if (!deps.started(id) || !gw) return controls.setLaunch({ effort });
+      const a = capsOf(id).session.changeEffort;
+      if (!a.ok) return a.why;
+      const l = launchOf(id);
+      if (l.effort === effort) return null;
+      try {
+        /* in place, on the same engine session (session-launch.md 6.1); whether a provider reads its cache again after it is not known, so the line names no cost */
+        const outcome = await mutateEffort(client, gw, details.model(id), effort);
+        l.effort = effort;
+        publish();
+        deps.addLine(id, { kind: 'settings', text: 'Effort changed to ' + effort.charAt(0).toUpperCase() + effort.slice(1) + (outcome === 'deferred' ? ' (applies when this turn ends)' : ''), cost: null });
+        return null;
+      } catch (e) { return 'The effort was not changed: ' + reason(e); }
+    },
     async rewind(uiId, shipId, o = {}) {
       const gw = deps.gwId(uiId);
       if (!gw) return { status: 'refused', isolation: 'refused', why: 'The session has not started yet.', files: [] };
@@ -209,6 +226,8 @@ export function createControls(deps: ControlsDeps): LiveControls {
       if (p.has('cwd_explicit')) params['cwd_explicit'] = true;
       if (p.has('client')) params['client'] = CLIENT;
       if (now.model && p.has('model')) { params['model'] = now.model; if (now.provider && now.provider !== 'auto' && p.has('provider')) params['provider'] = now.provider; }
+      const effort = launchOf(uiId).effort;   /* the thread keeps its effort across a continuation */
+      if (effort && p.has('reasoning')) params['reasoning'] = effort;
       return { params };
     },
     prepare: (uiId) => readFolder(deps.started(uiId) ? details.model(uiId).info?.cwd ?? null : launchOf(uiId).folder),

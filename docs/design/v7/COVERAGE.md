@@ -55,7 +55,7 @@ are not built. The picks are in `PLAN-session-waves.md` and `PLAN-w31-foundation
 | 3. Bots: a bot's chat | 26 | 7 | 0 | 19 | 0 |
 | 4. Bots: rooms | 24 | 8 | 0 | 16 | 0 |
 | 5. Session: new session and launch | 16 | 9 | 3 | 4 | 0 |
-| 6. Session: a running and finished session | 42 | 23 | 4 | 15 | 0 |
+| 6. Session: a running and finished session | 43 | 23 | 4 | 16 | 0 |
 | 7. Session: panels, commit, inbox, menus | 22 | 12 | 1 | 9 | 0 |
 | 8. Composer | 45 | 24 | 5 | 16 | 0 |
 | 9. Dock | 22 | 13 | 4 | 5 | 0 |
@@ -69,7 +69,7 @@ are not built. The picks are in `PLAN-session-waves.md` and `PLAN-w31-foundation
 | 17. Errors, empty, offline, engine states | 18 | 8 | 1 | 9 | 0 |
 | 18. Notch (macOS) | 18 | 14 | 3 | 0 | 1 |
 | 19. Narrow widths and density | 14 | 1 | 3 | 9 | 1 |
-| **All** | **430** | **191** | **38** | **199** | **2** |
+| **All** | **431** | **191** | **38** | **200** | **2** |
 
 A `board` row can still hold a derived part or a conflict: its Reference cell says so.
 
@@ -247,7 +247,8 @@ A `board` row can still hold a derived part or a conflict: its Reference cell sa
 | The line a rewind leaves in the thread, with Undo | yes, `s0.ts` `lineEl` | derived: `session/S33-settings-changed-*.jpg`; kit SystemLine with an action | works today (S0) | not started (no step) |
 | "Edit from here" on a turn; editing your last message | partly, `conversation.ts` (e, or up in an empty composer) | board `session/S23-finished-turn-*.jpg` (the button); the editing state derived; kit Composer | works today | built and hidden (step 4) until it exists (`later('turn-edit')`); E and ArrowUp bring a message back as before |
 | Fork from a turn | no | board `session/S23-finished-turn-*.jpg` | 0.3.0 S2 (fork and side chat) | built and hidden (step 4) until it exists (`later('turn-fork')`) |
-| A setting changed mid-session: one line with the extra cost | yes, `s0.ts` `lineText` | board `session/S33-settings-changed-*.jpg` | works today (S0) | not started (step 6) |
+| A setting changed mid-session: one line with the extra cost | yes, `s0.ts` `lineEl` (the kit's SystemLine with `meta`): how careful (in place, or continued), the effort (`SessionControls.setEffort`, the engine's `session.mutate` reasoning), the model you picked ("Model changed to X") | board `session/S33-settings-changed-*.jpg` | the steps work today (S0); the effort and the model's line are built at step 6a and tested on a fake gateway, not against a running engine; the cost is said in tokens read again without the cache (dollars need a price for the model, which nothing holds yet) | matched, step 6a (S33: the line 0.00%; the thread around it is S20's and S23's, see boards.json) |
+| The effort changed from the composer's line: its levels under the models in "who answers next" | yes, `modules/session/composer.ts` `effortEntries` | derived: no board draws the model item's menu with the effort; kit Menu (a heading, radio rows); the launch row's selector is `session/S08-components-launch.jpg` | built at step 6a | built at step 6a (derived; shown to the owner) |
 | A usage limit reached: the notice over the composer, "Paused: …" in the thread, the weekly bar on the line | partly, the free tier's limit notice exists (`host/free-tier.ts`) | board `session/S34-usage-limits-*.jpg` | 0.3.0 S3 | not started (step 6) |
 | Continued after a restart, a queued message still queued | no | board `session/S35-after-restart-*.jpg` | 0.3.0 S1 (the queue); "Continue after a restart" has no wave named | not started (step 4) |
 | The engine stopped mid-session: a line with "Start it again" | unknown: the link's state is known (`host/gateway.ts`); no line found in `modules/session` | board `session/S36-error-engine-stopped-*.jpg` | unknown: no plan names the restart action | not started (step 4) |

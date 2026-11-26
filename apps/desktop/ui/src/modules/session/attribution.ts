@@ -21,6 +21,14 @@ export function dividerRow(from: string, to: string): HTMLElement {
   return el('div', { class: 'ss-divider' }, line);
 }
 
+/** the thread already says that the model changed before this answer ("Model changed to X", the line the pick left): one line, not two */
+function saidAlready(turn: HTMLElement): boolean {
+  for (let n = turn.previousElementSibling; n; n = n.previousElementSibling) {
+    if (n.matches('[data-line-what="model"]')) return true;
+    if (n.matches('[data-hx-turn][data-answered]')) return false;
+  }
+  return false;
+}
 /** draw the lines of a conversation column again: one before each agent turn whose model differs from the last known one */
 export function syncDividers(col: HTMLElement): void {
   col.querySelectorAll('.ss-divider').forEach((d) => { d.remove(); });
@@ -28,7 +36,7 @@ export function syncDividers(col: HTMLElement): void {
   for (const t of col.querySelectorAll<HTMLElement>('[data-hx-turn][data-answered]')) {
     const now = t.dataset['answered'] ?? '';
     if (!now) continue;
-    if (last && !ui.modelMark.same(last, now)) t.before(dividerRow(last, now));
+    if (last && !ui.modelMark.same(last, now) && !saidAlready(t)) t.before(dividerRow(last, now));
     last = now;
   }
 }

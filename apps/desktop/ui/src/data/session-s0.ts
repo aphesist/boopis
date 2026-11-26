@@ -60,10 +60,15 @@ export type ThreadLine =
       kind: 'settings'; id: string;
       /** the agent turn it follows; null before the first */
       afterTurn: string | null;
-      /** "Permissions changed to Auto", "Settings changed: continued with Full access" */
+      /** "Permissions changed to Auto", "Effort changed to High", "Settings changed: continued with Full access" */
       text: string;
-      /** what the cache miss costs, said under the line; null when the change keeps the cache */
+      /** what the change costs on the next reply, at the line's end as board S33 draws it ("+$0.04"; where no price is known, the
+          tokens read again without the cache); null when the change keeps the cache or its cost is not known */
       cost: string | null;
+      /** the cost in full words, read from the line's tip ("The next reply reads about 18,000 tokens without the cache") */
+      costWhy?: string;
+      /** the line says the answering model changed: the thread then draws no second line where the next answer comes from it */
+      what?: 'model';
     }
   | {
       kind: 'checkpoint'; id: string; afterTurn: string | null; at: string;
@@ -102,6 +107,9 @@ export interface SessionControls {
   /** change how careful the followed, started session is: in place, or continued on a new engine session.
       Resolves with why not, or null; the thread gets its line */
   setCareful(step: CarefulStep): Promise<string | null>;
+  /** change the effort: the launch's before the first message; a started session's in place (the engine applies it to the next turn
+      while one runs). Resolves with why not, or null; a started session's thread gets its line ("Effort changed to High") */
+  setEffort(effort: string): Promise<string | null>;
   /** checkpoint.rewind, dry run or for real; never rejects for a refusal (`status: refused`, `why`) */
   /** `undo`: this rewind undoes the last one (its line says "Rewind undone") */
   rewind(sessionId: string, shipId: string | null, o?: { dryRun?: boolean; expectHead?: string; undo?: boolean }): Promise<RewindResult>;

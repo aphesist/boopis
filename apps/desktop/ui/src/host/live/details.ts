@@ -45,6 +45,10 @@ export interface DetailsDeps {
   /** what the Connectors section's switch and Sign in button do: the host switches a server through Hermes and runs Hermes's own OAuth
       flow for it. Without it (no desktop host) both controls are disabled and say nothing is wired */
   connectors?: { setEnabled(name: string, enabled: boolean): Promise<void>; signin(name: string): Promise<unknown> };
+  /** the person's own model pick reached the engine session in place (`session.mutate` operation `model`): the thread says so. `said` is
+      the model's readable name, `deferred` a pick the engine applies when the running turn ends, `context` the session's measured
+      context in tokens (the next reply reads it without the cache), null when it is not known */
+  onModelChanged?(uiId: string, o: { said: string; deferred: boolean; context: number | null }): void;
 }
 export interface LiveDetails {
   source: DetailsSource;
@@ -421,6 +425,8 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
         }
         m.pick = null;
         m.appliedModel = value;
+        /* the person's own pick (not Smart's, which chooses for each message) is a setting of the session that changed: one line in its thread */
+        if (!m.smart && outcome !== 'noop') deps.onModelChanged?.(uiId, { said: say, deferred: outcome === 'deferred', context: contextFrom(m.breakdown, m.usage)?.used ?? null });
         if (outcome === 'deferred') {
           /* a turn is running: the engine keeps its model and applies the pick before the next turn starts, so the chip waits for its report */
           why ??= say + ' answers from the next turn: the turn that is running keeps its model';

@@ -2,7 +2,8 @@
    (docs/design/v7/boards: sessiontab.js `comp`, `underSess`).
 
    The line says how the session runs, each item its own control: how careful (the S0 scale's menu, alt+G), the branch, the model
-   that answers next with its effort (the "who answers next" menu, alt+M; alt+S turns Smart on or off), and at the end how full the
+   that answers next with its effort (the "who answers next" menu, alt+M, which holds the effort's levels too; alt+S turns Smart on or
+   off; a change of either while the session runs leaves its line in the thread, S33), and at the end how full the
    context is and what the session has spent. The quick menu (a press on the line, or "+") turns items off (S05 B). "+" opens the add
    menu: attach a file or a folder (each a chip in the text, sent with the message), mention a file, start a command. "@" names the
    model that answers this message only (ADR-0036). The words the text is read by carry the kit's Mark (feedforward): a press on one,
@@ -92,7 +93,18 @@ export function modelMenu(o: { current: string; governed: boolean; smart: boolea
       for (const x of e.options) out.push({ label: x.label ?? '', value: x.value, ...(x.desc ? { desc: x.desc } : {}), leadHTML: ui.html.modelMark(x.value, { size: 16, label: false }), checked: x.value === now, role: 'menuitemradio', ...(x.disabled ? { disabled: true } : {}) });
     } else out.push({ label: e.label ?? '', value: e.value, ...(e.desc ? { desc: e.desc } : {}), ...(e.icon ? { icon: e.icon } : {}), ...(e.keys ? { keys: e.keys } : {}), ...(e.value === SMART_VALUE ? { checked: now === SMART_VALUE, role: 'menuitemradio' } : {}), ...(e.disabled ? { disabled: true } : {}) });
   }
-  return [...out, '-', { heading: o.governed ? FOOT_GOVERNED : FOOT_UNGOVERNED }];
+  return [...out, ...effortEntries(), '-', { heading: o.governed ? FOOT_GOVERNED : FOOT_UNGOVERNED }];
+}
+/** an effort row's value in the "who answers next" menu */
+export const EFFORT_VALUE = '__effort:';
+/** the effort, under the models (the line's item is "model and effort", S05 B): the engine's levels, the session's own checked. A level
+    that cannot be chosen now says why (the capability map) */
+function effortEntries(): MenuEntry[] {
+  const c = data().sessionControls; if (!c) return [];
+  const caps = c.capabilities.get(), levels = caps.launch.efforts;
+  if (!levels.length) return [];
+  const can = caps.session.changeModel.ok ? caps.session.changeEffort : caps.launch.effort, now = c.launch.get().effort;
+  return ['-', { heading: 'Effort' }, ...levels.map((e): MenuEntry => ({ label: e.charAt(0).toUpperCase() + e.slice(1), value: EFFORT_VALUE + e, checked: now === e, role: 'menuitemradio', ...(can.ok ? {} : { disabled: true, desc: can.why }) }))];
 }
 
 export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): SessionComposer {
@@ -107,7 +119,8 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
   let chipN = 0;
   const present = (): Attached[] => [...(text()?.querySelectorAll<HTMLElement>('[data-att]') ?? [])].map((n) => attached.get(n.dataset['att'] ?? '')).filter((a): a is Attached => !!a);
 
-  const placeholder = (): string => (o.waits() ? 'Send feedback to decline this request' : o.after() ? 'What next?' : 'Describe the change');
+  /* as the boards write it: S20 while a change waits, S23 after a turn, "Message" otherwise (S33 and the later boards) */
+  const placeholder = (): string => (o.waits() ? 'Send feedback to decline this request' : o.after() ? 'What next?' : 'Message');
   const line = (): LineItem[] => lineItems({ text: value(), attachments: present().length, sessionId: o.sessionId(), hidden });
   /* "@": a mention names the model that answers this message only; the menu's foot says what that means */
   const choicesNow = () => data().details.choices.get();
@@ -196,6 +209,8 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
     openOver(anchor, {
       label: 'Who answers next', entries: modelMenu({ current: G.model, governed: G.governed, smart: G.smart, sessionId: o.sessionId() }), place: 'above', align: 'start', attrs: v7Attrs(),
       onSelect: (v) => {
+        /* the effort changes in place (a started session's thread gets its line, S33); a refusal is said */
+        if (v.startsWith(EFFORT_VALUE)) { void controls?.setEffort(v.slice(EFFORT_VALUE.length)).then((why) => { if (why) say(why); sync(); }); return; }
         if (v === COUNCIL_VALUE) { requestAnimationFrame(() => { void openCouncilForm(lineItem('model'), o.sessionId(), () => { sync(); }); }); return; }
         setGovernance(v === SMART_VALUE ? { smart: true } : { smart: false, model: v });
         if (viaKeyboard) api.focus();

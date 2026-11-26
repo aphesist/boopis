@@ -179,6 +179,8 @@
   border-radius: var(--r-pill); background: var(--fill-2); font-size: var(--fs-s); line-height: var(--lh-m); color: var(--text-dim); white-space: nowrap;
 }
 .k7-sys > svg { flex: none; }
+/* S33 (sessiontab.js `s8`): the extra cost in mono, 6 more after the words */
+.k7-sys__meta { flex: none; margin-inline-start: var(--gap-s); }
 .k7-sys__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .k7-sys[data-variant="error"] .k7-sys__text { color: var(--red-text); }
 .k7-sys[data-act] { height: var(--line-h-act); padding: 0 var(--pad-line-act) 0 var(--sp-3); }

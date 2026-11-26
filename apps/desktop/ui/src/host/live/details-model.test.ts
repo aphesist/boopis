@@ -58,8 +58,9 @@ function setup(o: { governed?: boolean; ladder?: boolean; tiers?: Json[]; failSw
     },
     request(method: string, params: Json): Promise<unknown> { return this.requestRaw(method, params); }
   };
-  const d = createDetails({ client: client as unknown as GatewayClient, gwId: () => 'g1', now: () => 0, ...(o.hostGoverned ? { hostGoverned: async () => o.hostGoverned as never } : {}) });
-  return { d, calls, engine };
+  const changed: Array<{ said: string; deferred: boolean; context: number | null }> = [];
+  const d = createDetails({ client: client as unknown as GatewayClient, gwId: () => 'g1', now: () => 0, onModelChanged: (_id, x) => { changed.push(x); }, ...(o.hostGoverned ? { hostGoverned: async () => o.hostGoverned as never } : {}) });
+  return { d, calls, engine, changed };
 }
 async function ready(o: Parameters<typeof setup>[0] = {}) {
   const s = setup(o);
@@ -163,6 +164,24 @@ describe('the sticky pick is the engine\'s session.mutate (never config.set)', (
     expect(typeof m?.params['request_id']).toBe('string');
     expect(calls.some((c) => c.method === 'config.set')).toBe(false);
     expect(d.source.governance.get().model).toBe('openai-codex/gpt-6-luna');
+  });
+  it('the person\'s own pick, once the engine took it, is said to the thread (its line: "Model changed to X"); the same pick again says nothing', async () => {
+    const { d, changed } = await ready();
+    d.onHandle('s1', { revision: 0, execution_generation: 0 });
+    d.source.setGovernance({ model: 'openai-codex/gpt-6-luna' });
+    await d.prepareSend('s1', 'hello');
+    expect(changed).toHaveLength(1);
+    expect(changed[0]).toMatchObject({ deferred: false, context: null });
+    expect(changed[0]?.said).toMatch(/luna/i);
+    await d.prepareSend('s1', 'again');
+    expect(changed).toHaveLength(1);
+  });
+  it('a pick asked while a turn runs is said as one that applies when the turn ends', async () => {
+    const { d, changed } = await ready({ running: true });
+    d.onHandle('s1', { revision: 0, execution_generation: 0 });
+    d.source.setGovernance({ model: P + '/sonnet' });
+    await d.prepareSend('s1', 'hello');
+    expect(changed.map((x) => x.deferred)).toEqual([true]);
   });
   it('a pick on stale fences is retried once with the ones the refusal carries, under the same request id', async () => {
     const { d, calls } = await ready({ revision: 7, generation: 3 });

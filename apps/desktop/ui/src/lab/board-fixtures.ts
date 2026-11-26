@@ -146,6 +146,7 @@ function controls(): SessionControls {
     capabilities: store(CAPS), launch,
     setLaunch: (patch) => { launch.set({ ...launch.get(), ...patch }); return null; },
     setCareful: (step) => { launch.set({ ...launch.get(), careful: step }); return Promise.resolve(null); },
+    setEffort: (effort) => { launch.set({ ...launch.get(), effort }); return Promise.resolve(null); },
     rewind: () => Promise.resolve({ status: 'nothing_to_do', isolation: 'own_worktree', files: [] }),
     head: () => null, pickFolder: null
   };
@@ -183,12 +184,12 @@ const EDIT_ASK: FormSpec = {
   schema: { properties: { choice: { type: 'string', title: 'Decision', enum: ['once', 'session', 'deny'], default: 'once' } }, required: ['choice'] }, submit: { label: 'Decide' }, cancel: { label: 'Deny' }
 };
 /** board S17's sessions with the first one open and started, in the state `turns` draws */
-function started(p: DataProvider, turns: Conversation['turns'], careful: CarefulStep, draft: string, more: Partial<DataProvider> = {}): DataProvider {
+function started(p: DataProvider, turns: Conversation['turns'], careful: CarefulStep, draft: string, more: Partial<DataProvider> = {}, lines: NonNullable<Conversation['lines']> = []): DataProvider {
   const base = boardS17(p);
   const c = controls(), caps = c.capabilities.get();
   return {
     ...base, info: drawn(p, 'turn-edit', 'turn-fork'),
-    sessions: { ...base.sessions, list: store<readonly SessionSummary[]>(SESSIONS), draft: () => draft, conversation: (id: string) => feed(id === 's17-dock' ? { turns } : { turns: [{ id: 's20-o', role: 'user', at: '09:42', text: ASK }] }) },
+    sessions: { ...base.sessions, list: store<readonly SessionSummary[]>(SESSIONS), draft: () => draft, conversation: (id: string) => feed(id === 's17-dock' ? { turns, lines } : { turns: [{ id: 's20-o', role: 'user', at: '09:42', text: ASK }] }) },
     details: { ...base.details, governance: store({ ...base.details.governance.get(), cap: '$0.60', spent: '$0.37' }), context: store({ total: 200000, used: 76000, parts: [] }), environment: store({ ...p.details.environment.get(), branch: 'w32/dock-paint' }) },
     sessionControls: { ...c, capabilities: store({ ...caps, session: { ...caps.session, changeModel: YES } }), launch: store({ ...c.launch.get(), careful, effort: 'medium' }) },
     limits: store<LimitNotice | null>(null), ...more
@@ -214,6 +215,18 @@ export function boardS23(p: DataProvider): DataProvider {
       paragraphs: ['Fixed. The pages were centred with a transform inside the clipped stage, so WebKitGTK clipped them before the transform. They are centred by layout now, and the tests pass.'],
       blank: { question: 'Check the fix on which build?', short: 'Check the fix on which build?', options: ['staging', 'the Linux app'], guess: 'staging', rewrites: { staging: { lead: 'I guessed', tail: 'for the check' } } } }
   ], 'auto_edits', '', { details: { ...started(p, [], 'auto_edits', '').details, changes: store<readonly Change[]>([['modules/dock/dock.css', 12, 3], ['modules/dock/engine.ts', 2, 2]]) } });
+}
+
+/** board S33 (sessiontab.js `s8`): a setting changed between two turns: one line in the thread with what it cost, then the next message
+    and its turn at work */
+export function boardS33(p: DataProvider): DataProvider {
+  const base = started(p, [
+    { id: 's33-t1', role: 'user', at: '11:02', text: 'Make the dock tests run in WebKit too.' },
+    { id: 's33-t2', role: 'assistant', model: 'sonnet 5.5', time: '1m 12s', cost: '', stepCount: 1, steps: tools('patch', 1), status: 'done', bullets: [], paragraphs: ['Done: the WebKit run is a second job in the same workflow.'] },
+    { id: 's33-t3', role: 'user', at: '11:04', text: 'Now run both jobs locally.' },
+    { id: 's33-t4', role: 'assistant', model: 'sonnet 5.5', time: '', cost: '', stepCount: 1, steps: [{ title: 'Running the tests', time: '' }], status: 'running', bullets: [], paragraphs: [] }
+  ], 'auto_edits', '', {}, [{ kind: 'settings', id: 's33-line', afterTurn: 's33-t2', text: 'Settings changed: continued with Auto-accept edits', cost: '+$0.04' }]);
+  return { ...base, info: { ...base.info, later: new Set() } };   /* an earlier turn's foot offers only what exists */
 }
 
 /* ───────── the dock's key screens, K01 to K08 (dockv7.js `screen`): a session at work, your bots under it ───────── */

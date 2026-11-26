@@ -3,7 +3,7 @@
    draws the board from its source beside this state and measures the difference; a screen is done when they are the same, dark
    and light. Later boards add a fixture, a state here and a row in boards.json. */
 import type { AppCtx, State, Story } from '../../types';
-import { board11, board12, board12Held, board17, boardDock, boardS17, boardS20, boardS23 } from '../../board-fixtures';
+import { board11, board12, board12Held, board17, boardDock, boardS17, boardS20, boardS23, boardS33 } from '../../board-fixtures';
 import type { DockBoard } from '../../board-fixtures';
 
 const MOCK = { url: '/__boards/screen.html?s=bot11', note: 'the approved v7 board itself, drawn from its source' };
@@ -69,7 +69,7 @@ const bots: Story = {
 };
 
 const sessions: Story = {
-  id: 'boards/sessions', title: 'Boards: the Sessions tab', area: 'composer', kind: 'page', covers: ['page:board-S17', 'page:board-S20', 'page:board-S23'], mock: { url: '/__boards/screen.html?s=newSess&mk=a&usage=1', note: MOCK.note },
+  id: 'boards/sessions', title: 'Boards: the Sessions tab', area: 'composer', kind: 'page', covers: ['page:board-S17', 'page:board-S20', 'page:board-S23', 'page:board-S33'], mock: { url: '/__boards/screen.html?s=newSess&mk=a&usage=1', note: MOCK.note },
   states: {
     'S17 a new session': {
       tags: ['typical', 'owner'],
@@ -101,6 +101,20 @@ const sessions: Story = {
       note: 'board S23: the turn ended: "Worked for 59s: ...", the answer with its guess marked, the changed files with Open diff, the checkpoint row (Checkpoint 3, Undo, Edit from here, Fork; the model, the time, the cost), the lapsed blank as a question with its answers',
       app: {
         provider: { patch: boardS23 },
+        setup: async (c: AppCtx) => {
+          c.hx.setState({ tab: 'session', left: 'open', right: 'closed' });
+          await c.wait(300);
+          await c.click('[data-kit~="ListRow"][data-id="s17-dock"]');
+          await c.wait(900);
+          (document.activeElement as HTMLElement | null)?.blur();   /* the board draws the composer at rest */
+        }
+      }
+    } satisfies State,
+    'S33 a setting changed': {
+      tags: ['variant', 'owner'],
+      note: 'board S33: a setting changed between two turns: one line in the thread (the sliders glyph, "Settings changed: continued with Auto-accept edits", its extra cost in mono), then the next message and its turn at work; the composer\'s line says the new step',
+      app: {
+        provider: { patch: boardS33 },
         setup: async (c: AppCtx) => {
           c.hx.setState({ tab: 'session', left: 'open', right: 'closed' });
           await c.wait(300);

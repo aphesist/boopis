@@ -81,3 +81,25 @@ export async function mutateModel(client: GatewayClient, gw: string, fences: Fen
   }
   return r?.status === 'deferred' ? 'deferred' : r?.status === 'noop' ? 'noop' : 'applied';
 }
+
+/** change the effort of session `gw` in place: `session.mutate` operation `reasoning` (session-launch.md 6.1; the engine's
+    `hermes_state_mutations.py`), fenced and retried once with fresh fences as the model pick is. A pick asked of a running session is
+    `deferred` by the engine to its next turn. Throws the engine's refusal */
+export async function mutateEffort(client: GatewayClient, gw: string, fences: Fences, effort: string): Promise<SwitchOutcome> {
+  const requestId = uuid();
+  let r: MutateModelWire | null = null;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      r = (await client.requestRaw('session.mutate', {
+        session_id: gw, request_id: requestId, expected_revision: fences.revision ?? 0, expected_generation: fences.generation ?? 0, operation: 'reasoning', payload: { effort }
+      })) as MutateModelWire | null;
+      break;
+    } catch (e) {
+      const fresh = attempt === 0 ? freshFences(e) : null;
+      if (!fresh) throw e;
+      fences.revision = fresh.revision; fences.generation = fresh.generation;
+    }
+  }
+  fencesFrom(r, fences);
+  return r?.status === 'deferred' ? 'deferred' : r?.status === 'noop' ? 'noop' : 'applied';
+}

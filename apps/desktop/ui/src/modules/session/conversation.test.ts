@@ -7,6 +7,7 @@ import { createMockProvider } from '../../data/mock-provider';
 import { store } from '../../data/store';
 import { emitter } from '../../data/store';
 import type { AgentTurn, Conversation, ConversationEvent, DataProvider, FormSpec, Turn } from '../../data';
+import type { SessionCapabilities, SessionControls } from '../../data/session-s0';
 import { VIEW, mountView } from './conversation';
 
 const EDIT: FormSpec = { id: 'f1', kind: 'permission', title: 'Allow this change?', file: 'modules/dock/dock.css', diff: '+a\n-b', schema: { properties: { choice: { type: 'string', enum: ['once', 'session', 'deny'] } } } };
@@ -16,7 +17,7 @@ const calls: Array<[string, ...unknown[]]> = [];
 const q = <T extends HTMLElement = HTMLElement>(s: string): T => { const n = root.querySelector<T>(s); if (!n) throw new Error('missing ' + s); return n; };
 const parts = (): string[] => [...root.querySelectorAll<HTMLElement>('[data-turn="agent"]')].flatMap((t) => [...t.children].map((c) => (c as HTMLElement).dataset['part'] ?? ''));
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
-function boot(start: Turn[]): void {
+function boot(start: Turn[], more: Partial<DataProvider> = {}): void {
   turns = start;
   ev = emitter<ConversationEvent>();
   const base = createMockProvider({ simulate: false });
@@ -26,7 +27,8 @@ function boot(start: Turn[]): void {
     sessions: { ...base.sessions, list: store([{ id: 's1', project: 'boopis', title: 'Fix the dock', when: '', branch: 'w32/dock-paint' }]), draft: () => '',
       conversation: () => ({ snapshot: (): Conversation => ({ turns }), subscribe: (fn) => ev.subscribe(fn) }),
       send: (...a: unknown[]) => { calls.push(['send', ...a]); }, stop: (...a: unknown[]) => { calls.push(['stop', ...a]); }, answerBlank: (...a: unknown[]) => { calls.push(['blank', ...a]); } },
-    forms: { ...base.forms, submit: (...a: unknown[]) => { calls.push(['submit', ...a]); return Promise.resolve(); }, cancel: (...a: unknown[]) => { calls.push(['cancel', ...a]); return Promise.resolve(); } }
+    forms: { ...base.forms, submit: (...a: unknown[]) => { calls.push(['submit', ...a]); return Promise.resolve(); }, cancel: (...a: unknown[]) => { calls.push(['cancel', ...a]); return Promise.resolve(); } },
+    ...more
   };
   setProvider(p);
   document.body.innerHTML = '<div id="v"></div>';
@@ -97,6 +99,32 @@ describe('the thread', () => {
   it('the line where the answering model changes is the kit\'s SystemLine', () => {
     boot([{ id: 'u1', role: 'user', at: '09:42', text: 'a' }, agent({ status: 'done', model: 'haiku 4.5' }), { id: 'u2', role: 'user', at: '09:50', text: 'b' }, agent({ id: 'a2', status: 'done', model: 'sonnet 5.5' })]);
     expect(q('.ss-divider .k7-sys').textContent).toContain('→');
+  });
+});
+
+describe('a setting changed mid-session (board S33)', () => {
+  const TWO: Turn[] = [{ id: 'u1', role: 'user', at: '09:42', text: 'a' }, agent({ status: 'done', model: 'haiku 4.5' }), { id: 'u2', role: 'user', at: '09:50', text: 'b' }, agent({ id: 'a2', status: 'done', model: 'sonnet 5.5' })];
+  it('leaves one line in the thread after the turn it follows: the sliders glyph, the words, the extra cost in mono at its end, the cost in full in its tip', () => {
+    boot(TWO.slice(0, 2));
+    ev.emit({ type: 'line', line: { kind: 'settings', id: 'l1', afterTurn: 'a1', text: 'Settings changed: continued with Auto-accept edits', cost: '+$0.04', costWhy: 'The next reply reads about 18,000 tokens without the cache' } });
+    const line = q('.ss-s0-line .k7-sys');
+    expect(line.querySelector('.k7-sys__text')?.textContent).toBe('Settings changed: continued with Auto-accept edits');
+    expect([line.querySelector('.k7-sys__meta')?.textContent, line.querySelector('.k7-sys__meta')?.classList.contains('k7-mono')]).toEqual(['+$0.04', true]);
+    expect(line.getAttribute('data-tip')).toBe('The next reply reads about 18,000 tokens without the cache');
+    expect(q('.ss-s0-line').previousElementSibling?.getAttribute('data-turn-id')).toBe('a1');
+  });
+  it('a change that keeps the cache names no cost', () => {
+    boot(TWO.slice(0, 2));
+    ev.emit({ type: 'line', line: { kind: 'settings', id: 'l1', afterTurn: 'a1', text: 'Effort changed to High', cost: null } });
+    expect(q('.ss-s0-line .k7-sys').textContent).toBe('Effort changed to High');
+    expect(root.querySelector('.ss-s0-line .k7-sys__meta')).toBeNull();
+  });
+  it('a model you picked says so once: its own line, and no second line where the next answer comes from it', () => {
+    boot(TWO);
+    expect(root.querySelectorAll('.ss-divider')).toHaveLength(1);
+    ev.emit({ type: 'line', line: { kind: 'settings', id: 'l2', afterTurn: 'a1', text: 'Model changed to Sonnet 5.5', cost: '+76,000 tokens uncached', what: 'model' } });
+    expect(root.querySelectorAll('.ss-divider')).toHaveLength(0);
+    expect(q('.ss-s0-line .k7-sys__text').textContent).toBe('Model changed to Sonnet 5.5');
   });
 });
 
@@ -284,6 +312,37 @@ describe('the composer', () => {
     expect(t.querySelectorAll('[data-att]')).toHaveLength(0);
     z(true);
     expect(t.querySelectorAll('[data-att]')).toHaveLength(1);
+  });
+  it('the effort is changed from the line\'s "who answers next" menu: the engine\'s levels under the models, the session\'s own checked; a level that cannot be chosen says why', async () => {
+    const YES = { ok: true as const }, steps = { supervised: YES, auto_edits: YES, auto: YES, full: YES };
+    const asked: string[] = [];
+    const caps = (changeEffort: SessionCapabilities['session']['changeEffort']): SessionCapabilities => ({
+      engine: { caps: new Set(), createParams: new Set() }, plugin: { present: true, version: null, rpc: new Set() },
+      launch: { create: YES, folder: YES, model: YES, effort: YES, skills: YES, efforts: ['low', 'medium', 'high'], careful: steps },
+      session: { fork: YES, compact: YES, rewind: YES, changeModel: YES, changeEffort, changeCareful: steps, changeFolder: YES, changeSkills: YES }
+    });
+    const controls = (c: SessionCapabilities): SessionControls => ({
+      capabilities: store(c), launch: store({ folder: '/w', careful: 'auto_edits', effort: 'medium', fellBack: false }), setLaunch: () => null, setCareful: () => Promise.resolve(null),
+      setEffort: (e) => { asked.push(e); return Promise.resolve(null); }, rewind: () => Promise.resolve({ status: 'nothing_to_do', isolation: 'own_worktree', files: [] }), head: () => null, pickFolder: null
+    });
+    const open = (): HTMLElement[] => { q('.ss-composer [data-line="model"]').click(); const menus = document.querySelectorAll<HTMLElement>('.k7-menu[data-floating]'); return [...(menus[menus.length - 1] as HTMLElement).querySelectorAll<HTMLElement>('[data-value^="__effort:"]')]; };
+    boot([{ id: 'u1', role: 'user', at: '09:42', text: 'Fix it.' }, agent()], { sessionControls: controls(caps(YES)) });
+    const rows = open();
+    expect(rows.map((r) => [r.querySelector('.k7-mrow__name')?.textContent, r.getAttribute('aria-checked')])).toEqual([['Low', 'false'], ['Medium', 'true'], ['High', 'false']]);
+    rows[2]?.click();
+    await tick();
+    expect(asked).toEqual(['high']);
+    boot([{ id: 'u1', role: 'user', at: '09:42', text: 'Fix it.' }, agent()], { sessionControls: controls(caps({ ok: false, why: 'This version of boopis\'s engine cannot change the effort while a session runs.' })) });
+    const off = open();
+    expect(off.every((r) => r.getAttribute('aria-disabled') === 'true')).toBe(true);
+    expect(off[0]?.textContent).toContain('cannot change the effort');
+    off[0]?.click();
+    await tick();
+    expect(asked).toEqual(['high']);
+  });
+  it('while a turn runs and nothing waits the placeholder is "Message" (S33); after a turn "What next?" (S23)', () => {
+    boot([{ id: 'u1', role: 'user', at: '09:42', text: 'Fix it.' }, agent()]);
+    expect(q('.ss-composer .k7-composer__text').dataset['placeholder']).toBe('Message');
   });
   it('alt+S turns Smart on or off, alt+G governed mode where there is no scale; ArrowUp in an empty composer brings your last message back', () => {
     idle();

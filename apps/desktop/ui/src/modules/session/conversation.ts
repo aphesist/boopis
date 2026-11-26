@@ -452,7 +452,7 @@ function onConversationEvent(ev: ConversationEvent): void {
     change(ev.turnId, (a) => ({ ...a, status: ev.stopped ? 'stopped' : 'done', time: ev.time, cost: ev.cost, stepCount: ev.stepCount, paragraphs: ev.paragraphs, ...(ev.model ? { model: ev.model } : {}), ...(ev.why ? { why: ev.why } : {}) }));
     working(); syncDividers(col); rove(turnNode(ev.turnId) ?? undefined);
     ui.announce(ev.stopped ? 'Stopped' : 'Answer ready');
-  } else if (ev.type === 'line') placeLine(col, ev.line);
+  } else if (ev.type === 'line') { placeLine(col, ev.line); syncDividers(col); }
   else if (ev.type === 'turn-kept') change(ev.turnId, (a) => ({ ...a, kept: ev.kept }));
   else if (ev.type === 'blank-answered') {
     VIEW.blank = ev.answer;

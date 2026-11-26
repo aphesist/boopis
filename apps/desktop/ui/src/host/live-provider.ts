@@ -145,7 +145,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     return c;
   };
   const bind = (c: Convo, gwId: string): void => { c.gwId = gwId; byGw.set(gwId, c.uiId); };
-  const details = createDetails({ client, ...(hasHostDialogs() ? { hostLadder: async () => { const v = await loadModelsView(); return v.state === 'set' ? tiersFromHost(v.tiers) : []; }, hostGoverned: async () => (await loadModelsView()).governed } : {}), ...(opts.connectors ? { connectors: opts.connectors } : hasHostDialogs() ? { connectors: tauriConnectorActions() } : {}), now: () => now().getTime(), gwId: (id) => convos.get(id)?.gwId ?? (id.startsWith('new-') ? null : id), onRefreshed: (id) => { const c = convos.get(id); if (c) syncBlanks(c); } });
+  const details = createDetails({ client, onModelChanged: (id, o) => { modelLine(id, o); }, ...(hasHostDialogs() ? { hostLadder: async () => { const v = await loadModelsView(); return v.state === 'set' ? tiersFromHost(v.tiers) : []; }, hostGoverned: async () => (await loadModelsView()).governed } : {}), ...(opts.connectors ? { connectors: opts.connectors } : hasHostDialogs() ? { connectors: tauriConnectorActions() } : {}), now: () => now().getTime(), gwId: (id) => convos.get(id)?.gwId ?? (id.startsWith('new-') ? null : id), onRefreshed: (id) => { const c = convos.get(id); if (c) syncBlanks(c); } });
   const councilHost = createCouncil({ client, gwId: (id) => convos.get(id)?.gwId ?? null, context: (id) => details.councilContext(id) });
   /* Claude Code mods: what a session's mods draw (`mod.*` events) and the answers sent back; one `ModSession` per session */
   const modsHost = createModsHost({ client, uiOf: (gw) => byGw.get(gw), gwOf: (id) => convos.get(id)?.gwId ?? null });
@@ -475,6 +475,13 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   const ledgerSubs = new Set<(t: LedgerTotals) => void>();
 
   /* ───────── the Session tab's S0: launch settings, the permission step, rewind (ADR-0057, ADR-0058) ───────── */
+  /** the line a model pick leaves in its thread (session-launch.md 6.4: "Model changed to X"). A new model reads the whole context
+      without the cache on its next reply: the tokens are the session's measured context; dollars need a price, which nothing here holds */
+  function modelLine(uiId: string, o: { said: string; deferred: boolean; context: number | null }): void {
+    const c = convos.get(uiId); if (!c) return;
+    const n = o.context ? o.context.toLocaleString('en-US') : null;
+    addLine(c, { kind: 'settings', text: 'Model changed to ' + o.said + (o.deferred ? ' (applies when this turn ends)' : ''), cost: n ? '+' + n + ' tokens uncached' : null, ...(n ? { costWhy: 'The next reply reads about ' + n + ' tokens without the cache (cost unknown)' } : {}), what: 'model' });
+  }
   function addLine(c: Convo, line: NewLine): ThreadLine {
     let after: string | null = null;
     for (let i = c.turns.length - 1; i >= 0; i--) { const t = c.turns[i]; if (t?.role === 'assistant') { after = t.id; break; } }
@@ -539,7 +546,8 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       details.onHandle(uiId, res);
       details.onBound(uiId);
       const tokens = typeof armed?.tokens_est === 'number' ? armed.tokens_est : null;
-      addLine(c, { kind: 'settings', text: 'Settings changed: continued with ' + because, cost: tokens ? 'The next reply reads about ' + tokens.toLocaleString('en-US') + ' tokens without the cache (cost unknown)' : null });
+      /* what the miss costs: the tokens read again are known; dollars need a price for the model, which nothing here holds yet (unknown is said as unknown) */
+      addLine(c, { kind: 'settings', text: 'Settings changed: continued with ' + because, cost: tokens ? '+' + tokens.toLocaleString('en-US') + ' tokens uncached' : null, ...(tokens ? { costWhy: 'The next reply reads about ' + tokens.toLocaleString('en-US') + ' tokens without the cache (cost unknown)' } : {}) });
       return null;
     } catch (e) {
       if (fresh) await detach(fresh, 'launch_failed');

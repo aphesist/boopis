@@ -88,6 +88,48 @@ describe('a running turn, seen from elsewhere', () => {
   });
 });
 
+describe('the effort mid-session', () => {
+  const lines = (seen: ConversationEvent[]): string[] => seen.filter((e): e is Extract<ConversationEvent, { type: 'line' }> => e.type === 'line').map((e) => (e.line.kind === 'settings' ? e.line.text + '|' + String(e.line.cost) : ''));
+  const engine = (answer: (id: unknown, p: Record<string, unknown>) => void): void => {
+    host.autoReply = (f) => { const p = (f['params'] ?? {}) as Record<string, unknown>; if (f['method'] === 'session.mutate' && p['operation'] === 'reasoning') answer(f['id'], p); else gateway(f); };
+  };
+  it('changes in place on the same engine session (session.mutate, operation reasoning, fenced), shows on the line and says so in the thread', async () => {
+    const seen = await open();
+    engine((id) => { host.result(id, { operation: 'reasoning', revision: 4, execution_generation: 1 }); });
+    expect(await provider.sessionControls?.setEffort('high')).toBeNull();
+    const sent = calls('session.mutate').filter((p) => p['operation'] === 'reasoning');
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ session_id: OLD, expected_revision: 3, expected_generation: 1, payload: { effort: 'high' } });
+    expect(typeof sent[0]?.['request_id']).toBe('string');
+    expect(calls('session.create')).toEqual([]);
+    expect(provider.sessionControls?.launch.get().effort).toBe('high');
+    expect(lines(seen)).toEqual(['Effort changed to High|null']);
+    /* the same level again asks nothing and says nothing */
+    expect(await provider.sessionControls?.setEffort('high')).toBeNull();
+    expect(calls('session.mutate').filter((p) => p['operation'] === 'reasoning')).toHaveLength(1);
+  });
+  it('asked while a turn runs, the engine holds it for the next turn and the line says so', async () => {
+    const seen = await open();
+    engine((id) => { host.result(id, { operation: 'reasoning', status: 'deferred' }); });
+    expect(await provider.sessionControls?.setEffort('low')).toBeNull();
+    expect(lines(seen)).toEqual(['Effort changed to Low (applies when this turn ends)|null']);
+  });
+  it('refused by the engine, nothing changes and the reason is said, with no line', async () => {
+    const seen = await open();
+    engine((id) => { host.error(id, 4002, 'unknown reasoning effort'); });
+    expect(await provider.sessionControls?.setEffort('ultra')).toMatch(/^The effort was not changed: /);
+    expect(provider.sessionControls?.launch.get().effort).toBeNull();
+    expect(lines(seen)).toEqual([]);
+  });
+  it('a thread continued on a new engine session keeps its effort', async () => {
+    await open();
+    engine((id) => { host.result(id, { operation: 'reasoning', revision: 4, execution_generation: 1 }); });
+    await provider.sessionControls?.setEffort('high');
+    expect(await provider.sessionControls?.setCareful('full')).toBeNull();
+    expect(calls('session.create')[0]).toMatchObject({ reasoning: 'high' });
+  });
+});
+
 describe('the permission step mid-session', () => {
   it('among the governed steps it changes in place, keeps the engine session and says so in the thread', async () => {
     const seen = await open();
@@ -108,7 +150,9 @@ describe('the permission step mid-session', () => {
     expect(calls('session.detach')).toContainEqual({ session_id: OLD, end_reason: 'continued' });
     const line = [...seen].reverse().find((e): e is Extract<ConversationEvent, { type: 'line' }> => e.type === 'line');
     expect(line?.line).toMatchObject({ kind: 'settings', text: 'Settings changed: continued with Full access' });
-    expect(line?.line.kind === 'settings' && line.line.cost).toMatch(/18,000 tokens without the cache \(cost unknown\)/);
+    /* what the miss costs: the tokens at the line's end (dollars need a price, which nothing holds yet), the sentence in its tip */
+    expect(line?.line.kind === 'settings' && line.line.cost).toBe('+18,000 tokens uncached');
+    expect(line?.line.kind === 'settings' && line.line.costWhy).toMatch(/18,000 tokens without the cache \(cost unknown\)/);
     /* the visible thread is now on the new engine session */
     provider.sessions.send(OLD, 'next', META);
     await tick();

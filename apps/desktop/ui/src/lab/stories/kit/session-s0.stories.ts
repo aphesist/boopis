@@ -29,7 +29,10 @@ const sheet = (r: RewindResult, title: string): HTMLElement => {
 };
 const LINES: ThreadLine[] = [
   { kind: 'settings', id: 'l1', afterTurn: 't1', text: 'Permissions changed to Auto', cost: null },
-  { kind: 'settings', id: 'l2', afterTurn: 't1', text: 'Settings changed: continued with Full access', cost: 'The next reply reads about 18,000 tokens without the cache (cost unknown)' },
+  { kind: 'settings', id: 'l2', afterTurn: 't1', text: 'Settings changed: continued with Full access', cost: '+18,000 tokens uncached', costWhy: 'The next reply reads about 18,000 tokens without the cache (cost unknown)' },
+  { kind: 'settings', id: 'l4', afterTurn: 't1', text: 'Settings changed: continued with Auto-accept edits', cost: '+$0.04' },
+  { kind: 'settings', id: 'l5', afterTurn: 't1', text: 'Effort changed to High', cost: null },
+  { kind: 'settings', id: 'l6', afterTurn: 't1', text: 'Model changed to Sonnet 5.5 (applies when this turn ends)', cost: '+76,000 tokens uncached', what: 'model' },
   { kind: 'checkpoint', id: 'l3', afterTurn: 't2', at: '14:02', action: 'rewound', to: { shipId: 's1', label: 'after turn 3' }, files: 4, rewindShipId: 'r1', undoShipId: 's3' },
   { kind: 'checkpoint', id: 'l4', afterTurn: 't2', at: '14:03', action: 'undone', to: { shipId: 's3', label: 'after turn 4' }, files: 4, rewindShipId: 'r2', undoShipId: null }
 ];
@@ -75,7 +78,7 @@ export default [
     states: {
       typical: stage(['typical', 'variant'], ({ root }) => { fill(root, ...LINES.map((l) => lineEl(l, noop))); }, { width: 760 }),
       ...forced(stage(['variant'], ({ root }) => { fill(root, lineEl(LINES[2] as ThreadLine, noop)); }, { width: 760 }), '[data-line]'),
-      long: stage(['long'], ({ root }) => { fill(root, lineEl({ kind: 'settings', id: 'x', afterTurn: null, text: 'Settings changed: continued with Full access and ~/code/a-project-folder-with-a-very-long-name', cost: 'The next reply reads about 64,000 tokens without the cache (cost unknown)' }, noop)); }, { width: 520 })
+      long: stage(['long'], ({ root }) => { fill(root, lineEl({ kind: 'settings', id: 'x', afterTurn: null, text: 'Settings changed: continued with Full access and ~/code/a-project-folder-with-a-very-long-name', cost: '+64,000 tokens uncached', costWhy: 'The next reply reads about 64,000 tokens without the cache (cost unknown)' }, noop)); }, { width: 520 })
     }
   }
 ] satisfies Story[];

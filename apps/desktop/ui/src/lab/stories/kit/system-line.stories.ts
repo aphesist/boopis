@@ -16,6 +16,8 @@ export default {
   states: {
     typical: all,
     ...forced(all, '[data-kit~="SystemLine"] [data-kit~="Button"]'),
+    /* board S33: a setting changed mid-session, its extra cost in mono at the line's end */
+    'a setting changed, with its cost (S33)': stage(['variant', 'owner'], ({ root }) => { fill(root, kit.systemLine({ icon: 'sliders', text: 'Settings changed: continued with Auto-accept edits', meta: '+$0.04' })); fill(root, kit.systemLine({ icon: 'sliders', text: 'Effort changed to High' })); }, { width: 640 }),
     error: stage(['error'], ({ root }) => { fill(root, kit.systemLine({ variant: 'error', text: 'The engine stopped', action: 'Start it again' })); }, { width: 640 }),
     long: stage(['long'], ({ root }) => { fill(root, kit.systemLine({ text: 'Settings changed: How careful is now Auto-accept edits for every new session in this project' })); }, { width: 420 })
   }
