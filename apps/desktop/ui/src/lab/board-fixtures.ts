@@ -228,7 +228,8 @@ export function boardS20(p: DataProvider): DataProvider {
 export function boardS23(p: DataProvider): DataProvider {
   return started(p, [
     { id: 's23-t1', role: 'user', at: '09:42', text: ASK },
-    { id: 's23-t2', role: 'assistant', model: 'sonnet 5.5', time: '0m 59s', cost: '$0.08', stepCount: 3, steps: [...tools('patch', 2), ...tools('terminal', 1)], status: 'done', bullets: [], kept: ['c1', 'c2', 'c3'],
+    /* the steps are the work line's own, as board S10 lists them when it is open */
+    { id: 's23-t2', role: 'assistant', model: 'sonnet 5.5', time: '0m 59s', cost: '$0.08', stepCount: 3, steps: [{ title: 'patch', mono: true, meta: ['modules/dock/dock.css'], time: '' }, { title: 'patch', mono: true, meta: ['modules/dock/engine.ts'], time: '' }, { title: 'terminal', mono: true, meta: ['pnpm test dock'], time: '' }], status: 'done', bullets: [], kept: ['c1', 'c2', 'c3'],
       paragraphs: ['Fixed. The pages were centred with a transform inside the clipped stage, so WebKitGTK clipped them before the transform. They are centred by layout now, and the tests pass.'],
       blank: { question: 'Check the fix on which build?', short: 'Check the fix on which build?', options: ['staging', 'the Linux app'], guess: 'staging', rewrites: { staging: { lead: 'I guessed', tail: 'for the check' } } } }
   ], 'auto_edits', '', { details: { ...started(p, [], 'auto_edits', '').details, changes: store<readonly Change[]>([['modules/dock/dock.css', 12, 3], ['modules/dock/engine.ts', 2, 2]]) } });

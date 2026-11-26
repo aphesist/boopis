@@ -282,6 +282,9 @@
 .k7-step__ic { display: inline-grid; place-items: center; width: var(--icon-s); flex: none; color: var(--text-quiet); }
 .k7-step__dot { width: var(--gap-s); height: var(--gap-s); border-radius: var(--r-pill); background: var(--mark-off); }
 .k7-step[data-state="done"] .k7-step__ic { color: var(--ok-text); }
+.k7-step[data-state="log"] .k7-step__ic { color: inherit; }   /* S10 (sessionboards.js `s10`): a work log's glyph is its words' colour */
+/* S10: an open work line's rows start under its words, past the chevron (16 and the 6 between) */
+.k7-disc[data-variant="worklog"] > .k7-disc__body > .k7-steps { margin-inline-start: calc(var(--icon-s) + var(--gap-s)); }
 .k7-step[data-state="failed"] .k7-step__ic, .k7-step[data-state="failed"] { color: var(--red-text); }
 .k7-step[data-state="now"] { color: var(--text); }
 .k7-step[data-state="now"] .k7-step__dot { width: var(--step-dot); height: var(--step-dot); background: var(--text-dim); animation: k7-pulse var(--dur-breathe) var(--ease-io) infinite; }

@@ -137,7 +137,7 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 33 | Badge | `badge` | `kit/badge` | neutral, amber |
 | 34 | StatusLine | `statusLine` | `kit/status-line` | bot, session, system; working, waiting |
 | 35 | Avatar | `avatar` | `kit/avatar` | orb 16 to 96, brand tile, stack, logomark |
-| 36 | Disclosure | `disclosure` | `kit/disclosure` | steps, work log; closed, open; the summary hovered, focused; no steps; narrow |
+| 36 | Disclosure | `disclosure` | `kit/disclosure` | steps, work log; closed, open; the summary hovered, focused; no steps; narrow; the work log open as S10 draws it (rows under its words, each led by its kind's glyph: a step's `log` state) |
 | 37 | TurnFoot | `turnFoot` | `kit/turn-foot` | bot (model, time, cost); session (S23: the checkpoint, the actions that exist, the model with its time and cost): only Undo, none, Undo disabled, a route with why and "ungoverned", an action hovered and focused, narrow |
 | 38 | TimeSeparator | `timeSeparator` | `kit/time-separator` | a gap, NEW |
 | 39 | Composer | `composer` | `kit/composer` | session, bot, room, dock, notch; typed, multi-line, running (Stop beside the mic; with text; idle; Stop hovered, focused; narrow), held, no model, quick menu; no voice model yet (the voice circle as ever, its name saying so; what it opens: the Notice with "Set up voice"); nothing queues (no send while a turn runs); a session's line and marks (S20; an item hovered, focused; narrow: it folds; no line); a room's line and hint; chips in the text (and narrow); the "@" list open |

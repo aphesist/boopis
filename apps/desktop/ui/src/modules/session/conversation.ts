@@ -210,7 +210,10 @@ function partsOf(a: AgentTurn): Part[] {
     /* the list under it is drawn again as steps arrive; whether it is open is the reader's (kept across a redraw) */
     out.push(['log', line + '|' + a.steps.length + '|' + a.status, () => {
       const open = turnNode(a.id)?.querySelector('[data-part="log"]')?.hasAttribute('data-open') ?? false;
-      return kit.disclosure({ variant: 'worklog', summary: line, steps: stepRows(a), open });
+      /* a change says its lines where the session's changed files know them (the last turn's: board S10, "Changed dock.css, +12 −3") */
+      const changes = isLast ? data().details.changes.get() : [];
+      const counts = (path: string): readonly [number, number] | null => { const c = changes.find((x) => x[0] === path || x[0].endsWith('/' + path) || path.endsWith('/' + x[0])); return c ? [c[1], c[2]] : null; };
+      return kit.disclosure({ variant: 'worklog', summary: line, steps: stepRows(a, counts), open });
     }]);
   };
   if (a.council) out.push(['council', 'council', () => councilBlock(a.council as NonNullable<AgentTurn['council']>)]);

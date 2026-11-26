@@ -214,7 +214,7 @@ export function well(o: WellOpts): string {
 
 /* ── Disclosure (36): steps ("Read 6 files"), work log ("Worked for 59s: ..."): the boards' `.worklog` (kit.css): a chevron that turns down
    when it opens, then the summary ── */
-export interface StepOpts { text: string; state?: U<'done' | 'now' | 'todo' | 'failed'>; icon?: U<string>; time?: U<string> }
+export interface StepOpts { text: string; /** `log`: a line of a work log (board S10), led by its kind's glyph (`icon`) in the words' own colour */ state?: U<'done' | 'now' | 'todo' | 'failed' | 'log'>; icon?: U<string>; time?: U<string> }
 export function steps(items: readonly StepOpts[], id?: string): string {
   return '<ol class="k7-steps"' + partAttrs('Steps', { id }) + '>' + items.map((s) => '<li class="k7-step" data-state="' + (s.state ?? 'done') + '">' +
     '<span class="k7-step__ic" aria-hidden="true">' + (s.icon ? glyph(s.icon) : s.state === 'done' || !s.state ? glyph('check') : s.state === 'failed' ? glyph('close') : '<span class="k7-step__dot"' + (s.state === 'now' ? ' data-live' : '') + '></span>') + '</span>' +
