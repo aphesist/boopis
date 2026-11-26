@@ -191,6 +191,21 @@ describe('a new session with no model signed in (board S37)', () => {
     off();
     expect(went).toEqual([{ section: 'models', from: 'no-model', find: 'ChatGPT' }, { section: 'models', from: 'no-model' }, { section: 'models', from: 'no-model' }]);
   });
+  it('is the kit\'s option Menu: each row is the model\'s name and, on a second line, whose it is, whole; the one answering now is checked', () => {
+    boot([], { sessionControls: controls() });
+    const btn = document.querySelector<HTMLElement>('.ss-new [data-launch="model"]');
+    expect(btn).toBeTruthy();
+    btn?.click();
+    const menus = document.querySelectorAll<HTMLElement>('.k7-menu[data-floating]');
+    const menu = menus[menus.length - 1] as HTMLElement;
+    expect(menu.dataset['variant']).toBe('options');
+    const rows = [...menu.querySelectorAll<HTMLElement>('[data-kit~="OptionRow"]')];
+    expect(rows[0]?.querySelector('.k7-orow__label')?.textContent).toBe('Automatic');
+    expect(rows[0]?.querySelector('.k7-orow__meaning')?.textContent).toBe('Smart picks a model for each message');
+    expect(rows.length).toBeGreaterThan(1);
+    expect(rows.slice(1).every((r) => !!r.querySelector('.k7-orow__meaning')?.textContent)).toBe(true);   /* every model says whose it is */
+    expect(rows.filter((r) => r.getAttribute('aria-checked') === 'true').length).toBe(1);
+  });
 });
 
 describe('a setting changed mid-session (board S33)', () => {
