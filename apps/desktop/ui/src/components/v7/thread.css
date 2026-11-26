@@ -170,6 +170,10 @@
 }
 .k7-composer__text:empty::before { content: attr(data-placeholder); display: block; color: var(--text-quiet); pointer-events: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .k7-composer__box:focus-within { --sq-line: var(--line-field); }
+/* listening (the mic on): the box's line as when it has the focus. A file dragged over it: the line in the focus colour. No board draws
+   either: both are the composer's own focus answer, nothing new */
+.k7-composer[data-listening] .k7-composer__box { --sq-line: var(--line-field); }
+.k7-composer[data-drop] .k7-composer__box { --sq-line: var(--focus); }
 .k7-composer[data-kind="dock"] .k7-composer__box { --sq-bg: var(--bg-3); }
 .k7-composer[data-kind="notch"] .k7-composer__box { min-height: var(--ctl); padding: var(--gap-s); gap: var(--gap-s); border-radius: var(--r-bubble); }
 .k7-composer[data-kind="notch"] .k7-composer__box > .k7-ib { width: var(--notch-ctl); height: var(--notch-ctl); }

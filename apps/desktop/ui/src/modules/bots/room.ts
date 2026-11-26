@@ -337,7 +337,7 @@ function buildComposer(host: HTMLElement): void {
   const draw = (b: Bot): void => {
     const keep = slot.firstElementChild ? api.value : '';
     const l = lineOf(b);
-    const c = kit.composer({ kind: 'bot', placeholder: 'Message ' + b.name, label: 'Message ' + b.name, running, line: l.items, voiceSetup: voiceNeedsSetup(), ...(b.color ? { fill: kit.botFill(b.color) } : {}), ...(keep ? { text: keep } : {}) });
+    const c = kit.composer({ kind: 'bot', placeholder: 'Message ' + b.name, label: 'Message ' + b.name, hears: b.name, running, line: l.items, voiceSetup: voiceNeedsSetup(), ...(b.color ? { fill: kit.botFill(b.color) } : {}), ...(keep ? { text: keep } : {}) });
     slot.replaceChildren(c);
     tools.drawn();
     botId = b.id; sig = l.sig;
@@ -347,7 +347,7 @@ function buildComposer(host: HTMLElement): void {
     el: slot,
     get input() { return text(); },
     get value() { return text().textContent ?? ''; },
-    setValue(t) { const n = text(); n.textContent = t; n.dispatchEvent(new Event('input', { bubbles: true })); },
+    setValue(t) { kit.composerSet(text(), t); },
     focus() { text().focus(); },
     setRunning(on) { if (running === on) return; running = on; const b = bot(S.sel); if (b) draw(b); },
     paint(b) { if (b.id !== botId || lineOf(b).sig !== sig) draw(b); }

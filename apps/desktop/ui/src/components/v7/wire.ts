@@ -6,6 +6,7 @@ import { layer } from '../layer';
 import { icon } from '../icons';
 import { paintDock } from './dock';
 import { VOICE_SETUP } from './thread';
+import { composerForget, composerRemember, wireComposerEditing } from './compose';
 
 /* which behaviours an element has: an element can carry two (a chip that holds) */
 const WIRED = new WeakMap<Element, Set<string>>();
@@ -142,7 +143,8 @@ function wireRowAction(r: HTMLElement): void {
     with no text, send with text, stop while it runs. It fires, each cancelable where an action follows:
       ui:send {text, queue}   ui:steer {text}   ui:stop   ui:voice {setup} (the circle pressed with no text; `setup`: no voice model yet)
       ui:add                  "+" was pressed (the app picks what to add; `composerInsert` puts it in the text)
-      ui:dictate {on}         the mic was switched on or off (aria-pressed says which)
+      ui:dictate {on, mode}   the mic was switched on or off (aria-pressed says which): `toggle` by a press or alt+V, `hold` while held
+      ui:files {files, via}   files were dropped on it or pasted into it (compose.ts)
       ui:refused              Enter while a turn runs where nothing queues (`data-queue-off`): the text stays
     The voice circle is never hidden (owner, 26 November): `data-voice-setup` (ComposerOpts.voiceSetup) says no voice model is set up
     yet, in the circle's name and tip, and ui:voice fires all the same (the app then says what voice needs). `data-queue-off`: nothing
@@ -167,7 +169,7 @@ function wireComposer(c: HTMLElement): void {
     const text = (t.textContent ?? '').trim();
     if (!text) return;
     if (c.hasAttribute('data-running') && noQueue()) { fire(c, 'ui:refused', {}); return; }
-    if (fire(c, steer ? 'ui:steer' : 'ui:send', { text, queue: c.hasAttribute('data-running') && !steer }, true)) { t.textContent = ''; sync(); }
+    if (fire(c, steer ? 'ui:steer' : 'ui:send', { text, queue: c.hasAttribute('data-running') && !steer }, true)) { t.textContent = ''; composerForget(t); sync(); }
   };
   t.addEventListener('input', sync);
   t.addEventListener('keydown', (e) => {
@@ -188,8 +190,8 @@ function wireComposer(c: HTMLElement): void {
   const ask = (el: HTMLElement): void => { fire(c, 'ui:mark', { text: el.textContent ?? '', kind: el.getAttribute('data-ff') ?? '', el }); };
   t.addEventListener('click', (e) => { const m = markAt(e.target as Node); if (m) ask(m); });
   t.addEventListener('keydown', (e) => { if (e.key !== 'ArrowDown' || !e.altKey) return; const m = markAt(getSelection()?.anchorNode ?? null); if (m) { e.preventDefault(); ask(m); } });
-  const mic = c.querySelector<HTMLButtonElement>('[data-mic]');
-  mic?.addEventListener('click', () => { const on = mic.getAttribute('aria-pressed') !== 'true'; if (fire(c, 'ui:dictate', { on }, true)) mic.setAttribute('aria-pressed', String(on)); });
+  /* its own undo, a chip as one unit, paste, files dropped and pasted, the mic (a press, alt+V, or held): compose.ts */
+  wireComposerEditing(c);
   sync();
 }
 /** say that the composer's turn runs, or no longer does, in place (no redraw): Stop shows or goes, the send's name follows */
@@ -203,6 +205,7 @@ export function composerInsert(c: HTMLElement, text: string): void {
   if (!t) return;
   const sel = typeof getSelection === 'function' ? getSelection() : null;
   const r = sel && sel.rangeCount && t.contains(sel.anchorNode) ? sel.getRangeAt(0) : null;
+  composerRemember(t, 'edit');
   if (r) { r.deleteContents(); r.insertNode(document.createTextNode(text)); r.collapse(false); } else t.append(text);
   t.dispatchEvent(new Event('input', { bubbles: true }));
 }
@@ -214,6 +217,7 @@ export function composerInsertChip(c: HTMLElement, html: string): void {
   const sel = typeof getSelection === 'function' ? getSelection() : null;
   const r = sel && sel.rangeCount && t.contains(sel.anchorNode) ? sel.getRangeAt(0) : null;
   const mark = document.createElement('span'), space = document.createTextNode(' ');
+  composerRemember(t, 'edit');
   if (r) { r.deleteContents(); r.insertNode(space); r.insertNode(mark); } else t.append(mark, space);
   /* written into the page as markup, in place: an orb made in a template and moved in is not painted by its worker */
   mark.insertAdjacentHTML('beforebegin', html); mark.remove();
@@ -355,6 +359,7 @@ export function composerMentions(c: HTMLElement, src: KitMentions, open: (anchor
         shown = false;
         const now = typing() ?? q;
         const text = now.node.textContent ?? '';
+        composerRemember(t, 'edit');   /* a pick is one step for the undo */
         now.node.textContent = text.slice(0, now.from) + '@' + v + ' ' + text.slice(now.to);
         const r = document.createRange(); r.setStart(now.node, now.from + v.length + 2); r.collapse(true);
         const sel = getSelection(); sel?.removeAllRanges(); sel?.addRange(r);

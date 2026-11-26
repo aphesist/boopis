@@ -57,7 +57,7 @@ are not built. The picks are in `PLAN-session-waves.md` and `PLAN-w31-foundation
 | 5. Session: new session and launch | 16 | 9 | 3 | 4 | 0 |
 | 6. Session: a running and finished session | 41 | 23 | 3 | 15 | 0 |
 | 7. Session: panels, commit, inbox, menus | 22 | 12 | 1 | 9 | 0 |
-| 8. Composer | 43 | 24 | 5 | 14 | 0 |
+| 8. Composer | 45 | 24 | 5 | 16 | 0 |
 | 9. Dock | 22 | 13 | 4 | 5 | 0 |
 | 10. Cards, forms and approvals | 24 | 9 | 3 | 12 | 0 |
 | 11. Settings | 28 | 10 | 6 | 12 | 0 |
@@ -69,7 +69,7 @@ are not built. The picks are in `PLAN-session-waves.md` and `PLAN-w31-foundation
 | 17. Errors, empty, offline, engine states | 18 | 8 | 1 | 9 | 0 |
 | 18. Notch (macOS) | 18 | 14 | 3 | 0 | 1 |
 | 19. Narrow widths and density | 14 | 1 | 3 | 9 | 1 |
-| **All** | **427** | **191** | **37** | **197** | **2** |
+| **All** | **429** | **191** | **37** | **199** | **2** |
 
 A `board` row can still hold a derived part or a conflict: its Reference cell says so.
 
@@ -317,7 +317,9 @@ A `board` row can still hold a derived part or a conflict: its Reference cell sa
 | "@all" as the room's stack; a bot that is not here, muted; "@kai." left as text | yes, story `bots/group` | derived: the mention decision; kit InlineChip `mention` | works today | built at step 3 (derived) |
 | "@" a model in a session; in governed mode the list says the message runs without governance | yes, story `composer/attribution` | derived: S32 list; kit Menu with a note row | works today | not started (no step) |
 | "+" adds a file: a chip in the text | yes, `compose.ts` | decided: "a file added with '+' is a reference chip in the composer's text, not '@path' words" (REPASS.md, 25 November) | works today | built at step 3 (derived) |
-| A folder and a picture attached; a file dropped on the window or pasted | partly: the session's composer takes drops; the Bots composers take neither drop nor paste | derived: the attachment decision; kit InlineChip `words`; a known gap in the lead's notes (`docs/ORCHESTRATOR.md` on `origin/notes/parked-work`) | works today in sessions | not started (no step) |
+| A folder and a picture attached; a file dropped on a composer or pasted into it | yes, in every composer (a session, a bot's chat, a room, the dock's card): the kit Composer's `ui:files` (`components/v7/compose.ts`) and `modules/chat/compose.ts` `composerFiles`; the desktop app's host reports its drags. In the live app a pasted file with no place on disk is not attached, and a Notice says so | derived: the attachment decision; kit InlineChip `words` | works today (a pasted picture cannot reach the engine yet: it has no path) | built at step 6a (derived; story `kit/composer` "a dropped file is a chip") |
+| A file dragged over a composer: the drop target | yes, story `kit/composer` "a file dragged over it" | derived: no board draws it; the composer's own focus answer (the box's line in `--focus`), nothing new | works today | built at step 6a (derived; shown to the owner) |
+| Undo and redo in a composer (mod+Z, shift+mod+Z) across mention chips, marks and files | yes, `components/v7/compose.ts` | derived: no board (a behaviour); what v6's composer did | works today | built at step 6a |
 | The session's "+" menu today: Attach a file, Add a folder to context, Mention a file, Commands | yes, `modules/session/composer.ts` | derived: no board; see conflict 8 | works today | not started (no step) |
 | A review comment as a reference chip ("dock.css:42") | no | board `session/S24-panel-diff-*.jpg` | 0.3.0 S2 | not started (step 6) |
 | A terminal selection attached as a chip | no | derived: S26 says "Select output to attach it to your message"; the chip from S24 | 0.3.0 S2 | not started (no step) |
@@ -330,7 +332,7 @@ A `board` row can still hold a derived part or a conflict: its Reference cell sa
 | Messages queued (a session) | no | board `session/S22-steer-and-queue-*.jpg` | 0.3.0 S1 | not started (step 4) |
 | The line with a limit: the weekly bar and "81%" | no | board `session/S34-usage-limits-*.jpg` | 0.3.0 S3 | not started (step 6) |
 | "/" commands and "$" skills lists over the composer | partly | board `session/S31-slash-commands-*.jpg`, `session/S32-files-and-skills-*.jpg` | unknown (section 7) | not started (step 6) |
-| Dictation: the mic on, listening | yes, `compose.ts` through the provider's dictation; story `composer/composer` "listening" | derived: the boards draw the mic at rest; nearest `notch/stills/12-stage-listening.jpg` | works today | not started (no step) |
+| Dictation: the mic on, listening (a press or alt+V switches it; held, it listens while held; Esc stops it; the bot's orbs listen meanwhile) | yes, the kit Composer (`components/v7/compose.ts`) and `modules/chat/compose.ts` through the provider's dictation; story `kit/composer` "listening" | derived: the boards draw the mic at rest; nearest `notch/stills/12-stage-listening.jpg`; the mic pressed in the accent, the placeholder saying who listens, the box's line as with the focus | the mic works; **the live provider's dictation hears nothing yet** (`host/live-provider.ts`: no transcription exists in the host), only the page build's mock writes a transcript | built at step 6a (derived; shown to the owner) |
 | Talking to a bot (the voice button with no text) | partly: the button is always drawn (owner, 26 November: "it's not supposed to be hidden, it just will not come out functioning from the get go"); with no voice model it opens a Notice, "Voice needs a voice model", whose action "Set up voice" opens Settings at Models; with one (the provider's `voice`) it starts talking. Live voice and the voice section of Settings, Models (a provider's key, a local model) are not built | board `v7/11-bot-chat-rail-*.jpg` draws the button; the talking state and the Notice have no board | the set-up: step 7 (Settings); live voice: after 0.3.0 (PLAN-w31-foundations, "Naming") | matched, step 1; the Notice and the capability at step 5 |
 | A turn running: the send slot as Stop | yes (`ui:stop`) | derived: an open owner question (the boards draw the voice button) | works today | built at step 1 (derived) |
 | Governed or ungoverned, Smart on or off, as controls (alt+G, alt+S) | yes, `modules/session/composer.ts` | board `v7/10-session-chat-*.jpg` draws "Governed" and "Smart" on the line; see conflict 6 | works today | not started (step 4) |

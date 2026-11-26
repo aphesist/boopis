@@ -162,7 +162,7 @@ export function diffView(o: DiffViewOpts): string {
 }
 
 /* ── Composer (39): session, bot, room, dock, notch; with its line; empty, typed, multi-line, running (Stop joins the right cluster; Enter
-   queues), held, no model ── */
+   queues), held, no model; listening (the mic on), a file dragged over it. What it does is wire.ts `wireComposer` and compose.ts ── */
 export const COMPOSER_KINDS = ['session', 'bot', 'room', 'dock', 'notch'] as const;
 export type ComposerKind = typeof COMPOSER_KINDS[number];
 export interface LineItem {
@@ -179,6 +179,7 @@ export interface ComposerOpts {
       ui:voice all the same, and the app says what to set up (owner, 26 November: voice is never hidden) */ voiceSetup?: U<boolean>;
   /** nothing queues here yet: while a turn runs there is no send (the app lifts this while a typed message has somewhere to go) */ queueOff?: U<boolean>;
   /** the key Stop's tip shows (the shell's mod+. unless said) */ stopKeys?: U<string>;
+  /** who dictation is for (a bot's name): while the mic is on the placeholder reads "nina is listening"; without it, "Listening" */ hears?: U<string>;
 }
 /** the voice circle's name and tip while no voice model is set up */
 export const VOICE_SETUP = 'Talk: set up a voice model first';
@@ -202,7 +203,7 @@ export function composer(o: ComposerOpts): string {
       (o.hint ? '<span class="k7-composer__hint">' + esc(o.hint) + '</span>' : '') +
       '<span class="k7-grow"></span>' + (o.hintEnd ? '<span class="k7-composer__hint">' + esc(o.hintEnd) + '</span>' : '') + (o.line ?? []).filter((x) => x.end).map((x) => '<span class="' + cls('k7-composer__end', x.mono && x.ticks == null && 'k7-mono') + '"' + attrs({ 'aria-label': x.label + ': ' + x.value, 'data-fold': x.fold ? '' : null, ...(x.attrs ?? {}) }) + '>' + (x.ticks != null ? ticks5(x.ticks) + '<span class="k7-mono">' + esc(x.value) + '</span>' : esc(x.value)) + '</span>').join('') + '</div>'
     : '';
-  return '<div class="k7-composer"' + kitAttrs('Composer', { 'data-kind': k, 'data-typed': typed ? '' : null, 'data-running': o.running ? '' : null, 'data-voice-setup': o.voiceSetup ? '' : null, 'data-queue-off': o.queueOff ? '' : null, ...(o.attrs ?? {}) }) + '>' +
+  return '<div class="k7-composer"' + kitAttrs('Composer', { 'data-kind': k, 'data-typed': typed ? '' : null, 'data-running': o.running ? '' : null, 'data-voice-setup': o.voiceSetup ? '' : null, 'data-queue-off': o.queueOff ? '' : null, 'data-hears': o.hears || null, ...(o.attrs ?? {}) }) + '>' +
     '<div class="k7-composer__box" data-sq data-sq-mode="frame" data-mark-context>' +
     iconButton({ icon: 'plus', label: 'Add a file', variant: 'tinted', attrs: { 'data-plus': '' } }) +
     '<div class="k7-composer__text" contenteditable="plaintext-only" tabindex="0" role="textbox" aria-multiline="true"' + attrs({ 'aria-label': o.label ?? ph, 'data-placeholder': ph }) + '>' + (o.textHTML ?? esc(o.text ?? '')) + '</div>' +

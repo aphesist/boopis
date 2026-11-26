@@ -281,7 +281,7 @@ function composerFor(id: string): CardComposer | null {
     draw() {
       const x = botById(id); if (!x) return;
       const keep = text()?.textContent ?? '';
-      slot.replaceChildren(kit.composer({ kind: 'dock', placeholder: 'Message ' + x.name, label: 'Message ' + x.name, running: S.runs.has(id), voiceSetup: voiceNeedsSetup(), ...(keep ? { text: keep } : {}) }));   /* K04: the dock's own composer, its primary circle white (the bot's fill is its bubbles') */
+      slot.replaceChildren(kit.composer({ kind: 'dock', placeholder: 'Message ' + x.name, label: 'Message ' + x.name, hears: x.name, running: S.runs.has(id), voiceSetup: voiceNeedsSetup(), ...(keep ? { text: keep } : {}) }));   /* K04: the dock's own composer, its primary circle white (the bot's fill is its bubbles') */
       tools.drawn();
     },
     stop() { tools.stop(); if (made.listening) listen(false); }
@@ -296,12 +296,7 @@ function composerFor(id: string): CardComposer | null {
   slot.addEventListener('ui:steer', send);   /* ctrl Enter sends as Enter does until the keys get their own pass (owner, 25 November) */
   slot.addEventListener('ui:stop', () => { if (data().bots.stop(id)) ui.announce('Stopped ' + nameOf(id)); });
   slot.addEventListener('ui:dictate', (ev) => listen((ev as CustomEvent<{ on: boolean }>).detail.on));
-  slot.addEventListener('keydown', (e) => {
-    const mic = slot.querySelector<HTMLElement>('[data-mic]');
-    /* Esc while dictating stops dictating (the card stays); alt+V switches the mic, as in every composer */
-    if (e.key === 'Escape' && mic?.getAttribute('aria-pressed') === 'true') { e.preventDefault(); e.stopPropagation(); mic.click(); return; }
-    if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.code === 'KeyV') { e.preventDefault(); mic?.click(); }
-  });
+  /* Esc while dictating stops dictating (the card stays), and alt+V switches the mic or talks while held: the kit Composer's own keys */
   made.draw();
   X.composers.set(id, made);
   return made;

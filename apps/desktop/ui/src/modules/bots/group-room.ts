@@ -426,7 +426,7 @@ function buildComposer(slot: HTMLElement): void {
   };
   const api: RoomComposer = {
     get value() { return slot.firstElementChild ? (text().textContent ?? '') : ''; },
-    setValue(t) { const n = text(); n.textContent = t; n.dispatchEvent(new Event('input', { bubbles: true })); },
+    setValue(t) { kit.composerSet(text(), t); },
     insert(t) { kit.composerInsert(text(), t); },
     focus() { text().focus(); },
     paint(g) { if (g.id !== gid || g.busy !== running || JSON.stringify(lineOf(g)) + ((g.lead ? g.members.find((m) => m.id === g.lead)?.name : '') ?? '') !== sig) draw(g); }

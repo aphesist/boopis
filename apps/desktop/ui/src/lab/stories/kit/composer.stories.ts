@@ -101,6 +101,19 @@ export default {
     'a long unbroken word': stage(['long'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20, text: UNBROKEN + ' ' + UNBROKEN })); }, { width: 720, allow: LINES }),
     'a tall draft scrolls': stage(['long', 'scroll'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20, text: Array.from({ length: 30 }, (_, i) => 'line ' + (i + 1) + ' ' + LONG_TITLE).join('\n') })); }, { width: 720, allow: LINES }),
     'right to left': stage(['rtl'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20, text: RTL })); }, { width: 720, dir: 'rtl' }),
+    /* derived, no board: a file dragged over it (the box's line in the focus colour until it is dropped or leaves), and the mic on (the
+       mic pressed, the placeholder saying who listens, the box's line as with the focus) */
+    'a file dragged over it': stage(['variant', 'owner'], ({ root }) => {
+      for (const c of [kit.composer({ kind: 'session', line: S20 }), kit.composer({ kind: 'bot', placeholder: 'Message nina', text: 'read this first' })]) { fill(root, c); kit.composerDropping(c, true); }
+    }, { width: 720 }),
+    'a dropped file is a chip': stage(['variant'], ({ root }) => {
+      const c = kit.composer({ kind: 'session', line: S20, text: 'what is wrong with these totals? ' }); fill(root, c);
+      kit.composerInsertChip(c, kit.html.inlineChip({ kind: 'reference', text: 'invoices-sample.csv', words: '' }));
+      kit.composerInsertChip(c, kit.html.inlineChip({ kind: 'reference', text: 'screenshot.png', words: '' }));
+    }, { width: 720 }),
+    listening: stage(['variant', 'owner'], ({ root }) => {
+      for (const c of [kit.composer({ kind: 'bot', placeholder: 'Message nina', hears: 'nina' }), kit.composer({ kind: 'session', line: S20 })]) { fill(root, c); c.querySelector<HTMLElement>('[data-mic]')?.click(); }
+    }, { width: 720 }),
     'typed, narrow (390)': stage(['size', 'owner'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20, text: TYPED })); }, { width: 358, allow: LINES })
   }
 } satisfies Story;

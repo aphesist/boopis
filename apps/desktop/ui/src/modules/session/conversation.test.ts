@@ -223,6 +223,35 @@ describe('the composer', () => {
     rows.find((r) => r.dataset['value'] && r.dataset['value'] !== '__smart' && r.dataset['value'] !== '__council' && r.getAttribute('aria-disabled') !== 'true')?.click();
     expect(set).toHaveBeenCalledWith(expect.objectContaining({ smart: false }));
   });
+  it('a file dropped on it or pasted into it is a chip in the text and rides with the message; taken out with Backspace, it does not', async () => {
+    idle();
+    const c = q('.ss-composer .k7-composer'), t = q('.ss-composer .k7-composer__text');
+    const give = (name: string, via: string): void => { c.dispatchEvent(new CustomEvent('ui:files', { bubbles: true, detail: { files: [new File(['xy'], name)], via } })); };
+    give('notes.md', 'drop'); give('shot.png', 'paste');
+    expect([...t.querySelectorAll<HTMLElement>('[data-att]')].map((x) => [x.dataset['attKind'], x.textContent])).toEqual([['file', ''], ['image', '']]);
+    /* the caret is after the last chip's space: one step back, then Backspace takes the picture out as one unit */
+    const pic = t.querySelectorAll<HTMLElement>('[data-att]')[1] as HTMLElement;
+    const r = document.createRange(); r.setStartAfter(pic); r.collapse(true); getSelection()?.removeAllRanges(); getSelection()?.addRange(r);
+    t.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+    expect(t.querySelectorAll('[data-att]')).toHaveLength(1);
+    t.append('read this');
+    t.dispatchEvent(new Event('input', { bubbles: true }));
+    enter();
+    await tick(); await tick();
+    const sent = calls.find((x) => x[0] === 'send');
+    expect(sent?.[3]).toMatchObject({ attachments: [{ name: 'notes.md', kind: 'file', bytes: 2 }] });
+  });
+  it('mod+Z in the session\'s composer undoes an attachment and brings it back', () => {
+    idle();
+    const c = q('.ss-composer .k7-composer'), t = q('.ss-composer .k7-composer__text');
+    c.dispatchEvent(new CustomEvent('ui:files', { bubbles: true, detail: { files: [new File(['xy'], 'notes.md')], via: 'drop' } }));
+    expect(t.querySelectorAll('[data-att]')).toHaveLength(1);
+    const z = (shiftKey = false): void => { t.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', ctrlKey: true, shiftKey, bubbles: true, cancelable: true })); };
+    z();
+    expect(t.querySelectorAll('[data-att]')).toHaveLength(0);
+    z(true);
+    expect(t.querySelectorAll('[data-att]')).toHaveLength(1);
+  });
   it('alt+S turns Smart on or off, alt+G governed mode where there is no scale; ArrowUp in an empty composer brings your last message back', () => {
     idle();
     const set = vi.spyOn(p.details, 'setGovernance');

@@ -49,8 +49,6 @@
 
 .ss-find-anchor { position: absolute; top: var(--sp-3); right: var(--sp-5); width: var(--hl); height: var(--hl); }
 .ss-composer { --hx-dock-space: var(--hx-dock-space-to); position: absolute; z-index: 5; left: 50%; transform: translateX(-50%); bottom: calc(var(--hx-dock-space, 0px) + var(--composer-bottom)); width: var(--composer-w); max-width: calc(100% - 2 * var(--sp-5)); }
-/* a file dragged over the composer: its box takes the focus ring's colour until the file is dropped or leaves */
-.ss-composer .k7-composer[data-drop] .k7-composer__box { --sq-line: var(--focus); }
 
 /* find in this conversation: the kit's search Field and a count under it */
 .ss-find { width: var(--pane-w, 300px); display: flex; flex-direction: column; gap: var(--sp-1); }

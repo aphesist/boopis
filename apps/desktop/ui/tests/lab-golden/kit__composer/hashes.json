@@ -1,4 +1,24 @@
 {
+ "a-dropped-file-is-a-chip@dark": {
+  "sha": "2ac36322e745835f96bf58a49781ea09e4ec4e5c",
+  "w": 744,
+  "h": 96
+ },
+ "a-dropped-file-is-a-chip@light": {
+  "sha": "a8bfd6fe794bcc90de38e01591137d9258ece1e1",
+  "w": 744,
+  "h": 96
+ },
+ "a-file-dragged-over-it@dark": {
+  "sha": "3381252e9fea664eae95dc5a84f410731e60f99c",
+  "w": 744,
+  "h": 156
+ },
+ "a-file-dragged-over-it@light": {
+  "sha": "f32b8441b1fa8212d5badbfd1b5150fd2b14b5cd",
+  "w": 744,
+  "h": 156
+ },
  "a-line-item-focused@dark": {
   "sha": "1548ddfd1dc8d00e5faabc5593dc8eafa973e1c9",
   "w": 744,
@@ -168,6 +188,16 @@
   "sha": "226b67785e7ff13b697cbe1a81a83623b5c26740",
   "w": 744,
   "h": 68
+ },
+ "listening@dark": {
+  "sha": "6d8b189a07bc14cc380a78d2e6f0741e8a000dd0",
+  "w": 744,
+  "h": 156
+ },
+ "listening@light": {
+  "sha": "3fce4798408c058fb6ba64f3b3533223f533487f",
+  "w": 744,
+  "h": 156
  },
  "long@dark": {
   "sha": "7e788a3330c3739536b86b1231db3e84fe7a27b1",

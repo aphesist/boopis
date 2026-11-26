@@ -1,14 +1,16 @@
 // @vitest-environment jsdom
 /* A composer's own controls do their jobs (modules/chat/compose.ts over the kit's Composer): "+" asks the host for files and writes
-   each into the text as an "@" reference, the mic dictates through the provider until it is switched off, the voice circle is always
+   each into the text as an "@" reference, a file dropped on it or pasted into it becomes the same chip, the mic dictates through the
+   provider until it is switched off (the bot's orbs listen meanwhile), the voice circle is always
    there and either talks (a voice model is set up) or says what it needs and leads to Settings, Models; send and stop are said as events. */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { kit } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
 import { on } from '../../core/bus';
 import { setProvider } from '../../data';
 import type { DataProvider } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
-import { composeTools, voiceNeedsSetup } from './compose';
+import type { FileDrag } from '../../data/provider';
+import { NO_PLACE, composeTools, voiceNeedsSetup } from './compose';
 
 const tick = async (): Promise<void> => { for (let i = 0; i < 6; i++) await Promise.resolve(); };
 let slot: HTMLElement, heard: ((t: string) => void) | null, cancelled: number, started: Array<string | null>, provider: DataProvider;
@@ -136,5 +138,69 @@ describe('a composer\'s controls', () => {
     kit.composerInsert(c, 'two');
     text().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     expect(send).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('files dropped on a composer or pasted into it', () => {
+  const files = (...names: string[]): File[] => names.map((n) => new File(['x'], n));
+  const give = (list: File[], via: 'drop' | 'paste'): void => { slot.querySelector('.k7-composer')?.dispatchEvent(new CustomEvent('ui:files', { bubbles: true, detail: { files: list, via } })); };
+  const chips = (): Array<[string | null, string | null]> => [...text().querySelectorAll<HTMLElement>('[data-kit~="InlineChip"]')].map((c) => [c.getAttribute('data-kind'), c.getAttribute('data-words')]);
+  it('each becomes the chip "+" makes of a file: its name shows, its words are the "@" reference', () => {
+    mount();
+    give(files('notes.md', 'shot.png'), 'drop');
+    expect(chips()).toEqual([['reference', '@notes.md'], ['reference', '@shot.png']]);
+    give(files('plan.txt'), 'paste');
+    expect(text().textContent).toBe('@notes.md @shot.png @plan.txt ');
+  });
+  it('in the live app a file with no place on disk is not attached, and the app says why', () => {
+    setProvider({ ...provider, info: { ...provider.info, live: true } });
+    mount();
+    give(files('shot.png'), 'paste');
+    expect(chips()).toEqual([]);
+    expect(kit.notifyText()).toBe(NO_PLACE);
+  });
+  it('the desktop app: the host reports the drag and the drop with the files\' paths; the composer under the pointer shows it and takes them', () => {
+    let emit: (e: FileDrag) => void = () => undefined;
+    setProvider({ ...provider, files: { ...provider.files, drops: { subscribe: (fn) => { emit = fn; return () => undefined; } } } });
+    const other = document.createElement('div');
+    document.body.append(other);
+    composeTools(other, { botId: () => 'nina' });
+    other.replaceChildren(kit.composer({ kind: 'bot', placeholder: 'Message nina' }));
+    mount();
+    const at = (el: HTMLElement, top: number): void => { el.getBoundingClientRect = () => ({ left: 0, right: 600, top, bottom: top + 60, width: 600, height: 60, x: 0, y: top, toJSON: () => ({}) }); };
+    at(slot, 100); at(other, 400);
+    const dropping = (el: HTMLElement): boolean => !!el.querySelector('.k7-composer')?.hasAttribute('data-drop');
+    emit({ phase: 'over', x: 50, y: 120, attachments: [] });
+    expect([dropping(slot), dropping(other)]).toEqual([true, false]);
+    emit({ phase: 'over', x: 50, y: 420, attachments: [] });
+    expect([dropping(slot), dropping(other)]).toEqual([false, true]);
+    emit({ phase: 'over', x: 50, y: 300, attachments: [] });   /* over neither */
+    expect([dropping(slot), dropping(other)]).toEqual([false, false]);
+    emit({ phase: 'over', x: 50, y: 120, attachments: [] });
+    emit({ phase: 'drop', x: 50, y: 120, attachments: [{ name: 'notes.md', kind: 'file', path: '/work/notes.md' }] });
+    expect(dropping(slot)).toBe(false);
+    expect(chips()).toEqual([['reference', '@/work/notes.md']]);
+    expect(other.querySelector('.k7-composer__text')?.textContent).toBe('');
+    emit({ phase: 'drop', x: 50, y: 300, attachments: [{ name: 'lost.md', kind: 'file', path: '/work/lost.md' }] });   /* dropped elsewhere: nobody's */
+    expect(chips()).toHaveLength(1);
+  });
+});
+
+describe('the bot listens while you dictate', () => {
+  it('its orbs on the page listen while the mic is on and go back to what they were: one at rest to its pose, one in a state to that state', () => {
+    const KAI = { id: 'kai', name: 'kai', state: 'idle' as const };
+    const row = document.createElement('div');
+    row.innerHTML = ui.html.orb(KAI, { size: 28, rest: true }) + ui.html.orb({ ...KAI, state: 'working' as const }, { size: 20 }) + ui.html.orb({ id: 'nina', name: 'nina', state: 'idle' as const }, { size: 28, rest: true });
+    document.body.append(row);
+    const [rest, working, nina] = [...row.querySelectorAll('orb-avatar')] as unknown as [Element, Element, Element];
+    const before = [rest.getAttribute('reaction'), working.getAttribute('reaction'), nina.getAttribute('reaction')];
+    mount();
+    const mic = slot.querySelector('[data-mic]') as HTMLElement;
+    mic.click();
+    expect([rest.getAttribute('reaction'), working.getAttribute('reaction'), nina.getAttribute('reaction')]).toEqual(['listening', 'listening', before[2]]);
+    expect(rest.getAttribute('idle-motion')).not.toBe('off');   /* out of its pose, alive */
+    mic.click();
+    expect([rest.getAttribute('reaction'), working.getAttribute('reaction')]).toEqual(before.slice(0, 2));
+    expect(rest.getAttribute('idle-motion')).toBe('off');
   });
 });

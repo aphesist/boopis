@@ -17,7 +17,7 @@ import { data } from '../../data';
 import type { Attached, GovernanceState, SendMeta } from '../../data';
 import { CAREFUL } from '../../data';
 import { bestMention, findMentions, mentionName, routeMentions } from '../../data/mentions';
-import { later, voiceNeedsSetup, voiceTool } from '../chat/compose';
+import { composerFiles, later, voiceNeedsSetup, voiceTool } from '../chat/compose';
 import { kindOf, makeReader, optionsFor } from './feedforward';
 import { COUNCIL_VALUE, openCouncilForm } from './council';
 import { FOOT_GOVERNED, FOOT_MENTION, FOOT_MENTION_GOVERNED, FOOT_UNGOVERNED, SETTINGS_VALUE, SMART_VALUE, currentChoice, governedUnavailableEntries, modelEntries, smartPreview } from './model-menu';
@@ -305,11 +305,10 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
     if (l && !t.closest('button')) openQuick(lineItem('model'));
   });
   /* KEYMAP section 7: alt+G (how careful, or governed where there is no scale), alt+S (Smart), alt+M (who answers next), alt+C (a
-     council), alt+A (attach), alt+V (talk); ArrowUp in an empty composer brings your last message back */
+     council), alt+A (attach); alt+V (talk) and Esc while dictating are the kit Composer's own; ArrowUp in an empty composer brings your
+     last message back */
   slot.addEventListener('keydown', (e) => {
     if (!(e.target as Element).closest('.k7-composer__text')) return;
-    /* Esc while dictating stops it (KEYMAP section 7) */
-    if (e.key === 'Escape' && slot.querySelector('[data-mic]')?.getAttribute('aria-pressed') === 'true') { e.preventDefault(); e.stopPropagation(); slot.querySelector<HTMLElement>('[data-mic]')?.click(); return; }
     if (e.key === 'ArrowUp' && !e.altKey && !e.shiftKey && !e.ctrlKey && !e.metaKey && !value().trim()) { const last = o.lastMessage(); if (last) { e.preventDefault(); api.setValue(last); } return; }
     if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     if (e.code === 'KeyG') { e.preventDefault(); const item = lineItem('careful'); if (controls) openCarefulFor(item, 'above'); else toggleGoverned(item); }
@@ -317,27 +316,10 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
     else if (e.code === 'KeyC') { e.preventDefault(); requestAnimationFrame(() => { void openCouncilForm(lineItem('model'), o.sessionId(), () => { sync(); }); }); }
     else if (e.code === 'KeyM') { e.preventDefault(); requestAnimationFrame(() => openModel(true)); }
     else if (e.code === 'KeyA') { e.preventDefault(); openAdd(slot.querySelector<HTMLElement>('[data-plus]') ?? slot); }
-    else if (e.code === 'KeyV') { e.preventDefault(); slot.querySelector<HTMLElement>('[data-mic]')?.click(); }
   });
-  /* files dragged in: the desktop app reports where they are and what was dropped (with their paths); the page build knows names only */
-  const over = (x: number, y: number): boolean => { const r = slot.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; };
-  const drops = data().files.drops;
-  if (drops) {
-    const off = drops.subscribe((ev) => {
-      if (!slot.isConnected) { off(); return; }
-      if (ev.phase === 'drop') { root()?.removeAttribute('data-drop'); if (over(ev.x, ev.y)) addAttached(ev.attachments); return; }
-      root()?.toggleAttribute('data-drop', ev.phase !== 'leave' && over(ev.x, ev.y));
-    });
-  } else {
-    slot.addEventListener('dragover', (e) => { if (e.dataTransfer?.types.includes('Files')) { e.preventDefault(); root()?.setAttribute('data-drop', ''); } });
-    slot.addEventListener('dragleave', () => { root()?.removeAttribute('data-drop'); });
-    slot.addEventListener('drop', (e) => {
-      root()?.removeAttribute('data-drop');
-      const files = [...(e.dataTransfer?.files ?? [])]; if (!files.length) return;
-      e.preventDefault();
-      addAttached(files.map((f) => ({ name: f.name, kind: /\.(png|jpe?g|gif|webp|bmp)$/i.test(f.name) ? 'image' as const : 'file' as const, bytes: f.size })));
-    });
-  }
+  /* files dropped on the composer or pasted into it: each a chip, as "+" attaches one (the desktop app's host reports its drags with
+     the files' paths; the page's own drop and paste know names only) */
+  composerFiles(slot, addAttached);
   const d = data().details;
   d.governance.subscribe(sync); d.choices.subscribe(sync); d.context.subscribe(sync); d.environment.subscribe(sync);
   data().council.subscribe(sync);
@@ -347,7 +329,7 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
     el: slot,
     get input() { return text(); },
     get value() { return value(); },
-    setValue(t) { const n = text(); if (!n) return; n.textContent = t; n.dispatchEvent(new Event('input', { bubbles: true })); n.focus(); },
+    setValue(t) { const n = text(); if (!n) return; n.focus(); kit.composerSet(n, t); },
     focus() { text()?.focus(); },
     setRunning(on) { running = on; sync(); },
     sync

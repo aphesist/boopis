@@ -14,6 +14,7 @@ import { layer } from '../layer';
 import { glyph } from './util';
 import { applyTheme, botFill, deriveAccent } from './theme';
 import { composerChips, composerInsert, composerInsertChip, composerMarks, composerMentions, composerRunning, markReveal, wire, wireHold, wireMenu } from './wire';
+import { composerDropping, composerSet, composerUndo } from './compose';
 import type { KitMentions } from './wire';
 import { notify, notifyText } from './notify';
 
@@ -102,7 +103,7 @@ const mentions = (c: HTMLElement, src: KitMentions): void => {
 };
 
 export const kit = {
-  html, ...factories, composerInsert, composerInsertChip, composerChips, composerMarks, composerRunning, mentions, section: surfaces.section, dockGeometry: DOCK_GEOMETRY,
+  html, ...factories, composerInsert, composerInsertChip, composerChips, composerMarks, composerRunning, composerSet, composerUndo, composerDropping, mentions, section: surfaces.section, dockGeometry: DOCK_GEOMETRY,
   /** the Dock's parts as markup, for the app's live dock, which keeps its orbs connected and writes each part in place */
   dockParts: { slab: slabPath, orb: dockOrb, cap: dockCap, ask: dockAsk, more: dockMore, panel: dockPanel }, wire, wireHold, wireMenu, markReveal, openMenu, openNotice, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, notify, notifyText, keyNames: controls.keyNames, variants: kitVariants
 };
