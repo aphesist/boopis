@@ -187,6 +187,7 @@ export interface DiffViewOpts {
   /** a file of the tools' Diff (board S24, sessiontab.js `diffView`): its head folds it (a chevron leads the path, turned down while it is
       open); `add` and `del` are the file's own counts where the lines shown are not the whole of it */
   fold?: U<boolean>; open?: U<boolean>; add?: U<number>; del?: U<number>;
+  /** `group`: the body is a named group, not a landmark (a diff inside a form, which can stand twice on a page: the thread and the dock) */ body?: U<'region' | 'group'>;
 }
 export function diffView(o: DiffViewOpts): string {
   const v = o.variant ?? 'stacked';
@@ -202,7 +203,7 @@ export function diffView(o: DiffViewOpts): string {
   const head = '<span class="k7-ell k7-mono">' + esc(o.path) + '</span><span class="k7-files__counts k7-mono"><span data-tone="add">+' + add + '</span><span data-tone="del">−' + del + '</span></span>';
   return '<div class="k7-diff"' + kitAttrs('DiffView', { 'data-variant': v, 'data-sq': '', 'data-sq-mode': 'frame', 'data-disclose': o.fold ? '' : null, 'data-open': o.fold && o.open ? '' : null, ...(o.attrs ?? {}) }) + '>' +
     (o.fold ? '<button class="k7-reset k7-diff__head" type="button"' + attrs({ 'aria-expanded': String(!!o.open), 'aria-controls': id }) + '>' + glyph('chevron', 'k7-diff__chev') + head + '</button>' : '<div class="k7-diff__head">' + glyph('file') + head + '</div>') +
-    (v === 'split' ? '<div class="k7-diff__body"' + attrs({ id: o.fold ? id : null }) + '>' : '<div class="k7-diff__body ui-scroll ui-scroll--x" tabindex="0" role="region"' + attrs({ 'aria-label': o.path, id: o.fold ? id : null }) + '>') + body + '</div></div>';
+    (v === 'split' ? '<div class="k7-diff__body"' + attrs({ id: o.fold ? id : null }) + '>' : '<div class="k7-diff__body ui-scroll ui-scroll--x" tabindex="0"' + attrs({ role: o.body ?? 'region', 'aria-label': o.path, id: o.fold ? id : null }) + '>') + body + '</div></div>';
 }
 
 /* ── Composer (39): session, bot, room, dock, notch; with its line; empty, typed, multi-line, running (Stop joins the right cluster; Enter

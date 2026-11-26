@@ -37,17 +37,17 @@ export async function formCards(env) {
       for (const size of ['inline', 'compact', 'mini']) for (const st of states) for (const [k, sp] of Object.entries(specs)) {
         const c = __hx.ui.card('form', { ...JSON.parse(JSON.stringify(sp)), id: `g-${size}-${st}-${k}` }, { size, state: st });
         host.append(c);
-        out.push({ k, st, size, state: c.state, label: !!(c.getAttribute('aria-labelledby') || c.querySelector('.cd-mini[aria-labelledby]')), text: c.textContent.length > 8 });
+        out.push({ k, st, size, state: c.state, label: !!c.querySelector('[data-kit~="AskCard"][aria-label]'), text: c.textContent.length > 8 });
       }
       return out;
     }, [SPECS, STATES]);
     check('forms', 'every kind draws in every state on every size, named and not empty', drawn.every((d) => d.label && d.text && d.state === d.st), drawn.filter((d) => !(d.label && d.text && d.state === d.st)).slice(0, 5));
     const origin = await page.evaluate(() => ({
-      stack: document.querySelectorAll('hx-card [data-origin="joint"] .ui-stack__more').length,
-      more: [...document.querySelectorAll('hx-card [data-origin="joint"] .ui-sr')].some((n) => /atlas/.test(n.textContent)),
-      relay: [...document.querySelectorAll('hx-card [data-origin="relay"] .cd-names__via')].some((n) => /via atlas/.test(n.textContent)),
-      agent: !!document.querySelector('hx-card [data-origin="agent"] svg.ui-mm[data-family="claude"]'),
-      system: !!document.querySelector('hx-card [data-origin="plugin"] .cd-glyph'), mcp: !!document.querySelector('hx-card [data-origin="mcp"] .cd-tile'), one: !!document.querySelector('hx-card [data-origin="teammate"] orb-avatar')
+      stack: document.querySelectorAll('hx-card [data-origin="joint"] .k7-ask__askers .k7-ask__more[data-more="+2"]').length,
+      more: [...document.querySelectorAll('hx-card [data-origin="joint"] .k7-ask__askers [aria-label]')].some((n) => /atlas/.test(n.getAttribute('aria-label'))),
+      relay: [...document.querySelectorAll('hx-card [data-origin="relay"] .k7-ask__who')].some((n) => /via atlas/.test(n.textContent)),
+      agent: !!document.querySelector('hx-card [data-origin="agent"] .k7-ask__head .k7-head__mark svg'),
+      system: !!document.querySelector('hx-card [data-origin="plugin"] .k7-ask__head .k7-logomark'), mcp: !!document.querySelector('hx-card [data-origin="mcp"] .k7-ask__head .k7-ask__tile'), one: !!document.querySelector('hx-card [data-origin="teammate"] .k7-ask__head orb-avatar')
     }));
     check('forms', 'the origin slot draws one teammate, several with +N and every name, a relay, the agent with its logo, a system glyph and an MCP server', Object.values(origin).every((v) => v === true || v > 0), origin);
     await page.evaluate(() => document.getElementById('gal').remove());
@@ -61,11 +61,11 @@ export async function formCards(env) {
     await page.keyboard.press('Tab');
     await page.locator('#gal hx-card [data-action="submit"]').click();
     await page.waitForTimeout(150);
-    let v = await page.evaluate(() => { const i = __c.querySelector('input[data-secret]'), e = __c.querySelector('.cd-err'); return { state: __c.state, invalid: i.getAttribute('aria-invalid'), describedby: i.getAttribute('aria-describedby').includes(e.id), err: e.textContent, hidden: e.hidden, focus: document.activeElement === i, live: __c.querySelector('[role=status]').textContent }; });
+    let v = await page.evaluate(() => { const i = __c.querySelector('input[data-secret]'), e = __c.querySelector('[data-field="key"] .k7-field__error'); return { state: __c.state, invalid: i.getAttribute('aria-invalid'), describedby: i.getAttribute('aria-describedby').includes(e.id), err: e.textContent, hidden: e.hidden, focus: document.activeElement === i, live: __c.querySelector('[role=status]').textContent }; });
     check('forms', 'an empty required field is an error in its description, the field is aria-invalid and focused, and it is announced', v.state === 'invalid' && v.invalid === 'true' && v.describedby && !v.hidden && /Enter/.test(v.err) && v.focus && /Check/.test(v.live), v);
     await page.fill('#gal input[data-secret]', 'nope');
     await page.locator('#gal hx-card [data-action="submit"]').click();
-    v = await page.evaluate(() => ({ err: __c.querySelector('.cd-err').textContent }));
+    v = await page.evaluate(() => ({ err: __c.querySelector('[data-field="key"] .k7-field__error').textContent }));
     check('forms', 'a value that fails its pattern says why, in the schema\'s own words', /not an OpenAI key/.test(v.err), v);
 
     /* the secret: typed, submitted, and gone from the page */
@@ -76,26 +76,26 @@ export async function formCards(env) {
     check('forms', 'Enter submits from a field; the secret leaves the field and the page as it is sent, and the event names it without carrying it', during.state === 'submitting' && !during.html && !during.inputs && !during.events && during.sub, during);
     await page.waitForTimeout(900);
     const done = await page.evaluate((sec) => ({ state: __c.state, text: __c.textContent, html: document.documentElement.outerHTML.includes(sec), mem: JSON.stringify(Object.assign({}, __c.formState)).includes(sec) }), SECRET);
-    check('forms', 'the done receipt says what happened and holds no secret', done.state === 'done' && /Saved to your keychain/.test(done.text) && !done.html && !done.mem, done);
+    check('forms', 'the done receipt says what happened and holds no secret', done.state === 'done' && /You saved the key for OpenAI/.test(done.text) && !done.html && !done.mem, done);
 
-    /* keys: Esc defers (never cancels), x cancels, 1-9 pick, Tab order, Enter on a choice submits */
+    /* keys: 1-9 pick, the arrows move and choose; Later puts it off and Open brings it back; Esc cancels (REPASS.md 6d: the end answer's key) */
     await mount(SPECS.question, { size: 'inline' });
-    await page.locator('#gal hx-card .cd-opt').first().focus();
+    await page.locator('#gal hx-card .k7-orows .k7-orow').first().focus();
     await page.keyboard.press('2');
-    const picked = await page.evaluate(() => ({ v: __c.formState.vals.rule, checked: [...__c.querySelectorAll('.cd-opt')].map((o) => o.getAttribute('aria-checked')), preview: __c.querySelector('.cd-preview').textContent }));
+    const picked = await page.evaluate(() => ({ v: __c.formState.vals.rule, checked: [...__c.querySelectorAll('.k7-orows .k7-orow')].map((o) => o.getAttribute('aria-checked')), preview: __c.querySelector('[data-preview-for="rule"]').textContent }));
     check('forms', '1-9 pick an option and its preview shows beside it', picked.v === 'half-even' && picked.checked[1] === 'true' && /b/.test(picked.preview), picked);
     await page.keyboard.press('ArrowDown');
     const arrow = await page.evaluate(() => __c.formState.vals.rule);
     check('forms', 'the arrow keys move and choose in a radio group', arrow === 'none', arrow);
-    await page.keyboard.press('Escape');
+    await page.locator('#gal hx-card [data-action="defer"]').click();
     await page.waitForTimeout(150);
-    check('forms', 'Esc defers: the form collapses and offers to open again, nothing is cancelled', await page.evaluate(() => __c.state === 'deferred' && !!__c.querySelector('[data-action="reopen"]') && !window.__events.some((e) => /cancel/.test(e))));
+    check('forms', 'Later puts it off: one row that offers to open it again, nothing is cancelled', await page.evaluate(() => __c.state === 'deferred' && !!__c.querySelector('[data-action="reopen"]') && !window.__events.some((e) => /cancel/.test(e))));
     await page.locator('#gal [data-action="reopen"]').click();
     await page.waitForTimeout(150);
-    await page.locator('#gal hx-card .cd-opt').first().focus();
-    await page.keyboard.press('x');
+    await page.locator('#gal hx-card .k7-orows .k7-orow').first().focus();
+    await page.keyboard.press('Escape');
     await page.waitForTimeout(150);
-    check('forms', 'x cancels, and the receipt says the asker continues without it', await page.evaluate(() => __c.state === 'cancelled' && /continues without it/.test(__c.textContent)));
+    check('forms', 'Esc cancels, and the one row says so in a quiet word', await page.evaluate(() => __c.state === 'cancelled' && __c.querySelector('.k7-ask__head .k7-word')?.textContent === 'cancelled'));
 
     /* hold to approve: one second, in a form */
     await mount(SPECS.approval, { size: 'inline' });
@@ -114,7 +114,7 @@ export async function formCards(env) {
 
     /* a sign-in the build cannot run says so on the control, and a card with several sources of origin stays valid */
     await mount(SPECS.signin, { size: 'inline' });
-    check('forms', 'the sign-in control draws, with its provider named', await page.evaluate(() => /Sign in with Linear/.test(__c.querySelector('[data-action="signin"]').textContent)));
+    check('forms', 'the sign-in control draws, with its provider named on its row', await page.evaluate(() => __c.querySelector('[data-action="signin"] .k7-chip__label').textContent === 'Sign in' && /Linear/.test(__c.querySelector('[data-signin-row]').textContent)));
   });
 
   await s.safe('forms', async () => {
@@ -151,7 +151,7 @@ export async function liveForms(env) {
     const raised = await page.evaluate(() => ({
       inline: [...document.querySelectorAll('.ss-forms hx-card[data-kind="form"]')].map((c) => c.data.kind),
       dock: __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length, dockAsks: __hx.dock().state.asks, waits: __hx.data().waits.snapshot().map((w) => w.kind + ':' + w.data.kind),
-      origin: [...document.querySelectorAll('.ss-forms hx-card .cd-by')].map((n) => n.dataset.origin)
+      origin: [...document.querySelectorAll('.ss-forms hx-card [data-kit~="AskCard"]')].map((n) => n.dataset.origin)
     }));
     check('forms-live', 'forms the plugin raised appear inline in the conversation, where the turn raised them', raised.inline.join() === 'credential,question,setup', raised);
     check('forms-live', 'and they wait on you, next to approvals and blanks (none of them in the dock: its asks are your bots\' approvals)', raised.dock === 3 && raised.dockAsks === 0 && raised.waits.join() === 'form:credential,form:question,form:setup', raised);
@@ -178,8 +178,9 @@ export async function liveForms(env) {
 
     /* answer the question, inline (the dock's Needs-you page went with v7: a session's form is answered in the session) */
     const inlineQ = page.locator('.ss-forms hx-card[data-kind="form"]').filter({ hasText: 'Keep the old alias?' }).first();
-    await inlineQ.locator('.cd-opt').first().click();
-    await inlineQ.locator('[data-action="submit"]').click();
+    /* a question with options: a chip or a row answers it at once; a list of fields waits for its verb */
+    await inlineQ.locator('[data-value="yes"]').first().click();
+    if (await inlineQ.locator('[data-action="submit"]').count()) await inlineQ.locator('[data-action="submit"]').click();
     await page.waitForTimeout(600);
     const q = await page.evaluate(() => ({ req: window.__hxReplay.requests.filter((r) => r.method === 'plugin.boopis.form.submit').map((r) => r.params.values), inline: [...document.querySelectorAll('.ss-forms hx-card')].filter((c) => c.data.kind === 'question').map((c) => c.state) }));
     check('forms-live', 'answering the question sends the answer and the card becomes a receipt', q.req.some((v) => v.answer === 'yes') && q.inline.every((s) => s === 'done'), q);
@@ -211,7 +212,7 @@ export async function liveRequests(env) {
       await page.waitForTimeout(1500);
     };
     const cards = () => page.evaluate(() => ({
-      inline: [...document.querySelectorAll('.ss-forms hx-card[data-kind="form"]')].map((c) => ({ title: c.data.title, kind: c.data.kind, state: c.state, origin: c.querySelector('.cd-by')?.dataset.origin })),
+      inline: [...document.querySelectorAll('.ss-forms hx-card[data-kind="form"]')].map((c) => ({ title: c.data.title, kind: c.data.kind, state: c.state, origin: c.querySelector('[data-kit~="AskCard"]')?.dataset.origin })),
       dock: __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length,
       waits: __hx.data().waits.snapshot().map((w) => w.kind + ':' + w.data.kind)
     }));
@@ -234,11 +235,11 @@ export async function liveRequests(env) {
       keychain: window.__hxReplaySecrets.stored.size,
       dom: document.documentElement.outerHTML.includes(typed) || [...document.querySelectorAll('input,textarea')].some((i) => i.value.includes(typed)),
       states: [...document.querySelectorAll('.ss-forms hx-card')].map((x) => x.state),
-      receipt: document.querySelector('.ss-forms hx-card')?.innerText ?? ''
+      receipt: document.querySelector('.ss-forms hx-card')?.innerText ?? '', named: document.querySelector('.ss-forms hx-card [data-kit~="AskCard"]')?.getAttribute('aria-label') ?? ''
     }), TYPED);
     check('forms-requests', 'the value goes in the response frame of the request\'s own id', k.responses.length === 1 && String(k.responses[0].id).startsWith('srq-') && k.responses[0].result.value === TYPED, k.responses);
     check('forms-requests', 'and in no call to the gateway, not the keychain, and not the page, before or after the answer', !k.calls && k.keychain === 0 && !k.dom, { calls: k.calls, keychain: k.keychain, dom: k.dom });
-    check('forms-requests', 'the card becomes a receipt', k.states.every((x) => x === 'done') && /\bSent\b/.test(k.receipt) && /^boopis needs/.test(k.receipt), k);
+    check('forms-requests', 'the card becomes a receipt', k.states.every((x) => x === 'done') && /\bSent\b/.test(k.receipt) && /^boopis needs/.test(k.named), k);
     await page.waitForTimeout(1300);
     check('forms-requests', 'nothing waits on you any more', (await cards()).dock === 0);
 
@@ -246,7 +247,7 @@ export async function liveRequests(env) {
     await say('run sudo');
     c = await cards();
     const sudo = page.locator('.ss-forms hx-card').filter({ hasText: 'sudo password' }).last();
-    check('forms-requests', 'a sudo request is a credential form with the command it is for, not held (a password is typed on purpose)', c.dock === 1 && /sudo true # never/.test(await sudo.innerText()) && (await sudo.locator('.ui-hold').count()) === 0, c);
+    check('forms-requests', 'a sudo request is a credential form with the command it is for, not held (a password is typed on purpose)', c.dock === 1 && /sudo true # never/.test(await sudo.innerText()) && (await sudo.locator('[data-hold]').count()) === 0, c);
     await page.evaluate(() => { const sid = window.__hxReplay.requests.find((r) => r.method === 'prompt.submit').params.session_id; __hx.data().sessions.stop(sid); });
     await page.waitForTimeout(1500);
     c = await cards();

@@ -378,7 +378,7 @@ hx-card[data-accent] .cd-mini {
 .cd-mini__who { display: inline-block; vertical-align: top; max-width: var(--cd-who-max, 50%); overflow: hidden; color: var(--text-strong); font-weight: 500; text-transform: none; }
 .cd-mini__who.cd-mono, .cd-mini__who .cd-mono { font-weight: 400; }
 
-/* ------------------------------------------------------------------ a config diff in a well (parts.ts diffWell: a bot's settings)
+/* ------------------------------------------------------------------ a config diff in a well (parts.ts diffWell: a bot's settings): what will change */
 .cd-diff { font-family: var(--mono); font-size: var(--fs-2xs); line-height: var(--lh); letter-spacing: var(--track-mono); color: var(--text-dim); padding-block: var(--sp-2); }
 .cd-diff__file { color: var(--text-quiet); margin-bottom: var(--sp-1); }
 .cd-diff__l { display: flex; gap: var(--sp-2); white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 calc(-1 * var(--sp-1)); padding: 0 var(--sp-1);   /* the band sits 8px from the well's side, as far as the well's padding is above and below it (R-corner-3) */ border-radius: var(--r-floor); }

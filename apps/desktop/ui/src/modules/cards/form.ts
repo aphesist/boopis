@@ -56,6 +56,8 @@ function askerLead(o: KnownOrigin | null): Pick<AskCardOpts, 'bot' | 'model' | '
   if (o.kind === 'mod') return { lead: ui.icon('mod', { size: 'm', class: 'k7-ic' }) };
   return { lead: H.avatar({ variant: 'logomark', label: 'boopis' }) };
 }
+/** who asks, as one word for the block (`data-origin`): teammate, joint (several), relay, agent, mcp, mod, or the app's own */
+const originWord = (o: KnownOrigin | null): string | null => (!o ? null : o.kind === 'teammate' ? (o.ids.length > 1 ? 'joint' : o.via ? 'relay' : 'teammate') : o.kind);
 function askerWords(o: KnownOrigin | null): string {
   if (!o) return 'Needs your answer';
   if (o.kind === 'teammate') {
@@ -159,7 +161,7 @@ function extrasHTML(d: FormSpec): string {
   let h = '';
   if (d.diff) {
     const lines = String(d.diff).split('\n').map((l) => ({ sign: (l[0] === '+' ? '+' : l[0] === '-' ? '-' : ' ') as '+' | '-' | ' ', text: l.slice(1) }));
-    h += '<div class="k7-well" data-kit="Well" data-kind="diff" data-sq data-sq-mode="frame">' + H.diffView({ path: d.file || 'config', lines }) + '</div>';
+    h += '<div class="k7-well" data-kit="Well" data-kind="diff" data-sq data-sq-mode="frame">' + H.diffView({ path: d.file || 'config', lines, body: 'group' }) + '</div>';
   }
   if (d.plan) h += H.steps(d.plan.map((t) => ({ text: plain(t), state: 'todo' as const })));
   if (d.contents && d.kind !== 'connector') {
@@ -250,7 +252,7 @@ function formHTML(c: Ctx): string {
   if (DONE_FORM.includes(c.s)) {
     const r = rowOf(c);
     const act = c.s === 'deferred' ? H.button({ label: 'Open', variant: 'ghost', size: 28, attrs: { 'data-action': 'reopen' } }) : c.s === 'expired' ? H.button({ label: 'Ask again', variant: 'ghost', size: 28, attrs: { 'data-action': 'reopen' } }) : '';
-    return H.askCard({ variant: 'form', state: 'answered', ask: r.text, word: { text: r.word }, rowAction: act, ...lead, attrs: { 'data-form-row': '', 'aria-label': cap(d.title) + ': ' + r.text } });
+    return H.askCard({ variant: 'form', state: 'answered', ask: r.text, word: { text: r.word }, rowAction: act, ...lead, attrs: { 'data-form-row': '', 'data-origin': originWord(o), 'aria-label': plain(cap(d.title)) + ': ' + r.text } });
   }
   const busy = c.s === 'submitting';
   const owed = !!formT(d).stamp;
@@ -264,11 +266,11 @@ function formHTML(c: Ctx): string {
     const chosen = (p.enum ?? []).indexOf(cur);
     return H.askCard({ ...head, variant: shape === 'chips' ? 'question' : 'choices', ask: plain(cap(d.title)), ...(d.why ? { sub: plain(d.why) } : {}), something: !!p['x-other'],
       ...(shape === 'chips' ? { answers: (p.enum ?? []).map((v, i) => ({ label: opts[i] ?? String(v), value: String(v), primary: cur === v })) } : { choices: opts, ...(chosen >= 0 ? { chosen } : {}) }),
-      ...(own ? { fields: own } : {}), attrs: { 'data-question': name, 'data-shape': shape } });
+      ...(own ? { fields: own } : {}), attrs: { 'data-question': name, 'data-shape': shape, 'data-origin': originWord(o) } });
   }
   /* a permission is exactly the AskCard: its scope is the answers, not a field */
   const fields = d.kind === 'permission' ? '' : extrasHTML(d) + props(d).map(([name, p]) => fieldHTML(c, st, name, p)).join('');
-  return H.askCard({ ...head, variant: 'form', ask: plain(cap(d.title)), ...(d.why ? { sub: plain(d.why) } : {}), ...(fields ? { fields } : {}), ...(d.effect ? { effect: plain(d.effect) } : d.kind === 'credential' ? { effect: 'Stored in your system’s keychain' } : {}), answers: answersOf(d, st), attrs: { 'data-form': d.kind } });
+  return H.askCard({ ...head, variant: 'form', ask: plain(cap(d.title)), ...(d.why ? { sub: plain(d.why) } : {}), ...(fields ? { fields } : {}), ...(d.effect ? { effect: plain(d.effect) } : d.kind === 'credential' ? { effect: 'Stored in your system’s keychain' } : {}), answers: answersOf(d, st), attrs: { 'data-form': d.kind, 'data-origin': originWord(o) } });
 }
 
 /** focus a form's first control (a screen that just drew one: the store, connectors, providers, first run) */
