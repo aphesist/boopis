@@ -6,7 +6,7 @@
    shown), and a mock source is never mistaken for live. */
 import { logger } from '../core/log';
 import { createMockProvider } from '../data/mock-provider';
-import type { DataProvider, SessionsSource, WaitsEvent, WaitsSource } from '../data/provider';
+import type { DataProvider, EngineSource, EngineState, SessionsSource, WaitsEvent, WaitsSource } from '../data/provider';
 import { emitter, feed, store } from '../data/store';
 import type { AgentTurn, BlankData, CouncilChoice, BlankWait, ConversationEvent, FormStatus, FormWait, SendMeta, SessionSummary, Turn, User, UserTurn, Wait, WaitOutcome } from '../data/types';
 import { readFlag } from '../core/settings';
@@ -76,6 +76,9 @@ export interface LiveOptions {
   /** the Connectors section's switch and Sign in (default in the desktop app: the host's connector commands) */
   connectors?: { setEnabled(name: string, enabled: boolean): Promise<void>; signin(name: string): Promise<unknown> };
   cancelSignin?: ((s: XSignin) => Promise<void>) | null;
+  /** asks the host to reach the engine again now (the desktop app's `hermes_retry`: a link that gave up dials again, and the attach
+      starts a gateway that exited); without it the thread's "engine stopped" line has no action */
+  restartEngine?: () => Promise<void>;
   /** a teammate's own link to Hermes (the host's `connect(profile)`); without one its schedule and sessions are shown as unknown */
   linkTo?: (profile: string) => Promise<GatewayClient>;
   /** how often the teammates are read again (ms); null never (tests) */
@@ -462,6 +465,24 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   client.onEvent(onEvent);
   /* the gateway's own requests: the string prompts (secret, sudo, vault) are forms; anything else is refused, as before */
   client.onServerRequest((r) => formsHost.serverRequest(r));
+  /* the engine stopped (board S36): the link was lost and the host's first try to reach it again failed, or the host gave up on it
+     (`incompatible`). A loss the host mends at once (a gateway that idled out is started by the attach) is never said. It stays said
+     until the link is ready again */
+  const engineState = store<EngineState>({ stopped: false, restarting: false, why: null });
+  const engine: EngineSource = {
+    state: engineState,
+    ...(opts.restartEngine ? { restart: async () => {
+      const ask = opts.restartEngine; if (!ask || engineState.get().restarting) return;
+      engineState.update((e) => ({ ...e, restarting: true }));
+      try { await ask(); } catch (e) { engineState.update((x) => ({ ...x, restarting: false, why: e instanceof Error ? e.message : String(e) })); throw e; }
+    } } : {})
+  };
+  client.onState((s) => {
+    const was = engineState.get();
+    if (s.phase === 'ready') { if (was.stopped || was.restarting) engineState.set({ stopped: false, restarting: false, why: null }); }
+    else if (s.phase === 'incompatible' || (s.phase === 'degraded' && s.attempts >= 1)) engineState.set({ stopped: true, restarting: false, why: s.error?.message ?? null });
+    else if (s.phase === 'degraded' && was.stopped) engineState.set({ ...was, restarting: false, why: s.error?.message ?? was.why });
+  });
   client.onState((s) => {
     if (s.phase === 'ready' && s.reconnected) { for (const c of convos.values()) if (c.gwId) { void formsHost.reload(c.gwId, c.model); void modsHost.attach(c.uiId); } refreshList().catch((e: unknown) => { log.warn('could not refresh after reconnecting', e); }); details.onLinkReady(); }
   });
@@ -727,7 +748,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   return {
     ...base,
     info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable },
-    ready, sessions, waits, user, sessionControls: controls, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
+    ready, sessions, waits, user, engine, sessionControls: controls, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
     details: details.source, run: details.run, mods: modsHost.source, store: liveStore, kanban: liveKanban(),
     council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id), paths: hostPaths() },
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },

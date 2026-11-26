@@ -3,7 +3,7 @@
    draws the board from its source beside this state and measures the difference; a screen is done when they are the same, dark
    and light. Later boards add a fixture, a state here and a row in boards.json. */
 import type { AppCtx, State, Story } from '../../types';
-import { board11, board12, board12Held, board17, boardDock, boardS17, boardS20, boardS23, boardS33, boardS37, boardS41 } from '../../board-fixtures';
+import { board11, board12, board12Held, board17, boardDock, boardS17, boardS20, boardS23, boardS33, boardS36, boardS37, boardS41, engineStopped } from '../../board-fixtures';
 import type { DockBoard } from '../../board-fixtures';
 
 const MOCK = { url: '/__boards/screen.html?s=bot11', note: 'the approved v7 board itself, drawn from its source' };
@@ -31,6 +31,33 @@ const bots: Story = {
       note: 'board 12: the open Bots sidebar (the "+", the boopis bot, the bots\' rows, the room\'s row open, you, Store, Settings), the title pill with the members, the room\'s thread (mentions, bylines and gutter orbs, the system line, the message to you, the approval, who is replying) and the one-row composer with its line',
       app: {
         provider: { sessions: 'none', patch: board12 },
+        setup: async (c: AppCtx) => {
+          c.hx.setState({ tab: 'bots', left: 'open', right: 'closed' });
+          await c.wait(300);
+          await c.click('#hx-list-bots [data-gid="room-release"]');
+          await c.wait(900);
+        }
+      }
+    } satisfies State,
+    /* derived from board S36 (no board draws these): the engine stopped while a bot's chat or a room is open */
+    'the engine stopped, in a bot\'s chat (derived from S36)': {
+      tags: ['error', 'owner'],
+      note: 'derived from board S36: under a bot\'s thread, the same line, "boopis\'s engine stopped", with "Start it again"',
+      app: {
+        provider: { sessions: 'none', patch: engineStopped(board17) },
+        setup: async (c: AppCtx) => {
+          c.hx.setState({ tab: 'bots', left: 'rail', right: 'closed' });
+          await c.wait(300);
+          c.hx.emit('hx:bot-select', { id: 'kai', from: 'lab' });
+          await c.wait(900);
+        }
+      }
+    } satisfies State,
+    'the engine stopped, in a room (derived from S36)': {
+      tags: ['error', 'owner'],
+      note: 'derived from board S36: under a room\'s thread, the same line',
+      app: {
+        provider: { sessions: 'none', patch: engineStopped(board12) },
         setup: async (c: AppCtx) => {
           c.hx.setState({ tab: 'bots', left: 'open', right: 'closed' });
           await c.wait(300);
@@ -69,7 +96,7 @@ const bots: Story = {
 };
 
 const sessions: Story = {
-  id: 'boards/sessions', title: 'Boards: the Sessions tab', area: 'composer', kind: 'page', covers: ['page:board-S17', 'page:board-S20', 'page:board-S23', 'page:board-S33', 'page:board-S37', 'page:board-S41'], mock: { url: '/__boards/screen.html?s=newSess&mk=a&usage=1', note: MOCK.note },
+  id: 'boards/sessions', title: 'Boards: the Sessions tab', area: 'composer', kind: 'page', covers: ['page:board-S17', 'page:board-S20', 'page:board-S23', 'page:board-S33', 'page:board-S36', 'page:board-S37', 'page:board-S41'], mock: { url: '/__boards/screen.html?s=newSess&mk=a&usage=1', note: MOCK.note },
   states: {
     'S17 a new session': {
       tags: ['typical', 'owner'],
@@ -123,6 +150,20 @@ const sessions: Story = {
       note: 'board S23: the turn ended: "Worked for 59s: ...", the answer with its guess marked, the changed files with Open diff, the checkpoint row (Checkpoint 3, Undo, Edit from here, Fork; the model, the time, the cost), the lapsed blank as a question with its answers',
       app: {
         provider: { patch: boardS23 },
+        setup: async (c: AppCtx) => {
+          c.hx.setState({ tab: 'session', left: 'open', right: 'closed' });
+          await c.wait(300);
+          await c.click('[data-kit~="ListRow"][data-id="s17-dock"]');
+          await c.wait(900);
+          (document.activeElement as HTMLElement | null)?.blur();   /* the board draws the composer at rest */
+        }
+      }
+    } satisfies State,
+    'S36 the engine stopped': {
+      tags: ['error', 'owner'],
+      note: 'board S36: the engine stopped mid-session: after your message, one line in red, "boopis\'s engine stopped", with "Start it again"',
+      app: {
+        provider: { patch: boardS36 },
         setup: async (c: AppCtx) => {
           c.hx.setState({ tab: 'session', left: 'open', right: 'closed' });
           await c.wait(300);

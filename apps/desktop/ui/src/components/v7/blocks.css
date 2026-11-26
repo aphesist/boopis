@@ -189,7 +189,8 @@
 /* S33 (sessiontab.js `s8`): the extra cost in mono, 6 more after the words */
 .k7-sys__meta { flex: none; margin-inline-start: var(--gap-s); }
 .k7-sys__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.k7-sys[data-variant="error"] .k7-sys__text { color: var(--red-text); }
+/* S36 (sessiontab2.js `s18`): what went wrong is the line's own colour, its glyph with its words; the action keeps its ink */
+.k7-sys[data-variant="error"] { color: var(--red-text); }
 .k7-sys[data-act] { height: var(--line-h-act); padding: 0 var(--pad-line-act) 0 var(--sp-3); }
 .k7-sys[data-act] > .k7-btn:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
 .k7-sys[data-act] > .k7-btn { height: var(--line-h); padding: 0 var(--sp-3); margin-inline-start: var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-xs); }

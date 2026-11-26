@@ -35,6 +35,7 @@ import type { BoardView } from './group-board';
 import { atEnd, followZone } from '../chat/follow-zone';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 import { composeTools, mentionChips, micNeedsSetup, voiceNeedsSetup } from '../chat/compose';
+import { followEngine } from '../chat/engine';
 import { approvalCard } from './room';
 import { paintDetails } from './details';
 import { forgetLimit } from './group-details';
@@ -64,6 +65,7 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
   const log = el('div', { class: 'bt-log', role: 'log', 'aria-label': 'Group messages' });
   const boardEl = el('section', { class: 'bt-board', 'aria-label': 'Kanban board', hidden: true });
   col.append(log, boardEl);
+  followEngine(() => col);   /* derived from board S36, as in a bot's chat */
   scroll.append(col);
   const zone = el('div', { class: 'bt-composer-zone' });
   const hint = el('div', { class: 'bt-zone-slot', hidden: true }), queue = el('div', { class: 'bt-zone-slot', hidden: true }), slot = el('div', { class: 'bt-composer' });

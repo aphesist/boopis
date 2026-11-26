@@ -5,7 +5,8 @@ import { createLiveProvider } from './live-provider';
 import type { LiveProvider } from './live-provider';
 import { GatewayClient } from './gateway';
 import { loadPlan, registerPlanSource } from './free-tier';
-import { inTauri, tauriBridge } from './bridge';
+import { asHostError, inTauri, tauriBridge } from './bridge';
+import { commands } from './bindings';
 import type { DataProvider } from '../data/provider';
 
 export async function connectLive(profile: string | null = null): Promise<DataProvider> {
@@ -13,6 +14,7 @@ export async function connectLive(profile: string | null = null): Promise<DataPr
   const client = new GatewayClient(tauriBridge());
   await client.connect(profile);
   registerPlanSource(() => loadPlan(client));   /* Settings and Diagnostics ask Hermes about the plan through this connection */
-  const provider: LiveProvider = createLiveProvider({ client, linkTo: async (name) => { const c = new GatewayClient(tauriBridge()); await c.connect(name); return c; } });
+  const restartEngine = async (): Promise<void> => { try { await commands.hermesRetry(profile); } catch (e) { throw asHostError(e); } };
+  const provider: LiveProvider = createLiveProvider({ client, restartEngine, linkTo: async (name) => { const c = new GatewayClient(tauriBridge()); await c.connect(name); return c; } });
   return provider;
 }

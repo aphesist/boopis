@@ -354,6 +354,15 @@ export interface SchedulesSource {
   setPaused(id: string, paused: boolean): void;
 }
 
+/* ───────── boopis's engine ───────── */
+/** whether boopis's engine can be reached: `stopped` once the link to it was lost and it did not come back at once, or it cannot be used
+    as it is; `why` is the host's sentence; `restarting` while a restart asked for here has not been answered */
+export interface EngineState { stopped: boolean; restarting: boolean; why: string | null }
+/** the engine's link, for what a thread says when it stops mid-session (board S36: "boopis's engine stopped", Start it again). A
+    provider with no engine of its own (the page build's mock) has none. `restart` asks the host to start it again now; absent where
+    the host cannot, and the line then shows without its action */
+export interface EngineSource { state: Watch<EngineState>; restart?: () => Promise<void> }
+
 /* ───────── helpers the composer asks for ───────── */
 export interface FeedforwardSource { catalog(): readonly DecisionKind[] }
 /** the mic: what a person says, written into the composer's text. A capability: a provider has it once a speech model can hear */
@@ -417,6 +426,8 @@ export interface DataProvider {
   run: RunSource;
   schedules: SchedulesSource;
   feedforward: FeedforwardSource;
+  /** the link to boopis's engine (absent where there is none: the page build) */
+  engine?: EngineSource;
   /** dictation (the mic), once a speech model can hear it (absent until then: the mic then says what it needs, modules/chat/compose.ts
       `micTool`). The desktop app has no transcription yet, so its provider has none; the page build's mock invents a transcript */
   dictation?: DictationSource;

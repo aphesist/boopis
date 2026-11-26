@@ -324,6 +324,23 @@
       ],
       "note": "S33 is the reference for the line a changed setting leaves (the sliders glyph, the words, the extra cost in mono at its end) and for the composer under it; the line is measured where the app draws it, 32 lower than the board's. The thread around it is S20's and S23's: the app's finished turn keeps its foot (the model and its time; S23), and its running turn has its work line and the turn's clock, which S33's still leaves out. The turn runs, so the composer carries Stop (owner, 25 November). The fixture's cost is the board's \"+$0.04\"; the live app says the tokens read again without the cache, because nothing holds a price for a model yet."
     },
+    "S36-engine": {
+      "title": "Board S36: the engine stopped mid-session: the line with \"Start it again\"",
+      "board": "screen.html?s=s18&opt=a",
+      "image": "session/S36-error-engine-stopped-{theme}.jpg",
+      "story": "boards/sessions",
+      "state": "S36 the engine stopped",
+      "wait": 1500,
+      "regions": {
+        "chrome": [0, 0, 1440, 56],
+        "sidebar": [0, 56, 300, 844],
+        "engine line": [540, 294, 600, 44, 0, 32],
+        "composer": [300, 726, 1140, 92],
+        "dock": [300, 818, 1140, 82]
+      },
+      "scope": ["chrome", "sidebar", "engine line", "composer", "dock"],
+      "note": "S36 is the reference for the line a stopped engine leaves at the end of the thread (the red glyph and words, the tint button) and for the composer under it; the line is measured where the app draws it, 32 lower than the board's. The thread above it is S23's: the app's finished turn keeps its foot (the model and its time), and its work line stands where S23 draws it, which S36's still leaves out. The fixture's engine is its own (the page build has none): its restart brings it back."
+    },
     "S37-nomodel": {
       "title": "Board S37: no model: the mark asleep, \"+ Choose a model\", the block offering the sign-ins, \"Choose a model to start\"",
       "board": "screen.html?s=s18&opt=b",

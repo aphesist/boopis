@@ -23,6 +23,7 @@ import { checkClips, watchClips } from './clips';
 import { atEnd, followZone } from '../chat/follow-zone';
 import { paintDetails } from './details';
 import { composeTools, later, mentionChips, micNeedsSetup, voiceNeedsSetup } from '../chat/compose';
+import { followEngine } from '../chat/engine';
 import { outsideDescription, outsideRoomMark } from './outside';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 
@@ -75,6 +76,7 @@ function buildRoom(): void {
      19 November) and New session with a live bot. They sit on one quiet line over the thread, only when there is one to show */
   const top = el('div', { class: 'bt-topline', hidden: true });
   col.append(top, log);
+  followEngine(() => col);   /* derived from board S36: the engine stopped: the line that says so, and starts it again, under the thread */
   S.pActs = top;
   scroll.append(col);
   const zone = el('div', { class: 'bt-composer-zone' });

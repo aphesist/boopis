@@ -29,6 +29,8 @@ export interface LinkState {
   phase: LinkPhase;
   /** true on the `ready` that follows a loss: events were replayed */
   reconnected: boolean;
+  /** how many times in a row the host failed to reach the gateway again (0 on the loss itself: the first retry is immediate) */
+  attempts: number;
   error: { code: string; message: string } | null;
 }
 
@@ -76,7 +78,7 @@ export class GatewayClient {
   private readonly eventSubs = new Set<(e: GatewayEvent) => void>();
   private readonly stateSubs = new Set<(s: LinkState) => void>();
   private serverHandler: ((r: ServerRequest) => Promise<unknown> | unknown) | null = null;
-  private current: LinkState = { phase: 'connecting', reconnected: false, error: null };
+  private current: LinkState = { phase: 'connecting', reconnected: false, attempts: 0, error: null };
   describe: unknown = null;
 
   constructor(private readonly bridge: HostBridge) {}
@@ -144,8 +146,8 @@ export class GatewayClient {
 
   private onEventFrame(ev: GatewayEvent): void {
     if (ev.type === 'connection.state') {
-      const p = (ev.payload ?? {}) as { state?: LinkPhase; reconnected?: boolean; error?: { code: string; message: string } | null };
-      this.current = { phase: p.state ?? this.current.phase, reconnected: p.reconnected === true, error: p.error ?? null };
+      const p = (ev.payload ?? {}) as { state?: LinkPhase; reconnected?: boolean; attempts?: number; error?: { code: string; message: string } | null };
+      this.current = { phase: p.state ?? this.current.phase, reconnected: p.reconnected === true, attempts: typeof p.attempts === 'number' ? p.attempts : 0, error: p.error ?? null };
       for (const fn of [...this.stateSubs]) fn(this.current);
     }
     for (const fn of [...this.eventSubs]) {

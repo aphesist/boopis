@@ -69,6 +69,45 @@ describe('the live provider: sessions', () => {
   });
 });
 
+describe('the live provider: the engine\'s link (board S36)', () => {
+  const lost = { code: 'hx.engine.unavailable', message: 'boopis\'s engine is not answering.' };
+  it('a loss the host mends at once is never said; one it could not mend is "stopped" until the link is ready again', () => {
+    const e = provider.engine;
+    if (!e) throw new Error('the live provider has an engine');
+    expect(e.state.get()).toEqual({ stopped: false, restarting: false, why: null });
+    host.event('connection.state', '', { state: 'degraded', attempts: 0, error: lost });   /* the loss: the first retry is immediate */
+    expect(e.state.get().stopped).toBe(false);
+    host.event('connection.state', '', { state: 'ready', reconnected: true });
+    expect(e.state.get().stopped).toBe(false);
+    host.event('connection.state', '', { state: 'degraded', attempts: 0, error: lost });
+    host.event('connection.state', '', { state: 'degraded', attempts: 1, error: lost });   /* the retry failed */
+    expect(e.state.get()).toEqual({ stopped: true, restarting: false, why: lost.message });
+    host.event('connection.state', '', { state: 'ready', reconnected: true });
+    expect(e.state.get()).toEqual({ stopped: false, restarting: false, why: null });
+    host.event('connection.state', '', { state: 'incompatible', attempts: 0, error: { code: 'hx.engine.incompatible', message: 'Hermes is too old.' } });   /* the host gave up */
+    expect(e.state.get()).toEqual({ stopped: true, restarting: false, why: 'Hermes is too old.' });
+  });
+  it('has no restart where no host can (the action is then not drawn); with one, it asks the host and waits for the link to say how it went', async () => {
+    expect(provider.engine?.restart).toBeUndefined();
+    let asked = 0;
+    const p2 = createLiveProvider({ defaultFolder: '/work/proj', client, now: () => NOW, mock: createMockProvider({ simulate: false }), restartEngine: () => { asked++; return Promise.resolve(); } });
+    await p2.ready;
+    const e = p2.engine;
+    if (!e?.restart) throw new Error('a restart was given');
+    host.event('connection.state', '', { state: 'degraded', attempts: 2, error: lost });
+    await e.restart();
+    expect(asked).toBe(1);
+    expect(e.state.get()).toMatchObject({ stopped: true, restarting: true });
+    await e.restart();                                   /* a second press while it is asked does nothing */
+    expect(asked).toBe(1);
+    host.event('connection.state', '', { state: 'degraded', attempts: 1, error: lost });   /* it failed again */
+    expect(e.state.get()).toMatchObject({ stopped: true, restarting: false });
+    await e.restart();
+    host.event('connection.state', '', { state: 'ready', reconnected: true });
+    expect(e.state.get()).toEqual({ stopped: false, restarting: false, why: null });
+  });
+});
+
 describe('the live provider: the conversation stream, from recorded frames', () => {
   it('turns a recorded prompt into turn, step, streamed text and finish events, in order', async () => {
     const conv = provider.sessions.conversation(SESSION);

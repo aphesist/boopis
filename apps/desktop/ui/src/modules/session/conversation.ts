@@ -33,6 +33,7 @@ import type { RewindSheet } from './s0';
 import { mountNew } from './new';
 import type { NewScreen } from './new';
 import { openModel, openCarefulFor, openEffort, openFolder, launchView } from './launch';
+import { followEngine } from '../chat/engine';
 import { approvalCard, askShape, footOf, isOpen, lapsedCard, sayTurn, statusOf, stepRows, toolRow, workLine } from './turn';
 import type { AskState } from './turn';
 
@@ -561,6 +562,7 @@ export function mountView(root: HTMLElement): void {
   VIEW.col.addEventListener('keydown', onTurnKey);
   wireRefs(VIEW.col, { bot: () => null });
   VIEW.col.addEventListener('focusin', (e) => { const t = (e.target as Element).closest<HTMLElement>('[data-hx-turn]'); if (t && e.target === t) rove(t); });
+  followEngine(() => VIEW.col);   /* board S36: the engine stopped mid-session: the thread ends with the line that says so and starts it again */
   const first = sessions().list.get()[0];
   if (first) VIEW.current = first.id;
   /* the app opens on a new session: the row of the session that was last worked in keeps its mark */
@@ -596,7 +598,7 @@ export function mountView(root: HTMLElement): void {
     draft: sessions().draft(), sessionId: () => VIEW.current,
     waits: () => !!waitingAsk(),
     /** what the placeholder says of the thread: a change waits for your answer, the last turn ended, or nothing yet */
-    after: () => { const last = [...TURNS.values()].pop(); return !!last && last.status !== 'running'; },
+    after: () => { const last = conv().snapshot().turns.at(-1); return !!last && last.role === 'assistant' && last.status !== 'running'; },   /* your own message with no answer yet is not an ended turn (S36: "Message") */
     send: (text, meta) => {
       /* typing while a change waits declines it with these words (S09); the words are then the next message */
       declineWith(text);
