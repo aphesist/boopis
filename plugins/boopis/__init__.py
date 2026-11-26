@@ -77,6 +77,7 @@ RPC_METHODS = (
     "rules.draft",
     "rules.explain",
     "rules.reviewer.rank",
+    "rules.grant",
     "store.prepare",
     "store.confirm",
     "store.uninstall",

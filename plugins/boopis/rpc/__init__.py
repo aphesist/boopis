@@ -78,6 +78,7 @@ CAPABILITIES = (
     "rules.draft",
     "rules.explain",
     "rules.reviewer.rank",
+    "rules.grant",
 )
 DEFAULT_TAIL_LIMIT = 200
 MAX_TAIL_LIMIT = 1000

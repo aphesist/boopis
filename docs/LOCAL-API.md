@@ -71,7 +71,7 @@ Every success is `200` with a JSON object. Every failure is the error object abo
 | `GET /v1/presence` | | `{presence: [Presence], last_event_id}`: the snapshot. Read it, then follow `/v1/events` from `last_event_id` |
 | `GET /v1/notifications?after=<id>&limit=<n>` | | `{notifications: [Notification]}`, oldest first, at most 200 |
 | `GET /v1/approvals?all=1` | | `{approvals: [Approval]}`: the ones waiting; with `all=1` also those answered or expired in the last 10 minutes |
-| `POST /v1/approvals/<id>` | `{choice: "once" \| "deny", execution_generation?}` | `{approval}`. See below |
+| `POST /v1/approvals/<id>` | `{choice: "once" \| "deny" \| "session" \| "always", execution_generation?}` (the last two on a boopis rule's card only) | `{approval}`. See below |
 | `GET /v1/bots/<name>/conversation?session=latest\|<stored id>&limit=<n>` | | `{profile, session_id, messages: [Message], older, last_event_id}`: the conversation as the app shows it, oldest first |
 | `POST /v1/bots/<name>/say` | `{text, session?: "latest" \| "new" \| "<stored id>"}` | `{said: {profile, session_id, created}}` |
 | `POST /v1/bots/<name>/retry` | `{session?: "latest" \| "<stored id>"}` | `{retried: {profile, session_id, created: false}}`: the conversation's last turn is taken back and the owner's last message is sent again, the engine's own retry. See below |
@@ -104,13 +104,13 @@ Every success is `200` with a JSON object. Every failure is the error object abo
 **The owner's mention.** The engine reserves no handle for the human: it names the human `user` in every member's prompt (`User (user): ...`), matches mentions with `@([A-Za-z0-9][A-Za-z0-9._:-]*)` case-insensitively, and resolves `@all` and `@everyone` to the members. So a member's message addresses the owner when it mentions `@user` and no member of the room holds that handle (`@user.` names the handle `user.`, which is nobody). The rule is data, `apps/shared/data/room-mentions.json`, read by the host (`rooms/mentions.rs`) and by the app's room, so both say the same.
 
 **`Approval`**: `{id, profile, session_id, prompt_id, execution_generation, command, description, choices, answerable_with, timeout_s, origin: {model, tool}, governed, state, answered_by, asked_at}`.
-- `id` is the prompt's id. `choices` are what the engine offered. `answerable_with` is what boopis accepts from outside its window: **`once` and `deny` only**.
+- `id` is the prompt's id. `choices` are what the engine offered. `answerable_with` is what boopis accepts from outside its window: **`once` and `deny`**, and on a card the rules engine raised also `session` and `always` (B47 H6, ADR-0062).
 - `state`: `pending`, `answering`, `settled`, `expired`. `answered_by`: `{surface, choice, at}` once someone has answered (`surface` is `gui`, the app's window, or `endpoint`, this API; never a name).
 - A row exists only because the engine asked: from an `approval.request` event on a boopis link, or from the poll of a waiting session (`approval.pending`, with the generation and time limit read off that session's ring). An approval whose generation cannot be found is not offered.
 
 **Answering.** The rules are boopis's own, the same as its window's card:
 1. **First answer wins.** The row moves from `pending` to `answering` before the engine is called. A second answer gets `409 already_answered`, saying whether the first came from the app or from the local API. If the engine fails or refuses, the row goes back to `pending` for another client; if the engine says it was already settled, the row closes as settled by someone else. A race with the boopis window is settled by the engine's own atomic resolve.
-2. **`once` or `deny` only.** `session` and `always` (a standing grant) are `403 policy_refused` whether the bot is governed or not: grant them in boopis. The choice must be one the engine offered for that row (`400 choice_not_offered`).
+2. **`once` or `deny`; on a boopis rule's card also `session` and `always`** (B47 H6). On a rules card (its text names a rule: "Rule: “…”"), `session` allows that rule's matches for the rest of the turn (the plugin's key is scoped to the turn), and `always` is delivered to the engine as `once` while the drafted exception is kept **as a draft**, never applied until the owner finishes it in Settings. On any other approval `session` and `always` are `403 policy_refused`: grant them in boopis. The choice must be one the engine offered for that row (`400 choice_not_offered`).
 3. **The generation must be the row's** if you send it (`409 stale_generation`); omit it to use the row's.
 4. **Nothing is automatic.** No default choice (`400 choice_required`), no "all", no timeout that approves: an unanswered approval expires.
 5. **Every answer is recorded** with who gave it (the audit file) and in the `approvals.changed` event.

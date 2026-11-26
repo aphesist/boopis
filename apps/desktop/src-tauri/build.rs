@@ -114,6 +114,8 @@ const COMMANDS: &[&str] = &[
     "team_plan_reject",
     "team_plan_undo",
     "house_jobs",
+    "parked_list",
+    "parked_answer",
 ];
 
 fn main() {

@@ -200,7 +200,12 @@ class Runtime:
         root = self.root
 
         def parker(call: Any, session: Any, matched: Any, held: str) -> None:
-            park(root, call, session, matched, held)
+            from . import activity
+            from .rules.data import load
+            from .rules.gate import summary
+
+            pid = park(root, call, session, matched, held)
+            activity.rule_refused(call.session_id or "", [r.id for r in matched], summary(call, load()), pid)
 
         return parker
 

@@ -70,6 +70,8 @@ pub const CONSENTED: &[&str] = &[
 ];
 const SETTINGS: &str = "plugins.entries.boopis.settings";
 const ROOMS: &str = "hosted_rooms.profiles";
+/// Who may answer a bot's approvals on a chat platform: `[]`, the requester and the platform's admins (H6).
+const APPROVERS: &str = "approvals.approvers";
 
 /// What `prepare` and `repair` ask of the engine, behind a trait so the tests run them over a temporary home.
 #[async_trait]
@@ -551,6 +553,13 @@ async fn config_writes(
         writes.extend(provider_writes(&view.providers, provider, mine.as_ref()));
     }
     let roots = !writes.is_empty();
+    // H6 (ADR-0062): on a chat platform the engine bridges, only the requester and the platform's admins answer this bot's
+    // approvals; the engine's default `["*"]` lets any admitted member answer for the owner.
+    match engine.config_get(home, APPROVERS).await {
+        Ok(Some(v)) if v == json!([]) => {}
+        Ok(_) => writes.push((APPROVERS.to_owned(), json!([]))),
+        Err(e) => done.problems.push(done_problem(APPROVERS, &e)),
+    }
     let settings = have
         .plugins
         .as_ref()

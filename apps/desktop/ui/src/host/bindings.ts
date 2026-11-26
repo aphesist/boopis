@@ -487,6 +487,19 @@ export const commands = {
 	teamPlanUndo: (planHash: string, options?: InvokeOptions) => __TAURI_INVOKE<Json>("team_plan_undo", { planHash }, options),
 	/**  The house bot's jobs: one (`job_id`) or the open ones, as `{jobs: [{id, title, state, steps, spend, started, at}]}`. */
 	houseJobs: (jobId: string | null, options?: InvokeOptions) => __TAURI_INVOKE<Json>("house_jobs", { jobId }, options),
+	/**
+	 *  The parked steps: a scheduled run's step a rule refused, waiting for the owner, as `{parked: [{id, bot, profile,
+	 *  session_id, summary, action, rules, held, at, expires_at, choices}]}` (never the step's arguments). Expired ones go.
+	 */
+	parkedList: (options?: InvokeOptions) => __TAURI_INVOKE<Json>("parked_list", undefined, options),
+	/**
+	 *  Answer a parked step: `deny` deletes it and nothing runs; `once` re-runs it in the run's own session with a one-time
+	 *  grant for exactly that step; `always` does the same and keeps the narrowest exception as a draft for Settings. Returns
+	 *  `{state: "denied"}` or `{state: "rerun", session_id, resumed, draft_id}`.
+	 * 
+	 *  Errors: `hx.invalid_params` for an unknown step or choice; `hx.engine.unavailable` when the re-run could not start.
+	 */
+	parkedAnswer: (id: string, choice: string, options?: InvokeOptions) => __TAURI_INVOKE<Json>("parked_answer", { id, choice }, options),
 };
 
 /** Events */
@@ -499,6 +512,7 @@ export const events = {
 	plansChangedEvent: makeEvent<PlansChangedEvent, PlansChangedEvent>("plans-changed-event"),
 	providerSigninEvent: makeEvent<ProviderSigninEvent, ProviderSigninEvent>("provider-signin-event"),
 	roomHeldEvent: makeEvent<RoomHeldEvent, RoomHeldEvent>("room-held-event"),
+	rulesChangedOutsideEvent: makeEvent<RulesChangedOutsideEvent, RulesChangedOutsideEvent>("rules-changed-outside-event"),
 	setupProgress: makeEvent<SetupProgress, SetupProgress>("setup-progress"),
 	windowStateEvent: makeEvent<WindowStateEvent, WindowStateEvent>("window-state-event"),
 };
@@ -2812,6 +2826,15 @@ export type Rule =
 "nvidia_wayland_fixed" | 
 /**  The session type could not be told: nothing is assumed. */
 "session_unknown";
+
+/**
+ *  The rules list was changed outside boopis (`rules-engine.md` 11: the content's digest is not the one the host wrote).
+ *  Settings reads `rules_get` (`changed_outside`) and offers to keep or discard it; further changes wait until then.
+ */
+export type RulesChangedOutsideEvent = {
+	/**  The new content's digest (SHA-256 of the bytes). */
+	digest: string,
+};
 
 /**  The session the webview will draw into. */
 export type Session = 

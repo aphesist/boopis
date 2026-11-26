@@ -4,6 +4,8 @@ them writes ``rules.json``: the host is its only writer (its Tauri commands, fro
 - ``rules.draft {session_id, description}``: "Always allow" on a card; the narrowest exception, written nowhere.
 - ``rules.explain {bot, tool, args, cwd?}``: a dry check of one call (Settings' "Try it", the tests); makes no card. A
   reviewer call is made only with ``review: true``.
+- ``rules.grant {session_id, parked_id, grant}``: the host's re-run of a parked step (section 8.3): the step may run
+  once in that session. ``grant`` is a one-time owner grant, redeemed with the host (``grant.redeem``) before anything.
 - ``rules.reviewer.rank {}``: the connected models ranked by the cost of a standard check (the cheapest is the reviewer
   in ``auto`` mode); the unpriced ones listed apart.
 """
@@ -13,7 +15,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, cast
 
-from ..errors import InvalidParamsError
+from ..errors import InvalidParamsError, OwnerGrantRequiredError
 
 CAPABILITY = "rules-v1"
 
@@ -83,8 +85,27 @@ def rules_reviewer_rank(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
     return rank(book, models)
 
 
+def rules_grant(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
+    from ..hostops import HostOps, HostOpsError
+    from .grants import install, parked_step
+
+    sid, parked_id, grant = params.get("session_id"), params.get("parked_id"), params.get("grant")
+    if not all(isinstance(v, str) and v for v in (sid, parked_id, grant)):
+        raise InvalidParamsError("session_id, parked_id and grant are required")
+    try:
+        HostOps().ask("grant.redeem", {"grant": grant, "purpose": "rules.grant"}, key=f"rules.grant/{parked_id}")
+    except HostOpsError as exc:
+        raise OwnerGrantRequiredError(f"only the owner approves a parked step ({exc.code})") from None
+    step = parked_step(_runtime().root, cast("str", parked_id))
+    if step is None:
+        raise InvalidParamsError("there is no such parked step")
+    install(cast("str", sid), step)
+    return {"ok": True, "tool": step.get("tool"), "action": step.get("action")}
+
+
 HANDLERS = {
     "rules.draft": rules_draft,
     "rules.explain": rules_explain,
     "rules.reviewer.rank": rules_reviewer_rank,
+    "rules.grant": rules_grant,
 }

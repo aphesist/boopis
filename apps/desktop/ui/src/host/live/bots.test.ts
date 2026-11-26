@@ -703,6 +703,32 @@ describe('a conversation with a teammate is a session of its own profile', () =>
     expect(events.find((e) => e.type === 'message-resolved')).toMatchObject({ resolved: 'approved' });
     expect(botOf(bots, 'atlas')!.attention).toBeNull();
   });
+  it('a thread card takes the dock’s standing answers: turn is session, always is once and keeps a draft', async () => {
+    for (const [answer, choice] of [['turn', 'session'], ['always', 'once'], ['denied', 'deny']] as const) {
+      const h = new FakeHermes();
+      const drafts: unknown[][] = [];
+      const rules = {
+        plugin: async (method: string, params: Record<string, unknown>) => { drafts.push([method, params]); return { text: 'Allow make deploy for atlas', excepts: ['user.1'] }; },
+        host: { get: async () => ({ rules: { revision: 4 } }), put: async (rule: unknown, rev: number) => { drafts.push(['put', rule, rev]); return { id: 'x1' }; } }
+      };
+      const bots = createLiveBots({ client: h.main as unknown as GatewayClient, linkTo: h.linkTo, now: () => NOW, pollMs: null, bridge: null, rules });
+      const events: BotsEvent[] = [];
+      bots.source.subscribe((e) => events.push(e));
+      await bots.ready; await bots.settled();
+      bots.source.send('atlas', 'deploy', 'bots');
+      await tickAll();
+      bots.source.decide('atlas', 'ap-a1', answer);
+      await tickAll();
+      expect(h.links.get('atlas')!.calls.find((c) => c.method === 'approval.respond')!.params).toMatchObject({ choice });
+      expect(events.find((e) => e.type === 'message-resolved')).toMatchObject({ resolved: answer === 'denied' ? 'denied' : 'approved' });
+      if (answer === 'always') {
+        expect(drafts[0]).toEqual(['rules.draft', { session_id: 'gw-atlas', description: 'ships it' }]);
+        expect(drafts[1]).toMatchObject(['put', { state: 'draft', type: 'exception' }, 4]);
+      } else {
+        expect(drafts).toEqual([]);
+      }
+    }
+  });
   it('stops the reply with session.interrupt, and only while one is running', async () => {
     const { h, bots } = await open();
     expect(bots.source.stop('atlas')).toBe(false);

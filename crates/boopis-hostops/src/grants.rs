@@ -13,7 +13,12 @@ use crate::Refusal;
 pub const TTL_MS: u64 = 60_000;
 
 /// What a grant may be for: the plugin RPCs that loosen a rule.
-pub const PURPOSES: &[&str] = &["bots.write.approvals", "bots.write.cap", "budget.set"];
+pub const PURPOSES: &[&str] = &[
+    "bots.write.approvals",
+    "bots.write.cap",
+    "budget.set",
+    "rules.grant",
+];
 
 /// The grants not yet used.
 #[derive(Debug, Default)]

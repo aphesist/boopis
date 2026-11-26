@@ -31,6 +31,8 @@ import type { GatewayClient, GatewayEvent } from '../gateway';
 import { whenLabel } from '../map';
 import { isUnknownMethod } from './wire';
 import { createBotChat } from './bot-chat';
+import { keepDraft } from './rules';
+import type { RulesDeps } from './rules';
 import { botFrom, botName, capabilitiesFrom, isArchived, jobFrom, modelLabel, sessionFrom, sortJobs, splitModel } from './map-bots';
 import type { Known, PluginBot } from './map-bots';
 
@@ -48,6 +50,8 @@ export interface BotsDeps {
   bridge?: BotsBridge | null;
   /** shows the one notice the host's repair left (a toast in the app) */
   notify?: (text: string) => void;
+  /** the rules engine's seam (host/live/rules.ts): a thread card's "Always allow" keeps its draft through it */
+  rules?: RulesDeps;
 }
 export interface LiveBots {
   source: BotsSource;
@@ -115,7 +119,8 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
   const chat = createBotChat({
     link: (id) => link(id), emit: (ev) => { events.emit(ev); }, now,
     live(id, st) { const r = recs.get(id); if (!r) return; if (st) r.live = st; else delete r.live; events.emit({ type: 'bot', bot: toBot(r) }); },
-    changed(id) { const r = recs.get(id); if (r?.loaded) void track(loadLinked(id, r)); }
+    changed(id) { const r = recs.get(id); if (r?.loaded) void track(loadLinked(id, r)); },
+    ...(deps.rules ? { keepDraft: (sid: string, description: string) => keepDraft(deps.rules as RulesDeps, sid, description) } : {})
   });
 
   /* ───────── a teammate's own link ───────── */

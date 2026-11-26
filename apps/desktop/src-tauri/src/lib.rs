@@ -179,6 +179,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::team_plan_reject,
             commands::team_plan_undo,
             commands::house_jobs,
+            commands::parked_list,
+            commands::parked_answer,
         ])
         .events(collect_events![
             ConnectionStateEvent,
@@ -190,7 +192,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             EngineUpdateEvent,
             RoomHeldEvent,
             commands::ConnectorRestartEvent,
-            house::PlansChangedEvent
+            house::PlansChangedEvent,
+            rules::RulesChangedOutsideEvent
         ])
 }
 
@@ -648,6 +651,23 @@ pub fn run() {
                 Arc::new(local_api::owner::SystemCheck::new(peers.clone())),
             );
             let api_feed = local_api.feed().clone();
+            // H6: an "Always" answer from outside the window keeps its drafted exception through the app's own rules writer,
+            // as a draft, so the writer's record of what it wrote stays true.
+            let rules_host = Arc::new(rules::RulesHost::default());
+            {
+                let (keeper, root) = (rules_host.clone(), supervisor.environment().hermes_root());
+                local_api.service().set_draft_keeper(Arc::new(move |rule| {
+                    if let Err(e) = keeper.keep_draft(&root, &rule) {
+                        tracing::info!(error = %e, "an Always answer's draft exception could not be kept");
+                    }
+                }));
+            }
+            // A change to the rules made outside boopis is said to the windows once (rules-engine.md 11).
+            tauri::async_runtime::spawn(rules_host.clone().watch(
+                supervisor.environment().hermes_root(),
+                app.handle().clone(),
+                std::time::Duration::from_secs(5),
+            ));
             let update_gate = endpoint::Gate::default();
             // Dictation (ADR-0059). Nothing is opened, read or fetched here: the microphone and the speech model wait for
             // the person's first press. The model's name is read once (a change needs a restart).
@@ -680,7 +700,7 @@ pub fn run() {
                 carries_runtime,
                 connectors: std::sync::Mutex::default(),
                 bots: Arc::new(bots::engine::Service::new(supervisor.clone())),
-                rules: rules::RulesHost::default(),
+                rules: rules_host.clone(),
                 house: house.clone(),
                 store,
                 bundle: setup::install::Bundle::locate(

@@ -499,6 +499,11 @@ async fn a_governed_bot_turned_on_later_stays_governed() {
     let home = owners_home(&fake);
     let layout = layout_of(&home, Strategy::here());
     repair(&fake, &layout).await.unwrap();
+    // H6: a bot's approvals are answered on a chat platform only by the requester and the platform's admins
+    assert_eq!(
+        fake.get(&home.bot("kai"), "approvals.approvers"),
+        Some(json!([]))
+    );
     // the owner turns Governed on for kai (opus) in its settings; the app then prepares it
     fake.records.lock().unwrap().get_mut("kai").unwrap()["settings"]["gov"] = json!("governed");
     let mut view = RootView::read(&fake, &home.root).await.unwrap();

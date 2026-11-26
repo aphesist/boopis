@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-parked-answer"
+description = "Enables the parked_answer command without any pre-configured scope."
+commands.allow = ["parked_answer"]
+
+[[permission]]
+identifier = "deny-parked-answer"
+description = "Denies the parked_answer command without any pre-configured scope."
+commands.deny = ["parked_answer"]

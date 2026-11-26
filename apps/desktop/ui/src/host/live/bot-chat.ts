@@ -11,9 +11,9 @@
 
    The thread is the one session open. Starting over (`fresh`) or opening another replaces it; a bot that is replying is
    never switched away from, because its reply would land in the wrong thread. */
-import { ruleCard } from './rules';
+import { ruleCard, ruleChoice } from './rules';
 import { logger } from '../../core/log';
-import type { BotsEvent } from '../../data/provider';
+import type { BotDecision, BotsEvent } from '../../data/provider';
 import type { ApprovalMessage, NoteMessage, TextMessage, ThreadMessage } from '../../data/types';
 import type { TranscriptMessage } from '../../vendor/hermes-shared/gateway-contract.generated';
 import type { GatewayClient, GatewayEvent } from '../gateway';
@@ -32,6 +32,8 @@ export interface ChatDeps {
   live(botId: string, state: { state: string; activity: string; attention: string | null } | null): void;
   /** its recent sessions are read again (a session was made or grew) */
   changed(botId: string): void;
+  /** "Always allow" on a rules card: the narrowest exception kept as a draft (host/live/rules.ts `keepDraft`); absent outside the app */
+  keepDraft?: (sessionId: string, description: string) => Promise<unknown>;
 }
 
 interface Chat {
@@ -45,7 +47,7 @@ interface Chat {
   generation: number;
   /** while a session is being made or opened: a second message waits for it */
   busy: Promise<unknown> | null;
-  approvals: Map<string, { prompt: string; generation: number }>;
+  approvals: Map<string, { prompt: string; generation: number; description: string }>;
   /** the folder the session works in, as the engine said when it made or opened it (paths in its replies resolve there) */
   cwd: string | null;
 }
@@ -121,15 +123,21 @@ export function createBotChat(deps: ChatDeps) {
     return true;
   }
 
-  function decide(botId: string, messageId: string, decision: 'approved' | 'denied'): void {
+  /* The same answers the dock sends (host/live/rules.ts `ruleChoice`): `turn` is the engine's `session`, `always` is `once`
+     and then the drafted exception kept as a draft; anything unknown is a denial (fail closed). */
+  function decide(botId: string, messageId: string, answer: BotDecision): void {
     const c = chats.get(botId);
     const m = c?.thread.find((x): x is ApprovalMessage => x.kind === 'approval' && x.id === messageId);
     const route = c?.approvals.get(messageId);
     if (!c || !m || !route || !c.gw || m.resolved) return;
     const gw = c.gw;
+    const decision = ruleChoice(answer) === 'deny' ? 'denied' : 'approved';
     void deps.link(botId)
-      .then((l) => l.requestRaw('approval.respond', { session_id: gw, execution_generation: route.generation, prompt_id: route.prompt, choice: decision === 'approved' ? 'once' : 'deny' }))   /* the canonical shape the main provider uses */
-      .then(() => { settled(botId, c, messageId, decision); })
+      .then((l) => l.requestRaw('approval.respond', { session_id: gw, execution_generation: route.generation, prompt_id: route.prompt, choice: ruleChoice(answer) }))   /* the canonical shape the main provider uses */
+      .then(() => {
+        settled(botId, c, messageId, decision);
+        if (answer === 'always' && deps.keepDraft) deps.keepDraft(gw, route.description).catch((e: unknown) => { log.warn('the exception could not be drafted', e); });
+      })
       .catch((e: unknown) => { log.error('the answer was not delivered', e); note(botId, c, 'Your answer did not reach ' + botId + ': ' + why(e)); });
   }
   function settled(botId: string, c: Chat, messageId: string, decision: 'approved' | 'denied'): void {
@@ -237,7 +245,7 @@ export function createBotChat(deps: ChatDeps) {
         const mid = 'ap-' + id;
         if (c.thread.some((x) => x.id === mid)) break;
         const gen = typeof p['execution_generation'] === 'number' ? p['execution_generation'] : c.generation;
-        c.approvals.set(mid, { prompt: id, generation: gen });
+        c.approvals.set(mid, { prompt: id, generation: gen, description: what });
         /* a rules card carries its rule and its scope (host/live/rules.ts, ADR-0060) */
         const m: ApprovalMessage = { kind: 'approval', id: mid, who: botId, t: t(), data: { id: mid, title: command || what || 'Approval needed', quote: command, meta: what, from: botId, item: [], ...(ruleCard(what) ?? {}) } };
         add(botId, c, m);

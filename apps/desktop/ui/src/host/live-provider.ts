@@ -768,16 +768,17 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     }
   };
 
-  const liveBots = createLiveBots({ client, now, ...(opts.linkTo ? { linkTo: opts.linkTo } : {}), ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}), bridge: opts.botsBridge !== undefined ? opts.botsBridge : inTauri() ? tauriBotsBridge() : null, notify: (text) => { ui.toast.whenReady(text); } });
+  /* the rules engine's seam (ADR-0060): the dock and a bot's thread keep an "Always allow" draft through it */
+  const rulesDeps: RulesDeps = {
+    plugin: (method, params) => client.requestRaw('plugin.boopis.' + method, params),
+    host: inTauri() ? { get: () => commands.rulesGet(), put: (rule, revision) => commands.rulesPut(rule, revision) } : null
+  };
+  const liveBots = createLiveBots({ client, now, rules: rulesDeps, ...(opts.linkTo ? { linkTo: opts.linkTo } : {}), ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}), bridge: opts.botsBridge !== undefined ? opts.botsBridge : inTauri() ? tauriBotsBridge() : null, notify: (text) => { ui.toast.whenReady(text); } });
   Object.assign(details.unavailable, liveBots.unavailable);
   const liveGroups = createLiveGroups({ client, bots: () => liveBots.source.snapshot().bots, now, bridge: opts.roomsBridge !== undefined ? opts.roomsBridge : inTauri() ? tauriRoomsBridge() : null, ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}) });
   const liveStore = createLiveStore({ bridge: opts.storeBridge !== undefined ? opts.storeBridge : inTauri() ? tauriStoreBridge() : null, plugin: (method, params) => client.requestRaw('plugin.boopis.' + method, params) });
   /* the rules engine (ADR-0060): its standing answers are shown only once the plugin says it has it (host/live/rules.ts) */
   const later = new Set<LaterFeature>();
-  const rulesDeps: RulesDeps = {
-    plugin: (method, params) => client.requestRaw('plugin.boopis.' + method, params),
-    host: inTauri() ? { get: () => commands.rulesGet(), put: (rule, revision) => commands.rulesPut(rule, revision) } : null
-  };
   const ready = Promise.all([refreshList(), details.start().then(() => controls.start()), liveBots.ready, liveGroups.ready]).then(() => undefined);
   void ready.then(() => enableRules(rulesDeps, later));
   const flag = readFlag('feedforward');

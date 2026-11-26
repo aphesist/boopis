@@ -230,6 +230,10 @@ def decide(
     doc = session.rules
     if doc is None or session.bot is None:
         return row
+    from .grants import consume
+
+    if consume(call) is not None:
+        return None  # the owner approved this very step of a parked run (section 8.3): it passes the rules, once
     t = load()
     rows = (ROW_PREFIX + row.rule,) if row is not None and row.kind == "approve" else ()
     found = explain(call, session, defaults, doc, rows, llm=llm, redact=redact, tables=t)

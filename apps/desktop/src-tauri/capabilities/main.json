@@ -120,6 +120,8 @@
     "allow-team-plan-apply",
     "allow-team-plan-reject",
     "allow-team-plan-undo",
-    "allow-house-jobs"
+    "allow-house-jobs",
+    "allow-parked-list",
+    "allow-parked-answer"
   ]
 }

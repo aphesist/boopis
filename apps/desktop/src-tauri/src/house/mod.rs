@@ -8,6 +8,8 @@
 //! (`team_plan_apply`, `team_plan_undo`, `team_plan_reject`), and the command line's `team apply --hash` and `team undo`
 //! refuse a bot's process (H5).
 
+pub mod parked;
+
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -550,7 +552,7 @@ pub async fn held_cli(house: &House, args: &[&str]) -> std::result::Result<Value
         &words,
         &[("BOOPIS_SURFACE", "gui")],
         "",
-        Duration::from_secs(600),
+        Duration::from_mins(10),
     )
     .await?;
     if let Some(h) = v["plan_hash"].as_str() {

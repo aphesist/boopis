@@ -42,6 +42,9 @@ pub enum Kind {
     ToolEnd,
     /// A turn ended.
     TurnEnd,
+    /// A scheduled run's step was refused by a rule and parked for the owner (`rules-engine.md` 8.3); `tool` holds the
+    /// card's first words, `parked` the parked step's id.
+    RuleRefused,
 }
 
 /// One event, read and checked.
@@ -63,6 +66,8 @@ pub struct Pushed {
     pub failed: bool,
     /// The scheduled job the session runs for, when it is a scheduled run.
     pub cron: Option<String>,
+    /// The parked step's id (a `rule.refused` only).
+    pub parked: Option<String>,
 }
 
 fn id_ok(s: &str, max: usize) -> bool {
@@ -86,6 +91,7 @@ pub fn parse(bytes: &[u8]) -> Option<Pushed> {
         "tool.start" => Kind::ToolStart,
         "tool.end" => Kind::ToolEnd,
         "turn.end" => Kind::TurnEnd,
+        "rule.refused" => Kind::RuleRefused,
         _ => return None,
     };
     let s = |k: &str| {
@@ -115,6 +121,9 @@ pub fn parse(bytes: &[u8]) -> Option<Pushed> {
             .flatten(),
         failed: v.get("failed").and_then(Value::as_bool).unwrap_or(false),
         cron: Some(s("cron")).filter(|c| id_ok(c, 128)),
+        parked: (kind == Kind::RuleRefused)
+            .then(|| Some(s("parked")).filter(|c| id_ok(c, 64)))
+            .flatten(),
     })
 }
 
@@ -257,7 +266,21 @@ mod tests {
                 args: Some(json!({"path": "/home/o/repo/shots/03.json"})),
                 failed: false,
                 cron: None,
+                parked: None,
             }
+        );
+        let refused = parse(r#"{"v":1,"kind":"rule.refused","profile":"kai","session_id":"s1","tool":"Run a command · git push","rules":["default.git_cloud"],"parked":"0193a4b2-0000-7000-8000-000000000001","cron":"a1b2c3"}"#.as_bytes()).unwrap();
+        assert_eq!(
+            (
+                refused.kind,
+                refused.parked.as_deref(),
+                refused.tool.as_str()
+            ),
+            (
+                Kind::RuleRefused,
+                Some("0193a4b2-0000-7000-8000-000000000001"),
+                "Run a command · git push"
+            )
         );
         let end = parse(br#"{"v":1,"kind":"turn.end","profile":"moss","session_id":"local-9f","failed":true,"cron":"a1b2c3"}"#)
             .unwrap();

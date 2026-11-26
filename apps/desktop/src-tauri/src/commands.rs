@@ -83,7 +83,7 @@ pub struct AppState {
     /// The bots: what each one's home needs, and the repair once per run (ADR-0042).
     pub bots: Arc<crate::bots::engine::Service>,
     /// The rules list's writer (ADR-0060): the digest it last wrote, removed rules kept for Undo.
-    pub rules: crate::rules::RulesHost,
+    pub rules: Arc<crate::rules::RulesHost>,
     /// Team operations (ADR-0061): the plans the owner's hold applies, owner grants, the house bot's jobs.
     pub house: Arc<crate::house::House>,
     /// Where the app's links wait while the host puts this app's code in place for the gateway (`setup::update`).
@@ -2207,6 +2207,7 @@ pub fn owner_grant(
 /// `{plans: [{plan_hash, title, reason, counts, state, created_at, expires_at, undoes}]}`.
 #[tauri::command]
 #[specta::specta]
+#[must_use]
 pub fn team_plans_list(state: State<'_, AppState>, all: bool) -> Json {
     let plans = state.house.plans().list(all, boopis_hostops::now_ms());
     Json(serde_json::json!({ "plans": plans }))
@@ -2296,7 +2297,97 @@ pub async fn team_plan_undo(
 /// The house bot's jobs: one (`job_id`) or the open ones, as `{jobs: [{id, title, state, steps, spend, started, at}]}`.
 #[tauri::command]
 #[specta::specta]
+#[must_use]
 pub fn house_jobs(state: State<'_, AppState>, job_id: Option<String>) -> Json {
     let jobs = boopis_hostops::jobs::Jobs::at(&state.house.dir().join("jobs.jsonl"));
     Json(serde_json::json!({ "jobs": jobs.get(job_id.as_deref()) }))
+}
+
+/// The parked steps: a scheduled run's step a rule refused, waiting for the owner, as `{parked: [{id, bot, profile,
+/// session_id, summary, action, rules, held, at, expires_at, choices}]}` (never the step's arguments). Expired ones go.
+#[tauri::command]
+#[specta::specta]
+#[must_use]
+pub fn parked_list(state: State<'_, AppState>) -> Json {
+    let root = state.supervisor.environment().hermes_root();
+    let now = boopis_hostops::rfc3339(boopis_hostops::now_ms());
+    Json(serde_json::json!({ "parked": crate::house::parked::list(&root, &now) }))
+}
+
+/// Answer a parked step: `deny` deletes it and nothing runs; `once` re-runs it in the run's own session with a one-time
+/// grant for exactly that step; `always` does the same and keeps the narrowest exception as a draft for Settings. Returns
+/// `{state: "denied"}` or `{state: "rerun", session_id, resumed, draft_id}`.
+///
+/// Errors: `hx.invalid_params` for an unknown step or choice; `hx.engine.unavailable` when the re-run could not start.
+#[tauri::command]
+#[specta::specta]
+pub async fn parked_answer(
+    state: State<'_, AppState>,
+    id: String,
+    choice: String,
+) -> std::result::Result<Json, HostError> {
+    let root = state.supervisor.environment().hermes_root();
+    let refused = |m: &str| HostError {
+        code: "hx.invalid_params".into(),
+        message: m.into(),
+    };
+    let doc = crate::house::parked::read(&root, &id)
+        .ok_or_else(|| refused("That step is not parked any more."))?;
+    match choice.as_str() {
+        "deny" => {
+            crate::house::parked::remove(&root, &id);
+            return Ok(Json(serde_json::json!({"state": "denied"})));
+        }
+        "once" | "always" => {}
+        _ => return Err(refused("Answer once, always or deny.")),
+    }
+    let grant = state
+        .house
+        .grant("rules.grant")
+        .map_err(crate::house::host_error)?;
+    let profile = doc["profile"].as_str().unwrap_or_default();
+    let service = state.local_api.service();
+    let ran = service
+        .rerun_parked(
+            profile,
+            doc["session_id"].as_str().unwrap_or_default(),
+            &id,
+            &grant,
+            &crate::house::parked::message(&doc),
+            &crate::house::parked::fresh_message(&doc),
+        )
+        .await
+        .map_err(|e| HostError {
+            code: if e.status == 502 {
+                "hx.engine.unavailable".into()
+            } else {
+                "hx.invalid_params".into()
+            },
+            message: e.message,
+        })?;
+    crate::house::parked::remove(&root, &id);
+    let mut draft_id = serde_json::Value::Null;
+    if choice == "always" {
+        let drafted = service
+            .plugin_call(
+                profile,
+                "rules.draft",
+                serde_json::json!({"session_id": ran["session_id"], "description": crate::house::parked::card_text(&doc)}),
+            )
+            .await;
+        if let Some(rule) = drafted.as_ref().and_then(boopis_rules::card_draft) {
+            match state.rules.keep_draft(&root, &rule) {
+                Ok(v) => draft_id = v["id"].clone(),
+                Err(e) => {
+                    tracing::info!(error = %e, "a parked step's draft exception could not be kept")
+                }
+            }
+        }
+    }
+    Ok(Json(serde_json::json!({
+        "state": "rerun",
+        "session_id": ran["session_id"],
+        "resumed": ran["resumed"],
+        "draft_id": draft_id,
+    })))
 }

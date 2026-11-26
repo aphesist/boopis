@@ -33,6 +33,16 @@ pub struct RulesHost {
     digest: Mutex<Option<String>>,
     /// Removed rules, by undo token, until [`UNDO_FOR`] passes.
     undo: Mutex<HashMap<String, (Instant, Value)>>,
+    /// The digest of the last outside change the windows were told of, so each is said once.
+    told: Mutex<Option<String>>,
+}
+
+/// The rules list was changed outside boopis (`rules-engine.md` 11: the content's digest is not the one the host wrote).
+/// Settings reads `rules_get` (`changed_outside`) and offers to keep or discard it; further changes wait until then.
+#[derive(Debug, Clone, serde::Serialize, specta::Type, tauri_specta::Event)]
+pub struct RulesChangedOutsideEvent {
+    /// The new content's digest (SHA-256 of the bytes).
+    pub digest: String,
 }
 
 impl std::fmt::Debug for RulesHost {
@@ -64,6 +74,38 @@ fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 impl RulesHost {
     fn remember(&self, digest: String) {
         *lock(&self.digest) = Some(digest);
+    }
+
+    /// A change made outside boopis since the host last wrote or read the file, not yet said: its digest, once. Nothing is
+    /// said before the host has read the file at least once (it then knows what it accepted).
+    #[must_use]
+    pub fn outside_change(&self, root: &Path) -> Option<String> {
+        let known = lock(&self.digest).clone()?;
+        let (_, now) = Store::under(root).read().ok()??;
+        let mut told = lock(&self.told);
+        if now == known || told.as_deref() == Some(now.as_str()) {
+            return None;
+        }
+        *told = Some(now.clone());
+        Some(now)
+    }
+
+    /// Watch `root`'s rules file every `every` and tell the windows of each outside change, once.
+    pub async fn watch(
+        self: std::sync::Arc<Self>,
+        root: std::path::PathBuf,
+        app: tauri::AppHandle,
+        every: Duration,
+    ) {
+        loop {
+            tokio::time::sleep(every).await;
+            if let Some(digest) = self.outside_change(&root)
+                && let Err(e) =
+                    tauri_specta::Event::emit(&RulesChangedOutsideEvent { digest }, &app)
+            {
+                tracing::debug!(error = %e, "could not tell the windows the rules changed outside boopis");
+            }
+        }
     }
 
     /// The file's content (made with the defaults when there is none), with what Settings shows beside it:
@@ -121,6 +163,23 @@ impl RulesHost {
             )),
             _ => Ok(()),
         }
+    }
+
+    /// Keep an exception drafted from a card's "Always" answer outside the window (H6) as a **draft**: `rule` is
+    /// `boopis_rules::card_draft`'s, so it is never applied until the owner finishes it in Settings. Returns `{revision, id}`.
+    ///
+    /// # Errors
+    /// As [`RulesHost::put`]: a change made outside boopis that the owner has not looked at keeps it out (fail closed).
+    pub fn keep_draft(&self, root: &Path, rule: &Value) -> Result<Value, Error> {
+        if rule["state"] != "draft" {
+            return Err(Error::Rules(
+                "hx.rules.invalid",
+                "only a draft is kept this way".into(),
+            ));
+        }
+        let now = self.get(root)?;
+        let revision = now["rules"]["revision"].as_u64().unwrap_or(0);
+        self.put(root, rule, revision)
     }
 
     /// Add or edit a rule. Returns `{revision, id}`.
