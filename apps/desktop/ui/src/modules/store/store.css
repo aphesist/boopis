@@ -49,8 +49,7 @@
 .hx-store__fact > dd { margin: 0; min-width: 0; font-size: var(--fs-s); line-height: var(--lh-small); color: var(--text); overflow-wrap: anywhere; }
 @container (max-width: 30em) { .hx-store__fact { grid-template-columns: minmax(0, 1fr); } }
 
-/* on the store's v7 ground (6f, until step 7 redraws the store on the kit): the search field's glyph and an item's mark start a step in,
-   not the half-differences the v6 field and row derive from v7's taller controls (11 and 15, off the spacing scale). The mark stays
-   within a pixel of its row's vertical inset, so it keeps the row's corner (R-corner-3) */
-.hx-store__stack > .ui-search--m { padding-left: var(--sp-3); }
+/* on the store's v7 ground (6f, until step 7 redraws the store on the kit): an item's mark starts a step in, not the half-difference the
+   v6 row derives from v7's taller rows (15, off the spacing scale). It stays within a pixel of its row's vertical inset, so it keeps the
+   row's corner (R-corner-3) */
 .hx-store__rows .ui-row--item { padding-inline-start: var(--sp-4); }

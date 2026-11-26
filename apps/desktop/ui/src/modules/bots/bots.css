@@ -205,6 +205,7 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-group .bt-log > .bt-ask { margin-top: var(--gap-s); align-self: stretch; }
 .bt-group .bt-ask > .bt-cardslot { margin-top: var(--sp-2); }
 .bt-outside { align-self: flex-start; margin-left: var(--gutter); }
+.k7-lrow > .bt-outside { align-self: center; margin-left: 0; }   /* in a roster row the mark sits on the row's centre line, never on its top edge (6f) */
 /* the composer and what sits over it */
 .bt-composer-zone { position: absolute; z-index: 3; left: 50%; width: var(--composer-w); max-width: calc(100% - 2 * var(--sp-5)); bottom: var(--composer-bottom); transform: translateX(-50%); display: flex; flex-direction: column; }
 .hx[data-right="open"] .bt-composer-zone { width: var(--composer-w-pane); }

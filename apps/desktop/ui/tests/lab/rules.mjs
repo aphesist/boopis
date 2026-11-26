@@ -86,6 +86,11 @@ export const STANDING_ALLOW = [
   { check: 'axe', el: 'k7-search-pill__label color-contrast', reason: 'board P2: the search pill\'s word in the quiet token' },
   { check: 'axe', el: '.k7-step__time', reason: 'board 17 light: a step\'s time in the quiet token (kit.css `.step .t`)' },
   { check: 'axe', el: '.k7-step__text color-contrast', reason: 'board 17 light: a step not yet begun in the quiet token (kit.css `.step.todo`); a step begun or done is --text-dim or --text, which pass' },
+  { check: 'axe', el: 'k7-shead__count', reason: 'boards K02 and 11 light: a section head\'s count in mono 11 --text-quiet (kit.css `.inbox-h` and `.sb-head`)' },
+  /* a StatusWord's tones are the boards' own tokens (--owe-text, --red-text): the attention amber on a SystemLine's pill on the bone ground
+     is 4.2:1 (an escalation the cap stopped says "capped" in it, the lead's 6e decision). The owner's question is the light amber, as with
+     the quiet words above */
+  { check: 'axe', el: '.k7-word color-contrast', reason: 'a StatusWord in the boards\' attention amber or red' },
   { check: 'geometry.target', el: 'ui-pages__dot', reason: 'the dock\'s page dots: R-a11y-2 names them, each has a 24 px tall hit area around its mark, and a 24 px wide one would cover its neighbour at the 10 px pitch of the nub (14.12)' }
 ];
 

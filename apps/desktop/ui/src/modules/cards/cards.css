@@ -11,6 +11,7 @@ hx-card {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   text-align: left;
+  min-width: 0; max-width: 100%;   /* in a page's grid or flex column the host never takes its content's widest line: the block fits the column (a form at 390) */
 }
 hx-card *, hx-card *::before, hx-card *::after { box-sizing: border-box; }
 /* the host is bare: the block draws everything, at the AskCard's own width (the conversation's, or the dock's) */

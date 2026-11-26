@@ -44,6 +44,8 @@ export const botColours = (hex: string): string => '--bot-dark:' + botText(hex, 
 export const inkOrb = (orb: string): string => orb.replace(/ color="[^"]*"/, ' color="var(--text-strong)" data-ink').replace(/ shape="[^"]*"/, ' shape="squircle"');   /* its eyes stay cut to its surface, as every orb's (orb.ts `surface`) */
 
 /* ── InlineChip (30): mention, you, reference, code, cite, model, countdown ── */
+/** a source's words after its tile; the tile and the first word never part at a line's end (6f: the tile stood alone at the end of a line) */
+const citeText = (t: string): string => { const m = /^(\S+)([\s\S]*)$/.exec(t); return '<span class="k7-cite__lead"><i class="k7-cite__ic" aria-hidden="true"></i>' + esc(m ? m[1] ?? '' : t) + '</span>' + esc(m ? m[2] ?? '' : ''); };
 export const INLINE_KINDS = ['mention', 'you', 'reference', 'code', 'cite', 'model', 'countdown'] as const;
 export type InlineKind = typeof INLINE_KINDS[number];
 export interface InlineChipOpts {
@@ -73,7 +75,7 @@ export function inlineChip(o: InlineChipOpts): string {
       const tag = o.action && o.words == null ? 'button' : 'span';
       return '<' + tag + ' class="' + cls(tag === 'button' && 'k7-reset', 'k7-chip-in k7-cap k7-ref') + '"' + a({ type: tag === 'button' ? 'button' : null, 'aria-label': o.label }) + '>' + said(o.text ?? '') + '</' + tag + '>';
     }
-    case 'cite': return '<a class="k7-chip-in k7-cite"' + a({ href: o.href, target: o.href ? '_blank' : null, rel: o.href ? 'noopener noreferrer' : null }) + '><i class="k7-cite__ic" aria-hidden="true"></i>' + esc(o.text ?? '') + '</a>';
+    case 'cite': return '<a class="k7-chip-in k7-cite"' + a({ href: o.href, target: o.href ? '_blank' : null, rel: o.href ? 'noopener noreferrer' : null }) + '>' + citeText(o.text ?? '') + '</a>';
     case 'code': return '<code class="k7-chip-in k7-code"' + a() + '>' + esc(o.text ?? '') + '</code>';
     case 'model': return '<span class="k7-chip-in k7-model"' + a() + '>' + markHTML(o.model ?? null, { size: 14, label: false }) + said(o.text ?? (typeof o.model === 'string' ? o.model : '')) + '</span>';   /* in a composer its own text is the words typed ("@Claude Sonnet"), as every chip's */
     case 'countdown': return '<span class="k7-chip-in k7-cap k7-count"' + partAttrs('Countdown', { 'data-kit': 'InlineChip', 'data-kind': 'countdown', role: 'timer', 'aria-live': 'off', ...(o.attrs ?? {}) }) + '>' + esc(o.text ?? '') + '</span>';
@@ -110,10 +112,11 @@ export function mark(o: MarkOpts): string {
 }
 
 /* ── MarkStack (6e, derived from 6d's askers): several models as their marks overlapped a third, at most three, then the rail's "+N"
-   chip clear of them (owner, 25 November); its name says them all ── */
+   chip clear of them (owner, 25 November); its name says them all, or, with no name, the words beside it do (a turn's foot: "council
+   of 3") and it is hidden from readers (6f) ── */
 export function markStack(models: readonly ModelRef[], size = 12, label?: string): string {
   const shown = models.slice(0, 3), more = models.length - shown.length;
-  return '<span class="k7-marks"' + kitAttrs('MarkStack', { role: 'img', 'aria-label': label ?? null, style: '--s:' + size + 'px' }) + '>' + shown.map((m) => '<span class="k7-marks__one">' + markHTML(m, { size, label: false }) + '</span>').join('') +
+  return '<span class="k7-marks"' + kitAttrs('MarkStack', { role: label ? 'img' : null, 'aria-label': label ?? null, 'aria-hidden': label ? null : 'true', style: '--s:' + size + 'px' }) + '>' + shown.map((m) => '<span class="k7-marks__one">' + markHTML(m, { size, label: false }) + '</span>').join('') +
     (more ? '<span class="k7-ask__more" aria-hidden="true" data-more="+' + more + '"></span>' : '') + '</span>';
 }
 

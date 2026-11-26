@@ -94,8 +94,10 @@ const entryHTML = (e: MenuEntry): string => e === '-' ? '<div class="k7-menu__se
 export function menu(o: MenuOpts): string {
   const v = o.variant ?? 'menu';
   const head = v === 'palette' ? '<div class="k7-menu__query"><span class="k7-mono k7-menu__sigil">' + esc(o.query ?? '/') + '</span></div>' : '';
-  return '<div class="k7-menu"' + kitAttrs('Menu', { role: 'menu', 'aria-label': o.label, 'data-variant': v, 'data-sq': '', 'data-sq-mode': 'surface', ...(o.attrs ?? {}) }) + '>' + head +
-    '<div class="' + cls('k7-menu__list', scrollClass({ inset: 'both' })) + '">' + o.entries.map(entryHTML).join('') + '</div>' + (o.foot ? '<div class="k7-menu__foot">' + o.foot + '</div>' : '') + '</div>';
+  /* with a foot (its own controls, not menu items) the rows alone are the menu, and the whole a group of the menu and its foot (6f) */
+  const role = o.foot ? { role: 'group', 'aria-label': o.label } : { role: 'menu', 'aria-label': o.label };
+  return '<div class="k7-menu"' + kitAttrs('Menu', { ...role, 'data-variant': v, 'data-sq': '', 'data-sq-mode': 'surface', ...(o.attrs ?? {}) }) + '>' + head +
+    '<div class="' + cls('k7-menu__list', scrollClass({ inset: 'both' })) + '"' + attrs(o.foot ? { role: 'menu', 'aria-label': o.label } : {}) + '>' + o.entries.map(entryHTML).join('') + '</div>' + (o.foot ? '<div class="k7-menu__foot">' + o.foot + '</div>' : '') + '</div>';
 }
 
 /* ── ListRow (17): session (44, two lines), bot (54, its orb 28: board K02, the owner's "Grok sizes", 23 November; a room's row leads

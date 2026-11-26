@@ -357,8 +357,13 @@
 .k7-notify[data-in] { opacity: 1; translate: 0 0; pointer-events: auto; }
 
 /* ── Menu's foot (6e, derived: a council under S19's rows): a hairline, then what follows the rows on the menu's own inset ── */
-.k7-menu__foot { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); padding: var(--sp-2) var(--gap-hair) var(--gap-hair); box-shadow: inset 0 var(--hl) 0 var(--hair); min-width: 0; }
+.k7-menu__foot { position: relative; display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); padding: var(--sp-2) var(--gap-hair) var(--gap-hair); min-width: 0; }
+/* its rule over it is a line, not a surface: the foot paints nothing of its own, so what sits at its end is set in the menu's corner */
+.k7-menu__foot::before { content: ""; position: absolute; inset: 0 0 auto; height: var(--hl); background: var(--hair); }
 .k7-menu__foot > .k7-grow { flex: 1 1 auto; }
+/* the control at the foot's end is concentric with the menu's corner (R-corner-3; 6f): 8 at 8 in (16 - 8) */
+.k7-menu__foot > :is(.k7-sel, .k7-btn):focus-visible { outline-offset: calc(-1 * var(--focus-w)); }   /* the rings inside: 2 from the foot's sides */
+.k7-menu__foot > .k7-btn:last-child { border-radius: max(var(--r-floor), calc(var(--r-menu) - var(--pad-menu) - var(--gap-hair))); }
 .k7-menu__foot > .k7-menu__head { padding: 0 var(--gap-hair); }
 
 /* ── Well, a thread (6e, derived: a handed-off task's transcript): the deepest surface, the words in 12 on the code's inset, its turns
@@ -379,7 +384,7 @@
 .k7-find__box > .k7-field__input { width: 0; }   /* the field takes what the count and the buttons leave */
 .k7-find__count { flex: none; min-width: 0; padding-inline: var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .k7-find__count:empty { display: none; }
-.k7-find__count[data-none] { font-family: var(--sans); color: var(--text-quiet); }
+.k7-find__count[data-none] { font-family: var(--sans); color: var(--text-dim); }   /* "No matches" readable (4.5:1) in both themes; derived, no board draws it (6f) */
 /* the matches in the thread (the CSS highlight the app names `k7-find`; the one it is on, `k7-find-now`) */
 ::highlight(k7-find) { background-color: var(--find-hit); color: inherit; }
 ::highlight(k7-find-now) { background-color: var(--find-hit-now); color: inherit; }

@@ -916,6 +916,9 @@
       try {
         par.insertBefore(lineProbe, chip);
         if (ownProbe) { if (firstText) holder.insertBefore(ownProbe, firstText); else holder.append(ownProbe); }
+        /* drawn text (::before) is measured at its end: where the chip wraps (a long name in a narrow composer, 6f) that end is on the chip's
+           last line, so the line is read just after the chip, on that same line */
+        if (ownProbe && !firstText && chip.getClientRects().length > 1) par.insertBefore(lineProbe, chip.nextSibling);
         let L = lineProbe.getBoundingClientRect();
         const b0 = chip.getClientRects()[0] || chip.getBoundingClientRect();
         /* the chip began a new line: the probe before it stayed at the end of the line above, so it stands just after the chip */
@@ -962,8 +965,6 @@
               if (k === ownProbe) continue;
               if (k.nodeType === 3) { if (!k.data.trim()) continue; const r = document.createRange(); r.selectNodeContents(k); let clip = null;   /* what a box between the text and the chip cuts away (a path's folders, cut from the left) is not content */
                 for (let pe = k.parentElement; pe && pe !== chip; pe = pe.parentElement) if (getComputedStyle(pe).overflowX !== 'visible') { const z = pe.getBoundingClientRect(); clip = clip ? { left: Math.max(clip.left, z.left), right: Math.min(clip.right, z.right) } : { left: z.left, right: z.right }; }
-                /* a chip that cuts its own text (a long path's reference, `overflow: clip` with an ellipsis, 6f) shows it up to its content box */
-                if (c.overflowX !== 'visible') { const z = chip.getBoundingClientRect(), zl = z.left + px(c.borderLeftWidth) + px(c.paddingLeft), zr = z.right - px(c.borderRightWidth) - px(c.paddingRight); clip = clip ? { left: Math.max(clip.left, zl), right: Math.min(clip.right, zr) } : { left: zl, right: zr }; }
                 for (const q0 of r.getClientRects()) { const q = clip ? { left: Math.max(q0.left, clip.left), right: Math.min(q0.right, clip.right), top: q0.top, bottom: q0.bottom, width: q0.width } : q0; if (q.width > 0 && q.right > q.left && q.top < b.bottom && q.bottom > b.top) parts.push({ q, mark: false }); }
                 continue; }
               if (k.nodeType !== 1 || k.matches(SR) || !shown(k)) continue;
@@ -972,6 +973,8 @@
             }
           };
           walk(chip);
+          /* a chip that cuts its own content (`overflow` not visible: a long path's reference) shows it up to its content box */
+          if (c.overflowX !== 'visible') { const z = chip.getBoundingClientRect(), zl = z.left + px(c.borderLeftWidth) + px(c.paddingLeft), zr = z.right - px(c.borderRightWidth) - px(c.paddingRight); for (const p of parts) p.q = { left: Math.max(p.q.left, zl), right: Math.min(p.q.right, zr), top: p.q.top, bottom: p.q.bottom, width: Math.max(0, Math.min(p.q.right, zr) - Math.max(p.q.left, zl)) }; }
           if (parts.length && chip.getClientRects().length === 1) {
             parts.sort((x, y) => x.q.left - y.q.left);
             const first = parts[0], left = first.q.left - b.left, right = b.right - Math.max(...parts.map((p) => p.q.right));

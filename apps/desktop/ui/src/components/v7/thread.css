@@ -85,7 +85,7 @@
 .k7-ask__tile > :is(svg, .k7-ic, .k7-head__mark) { width: var(--icon-s); height: var(--icon-s); }
 .k7-ask__head > .k7-ask__tile { width: var(--icon-s); height: var(--icon-s); border-radius: var(--r-tip); font-size: var(--fs-2xs); }
 .k7-ask__item-text { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
-.k7-ask__item-name { font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); }
+.k7-ask__item-name { font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); overflow-wrap: anywhere; }   /* a long name breaks in the block, never widens the window (R-overflow-1; 6f) */
 .k7-ask__item-line { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow-wrap: anywhere; }
 /* the files a form takes (the composer's attachment chips) and "+ Add files" after them */
 .k7-ask__files { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap-s); }
@@ -140,7 +140,7 @@
    verdict; under it what the check printed in a Well in the verdict's colour (8 under the head; the boards' own corner of 10, as every
    Well they draw: the lead's decision of 26 November), then one quiet note 6 under it */
 .k7-files[data-check] > .k7-files__head { gap: var(--sp-2); margin-bottom: 0; color: var(--text); }
-.k7-files__name { flex: none; font-weight: 500; }
+.k7-files__name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }   /* a long check's name gives way (an ellipsis) before its word and its action leave the card (6f) */
 .k7-files[data-check] > .k7-well { margin-top: var(--sp-2); border-radius: var(--r-field); }
 .k7-files[data-check="red"] > .k7-well { color: var(--red-text); }
 .k7-files[data-check] > .k7-well > .k7-well__pre { padding-inline-start: var(--sp-1); }   /* kit.css `.files-card > *`: the card's parts start 4 in, its Well's words with them */
@@ -279,6 +279,11 @@ span.k7-composer__item { cursor: default; }
    under the head (`after`: a task's transcript) follows 4 under it; a control at the head's end (a running task's Stop) sits on the inset */
 .k7-tool[data-row] { width: 100%; border-radius: calc(var(--r-block) - var(--pad-block)); }
 .k7-tool__head > .k7-word[data-tip] { cursor: default; border-radius: var(--r-xs); }
+/* a word that says why in its Tooltip takes the focus; in a block's corner (a task's row) a ring would not nest, so its focus is the
+   focus colour under the word (6f) */
+.k7-tool__head > .k7-word[data-tip]:focus-visible { outline: none; text-decoration: underline var(--focus-w) var(--focus); text-underline-offset: var(--gap-xs); }
+/* what stands last under a block's head (a task's Transcript) ends in the block's lower corner: concentric with it (R-corner-3; 6f) */
+.k7-tool.k7-block > .k7-tool__after > .k7-disc:last-child > .k7-disc__sum { border-end-start-radius: calc(var(--r-block) - var(--pad-block)); }
 .k7-tool__head > .k7-btn { flex: none; margin-block: calc(-1 * var(--gap-hair)); }
 .k7-tool__after { display: flex; flex-direction: column; gap: var(--sp-1); margin-top: var(--sp-1); min-width: 0; }
 /* a FilesCard row that says what happens to its file (a rewind's dry run) in words where its +/− would be */

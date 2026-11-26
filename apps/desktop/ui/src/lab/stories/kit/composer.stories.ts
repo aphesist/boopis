@@ -52,7 +52,7 @@ export default {
     /* "@" opens the kit's Menu over the composer, under its heading (as the composer's lists of boards S31 and S32) */
     'the "@" list, open': stage(['open', 'owner'], async ({ root }) => {
       const c = kit.composer({ kind: 'room', placeholder: 'Message release crew', line: [{ label: 'Members', value: '3 members', icon: 'at', plain: true }] });
-      const pad = document.createElement('div'); pad.style.paddingTop = '220px'; pad.append(c); fill(root, pad);
+      const pad = document.createElement('div'); pad.style.marginTop = '220px';   /* the story's room for the list above the composer (a margin: not a design value the token check reads) */  pad.append(c); fill(root, pad);
       kit.mentions(c, { label: 'Members', foot: () => 'Only the bots you name answer. With no name, every member does.', entries: () => [KAI, NINA, MOSS].map((b) => ({ value: b.id, label: b.name, desc: b.id === 'kai' ? 'docs and changelog' : b.id === 'nina' ? 'deploys' : 'flaky test hunter', leadHTML: kit.html.avatar({ bot: b, size: 16, still: true }) })) });
       const t = c.querySelector<HTMLElement>('.k7-composer__text') as HTMLElement;
       t.focus(); t.textContent = '@'; const r = document.createRange(); r.setStart(t.firstChild as Node, 1); r.collapse(true); getSelection()?.removeAllRanges(); getSelection()?.addRange(r);

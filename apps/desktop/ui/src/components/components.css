@@ -349,6 +349,7 @@
 @media (hover: hover) and (pointer: fine) { .ui-search--m:hover { box-shadow: inset 0 0 0 1px var(--text-quiet); } }
 .ui-search--m:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
 .ui-search--m .ui-search__input { font-size: var(--fs-s); color: var(--text); }
+[data-ui="v7"] .ui-search--m { padding-left: var(--sp-3); }   /* on a v7 ground (taller controls) the glyph starts a step in, not the half-difference (11, off the scale), until step 7 (6f) */
 
 /* ───────────── chips ─────────────
    .ui-chip: a toggle or an action in a toolbar (aria-pressed for a mode, aria-haspopup for a picker).
