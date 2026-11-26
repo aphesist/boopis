@@ -356,6 +356,7 @@ export interface SchedulesSource {
 
 /* ───────── helpers the composer asks for ───────── */
 export interface FeedforwardSource { catalog(): readonly DecisionKind[] }
+/** the mic: what a person says, written into the composer's text. A capability: a provider has it once a speech model can hear */
 export interface DictationSource {
   /** start listening; `onTranscript` gets what was heard; the returned function cancels */
   start(opts: { botId: string | null }, onTranscript: (text: string) => void): Unsubscribe;
@@ -363,7 +364,7 @@ export interface DictationSource {
 /** talking to a bot or a session, live (a composer's voice circle, pressed with no text). It is a capability: a provider has it once a
     voice model is set up (Settings, Models: a voice provider's key through the host's secret store, or a local model with live voice).
     Until then every composer still draws the circle, and pressing it says what voice needs (modules/chat/compose.ts `voiceTool`).
-    Dictation (the mic) is another thing, and works without it */
+    Dictation (the mic) is another thing with a capability of its own (`dictation`) */
 export interface VoiceSource {
   /** start talking with the open bot (null in a session); the returned function ends it */
   start(opts: { botId: string | null }): Unsubscribe;
@@ -416,7 +417,9 @@ export interface DataProvider {
   run: RunSource;
   schedules: SchedulesSource;
   feedforward: FeedforwardSource;
-  dictation: DictationSource;
+  /** dictation (the mic), once a speech model can hear it (absent until then: the mic then says what it needs, modules/chat/compose.ts
+      `micTool`). The desktop app has no transcription yet, so its provider has none; the page build's mock invents a transcript */
+  dictation?: DictationSource;
   /** live voice, once a voice model is set up (absent until then: the voice circle then says what it needs) */
   voice?: VoiceSource;
   files: FilesSource;

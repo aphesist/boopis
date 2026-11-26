@@ -332,6 +332,27 @@ describe('Composer: the mic', () => {
     expect(outside).toBe(0);
     expect(key('Escape')).toBe(true);   /* not listening: Esc is the shell's */
   });
+  it('no speech model set up (micSetup): the mic is there and says so; a press, a hold, Enter and alt+V start nothing and ask for the setup', () => {
+    mount({ kind: 'bot', placeholder: 'Message nina', hears: 'nina', micSetup: true }); listen();
+    let asked = 0;
+    c.addEventListener('ui:dictate-setup', () => { asked++; });
+    expect(mic().hidden).toBe(false);
+    expect([mic().getAttribute('aria-label'), mic().getAttribute('data-tip'), mic().getAttribute('aria-haspopup')]).toEqual(['Dictate: set up a speech model first', 'Dictate: set up a speech model first', 'dialog']);
+    down(); vi.advanceTimersByTime(120); up();          /* a press */
+    expect(asked).toBe(1);
+    down();
+    expect(pressed()).toBe('false');                     /* held: it never listens */
+    vi.advanceTimersByTime(900); up();
+    expect(asked).toBe(2);
+    mic().click();                                       /* Enter or Space on it */
+    expect(asked).toBe(3);
+    key('v', { code: 'KeyV', altKey: true }); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'v', code: 'KeyV' }));
+    expect(asked).toBe(4);
+    expect(pressed()).toBe('false');
+    expect(heard).toEqual([]);
+    expect(c.hasAttribute('data-listening')).toBe(false);
+    expect(t.getAttribute('data-placeholder')).toBe('Message nina');
+  });
   it('an app that refuses (nothing can hear) leaves it off; switched off from outside, its look follows', async () => {
     c.addEventListener('ui:dictate', (e) => { e.preventDefault(); }, { once: true });
     mic().click();

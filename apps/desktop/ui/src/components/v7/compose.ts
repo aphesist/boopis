@@ -12,7 +12,8 @@
             Where the host reports drags itself (the desktop app: the page gets no drop), the app says so with `composerDropping`.
    Talk     The mic dictates: a press or alt+V switches it on and off; held 400 ms or more, it listens while held and stops on
             release. Esc stops it. `ui:dictate` {on, mode} (cancelable) says so; the audio is the host's. While it listens the mic is
-            named "Stop listening" and the placeholder says who listens (`data-hears`). */
+            named "Stop listening" and the placeholder says who listens (`data-hears`). With no speech model set up (`data-mic-setup`)
+            a press, a hold or alt+V starts nothing: `ui:dictate-setup` asks the app to say what dictation needs. */
 import { fire, isMac } from '../../core/dom';
 import { announce } from '../announce';
 
@@ -179,8 +180,12 @@ function wireMic(c: HTMLElement, t: HTMLElement, mic: HTMLButtonElement): void {
     if (v) { if (rest.ph === null) { rest.ph = t.getAttribute('data-placeholder') ?? ''; t.setAttribute('data-placeholder', words()); } }
     else if (rest.ph !== null) { if (t.getAttribute('data-placeholder') === words()) t.setAttribute('data-placeholder', rest.ph); rest.ph = null; }
   };
+  /* nothing can hear yet: the mic never switches on, and the app is asked to say what it needs (thread.ts `micSetup`) */
+  const needsSetup = (): boolean => c.hasAttribute('data-mic-setup');
+  const askSetup = (): void => { fire(c, 'ui:dictate-setup', {}); };
   const set = (v: boolean, mode: 'toggle' | 'hold' = 'toggle'): void => {
     if (v === on()) return;
+    if (v && needsSetup()) return;
     if (!fire(c, 'ui:dictate', { on: v, mode: v ? mode : null }, true)) return;
     mic.setAttribute('aria-pressed', String(v));
     paint();
@@ -191,6 +196,7 @@ function wireMic(c: HTMLElement, t: HTMLElement, mic: HTMLButtonElement): void {
     if (e.button !== 0) return;
     e.preventDefault();   /* the text keeps the focus: you can talk and type */
     try { mic.setPointerCapture?.(e.pointerId); } catch { /* a pointer that is already gone */ }
+    if (needsSetup()) return;   /* the click that follows asks for the setup, once, however long the press was held */
     pressAt = Date.now(); pressStarted = !on();
     if (pressStarted) set(true, 'hold');
   });
@@ -203,13 +209,14 @@ function wireMic(c: HTMLElement, t: HTMLElement, mic: HTMLButtonElement): void {
   mic.addEventListener('pointerup', release);
   mic.addEventListener('pointercancel', release);
   /* Enter or Space on the focused mic, and a press the app makes for the person: the switch */
-  mic.addEventListener('click', (e) => { if (e.detail === 0) set(!on()); });
+  mic.addEventListener('click', (e) => { if (needsSetup()) { if (on()) set(false); else askSetup(); return; } if (e.detail === 0) set(!on()); });
   c.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && on()) { e.preventDefault(); e.stopPropagation(); set(false); return; }
     if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.code !== 'KeyV') return;
     e.preventDefault();
     if (e.repeat) return;
     if (on()) { set(false); keyAt = 0; return; }
+    if (needsSetup()) { askSetup(); return; }
     set(true, 'hold'); keyAt = Date.now();
     const up = (u: KeyboardEvent): void => {
       if (u.code !== 'KeyV') return;

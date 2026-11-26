@@ -182,9 +182,9 @@ describe('files, fork and what stays a preview', () => {
     expect(count('session.branch')).toBe(1); // the probe only
   });
 
-  it('keeps the feedforward reading off unless the preview flag is on, and hears nothing', () => {
+  it('keeps the feedforward reading off unless the preview flag is on, and offers no dictation (the host has no transcription: no stub pretends to listen)', () => {
     expect(provider.feedforward.catalog()).toEqual([]);
-    expect(provider.dictation.start({ botId: null }, () => { throw new Error('nothing was heard'); })).toBeTypeOf('function');
+    expect(provider.dictation).toBeUndefined();
     expect(provider.user.get().name).not.toBe('enzo');
   });
 });

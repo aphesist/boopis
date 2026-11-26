@@ -10,12 +10,12 @@ import { setProvider } from '../../data';
 import type { DataProvider } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
 import type { FileDrag } from '../../data/provider';
-import { NO_PLACE, composeTools, voiceNeedsSetup } from './compose';
+import { NO_PLACE, composeTools, micNeedsSetup, voiceNeedsSetup } from './compose';
 
 const tick = async (): Promise<void> => { for (let i = 0; i < 6; i++) await Promise.resolve(); };
 let slot: HTMLElement, heard: ((t: string) => void) | null, cancelled: number, started: Array<string | null>, provider: DataProvider;
 function mount(running = false): HTMLElement {
-  slot.replaceChildren(kit.composer({ kind: 'bot', placeholder: 'Message kai', voiceSetup: voiceNeedsSetup(), running }));
+  slot.replaceChildren(kit.composer({ kind: 'bot', placeholder: 'Message kai', voiceSetup: voiceNeedsSetup(), micSetup: micNeedsSetup(), running }));
   return slot.querySelector('.k7-composer') as HTMLElement;
 }
 const notice = (): HTMLElement | null => document.querySelector<HTMLElement>('.k7-notice[data-floating]');
@@ -84,6 +84,37 @@ describe('a composer\'s controls', () => {
     expect(end.getAttribute('aria-expanded')).toBe('false');
     expect(document.activeElement).toBe(end);
     expect(opened).toEqual(['models']);
+    off();
+  });
+  it('no speech model (the provider has no dictation, as the desktop app\'s): the mic is there, says so, starts nothing, and opens a Notice whose one action is Settings at Models', () => {
+    const { dictation: _none, ...rest } = provider;
+    setProvider(rest);
+    mount();
+    const mic = slot.querySelector('[data-mic]') as HTMLElement, opened: string[] = [];
+    const off = on('hx:open-settings', (d) => { opened.push(d.section); });
+    expect(mic.hidden).toBe(false);
+    expect(mic.getAttribute('aria-label')).toBe('Dictate: set up a speech model first');
+    expect(mic.getAttribute('data-tip')).toBe('Dictate: set up a speech model first');
+    mic.click();
+    expect(mic.getAttribute('aria-pressed')).toBe('false');
+    expect(started).toEqual([]);
+    const n = notice() as HTMLElement;
+    expect(n.getAttribute('data-kit')).toBe('Notice');
+    expect(n.getAttribute('role')).toBe('dialog');
+    expect(n.querySelector('.k7-notice__text')?.textContent).toBe('Dictation needs a speech model');
+    const acts = [...n.querySelectorAll<HTMLElement>('[data-kit~="Button"]')];
+    expect(acts.map((b) => b.textContent?.trim())).toEqual(['Set up voice']);
+    expect(mic.getAttribute('aria-expanded')).toBe('true');
+    acts[0]!.click();
+    expect(opened).toEqual(['models']);
+    expect(notice()?.classList.contains('is-in') ?? false).toBe(false);
+    /* alt+V from the text asks the same; Esc closes it and the focus is back on the mic */
+    text().dispatchEvent(new KeyboardEvent('keydown', { key: 'v', code: 'KeyV', altKey: true, bubbles: true, cancelable: true }));
+    expect(mic.getAttribute('aria-expanded')).toBe('true');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    expect(mic.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(mic);
+    expect(started).toEqual([]);
     off();
   });
   it('a voice model set up (the provider\'s voice): the circle is named Talk, a press starts talking with the open bot, another ends it; no Notice', () => {

@@ -43,7 +43,13 @@ table at the end true.
     nothing and opens a small Notice at the circle, "Voice needs a voice model", whose one action, "Set up voice", opens Settings at
     Models; the circle's name and tooltip say it needs setting up. The capability is the provider's `voice` (`data/provider.ts`); the
     voice section of Settings, Models (the provider, its key through the host's secret store, the local option) is the Settings
-    step's, and live voice itself is not built yet. Dictation (the mic) is another thing and works already;
+    step's, and live voice itself is not built yet. Dictation (the mic) is another thing with a capability of its own (below);
+  - **the mic without a speech model** (26 November; the lead's decision, by the owner's rule for the voice circle): transcription does
+    not exist in the desktop app yet (step 6a found the live provider's dictation was a stub that heard nothing; only the page build's
+    mock invents a transcript). The mic is shown as the boards draw it. While the provider has no dictation (`DataProvider.dictation`,
+    optional, absent in the live provider: no stub pretends to listen), a press, a hold or alt+V starts nothing and opens the same kit
+    Notice as the voice circle, at the mic: "Dictation needs a speech model", whose one action, "Set up voice", opens Settings at
+    Models; the mic's name and tooltip say it needs setting up ("Dictate: set up a speech model first"). No transcription is built;
   - **the lead's dock decisions** (26 November; the owner gave the lead design latitude, and these are the lead's, not the owner's):
     - K02: a hovered bot at 52, and its neighbours at 46, drop the small orbs' 1.25 face scale, as the board's still draws them, and
       take it back at 40;

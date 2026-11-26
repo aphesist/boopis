@@ -7,7 +7,7 @@ import { kit } from '@boopis/ui';
 import { data } from '../../data';
 import type { LaunchActions, LaunchView } from './s0';
 import { launchCanvas } from './s0';
-import { composeTools, later, voiceNeedsSetup } from '../chat/compose';
+import { composeTools, later, micNeedsSetup, voiceNeedsSetup } from '../chat/compose';
 
 export interface NewScreen {
   /** draw it (again) for these launch settings and show it */
@@ -34,7 +34,7 @@ export function mountNew(root: HTMLElement, o: { actions: LaunchActions; send(te
   function drawComposer(v: LaunchView): void {
     const ph = v.folder === null ? 'Add a folder to start' : v.model === null ? 'Choose a model to start' : 'What should change? @ files, $ skills, / commands';
     const keep = text()?.textContent ?? data().sessions.draft();
-    composerSlot.replaceChildren(kit.composer({ kind: 'session', placeholder: ph, label: 'Message', hint: HINT, hintEnd: HINT_END, voiceSetup: voiceNeedsSetup(), ...(keep ? { text: keep } : {}) }));
+    composerSlot.replaceChildren(kit.composer({ kind: 'session', placeholder: ph, label: 'Message', hint: HINT, hintEnd: HINT_END, voiceSetup: voiceNeedsSetup(), micSetup: micNeedsSetup(), ...(keep ? { text: keep } : {}) }));
     tools.drawn();
     text()?.setAttribute('data-hx-focus', 'composer');
   }

@@ -57,7 +57,7 @@ are not built. The picks are in `PLAN-session-waves.md` and `PLAN-w31-foundation
 | 5. Session: new session and launch | 16 | 9 | 3 | 4 | 0 |
 | 6. Session: a running and finished session | 43 | 23 | 4 | 16 | 0 |
 | 7. Session: panels, commit, inbox, menus | 22 | 12 | 1 | 9 | 0 |
-| 8. Composer | 45 | 24 | 5 | 16 | 0 |
+| 8. Composer | 46 | 24 | 6 | 16 | 0 |
 | 9. Dock | 22 | 13 | 4 | 5 | 0 |
 | 10. Cards, forms and approvals | 24 | 9 | 3 | 12 | 0 |
 | 11. Settings | 28 | 10 | 6 | 12 | 0 |
@@ -69,7 +69,7 @@ are not built. The picks are in `PLAN-session-waves.md` and `PLAN-w31-foundation
 | 17. Errors, empty, offline, engine states | 18 | 8 | 1 | 9 | 0 |
 | 18. Notch (macOS) | 18 | 14 | 3 | 0 | 1 |
 | 19. Narrow widths and density | 14 | 1 | 3 | 9 | 1 |
-| **All** | **431** | **191** | **38** | **200** | **2** |
+| **All** | **432** | **191** | **39** | **200** | **2** |
 
 A `board` row can still hold a derived part or a conflict: its Reference cell says so.
 
@@ -334,7 +334,8 @@ A `board` row can still hold a derived part or a conflict: its Reference cell sa
 | Messages queued (a session) | no | board `session/S22-steer-and-queue-*.jpg` | 0.3.0 S1 | not started (step 4) |
 | The line with a limit: the weekly bar and "81%" | no | board `session/S34-usage-limits-*.jpg` | 0.3.0 S3 | not started (step 6) |
 | "/" commands and "$" skills lists over the composer | partly | board `session/S31-slash-commands-*.jpg`, `session/S32-files-and-skills-*.jpg` | unknown (section 7) | not started (step 6) |
-| Dictation: the mic on, listening (a press or alt+V switches it; held, it listens while held; Esc stops it; the bot's orbs listen meanwhile) | yes, the kit Composer (`components/v7/compose.ts`) and `modules/chat/compose.ts` through the provider's dictation; story `kit/composer` "listening" | derived: the boards draw the mic at rest; nearest `notch/stills/12-stage-listening.jpg`; the mic pressed in the accent, the placeholder saying who listens, the box's line as with the focus | the mic works; **the live provider's dictation hears nothing yet** (`host/live-provider.ts`: no transcription exists in the host), only the page build's mock writes a transcript | built at step 6a (derived; shown to the owner) |
+| Dictation: the mic on, listening (a press or alt+V switches it; held, it listens while held; Esc stops it; the bot's orbs listen meanwhile) | yes, the kit Composer (`components/v7/compose.ts`) and `modules/chat/compose.ts` through the provider's dictation; story `kit/composer` "listening" | derived: the boards draw the mic at rest; nearest `notch/stills/12-stage-listening.jpg`; the mic pressed in the accent, the placeholder saying who listens, the box's line as with the focus | the mic's control works where the provider has dictation (the page build's mock, which invents a transcript); **the desktop app has no transcription yet**, so its provider has no dictation (see the next row) | built at step 6a (derived; shown to the owner) |
+| The mic without a speech model: drawn as ever, named "Dictate: set up a speech model first"; a press, a hold or alt+V starts nothing and opens a Notice at the mic, "Dictation needs a speech model", with "Set up voice" (Settings, Models) | yes, the kit Composer's `micSetup` (`components/v7/compose.ts`, `ui:dictate-setup`) and `modules/chat/compose.ts` `micTool`; story `kit/composer` "no speech model yet: what the mic opens" | decided: the lead, 26 November, by the owner's rule for the voice circle (REPASS.md); the Notice is the voice circle's | the control works today; transcription: unknown (no plan names a speech model) | built at step 6b (decided by the lead; shown to the owner) |
 | Talking to a bot (the voice button with no text) | partly: the button is always drawn (owner, 26 November: "it's not supposed to be hidden, it just will not come out functioning from the get go"); with no voice model it opens a Notice, "Voice needs a voice model", whose action "Set up voice" opens Settings at Models; with one (the provider's `voice`) it starts talking. Live voice and the voice section of Settings, Models (a provider's key, a local model) are not built | board `v7/11-bot-chat-rail-*.jpg` draws the button; the talking state and the Notice have no board | the set-up: step 7 (Settings); live voice: after 0.3.0 (PLAN-w31-foundations, "Naming") | matched, step 1; the Notice and the capability at step 5 |
 | A turn running: the send slot as Stop | yes (`ui:stop`) | derived: an open owner question (the boards draw the voice button) | works today | built at step 1 (derived) |
 | Governed or ungoverned, Smart on or off, as controls (alt+G, alt+S) | yes, `modules/session/composer.ts` | board `v7/10-session-chat-*.jpg` draws "Governed" and "Smart" on the line; see conflict 6 | works today | not started (step 4) |

@@ -172,8 +172,10 @@
 .k7-notice[data-tone="owe"] { --sq-bg: var(--owe-soft); --sq-line: transparent; color: var(--owe-text); }
 .k7-notice[data-tone="accent"] { --sq-bg: var(--accent-soft); --sq-line: transparent; color: var(--accent-text); }
 .k7-notice[data-tone="red"] { --sq-bg: var(--red-soft); --sq-line: transparent; color: var(--red-text); }
-.k7-notice[data-place="floating"] { --sq-line: var(--float-line); --sq-shadow: var(--shadow-pop); width: max-content; color: var(--text); font-size: var(--fs-m); line-height: var(--lh-m); }
-.k7-notice[data-place="floating"][data-tone="neutral"] { --sq-bg: var(--bg-3); }
+/* floating: the notice over the work (notify.ts) and one opened against a control (openNotice: `data-floating`; the placement writes its
+   own side into data-place, so that one is not read by its place) */
+.k7-notice[data-place="floating"], .k7-notice[data-floating] { --sq-line: var(--float-line); --sq-shadow: var(--shadow-pop); width: max-content; color: var(--text); font-size: var(--fs-m); line-height: var(--lh-m); }
+.k7-notice[data-place="floating"][data-tone="neutral"], .k7-notice[data-floating][data-tone="neutral"] { --sq-bg: var(--bg-3); }
 .k7-notice .k7-ib[data-variant="ghost"] { flex: none; }
 @media (prefers-reduced-motion: no-preference) { .k7-notice[data-enter] { animation: k7-enter var(--dur-1) var(--ease-sharp); } }
 @keyframes k7-enter { from { opacity: 0; transform: translateY(var(--sp-1)) scale(.98); } }

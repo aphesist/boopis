@@ -2,7 +2,8 @@
    events, wire.ts and compose.ts): "+" asks the host for files and sets each into the text as a chip whose words are its "@" reference,
    the way a typed path is read; a file dropped on the composer or pasted into it becomes the same chip (`composerFiles`, which a started
    session uses too); the mic dictates into the text through the provider's dictation until it is switched off or let go, and the
-   bot's orbs listen meanwhile; "@" names what the screen offers. The voice
+   bot's orbs listen meanwhile (with no speech model set up the provider has no dictation: the mic then says what it needs, `micTool`);
+   "@" names what the screen offers. The voice
    circle (the primary button with no text) is always there (owner, 26 November): it talks once a voice model is set up (the
    provider's `voice`), and until then says what it needs, with the way to Settings, Models (`voiceTool`). */
 import { emit } from '../../core/bus';
@@ -42,6 +43,19 @@ export function voiceTool(slot: HTMLElement, botId: () => string | null): () => 
     if (at) kit.openNotice(at, { icon: 'waveform', title: 'Voice needs a voice model', text: '', action: 'Set up voice', onAction: () => { emit('hx:open-settings', { section: 'models', from: 'voice' }); } });
   });
   return stop;
+}
+
+/** no speech model is set up yet, so nothing can hear a dictation: a composer's mic says so (`ComposerOpts.micSetup`) */
+export const micNeedsSetup = (): boolean => !data().dictation;
+/** what the mic says when it is pressed, held or keyed with no speech model (the kit fires ui:dictate-setup and starts nothing): the same
+    Notice as the voice circle's, at the mic, whose one action opens Settings at Models (the lead, 26 November). Transcription itself
+    is not built here */
+export const MIC_NEEDS = 'Dictation needs a speech model';
+export function micTool(slot: HTMLElement): void {
+  slot.addEventListener('ui:dictate-setup', () => {
+    const at = slot.querySelector<HTMLElement>('.k7-composer [data-mic]');
+    if (at) kit.openNotice(at, { icon: 'mic', title: MIC_NEEDS, text: '', action: 'Set up voice', onAction: () => { emit('hx:open-settings', { section: 'models', from: 'dictation' }); } });
+  });
 }
 
 /* ───────── files dropped on a composer or pasted into it ───────── */
@@ -131,9 +145,12 @@ export function composeTools(slot: HTMLElement, o: ComposeTools): { drawn(): voi
   slot.addEventListener('ui:dictate', (e) => {
     hush();
     if (!(e as CustomEvent<{ on: boolean }>).detail.on) return;
-    cancel = data().dictation.start({ botId: o.botId() }, (heard) => { const c = text(); if (c) kit.composerInsert(c, heard); });
+    const hear = data().dictation;
+    if (!hear) return;   /* the kit's mic does not switch on without one (`micSetup`) */
+    cancel = hear.start({ botId: o.botId() }, (heard) => { const c = text(); if (c) kit.composerInsert(c, heard); });
     orbsListen(o.botId(), true, was);
   });
+  micTool(slot);
   const endTalk = voiceTool(slot, o.botId);
   return {
     drawn() { stop(); const c = slot.querySelector<HTMLElement>('.k7-composer'); if (c && o.mentions) kit.mentions(c, o.mentions); },

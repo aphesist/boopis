@@ -144,6 +144,7 @@ function wireRowAction(r: HTMLElement): void {
       ui:send {text, queue}   ui:steer {text}   ui:stop   ui:voice {setup} (the circle pressed with no text; `setup`: no voice model yet)
       ui:add                  "+" was pressed (the app picks what to add; `composerInsert` puts it in the text)
       ui:dictate {on, mode}   the mic was switched on or off (aria-pressed says which): `toggle` by a press or alt+V, `hold` while held
+      ui:dictate-setup        the mic was pressed, held or keyed with no speech model set up (`data-mic-setup`): nothing started
       ui:files {files, via}   files were dropped on it or pasted into it (compose.ts)
       ui:refused              Enter while a turn runs where nothing queues (`data-queue-off`): the text stays
     The voice circle is never hidden (owner, 26 November): `data-voice-setup` (ComposerOpts.voiceSetup) says no voice model is set up
