@@ -92,6 +92,7 @@ in a narrow composer; `kit.composerMarks`, the words a text is read by, as Marks
 | `kit.turnFoot({ kind: 'session' })` | "Checkpoint N", Undo (the rewind; disabled with why where it cannot run), Edit from here and Fork once they exist, the model's 12 mark with its name, time and cost; a route, why it was picked, "ungoverned"; hover, focus, narrow | kit.css `.turnbar`, S23 |
 | `kit.hoverBar`, `kit.hoverBeside` | a turn's hover actions beside its last bubble: copy, more (a bot's message, board 11); the same on a session's answer (owner), where "more" holds the copy as Markdown; in a room: reply, open the chat | botscreens.js `.hoverbar`, kit.css `.row` |
 | `kit.askCard` in a session | a question ("asked during the turn", its options, Something else: your own words in a Field); an approval with no fields (the hold, Deny); lapsed (a change whose approval ran out, S09) | sessiontab.js `ask`, S23 |
+| `kit.askCard({ variant: 'form' })` (step 6d, derived) | every form (`modules/cards/form.ts`): the asker at 16 (a bot's orb, the agent's model mark, three orbs and the rail's "+N" chip, a connector's tile, a mod's glyph, the boopis mark, none: "Needs your answer"), the countdown, the StatusWord; the ask, its why, the fields stacked 8 apart, the effect line, the answers (the form's verb or its hold, Later, Cancel or Deny at the end with esc); a question with options is the question (S23's chips) or choices (K02-11's lettered rows) variant; submitting (the primary's words shimmer, the fields and answers inert), a send that failed (the Field's error words); done, later (with Open), expired (with Ask again) and cancelled as the one-row receipt with a quiet word | boards 11 and K04 (the block), S23, K02-11, S17, S29, P1, O-B06, O-P03c, 17; the lead's design (REPASS.md 6d) |
 | `kit.statusLine({ kind: 'session' })` | the model's mark and "Waiting for your approval" at rest; while it works the phrase sweeps and `count` is the turn's clock | sessiontab.js `status`, S20 |
 | `kit.composer({ kind: 'session' })` | the line (How careful, the branch, who answers next with the effort's ticks, the context's ticks, the cost); Stop while a turn runs; the words the text is read by as Marks; a model mention as a chip; attachments as chips; narrow: the branch and the context fold | sessiontab.js `comp`, `underSess`; S05 B, S20 |
 | `kit.titlePill({ sub })` | a session's glyph, its name, its branch in mono | sessiontab.js `title` |
@@ -110,24 +111,25 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 6 | Card | `card` (and its Row) | `kit/card` | settings, pane, danger zone collapsed and open |
 | 7 | Block | `block` | `kit/block` | the corner rule's specimen; `offer` (S37: what is missing, said kindly, over the ways to get it, each a Button led by a provider's mark); narrow |
 | 8 | ToolRow | `toolRow` | `kit/tool-row` | edit, command, read, search; running, done, failed, waiting; a session's (S20): a change waiting with its answers, a command waiting, allowed, denied with feedback; an answer hovered, focused; narrow |
-| 9 | AskCard | `askCard` | `kit/ask-card` | standalone, attached, question, choices, lapsed; asked, needs, answered, hold at 50% |
+| 9 | AskCard | `askCard` | `kit/ask-card`; forms: `cards/form-*`, `cards/form-questions`, `cards/form-askers` | standalone, attached, question, choices, lapsed, form (6d, derived: fields, effect, error, busy, a row's action, the asker drawn by the app, the head's word and countdown); asked, needs, answered, hold at 50% |
 | 10 | FilesCard | `filesCard` | `kit/files-card` | 1 file, 2 files (S23) with Open diff, 12 files folded and unfolded, empty, long, narrow; the action hovered, focused; `check` (board S38): how a check on the change went: its glyph and name, the verdict as a StatusWord, the one action, what it printed in a Well in the verdict's colour, the files, a note |
 | 11 | Queue | `queue` | `kit/queue` | list 1, 3, 9; held (with Edit: at rest, hovered, focused, narrow); editing |
 | 12 | Notice | `notice` | `kit/notice` | composer, page, floating; neutral, amber, accent, red; 0 to 2 actions; dismiss |
 | 13 | SystemLine | `systemLine` | `kit/system-line` | info (with `meta`: what a changed setting costs, in mono at its end, S33), steer, hand-off, error (the glyph and the words in red, S36) with its action (the tint Button, `.sysline.act .btn`). A stopped engine's line is `modules/chat/engine.ts` in a session, a bot's chat and a room |
 | 14 | Bubble | `bubble` | `kit/bubble` | user, agent, a bot's fill, room byline, brand tile, you wash, code |
-| 15 | DiffView | `diffView` | `kit/diff-view` | stacked, split; comment, comment focused; a file of the tools' Diff that folds by its head (board S24: the chevron, the path, its counts), open and closed, its head hovered and focused |
+| 15 | DiffView | `diffView` | `kit/diff-view` | stacked, split; comment, comment focused; its body a named group in a form (6d: no landmark); a file of the tools' Diff that folds by its head (board S24: the chevron, the path, its counts), open and closed, its head hovered and focused |
 | 16 | Well | `well` | `kit/well` | code in a Block and a bubble, terminal |
 | 17 | ListRow | `listRow`, `list` | `kit/list-row` | session, bot, head, item, compact; current, needs you, working; the Bots list (hover, focus, pressed, the main bot open, narrow with long names, no rows, archived items) |
 | 18 | SectionHead | `sectionHead` | `kit/section-head` | plain, count, disclosure; collapsed |
 | 19 | MenuRow | `menuRow` | `kit/menu-row` | glyph, description, kbd, danger, check |
-| 20 | OptionRow | `optionRow` | `kit/option-row` | permission step, import pick; disabled (a step that cannot be honoured: its line says why) |
+| 20 | OptionRow | `optionRow` | `kit/option-row` | permission step, import pick; disabled (a step that cannot be honoured: its line says why); check (6d, derived: one of several that can all be chosen, a form's "choose any") |
 | 21 | Button | `button` | `kit/button` | secondary, primary, ghost, tint, danger, split; 36, 32, 28; hold |
 | 22 | IconButton | `iconButton` | `kit/icon-button` | floating, tinted, ghost, inverted |
 | 23 | Segmented | `segmented` | `kit/segmented` | inline 2 to 4, page head, tab bar; upright (the collapsed rail's switch: glyph items, the attention dot, hover, focus) |
 | 24 | SelectorItem | `selectorItem` | `kit/selector-item` | line, launch, field; ticks; "+ Choose a model" |
 | 25 | Switch | `switch` | `kit/switch` | on, off, disabled |
-| 26 | Field | `field` | `kit/field` | text, search pill, multi-line; error, disabled |
+| 26 | Field | `field` | `kit/field` | text, search pill, multi-line; error, disabled; secret with Show and Hide, a hint line, an email or address input, round another control (OptionRows, Segmented, SelectorItem, Switch on its line, Swatches): 6d, derived for forms |
+| — | Swatches | `swatches` | `kit/swatches` | 6d, derived from P1: colours as 28 circles; shown, or one to choose (a radio group, the chosen ringed); none chosen, long, focus |
 | 27 | Kbd | `kbd` | `kit/kbd` | in text, in a pill |
 | 28 | Chip | `chip` | `kit/chip` | answer, filter, mode |
 | 29 | Tooltip | `tooltip` (the runtime `[data-tip]`, restyled on a v7 root) | `kit/tooltip` | name, name and keys |
@@ -137,7 +139,7 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 33 | Badge | `badge` | `kit/badge` | neutral, amber |
 | 34 | StatusLine | `statusLine` | `kit/status-line` | bot, session, system; working, waiting |
 | 35 | Avatar | `avatar` | `kit/avatar` | orb 16 to 96, brand tile, stack, logomark |
-| 36 | Disclosure | `disclosure` | `kit/disclosure` | steps, work log; closed, open; the summary hovered, focused; no steps; narrow; the work log open as S10 draws it (rows under its words, each led by its kind's glyph: a step's `log` state; a step that failed keeps its words and says "failed" as a red StatusWord before its time: `word`); what follows the steps (`after`): a work log's output in the terminal Well, a list of parts with a Button (the context's parts and "Compact conversation") |
+| 36 | Disclosure | `disclosure`, `steps` (its Steps alone: a form's plan, 6d) | `kit/disclosure` | steps, work log; the Steps alone, not started; closed, open; the summary hovered, focused; no steps; narrow; the work log open as S10 draws it (rows under its words, each led by its kind's glyph: a step's `log` state; a step that failed keeps its words and says "failed" as a red StatusWord before its time: `word`); what follows the steps (`after`): a work log's output in the terminal Well, a list of parts with a Button (the context's parts and "Compact conversation") |
 | 37 | TurnFoot | `turnFoot` | `kit/turn-foot` | bot (model, time, cost); session (S23: the checkpoint, the actions that exist, the model with its time and cost): only Undo, none, Undo disabled, a route with why and "ungoverned", an action hovered and focused, narrow |
 | 38 | TimeSeparator | `timeSeparator` | `kit/time-separator` | a gap, NEW |
 | 39 | Composer | `composer` | `kit/composer` | session, bot, room, dock, notch; typed, multi-line, running (Stop beside the mic; with text; idle; Stop hovered, focused; narrow), held, no model, quick menu; no voice model yet (the voice circle as ever, its name saying so; what it opens: the Notice with "Set up voice"); nothing queues (no send while a turn runs); a session's line and marks (S20; an item hovered, focused; narrow: it folds; no line); a room's line and hint; chips in the text (and narrow); the "@" list open |
@@ -170,8 +172,7 @@ details pane (Pane), the Archived group (SectionHead and ListRow items), a live 
 in its details). The v6 room header, presence entry, huddle fold, held strip, ledger lines and glance are deleted. **Since boards S20 and S23** a started session is the
 kit's too (`modules/session/conversation.ts`, `turn.ts`, `composer.ts`): the thread, the composer and its line, their menus (the kit's
 Menu), the model-change line (SystemLine), find (the kit's search Field). **Still v6 in the Bots tab:** the bot settings sheet, the
-new-bot and new-group forms, a room's kanban board view; **in a session:** the form card for forms with fields (`hx-card`: credentials,
-sign-ins, plans), the tasks handed to other models (`children.ts`, `ui.child`), a council (`council.ts`), find's
+new-bot and new-group forms, a room's kanban board view; **in a session:** the tasks handed to other models (`children.ts`, `ui.child`), a council (`council.ts`), find's
 popover shell; and outside them the palette, and Settings, Store and Keyboard. The v6 composer and its mentions (`components/composer.ts`,
 `mentions.ts`, `.ui-composer`, `.ui-ff`, the story `composer/composer`) were deleted at step 6a: every composer is `kit.composer`.
 **Since board S40** (step 6c) the session's right panel is the kit's Pane (`modules/session/details.ts`): its details as S40 draws them,
@@ -255,8 +256,8 @@ changed most is that it is now the kit's component, one markup for both fields a
 
 ### Toggles and switches — one
 - `switch` everywhere: Settings > General (Show the dock), Appearance (Grow bots on hover), Hermes source, bot settings,
-  the dock's card, form cards, connectors. No checkbox anywhere (R-check-1): the form card's several-choice rows were
-  a filled square, now the check glyph at rest in `--mark-off`, brass when chosen, with "Choose any" in the label.
+  the dock's card, form cards, connectors. No platform checkbox anywhere (R-check-1): a form's several-choice rows are the
+  kit's OptionRows with the check variant (6d), with "choose any" in the field's label.
 
 ### Segmented controls — one
 - `segmented` for Session | Bots (pill and rail), Rail | Hide, Auto | Integrated | Dedicated, Governed | Ungoverned,
@@ -276,8 +277,7 @@ changed most is that it is now the kit's component, one markup for both fields a
 - **Migrated:** the title bar's command field and the palette's field (from `index.html` and `shell.css`), the shortcut
   sheet's filter (now a search field, R-search-1), the bot settings' cap fields (the mock version wrote its value after
   an empty `value` attribute: fixed), the session rename, the theme panel's hex fields and JSON box.
-- **Debt (allowlisted):** `cards/form.ts` renders its own `.ui-input` controls from the schema (one card family);
-  the new bot's name field (`.bt-name`, an underlined title field) and the card's free answer (`.cd-free input`) keep
+- Forms draw the kit's Field (6d): no `.ui-input` is left in `cards/form.ts`. **Debt (allowlisted):** the new bot's name field (`.bt-name`, an underlined title field) and the card's free answer (`.cd-free input`) keep
   their own look by design (§13, §14.13).
 
 ### Key chips — one
@@ -408,7 +408,7 @@ this build", and "listening".
   the x = 28 axis.
 
 ### Cards — card layer, with debt
-- `hx-card` (the cards module) is the one card family (forms included). **Debt:** the bots module's confirm and review
+- `hx-card` (the cards module) is the one card family. A form's card is a bare host round the kit's AskCard block (6d). **Debt:** the bots module's confirm and review
   boxes (`.bt-confirm`, `.bt-review`) draw a native 1px border at `--r-m` rather than a card or well; the suggestion
   tiles (`.bt-sugg`), the theme presets (`.hxt-preset`) and the dock tiles (`.dk-tile`) are their own surfaces.
 
@@ -424,7 +424,7 @@ this build", and "listening".
 | R-search-1, 3, 4 | `.ui-search--s/--m/--l` |
 | R-kbd-1 to 3 | `kbd.ts`, `.ui-keys--fit`, `.ui-keys--raised` |
 | R-state-3 | every hover rule of `components.css` and `mod-view.css` under `(hover: hover) and (pointer: fine)` |
-| R-check-1 | `cards/form.ts` several-choice rows, `.cd-opt__check`, "Choose any" |
+| R-check-1 | a form's several-choice OptionRows (`check`), "choose any" |
 
 R-load-2 (the waiting region's quiet line after `--load-delay`) has no instance in the app yet: there is no waiting
 region to apply it to. R-seg-3 has no instance (no segmented control sits on a dialog's band).
