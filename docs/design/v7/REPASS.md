@@ -239,7 +239,11 @@ gh api repos/aphesist/boopis/actions/workflows/ci.yml/dispatches -f ref=<branch>
   `v7/settings-providers`, `v7/settings-connectors`, `v7/settings-connectors-for`, `v7/settings-local-api`, `kit/card`, `kit/kbd`,
   `kit/swatches`, `kit/dialog`, `kit/page`, `boards/settings`. Host: `cargo test -p boopis-dictation` (service) and `-p boopis-rules` here;
   `boopis-host` (its commands, `voice.rs`, the bindings) builds in CI only. Rules adjusted: none; one story allowance (`boards/settings`:
-  board 14's nav 12 down and 8 in, and its ghost close 10 in, rule 7).
+  board 14's nav 12 down and 8 in, and its ghost close 10 in, rule 7; the same on `pages/window` "Settings open"). CI on `3768c109` (run
+  45893768148): every job green but `lab`, whose gate counted 11 blocking: 6f's three were gone but for the first run's consent diff
+  (step 8's page, 1); new and fixed after it: the dialog's board-drawn corners on `pages/window` (3, the allowance above), the page fade's
+  `#000` and the accents' hexes as literal colours (7: the fade's colour is `currentColor`, the accents are data in
+  `styles/accents.v7.json`).
 - The lab's report is read by cause, not by story (step 6a, CI run 45736911632 on `2890ee9a`: 1109 blocking findings). A cause is fixed
   where it is a defect of a converted screen or of the kit; where a rule flags what a board draws or the owner decided, the rule is
   adjusted in `tests/lab/probe.js`, `probe-v7.js` or `v7.mjs` with a comment naming the board (rule 7); a cause of a screen still on v6

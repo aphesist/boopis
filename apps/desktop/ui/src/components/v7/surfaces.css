@@ -116,7 +116,7 @@
 }
 .k7-dialog__page { flex: 1 1 auto; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
   /* board 14's `.setbody`: the page fades out over its last 28 as it scrolls under the dialog's foot */
-  -webkit-mask-image: linear-gradient(#000 calc(100% - var(--sp-6) + var(--sp-1)), transparent); mask-image: linear-gradient(#000 calc(100% - var(--sp-6) + var(--sp-1)), transparent); }
+  -webkit-mask-image: linear-gradient(currentColor calc(100% - var(--sp-6) + var(--sp-1)), transparent); mask-image: linear-gradient(currentColor calc(100% - var(--sp-6) + var(--sp-1)), transparent); }
 
 /* ── Rail (40): the boards' `.rail` (kit.css, screens.js rail): 88 wide (64 compact), its first tile 56 down, tiles 54 (44) and 6 apart, the
    current one 8%; the amber flag 6 in from the tile's lower right with a 2.5 ring of the rail; a 24 hairline at --line-strong before

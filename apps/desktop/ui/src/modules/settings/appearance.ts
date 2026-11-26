@@ -19,7 +19,7 @@ import type { RowOpts } from './rows';
 const THEMES = [{ value: 'system', label: 'Follow system' }, { value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }] as const;
 const themeNow = (): string => (loadLook().followSystem ? 'system' : themeApi.scheme());
 const dot = (hex: string): string => kit.html.swatchDot(hex);
-const accentNow = (): (typeof ACCENTS)[number] => ACCENTS.find((a) => a.id === loadLook().accent) ?? ACCENTS[0];
+const accentNow = (): (typeof ACCENTS)[number] => ACCENTS.find((a) => a.id === loadLook().accent) ?? { id: 'iris', label: 'Iris', hex: '' };
 
 /** the three look rows (board 14): Theme, Accent, Corners */
 export function lookRows(): RowOpts[] {

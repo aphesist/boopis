@@ -1,6 +1,7 @@
 /* UI preferences persistence (STANDARDS sections 2 and 9: `ui/core/settings`). Storage can be missing, full or
    blocked (private windows, previews, thumbnails), so every read and write is wrapped and the app renders
    without it. What is written carries a schema version `v`. Keys keep the v6 names, so a saved theme survives the port. */
+import accentData from '../styles/accents.v7.json';
 import { logger } from './log';
 
 const log = logger('settings');
@@ -139,12 +140,10 @@ export const saveChrome = (p: ChromePrefs): boolean => writeJSON(KEYS.chrome, { 
 
 /* ───────── the v7 look (Settings › Appearance, board 14, P1): the accent and the corners ───────── */
 /** the accents a person chooses from: Iris, the owner's pick (P1), then the other candidates board P1 drew, each fill as P1 wrote it;
-    the text, focus and on-accent shades are derived per theme (kit theme.ts `deriveAccent`, section 18) */
-export const ACCENTS = [
-  { id: 'iris', label: 'Iris', hex: '#5b5bd6' }, { id: 'indigo', label: 'Indigo', hex: '#4f46e5' }, { id: 'ultramarine', label: 'Ultramarine', hex: '#3e4fd8' },
-  { id: 'violet', label: 'Violet-indigo', hex: '#5e4ad9' }, { id: 'soft', label: 'Soft indigo', hex: '#6366f1' }
-] as const;
-export type AccentId = (typeof ACCENTS)[number]['id'];
+    the text, focus and on-accent shades are derived per theme (kit theme.ts `deriveAccent`, section 18). The fills are data
+    (`styles/accents.v7.json`) */
+export const ACCENTS: ReadonlyArray<{ id: AccentId; label: string; hex: string }> = accentData.accents as ReadonlyArray<{ id: AccentId; label: string; hex: string }>;
+export type AccentId = 'iris' | 'indigo' | 'ultramarine' | 'violet' | 'soft';
 export const CORNERS_V7 = ['standard', 'rounder'] as const;
 export type CornersV7 = (typeof CORNERS_V7)[number];
 /** `followSystem`: the theme follows the system's light or dark (board 14's "Follow system"); off, the theme is the one chosen */
