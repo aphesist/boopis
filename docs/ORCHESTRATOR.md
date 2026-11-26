@@ -278,6 +278,8 @@ final / error; UI adapter in one file `host/dictation.ts`. Kit side (states draw
 
 - **Owner, 28 Nov:** live talking to bots (the voice circle) goes into **0.3.0** with the rest of the session features. 0.2.0 ships the voice settings (provider, key, local server) and the circle's "arrives in a later update" Notice.
 
+- **Owner, 28 Nov:** approved the kit structure and docs plan (Effect UI's article as the model: terms, one folder per component with a contract, props down / events up, where state lives, Story/Scene/Play tests plus the board check, one teaching article with live examples). Runs right after 7a, before 7b.
+
 ## 9b. The coverage map and the lead's resolutions (25 Nov)
 
 `docs/design/v7/COVERAGE.md` (branch `w33/coverage` 6507482d, to be merged into `w33/repass`): 427 rows in 19 areas:
