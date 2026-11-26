@@ -196,3 +196,7 @@
 .k7-swatches__item[aria-checked="true"] { box-shadow: 0 0 0 var(--focus-w) var(--focus); }
 .k7-swatches__item[role="radio"]:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-off); }
 
+/* a Button that cannot be taken now and says why in its Tooltip (6e: a rewind where it cannot run): drawn as a disabled one, still
+   hovered and focused so its Tooltip shows (a `disabled` control gets no pointer events) */
+.k7-btn[aria-disabled="true"] { background: var(--selected-off); color: var(--icon-off); box-shadow: none; cursor: default; }
+.k7-btn[aria-disabled="true"]:active { transform: none; }

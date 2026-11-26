@@ -47,6 +47,8 @@ for (const [k, v] of Object.entries(t.motion.durations)) both.push(`${k}: ${v.va
 for (const [k, v] of Object.entries(t.mark)) if (k.startsWith('--')) both.push(`${k}: ${v};`);
 both.push(`--shadow-composer: ${t.elevation.composer.value};`);
 for (const [k, v] of Object.entries(t.elevation.light)) if (k.startsWith('--')) light.push(`${k}: ${v};`);
+/* find in a conversation (6e, derived; no board): a match is washed in the accent, the one the bar is on twice as strong */
+both.push('--find-hit: color-mix(in srgb, var(--accent) 24%, transparent);', '--find-hit-now: color-mix(in srgb, var(--accent) 48%, transparent);');
 dark.push('--shadow-inline: none;', '--shadow-pop: none;', '--shadow-modal: none;', '--shadow-window: none;');
 
 /* the board constants that change with the theme (ds-v7/src/kit.css and build-v7-css.mjs's last two rules) */
@@ -101,6 +103,7 @@ both.push('--file-w: 260px;',                       /* a file card (kit.css .fil
   '--hover-ctl: 28px;', '--step-dot: 7px;',                             /* a hover action beside a bubble (kit.css .hoverbar span) */
   '--stop-glyph: 10px;', '--r-stop: 2px;',              /* the composer's Stop: a filled rounded square in a tinted 28 circle (owner, 25 November) */
   '--wc-w: 32px;', '--wc-h: 28px;', '--icon-l: 18px;',                 /* a window glyph's cell (kit.css .wc span) */
+  '--find-w: 360px;', '--well-thread-h: 240px;',   /* find in a conversation (6e, derived): the bar's width; a handed-off task's transcript, at most this tall */
   '--ns-top: 64px;', '--ns-bottom: 250px;', '--ns-wait-w: 520px;', '--ns-wait-top: 40px;', '--ns-mark: 72px;', '--ns-logo: 44px;', '--offer-w: 470px;', '--ns-offer-top: 22px;');   /* the new session's canvas (kit.css .ns, .ns-wait, .ns-mark; sessionnew.js brand) */
 
 const css = `/* Generated from tokens.v7.json by scripts/build-tokens-v7.mjs. Do not edit: run \`pnpm tokens\`. */

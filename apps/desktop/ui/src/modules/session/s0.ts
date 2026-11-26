@@ -182,22 +182,26 @@ export const REWIND_BASE = 'Rewind to before this session';
 
 const ACTION_WORD = { restore: 'put back', delete: 'removed', recreate: 'brought back' } as const;
 const MAX_FILES = 12;
-/** the sheet's body: what the rewind would do, file by file, and the guard's verdict (or why it will not run) */
+/** why the rewind cannot run here (a shared checkout), said in the disabled Rewind's Tooltip */
+export const refusedWhy = (r: RewindResult): string => r.why ?? 'The rewind was refused.';
+/** the sheet's body: what the rewind would do, file by file (the kit's FilesCard: each path in mono and what happens to it in words), and
+    the guard's verdict; where it cannot run, why, in the words the guard gave (the Rewind button says it again in its Tooltip) */
 export function rewindBody(r: RewindResult): string {
-  if (r.status === 'refused') return '<p class="k7-type-s ss-s0-why">' + kit.html.statusWord({ text: 'Refused', tone: 'red' }) + ' ' + esc(r.why ?? 'The rewind was refused.') + '</p>';
   if (r.status === 'nothing_to_do') return '<p class="k7-type-s">Nothing to rewind: the files are already as they were then.</p>';
-  /* the path in mono, as the kit's file rows draw it (FilesCard); what happens to it in words */
-  const rows = r.files.slice(0, MAX_FILES).map((f) => ({ label: f.path, labelHTML: '<span class="k7-mono k7-ell">' + esc(f.path) + '</span>', value: ACTION_WORD[f.action] }));
+  const rows = r.files.slice(0, MAX_FILES).map((f) => ({ path: f.path, word: ACTION_WORD[f.action] }));
+  const card = rows.length ? kit.html.filesCard({ files: rows, title: r.files.length + (r.files.length === 1 ? ' file' : ' files') }) : '';
   const more = r.files.length > MAX_FILES ? '<p class="k7-type-s ss-s0-more">And ' + (r.files.length - MAX_FILES) + ' more files.</p>' : '';
+  if (r.status === 'refused') return card + more + '<p class="k7-type-s ss-s0-why">' + kit.html.statusWord({ text: 'cannot run', tone: 'red' }) + ' ' + esc(refusedWhy(r)) + '</p>';
   const verdict = r.isolation === 'own_worktree' ? 'This folder is this session\'s own worktree.' : 'Nothing else changed in this folder since this session\'s last change.';
-  return kit.html.card({ variant: 'pane', rows }) + more +
-    '<p class="k7-type-s ss-s0-why">' + esc(verdict) + ' The rewind is recorded and can be undone.</p>';
+  return card + more + '<p class="k7-type-s ss-s0-why">' + esc(verdict) + ' The rewind is recorded and can be undone.</p>';
 }
 export interface RewindSheet { el: HTMLElement; close(): void }
-/** the dry-run sheet: the files, the guard's verdict, Rewind or Cancel; a refusal shows why and Close only */
+/** the dry-run sheet (the kit's Dialog in its form shape): the files, the guard's verdict, Rewind and Cancel. Where it cannot run, Rewind
+    stays, disabled, and its Tooltip says why; with nothing to rewind, Close alone */
 export function rewindSheet(r: RewindResult, title: string, on: { onConfirm(): void; closed?(): void }): RewindSheet {
-  const can = r.status === 'planned';
-  const node = kit.dialog({ title, body: rewindBody(r), actions: can ? [{ label: 'Cancel', variant: 'ghost' }, { label: 'Rewind', variant: 'primary' }] : [{ label: 'Close', variant: 'ghost' }], attrs: v7Attrs() });
+  const actions = r.status === 'nothing_to_do' ? [{ label: 'Close', variant: 'ghost' as const }]
+    : [{ label: 'Cancel', variant: 'ghost' as const }, { label: 'Rewind', variant: 'primary' as const, ...(r.status === 'refused' ? { disabled: true, tip: refusedWhy(r) } : {}) }];
+  const node = kit.dialog({ title, body: rewindBody(r), actions, attrs: v7Attrs() });
   asV7(node);
   const prev = document.activeElement as HTMLElement | null;
   const close = (): void => { const wrap = node.parentElement?.classList.contains('ss-s0-sheet') ? node.parentElement : null; node.remove(); wrap?.remove(); document.removeEventListener('keydown', key, true); on.closed?.(); prev?.focus?.(); };
@@ -206,7 +210,7 @@ export function rewindSheet(r: RewindResult, title: string, on: { onConfirm(): v
     const t = e.target as Element;
     if (t === node || t.closest('[data-dialog-close]')) { close(); return; }
     const b = t.closest<HTMLButtonElement>('.k7-dialog__foot .k7-btn');
-    if (!b) return;
+    if (!b || b.getAttribute('aria-disabled') === 'true') return;
     const label = b.textContent?.trim();
     if (label === 'Rewind') { b.disabled = true; on.onConfirm(); } else close();
   });
@@ -219,7 +223,7 @@ export function showSheet(s: RewindSheet): void {
   over.className = 'ss-s0-sheet';
   over.append(s.el);
   (document.getElementById('hx-app') ?? document.body).append(over);
-  requestAnimationFrame(() => { s.el.querySelector<HTMLElement>('.k7-dialog__foot .k7-btn:last-child')?.focus(); });
+  requestAnimationFrame(() => { s.el.querySelector<HTMLElement>('.k7-dialog__foot .k7-btn:last-child:not([aria-disabled="true"])')?.focus() ?? s.el.querySelector<HTMLElement>('.k7-dialog__foot .k7-btn')?.focus(); });
 }
 
 /* ───────── a word to the person (the v7 Notice, floating: section 21 merged the toast into it) ───────── */

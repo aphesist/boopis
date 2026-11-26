@@ -36,7 +36,7 @@ export const MIN_COMPONENT: readonly Tag[] = ['typical', 'long'];
 /** components and cards where "empty" means something (nothing to show, no items, no value) */
 export const EMPTY_APPLIES: readonly string[] = ['ui.row', 'ui.group', 'ui.chipGroup', 'ui.field', 'ui.menu', 'ui.ladder', 'ui.measure', 'ui.steps', 'ui.entry', 'ui.section', 'ui.blank', 'ui.code', 'ui.modView', 'ui.request', 'card:*', 'form:*'];
 /** where "error" applies (a failure, an invalid value, an unknown model, a refused tree) */
-export const ERROR_APPLIES: readonly string[] = ['ui.field', 'ui.chip', 'ui.capacity', 'ui.measure', 'ui.steps', 'ui.modelMark', 'ui.modView', 'card:approval', 'card:ship', 'card:escalation', 'card:error', 'card:connector', 'card:teammate', 'form:*'];
+export const ERROR_APPLIES: readonly string[] = ['ui.field', 'ui.chip', 'ui.capacity', 'ui.measure', 'ui.steps', 'ui.modelMark', 'ui.modView', 'card:approval', 'card:connector', 'form:*'];
 /** surfaces need a typical state and at least this many states */
 export const MIN_SURFACE_STATES = 3;
 

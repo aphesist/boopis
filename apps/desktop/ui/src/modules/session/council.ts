@@ -1,15 +1,21 @@
-/* The council in the session view (ADR-0035): the form that picks who sits on it, and what a council turn shows.
-   The form is a popover from the composer's model menu ("Ask a council"): a list of the models on offer to check (members, at
-   least two), a list to choose the combiner from, and one button. It starts from the last council (the engine keeps it in the
-   profile's configuration) or from the best model of each provider. The turn shows each member's answer as a quiet, collapsible
-   row (the provider's mark, the model's readable name, a state word), then the combiner's byline, then the combined answer
-   (the entry's own prose). Built from the kit: no colour, size or control of its own. */
-import { el } from '../../core/dom';
-import { ui } from '@boopis/ui';
+/* The council in the session view (ADR-0035) on the v7 kit (REPASS.md step 6e; the lead's design, no board draws it):
+   - The form is board S19's Menu: the models on offer as OptionRows with checks (each its mark, its name, its provider on the second
+     line), and under them the combiner as a SelectorItem and "Ask the council". Pressing the combiner turns the same Menu to the models
+     as one choice, and choosing one turns it back. It starts from the last council (the engine keeps it in the profile's configuration)
+     or from the best model of each provider. alt+C from the composer's model menu opens it.
+   - While the members answer and while one combines them, the turn holds one Block: "Council · N models" with a StatusWord ("asking",
+     then "combining" with the kit's shimmer), and each member a ToolRow: its mark, its name, and its StatusWord (running, done, failed
+     with the reason in its Tooltip, no answer).
+   - Done, the combined reply is the turn's ordinary agent message; its foot says "council of N" with the members' marks stacked (three,
+     then "+N"), and under the reply a Disclosure, "Answers (N)", opens each member's answer.
+   - Where no member was reported, the Block stays with a red StatusWord and "Ask again".
+   Everything drawn is the kit's; this file composes and wires it. */
+import { kit, layer, ui } from '@boopis/ui';
+import type { ToolRowOpts } from '@boopis/ui';
 import { data } from '../../data';
 import { MIN_COUNCIL } from '../../data/types';
-import type { CouncilChoice, CouncilForm, CouncilSlot, CouncilTurn, ModelChoice } from '../../data';
-import { randomId } from './shared';
+import type { CouncilChoice, CouncilForm, CouncilMember, CouncilSlot, CouncilTurn, ModelChoice } from '../../data';
+import { asV7, say, v7Attrs } from './s0';
 
 export const COUNCIL_VALUE = '__council';
 export const COUNCIL_DESC = 'Several models answer your next message, one combines them';
@@ -18,123 +24,129 @@ export const COUNCIL_KEYS = 'alt+C';
 export const COST_NOTE = 'Costs one call for each member, plus the combiner\'s own turn, which may take several steps.';
 /** a resumed answer that was longer than the turn book keeps (ADR-0036): said, never passed off as the whole answer */
 export const CUT_NOTE = 'This answer was shortened when it was saved. The rest is not kept.';
-export const TOOLS_NOTE = 'Members answer without tools. The combiner keeps them.';
+/** a member that failed and the engine said nothing of why */
+export const FAILED_TIP = 'It did not answer. The council went on without it.';
+export const NONE_SAID = 'No member\'s answer was reported, so only the combined answer is shown.';
 
+type MenuEntry = Parameters<typeof kit.html.menu>[0]['entries'][number];
 const nameOf = (s: CouncilSlot): string => ui.modelMark.called(s.model) || s.model;
-const modelEl = (s: CouncilSlot): HTMLElement => ui.model(s.model, { name: nameOf(s) });
 const plural = (n: number, one: string, many: string): string => n + ' ' + (n === 1 ? one : many);
 
 /* ───────── the turn ───────── */
 
-const STATE: Record<string, [word: string, tone?: string]> = { waiting: ['thinking', 'busy'], answered: ['done'], failed: ['failed', 'attention'] };
-const OPEN = new WeakMap<HTMLElement, Set<number>>();
+/** what a member's row says: running while the members answer, done, failed (red, the reason in its Tooltip), no answer once the
+    council went on without it (amber) */
+export function memberRow(m: CouncilMember, phase: CouncilTurn['phase']): ToolRowOpts {
+  const base = { tool: nameOf(m.slot), model: m.slot.model, icon: '', row: true, attrs: { 'data-member': m.slot.provider + '/' + m.slot.model } } as const;
+  if (m.state === 'failed') return { ...base, state: 'failed', wordTip: m.reason || FAILED_TIP };
+  if (m.state === 'answered') return { ...base, state: 'done', word: 'done' };
+  if (phase === 'members') return { ...base, state: 'running', word: 'running' };
+  return { ...base, state: 'done', word: 'no answer', wordTone: 'owe' };
+}
+/** the Block's head word: asking, combining (both with the shimmer), or none reported (red) */
+export function councilWord(c: CouncilTurn): { text: string; tone: 'neutral' | 'red'; live: boolean } {
+  if (c.phase !== 'members' && !c.members.length) return { text: 'none reported', tone: 'red', live: false };
+  if (c.phase === 'members') return { text: 'asking', tone: 'neutral', live: true };
+  return { text: c.phase === 'combining' ? 'combining' : 'done', tone: 'neutral', live: c.phase === 'combining' };
+}
+/** how many sit on it: the members the engine reported, or the count it gave */
+const sitting = (c: CouncilTurn): number => Math.max(c.total, c.members.length);
+/** whether the turn still shows its Block: while it works, and where no member was reported */
+export const showsBlock = (c: CouncilTurn): boolean => c.phase !== 'done' || !c.members.length;
 
-/** the progress line: where the council has got to, in words */
-export function councilStatus(c: CouncilTurn): string {
-  const answered = c.members.filter((m) => m.state === 'answered').length;
-  if (c.phase !== 'members' && !c.members.length) return 'The members\' answers were not reported, so only the combined answer is shown.';
-  if (c.phase === 'members') return c.total ? 'Asking ' + plural(c.total, 'member', 'members') + ': ' + c.done + ' of ' + c.total + ' answered.' : 'Asking the members.';
-  if (c.phase === 'combining') return (c.combiner ? nameOf(c.combiner) : 'The combiner') + ' is combining ' + plural(answered, 'answer', 'answers') + '.';
-  return (c.combiner ? nameOf(c.combiner) : 'The combiner') + ' combined ' + plural(answered, 'answer', 'answers') + '.';
+/** the council's Block while it runs, or where no member was reported (with "Ask again", when `again` is given) */
+export function councilBlock(c: CouncilTurn, o: { again?: (() => void) | undefined } = {}): HTMLElement {
+  const w = councilWord(c), n = sitting(c);
+  const word = kit.html.statusWord({ text: w.text, tone: w.tone }).replace(/>([^<]*)<\/span>$/, w.live ? '><span class="k7-shimmer" data-live>$1</span></span>' : '>$1</span>');
+  const none = w.tone === 'red';
+  const head = '<div class="k7-tool__head k7-text" data-council-head><b class="k7-tool__name">' + ui.esc('Council · ' + plural(n, 'model', 'models')) + '</b><span class="k7-grow"></span>' + word +
+    (none && o.again ? kit.html.button({ label: 'Ask again', variant: 'ghost', size: 28, attrs: { 'data-again': '' } }) : '') + '</div>';
+  const rows = c.members.map((m) => kit.html.toolRow(memberRow(m, c.phase))).join('');
+  const block = kit.block({ body: head + rows + (none ? '<p class="k7-tool__note k7-text">' + ui.esc(NONE_SAID) + '</p>' : ''), attrs: { role: 'group', 'aria-label': 'Council of ' + n, 'data-council': c.phase, 'aria-busy': w.live ? 'true' : null } });
+  block.querySelector('[data-again]')?.addEventListener('click', () => { o.again?.(); });
+  return block;
 }
 
-function memberRow(host: HTMLElement, c: CouncilTurn, i: number): HTMLElement {
-  const m = c.members[i] as CouncilTurn['members'][number];
-  const id = 'ss-cm-' + randomId('');
-  const open = OPEN.get(host)?.has(i) ?? false;
-  const has = m.state === 'answered' && m.text !== '';
-  const head = ui.disclosure({ label: '', controls: id, expanded: open && has });
-  head.querySelector('span')?.replaceChildren(modelEl(m.slot));
-  head.disabled = !has;
-  head.setAttribute('aria-label', nameOf(m.slot) + ', ' + (STATE[m.state]?.[0] ?? '') + (has ? '. Show its answer' : ''));
-  const [word, tone] = STATE[m.state] ?? ['', undefined];
-  const state = el('span', { class: 'ui-state', text: word, ...(tone ? { 'data-tone': tone } : {}) });
-  const body = el('div', { class: 'ss-council__text ui-prose', id, hidden: !(open && has) });
-  for (const p of m.text.split(/\n{2,}/).map((t) => t.trim()).filter(Boolean)) body.append(el('p', { html: ui.html.inline(p) }));
-  if (m.cut) body.append(el('p', { class: 'ss-council__why', text: CUT_NOTE }));
-  head.addEventListener('ui:change', (e) => {
-    const set = OPEN.get(host) ?? new Set<number>();
-    if ((e as CustomEvent<{ value: boolean }>).detail.value) set.add(i); else set.delete(i);
-    OPEN.set(host, set);
-  });
-  const row = el('div', { class: 'ss-council__m', 'data-state': m.state }, [el('div', { class: 'ss-council__head' }, [head, state]), body]);
-  if (m.state === 'failed') row.append(el('p', { class: 'ss-council__why', text: 'It did not answer. The council went on without it.' }));
-  return row;
+/** done: each member's answer under the reply, in a Disclosure ("Answers (3)"), a compact thread in a Well (a failed member says so) */
+export function councilAnswers(c: CouncilTurn, open = false): HTMLElement | null {
+  if (c.phase !== 'done' || !c.members.length) return null;
+  const html = c.members.map((m) => {
+    const head = '<p data-role="user">' + ui.html.modelMark(m.slot.model, { size: 12, label: false }) + ' ' + ui.esc(nameOf(m.slot)) + '</p>';
+    if (m.state === 'failed') return head + '<p>' + ui.esc(m.reason ? 'It did not answer: ' + m.reason : FAILED_TIP) + '</p>';
+    if (m.state !== 'answered' || !m.text) return head + '<p>It did not answer.</p>';
+    return head + m.text.split(/\n{2,}/).map((t) => t.trim()).filter(Boolean).map((p) => '<p>' + ui.html.inline(p) + '</p>').join('') + (m.cut ? '<p>' + ui.esc(CUT_NOTE) + '</p>' : '');
+  }).join('');
+  return kit.disclosure({ summary: 'Answers (' + c.members.length + ')', open, after: kit.html.well({ kind: 'thread', text: '', html, label: 'The members\' answers' }), attrs: { 'data-council-answers': '' } });
 }
 
-/** draw (or draw again) a council turn's block into `host`; the answers the reader has opened stay open */
-export function drawCouncil(host: HTMLElement, c: CouncilTurn): HTMLElement {
-  host.className = 'ss-council'; host.setAttribute('role', 'group'); host.setAttribute('aria-label', 'Council');
-  const byline = !!c.combiner && c.phase !== 'members' && c.members.length > 0;
-  const status = el('p', { class: 'ss-council__status', role: 'status', 'aria-live': 'polite', text: byline ? '' : councilStatus(c) });
-  host.replaceChildren(
-    el('p', { class: 'ss-council__note', text: TOOLS_NOTE + ' ' + COST_NOTE }),
-    ...c.members.map((_, i) => memberRow(host, c, i)),
-    status
-  );
-  /* the combiner's byline: its mark and name, then what it did (the name is not written twice) */
-  if (byline && c.combiner) status.append(modelEl(c.combiner), ' ' + councilStatus(c).slice(nameOf(c.combiner).length + 1));
-  host.toggleAttribute('data-done', c.phase === 'done');
-  return host;
+/** the reply's foot when a council answered: "council of N" and the members' marks stacked */
+export function councilFoot(c: CouncilTurn): { marks: string[]; modelName: string } {
+  return { marks: c.members.map((m) => m.slot.model), modelName: 'council of ' + sitting(c) };
 }
-export const councilBlock = (c: CouncilTurn): HTMLElement => drawCouncil(el('div'), c);
 
-/* ───────── the form ───────── */
+/* ───────── the form (S19's Menu) ───────── */
 
-type Item = { label: string; model: string; value: string; checked: boolean; desc: string };
-const listOf = (choices: readonly ModelChoice[], on: (c: ModelChoice) => boolean): Item[] => choices.map((c) => ({ label: ui.modelMark.called(c.model) || c.model, model: c.model, value: c.value, checked: on(c), desc: c.providerName }));
-
-/** the form's content: members to check, the combiner to choose, and the button. `submit` is told the choice; it rejects with a sentence */
-export function councilFormNode(form: CouncilForm, submit: (c: CouncilChoice) => Promise<void>): HTMLElement {
+export interface CouncilFormNode { el: HTMLElement; choice(): CouncilChoice | null }
+/** the form: the members to check, the combiner, and "Ask the council". `submit` is told the choice; it rejects with a sentence */
+export function councilFormNode(form: CouncilForm, submit: (c: CouncilChoice) => Promise<void>): CouncilFormNode {
   const { options } = form;
   const slotOf = (v: string): CouncilSlot => { const c = options.find((x) => x.value === v) as ModelChoice; return { provider: c.provider, model: c.model }; };
   const valueOf = (s: CouncilSlot): string => options.find((c) => c.provider === s.provider && ui.modelMark.same(c.model, s.model))?.value ?? '';
   const members = new Set(form.choice.members.map(valueOf).filter(Boolean));
-  let combiner = valueOf(form.choice.combiner);
-
-  const lead = el('p', { class: 'ss-cf__lead', text: 'Your next message goes to several models, each answering on its own. One then combines their answers.' });
-  const mList = el('div', { class: 'ss-cf__list ' + ui.scrollClass({ axis: 'y' }), role: 'menu', 'aria-label': 'Members' });
-  const cList = el('div', { class: 'ss-cf__list ' + ui.scrollClass({ axis: 'y' }), role: 'menu', 'aria-label': 'Combiner' });
-  const items = (list: Item[], role: 'menuitemcheckbox' | 'menuitemradio'): string => ui.html.menuItems(list.map((i) => ({ label: i.label, model: i.model, modelColor: 'mono' as const, value: i.value, desc: i.desc, checked: i.checked, role })));
-  const err = el('p', { class: 'ss-cf__err', role: 'alert', 'data-tone': 'attention' });
-  const go = ui.button({ label: 'Ask the council', variant: 'primary' });
-  const note = el('p', { class: 'ss-cf__note', role: 'status', 'aria-live': 'polite' });
-
-  const paint = (): void => {
-    for (const b of mList.querySelectorAll<HTMLElement>('.ui-menu__item')) { const on = members.has(b.dataset['value'] ?? ''); b.setAttribute('aria-checked', String(on)); const g = b.querySelector('.ui-menu__glyph'); if (g) g.innerHTML = on ? ui.icon('check') : ''; }
-    for (const b of cList.querySelectorAll<HTMLElement>('.ui-menu__item')) { const on = (b.dataset['value'] ?? '') === combiner; b.setAttribute('aria-checked', String(on)); const g = b.querySelector('.ui-menu__glyph'); if (g) g.innerHTML = on ? ui.icon('check') : ''; }
-    const n = members.size;
-    note.textContent = (n < MIN_COUNCIL ? 'Choose at least ' + MIN_COUNCIL + ' members. ' : plural(n, 'member', 'members') + ' answer, then ' + (combiner ? nameOf(slotOf(combiner)) : 'one model') + ' combines them. ') + COST_NOTE;
-    go.disabled = n < MIN_COUNCIL || !combiner;
+  let combiner = valueOf(form.choice.combiner) || (options[0]?.value ?? '');
+  let page: 'members' | 'combiner' = 'members';
+  let host: HTMLElement | null = null;
+  const mark = (m: string): string => ui.html.modelMark(m, { size: 14, label: false });
+  const nameOfValue = (v: string): string => { const c = options.find((x) => x.value === v); return c ? ui.modelMark.called(c.model) || c.model : 'Choose a model'; };
+  const draw = (): void => {
+    const n = members.size, can = n >= MIN_COUNCIL && !!combiner;
+    const entries: MenuEntry[] = page === 'members'
+      ? [{ heading: 'Members, choose any' }, ...options.map((c) => ({ label: ui.modelMark.called(c.model) || c.model, meaning: c.providerName, leadHTML: mark(c.model), value: c.value, chosen: members.has(c.value), check: true, attrs: { role: 'menuitemcheckbox' } })),
+        '-', { heading: (n < MIN_COUNCIL ? 'Choose at least ' + MIN_COUNCIL + ' members. ' : plural(n, 'member answers', 'members answer') + ', then ' + nameOfValue(combiner) + ' combines them. ') + COST_NOTE }]
+      : [{ heading: 'Combiner: writes the answer and keeps the tools' }, ...options.map((c) => ({ label: ui.modelMark.called(c.model) || c.model, meaning: c.providerName, leadHTML: mark(c.model), value: c.value, chosen: c.value === combiner }))];
+    const foot = page === 'members'
+      ? kit.html.selectorItem({ variant: 'line', label: 'Combiner', value: nameOfValue(combiner), leadHTML: combiner ? mark(slotOf(combiner).model) : undefined, attrs: { 'data-combiner': '' } }) + '<span class="k7-grow"></span>' +
+        kit.html.button({ label: 'Ask the council', variant: 'primary', size: 28, disabled: !can, attrs: { 'data-ask': '' } })
+      : kit.html.button({ label: 'Back to the members', variant: 'ghost', size: 28, icon: 'back', attrs: { 'data-back': '' } });
+    const fresh = kit.menu({ label: 'Ask a council', variant: 'options', entries, foot, attrs: { ...v7Attrs(), 'data-page': page, 'data-remembered': form.remembered ? '' : null } });
+    /* the Menu is drawn again in place as the choice changes: the node that floats keeps its place and its listeners */
+    if (!host) host = fresh; else { host.replaceChildren(...fresh.childNodes); host.dataset['page'] = page; }
+    (host.querySelector<HTMLElement>(page === 'members' ? '[data-kit~="OptionRow"]' : '[data-kit~="OptionRow"][aria-checked="true"]'))?.focus({ preventScroll: true });
   };
-  mList.innerHTML = items(listOf(options, (c) => members.has(c.value)), 'menuitemcheckbox');
-  cList.innerHTML = items(listOf(options, (c) => c.value === combiner), 'menuitemradio');
-  for (const b of [...mList.querySelectorAll<HTMLElement>('.ui-menu__item'), ...cList.querySelectorAll<HTMLElement>('.ui-menu__item')]) b.tabIndex = 0;   /* in a form each row is a tab stop (the menu's arrow keys belong to the layer's menu) */
-  mList.addEventListener('click', (e) => {
-    const b = (e.target as Element).closest<HTMLElement>('.ui-menu__item'); if (!b) return;
-    const v = b.dataset['value'] ?? ''; if (members.has(v)) members.delete(v); else members.add(v);
-    paint();
+  draw();
+  const el = host as unknown as HTMLElement;
+  el.addEventListener('click', (e) => {
+    const t = e.target as Element;
+    const row = t.closest<HTMLElement>('[data-kit~="OptionRow"]');
+    if (row) {
+      const v = row.dataset['value'] ?? '';
+      if (page === 'members') { if (members.has(v)) members.delete(v); else members.add(v); draw(); el.querySelector<HTMLElement>('[data-value="' + CSS.escape(v) + '"]')?.focus({ preventScroll: true }); }
+      else { combiner = v; page = 'members'; draw(); el.querySelector<HTMLElement>('[data-combiner]')?.focus({ preventScroll: true }); }
+      return;
+    }
+    if (t.closest('[data-combiner]')) { page = 'combiner'; draw(); return; }
+    if (t.closest('[data-back]')) { page = 'members'; draw(); el.querySelector<HTMLElement>('[data-combiner]')?.focus({ preventScroll: true }); return; }
+    const ask = t.closest<HTMLButtonElement>('[data-ask]');
+    if (ask && !ask.disabled) {
+      ask.disabled = true;
+      submit({ members: [...members].map(slotOf), combiner: slotOf(combiner) }).catch((err: unknown) => { say(err instanceof Error ? err.message : 'The council could not be set up.'); draw(); });
+    }
   });
-  cList.addEventListener('click', (e) => { const b = (e.target as Element).closest<HTMLElement>('.ui-menu__item'); if (!b) return; combiner = b.dataset['value'] ?? combiner; paint(); });
-  go.addEventListener('click', () => {
-    err.textContent = ''; go.disabled = true;
-    submit({ members: [...members].map(slotOf), combiner: slotOf(combiner) }).catch((e: unknown) => { err.textContent = e instanceof Error ? e.message : 'The council could not be set up.'; paint(); });
-  });
-  const h = (t: string): HTMLElement => el('h3', { class: 'ss-cf__head', text: t });
-  const hint = form.remembered ? 'Your last council.' : 'The best model of each provider you are signed in to.';
-  const node = el('div', { class: 'ss-cf' }, [lead, h('Members, choose any'), el('p', { class: 'ss-cf__hint', text: hint }), mList, h('Combiner'), el('p', { class: 'ss-cf__hint', text: 'Writes the answer and keeps the tools. The session\'s model, unless you choose another.' }), cList, note, err, el('div', { class: 'ss-cf__foot' }, go)]);
-  paint();
-  return node;
+  return { el, choice: () => (members.size >= MIN_COUNCIL && combiner ? { members: [...members].map(slotOf), combiner: slotOf(combiner) } : null) };
 }
 
 /** open the form from the composer: it arms the next message on Ask. `done` runs once the council is armed */
 export async function openCouncilForm(anchor: HTMLElement, uiId: string, done: () => void): Promise<void> {
   const src = data().council;
   const can = src.can(uiId);
-  if (!can.ok) { ui.toast(can.reason); return; }
+  if (!can.ok) { say(can.reason); return; }
   let form: CouncilForm;
-  try { form = await src.prepare(uiId); } catch (e) { ui.toast(e instanceof Error ? e.message : 'The council could not be read.'); return; }
-  if (form.options.length < MIN_COUNCIL) { ui.toast('A council needs at least ' + MIN_COUNCIL + ' models you can use. Sign in to another provider in Settings, Models.'); return; }
-  const node = councilFormNode(form, async (choice) => { await src.arm(uiId, choice); ui.popover.close(true); done(); ui.announce('The next message goes to a council of ' + choice.members.length); });
-  ui.popover.open(anchor, node, { place: 'above', label: 'Ask a council' });
+  try { form = await src.prepare(uiId); } catch (e) { say(e instanceof Error ? e.message : 'The council could not be read.'); return; }
+  if (form.options.length < MIN_COUNCIL) { say('A council needs at least ' + MIN_COUNCIL + ' models you can use. Sign in to another provider in Settings, Models.'); return; }
+  const f = councilFormNode(form, async (choice) => { await src.arm(uiId, choice); layer.close(true); done(); ui.announce('The next message goes to a council of ' + choice.members.length); });
+  /* the Menu floats as the kit's menus do (one layer open at a time; Esc or a press outside closes it and focus returns) */
+  f.el.setAttribute('data-floating', '');
+  asV7(f.el);
+  if (!layer.open(anchor, f.el, { place: 'above', align: 'start' })) return;
+  (f.el.querySelector<HTMLElement>('[data-kit~="OptionRow"]'))?.focus({ preventScroll: true });
 }

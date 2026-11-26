@@ -67,6 +67,8 @@ export default [
     states: {
       typical: stage(['typical', 'variant'], ({ root }) => { fill(root, sheet(PLAN, 'Rewind files to after turn 3')); }, { width: 640 }),
       refused: stage(['error'], ({ root }) => { fill(root, sheet(REFUSED, 'Rewind files to after turn 3')); }, { width: 640 }),
+      /* 6e: where it cannot run, Rewind stays, disabled, and its Tooltip says why */
+      'refused, why on Rewind': stage(['error', 'focus'], ({ root }) => { fill(root, sheet({ ...REFUSED, files: PLAN.files }, 'Rewind files to after turn 3')); }, { width: 640, force: [{ sel: '.k7-dialog__foot .k7-btn[aria-disabled="true"]', state: 'focus' }] }),
       'nothing to do': stage(['empty'], ({ root }) => { fill(root, sheet({ status: 'nothing_to_do', isolation: 'shared_unchanged', files: [] }, 'Rewind to before this session')); }, { width: 640 }),
       long: stage(['long'], ({ root }) => {
         const many: RewindResult = { ...PLAN, files: Array.from({ length: 30 }, (_, i) => ({ path: 'src/a/deeply/nested/folder/with/a/long/name/file-' + i + '.ts', action: 'restore' as const })) };

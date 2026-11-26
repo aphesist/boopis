@@ -163,10 +163,11 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
     const m = list[k];
     if (!m || m.kind !== 'approval' || m.resolved) return;
     const at = hhmm();
-    list[k] = { ...m, resolved: decision, resolvedAt: at };
+    const how = decision === 'approved' ? (answer === 'turn' || answer === 'always' ? answer : 'once') : undefined;
+    list[k] = { ...m, resolved: decision, resolvedAt: at, ...(how ? { how } : {}) };
     const b = botById(botId);
     if (b) b.attention = null;
-    botsEv.emit({ type: 'message-resolved', botId, messageId, resolved: decision, resolvedAt: at });
+    botsEv.emit({ type: 'message-resolved', botId, messageId, resolved: decision, resolvedAt: at, ...(how ? { how } : {}) });
     const w = waits.find((x) => x.bot === botId && x.kind === 'approval');
     if (w) dropWait(w.id, decision);
     if (decision === 'approved') {

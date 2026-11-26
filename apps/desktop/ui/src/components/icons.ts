@@ -25,6 +25,7 @@ const ICONS: Record<string, readonly [viewBox: string, inner: string | null]> = 
   spark: [I16, '<path d="M8.8 1.8 3.6 9.2h4.1l-.6 5 5.2-7.4H8.2z"/>'],
   chevron: [I16, '<path d="m6 3.5 4.5 4.5L6 12.5"/>'],
   'chevron-down': [I16, '<path d="m4 6 4 4 4-4"/>'],
+  'chevron-up': [I16, '<path d="m4 10 4-4 4 4"/>'],
   fork: [I16, '<circle cx="4.5" cy="3.5" r="1.5"/><circle cx="11.5" cy="3.5" r="1.5"/><circle cx="8" cy="12.5" r="1.5"/><path d="M4.5 5v1.2a1.8 1.8 0 0 0 1.8 1.8h3.4a1.8 1.8 0 0 0 1.8-1.8V5M8 8v3"/>'],
   unarchive: [I16, '<rect x="2" y="2.8" width="12" height="3.2" rx=".8"/><path d="M3.2 6v6.2a1 1 0 0 0 1 1h7.6a1 1 0 0 0 1-1V6M8 12V8.2M6.4 9.6 8 8l1.6 1.6"/>'],
   slash: [I16, '<path d="M10.5 2.5 5.5 13.5"/>'],

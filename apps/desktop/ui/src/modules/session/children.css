@@ -1,7 +1,3 @@
-/* boopis v6 · the cards of the tasks a turn handed to other models (children.ts). The card itself is the kit's `.ui-child`; this
-   only places the block in the turn and the read-only log under a card. Tokens only. */
-.ss-children { display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-3); min-width: 0; }
-.ss-child-log { display: flex; flex-direction: column; gap: var(--sp-3); margin: calc(var(--sp-1) * -1) 0 0 var(--sp-4); padding-left: var(--sp-3); border-left: 1px solid var(--hair); min-width: 0; font: 400 var(--fs-s)/var(--lh-ui) var(--sans); }
-.ss-child-log__note { margin: 0; color: var(--text-quiet); }
-.ss-child-log__row { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
-.ss-child-log__row p { margin: 0; overflow-wrap: anywhere; }
+/* the tasks a turn handed to other models (children.ts): every piece is the kit's ToolRow; this only places their stack in the turn,
+   where a tool row stands (30 in, as wide as the column, 6 apart and 6 under what it follows). Tokens only. */
+.ss-children { display: flex; flex-direction: column; gap: var(--gap-s); margin-top: var(--gap-s); margin-inline-start: var(--gutter); min-width: 0; }

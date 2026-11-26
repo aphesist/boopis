@@ -109,6 +109,14 @@ export function mark(o: MarkOpts): string {
   return '<span class="k7-mark"' + kitAttrs('Mark', { 'data-mark-kind': 'feedforward', 'data-mark': o.state, 'data-mark-new': o.isNew ? '' : null, tabindex: '0', role: 'button', 'aria-haspopup': 'menu', ...(o.attrs ?? {}) }) + '>' + esc(o.text) + '</span>';
 }
 
+/* ── MarkStack (6e, derived from 6d's askers): several models as their marks overlapped a third, at most three, then the rail's "+N"
+   chip clear of them (owner, 25 November); its name says them all ── */
+export function markStack(models: readonly ModelRef[], size = 12, label?: string): string {
+  const shown = models.slice(0, 3), more = models.length - shown.length;
+  return '<span class="k7-marks"' + kitAttrs('MarkStack', { role: 'img', 'aria-label': label ?? null, style: '--s:' + size + 'px' }) + '>' + shown.map((m) => '<span class="k7-marks__one">' + markHTML(m, { size, label: false }) + '</span>').join('') +
+    (more ? '<span class="k7-ask__more" aria-hidden="true" data-more="+' + more + '"></span>' : '') + '</span>';
+}
+
 /* ── StatusWord (32): neutral, amber (needs you), red (failed), ok; with a dot, with a pulse ── */
 export const STATUS_TONES = ['neutral', 'owe', 'red', 'ok'] as const;
 export type StatusTone = typeof STATUS_TONES[number];

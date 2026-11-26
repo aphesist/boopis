@@ -262,3 +262,29 @@ span.k7-composer__item { cursor: default; }
   .k7-gutter > .k7-hoverrow > .k7-bubble { max-width: min(var(--bubble-max), 100%); }
   .k7-gutter > .k7-hoverrow > .k7-hoverbar { position: static; transform: none; margin-left: 0; }
 }
+
+/* ── ToolRow (6e, derived): a row of a Block (a council's member): no frame of its own; its head keeps the session row's 28 height and
+   takes the corner concentric with its Block (22 - 8). The word's Tooltip (a member that failed) is reached by the keyboard. What stands
+   under the head (`after`: a task's transcript) follows 4 under it; a control at the head's end (a running task's Stop) sits on the inset */
+.k7-tool[data-row] { width: 100%; border-radius: calc(var(--r-block) - var(--pad-block)); }
+.k7-tool__head > .k7-word[data-tip] { cursor: default; border-radius: var(--r-xs); }
+.k7-tool__head > .k7-btn { flex: none; margin-block: calc(-1 * var(--gap-hair)); }
+.k7-tool__after { display: flex; flex-direction: column; gap: var(--sp-1); margin-top: var(--sp-1); min-width: 0; }
+/* a FilesCard row that says what happens to its file (a rewind's dry run) in words where its +/− would be */
+.k7-files__word { flex: none; margin-inline-start: auto; font-family: var(--sans); font-size: var(--fs-xs); color: var(--text-dim); }
+
+/* ── TeamPlan (6e, derived from O-B06's team-plan block): rows 32 tall on the text inset, the mark in mono in its tone (added in the
+   accent's add green, changed dim, removed red), what it is about in --text, what changes in --text-dim; problems in red, notes quiet ── */
+.k7-plan { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.k7-plan__list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.k7-plan__row { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl-s); padding-inline: var(--pad-text); font-size: var(--fs-s); line-height: var(--lh-s); min-width: 0; }
+.k7-plan__mark { flex: none; width: var(--icon-s); text-align: center; font-size: var(--fs-s); }
+.k7-plan__row[data-mark="add"] > .k7-plan__mark { color: var(--add); }
+.k7-plan__row[data-mark="change"] > .k7-plan__mark { color: var(--text-dim); }
+.k7-plan__row[data-mark="del"] > .k7-plan__mark { color: var(--red-text); }
+.k7-plan__text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.k7-plan__target { color: var(--text); }
+.k7-plan__what { color: var(--text-dim); }
+.k7-plan__problem, .k7-plan__note { margin: 0; padding-inline: var(--pad-text); font-size: var(--fs-xs); line-height: var(--lh-xs); overflow-wrap: anywhere; }
+.k7-plan__problem { color: var(--red-text); }
+.k7-plan__note { color: var(--text-dim); }

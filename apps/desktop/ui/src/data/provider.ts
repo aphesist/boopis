@@ -10,12 +10,14 @@ import type { SessionControls } from './session-s0';
 import type {
   ApprovalTier, ArchivedBot, Turn, Bot, LimitNotice, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment, ArchivedGroup,
   Attached, KanbanBoardInfo, KanbanView, DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome, ModelChoice, CouncilSource, Group, GroupMessage,
-  InstallPlan, InstallReceipt, InstallRequest, ProjectPolicy, StageResult, StoreBrowse, StoreDetail, StoreFilter, StoreScope, StoreSource, UninstallResult, UpdateDiff
+  InstallPlan, InstallReceipt, TeamPlansSource, ParkedSource, InstallRequest, ProjectPolicy, StageResult, StoreBrowse, StoreDetail, StoreFilter, StoreScope, StoreSource, UninstallResult, UpdateDiff
 } from './types';
 
 export type Unsubscribe = () => void;
 /** an answer to a bot's approval card: once, deny, or a rules card's two standing answers */
 export type BotDecision = 'approved' | 'denied' | 'turn' | 'always';
+/** how an approval was allowed, said back in its receipt */
+export type ApprovalHow = 'once' | 'turn' | 'always' | 'edited';
 
 export interface Watch<T> { get(): T; subscribe(fn: (value: T) => void): Unsubscribe }
 export interface Feed<S, E> { snapshot(): S; subscribe(fn: (event: E) => void): Unsubscribe }
@@ -83,7 +85,7 @@ export type BotsEvent =
   | { type: 'message'; botId: string; message: ThreadMessage; streaming: boolean }
   | { type: 'message-text'; botId: string; messageId: string; text: string }
   | { type: 'message-end'; botId: string; messageId: string; text: string }
-  | { type: 'message-resolved'; botId: string; messageId: string; resolved: 'approved' | 'denied'; resolvedAt: string }
+  | { type: 'message-resolved'; botId: string; messageId: string; resolved: 'approved' | 'denied'; resolvedAt: string; how?: ApprovalHow | undefined; drafted?: boolean | undefined }
   /** a reply is being worked on (true) or finished or was stopped (false) */
   | { type: 'run'; botId: string; running: boolean }
   /** the whole thread changed under the room (a session was opened or a new one started): draw it again */
@@ -184,6 +186,9 @@ export interface BotsSource extends Feed<BotsSnapshot, BotsEvent> {
   /** decide an approval card in a thread (the dock decides through `waits`): `turn` and `always` are a rules card's
       standing answers (allow all this turn; always, kept as a draft for the owner to finish), as the dock sends them */
   decide(botId: string, messageId: string, decision: BotDecision): void;
+  /** allow a request the owner edited first (approval-surfaces.md 7). The engine cannot take one (`approval.respond` takes only the choice), so
+      no provider has it and the card's Edit stays hidden behind `approval-edit` */
+  decideEdited?(botId: string, messageId: string, text: string): void;
   /** changes the role, the settings or the look (shape and colour, never the eyes); the change comes back as a `bot` event */
   update(id: string, patch: { role?: string; cfg?: Partial<BotConfig>; look?: { shape?: string; color?: string } }): void;
   create(draft: BotDraft & { instructions: string }): Bot;
@@ -464,4 +469,8 @@ export interface DataProvider {
   sessionControls?: SessionControls;
   /** a usage limit that is close, null when none is (a provider that cannot tell leaves it out: nothing is said) */
   limits?: Watch<LimitNotice | null>;
+  /** the team changes bots proposed, held for the owner (the desktop host's; absent elsewhere) */
+  teamPlans?: TeamPlansSource;
+  /** the steps a rule paused while the owner was away (the desktop host's; absent elsewhere) */
+  parked?: ParkedSource;
 }

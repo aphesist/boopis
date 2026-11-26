@@ -6,15 +6,13 @@
    `hx:attention` {source: 'cards', count} whenever the number of cards waiting on the user changes.
    Sizes: inline (in the measure, up to 520px), compact (dock, side panel, up to 360px), mini (one row);
    blank also has popover (the expanded blank).
-   Keys (KEYMAP section 6): hold Space or Enter twice on Hold to approve; x denies while focus is in an approval; d opens
-   the diff from a ship card; 1-9 pick a blank option; Esc closes the popover. Every item waiting on the user marks
+   Keys (KEYMAP section 6): hold Space or Enter twice on Hold to approve; x denies while focus is in an approval; 1-9 pick a blank option; Esc closes the popover. Every item waiting on the user marks
    its focusable element with data-hx-attention, so F8 / shift+F8 can find it.
    OWNER DECISION: a card that changes state grows or shrinks over --dur-3 on --spring, so the conversation under
    it never jumps (the one height animation; under reduced motion it snaps). */
 import { emit } from '../../core/bus';
 import { nid, reduced } from '../../core/dom';
 import { holdOf, kit, wireHold } from '@boopis/ui';
-import { data as provider } from '../../data';
 import type { CardKind, CardOpts, CardSize } from '@boopis/ui';
 import { bot, expiryText, KINDS, parts } from './kinds';
 import { accentOf, originOf } from './parts';
@@ -113,11 +111,6 @@ export class HxCard extends HTMLElement {
     if (!d.from && d.bot && bot(d.bot)) d.from = d.bot;
     if (!d.item && Array.isArray(d.lines)) d.item = d.lines;
     if (d.cost && kind === 'approval') { d.meta = parts(d.meta).concat(parts(d.cost)).join(' · '); delete d.cost; }
-    if (kind === 'ship' && !Array.isArray(d.files)) {
-      /* a count only: use the session's change list when it matches */
-      const ch = provider().details.changes.get();
-      d.files = ch.length && (d.files == null || +d.files === ch.length) ? ch.map((x) => [x[0], x[1], x[2]] as const) : [];
-    }
     this.kind = kind; this.data = d; this.opts = opts; this.K = KINDS[kind];
     if (kind === 'form') { this.formState = newFormState(); if (!d.id) d.id = nid('form-'); }
     this.size = opts.size ?? 'inline';
@@ -358,7 +351,7 @@ export class HxCard extends HTMLElement {
     this.act(b.dataset['action'] ?? '', { value, el: b });
   }
 
-  /* KEYMAP section 6: x denies while focus is in an approval; d opens the diff from a ship card (never while typing) */
+  /* KEYMAP section 6: x denies while focus is in an approval (never while typing) */
   private onKey(e: KeyboardEvent): void {
     if (e.defaultPrevented) return;
     if (this.kind === 'form' && this.size !== 'mini' && LIVE_FORM.includes(this.state) && formKey(this, e)) return;
@@ -370,9 +363,6 @@ export class HxCard extends HTMLElement {
       e.preventDefault();
       holdOf(this.holdBtn())?.reset();
       this.act('deny');
-    } else if (e.code === 'KeyD' && this.kind === 'ship' && this.querySelector('[data-action="view-diff"]')) {
-      e.preventDefault();
-      this.act('view-diff');
     }
   }
 

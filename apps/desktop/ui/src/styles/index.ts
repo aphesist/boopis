@@ -9,7 +9,6 @@ import '../modules/cards/cards.css';
 import '../modules/store/store.css';
 import '../modules/session/session.css';
 import '../modules/session/children.css';
-import '../modules/session/council.css';
 import '../modules/bots/bots.css';
 import '../modules/chat/chat.css';
 import '../modules/dock/dock.css';

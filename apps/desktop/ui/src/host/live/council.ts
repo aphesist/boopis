@@ -156,6 +156,8 @@ export const startedCouncil = (c: CouncilChoice): CouncilTurn => ({
 });
 /** the engine's note for a member that did not answer (`[failed: ...]`, `[skipped: ...]`): it never reaches the screen as written */
 export const isFailedReference = (text: string): boolean => /^\s*\[(failed|skipped):/i.test(text);
+/** the engine's reason for a member that did not answer, in its own words (`[failed: the request timed out]`): the member's Tooltip says it */
+export const failedReason = (text: string): string => (/^\s*\[(?:failed|skipped):\s*([^\]]*)\]?/i.exec(text)?.[1] ?? '').trim();
 
 interface MoaEvent { type: string; payload?: Record<string, unknown> | undefined }
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
@@ -184,7 +186,7 @@ export function applyMoa(prev: CouncilTurn | null, ev: MoaEvent): CouncilTurn | 
       const text = str(p['text']);
       const slot = slotOfLabel(str(p['label']), known);
       const failed = isFailedReference(text);
-      const members = upsert(slot, { state: failed ? 'failed' : 'answered', text: failed ? '' : text });
+      const members = upsert(slot, failed ? { state: 'failed', text: '', ...(failedReason(text) ? { reason: failedReason(text) } : {}) } : { state: 'answered', text });
       const count = num(p['count']);
       return { ...t, members, total: count ?? Math.max(t.total, members.length), done: Math.max(t.done, members.filter((m) => m.state !== 'waiting').length) };
     }

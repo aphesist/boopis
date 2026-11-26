@@ -103,17 +103,18 @@ export async function ownerDecisions(env) {
     check('owner', 'a hold released at 0.7 s does not approve · ' + where, await ev((q) => { const b = document.querySelector(q); return !!b && b.dataset.state !== 'done' && !b.hasAttribute('data-held') && __hx.data().waits.snapshot().some((w) => w.kind === 'approval'); }, sel));
   }
 
-  /* cards animate their height when their state changes (the one height animation), and snap under reduced motion. A ship
-     card going from passed to failed is a state change that changes its height. */
+  /* cards animate their height when their state changes (the one height animation), and snap under reduced motion. A form (the
+     kit's AskCard block) going from open to done collapses to its one-row receipt: a state change that changes its height. (The v6
+     ship card this checked went at step 6e.) */
   for (const reduced of [false, true]) {
     page = await s.fresh({ reduced });
     const r = await ev(async () => {
       const heights = [];
       const o = Element.prototype.animate;
       Element.prototype.animate = function (k, opt) { try { const ks = Array.isArray(k) ? k : []; if (ks.some((f) => f && 'height' in f)) heights.push([ks[0].height, ks[ks.length - 1].height, typeof opt === 'object' ? opt.duration : opt]); } catch { /* keep going */ } return o.call(this, k, opt); };
-      const c = __hx.ui.card('ship', { title: 'ready to ship', passed: 142, rolledBack: 1, branch: 'cents/proration', files: [['src/a.ts', 3, 1], ['src/b.ts', 4, 2]] }, { size: 'inline' });
+      const c = __hx.ui.card('form', { id: 'smoke-height', kind: 'approval', title: 'Deploy 0.2.0 to staging', why: 'The dry run matched all 200 invoices to the cent.', origin: { kind: 'agent', model: 'sonnet 5.5' }, schema: { properties: {} } }, { size: 'inline' });
       document.getElementById('hx-view-session').appendChild(c); await new Promise((r) => setTimeout(r, 200));
-      c.update({ state: 'failed', failures: ['invoice.test.ts rounds per line item', 'money.test.ts'] }); await new Promise((r) => setTimeout(r, 700));
+      c.update({ state: 'done', receiptText: 'You approved it' }); await new Promise((r) => setTimeout(r, 700));
       Element.prototype.animate = o; c.remove();
       return heights;
     });

@@ -9,7 +9,7 @@ import { cap1, el, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
 import { kit, lookOf, repaintLook, ui } from '@boopis/ui';
 import { bubbleOf, placeActs, turnActs, turnBody, turnEntry } from './turn';
-import type { MarkdownCtx } from '@boopis/ui';
+import type { AskAnswer, MarkdownCtx } from '@boopis/ui';
 import { data } from '../../data';
 import type { ApprovalMessage, Bot, BotsEvent, ThreadMessage } from '../../data';
 import { bot, initModel, S, thread } from './model';
@@ -25,6 +25,7 @@ import { paintDetails } from './details';
 import { composeTools, later, mentionChips, micUnavailable, voiceNeedsSetup } from '../chat/compose';
 import { followEngine } from '../chat/engine';
 import { outsideDescription, outsideRoomMark } from './outside';
+import { mountHeld } from './held';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 
 const bots = () => data().bots;
@@ -141,6 +142,10 @@ function renderThread(b: Bot): void {
     if (first) log.append(kit.timeSeparator({ text: first.t }));
     for (const m of msgs) { entry = renderMsg(b, m, prev, entry); prev = m; }
   }
+  /* what the host holds for the owner in this bot's thread (6e): the team changes it proposed, its steps a rule paused */
+  HELD = el('div', { class: 'bt-held', hidden: true });
+  log.append(HELD);
+  mountHeld(HELD, b, () => S.bots, toast);
   syncTurns();
   paintStatus(b.id);
   requestAnimationFrame(() => { if (S.scroll) S.scroll.scrollTop = S.scroll.scrollHeight; });
@@ -219,7 +224,9 @@ function appendMsg(id: string, m: ThreadMessage, streaming: boolean): void {
    the bot's 16 px orb and one phrase, while it works on a reply (the sweep) or waits for your answer (at rest) ───────── */
 let STATUS: HTMLElement | null = null;
 /** a node goes before the status line: replies land above it */
-function placeInLog(n: Node): void { const log = S.log as HTMLElement; if (STATUS && STATUS.isConnected) STATUS.before(n); else log.append(n); }
+function placeInLog(n: Node): void { const log = S.log as HTMLElement; if (HELD && HELD.isConnected) HELD.before(n); else if (STATUS && STATUS.isConnected) STATUS.before(n); else log.append(n); }
+/** the host's held asks for the open bot (held.ts), kept after the messages */
+let HELD: HTMLElement | null = null;
 function paintStatus(id: string): void {
   if (id !== S.sel || S.view !== 'bot') return;
   const b = bot(id), log = S.log; if (!log) return;
@@ -288,23 +295,63 @@ function turnKeys(e: KeyboardEvent): void {
    not shown until it exists (`later('approval-rules')`). It never expires. Decided, it collapses to its one-row receipt. */
 /** a bot's approval as its AskCard, wired to the provider: the bot's own chat draws it in the thread, a room under what that member said */
 export const approvalCard = (b: Bot, m: ApprovalMessage): HTMLElement => renderCard(b, m);
+/** the answers of a bot's approval: the hold, the standing answers once rules exist, Edit once an edited request can be taken (6e,
+    `approval-edit`: the engine cannot take one yet, approval-surfaces.md 7), Deny with esc */
+export function approvalAnswers(editing = false): AskAnswer[] {
+  if (editing) return [{ label: 'Hold to approve edited', primary: true, hold: true, value: 'edited' }, { label: 'Cancel', value: 'unedit', keys: 'esc', outline: true }];
+  return [{ label: 'Hold to allow once', primary: true, hold: true }, ...(later('approval-rules') ? [{ label: 'Allow all this turn', value: 'turn' }, { label: 'Always allow', value: 'always' }] : []),
+    ...(later('approval-edit') ? [{ label: 'Edit', value: 'edit' }] : []), { label: 'Deny', value: 'deny', keys: 'esc', outline: true }];
+}
 function renderCard(b: Bot, m: ApprovalMessage): HTMLElement {
   if (m.resolved) return resolvedLine(b, m);
   const asker = bot(m.data.from ?? m.who) ?? b;
-  const card = kit.askCard({
-    variant: 'standalone', state: 'needs', bot: { ...asker, state: 'needs' }, who: asker.name + ' asks', ask: m.data.title || 'Approve this step',
-    ...(m.data.rule ? { rule: m.data.rule } : m.data.quote ? { sub: m.data.quote } : {}), ...(m.data.item?.length ? { command: m.data.item.join('\n') } : {}),
-    answers: [{ label: 'Hold to allow once', primary: true, hold: true }, ...(later('approval-rules') ? [{ label: 'Allow all this turn', value: 'turn' }, { label: 'Always allow', value: 'always' }] : []), { label: 'Deny', value: 'deny', keys: 'esc', outline: true }]
-  });
-  card.addEventListener('ui:commit', () => { resolveCard(b.id, m, 'approve'); });
-  card.addEventListener('click', (e) => { const c = (e.target as Element).closest<HTMLElement>('[data-kit~="Chip"][data-value="deny"]'); if (c) resolveCard(b.id, m, 'deny'); });
-  /* KEYMAP section 6: on a card, x denies (and Esc, the Deny chip's key) */
-  card.addEventListener('keydown', (e) => { if ((e.key === 'Escape' || e.key === 'x') && !e.defaultPrevented && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); resolveCard(b.id, m, 'deny'); } });
-  return el('div', { class: 'bt-cardslot' }, card);
+  const text = m.data.item?.join('\n') ?? '';
+  const slot = el('div', { class: 'bt-cardslot' });
+  /* editing (6e): the request's text in a mono multi-line Field where its Well stood, and the hold approves what was written */
+  const draw = (editing: boolean, value = text): void => {
+    const card = kit.askCard({
+      variant: editing ? 'form' : 'standalone', state: 'needs', bot: { ...asker, state: 'needs' }, who: asker.name + ' asks', ask: m.data.title || 'Approve this step',
+      ...(m.data.rule ? { rule: m.data.rule } : m.data.quote ? { sub: m.data.quote } : {}), ...(!editing && text ? { command: text } : {}),
+      ...(editing ? { fields: kit.html.field({ id: 'bt-edit-' + m.id, kind: 'multiline', mono: true, rows: Math.min(8, Math.max(2, value.split('\n').length)), value, ariaLabel: 'The request, edited', attrs: { 'data-edited': '' } }) } : {}),
+      answers: approvalAnswers(editing)
+    });
+    card.addEventListener('ui:commit', () => {
+      if (!editing) { resolveCard(b.id, m, 'approve'); return; }
+      const v = card.querySelector<HTMLTextAreaElement>('[data-edited]')?.value ?? value;
+      if (bots().decideEdited) bots().decideEdited?.(b.id, m.id, v); else toast('An edited request cannot be sent in this build.');
+    });
+    card.addEventListener('click', (e) => {
+      const c = (e.target as Element).closest<HTMLElement>('[data-kit~="Chip"][data-value]'); if (!c || c.hasAttribute('data-hold')) return;
+      const v = c.dataset['value'];
+      if (v === 'deny') resolveCard(b.id, m, 'deny');
+      else if (v === 'turn' || v === 'always') { if (!m.resolved) bots().decide(b.id, m.id, v); }
+      else if (v === 'edit') { draw(true); slot.querySelector<HTMLTextAreaElement>('[data-edited]')?.focus(); }
+      else if (v === 'unedit') { draw(false); slot.querySelector<HTMLElement>('[data-value="edit"]')?.focus(); }
+    });
+    /* KEYMAP section 6: on a card, x denies (and Esc, the Deny chip's key); while editing, Esc puts the request back as it was */
+    card.addEventListener('keydown', (e) => {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (editing && e.key === 'Escape') { e.preventDefault(); draw(false); slot.querySelector<HTMLElement>('[data-value="edit"]')?.focus(); return; }
+      if (!editing && (e.key === 'Escape' || e.key === 'x')) { e.preventDefault(); resolveCard(b.id, m, 'deny'); }
+    });
+    slot.replaceChildren(card);
+  };
+  draw(false);
+  return slot;
+}
+/** what an answered approval says, in 6d's words: what you did, and its quiet word */
+export function approvalReceipt(m: Pick<ApprovalMessage, 'resolved' | 'how' | 'drafted' | 'resolvedAt'>): { text: string; word: string } {
+  if (m.resolved !== 'approved') return { text: 'You denied it', word: 'denied' };
+  const text = m.how === 'edited' ? 'You approved it, edited' : m.how === 'always' ? 'You allowed it always' + (m.drafted ? ' · exception drafted' : '') : m.how === 'turn' ? 'You allowed it for this turn' : 'You allowed it once';
+  return { text, word: 'done' + (m.resolvedAt ? ' ' + m.resolvedAt : '') };
 }
 function resolvedLine(b: Bot, m: ApprovalMessage): HTMLElement {
-  const ok = m.resolved === 'approved', asker = bot(m.data.from ?? m.who) ?? b;
-  return el('div', { class: 'bt-cardslot bt-resolved' }, kit.askCard({ state: 'answered', bot: asker, ask: m.data.title || 'the request', receipt: (ok ? 'allowed once' : 'denied') + (m.resolvedAt ? ' ' + m.resolvedAt : '') }));
+  const asker = bot(m.data.from ?? m.who) ?? b, r = approvalReceipt(m);
+  /* "Always allow" kept a draft: Open goes to where it is finished, Settings › Approvals, once that screen exists (`rules-settings`) */
+  const open = m.drafted && later('rules-settings') ? kit.html.button({ label: 'Open', variant: 'ghost', size: 28, attrs: { 'data-open-draft': '' } }) : '';
+  const line = kit.askCard({ variant: 'form', state: 'answered', bot: asker, ask: r.text, word: { text: r.word }, rowAction: open, attrs: { 'aria-label': (m.data.title || 'The request') + ': ' + r.text } });
+  line.querySelector('[data-open-draft]')?.addEventListener('click', () => { emit('hx:open-settings', { section: 'approvals' }); });
+  return el('div', { class: 'bt-cardslot bt-resolved' }, line);
 }
 /** an approval decided here: the provider decides it everywhere (the dock, the thread) */
 function resolveCard(id: string, m: ApprovalMessage, action: string): void {
@@ -484,7 +531,7 @@ export function onBotsEvent(ev: BotsEvent, handlers: { announce: () => void }): 
     case 'message-resolved': {
       const list = thread(ev.botId), i = list.findIndex((x) => x.id === ev.messageId), m = list[i];
       if (!m || m.kind !== 'approval') return;
-      list[i] = { ...m, resolved: ev.resolved, resolvedAt: ev.resolvedAt };
+      list[i] = { ...m, resolved: ev.resolved, resolvedAt: ev.resolvedAt, ...(ev.how ? { how: ev.how } : {}), ...(ev.drafted ? { drafted: true } : {}) };
       /* the AskCard collapses to its one-row receipt, in place (everywhere it was decided: here, the dock, another client) */
       const node = NODE.get(ev.messageId), b = bot(ev.botId), now = list[i];
       if (node && node.isConnected && b && now && now.kind === 'approval') {

@@ -86,6 +86,28 @@ export function askCard(o: AskCardOpts): string {
   return '<div class="k7-ask k7-block"' + a + '>' + head + body + (o.busy ? answers.replace(/^<div class="k7-ask__(answers|choices)"/, '<div inert class="k7-ask__$1"') : answers) + after + '</div>';
 }
 
+/* ── TeamPlan (6e, derived from O-B06's team-plan block): what a proposed change to the team does, one row per action led by its
+   mark (+ added, ~ changed, − removed), what it is about and what changes; the plan's problems as error lines, its notes quiet, and
+   a quiet note where an action cannot be undone. It is what an AskCard asks about (`fields`), here and in the first run's O-B06 ── */
+export type PlanMark = '+' | '~' | '-' | '−';
+export interface PlanAction { mark: PlanMark | string; target: string; what?: U<string>; /** what leads the target (a bot's 16 orb) */ leadHTML?: U<string> }
+export interface TeamPlanOpts {
+  actions: readonly PlanAction[]; problems?: U<readonly string[]>; notes?: U<readonly string[]>;
+  /** an action that cannot be undone (disbanding a room), said in one quiet line */ permanent?: U<string>; attrs?: U<Attrs>;
+}
+const PLAN_MARK: Readonly<Record<string, readonly [glyph: string, tone: string, said: string]>> = { '+': ['+', 'add', 'adds'], '~': ['~', 'change', 'changes'], '-': ['−', 'del', 'removes'], '−': ['−', 'del', 'removes'] };
+export function teamPlan(o: TeamPlanOpts): string {
+  const rows = o.actions.map((a) => {
+    const [g, tone, said] = PLAN_MARK[a.mark] ?? ['•', 'neutral', ''];
+    return '<li class="k7-plan__row"' + partAttrs('PlanRow', { 'data-mark': tone }) + '><span class="k7-plan__mark k7-mono" aria-hidden="true">' + esc(g) + '</span>' + (a.leadHTML ?? '') +
+      '<span class="k7-plan__text"><span class="k7-sr">' + esc(said) + ' </span><span class="k7-plan__target">' + esc(a.target) + '</span>' + (a.what ? ' <span class="k7-plan__what">' + esc(a.what) + '</span>' : '') + '</span></li>';
+  }).join('');
+  return '<div class="k7-plan"' + kitAttrs('TeamPlan', o.attrs ?? null) + '>' + (rows ? '<ul class="k7-plan__list" aria-label="What the plan changes">' + rows + '</ul>' : '') +
+    (o.problems ?? []).map((p) => '<p class="k7-plan__problem k7-text" role="alert">' + esc(p) + '</p>').join('') +
+    (o.notes ?? []).map((n) => '<p class="k7-plan__note k7-text">' + esc(n) + '</p>').join('') +
+    (o.permanent ? '<p class="k7-plan__note k7-text" data-permanent>' + esc(o.permanent) + '</p>' : '') + '</div>';
+}
+
 /* ── ToolRow (8): one tool call; edit, command, read, search; running (shimmer), done, failed (red word), waiting (an attached AskCard).
    A session's (boards S09 and S20, kit.css `.toolrow`): the answering model's 14 mark, the tool's glyph, what it is called on in mono, an
    edit's +/−, and at the end what became of it ("Waiting for you" in amber, "Allowed once 09:43", "Declined 09:44"); while it waits its
@@ -100,6 +122,12 @@ export interface ToolRowOpts {
   kind?: U<ToolKind>; state?: U<ToolState>; tool: string; target?: U<string>; model?: U<ModelRef>; open?: U<boolean>;
   command?: U<string>; steps?: U<readonly StepOpts[]>; ask?: U<AskCardOpts>; attrs?: U<Attrs>;
   /** an edit's lines added and removed */ add?: U<number>; del?: U<number>; /** what became of it, at the head's end ("Allowed once 09:43") */ word?: U<string>; /** the feedback a decline was sent with, quoted under the head */ note?: U<string>;
+  /* ── 6e, derived (a council's members, the tasks handed to other models) ── */
+  /** the word's tone ("done" ok, "no answer" amber, "error" red) */ wordTone?: U<StatusTone>;
+  /** why, said in the word's Tooltip (a member that failed): the word takes the focus so the keyboard reaches it */ wordTip?: U<string>;
+  /** a control at the head's end, after the word, as kit markup (a running task's ghost Stop); only on a head that is not itself a control */ end?: U<string>;
+  /** what stands under the head, as kit markup (a Disclosure over a task's transcript) */ after?: U<string>;
+  /** a row of a Block (a council's member): no frame of its own, its head on the corner concentric with the Block's */ row?: U<boolean>;
 }
 export function toolRow(o: ToolRowOpts): string {
   const k = o.kind ?? 'command', st = o.state ?? 'done';
@@ -111,33 +139,39 @@ export function toolRow(o: ToolRowOpts): string {
       '<b class="k7-btool__name">' + esc(o.tool) + '</b>' + (o.target ? '<span class="k7-btool__target k7-ell">' + esc(o.target) + '</span>' : '') + '<span class="k7-grow"></span>' + glyph('chevron', 'k7-btool__chev') + '</button>' +
       (o.steps || o.command ? '<div class="k7-btool__body" id="' + id + '">' + (o.command ? well({ text: o.command }) : '') + (o.steps ? steps(o.steps) : '') + '</div>' : '') + '</div>';
   }
-  const word = st === 'failed' ? statusWord({ text: 'failed', tone: 'red' }) : st === 'waiting' ? statusWord({ text: 'Waiting for you', tone: 'owe' }) : o.word ? statusWord({ text: o.word }) : '';
+  const tip = o.wordTip ? { 'data-tip': o.wordTip, tabindex: '0', 'aria-description': o.wordTip } : {};
+  const word = st === 'failed' && !o.word ? statusWord({ text: 'failed', tone: 'red', attrs: tip }) : st === 'waiting' ? statusWord({ text: 'Waiting for you', tone: 'owe' }) : o.word ? statusWord({ text: o.word, tone: o.wordTone ?? (st === 'failed' ? 'red' : 'neutral'), attrs: tip }) : '';
   const hasBody = !!(o.command || o.steps);
-  const inner = (o.model ? '<span class="k7-head__mark">' + markHTML(o.model, { size: 14, label: false }) + '</span>' : '') + glyph(TOOL_GLYPH[k], 'k7-tool__ic') +
+  /* a session's row leads with its tool's glyph; `icon` names another, and '' none (a council's member is its model's mark alone) */
+  const lead = o.icon === '' ? '' : glyph(o.icon ?? TOOL_GLYPH[k], 'k7-tool__ic');
+  const inner = (o.model ? '<span class="k7-head__mark">' + markHTML(o.model, { size: 14, label: false }) + '</span>' : '') + lead +
     '<b class="k7-tool__name' + (st === 'running' ? ' k7-shimmer" data-live="' : '') + '">' + esc(o.tool) + '</b>' +
     (o.add != null || o.del != null ? '<span class="k7-files__counts k7-mono"><span data-tone="add">+' + (o.add ?? 0) + '</span><span data-tone="del">−' + (o.del ?? 0) + '</span></span>' : '') +
     (o.target ? '<span class="k7-tool__target k7-ell">' + esc(o.target) + '</span>' : '') + '<span class="k7-grow"></span>' + word + (hasBody ? glyph('chevron-down', 'k7-chev') : '');
-  const head = hasBody ? '<button class="k7-reset k7-tool__head k7-text" type="button"' + attrs({ 'aria-expanded': String(!!o.open), 'aria-controls': id }) + '>' + inner + '</button>' : '<div class="k7-tool__head k7-text">' + inner + '</div>';
+  const head = hasBody ? '<button class="k7-reset k7-tool__head k7-text" type="button"' + attrs({ 'aria-expanded': String(!!o.open), 'aria-controls': id }) + '>' + inner + '</button>' : '<div class="k7-tool__head k7-text">' + inner + (o.end ?? '') + '</div>';
   const body = hasBody ? '<div class="k7-tool__body" id="' + id + '">' + (o.command ? well({ text: o.command }) : '') + (o.steps ? steps(o.steps) : '') + '</div>' : '';
-  return '<div class="k7-tool k7-block"' + blockAttrs('ToolRow', { 'data-kind': k, 'data-state': st, 'data-disclose': hasBody ? '' : null, 'data-open': hasBody && o.open ? '' : null, ...(o.attrs ?? {}) }) + '>' + head + body +
-    (o.note ? '<p class="k7-tool__note k7-text">“' + esc(o.note) + '”</p>' : '') + (st === 'waiting' && o.ask ? askCard({ ...o.ask, variant: 'attached' }) : '') + '</div>';
+  const root = o.row ? kitAttrs('ToolRow', { 'data-row': '', 'data-kind': k, 'data-state': st, 'data-disclose': hasBody ? '' : null, 'data-open': hasBody && o.open ? '' : null, ...(o.attrs ?? {}) })
+    : blockAttrs('ToolRow', { 'data-kind': k, 'data-state': st, 'data-disclose': hasBody ? '' : null, 'data-open': hasBody && o.open ? '' : null, ...(o.attrs ?? {}) });
+  return '<div class="' + (o.row ? 'k7-tool' : 'k7-tool k7-block') + '"' + root + '>' + head + body +
+    (o.note ? '<p class="k7-tool__note k7-text">“' + esc(o.note) + '”</p>' : '') + (o.after ? '<div class="k7-tool__after">' + o.after + '</div>' : '') + (st === 'waiting' && o.ask ? askCard({ ...o.ask, variant: 'attached' }) : '') + '</div>';
 }
 
 /* ── FilesCard (10): a turn's changed files (board S23, kit.css `.files-card`): "2 changed files" with the turn's +/−, an action at the
    head's end (Open diff), then a row per file: its glyph, its path in mono, its own +/− at the end. A long list folds (`fold`) ── */
-export interface FileRow { path: string; add?: number; del?: number }
+export interface FileRow { path: string; add?: number; del?: number; /** what happens to it, in words, in place of its +/− (a rewind's dry run: "put back", 6e) */ word?: string }
 export interface FilesCardOpts {
   files: readonly FileRow[]; /** a long list folds under its head: open or closed */ fold?: U<boolean>; open?: U<boolean>; /** the head's action ("Open diff"); its button carries `data-files` */ action?: U<string>; actionAttrs?: U<Attrs>; attrs?: U<Attrs>;
   /** board S38 (sessiontab2.js `s18` c): the same card says how a check on the change went (the gate): in its head the check's glyph and
       name and the verdict as a StatusWord in its tone, at the end the one way on ("Fix and retry"); under it what the check printed, in
       a Well in the verdict's colour, and one note. The files the check ran on follow where there are any */
-  check?: U<{ icon?: U<string>; title: string; word: string; tone?: U<StatusTone>; output?: U<string>; note?: U<string> }>;
+  check?: U<{ icon?: U<string>; title: string; word: string; tone?: U<StatusTone>; output?: U<string>; note?: U<string>; /** the check runs again: its word shimmers (6e, a failed turn retrying) */ live?: U<boolean> }>;
+  /** the head's words in place of "N changed files" (a rewind's sheet: "4 files"); the turn's +/− then are not said */ title?: U<string>;
 }
 export function filesCard(o: FilesCardOpts): string {
   if (o.check) {
     const c = o.check;
     return '<div class="k7-files k7-block"' + blockAttrs('FilesCard', { 'data-check': c.tone ?? 'neutral', 'data-open': '', ...(o.attrs ?? {}) }) + '>' +
-      '<div class="k7-files__head k7-text">' + glyph(c.icon ?? 'terminal') + '<span class="k7-files__name">' + esc(c.title) + '</span>' + statusWord({ text: c.word, tone: c.tone }) +
+      '<div class="k7-files__head k7-text">' + glyph(c.icon ?? 'terminal') + '<span class="k7-files__name">' + esc(c.title) + '</span>' + (c.live ? statusWord({ text: c.word, tone: c.tone }).replace(/>([^<]*)<\/span>$/, '><span class="k7-shimmer" data-live>$1</span></span>') : statusWord({ text: c.word, tone: c.tone })) +
       '<span class="k7-grow"></span>' + (o.action ? button({ label: o.action, variant: 'tint', size: 28, attrs: { 'data-files': '', ...(o.actionAttrs ?? {}) } }) : '') + '</div>' +
       (c.output ? well({ text: c.output, label: c.title + ' output' }) : '') +
       (o.files.length ? '<ul class="k7-files__list">' + o.files.map((f) => '<li class="k7-files__row k7-text"' + partAttrs('FileRow') + '>' + glyph('file') + '<span class="k7-ell k7-mono">' + esc(f.path) + '</span></li>').join('') + '</ul>' : '') +
@@ -146,12 +180,12 @@ export function filesCard(o: FilesCardOpts): string {
   const add = o.files.reduce((n, f) => n + (f.add ?? 0), 0), del = o.files.reduce((n, f) => n + (f.del ?? 0), 0);
   const id = idFrom('k7-fc', o.files.map((f) => f.path).join());
   const counts = (a: number, d: number): string => '<span class="k7-files__counts k7-mono"><span data-tone="add">+' + a + '</span><span data-tone="del">−' + d + '</span></span>';
-  const title = '<span class="k7-files__title">' + esc(o.files.length + (o.files.length === 1 ? ' changed file' : ' changed files')) + '</span>' + counts(add, del);
+  const title = o.title != null ? '<span class="k7-files__title">' + esc(o.title) + '</span>' : '<span class="k7-files__title">' + esc(o.files.length + (o.files.length === 1 ? ' changed file' : ' changed files')) + '</span>' + counts(add, del);
   const open = o.fold ? !!o.open : true;
   return '<div class="k7-files k7-block"' + blockAttrs('FilesCard', { 'data-disclose': o.fold ? '' : null, 'data-open': open ? '' : null, ...(o.attrs ?? {}) }) + '>' +
     '<div class="k7-files__head k7-text">' + (o.fold ? '<button class="k7-reset k7-files__fold" type="button"' + attrs({ 'aria-expanded': String(open), 'aria-controls': id }) + '>' + title + glyph('chevron-down', 'k7-chev') + '</button>' : title) +
     '<span class="k7-grow"></span>' + (o.action ? button({ label: o.action, variant: 'tint', size: 28, attrs: { 'data-files': '', ...(o.actionAttrs ?? {}) } }) : '') + '</div>' +
-    '<ul class="k7-files__list" id="' + id + '">' + o.files.map((f) => '<li class="k7-files__row k7-text"' + partAttrs('FileRow') + '>' + glyph('file') + '<span class="k7-ell k7-mono">' + esc(f.path) + '</span>' + counts(f.add ?? 0, f.del ?? 0) + '</li>').join('') + '</ul></div>';
+    '<ul class="k7-files__list" id="' + id + '">' + o.files.map((f) => '<li class="k7-files__row k7-text"' + partAttrs('FileRow') + '>' + glyph('file') + '<span class="k7-ell k7-mono">' + esc(f.path) + '</span>' + (f.word != null ? '<span class="k7-files__word">' + esc(f.word) + '</span>' : counts(f.add ?? 0, f.del ?? 0)) + '</li>').join('') + '</ul></div>';
 }
 
 /* ── FileCard: one file a bot wrote or handed over (boards 11 and 17, botscreens.js `.file`): a 32 x 40 file tile, the name, one mono line ── */

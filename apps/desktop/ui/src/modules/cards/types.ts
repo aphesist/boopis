@@ -10,17 +10,8 @@ export interface Data extends Partial<Omit<FormSpec, 'id' | 'title' | 'receipt'>
   via?: string;
   from?: string; bot?: string; source?: string; model?: string; title?: string; quote?: string; item?: readonly string[]; lines?: readonly string[];
   meta?: string; cost?: string; expiresAt?: number; decidedAt?: number; progress?: number; state?: string; id?: string; at?: string;
-  /* ship */
-  passed?: number; rolledBack?: number; files?: number | ReadonlyArray<readonly [string, number, number]>; add?: number; del?: number; branch?: string;
-  failures?: readonly string[]; showRollback?: boolean; rollbackNote?: string;
   /* blank */
   question?: string; short?: string; options?: readonly string[]; answer?: string;
-  /* escalation */
-  ladder?: ReadonlyArray<readonly [string, string]>; current?: number; to?: string; reason?: string; cap?: string; spent?: string; next?: string; raiseTo?: string;
-  /* error */
-  gate?: string; retryWith?: string; output?: readonly string[]; test?: string; note?: string;
-  /* schedule */
-  days?: readonly number[]; time?: string; cron?: string; when?: string;
   /* connector */
   name?: string; tools?: number; host?: string; scopes?: readonly string[];
 }

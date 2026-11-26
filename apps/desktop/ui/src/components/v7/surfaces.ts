@@ -109,7 +109,7 @@ export function pane(o: PaneOpts): string {
    close 28 at 10 in (a capsule) ── */
 export interface DialogOpts {
   variant?: U<'large' | 'form'>; title: string; body: string; nav?: U<readonly { label: string; icon?: string; current?: boolean }[]>;
-  actions?: U<readonly { label: string; variant?: 'primary' | 'ghost' | 'danger' | 'split' }[]>; scrim?: U<boolean>; id?: U<string>; attrs?: U<Attrs>;
+  actions?: U<readonly { label: string; variant?: 'primary' | 'ghost' | 'danger' | 'split'; /** it cannot be taken now, and its Tooltip says why (6e: a rewind where it cannot run) */ disabled?: boolean; tip?: string }[]>; scrim?: U<boolean>; id?: U<string>; attrs?: U<Attrs>;
 }
 export function dialog(o: DialogOpts): string {
   const v = o.variant ?? 'form', id = o.id ?? 'k7-dlg-' + o.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -118,7 +118,7 @@ export function dialog(o: DialogOpts): string {
     ? '<nav class="k7-dialog__nav" aria-label="' + esc(o.title) + '">' + (o.nav ?? []).map((n) => '<button class="k7-reset k7-dialog__navrow" type="button"' + attrs({ 'aria-current': n.current ? 'page' : null }) + '>' + glyph(n.icon) + '<span class="k7-ell">' + esc(n.label) + '</span></button>').join('') + '</nav>' +
       '<div class="k7-dialog__page">' + o.body + '</div>'
     : '<h2 class="k7-dialog__title" id="' + esc(id) + '-t">' + esc(o.title) + '</h2><div class="k7-dialog__body">' + o.body + '</div>' +
-      ((o.actions ?? []).length ? '<div class="k7-dialog__foot">' + (o.actions ?? []).map((x) => button({ label: x.label, variant: x.variant ?? 'secondary', size: 32, menuLabel: x.label + ' options' })).join('') + '</div>' : '');
+      ((o.actions ?? []).length ? '<div class="k7-dialog__foot">' + (o.actions ?? []).map((x) => button({ label: x.label, variant: x.variant ?? 'secondary', size: 32, menuLabel: x.label + ' options', ...(x.tip ? { tip: x.tip } : {}), ...(x.disabled ? { attrs: { 'aria-disabled': 'true', 'data-disabled': '' } } : {}) })).join('') + '</div>' : '');
   const dlg = '<div class="k7-dialog"' + kitAttrs('Dialog', { role: 'dialog', 'aria-modal': 'true', 'data-variant': v, id, 'aria-labelledby': v === 'form' ? id + '-t' : null, 'aria-label': v === 'large' ? o.title : null, 'data-sq': '', 'data-sq-mode': 'surface', ...(o.attrs ?? {}) }) + '>' + inner + close + '</div>';
   return o.scrim === false ? dlg : '<div class="k7-scrim" data-layer-host>' + dlg + '</div>';
 }

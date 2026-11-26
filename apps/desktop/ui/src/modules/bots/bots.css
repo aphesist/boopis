@@ -224,3 +224,9 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-details .k7-row > .k7-field { flex: 0 1 60%; min-width: 0; }
 /* the line over the thread for what no board places yet (the made-outside mark, New session with a live bot); nothing when there is neither */
 .bt-topline { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl-s); margin-bottom: var(--sp-2); }
+
+/* what the host holds for the owner (held.ts, 6e): a bot's proposed team change and its paused steps, after the thread's messages, as
+   wide as an AskCard may be, 10 apart and 10 under what they follow */
+.bt-held { display: flex; flex-direction: column; gap: var(--gap-row); margin-top: var(--gap-row); min-width: 0; }
+.bt-held[hidden] { display: none; }
+.bt-held > .k7-ask { width: min(100%, var(--bubble-max)); }

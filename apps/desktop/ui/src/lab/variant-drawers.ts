@@ -40,7 +40,6 @@ export const DRAWERS: Partial<Record<ComponentName, Drawer>> = {
   blank: t('blank', {}, (a, v) => (a === 'answered' ? (v ? { answer: 'as a deprecated alias' } : {}) : {})),
   entry: t('entry', { who: 'you', callno: ['14:01'], body: '<p>A message.</p>' }, undefined, { width: 720 }),
   pages: t('pages', { pages: [{ id: 'a', label: 'Bots' }, { id: 'b', label: 'Runs' }], current: 'a' }, (a, v) => (a === 'attention' ? { pages: [{ id: 'a', label: 'Bots' }, { id: 'b', label: 'Runs', attention: v }] } : { [a]: v }), { ground: 'dock' }),
-  child: t('child', { id: 'c1', model: 'claude-opus-5-5', goal: 'Review the diff for rounding errors', status: 'running', time: '12s', now: 'read_file src/billing/invoice.ts', tools: 3, summary: 'Found two places that round twice.' }, undefined, { width: 420 }),
   modelMark: { draw: (p) => ui.html.modelMark('sonnet 5.5', p as { color?: 'mono' | 'brand' }), base: {} }
 };
 /** components in `variants` drawn elsewhere: their own stories cover every value */

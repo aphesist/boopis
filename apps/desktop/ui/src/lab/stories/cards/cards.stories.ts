@@ -1,4 +1,4 @@
-/* The card family (14.13), through the library's `ui.card(kind, data, {state, size, ground})`: every kind in every
+/* The v6 card family still in use (14.13; ship, teammate, escalation, error and schedule moved to the kit at step 6e: cards/asks), through the library's `ui.card(kind, data, {state, size, ground})`: every kind in every
    state, inline at the conversation's measure, compact at the dock's width, mini, on the chrome and on the dock, with
    the mock-up's own gallery data and with every string long. Forms have their own story (forms.stories.ts). */
 import { ui, type CardKind } from '@boopis/ui';
@@ -9,16 +9,10 @@ import { CARD_DATA, CARD_LONG } from '../../fixtures';
 /** each kind's states, as the card layer names them (the coverage gate checks this list against the layer) */
 export const CARD_STATES: Readonly<Record<string, readonly string[]>> = {
   approval: ['pending', 'holding', 'approved', 'denied', 'expired'],
-  ship: ['passed', 'failed', 'rolled-back'],
   blank: ['open', 'answered'],
-  teammate: ['pending', 'accepted', 'declined'],
-  escalation: ['escalated', 'capped'],
-  error: ['failed', 'retrying', 'passed'],
-  schedule: ['pending', 'scheduled', 'dismissed'],
   connector: ['needed', 'waiting', 'connected', 'failed']
 };
 const TAG: Record<string, State['tags'][number]> = { denied: 'error', failed: 'error', capped: 'error', declined: 'error', expired: 'expired', dismissed: 'disabled', approved: 'success', passed: 'success', connected: 'success', accepted: 'success', scheduled: 'success', answered: 'success', holding: 'active', retrying: 'loading', waiting: 'loading' };
-const LADDER_MASK = { roles: 'a ladder station is a disc in the card\'s colour that hides the rail behind it (a mask, not an inset surface); R-colour-4 is about surfaces' };
 const INLINE = 608, COMPACT = 400, MINI = 360;
 
 const draw = (kind: CardKind, data: Record<string, unknown>, o: { state?: string | undefined; size?: 'inline' | 'compact' | 'mini'; ground?: 'chrome' | 'dock' } = {}): Render => async ({ root }) => {
@@ -33,8 +27,6 @@ function story(kind: CardKind): Story {
   for (const s of CARD_STATES[kind] ?? []) {
     const tags: State['tags'][number][] = s === CARD_STATES[kind]?.[0] ? ['typical', ...(TAG[s] ? [TAG[s]] : [])] : [TAG[s] ?? 'variant'];
     const st: State = { tags, render: draw(kind, d, { state: s }), width: INLINE };
-    if (kind === 'escalation') st.allow = LADDER_MASK;
-    if (kind === 'ship') st.allow = { concentric: 'the branch chip is centred in the 30px control row beside the buttons (R-type-11), so its bottom inset is the row\'s slack; both insets are at least --pad (R-corner-4: inset by --pad from both edges)' };
     if (s === 'holding') st.allow = { 'stability.render': 'a hold in progress is time based', visual: 'a hold in progress is time based' };
     states[s] = st;
   }
@@ -45,7 +37,6 @@ function story(kind: CardKind): Story {
   states['compact, on the dock'] = { tags: ['size', 'variant'], render: draw(kind, d, { state: first, size: 'compact', ground: 'dock' }), width: COMPACT, ground: 'dock' };
   states['mini'] = { tags: ['size'], render: draw(kind, d, { state: first, size: 'mini' }), width: MINI };
   states['mini, long'] = { tags: ['size', 'long'], render: draw(kind, long, { state: first, size: 'mini' }), width: MINI };
-  if (kind === 'escalation') for (const x of Object.values(states)) x.allow = { ...x.allow, ...LADDER_MASK };
   if (kind === 'connector') for (const k of ['mini', 'mini, long']) states[k]!.allow = { concentric: 'the server tile stands where an orb stands in a one-row card: a 16px mark centred in the 30px row (7px above and below, --pad at the side), and an orb is a circle, never nested (R-corner-2); R-corner-4 holds, both insets are at least 7px' };
   states['empty data'] = { tags: ['empty'], render: draw(kind, {}, { state: first }), width: INLINE, note: 'a sender that gave nothing: unknown stays unknown' };
   if (kind === 'approval') {

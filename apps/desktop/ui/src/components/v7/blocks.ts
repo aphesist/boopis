@@ -6,7 +6,7 @@ import type { ModelRef } from '../model-mark';
 import { orbHtml } from '../orb';
 import { scrollClass } from '../scroll';
 import { kbd, button, iconButton } from './controls';
-import { badge, botColours, inkOrb, statusWord } from './inline';
+import { badge, botColours, inkOrb, markStack, statusWord } from './inline';
 import { attrs, cls, esc, glyph, idFrom, kitAttrs, partAttrs, textOr } from './util';
 import type { Attrs, U } from './util';
 
@@ -86,7 +86,8 @@ export function optionRow(o: OptionRowOpts): string {
 export const MENU_VARIANTS = ['menu', 'quick', 'palette', 'snooze', 'split', 'options', 'list'] as const;
 export type MenuVariant = typeof MENU_VARIANTS[number];
 export type MenuEntry = MenuRowOpts | OptionRowOpts | '-' | { heading: string };
-export interface MenuOpts { label: string; entries: readonly MenuEntry[]; variant?: U<MenuVariant>; query?: U<string>; attrs?: U<Attrs> }
+export interface MenuOpts { label: string; entries: readonly MenuEntry[]; variant?: U<MenuVariant>; query?: U<string>; attrs?: U<Attrs>;
+  /** what follows the rows, as kit markup (6e, derived: a council's combiner and "Ask the council" under S19's rows) */ foot?: U<string> }
 const entryHTML = (e: MenuEntry): string => e === '-' ? '<div class="k7-menu__sep" role="separator"></div>'
   : 'heading' in e ? '<div class="k7-menu__head" role="presentation">' + esc(e.heading) + '</div>'
   : 'meaning' in e ? optionRow(e) : menuRow(e);
@@ -94,7 +95,7 @@ export function menu(o: MenuOpts): string {
   const v = o.variant ?? 'menu';
   const head = v === 'palette' ? '<div class="k7-menu__query"><span class="k7-mono k7-menu__sigil">' + esc(o.query ?? '/') + '</span></div>' : '';
   return '<div class="k7-menu"' + kitAttrs('Menu', { role: 'menu', 'aria-label': o.label, 'data-variant': v, 'data-sq': '', 'data-sq-mode': 'surface', ...(o.attrs ?? {}) }) + '>' + head +
-    '<div class="' + cls('k7-menu__list', scrollClass({ inset: 'both' })) + '">' + o.entries.map(entryHTML).join('') + '</div></div>';
+    '<div class="' + cls('k7-menu__list', scrollClass({ inset: 'both' })) + '">' + o.entries.map(entryHTML).join('') + '</div>' + (o.foot ? '<div class="k7-menu__foot">' + o.foot + '</div>' : '') + '</div>';
 }
 
 /* ── ListRow (17): session (44, two lines), bot (54, its orb 28: board K02, the owner's "Grok sizes", 23 November; a room's row leads
@@ -171,12 +172,12 @@ export function notice(o: NoticeOpts): string {
 
 /* ── SystemLine (13): a centred line about the thread itself: info (with what it cost at its end, S33), steer, hand-off, error with action ── */
 export const SYSTEM_LINE_VARIANTS = ['info', 'steer', 'handoff', 'error'] as const;
-export interface SystemLineOpts { variant?: U<typeof SYSTEM_LINE_VARIANTS[number]>; text: string; /** what follows the words in mono, at the line's end (board S33: a changed setting's extra cost, "+$0.04") */ meta?: U<string>; icon?: U<string>; from?: U<BotLike>; to?: U<BotLike>; message?: U<string>; action?: U<string>; attrs?: U<Attrs> }
+export interface SystemLineOpts { variant?: U<typeof SYSTEM_LINE_VARIANTS[number]>; text: string; /** a StatusWord before the words (6e, derived: an escalation the cap stopped, "capped" in amber) */ word?: U<{ text: string; tone?: U<import('./inline').StatusTone> }>; /** what follows the words in mono, at the line's end (board S33: a changed setting's extra cost, "+$0.04") */ meta?: U<string>; icon?: U<string>; from?: U<BotLike>; to?: U<BotLike>; message?: U<string>; action?: U<string>; attrs?: U<Attrs> }
 export function systemLine(o: SystemLineOpts): string {
   const v = o.variant ?? 'info';
   const lead = v === 'handoff' ? (o.from ? orbHtml(o.from, { size: 16, still: true }) : '') + glyph('chevron', 'k7-sys__chev') + (o.to ? orbHtml(o.to, { size: 16, still: true }) : '') : glyph(o.icon);
   const pill = '<div class="k7-sys"' + kitAttrs('SystemLine', { role: 'note', 'data-variant': v, 'data-act': o.action ? '' : null, ...(o.attrs ?? {}) }) + '>' + lead +
-    '<span class="k7-sys__text">' + esc(o.text) + '</span>' + (o.meta ? '<span class="k7-sys__meta k7-mono">' + esc(o.meta) + '</span>' : '') + (o.action ? button({ label: o.action, variant: 'tint', size: 28, attrs: { 'data-line': '' } }) : '') + '</div>';   /* kit.css `.sysline.act .btn`: the tint button (S36) */
+    (o.word ? statusWord({ text: o.word.text, tone: o.word.tone }) : '') + '<span class="k7-sys__text">' + esc(o.text) + '</span>' + (o.meta ? '<span class="k7-sys__meta k7-mono">' + esc(o.meta) + '</span>' : '') + (o.action ? button({ label: o.action, variant: 'tint', size: 28, attrs: { 'data-line': '' } }) : '') + '</div>';   /* kit.css `.sysline.act .btn`: the tint button (S36) */
   return v === 'steer' && o.message ? '<div class="k7-sys-wrap">' + pill + '<div class="k7-sys__msg">' + esc(o.message) + '</div></div>' : pill;
 }
 
@@ -206,9 +207,11 @@ export function bubble(o: BubbleOpts): string {
 }
 
 /* ── Well (16): mono text on the deepest surface; code (in a Block or a bubble), terminal (path and branch in its head) ── */
-export interface WellOpts { kind?: U<'code' | 'terminal'>; text: string; path?: U<string>; branch?: U<string>; label?: U<string>; attrs?: U<Attrs> }
+export interface WellOpts { kind?: U<'code' | 'terminal' | 'thread'>; text: string; path?: U<string>; branch?: U<string>; label?: U<string>; attrs?: U<Attrs>;
+  /** `thread` (6e, derived): a compact thread in the Well, as kit markup (a handed-off task's transcript); `text` is then unused */ html?: U<string> }
 export function well(o: WellOpts): string {
   const k = o.kind ?? 'code';
+  if (k === 'thread') return '<div class="k7-well"' + kitAttrs('Well', { 'data-kind': k, 'data-sq': '', 'data-sq-mode': 'frame', ...(o.attrs ?? {}) }) + '><div class="' + cls('k7-well__thread', scrollClass({ axis: 'y' })) + '" tabindex="0" role="region"' + attrs({ 'aria-label': o.label ?? 'Transcript' }) + '>' + (o.html ?? '') + '</div></div>';
   const head = k === 'terminal' ? '<div class="k7-well__head">' + glyph('terminal') + '<span class="k7-mono k7-ell">' + esc(o.path ?? '') + '</span>' + (o.branch ? '<span class="k7-mono k7-dim">' + esc(o.branch) + '</span>' : '') + '</div>' : '';
   const lines = k === 'terminal'
     ? o.text.split('\n').map((l) => (l.startsWith('$ ') ? '<span class="k7-well__prompt">$</span> ' + esc(l.slice(2)) : esc(l))).join('\n')
@@ -241,12 +244,13 @@ export function disclosure(o: DisclosureOpts): string {
 
 /* ── TurnFoot (37): under a finished reply. bot: the model, the time, the cost. session (board S23's `.turnbar`): the checkpoint the turn
    left, its actions (Undo, Edit from here, Fork: the app passes the ones that exist), and at the end the model, the time and the cost ── */
-export interface TurnFootAction { label: string; value: string; icon?: U<string>; disabled?: U<boolean>; tip?: U<string> }
+export interface TurnFootAction { label: string; value: string; icon?: U<string>; /** it cannot be taken now: drawn faint, still hovered and focused so its tip says why (6e: a rewind in a shared checkout) */ disabled?: U<boolean>; tip?: U<string> }
 export interface TurnFootOpts {
   kind?: U<'bot' | 'session'>; model?: U<ModelRef>; modelName?: U<string>; time?: U<string>; cost?: U<string>;
   /** a session's: the checkpoint this turn left ("Checkpoint 3") */ label?: U<string>;
   /** a session's actions (the board's three unless said); each button carries `data-value` */ actions?: U<readonly TurnFootAction[]>; attrs?: U<Attrs>;
   /** a few words after the model (why it was picked: "debugging"; "8 steps") */ note?: U<string>; /** a Badge after the model ("ungoverned"), and what it means in its tip */ badge?: U<string>; badgeTip?: U<string>;
+  /** several models answered (a council, 6e): their marks stacked in place of the one model's (three, then "+N") */ marks?: U<readonly ModelRef[]>;
 }
 export const TURN_ACTIONS: readonly TurnFootAction[] = [{ label: 'Undo', value: 'undo', icon: 'back' }, { label: 'Edit from here', value: 'edit', icon: 'pen' }, { label: 'Fork', value: 'fork', icon: 'fork' }];
 export function turnFoot(o: TurnFootOpts): string {
@@ -256,8 +260,8 @@ export function turnFoot(o: TurnFootOpts): string {
     const list = o.actions ?? TURN_ACTIONS;
     const said = [o.modelName, o.time, o.cost].filter(Boolean).join(' ');
     return '<div class="k7-foot"' + kitAttrs('TurnFoot', { 'data-kind': k, ...(o.attrs ?? {}) }) + '>' + (o.label ? '<span class="k7-foot__label">' + esc(o.label) + '</span>' : '') +
-      (list.length ? '<span class="k7-foot__acts">' + list.map((x) => '<button class="k7-reset k7-foot__btn" type="button"' + attrs({ 'data-value': x.value, disabled: !!x.disabled, 'data-tip': x.tip }) + '>' + glyph(x.icon) + esc(x.label) + '</button>').join('') + '</span>' : '') +
-      '<span class="k7-grow"></span>' + extra + (said || o.model ? '<span class="k7-foot__meta k7-mono">' + (o.model ? markHTML(o.model, { size: 12, label: false }) + ' ' : '') + esc(said) + '</span>' : '') + '</div>';
+      (list.length ? '<span class="k7-foot__acts">' + list.map((x) => '<button class="k7-reset k7-foot__btn" type="button"' + attrs({ 'data-value': x.value, 'aria-disabled': x.disabled ? 'true' : null, 'data-tip': x.tip }) + '>' + glyph(x.icon) + esc(x.label) + '</button>').join('') + '</span>' : '') +
+      '<span class="k7-grow"></span>' + extra + (said || o.model || o.marks ? '<span class="k7-foot__meta k7-mono">' + (o.marks?.length ? markStack(o.marks, 12) + ' ' : o.model ? markHTML(o.model, { size: 12, label: false }) + ' ' : '') + esc(said) + '</span>' : '') + '</div>';
   }
   const meta = (o.model ? '<span class="k7-foot__model">' + markHTML(o.model, { size: 14, label: false }) + esc(o.modelName ?? '') + '</span>' : o.modelName ? '<span class="k7-foot__model">' + esc(o.modelName) + '</span>' : '') + extra +
     (o.time ? '<span class="k7-mono">' + esc(o.time) + '</span>' : '') + (o.cost ? '<span class="k7-mono">' + esc(o.cost) + '</span>' : '');
@@ -284,6 +288,20 @@ export function hoverBeside(bar: HTMLElement, bubble: HTMLElement): void {
   row.className = 'k7-hoverrow';
   bubble.replaceWith(row);
   row.append(bubble, bar);
+}
+
+/* ── FindBar (6e, derived: find in a conversation): a small floating bar at the conversation's top right: the kit's search Field, how
+   many matched ("3 of 12", or "No matches" in quiet words), previous and next, and esc that closes it. What it finds and marks is the
+   app's (`ui:find` {query, dir} on the bar; `ui:find-close`) ── */
+export interface FindBarOpts { id: string; label?: U<string>; value?: U<string>; /** "3 of 12"; '' says nothing; "No matches" is quiet */ count?: U<string>; attrs?: U<Attrs> }
+export function findBar(o: FindBarOpts): string {
+  const none = o.count === 'No matches';
+  return '<div class="k7-find"' + kitAttrs('FindBar', { role: 'search', 'aria-label': o.label ?? 'Find in this conversation', 'data-sq': '', 'data-sq-mode': 'surface', ...(o.attrs ?? {}) }) + '>' +
+    '<span class="k7-field__box k7-find__box" data-kind="search">' + glyph('search', 'k7-field__glyph') + '<input class="k7-field__input" type="search" id="' + esc(o.id) + '"' + attrs({ value: o.value, placeholder: 'Find', 'aria-label': o.label ?? 'Find in this conversation', autocomplete: 'off', spellcheck: 'false', 'aria-describedby': o.id + '-count' }) + '></span>' +
+    '<span class="k7-find__count k7-mono" id="' + esc(o.id) + '-count" role="status" aria-live="polite"' + attrs({ 'data-none': none ? '' : null }) + '>' + esc(o.count ?? '') + '</span>' +
+    iconButton({ icon: 'chevron-up', label: 'Previous match', tip: 'Previous', variant: 'ghost', keys: 'shift+Enter', attrs: { 'data-find': 'prev' } }) +
+    iconButton({ icon: 'chevron-down', label: 'Next match', tip: 'Next', variant: 'ghost', keys: 'Enter', attrs: { 'data-find': 'next' } }) +
+    iconButton({ icon: 'close', label: 'Close find', tip: 'Close', variant: 'ghost', keys: 'esc', attrs: { 'data-find': 'close' } }) + '</div>';
 }
 
 /* ── TimeSeparator (38): only after a gap; "NEW" in the accent ── */

@@ -48,3 +48,27 @@ describe('no folder yet (board S41)', () => {
     expect(asked).toEqual(['folder']);
   });
 });
+
+describe('the rewind sheet (6e)', () => {
+  const PLAN = { status: 'planned', isolation: 'shared_unchanged', files: [{ path: 'src/a.ts', action: 'restore' }, { path: 'src/b.ts', action: 'delete' }] } as const;
+  it('its files are the kit\'s FilesCard, each path with what happens to it', async () => {
+    const { rewindBody } = await import('./s0');
+    const box = document.createElement('div'); box.innerHTML = rewindBody(PLAN);
+    expect([...box.querySelectorAll('.k7-files__row')].map((r) => r.textContent)).toEqual(['src/a.tsput back', 'src/b.tsremoved']);
+    expect(box.querySelector('.k7-files__title')?.textContent).toBe('2 files');
+  });
+  it('where it cannot run, Rewind stays, disabled, and says why in its Tooltip; Cancel closes', async () => {
+    const { rewindSheet } = await import('./s0');
+    const confirm = vi.fn(), closed = vi.fn();
+    const s = rewindSheet({ ...PLAN, status: 'refused', isolation: 'refused', why: 'A shared checkout changed.' }, 'Rewind', { onConfirm: confirm, closed });
+    document.body.append(s.el);
+    const btns = [...s.el.querySelectorAll<HTMLButtonElement>('.k7-dialog__foot .k7-btn')];
+    const rw = btns.find((b) => b.textContent === 'Rewind') as HTMLButtonElement;
+    expect(rw.getAttribute('aria-disabled')).toBe('true');
+    expect(rw.dataset['tip']).toBe('A shared checkout changed.');
+    rw.click();
+    expect(confirm).not.toHaveBeenCalled();
+    btns.find((b) => b.textContent === 'Cancel')?.click();
+    expect(closed).toHaveBeenCalledOnce();
+  });
+});

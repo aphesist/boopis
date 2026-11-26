@@ -1,46 +1,52 @@
-/* The tasks a turn handed to other models: a card per child agent, in the turn that started them. A turn with four of them
-   shows every ending a child can have (working, done, failed, stopped); the card alone, long text and a card with no session to
-   open. Drawn with the kit's `ui.child` inside the call-number entry, as the session draws them (modules/session/children.ts). */
-import { html, ui } from '@boopis/ui';
-import type { ChildOpts } from '@boopis/ui';
-import { line, put, stage } from '../../story';
+/* The tasks a turn handed to other models, on the kit (REPASS.md 6e, the lead's design; no board draws it): a ToolRow each in the turn
+   that started them (the model's mark and name, the task, its StatusWord: queued, running with its clock, done, error with why in its
+   Tooltip, stopped), what it reported quoted under it, a Disclosure over its transcript in a Well, and a ghost Stop while it runs.
+   Drawn by the session's own module (modules/session/children.ts) on the session's thread. */
+import { put, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_TITLE, UNBROKEN } from '../../fixtures';
-import { CUT_NOTE } from '../../../modules/session/children';
+import { CUT_NOTE, childrenBlock, resetChildren } from '../../../modules/session/children';
+import type { ChildHost } from '../../../modules/session/children';
+import type { ChildTask, Turn } from '../../../data';
+import { asked, reply, sessionThread } from './_thread';
 
-const CONV = { url: '/v6/design-system/index.html#c-conversation', crop: '#c-conversation' };
-const W = 720;
-
-const FOUR: readonly ChildOpts[] = [
-  { id: 'a', model: 'claude-opus-5-5', goal: 'Review the diff in src/billing for rounding errors', status: 'running', time: '12s', now: 'read_file src/billing/invoice.ts', tools: 3, canOpen: true, canStop: true },
-  { id: 'b', model: 'gpt-6-luna', goal: 'Write the migration that moves invoices to integer cents', status: 'done', time: '1m 04s', tools: 9, summary: 'Added 0042_integer_cents.sql and a rollback; both run on the sample database.', canOpen: true },
-  { id: 'c', model: 'gemini-3.8-flash', goal: 'Find every caller of prorate() outside src/billing', status: 'failed', time: '8s', tools: 2, summary: 'The search tool timed out twice.', canOpen: true },
-  { id: 'd', model: 'grok-4', goal: 'Draft the changelog entry', status: 'stopped', time: '5s', tools: 1, summary: 'Stopped before it finished.', canOpen: true }
+const W = 720, NOW = 1_800_000_000_000;
+const task = (o: Partial<ChildTask> & Pick<ChildTask, 'id' | 'goal' | 'model' | 'status'>): ChildTask => ({ subagentId: 'sa-' + o.id, childSession: 'cs-' + o.id, index: 0, startedAt: NOW - 12_000, seconds: null, tools: 0, now: '', summary: '', ...o });
+const FOUR: readonly ChildTask[] = [
+  task({ id: 'a', model: 'claude-opus-5-5', goal: 'Review the diff in src/billing for rounding errors', status: 'running', now: 'read_file src/billing/invoice.ts', tools: 3 }),
+  task({ id: 'b', model: 'gpt-6-luna', goal: 'Write the migration that moves invoices to integer cents', status: 'done', seconds: 64, tools: 9, summary: 'Added 0042_integer_cents.sql and a rollback; both run on the sample database.' }),
+  task({ id: 'c', model: 'gemini-3.8-flash', goal: 'Find every caller of prorate() outside src/billing', status: 'failed', seconds: 8, tools: 2, summary: 'The search tool timed out twice.' }),
+  task({ id: 'd', model: 'grok-4', goal: 'Draft the changelog entry', status: 'stopped', seconds: 5, tools: 1 })
 ];
-/* the same cards after a resume (read back from the turn book): finished, so the clock is the time they ran, none can be stopped, they open
-   their own session read-only; one that never ended is drawn stopped; a report longer than the book keeps says it was shortened */
-const RESUMED: readonly ChildOpts[] = [
-  { id: 'ra', model: 'claude-opus-5-5', goal: 'Review the diff in src/billing for rounding errors', status: 'done', time: '48s', tools: 7, summary: 'Two rounding errors, in prorate() and in the invoice total.', canOpen: true },
-  { id: 'rb', model: 'gpt-6-luna', goal: 'Write the migration that moves invoices to integer cents', status: 'done', time: '1m 04s', tools: 9, summary: 'Added 0042_integer_cents.sql and a rollback; both run on the sample database, and every row moves.' + CUT_NOTE, canOpen: true },
-  { id: 'rc', model: 'gemini-3.8-flash', goal: 'Find every caller of prorate() outside src/billing', status: 'stopped', tools: 0, canOpen: false }
+const TRANSCRIPT: readonly Turn[] = [
+  { id: 'u', role: 'user', at: '09:41', text: 'Write the migration that moves invoices to integer cents.' },
+  { id: 'x', role: 'assistant', model: 'gpt-6-luna', time: '1m 04s', cost: '', stepCount: 3, status: 'done', paragraphs: ['Added 0042_integer_cents.sql and a rollback. Both ran on the sample database: every row moves.'], bullets: [],
+    steps: [{ title: 'Read', mono: true, meta: ['db/schema.sql'], time: '0:04' }, { title: 'Wrote', mono: true, meta: ['db/0042_integer_cents.sql'], time: '0:31' }, { title: 'Ran', mono: true, meta: ['pnpm db:migrate --dry'], time: '0:58' }] }
 ];
-const turnWith = (kids: readonly ChildOpts[]): HTMLElement => {
-  const box = document.createElement('div'); box.className = 'ss-children';
-  for (const k of kids) box.append(ui.child(k));
-  return ui.entry({ kind: 'agent', callno: ['claude-sonnet-5-5', '48s', '$0.04'], body: '<p>' + html.inline('I sent four tasks, one to each model you named. Their results come back here.') + '</p>' + box.outerHTML });
-};
+const host = (o: { stop?: boolean; open?: boolean; fail?: boolean } = {}): ChildHost => ({
+  col: () => null, now: () => NOW,
+  ...(o.stop === false ? {} : { stop: () => undefined }),
+  ...(o.open === false ? {} : { transcript: () => (o.fail ? Promise.reject(new Error('its session was removed')) : Promise.resolve(TRANSCRIPT)) })
+});
+const turn = (kids: readonly ChildTask[], h = host()): HTMLElement => { resetChildren(); return sessionThread(asked('Split the cents work four ways.'), reply('I sent four tasks, one to each model you named. Their results come back here.', 'claude-sonnet-5-5'), childrenBlock(kids, h)); };
+const openFirst = async (root: HTMLElement): Promise<void> => { root.querySelector<HTMLElement>('[data-child-id] .k7-disc__sum')?.click(); await new Promise((r) => setTimeout(r, 30)); };
 
 export default [
   {
-    id: 'composer/children', title: 'Tasks handed to other models', area: 'composer', kind: 'component', covers: ['ui.child', 'html.child'], mock: CONV,
+    id: 'composer/children', title: 'Tasks handed to other models', area: 'composer', kind: 'component', covers: ['surface:children'],
     states: {
-      typical: stage(['typical', 'variant', 'many'], ({ root }) => { put(root, turnWith(FOUR)); ui.hydrate(root); }, { width: W }),
-      'after a resume': stage(['variant', 'success'], ({ root }) => { put(root, turnWith(RESUMED)); ui.hydrate(root); }, { width: W }),
-      'the card alone': stage(['single', 'variant'], ({ root }) => { line(root, ui.child(FOUR[0] as ChildOpts)); }, { width: 420 }),
-      'queued, and no session to open yet': stage(['variant'], ({ root }) => { line(root, ui.child({ id: 'q', model: 'claude-haiku-5-5', goal: 'Summarise the README', status: 'queued' })); }, { width: 420 }),
-      long: stage(['long'], ({ root }) => { line(root, ui.child({ id: 'l', model: 'claude-sonnet-5-5-20261101-extended-context-preview', goal: LONG_TITLE + ' ' + UNBROKEN, status: 'running', time: '3m 02s', now: UNBROKEN, tools: 120, canOpen: true, canStop: true }), ui.child({ id: 'm', model: 'gpt-6-luna', goal: LONG_TITLE, status: 'done', time: '9m 59s', summary: LONG_TITLE + ' ' + UNBROKEN, canOpen: true })); }, { width: 420 }),
-      empty: stage(['empty'], ({ root }) => { line(root, ui.child({ id: 'e', model: '', goal: '', status: 'queued' })); }, { width: 420 }),
-      error: stage(['error'], ({ root }) => { line(root, ui.child(FOUR[2] as ChildOpts)); }, { width: 420 })
+      typical: stage(['typical', 'many'], ({ root }) => { put(root, turn(FOUR)); }, { width: W }),
+      queued: stage(['variant'], ({ root }) => { put(root, turn([task({ id: 'q', model: 'claude-haiku-5-5', goal: 'Summarise the README', status: 'queued', startedAt: null, subagentId: '' })])); }, { width: W }),
+      running: stage(['loading'], ({ root }) => { put(root, turn([FOUR[0] as ChildTask])); }, { width: W }),
+      'stop hovered': stage(['hover'], ({ root }) => { put(root, turn([FOUR[0] as ChildTask])); }, { width: W, force: [{ sel: '[data-action="stop"]', state: 'hover' }] }),
+      done: stage(['success'], ({ root }) => { put(root, turn([FOUR[1] as ChildTask])); }, { width: W }),
+      'transcript open': stage(['open'], async ({ root }) => { put(root, turn([FOUR[1] as ChildTask])); await openFirst(root); }, { width: W }),
+      'transcript could not be read': stage(['error', 'open'], async ({ root }) => { put(root, turn([FOUR[1] as ChildTask], host({ fail: true }))); await openFirst(root); }, { width: W }),
+      error: stage(['error'], ({ root }) => { put(root, turn([FOUR[2] as ChildTask])); }, { width: W }),
+      'error, its reason': stage(['error', 'focus'], ({ root }) => { put(root, turn([FOUR[2] as ChildTask])); }, { width: W, force: [{ sel: '[data-kit~="StatusWord"][data-tip]', state: 'focus' }] }),
+      'after a resume': stage(['variant'], ({ root }) => { put(root, turn([{ ...(FOUR[1] as ChildTask), summary: 'Added 0042_integer_cents.sql and a rollback; every row moves.', cut: true }, { ...(FOUR[3] as ChildTask), childSession: '' }], host({ stop: false }))); }, { width: W, note: 'read back from the turn book: none can be stopped; a report longer than the book keeps ends with' + CUT_NOTE }),
+      'nothing to open or stop (the page build)': stage(['empty'], ({ root }) => { put(root, turn([FOUR[0] as ChildTask], host({ stop: false, open: false }))); }, { width: W }),
+      long: stage(['long'], ({ root }) => { put(root, turn([task({ id: 'l', model: 'claude-sonnet-5-5-20261101-extended-context-preview', goal: LONG_TITLE + ' ' + UNBROKEN, status: 'running', now: UNBROKEN }), task({ id: 'm', model: 'gpt-6-luna', goal: LONG_TITLE, status: 'done', seconds: 599, summary: LONG_TITLE + ' ' + UNBROKEN })])); }, { width: 420 })
     }
   }
 ] satisfies Story[];

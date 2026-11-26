@@ -1,11 +1,13 @@
-/* The tasks a turn handed to other models, drawn where the turn raised them: one card per child (the kit's `ui.child`), each
-   with its model's mark and name, the goal, what it does now, the clock, and how it ended. Two actions: open what the child did,
-   read-only, under its card; stop it. A card is replaced whole when the engine sends a frame, and a running clock ticks between
-   frames. Nothing here talks to the engine: it reads `ChildTask`s and calls the provider's
+/* The tasks a turn handed to other models, on the v7 kit (REPASS.md step 6e; the lead's design, no board draws it): a ToolRow each,
+   where the turn raised them: the model's mark and short name, the task's title, and its StatusWord (queued, running with its clock,
+   done with the time it took, error in red with why in its Tooltip, stopped). What it reported when it ended is quoted under it. A
+   Disclosure, "Transcript", opens what it did in a Well, as a compact thread, read only (it is read when first opened). Stop is a ghost
+   Button at the row's end, shown only while it runs. A row is drawn again whole when the engine sends a frame (an open transcript stays
+   open), and a running clock ticks between frames. Nothing here talks to the engine: it reads `ChildTask`s and calls the provider's
    `stopChild` and `childTranscript`, which are absent where there is nothing to stop or read (the page build). */
 import { el } from '../../core/dom';
-import { ui } from '@boopis/ui';
-import type { ChildOpts } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
+import type { ToolRowOpts } from '@boopis/ui';
 import type { ChildTask, Turn } from '../../data';
 import { childTime, isLive } from '../../host/live/children';
 
@@ -17,29 +19,52 @@ export interface ChildHost {
   now(): number;
 }
 
-const SEEN = new Map<string, ChildTask>();   /* the latest state of every card on screen: what the clock reads */
-const OPEN = new Set<string>();              /* the children whose log is open */
+const SEEN = new Map<string, ChildTask>();   /* the latest state of every row on screen: what the clock reads */
+const OPEN = new Set<string>();              /* the children whose transcript is open */
+const READ = new Map<string, string>();      /* a transcript once read, as the Well's markup (a redraw keeps it) */
 let clock = 0;
 
 /** a resumed report that was longer than the turn book keeps (ADR-0036): said, never passed off as the whole report */
 export const CUT_NOTE = ' (Shortened when it was saved: the rest is not kept.)';
+export const LOADING = 'Reading what it did…';
 
-export const opts = (c: ChildTask, h: Pick<ChildHost, 'now' | 'stop' | 'transcript'>): ChildOpts => ({
-  id: c.id, model: c.model || 'a model', goal: c.goal || 'a task', status: c.status, time: childTime(c, h.now()), now: c.now, tools: c.tools, summary: c.cut ? c.summary + CUT_NOTE : c.summary,
-  canOpen: !!h.transcript && !!c.childSession, canStop: !!h.stop && !!c.subagentId
-});
+/** the StatusWord of a task, with its clock where it has one */
+export function childWord(c: Pick<ChildTask, 'status' | 'startedAt' | 'seconds'>, now: number): { text: string; tone: 'neutral' | 'red' | 'ok' } {
+  const t = childTime(c, now);
+  if (c.status === 'running') return { text: 'running' + (t ? ' ' + t : ''), tone: 'neutral' };
+  if (c.status === 'done') return { text: 'done' + (t ? ' ' + t : ''), tone: 'neutral' };
+  if (c.status === 'failed') return { text: 'error', tone: 'red' };
+  return { text: c.status, tone: 'neutral' };   /* queued, stopped */
+}
+const shortModel = (m: string): string => (m ? ui.modelMark.short(m) || ui.modelMark.called(m) || m : 'a model');
 
-function card(c: ChildTask, h: ChildHost): HTMLElement {
-  const node = ui.child(opts(c, h));
-  const open = node.querySelector<HTMLElement>('[data-action="open"]');
-  if (open) open.setAttribute('aria-expanded', String(OPEN.has(c.id)));
+/** what a task's row shows, as the kit's ToolRow */
+export function childRow(c: ChildTask, h: Pick<ChildHost, 'now' | 'stop' | 'transcript'>): ToolRowOpts {
+  const w = childWord(c, h.now()), live = isLive(c);
+  const canOpen = !!h.transcript && !!c.childSession, canStop = !!h.stop && !!c.subagentId && live;
+  const summary = c.summary ? c.summary + (c.cut ? CUT_NOTE : '') : '';
+  const open = OPEN.has(c.id);
+  return {
+    kind: 'command', icon: '', tool: shortModel(c.model), target: c.goal || 'a task', ...(c.model ? { model: c.model } : {}),
+    state: c.status === 'running' ? 'running' : c.status === 'failed' ? 'failed' : 'done', word: w.text, wordTone: w.tone,
+    ...(c.status === 'failed' ? { wordTip: summary || 'It stopped with an error, and said nothing of why.' } : c.status === 'running' && c.now ? { wordTip: 'Now: ' + c.now } : {}),
+    ...(c.status === 'done' && summary ? { note: summary } : {}),
+    ...(canStop ? { end: kit.html.button({ label: 'Stop', variant: 'ghost', size: 28, attrs: { 'data-action': 'stop', 'aria-label': 'Stop: ' + (c.goal || 'this task') } }) } : {}),
+    ...(canOpen ? { after: kit.html.disclosure({ summary: 'Transcript', open, after: kit.html.well({ kind: 'thread', text: '', html: READ.get(c.id) ?? '<p>' + ui.esc(LOADING) + '</p>', label: 'What this task did, read only' }), attrs: { 'data-action': 'open' } }) } : {}),
+    attrs: { 'data-child-id': c.id, 'data-status': c.status }
+  };
+}
+
+function rowEl(c: ChildTask, h: ChildHost): HTMLElement {
+  const node = kit.toolRow(childRow(c, h));
+  if (OPEN.has(c.id) && !READ.has(c.id)) fill(node, c, h);
   return node;
 }
 
-/** the block of cards a turn carries (a turn drawn from a snapshot) */
+/** the rows a turn carries (a turn drawn from a snapshot) */
 export function childrenBlock(children: readonly ChildTask[], h: ChildHost): HTMLElement {
   const box = el('div', { class: 'ss-children' });
-  for (const c of children) { SEEN.set(c.id, c); box.append(card(c, h)); if (OPEN.has(c.id)) box.append(logSlot(c, h)); }
+  for (const c of children) { SEEN.set(c.id, c); box.append(rowEl(c, h)); }
   wire(box, h);
   tick(h);
   return box;
@@ -54,70 +79,65 @@ export function upsertChild(turnId: string, c: ChildTask, h: ChildHost): void {
   const was = SEEN.get(c.id);
   SEEN.set(c.id, c);
   const at = box.querySelector<HTMLElement>('[data-child-id="' + CSS.escape(c.id) + '"]');
-  if (!at) box.append(card(c, h));
-  else if (!at.contains(document.activeElement)) at.replaceWith(card(c, h));
-  else patchInPlace(at, c, h);   /* focus is inside it: change the words and leave the buttons alone, so focus stays */
-  if (was && was.status !== c.status && !isLive(c)) ui.announce((c.goal || 'A task') + ': ' + (c.status === 'done' ? 'done' : c.status));
-  tick(h);
-}
-
-function patchInPlace(node: HTMLElement, c: ChildTask, h: ChildHost): void {
-  const fresh = card(c, h);
-  for (const sel of ['.ui-child__state', '.ui-child__now', '.ui-child__summary', '.ui-child__goal']) {
-    const a = node.querySelector(sel), b = fresh.querySelector(sel);
-    if (a && b) a.replaceWith(b); else if (b && !a) node.append(b); else if (a && !b) a.remove();
+  if (!at) box.append(rowEl(c, h));
+  else {
+    /* focus inside it stays where it was: the row is drawn again and the focus goes back to the same control */
+    const had = at.contains(document.activeElement) ? (document.activeElement as HTMLElement).closest('[data-action]')?.getAttribute('data-action') ?? 'disc' : null;
+    const fresh = rowEl(c, h);
+    at.replaceWith(fresh);
+    if (had) (fresh.querySelector<HTMLElement>('[data-action="' + had + '"] button, [data-action="' + had + '"]') ?? fresh.querySelector<HTMLElement>('.k7-disc__sum'))?.focus({ preventScroll: true });
   }
-  node.dataset['status'] = c.status;
-  if (c.status !== 'running' && c.status !== 'queued') node.querySelector('[data-action="stop"]')?.remove();
+  if (was && was.status !== c.status && !isLive(c)) ui.announce((c.goal || 'A task') + ': ' + (c.status === 'failed' ? 'error' : c.status));
+  tick(h);
 }
 
 /** the clock of every running child, once a second, until none runs */
 function tick(h: ChildHost): void {
   if (clock) return;
   clock = window.setInterval(() => {
-    const live = [...SEEN.values()].filter((c) => isLive(c) && c.startedAt != null);
+    const live = [...SEEN.values()].filter((c) => c.status === 'running' && c.startedAt != null);
     if (!live.length) { clearInterval(clock); clock = 0; return; }
     for (const c of live) {
-      const meta = h.col()?.querySelector('[data-child-id="' + CSS.escape(c.id) + '"] .ui-child__meta');
-      const t = childTime(c, h.now());
-      if (meta && t) meta.textContent = ['Working', t, c.tools ? c.tools + (c.tools === 1 ? ' tool' : ' tools') : ''].filter(Boolean).join(' · ');
+      const w = h.col()?.querySelector('[data-child-id="' + CSS.escape(c.id) + '"] > .k7-tool__head > [data-kit~="StatusWord"]');
+      if (w) w.textContent = childWord(c, h.now()).text;
     }
   }, 1000);
 }
-export const resetChildren = (): void => { SEEN.clear(); OPEN.clear(); if (clock) { clearInterval(clock); clock = 0; } };
+export const resetChildren = (): void => { SEEN.clear(); OPEN.clear(); READ.clear(); if (clock) { clearInterval(clock); clock = 0; } };
 
-function logSlot(c: ChildTask, h: ChildHost): HTMLElement {
-  const slot = el('div', { class: 'ss-child-log', 'data-log-for': c.id, role: 'region', 'aria-label': 'What this task did, read only' });
-  slot.append(el('p', { class: 'ss-child-log__note', text: 'Loading what it did…' }));
-  void (h.transcript?.(c.id) ?? Promise.reject(new Error('This build cannot read it.'))).then((turns) => { slot.replaceChildren(...logRows(turns)); }, (e: unknown) => {
-    slot.replaceChildren(el('p', { class: 'ss-child-log__note', text: 'Could not read it: ' + (e instanceof Error ? e.message : String(e)) }));
-  });
-  return slot;
-}
-function logRows(turns: readonly Turn[]): Node[] {
-  if (!turns.length) return [el('p', { class: 'ss-child-log__note', text: 'It has not written anything yet.' })];
+/** what a task did, as a compact thread: what it was asked, the steps it took, what it said */
+export function transcriptHTML(turns: readonly Turn[]): string {
+  if (!turns.length) return '<p>' + ui.esc('It has not written anything yet.') + '</p>';
   return turns.map((t) => {
-    const row = el('div', { class: 'ss-child-log__row', 'data-role': t.role });
-    if (t.role === 'user') { row.append(ui.request(t.text)); return row; }
-    if (t.steps.length) row.append(ui.steps({ items: [...t.steps] }));
-    for (const p of t.paragraphs) { const q = el('p', { class: 'ui-prose' }); q.innerHTML = ui.html.inline(p); row.append(q); }
-    return row;
+    if (t.role === 'user') return '<p data-role="user">' + ui.esc(t.text) + '</p>';
+    return (t.steps.length ? kit.html.steps(t.steps.map((s) => ({ text: s.title + (s.meta?.length ? '  ' + s.meta.join('  ') : ''), state: s.kind === 'fail' ? 'failed' as const : 'done' as const, ...(s.time ? { time: s.time } : {}) }))) : '') +
+      t.paragraphs.map((p) => '<p>' + ui.html.inline(p) + '</p>').join('');
+  }).join('');
+}
+function fill(row: HTMLElement, c: ChildTask, h: ChildHost): void {
+  const read = h.transcript?.(c.id) ?? Promise.reject(new Error('This build cannot read it.'));
+  void read.then((turns) => transcriptHTML(turns), (e: unknown) => '<p>' + ui.esc('Could not read it: ' + (e instanceof Error ? e.message : String(e))) + '</p>').then((html) => {
+    READ.set(c.id, html);
+    const at = h.col()?.querySelector('[data-child-id="' + CSS.escape(c.id) + '"] .k7-well__thread') ?? row.querySelector('.k7-well__thread');
+    if (at) at.innerHTML = html;
   });
 }
 
 function wire(box: HTMLElement, h: ChildHost): void {
-  box.addEventListener('click', (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
-    const cardEl = b?.closest<HTMLElement>('[data-child-id]');
-    const id = cardEl?.dataset['childId'];
-    if (!b || !cardEl || !id) return;
-    if (b.dataset['action'] === 'stop') { h.stop?.(id); b.setAttribute('disabled', ''); return; }
-    if (b.dataset['action'] !== 'open') return;
+  box.addEventListener('ui:toggle', (e) => {
+    const row = (e.target as HTMLElement).closest<HTMLElement>('[data-child-id]'), id = row?.dataset['childId'];
+    if (!row || !id) return;
+    const open = (e as CustomEvent<{ open: boolean }>).detail.open;
+    if (open) OPEN.add(id); else OPEN.delete(id);
     const c = SEEN.get(id);
-    if (!c) return;
-    const slot = box.querySelector('[data-log-for="' + CSS.escape(id) + '"]');
-    if (slot) { slot.remove(); OPEN.delete(id); b.setAttribute('aria-expanded', 'false'); return; }
-    OPEN.add(id); b.setAttribute('aria-expanded', 'true');
-    cardEl.after(logSlot(c, h));
+    if (open && c && !READ.has(id)) fill(row, c, h);
+  });
+  box.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-action="stop"]');
+    const id = b?.closest<HTMLElement>('[data-child-id]')?.dataset['childId'];
+    if (!b || !id || b.getAttribute('aria-disabled') === 'true') return;
+    h.stop?.(id);
+    b.setAttribute('aria-disabled', 'true');
+    ui.announce('Stopping');
   });
 }

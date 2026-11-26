@@ -35,7 +35,9 @@ import type { RoomsBridge } from './rooms-bridge';
 import type { BotsBridge } from './bots-bridge';
 import { ui } from '@boopis/ui';
 import { inTauri } from './bridge';
-import { commands } from './bindings';
+import { commands, events } from './bindings';
+import { parkedSource, teamPlansSource } from './live/held';
+import type { HeldDeps } from './live/held';
 import { enableRules, keepDraft } from './live/rules';
 import type { RulesDeps } from './live/rules';
 import type { FormEntry } from './live/forms';
@@ -782,11 +784,18 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   const ready = Promise.all([refreshList(), details.start().then(() => controls.start()), liveBots.ready, liveGroups.ready]).then(() => undefined);
   void ready.then(() => enableRules(rulesDeps, later));
   const flag = readFlag('feedforward');
+  /* what the host holds for the owner (6e): a team change a bot proposed, a step a rule paused; only in the desktop app */
+  const held: HeldDeps | null = inTauri() ? {
+    plansList: (all) => commands.teamPlansList(all), planGet: (h) => commands.teamPlanGet(h), planApply: (h) => commands.teamPlanApply(h), planReject: (h, w) => commands.teamPlanReject(h, w), planUndo: (h) => commands.teamPlanUndo(h),
+    onPlansChanged: (cb) => events.plansChangedEvent.listen(() => { cb(); }), parkedList: () => commands.parkedList(), parkedAnswer: (id, c) => commands.parkedAnswer(id, c),
+    onFront: (cb) => { const f = (): void => { if (document.visibilityState === 'visible') cb(); }; document.addEventListener('visibilitychange', f); window.addEventListener('focus', cb); return () => { document.removeEventListener('visibilitychange', f); window.removeEventListener('focus', cb); }; }
+  } : null;
   return {
     ...mock,
     info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable, later },
     ready, sessions, waits, user, engine, sessionControls: controls, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
     details: details.source, run: details.run, mods: modsHost.source, store: liveStore, kanban: liveKanban(),
+    ...(held ? { teamPlans: teamPlansSource(held), parked: parkedSource(held) } : {}),
     council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id), paths: hostPaths() },
     dictation: hostDictation(), // the host hears and writes it down (host/dictation.ts, ADR-0059)
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },

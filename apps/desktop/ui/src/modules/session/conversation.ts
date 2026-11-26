@@ -22,12 +22,13 @@ import { copyText, mdOf } from './shared';
 import { openDiff } from './details';
 import { childrenBlock, resetChildren, upsertChild } from './children';
 import type { ChildHost } from './children';
-import { councilBlock, drawCouncil } from './council';
+import { councilAnswers, councilBlock, councilFoot, showsBlock } from './council';
 import { setAttention, changed } from './state';
 import { surface } from '../mods/surfaces';
 import { answeredModel, syncDividers } from './attribution';
 import { resolvePaths, wireRefs } from '../chat/refs';
-import { REWIND_BASE, lineEl, rewindSheet, say, showSheet, v7Attrs, watchTyping } from './s0';
+import { Highlight, findRanges, highlights } from './find';
+import { REWIND_BASE, asV7, lineEl, rewindSheet, say, showSheet, v7Attrs, watchTyping } from './s0';
 import { later } from '../chat/compose';
 import type { RewindSheet } from './s0';
 import { mountNew } from './new';
@@ -39,7 +40,7 @@ import type { AskState } from './turn';
 
 export const VIEW = {
   root: null as HTMLElement | null, scroll: null as HTMLElement | null, col: null as HTMLElement | null, composer: null as SessionComposer | null,
-  findAnchor: null as HTMLElement | null, current: 's1', /** the session you were in when a new one was opened: its row keeps its mark while the new session's canvas shows (board S17) */ from: null as string | null,
+  current: 's1', /** the session you were in when a new one was opened: its row keeps its mark while the new session's canvas shows (board S17) */ from: null as string | null,
   /** the open session's blank, answered with this (null: not yet) */ blank: null as string | null
 };
 const sessions = () => data().sessions;
@@ -233,9 +234,16 @@ function partsOf(a: AgentTurn): Part[] {
       return card;
     }]);
   };
-  if (a.council) out.push(['council', 'council', () => councilBlock(a.council as NonNullable<AgentTurn['council']>)]);
+  /* a council (6e): its Block while the members answer and one combines them (or where none was reported); once done, the reply is the
+     turn's ordinary message, and the members' answers fold under it */
+  const council = a.council;
+  if (council && showsBlock(council)) out.push(['council', JSON.stringify(council), () => councilBlock(council, { again: () => { askAgain(a.id); } })]);
   /* while it works or waits: what it said, then what it did (board S20); once it ended: the work, then the answer (board S23) */
   if (running) { said(); log(); tasks(); } else { log(); tasks(); said(); }
+  if (council && council.phase === 'done' && council.members.length) out.push(['answers', JSON.stringify(council.members), () => {
+    const open = turnNode(a.id)?.querySelector('[data-part="answers"]')?.hasAttribute('data-open') ?? false;
+    return councilAnswers(council, open) as HTMLElement;
+  }]);
   for (const f of a.forms ?? []) {
     if (askShape(f) !== 'tool') continue;
     const st = formState(f), status = st.status ?? f.resolved;
@@ -250,12 +258,12 @@ function partsOf(a: AgentTurn): Part[] {
   /* the last finished turn that changed files lists them (board S23); "Open diff" opens them in the right panel (board S24's Diff) */
   const files = isLast && !running && (a.ship || a.kept?.length) ? data().details.changes.get() : [];
   if (files.length) out.push(['files', JSON.stringify(files), () => filesCard(files.map((c) => ({ path: c[0], add: c[1], del: c[2] })))]);
-  const foot = footOf(a, footCan(a));
+  const foot0 = footOf(a, footCan(a)), foot = foot0 && council?.phase === 'done' && council.members.length ? { ...foot0, ...councilFoot(council) } : foot0;
   if (foot) out.push(['foot', JSON.stringify(foot), () => {
     const f = kit.turnFoot(foot);
     f.addEventListener('click', (e) => {
       const b = (e.target as Element).closest<HTMLButtonElement>('.k7-foot__btn');
-      if (!b || b.disabled) return;
+      if (!b || b.getAttribute('aria-disabled') === 'true') return;
       if (b.dataset['value'] === 'undo') undoTurn(a.id);
       if (b.dataset['value'] === 'edit') editFrom(a.id);
       if (b.dataset['value'] === 'fork') say('Forking from a turn is not in this build yet.');
@@ -279,6 +287,18 @@ function filesCard(files: Array<{ path: string; add: number; del: number }>): HT
   const c = kit.filesCard({ files, action: 'Open diff', actionAttrs: { 'data-action': 'view-diff' }, ...(files.length > 8 ? { fold: true, open: false } : {}) });
   c.querySelector('[data-files]')?.addEventListener('click', () => { openDiff(); });
   return c;
+}
+/** a council where no member was reported: the same council is asked again with the message the turn answered */
+function askAgain(turnId: string): void {
+  if (isRunning(VIEW.current)) return;
+  const snap = conv().snapshot().turns, i = snap.findIndex((t) => t.id === turnId);
+  const asked = [...snap.slice(0, i)].reverse().find((t): t is UserTurn => t.role === 'user');
+  const src = data().council;
+  if (!asked) return;
+  void src.prepare(VIEW.current).then((f) => src.arm(VIEW.current, f.choice)).then(() => {
+    const gv = data().details.governance.get();
+    sessions().send(VIEW.current, asked.text, { governed: gv.governed, smart: gv.smart, model: gv.model, assume: [], attachments: [] });
+  }).catch((e: unknown) => { say(e instanceof Error ? e.message : 'The council could not be asked again.'); });
 }
 /** what "Fix and retry" sends as your next message: the agent reads the failing check in its own context */
 export const FIX_AND_RETRY = 'The gate failed. Fix what it found and ship the change again.';
@@ -485,7 +505,7 @@ function onConversationEvent(ev: ConversationEvent): void {
   else if (ev.type === 'form-resolved') resolveForm(ev.formId, ev.status);
   else if (ev.type === 'child-updated') { change(ev.turnId, (a) => ({ ...a, children: [...(a.children ?? []).filter((c) => c.id !== ev.child.id), ev.child] })); upsertChild(ev.turnId, ev.child, childHost()); }
   else if (ev.type === 'turn-model') { change(ev.turnId, (a) => ({ ...a, model: ev.model })); syncDividers(col); }
-  else if (ev.type === 'council') { change(ev.turnId, (a) => ({ ...a, council: ev.council })); const b = turnNode(ev.turnId)?.querySelector<HTMLElement>('.ss-council'); if (b) drawCouncil(b, ev.council); }
+  else if (ev.type === 'council') change(ev.turnId, (a) => ({ ...a, council: ev.council }));
   else if (ev.type === 'turn-finished') {
     change(ev.turnId, (a) => ({ ...a, status: ev.stopped ? 'stopped' : 'done', time: ev.time, cost: ev.cost, stepCount: ev.stepCount, paragraphs: ev.paragraphs, ...(ev.model ? { model: ev.model } : {}), ...(ev.why ? { why: ev.why } : {}) }));
     working(); syncDividers(col); rove(turnNode(ev.turnId) ?? undefined);
@@ -532,26 +552,53 @@ function onTurnKey(e: KeyboardEvent): void {
   if (key === 'b') { const b = t.querySelector<HTMLElement>('[data-blank] [data-kit~="Chip"]'); if (b) { e.preventDefault(); b.focus(); } }
 }
 
-/* find in this conversation (mod+F through the shell's provider) */
+/* ───────── find in this conversation (mod+F through the shell's provider) ─────────
+   The kit's FindBar at the conversation's top right (6e, derived): what is typed is found in the thread's words, every match washed
+   in the find token and the one it is on stronger (the CSS Custom Highlight API: nothing in the thread is rewritten), "3 of 12" or
+   "No matches"; Enter and the down arrow go to the next, shift+Enter and the up arrow to the previous, alt+Enter moves to that turn,
+   esc closes it and the focus goes back to the turn it was on. */
+let FIND: { bar: HTMLElement; clear(): void } | null = null;
+function closeFind(focusTurn = true): void {
+  if (!FIND) return;
+  FIND.clear(); FIND.bar.remove(); FIND = null;
+  if (focusTurn) { const t = turnsEls().find((x) => x.tabIndex === 0) ?? lastTurn(); t?.focus({ preventScroll: true }); }
+}
 function openFind(): boolean {
-  if (!VIEW.col || !VIEW.root || !VIEW.findAnchor) return false;
-  const field = kit.field({ id: 'ss-find', kind: 'search', label: 'Find in this conversation', placeholder: 'Words in a message or an answer' });
-  const input = field.querySelector('input') as HTMLInputElement, hint = el('p', { class: 'ss-find-count', 'aria-live': 'polite' });
-  const box = el('div', { class: 'ss-find', ...v7Attrs() }, [field, hint]);
-  let hits: HTMLElement[] = [], at = -1;
-  const run = (dir: number): void => {
-    const q = input.value.trim().toLowerCase();
-    hits = q ? turnsEls().filter((t) => t.innerText.toLowerCase().includes(q)) : [];
-    if (!hits.length) { hint.textContent = q ? 'No matches' : ''; return; }
-    at = (at + dir + hits.length) % hits.length;
-    hint.textContent = (at + 1) + ' of ' + hits.length;
-    const h = hits[at] as HTMLElement;
-    rove(h); h.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' });
+  if (!VIEW.col || !VIEW.root) return false;
+  if (FIND) { FIND.bar.querySelector<HTMLInputElement>('input')?.select(); return true; }
+  const bar = kit.findBar({ id: 'ss-find', attrs: v7Attrs() });
+  bar.classList.add('ss-find');
+  asV7(bar);
+  const input = bar.querySelector('input') as HTMLInputElement, count = bar.querySelector('.k7-find__count') as HTMLElement;
+  let hits: Range[] = [], at = -1;
+  const paint = (): void => {
+    const hl = highlights(), H = Highlight();
+    if (hl && H) { if (hits.length) hl.set('k7-find', new H(...hits)); else hl.delete('k7-find'); if (hits[at]) hl.set('k7-find-now', new H(hits[at] as Range)); else hl.delete('k7-find-now'); }
   };
-  input.addEventListener('input', () => { at = -1; run(1); });
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (e.altKey && hits[at]) { ui.popover.close(false); hits[at]?.focus(); } else run(e.shiftKey ? -1 : 1); } });
-  const root = VIEW.root;
-  ui.popover.open(VIEW.findAnchor, box, { label: 'Find in this conversation', align: 'end', onClose: () => { const t = turnsEls().find((x) => x.tabIndex === 0) ?? lastTurn(); if (t && !root.contains(document.activeElement)) t.focus({ preventScroll: true }); } });
+  const tell = (): void => { const q = input.value.trim(); count.textContent = !q ? '' : hits.length ? (at + 1) + ' of ' + hits.length : 'No matches'; count.toggleAttribute('data-none', !!q && !hits.length); };
+  const go = (dir: number): void => {
+    if (!hits.length) { tell(); paint(); return; }
+    at = (at + dir + hits.length) % hits.length;
+    const r = hits[at] as Range, turn = (r.startContainer.parentElement as HTMLElement | null)?.closest<HTMLElement>('[data-hx-turn]');
+    if (turn) rove(turn);
+    (r.startContainer.parentElement as HTMLElement | null)?.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' });
+    tell(); paint();
+  };
+  const run = (): void => { hits = findRanges(VIEW.col as HTMLElement, input.value.trim()); at = -1; go(1); };
+  input.addEventListener('input', run);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeFind(); return; }
+    if (e.key === 'Enter' && e.altKey) { e.preventDefault(); const t = turnsEls().find((x) => x.tabIndex === 0); closeFind(false); t?.focus(); return; }
+    if (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); go(e.key === 'ArrowUp' || (e.key === 'Enter' && e.shiftKey) ? -1 : 1); }
+  });
+  bar.addEventListener('click', (e) => {
+    const b = (e.target as Element).closest<HTMLElement>('[data-find]'); if (!b) return;
+    if (b.dataset['find'] === 'close') closeFind(); else { go(b.dataset['find'] === 'prev' ? -1 : 1); input.focus(); }
+  });
+  bar.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); closeFind(); } });
+  FIND = { bar, clear: () => { const hl = highlights(); hl?.delete('k7-find'); hl?.delete('k7-find-now'); } };
+  VIEW.root.append(bar);
+  input.focus();
   return true;
 }
 
@@ -571,6 +618,7 @@ const openSession = (): SessionSummary | undefined => sessions().list.get().find
 export function selectSession(id: string, opts: { quiet?: boolean; focus?: boolean } = {}): void {
   /* switching never stops a turn: the running session keeps streaming into its conversation (session-launch.md 2.2) */
   VIEW.current = id;
+  closeFind(false);
   data().details.follow(id);
   if (VIEW.col) { renderConversation(); if (VIEW.scroll) VIEW.scroll.scrollTop = 0; }
   const s = sessions().list.get().find((x) => x.id === id);
@@ -592,10 +640,9 @@ export function mountView(root: HTMLElement): void {
   ASKS.clear();
   root.classList.add('ss-view');
   VIEW.scroll = el('div', { class: 'ss-scroll ' + ui.scrollClass({ ground: true }) });
-  VIEW.findAnchor = el('span', { class: 'ss-find-anchor', 'aria-hidden': 'true' });
   VIEW.col = el('div', { class: 'ss-col', role: 'log', 'aria-label': 'Conversation' });
   VIEW.scroll.append(VIEW.col);
-  root.replaceChildren(VIEW.findAnchor, VIEW.scroll);
+  root.replaceChildren(VIEW.scroll);
   VIEW.col.addEventListener('keydown', onTurnKey);
   wireRefs(VIEW.col, { bot: () => null });
   VIEW.col.addEventListener('focusin', (e) => { const t = (e.target as Element).closest<HTMLElement>('[data-hx-turn]'); if (t && e.target === t) rove(t); });

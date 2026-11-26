@@ -135,19 +135,27 @@ export function createBotChat(deps: ChatDeps) {
     void deps.link(botId)
       .then((l) => l.requestRaw('approval.respond', { session_id: gw, execution_generation: route.generation, prompt_id: route.prompt, choice: ruleChoice(answer) }))   /* the canonical shape the main provider uses */
       .then(() => {
-        settled(botId, c, messageId, decision);
-        if (answer === 'always' && deps.keepDraft) deps.keepDraft(gw, route.description).catch((e: unknown) => { log.warn('the exception could not be drafted', e); });
+        const how = decision === 'approved' ? (answer === 'turn' || answer === 'always' ? answer : 'once') : undefined;
+        settled(botId, c, messageId, decision, how);
+        /* "Always allow": the host keeps the narrowest exception as a draft; once it says it kept one, the receipt says so */
+        if (answer === 'always' && deps.keepDraft) deps.keepDraft(gw, route.description).then((id) => { if (id) drafted(botId, c, messageId); }, (e: unknown) => { log.warn('the exception could not be drafted', e); });
       })
       .catch((e: unknown) => { log.error('the answer was not delivered', e); note(botId, c, 'Your answer did not reach ' + botId + ': ' + why(e)); });
   }
-  function settled(botId: string, c: Chat, messageId: string, decision: 'approved' | 'denied'): void {
+  function drafted(botId: string, c: Chat, messageId: string): void {
+    const i = c.thread.findIndex((x) => x.id === messageId), m = c.thread[i];
+    if (!m || m.kind !== 'approval' || !m.resolved) return;
+    c.thread[i] = { ...m, drafted: true };
+    deps.emit({ type: 'message-resolved', botId, messageId, resolved: m.resolved, resolvedAt: m.resolvedAt ?? t(), how: m.how, drafted: true });
+  }
+  function settled(botId: string, c: Chat, messageId: string, decision: 'approved' | 'denied', how?: 'once' | 'turn' | 'always'): void {
     const i = c.thread.findIndex((x) => x.id === messageId);
     const m = c.thread[i];
     if (!m || m.kind !== 'approval' || m.resolved) return;
     const at = t();
-    c.thread[i] = { ...m, resolved: decision, resolvedAt: at };
+    c.thread[i] = { ...m, resolved: decision, resolvedAt: at, ...(how ? { how } : {}) };
     c.approvals.delete(messageId);
-    deps.emit({ type: 'message-resolved', botId, messageId, resolved: decision, resolvedAt: at });
+    deps.emit({ type: 'message-resolved', botId, messageId, resolved: decision, resolvedAt: at, ...(how ? { how } : {}) });
     if (![...c.approvals.keys()].length) deps.live(botId, c.running ? { state: 'working', activity: '', attention: null } : null);
   }
 

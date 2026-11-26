@@ -53,12 +53,10 @@
 /* beside the open details the composer is 600 (board S40), beside the diff 560 (boards S25 to S27: the tools take 520) */
 .hx[data-right="open"] :is(.ss-composer, .ss-new__zone) { width: var(--composer-w-pane); }
 html[data-right-tools] .hx[data-right="open"] :is(.ss-composer, .ss-new__zone) { width: calc(var(--composer-w-pane) - var(--sp-5) - var(--sp-4)); }
-.ss-find-anchor { position: absolute; top: var(--sp-3); right: var(--sp-5); width: var(--hl); height: var(--hl); }
 .ss-composer { --hx-dock-space: var(--hx-dock-space-to); position: absolute; z-index: 5; left: 50%; transform: translateX(-50%); bottom: calc(var(--hx-dock-space, 0px) + var(--composer-bottom)); width: var(--composer-w); max-width: calc(100% - 2 * var(--sp-5)); }
 
-/* find in this conversation: the kit's search Field and a count under it */
-.ss-find { width: var(--pane-w, 300px); display: flex; flex-direction: column; gap: var(--sp-1); }
-.ss-find-count { margin: 0; min-height: var(--lh-xs); font-size: var(--fs-2xs); line-height: var(--lh-xs); font-family: var(--mono); color: var(--text-quiet); }
+/* find in the conversation (6e): the kit's FindBar floats at the conversation's top right, over the thread */
+.ss-find { position: absolute; top: var(--sp-3); right: var(--sp-5); z-index: 3; }
 
 /* ================================================================ boards S40 and S24: the right panel (modules/session/details.ts)
    Placement only: the kit's Pane fills the shell's slot from the window's top (the chrome's controls float over it) and scrolls its
@@ -87,7 +85,7 @@ html[data-right-tools] .hx[data-right="open"] :is(.ss-composer, .ss-new__zone) {
 /* The new session's screen: the canvas between 64 under the window's top and 250 over its foot, its pieces centred: the logomark 16 over
    the greeting, the greeting 14 over the launch row (its selectors 4 apart), Waiting on you 40 under it and 520 wide. At the foot the
    composer, 720 wide on the work's centre line, 24 over the dock; a limit's Notice 8 over it. */
-.ss-view[data-new] > :is(.ss-scroll, .ss-composer, .ss-find-anchor) { display: none; }
+.ss-view[data-new] > :is(.ss-scroll, .ss-composer, .ss-find) { display: none; }
 .ss-view[data-new]::before, .ss-view[data-new]::after { display: none; }
 .ss-new { position: absolute; inset: 0; }
 .ss-new__canvas { position: absolute; left: 0; right: 0; top: calc(var(--ns-top) - var(--drag-h)); bottom: var(--ns-bottom); display: flex; flex-direction: column; align-items: center; justify-content: center; }

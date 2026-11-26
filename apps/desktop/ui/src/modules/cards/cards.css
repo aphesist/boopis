@@ -38,7 +38,7 @@ hx-card p, hx-card ol { margin: 0; padding: 0; }
 /* interface labels follow the interface case; content (quotes, the agent's words, data, code) never does */
 /* interface labels follow the interface case; what a sender wrote (titles, the why, quotes, options, data, code)
    keeps its own case, so a lowercase theme never turns "OpenAI" into "openai" */
-.cd-note, .cd-meta, .cd-receipt, .cd-week b, .cd-mini__meta, .cd-queue__done, .cd-file--more,
+.cd-note, .cd-meta, .cd-receipt, .cd-mini__meta, .cd-queue__done,
 .cd-free input::placeholder { text-transform: var(--ui-case); }
 .cd-lead, .cd-text, .cd-mono, .cd-quote, .cd-well, .cd-opt, .cd-free input, .cd-files, .cd-out, .cd-raw, hx-card .ui-code { text-transform: none; }
 
@@ -98,7 +98,7 @@ hx-card[data-side] { grid-template-columns: var(--cd-orb) minmax(0, 1fr); }
 /* prose that can carry a name: a 40-letter name breaks inside the word instead of pushing the card wider */
 .cd-lead, .cd-quote, .cd-text, .cd-note, .cd-receipt > span,
 hx-card .ui-field__label, hx-card .ui-field__hint { overflow-wrap: anywhere; min-width: 0; }
-.cd-dim { color: var(--text-dim); }
+
 .cd-mono { font-family: var(--mono); letter-spacing: var(--track-mono); font-weight: 400; }
 .cd-lead .cd-mono { font-size: var(--fs-s); font-weight: 500; }
 hx-card[data-size="compact"] .cd-quote {
@@ -110,16 +110,6 @@ hx-card[data-resolved] .cd-lead,
 hx-card[data-resolved] .cd-well__strong { color: var(--text-dim); }
 
 /* a phrase that explains itself on click: a dotted underline, as in the composer */
-.cd-token {
-  appearance: none; border: 0; background: none; padding: 0; margin: 0;
-  font: inherit; color: inherit; letter-spacing: inherit; cursor: pointer;
-  text-decoration: underline dotted; text-decoration-color: var(--text-quiet);
-  text-underline-offset: 4px; text-decoration-thickness: 1px;
-  border-radius: var(--r-xs);
-  transition: text-decoration-color var(--dur-out) var(--ease);
-}
-.cd-token:hover { text-decoration-color: var(--text); transition-duration: var(--dur-1); }
-.cd-token[aria-expanded="true"] { text-decoration-style: solid; text-decoration-color: var(--text); }
 
 /* ------------------------------------------------------------------ wells */
 
@@ -135,31 +125,10 @@ hx-card[data-resolved] .cd-well__strong { color: var(--text-dim); }
 .cd-well__line { display: flex; flex-wrap: wrap; column-gap: var(--sp-3); min-width: 0; }
 .cd-well__line > span { min-width: 0; overflow-wrap: anywhere; }
 .cd-well__line--first > span { font-family: var(--mono); font-size: var(--fs-xs); letter-spacing: var(--track-mono); }
-.cd-out { font-family: var(--mono); font-size: var(--fs-2xs); line-height: 1.6; letter-spacing: var(--track-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
-.cd-out__hit { color: var(--text); }
 
 /* ship: the changed files */
-.cd-files {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; column-gap: var(--sp-3);
-  font-family: var(--mono); font-size: var(--fs-xs); letter-spacing: var(--track-mono);
-}
-.cd-file { display: contents; }
-.cd-file > span { line-height: var(--lh); }
-.cd-file__path { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cd-file__dir { color: var(--text-quiet); }
-.cd-file__n { text-align: right; color: var(--text); }
-.cd-file__n--del { color: var(--text-dim); }
-.cd-file--more > span { color: var(--text-quiet); font-family: var(--sans); }
-hx-card[data-resolved] .cd-file__path,
-hx-card[data-resolved] .cd-file__n { color: var(--text-dim); }
+
 /* diffstat: five dots per file, added filled, removed hollow */
-.cd-diffdots { display: inline-flex; gap: var(--sp-1); align-items: center; flex: none; }
-.cd-diffdots i, .cd-week i { display: block; width: 5px; height: 5px; border-radius: var(--r-pill); flex: none; }
-.cd-diffdots i { background: var(--bg-3); }
-.cd-diffdots i[data-d="add"] { background: var(--text); }
-.cd-diffdots i[data-d="del"] { background: transparent; box-shadow: inset 0 0 0 1px var(--text-dim); }
-hx-card[data-size="compact"] .cd-files { grid-template-columns: minmax(0, 1fr) auto auto; }
-hx-card[data-size="compact"] .cd-files .cd-diffdots { display: none; }
 
 /* ------------------------------------------------------------------ foot: the decision, or its receipt */
 
@@ -290,29 +259,16 @@ hx-card[data-size="compact"] .cd-opts { margin: 0 calc(-1 * var(--sp-2)); }
 hx-card[data-kind="escalation"][data-size="inline"] { display: block; background: none; padding: 0; border-radius: 0; }
 /* one line in a wide answer (the why gives way with an ellipsis); it wraps only where the answer is narrow */
 hx-card[data-kind="escalation"][data-size="inline"] { container-type: inline-size; }
-@container (max-width: 420px) { .cd-rule { flex-wrap: wrap; } .cd-rule__what { flex-shrink: 1; max-width: 100%; } }
+@container (max-width: 420px) { .cd-rule { flex-wrap: wrap; } }
 .cd-rule {
   display: flex; align-items: center; gap: var(--sp-1) var(--sp-3);
   min-height: var(--ctl);
   font-size: var(--fs-xs); line-height: var(--lh-ui); color: var(--text-quiet);
 }
-.cd-rule__what { flex: 0 0 auto; color: var(--text); display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-2); min-width: 0; max-width: 60%; text-transform: var(--ui-case); }
-.cd-rule__what .cd-mono { font-size: var(--fs-xs); }
-.cd-rule__why { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cd-rule__line { flex: 1 1 24px; height: 1px; background: var(--hair); min-width: 24px; }
-.cd-rule__meta { white-space: nowrap; font-family: var(--mono); font-size: var(--fs-2xs); letter-spacing: var(--track-mono); }
+
 .cd-rule .cd-actions { margin-left: 0; }
 
 /* ------------------------------------------------------------------ schedule */
-
-.cd-sched { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-5); }
-.cd-week { display: grid; grid-template-columns: repeat(7, 16px); row-gap: var(--sp-1); justify-items: center; }
-.cd-week b { font-weight: 500; font-size: var(--fs-xs); line-height: var(--lh-ui); color: var(--text-quiet); }
-.cd-week i { background: transparent; box-shadow: inset 0 0 0 1px var(--mark-off); }
-.cd-week i[data-on] { background: var(--text); box-shadow: none; }
-.cd-sched__when { display: flex; flex-direction: column; gap: 2px; min-width: 0; line-height: var(--lh-ui); }
-.cd-sched__time { color: var(--text-strong); display: flex; align-items: center; gap: var(--sp-3); font-family: var(--mono); font-size: var(--fs-s); letter-spacing: var(--track-mono); }
-.cd-sched__when .cd-dim { font-size: var(--fs-xs); }
 
 /* ------------------------------------------------------------------ queue: the next card peeks */
 

@@ -12,7 +12,6 @@ import { esc, frag } from '../core/dom';
 import { announce } from './announce';
 import { botLabel, botState, STATES } from './bot-state';
 import { card } from './card-registry';
-import type { ChildOpts } from './child';
 import { holdElement, wireHold } from './hold';
 import { html } from './html';
 import type { ButtonOpts, ChipOpts, EntryOpts, FieldOpts, IconButtonOpts, ItemRowOpts, LadderOpts, MeasureOpts, MeasurePart, RowOpts, SegmentedOpts, StepItem } from './html';
@@ -80,7 +79,6 @@ const factories = {
   empty: make<Parameters<typeof html.empty>[0]>(html.empty),
   row: make<RowOpts, HTMLLIElement>(html.row),
   group: make<Parameters<typeof html.group>[0]>(html.group),
-  child: make<ChildOpts, HTMLElement>(html.child),
   signinButton: make<SigninButtonOpts, HTMLButtonElement>(html.signinButton),
   stack: make<StackOpts>(html.stack),
   /** an item's tile: the service a connector connects to, else its monogram (item-mark.ts) */
@@ -161,8 +159,6 @@ export { tabs, tabsVariants, fitTabs } from './tabs';
 export { search, searchVariants, SEARCH_SIZES } from './search';
 export type { SearchOpts, SearchSize } from './search';
 export type { TabDef, TabsOpts } from './tabs';
-export { CHILD_STATUSES, STATUS_WORD as CHILD_STATUS_WORDS } from './child';
-export type { ChildOpts, ChildStatus } from './child';
 export type { ScrollAxis, ScrollOpts, ScrollHtmlOpts } from './scroll';
 export type { ItemRowOpts, PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
 export type { ModelRef, ModelOpts, MarkOpts, ModelFamily } from './model-mark';

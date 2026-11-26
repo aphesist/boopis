@@ -4,7 +4,7 @@
 import type { Bot } from '../data/types';
 import type { CardData } from '../modules/cards';
 import { endpointForm } from '../host/forms';
-import { CHANGES, GOVERNANCE, OUTPUT, S1_TURNS, STEPS } from '../data/mock-data';
+import { S1_TURNS, STEPS } from '../data/mock-data';
 
 /* ───────── text ───────── */
 export const LONG_NAME = 'cassiopeia-staging-deploy-guardian';
@@ -47,26 +47,15 @@ export const BOT_LIKE = { id: 'nina', name: 'nina', shape: 'triangle', color: '#
 export const BOT_LONG = { id: LONG_NAME, name: LONG_NAME, shape: 'star', color: '#e8b04a', eyes: 'pill', state: 'working', attention: null } as const;
 
 /* ───────── the classic card kinds (cards.test.html `G`) ───────── */
-const ship = S1_TURNS.find((t) => t.role === 'assistant' && 'ship' in t && t.ship);
 export const CARD_DATA: Readonly<Record<string, CardData>> = {
   approval: { from: 'nina', title: 'deploy to staging', quote: 'billing/cents → staging, dry run first', item: ['staging · invoices-api', 'read-only on invoices · 1 migration'], meta: 'expires in 9 min · ~$0.02' },
-  ship: { ...(ship && 'ship' in ship ? ship.ship : {}), files: CHANGES, failures: ['invoice.test.ts › rounds per line item'], rollbackNote: 'Rounding each line item in invoice.ts failed invoice.test.ts, so that edit was undone and the invoice total is rounded once instead.' },
   blank: { question: 'should I keep the old export name `prorate` as a deprecated alias?', short: 'keep `prorate` as an alias?', options: ['as a deprecated alias', 'for one release', 'removed now'] },
-  teammate: { from: 'atlas', title: 'hands you a review', quote: 'invoice.ts:88 still divides before rounding. I fixed it in 9f3c1a2. Can you check it before nina deploys?', item: ['cents/proration · 9f3c1a2', '1 commit · 142 tests pass'], meta: '2 min ago' },
-  escalation: { from: 'qwen3-coder', to: 'sonnet 5.5', reason: 'after 2 failed gate runs on cheaper models', ladder: GOVERNANCE.ladder, current: GOVERNANCE.current, spent: GOVERNANCE.spent, cap: GOVERNANCE.cap, raiseTo: '$1.00', next: 'opus 5.5' },
-  error: { gate: 'npm test', retryWith: 'sonnet 5.5', test: 'invoice.test.ts › rounds per line item', output: OUTPUT.slice(0, 4).map((l) => l.trim()), note: 'The edit to invoice.ts was rolled back. Nothing else changed.' },
-  schedule: { from: 'sol', title: 'run the morning digest', quote: 'overnight CI and your inbox, summed up before you start', time: '02:00', when: 'every weekday', days: [1, 1, 1, 1, 1, 0, 0], cron: '0 2 * * 1-5', next: 'tonight at 02:00', meta: 'about $0.08 a run' },
   connector: { name: 'linear', host: 'linear.app', tools: 9, scopes: ['issues', 'projects', 'comments'] }
 };
 /** the same kinds with every string as long as it gets */
 export const CARD_LONG: Readonly<Record<string, CardData>> = {
   approval: { from: LONG_NAME, title: LONG_TITLE, quote: URLISH, item: [UNBROKEN, 'read-only on invoices · 1 migration · 4 tables · 2 indexes rebuilt'], meta: 'expires in 9 min · ~$0.02' },
-  ship: { ...CARD_DATA['ship'], title: LONG_TITLE, files: [[UNBROKEN, 1204, 977], ...CHANGES, ['src/a.ts', 1, 1], ['src/b.ts', 2, 0], ['src/c.ts', 0, 3]], branch: 'feature/' + UNBROKEN },
   blank: { question: LONG_TITLE + '? ' + UNBROKEN, short: LONG_TITLE, options: [LONG_TITLE, UNBROKEN, 'removed now'] },
-  teammate: { from: LONG_NAME, title: LONG_TITLE, quote: URLISH, item: [UNBROKEN], meta: '2 min ago' },
-  escalation: { ...CARD_DATA['escalation'], from: 'qwen3-coder-480b-a35b-instruct-preview', to: 'claude-sonnet-5-5-20261101-extended-context', reason: LONG_TITLE },
-  error: { ...CARD_DATA['error'], test: UNBROKEN + ' › rounds per line item when the invoice spans a leap day', output: [UNBROKEN, URLISH, ...OUTPUT] },
-  schedule: { ...CARD_DATA['schedule'], from: LONG_NAME, title: LONG_TITLE, quote: URLISH },
   connector: { name: 'linear-enterprise-self-hosted-connector-' + LONG_NAME, host: 'linear.internal.example.com', tools: 142, scopes: ['issues', 'projects', 'comments', 'cycles', 'roadmaps', 'webhooks', 'admin:read'] }
 };
 

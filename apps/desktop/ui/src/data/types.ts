@@ -122,7 +122,11 @@ export interface ApprovalData {
   scope?: string;
 }
 export interface TextMessage { kind: 'text'; id: string; who: string; t: string; text: string; via?: 'bots' | 'dock' }
-export interface ApprovalMessage { kind: 'approval'; id: string; who: string; t: string; data: ApprovalData; resolved?: 'approved' | 'denied'; resolvedAt?: string }
+export interface ApprovalMessage {
+  kind: 'approval'; id: string; who: string; t: string; data: ApprovalData; resolved?: 'approved' | 'denied'; resolvedAt?: string;
+  /** how it was allowed: once, for the turn, always (the rules engine's standing answer), or edited first */ how?: 'once' | 'turn' | 'always' | 'edited';
+  /** "Always allow" kept a draft exception for Settings (the host said so) */ drafted?: boolean;
+}
 /** a line the app says in a thread and nobody in it does: a message that was not sent, a reply that failed */
 export interface NoteMessage { kind: 'note'; id: string; who: 'app'; t: string; text: string }
 /** a tool call the bot made, one row of its thread: the tool's name ("Read") and what it was called on ("14 merged pull requests") */
@@ -419,6 +423,8 @@ export interface CouncilMember {
   slot: CouncilSlot; state: 'waiting' | 'answered' | 'failed'; text: string;
   /** a resumed turn: the answer was longer than the turn book keeps (ADR-0036), so the text ends early. The card says so */
   cut?: boolean | undefined;
+  /** a member that failed: why, in the engine's words, when it said */
+  reason?: string | undefined;
 }
 /** what a council turn shows: every member, the combiner, and how far it has got */
 export interface CouncilTurn {
@@ -528,8 +534,10 @@ export interface ProviderInfo {
 /** `approval-rules`: "Allow all this turn", "Always allow". `usage`: buying more usage from a
     limit notice. `worktree`: a new worktree for a session. `turn-edit`, `turn-fork`: Edit from here and Fork on a finished turn.
     `queue`: a message queued or steered while a turn runs. `pull-request`: a session's pull request in its details (board S40).
-    `pin`: pinning a session (the details pane's overflow) */
-export type LaterFeature = 'approval-rules' | 'usage' | 'worktree' | 'turn-edit' | 'turn-fork' | 'queue' | 'pull-request' | 'pin';
+    `pin`: pinning a session (the details pane's overflow). `approval-edit`: editing a request before approving it (the engine cannot
+    take an edited request: docs/specs/approval-surfaces.md 7). `rules-settings`: Settings › Approvals, where a drafted exception is finished
+    (step 7) */
+export type LaterFeature = 'approval-rules' | 'approval-edit' | 'rules-settings' | 'usage' | 'worktree' | 'turn-edit' | 'turn-fork' | 'queue' | 'pull-request' | 'pin';
 export interface Schedule { id: string; bot: string; what: string; when: string; next: string; paused: boolean }
 
 /* ───────── the composer's feedforward reading ───────── */
@@ -695,3 +703,43 @@ export interface KanbanTask {
   problem: string | null;
 }
 export interface KanbanView { board: KanbanBoardInfo; tasks: readonly KanbanTask[] }
+
+/* ───────── what the host holds for the owner (6e): a team change a bot proposed, a step a rule paused ───────── */
+/** one action of a team plan as the host shows it (`team_plan_get`): its mark (+ added, ~ changed, - removed), what it is about, what changes */
+export interface PlanAction { mark: string; target: string; what: string }
+export type PlanState = 'proposed' | 'applied' | 'rejected' | 'expired' | 'failed';
+/** a change to the team a bot proposed (docs/specs/team-ops.md), held until the owner's hold applies it; never its fragment */
+export interface TeamPlan {
+  hash: string; title: string; reason: string; actions: readonly PlanAction[]; problems: readonly string[]; notes: readonly string[]; state: PlanState;
+  /** an action of it cannot be undone (disbanding a room) */ permanent: boolean;
+  /** the plan this one undoes, when it is a way back */ undoes: string | null;
+  /** the owner's words when they asked for changes */ words: string | null;
+  /** what applying it did, or why it failed, in the host's words */ report: string | null;
+  /** who proposed it: the bot whose thread it stands in (the house bot, boopis, when the host does not say) */ bot: string;
+  createdAt: string; expiresAt: string | null;
+}
+export interface TeamPlansSource {
+  /** every plan kept (newest first): the ones that wait, and the ones answered, for their receipts */
+  list(): Promise<readonly TeamPlan[]>;
+  /** the owner's hold: the checks run, then the actions; resolves with the plan as it is now (applied or failed), rejects with a sentence */
+  apply(hash: string): Promise<TeamPlan>;
+  /** no, with the words the bot reads ('' says nothing) */
+  reject(hash: string, words: string): Promise<TeamPlan>;
+  /** plan the way back from an applied plan: a new proposal, applied by the same hold */
+  undo(hash: string): Promise<TeamPlan>;
+  /** a plan was proposed or changed state (the host's `plans-changed-event`) */
+  subscribe(fn: () => void): () => void;
+}
+/** a step of a scheduled run a rule refused while the owner was away (docs/specs/rules-engine.md 8.3): never its arguments */
+export interface ParkedStep {
+  id: string; /** the bot whose run it was */ bot: string; /** the rule that paused it, by its words */ rule: string; /** the tool, in the host's safe words ("Run a command · git push") */ tool: string;
+  at: string; expiresAt: string | null; /** what the host can do with it: once, always, deny */ choices: readonly string[];
+}
+export type ParkedChoice = 'once' | 'always' | 'deny';
+export interface ParkedSource {
+  list(): Promise<readonly ParkedStep[]>;
+  /** deny drops it; once runs it again with a grant for exactly that step; always does the same and keeps a draft exception for Settings */
+  answer(id: string, choice: ParkedChoice): Promise<{ state: 'denied' | 'rerun'; draftId: string | null }>;
+  /** a step was parked or answered (the host's notification of `rule.refused`) */
+  subscribe(fn: () => void): () => void;
+}

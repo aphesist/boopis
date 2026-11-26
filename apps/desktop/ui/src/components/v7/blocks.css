@@ -270,6 +270,9 @@
 .k7-thread[data-kind="session"] > :not(.k7-disc) + .k7-tool { margin-top: var(--gap-s); }
 .k7-thread[data-kind="session"] > * + :is(.k7-files, .k7-foot) { margin-top: var(--sp-2); }
 .k7-thread[data-kind="session"] > * + .k7-ask { margin-top: var(--gap-row); }
+/* a Block of the thread's own (6e: a council while it runs) stands where a tool row stands, as wide as the column, 6 under what it follows */
+.k7-thread[data-kind="session"] > .k7-block[data-kit="Block"] { margin-inline-start: var(--gutter); align-self: stretch; width: auto; }
+.k7-thread[data-kind="session"] > * + .k7-block[data-kit="Block"] { margin-top: var(--gap-s); }
 
 /* ── Well (16): --bg-0, radius 10, mono 12/18 ── */
 .k7-well { --sq-bg: var(--bg-0); --sq-line: var(--hair); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line); border-radius: var(--r-field); min-width: 0; color: var(--text-dim); }
@@ -331,8 +334,8 @@
 .k7-foot__acts { display: inline-flex; flex-wrap: wrap; gap: var(--sp-1); min-width: 0; }
 .k7-foot__btn { display: inline-flex; align-items: center; gap: var(--gap-s); flex: none; height: var(--line-h); padding: 0 var(--gap-row); border-radius: var(--r-pill); font-size: var(--fs-xs); line-height: var(--lh-xs); letter-spacing: var(--track); color: var(--text-dim); white-space: nowrap; }
 .k7-foot__btn > svg { flex: none; }
-.k7-foot__btn:disabled { color: var(--text-faint); cursor: default; }
-@media (hover: hover) and (pointer: fine) { .k7-foot__btn:not(:disabled):hover { background: var(--hover); color: var(--text); } }
+.k7-foot__btn[aria-disabled="true"] { color: var(--text-faint); cursor: default; }
+@media (hover: hover) and (pointer: fine) { .k7-foot__btn:not([aria-disabled="true"]):hover { background: var(--hover); color: var(--text); } }
 .k7-foot__meta { flex: none; white-space: pre; letter-spacing: 0; }
 .k7-foot__meta > svg { vertical-align: baseline; color: var(--text-dim); }
 .k7-foot__note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -351,3 +354,30 @@
    Where it sits, and above what, is the host's (the shell: the top of the work, on the column's centre line) */
 .k7-notify { position: absolute; pointer-events: none; opacity: 0; translate: 0 calc(-1 * var(--sp-1)); transition: opacity var(--dur-2) var(--ease-sharp), translate var(--dur-2) var(--ease-sharp); }
 .k7-notify[data-in] { opacity: 1; translate: 0 0; pointer-events: auto; }
+
+/* ── Menu's foot (6e, derived: a council under S19's rows): a hairline, then what follows the rows on the menu's own inset ── */
+.k7-menu__foot { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); padding: var(--sp-2) var(--gap-hair) var(--gap-hair); box-shadow: inset 0 var(--hl) 0 var(--hair); min-width: 0; }
+.k7-menu__foot > .k7-grow { flex: 1 1 auto; }
+.k7-menu__foot > .k7-menu__head { padding: 0 var(--gap-hair); }
+
+/* ── Well, a thread (6e, derived: a handed-off task's transcript): the deepest surface, the words in 12 on the code's inset, its turns
+   8 apart, at most 240 tall then it scrolls ── */
+.k7-well__thread { display: flex; flex-direction: column; gap: var(--sp-2); max-height: var(--well-thread-h); padding: var(--gap-row) var(--sp-3); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow-y: auto; overscroll-behavior: contain; border-radius: inherit; }
+.k7-well__thread:focus-visible { outline: none; }
+.k7-well:has(> .k7-well__thread:focus-visible) { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-off); }
+.k7-well__thread p { margin: 0; overflow-wrap: anywhere; }
+.k7-well__thread [data-role="user"] { color: var(--text); }
+.k7-well__thread .k7-steps { margin: 0; }
+
+/* ── FindBar (6e, derived): the Menu's floating surface as a pill, 4 around the search Field; the count in mono 12, quiet with none ── */
+.k7-find { --sq-bg: var(--bg-3); --sq-line: var(--float-line); --sq-shadow: var(--shadow-pop);
+  display: flex; align-items: center; gap: var(--gap-hair); width: var(--find-w); max-width: calc(100% - 2 * var(--sp-3)); padding: var(--pad-queue); box-sizing: border-box;
+  border-radius: var(--r-pill); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line), var(--sq-shadow); color: var(--text); }
+.k7-find[data-sq-on]:not(#sq) { box-shadow: var(--sq-shadow); }
+.k7-find__box { flex: 1 1 auto; min-height: var(--ctl-s); }
+.k7-find__count { flex: none; min-width: 0; padding-inline: var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.k7-find__count:empty { display: none; }
+.k7-find__count[data-none] { font-family: var(--sans); color: var(--text-quiet); }
+/* the matches in the thread (the CSS highlight the app names `k7-find`; the one it is on, `k7-find-now`) */
+::highlight(k7-find) { background-color: var(--find-hit); color: inherit; }
+::highlight(k7-find-now) { background-color: var(--find-hit-now); color: inherit; }
