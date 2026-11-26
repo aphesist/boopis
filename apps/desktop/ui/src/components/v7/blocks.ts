@@ -77,7 +77,7 @@ export function optionRow(o: OptionRowOpts): string {
   return '<button class="k7-reset k7-orow"' + kitAttrs('OptionRow', { type: 'button', role: 'menuitemradio', tabindex: '-1', 'aria-checked': String(!!o.chosen), 'aria-disabled': o.disabled ? 'true' : null, 'data-value': o.value ?? o.label, ...(o.attrs ?? {}) }) + '>' +
     '<span class="k7-orow__ring" aria-hidden="true"></span><span class="k7-orow__text"><span class="k7-orow__name">' + (o.leadHTML ?? (o.icon ? glyph(o.icon) : '')) + '<span class="k7-orow__label">' + esc(o.label) + '</span>' +
     (o.ticks ? '<span class="k7-ticks" aria-hidden="true">' + Array.from({ length: o.ticks.of }, (_, i) => '<i' + (i < (o.ticks?.on ?? 0) ? ' data-on' : '') + '></i>').join('') + '</span>' : '') +
-    (o.keys ? '<span class="k7-grow"></span>' + kbd({ keys: o.keys }) : '') + '</span><span class="k7-orow__meaning">' + esc(o.meaning) + '</span></span></button>';
+    (o.keys ? '<span class="k7-grow"></span>' + kbd({ keys: o.keys }) : '') + '</span><span class="k7-orow__meaning" data-wrap-ok>' + esc(o.meaning) + '</span></span></button>';
 }
 
 /* ── Menu (5): menu, quick menu (checks), palette (/ @ $), snooze, split-button menu, option menu (four rows), and a list whose rows

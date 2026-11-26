@@ -136,8 +136,8 @@ export function filesCard(o: FilesCardOpts): string {
 /* ── FileCard: one file a bot wrote or handed over (boards 11 and 17, botscreens.js `.file`): a 32 x 40 file tile, the name, one mono line ── */
 export interface FileCardOpts { name: string; meta?: U<string>; /** it opens the file: a control (Enter and Space press it) */ opens?: U<boolean>; attrs?: U<Attrs> }
 export function fileCard(o: FileCardOpts): string {
-  return '<div class="k7-file"' + kitAttrs('FileCard', { 'data-sq': '', 'data-sq-mode': 'frame', ...(o.opens ? { role: 'button', tabindex: '0', 'data-action': '', 'aria-label': 'Open ' + o.name } : {}), ...(o.attrs ?? {}) }) + '><span class="k7-file__ic" aria-hidden="true">' + glyph('file') + '</span>' +
-    '<span class="k7-file__text"><span class="k7-file__name k7-ell">' + esc(o.name) + '</span>' + (o.meta ? '<span class="k7-file__meta k7-mono k7-ell">' + esc(o.meta) + '</span>' : '') + '</span></div>';
+  return '<div class="k7-file"' + kitAttrs('FileCard', { 'data-sq': '', 'data-sq-mode': 'frame', ...(o.opens ? { role: 'button', tabindex: '0', 'data-action': '', 'aria-label': o.name + (o.meta ? ' ' + o.meta : '') + ', opens the file' } : {}), ...(o.attrs ?? {}) }) + '><span class="k7-file__ic" aria-hidden="true">' + glyph('file') + '</span>' +
+    '<span class="k7-file__text"><span class="k7-file__name k7-ell">' + esc(o.name) + '</span>' + (o.meta ? ' <span class="k7-file__meta k7-mono k7-ell">' + esc(o.meta) + '</span>' : '') + '</span></div>';   /* a word break between the name and what it holds, for the card's name (a flex column: it takes no room) */
 }
 
 /* ── Queue (11): messages waiting to be sent, above the composer; list (the engine's numbered queue), held (one row) ── */

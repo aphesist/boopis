@@ -60,6 +60,10 @@ export function reportAttention(source: string, count: number, tab: string | und
 /** what waits on the user is counted on the tab it belongs to: a bot's approval on Bots, the agent's own (an approval or a blank) on Session */
 const waitTab = (w: { kind: string; bot?: string | undefined }): Tab => (w.kind === 'approval' && w.bot ? 'bots' : 'session');
 export function seedAttention(): void {
+  /* the collapsed rail is drawn again by its own module (a tab change, a new bot, the window's size): its upright switch is new each
+     time, and says at once what the open sidebar's says (it used to keep the bare name until the next change of attention) */
+  const rail = document.getElementById('hx-rail');
+  if (rail && typeof MutationObserver === 'function') new MutationObserver(() => { updateAttentionDots(); }).observe(rail, { childList: true });
   for (const w of data().waits.snapshot()) attention.set('seed:' + w.id, { count: 1, tab: waitTab(w), ids: null });
   /* a wait that arrives later (a live approval or blank) and one that is decided */
   data().waits.subscribe((ev) => {

@@ -135,5 +135,10 @@ describe('the rail', () => {
     const other = S.bots[2]!;
     onBotsEvent({ type: 'bot', bot: { ...other, state: 'needs', attention: 'approval' } }, { announce: () => undefined });
     expect(q('.k7-tile[data-bot="' + other.id + '"]', rail()).querySelector('.k7-flag')).not.toBeNull();
+    /* opening another bot gives the one you left its flag back at once, and takes the new one's (the lab's second render differed
+       here: the flag waited for the rail's next redraw) */
+    openBot(other.id);
+    expect([q('.k7-tile[data-bot="' + id + '"]', rail()).hasAttribute('data-needs'), !!q('.k7-tile[data-bot="' + id + '"]', rail()).querySelector('.k7-flag')]).toEqual([true, true]);
+    expect([q('.k7-tile[data-bot="' + other.id + '"]', rail()).hasAttribute('data-needs'), !!q('.k7-tile[data-bot="' + other.id + '"]', rail()).querySelector('.k7-flag')]).toEqual([false, false]);
   });
 });

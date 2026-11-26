@@ -173,6 +173,9 @@ export function markSelected(): void {
     const on = (t.dataset['bot'] && S.view === 'bot' && t.dataset['bot'] === S.sel) || (t.dataset['gid'] && S.view === 'group' && t.dataset['gid'] === S.groupSel);
     if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
   }
+  /* a tile's flag follows the selection too: the open bot's tile carries none (board 11), and the bot you just left takes its own back
+     at once (it used to wait for the rail's next redraw, so the same screen could show it or not) */
+  if (RAIL.host?.firstElementChild) for (const b of S.bots) patchTile(b.id);
   showDraftRow(S.view === 'new');
   syncRoving();
 }

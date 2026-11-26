@@ -143,6 +143,9 @@
     /* geometry.padding */
     if (want.has('geometry.padding')) for (const el of all(scope, T.padding)) {
       if (!inScope(el)) continue;
+      /* board K02 (src-k02, the main bot first in the Bots list): its 44 orb stands 6 under the row's top and its name 12 over the row's
+         foot, as the board draws them: the board wins (REPASS rule 7) */
+      if (el.matches('.k7-lrow[data-variant="head"]')) continue;
       const cs = getComputedStyle(el);
       const L = px(cs.paddingLeft), Rp = px(cs.paddingRight), Tp = px(cs.paddingTop), B = px(cs.paddingBottom);
       if (Math.abs(L - Rp) > 0.5 || Math.abs(Tp - B) > 0.5) add('geometry.padding', el, `uneven padding ${Tp}/${Rp}/${B}/${L} (top/right/bottom/left): left must equal right and top bottom; an asymmetric inset is an inner element`);

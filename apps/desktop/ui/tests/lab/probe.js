@@ -292,7 +292,9 @@
            down: the boards win over the concentric corner (REPASS rule 7) */
         /* the composer's Stop is the owner's (25 November): a tinted 28 circle with a filled rounded square. The square is the control's
            glyph, drawn as a shape, not a surface set into the circle's corner */
-        if (want.has('concentric') && !e.matches('.k7-search-hint .k7-kbd, .k7-composer__stop-glyph')) {
+        /* boards 11 and 17 (kit.css `.file .fi`): a file card's icon tile, 32 by 40 with a 6 radius, 12 in and 10 down in its card, as the
+           boards draw it: the boards win over the concentric corner (REPASS rule 7) */
+        if (want.has('concentric') && !e.matches('.k7-search-hint .k7-kbd, .k7-composer__stop-glyph, .k7-file > .k7-file__ic')) {
           /* the floor is the corners setting's (--r-floor: 4 sharp, 8 default, 12 round; v7's 6), not a constant (R-corner-3: max(--r-floor, R - gap)) */
           const FLOOR = px(ccs.getPropertyValue('--r-floor')) || px(getComputedStyle(document.documentElement).getPropertyValue('--r-floor')) || 8;   /* the container's: a v7 root sets 6 */
           const corners = [['top-left', er.left - cr.left, er.top - cr.top, 0], ['top-right', cr.right - er.right, er.top - cr.top, 1], ['bottom-right', cr.right - er.right, cr.bottom - er.bottom, 2], ['bottom-left', er.left - cr.left, cr.bottom - er.bottom, 3]];
@@ -343,6 +345,9 @@
           /* boards 11 and S17 (screens.js `chrome`, kit.css `.wc`): the window's own glyphs stand in their 32 by 28 cells 4 above the middle of
              the chrome's end row, beside the 36 controls: the boards win (REPASS rule 7) */
           if (k.matches('.k7-chrome__wc')) continue;
+          /* board 12 (kit.css `.activity`): who is replying in a room, as a stack: its orbs stand on the phrase's baseline, 3 under the row's
+             middle, as the board draws them: the board wins (REPASS rule 7) */
+          if (k.matches('.k7-status > .ui-stack')) continue;
           if (kcs.alignSelf === 'flex-start' || kcs.alignSelf === 'flex-end' || kcs.alignSelf === 'baseline' || (/^(auto|normal)$/.test(kcs.alignSelf) && /baseline/.test(s.alignItems))) continue;
           const off = (kr.top + kr.bottom) / 2 - mid;
           if (Math.abs(off) > 1) { add('geometry.center', k, 'sits ' + r1(Math.abs(off)) + 'px ' + (off > 0 ? 'below' : 'above') + ' the centre of its row ' + describe(e)); }

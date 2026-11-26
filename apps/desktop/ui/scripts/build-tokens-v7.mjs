@@ -95,6 +95,7 @@ both.push('--file-w: 260px;',                       /* a file card (kit.css .fil
   '--composer-bottom: 24px;', '--composer-above-dock: 96px;',   /* its foot: 24 over the window's, 96 where the dock sits under it (sessiontab.js shell) */
   '--thread-top: 72px;',                            /* the thread's first line under the window's top (screens: padding-top 72) */
   '--pad-pane-top: 64px;', '--pane-sec-top: 14px;',     /* the details pane (kit.css .pane-in, .pane-sec) */
+  '--pad-empty-list: 18px;',                             /* "No sessions yet" in a list, 18 under what stands over it (sessiontab2.js `emptyInbox`) */
   '--pad-pane-top-session: 58px;',                       /* a session's details and the tools' tabs start 58 from the window's top (sessiontab2.js `s20`, kit.css .rtabs) */
   '--name-top: 14px;', '--orb-main: 44px;', '--pane-stack: 32px;',   /* a member's name over what it follows in a room (kit.css .gname); the Bots list's main bot (board K02 .sb-main); a room's stack heading its details */
   '--hover-ctl: 28px;', '--step-dot: 7px;',                             /* a hover action beside a bubble (kit.css .hoverbar span) */
