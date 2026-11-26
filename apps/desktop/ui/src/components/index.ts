@@ -170,4 +170,4 @@ export type { BotLike } from './bot-state';
 export type { MarkdownCtx, MdBot, PathTarget, Block as MarkdownBlock, MentionSpan, MentionTarget } from './markdown';
 export { EVERYONE_HANDLES, HUMAN_HANDLE, MENTION_SOURCE } from './markdown';
 export type { CardKind, CardOpts, CardLike, CardData } from './card-registry';
-export { REST_REACTION } from './orb-pose';
+export { FACE_SCALE_MAX, REST_REACTION } from './orb-pose';

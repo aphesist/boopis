@@ -44,6 +44,21 @@ table at the end true.
     Models; the circle's name and tooltip say it needs setting up. The capability is the provider's `voice` (`data/provider.ts`); the
     voice section of Settings, Models (the provider, its key through the host's secret store, the local option) is the Settings
     step's, and live voice itself is not built yet. Dictation (the mic) is another thing and works already;
+  - **the lead's dock decisions** (26 November; the owner gave the lead design latitude, and these are the lead's, not the owner's):
+    - K02: a hovered bot at 52, and its neighbours at 46, drop the small orbs' 1.25 face scale, as the board's still draws them, and
+      take it back at 40;
+    - the Well inside an ask in the dock takes the corner the boards draw (10, `kit.css` `.well`), not the corner concentric with its
+      Block (14): rule 6. The boards draw every Well at 10 wherever one stands (the dock's asks K03 and K04, a bot's tool block on
+      board 11, the terminal of S26); the session's approval boards draw no Well in an ask (S20's change waits on its tool row with
+      its diff, boards 11 and 12's approval card has its rule line), so nothing there differs. The kit's Well in a Block elsewhere
+      still takes 14, which no board draws: an open question for the kit, not changed here;
+    - a card with no messages keeps its ask and its composer at the foot of the card, 12 over the row as K04 draws them; the space
+      above stays empty;
+    - the row's order stays needs you, then working, then the rest. K05's still (moss resting before kai working) contradicts that
+      rule and is not followed;
+    - "Always for staging": the standing answer names the scope when the rules engine supplies one with the ask ("Always for
+      <scope>", `ApprovalData.scope`), and is "Always allow" otherwise; it stays hidden until rules exist (`approval-rules`). The
+      label is a field of the ask; nothing of the engine is built;
   - confirmed (25 November): member name colours stay the kit's contrast-safe derivation; the huddle fold, the "to nina" line and the
     presence tool words stay out; file chips keep the bare file name.
 

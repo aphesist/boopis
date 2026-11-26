@@ -220,7 +220,7 @@ export function boardS23(p: DataProvider): DataProvider {
 /** the bots as dockv7.js orders them (BOTS: nina needs you, kai works, hex rests) and, for K05, the thirteen that do not fit */
 const DOCK_BOTS = ['nina', 'kai', 'boopis', 'moss', 'iris', 'hex'] as const;
 const MORE_SHAPES = ['circle', 'squircle', 'triangle', 'flower', 'hexagon', 'cloud', 'star', 'diamond', 'drop', 'clover', 'ghost', 'circle', 'squircle'] as const;
-const NINA_ASK = { id: 's17-nina', kind: 'approval' as const, bot: 'nina', who: 'nina', title: 'Deploy 0.2.0 to staging?', data: { id: 's17-nina', title: 'Deploy 0.2.0 to staging?', item: ['boopis deploy staging --tag 0.2.0'], from: 'nina' } };
+const NINA_ASK = { id: 's17-nina', kind: 'approval' as const, bot: 'nina', who: 'nina', title: 'Deploy 0.2.0 to staging?', data: { id: 's17-nina', title: 'Deploy 0.2.0 to staging?', item: ['boopis deploy staging --tag 0.2.0'], from: 'nina', scope: 'staging' } };
 /** K03's second ask. The board draws it as a question with three answers, which is stale (owner: bots ask only through approvals):
     the same words, as moss's approval */
 const MOSS_ASK = { id: 'k03-moss', kind: 'approval' as const, bot: 'moss', who: 'moss', title: 'The WebKit job flaked twice. Quarantine it?', data: { id: 'k03-moss', title: 'The WebKit job flaked twice. Quarantine it?', item: ['boopis ci quarantine webkit-dock'], from: 'moss' } };
@@ -244,7 +244,8 @@ export function boardDock(kind: DockBoard): (p: DataProvider) => DataProvider {
     const bots = kind === 'none' ? roster(p, {}, ['boopis']) : [...six, ...more];
     const waits = kind === 'none' ? [] : kind === 'asks' ? [NINA_ASK, MOSS_ASK] : [NINA_ASK];
     return {
-      /* the boards draw "Always for staging" on an approval: the app builds its standing answer against `approval-rules` ("Always allow") */
+      /* the boards draw "Always for staging" on an approval: the app builds its standing answer against `approval-rules`, and the ask
+         names its scope as the rules engine will (`ApprovalData.scope`) */
       ...base, info: drawn(p, 'approval-rules'),
       bots: { ...base.bots, snapshot: () => ({ bots, threads: { ...Object.fromEntries(bots.map((b) => [b.id, []])), ...(kind === 'none' ? {} : { nina: NINA_THREAD }) } }) },
       waits: { ...base.waits, snapshot: () => waits }

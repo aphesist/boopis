@@ -311,7 +311,7 @@
           82
         ]
       },
-      "note": "The hovered bot and its neighbour keep the face scale the dock's bots wear at rest (ORBS.md: 1.25 for orbs of 44 and under, the row at 40): a face that shrank as its bot grew would pop. The board's still draws them at 52 and 46 with no face scale; the difference is inside those two orbs."
+      "note": "The lead's decision (26 November): a bot grown past 44 (the hovered one at 52, its neighbours at 46) drops the small orbs' face scale, as the board's still draws it, and takes it back at 40. What still differs is inside the orbs: they are alive and caught mid-behaviour (the hovered bot comes out of its pose), where the board's are a still."
     },
     "K03-asks": {
       "title": "Board K03: the asks open (the stack over the row, 640 x 432)",
@@ -331,7 +331,7 @@
           442
         ]
       },
-      "note": "The board's second ask is a question with three answers, which is stale (owner: bots ask only through approvals): the app draws moss's ask as an approval, so that card differs by its Well and its answers. The board keeps its fixed order with moss fourth; the app's order is needs you first, so moss is second. The standing answer reads \"Always allow\" where the board writes \"Always for staging\" (the rules engine names the scope; it is shown only with `approval-rules`). The Well keeps the kit's concentric corner (14) where the board draws 10."
+      "note": "The board's second ask is a question with three answers, which is stale (owner: bots ask only through approvals): the app draws moss's ask as an approval, so that card differs by its Well and its answers. The board keeps its fixed order with moss fourth; the app's order is needs you, then working, then the rest (the lead's decision, 26 November), so moss is second. Decided by the lead and now as the board: the standing answer names the scope the ask carries (\"Always for staging\", `ApprovalData.scope`; shown only with `approval-rules`), and the Well keeps the boards' corner of 10."
     },
     "K04-card": {
       "title": "Board K04: a bot's card (its head, its messages, its ask, its composer)",
@@ -351,7 +351,7 @@
           442
         ]
       },
-      "note": "The standing answer reads \"Always allow\" where the board writes \"Always for staging\" (the rules engine names the scope; it is shown only with `approval-rules`, which this fixture switches on). The Well keeps the kit's concentric corner (14) where the board draws 10."
+      "note": "As the board by the lead's decisions (26 November): the standing answer names the ask's scope (\"Always for staging\"; shown only with `approval-rules`, which this fixture switches on), the Well keeps the boards' corner of 10, and the ask and the composer sit at the card's foot, 12 over the row. What still differs: your bubble's fill is the kit's derivation from nina's colour (section 18.1: the least darkening that holds 4.5:1 under white, #e2284e) where the board writes #d42746 by hand."
     },
     "K05-many": {
       "title": "Board K05: many bots (the six that fit, then \"13 more\")",

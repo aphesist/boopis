@@ -117,6 +117,9 @@ export interface ApprovalData {
   actions?: readonly string[];
   /** the approval rule that made the bot ask, by its name ("Pushes to a shared branch"); absent when no rule is known */
   rule?: string;
+  /** what a standing answer would cover, as the rules engine names it ("staging"): the dock's second answer then reads "Always for
+      staging" (K03, K04), and "Always allow" without it. Nothing supplies it until the rules engine exists (`approval-rules`) */
+  scope?: string;
 }
 export interface TextMessage { kind: 'text'; id: string; who: string; t: string; text: string; via?: 'bots' | 'dock' }
 export interface ApprovalMessage { kind: 'approval'; id: string; who: string; t: string; data: ApprovalData; resolved?: 'approved' | 'denied'; resolvedAt?: string }

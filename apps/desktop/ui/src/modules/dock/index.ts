@@ -20,7 +20,7 @@ import { emit, on } from '../../core/bus';
 import { register, setDockApi } from '../../core/registry';
 import { getLayout, setState, state as appState } from '../../core/state';
 import { $$, clamp, isMac, onReducedChange, reduced } from '../../core/dom';
-import { kit, lookOf, oc, paintLook, repaintLook, restReact, ui } from '@boopis/ui';
+import { FACE_SCALE_MAX, kit, lookOf, oc, paintLook, repaintLook, restReact, ui } from '@boopis/ui';
 import type { AskCardOpts, DockBot } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, ThreadMessage, Wait } from '../../data';
@@ -178,6 +178,10 @@ function layoutRow(): void {
     if (btn.hasAttribute('data-out') === show) { btn.toggleAttribute('data-out', !show); btn.inert = !show; if (show) btn.removeAttribute('aria-hidden'); else btn.setAttribute('aria-hidden', 'true'); }
     const s = show ? sizeOf(i, hi) : g.orb;
     if (btn.style.getPropertyValue('--s') !== s + 'px') btn.style.setProperty('--s', s + 'px');
+    /* K02: a bot grown past 44 (the hovered one at 52, its neighbours at 46) is drawn without the small orbs' face scale, as the
+       board's still draws it, and takes it back at 40 (the lead, 26 November; ORBS.md: 1.25 for orbs of 44 and under) */
+    const face = btn.querySelector('orb-avatar'), small = s <= FACE_SCALE_MAX;
+    if (face && face.hasAttribute('face-scale') !== small) { if (small) face.setAttribute('face-scale', '1.25'); else face.removeAttribute('face-scale'); }
     btn.toggleAttribute('data-awake', show && i === hi);
   });
   /* one tab stop: the focused orb, else the first */
@@ -229,15 +233,18 @@ function wake(): void {
 }
 
 /* ───────── the open dock: the stack, a bot's card ───────── */
+/** the standing answer's words: the scope the rules engine names with the ask, else the plain "Always allow" */
+export const standingLabel = (d: { scope?: string } | null | undefined): string => (d?.scope ? 'Always for ' + d.scope : 'Always allow');
 function askOpts(w: Wait): AskCardOpts {
   const b = botById(w.bot), d = w.kind === 'approval' ? w.data : null;
   return {
     /* the asker's small orb is at rest (K03: a still), its state is in the words beside it */
     variant: 'standalone', state: 'needs', ...(b ? { bot: { ...b, state: 'idle', attention: null } } : {}), who: (b?.name ?? w.who) + ' asks', ask: (d?.title || w.title) || 'Approve this step',
     ...(d?.quote ? { sub: d.quote } : {}), ...(d?.item?.length ? { command: d.item.join('\n') } : {}),
-    /* what the provider can carry out: once, or deny. "Always for staging" (K03, K04) needs the rules engine: it is built against
-       `approval-rules` and not shown until that exists; Deny is at the row's end, outlined, as the boards draw it */
-    answers: [{ label: 'Hold to allow once', primary: true, hold: true }, ...(later('approval-rules') ? [{ label: 'Always allow', value: 'always', outline: true }] : []), { label: 'Deny', value: 'deny', keys: 'esc', outline: true, end: true }],
+    /* what the provider can carry out: once, or deny. The standing answer needs the rules engine: it is built against `approval-rules`
+       and not shown until that exists. It names the scope the engine supplies with the ask ("Always for staging", K03, K04), and is
+       "Always allow" when the ask carries none. Deny is at the row's end, outlined, as the boards draw it */
+    answers: [{ label: 'Hold to allow once', primary: true, hold: true }, ...(later('approval-rules') ? [{ label: standingLabel(d), value: 'always', outline: true }] : []), { label: 'Deny', value: 'deny', keys: 'esc', outline: true, end: true }],
     plain: true, rest: true, attrs: { 'data-wait': w.id }
   };
 }

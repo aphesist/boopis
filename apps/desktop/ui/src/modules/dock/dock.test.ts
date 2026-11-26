@@ -88,11 +88,14 @@ describe('the row', () => {
     dock().hover(null);
     orb('kai').dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
     expect(['nina', 'kai', 'moss', 'iris'].map((id) => orb(id).style.getPropertyValue('--s'))).toEqual(['46px', '52px', '46px', '40px']);
+    /* K02: a bot grown past 44 drops the small orbs' face scale, as the board's still draws it; at 40 it has it */
+    expect(['nina', 'kai', 'moss', 'iris'].map((id) => orb(id).querySelector('orb-avatar')?.getAttribute('face-scale') ?? null)).toEqual([null, null, null, '1.25']);
     expect(q('#hx-dock .k7-dock__cap').textContent).toBe('kai' + 'idle');
     expect(document.querySelector('#hx-dock .k7-dock__ask')).toBeNull();
     q('#hx-dock .k7-dock__row').dispatchEvent(new MouseEvent('pointerleave'));
     expect(orb('kai').style.getPropertyValue('--s')).toBe('40px');
     expect(q('#hx-dock .k7-dock__ask').textContent).toBe('nina needs you');
+    expect(['nina', 'kai', 'moss'].map((id) => orb(id).querySelector('orb-avatar')?.getAttribute('face-scale'))).toEqual(['1.25', '1.25', '1.25']);
     setState({ orbGrow: false });
     orb('kai').dispatchEvent(new MouseEvent('pointermove', { bubbles: true }));
     expect(orb('kai').style.getPropertyValue('--s')).toBe('40px');
@@ -247,6 +250,22 @@ describe('the asks', () => {
     expect(all('#hx-dock .k7-ask__answers .k7-chip').map(label)).toEqual(['Hold to allow once', 'Always allow', 'Deny']);
     q('#hx-dock .k7-chip[data-value="always"]').click();   /* not carried out yet: it decides nothing */
     expect(decided).toEqual([]);
+  });
+  it('the standing answer names the scope the rules engine supplies with the ask ("Always for staging"); with none it is "Always allow"', () => {
+    mount({ needs: ['kai'], later: ['approval-rules'] });
+    const w = ask('nina') as Extract<Wait, { kind: 'approval' }>, scoped: Wait = { ...w, data: { ...w.data, scope: 'staging' } };
+    waits = [scoped, ...waits];
+    emitWaits({ type: 'added', wait: scoped });
+    q('#hx-dock .k7-dock__ask').click();
+    expect(all('#hx-dock .k7-ask').map((c) => [...c.querySelectorAll('.k7-ask__answers .k7-chip')].map(label)[1])).toEqual(['Always allow', 'Always for staging']);   /* kai's ask came first */
+  });
+  it('without the rules there is no standing answer, whatever the ask carries', () => {
+    mount();
+    const w = ask('nina') as Extract<Wait, { kind: 'approval' }>, scoped: Wait = { ...w, data: { ...w.data, scope: 'staging' } };
+    waits = [scoped];
+    emitWaits({ type: 'added', wait: scoped });
+    q('#hx-dock .k7-dock__ask').click();
+    expect(all('#hx-dock .k7-ask__answers .k7-chip').map(label)).toEqual(['Hold to allow once', 'Deny']);
   });
 });
 

@@ -35,10 +35,16 @@
 .k7-dock__title { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); padding-inline-start: var(--sp-1); }
 .k7-dock__count { font-size: var(--fs-2xs); color: var(--text-dim); }
 .k7-dock__name { font-size: var(--fs-m); line-height: var(--lh-m); font-weight: 500; margin-inline-start: var(--gap-hair); }
-.k7-dock__log { padding: var(--sp-1) var(--sp-1) 0; }
+/* the card's messages take the room the card has: its ask and its composer stay at the card's foot, 12 over the row as K04 draws
+   them, and a card with no messages yet is empty above them (the lead, 26 November) */
+.k7-dock__log { flex: 1 0 auto; padding: var(--sp-1) var(--sp-1) 0; }
+.k7-dock__panel:has(> .k7-dock__log) { padding-bottom: var(--sp-3); }
 /* K03, K04 (dockv7.js `.dk7-q`): an ask is as wide as the panel, its words 6 over its Well */
 .k7-dock__panel > .k7-ask { width: auto; max-width: none; flex: none; }
 .k7-dock__panel > .k7-ask > .k7-ask__ask { margin-bottom: var(--gap-s); }
+/* K03, K04 (kit.css `.well`: --r-field): the Well of an ask in the dock keeps the boards' corner of 10, not the corner concentric with
+   its Block (14): the board wins (REPASS rule 6; the lead, 26 November) */
+.k7-dock__panel > .k7-ask > .k7-well { border-radius: var(--r-field); }
 /* K03, K04: the command starts where the ask's words do, 4 inside its Well */
 .k7-dock__panel > .k7-ask > .k7-well > .k7-well__pre { padding-inline-start: var(--sp-1); }
 /* dockv7.js `approval`: Deny's key is the kit's own 20, 4 after the gap */
