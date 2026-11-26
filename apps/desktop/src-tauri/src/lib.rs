@@ -191,9 +191,9 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             FileDragEvent,
             EngineUpdateEvent,
             RoomHeldEvent,
-            commands::ConnectorRestartEvent,
             house::PlansChangedEvent,
-            rules::RulesChangedOutsideEvent
+            rules::RulesChangedOutsideEvent,
+            commands::ConnectorRestartEvent
         ])
 }
 
