@@ -1,0 +1,19 @@
+# How whisper.cpp is built for dictation (ADR-0052; whisper-rs-sys hands every GGML_* and CMAKE_* variable to its CMake).
+#
+# Left alone, ggml compiles for the processor of the machine that builds it (`-march=native`), so an installer built on a
+# CI runner would stop with an illegal instruction on an older computer, and a cross build (cargo-xwin) would get no vector
+# instructions at all. The x86-64 level is named here instead, the same for every build: AVX2 with FMA, F16C and BMI2
+# (processors since 2013; the host checks for them before it loads a speech model, src/dictation/transcribe.rs). On arm64
+# these switches are not read and the compiler's own baseline stands (NEON; Apple silicon's on macOS).
+#
+# CMAKE_BUILD_TYPE: whisper-rs-sys asks for RelWithDebInfo in a debug build; Release keeps a few hundred MB of debug
+# information out of the target directory. It is optimised either way (an unoptimised whisper is unusable).
+[env]
+GGML_NATIVE = "OFF"
+GGML_SSE42 = "ON"
+GGML_AVX = "ON"
+GGML_AVX2 = "ON"
+GGML_FMA = "ON"
+GGML_F16C = "ON"
+GGML_BMI2 = "ON"
+CMAKE_BUILD_TYPE = "Release"

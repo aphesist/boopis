@@ -1,0 +1,30 @@
+[package]
+name = "boopis-dictation"
+description = "Dictation for the boopis desktop host: the microphone through the system's audio API, and speech to text on this computer with whisper.cpp. No network but the one-time fetch of the speech model; no audio on disk."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+hex.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+url = "2"
+# The microphone: ALSA on Linux (PipeWire and PulseAudio answer as its default device), WASAPI on Windows, Core Audio on
+# macOS. No JACK, PulseAudio or PipeWire backend of its own. Apache-2.0.
+cpal = { version = "=0.18.2", default-features = false }
+# whisper.cpp 1.8.3 (MIT), built from source by whisper-rs-sys with CMake, on the CPU: no GPU, CoreML, OpenBLAS or OpenMP
+# feature. The two binding crates are Unlicense, a public-domain dedication (ADR-0052 admits it for them). Its log lines go
+# to `tracing`. How it is compiled for every processor: `.cargo/config.toml` at the repository root.
+whisper-rs = { version = "=0.16.0", default-features = false, features = ["tracing_backend"] }
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -24,6 +24,13 @@ boopis includes or distributes the following third-party work, each under its ow
 - LobeHub icons, vendored in the interface for provider logos: MIT License.
 - The fonts the interface embeds (Fontsource packages of Geist, IBM Plex, Instrument Sans, JetBrains Mono and
   Libre Franklin): SIL Open Font License 1.1.
+- whisper.cpp 1.8.3 and its ggml library, compiled into the desktop app for dictation (through the whisper-rs and
+  whisper-rs-sys crates, which are in the public domain under the Unlicense): MIT License, Copyright (c) 2023-2026 The ggml
+  authors. The speech model itself (OpenAI's Whisper `base`, MIT License, in the ggml format from the whisper.cpp model
+  repository) is not distributed with boopis: the app fetches it on first use and checks its SHA-256.
+- cpal, compiled into the desktop app for the microphone: Apache License 2.0.
+- crates/boopis-dictation/tests/fixtures/jfk.wav, a test recording of President Kennedy's 1961 inaugural address (whisper.cpp's
+  own sample): a work of the United States government, in the public domain.
 
 WebKitGTK and GTK are system libraries on Linux packages; the AppImage carries them under their own licences (LGPL).
 - Sign-in marks, vendored unmodified in the interface (`apps/desktop/ui/src/vendor/signin-marks`): the ChatGPT logo (OpenAI's Sign in with ChatGPT assets), the GitHub Invertocat and Copilot icon (GitHub's logo pack), the Claude logo (Anthropic's branding samples) and the xAI mark (a Wikimedia Commons vector, not an xAI file). They are trademarks of OpenAI, GitHub, Anthropic and xAI, used only to identify the lab or account the person connects, under their brand rules; no open licence is stated. See `NOTICE` in that folder.
