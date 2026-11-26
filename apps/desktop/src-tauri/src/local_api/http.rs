@@ -611,12 +611,11 @@ async fn route<E: Engine>(
             ["v1"]
             | [
                 "v1",
-                "bots" | "presence" | "notifications" | "approvals" | "rooms" | "events",
+                "bots" | "presence" | "notifications" | "approvals" | "rooms" | "events" | "jobs",
             ]
             | ["v1", "bots", _, "conversation"]
             | ["v1", "rooms", _, "log"]
-            | ["v1", "plans", ..]
-            | ["v1", "jobs"],
+            | ["v1", "plans", ..],
         ) => Err(method_not_allowed()),
         _ => Err(not_found()),
     }
