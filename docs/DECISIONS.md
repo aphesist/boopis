@@ -1154,3 +1154,133 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - A person who denied the microphone, or whose system has none, reads a sentence that says what to do (`no-microphone`, `permission-denied`); macOS asks once, in the app's name, with the sentence in `packaging/macos/Info.plist`, and the host reads the system's own authorization status (AVFoundation, through the `objc2-av-foundation` bindings, MIT) instead of guessing from silence: a question nobody has answered yet is waited for, never reported as a refusal.
 - Quality is the `base` model's: good for clear speech in the languages the owner writes, weaker on names, code words and noise. A larger model is a row in the table and a setting.
 - What is proven is that a recording becomes the right words through the whole pipeline (CI's `dictation` job, `crates/boopis-dictation/tests/speech.rs`); a real microphone, and each system's permission prompt, are tried by hand (`docs/RELEASING.md`, "Dictation").
+<!-- ADR-0050 is kept for w30/governed-bots's record "A bot's own rules are enforced", numbered ADR-0048 on its branch, which collides with ADR-0048 here; it is renumbered when w30 is merged. The records below are drafts for the w31 foundations wave (docs/specs/). -->
+
+## ADR-0051 The rules engine runs in the plugin's gate, for every tool, with its own reviewer (proposed, 23 November 2026)
+**Status.** Proposed (w31 foundations; spec `docs/specs/rules-engine.md`).
+
+**Context.**
+- Owner decision 10 (23 November 2026): one plain-language rules list in Settings for every bot, defaults for dangerous actions pre-filled and removable, anything uncovered runs, a pattern pre-filter plus an AI reviewer, fail closed; the card names the rule and offers Allow once, Always allow, Deny, Allow all this turn. The owner's answers to the plan (same day): the per-bot Allow/Ask/Block rows of w30/governed-bots stay on top; the reviewer is the cheapest connected model, changeable; no default caps.
+- Read in the engine (v0.23.2), not patched: its `smart` reviewer judges only shell commands its own detection flagged and takes operator policy as one prompt string (`tools/approval_smart.py`); plugin cards never pass through it (`tools/approval.py`, `_run_approval_gate`); `pre_tool_call` sees every tool call, receives `turn_id`, may return `approve` with a `rule_key`, and fails closed on error and timeout (`hermes_cli/plugins_dispatch.py`); plugins have LLM access through `ctx.llm` and may register their own auxiliary task (`agent/plugin_llm.py`, on the public plugin API list); `approvals.mode: off`, yolo and approving cron or unattended modes approve plugin cards without a person.
+
+**Decision.**
+1. **The rules engine is a step of the plugin's one permission function** (`policy.check`, inside `pre_tool_call`), for every tool of every bot: terminal, code, files, MCP and connector writes, messaging, browser, computer use. Not the engine's smart mode, which cannot judge per rule, cannot see non-shell tools, and would not show the owner which rule matched.
+2. **Order:** host protections, the existing hard policy, per-bot Block, exceptions, global rule match (ask), per-bot Ask, then run. A per-bot Allow never switches a global rule off; an exception does.
+3. **Pre-filter** for unedited default rules only, exact for structured calls (a miss means the rule does not apply) and a hint for opaque ones; **reviewer** for the rest, through `ctx.llm.complete_structured(task="boopis_reviewer")`, trusted rules in the system prompt, the action as delimited untrusted input, one verdict per rule id. A failure, timeout or wrong route holds the action at a card; where nobody can answer, it is refused and the owner notified.
+4. **The card is the engine's approval gate.** "Allow all this turn" is the engine's `session` answer on a turn-scoped rule key; "Always allow" answers `once` and drafts a narrow exception the owner edits; the engine's `always` is never sent for these cards.
+5. **`rules.json` is written by the host only** (Tauri commands from the window); the plugin reads it. The reviewer is the cheapest priced connected model by a fixed standard check, or the owner's pick.
+6. `approvals.mode` stays as the owner has it (`smart` or `manual`); `off`, yolo and approving cron or unattended modes are refused for bot profiles (ADR-0053).
+7. w30/governed-bots's tiers become per-bot rows whose default is "follow the rules list"; boopis-written tiers and caps are cleared once.
+
+**Alternatives weighed.**
+- *Feed the rules to the engine's smart mode* (`approvals.smart_policy`): shell-only, no rule named on the card, and its own decisions are not the owner's rules.
+- *Reviewer on the bot's own model*: costlier, and a bot's model is the one the action came from.
+- *Only deterministic rules*: the owner asked for plain language.
+
+**Consequences.**
+- One reviewer call at most per tool call that a rule's kinds cover and the pre-filter did not decide; cached per identical action. Latency budget p95 4 s, timeout 8 s.
+- The engine's hardline runs after the plugin's card (inside the tool), so a hardline command can show a card and still be blocked.
+- Room turns and kanban workers: whether their cards reach a person is to be verified on a live engine; behaviour is held where a person can answer, refused and notified where not.
+- A scheduled run's refused step is parked as an approval card and re-run on approval, in a run that resumes the scheduled session with a one-time grant for that exact call (owner decision, 23 November 2026; spec section 8.3).
+
+## ADR-0052 The host-ops channel, and the verbs a bot can reach (proposed, 23 November 2026)
+**Status.** Proposed (w31 foundations; spec `docs/specs/team-ops.md`).
+
+**Context.**
+- The BOOPIS bot (package w29, here w32) must run rooms, message bots, stop work and propose team changes from plugin tools. The plugin's only channel to the host is the secret channel (`hx-host-secrets-v1`: `get` and `has`), whose transport admits only the gateway process the host recorded, never a child of it (`secrets/peer.rs`).
+- Part C 2.5: team changes go through a dry-run plan card, the owner's hold, apply by plan hash and an undo snapshot; no bot answers approvals.
+
+**Decision.**
+1. **`hx-host-ops-v1`**: a second socket in the secret channel's `0700` folder, the same peer check, its own per-launch token handed only to the gateway. The listener moves into one shared module for both protocols.
+2. **The verbs are a closed list:** `team.plan`, `room.say`, `room.run`, `room.log`, `room.stop`, `bot.say`, `bot.run`, `session.stop`, `jobs.get`, `jobs.put`, `grant.redeem`. **Never** an apply, undo, reject, approval, clarify, form, secret, config, rules, budget or token verb, nor "send now" into a room. A test pins the list.
+3. Every changing verb takes an idempotency key and accepts `dry_run`; messages carry the host-written label "From boopis, for <owner>. This is not an approval."; a bot's `bot.say` never writes into the owner's open thread.
+4. **Plans** are stored under `<app data>/house/plans/<plan_hash>.json`; `plan_hash` is a SHA-256 over the plan's actions and the export hash it was planned against. Apply is a Tauri command behind the window's hold-to-approve, refused when the team changed since the plan; a snapshot is taken first; undo is a new plan through the same hold. The CLI gets `team plan`, `team apply --hash` and `team undo`, all refusing a bot caller.
+5. The Local API reads plans and jobs and may stop jobs; it cannot apply.
+6. Every call is a line of `<app data>/audit/house-ops.jsonl`, never message text.
+
+**Consequences.**
+- Only the gateway process reaches the channel: house tools work in the BOOPIS bot's chat and room turns, not in kanban or cron worker processes. Windows has no channel until a named-pipe server exists.
+- A plan made before another window or the CLI changed the team is refused at apply and must be made again.
+
+## ADR-0053 B47: host protections, and approvals answered only from an owner surface (proposed, 23 November 2026)
+**Status.** Proposed (w31 foundations; specs `docs/specs/host-protections.md`, `docs/specs/approval-surfaces.md`). Changes part of ADR-0045 ("once or deny only" from outside the window).
+
+**Context.**
+- B47 (verified in source): a bot with `terminal` can read the Local API token and answer approvals, including its own. w30/governed-bots denies the token read and refuses answer words in a bot's command lines. Still open: the engine's control socket (it mints tickets for any process of the owner), speaking as the owner through the Local API's `say`, editing the files that hold a bot's rules or the engine's `approvals.mode`, and owner-only CLI commands.
+- Owner decision 10: B47 and no self-approval are host protections, not rules. Bots run as the owner's user, so none of this is a sandbox.
+
+**Decision.**
+1. **Plugin, every session:** denied reads add `client-endpoint`, `gateway.sock` with its pointer and target, `host-ops.sock`, `activity.sock` and `activity.json`.
+2. **Plugin, bot sessions:** governance files (`rules.json`, `bot.json`, budgets, the engine's `config.yaml`, the plugin's installed copy, audit and plan files) cannot be written by any tool; more denied command words (the control socket, the Local API's say routes, owner-only CLI commands, engine settings that silence cards).
+3. **Host, Local API:** an answer or a message in the owner's voice (`approvals`, `say`, `retry`, room `say`) is refused when any process holding the client's end of the connection descends from the recorded gateway, was started with the per-launch `BOOPIS_ENGINE_LAUNCH` marker, or (Linux) sits in the gateway's own cgroup; and when the peer cannot be identified. Linux: `/proc/net/tcp` inode, `/proc/<pid>/fd`, `/proc/<pid>/stat`. macOS: `proc_pidfdinfo` socket info, `proc_pidinfo`. Windows: `GetExtendedTcpTable` gives the pid, but the gateway's pid is unknown there, so owner-voice routes are refused on Windows until it is known. Stops and reads stay open.
+4. **Owner surface:** an approval is answered from the window, from a Local API client that passed 3, or from a chat platform the engine bridges with `approvals.approvers: []` for bot profiles; never from a bot's tool, a host-ops verb or a plugin RPC. From the Local API: `once`, `deny`, `session` (bounded to the turn on boopis cards), and `always` on a boopis card answers `once` and saves the exception disabled, for the owner to finish in the window.
+5. **Owner-only commands** (`boopis team apply`, `undo`) refuse a bot caller; plugin RPCs that loosen tiers or budgets need a one-time owner grant redeemed over host-ops where it exists.
+6. `approvals.mode: off` and approving cron or unattended modes in a bot profile are a problem on the bot, and cards it would need are refused.
+
+**Consequences.**
+- Said plainly in `docs/LOCAL-API.md`: a program that double-forks, clears its environment and leaves the gateway's cgroup passes check 3; reading the token is denied but can be built. Defence in depth.
+- Follow-ups: per-client tokens (reverses ADR-0045's one-token consequence; the owner's call), an engine veto hook carrying who answered (an answer through a ticket minted at the control socket is invisible to the host today), the gateway's pid on Windows.
+
+## ADR-0054 The package's waves are renumbered w31 to w36 (proposed, 23 November 2026)
+**Status.** Proposed; the owner did not object to the plan's proposal (23 November 2026).
+
+**Context.** The owner's design package (`boopis-package`, 23 November 2026) names its waves w28 to w33 and the calm pass w28c. Branches `w28/launch-video`, `w29/*` and `w30/*` already exist.
+
+**Decision.** Package w28 (foundations) is w31; w29 (the BOOPIS bot) is w32; w30 (Bots onboarding) is w33; w31 (routines and teach-a-task) is w34; w32 (the bot computer) is w35; w33 (voice) is w36; w28c (the calm pass) is w31c and runs in parallel with w31, one UI writer on the library and the copy. Specs cite both numbers on first mention ("package w29, here w32").
+
+**Consequences.** Branch names follow this numbering (`w31/rules-engine`, `w31/host-protections`, `w31/team-ops`, `w31/rules-ui`, `w31c/calm`); the package's text is not rewritten.
+
+## ADR-0055 Feedforward reads the draft in the plugin, with the cheapest model of the answering provider, and its answers ride the next user message (proposed, 23 November 2026)
+**Status.** Proposed (w31; spec `docs/specs/feedforward.md`). The owner's decisions (23 November 2026): on by default and shown live in first run; the reader is the cheapest fast model of the same provider the message goes to; it runs in sessions, bot chats and rooms, each switchable, with per-bot and per-room overrides; subscriptions may be read on if fast enough; everything the "Will assume" row shows travels, the person's picks marked (the last two are defaults).
+
+**Context.**
+- Liu Xingyu's demo: while the person types, the agent marks ambiguous words, missing parameters and assumptions, and the person fills them before sending. In boopis the composer, its marks and its menus exist, but the live provider feeds them the mock's fixed pattern catalogue behind a preview flag (`host/live-provider.ts`, `core/settings.ts` `readFlag`).
+- Read in the engine (v0.23.2), not patched: plugins call a model with a JSON schema through `ctx.llm.complete_structured` and may route through an auxiliary task they registered (`agent/plugin_llm.py`); plugin RPCs run off the loop on an unbounded pool and cannot be cancelled by the client (`gateway/session_plugin_rpc.py`); `pre_llm_call` context is appended to the turn's user message, never the system prompt, and the sent bytes are persisted and replayed (`agent/turn_context.py`). The gateway session is created at the first send, so the first draft has no session.
+
+**Decision.**
+1. **The read is a plugin RPC**, `plugin.boopis.feedforward.read {session_id?, draft_id, rev, draft, cursor, prior, context}`, returning marks (`text`, UTF-16 `at`, `kind`, `reading`, `options`, `guess`, `confidence`) and assumptions. The model names a mark's text and occurrence; the plugin computes the offsets.
+2. **Staleness by revisions on both sides**: the UI keeps one read in flight per composer and drops answers older than the last applied; the plugin answers an older `rev` as `stale` with no model call and runs one call per draft at a time. Marks are re-anchored on the live text between reads.
+3. **The reader is the cheapest fast, priced, non-heavy model of the same provider the message goes to**, by the reviewer's chooser (one implementation, shared with ADR-0051), through the plugin's own auxiliary task; a route measured too slow is skipped, and with none left there are no marks. A subscription may be the reader. Not frontier-bound: a read does no governed work. Every read runs in the root profile and its cost is the person's.
+4. **Fail quiet**: no reader, an error or a timeout gives no marks and never delays or blocks sending. Feedforward is advice, not a permission, policy or gate check.
+5. **Cost on the ledger**: `usage.recorded` with `purpose: "feedforward"` in the session's ledger, or, before the session exists, in a monthly aside ledger in contraprova's format.
+6. **The answers ride the next user message**: `feedforward.commit` arms the session's next turn (as `mode.once` does), and `pre_llm_call` returns a fixed `<boopis-readings v="1">` block after the typed text. The system prompt, toolsets and skills never change (invariant 4). Each travelled reading is a `feedforward.set` ledger event.
+7. **Smart keeps the start-tier pick** (ADR-0032); the reading's level is one more signal, and the person's choice beats both.
+8. **Everywhere, switchable:** sessions, bot chats and rooms, with a global switch, one per context and a per-bot and per-room override. In a room one read is made with the provider of the members the message reaches first; the commit is stored by the root plugin and each member's plugin copy adds the block on the first round only.
+
+**Alternatives weighed.**
+- *Keep patterns in the UI*: what exists; cannot read meaning, and invents nothing the model would actually ask.
+- *The reader in the UI calling a provider*: the UI holds no keys and no price book, and the ledger is the plugin's.
+- *Answers written into the message text*: changes the person's words in the transcript.
+- *The global cheapest model*: cheaper, but sends a draft to a lab the message is not going to; the owner chose the same provider.
+
+**Consequences.**
+- The mock catalogue leaves the live path; the preview flag goes; a setting, on by default, replaces it; first run gains a "Try it" step that is live with a model and a labelled recording without one.
+- At most one read in flight and one waiting per composer; a hard timeout of 5 s.
+- `docs/PROTOCOL.md`'s `feedforward.preview` and `feedforward.set` are replaced by `feedforward.read` and `feedforward.commit`.
+
+## ADR-0056 In sessions, blanks wait inline for a while through a plugin tool, then the agent goes on with its guess; bots ask only through approvals, with no time limit (proposed, 23 November 2026)
+**Status.** Proposed (w31; spec `docs/specs/blanks-inline.md`). The rules are the owner's (23 November 2026): the answer must reach the agent inside its own reply, with no double output; a blank waits for a while, not forever, then the agent goes on with its best guess and the question stays answerable; **blanks are for sessions only, and bots have none, not even as an option**: a bot asks only where the owner set it up to ask (rules and its rows), as an approval card, and that ask has no time limit ("If it's asking you something ... it's because you made it so it asks whenever that happens, so it should ask"). Defaults and looks as design system v7 section 17.1: 30 s, 60 s (default), 2 min; "(my guess)"; one shared card for a lapsed blank and a bot's approval.
+
+**Context.**
+- Today a blank does not block: the cell goes on, the turn ends, and the answer is handed to `ctx.inject_message` as an unlabelled new user turn, which the model answers with a second reply.
+- Read in the engine (v0.23.2), not patched: a plugin tool runs under the generic tool deadline of 420 s (`agent/tool_executor.py`; `ctx.register_tool` cannot declare a longer one); an interrupted tool is abandoned after 3 s and `on_session_end` fires for the interrupted turn. The engine's `clarify` returns an answer in the same turn and waits per profile, but its timeout result carries no guess (`tools/clarify_tool.py`), and the engine removes it from room member turns, cron runs and delegated children. An approval card expires after `approvals.timeout` (300 s by default, clamped to `MAX_SAFE_TIMEOUT_S`), and its wait is excluded from the tool deadline. A bot's toolsets are applied once per bot (ADR-0048).
+
+**Decision.**
+1. **In sessions, a blank is the plugin's `leave_blank`** (toolset `boopis_blanks`, root profile and governed sessions only), with a required `guess` per question. It blocks for the session's wait; an answer in time is its result, so the agent goes on in the same reply.
+2. **With no answer in time it returns `no_answer_yet` with the guess** and tells the agent to go on, mention the assumption once and not ask again. The reply shows the guess marked "(my guess)"; the question stays as the shared v7 card under the reply.
+3. **The wait:** Settings > General > Sessions > "Wait for my answer", 30 s, 60 s (default), 2 min, which is also the root profile's `agent.clarify_timeout`; never unlimited. The engine's `clarify` is off in the root profile, so there is one way to ask.
+4. **A late answer is one labelled correction:** nothing when it equals the guess; otherwise one message starting "[Correction to your guess]", held until the current turn ends and merged with other late answers, submitted by the client as the person's message; not sent when superseded, undone, expired (24 h) or the session is gone. The `inject_message` path is removed.
+5. **Bots have no blanks and no `clarify`.** `clarify` moves to `bot-toolsets.json`'s off list and is turned off once for every existing bot (a version of ADR-0048's once-per-bot record); neither it nor `boopis_blanks` can be switched on for a bot (settings, `bots.toolsets`, team files), and the plugin refuses both in a bot's session. A bot asks only through the rules engine and its rows, as an approval card, rendered in the app with the same shared v7 card (no countdown, no guess).
+6. **A bot's approval has no time limit:** the host writes `approvals.timeout` = the engine's maximum into every bot profile. Where nobody can answer (scheduled runs), the step is refused for now and left as the shared approval card; approving it re-runs that step in a run that resumes the scheduled run's session, with a one-time grant for that exact call (`rules-engine.md` 8.3; owner decision).
+7. **A lapsed session question stays answerable for 24 hours** (owner decision, a default). **Next wave:** `ask` and `request_input` follow the same rule (sessions wait with the same timer, bots get approval cards with no limit), and credentials and secrets still never reach the agent.
+8. Blanks stay in contraprova's vocabulary (`blank.opened`, `blank.filled`, `blank.lapsed`) with extra fields.
+
+**Alternatives weighed.**
+- *The engine's `clarify` for sessions*: its lapse has no guess, and it is absent from governed sessions.
+- *Blanks for bots, waiting off by default*: rejected by the owner; a bot asks only where the owner decided it must.
+- *Keep injecting the answer*: the double output the owner rejected.
+
+**Consequences.**
+- One reply per message in sessions, proven by end-to-end tests that count submits, stored rows, completions and model requests; a late different answer costs one visibly labelled turn.
+- ADR-0048 changes: `clarify` is off for every bot and cannot be turned on; a team file's list loses it on import.
+- `approval-surfaces.md`'s "expired after 300 s" no longer applies to bots' cards.
