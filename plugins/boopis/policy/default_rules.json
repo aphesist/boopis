@@ -104,7 +104,8 @@
         "iptables", "ip6tables", "nft", "ufw", "firewall-cmd", "pfctl", "netsh", "ip link set", "ip addr add", "ip addr del",
         "ip route add", "ip route del", "ip route replace", "nmcli connection", "nmcli device connect", "nmcli device disconnect",
         "nmcli radio", "wg", "wg-quick", "openvpn", "tailscale up", "tailscale down", "tailscale set", "tailscale serve",
-        "tailscale funnel", "ngrok", "cloudflared tunnel", "ssh -R"
+        "tailscale funnel", "ngrok", "cloudflared tunnel", "ssh -R",
+        "nc", "ncat", "netcat"
       ],
       "checks": ["networksetup_set", "socat_listen", "ifconfig_args"],
       "write_paths": ["//etc/hosts", "//etc/resolv.conf", "//etc/NetworkManager/**"]
