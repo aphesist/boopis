@@ -186,7 +186,43 @@ class Page:
             "  window.__orbsOut.push(m.target.closest('.k7-dock__orb').dataset.bot); })"
             ".observe(document.querySelector('#hx-dock'), {childList: true, subtree: true});"
         )
+        # what the page tells the orb worker (a size, a visibility, an attribute), kept for a failure's report
+        self.run(
+            "window.__orbLog = [];"
+            "const post = Worker.prototype.postMessage;"
+            "Worker.prototype.postMessage = function (m, t) {"
+            " try { for (const x of Array.isArray(m) ? m : [m]) {"
+            "  if (!x || !x.t || x.t === 'hold' || x.t === 'release') continue;"
+            "  const what = x.t === 'size' ? x.w : x.t === 'attr' ? x.name + '=' + x.value : x.t === 'vis' ? x.v"
+            "   : x.t === 'conn' ? x.on : x.t === 'call' ? x.m : '';"
+            "  window.__orbLog.push([Math.round(performance.now()), x.t, x.id, what]);"
+            "  if (window.__orbLog.length > 600) window.__orbLog.shift();"
+            " } } catch (e) {}"
+            " return t ? post.call(this, m, t) : post.call(this, m);"
+            "};"
+        )
         self.run("__hx.dock().timeScale(arguments[0])", SLOW)
+
+    def orb_trail(self, bots: list[str], ms: int = 4000) -> list[str]:
+        """For a failure's report: each named bot's orb as the page holds it now, and what the page told the orb worker
+        about it in the last `ms`."""
+        return self.run(
+            "const now = performance.now(), out = [];"
+            "for (const id of arguments[0]) {"
+            " const b = document.querySelector('#hx-dock .k7-dock__orb[data-bot=\"' + id + '\"]');"
+            " const o = b && b.querySelector('orb-avatar'); if (!o) { out.push(id + ': no orb'); continue; }"
+            " const r = o.getBoundingClientRect(), c = o.shadowRoot && o.shadowRoot.querySelector('canvas');"
+            " const log = (window.__orbLog || []).filter((e) => e[2] === o._id && now - e[0] <= arguments[1])"
+            "  .map((e) => '-' + Math.round(now - e[0]) + 'ms ' + e[1] + ' ' + e[3]);"
+            " out.push(id + ': box ' + [r.left, r.top, r.width].map((v) => v.toFixed(1)).join(' ') + ', --s ' +"
+            "  b.style.getPropertyValue('--s') + ', order ' + b.style.order + ', canvas ' + (c ? c.width + ' (css ' +"
+            "  c.style.width + ')' : 'none') + ', seen ' + o._visible + ', reaction ' + o.getAttribute('reaction') +"
+            "  ', connected ' + o.isConnected + '; told the worker: ' + (log.join(', ') || 'nothing'));"
+            "}"
+            "return out;",
+            bots,
+            ms,
+        )
 
     def slab(self) -> dict:
         """The slab as drawn (its path's box, flares included), cut to the window: it rises from below the edge."""
@@ -386,11 +422,13 @@ class Run:
         """
         p = self.page
         p.orbs_out()
+        orbs_were, shot_were = p.orbs(), p.shot()
         if act:
             act()
         end = time.time() + seconds
         judged, lowest, k = 0, None, 0
         orb_snaps, orb_lowest, orb_blank = 0, None, []
+        notes: list[str] = []
         seen: dict[str, list[tuple[int, int, int]]] = {}
         while time.time() < end:
             before = p.slab()
@@ -415,6 +453,7 @@ class Run:
                 orb_lowest = lit if orb_lowest is None else min(orb_lowest, lit)
                 if lit < MIN_ORB_LIT:
                     orb_blank.append(f"{o['id']} in shot {k}")
+                    notes.extend(self.blank_report(name, k, img, o, orbs_were, shot_were))
             got = lit_pixels(img, before, after)
             if p.frames:  # the same window of the screen every time: the bottom, around the centre line
                 mid = int(img.width * 0.6)
@@ -446,8 +485,45 @@ class Run:
             print(f"      live orbs were taken out of the page: {len(out)} ({', '.join(out[:6])})", flush=True)
         if orb_blank:
             print(f"      an orb was blank (under {MIN_ORB_LIT} lit pixels): {', '.join(orb_blank[:8])}", flush=True)
+            for line in notes[:24]:
+                print(f"        {line}", flush=True)
         elif expect_orbs and orb_snaps < MIN_ORB_SNAPS:
             print(f"      too few orbs to judge ({orb_snaps} of at least {MIN_ORB_SNAPS})", flush=True)
+
+    def blank_report(
+        self, name: str, k: int, img: Any, orb: dict[str, Any], were: list[dict[str, Any]], shot_were: Any
+    ) -> list[str]:
+        """What a blank orb's snapshot can say of its cause, for the report. The snapshot is kept (`--frames`, or the
+        system's temporary folder) beside the one taken before the act. Then: the orb as the page holds it and what the
+        page told its worker; how much of the row's band is the picture from before the act (a snapshot one layout
+        behind the page shows the orbs where they stood, not where the page says they are); and whether the orb is back
+        in the very next snapshot."""
+        p = self.page
+        folder = p.frames or Path(os.environ.get("TMPDIR", "/tmp")) / "dock-webkit-blank"
+        folder.mkdir(parents=True, exist_ok=True)
+        stem = f"blank-{name.replace(' ', '-')}-{k:02d}-{orb['id']}"
+        img.save(folder / f"{stem}.png")
+        shot_were.save(folder / f"{stem}-before-the-act.png")
+        out = [f"{orb['id']} in shot {k}: kept as {folder / stem}.png, with the snapshot from before the act"]
+        out.extend(p.orb_trail([orb["id"]]))
+
+        def lit_at(image: Any, o: dict[str, Any]) -> int:
+            w, h = o["r"] - o["l"], o["b"] - o["t"]
+            box = (int(o["l"] + w * 0.25), int(o["t"] + h * 0.25), int(o["r"] - w * 0.25), int(o["b"] - h * 0.25))
+            return sum(image.crop(box).convert("L").histogram()[ORB_LIT + 1 :])
+
+        now = p.orbs()
+        out.append("lit pixels at each orb's box now: " + ", ".join(f"{o['id']} {lit_at(img, o)}" for o in now))
+        out.append("and where each stood before the act: " + ", ".join(f"{o['id']} {lit_at(img, o)}" for o in were))
+        band = (0, int(min(o["t"] for o in now + were)) - 4, img.width, int(max(o["b"] for o in now + were)) + 4)
+        a, b = img.crop(band).convert("L"), shot_were.crop(band).convert("L")
+        chops = importlib.import_module("PIL.ImageChops")
+        same = chops.difference(a, b).histogram()[0] / max(1, a.width * a.height)
+        out.append(f"the row's band is the picture from before the act in {same:.0%} of its pixels")
+        mine = {o["id"]: o for o in now}.get(orb["id"])
+        if mine:
+            out.append(f"the next snapshot holds {lit_at(p.shot(), mine)} lit pixels of it")
+        return out
 
     def check(self, name: str, ok: bool, detail: object = "") -> None:
         self.rows.append((name, 0, None, ok))
