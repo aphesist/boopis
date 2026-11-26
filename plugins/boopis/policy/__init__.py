@@ -19,8 +19,10 @@ Order, first to last:
    tools are refused at every step and an unknown step runs read-only tools only; Supervised asks before every
    ``ship`` and ``exec``, Auto-accept edits before every ``exec``; Auto and Full access skip step 7's network ask, and
    Full access turns every ask into allow (blocks stay blocks);
-4b. for a session that runs for a bot, the bot's capability tier (``policy/tiers.py``): Block refuses, Ask asks a
-   human at the engine's approval gate, Allow goes on (it never widens anything below);
+4b. for a session that runs for a bot, the bot's capability tier (``policy/tiers.py``): Block refuses; then the rules
+   engine (``rules/gate.py``, ADR-0060): this bot's exceptions remove what they except, a global rule that applies is a
+   card naming it (a reviewer failure holds the call at a card), and the bot's Ask row left is its own card; Allow goes
+   on (it never widens anything below and never switches a global rule off);
 5. an ``ask`` rule asks a human;
 6. an ``allow`` rule allows;
 7. in governed mode a network tool (``web_search``, ``web_extract``, ``vision_analyze``, ...) that no rule allowed asks
@@ -152,7 +154,24 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
         from .tiers import decide as decide_tier
 
         tier = decide_tier(call, session, defaults)
-        if tier is not None:
+        if tier is not None and tier.kind == "block":
+            return tier
+        if session.rules is not None:
+            # the rules engine (ADR-0060): an exception for this bot, then a global rule's card, then the bot's Ask row
+            from ..rules.gate import decide as decide_rules
+
+            ruled = decide_rules(
+                call,
+                session,
+                defaults,
+                tier,
+                llm=session.reviewer,
+                redact=session.redact or (lambda s: s),
+                park=session.park,
+            )
+            if ruled is not None:
+                return ruled
+        elif tier is not None:
             return tier
     for rule in _parsed(session.ask):
         if match_rule(rule, call, root, defaults, deny_like=True) is not Match.NO:

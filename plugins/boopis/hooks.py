@@ -90,7 +90,9 @@ def pre_tool_call(tool_name: str = "", args: Mapping[str, Any] | None = None, **
         rt = runtime()
         session_id = str(kw.get("session_id") or "")
         caller = _caller(rt, kw)
-        call = ToolCall(tool_name, args or {}, session_id, str(kw.get("tool_call_id") or ""))
+        call = ToolCall(
+            tool_name, args or {}, session_id, str(kw.get("tool_call_id") or ""), turn_id=str(kw.get("turn_id") or "")
+        )
         decision = _budget_gate(rt, caller, policy.check(call, rt.policy_for(caller)))
         if decision.kind == "block" and call.tool_call_id:
             caller.state.blocked_calls[call.tool_call_id] = "hx.policy.denied"

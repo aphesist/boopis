@@ -72,6 +72,10 @@ RPC_METHODS = (
     "bots.restore",
     "bots.delete",
     # store/: the plugin's half of the store (docs/STORE.md, docs/PROTOCOL.md section 3)
+    # rules/: the rules engine's RPCs (docs/specs/rules-engine.md section 11, ADR-0060); none writes rules.json
+    "rules.draft",
+    "rules.explain",
+    "rules.reviewer.rank",
     "store.prepare",
     "store.confirm",
     "store.uninstall",
@@ -171,12 +175,35 @@ def register(ctx: Any) -> None:
     ctx.register_system_prompt_section("boopis", _lazy("hooks", "system_prompt_section"))
     _register_delegation(ctx)
     _register_secret_source(ctx)
+    _register_reviewer(ctx)
     _start_recovery()
     _start_signins()
     on_unload = getattr(ctx, "on_unload", None)
     if callable(on_unload):
         on_unload(_lazy("hx", "shutdown"))
         on_unload(_lazy("exec", "shutdown"))  # unload runs in reverse: kernels stop before the hx that sandboxes them
+
+
+def _register_reviewer(ctx: Any) -> None:
+    """The rules engine's reviewer route (ADR-0060): the auxiliary task ``boopis_reviewer``, whose provider and model
+    the host writes into every bot profile (``auxiliary.boopis_reviewer``). Registered only where the engine has the
+    API; a route that cannot be registered leaves the reviewer unset, and the calls it would check are held."""
+    register = getattr(ctx, "register_auxiliary_task", None)
+    if not callable(register):
+        return
+    try:
+        register(
+            "boopis_reviewer",
+            display_name="boopis rules reviewer",
+            description=(
+                "Checks a bot's action against the owner's rules (boopis). Chosen in boopis, Settings, Approvals."
+            ),
+            defaults={"timeout": 8},
+        )
+    except Exception:  # noqa: BLE001 - an engine that refuses the task leaves the reviewer unset (calls are held)
+        from .util.log import get_logger
+
+        get_logger("rules").warning("the reviewer's auxiliary task could not be registered", exc_info=True)
 
 
 def _register_delegation(ctx: Any) -> None:

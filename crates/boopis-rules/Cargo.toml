@@ -1,0 +1,21 @@
+[package]
+name = "boopis-rules"
+description = "The owner's rules list for every bot, <root>/boopis/rules.json, as the boopis desktop host writes it: the defaults, validation, revisions, atomic writes under a lock (docs/specs/rules-engine.md section 11, ADR-0060)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+serde_json.workspace = true
+sha2.workspace = true
+hex.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -1,0 +1,23 @@
+{
+  "_comment": [
+    "The owner's default rules (owner decision 10, 23 November 2026; docs/specs/rules-engine.md section 4, ADR-0060): one rule",
+    "per bullet of the owner's list, the bullet's words kept. Every default is editable and removable in Settings. The host",
+    "writes them into <root>/boopis/rules.json (crates/boopis-rules); the plugin reads this copy (plugins/boopis/data/, synced",
+    "by scripts/sync-shared-data.sh) for a root whose rules.json does not exist yet. `kinds` are what a rule can concern: the",
+    "reviewer judges a rule only for a call that has one of them. `defaults_version` goes up when a text changes or a rule is",
+    "added; a removed default stays removed (`removed_defaults`)."
+  ],
+  "schema_version": 1,
+  "defaults_version": 1,
+  "kinds": ["reads", "writes", "commands", "code", "network", "connector_write", "messages", "spend", "browser", "computer", "delegation", "unknown"],
+  "rules": [
+    {"id": "default.outside_files", "text": "Ask before deleting or overwriting files outside the bot's workspace, or running rm -rf on broad paths.", "kinds": ["writes", "commands", "code", "computer"]},
+    {"id": "default.root_packages", "text": "Ask before running as root (sudo, pkexec, su), and before installing or removing packages.", "kinds": ["commands", "code", "computer"]},
+    {"id": "default.system", "text": "Ask before touching disks, partitions, the bootloader or firmware, system services, or system config under /etc.", "kinds": ["writes", "commands", "code", "computer"]},
+    {"id": "default.secrets", "text": "Ask before reading or changing shell startup files, SSH keys, keyrings, .env and credential files.", "kinds": ["reads", "writes", "commands", "code", "computer"]},
+    {"id": "default.git_cloud", "text": "Ask before a git force-push or history rewrite, and before deleting branches, repositories or cloud resources.", "kinds": ["commands", "code", "connector_write", "computer"]},
+    {"id": "default.network_config", "text": "Ask before opening ports, or changing the firewall, VPN or network settings.", "kinds": ["commands", "code", "computer"]},
+    {"id": "default.messages", "text": "Ask before sending messages, emails or posts to other people, and before publishing anything.", "kinds": ["messages", "connector_write", "commands", "code", "browser", "computer"]},
+    {"id": "default.purchases", "text": "Ask before purchases and spending money.", "kinds": ["spend", "connector_write", "browser", "commands", "computer"]}
+  ]
+}

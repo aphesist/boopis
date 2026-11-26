@@ -153,6 +153,16 @@ def _matches(words: Sequence[str], pattern: Sequence[str]) -> bool:
     return True
 
 
+def matches(words: Sequence[str], pattern: Sequence[str]) -> bool:
+    """``_matches`` for the rules engine's pre-filter (``rules.prefilter``): the same grammar as ``bot_tiers.json``."""
+    return _matches(words, pattern)
+
+
+def token_commands(text: str) -> list[tuple[str, ...]]:
+    """Every token of ``text`` as a possible command start (``_token_scan``): code and lines that do not parse."""
+    return _token_scan(text)
+
+
 def _token_scan(text: str) -> list[tuple[str, ...]]:
     """A line the splitter cannot read (``$(...)``, a heredoc): every token may start a command, so ``rm`` inside
     ``echo $(rm x)`` is still seen. It over-matches rather than misses: an ask too many, never a delete unseen."""

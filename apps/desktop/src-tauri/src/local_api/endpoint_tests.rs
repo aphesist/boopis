@@ -98,7 +98,7 @@ struct Rig {
     service: Arc<Service<Scripted>>,
     scripted: Arc<Scripted>,
     store: Store,
-    _dir: tempfile::TempDir,
+    dir: tempfile::TempDir,
 }
 
 fn limits() -> ApiLimits {
@@ -141,7 +141,7 @@ async fn rig_owned(limits: ApiLimits, owner: Arc<dyn OwnerCheck>) -> Rig {
         service,
         scripted,
         store,
-        _dir: dir,
+        dir,
     }
 }
 
@@ -1631,7 +1631,7 @@ fn assert_owner_surface_unproven(status: u16, body: &str) {
 }
 
 fn audit_text(r: &Rig) -> String {
-    std::fs::read_to_string(r._dir.path().join("audit").join("client-answers.jsonl"))
+    std::fs::read_to_string(r.dir.path().join("audit").join("client-answers.jsonl"))
         .unwrap_or_default()
 }
 

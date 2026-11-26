@@ -306,6 +306,7 @@
     "//**/boopis/bot-skills.json",
     "//**/boopis/bot-toolsets.json",
     "//**/boopis/budget.json",
+    "//**/boopis/parked/**",
     "//**/profiles/*/config.yaml",
     "//**/dev.aphesist.boopis/audit/**",
     "//**/dev.aphesist.boopis/house/**",

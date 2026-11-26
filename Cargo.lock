@@ -538,6 +538,16 @@ name = "boopis-peer"
 version = "0.1.10"
 
 [[package]]
+name = "boopis-rules"
+version = "0.1.10"
+dependencies = [
+ "hex",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+]
+
+[[package]]
 name = "borsh"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
