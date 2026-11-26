@@ -1,5 +1,5 @@
-/* The UI's side of dictation against a fake host: the events as the composer gets them, stop in every order, the end, and
-   the host that cannot be asked. The real bridge is checked over a fake Channel and `invoke`. */
+/* The UI's side of dictation against a fake host: the provider's events as the composer gets them, cancel in every order, the
+   host's reasons as sentences, and the host that cannot be asked. The real bridge is checked over a fake Channel and `invoke`. */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const invoke = vi.hoisted(() => vi.fn());
@@ -8,12 +8,14 @@ vi.mock('@tauri-apps/api/core', () => ({
   Channel: class { onmessage: ((m: unknown) => void) | null = null; }
 }));
 
-import { asDictationSource, COULD_NOT_START, createDictation, DICTATION_REASONS, tauriDictationBridge } from './dictation';
-import type { DictationBridge, DictationEvent } from './dictation';
+import { hostDictation, REASONS, tauriDictationBridge } from './dictation';
+import type { DictationBridge } from './dictation';
 import type { DictationEvent as WireEvent, DictationKind } from './bindings';
+import type { DictationEvent } from '../data/provider';
 
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 const wire = (kind: DictationKind, over: Partial<WireEvent> = {}): WireEvent => ({ kind, done: 0, total: 0, text: '', reason: '', message: '', retry: false, ...over });
+const BOT = { botId: 'nina' };
 
 /** a host that starts when the test says, and remembers what it was asked */
 function fakeHost(): { bridge: () => DictationBridge; calls: string[]; send: (e: WireEvent) => void; answer: (id: number) => void; refuse: (why: string) => void; made: () => number } {
@@ -39,165 +41,164 @@ function fakeHost(): { bridge: () => DictationBridge; calls: string[]; send: (e:
 
 beforeEach(() => { invoke.mockReset(); });
 
-describe('dictation over the host', () => {
+describe('the provider\'s dictation over the host', () => {
   it('asks nothing of the host until the first press', () => {
     const host = fakeHost();
-    createDictation(host.bridge);
+    hostDictation(host.bridge);
     expect(host.made()).toBe(0);
     expect(host.calls).toEqual([]);
   });
 
-  it('hands on preparing, listening, partial and final words in order, and ends after the stop\'s last words', async () => {
+  it('hands on the model\'s bytes, listening, and partial and final words in order; cancel closes the microphone', async () => {
     const host = fakeHost();
     const got: DictationEvent[] = [];
-    let ended = 0;
-    const stop = createDictation(host.bridge).start((e) => got.push(e), () => { ended++; });
+    const cancel = hostDictation(host.bridge).start(BOT, (e) => got.push(e));
     host.answer(4);
     await tick();
-    host.send(wire('preparing', { done: 1024, total: 59707625 }));
+    host.send(wire('preparing', { done: 12582912, total: 59707625 }));
     host.send(wire('preparing', { done: 59707625, total: 59707625 }));
     host.send(wire('listening'));
     host.send(wire('partial', { text: 'and so' }));
     host.send(wire('partial', { text: 'and so my fellow' }));
     host.send(wire('final', { text: 'And so, my fellow Americans,' }));
     host.send(wire('partial', { text: 'ask not' }));
-    stop();
+    cancel();
     expect(host.calls).toEqual(['start', 'stop:4']);
-    /* the microphone is closed; what was still being said arrives as one more final, then the end */
+    /* cancelled: what the host still sends (the same stretch, written down after the stop) is not handed on */
     host.send(wire('final', { text: 'ask not what your country can do for you.' }));
-    expect(ended).toBe(0);
     host.send(wire('ended'));
-    expect(ended).toBe(1);
     host.send(wire('partial', { text: 'a stray event after the end' }));
     expect(got).toEqual([
-      { kind: 'preparing', done: 1024, total: 59707625 },
+      { kind: 'preparing', done: 12582912, total: 59707625 },
       { kind: 'preparing', done: 59707625, total: 59707625 },
       { kind: 'listening' },
       { kind: 'partial', text: 'and so' },
       { kind: 'partial', text: 'and so my fellow' },
       { kind: 'final', text: 'And so, my fellow Americans,' },
       { kind: 'partial', text: 'ask not' },
-      { kind: 'final', text: 'ask not what your country can do for you.' }
+      { kind: 'final', text: 'ask not' }   /* the words on screen are settled inside the cancel itself, while the composer still listens */
     ]);
-    stop();   /* a second stop, and one after the end, ask nothing */
+    cancel();   /* a second cancel asks nothing and says nothing */
     expect(host.calls).toEqual(['start', 'stop:4']);
-    expect(ended).toBe(1);
+    expect(got).toHaveLength(8);
   });
 
-  it('stops a dictation the person let go of before the host had answered', async () => {
+  it('settles nothing at a cancel when no words stand: after a final, or before any', async () => {
     const host = fakeHost();
-    const stop = createDictation(host.bridge).start(() => undefined);
-    stop();
+    const got: DictationEvent[] = [];
+    const cancel = hostDictation(host.bridge).start(BOT, (e) => got.push(e));
+    host.answer(2);
+    await tick();
+    host.send(wire('listening'));
+    host.send(wire('partial', { text: 'one' }));
+    host.send(wire('final', { text: 'One.' }));
+    cancel();
+    expect(got).toEqual([{ kind: 'listening' }, { kind: 'partial', text: 'one' }, { kind: 'final', text: 'One.' }]);
+  });
+
+  it('can follow the host\'s last words after a cancel instead, for a composer that takes them', async () => {
+    const host = fakeHost();
+    const got: DictationEvent[] = [];
+    const cancel = hostDictation(host.bridge, 'follow').start(BOT, (e) => got.push(e));
+    host.answer(5);
+    await tick();
+    host.send(wire('listening'));
+    host.send(wire('partial', { text: 'ask not' }));
+    cancel();
+    expect(got).toHaveLength(2);   /* nothing is settled at the cancel */
+    host.send(wire('partial', { text: 'a partial that was already on its way' }));
+    host.send(wire('final', { text: 'Ask not what your country can do for you.' }));
+    host.send(wire('ended'));
+    host.send(wire('final', { text: 'after the end' }));
+    expect(got.slice(2)).toEqual([{ kind: 'final', text: 'Ask not what your country can do for you.' }]);
+    expect(host.calls).toEqual(['start', 'stop:5']);
+  });
+
+  it('cancels a dictation the person let go of before the host had answered', async () => {
+    const host = fakeHost();
+    const cancel = hostDictation(host.bridge).start(BOT, () => undefined);
+    cancel();
     expect(host.calls).toEqual(['start']);   /* no id yet: nothing to stop with */
     host.answer(9);
     await tick();
     expect(host.calls).toEqual(['start', 'stop:9']);
   });
 
-  it('does not ask the host to stop what already ended by itself', async () => {
-    const host = fakeHost();
-    const got: DictationEvent[] = [];
-    let ended = 0;
-    const stop = createDictation(host.bridge).start((e) => got.push(e), () => { ended++; });
-    host.answer(2);
-    await tick();
-    host.send(wire('error', { reason: 'no-microphone', message: 'boopis found no microphone. Plug one in, or choose an input in your system\'s sound settings, then press the mic again.', retry: true }));
-    host.send(wire('ended'));
-    stop();
-    expect(host.calls).toEqual(['start']);
-    expect(ended).toBe(1);
-    expect(got).toEqual([{ kind: 'error', reason: 'no-microphone', message: 'boopis found no microphone. Plug one in, or choose an input in your system\'s sound settings, then press the mic again.', retry: true }]);
+  it('says each of the host\'s reasons as one plain sentence, and sends nothing after an error', async () => {
+    const said: Record<string, DictationEvent[]> = {};
+    for (const reason of Object.keys(REASONS)) {
+      const host = fakeHost();
+      const got: DictationEvent[] = [];
+      const cancel = hostDictation(host.bridge).start({ botId: null }, (e) => got.push(e));
+      host.answer(1);
+      await tick();
+      host.send(wire('error', { reason, message: reason === 'too-long' ? 'Dictation stops after 5 minutes. Press the mic to go on.' : 'boopis found no microphone. Plug one in, then press the mic again.', retry: true }));
+      host.send(wire('final', { text: 'never shown' }));
+      host.send(wire('ended'));
+      cancel();
+      expect(host.calls).toEqual(['start']);   /* it ended by itself: there is nothing to stop */
+      said[reason] = got;
+    }
+    expect(said).toEqual({
+      'no-microphone': [{ kind: 'error', reason: 'No microphone found', retry: false }],
+      'permission-denied': [{ kind: 'error', reason: 'Microphone access is off for boopis', retry: false }],
+      'model-download-failed': [{ kind: 'error', reason: 'The speech model could not be downloaded' }],
+      'busy': [{ kind: 'error', reason: 'Something else is using dictation' }],
+      'too-long': [{ kind: 'error', reason: 'Dictation stops after 5 minutes' }],   /* the cap's minutes are the host's */
+      'failed': [{ kind: 'error', reason: 'Dictation failed' }]
+    });
   });
 
-  it('carries each of the host\'s reasons, and reads one it does not know as failed', async () => {
+  it('reads a reason it does not know as a failure, and the host\'s "cannot help" as retry: false', async () => {
     const host = fakeHost();
     const got: DictationEvent[] = [];
-    createDictation(host.bridge).start((e) => got.push(e));
-    host.answer(1);
-    await tick();
-    for (const reason of DICTATION_REASONS) host.send(wire('error', { reason, message: 'A sentence.', retry: reason !== 'failed' }));
-    host.send(wire('error', { reason: 'something-newer', message: '', retry: false }));
-    expect(got.map((e) => (e.kind === 'error' ? e.reason : e.kind))).toEqual(['no-microphone', 'permission-denied', 'model-download-failed', 'busy', 'too-long', 'failed', 'failed']);
-    expect(got[6]).toEqual({ kind: 'error', reason: 'failed', message: COULD_NOT_START, retry: false });   /* never an empty sentence */
+    hostDictation(host.bridge).start(BOT, (e) => got.push(e));
+    host.send(wire('error', { reason: 'something-newer', message: 'Dictation needs a processor with AVX2, which this computer does not have.', retry: false }));
+    expect(got).toEqual([{ kind: 'error', reason: 'Dictation failed', retry: false }]);
   });
 
-  it('reads byte counts the host could not give as zero', async () => {
+  it('reads byte counts the host could not give as zero', () => {
     const host = fakeHost();
     const got: DictationEvent[] = [];
-    createDictation(host.bridge).start((e) => got.push(e));
+    hostDictation(host.bridge).start(BOT, (e) => got.push(e));
     host.send(wire('preparing', { done: null, total: null }));   /* events may come before the id does */
     expect(got).toEqual([{ kind: 'preparing', done: 0, total: 0 }]);
   });
 
-  it('says one plain error and ends when the host cannot be asked', async () => {
+  it('says one plain error when the host cannot be asked, or is not there at all, and never throws at the composer', async () => {
     const host = fakeHost();
     const got: DictationEvent[] = [];
-    let ended = 0;
-    const stop = createDictation(host.bridge).start((e) => got.push(e), () => { ended++; });
+    const cancel = hostDictation(host.bridge).start(BOT, (e) => got.push(e));
     host.refuse('dictation_start is not allowed');
     await tick();
-    expect(got).toEqual([{ kind: 'error', reason: 'failed', message: COULD_NOT_START, retry: true }]);
-    expect(ended).toBe(1);
-    stop();
+    expect(got).toEqual([{ kind: 'error', reason: 'Dictation failed' }]);
+    cancel();
     expect(host.calls).toEqual(['start']);
-  });
 
-  it('says the same when there is no host at all, and never throws at the composer', async () => {
-    const got: DictationEvent[] = [];
-    let ended = 0;
+    const none: DictationEvent[] = [];
     const noHost = (): DictationBridge => ({ start: () => { throw new TypeError('window.__TAURI_INTERNALS__ is undefined'); }, stop: () => Promise.resolve() });
-    const stop = createDictation(noHost).start((e) => got.push(e), () => { ended++; });
-    expect(got).toEqual([]);   /* the press itself returns; the error comes as an event */
+    hostDictation(noHost).start(BOT, (e) => none.push(e));
+    expect(none).toEqual([]);   /* the press itself returns; the error comes as an event */
     await tick();
-    expect(got).toEqual([{ kind: 'error', reason: 'failed', message: COULD_NOT_START, retry: true }]);
-    expect(ended).toBe(1);
-    stop();
+    expect(none).toEqual([{ kind: 'error', reason: 'Dictation failed' }]);
   });
 
-  it('keeps going when the composer\'s handler throws', async () => {
+  it('keeps going when the composer\'s handler throws, and runs one dictation after another over the same bridge', async () => {
     const host = fakeHost();
+    const source = hostDictation(host.bridge);
     let n = 0;
-    createDictation(host.bridge).start(() => { n++; throw new Error('the composer is gone'); });
+    source.start(BOT, () => { n++; throw new Error('the composer is gone'); });
     host.answer(1);
     await tick();
     host.send(wire('listening'));
     host.send(wire('final', { text: 'still delivered' }));
-    expect(n).toBe(2);
-  });
-
-  it('runs one dictation after another over the same bridge', async () => {
-    const host = fakeHost();
-    const source = createDictation(host.bridge);
-    const first: DictationEvent[] = [], second: DictationEvent[] = [];
-    source.start((e) => first.push(e));
-    host.answer(1);
-    await tick();
-    host.send(wire('final', { text: 'one' }));
     host.send(wire('ended'));
-    source.start((e) => second.push(e));
+    expect(n).toBe(2);
+    const second: DictationEvent[] = [];
+    source.start(BOT, (e) => second.push(e));
     host.send(wire('final', { text: 'two' }));
     expect(host.made()).toBe(1);
-    expect(first).toEqual([{ kind: 'final', text: 'one' }]);
     expect(second).toEqual([{ kind: 'final', text: 'two' }]);
-  });
-});
-
-describe('the provider\'s text-only dictation', () => {
-  it('hands on each finished stretch, spaced, and no partial words', async () => {
-    const host = fakeHost();
-    const heard: string[] = [];
-    const stop = asDictationSource(createDictation(host.bridge)).start({ botId: null }, (t) => heard.push(t));
-    host.answer(3);
-    await tick();
-    host.send(wire('listening'));
-    host.send(wire('partial', { text: 'and' }));
-    host.send(wire('final', { text: 'And so, my fellow Americans,' }));
-    stop();
-    host.send(wire('final', { text: 'ask not.' }));   /* the words of the stop still arrive */
-    host.send(wire('error', { reason: 'too-long', message: 'Dictation stops after 5 minutes. Press the mic to go on.', retry: true }));
-    host.send(wire('ended'));
-    expect(heard).toEqual(['And so, my fellow Americans,', ' ask not.']);
-    expect(host.calls).toEqual(['start', 'stop:3']);
   });
 });
 
