@@ -74,11 +74,11 @@ pub struct Limits {
     pub api: ApiLimits,
     /// How rooms hold a message while their members work (`rooms/hold.rs`).
     pub rooms: RoomLimits,
-    /// Dictation's numbers (ADR-0052).
+    /// Dictation's numbers (ADR-0059).
     pub dictation: DictationLimits,
 }
 
-/// Dictation's numbers (ADR-0052, `dictation.rs`): how a dictation listens and how the speech model is fetched.
+/// Dictation's numbers (ADR-0059, `dictation.rs`): how a dictation listens and how the speech model is fetched.
 #[derive(Debug, Clone)]
 pub struct DictationLimits {
     /// How a dictation listens: the cap, the pause that ends a stretch, how often words appear, how long the model stays

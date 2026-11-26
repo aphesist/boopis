@@ -7,7 +7,7 @@
   system's libraries, so none of the code-signing exceptions are here (the runtime's own file has them). What is here is
   what macOS's privacy prompts attribute to the app, which is the responsible process for every child it starts: the engine's
   voice, camera, automation, calendar and reminders tools, the same set Hermes's own desktop app declares. The audio input
-  is also the host's own: dictation (ADR-0052) opens the microphone in the app's process, which the hardened runtime
+  is also the host's own: dictation (ADR-0059) opens the microphone in the app's process, which the hardened runtime
   refuses without com.apple.security.device.audio-input.
 -->
 <plist version="1.0">

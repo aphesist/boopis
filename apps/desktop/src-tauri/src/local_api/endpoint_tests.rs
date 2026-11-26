@@ -1535,7 +1535,7 @@ async fn each_stream_gets_a_growing_reply_at_its_own_pace_and_the_words_never_st
     cancel.cancel();
 }
 
-/// ADR-0052: another client reads the bots and answers approvals; it can never start, stop or read the microphone. The API
+/// ADR-0059: another client reads the bots and answers approvals; it can never start, stop or read the microphone. The API
 /// lists no such address, none that a client might guess answers with either method, and no event of the feed is about it.
 /// (That the service itself is out of this module's reach is `dictation.rs`'s `nothing_but_the_command_reaches_the_microphone`.)
 #[tokio::test]

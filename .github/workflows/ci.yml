@@ -173,7 +173,7 @@ jobs:
           git diff -- apps/desktop/ui/src/host/bindings.ts apps/desktop/src-tauri/permissions | head -400
 
   dictation:
-    # Dictation hears (ADR-0052): crates/boopis-dictation's tests, and tests/speech.rs with the REAL speech model, which plays
+    # Dictation hears (ADR-0059): crates/boopis-dictation's tests, and tests/speech.rs with the REAL speech model, which plays
     # a public-domain recording (tests/fixtures/jfk.wav) to a real dictation, as a 16 kHz and as a 48 kHz microphone and
     # once at the speed it was spoken, and checks the words whisper.cpp wrote. This is the job that proves the microphone
     # button transcribes; HX_DICTATION_REQUIRE_MODEL makes a skipped model a failure. The model (57 MB) is fetched from the

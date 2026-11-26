@@ -4,7 +4,7 @@
   Merged into the Info.plist Tauri writes (tauri.bundle.macos.conf.json, bundle.macOS.infoPlist). macOS asks the person in
   the app's name when any process the app starts touches one of these, and refuses without asking when the app gives no
   reason: so each tool the agent may run (voice, camera, automation, calendar, reminders, contacts, the local network) has its
-  sentence here. The microphone's is also boopis's own: dictation (the composer's mic, ADR-0052) is heard by the host itself. The set follows Hermes's own desktop app at the pinned tag; the words are boopis's.
+  sentence here. The microphone's is also boopis's own: dictation (the composer's mic, ADR-0059) is heard by the host itself. The set follows Hermes's own desktop app at the pinned tag; the words are boopis's.
 -->
 <plist version="1.0">
 <dict>

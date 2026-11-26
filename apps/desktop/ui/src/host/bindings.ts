@@ -455,7 +455,7 @@ export type AppSettings_Deserialize = {
 	/**
 	 *  Which speech model dictation uses, by its name in `boopis_dictation::model::MODELS`; `None` is the default
 	 *  (`base-q5_1`). Read at startup, so a change needs a restart. There is no control for it in the app yet: it is the
-	 *  seam for a larger model (ADR-0052). Added without a version bump: a file from before has none.
+	 *  seam for a larger model (ADR-0059). Added without a version bump: a file from before has none.
 	 */
 	speech_model?: string | null,
 };
@@ -476,7 +476,7 @@ export type AppSettings_Serialize = {
 	/**
 	 *  Which speech model dictation uses, by its name in `boopis_dictation::model::MODELS`; `None` is the default
 	 *  (`base-q5_1`). Read at startup, so a change needs a restart. There is no control for it in the app yet: it is the
-	 *  seam for a larger model (ADR-0052). Added without a version bump: a file from before has none.
+	 *  seam for a larger model (ADR-0059). Added without a version bump: a file from before has none.
 	 */
 	speech_model: string | null,
 };

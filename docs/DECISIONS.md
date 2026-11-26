@@ -1119,7 +1119,7 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 
 **Consequences.** The bots look the same everywhere the owner approved them, and an upstream change reaches the app only by a new pin.
 
-## ADR-0052 Dictation is heard on this computer: native capture, whisper.cpp, a model fetched once, and only the person's press opens the microphone (proposed, 26 November 2026)
+## ADR-0059 Dictation is heard on this computer: native capture, whisper.cpp, a model fetched once, and only the person's press opens the microphone (proposed, 26 November 2026)
 **Status.** Proposed: built on `w33/transcription` and proven with a recording through the real model; not yet tried with a person at a real microphone on any of the three systems.
 
 **Context.**
@@ -1151,6 +1151,6 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - The first press fetches 57 MB (the composer says so, with progress); every press after it works offline.
 - The app links ALSA's library on Linux (`alsa-lib` is a dependency of the Arch package; an AppImage takes the system's `libasound.so.2`, which the AppImage tools never bundle) and compiles whisper.cpp in every build that compiles the host: CMake, a C++ compiler and libclang, and on Linux `libasound2-dev`, in every CI job that builds it.
 - The model is in memory (about 150 MB) only around a dictation: it is loaded on the first one, on its own thread, and dropped 2 minutes after the last. Nothing is loaded at start.
-- A person who denied the microphone, or whose system has none, reads a sentence that says what to do (`no-microphone`, `permission-denied`); macOS asks once, in the app's name, with the sentence in `packaging/macos/Info.plist`.
+- A person who denied the microphone, or whose system has none, reads a sentence that says what to do (`no-microphone`, `permission-denied`); macOS asks once, in the app's name, with the sentence in `packaging/macos/Info.plist`, and the host reads the system's own authorization status (AVFoundation, through the `objc2-av-foundation` bindings, MIT) instead of guessing from silence: a question nobody has answered yet is waited for, never reported as a refusal.
 - Quality is the `base` model's: good for clear speech in the languages the owner writes, weaker on names, code words and noise. A larger model is a row in the table and a setting.
 - What is proven is that a recording becomes the right words through the whole pipeline (CI's `dictation` job, `crates/boopis-dictation/tests/speech.rs`); a real microphone, and each system's permission prompt, are tried by hand (`docs/RELEASING.md`, "Dictation").

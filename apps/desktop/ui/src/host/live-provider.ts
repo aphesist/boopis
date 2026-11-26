@@ -773,7 +773,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     ready, sessions, waits, user, engine, sessionControls: controls, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
     details: details.source, run: details.run, mods: modsHost.source, store: liveStore, kanban: liveKanban(),
     council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id), paths: hostPaths() },
-    dictation: hostDictation(), // the host hears and writes it down (host/dictation.ts, ADR-0052)
+    dictation: hostDictation(), // the host hears and writes it down (host/dictation.ts, ADR-0059)
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },
     settled: async () => { await liveStore.settled(); await details.settled(); await controls.settled(); await liveBots.settled(); await liveGroups.settled(); },
     ledger: { totals: () => ledgerTotals, subscribe(fn) { ledgerSubs.add(fn); return () => { ledgerSubs.delete(fn); }; } }

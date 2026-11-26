@@ -1,4 +1,4 @@
-//! Dictation in the host (ADR-0052): the microphone button of a composer, heard and written down on this computer by
+//! Dictation in the host (ADR-0059): the microphone button of a composer, heard and written down on this computer by
 //! `boopis-dictation`. This file is the host's side of it: the service built once at start, how the speech model's bytes
 //! leave the network ([`Https`], the host's one TLS setup), and the events a dictation sends its window.
 //!
@@ -329,7 +329,7 @@ mod tests {
         }
     }
 
-    /// Decision 5 of ADR-0052, kept by reading the host's own sources: the dictation service and the audio crate are
+    /// Decision 5 of ADR-0059, kept by reading the host's own sources: the dictation service and the audio crate are
     /// named only here, in the two commands, in the app's start-up and in the numbers. A new way to the microphone (a
     /// local API route, a command-line command, a gateway method) has to edit this list, in the open.
     #[test]

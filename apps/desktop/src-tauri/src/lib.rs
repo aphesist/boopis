@@ -377,7 +377,7 @@ pub fn run() {
         .on_window_event(|window, event| {
             if window.label() == "main" {
                 window_events(window, event);
-                // The window that could have asked for a dictation is going away: the microphone closes (ADR-0052).
+                // The window that could have asked for a dictation is going away: the microphone closes (ADR-0059).
                 if matches!(
                     event,
                     tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed
@@ -618,7 +618,7 @@ pub fn run() {
             );
             let api_feed = local_api.feed().clone();
             let update_gate = endpoint::Gate::default();
-            // Dictation (ADR-0052). Nothing is opened, read or fetched here: the microphone and the speech model wait for
+            // Dictation (ADR-0059). Nothing is opened, read or fetched here: the microphone and the speech model wait for
             // the person's first press. The model's name is read once (a change needs a restart).
             let speech_model = app
                 .store("settings.json")

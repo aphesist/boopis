@@ -86,7 +86,7 @@ pub struct AppState {
     pub update_gate: crate::endpoint::Gate,
     /// The automatic update was started in this run (once per run).
     pub updating: std::sync::atomic::AtomicBool,
-    /// Dictation (ADR-0052): the one holder of the microphone. Only `dictation_start` and `dictation_stop` use it, and the
+    /// Dictation (ADR-0059): the one holder of the microphone. Only `dictation_start` and `dictation_stop` use it, and the
     /// app's own shutdown paths in `lib.rs`.
     pub dictation: boopis_dictation::service::Dictation,
 }
@@ -1218,7 +1218,7 @@ pub async fn chatgpt_sign_out(
     Ok(state.chatgpt.sign_out().await?)
 }
 
-// ---------------------------------------------------------------- dictation (ADR-0052)
+// ---------------------------------------------------------------- dictation (ADR-0059)
 
 /// Start a dictation: the person pressed a composer's mic. The microphone is opened by the host (never by the page), what
 /// is said is written down on this computer, and the events arrive on `events` (`DictationEvent`): `preparing` while the

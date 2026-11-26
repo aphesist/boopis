@@ -13,7 +13,7 @@ The Rust side of boopis: the `hx` binary and its libraries. The plugin drives `h
 | `hx-pack` | search, read, symbols, outlines, git status, redaction: the `pack.*` handlers, registered in `hx::build_dispatcher` |
 | `hx-sandbox` | the OS sandbox and the `sandbox.*` handlers (run, spawn, wait, kill, capabilities), registered in `hx::build_dispatcher` |
 | `hx-mods` | the runtime for Claude Code mods: QuickJS with a runtime and a sandboxed worker per mod, the oxc TypeScript/JSX transform, the event chain, `$` as asynchronous host calls, the event chain across the workers, and the `hx-mods-v2` worker protocol. Served by `hx` as `mods.*` (`crates/hx/src/mods.rs`), in `hx mods-worker` inside `hx-sandbox` (`docs/MODS.md`) |
-| `boopis-dictation` | not `hx`'s: the desktop host's dictation (ADR-0052). The microphone (cpal), speech to text on this computer (whisper.cpp), the one-time fetch of the speech model with its pinned hash. Its README has its invariants; it needs `libasound2-dev`, CMake and a C++ compiler to build |
+| `boopis-dictation` | not `hx`'s: the desktop host's dictation (ADR-0059). The microphone (cpal), speech to text on this computer (whisper.cpp), the one-time fetch of the speech model with its pinned hash. Its README has its invariants; it needs `libasound2-dev`, CMake and a C++ compiler to build |
 
 ## Invariants
 - Stdout carries protocol frames only.

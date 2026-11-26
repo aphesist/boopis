@@ -24,7 +24,7 @@ pub struct AppSettings {
     pub gpu: crate::gpu::Policy,
     /// Which speech model dictation uses, by its name in `boopis_dictation::model::MODELS`; `None` is the default
     /// (`base-q5_1`). Read at startup, so a change needs a restart. There is no control for it in the app yet: it is the
-    /// seam for a larger model (ADR-0052). Added without a version bump: a file from before has none.
+    /// seam for a larger model (ADR-0059). Added without a version bump: a file from before has none.
     #[serde(default)]
     pub speech_model: Option<String>,
 }

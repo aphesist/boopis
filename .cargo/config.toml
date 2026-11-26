@@ -1,4 +1,4 @@
-# How whisper.cpp is built for dictation (ADR-0052; whisper-rs-sys hands every GGML_* and CMAKE_* variable to its CMake).
+# How whisper.cpp is built for dictation (ADR-0059; whisper-rs-sys hands every GGML_* and CMAKE_* variable to its CMake).
 #
 # Left alone, ggml compiles for the processor of the machine that builds it (`-march=native`), so an installer built on a
 # CI runner would stop with an illegal instruction on an older computer, and a cross build (cargo-xwin) would get no vector
