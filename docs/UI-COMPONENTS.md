@@ -108,7 +108,7 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 4 | Dialog | `dialog` | `kit/dialog` | large (Settings), form (commit, new bot, import, confirm); error |
 | 5 | Menu | `menu`, `openMenu` | `kit/menu` | menu, quick, palette / @ $, snooze, split, options; open, flipped |
 | 6 | Card | `card` (and its Row) | `kit/card` | settings, pane, danger zone collapsed and open |
-| 7 | Block | `block` | `kit/block` | the corner rule's specimen |
+| 7 | Block | `block` | `kit/block` | the corner rule's specimen; `offer` (S37: what is missing, said kindly, over the ways to get it, each a Button led by a provider's mark); narrow |
 | 8 | ToolRow | `toolRow` | `kit/tool-row` | edit, command, read, search; running, done, failed, waiting; a session's (S20): a change waiting with its answers, a command waiting, allowed, denied with feedback; an answer hovered, focused; narrow |
 | 9 | AskCard | `askCard` | `kit/ask-card` | standalone, attached, question, choices, lapsed; asked, needs, answered, hold at 50% |
 | 10 | FilesCard | `filesCard` | `kit/files-card` | 1 file, 2 files (S23) with Open diff, 12 files folded and unfolded, empty, long, narrow; the action hovered, focused |

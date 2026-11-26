@@ -70,7 +70,7 @@ export function openCarefulMenu(anchor: HTMLElement, o: CarefulMenuOpts): HTMLEl
 /** the step as a selector's ticks: one to four, Supervised to Full access */
 export const ticksOf = (s: CarefulStep): { of: number; on: number } => ({ of: 4, on: CAREFUL_STEPS.indexOf(s) + 1 });
 
-/* ───────── the new session's canvas (boards S17 and S41 A; sessionnew.js newSess, kit.css `.ns`) ─────────
+/* ───────── the new session's canvas (boards S17, S37 and S41 A; sessionnew.js newSess, kit.css `.ns`) ─────────
    The "oo" logomark, the greeting, the launch row of quiet selectors (the folder, the worktree, the model with its provider's mark,
    the effort with its five ticks, how careful with the shield), and the sessions waiting on you, one line each. */
 export interface LaunchView {
@@ -96,7 +96,12 @@ export interface LaunchActions {
   careful(anchor: HTMLElement): void;
   /** a session waiting on you: open it */
   open?(id: string): void;
+  /** no model is signed in: go to where `lab` is signed in ("Claude", "ChatGPT", "Gemini"), or to every way there is ('') */
+  signin?(lab: string): void;
 }
+/** S37: what the canvas says when no model is signed in, and the labs it offers first (each by a model of its family, for its mark) */
+export const NO_MODEL = 'boopis needs a model to think with. Sign in once and every session can use it.';
+export const LABS: readonly (readonly [name: string, model: string])[] = [['Claude', 'claude-sonnet'], ['ChatGPT', 'gpt-5'], ['Gemini', 'gemini-pro']];
 const NO_FOLDER = 'Add a folder to start';
 export function launchCanvas(v: LaunchView, act: LaunchActions): HTMLElement {
   const c = document.createElement('div');
@@ -118,12 +123,16 @@ export function launchCanvas(v: LaunchView, act: LaunchActions): HTMLElement {
     : '';
   /* written as markup: the logomark is a custom element, drawn when it is in the page */
   c.innerHTML = kit.html.avatar({ variant: 'logomark', ...(v.model === null ? { state: 'sleeping', label: 'boopis, asleep' } : { label: 'boopis' }) }) + hello +
-    '<div class="ss-new__launch" role="group" aria-label="How the session starts">' + row + '</div>' + waiting;
+    '<div class="ss-new__launch" role="group" aria-label="How the session starts">' + row + '</div>' +
+    /* no model yet (board S37): said kindly inside the canvas, with the sign-ins that exist one press away */
+    (v.folder !== null && v.model === null ? kit.html.block({ variant: 'offer', text: NO_MODEL, body: '', attrs: { role: 'group', 'aria-label': 'Sign in to a model' }, actions: LABS.map(([name, model]) => kit.html.button({ label: name, size: 28, leadHTML: markHTML(model, { size: 14, label: false }), attrs: { 'data-signin': name } })).join('') + kit.html.button({ label: 'More', size: 28, variant: 'ghost', attrs: { 'data-signin': '' } }) }) : '') + waiting;
   c.addEventListener('keydown', (e) => { const r = (e.target as Element).closest<HTMLElement>('[data-open]'); if (r && e.target === r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); r.click(); } });
   c.addEventListener('click', (e) => {
     const t = e.target as Element;
     const open = t.closest<HTMLElement>('[data-open]');
     if (open) { act.open?.(open.dataset['open'] as string); return; }
+    const lab = t.closest<HTMLElement>('[data-signin]');
+    if (lab) { act.signin?.(lab.dataset['signin'] ?? ''); return; }
     const b = t.closest<HTMLElement>('[data-launch]');
     if (!b || b.getAttribute('aria-disabled') === 'true') return;
     const k = b.dataset['launch'];

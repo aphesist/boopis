@@ -38,9 +38,14 @@ export function card(o: CardOpts): string {
 }
 
 /* ── Block (7): every inline surface that holds controls: radius 22, padding 8, 28 px controls on the 8 inset, text 4 more ── */
-export interface BlockOpts { body: string; attrs?: U<Attrs> }
+export interface BlockOpts {
+  body: string; attrs?: U<Attrs>;
+  /** `offer` (board S37's `.ns-hello`): what is missing, said kindly in one centred sentence, over the row of ways to get it (`actions`,
+      kit Buttons as markup) */ variant?: U<'offer'>; text?: U<string>; actions?: U<string>;
+}
 export function block(o: BlockOpts): string {
-  return '<div class="k7-block"' + kitAttrs('Block', { 'data-sq': '', 'data-sq-mode': 'frame', ...(o.attrs ?? {}) }) + '>' + o.body + '</div>';
+  const body = o.variant === 'offer' ? '<p class="k7-type-s k7-block__say">' + esc(o.text ?? '') + '</p><div class="k7-block__ways">' + (o.actions ?? '') + '</div>' + o.body : o.body;
+  return '<div class="k7-block"' + kitAttrs('Block', { 'data-sq': '', 'data-sq-mode': 'frame', 'data-variant': o.variant ?? null, ...(o.attrs ?? {}) }) + '>' + body + '</div>';
 }
 
 /* ── MenuRow (19): glyph + name, name + description, with kbd, danger; a check in a quick menu ── */

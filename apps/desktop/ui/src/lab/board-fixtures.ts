@@ -174,6 +174,23 @@ export function boardS17(p: DataProvider): DataProvider {
   };
 }
 
+/** board S37 (sessionnew.js `newSess`, st `nomodel`): the new session with no model signed in: the mark asleep, "+ Choose a model" in the
+    launch row, the block that offers the sign-ins, "Choose a model to start" in the composer; no usage notice */
+export function boardS37(p: DataProvider): DataProvider {
+  const base = boardS17(p);
+  return { ...base, info: drawn(p, 'worktree'), details: { ...base.details, governance: store({ ...base.details.governance.get(), model: '', smart: false }), choices: store([]) }, limits: store<LimitNotice | null>(null) };
+}
+/** board S41 (st `noproject`): nothing yet: no session, no folder: "Add a folder to start" on the canvas and in the composer */
+export function boardS41(p: DataProvider): DataProvider {
+  const base = boardS17(p), c = controls();
+  const draft: SessionSummary = { id: 's41-new', project: '', title: 'New session', when: '', draft: true };
+  return {
+    ...base, info: drawn(p),
+    sessions: { ...base.sessions, list: store<readonly SessionSummary[]>([draft]), archived: store([]), conversation: () => ({ snapshot: () => ({ turns: [] }), subscribe: () => () => undefined }), create: () => draft },
+    sessionControls: { ...c, launch: store({ ...c.launch.get(), folder: null }) }, limits: store<LimitNotice | null>(null)
+  };
+}
+
 /* ───────── boards S20 and S23: a started session (sessiontab.js `s2`, `s4`) ───────── */
 const ASK = 'The dock loses its right half while the slab moves. Find why and fix it.';
 const tools = (name: string, n: number): Step[] => Array.from({ length: n }, () => ({ title: name, mono: true, time: '' }));

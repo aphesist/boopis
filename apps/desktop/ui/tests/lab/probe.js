@@ -631,7 +631,10 @@
         const hasText = [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
         if (hasText && ckey(s.color) === T.roles['--brass'] && !e.closest('[role="menuitemradio"], [aria-current], .ui-ladder')) add('roles', e, 'text in --brass: brass marks position and choice, never text (R-colour-3)');
         const bg = ckey(s.backgroundColor);
-        if (bg === T.roles['--bg-0'] || bg === T.roles['--bg-3']) {
+        /* board S37 (kit.css `.ns-hello`): the ways an offer holds are the boards' own buttons, drawn on the offer's raised ground and told
+           from it by their line: the board wins (REPASS rule 7) */
+        const offered = e.matches('.k7-block[data-variant="offer"] [data-kit~="Button"]');
+        if (!offered && (bg === T.roles['--bg-0'] || bg === T.roles['--bg-3'])) {
           for (let p = e.parentElement; p && p !== document.documentElement; p = p.parentElement) {
             let pb = getComputedStyle(p).backgroundColor;
             /* a drawn shape (the squircle) paints its fill from --sq-bg and leaves background-color clear: that fill is its surface */

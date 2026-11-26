@@ -53,6 +53,14 @@ function showSettingsSection(section?: string): void {
   d.classList.toggle('is-side', sec === 'appearance');
   $('.hx-dialog__body', d).scrollTop = 0;
 }
+/** Models, opened for one lab (the new session's "boopis needs a model": Claude, ChatGPT, Gemini): its provider search starts with the
+    lab's name, so the list is that lab's ways to sign in. The section mounts on its own time; where it has no search (the page build,
+    which has no engine to sign in to) nothing is typed */
+function findProvider(name: string, tries = 40): void {
+  const q = els().settings.querySelector<HTMLInputElement>('#hx-prov-q');
+  if (q) { q.value = name; q.dispatchEvent(new Event('input', { bubbles: true })); return; }
+  if (tries > 0 && els().settings.open) setTimeout(() => { findProvider(name, tries - 1); }, 100);
+}
 /* Settings > Models: the plan, the ladder and "Change models". Built the first time the tab opens, and asked again every time
    it opens, because Hermes's plan and the saved ladder move while the dialog is closed. Without the desktop host there is no
    Hermes to ask: the plan section says so and the ladder and the button are left out, rather than drawn empty. */
@@ -209,11 +217,12 @@ function mountOrbGrow(): void {
   ui.hydrate(sec);
   $('#hx-set-orb-grow', sec).addEventListener('ui:change', (e) => setState({ orbGrow: !!(e as CustomEvent<{ value: boolean }>).detail.value }));
 }
-export function openSettings(section?: string): void {
+export function openSettings(section?: string, find?: string): void {
   closePalette(); closeMenu(false);
   const d = els().settings;
   showSettingsSection(section);
   if (!d.open) { try { d.showModal(); } catch { d.setAttribute('open', ''); } }
+  if (section === 'models' && find) findProvider(find);
   const card = $('.hx-dialog__card', d); card.tabIndex = -1; card.focus({ preventScroll: true });
 }
 

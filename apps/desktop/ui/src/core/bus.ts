@@ -33,7 +33,7 @@ export interface EventMap {
   'hx:nav': { action: 'first' | 'last'; region: RegionName | null };
   'hx:region': { region: RegionName };
   /** a surface asks the shell to open Settings at a section (`models`) */
-  'hx:open-settings': { section: string; from?: string };
+  'hx:open-settings': { section: string; from?: string; /** Models: what its provider search starts with ("Claude"), so the person lands on that lab's sign-in */ find?: string };
   'hx:bot-settings': { open?: boolean; toggle?: boolean; from?: string };
   'hx:view-inset': { tab?: Tab; left?: number; right?: number; source?: string };
   'hx:toast': { text?: string; message?: string };

@@ -363,6 +363,8 @@
   --ns-wait-top: 40px;
   --ns-mark: 72px;
   --ns-logo: 44px;
+  --offer-w: 470px;
+  --ns-offer-top: 22px;
 }
 /* one device pixel (elevation.hairline) */
 @media (min-resolution: 1.5dppx) { [data-ui="v7"] { --hl: 0.625px; } }

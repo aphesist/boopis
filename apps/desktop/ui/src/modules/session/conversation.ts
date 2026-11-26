@@ -565,7 +565,9 @@ export function mountView(root: HTMLElement): void {
   NEW = mountNew(root, {
     actions: {
       folder: () => { void openFolder(); },
-      model: (a) => { openModel(a); },
+      /* with no model signed in there is nothing to choose from: the way is the sign-ins (Settings, Models) */
+      model: (a) => { if (data().details.choices.get().length) openModel(a); else emit('hx:open-settings', { section: 'models', from: 'no-model' }); },
+      signin: (lab) => { emit('hx:open-settings', { section: 'models', from: 'no-model', ...(lab ? { find: lab } : {}) }); },
       effort: (a) => { openEffort(a); },
       careful: (a) => { openCarefulFor(a, 'below'); },
       open: (id) => { selectSession(id, { focus: true }); }

@@ -314,7 +314,7 @@ function wire(): void {
     setTitleOverride((TABS as readonly string[]).includes(d.tab ?? '') ? (d.tab as Tab) : state.tab, d.title || d.text || null, members?.length ? { members } : d.sub != null ? { sub: d.sub || null } : null);
     updateTitle();
   });
-  on('hx:open-settings', (d) => { if (d) openSettings(d.section); });
+  on('hx:open-settings', (d) => { if (d) openSettings(d.section, d.find); });
   on('hx:open-store', (d) => { openStore(d?.screen); });
   on('hx:open-panel', (d) => { if (d && d.from !== 'shell' && state.right !== 'open') setState({ right: 'open' }); });
   on('hx:attention', (d) => { if (d) reportAttention(d.source || 'unknown', d.count, d.tab, d.ids); });

@@ -2,6 +2,7 @@
    follows its events; a change waiting on its tool row is allowed by the hold and denied by Deny, Esc or by typing feedback; the
    composer's line, its "+" and quick menus, Stop and the keys do their jobs. */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { on } from '../../core/bus';
 import { setProvider } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
 import { store } from '../../data/store';
@@ -100,6 +101,31 @@ describe('the thread', () => {
   it('the line where the answering model changes is the kit\'s SystemLine', () => {
     boot([{ id: 'u1', role: 'user', at: '09:42', text: 'a' }, agent({ status: 'done', model: 'haiku 4.5' }), { id: 'u2', role: 'user', at: '09:50', text: 'b' }, agent({ id: 'a2', status: 'done', model: 'sonnet 5.5' })]);
     expect(q('.ss-divider .k7-sys').textContent).toContain('→');
+  });
+});
+
+describe('a new session with no model signed in (board S37)', () => {
+  const YES = { ok: true as const }, steps = { supervised: YES, auto_edits: YES, auto: YES, full: YES };
+  const controls = (): SessionControls => ({
+    capabilities: store<SessionCapabilities>({
+      engine: { caps: new Set(), createParams: new Set() }, plugin: { present: true, version: null, rpc: new Set() },
+      launch: { create: YES, folder: YES, model: YES, effort: YES, skills: YES, efforts: [], careful: steps },
+      session: { fork: YES, compact: YES, rewind: YES, changeModel: { ok: false, why: 'The session has not started.' }, changeEffort: YES, changeCareful: steps, changeFolder: YES, changeSkills: YES }
+    }),
+    launch: store({ folder: '/home/you/code/boopis', careful: 'auto_edits', effort: null, fellBack: false }), setLaunch: () => null, setCareful: () => Promise.resolve(null), setEffort: () => Promise.resolve(null),
+    rewind: () => Promise.resolve({ status: 'nothing_to_do', isolation: 'own_worktree', files: [] }), head: () => null, pickFolder: null
+  });
+  it('the canvas offers the sign-ins and the composer says "Choose a model to start"; a lab opens Settings at Models on that lab, More and "+ Choose a model" on every way', () => {
+    const base = createMockProvider({ simulate: false });
+    boot([], { sessionControls: controls(), details: { ...base.details, choices: store([]), governance: store({ ...base.details.governance.get(), model: '', smart: false }) } });
+    expect(q('.ss-new .k7-composer__text').dataset['placeholder']).toBe('Choose a model to start');
+    const went: Array<{ section: string; from?: string; find?: string }> = [];
+    const off = on('hx:open-settings', (d) => { if (d) went.push(d); });
+    q('.ss-new [data-signin="ChatGPT"]').click();
+    q('.ss-new [data-signin=""]').click();
+    q('.ss-new [data-launch="model"]').click();
+    off();
+    expect(went).toEqual([{ section: 'models', from: 'no-model', find: 'ChatGPT' }, { section: 'models', from: 'no-model' }, { section: 'models', from: 'no-model' }]);
   });
 });
 

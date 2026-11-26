@@ -10,7 +10,7 @@ export type ButtonVariant = typeof BUTTON_VARIANTS[number];
 export const BUTTON_SIZES = [36, 32, 28] as const;
 export type ButtonSize = typeof BUTTON_SIZES[number];
 export interface ButtonOpts {
-  label: string; variant?: U<ButtonVariant>; size?: U<ButtonSize>; icon?: U<string>; disabled?: U<boolean>;
+  label: string; variant?: U<ButtonVariant>; size?: U<ButtonSize>; icon?: U<string>; /** what leads the label in place of a glyph (a provider's mark, S37): trusted kit markup */ leadHTML?: U<string>; disabled?: U<boolean>;
   /** hold to confirm: the fill sweeps over --dur-hold (1 s, owner decision) and fires ui:commit */
   hold?: U<boolean>; tip?: U<string>; keys?: U<string>; type?: U<'button' | 'submit'>; attrs?: U<Attrs>;
   /** split: the menu half's accessible name */
@@ -19,7 +19,7 @@ export interface ButtonOpts {
 export function button(o: ButtonOpts): string {
   const v = o.variant ?? 'secondary', size = o.size ?? 36;
   const a = (extra: Attrs): string => attrs({ type: o.type ?? 'button', disabled: !!o.disabled, 'data-tip': o.tip, 'data-kbd': o.keys, ...extra });
-  const inner = glyph(o.icon) + '<span class="k7-btn__label">' + esc(o.label) + '</span>';
+  const inner = (o.leadHTML ?? glyph(o.icon)) + '<span class="k7-btn__label">' + esc(o.label) + '</span>';
   if (v === 'split') {
     return '<span class="k7-split" ' + kitAttrs('Button', { 'data-variant': 'split', 'data-size': size, ...(o.attrs ?? {}) }).trim() + '>' +
       '<button class="k7-reset k7-btn k7-split__main"' + a({ 'data-variant': 'primary', 'data-size': size }) + '>' + inner + '</button>' +

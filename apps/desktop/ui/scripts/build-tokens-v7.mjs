@@ -99,7 +99,7 @@ both.push('--file-w: 260px;',                       /* a file card (kit.css .fil
   '--hover-ctl: 28px;', '--step-dot: 7px;',                             /* a hover action beside a bubble (kit.css .hoverbar span) */
   '--stop-glyph: 10px;', '--r-stop: 2px;',              /* the composer's Stop: a filled rounded square in a tinted 28 circle (owner, 25 November) */
   '--wc-w: 32px;', '--wc-h: 28px;', '--icon-l: 18px;',                 /* a window glyph's cell (kit.css .wc span) */
-  '--ns-top: 64px;', '--ns-bottom: 250px;', '--ns-wait-w: 520px;', '--ns-wait-top: 40px;', '--ns-mark: 72px;', '--ns-logo: 44px;');   /* the new session's canvas (kit.css .ns, .ns-wait, .ns-mark; sessionnew.js brand) */
+  '--ns-top: 64px;', '--ns-bottom: 250px;', '--ns-wait-w: 520px;', '--ns-wait-top: 40px;', '--ns-mark: 72px;', '--ns-logo: 44px;', '--offer-w: 470px;', '--ns-offer-top: 22px;');   /* the new session's canvas (kit.css .ns, .ns-wait, .ns-mark; sessionnew.js brand) */
 
 const css = `/* Generated from tokens.v7.json by scripts/build-tokens-v7.mjs. Do not edit: run \`pnpm tokens\`. */
 ${DARK} { color-scheme: dark;
