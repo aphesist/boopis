@@ -228,3 +228,15 @@ None for the owner. Package w32 decides the house tools' wording and the plan ca
 | The secret channel's transport: `0600` socket, per-launch token, kernel peer check that the caller is the gateway | verified: `secrets/channel.rs`, `secrets/peer.rs`; macOS process questions on w30/macos; Windows not implemented |
 | `session.create {client_env: {BOOPIS_JOB}}` tags a session | partly: `client_env` exists but is an allowlisted, secret-filtered map (`gateway/session_policy.py:157-165`, `agent/session_client_env.py`); whether `BOOPIS_JOB` passes is [verify]. Not needed here: the host records the sessions it creates in the job file |
 | `prompt.submit` is idempotent by `submission_id` | [verify] |
+
+## 14. Built on w34/host-foundations (what differs from the text above)
+
+| Point | As built |
+|---|---|
+| Line caps (4.1) | 8 KiB for the verbs without text; the text verbs take what their text may be, escaped, plus 4 KiB (`room.say`, `room.run`, `bot.run` 36 KiB; `bot.say` 68 KiB); `team.plan` 160 KiB. A flat 8 KiB could not carry a 16 or 32 KiB text |
+| Where the logic lives | `crates/boopis-hostops` (listener, verbs, dispatcher, run table, limits, audit, grants, jobs, plan files); `apps/desktop/src-tauri/src/house` (the app's verbs) and `team/held.rs` (plan, apply by hash, undo, reject) |
+| `team.plan`, `room.run`, `bot.run` in the app | run this binary's own command line (`team plan -`, `run --group`, `run --bot`), so the team and the runs have one implementation; a run's log is `house/runs/<run_id>.jsonl` and its `session_id` is answered `null` (unknown until the run says it) |
+| Apply and undo from the window | `team_plan_apply` and `team_plan_undo` run `boopis team apply --hash` / `team undo` with `BOOPIS_SURFACE=gui` |
+| Run table keys | written `pending` before the verb acts; a key found `pending` is `hx.host.in_progress` and never acted on again; a failed verb frees its key |
+| `prompt.submit` by `submission_id` | still [verify]; the run table is the guard |
+| Not built | `POST /v1/jobs/<id>/stop`, `POST /v1/house/stop-all`, `plans.changed` / `jobs.changed` on the local API's stream, notification kind `plan`, the 4.4 32 KiB message cap beyond the per-verb caps |
