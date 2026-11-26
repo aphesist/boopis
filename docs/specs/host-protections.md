@@ -1,6 +1,6 @@
 # Host protections: no bot answers for the owner (B47)
 
-Status: draft for w31 (the package's w28), proposed in ADR-0053. Owner decision 10 (23 November 2026): "B47 and no self-approval are host protections, not rules". They are not in the rules list (`rules-engine.md`), cannot be edited or removed in Settings, and apply whatever a bot's tiers or the global rules say.
+Status: draft for w31 (the package's w28), proposed in ADR-0062. Owner decision 10 (23 November 2026): "B47 and no self-approval are host protections, not rules". They are not in the rules list (`rules-engine.md`), cannot be edited or removed in Settings, and apply whatever a bot's tiers or the global rules say.
 
 ## 1. The problem, and what this is not
 

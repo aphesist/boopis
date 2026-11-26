@@ -1,6 +1,6 @@
 # The rules engine: one plain-language rules list for every bot
 
-Status: draft for w31 (the package's w28), proposed in ADR-0051. Owner decision 10 (23 November 2026) and the owner's answers to the foundations plan (same day): one global rules list plus the per-bot Allow/Ask/Block rows; the reviewer is the cheapest connected model, changeable; no default caps.
+Status: draft for w31 (the package's w28), proposed in ADR-0060. Owner decision 10 (23 November 2026) and the owner's answers to the foundations plan (same day): one global rules list plus the per-bot Allow/Ask/Block rows; the reviewer is the cheapest connected model, changeable; no default caps.
 
 ## 1. What the owner decided
 

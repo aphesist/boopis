@@ -1,6 +1,6 @@
 # Blanks: in sessions, the agent asks inline, waits a while, then goes on with its guess
 
-Status: draft for w31, proposed in ADR-0056. The owner's decisions (23 November 2026):
+Status: draft for w31, proposed in ADR-0065. The owner's decisions (23 November 2026):
 - "Should probably wait for your confirmation before continuing / find a way to make your answer reach the bot inside their own reply. That's the entire thing, so you don't trigger a double output from the bot. boopis needs to function this way."
 - A blank **waits inline for a while, not forever**. With no answer in time, the agent **keeps going on its best guess**, and the question stays as a card that can still be answered; a late answer reaches it as a correction.
 - **Blanks are for sessions only. Bots have no blanks at all, not even as an option.** A bot asks only where the owner decided beforehand that it must: the rules engine and the per-bot rows (`rules-engine.md`), shown as an approval card (`approval-surfaces.md`, the Grok-Bot design recording `grok-package/grokbot-design/GROKBOT-DESIGN.md`). A bot's ask has **no time limit**: "If it's asking you something it's not because it doesn't know, it's because you made it so it asks whenever that happens, so it should ask."
@@ -196,7 +196,7 @@ Events: `blank.opened` (with `wait_s` and `deadline`), `blank.filled`, `blank.la
 - **Governed caps:** waiting costs no tokens; the cost cap sees nothing during a wait.
 - **The island and the notch** show a waiting blank with its countdown and options, and a lapsed card with its options. A typed answer opens boopis at the blank.
 - **The Local API** lists waiting blanks and lapsed cards as kind `question` and answers them through `blank.fill` (the host submits a returned correction). **[verify]** the inbox's kinds on `w30/local-api-0.2`.
-- **Only owner surfaces answer** (ADR-0053): the host refuses an answer from a bot's process (`host-protections.md`).
+- **Only owner surfaces answer** (ADR-0062): the host refuses an answer from a bot's process (`host-protections.md`).
 
 ## 10. Removing the injected turn
 

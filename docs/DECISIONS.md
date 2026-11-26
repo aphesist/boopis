@@ -1154,9 +1154,9 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - A person who denied the microphone, or whose system has none, reads a sentence that says what to do (`no-microphone`, `permission-denied`); macOS asks once, in the app's name, with the sentence in `packaging/macos/Info.plist`, and the host reads the system's own authorization status (AVFoundation, through the `objc2-av-foundation` bindings, MIT) instead of guessing from silence: a question nobody has answered yet is waited for, never reported as a refusal.
 - Quality is the `base` model's: good for clear speech in the languages the owner writes, weaker on names, code words and noise. A larger model is a row in the table and a setting.
 - What is proven is that a recording becomes the right words through the whole pipeline (CI's `dictation` job, `crates/boopis-dictation/tests/speech.rs`); a real microphone, and each system's permission prompt, are tried by hand (`docs/RELEASING.md`, "Dictation").
-<!-- ADR-0050 is kept for w30/governed-bots's record "A bot's own rules are enforced", numbered ADR-0048 on its branch, which collides with ADR-0048 here; it is renumbered when w30 is merged. The records below are drafts for the w31 foundations wave (docs/specs/). -->
+<!-- ADR-0050 is kept for w30/governed-bots's record "A bot's own rules are enforced", numbered ADR-0048 on its branch, which collides with ADR-0048 here; it is renumbered when w30 is merged. The records below are drafts for the w31 foundations wave (docs/specs/), numbered ADR-0051 to ADR-0056 on w31/specs and renumbered ADR-0060 to ADR-0065 here (ADR-0051 is the orb, ADR-0057 and ADR-0058 are w32/session-specs's, ADR-0059 is dictation). -->
 
-## ADR-0051 The rules engine runs in the plugin's gate, for every tool, with its own reviewer (proposed, 23 November 2026)
+## ADR-0060 The rules engine runs in the plugin's gate, for every tool, with its own reviewer (proposed, 23 November 2026)
 **Status.** Proposed (w31 foundations; spec `docs/specs/rules-engine.md`).
 
 **Context.**
@@ -1169,7 +1169,7 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 3. **Pre-filter** for unedited default rules only, exact for structured calls (a miss means the rule does not apply) and a hint for opaque ones; **reviewer** for the rest, through `ctx.llm.complete_structured(task="boopis_reviewer")`, trusted rules in the system prompt, the action as delimited untrusted input, one verdict per rule id. A failure, timeout or wrong route holds the action at a card; where nobody can answer, it is refused and the owner notified.
 4. **The card is the engine's approval gate.** "Allow all this turn" is the engine's `session` answer on a turn-scoped rule key; "Always allow" answers `once` and drafts a narrow exception the owner edits; the engine's `always` is never sent for these cards.
 5. **`rules.json` is written by the host only** (Tauri commands from the window); the plugin reads it. The reviewer is the cheapest priced connected model by a fixed standard check, or the owner's pick.
-6. `approvals.mode` stays as the owner has it (`smart` or `manual`); `off`, yolo and approving cron or unattended modes are refused for bot profiles (ADR-0053).
+6. `approvals.mode` stays as the owner has it (`smart` or `manual`); `off`, yolo and approving cron or unattended modes are refused for bot profiles (ADR-0062).
 7. w30/governed-bots's tiers become per-bot rows whose default is "follow the rules list"; boopis-written tiers and caps are cleared once.
 
 **Alternatives weighed.**
@@ -1183,7 +1183,7 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - Room turns and kanban workers: whether their cards reach a person is to be verified on a live engine; behaviour is held where a person can answer, refused and notified where not.
 - A scheduled run's refused step is parked as an approval card and re-run on approval, in a run that resumes the scheduled session with a one-time grant for that exact call (owner decision, 23 November 2026; spec section 8.3).
 
-## ADR-0052 The host-ops channel, and the verbs a bot can reach (proposed, 23 November 2026)
+## ADR-0061 The host-ops channel, and the verbs a bot can reach (proposed, 23 November 2026)
 **Status.** Proposed (w31 foundations; spec `docs/specs/team-ops.md`).
 
 **Context.**
@@ -1202,7 +1202,7 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - Only the gateway process reaches the channel: house tools work in the BOOPIS bot's chat and room turns, not in kanban or cron worker processes. Windows has no channel until a named-pipe server exists.
 - A plan made before another window or the CLI changed the team is refused at apply and must be made again.
 
-## ADR-0053 B47: host protections, and approvals answered only from an owner surface (proposed, 23 November 2026)
+## ADR-0062 B47: host protections, and approvals answered only from an owner surface (proposed, 23 November 2026)
 **Status.** Proposed (w31 foundations; specs `docs/specs/host-protections.md`, `docs/specs/approval-surfaces.md`). Changes part of ADR-0045 ("once or deny only" from outside the window).
 
 **Context.**
@@ -1221,7 +1221,7 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - Said plainly in `docs/LOCAL-API.md`: a program that double-forks, clears its environment and leaves the gateway's cgroup passes check 3; reading the token is denied but can be built. Defence in depth.
 - Follow-ups: per-client tokens (reverses ADR-0045's one-token consequence; the owner's call), an engine veto hook carrying who answered (an answer through a ticket minted at the control socket is invisible to the host today), the gateway's pid on Windows.
 
-## ADR-0054 The package's waves are renumbered w31 to w36 (proposed, 23 November 2026)
+## ADR-0063 The package's waves are renumbered w31 to w36 (proposed, 23 November 2026)
 **Status.** Proposed; the owner did not object to the plan's proposal (23 November 2026).
 
 **Context.** The owner's design package (`boopis-package`, 23 November 2026) names its waves w28 to w33 and the calm pass w28c. Branches `w28/launch-video`, `w29/*` and `w30/*` already exist.
@@ -1230,7 +1230,7 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 
 **Consequences.** Branch names follow this numbering (`w31/rules-engine`, `w31/host-protections`, `w31/team-ops`, `w31/rules-ui`, `w31c/calm`); the package's text is not rewritten.
 
-## ADR-0055 Feedforward reads the draft in the plugin, with the cheapest model of the answering provider, and its answers ride the next user message (proposed, 23 November 2026)
+## ADR-0064 Feedforward reads the draft in the plugin, with the cheapest model of the answering provider, and its answers ride the next user message (proposed, 23 November 2026)
 **Status.** Proposed (w31; spec `docs/specs/feedforward.md`). The owner's decisions (23 November 2026): on by default and shown live in first run; the reader is the cheapest fast model of the same provider the message goes to; it runs in sessions, bot chats and rooms, each switchable, with per-bot and per-room overrides; subscriptions may be read on if fast enough; everything the "Will assume" row shows travels, the person's picks marked (the last two are defaults).
 
 **Context.**
@@ -1240,7 +1240,7 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 **Decision.**
 1. **The read is a plugin RPC**, `plugin.boopis.feedforward.read {session_id?, draft_id, rev, draft, cursor, prior, context}`, returning marks (`text`, UTF-16 `at`, `kind`, `reading`, `options`, `guess`, `confidence`) and assumptions. The model names a mark's text and occurrence; the plugin computes the offsets.
 2. **Staleness by revisions on both sides**: the UI keeps one read in flight per composer and drops answers older than the last applied; the plugin answers an older `rev` as `stale` with no model call and runs one call per draft at a time. Marks are re-anchored on the live text between reads.
-3. **The reader is the cheapest fast, priced, non-heavy model of the same provider the message goes to**, by the reviewer's chooser (one implementation, shared with ADR-0051), through the plugin's own auxiliary task; a route measured too slow is skipped, and with none left there are no marks. A subscription may be the reader. Not frontier-bound: a read does no governed work. Every read runs in the root profile and its cost is the person's.
+3. **The reader is the cheapest fast, priced, non-heavy model of the same provider the message goes to**, by the reviewer's chooser (one implementation, shared with ADR-0060), through the plugin's own auxiliary task; a route measured too slow is skipped, and with none left there are no marks. A subscription may be the reader. Not frontier-bound: a read does no governed work. Every read runs in the root profile and its cost is the person's.
 4. **Fail quiet**: no reader, an error or a timeout gives no marks and never delays or blocks sending. Feedforward is advice, not a permission, policy or gate check.
 5. **Cost on the ledger**: `usage.recorded` with `purpose: "feedforward"` in the session's ledger, or, before the session exists, in a monthly aside ledger in contraprova's format.
 6. **The answers ride the next user message**: `feedforward.commit` arms the session's next turn (as `mode.once` does), and `pre_llm_call` returns a fixed `<boopis-readings v="1">` block after the typed text. The system prompt, toolsets and skills never change (invariant 4). Each travelled reading is a `feedforward.set` ledger event.
@@ -1258,7 +1258,7 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - At most one read in flight and one waiting per composer; a hard timeout of 5 s.
 - `docs/PROTOCOL.md`'s `feedforward.preview` and `feedforward.set` are replaced by `feedforward.read` and `feedforward.commit`.
 
-## ADR-0056 In sessions, blanks wait inline for a while through a plugin tool, then the agent goes on with its guess; bots ask only through approvals, with no time limit (proposed, 23 November 2026)
+## ADR-0065 In sessions, blanks wait inline for a while through a plugin tool, then the agent goes on with its guess; bots ask only through approvals, with no time limit (proposed, 23 November 2026)
 **Status.** Proposed (w31; spec `docs/specs/blanks-inline.md`). The rules are the owner's (23 November 2026): the answer must reach the agent inside its own reply, with no double output; a blank waits for a while, not forever, then the agent goes on with its best guess and the question stays answerable; **blanks are for sessions only, and bots have none, not even as an option**: a bot asks only where the owner set it up to ask (rules and its rows), as an approval card, and that ask has no time limit ("If it's asking you something ... it's because you made it so it asks whenever that happens, so it should ask"). Defaults and looks as design system v7 section 17.1: 30 s, 60 s (default), 2 min; "(my guess)"; one shared card for a lapsed blank and a bot's approval.
 
 **Context.**

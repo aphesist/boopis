@@ -1,6 +1,6 @@
 # Approval surfaces: the inbox, the card, and its four answers
 
-Status: draft for w31 (the package's w28). Part B 5.3 ("Add: session and always through the Local API; edit-before-approve; allow all for this turn; the rule link on the card; the B40 argument summary"). Builds on ADR-0045 (the inbox) and `rules-engine.md` (the cards it makes); changes ADR-0045's "once or deny only" as proposed in ADR-0053.
+Status: draft for w31 (the package's w28). Part B 5.3 ("Add: session and always through the Local API; edit-before-approve; allow all for this turn; the rule link on the card; the B40 argument summary"). Builds on ADR-0045 (the inbox) and `rules-engine.md` (the cards it makes); changes ADR-0045's "once or deny only" as proposed in ADR-0062.
 
 ## 1. Where it runs
 

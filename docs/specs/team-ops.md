@@ -1,6 +1,6 @@
 # Team operations: plans, runs and stops for the BOOPIS bot and clients
 
-Status: draft for w31 (the package's w28), proposed in ADR-0052. Source: Part C sections 2.3 (tiers T0-T3, gaps G1-G3), 2.5 (no self-approval) and 4.1-4.4. The BOOPIS bot's own tools (`house_*`) are package w29, here w32; this spec builds what they call.
+Status: draft for w31 (the package's w28), proposed in ADR-0061. Source: Part C sections 2.3 (tiers T0-T3, gaps G1-G3), 2.5 (no self-approval) and 4.1-4.4. The BOOPIS bot's own tools (`house_*`) are package w29, here w32; this spec builds what they call.
 
 ## 1. Rules that hold for every operation
 
