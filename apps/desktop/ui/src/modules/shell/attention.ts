@@ -20,7 +20,7 @@ export function updateTitle(): void {
   if (state.tab === 'session') {
     const ss = data().sessions.list.get();
     const s = ss.find((x) => x.id === sh.selection.session) ?? ss.find((x) => x.running) ?? ss[0];
-    t = t || (s ? s.title : 'New session');
+    t = t || (s ? s.title : 'Sessions');   /* nothing open: the pill names the tab (board S41) */
     const sub = leadOverride.session ? leadOverride.session.sub : s && !s.draft ? s.branch : null;
     lead = { icon: 'session', ...(sub ? { sub } : {}) };   /* the boards' session glyph in the pill's 24 circle (sessiontab.js title) */
   } else {

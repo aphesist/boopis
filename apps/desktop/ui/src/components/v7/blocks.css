@@ -56,6 +56,7 @@
 .k7-menu__list { display: flex; flex-direction: column; min-height: 0; overscroll-behavior: contain; }
 .k7-menu[data-variant="palette"] { width: var(--palette-w); border-radius: var(--r-card); padding: var(--pad-palette); }
 .k7-menu[data-variant="options"] { width: var(--options-w); }
+.k7-menu[data-variant="list"] { width: var(--menu-list-w); }   /* sessiontab2.js s11: the lists of things with a description */
 .k7-menu__sep { height: var(--hl); margin: var(--sp-1) var(--sp-2); background: var(--line-strong); flex: none; }
 .k7-menu__head { padding: var(--pad-row-y) var(--pad-row-x) var(--gap-hair); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
 .k7-menu__query { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl); padding: 0 var(--sp-3); color: var(--text-quiet); }
@@ -171,8 +172,10 @@
 .k7-notice[data-tone="owe"] { --sq-bg: var(--owe-soft); --sq-line: transparent; color: var(--owe-text); }
 .k7-notice[data-tone="accent"] { --sq-bg: var(--accent-soft); --sq-line: transparent; color: var(--accent-text); }
 .k7-notice[data-tone="red"] { --sq-bg: var(--red-soft); --sq-line: transparent; color: var(--red-text); }
-.k7-notice[data-place="floating"] { --sq-line: var(--float-line); --sq-shadow: var(--shadow-pop); width: max-content; color: var(--text); font-size: var(--fs-m); line-height: var(--lh-m); }
-.k7-notice[data-place="floating"][data-tone="neutral"] { --sq-bg: var(--bg-3); }
+/* floating: the notice over the work (notify.ts) and one opened against a control (openNotice: `data-floating`; the placement writes its
+   own side into data-place, so that one is not read by its place) */
+.k7-notice[data-place="floating"], .k7-notice[data-floating] { --sq-line: var(--float-line); --sq-shadow: var(--shadow-pop); width: max-content; color: var(--text); font-size: var(--fs-m); line-height: var(--lh-m); }
+.k7-notice[data-place="floating"][data-tone="neutral"], .k7-notice[data-floating][data-tone="neutral"] { --sq-bg: var(--bg-3); }
 .k7-notice .k7-ib[data-variant="ghost"] { flex: none; }
 @media (prefers-reduced-motion: no-preference) { .k7-notice[data-enter] { animation: k7-enter var(--dur-1) var(--ease-sharp); } }
 @keyframes k7-enter { from { opacity: 0; transform: translateY(var(--sp-1)) scale(.98); } }
@@ -186,7 +189,8 @@
 /* S33 (sessiontab.js `s8`): the extra cost in mono, 6 more after the words */
 .k7-sys__meta { flex: none; margin-inline-start: var(--gap-s); }
 .k7-sys__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.k7-sys[data-variant="error"] .k7-sys__text { color: var(--red-text); }
+/* S36 (sessiontab2.js `s18`): what went wrong is the line's own colour, its glyph with its words; the action keeps its ink */
+.k7-sys[data-variant="error"] { color: var(--red-text); }
 .k7-sys[data-act] { height: var(--line-h-act); padding: 0 var(--pad-line-act) 0 var(--sp-3); }
 .k7-sys[data-act] > .k7-btn:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
 .k7-sys[data-act] > .k7-btn { height: var(--line-h); padding: 0 var(--sp-3); margin-inline-start: var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-xs); }
@@ -278,6 +282,9 @@
 .k7-step__ic { display: inline-grid; place-items: center; width: var(--icon-s); flex: none; color: var(--text-quiet); }
 .k7-step__dot { width: var(--gap-s); height: var(--gap-s); border-radius: var(--r-pill); background: var(--mark-off); }
 .k7-step[data-state="done"] .k7-step__ic { color: var(--ok-text); }
+.k7-step[data-state="log"] .k7-step__ic { color: inherit; }   /* S10 (sessionboards.js `s10`): a work log's glyph is its words' colour */
+/* S10: an open work line's rows start under its words, past the chevron (16 and the 6 between) */
+.k7-disc[data-variant="worklog"] > .k7-disc__body > .k7-steps { margin-inline-start: calc(var(--icon-s) + var(--gap-s)); }
 .k7-step[data-state="failed"] .k7-step__ic, .k7-step[data-state="failed"] { color: var(--red-text); }
 .k7-step[data-state="now"] { color: var(--text); }
 .k7-step[data-state="now"] .k7-step__dot { width: var(--step-dot); height: var(--step-dot); background: var(--text-dim); animation: k7-pulse var(--dur-breathe) var(--ease-io) infinite; }
@@ -312,7 +319,9 @@
 
 /* ── EmptyState: one line in --text-dim, at most one action ── */
 .k7-empty { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); padding: var(--sp-5) var(--sp-4); text-align: center; }
-.k7-empty__text { margin: 0; max-width: 80ch; font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); }
+.k7-empty__text { margin: 0; max-width: 80ch; font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text-dim); }   /* the boards' `.s` */
+/* in a list (board S41, sessiontab2.js emptyInbox: 18 over the line, 10 beside it, inside the list's own 10) */
+.k7-empty[data-place="list"] { align-items: flex-start; padding: calc(var(--sp-4) + var(--sp-1) / 2) var(--gap-row); text-align: start; }
 /* the floating Notice's layer (notify.ts): one at a time, it fades in toward its place and out (--dur-2; reduced motion: at once).
    Where it sits, and above what, is the host's (the shell: the top of the work, on the column's centre line) */
 .k7-notify { position: absolute; pointer-events: none; opacity: 0; translate: 0 calc(-1 * var(--sp-1)); transition: opacity var(--dur-2) var(--ease-sharp), translate var(--dur-2) var(--ease-sharp); }

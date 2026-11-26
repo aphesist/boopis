@@ -182,6 +182,8 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-log > .k7-time[data-unread] { align-self: stretch; }
 .bt-log > [data-hx-turn] + [data-hx-turn] { margin-top: var(--sp-4); }
 .bt-log > .k7-status { margin-top: var(--sp-3); }
+/* derived from board S36: the line under a thread while the engine is stopped, 12 from what is over it (kit.css `.sysline`) */
+.bt-col > .k7-sys { display: flex; width: fit-content; margin: var(--sp-3) auto; }
 .bt-turn { position: relative; display: flex; flex-direction: column; min-width: 0; }
 .bt-turn:focus-visible { outline-offset: var(--focus-off); }
 .bt-turn > .bt-turn__body > * + * { margin-top: var(--gap-s); }

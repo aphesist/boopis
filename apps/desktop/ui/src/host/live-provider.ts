@@ -6,7 +6,7 @@
    shown), and a mock source is never mistaken for live. */
 import { logger } from '../core/log';
 import { createMockProvider } from '../data/mock-provider';
-import type { DataProvider, SessionsSource, WaitsEvent, WaitsSource } from '../data/provider';
+import type { DataProvider, EngineSource, EngineState, SessionsSource, WaitsEvent, WaitsSource } from '../data/provider';
 import { emitter, feed, store } from '../data/store';
 import type { AgentTurn, BlankData, CouncilChoice, BlankWait, ConversationEvent, FormStatus, FormWait, SendMeta, SessionSummary, Turn, User, UserTurn, Wait, WaitOutcome } from '../data/types';
 import { readFlag } from '../core/settings';
@@ -77,6 +77,9 @@ export interface LiveOptions {
   /** the Connectors section's switch and Sign in (default in the desktop app: the host's connector commands) */
   connectors?: { setEnabled(name: string, enabled: boolean): Promise<void>; signin(name: string): Promise<unknown> };
   cancelSignin?: ((s: XSignin) => Promise<void>) | null;
+  /** asks the host to reach the engine again now (the desktop app's `hermes_retry`: a link that gave up dials again, and the attach
+      starts a gateway that exited); without it the thread's "engine stopped" line has no action */
+  restartEngine?: () => Promise<void>;
   /** a teammate's own link to Hermes (the host's `connect(profile)`); without one its schedule and sessions are shown as unknown */
   linkTo?: (profile: string) => Promise<GatewayClient>;
   /** how often the teammates are read again (ms); null never (tests) */
@@ -118,6 +121,17 @@ interface Convo {
   held: { step: CarefulStep; because: string } | null;
   /** the permission step the engine session was made with (or changed to), null when unknown */
   step: CarefulStep | null;
+}
+
+/** what became of a change whose gate failed, as the engine does it: the files were written, checked, and put back */
+export const GATE_RESTORED = 'Nothing was kept: every file is back as it was.';
+/** what the failing check printed, from the ship tool's answer (the plugin's `output`; else the answer's own words), at most 12 lines */
+export function gateOutput(result: unknown): string[] {
+  if (typeof result !== 'string' || !result.trim()) return [];
+  let text = result;
+  try { const j = JSON.parse(result) as { output?: unknown; reason?: unknown }; text = typeof j.output === 'string' && j.output.trim() ? j.output : typeof j.reason === 'string' ? j.reason : result; } catch { /* not JSON: its own words */ }
+  const lines = text.split('\n').map((l) => l.replace(/\s+$/, '')).filter((l) => l.trim());
+  return lines.length > 12 ? [...lines.slice(0, 12), '… ' + (lines.length - 12) + ' more lines'] : lines;
 }
 
 export interface LiveProvider extends DataProvider {
@@ -356,7 +370,13 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
         break;
       }
       case 'tool.start': addStep(c, startTurn(c), toolStep(p)); break;
-      case 'tool.complete': if (p['is_error'] === true) addStep(c, startTurn(c), failedStep(p)); break;
+      case 'tool.complete': {
+        if (p['is_error'] === true) addStep(c, startTurn(c), failedStep(p));
+        /* the ship's own answer says what the failing check printed (the plugin's `output`): it follows the event that said the gate failed */
+        const t = p['name'] === 'ship' ? raisingTurn(c) : null;
+        if (t?.gate && !t.gate.output.length) { const out = gateOutput(p['result_text']); if (out.length) { t.gate = { ...t.gate, output: out }; c.events.emit({ type: 'turn-gate', turnId: t.id, gate: t.gate }); } }
+        break;
+      }
       case 'message.delta': {
         const r = startTurn(c);
         const t = p['text'];
@@ -387,9 +407,16 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       case 'plugin.boopis.ship.completed': {
         /* a kept ship of the running turn: the turn can now be rewound to it */
         const id = typeof p['ship_id'] === 'string' ? p['ship_id'] : '';
-        if (!id || p['status'] !== 'shipped') break;
-        c.head = id;
         const t = raisingTurn(c);
+        /* the gate did not pass: the engine put every file back (board S38); a later ship of the turn that passes takes the card away */
+        if (id && p['status'] === 'restored' && t) {
+          const g = (p['gate'] ?? {}) as { gates?: unknown }, files = Array.isArray(p['files']) ? (p['files'] as { path?: unknown }[]).map((f) => (typeof f.path === 'string' ? f.path : '')).filter(Boolean) : [];
+          t.gate = { checks: Array.isArray(g.gates) ? g.gates.filter((x): x is string => typeof x === 'string') : [], output: [], files, note: GATE_RESTORED };
+          c.events.emit({ type: 'turn-gate', turnId: t.id, gate: t.gate });
+        }
+        if (!id || p['status'] !== 'shipped') break;
+        if (t?.gate) { t.gate = undefined; c.events.emit({ type: 'turn-gate', turnId: t.id, gate: null }); }
+        c.head = id;
         if (t && !t.kept?.includes(id)) { t.kept = [...(t.kept ?? []), id]; c.events.emit({ type: 'turn-kept', turnId: t.id, kept: t.kept }); }
         spendUndo(c);
         break;
@@ -463,6 +490,24 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   client.onEvent(onEvent);
   /* the gateway's own requests: the string prompts (secret, sudo, vault) are forms; anything else is refused, as before */
   client.onServerRequest((r) => formsHost.serverRequest(r));
+  /* the engine stopped (board S36): the link was lost and the host's first try to reach it again failed, or the host gave up on it
+     (`incompatible`). A loss the host mends at once (a gateway that idled out is started by the attach) is never said. It stays said
+     until the link is ready again */
+  const engineState = store<EngineState>({ stopped: false, restarting: false, why: null });
+  const engine: EngineSource = {
+    state: engineState,
+    ...(opts.restartEngine ? { restart: async () => {
+      const ask = opts.restartEngine; if (!ask || engineState.get().restarting) return;
+      engineState.update((e) => ({ ...e, restarting: true }));
+      try { await ask(); } catch (e) { engineState.update((x) => ({ ...x, restarting: false, why: e instanceof Error ? e.message : String(e) })); throw e; }
+    } } : {})
+  };
+  client.onState((s) => {
+    const was = engineState.get();
+    if (s.phase === 'ready') { if (was.stopped || was.restarting) engineState.set({ stopped: false, restarting: false, why: null }); }
+    else if (s.phase === 'incompatible' || (s.phase === 'degraded' && s.attempts >= 1)) engineState.set({ stopped: true, restarting: false, why: s.error?.message ?? null });
+    else if (s.phase === 'degraded' && was.stopped) engineState.set({ ...was, restarting: false, why: s.error?.message ?? was.why });
+  });
   client.onState((s) => {
     if (s.phase === 'ready' && s.reconnected) { for (const c of convos.values()) if (c.gwId) { void formsHost.reload(c.gwId, c.model); void modsHost.attach(c.uiId); } refreshList().catch((e: unknown) => { log.warn('could not refresh after reconnecting', e); }); details.onLinkReady(); }
   });
@@ -725,7 +770,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   return {
     ...mock,
     info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable },
-    ready, sessions, waits, user, sessionControls: controls, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
+    ready, sessions, waits, user, engine, sessionControls: controls, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
     details: details.source, run: details.run, mods: modsHost.source, store: liveStore, kanban: liveKanban(),
     council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id), paths: hostPaths() },
     dictation: asDictationSource(), // the host hears and writes it down (host/dictation.ts, ADR-0052)

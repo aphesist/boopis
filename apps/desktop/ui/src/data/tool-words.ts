@@ -45,6 +45,9 @@ const WORK: ReadonlyArray<readonly [verb: string, one: string, many: string, too
   ['changed', 'file', 'files', ['write_file', 'patch']],
   ['ran', 'command', 'commands', ['terminal', 'process', 'execute_code']]
 ];
+/** which kind of work a tool call is (`read`, `searched`, `changed`, `ran`), null for a tool there is no word for */
+export type WorkKind = 'read' | 'searched' | 'changed' | 'ran';
+export const workKind = (tool: string): WorkKind | null => (WORK.find((w) => w[3].includes(tool))?.[0] as WorkKind | undefined) ?? null;
 /** what a turn's steps did, counted by kind in the order they first happened: "Read 6 files, ran 2 commands". Tools it has no word for
     are counted together ("3 other steps"); steps that are not tool calls at all (a provider that says its steps in words) are "8 steps".
     `count` is how many steps the turn had when its list is not at hand. Pure. */

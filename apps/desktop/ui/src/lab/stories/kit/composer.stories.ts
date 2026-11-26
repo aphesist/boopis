@@ -68,11 +68,40 @@ export default {
     'running, narrow': stage(['size'], ({ root }) => { fill(root, kit.composer({ kind: 'dock', running: true, text: 'a message long enough to wrap in a narrow composer' })); }, { width: 328, ground: 'dock' }),
     /* the voice circle always shows (owner, 26 November): with no voice model it is drawn the same and its name and tip say what it needs */
     'no voice model yet: the voice circle as ever, then the send': stage(['variant', 'owner'], ({ root }) => { fill(root, kit.composer({ kind: 'session', voiceSetup: true, line: S20 })); fill(root, kit.composer({ kind: 'session', voiceSetup: true, text: 'Describe the change' })); }, { width: 720 }),
-    'no voice model yet: what the circle opens': stage(['open', 'owner'], ({ root }) => {
+    'no voice model yet: what the circle opens': stage(['open', 'owner'], async ({ root, wait }) => {
       fill(root, kit.composer({ kind: 'bot', voiceSetup: true }));
+      await wait(100);   /* the Notice is placed against the circle where the stage has laid it out */
       const b = root.querySelector<HTMLElement>('[data-send]');
       if (b) kit.openNotice(b, { icon: 'waveform', title: 'Voice needs a voice model', text: '', action: 'Set up voice' });
+      await wait(200);
     }, { width: 720, overlay: { anchor: '[data-send]', layer: '.k7-notice[data-floating]' } }),
+    /* the mic is transcription (owner, 26 November): what its dictation reports is drawn with what the composer has. Derived, no board:
+       the speech model being fetched once (its progress in the placeholder), the words arriving in the text, an error at the mic with
+       "Try again", and a build with no dictation at all */
+    'dictation: getting the speech model': stage(['loading', 'owner'], ({ root }) => {
+      const c = kit.composer({ kind: 'bot', placeholder: 'Message nina', hears: 'nina' }); fill(root, c);
+      c.querySelector<HTMLElement>('[data-mic]')?.click();
+      kit.composerDictation(c, { kind: 'preparing', done: 12 * 1048576, total: 57 * 1048576 });
+    }, { width: 720 }),
+    'dictation: the words arriving': stage(['variant', 'owner'], ({ root }) => {
+      const c = kit.composer({ kind: 'session', line: S20, text: 'Fix the dock,' }); fill(root, c);
+      c.querySelector<HTMLElement>('[data-mic]')?.click();
+      kit.composerDictation(c, { kind: 'partial', text: 'and update the change' });
+    }, { width: 720 }),
+    'dictation: it failed': stage(['error', 'open', 'owner'], async ({ root, wait }) => {
+      const c = kit.composer({ kind: 'bot', placeholder: 'Message nina', hears: 'nina' }); fill(root, c);
+      await wait(100);
+      c.querySelector<HTMLElement>('[data-mic]')?.click();
+      kit.composerDictation(c, { kind: 'error', reason: 'Microphone access is off for boopis' });
+      await wait(200);
+    }, { width: 720, overlay: { anchor: '[data-mic]', layer: '.k7-notice[data-floating]' } }),
+    'dictation: not in this build': stage(['open', 'disabled', 'owner'], async ({ root, wait }) => {
+      fill(root, kit.composer({ kind: 'bot', voiceSetup: true, micOff: true }));
+      await wait(100);
+      const b = root.querySelector<HTMLElement>('[data-mic]');
+      if (b) kit.openNotice(b, { icon: 'mic', title: 'Dictation is not available in this build', text: '' });
+      await wait(200);
+    }, { width: 720, overlay: { anchor: '[data-mic]', layer: '.k7-notice[data-floating]' } }),
     /* a thing shows only once it exists: no send while a turn runs where nothing queues */
     'running where nothing queues: Stop and the mic': stage(['variant'], ({ root }) => { fill(root, kit.composer({ kind: 'session', running: true, voiceSetup: true, queueOff: true, text: 'wait' })); }, { width: 720 }),
     /* boards S05 B and S20: the session's line, and the words the text is read by */

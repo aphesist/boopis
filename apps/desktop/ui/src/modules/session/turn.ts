@@ -5,7 +5,7 @@ import { ui } from '@boopis/ui';
 import type { AskAnswer, AskCardOpts, StepOpts, ToolRowOpts, TurnFootOpts } from '@boopis/ui';
 import { cap1 } from '../../core/dom';
 import type { AgentTurn, FormSpec, FormStatus, Step } from '../../data';
-import { toolWords, workSummary } from '../../data/tool-words';
+import { toolWords, workKind, workSummary } from '../../data/tool-words';
 import { UNGOVERNED_TIP, UNKNOWN_MODEL } from './attribution';
 
 /* ───────── the work line ───────── */
@@ -18,12 +18,41 @@ export function workLine(a: Pick<AgentTurn, 'steps' | 'stepCount' | 'status' | '
   /* a duration under a minute is said as its seconds ("Worked for 59s", where the foot's clock reads "0m 59s") */
   return a.time ? lead + a.time.replace(/^0m\s+/, '') + ': ' + what.charAt(0).toLowerCase() + what.slice(1) : what;
 }
-/** a step as the kit's step row: a tool call by its name and what it was called on, a failure in red, the one being done now */
-export function stepRow(s: Step, now = false): StepOpts {
-  const text = [s.title, ...(s.meta ?? [])].join('  ');
-  return { text, state: s.kind === 'fail' ? 'failed' : now ? 'now' : 'done', ...(s.kind === 'escalate' ? { icon: 'ladder' } : {}), ...(s.time ? { time: s.time } : {}) };
+/** a file's own name, as a step says it ("Changed dock.css"): its path is in the changed files' card */
+const baseName = (path: string): string => path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path;
+/** a step as the kit's step row: a failure in red, a step that moved to a stronger model with the ladder, the one being done now; a
+    step a provider says in words as it is. A tool call is a line of the work log as board S10 writes it, led by its kind's glyph:
+    "Read dock.css", "Changed dock.css, +12 −3" (`counts`: the file's changed lines, where they are known), "Ran pnpm test dock" */
+export function stepRow(s: Step, now = false, counts?: (path: string) => readonly [number, number] | null): StepOpts {
+  const more = { ...(s.time ? { time: s.time } : {}) };
+  if (s.kind === 'fail') return { text: [s.title, ...(s.meta ?? [])].join('  '), state: 'failed', ...more };
+  if (s.kind === 'escalate') return { text: [s.title, ...(s.meta ?? [])].join('  '), state: now ? 'now' : 'log', icon: 'ladder', ...more };   /* the ladder in the words' colour, as S10's glyphs are */
+  const what = s.meta?.[0] ?? '', kind = s.mono ? workKind(s.title) : null;
+  if (!s.mono) return { text: [s.title, ...(s.meta ?? [])].join('  '), state: now ? 'now' : 'done', ...more };
+  const n = kind === 'changed' && what ? counts?.(what) ?? null : null;
+  const text = kind === 'read' ? 'Read ' + (what ? baseName(what) : 'a file')
+    : kind === 'searched' ? 'Searched' + (what ? ' for ' + what : '')
+    : kind === 'changed' ? 'Changed ' + (what ? baseName(what) : 'a file') + (n ? ', +' + n[0] + ' −' + n[1] : '')
+    : kind === 'ran' ? 'Ran ' + (what || 'a command')
+    : cap1(toolWords(s.title)) + (what ? '  ' + what : '');
+  return { text, state: now ? 'now' : 'log', icon: kind === 'changed' ? 'pen' : kind === 'ran' ? 'terminal' : 'session', ...more };
 }
-export const stepRows = (a: Pick<AgentTurn, 'steps' | 'status'>): StepOpts[] => a.steps.map((s, i) => stepRow(s, a.status === 'running' && i === a.steps.length - 1));
+/** the open work line's rows (board S10): reads that follow one another are one row ("Read 6 files"), as are searches; every change and
+    every command has its own */
+export function stepRows(a: Pick<AgentTurn, 'steps' | 'status'>, counts?: (path: string) => readonly [number, number] | null): StepOpts[] {
+  const out: StepOpts[] = [];
+  let run: { kind: 'read' | 'searched'; n: number; at: number } | null = null;
+  a.steps.forEach((s, i) => {
+    const now = a.status === 'running' && i === a.steps.length - 1;
+    const kind = s.mono && !s.kind ? workKind(s.title) : null;
+    if ((kind === 'read' || kind === 'searched') && !now) {
+      if (run && run.kind === kind) { run.n++; out[run.at] = { text: kind === 'read' ? 'Read ' + run.n + ' files' : 'Searched ' + run.n + ' patterns', state: 'log', icon: 'session' }; return; }
+      run = { kind, n: 1, at: out.length };
+    } else run = null;
+    out.push(stepRow(s, now, counts));
+  });
+  return out;
+}
 
 /* ───────── what waits on the person ───────── */
 /** how a form the turn raised is drawn: on a tool row (a change or a command asking to run, S09), as an approval (the AskCard with its

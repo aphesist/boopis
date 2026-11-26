@@ -76,8 +76,9 @@ export function optionRow(o: OptionRowOpts): string {
     '</span><span class="k7-orow__meaning">' + esc(o.meaning) + '</span></span></button>';
 }
 
-/* ── Menu (5): menu, quick menu (checks), palette (/ @ $), snooze, split-button menu, option menu (four rows) ── */
-export const MENU_VARIANTS = ['menu', 'quick', 'palette', 'snooze', 'split', 'options'] as const;
+/* ── Menu (5): menu, quick menu (checks), palette (/ @ $), snooze, split-button menu, option menu (four rows), and a list whose rows
+   say what they are beside their name (boards S31 and S32: 360 wide, the name whole and the description cut where the row ends) ── */
+export const MENU_VARIANTS = ['menu', 'quick', 'palette', 'snooze', 'split', 'options', 'list'] as const;
 export type MenuVariant = typeof MENU_VARIANTS[number];
 export type MenuEntry = MenuRowOpts | OptionRowOpts | '-' | { heading: string };
 export interface MenuOpts { label: string; entries: readonly MenuEntry[]; variant?: U<MenuVariant>; query?: U<string>; attrs?: U<Attrs> }
@@ -170,7 +171,7 @@ export function systemLine(o: SystemLineOpts): string {
   const v = o.variant ?? 'info';
   const lead = v === 'handoff' ? (o.from ? orbHtml(o.from, { size: 16, still: true }) : '') + glyph('chevron', 'k7-sys__chev') + (o.to ? orbHtml(o.to, { size: 16, still: true }) : '') : glyph(o.icon);
   const pill = '<div class="k7-sys"' + kitAttrs('SystemLine', { role: 'note', 'data-variant': v, 'data-act': o.action ? '' : null, ...(o.attrs ?? {}) }) + '>' + lead +
-    '<span class="k7-sys__text">' + esc(o.text) + '</span>' + (o.meta ? '<span class="k7-sys__meta k7-mono">' + esc(o.meta) + '</span>' : '') + (o.action ? button({ label: o.action, variant: 'secondary', size: 28, attrs: { 'data-line': '' } }) : '') + '</div>';
+    '<span class="k7-sys__text">' + esc(o.text) + '</span>' + (o.meta ? '<span class="k7-sys__meta k7-mono">' + esc(o.meta) + '</span>' : '') + (o.action ? button({ label: o.action, variant: 'tint', size: 28, attrs: { 'data-line': '' } }) : '') + '</div>';   /* kit.css `.sysline.act .btn`: the tint button (S36) */
   return v === 'steer' && o.message ? '<div class="k7-sys-wrap">' + pill + '<div class="k7-sys__msg">' + esc(o.message) + '</div></div>' : pill;
 }
 
@@ -213,7 +214,7 @@ export function well(o: WellOpts): string {
 
 /* ── Disclosure (36): steps ("Read 6 files"), work log ("Worked for 59s: ..."): the boards' `.worklog` (kit.css): a chevron that turns down
    when it opens, then the summary ── */
-export interface StepOpts { text: string; state?: U<'done' | 'now' | 'todo' | 'failed'>; icon?: U<string>; time?: U<string> }
+export interface StepOpts { text: string; /** `log`: a line of a work log (board S10), led by its kind's glyph (`icon`) in the words' own colour */ state?: U<'done' | 'now' | 'todo' | 'failed' | 'log'>; icon?: U<string>; time?: U<string> }
 export function steps(items: readonly StepOpts[], id?: string): string {
   return '<ol class="k7-steps"' + partAttrs('Steps', { id }) + '>' + items.map((s) => '<li class="k7-step" data-state="' + (s.state ?? 'done') + '">' +
     '<span class="k7-step__ic" aria-hidden="true">' + (s.icon ? glyph(s.icon) : s.state === 'done' || !s.state ? glyph('check') : s.state === 'failed' ? glyph('close') : '<span class="k7-step__dot"' + (s.state === 'now' ? ' data-live' : '') + '></span>') + '</span>' +
@@ -280,10 +281,11 @@ export function timeSeparator(o: TimeSeparatorOpts): string {
   return '<div class="k7-time"' + kitAttrs('TimeSeparator', { role: 'separator', 'aria-label': o.text, 'data-unread': o.unread ? '' : null }) + '><span>' + esc(o.text) + '</span></div>';
 }
 
-/* ── EmptyState: one line (at most 80 characters) and at most one action, where the content would be ── */
-export interface EmptyStateOpts { text: string; action?: U<string> }
+/* ── EmptyState: one line (at most 80 characters) and at most one action, where the content would be. In a list (`place: 'list'`,
+   board S41's "No sessions yet") the line starts where the list's rows and heads start their words ── */
+export interface EmptyStateOpts { text: string; action?: U<string>; place?: U<'list'> }
 export function emptyState(o: EmptyStateOpts): string {
-  return '<div class="k7-empty"' + kitAttrs('EmptyState') + '><p class="k7-empty__text">' + esc(o.text) + '</p>' + (o.action ? button({ label: o.action, variant: 'secondary', size: 32 }) : '') + '</div>';
+  return '<div class="k7-empty"' + kitAttrs('EmptyState', { 'data-place': o.place ?? null }) + '><p class="k7-empty__text">' + esc(o.text) + '</p>' + (o.action ? button({ label: o.action, variant: 'secondary', size: 32 }) : '') + '</div>';
 }
 
 export { statusWord };

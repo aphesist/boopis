@@ -53,7 +53,7 @@ export function openModel(anchor: HTMLElement): void {
   const now = g.smart || !g.model ? SMART : g.model;
   const entries = [{ label: 'Automatic', desc: now === SMART ? 'Smart, now' : 'Smart picks for each message', value: SMART, icon: 'spark' },
     ...d.choices.get().map((c) => ({ label: ui.modelMark.short(c.model) || c.model, value: c.value, leadHTML: ui.html.modelMark(c.value, { size: 16, label: false }), desc: ui.modelMark.same(c.value, now) ? c.providerName + ', now' : c.providerName }))];
-  kit.openMenu(anchor, { label: 'Model', entries, place: 'below', align: 'center', attrs: v7Attrs(), onSelect: (v) => { const why = d.setGovernance(v === SMART ? { smart: true } : { smart: false, model: v }); if (why) say(why); } });
+  kit.openMenu(anchor, { label: 'Model', variant: 'list', entries, place: 'below', align: 'center', attrs: v7Attrs(), onSelect: (v) => { const why = d.setGovernance(v === SMART ? { smart: true } : { smart: false, model: v }); if (why) say(why); } });
 }
 
 export function openEffort(anchor: HTMLElement): void {

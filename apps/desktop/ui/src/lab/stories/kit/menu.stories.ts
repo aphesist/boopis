@@ -34,6 +34,15 @@ export default {
     'palette @': stage(['variant'], ({ root }) => { line(root, kit.menu({ label: 'Mention', variant: 'palette', query: '@', entries: [{ label: 'kai', desc: 'docs and changelog', leadHTML: kit.html.avatar({ bot: KAI, size: 20 }) }, { label: 'nina', desc: 'deploys', leadHTML: kit.html.avatar({ bot: NINA, size: 20 }) }, { label: 'src/billing.ts', desc: 'a file', icon: 'file' }] })); }, { width: 680 }),
     'palette $': stage(['variant'], ({ root }) => { line(root, kit.menu({ label: 'Skills', variant: 'palette', query: '$', entries: [{ label: '$changelog', desc: 'Write the changelog from merged pull requests' }, { label: '$release', desc: 'Cut a release with notes' }] })); }, { width: 680 }),
     snooze: stage(['variant'], ({ root }) => { line(root, kit.menu({ label: 'Snooze', variant: 'snooze', entries: [{ label: 'In an hour', icon: 'clock' }, { label: 'This evening', icon: 'clock', desc: '18:00' }, { label: 'Tomorrow', icon: 'clock', desc: '09:00' }] })); }),
+    'a list with descriptions': stage(['variant', 'owner'], ({ root }) => {
+      line(root, kit.menu({ label: 'Who answers next', variant: 'list', entries: [
+        { label: 'Automatic (Smart)', desc: 'Picks a tier for each message: the cheapest by default, a stronger one for design, debugging or code', checked: false, role: 'menuitemradio' },
+        { label: 'Ask a council', desc: 'Several models answer your next message, one combines them', icon: 'bots', keys: 'alt+C' },
+        { heading: 'Claude' }, { label: 'Claude Haiku 5.5', desc: 'Tier 1 of 3, the cheapest', checked: false, role: 'menuitemradio' }, { label: 'Claude Sonnet 5.5', desc: 'Tier 2 of 3', checked: true, role: 'menuitemradio' },
+        '-', { heading: 'Effort' }, { label: 'Low', checked: false, role: 'menuitemradio' }, { label: 'Medium', checked: true, role: 'menuitemradio' }, { label: 'High', checked: false, role: 'menuitemradio' },
+        '-', { heading: 'Your pick answers the next messages of this session. Automatic picks a tier for each message.' }
+      ] }));
+    }, { note: 'rows that say what they are beside their name, at the width boards S31 and S32 draw such lists (360): the name whole, the description cut where the row ends and whole in the row\'s tooltip; a session\'s "who answers next" with the effort under the models (derived)' }),
     'option menu': stage(['variant'], ({ root }) => { line(root, kit.menu({ label: 'How careful', variant: 'options', entries: STEPS })); }),
     open: open('menu'),
     'split-button menu': open('split'),

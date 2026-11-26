@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createMockProvider } from '../data/mock-provider';
 import type { ConversationEvent, WaitsEvent } from '../data';
 import { GatewayClient } from './gateway';
-import { createLiveProvider } from './live-provider';
+import { createLiveProvider, gateOutput } from './live-provider';
 import type { LiveProvider } from './live-provider';
 import { FakeHost, S0_CREATE_PARAMS, recorded } from './testing';
 
@@ -66,6 +66,75 @@ describe('the live provider: sessions', () => {
   it('keeps the mock for the sources it names, and says so', () => {
     expect(provider.details).toBeDefined();
     expect(provider.bots).toBeDefined();
+  });
+});
+
+describe('the live provider: a ship the gate did not pass (board S38)', () => {
+  it('the turn says so: the checks, the files the engine put back, then what the failing check printed; a ship that passes afterwards takes it away', async () => {
+    const conv = provider.sessions.conversation(SESSION);
+    await tick();
+    const seen: ConversationEvent[] = [];
+    conv.subscribe((e) => { seen.push(e); });
+    host.event('message.start', SESSION, {});
+    host.event('tool.start', SESSION, { name: 'ship', tool_id: 't1' });
+    host.event('plugin.boopis.ship.completed', SESSION, { ship_id: 's1', status: 'restored', files: [{ path: 'calc.py' }], gate: { verdict: 'block', gates: ['tests'] } });
+    const gates = (): unknown[] => seen.filter((e) => e.type === 'turn-gate').map((e) => (e as { gate: unknown }).gate);
+    expect(gates()).toEqual([{ checks: ['tests'], output: [], files: ['calc.py'], note: 'Nothing was kept: every file is back as it was.' }]);
+    host.event('tool.complete', SESSION, { name: 'ship', tool_id: 't1', result_text: JSON.stringify({ status: 'restored', output: 'FAIL test_calc.py::test_add\n  assert 3 == 4\n', note: 'Every file is back.' }) });
+    expect(gates()[1]).toMatchObject({ output: ['FAIL test_calc.py::test_add', '  assert 3 == 4'] });
+    const turn = conv.snapshot().turns.at(-1);
+    expect(turn?.role === 'assistant' && turn.gate?.output.length).toBe(2);
+    host.event('plugin.boopis.ship.completed', SESSION, { ship_id: 's2', status: 'shipped', files: [{ path: 'calc.py' }], gate: { verdict: 'pass', gates: ['tests'] } });
+    expect(gates()[2]).toBeNull();
+    const after = conv.snapshot().turns.at(-1);
+    expect(after?.role === 'assistant' && after.gate).toBeUndefined();
+    expect(after?.role === 'assistant' && after.kept).toEqual(['s2']);
+  });
+  it('reads the failing check from the ship\'s answer: its `output`, else its reason, else its own words; at most 12 lines', () => {
+    expect(gateOutput(JSON.stringify({ output: 'a\nb\n' }))).toEqual(['a', 'b']);
+    expect(gateOutput(JSON.stringify({ reason: 'the scope gate blocked src/x' }))).toEqual(['the scope gate blocked src/x']);
+    expect(gateOutput('FAIL plain words')).toEqual(['FAIL plain words']);
+    expect(gateOutput(Array.from({ length: 20 }, (_, i) => 'l' + i).join('\n')).at(-1)).toBe('… 8 more lines');
+    expect(gateOutput(null)).toEqual([]);
+  });
+});
+
+describe('the live provider: the engine\'s link (board S36)', () => {
+  const lost = { code: 'hx.engine.unavailable', message: 'boopis\'s engine is not answering.' };
+  it('a loss the host mends at once is never said; one it could not mend is "stopped" until the link is ready again', () => {
+    const e = provider.engine;
+    if (!e) throw new Error('the live provider has an engine');
+    expect(e.state.get()).toEqual({ stopped: false, restarting: false, why: null });
+    host.event('connection.state', '', { state: 'degraded', attempts: 0, error: lost });   /* the loss: the first retry is immediate */
+    expect(e.state.get().stopped).toBe(false);
+    host.event('connection.state', '', { state: 'ready', reconnected: true });
+    expect(e.state.get().stopped).toBe(false);
+    host.event('connection.state', '', { state: 'degraded', attempts: 0, error: lost });
+    host.event('connection.state', '', { state: 'degraded', attempts: 1, error: lost });   /* the retry failed */
+    expect(e.state.get()).toEqual({ stopped: true, restarting: false, why: lost.message });
+    host.event('connection.state', '', { state: 'ready', reconnected: true });
+    expect(e.state.get()).toEqual({ stopped: false, restarting: false, why: null });
+    host.event('connection.state', '', { state: 'incompatible', attempts: 0, error: { code: 'hx.engine.incompatible', message: 'Hermes is too old.' } });   /* the host gave up */
+    expect(e.state.get()).toEqual({ stopped: true, restarting: false, why: 'Hermes is too old.' });
+  });
+  it('has no restart where no host can (the action is then not drawn); with one, it asks the host and waits for the link to say how it went', async () => {
+    expect(provider.engine?.restart).toBeUndefined();
+    let asked = 0;
+    const p2 = createLiveProvider({ defaultFolder: '/work/proj', client, now: () => NOW, mock: createMockProvider({ simulate: false }), restartEngine: () => { asked++; return Promise.resolve(); } });
+    await p2.ready;
+    const e = p2.engine;
+    if (!e?.restart) throw new Error('a restart was given');
+    host.event('connection.state', '', { state: 'degraded', attempts: 2, error: lost });
+    await e.restart();
+    expect(asked).toBe(1);
+    expect(e.state.get()).toMatchObject({ stopped: true, restarting: true });
+    await e.restart();                                   /* a second press while it is asked does nothing */
+    expect(asked).toBe(1);
+    host.event('connection.state', '', { state: 'degraded', attempts: 1, error: lost });   /* it failed again */
+    expect(e.state.get()).toMatchObject({ stopped: true, restarting: false });
+    await e.restart();
+    host.event('connection.state', '', { state: 'ready', reconnected: true });
+    expect(e.state.get()).toEqual({ stopped: false, restarting: false, why: null });
   });
 });
 

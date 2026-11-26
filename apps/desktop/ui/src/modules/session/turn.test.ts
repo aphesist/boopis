@@ -33,9 +33,20 @@ describe('the work line', () => {
   });
   it('draws the step being done now, a failure and an escalation', () => {
     const rows = stepRows(turn({ steps: [{ title: 'read_file', mono: true, meta: ['a.ts'], time: '0:02' }, { title: 'npm test failed', kind: 'fail', time: '' }, { title: 'sonnet 5.5', kind: 'escalate', time: '' }] }));
-    expect(rows.map((r) => r.state)).toEqual(['done', 'failed', 'now']);
-    expect(rows[0]?.text).toBe('read_file  a.ts');
+    expect(rows.map((r) => r.state)).toEqual(['log', 'failed', 'now']);
+    expect([rows[0]?.text, rows[0]?.icon, rows[0]?.time]).toEqual(['Read a.ts', 'session', '0:02']);
     expect(rows[2]?.icon).toBe('ladder');
+  });
+  it('writes the open work line as board S10 does: reads that follow one another are one row, each change and each command its own, led by its kind\'s glyph', () => {
+    const step = (title: string, what?: string): Step => ({ title, mono: true, ...(what ? { meta: [what] } : {}), time: '' });
+    const rows = stepRows(turn({ status: 'done', steps: [...Array.from({ length: 6 }, (_, i) => step('read_file', 'src/f' + i + '.ts')), step('patch', 'modules/dock/dock.css'), step('patch', 'modules/dock/engine.ts'), step('terminal', 'pnpm test dock')] }),
+      (p) => (p.endsWith('dock.css') ? [12, 3] : p.endsWith('engine.ts') ? [2, 2] : null));
+    expect(rows.map((r) => [r.icon, r.text])).toEqual([['session', 'Read 6 files'], ['pen', 'Changed dock.css, +12 −3'], ['pen', 'Changed engine.ts, +2 −2'], ['terminal', 'Ran pnpm test dock']]);
+    expect(rows.every((r) => r.state === 'log')).toBe(true);
+  });
+  it('a change whose lines are not known says its file alone; a tool with no word of its own says what it is doing; the running step is the one being done', () => {
+    const rows = stepRows(turn({ status: 'running', steps: [{ title: 'patch', mono: true, meta: ['a/b.ts'], time: '' }, { title: 'web_search', mono: true, meta: ['webkit clip'], time: '' }, { title: 'cronjob', mono: true, time: '' }, { title: 'read_file', mono: true, meta: ['x.ts'], time: '' }] }));
+    expect(rows.map((r) => [r.state, r.text])).toEqual([['log', 'Changed b.ts'], ['log', 'Searched for webkit clip'], ['log', 'Scheduling'], ['now', 'Read x.ts']]);
   });
 });
 

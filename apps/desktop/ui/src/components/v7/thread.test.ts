@@ -258,3 +258,48 @@ describe('HoverBar: what a turn offers under the pointer or the focus', () => {
   });
 });
 
+
+describe('Menu: a row cut by the menu\'s width', () => {
+  it('says its description whole in its tooltip; a row that fits, or has a tooltip of its own, is left alone', () => {
+    /* jsdom lays nothing out: the second row's description is the one that does not fit */
+    const sw = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollWidth'), cw = Object.getOwnPropertyDescriptor(Element.prototype, 'clientWidth');
+    Object.defineProperty(Element.prototype, 'scrollWidth', { configurable: true, get(this: Element) { return (this.textContent ?? '').length * 7; } });
+    Object.defineProperty(Element.prototype, 'clientWidth', { configurable: true, get() { return 180; } });
+    try {
+      const anchor = put(kit.button({ label: 'Model' }));
+      const m = kit.openMenu(anchor, { label: 'Who answers next', variant: 'list', entries: [
+        { label: 'Claude Sonnet 5.5', desc: 'Tier 2 of 3' },
+        { label: 'Automatic (Smart)', desc: 'Picks a tier for each message: the cheapest by default, a stronger one for design' },
+        { label: 'High', desc: 'This version of the engine cannot change the effort while a session runs.', disabled: true, attrs: { 'data-tip': 'Not now' } }
+      ] });
+      const rows = [...(m as HTMLElement).querySelectorAll<HTMLElement>('[data-kit~="MenuRow"]')];
+      expect((m as HTMLElement).dataset['variant']).toBe('list');
+      expect(rows.map((r) => r.dataset['tip'] ?? null)).toEqual([null, 'Picks a tier for each message: the cheapest by default, a stronger one for design', 'Not now']);
+    } finally {
+      kit.closeMenu();
+      if (sw) Object.defineProperty(Element.prototype, 'scrollWidth', sw);
+      if (cw) Object.defineProperty(Element.prototype, 'clientWidth', cw);
+    }
+  });
+});
+
+describe('FilesCard: how a check on the change went (board S38)', () => {
+  it('draws the check\'s name, its verdict as a StatusWord in its tone, the one action, what it printed in a Well, the files and the note', () => {
+    const c = put(kit.filesCard({ files: [{ path: 'modules/dock/dock.css' }], action: 'Fix and retry', check: { title: 'Gate', word: 'failed', tone: 'red', output: 'FAIL centred.test.ts\n  expected 720 to be 744', note: 'Nothing was kept: every file is back as it was.' } }));
+    expect(c.dataset['check']).toBe('red');
+    expect(c.querySelector('.k7-files__name')?.textContent).toBe('Gate');
+    const w = c.querySelector<HTMLElement>('[data-kit="StatusWord"]');
+    expect([w?.textContent, w?.dataset['tone']]).toEqual(['failed', 'red']);
+    expect([...c.querySelectorAll('button')].map((b) => [b.textContent?.trim(), b.dataset['variant']])).toEqual([['Fix and retry', 'tint']]);
+    expect(c.querySelector('[data-kit="Well"] pre')?.textContent).toBe('FAIL centred.test.ts\n  expected 720 to be 744');
+    expect([...c.querySelectorAll('.k7-files__row')].map((r) => r.textContent)).toEqual(['modules/dock/dock.css']);
+    expect(c.querySelector('.k7-files__note')?.textContent).toBe('Nothing was kept: every file is back as it was.');
+    expect(c.querySelector('.k7-files__counts')).toBeNull();   /* a check counts no lines */
+  });
+  it('with nothing printed and no action it is the head and the note alone', () => {
+    const c = put(kit.filesCard({ files: [], check: { title: 'Gate', word: 'failed', tone: 'red', note: 'Nothing was kept.' } }));
+    expect(c.querySelector('[data-kit="Well"]')).toBeNull();
+    expect(c.querySelector('button')).toBeNull();
+    expect(c.querySelector('.k7-files__list')).toBeNull();
+  });
+});

@@ -307,6 +307,9 @@ export interface SessionSummary {
 /** a usage limit that is close: said above the composer ("Approaching the weekly limit, 81% used, resets Wed 09:00") */
 export interface LimitNotice { id: string; title: string; detail: string }
 export interface Step { title: string; mono?: boolean; meta?: readonly string[]; time: string; kind?: 'step' | 'fail' | 'escalate' }
+/** how the gate went on a change the turn tried to ship, when it did not pass (board S38): the checks that ran, what the failing one
+    printed (empty when the engine did not say), the files the change touched, and what became of the change, in one sentence */
+export interface GateFail { checks: readonly string[]; output: readonly string[]; files: readonly string[]; note: string }
 export interface Ship { title: string; quote: string; passed: number; rolledBack: number; files: number; add: number; del: number; branch: string }
 /** something attached to a message: a file, a picture or a folder. `path` is absolute on the machine the engine runs on; the page build has only a name. */
 export interface Attached { name: string; kind: 'file' | 'image' | 'folder'; path?: string; bytes?: number }
@@ -362,6 +365,8 @@ export interface AgentTurn {
   startedAt?: number | undefined;
   /** the ships this turn kept, oldest first (`checkpoint.list`): what "Rewind files to here" goes back to */
   kept?: readonly string[] | undefined;
+  /** the turn's last ship did not pass its gate and was not kept (cleared by a later ship of the turn that passes) */
+  gate?: GateFail | undefined;
   /** the engine's id of the turn, when the plugin recorded it (a resumed turn): how its kept ships are found */
   engineTurn?: string | undefined;
 }
@@ -394,6 +399,8 @@ export type ConversationEvent =
   | { type: 'line'; line: ThreadLine }
   /** a running turn kept a ship: it can now be rewound to */
   | { type: 'turn-kept'; turnId: string; kept: readonly string[] }
+  /** a turn's ship did not pass its gate (or a later one passed: null) */
+  | { type: 'turn-gate'; turnId: string; gate: GateFail | null }
   /** the whole conversation changed under the reader (a transcript loaded, or events were lost): read the snapshot again */
   | { type: 'reset' };
 

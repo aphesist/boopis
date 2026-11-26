@@ -332,6 +332,91 @@ describe('Composer: the mic', () => {
     expect(outside).toBe(0);
     expect(key('Escape')).toBe(true);   /* not listening: Esc is the shell's */
   });
+  it('a build with no dictation (micOff): the mic is there under its own name; a press, a hold, Enter and alt+V start nothing and say so', () => {
+    mount({ kind: 'bot', placeholder: 'Message nina', hears: 'nina', micOff: true }); listen();
+    let said = 0;
+    c.addEventListener('ui:dictate-unavailable', () => { said++; });
+    expect(mic().hidden).toBe(false);
+    expect([mic().getAttribute('aria-label'), mic().getAttribute('data-tip'), mic().getAttribute('aria-haspopup')]).toEqual(['Dictate', 'Dictate', null]);
+    down(); vi.advanceTimersByTime(120); up();          /* a press */
+    expect(said).toBe(1);
+    down();
+    expect(pressed()).toBe('false');                     /* held: it never listens */
+    vi.advanceTimersByTime(900); up();
+    expect(said).toBe(2);
+    mic().click();                                       /* Enter or Space on it */
+    expect(said).toBe(3);
+    key('v', { code: 'KeyV', altKey: true }); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'v', code: 'KeyV' }));
+    expect(said).toBe(4);
+    expect(pressed()).toBe('false');
+    expect(heard).toEqual([]);
+    expect(t.getAttribute('data-placeholder')).toBe('Message nina');
+  });
+  it('draws what the dictation reports: the speech model being fetched with its progress, then who listens, in the placeholder', () => {
+    mount({ kind: 'bot', placeholder: 'Message nina', hears: 'nina' });
+    mic().click();
+    expect([c.dataset['dictation'], t.getAttribute('data-placeholder')]).toEqual(['listening', 'nina is listening']);
+    kit.composerDictation(c, { kind: 'preparing', done: 12 * 1048576, total: 57 * 1048576 });
+    expect([c.dataset['dictation'], t.getAttribute('data-placeholder')]).toEqual(['preparing', 'Getting the speech model 12 of 57 MB']);
+    kit.composerDictation(c, { kind: 'preparing', done: 40 * 1048576, total: 57 * 1048576 });
+    expect(t.getAttribute('data-placeholder')).toBe('Getting the speech model 40 of 57 MB');
+    expect(mic().getAttribute('aria-label')).toBe('Stop listening');   /* a press still stops it */
+    kit.composerDictation(c, { kind: 'listening' });
+    expect([c.dataset['dictation'], t.getAttribute('data-placeholder')]).toEqual(['listening', 'nina is listening']);
+    mic().click();
+    expect([c.hasAttribute('data-dictation'), t.getAttribute('data-placeholder')]).toEqual([false, 'Message nina']);
+  });
+  it('the words arrive in the text: each partial replaces the last, the final one stays (after a space where the text has none) and wakes the composer once', () => {
+    mount({ kind: 'bot', placeholder: 'Message nina', text: 'Ship it' });
+    let inputs = 0;
+    t.addEventListener('input', () => { inputs++; });
+    const end = document.createRange(); end.selectNodeContents(t); end.collapse(false);
+    getSelection()?.removeAllRanges(); getSelection()?.addRange(end);   /* the caret after "Ship it" */
+    mic().click();
+    kit.composerDictation(c, { kind: 'partial', text: 'and update' });
+    expect([c.dataset['dictation'], t.textContent]).toEqual(['transcribing', 'Ship it and update']);
+    kit.composerDictation(c, { kind: 'partial', text: 'and update the change' });
+    expect(t.textContent).toBe('Ship it and update the change');
+    expect(inputs).toBe(0);
+    kit.composerDictation(c, { kind: 'final', text: 'and update the changelog' });
+    expect([c.dataset['dictation'], t.textContent, inputs]).toEqual(['listening', 'Ship it and update the changelog', 1]);
+    kit.composerDictation(c, { kind: 'final', text: 'today' });          /* the next stretch follows the last */
+    expect(t.textContent).toBe('Ship it and update the changelog today');
+    mic().click();
+    kit.composerDictation(c, { kind: 'final', text: 'too late' });       /* the mic is off: nothing more is written */
+    expect(t.textContent).toBe('Ship it and update the changelog today');
+  });
+  it('said with the caret before other words, a stretch ends with a space; with the caret elsewhere it goes to the end of the text', () => {
+    mount({ kind: 'bot', placeholder: 'Message nina', text: 'the changelog' });
+    const start = document.createRange(); start.setStart(t.firstChild as Node, 0); start.collapse(true);
+    getSelection()?.removeAllRanges(); getSelection()?.addRange(start);
+    mic().click();
+    kit.composerDictation(c, { kind: 'final', text: 'Update' });
+    expect(t.textContent).toBe('Update the changelog');
+    getSelection()?.removeAllRanges();
+    kit.composerDictation(c, { kind: 'final', text: 'today' });
+    expect(t.textContent).toBe('Update the changelog today');
+  });
+  it('an error switches the mic off, tells the app to stop (ui:dictate off) and opens a Notice at the mic with the reason and "Try again", which switches it on again', () => {
+    mount({ kind: 'bot', placeholder: 'Message nina' }); listen();
+    mic().click();
+    kit.composerDictation(c, { kind: 'error', reason: 'No microphone found' });
+    expect(pressed()).toBe('false');
+    expect(heard.map((d) => d.on)).toEqual([true, false]);
+    const n = document.querySelector<HTMLElement>('.k7-notice[data-floating]') as HTMLElement;
+    expect(n.querySelector('.k7-notice__text')?.textContent).toBe('No microphone found');
+    const again = [...n.querySelectorAll<HTMLElement>('[data-kit~="Button"]')];
+    expect(again.map((b) => b.textContent?.trim())).toEqual(['Try again']);
+    expect(mic().getAttribute('aria-expanded')).toBe('true');
+    again[0]?.click();
+    expect(pressed()).toBe('true');
+    /* where trying again cannot help, the Notice only says */
+    kit.composerDictation(c, { kind: 'error', reason: 'This computer cannot run the speech model', retry: false });
+    const n2 = [...document.querySelectorAll<HTMLElement>('.k7-notice[data-floating]')].pop() as HTMLElement;
+    expect(n2.querySelector('.k7-notice__text')?.textContent).toBe('This computer cannot run the speech model');
+    expect(n2.querySelector('[data-value="act"]')).toBeNull();
+    kit.closeMenu();
+  });
   it('an app that refuses (nothing can hear) leaves it off; switched off from outside, its look follows', async () => {
     c.addEventListener('ui:dictate', (e) => { e.preventDefault(); }, { once: true });
     mic().click();

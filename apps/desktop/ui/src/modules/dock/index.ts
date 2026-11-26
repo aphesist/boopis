@@ -25,7 +25,7 @@ import type { AskCardOpts, DockBot } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, ThreadMessage, Wait } from '../../data';
 import { asksOf, askWords, BOOPIS_ID, fit, ordered, ownBots, shows } from './model';
-import { composeTools, later, mentionChips, voiceNeedsSetup } from '../chat/compose';
+import { composeTools, later, mentionChips, micUnavailable, voiceNeedsSetup } from '../chat/compose';
 import { mentionCtx } from '../chat/refs';
 import { dockRoom } from './geometry';
 
@@ -296,7 +296,7 @@ function composerFor(id: string): CardComposer | null {
     draw() {
       const x = botById(id); if (!x) return;
       const keep = text()?.textContent ?? '';
-      slot.replaceChildren(kit.composer({ kind: 'dock', placeholder: 'Message ' + x.name, label: 'Message ' + x.name, hears: x.name, running: S.runs.has(id), voiceSetup: voiceNeedsSetup(), ...(keep ? { text: keep } : {}) }));   /* K04: the dock's own composer, its primary circle white (the bot's fill is its bubbles') */
+      slot.replaceChildren(kit.composer({ kind: 'dock', placeholder: 'Message ' + x.name, label: 'Message ' + x.name, hears: x.name, running: S.runs.has(id), voiceSetup: voiceNeedsSetup(), micOff: micUnavailable(), ...(keep ? { text: keep } : {}) }));   /* K04: the dock's own composer, its primary circle white (the bot's fill is its bubbles') */
       tools.drawn();
     },
     stop() { tools.stop(); if (made.listening) listen(false); }

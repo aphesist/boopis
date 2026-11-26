@@ -69,7 +69,7 @@ in a narrow composer; `kit.composerMarks`, the words a text is read by, as Marks
 | `kit.toolRow({ variant: 'bot' })` | closed; open on its Steps (done, now, to do, each with its end words); `icon` for a shell | kit.css `.tool`, `.steps` |
 | `kit.fileCard` | a file; `opens` makes it a control | kit.css `.file` |
 | `kit.askCard` | approval: head, ask, `rule`, four answers (`inert` for one that cannot be taken yet, `outline` for Deny) | botscreens.js `approval` |
-| `kit.composer` | bot, session; its line (plain items, the cost, hints at both ends); `voiceSetup`; `hears`; events `ui:send`, `ui:steer`, `ui:stop`, `ui:voice {setup}`, `ui:add`, `ui:dictate {on, mode}`, `ui:files {files, via}`; `kit.mentions` (an "@" Menu), `kit.composerInsert`, `kit.composerSet`. Its own editing is `components/v7/compose.ts`, the same in every composer: undo and redo across chips and marks, a chip as one unit, paste, a file dragged over it (`data-drop`, `kit.composerDropping`) and dropped or pasted, the mic (a press, alt+V, held; `data-listening`) | screens.js `composer`, kit.css `.composer-under`; the drop and listening states have no board (derived) |
+| `kit.composer` | bot, session; its line (plain items, the cost, hints at both ends); `voiceSetup`; `micOff` (a build with no dictation: the mic starts nothing and says so); `hears`; events `ui:send`, `ui:steer`, `ui:stop`, `ui:voice {setup}`, `ui:add`, `ui:dictate {on, mode}`, `ui:dictate-unavailable`, `ui:files {files, via}`; `kit.composerDictation(composer, event)` draws what a dictation reports (see "The mic's dictation" below); `kit.mentions` (an "@" Menu), `kit.composerInsert`, `kit.composerSet`. Its own editing is `components/v7/compose.ts`, the same in every composer: undo and redo across chips and marks, a chip as one unit, paste, a file dragged over it (`data-drop`, `kit.composerDropping`) and dropped or pasted, the mic (a press, alt+V, held; `data-listening`) | screens.js `composer`, kit.css `.composer-under`; the drop and listening states have no board (derived) |
 | `kit.listRow` | session (the model's mark, title, branch and time, Badge or dot), compact (one line), bot, item; `kit.sectionHead` with a count, folding | kit.css `.sess-row`, `.inbox-h` |
 | `kit.selectorItem({ variant: 'launch' })` | a glyph, a model's mark or the five ticks, the value, the chevron; `aria-disabled` for one that cannot be chosen yet | kit.css `.select`, sessionnew.js `launch` |
 | `kit.notice` | a limit: glyph, `title` and words, a ghost action, dismiss | kit.css `.notice` |
@@ -106,15 +106,15 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 2 | Page | `page`, `section` | `kit/page` | column, settings page with its scope; empty |
 | 3 | Pane | `pane` | `kit/pane` | details (bot, session, room), tools (Diff, Files, Terminal, PR, side chat); overlay |
 | 4 | Dialog | `dialog` | `kit/dialog` | large (Settings), form (commit, new bot, import, confirm); error |
-| 5 | Menu | `menu`, `openMenu` | `kit/menu` | menu, quick, palette / @ $, snooze, split, options; open, flipped |
+| 5 | Menu | `menu`, `openMenu` | `kit/menu` | menu, quick, palette / @ $, snooze, split, options, list (rows with a description, 360: boards S31, S32; a session's "who answers next"); open, flipped. An open Menu gives a row whose description is cut its whole words as a tooltip |
 | 6 | Card | `card` (and its Row) | `kit/card` | settings, pane, danger zone collapsed and open |
 | 7 | Block | `block` | `kit/block` | the corner rule's specimen; `offer` (S37: what is missing, said kindly, over the ways to get it, each a Button led by a provider's mark); narrow |
 | 8 | ToolRow | `toolRow` | `kit/tool-row` | edit, command, read, search; running, done, failed, waiting; a session's (S20): a change waiting with its answers, a command waiting, allowed, denied with feedback; an answer hovered, focused; narrow |
 | 9 | AskCard | `askCard` | `kit/ask-card` | standalone, attached, question, choices, lapsed; asked, needs, answered, hold at 50% |
-| 10 | FilesCard | `filesCard` | `kit/files-card` | 1 file, 2 files (S23) with Open diff, 12 files folded and unfolded, empty, long, narrow; the action hovered, focused |
+| 10 | FilesCard | `filesCard` | `kit/files-card` | 1 file, 2 files (S23) with Open diff, 12 files folded and unfolded, empty, long, narrow; the action hovered, focused; `check` (board S38): how a check on the change went: its glyph and name, the verdict as a StatusWord, the one action, what it printed in a Well in the verdict's colour, the files, a note |
 | 11 | Queue | `queue` | `kit/queue` | list 1, 3, 9; held (with Edit: at rest, hovered, focused, narrow); editing |
 | 12 | Notice | `notice` | `kit/notice` | composer, page, floating; neutral, amber, accent, red; 0 to 2 actions; dismiss |
-| 13 | SystemLine | `systemLine` | `kit/system-line` | info (with `meta`: what a changed setting costs, in mono at its end, S33), steer, hand-off, error with its action |
+| 13 | SystemLine | `systemLine` | `kit/system-line` | info (with `meta`: what a changed setting costs, in mono at its end, S33), steer, hand-off, error (the glyph and the words in red, S36) with its action (the tint Button, `.sysline.act .btn`). A stopped engine's line is `modules/chat/engine.ts` in a session, a bot's chat and a room |
 | 14 | Bubble | `bubble` | `kit/bubble` | user, agent, a bot's fill, room byline, brand tile, you wash, code |
 | 15 | DiffView | `diffView` | `kit/diff-view` | stacked, split; comment, comment focused |
 | 16 | Well | `well` | `kit/well` | code in a Block and a bubble, terminal |
@@ -137,7 +137,7 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 33 | Badge | `badge` | `kit/badge` | neutral, amber |
 | 34 | StatusLine | `statusLine` | `kit/status-line` | bot, session, system; working, waiting |
 | 35 | Avatar | `avatar` | `kit/avatar` | orb 16 to 96, brand tile, stack, logomark |
-| 36 | Disclosure | `disclosure` | `kit/disclosure` | steps, work log; closed, open; the summary hovered, focused; no steps; narrow |
+| 36 | Disclosure | `disclosure` | `kit/disclosure` | steps, work log; closed, open; the summary hovered, focused; no steps; narrow; the work log open as S10 draws it (rows under its words, each led by its kind's glyph: a step's `log` state) |
 | 37 | TurnFoot | `turnFoot` | `kit/turn-foot` | bot (model, time, cost); session (S23: the checkpoint, the actions that exist, the model with its time and cost): only Undo, none, Undo disabled, a route with why and "ungoverned", an action hovered and focused, narrow |
 | 38 | TimeSeparator | `timeSeparator` | `kit/time-separator` | a gap, NEW |
 | 39 | Composer | `composer` | `kit/composer` | session, bot, room, dock, notch; typed, multi-line, running (Stop beside the mic; with text; idle; Stop hovered, focused; narrow), held, no model, quick menu; no voice model yet (the voice circle as ever, its name saying so; what it opens: the Notice with "Set up voice"); nothing queues (no send while a turn runs); a session's line and marks (S20; an item hovered, focused; narrow: it folds; no line); a room's line and hint; chips in the text (and narrow); the "@" list open |
@@ -145,7 +145,7 @@ A module composes these and places them; its CSS holds placement only (`bots.css
 | 41 | Dock | `dock` | `kit/dock`; the app's: `v7/dock`; boards `boards/dock` (K01 to K08) | row, compact, open (stack, card); hover, focus, many; in the app: one bot, none (no dock), 120 bots ("N more"), a long name (and hovered), the asks open, a card with an ask, with a thread, of a working bot, with no messages, of a long-named bot, centred in the window, compact when idle, 112% and 125% (and a card open at 125%), the Bots tab (no dock). An orb is drawn at the size it shows and fills its button (`--s`); an AskCard in it takes `plain`, `rest` and an answer at the `end`; the row's end slot is the ask pill or, under a hover, the bot's name and state (at least `--dk-cap-min` wide) |
 | 42 | Notch | `notch` | `kit/notch` | the slab and its composer (the notch spec is not in this repository) |
 | — | SidebarFoot | `sidebarFoot` | `kit/sidebar-foot` | you, Store, Settings; hover, focus, pressed, the menu open, a long name, no account, narrow |
-| — | EmptyState | `emptyState` | `kit/empty-state` | one line, at most one action |
+| — | EmptyState | `emptyState` | `kit/empty-state` | one line, at most one action; `place: 'list'` in a list (board S41's "No sessions yet": the line starts where the rows' words start) |
 | — | HoverBar | `hoverBar`, `hoverBeside` | `kit/hover-bar` | what a turn offers under the pointer or the focus (board 11's `.hoverbar`): copy, more; a room adds reply and open the chat; beside a bubble, and in the gutter (a room's member, a session's answer); an action hovered, focused, pressed; at rest (hidden); long; the more menu open. One part for a bot's chat, a room and a session (`modules/bots/turn.ts`, `modules/session/conversation.ts`) |
 | — | Session S0 patterns | `modules/session/s0.ts` | `kit/session-launch`, `kit/session-rewind`, `kit/session-lines` | the new session's canvas and launch row, the four-row How careful menu, the rewind foot and sheet, the thread's own lines (wave C, `w33/session-s0`) |
 
@@ -342,6 +342,37 @@ changed most is that it is now the kit's component, one markup for both fields a
 - Settings, the shortcut sheet (`.hx-dialog`), the palette, the bot settings sheet (`.ui-panel` with a concave corner),
   popovers (`ui.popover`). R-dialog-1 to 6 hold. The dialog markup is the page's own (`index.html`); its body is a
   stable scroll area with the track inset at the foot.
+
+### The mic's dictation
+
+The mic is transcription (owner, 26 November): it writes what you say into the composer's text. A dictation source reports its
+states as events, and the kit's Composer draws each with what it already has (the placeholder line, the text, a Notice at the mic).
+The shape, in `data/provider.ts` (the kit's `DictationState` in `components/v7/compose.ts` is the same):
+
+```ts
+export type DictationEvent =
+  | { kind: 'preparing'; done: number; total: number }   // the speech model is being fetched, once: bytes done of the total
+  | { kind: 'listening' }                                // the microphone is open and it hears
+  | { kind: 'partial'; text: string }                    // the words so far of what is being said; each replaces the last partial
+  | { kind: 'final'; text: string }                      // a finished stretch: it stays in the text; more may follow
+  | { kind: 'error'; reason: string; retry?: boolean };  // one plain sentence; `retry: false` when trying again cannot help
+export interface DictationSource {
+  start(opts: { botId: string | null }, onEvent: (e: DictationEvent) => void): () => void;   // the returned function cancels
+}
+```
+
+| Event | What the composer shows |
+|---|---|
+| `preparing` | `data-dictation="preparing"`; the placeholder reads "Getting the speech model 12 of 57 MB" (megabytes from the bytes) |
+| `listening` | `data-dictation="listening"`; the placeholder says who listens ("nina is listening", "Listening") |
+| `partial` | `data-dictation="transcribing"`; the words stand in the text where the caret is (at its end when the caret is elsewhere), after a space where the words before have none; the next partial replaces them |
+| `final` | the words stay, the composer's own input handling follows (marks, chips, the send arrow), and it listens again |
+| `error` | the mic switches off (`ui:dictate {on: false}`, so the app cancels the source), and a Notice at the mic says `reason` with "Try again" (it switches the mic on again), or with no action when `retry` is `false` |
+
+The app starts a source on `ui:dictate {on: true}` and hands its events on (`modules/chat/compose.ts` `dictate`); events that arrive
+while the mic is off are dropped. A provider with no `dictation` draws the mic with `micOff`: a press says "Dictation is not available
+in this build" (`micTool`). Stories: `kit/composer` "dictation: getting the speech model", "the words arriving", "it failed", "not in
+this build", and "listening".
 
 ### Menus, tooltips and popovers — one
 - `menu.open` (account, model picker, composer, room, form pickers, right panel), `popover.open` (the blank), the

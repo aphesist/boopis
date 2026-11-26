@@ -324,6 +324,23 @@
       ],
       "note": "S33 is the reference for the line a changed setting leaves (the sliders glyph, the words, the extra cost in mono at its end) and for the composer under it; the line is measured where the app draws it, 32 lower than the board's. The thread around it is S20's and S23's: the app's finished turn keeps its foot (the model and its time; S23), and its running turn has its work line and the turn's clock, which S33's still leaves out. The turn runs, so the composer carries Stop (owner, 25 November). The fixture's cost is the board's \"+$0.04\"; the live app says the tokens read again without the cache, because nothing holds a price for a model yet."
     },
+    "S36-engine": {
+      "title": "Board S36: the engine stopped mid-session: the line with \"Start it again\"",
+      "board": "screen.html?s=s18&opt=a",
+      "image": "session/S36-error-engine-stopped-{theme}.jpg",
+      "story": "boards/sessions",
+      "state": "S36 the engine stopped",
+      "wait": 1500,
+      "regions": {
+        "chrome": [0, 0, 1440, 56],
+        "sidebar": [0, 56, 300, 844],
+        "engine line": [540, 294, 600, 44, 0, 32],
+        "composer": [300, 726, 1140, 92],
+        "dock": [300, 818, 1140, 82]
+      },
+      "scope": ["chrome", "sidebar", "engine line", "composer", "dock"],
+      "note": "S36 is the reference for the line a stopped engine leaves at the end of the thread (the red glyph and words, the tint button) and for the composer under it; the line is measured where the app draws it, 32 lower than the board's. The thread above it is S23's: the app's finished turn keeps its foot (the model and its time), and its work line stands where S23 draws it, which S36's still leaves out. The fixture's engine is its own (the page build has none): its restart brings it back."
+    },
     "S37-nomodel": {
       "title": "Board S37: no model: the mark asleep, \"+ Choose a model\", the block offering the sign-ins, \"Choose a model to start\"",
       "board": "screen.html?s=s18&opt=b",
@@ -365,8 +382,25 @@
       },
       "note": "The fixture switches on the worktree selector the board draws (\"New worktree\": `info.later`), which the app does not show until that choice exists. The block's buttons go to Settings, Models, at that lab's sign-in."
     },
+    "S38-gate": {
+      "title": "Board S38: the gate failed: the card with the failing check and \"Fix and retry\"",
+      "board": "screen.html?s=s18&opt=c",
+      "image": "session/S38-error-gate-failed-{theme}.jpg",
+      "story": "boards/sessions",
+      "state": "S38 the gate failed",
+      "wait": 1500,
+      "regions": {
+        "chrome": [0, 0, 1440, 56],
+        "sidebar": [0, 56, 300, 844],
+        "gate card": [570, 238, 630, 142, 0, -2],
+        "composer": [300, 726, 1140, 92],
+        "dock": [300, 818, 1140, 82]
+      },
+      "scope": ["chrome", "sidebar", "gate card", "composer", "dock"],
+      "note": "S38 is the reference for the card a failed gate leaves under the answer (the check's glyph and name, \"failed\" in red, \"Fix and retry\", what the check printed in its Well, the note) and for the composer under it; the card is measured where the app draws it, 2 higher than the board's. The thread above it is S23's: the work line stands where S23 draws it (S38's still sets it 2 higher and 30 further in) and the finished turn keeps its foot under the card. The fixture's note is the board's sentence (\"Nothing was written: the change stays in the journal, not the workspace.\"); the live app says what its engine does: the files were written, checked, and put back."
+    },
     "S41-noproject": {
-      "title": "Board S41: no project: \"Add a folder to start\" on the canvas and in the composer",
+      "title": "Board S41: no project, no sessions: \"No sessions yet\", the title \"Sessions\", \"Add a folder to start\" on the canvas and in the composer",
       "board": "screen.html?s=newSess&mk=a&st=noproject",
       "image": "session/S41-no-project-{theme}.jpg",
       "story": "boards/sessions",
@@ -404,12 +438,7 @@
           82
         ]
       },
-      "scope": [
-        "canvas",
-        "composer",
-        "dock"
-      ],
-      "note": "S41 is measured for the canvas and the composer under it (\"Add a folder to start\"). The canvas differs by \"Import sessions\", which is not shown until importing exists. The sidebar's \"No sessions yet\" and the title pill's \"Sessions\" are S41's too and are not converted yet (step 6b): the app says \"No sessions yet. Start one with New session.\" in the middle of the sidebar and titles the pill \"New session\"."
+      "note": "The canvas differs by \"Import sessions\", which is not shown until importing exists (the one button left stands on the centre line). The sidebar (the switch, \"+\", \"No sessions yet\") and the title pill (\"Sessions\") are the board's."
     },
     "K01-rest": {
       "title": "Board K01: the dock at rest under a running session",

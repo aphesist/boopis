@@ -2,7 +2,7 @@
    inbox, sessionnew.js newSess, dockv7.js). `pnpm lab:board` draws the app's real modules on it and compares them with the board,
    so every word, look and order here is the board's. Test data: the lab alone reads it. */
 import { store } from '../data/store';
-import type { DataProvider, Feed, GroupsEvent } from '../data/provider';
+import type { DataProvider, EngineState, Feed, GroupsEvent } from '../data/provider';
 import { CAREFUL_STEPS, YES } from '../data/session-s0';
 import type { CarefulStep, LaunchSettings, SessionCapabilities, SessionControls } from '../data/session-s0';
 import type { Bot, Change, Conversation, ConversationEvent, FormSpec, Group, GroupMember, GroupMessage, LimitNotice, LaterFeature, Schedule, SessionSummary, Step, ThreadMessage } from '../data/types';
@@ -228,7 +228,8 @@ export function boardS20(p: DataProvider): DataProvider {
 export function boardS23(p: DataProvider): DataProvider {
   return started(p, [
     { id: 's23-t1', role: 'user', at: '09:42', text: ASK },
-    { id: 's23-t2', role: 'assistant', model: 'sonnet 5.5', time: '0m 59s', cost: '$0.08', stepCount: 3, steps: [...tools('patch', 2), ...tools('terminal', 1)], status: 'done', bullets: [], kept: ['c1', 'c2', 'c3'],
+    /* the steps are the work line's own, as board S10 lists them when it is open */
+    { id: 's23-t2', role: 'assistant', model: 'sonnet 5.5', time: '0m 59s', cost: '$0.08', stepCount: 3, steps: [{ title: 'patch', mono: true, meta: ['modules/dock/dock.css'], time: '' }, { title: 'patch', mono: true, meta: ['modules/dock/engine.ts'], time: '' }, { title: 'terminal', mono: true, meta: ['pnpm test dock'], time: '' }], status: 'done', bullets: [], kept: ['c1', 'c2', 'c3'],
       paragraphs: ['Fixed. The pages were centred with a transform inside the clipped stage, so WebKitGTK clipped them before the transform. They are centred by layout now, and the tests pass.'],
       blank: { question: 'Check the fix on which build?', short: 'Check the fix on which build?', options: ['staging', 'the Linux app'], guess: 'staging', rewrites: { staging: { lead: 'I guessed', tail: 'for the check' } } } }
   ], 'auto_edits', '', { details: { ...started(p, [], 'auto_edits', '').details, changes: store<readonly Change[]>([['modules/dock/dock.css', 12, 3], ['modules/dock/engine.ts', 2, 2]]) } });
@@ -245,6 +246,34 @@ export function boardS33(p: DataProvider): DataProvider {
   ], 'auto_edits', '', {}, [{ kind: 'settings', id: 's33-line', afterTurn: 's33-t2', text: 'Settings changed: continued with Auto-accept edits', cost: '+$0.04' }]);
   return { ...base, info: { ...base.info, later: new Set() } };   /* an earlier turn's foot offers only what exists */
 }
+
+/** board S36 (sessiontab2.js `s18`): the engine stopped mid-session: the last turn, your next message, and the line that says so with
+    "Start it again". The mock has no engine of its own: the fixture's says it stopped, and its restart brings it back */
+export function boardS36(p: DataProvider): DataProvider {
+  const base = started(p, [
+    { id: 's36-t1', role: 'user', at: '09:42', text: ASK },
+    { id: 's36-t2', role: 'assistant', model: 'sonnet 5.5', time: '0m 59s', cost: '', stepCount: 3, steps: [...tools('patch', 2), ...tools('terminal', 1)], status: 'done', bullets: [], paragraphs: ['Fixed. The pages are centred by layout now, and the tests pass.'] },
+    { id: 's36-t3', role: 'user', at: '09:44', text: 'Run the WebKit job.' }
+  ], 'auto_edits', '');
+  const state = store<EngineState>({ stopped: true, restarting: false, why: 'boopis\'s engine stopped answering.' });
+  return { ...base, info: { ...base.info, later: new Set() }, engine: { state, restart: () => { state.set({ stopped: false, restarting: false, why: null }); return Promise.resolve(); } } };
+}
+
+/** board S38 (sessiontab2.js `s18` c): the gate failed on the turn's change: the card with the failing check and "Fix and retry". The
+    note is the board's own sentence; the live app says what its engine does (the files are put back) */
+export function boardS38(p: DataProvider): DataProvider {
+  const base = started(p, [
+    { id: 's38-t1', role: 'user', at: '09:42', text: ASK },
+    { id: 's38-t2', role: 'assistant', model: 'sonnet 5.5', time: '0m 59s', cost: '', stepCount: 3, steps: [...tools('patch', 2), ...tools('terminal', 1)], status: 'done', bullets: [], paragraphs: ['I changed the centring; the gate ran the tests.'],
+      gate: { checks: ['tests'], output: ['FAIL centred.test.ts > the dock does not move', '  expected 720 to be 744'], files: [], note: 'Nothing was written: the change stays in the journal, not the workspace.' } }
+  ], 'auto_edits', '');
+  return { ...base, info: { ...base.info, later: new Set() } };
+}
+/** a board's content with the engine stopped (derived from S36: the same line under a bot's chat and a room) */
+export const engineStopped = (make: (p: DataProvider) => DataProvider) => (p: DataProvider): DataProvider => {
+  const state = store<EngineState>({ stopped: true, restarting: false, why: 'boopis\'s engine stopped answering.' });
+  return { ...make(p), engine: { state, restart: () => { state.set({ stopped: false, restarting: false, why: null }); return Promise.resolve(); } } };
+};
 
 /* ───────── the dock's key screens, K01 to K08 (dockv7.js `screen`): a session at work, your bots under it ───────── */
 /** the bots as dockv7.js orders them (BOTS: nina needs you, kai works, hex rests) and, for K05, the thirteen that do not fit */

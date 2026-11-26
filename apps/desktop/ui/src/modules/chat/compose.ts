@@ -2,7 +2,9 @@
    events, wire.ts and compose.ts): "+" asks the host for files and sets each into the text as a chip whose words are its "@" reference,
    the way a typed path is read; a file dropped on the composer or pasted into it becomes the same chip (`composerFiles`, which a started
    session uses too); the mic dictates into the text through the provider's dictation until it is switched off or let go, and the
-   bot's orbs listen meanwhile; "@" names what the screen offers. The voice
+   bot's orbs listen meanwhile. The mic is transcription: it writes what you say into the text and needs no voice model (owner,
+   26 November). What the dictation does is the source's to say, in events the kit's Composer draws (`dictate`); a build with no
+   dictation at all says so (`micTool`). "@" names what the screen offers. The voice
    circle (the primary button with no text) is always there (owner, 26 November): it talks once a voice model is set up (the
    provider's `voice`), and until then says what it needs, with the way to Settings, Models (`voiceTool`). */
 import { emit } from '../../core/bus';
@@ -11,6 +13,7 @@ import { REST_REACTION, restReact } from '@boopis/ui';
 import type { ComposerChip, KitMentions, MarkdownCtx } from '@boopis/ui';
 import { data } from '../../data';
 import type { Attached, LaterFeature } from '../../data/types';
+import type { DictationEvent } from '../../data/provider';
 
 /** the mentions a draft holds, each as the chip the sent message will draw (the kit's InlineChip with its words): a bot's orb and name
     in its colour, the room's stack for @all, a bot that is not here muted. `ctx` is the context the conversation draws its messages with */
@@ -42,6 +45,26 @@ export function voiceTool(slot: HTMLElement, botId: () => string | null): () => 
     if (at) kit.openNotice(at, { icon: 'waveform', title: 'Voice needs a voice model', text: '', action: 'Set up voice', onAction: () => { emit('hx:open-settings', { section: 'models', from: 'voice' }); } });
   });
   return stop;
+}
+
+/** this build has no dictation at all (the provider has none): a composer's mic says so when pressed (`ComposerOpts.micOff`) */
+export const micUnavailable = (): boolean => !data().dictation;
+export const NO_DICTATION = 'Dictation is not available in this build';
+/** what the mic says when it is pressed, held or keyed in a build with no dictation (the kit fires ui:dictate-unavailable and starts
+    nothing): a Notice at the mic, with nothing to do about it. The mic never leads to the voice setup: that is the voice circle's */
+export function micTool(slot: HTMLElement): void {
+  slot.addEventListener('ui:dictate-unavailable', () => {
+    const at = slot.querySelector<HTMLElement>('.k7-composer [data-mic]');
+    if (at) kit.openNotice(at, { icon: 'mic', title: NO_DICTATION, text: '' });
+  });
+}
+/** start a dictation for the composer living in `slot`: what the source reports (the speech model being fetched, listening, the words
+    so far, a finished stretch, an error) is handed to the kit's Composer, which draws it and writes the words into its text. Returns
+    what stops it; null where the provider has no dictation */
+export function dictate(slot: HTMLElement, botId: string | null): (() => void) | null {
+  const hear = data().dictation;
+  if (!hear) return null;
+  return hear.start({ botId }, (ev: DictationEvent) => { const c = slot.querySelector<HTMLElement>('.k7-composer'); if (c) kit.composerDictation(c, ev); });
 }
 
 /* ───────── files dropped on a composer or pasted into it ───────── */
@@ -131,9 +154,11 @@ export function composeTools(slot: HTMLElement, o: ComposeTools): { drawn(): voi
   slot.addEventListener('ui:dictate', (e) => {
     hush();
     if (!(e as CustomEvent<{ on: boolean }>).detail.on) return;
-    cancel = data().dictation.start({ botId: o.botId() }, (heard) => { const c = text(); if (c) kit.composerInsert(c, heard); });
+    cancel = dictate(slot, o.botId());   /* the kit's mic does not switch on in a build with no dictation (`micOff`) */
+    if (!cancel) return;
     orbsListen(o.botId(), true, was);
   });
+  micTool(slot);
   const endTalk = voiceTool(slot, o.botId);
   return {
     drawn() { stop(); const c = slot.querySelector<HTMLElement>('.k7-composer'); if (c && o.mentions) kit.mentions(c, o.mentions); },

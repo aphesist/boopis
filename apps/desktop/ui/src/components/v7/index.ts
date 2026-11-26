@@ -14,7 +14,8 @@ import { layer } from '../layer';
 import { glyph } from './util';
 import { applyTheme, botFill, deriveAccent } from './theme';
 import { composerChips, composerInsert, composerInsertChip, composerMarks, composerMentions, composerRunning, markReveal, wire, wireHold, wireMenu } from './wire';
-import { composerDropping, composerSet, composerUndo } from './compose';
+import { composerDictate, composerDictation as micSay, composerDropping, composerSet, composerUndo } from './compose';
+import type { DictationState } from './compose';
 import type { KitMentions } from './wire';
 import { notify, notifyText } from './notify';
 
@@ -73,22 +74,40 @@ function openMenu(anchor: HTMLElement, o: blocks.MenuOpts & { place?: 'above' | 
     layer.close();
   });
   (node.querySelector<HTMLElement>('[aria-checked="true"]') ?? node.querySelector<HTMLElement>('[data-kit~="MenuRow"], [data-kit~="OptionRow"]'))?.focus({ preventScroll: true });
+  tipCutRows(node);
   return node;
+}
+/** a row whose second words are cut where the row ends (a MenuRow's description, an OptionRow's meaning) says them whole in its tooltip:
+    nothing a menu says is lost to its width. A row that has a tooltip of its own keeps it */
+function tipCutRows(menu: HTMLElement): void {
+  for (const d of menu.querySelectorAll<HTMLElement>('.k7-mrow__desc, .k7-orow__meaning')) {
+    const row = d.closest<HTMLElement>('[data-kit~="MenuRow"], [data-kit~="OptionRow"]');
+    if (row && !row.dataset['tip'] && d.scrollWidth > d.clientWidth + 1) { row.dataset['tip'] = d.textContent ?? ''; row.dataset['tipPos'] = 'right'; }
+  }
 }
 
 /** a Notice opened against an anchor: what a control that cannot act yet needs, in one line, with the one action that gets there (the
     voice circle with no voice model: "Set up voice"). It is the Menu's layer: one open at a time, Esc or an outside press closes it and
     focus returns to the anchor. The action closes it and calls `onAction` */
-function openNotice(anchor: HTMLElement, o: Pick<blocks.NoticeOpts, 'text' | 'title' | 'icon' | 'tone'> & { action: string; label?: string; place?: 'above' | 'below'; align?: 'start' | 'end' | 'center'; onAction?: () => void }): HTMLElement | null {
-  const node = wire(frag(blocks.notice({ text: o.text, title: o.title, icon: o.icon, tone: o.tone, place: 'floating', actions: [{ label: o.action, value: 'act' }], dismiss: true, attrs: { role: 'dialog', 'aria-label': o.label ?? o.title ?? o.text, 'data-floating': '' } })));
+function openNotice(anchor: HTMLElement, o: Pick<blocks.NoticeOpts, 'text' | 'title' | 'icon' | 'tone'> & { /** the one way on; without it the Notice only says */ action?: string; label?: string; place?: 'above' | 'below'; align?: 'start' | 'end' | 'center'; onAction?: () => void }): HTMLElement | null {
+  const node = wire(frag(blocks.notice({ text: o.text, title: o.title, icon: o.icon, tone: o.tone, place: 'floating', actions: o.action ? [{ label: o.action, value: 'act' }] : [], dismiss: true, attrs: { role: o.action ? 'dialog' : 'status', 'aria-label': o.label ?? o.title ?? o.text, 'data-floating': '' } })));
   if (!layer.open(anchor, node, { place: o.place ?? 'above', align: o.align ?? 'end' })) return null;
   node.addEventListener('click', (e) => {
     const t = e.target as Element;
     if (t.closest('[data-dismiss]')) { layer.close(); return; }
     if (t.closest('[data-value="act"]')) { layer.close(false); o.onAction?.(); }
   });
-  node.querySelector<HTMLElement>('[data-value="act"]')?.focus({ preventScroll: true });
+  node.querySelector<HTMLElement>('[data-value="act"]')?.focus({ preventScroll: true });   /* a Notice with nothing to do only says (a status): the focus stays where it was */
   return node;
+}
+/** tell a composer what its dictation is doing, as the source reports it (compose.ts `DictationState`): the composer draws preparing,
+    listening and the words arriving itself; an error switches its mic off and opens a Notice at the mic that says why in the
+    source's own plain words, with "Try again" (it switches the mic on again) unless the source says trying again cannot help */
+function composerDictation(c: HTMLElement, ev: DictationState): void {
+  micSay(c, ev);
+  if (ev.kind !== 'error') return;
+  const mic = (c.matches('.k7-composer') ? c : c.querySelector<HTMLElement>('.k7-composer'))?.querySelector<HTMLElement>('[data-mic]');
+  if (mic) openNotice(mic, { icon: 'mic', title: ev.reason, text: '', ...(ev.retry === false ? {} : { action: 'Try again', onAction: () => { composerDictate(c, true); } }) });
 }
 
 /** "@" in a composer names one of `src`'s entries, chosen from the kit's Menu over it (wire.ts composerMentions) */
@@ -103,7 +122,7 @@ const mentions = (c: HTMLElement, src: KitMentions): void => {
 };
 
 export const kit = {
-  html, ...factories, composerInsert, composerInsertChip, composerChips, composerMarks, composerRunning, composerSet, composerUndo, composerDropping, hoverBeside: blocks.hoverBeside, mentions, section: surfaces.section, dockGeometry: DOCK_GEOMETRY,
+  html, ...factories, composerInsert, composerInsertChip, composerChips, composerMarks, composerRunning, composerSet, composerUndo, composerDropping, composerDictation, composerDictate, hoverBeside: blocks.hoverBeside, mentions, section: surfaces.section, dockGeometry: DOCK_GEOMETRY,
   /** the Dock's parts as markup, for the app's live dock, which keeps its orbs connected and writes each part in place */
   dockParts: { slab: slabPath, orb: dockOrb, cap: dockCap, ask: dockAsk, more: dockMore, panel: dockPanel }, wire, wireHold, wireMenu, markReveal, openMenu, openNotice, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, notify, notifyText, keyNames: controls.keyNames, variants: kitVariants
 };
@@ -115,5 +134,6 @@ export type { ToolRowOpts, AskCardOpts, AskAnswer, FilesCardOpts, FileCardOpts, 
 export type { CardOpts, RowOpts, BlockOpts, MenuOpts, MenuEntry, MenuRowOpts, OptionRowOpts, ListRowOpts, ListOpts, SectionHeadOpts, NoticeOpts, SystemLineOpts, BubbleOpts, WellOpts, DisclosureOpts, StepOpts, TurnFootOpts, HoverBarOpts, HoverAction, TimeSeparatorOpts, EmptyStateOpts } from './blocks';
 export type { AvatarOpts, InlineChipOpts, MarkOpts, StatusWordOpts, BadgeOpts, StatusLineOpts } from './inline';
 export type { NotifyOpts } from './notify';
+export type { DictationState, DictationPhase } from './compose';
 export type { KitMentions, ComposerChip, ComposerMark } from './wire';
 export type { ThemeOpts, Mode as KitMode, AccentTokens } from './theme';

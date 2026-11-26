@@ -184,7 +184,7 @@ describe('files, fork and what stays a preview', () => {
 
   it('keeps the feedforward reading off unless the preview flag is on, and hears nothing', () => {
     expect(provider.feedforward.catalog()).toEqual([]);
-    expect(provider.dictation.start({ botId: null }, () => { throw new Error('nothing was heard'); })).toBeTypeOf('function');
+    expect(provider.dictation?.start({ botId: null }, () => { throw new Error('nothing was heard'); })).toBeTypeOf('function');
     expect(provider.user.get().name).not.toBe('enzo');
   });
 });

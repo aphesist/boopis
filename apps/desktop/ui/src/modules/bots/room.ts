@@ -22,7 +22,8 @@ import { openSettings } from './settings';
 import { checkClips, watchClips } from './clips';
 import { atEnd, followZone } from '../chat/follow-zone';
 import { paintDetails } from './details';
-import { composeTools, later, mentionChips, voiceNeedsSetup } from '../chat/compose';
+import { composeTools, later, mentionChips, micUnavailable, voiceNeedsSetup } from '../chat/compose';
+import { followEngine } from '../chat/engine';
 import { outsideDescription, outsideRoomMark } from './outside';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 
@@ -75,6 +76,7 @@ function buildRoom(): void {
      19 November) and New session with a live bot. They sit on one quiet line over the thread, only when there is one to show */
   const top = el('div', { class: 'bt-topline', hidden: true });
   col.append(top, log);
+  followEngine(() => col);   /* derived from board S36: the engine stopped: the line that says so, and starts it again, under the thread */
   S.pActs = top;
   scroll.append(col);
   const zone = el('div', { class: 'bt-composer-zone' });
@@ -337,7 +339,7 @@ function buildComposer(host: HTMLElement): void {
   const draw = (b: Bot): void => {
     const keep = slot.firstElementChild ? api.value : '';
     const l = lineOf(b);
-    const c = kit.composer({ kind: 'bot', placeholder: 'Message ' + b.name, label: 'Message ' + b.name, hears: b.name, running, line: l.items, voiceSetup: voiceNeedsSetup(), ...(b.color ? { fill: kit.botFill(b.color) } : {}), ...(keep ? { text: keep } : {}) });
+    const c = kit.composer({ kind: 'bot', placeholder: 'Message ' + b.name, label: 'Message ' + b.name, hears: b.name, running, line: l.items, voiceSetup: voiceNeedsSetup(), micOff: micUnavailable(), ...(b.color ? { fill: kit.botFill(b.color) } : {}), ...(keep ? { text: keep } : {}) });
     slot.replaceChildren(c);
     tools.drawn();
     botId = b.id; sig = l.sig;

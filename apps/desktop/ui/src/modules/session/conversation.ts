@@ -14,7 +14,7 @@ import { el, isMac, reduced } from '../../core/dom';
 import { provide } from '../../core/registry';
 import { kit, ui } from '@boopis/ui';
 import { data } from '../../data';
-import type { AgentTurn, ConversationEvent, FormSpec, FormStatus, SessionSummary, ThreadLine, Turn, UserTurn } from '../../data';
+import type { AgentTurn, GateFail, ConversationEvent, FormSpec, FormStatus, SessionSummary, ThreadLine, Turn, UserTurn } from '../../data';
 import { clock } from '../../host/map';
 import { sessionComposer } from './composer';
 import type { SessionComposer } from './composer';
@@ -33,6 +33,7 @@ import type { RewindSheet } from './s0';
 import { mountNew } from './new';
 import type { NewScreen } from './new';
 import { openModel, openCarefulFor, openEffort, openFolder, launchView } from './launch';
+import { followEngine } from '../chat/engine';
 import { approvalCard, askShape, footOf, isOpen, lapsedCard, sayTurn, statusOf, stepRows, toolRow, workLine } from './turn';
 import type { AskState } from './turn';
 
@@ -209,7 +210,10 @@ function partsOf(a: AgentTurn): Part[] {
     /* the list under it is drawn again as steps arrive; whether it is open is the reader's (kept across a redraw) */
     out.push(['log', line + '|' + a.steps.length + '|' + a.status, () => {
       const open = turnNode(a.id)?.querySelector('[data-part="log"]')?.hasAttribute('data-open') ?? false;
-      return kit.disclosure({ variant: 'worklog', summary: line, steps: stepRows(a), open });
+      /* a change says its lines where the session's changed files know them (the last turn's: board S10, "Changed dock.css, +12 −3") */
+      const changes = isLast ? data().details.changes.get() : [];
+      const counts = (path: string): readonly [number, number] | null => { const c = changes.find((x) => x[0] === path || x[0].endsWith('/' + path) || path.endsWith('/' + x[0])); return c ? [c[1], c[2]] : null; };
+      return kit.disclosure({ variant: 'worklog', summary: line, steps: stepRows(a, counts), open });
     }]);
   };
   if (a.council) out.push(['council', 'council', () => councilBlock(a.council as NonNullable<AgentTurn['council']>)]);
@@ -223,6 +227,9 @@ function partsOf(a: AgentTurn): Part[] {
     else out.push(['tool:' + f.id, JSON.stringify([status ?? 'open', st.choice, st.at, st.note]), () => wireAsk(kit.toolRow(toolRow(f, last, st)), f)]);
   }
   if (a.children?.length) out.push(['children', 'children', () => childrenBlock(a.children ?? [], childHost())]);
+  /* a ship that did not pass its gate (board S38): the check and its verdict, what it printed, what became of the change, and the one
+     way on, which asks the agent to fix what the gate found and ship again (on the last turn, once it ended) */
+  if (a.gate && !running) out.push(['gate', JSON.stringify([a.gate, isLast]), () => gateCard(a.gate as GateFail, isLast)]);
   /* the last finished turn that changed files lists them (board S23); their diff opens in the Changes panel */
   const files = isLast && !running && (a.ship || a.kept?.length) ? data().details.changes.get() : [];
   if (files.length) out.push(['files', JSON.stringify(files), () => filesCard(files.map((c) => ({ path: c[0], add: c[1], del: c[2] })))]);
@@ -254,6 +261,19 @@ const elapsed = (a: AgentTurn): string => Math.max(0, Math.floor((Date.now() - (
 function filesCard(files: Array<{ path: string; add: number; del: number }>): HTMLElement {
   const c = kit.filesCard({ files, action: 'Open diff', actionAttrs: { 'data-action': 'view-diff' }, ...(files.length > 8 ? { fold: true, open: false } : {}) });
   c.querySelector('[data-files]')?.addEventListener('click', () => { openPanel('changes'); });
+  return c;
+}
+/** what "Fix and retry" sends as your next message: the agent reads the failing check in its own context */
+export const FIX_AND_RETRY = 'The gate failed. Fix what it found and ship the change again.';
+/** board S38: the gate failed. The kit's FilesCard in its check form: "Gate", "failed" in red, what the failing check printed, what
+    became of the change. "Fix and retry" is on the session's last turn only (an earlier failure is history) and sends the ask above */
+function gateCard(g: GateFail, last: boolean): HTMLElement {
+  const c = kit.filesCard({ files: g.files.map((path) => ({ path })), check: { title: 'Gate', word: 'failed', tone: 'red', ...(g.output.length ? { output: g.output.join('\n') } : {}), note: g.note }, ...(last ? { action: 'Fix and retry', actionAttrs: { 'data-action': 'fix-retry' } } : {}), attrs: { 'data-checks': g.checks.join(' ') || null } });
+  c.querySelector('[data-files]')?.addEventListener('click', () => {
+    if (isRunning(VIEW.current)) return;
+    const gv = data().details.governance.get();
+    sessions().send(VIEW.current, FIX_AND_RETRY, { governed: gv.governed, smart: gv.smart, model: gv.model, assume: [], attachments: [] });
+  });
   return c;
 }
 const turnText = (id: string): string => { const b = turnNode(id)?.querySelector<HTMLElement>('[data-part="text"] [data-kit~="Bubble"], [data-part="text"][data-kit~="Bubble"]'); return b ? mdOf(b) : ''; };
@@ -455,6 +475,7 @@ function onConversationEvent(ev: ConversationEvent): void {
     ui.announce(ev.stopped ? 'Stopped' : 'Answer ready');
   } else if (ev.type === 'line') { placeLine(col, ev.line); syncDividers(col); }
   else if (ev.type === 'turn-kept') change(ev.turnId, (a) => ({ ...a, kept: ev.kept }));
+  else if (ev.type === 'turn-gate') change(ev.turnId, (a) => ({ ...a, gate: ev.gate ?? undefined }));
   else if (ev.type === 'blank-answered') {
     VIEW.blank = ev.answer;
     setAttention(0); changed();
@@ -524,8 +545,12 @@ function placeRow(node: HTMLElement, o: { quiet: boolean }): void {
   if (!o.quiet && VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
 }
 
-/** what the title pill says of a session: its name, and the branch it works on once it has started (board S20) */
-const titleOf = (s: SessionSummary | undefined): { title: string; project: string; tab: 'session'; sub: string } => ({ title: s?.title ?? '', project: s?.project ?? '', tab: 'session', sub: s && !isDraft(s.id) ? s.branch ?? '' : '' });
+/** what the title pill says of a session: its name, and the branch it works on once it has started (board S20). With no folder to
+    start one in, nothing is open yet and the pill names the tab, "Sessions" (board S41; a new session with a folder is S17's "New session") */
+const NOTHING_OPEN = 'Sessions';
+const noFolder = (s: SessionSummary | undefined): boolean => !!controls() && (!s || isDraft(s.id)) && launchView().folder === null;
+const titleOf = (s: SessionSummary | undefined): { title: string; project: string; tab: 'session'; sub: string } => ({ title: noFolder(s) ? NOTHING_OPEN : s?.title ?? (controls() ? 'New session' : ''), project: s?.project ?? '', tab: 'session', sub: s && !isDraft(s.id) ? s.branch ?? '' : '' });
+const openSession = (): SessionSummary | undefined => sessions().list.get().find((x) => x.id === VIEW.current);
 export function selectSession(id: string, opts: { quiet?: boolean; focus?: boolean } = {}): void {
   /* switching never stops a turn: the running session keeps streaming into its conversation (session-launch.md 2.2) */
   VIEW.current = id;
@@ -557,6 +582,7 @@ export function mountView(root: HTMLElement): void {
   VIEW.col.addEventListener('keydown', onTurnKey);
   wireRefs(VIEW.col, { bot: () => null });
   VIEW.col.addEventListener('focusin', (e) => { const t = (e.target as Element).closest<HTMLElement>('[data-hx-turn]'); if (t && e.target === t) rove(t); });
+  followEngine(() => VIEW.col);   /* board S36: the engine stopped mid-session: the thread ends with the line that says so and starts it again */
   const first = sessions().list.get()[0];
   if (first) VIEW.current = first.id;
   /* the app opens on a new session: the row of the session that was last worked in keeps its mark */
@@ -592,7 +618,7 @@ export function mountView(root: HTMLElement): void {
     draft: sessions().draft(), sessionId: () => VIEW.current,
     waits: () => !!waitingAsk(),
     /** what the placeholder says of the thread: a change waits for your answer, the last turn ended, or nothing yet */
-    after: () => { const last = [...TURNS.values()].pop(); return !!last && last.status !== 'running'; },
+    after: () => { const last = conv().snapshot().turns.at(-1); return !!last && last.role === 'assistant' && last.status !== 'running' && !last.gate; },   /* your own message with no answer yet is not an ended turn (S36: "Message"), nor is a change the gate did not pass (S38) */
     send: (text, meta) => {
       /* typing while a change waits declines it with these words (S09); the words are then the next message */
       declineWith(text);
@@ -607,7 +633,8 @@ export function mountView(root: HTMLElement): void {
   followZone(host, () => VIEW.scroll, () => root, '--ss-comp-h')();
   requestAnimationFrame(() => c.focus());
   const c0 = controls();
-  if (c0) { c0.capabilities.subscribe(() => { syncFeet(); redrawCanvas(); }); c0.launch.subscribe(() => { redrawCanvas(); }); }
+  /* a folder chosen (or lost) changes what the pill says of a session that has not started */
+  if (c0) { c0.capabilities.subscribe(() => { syncFeet(); redrawCanvas(); }); c0.launch.subscribe(() => { redrawCanvas(); if (NEW?.shown) emit('hx:title', titleOf(openSession())); }); }
   data().details.changes.subscribe(() => { const id = lastAgent(); if (id) drawAgent(id); });
   provide('stop', (d) => { if (d.tab !== 'session' || !isRunning(VIEW.current)) return false; sessions().stop(VIEW.current); return true; });
   provide('find', (d) => (d.tab === 'session' ? openFind() : false));
@@ -618,6 +645,5 @@ export function mountView(root: HTMLElement): void {
   });
   on('hx:new-session', (d) => newSession(d.project));
   on('hx:session-select', (d) => { if (d.id && d.from !== 'list' && d.id !== VIEW.current && sessions().list.get().some((x) => x.id === d.id)) selectSession(d.id, { quiet: true }); });
-  const cur = sessions().list.get().find((s) => s.id === VIEW.current);
-  emit('hx:title', titleOf(cur));
+  emit('hx:title', titleOf(openSession()));
 }

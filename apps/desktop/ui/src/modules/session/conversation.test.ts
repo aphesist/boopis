@@ -104,6 +104,31 @@ describe('the thread', () => {
   });
 });
 
+describe('the gate failed (board S38)', () => {
+  const GATE = { checks: ['tests'], output: ['FAIL centred.test.ts > the dock does not move', '  expected 720 to be 744'], files: ['modules/dock/dock.css'], note: 'Nothing was kept: every file is back as it was.' };
+  it('the ended turn draws the card under its answer: "Gate", "failed", what the check printed, the files, the note; the composer says "Message"', () => {
+    boot([{ id: 'u1', role: 'user', at: '09:42', text: 'Fix it.' }, agent({ status: 'done', time: '0m 59s', steps: [{ title: 'patch', mono: true, time: '' }], paragraphs: ['I changed the centring; the gate ran the tests.'], gate: GATE })]);
+    expect(parts()).toEqual(['log', 'text', 'gate', 'foot']);
+    const card = q('[data-part="gate"]');
+    expect(card.querySelector('[data-kit="FilesCard"], [data-kit~="FilesCard"]') ?? card.closest('[data-kit~="FilesCard"]')).toBeTruthy();
+    expect(q('[data-part="gate"] .k7-files__name, [data-part="gate"].k7-files .k7-files__name').textContent).toBe('Gate');
+    expect(q('.k7-files [data-kit="StatusWord"]').textContent).toBe('failed');
+    expect(q('.k7-files [data-kit="Well"] pre').textContent).toBe(GATE.output.join('\n'));
+    expect(q('.k7-files__note').textContent).toBe(GATE.note);
+    expect(q('.ss-composer .k7-composer__text').getAttribute('data-placeholder')).toBe('Message');
+  });
+  it('"Fix and retry" sends the ask as your next message; an earlier turn\'s card has no action; a later ship that passes takes the card away', () => {
+    boot([{ id: 'u1', role: 'user', at: '09:42', text: 'Fix it.' }, agent({ id: 'a0', status: 'done', time: '5s', gate: GATE }), { id: 'u2', role: 'user', at: '09:44', text: 'Again.' }, agent({ id: 'a1', status: 'done', time: '9s', gate: GATE })]);
+    const acts = [...root.querySelectorAll<HTMLElement>('[data-part="gate"] [data-files], [data-part="gate"][data-files]')];
+    expect(acts.map((b) => b.textContent?.trim())).toEqual(['Fix and retry']);
+    expect(acts[0]?.closest('[data-turn-id], [data-hx-turn]')).toBe(root.querySelectorAll('[data-turn="agent"]')[1]);
+    acts[0]?.click();
+    expect(calls.filter((c) => c[0] === 'send').map((c) => c[2])).toEqual(['The gate failed. Fix what it found and ship the change again.']);
+    ev.emit({ type: 'turn-gate', turnId: 'a1', gate: null });
+    expect(root.querySelectorAll('[data-part="gate"]').length).toBe(1);   /* the earlier turn's stays: it is that turn's history */
+  });
+});
+
 describe('a new session with no model signed in (board S37)', () => {
   const YES = { ok: true as const }, steps = { supervised: YES, auto_edits: YES, auto: YES, full: YES };
   const controls = (): SessionControls => ({
@@ -321,6 +346,9 @@ describe('the composer', () => {
     const menus = document.querySelectorAll<HTMLElement>('.k7-menu[data-floating]');   /* the add menu is still leaving the page: the list now open is the last */
     const rows = [...(menus[menus.length - 1] as HTMLElement).querySelectorAll<HTMLElement>('[data-kit~="MenuRow"]')];
     expect(rows[0]?.textContent).toContain('Automatic (Smart)');
+    /* its rows say what they are beside their name: the kit's list Menu, wide enough for them (boards S31, S32) */
+    expect((menus[menus.length - 1] as HTMLElement).dataset['variant']).toBe('list');
+    expect(rows[0]?.querySelector('.k7-mrow__desc')?.textContent).toMatch(/^Picks a tier for each message/);
     rows.find((r) => r.dataset['value'] && r.dataset['value'] !== '__smart' && r.dataset['value'] !== '__council' && r.getAttribute('aria-disabled') !== 'true')?.click();
     expect(set).toHaveBeenCalledWith(expect.objectContaining({ smart: false }));
   });
