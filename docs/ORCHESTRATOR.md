@@ -127,7 +127,7 @@ Each phase ends at a gate. The lead does not start the next phase's volume work 
 **Phase 3: 0.2.0's remaining features.**
 - Wave D foundations, each with its UI on the kit: host protections, the rules engine and its UI (this enables
   "Allow all this turn" and "Always allow"), team ops, feedforward live, blanks inline.
-- Wave E: the macOS notch helper, aligned to v7. The dmg ships unsigned (owner decision).
+- Wave E: the macOS notch helper: **moved to 0.4.0 by the owner (26 Nov)**. The dmg ships unsigned (owner decision).
 - Already in the base: governed bots, local API 0.2, macOS, Session S0 (launch settings, the permission scale,
   rewind, sessions stay live).
 - Gate: every 0.2.0 feature works on a real engine; installers for Linux, Windows, macOS; the owner's OK to release.
@@ -205,6 +205,14 @@ Until a 0.3.0 feature exists, its control on a 0.2.0 screen is disabled with a r
 - ctrl J for the compact row goes to the keys pass.
 - Removed with the v6 dock (spec 21.4 and "bots ask only through approvals"): a form answered from the dock,
   `[` `]` pages, up/down for size, the minimised pill, the session part.
+
+**Owner, 26 Nov (after the model switch):** "yes, run the host-only parts in parallel, that's fine. we can add the
+macOS notch integration futurely. leave that for a possible 0.4.0 update. right now i want the basics. just don't
+run screen-building for those. want to maintain the same level of consistency fable was giving me, where the boards
+were a base but the model itself did some choices (it has to, not every screen is done, neither is every submenu)."
+So: host-only work runs beside the kit builder, never screens; **the notch moves to 0.4.0** (phase 3 no longer
+holds it); screen steps keep the board as the base and make the derived choices themselves, on Opus at high effort,
+recorded and shown to the owner in batches.
 
 **The lead's transcription follow-up decisions (26 Nov):** the kit takes one trailing final after the mic is off;
 the Unlicense is accepted for whisper-rs and whisper-rs-sys (public-domain dedication; told to the owner); the
@@ -317,6 +325,7 @@ Resolutions the lead made (by the precedence of section 3 and the owner's leave 
 | Merged by the lead (26 Nov) | `e5f4c171`: `w33/transcription` (6d6076a2) into `w33/repass`, no conflicts, pushed |
 | **Model change (owner, 26 Nov)** | The owner switched the session to Opus 5.5 and said: no Fable subagents; pick models and effort levels that fit the goal; do not waste limits. The lead's rule from now: **Sonnet at medium** for close-outs, health runs, mechanical fixes and CI chasing; **Opus at high** for steps that match boards and design kit components (judgment); one kit builder at a time; parallel host-only work only when the owner agrees (asked 26 Nov, no answer yet) |
 | Running (26 Nov) | **6c close-out** (Sonnet, medium): item 3 if missing, the smoke's controls wait, dictation wording, health suite, CI, the dock diagnostic text if it fails |
+| Running in parallel (26 Nov, owner's OK) | **0.2.0 host foundations, no screens** (Opus, high): branch `w34/host-foundations` (worktree `/home/user/hx-wt/w34-host`) from w33/repass e5f4c171 with `w31/specs` merged (`1eff3002`; DECISIONS.md conflict resolved by keeping both; the w31 ADR drafts 0051 to 0056 collide with the orb's ADR-0051 and are to be renumbered 0060 to 0065). Order: renumber, host protections H1 to H6, the rules engine and its data (approval `scope`, capability `approval-rules`), team ops if room. Not: feedforward, blanks, notch, any `components/` or `modules/` file. Host builds on CI only (disk) |
 | Next | **6d** (Opus, high): the dock blank-orb fix from the diagnostic, form cards with fields, a council, find, the `ship` card kind. Then **step 7** (Opus, high): Settings (with project policy, connectors, Diagnostics, the voice section), Store, Connectors, palette, dialogs |
 | Transcription (76ed01b6 on `w33/transcription`, 26 Nov) | **Built and proven on a recording on Linux, Windows and macOS; a real microphone not tested.** New crate `crates/boopis-dictation` (whisper.cpp via whisper-rs 0.16, cpal, rubato; resampler adapted from voxtype with its MIT notice), CPU only with pinned x86-64 instructions; model `ggml-base-q5_1` (59.7 MB, pinned SHA-256, from huggingface.co, resumable, re-hashed at every load) in `<app data>/speech/`; host commands `dictation_start`/`dictation_stop` (main window only), stopped on close/reload/exit; local API test "nothing reaches the microphone"; `host/dictation.ts` in the kit's shape; new CI job `dictation` on three systems runs the model-backed test on whisper.cpp's public-domain sample. First words about 4 to 5.6 s, last words 0.3 to 1.1 s after the end; +1.7 MB. CI run 45772503012: all green but `ui` (smoke "controlslight: it opens a themed listbox") and the running lab. Merged `origin/w33/repass` at bb32bb41 into itself, no conflicts. The owner's test steps are in `docs/RELEASING.md` "Dictation" |
 | Transcription follow-ups (6d6076a2, 26 Nov) | **Done:** the kit composer keeps taking a stopped dictation's events until one `final`, an `error` or 3 s (`988d81c8`; `hostDictation()` always follows; 4 new tests; vitest 2041); macOS reads the authorization status and waits for the person's answer (objc2-av-foundation 0.3.2, MIT, macOS only; type-checked and built on CI's macOS leg, the prompt itself not seen); the record is **ADR-0059** (w31/specs holds 0051 to 0056, w32/session-specs 0057 and 0058). **`ui` still red on the branch, not from this work:** "controlslight: it opens a themed listbox" is an intermittent in the smoke's fixed 350 ms wait (0 of 17 local runs; 1 of 3 on CI); the re-run 45778070936 failed only at the WebKitGTK dock step (the blank-orb intermittent 6c is fixing); every other non-lab job green incl. `dictation` on three systems. Known cost of "do not mix": a new press within about a second of a stop loses the stopped dictation's last second. `data/provider.ts` and UI-COMPONENTS wording ("cancels" now means "stops listening; one last final may follow") left for the repass side. The builder cleaned the shared target directory by mistake (504 MB, its own build; nothing of the other builder's was there). **To do by the lead when 6c finishes: merge `origin/w33/transcription` into `w33/repass`; then the smoke's controls check waits for the fill, not 350 ms** |
