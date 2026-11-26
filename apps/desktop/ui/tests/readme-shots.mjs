@@ -26,11 +26,12 @@ const SHOTS = {
     await page.setViewportSize({ width: 1280, height: 980 });
     await page.waitForTimeout(500);
     await page.evaluate((spec) => {
-      const body = document.querySelector('.ss-q').closest('.ui-entry__body');
+      /* where a turn's forms go (modules/session/conversation.ts: `.ss-forms`, a child of the turn, in the model's gutter) */
+      const turn = [...document.querySelectorAll('.ss-col .ss-turn')].at(-1);
       const box = document.createElement('div');
       box.className = 'ss-forms'; box.style.marginTop = '14px';
       box.append(__hx.ui.card('form', spec, { size: 'inline' }));
-      body.append(box);
+      turn.append(box);
     }, QUESTION);
     await page.waitForTimeout(900);
     await page.evaluate(() => document.querySelector('.ss-forms').scrollIntoView({ block: 'end' }));

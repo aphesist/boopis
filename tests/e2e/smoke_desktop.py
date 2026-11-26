@@ -41,6 +41,11 @@ HERE = Path(__file__).parent
 PORT = 4455
 SETUP_DONE = HERE / "setup-done.json"  # what the host's setup leaves in a home it has finished with
 REPLY = "Hello from the fake model, streamed through the host."
+# the composer's text field that is displayed now, as an element for the driver (null while none is)
+SHOWN_COMPOSER = (
+    "return [...document.querySelectorAll('.ss-view .k7-composer__text')]"
+    ".find((e) => e.getClientRects().length) || null"
+)
 
 
 def call(method: str, path: str, body: object | None = None, timeout: float = 60) -> dict:
@@ -167,7 +172,11 @@ def main() -> int:
         def composer_or_setup() -> str | None:
             if setup_showing():  # the UI holds back the session until setup has finished
                 raise SystemExit(f"first-run setup is showing instead of a session: {text().strip()[:200]!r}")
-            return find(".ss-composer .k7-composer__text")  # the session's composer is the kit's (boards S20, S23)
+            # The composer that shows. A session that has not started is the new session's screen with a composer of
+            # its own (board S17, `.ss-new__composer`); the started session's (`.ss-composer`, boards S20 and S23) is
+            # not displayed until the first message, and a driver cannot type into what is not displayed.
+            v = call("POST", f"{s}/execute/sync", {"script": SHOWN_COMPOSER, "args": []})["value"]
+            return next(iter(v.values())) if isinstance(v, dict) and v else None
 
         composer = wait_for(composer_or_setup, "the composer")
         call("POST", f"{s}/element/{composer}/value", {"text": f"@@reply {REPLY}@@"})
@@ -256,25 +265,22 @@ def hide_and_return(s: str, display_file: Path, agent_text) -> None:
     long_reply = "Hidden " + ("streaming while the window is away. " * 240)
     marker = "window-came-back"
     prompt = "@@reply " + long_reply + marker + "@@"
-    # the first turn has ended (the composer no longer says a turn runs), then the long prompt goes in and Enter sends it
+    # the first turn has ended (the composer no longer says a turn runs), then the long prompt goes in and Enter sends
+    # it. The session has started, so its own composer shows now.
+    box = ".ss-composer .k7-composer"
     wait_for(
-        lambda: js(
-            "const c = document.querySelector('.ss-composer .k7-composer'); return !!c && !c.hasAttribute('data-running')"
-        ),
+        lambda: js(f"const c = document.querySelector('{box}'); return !!c && !c.hasAttribute('data-running')"),
         "the first turn to end",
         60,
     )
     js(
-        "const c = document.querySelector('.ss-composer .k7-composer__text'); c.focus();"
+        f"const c = document.querySelector('{box}__text'); c.focus();"
         f"document.execCommand('insertText', false, {json.dumps(prompt)}); return true;"
     )
-    composer = call("POST", f"{s}/element", {"using": "css selector", "value": ".ss-composer .k7-composer__text"})["value"]
+    composer = call("POST", f"{s}/element", {"using": "css selector", "value": f"{box}__text"})["value"]
     call("POST", f"{s}/element/{next(iter(composer.values()))}/value", {"text": "\ue007"})
     wait_for(
-        lambda: (
-            js("return !!document.querySelector('.ss-composer .k7-composer[data-running] [data-stop]')")
-            or marker in agent_text()
-        ),
+        lambda: js(f"return !!document.querySelector('{box}[data-running] [data-stop]')") or marker in agent_text(),
         "the long prompt to start a turn",
         30,
     )
