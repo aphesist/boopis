@@ -1,0 +1,19 @@
+/* The first run's placement (onboarding round 3: ob3.css). Its looks are the kit's (SetupPage, Block, OptionRow, Card, Composer, Menu,
+   Notice, AskCard, Tiles); this file only places them. */
+
+/* ── (a) setup: the layer over the whole window ── */
+.hx-first-run { position: fixed; inset: 0; z-index: var(--z-palette); font-family: var(--sans); }
+/* O-P02: each setting's check, in the accent (ob3 consent) */
+.hx-fr__on { display: inline-flex; color: var(--accent-text); }
+/* O-P03: the rows in the Block, 2 apart, and a key's Field under them */
+.hx-fr__rows { display: flex; flex-direction: column; gap: var(--gap-hair); }
+.hx-fr__rows > [data-kit~="OptionRow"] { width: 100%; }
+.hx-fr__key { padding: var(--sp-2) var(--pad-text) var(--sp-1); }
+.hx-fr__extras { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-3); }
+.hx-fr__say { margin: 0; color: var(--text-dim); }
+.hx-fr__out { margin: 0; white-space: pre-wrap; color: var(--text-dim); }
+/* O-P04: the composer 40 over the scene's foot, the recorded example's Notice 8 under it, the reading's menu above its mark */
+.hx-fr__try { position: absolute; inset: 0; }
+.hx-fr__trycomp { position: absolute; left: 50%; bottom: calc(var(--sp-6) + var(--sp-2)); translate: -50% 0; width: var(--col-w); display: flex; flex-direction: column; }
+.hx-fr__trycomp > [data-kit~="Notice"] { position: absolute; left: 0; right: 0; top: calc(100% + var(--sp-2)); }
+.hx-fr__try > [data-fr-reading] { position: absolute; z-index: 1; }

@@ -56,6 +56,7 @@
 /* surfaces */
 @import './window-chrome/window-chrome.css';
 @import './page/page.css';
+@import './setup-page/setup-page.css';
 @import './pane/pane.css';
 @import './dialog/dialog.css';
 @import './rail/rail.css';

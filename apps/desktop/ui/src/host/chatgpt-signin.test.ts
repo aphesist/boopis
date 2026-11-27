@@ -4,8 +4,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mountChatgptSignin, pageText } from './chatgpt-signin';
 import type { ChatgptBridge, ChatgptSigninEvent, ChatgptStatus } from './chatgpt-signin';
-import { runFirstRun } from './first-run';
-import type { SetupSignins } from './first-run';
+import { runFirstRun } from '../modules/onboarding/setup';
+import type { SetupSignins } from '../modules/onboarding/setup';
 import type { SetupBridge, SetupProgress, SetupStatus } from './setup-bridge';
 import type { ConnectorLogin } from './bindings';
 
@@ -110,7 +110,7 @@ describe('first-run setup: the sign-ins and pages a form offers', () => {
     b.end({ outcome: 'signed_in', message: '' });
     await tick(); await tick();
     expect(bridge.answers.at(-1)).toEqual({ form_id: 'setup.chatgpt', cancelled: false, values: {}, secrets: {} });
-    expect(document.body.textContent).toContain('You are set');
+    expect(document.querySelector('.hx-first-run'), 'setup is over: the page leaves').toBeNull();
   });
 
   it('the Gemini key form offers its page, opened in the browser', async () => {

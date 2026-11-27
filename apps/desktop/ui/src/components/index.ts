@@ -129,7 +129,6 @@ export { isKnownModel } from './model-mark';
 export { modViewUpdate } from './mod-view';
 export type { ModEvent, ModRoot } from './mod-view';
 export { MARK, parseLiteral, setTokenReader } from './mod-colors';
-export { welcomeLogo } from './logo';
 export { SIGNIN_BRANDS, signinLabel, signinLogo, signinMark } from './signin-button';
 export type { SigninBrand, SigninButtonOpts } from './signin-button';
 export { progressDots, setProgress } from './progress';

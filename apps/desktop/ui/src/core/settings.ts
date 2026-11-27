@@ -23,7 +23,9 @@ export const KEYS = {
   /** the chrome's own choices (Settings › General, board 14): the rail's size and how search shows */
   chrome: 'hx.v7.chrome',
   /** the v7 look (Settings › Appearance, board 14): the accent and the corners */
-  look: 'hx.v7.look'
+  look: 'hx.v7.look',
+  /** the first run's ledger (board O01: "only for resume, skip and returning users"): which parts are done, put off or skipped */
+  onboarding: 'hx.v7.onboarding'
 } as const;
 export type StoreKey = (typeof KEYS)[keyof typeof KEYS];
 

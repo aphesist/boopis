@@ -1,7 +1,7 @@
 /* What the person sees when the app cannot start: a plain, readable notice with the stable error code and a Retry. It covers the
    whole window, title bar included, so like first run it carries the window's own title bar (its controls and a drag area: the
    window is undecorated, and without them a failed start left no way to move, shrink or close it). Built from the kit and the
-   tokens (`first-run.css`, "the startup notice"); the v6 mock-up has no screen for this, and the owner may design one. */
+   tokens (`notice.css`); the v6 mock-up has no screen for this, and the owner may design one. */
 import { ui } from '@boopis/ui';
 import { windowBar } from './window-controls';
 import type { WindowControls } from './window-controls';

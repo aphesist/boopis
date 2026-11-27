@@ -6,6 +6,7 @@
      /__frames/<name>.frames.json   the recorded gateway frames (tests/fixtures/frames), for the live-replay provider
      /__boards/...               the approved v7 boards' own sources (docs/design/v7/boards/src), read only, for `pnpm lab:board`;
      /__boards/k02/...           board K02's source (docs/design/v7/boards/src-k02: the files it changed, the rest from src);
+     /__boards/onboarding/...    the onboarding boards' source (docs/design/v7/boards/src-onboarding, round 3: ob3.html, the rest from src);
                                  the orb library the boards load is the app's vendored one (the boards' folder does not carry it)
    The mock's pages ask Google for their fonts; every HTML page served from /v6/ has those links rewritten to /__gfonts,
    so the lab never reaches the network and a pixel difference is never a font difference. */
@@ -65,9 +66,11 @@ export function labRoute(rawUrl) {
   };
   if (path.startsWith('/__fonts/')) return file(FONTS, path.slice('/__fonts/'.length));
   if (path.startsWith('/__frames/')) return file(FRAMES, path.slice('/__frames/'.length));
-  if (/^\/__boards\/(k02\/)?lib\/orb-avatar[^/]*\.js$/.test(path)) return [200, 'text/javascript', readFileSync(ORB)];
+  if (/^\/__boards\/(k02\/|onboarding\/)?lib\/orb-avatar[^/]*\.js$/.test(path)) return [200, 'text/javascript', readFileSync(ORB)];
   /* a later board's own source (K02: the Bots sidebar with the main bot at 44): the files it changed, the rest the boards' */
   if (path.startsWith('/__boards/k02/')) { const rest = path.slice('/__boards/k02/'.length), g = [join(BOARDS + '-k02', rest), join(BOARDS, rest)].map((f) => normalize(f)).find((f) => f.startsWith(BOARDS) && existsSync(f) && statSync(f).isFile()); return g ? [200, typeOf(g), readFileSync(g)] : [404, 'text/plain', 'not found']; }
+  /* the onboarding boards (round 3, the O-* screens): their own files, the rest the boards' */
+  if (path.startsWith('/__boards/onboarding/')) { const rest = path.slice('/__boards/onboarding/'.length), g = [join(BOARDS + '-onboarding', rest), join(BOARDS, rest)].map((f) => normalize(f)).find((f) => (f.startsWith(BOARDS + '-onboarding') || f.startsWith(BOARDS + '/')) && existsSync(f) && statSync(f).isFile()); return g ? [200, typeOf(g), readFileSync(g)] : [404, 'text/plain', 'not found']; }
   if (path.startsWith('/__boards/')) { const g = normalize(join(BOARDS, path.slice('/__boards/'.length))); return !g.startsWith(BOARDS) ? [403, 'text/plain', 'forbidden'] : existsSync(g) && statSync(g).isFile() ? [200, typeOf(g), readFileSync(g)] : [404, 'text/plain', 'not found']; }
   if (path === '/v6/__index.html') return [200, 'text/html', v6IndexPage()];
   if (path.startsWith('/v6/design-system/hx/')) return file(V6, path.slice('/v6/design-system/hx/'.length));

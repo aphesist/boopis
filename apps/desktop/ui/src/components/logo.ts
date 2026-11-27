@@ -3,14 +3,12 @@
    sits on, never a literal. The rules are DESIGN-SYSTEM.md section 12 and design/v6/brand/logo/README.md:
 
    - STATIC everywhere it labels: the title bar, the sidebar, the rail, empty states. `still`: nothing moves, nothing blinks.
-   - ANIMATED only as the subject of a screen, and only the first-run welcome is one in the app (`welcomeLogo`): the hero,
-     `letters="play"`. One moving logo per screen; never in chrome, lists, a loader or below a 32px type size.
+   - ANIMATED only as the subject of a screen (the first run's logomark, the kit's Avatar `logomark`): one moving logo per screen;
+     never in chrome, lists, a loader or below a 32px type size.
    - The product's mark, never a model's (the provider's logo is `ui.modelMark`) and never the app icon.
 
    The element is defined by importing the vendored file (main.ts does it once). `logoHTML` is a string for the modules that
-   build innerHTML; `welcomeLogo` builds the one element that moves. */
-import type { BoopisLogoElement } from '../../vendor/boopis-logo';
-
+   build innerHTML. */
 export type { BoopisLogoElement } from '../../vendor/boopis-logo';
 
 export interface LogoOpts {
@@ -24,14 +22,4 @@ export interface LogoOpts {
 export function logoHTML(o: LogoOpts = {}): string {
   const label = o.label === false ? ' aria-hidden="true"' : o.label ? ' label="' + o.label.replace(/["<>&]/g, '') + '"' : '';
   return '<boopis-logo' + (o.mark ? ' mark' : '') + ' still' + label + '></boopis-logo>';
-}
-
-/** The first-run welcome's logo: the hero, playful letters, played once when it is shown. The one animated logo of the app.
-    `letters="play"` needs a 32px type size and ignores reduced motion (the element reduces it itself). */
-export function welcomeLogo(): BoopisLogoElement {
-  const el = document.createElement('boopis-logo');
-  el.setAttribute('letters', 'play');
-  el.setAttribute('animation', 'hero');
-  el.classList.add('ui-logo', 'ui-logo--welcome');
-  return el;
 }

@@ -1,0 +1,8 @@
+/* The startup notice (host/notice.ts): when the app cannot start, a layer over the whole window with the shell's title bar. Kept
+   as it was when the first run's v6 stylesheet (host/first-run.css) went at step 8; the owner may design it (COVERAGE section 17). */
+.hx-notice { position: fixed; inset: 0; z-index: var(--z-palette); display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--bg-2); color: var(--text); font: var(--fs-m)/var(--lh) var(--sans); }
+.hx-notice__body { display: grid; align-content: center; justify-items: center; gap: var(--sp-3); padding: var(--sp-6) var(--sp-4); text-align: center; min-width: 0; }
+.hx-notice__title { margin: 0; color: var(--text-strong); font: 600 var(--fs-xl)/var(--lh-tight) var(--sans); text-wrap: balance; }
+.hx-notice__msg { margin: 0; color: var(--text-dim); max-width: var(--measure); overflow-wrap: anywhere; text-wrap: pretty; }
+.hx-notice__body .ui-code { max-width: 100%; overflow-wrap: anywhere; }
+.hx-notice__body .ui-btn { margin-top: var(--sp-2); }

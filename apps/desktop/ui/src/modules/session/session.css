@@ -95,6 +95,18 @@ html[data-right-tools] .hx[data-right="open"] :is(.ss-composer, .ss-new__zone) {
 .ss-new__launch { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); max-width: 100%; }
 .ss-new__launch > .k7-sel { flex: 0 1 auto; min-width: 0; max-width: 100%; }
 .ss-new__canvas > .k7-block[data-variant="offer"] { margin-top: var(--ns-offer-top); }
+/* the first run's steps on the canvas (ob3.css: .ob3-nss, .ob3-gap, .ob3-nsq, .ob3-chips, .ob3-auto, .ob3-pair): the line under the
+   heading, the question's Block 16 under the row and 440 wide, its foot on the rows' edge; the three ways to start 24 under, 6 apart;
+   the hand-off's line and Later, or its two buttons, centred */
+.ss-new__say { margin: calc(0px - var(--gap-s)) 0 var(--sp-4); text-align: center; color: var(--text-dim); }
+.ss-new__canvas > .k7-block[data-first-q] { width: var(--ns-q-w); max-width: 100%; margin-top: var(--sp-4); }
+.ss-new__rows { display: flex; flex-direction: column; gap: var(--gap-hair); }
+.ss-new__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-top: var(--sp-2); }
+.ss-new__note { color: var(--text-dim); }
+.ss-new__asks { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--gap-s); margin-top: var(--sp-5); max-width: 100%; }
+.ss-new__auto { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); }
+.ss-new__auto > [data-kit~="Button"] { width: calc(var(--setup-acts-w) / 2 - var(--sp-1)); }
+.ss-new__pair { display: flex; justify-content: center; gap: var(--sp-2); }
 .ss-new__wait { margin-top: var(--ns-wait-top); width: var(--ns-wait-w); max-width: 100%; }
 .ss-new__zone { --hx-dock-space: var(--hx-dock-space-to); position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--hx-dock-space, 0px) + var(--composer-bottom)); width: var(--composer-w); max-width: calc(100% - 2 * var(--sp-5)); }
 .ss-new__notice > .k7-notice { margin-bottom: var(--sp-2); }

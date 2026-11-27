@@ -1,6 +1,6 @@
 /* Whole-window layouts, at every width the checker runs (390, 1200, 1440, 1920): the empty app, a conversation on
    the mock, a live conversation over recorded gateway frames (real data), the Bots tab, Settings open, first run. */
-import { runFirstRun } from '../../../host/first-run';
+import { runFirstRun } from '../../../modules/onboarding/setup';
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
 import { lookMismatches, recordsArrive, teamBeforeRecords } from '../../live-bots';
 

@@ -25,3 +25,12 @@
 .k7-orow[aria-disabled="true"] { cursor: default; }
 .k7-orow[aria-disabled="true"] .k7-orow__name { color: var(--text-faint); }
 .k7-orow:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
+/* the first run's questions in a Block (onboarding.css `.qcard .optrow`, boards O-P03, O-S02, O-S03): 8 by 4 inside, centred on the
+   row, 10 between the ring, the lead and the words, the corner concentric with the Block's; the second line small; a quiet word after
+   the name, 8 from it */
+.k7-orow[data-variant="question"] { align-items: center; padding: var(--sp-2) var(--sp-1); border-radius: calc(var(--r-block) - var(--pad-block)); }
+.k7-orow[data-variant="question"] .k7-orow__ring { margin-top: 0; }
+.k7-orow[data-variant="question"][data-lead] { grid-template-columns: auto auto minmax(0, 1fr); }
+.k7-orow__lead { display: inline-grid; place-items: center; width: var(--icon-s); height: var(--lh-m); }
+.k7-orow[data-variant="question"] .k7-orow__meaning { font-size: var(--fs-xs); line-height: var(--lh-xs); }
+.k7-orow__tag { margin-inline-start: var(--sp-2); font-size: var(--fs-xs); color: var(--text-dim); }

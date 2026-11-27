@@ -27,9 +27,6 @@ const orbs = setupOrbs();
 ui.squircle.start();
 ui.scrollEdges.start();
 
-/** where first run's optional steps asked to land once the app is up (`connectors`, `store`) */
-let landing: 'connectors' | 'store' | null = null;
-
 /* the watchdog's and the engine update's notices wait for the shell (the kit's `toast.whenReady`): a toast shown while the app
    is still booting has no layout to sit in. The update's may offer an action (Set up) */
 type NoticeAction = { label: string; onClick: () => void };
@@ -41,11 +38,11 @@ async function start(): Promise<void> {
   if (inTauri()) void import('./host/heartbeat').then((m) => { m.startHeartbeat(noticeWhenReady); }).catch((e: unknown) => { log.warn('the heartbeat did not start', e); });
   if (inTauri()) {
     /* first run: the host sets Hermes up for boopis (plugin, settings, a key) before anything connects; a screen of its own, thin on purpose */
-    const [{ runFirstRun }, { tauriSetupBridge }] = await Promise.all([import('./host/first-run'), import('./host/setup-bridge')]);
+    const [{ runFirstRun }, { tauriSetupBridge }] = await Promise.all([import('./modules/onboarding/setup'), import('./host/setup-bridge')]);
     /* an install set up before gets this app's engine code by itself (no screen): its one line is listened for before the
        check that starts it, and waits for the shell; a failed update offers the setup screen's Set up */
     await import('./host/engine-update-notice').then((m) => m.listenEngineUpdates(noticeWhenReady, () => { void runFirstRun(tauriSetupBridge(), document.body, { autostart: true }); })).catch((e: unknown) => { log.warn('engine update notices are not listened for', e); });
-    await runFirstRun(tauriSetupBridge(), document.body, { onExit: (e) => { landing = e.open; } });
+    await runFirstRun(tauriSetupBridge(), document.body);
   }
   const provider = await selectProvider();
   setProvider(provider);
@@ -53,8 +50,6 @@ async function start(): Promise<void> {
   startGlance();
   ui.tooltip.enable();
   boot();
-  if (landing === 'connectors') emit('hx:open-settings', { section: 'connectors', from: 'first-run' });
-  else if (landing === 'store') emit('hx:open-store', { from: 'first-run' });
   if (inTauri()) void import('./host/links').then((m) => m.wireExternalLinks(undefined, (e) => { ui.toast(e instanceof Error ? e.message : 'The link did not open'); }));
   if (inTauri()) void import('./host/connectors-notice').then((m) => m.listenConnectorRestarts()).catch((e: unknown) => { log.warn('connector notices are not listened for', e); });
   if (__HX_TEST_API__) {

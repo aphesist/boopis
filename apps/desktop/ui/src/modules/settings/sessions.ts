@@ -14,7 +14,7 @@ import { fill, pageEl } from './page';
 import type { Page } from './page';
 import { openSelect, said, section, selectHTML, switchHTML } from './rows';
 
-const isStep = (s: unknown): s is CarefulStep => typeof s === 'string' && (CAREFUL_STEPS as readonly string[]).includes(s);
+export const isStep = (s: unknown): s is CarefulStep => typeof s === 'string' && (CAREFUL_STEPS as readonly string[]).includes(s);
 /** the step new sessions start with on this device (the launch row's own memory, `KEYS.sessionLaunch`) */
 export const defaultCareful = (): CarefulStep => { const c = readJSON<Record<string, unknown>>(KEYS.sessionLaunch)?.['careful']; return isStep(c) ? c : DEFAULT_CAREFUL; };
 export const setDefaultCareful = (step: CarefulStep): void => { writeJSON(KEYS.sessionLaunch, { ...(readJSON<Record<string, unknown>>(KEYS.sessionLaunch) ?? {}), careful: step }); };

@@ -663,6 +663,7 @@ export function mountView(root: HTMLElement): void {
       careful: (a) => { openCarefulFor(a, 'below'); },
       open: (id) => { selectSession(id, { focus: true }); }
     },
+    redraw: () => { if (NEW?.shown) NEW.show(launchView()); },
     /* ctrl Enter starts it in the background: the session starts and takes its row, and a new session's canvas stays in front */
     send: (text, background) => {
       const g = data().details.governance.get();

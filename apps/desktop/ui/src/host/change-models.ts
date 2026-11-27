@@ -1,4 +1,4 @@
-/* "Change models": ask setup's models question again, through the same first-run view and the same forms. The host forgets the
+/* "Change models": ask setup's models question again, through the first run's model question (modules/onboarding/setup.ts). The host forgets the
    earlier choice (nothing in Hermes changes until the new one is made), then the view runs setup again, which stops at that
    question. Used from Settings > Models and from the free-tier limit notice's "choose another model". */
 import { reopenModels, tauriSetupBridge } from './setup-bridge';
@@ -15,7 +15,7 @@ export interface ChangeModelsDeps {
     choice rejects, and nothing is shown. */
 export async function changeModels(deps?: Partial<ChangeModelsDeps>): Promise<{ done: Promise<void> }> {
   const reopen = deps?.reopen ?? reopenModels;
-  const run = deps?.run ?? (async (bridge, opts) => { await (await import('./first-run')).runFirstRun(bridge, document.body, opts); });
+  const run = deps?.run ?? (async (bridge, opts) => { await (await import('../modules/onboarding/setup')).runFirstRun(bridge, document.body, opts); });
   const bridge = (deps?.bridge ?? tauriSetupBridge)();
   await reopen();
   return { done: run(bridge, { autostart: true, title: 'Change models' }) };

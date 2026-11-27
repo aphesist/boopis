@@ -54,7 +54,7 @@ export interface ProvidersDeps {
   settle?: number;
   /** cards for other sign-ins, by way id; the registry's are used when absent */
   signinCards?: Readonly<Record<string, SigninMount>>;
-  /** another arrangement of the same list (first-run setup's hub, `providers-hub.ts`); the section's own when absent. The rows keep
+  /** another arrangement of the same list (none today: the first run's hub went at step 8); the section's own when absent. The rows keep
       their `data-do` and `data-way` buttons, so every action below is the section's own. */
   layout?: ProvidersLayout;
   /** told after every read with what the host said (the hub counts what is connected) */

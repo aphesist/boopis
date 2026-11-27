@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { html } from './html';
-import { logoHTML, welcomeLogo } from './logo';
+import { logoHTML } from './logo';
 
 describe('the logo', () => {
   it('is static wherever it labels: still, and no animation attribute', () => {
@@ -15,15 +15,6 @@ describe('the logo', () => {
 
   it('keeps a label out of markup breaking characters', () => {
     expect(logoHTML({ label: 'a"><script>' })).not.toContain('<script>');
-  });
-
-  it('is the hero with playful letters only for the first-run welcome', () => {
-    const el = welcomeLogo();
-    expect(el.localName).toBe('boopis-logo');
-    expect(el.getAttribute('letters')).toBe('play');
-    expect(el.getAttribute('animation')).toBe('hero');
-    expect(el.hasAttribute('still')).toBe(false);
-    expect(el.hasAttribute('loop')).toBe(false);
   });
 
   it('draws an empty state with the static mark and never the phi', () => {

@@ -11,7 +11,7 @@ const markHTML = (ref: string, o: { size: number; label: false }): string => ui.
 const shortName = (ref: string): string => ui.modelMark.short(ref);
 import { themeApi } from '../../styles/theme';
 import { loadFont } from '../../styles/fonts';
-import { CAREFUL, CAREFUL_STEPS } from '../../data/session-s0';
+import { CAREFUL, CAREFUL_STEPS, DEFAULT_CAREFUL } from '../../data/session-s0';
 import type { Avail, CarefulStep, RewindResult, ThreadLine } from '../../data/session-s0';
 
 /* ───────── the v7 root ───────── */
@@ -88,6 +88,9 @@ export interface LaunchView {
   /** the worktree choice exists (it does not yet: every session takes a new worktree) */ worktree?: boolean;
   /** the sessions waiting on the person, one line each: the model's mark, the title, where it works, what it waits for */
   waiting: readonly { id: string; title: string; sub: string; word: string; model: string | null }[];
+  /** the first run's Sessions part on this canvas (boards O-S03, O-S04, O-H01; modules/onboarding/ledger.ts): how careful sessions should
+      be, "You're set" with three ways to start, or the hand-off to the Bots tab (`handoff` counts down from `count`, or asks) */
+  firstRun?: { step: 'careful' | 'ready' | 'handoff'; count?: number | null } | null;
 }
 export interface LaunchActions {
   folder(anchor: HTMLElement): void;
@@ -98,6 +101,35 @@ export interface LaunchActions {
   open?(id: string): void;
   /** no model is signed in: go to where `lab` is signed in ("Claude", "ChatGPT", "Gemini"), or to every way there is ('') */
   signin?(lab: string): void;
+  /** the first run's part: a step chosen ("careful" with the step, "suggest" with its words, "bots" or "later" at the hand-off) */
+  firstRun?(what: 'careful' | 'pick' | 'suggest' | 'bots' | 'later', value: string): void;
+}
+/** O-S04's three ways to start, as the board writes them */
+export const FIRST_ASKS: readonly string[] = ['Explain how this project is laid out', 'Find and fix one failing test', 'Review the last 3 commits'];
+/** the first run's step on the canvas: its heading, the launch row's first selectors, and what follows them (ob3-screens.js careful, ready, handoff) */
+function firstRunHTML(v: LaunchView, sel: (o: Parameters<typeof kit.html.selectorItem>[0], act0: string) => string): { hello: string; row: string; after: string } | null {
+  const f = v.firstRun;
+  if (!f || v.folder === null || v.model === null) return null;
+  const folder = sel({ label: 'Folder', value: v.folder, icon: 'folder' }, 'folder');
+  const work = v.worktree ? sel({ label: 'Workspace', value: 'New worktree', icon: 'fork' }, 'worktree') : '';
+  const model = sel({ label: 'Model', value: shortName(v.model) || v.model, leadHTML: markHTML(v.model, { size: 14, label: false }) }, 'model');
+  if (f.step === 'careful') {
+    const rows = CAREFUL_STEPS.map((st) => kit.html.optionRow({ variant: 'question', label: CAREFUL[st].name, meaning: CAREFUL[st].meaning, chosen: st === v.careful, value: st, ...(st === DEFAULT_CAREFUL ? { tag: 'recommended' } : {}), attrs: { role: 'radio', 'data-first-careful': st } })).join('');
+    return {
+      hello: 'How careful should sessions be?', row: folder + work + model,
+      after: kit.html.block({ body: '<div class="ss-new__rows" role="radiogroup" aria-label="How careful">' + rows + '</div><div class="ss-new__foot">' + kit.html.button({ label: 'Use ' + CAREFUL[v.careful].name, variant: 'primary', size: 28, attrs: { 'data-first': 'careful', 'data-value': v.careful } }) + '<span class="k7-type-xs ss-new__note">Change it in Settings, Sessions</span></div>', attrs: { 'data-first-q': 'careful' } })
+    };
+  }
+  if (f.step === 'ready') {
+    return { hello: 'You’re set. What’s first?', row: '', after: '<div class="ss-new__asks" role="group" aria-label="Ways to start">' + FIRST_ASKS.map((a) => kit.html.chip({ label: a, variant: 'answer', attrs: { 'data-first': 'suggest', 'data-value': a } })).join('') + '</div>' };
+  }
+  const later = kit.html.button({ label: 'Later', size: 32, attrs: { 'data-first': 'later' } });
+  return {
+    hello: 'One more thing: your bots', row: '',
+    after: '<p class="k7-type-s ss-new__say">A bot of mine takes it from here, in the Bots tab. It has my eyes.</p>' +
+      (f.count != null ? '<div class="ss-new__auto"><span class="k7-type-s ss-new__note" role="status">Opening Bots in ' + String(f.count) + ' s</span>' + later + '</div>'
+        : '<div class="ss-new__pair">' + kit.html.button({ label: 'Meet your bots', variant: 'primary', size: 32, attrs: { 'data-first': 'bots' } }) + later + '</div>')
+  };
 }
 /** S37: what the canvas says when no model is signed in, and the labs it offers first (each by a model of its family, for its mark) */
 export const NO_MODEL = 'boopis needs a model to think with. Sign in once and every session can use it.';
@@ -107,9 +139,10 @@ export function launchCanvas(v: LaunchView, act: LaunchActions): HTMLElement {
   const c = document.createElement('div');
   c.className = 'ss-new__canvas';
   c.setAttribute('data-kit-part', 'NewSession');
-  const hello = '<p class="k7-type-2xl ss-new__h">' + (v.folder === null ? NO_FOLDER : 'What’s next for ' + esc(v.folder) + '?') + '</p>';
   const sel = (o: Parameters<typeof kit.html.selectorItem>[0], act0: string): string => kit.html.selectorItem({ variant: 'launch', ...o, attrs: { 'data-launch': act0, ...(o.attrs ?? {}) } });
-  const row = v.folder === null
+  const first = firstRunHTML(v, sel);
+  const hello = '<p class="k7-type-2xl ss-new__h">' + (first ? esc(first.hello) : v.folder === null ? NO_FOLDER : 'What’s next for ' + esc(v.folder) + '?') + '</p>';
+  const full = v.folder === null
     ? kit.html.button({ label: 'Add a project', variant: 'primary', icon: 'folder', attrs: { 'data-launch': 'folder' } })
     : sel({ label: 'Folder', value: v.folder, icon: 'folder' }, 'folder') +
       /* where a session works is not a choice yet (every session takes a new worktree): the selector shows once it is */
@@ -117,20 +150,26 @@ export function launchCanvas(v: LaunchView, act: LaunchActions): HTMLElement {
       (v.model === null ? sel({ label: 'Model', value: 'Choose a model', icon: 'plus', need: true, chevron: false }, 'model') : sel({ label: 'Model', value: shortName(v.model) || v.model, leadHTML: markHTML(v.model, { size: 14, label: false }) }, 'model')) +
       (v.effort !== null && v.model !== null ? sel({ label: 'Effort', value: v.effort, ticks: { of: 5, on: v.effortTicks } }, 'effort') : '') +
       sel({ label: 'How careful', value: CAREFUL[v.careful].name, icon: 'shield', attrs: { 'data-step': v.careful, ...(v.fellBack ? { 'data-tip': 'No trusted gate here, so sessions start Supervised.' } : {}) } }, 'careful');
+  /* the first run's step: "You're set" keeps the whole row (O-S04), how careful the row up to the model (O-S03), the hand-off none */
+  const row = !first ? full : first.hello.startsWith('You’re set') ? full : first.row;
   const waiting = v.waiting.length
     ? '<div class="ss-new__wait">' + kit.html.sectionHead({ title: 'Waiting on you', count: String(v.waiting.length) }) +
       v.waiting.map((w) => kit.html.listRow({ variant: 'compact', title: w.title, sub: w.sub, needs: true, count: w.word, ...(w.model ? { model: w.model } : {}), attrs: { 'data-open': w.id, role: 'button', tabindex: '0', 'aria-selected': null } })).join('') + '</div>'
     : '';
   /* written as markup: the logomark is a custom element, drawn when it is in the page */
   c.innerHTML = kit.html.avatar({ variant: 'logomark', ...(v.model === null ? { state: 'sleeping', label: 'boopis, asleep' } : { label: 'boopis' }) }) + hello +
-    '<div class="ss-new__launch" role="group" aria-label="How the session starts">' + row + '</div>' +
+    (row ? '<div class="ss-new__launch" role="group" aria-label="How the session starts">' + row + '</div>' : '') + (first ? first.after : '') +
     /* no model yet (board S37): said kindly inside the canvas, with the sign-ins that exist one press away */
-    (v.folder !== null && v.model === null ? kit.html.block({ variant: 'offer', text: NO_MODEL, body: '', attrs: { role: 'group', 'aria-label': 'Sign in to a model' }, actions: LABS.map(([name, model]) => kit.html.button({ label: name, size: 28, leadHTML: markHTML(model, { size: 14, label: false }), attrs: { 'data-signin': name } })).join('') + kit.html.button({ label: 'More', size: 28, variant: 'ghost', attrs: { 'data-signin': '' } }) }) : '') + waiting;
+    (!first && v.folder !== null && v.model === null ? kit.html.block({ variant: 'offer', text: NO_MODEL, body: '', attrs: { role: 'group', 'aria-label': 'Sign in to a model' }, actions: LABS.map(([name, model]) => kit.html.button({ label: name, size: 28, leadHTML: markHTML(model, { size: 14, label: false }), attrs: { 'data-signin': name } })).join('') + kit.html.button({ label: 'More', size: 28, variant: 'ghost', attrs: { 'data-signin': '' } }) }) : '') + (first ? '' : waiting);
   c.addEventListener('keydown', (e) => { const r = (e.target as Element).closest<HTMLElement>('[data-open]'); if (r && e.target === r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); r.click(); } });
   c.addEventListener('click', (e) => {
     const t = e.target as Element;
     const open = t.closest<HTMLElement>('[data-open]');
     if (open) { act.open?.(open.dataset['open'] as string); return; }
+    const q = t.closest<HTMLElement>('[data-first-careful]');
+    if (q) { act.firstRun?.('pick', q.dataset['firstCareful'] ?? ''); return; }
+    const f = t.closest<HTMLElement>('[data-first]');
+    if (f) { act.firstRun?.(f.dataset['first'] as 'careful' | 'suggest' | 'bots' | 'later', f.dataset['value'] ?? ''); return; }
     const lab = t.closest<HTMLElement>('[data-signin]');
     if (lab) { act.signin?.(lab.dataset['signin'] ?? ''); return; }
     const b = t.closest<HTMLElement>('[data-launch]');

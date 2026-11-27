@@ -66,6 +66,7 @@ import { composerDictate, composerDictation as micSay, composerDropping, compose
 import type { DictationState } from './composer/editing';
 import { CHROME_RAILS, SEARCH_SHOWS, searchHint, titlePill, windowChrome } from './window-chrome/window-chrome';
 import { page, pageNote, section } from './page/page';
+import { setupPage } from './setup-page/setup-page';
 import { pane } from './pane/pane';
 import { dialog, DIALOG_VARIANTS } from './dialog/dialog';
 import { rail } from './rail/rail';
@@ -81,7 +82,7 @@ const html = {
   notice, systemLine, bubble, well, steps, disclosure, turnFoot, hoverBar,
   timeSeparator, emptyState, list, findBar,
   toolRow, askCard, filesCard, fileCard, queue, diffView, composer, teamPlan,
-  windowChrome, titlePill, searchHint, page, pageNote, pane, dialog, rail, sidebarFoot, notch, dock
+  windowChrome, titlePill, searchHint, page, pageNote, setupPage, pane, dialog, rail, sidebarFoot, notch, dock
 };
 type Html = typeof html;
 type Factories = { [K in keyof Html]: (o: Parameters<Html[K]>[0]) => HTMLElement };
@@ -225,6 +226,7 @@ export type { TurnFootOpts } from './turn-foot/turn-foot';
 export type { HoverBarOpts, HoverAction } from './hover-bar/hover-bar';
 export type { TimeSeparatorOpts } from './time-separator/time-separator';
 export type { EmptyStateOpts } from './empty-state/empty-state';
+export type { SetupPageOpts, SetupAction } from './setup-page/setup-page';
 export type { FindBarOpts } from './find-bar/find-bar';
 export type { AvatarOpts } from './avatar/avatar';
 export type { InlineChipOpts } from './inline-chip/inline-chip';

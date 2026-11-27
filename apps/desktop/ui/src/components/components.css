@@ -959,8 +959,6 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-option:focus-visible { --sq-line: transparent; }
 
 
-/* the first-run welcome's logo: the hero (letters="play" needs a 32px type size); sized from the spacing scale, inked like the frame */
-.ui-logo--welcome { display: block; justify-self: center; font-size: calc(var(--sp-6) * 3); color: var(--text-strong); }
 
 /* a settings row about one item (a connector, an installed item): its tile before the label */
 .ui-set__lead { display: flex; flex: none; align-self: center; }

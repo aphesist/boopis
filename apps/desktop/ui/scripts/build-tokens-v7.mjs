@@ -107,6 +107,10 @@ both.push('--file-w: 260px;',                       /* a file card (kit.css .fil
   '--find-w: 360px;', '--well-thread-h: 240px;',   /* find in a conversation (6e, derived): the bar's width; a handed-off task's transcript, at most this tall */
   '--pad-wide: 18px;', '--wide-h: 640px;', '--wide-head: 52px;',   /* the Store: a 900 by 640 dialog with no nav, its parts 18 in, its head 52 (board 15: screens.js store) */
   '--palette-h: 520px;',                                 /* the command palette's most height (derived, no board: the v6 palette's) */
+  '--setup-mark-y: 116px;', '--setup-head-y: 196px;', '--setup-lede-w: 420px;', '--setup-card-w: 520px;', '--setup-gap: 28px;',   /* the first run's setup pages (onboarding ob3.css, onboarding.css .ob-page, ob2.css .ob2-pagespk) */
+  '--setup-scene-w: 760px;', '--setup-scene-h: 300px;', '--setup-hero-w: 240px;', '--setup-hero-h: 160px;', '--setup-hero-logo: 96px;',   /* the scene and the hero logomark's stage (.ob-scene, .ob2-hero) */
+  '--setup-acts-y: 640px;', '--setup-acts-w: 288px;', '--setup-skip-x: 24px;', '--setup-skip-y: 20px;',   /* the actions stacked at 640, 288 wide; the way out 24 in, 20 up (.ob-acts, .ob-skip) */
+  '--ns-q-w: 440px;', '--chat-head-orb-w: 88px;', '--chat-head-orb-h: 72px;', '--tile-h: 100px;',   /* a question on the canvas (ob3 .ob3-nsq); the boopis bot's chat head (.ob3-ch-orb); a goal tile (.ob3-goals .ob-gt) */
   '--ns-top: 64px;', '--ns-bottom: 250px;', '--ns-wait-w: 520px;', '--ns-wait-top: 40px;', '--ns-mark: 72px;', '--ns-logo: 44px;', '--offer-w: 470px;', '--ns-offer-top: 22px;');   /* the new session's canvas (kit.css .ns, .ns-wait, .ns-mark; sessionnew.js brand) */
 
 const css = `/* Generated from tokens.v7.json by scripts/build-tokens-v7.mjs. Do not edit: run \`pnpm tokens\`. */

@@ -1,0 +1,34 @@
+/* SetupPage's look (onboarding round 3: ob3.css, onboarding.css .ob-page, ob2.css; kit.css). Tokens only; kit-v7.css imports it in the
+   kit's cascade order. */
+
+/* ── SetupPage: the whole window on the frame's ground; one centre line for the mark, the heading, the lede and what the step shows ── */
+.k7-setup { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; background: var(--bg-2); color: var(--text); overflow: hidden; }
+.k7-setup__mark { position: absolute; top: var(--setup-mark-y); left: 50%; translate: -50% 0; }
+.k7-setup__title { margin: var(--setup-head-y) 0 0; font-size: var(--fs-3xl); line-height: var(--lh-3xl); font-weight: 400; color: var(--text-strong); white-space: nowrap; }
+.k7-setup__lede { margin: var(--sp-2) 0 0; width: var(--setup-lede-w); max-width: calc(100% - 2 * var(--sp-5)); text-align: center; font-size: var(--fs-l); line-height: var(--lh-l); color: var(--text-dim); text-wrap: balance; }
+/* a Notice over the card (O-P03e: 20 under the lede, 8 closer to the card) */
+.k7-setup__notice { width: var(--setup-card-w); max-width: calc(100% - 2 * var(--sp-5)); margin: calc(var(--sp-5) - var(--sp-1)) 0 calc(0px - var(--sp-2)); }
+/* the hero's scene: the logomark at 96, centred in its stage */
+.k7-setup__scene { position: relative; display: grid; place-items: center; width: var(--setup-scene-w); max-width: 100%; height: var(--setup-scene-h); margin-top: var(--setup-gap); flex: none; }
+.k7-setup__hero { display: grid; place-items: center; width: var(--setup-hero-w); height: var(--setup-hero-h); }
+.k7-setup__hero .k7-logomark { --ns-logo: var(--setup-hero-logo); }
+/* what the step shows: a card 520 wide, 28 under the lede; a scene (Try it) its own 300 */
+.k7-setup__body { width: var(--setup-card-w); max-width: calc(100% - 2 * var(--sp-5)); margin-top: var(--setup-gap); }
+.k7-setup[data-scene] .k7-setup__body { position: relative; width: var(--setup-scene-w); height: var(--setup-scene-h); }
+/* the actions at 640 from the window's top, stacked, 288 wide; a status line in their place */
+.k7-setup__acts { position: absolute; top: var(--setup-acts-y); left: 50%; translate: -50% 0; display: flex; flex-direction: column; gap: var(--sp-3); width: var(--setup-acts-w); }
+.k7-setup__acts > [data-kit~="Button"] { width: 100%; }
+.k7-setup__status { height: var(--ctl); display: flex; align-items: center; justify-content: center; gap: var(--sp-2); font-size: var(--fs-m); color: var(--text-dim); }
+.k7-setup__figure { font-size: var(--fs-xs); }
+.k7-setup__skip { position: absolute; left: var(--setup-skip-x); bottom: var(--setup-skip-y); }
+.k7-setup__wc { position: absolute; right: var(--sp-3); top: var(--chrome-y); display: inline-flex; gap: var(--gap-hair); -webkit-app-region: no-drag; }
+.k7-setup__wc > .k7-ib { width: var(--wc-w); height: var(--wc-h); }
+/* a short window: the actions follow what the step shows instead of standing at 640 */
+@media (max-height: 760px), (max-width: 639px) {
+  .k7-setup { overflow-y: auto; padding-bottom: var(--sp-5); }
+  .k7-setup__title { margin-top: calc(var(--setup-head-y) / 2); }
+  .k7-setup__mark { top: calc(var(--setup-head-y) / 2 - var(--setup-head-y) + var(--setup-mark-y)); }
+  .k7-setup__title { white-space: normal; text-align: center; }
+  .k7-setup__acts { position: static; translate: none; margin-top: var(--sp-5); max-width: calc(100% - 2 * var(--sp-5)); }
+  .k7-setup__skip { position: static; margin-top: var(--sp-3); }
+}

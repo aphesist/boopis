@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { mountXaiSignin, tauriXaiBridge, XAI_COPY, XAI_WAY } from './xai-signin';
 import { mountSigninCard } from './signin-card';
 import type { SigninBridge, SigninEnd, SigninPage } from './signin-card';
-import { formExtras } from './first-run';
-import type { SetupSignins } from './first-run';
+import { formExtras } from '../modules/onboarding/setup';
+import type { SetupSignins } from '../modules/onboarding/setup';
 
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 const NOW = 1_000_000_000_000;

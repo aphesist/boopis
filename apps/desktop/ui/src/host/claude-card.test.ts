@@ -1,12 +1,10 @@
-/* The Claude subscription's card in every state the host reports (ADR-0029, amended 22 November 2026): the first run's plate and
-   the row of Settings > Models > Providers. Not installed is calm, with Anthropic's installer for the person's system, where to
+/* The Claude subscription's card in every state the host reports (ADR-0029, amended 22 November 2026): the row of Settings >
+   Models > Providers. Not installed is calm, with Anthropic's installer for the person's system, where to
    paste it, Copy and the guide; "failed" is only for a Claude Code that was found and did not start; an old version and a login
    that bills the API are steps to take, not failures. */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { entries } from '../data/providers';
-import { plateHtml } from './providers-hub';
 import { actionsFor, failed, mountProviders, statusWord } from './providers-view';
-import type { Row } from './providers-view';
 import type { ProviderState, ProvidersBridge } from './providers-bridge';
 import type { InstallHint } from './bindings';
 
@@ -28,58 +26,6 @@ const STATES = {
   out: claude('signed_out'),
   in: claude('connected', { plan: 'Claude Max' })
 };
-const plate = (s: ProviderState): HTMLElement => {
-  const host = document.createElement('div');
-  host.innerHTML = plateHtml({ entry, way, state: s } as Row, () => true);
-  return host.firstElementChild as HTMLElement;
-};
-const does = (el: HTMLElement): string[] => [...el.querySelectorAll<HTMLElement>('[data-do]')].map((b) => b.dataset['do'] ?? '');
-const word = (el: HTMLElement): string => el.querySelector('.fr-st')?.textContent ?? '';
-
-describe('the first run\'s Claude plate', () => {
-  it('not installed is calm: a word, Anthropic\'s installer for PowerShell, Copy, the guide and Check again, never red', () => {
-    const p = plate(STATES.missing);
-    expect(p.dataset['state']).toBe('off');
-    expect(word(p)).toBe('not installed');
-    expect(p.querySelector('[data-tone="red"]')).toBeNull();
-    const line = p.querySelector('[data-install]') as HTMLElement;
-    expect(line.textContent).toBe('In PowerShell: irm https://claude.ai/install.ps1 | iex');
-    expect(line.querySelector('code.ui-code')?.textContent).toBe('irm https://claude.ai/install.ps1 | iex');
-    expect(does(p)).toEqual(['copy', 'guide', 'recheck']);
-    expect(p.textContent).not.toContain('npm');
-    expect(p.textContent).not.toContain('failed');
-  });
-  it('says plainly when only the desktop app\'s own Claude Code is here', () => {
-    expect(plate(STATES.desktop).querySelector('[data-note]')?.textContent).toContain('command-line tool, which is separate');
-  });
-  it('a Claude Code that does not start is the one failure, in plain words, with the installer to put it back', () => {
-    const p = plate(STATES.broken);
-    expect(p.dataset['state']).toBe('failed');
-    expect(word(p)).toBe('failed');
-    expect(p.querySelector('.fr-st')?.getAttribute('data-tone')).toBe('red');
-    expect(p.querySelector('[data-note]')?.textContent).toContain('could not start it');
-    expect(does(p)).toEqual(['copy', 'guide', 'recheck']);
-  });
-  it('an old version is a step, not a failure: update needed, `claude update` as code, the update guide', () => {
-    const p = plate(STATES.old);
-    expect([p.dataset['state'], word(p)]).toEqual(['off', 'update needed']);
-    expect(p.querySelector('[data-note]')?.innerHTML).toContain('<code class="ui-code">claude update</code>');
-    expect(p.querySelector('[data-note]')?.textContent).not.toContain('`');
-    expect(p.querySelector('[data-do="guide"]')?.textContent).toBe('Update guide');
-  });
-  it('a login that bills the API offers Claude\'s own sign-in, calmly', () => {
-    const p = plate(STATES.metered);
-    expect([p.dataset['state'], word(p)]).toEqual(['off', 'not your plan']);
-    expect(does(p)).toEqual(['signin', 'recheck']);
-  });
-  it('signed out offers the branded sign-in, and signed in shows the plan', () => {
-    expect(does(plate(STATES.out))).toEqual(['signin', 'recheck']);
-    const yes = plate(STATES.in);
-    expect([yes.dataset['state'], word(yes)]).toEqual(['connected', 'connected']);
-    expect(yes.textContent).toContain('Claude Max');
-  });
-});
-
 describe('the Settings row of the Claude subscription', () => {
   it('names each state in words and only a real failure as one', () => {
     expect(statusWord(STATES.missing)).toBe('Not installed');
