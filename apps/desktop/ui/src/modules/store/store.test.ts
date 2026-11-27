@@ -213,7 +213,7 @@ describe('the store view', () => {
   });
   it('board 15\'s items take the kit\'s one tile rule: brand marks in colour, a proven publisher\'s mark, a mod\'s glyph, letters where none is known', () => {
     const t = [...BOARD15_ITEMS, ...BOARD15_MODS].map((i) => { const x = itemTile(markRef(i), i.title); return 'markText' in x ? x.markText : /data-mark="([^"]+)"/.exec(x.markHTML)?.[1] ?? 'glyph'; });
-    expect(t).toEqual(['C7', 'anthropic', 'github', 'PL', 'linear', 'supabase', 'glyph', 'glyph']);
+    expect(t).toEqual(['context7', 'anthropic', 'github', 'playwright', 'linear', 'supabase', 'glyph', 'glyph']);   /* Context7 and Playwright from the brands' own files (2a) */
   });
   it('board 15\'s tile letters: two from the name', () => {
     expect([letters('Context7'), letters('GitHub'), letters('Linear'), letters('Frontend design'), letters('Pomodoro band')]).toEqual(['C7', 'GH', 'LN', 'FD', 'PB']);

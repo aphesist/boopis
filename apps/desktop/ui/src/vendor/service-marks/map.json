@@ -1,5 +1,5 @@
 {
-  "source": "simple-icons 16.38.1 (CC0-1.0), https://github.com/simple-icons/simple-icons",
+  "source": "simple-icons 16.38.1 (CC0-1.0, and Git's CC BY 3.0), https://github.com/simple-icons/simple-icons; Context7, Playwright, Firecrawl, Exa and Slack from the brands' own files (each entry's `origin` and `licence`; README.md)",
   "read": "2026-11-22",
   "rule": "A connector's tile shows the mark of the service it connects to, found from what it is or what it runs: the host of its address or the package or image it starts, when that names a listed service; else its id in boopis's collection or its own name, read as one key (case, a scope, separators and the words mcp and server aside: `connectorKey` in components/item-mark.ts; the owner, 27 November 2026: an installed connector matches the collection's mark), or (for a store item) the host of its home page. A skill, plugin or mod shows its publisher's mark when its source proves the publisher (anything but a namespace proof of none) and the publisher's name is listed here exactly. Hosts are exact (a leading www. is ignored); a code host such as github.com is never listed, since anyone can publish there. Anything not listed gets letters.",
   "marks": [
@@ -1055,7 +1055,227 @@
         "dark": "#056AFF",
         "why": "Bitbucket's own colour (Simple Icons #0052CC); on the dark tiles the brand #0052CC is 2.05:1, so its own hue lightened to #056AFF (3:1)."
       }
+    },
+    {
+      "id": "context7",
+      "name": "Context7",
+      "svg": "context7.svg",
+      "hex": "059669",
+      "origin": "https://github.com/upstash/context7/blob/17839096a0efe61b4b8a88cc20a8147784234cfa/public/context7-icon-green.svg",
+      "guidelines": null,
+      "connectors": [
+        "context7"
+      ],
+      "hosts": [
+        "context7.com",
+        "mcp.context7.com"
+      ],
+      "packages": [
+        "@upstash/context7-mcp"
+      ],
+      "publishers": [],
+      "color": {
+        "light": "own",
+        "dark": "own",
+        "why": "Context7's green icon as Upstash draws it: its #059669 square holds 3:1 on every tile of both schemes (3.34:1 light, 3.71:1 dark), and its white glyph sits on that square (3.77:1), so both colours are drawn as they are."
+      },
+      "fills": [
+        {
+          "hex": "059669",
+          "light": "#059669",
+          "dark": "#059669"
+        },
+        {
+          "hex": "FFFFFF",
+          "light": "#FFFFFF",
+          "dark": "#FFFFFF",
+          "on": "059669"
+        }
+      ],
+      "licence": "MIT (the upstash/context7 repository); the mark is Upstash's trademark"
+    },
+    {
+      "id": "playwright",
+      "name": "Playwright",
+      "svg": "playwright.svg",
+      "hex": "2EAD33",
+      "origin": "https://github.com/microsoft/playwright/blob/a804c193562095b0da20e5d4679fa87e4c8e5563/packages/web/src/assets/playwright-logo.svg",
+      "guidelines": null,
+      "connectors": [
+        "playwright"
+      ],
+      "hosts": [
+        "playwright.dev"
+      ],
+      "packages": [
+        "@playwright/mcp"
+      ],
+      "publishers": [],
+      "color": {
+        "light": "own",
+        "dark": "own",
+        "why": "Playwright's two masks keep their six colours. Each colour under 3:1 on a scheme's tiles keeps its hue with its lightness moved there: the slate #2D4552 (1.39:1 dark) is #4F7A91 on the dark tiles; the green #2EAD33 (2.60:1 light) is #2BA02F on the light ones; the shadow red #C04B41 (2.88:1 dark) is #C25046 on the dark ones."
+      },
+      "fills": [
+        {
+          "hex": "2D4552",
+          "light": "#2D4552",
+          "dark": "#4F7A91"
+        },
+        {
+          "hex": "E2574C",
+          "light": "#E2574C",
+          "dark": "#E2574C"
+        },
+        {
+          "hex": "2EAD33",
+          "light": "#2BA02F",
+          "dark": "#2EAD33"
+        },
+        {
+          "hex": "D65348",
+          "light": "#D65348",
+          "dark": "#D65348"
+        },
+        {
+          "hex": "1D8D22",
+          "light": "#1D8D22",
+          "dark": "#1D8D22"
+        },
+        {
+          "hex": "C04B41",
+          "light": "#C04B41",
+          "dark": "#C25046"
+        }
+      ],
+      "licence": "Apache-2.0 (the microsoft/playwright repository); the mark is Microsoft's trademark"
+    },
+    {
+      "id": "firecrawl",
+      "name": "Firecrawl",
+      "svg": "firecrawl.svg",
+      "hex": "FA5D19",
+      "origin": "https://www.firecrawl.dev/brand/firecrawl-logo.svg",
+      "guidelines": "https://www.firecrawl.dev/brand",
+      "connectors": [
+        "firecrawl"
+      ],
+      "hosts": [
+        "firecrawl.dev",
+        "mcp.firecrawl.dev"
+      ],
+      "packages": [
+        "firecrawl-mcp"
+      ],
+      "publishers": [
+        "Firecrawl"
+      ],
+      "color": {
+        "light": "#FA4F06",
+        "dark": "#FA5D19",
+        "why": "Firecrawl's Heat (#FA5D19, its brand page); on the light tiles it is 2.80:1, so its own hue darkened to #FA4F06 (3:1)."
+      },
+      "licence": "the brand page's file; the mark is Firecrawl's trademark"
+    },
+    {
+      "id": "exa",
+      "name": "Exa",
+      "svg": "exa.svg",
+      "hex": "0143D9",
+      "origin": "https://exa.ai/assets/Exa%20Brand%20Assets.zip (Logo/SVGs/Logomark/Exa Logomark Blue.svg)",
+      "guidelines": "https://exa.ai/brand",
+      "connectors": [
+        "exa"
+      ],
+      "hosts": [
+        "exa.ai",
+        "mcp.exa.ai"
+      ],
+      "packages": [
+        "exa-mcp-server"
+      ],
+      "publishers": [
+        "Exa"
+      ],
+      "color": {
+        "light": "#0143D9",
+        "dark": "#2769FE",
+        "why": "Exa's blue logomark (#0143D9, its brand kit); on the dark tiles it is 1.87:1, so its own hue lightened to #2769FE (3:1)."
+      },
+      "licence": "Exa's brand kit; the mark is Exa's trademark"
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "svg": "slack.svg",
+      "hex": "E3066A",
+      "origin": "https://a.slack-edge.com/1f40066/marketing/img/nav/logo.svg (the mark on https://slack.com/media-kit)",
+      "guidelines": "https://slack.com/media-kit",
+      "connectors": [
+        "slack"
+      ],
+      "hosts": [
+        "slack.com"
+      ],
+      "packages": [
+        "@modelcontextprotocol/server-slack"
+      ],
+      "publishers": [
+        "Slack"
+      ],
+      "color": {
+        "light": "own",
+        "dark": "own",
+        "why": "Slack's mark keeps its four colours. Each colour under 3:1 on a scheme's tiles keeps its hue with its lightness moved there: on the light tiles the blue #00B3FF (2.09:1) is #0094D3, the green #41B658 (2.31:1) #399E4D and the yellow #FCC003 (1.47:1) #AF8502; on the dark tiles the red #E3066A (2.99:1) is #E4066A."
+      },
+      "fills": [
+        {
+          "hex": "E3066A",
+          "light": "#E3066A",
+          "dark": "#E4066A"
+        },
+        {
+          "hex": "00B3FF",
+          "light": "#0094D3",
+          "dark": "#00B3FF"
+        },
+        {
+          "hex": "41B658",
+          "light": "#399E4D",
+          "dark": "#41B658"
+        },
+        {
+          "hex": "FCC003",
+          "light": "#AF8502",
+          "dark": "#FCC003"
+        }
+      ],
+      "licence": "Slack's media kit (https://slack.com/terms-of-service/slack-brand); the mark is Slack Technologies' trademark"
+    },
+    {
+      "id": "git",
+      "name": "Git",
+      "svg": "git.svg",
+      "hex": "F03C2E",
+      "origin": "https://git-scm.com/community/logos",
+      "guidelines": null,
+      "connectors": [
+        "git"
+      ],
+      "hosts": [
+        "git-scm.com"
+      ],
+      "packages": [
+        "mcp-server-git"
+      ],
+      "publishers": [],
+      "color": {
+        "light": "#F03C2E",
+        "dark": "#F03C2E",
+        "why": "Git's own colour (Simple Icons #F03C2E) holds 3:1 on every tile of both schemes (3.45:1 light, 3.58:1 dark)."
+      },
+      "licence": "CC BY 3.0: Git Logo by Jason Long, https://creativecommons.org/licenses/by/3.0/ (Simple Icons 16.38.1, unchanged)"
     }
   ],
-  "color_rule": "Owner decisions, 23 and 27 November 2026 (ADR-0040, amended; conflict 30): marks show in their brand colours wherever an item's tile is drawn. `color.light` is drawn on the light tiles (v6 Bone #fffdf8/#f1f1f1/#ffffff with v7's), `color.dark` on the dark ones (#23211e/#1f1f1f/#2c2c2c). Each is the brand's own colour (Simple Icons' `hex`) where it reaches 3:1 against every tile of its scheme (WCAG 1.4.11, the system's floor for marks); where it does not, the same hue and saturation with the lightness moved until it does. A one-colour brand (black or near black) is \"ink\": the theme's text colour, so it follows the theme. components/item-mark.test.ts checks every pair against every tile."
+  "color_rule": "Owner decisions, 23 and 27 November 2026 (ADR-0040, amended; conflict 30): marks show in their brand colours wherever an item's tile is drawn. `color.light` is drawn on the light tiles (v6 Bone #fffdf8/#f1f1f1/#ffffff with v7's), `color.dark` on the dark ones (#23211e/#1f1f1f/#2c2c2c). Each is the brand's own colour (Simple Icons' `hex`) where it reaches 3:1 against every tile of its scheme (WCAG 1.4.11, the system's floor for marks); where it does not, the same hue and saturation with the lightness moved until it does. A one-colour brand (black or near black) is \"ink\": the theme's text colour, so it follows the theme. components/item-mark.test.ts checks every pair against every tile. A multi-colour mark from the brand's own file (Context7, Playwright, Slack) has `color` \"own\" and a `fills` list: each of the file's colours with what it is drawn as on the light and the dark tiles, by the same rule; a colour drawn on the mark's own shape (`on`) is checked against that shape instead."
 }

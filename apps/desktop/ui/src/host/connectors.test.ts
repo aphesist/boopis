@@ -184,12 +184,12 @@ describe('the Connectors tab', () => {
   });
 
   it('draws each installed connector as the Store\'s item row, its tile two letters of its name (board 15)', async () => {
-    const f = fake([info({ name: 'Context7', url: 'https://mcp.example.com/mcp', command: null, args: [] }), info({ name: 'notes-copy', command: 'npx', args: ['-y', 'other-mcp@1.0.0'] })]);
+    const f = fake([info({ name: 'Tavily', url: 'https://mcp.example.com/mcp', command: null, args: [] }), info({ name: 'notes-copy', command: 'npx', args: ['-y', 'other-mcp@1.0.0'] })]);
     const { panel } = await mount(f);
     const tile = (n: string): Element | null | undefined => panel.querySelector(`[data-conn-row="${n}"] .k7-lrow__mark`);
-    expect(tile('Context7')?.textContent).toBe('C7');
+    expect(tile('Tavily')?.textContent).toBe('TV');
     expect(tile('notes-copy')?.textContent).toBe('NC');
-    expect(panel.querySelector('[data-conn-row="Context7"]')?.getAttribute('data-variant')).toBe('item');
+    expect(panel.querySelector('[data-conn-row="Tavily"]')?.getAttribute('data-variant')).toBe('item');
   });
 
   it('says the list could not be read, and draws no list, when the host cannot read it', async () => {

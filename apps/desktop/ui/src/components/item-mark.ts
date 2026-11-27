@@ -15,30 +15,42 @@
    key: `connectorKey`; the owner, 27 November 2026: an installed "github" shows GitHub's mark as the collection's row does) or a store
    item's home page host, as `vendor/service-marks/map.json` lists; a skill, plugin or mod gets its publisher's mark only when its source
    proved who published it and that name is listed exactly (a claimed name proves nothing: anyone can write "Anthropic" in a marketplace
-   of their own). The marks are Simple Icons' files (CC0), unchanged (vendor/service-marks/README.md). The mark is always aria-hidden: it
+   of their own). The marks are Simple Icons' files (CC0; Git's CC BY 3.0), unchanged, and five brands' own files made minimal (Context7,
+   Playwright, Firecrawl, Exa, Slack: vendor/service-marks/README.md). The mark is always aria-hidden: it
    sits beside the name it stands for. */
 import { esc } from '../core/dom';
 import { letters } from '../core/letters';
 import { icon } from './icons';
 import mapFile from '../vendor/service-marks/map.json';
 
+/** one colour of a multi-colour mark: the file's `hex`, drawn as `light` on the light tiles and `dark` on the dark ones; `on`: a colour drawn
+    on the mark's own shape (Context7's white glyph on its green), checked against that colour instead of the tile */
+export interface MarkFill { hex: string; light: string; dark: string; on?: string }
 interface MarkEntry {
-  id: string; name: string; svg: string; color: { light: string; dark: string; why: string };
+  id: string; name: string; svg: string; color: { light: string; dark: string; why: string }; fills?: readonly MarkFill[];
   connectors: readonly string[]; hosts: readonly string[]; packages: readonly string[]; publishers: readonly string[];
 }
-/** a mark and its colours: `light` on a light preset's tile, `dark` on a dark preset's */
-export interface ServiceMark { id: string; name: string; viewBox: string; body: string; light: string; dark: string }
+/** a mark and its colours: `light` on a light preset's tile, `dark` on a dark preset's; a multi-colour mark ("own") lists its `fills` */
+export interface ServiceMark { id: string; name: string; viewBox: string; body: string; light: string; dark: string; fills: readonly MarkFill[] }
 
 const FILES = import.meta.glob('../vendor/service-marks/svg/*.svg', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const ENTRIES = (mapFile as unknown as { marks: MarkEntry[] }).marks;
 
-/** the file's own path(s), drawn in currentColor: the viewBox and everything inside <svg> but its <title> */
+/* a multi-colour mark's colour for the scheme: the stylesheet's own light-dark() on the shape, as the one-colour marks' --mk-l/--mk-d */
+const fillStyle = (f: MarkFill): string => 'fill:light-dark(' + f.light + ', ' + f.dark + ')';
+/** the file's own shapes: the viewBox and everything inside <svg> but its <title>. A one-colour mark is drawn in currentColor (its file's
+    fill, where it has one, is the map's `hex` and goes); a multi-colour mark keeps each shape's colour, as the map's `fills` say it is
+    drawn for the scheme (the owner, 2a: "real logos, in colour"; Slack and Playwright keep their colours) */
 function parse(entry: MarkEntry): ServiceMark | null {
   const raw = FILES['../vendor/service-marks/svg/' + entry.svg];
   if (!raw) return null;
   const view = /viewBox="([^"]+)"/.exec(raw)?.[1] ?? '0 0 24 24';
-  const inner = /<svg[^>]*>([\s\S]*)<\/svg>/.exec(raw)?.[1] ?? '';
-  return { id: entry.id, name: entry.name, viewBox: view, body: inner.replace(/<title>[\s\S]*?<\/title>/g, '').trim(), light: entry.color.light, dark: entry.color.dark };
+  const inner = (/<svg[^>]*>([\s\S]*)<\/svg>/.exec(raw)?.[1] ?? '').replace(/<title>[\s\S]*?<\/title>/g, '').trim();
+  const fills = entry.fills ?? [];
+  const body = fills.length
+    ? inner.replace(/ fill="#([0-9A-Fa-f]{6})"/g, (m, hex: string) => { const f = fills.find((x) => x.hex.toUpperCase() === hex.toUpperCase()); return f ? ' style="' + fillStyle(f) + '"' : m; })
+    : inner.replace(/ fill="[^"]*"/g, '');
+  return { id: entry.id, name: entry.name, viewBox: view, body, light: entry.color.light, dark: entry.color.dark, fills };
 }
 const MARKS = new Map<string, ServiceMark>();
 for (const e of ENTRIES) { const m = parse(e); if (m) MARKS.set(e.id, m); }
@@ -128,7 +140,8 @@ export { monogram } from '../core/letters';
 
 /* the colours come from the map (data, like a bot's look), as two properties the stylesheet picks between by the scheme */
 /* "ink": a one-colour brand drawn in the theme's text colour, so it follows the theme as the words beside it do */
-const paint = (c: string): string => (c === 'ink' ? 'var(--text)' : esc(c));
+/* "own": a multi-colour mark, whose shapes carry their colours; currentColor is then the theme's ink and paints nothing */
+const paint = (c: string): string => (c === 'ink' || c === 'own' ? 'var(--text)' : esc(c));
 const svgOf = (m: ServiceMark, cls: string): string =>
   '<svg class="' + cls + '" viewBox="' + esc(m.viewBox) + '" fill="currentColor" data-brand style="--mk-l:' + paint(m.light) + ';--mk-d:' + paint(m.dark) + '" aria-hidden="true" focusable="false">' + m.body + '</svg>';
 

@@ -61,8 +61,8 @@ export default {
         { title: 'Frontend design', sub: 'Anthropic', ref: { name: 'Frontend design', kind: 'skill', publisher: 'Anthropic', proven: true } },
         { title: 'Release notes', sub: 'a claimed publisher', ref: { name: 'Release notes', kind: 'skill', publisher: 'Anthropic', proven: false } },
         { title: 'Pomodoro band', sub: 'a mod', ref: { name: 'Pomodoro band', kind: 'mod' } },
-        { title: 'Context7', sub: 'no mark known', ref: { name: 'Context7', collection: 'context7' } },
-        { title: 'Playwright', sub: 'no mark known', ref: { name: 'Playwright', collection: 'playwright' } }
+        { title: 'Tavily', sub: 'no mark known', ref: { name: 'Tavily', collection: 'tavily' } },
+        { title: 'Release crew', sub: 'no mark known', ref: { name: 'Release crew', collection: 'release-crew' } }
       ];
       fill(root, kit.list({ label: 'Store', rows: rows.map((r) => ({ variant: 'item' as const, title: r.title, sub: r.sub, ...itemTile(r.ref) })) }));
     }, { width: 380 }),

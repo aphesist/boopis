@@ -78,14 +78,49 @@ brand publishes them.
 | `elasticsearch.svg` | Elasticsearch | https://www.elastic.co/brand | none listed | the elasticsearch connector |
 | `bitbucket.svg` | Bitbucket | https://atlassian.design/resources/logo-library | https://atlassian.design/foundations/logos | the bitbucket connector |
 
-Not found in the source, so drawn as letters: Context7, Playwright (and Microsoft), Firecrawl, Exa, Slack and Tavily. Git's
-icon is in the source but under CC BY 3.0, not CC0, so it is not copied and a git connector keeps its letters. The reference servers
+Not found in Simple Icons: Context7, Playwright (and Microsoft), Firecrawl, Exa, Slack and Tavily. The first five come from the
+brands' own files (below); Microsoft and Tavily stay letters. Git's icon is in Simple Icons under CC BY 3.0, not CC0: it is copied
+with its attribution (below). The reference servers
 (Memory, Sequential Thinking, Fetch, Filesystem, Time, Everything) are the Model Context Protocol project's own, so they carry its mark
 as their service.
 
 Second copy, 27 November 2026: the files added for the owner's decision on conflict 30 ("Real logos, obviously. They should be
 coloured too.") come from the same version, `npm pack simple-icons@16.38.1` into a scratch directory; each one's data entry was
 checked to carry no licence of its own.
+
+## From the brands' own files (27 November 2026)
+
+The owner asked for the real logos, in colour, where Simple Icons has none (the repass's step 2a). Each file below was fetched on
+27 November 2026 from the brand's own source and saved as a minimal SVG: its viewBox and its shapes with their own colours, with the
+size, the ids, the inline styles (a `display-p3` copy of the same colour), the comments, and a clip that covered the whole box taken
+out; no shape was redrawn or moved. Each minimal file was rendered beside the original to check it draws the same mark (the only
+differences are the `display-p3` colours, drawn here as their sRGB fallback, which the file itself gives). A mark that is one colour
+is drawn in `currentColor` like the Simple Icons files; a multi-colour mark keeps its colours (`fills` in `map.json`).
+
+| File | Brand | Source (fetched 27 November 2026) | Licence or trademark | Used for |
+|---|---|---|---|---|
+| `context7.svg` | Context7 | https://github.com/upstash/context7/blob/17839096a0efe61b4b8a88cc20a8147784234cfa/public/context7-icon-green.svg (Upstash's repository; the green icon of its two) | the repository is MIT; the mark is Upstash's trademark | the context7 connector |
+| `playwright.svg` | Playwright | https://github.com/microsoft/playwright/blob/a804c193562095b0da20e5d4679fa87e4c8e5563/packages/web/src/assets/playwright-logo.svg (the same file the recorder and trace viewer ship) | the repository is Apache-2.0; the mark is Microsoft's trademark | the playwright connector |
+| `firecrawl.svg` | Firecrawl | https://www.firecrawl.dev/brand/firecrawl-logo.svg, the symbol on https://www.firecrawl.dev/brand | the brand page's file ("avoid stretching, recoloring, or modifying"); the mark is Firecrawl's trademark | the firecrawl connector; publisher Firecrawl |
+| `exa.svg` | Exa | https://exa.ai/assets/Exa%20Brand%20Assets.zip, `Logo/SVGs/Logomark/Exa Logomark Blue.svg`, from https://exa.ai/brand (the same file as `assets/Exa.svg` in exa-labs/exa-mcp-server; its black copy of the same path, drawn under the blue one, is left out) | Exa's brand kit; the mark is Exa's trademark | the exa connector; publisher Exa |
+| `slack.svg` | Slack | https://a.slack-edge.com/1f40066/marketing/img/nav/logo.svg, the mark Slack's own media kit page (https://slack.com/media-kit) draws; the kit's logo files sit behind a script-driven asset library that could not be read here | Slack's brand terms, https://slack.com/terms-of-service/slack-brand; the mark is Slack Technologies' trademark | the slack connector; publisher Slack |
+| `git.svg` | Git | Simple Icons 16.38.1 (`npm pack simple-icons@16.38.1`, unchanged), whose source is https://git-scm.com/community/logos | **CC BY 3.0**: "Git Logo by Jason Long is licensed under the Creative Commons Attribution 3.0 Unported License" (https://creativecommons.org/licenses/by/3.0/); the file is unchanged | the git connector |
+
+**Colours.** A brand's colour that holds 3:1 on every tile of a scheme is drawn as it is; one that does not keeps its hue with its
+lightness moved there (the rule above). Firecrawl's guidelines ask that the symbol not be recoloured: its Heat `#FA5D19` is 2.80:1
+on the light tiles, so it is drawn `#FA4F06` there (the same hue and saturation, 3:1); dark is its own Heat. In a multi-colour mark
+each colour is judged alone: Playwright's slate is lightened on the dark tiles and its green darkened on the light ones; Slack's
+blue, green and yellow are darkened on the light tiles and its red barely lightened on the dark ones. Context7's green square holds
+3:1 in both, and its white glyph is checked against the square it is drawn on.
+
+| Mark | The file's colours | On the light tiles | On the dark tiles |
+|---|---|---|---|
+| Context7 | `#059669`, `#FFFFFF` (on the green) | as they are | as they are |
+| Playwright | `#2D4552`, `#E2574C`, `#2EAD33`, `#D65348`, `#1D8D22`, `#C04B41` | `#2EAD33` as `#2BA02F` | `#2D4552` as `#4F7A91`, `#C04B41` as `#C25046` |
+| Firecrawl | `#FA5D19` | `#FA4F06` | as it is |
+| Exa | `#0143D9` | as it is | `#2769FE` |
+| Slack | `#E3066A`, `#00B3FF`, `#41B658`, `#FCC003` | `#00B3FF` as `#0094D3`, `#41B658` as `#399E4D`, `#FCC003` as `#AF8502` | `#E3066A` as `#E4066A` |
+| Git | `#F03C2E` (Simple Icons' `hex`) | as it is | as it is |
 
 **To check before release** (as ADR-0040 does for the sign-in marks): Anthropic's trademark guidelines ask for prior
 permission for other uses of its marks; GitHub allows its logo to indicate an integration. Remove a file and its
@@ -163,7 +198,9 @@ and Maps are several colours officially; Simple Icons carries one path, drawn in
 ## Adding a mark
 
 1. Copy the file from the same Simple Icons version unchanged into `svg/`, after checking its data entry has no other
-   licence, and read the brand's guidelines.
+   licence (or record the licence and its attribution, as Git's), and read the brand's guidelines. Where Simple Icons has no
+   mark, take the brand's own file from its own source (its repository, brand page or media kit), save it minimal as above,
+   and record the source, the licence or trademark note and the date; never redraw one.
 2. Add its entry to `map.json` with only evidence that is in boopis's data (a collection id or a connector's own name, read as
    one key by `connectorKey`; a host the collection or a registry lists; a package it runs; a publisher's exact name). A
    connector's name decides only when what it runs names no listed service. Give it `color.light`

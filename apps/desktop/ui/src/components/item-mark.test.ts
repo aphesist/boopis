@@ -15,11 +15,24 @@ describe('the vendored marks', () => {
   it('every entry of the map has its file, with a path to draw and no fill of its own', () => {
     const entries = (mapFile as unknown as { marks: { id: string }[] }).marks;
     expect(serviceMarks().map((m) => m.id).sort()).toEqual(entries.map((e) => e.id).sort());
-    for (const m of serviceMarks()) {
+    for (const m of serviceMarks().filter((x) => !x.fills.length)) {
       expect(m.body, m.id).toMatch(/^<path d="/);
       expect(m.body, m.id).not.toMatch(/<title>|fill=|style=/);
-      expect(m.viewBox, m.id).toBe('0 0 24 24');
+      expect(m.viewBox, m.id).toMatch(/^0 0 \d+ \d+$/);
     }
+    /* the Simple Icons files keep their 24-unit box; the brands' own files keep theirs */
+    for (const m of serviceMarks().filter((x) => !['context7', 'playwright', 'firecrawl', 'exa', 'slack'].includes(x.id))) expect(m.viewBox, m.id).toBe('0 0 24 24');
+  });
+  it('a multi-colour mark keeps every shape\'s colour, as its fills say for the scheme (Context7, Playwright, Slack)', () => {
+    for (const id of ['context7', 'playwright', 'slack']) {
+      const m = serviceMark(id);
+      expect(m?.light, id).toBe('own');
+      expect(m?.body, id).not.toMatch(/<title>| fill=/);
+      const styles = [...(m?.body ?? '').matchAll(/style="fill:light-dark\((#[0-9A-F]{6}), (#[0-9A-F]{6})\)"/g)];
+      expect(styles.length, id).toBe((m?.body.match(/<(path|rect) /g) ?? []).length);
+      for (const s of styles) expect(m?.fills.some((f) => f.light === s[1] && f.dark === s[2]), id).toBe(true);
+    }
+    expect(serviceMark('slack')?.fills.map((f) => f.hex)).toEqual(['E3066A', '00B3FF', '41B658', 'FCC003']);
   });
   it('lists no code host, where anyone can publish', () => {
     for (const e of (mapFile as unknown as { marks: { hosts: string[] }[] }).marks) for (const h of e.hosts) expect(['github.com', 'gitlab.com', 'npmjs.com', 'registry.npmjs.org']).not.toContain(h);
@@ -32,10 +45,10 @@ describe('serviceMarkOf: evidence, never a guess', () => {
     expect(id(serviceMarkOf({ name: 'Chrome DevTools', collection: 'chrome-devtools' }))).toBe('googlechrome');
     expect(id(serviceMarkOf({ name: 'Brave Search', collection: 'brave-search', kind: 'connector' }))).toBe('brave');
   });
-  it('the collection\'s entries each get the mark the map gives, or none (Context7, Playwright, Firecrawl and Exa have none in Simple Icons; the reference servers are the protocol\'s own)', () => {
+  it('the collection\'s entries each get the mark the map gives (Context7, Playwright, Firecrawl and Exa from the brands\' own files; the reference servers are the protocol\'s own)', () => {
     const got = Object.fromEntries((collection as unknown as { connectors: { id: string; name: string }[] }).connectors.map((c) => [c.id, id(serviceMarkOf({ name: c.name, collection: c.id }))]));
     expect(got).toEqual({
-      context7: null, 'chrome-devtools': 'googlechrome', playwright: null, github: 'github', firecrawl: null, exa: null, notion: 'notion', supabase: 'supabase',
+      context7: 'context7', 'chrome-devtools': 'googlechrome', playwright: 'playwright', github: 'github', firecrawl: 'firecrawl', exa: 'exa', notion: 'notion', supabase: 'supabase',
       'brave-search': 'brave', atlassian: 'atlassian', mongodb: 'mongodb', sentry: 'sentry', neon: 'neon', 'sequential-thinking': 'modelcontextprotocol', memory: 'modelcontextprotocol'
     });
   });
@@ -58,9 +71,17 @@ describe('serviceMarkOf: evidence, never a guess', () => {
     expect(id(serviceMarkOf({ name: 'postgres', collection: 'postgres' }))).toBe('postgresql');
     expect(serviceMarkOf({ name: 'notes', collection: 'notes', url: 'https://mcp.example.com/mcp' })).toBeNull();
   });
-  it('the pane\'s common connectors each have their mark; Slack, Playwright and the rest Simple Icons lacks keep their letters', () => {
-    const got = Object.fromEntries(['github', 'postgres', 'linear', 'sentry', 'sqlite', 'filesystem', 'fetch', 'memory', 'jira', 'gitlab', 'slack', 'playwright', 'context7', 'exa', 'firecrawl'].map((n) => [n, id(serviceMarkOf({ name: n, collection: n }))]));
-    expect(got).toEqual({ github: 'github', postgres: 'postgresql', linear: 'linear', sentry: 'sentry', sqlite: 'sqlite', filesystem: 'modelcontextprotocol', fetch: 'modelcontextprotocol', memory: 'modelcontextprotocol', jira: 'jira', gitlab: 'gitlab', slack: null, playwright: null, context7: null, exa: null, firecrawl: null });
+  it('the pane\'s common connectors each have their mark, Slack, Playwright, Git and the rest included; one no source carries keeps its letters', () => {
+    const got = Object.fromEntries(['github', 'postgres', 'linear', 'sentry', 'sqlite', 'filesystem', 'fetch', 'memory', 'jira', 'gitlab', 'slack', 'playwright', 'context7', 'exa', 'firecrawl', 'git', 'tavily'].map((n) => [n, id(serviceMarkOf({ name: n, collection: n }))]));
+    expect(got).toEqual({ github: 'github', postgres: 'postgresql', linear: 'linear', sentry: 'sentry', sqlite: 'sqlite', filesystem: 'modelcontextprotocol', fetch: 'modelcontextprotocol', memory: 'modelcontextprotocol', jira: 'jira', gitlab: 'gitlab', slack: 'slack', playwright: 'playwright', context7: 'context7', exa: 'exa', firecrawl: 'firecrawl', git: 'git', tavily: null });
+  });
+  it('the five brands\' own marks by what a connector runs: its package or its address', () => {
+    expect(id(serviceMarkOf({ name: 'x', command: 'npx', args: ['-y', '@upstash/context7-mcp@4.7.3'] }))).toBe('context7');
+    expect(id(serviceMarkOf({ name: 'x', url: 'https://mcp.context7.com/mcp' }))).toBe('context7');
+    expect(id(serviceMarkOf({ name: 'x', command: 'npx', args: ['-y', '@playwright/mcp@0.0.86'] }))).toBe('playwright');
+    expect(id(serviceMarkOf({ name: 'x', url: 'https://mcp.firecrawl.dev/v2/mcp' }))).toBe('firecrawl');
+    expect(id(serviceMarkOf({ name: 'x', url: 'https://mcp.exa.ai/mcp' }))).toBe('exa');
+    expect(id(serviceMarkOf({ name: 'x', command: 'uvx', args: ['mcp-server-git'] }))).toBe('git');
   });
   it('without anything it runs (the session knows only the name), the name the collection gave it decides', () => {
     expect(id(serviceMarkOf({ name: 'sentry', collection: 'sentry' }))).toBe('sentry');
@@ -95,7 +116,8 @@ describe('itemTile: the one rule every item row draws', () => {
     expect('markHTML' in itemTile({ name: 'Focus theme', kind: 'mod' }) && itemTile({ name: 'Focus theme', kind: 'mod' })).toMatchObject({ markHTML: expect.stringContaining('<svg') });
     expect(itemTile({ name: 'github', collection: 'github' })).toMatchObject({ markHTML: expect.stringContaining('data-mark="github"') });
     expect(itemTile({ name: 'Frontend design', kind: 'skill', publisher: 'Anthropic', proven: true })).toMatchObject({ markHTML: expect.stringContaining('data-mark-of="publisher"') });
-    expect(itemTile({ name: 'Context7', collection: 'context7' })).toEqual({ markText: 'C7' });
+    expect(itemTile({ name: 'Context7', collection: 'context7' })).toMatchObject({ markHTML: expect.stringContaining('data-mark="context7"') });
+    expect(itemTile({ name: 'Tavily', collection: 'tavily' })).toEqual({ markText: 'TV' });
     expect(itemTile({ name: 'pw', collection: 'pw' }, 'Playwright')).toEqual({ markText: 'PL' });
   });
 });
@@ -187,11 +209,29 @@ describe('brand colours (owner decisions, 23 and 27 November 2026)', () => {
     for (const m of serviceMarks()) for (const p of presets) for (const t of p.tiles) {
       const c = p.light ? m.light : m.dark;
       if (c === 'ink') continue;
+      if (c === 'own') {
+        /* a multi-colour mark: each colour against the tile, or against the mark's own shape it is drawn on */
+        for (const f of m.fills) {
+          const fc = p.light ? f.light : f.dark;
+          const under = f.on ? m.fills.find((x) => x.hex === f.on) : null;
+          const ground = under ? (p.light ? under.light : under.dark) : t;
+          expect(ratio(fc, ground), `${m.id} ${f.hex} on ${p.id} (${fc} on ${ground})`).toBeGreaterThanOrEqual(3);
+        }
+        continue;
+      }
       expect(ratio(c, t), `${m.id} on ${p.id} (${c} on ${t})`).toBeGreaterThanOrEqual(3);
     }
   });
   it('each colour is the brand\'s own hue (Simple Icons\' hex, or its lightness moved to reach 3:1), or ink for a one-colour brand, with the reason written down', () => {
-    for (const e of (mapFile as unknown as { marks: { id: string; hex: string; color: { light: string; dark: string; why: string } }[] }).marks) {
+    for (const e of (mapFile as unknown as { marks: { id: string; hex: string; color: { light: string; dark: string; why: string }; fills?: { hex: string; light: string; dark: string }[] }[] }).marks) {
+      for (const f of e.fills ?? []) {
+        const own = hue('#' + f.hex);
+        for (const c of [f.light, f.dark]) {
+          expect(Math.abs(hue(c).h - own.h), e.id + ' ' + f.hex + ' keeps its hue').toBeLessThan(3);
+          expect(Math.abs(hue(c).s - own.s), e.id + ' ' + f.hex + ' keeps its saturation').toBeLessThan(0.08);
+        }
+      }
+      if (e.color.light === 'own') { expect(e.fills?.length, e.id).toBeGreaterThan(1); expect(e.color.why.length, e.id).toBeGreaterThan(20); continue; }
       const own = hue('#' + e.hex);
       for (const c of [e.color.light, e.color.dark]) {
         if (c === 'ink') { expect(own.s, e.id + ' is one colour').toBeLessThan(0.1); continue; }
@@ -227,7 +267,8 @@ describe('publisher tiles', () => {
     expect(tileMarkOf({ name: 'Tips', kind: 'skill', publisher: 'GitHub Inc', proven: true })).toBeNull();
   });
   it('a connector shows its service or its monogram, never its publisher\'s mark', () => {
-    expect(tileMarkOf({ name: 'Context7', kind: 'connector', collection: 'context7', publisher: 'Upstash', proven: true })).toBeNull();
+    expect(tileMarkOf({ name: 'Upstash Redis', kind: 'connector', collection: 'upstash-redis', publisher: 'Upstash', proven: true })).toBeNull();
+    expect(tileMarkOf({ name: 'Context7', kind: 'connector', collection: 'context7', publisher: 'Upstash', proven: true })).toMatchObject({ of: 'service', mark: { id: 'context7' } });
     expect(tileMarkOf({ name: 'GitHub', kind: 'connector', collection: 'github', publisher: 'GitHub', proven: true })).toMatchObject({ of: 'service' });
   });
 });
