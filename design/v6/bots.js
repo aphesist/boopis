@@ -64,7 +64,7 @@
   const EYES = ['pill', 'tall', 'circle', 'wide', 'squint', 'square', 'grid', 'matrix', 'bars', 'arc', 'rest', 'plus', 'heart', 'circle wide'];
   const MODELS = ['opus 5.5', 'sonnet 5.5', 'haiku 4.5', 'qwen3-coder'];
   const CRON_PRESETS = [['', 'Only when asked'], ['0 * * * *', 'Hourly'], ['0 2 * * *', 'Every night'], ['0 9 * * 1-5', 'Weekday mornings']];
-  const CHANNELS = [['app', 'This app', 'always on'], ['slack', 'Slack', '#billing-alerts'], ['telegram', 'Telegram', '@enzo'], ['email', 'Email', 'enzo@boopis.dev']];
+  const CHANNELS = [['app', 'This app', 'always on'], ['slack', 'Slack', '#billing-alerts'], ['telegram', 'Telegram', '@you'], ['email', 'Email', 'you@example.com']];
   const APPROVALS = [
     ['deploys', 'Deploying anywhere'], ['push', 'Pushing to protected branches'], ['network', 'Reaching the network'],
     ['spend', 'Spending past the run cap'], ['people', 'Messaging people'], ['outside', 'Writing outside its workspace']

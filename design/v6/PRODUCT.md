@@ -17,7 +17,7 @@ chrome drawn by the page). Published as a claude.ai Artifact for review. Fonts f
 
 ## Users
 
-One primary user (the owner, "enzo" in the mock data): a developer who runs AI coding agents against their own
+One primary user (the owner, "you" in the mock data): a developer who runs AI coding agents against their own
 repositories most of the day, on Linux, alongside an editor and a terminal. They watch cost closely ("keep it
 cheap"), keep several projects going (billing-api, marketing-site, bethunter), and delegate recurring work to
 named bots: review, deploys, docs, on-call, data migrations.

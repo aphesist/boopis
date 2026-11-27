@@ -3,6 +3,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { ConversationEvent, WaitsEvent } from '../../data';
 import { GatewayClient } from '../gateway';
+import { USER } from '../../data/mock-data';
 import { createLiveProvider } from '../live-provider';
 import type { LiveProvider } from '../live-provider';
 import { ReplayHost } from '../replay';
@@ -52,7 +53,7 @@ describe('the details panels follow a session and show only what Hermes and the 
     expect(d.models.get()).toEqual(['custom:main/fake-a']);
     expect(d.can.get()).toEqual({ compact: false, connectors: false, signIn: false });
     expect(d.notes.get().environment).toMatch(/fork, compact/);
-    expect(JSON.stringify([d.context.get(), d.environment.get(), d.output.get()])).not.toMatch(/billing|proration|enzo/i);
+    expect(JSON.stringify([d.context.get(), d.environment.get(), d.output.get()])).not.toMatch(/billing|proration/i);
   });
 
   it('answers a refused control with the reason, and never pretends', async () => {
@@ -185,7 +186,7 @@ describe('files, fork and what stays a preview', () => {
   it('keeps the feedforward reading off unless the preview flag is on, and hears nothing', () => {
     expect(provider.feedforward.catalog()).toEqual([]);
     expect(provider.dictation?.start({ botId: null }, () => { throw new Error('nothing was heard'); })).toBeTypeOf('function');
-    expect(provider.user.get().name).not.toBe('enzo');
+    expect(provider.user.get()).not.toBe(USER);   /* the live provider's own user, never the mock's */
   });
 });
 

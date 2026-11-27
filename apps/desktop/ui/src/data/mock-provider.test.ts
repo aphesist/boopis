@@ -8,7 +8,7 @@ afterEach(() => vi.useRealTimers());
 
 describe('the mock provider serves the v6 data through the seam', () => {
   it('has the user, 11 bots in the owner\'s dock order, five sessions and the conversation with its blank', () => {
-    expect(p.user.get().name).toBe('enzo');
+    expect(p.user.get().name).toBe('you');
     expect(p.bots.snapshot().bots.map((b) => b.id)).toEqual(['atlas', 'nina', 'kai', 'iris', 'hex', 'sol', 'noct', 'terra', 'nimbus', 'vox', 'moss']);
     expect(p.sessions.list.get()).toHaveLength(5);
     const turns = p.sessions.conversation('s1').snapshot().turns;

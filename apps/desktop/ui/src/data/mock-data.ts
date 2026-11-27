@@ -8,7 +8,7 @@ import type {
   LedgerStats, Schedule, SessionSummary, Step, Todo, Turn, User
 } from './types';
 
-export const USER: User = { name: 'enzo', initials: 'e' };
+export const USER: User = { name: 'you', initials: 'y' };
 
 /* ───────── bots: the 11 in the owner's Figma dock, in order ───────── */
 interface BotSeed { id: string; name: string; role: string; shape: string; color: string; state: string; attention?: string; /** boopis has no store for it: made with the `hermes` command */ outside?: boolean }

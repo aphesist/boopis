@@ -15,7 +15,7 @@ to the Figma frame) is withdrawn: the Figma, Grok Bot, the Gemini mock-up and Pa
 │ billing-api               │       │ → sonnet   │                            │                    ┊                            │
 │ • proration drift    now  │       └────────────┴────────────────────────────┘                    ┊                            │
 │                           │       [ composer, 720 wide, card stock ]                             ┊                            │
-│ (E) enzo             ⚙    │              ╭──[ dock, drawer colour, flush to the edge ]──╮       ┊                            │
+│ (Y) you              ⚙    │              ╭──[ dock, drawer colour, flush to the edge ]──╮       ┊                            │
 └───────────────────────────┴──────────────┴──────────────────────────────────────────────┴───────┴────────────────────────────┘
 ```
 

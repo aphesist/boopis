@@ -5,7 +5,7 @@
 import { check, scenario } from './harness.mjs';
 
 /* words only the mock's data contains (data/mock-data.ts). Its model names ('sonnet 5.5') are left out: a readable Claude model name is also what a real ladder reads as */
-const MOCK = ['billing-api', 'proration', 'prorate', 'enzo', 'qwen3', 'cents/proration', '142 passed', 'src/billing', 'invoices-sample', 'bubblewrap', 'github', 'postgres', 'linear', 'sentry'];
+const MOCK = ['billing-api', 'proration', 'prorate', 'qwen3', 'cents/proration', '142 passed', 'src/billing', 'invoices-sample', 'bubblewrap', 'github', 'postgres', 'linear', 'sentry'];
 const text = (page, sel) => page.evaluate((q) => [...document.querySelectorAll(q)].map((n) => n.textContent).join('\n'), sel);
 const leaks = (t) => MOCK.filter((w) => t.toLowerCase().includes(w.toLowerCase()));
 

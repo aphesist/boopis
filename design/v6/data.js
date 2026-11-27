@@ -1,6 +1,6 @@
 /* Shared mock data for the boopis v6 mock-up. Read-only for module agents; propose additions in your report. */
 window.HX_DATA = {
-  user: { name: 'enzo', initials: 'e' },
+  user: { name: 'you', initials: 'y' },
   /* the 11 bots in the owner's Figma dock, in order; orb2 attributes */
   bots: [
     { id: 'atlas',  name: 'atlas',  role: 'reviewer',          shape: 'circle',   color: '#efece6', eyes: 'pill',   state: 'idle' },
