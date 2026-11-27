@@ -170,7 +170,7 @@ A `board` row can still hold a derived part or a conflict: its Reference cell sa
 | New bot: the stage, the name, the pickers, suggestions, the dice | yes, `modules/bots/new-bot.ts`, story `bots/new-bot` | derived: `v7/03-light-shadows.jpg` draws a small "Create a new bot" dialog as a sample; spec 21.2 pattern "the setup form" | works today | not started (no step) |
 | New bot from no bots | yes, `bots/new-bot` "from no bots" | derived: as above | works today | not started (no step) |
 | Archive, delete and restore a bot: the confirm, the notice with Undo | yes, `modules/bots/settings.ts`, `modules/shell/palette.ts` ("Restore bot…") | derived: `v7/03-light-shadows.jpg` (a "Link copied / Undo" sample); kit Dialog form, Notice | works today | not started (no step) |
-| Who is at work, in detail (the tool a bot is in, nine at work, a lead first) | partly, `components/presence.ts` and story `chat/presence` remain; the room no longer draws it | derived: dropped at step 3 because no board draws it; asked of the owner | works today | not started (no step) |
+| Who is at work, in detail (the tool a bot is in, nine at work, a lead first) | no: `components/presence.ts` and story `chat/presence` were deleted at step 9 (no app user since step 3; git history keeps them) | derived: dropped at step 3 because no board draws it; asked of the owner | needs building again if the owner wants it | not started (no step) |
 
 ## 4. Bots: rooms
 
@@ -460,7 +460,7 @@ A `board` row can still hold a derived part or a conflict: its Reference cell sa
 | Connectors for one bot: its own list, none yet, could not be read | yes, story `settings/connectors-for` | derived: as above, with a SelectorItem naming the bot | works today | built, step 7b: the "Connectors for" select over the same page |
 | Adding a connector: from the collection, a URL or a command; the review; an OAuth sign-in | yes, `host/connectors.ts` | derived: the form rows of section 10; `O-B06` "Add GitHub" | works today | not started (no step) |
 | "boopis restarted to read the key" after an install | yes, `host/connectors-notice.ts` | derived: `session/S17` Notice; kit Notice | works today | not started (no step) |
-| An item's mark (a brand, a publisher's tile, letters) | yes, `components/item-mark.ts` (`brandMarkHTML`) in the kit's ListRow item tile and the pane's Card row; letters (`core/letters.ts`) where no mark is known; a mod's glyph | board `v7/15-store-*.jpg`; see conflict 30 | works today | decided by the owner at step 8 (27 November): the real brand logos in colour on the Store's, Settings › Connectors' and the pane's connector rows; board 15's letters lose (conflict 30, resolved) |
+| An item's mark (a brand, a publisher's tile, letters) | yes, `components/item-mark.ts` (`itemTile`, the one rule: a mod's glyph, a brand's mark, else letters from `core/letters.ts`) in the kit's ListRow item tile and the pane's Card row; 49 Simple Icons marks (step 9 added 35: Linear, PostgreSQL, SQLite, Google Drive, Jira and the rest), the reference servers on the protocol's mark; an installed connector matched by its name as one key (`connectorKey`); the v6 tile `ui.itemMark` deleted at step 9 | board `v7/15-store-*.jpg`; see conflict 30 | works today | decided by the owner at step 8 (27 November): the real brand logos in colour on the Store's, Settings › Connectors' and the pane's connector rows; board 15's letters lose (conflict 30, resolved). Step 9: a brand colour under 3:1 keeps its hue with its lightness moved (Supabase green in light), a one-colour brand takes the theme's ink; Context7, Playwright, Firecrawl, Exa, Slack and Git stay letters (no CC0 mark) |
 
 ## 13. Models and sign-ins
 
@@ -817,7 +817,10 @@ Both sides as they are written or drawn. None is resolved here.
 30. **An item's mark in the Store.** `docs/UI-COMPONENTS.md`: "Item marks and item rows … (brand colours and publisher tiles:
     the owner, 23 November 2026)". `v7/15-store-*.jpg` draws grey tiles with two letters ("C7", "GH", "LN"). **Resolved by the owner (27 November, step 8):** the Store, Connectors
     and the pane's connector rows show the real brand logos in colour (the item-mark path: brand colours with their contrast per
-    preset, a proven publisher's mark) in the kit's item tile; letters only where no mark is known; a mod keeps its glyph.
+    preset, a proven publisher's mark) in the kit's item tile; letters only where no mark is known; a mod keeps its glyph. **Step 9**
+    finished it: every item row draws `itemTile`; 35 more Simple Icons marks; a colour under 3:1 is the brand's hue with its lightness
+    moved, a one-colour brand the theme's ink; board 15's Linear, Supabase and Frontend design (Anthropic's, a proven publisher) draw
+    their marks, Context7 and Playwright keep letters (Simple Icons has no mark for them).
 31. **Where a floating notice sits.** The spec's Notice: "floating (bottom centre, was the toast)". The app's toast: "one
     line at the top of the work". No board draws a floating notice on a key screen (`v7/03-light-shadows.jpg` draws one as
     a sample).

@@ -333,13 +333,15 @@ changed most is that it is now the kit's component, one markup for both fields a
   row's line twice; it now lists the groups as the shortcut sheet does.
 
 ### Item marks — one each (brand colours and publisher tiles: the owner, 23 November 2026; logos over letters: the owner, 27 November 2026)
-- `components/item-mark.ts`: what an installable thing is, from evidence (`vendor/service-marks/map.json`: an id in boopis's collection,
-  an address's host, a package or image it runs, a home page's host, a proven publisher's exact name), in its brand's colours for the
-  scheme (`light-dark(--mk-l, --mk-d)`, each checked at 3:1 per preset by `item-mark.test.ts`). `brandMarkHTML(ref)` is the mark alone,
-  which the Store, Settings › Connectors (the kit's ListRow item tile, 40 at `--r-tile`, the mark 55% of it) and the session pane's
-  connector rows (a 16 mark before the name in the kit's Card row) draw; `itemMark` and `publisher` stay for the item's own tile and
-  "by" lines. Letters (`core/letters.ts`, the one rule) only where no mark is known; a mod keeps its glyph. Board 15's letters lose to
-  the owner's decision (COVERAGE conflict 30).
+- `components/item-mark.ts`: what an installable thing is, from evidence (`vendor/service-marks/map.json`: a host or package it runs
+  that names a listed service, else an id in boopis's collection or the connector's own name as one key (`connectorKey`), a home
+  page's host, a proven publisher's exact name), in its brand's colours for the scheme (`light-dark(--mk-l, --mk-d)`: the brand's
+  colour where it holds 3:1 on every tile of the scheme, else its hue with the lightness moved, a one-colour brand the theme's ink;
+  `item-mark.test.ts`). `itemTile(ref)` is the one rule every row of an installable thing draws (the Store, Settings › Connectors
+  installed and from the collection, the pane's connector rows, the first run's offer): a mod's glyph, else `brandMarkHTML(ref)` (the
+  kit's ListRow item tile, 40 at `--r-tile`, the mark 55% of it; a 16 mark before the name in the kit's Card row), else board 15's
+  letters (`core/letters.ts`). Board 15's letters lose to the owner's decision (COVERAGE conflict 30).
+- Deleted at step 9: the v6 tile and publisher line (`ui.itemMark`, `ui.publisher`: no app user).
 - Deleted at step 8: the v6 `itemRow` (no app user since 7b) and the v6 search field (`ui.search`: the palette is the kit's
   CommandPalette).
 
