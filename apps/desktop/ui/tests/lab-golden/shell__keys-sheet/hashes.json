@@ -1,62 +1,62 @@
 {
  "filtered@bone": {
-  "sha": "1139e40502801e9bd8fe5ce8cc78de6d2250f396",
-  "w": 1024,
-  "h": 744
+  "sha": "3bc528f68e8895063ba096147ae3ce201da05996",
+  "w": 924,
+  "h": 664
  },
  "filtered@catalog": {
-  "sha": "06a0d4e0cee9ca43f69af431aeeb97cd9634fed6",
-  "w": 1024,
-  "h": 744
+  "sha": "e2824f1d7ad44729f5b0a03c4440138ef7f47b02",
+  "w": 924,
+  "h": 664
  },
  "filtered@graphite": {
-  "sha": "d56911bbbc5d9fc26bfe32e629e2f59a876afc6a",
-  "w": 1024,
-  "h": 744
+  "sha": "67237af31d89577ad626d0144d8218f007e2bb66",
+  "w": 924,
+  "h": 664
  },
  "filtered@typewriter": {
-  "sha": "041e33ccebdfb5f96c2f86ef9828177792d46821",
-  "w": 1024,
-  "h": 744
+  "sha": "89d022ea9b54931360b6643eea43183213475a88",
+  "w": 924,
+  "h": 664
  },
  "no-matches@bone": {
-  "sha": "4f7f3c9333a272c806100912917babc81bb4ae29",
-  "w": 1024,
-  "h": 744
+  "sha": "f5e424cf683ac55cf8152d826f4417470f5ad577",
+  "w": 924,
+  "h": 664
  },
  "no-matches@catalog": {
-  "sha": "2c6499b960041abe2d6c66a816d547f10851f13b",
-  "w": 1024,
-  "h": 744
+  "sha": "00faa85d27f66c02210dfa5e55591c9237aad876",
+  "w": 924,
+  "h": 664
  },
  "no-matches@graphite": {
-  "sha": "54870d892e76d89d3aa7bcbda175744592a174d2",
-  "w": 1024,
-  "h": 744
+  "sha": "00faa85d27f66c02210dfa5e55591c9237aad876",
+  "w": 924,
+  "h": 664
  },
  "no-matches@typewriter": {
-  "sha": "d9440ae28e8b83ed125e3c5bf4050be3975e6806",
-  "w": 1024,
-  "h": 744
+  "sha": "00faa85d27f66c02210dfa5e55591c9237aad876",
+  "w": 924,
+  "h": 664
  },
  "open@bone": {
-  "sha": "fecbdb58b48dd8e2b97fca3fadb8e49d1569bddb",
-  "w": 1024,
-  "h": 744
+  "sha": "eea6c63ef4d6f4f471426c513c389f4a10ece652",
+  "w": 924,
+  "h": 664
  },
  "open@catalog": {
-  "sha": "5099e76f55af1ff5f33bd6e86ca9b3e39a36df57",
-  "w": 1024,
-  "h": 744
+  "sha": "a35e9757f769c7a30eedeab68194fa78c56569d9",
+  "w": 924,
+  "h": 664
  },
  "open@graphite": {
-  "sha": "6c62b5db876d77e8c80b02714534d9506e93e4a7",
-  "w": 1024,
-  "h": 744
+  "sha": "37543cfc003882c73ee08cd87aae1991c9443cf0",
+  "w": 924,
+  "h": 664
  },
  "open@typewriter": {
-  "sha": "44c47a0f1bcc2162eb6075de686c77af091be799",
-  "w": 1024,
-  "h": 744
+  "sha": "8759d493740c0ac83a6fcdb6a8c2cfff1516ee9d",
+  "w": 924,
+  "h": 664
  }
 }

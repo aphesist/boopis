@@ -1,6 +1,6 @@
 /* Settings › Connectors (board 14 names the page): the connectors boopis's engine has, each with its state, its switch, Test, Sign in
    and Remove, boopis's collection and the other ways to add one, for the main profile or one bot (`host/connectors.ts`, on the kit since
-   7a). The full Connectors page, with the store's item rows, is step 7b. In the page build there is no engine to ask: it says so. */
+   7a; the full page, with the Store's item rows, since 7b). In the page build there is no engine to ask: it says so. */
 import { kit } from '@boopis/ui';
 import { data } from '../../data';
 import { emit } from '../../core/bus';

@@ -167,10 +167,10 @@ export async function ownerDecisions(env) {
   page = await s.fresh();
   await page.keyboard.press('Control+k'); await page.waitForTimeout(200);
   await page.keyboard.type('restore'); await page.waitForTimeout(150);
-  const pc = await ev(() => [...document.querySelectorAll('#hx-palette-list .hx-pal-row__label')].map((n) => n.textContent));
+  const pc = await ev(() => [...document.querySelectorAll('#hx-palette-list .k7-cpal__label')].map((n) => n.textContent));
   check('owner', 'the palette offers "Restore bot…" while bots are archived', pc.join() === 'Restore bot…', pc);
   await page.keyboard.press('Enter'); await page.waitForTimeout(250);
-  const pl = await ev(() => ({ open: !document.getElementById('hx-palette').hidden, group: [...document.querySelectorAll('#hx-palette-list .hx-pal-group')].map((n) => n.textContent), rows: [...document.querySelectorAll('#hx-palette-list .hx-pal-row__label')].map((n) => n.textContent), ph: document.getElementById('hx-palette-input').placeholder }));
+  const pl = await ev(() => ({ open: !document.getElementById('hx-palette').hidden, group: [...document.querySelectorAll('#hx-palette-list .k7-cpal__head')].map((n) => n.textContent), rows: [...document.querySelectorAll('#hx-palette-list .k7-cpal__label')].map((n) => n.textContent), ph: document.getElementById('hx-palette-input').placeholder }));
   check('owner', 'it lists the archived bots, and only them', pl.open && pl.group.join() === 'Archived bots' && pl.rows.join() === 'ledger,nina' && pl.ph === 'Restore which bot', pl);
   await page.keyboard.press('Enter'); await page.waitForTimeout(600);
   const pr = await ev(() => ({ open: !document.getElementById('hx-palette').hidden, toast: document.querySelector('.k7-notify .k7-notice__text')?.textContent, ledger: __hx.data().bots.snapshot().bots.some((b) => b.id === 'ledger'), left: __hx.data().bots.archived.get().map((a) => a.was) }));

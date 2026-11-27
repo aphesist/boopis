@@ -1,55 +1,37 @@
-/* The store's placement: the view is the Settings dialog's body, wider; every control in it is the kit's (rows, the card layer's
-   form card, segmented controls, the search field and the themed select). Only layout lives here. */
-.hx-store-dialog { width: min(920px, calc(100% - 32px)); height: min(760px, calc(100% - 64px)); }
-.hx-store { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--sp-4); align-content: start; }
-.hx-store__head { display: flex; justify-content: flex-start; }
-.hx-store__main { min-width: 0; }
-.hx-store__stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); align-content: start; min-width: 0; }
-.hx-store__list { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); min-width: 0; }
-.hx-store__filters, .hx-store__note { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
-.hx-store__note > .ui-field__hint { flex: 1 1 16em; margin: 0; overflow-wrap: anywhere; }
-.hx-store__sheet { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); min-width: 0; }
-.hx-store__scope { display: flex; }
-.hx-store__lines { margin: 0; padding-left: 1.2em; color: var(--text-dim); }
-/* a row's controls differ in height (a word, a switch, buttons): they share the row's centre, and wrap under the text when the row is narrow */
-.hx-store .ui-set__row { flex-wrap: wrap; }
-.hx-store .ui-set__actions { align-items: center; flex-wrap: wrap; }
-.hx-store .ui-set__label { overflow-wrap: anywhere; }
-.hx-store .ui-set__actions { flex: 0 1 auto; max-width: 100%; }
-.hx-store__sheet, .hx-store__sheet .ui-set__head, .hx-store__sheet .ui-field__hint { overflow-wrap: anywhere; min-width: 0; }
-/* the progress of a read: the section's own rows (a source, what it is doing, a badge); the dots sit at the start of the line */
-.hx-store__reading { min-width: 0; }
-.hx-store__reading:empty { display: none; }
-.hx-store__note > .ui-progress { flex: none; }
-/* ───────── the redesign (23 November 2026): items as rows with their tile, a head on an item's page ─────────
-   Placement only: the rows are the kit's (`.ui-row--item`), the tile is `itemMark`, the type is the system's scale. */
-/* the kind chips and the source select share a line; the select keeps its own width at the line's end and wraps under the chips when narrow */
-.hx-store__filters { justify-content: space-between; }
-.hx-store__source { flex: 0 1 16em; min-width: min(100%, 12em); }
-/* a list of item rows under its heading: the rows reach the section's edges (no list inset: the store has no sidebar axis) */
-.hx-store__rows { padding: 0; }
-.hx-store__group > .ui-set__head { margin-block-start: 0; }
-.hx-store__list > .ui-btn { justify-self: start; }
-/* back to the list: a ghost button at the start of the line, never stretched across the page */
-.hx-store__back { justify-self: start; }
-/* an item's page: its tile, name and meta line, then the action; the action wraps under the name when the dialog is narrow */
-.hx-store__hero { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3) var(--sp-4); min-width: 0; }
-.hx-store__tile { display: flex; flex: none; }
-.hx-store__who { display: grid; gap: var(--sp-1); flex: 1 1 18em; min-width: 0; }
-.hx-store__title { margin: 0; font: 600 var(--fs-l)/var(--lh-tight) var(--sans); color: var(--text-strong); text-transform: var(--ui-case); overflow-wrap: anywhere; }
-.hx-store__meta { margin: 0; font-size: var(--fs-xs); line-height: var(--lh-small); color: var(--text-dim); overflow-wrap: anywhere; }
-.hx-store__sep { color: var(--text-quiet); }
-.hx-store__hero > .ui-set__actions { flex: none; }
-/* an item's facts: reference data as a two-column grid (R-table-1, as the keymap): the label at the start, the value beside it,
-   8 0 per line, a hairline between lines and none after the last; one column when the dialog is narrow */
-.hx-store__facts { display: grid; grid-template-columns: minmax(0, 1fr); margin: 0; container-type: inline-size; }
-.hx-store__fact { display: grid; grid-template-columns: minmax(7em, 12em) minmax(0, 1fr); gap: var(--sp-1) var(--sp-4); padding: var(--sp-2) 0; border-bottom: 1px solid var(--hair); min-width: 0; }
-.hx-store__fact:last-child { border-bottom: 0; }
-.hx-store__fact > dt { font-size: var(--fs-s); line-height: var(--lh-small); color: var(--text-dim); text-transform: var(--ui-case); }
-.hx-store__fact > dd { margin: 0; min-width: 0; font-size: var(--fs-s); line-height: var(--lh-small); color: var(--text); overflow-wrap: anywhere; }
-@container (max-width: 30em) { .hx-store__fact { grid-template-columns: minmax(0, 1fr); } }
+/* The Store's placement (board 15: screens.js store). Every look is the kit's: the wide Dialog, the search Field, filter Chips, the
+   StatusLine, SectionHeads, item ListRows, Cards of rows, Notices, Switches and Buttons. Only where they stand lives here. */
+.hx-dialog.hx-store-dialog, .hx-dialog.hx-keysheet { padding: 0; border: 0; background: transparent; color: inherit; overflow: visible;
+  width: min(var(--dialog-l), calc(100% - 2 * var(--sp-4))); height: min(var(--wide-h), calc(100% - var(--drag-h) - var(--sp-3) - var(--gap-hair) - var(--sp-4))); max-width: none; max-height: none;
+  margin: calc(var(--drag-h) + var(--sp-3) + var(--gap-hair)) auto auto; }   /* board 15: 900 by 640, 70 from the window's top */
+.hx-dialog.hx-store-dialog::backdrop, .hx-dialog.hx-keysheet::backdrop { background: var(--scrim); }
+:is(.hx-store-dialog, .hx-keysheet) > .k7-dialog { width: 100%; height: 100%; }
 
-/* on the store's v7 ground (6f, until step 7 redraws the store on the kit): an item's mark starts a step in, not the half-difference the
-   v6 row derives from v7's taller rows (15, off the spacing scale). It stays within a pixel of its row's vertical inset, so it keeps the
-   row's corner (R-corner-3) */
-.hx-store__rows .ui-row--item { padding-inline-start: var(--sp-4); }
+.hx-store { display: flex; flex-direction: column; min-width: 0; }
+.hx-store__end { display: flex; justify-content: flex-end; }
+.hx-store__main { min-width: 0; }
+.hx-store__stack { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; padding-top: var(--gap-row); }
+/* board 15: the search 10 under the head, the chips 10 under it, the first section's head 18 under them */
+.hx-store__filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap-s); min-width: 0; margin-top: var(--gap-hair); }
+.hx-store__chips { display: flex; flex-wrap: wrap; gap: var(--gap-s); min-width: 0; }
+.hx-store__line { flex: 1 1 auto; display: flex; justify-content: flex-end; min-width: 0; }
+.hx-store__note { padding: var(--sp-1); margin: calc(-1 * var(--sp-1)); }   /* room for a control's ring inside the Notice */
+.hx-store__note:empty { display: none; }
+.hx-store__list { display: flex; flex-direction: column; gap: var(--gap-s); min-width: 0; margin-top: calc(-1 * var(--sp-1)); }   /* a section's head 18 under the line over it (its own 12 over its words, board 15) */
+.hx-store__list > .k7-btn { align-self: flex-start; }
+/* a list of item rows: two columns 16 apart and 2 between rows; the section's head (its own 10 in) stands over the rows' tiles */
+.hx-store__group { min-width: 0; }
+.hx-store__group > .k7-shead { padding-bottom: var(--gap-s); }   /* board 15's `.set-head`: 6 under its words */
+.hx-store__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap-hair) var(--sp-4); min-width: 0; }
+.hx-store__grid[data-one] { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 719px) { .hx-store__grid { grid-template-columns: minmax(0, 1fr); } }
+.hx-store__grid > .k7-lrow { min-width: 0; cursor: default; }
+.hx-store__acts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.hx-store__stack > [data-store-back] { align-self: flex-start; }
+.hx-store__hero { min-width: 0; }
+.hx-store__sheet, .hx-store__facts { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; padding: var(--gap-hair); margin: calc(-1 * var(--gap-hair)); }   /* room for a Card's ring */
+.hx-store__sheet .k7-row__sub { overflow-wrap: anywhere; }
+.hx-store__scope { display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-start; }
+
+/* the shortcut sheet: the keymap's groups in two columns */
+.hx-keys { columns: 2 calc(var(--set-nav-w) + var(--sp-7)); column-gap: var(--sp-5); padding-top: var(--sp-3); }
+.hx-keys__group { break-inside: avoid; padding-bottom: var(--sp-4); }

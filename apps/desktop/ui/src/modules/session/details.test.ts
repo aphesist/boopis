@@ -161,7 +161,7 @@ describe('what S40 draws no place for, kept in the pane (the lead, 26 November)'
   it('Connectors: a switch turns one on or off for this session, a sign-in starts, the store opens; the project\'s switch moved to Settings (7a)', async () => {
     boot();
     await tick();
-    expect(rows('Connectors').map((r) => r[0])).toEqual(expect.arrayContaining(['Github', 'Postgres', 'Linear', 'Browse the store']));
+    expect(rows('Connectors').map((r) => r[0])).toEqual(expect.arrayContaining(['github', 'postgres', 'linear', 'Browse the store']));
     expect(rows('Connectors').map((r) => r[0])).not.toContain('No engine plugins and no plugin hooks');
     q<HTMLButtonElement>('[data-conn="github"]').click();
     expect(calls).toContainEqual(['connector', 'github', false]);

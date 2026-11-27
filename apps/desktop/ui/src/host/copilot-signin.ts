@@ -18,7 +18,10 @@ export const COPILOT_COPY: SigninCopy = {
   explain: () => 'Open GitHub’s sign-in page, sign in with the account that has GitHub Copilot, then type this code.',
   caution: (page, now) => {
     const left = minutesLeft(page.expiresAt, now);
-    return `The code works for ${left === null ? 'a few' : String(left)} minutes. Type it only on github.com, and only if you started this sign-in in boopis.`;
+    /* the page's own host, as the sign-in gave it: the code is typed there and nowhere else */
+    let site = 'GitHub’s own page';
+    try { site = new URL(page.url).host || site; } catch { /* no address given: the words stand */ }
+    return `The code works for ${left === null ? 'a few' : String(left)} minutes. Type it only on ${site}, and only if you started this sign-in in boopis.`;
   },
   done: 'Signed in with GitHub.',
   gave: 'GitHub gave no code.'

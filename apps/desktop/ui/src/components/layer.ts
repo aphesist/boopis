@@ -1,11 +1,7 @@
-/* Menus and popovers: one open at a time, placed against an anchor, closed by Esc or an outside press, focus
-   returned to the anchor. `layer` is the same layer for a node that brings its own surface (the card layer's blank
-   popover). */
-import { attrs, fire, frag, reduced } from '../core/dom';
-import type { Attrs } from '../core/dom';
-import { html, itemValue } from './html';
-import type { MenuEntry, MenuItem } from './html';
-import { icon } from './icons';
+/* Popovers and the layer every floating thing shares (the kit's Menu and Notice, a select's list): one open at a time, placed
+   against an anchor, closed by Esc or an outside press, focus returned to the anchor. `layer` is the same layer for a node that brings
+   its own surface (kit.openMenu, the card layer's blank popover). The v6 menu that drew here went at step 7b: the kit's Menu replaced it. */
+import { attrs, frag, reduced } from '../core/dom';
 import { placeAt } from './place';
 
 export interface PlaceOpts { place?: 'above' | 'below' | undefined; align?: 'start' | 'end' | 'center' | undefined; inset?: number | undefined }
@@ -49,18 +45,7 @@ document.addEventListener('keydown', (e) => {
   const node = openLayer.node;
   if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeLayer(); return; }
   if (node.classList.contains('ui-listbox')) return;   /* the listbox keeps its own keys (select.ts) */
-  if (node.classList.contains('ui-menu')) {
-    const items = [...node.querySelectorAll<HTMLElement>('.ui-menu__item:not(:disabled)')];
-    const i = items.indexOf(document.activeElement as HTMLElement);
-    const n = ({ ArrowDown: i + 1, ArrowUp: i < 0 ? items.length - 1 : i - 1, Home: 0, End: items.length - 1 } as Record<string, number>)[e.key];
-    if (n != null && items.length) { e.preventDefault(); items[(n + items.length) % items.length]?.focus(); return; }
-    if (e.key === 'Tab') { closeLayer(false); return; }
-    if (e.key.length === 1 && /\S/.test(e.key) && !e.metaKey && !e.ctrlKey) {
-      const k = e.key.toLowerCase(), start = i + 1;
-      const hit = items.slice(start).concat(items.slice(0, start)).find((x) => (x.textContent ?? '').trim().toLowerCase().startsWith(k));
-      if (hit) hit.focus();
-    }
-  } else if (e.key === 'Tab') {
+  if (e.key === 'Tab') {
     const f = [...node.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"], textarea, select')].filter((x) => x.offsetParent !== null);
     const first = f[0], last = f[f.length - 1];
     if (!first || !last) return;
@@ -68,30 +53,6 @@ document.addEventListener('keydown', (e) => {
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
 }, true);
-
-export interface MenuOpts extends LayerOpts { label?: string | undefined; multi?: boolean | undefined; onSelect?: ((value: string, item: MenuItem | undefined) => void) | undefined }
-export const menu = {
-  /** menu.open(anchor, items, {label, place, align, multi, onSelect, layer}): the node, or null when the same anchor closed it */
-  open(anchor: HTMLElement, items: readonly MenuEntry[], o: MenuOpts = {}): HTMLElement | null {
-    const node = frag('<div class="ui-menu" role="menu"' + attrs({ 'aria-label': o.label }) + '>' + '<div class="ui-menu__list ui-scroll ui-scroll--inset-both">' + html.menuItems(items, o) + '</div></div>');
-    if (!openLayerAt(anchor, node, o)) return null;
-    node.addEventListener('click', (e) => {
-      const it = (e.target as Element).closest<HTMLButtonElement>('.ui-menu__item'); if (!it || it.disabled) return;
-      const value = it.dataset['value'] ?? '';
-      const item = items.find((x): x is MenuItem => x !== '-' && !!x && itemValue(x) === value);
-      if (!fire(node, 'ui:select', { value, item }, true)) return;
-      o.onSelect?.(value, item);
-      if (!o.multi) closeLayer();
-      else { const c = it.getAttribute('aria-checked') !== 'true'; it.setAttribute('aria-checked', String(c)); const g = it.querySelector('.ui-menu__glyph'); if (g) g.innerHTML = c ? icon('check') : ''; }
-    });
-    const first = node.querySelector<HTMLElement>('.ui-menu__item[aria-checked="true"]') ?? node.querySelector<HTMLElement>('.ui-menu__item:not(:disabled)');
-    if (first) first.focus({ preventScroll: true });
-    return node;
-  },
-  close: closeLayer,
-  /** a menu drawn in place (specimens, documentation): no anchor, no positioning */
-  still(items: readonly MenuEntry[], o: MenuOpts = {}): HTMLElement { return frag('<div class="ui-menu" role="menu" data-static' + attrs({ 'aria-label': o.label } as Attrs) + '>' + html.menuItems(items, o) + '</div>'); }
-};
 
 export interface PopoverOpts extends LayerOpts { label?: string | undefined; /** false: a card shown on hover keeps focus where it was (Tab still reaches it) */ focus?: boolean | undefined }
 export const popover = {

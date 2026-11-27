@@ -116,7 +116,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
       const g = data().details.governance.get();
       modelBox.append(ui.ladder({ stations: g.ladder, current: 0, variant: 'list', label: 'Escalation ladder' }));
     } else {
-      const f = ui.field({ kind: 'model', label: 'Model', options: catalog.models, value: c.model });
+      const f = ui.field({ kind: 'model', label: 'Model', hideLabel: true, options: catalog.models, value: c.model });
       f.addEventListener('ui:change', (e) => { c.model = (e as CustomEvent<{ value: string }>).detail.value; push({ model: c.model }); changed(); });
       modelBox.append(f);
     }

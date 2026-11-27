@@ -11,7 +11,7 @@ import { fill, frames } from '../../story';
 import type { Force, Render, State, Story } from '../../types';
 
 const OPENAI_PAGE = 'https://auth.openai.com/api/accounts/authorize?client_id=dynamic_agent_client&state=lab';
-const GITHUB_PAGE = 'https://github.com/login/device';
+const GITHUB_PAGE = 'https://example.com/login/device';
 const LONG_PAGE = 'https://auth.openai.com/api/accounts/authorize/with/a/path/long/enough/to/wrap/on/a/phone/width/screen?client_id=x';
 const FAR = (): number => Date.now() + 15 * 60000;
 

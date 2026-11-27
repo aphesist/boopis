@@ -1,11 +1,11 @@
 /* The command palette: sessions, bots and commands. `>` limits to commands, `@` to bots. "Restore bot…" opens it again on the archived
    bots alone (the Bots tab's Archived group has the same action) and restores the one chosen. */
 import { emit } from '../../core/bus';
-import { esc } from '../../core/dom';
 import { callProvided, getDockApi, hasProvider } from '../../core/registry';
 import { setState, state, toggle } from '../../core/state';
 import { themeApi } from '../../styles/theme';
 import { kit, ui } from '@boopis/ui';
+import type { CommandPaletteRow } from '@boopis/ui';
 import { data } from '../../data';
 import { archivedWhen, restoreBot, restoredWords } from '../../data/restore';
 import { updateTitle } from './attention';
@@ -17,12 +17,12 @@ import { pushHistory } from './history';
 import type { RegionName } from '../../core/bus';
 
 type Group = 'sessions' | 'bots' | 'commands' | 'archived';
-interface Item { group: Group; label: string; meta?: string; trail?: string; icon: string; keys: string; kbd?: string; attn?: boolean; run: () => void; s?: number }
+interface Item { group: Group; label: string; meta?: string; trail?: string; /** a glyph of the kit's set */ icon: string; /** a bot's orb in its place */ lead?: string; keys: string; kbd?: string; attn?: boolean; run: () => void; s?: number }
 const pal: { items: Item[]; active: number; scope: string | null; ret: Element | null } = { items: [], active: 0, scope: null, ret: null };
 const GROUPS: Record<Group, string> = { sessions: 'Sessions', bots: 'Bots', commands: 'Commands', archived: 'Archived bots' };
-const ICON = (name: string): string => ui.icon(name);
-// the library's orb: 16px is a still thumbnail, its state reaction and dark-body eyes come with it
-const botIcon = (b: Parameters<typeof ui.html.orb>[0]): string => ui.html.orb(b, { size: 16 });
+const ICON = (name: string): string => name;
+/* a bot leads its row with its own orb (the kit's Avatar at 16: a still thumbnail) */
+const botIcon = (b: NonNullable<Parameters<typeof kit.html.avatar>[0]['bot']>): string => kit.html.avatar({ bot: b, size: 16 });
 
 function paletteItems(): Item[] {
   const out: Item[] = [];
@@ -31,7 +31,7 @@ function paletteItems(): Item[] {
       run: () => { setState({ tab: 'session' }); sh.selection.session = s.id; emit('hx:session-select', { id: s.id, from: 'palette' }); pushHistory({ tab: 'session', sel: s.id }); updateTitle(); } });
   }
   for (const b of data().bots.snapshot().bots) {
-    out.push({ group: 'bots', label: b.name, meta: b.role, icon: botIcon(b), keys: 'bot ' + (b.attention || ''), trail: data().info.preview.has('bots') ? 'preview' : b.attention ? 'needs you' : '', attn: !!b.attention && !data().info.preview.has('bots'),
+    out.push({ group: 'bots', label: b.name, meta: b.role, icon: '', lead: botIcon(b), keys: 'bot ' + (b.attention || ''), trail: data().info.preview.has('bots') ? 'preview' : b.attention ? 'needs you' : '', attn: !!b.attention && !data().info.preview.has('bots'),
       run: () => { setState({ tab: 'bots' }); sh.selection.bots = b.id; emit('hx:bot-select', { id: b.id, from: 'palette' }); pushHistory({ tab: 'bots', sel: b.id }); updateTitle(); } });
   }
   /* the archived bots, only while "Restore bot…" has narrowed the palette to them */
@@ -67,9 +67,9 @@ function paletteItems(): Item[] {
   if (api) cmd('Minimise the dock', '', () => { if (state.dock !== 'on') setState({ dock: 'on' }); api.setMode('minimal'); }, ICON('dock'), 'dock small minimal');
   cmd('Toggle grow bots on hover', '', toggleOrbGrow, ICON('bots'), 'dock orb magnify size hover grow ' + (state.orbGrow ? 'on' : 'off'));
   cmd('Settings', 'mod+,', () => openSettings(), ICON('gear'), 'preferences');
-  cmd('Store', 'mod+shift+S', () => openStore(), ICON('plus'), 'marketplace install skills connectors plugins mods browse search recommended');
-  cmd('Installed from the store', '', () => openStore('installed'), ICON('plus'), 'store installed update roll back remove');
-  cmd('Keyboard shortcuts', 'mod+/', openKeys, ICON('gear'), 'keys help keymap');
+  cmd('Store', 'mod+shift+S', () => openStore(), ICON('store'), 'marketplace install skills connectors plugins mods browse search recommended');
+  cmd('Installed from the store', '', () => openStore('installed'), ICON('store'), 'store installed update roll back remove');
+  cmd('Keyboard shortcuts', 'mod+/', openKeys, ICON('keyboard'), 'keys help keymap');
   cmd('Appearance and theme', 'mod+shift+,', () => openSettings('appearance'), ICON('sliders'), 'theme colours fonts logo');
   cmd('Light or dark theme', 'mod+shift+L', toggleLightDark, ICON('sliders'), 'theme appearance');
   const cur = themeApi.get().preset;
@@ -88,13 +88,8 @@ export function score(item: { label: string; meta?: string | undefined; keys?: s
   }
   return s;
 }
-function highlight(label: string, q: string): string {
-  const w = (q || '').split(/\s+/).filter(Boolean)[0];
-  if (!w) return esc(label);
-  const i = label.toLowerCase().indexOf(w);
-  if (i < 0) return esc(label);
-  return esc(label.slice(0, i)) + '<mark>' + esc(label.slice(i, i + w.length)) + '</mark>' + esc(label.slice(i + w.length));
-}
+const EMPTY = (q: string): string => q ? 'Nothing matches “' + q + '”.' : 'Nothing here yet.';
+/** the palette's rows as the kit's CommandPalette draws them: one group per kind, each row named by its place in `pal.items` */
 export function renderPalette(): void {
   const el = els();
   let raw = el.palInput.value.trim(), scope = pal.scope;
@@ -113,35 +108,25 @@ export function renderPalette(): void {
   }
   pal.items = items;
   pal.active = Math.min(pal.active, Math.max(0, items.length - 1));
-  if (!items.length) {
-    /* no options: the list stops being a listbox (it has no option to hold, and an unnamed generic takes no label) */
-    el.palList.removeAttribute('role'); el.palList.removeAttribute('aria-label');
-    patchList(el.palList, '<div class="hx-pal-empty" role="status" data-key="empty">Nothing matches <b>' + esc(el.palInput.value.trim()) + '</b>.<br>Try a session title, a bot’s name or a command.</div>');
-    el.palInput.removeAttribute('aria-activedescendant');
-    return;
-  }
-  el.palList.setAttribute('role', 'listbox'); el.palList.setAttribute('aria-label', 'Results');
-  let html = '', g: Group | null = null;
+  const groups: { label: string; rows: CommandPaletteRow[] }[] = [];
   items.forEach((it, i) => {
-    if (it.group !== g) { g = it.group; html += '<div class="ui-group__head hx-pal-group" role="presentation" data-key="g-' + g + '">' + GROUPS[g] + '</div>'; }
-    html += '<div class="ui-row hx-pal-row ui-nest" role="option" id="hx-pal-' + i + '" data-key="hx-pal-' + i + '" data-i="' + i + '" data-kind="' + (it.group === 'commands' ? 'command' : 'item') + '" aria-selected="' + (i === pal.active) + '">' +
-      '<span class="hx-pal-row__icon">' + (it.icon || '') + '</span>' +
-      '<span class="hx-pal-row__label">' + highlight(it.label, q2) + '</span>' +
-      (it.meta ? '<span class="hx-pal-row__meta">' + esc(it.meta) + '</span>' : '') +
-      (it.trail ? '<span class="hx-pal-row__trail' + (it.attn ? ' is-attn' : '') + '">' + esc(it.trail) + '</span>' : '') +
-      (it.kbd ? ui.html.keys(it.kbd, { fit: true }) : '') + '</div>';
+    let g = groups[groups.length - 1];
+    if (!g || g.label !== GROUPS[it.group]) { g = { label: GROUPS[it.group], rows: [] }; groups.push(g); }
+    g.rows.push({ value: String(i), label: it.label, ...(it.meta ? { meta: it.meta } : {}), ...(it.trail ? { trail: it.trail } : {}), ...(it.attn ? { attn: true } : {}), ...(it.lead ? { leadHTML: it.lead } : { icon: it.icon }), ...(it.kbd ? { keys: it.kbd } : {}), attrs: { 'data-kind': it.group === 'commands' ? 'command' : 'item' } });
   });
-  patchList(el.palList, html);
-  el.palInput.setAttribute('aria-activedescendant', 'hx-pal-' + pal.active);
+  patchList(el.palList, kit.html.commandPaletteList({ id: 'hx-palette', groups, active: pal.active, query: q2, empty: EMPTY(el.palInput.value.trim()) }));
+  /* no options: the list stops being a listbox (it has no option to hold, and an unnamed generic takes no label) */
+  if (items.length) { el.palList.setAttribute('role', 'listbox'); el.palList.setAttribute('aria-label', 'Results'); el.palInput.setAttribute('aria-activedescendant', 'hx-palette-' + String(pal.active)); }
+  else { el.palList.removeAttribute('role'); el.palList.removeAttribute('aria-label'); el.palInput.removeAttribute('aria-activedescendant'); }
 }
 /* Update the list in place (R-motion-5): a row keeps its node while its text, its state or its place changes; only rows
    that are gone leave and only new ones arrive. Typing never redraws a row that stays in the results. Nodes are matched by
-   data-key; the attributes the markup sets are the only ones touched (the drawn corner keeps its own). */
-const OWN = ['id', 'role', 'data-i', 'data-kind', 'aria-selected', 'aria-label'];
+   data-key; the attributes the markup sets are the only ones touched. */
+const OWN = ['id', 'role', 'data-i', 'data-value', 'data-kind', 'aria-selected', 'aria-label'];
 function patchList(host: HTMLElement, html: string): void {
   const t = document.createElement('template'); t.innerHTML = html;
   const have = new Map<string, HTMLElement>();
-  for (const c of Array.from(host.children) as HTMLElement[]) { const k = c.dataset['key']; if (k) have.set(k, c); else c.remove(); }
+  for (const c of Array.from(host.children) as HTMLElement[]) { const k = c.dataset['key']; if (k && !have.has(k)) have.set(k, c); else c.remove(); }
   let at: ChildNode | null = host.firstChild;
   for (const n of Array.from(t.content.children) as HTMLElement[]) {
     const k = n.dataset['key'] ?? '';
@@ -154,14 +139,6 @@ function patchList(host: HTMLElement, html: string): void {
     } else host.insertBefore(n, at);
   }
   for (const c of have.values()) c.remove();
-}
-export function movePal(d: number): void {
-  if (!pal.items.length) return;
-  pal.active = (pal.active + d + pal.items.length) % pal.items.length;
-  const el = els();
-  for (const r of el.palList.querySelectorAll<HTMLElement>('.hx-pal-row')) r.setAttribute('aria-selected', String(+(r.dataset['i'] ?? -1) === pal.active));
-  document.getElementById('hx-pal-' + pal.active)?.scrollIntoView({ block: 'nearest' });
-  el.palInput.setAttribute('aria-activedescendant', 'hx-pal-' + pal.active);
 }
 export function runPal(i: number): void {
   const it = pal.items[i]; if (!it) return;
@@ -191,5 +168,3 @@ export function closePalette(keepFocus?: boolean): void {
   if (!keepFocus && pal.ret && (pal.ret as HTMLElement).focus) (pal.ret as HTMLElement).focus();
 }
 export function resetActive(): void { pal.active = 0; }
-export function setActive(i: number): void { pal.active = i; }
-export const paletteActive = (): number => pal.active;

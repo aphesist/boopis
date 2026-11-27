@@ -32,7 +32,7 @@
    (radius, size, ring); a row along an edge that holds corner controls at its ends: .ui-corners (the inset). Never set a
    radius or an inset in a corner by hand. A squircle-drawn container also exposes its drawn radius as --r-outer when it
    declared none (squircle.ts), so its children nest the same way. */
-:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-codeblock, .ui-file, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m) {
+:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-codeblock, .ui-file, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m) {
   --corner-size: var(--ctl-s);
   --r-in: min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))));
   --r-corner: min(var(--r-in), calc(var(--corner-size) / 2));
@@ -457,30 +457,30 @@ button.ui-group__head { cursor: pointer; }
 .ui-row-wrap:focus-within > .ui-row:not([aria-current], [aria-selected="true"]) { --sq-bg: transparent; }
 
 /* ───────────── floating surfaces: menu, popover, tooltip, toast ───────────── */
-.ui-menu, .ui-pop, .ui-listbox {
+.ui-pop, .ui-listbox {
   position: fixed; z-index: var(--z-menu); box-sizing: border-box; min-width: 220px; max-width: 340px; padding: var(--pad-menu);
   --r-outer: var(--r-m); --pad: var(--pad-menu); border-radius: var(--r-outer); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
   font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text);
   opacity: 0; translate: 0 -6px; transition: opacity var(--dur-2) var(--ease), translate var(--dur-2) var(--ease);
 }
-.ui-menu[data-place="above"], .ui-pop[data-place="above"], .ui-listbox[data-place="above"] { translate: 0 6px; }
-.ui-menu.is-in, .ui-pop.is-in, .ui-listbox.is-in { opacity: 1; translate: 0 0; }
-.ui-menu[data-static], .ui-pop[data-static] { position: relative; opacity: 1; translate: none; z-index: auto; }
+.ui-pop[data-place="above"], .ui-listbox[data-place="above"] { translate: 0 6px; }
+.ui-pop.is-in, .ui-listbox.is-in { opacity: 1; translate: 0 0; }
+.ui-pop[data-static] { position: relative; opacity: 1; translate: none; z-index: auto; }
 .ui-pop { padding: var(--pad-pop); --pad: var(--pad-pop); width: 360px; max-width: calc(100vw - 24px); }
 /* the controls of a popover sit within its corner radius of the corners (R-corner-3): they take the concentric radius, the container's less its inset, down to the floor */
 .ui-pop :is(.ui-btn, .ui-input) { border-radius: var(--r-in); }
-.ui-menu__title, .ui-listbox__head { padding: 6px 8px 4px; font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); text-transform: var(--ui-case); }
-.ui-menu__item, .ui-option {
+.ui-listbox__head { padding: 6px 8px 4px; font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); text-transform: var(--ui-case); }
+.ui-option {
   appearance: none; display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; min-height: var(--row-h); padding: 6px 8px; margin: 0; border: 0;
   border-radius: var(--r-in); --sq-bg: transparent; background: var(--sq-bg); font: inherit; color: var(--text); text-align: left; cursor: pointer;   /* concentric with the menu */
 }
-@media (hover: hover) and (pointer: fine) { .ui-menu__item:hover, .ui-option:hover { --sq-bg: var(--hover); background: var(--sq-bg); } }
-.ui-menu__item:focus-visible, .ui-option:focus-visible { --sq-bg: var(--current); background: var(--sq-bg); outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
-.ui-menu__item:disabled, .ui-option[aria-disabled="true"] { color: var(--text-quiet); cursor: default; }
+@media (hover: hover) and (pointer: fine) { .ui-option:hover { --sq-bg: var(--hover); background: var(--sq-bg); } }
+.ui-option:focus-visible { --sq-bg: var(--current); background: var(--sq-bg); outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
+.ui-option[aria-disabled="true"] { color: var(--text-quiet); cursor: default; }
 @media (hover: hover) and (pointer: fine) { .ui-option[aria-disabled="true"]:hover { --sq-bg: transparent; } }
 .ui-menu__glyph { width: 16px; height: 18px; display: grid; place-items: center; flex: none; color: var(--icon); }
 .ui-menu__glyph .ui-icon { width: 15px; height: 15px; }
-.ui-menu__item[aria-checked="true"] .ui-menu__glyph, .ui-option[aria-selected="true"] .ui-menu__glyph { color: var(--brass); }
+.ui-option[aria-selected="true"] .ui-menu__glyph { color: var(--brass); }
 .ui-option[aria-selected="true"] { color: var(--text-strong); }
 .ui-menu__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
 .ui-menu__label { overflow-wrap: anywhere; text-transform: var(--ui-case); }
@@ -491,24 +491,20 @@ button.ui-group__head { cursor: pointer; }
 .ui-menu__label[data-content]:has(> .ui-orb, > .ui-icon) { display: flex; align-items: center; gap: var(--ic-gap); }
 .ui-menu__label[data-content] > .ui-icon { width: var(--ic-l); height: var(--ic-l); color: var(--icon); }
 .ui-menu__text:has(> .ui-menu__label[data-content] > :is(.ui-orb, .ui-icon)) .ui-menu__desc { padding-inline-start: calc(var(--ic-l) + var(--ic-gap)); }
-.ui-menu__item .ui-keys, .ui-option .ui-keys { margin-left: auto; align-self: center; }
+.ui-option .ui-keys { margin-left: auto; align-self: center; }
 /* an item that ends in key chips or a stamp: the end padding is the chip's inset from the top and bottom, (row - chip) / 2, and the chip's radius the item's less that (R-corner-3, R-corner-4) */
-.ui-menu__item:has(.ui-keys, .ui-stamp), .ui-option:has(.ui-keys, .ui-stamp) { --kbd-inset: calc((var(--row-h) - 18px) / 2); padding-inline-end: var(--kbd-inset); }
-:is(.ui-menu__item, .ui-option) :is(.ui-kbd, .ui-stamp) { border-radius: max(var(--r-floor), calc(var(--r-in) - var(--kbd-inset) - 1px)); }
+.ui-option:has(.ui-keys, .ui-stamp) { --kbd-inset: calc((var(--row-h) - 18px) / 2); padding-inline-end: var(--kbd-inset); }
+.ui-option :is(.ui-kbd, .ui-stamp) { border-radius: max(var(--r-floor), calc(var(--r-in) - var(--kbd-inset) - 1px)); }
 /* an 18px chip at (row - 18) / 2 inside the item's corner takes the item's radius less that inset (R-corner-3), a pixel under it so it
    lands on a radius token (the corner rule allows a pixel; 7 is no token): 8 in a v6 menu (item radius 16), the floor 6 in a v7 one
    (item radius 14), until step 7 puts these menus on the kit (6f) */
-:is(.ui-menu__item, .ui-option) .ui-stamp { height: 18px; }
-.ui-menu__list { max-height: min(calc(100vh - 2 * var(--float-margin) - 2 * var(--pad-menu)), calc(var(--float-room, 100vh) - 2 * var(--pad-menu))); border-radius: var(--r-in); }   /* a long menu scrolls inside its surface (R-float-4, R-select-2) */
-.ui-menu__item .ui-stamp { margin-left: auto; align-self: center; }
-.ui-menu__sep { height: 1px; margin: 4px 6px; background: var(--hair); }
+.ui-option .ui-stamp { height: 18px; }
 /* the select's list: the menu's surface and rows, as a scrolling listbox; provider headers are the menu's titles with a mark */
 .ui-listbox { display: flex; flex-direction: column; max-width: min(520px, calc(100vw - 2 * var(--float-margin))); }
 .ui-listbox__list { flex: 1; min-height: 0; border-radius: var(--r-in); }   /* the surface does not scroll: its drawn corner would go with the content */
 .ui-listbox__head { display: flex; align-items: center; gap: var(--sp-2); }
 .ui-listbox__group + .ui-listbox__group { margin-top: 4px; }
 .ui-option { overflow-wrap: anywhere; }
-.ui-menu__foot { margin-top: 4px; padding: 8px 8px 4px; border-radius: 0 0 var(--r-in) var(--r-in); box-shadow: inset 0 1px 0 var(--hair); font-size: var(--fs-xs); color: var(--text-quiet); }
 
 .ui-tip {
   position: fixed; z-index: var(--z-tooltip); pointer-events: none; display: flex; align-items: center; gap: 8px; box-sizing: border-box;
@@ -937,7 +933,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
   .ui-dot--run { animation: none; opacity: 1; }
   .ui-sec[data-flash] > .ui-sec__head { animation: none; }
   .ui-btn:active, .ui-ib:active, .ui-send:active { transform: none; }
-  :is(.ui-menu, .ui-pop, .ui-toast, .ui-tip) { translate: none; transform: none; }
+  :is(.ui-pop, .ui-toast, .ui-tip) { translate: none; transform: none; }
   .ui-toast { translate: -50% 0; }
   .ui-toast[data-static] { translate: none; }
   .ui-stack--cluster > * { transition: none; }
@@ -985,14 +981,14 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-btn[data-armed], .ui-hold[data-armed] { --sq-line: var(--line-strong); }
 .ui-hold { --sq-line: var(--hair); }
 .ui-seg { --sq-line: var(--hair); }
-.ui-menu, .ui-pop, .ui-listbox { --sq-line: var(--line); --sq-bg: var(--bg-1); }
-.ui-menu[data-sq-on], .ui-pop[data-sq-on], .ui-listbox[data-sq-on] { box-shadow: var(--shadow-pop); }
+.ui-pop, .ui-listbox { --sq-line: var(--line); --sq-bg: var(--bg-1); }
+.ui-pop[data-sq-on], .ui-listbox[data-sq-on] { box-shadow: var(--shadow-pop); }
 .ui-tip { --sq-line: var(--hair); --sq-bg: var(--bg-3); }
 .ui-tip[data-sq-on] { box-shadow: var(--shadow-tip); }
 .ui-tip[data-sq-on] .ui-kbd { position: relative; }
 .ui-toast { --sq-line: var(--hair); --sq-bg: var(--bg-3); }
 .ui-toast[data-sq-on] { box-shadow: var(--shadow-pop); }
-.ui-menu__item:focus-visible, .ui-option:focus-visible { --sq-line: transparent; }
+.ui-option:focus-visible { --sq-line: transparent; }
 
 
 /* the first-run welcome's logo: the hero (letters="play" needs a 32px type size); sized from the spacing scale, inked like the frame */

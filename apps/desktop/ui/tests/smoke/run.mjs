@@ -74,7 +74,7 @@ if (want('axe')) {
     ['settings models', {}, async (p) => { await p.keyboard.press('Control+Comma'); await p.waitForTimeout(300); await p.click('#hx-set-nav-models'); }],
     ['appearance', {}, (p) => p.keyboard.press('Control+Shift+Comma')], ['keys sheet', {}, (p) => p.keyboard.press('Control+Slash')],
     ['store', {}, (p) => p.keyboard.press('Control+Shift+S')],
-    ['store installed', {}, async (p) => { await p.keyboard.press('Control+Shift+S'); await p.waitForSelector('#hx-store-body [role=tab]'); await p.getByRole('tab', { name: 'Installed' }).click(); }],
+    ['store installed', {}, async (p) => { await p.keyboard.press('Control+Shift+S'); await p.waitForSelector('#hx-store [data-store-go="installed"]'); await p.click('#hx-store [data-store-go="installed"]'); }],
     ['account menu', {}, async (p) => { await p.keyboard.press('Alt+2'); await p.waitForTimeout(500); await p.click('#hx-btn-account'); }], ['model picker', {}, async (p) => { await p.keyboard.press('Control+g'); await p.keyboard.press('i'); await p.waitForTimeout(200); await p.keyboard.press('Alt+m'); }],
     ['blank popover', {}, async (p) => { await p.keyboard.press('Control+g'); await p.keyboard.press('m'); await p.waitForTimeout(200); await p.keyboard.press('b'); }],
     ['dock with no bots', { q: 'fixture=none' }, null],

@@ -76,7 +76,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const models = [...admin.models()];
   if (info.model && !models.includes(info.model)) models.unshift(info.model);
   const modelHint = info.model ? null : info.notes.detail ?? (models.length ? 'None pinned yet.' : 'Connect a model provider first.');
-  const modelF = ui.field({ kind: 'model', label: 'Model', options: models, value: info.model ?? '', ...(modelHint ? { hint: modelHint } : {}), disabled: !models.length });
+  const modelF = ui.field({ kind: 'model', label: 'Model', hideLabel: true, options: models, value: info.model ?? '', ...(modelHint ? { hint: modelHint } : {}), disabled: !models.length });
   modelF.addEventListener('ui:change', (e) => { pend.model = (e as CustomEvent<{ value: string }>).detail.value; paintDirty(); });
 
   /* ───────── routines: Hermes's cron store, this profile's ───────── */

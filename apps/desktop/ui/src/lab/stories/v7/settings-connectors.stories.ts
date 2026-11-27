@@ -7,9 +7,10 @@ import { mountConnectors } from '../../../host/connectors';
 import type { ConnectorInfo, ConnectorsBridge } from '../../../host/connectors-bridge';
 import type { StageCtx, State, Story } from '../../types';
 import { collectionCatalog } from '../store/connector-items';
+import { neutralText } from '../../neutral-store';
 import type { ConnectorCatalogEntry } from '../../../host/connectors-bridge';
 
-const MOCK = { url: '/v6/__index.html', note: 'the owner has not drawn a connectors page (step 7b): it is composed from the kit\'s settings Cards and the form cards, for review' };
+const MOCK = { url: '/__boards/screen.html?s=store', note: 'board 14 names the page and board 15 draws its rows: the installed connectors and the collection are the Store\'s item rows (step 7b)' };
 const info = (o: Partial<ConnectorInfo>): ConnectorInfo => ({ name: 'fakemcp', transport: 'stdio', url: null, command: 'npx', args: ['-y', 'notes-mcp@1.2.3'], env: [], auth: null, oauth_tokens_present: null, enabled: true, plugin: null, status: 'connected', tools: 4, needs_auth: false, secrets: [], ...o });
 const ok = { ok: true, tools: [{ name: 'search', description: '' }], error: null, prompts: 0, resources: 0, oauth_needed: false, signin_needed: false };
 const bridge = (servers: ConnectorInfo[], fail = false, catalog: ConnectorCatalogEntry[] = []): ConnectorsBridge => ({
@@ -26,17 +27,17 @@ const bridge = (servers: ConnectorInfo[], fail = false, catalog: ConnectorCatalo
   login: () => Promise.reject(new Error('not in the lab'))
 });
 const BOTS = [{ id: 'kai', name: 'Kai' }, { id: 'nina', name: 'Nina' }, { id: 'a-bot-with-a-very-long-name-that-keeps-going', name: 'A bot with a very long name that keeps going' }];
-const MAIN = [info({ name: 'github', url: 'https://api.githubcopilot.com/mcp/', command: null, args: [], tools: 12 }), info({ name: 'firecrawl', enabled: false })];
+const MAIN = [info({ name: 'github', url: 'https://mcp.example.com/code/', command: null, args: [], tools: 12 }), info({ name: 'firecrawl', enabled: false })];
 
 /* every state a connector the host lists can be in, with what each runs as the host reports it */
 const EVERY = [
-  info({ name: 'github', transport: 'stdio', command: 'docker', args: ['run', '-i', '--rm', '-e', 'GITHUB_PERSONAL_ACCESS_TOKEN', 'ghcr.io/github/github-mcp-server@sha256:040c4e99810076035eb1d9beb4b4a96fcf589c43cefed6ff51a46a553eb4e174'], tools: 41, secrets: ['secret://connector.github/github_token'] }),
-  info({ name: 'notion', transport: 'http', url: 'https://mcp.notion.com/mcp', command: null, args: [], auth: 'oauth', oauth_tokens_present: false, status: 'configured', tools: null }),
-  info({ name: 'sentry', transport: 'http', url: 'https://mcp.sentry.dev/mcp', command: null, args: [], status: 'failed', tools: null }),
-  info({ name: 'supabase', transport: 'http', url: 'https://mcp.supabase.com/mcp', command: null, args: [], status: 'connecting', tools: null }),
-  info({ name: 'context7', command: 'npx', args: ['-y', '@upstash/context7-mcp@4.7.3'], status: 'lazy', tools: null }),
-  info({ name: 'brave-search', command: 'npx', args: ['-y', '@brave/brave-search-mcp-server@2.2.0'], enabled: false, secrets: ['secret://connector.brave-search/brave_api_key'] }),
-  info({ name: 'playwright', command: 'npx', args: ['-y', '@playwright/mcp@0.0.86'], plugin: 'browser-tools' }),
+  info({ name: 'github', transport: 'stdio', command: 'docker', args: ['run', '-i', '--rm', '-e', 'CODE_HOST_TOKEN', 'registry.example.com/code-mcp-server@sha256:040c4e99810076035eb1d9beb4b4a96fcf589c43cefed6ff51a46a553eb4e174'], tools: 41, secrets: ['secret://connector.github/github_token'] }),
+  info({ name: 'notion', transport: 'http', url: 'https://mcp.example.com/notes', command: null, args: [], auth: 'oauth', oauth_tokens_present: false, status: 'configured', tools: null }),
+  info({ name: 'sentry', transport: 'http', url: 'https://mcp.example.com/errors', command: null, args: [], status: 'failed', tools: null }),
+  info({ name: 'supabase', transport: 'http', url: 'https://mcp.example.com/database', command: null, args: [], status: 'connecting', tools: null }),
+  info({ name: 'context7', command: 'npx', args: ['-y', '@example/docs-mcp@4.7.3'], status: 'lazy', tools: null }),
+  info({ name: 'brave-search', command: 'npx', args: ['-y', '@example/search-mcp@2.2.0'], enabled: false, secrets: ['secret://connector.brave-search/brave_api_key'] }),
+  info({ name: 'playwright', command: 'npx', args: ['-y', '@example/browser-mcp@0.0.86'], plugin: 'browser-tools' }),
   info({ name: 'notes', command: 'npx', args: ['-y', 'notes-mcp@1.2.3'], status: 'configured', tools: null })
 ];
 const typeIn = (text: string) => async (root: HTMLElement): Promise<void> => {
@@ -60,7 +61,7 @@ const view = (tags: State['tags'], per: Record<string, ConnectorsBridge>, pick: 
 });
 
 const story: Story = {
-  id: 'v7/settings-connectors-for', title: 'Connectors for a bot (7a, on the kit)', area: 'settings', kind: 'surface', covers: ['surface:settings-connectors'], scope: '#lab-connectors', mock: MOCK,
+  id: 'v7/settings-connectors-for', title: 'Connectors for a bot (7b, the full page)', area: 'settings', kind: 'surface', covers: ['surface:settings-connectors'], scope: '#lab-connectors', mock: MOCK,
   states: {
     'main profile': view(['typical'], {}, null),
     'one bot, its own list': view(['variant'], { kai: bridge([info({ name: 'notes' }), info({ name: 'paper-search', url: 'https://mcp.example.com/mcp', command: null, args: [], status: 'failed', tools: null })]) }, 'kai'),
@@ -72,9 +73,10 @@ const story: Story = {
 };
 
 const LONG = 'a-connector-with-an-extremely-long-name-that-goes-on-and-on_without_any_sensible_place_to_stop';
-const COLL = collectionCatalog();
+/* boopis's real collection on neutral words: no story shows a code host's address (neutral-store.ts) */
+const COLL = collectionCatalog().map((c) => ({ ...c, description: neutralText(c.description), variants: c.variants.map((v) => ({ ...v, summary: neutralText(v.summary), reaches: neutralText(v.reaches) })) }));
 const collection: Story = {
-  id: 'v7/settings-connectors', title: 'Settings: Connectors (7a, on the kit)', area: 'settings', kind: 'surface', covers: ['surface:settings-connectors'], scope: '#lab-connectors', mock: MOCK,
+  id: 'v7/settings-connectors', title: 'Settings: Connectors (7b, the full page)', area: 'settings', kind: 'surface', covers: ['surface:settings-connectors'], scope: '#lab-connectors', mock: MOCK,
   states: {
     'with boopis\'s collection': view(['typical'], {}, null, undefined, bridge(MAIN, false, COLL)),
     'every state of an installed connector': view(['variant', 'many'], {}, null, undefined, bridge(EVERY, false, COLL)),
@@ -85,7 +87,7 @@ const collection: Story = {
     'long names': view(['long'], {}, null, undefined, bridge([info({ name: LONG, url: 'https://mcp.example.com/' + 'a-very-long-path/'.repeat(6), command: null, args: [] }), ...EVERY.slice(0, 2)], false, COLL.map((c, i) => (i === 0 ? { ...c, name: 'A connector with an extremely long name that goes on and on without a sensible place to stop', publisher: 'A publisher whose name is also far too long to fit on one line' } : c)))),
     'the list could not be read': view(['error'], {}, null, undefined, bridge([], true, COLL)),
     'row focus': { ...view(['focus'], {}, null, undefined, bridge(MAIN, false, COLL)), force: [{ sel: '[data-add-entry]', state: 'focus' as const }] },
-    'row hover': { ...view(['hover'], {}, null, undefined, bridge(MAIN, false, COLL)), force: [{ sel: '[data-add-entry]', state: 'hover' as const }] }
+    'row hover': { ...view(['hover'], {}, null, undefined, bridge(MAIN, false, COLL)), force: [{ sel: '#lab-connectors [data-kit~="ListRow"]', state: 'hover' as const }] }
   }
 };
 

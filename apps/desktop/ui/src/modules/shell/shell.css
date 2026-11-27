@@ -171,56 +171,20 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
 @keyframes hx-fade { from { opacity: 0; } }
 
 .hx-palette { position: absolute; inset: 0; z-index: var(--z-palette); background: var(--scrim); animation: hx-fade var(--dur-2) var(--ease); }
-.hx-palette__box {
-  position: absolute; top: 48px; left: 50%; translate: -50% 0;
-  --r-outer: var(--r-l); --pad: var(--pad-palette);   /* a container (.ui-nest): the corner rule derives --r-in */
-  width: min(600px, calc(100% - 32px)); box-sizing: border-box;
-  display: flex; flex-direction: column; max-height: min(520px, calc(100% - 96px));
-  border-radius: var(--r-outer); background: var(--bg-1);
-  box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
-  overflow: hidden; animation: hx-drop var(--dur-2) var(--ease);
-}
-.hx-palette__list { padding: 4px max(0px, calc(6px - var(--scroll-gutter, 0px))) 6px 6px; } /* a scroll area (.ui-scroll): rows ellipsise, the list never scrolls sideways */
-/* a row is a pill (its radius is half its height) and a container for its key chip (.ui-nest): the chip sits at the end at the
-   same inset as above and below it, and takes --r-in of the row's corner (R-corner-3, R-kbd-2) */
-.hx-pal-row { --r-outer: calc(var(--row-h) / 2); --pad: calc((var(--row-h) - 18px) / 2); height: auto; min-height: var(--row-h); gap: 10px; padding: 0 10px; border-radius: var(--r-outer); }
-.hx-pal-row:has(> .ui-keys) { padding-inline-end: var(--pad); }
-/* the field's key chip (esc): 15px from the top and bottom of the 48px field, so --sp-4 from the end (the hairline under the field is
-   an inset shadow, not a border, so the 48px box is all chip room) */
-.hx-palette .ui-search--l { padding-right: var(--sp-4); border-bottom: 0; box-shadow: inset 0 -1px 0 var(--hair); }
-.hx-pal-row__icon { width: 18px; height: 18px; display: grid; place-items: center; color: var(--icon); flex: none; }
-.hx-pal-row__icon .ui-icon { width: 16px; height: 16px; }
-.hx-pal-row__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hx-pal-row__label mark { background: none; color: var(--text-strong); text-decoration: underline; text-decoration-color: var(--brass); text-underline-offset: 3px; }
-.hx-pal-row__meta { color: var(--text-quiet); font-size: var(--fs-xs); white-space: nowrap; }
-.hx-pal-row__trail { color: var(--text-quiet); font: 400 var(--fs-2xs)/1 var(--mono); white-space: nowrap; }
-.hx-pal-row__trail.is-attn { color: var(--red-text); }
-.hx-pal-empty { padding: var(--sp-5) var(--sp-4); text-align: center; color: var(--text-dim); font-size: var(--fs-s); line-height: 1.6; }
-.hx-pal-empty b { color: var(--text); font-weight: 500; }
+/* the kit's CommandPalette (placement only): 48 under the window's top, on its centre line, 16 clear of its sides */
+.hx-palette > .k7-cpal { position: absolute; top: var(--sp-7); left: 50%; translate: -50% 0; width: min(var(--palette-w), calc(100% - 2 * var(--sp-4))); max-height: min(var(--palette-h), calc(100% - 2 * var(--sp-7))); animation: hx-drop var(--dur-2) var(--ease); }
+
 
 .hx-dialog { padding: 0; border: 0; background: transparent; color: var(--text); width: min(600px, calc(100% - 32px)); height: min(680px, calc(100% - 64px)); max-height: none; font-family: var(--sans); }
 .hx-dialog::backdrop { background: var(--scrim); transition: background-color var(--dur-2) var(--ease); }
 .hx-dialog[open] { animation: hx-drop var(--dur-2) var(--ease); }
-/* Appearance: the dialog steps aside to the right edge and drops its scrim, so changes show on the whole app */
-.hx-dialog__card { --r-outer: var(--r-l); --pad: var(--pad-dialog); display: flex; flex-direction: column; height: 100%; box-sizing: border-box; border-radius: var(--r-outer); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop); overflow: hidden; }
-.hx-dialog__card:focus { outline: none; }
-.hx-dialog__head { display: flex; align-items: center; gap: 16px; height: 52px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--hair); flex: none; }
-.hx-dialog__head h2 { margin: 0; font-size: var(--fs-l); font-weight: 600; color: var(--text-strong); text-transform: var(--ui-case); }
-.hx-dialog__head .ui-ib { margin-left: auto; }   /* the close is a .ui-corner: --r-corner, on the head's band (R-dialog-1, R-corner-5) */
-.hx-dialog__body { flex: 1; min-height: 0; padding: 4px calc(20px - var(--scroll-gutter, 0px)) 24px 20px; }   /* a scroll area (.ui-scroll) */
-
-/* ───────────── theme customizer (theme.js renders it into the Appearance panel) ───────────── */
-/* the strip spans the card's content box, so its last chip sits at --pad from the card's end as the first sits at --pad from its start and the top (R-corner-3); 22px chips left 16px at 390 */
-/* the swatch shows the colour (--sw, set from the theme); it is a button that moves to the hex field, never a platform colour chooser */
 
 /* interface case: Typewriter sets lowercase; content (titles, names, messages) is never transformed */
-:is(.hx-new__label, .hx-pal-row[data-kind="command"] .hx-pal-row__label) { text-transform: var(--ui-case); }
-/* Settings > Keyboard: the same groups as the shortcut sheet, in one column (the rows are .hx-keygroup's; a second grid here split the
-   groups into two columns and drew every row's line twice) */
-
+.hx-new__label { text-transform: var(--ui-case); }
 
 .hx-probe { position: absolute; left: -9999px; top: 0; visibility: hidden; pointer-events: none; }
 .hx-probe i { display: block; height: 1px; }
+
 
 /* ───────────── placeholders: shown only when a module never registered (drawn with HX.ui) ───────────── */
 .hx-stub { position: absolute; inset: 0; overflow: auto; color: var(--text); }
@@ -247,9 +211,7 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
   #hx-btn-back, #hx-btn-fwd, .hx-win { display: none; }
   .hx-cmd { position: static; translate: none; flex: 1; width: auto; min-width: 0; margin: 0 8px; }
   .hx-cmd .ui-search__keys, .hx-cmd__project { display: none; }
-  .hx-palette__box { top: 8px; }
-  .hx-dialog__head { gap: 8px; padding-left: 12px; }
-  .hx-dialog__head h2 { display: none; }
+  .hx-palette > .k7-cpal { top: var(--sp-2); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -258,22 +220,6 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
 
 
 /* ───────────── keyboard: sheet, go-to hint, region focus ───────────── */
-.hx-keysheet { width: min(1000px, calc(100% - 32px)); height: min(720px, calc(100% - 48px)); }
-.hx-keysheet .hx-dialog__head h2 { margin-right: auto; }
-.hx-keys-filter { width: 200px; min-height: 0; height: var(--ctl-s); border-radius: var(--r-in-dialog); }   /* in the dialog head's corner: the dialog's --r-in (a capsule at this height), as the close button beside it (R-corner-3, R-corner-5); the field declares an --r-in of its own (its 8 px corner), so the dialog's is --r-in-dialog */   /* the library's search field (.ui-search--m), small in the sheet's head */
-.hx-keysheet .hx-dialog__head .ui-ib { margin-left: 0; }
-.hx-dialog__body:focus-visible { outline-offset: -2px; border-radius: 0 0 var(--r-l) var(--r-l); }   /* the body of Settings and of the shortcut sheet scrolls from the keyboard */
-.hx-keys-grid { columns: 3 260px; column-gap: 32px; padding-top: 8px; }
-.hx-keygroup { break-inside: avoid; margin: 0 0 20px; }
-.hx-keygroup h3 { margin: 12px 0 4px; font-size: var(--fs-xs); font-weight: 500; color: var(--text-quiet); text-transform: var(--ui-case); }
-.hx-keygroup dl { margin: 0; }
-.hx-keygroup dl > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 30px; border-bottom: 1px solid var(--hair); }
-.hx-keygroup dt { font-size: var(--fs-s); color: var(--text); text-transform: var(--ui-case); }
-.hx-keygroup dd { margin: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px; }
-.hx-kword { font-size: var(--fs-2xs); color: var(--text-quiet); margin: 0 2px; }
-.hx-kthen { display: inline-block; width: 4px; }
-.hx-keys-empty, .hx-keys-note { font-size: var(--fs-xs); color: var(--text-dim); }
-.hx-keys-note { margin: 4px 0 0; }
 .hx-goto {
   position: absolute; z-index: var(--z-toast); top: calc(var(--chrome-h) + 12px); left: 50%; translate: -50% 0;
   display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; max-width: calc(100% - 32px); box-sizing: border-box;
@@ -287,13 +233,9 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
 /* ───────────── drawn corners (DESIGN-SYSTEM.md §8; bound in boot() with HX.ui.squircle.auto) ─────────────
    A bound element's inset line is --sq-line and a floating surface paints --sq-bg; the library draws both along the
    continuous path and turns the box-shadow line off. */
-.hx-dialog__card { --r-outer: var(--r-l); --pad: var(--pad-dialog); --sq-bg: var(--bg-1); --sq-line: var(--line); }
-.hx-palette__box { --r-outer: var(--r-l); --pad: var(--pad-palette); --sq-bg: var(--bg-1); --sq-line: var(--line); }
-.hx-dialog__card[data-sq-on], .hx-palette__box[data-sq-on], .hx-goto[data-sq-on] { box-shadow: var(--shadow-pop); }
 /* A drawn surface does not transition. Reduced motion gives every element a 1 ms transition (all properties), and a corner radius
    that transitions is read half-way by the squircle after a preset change, which writes it into --r-outer and keeps the old
    radius for good (a Settings dialog 30px in Typewriter, which wants 36). The surfaces animate with their own keyframes. */
-.hx-dialog__card, .hx-palette__box, .hx-goto { transition-property: none; }
 .hx-goto { --sq-bg: var(--bg-3); --sq-line: var(--line); }
 
 /* the floating Notice (the retired toast's place, R-toast-1 "the top of the work"): under the chrome, on the column's centre line */

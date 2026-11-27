@@ -16,7 +16,7 @@ export const NOT_COMPONENTS: Readonly<Record<string, string>> = {
 /** html templates that are only strings (no factory), and why some need no story of their own */
 export const HTML_ONLY_EXCUSED: Readonly<Record<string, string>> = {
   kbd: 'an alias of keys', switch: 'the switch factory covers it', orb: 'the orb factory covers it', model: 'the model factory covers it', modelRoute: 'the modelRoute factory covers it', modelMark: 'the modelMark factory covers it',
-  menuItems: 'covered by the menu story (covers html.menuItems)', leadFor: 'covered by the row story', stateWord: 'covered by the row story', icon: 'covered by the icon button story'
+  leadFor: 'covered by the row story', stateWord: 'covered by the row story', icon: 'covered by the icon button story'
 };
 
 /** surfaces: the app's places that are more than one component */
@@ -34,7 +34,7 @@ export const PAGES: readonly string[] = ['empty', 'conversation', 'live', 'bots'
 /** the states every component and card story needs */
 export const MIN_COMPONENT: readonly Tag[] = ['typical', 'long'];
 /** components and cards where "empty" means something (nothing to show, no items, no value) */
-export const EMPTY_APPLIES: readonly string[] = ['ui.row', 'ui.group', 'ui.chipGroup', 'ui.field', 'ui.menu', 'ui.ladder', 'ui.measure', 'ui.steps', 'ui.entry', 'ui.section', 'ui.code', 'ui.modView', 'ui.request', 'card:*', 'form:*'];
+export const EMPTY_APPLIES: readonly string[] = ['ui.row', 'ui.group', 'ui.chipGroup', 'ui.field', 'ui.ladder', 'ui.measure', 'ui.steps', 'ui.entry', 'ui.section', 'ui.code', 'ui.modView', 'ui.request', 'card:*', 'form:*'];
 /** where "error" applies (a failure, an invalid value, an unknown model, a refused tree) */
 export const ERROR_APPLIES: readonly string[] = ['ui.field', 'ui.chip', 'ui.capacity', 'ui.measure', 'ui.steps', 'ui.modelMark', 'ui.modView', 'card:approval', 'card:connector', 'form:*'];
 /** surfaces need a typical state and at least this many states */

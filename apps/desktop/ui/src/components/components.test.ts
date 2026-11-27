@@ -44,12 +44,6 @@ describe('the markup the CSS depends on', () => {
     expect(l.getAttribute('aria-label')).toBe('Model ladder, station 2 of 2: B');
     expect([...l.querySelectorAll('i')].map((i) => i.getAttribute('data-s'))).toEqual(['past', 'now']);
   });
-  it('a menu with a checked item is a radio menu, and gives each item its value', () => {
-    const html = ui.html.menuItems([{ title: 'Model' }, { label: 'Smart', value: 's', checked: true }, { label: 'opus', checked: false }]);
-    expect(html).toContain('role="menuitemradio"');
-    expect(html).toContain('data-value="s"');
-    expect(html).toContain('data-value="opus"');
-  });
 });
 
 describe('the icon library', () => {

@@ -218,20 +218,8 @@ export interface MenuItem {
 }
 export type MenuEntry = MenuItem | '-';
 export const itemValue = (x: MenuItem): string => String(x.value != null ? x.value : x.label);
-function menuItems(items: readonly MenuEntry[], o: { multi?: boolean | undefined } = {}): string {
-  const radio = items.some((x) => x !== '-' && x.checked != null);
-  return items.map((x) => {
-    if (x === '-') return '<div class="ui-menu__sep" role="separator"></div>';
-    if (x.title) return '<div class="ui-menu__title" role="presentation">' + esc(x.title) + '</div>';
-    if (x.foot) return '<div class="ui-menu__foot">' + esc(x.foot) + '</div>';
-    const role = x.role ?? (radio ? (o.multi ? 'menuitemcheckbox' : 'menuitemradio') : 'menuitem');
-    return '<button type="button" class="ui-menu__item" role="' + role + '"' + attrs({ 'aria-checked': role === 'menuitem' ? null : String(!!x.checked), 'data-value': itemValue(x), disabled: x.disabled, tabindex: '-1', 'aria-keyshortcuts': x.keys && ariaKeys(x.keys) }) + '>' +
-      '<span class="ui-menu__glyph">' + (role !== 'menuitem' ? (x.checked ? icon('check') : '') : (x.lead ?? (x.icon ? icon(x.icon) : ''))) + '</span>' +
-      '<span class="ui-menu__text"><span class="' + cx('ui-menu__label', x.mono && 'ui-mono') + '"' + (x.content || x.model ? ' data-content' : '') + '>' + (x.model ? markHTML(x.model, { size: 16, color: x.modelColor ?? 'brand' }) : '') + esc(x.label) + '</span>' + (x.desc ? '<span class="ui-menu__desc">' + esc(x.desc) + '</span>' : '') + '</span>' +
-      (x.stamp ? stamp(x.stamp) : '') + (x.keys ? keys(x.keys) : '') + '</button>';
-  }).join('');
-}
-export interface FieldOpts { id?: U<string>; name?: U<string>; label?: U<string>; hint?: U<string>; error?: U<string>; /** 'select' draws the library's select; 'model' is the model picker (options are model ids, grouped by provider) */ kind?: U<'text' | 'textarea' | 'select' | 'model'>; type?: U<string>; value?: U<string>; placeholder?: U<string>; mono?: U<boolean>; raised?: U<boolean>; options?: U<readonly (string | SelectEntry)[]>; disabled?: U<boolean> }
+export interface FieldOpts { id?: U<string>; name?: U<string>; label?: U<string>; hint?: U<string>; error?: U<string>; /** 'select' draws the library's select; 'model' is the model picker (options are model ids, grouped by provider) */ kind?: U<'text' | 'textarea' | 'select' | 'model'>; type?: U<string>; value?: U<string>; placeholder?: U<string>; mono?: U<boolean>; raised?: U<boolean>; options?: U<readonly (string | SelectEntry)[]>; disabled?: U<boolean>;
+  /** the label is said to a screen reader only: a section's title already says it on screen (a bot sheet's Model) */ hideLabel?: U<boolean> }
 function field(o: FieldOpts): string {
   const id = o.id || nid('fld'), hid = id + '-hint';
   const common: Attrs = { id, name: o.name, placeholder: o.placeholder, 'aria-describedby': o.hint || o.error ? hid : null, 'aria-invalid': o.error ? 'true' : null, disabled: o.disabled, spellcheck: o.mono ? 'false' : null, autocomplete: 'off' };
@@ -244,7 +232,7 @@ function field(o: FieldOpts): string {
       labelId: o.label ? id + '-l' : null, label: o.label, describedby: o.hint || o.error ? hid : null, invalid: !!o.error, disabled: o.disabled, mono: o.mono, raised: o.raised });
   } else control = '<input type="' + (o.type ?? 'text') + '" class="' + cls + '"' + attrs({ ...common, value: o.value }) + '>';
   const picker = o.kind === 'select' || o.kind === 'model';   /* a button is named by aria-labelledby; a click on its label would open the list */
-  return '<div class="ui-field">' + (o.label ? (picker ? '<span class="ui-field__label" id="' + id + '-l">' + esc(o.label) + '</span>' : '<label class="ui-field__label" for="' + id + '">' + esc(o.label) + '</label>') : '') + control +
+  return '<div class="ui-field">' + (o.label ? (picker ? '<span class="' + cx('ui-field__label', o.hideLabel && 'ui-sr') + '" id="' + id + '-l">' + esc(o.label) + '</span>' : '<label class="' + cx('ui-field__label', o.hideLabel && 'ui-sr') + '" for="' + id + '">' + esc(o.label) + '</label>') : '') + control +
     (o.error || o.hint ? '<p class="ui-field__hint" id="' + hid + '"' + (o.error ? ' data-tone="attention"' : '') + '>' + esc(o.error || o.hint) + '</p>' : '') + '</div>';
 }
 /** a settings row: its label, a hint under it (a command in backticks shows as code, as the host writes its sentences), its control */
@@ -301,6 +289,6 @@ const tip = (label: string, k?: string, state?: { text: string; tone?: string })
 
 export const html = {
   icon, keys, kbd, combo, comboKbds, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
-  orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, section, menuItems, field, select: selectHTML, setRow, setHead, setSection, empty, toast, tip, mod,
+  orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, section, field, select: selectHTML, setRow, setHead, setSection, empty, toast, tip, mod,
   scroll, tabs, search, tipBody, badge, input, signinButton, stack, itemMark: itemMarkHTML, publisher: publisherHTML, itemRow
 };

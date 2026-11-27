@@ -1,162 +1,162 @@
 {
  "a-connector-with-a-key@bone": {
-  "sha": "5b36fe1bc0ef80598c2db508ef2d6bbf7895e16a",
+  "sha": "e7b84f21d923a6c387b00a13fa029bd378f3e4c4",
   "w": 1416,
-  "h": 884
+  "h": 664
  },
  "a-connector-with-a-key@catalog": {
-  "sha": "dba1e31e32ab956d0e2cf1d539d970ea4a3d3412",
+  "sha": "7a0cfe179a637def200e9508edc9e4a06d193060",
   "w": 1416,
-  "h": 884
+  "h": 664
  },
  "a-connector-with-a-key@graphite": {
-  "sha": "a28c737f13e50c79ac71e2c6445c6f11821a3979",
+  "sha": "56bd00482d6986d612944c4ced2b9863b66a87b7",
   "w": 1416,
-  "h": 863
+  "h": 664
  },
  "a-connector-with-a-key@typewriter": {
-  "sha": "d12e8b85ad2131a2808c7d4c5a296932578f834e",
+  "sha": "908924951ba2164df3264f5ea3584c65cd6b0ce8",
   "w": 1416,
-  "h": 1028
+  "h": 664
  },
  "a-hosted-connector-standing-caution@bone": {
-  "sha": "3069a3171e087bd59429b0f2e3600cd8d10b84c7",
+  "sha": "9efe4aa260f0440aa79122f8b8ca115fe6f24625",
   "w": 1416,
-  "h": 746
+  "h": 664
  },
  "a-hosted-connector-standing-caution@catalog": {
-  "sha": "589178ec23a4ef147932bd86e57438c11b43dda1",
+  "sha": "be0a3772c3cc08bb3c9e82102f06c302a0de207a",
   "w": 1416,
-  "h": 746
+  "h": 664
  },
  "a-hosted-connector-standing-caution@graphite": {
-  "sha": "efdaa91215724e0fa66bc254eaac96f0bea182dd",
+  "sha": "60ed0a85c68e3db90cf5faedc779c88a39044b83",
   "w": 1416,
-  "h": 746
+  "h": 664
  },
  "a-hosted-connector-standing-caution@typewriter": {
-  "sha": "27fc00843a971102d83799d36ec61629d4fbd394",
+  "sha": "d5ff54a71de46fba2ce46cca3029ff4c213b088b",
   "w": 1416,
-  "h": 829
+  "h": 664
  },
  "an-engine-plugin-strong-warning@bone": {
-  "sha": "91a0f2e1c98505b085be6ce838090ffd1c1a7e27",
+  "sha": "c882a275ace40ff6381a7103243ab6c574dac5a3",
   "w": 1416,
-  "h": 991
+  "h": 664
  },
  "an-engine-plugin-strong-warning@catalog": {
-  "sha": "83a654c6945ff0efca08222a78a9912963ad3b39",
+  "sha": "a7b79c834145b0306e037d2198ded85e102ab4b6",
   "w": 1416,
-  "h": 991
+  "h": 664
  },
  "an-engine-plugin-strong-warning@graphite": {
-  "sha": "0bc35c4e8c7612ea976a1d534181e3d396b4751c",
+  "sha": "da188fe092937c748b4051ad1f4a3ecd59ca6de5",
   "w": 1416,
-  "h": 970
+  "h": 664
  },
  "an-engine-plugin-strong-warning@typewriter": {
-  "sha": "dc7c224cb5a7038029aabb290115194ff457953a",
+  "sha": "deaa6ca3e0ff5bd11c2e51a11b11f2e42277eaa2",
   "w": 1416,
-  "h": 1072
+  "h": 664
  },
  "an-update-with-its-diff@bone": {
-  "sha": "c9e162bb3c1dd5706310de6c0b1f820e1f5ed29d",
+  "sha": "bdd48c3242a1ff3474b4044e72da5aaaa42ef1b6",
   "w": 1416,
-  "h": 658
+  "h": 664
  },
  "an-update-with-its-diff@catalog": {
-  "sha": "970cc9189a351216b56de1a16ae0728768a41cb8",
+  "sha": "bef4a54f0bb2f00274780a91e90b7849823f8c69",
   "w": 1416,
-  "h": 658
+  "h": 664
  },
  "an-update-with-its-diff@graphite": {
-  "sha": "c3d1a4a1dec6cb40407789c04654a8dfb6a2c434",
+  "sha": "c692d55bad01a1029a33d1a918f9eea5b8ff51b1",
   "w": 1416,
-  "h": 637
+  "h": 664
  },
  "an-update-with-its-diff@typewriter": {
-  "sha": "4713484763f91b65cd84b3c674e6f3953242eddc",
+  "sha": "8c5ab4726f7586c4ab02eaba0790e918516b9d7f",
   "w": 1416,
-  "h": 741
+  "h": 664
  },
  "could-not-be-checked@bone": {
-  "sha": "c701f0a91aaccf4644a86fc72ffa471a4c2f2d4e",
+  "sha": "354ec6ba4ebeee57a97ad078c3a2666679846e7f",
   "w": 1416,
-  "h": 247
+  "h": 664
  },
  "could-not-be-checked@catalog": {
-  "sha": "eeba1e306fed4d4dc6c90bd0ed5033afef1c0b50",
+  "sha": "504a684029ab4df8d9b2f97744da2ea4d46ad5f7",
   "w": 1416,
-  "h": 247
+  "h": 664
  },
  "could-not-be-checked@graphite": {
-  "sha": "b246e1e8abd060e67e258953e930169696adcdd0",
+  "sha": "e393afea6cbfc79f19590a0e9059cd6fd3fccb7a",
   "w": 1416,
-  "h": 247
+  "h": 664
  },
  "could-not-be-checked@typewriter": {
-  "sha": "cf3eb14d47980ba135cfcf92094159bb88b74448",
+  "sha": "e393afea6cbfc79f19590a0e9059cd6fd3fccb7a",
   "w": 1416,
-  "h": 268
+  "h": 664
  },
  "in-a-project-scope-choice@bone": {
-  "sha": "f4250932dc8636b62c07c63939c2c73385ce2765",
+  "sha": "7cf6ebfc8888825e9cbd3c3d220683f6e3a58060",
   "w": 1416,
-  "h": 577
+  "h": 664
  },
  "in-a-project-scope-choice@catalog": {
-  "sha": "3be6049824e9e8c1a6d78fcbea77d0e96968efc4",
+  "sha": "57c08092030ad312315d2d96bf1c58b7f570a2f5",
   "w": 1416,
-  "h": 577
+  "h": 664
  },
  "in-a-project-scope-choice@graphite": {
-  "sha": "2b4c9e5350a1859f2b2bf0ce669cbe537ca65228",
+  "sha": "17ef73baa2d8513ba371140e4af1e59c2ff88c79",
   "w": 1416,
-  "h": 556
+  "h": 664
  },
  "in-a-project-scope-choice@typewriter": {
-  "sha": "ec9998702214c64fee35596e1126fab1976b1b86",
+  "sha": "759ef2da36f7846b1b03292724b3933a1bd64dd9",
   "w": 1416,
-  "h": 598
+  "h": 664
  },
  "long-name@bone": {
-  "sha": "6036aa8a74195e9018cf3e0cd4a07a7e2b411feb",
+  "sha": "0f3bfd60f11ef5dac0e8d123a2d737d6ced75c7b",
   "w": 1416,
-  "h": 590
+  "h": 664
  },
  "long-name@catalog": {
-  "sha": "384f9ba9241df51c6e8493e92a827f145a425e33",
+  "sha": "5ec1a28b34364f8ea9d439416aefd5cbf77e0331",
   "w": 1416,
-  "h": 590
+  "h": 664
  },
  "long-name@graphite": {
-  "sha": "7c30e840f079a32e6f1869ed76c002c3a142f3a9",
+  "sha": "a22dad6e1aab407608836d9debabc44b544af0e5",
   "w": 1416,
-  "h": 569
+  "h": 664
  },
  "long-name@typewriter": {
-  "sha": "fa4a1f9638f535fae1d9a667407b07fc7cce2478",
+  "sha": "4accee2f067d22a1b017ca946c971c06eaae11f7",
   "w": 1416,
-  "h": 611
+  "h": 664
  },
  "not-reviewed-strong-warning@bone": {
-  "sha": "75505de0b28328ee2fb95f1c19214b2fbab0b44f",
+  "sha": "01b51a3163c519805a44f6a58686249ed21520f8",
   "w": 1416,
-  "h": 554
+  "h": 664
  },
  "not-reviewed-strong-warning@catalog": {
-  "sha": "3aeb6ab3e6ef640e801a9beacdde08706b2a4598",
+  "sha": "6c245f863dca9a2da771837b36af181c3d4923c2",
   "w": 1416,
-  "h": 554
+  "h": 664
  },
  "not-reviewed-strong-warning@graphite": {
-  "sha": "157f2e5da2b39635c16b408630a238d80b9bb0ed",
+  "sha": "9abe555ad75209db59e4be5bec86810c91a2559f",
   "w": 1416,
-  "h": 533
+  "h": 664
  },
  "not-reviewed-strong-warning@typewriter": {
-  "sha": "9aa1d2a09baf75b1efc1f50234deb0a55cbcd336",
+  "sha": "fd8ec4a64ffea670d34d882f3d552cb1a9be1a1d",
   "w": 1416,
-  "h": 596
+  "h": 664
  }
 }

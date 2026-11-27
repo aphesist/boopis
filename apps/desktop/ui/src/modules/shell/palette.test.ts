@@ -27,12 +27,12 @@ describe('palette scoring', () => {
 describe('"Restore bot…" in the palette', () => {
   const input = (): HTMLInputElement => document.getElementById('hx-palette-input') as HTMLInputElement;
   const list = (): HTMLElement => document.getElementById('hx-palette-list') as HTMLElement;
-  const rows = (): string[] => [...list().querySelectorAll('.hx-pal-row')].map((r) => r.querySelector('.hx-pal-row__label')?.textContent ?? '');
-  const heads = (): string[] => [...list().querySelectorAll('.hx-pal-group')].map((r) => r.textContent ?? '');
+  const rows = (): string[] => [...list().querySelectorAll('[data-kit-part="CommandPaletteRow"]')].map((r) => r.querySelector('.k7-cpal__label')?.textContent ?? '');
+  const heads = (): string[] => [...list().querySelectorAll('.k7-cpal__head')].map((r) => r.textContent ?? '');
   const toast = (): string => document.querySelector('.k7-notify .k7-notice__text')?.textContent ?? '';
   const flush = async (): Promise<void> => { await vi.advanceTimersByTimeAsync(20); for (let i = 0; i < 8; i++) await Promise.resolve(); };
   const type = (text: string): void => { input().value = text; renderPalette(); };
-  const run = (label: string): void => { runPal([...list().querySelectorAll('.hx-pal-row')].findIndex((r) => r.querySelector('.hx-pal-row__label')?.textContent === label)); };
+  const run = (label: string): void => { runPal([...list().querySelectorAll('[data-kit-part="CommandPaletteRow"]')].findIndex((r) => r.querySelector('.k7-cpal__label')?.textContent === label)); };
   function mount(provider: DataProvider): void {
     setProvider(provider);
     document.body.innerHTML = '<div id="hx-palette" hidden><input id="hx-palette-input"><div id="hx-palette-list"></div></div><button id="hx-btn-search"></button>';
@@ -67,7 +67,7 @@ describe('"Restore bot…" in the palette', () => {
     expect(input().placeholder).toBe('Restore which bot');
     expect(heads()).toEqual(['Archived bots']);
     expect(rows()).toEqual(['ledger', 'nina']);
-    expect([...list().querySelectorAll('.hx-pal-row__meta')].map((n) => n.textContent)).toEqual(['Archived yesterday', 'Archived mon']);
+    expect([...list().querySelectorAll('.k7-cpal__meta')].map((n) => n.textContent)).toEqual(['Archived yesterday', 'Archived mon']);
     type('led');
     expect(rows()).toEqual(['ledger']);
   });

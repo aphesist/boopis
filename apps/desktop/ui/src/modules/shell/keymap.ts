@@ -2,8 +2,7 @@
    dispatcher the shell's window handler runs (a pure function, unit-tested; the shell executes what it returns).
    Spec syntax: alternatives ' | ', a sequence ' ' (press one after the other), a combination '+', 'hold:X' (press
    and hold). 'mod' is Command on macOS and Ctrl elsewhere; 'alt' is Option on macOS. */
-import { esc } from '../../core/dom';
-import { ui } from '@boopis/ui';
+import { kit } from '@boopis/ui';
 
 export const KEYGROUPS: ReadonlyArray<readonly [string, ReadonlyArray<readonly [label: string, spec: string]>]> = [
   ['General', [
@@ -101,20 +100,15 @@ export const KEYGROUPS: ReadonlyArray<readonly [string, ReadonlyArray<readonly [
   ]]
 ];
 
-function specHTML(spec: string): string {
-  return spec.split(' | ').map((alt) => '<span class="ui-keys">' + alt.split(' ').map((step) =>
-    step.startsWith('hold:') ? '<span class="hx-kword">hold</span>' + ui.html.comboKbds(step.slice(5)) : ui.html.comboKbds(step)).join('<span class="hx-kthen" aria-hidden="true"></span>') + '</span>').join('<span class="hx-kword">or</span>');
-}
-/** the shortcut table as HTML, filtered by a search (a group, a label or a spec matches) */
+/** the shortcut sheet's list (mod+/), on the kit as Settings › Keyboard draws it: one section per group, each row the action and its keys
+    as the kit's key chips; `filter` keeps the rows whose group, action or keys hold it */
 export function keysTableHTML(filter?: string): string {
   const f = (filter || '').trim().toLowerCase();
-  let html = '';
-  for (const [group, rows] of KEYGROUPS) {
+  const html = KEYGROUPS.map(([group, rows]) => {
     const list = rows.filter(([label, spec]) => !f || (group + ' ' + label + ' ' + spec).toLowerCase().includes(f));
-    if (!list.length) continue;
-    html += '<section class="hx-keygroup"><h3>' + esc(group) + '</h3><dl>' + list.map(([label, spec]) => '<div><dt>' + esc(label) + '</dt><dd>' + specHTML(spec) + '</dd></div>').join('') + '</dl></section>';
-  }
-  return html || '<p class="hx-keys-empty">No shortcut matches <b>' + esc(filter ?? '') + '</b>.</p>';
+    return list.length ? '<div class="hx-keys__group">' + kit.section(group, kit.html.card({ variant: 'settings', rows: list.map(([label, spec]) => ({ label, wrap: true, control: kit.html.kbdSpec(spec) })) })) + '</div>' : '';
+  }).join('');
+  return html || kit.html.emptyState({ text: 'No shortcut matches “' + (filter ?? '').trim() + '”.' });
 }
 
 /* ───────── the dispatcher ───────── */

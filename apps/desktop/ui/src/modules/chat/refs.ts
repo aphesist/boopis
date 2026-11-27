@@ -10,8 +10,11 @@
    The surface owns its words: what "Ask in this room" and "Attach to my message" do is its own callback. */
 import { emit } from '../../core/bus';
 import { el, esc } from '../../core/dom';
-import { ui } from '@boopis/ui';
-import type { BotLike, MarkdownCtx, MdBot, MenuEntry, PathTarget } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
+import type { BotLike, MarkdownCtx, MdBot, PathTarget } from '@boopis/ui';
+
+/** a row of the kit's Menu (the v7 menus: their key chips and corners are the kit's) */
+type MenuEntry = Parameters<typeof kit.openMenu>[1]['entries'][number];
 import { data } from '../../data';
 import type { ResolvedPath } from '../../data';
 
@@ -86,8 +89,8 @@ async function pathMenu(b: HTMLElement, o: RefsOpts): Promise<void> {
   items.push({ label: 'Show in folder', value: 'reveal', icon: 'folder' }, '-', { label: 'Copy path', value: 'copy', icon: 'copy' });
   if (p.rel) items.push({ label: 'Copy relative path', value: 'copy-rel' });
   if (o.attach) items.push('-', { label: 'Attach to my message', value: 'attach', icon: 'plus' });
-  ui.menu.open(b, items, {
-    label: p.abs,
+  kit.openMenu(b, {
+    label: p.abs, entries: items, place: 'below', align: 'start',
     onSelect: (v) => {
       if (v === 'open') openPath(p);
       else if (v.startsWith('editor:')) openPath(p, v.slice(7));
@@ -121,7 +124,7 @@ function mentionMenu(b: HTMLElement, id: string, o: RefsOpts): void {
   const items: MenuEntry[] = [{ label: 'Open chat', value: 'open', icon: 'bots' }];
   if (o.ask) items.push({ label: 'Ask in this room', value: 'ask', icon: 'at' });
   items.push({ label: 'Settings', value: 'settings', icon: 'gear' });
-  ui.menu.open(b, items, { label: b.getAttribute('aria-label') ?? 'Mention', onSelect: (v) => { if (v === 'open') openChat(id); else if (v === 'ask') o.ask?.(id); else if (v === 'settings') openSettings(id); } });
+  kit.openMenu(b, { label: b.getAttribute('aria-label') ?? 'Mention', entries: items, place: 'below', align: 'start', onSelect: (v) => { if (v === 'open') openChat(id); else if (v === 'ask') o.ask?.(id); else if (v === 'settings') openSettings(id); } });
 }
 
 /** answer mentions and paths under `root` (one set of listeners on the root) */

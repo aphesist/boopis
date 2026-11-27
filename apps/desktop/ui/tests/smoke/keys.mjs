@@ -12,11 +12,11 @@ export async function keyWalk(env) {
   await s.safe('1', async () => {
     await press('Control+k'); check('1', 'mod+K opens the palette', (await layer()).pal);
     await page.keyboard.type('>'); await page.waitForTimeout(200);
-    check('1', '> limits to commands', (await texts('.hx-pal-group')) === 'Commands');
+    check('1', '> limits to commands', (await texts('.k7-cpal__head')) === 'Commands');
     await page.fill('#hx-palette-input', '@'); await page.waitForTimeout(200);
-    check('1', '@ limits to bots', (await texts('.hx-pal-group')) === 'Bots');
+    check('1', '@ limits to bots', (await texts('.k7-cpal__head')) === 'Bots');
     await press('Escape'); check('1', 'Esc closes the palette', !(await layer()).pal);
-    await press('Control+p'); check('1', 'mod+P is the palette without commands', (await texts('.hx-pal-group')) === 'Sessions,Bots'); await press('Escape');
+    await press('Control+p'); check('1', 'mod+P is the palette without commands', (await texts('.k7-cpal__head')) === 'Sessions,Bots'); await press('Escape');
     const newTab = await ev(() => new Promise((r) => { const off = __hx.on('hx:new', (d) => { off(); r(d.tab); }); setTimeout(() => r(null), 600); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'O', code: 'KeyO', ctrlKey: true, shiftKey: true, bubbles: true })); }));
     check('1', 'mod+shift+O new (session)', newTab === 'session', newTab);
     page = await s.fresh();
@@ -304,7 +304,7 @@ export async function keyWalk(env) {
     /* Settings' nav (board S39): up and down move through it and open the page */
     await page.focus('#hx-set-nav-general'); await press('ArrowDown', 300); check('10', 'the settings nav moves with up and down', await ev(() => document.getElementById('hx-set-nav-sessions').getAttribute('aria-current') === 'page' && document.activeElement.id === 'hx-set-nav-sessions'));
     await page.click('#hx-set-nav-models'); await page.waitForTimeout(400);
-    check('10', 'Settings > Models in the page build says the engine is not connected, and offers nothing it cannot do', await ev(() => { const p = document.getElementById('hx-set-models'); return !!p && !p.hidden && /boopis's engine is not connected/.test(p.textContent) && !document.getElementById('hx-models-change') && !p.querySelector('[data-part="ladder"]'); }));
+    check('10', 'Settings > Models in the page build says the engine is not connected, and offers nothing it cannot do', await ev(() => { const p = document.getElementById('hx-set-models'); return !!p && !p.hidden && /Engine not connected/.test(p.textContent) && !document.getElementById('hx-models-change') && !p.querySelector('[data-part="ladder"]'); }));
     await page.focus('#hx-set-nav-models'); await press('ArrowDown', 300);
     check('10', 'Models is followed by Connectors (Approvals only with the rules engine), which in the page build says it needs the desktop app and offers nothing', await ev(() => { const p = document.getElementById('hx-set-connectors'); return document.getElementById('hx-set-nav-connectors').getAttribute('aria-current') === 'page' && !!p && !p.hidden && /desktop app/.test(p.textContent) && !p.querySelector('button, input'); }));
     await press('ArrowDown', 300); check('10', 'Connectors is followed by Appearance', await ev(() => document.getElementById('hx-set-nav-appearance').getAttribute('aria-current') === 'page'));

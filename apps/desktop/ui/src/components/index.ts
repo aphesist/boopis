@@ -2,7 +2,7 @@
      html            string templates for modules that build innerHTML
      the factories   button, iconButton, segmented, chip, row, group, ... -> an element, already wired
      hydrate(root)   wires every [data-ui] element under root once
-     select (the themed select), listbox (its list: a chip's picker), modelEntries, menu, popover, layer, tooltip, toast, hold, orb, liven, glance, announce, shape, squircle, modelMark, icon, botState
+     select (the themed select), listbox (its list: a chip's picker), modelEntries, popover, layer, tooltip, toast, hold, orb, liven, glance, announce, shape, squircle, modelMark, icon, botState
    Events bubble from the element and are cancelable where an action follows:
      'ui:change' {value}  segmented, switch, chip, option group
      'ui:commit'          hold to approve finished
@@ -16,7 +16,7 @@ import { holdElement, wireHold } from './hold';
 import { html } from './html';
 import type { ButtonOpts, ChipOpts, EntryOpts, FieldOpts, IconButtonOpts, ItemRowOpts, LadderOpts, MeasureOpts, MeasurePart, RowOpts, SegmentedOpts, StepItem } from './html';
 import { icon, iconNames } from './icons';
-import { layer, menu, popover } from './layer';
+import { layer, popover } from './layer';
 import { isRoute, lastModel, modelFamily, modelHTML, modelMark as modelMarkEl, parseRoute, routeHTML, swapMark, families as modelFamilies } from './model-mark';
 import type { ModelOpts, ModelRef } from './model-mark';
 import { modView, modViewUpdate, h as modH, sanitizeSvg, validateTree, LIMITS as MOD_LIMITS, modColors } from './mod-view';
@@ -109,13 +109,13 @@ export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
   ...factories, legend, keys, inline, scrollClass, scrollEdges,
   markdown, copyText, presence, kit,
-  hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, card,
+  hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, card,
   hold: Object.assign(holdElement, { wire: wireHold }),
   /** a Claude Code mod's element tree, drawn with the library (MODS.md section 2) */
   modView: Object.assign(modView, { update: modViewUpdate, validate: validateTree, limits: MOD_LIMITS, sanitizeSvg, h: modH, colors: modColors })
 };
 export type Ui = typeof ui;
-export { html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, menu, popover, layer, listbox, modelEntries, tooltip, toast, card, wireHold, holdElement };
+export { html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, popover, layer, listbox, modelEntries, tooltip, toast, card, wireHold, holdElement };
 export type { SegElement } from './wire';
 /* the v7 kit (DESIGN-SYSTEM.md v7 section 21), on a v7 root */
 export { kit, kitVariants } from './v7';

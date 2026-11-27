@@ -11,7 +11,7 @@ import type { SlotName } from '../../core/registry';
 import { followScheme, followWindowWidth, prefs, setMounting, setState, setStateHooks, state, toggle, urlQuery } from '../../core/state';
 import { loadLook, TABS } from '../../core/settings';
 import type { Tab } from '../../core/types';
-import { ui } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
 import { applyChromePrefs, drawChrome, drawSideFoot, drawSideHead, selectTab, syncV7Theme } from './chrome';
 import { mountSettings } from '../settings';
 import { applyLook } from '../../styles/v7-look';
@@ -26,12 +26,11 @@ import { wireUiSize } from './ui-size';
 import { go, pushHistory } from './history';
 import { classifyKey } from './keymap';
 import { computeNow, layoutNow, markResized, queueLayout, setDockHeight, setInset } from './layout';
-import { closePalette, movePal, openPalette, paletteActive, renderPalette, resetActive, runPal, setActive } from './palette';
+import { closePalette, openPalette, renderPalette, resetActive, runPal } from './palette';
 import { cycleRegion, focusRegion, leaderActive, leaderKey, nextAttention, regionOf, rememberFocus, startLeader } from './regions';
 import { getLayout } from '../../core/state';
 /* drawn corners (DESIGN-SYSTEM.md section 8): the shell's surfaces; sheets and menus float, so they are surfaces */
-ui.squircle.auto('.hx-pal-row');
-ui.squircle.auto('.hx-dialog__card, .hx-palette__box, .hx-goto', { mode: 'surface' });
+ui.squircle.auto('.hx-goto', { mode: 'surface' });
 
 const log = logger('shell');
 
@@ -160,9 +159,8 @@ export function boot(): void {
   drawChrome(app);
   drawSideHead(app);
   drawSideFoot(app);
-  $('#hx-palette-input', app).outerHTML = ui.html.search({ size: 'l', id: 'hx-palette-input', label: 'Search sessions, bots and commands', placeholder: 'Search sessions, bots and commands', keys: 'esc',
-    attrs: { role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'hx-palette-list', 'aria-autocomplete': 'list' } });
-  $('#hx-keys-filter', app).outerHTML = ui.html.search({ size: 'm', id: 'hx-keys-filter', class: 'hx-keys-filter', label: 'Filter shortcuts', placeholder: 'Filter' });
+  /* the command palette: the kit's CommandPalette in the shell's scrim (#hx-palette); its rows are drawn as it opens and as the query changes */
+  $('#hx-palette', app).replaceChildren(kit.commandPalette({ id: 'hx-palette', label: 'Search and commands', placeholder: 'Search sessions, bots and commands', groups: [] }));
   sh.el = collectEls();
   const el = els();
 
@@ -245,19 +243,8 @@ function wire(): void {
 
   // palette
   el.palInput.addEventListener('input', () => { resetActive(); renderPalette(); });
-  el.palInput.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); movePal(1); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); movePal(-1); }
-    else if (e.key === 'Enter') { e.preventDefault(); runPal(paletteActive()); }
-    else if (e.key === 'Tab') { e.preventDefault(); movePal(e.shiftKey ? -1 : 1); }
-  });
-  el.palList.addEventListener('pointermove', (e) => {
-    const r = (e.target as Element).closest<HTMLElement>('.hx-pal-row'); if (!r || +(r.dataset['i'] ?? -1) === paletteActive()) return;
-    setActive(+(r.dataset['i'] ?? 0));
-    for (const x of $$('.hx-pal-row', el.palList)) x.setAttribute('aria-selected', String(x === r));
-    el.palInput.setAttribute('aria-activedescendant', r.id);
-  });
-  el.palList.addEventListener('click', (e) => { const r = (e.target as Element).closest<HTMLElement>('.hx-pal-row'); if (r) runPal(+(r.dataset['i'] ?? 0)); });
+  /* the kit's palette moves the row the keys are on and says which was chosen (ui:select {value}: the row's place in the results) */
+  el.palette.addEventListener('ui:select', (e) => { runPal(+(e as CustomEvent<{ value: string }>).detail.value); });
   el.palette.addEventListener('pointerdown', (e) => { if (e.target === el.palette) { e.preventDefault(); closePalette(); } });
 
   // scrim closes overlay drawers

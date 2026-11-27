@@ -48,39 +48,14 @@
 
   <div class="hx-scrim" id="hx-scrim" hidden></div>
 
-  <div class="hx-palette" id="hx-palette" role="dialog" aria-modal="true" aria-label="Search and commands" hidden>
-    <div class="hx-palette__box ui-nest">
-      <div id="hx-palette-input"></div>
-      <div class="hx-palette__list ui-scroll ui-scroll--stable ui-scroll--inset-end" id="hx-palette-list" role="listbox" aria-label="Results"></div>
-    </div>
-  </div>
+  <div class="hx-palette" id="hx-palette" hidden></div>
 
   <!-- Settings: the kit's large dialog (board 14, S39), drawn into this <dialog> by modules/settings -->
   <dialog class="hx-dialog hx-settings" id="hx-settings" aria-label="Settings"></dialog>
 
-  <dialog class="hx-dialog hx-store-dialog" id="hx-store" aria-labelledby="hx-store-title">
-    <div class="hx-dialog__card ui-nest">
-      <header class="hx-dialog__head">
-        <h2 id="hx-store-title">Store</h2>
-        <button class="ui-ib ui-corner" type="button" id="hx-store-close" aria-label="Close the store" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
-      </header>
-      <div class="hx-dialog__body ui-scroll ui-scroll--stable ui-scroll--inset-end" tabindex="0" role="region" aria-labelledby="hx-store-title" id="hx-store-body"></div>
-    </div>
-  </dialog>
-
-  <dialog class="hx-dialog hx-keysheet" id="hx-keys-sheet" aria-labelledby="hx-keys-title">
-    <div class="hx-dialog__card ui-nest">
-      <header class="hx-dialog__head">
-        <h2 id="hx-keys-title">Keyboard shortcuts</h2>
-        <div id="hx-keys-filter"></div>
-        <button class="ui-ib ui-corner" type="button" id="hx-keys-close" aria-label="Close keyboard shortcuts" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
-      </header>
-      <div class="hx-dialog__body ui-scroll ui-scroll--stable ui-scroll--inset-end" tabindex="0" role="region" aria-labelledby="hx-keys-title">
-        <div class="hx-keys-grid" id="hx-keys-body"></div>
-        <p class="hx-keys-note">Keys shown for this computer. In a web browser a few belong to the browser (F6, and Alt+1 or Alt+2 on Linux); every action is also in the palette.</p>
-      </div>
-    </div>
-  </dialog>
+  <!-- the Store (board 15) and the shortcut sheet: the kit's wide dialog, drawn into these <dialog>s by modules/shell/dialogs.ts -->
+  <dialog class="hx-dialog hx-store-dialog" id="hx-store" aria-label="Store"></dialog>
+  <dialog class="hx-dialog hx-keysheet" id="hx-keys-sheet" aria-label="Keyboard shortcuts"></dialog>
   <div class="hx-goto" id="hx-goto" role="status" hidden></div>
   <!-- the floating Notice's layer (kit.notify): a v7 root, on the column's centre line at the top of the work -->
   <div class="hx-notify" id="hx-notify" data-notify-host></div>

@@ -125,14 +125,16 @@ function environmentCard(): string {
 }
 function connectorsCard(): string {
   const can = d().can.get(), list = d().connectors.get();
+  /* each connector on one line of the pane's Card: its own name as it is (ADR-0031), what it gives as the row's quiet value, and its
+     Switch, or Sign in where it owes one; the store at the foot */
   const rows = list.map((c) => ({
-    label: cap1(c.name), sub: c.hint ?? c.tools + ' tools',
+    label: c.name, value: c.hint ?? (c.tools === 1 ? '1 tool' : String(c.tools) + ' tools'),
     control: c.state === 'sign in'
-      ? kit.html.button({ label: 'Sign in', size: 28, variant: 'tint', ...(can.signIn ? {} : { disabled: true }), attrs: { 'data-signin': c.name } })
-      : kit.html.switch({ label: cap1(c.name), checked: c.state === 'on', ...(can.connectors ? {} : { disabled: true }), attrs: { 'data-conn': c.name } })
+      ? kit.html.button({ label: 'Sign in', size: 28, variant: 'tint', ...(can.signIn ? {} : { disabled: true }), attrs: { 'data-signin': c.name, 'aria-label': 'Sign in to ' + c.name } })
+      : kit.html.switch({ label: c.name, checked: c.state === 'on', ...(can.connectors ? {} : { disabled: true }), attrs: { 'data-conn': c.name } })
   }));
-  const none = !list.length && data().info.live ? '<p class="k7-pane__note">No connectors are set up yet.</p>' : '';
-  return '<h3 class="k7-pane__sec" data-pane-part="connectors">Connectors</h3>' + kit.html.card({ variant: 'pane', rows: [...rows, { label: 'Browse the store', action: 'opens the store', attrs: { 'data-pane': 'store' } }] }) + none;
+  const none = !list.length && data().info.live ? kit.html.emptyState({ text: 'No connectors yet.' }) : '';
+  return '<h3 class="k7-pane__sec" data-pane-part="connectors">Connectors</h3>' + none + kit.html.card({ variant: 'pane', rows: [...rows, { label: 'Browse the store', action: 'opens the store', attrs: { 'data-pane': 'store' } }] });
 }
 /** the details pane's markup for the open session (pure but for its reads): the tests and the lab read it as the app draws it */
 export function detailsHTML(o: { overlay?: boolean; strip?: Parameters<typeof kit.html.pane>[0]['strip'] } = {}): string {

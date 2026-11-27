@@ -53,7 +53,14 @@ async function mount(f: Fake): Promise<{ panel: HTMLElement; toasts: string[] }>
   await mountConnectors(panel, { bridge: f, toast: (t) => { toasts.push(t); }, settle: 0 });
   return { panel, toasts };
 }
-const click = (root: Element, sel: string): void => { const b = root.querySelector<HTMLElement>(sel); if (!b) throw new Error('no ' + sel); b.click(); };
+/* Test and Remove are in a connector's More menu: a press on either opens it first */
+const inMore = (root: Element, sel: string): HTMLElement | null => {
+  const m = /^\[data-conn-(?:test|remove)="([^"]+)"\]$/.exec(sel);
+  if (!m) return null;
+  root.querySelector<HTMLElement>('[data-conn-more="' + (m[1] ?? '') + '"]')?.click();
+  return document.querySelector<HTMLElement>(sel);
+};
+const click = (root: Element, sel: string): void => { const b = root.querySelector<HTMLElement>(sel) ?? inMore(root, sel); if (!b) throw new Error('no ' + sel); b.click(); };
 function fill(root: Element, name: string, value: string): void {
   const input = root.querySelector<HTMLInputElement>(`[data-name="${name}"]`);
   if (!input) throw new Error('no field ' + name);
@@ -98,14 +105,16 @@ describe('the Connectors tab', () => {
   it('lists what Hermes has, with a switch, Test and Remove for its own and no control for a plugin\'s, and Sign in where one is owed', async () => {
     const f = fake([info(), info({ name: 'linear', url: 'https://mcp.linear.example/mcp', command: null, args: [], auth: 'oauth', oauth_tokens_present: false, status: 'configured', tools: null }), info({ name: 'fromplugin', plugin: 'acme' })]);
     const { panel } = await mount(f);
-    const rows = [...panel.querySelectorAll('.hx-conn__installed .k7-row')].map((r) => r.querySelector('.k7-row__label')?.childNodes[1]?.textContent);
+    const rows = [...panel.querySelectorAll('.hx-conn__installed [data-conn-row]')].map((r) => r.querySelector('.k7-lrow__title')?.textContent);
     expect(rows.slice(0, 3)).toEqual(['fakemcp', 'linear', 'fromplugin']);
     expect(panel.querySelectorAll('[data-kit~="Switch"]')).toHaveLength(2);
     expect(panel.querySelector('[data-conn-signin="linear"]')).toBeTruthy();
     expect(panel.querySelector('[data-conn-signin="fakemcp"]')).toBeNull();
-    expect(panel.querySelector('[data-conn-test="fromplugin"]')).toBeNull();
-    expect(panel.textContent).toContain('Provided by the plugin acme');
-    expect(panel.querySelector('[data-conn-remove="fakemcp"]')?.getAttribute('aria-label')).toBe('Remove fakemcp');
+    expect(panel.querySelector('[data-conn-more="fromplugin"]')).toBeNull();
+    expect(panel.textContent).toContain('Plugin acme · ');
+    expect(inMore(panel, '[data-conn-remove="fakemcp"]')?.getAttribute('aria-label')).toBe('Remove fakemcp');
+    expect(document.querySelector('[data-conn-test="fakemcp"]')?.textContent).toBe('Test');
+    kit.closeMenu();
   });
 
   it('lists the collection one row per connector, and offers each way with where it reaches and its pin, then a URL and a command', async () => {
@@ -115,7 +124,6 @@ describe('the Connectors tab', () => {
     expect(coll.querySelectorAll('[data-add-entry]')).toHaveLength(1);
     expect(coll.textContent).toContain('Firecrawl');
     expect(coll.textContent).toContain('Scrape the web.');
-    expect(coll.textContent).toContain('local · hosted');
     expect(coll.querySelector('[data-add-entry="firecrawl"]')?.getAttribute('aria-haspopup')).toBe('menu');
     click(coll, '[data-add-entry="firecrawl"]');
     const menu = document.querySelector('[data-kit~="Menu"]') as HTMLElement;
@@ -134,8 +142,8 @@ describe('the Connectors tab', () => {
     f.catalog = () => Promise.resolve([{ id: 'exa', name: 'Exa', publisher: 'Exa', description: 'Web search.', license: 'MIT', verified: '2026-11-19', variants: [{ id: 'hosted', label: 'Hosted', summary: 'Exa runs it.', reaches: 'mcp.exa.ai', pinned: null, default: true }] },
       { id: 'firecrawl', name: 'Firecrawl', publisher: 'Firecrawl', description: 'Scrape.', license: 'MIT', verified: '2026-11-19', variants: [{ id: 'local', label: 'Local', summary: 'Here.', reaches: 'x', pinned: null, default: true }] }]);
     const { panel } = await mount(f);
-    expect(panel.querySelector('[data-add-entry="firecrawl"]')?.closest('.k7-row')?.textContent).toContain('added');
-    expect(panel.querySelector('[data-add-entry="exa"]')?.closest('.k7-row')?.textContent).not.toContain('Exa ·');   /* the publisher is the name: said once */
+    expect(panel.querySelector('[data-add-entry="firecrawl"]')?.closest('[data-kit~="ListRow"]')?.textContent).toContain('added');
+    expect(panel.querySelector('[data-add-entry="exa"]')?.closest('[data-kit~="ListRow"]')?.textContent).not.toContain('Exa ·');   /* the publisher is the name: said once */
     click(panel, '[data-add-entry="exa"]');
     await tick();
     expect(f.calls).toContain('inputs:catalog:exa:hosted');
@@ -150,25 +158,25 @@ describe('the Connectors tab', () => {
     expect(panel.querySelector('[data-add-entry="firecrawl"]')).toBeTruthy();
     expect(panel.querySelector('#hx-conn-installed-h')?.parentElement?.textContent).toContain('None installed matches');
     q.value = 'github'; q.dispatchEvent(new Event('input', { bubbles: true }));
-    expect(panel.querySelector('[data-conn-test="github"]')).toBeTruthy();
-    expect(panel.querySelector('[data-conn-test="notes"]')).toBeNull();
+    expect(panel.querySelector('[data-conn-more="github"]')).toBeTruthy();
+    expect(panel.querySelector('[data-conn-more="notes"]')).toBeNull();
     expect(panel.querySelector('#hx-conn-coll-h')?.parentElement?.textContent).toContain('Nothing in boopis\'s collection matches “github”');
   });
 
-  it('draws each installed connector with its tile: the service it runs, else its monogram', async () => {
-    const f = fake([info({ name: 'github', url: 'https://api.githubcopilot.com/mcp/', command: null, args: [] }), info({ name: 'github-copy', command: 'npx', args: ['-y', 'other-mcp@1.0.0'] })]);
+  it('draws each installed connector as the Store\'s item row, its tile two letters of its name (board 15)', async () => {
+    const f = fake([info({ name: 'Context7', url: 'https://mcp.example.com/mcp', command: null, args: [] }), info({ name: 'notes-copy', command: 'npx', args: ['-y', 'other-mcp@1.0.0'] })]);
     const { panel } = await mount(f);
-    const tile = (n: string): Element | null | undefined => panel.querySelector(`[data-conn-test="${n}"]`)?.closest('.k7-row')?.querySelector('.ui-imark');
-    expect(tile('github')?.getAttribute('data-mark')).toBe('github');
-    expect(tile('github-copy')?.getAttribute('data-mark')).toBeNull();
-    expect(tile('github-copy')?.textContent).toBe('GC');
+    const tile = (n: string): Element | null | undefined => panel.querySelector(`[data-conn-row="${n}"] .k7-lrow__mark`);
+    expect(tile('Context7')?.textContent).toBe('C7');
+    expect(tile('notes-copy')?.textContent).toBe('NC');
+    expect(panel.querySelector('[data-conn-row="Context7"]')?.getAttribute('data-variant')).toBe('item');
   });
 
   it('says the list could not be read, and draws no list, when the host cannot read it', async () => {
     const f = fake();
     f.list = () => Promise.reject(new Error('hermes is not installed'));
     const { panel } = await mount(f);
-    expect(panel.textContent).toContain('boopis could not read the list, so it is not shown: ');
+    expect(panel.textContent).toContain('The list could not be read: ');
   });
 
   it('switches a server through the host, and puts the switch back when the host refuses', async () => {
@@ -406,7 +414,7 @@ describe('connectors for one bot', () => {
     expect(asked).toContain('kai');
     expect(panel.textContent).toContain('kaimcp');
     expect(panel.textContent).not.toContain('mainmcp');
-    expect(panel.textContent).toContain('Only Kai has these');
+    expect(panel.querySelector('#hx-conn-for')?.textContent).toContain('Kai');
     click(panel, '[data-conn-test="kaimcp"]');
     await tick();
     panel.querySelector<HTMLButtonElement>('[data-conn-switch]')?.click();

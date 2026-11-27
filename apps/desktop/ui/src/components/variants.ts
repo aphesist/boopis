@@ -39,7 +39,6 @@ export const variants = {
   empty: { mark: [false, true], action: [false, true] },
   toast: { action: [false, true] },
   tip: { keys: [false, true], state: [false, true] },
-  menu: { checked: [false, true], keys: [false, true], desc: [false, true], model: [false, true] },
   ladder: { variant: ['line', 'list'], off: [false, true] },
   measure: { variant: ['strip', 'row', 'grid'] },
   pages: { interactive: [false, true], attention: [false, true] },

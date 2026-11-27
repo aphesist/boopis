@@ -41,26 +41,26 @@ const titleBar: Story = {
   }
 };
 const pal: Story = {
-  id: 'shell/palette', title: 'Command palette', area: 'shell', kind: 'surface', covers: ['surface:palette'], scope: '.hx-palette__box', mock: MOCK,
+  id: 'shell/palette', title: 'Command palette', area: 'shell', kind: 'surface', covers: ['surface:palette'], scope: '.hx-palette > .k7-cpal', mock: MOCK,
   states: {
     open: st(['typical', 'open'], palette, {}, { interact: [{ name: 'type, then close', watch: '#hx-app', steps: [{ do: 'press', key: 'p', ms: 200 }, { do: 'press', key: 'r', ms: 300 }, { do: 'press', key: 'Escape' }], sample: 700 }] }),
     'typed query': st(['variant'], async (c) => { await palette(c); await typeIn('#hx-palette-input', 'pro')(c); }),
     'no matches': st(['empty'], async (c) => { await palette(c); await typeIn('#hx-palette-input', 'zzqxv')(c); }),
     'a long query': st(['long'], async (c) => { await palette(c); await typeIn('#hx-palette-input', 'src/billing/integrations/stripe/webhooks/handlers/invoice_payment_succeeded_idempotency_guard')(c); }),
     'many results, scrolling': st(['many', 'scroll'], palette, { sessions: 150 }),
-    'field focus (the esc key chip)': st(['focus', 'owner'], palette, {}, { force: [{ sel: '.hx-palette__field, #hx-palette-input', state: 'focus' }] }),
-    'row hover': st(['hover'], palette, {}, { force: [{ sel: '.hx-pal-row:nth-of-type(2)', state: 'hover' }] })
+    'field focus (the esc key chip)': st(['focus', 'owner'], palette, {}, { force: [{ sel: '#hx-palette-input', state: 'focus' }] }),
+    'row hover': st(['hover'], palette, {}, { force: [{ sel: '#hx-palette-list [data-kit-part="CommandPaletteRow"]:nth-of-type(3)', state: 'hover' }] })
   }
 };
 const menus: Story = {
   id: 'shell/menus', title: 'Menus in the app', area: 'shell', kind: 'surface', covers: ['surface:menus', 'surface:popover'], mock: MOCK,
   states: {
-    'account menu': st(['typical', 'open'], async (c) => { await c.click('#hx-btn-account'); await c.wait(300); }, {}, { overlay: { anchor: '#hx-btn-account', layer: '.ui-menu' } }),
+    'account menu': st(['typical', 'open'], async (c) => { await c.click('#hx-btn-account'); await c.wait(300); }, {}, { overlay: { anchor: '#hx-btn-account', layer: '.k7-menu[data-floating]' } }),
     'attach menu': st(['open', 'owner'], async (c) => { await c.click('#hx-view-session [data-plus]'); await c.wait(300); }, {}, { overlay: { anchor: '#hx-view-session .k7-composer__box', layer: '.k7-menu[data-floating]' } }),
     'model picker': st(['open'], async (c) => { c.$('#hx-view-session [role="textbox"]').focus(); await c.key('m', { altKey: true }); await c.wait(400); }, {}, { overlay: { anchor: '#hx-view-session .k7-composer__box', layer: '.k7-menu[data-floating]' } }),
     'the blank\'s own words': st(['open'], async (c) => { await c.click('#hx-view-session [data-blank] [data-value="else"]'); await c.wait(300); }),
-    'account menu, rail': st(['open', 'variant'], async (c) => { c.hx.setState({ left: 'rail' }); await c.wait(500); await c.click('#hx-btn-account'); await c.wait(300); }, {}, { overlay: { anchor: '#hx-btn-account', layer: '.ui-menu' } }),
-    'a menu item hover': st(['hover'], async (c) => { await c.click('#hx-btn-account'); await c.wait(300); }, {}, { force: [{ sel: '.ui-menu .ui-menu__item:nth-of-type(2)', state: 'hover' }], overlay: { anchor: '#hx-btn-account', layer: '.ui-menu' } })
+    'account menu, rail': st(['open', 'variant'], async (c) => { c.hx.setState({ left: 'rail' }); await c.wait(500); await c.click('#hx-btn-account'); await c.wait(300); }, {}, { overlay: { anchor: '#hx-btn-account', layer: '.k7-menu[data-floating]' } }),
+    'a menu item hover': st(['hover'], async (c) => { await c.click('#hx-btn-account'); await c.wait(300); }, {}, { force: [{ sel: '.k7-menu[data-floating] [data-kit~="MenuRow"]:nth-of-type(2)', state: 'hover' }], overlay: { anchor: '#hx-btn-account', layer: '.k7-menu[data-floating]' } })
   }
 };
 const toast: Story = {
@@ -95,12 +95,15 @@ const details: Story = {
     closed: st(['variant'], async (c) => { c.hx.setState({ right: 'closed' }); await c.wait(400); }, {}, { scope: '#hx-app' })
   }
 };
+/* the shortcut sheet on the kit's wide Dialog (board 15's frame): its close a ghost 28 circle 10 in from the 14 corner, as boards 14 and 15
+   draw it (kit.css .d-close: REPASS rule 7) */
+const WIDE_CLOSE = { concentric: 'boards 14 and 15 draw the ghost close 10 in from the 14 corner (kit.css .d-close): REPASS rule 7' };
 const keysSheet: Story = {
   id: 'shell/keys-sheet', title: 'Keyboard sheet', area: 'shell', kind: 'surface', covers: ['surface:keys-sheet'], scope: '#hx-keys-sheet', mock: MOCK,
   states: {
-    open: st(['typical', 'scroll'], key('/', { ctrlKey: true })),
-    filtered: st(['variant'], async (c) => { await key('/', { ctrlKey: true })(c); await typeIn('#hx-keys-filter', 'dock')(c); }),
-    'no matches': st(['empty'], async (c) => { await key('/', { ctrlKey: true })(c); await typeIn('#hx-keys-filter', 'zzqxv')(c); })
+    open: st(['typical', 'scroll'], key('/', { ctrlKey: true }), {}, { allow: WIDE_CLOSE }),
+    filtered: st(['variant'], async (c) => { await key('/', { ctrlKey: true })(c); await typeIn('#hx-keys-filter', 'dock')(c); }, {}, { allow: WIDE_CLOSE }),
+    'no matches': st(['empty'], async (c) => { await key('/', { ctrlKey: true })(c); await typeIn('#hx-keys-filter', 'zzqxv')(c); }, {}, { allow: WIDE_CLOSE })
   }
 };
 

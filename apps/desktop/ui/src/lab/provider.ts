@@ -8,6 +8,7 @@ import type { Bot, Wait } from '../data/types';
 import type { ProviderSpec } from './types';
 import { manyBots } from './fixtures';
 import type { RecordedFrame } from '../host/replay';
+import { neutralStore } from './neutral-store';
 
 /* The frames were recorded against the test model, which is driven by a script typed as the user's message ("@@call todo_list {...}@@
    @@reply ...@@"). That is what the recorder typed, not what a person writes: the lab shows each such message as the plain request it
@@ -31,7 +32,7 @@ export async function labProvider(spec: ProviderSpec = {}): Promise<DataProvider
   if (spec.replay) {
     const { connectReplay } = await import('../host/connect-replay');
     const p = await connectReplay(spec.replay, restateScripts);
-    return spec.patch ? spec.patch(p) : p;
+    return neutral(spec.patch ? spec.patch(p) : p);
   }
   let p = createMockProvider({ fixtures: spec.fixtures ?? [], simulate: spec.simulate ?? false });
   if (spec.bots !== undefined) {
@@ -52,5 +53,7 @@ export async function labProvider(spec: ProviderSpec = {}): Promise<DataProvider
     const list = spec.sessions === 'none' ? [] : Array.from({ length: spec.sessions }, (_, i) => ({ ...(all[i % all.length] ?? all[0]!), id: i < all.length ? all[i]!.id : 'lab-s' + i, title: (all[i % all.length]?.title ?? 'session') + (i >= all.length ? ' ' + i : '') }));
     p = { ...p, sessions: { ...p.sessions, list: store(list) } };
   }
-  return spec.patch ? spec.patch(p) : p;
+  return neutral(spec.patch ? spec.patch(p) : p);
 }
+/** no story shows a real repository's address or a person's name from the store's data (neutral-store.ts) */
+const neutral = (p: DataProvider): DataProvider => ({ ...p, store: neutralStore(p.store) });

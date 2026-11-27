@@ -1,11 +1,10 @@
-/* Settings > Connectors (host/connectors.ts): placement only. The rows are the kit's settings rows with an item's tile in the
-   lead, boopis's collection is the kit's item rows (the Store's), the search is the kit's field. */
+/* Settings > Connectors (host/connectors.ts): placement only. The installed connectors and boopis's collection are the Store's item
+   rows (the kit's ListRow, board 15), the search the kit's Field, the ways to add a Card of rows. */
 .hx-conn { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; min-width: 0; }
-.hx-conn__find { padding-block-start: var(--sp-2); }
 .hx-conn__find[hidden] { display: none; }
-/* the collection's rows reach the section's edges (no list inset: a dialog has no sidebar axis) */
-.hx-conn__rows { padding: 0; }
-/* a row's controls differ in height (a word, a switch, buttons): they share its centre and wrap under the text when narrow */
-.hx-conn__installed .ui-set__row { flex-wrap: wrap; }
-.hx-conn .ui-set__label { overflow-wrap: anywhere; }
-.hx-conn__acts { align-items: center; flex-wrap: wrap; flex: 0 1 auto; max-width: 100%; }
+/* item rows: one column for what is installed (a row carries its state, Switch and More), two for the collection (board 15's grid) */
+.hx-conn__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap-hair) var(--sp-4); min-width: 0; }
+.hx-conn__grid[data-one] { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 899px) { .hx-conn__grid { grid-template-columns: minmax(0, 1fr); } }
+.hx-conn__grid > .k7-lrow { min-width: 0; }
+.hx-conn [data-conn-status]:empty { display: none; }

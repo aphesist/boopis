@@ -70,11 +70,6 @@ describe('drawing a mark', () => {
 });
 
 describe('the library takes a model through the one primitive', () => {
-  it('a menu item {model} leads with a brand mark', () => {
-    const h = html.menuItems([{ label: 'sonnet 5.5', value: 'sonnet 5.5', model: 'sonnet 5.5', checked: true }]);
-    expect(h).toContain('data-color="brand"');
-    expect(h).toContain('data-content');
-  });
   it('a chip {model} takes a mono mark and the model name as its label', () => {
     const h = html.chip({ model: 'gpt-5' });
     expect(h).toContain('data-color="mono"');

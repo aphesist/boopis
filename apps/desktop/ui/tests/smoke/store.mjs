@@ -17,11 +17,11 @@ export async function store(env) {
     await page.keyboard.press('Control+Shift+S');
     await page.waitForSelector(OPEN + ' [data-store-open]', { timeout: 8000 });
     const front = await page.evaluate(() => ({
-      title: document.getElementById('hx-store-title').textContent, tabs: [...document.querySelectorAll('#hx-store-body [role=tab]')].map((n) => n.textContent.trim()),
-      heads: [...document.querySelectorAll('#hx-store-body .ui-set__head')].map((n) => n.textContent.trim()), rows: document.querySelectorAll('#hx-store-body [data-store-open]').length,
+      title: document.querySelector('#hx-store .k7-dialog__title').textContent, go: document.querySelector('#hx-store [data-store-go]')?.textContent.trim(),
+      heads: [...document.querySelectorAll('#hx-store-body .hx-store__group > .k7-shead')].map((n) => n.textContent.trim()), rows: document.querySelectorAll('#hx-store-body [data-store-open]').length,
       focusIn: !!document.activeElement.closest('#hx-store')
     }));
-    check('store', 'mod+shift+S opens the store with focus inside it, on Browse, Installed and Sources', front.title === 'Store' && front.tabs.join() === 'Browse,Installed,Sources' && front.focusIn, front);
+    check('store', 'mod+shift+S opens the store with focus inside it, its head\'s end saying how many are installed (board 15)', front.title === 'Store' && /^\d+ installed$/.test(front.go ?? '') && front.focusIn, front);
     /* the rest of the front page is grouped by kind, in the kinds' order (src/modules/store/model.ts KIND_ORDER and KIND_GROUP) */
     const KINDS = ['Skills', 'Connectors', 'Plugins', 'Mods', 'Engine plugins'];
     const kinds = front.heads.slice(1).map((h) => KINDS.indexOf(h));
@@ -32,7 +32,7 @@ export async function store(env) {
     const q = page.locator('#hx-store-q');
     await q.fill('sql');
     await page.waitForTimeout(700);
-    const hit = await text(page, '#hx-store-body .ui-set__head, #hx-store-body .ui-set .ui-row__label, #hx-store-body .ui-set [data-store-item]');
+    const hit = await text(page, '#hx-store-body .hx-store__group .k7-shead, #hx-store-body [data-store-item-row] .k7-lrow__title');
     check('store', 'searching "sql" finds SQL review and leaves out the rest', /SQL review/.test(hit) && !/Firecrawl/.test(hit), hit.slice(0, 200));
     await q.fill('zzzzqq');
     await page.waitForTimeout(700);
@@ -47,7 +47,7 @@ export async function store(env) {
     check('store', 'an item\'s page names its pin, its source, its licence and when it takes effect', /Pinned to/.test(sheet) && /Licence/.test(sheet) && /Recommended by boopis/.test(sheet) && /Where it comes from/.test(sheet), sheet.slice(0, 300));
 
     /* review: the card shows the plan; Esc/Deny goes back; the hold approves and only after a second */
-    await page.getByRole('button', { name: 'Review and install' }).click();
+    await page.locator('[data-store-review]').click();
     await page.waitForFunction(() => { const c = document.querySelector('#hx-store-body hx-card'); const h = c?.querySelector('[data-hold]'); return !!h && c.state === 'open' && h.getBoundingClientRect().width > 0; }, null, { timeout: 15000 });
     const card = await page.evaluate(() => { const c = document.querySelector('#hx-store-body hx-card'); return { state: c.state, holds: c.querySelectorAll('[data-hold]').length, deny: !!c.querySelector('[data-action="cancel"]'), text: c.textContent.replace(/\s+/g, ' ') }; });
     check('store', 'the review card asks for the hold with Deny beside it, and nothing is installed yet', card.holds === 1 && card.deny && card.state === 'open', card);
@@ -64,37 +64,42 @@ export async function store(env) {
     await page.keyboard.down('Space');
     await page.waitForTimeout(1250);
     await page.keyboard.up('Space');
-    await page.waitForSelector('.hx-store__lines, .ui-set__head:has-text("is installed")', { timeout: 8000 });
+    await page.waitForSelector('#hx-store-done', { timeout: 8000 });
     check('store', 'holding for a second installs it, and the receipt says so', Date.now() - t0 >= 1000 && /Release notes is installed/.test(await text(page, '#hx-store-body')), null);
 
     /* installed: it is listed on, with its switch, and the switch can be turned off and on */
     await page.getByRole('button', { name: 'See what is installed' }).click();
     await page.waitForSelector('#hx-store-have');
-    const have = await page.evaluate(() => [...document.querySelectorAll('#hx-store-body input[role=switch]')].map((n) => ({ id: n.name, on: n.checked })));
+    const have = await page.evaluate(() => [...document.querySelectorAll('#hx-store-body [data-store-switch]')].map((n) => ({ id: n.dataset.storeSwitch, on: n.getAttribute('aria-checked') === 'true' })));
     check('store', 'Installed lists what was just installed, switched on, beside what was already there', have.some((h) => h.id === 'boopis:release-notes' && h.on) && have.length >= 3, have);
-    const sw = page.locator('input[role=switch][name="boopis:release-notes"]');
+    const sw = page.locator('[data-store-switch="boopis:release-notes"]');
+    const on = async () => (await sw.getAttribute('aria-checked')) === 'true';
     await sw.focus();
     await page.keyboard.press('Space');
     await page.waitForTimeout(500);
-    check('store', 'the switch turns an item off, and says it takes effect in new sessions', !(await sw.isChecked()) && /new ones use this|new sessions/i.test(await text(page, '[data-store-status], .ui-toast')), null);
+    check('store', 'the switch turns an item off, and says it takes effect from the next session', !(await on()) && /next session/i.test(await text(page, '[data-store-status], .k7-notify')), null);
     await page.keyboard.press('Space');
     await page.waitForTimeout(500);
-    check('store', 'the switch keeps focus through the redraw, so the same key turns it on again', await sw.isChecked(), null);
+    check('store', 'the switch keeps focus through the redraw, so the same key turns it on again', await on(), null);
 
     /* the refusals: an item with no pin cannot be installed, a taken-down one is flagged */
-    await page.getByRole('tab', { name: 'Browse' }).click();
+    await page.locator('#hx-store [data-store-back]').click();
     await page.waitForSelector('[data-store-open="github:example-org/loose-skill"]');
     await page.locator('[data-store-open="github:example-org/loose-skill"]').click();
     await page.waitForSelector('.hx-store__sheet');
-    check('store', 'an item that is not pinned says so and offers no install', /Not pinned/.test(await text(page, '.hx-store__sheet')) && (await page.getByRole('button', { name: 'Review and install' }).count()) === 0, null);
+    check('store', 'an item that is not pinned says so and offers no install', /Not pinned/.test(await text(page, '.hx-store__sheet')) && (await page.locator('[data-store-review]').count()) === 0, null);
 
-    /* the keyboard: Tab reaches the tabs and the rows, arrows move between the tabs, Esc closes and gives focus back */
-    await page.getByRole('button', { name: 'Back to the store' }).click();
-    await page.getByRole('tab', { name: 'Sources' }).focus();
+    /* the head's end leads to Installed and on to Sources, by the keyboard too; Esc closes and gives focus back */
+    await page.locator('#hx-store [data-store-back]').click();
+    await page.waitForTimeout(300);
+    await page.locator('#hx-store [data-store-go="installed"]').focus();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+    await page.locator('#hx-store [data-store-go="sources"]').focus();
     await page.keyboard.press('Enter');
     await page.waitForTimeout(400);
     const src = await text(page, '#hx-store-body');
-    check('store', 'Sources lists the sources, Anthropic\'s among them, each with a switch', /Anthropic/.test(src) && (await page.locator('#hx-store-body input[role=switch]').count()) >= 5, src.slice(0, 200));
+    check('store', 'Sources lists the sources, Anthropic\'s among them, each with a switch', /Anthropic/.test(src) && (await page.locator('#hx-store-body [data-store-src]').count()) >= 5, src.slice(0, 200));
     await page.keyboard.press('Escape');
     await page.waitForTimeout(500);
     const closed = await page.evaluate(() => ({ open: document.getElementById('hx-store').open, where: document.activeElement?.tagName }));

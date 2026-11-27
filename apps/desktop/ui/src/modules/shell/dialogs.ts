@@ -3,7 +3,7 @@
 import { $, $$ } from '../../core/dom';
 import { state, toggle } from '../../core/state';
 import { logger } from '../../core/log';
-import { ui } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
 import { data } from '../../data';
 import { els, sh } from './ctx';
 import { FOCUSABLE, visible } from './regions';
@@ -13,15 +13,24 @@ import { openSettings as openSettingsDialog } from '../settings';
 
 const log = logger('dialogs');
 
-export const closeMenu = (returnFocus?: boolean): void => ui.menu.close(returnFocus);
+export const closeMenu = (returnFocus?: boolean): void => ui.layer.close(returnFocus);
 
-/* ───────── the shortcut sheet ───────── */
+/* ───────── the shortcut sheet (mod+/): the kit's wide Dialog, its filter at the head's end, the keymap's groups as Cards of rows ───────── */
+const KEYS_NOTE = 'Every action is also in the palette.';
+function drawKeys(d: HTMLDialogElement): void {
+  if (d.querySelector('.k7-dialog')) return;
+  const filter = kit.html.field({ id: 'hx-keys-filter', kind: 'search', ariaLabel: 'Filter shortcuts', placeholder: 'Filter' });
+  d.replaceChildren(kit.dialog({ variant: 'wide', title: 'Keyboard shortcuts', id: 'hx-keys-card', scrim: false, headEnd: filter, body: '<div class="hx-keys" id="hx-keys-body"></div><p class="k7-page__note">' + KEYS_NOTE + '</p>', bodyAttrs: { tabindex: '0', role: 'region', 'aria-label': 'Keyboard shortcuts' } }));
+}
 export function openKeys(): void {
   closePalette(true); closeMenu(false);
   const d = $<HTMLDialogElement>('#hx-keys-sheet', sh.app);
+  drawKeys(d);
   const input = $<HTMLInputElement>('#hx-keys-filter', d);
   input.value = '';
-  $('#hx-keys-body', d).innerHTML = keysTableHTML('');
+  const body = $('#hx-keys-body', d);
+  body.innerHTML = keysTableHTML('');
+  kit.wire(body);
   if (!d.open) { try { d.showModal(); } catch { d.setAttribute('open', ''); } }
   input.focus();
 }
@@ -32,13 +41,19 @@ export function openSettings(section?: string, find?: string, focus?: string): v
   openSettingsDialog(section, { ...(find ? { find } : {}), ...(focus ? { focus } : {}) });
 }
 
-/* ───────── the store: its own full view (modules/store), reached from the palette, mod+shift+S, the Connectors tab and the session details panel ───────── */
+/* ───────── the store (board 15): the kit's wide Dialog in the shell's <dialog>, its body the store's own view (modules/store), reached from
+   the palette, mod+shift+S, the sidebar's foot, Settings › Connectors and the session's details ───────── */
 let storeView: import('../store/view').StoreView | null = null;
 let storeMounting: Promise<void> | null = null;
 const storeDialog = (): HTMLDialogElement => $<HTMLDialogElement>('#hx-store', sh.app);
+function drawStore(d: HTMLDialogElement): void {
+  if (d.querySelector('.k7-dialog')) return;
+  d.replaceChildren(kit.dialog({ variant: 'wide', title: 'Store', id: 'hx-store-card', scrim: false, headEnd: '<span hidden></span>', body: '', bodyAttrs: { id: 'hx-store-body', tabindex: '-1', role: 'region', 'aria-label': 'Store' } }));
+}
 export function openStore(screen: 'browse' | 'installed' | 'sources' = 'browse', item?: string): void {
   closePalette(); closeMenu(false);
   const d = storeDialog();
+  drawStore(d);
   if (els().settings.open) els().settings.close();
   const ret = document.activeElement as HTMLElement | null;
   /* every time it opens, the store reads the sources that are due (never read, failed last time, or old), with its progress on
@@ -48,27 +63,31 @@ export function openStore(screen: 'browse' | 'installed' | 'sources' = 'browse',
   d.addEventListener('close', () => { ret?.focus?.(); }, { once: true });
   if (storeView) { go(); } else {
     storeMounting ??= import('../store/view').then((m) => {
-      storeView = m.mountStore($('#hx-store-body', d), { store: data().store, toast: (t) => { ui.toast(t); }, project: () => data().details.environment.get().cwd || null });
+      storeView = m.mountStore($('#hx-store-body', d), { store: data().store, toast: (t) => { kit.notify(t); }, project: () => data().details.environment.get().cwd || null });
     }).catch((e: unknown) => { log.warn('the store did not mount', e); });
     void storeMounting.then(go);
   }
-  const card = $('.hx-dialog__card', d); card.tabIndex = -1; card.focus({ preventScroll: true });
+  const card = $<HTMLElement>('.k7-dialog', d); card.tabIndex = -1; card.focus({ preventScroll: true });
 }
 
 /* ───────── the account menu ───────── */
 export function openMenu(): void {
   ui.tooltip.hide();
   const U = data().user.get();
-  const m = ui.menu.open(els().btnAccount, [
-    { title: U.name },
-    { label: 'Settings', value: 'settings', keys: 'mod+,', role: 'menuitem' },
-    { label: 'Keyboard shortcuts', value: 'shortcuts', keys: 'mod+/', role: 'menuitem' },
-    '-',
-    { label: 'Show the dock', value: 'dock', role: 'menuitemcheckbox', checked: state.dock === 'on', keys: 'mod+J' },
-    { label: 'Show session details', value: 'right', role: 'menuitemcheckbox', checked: state.right === 'open', keys: 'mod+I', disabled: state.tab !== 'session' }
-  ], { place: 'above', label: 'Account', onSelect: menuAction });
-  // an account menu starts at its first item (the library starts a choice menu at the checked one)
-  const first = m && m.querySelector<HTMLElement>('.ui-menu__item:not(:disabled)'); if (first) first.focus({ preventScroll: true });
+  /* the kit's Menu (its key chips sit in their row's corner, which the v6 menu's did not): the person's name heads it */
+  kit.openMenu(els().btnAccount, {
+    label: 'Account', variant: 'list', place: 'above', align: 'start', onSelect: menuAction,
+    entries: [
+      { heading: U.name },
+      { label: 'Settings', value: 'settings', keys: 'mod+,' },
+      { label: 'Keyboard shortcuts', value: 'shortcuts', keys: 'mod+/' },
+      '-',
+      { label: 'Show the dock', value: 'dock', checked: state.dock === 'on', keys: 'mod+J' },
+      { label: 'Show session details', value: 'right', checked: state.right === 'open', keys: 'mod+I', disabled: state.tab !== 'session' }
+    ]
+  });
+  /* an account menu starts at its first row (the kit starts a choice menu at the checked one) */
+  els().btnAccount.ownerDocument.querySelector<HTMLElement>('.k7-menu[data-floating] [data-kit~="MenuRow"]:not([aria-disabled="true"])')?.focus({ preventScroll: true });
 }
 function menuAction(act: string): void {
   // the menu returns focus to the account button as it closes, so a dialog opens on the next tick and keeps it
@@ -81,16 +100,19 @@ function menuAction(act: string): void {
 /* ───────── wiring ───────── */
 export function wireDialogs(): void {
   const el = els();
-  const sd = storeDialog();
-  $('#hx-store-close', sd).addEventListener('click', () => sd.close());
-  sd.addEventListener('click', (e) => { if (e.target === sd) sd.close(); });
-  el.settings.addEventListener('click', (e) => { if (e.target === el.settings) el.settings.close(); });
-  const ks = $<HTMLDialogElement>('#hx-keys-sheet', sh.app);
-  $('#hx-keys-close', ks).addEventListener('click', () => ks.close());
-  $<HTMLInputElement>('#hx-keys-filter', ks).addEventListener('input', (e) => { $('#hx-keys-body', ks).innerHTML = keysTableHTML((e.target as HTMLInputElement).value); });
-  ks.addEventListener('click', (e) => { if (e.target === ks) ks.close(); });
-  // close on Esc explicitly: a module's window-level key handler must never be able to keep a dialog open
-  for (const d of [ks, el.settings, sd]) d.addEventListener('keydown', (e) => { if (e.key === 'Escape' && d.open) { e.preventDefault(); e.stopPropagation(); d.close(); } });
+  const sd = storeDialog(), ks = $<HTMLDialogElement>('#hx-keys-sheet', sh.app);
+  drawStore(sd); drawKeys(ks);
+  const shut = (d: HTMLDialogElement): void => { if (d.open) d.close(); };
+  /* the kit Dialog's close, and a press on the backdrop, shut each (Settings wires its own close) */
+  for (const d of [sd, ks, el.settings]) {
+    d.addEventListener('click', (e) => { if (e.target === d) shut(d); else if (d !== el.settings && (e.target as Element).closest('[data-dialog-close]')) shut(d); });
+  }
+  ks.addEventListener('input', (e) => {
+    const t = e.target as HTMLInputElement; if (t.id !== 'hx-keys-filter') return;
+    const b = $('#hx-keys-body', ks); b.innerHTML = keysTableHTML(t.value); kit.wire(b);
+  });
+  // Esc shuts each explicitly: a module's window-level key handler must never be able to keep a dialog open (a field that clears itself on Esc goes first)
+  for (const d of [ks, el.settings, sd]) d.addEventListener('keydown', (e) => { if (e.key === 'Escape' && d.open && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); shut(d); } });
   // Tab cycles inside a dialog: a modal dialog would otherwise hand focus to the browser after its last control
   const tabStops = (d: HTMLElement): HTMLElement[] => $$(FOCUSABLE, d).filter((n) => {
     const r = n as HTMLInputElement;

@@ -88,7 +88,7 @@ describe('the key table that feeds the sheet, Settings and the palette', () => {
     expect(JSON.stringify(KEYGROUPS.find(([g]) => g === 'Cards'))).toContain('cut name');
   });
   it('filters by group, label or spec, and says so when nothing matches', () => {
-    expect(keysTableHTML('dock')).toContain('hx-keygroup');
+    expect(keysTableHTML('dock')).toContain('k7-section');
     expect(keysTableHTML('zzzzzz')).toContain('No shortcut matches');
     expect(keysTableHTML('f6')).toContain('Next or previous region');
   });

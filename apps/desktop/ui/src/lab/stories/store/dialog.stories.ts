@@ -17,13 +17,13 @@ import type { AppCtx, State, Story } from '../../types';
 import { recommendedItems } from './recommended-items';
 import { connectorItems } from './connector-items';
 
-const MOCK = { url: '/v6/__index.html', note: 'the owner has not drawn a store view: it is composed from the kit, for review' };
+const MOCK = { url: '/__boards/screen.html?s=store', note: 'board 15 (v7/15-store-*.jpg): the Store\'s front page; the other screens are composed from the kit' };
 const FX = (fixtureFile as unknown as { items: StoreItem[] }).items;
 
 /* the host's own sentences for a source that could not be read (store/reasons.rs) */
 const HUB_DOWN = 'The engine is not running yet. This source is read through it: read the sources again once it has started.';
 const REG_DOWN = 'Could not reach registry.modelcontextprotocol.io. Check the connection or proxy, then read the sources again.';
-const PROXY_PAGE = 'github.com answered with something that is not its list (a proxy or a sign-in page can do that). Check the connection or proxy, then read it again.';
+const PROXY_PAGE = 'example.com answered with something that is not its list (a proxy or a sign-in page can do that). Check the connection or proxy, then read it again.';
 const NEVER = { ms: Number.POSITIVE_INFINITY };
 
 const LONG = 'A connector with an extremely long name that goes on and on without a sensible place to stop, ending in a_very_long_unbroken_identifier_that_must_not_push_the_row_wider_than_the_dialog';
@@ -63,21 +63,25 @@ const withStore = (o: MockStoreOptions = {}) => (p: DataProvider): DataProvider 
 const until = async (c: AppCtx, ok: () => boolean, ms = 5000): Promise<void> => { for (let t = 0; t < ms && !ok(); t += 50) await c.wait(50); };
 const open = async (c: AppCtx): Promise<void> => {
   document.body.focus(); await c.key('S', { ctrlKey: true, shiftKey: true });
-  await until(c, () => !!document.querySelector('#hx-store [data-store-status]') && !!document.querySelector('#hx-store [data-store-open], #hx-store .ui-empty'));
+  await until(c, () => !!document.querySelector('#hx-store [data-store-status]') && !!document.querySelector('#hx-store [data-store-open], #hx-store .k7-empty'));
   await c.wait(400);
 };
-const tab = async (c: AppCtx, value: 'browse' | 'installed' | 'sources'): Promise<void> => {
-  await c.click(`#hx-store [role=tab][data-value="${value}"], #hx-store .ui-seg__opt[data-value="${value}"]`); await c.wait(400);
+/* Installed and Sources are reached from the head's end ("3 installed", then "Sources") */
+const tab = async (c: AppCtx, value: 'installed' | 'sources'): Promise<void> => {
+  await c.click('#hx-store [data-store-go="installed"]'); await c.wait(400);
+  if (value === 'sources') { await c.click('#hx-store [data-store-go="sources"]'); await c.wait(400); }
 };
+/* the wide Dialog's ghost close 10 in from its 14 corner, as board 15 draws it (kit.css .d-close): REPASS rule 7 */
+const WIDE_CLOSE = { concentric: 'board 15 draws the ghost close 10 in from the 14 corner (kit.css .d-close): REPASS rule 7' };
 const st = (tags: State['tags'], o: MockStoreOptions | null, setup: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State =>
-  ({ tags, app: { provider: { patch: withStore(o ?? {}) }, setup }, ...extra });
+  ({ tags, app: { provider: { patch: withStore(o ?? {}) }, setup }, allow: WIDE_CLOSE, ...extra });
 
 /* every state a source row has after a read, at once: read just now, two that could not be read, one off, built in, GitHub, the
    placeholder, and one the person added (being read and waiting are 'sources, being read') */
 const everySource: MockStoreOptions = { start: 'unread', reads: { 'skills-hub': { error: HUB_DOWN }, anthropic: { error: PROXY_PAGE } } };
 const addLong = async (c: AppCtx): Promise<void> => {
   const s = c.hx.data().store;
-  await s.addSource({ url: 'https://github.com/an-organisation-with-a-long-name/a-marketplace-repository-with-an-even-longer-name-and-no-spaces' });
+  await s.addSource({ url: 'https://example.com/plugins/a-marketplace-with-a-long-name/and-a-folder-with-an-even-longer-name-and-no-spaces' });
   await s.setSourceEnabled('engine-plugins', false);
 };
 
@@ -87,13 +91,13 @@ const dialog: Story = {
     'browse (the front page)': st(['typical'], null, open),
     'browse, many items': st(['many', 'scroll'], null, async (c) => {
       await open(c);
-      await until(c, () => [...document.querySelectorAll('#hx-store .hx-store__list button')].some((b) => b.textContent === 'Show more'));
+      await until(c, () => !!document.querySelector('#hx-store [data-store-more]'));
       const body = c.$('#hx-store-body'); body.scrollTop = body.scrollHeight; await c.wait(300);
     }),
-    'browse, connectors': st(['variant'], null, async (c) => { await open(c); await c.click('#hx-store [role=radio][data-value="connector"]'); await c.wait(400); }),
+    'browse, connectors': st(['variant'], null, async (c) => { await open(c); await c.click('#hx-store [data-kit~="Chip"][data-value="connector"]'); await c.wait(400); }),
     'browse, long names': st(['long'], null, async (c) => {
       await open(c);
-      const q = c.$('#hx-store-q input, input#hx-store-q') as HTMLInputElement;
+      const q = c.$('#hx-store-q') as HTMLInputElement;
       q.value = 'long name'; q.dispatchEvent(new Event('input', { bubbles: true })); await c.wait(500);
     }),
     'browse, the sources being read': st(['loading'], { start: 'unread', reads: { 'engine-plugins': NEVER } }, open),
@@ -107,7 +111,7 @@ const dialog: Story = {
     'an item\'s page': st(['variant'], null, async (c) => { await open(c); await c.click('#hx-store [data-store-open="mcp-registry:lab/item-0"]'); await c.wait(400); }),
     'the review card': st(['open'], null, async (c) => {
       await open(c); await c.click('#hx-store [data-store-open="mcp-registry:lab/item-0"]'); await c.wait(400);
-      await c.click('#hx-store .hx-store__sheet .ui-btn--primary'); await c.wait(600);
+      await c.click('#hx-store [data-store-review]'); await c.wait(600);
     })
   }
 };

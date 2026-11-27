@@ -5,7 +5,7 @@
 import type { AppCtx, State, Story } from '../../types';
 import { store } from '../../../data/store';
 import type { Todo } from '../../../data/types';
-import { board11, board12, board12Held, board17, boardDock, boardS17, boardS20, boardS23, boardS33, boardS36, boardS37, boardS38, boardS40, boardS41, engineStopped } from '../../board-fixtures';
+import { board11, board12, board12Held, board17, boardDock, boardS17, boardS20, boardS23, boardS33, boardS36, boardS37, boardS38, boardS40, boardS41, board15, engineStopped } from '../../board-fixtures';
 import type { DockBoard } from '../../board-fixtures';
 import { fakeRules, fakeSpeech, withSettings } from '../../settings-fixtures';
 import { saveChrome, saveLineHidden } from '../../../core/settings';
@@ -317,4 +317,30 @@ const settings: Story = {
   }
 };
 
-export default [bots, sessions, dock, settings];
+/* the Store (board 15): the kit's wide Dialog over a session, its front page as the board draws it (board15 in board-fixtures.ts) */
+const storeBoard: Story = {
+  id: 'boards/store', title: 'Boards: the Store', area: 'store', kind: 'page', covers: ['page:board-15'], mock: { url: '/__boards/screen.html?s=store', note: MOCK.note },
+  states: {
+    '15 the store': {
+      tags: ['typical', 'owner'],
+      note: 'board 15: the Store over a session: its head ("3 installed"), the search, the kinds and "Reading sources 0 of 1", Recommended in two columns (Context7 hovered, GitHub installed so Open), Mods',
+      /* board 15 draws the ghost close 10 in from the dialog's 14 corner (kit.css .d-close), as board 14 (rule 7) */
+      allow: { concentric: 'board 15 draws the ghost close 10 in from the 14 corner (kit.css .d-close): REPASS rule 7' },
+      force: [{ sel: '#hx-store [data-store-item-row="boopis:context7"]', state: 'hover' }],
+      app: {
+        provider: { patch: board15 },
+        setup: async (c: AppCtx) => {
+          c.hx.setState({ tab: 'session', left: 'rail', right: 'closed' });
+          await c.wait(300);
+          await c.click('[data-kit~="ListRow"][data-id="s17-dock"]').catch(() => undefined);
+          await c.wait(500);
+          c.hx.emit('hx:open-store', { screen: 'browse' });
+          await c.wait(1500);
+          (document.activeElement as HTMLElement | null)?.blur();   /* the board draws the dialog at rest */
+        }
+      }
+    } satisfies State
+  }
+};
+
+export default [bots, sessions, dock, settings, storeBoard];

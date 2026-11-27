@@ -143,7 +143,7 @@ describe('where it is shown', () => {
     const panel = document.createElement('div');
     let answer: ReturnType<typeof planView> | null = null;
     const mounted = await mountPlan(panel, () => Promise.resolve(answer));
-    expect(panel.textContent).toContain('boopis\'s engine is not connected');
+    expect(panel.textContent).toContain('Engine not connected.');
     answer = planView({ status: status(), options: null, limit: null }, NOW);
     await mounted.refresh();
     expect(panel.querySelectorAll('section')).toHaveLength(1);

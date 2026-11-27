@@ -2,6 +2,9 @@
    inbox, sessionnew.js newSess, dockv7.js). `pnpm lab:board` draws the app's real modules on it and compares them with the board,
    so every word, look and order here is the board's. Test data: the lab alone reads it. */
 import { store } from '../data/store';
+import fixtureStore from '../../../../shared/data/store.fixtures.json';
+import { createMockStore } from '../data/mock-store';
+import type { InstallReceipt, StoreItem, StoreKind, StoreSource } from '../data/types';
 import type { DataProvider, EngineState, Feed, GroupsEvent } from '../data/provider';
 import { CAREFUL_STEPS, YES } from '../data/session-s0';
 import type { CarefulStep, LaunchSettings, SessionCapabilities, SessionControls } from '../data/session-s0';
@@ -335,4 +338,33 @@ export function boardDock(kind: DockBoard): (p: DataProvider) => DataProvider {
       waits: { ...base.waits, snapshot: () => waits }
     };
   };
+}
+
+/* ───────── board 15: the Store over a session (screens.js store) ─────────
+   The board's front page: Recommended (Context7 hovered, Frontend design, GitHub installed so Open, Playwright, Linear, Supabase), Mods
+   (Pomodoro band, Ledger glance), "3 installed", and one source being read ("Reading sources 0 of 1"). The kinds on are skills, connectors,
+   plugins and mods (boopis's own list); the one source read never answers, so the line stays as the board draws it. */
+
+const STORE_FX = fixtureStore as unknown as { items: StoreItem[]; receipts: InstallReceipt[] };
+const boardItem = (id: string, kind: StoreKind, title: string, summary: string): StoreItem => {
+  const t = structuredClone(STORE_FX.items.find((i) => i.kind === kind && i.pinned && !i.removed) ?? STORE_FX.items[0] as StoreItem);
+  return { ...t, id: 'boopis:' + id, source: 'boopis', kind, title, summary, tier: 'recommended', secrets: [], removed: null, publisher: 'Example Org', homepage: null };
+};
+export const BOARD15_ITEMS: readonly StoreItem[] = [
+  boardItem('context7', 'connector', 'Context7', 'Up-to-date docs for the libraries you use'), boardItem('frontend-design', 'skill', 'Frontend design', 'Distinctive, production-grade interfaces'),
+  boardItem('github', 'connector', 'GitHub', 'Issues, pull requests and checks'), boardItem('playwright', 'connector', 'Playwright', 'Drive a browser to check your pages'),
+  boardItem('linear', 'connector', 'Linear', 'Read and update your issues'), boardItem('supabase', 'connector', 'Supabase', 'Your database, auth and storage')
+];
+export const BOARD15_MODS: readonly StoreItem[] = [boardItem('pomodoro-band', 'mod', 'Pomodoro band', 'A focus timer in the dock'), boardItem('ledger-glance', 'mod', 'Ledger glance', 'Today’s spend beside the composer')];
+export function board15(p: DataProvider): DataProvider {
+  const base = boardS23(p);
+  const s = createMockStore({ start: 'unread', reads: { anthropic: { ms: Number.POSITIVE_INFINITY } }, extraItems: [...BOARD15_ITEMS, ...BOARD15_MODS] });
+  /* only boopis's own list and one source to read are on (the board's "0 of 1") */
+  const on = new Set(['boopis', 'anthropic']);
+  const sources = { get: (): readonly StoreSource[] => s.sources.get().map((x) => ({ ...x, enabled: on.has(x.id), kinds: x.id === 'anthropic' ? (['skill', 'plugin'] as StoreKind[]) : x.kinds, stale: x.id === 'anthropic' })), subscribe: s.sources.subscribe };
+  const github = STORE_FX.receipts[0] as InstallReceipt;
+  const receipts: readonly InstallReceipt[] = [{ ...github, item_id: 'boopis:github', title: 'GitHub', kind: 'connector' }, ...STORE_FX.receipts.slice(0, 2)];
+  const installed = { get: () => receipts, subscribe: () => () => undefined };
+  const page = { items: [...BOARD15_MODS], recommended: [...BOARD15_ITEMS], total: 8, next_cursor: null, refreshed_at: null, stale: false, offline: false };
+  return { ...base, store: { ...s, sources, installed, browse: (f) => (f && Object.keys(f).length ? s.browse(f) : Promise.resolve(page)) } };
 }

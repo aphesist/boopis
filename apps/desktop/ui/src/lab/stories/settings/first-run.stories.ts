@@ -119,7 +119,7 @@ interface Run { script: SetupStatus[]; model?: ModelsView | null; list?: Provide
 const draw = (r: Run): Render => async ({ root }) => {
   /* the shared cards for xAI and Copilot, with a host that has a page ready (the real ones reach the host) */
   registerSigninCard(XAI_WAY, (host, done) => mountXaiSignin(host, waiting({ url: 'https://auth.x.ai/device', code: 'LMNP-4821', expiresAt: FAR() }), { onSignedIn: done }));
-  registerSigninCard(COPILOT_WAY, (host, done) => mountSigninCard(host, waiting({ url: 'https://github.com/login/device', code: 'WDJB-MJHT', expiresAt: FAR() }), COPILOT_COPY, { onSignedIn: done }));
+  registerSigninCard(COPILOT_WAY, (host, done) => mountSigninCard(host, waiting({ url: 'https://example.com/login/device', code: 'WDJB-MJHT', expiresAt: FAR() }), COPILOT_COPY, { onSignedIn: done }));
   void runFirstRun(new Fake(r.script, r.model ?? null, r.hang), root, { signins, extras: r.extras ?? EXTRAS, ...(r.noProviders ? {} : { providers: providersBridge(r.list ?? baseline(), r.probe ?? []) }) });
   await wait(300);
   if (r.layout) { emit('hx:window-controls', { layout: r.layout }); await frames(2); }
