@@ -2,7 +2,7 @@
 /* Menu: its tests at the kit's two unit levels (docs/kit/TERMS.md). Story: its props drawn as markup and states. Scene: its
    behaviour in jsdom, keys and clicks to events and ARIA.
   Cases moved from kit-6e.test.ts and thread.test.ts keep their words. */
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { kit } from '../index';
 import { contract } from './menu';
 
@@ -64,5 +64,30 @@ describe('scene: Menu, a row cut by the menu\'s width', () => {
       if (sw) Object.defineProperty(Element.prototype, 'scrollWidth', sw);
       if (cw) Object.defineProperty(Element.prototype, 'clientWidth', cw);
     }
+  });
+});
+
+describe('scene: Menu, the keys of a list (2a)', () => {
+  it('a word typed quickly jumps to the row it starts, one letter again goes on to the next, PageDown and PageUp move a page', () => {
+    const names = ['opus 5.5', 'sonnet 5.5', 'haiku 4.5', 'qwen2', 'qwen3-coder', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7'];
+    const m = kit.menu({ label: 'Model', variant: 'list', entries: names.map((n) => ({ label: n, value: n, role: 'menuitemradio', checked: n === 'sonnet 5.5' })) });
+    document.body.replaceChildren(m);
+    const rows = [...m.querySelectorAll<HTMLElement>('[data-kit~="MenuRow"]')];
+    const key = (k: string): void => { (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true })); };
+    vi.useFakeTimers();
+    rows[1]!.focus();
+    key('q'); key('w'); key('e'); key('n'); key('3');
+    expect((document.activeElement as HTMLElement).dataset['value']).toBe('qwen3-coder');
+    vi.advanceTimersByTime(800);
+    rows[0]!.focus();
+    key('a'); expect((document.activeElement as HTMLElement).dataset['value']).toBe('a1');
+    key('a'); expect((document.activeElement as HTMLElement).dataset['value']).toBe('a2');
+    vi.advanceTimersByTime(800); vi.useRealTimers();
+    rows[0]!.focus(); key('PageDown');
+    expect(document.activeElement).toBe(rows[8]);
+    key('PageDown'); expect(document.activeElement).toBe(rows[11]);
+    key('PageUp'); expect(document.activeElement).toBe(rows[3]);
+    key('Home'); expect(document.activeElement).toBe(rows[0]);
+    key('End'); expect(document.activeElement).toBe(rows[11]);
   });
 });

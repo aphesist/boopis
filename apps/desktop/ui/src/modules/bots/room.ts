@@ -60,7 +60,7 @@ export function mountView(root: HTMLElement): void {
   root.classList.add('bt-view');
   const room = el('section', { class: 'bt-room', 'aria-label': 'Bot conversation' });
   const nb = el('section', { class: 'bt-new', 'aria-label': 'New bot', hidden: true });
-  const sheet = el('aside', { class: 'ui-panel bt-sheet', 'data-hx-panel': '', 'aria-label': 'Bot settings', hidden: true });
+  const sheet = el('div', { class: 'bt-sheet', 'data-hx-panel': '', hidden: true });   /* the kit's Pane (sheet) is drawn in it (settings.ts) */
   root.append(room, nb, sheet);
   S.room = room; S.newPane = nb; S.sheet = sheet;
   mountGroupPane(root); mountNewGroupPane(root);

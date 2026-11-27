@@ -31,3 +31,9 @@
 .k7-pane[data-variant="tools"] .k7-pane__body { padding: 0 var(--sp-3) var(--sp-3); }
 .k7-pane__grip { position: absolute; top: 0; bottom: 0; left: 0; width: var(--sp-1); cursor: col-resize; }
 .k7-pane__grip:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
+/* a settings sheet (2a, a bot's settings; no board draws it: S40's head is the nearest drawn state): its title at the start and its close
+   at the end, a body of sections that scrolls, and its actions at the foot, end-aligned over a hairline */
+.k7-pane[data-variant="sheet"] { height: 100%; }
+.k7-pane[data-variant="sheet"] > .k7-pane__head { align-items: stretch; padding: var(--pad-pane-top-session) var(--sp-4) var(--gap-s) calc(var(--sp-4) + var(--sp-1)); }
+.k7-pane[data-variant="sheet"] > .k7-pane__body { flex: 1 1 auto; gap: var(--sp-1); }
+.k7-pane__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); box-shadow: inset 0 var(--hl) 0 var(--hair); }

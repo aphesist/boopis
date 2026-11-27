@@ -13,8 +13,8 @@ function runChecks(): void {
   if (S.draftRow && !railOn()) spots.push([S.draftRow.btn, S.draftRow.name, S.draftRow.name.textContent ?? '']);
   const root = S.viewRoot;
   if (root) {
-    for (const n of root.querySelectorAll<HTMLElement>('.bt-p-name, .bt-who-name, .bt-sh-name')) spots.push([n, n, n.textContent ?? '']);
-    for (const label of root.querySelectorAll<HTMLElement>('.bt-go-label, .bt-arch-label')) spots.push([label.closest('button'), label, label.textContent ?? '']);
+    for (const n of root.querySelectorAll<HTMLElement>('.bt-p-name, .bt-who-name, [data-clip-name] .k7-row__label')) spots.push([n, n, n.textContent ?? '']);
+    for (const label of root.querySelectorAll<HTMLElement>('[data-clip-label] .k7-btn__label')) spots.push([label.closest('button'), label, label.textContent ?? '']);
   }
   tipsIfClipped(spots);
 }

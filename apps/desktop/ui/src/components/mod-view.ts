@@ -29,7 +29,7 @@ import { isMac } from '../core/dom';
 import { logger } from '../core/log';
 import { html } from './html';
 import { iconNames } from './icons';
-import { listbox } from './select';
+import { kit } from './v7';
 import { MARK, SURFACE, TINT, isLiteral, paintColor } from './mod-colors';
 import type { Lit, PaintCtx, Surface } from './mod-colors';
 import { cleanSvg } from './mod-svg';
@@ -250,15 +250,15 @@ function buildSelect(p: Props, ctx: Ctx, path: string): HTMLElement {
     : { label: str(o), value: str(o) }));
   const cur = opts.find((o) => o.value === str(p['value'])) ?? opts[0] ?? { label: '', value: '' };
   const b = el('button', 'ui-input mv-select');
-  b.type = 'button'; b.setAttribute('aria-haspopup', 'listbox'); b.setAttribute('aria-expanded', 'false'); b.setAttribute('data-mv-key', path);
+  b.type = 'button'; b.setAttribute('aria-haspopup', 'menu'); b.setAttribute('aria-expanded', 'false'); b.setAttribute('data-mv-key', path);
   const lab = str(p['aria-label']) || str(p['label']) || 'Choose';
   b.setAttribute('aria-label', lab + ': ' + cur.label);
   b.append(el('span', 'mv-select__v', cur.label)); b.insertAdjacentHTML('beforeend', html.icon('chevron-down', { size: 's' }));
   const id = handlerId(p['onSelect']);
   b.addEventListener('click', () => {
-    listbox.open(b, opts.map((o) => ({ label: o.label, value: o.value })), {
-      label: lab, align: 'start', value: cur.value, onSelect: (v) => { b.setAttribute('aria-expanded', 'false'); if (id != null) ctx.dispatch({ type: 'ui.select', id, value: v }); }
-    });
+    /* the kit's Menu (2a: the v6 listbox went): the options as rows, the current one checked */
+    kit.openMenu(b, { label: lab, variant: 'list', place: 'below', align: 'start', entries: opts.map((o) => ({ label: o.label, value: o.value, role: 'menuitemradio', checked: o.value === cur.value })),
+      onSelect: (v) => { b.setAttribute('aria-expanded', 'false'); if (id != null) ctx.dispatch({ type: 'ui.select', id, value: v }); } });
   });
   return b;
 }

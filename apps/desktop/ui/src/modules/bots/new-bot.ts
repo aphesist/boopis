@@ -1,15 +1,18 @@
-/* the new-bot form (the bots tab's own: stage, name, pickers, suggestions); library controls throughout */
+/* The new-bot form (the Bots tab's own: the preview, the name, the look, what it does, suggestions) on the kit (the repass's step 2a): the
+   kit's Dialog in its form shape, drawn in the view in place of the room (no scrim: the roster beside it shows the draft as you type),
+   with the kit's Field for the name and what it does, the look picker (Segmented tabs over Swatches), the suggestions as the kit's
+   ListRows, and Create as its Button. No board draws it; O-B06's team plan is the nearest drawn state for making a team (rule 6). */
 import { emit } from '../../core/bus';
-import { $, cap1, el, reduced } from '../../core/dom';
+import { cap1, el, frag, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { ui } from '@boopis/ui';
-import { oc } from '@boopis/ui';
+import { announce, kit, oc } from '@boopis/ui';
 import { data } from '../../data';
 import { DRAFT_COLOR, paintOrb } from './paint';
 import { lookPicker, lookWords, offeredShapes } from './look-picker';
 import type { LookTab } from './look-picker';
 import { rollLook } from '@boopis/ui';
-import { gentleFollow, orbButton, orbEl, setReact } from './orbs';
+import { gentleFollow, orbButton, setReact } from './orbs';
+import { modelFieldHTML, openModelMenu, wireModelField } from './model-pick';
 import { S } from './model';
 import type { Draft } from './model';
 import { markSelected, paintDraftRow } from './list';
@@ -35,6 +38,21 @@ export function openNew(seed?: Partial<Draft>): void {
 function buildNew(seed?: Partial<Draft>): void {
   const pane = S.newPane as HTMLElement; pane.textContent = '';
   const d: Draft = S.draft = { name: '', role: '', color: DRAFT_COLOR, shape: 'circle', tab: 'colour', ...(seed ?? {}) };
+  const sugg = data().bots.catalog().suggestions;
+  /* the kit's Dialog, in place: its title, its body (drawn below), Create; its close goes back to the bot you came from (none when there
+     is no bot yet: there is nowhere to go back to) */
+  const dlg = kit.wire(frag(kit.html.dialog({
+    title: 'New bot', scrim: false, body: '', id: 'bt-new-dialog',
+    actions: [{ label: 'Create bot', variant: 'primary' }],
+    attrs: { 'aria-modal': null, 'data-new-bot': '' }
+  })));
+  const dbody = dlg.querySelector<HTMLElement>('.k7-dialog__body') as HTMLElement;
+  const close = dlg.querySelector<HTMLElement>('[data-dialog-close]');
+  if (close) { close.setAttribute('aria-label', 'Close new bot'); if (!S.bots.length) close.hidden = true; close.addEventListener('click', () => { openBot(S.sel); focusConversation(); }); }
+  const go = dlg.querySelector<HTMLButtonElement>('.k7-dialog__foot .k7-btn') as HTMLButtonElement;
+  go.setAttribute('data-go', ''); go.setAttribute('data-clip-label', '');
+  const goLabel = go.querySelector('.k7-btn__label') as HTMLElement;
+
   /* calm, not lively: orb2's lively idle swings the head up to about 72 degrees (rim peeks, sky gazes); on a narrow,
      pointy or low-faced body (triangle, drop, star, diamond, tall) that tips the whole silhouette and takes the face
      past its edge, so the eyes vanish and pop back: the owner's "flickers and flashes, depending on the shape". Calm
@@ -45,12 +63,12 @@ function buildNew(seed?: Partial<Draft>): void {
   S.newFollow?.dispose();
   const follow = S.newFollow = gentleFollow(() => preview, 0.55);
 
-  const noteId = 'bt-name-note-' + Math.random().toString(36).slice(2, 7);
-  const nameIn = el('input', { class: 'bt-name', type: 'text', maxlength: '24', placeholder: 'Name your bot', 'aria-label': 'Name', 'aria-describedby': noteId, 'aria-keyshortcuts': 'Alt+R', autocomplete: 'off', spellcheck: 'false', value: d.name, 'data-hx-focus': 'messages' });
-  /* Surprise me: the library's icon button with its dice glyph */
-  const dice = ui.iconButton({ icon: 'dice', label: 'Surprise me with a name, colour and shape', tip: 'Surprise me', keys: 'alt+R', size: 's' });
-  dice.classList.add('bt-dice');
-  const note = el('p', { class: 'bt-name-note', id: noteId });
+  /* the name: the kit's Field, its note under it (what the name will become), the dice at its end */
+  const nameF = kit.wire(frag(kit.html.field({ id: 'bt-new-name', label: 'Name', placeholder: 'Name your bot', value: d.name, hint: ' ', keys: 'alt+R', attrs: { maxlength: '24', autocomplete: 'off', spellcheck: 'false', 'aria-keyshortcuts': 'Alt+R', 'data-hx-focus': 'messages', 'data-new-name': '' } })));
+  const nameIn = nameF.querySelector<HTMLInputElement>('input') as HTMLInputElement;
+  const note = nameF.querySelector<HTMLElement>('.k7-field__hint') as HTMLElement;
+  note.textContent = ''; note.setAttribute('aria-live', 'polite');
+  const dice = kit.iconButton({ icon: 'dice', label: 'Surprise me with a name, colour and shape', tip: 'Surprise me', keys: 'alt+R', variant: 'ghost', attrs: { 'data-dice': '', 'aria-keyshortcuts': 'Alt+R' } });
   /* Colour and Shape: the look picker the look editor uses too */
   const picker = lookPicker({
     value: d, tab: d.tab === 'shape' ? 'shape' : 'colour',
@@ -60,47 +78,39 @@ function buildNew(seed?: Partial<Draft>): void {
       else { follow.faceOn(560); d.shape = look.shape; apply('shape'); oc(preview, 'poke', 0.5, { react: false }); }
     }
   });
-  const roleField = ui.field({ kind: 'textarea', label: 'What it does', placeholder: 'Reviews pull requests before I merge', value: d.role, raised: true });
-  const roleIn = $<HTMLTextAreaElement>('textarea', roleField);
-  const go = ui.button({ label: 'Create bot', variant: 'primary', disabled: true });
-  go.classList.add('bt-go');
-  const back = S.bots.length ? ui.iconButton({ icon: 'close', label: 'Close new bot', keys: 'esc' }) : null;
-  if (back) { back.classList.add('bt-new-close'); back.addEventListener('click', () => { openBot(S.sel); focusConversation(); }); }
+  const roleF = kit.wire(frag(kit.html.field({ id: 'bt-new-role', kind: 'multiline', rows: 3, label: 'What it does', placeholder: 'Reviews pull requests before I merge', value: d.role })));
+  const roleIn = roleF.querySelector<HTMLTextAreaElement>('textarea') as HTMLTextAreaElement;
 
-  const goRow = el('div', { class: 'bt-go-row' }, go);
   const form = el('div', { class: 'bt-new-form' }, [
     el('div', { class: 'bt-stage' }, pv),
-    el('div', { class: 'bt-name-row' }, [nameIn, dice]),
-    note,
+    el('div', { class: 'bt-name-row' }, [nameF, dice]),
     picker.el,
-    el('div', { class: 'bt-new-field' }, roleField),
-    goRow
+    roleF
   ]);
-  const sugg = data().bots.catalog().suggestions;
-  const suggest = sugg.length ? el('section', { class: 'bt-suggest', 'aria-label': 'Suggestions' }, [
-    el('h2', { class: 'ui-group__head bt-suggest-h', text: 'Or start from one of these' }),
-    el('div', { class: 'bt-suggest-row' }, sugg.map((s) => {
-      const btn = el('button', { class: 'bt-sugg', type: 'button' }, [orbEl({ shape: s.shape, color: s.color, name: s.name }, 32), el('span', { class: 'bt-sugg-text' }, [el('span', { class: 'bt-sugg-name', text: cap1(s.name) }), el('span', { class: 'bt-sugg-desc', text: s.desc })])]);
-      btn.addEventListener('click', () => {
-        const reshape = s.shape !== d.shape;
-        Object.assign(d, { name: s.name.replace(/\s+/g, '-'), role: s.desc, shape: s.shape, color: s.color });
-        if (reshape) follow.faceOn(560);
-        nameIn.value = d.name; roleIn.value = d.role; roleIn.dispatchEvent(new Event('input')); picker.set(d); apply('all'); oc(preview, 'poke', reshape ? 0.5 : 0.9, { react: !reshape });
-      });
-      return btn;
-    }))
-  ]) : null;
-  pane.append(el('div', { class: 'bt-new-scroll ui-scroll' }, [el('div', { class: 'bt-new-col' }, [back, form, suggest])]));
+  dbody.append(form);
+  /* suggestions: a ListRow each (its look's orb, its name, what it does); a press fills the form */
+  if (sugg.length) {
+    const list = kit.wire(frag('<section class="bt-suggest" aria-label="Suggestions">' + kit.html.sectionHead({ title: 'Or start from one of these' }) +
+      kit.html.list({ label: 'Suggestions', rows: sugg.map((s, i) => ({ variant: 'bot' as const, title: cap1(s.name), sub: s.desc, bot: { shape: s.shape, color: s.color, name: s.name }, attrs: { 'data-sugg': String(i) } })) }) + '</section>'));
+    list.addEventListener('click', (e) => {
+      const r = (e.target as Element).closest<HTMLElement>('[data-sugg]'); if (!r) return;
+      const s = sugg[Number(r.dataset['sugg'])]; if (!s) return;
+      const reshape = s.shape !== d.shape;
+      Object.assign(d, { name: s.name.replace(/\s+/g, '-'), role: s.desc, shape: s.shape, color: s.color });
+      if (reshape) follow.faceOn(560);
+      nameIn.value = d.name; roleIn.value = d.role; picker.set(d); apply('all'); oc(preview, 'poke', reshape ? 0.5 : 0.9, { react: !reshape });
+    });
+    dbody.append(list);
+  }
+  pane.append(el('div', { class: 'bt-new-scroll ui-scroll' }, [el('div', { class: 'bt-new-col' }, dlg)]));
 
   function apply(what: 'color' | 'shape' | 'all'): void {
     if (what === 'color' || what === 'all') paintOrb(preview, d);
     if (what === 'shape' || what === 'all') preview.setAttribute('shape', d.shape);
     paintGo(); paintDraftRow();
   }
-  /* the caption under the preview is the button: it names the bot as you type or roll (an empty name gets one from
-     the list on create, so the button is never disabled for want of a name) */
-  const goLabel = el('span', { class: 'bt-go-label' });
-  $('span', go).replaceChildren(goLabel);
+  /* the button names the bot as you type or roll (an empty name gets one from the list on create, so the button is never disabled for
+     want of a name) */
   function paintGo(): void {
     const n = d.name.trim();
     go.disabled = false;
@@ -129,7 +139,7 @@ function buildNew(seed?: Partial<Draft>): void {
     d.shape = look.shape; d.color = look.color;
     picker.set(d); apply('color'); apply('shape');
     oc(preview, 'blink');
-    ui.announce('Name: ' + name + ', ' + lookWords(look) + (rolledOut ? '. Every name in the list is taken, so it has a number.' : ''));
+    announce('Name: ' + name + ', ' + lookWords(look) + (rolledOut ? '. Every name in the list is taken, so it has a number.' : ''));
   }
   dice.addEventListener('click', () => roll());
   form.addEventListener('focusin', (e) => {
@@ -147,40 +157,36 @@ function buildNew(seed?: Partial<Draft>): void {
   roleIn.addEventListener('input', () => { d.role = roleIn.value; });
   go.addEventListener('click', () => create());
 
-  /* A live bot is a Hermes profile, a folder of its own: say which one, and which model it starts on, before making it */
+  /* A live bot is a Hermes profile, a folder of its own: say which one, and which model it starts on, before making it (a kit Block in
+     the dialog's body, with Back and Make; Create waits while it shows) */
   function confirmLive(admin: NonNullable<ReturnType<typeof data>['bots']['admin']>): void {
     const plan = admin.planCreate(d.name);
     const models = admin.models();
-    let model = plan.model;
-    const box = el('section', { class: 'bt-confirm', role: 'group', 'aria-label': 'Make ' + plan.profile }, [
-      el('p', { class: 'bt-confirm-line', text: plan.profile + ' gets a folder of its own.' }),
-      plan.folder ? el('p', { class: 'bt-confirm-path ui-mono', text: plan.folder }) : null,
-      ...plan.notes.map((n) => el('p', { class: 'bt-confirm-line bt-confirm-note', text: n }))
-    ]);
-    if (models.length) {
-      const f = ui.field({ kind: 'model', label: 'Model', options: models, value: model ?? models[0] ?? '', hint: 'You can change it later.' });
-      f.addEventListener('ui:change', (e) => { model = (e as CustomEvent<{ value: string }>).detail.value; });
-      model = model ?? models[0] ?? null;
-      box.append(f);
-    }
-    const err = el('p', { class: 'bt-confirm-err', role: 'alert' });
-    const back = ui.button({ label: 'Back' });
-    const make = ui.button({ label: 'Make ' + plan.profile, variant: 'primary' });
-    const acts = el('div', { class: 'bt-confirm-acts' }, [back, make]);
-    box.append(err, acts);
-    go.hidden = true; goRow.append(box);
+    let model = plan.model ?? models[0] ?? null;
+    const esc = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const box = kit.wire(frag(kit.html.block({ attrs: { 'data-confirm': plan.profile, role: 'group', 'aria-label': 'Make ' + plan.profile }, body: '<div class="bt-confirm">' +
+      '<p class="k7-pane__note">' + esc(plan.profile) + ' gets a folder of its own.</p>' + (plan.folder ? '<p class="k7-pane__note k7-mono bt-confirm__path">' + esc(plan.folder) + '</p>' : '') +
+      plan.notes.map((n) => '<p class="k7-pane__note">' + esc(n) + '</p>').join('') +
+      (models.length ? kit.html.card({ variant: 'settings', rows: [{ label: 'Model', sub: 'You can change it later.', control: modelFieldHTML('model', 'Model', model ?? '') }] }) : '') +
+      '<p class="k7-pane__note bt-sheet__error" role="alert" data-confirm-error hidden></p>' +
+      '<div class="bt-confirm__acts">' + kit.html.button({ label: 'Back', variant: 'ghost', size: 32, attrs: { 'data-confirm-act': 'back' } }) + kit.html.button({ label: 'Make ' + plan.profile, variant: 'primary', size: 32, attrs: { 'data-confirm-act': 'make' } }) + '</div></div>' })));
+    const field = box.querySelector<HTMLElement>('[data-model-pick]');
+    if (field) wireModelField(field, () => { openModelMenu(field, { label: 'Model', models, value: field.dataset['value'] ?? '', onPick: (v) => { model = v; } }); });
+    const err = box.querySelector<HTMLElement>('[data-confirm-error]') as HTMLElement;
+    const back = box.querySelector<HTMLButtonElement>('[data-confirm-act="back"]') as HTMLButtonElement, make = box.querySelector<HTMLButtonElement>('[data-confirm-act="make"]') as HTMLButtonElement;
+    go.hidden = true; dbody.append(box);
     const leave = (): void => { box.remove(); go.hidden = false; go.disabled = false; go.focus({ preventScroll: true }); };
     back.addEventListener('click', leave);
     box.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); leave(); } });
     make.addEventListener('click', () => {
-      make.disabled = true; back.disabled = true; err.textContent = '';
+      make.disabled = true; back.disabled = true; err.hidden = true;
       setReact(preview, 'thinking');
       admin.create({ name: d.name, role: d.role, shape: d.shape, color: d.color, instructions: d.role.trim() }, { model })
         .then((nb) => {
           setReact(preview, 'done');
           later(() => { openBot(nb.id); emit('hx:bot-select', { id: nb.id, from: 'bots-new' }); }, 900);
         })
-        .catch((e: unknown) => { setReact(preview, 'idle'); make.disabled = false; back.disabled = false; err.textContent = 'It was not made: ' + (e instanceof Error ? e.message : String(e)); });
+        .catch((e: unknown) => { setReact(preview, 'idle'); make.disabled = false; back.disabled = false; err.textContent = 'It was not made: ' + (e instanceof Error ? e.message : String(e)); err.hidden = false; });
     });
     requestAnimationFrame(() => make.focus({ preventScroll: true }));
   }

@@ -15,8 +15,6 @@ import { arrowHTML, isKnownModel, markHTML, modelHTML, routeHTML } from './model
 import type { ModelRef } from './model-mark';
 import { orbHtml } from './orb';
 import { stack } from './stack';
-import { modelEntries, selectHTML, toEntries } from './select-html';
-import type { SelectEntry } from './select-html';
 import { scroll } from './scroll';
 import { tabs } from './tabs';
 
@@ -183,7 +181,7 @@ export interface MenuItem {
 }
 export type MenuEntry = MenuItem | '-';
 export const itemValue = (x: MenuItem): string => String(x.value != null ? x.value : x.label);
-export interface FieldOpts { id?: U<string>; name?: U<string>; label?: U<string>; hint?: U<string>; error?: U<string>; /** 'select' draws the library's select; 'model' is the model picker (options are model ids, grouped by provider) */ kind?: U<'text' | 'textarea' | 'select' | 'model'>; type?: U<string>; value?: U<string>; placeholder?: U<string>; mono?: U<boolean>; raised?: U<boolean>; options?: U<readonly (string | SelectEntry)[]>; disabled?: U<boolean>;
+export interface FieldOpts { id?: U<string>; name?: U<string>; label?: U<string>; hint?: U<string>; error?: U<string>; kind?: U<'text' | 'textarea'>; type?: U<string>; value?: U<string>; placeholder?: U<string>; mono?: U<boolean>; raised?: U<boolean>; disabled?: U<boolean>;
   /** the label is said to a screen reader only: a section's title already says it on screen (a bot sheet's Model) */ hideLabel?: U<boolean> }
 function field(o: FieldOpts): string {
   const id = o.id || nid('fld'), hid = id + '-hint';
@@ -191,13 +189,8 @@ function field(o: FieldOpts): string {
   const cls = cx('ui-input', o.mono && 'ui-input--mono', o.raised && 'ui-input--raised');
   let control: string;
   if (o.kind === 'textarea') control = '<textarea class="' + cls + '" data-ui="autosize" rows="2"' + attrs(common) + '>' + esc(o.value ?? '') + '</textarea>';
-  else if (o.kind === 'select' || o.kind === 'model') {
-    const list = o.options ?? [];
-    control = selectHTML({ id, name: o.name, entries: o.kind === 'model' ? modelEntries(list.filter((x): x is string => typeof x === 'string')) : toEntries(list), value: o.value, placeholder: o.placeholder,
-      labelId: o.label ? id + '-l' : null, label: o.label, describedby: o.hint || o.error ? hid : null, invalid: !!o.error, disabled: o.disabled, mono: o.mono, raised: o.raised });
-  } else control = '<input type="' + (o.type ?? 'text') + '" class="' + cls + '"' + attrs({ ...common, value: o.value }) + '>';
-  const picker = o.kind === 'select' || o.kind === 'model';   /* a button is named by aria-labelledby; a click on its label would open the list */
-  return '<div class="ui-field">' + (o.label ? (picker ? '<span class="' + cx('ui-field__label', o.hideLabel && 'ui-sr') + '" id="' + id + '-l">' + esc(o.label) + '</span>' : '<label class="' + cx('ui-field__label', o.hideLabel && 'ui-sr') + '" for="' + id + '">' + esc(o.label) + '</label>') : '') + control +
+  else control = '<input type="' + (o.type ?? 'text') + '" class="' + cls + '"' + attrs({ ...common, value: o.value }) + '>';
+  return '<div class="ui-field">' + (o.label ? '<label class="' + cx('ui-field__label', o.hideLabel && 'ui-sr') + '" for="' + id + '">' + esc(o.label) + '</label>' : '') + control +
     (o.error || o.hint ? '<p class="ui-field__hint" id="' + hid + '"' + (o.error ? ' data-tone="attention"' : '') + '>' + esc(o.error || o.hint) + '</p>' : '') + '</div>';
 }
 /** a settings row: its label, a hint under it (a command in backticks shows as code, as the host writes its sentences), its control */
@@ -252,5 +245,5 @@ const tip = (label: string, k?: string, state?: { text: string; tone?: string })
 
 
 export const html = {
-  icon, keys, kbd, combo, comboKbds, code, inline, dot, button, iconButton, hold, switch: switchHtml, segmented, chip, chipGroup, orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, ladder, measure, legend, request, entry, disclosure, section, field, select: selectHTML, setRow, setHead, setSection, empty, tip, mod, scroll, tabs, tipBody, badge, input, signinButton, stack
+  icon, keys, kbd, combo, comboKbds, code, inline, dot, button, iconButton, hold, switch: switchHtml, segmented, chip, chipGroup, orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, ladder, measure, legend, request, entry, disclosure, section, field, setRow, setHead, setSection, empty, tip, mod, scroll, tabs, tipBody, badge, input, signinButton, stack
 };

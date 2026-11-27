@@ -4,15 +4,19 @@
    The view asks the provider's `kanban` source, shows what it says (loading, an empty board, no board, an error) and reads again
    every few seconds while it is open, drawing again only when something changed. Which board belongs to a group is the engine's
    convention, not a link: a board whose name is the group's name, said as a slug (`paper past` is `paper-past`); another can be chosen,
-   and the choice is remembered for the group. */
-import { el, esc } from '../../core/dom';
+   and the choice is remembered for the group.
+   On the kit (the repass's step 2a; no board draws it, the lead's decision): one read-only Card column per state, its name and count
+   over it, its tasks as ListRow items each carrying its assignee's orb at 20; nothing drags. The board's chooser is the kit's
+   SelectorItem opening the kit's Menu; what the board cannot show is one quiet EmptyState line. */
+import { el, frag } from '../../core/dom';
 import { loadBoardChoice, saveBoardChoice } from '../../core/settings';
-import { ui } from '@boopis/ui';
+import { kit } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
 import type { KanbanBoardInfo, KanbanSource, KanbanTask, KanbanView } from '../../data';
 import { lookFor } from '@boopis/ui';
 import { bot } from './model';
-import { livenIn, orbHTML } from './orbs';
+import { livenIn } from './orbs';
+import { openSelect } from '../settings/rows';
 
 /** the columns of the engine's board, in its order; a state it adds later is drawn after these under its own name */
 export const COLUMNS: ReadonlyArray<readonly [key: string, label: string]> = [
@@ -90,7 +94,7 @@ export function mountBoard(host: HTMLElement, deps: BoardDeps): BoardView {
   const now = deps.now ?? ((): Date => new Date());
   const pollMs = deps.pollMs === undefined ? POLL_MS : deps.pollMs;
   const bar = el('div', { class: 'bt-board-bar' });
-  const status = el('p', { class: 'ui-field__hint bt-board-status', role: 'status', 'aria-live': 'polite' });
+  const status = el('p', { class: 'k7-pane__note bt-board-status', role: 'status', 'aria-live': 'polite' });
   const body = el('div', { class: 'bt-board-body' });
   host.replaceChildren(bar, status, body);
   let group: { id: string; name: string } | null = null;
@@ -105,40 +109,38 @@ export function mountBoard(host: HTMLElement, deps: BoardDeps): BoardView {
   const drawBar = (): void => {
     bar.replaceChildren();
     if (!boards.length) return;
-    const pick = ui.select({ id: 'hx-board-pick', label: 'Board', entries: boards.map((b) => ({ value: b.slug, label: b.name + (b.archived ? ' (archived)' : '') })), value: slug ?? '' });
-    pick.addEventListener('ui:change', (e) => {
-      const v = (e as CustomEvent<{ value: string }>).detail.value;
-      if (!v || v === slug || !group) return;
-      slug = v; saveBoardChoice(group.id, v); last = ''; drawBar(); void read(true);
+    const nameOf = (b: KanbanBoardInfo): string => b.name + (b.archived ? ' (archived)' : '');
+    const cur = boards.find((b) => b.slug === slug);
+    const pick = kit.wire(frag(kit.html.selectorItem({ variant: 'field', label: 'Board', value: cur ? nameOf(cur) : 'Choose a board', attrs: { id: 'hx-board-pick', 'data-board-pick': slug ?? '' } })));
+    pick.addEventListener('click', () => {
+      openSelect(pick, { label: 'Board', value: slug ?? '', choices: boards.map((b) => ({ value: b.slug, label: nameOf(b) })), onPick: (v) => {
+        if (!v || v === slug || !group) return;
+        slug = v; saveBoardChoice(group.id, v); last = ''; drawBar(); void read(true);
+      } });
     });
     bar.append(pick);
   };
-  const empty = (title: string, text: string): void => { const e = ui.empty({ title, text }); e.classList.add('bt-empty'); body.replaceChildren(e); };
+  const empty = (text: string): void => { body.replaceChildren(kit.wire(frag(kit.html.emptyState({ text })))); };
 
   function drawView(v: KanbanView): void {
     const cols = columnsOf(v.tasks);
-    if (!cols.length) { empty('Nothing on this board yet', 'When the group’s bots add tasks to the board ' + v.board.name + ', they show here, by state.'); return; }
+    if (!cols.length) { empty('Nothing on ' + v.board.name + ' yet: the group’s tasks show here, by state.'); return; }
     const t = now();
-    const sections = cols.map((c) => {
-      const s = frag(ui.html.section({ label: c.label, meta: String(c.tasks.length), open: true, name: c.key }));
-      const rows = c.tasks.map((k) => {
+    const html = cols.map((c) => '<section class="bt-state" data-state="' + c.key + '" aria-label="' + c.label + '">' + kit.html.sectionHead({ title: c.label, count: String(c.tasks.length) }) +
+      kit.html.card({ variant: 'settings', rows: [], attrs: { 'data-column': c.key }, body: kit.html.list({ label: c.label, attrs: { 'data-kit-part': null }, rows: c.tasks.map((k) => {
         const who = k.assignee ? assigneeBot(k.assignee) : null;
         const sub = [who ? who.name : 'nobody yet', timeline(k, t), k.problem ? 'stopped: ' + k.problem : ''].filter(Boolean).join(' · ');
-        return ui.html.row({ tag: 'div', class: 'bt-task', title: k.title || k.id, sub, lead: who ? orbHTML(who, 20, { state: 'idle' }) : '', end: esc(c.label.toLowerCase()), endTone: k.status === 'blocked' ? 'attention' : null, attrs: { 'data-task': k.id } });
-      });
-      s.querySelector('.ui-sec__body')?.insertAdjacentHTML('beforeend', '<ul class="ui-rows bt-tasks">' + rows.join('') + '</ul>');
-      return s;
-    });
-    body.replaceChildren(...sections);
-    ui.hydrate(body);
+        return { variant: 'item' as const, title: k.title || k.id, sub, ...(who ? { markHTML: kit.html.avatar({ bot: who, size: 20, state: 'idle' }) } : { markText: '–' }),
+          ...(k.status === 'blocked' ? { endHTML: kit.html.statusWord({ text: 'blocked', tone: 'red' }) } : {}), attrs: { 'data-task': k.id } };
+      }) }) }) + '</section>').join('');
+    body.replaceChildren(kit.wire(frag('<div class="bt-states">' + html + '</div>')));
     livenIn(body);
   }
-  const frag = (html: string): HTMLElement => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild as HTMLElement; };
 
   async function read(force: boolean): Promise<void> {
     const src = deps.source();
     const mine = ++gen;
-    if (!src) { empty('No board here', 'This build cannot read the engine’s kanban boards.'); note(''); return; }
+    if (!src) { empty('This build cannot read kanban boards.'); note(''); return; }
     try {
       if (!boards.length || force) {
         const all = await src.boards();
@@ -148,8 +150,7 @@ export function mountBoard(host: HTMLElement, deps: BoardDeps): BoardView {
       if (!group) return;
       if (slug === null || !boards.some((b) => b.slug === slug)) slug = boardFor(group.name, boards, loadBoardChoice(group.id));
       if (slug === null) {
-        const text = boards.length ? 'None of the engine’s boards is named like ' + group.name + '. Choose one above to see it here.' : 'The engine has no kanban board yet. When a board named ' + (slugOf(group.name) || 'like this group') + ' is made, it shows here.';
-        empty(boards.length ? 'No board chosen' : 'No board yet', text); note(''); return;
+        empty(boards.length ? 'No board is named like ' + group.name + ': choose one above.' : 'No kanban board yet: one named ' + (slugOf(group.name) || 'like this group') + ' shows here.'); note(''); return;
       }
       drawBar();
       const v = await src.view(slug);
@@ -160,8 +161,7 @@ export function mountBoard(host: HTMLElement, deps: BoardDeps): BoardView {
     } catch (e) {
       if (mine !== gen) return;
       last = '';
-      const e1 = ui.empty({ title: 'The board could not be read', text: message(e) });
-      e1.classList.add('bt-empty'); body.replaceChildren(e1);
+      empty('The board could not be read: ' + message(e));
       note('It will try again in a few seconds.');
     }
   }

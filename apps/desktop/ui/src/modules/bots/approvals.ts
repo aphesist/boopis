@@ -70,7 +70,7 @@ export function approvalsSection(start: Bot, deps: ApprovalsDeps): { el: HTMLEle
       (drafts.length ? sectionOf('Drafts', drafts.map((r) => draftBlock(r.rule as Rule, view, { forWhom: false })).join(''), { 'data-part': 'drafts' }) : '') +
       own + (adding ? newEditor() : '<div class="hx-set__acts">' + buttonHTML('Add a rule', { attrs: { 'data-rule-add': '' } }) + '</div>') + unknownKinds + change);
     if (keepKey) el.querySelector<HTMLElement>(keepKey)?.focus({ preventScroll: true });
-    const meta = el.closest('.ui-sec')?.querySelector('.ui-sec__meta');
+    const meta = el.closest('.bt-sec')?.querySelector('.k7-shead__value');
     if (meta) meta.textContent = metaOf(rows.length);
   }
 

@@ -76,7 +76,7 @@ describe('the board view', () => {
     const { host, view } = mount(src);
     view.show({ id: 'g1', name: 'paper past' });
     await view.settled(); await tick();
-    expect([...host.querySelectorAll('.ui-sec__label')].map((n) => n.textContent)).toEqual(['Todo', 'Running', 'Blocked']);
+    expect([...host.querySelectorAll('.bt-state .k7-shead__title')].map((n) => n.textContent)).toEqual(['Todo', 'Running', 'Blocked']);
     const a = host.querySelector('[data-task="a"]') as HTMLElement;
     expect(a.textContent).toContain('Fact-check');
     expect(a.textContent).toContain('kai');
@@ -84,32 +84,34 @@ describe('the board view', () => {
     expect(a.querySelector('orb-avatar, .ui-orb')).toBeTruthy();
     expect(host.querySelector('[data-task="b"]')?.textContent).toContain('stopped: no key');
     expect(host.querySelector('[data-task="c"]')?.textContent).toContain('nobody yet');
-    expect(host.querySelector('[data-task="b"] .ui-row__end')?.getAttribute('data-tone')).toBe('attention');
+    expect(host.querySelector('[data-task="b"] [data-kit~="StatusWord"]')?.textContent).toContain('blocked');
+    expect([...host.querySelectorAll('.bt-state')].every((s) => s.querySelector('[data-kit~="Card"] [data-kit~="ListRow"][data-variant="item"]'))).toBe(true);   /* a read-only Card column per state, its tasks ListRow items */
     expect(src.reads).toEqual(['paper-past']);
   });
 
   it('says so when the board is empty, when no board is named like the group, and when there is no board at all', async () => {
     let r = mount(source({ news: v('news', []) }));
     r.view.show({ id: 'g', name: 'news' }); await r.view.settled(); await tick();
-    expect(r.host.textContent).toContain('Nothing on this board yet');
+    expect(r.host.textContent).toContain('Nothing on news yet');
     r = mount(source({ default: v('default', []) }));
     r.view.show({ id: 'g', name: 'paper past' }); await r.view.settled(); await tick();
-    expect(r.host.textContent).toContain('No board chosen');
+    expect(r.host.textContent).toContain('No board is named like paper past');
     expect(r.host.querySelector('#hx-board-pick')).toBeTruthy();
     r = mount(source({}, []));
     r.view.show({ id: 'g', name: 'paper past' }); await r.view.settled(); await tick();
-    expect(r.host.textContent).toContain('No board yet');
+    expect(r.host.textContent).toContain('No kanban board yet');
     expect(r.host.textContent).toContain('paper-past');
     r = mount(undefined);
     r.view.show({ id: 'g', name: 'x' }); await r.view.settled(); await tick();
-    expect(r.host.textContent).toContain('No board here');
+    expect(r.host.textContent).toContain('This build cannot read kanban boards.');
   });
 
   it('shows the board the user chooses and remembers it for the group', async () => {
     const src = source({ default: v('default', [task({ id: 'd1', title: 'Default task' })]), other: v('other', [task({ id: 'o1', title: 'Other task', status: 'done' })]) });
     const { host, view } = mount(src);
     view.show({ id: 'g9', name: 'zzz' }); await view.settled(); await tick();
-    host.querySelector('#hx-board-pick')?.dispatchEvent(new CustomEvent('ui:change', { detail: { value: 'other' }, bubbles: true }));
+    (host.querySelector('#hx-board-pick') as HTMLElement).click();   /* the kit's Menu of boards */
+    [...document.querySelectorAll<HTMLElement>('.k7-menu[data-floating] [data-kit~="MenuRow"]')].find((r) => r.dataset['value'] === 'other')!.click();
     await view.settled(); await tick();
     expect(host.textContent).toContain('Other task');
     expect(loadBoardChoice('g9')).toBe('other');
@@ -146,7 +148,7 @@ describe('the board view', () => {
     views['paper-past'] = v('paper-past', [task({ id: 'a', title: 'One', status: 'running' })]);
     await vi.advanceTimersByTimeAsync(60); await tick(10);
     expect(host.querySelector('[data-task="a"]')).not.toBe(row);
-    expect(host.querySelector('.ui-sec__label')?.textContent).toBe('Running');
+    expect(host.querySelector('.bt-state .k7-shead__title')?.textContent).toBe('Running');
     const n = src.reads.length;
     view.stop();
     await vi.advanceTimersByTimeAsync(200); await tick(10);

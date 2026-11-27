@@ -59,8 +59,10 @@ describe('a long name: an ellipsis, and the whole name as a tooltip only while i
     const root = document.createElement('div');
     document.body.append(root);
     S.viewRoot = root;
-    const head = mk('bt-p-name', LONG, root), who = mk('bt-who-name', LONG, root), fits = mk('bt-sh-name', 'atlas', root);
-    const archive = document.createElement('button'), label = mk('bt-arch-label', 'Archive ' + LONG, archive);
+    const row = document.createElement('div'); row.setAttribute('data-clip-name', ''); root.append(row);
+    const head = mk('bt-p-name', LONG, root), who = mk('bt-who-name', LONG, root), fits = mk('k7-row__label', 'atlas', row);
+    const archive = document.createElement('button'), label = mk('k7-btn__label', 'Archive ' + LONG, archive);
+    archive.setAttribute('data-clip-label', '');
     root.append(archive);
     layout(head, { scrollW: 200, clientW: 100 }); layout(who, { scrollW: 200, clientW: 100 }); layout(fits, { scrollW: 40, clientW: 100 }); layout(label, { scrollW: 200, clientW: 100 });
     checkClips(); checkClips(); checkClips();

@@ -30,27 +30,27 @@ afterEach(() => { vi.useRealTimers(); });
 
 describe('the new-bot form: names', () => {
   it('has a dice button that says what it does and what its key is', () => {
-    const dice = q('.bt-dice');
+    const dice = q('[data-dice]');
     expect(dice.getAttribute('aria-label')).toBe('Surprise me with a name, colour and shape');
     expect(dice.getAttribute('data-tip')).toBe('Surprise me');
     expect(dice.getAttribute('aria-keyshortcuts')).toBe('Alt+R');
-    expect(dice.querySelector('svg.ui-icon')).toBeTruthy();
-    expect(q('.bt-name').getAttribute('aria-keyshortcuts')).toBe('Alt+R');
+    expect(dice.querySelector('svg')).toBeTruthy();
+    expect(q('[data-new-name]').getAttribute('aria-keyshortcuts')).toBe('Alt+R');
   });
   it('the button is never disabled for want of a name', () => {
-    expect(q<HTMLButtonElement>('.bt-go').disabled).toBe(false);
-    expect(q('.bt-go-label').textContent).toBe('Create bot');
+    expect(q<HTMLButtonElement>('[data-go]').disabled).toBe(false);
+    expect(q('[data-go] .k7-btn__label').textContent).toBe('Create bot');
   });
   it('the dice puts a free name from the list in the field and on the button', () => {
-    q('.bt-dice').click();
-    const name = q<HTMLInputElement>('.bt-name').value;
+    q('[data-dice]').click();
+    const name = q<HTMLInputElement>('[data-new-name]').value;
     expect(NAME_POOL).toContain(name);
     expect(data().bots.snapshot().bots.map((b) => b.id)).not.toContain(name);
-    expect(q('.bt-go-label').textContent).toBe('Create ' + name);
+    expect(q('[data-go] .k7-btn__label').textContent).toBe('Create ' + name);
     expect(S.draft?.name).toBe(name);
   });
   it('alt+R in the name field rolls a name, and the browser does not get the key', () => {
-    const input = q<HTMLInputElement>('.bt-name');
+    const input = q<HTMLInputElement>('[data-new-name]');
     const e = alt('KeyR');
     input.dispatchEvent(e);
     expect(e.defaultPrevented).toBe(true);
@@ -60,10 +60,10 @@ describe('the new-bot form: names', () => {
     expect(input.value).not.toBe(before);                    // a reroll never lands on what is in the field
   });
   it('alt+R matches by code (Option+R types a symbol on a Mac) and ignores other chords', () => {
-    const input = q<HTMLInputElement>('.bt-name');
+    const input = q<HTMLInputElement>('[data-new-name]');
     input.dispatchEvent(alt('KeyR', { key: '®' }));
     expect(NAME_POOL).toContain(input.value);
-    input.value = ''; q('.bt-dice').click(); const rolled = input.value;
+    input.value = ''; q('[data-dice]').click(); const rolled = input.value;
     const shifted = alt('KeyR', { shiftKey: true }); input.dispatchEvent(shifted);
     const plain = new KeyboardEvent('keydown', { key: 'r', code: 'KeyR', bubbles: true, cancelable: true }); input.dispatchEvent(plain);
     expect(shifted.defaultPrevented).toBe(false);
@@ -72,26 +72,26 @@ describe('the new-bot form: names', () => {
   });
   it('an empty name is given one from the list when the bot is created', () => {
     const before = data().bots.snapshot().bots.length;
-    q('.bt-go').click();
+    q('[data-go]').click();
     const after = data().bots.snapshot().bots;
     expect(after.length).toBe(before + 1);
     expect(NAME_POOL).toContain(after[after.length - 1]?.name);
-    expect(q<HTMLInputElement>('.bt-name').value).toBe(after[after.length - 1]?.name);
+    expect(q<HTMLInputElement>('[data-new-name]').value).toBe(after[after.length - 1]?.name);
   });
   it('a name in use says it will be numbered, and the provider numbers it', () => {
-    const input = q<HTMLInputElement>('.bt-name');
+    const input = q<HTMLInputElement>('[data-new-name]');
     input.value = 'atlas'; input.dispatchEvent(new Event('input'));
-    expect(q('.bt-name-note').textContent).toBe('atlas is taken, so this one will be atlas-2.');
-    expect(input.getAttribute('aria-describedby')).toBe(q('.bt-name-note').id);
-    q('.bt-go').click();
+    expect(q('#bt-new-name-hint').textContent).toBe('atlas is taken, so this one will be atlas-2.');
+    expect(input.getAttribute('aria-describedby')).toBe(q('#bt-new-name-hint').id);
+    q('[data-go]').click();
     expect(data().bots.snapshot().bots.map((b) => b.id)).toContain('atlas-2');
   });
   it('a long name stays whole in the field value, the accessible name and the tooltip, and is cut only by CSS', () => {
-    const input = q<HTMLInputElement>('.bt-name');
+    const input = q<HTMLInputElement>('[data-new-name]');
     const long = 'cassiopeia-staging-deploy-g';
     input.value = long; input.dispatchEvent(new Event('input'));
-    expect(q('.bt-go-label').textContent).toBe('Create ' + input.value);
-    expect(q('.bt-go').getAttribute('data-tip')).toBe('Create ' + input.value);
+    expect(q('[data-go] .k7-btn__label').textContent).toBe('Create ' + input.value);
+    expect(q('[data-go]').getAttribute('data-tip')).toBe('Create ' + input.value);
     expect(q('.bt-stage button').getAttribute('aria-label')).toBe('Preview of ' + input.value);
   });
 });
@@ -100,7 +100,7 @@ describe('the new-bot form: the dice rolls the look', () => {
   const cur = () => ({ shape: S.draft?.shape, color: S.draft?.color });
   it('changes name, colour and shape, and the preview follows', () => {
     const before = cur(); const orb = q('.bt-stage orb-avatar');
-    q('.bt-dice').click();
+    q('[data-dice]').click();
     const d = S.draft!;
     expect(d.shape !== before.shape || d.color !== before.color).toBe(true);
     expect(orb.getAttribute('shape')).toBe(d.shape);
@@ -108,12 +108,12 @@ describe('the new-bot form: the dice rolls the look', () => {
   });
   it('a manual pick stays until the next roll', () => {
     [...document.querySelectorAll<HTMLElement>('[role=tab]')].find((t) => t.textContent === 'Shape')!.click();
-    q<HTMLElement>('.bt-opt[data-val=star]').click();
-    q<HTMLInputElement>('.bt-name').dispatchEvent(new Event('input'));
+    q<HTMLElement>('[data-look] [role=radio][data-value=star]').click();
+    q<HTMLInputElement>('[data-new-name]').dispatchEvent(new Event('input'));
     q<HTMLTextAreaElement>('textarea').dispatchEvent(new Event('input'));
     expect(S.draft?.shape).toBe('star');
     const colour = S.draft?.color;
-    q('.bt-dice').click();
+    q('[data-dice]').click();
     expect(S.draft?.shape !== 'star' || S.draft?.color !== colour).toBe(true);
   });
   it('has no way to choose eyes', () => {

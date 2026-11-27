@@ -2,7 +2,7 @@
      html            string templates for modules that build innerHTML
      the factories   button, iconButton, segmented, chip, row, group, ... -> an element, already wired
      hydrate(root)   wires every [data-ui] element under root once
-     select (the themed select), listbox (its list: a chip's picker), modelEntries, popover, layer, tooltip, hold, orb, liven, glance, announce, shape, squircle, modelMark, icon, botState
+     popover, layer, tooltip, hold, orb, liven, glance, announce, shape, squircle, modelMark, icon, botState
    Events bubble from the element and are cancelable where an action follows:
      'ui:change' {value}  segmented, switch, chip, option group
      'ui:commit'          hold to approve finished
@@ -21,11 +21,8 @@ import { isRoute, lastModel, modelFamily, modelHTML, modelMark as modelMarkEl, p
 import type { ModelOpts, ModelRef } from './model-mark';
 import { modView, modViewUpdate, h as modH, sanitizeSvg, validateTree, LIMITS as MOD_LIMITS, modColors } from './mod-view';
 import { glance, liven, orb } from './orb';
-import { listbox, wireSelect } from './select';
-import type { SelectElement } from './select';
-import { modelEntries } from './select-html';
 import { shortName, aliasOf, canon, modelName, providerName, sameModel, splitRef } from './model-name';
-import type { SelectEntry, SelectGroup, SelectOpts, SelectOption } from './select-html';
+import type { SelectEntry, SelectGroup, SelectOption } from './select-entries';
 import { shape } from './shape';
 import { squircle } from './squircle';
 import type { SigninButtonOpts } from './signin-button';
@@ -65,7 +62,6 @@ const factories = {
   scroll: make<Parameters<typeof html.scroll>[0]>(html.scroll),
   tabs: make<Parameters<typeof html.tabs>[0], SegElement>(html.tabs),
   field: make<FieldOpts>(html.field),
-  select: make<SelectOpts, SelectElement>(html.select),
   empty: make<Parameters<typeof html.empty>[0]>(html.empty),
   row: make<RowOpts, HTMLLIElement>(html.row),
   signinButton: make<SigninButtonOpts, HTMLButtonElement>(html.signinButton),
@@ -91,13 +87,13 @@ export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
   ...factories, legend, keys, inline, scrollClass, scrollEdges,
   markdown, copyText, kit,
-  hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, popover, layer, listbox, modelEntries, wireSelect, tooltip, card,
+  hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, popover, layer, tooltip, card,
   hold: Object.assign(holdElement, { wire: wireHold }),
   /** a Claude Code mod's element tree, drawn with the library (MODS.md section 2) */
   modView: Object.assign(modView, { update: modViewUpdate, validate: validateTree, limits: MOD_LIMITS, sanitizeSvg, h: modH, colors: modColors })
 };
 export type Ui = typeof ui;
-export { html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, popover, layer, listbox, modelEntries, tooltip, card, wireHold, holdElement };
+export { html, icon, hydrate, hydrateOne, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, popover, layer, tooltip, card, wireHold, holdElement };
 export type { SegElement } from './wire';
 /* the v7 kit (DESIGN-SYSTEM.md v7 section 21), on a v7 root */
 export { kit, kitVariants } from './v7';
@@ -130,8 +126,7 @@ export type { ItemRef, ServiceMark } from './item-mark';
 export { variants } from './variants';
 export type { ComponentName } from './variants';
 export type { InputOpts, BadgeOpts } from './html';
-export type { SelectElement, ListboxOpts } from './select';
-export type { SelectEntry, SelectGroup, SelectOpts, SelectOption };
+export type { SelectEntry, SelectGroup, SelectOption };
 export { scroll, scrollClass, scrollVariants, SCROLL_AXES } from './scroll';
 export { tabs, tabsVariants, fitTabs } from './tabs';
 export type { TabDef, TabsOpts } from './tabs';

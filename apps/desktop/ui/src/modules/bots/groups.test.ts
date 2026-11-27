@@ -416,25 +416,25 @@ describe('a message written while the members are working', () => {
 describe('making a group', () => {
   beforeEach(async () => { mount(withGroups()); const { emit } = await import('../../core/bus'); emit('hx:new-group', { from: 'test' }); });
   it('opens the form with every bot to pick, and cannot be made with fewer than two', () => {
-    expect(q('.bt-new:not([hidden]) .bt-name').getAttribute('aria-label')).toBe('Group name');
-    expect(document.querySelectorAll('.bt-new:not([hidden]) .bt-member').length).toBe(provider.bots.snapshot().bots.length);
-    expect(q<HTMLButtonElement>('.bt-new:not([hidden]) .bt-go').disabled).toBe(true);
-    q('.bt-new:not([hidden]) .bt-member').click();
-    expect(q<HTMLButtonElement>('.bt-new:not([hidden]) .bt-go').disabled).toBe(true);
+    expect(q('.bt-new:not([hidden]) label[for="bt-group-name"]').textContent).toBe('Name');
+    expect(document.querySelectorAll('.bt-new:not([hidden]) [data-member]').length).toBe(provider.bots.snapshot().bots.length);
+    expect(q<HTMLButtonElement>('.bt-new:not([hidden]) [data-go]').disabled).toBe(true);
+    q('.bt-new:not([hidden]) [data-member]').click();
+    expect(q<HTMLButtonElement>('.bt-new:not([hidden]) [data-go]').disabled).toBe(true);
   });
   it('stops at six members', () => {
-    const members = [...document.querySelectorAll<HTMLElement>('.bt-new:not([hidden]) .bt-member')];
+    const members = [...document.querySelectorAll<HTMLElement>('.bt-new:not([hidden]) [data-member]')];
     members.forEach((m) => m.click());
     expect(members.filter((m) => m.getAttribute('aria-checked') === 'true')).toHaveLength(Math.min(6, members.length));
   });
   it('makes the group with the picked bots and opens it', async () => {
-    const members = [...document.querySelectorAll<HTMLElement>('.bt-new:not([hidden]) .bt-member')];
+    const members = [...document.querySelectorAll<HTMLElement>('.bt-new:not([hidden]) [data-member]')];
     members[0]!.click(); members[1]!.click();
-    const name = q<HTMLInputElement>('.bt-new:not([hidden]) .bt-name');
+    const name = q<HTMLInputElement>('.bt-new:not([hidden]) [data-group-name]');
     name.value = 'night shift';
-    q<HTMLButtonElement>('.bt-new:not([hidden]) .bt-go').click();
+    q<HTMLButtonElement>('.bt-new:not([hidden]) [data-go]').click();
     await flush();
-    expect(calls.find((c) => c.fn === 'create')!.args).toEqual([{ name: 'night shift', bots: [members[0]!.dataset['id'], members[1]!.dataset['id']] }]);
+    expect(calls.find((c) => c.fn === 'create')!.args).toEqual([{ name: 'night shift', bots: [members[0]!.dataset['member'], members[1]!.dataset['member']] }]);
     expect(S.view).toBe('group');
     expect(q('#hx-right-bots .k7-pane__name').textContent).toBe('night shift');
     expect(document.querySelectorAll('.bt-group-rows [data-kit~="ListRow"]')).toHaveLength(2);
@@ -443,20 +443,20 @@ describe('making a group', () => {
     const m = createMockProvider({ simulate: false, fixtures: ['groups'] });
     mount({ ...m, groups: { ...m.groups, create: () => Promise.reject(new Error('The room worker is off.')) } });
     const { emit } = await import('../../core/bus'); emit('hx:new-group', { from: 'test' });
-    const members = [...document.querySelectorAll<HTMLElement>('.bt-new:not([hidden]) .bt-member')];
+    const members = [...document.querySelectorAll<HTMLElement>('.bt-new:not([hidden]) [data-member]')];
     members[0]!.click(); members[1]!.click();
-    q<HTMLButtonElement>('.bt-new:not([hidden]) .bt-go').click();
+    q<HTMLButtonElement>('.bt-new:not([hidden]) [data-go]').click();
     await flush();
-    expect(q('.bt-new:not([hidden]) .bt-confirm-err').textContent).toContain('The room worker is off.');
+    expect(q('.bt-new:not([hidden]) [data-group-error]').textContent).toContain('The room worker is off.');
   });
   it('changing members says it makes a new group and archives this one, then asks for it', async () => {
     openRoom(); await flush();
     paneRow('members').click();
     expect(q('.bt-new:not([hidden])').textContent).toMatch(/archives this one/);
-    const picked = [...document.querySelectorAll<HTMLElement>('.bt-new:not([hidden]) .bt-member')].filter((m) => m.getAttribute('aria-checked') === 'true');
+    const picked = [...document.querySelectorAll<HTMLElement>('.bt-new:not([hidden]) [data-member]')].filter((m) => m.getAttribute('aria-checked') === 'true');
     expect(picked).toHaveLength(3);
     picked[2]!.click();
-    q<HTMLButtonElement>('.bt-new:not([hidden]) .bt-go').click();
+    q<HTMLButtonElement>('.bt-new:not([hidden]) [data-go]').click();
     await flush();
     expect(calls.find((c) => c.fn === 'setMembers')!.args[0]).toBe('room-release');
     expect((calls.find((c) => c.fn === 'setMembers')!.args[1] as string[]).length).toBe(2);
@@ -465,7 +465,7 @@ describe('making a group', () => {
     const m = createMockProvider({ simulate: false });
     mount({ ...m, groups: { ...m.groups, note: () => 'Group chat is not running in the engine. Restart boopis and try again.' } });
     const { emit } = await import('../../core/bus'); emit('hx:new-group', { from: 'test' });
-    expect(q<HTMLButtonElement>('.bt-new:not([hidden]) .bt-go').disabled).toBe(true);
+    expect(q<HTMLButtonElement>('.bt-new:not([hidden]) [data-go]').disabled).toBe(true);
     expect(q('.bt-new:not([hidden])').textContent).toContain('not running');
   });
 });
@@ -619,6 +619,6 @@ describe('a group’s kanban board', () => {
     openRoom(); await flush();
     board().click();
     await flush();
-    expect(q('.bt-board').textContent).toContain('No board here');
+    expect(q('.bt-board').textContent).toContain('This build cannot read kanban boards.');
   });
 });

@@ -4,6 +4,7 @@
    one ringed in the focus colour ── */
 .k7-swatches { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); padding: 0 var(--gap-hair); }
 .k7-swatches__item { display: inline-grid; place-items: center; flex: none; width: var(--ctl-s); height: var(--ctl-s); border-radius: var(--r-pill); }
+.k7-swatches__face { display: inline-grid; place-items: center; width: var(--ctl-s); height: var(--ctl-s); border-radius: var(--r-pill); }
 .k7-swatches__dot { width: var(--ctl-s); height: var(--ctl-s); border-radius: var(--r-pill); box-shadow: inset 0 0 0 var(--hl) var(--hair); }
 .k7-swatches__item[aria-checked="true"] { box-shadow: 0 0 0 var(--focus-w) var(--focus); }
 .k7-swatches__item[role="radio"]:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-off); }

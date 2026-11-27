@@ -1,13 +1,10 @@
-/* boopis · bots tab. A bot's chat, a room and the Bots sidebar are the v7 kit's (docs/design/v7/REPASS.md): for them this file holds
-   placement only (the last section). What is still v6 keeps its own looks here until its step: the new-bot and new-group forms
-   (stage, name, pickers, suggestions) and the settings sheet. Every colour, font and radius is a token; --c on a swatch is an orb
-   colour (data). */
+/* boopis · bots tab. A bot's chat, a room, the Bots sidebar, the settings sheet, the new-bot and new-group forms and a group's board are
+   the v7 kit's (docs/design/v7/REPASS.md; the sheet, the forms and the board since step 2a): this file holds placement only. */
 
 .bt-list { font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui); color: var(--text); }
 .bt-view { color: var(--text); }   /* the Bots view takes the v7 root's own type (14/20, 0.01em): a board's thread inherits them */
 .bt-preview { margin: 0 0 var(--sp-2); font-size: var(--fs-xs); line-height: 1.5; color: var(--text-quiet); }
 .bt-view [hidden], .bt-list[hidden] { display: none !important; }
-:where(.bt-view, .bt-list) :where(button.bt-opt, button.bt-sugg, button.bt-p-sched) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
 
 /* ================================================================ sidebar list (v7: the kit's ListRows; the rail is the kit's Rail, list.ts) */
 /* board K02 (kit.css `.sb-open`): the rows 10 in from the sidebar's sides, one under the other with nothing between; "Groups" and the rooms' rows after the bots' */
@@ -34,82 +31,58 @@
 /* the thread: each turn is a focus stop (the ring comes from the root) */
 .bt-log { display: flex; flex-direction: column; }
 .bt-empty { justify-items: start; text-align: left; padding: 0; }
-/* a group's kanban board takes the thread's place: the board's chooser and its state line, then a section of rows for each column */
+/* a group's kanban board takes the thread's place: the board's chooser and its state line, then a read-only Card column for each state
+   (step 2a), as many side by side as the column holds */
 .bt-board { display: grid; gap: var(--sp-3); padding-bottom: var(--sp-6); }
 .bt-board-bar { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 .bt-board-status { margin: 0; }
-.bt-board-body { display: grid; gap: var(--sp-3); }
-/* ================================================================ new bot (bots' own form) */
+.bt-states { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); align-items: start; gap: var(--sp-3); }
+.bt-state { display: flex; flex-direction: column; min-width: 0; }
+.bt-state .k7-list { display: flex; flex-direction: column; }
+/* ================================================================ the new-bot and new-group forms (step 2a: the kit's Dialog in its form
+   shape, drawn in the view in place of the room): placement only */
 .bt-new-scroll { padding-bottom: calc(var(--hx-dock-space, 0px) + var(--sp-6)); }
-.bt-new-col { position: relative; padding: var(--sp-6) 0; }
-.bt-new-close { position: absolute; top: var(--sp-6); right: 0; }
-.bt-new-form { display: flex; flex-direction: column; align-items: center; }
-.bt-stage { width: 168px; height: 160px; display: grid; place-items: center; }
-/* the name field and its dice: the field stays centred under the orb, the dice sits inside its right end */
-.bt-name-row { position: relative; width: min(360px, 100%); margin: var(--sp-2) 0 0; }
-.bt-dice { position: absolute; right: 0; bottom: 6px; color: var(--text-quiet); }
-.bt-dice:hover, .bt-dice:focus-visible { color: var(--text); }
-.bt-name-note { min-height: calc(var(--fs-xs) * 1.5); margin: var(--sp-1) 0 var(--sp-4); max-width: min(360px, 100%); text-align: center; font-size: var(--fs-xs); line-height: 1.5; color: var(--text-quiet); overflow-wrap: anywhere; }
-.bt-name {
-  box-sizing: border-box; width: 100%; margin: 0; padding: var(--sp-1) var(--sp-7) var(--sp-2); text-align: center; text-overflow: ellipsis;
-  background: none; border: 0; border-bottom: 1px solid var(--line-field); outline: 0;
-  font: inherit; font-size: var(--fs-xl); font-weight: 600; line-height: var(--lh-tight); color: var(--text-strong); caret-color: var(--brass);
-}
-.bt-name::placeholder { color: var(--text-quiet); font-weight: 400; text-transform: var(--ui-case); }
-.bt-name:hover { border-bottom-color: var(--line-strong); }
-.bt-name:focus { border-bottom-color: var(--brass); }
-.bt-name:focus-visible { outline: none; }
-.bt-appearance { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); width: 100%; margin-bottom: var(--sp-6); }
-/* in a bot's settings (the look editor) the picker sits in a section: flush with its fields, the dice at the end of the tabs' line */
-.bt-appearance--sheet { align-items: stretch; margin-bottom: 0; }
-.bt-appearance--sheet .bt-pick { justify-content: flex-start; }
-.bt-appearance--sheet .bt-opts { justify-content: flex-start; }
-.bt-appearance-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
-.bt-look-dice { color: var(--text-quiet); }
-.bt-look-dice:hover, .bt-look-dice:focus-visible { color: var(--text); }
-.bt-pick { width: 100%; min-height: calc(var(--ctl) + 6px); display: flex; justify-content: center; }
-.bt-opts { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }
-.bt-opt { width: calc(var(--ctl) + 6px); height: calc(var(--ctl) + 6px); border-radius: var(--r-pill);   /* a pill: the colour circle in it stays a circle at --sp-2 (R-corner-9) */ display: grid; place-items: center; transition: background-color var(--dur-out) var(--ease); --sq-bg: transparent; background: var(--sq-bg); }
-.bt-opt:hover { --sq-bg: var(--hover); background: var(--sq-bg); transition-duration: var(--dur-1); }
-.bt-opt[aria-checked="true"] { --sq-bg: var(--current); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--brass); }
-.bt-swatch { width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--c); box-shadow: inset 0 0 0 1px var(--hair); }
-.bt-new-field { width: min(480px, 100%); }
-.bt-go-row { display: flex; justify-content: center; margin-top: var(--sp-5); }
-.bt-go { min-width: 148px; max-width: 100%; }
-.bt-go-label { display: block; max-width: min(36ch, calc(100vw - 2 * var(--gutter) - 48px)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bt-suggest { margin-top: var(--sp-7); }
-.bt-suggest-h { margin: 0 0 var(--sp-3); }
-.bt-suggest-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); }
-.bt-sugg {
-  display: flex; align-items: flex-start; gap: var(--sp-3); padding: 14px 16px; border-radius: var(--r-m); text-align: left;
-  --sq-bg: var(--bg-0); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair); transition: box-shadow var(--dur-out) var(--ease);
-}
-.bt-sugg:hover { box-shadow: inset 0 0 0 1px var(--line); transition-duration: var(--dur-1); }
-.bt-sugg-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.bt-sugg-name { font-size: var(--fs-s); font-weight: 500; color: var(--text-strong); text-transform: var(--ui-case); }
-.bt-sugg-desc { font-size: var(--fs-xs); line-height: 1.5; color: var(--text-dim); }
-[data-margin="off"] .bt-suggest-row { grid-template-columns: minmax(0, 1fr); }
+.bt-new-col { position: relative; display: flex; justify-content: center; padding: var(--sp-6) 0; }
+.bt-new-col > .k7-dialog { width: min(var(--dialog-form), 100%); }
+.bt-new-form { display: flex; flex-direction: column; align-items: stretch; gap: var(--sp-3); }
+.bt-stage { align-self: center; width: 168px; height: 160px; display: grid; place-items: center; }
+.bt-name-row { display: flex; align-items: flex-end; gap: var(--sp-2); }
+.bt-name-row > .k7-field { flex: 1 1 auto; min-width: 0; }
+.bt-name-row > [data-dice] { flex: none; margin-bottom: var(--sp-1); }
+.bt-suggest { display: flex; flex-direction: column; }
+.bt-members { display: flex; flex-direction: column; gap: var(--gap-hair); }
+.bt-confirm { display: flex; flex-direction: column; gap: var(--sp-2); }
+.bt-confirm__path { overflow-wrap: anywhere; user-select: all; }
+.bt-confirm__acts, .bt-review__acts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-2); }
 
-/* ================================================================ settings sheet: a .ui-panel placed in the view */
+/* the look picker (look-picker.ts): the kit's Segmented tabs, the dice at their end in the sheet, the Swatches under them */
+.bt-look { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); }
+.bt-look__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.bt-look--sheet { align-items: stretch; }
+.bt-look--sheet .bt-look__panel { display: flex; }
+
+/* ================================================================ a bot's settings sheet (settings.ts, step 2a): the kit's Pane as a sheet,
+   placed flush right in the view, --right-w wide; it slides in */
 .bt-sheet {
-  position: absolute; top: 0; right: 0; bottom: 0; z-index: 5; width: var(--right-w); max-width: 100%; height: auto;
+  position: absolute; top: 0; right: 0; bottom: 0; z-index: 5; width: var(--right-w); max-width: 100%;
   transform: translateX(100%); transition: transform var(--dur-3) var(--spring);
 }
 .bt-sheet.is-open { transform: none; }
-.bt-sheet-corner { top: 0; left: calc(-1 * var(--r-l)); }
-.bt-sh-who { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 20px var(--sp-4); }
-.bt-sh-who > .ui-orb-btn { flex: none; }
-.bt-sh-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-m); font-weight: 600; color: var(--text-strong); }
-.bt-sh-role { min-width: 0; flex-shrink: 3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); color: var(--text-quiet); }
-.bt-sheet .ui-sec__body { display: flex; flex-direction: column; gap: var(--sp-3); }
-.bt-model { display: flex; flex-direction: column; gap: var(--sp-2); }
-.bt-cap { width: 80px; text-align: right; }
-/* the project folder's label keeps its one line beside the path field (R-row-1): the field gives way, not the label */
-.bt-sheet .ui-set__row:has([id^="bt-project-"]) > .ui-set__label { flex: none; }
-.bt-arch-label { display: block; max-width: 15ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* corners (DESIGN-SYSTEM §8): every surface here is loose (nothing sits in another's corner), on the radius tokens;
-   the sheet is flush to the frame and takes the library's concave corner; circles are round */
+.bt-sheet > .k7-pane { width: 100%; height: 100%; }
+.bt-sec { display: flex; flex-direction: column; }
+.bt-sec__body { display: flex; flex-direction: column; gap: var(--sp-2); padding-bottom: var(--sp-2); }
+.bt-sec__body[hidden] { display: none; }
+.bt-sheet__error[hidden], .bt-review[hidden] { display: none; }
+.bt-sheet .k7-row > .k7-field { flex: 0 1 50%; min-width: 0; }
+.bt-cap { text-align: end; }
+.bt-presets { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.bt-routines, .bt-caps, .bt-project { display: flex; flex-direction: column; gap: var(--sp-1); }
+[data-routine][data-going] { opacity: .6; }
+.bt-routine-to { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: 0; padding: 0 var(--sp-3) var(--sp-2); }
+.bt-add-row { display: flex; justify-content: flex-end; }
+.bt-review { margin-bottom: var(--sp-2); }
+.bt-review__flow { display: flex; flex-direction: column; gap: var(--sp-2); }
+.bt-sheet [data-clip-label] .k7-btn__label { display: block; max-width: 15ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* every live orb answers the pointer */
 orb-avatar.is-live { cursor: pointer; }
@@ -119,55 +92,10 @@ orb-avatar.is-live { cursor: pointer; }
 }
 @media (max-width: 760px) {
   .bt-sheet { width: 100%; }
-  .bt-sheet-corner { display: none; }
 }
-/* drawn corners (DESIGN-SYSTEM.md §8; bound at start-up with HX.ui.squircle.auto): the line is --sq-line */
-.bt-sugg { --sq-line: var(--hair); }
-.bt-sugg:hover { --sq-line: var(--line); }
-.bt-opt[aria-checked="true"] { --sq-line: var(--brass); }
-
-/* making a live bot: the folder it creates, confirmed first */
-.bt-confirm { display: grid; gap: var(--sp-2); padding: var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); width: 100%; }
-.bt-confirm-line { margin: 0; font-size: var(--fs-s); line-height: 1.5; color: var(--text-dim); }
-.bt-confirm-note { color: var(--text-quiet); font-size: var(--fs-xs); }
-.bt-confirm-path { margin: 0; font-size: var(--fs-xs); color: var(--text); overflow-wrap: anywhere; user-select: all; }
-.bt-confirm-err { margin: 0; font-size: var(--fs-xs); color: var(--red-text); }
-.bt-confirm-err:empty { display: none; }
-.bt-confirm-acts { display: flex; gap: var(--sp-2); justify-content: flex-end; }
-
-/* the live sheet: the diff to review, the question before a delete, the routines */
-.bt-review { display: grid; gap: var(--sp-2); padding: var(--sp-3); margin-bottom: var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); }
-.bt-review[hidden] { display: none; }
-.bt-review-h { margin: 0; font-size: var(--fs-s); font-weight: 600; color: var(--text); }
-.bt-review-acts { display: flex; gap: var(--sp-2); justify-content: flex-end; flex-wrap: wrap; }
-.bt-gone-list { margin: 0; padding-left: var(--sp-4); display: grid; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--text-dim); }
-.bt-routines { list-style: none; margin: 0 0 var(--sp-2); padding: 0; display: grid; gap: var(--sp-1); }
-.bt-routine { display: flex; align-items: center; gap: var(--sp-2); }
-.bt-routine > :first-child { flex: 1; min-width: 0; }
-.bt-routine.is-going { opacity: .6; }
-.bt-routine-main { display: grid; gap: var(--sp-1); }
-.bt-routine-to { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
-.bt-routine-text { display: grid; gap: 2px; font-size: var(--fs-s); }
-.bt-routine-note { font-size: var(--fs-xs); color: var(--text-quiet); }
-.bt-add-row { display: flex; justify-content: flex-end; margin-top: var(--sp-2); }
-.bt-caps { display: grid; gap: var(--sp-1); }
 
 /* ================================================================ groups (team chat) */
 .bt-groups { display: flex; flex-direction: column; }
-.bt-members { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); margin-top: var(--sp-4); width: 100%; }
-[data-margin="off"] .bt-members { grid-template-columns: minmax(0, 1fr); }
-.bt-member {
-  font: inherit; color: inherit; text-align: inherit; background: none; border: 0; padding: 0; margin: 0; box-sizing: border-box; display: flex; align-items: flex-start; gap: var(--sp-3); padding: 14px 16px; border-radius: var(--r-m); cursor: pointer; min-width: 0;
-  background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--hair); transition: box-shadow var(--dur-out) var(--ease);
-}
-.bt-member:hover { box-shadow: inset 0 0 0 1px var(--line); transition-duration: var(--dur-1); }
-.bt-member[aria-checked="true"] { box-shadow: inset 0 0 0 2px var(--brass); }
-.bt-member[aria-disabled="true"] { opacity: .5; cursor: default; }
-.bt-member:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-offset); }
-.bt-new-col .bt-name-row { width: min(360px, 100%); }
-.bt-new-col .bt-name-note { text-align: left; margin-inline: 0; }
-.bt-new-col .bt-go-row { margin-top: var(--sp-4); }
-.bt-new-col > .bt-p-name { margin: 0 0 var(--sp-2); font-size: var(--fs-xl); font-weight: 600; line-height: var(--lh-ui); color: var(--text-strong); }   /* the page's one display line, in the display size (not the browser's h1) */
 
 /* ================================================================ boards 11, 17 and 12: a bot's chat and a room (docs/design/v7/boards:
    botscreens.js bot11, work17, room12; kit.css). Placement only: every look here is the kit's.

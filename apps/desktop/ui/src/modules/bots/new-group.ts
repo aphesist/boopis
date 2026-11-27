@@ -1,13 +1,14 @@
 /* Making a group, and changing the members of one: a name, and the bots that are in it (two to six). A room's members are
    fixed when it is made (the engine's rule), so changing them makes a new room with the same name and archives the old one;
-   the form says so before it does. The bots are chosen with checkbox buttons that show each bot's orb. */
+   the form says so before it does. On the kit (the repass's step 2a): the kit's Dialog in its form shape, drawn in the view in place of
+   the room, with the kit's Field for the name and the bots as the kit's OptionRows that check (each led by its orb at 20, its name and
+   its role: O-B06's team plan, the nearest drawn state, rule 6), and Create as its Button. */
 import { emit } from '../../core/bus';
-import { el } from '../../core/dom';
+import { el, esc, frag } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { ui } from '@boopis/ui';
+import { kit } from '@boopis/ui';
 import { data } from '../../data';
 import { bot, group, initGroups, S } from './model';
-import { orbEl } from './orbs';
 import { markSelected } from './list';
 import { closeSettings } from './settings';
 import { openGroup } from './group-room';
@@ -51,60 +52,66 @@ function build(editId: string | null): void {
   const old = editId ? group(editId) : undefined;
   const picked = new Set<string>(old ? old.members.map((m) => m.profile) : []);
   const { min, max } = src.limits;
-
-  const title = el('h1', { class: 'bt-p-name', text: old ? 'Members of ' + old.name : 'New group' });
-  const lead = el('p', { class: 'bt-confirm-line', text: old
-    ? 'The members of a group are fixed when it is made, so this makes a new group called ' + old.name + ' with the bots you pick and archives this one. Its messages stay in Archived.'
-    : 'A group is a conversation among ' + min + ' to ' + max + ' of your bots and you. ' + src.nature });
-  const nameIn = el('input', { class: 'bt-name', type: 'text', maxlength: '200', placeholder: 'Name the group', 'aria-label': 'Group name', autocomplete: 'off', spellcheck: 'false', value: old?.name ?? '' });
-  const nameRow = el('div', { class: 'bt-name-row' }, nameIn);
-  if (old) nameIn.disabled = true;
-
-  const list = el('div', { class: 'bt-members', role: 'group', 'aria-label': 'Members' });
-  const count = el('p', { class: 'bt-name-note', role: 'status', 'aria-live': 'polite' });
-  const err = el('p', { class: 'bt-confirm-err', role: 'alert' });
-  const go = ui.button({ label: old ? 'Make the new group' : 'Create group', variant: 'primary', disabled: true });
-  go.classList.add('bt-go');
   const why = src.note();
-  const cancel = ui.iconButton({ icon: 'close', label: 'Close', keys: 'esc' });
-  cancel.classList.add('bt-new-close');
-  cancel.addEventListener('click', () => { leave(editId); });
+  const enough = S.bots.length >= min;
+
+  const lead = old
+    ? 'The members of a group are fixed when it is made, so this makes a new group called ' + old.name + ' with the bots you pick and archives this one. Its messages stay in Archived.'
+    : 'A group is a conversation among ' + min + ' to ' + max + ' of your bots and you. ' + src.nature;
+  const rows = S.bots.map((b) => kit.html.optionRow({ label: b.name, meaning: b.role || ' ', check: true, value: b.id, leadHTML: kit.html.avatar({ bot: b, size: 20, still: true }), attrs: { role: 'menuitemcheckbox', tabindex: '0', 'data-member': b.id, 'aria-label': b.name } }));
+  const members = enough
+    ? '<div class="bt-members" role="group" aria-label="Members">' + rows.join('') + '</div><p class="k7-pane__note bt-count" role="status" aria-live="polite"></p>'
+    : kit.html.emptyState({ text: 'Make another bot first: a group needs two.' });
+  const dlg = kit.wire(frag(kit.html.dialog({
+    title: old ? 'Members of ' + old.name : 'New group', scrim: false, id: 'bt-new-group-dialog',
+    body: '<p class="k7-pane__note">' + esc(lead) + '</p>' +
+      kit.html.field({ id: 'bt-group-name', label: 'Name', placeholder: 'Name the group', value: old?.name ?? '', disabled: !!old, attrs: { maxlength: '200', autocomplete: 'off', spellcheck: 'false', 'data-group-name': '' } }) +
+      members + (why ? '<p class="k7-pane__note" role="note">' + esc(why) + '</p>' : '') + '<p class="k7-pane__note bt-sheet__error" role="alert" data-group-error hidden></p>',
+    actions: [{ label: old ? 'Make the new group' : 'Create group', variant: 'primary' }],
+    attrs: { 'aria-modal': null, 'data-new-group': '' }
+  })));
+  const nameIn = dlg.querySelector<HTMLInputElement>('[data-group-name]') as HTMLInputElement;
+  const count = dlg.querySelector<HTMLElement>('.bt-count');
+  const err = dlg.querySelector<HTMLElement>('[data-group-error]') as HTMLElement;
+  const go = dlg.querySelector<HTMLButtonElement>('.k7-dialog__foot .k7-btn') as HTMLButtonElement;
+  go.setAttribute('data-go', '');
+  dlg.querySelector('[data-dialog-close]')?.addEventListener('click', () => { leave(editId); });
 
   const paint = (): void => {
     const n = picked.size;
-    count.textContent = n < min ? 'Pick ' + (min - n === 1 && n ? 'one more' : min + ' or more') + '. ' + n + ' of ' + max + '.' : n + ' of ' + max + (n === max ? ', the most a group holds.' : '.');
-    go.disabled = n < min || n > max || !!why;
-    for (const b of list.querySelectorAll<HTMLElement>('.bt-member')) {
-      const on = picked.has(b.dataset['id'] ?? '');
-      b.setAttribute('aria-checked', String(on));
-      if (!on && picked.size >= max) b.setAttribute('aria-disabled', 'true'); else b.removeAttribute('aria-disabled');
+    if (count) count.textContent = n < min ? 'Pick ' + (min - n === 1 && n ? 'one more' : min + ' or more') + '. ' + n + ' of ' + max + '.' : n + ' of ' + max + (n === max ? ', the most a group holds.' : '.');
+    go.disabled = n < min || n > max || !!why || !enough;
+    for (const r of dlg.querySelectorAll<HTMLElement>('[data-member]')) {
+      const on = picked.has(r.dataset['member'] ?? '');
+      r.setAttribute('aria-checked', String(on));
+      if (!on && picked.size >= max) r.setAttribute('aria-disabled', 'true'); else r.removeAttribute('aria-disabled');
     }
   };
-  for (const b of S.bots) {
-    const btn = el('button', { class: 'bt-member', type: 'button', role: 'checkbox', 'aria-checked': 'false', 'data-id': b.id, 'aria-label': b.name }, [
-      orbEl(b, 28), el('span', { class: 'bt-sugg-text' }, [el('span', { class: 'bt-sugg-name', text: b.name }), el('span', { class: 'bt-sugg-desc', text: b.role })])
-    ]);
-    btn.addEventListener('click', () => {
-      if (picked.has(b.id)) picked.delete(b.id);
-      else if (picked.size < max) picked.add(b.id);
-      paint();
-    });
-    list.append(btn);
-  }
-  if (S.bots.length < min) list.replaceWith(ui.empty({ title: 'A group needs two bots', text: 'Make another bot first, then bring them together here.' }));
-
+  dlg.addEventListener('click', (e) => {
+    const r = (e.target as Element).closest<HTMLElement>('[data-member]'); if (!r) return;
+    const id = r.dataset['member'] ?? '';
+    if (picked.has(id)) picked.delete(id);
+    else if (picked.size < max) picked.add(id);
+    paint();
+  });
+  /* the arrows move between the bots (each is its own tab stop too: several can be checked) */
+  dlg.querySelector('.bt-members')?.addEventListener('keydown', (e) => {
+    const ke = e as KeyboardEvent, list = [...dlg.querySelectorAll<HTMLElement>('[data-member]')], i = list.indexOf(document.activeElement as HTMLElement);
+    const n = ({ ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: list.length - 1 } as Record<string, number>)[ke.key];
+    if (i < 0 || n == null) return;
+    ke.preventDefault(); list[(n + list.length) % list.length]?.focus();
+  });
   go.addEventListener('click', () => {
-    go.disabled = true; err.textContent = '';
+    go.disabled = true; err.hidden = true;
     const bots = [...picked];
     const done = old ? src.setMembers(old.id, bots) : src.create({ name: nameIn.value, bots });
     done.then((g) => { openGroup(g.id); })
-      .catch((e: unknown) => { err.textContent = 'It was not made: ' + sentence(e); paint(); });
+      .catch((e: unknown) => { err.textContent = 'It was not made: ' + sentence(e); err.hidden = false; paint(); });
   });
   nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !go.disabled) { e.preventDefault(); go.click(); } });
   pane.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); leave(editId); } });
 
-  const col = el('div', { class: 'bt-new-col' }, [cancel, title, lead, nameRow, list, count, why ? el('p', { class: 'bt-confirm-line bt-confirm-note', role: 'note', text: why }) : null, err, el('div', { class: 'bt-go-row' }, go)]);
-  pane.append(el('div', { class: 'bt-new-scroll ui-scroll' }, col));
+  pane.append(el('div', { class: 'bt-new-scroll ui-scroll' }, el('div', { class: 'bt-new-col' }, dlg)));
   paint();
   if (!old) setTimeout(() => nameIn.focus({ preventScroll: true }), 60);
   void bot;

@@ -27,7 +27,11 @@ export function row(o: RowOpts): string {
     (o.valueHTML ? '<span class="k7-row__value k7-row__value--lead">' + o.valueHTML + '</span>' : o.value ? '<span class="' + cls('k7-row__value', o.mono && 'k7-mono') + '">' + esc(o.value) + '</span>' : '') + (o.control ?? '') +
     (o.check == null ? '' : '<span class="k7-row__check" aria-hidden="true">' + glyph('check') + '</span>') + '</div>';
 }
-export interface CardOpts { variant?: U<CardVariant>; rows: readonly RowOpts[]; open?: U<boolean>; title?: U<string>; attrs?: U<Attrs> }
+export interface CardOpts {
+  variant?: U<CardVariant>; rows: readonly RowOpts[]; open?: U<boolean>; title?: U<string>; attrs?: U<Attrs>;
+  /** what the card holds after its rows when it is not rows, as kit markup (a group's board: a column's tasks as a list of ListRows, 2a) */
+  body?: U<string>;
+}
 export function card(o: CardOpts): string {
   const v = o.variant ?? 'settings';
   if (v === 'danger') {
@@ -36,7 +40,7 @@ export function card(o: CardOpts): string {
       '<button class="k7-reset k7-card__head" type="button"' + attrs({ 'aria-expanded': String(!!o.open), 'aria-controls': id }) + '><span class="k7-row__label">' + esc(o.title ?? 'Danger zone') + '</span>' + glyph('chevron-down', 'k7-chev') + '</button>' +
       '<div class="k7-card__body" id="' + id + '">' + o.rows.map(row).join('') + '</div></section>';
   }
-  return '<section class="k7-card"' + kitAttrs('Card', { 'data-variant': v, 'data-sq': '', 'data-sq-mode': 'frame', ...(o.attrs ?? {}) }) + '>' + o.rows.map(row).join('') + '</section>';
+  return '<section class="k7-card"' + kitAttrs('Card', { 'data-variant': v, 'data-sq': '', 'data-sq-mode': 'frame', ...(o.attrs ?? {}) }) + '>' + o.rows.map(row).join('') + (o.body ?? '') + '</section>';
 }
 
 /** what Card promises: read by the docs (pnpm kit:docs) and checked by contract.test.ts */
@@ -51,7 +55,8 @@ export const contract = defineContract<CardOpts>({
     rows: 'its rows: a label (with a second line, a lead, an explanation), a value or a control; a row can be one control (`action`) or a checkbox (`check`)',
     open: 'danger: the zone is open',
     title: 'danger: the head\'s words ("Danger zone")',
-    attrs: 'extra attributes on its root: the app\'s handles (an id, data-*, aria-*)'
+    attrs: 'extra attributes on its root: the app\'s handles (an id, data-*, aria-*)',
+    body: 'what it holds after its rows when it is not rows, as kit markup (a list of ListRows)'
   },
   events: ['ui:change', 'ui:toggle'],
   states: ['data-variant', 'data-open', 'aria-expanded (danger)', 'aria-checked (a check Row)'],

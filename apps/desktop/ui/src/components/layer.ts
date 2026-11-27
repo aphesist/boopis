@@ -44,7 +44,6 @@ document.addEventListener('keydown', (e) => {
   if (!openLayer) return;
   const node = openLayer.node;
   if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeLayer(); return; }
-  if (node.classList.contains('ui-listbox')) return;   /* the listbox keeps its own keys (select.ts) */
   if (e.key === 'Tab') {
     const f = [...node.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"], textarea, select')].filter((x) => x.offsetParent !== null);
     const first = f[0], last = f[f.length - 1];

@@ -141,14 +141,14 @@ describe('Input', () => {
 });
 
 describe('Select', () => {
-  it('shows the current option, opens the library listbox and sends the chosen value as ui.select', () => {
+  it('shows the current option, opens the kit\'s Menu and sends the chosen value as ui.select', () => {
     const { root, events } = view(Select({ options: [{ label: 'All tests', value: 'all' }, { label: 'Failing only', value: 'failing' }, 'plain'], value: 'failing', label: 'Show', onSelect: { $handler: 'sel' } }));
     const b = q<HTMLButtonElement>(root, 'button.mv-select');
-    expect([b.textContent, b.getAttribute('aria-label'), b.getAttribute('aria-haspopup')]).toEqual(['Failing only', 'Show: Failing only', 'listbox']);
+    expect([b.textContent, b.getAttribute('aria-label'), b.getAttribute('aria-haspopup')]).toEqual(['Failing only', 'Show: Failing only', 'menu']);
     b.click();
-    const items = [...document.querySelectorAll<HTMLElement>('.ui-listbox .ui-option')];
+    const items = [...document.querySelectorAll<HTMLElement>('.k7-menu[data-floating] [data-kit~="MenuRow"]')];
     expect(items.map((i) => i.dataset['value'])).toEqual(['all', 'failing', 'plain']);
-    expect(items[1]?.getAttribute('aria-selected')).toBe('true');
+    expect(items[1]?.getAttribute('aria-checked')).toBe('true');
     items[0]?.click();
     expect(events).toEqual([{ type: 'ui.select', id: 'sel', value: 'all' }]);
   });
@@ -348,7 +348,7 @@ describe('handler round trips: what the user does goes back by id, whatever the 
     f.value = 'v'; f.dispatchEvent(new Event('input', { bubbles: true }));
     f.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     q<HTMLButtonElement>(root, 'button.mv-select').click();
-    document.querySelectorAll<HTMLElement>('.ui-listbox .ui-option')[1]?.click();
+    document.querySelectorAll<HTMLElement>('.k7-menu[data-floating] [data-kit~="MenuRow"]')[1]?.click();
     expect(events).toEqual([{ type: 'ui.press', id: 'p' }, { type: 'ui.input', id: 'in', value: 'v' }, { type: 'ui.submit', id: 'su', value: 'v' }, { type: 'ui.select', id: 'se', value: 'b' }]);
   });
 });

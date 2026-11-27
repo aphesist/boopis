@@ -9,7 +9,7 @@
    store on that first save, and its "made outside" mark goes. A save that fails puts the saved look back everywhere and
    says why under the picker. */
 import { el } from '../../core/dom';
-import { lookOf, repaintLook, rollLook, ui } from '@boopis/ui';
+import { announce, kit, lookOf, repaintLook, rollLook } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot } from '../../data';
 import { lookPicker, lookWords, offeredShapes } from './look-picker';
@@ -31,9 +31,8 @@ export interface LookEditor { kids: HTMLElement[]; meta: string }
 /** the parts of the Look section for `b`; `onMeta` is told the section's new words ("mint circle") */
 export function lookEditor(b: Bot, onMeta: (words: string) => void): LookEditor {
   const saved = (): LookValue => lookOf(bot(b.id) ?? b);
-  const dice = ui.iconButton({ icon: 'dice', label: 'Surprise me with a colour and shape', tip: 'Surprise me', size: 's' });
-  dice.classList.add('bt-look-dice');
-  const err = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: true });
+  const dice = kit.iconButton({ icon: 'dice', label: 'Surprise me with a colour and shape', tip: 'Surprise me', variant: 'ghost', attrs: { 'data-look-dice': '' } });
+  const err = el('p', { class: 'bt-sheet__error', role: 'alert', hidden: true });
   let timer = 0, wanted: LookValue | null = null;
 
   const show = (look: LookValue): void => { repaintLook(document, b.id, look); onMeta(lookWords(look)); };
@@ -54,12 +53,12 @@ export function lookEditor(b: Bot, onMeta: (words: string) => void): LookEditor 
     wanted = look; err.hidden = true;
     window.clearTimeout(timer); timer = window.setTimeout(save, SAVE_AFTER);
   }
-  const picker = lookPicker({ value: saved(), class: 'bt-appearance--sheet', aside: dice, onPick: (_what, look) => choose(look) });
+  const picker = lookPicker({ value: saved(), class: 'bt-look--sheet', aside: dice, onPick: (_what, look) => choose(look) });
   dice.addEventListener('click', () => {
     const others = (S.bots.length ? S.bots : data().bots.snapshot().bots).filter((x) => x.id !== b.id).map((x) => lookOf(x));
     const look = rollLook({ shapes: offeredShapes(), taken: others, avoid: picker.value });
     picker.set(look); choose(look);
-    ui.announce('Look: ' + lookWords(look));
+    announce('Look: ' + lookWords(look));
   });
   return {
     kids: [picker.el, err],

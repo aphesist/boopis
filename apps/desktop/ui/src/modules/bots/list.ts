@@ -48,7 +48,7 @@ export function mountList(root: HTMLElement): void {
   S.groupsEl = groupsHost;
   (root || document.body).append(wrap);
   wireList(ul, (id) => {
-    if (id === '__draft') { S.newPane?.querySelector<HTMLElement>('.bt-name')?.focus(); return; }
+    if (id === '__draft') { S.newPane?.querySelector<HTMLElement>('[data-new-name]')?.focus(); return; }
     if (id && bot(id)) { openBot(id); emit('hx:bot-select', { id, from: 'bots-list' }); }
   });
   S.listWrap = wrap; S.rowsEl = ul;

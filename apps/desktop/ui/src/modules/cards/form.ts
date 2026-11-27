@@ -515,20 +515,10 @@ export function wireForm(card: HxCard): void {
     g.addEventListener('ui:change', (e) => { st.vals[n] = (e as CustomEvent<{ value: string }>).detail.value; clearErr(); });
   }
   for (const g of root.querySelectorAll<HTMLElement>('.k7-orows[data-group]')) wireOptions(card, g, st, props0, clearErr);
+  /* the kit wires a choosing Swatches too (swatches/behaviour.ts): the form keeps the colour it says */
   for (const g of root.querySelectorAll<HTMLElement>('.k7-swatches[data-group]')) {
     const n = g.dataset['group'] ?? '';
-    const items = Array.from(g.querySelectorAll<HTMLElement>('[role=radio]'));
-    const pick = (it: HTMLElement): void => {
-      st.vals[n] = it.dataset['value'];
-      items.forEach((x) => { const on = x === it; x.setAttribute('aria-checked', String(on)); x.tabIndex = on ? 0 : -1; });
-      clearErr();
-    };
-    items.forEach((it) => it.addEventListener('click', () => pick(it)));
-    g.addEventListener('keydown', (e) => {
-      const i = items.indexOf(document.activeElement as HTMLElement), dlt = ({ ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 } as Record<string, number>)[e.key];
-      if (i < 0 || !dlt) return;
-      e.preventDefault(); const nx = items[(i + dlt + items.length) % items.length]; if (nx) { pick(nx); nx.focus(); }
-    });
+    g.addEventListener('ui:change', (e) => { st.vals[n] = (e as CustomEvent<{ value: string }>).detail.value; clearErr(); });
   }
   for (const pk of root.querySelectorAll<HTMLElement>('.k7-sel[data-picker]')) wirePicker(pk, st, props0, clearErr);
   for (const drop of root.querySelectorAll<HTMLElement>('[data-drop]')) {

@@ -16,6 +16,7 @@ import { wireTiles } from './tiles/behaviour';
 import { wireInfo, wireMark } from './mark/behaviour';
 import { wireMenu } from './menu/behaviour';
 import { wireSegmented } from './segmented/behaviour';
+import { wireSwatches } from './swatches/behaviour';
 import { wireSwitch } from './switch/behaviour';
 
 /* which behaviours an element has: an element can carry two (a chip that holds) */
@@ -26,6 +27,7 @@ const WIRES: ReadonlyArray<readonly [string, (el: HTMLElement) => void]> = [
   ['.k7-seg', wireSegmented],                                     /* segmented/ */
   ['.k7-switch', (el) => wireSwitch(el as HTMLButtonElement)],   /* switch/ */
   ['.k7-chip', (el) => wireChip(el as HTMLButtonElement)],       /* chip/ */
+  ['.k7-swatches[role="radiogroup"]', wireSwatches],              /* swatches/ */
   ['[data-hold]', wireHold],                                      /* button/: a Button or Chip that holds */
   ['[data-disclose]', wireDisclosure],                            /* disclosure/: and every collapsed summary */
   ['[data-kit~="Menu"]', wireMenu],                               /* menu/ */

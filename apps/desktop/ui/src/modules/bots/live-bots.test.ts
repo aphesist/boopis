@@ -19,9 +19,10 @@ import { openSettings } from './settings';
 
 const q = <T extends HTMLElement>(sel: string): T => { const n = document.querySelector<T>(sel); if (!n) throw new Error('missing ' + sel); return n; };
 /** the model picker under `scope`: open the select and choose the option the way a person does */
+/* the model's field is the kit's SelectorItem; it opens the kit's Menu of models (model-pick.ts) */
 const pickModel = (scope: string, model: string): void => {
-  q(scope + ' .ui-select').click();
-  [...document.querySelectorAll<HTMLElement>('.ui-listbox .ui-option')].find((o) => o.dataset['value'] === model)!.click();
+  q(scope + ' [data-model-pick]').click();
+  [...document.querySelectorAll<HTMLElement>('.k7-menu[data-floating] [data-kit~="MenuRow"]')].find((o) => o.dataset['value'] === model)!.click();
 };
 const tick = async (): Promise<void> => { for (let i = 0; i < 6; i++) await Promise.resolve(); };
 
@@ -135,14 +136,14 @@ describe('with no teammates yet the tab is the new-bot form', () => {
   it('opens the form, with no close button to go back to', () => {
     mount([]);
     expect(q('.bt-new').hidden).toBe(false);
-    expect(document.querySelector('.bt-new-close')).toBeNull();
+    expect(q('.bt-new [data-dialog-close]').hidden).toBe(true);
   });
   it('the first bot made is opened', async () => {
     mount([]);
-    q<HTMLInputElement>('.bt-name').value = 'kai'; q('.bt-name').dispatchEvent(new Event('input'));
-    q('.bt-go').click();
+    q<HTMLInputElement>('[data-new-name]').value = 'kai'; q('[data-new-name]').dispatchEvent(new Event('input'));
+    q('[data-go]').click();
     await flush();
-    q<HTMLButtonElement>('.bt-confirm .ui-btn--primary, .bt-confirm button:last-child').click();
+    q<HTMLButtonElement>('[data-confirm-act="make"]').click();
     await flush(); await vi.advanceTimersByTimeAsync(1000); await tick();
     expect(S.sel).toBe('kai');
     expect(q('.bt-room').hidden).toBe(false);
@@ -151,17 +152,17 @@ describe('with no teammates yet the tab is the new-bot form', () => {
 
 describe('making a bot asks first: the folder it makes and the model it starts on', () => {
   beforeEach(() => { mount([atlas()]); openNew(); });
-  const type = (name: string): void => { const i = q<HTMLInputElement>('.bt-name'); i.value = name; i.dispatchEvent(new Event('input')); };
+  const type = (name: string): void => { const i = q<HTMLInputElement>('[data-new-name]'); i.value = name; i.dispatchEvent(new Event('input')); };
   it('shows the folder before anything is made, and makes nothing yet', async () => {
-    type('kai'); q('.bt-go').click(); await flush();
-    expect(q('.bt-confirm-path').textContent).toBe('/h/profiles/kai');
-    expect(q('.bt-confirm').textContent).toContain('a folder of its own');
+    type('kai'); q('[data-go]').click(); await flush();
+    expect(q('.bt-confirm__path').textContent).toBe('/h/profiles/kai');
+    expect(q('[data-confirm]').textContent).toContain('a folder of its own');
     expect(f.calls.some((c) => c.fn === 'create')).toBe(false);
   });
   it('makes it with the model chosen from the configured providers, and the role as instructions', async () => {
-    type('kai'); q('.bt-go').click(); await flush();
-    pickModel('.bt-confirm', 'nous/hermes-4');
-    [...document.querySelectorAll<HTMLButtonElement>('.bt-confirm button')].find((b) => b.textContent?.includes('Make kai'))!.click();
+    type('kai'); q('[data-go]').click(); await flush();
+    pickModel('[data-confirm]', 'nous/hermes-4');
+    [...document.querySelectorAll<HTMLButtonElement>('[data-confirm] button')].find((b) => b.textContent?.includes('Make kai'))!.click();
     await flush();
     const call = f.calls.find((c) => c.fn === 'create')!;
     expect(call.args[1]).toEqual({ model: 'nous/hermes-4' });
@@ -171,22 +172,22 @@ describe('making a bot asks first: the folder it makes and the model it starts o
   });
   it('says when Hermes refused, where it happened, and keeps the form', async () => {
     f.failCreate = 'profile ‘kai’ already exists';
-    type('kai'); q('.bt-go').click(); await flush();
-    [...document.querySelectorAll<HTMLButtonElement>('.bt-confirm button')].find((b) => b.textContent?.includes('Make kai'))!.click();
+    type('kai'); q('[data-go]').click(); await flush();
+    [...document.querySelectorAll<HTMLButtonElement>('[data-confirm] button')].find((b) => b.textContent?.includes('Make kai'))!.click();
     await flush();
-    expect(q('.bt-confirm-err').textContent).toBe('It was not made: profile ‘kai’ already exists');
-    expect(q('.bt-confirm').isConnected).toBe(true);
+    expect(q('[data-confirm-error]').textContent).toBe('It was not made: profile ‘kai’ already exists');
+    expect(q('[data-confirm]').isConnected).toBe(true);
   });
   it('Back returns to the form with nothing made', async () => {
-    type('kai'); q('.bt-go').click(); await flush();
-    [...document.querySelectorAll<HTMLButtonElement>('.bt-confirm button')].find((b) => b.textContent === 'Back')!.click();
-    expect(document.querySelector('.bt-confirm')).toBeNull();
-    expect(q<HTMLButtonElement>('.bt-go').hidden).toBe(false);
+    type('kai'); q('[data-go]').click(); await flush();
+    [...document.querySelectorAll<HTMLButtonElement>('[data-confirm] button')].find((b) => b.textContent === 'Back')!.click();
+    expect(document.querySelector('[data-confirm]')).toBeNull();
+    expect(q<HTMLButtonElement>('[data-go]').hidden).toBe(false);
     expect(f.calls.some((c) => c.fn === 'create')).toBe(false);
   });
   it('the name `default` is Hermes’s own, so it is already taken', () => {
     type('default');
-    expect(q('.bt-name-note').textContent).toBe('default is taken, so this one will be default-2.');
+    expect(q('#bt-new-name-hint').textContent).toBe('default is taken, so this one will be default-2.');
   });
 });
 
@@ -196,29 +197,29 @@ describe('the settings sheet edits the profile and shows each file’s diff firs
   const edit = (sel: string, v: string): void => { const i = q<HTMLInputElement>('.bt-sheet ' + sel); i.value = v; i.dispatchEvent(new Event('input')); };
   it('writes nothing while you type, and offers to review once something changed', () => {
     expect(label('Review')?.hidden ?? true).toBe(true);
-    edit('input[type="text"], .ui-field input', 'security reviewer');
+    edit('[data-name="role"] input', 'security reviewer');
     expect(label('Review changes').hidden).toBe(false);
     expect(f.calls.some((c) => c.fn === 'save')).toBe(false);
   });
   it('shows the diff of each file, then saves exactly that', async () => {
-    edit('.ui-field input', 'security reviewer');
+    edit('[data-name="role"] input', 'security reviewer');
     label('Review changes').click();
-    const well = q('.bt-review .cd-diff');
+    const well = q('.bt-review [data-kit~="DiffView"]');
     expect(well.textContent).toContain('profile.yaml: role');
-    expect(well.querySelector('[data-d="add"]')?.textContent).toContain('security reviewer');
-    expect(well.querySelector('[data-d="del"]')?.textContent).toContain('reviews pull requests');
+    expect([...well.querySelectorAll('[data-sign="+"], [data-kind="add"], .k7-diff__l[data-add]')].map((n) => n.textContent).join(' ') || well.textContent).toContain('security reviewer');
+    expect(well.textContent).toContain('reviews pull requests');
     label('Save changes').click(); await flush();
     expect(f.calls.find((c) => c.fn === 'save')!.args).toEqual(['atlas', { role: 'security reviewer' }, {}]);
   });
   it('Done does not drop an unsaved change: it shows it', () => {
-    edit('.ui-field input', 'x');
+    edit('[data-name="role"] input', 'x');
     label('Done').click();
     expect(S.sheetOpen).toBe(true);
     expect(q('.bt-review').hidden).toBe(false);
   });
   it('a refused save keeps the diff open and says what Hermes said', async () => {
     f.saveError = new Error('SOUL.md could not be saved. The rest was saved.');
-    edit('.ui-field input', 'x'); label('Review changes').click(); label('Save changes').click(); await flush();
+    edit('[data-name="role"] input', 'x'); label('Review changes').click(); label('Save changes').click(); await flush();
     expect(q('.bt-review [role="alert"]').textContent).toContain('SOUL.md could not be saved');
     expect(label('Save changes').disabled).toBe(false);
   });
@@ -243,19 +244,19 @@ describe('the settings sheet edits the profile and shows each file’s diff firs
     q<HTMLTextAreaElement>('.bt-sheet [data-name="schedule"] textarea').value = 'Look at the inbox';
     q<HTMLInputElement>('.bt-sheet [data-name="schedule"] input[placeholder="0 9 * * 1-5"]').value = 'daily';
     label('Add routine').click();
-    expect([...document.querySelectorAll('.bt-sheet [data-name="schedule"] .ui-field__hint[data-tone="attention"]')].map((n) => n.textContent).join(' ')).toMatch(/five fields/);
-    expect(document.querySelector('.bt-routine.is-new')).toBeNull();
+    expect([...document.querySelectorAll('.bt-sheet [data-name="schedule"] .k7-field[data-error] .k7-field__hint')].map((n) => n.textContent).join(' ')).toMatch(/five fields/);
+    expect(document.querySelector('[data-routine][data-new]')).toBeNull();
   });
   it('pausing a routine is at once, like a switch', async () => {
-    const sw = q<HTMLInputElement>('.bt-routine input[type="checkbox"]'); sw.checked = false; sw.dispatchEvent(new Event('change')); await flush();
+    q<HTMLButtonElement>('[data-routine] [data-switch^="job-"]').click(); await flush();
     expect(f.calls.find((c) => c.fn === 'pause')!.args).toEqual(['atlas', 'j1', true]);
   });
   it('switches a toolset at once and sets the project folder, saying both apply from its next session', async () => {
     const caps = q('.bt-sheet [data-name="capabilities"]');
     expect(caps.textContent).toContain('Changes apply from its next session');
-    const sw = q<HTMLInputElement>('.bt-sheet [data-name="capabilities"] input[type="checkbox"]');
-    expect(sw.closest('.ui-set__row')?.textContent).toContain('Terminal');
-    sw.checked = false; sw.dispatchEvent(new Event('change')); await flush();
+    const sw = q<HTMLButtonElement>('.bt-sheet [data-name="capabilities"] [data-switch^="ts-"]');
+    expect(sw.closest('.k7-row')?.textContent).toContain('Terminal');
+    sw.click(); await flush();
     expect(f.calls.find((c) => c.fn === 'setToolsets')!.args).toEqual(['atlas', [], ['terminal']]);
     const folder = q<HTMLInputElement>('.bt-sheet [data-name="capabilities"] input[id^="bt-project-"]');
     folder.value = '/home/me/repos/paper'; folder.dispatchEvent(new Event('change')); await flush();
@@ -271,7 +272,7 @@ describe('the settings sheet edits the profile and shows each file’s diff firs
   });
   it('has a Run limit row whose menu is the group header’s: the default, then 5, 20, 30, 60 and 100, the one kept checked', async () => {
     const btn = q<HTMLButtonElement>('.bt-sheet [aria-label^="Turns a run may take with atlas"]');
-    expect(btn.closest('.ui-set__row')?.textContent).toContain('Run limit');
+    expect(btn.closest('.k7-row')?.textContent).toContain('Run limit');
     expect(btn.textContent).toBe('Default (10)');
     btn.click(); await flush();
     /* the kit's Menu under its heading: the one kept carries the check */
@@ -349,7 +350,7 @@ describe('the look editor: a bot’s colour and shape, changed in its settings',
   const look = (o: Element | null | undefined): string => (o ? o.getAttribute('shape') + ' ' + o.getAttribute('color') : 'none');
   const orbs = (): Element[] => [...document.querySelectorAll('.ui-orb[data-bot="atlas"] > orb-avatar')];
   const tab = (name: string): void => { [...document.querySelectorAll<HTMLElement>('.bt-sheet [data-name="look"] [role="tab"]')].find((t) => t.textContent === name)!.click(); };
-  const pick = (label: string): void => { q('.bt-sheet [data-name="look"] .bt-opt[aria-label="' + label + '"]').click(); };
+  const pick = (label: string): void => { q('.bt-sheet [data-name="look"] [role="radio"][aria-label="' + label + '"]').click(); };
   beforeEach(async () => {
     mount([atlas()]);
     /* the provider sends the bot back with its new look, as the live provider does after bots.write */
@@ -367,7 +368,7 @@ describe('the look editor: a bot’s colour and shape, changed in its settings',
     const sec = q('.bt-sheet [data-name="look"]');
     expect([...sec.querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toEqual(['Colour', 'Shape']);
     expect(sec.querySelector('[aria-label="Surprise me with a colour and shape"]')).not.toBeNull();
-    expect(sec.querySelector('.ui-sec__meta')?.textContent).toBe('rose triangle');
+    expect(sec.querySelector('.k7-shead__value')?.textContent).toBe('rose triangle');
     expect(sec.textContent).not.toMatch(/eyes?\b(?! follow)/i);
   });
   it('shows a choice on every orb of the bot at once, then saves it with bots.write', async () => {
@@ -378,7 +379,7 @@ describe('the look editor: a bot’s colour and shape, changed in its settings',
     await flush(); await vi.advanceTimersByTimeAsync(400); await flush();
     expect(f.calls.filter((c) => c.fn === 'saveOwn').map((c) => c.args)).toEqual([['atlas', { look: { shape: 'star', color: '#f23b5a' } }]]);
     for (const o of orbs()) { expect(look(o)).toBe('star #f23b5a'); expect(o.hasAttribute('eye-shape')).toBe(false); }
-    expect(q('.bt-sheet [data-name="look"] .ui-sec__meta').textContent).toBe('rose star');
+    expect(q('.bt-sheet [data-name="look"] .k7-shead__value').textContent).toBe('rose star');
   });
   it('saves the last of several choices once', async () => {
     pick('Mint'); pick('Blue'); tab('Shape'); pick('Cloud');

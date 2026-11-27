@@ -2,7 +2,7 @@
    It reads every source file and fails on a native select, a date or colour field, a spin button, a stock checkbox or radio, a
    title="" tooltip used as UI, a native alert, or an unthemed dialog, unless the file is on the allowlist below with the reason
    written next to it. An allowlist entry nobody uses any more fails too, so the list stays true.
-   A new control is built in `src/components/` (select.ts, html.ts) from the design system; do not add to the allowlist to ship one. */
+   A new control is built in the kit (`src/components/v7/`) from the design system; do not add to the allowlist to ship one. */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,8 +14,8 @@ const ROOT = join(SRC, '..');
 interface Rule { id: string; what: string; instead: string; re: RegExp; kinds?: readonly string[] }
 const TYPE = (names: string): RegExp => new RegExp(`type\\s*[=:]\\s*\\\\?["'](?:${names})\\\\?["']`, 'i');
 const RULES: readonly Rule[] = [
-  { id: 'select', what: 'a native <select>, <option> or <datalist> (its popup is the platform\'s)', instead: 'ui.select / ui.field({ kind: \'select\' | \'model\' }) from components/select.ts', re: /<(?:select|option|datalist)\b|createElement\(\s*['"](?:select|option|datalist)['"]|\bel\(\s*['"](?:select|option|datalist)['"]/i },
-  { id: 'select-css', what: 'a stylesheet rule for a native select or option', instead: '.ui-select and .ui-option in components.css', re: /(?:^|[\s,>}])(?:select|option)(?:\.|\s*[{,:[])/m, kinds: ['.css'] },
+  { id: 'select', what: 'a native <select>, <option> or <datalist> (its popup is the platform\'s)', instead: 'the kit\'s SelectorItem opening the kit\'s Menu (kit.openMenu; modules/settings/rows.ts openSelect)', re: /<(?:select|option|datalist)\b|createElement\(\s*['"](?:select|option|datalist)['"]|\bel\(\s*['"](?:select|option|datalist)['"]/i },
+  { id: 'select-css', what: 'a stylesheet rule for a native select or option', instead: 'the kit\'s SelectorItem and Menu (components/v7)', re: /(?:^|[\s,>}])(?:select|option)(?:\.|\s*[{,:[])/m, kinds: ['.css'] },
   { id: 'date-time', what: 'a date, time or month field (a platform picker)', instead: 'a text field with a format hint, or a select', re: TYPE('date|time|datetime-local|month|week'), kinds: ['.ts', '.html'] },
   { id: 'colour', what: 'a colour field (the platform\'s colour chooser)', instead: 'the kit\'s Swatches, a choice of named colours (Settings › Appearance\'s accent)', re: TYPE('color'), kinds: ['.ts', '.html'] },
   { id: 'range', what: 'a range slider', instead: 'a segmented control, or a text field', re: TYPE('range'), kinds: ['.ts', '.html'] },
@@ -68,7 +68,7 @@ const allowed = (f: { rule: Rule; file: string }): boolean => ALLOW.some((a) => 
 describe('no native controls in src', () => {
   it('scans the app\'s sources (a guard that reads nothing guards nothing)', () => {
     expect(files.length).toBeGreaterThan(100);
-    expect(files.some((f) => rel(f) === 'src/components/select.ts')).toBe(true);
+    expect(files.some((f) => rel(f) === 'src/components/v7/menu/menu.ts')).toBe(true);
     expect(files.some((f) => rel(f) === 'index.html')).toBe(true);
   });
   it('finds none outside the allowlist', () => {

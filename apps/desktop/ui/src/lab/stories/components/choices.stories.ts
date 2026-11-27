@@ -61,7 +61,6 @@ const field: Story = {
     error: stage(['error'], ({ root }) => { line(root, ui.field({ label: 'OpenAI API key', value: 'sk-short', error: 'That doesn’t look like an OpenAI key: it starts with sk- and is at least 23 characters' })); }, { width: 420 }),
     disabled: stage(['disabled'], ({ root }) => { line(root, ui.field({ label: 'Folder', value: '~/code/billing-api', disabled: true })); }, { width: 420 }),
     long: stage(['long'], ({ root }) => { line(root, ui.field({ label: LONG_TITLE, value: UNBROKEN, hint: LONG_TITLE })); }, { width: 420 }),
-    select: stage(['variant'], ({ root }) => { line(root, ui.field({ label: 'Interface font', kind: 'select', value: 'Geist', options: ['Libre Franklin', 'Geist', 'IBM Plex Sans'] })); }, { width: 420, note: 'a native select: the UI-controls agent replaces it' }),
     rtl: stage(['rtl'], ({ root }) => { line(root, ui.field({ label: 'Name', value: RTL })); }, { width: 420, dir: 'rtl' })
   }
 };

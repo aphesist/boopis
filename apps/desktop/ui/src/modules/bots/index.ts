@@ -17,10 +17,7 @@ import { openNew } from './new-bot';
 import { onGroupsEvent, openGroup, repaintRoom, stopTalk } from './group-room';
 import { openNewGroup } from './new-group';
 import { closeSettings, openSettings, toggleSettings } from './settings';
-import { ui as uiLib } from '@boopis/ui';
 import { startBotsPart } from '../onboarding/bots';
-/* drawn corners (DESIGN-SYSTEM.md section 8): the bots' own surfaces take the library's continuous corner */
-uiLib.squircle.auto('.bt-sugg, .bt-opt');
 
 let wired = false;
 /** the provider the module listens to: a different one (tests; a provider swapped at boot) is listened to instead */

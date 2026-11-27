@@ -1,6 +1,7 @@
 /* Pane: its view (typed props to markup) and its contract. Its look is pane.css, its stories and tests stand beside it
    (docs/kit/RULES.md). */
 import type { BotLike } from '../../bot-state';
+import { scrollClass } from '../../scroll';
 import { orbHtml } from '../../orb';
 import { kitStack } from '../avatar/avatar';
 import { iconButton } from '../icon-button/icon-button';
@@ -13,7 +14,7 @@ import { defineContract } from '../contract';
 /* ── Pane (3): details (356: a bot's, a room's, a session's) or tools (520, resizable: Diff, Files, Terminal, PR, + Side chat); open,
    closed, overlay under 900 ── */
 export interface PaneOpts {
-  variant?: U<'details' | 'tools' | 'session'>; open?: U<boolean>; overlay?: U<boolean>; title?: U<string>; bot?: U<BotLike>; tab?: U<string>; sideChat?: U<boolean>;
+  variant?: U<'details' | 'tools' | 'session' | 'sheet'>; open?: U<boolean>; overlay?: U<boolean>; title?: U<string>; bot?: U<BotLike>; tab?: U<string>; sideChat?: U<boolean>;
   body?: U<string>; label?: U<string>; attrs?: U<Attrs>;
   /** details of a room: its members' stack (at 32, the orbs still) heads the pane in place of one orb, and there is no Activity |
       Library (a room has no library); no board draws a room's details (an owner question): it follows a bot's */
@@ -26,6 +27,9 @@ export interface PaneOpts {
   tabs?: U<boolean>; summary?: U<string>;
   /** `details` and `session`: what else shares the pane, as tabs over its head (a mod's pane beside the session's details) */
   strip?: U<{ label: string; items: readonly SegItem[]; value: string }>;
+  /** `sheet` (a bot's settings, 2a: no board draws it, the nearest drawn state is S40's head): its actions at the foot, as kit Buttons'
+      markup (Archive, Delete…, Done); the head holds the title and the close (`data-pane-close`, `closeLabel`, `closeKeys`) */
+  foot?: U<string>; closeLabel?: U<string>; closeKeys?: U<string>;
 }
 export function pane(o: PaneOpts): string {
   const v = o.variant ?? 'details';
@@ -37,6 +41,12 @@ export function pane(o: PaneOpts): string {
       '<div class="k7-pane__tabs">' + (o.tabs === false ? '<div class="k7-pane__summary">' + (o.summary ?? '') + '</div>' : segmented({ label: 'Tools', items: tabs, value: o.tab ?? 'diff', variant: 'tabs' })) + '<span class="k7-grow"></span>' + iconButton({ icon: 'close', label: 'Close the tools', variant: 'tinted', attrs: { 'data-pane-close': '' } }) + '</div>' + body;
   }
   const strip = o.strip ? '<div class="k7-pane__tabs">' + segmented({ label: o.strip.label, items: o.strip.items, value: o.strip.value, variant: 'tabs' }) + '</div>' : '';
+  if (v === 'sheet') {
+    /* a settings sheet: the title at the start and the close at the end, a scrolling body, the actions at the foot */
+    return '<aside class="k7-pane"' + a + '><div class="k7-pane__head"><div class="k7-pane__title"><h2 class="k7-pane__name">' + esc(o.title ?? '') + '</h2>' +
+      iconButton({ icon: 'close', label: o.closeLabel ?? 'Close', variant: 'tinted', ...(o.closeKeys ? { keys: o.closeKeys } : {}), attrs: { 'data-pane-close': '' } }) + '</div></div>' +
+      '<div class="k7-pane__body ' + scrollClass() + '">' + (o.body ?? '') + '</div>' + (o.foot ? '<div class="k7-pane__foot">' + o.foot + '</div>' : '') + '</aside>';
+  }
   if (v === 'session') {
     const where = (o.folder ? glyph('folder') + '<span class="k7-mono k7-ell">' + esc(o.folder) + '</span>' : '') + (o.branch ? glyph('fork') + '<span class="k7-mono k7-ell">' + esc(o.branch) + '</span>' : '');
     return '<aside class="k7-pane"' + a + '>' + strip + (o.title === undefined ? '' : '<div class="k7-pane__head"><div class="k7-pane__title"><h2 class="k7-pane__name">' + esc(o.title) + '</h2>' +
@@ -55,10 +65,10 @@ export const contract = defineContract<PaneOpts>({
   name: 'Pane',
   folder: 'pane',
   layer: 'surface',
-  summary: 'The right side: details (356: a bot\'s, a room\'s, a session\'s) or the tools (520, resizable: Diff, Files, Terminal, PR, Side chat). Open, closed, or an overlay under 900.',
+  summary: 'The right side: details (356: a bot\'s, a room\'s, a session\'s), the tools (520, resizable: Diff, Files, Terminal, PR, Side chat), or a settings sheet (its title, a scrolling body of sections, its actions at the foot). Open, closed, or an overlay under 900.',
   exports: ['pane'],
   props: {
-    variant: 'details (the default), tools or session',
+    variant: 'details (the default), tools, session or sheet',
     open: 'false: closed',
     overlay: 'an overlay (under 900)',
     title: 'its name',
@@ -74,11 +84,14 @@ export const contract = defineContract<PaneOpts>({
     more: 'session: the overflow menu\'s button',
     tabs: 'tools: false draws the one tool alone, with no tabs',
     summary: 'tools without tabs: what stands where the tabs would',
-    strip: 'what else shares the pane, as tabs over its head'
+    strip: 'what else shares the pane, as tabs over its head',
+    foot: 'sheet: its actions, as kit Buttons\' markup',
+    closeLabel: 'sheet: the close button\'s name',
+    closeKeys: 'sheet: the close button\'s keys'
   },
   events: [],
   states: ['data-variant', 'data-open', 'data-overlay'],
-  parts: ['k7-pane__head', 'k7-pane__tabs', 'k7-pane__grip', 'k7-pane__body'],
+  parts: ['k7-pane__head', 'k7-pane__tabs', 'k7-pane__grip', 'k7-pane__body', 'k7-pane__foot'],
   tokens: [
     '--bg-pane', '--ctl-s', '--focus-w', '--fs-l', '--fs-s', '--fs-xs', '--gap-s', '--hair', '--hl', '--lh-l', '--lh-m', '--lh-s',
     '--lh-xs', '--pad-chrome', '--pad-pane-top', '--pad-pane-top-session', '--pane-sec-top', '--right-w', '--shadow-modal',

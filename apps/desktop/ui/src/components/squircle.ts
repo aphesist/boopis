@@ -42,7 +42,7 @@ interface Snap { ox: number; oy: number; w: number; h: number; t: number; t2: nu
 export interface SquircleStats { bound: number; cached: number; smoothing: number; frames: number; lastMs: number; maxMs: number; totalMs: number; snaps: number; snapMs: number }
 
 const FOCUSABLE = 'button, a[href], input, select, textarea, [tabindex]';
-const SURFACE = '.ui-listbox, .ui-pop, .ui-tip';
+const SURFACE = '.ui-pop, .ui-tip';
 /** the leaf controls: nothing inside them reaches past their edge */
 const LEAF = '.ui-btn, .ui-ib, .ui-seg__thumb, .ui-file';
 /** the library's surfaces and the config diff's well (cards parts.ts diffWell); modules add theirs with `auto()` or `data-sq` */
