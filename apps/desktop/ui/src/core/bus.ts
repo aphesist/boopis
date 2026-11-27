@@ -40,7 +40,7 @@ export interface EventMap {
   'hx:session-line': Record<string, never>;
   'hx:open-settings': { section: string; from?: string; /** Models: what its provider search starts with ("Claude"), so the person lands on that lab's sign-in */ find?: string;
     /** a part of the page to scroll to and focus: `voice` (Models › Voice and speech), `drafts` (Approvals' drafted exceptions) */ focus?: string };
-  'hx:bot-settings': { open?: boolean; toggle?: boolean; from?: string };
+  'hx:bot-settings': { open?: boolean; toggle?: boolean; from?: string; /** the bot whose sheet opens (the one open when absent) */ id?: string; /** the section it opens at (7a follow-ups: `approvals`, drafts first) */ section?: string };
   'hx:view-inset': { tab?: Tab; left?: number; right?: number; source?: string };
   'hx:toast': { text?: string; message?: string };
   /** the dock reports its size: the room the composer keeps above it */

@@ -54,7 +54,9 @@ export const defaultConfig = (id: string): BotConfig => ({
   instructions: '', gov: id === 'noct' ? 'ungoverned' : 'governed', model: 'sonnet 5.5', cap: '',
   cron: CRON_DEFAULT[id] ?? '',
   channels: { app: true, slack: ['nina', 'noct', 'hex'].includes(id), telegram: id === 'noct', email: id === 'nimbus' },
-  approvals: { deploys: 'ask', push: 'ask', network: id !== 'nimbus' ? 'ask' : 'allow', spend: 'ask', people: 'ask', outside: 'ask', delete: 'ask', commands: 'allow' },
+  /* a bot follows the owner's rules and adds nothing of its own (7a follow-ups), but for two that show the two kinds a bot can add:
+     nina asks before every deploy, nimbus may never message people itself (spending past the cap always asks: never_allow) */
+  approvals: { deploys: id === 'nina' ? 'ask' : 'allow', push: 'allow', network: 'allow', spend: 'ask', people: id === 'nimbus' ? 'block' : 'allow', outside: 'allow', delete: 'allow', commands: 'allow' },
   workspace: ['hex', 'moss', 'terra'].includes(id) ? 'sandbox' : 'worktree'
 });
 export const seedBots = (): Bot[] => BOT_SEEDS.map((b) => ({

@@ -518,7 +518,8 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       if (patch.cfg?.gov) await prepare(id, false);   /* the Governed switch is the bot's plugin mode */
     },
     async removal(id): Promise<RemovalNote> {
-      const r = need(id);
+      /* an archived teammate (Settings › Bots' Archived) is no record any more: its folder is counted all the same */
+      const r = recs.get(id) ?? (archivedNow.get().some((a) => a.id === id) ? null : need(id));
       const got = await plug<{ path: string; bytes: number; files: number; truncated: boolean; has_sessions: boolean; memory_files: number; skills: number; boopis_bytes: number }>('bots.inspect', { name: id });
       const mb = got.bytes < 1024 * 1024 ? Math.max(1, Math.round(got.bytes / 1024)) + ' KB' : (got.bytes / 1024 / 1024).toFixed(1) + ' MB';
       const lines = [
@@ -526,7 +527,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
         got.has_sessions ? 'All its sessions and what they said.' : 'It has no sessions.',
         got.memory_files ? 'Its memory (' + got.memory_files + ' ' + (got.memory_files === 1 ? 'file' : 'files') + ').' : 'It has no memory yet.',
         got.skills ? 'Its ' + got.skills + ' ' + (got.skills === 1 ? 'skill' : 'skills') + '.' : 'It has no skills of its own.',
-        r.jobs === null ? 'Its routines, whatever they are.' : r.jobs.length ? 'Its ' + r.jobs.length + ' ' + (r.jobs.length === 1 ? 'routine' : 'routines') + '.' : 'It has no routines.',
+        !r || r.jobs === null ? 'Its routines, whatever they are.' : r.jobs.length ? 'Its ' + r.jobs.length + ' ' + (r.jobs.length === 1 ? 'routine' : 'routines') + '.' : 'It has no routines.',
         'Its look and its boopis settings.'
       ];
       return { folder: got.path, lines };
@@ -554,6 +555,8 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       return { undo: () => restoreArchived(done.name) };
     },
     async remove(id, confirm) {
+      /* an archived teammate has no link and no record: the plugin deletes its profile by the name it has now */
+      if (!recs.has(id) && archivedNow.get().some((a) => a.id === id)) { await plug('bots.delete', { name: id, confirm }); await refreshRoster(); return; }
       need(id);
       await closeLink(id);
       await plug('bots.delete', { name: id, confirm });

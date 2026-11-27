@@ -7,6 +7,7 @@
 import { emit } from '../../core/bus';
 import { cap1, el, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
+import { openDraft } from './rule-route';
 import { kit, lookOf, repaintLook, ui } from '@boopis/ui';
 import { bubbleOf, placeActs, turnActs, turnBody, turnEntry } from './turn';
 import type { AskAnswer, MarkdownCtx } from '@boopis/ui';
@@ -347,10 +348,10 @@ export function approvalReceipt(m: Pick<ApprovalMessage, 'resolved' | 'how' | 'd
 }
 function resolvedLine(b: Bot, m: ApprovalMessage): HTMLElement {
   const asker = bot(m.data.from ?? m.who) ?? b, r = approvalReceipt(m);
-  /* "Always allow" kept a draft: Open goes to where it is finished, Settings › Approvals, once that screen exists (`rules-settings`) */
+  /* "Always allow" kept a draft: Open goes to where it is finished (`rule-route.ts`: the asker's sheet, or Settings › Approvals), once that screen exists (`rules-settings`) */
   const open = m.drafted && later('rules-settings') ? kit.html.button({ label: 'Open', variant: 'ghost', size: 28, attrs: { 'data-open-draft': '' } }) : '';
   const line = kit.askCard({ variant: 'form', state: 'answered', bot: asker, ask: r.text, word: { text: r.word }, rowAction: open, attrs: { 'aria-label': (m.data.title || 'The request') + ': ' + r.text } });
-  line.querySelector('[data-open-draft]')?.addEventListener('click', () => { emit('hx:open-settings', { section: 'approvals', focus: 'drafts' }); });
+  line.querySelector('[data-open-draft]')?.addEventListener('click', () => { openDraft(asker); });
   return el('div', { class: 'bt-cardslot bt-resolved' }, line);
 }
 /** an approval decided here: the provider decides it everywhere (the dock, the thread) */

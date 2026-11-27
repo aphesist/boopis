@@ -560,6 +560,17 @@ describe('archived bots, restored from the Archived group and the palette', () =
     expect(h.main.calls.some((c) => c.method === 'plugin.boopis.bots.restore')).toBe(false);
     expect(bots.source.archived.get().map((a) => a.was)).toEqual(['nina']);
   });
+  it('deletes one from Settings › Bots: its folder counted, then the plugin deletes the profile by the name it has now', async () => {
+    const h = new FakeHermes();
+    archive(h, 'archived--hex', 'hex', '2026-11-18T09:30:00+00:00');
+    const { bots } = await open(h);
+    const admin = bots.source.admin!;
+    const note = await admin.removal('archived--hex');
+    expect(note.lines).toContain('Its routines, whatever they are.');
+    await admin.remove('archived--hex', 'archived--hex');
+    expect(h.main.calls.find((c) => c.method === 'plugin.boopis.bots.delete')!.params).toEqual({ name: 'archived--hex', confirm: 'archived--hex' });
+    expect(bots.source.archived.get()).toEqual([]);
+  });
   it('a restore the plugin refuses reaches the user as the plugin said it', async () => {
     const h = new FakeHermes();
     archive(h, 'archived--hex', 'hex', '2026-11-18T09:30:00+00:00');

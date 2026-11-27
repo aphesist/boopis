@@ -1,38 +1,31 @@
-/* Settings › Approvals: the one rules list for every bot (ADR-0060; docs/specs/rules-engine.md 11 and 13). The lead's design, in board
-   O-B07's look (the rules as rows, each led by its Switch; on a row under the pointer or the focus its Edit and Remove):
+/* Settings › Approvals: the rules for every bot (ADR-0060; docs/specs/rules-engine.md 11 and 13). The lead's design, in board O-B07's
+   look (the rules as rows, each led by its Switch; on a row under the pointer or the focus its Edit and Remove; the parts are
+   `rule-parts.ts`, the same a bot sheet's Approvals draws):
    - a Notice at the top when the file changed outside boopis: "Use the new rules" (keep theirs) and "Keep mine" (put back what boopis
      wrote); changes wait until one is chosen. The file unreadable: "Rules can't be read. Every action asks." (the spec's words);
-   - "Drafts" first when "Always allow" kept any: each draft's words in a Field to finish, with what it lets through, then "Save rule"
-     (it becomes active) and Discard;
-   - "Your approval rules, for every bot" (O-B07's head): a row per ask rule (its Switch, its words, where it came from as a quiet word); Edit opens the row on its
-     words in a Field with "What this catches" (the kinds of action it is checked against) and Save; Remove takes it out. "Add a rule"
-     opens an empty one; its kinds are the reviewer's reading of its words (`rules.kinds`). Exceptions that are active follow under
-     "Bots go ahead without asking";
-   - under them: the last change as a SystemLine with Undo (as board S33's line after a change), "Restore defaults" behind a confirm in
-     place, and "Reviewer model" as a select (Automatic: the cheapest connected model; or one pinned).
+   - "Drafts" first when "Always allow" kept any that name no bot: each draft's words in a Field to finish, then "Save rule" and Discard;
+   - "Your approval rules, for every bot" (O-B07's head): a row per ask rule; Edit opens it on its words in a Field with "What this
+     catches" and Save; Remove takes it out. "Add a rule" opens an empty one. Exceptions for every bot follow under "Bots go ahead without
+     asking";
+   - only rules for every bot are here (7a follow-ups, the owner: "if there's a way to make a setting bot specific, it should be in the
+     bot's settings"): a rule or a draft that names a bot is in that bot's sheet, and one quiet line names the bots with rules of their
+     own, each a link to its sheet's Approvals (hidden when none);
+   - under them: the built-in protections in a line, the last change as a SystemLine with Undo (S33's line), "Restore defaults" behind a
+     confirm in place, and "Reviewer model" as a select.
    The page exists only where the plugin reports `rules-v1` (`rules-settings`, the dialog's nav); the provider's `rules` is the host. */
 import { kit } from '@boopis/ui';
-import { data } from '../../data';
+import type { PageNotePart } from '@boopis/ui';
+import { data, BOOPIS_ID } from '../../data';
 import type { Rule, RulesSource, RulesView, ReviewerChoice } from '../../data';
 import { fill, pageEl, revealPart } from './page';
 import type { Page } from './page';
-import { actionsHTML, buttonHTML, esc, openSelect, said, section, sectionOf } from './rows';
-import type { RowOpts } from './rows';
+import { actionsHTML, buttonHTML, openSelect, said, section, sectionOf } from './rows';
+import { BUILT_IN, catches, draftBlock, everyBot, isDraft, originWord, ruleEditor, ruleLimit, rulesCard } from './rule-parts';
+import type { RuleRowOpts } from './rule-parts';
+import { ownCount } from '../bots/own-rules';
+import { openBotSheet } from './open-bot';
 
-/** where a rule came from, as the quiet word at its row's end */
-export const SOURCE_WORDS: Readonly<Record<Rule['source'], string>> = { default: 'default', owner: 'yours', card: 'from a card', chat: 'from a chat' };
-/** the kinds of action a rule is checked against, in words ("What this catches") */
-export const KIND_WORDS: Readonly<Record<string, string>> = {
-  reads: 'reading files', writes: 'writing files', commands: 'running commands', code: 'running code', network: 'network requests', connector_write: 'changes through a connector',
-  messages: 'sending messages', spend: 'spending money', browser: 'driving a browser', computer: 'using the computer', delegation: 'handing work to another bot', unknown: 'anything it cannot place'
-};
-export function catches(kinds: readonly string[]): string {
-  const words = kinds.map((k) => KIND_WORDS[k] ?? k);
-  if (!words.length) return 'The reviewer has not read what this catches yet.';
-  return 'Checked when a bot is ' + (words.length === 1 ? words[0] : words.slice(0, -1).join(', ') + ' or ' + words[words.length - 1]) + '.';
-}
-const isDraft = (r: Rule): boolean => r.type === 'exception' && r.state === 'draft';
-const forWhom = (r: Rule): string => (r.bots && r.bots.length ? 'For ' + r.bots.join(', ') : '');
+export { SOURCE_WORDS, KIND_WORDS, catches } from './rule-parts';
 
 type Change = { what: string; undo: () => Promise<unknown> };
 
@@ -46,31 +39,21 @@ export function approvalsPage(rules: RulesSource | undefined = data().rules): Pa
     try { view = await src.get(); readError = ''; } catch (e) { view = null; readError = said(e); }
     readOnce = true;
   };
-  const ruleRow = (r: Rule): RowOpts => ({
-    label: r.text, wrap: true,
-    leadHTML: kit.html.switch({ checked: r.enabled, label: r.text, attrs: { 'data-rule-switch': r.id } }),
-    ...(forWhom(r) ? { sub: forWhom(r) } : {}),
-    control: '<span class="k7-row__value">' + esc(r.edited ? 'edited default' : SOURCE_WORDS[r.source]) + '</span>' +
-      '<span class="hx-set__hover">' + kit.html.iconButton({ icon: 'pen', label: 'Edit: ' + r.text, variant: 'ghost', expanded: open === r.id, attrs: { 'data-rule-edit': r.id } }) +
-      kit.html.iconButton({ icon: 'close', label: 'Remove: ' + r.text, variant: 'ghost', attrs: { 'data-rule-remove': r.id } }) + '</span>',
-    attrs: { 'data-rule': r.id, ...(open === r.id ? { 'data-open': '' } : {}) }
-  });
-  /** a rule opened to edit: its words in a Field, what it catches, Save, Cancel and Remove */
-  const editor = (r: Rule | null): string => kit.html.block({ attrs: { 'data-rule-editor': r?.id ?? 'new' }, body:
-    kit.html.field({ id: 'hx-rule-text-' + (r?.id ?? 'new'), label: r ? 'The rule' : 'A new rule', value: r?.text ?? '', placeholder: 'Ask before …', hint: r ? catches(r.kinds) : 'One line. The reviewer reads what it catches when you save it.', attrs: { maxlength: '200', 'data-rule-input': '' } }) +
-    actionsHTML(buttonHTML('Save', { variant: 'primary', attrs: { 'data-rule-save': r?.id ?? 'new' } }), buttonHTML('Cancel', { variant: 'ghost', attrs: { 'data-rule-cancel': '' } }), r ? buttonHTML('Remove', { variant: 'ghost', attrs: { 'data-rule-remove': r.id } }) : '') });
-  /** a card of rule rows, with the opened one's editor under it */
-  const rulesCard = (title: string, list: readonly Rule[], part: string, count?: string): string => {
-    if (!list.length) return '';
-    const rows = list.map(ruleRow);
+  const rowOf = (r: Rule): RuleRowOpts => ({ key: r.id, text: r.text, enabled: r.enabled, origin: originWord(r), open: open === r.id });
+  const editor = (r: Rule | null): string => ruleEditor({ key: r?.id ?? 'new', ...(r ? { text: r.text } : {}), hint: r ? catches(r.kinds) : 'One line. The reviewer reads what it catches when you save it.', removable: !!r });
+  const card = (title: string, list: readonly Rule[], part: string, count?: string): string => {
     const opened = list.find((r) => r.id === open);
-    return '<div class="k7-section" data-part="' + part + '">' + kit.html.sectionHead({ title, ...(count ? { count } : {}) }) + kit.html.card({ variant: 'settings', rows, attrs: { 'data-mark-reveal': 'hover' } }) + (opened ? editor(opened) : '') + '</div>';
+    return rulesCard({ title, rows: list.map(rowOf), part, ...(count ? { count } : {}), ...(opened ? { editor: editor(opened) } : {}) });
   };
-  const draftHTML = (r: Rule): string => {
-    const excepts = (r.excepts ?? []).map((id) => view?.rules.find((x) => x.id === id)?.text ?? id);
-    return kit.html.block({ attrs: { 'data-draft': r.id }, body:
-      kit.html.field({ id: 'hx-draft-' + r.id, label: 'Always allow', value: r.text, hint: [forWhom(r), excepts.length ? 'Lets through: ' + excepts.join('; ') : '', (r.match ?? []).length ? 'Only: ' + (r.match ?? []).join(', ') : ''].filter(Boolean).join('. ') || 'An exception kept from “Always allow”. It does nothing until you save it.', attrs: { maxlength: '200', 'data-draft-input': '' } }) +
-      actionsHTML(buttonHTML('Save rule', { variant: 'primary', attrs: { 'data-draft-save': r.id } }), buttonHTML('Discard', { variant: 'ghost', attrs: { 'data-draft-discard': r.id } })) });
+  /** the bots with rules of their own (the rules list's that name them, and their kinds that ask or are blocked), each a link to its sheet */
+  const ownLine = (v: RulesView): string => {
+    const kinds = data().bots.catalog().approvals;
+    const bots = data().bots.snapshot().bots.filter((b) => b.id !== BOOPIS_ID && (() => { const n = ownCount(b, kinds, v.rules); return n.rules + n.drafts > 0; })());
+    if (!bots.length) return '';
+    const parts: PageNotePart[] = [bots.length === 1 ? 'One bot has rules of its own: ' : 'Bots with rules of their own: '];
+    bots.forEach((b, i) => { if (i) parts.push(i === bots.length - 1 ? ' and ' : ', '); parts.push({ text: b.name, attrs: { 'data-own-bot': b.id, 'aria-label': b.name + '’s own rules' } }); });
+    parts.push('.');
+    return kit.html.pageNote({ parts, attrs: { 'data-part': 'own' } });
   };
   const reviewerLabel = (v: RulesView): string => (v.reviewer.mode === 'auto' ? 'Automatic' : v.reviewer.model ?? 'Automatic');
   function draw(): void {
@@ -83,17 +66,20 @@ export function approvalsPage(rules: RulesSource | undefined = data().rules): Pa
     }
     const v = view;
     const outside = v.changedOutside ? kit.html.notice({ tone: 'owe', icon: 'shield', title: 'The rules changed outside boopis', text: '', actions: [{ label: 'Use the new rules', value: 'accept', primary: true }, { label: 'Keep mine', value: 'discard' }], attrs: { 'data-outside': '' } }) : '';
-    const drafts = v.rules.filter(isDraft), asks = v.rules.filter((r) => r.type === 'ask'), allowed = v.rules.filter((r) => r.type === 'exception' && !isDraft(r));
+    const all = v.rules.filter(everyBot);
+    const drafts = all.filter(isDraft), asks = all.filter((r) => r.type === 'ask'), allowed = all.filter((r) => r.type === 'exception' && !isDraft(r));
     const on = asks.filter((r) => r.enabled).length;
     const change = last ? kit.html.systemLine({ icon: 'sliders', text: last.what, action: 'Undo', attrs: { 'data-last': '' } }) : '';
     const reviewerSub = v.reviewerStatus === 'none' ? 'No reviewer yet: a check it cannot make holds the action.' : v.reviewerStatus === 'failing' ? 'The reviewer is failing: checks hold the action until it answers.' : 'Reads each action against your rules. Automatic picks the cheapest model you have connected.';
     fill(body,
       outside +
-      (drafts.length ? sectionOf('Drafts', drafts.map(draftHTML).join(''), { 'data-part': 'drafts', id: 'hx-set-drafts' }) : '') +
-      (asks.length ? rulesCard('Your approval rules, for every bot', asks, 'asks', on + ' on') : sectionOf('Your approval rules, for every bot', kit.html.emptyState({ text: 'Nothing asks. Bots do everything.' }), { 'data-part': 'asks' })) +
+      (drafts.length ? sectionOf('Drafts', drafts.map((r) => draftBlock(r, v)).join(''), { 'data-part': 'drafts', id: 'hx-set-drafts' }) : '') +
+      (asks.length ? card('Your approval rules, for every bot', asks, 'asks', on + ' on') : sectionOf('Your approval rules, for every bot', kit.html.emptyState({ text: 'Nothing asks. Bots do everything.' }), { 'data-part': 'asks' })) +
       (adding ? editor(null) : '<div class="hx-set__acts">' + buttonHTML('Add a rule', { attrs: { 'data-rule-add': '' } }) + '</div>') +
-      rulesCard('Bots go ahead without asking', allowed, 'allowed') +
+      card('Bots go ahead without asking', allowed, 'allowed') +
       '<p class="k7-page__note">Anything not on the list runs on its own. A check that fails holds the action.</p>' +
+      '<p class="k7-page__note" data-part="built-in">' + BUILT_IN + '</p>' +
+      ownLine(v) +
       change +
       section('Rules', [
         confirming
@@ -113,8 +99,8 @@ export function approvalsPage(rules: RulesSource | undefined = data().rules): Pa
   const textOf = (sel: string): string => (body.querySelector<HTMLInputElement>(sel)?.value ?? '').trim();
   const rule = (id: string): Rule | undefined => view?.rules.find((r) => r.id === id);
   const saveText = (r: Rule | null, text: string, extra: Partial<Rule> = {}): void => {
-    if (!text) { kit.notify('Write the rule first'); return; }
-    if (text.length > 200) { kit.notify('A rule is one line of at most 200 characters'); return; }
+    const limit = ruleLimit(text);
+    if (limit) { kit.notify(limit); return; }
     run(async (rev) => {
       const read = r && text === r.text ? { kinds: r.kinds } : await src.kinds(text).catch(() => ({ kinds: null }));
       const kinds = read.kinds ?? r?.kinds ?? [];
@@ -133,6 +119,8 @@ export function approvalsPage(rules: RulesSource | undefined = data().rules): Pa
   });
   body.addEventListener('click', (e) => {
     const t = e.target as Element;
+    const own = t.closest<HTMLElement>('[data-own-bot]')?.dataset['ownBot'];
+    if (own) { openBotSheet(body, own, 'approvals'); return; }
     const val = t.closest<HTMLElement>('[data-kit~="Notice"] [data-value]')?.dataset['value'];
     if (val === 'reread') { void read().then(draw); return; }
     if (val === 'accept') { run(() => src.acceptOutside(), null); return; }

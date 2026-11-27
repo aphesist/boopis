@@ -3,7 +3,7 @@
    memory: the pages draw every state from them without a host. The defaults' words are the shipped ones (plugins/boopis/data/
    default-rules.json). */
 import { store } from '../data/store';
-import type { DataProvider, LaterFeature, Rule, RulesSource, RulesView, SpeechModel, SpeechSource, VoiceSettings } from '../data';
+import type { BotsAdmin, DataProvider, LaterFeature, Rule, RulesSource, RulesView, SpeechModel, SpeechSource, VoiceSettings } from '../data';
 import type { DiagnosticsHost } from '../modules/settings/host';
 
 export const DEFAULT_RULES: readonly Rule[] = [
@@ -89,3 +89,20 @@ export const fakeDiagnostics = (): DiagnosticsHost => ({
   setGpu: async () => undefined,
   restart: async () => undefined
 });
+
+/** the bots' own settings as a provider that can delete keeps them (Settings › Bots' Delete, the sheet's flow): the removal note as the
+    plugin counts it, archive with its way back, delete by name; scripted, nothing is removed but the roster's row */
+export function withBotAdmin(p: DataProvider): DataProvider {
+  const admin = {
+    removal: async (id: string) => ({ folder: '~/.local/share/boopis/bots/' + id, lines: ['The folder ~/.local/share/boopis/bots/' + id + ' (3.2 MB in 240 files).', 'All its sessions and what they said.', 'Its memory (2 files).', 'Its 9 skills.', 'It has no routines.', 'Its look and its boopis settings.'] }),
+    archive: async (id: string) => { p.bots.archive(id); return { undo: () => { const a = p.bots.archived.get().find((x) => x.was === id); return a ? p.bots.restore(a.id) : Promise.resolve(); } }; },
+    remove: async (id: string) => { p.bots.archive(id); }
+  } as unknown as BotsAdmin;
+  return { ...p, bots: { ...p.bots, admin } };
+}
+/** bots with what Settings › Bots shows of them: kai a $5 cap, iris a rule of its own from the list (with `KAI_ASK` and `NINA_LET`) */
+export const KAI_ASK: Rule = { id: 'r_kai_ask', type: 'ask', text: 'Ask before publishing the docs site.', enabled: true, source: 'owner', bots: ['kai'], kinds: ['commands'] };
+export function withCaps(p: DataProvider, caps: Readonly<Record<string, string>>): DataProvider {
+  const snap = p.bots.snapshot;
+  return { ...p, bots: { ...p.bots, snapshot: () => { const s = snap(); return { ...s, bots: s.bots.map((b) => (caps[b.id] ? { ...b, cfg: { ...b.cfg, cap: caps[b.id] as string } } : b)) }; } } };
+}

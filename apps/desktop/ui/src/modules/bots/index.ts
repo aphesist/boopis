@@ -80,7 +80,8 @@ function wireBus(): void {
   on('hx:new-group', () => openNewGroup());
   on('hx:bot-select', (d) => { if (d.from && String(d.from).startsWith('bots')) return; if (d.id && bot(d.id)) openBot(d.id); });
   on('hx:new-bot', () => openNew());
-  on('hx:bot-settings', (d) => { if (d.open && !S.sheetOpen) openSettings(S.sel); });
+  /* a caller may name the bot and the section (Settings › Bots' Open, a receipt's Open for a bot's own rule: its Approvals) */
+  on('hx:bot-settings', (d) => { if (!d.open) return; const id = d.id && bot(d.id) ? d.id : S.sel; if (d.section || !S.sheetOpen || S.sheetFor !== id) openSettings(id, d.section ?? null); });
   on('hx:nav', (d) => {
     if (state.tab !== 'bots' || S.view !== 'bot') return;
     if (d.region && d.region !== 'messages') return;

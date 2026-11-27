@@ -8,7 +8,7 @@
      Receipts as 6d's ("You allowed it once", "You allowed it always · exception drafted", "You denied it").
    The builders are pure kit markup with callbacks (tested and drawn in the lab as they are); `mountHeld` keeps a thread's asks in step
    with the provider's sources, which only the desktop app has. */
-import { emit } from '../../core/bus';
+import { openDraft } from './rule-route';
 import { kit, ui } from '@boopis/ui';
 import type { AskAnswer, PlanAction } from '@boopis/ui';
 import { data } from '../../data';
@@ -84,7 +84,7 @@ export function parkedCard(s: ParkedStep, asker: Bot | null, v: ParkedView = {})
     const r = parkedReceipt(v.answered);
     const open = v.answered.drafted && later('rules-settings') ? kit.html.button({ label: 'Open', variant: 'ghost', size: 28, attrs: { 'data-open-draft': '' } }) : '';
     const row = kit.askCard({ variant: 'form', state: 'answered', ask: r.text, word: { text: r.word }, rowAction: open, ...l, attrs: { 'data-parked': s.id, 'aria-label': name + '’s step: ' + r.text } });
-    row.querySelector('[data-open-draft]')?.addEventListener('click', () => { emit('hx:open-settings', { section: 'approvals', focus: 'drafts' }); });
+    row.querySelector('[data-open-draft]')?.addEventListener('click', () => { openDraft(asker ?? (s.bot ? { id: s.bot, name: s.bot } : null)); });
     return row;
   }
   const can = (c: string): boolean => !s.choices.length || s.choices.includes(c);

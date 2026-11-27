@@ -12,7 +12,7 @@ import { createMockProvider } from '../../data/mock-provider';
 import type { DataProvider, ProjectPolicy } from '../../data';
 import { store } from '../../data/store';
 import { themeApi } from '../../styles/theme';
-import { DEFAULT_RULES, DRAFT, MODEL, fakeDiagnostics, fakeRules, fakeSpeech, withSettings } from '../../lab/settings-fixtures';
+import { DEFAULT_RULES, DRAFT as KAI_DRAFT, EXCEPTION, MODEL, fakeDiagnostics, fakeRules, fakeSpeech, withSettings } from '../../lab/settings-fixtures';
 import type { FakeRules, FakeSpeech } from '../../lab/settings-fixtures';
 import { currentPage, mountSettings, openSettings, PAGES, resetSettings } from './index';
 import { resetSettingsHost, setSettingsHost } from './host';
@@ -177,7 +177,7 @@ describe('Sessions', () => {
 });
 
 describe('Approvals', () => {
-  const open = async (r: FakeRules = fakeRules(), focus?: string): Promise<void> => { boot({ rules: r }); openSettings('approvals', focus ? { focus } : {}); await tick(6); };
+  const open = async (r: FakeRules = fakeRules(), focus?: string, patch?: (p: DataProvider) => DataProvider): Promise<void> => { boot({ rules: r, ...(patch ? { patch } : {}) }); openSettings('approvals', focus ? { focus } : {}); await tick(6); };
   it('lists the rules, each led by its switch, its words and where it came from; how many are on', async () => {
     await open();
     const rows = [...page().querySelectorAll('[data-rule]')];
@@ -232,7 +232,8 @@ describe('Approvals', () => {
     expect(rules.calls).toContain('put:new:Ask before deleting a calendar event.');
     expect([...page().querySelectorAll('[data-rule]')].some((r) => r.textContent?.includes('calendar'))).toBe(true);
   });
-  it('a draft from "Always allow" heads the page (opened at it): Save rule makes it active, Discard removes it', async () => {
+  it('a draft from "Always allow" for every bot heads the page (opened at it): Save rule makes it active, Discard removes it', async () => {
+    const DRAFT = { ...KAI_DRAFT, bots: null };
     const r = fakeRules({ rules: [...DEFAULT_RULES, DRAFT] });
     await open(r, 'drafts');
     const d = q('[data-draft="x_draft1"]');
@@ -245,7 +246,7 @@ describe('Approvals', () => {
     expect(r.calls).toContain('put:x_draft1:kai may force-push feature/* of ~/repos/site.');
     expect(page().querySelector('[data-draft]')).toBeNull();
     expect(page().querySelector('[data-part="allowed"]')?.textContent).toContain('feature/*');
-    const r2 = fakeRules({ rules: [...DEFAULT_RULES, DRAFT] });
+    const r2 = fakeRules({ rules: [...DEFAULT_RULES, { ...DRAFT }] });
     await open(r2);
     q<HTMLButtonElement>('[data-draft-discard="x_draft1"]').click();
     await tick(6);
@@ -286,9 +287,105 @@ describe('Approvals', () => {
     await tick(6);
     expect(rules.calls).toContain('reviewer:pinned:claude-haiku-4');
   });
+  it('shows only the rules for every bot: a bot\'s own rules and drafts are in its sheet, and one line links each bot that has some', async () => {
+    const r = fakeRules({ rules: [...DEFAULT_RULES, KAI_DRAFT, EXCEPTION] });
+    await open(r);
+    expect(page().querySelector('[data-draft]')).toBeNull();
+    expect(page().textContent).not.toContain('kai may force-push');
+    expect(page().textContent).not.toContain('nina may restart');
+    expect(page().querySelector('[data-part="allowed"]')).toBeNull();
+    expect(page().querySelector('[data-part="built-in"]')?.textContent).toContain('no bot may answer an approval for you');
+    const line = q('[data-part="own"]');
+    /* the mock: nina asks before deploying, nimbus may never message people; kai has a draft, nina an exception too */
+    expect([...line.querySelectorAll('[data-own-bot]')].map((a) => a.textContent)).toEqual(['nina', 'kai', 'nimbus']);
+    const seen: string[] = [];
+    on('hx:bot-select', (d) => { seen.push('select ' + d.id); });
+    on('hx:bot-settings', (d) => { seen.push('sheet ' + String(d.id) + ' ' + String(d.section)); });
+    line.querySelector<HTMLButtonElement>('[data-own-bot="kai"]')?.click();
+    await tick(4);
+    expect(seen).toEqual(['select kai', 'sheet kai approvals']);
+  });
+  it('the line of bots with rules of their own is hidden when none has any', async () => {
+    await open(fakeRules(), undefined, (p) => ({ ...p, bots: { ...p.bots, snapshot: () => { const s = p.bots.snapshot(); return { ...s, bots: s.bots.map((b) => ({ ...b, cfg: { ...b.cfg, approvals: { ...b.cfg.approvals, deploys: 'allow', people: 'allow' } } })) }; } } }));
+    expect(page().querySelector('[data-part="own"]')).toBeNull();
+  });
   it('says what a rule catches in words', () => {
     expect(catches(['messages', 'browser'])).toBe('Checked when a bot is sending messages or driving a browser.');
     expect(catches([])).toContain('has not read');
+  });
+});
+
+describe('Bots', () => {
+  type Admin = NonNullable<DataProvider['bots']['admin']>;
+  const withAdmin = (calls: string[]) => (p: DataProvider): DataProvider => ({ ...p, bots: { ...p.bots, admin: {
+    removal: async (id: string) => { calls.push('removal ' + id); return { folder: '/x/' + id, lines: ['The folder /x/' + id + ' (2 MB in 40 files).', 'Its look and its boopis settings.'] }; },
+    remove: async (id: string, confirm: string) => { calls.push('remove ' + id + ' ' + confirm); },
+    archive: async (id: string) => { calls.push('archive ' + id); p.bots.archive(id); return { undo: async () => { calls.push('undo ' + id); } }; }
+  } as unknown as Admin } });
+  const open = async (patch?: (p: DataProvider) => DataProvider): Promise<void> => { boot(patch ? { patch } : {}); openSettings('bots'); await tick(8); };
+  const botRow = (id: string): HTMLElement => q('[data-bot="' + id + '"]');
+  it('the one default is a value; each bot has its orb at the rail\'s size, its role and only what differs; Open goes to its sheet', async () => {
+    await open((p) => ({ ...p, bots: { ...p.bots, snapshot: () => { const s = p.bots.snapshot(); return { ...s, bots: s.bots.map((b) => (b.id === 'kai' ? { ...b, cfg: { ...b.cfg, cap: '5' } } : b)) }; } } }));
+    expect(q('[data-part="defaults"]').textContent).toContain('Run limit for bots without their own');
+    expect(q('[data-fallback]').textContent).toBe('10 turns');
+    expect(botRow('atlas').querySelector('[data-kit~="Avatar"] orb-avatar')).not.toBeNull();
+    expect(botRow('atlas').querySelector('[data-kit~="Avatar"]')?.getAttribute('data-size')).toBe(window.innerWidth < 1200 ? '28' : '36');   /* Automatic: compact under 1200 */
+    expect(botRow('atlas').textContent).toContain('reviewer · Follows your rules');
+    expect(botRow('nina').textContent).toContain('1 rule of its own');
+    expect(botRow('kai').textContent).toContain('Follows your rules · $5 cap');
+    expect(page().textContent).not.toMatch(/default cap|No cap/i);
+    const seen: string[] = [];
+    on('hx:bot-settings', (d) => { seen.push(String(d.id)); });
+    botRow('kai').querySelector<HTMLButtonElement>('[data-bot-open]')?.click();
+    await tick(3);
+    expect(seen).toEqual(['kai']);
+  });
+  it('the menu archives with an Undo line; Archived lists each with Restore; Delete shows only where the provider deletes', async () => {
+    await open();
+    botRow('kai').querySelector<HTMLButtonElement>('[data-bot-menu]')?.click();
+    await tick(2);
+    expect([...document.querySelectorAll('.k7-menu [role^="menuitem"]')].map((r) => r.textContent)).toEqual(['Archive']);
+    menuPick('Archive');
+    await tick(8);
+    expect(page().querySelector('[data-bot="kai"]')).toBeNull();
+    expect(q('[data-last]').textContent).toContain('Archived kai');
+    expect(q('[data-part="archived"]').textContent).toContain('kai');
+    q<HTMLButtonElement>('[data-last] [data-line]').click();
+    await tick(8);
+    expect(page().querySelector('[data-bot="kai"]')).not.toBeNull();
+    expect(page().querySelector('[data-bot-delete]')).toBeNull();
+  });
+  it('Delete is the sheet\'s flow: what goes, Archive instead, and a second press deletes with the name as the confirmation', async () => {
+    const calls: string[] = [];
+    await open(withAdmin(calls));
+    botRow('atlas').querySelector<HTMLButtonElement>('[data-bot-menu]')?.click();
+    await tick(2);
+    menuPick('Delete');
+    await tick(6);
+    const flow = q('[data-part="delete"]');
+    expect(flow.textContent).toContain('Delete atlas for good?');
+    expect(flow.textContent).toContain('The folder /x/atlas');
+    const sure = flow.querySelector<HTMLButtonElement>('[data-delete-act="sure"]') as HTMLButtonElement;
+    sure.click();
+    expect(calls).not.toContain('remove atlas atlas');
+    expect(sure.textContent).toContain('Click again to delete');
+    sure.click();
+    await tick(4);
+    expect(calls).toContain('remove atlas atlas');
+    /* an archived bot is deleted the same way, from its row */
+    q<HTMLButtonElement>('[data-bot-delete="archived--ledger"]').click();
+    await tick(6);
+    expect(q('[data-part="delete"]').textContent).toContain('Delete ledger for good?');
+  });
+  it('Restore brings an archived bot back; New bot opens the new-bot form', async () => {
+    await open();
+    q<HTMLButtonElement>('[data-bot-restore="archived--ledger"]').click();
+    await tick(8);
+    expect(page().querySelector('[data-bot="ledger"]')).not.toBeNull();
+    const seen: string[] = [];
+    on('hx:new-bot', () => { seen.push('new'); });
+    q<HTMLButtonElement>('[data-new-bot]').click();
+    expect(seen).toEqual(['new']);
   });
 });
 

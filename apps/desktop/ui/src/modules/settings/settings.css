@@ -31,5 +31,5 @@
 .hx-set__list { margin: 0; padding-inline-start: var(--sp-5); }
 .hx-set__more { display: flex; }
 /* a rule's editor and a draft sit under their card, the page's gap above */
-[data-page="approvals"] .k7-block { display: grid; gap: var(--sp-3); }
-[data-page="approvals"] .k7-block .hx-set__acts { justify-content: flex-end; }
+[data-page="approvals"] .k7-block, .hx-rules .k7-block { display: grid; gap: var(--sp-3); }
+[data-page="approvals"] .k7-block .hx-set__acts, .hx-rules .k7-block .hx-set__acts { justify-content: flex-end; }

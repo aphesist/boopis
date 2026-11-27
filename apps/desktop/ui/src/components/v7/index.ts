@@ -64,7 +64,7 @@ import type { KitMentions } from './composer/behaviour';
 import { composerDictate, composerDictation as micSay, composerDropping, composerSet, composerUndo } from './composer/editing';
 import type { DictationState } from './composer/editing';
 import { CHROME_RAILS, SEARCH_SHOWS, searchHint, titlePill, windowChrome } from './window-chrome/window-chrome';
-import { page, section } from './page/page';
+import { page, pageNote, section } from './page/page';
 import { pane } from './pane/pane';
 import { dialog } from './dialog/dialog';
 import { rail } from './rail/rail';
@@ -80,7 +80,7 @@ const html = {
   notice, systemLine, bubble, well, steps, disclosure, turnFoot, hoverBar,
   timeSeparator, emptyState, list, findBar,
   toolRow, askCard, filesCard, fileCard, queue, diffView, composer, teamPlan,
-  windowChrome, titlePill, searchHint, page, pane, dialog, rail, sidebarFoot, notch, dock
+  windowChrome, titlePill, searchHint, page, pageNote, pane, dialog, rail, sidebarFoot, notch, dock
 };
 type Html = typeof html;
 type Factories = { [K in keyof Html]: (o: Parameters<Html[K]>[0]) => HTMLElement };
@@ -191,7 +191,7 @@ export type { FieldOpts } from './field/field';
 export type { TooltipOpts } from './tooltip/tooltip';
 export type { SwatchesOpts } from './swatches/swatches';
 export type { ChromeOpts, ChromeParts } from './window-chrome/window-chrome';
-export type { PageOpts } from './page/page';
+export type { PageOpts, PageNoteOpts, PageNotePart } from './page/page';
 export type { PaneOpts } from './pane/pane';
 export type { DialogOpts } from './dialog/dialog';
 export type { RailOpts, RailBot, RailGroup } from './rail/rail';

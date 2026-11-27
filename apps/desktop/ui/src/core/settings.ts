@@ -136,6 +136,8 @@ export const loadChrome = (): ChromePrefs => {
   const searchAs = SEARCH_AS.find((r) => r === o['searchAs']) ?? 'hint';
   return { rail, search: o['search'] !== false, searchAs };
 };
+/** the rail's size now: the one chosen, or Automatic's (compact under 1200 wide) */
+export const railSizeNow = (): 'a' | 'b' => { const r = loadChrome().rail; return r !== 'auto' ? r : typeof window !== 'undefined' && window.innerWidth < 1200 ? 'b' : 'a'; };
 export const saveChrome = (p: ChromePrefs): boolean => writeJSON(KEYS.chrome, { rail: p.rail, search: p.search, searchAs: p.searchAs });
 
 /* ───────── the v7 look (Settings › Appearance, board 14, P1): the accent and the corners ───────── */

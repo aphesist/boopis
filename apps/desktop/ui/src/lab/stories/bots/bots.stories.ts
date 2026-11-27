@@ -5,7 +5,8 @@ import { kit } from '@boopis/ui';
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
 import { MANY, TASKS, withKanban } from '../../kanban-fixtures';
 import type { Kanban } from '../../kanban-fixtures';
-import type { GroupMessage } from '../../../data';
+import type { GroupMessage, Rule } from '../../../data';
+import { DEFAULT_RULES, DRAFT, EXCEPTION, KAI_ASK, fakeRules, withSettings } from '../../settings-fixtures';
 import { drivable, groupRowOverlaps, liveShaped, lookMismatches, recordsArrive, teamBeforeRecords, teamGroups, withActivity, withGroupThread, withKanbanWorker, withMarkdownThread, withQueue, withRun, withWorking } from '../../live-bots';
 
 const bots = async (c: AppCtx): Promise<void> => { c.hx.setState({ tab: 'bots' }); await c.wait(500); };
@@ -123,10 +124,24 @@ const room: Story = {
   }
 };
 
+/** the sheet opened at its Approvals, as a receipt's Open and Settings › Bots open it, over a rules list (the lab's) */
+const atApprovals = (id: string, then?: (c: AppCtx) => Promise<void>) => async (c: AppCtx): Promise<void> => { await pick(id)(c); c.hx.emit('hx:bot-settings', { open: true, id, section: 'approvals', from: 'lab' }); await c.wait(1600);   /* the section's flash (1.3 s) is over */ if (then) { await then(c); await c.wait(300); } };
+const withRules = (list: readonly Rule[]): ProviderSpec => ({ patch: (p) => withSettings(p, { rules: fakeRules({ rules: list }), speech: null }) });
+const KAI_LET: Rule = { ...EXCEPTION, id: 'x_kai_let', bots: ['kai'], text: 'kai may restart the docs preview.', excepts: ['default.system'] };
+
 const sheet: Story = {
   id: 'bots/settings-sheet', title: 'Bot settings sheet', area: 'bots', kind: 'surface', covers: ['surface:bots-sheet'], scope: '#hx-view-bots', mock: MOCK,
   states: {
     nina: st(['typical'], {}, async (c) => { await pick('nina')(c); c.hx.emit('hx:bot-settings', { open: true, from: 'lab' }); await c.wait(500); }),
+    'approvals: follows your rules, none of its own': st(['empty'], withRules(DEFAULT_RULES), atApprovals('kai')),
+    'approvals: an extra ask (asks before deploying)': st(['typical'], withRules(DEFAULT_RULES), atApprovals('nina')),
+    'approvals: may never message people': st(['variant'], withRules(DEFAULT_RULES), atApprovals('nimbus')),
+    'approvals: let-throughs and an ask from the list': st(['many'], withRules([...DEFAULT_RULES, KAI_LET, KAI_ASK]), atApprovals('kai')),
+    'approvals: a draft from Always allow, first': st(['variant'], withRules([...DEFAULT_RULES, DRAFT]), atApprovals('kai')),
+    'approvals: a kind opened to edit': st(['open'], withRules(DEFAULT_RULES), atApprovals('nina', async (c) => { await c.click('#hx-view-bots [data-rule-edit="tier:deploys"]'); })),
+    'approvals: adding a rule': st(['open'], withRules(DEFAULT_RULES), atApprovals('kai', async (c) => { await c.click('#hx-view-bots [data-rule-add]'); })),
+    'approvals: a rule hovered (Edit and Remove)': st(['hover'], withRules([...DEFAULT_RULES, KAI_LET]), atApprovals('kai'), { force: [{ sel: '#hx-view-bots [data-rule="rule:x_kai_let"]', state: 'hover' }] }),
+    'approvals: switched off (the Undo line)': st(['success'], withRules(DEFAULT_RULES), atApprovals('nina', async (c) => { await c.click('#hx-view-bots [data-rule-switch="tier:deploys"]'); })),
     'a long name': st(['long'], { fixtures: ['long'] }, async (c) => { await pick('cassiopeia-staging-deploy-guardian')(c); c.hx.emit('hx:bot-settings', { open: true, from: 'lab' }); await c.wait(500); }),
     'live bot: where each routine posts': st(['typical', 'variant'], { fixtures: ['groups'], simulate: false, patch: (p) => liveShaped(p) }, async (c) => { await pick('atlas')(c); c.hx.emit('hx:bot-settings', { open: true, from: 'lab' }); await c.wait(500); document.querySelector('#hx-view-bots .bt-routines')?.scrollIntoView({ block: 'center' }); await c.wait(200); }),
     'live bot: the room link, focused': st(['focus'], { fixtures: ['groups'], simulate: false, patch: (p) => liveShaped(p) }, async (c) => { await pick('atlas')(c); c.hx.emit('hx:bot-settings', { open: true, from: 'lab' }); await c.wait(500); document.querySelector('#hx-view-bots .bt-routines')?.scrollIntoView({ block: 'center' }); await c.wait(200); }, { force: [{ sel: '#hx-view-bots .bt-routine-open', state: 'focus' }] }),

@@ -8,7 +8,7 @@
 import { $, cap1, el, frag } from '../../core/dom';
 import { kit, ui } from '@boopis/ui';
 import { data, NeedsConfirmation } from '../../data';
-import type { ApprovalTier, Bot, BotConfig, BotsAdmin, BotPatch, RoutineDraft, BotCapability } from '../../data';
+import type { Bot, BotConfig, BotsAdmin, BotPatch, RoutineDraft, BotCapability } from '../../data';
 import { diffWell } from '../cards/parts';
 import { cronValid, CRON_PRESETS, scheduleWords } from './cron';
 import { deliveryParts } from '../../data/delivery';
@@ -16,10 +16,11 @@ import { openGroup } from './group-room';
 import { bot, S } from './model';
 import { orbButton } from './orbs';
 import { checkClips } from './clips';
-import { closeSettings, hintOf, lookSection, openSettings, runLimitRow, sectionOf, tierRow, wireSectionKeys } from './settings';
+import { approvalsOf, closeSettings, hintOf, lookSection, openSettings, runLimitRow, sectionOf, wireSectionKeys } from './settings';
 import { focusConversation, openBot, refreshPresence } from './room';
 import { openNew } from './new-bot';
 import { updateRow } from './list';
+import { deleteFlow } from './delete-flow';
 
 const on = (list: readonly BotCapability[] | null): BotCapability[] => (list ?? []).filter((c) => c.enabled);
 const count = (n: number, one: string, many: string): string => n + ' ' + (n === 1 ? one : many);
@@ -40,7 +41,6 @@ export const CAP_HINT = 'No cap unless you set one. Dollars per run: one message
 export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | null, keepFocus: boolean): void {
   const admin = data().bots.admin as BotsAdmin;
   const info = b.info as NonNullable<Bot['info']>;
-  const catalog = data().bots.catalog();
   const sec = sectionOf, hint = hintOf;
   const loaded = info.soul !== null;
   const base = { role: b.role, instructions: info.soul ?? '', model: info.model ?? '' };
@@ -145,7 +145,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
 
   /* ───────── what boopis keeps for it: its own store, saved at once ───────── */
   const c = b.cfg;
-  const own = (patch: Partial<Pick<BotConfig, 'gov' | 'cap' | 'workspace'>> & { approvals?: Readonly<Record<string, ApprovalTier>> }, then?: () => void, undo?: () => void): void => {
+  const own = (patch: Partial<Pick<BotConfig, 'gov' | 'cap' | 'workspace'>>, then?: () => void, undo?: () => void): void => {
     admin.saveOwn(b.id, { cfg: patch }).then(() => { if (patch.gov) c.gov = patch.gov; then?.(); }).catch((e: unknown) => { undo?.(); ownErr.textContent = 'boopis did not save it: ' + sentence(e); ownErr.hidden = false; });
     ownErr.hidden = true;
   };
@@ -170,8 +170,6 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     $<HTMLInputElement>('input', row).addEventListener('change', (e) => onChange((e.target as HTMLInputElement).checked));
     return row;
   };
-  const appr = el('div', { class: 'ui-set' }, catalog.approvals.map((ap) => tierRow(b, ap, c.approvals[ap.id], (v) => own({ approvals: { [ap.id]: v } }))).filter((n): n is HTMLElement => !!n));
-  const apprNote = Object.keys(c.approvals).length ? null : hint('What it may do is not shown: this version of boopis’s plugin did not report it.');
 
   /* ───────── what it has: skills and servers read only; its toolsets switch here (ADR-0048), and its project folder (ADR-0049) ───────── */
   const mcpLine = inventoryLine('MCP servers', 'server', 'servers', info.mcpServers, info.notes.detail);
@@ -224,7 +222,8 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     sec('model', 'Model', info.model ?? 'not set', [modelF]),
     sec('schedule', 'Schedule', jobsMeta, [hint('What it does when you have not asked. Each is a job in this bot’s own schedule.'), routines, routineErr, promptF, presets, cronF, el('div', { class: 'bt-add-row' }, addBtn)]),
     sec('capabilities', 'What it can use', null, [hint('Toolsets and the project folder apply from its next new session.'), caps, tools, project]),
-    sec('rules', 'Rules', null, [hint('Saved with the bot, in its boopis folder. Governed applies from its next session and needs a frontier model; the cap and what it may do apply from its next step (Allow: it goes ahead, Ask: it pauses for your approval, Block: it may not); the workspace does not apply yet.'), gov, capRow, ws, appr, apprNote, ownErr, el('div', { class: 'ui-set' }, runLimitRow(b))])
+    approvalsOf(b),
+    sec('rules', 'Limits and workspace', null, [hint('Saved with the bot, in its boopis folder. Governed applies from its next session and needs a frontier model; the cap applies from its next step; the workspace does not apply yet.'), gov, capRow, ws, ownErr, el('div', { class: 'ui-set' }, runLimitRow(b))])
   );
   paintRoutines();
   const heads = wireSectionKeys(body);
@@ -283,36 +282,10 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     requestAnimationFrame(() => { review.scrollIntoView({ block: 'nearest' }); save.focus({ preventScroll: true }); });
   }
 
-  /* delete: say what goes, archive is the first answer, the second is two clicks away */
+  /* delete: say what goes, archive is the first answer, the second is two clicks away (delete-flow.ts, shared with Settings › Bots) */
   async function askDelete(): Promise<void> {
-    gone.hidden = false; review.hidden = true;
-    gone.replaceChildren(el('h3', { class: 'bt-review-h', text: 'Delete ' + b.name + ' for good?' }), el('p', { class: 'ui-field__hint', text: 'Counting what is in its folder…' }));
-    let lines: readonly string[] = [];
-    try { lines = (await admin.removal(b.id)).lines; } catch (e) { lines = ['Everything in its folder (boopis could not count it: ' + sentence(e) + ').']; }
-    if (!live()) return;
-    const err = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: true });
-    const instead = ui.button({ label: 'Archive instead', variant: 'primary' });
-    const sure = ui.button({ label: 'Delete permanently' });
-    const sureLabel = el('span', { text: 'Delete permanently' });
-    $('span', sure).replaceChildren(sureLabel);
-    const cancel = ui.button({ label: 'Cancel' });
-    gone.replaceChildren(
-      el('h3', { class: 'bt-review-h', text: 'Delete ' + b.name + ' for good?' }),
-      el('p', { class: 'ui-field__hint', text: 'This removes, and cannot be undone:' }),
-      el('ul', { class: 'bt-gone-list' }, lines.map((l) => el('li', { text: l }))),
-      el('p', { class: 'ui-field__hint', text: 'Archiving keeps all of it, pauses its routines, frees the name, and can be undone.' }),
-      err, el('div', { class: 'bt-review-acts' }, [cancel, sure, instead])
-    );
-    cancel.addEventListener('click', () => { gone.hidden = true; del.focus(); });
-    instead.addEventListener('click', () => { void archiveBot(); });
-    sure.addEventListener('click', () => {
-      if (!sure.hasAttribute('data-armed')) { sure.setAttribute('data-armed', ''); sureLabel.textContent = 'Click again to delete'; setTimeout(() => { if (sure.isConnected) { sure.removeAttribute('data-armed'); sureLabel.textContent = 'Delete permanently'; } }, 4000); return; }
-      sure.disabled = true; cancel.disabled = true; instead.disabled = true; err.hidden = true;
-      const name = b.name, id = b.id;
-      admin.remove(id, id).then(() => { afterGone(); kit.notify('Deleted ' + name); })
-        .catch((e: unknown) => { sure.disabled = false; cancel.disabled = false; instead.disabled = false; err.textContent = 'It was not deleted: ' + sentence(e); err.hidden = false; });
-    });
-    requestAnimationFrame(() => { gone.scrollIntoView({ block: 'nearest' }); instead.focus({ preventScroll: true }); });
+    review.hidden = true;
+    await deleteFlow(gone, { id: b.id, name: b.name, admin, live, onCancel: () => { del.focus(); }, onArchive: () => { void archiveBot(); }, onDone: (name) => { afterGone(); kit.notify('Deleted ' + name); } });
   }
   async function archiveBot(): Promise<void> {
     const name = b.name, id = b.id;
@@ -342,7 +315,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     const target = focusSection ? body.querySelector<HTMLElement>('[data-name="' + focusSection + '"]') : null;
     if (target) {
       target.scrollIntoView({ block: 'start' }); target.setAttribute('data-flash', ''); setTimeout(() => target.removeAttribute('data-flash'), 1300);
-      (target.querySelector<HTMLElement>('.ui-sec__body input, .ui-sec__body button, .ui-sec__body select, .ui-sec__body textarea') ?? target.querySelector<HTMLElement>('.ui-sec__head'))?.focus({ preventScroll: true });
+      (target.querySelector<HTMLElement>('[data-draft-input], [data-rule-switch]:not([disabled]), [data-rule-add]') ?? target.querySelector<HTMLElement>('.ui-sec__body input, .ui-sec__body button, .ui-sec__body select, .ui-sec__body textarea') ?? target.querySelector<HTMLElement>('.ui-sec__head'))?.focus({ preventScroll: true });   /* Approvals: its first draft, else its first rule */
     } else heads[0]?.focus({ preventScroll: true });
   });
 }

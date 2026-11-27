@@ -231,3 +231,12 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-held { display: flex; flex-direction: column; gap: var(--gap-row); margin-top: var(--gap-row); min-width: 0; }
 .bt-held[hidden] { display: none; }
 .bt-held > .k7-ask { width: min(100%, var(--bubble-max)); }
+
+/* a bot sheet's Approvals (7a follow-ups): the kit's rules list (Settings › Approvals' parts) in the sheet's section, the page's gaps */
+.bt-approvals { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); min-width: 0; }
+.bt-approvals > * { min-width: 0; }
+.bt-approvals > .hx-set__acts { justify-content: flex-start; }
+.bt-approvals .k7-page__note { margin: 0; }
+/* the sheet is narrow: a rule's words take the room its switch and its end leave, on one row (the card's own rule wraps at 10em) */
+.bt-approvals .k7-card[data-variant="settings"] .k7-row { flex-wrap: nowrap; }
+.bt-approvals .k7-card[data-variant="settings"] .k7-row > .k7-row__label { flex-basis: 0; }

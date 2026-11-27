@@ -2,7 +2,7 @@
    speech scripted (settings-fixtures.ts), the dialog opened at each page in each state. The boards' own states are `boards/settings`.
    Desktop-only parts (Diagnostics, the Local API) are drawn over a scripted host (`setSettingsHost`). */
 import type { AppCtx, State, Story } from '../../types';
-import { DEFAULT_RULES, DRAFT, EXCEPTION, MODEL, fakeDiagnostics, fakeRules, fakeSpeech, withSettings } from '../../settings-fixtures';
+import { DEFAULT_RULES, DRAFT, EXCEPTION, KAI_ASK, MODEL, fakeDiagnostics, fakeRules, fakeSpeech, withBotAdmin, withCaps, withSettings } from '../../settings-fixtures';
 import type { FakeRules } from '../../settings-fixtures';
 import { setSettingsHost } from '../../../modules/settings/host';
 import type { DataProvider, RulesSource, SpeechSource } from '../../../data';
@@ -32,6 +32,9 @@ const rules = (o: Parameters<typeof fakeRules>[0] = {}): FakeRules => fakeRules(
 /** the Session tab's launch controls, as the live provider has them (the mock has none): Sessions' How careful shows */
 const launch = (p: DataProvider): DataProvider => { const b = boardS20(p); return { ...p, ...(b.sessionControls ? { sessionControls: b.sessionControls } : {}) }; };
 
+/** every bot follows the rules alone (no kind asks or is blocked of its own) */
+const followAll = (p: DataProvider): DataProvider => { const snap = p.bots.snapshot; return { ...p, bots: { ...p.bots, snapshot: () => { const s = snap(); return { ...s, bots: s.bots.map((b) => ({ ...b, cfg: { ...b.cfg, approvals: { ...b.cfg.approvals, deploys: 'allow', people: 'allow' } } })) }; } } }; };
+
 const story: Story = {
   id: 'v7/settings', title: 'Settings (7a, on the kit)', area: 'settings', kind: 'surface', scope: '#hx-settings',
   covers: ['surface:settings', 'surface:settings-general', 'surface:settings-models', 'surface:settings-connectors', 'surface:settings-appearance', 'surface:settings-keys'],
@@ -45,7 +48,13 @@ const story: Story = {
     'sessions, this device': st(['typical'], 'sessions', { patch: launch }),
     'sessions, this project': st(['variant'], 'sessions', { patch: launch, then: click('#hx-settings [data-scope] [data-value="project"]') }),
     'sessions, how careful: its menu open': st(['open'], 'sessions', { patch: launch, then: click('#hx-settings [data-select="careful"]') }, { overlay: { anchor: '#hx-settings [data-select="careful"]', layer: '[data-kit~="Menu"]' } }),
-    bots: st(['typical', 'many'], 'bots'),
+    bots: st(['typical', 'many'], 'bots', { rules: rules({ rules: [...DEFAULT_RULES, KAI_ASK] }) }),
+    'bots, one with a cap': st(['variant'], 'bots', { patch: (p) => withCaps(p, { kai: '5', terra: '12.50' }) }),
+    'bots, scrolled to Archived': st(['scroll', 'variant'], 'bots', { patch: withBotAdmin, then: scrollEnd }),
+    'bots, a bot\'s menu open': st(['open'], 'bots', { patch: withBotAdmin, then: click('#hx-settings [data-bot-menu="kai"]') }, { overlay: { anchor: '#hx-settings [data-bot-menu="kai"]', layer: '[data-kit~="Menu"]' } }),
+    'bots, archived (the Undo line)': st(['success'], 'bots', { then: async (c) => { await c.click('#hx-settings [data-bot-menu="kai"]'); await c.wait(300); await c.click('.k7-menu [data-value="archive"]'); await c.wait(500); } }),
+    'bots, delete asks first': st(['variant'], 'bots', { patch: withBotAdmin, then: async (c) => { await c.click('#hx-settings [data-bot-menu="atlas"]'); await c.wait(300); await c.click('.k7-menu [data-value="delete"]'); await c.wait(600); } }),
+    'bots, a row hovered': st(['hover'], 'bots', {}, { force: [{ sel: '#hx-settings [data-bot="nina"]', state: 'hover' }] }),
     'bots, none': st(['empty'], 'bots', { patch: (p) => ({ ...p, bots: { ...p.bots, snapshot: () => ({ ...p.bots.snapshot(), bots: [] }) } }) }),
     'models (the page build), voice not chosen, the model ready': st(['typical'], 'models', { focus: 'voice' }),
     'models, the speech model not downloaded': st(['empty'], 'models', { focus: 'voice', speech: fakeSpeech({ model: MODEL({ state: 'absent', done: 0 }) }) }),
@@ -57,7 +66,10 @@ const story: Story = {
     'models, the voice menu open': st(['open'], 'models', { focus: 'voice', then: click('#hx-settings [data-select="voice"]') }, { overlay: { anchor: '#hx-settings [data-select="voice"]', layer: '[data-kit~="Menu"]' } }),
     'models, no speech in this build': st(['empty'], 'models', { speech: null }),
     approvals: st(['typical'], 'approvals', { rules: rules({ rules: [...DEFAULT_RULES, EXCEPTION] }) }),
-    'approvals, a draft from Always allow (opened at it)': st(['variant'], 'approvals', { focus: 'drafts', rules: rules({ rules: [...DEFAULT_RULES, DRAFT] }) }),
+    'approvals, the bots with rules of their own (scrolled)': st(['variant', 'scroll'], 'approvals', { rules: rules({ rules: [...DEFAULT_RULES, DRAFT, EXCEPTION] }), then: scrollEnd }),
+    'approvals, no bot has rules of its own (scrolled)': st(['variant', 'scroll'], 'approvals', { rules: rules(), patch: followAll, then: scrollEnd }),
+    'approvals, a bot\'s link focused': st(['focus'], 'approvals', { rules: rules({ rules: [...DEFAULT_RULES, DRAFT] }), then: scrollEnd }, { force: [{ sel: '#hx-settings [data-own-bot="kai"]', state: 'focus' }] }),
+    'approvals, a draft from Always allow (opened at it)': st(['variant'], 'approvals', { focus: 'drafts', rules: rules({ rules: [...DEFAULT_RULES, { ...DRAFT, bots: null, text: 'Bots may force-push feature branches of ~/repos/site.' }] }) }),
     'approvals, the file changed outside boopis': st(['variant'], 'approvals', { rules: rules({ changedOutside: true }) }),
     'approvals, the rules cannot be read': st(['error'], 'approvals', { rules: rules({ unreadable: true }) }),
     'approvals, nothing asks': st(['empty'], 'approvals', { rules: rules({ rules: [] }) }),

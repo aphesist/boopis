@@ -21,4 +21,13 @@ describe('story: Page', () => {
     expect([s.tagName, s.getAttribute('aria-label')]).toEqual(['SECTION', 'General']);
     expect(s.querySelector('[data-kit~="Segmented"]')).not.toBeNull();
   });
+  it('a quiet line: its words, and links that are buttons named by their words', () => {
+    const p = put(document.createElement('div'));
+    p.innerHTML = kit.html.pageNote({ parts: ['Rules of their own: ', { text: 'kai', attrs: { 'data-open': 'kai' } }, '.'], attrs: { 'data-part': 'own' } });
+    const n = p.querySelector('.k7-page__note') as HTMLElement;
+    expect(n.textContent).toBe('Rules of their own: kai.');
+    const a = n.querySelector('button.k7-page__link') as HTMLButtonElement;
+    expect([a.textContent, a.dataset['open'], a.type]).toEqual(['kai', 'kai', 'button']);
+    expect(n.dataset['part']).toBe('own');
+  });
 });

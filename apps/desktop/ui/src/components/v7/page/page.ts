@@ -4,7 +4,7 @@ import { emptyState } from '../empty-state/empty-state';
 import { sectionHead } from '../section-head/section-head';
 import { segmented } from '../segmented/segmented';
 import type { SegItem } from '../segmented/segmented';
-import { esc, kitAttrs } from '../util';
+import { attrs, esc, kitAttrs } from '../util';
 import type { Attrs, U } from '../util';
 import { defineContract } from '../contract';
 
@@ -19,6 +19,14 @@ export function page(o: PageOpts): string {
   }
   return '<main class="k7-page"' + kitAttrs('Page', { 'data-variant': 'column', ...(o.attrs ?? {}) }) + '><div class="k7-page__column k7-thread" data-kit-part="Thread">' + body + '</div></main>';
 }
+/** a part of a quiet line: its words, or words that open something (a link: a button that reads as one, its handles in `attrs`) */
+export type PageNotePart = string | { text: string; attrs: Attrs };
+export interface PageNoteOpts { parts: readonly PageNotePart[]; attrs?: U<Attrs> }
+/** a settings page's quiet line (7a: what a list does not say in its rows), whose links open where the rest is set (7a follow-ups: the bots
+    with rules of their own, the bot sheet's "Follows your approval rules"). A link is a button in the line's words, in AskCard's rule look */
+export function pageNote(o: PageNoteOpts): string {
+  return '<p class="k7-page__note"' + attrs(o.attrs ?? {}) + '>' + o.parts.map((x) => (typeof x === 'string' ? esc(x) : '<button type="button" class="k7-reset k7-page__link"' + attrs(x.attrs) + '>' + esc(x.text) + '</button>')).join('') + '</p>';
+}
 /** a settings section: its heading (4 in from its card) and its card */
 export const section = (title: string, cardHTML: string, count?: string): string => '<div class="k7-section">' + sectionHead({ title, ...(count ? { count } : {}) }) + cardHTML + '</div>';
 
@@ -27,8 +35,8 @@ export const contract = defineContract<PageOpts>({
   name: 'Page',
   folder: 'page',
   layer: 'surface',
-  summary: 'The ground and its 640 column, or a settings page with its head (the title and a Segmented scope). `section` is a settings section: its head and its card.',
-  exports: ['page'],
+  summary: 'The ground and its 640 column, or a settings page with its head (the title and a Segmented scope). `section` is a settings section: its head and its card; `pageNote` a quiet line of the page, whose links open where the rest is set.',
+  exports: ['page', 'pageNote'],
   props: {
     variant: 'column (the default) or settings',
     title: 'settings: the page\'s title',
@@ -39,11 +47,11 @@ export const contract = defineContract<PageOpts>({
   },
   events: [],
   states: ['data-variant'],
-  parts: ['Thread', 'k7-page__head', 'k7-section'],
+  parts: ['Thread', 'k7-page__head', 'k7-section', 'k7-page__note', 'k7-page__link'],
   tokens: [
-    '--bg-2', '--col-w', '--fs-s', '--fs-xl', '--gap-hair', '--lh-s', '--lh-xl', '--pad-set-gap', '--pad-set-page', '--sp-1',
-    '--sp-2', '--sp-4', '--sp-5', '--text', '--text-dim'
+    '--accent-text', '--bg-2', '--col-w', '--fs-s', '--fs-xl', '--gap-hair', '--gap-xs', '--lh-s',
+    '--lh-xl', '--pad-set-gap', '--pad-set-page', '--r-xs', '--sp-1', '--sp-2', '--sp-4', '--sp-5', '--text', '--text-dim'
   ],
-  a11y: 'The column is <main>; a settings page a <section> named by its title (an <h2>).',
+  a11y: 'The column is <main>; a settings page a <section> named by its title (an <h2>). A note\'s link is a <button> in the line, named by its words, with the focus ring.',
   boards: ['14-settings', 'S39-settings-sessions']
 });

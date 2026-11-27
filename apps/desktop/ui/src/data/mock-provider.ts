@@ -225,18 +225,23 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       const role = shortRole(draft.role);
       const nb: Bot = {
         id, name: id, role, shape: draft.shape, color: draft.color, state: 'happy', attention: null, paused: false, activity: '', spent: '0.00', last: null, ideas: M.ideasFor(role),
-        cfg: { instructions: draft.instructions, gov: 'governed', model: 'sonnet 5.5', cap: '', cron: '', channels: { app: true, slack: false, telegram: false, email: false }, approvals: { deploys: 'ask', push: 'ask', network: 'allow', spend: 'ask', people: 'ask', outside: 'ask', delete: 'ask', commands: 'allow' }, workspace: 'worktree' }
+        cfg: { instructions: draft.instructions, gov: 'governed', model: 'sonnet 5.5', cap: '', cron: '', channels: { app: true, slack: false, telegram: false, email: false }, approvals: { deploys: 'allow', push: 'allow', network: 'allow', spend: 'ask', people: 'allow', outside: 'allow', delete: 'allow', commands: 'allow' }, workspace: 'worktree' }
       };
       bots.push(nb);
       botsEv.emit({ type: 'bot-created', bot: cloneBot(nb) });
-      later(() => stream(id, 'Hi, I’m ' + id + '. ' + (nb.cfg.instructions ? 'My brief: “' + nb.cfg.instructions.replace(/\s+/g, ' ') + '”' : 'Tell me what you need.') + ' I ask before deploying, pushing or spending past my cap. Open settings to give me a schedule or more channels.', () => {
+      later(() => stream(id, 'Hi, I’m ' + id + '. ' + (nb.cfg.instructions ? 'My brief: “' + nb.cfg.instructions.replace(/\s+/g, ' ') + '”' : 'Tell me what you need.') + ' I follow your approval rules. Open settings to give me a schedule, more channels or rules of my own.', () => {
         later(() => { const c = botById(id); if (c && c.state === 'happy') setBotState(id, 'idle'); }, 3000);
       }), 900);
       return cloneBot(nb);
     },
     archive(id) {
       const i = bots.findIndex((b) => b.id === id); if (i < 0) return;
-      bots.splice(i, 1);
+      const [gone] = bots.splice(i, 1);
+      /* it waits under Archived, as a real profile renamed out of the way does, until it is restored */
+      if (gone && !archivedSeeds.some((a) => a.was === id)) {
+        archivedSeeds.unshift({ id: 'archived--' + id, name: 'archived--' + id, was: id, at: new Date().toISOString(), when: 'just now', seed: { id, name: gone.name, role: gone.role, shape: gone.shape, color: gone.color, state: 'idle' } });
+        archivedBots.set(archivedSeeds.map(({ seed: _seed, ...row }) => row));
+      }
       botsEv.emit({ type: 'bot-archived', id });
     },
     archived: archivedBots,

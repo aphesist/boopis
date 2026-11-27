@@ -8,7 +8,7 @@
    click opens and focus stays in the list (KEYMAP 4). The rail: the kit's Rail, the bots' tiles (54 on 88; 44 on 64 under 1200 px
    of window, Automatic), the rooms as clusters under a hairline, New bot, Store and Settings at its foot. A live update never
    draws an orb again: rows and tiles are written in place. */
-import { loadChrome } from '../../core/settings';
+import { railSizeNow } from '../../core/settings';
 import { emit, on } from '../../core/bus';
 import { $, el, frag, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
@@ -206,7 +206,7 @@ export function syncListVisibility(): void {
 const RAIL = { host: null as HTMLElement | null, sig: '' };
 /** Settings > General > Layout > Rail size (board 14): Standard, Compact, or Automatic (the default: compact under 1200 px of window,
     standard from 1200) */
-const railSize = (): 'a' | 'b' => { const r = loadChrome().rail; return r !== 'auto' ? r : typeof window !== 'undefined' && window.innerWidth < 1200 ? 'b' : 'a'; };
+const railSize = railSizeNow;
 function mountRail(): void {
   RAIL.host = document.getElementById('hx-rail');
   RAIL.sig = '';
