@@ -65,9 +65,9 @@ export const contract = defineContract<FieldOpts>({
   parts: ['k7-field__box', 'k7-field__label', 'k7-field__hint', 'k7-field__error'],
   tokens: [
     '--ctl', '--ctl-s', '--dur-1', '--dur-out', '--ease-out', '--fill-2', '--focus', '--focus-off', '--focus-w', '--fs-s',
-    '--fs-xs', '--gap-label', '--hl', '--icon-quiet', '--icon-s', '--lh-s', '--lh-xs', '--line', '--line-field', '--mono',
+    '--fs-xs', '--gap-label', '--gap-s', '--hl', '--icon-quiet', '--icon-s', '--lh-s', '--lh-xs', '--line', '--line-field', '--mono',
     '--pad-field', '--pad-field-y', '--r-field', '--r-floor', '--r-pill', '--red', '--red-text', '--sp-1', '--sp-2', '--text',
-    '--text-dim', '--text-faint', '--text-quiet', '--track-s'
+    '--text-dim', '--text-faint', '--text-quiet', '--track', '--track-s'
   ],
   a11y: 'A native input or textarea with a <label>; the hint and error are joined to it by aria-describedby. A secret\'s Show is a pressed toggle that names what it shows.',
   boards: []

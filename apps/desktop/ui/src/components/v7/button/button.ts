@@ -12,14 +12,14 @@ export type ButtonSize = typeof BUTTON_SIZES[number];
 export interface ButtonOpts {
   label: string; variant?: U<ButtonVariant>; size?: U<ButtonSize>; icon?: U<string>; /** what leads the label in place of a glyph (a provider's mark, S37): trusted kit markup */ leadHTML?: U<string>; disabled?: U<boolean>;
   /** hold to confirm: the fill sweeps over --dur-hold (1 s, owner decision) and fires ui:commit */
-  hold?: U<boolean>; tip?: U<string>; keys?: U<string>; type?: U<'button' | 'submit'>; attrs?: U<Attrs>;
+  hold?: U<boolean>; /** a glyph after the words: where pressing it goes (board 15's "3 installed" with its chevron) */ iconEnd?: U<string>; tip?: U<string>; keys?: U<string>; type?: U<'button' | 'submit'>; attrs?: U<Attrs>;
   /** split: the menu half's accessible name */
   menuLabel?: U<string>;
 }
 export function button(o: ButtonOpts): string {
   const v = o.variant ?? 'secondary', size = o.size ?? 36;
   const a = (extra: Attrs): string => attrs({ type: o.type ?? 'button', disabled: !!o.disabled, 'data-tip': o.tip, 'data-kbd': o.keys, ...extra });
-  const inner = (o.leadHTML ?? glyph(o.icon)) + '<span class="k7-btn__label">' + esc(o.label) + '</span>';
+  const inner = (o.leadHTML ?? glyph(o.icon)) + '<span class="k7-btn__label">' + esc(o.label) + '</span>' + glyph(o.iconEnd, 'k7-btn__end');
   if (v === 'split') {
     return '<span class="k7-split" ' + kitAttrs('Button', { 'data-variant': 'split', 'data-size': size, ...(o.attrs ?? {}) }).trim() + '>' +
       '<button class="k7-reset k7-btn k7-split__main"' + a({ 'data-variant': 'primary', 'data-size': size }) + '>' + inner + '</button>' +
@@ -41,6 +41,7 @@ export const contract = defineContract<ButtonOpts>({
     variant: 'secondary (the default), primary, ghost, tint, danger or split (a primary with a menu half)',
     size: '36 (the default), 32 or 28',
     icon: 'a glyph of the kit\'s icon set, before the words',
+    iconEnd: 'a glyph after the words: where pressing it goes',
     leadHTML: 'trusted kit markup that leads it in place of a glyph (an orb, a model\'s mark)',
     disabled: 'it cannot be pressed now',
     hold: 'hold to confirm: the fill sweeps over --dur-hold (1 s) and fires ui:commit',
@@ -55,7 +56,7 @@ export const contract = defineContract<ButtonOpts>({
     'data-variant', 'data-size', 'disabled', 'data-hold', 'data-holding', 'data-held', 'data-armed',
     'aria-expanded (the split menu half)'
   ],
-  parts: ['k7-split__main', 'k7-split__menu', 'k7-btn__sweep'],
+  parts: ['k7-split__main', 'k7-split__menu', 'k7-btn__sweep', 'k7-btn__end'],
   tokens: [
     '--bg-3', '--bg-4', '--ctl', '--ctl-card', '--ctl-s', '--dur-1', '--dur-hold', '--dur-out', '--dur-press', '--ease-out',
     '--ease-sharp', '--fill-2', '--fs-m', '--fs-s', '--gap-hair', '--gap-s', '--hl', '--hover', '--icon-off', '--line',

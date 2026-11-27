@@ -366,6 +366,10 @@
   --icon-l: 18px;
   --find-w: 360px;
   --well-thread-h: 240px;
+  --pad-wide: 18px;
+  --wide-h: 640px;
+  --wide-head: 52px;
+  --palette-h: 520px;
   --ns-top: 64px;
   --ns-bottom: 250px;
   --ns-wait-w: 520px;

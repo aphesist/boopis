@@ -28,6 +28,9 @@
 .k7-lrow[data-variant="compact"] > .k7-lrow__sub { display: block; overflow: hidden; text-overflow: ellipsis; }
 .k7-lrow[data-variant="bot"] .k7-lrow__sub, .k7-lrow[data-variant="item"] .k7-lrow__sub { display: block; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); }
 .k7-lrow__sub[data-tone="owe"] { color: var(--owe-text); }
+/* an item's name on the 20 line over its 18 (board 15's `.m` and `.s`), its tile at the boards' 12 (kit.css `.imark`: --r-tile) */
+.k7-lrow[data-variant="item"] .k7-lrow__title { line-height: var(--lh-m); }
+.k7-lrow[data-variant="item"] > .k7-lrow__mark { border-radius: var(--r-tile); }
 /* renaming a session in its row: the title becomes a field on the same line */
 .k7-lrow__rename { flex: 1 1 auto; min-width: 0; font-size: var(--fs-m); line-height: var(--lh-s); color: var(--text); cursor: text; outline: none; box-shadow: 0 var(--hl) 0 var(--line-field); }
 .k7-lrow__time { flex: none; font-size: var(--fs-2xs); color: var(--text-dim); }

@@ -34,6 +34,7 @@ import { block } from './block/block';
 import { menuRow } from './menu-row/menu-row';
 import { optionRow } from './option-row/option-row';
 import { menu, MENU_VARIANTS } from './menu/menu';
+import { commandPalette, commandPaletteList } from './command-palette/command-palette';
 import type { MenuOpts } from './menu/menu';
 import { wireMenu } from './menu/behaviour';
 import { list, LIST_ROW_VARIANTS, listRow } from './list-row/list-row';
@@ -66,7 +67,7 @@ import type { DictationState } from './composer/editing';
 import { CHROME_RAILS, SEARCH_SHOWS, searchHint, titlePill, windowChrome } from './window-chrome/window-chrome';
 import { page, pageNote, section } from './page/page';
 import { pane } from './pane/pane';
-import { dialog } from './dialog/dialog';
+import { dialog, DIALOG_VARIANTS } from './dialog/dialog';
 import { rail } from './rail/rail';
 import { sidebarFoot } from './sidebar-foot/sidebar-foot';
 import { notch } from './notch/notch';
@@ -76,7 +77,7 @@ const html = {
   button, iconButton, kbd, chip, segmented,
   selectorItem, switch: switchHTML, swatchDot, kbdSpec, field, tooltip, swatches,
   inlineChip, mark, statusWord, badge, statusLine, avatar,
-  card, block, menu, menuRow, optionRow, listRow, sectionHead,
+  card, block, menu, menuRow, optionRow, listRow, sectionHead, commandPalette, commandPaletteList,
   notice, systemLine, bubble, well, steps, disclosure, turnFoot, hoverBar,
   timeSeparator, emptyState, list, findBar,
   toolRow, askCard, filesCard, fileCard, queue, diffView, composer, teamPlan,
@@ -109,6 +110,7 @@ export const kitVariants = {
   askCard: { variant: ASK_VARIANTS, state: ASK_STATES },
   composer: { kind: COMPOSER_KINDS },
   windowChrome: { rail: CHROME_RAILS, search: SEARCH_SHOWS },
+  dialog: { variant: DIALOG_VARIANTS },
   dock: { kind: ['row', 'compact', 'open'] as const }
 } as const;
 
@@ -210,6 +212,7 @@ export type { CardOpts, RowOpts } from './card/card';
 export type { BlockOpts } from './block/block';
 export type { MenuOpts, MenuEntry } from './menu/menu';
 export type { MenuRowOpts } from './menu-row/menu-row';
+export type { CommandPaletteOpts, CommandPaletteListOpts, CommandPaletteGroup, CommandPaletteRow } from './command-palette/command-palette';
 export type { OptionRowOpts } from './option-row/option-row';
 export type { ListRowOpts, ListOpts } from './list-row/list-row';
 export type { SectionHeadOpts } from './section-head/section-head';

@@ -105,6 +105,8 @@ both.push('--file-w: 260px;',                       /* a file card (kit.css .fil
   '--stop-glyph: 10px;', '--r-stop: 2px;',              /* the composer's Stop: a filled rounded square in a tinted 28 circle (owner, 25 November) */
   '--wc-w: 32px;', '--wc-h: 28px;', '--icon-l: 18px;',                 /* a window glyph's cell (kit.css .wc span) */
   '--find-w: 360px;', '--well-thread-h: 240px;',   /* find in a conversation (6e, derived): the bar's width; a handed-off task's transcript, at most this tall */
+  '--pad-wide: 18px;', '--wide-h: 640px;', '--wide-head: 52px;',   /* the Store: a 900 by 640 dialog with no nav, its parts 18 in, its head 52 (board 15: screens.js store) */
+  '--palette-h: 520px;',                                 /* the command palette's most height (derived, no board: the v6 palette's) */
   '--ns-top: 64px;', '--ns-bottom: 250px;', '--ns-wait-w: 520px;', '--ns-wait-top: 40px;', '--ns-mark: 72px;', '--ns-logo: 44px;', '--offer-w: 470px;', '--ns-offer-top: 22px;');   /* the new session's canvas (kit.css .ns, .ns-wait, .ns-mark; sessionnew.js brand) */
 
 const css = `/* Generated from tokens.v7.json by scripts/build-tokens-v7.mjs. Do not edit: run \`pnpm tokens\`. */

@@ -29,6 +29,7 @@
 @import './card/card.css';
 @import './block/block.css';
 @import './menu/menu.css';
+@import './command-palette/command-palette.css';
 @import './menu-row/menu-row.css';
 @import './option-row/option-row.css';
 @import './list-row/list-row.css';

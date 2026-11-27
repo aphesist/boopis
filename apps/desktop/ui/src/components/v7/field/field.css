@@ -11,11 +11,13 @@
   --field-r: var(--r-field); border-radius: var(--field-r); background: transparent; box-shadow: inset 0 0 0 var(--hl) var(--line-field); color: var(--text);
   transition: box-shadow var(--dur-out) var(--ease-out);
 }
-.k7-field__box[data-kind="search"] { border-radius: var(--r-pill); background: var(--fill-2); box-shadow: inset 0 0 0 var(--hl) var(--line); padding: 0 var(--sp-2) 0 var(--pad-field); }   /* a kbd 8 in from the pill's end: 18 - 8 = 10, a pill (8.2) */
+.k7-field__box[data-kind="search"] { border-radius: var(--r-pill); background: var(--fill-2); box-shadow: inset 0 0 0 var(--hl) var(--line); padding: 0 var(--sp-2) 0 var(--gap-s); }   /* the boards' `.input.search`: its glyph 6 in (board 15's search); a kbd 8 in from the pill's end, a pill (8.2) */
 .k7-field__box[data-kind="multiline"] { align-items: flex-start; padding: var(--pad-field-y) var(--pad-field); }
 .k7-field__glyph { width: var(--icon-s); height: var(--icon-s); color: var(--icon-quiet); }
-.k7-field__input { flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text); outline: none; resize: none; }
+.k7-field__input { flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track); color: var(--text); outline: none; resize: none; }   /* the boards' `.input` keeps the root's tracking (kit.css) */
 .k7-field__input::placeholder { color: var(--text-quiet); }
+/* a search field has no clear button the platform draws (AGENTS: no platform-drawn controls); Esc and the screen clear it */
+.k7-field__input::-webkit-search-cancel-button, .k7-field__input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
 .k7-field__input:focus-visible { outline: none; }   /* the box draws the ring (`:focus-within` below); the input never draws a second one */
 .k7-field__input.k7-mono { font-family: var(--mono); font-size: var(--fs-xs); }
 @media (hover: hover) and (pointer: fine) { .k7-field__box:hover { box-shadow: inset 0 0 0 var(--hl) var(--text-quiet); transition-duration: var(--dur-1); } }

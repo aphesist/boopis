@@ -48,7 +48,7 @@ export const contract = defineContract<StatusLineOpts>({
   states: ['data-kind', 'data-working'],
   parts: ['k7-status__phrase', 'k7-status__mark'],
   tokens: [
-    '--dur-breathe', '--dur-shimmer', '--ease-io', '--fs-l', '--fs-xs', '--gap-xs', '--lh-m', '--sp-2', '--text', '--text-dim'
+    '--dur-breathe', '--dur-shimmer', '--ease-io', '--fs-l', '--fs-s', '--fs-xs', '--gap-xs', '--lh-m', '--lh-s', '--sp-2', '--text', '--text-dim'
   ],
   a11y: 'role="status" with aria-live="polite", so a change is said once; inside the title pill the pill names it instead.',
   boards: ['11-botchat', '12-room', '17-working', 'S20-running', '14-settings']

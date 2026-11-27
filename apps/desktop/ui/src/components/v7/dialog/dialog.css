@@ -34,3 +34,12 @@
 .k7-dialog__page { flex: 1 1 auto; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
   /* board 14's `.setbody`: the page fades out over its last 28 as it scrolls under the dialog's foot */
   -webkit-mask-image: linear-gradient(currentColor calc(100% - var(--sp-6) + var(--sp-1)), transparent); mask-image: linear-gradient(currentColor calc(100% - var(--sp-6) + var(--sp-1)), transparent); }
+
+/* ── wide (the Store, board 15: screens.js store): 900 by 640 on --bg-pane, no nav; a head of 52 (its title 15 semibold 18 in, what stands at
+   its end 56 from the right, clear of the close), then a body that scrolls, its parts 18 in ── */
+.k7-dialog[data-variant="wide"] { --sq-bg: var(--bg-pane); gap: 0; width: var(--dialog-l); height: var(--wide-h); max-height: 100%; padding: 0; border-radius: var(--r-card); }
+.k7-dialog__head { display: flex; align-items: center; gap: var(--sp-3); flex: none; min-height: var(--wide-head); padding: var(--sp-4) var(--pad-chrome) var(--sp-1) var(--pad-wide); box-sizing: border-box; }
+.k7-dialog[data-variant="wide"] .k7-dialog__title { flex: 1 1 auto; min-width: 0; padding: 0; }
+.k7-dialog__end { display: inline-flex; align-items: center; gap: var(--sp-2); flex: none; min-width: 0; }
+.k7-dialog__body[data-wide] { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 var(--pad-wide) var(--pad-wide); color: var(--text); gap: 0; }
+.k7-dialog__body[data-wide]:focus { outline: none; }

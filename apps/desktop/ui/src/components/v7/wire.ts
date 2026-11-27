@@ -7,6 +7,7 @@ import { wireRestOrb } from './avatar/behaviour';
 import { wireHold } from './button/behaviour';
 import { wireCheckRow, wireRowAction } from './card/behaviour';
 import { wireChip } from './chip/behaviour';
+import { wireCommandPalette } from './command-palette/behaviour';
 import { wireComposer } from './composer/behaviour';
 import { wireDisclosure } from './disclosure/behaviour';
 import { paintDock } from './dock/behaviour';
@@ -27,6 +28,7 @@ const WIRES: ReadonlyArray<readonly [string, (el: HTMLElement) => void]> = [
   ['[data-hold]', wireHold],                                      /* button/: a Button or Chip that holds */
   ['[data-disclose]', wireDisclosure],                            /* disclosure/: and every collapsed summary */
   ['[data-kit~="Menu"]', wireMenu],                               /* menu/ */
+  ['[data-kit~="CommandPalette"]', wireCommandPalette],           /* command-palette/ */
   ['.k7-mark', wireMark],                                         /* mark/ */
   ['.k7-info', wireInfo],                                         /* mark/: an info label */
   ['.k7-composer', wireComposer],                                 /* composer/ */

@@ -90,7 +90,7 @@ export const contract = defineContract<ListRowOpts>({
   tokens: [
     '--bg-1', '--bg-4', '--compact-h', '--current', '--dur-1', '--dur-out', '--ease-out', '--flag-ring', '--focus-w', '--fs-2xs',
     '--fs-m', '--fs-s', '--fs-xs', '--gap-row', '--gap-s', '--hair', '--hl', '--hover', '--item-h', '--item-mark', '--lh-s',
-    '--lh-xs', '--line-field', '--mono', '--owe-text', '--pad-kbd', '--r-field', '--r-floor', '--r-tile', '--row-h-2',
+    '--lh-m', '--lh-xs', '--line-field', '--mono', '--owe-text', '--pad-kbd', '--r-field', '--r-floor', '--r-tile', '--row-h-2',
     '--session-h', '--sp-2', '--sp-3', '--text', '--text-dim', '--track-s'
   ],
   a11y: 'An option of a listbox (an item row is a listitem, since it carries its own action). The list is one tab stop; its current row takes it.',

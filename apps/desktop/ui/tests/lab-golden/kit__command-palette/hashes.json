@@ -1,0 +1,82 @@
+{
+ "a-typed-query@dark": {
+  "sha": "547625bf3256eb1ad4edc94a4ef0d55fcd4221f5",
+  "w": 724,
+  "h": 200
+ },
+ "a-typed-query@light": {
+  "sha": "0d98b23c6a494686e5af841ed8bfae021ff83964",
+  "w": 724,
+  "h": 200
+ },
+ "focus@dark": {
+  "sha": "9776b3f911e760336c8474f26949458e22748774",
+  "w": 724,
+  "h": 348
+ },
+ "focus@light": {
+  "sha": "cff07ac5d9ab7957b1602834a40b29f869c7979b",
+  "w": 724,
+  "h": 348
+ },
+ "hover@dark": {
+  "sha": "9f6a69184dfc72ba4b62a070bc9cb1da8db80330",
+  "w": 724,
+  "h": 348
+ },
+ "hover@light": {
+  "sha": "a2817f710d6a4a463978b70252c4d6cd6e127c34",
+  "w": 724,
+  "h": 348
+ },
+ "long@dark": {
+  "sha": "c4ceb46588752124d4e5dfd6b918b20678c42d42",
+  "w": 444,
+  "h": 136
+ },
+ "long@light": {
+  "sha": "601991b3d4f6a0881cfc0443570c24b00372e519",
+  "w": 444,
+  "h": 136
+ },
+ "many-rows-scrolling@dark": {
+  "sha": "be6a87b4279df32cb49ad0bc88127b4ba766d08c",
+  "w": 724,
+  "h": 544
+ },
+ "many-rows-scrolling@light": {
+  "sha": "e69c8c647d520f607ad735c3ebb9de4037e0b717",
+  "w": 724,
+  "h": 544
+ },
+ "no-matches@dark": {
+  "sha": "3f7f02619a6a30f52a513acceea68b36c3341465",
+  "w": 724,
+  "h": 144
+ },
+ "no-matches@light": {
+  "sha": "78e76d935e114443926e8f6b102f5cdd1452936a",
+  "w": 724,
+  "h": 144
+ },
+ "pressed@dark": {
+  "sha": "761f69c9dfc067601db2d45edee76f28e4cd9627",
+  "w": 724,
+  "h": 348
+ },
+ "pressed@light": {
+  "sha": "41ae4cb459adb3228bc086e19e98bf507082cd50",
+  "w": 724,
+  "h": 348
+ },
+ "typical@dark": {
+  "sha": "761f69c9dfc067601db2d45edee76f28e4cd9627",
+  "w": 724,
+  "h": 348
+ },
+ "typical@light": {
+  "sha": "41ae4cb459adb3228bc086e19e98bf507082cd50",
+  "w": 724,
+  "h": 348
+ }
+}

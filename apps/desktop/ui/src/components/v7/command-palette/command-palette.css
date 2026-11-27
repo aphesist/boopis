@@ -1,0 +1,29 @@
+/* CommandPalette's look (derived, no board: S31's rows, the kit's Menu surface). Tokens only; kit-v7.css imports it after the Menu. */
+
+/* ── CommandPalette: the Menu's surface (--bg-3, --float-line, --shadow-pop), 640 wide and at most 520 tall, its corner 14 and inset 6;
+   the search Field on top, the rows under it on the same inset ── */
+.k7-cpal {
+  --sq-bg: var(--bg-3); --sq-line: var(--float-line); --sq-shadow: var(--shadow-pop);
+  display: flex; flex-direction: column; gap: var(--pad-palette); width: var(--palette-w); max-width: 100%; max-height: var(--palette-h); padding: var(--pad-palette); box-sizing: border-box;
+  border-radius: var(--r-card); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line), var(--sq-shadow); color: var(--text);
+}
+.k7-cpal[data-sq-on]:not(#sq) { box-shadow: var(--sq-shadow); }
+.k7-cpal > .k7-field { flex: none; }
+/* the field sits in the palette's corner on its 6 inset: its corner is concentric with the palette's (14 - 6 = 8, R-corner-3), not a pill */
+.k7-cpal > .k7-field > .k7-field__box { border-radius: max(var(--r-floor), calc(var(--r-card) - var(--pad-palette))); }
+.k7-cpal__list { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.k7-cpal__head { padding: var(--pad-row-y) var(--pad-row-x) var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
+/* a row: 32 tall, concentric with the palette's corner (14 - 6 = 8); its lead 16, its label cut where the row ends, its keys at its end */
+.k7-cpal__row {
+  display: flex; align-items: center; gap: var(--gap-row); flex: none; min-height: var(--row-h); padding: 0 var(--pad-row-x); box-sizing: border-box;
+  border-radius: max(var(--r-floor), calc(var(--r-card) - var(--pad-palette))); font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); cursor: default;
+}
+.k7-cpal__row[aria-selected="true"] { background: var(--current); }
+@media (hover: hover) and (pointer: fine) { .k7-cpal__row:not([aria-selected="true"]):hover { background: var(--hover); } }
+.k7-cpal__lead { display: inline-grid; place-items: center; flex: none; width: var(--icon-s); height: var(--icon-s); color: var(--icon); }
+.k7-cpal__lead > * { max-width: 100%; max-height: 100%; }
+.k7-cpal__label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k7-cpal__hit { background: none; color: inherit; text-decoration: underline; text-decoration-color: var(--accent-text); text-underline-offset: var(--sp-1); }
+.k7-cpal__meta { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
+.k7-cpal__row > .k7-word, .k7-cpal__row > .k7-keys { flex: none; }
+.k7-cpal__empty { margin: 0; padding: var(--sp-5) var(--sp-2); text-align: center; font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); overflow-wrap: anywhere; }

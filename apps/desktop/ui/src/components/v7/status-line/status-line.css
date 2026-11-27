@@ -4,6 +4,8 @@
 /* kit.css `.activity`: 15 on the thread's own 20 line */
 .k7-status { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; font-size: var(--fs-l); line-height: var(--lh-m); color: var(--text-dim); }
 /* who is replying, as a stack (board 12): the boards set the stack's orbs on the phrase's baseline, 3 under the stack's own top */
+/* the system's line in a page (board 15's "Reading sources 0 of 1", kit.css `.status-a`): 13 on its 18 line */
+.k7-status[data-kind="system"] { font-size: var(--fs-s); line-height: var(--lh-s); }
 .k7-status > .ui-stack { margin-top: var(--gap-xs); margin-bottom: calc(-1 * var(--gap-xs)); }
 .k7-status__phrase { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .k7-status__count { font-size: var(--fs-xs); color: var(--text-dim); }
