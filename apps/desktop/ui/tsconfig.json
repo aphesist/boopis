@@ -19,5 +19,5 @@
     "noEmit": true,
     "paths": { "@boopis/ui": ["./src/components/index.ts"] }
   },
-  "include": ["src", "vendor/orb-avatar.d.ts", "vendor/boopis-logo.d.ts", "vite.config.ts", "vite.kit.config.ts", "vitest.config.ts"]
+  "include": ["src", "kit-docs", "vendor/orb-avatar.d.ts", "vendor/boopis-logo.d.ts", "vite.config.ts", "vite.kit.config.ts", "vite.kit-docs.config.ts", "vitest.config.ts"]
 }

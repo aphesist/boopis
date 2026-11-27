@@ -25,6 +25,7 @@
     "tokens": "node scripts/build-tokens.mjs && node scripts/build-tokens-v7.mjs",
     "tokens:check": "node scripts/build-tokens.mjs --check && node scripts/build-tokens-v7.mjs --check",
     "kit": "vite build --config vite.kit.config.ts",
+    "kit:docs": "node scripts/kit-docs.mjs",
     "dev:desktop": "vite --mode desktop",
     "build:desktop": "pnpm tokens:check && tsc --noEmit && vite build --mode desktop",
     "vendor:hermes-shared": "node scripts/vendor-hermes-shared.mjs"

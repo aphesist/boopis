@@ -1,0 +1,74 @@
+/* The kit's article: the page around the live examples. Tokens only (styles/tokens.v7.css on the v7 root, the body); the examples
+   inside draw with the kit's own CSS. No new design language: the type, the surfaces and the lines are the kit's. */
+html, body { margin: 0; }
+body { background: var(--bg-2); color: var(--text); font-family: var(--sans); font-size: var(--fs-m); line-height: var(--lh-m); }
+.kd { box-sizing: border-box; display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100vh; }
+.kd-nav { position: sticky; top: 0; align-self: start; box-sizing: border-box; height: 100vh; overflow-y: auto; padding: var(--sp-6) var(--sp-3) var(--sp-6) var(--sp-5); background: var(--bg-1); box-shadow: inset calc(-1 * var(--hl)) 0 0 var(--line); }
+.kd-nav__title { margin: 0 0 var(--sp-4); color: var(--text-strong); font-size: var(--fs-s); font-weight: 600; }
+.kd-nav ol { list-style: none; margin: 0; padding: 0; }
+.kd-nav li + li { margin-top: var(--sp-1); }
+.kd-nav a { display: block; padding: var(--sp-1) var(--sp-2); border-radius: var(--r-nav); color: var(--text-dim); font-size: var(--fs-s); line-height: var(--lh-s); text-decoration: none; }
+.kd-nav a:hover { background: var(--hover); color: var(--text); }
+.kd-nav a:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: calc(-1 * var(--focus-w)); }
+.kd-nav__sub a { padding-left: var(--sp-4); font-size: var(--fs-xs); line-height: var(--lh-xs); }
+.kd-nav__theme { margin-top: var(--sp-5); }
+.kd-body { box-sizing: border-box; width: 100%; max-width: 920px; padding: var(--sp-7) var(--sp-6) var(--sp-7); }
+.kd h1 { margin: 0 0 var(--sp-3); color: var(--text-strong); font-size: var(--fs-3xl); line-height: var(--lh-3xl); font-weight: 600; }
+.kd h2 { margin: var(--sp-7) 0 var(--sp-3); color: var(--text-strong); font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 600; }
+.kd h3 { margin: var(--sp-6) 0 var(--sp-2); color: var(--text-strong); font-size: var(--fs-l); line-height: var(--lh-l); font-weight: 600; }
+.kd h4 { margin: var(--sp-4) 0 var(--sp-2); color: var(--text-dim); font-size: var(--fs-s); line-height: var(--lh-s); font-weight: 500; }
+.kd p { margin: 0 0 var(--sp-3); }
+.kd-lead { color: var(--text-dim); font-size: var(--fs-l); line-height: var(--lh-l); }
+.kd-dim { color: var(--text-dim); }
+.kd code { font-family: var(--mono); font-size: 0.92em; }
+.kd p code, .kd td code, .kd li code, .kd dd code { padding: 0 var(--pad-code-x); border-radius: var(--r-xs); background: var(--fill-2); }
+.kd-rule { margin: var(--sp-3) 0 var(--sp-4); padding: var(--sp-3) var(--sp-4); border-radius: var(--r-card); background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line); }
+.kd-rule strong { color: var(--text-strong); }
+.kd table { width: 100%; margin: var(--sp-2) 0 var(--sp-4); border-collapse: collapse; font-size: var(--fs-s); line-height: var(--lh-s); }
+.kd th { padding: var(--sp-2) var(--sp-3) var(--sp-2) 0; color: var(--text-dim); font-weight: 500; text-align: left; vertical-align: bottom; box-shadow: inset 0 calc(-1 * var(--hl)) 0 var(--line); }
+.kd td { padding: var(--sp-2) var(--sp-3) var(--sp-2) 0; vertical-align: top; box-shadow: inset 0 calc(-1 * var(--hl)) 0 var(--hair); }
+.kd td:first-child { color: var(--text-strong); white-space: nowrap; }
+.kd-comp { margin-top: var(--sp-6); }
+.kd-comp > h3 { display: flex; align-items: baseline; gap: var(--sp-2); }
+.kd-comp > h3 small { color: var(--text-quiet); font-family: var(--mono); font-size: var(--fs-xs); font-weight: 400; }
+.kd-stage { box-sizing: border-box; margin: var(--sp-3) 0; padding: var(--sp-5); overflow-x: auto; border-radius: var(--r-card); background: var(--bg-2); box-shadow: inset 0 0 0 var(--hl) var(--line); }
+.kd-stage[data-ground="frame"] { background: var(--bg-1); }
+.kd-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--sp-1) var(--sp-4); margin: var(--sp-2) 0 var(--sp-3); font-size: var(--fs-s); line-height: var(--lh-s); }
+.kd-facts dt { color: var(--text-dim); }
+.kd-facts dd { margin: 0; }
+.kd-props { margin: var(--sp-1) 0 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--sp-1) var(--sp-4); font-size: var(--fs-s); line-height: var(--lh-s); }
+.kd-props dt { font-family: var(--mono); color: var(--text-strong); }
+.kd-props dd { margin: 0; color: var(--text-dim); }
+.kd-code, .kd-props { align-self: stretch; min-width: 0; }
+.kd-code { margin-top: var(--sp-2); }
+.kd-code__panel { margin-top: var(--sp-2); max-height: 520px; overflow: auto; border-radius: var(--r-field); }
+.kd-code__panel[hidden] { display: none; }
+.kd-code__panel .k7-well__pre { white-space: pre; }
+.kd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: var(--sp-4); margin: var(--sp-4) 0; padding: var(--sp-4); border-radius: var(--r-card); background: var(--bg-2); box-shadow: inset 0 0 0 var(--hl) var(--line); }
+.kd-grid__cell { box-sizing: border-box; min-width: 0; padding: var(--sp-4); overflow: hidden; border-radius: var(--r-card); background: var(--bg-2); box-shadow: inset 0 0 0 var(--hl) var(--hair); }
+.kd-grid__cell > h4 { margin: 0 0 var(--sp-3); }
+.kd-grid__cell .lab-cell { transform-origin: 0 0; }
+.kd-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); margin: var(--sp-3) 0; }
+.kd-steps { margin: var(--sp-3) 0 var(--sp-5); }
+.kd-steps__stage { min-height: 120px; }
+.kd-steps__say { min-height: calc(2 * var(--lh-m)); color: var(--text-dim); }
+.kd-steps__say strong { color: var(--text-strong); }
+.kd-prompt { margin: var(--sp-3) 0 var(--sp-4); }
+.kd-prompt .k7-well__pre { white-space: pre-wrap; }
+.kd-prompt__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-2); }
+.kd-prompt__bar span { color: var(--text-dim); font-size: var(--fs-s); }
+.kd-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: var(--sp-2); margin: var(--sp-3) 0; }
+.kd-swatch { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); }
+.kd-swatch i { flex: none; width: var(--ctl-s); height: var(--ctl-s); border-radius: var(--r-xs); box-shadow: inset 0 0 0 var(--hl) var(--line); }
+.kd-swatch span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kd-scale { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--sp-4); margin: var(--sp-3) 0; }
+.kd-scale > div { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--text-dim); }
+.kd-scale b { display: block; width: var(--ctl); height: var(--ctl); background: var(--fill-2); box-shadow: inset 0 0 0 var(--hl) var(--line); }
+.kd-type > div { display: flex; align-items: baseline; gap: var(--sp-4); padding: var(--sp-1) 0; }
+.kd-type > div > span:first-child { flex: none; width: 96px; color: var(--text-dim); font-family: var(--mono); font-size: var(--fs-xs); }
+.kd-foot { margin-top: var(--sp-7); padding-top: var(--sp-4); color: var(--text-quiet); font-size: var(--fs-xs); box-shadow: inset 0 var(--hl) 0 var(--line); }
+@media (max-width: 899px) {
+  .kd { grid-template-columns: minmax(0, 1fr); }
+  .kd-nav { position: static; height: auto; }
+  .kd-body { padding: var(--sp-5) var(--sp-4); }
+}
