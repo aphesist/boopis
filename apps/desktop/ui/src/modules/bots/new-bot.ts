@@ -60,7 +60,7 @@ function buildNew(seed?: Partial<Draft>): void {
       else { follow.faceOn(560); d.shape = look.shape; apply('shape'); oc(preview, 'poke', 0.5, { react: false }); }
     }
   });
-  const roleField = ui.field({ kind: 'textarea', label: 'What it does', placeholder: 'For example: reviews every pull request before I merge', value: d.role, raised: true });
+  const roleField = ui.field({ kind: 'textarea', label: 'What it does', placeholder: 'Reviews pull requests before I merge', value: d.role, raised: true });
   const roleIn = $<HTMLTextAreaElement>('textarea', roleField);
   const go = ui.button({ label: 'Create bot', variant: 'primary', disabled: true });
   go.classList.add('bt-go');
@@ -153,12 +153,12 @@ function buildNew(seed?: Partial<Draft>): void {
     const models = admin.models();
     let model = plan.model;
     const box = el('section', { class: 'bt-confirm', role: 'group', 'aria-label': 'Make ' + plan.profile }, [
-      el('p', { class: 'bt-confirm-line', text: 'This makes ' + plan.profile + ' a folder of its own. Its instructions, memory, skills and schedule live there.' }),
+      el('p', { class: 'bt-confirm-line', text: plan.profile + ' gets a folder of its own.' }),
       plan.folder ? el('p', { class: 'bt-confirm-path ui-mono', text: plan.folder }) : null,
       ...plan.notes.map((n) => el('p', { class: 'bt-confirm-line bt-confirm-note', text: n }))
     ]);
     if (models.length) {
-      const f = ui.field({ kind: 'model', label: 'Model', options: models, value: model ?? models[0] ?? '', hint: 'From the providers boopis has keys for. You can change it later in its settings.' });
+      const f = ui.field({ kind: 'model', label: 'Model', options: models, value: model ?? models[0] ?? '', hint: 'You can change it later.' });
       f.addEventListener('ui:change', (e) => { model = (e as CustomEvent<{ value: string }>).detail.value; });
       model = model ?? models[0] ?? null;
       box.append(f);

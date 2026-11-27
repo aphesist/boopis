@@ -358,6 +358,8 @@ Intentional differences from v6, all invisible:
 - Stories import the kit, `@boopis/ui`, and use its public API (props and variants), never a module's internals or hand-built kit markup. The lab is never in the desktop build.
 
 ## What not to do
+- Do not write long settings text: every label, hint, notice, empty state and placeholder follows the copy rules (`docs/kit/RULES.md`
+  section 7). A label that stands alone gets no hint; a hint is one short sentence about what it does for the person.
 - Do not name the engine in anything a person reads (ADR-0031, `docs/BRANDING.md`): say "boopis's engine" or, better, what failed in the user's terms; a teammate is a bot. Show an error with `sentence(e)` (already mapped by the host, or by `GatewayError.fromFrame`), and pass a text that may quote the engine through `unlessEngine` (`host/errors.ts`). A store item's own name is the one exception: wrap it with `storeItem` (`core/engine-words.ts`). `engine-words.test.ts` is the guard.
 - Do not redesign, "improve", re-space or re-colour anything. If the design looks wrong, tell the owner; do not change it.
 - Do not edit `design/v6/` (the reference). A change that only moves where motion runs (compositor, worker) does not touch it: the look is the same.

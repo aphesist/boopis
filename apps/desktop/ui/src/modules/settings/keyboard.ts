@@ -10,6 +10,6 @@ import { section } from './rows';
 export function keyboardPage(): Page {
   const { el, body } = pageEl('keys', 'Keyboard');
   fill(body, KEYGROUPS.map(([group, rows]) => section(group, rows.map(([label, spec]) => ({ label, wrap: true, control: kit.html.kbdSpec(spec) })))).join('') +
-    '<p class="k7-page__note">Keys shown for this computer. In a web browser a few belong to the browser (F6, and Alt+1 or Alt+2 on Linux); every action is also in the palette. Changing a key comes later.</p>');
+    '<p class="k7-page__note">Every action is also in the palette.</p>');
   return { el };
 }

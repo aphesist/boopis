@@ -42,11 +42,9 @@ async function realDiagnostics(): Promise<DiagnosticsHost> {
       return {
         policy,
         lines: (chosen) => {
-          const lines: string[] = [];
-          lines.push(g.policy_source === 'environment' ? `BOOPIS_GPU is set (${m.gpuLabel(g.policy)}) and overrides this choice.` : `Running on: ${g.set.length ? 'the dedicated GPU' : 'the integrated GPU'} (${g.rule.replace(/_/g, ' ')}).`);
-          if (g.warning === 'may_crash_on_wayland') lines.push('The dedicated GPU on Wayland with this WebKitGTK (before 2.54.2) may crash or show a blank window.');
-          if (g.restart_advice) lines.push(`The power source changed: a restart would switch to the ${g.restart_advice === 'to_dedicated' ? 'dedicated' : 'integrated'} GPU.`);
-          if (chosen !== g.policy && g.policy_source !== 'environment') lines.push('Saved. It applies after a restart.');
+          const pending = chosen !== g.policy && g.policy_source !== 'environment';
+          const lines: string[] = [g.policy_source === 'environment' ? `BOOPIS_GPU (${m.gpuLabel(g.policy)}) overrides this.` : pending ? 'Applies after a restart.' : g.restart_advice ? `Restart to switch to the ${g.restart_advice === 'to_dedicated' ? 'dedicated' : 'integrated'} GPU.` : `Running on the ${g.set.length ? 'dedicated' : 'integrated'} GPU.`];
+          if (g.warning === 'may_crash_on_wayland') lines.push('The dedicated GPU may show a blank window here.');
           return lines;
         },
         restart: (chosen) => (chosen !== g.policy && g.policy_source !== 'environment') || !!g.restart_advice

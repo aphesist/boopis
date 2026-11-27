@@ -28,7 +28,6 @@ export function tauriLocalApiBridge(): LocalApiBridge {
 /** the words under the switch for a status: what is on, where, and what the owner must know */
 export function describeStatus(s: LocalApiStatus): string {
   if (s.problem) return s.problem;
-  if (!s.running) return 'Off. Other apps on this computer cannot see your bots, answer approvals or send them messages.';
-  const clients = s.streams === 0 ? 'No app is following it now.' : s.streams === 1 ? 'One app is following it.' : s.streams + ' apps are following it.';
-  return 'On, on this computer only. Apps read the token from the file below. ' + clients;
+  if (!s.running) return 'Lets apps see your bots, answer approvals and message them.';
+  return s.streams === 0 ? 'No app connected.' : s.streams === 1 ? 'One app connected.' : s.streams + ' apps connected.';
 }

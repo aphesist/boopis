@@ -62,7 +62,7 @@ export function lookEditor(b: Bot, onMeta: (words: string) => void): LookEditor 
     ui.announce('Look: ' + lookWords(look));
   });
   return {
-    kids: [el('p', { class: 'ui-field__hint', text: 'Its colour and shape, wherever it appears. Its eyes follow what it is doing.' }), picker.el, err],
+    kids: [picker.el, err],
     meta: lookWords(saved())
   };
 }

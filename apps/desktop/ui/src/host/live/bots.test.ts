@@ -447,7 +447,7 @@ describe('archive keeps everything, delete asks first and says what goes', () =>
     const note = await bots.source.admin!.removal('atlas');
     expect(note.folder).toBe(HOME + '/profiles/atlas');
     expect(note.lines).toEqual([
-      'The folder ' + HOME + '/profiles/atlas (3.0 MB in 240 files).', 'All its sessions and what they said.', 'Its memory (2 files).', 'Its 9 skills.', 'Its 1 routine.', 'Its look and its boopis settings.'
+      'Its folder, 3.0 MB in 240 files', 'All its sessions', 'Its memory', 'Its 9 skills', 'Its 1 routine', 'Its look and settings'
     ]);
   });
   it('deletes only with the name, through the plugin, and the bot goes', async () => {
@@ -566,7 +566,7 @@ describe('archived bots, restored from the Archived group and the palette', () =
     const { bots } = await open(h);
     const admin = bots.source.admin!;
     const note = await admin.removal('archived--hex');
-    expect(note.lines).toContain('Its routines, whatever they are.');
+    expect(note.lines).toContain('Its routines');
     await admin.remove('archived--hex', 'archived--hex');
     expect(h.main.calls.find((c) => c.method === 'plugin.boopis.bots.delete')!.params).toEqual({ name: 'archived--hex', confirm: 'archived--hex' });
     expect(bots.source.archived.get()).toEqual([]);

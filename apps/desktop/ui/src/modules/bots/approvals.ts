@@ -51,7 +51,7 @@ export function approvalsSection(start: Bot, deps: ApprovalsDeps): { el: HTMLEle
     ? ruleEditor({ key: r.key, text: r.text, hint: catches(r.rule.kinds), removable: true })
     : ruleEditor({ key: r.key, text: r.text, wordsFixed: true, hint: '', removable: true, extra: senseField(r.key, r.sense === 'never' ? 'never' : 'ask', canAllow(r.kind as Choice)) });
   const senseField = (key: string, value: string, canAsk: boolean): string => kit.html.field({ id: 'hx-sense-' + key.replace(/[^\w-]/g, '-'), label: 'What ' + start.name + ' does', control: kit.html.segmented({ label: 'What ' + start.name + ' does', items: [...(canAsk ? [{ value: 'ask', label: 'Asks first' }] : []), { value: 'never', label: 'Never' }], value, attrs: { 'data-sense': key } }) });
-  const newEditor = (): string => ruleEditor({ key: 'new', label: 'A new rule for ' + start.name, hint: 'One line, such as “may restart the staging services” or “ask before deploying”.', extra:
+  const newEditor = (): string => ruleEditor({ key: 'new', label: 'A new rule for ' + start.name, hint: 'One line, like “ask before deploying”.', extra:
     kit.html.field({ id: 'hx-rule-new-type', label: 'When it applies', control: kit.html.segmented({ label: 'When it applies', items: [{ value: 'ask', label: 'Asks first' }, { value: 'exception', label: 'Goes ahead' }], value: 'ask', attrs: { 'data-sense': 'new' } }) }) });
 
   function draw(): void {
@@ -61,10 +61,10 @@ export function approvalsSection(start: Bot, deps: ApprovalsDeps): { el: HTMLEle
     const opened = rows.find((r) => r.key === open);
     const follows = kit.html.pageNote({ parts: src ? ['Follows ', { text: 'your approval rules', attrs: { 'data-open-rules': '' } }, '.'] : ['Anything not listed here runs on its own.'], attrs: { 'data-part': 'follows' } });
     const unread = src && !view && readError ? '<p class="k7-page__note" role="status">Its rules from the list can’t be read: ' + readError + '</p>' : '';
-    const unknownKinds = known ? '' : '<p class="k7-page__note">What it asks by kind of action is not shown: this version of boopis’s plugin did not report it.</p>';
+    const unknownKinds = known ? '' : '<p class="k7-page__note">This plugin version doesn’t report its kinds of action.</p>';
     const own = rows.length
       ? rulesCard({ title: 'Only for ' + start.name, rows: rows.map(rowOf), part: 'own', ...(opened ? { editor: editorOf(opened) } : {}) })
-      : sectionOf('Only for ' + start.name, '<p class="k7-page__note">Nothing of its own: ' + start.name + ' asks only where your rules say.</p>', { 'data-part': 'own' });
+      : sectionOf('Only for ' + start.name, '<p class="k7-page__note">No rules of its own.</p>', { 'data-part': 'own' });
     const change = last ? kit.html.systemLine({ icon: 'sliders', text: last.what, action: 'Undo', attrs: { 'data-last': '' } }) : '';
     fill(el, follows + unread +
       (drafts.length ? sectionOf('Drafts', drafts.map((r) => draftBlock(r.rule as Rule, view, { forWhom: false })).join(''), { 'data-part': 'drafts' }) : '') +

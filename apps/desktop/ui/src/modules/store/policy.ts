@@ -5,10 +5,8 @@ import type { ProjectPolicy, StoreProvider } from '../../data';
 import { errorText } from './model';
 
 export const POLICY_LABEL = 'No engine plugins and no plugin hooks';
-export function policyHint(p: ProjectPolicy): string {
-  const base = 'Engine plugins run in every session, outside the sandbox. Plugin hooks run commands on this computer.';
-  if (p.explicit === null) return `${base} On by default here: this project is ${p.governed ? 'governed' : 'not governed'}.`.replace('On by default here', p.governed ? 'On by default here' : 'Off by default here');
-  return `${base} Your choice for this project.`;
+export function policyHint(_p: ProjectPolicy): string {
+  return 'Plugins and hooks run outside the sandbox.';
 }
 
 const seen = new Map<string, ProjectPolicy>();   // the last answer per project, so a redrawn panel shows it at once
@@ -23,7 +21,7 @@ export function projectSwitch(store: Pick<StoreProvider, 'projectPolicy' | 'setP
     const sw = host.querySelector<HTMLInputElement>('input[role=switch]');
     sw?.addEventListener('change', () => {
       const want = sw.checked;
-      store.setProjectPolicy(project, want).then((n) => { seen.set(project, n); draw(n); say(want ? 'Engine plugins and plugin hooks are off for this project.' : 'Engine plugins and plugin hooks are allowed here once approved.'); }).catch((e: unknown) => { sw.checked = !want; say(errorText(e)); });
+      store.setProjectPolicy(project, want).then((n) => { seen.set(project, n); draw(n); say(want ? 'Plugins and hooks are off for this project' : 'Plugins and hooks may run here once approved'); }).catch((e: unknown) => { sw.checked = !want; say(errorText(e)); });
     });
   };
   draw(seen.get(project) ?? null);

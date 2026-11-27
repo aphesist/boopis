@@ -22,10 +22,10 @@ export function modelWords(m: SpeechModel): string {
   return 'Not downloaded';
 }
 const PROVIDERS: ReadonlyArray<{ value: VoiceProvider | 'none'; label: string; desc: string }> = [
-  { value: 'none', label: 'None', desc: 'The voice circle says a voice model is needed.' },
-  { value: 'elevenlabs', label: 'ElevenLabs', desc: 'With your ElevenLabs API key.' },
-  { value: 'fish_audio', label: 'Fish Audio', desc: 'With your Fish Audio API key.' },
-  { value: 'local', label: 'A server on this computer', desc: 'An OpenAI-compatible speech server, such as Kokoro or Piper.' }
+  { value: 'none', label: 'None', desc: 'No voice.' },
+  { value: 'elevenlabs', label: 'ElevenLabs', desc: 'Needs an API key.' },
+  { value: 'fish_audio', label: 'Fish Audio', desc: 'Needs an API key.' },
+  { value: 'local', label: 'A server on this computer', desc: 'An OpenAI-compatible server, like Kokoro or Piper.' }
 ];
 const providerLabel = (p: VoiceProvider | null): string => PROVIDERS.find((x) => x.value === (p ?? 'none'))?.label ?? 'None';
 
@@ -37,22 +37,22 @@ export function mountVoice(host: HTMLElement, src: SpeechSource | undefined = da
   const draw = (): void => {
     const dict: RowOpts[] = model
       ? [{
-        label: 'Speech model', sub: model.failed ?? 'Whisper, on this computer. The mic writes what you say into the composer; its first press fetches the model.',
+        label: 'Speech model', sub: model.failed ?? 'Turns what you say into text, on this computer.',
         control: '<span class="k7-row__value" data-model-state="' + model.state + '">' + esc(modelWords(model)) + '</span>' +
           actionsHTML(model.state === 'absent' ? buttonHTML('Download', { attrs: { 'data-speech': 'fetch' } }) : model.state === 'ready' ? buttonHTML('Delete', { variant: 'ghost', attrs: { 'data-speech': 'delete', 'aria-label': 'Delete the speech model' } }) : '')
-      }, { label: 'Language', sub: 'It hears which language you speak.', value: model.language ?? 'Automatic' }]
+      }, { label: 'Language', value: model.language ?? 'Automatic' }]
       : [{ label: 'Speech model', sub: modelError || 'Reading the speech model.' }];
     const p = voice.provider;
     const keyRow: RowOpts[] = p === 'elevenlabs' || p === 'fish_audio'
       ? [hasKey
-        ? { label: 'API key', sub: 'Kept in your system’s keychain. boopis never shows it again.', control: actionsHTML(buttonHTML('Change', { attrs: { 'data-voice': 'change-key' } }), buttonHTML('Remove', { variant: 'ghost', attrs: { 'data-voice': 'remove-key', 'aria-label': 'Remove the ' + providerLabel(p) + ' key' } })) }
-        : { label: 'API key', sub: 'It goes to your system’s keychain and nowhere else.', control: kit.html.field({ id: 'hx-voice-key', secret: true, ariaLabel: providerLabel(p) + ' API key', placeholder: 'Paste the key' }) + actionsHTML(buttonHTML('Save', { variant: 'primary', attrs: { 'data-voice': 'save-key' } })) }]
+        ? { label: 'API key', sub: 'Kept in your system’s keychain.', control: actionsHTML(buttonHTML('Change', { attrs: { 'data-voice': 'change-key' } }), buttonHTML('Remove', { variant: 'ghost', attrs: { 'data-voice': 'remove-key', 'aria-label': 'Remove the ' + providerLabel(p) + ' key' } })) }
+        : { label: 'API key', sub: 'Stays in your system’s keychain.', control: kit.html.field({ id: 'hx-voice-key', secret: true, ariaLabel: providerLabel(p) + ' API key', placeholder: 'Paste the key' }) + actionsHTML(buttonHTML('Save', { variant: 'primary', attrs: { 'data-voice': 'save-key' } })) }]
       : p === 'local'
-        ? [{ label: 'Speech address', sub: 'The server’s OpenAI-compatible speech URL on this computer.', control: kit.html.field({ id: 'hx-voice-url', inputType: 'url', ariaLabel: 'Speech address', value: voice.localUrl ?? '', placeholder: 'http://127.0.0.1:8880/v1/audio/speech', mono: true }) + actionsHTML(buttonHTML('Save', { variant: 'primary', attrs: { 'data-voice': 'save-url' } })) }]
+        ? [{ label: 'Speech address', control: kit.html.field({ id: 'hx-voice-url', inputType: 'url', ariaLabel: 'Speech address', value: voice.localUrl ?? '', placeholder: 'http://127.0.0.1:8880/v1/audio/speech', mono: true }) + actionsHTML(buttonHTML('Save', { variant: 'primary', attrs: { 'data-voice': 'save-url' } })) }]
         : [];
     fill(host,
       section('Dictation', dict, { 'data-part': 'dictation' }) +
-      section('Voice', [{ label: 'Talking to bots', sub: 'The voice the voice circle will talk with. Talking to bots arrives in a later update.', control: selectHTML('voice', 'Voice', providerLabel(p)) }, ...keyRow], { 'data-part': 'voice', id: 'hx-set-voice' }));
+      section('Voice', [{ label: 'Talking to bots', sub: 'Coming in a later update.', control: selectHTML('voice', 'Voice', providerLabel(p)) }, ...keyRow], { 'data-part': 'voice', id: 'hx-set-voice' }));
   };
   const readModel = async (): Promise<void> => {
     try { model = await speech.model(); modelError = ''; } catch (e) { model = null; modelError = 'The speech model could not be read: ' + said(e); }
@@ -72,7 +72,7 @@ export function mountVoice(host: HTMLElement, src: SpeechSource | undefined = da
     const t = e.target as Element;
     const s = t.closest<HTMLElement>('[data-speech]')?.dataset['speech'];
     if (s === 'fetch') { act(speech.fetchModel().then((m) => { model = m; })); return; }
-    if (s === 'delete') { act(speech.deleteModel().then((m) => { model = m; }), 'The speech model was deleted. The mic fetches it again when you press it.'); return; }
+    if (s === 'delete') { act(speech.deleteModel().then((m) => { model = m; }), 'Speech model deleted; the mic fetches it again'); return; }
     const sel = t.closest<HTMLElement>('[data-select="voice"]');
     if (sel) {
       openSelect(sel, { label: 'Voice', value: voice.provider ?? 'none', choices: PROVIDERS, onPick: (v) => {

@@ -6,7 +6,7 @@ import type { AppCtx, ProviderSpec, State, Story } from '../../types';
 import { MANY, TASKS, withKanban } from '../../kanban-fixtures';
 import type { Kanban } from '../../kanban-fixtures';
 import type { GroupMessage, Rule } from '../../../data';
-import { DEFAULT_RULES, DRAFT, EXCEPTION, KAI_ASK, fakeRules, withSettings } from '../../settings-fixtures';
+import { DEFAULT_RULES, DRAFT, EXCEPTION, KAI_ASK, fakeRules, withLiveSheet, withSettings } from '../../settings-fixtures';
 import { drivable, groupRowOverlaps, liveShaped, lookMismatches, recordsArrive, teamBeforeRecords, teamGroups, withActivity, withGroupThread, withKanbanWorker, withMarkdownThread, withQueue, withRun, withWorking } from '../../live-bots';
 
 const bots = async (c: AppCtx): Promise<void> => { c.hx.setState({ tab: 'bots' }); await c.wait(500); };
@@ -153,6 +153,7 @@ const sheet: Story = {
     'look: a swatch focused': st(['focus'], {}, openSheet('nina'), { force: [{ sel: '#hx-view-bots [data-name="look"] .bt-opt[aria-checked="true"]', state: 'focus' }] }),
     'run limit: the row, in the model section': st(['variant'], {}, async (c) => { await openSheet('nina')(c); document.querySelector('#hx-view-bots [aria-label^="Turns a run may take"]')?.scrollIntoView({ block: 'center' }); await c.wait(200); }),
     'run limit menu, the bot has its own': st(['open', 'variant'], { patch: (p) => ({ ...p, bots: { ...p.bots, runLimit: () => Promise.resolve({ turns: 45, fallback: 10 }) } }) }, async (c) => { await openSheet('nina')(c); document.querySelector('#hx-view-bots [aria-label^="Turns a run may take"]')?.scrollIntoView({ block: 'center' }); await c.wait(200); await c.click('#hx-view-bots [aria-label^="Turns a run may take"]'); await c.wait(400); }, { overlay: { anchor: '#hx-view-bots [aria-label^="Turns a run may take"]', layer: '.k7-menu[data-floating]' } }),
+    'a profile\'s own sheet (the live sheet), every section': st(['typical', 'owner'], { patch: (p) => withLiveSheet(withSettings(p, { rules: fakeRules({ rules: DEFAULT_RULES }), speech: null }), 'kai') }, openSheet('kai'), { note: 'the sheet the app draws for a teammate that is a profile: role and instructions, model, routines, what it can use, approvals, limits; kai has only the defaults, so its approvals follow your rules' }),
     'scrolled to the end': st(['scroll'], {}, async (c) => { await pick('nina')(c); c.hx.emit('hx:bot-settings', { open: true, from: 'lab' }); await c.wait(500); for (const n of document.querySelectorAll<HTMLElement>('#hx-view-bots [class*="sheet"] *')) if (n.scrollHeight > n.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(n).overflowY)) n.scrollTop = n.scrollHeight; await c.wait(200); })
   }
 };

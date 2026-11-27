@@ -63,7 +63,7 @@ describe('the sheet\'s Approvals', () => {
   it('follows your rules (a link to Settings › Approvals); a bot with none of its own says so, with Add a rule', async () => {
     await mount(botOf('kai'));
     expect(q('[data-part="follows"]').textContent).toBe('Follows your approval rules.');
-    expect(q('[data-part="own"]').textContent).toContain('Nothing of its own: kai asks only where your rules say.');
+    expect(q('[data-part="own"]').textContent).toContain('No rules of its own.');
     expect(host.querySelector('[data-rule-add]')).not.toBeNull();
     expect(host.textContent).not.toMatch(/tier/i);
     const seen: string[] = [];
@@ -105,7 +105,7 @@ describe('the sheet\'s Approvals', () => {
     q<HTMLButtonElement>('[data-rule-remove="tier:deploys"]').click();
     await tick(6);
     expect(writes).toEqual(['deploys:block', 'deploys:allow']);
-    expect(q('[data-part="own"]').textContent).toContain('Nothing of its own');
+    expect(q('[data-part="own"]').textContent).toContain('No rules of its own');
   });
   it('Add a rule: its words and whether it asks first or goes ahead, kept in the rules list for this bot alone', async () => {
     await mount(botOf('kai'));

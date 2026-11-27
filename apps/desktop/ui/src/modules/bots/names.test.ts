@@ -90,8 +90,8 @@ describe('picking a name', () => {
 
 describe('the note under the name', () => {
   it('says what a name in use will become, and why a rolled name has a number', () => {
-    expect(nameNote('atlas', true, 'atlas-2', false)).toBe('There is already a bot called atlas. This one will be atlas-2.');
-    expect(nameNote('nova-2', false, 'nova-2-2', true)).toBe('Every name in the list is taken, so this one has a number.');
+    expect(nameNote('atlas', true, 'atlas-2', false)).toBe('atlas is taken, so this one will be atlas-2.');
+    expect(nameNote('nova-2', false, 'nova-2-2', true)).toBe('Every name is taken, so it gets a number.');
     expect(nameNote('nova', false, 'nova-2', false)).toBe('');
     expect(nameNote('  ', true, 'bot-2', true)).toBe('');
   });

@@ -44,13 +44,13 @@ export function botsPage(): Page {
   function draw(): void {
     const list = bots(), gone = archived(), canDelete = !!admin();
     const defaults = list.length && fallback !== null
-      ? section('Defaults', [{ label: 'Run limit for bots without their own', sub: 'The most turns a run may take. Each bot can have its own, set in its settings.', control: valueHTML(fallback + ' turns', { 'data-fallback': '' }) }], { 'data-part': 'defaults' }) : '';
+      ? section('Defaults', [{ label: 'Default run limit', sub: 'Each bot can set its own.', control: valueHTML(fallback + ' turns', { 'data-fallback': '' }) }], { 'data-part': 'defaults' }) : '';
     const yours = list.length
       ? section('Your bots', list.map((b) => ({ label: b.name, sub: botLine(b, rules), leadHTML: orb(b),
         control: actionsHTML(buttonHTML('Open', { attrs: { 'data-bot-open': b.id, 'aria-label': 'Open ' + b.name + '’s settings' } }),
           kit.html.iconButton({ icon: 'more', label: 'More for ' + b.name, variant: 'ghost', attrs: { 'data-bot-menu': b.id, 'aria-haspopup': 'menu' } })),
         attrs: { 'data-bot': b.id } })), { 'data-part': 'bots' })
-      : sectionOf('Your bots', kit.html.emptyState({ text: 'No bots yet. A new bot has no cap and follows your rules.' }), { 'data-part': 'bots' });
+      : sectionOf('Your bots', kit.html.emptyState({ text: 'No bots yet.' }), { 'data-part': 'bots' });
     const change = last ? kit.html.systemLine({ icon: 'archive', text: last.what, action: 'Undo', attrs: { 'data-last': '' } }) : '';
     const arch = gone.length
       ? section('Archived', gone.map((a) => ({ label: a.was, sub: 'Archived' + (a.when ? ' ' + a.when : ''),

@@ -50,7 +50,7 @@ export function sessionsPage(): Page {
     const step = defaultCareful();
     fill(host, data().sessionControls
       ? section('New sessions', [{ label: 'How careful', control: selectHTML('careful', 'How careful', CAREFUL[step].name) }], { 'data-part': 'new' })
-      : kit.html.emptyState({ text: 'New sessions start from the launch row in the Session tab.' }));
+      : kit.html.emptyState({ text: 'New sessions start from the Session tab.' }));
   }
   wrap.addEventListener('click', (e) => {
     const sel = (e.target as Element).closest<HTMLElement>('[data-select="careful"]');
@@ -62,7 +62,7 @@ export function sessionsPage(): Page {
     if (t.dataset['set'] !== 'policy' || !project) return;
     const want = !!(e as CustomEvent<{ value: boolean }>).detail.value, p = project;
     data().store.setProjectPolicy(p, want)
-      .then((n) => { policy = n; draw(); kit.notify(want ? 'Engine plugins and plugin hooks are off for this project.' : 'Engine plugins and plugin hooks are allowed here once approved.'); })
+      .then((n) => { policy = n; draw(); kit.notify(want ? 'Plugins and hooks are off for this project' : 'Plugins and hooks may run here once approved'); })
       .catch((err: unknown) => { draw(); kit.notify(said(err)); });
   });
   build();

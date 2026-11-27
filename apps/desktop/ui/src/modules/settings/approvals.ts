@@ -40,7 +40,7 @@ export function approvalsPage(rules: RulesSource | undefined = data().rules): Pa
     readOnce = true;
   };
   const rowOf = (r: Rule): RuleRowOpts => ({ key: r.id, text: r.text, enabled: r.enabled, origin: originWord(r), open: open === r.id });
-  const editor = (r: Rule | null): string => ruleEditor({ key: r?.id ?? 'new', ...(r ? { text: r.text } : {}), hint: r ? catches(r.kinds) : 'One line. The reviewer reads what it catches when you save it.', removable: !!r });
+  const editor = (r: Rule | null): string => ruleEditor({ key: r?.id ?? 'new', ...(r ? { text: r.text } : {}), hint: r ? catches(r.kinds) : 'One line, like “Ask before deploying”.', removable: !!r });
   const card = (title: string, list: readonly Rule[], part: string, count?: string): string => {
     const opened = list.find((r) => r.id === open);
     return rulesCard({ title, rows: list.map(rowOf), part, ...(count ? { count } : {}), ...(opened ? { editor: editor(opened) } : {}) });
@@ -61,7 +61,7 @@ export function approvalsPage(rules: RulesSource | undefined = data().rules): Pa
     const keepKey = keep ? ['data-rule-switch', 'data-rule-edit', 'data-draft-save', 'data-rule-save'].map((a) => (keep.hasAttribute(a) ? '[' + a + '="' + CSS.escape(keep.getAttribute(a) ?? '') + '"]' : '')).find(Boolean) : '';
     if (!view && !readOnce) { fill(body, '<p class="k7-page__note" role="status">Reading your rules.</p>'); return; }
     if (!view) {
-      fill(body, kit.html.notice({ tone: 'red', icon: 'shield', title: 'Rules can’t be read. Every action asks.', text: readError ? ' ' + readError : '', actions: [{ label: 'Read again', value: 'reread' }] }));
+      fill(body, kit.html.notice({ tone: 'red', icon: 'shield', title: 'Rules can’t be read, so every action asks.', text: readError ? ' ' + readError : '', actions: [{ label: 'Read again', value: 'reread' }] }));
       return;
     }
     const v = view;
@@ -70,21 +70,21 @@ export function approvalsPage(rules: RulesSource | undefined = data().rules): Pa
     const drafts = all.filter(isDraft), asks = all.filter((r) => r.type === 'ask'), allowed = all.filter((r) => r.type === 'exception' && !isDraft(r));
     const on = asks.filter((r) => r.enabled).length;
     const change = last ? kit.html.systemLine({ icon: 'sliders', text: last.what, action: 'Undo', attrs: { 'data-last': '' } }) : '';
-    const reviewerSub = v.reviewerStatus === 'none' ? 'No reviewer yet: a check it cannot make holds the action.' : v.reviewerStatus === 'failing' ? 'The reviewer is failing: checks hold the action until it answers.' : 'Reads each action against your rules. Automatic picks the cheapest model you have connected.';
+    const reviewerSub = v.reviewerStatus === 'none' ? 'No reviewer yet, so checks hold actions.' : v.reviewerStatus === 'failing' ? 'Failing, so checks hold actions until it answers.' : 'Checks each action against your rules.';
     fill(body,
       outside +
       (drafts.length ? sectionOf('Drafts', drafts.map((r) => draftBlock(r, v)).join(''), { 'data-part': 'drafts', id: 'hx-set-drafts' }) : '') +
-      (asks.length ? card('Your approval rules, for every bot', asks, 'asks', on + ' on') : sectionOf('Your approval rules, for every bot', kit.html.emptyState({ text: 'Nothing asks. Bots do everything.' }), { 'data-part': 'asks' })) +
+      (asks.length ? card('Your approval rules, for every bot', asks, 'asks', on + ' on') : sectionOf('Your approval rules, for every bot', kit.html.emptyState({ text: 'No rules, so nothing asks.' }), { 'data-part': 'asks' })) +
       (adding ? editor(null) : '<div class="hx-set__acts">' + buttonHTML('Add a rule', { attrs: { 'data-rule-add': '' } }) + '</div>') +
       card('Bots go ahead without asking', allowed, 'allowed') +
-      '<p class="k7-page__note">Anything not on the list runs on its own. A check that fails holds the action.</p>' +
+      '<p class="k7-page__note">Anything not on the list runs on its own.</p>' +
       '<p class="k7-page__note" data-part="built-in">' + BUILT_IN + '</p>' +
       ownLine(v) +
       change +
       section('Rules', [
         confirming
-          ? { label: 'Put the shipped rules back?', sub: 'Their words, on, for every bot; removed ones come back. Your own rules stay.', control: actionsHTML(buttonHTML('Restore', { variant: 'danger', attrs: { 'data-restore': 'yes' } }), buttonHTML('Cancel', { variant: 'ghost', attrs: { 'data-restore': 'no' } })) }
-          : { label: 'Restore defaults', sub: v.removedDefaults.length ? v.removedDefaults.length + ' removed' : 'The shipped rules, as they came.', control: buttonHTML('Restore defaults', { attrs: { 'data-restore': 'ask' } }) },
+          ? { label: 'Put the shipped rules back?', sub: 'Edits to the shipped rules are lost; yours stay.', control: actionsHTML(buttonHTML('Restore', { variant: 'danger', attrs: { 'data-restore': 'yes' } }), buttonHTML('Cancel', { variant: 'ghost', attrs: { 'data-restore': 'no' } })) }
+          : { label: 'Restore defaults', ...(v.removedDefaults.length ? { sub: v.removedDefaults.length + ' removed' } : {}), control: buttonHTML('Restore defaults', { attrs: { 'data-restore': 'ask' } }) },
         { label: 'Reviewer model', sub: reviewerSub, control: kit.html.selectorItem({ variant: 'field', label: 'Reviewer model', value: reviewerLabel(v), attrs: { 'data-select': 'reviewer' } }) }
       ], { 'data-part': 'more' }));
     if (keepKey) body.querySelector<HTMLElement>(keepKey)?.focus({ preventScroll: true });

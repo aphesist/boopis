@@ -104,6 +104,8 @@
 .bt-sheet .ui-sec__body { display: flex; flex-direction: column; gap: var(--sp-3); }
 .bt-model { display: flex; flex-direction: column; gap: var(--sp-2); }
 .bt-cap { width: 80px; text-align: right; }
+/* the project folder's label keeps its one line beside the path field (R-row-1): the field gives way, not the label */
+.bt-sheet .ui-set__row:has([id^="bt-project-"]) > .ui-set__label { flex: none; }
 .bt-arch-label { display: block; max-width: 15ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* corners (DESIGN-SYSTEM §8): every surface here is loose (nothing sits in another's corner), on the radius tokens;

@@ -19,11 +19,11 @@ export async function deleteFlow(host: HTMLElement, o: DeleteFlow): Promise<void
   host.hidden = false;
   fill(host, kit.html.block({ attrs: { 'data-delete': o.id }, body: '<div class="hx-set__flow">' + head(o.name) + '<p class="k7-page__note" role="status">Counting what is in its folder…</p></div>' }));
   let lines: readonly string[];
-  try { lines = (await o.admin.removal(o.id)).lines; } catch (e) { lines = ['Everything in its folder (boopis could not count it: ' + said(e) + ').']; }
+  try { lines = (await o.admin.removal(o.id)).lines; } catch { lines = ['Everything in its folder']; }
   if (o.live && !o.live()) return;
   fill(host, kit.html.block({ attrs: { 'data-delete': o.id }, body: '<div class="hx-set__flow">' + head(o.name) +
-    '<p class="k7-page__note">This removes, and cannot be undone:</p><ul class="hx-set__list k7-page__note">' + lines.map((l) => '<li>' + esc(l) + '</li>').join('') + '</ul>' +
-    '<p class="k7-page__note">Archiving keeps all of it, pauses its routines, frees the name, and can be undone.</p>' +
+    '<p class="k7-page__note">This can’t be undone. It removes:</p><ul class="hx-set__list k7-page__note">' + lines.map((l) => '<li>' + esc(l) + '</li>').join('') + '</ul>' +
+    '<p class="k7-page__note">Archive keeps everything and can be undone.</p>' +
     '<p class="k7-page__note" role="alert" data-delete-error hidden></p>' +
     actionsHTML(buttonHTML('Cancel', { variant: 'ghost', attrs: { 'data-delete-act': 'cancel' } }), buttonHTML('Delete permanently', { variant: 'danger', attrs: { 'data-delete-act': 'sure' } }), buttonHTML('Archive instead', { variant: 'primary', attrs: { 'data-delete-act': 'archive' } })) + '</div>' }));
   const btn = (a: string): HTMLButtonElement => host.querySelector<HTMLButtonElement>('[data-delete-act="' + a + '"]') as HTMLButtonElement;

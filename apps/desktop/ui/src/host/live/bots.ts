@@ -372,9 +372,9 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
     const taken = (n: string): boolean => profileNames.has(n) || recs.has(n);
     const profile = taken(wanted) || wanted === 'default' ? numbered(wanted, taken) : wanted;
     const notes: string[] = [];
-    if (profile !== (name || '').trim().toLowerCase()) notes.push(name.trim() ? 'It will be called ' + profile + ': a bot\'s folder is named with lower case letters, digits and hyphens, and each name is used once.' : '');
+    if (profile !== (name || '').trim().toLowerCase()) notes.push(name.trim() ? 'It will be called ' + profile + '.' : '');
     const model = currentModel && modelList().includes(currentModel) ? currentModel : modelList()[0] ?? null;
-    if (!model) notes.push('No model provider is set up yet, so this bot is made without a model and cannot run until you add one.');
+    if (!model) notes.push('It can’t run until you connect a model provider.');
     return { profile, folder: defaultHome ? defaultHome.replace(/[\\/]+$/, '') + '/profiles/' + profile : null, model, notes: notes.filter(Boolean) };
   }
 
@@ -522,14 +522,16 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       const r = recs.get(id) ?? (archivedNow.get().some((a) => a.id === id) ? null : need(id));
       const got = await plug<{ path: string; bytes: number; files: number; truncated: boolean; has_sessions: boolean; memory_files: number; skills: number; boopis_bytes: number }>('bots.inspect', { name: id });
       const mb = got.bytes < 1024 * 1024 ? Math.max(1, Math.round(got.bytes / 1024)) + ' KB' : (got.bytes / 1024 / 1024).toFixed(1) + ' MB';
+      /* only what is lost, a few words each (copy rule 6): what it does not have is not listed */
+      const routines = !r || r.jobs === null ? 'Its routines' : r.jobs.length ? 'Its ' + r.jobs.length + ' ' + (r.jobs.length === 1 ? 'routine' : 'routines') : '';
       const lines = [
-        'The folder ' + got.path + ' (' + mb + ' in ' + got.files + (got.truncated ? '+' : '') + ' files).',
-        got.has_sessions ? 'All its sessions and what they said.' : 'It has no sessions.',
-        got.memory_files ? 'Its memory (' + got.memory_files + ' ' + (got.memory_files === 1 ? 'file' : 'files') + ').' : 'It has no memory yet.',
-        got.skills ? 'Its ' + got.skills + ' ' + (got.skills === 1 ? 'skill' : 'skills') + '.' : 'It has no skills of its own.',
-        !r || r.jobs === null ? 'Its routines, whatever they are.' : r.jobs.length ? 'Its ' + r.jobs.length + ' ' + (r.jobs.length === 1 ? 'routine' : 'routines') + '.' : 'It has no routines.',
-        'Its look and its boopis settings.'
-      ];
+        'Its folder, ' + mb + ' in ' + got.files + (got.truncated ? '+' : '') + ' files',
+        got.has_sessions ? 'All its sessions' : '',
+        got.memory_files ? 'Its memory' : '',
+        got.skills ? 'Its ' + got.skills + ' ' + (got.skills === 1 ? 'skill' : 'skills') : '',
+        routines,
+        'Its look and settings'
+      ].filter(Boolean);
       return { folder: got.path, lines };
     },
     async archive(id) {

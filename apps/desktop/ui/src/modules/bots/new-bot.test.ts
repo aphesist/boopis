@@ -81,7 +81,7 @@ describe('the new-bot form: names', () => {
   it('a name in use says it will be numbered, and the provider numbers it', () => {
     const input = q<HTMLInputElement>('.bt-name');
     input.value = 'atlas'; input.dispatchEvent(new Event('input'));
-    expect(q('.bt-name-note').textContent).toBe('There is already a bot called atlas. This one will be atlas-2.');
+    expect(q('.bt-name-note').textContent).toBe('atlas is taken, so this one will be atlas-2.');
     expect(input.getAttribute('aria-describedby')).toBe(q('.bt-name-note').id);
     q('.bt-go').click();
     expect(data().bots.snapshot().bots.map((b) => b.id)).toContain('atlas-2');

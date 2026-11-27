@@ -6,6 +6,8 @@ This file is the inventory behind it: for each pattern, every place it is drawn,
 differences are intended variants and which were drift, and where it stands. Rule IDs are the design system's
 (`design/v6/design-system/DESIGN-SYSTEM.md` 1.1, indexed in `RULES.md`); every rule cited here is approved, including
 the 18 that were proposed (approved 19 November 2026, three amended). The live catalogue is the UI lab (`docs/UI-LAB.md`).
+The words in settings and settings-like places (labels, hints, notices, empty states, placeholders) follow the copy rules,
+`docs/kit/RULES.md` section 7: a label that stands alone, a hint of one short sentence, nothing about how it works.
 
 Status words: **one** (one kit component, every instance migrated, the per-screen copies and their CSS deleted);
 **debt** (instances left, each named below and allowlisted in `kit.guard.test.ts`, which fails on a new copy and on an

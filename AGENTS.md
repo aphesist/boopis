@@ -26,7 +26,7 @@ boopis is a desktop coding harness on **unmodified Hermes Agent**: Hermes does t
 | `skills/` | bundled skills (agentskills.io format) | `skills/AGENTS.md` |
 | `packaging/` | the terminal art (`brand/`), the installers' icons, the Arch install script; `scripts/install.sh` and `install.ps1` read it | `packaging/AGENTS.md` |
 | `docs/` | architecture, standards, decisions, protocol, ledger, compat, research | this file |
-| `docs/kit/` | the v7 kit's terms, where state lives, its rules and a new component's checklist; `pnpm kit:docs` writes the article | `docs/kit/RULES.md` |
+| `docs/kit/` | the v7 kit's terms, where state lives, its rules (section 7: the copy rules every settings text follows) and a new component's checklist; `pnpm kit:docs` writes the article | `docs/kit/RULES.md` |
 | `vendor/hermes-agent/` | upstream Hermes, pinned tag, CI only. Read it, never edit it | — |
 
 ## Commands

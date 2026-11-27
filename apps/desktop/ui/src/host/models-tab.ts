@@ -45,7 +45,7 @@ export const realModelsDeps = (closeSettings: () => void): ModelsDeps => ({
   login: async (provider) => (await import('./connectors-bridge')).tauriConnectorsBridge().login(provider)
 });
 
-const SCOPE = 'A task starts at the first tier and moves to the next only when its gate fails.';
+const SCOPE = 'A task moves up only when its gate fails.';
 
 const esc = (t: string): string => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
 
@@ -53,7 +53,7 @@ const esc = (t: string): string => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', 
 const tierRule = (view: ModelsView, t: { name: string; model: string }): string => {
   const g = view.governed.tiers.find((c) => c.name === t.name && c.model === t.model);
   if (g?.frontier === false) return `${t.name}, not used in governed mode`;
-  return g?.heavy ? `${t.name}, heavy: on the ladder because you chose it` : t.name;
+  return g?.heavy ? `${t.name}, heavy, your choice` : t.name;
 };
 
 /** The heavy models' switches (ADR-0037), one for each heavy model the saved ladder can take: Fable on either Claude choice, Grok on an
@@ -62,7 +62,7 @@ const tierRule = (view: ModelsView, t: { name: string; model: string }): string 
 export function heavyRows(view: ModelsView): RowOpts[] {
   return view.heavy.filter((c) => c.applies).map((c) => ({
     label: c.label,
-    sub: c.reason + (c.blocked && !c.on ? ' ' + c.blocked : '') + ' Applies to sessions you start after this.',
+    sub: c.blocked && !c.on ? c.blocked : c.reason,
     control: kit.html.switch({ id: `hx-heavy-${c.id}`, checked: c.on, disabled: !c.on && c.blocked !== null, label: c.label })
   }));
 }
@@ -78,14 +78,14 @@ export function governedRows(view: ModelsView | { error: string }): RowOpts[] {
   if ('error' in view) return [{ label: 'Governed mode', sub: `Not read: ${view.error}` }];
   const g = view.governed;
   const status: RowOpts = g.available
-    ? { label: 'Status', sub: view.state === 'set' ? 'Every tier of the saved ladder is a frontier model.' : 'No ladder is saved, so boopis uses its built-in one: Opus, on your Anthropic key.', value: 'Available' }
+    ? { label: 'Status', sub: view.state === 'set' ? 'Every tier is a frontier model.' : 'Uses the built-in ladder: Opus on your Anthropic key.', value: 'Available' }
     : {
       label: 'Status',
-      sub: `${g.why ?? 'No frontier model is set up.'} To use governed mode, sign in with your Claude subscription (Opus), sign in with ChatGPT or add an OpenAI key, on a plan or key that includes GPT-6.1 Terra, Sol or Astra, add a Gemini key for Gemini 4 Hydrogen or Neon, or turn on Grok with an xAI key. Sessions that are not governed can use any model.`,
+      sub: g.why ?? 'Needs one of the allowed models above.',
       control: value('Unavailable') + button('Change models', 'hx-governed-change')
     };
   return [
-    { label: 'Allowed models', sub: 'Governed mode runs every tier and the session itself only on these, or a later version of them. Anything else stays available outside governed mode. A heavy model is token-heavy or costly: it is never on a ladder boopis writes, only when you turn it on below or name it yourself.' },
+    { label: 'Allowed models', sub: 'Governed sessions run only on these.' },
     ...g.allowed.map((name): RowOpts => ({ label: name, ...(g.heavy.includes(name) ? { sub: 'Heavy: only when you turn it on.' } : {}), value: 'or later' })),
     status,
     ...heavyRows(view)
@@ -95,15 +95,15 @@ export function governedRows(view: ModelsView | { error: string }): RowOpts[] {
 /** the ladder section's rows for what the host read, or for why it could not: each tier a row (its model, its name), cheapest first; the
     first is where a task starts */
 export function ladderRows(view: ModelsView | { error: string }): RowOpts[] {
-  if ('error' in view) return [{ label: 'Tiers', sub: `The ladder could not be read, so it is not shown: ${view.error}` }];
+  if ('error' in view) return [{ label: 'Tiers', sub: `The ladder can’t be read: ${view.error}` }];
   if (view.state === 'set') {
     return [
       { label: 'Tiers', sub: `Cheapest first. ${SCOPE}` },
       ...view.tiers.map((t, i): RowOpts => ({ label: ui.modelMark.called(t.model) || t.model, value: tierRule(view, t), attrs: { 'data-tier': String(i), ...(i === 0 ? { 'aria-current': 'step' } : {}) } }))
     ];
   }
-  if (view.state === 'default') return [{ label: 'Tiers', sub: 'No ladder is saved here, so boopis uses its built-in Claude ladder: Opus. Change models saves one of your own.' }];
-  return [{ label: 'Tiers', sub: 'A ladder is saved, but it does not read as a list of named tiers, so none is shown. Change models saves a new one.' }];
+  if (view.state === 'default') return [{ label: 'Tiers', sub: 'The built-in ladder: Opus.' }];
+  return [{ label: 'Tiers', sub: 'The saved ladder can’t be shown. Change models saves a new one.' }];
 }
 
 const section = (panel: HTMLElement, id: string): HTMLElement => {
@@ -127,7 +127,7 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
   panel.append(providersEl);
   const change = section(panel, 'change');
   fill(change, card('Change', [{
-    label: 'Models', sub: 'Ask the models question again: how to connect, then which provider. Nothing changes until you answer.',
+    label: 'Models', sub: 'Nothing changes until you answer.',
     control: button('Change models', 'hx-models-change')
   }]));
   const askAgain = (): void => {

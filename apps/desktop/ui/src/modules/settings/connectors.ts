@@ -16,7 +16,7 @@ export function connectorsPage(): Page {
   const { el, body } = pageEl('connectors', 'Connectors');
   let view: { refresh: () => Promise<void> } | null = null;
   if (!settingsHost.desktop()) {
-    fill(body, kit.html.emptyState({ text: 'Connectors are added in the desktop app. This page cannot reach boopis’s engine.' }));
+    fill(body, kit.html.emptyState({ text: 'Connectors are added in the desktop app.' }));
     return { el };
   }
   const openStore = (): void => { closeDialog(el.closest('dialog')); emit('hx:open-store', { screen: 'browse' }); };

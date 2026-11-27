@@ -28,7 +28,7 @@ const PLATE_COPY: Readonly<Record<string, { title: string; line: string }>> = {
   'openai.signin': { title: 'ChatGPT', line: 'Uses your ChatGPT plan.' },
   'github-copilot.signin': { title: 'GitHub Copilot', line: 'Uses your Copilot plan: models from several labs.' },
   'xai.signin': { title: 'xAI SuperGrok', line: 'Uses your SuperGrok plan.' },
-  'anthropic.signin': { title: 'Claude', line: 'Uses your Claude plan. boopis never sees your login.' }
+  'anthropic.signin': { title: 'Claude', line: 'Uses your Claude plan; boopis never sees your login.' }
 };
 /** the accounts in the order of the page, and the labs whose keys lead the wall (the rest keep the catalogue's order); a way for one
     region only (`china`) is in the tail */

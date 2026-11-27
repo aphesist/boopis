@@ -67,7 +67,7 @@ function fake(bots: Bot[]): Fake {
     saveOwn: (id, patch) => { calls.push({ fn: 'saveOwn', args: [id, patch] }); return Promise.resolve(); },
     setToolsets: (id, on, off) => { calls.push({ fn: 'setToolsets', args: [id, on, off] }); return Promise.resolve(); },
     setProject: (id, folder) => { calls.push({ fn: 'setProject', args: [id, folder] }); return folder === '/nowhere' ? Promise.reject(new Error('/nowhere is not a folder on this computer')) : Promise.resolve(); },
-    removal: () => Promise.resolve({ folder: '/h/profiles/atlas', lines: ['The folder /h/profiles/atlas (3.0 MB in 240 files).', 'All its sessions and what they said.'] }),
+    removal: () => Promise.resolve({ folder: '/h/profiles/atlas', lines: ['Its folder, 3.0 MB in 240 files', 'All its sessions'] }),
     archive: (id) => { calls.push({ fn: 'archive', args: [id] }); const i = bots.findIndex((b) => b.id === id); bots.splice(i, 1); events.emit({ type: 'bot-archived', id }); return Promise.resolve({ undo: () => Promise.resolve() }); },
     remove: (id, confirm) => { calls.push({ fn: 'remove', args: [id, confirm] }); const i = bots.findIndex((b) => b.id === id); bots.splice(i, 1); events.emit({ type: 'bot-archived', id }); return Promise.resolve(); },
     note: () => null
@@ -185,7 +185,7 @@ describe('making a bot asks first: the folder it makes and the model it starts o
   });
   it('the name `default` is Hermes’s own, so it is already taken', () => {
     type('default');
-    expect(q('.bt-name-note').textContent).toBe('There is already a bot called default. This one will be default-2.');
+    expect(q('.bt-name-note').textContent).toBe('default is taken, so this one will be default-2.');
   });
 });
 
@@ -251,7 +251,7 @@ describe('the settings sheet edits the profile and shows each file’s diff firs
   });
   it('switches a toolset at once and sets the project folder, saying both apply from its next session', async () => {
     const caps = q('.bt-sheet [data-name="capabilities"]');
-    expect(caps.textContent).toContain('apply from its next new session');
+    expect(caps.textContent).toContain('Changes apply from its next session');
     const sw = q<HTMLInputElement>('.bt-sheet [data-name="capabilities"] input[type="checkbox"]');
     expect(sw.closest('.ui-set__row')?.textContent).toContain('Terminal');
     sw.checked = false; sw.dispatchEvent(new Event('change')); await flush();
@@ -304,8 +304,8 @@ describe('deleting asks, archives by default, and says what goes', () => {
     label('Delete').click(); await flush();
     const t = q('.bt-sheet .bt-review:not([hidden])').textContent ?? '';
     expect(t).toContain('Delete atlas for good?');
-    expect(t).toContain('The folder /h/profiles/atlas (3.0 MB in 240 files).');
-    expect(t).toContain('Archiving keeps all of it');
+    expect(t).toContain('Its folder, 3.0 MB in 240 files');
+    expect(t).toContain('Archive keeps everything and can be undone');
     expect(label('Archive instead').classList.contains('ui-btn--primary') || true).toBe(true);
     expect(f.calls.some((c) => c.fn === 'remove')).toBe(false);
   });

@@ -2,7 +2,8 @@
 
 These hold for every component of the v7 kit (`apps/desktop/ui/src/components/v7/`). The words are defined in `TERMS.md`; where state
 may live is `STATE.md`. The design rules (tokens, corners, motion, the boards) are the design system's (`docs/UI-COMPONENTS.md`,
-`DESIGN-SYSTEM.md` v7); these are the rules of the code's shape.
+`DESIGN-SYSTEM.md` v7); these are the rules of the code's shape. Section 7 is the rule for the words the app shows in settings and
+settings-like places, components and modules alike.
 
 ## 1. Props down, events up
 
@@ -92,3 +93,23 @@ screenshots. A change to the kit's shape must leave the goldens, the stories and
 - **Wiring a Source**: the Source's interface goes in `src/data/provider.ts` (a `Watch`, a `Feed`, commands), both providers implement
   it, and the screen module reads it and draws kit components from its values. The component does not change: it gets props and
   dispatches events, and the module turns the events into the Source's commands.
+
+## 7. Copy
+
+Every word the app shows in its settings and settings-like places: the Settings pages, a bot's sheet, the new-bot flow, the session
+launch, and the rows, cards, notices and placeholders of the v7 modules (the owner, 27 November 2026: "we need to fix this
+verboseness"). Thread and chat content, the engine's messages, text a board draws and the docs are not copy in this sense.
+
+1. **The label carries the meaning.** Add a hint only when the label cannot stand alone.
+2. **A hint is one short sentence**, at most about ten words. No second sentence.
+3. **Say what it does for the person, not how it works.** No mechanics, edge cases, billing internals, file formats or
+   implementation words.
+4. **Do not restate** the label, the control or the current value. Do not explain how to clear a field ("Empty it to remove…") or
+   that a switch turns something on.
+5. **Defaults show as the control's value or placeholder**, not in prose.
+6. **Notices and confirmations:** one sentence, plus the action. A destructive confirm lists only what is lost, a few words each.
+7. **Empty states:** one quiet line.
+8. **Write plainly**, in sentence case as the app does. Add no new claims, and keep every fact the person needs in order to decide
+   (that a delete cannot be undone, that something leaves the computer).
+
+For example, "Cap per run": the hint "Pauses and asks you when it's reached.", the placeholder "No cap".

@@ -13,7 +13,7 @@ import { orbButton } from './orbs';
 import { updateRow } from './list';
 import { focusConversation, openBot, paintToolbar, refreshPresence } from './room';
 import { checkClips } from './clips';
-import { CAP_HINT, openLiveSheet } from './settings-live';
+import { CAP_HINT, CAP_PLACEHOLDER, openLiveSheet } from './settings-live';
 import { lookEditor } from './look-edit';
 import { limitWords, openLimitMenu } from './run-limit';
 
@@ -36,7 +36,7 @@ export function lookSection(b: Bot): HTMLElement {
  *  The engine keeps a goal's budget in the bot's own configuration and the host writes it there, so the command line and this row
  *  read one number. Its menu is the group header's (`run-limit.ts`). */
 export function runLimitRow(b: Bot): HTMLElement {
-  const row = frag(ui.html.setRow({ label: 'Run limit', hint: 'The most turns a run may take with ' + b.name + '.', control: ui.html.button({ label: 'Reading…', size: 's', attrs: { 'aria-haspopup': 'menu', 'aria-label': 'Turns a run may take with ' + b.name + ': Reading…' } }) }));
+  const row = frag(ui.html.setRow({ label: 'Run limit', hint: 'Most turns one run may take.', control: ui.html.button({ label: 'Reading…', size: 's', attrs: { 'aria-haspopup': 'menu', 'aria-label': 'Turns a run may take with ' + b.name + ': Reading…' } }) }));
   const btn = $<HTMLButtonElement>('button', row), word = $('span', btn), hint = $('small', row);
   let cur: { turns: number | null; fallback: number } | null = null;
   const name = (words: string): string => 'Turns a run may take with ' + b.name + ': ' + words;   /* the visible words are part of the name */
@@ -116,13 +116,13 @@ export function openSettings(id: string | null, focusSection?: string | null, op
       const g = data().details.governance.get();
       modelBox.append(ui.ladder({ stations: g.ladder, current: 0, variant: 'list', label: 'Escalation ladder' }));
     } else {
-      const f = ui.field({ kind: 'model', label: 'Model', options: catalog.models, value: c.model, hint: 'Runs every step on this model, with no escalation.' });
+      const f = ui.field({ kind: 'model', label: 'Model', options: catalog.models, value: c.model });
       f.addEventListener('ui:change', (e) => { c.model = (e as CustomEvent<{ value: string }>).detail.value; push({ model: c.model }); changed(); });
       modelBox.append(f);
     }
     /* the cap per run holds governed or not (ADR-0050) */
     const capId = 'bt-cap-' + b.id;
-    const row = frag(ui.html.setRow({ label: 'Cap per run', hint: CAP_HINT, for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
+    const row = frag(ui.html.setRow({ label: 'Cap per run', hint: CAP_HINT, for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, placeholder: CAP_PLACEHOLDER, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
     $<HTMLInputElement>('input', row).addEventListener('input', (e) => { c.cap = (e.target as HTMLInputElement).value; push({ cap: c.cap }); paintToolbar(b); });
     modelBox.append(row);
   };
@@ -159,7 +159,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
 
   /* workspace */
   const wsHint = hint('');
-  const paintWs = (): void => { wsHint.textContent = c.workspace === 'worktree' ? 'Its own git worktree; changes reach you as a branch.' : 'An isolated bubblewrap sandbox with the network off; nothing leaves it without approval.'; };
+  const paintWs = (): void => { wsHint.textContent = c.workspace === 'worktree' ? 'Changes reach you as a branch.' : 'No network, and nothing leaves without your approval.'; };
   const ws = ui.segmented({ mode: 'radio', label: 'Workspace', value: c.workspace, options: [{ value: 'worktree', label: 'Worktree' }, { value: 'sandbox', label: 'Sandbox' }], fill: true });
   ws.addEventListener('ui:change', (e) => { c.workspace = (e as CustomEvent<{ value: string }>).detail.value as BotConfig['workspace']; push({ workspace: c.workspace }); paintWs(); });
   paintWs();
@@ -170,7 +170,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
     who,
     lookSection(b),
     sec('role', 'Role and instructions', null, [roleF, instrF]),
-    sec('model', 'Model', c.gov === 'governed' ? 'governed' : c.model, [hint('Governed starts cheap and climbs the ladder only when a step fails.'), gov, modelBox, el('div', { class: 'ui-set' }, runLimitRow(b))]),
+    sec('model', 'Model', c.gov === 'governed' ? 'governed' : c.model, [hint('Governed moves up a model only when a step fails.'), gov, modelBox, el('div', { class: 'ui-set' }, runLimitRow(b))]),
     sec('schedule', 'Schedule', c.cron ? (cronValid(c.cron) ? cronWords(c.cron) : 'incomplete') : null, [hint('When it runs without being asked.'), presets, cronF]),
     sec('channels', 'Channels', null, [hint('Where you can reach it, and where it reports.'), chans]),
     approvalsOf(b),

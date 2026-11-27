@@ -46,8 +46,8 @@ export function pickName(pool: readonly string[], used: ReadonlySet<string>, o: 
 /** what a name in the field will turn into, in words ('' when nothing changes) */
 export function nameNote(name: string, taken: boolean, nextFree: string, rolledOut: boolean): string {
   const n = name.trim();
-  if (n && taken) return 'There is already a bot called ' + n + '. This one will be ' + nextFree + '.';
-  if (n && rolledOut) return 'Every name in the list is taken, so this one has a number.';
+  if (n && taken) return n + ' is taken, so this one will be ' + nextFree + '.';
+  if (n && rolledOut) return 'Every name is taken, so it gets a number.';
   return '';
 }
 /** alt+R rolls a name: matched by code, since Option+R types a symbol on a Mac */

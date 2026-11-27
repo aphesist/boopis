@@ -23,7 +23,7 @@ describe('Settings, Local API on the kit', () => {
     expect(html).toContain('data-kit="Card"');
     expect(html).not.toContain('data-rotate');
     expect(html).not.toContain('client-token');
-    expect(describeStatus(OFF)).toMatch(/^Off\./);
+    expect(describeStatus(OFF)).toContain('answer approvals');
   });
 
   it('shows the address and the token file\'s path when it is on, and never anything that looks like the token itself', () => {
@@ -35,8 +35,8 @@ describe('Settings, Local API on the kit', () => {
   });
 
   it('counts the apps that follow it, and puts the host\'s reason in words when nothing listens', () => {
-    expect(describeStatus({ ...ON, streams: 1 })).toContain('One app is following');
-    expect(describeStatus({ ...ON, streams: 3 })).toContain('3 apps are following');
+    expect(describeStatus({ ...ON, streams: 1 })).toBe('One app connected.');
+    expect(describeStatus({ ...ON, streams: 3 })).toBe('3 apps connected.');
     const s = { ...OFF, enabled: true, problem: 'The token file would be readable by other users, so the endpoint stays off.' };
     expect(describeStatus(s)).toBe(s.problem);
     expect(localApiHTML(s)).not.toContain('data-rotate');

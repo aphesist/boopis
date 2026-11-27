@@ -270,9 +270,9 @@ describe('Approvals', () => {
   });
   it('rules that cannot be read say so in the spec\'s words; an empty list says nothing asks', async () => {
     await open(fakeRules({ unreadable: true }));
-    expect(page().textContent).toContain('Rules can’t be read. Every action asks.');
+    expect(page().textContent).toContain('Rules can’t be read, so every action asks.');
     await open(fakeRules({ rules: [] }));
-    expect(page().textContent).toContain('Nothing asks. Bots do everything.');
+    expect(page().textContent).toContain('No rules, so nothing asks.');
   });
   it('Restore defaults asks first; the reviewer is a select of Automatic and the ranked models', async () => {
     await open(rules);
@@ -294,7 +294,7 @@ describe('Approvals', () => {
     expect(page().textContent).not.toContain('kai may force-push');
     expect(page().textContent).not.toContain('nina may restart');
     expect(page().querySelector('[data-part="allowed"]')).toBeNull();
-    expect(page().querySelector('[data-part="built-in"]')?.textContent).toContain('no bot may answer an approval for you');
+    expect(page().querySelector('[data-part="built-in"]')?.textContent).toContain('no bot can answer an approval for you');
     const line = q('[data-part="own"]');
     /* the mock: nina asks before deploying, nimbus may never message people; kai has a draft, nina an exception too */
     expect([...line.querySelectorAll('[data-own-bot]')].map((a) => a.textContent)).toEqual(['nina', 'kai', 'nimbus']);
@@ -318,7 +318,7 @@ describe('Approvals', () => {
 describe('Bots', () => {
   type Admin = NonNullable<DataProvider['bots']['admin']>;
   const withAdmin = (calls: string[]) => (p: DataProvider): DataProvider => ({ ...p, bots: { ...p.bots, admin: {
-    removal: async (id: string) => { calls.push('removal ' + id); return { folder: '/x/' + id, lines: ['The folder /x/' + id + ' (2 MB in 40 files).', 'Its look and its boopis settings.'] }; },
+    removal: async (id: string) => { calls.push('removal ' + id); return { folder: '/x/' + id, lines: ['Its folder, 2 MB in 40 files', 'Its look and settings'] }; },
     remove: async (id: string, confirm: string) => { calls.push('remove ' + id + ' ' + confirm); },
     archive: async (id: string) => { calls.push('archive ' + id); p.bots.archive(id); return { undo: async () => { calls.push('undo ' + id); } }; }
   } as unknown as Admin } });
@@ -326,7 +326,7 @@ describe('Bots', () => {
   const botRow = (id: string): HTMLElement => q('[data-bot="' + id + '"]');
   it('the one default is a value; each bot has its orb at the rail\'s size, its role and only what differs; Open goes to its sheet', async () => {
     await open((p) => ({ ...p, bots: { ...p.bots, snapshot: () => { const s = p.bots.snapshot(); return { ...s, bots: s.bots.map((b) => (b.id === 'kai' ? { ...b, cfg: { ...b.cfg, cap: '5' } } : b)) }; } } }));
-    expect(q('[data-part="defaults"]').textContent).toContain('Run limit for bots without their own');
+    expect(q('[data-part="defaults"]').textContent).toContain('Default run limit');
     expect(q('[data-fallback]').textContent).toBe('10 turns');
     expect(botRow('atlas').querySelector('[data-kit~="Avatar"] orb-avatar')).not.toBeNull();
     expect(botRow('atlas').querySelector('[data-kit~="Avatar"]')?.getAttribute('data-size')).toBe(window.innerWidth < 1200 ? '28' : '36');   /* Automatic: compact under 1200 */
@@ -364,7 +364,7 @@ describe('Bots', () => {
     await tick(6);
     const flow = q('[data-part="delete"]');
     expect(flow.textContent).toContain('Delete atlas for good?');
-    expect(flow.textContent).toContain('The folder /x/atlas');
+    expect(flow.textContent).toContain('Its folder, 2 MB in 40 files');
     const sure = flow.querySelector<HTMLButtonElement>('[data-delete-act="sure"]') as HTMLButtonElement;
     sure.click();
     expect(calls).not.toContain('remove atlas atlas');
@@ -481,9 +481,10 @@ describe('Appearance, Keyboard, Diagnostics', () => {
     boot({ desktop: true });
     openSettings('diagnostics');
     await tick(6);
-    expect(rowOf('Graphics card').textContent).toContain('Running on: the integrated GPU');
+    expect(rowOf('Graphics card').textContent).toContain('Running on the integrated GPU');
     q<HTMLElement>('[data-set="gpu"] [data-value="dedicated"]').click();
     await tick(6);
+    expect(rowOf('Graphics card').textContent).toContain('Applies after a restart.');
     expect(q('[data-act="restart"]').textContent).toContain('Restart to switch');
     expect(rowOf('Graphics renderer').querySelector('[data-act="copy"]')).not.toBeNull();
   });

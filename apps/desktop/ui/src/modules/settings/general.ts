@@ -38,10 +38,10 @@ export function generalPage(): Page {
       section('Under the composer', lines.map((i) => ({ label: LINE_NAMES[i], check: !hidden.includes(i), attrs: { 'data-line': i } })), { 'data-part': 'line' }) +
       section('Appearance', lookRows(), { 'data-part': 'look' }) +
       section('Dock', [
-        { label: 'Keep the dock centred in the window', sub: 'It stays in the middle of the window while the sidebar and the details panel open and close.', control: switchHTML('dock-centre', 'Keep the dock centred in the window', state.dockCentred) },
-        { label: 'Compact dock when idle', sub: 'While nothing new needs you, the dock gets smaller. Pointing at it, or a bot asking, brings it back.', control: switchHTML('dock-compact', 'Compact dock when idle', state.dockCompact) }
+        { label: 'Keep the dock centred in the window', control: switchHTML('dock-centre', 'Keep the dock centred in the window', state.dockCentred) },
+        { label: 'Compact dock when idle', sub: 'Smaller until something needs you.', control: switchHTML('dock-compact', 'Compact dock when idle', state.dockCompact) }
       ]) +
-      section('Window', [{ label: 'Window controls', sub: (windowPref() === 'auto' ? '' : 'Set by you. ') + describeDesktop(windowInfo()), control: segHTML('window', 'Window controls', [{ value: 'auto', label: 'Automatic' }, { value: 'close', label: 'Close only' }, { value: 'all', label: 'All' }], windowPref()) }], { 'data-part': 'window' }));
+      section('Window', [{ label: 'Window controls', sub: describeDesktop(windowInfo()), control: segHTML('window', 'Window controls', [{ value: 'auto', label: 'Automatic' }, { value: 'close', label: 'Close only' }, { value: 'all', label: 'All' }], windowPref()) }], { 'data-part': 'window' }));
   };
   draw();
   void mountLocalApi(api);

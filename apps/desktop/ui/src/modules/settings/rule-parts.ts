@@ -17,7 +17,7 @@ export const KIND_WORDS: Readonly<Record<string, string>> = {
 };
 export function catches(kinds: readonly string[]): string {
   const words = kinds.map((k) => KIND_WORDS[k] ?? k);
-  if (!words.length) return 'The reviewer has not read what this catches yet.';
+  if (!words.length) return 'The reviewer has not read it yet.';
   return 'Checked when a bot is ' + (words.length === 1 ? words[0] : words.slice(0, -1).join(', ') + ' or ' + words[words.length - 1]) + '.';
 }
 export const isDraft = (r: Rule): boolean => r.type === 'exception' && r.state === 'draft';
@@ -68,7 +68,7 @@ export function draftBlock(r: Rule, view: RulesView | null, o: { forWhom?: boole
   const excepts = (r.excepts ?? []).map((id) => view?.rules.find((x) => x.id === id)?.text ?? id);
   const who = o.forWhom !== false && r.bots && r.bots.length ? 'For ' + r.bots.join(', ') : '';
   return kit.html.block({ attrs: { 'data-draft': r.id }, body:
-    kit.html.field({ id: 'hx-draft-' + r.id, label: 'Always allow', value: r.text, hint: [who, excepts.length ? 'Lets through: ' + excepts.join('; ') : '', (r.match ?? []).length ? 'Only: ' + (r.match ?? []).join(', ') : ''].filter(Boolean).join('. ') || 'An exception kept from “Always allow”. It does nothing until you save it.', attrs: { maxlength: '200', 'data-draft-input': '' } }) +
+    kit.html.field({ id: 'hx-draft-' + r.id, label: 'Always allow', value: r.text, hint: [who, excepts.length ? 'Lets through: ' + excepts.join('; ') : '', (r.match ?? []).length ? 'Only: ' + (r.match ?? []).join(', ') : ''].filter(Boolean).join('. ') || 'Does nothing until you save it.', attrs: { maxlength: '200', 'data-draft-input': '' } }) +
     actionsHTML(buttonHTML('Save rule', { variant: 'primary', attrs: { 'data-draft-save': r.id } }), buttonHTML('Discard', { variant: 'ghost', attrs: { 'data-draft-discard': r.id } })) });
 }
 
@@ -84,4 +84,4 @@ export const ruleLimit = (text: string): string | null => (!text ? 'Write the ru
 
 /** The protections built in, whatever a rules list says (docs/specs/host-protections.md; policy/bot_tiers.json `never_allow`): no bot may
     answer an approval meant for you, change these rules or read boopis's own keys, and paying with a saved card always asks */
-export const BUILT_IN = 'Some protections are built in and hold whatever this list says: no bot may answer an approval for you, change these rules or read boopis’s own keys, and paying with a saved card always asks.';
+export const BUILT_IN = 'Built in: no bot can answer an approval for you, change these rules or read boopis’s keys, and paying with a saved card always asks.';

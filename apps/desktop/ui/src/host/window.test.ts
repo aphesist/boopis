@@ -22,9 +22,9 @@ describe('which title-bar controls show', () => {
     expect(resolveControls('close', null)).toBe('close');
   });
   it('the settings row says what was found', () => {
-    expect(describeDesktop({ desktop: 'Hyprland', tiling: true })).toContain('Hyprland, a tiling window manager');
+    expect(describeDesktop({ desktop: 'Hyprland', tiling: true })).toContain('Hyprland tiles windows, so only close shows');
     expect(describeDesktop({ desktop: 'GNOME', tiling: false })).toContain('GNOME');
     expect(describeDesktop({ desktop: null, tiling: false })).toContain('not recognised');
-    expect(describeDesktop(null)).toContain('not the desktop app');
+    expect(describeDesktop(null)).toContain('outside the desktop app');
   });
 });

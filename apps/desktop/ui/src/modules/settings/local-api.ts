@@ -22,8 +22,8 @@ export function localApiHTML(s: LocalApiStatus): string {
     { label: 'Let other apps on this computer connect', sub: describeStatus(s), control: switchHTML('local-api', 'Let other apps on this computer connect', s.enabled && (on || !!s.problem)) },
     ...(on && s.url ? [{ label: 'Address', subHTML: monoSub(s.url, 'hx-local-api-url', 'Only this computer can reach it.'), control: actionsHTML(buttonHTML('Copy', { variant: 'ghost', attrs: { 'data-copy': 'url', 'aria-label': 'Copy the address' } })) }] : []),
     ...(on && s.token_file ? [
-      { label: 'Token file', subHTML: monoSub(s.token_file, 'hx-local-api-file', 'Readable by you alone. A new token is made every time boopis starts.'), control: actionsHTML(buttonHTML('Copy path', { variant: 'ghost', attrs: { 'data-copy': 'file', 'aria-label': 'Copy path of the token file' } })) },
-      { label: 'Rotate token', sub: 'Makes a new token. Apps that are connected are disconnected and read the file again.', control: buttonHTML('Rotate token', { attrs: { 'data-rotate': '' } }) }
+      { label: 'Token file', subHTML: monoSub(s.token_file, 'hx-local-api-file', 'Only you can read it, and it changes at every start.'), control: actionsHTML(buttonHTML('Copy path', { variant: 'ghost', attrs: { 'data-copy': 'file', 'aria-label': 'Copy path of the token file' } })) },
+      { label: 'Rotate token', sub: 'Disconnects apps until they read the new token.', control: buttonHTML('Rotate token', { attrs: { 'data-rotate': '' } }) }
     ] : [])
   ], { 'data-part': 'local-api' });
 }
@@ -37,7 +37,7 @@ export function renderLocalApi(sec: HTMLElement, s: LocalApiStatus, bridge: Loca
   sec.querySelector('[data-set="local-api"]')?.addEventListener('ui:change', (e) => { void bridge.setEnabled(!!(e as CustomEvent<{ value: boolean }>).detail.value).then(redraw, fail); });
   sec.querySelector('[data-copy="url"]')?.addEventListener('click', () => { if (s.url) void copy(s.url); });
   sec.querySelector('[data-copy="file"]')?.addEventListener('click', () => { if (s.token_file) void copy(s.token_file); });
-  sec.querySelector('[data-rotate]')?.addEventListener('click', () => { void bridge.rotate().then((next) => { kit.notify('Token rotated. Connected apps were disconnected.'); redraw(next); }, fail); });
+  sec.querySelector('[data-rotate]')?.addEventListener('click', () => { void bridge.rotate().then((next) => { kit.notify('Token rotated and apps disconnected'); redraw(next); }, fail); });
 }
 
 /** draw the section into `host` in the desktop app (the page build has no host to ask: nothing is drawn) */

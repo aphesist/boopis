@@ -124,7 +124,7 @@ export const CATALOG: BotCatalog = {
   models: ['opus 5.5', 'sonnet 5.5', 'haiku 4.5', 'qwen3-coder'],
   channels: [
     { id: 'app', name: 'This app', hint: 'always on' }, { id: 'slack', name: 'Slack', hint: '#billing-alerts' },
-    { id: 'telegram', name: 'Telegram', hint: '@enzo' }, { id: 'email', name: 'Email', hint: 'enzo@boopis.dev' }
+    { id: 'telegram', name: 'Telegram', hint: '@you' }, { id: 'email', name: 'Email', hint: 'you@example.com' }
   ],
   approvals: APPROVALS,
   suggestions: SUGGESTIONS

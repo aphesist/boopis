@@ -3,7 +3,7 @@
    memory: the pages draw every state from them without a host. The defaults' words are the shipped ones (plugins/boopis/data/
    default-rules.json). */
 import { store } from '../data/store';
-import type { BotsAdmin, DataProvider, LaterFeature, Rule, RulesSource, RulesView, SpeechModel, SpeechSource, VoiceSettings } from '../data';
+import type { BotInfo, BotsAdmin, DataProvider, LaterFeature, Rule, RulesSource, RulesView, SpeechModel, SpeechSource, VoiceSettings } from '../data';
 import type { DiagnosticsHost } from '../modules/settings/host';
 
 export const DEFAULT_RULES: readonly Rule[] = [
@@ -85,7 +85,7 @@ export const fakeDiagnostics = (): DiagnosticsHost => ({
   report: async () => 'boopis 0.2.0\nrenderer: WebKitGTK 2.54.2, GPU',
   measure: async () => '60 fps, p95 17 ms over 5 s: Copy report includes it',
   gpuPage: async () => undefined,
-  gpu: async () => ({ policy: 'auto', lines: (chosen) => ['Running on: the integrated GPU (on battery).', ...(chosen !== 'auto' ? ['Saved. It applies after a restart.'] : [])], restart: (chosen) => chosen !== 'auto' }),
+  gpu: async () => ({ policy: 'auto', lines: (chosen) => [chosen !== 'auto' ? 'Applies after a restart.' : 'Running on the integrated GPU.'], restart: (chosen) => chosen !== 'auto' }),
   setGpu: async () => undefined,
   restart: async () => undefined
 });
@@ -94,7 +94,7 @@ export const fakeDiagnostics = (): DiagnosticsHost => ({
     plugin counts it, archive with its way back, delete by name; scripted, nothing is removed but the roster's row */
 export function withBotAdmin(p: DataProvider): DataProvider {
   const admin = {
-    removal: async (id: string) => ({ folder: '~/.local/share/boopis/bots/' + id, lines: ['The folder ~/.local/share/boopis/bots/' + id + ' (3.2 MB in 240 files).', 'All its sessions and what they said.', 'Its memory (2 files).', 'Its 9 skills.', 'It has no routines.', 'Its look and its boopis settings.'] }),
+    removal: async (id: string) => ({ folder: '~/.local/share/boopis/bots/' + id, lines: ['Its folder, 3.2 MB in 240 files', 'All its sessions', 'Its memory', 'Its 9 skills', 'Its look and settings'] }),
     archive: async (id: string) => { p.bots.archive(id); return { undo: () => { const a = p.bots.archived.get().find((x) => x.was === id); return a ? p.bots.restore(a.id) : Promise.resolve(); } }; },
     remove: async (id: string) => { p.bots.archive(id); }
   } as unknown as BotsAdmin;
@@ -105,4 +105,25 @@ export const KAI_ASK: Rule = { id: 'r_kai_ask', type: 'ask', text: 'Ask before p
 export function withCaps(p: DataProvider, caps: Readonly<Record<string, string>>): DataProvider {
   const snap = p.bots.snapshot;
   return { ...p, bots: { ...p.bots, snapshot: () => { const s = snap(); return { ...s, bots: s.bots.map((b) => (caps[b.id] ? { ...b, cfg: { ...b.cfg, cap: caps[b.id] as string } } : b)) }; } } };
+}
+/** `id` as a bot that is a real profile (its sheet edits the profile: the live sheet), with a profile, a routine and its toolsets read;
+    every write is answered at once and changes nothing. For the live sheet's look in the lab, as the app draws it for a teammate */
+export function withLiveSheet(p: DataProvider, id: string): DataProvider {
+  const info: BotInfo = {
+    profile: id, path: '~/.local/share/boopis/profiles/' + id, model: 'anthropic/claude-sonnet-4.5', provider: 'anthropic',
+    skills: [{ name: 'git', label: 'git', enabled: true }, { name: 'review', label: 'review', enabled: true }], toolsets: [{ name: 'terminal', label: 'Terminal', enabled: true }, { name: 'web', label: 'Web', enabled: false }], mcpServers: [],
+    jobs: [{ id: 'j1', name: 'morning review', schedule: '0 9 * * 1-5', prompt: 'Review the open pull requests', enabled: true, next: 'in 2 h', last: null, deliver: '' }],
+    sessions: [], soul: 'You review pull requests.\n', running: false, project: '~/repos/site', notes: {}
+  };
+  const base = withBotAdmin(p);
+  const admin = {
+    ...base.bots.admin,
+    models: () => ['anthropic/claude-sonnet-4.5', 'anthropic/claude-opus-4.5'],
+    open: async () => info,
+    planCreate: (name: string) => ({ profile: name, folder: null, model: null, notes: [] }),
+    review: () => [], save: async () => undefined, setRoutinePaused: async () => undefined, saveOwn: async () => undefined,
+    setToolsets: async () => undefined, setProject: async () => undefined, note: () => null
+  } as unknown as BotsAdmin;
+  const snap = base.bots.snapshot;
+  return { ...base, bots: { ...base.bots, admin, snapshot: () => { const s = snap(); return { ...s, bots: s.bots.map((b) => (b.id === id ? { ...b, info } : b)) }; } } };
 }

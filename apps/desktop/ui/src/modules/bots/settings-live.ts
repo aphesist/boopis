@@ -36,7 +36,9 @@ export function inventoryLine(label: string, one: string, many: string, list: re
 
 const sentence = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 /** what the cap per run means, said where it is set (ADR-0050) */
-export const CAP_HINT = 'No cap unless you set one. Dollars per run: one message, room turn, card or scheduled run. At the cap it pauses and asks you; no answer stops it. On a subscription it counts what the same tokens would cost on the API, so it works as a token budget. Empty it to remove the cap.';
+export const CAP_HINT = 'Pauses and asks you when it’s reached.';
+/** the cap's placeholder: no cap is the default (copy rule 5) */
+export const CAP_PLACEHOLDER = 'No cap';
 
 export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | null, keepFocus: boolean): void {
   const admin = data().bots.admin as BotsAdmin;
@@ -65,16 +67,16 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const gone = el('section', { class: 'bt-review', 'aria-label': 'Delete ' + b.name, hidden: true });
 
   /* ───────── role and instructions: profile.yaml and SOUL.md ───────── */
-  const roleF = ui.field({ label: 'Role, shown under its name', value: pend.role, hint: 'Kept as the bot’s description; other bots read it to know what this one is for.' });
+  const roleF = ui.field({ label: 'Role, shown under its name', value: pend.role, hint: 'Other bots read it too.' });
   $<HTMLInputElement>('input', roleF).addEventListener('input', (e) => { pend.role = (e.target as HTMLInputElement).value; paintDirty(); });
-  const instrF = ui.field({ kind: 'textarea', label: 'Instructions (SOUL.md)', placeholder: loaded ? 'How it should work, what to avoid, who to tell' : 'Reading SOUL.md…', value: pend.instructions, disabled: !loaded, hint: loaded ? 'Takes effect in its next session; a session already running keeps the text it started with.' : (info.notes.detail ?? 'It has not been read yet.') });
+  const instrF = ui.field({ kind: 'textarea', label: 'Instructions', placeholder: loaded ? 'How it should work, what to avoid, who to tell' : 'Reading…', value: pend.instructions, disabled: !loaded, hint: loaded ? 'Applies from its next session.' : (info.notes.detail ?? 'It has not been read yet.') });
   $<HTMLTextAreaElement>('textarea', instrF).addEventListener('input', (e) => { pend.instructions = (e.target as HTMLTextAreaElement).value; paintDirty(); });
 
   /* ───────── model: config.yaml ───────── */
   const models = [...admin.models()];
   if (info.model && !models.includes(info.model)) models.unshift(info.model);
-  const modelHint = info.model ? 'The model ' + b.name + ' runs on.' : (info.notes.detail ?? 'No model is pinned for this bot.') + (models.length ? ' Pick one to pin it.' : ' No provider is configured yet.');
-  const modelF = ui.field({ kind: 'model', label: 'Model', options: models, value: info.model ?? '', hint: modelHint, disabled: !models.length });
+  const modelHint = info.model ? null : info.notes.detail ?? (models.length ? 'None pinned yet.' : 'Connect a model provider first.');
+  const modelF = ui.field({ kind: 'model', label: 'Model', options: models, value: info.model ?? '', ...(modelHint ? { hint: modelHint } : {}), disabled: !models.length });
   modelF.addEventListener('ui:change', (e) => { pend.model = (e as CustomEvent<{ value: string }>).detail.value; paintDirty(); });
 
   /* ───────── routines: Hermes's cron store, this profile's ───────── */
@@ -100,7 +102,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   function paintRoutines(): void {
     routines.textContent = '';
     if (!jobsKnown) { routines.append(el('li', { class: 'bt-routine-note', text: 'Unknown. ' + (info.notes.jobs ?? 'boopis could not read its schedule.') })); return; }
-    if (!(info.jobs ?? []).length && !pend.add.length) routines.append(el('li', { class: 'bt-routine-note', text: b.name + ' has no routines: it only works when asked.' }));
+    if (!(info.jobs ?? []).length && !pend.add.length) routines.append(el('li', { class: 'bt-routine-note', text: 'No routines yet.' }));
     for (const j of info.jobs ?? []) {
       const going = pend.remove.has(j.id);
       const sid = 'bt-job-' + b.id + '-' + j.id;
@@ -124,7 +126,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
       routines.append(el('li', { class: 'bt-routine is-new' }, [el('div', { class: 'bt-routine-text' }, [el('span', { text: a.name || a.prompt }), el('span', { class: 'ui-field__hint', text: scheduleWords(a.schedule) + ' · added when you save' })]), del]));
     });
   }
-  const promptF = ui.field({ kind: 'textarea', label: 'What should it do?', placeholder: 'Review what changed since yesterday and tell me what needs me', value: '' });
+  const promptF = ui.field({ kind: 'textarea', label: 'What should it do?', placeholder: 'Tell me what changed since yesterday', value: '' });
   const presets = ui.chipGroup({ label: 'Schedule', value: null, options: CRON_PRESETS.filter(([v]) => v).map(([value, label]) => ({ value, label })) });
   const cronF = ui.field({ label: 'Cron', mono: true, value: '', placeholder: '0 9 * * 1-5', hint: 'Minute, hour, day, month, weekday.' });
   const cronIn = $<HTMLInputElement>('input', cronF), cronHint = $('.ui-field__hint', cronF), promptIn = $<HTMLTextAreaElement>('textarea', promptF);
@@ -152,7 +154,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const ownErr = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: true });
   const gov = ui.segmented({ mode: 'radio', label: 'Governance', value: c.gov, options: [{ value: 'governed', label: 'Governed' }, { value: 'ungoverned', label: 'Ungoverned' }], fill: true });
   const capId = 'bt-cap-' + b.id;
-  const capRow = frag(ui.html.setRow({ label: 'Cap per run', hint: CAP_HINT, for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
+  const capRow = frag(ui.html.setRow({ label: 'Cap per run', hint: CAP_HINT, for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, placeholder: CAP_PLACEHOLDER, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
   let capTimer = 0;
   $<HTMLInputElement>('input', capRow).addEventListener('input', (e) => { const v = (e.target as HTMLInputElement).value.trim(); window.clearTimeout(capTimer); capTimer = window.setTimeout(() => { if (v === '' || /^\d{1,4}(\.\d{1,4})?$/.test(v)) own({ cap: v }); }, 500); });   /* empty: no cap */
   gov.addEventListener('ui:change', (e) => {
@@ -192,7 +194,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     });
   const tools = el('div', { class: 'ui-set' }, [...toolRows, toolErr]);
   const projId = 'bt-project-' + b.id;
-  const projRow = frag(ui.html.setRow({ label: 'Project folder', hint: 'Its sessions start here and read the folder’s AGENTS.md or CLAUDE.md.', for: projId, control: ui.html.input({ id: projId, value: info.project ?? '', mono: true, placeholder: 'None', attrs: { spellcheck: null } }) }));
+  const projRow = frag(ui.html.setRow({ label: 'Project folder', hint: null, for: projId, control: ui.html.input({ id: projId, value: info.project ?? '', mono: true, placeholder: 'None', attrs: { spellcheck: null } }) }));
   const projInput = $<HTMLInputElement>('input', projRow);
   const projErr = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: !info.notes.project, text: info.notes.project ?? '' });
   let projSaved = info.project ?? '';
@@ -220,10 +222,10 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     lookSection(b),
     sec('role', 'Role and instructions', null, [roleF, instrF]),
     sec('model', 'Model', info.model ?? 'not set', [modelF]),
-    sec('schedule', 'Schedule', jobsMeta, [hint('What it does when you have not asked. Each is a job in this bot’s own schedule.'), routines, routineErr, promptF, presets, cronF, el('div', { class: 'bt-add-row' }, addBtn)]),
-    sec('capabilities', 'What it can use', null, [hint('Toolsets and the project folder apply from its next new session.'), caps, tools, project]),
+    sec('schedule', 'Schedule', jobsMeta, [hint('What it does without being asked.'), routines, routineErr, promptF, presets, cronF, el('div', { class: 'bt-add-row' }, addBtn)]),
+    sec('capabilities', 'What it can use', null, [hint('Changes apply from its next session.'), caps, tools, project]),
     approvalsOf(b),
-    sec('rules', 'Limits and workspace', null, [hint('Saved with the bot, in its boopis folder. Governed applies from its next session and needs a frontier model; the cap applies from its next step; the workspace does not apply yet.'), gov, capRow, ws, ownErr, el('div', { class: 'ui-set' }, runLimitRow(b))])
+    sec('rules', 'Limits and workspace', null, [hint('The workspace choice doesn’t apply yet.'), gov, capRow, ws, ownErr, el('div', { class: 'ui-set' }, runLimitRow(b))])
   );
   paintRoutines();
   const heads = wireSectionKeys(body);
@@ -263,7 +265,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     const save = ui.button({ label: ask ? 'Use this model anyway' : 'Save changes', variant: 'primary' });
     review.replaceChildren(
       el('h3', { class: 'bt-review-h', text: 'Review before saving' }),
-      el('p', { class: 'ui-field__hint', text: 'These are the files boopis keeps for ' + b.name + '. Nothing is written until you save.' }),
+      el('p', { class: 'ui-field__hint', text: 'Nothing is written until you save.' }),
       ...planned.map((w) => frag(diffWell(w.diff, w.file))),
       ...(ask ? [el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', text: ask })] : []),
       err, el('div', { class: 'bt-review-acts' }, [keep, save])

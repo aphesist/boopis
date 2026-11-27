@@ -33,9 +33,9 @@ export function resolveControls(pref: ControlsPref, info: Pick<WindowInfo, 'plat
 
 /** the words under the setting, so a person can see what was found */
 export function describeDesktop(info: Pick<WindowInfo, 'desktop' | 'tiling'> | null): string {
-  if (!info) return 'This page is not the desktop app, so nothing was detected.';
-  if (!info.desktop) return 'The desktop was not recognised: all three buttons show.';
-  return info.tiling ? `Detected ${info.desktop}, a tiling window manager: only close shows.` : `Detected ${info.desktop}: all three buttons show.`;
+  if (!info) return 'Nothing detected outside the desktop app.';
+  if (!info.desktop) return 'Desktop not recognised, so all three show.';
+  return info.tiling ? `${info.desktop} tiles windows, so only close shows.` : `Detected ${info.desktop}.`;
 }
 
 export interface WindowHost {

@@ -268,10 +268,10 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<Record
 export function keyForm(entry: Entry, way: Way, changing: boolean): FormSpec {
   const url = way.key?.url ? way.key.url.replace(/^https?:\/\//, '').replace(/\/$/, '') : '';
   const notes = way.notes.filter((n) => !rowNote(n)).map((n) => n.text);
-  const why = [url ? `Make a key at ${url}.` : '', 'It is kept in your OS keychain and never shown again.', ...notes].filter(Boolean).join(' ');
+  const why = [url ? `Make a key at ${url}.` : '', 'Kept in your keychain.', ...notes].filter(Boolean).join(' ');
   return {
     id: 'provider.key.' + way.id, kind: 'credential', title: `${changing ? 'Change the key for' : 'Add a key for'} ${way.label}`, origin: { kind: 'host' }, defer: false, why,
-    provider: entry.label, receipt: 'Saved to your keychain. The row shows what the provider said.',
+    provider: entry.label, receipt: 'Saved to your keychain',
     schema: { properties: { key: { type: 'string', title: 'API key', 'x-secret': true } }, required: ['key'] },
     submit: { label: 'Save key' }, cancel: { label: 'Cancel' }
   };
@@ -434,14 +434,14 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
       case 'recheck': void read(true); break;
       case 'copy': {
         const hint = r?.state?.install;
-        if (hint) copyText(hint.command).then(() => { deps.toast(`Copied. Paste it into ${hint.shell} and run it, then choose Check again.`); }, () => { deps.toast('Could not copy: select the command and copy it.'); });
+        if (hint) copyText(hint.command).then(() => { deps.toast(`Copied: run it in ${hint.shell}, then Check again`); }, () => { deps.toast('Could not copy: select the command and copy it.'); });
         break;
       }
       case 'guide': { const hint = r?.state?.install; if (hint) openPage(hint.page).catch((e: unknown) => { deps.toast(message(e)); }); break; }
       case 'use': if (r) void useLocal(r); break;
       case 'remove': {
-        if (r) removeFlow(wayId, r.way.label, 'Its key leaves your keychain. A ladder tier that names it stays as it is, and governed mode says why it cannot run.');
-        else removeFlow(wayId, wayId.slice('custom.'.length), 'The endpoint and its key are removed. Models you chose from it stay named in your ladder until you change them.');
+        if (r) removeFlow(wayId, r.way.label, 'Its key is removed from your keychain.');
+        else removeFlow(wayId, wayId.slice('custom.'.length), 'The endpoint and its key are removed.');
         break;
       }
     }

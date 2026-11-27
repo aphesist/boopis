@@ -111,7 +111,7 @@ describe('the Settings row of the Claude subscription', () => {
     el.querySelector<HTMLButtonElement>('[data-do="copy"][data-way="anthropic.signin"]')?.click();
     await Promise.resolve(); await Promise.resolve();
     expect(copied).toEqual(['irm https://claude.ai/install.ps1 | iex']);
-    expect(toasts).toEqual(['Copied. Paste it into PowerShell and run it, then choose Check again.']);
+    expect(toasts).toEqual(['Copied: run it in PowerShell, then Check again']);
     el.querySelector<HTMLButtonElement>('[data-do="guide"][data-way="anthropic.signin"]')?.click();
     expect(opened).toEqual(['https://code.claude.com/docs/en/setup']);
   });

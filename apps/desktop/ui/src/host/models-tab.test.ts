@@ -56,7 +56,7 @@ describe('Settings > Models', () => {
     expect(rows[0]?.querySelector('.k7-row__value')?.textContent).toBe('small');
     expect(rows[1]?.querySelector('.k7-row__value')?.textContent).toBe('big');
     expect(rows[0]?.getAttribute('aria-current'), 'the first tier is where a task starts').toBe('step');
-    expect(panel.textContent).toContain('moves to the next only when its gate fails');
+    expect(panel.textContent).toContain('A task moves up only when its gate fails');
     expect(panel.querySelector('[data-kit~="Card"][aria-label="Model ladder"]')).toBeTruthy();
   });
 
@@ -64,17 +64,17 @@ describe('Settings > Models', () => {
     const panel = document.createElement('div');
     await mountModels(panel, deps({ ladder: () => Promise.resolve({ state: 'default', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY }) }));
     expect(panel.querySelector('[data-tier]')).toBeNull();
-    expect(panel.textContent).toContain('No ladder is saved here, so boopis uses its built-in Claude ladder');
+    expect(panel.textContent).toContain('The built-in ladder: Opus');
   });
 
   it('says a saved ladder it cannot read is not shown, and that Hermes could not be asked when it could not', async () => {
     const odd = document.createElement('div');
     await mountModels(odd, deps({ ladder: () => Promise.resolve({ state: 'unreadable', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY }) }));
-    expect(odd.textContent).toContain('does not read as a list of named tiers');
+    expect(odd.textContent).toContain('The saved ladder can’t be shown');
     expect(odd.querySelector('[data-tier]')).toBeNull();
     const down = document.createElement('div');
     await mountModels(down, deps({ ladder: () => Promise.reject(new Error('hermes is not installed')) }));
-    expect(down.textContent).toContain('The ladder could not be read, so it is not shown: hermes is not installed');
+    expect(down.textContent).toContain('The ladder can’t be read: hermes is not installed');
     expect(down.querySelector('#hx-models-change'), 'the button is still there: choosing models does not need the read').toBeTruthy();
   });
 
@@ -152,8 +152,7 @@ describe('Settings > Models: governed mode (ADR-0037)', () => {
     const t = text(governedRows(view(NO)));
     expect(t).toContain('Unavailable');
     expect(t).toContain('tier \'haiku\' runs');
-    expect(t).toContain('sign in with your Claude subscription');
-    expect(t).toContain('GPT-6.2 Astra');
+    expect(t).toContain('GPT-6.2 Astra');   /* the allowed models are listed above the status, so it says how to get one by name */
     const panel = document.createElement('div');
     const d = deps({ ladder: () => Promise.resolve(view(NO, { tiers: NO.tiers.map((x) => ({ name: x.name, model: x.model })) })) });
     await mountModels(panel, d);
@@ -254,7 +253,7 @@ describe('Settings > Models: the heavy models\' switches (ADR-0037)', () => {
     expect(calls).toEqual(['grok:true']);
     expect(panel.textContent).toContain('Available');
     expect(panel.querySelector('#hx-heavy-grok')?.getAttribute('aria-checked')).toBe('true');
-    expect(panel.textContent).toContain('heavy: on the ladder because you chose it');
+    expect(panel.textContent).toContain('heavy, your choice');
   });
   it('without a way to ask the host the switches stay off', async () => {
     const panel = document.createElement('div');

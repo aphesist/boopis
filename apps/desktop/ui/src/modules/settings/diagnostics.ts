@@ -10,7 +10,6 @@ import type { Page } from './page';
 import { actionsHTML, buttonHTML, said, section, segHTML } from './rows';
 
 type Gpu = 'auto' | 'integrated' | 'dedicated';
-const GPU_HINT = 'Which GPU draws the window. Automatic uses the dedicated GPU on AC power when it is safe to. Applies the next time the app starts.';
 
 export function diagnosticsPage(): Page {
   const { el, body } = pageEl('diagnostics', 'Diagnostics');
@@ -19,11 +18,11 @@ export function diagnosticsPage(): Page {
   const draw = (): void => {
     if (!host) { fill(body, kit.html.emptyState({ text: 'Diagnostics are in the desktop app.' })); return; }
     fill(body,
-      section('Graphics', [{ label: 'Graphics card', sub: [GPU_HINT, ...(gpu ? gpu.lines(chosen) : ['Reading what runs now.'])].join(' '), control: (gpu ? segHTML('gpu', 'Graphics card', [{ value: 'auto', label: 'Auto' }, { value: 'integrated', label: 'Integrated' }, { value: 'dedicated', label: 'Dedicated' }], chosen) : '') + (gpu?.restart(chosen) ? actionsHTML(buttonHTML('Restart to switch', { attrs: { 'data-act': 'restart' } })) : '') }], { 'data-part': 'gpu' }) +
+      section('Graphics', [{ label: 'Graphics card', sub: (gpu ? gpu.lines(chosen) : ['Reading what runs now.']).join(' '), control: (gpu ? segHTML('gpu', 'Graphics card', [{ value: 'auto', label: 'Auto' }, { value: 'integrated', label: 'Integrated' }, { value: 'dedicated', label: 'Dedicated' }], chosen) : '') + (gpu?.restart(chosen) ? actionsHTML(buttonHTML('Restart to switch', { attrs: { 'data-act': 'restart' } })) : '') }], { 'data-part': 'gpu' }) +
       section('Renderer', [
-        { label: 'Graphics renderer', sub: 'What the window draws with. Copy it when asked why the app is slow or blank.' + (measured ? ' It includes the frames measured.' : ''), control: buttonHTML('Copy report', { attrs: { 'data-act': 'copy' } }) },
-        { label: 'Motion', sub: 'Measures the window’s frames for 5 seconds while you move the pointer along the dock.', control: buttonHTML('Measure frames', { variant: 'ghost', attrs: { 'data-act': 'measure' } }) },
-        { label: 'WebKit GPU page', sub: 'WebKitGTK’s own report of what it draws with.', control: buttonHTML('Open', { variant: 'ghost', attrs: { 'data-act': 'gpu-page', 'aria-label': 'Open the WebKit GPU page' } }) }
+        { label: 'Graphics renderer', sub: measured ? 'Includes the frames you measured.' : 'For when the app is slow or blank.', control: buttonHTML('Copy report', { attrs: { 'data-act': 'copy' } }) },
+        { label: 'Motion', sub: 'Move the pointer along the dock for 5 seconds.', control: buttonHTML('Measure frames', { variant: 'ghost', attrs: { 'data-act': 'measure' } }) },
+        { label: 'WebKit GPU page', sub: 'WebKitGTK’s own graphics report.', control: buttonHTML('Open', { variant: 'ghost', attrs: { 'data-act': 'gpu-page', 'aria-label': 'Open the WebKit GPU page' } }) }
       ], { 'data-part': 'renderer' }));
   };
   const load = async (): Promise<void> => {
@@ -46,7 +45,7 @@ export function diagnosticsPage(): Page {
     switch (b.dataset['act']) {
       case 'restart': void h.restart().catch(fail); return;
       case 'copy': void h.report(measured).then(async (text) => { try { await navigator.clipboard.writeText(text); kit.notify('Copied'); } catch { kit.notify('Copy is blocked here'); } }, fail); return;
-      case 'measure': kit.notify('Measuring for 5 seconds: close this and move the pointer along the dock', { ms: 6000 }); void h.measure(5000).then((words) => { measured = true; kit.notify(words, { ms: 6000 }); draw(); }, fail); return;
+      case 'measure': kit.notify('Measuring: move the pointer along the dock', { ms: 6000 }); void h.measure(5000).then((words) => { measured = true; kit.notify(words, { ms: 6000 }); draw(); }, fail); return;
       case 'gpu-page': void h.gpuPage().catch(fail); return;
       default: return;
     }

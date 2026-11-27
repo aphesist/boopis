@@ -22,7 +22,7 @@ export function planRows(view: PlanView, now = Date.now()): RowOpts[] {
   }
   for (const g of view.gauges) rows.push({ label: g.title, sub: `${g.provider}${g.resetsAtMs === null ? '' : `, resets ${inWords(g.resetsAtMs - now)}`}`, value: String(g.usedPercent) + '% used' });
   if (view.gaugesNote) rows.push({ label: 'Usage', sub: view.gaugesNote });
-  if (view.checking) rows.push({ label: 'Quick check', sub: 'The account service asked for a short browser check. It runs in the background and appears only if it needs you.' });
+  if (view.checking) rows.push({ label: 'Quick check', sub: 'Runs in the background and shows only if it needs you.' });
   return rows;
 }
 

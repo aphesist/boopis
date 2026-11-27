@@ -10,7 +10,7 @@ import { ACCENTS, UI_SIZES, loadLook } from '../../core/settings';
 import type { AccentId, UiSize } from '../../core/settings';
 import { setLook } from '../../styles/v7-look';
 import { themeApi } from '../../styles/theme';
-import { canZoom, onUiSizeChange, setUiSize, uiSize, uiZoomPercent } from '../shell/ui-size';
+import { canZoom, onUiSizeChange, setUiSize, uiSize } from '../shell/ui-size';
 import { pageEl, fill } from './page';
 import type { Page } from './page';
 import { openSelect, section, segHTML, selectHTML, switchHTML } from './rows';
@@ -53,7 +53,7 @@ export function wireLook(host: HTMLElement, redraw: () => void): void {
 }
 
 const SIZE_LABELS: Readonly<Record<UiSize, string>> = { default: 'Default', larger: 'Larger', largest: 'Largest' };
-const sizeHint = (): string => 'Text, bots and layout grow together. ' + (canZoom() ? 'Now ' + uiZoomPercent() + '%.' : 'The desktop app applies it.');
+const sizeHint = (): string => (canZoom() ? 'Text, bots and layout grow together.' : 'Applies in the desktop app.');
 
 export function appearancePage(): Page {
   const { el, body } = pageEl('appearance', 'Appearance');
@@ -61,7 +61,7 @@ export function appearancePage(): Page {
     fill(body,
       section('Theme', lookRows(), { 'data-part': 'look' }) +
       section('Size', [{ label: 'Interface size', sub: sizeHint(), control: segHTML('size', 'Interface size', UI_SIZES.map((s) => ({ value: s, label: SIZE_LABELS[s] })), uiSize()) }]) +
-      section('Bots', [{ label: 'Grow bots on hover', sub: 'Bots in the dock grow under the pointer.', control: switchHTML('orb-grow', 'Grow bots on hover', state.orbGrow) }]));
+      section('Bots', [{ label: 'Grow bots on hover', sub: 'In the dock.', control: switchHTML('orb-grow', 'Grow bots on hover', state.orbGrow) }]));
   };
   draw();
   wireLook(body, draw);
