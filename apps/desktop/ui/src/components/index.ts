@@ -14,7 +14,7 @@ import { botLabel, botState, STATES } from './bot-state';
 import { card } from './card-registry';
 import { holdElement, wireHold } from './hold';
 import { html } from './html';
-import type { ButtonOpts, ChipOpts, EntryOpts, FieldOpts, IconButtonOpts, LadderOpts, MeasureOpts, MeasurePart, RowOpts, SegmentedOpts } from './html';
+import type { ButtonOpts, EntryOpts, IconButtonOpts, MeasureOpts, MeasurePart } from './html';
 import { icon, iconNames } from './icons';
 import { layer, popover } from './layer';
 import { isRoute, lastModel, modelFamily, modelHTML, modelMark as modelMarkEl, parseRoute, routeHTML, swapMark, families as modelFamilies } from './model-mark';
@@ -34,7 +34,6 @@ import { scrollEdges } from './scroll-edges';
 import { addressesYou, codeHTML, everyoneHTML, inlineHTML, plainHTML, markdownHTML, mentionHandles, mentionHTML, mentionOutsideHTML, mentionsOutside, mentionSpans, mentionTarget, pathCandidate, pathCandidates, pathHTML, resolveMentions, splitBlocks, upgradePaths } from './markdown';
 import { arrive, codeOf, markdown as markdownEl, streamMarkdown, wireMarkdown } from './md-view';
 import { copyText } from './clipboard';
-import type { SegElement } from './wire';
 import { kit } from './v7';
 
 export const version = '1.0.0';
@@ -47,23 +46,14 @@ function make<O, E extends HTMLElement = HTMLElement>(fn: (o: O) => string): (o:
 const factories = {
   button: make<ButtonOpts, HTMLButtonElement>(html.button),
   iconButton: make<IconButtonOpts, HTMLButtonElement>(html.iconButton),
-  switch: make<Parameters<typeof html.switch>[0], HTMLInputElement>(html.switch),
-  segmented: make<SegmentedOpts, SegElement>(html.segmented),
-  chip: make<ChipOpts, HTMLButtonElement>(html.chip),
-  chipGroup: make<Parameters<typeof html.chipGroup>[0]>(html.chipGroup),
   dot: make<{ kind?: string }>((o) => html.dot(o.kind)),
   code: make<string>(html.code),
-  ladder: make<LadderOpts>(html.ladder),
   measure: make<MeasureOpts>(html.measure),
   request: make<string>(html.request),
   entry: make<EntryOpts, HTMLElement>(html.entry),
   disclosure: make<Parameters<typeof html.disclosure>[0], HTMLButtonElement>(html.disclosure),
-  section: make<Parameters<typeof html.section>[0]>(html.section),
   scroll: make<Parameters<typeof html.scroll>[0]>(html.scroll),
-  tabs: make<Parameters<typeof html.tabs>[0], SegElement>(html.tabs),
-  field: make<FieldOpts>(html.field),
   empty: make<Parameters<typeof html.empty>[0]>(html.empty),
-  row: make<RowOpts, HTMLLIElement>(html.row),
   signinButton: make<SigninButtonOpts, HTMLButtonElement>(html.signinButton),
   stack: make<StackOpts>(html.stack),
 };
@@ -94,7 +84,7 @@ export const ui = {
 };
 export type Ui = typeof ui;
 export { html, icon, hydrate, hydrateOne, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, popover, layer, tooltip, card, wireHold, holdElement };
-export type { SegElement } from './wire';
+
 /* the v7 kit (DESIGN-SYSTEM.md v7 section 21), on a v7 root */
 export { kit, kitVariants } from './v7';
 export type * from './v7';
@@ -125,13 +115,11 @@ export { serviceMarkOf, publisherMarkOf, monogram, serviceMarks, serviceMark, pa
 export type { ItemRef, ServiceMark } from './item-mark';
 export { variants } from './variants';
 export type { ComponentName } from './variants';
-export type { InputOpts, BadgeOpts } from './html';
+export type { BadgeOpts } from './html';
 export type { SelectEntry, SelectGroup, SelectOption };
 export { scroll, scrollClass, scrollVariants, SCROLL_AXES } from './scroll';
-export { tabs, tabsVariants, fitTabs } from './tabs';
-export type { TabDef, TabsOpts } from './tabs';
 export type { ScrollAxis, ScrollOpts, ScrollHtmlOpts } from './scroll';
-export type { MenuEntry, MenuItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
+export type { MenuEntry, MenuItem, MeasurePart, CallLine } from './html';
 export type { ModelRef, ModelOpts, MarkOpts, ModelFamily } from './model-mark';
 export type { BotLike } from './bot-state';
 export type { MarkdownCtx, MdBot, PathTarget, Block as MarkdownBlock, MentionSpan, MentionTarget } from './markdown';

@@ -59,14 +59,4 @@ const hold: Story = {
   }
 };
 
-const swTypical = stage(['typical', 'variant'], ({ root }) => { line(root, ui.switch({ label: 'Smart', checked: true }), ui.switch({ label: 'Network' })); });
-const sw: Story = {
-  id: 'components/switch', title: 'Switch', area: 'components', kind: 'component', covers: ['ui.switch'], mock: { url: '/v6/design-system/index.html#c-choices', crop: '#c-choices' },
-  states: {
-    typical: swTypical, ...forced(swTypical, '.ui-switch'),
-    disabled: stage(['disabled'], ({ root }) => { line(root, ui.switch({ label: 'Smart', checked: true, disabled: true }), ui.switch({ label: 'Network', disabled: true })); }),
-    long: stage(['long'], ({ root }) => { line(root, ui.switch({ label: LONG_TITLE, checked: true })); }, { note: 'a switch has no visible text' })
-  }
-};
-
-export default [button, iconButton, hold, sw];
+export default [button, iconButton, hold];

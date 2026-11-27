@@ -2,7 +2,7 @@
    (frame.ts) beside the v6 mock-up's counterpart. The toolbar's choices live in the URL's hash, so a link opens the
    same view: #story=<id>&preset=<id>&w=<px>&zoom=<1|1.6>&force=<hover|focus|active>&reduced=1&mock=0 */
 import '../styles';
-import { ui } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
 import { STORIES, storyById } from './registry';
 import { AREAS } from './types';
 import type { Story, StoryKind } from './types';
@@ -34,7 +34,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 function seg(label: string, values: readonly string[], value: string, names: (v: string) => string, onChange: (v: string) => void): HTMLElement {
   const wrap = el('label');
   wrap.append(label);
-  const s = ui.segmented({ mode: 'radio', size: 's', label, value, options: values.map((x) => ({ value: x, label: names(x) })) });
+  const s = kit.segmented({ label, value, items: values.map((x) => ({ value: x, label: names(x) })), attrs: { 'data-ui': 'v7', 'data-theme': 'dark' } });
   s.addEventListener('ui:change', (e) => onChange(String((e as CustomEvent<{ value: string }>).detail.value)));
   wrap.append(s);
   return wrap;

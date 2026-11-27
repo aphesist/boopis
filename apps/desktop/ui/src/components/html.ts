@@ -5,18 +5,14 @@ import { attrs, cx, esc, nid } from '../core/dom';
 import type { Attrs } from '../core/dom';
 import { ariaKeys } from '../core/keys';
 import { combo, comboKbds, kbd, keys } from './kbd';
-import { botState } from './bot-state';
-import type { BotLike } from './bot-state';
 import { icon } from './icons';
 import { logoHTML } from './logo';
-import { modelName } from './model-name';
 import { signinButton } from './signin-button';
 import { arrowHTML, isKnownModel, markHTML, modelHTML, routeHTML } from './model-mark';
 import type { ModelRef } from './model-mark';
 import { orbHtml } from './orb';
 import { stack } from './stack';
 import { scroll } from './scroll';
-import { tabs } from './tabs';
 
 type U<T> = T | undefined;
 
@@ -55,70 +51,6 @@ function hold(o: HoldOpts = {}): string {
     '<span class="ui-hold__label">' + esc(label) + '</span><span class="ui-hold__label ui-hold__label--on" aria-hidden="true">' + esc(label) + '</span></button>' +
     '<span class="ui-sr" id="' + id + '">Press and hold for one second, hold the space bar, or press enter twice</span>';
 }
-/** a native checkbox */
-const switchHtml = (o: { id?: U<string>; checked?: U<boolean>; disabled?: U<boolean>; label?: U<string>; name?: U<string> }): string =>
-  '<input type="checkbox" role="switch" class="ui-switch" data-ui="switch"' + attrs({ id: o.id, checked: !!o.checked, disabled: o.disabled, 'aria-label': o.label, name: o.name }) + '>';
-
-export interface SegOption { value: string; label?: U<string>; dot?: U<boolean>; icon?: U<string>; ariaLabel?: U<string>; tip?: U<string>; keys?: U<string> }
-export interface SegmentedOpts { options: readonly SegOption[]; value?: U<string | null>; mode?: U<'tabs' | 'radio'>; label?: U<string>; /** named by a visible label instead (a settings row's label id); replaces `label` */ labelledby?: U<string>; size?: U<'s'>; vertical?: U<boolean>; fill?: U<boolean>; class?: U<string>; controls?: U<Record<string, string>>; attrs?: U<Attrs> }
-function segmented(o: SegmentedOpts): string {
-  const opts = o.options;
-  const i = Math.max(0, opts.findIndex((x) => x.value === o.value));
-  const tabs = o.mode !== 'radio';
-  return '<div class="' + cx('ui-seg', o.size === 's' && 'ui-seg--s', o.vertical && 'ui-seg--vertical', o.fill && 'ui-seg--fill', o.class) + '" data-ui="seg" role="' + (tabs ? 'tablist' : 'radiogroup') + '"' +
-    attrs({ 'aria-label': o.labelledby ? null : o.label, 'aria-labelledby': o.labelledby, 'aria-orientation': o.vertical ? 'vertical' : null, style: '--n:' + opts.length + ';--i:' + i, ...o.attrs }) + '><span class="ui-seg__thumb" aria-hidden="true"></span>' +
-    opts.map((x, j) => '<button type="button" class="ui-seg__opt" role="' + (tabs ? 'tab' : 'radio') + '" data-value="' + esc(x.value) + '"' +
-      attrs({ [tabs ? 'aria-selected' : 'aria-checked']: String(j === i), tabindex: j === i ? '0' : '-1', 'aria-controls': o.controls?.[x.value], 'aria-label': x.ariaLabel, 'data-tip': x.tip, 'data-kbd': x.keys }) + '>' +
-      (x.icon ? icon(x.icon, { size: 'm' }) : '') + (x.label != null ? '<span>' + esc(x.label) + '</span>' : '') + (x.dot != null ? dot('attention', { show: !!x.dot }) : '') + '</button>').join('') + '</div>';
-}
-export interface ChipOpts { label?: U<string>; /** a model: its provider's mark leads, and the label defaults to the name */ model?: U<ModelRef>; modelColor?: U<'mono' | 'brand'>; icon?: U<string>; pressed?: U<boolean>; mono?: U<boolean>; haspopup?: U<string>; expanded?: U<boolean>; option?: U<boolean>; checked?: U<boolean>; tip?: U<string>; value?: U<string>; tabindex?: U<string>; class?: U<string>; attrs?: U<Attrs> }
-function chip(o: ChipOpts): string {
-  const option = !!o.option;
-  return '<button type="button" class="' + cx('ui-chip', (o.mono || (o.model && o.mono !== false)) && 'ui-chip--mono', option && 'ui-chip--option', o.class) + '" data-ui="chip"' +
-    attrs({ role: option ? 'radio' : null, 'aria-checked': option ? String(!!o.checked) : null, 'aria-pressed': !option && o.pressed != null ? String(!!o.pressed) : null,
-      'aria-haspopup': o.haspopup, 'aria-expanded': o.haspopup ? String(!!o.expanded) : null, 'data-tip': o.tip, 'data-value': o.value, tabindex: o.tabindex, ...o.attrs }) + '>' +
-    (o.model ? markHTML(o.model, { size: 14, color: o.modelColor ?? 'mono' }) : o.icon ? icon(o.icon) : '') + '<span>' + esc(o.label ?? (o.model ? modelName(o.model) : '')) + '</span>' + (o.haspopup ? icon('chevron-down', { size: 's' }) : '') + '</button>';
-}
-const chipGroup = (o: { options: readonly { label: string; value: string }[]; value?: U<string | null>; label?: U<string> }): string =>
-  '<div class="ui-chips" role="radiogroup" data-ui="options"' + attrs({ 'aria-label': o.label }) + '>' +
-  o.options.map((x) => chip({ label: x.label, value: x.value, option: true, checked: x.value === o.value, tabindex: x.value === o.value ? '0' : '-1' })).join('') + '</div>';
-
-const stateWord = (b: BotLike, o?: { showIdle?: boolean }): string => {
-  const s = botState(b);
-  if (s.key === 'idle' && !o?.showIdle) return '';
-  return '<span class="ui-state"' + (s.tone !== 'none' ? ' data-tone="' + s.tone + '"' : '') + '>' + esc(s.word) + '</span>';
-};
-
-export interface RowOpts { title?: U<string>; titleHTML?: U<string>; sub?: U<string | null>; end?: U<string>; endTone?: U<string | null>; lead?: U<string>; current?: U<boolean>; archived?: U<boolean>; acts?: U<string>; attrs?: U<Attrs>; tag?: U<string>; class?: U<string>; value?: U<string>; tabindex?: U<string> }
-function row(o: RowOpts): string {
-  const two = o.sub != null;
-  const tag = o.tag || 'button';
-  const r = '<' + tag + (tag === 'button' ? ' type="button"' : '') + ' class="' + cx('ui-row', two && 'ui-row--2', o.class) + '"' +
-    attrs({ 'aria-current': o.current ? 'true' : null, 'data-archived': o.archived, 'data-value': o.value, tabindex: o.tabindex, ...o.attrs }) + '>' +
-    '<span class="ui-row__lead">' + (o.lead ?? '') + '</span>' +
-    '<span class="ui-row__text"><span class="ui-row__title">' + (o.titleHTML ?? esc(o.title)) + '</span>' + (two ? ' <span class="ui-row__sub">' + esc(o.sub) + '</span>' : '') + '</span>' +
-    (o.end ? ' <span class="ui-row__end"' + attrs({ 'data-tone': o.endTone, 'data-swap': o.acts ? '' : null }) + '>' + o.end + '</span>' : '') + '</' + tag + '>';
-  return o.acts ? '<li class="ui-row-wrap">' + r + '<span class="ui-row__acts">' + o.acts + '</span></li>' : '<li>' + r + '</li>';
-}
-/** the glyph column: running breathes, attention is red, current and idle is brass, else nothing */
-const leadFor = (o: { attention?: U<boolean>; running?: U<boolean>; current?: U<boolean> }): string => (o.attention ? dot('attention') : o.running ? dot('run') : o.current ? dot('here') : '');
-
-export type Station = readonly [model: string, rule?: string];
-export interface LadderOpts { stations?: U<readonly Station[]>; current?: U<number>; variant?: U<'line' | 'list'>; label?: U<string>; off?: U<boolean>; ground?: U<string> }
-function ladder(o: LadderOpts): string {
-  const L = o.stations ?? [], cur = o.current ?? 0;
-  const st = (i: number): string => (i < cur ? 'past' : i === cur ? 'now' : 'next');
-  const style = o.ground ? '--ui-ladder-ground:' + o.ground : null;
-  if (o.variant === 'list') {
-    return '<ol class="ui-ladder ui-ladder--list"' + attrs({ 'aria-label': o.label || 'Model ladder', 'data-off': o.off, style }) + '>' + L.map((x, i) =>
-      '<li' + (i === cur ? ' aria-current="step"' : '') + '><span class="ui-ladder__mark"><i class="ui-ladder__st" data-s="' + st(i) + '"></i></span>' +
-      '<span class="ui-ladder__name">' + markHTML(x[0], { size: 14 }) + esc(modelName(x[0]) || x[0]) + '</span><span class="ui-ladder__rule">' + esc(x[1] ?? '') + '</span></li>').join('') + '</ol>';
-  }
-  const name = L[cur] ? L[cur][0] : '';
-  return '<span class="ui-ladder" role="img"' + attrs({ 'aria-label': (o.label || 'Model ladder') + ', station ' + (cur + 1) + ' of ' + L.length + (name ? ': ' + (modelName(name) || name) : ''), 'data-off': o.off, style }) + '>' +
-    L.map((_, i) => '<i class="ui-ladder__st" data-s="' + st(i) + '"></i>').join('') + '</span>';
-}
-
 export type MeasurePart = readonly [label: string, n: number];
 export interface MeasureOpts { used?: U<number>; total: number; dots?: U<number>; variant?: U<'strip' | 'row' | 'grid'>; parts?: U<readonly MeasurePart[]>; label?: U<string>; cols?: U<number> }
 function measure(o: MeasureOpts): string {
@@ -169,34 +101,12 @@ function entry(o: EntryOpts): string {
   return '<article class="ui-entry"' + attrs({ 'data-kind': o.kind, 'aria-label': o.label }) + '><div class="ui-callno">' + (o.who ? '<span class="' + cx('ui-callno__who', o.kind === 'user' && 'is-you') + '">' + o.who + '</span>' : '') + lines + steps + '</div>' +
     '<div class="ui-entry__body">' + (o.body ?? '') + '</div></article>';
 }
-function section(o: { label: string; meta?: U<string>; open?: U<boolean>; body?: U<string>; id?: U<string>; name?: U<string> }): string {
-  const id = o.id || nid('sec');
-  return '<div class="ui-sec" role="group"' + attrs({ 'aria-labelledby': id + '-h', 'data-name': o.name }) + '><button type="button" class="ui-sec__head" data-ui="section" id="' + id + '-h" aria-expanded="' + (!!o.open) + '" aria-controls="' + id + '">' +
-    '<span class="ui-sec__label">' + esc(o.label) + '</span><span class="ui-sec__meta">' + (o.meta ?? '') + '</span>' + icon('chevron') + '</button><div class="ui-sec__body" id="' + id + '">' + (o.body ?? '') + '</div></div>';
-}
-
 export interface MenuItem {
   label?: string; /** a model: a brand mark leads the label (a menu of models is the picker) */ model?: ModelRef; modelColor?: 'mono' | 'brand'; value?: string | number; desc?: string; icon?: string; keys?: string; checked?: boolean; mono?: boolean; disabled?: boolean; stamp?: string;
   role?: 'menuitem' | 'menuitemradio' | 'menuitemcheckbox'; lead?: string; content?: boolean; title?: string; foot?: string;
 }
 export type MenuEntry = MenuItem | '-';
 export const itemValue = (x: MenuItem): string => String(x.value != null ? x.value : x.label);
-export interface FieldOpts { id?: U<string>; name?: U<string>; label?: U<string>; hint?: U<string>; error?: U<string>; kind?: U<'text' | 'textarea'>; type?: U<string>; value?: U<string>; placeholder?: U<string>; mono?: U<boolean>; raised?: U<boolean>; disabled?: U<boolean>;
-  /** the label is said to a screen reader only: a section's title already says it on screen (a bot sheet's Model) */ hideLabel?: U<boolean> }
-function field(o: FieldOpts): string {
-  const id = o.id || nid('fld'), hid = id + '-hint';
-  const common: Attrs = { id, name: o.name, placeholder: o.placeholder, 'aria-describedby': o.hint || o.error ? hid : null, 'aria-invalid': o.error ? 'true' : null, disabled: o.disabled, spellcheck: o.mono ? 'false' : null, autocomplete: 'off' };
-  const cls = cx('ui-input', o.mono && 'ui-input--mono', o.raised && 'ui-input--raised');
-  let control: string;
-  if (o.kind === 'textarea') control = '<textarea class="' + cls + '" data-ui="autosize" rows="2"' + attrs(common) + '>' + esc(o.value ?? '') + '</textarea>';
-  else control = '<input type="' + (o.type ?? 'text') + '" class="' + cls + '"' + attrs({ ...common, value: o.value }) + '>';
-  return '<div class="ui-field">' + (o.label ? '<label class="' + cx('ui-field__label', o.hideLabel && 'ui-sr') + '" for="' + id + '">' + esc(o.label) + '</label>' : '') + control +
-    (o.error || o.hint ? '<p class="ui-field__hint" id="' + hid + '"' + (o.error ? ' data-tone="attention"' : '') + '>' + esc(o.error || o.hint) + '</p>' : '') + '</div>';
-}
-/** a settings row: its label, a hint under it (a command in backticks shows as code, as the host writes its sentences), its control */
-const setRow = (o: { label: string; hint?: U<string | null>; for?: U<string | null>; /** the label's own id, for a control named by aria-labelledby (a select) */ labelId?: U<string>; control?: U<string>;
-  /** what the row is about, before its label, never decoration */ lead?: U<string> }): string =>
-  '<div class="ui-set__row">' + (o.lead ? '<span class="ui-set__lead">' + o.lead + '</span>' : '') + '<' + (o.for ? 'label for="' + esc(o.for) + '"' : 'span') + attrs({ id: o.labelId }) + ' class="ui-set__label"><span>' + esc(o.label) + '</span>' + (o.hint ? '<small>' + inline(o.hint) + '</small>' : '') + '</' + (o.for ? 'label' : 'span') + '>' + (o.control ?? '') + '</div>';
 export interface BadgeOpts {
   label: string;
   /** the sentence behind the short words: its tooltip (and, with `describedBy`, its accessible description) */
@@ -205,33 +115,8 @@ export interface BadgeOpts {
   focusable?: U<boolean>; describedBy?: U<string>;
   class?: U<string>; attrs?: U<Attrs>;
 }
-export interface InputOpts {
-  id?: U<string>; name?: U<string>; type?: U<string>; value?: U<string>; placeholder?: U<string>;
-  /** the accessible name when no visible label is bound with `for` */
-  label?: U<string>;
-  mono?: U<boolean>; raised?: U<boolean>;
-  /** a textarea of this many rows (a multi-line value: a theme's JSON) */
-  rows?: U<number>;
-  disabled?: U<boolean>; class?: U<string>; attrs?: U<Attrs>;
-}
-/** the bare text control (`.ui-input`, DESIGN-SYSTEM.md §14.25, R-field-1 to 4) for a place that has its own label: a settings row's
-    control, a rename in a list. `field()` is the same control with its label, hint and error. */
-function input(o: InputOpts): string {
-  const a: Attrs = { id: o.id, name: o.name, placeholder: o.placeholder, 'aria-label': o.label, disabled: o.disabled, autocomplete: 'off', spellcheck: o.mono ? 'false' : null, ...o.attrs };
-  const cls = cx('ui-input', o.mono && 'ui-input--mono', o.raised && 'ui-input--raised', o.class);
-  return o.rows ? '<textarea class="' + cls + '"' + attrs({ rows: o.rows, ...a }) + '>' + esc(o.value ?? '') + '</textarea>'
-    : '<input type="' + esc(o.type ?? 'text') + '" class="' + cls + '"' + attrs({ ...a, value: o.value }) + '>';
-}
-/** a quiet mark: a chip's capsule in mono 11, outlined, never filled and never red (a stamp is what the user owes). The "made outside
-    boopis" mark (owner decision, 19 November 2026) is one. Pending rule: the design system describes this mark only for that place. */
 const badge = (o: BadgeOpts): string => '<span class="' + cx('ui-badge', o.class) + '"' +
   attrs({ role: o.focusable ? 'note' : null, tabindex: o.focusable ? '0' : null, 'data-tip': o.tip, 'data-tip-pos': o.tipPos, 'aria-describedby': o.describedBy, ...o.attrs }) + '>' + esc(o.label) + '</span>';
-/** a settings section's heading (12/500 quiet, 20 above: DESIGN-SYSTEM.md §14.21); the section is a `<section class="ui-set">` named by it */
-/** a section's heading; `level` 2 where the page's own title is the h1 and no h2 sits between (first run), else 3 under the dialog's */
-const setHead = (o: { label: string; id: string; level?: 2 | 3 }): string => { const h = 'h' + String(o.level ?? 3); return '<' + h + ' class="ui-set__head" id="' + esc(o.id) + '">' + esc(o.label) + '</' + h + '>'; };
-/** a settings section: its heading, then its rows (`setRow`) */
-const setSection = (o: { label: string; id: string; body?: U<string>; attrs?: U<Attrs> }): string =>
-  '<section class="ui-set"' + attrs({ 'aria-labelledby': o.id, ...o.attrs }) + '>' + setHead(o) + (o.body ?? '') + '</section>';
 const empty = (o: { title: string; text?: U<string>; mark?: U<boolean>; action?: U<string> }): string =>
   '<div class="ui-empty">' + (o.mark ? '<span class="ui-empty__mark">' + logoHTML({ mark: true, label: false }) + '</span>' : '') + '<h2 class="ui-empty__title">' + esc(o.title) + '</h2>' + (o.text ? '<p class="ui-empty__text">' + esc(o.text) + '</p>' : '') + (o.action ?? '') + '</div>';
 
@@ -245,5 +130,5 @@ const tip = (label: string, k?: string, state?: { text: string; tone?: string })
 
 
 export const html = {
-  icon, keys, kbd, combo, comboKbds, code, inline, dot, button, iconButton, hold, switch: switchHtml, segmented, chip, chipGroup, orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, ladder, measure, legend, request, entry, disclosure, section, field, setRow, setHead, setSection, empty, tip, mod, scroll, tabs, tipBody, badge, input, signinButton, stack
+  icon, keys, kbd, combo, comboKbds, code, inline, dot, button, iconButton, hold, orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, measure, legend, request, entry, disclosure, empty, tip, mod, scroll, tipBody, badge, signinButton, stack
 };

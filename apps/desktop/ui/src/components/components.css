@@ -32,7 +32,7 @@
    (radius, size, ring); a row along an edge that holds corner controls at its ends: .ui-corners (the inset). Never set a
    radius or an inset in a corner by hand. A squircle-drawn container also exposes its drawn radius as --r-outer when it
    declared none (squircle.ts), so its children nest the same way. */
-:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-codeblock, .ui-file, .ui-pop, .ui-tip, .ui-seg) {
+:where(.ui-nest, .ui-entry, .ui-codeblock, .ui-file, .ui-pop, .ui-tip) {
   --corner-size: var(--ctl-s);
   --r-in: min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))));
   --r-corner: min(var(--r-in), calc(var(--corner-size) / 2));
@@ -237,96 +237,8 @@
 .ui-hold[data-state="done"] { background: var(--selected); color: var(--text-on-light); box-shadow: none; cursor: default; }
 .ui-hold[data-armed] { box-shadow: inset 0 0 0 1px var(--line-strong); }
 
-/* ───────────── switch: a native checkbox with role="switch" ───────────── */
-.ui-switch {
-  appearance: none; -webkit-appearance: none; flex: none; position: relative; margin: 0; cursor: pointer;
-  width: 34px; height: 20px; border-radius: var(--r-pill); background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--line-strong);
-  transition: background-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
-}
-.ui-switch::before {
-  content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: var(--r-pill); background: var(--text-quiet);
-  transition: transform var(--dur-2) var(--ease), background-color var(--dur-1) var(--ease);
-}
-.ui-switch::after { content: ""; position: absolute; inset: calc((20px - var(--hit-min)) / 2) 0; }   /* the track is 20px tall, under --hit-min: a hit area of 24 around it (R-a11y-2), so a switch scrolled next to another control is never a target too small and too close */
-.ui-switch:checked { background: var(--selected); box-shadow: none; }
-.ui-switch:checked::before { transform: translateX(14px); background: var(--text-on-light); }
-.ui-switch:disabled { opacity: .45; cursor: default; }
-.ui-switch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* ───────────── inline code ───────────── */
 
-/* ───────────── segmented control: tabs (view switch) or a radio group (a value) ───────────── */
-.ui-seg {
-  --n: 2; --i: 0;
-  position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; flex: none;
-  --seg-h: var(--ctl); height: var(--seg-h); max-width: 100%; padding: var(--corner-inset); box-sizing: border-box;
-  --r-outer: min(var(--r-s), calc(var(--seg-h) / 2));   /* the radius the track really draws: at most a pill, so the thumb's --r-in is concentric with it at every corners setting (R-corner-3) */ --pad: var(--pad-seg); border-radius: var(--r-outer);
-  --sq-bg: var(--bg-0); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair);
-}
-.ui-seg--fill { display: grid; width: 100%; }
-.ui-seg__thumb {
-  position: absolute; top: var(--corner-inset); bottom: var(--corner-inset); inset-inline-start: var(--corner-inset); width: calc((100% - 2 * var(--corner-inset)) / var(--n));
-  border-radius: var(--r-corner); background: var(--selected); pointer-events: none;   /* concentric with the track: the container rule's inset and radius */
-  transform: translateX(calc(100% * var(--i) * var(--dir, 1))); transition: transform var(--dur-slide) var(--ease);
-}
-.ui-seg:dir(rtl) { --dir: -1; }   /* the options run right to left, so the thumb starts at the right and slides left */
-.ui-seg__opt {
-  appearance: none; position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  min-width: 0; padding: 0 14px; margin: 0; border: 0; border-radius: var(--r-corner); background: transparent;
-  font: 500 var(--fs-s)/1 var(--sans); color: var(--text-dim); white-space: nowrap; text-transform: var(--ui-case); cursor: pointer;
-  transition: color var(--dur-2) var(--ease);
-}
-@media (hover: hover) and (pointer: fine) { .ui-seg__opt:hover:not([aria-selected="true"], [aria-checked="true"]) { color: var(--text-strong); } }   /* the chosen option keeps its ink on the thumb */
-.ui-seg__opt[aria-selected="true"], .ui-seg__opt[aria-checked="true"] { color: var(--text-on-light); cursor: default; }
-.ui-seg__opt > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.ui-seg__opt:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }   /* inside the track, which clips to its path */
-.ui-seg__opt .ui-dot { display: none; }
-.ui-seg__opt[aria-selected="false"] .ui-dot[data-show], .ui-seg__opt[aria-checked="false"] .ui-dot[data-show] { display: block; }
-.ui-seg--s { --seg-h: calc(var(--ctl) - 2px); }
-.ui-seg--s .ui-seg__opt { padding: 0 12px; font-size: var(--fs-xs); }
-.ui-seg--vertical { grid-auto-flow: row; grid-auto-rows: 1fr; width: 36px; height: auto; }
-.ui-seg--vertical .ui-seg__thumb { left: 3px; right: 3px; width: auto; height: calc((100% - 6px) / var(--n)); transform: translateY(calc(100% * var(--i))); }
-.ui-seg--vertical .ui-seg__opt { padding: 0; height: 29px; }
-/* an icon-only option (the rail) keeps its icon on the axis: the attention dot sits on the corner, out of the flow */
-:is(.ui-seg--vertical .ui-seg__opt, .ui-seg__opt:not(:has(> span:not(.ui-dot)))) > .ui-dot { position: absolute; top: 5px; right: 5px; }
-
-/* ───────────── tab bar: plain tabs naming sections (the Settings head, the details panel's mod panes) ─────────────
-   DESIGN-SYSTEM.md §14.21: 28px tabs, the active one --current. Corners: concentric with the surface the bar sits in (--r-in, §8.2);
-   on a surface that declares no nesting, --r-s. Not the tabs pill (.ui-seg), which slides a thumb in a track. */
-.ui-tabs { display: flex; align-items: center; gap: 2px; min-width: 0; }
-.ui-tab {
-  appearance: none; position: relative; flex: none; display: inline-flex; align-items: center; max-width: 148px; height: var(--ctl-s); padding: 0 10px; margin: 0; border: 0;
-  border-radius: var(--r-corner, var(--r-s)); --sq-bg: transparent; background: var(--sq-bg); color: var(--text-dim);
-  font: 500 var(--fs-s)/1 var(--sans); text-transform: var(--ui-case); white-space: nowrap; cursor: pointer;
-  transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease), transform var(--dur-press) var(--ease);
-}
-.ui-tab > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-@media (hover: hover) and (pointer: fine) { .ui-tab:hover { --sq-bg: var(--hover); background: var(--sq-bg); color: var(--text); transition-duration: var(--dur-1); } }
-.ui-tab:active { transform: translateY(1px) scale(.985); }
-.ui-tab[aria-selected="true"] { --sq-bg: var(--current); background: var(--sq-bg); color: var(--text-strong); }
-.ui-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.ui-tab[data-sq-on]:focus-visible { outline: none; }   /* the drawn corner draws the ring */
-/* a scrolling strip fades the edge that cuts its tabs with every scroller's edge fade (.ui-scroll, R-scroll-9) */
-@media (prefers-reduced-motion: reduce) { .ui-tab { transition: none; } }
-
-
-/* ───────────── chips ─────────────
-   .ui-chip: a toggle or an action in a toolbar (aria-pressed for a mode, aria-haspopup for a picker).
-   .ui-chip--option: one of several values (role="radio", aria-checked). .ui-code: inline code. */
-.ui-chip {
-  appearance: none; display: inline-flex; align-items: center; gap: 6px; flex: none; min-width: 0;
-  height: calc(var(--ctl-s) - 2px); padding: 0 10px 0 8px; margin: 0; border: 0; border-radius: var(--r-pill); background: transparent;   /* a capsule */
-  font: 500 var(--fs-xs)/1 var(--sans); color: var(--text-dim); white-space: nowrap; text-transform: var(--ui-case); cursor: pointer;
-  transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease);
-}
-.ui-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.ui-chip .ui-icon { width: 15px; height: 15px; }
-@media (hover: hover) and (pointer: fine) { .ui-chip:hover { background: var(--hover); color: var(--text-strong); transition-duration: var(--dur-1); } }
-.ui-chip[aria-pressed="true"] { color: var(--text); }
-.ui-chip[aria-pressed="true"] .ui-icon { color: var(--brass); }
-.ui-chip[aria-pressed="false"] > span { text-decoration: line-through; text-decoration-color: var(--line-strong); }
-.ui-chip--mono > span { font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); text-transform: none; }
-.ui-chip--mono .ui-icon { width: 12px; height: 12px; }
-.ui-chip--option { height: calc(var(--ctl) - 4px); padding: 0 10px; box-shadow: inset 0 0 0 1px var(--line); color: var(--text); }
-.ui-chip--option[aria-checked="true"] { background: var(--current); color: var(--text-strong); box-shadow: inset 0 0 0 1px var(--brass); }
 .ui-code {
   font-family: var(--mono); font-size: var(--fs-xs); font-weight: 400; letter-spacing: var(--track-mono); padding: 1px 5px; border-radius: var(--r-xs);
   background: var(--chip); color: var(--text); overflow-wrap: anywhere; -webkit-box-decoration-break: clone; box-decoration-break: clone;
@@ -337,7 +249,7 @@
   font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: 0; color: var(--text-dim); white-space: nowrap;
 }
 .ui-keys { display: inline-flex; gap: 3px; flex: none; }
-.ui-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
 /* fit: the chips sit in a control's corner and are concentric with it (DESIGN-SYSTEM.md §8.2: a key in a tooltip, in the search field) */
 .ui-keys--fit > .ui-kbd { border-radius: var(--r-in, var(--r-xs)); }
 /* raised: on a raised surface (a tooltip, §14.17): --bg-4, no hairline */
@@ -360,44 +272,12 @@
 
 /* ───────────── list rows (sidebar lists, roster) ─────────────
    Every glyph or orb centres on the x = 28 axis and every label starts at x = 44, given the list's 8px inset. */
-.ui-rows { list-style: none; margin: 0; padding: 0 max(0px, calc(8px - var(--scroll-gutter, 0px))) 0 8px; }
+
 .ui-group__head {
   appearance: none; display: flex; align-items: center; gap: 4px; box-sizing: border-box; width: 100%; height: calc(var(--row-h) - 6px); padding: 0 12px; margin: 0; border: 0;
   border-radius: var(--r-s); background: transparent; text-align: left;
   font: 500 var(--fs-xs)/1 var(--sans); color: var(--text-quiet); text-transform: var(--ui-case);
 }
-.ui-row {
-  appearance: none; position: relative; display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box;
-  height: var(--row-h); padding: 0 4px 0 12px; margin: 0; border: 0; border-radius: var(--r-s); --sq-bg: transparent; background: var(--sq-bg);
-  font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); text-align: left; cursor: pointer;
-  transition: background-color var(--dur-out) var(--ease);
-}
-@media (hover: hover) and (pointer: fine) { .ui-row:hover { --sq-bg: var(--hover); background: var(--sq-bg); transition-duration: var(--dur-1); } }
-.ui-row[aria-current="true"], .ui-row[aria-current="page"], .ui-row[aria-selected="true"] { --sq-bg: var(--current); background: var(--sq-bg); color: var(--text-strong); }
-.ui-row--2 { height: var(--row-h-2); }
-.ui-row__lead { width: 16px; height: 16px; display: grid; place-items: center; flex: none; }
-.ui-row__lead > .ui-orb { margin: 0 -2px; }
-.ui-row__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.ui-row__title, .ui-row__sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ui-row__sub { font-size: var(--fs-xs); color: var(--text-quiet); }
-.ui-row__end { flex: none; padding-right: 8px; font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.ui-row__end[data-tone="attention"] { color: var(--red-text); }
-.ui-row__acts { display: none; gap: 2px; flex: none; }
-.ui-row:is(:hover, :focus-within) .ui-row__acts, .ui-row-wrap:is(:hover, :focus-within) .ui-row__acts { display: flex; }
-.ui-row-wrap:is(:hover, :focus-within) .ui-row__end[data-swap] { display: none; }
-.ui-row[data-archived] .ui-row__title { color: var(--text-quiet); text-decoration: line-through; text-decoration-color: var(--line-strong); }
-.ui-row-wrap {
-  --r-outer: var(--r-s); --pad: var(--pad-row);   /* the row's own radius; its action button sits --pad-row from every edge: concentric, --r-in-row (R-corner-3) */
-  display: flex; align-items: center; border-radius: var(--r-outer);
-}   /* the actions join the flow when the row is hovered or has focus, so the title ellipsises before them with no computed padding (R-space-1) */
-.ui-row-wrap > .ui-row { flex: 1; width: auto; min-width: 0; }
-.ui-row-wrap > .ui-row__acts { align-self: stretch; padding: var(--pad-row) var(--corner-inset) var(--pad-row) 0; }   /* the actions fill the row's height less --pad-row above and below, whatever the row's height (30px, or 44px for two lines) */
-.ui-row-wrap > .ui-row__acts > .ui-ib { --act: calc(var(--row-h) - 2 * var(--pad-row)); width: var(--act); height: var(--act); border-radius: var(--r-corner); }   /* a square as tall as that: --pad-row from every edge, equal insets (R-corner-3) */
-.ui-row-wrap:has(> .ui-row--2) > .ui-row__acts > .ui-ib { --act: calc(var(--row-h-2) - 2 * var(--pad-row)); }
-.ui-row-wrap :is(.ui-row, .ui-ib):focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }   /* flush with the wrap: the ring sits inside, where nothing cuts it (R-focus-2, R-corner-4) */
-.ui-row-wrap:focus-within { background: var(--hover); }
-@media (hover: hover) and (pointer: fine) { .ui-row-wrap:hover { background: var(--hover); } .ui-row-wrap > .ui-row:hover { --sq-bg: transparent; } }   /* one fill under the row and its actions */
-.ui-row-wrap:focus-within > .ui-row:not([aria-current], [aria-selected="true"]) { --sq-bg: transparent; }
 
 /* ───────────── floating surfaces: menu, popover, tooltip ───────────── */
 .ui-pop {
@@ -427,12 +307,8 @@
 .ui-tip__state { font: 400 var(--fs-2xs)/1 var(--mono); color: var(--text-dim); text-transform: none; }
 .ui-tip__state[data-tone="attention"] { color: var(--red-text); }
 
-
 /* ───────────── fields ───────────── */
-.ui-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.ui-field__label { font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-dim); text-transform: var(--ui-case); }
-.ui-field__hint { font: 400 var(--fs-xs)/1.5 var(--sans); color: var(--text-quiet); margin: 0; }
-.ui-field__hint[data-tone="attention"] { color: var(--red-text); }
+
 .ui-input {
   display: block; width: 100%; box-sizing: border-box; min-height: var(--ctl); margin: 0; padding: 6px 10px; border: 0; border-radius: var(--r-s);
   background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--line-field); color: var(--text); caret-color: var(--brass);
@@ -452,38 +328,6 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 @media (hover: hover) and (pointer: fine) { .ui-input:-webkit-autofill, .ui-input:-webkit-autofill:hover, .ui-input:-webkit-autofill:focus { -webkit-text-fill-color: var(--text); box-shadow: inset 0 0 0 1000px var(--bg-0), inset 0 0 0 1px var(--line-field); caret-color: var(--brass); transition: background-color 9999s; } }
 
 /* settings rows: label and hint on the left, the control on the right, a hairline between */
-.ui-set { margin: 0; }
-.ui-set__head { margin: 20px 0 4px; font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); text-transform: var(--ui-case); }
-.ui-set__row { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 40px; padding: 10px 0; border-bottom: 1px solid var(--hair); }
-.ui-set__row:last-child { border-bottom: 0; }
-.ui-set__actions { display: flex; gap: var(--sp-2); flex: none; }
-.ui-set__label { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: var(--fs-s); color: var(--text); text-transform: var(--ui-case); }
-.ui-set__label small { font-size: var(--fs-xs); line-height: 1.5; color: var(--text-dim); max-width: 42ch; }
-
-/* ───────────── ladder: the governance ladder as a line with stations; the current station is brass ───────────── */
-.ui-ladder { --st: 5px; position: relative; display: inline-flex; align-items: center; gap: 7px; flex: none; list-style: none; margin: 0; padding: 0; }
-.ui-ladder::before { content: ""; position: absolute; left: 2px; right: 2px; top: 50%; height: 1px; background: var(--line); }
-.ui-ladder__st { position: relative; display: block; width: var(--st); height: var(--st); border-radius: var(--r-pill); background: var(--ui-ladder-ground, var(--bg-2)); box-shadow: inset 0 0 0 1px var(--mark-off); }
-.ui-ladder__st[data-s="past"] { background: var(--text-dim); box-shadow: none; }
-.ui-ladder__st[data-s="now"] { background: var(--brass); box-shadow: none; }
-/* off: the role colours of a disabled thing, not an opacity (R-state-6): text in --text-quiet, which holds AA, marks in --mark-off */
-.ui-ladder[data-off] :is(.ui-ladder__name, .ui-ladder__rule), .ui-ladder--list[data-off] > li[aria-current="step"] :is(.ui-ladder__name, .ui-ladder__rule) { color: var(--text-quiet); }
-.ui-ladder[data-off] .ui-ladder__st:is([data-s="past"], [data-s="now"]) { background: var(--mark-off); box-shadow: none; }
-/* list: one station per row, with the model and the rule that reaches it */
-.ui-ladder--list { --st: 8px; display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 0; align-items: center; }
-.ui-ladder--list::before { display: none; }
-.ui-ladder--list > li { display: contents; }
-.ui-ladder--list .ui-ladder__st { justify-self: center; position: relative; }
-.ui-ladder--list > li > * { min-height: var(--ctl-s); display: flex; align-items: center; }
-.ui-ladder--list .ui-ladder__mark { position: relative; justify-content: center; }
-.ui-ladder--list > li:not(:last-child) .ui-ladder__mark::after { content: ""; position: absolute; left: 50%; top: calc(50% + var(--st) / 2 + 2px); height: calc(100% - var(--st) - 4px); width: 1px; translate: -.5px 0; background: var(--line); }
-.ui-ladder--list .ui-ladder__st { background: var(--ui-ladder-ground, var(--bg-1)); box-shadow: inset 0 0 0 1px var(--mark-off); }
-.ui-ladder--list .ui-ladder__st[data-s="past"] { background: var(--text-quiet); box-shadow: none; }
-.ui-ladder--list .ui-ladder__st[data-s="now"] { background: var(--brass); box-shadow: none; }
-.ui-ladder__name { font: 400 var(--fs-2xs)/1.45 var(--mono); letter-spacing: var(--track-mono); color: var(--text-dim); }
-.ui-ladder__rule { justify-content: flex-end; font-size: var(--fs-xs); color: var(--text-quiet); text-transform: var(--ui-case); }
-.ui-ladder--list > li[aria-current="step"] .ui-ladder__name { color: var(--text-strong); }
-.ui-ladder--list > li[aria-current="step"] .ui-ladder__rule { color: var(--text-dim); }   /* brass marks the station, never text: 4.0:1 in Bone */
 
 /* ───────────── dot measures: context, capacity, position ───────────── */
 .ui-measure { display: inline-flex; flex: none; gap: 6px; }
@@ -539,8 +383,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-stack[tabindex]:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-offset); border-radius: var(--r-pill); }
 /* in a row (a group's lead) the stack has a slot of its own: the lead grows to hold it, so it never covers the row's text; "+N"
    takes the row's fill (rest, hover, current), and the first orb keeps the row's orb axis */
-.ui-row__lead:has(> .ui-stack) { width: auto; }
-.ui-row__lead > .ui-stack { --stack-fill: var(--sq-bg); margin-left: -2px; min-width: calc(var(--s) + (var(--places) - 1) * (var(--s) + var(--stack-step))); }
+
 /* a cluster (stack.ts `shape: 'cluster'`): the same places set around a circle, a group's avatar. Its box is the cluster's own
    (--w by --h, from clusterLayout), so centring the box centres the cluster; each place sits at its --x, --y, the first
    underneath and each next one on top, with the line's size, step and "+N" disc. In a row it is the lead's one item (no slot of
@@ -548,7 +391,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
    (--dx, --dy, whole pixels, on the compositor), and settle back; reduced motion keeps them where they are. */
 .ui-stack--cluster { position: relative; display: inline-block; width: var(--w); height: var(--h); padding: 0; }
 .ui-stack--cluster > :is(.ui-stack__one, .ui-stack__more) { position: absolute; left: var(--x); top: var(--y); margin: 0; transition: translate var(--dur-2) var(--ease); }
-.ui-row__lead > .ui-stack--cluster { margin: 0; min-width: 0; }
+
 /* a cluster's "+N" is a counter, not a member (the owner, 23 November 2026: "that +2 is too big"): a chip --fs-2xs tall (half
    an orb when that is more), --sp-4 wide for one digit, --sp-5 for two, --sp-6 for three, with the key chip's hairline and the
    figures centred. Every size is a token and none comes from the font, and the chip keeps its place's outer corner (data-h,
@@ -565,8 +408,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-stack--cluster > .ui-stack__more[data-h="end"] { --more-x: 1; }
 .ui-stack--cluster > .ui-stack__more[data-v="start"] { --more-y: 0; }
 .ui-stack--cluster > .ui-stack__more[data-v="end"] { --more-y: 1; }
-@media (hover: hover) and (pointer: fine) { .ui-row:hover .ui-stack--cluster > * { translate: var(--dx) var(--dy); } }
-.ui-row:focus-visible .ui-stack--cluster > * { translate: var(--dx) var(--dy); }
+
 .ui-state { font: 400 var(--fs-2xs)/1.45 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); white-space: nowrap; }
 .ui-state[data-tone="attention"] { color: var(--red-text); }
 .ui-state[data-tone="busy"] { color: var(--text-dim); }
@@ -757,17 +599,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-panel__title { flex: 1; margin: 0; font: 600 var(--fs-s)/1 var(--sans); color: var(--text-strong); text-transform: var(--ui-case); }
 .ui-panel__body { flex: 1; min-height: 0; padding-bottom: 24px; }   /* a scroll area (.ui-scroll --stable) */
 .ui-panel__foot { display: flex; justify-content: space-between; gap: var(--sp-3); flex: none; padding: var(--sp-3) 20px; border-top: 1px solid var(--hair); }
-.ui-sec { width: 100%; min-width: 0; box-shadow: inset 0 1px 0 var(--hair); }
-.ui-sec__head { appearance: none; display: flex; align-items: center; gap: 8px; width: 100%; height: calc(var(--row-h) + 10px); padding: 0 calc(16px - var(--scroll-gutter, 0px)) 0 20px; margin: 0; border: 0; background: transparent; font: inherit; color: var(--text); text-align: left; cursor: pointer; transition: background-color var(--dur-1) var(--ease); }
-@media (hover: hover) and (pointer: fine) { .ui-sec__head:hover { background: var(--hover); } }
-.ui-sec__head:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }   /* a row flush with its container: the ring sits inside (R-focus-2) */
-.ui-sec__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-s); text-transform: var(--ui-case); }
-.ui-sec__meta { min-width: 0; max-width: 40%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-left: auto; display: inline-flex; gap: 8px; font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
-.ui-sec__head .ui-icon { width: 12px; height: 12px; color: var(--text-quiet); transition: transform var(--dur-2) var(--ease); }
-.ui-sec__head[aria-expanded="true"] .ui-icon { transform: rotate(90deg); }
-.ui-sec__body { overflow-wrap: anywhere; padding: 0 calc(20px - var(--scroll-gutter, 0px)) 16px 20px; }
-.ui-sec__head[aria-expanded="false"] + .ui-sec__body { display: none; }
-.ui-sec[data-flash] > .ui-sec__head { animation: ui-flash 1.2s var(--ease); }
+
 @keyframes ui-flash { 0%, 40% { background: var(--brass-soft); } 100% { background: transparent; } }
 
 /* concave corner: where a surface grows out of an edge (the ground under the frame, a sheet, the dock) */
@@ -793,12 +625,10 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 /* ───────────── reduced motion: nothing loops, nothing travels; colour and opacity still answer ───────────── */
 @media (prefers-reduced-motion: reduce) {
   .ui-dot--run { animation: none; opacity: 1; }
-  .ui-sec[data-flash] > .ui-sec__head { animation: none; }
+
   .ui-btn:active, .ui-ib:active { transform: none; }
   :is(.ui-pop, .ui-tip) { translate: none; transform: none; }
-  .ui-stack--cluster > * { transition: none; }
-  .ui-row:is(:hover, :focus-visible) .ui-stack--cluster > * { translate: none; }
-}
+  .ui-stack--cluster > * { transition: none; } }
 
 /* ───────────── squircle: the drawn corner (HX.ui.squircle binds these; DESIGN-SYSTEM.md §8.1) ─────────────
    Bound elements carry data-sq-mode and, once their path is written, data-sq-on. The --sq-* properties are plain
@@ -840,16 +670,12 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-btn--primary, .ui-btn--ghost, .ui-hold[data-state="done"] { --sq-line: transparent; }
 .ui-btn[data-armed], .ui-hold[data-armed] { --sq-line: var(--line-strong); }
 .ui-hold { --sq-line: var(--hair); }
-.ui-seg { --sq-line: var(--hair); }
+
 .ui-pop { --sq-line: var(--line); --sq-bg: var(--bg-1); }
 .ui-pop[data-sq-on] { box-shadow: var(--shadow-pop); }
 .ui-tip { --sq-line: var(--hair); --sq-bg: var(--bg-3); }
 .ui-tip[data-sq-on] { box-shadow: var(--shadow-tip); }
 .ui-tip[data-sq-on] .ui-kbd { position: relative; }
 
-
-
 /* a settings row about one thing: what it is about before the label */
-.ui-set__lead { display: flex; flex: none; align-self: center; }
-.ui-set__row:has(> .ui-set__lead) { gap: var(--sp-3); }
-.ui-set__row:has(> .ui-set__lead) > .ui-set__label { flex: 1 1 auto; }
+

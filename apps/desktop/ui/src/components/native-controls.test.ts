@@ -32,7 +32,6 @@ const RULES: readonly Rule[] = [
 interface Allow { rule: string; file: string; why: string }
 const ALLOW: readonly Allow[] = [
   { rule: 'file', file: 'src/modules/cards/form.ts', why: 'the form card\'s upload: the input is hidden and the library\'s "Choose a file" button opens the OS chooser, which cannot be themed' },
-  { rule: 'checkbox-radio', file: 'src/components/html.ts', why: 'ui.switch: appearance none, drawn by .ui-switch (14.16 "a native checkbox with role=switch")' },
   { rule: 'checkbox-radio', file: 'src/modules/shell/dialogs.ts', why: 'reads the radios\' state for the dialog\'s Tab loop; draws nothing' }
 ];
 

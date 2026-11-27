@@ -1,6 +1,6 @@
 /* Floating surfaces: popovers, the layer, tooltips, notices (the v6 menu went at step 7b: the kit's Menu is `kit/menu`)
    (14.18, 14.19, 14.22, 14.23). */
-import { html, ui } from '@boopis/ui';
+import { html, kit, ui } from '@boopis/ui';
 import { line, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_TITLE, UNBROKEN } from '../../fixtures';
@@ -12,13 +12,13 @@ export default [
     states: {
       typical: stage(['typical', 'open'], async ({ root, wait }) => {
         const a = ui.button({ label: 'Edit', attrs: { 'aria-haspopup': 'dialog' } }); line(root, a);
-        const body = document.createElement('div'); body.innerHTML = html.field({ label: 'Title', value: 'proration drift' }) + html.button({ label: 'Save', variant: 'primary', size: 's' });
+        const body = document.createElement('div'); body.innerHTML = kit.html.field({ id: 'lab-pop-title', label: 'Title', value: 'proration drift' }) + html.button({ label: 'Save', variant: 'primary', size: 's' });
         ui.popover.open(a, body, { label: 'Rename' }); await wait(260);
       }, { overlay: { anchor: '.ui-btn', layer: '.ui-pop' } }),
       above: stage(['variant', 'open'], async ({ root, wait }) => {
         root.style.minHeight = 'calc(100vh - 48px)'; root.style.justifyContent = 'flex-end';
         const a = ui.button({ label: 'Edit' }); line(root, a);
-        const body = document.createElement('div'); body.innerHTML = html.field({ label: 'Title', value: 'proration drift' });
+        const body = document.createElement('div'); body.innerHTML = kit.html.field({ id: 'lab-pop-title', label: 'Title', value: 'proration drift' });
         ui.popover.open(a, body, { label: 'Rename', place: 'above' }); await wait(260);
       }, { overlay: { anchor: '.ui-btn', layer: '.ui-pop' } }),
       long: stage(['long', 'open'], async ({ root, wait }) => {

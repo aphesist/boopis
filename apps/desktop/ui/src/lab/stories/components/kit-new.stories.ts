@@ -1,28 +1,14 @@
 /* The kit's newer pieces: tabs (the Settings tab bar, a mod pane's strip), scroll areas (the one scrollbar, R-scroll-*), the quiet badge, the bare input,
    settings sections and heads, and key combos. */
 import { html, ui } from '@boopis/ui';
-import { forced, line, put, stage } from '../../story';
+import { line, put, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_TITLE, UNBROKEN } from '../../fixtures';
 
 const SIDEWAYS = "a specimen of the primitive's sideways axis: the scroller scrolling sideways is what it draws (R-scroll-7 names code, a diff, terminal output, a wide table and a tab strip as its users)";
-const SETTINGS_TABS = [{ value: 'general', label: 'General' }, { value: 'models', label: 'Models' }, { value: 'connectors', label: 'Connectors' }, { value: 'appearance', label: 'Appearance' }, { value: 'keys', label: 'Keyboard' }];
 const LINES = Array.from({ length: 60 }, (_, i) => '<p>Line ' + (i + 1) + ' of a long body that scrolls inside its area.</p>').join('');
 
-const tabsTypical = stage(['typical', 'variant'], ({ root }) => {
-  line(root, ui.tabs({ label: 'Settings sections', tabs: SETTINGS_TABS, value: 'general' }));
-  line(root, ui.tabs({ label: 'Mod panes', scroll: true, tabs: Array.from({ length: 9 }, (_, i) => ({ value: 'p' + i, label: 'pane ' + i })), value: 'p2' }));
-}, { width: 560, ground: 'frame' });
 export default [
-  {
-    id: 'components/tabs', title: 'Tabs', area: 'components', kind: 'component', covers: ['ui.tabs', 'html.tabs'], mock: { url: '/v6/design-system/index.html#c-shell', crop: '#c-shell' },
-    states: {
-      typical: tabsTypical, ...forced(tabsTypical, '.ui-tabs [role="tab"]'),
-      single: stage(['single'], ({ root }) => { line(root, ui.tabs({ label: 'One', tabs: [{ value: 'a', label: 'General' }], value: 'a' })); }, { ground: 'frame' }),
-      long: stage(['long'], ({ root }) => { line(root, ui.tabs({ label: 'Long', scroll: true, tabs: [{ value: 'a', label: LONG_TITLE }, { value: 'b', label: UNBROKEN }], value: 'b' })); }, { width: 420, ground: 'frame' }),
-      'in the dialog head (the owner\'s tab bar)': stage(['owner', 'variant'], ({ root }) => { line(root, ui.tabs({ label: 'Settings sections', tabs: SETTINGS_TABS, value: 'appearance' })); }, { width: 600, ground: 'frame', force: [{ sel: '.ui-tabs [role="tab"]:nth-of-type(2)', state: 'hover' }] })
-    }
-  },
   {
     id: 'components/scroll', title: 'Scroll area', area: 'components', kind: 'component', covers: ['ui.scroll', 'html.scroll', 'ui.scrollClass'], mock: { url: '/v6/design-system/index.html#c-panel', crop: '#c-panel' },
     states: {
@@ -39,25 +25,6 @@ export default [
     states: {
       typical: stage(['typical'], ({ root }) => { line(root, html.badge({ label: 'outside', tip: 'Made outside boopis' }), html.badge({ label: 'made outside boopis', focusable: true, tip: 'Made outside boopis' })); }),
       long: stage(['long'], ({ root }) => { line(root, html.badge({ label: LONG_TITLE })); }, { width: 300 })
-    }
-  },
-  {
-    id: 'components/input', title: 'Input', area: 'components', kind: 'component', covers: ['html.input'], mock: { url: '/v6/design-system/index.html#c-fields', crop: '#c-fields' },
-    states: {
-      typical: stage(['typical', 'variant'], ({ root }) => { line(root, html.input({ label: 'Name', value: 'nina' }), html.input({ label: 'Gate', value: 'npm test', mono: true }), html.input({ label: 'Filter', placeholder: 'Filter', raised: true })); line(root, html.input({ label: 'Theme JSON', rows: 3, value: '{ "preset": "catalog" }', mono: true })); }, { width: 640, ground: 'frame' }),
-      empty: stage(['empty'], ({ root }) => { line(root, html.input({ label: 'Name', placeholder: 'nina' })); }, { ground: 'frame' }),
-      disabled: stage(['disabled'], ({ root }) => { line(root, html.input({ label: 'Name', value: 'nina', disabled: true })); }, { ground: 'frame' }),
-      long: stage(['long'], ({ root }) => { line(root, html.input({ label: 'Path', value: UNBROKEN })); }, { width: 360, ground: 'frame' }),
-      focus: stage(['focus'], ({ root }) => { line(root, html.input({ label: 'Name', value: 'nina' })); }, { ground: 'frame', force: [{ sel: '.ui-input', state: 'focus' }] }),
-      error: stage(['error'], ({ root }) => { line(root, html.input({ label: 'Key', value: 'sk-short', attrs: { 'aria-invalid': 'true' } })); }, { ground: 'frame' })
-    }
-  },
-  {
-    id: 'components/set-section', title: 'Settings section and head', area: 'components', kind: 'component', covers: ['html.setSection', 'html.setHead'], mock: { url: '/v6/design-system/index.html#c-fields', crop: '#c-fields' },
-    states: {
-      typical: stage(['typical'], ({ root }) => { put(root, html.setSection({ id: 'lab-s1', label: 'Layout', body: html.setRow({ label: 'Show the dock', hint: 'Bots and widgets at the bottom edge', control: html.switch({ label: 'Show the dock', checked: true }) }) })); ui.hydrate(root); }, { width: 560, ground: 'frame' }),
-      long: stage(['long'], ({ root }) => { put(root, html.setHead({ id: 'lab-h', label: LONG_TITLE })); }, { width: 360, ground: 'frame' }),
-      empty: stage(['empty'], ({ root }) => { put(root, html.setSection({ id: 'lab-s2', label: 'Nothing here yet' })); }, { width: 560, ground: 'frame' })
     }
   },
   {

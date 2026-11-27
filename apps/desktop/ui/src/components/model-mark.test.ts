@@ -70,15 +70,6 @@ describe('drawing a mark', () => {
 });
 
 describe('the library takes a model through the one primitive', () => {
-  it('a chip {model} takes a mono mark and the model name as its label', () => {
-    const h = html.chip({ model: 'gpt-5' });
-    expect(h).toContain('data-color="mono"');
-    expect(h).toContain('<span>GPT-5</span>');
-  });
-  it('a list ladder marks every station', () => {
-    const h = html.ladder({ variant: 'list', stations: [['qwen3-coder', 'first'], ['sonnet 5.5', 'on failure']] });
-    expect((h.match(/<svg/g) ?? []).length).toBe(2);
-  });
   it("an agent entry's leading model lines carry their marks, a time never does", () => {
     const h = html.entry({ kind: 'agent', callno: ['qwen3-coder', '→ sonnet 5.5', '3m 42s', '$0.37'] });
     expect((h.match(/<svg/g) ?? []).length).toBe(2);

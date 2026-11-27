@@ -15,8 +15,6 @@
 .bt-archived { margin-top: var(--sp-3); }
 .bt-archived[hidden], .bt-archived-rows[hidden] { display: none; }
 
-/* "made outside boopis": the library's badge (.ui-badge) in a row's end slot and in the header's line */
-.bt-outside + .ui-state { margin-left: 4px; }
 
 /* ================================================================ view */
 .bt-view { overflow: hidden; }

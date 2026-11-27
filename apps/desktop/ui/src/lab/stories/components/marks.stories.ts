@@ -5,7 +5,7 @@ import { line, put, stage } from '../../story';
 import type { Story } from '../../types';
 import { BOT_LIKE, BOT_LONG, LONG_NAME, LONG_TITLE, RTL, TEAM_SIX, UNBROKEN, manyBots } from '../../fixtures';
 import type { Bot } from '../../../data/types';
-import { GOVERNANCE, CONTEXT } from '../../../data/mock-data';
+import { CONTEXT } from '../../../data/mock-data';
 
 const MARKS = { url: '/v6/design-system/index.html#c-marks', crop: '#c-marks' };
 const MEASURES = { url: '/v6/design-system/index.html#c-measures', crop: '#c-measures' };
@@ -30,13 +30,6 @@ export default [
     long: stage(['long'], ({ root }) => { line(root, ui.dot({ kind: 'attention' })); }, { note: 'no text' })
   }),
 
-  cmp('ladder', 'Ladder', ['ui.ladder'], MEASURES, {
-    typical: stage(['typical', 'variant'], ({ root }) => { line(root, ui.ladder({ stations: GOVERNANCE.ladder, current: GOVERNANCE.current })); put(root, ui.ladder({ stations: GOVERNANCE.ladder, current: GOVERNANCE.current, variant: 'list' })); }, { width: 320 }),
-    empty: stage(['empty'], ({ root }) => { line(root, ui.ladder({ stations: [] })); }),
-    off: stage(['disabled'], ({ root }) => { put(root, ui.ladder({ stations: GOVERNANCE.ladder, current: 1, variant: 'list', off: true })); }, { width: 320 }),
-    long: stage(['long'], ({ root }) => { put(root, ui.ladder({ variant: 'list', current: 0, stations: [['claude-sonnet-5-5-20261101-extended-context-preview', LONG_TITLE], ['qwen3-coder-480b', 'after 1 fail']] })); }, { width: 320 }),
-    many: stage(['many'], ({ root }) => { line(root, ui.ladder({ current: 9, stations: Array.from({ length: 16 }, (_, i) => ['model ' + i] as const) })); })
-  }),
   cmp('measure', 'Measure and legend', ['ui.measure', 'ui.legend'], MEASURES, {
     typical: stage(['typical', 'variant'], ({ root }) => {
       line(root, ui.measure({ used: 76000, total: 200000 }));
