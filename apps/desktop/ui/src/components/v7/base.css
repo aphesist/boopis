@@ -78,3 +78,5 @@
 .k7-type-s { margin: 0; font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); }
 .k7-type-m { margin: 0; font-size: var(--fs-m); line-height: var(--lh-m); }
 .k7-type-l { margin: 0; font-size: var(--fs-l); line-height: var(--lh-l); }
+/* a quiet line at the small size (12: a head's second line, a note under a control) */
+.k7-type-xs { margin: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); }

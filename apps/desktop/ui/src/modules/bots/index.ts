@@ -18,6 +18,7 @@ import { onGroupsEvent, openGroup, repaintRoom, stopTalk } from './group-room';
 import { openNewGroup } from './new-group';
 import { closeSettings, openSettings, toggleSettings } from './settings';
 import { ui as uiLib } from '@boopis/ui';
+import { startBotsPart } from '../onboarding/bots';
 /* drawn corners (DESIGN-SYSTEM.md section 8): the bots' own surfaces take the library's continuous corner */
 uiLib.squircle.auto('.bt-sugg, .bt-opt');
 
@@ -80,6 +81,9 @@ function wireBus(): void {
   on('hx:new-group', () => openNewGroup());
   on('hx:bot-select', (d) => { if (d.from && String(d.from).startsWith('bots')) return; if (d.id && bot(d.id)) openBot(d.id); });
   on('hx:new-bot', () => openNew());
+  /* the first run's hand-off (board O-H01): the Bots tab opens on the boopis bot, whose chat takes it from there */
+  on('hx:onboarding-bots', () => { startBotsPart(); });
+  on('hx:onboarding', () => { if (S.sel === 'boopis' && S.view === 'bot') openBot('boopis'); });
   /* a caller may name the bot and the section (Settings › Bots' Open, a receipt's Open for a bot's own rule: its Approvals) */
   on('hx:bot-settings', (d) => { if (!d.open) return; const id = d.id && bot(d.id) ? d.id : S.sel; if (d.section || !S.sheetOpen || S.sheetFor !== id) openSettings(id, d.section ?? null); });
   on('hx:nav', (d) => {

@@ -60,3 +60,9 @@
 .k7-ask__item-line { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow-wrap: anywhere; }
 /* the files a form takes (the composer's attachment chips) and "+ Add files" after them */
 .k7-ask__files { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap-s); }
+/* the boopis bot's choice cards (onboarding2.js `choices`, onboarding.css .ob-ch): the ask as the card's heading, 15 semibold, 2 over and
+   6 under; a choice's quiet hint after its words; a quiet foot 6 under the rows */
+.k7-ask[data-heading] .k7-ask__title { margin: 0; padding-block: var(--gap-hair) var(--gap-s); font-size: var(--fs-l); line-height: var(--lh-l); font-weight: 600; color: var(--text-strong); }
+.k7-ask__label { flex: none; white-space: nowrap; }
+.k7-ask__hint { flex: 0 1 auto; min-width: 0; font-size: var(--fs-s); color: var(--text-dim); }
+.k7-ask__foot { margin: var(--gap-s) 0 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }

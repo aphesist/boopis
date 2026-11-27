@@ -34,7 +34,9 @@ export interface AskAnswer {
 }
 export interface AskCardOpts {
   variant?: U<AskVariant>; state?: U<AskState>; who?: U<string>; bot?: U<BotLike>; model?: U<ModelRef>;
-  ask: string; sub?: U<string>; /** the approval rule that asked, by name: "Rule: “...”" in the accent (board 11) */ rule?: U<string>; command?: U<string>; answers?: U<readonly AskAnswer[]>; choices?: U<readonly string[]>; chosen?: U<number | string>;
+  ask: string; sub?: U<string>; /** the approval rule that asked, by name: "Rule: “...”" in the accent (board 11) */ rule?: U<string>; command?: U<string>; answers?: U<readonly AskAnswer[]>; choices?: U<readonly (string | AskChoice)[]>; chosen?: U<number | string>;
+  /** choices: the ask is the card's own heading, with no head row (the boopis bot's choice cards, boards O-B01, O-B04, O-B05) */ heading?: U<boolean>;
+  /** a quiet line under the answers ("Change it any time in Settings, Bots.") */ foot?: U<string>;
   /** answered: the one-line receipt ("Allowed once", "sent as a correction") */ receipt?: U<string>; something?: U<boolean>; attrs?: U<Attrs>;
   /** the asker's orb at rest, in its pose (the dock's cards: every bot in the dock rests unless its state shows in the row) */ rest?: U<boolean>;
   /** "needs you" in words alone, without its dot (the dock's cards, K03 and K04: the orb's flag in the row already carries the dot) */ plain?: U<boolean>;
@@ -49,6 +51,8 @@ export interface AskCardOpts {
   /** the answer is being sent: the primary shows the kit's working state (its words shimmer) and the fields and answers are inert */ busy?: U<boolean>;
   /** an answered row's action at its end, as kit markup ("Open" on a form put off for later) */ rowAction?: U<string>;
 }
+/** a lettered choice with a quiet hint after its words ("Yes, let’s go" "about two minutes") */
+export interface AskChoice { label: string; hint?: U<string>; value?: U<string> }
 export const APPROVAL_ANSWERS: readonly AskAnswer[] = [{ label: 'Hold to allow once', primary: true, hold: true }, { label: 'Allow all this turn', value: 'turn' }, { label: 'Always allow', value: 'always' }, { label: 'Deny', value: 'deny', keys: 'esc', outline: true }];
 const answerChips = (list: readonly AskAnswer[], more = '', busy = false): string => '<div class="k7-ask__answers"' + (busy ? ' inert' : '') + '>' + list.map((x) => chip({ label: x.label, variant: 'answer', chosen: !!x.primary && !busy, hold: !!x.hold && !(busy && x.primary), attrs: { 'data-value': x.value ?? null, 'data-action': x.action ?? null, 'data-outline': x.outline ? '' : null, 'data-ghost': x.ghost ? '' : null, 'data-end': x.end ? '' : null, 'aria-keyshortcuts': x.keys ? (x.keys === 'esc' ? 'Escape' : x.keys) : null, 'aria-disabled': x.inert ? 'true' : null, 'data-tip': x.inert ?? null, 'data-busy': busy && x.primary ? '' : null, 'aria-busy': busy && x.primary ? 'true' : null } }).replace('<span class="k7-chip__label">', busy && x.primary ? '<span class="k7-chip__label k7-shimmer">' : '<span class="k7-chip__label">').replace('</button>', x.keys ? kbd({ keys: x.keys }) + '</button>' : '</button>')).join('') + more + '</div>';
 export function askCard(o: AskCardOpts): string {
@@ -69,21 +73,24 @@ export function askCard(o: AskCardOpts): string {
     /* a form (6d): the ask, its why, what it asks for stacked 8 apart, what submitting does, why the last answer did not go, the answers */
     return '<div class="k7-ask k7-block"' + a + '>' + head + body + (o.fields ? '<div class="k7-ask__fields"' + (o.busy ? ' inert' : '') + '>' + o.fields + '</div>' : '') +
       (o.effect ? '<p class="k7-ask__effect k7-text">' + esc(o.effect) + '</p>' : '') + (o.error ? '<p class="k7-ask__error k7-text" role="alert">' + esc(o.error) + '</p>' : '') +
-      (o.answers?.length ? answerChips(o.answers, '', !!o.busy) : '') + '</div>';
+      (o.answers?.length ? answerChips(o.answers, '', !!o.busy) : '') + (o.foot ? '<p class="k7-ask__foot k7-text">' + esc(o.foot) + '</p>' : '') + '</div>';
   }
   let answers = '';
   if (v === 'choices') {
-    answers = '<div class="k7-ask__choices" role="radiogroup"' + attrs({ 'aria-label': o.ask }) + '>' + (o.choices ?? []).map((c, i) => {
-      const on = o.chosen === i || o.chosen === c;
-      return '<button class="k7-reset k7-ask__choice" type="button" role="radio"' + attrs({ 'aria-checked': String(on), 'data-chosen': on ? '' : null }) + '><span class="k7-ask__letter" aria-hidden="true">' + String.fromCharCode(65 + i) + '</span><span class="k7-ell">' + esc(c) + '</span></button>';
+    answers = '<div class="k7-ask__choices" role="radiogroup"' + attrs({ 'aria-label': o.ask }) + '>' + (o.choices ?? []).map((c0, i) => {
+      const c = typeof c0 === 'string' ? { label: c0 } : c0;
+      const on = o.chosen === i || o.chosen === c.label;
+      return '<button class="k7-reset k7-ask__choice" type="button" role="radio"' + attrs({ 'aria-checked': String(on), 'data-chosen': on ? '' : null, 'data-value': c.value ?? null }) + '><span class="k7-ask__letter" aria-hidden="true">' + String.fromCharCode(65 + i) + '</span><span class="k7-ask__label">' + esc(c.label) + '</span>' + (c.hint ? '<span class="k7-ask__hint k7-ell">' + esc(c.hint) + '</span>' : '') + '</button>';
     }).join('') + (o.something !== false ? '<button class="k7-reset k7-ask__choice" type="button"><span class="k7-ask__letter" aria-hidden="true">' + glyph('pen') + '</span><span class="k7-ell">Something else</span></button>' : '') + '</div>';
   } else {
-    const list: readonly AskAnswer[] = o.answers ?? (v === 'question' || v === 'lapsed' ? (o.choices ?? []).map((c, i) => ({ label: c, primary: i === 0 })) : APPROVAL_ANSWERS);
+    const list: readonly AskAnswer[] = o.answers ?? (v === 'question' || v === 'lapsed' ? (o.choices ?? []).map((c, i) => ({ label: typeof c === 'string' ? c : c.label, primary: i === 0 })) : APPROVAL_ANSWERS);
     answers = answerChips(list, (v === 'question' || v === 'lapsed') && o.something !== false ? chip({ label: 'Something else', variant: 'answer', attrs: { 'data-value': 'else', 'data-outline': '' } }) : '');
   }
   /* a form's question (6d): your own words in a Field under the answers once "Something else" is chosen, and why the answer did not go */
   const after = (o.fields ? '<div class="k7-ask__fields"' + (o.busy ? ' inert' : '') + '>' + o.fields + '</div>' : '') + (o.error ? '<p class="k7-ask__error k7-text" role="alert">' + esc(o.error) + '</p>' : '');
-  return '<div class="k7-ask k7-block"' + a + '>' + head + body + (o.busy ? answers.replace(/^<div class="k7-ask__(answers|choices)"/, '<div inert class="k7-ask__$1"') : answers) + after + '</div>';
+  const top = o.heading ? '<p class="k7-ask__title k7-text">' + esc(o.ask) + '</p>' : head + body;
+  return '<div class="k7-ask k7-block"' + a + (o.heading ? ' data-heading' : '') + '>' + top + (o.busy ? answers.replace(/^<div class="k7-ask__(answers|choices)"/, '<div inert class="k7-ask__$1"') : answers) + after +
+    (o.foot ? '<p class="k7-ask__foot k7-text">' + esc(o.foot) + '</p>' : '') + '</div>';
 }
 
 /** what AskCard promises: read by the docs (pnpm kit:docs) and checked by contract.test.ts */
@@ -104,7 +111,9 @@ export const contract = defineContract<AskCardOpts>({
     rule: 'the approval rule that asked, by name',
     command: 'the command it would run, in a Well',
     answers: 'its answers as chips (primary, hold, keys, outline, ghost, at the end, inert)',
-    choices: 'choices: the lettered rows',
+    choices: 'choices: the lettered rows, each its words or its words, a quiet hint and its value',
+    heading: 'choices: the ask is the card\'s heading, with no head row',
+    foot: 'a quiet line under the answers',
     chosen: 'the answer chosen (answered)',
     receipt: 'answered: the one-line receipt ("Allowed once")',
     something: 'question: false hides "Something else"',
@@ -121,13 +130,13 @@ export const contract = defineContract<AskCardOpts>({
     rowAction: 'answered: an action at the row\'s end, as markup'
   },
   events: ['ui:commit'],
-  states: ['data-variant', 'data-state', 'aria-busy', 'inert (while busy)'],
-  parts: ['AskCard (attached: its answers alone)', 'k7-ask__answers'],
+  states: ['data-variant', 'data-state', 'aria-busy', 'inert (while busy)', 'data-heading'],
+  parts: ['AskCard (attached: its answers alone)', 'k7-ask__answers', 'k7-ask__title', 'k7-ask__hint', 'k7-ask__foot'],
   tokens: [
     '--accent', '--accent-text', '--badge-h', '--bubble-max', '--ctl', '--fill-2', '--focus-w', '--fs-2xs', '--fs-m', '--fs-s',
     '--fs-xs', '--gap-hair', '--gap-row', '--gap-s', '--hl', '--hover', '--icon-s', '--letter', '--lh-m', '--lh-xs', '--line',
     '--line-strong', '--mono', '--on-accent', '--pad-block', '--r-block', '--r-field', '--r-tip', '--red-text', '--sp-1', '--sp-2',
-    '--text', '--text-dim'
+    '--text', '--text-dim', '--fs-l', '--lh-l', '--text-strong'
   ],
   a11y: 'role="group" named by the question. Its answers are buttons; the primary one may need a 1 s hold (or Enter twice). Answered, it is one line that says what was chosen.',
   boards: ['11-botchat', '12-room', 'K02-12-held', '17-working', 'S23-finished', 'K03-asks', 'K04-card', '14-settings']

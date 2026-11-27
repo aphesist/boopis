@@ -54,6 +54,7 @@ import { timeSeparator } from './time-separator/time-separator';
 import { emptyState } from './empty-state/empty-state';
 import { ASK_STATES, ASK_VARIANTS, askCard } from './ask-card/ask-card';
 import { teamPlan } from './team-plan/team-plan';
+import { tiles } from './tiles/tiles';
 import { TOOL_KINDS, TOOL_STATES, toolRow } from './tool-row/tool-row';
 import { filesCard } from './files-card/files-card';
 import { fileCard } from './file-card/file-card';
@@ -81,7 +82,7 @@ const html = {
   card, block, menu, menuRow, optionRow, listRow, sectionHead, commandPalette, commandPaletteList,
   notice, systemLine, bubble, well, steps, disclosure, turnFoot, hoverBar,
   timeSeparator, emptyState, list, findBar,
-  toolRow, askCard, filesCard, fileCard, queue, diffView, composer, teamPlan,
+  toolRow, askCard, filesCard, fileCard, queue, diffView, composer, teamPlan, tiles,
   windowChrome, titlePill, searchHint, page, pageNote, setupPage, pane, dialog, rail, sidebarFoot, notch, dock
 };
 type Html = typeof html;
@@ -202,13 +203,14 @@ export type { SidebarFootOpts } from './sidebar-foot/sidebar-foot';
 export type { NotchOpts } from './notch/notch';
 export type { DockOpts, DockBot, DockKind } from './dock/dock';
 export type { ToolRowOpts } from './tool-row/tool-row';
-export type { AskCardOpts, AskAnswer } from './ask-card/ask-card';
+export type { AskCardOpts, AskAnswer, AskChoice } from './ask-card/ask-card';
 export type { FilesCardOpts, FileRow } from './files-card/files-card';
 export type { FileCardOpts } from './file-card/file-card';
 export type { QueueOpts } from './queue/queue';
 export type { DiffViewOpts, DiffLine, DiffComment } from './diff-view/diff-view';
 export type { ComposerOpts, LineItem } from './composer/composer';
 export type { TeamPlanOpts, PlanAction } from './team-plan/team-plan';
+export type { TilesOpts, Tile } from './tiles/tiles';
 export type { CardOpts, RowOpts } from './card/card';
 export type { BlockOpts } from './block/block';
 export type { MenuOpts, MenuEntry } from './menu/menu';

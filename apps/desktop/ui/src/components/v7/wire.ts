@@ -12,6 +12,7 @@ import { wireComposer } from './composer/behaviour';
 import { wireDisclosure } from './disclosure/behaviour';
 import { paintDock } from './dock/behaviour';
 import { wireHoverBar } from './hover-bar/behaviour';
+import { wireTiles } from './tiles/behaviour';
 import { wireInfo, wireMark } from './mark/behaviour';
 import { wireMenu } from './menu/behaviour';
 import { wireSegmented } from './segmented/behaviour';
@@ -35,7 +36,8 @@ const WIRES: ReadonlyArray<readonly [string, (el: HTMLElement) => void]> = [
   ['.k7-row[data-action]', wireRowAction],                        /* card/: a Row that is a control */
   ['.k7-row[data-check]', wireCheckRow],                          /* card/: a Row that is a checkbox */
   ['.k7-file[data-action]', wireRowAction],                       /* file-card/: a FileCard that opens */
-  ['.k7-hoverbar', wireHoverBar],                                 /* hover-bar/ */
+  ['.k7-hoverbar', wireHoverBar],
+  ['.k7-tiles[data-variant="goals"]', wireTiles],                /* tiles/ */                                 /* hover-bar/ */
   ['.k7-dock', paintDock],                                        /* dock/ */
   ['.ui-orb[data-orb-rest]', wireRestOrb]                         /* avatar/: a bot at rest wakes under the pointer */
 ];

@@ -22,6 +22,8 @@ export interface EventMap {
   'hx:bot-select': { id: string; from?: string; source?: string };
   /** the first run's hand-off (board O-H01): the Bots tab opens on the boopis bot, whose chat takes the first run from there */
   'hx:onboarding-bots': { from: string };
+  /** the first run's ledger changed (modules/onboarding/ledger.ts): the canvas and the boopis bot's chat draw their step again */
+  'hx:onboarding': { sessions: string; bots: string };
   'hx:session-select': { id: string; from?: string; title?: string; project?: string };
   'hx:title': { tab?: Tab; title?: string | null; text?: string; project?: string; /** a session's branch, after its name in the pill ('' for none) */ sub?: string; /** a room's members (bot ids): the title pill's stack */ members?: readonly string[] };
   /** something needs the user: the shell and the dock show a dot */

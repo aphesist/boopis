@@ -478,4 +478,23 @@ export interface DataProvider {
   teamPlans?: TeamPlansSource;
   /** the steps a rule paused while the owner was away (the desktop host's; absent elsewhere) */
   parked?: ParkedSource;
+  /** the boopis bot's part of the first run (boards O-H01, O-B01 to O-B10). Absent in every provider today: the host keeps none of these
+      answers and the bot does not act on them yet, so the hand-off and the bot's first-run chat stay hidden (REPASS rule 2) */
+  onboarding?: OnboardingSource;
+}
+
+/** What the boopis bot's first-run chat reads and answers. Each answer is kept by the host as it is given (board O01, "the ledger"). */
+export interface OnboardingSource {
+  /** the names this computer knows the person by (O-B05): their full name and their login name, null where it has none */
+  names(): Promise<{ full: string | null; login: string | null }>;
+  /** where bots may work (O-B04), in the host's words, the one it recommends first */
+  places(): Promise<ReadonlyArray<{ id: string; label: string; hint: string; recommended?: boolean }>>;
+  /** keep an answer: the goals picked (O-B03), where bots work (O-B04), what to call the person (O-B05; '' for no name) */
+  answer(step: 'goals' | 'place' | 'name', value: string | readonly string[]): Promise<void>;
+  /** the place being set up while the chat goes on (O-B05: "Getting the container 1.2 of 3.8 GB"), null when nothing is */
+  setup: Watch<{ label: string; done: number; total: number } | null>;
+  /** ask the boopis bot for a starter team for the goals; resolves with the plan's hash once it is in `teamPlans` (O-B06) */
+  propose(goals: readonly string[]): Promise<string>;
+  /** the one connector the plan's bots would use, from the store's collection, or null (O-B06: "Optional, from the Store") */
+  connector(): Promise<{ id: string; name: string; why: string } | null>;
 }

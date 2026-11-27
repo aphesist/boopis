@@ -5,7 +5,9 @@ import { store } from '../data/store';
 import fixtureStore from '../../../../shared/data/store.fixtures.json';
 import { createMockStore } from '../data/mock-store';
 import type { InstallReceipt, StoreItem, StoreKind, StoreSource } from '../data/types';
-import type { DataProvider, EngineState, Feed, GroupsEvent } from '../data/provider';
+import type { DataProvider, EngineState, Feed, GroupsEvent, OnboardingSource } from '../data/provider';
+import type { TeamPlan as TeamPlanData } from '../data/types';
+import { fakeRules } from './settings-fixtures';
 import { CAREFUL_STEPS, YES } from '../data/session-s0';
 import type { CarefulStep, LaunchSettings, SessionCapabilities, SessionControls } from '../data/session-s0';
 import type { Bot, Change, Conversation, ConversationEvent, DiffFile, FormSpec, Group, GroupMember, GroupMessage, LimitNotice, LaterFeature, Schedule, SessionSummary, Step, ThreadMessage, Todo } from '../data/types';
@@ -367,4 +369,51 @@ export function board15(p: DataProvider): DataProvider {
   const installed = { get: () => receipts, subscribe: () => () => undefined };
   const page = { items: [...BOARD15_MODS], recommended: [...BOARD15_ITEMS], total: 8, next_cursor: null, refreshed_at: null, stale: false, offline: false };
   return { ...base, store: { ...s, sources, installed, browse: (f) => (f && Object.keys(f).length ? s.browse(f) : Promise.resolve(page)) } };
+}
+
+/* ───────── the first run in the app (onboarding round 3: ob3-screens.js) ─────────
+   (b) the new session's canvas with a folder and a model and no bot of your own (O-S03, O-S04, O-H01: no dock); (d) the boopis bot's
+   chat with its part of the first run (O-B01 to O-B09), against a host that keeps the answers (`onboarding`), the plan it proposes
+   (`teamPlans`) and the rules for every bot (`rules`). `team` puts the built team in the sidebar (O-B08, O-B09). */
+export function boardFirstRunCanvas(p: DataProvider): DataProvider {
+  const base = boardS41(p), c = controls();
+  const bots = roster(p, {}, ['boopis']).map((b) => ({ ...b, cfg: { ...b.cfg, model: 'opus' } }));
+  return {
+    ...base, info: drawn(p, 'worktree'), user: store({ name: 'you', initials: 'y' }),
+    details: { ...base.details, governance: store({ ...base.details.governance.get(), governed: true, smart: false, model: 'opus' }), choices: store([{ value: 'anthropic/opus', provider: 'anthropic', model: 'opus', providerName: 'Claude' }]) },
+    bots: { ...base.bots, snapshot: () => ({ bots, threads: { boopis: [] } }), archived: store([]) },
+    groups: { ...base.groups, snapshot: () => ({ groups: [], threads: {} }), archived: store([]) },
+    waits: { ...base.waits, snapshot: () => [] },
+    sessionControls: { ...c, launch: store({ ...c.launch.get(), folder: '/home/you/projects/boopis' }) }
+  };
+}
+/** O-S01: the app opens on Sessions with no folder yet, and no bot of your own (no dock: the composer 24 from the foot) */
+export function boardFirstRunNoFolder(p: DataProvider): DataProvider {
+  const base = boardFirstRunCanvas(p), c = controls();
+  return { ...base, sessionControls: { ...c, launch: store({ ...c.launch.get(), folder: null }) } };
+}
+export const FIRST_RUN_PLAN: TeamPlanData = {
+  hash: 'p-crew', title: 'A small crew for ~/projects/boopis', reason: 'Code and reviews', state: 'proposed', permanent: false, undoes: null, words: null, report: '3 bots, 1 room, 1 routine (paused)', bot: 'boopis', createdAt: '', expiresAt: null, problems: [],
+  actions: [{ mark: '+', target: 'kai', what: 'reviews pull requests' }, { mark: '+', target: 'moss', what: 'runs the tests at night, proposes fixes' }, { mark: '+', target: 'iris', what: 'release notes and the changelog' }],
+  notes: ['Room “crew”, kai leads. Routine: moss’s test sweep, weekdays at 02:00, paused.']
+};
+export function boardFirstRunBots(team: boolean): (p: DataProvider) => DataProvider {
+  return (p) => {
+    const base = boardFirstRunCanvas(p);
+    const bots = (team ? roster(p, { iris: { state: 'idle' } }, ['boopis', 'kai', 'moss', 'iris']).map((b) => (b.id === 'kai' ? { ...b, role: 'Reviews pull requests' } : b.id === 'moss' ? { ...b, role: 'Runs the tests at night' } : b.id === 'iris' ? { ...b, role: 'Writes the release notes' } : b)) : roster(p, {}, ['boopis'])).map((b) => ({ ...b, cfg: { ...b.cfg, model: 'opus' } }));
+    let plan: TeamPlanData = FIRST_RUN_PLAN;
+    const onboarding: OnboardingSource = {
+      names: () => Promise.resolve({ full: 'Alex', login: 'alex' }),
+      places: () => Promise.resolve([
+        { id: 'container', label: 'This computer, in a container', hint: 'recommended, kept apart, about 4 GB', recommended: true }, { id: 'paired', label: 'A computer I own', hint: 'a home server, paired by a code' },
+        { id: 'ssh', label: 'A cloud server', hint: 'your own server, set up over SSH' }, { id: 'direct', label: 'Directly on this computer', hint: 'no container; risky steps ask' }]),
+      answer: () => Promise.resolve(), setup: store<{ label: string; done: number; total: number } | null>({ label: 'Getting the container', done: 1.2e9, total: 3.8e9 }),
+      propose: () => Promise.resolve(plan.hash), connector: () => Promise.resolve({ id: 'github', name: 'GitHub', why: 'Let kai and moss read issues and pull requests' })
+    };
+    return {
+      ...base, onboarding, rules: fakeRules(),
+      teamPlans: { list: () => Promise.resolve([plan]), apply: () => { plan = { ...plan, state: 'applied' }; return Promise.resolve(plan); }, reject: () => Promise.resolve(plan), undo: () => Promise.resolve(plan), subscribe: () => () => undefined },
+      bots: { ...base.bots, snapshot: () => ({ bots, threads: Object.fromEntries(bots.map((b) => [b.id, []])) }), archived: store([]) }
+    };
+  };
 }

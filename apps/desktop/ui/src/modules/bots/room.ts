@@ -27,6 +27,7 @@ import { composeTools, later, mentionChips, micUnavailable, voiceNeedsSetup } fr
 import { followEngine } from '../chat/engine';
 import { outsideDescription, outsideRoomMark } from './outside';
 import { mountHeld } from './held';
+import { botsPartShown, mountBotsPart } from '../onboarding/bots';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 
 const bots = () => data().bots;
@@ -125,7 +126,12 @@ function renderThread(b: Bot): void {
   const log = S.log as HTMLElement; log.textContent = '';
   NODE.clear(); STATUS = null;
   const msgs = thread(b.id);
-  if (!msgs.length) {
+  /* the first run's part in the boopis bot's own chat (modules/onboarding/bots.ts): its choice cards, one exchange at a time */
+  if (botsPartShown(b)) {
+    const box = el('div', { class: 'hx-ob' });
+    log.append(box);
+    mountBotsPart(box, { draft: (t) => { setDraft(t); }, redraw: () => { openBot(b.id); } });
+  } else if (!msgs.length) {
     /* EmptyState: one line where the conversation would be (why it cannot be messaged, when it cannot); the bot's own ideas as answer
        chips (the AskCard's) to start from. A live bot's earlier sessions are in its details, under Library (no board draws an empty
        chat: an owner question) */
@@ -146,7 +152,7 @@ function renderThread(b: Bot): void {
   /* what the host holds for the owner in this bot's thread (6e): the team changes it proposed, its steps a rule paused */
   HELD = el('div', { class: 'bt-held', hidden: true });
   log.append(HELD);
-  mountHeld(HELD, b, () => S.bots, notify);
+  if (!botsPartShown(b)) mountHeld(HELD, b, () => S.bots, notify);   /* the first run's plan is its own card while the part runs */
   syncTurns();
   paintStatus(b.id);
   requestAnimationFrame(() => { if (S.scroll) S.scroll.scrollTop = S.scroll.scrollHeight; });
@@ -382,12 +388,12 @@ function buildComposer(host: HTMLElement): void {
       ...(model ? [{ label: 'Model', value: ui.modelMark.short(model) || model, model, plain: true, attrs: { 'data-line': 'model', 'data-kbd': 'alt+M' } }] : []),
       ...(cap && spent ? [{ label: 'Spend', value: spent + ' of ' + cap, mono: true, end: true }] : spent && run?.spent ? [{ label: 'Spend', value: spent, mono: true, end: true }] : [])
     ];
-    return { items, sig: JSON.stringify(items) };
+    return { items, sig: JSON.stringify(items) + (botsPartShown(b) ? '|first-run' : '') };
   };
   const draw = (b: Bot): void => {
     const keep = slot.firstElementChild ? api.value : '';
     const l = lineOf(b);
-    const c = kit.composer({ kind: 'bot', placeholder: 'Message ' + b.name, label: 'Message ' + b.name, hears: b.name, running, line: l.items, voiceSetup: voiceNeedsSetup(), micOff: micUnavailable(), ...(b.color ? { fill: kit.botFill(b.color) } : {}), ...(keep ? { text: keep } : {}) });
+    const c = kit.composer({ kind: 'bot', placeholder: botsPartShown(b) ? 'Type your answer, or ask something else' : 'Message ' + b.name, label: 'Message ' + b.name, hears: b.name, running, line: l.items, voiceSetup: voiceNeedsSetup(), micOff: micUnavailable(), ...(b.color ? { fill: kit.botFill(b.color) } : {}), ...(keep ? { text: keep } : {}) });
     slot.replaceChildren(c);
     tools.drawn();
     botId = b.id; sig = l.sig;

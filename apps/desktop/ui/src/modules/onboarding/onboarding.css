@@ -17,3 +17,16 @@
 .hx-fr__trycomp { position: absolute; left: 50%; bottom: calc(var(--sp-6) + var(--sp-2)); translate: -50% 0; width: var(--col-w); display: flex; flex-direction: column; }
 .hx-fr__trycomp > [data-kit~="Notice"] { position: absolute; left: 0; right: 0; top: calc(100% + var(--sp-2)); }
 .hx-fr__try > [data-fr-reading] { position: absolute; z-index: 1; }
+
+/* ── (d) the boopis bot's chat: its exchange stands in the log as its own messages; its head centred over them (ob3 .ob3-chathead) ── */
+.hx-ob { display: contents; }
+.hx-ob__head { display: flex; flex-direction: column; align-items: center; gap: var(--sp-1); margin: var(--sp-2) 0 calc(var(--sp-5) - var(--sp-1)); text-align: center; align-self: stretch; }
+.hx-ob__head > .k7-avatar { width: var(--chat-head-orb-w); height: var(--chat-head-orb-h); }
+.hx-ob__name { margin-top: var(--gap-s); color: var(--text-strong); }
+.hx-ob__what { color: var(--text-dim); }
+.hx-ob__glyph { display: inline-flex; color: var(--text-dim); }
+.hx-ob > .k7-tiles, .hx-ob > .k7-ask { align-self: stretch; }
+/* the bot's lines and its card stand apart as the boards draw them (onboarding2.js `bsay`: a bubble of its own each, the card 8 under) */
+.hx-ob > :is(.k7-bubble, [data-kit~="Bubble"]) + :is(.k7-bubble, [data-kit~="Bubble"], .k7-ask, .k7-tiles) { margin-top: var(--gap-s); }
+/* your answer, then the bot's first line 16 under it (ob3-screens.js: bsay(…, 'margin-top:16px') after `you`) */
+.hx-ob > [data-kit~="Bubble"][data-kind="user"] + [data-kit~="Bubble"][data-kind="agent"] { margin-top: var(--sp-4); }

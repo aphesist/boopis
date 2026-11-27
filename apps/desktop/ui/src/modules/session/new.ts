@@ -8,7 +8,7 @@ import { data } from '../../data';
 import type { LaunchActions, LaunchView } from './s0';
 import { launchCanvas } from './s0';
 import { composeTools, later, micUnavailable, voiceNeedsSetup } from '../chat/compose';
-import { emit } from '../../core/bus';
+import { emit, on } from '../../core/bus';
 import { ledger, writeLedger } from '../onboarding/ledger';
 import { isStep, setDefaultCareful } from '../settings/sessions';
 
@@ -24,16 +24,18 @@ export interface NewScreen {
 const HINT = 'Enter starts the session', HINT_END = 'ctrl Enter starts it in the background';
 
 /** the first run's step on this canvas, from the ledger (modules/onboarding/ledger.ts): only once a folder and a model are there, and the
-    hand-off only where the boopis bot's part exists (`bots-onboarding`) */
+    hand-off only where the boopis bot's part exists (`DataProvider.onboarding`) */
 export function firstRunStep(v: Pick<LaunchView, 'folder' | 'model'>, handoff: { count: number | null } | null): NonNullable<LaunchView['firstRun']> | null {
   if (v.folder === null || v.model === null) return null;
   const l = ledger();
   if (l.sessions === 'careful' || l.sessions === 'ready') return { step: l.sessions };
-  if (l.sessions === 'done' && l.bots === 'todo' && handoff && later('bots-onboarding')) return { step: 'handoff', count: handoff.count };
+  if (l.sessions === 'done' && l.bots === 'todo' && handoff && data().onboarding) return { step: 'handoff', count: handoff.count };
   return null;
 }
-/** the hand-off counts down from this many seconds, then opens the Bots tab by itself (board O-H01: "Opening Bots in 3 s") */
+/** the hand-off counts down from this many seconds, then opens the Bots tab by itself (board O-H01: "Opening Bots in 3 s"); Later is there
+    the whole time. `hold` keeps the count where it is (the lab draws the board's still) */
 export const HANDOFF_SECONDS = 3;
+export const handoffClock = { hold: false };
 
 export function mountNew(root: HTMLElement, o: { actions: LaunchActions; send(text: string, background: boolean): void; /** draw it again (the launch settings changed) */ redraw?(): void }): NewScreen {
   const host = el('div', { class: 'ss-new', hidden: true });
@@ -76,15 +78,15 @@ export function mountNew(root: HTMLElement, o: { actions: LaunchActions; send(te
   composerSlot.addEventListener('ui:send', (e) => { o.send((e as CustomEvent<{ text: string }>).detail.text, false); });
   composerSlot.addEventListener('ui:steer', (e) => { o.send((e as CustomEvent<{ text: string }>).detail.text, true); });   /* ctrl Enter: in the background */
   data().limits?.subscribe(() => { drawNotice(); });
+  on('hx:onboarding', () => { if (!host.hidden) o.redraw?.(); });
   return {
     show(v0) {
       last = v0;
       const v: LaunchView = { ...v0, firstRun: v0.firstRun !== undefined ? v0.firstRun : firstRunStep(v0, { count }) ?? null };
-      /* the hand-off counts down once, then opens Bots by itself; under reduced motion it waits for a press (the prompt, O-H01b) */
+      /* the hand-off counts down once, then opens Bots by itself (O-H01, the owner's recommended way; Later stops it) */
       if (v.firstRun?.step === 'handoff' && !tick && count !== null) {
-        if (matchMedia('(prefers-reduced-motion: reduce)').matches) { count = null; v.firstRun = { step: 'handoff', count: null }; }
-        else tick = window.setInterval(() => {
-          if (count === null) return;
+        tick = window.setInterval(() => {
+          if (count === null || handoffClock.hold) return;
           count -= 1;
           if (count <= 0) { window.clearInterval(tick); count = null; emit('hx:onboarding-bots', { from: 'handoff' }); return; }
           if (last && !host.hidden) this.show(last);

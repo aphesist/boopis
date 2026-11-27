@@ -1,0 +1,28 @@
+/* Tiles' look (onboarding round 3: ob3.css .ob3-goals, .ob3-team; ob2.css .ob-gt). Tokens only; kit-v7.css imports it in the kit's cascade
+   order. */
+
+/* ── Tiles: a Block as wide as the thread's column, its content on the 8 inset ── */
+.k7-tiles { width: 100%; }
+.k7-tiles__head { display: flex; align-items: center; gap: var(--gap-s); height: var(--ctl-s); padding: 0 var(--gap-s); margin-bottom: var(--sp-2); font-size: var(--fs-s); color: var(--text-dim); }
+.k7-tiles__free { display: inline-flex; gap: var(--gap-s); margin-inline-start: auto; }
+.k7-tiles__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); }
+/* a goal: 100 tall, 14 in, the corner concentric with the Block's; its lead at the top, its name at the foot */
+.k7-tiles__tile {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between; height: var(--tile-h); padding: var(--pad-chip); box-sizing: border-box; min-width: 0;
+  border-radius: calc(var(--r-bubble) - var(--pad-block)); background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line); text-align: start;
+  transition: background-color var(--dur-out) var(--ease-out), box-shadow var(--dur-out) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) { .k7-tiles__tile:hover { background: color-mix(in srgb, var(--bg-3), var(--text-strong) 4%); transition-duration: var(--dur-1); } }
+.k7-tiles__tile[aria-pressed="true"] { background: color-mix(in srgb, var(--bg-3), var(--tile-bot, var(--accent)) 10%); box-shadow: inset 0 0 0 2px var(--tile-bot, var(--accent)); }
+.k7-tiles__tile:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
+.k7-tiles__lead { display: grid; place-items: center; width: var(--hover-ctl); height: var(--hover-ctl); }
+.k7-tiles__ic { display: grid; place-items: center; width: var(--hover-ctl); height: var(--hover-ctl); border-radius: var(--r-pill); background: var(--fill-2); color: var(--icon); }
+.k7-tiles__ic > .k7-ic { width: var(--icon-s); height: var(--icon-s); }
+.k7-tiles__name { font-size: var(--fs-l); line-height: var(--lh-l); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* a bot over a chip of its job, 10 apart; the row 12 down and 16 over the foot */
+.k7-tiles[data-variant="bots"] .k7-tiles__grid { gap: var(--sp-3); padding: var(--sp-3) 0 var(--sp-4); }
+.k7-tiles__bot { display: flex; flex-direction: column; align-items: center; gap: var(--gap-row); min-width: 0; }
+.k7-tiles__bot > .k7-chip { background: var(--fill-2); color: var(--text); max-width: 100%; cursor: default; }
+.k7-tiles__foot { display: flex; align-items: center; gap: var(--gap-s); margin-top: var(--sp-2); }
+.k7-tiles[data-variant="bots"] .k7-tiles__foot { margin-top: 0; }
+.k7-tiles__note { margin-inline-start: auto; padding-inline-end: var(--gap-s); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }

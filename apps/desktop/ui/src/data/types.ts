@@ -541,9 +541,8 @@ export interface ProviderInfo {
     take an edited request: docs/specs/approval-surfaces.md 7). `rules-settings`: Settings › Approvals, where a drafted exception is finished
     (step 7) */
 /** `drafts`: boopis reading a draft as it is written (feedforward live, 0.2.0 D): the first run's Try it (boards O-P04*) and "Try reading
-    drafts". `bots-onboarding`: the boopis bot's own part of the first run (boards O-H01, O-B01 to O-B10, O-X04: the hand-off, its chat's
-    choice cards, the team it proposes, where bots work, your name), which needs the host to keep those answers and the bot to act on them. */
-export type LaterFeature = 'approval-rules' | 'approval-edit' | 'rules-settings' | 'usage' | 'worktree' | 'turn-edit' | 'turn-fork' | 'queue' | 'pull-request' | 'pin' | 'drafts' | 'bots-onboarding';
+    drafts". (The boopis bot's part of the first run is a Source, `DataProvider.onboarding`.) */
+export type LaterFeature = 'approval-rules' | 'approval-edit' | 'rules-settings' | 'usage' | 'worktree' | 'turn-edit' | 'turn-fork' | 'queue' | 'pull-request' | 'pin' | 'drafts';
 export interface Schedule { id: string; bot: string; what: string; when: string; next: string; paused: boolean }
 
 /* ───────── the composer's feedforward reading ───────── */

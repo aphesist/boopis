@@ -53,6 +53,7 @@
 @import './composer/composer.css';
 @import './hover-bar/hover-bar.css';
 @import './team-plan/team-plan.css';
+@import './tiles/tiles.css';
 /* surfaces */
 @import './window-chrome/window-chrome.css';
 @import './page/page.css';

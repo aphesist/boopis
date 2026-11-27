@@ -1,4 +1,4 @@
-/* Settings › General (board 14): Layout (Show the dock, When the sidebar collapses, Rail size, Show search, Search shows as), Under
+/* Settings › General (board 14; O-X02's Getting started, last): Layout (Show the dock, When the sidebar collapses, Rail size, Show search, Search shows as), Under
    the composer (what the session composer's line shows, one check each: the quick menu's list, S05 B), Appearance (Theme, Accent,
    Corners: board 14's card, the same choices as the Appearance page). Then what board 14 does not draw and today's General had:
    the dock's two choices (Keep the dock centred, Compact dock when idle; decided for General), Window (which title-bar buttons show)
@@ -14,7 +14,24 @@ import { lookRows, wireLook } from './appearance';
 import { mountLocalApi } from './local-api';
 import { fill, pageEl } from './page';
 import type { Page } from './page';
-import { openSelect, section, segHTML, selectHTML, switchHTML } from './rows';
+import { actionsHTML, buttonHTML, openSelect, section, segHTML, selectHTML, switchHTML } from './rows';
+import { closeDialog } from './page';
+import { inTauri } from '../../host/bridge';
+import { ledger, writeLedger } from '../onboarding/ledger';
+import { startBotsPart } from '../onboarding/bots';
+import type { RowOpts } from '@boopis/ui';
+
+/** Getting started (board O-X02): each part of the first run, where it stands, and the way to run it again. Setup's model question only
+    in the desktop app (the host asks it); the boopis bot's part only where it exists (`DataProvider.onboarding`) */
+export function gettingStartedRows(o: { desktop: boolean; bots: boolean }): RowOpts[] {
+  const l = ledger();
+  const word = (done: boolean, later = false): string => (later ? 'Later' : done ? 'Done' : 'Not yet');
+  return [
+    ...(o.desktop ? [{ label: 'Setup: the model', control: actionsHTML(buttonHTML('Run it again', { attrs: { 'data-start': 'setup' } })) }] : []),
+    { label: 'Sessions', value: word(l.sessions === 'done', l.sessions === 'skipped'), control: actionsHTML(buttonHTML(l.sessions === 'skipped' ? 'Start' : 'Run it again', { attrs: { 'data-start': 'sessions' } })) },
+    ...(o.bots ? [{ label: 'Bots, with the boopis bot', value: word(l.bots === 'done', l.bots === 'later'), control: actionsHTML(buttonHTML(l.bots === 'done' ? 'Run it again' : 'Start', { attrs: { 'data-start': 'bots' } })) }] : [])
+  ];
+}
 
 const SEARCH_LABELS: Readonly<Record<SearchAs, string>> = { hint: 'A hint', button: 'A button', pill: 'A pill' };
 const setChrome = (patch: Partial<ChromePrefs>): void => { saveChrome({ ...loadChrome(), ...patch }); emit('hx:chrome', {}); };
@@ -41,7 +58,9 @@ export function generalPage(): Page {
         { label: 'Keep the dock centred in the window', control: switchHTML('dock-centre', 'Keep the dock centred in the window', state.dockCentred) },
         { label: 'Compact dock when idle', sub: 'Smaller until something needs you.', control: switchHTML('dock-compact', 'Compact dock when idle', state.dockCompact) }
       ]) +
-      section('Window', [{ label: 'Window controls', sub: describeDesktop(windowInfo()), control: segHTML('window', 'Window controls', [{ value: 'auto', label: 'Automatic' }, { value: 'close', label: 'Close only' }, { value: 'all', label: 'All' }], windowPref()) }], { 'data-part': 'window' }));
+      section('Window', [{ label: 'Window controls', sub: describeDesktop(windowInfo()), control: segHTML('window', 'Window controls', [{ value: 'auto', label: 'Automatic' }, { value: 'close', label: 'Close only' }, { value: 'all', label: 'All' }], windowPref()) }], { 'data-part': 'window' }) +
+      /* O-X02 draws Getting started at the top of General, board 14 draws Layout there (COVERAGE conflict 17): board 14 keeps the top */
+      section('Getting started', gettingStartedRows({ desktop: inTauri(), bots: !!data().onboarding }), { 'data-part': 'start' }));
   };
   draw();
   void mountLocalApi(api);
@@ -66,6 +85,14 @@ export function generalPage(): Page {
     }
   });
   main.addEventListener('click', (e) => {
+    const start = (e.target as Element).closest<HTMLElement>('[data-start]')?.dataset['start'];
+    if (start) {
+      closeDialog(el.closest('dialog'));
+      if (start === 'setup') void import('../../host/change-models').then((m) => m.changeModels()).catch((err: unknown) => { emit('hx:toast', { text: err instanceof Error ? err.message : String(err) }); });
+      else if (start === 'sessions') { writeLedger({ sessions: 'careful' }); emit('hx:new-session', { from: 'settings' }); }
+      else startBotsPart();
+      return;
+    }
     const sel = (e.target as Element).closest<HTMLElement>('[data-select="search-as"]');
     if (!sel) return;
     openSelect(sel, { label: 'Search shows as', value: loadChrome().searchAs, choices: (['hint', 'button', 'pill'] as const).map((v) => ({ value: v, label: SEARCH_LABELS[v] })), onPick: (v) => { setChrome({ searchAs: v as SearchAs }); draw(); } });
