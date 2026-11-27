@@ -7,7 +7,7 @@ import { defineContract } from '../contract';
 
 /* ── HoverBar: what a turn offers while the pointer or the focus is on it (board 11's `.hoverbar`: copy, more), beside its last bubble
    on that bubble's middle. One part for every thread: a bot's message, a room's member, a session's answer. Each action is a ghost
-   IconButton carrying `data-act`; a press fires `ui:act` {value, el} on the bar (wire.ts) ── */
+   IconButton carrying `data-act`; a press fires `ui:act` {value, el} on the bar (behaviour.ts) ── */
 export interface HoverAction { value: string; icon: string; /** its accessible name ("Copy kai's message") */ label: string; /** the tip, when shorter than the name ("Copy") */ tip?: U<string>; keys?: U<string>; /** it opens a menu */ menu?: U<boolean> }
 export interface HoverBarOpts { /** the group's name ("Actions on kai's message") */ label: string; actions: readonly HoverAction[]; attrs?: U<Attrs> }
 export function hoverBar(o: HoverBarOpts): string {
@@ -32,5 +32,5 @@ export const contract = defineContract<HoverBarOpts>({
   parts: ['k7-hoverrow'],
   tokens: ['--bubble-max', '--dur-1', '--ease-out', '--focus-w', '--gap-hair', '--gap-s', '--icon-quiet', '--sp-2'],
   a11y: 'role="group" named for the message; each action is a named IconButton, and it shows on focus as well as hover.',
-  boards: []
+  boards: ['11-botchat', '12-room', '17-working', 'S20-running', 'S23-finished', '14-settings']
 });

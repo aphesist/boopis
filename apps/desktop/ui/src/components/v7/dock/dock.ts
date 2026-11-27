@@ -115,5 +115,8 @@ export const contract = defineContract<DockOpts>({
     '--text', '--text-dim'
   ],
   a11y: 'Each orb is a <button> named with its state ("nina, needs you"); the ask pill opens the stack. The slab is decoration.',
-  boards: []
+  boards: [
+    'S17-newsession', 'S20-running', 'S23-finished', 'S33-changed', 'S36-engine', 'S37-nomodel', 'S38-gate', 'S40-details',
+    'S41-noproject', 'K01-rest', 'K02-hover', 'K03-asks', 'K04-card', 'K05-many', 'K07-centred', 'K08-compact'
+  ]
 });

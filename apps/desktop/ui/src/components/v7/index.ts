@@ -153,7 +153,7 @@ function openNotice(anchor: HTMLElement, o: Pick<NoticeOpts, 'text' | 'title' | 
   node.querySelector<HTMLElement>('[data-value="act"]')?.focus({ preventScroll: true });   /* a Notice with nothing to do only says (a status): the focus stays where it was */
   return node;
 }
-/** tell a composer what its dictation is doing, as the source reports it (compose.ts `DictationState`): the composer draws preparing,
+/** tell a composer what its dictation is doing, as the source reports it (composer/editing.ts `DictationState`): the composer draws preparing,
     listening and the words arriving itself; an error switches its mic off and opens a Notice at the mic that says why in the
     source's own plain words, with "Try again" (it switches the mic on again) unless the source says trying again cannot help */
 function composerDictation(c: HTMLElement, ev: DictationState): void {
@@ -163,7 +163,7 @@ function composerDictation(c: HTMLElement, ev: DictationState): void {
   if (mic) openNotice(mic, { icon: 'mic', title: ev.reason, text: '', ...(ev.retry === false ? {} : { action: 'Try again', onAction: () => { composerDictate(c, true); } }) });
 }
 
-/** "@" in a composer names one of `src`'s entries, chosen from the kit's Menu over it (wire.ts composerMentions) */
+/** "@" in a composer names one of `src`'s entries, chosen from the kit's Menu over it (composer/behaviour.ts composerMentions) */
 /** the "@" list is placed against the composer's box, which is no control: the layer's aria-expanded does not belong on it (the list names itself) */
 function unsaid(box: HTMLElement): void {
   if (box.dataset['unsaid'] != null) return;

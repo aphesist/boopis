@@ -42,10 +42,10 @@ export const contract = defineContract<NoticeOpts>({
   states: ['data-place', 'data-tone'],
   parts: ['k7-notice__text', 'k7-notice__title'],
   tokens: [
-    '--accent-soft', '--accent-text', '--bg-3', '--composer-h', '--dur-1', '--ease-sharp', '--float-line', '--fs-m', '--fs-s',
-    '--gap-row', '--hl', '--lh-m', '--line', '--owe-soft', '--owe-text', '--pad-block', '--pad-text', '--r-block', '--red-soft',
-    '--red-text', '--shadow-pop', '--sp-1', '--text', '--text-dim'
+    '--accent-soft', '--accent-text', '--bg-3', '--composer-h', '--dur-1', '--dur-2', '--ease-sharp', '--float-line', '--fs-m',
+    '--fs-s', '--gap-row', '--hl', '--lh-m', '--line', '--owe-soft', '--owe-text', '--pad-block', '--pad-text', '--r-block',
+    '--red-soft', '--red-text', '--shadow-pop', '--sp-1', '--text', '--text-dim'
   ],
   a11y: 'role="status" (polite), or role="alert" in the red tone. Opened at a control (kit.openNotice) it is a small dialog with one action, and Esc returns the focus.',
-  boards: []
+  boards: ['S17-newsession']
 });

@@ -32,5 +32,5 @@ export const contract = defineContract<FileCardOpts>({
     '--line', '--pill-h', '--r-bubble', '--r-tip', '--sp-3', '--sp-6', '--text', '--text-dim'
   ],
   a11y: 'When it opens the file it is role="button", one tab stop pressed with Enter or Space.',
-  boards: []
+  boards: ['11-botchat', '17-working', '14-settings']
 });

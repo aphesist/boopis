@@ -28,5 +28,8 @@ export const contract = defineContract<BadgeOpts>({
   parts: [],
   tokens: ['--badge-h', '--fill-2', '--fs-2xs', '--owe-soft', '--owe-text', '--pad-inline', '--r-pill', '--text-dim'],
   a11y: 'Plain words; `label` names a bare count ("3 waiting").',
-  boards: []
+  boards: [
+    'S17-newsession', 'S20-running', 'S23-finished', 'S33-changed', 'S36-engine', 'S37-nomodel', 'S38-gate', 'S40-details',
+    'S39-settings-sessions'
+  ]
 });

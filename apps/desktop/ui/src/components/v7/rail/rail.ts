@@ -26,7 +26,7 @@ export function rail(o: RailOpts): string {
      boards draw it (ds-v7 screens.js: 15 on the standard rail, 12 on the compact one). DECIDED (owner, 25 November 2026): the cluster is
      at most three orbs in their triangle, as drawn; the members past three are a "+N" chip clear of the orbs, on the cluster's right,
      on its middle (a row's items share its centre), a filled pill (the line stack's counter: --bg-3, --text-dim, a hairline) no taller than half a cluster orb, so it scales
-     with the rail's size (surfaces.css .k7-rail__more) */
+     with the rail's size (rail.css .k7-rail__more) */
   const groups = (o.groups ?? []).map((g) => {
     const shown = g.members.slice(0, 3), more = g.members.length - shown.length + Math.max(0, Math.floor(g.extra ?? 0));
     return '<button class="k7-reset k7-tile" type="button"' + attrs({ 'aria-label': g.name + ': ' + g.members.map((m) => m.name).join(', '), 'aria-current': g.current ? 'page' : null, 'data-tip': g.name, 'data-tip-pos': 'right', ...(g.attrs ?? {}) }) + '>' +
@@ -76,5 +76,8 @@ export const contract = defineContract<RailOpts>({
     '--sp-5', '--text-dim', '--tile-b'
   ],
   a11y: 'A <nav> named Bots or Sessions; each tile is a <button> named with its state ("kai, needs you"), the open one aria-current="page".',
-  boards: []
+  boards: [
+    '11-botchat', 'K02-12-sidebar', '17-working', 'S17-newsession', 'S20-running', 'S23-finished', 'S33-changed', 'S36-engine',
+    'S37-nomodel', 'S38-gate', 'S40-details', 'S41-noproject'
+  ]
 });

@@ -61,5 +61,8 @@ export const contract = defineContract<BubbleOpts>({
     '--pad-bubble-y', '--r-bubble', '--sp-2', '--sp-3', '--sp-4', '--spec', '--text', '--text-dim', '--track'
   ],
   a11y: 'Plain text in the thread; the gutter\'s orb and tile are hidden from readers (the byline names who spoke).',
-  boards: []
+  boards: [
+    '11-botchat', '12-room', '17-working', 'S20-running', 'S23-finished', 'S36-engine', 'K04-card', '14-settings',
+    'S39-settings-sessions'
+  ]
 });

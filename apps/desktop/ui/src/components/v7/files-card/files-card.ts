@@ -65,5 +65,5 @@ export const contract = defineContract<FilesCardOpts>({
     '--red-text', '--sp-1', '--sp-2', '--text', '--text-dim', '--track-s'
   ],
   a11y: 'A Block; a folding head is a <button> with aria-expanded and aria-controls, and the head\'s action is a Button.',
-  boards: []
+  boards: ['11-botchat', '12-room', '17-working', 'S23-finished', 'S38-gate', '14-settings']
 });

@@ -54,5 +54,8 @@ export const contract = defineContract<SegmentedOpts>({
     '--pad-chip', '--pad-kbd', '--pad-seg', '--r-pill', '--seg-item-h', '--seg-on', '--seg-on-sh', '--text', '--text-dim'
   ],
   a11y: 'A radiogroup of radios, or a tablist of tabs. One tab stop (roving tabindex); the arrows, Home and End move and choose.',
-  boards: []
+  boards: [
+    '11-botchat', 'K02-12-sidebar', '17-working', 'S17-newsession', 'S20-running', 'S23-finished', 'S33-changed', 'S36-engine',
+    'S37-nomodel', 'S38-gate', 'S40-details', 'S41-noproject', '14-settings', 'S39-settings-sessions'
+  ]
 });

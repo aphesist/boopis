@@ -76,5 +76,5 @@ export const contract = defineContract<InlineChipOpts>({
     '--r-pill', '--r-xs', '--sp-1', '--text', '--text-dim'
   ],
   a11y: 'Inline text, or a <button> when it acts. In a composer its own text is the words typed, so it is read, selected and sent as words; the drawn name is hidden from readers.',
-  boards: []
+  boards: ['11-botchat', '12-room', '17-working', '14-settings']
 });

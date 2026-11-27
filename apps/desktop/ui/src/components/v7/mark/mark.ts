@@ -66,5 +66,5 @@ export const contract = defineContract<MarkOpts>({
   parts: ['MarkStack', 'k7-gap', 'k7-info'],
   tokens: ['--fs-xs', '--gap-hair', '--gap-s', '--mark-gap-ch', '--owe-text', '--r-pill', '--r-xs', '--text-dim'],
   a11y: 'A feedforward is role="button" with aria-haspopup="menu"; a blank is a focusable textbox named by its words; an info label is a <button> that opens its explanation (Enter, Space, or 300 ms of hover), and Esc returns the focus.',
-  boards: []
+  boards: ['11-botchat', '12-room', 'K02-12-held', '17-working', 'S20-running', 'S23-finished']
 });

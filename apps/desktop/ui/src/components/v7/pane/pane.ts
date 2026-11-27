@@ -85,5 +85,5 @@ export const contract = defineContract<PaneOpts>({
     '--sp-1', '--sp-2', '--sp-3', '--sp-4', '--text', '--text-dim', '--tools-w'
   ],
   a11y: 'role="complementary" named Details or Tools; the tools\' grip is a focusable vertical separator with its value.',
-  boards: []
+  boards: ['11-botchat', 'S40-details']
 });

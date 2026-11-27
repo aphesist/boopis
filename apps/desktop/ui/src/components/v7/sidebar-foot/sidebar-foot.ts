@@ -38,5 +38,8 @@ export const contract = defineContract<SidebarFootOpts>({
     '--text', '--text-dim', '--track-s'
   ],
   a11y: 'Three buttons: the account (a menu), Store and Settings (dialogs), each named, with their keys.',
-  boards: []
+  boards: [
+    '11-botchat', 'K02-12-sidebar', '17-working', 'S17-newsession', 'S20-running', 'S23-finished', 'S33-changed', 'S36-engine',
+    'S37-nomodel', 'S38-gate', 'S40-details', 'S41-noproject'
+  ]
 });

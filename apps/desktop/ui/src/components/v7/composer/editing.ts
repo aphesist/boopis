@@ -1,4 +1,4 @@
-/* The Composer's own editing, the same in every composer (a session, a bot's chat, a room, the dock's card): wire.ts wires it on each.
+/* The Composer's own editing, the same in every composer (a session, a bot's chat, a room, the dock's card): wireComposer (behaviour.ts) wires it on each.
 
    Undo     The text is drawn again under the person (a mention becomes its chip, the words it is read by are marked, a file is set in
             as a chip), which the browser's own undo cannot follow. So the composer keeps its own: mod+Z, shift+mod+Z (ctrl+Y off the
@@ -360,7 +360,7 @@ function wireFiles(c: HTMLElement, t: HTMLElement): void {
   });
 }
 
-/** wire a composer's editing (wire.ts calls it once per composer) */
+/** wire a composer's editing (wireComposer calls it once per composer) */
 export function wireComposerEditing(c: HTMLElement): void {
   const t = textOf(c); if (!t) return;
   t.addEventListener('beforeinput', (e) => {

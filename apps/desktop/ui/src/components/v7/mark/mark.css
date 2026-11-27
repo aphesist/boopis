@@ -10,7 +10,7 @@
 .k7-info { display: inline; font: inherit; color: inherit; border-radius: var(--r-xs); }
 
 /* ── MarkStack (6e, derived from 6d's askers): model marks overlapped a third of a mark, each cut clear of the one before by its
-   surface's ring, then the "+N" chip (surfaces.css .k7-ask__more) clear of them ── */
+   surface's ring, then the "+N" chip (rail.css .k7-ask__more) clear of them ── */
 .k7-marks { display: inline-flex; align-items: center; gap: var(--gap-hair); flex: none; line-height: 0; vertical-align: middle; }
 .k7-marks__one { display: inline-grid; place-items: center; border-radius: var(--r-pill); }
 .k7-marks__one + .k7-marks__one { margin-inline-start: calc(var(--s) / -3 - var(--gap-hair)); }

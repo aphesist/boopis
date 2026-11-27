@@ -63,5 +63,8 @@ export const contract = defineContract<ButtonOpts>({
     '--selected-off', '--text', '--text-dim', '--text-on-light', '--track'
   ],
   a11y: 'A native <button>, named by its words. A hold is pressed and held, or Space held, for 1 s; from the keyboard Enter twice confirms too (the first press says "Press again to confirm" for 4 s). The split half is its own button with aria-haspopup="menu".',
-  boards: []
+  boards: [
+    '11-botchat', '12-room', 'K02-12-held', '17-working', 'S17-newsession', 'S23-finished', 'S36-engine', 'S37-nomodel',
+    'S38-gate', 'S41-noproject', '14-settings'
+  ]
 });

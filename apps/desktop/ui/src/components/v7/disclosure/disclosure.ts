@@ -51,5 +51,5 @@ export const contract = defineContract<DisclosureOpts>({
     '--text-dim', '--text-quiet', '--track-s'
   ],
   a11y: 'The summary is a <button> with aria-expanded and aria-controls; the steps are an ordered list.',
-  boards: []
+  boards: ['11-botchat', '12-room', '17-working', 'S20-running', 'S23-finished', '14-settings']
 });

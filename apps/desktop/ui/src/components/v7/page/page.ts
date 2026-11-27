@@ -45,5 +45,5 @@ export const contract = defineContract<PageOpts>({
     '--sp-2', '--sp-4', '--sp-5', '--text', '--text-dim'
   ],
   a11y: 'The column is <main>; a settings page a <section> named by its title (an <h2>).',
-  boards: []
+  boards: ['14-settings', 'S39-settings-sessions']
 });

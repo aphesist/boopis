@@ -45,5 +45,9 @@ export const contract = defineContract<IconButtonOpts>({
     '--shadow-inline', '--text-on-light'
   ],
   a11y: 'A native <button> named by `label`, never by its glyph alone; its tooltip says the name and the keys on hover and focus.',
-  boards: []
+  boards: [
+    '11-botchat', '12-room', 'K02-12-sidebar', 'K02-12-held', '17-working', 'S17-newsession', 'S20-running', 'S23-finished',
+    'S33-changed', 'S36-engine', 'S37-nomodel', 'S38-gate', 'S40-details', 'S41-noproject', 'K01-rest', 'K02-hover', 'K03-asks',
+    'K04-card', 'K05-many', 'K06-none', 'K07-centred', 'K08-compact', '14-settings', 'S39-settings-sessions'
+  ]
 });

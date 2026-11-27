@@ -51,5 +51,5 @@ export const contract = defineContract<StatusLineOpts>({
     '--dur-breathe', '--dur-shimmer', '--ease-io', '--fs-l', '--fs-xs', '--gap-xs', '--lh-m', '--sp-2', '--text', '--text-dim'
   ],
   a11y: 'role="status" with aria-live="polite", so a change is said once; inside the title pill the pill names it instead.',
-  boards: []
+  boards: ['11-botchat', '12-room', '17-working', 'S20-running', '14-settings']
 });

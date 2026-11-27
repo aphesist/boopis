@@ -63,5 +63,5 @@ export const contract = defineContract<TurnFootOpts>({
     '--sp-2', '--text', '--text-dim', '--text-faint', '--track'
   ],
   a11y: 'Its actions are buttons; one that cannot be taken stays focusable (aria-disabled) so its tip says why.',
-  boards: []
+  boards: ['11-botchat', '12-room', '17-working', 'S23-finished', 'S33-changed', '14-settings']
 });

@@ -49,5 +49,5 @@ export const contract = defineContract<QueueOpts>({
     '--text-dim'
   ],
   a11y: 'A list above the composer; its controls are IconButtons and Buttons, each named.',
-  boards: []
+  boards: ['K02-12-held']
 });

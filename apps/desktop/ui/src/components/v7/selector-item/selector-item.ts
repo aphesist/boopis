@@ -55,5 +55,5 @@ export const contract = defineContract<SelectorItemOpts>({
     '--pad-sel-start', '--r-field', '--r-pill', '--text', '--text-dim', '--tick', '--track'
   ],
   a11y: 'A native <button> with aria-haspopup="menu"; its name says what it sets and the value ("Model: Opus").',
-  boards: []
+  boards: ['S17-newsession', 'S37-nomodel', 'S40-details', '14-settings']
 });

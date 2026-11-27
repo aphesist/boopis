@@ -26,5 +26,5 @@ export const contract = defineContract<TimeSeparatorOpts>({
   parts: [],
   tokens: ['--accent-text', '--fs-2xs', '--fs-xs', '--gap-row', '--gap-s', '--hl', '--lh-m', '--sp-3', '--text-dim'],
   a11y: 'role="separator" named by its words.',
-  boards: []
+  boards: ['11-botchat', '12-room', '17-working', 'S20-running', 'S23-finished', '14-settings', 'S39-settings-sessions']
 });

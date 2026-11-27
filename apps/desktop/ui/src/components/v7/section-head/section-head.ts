@@ -38,5 +38,8 @@ export const contract = defineContract<SectionHeadOpts>({
     '--text-quiet'
   ],
   a11y: 'An <h3>; a folding head holds a <button> with aria-expanded.',
-  boards: []
+  boards: [
+    '11-botchat', 'K02-12-sidebar', '17-working', 'S17-newsession', 'S20-running', 'S23-finished', 'S33-changed', 'S36-engine',
+    'S37-nomodel', 'S38-gate', 'S40-details', 'S41-noproject', '14-settings', 'S39-settings-sessions'
+  ]
 });

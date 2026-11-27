@@ -9,7 +9,7 @@ import type { Attrs, U } from '../util';
 import { defineContract } from '../contract';
 
 /* ── Composer (39): session, bot, room, dock, notch; with its line; empty, typed, multi-line, running (Stop joins the right cluster; Enter
-   queues), held, no model; listening (the mic on), a file dragged over it. What it does is wire.ts `wireComposer` and compose.ts ── */
+   queues), held, no model; listening (the mic on), a file dragged over it. What it does is behaviour.ts (`wireComposer`) and editing.ts ── */
 export const COMPOSER_KINDS = ['session', 'bot', 'room', 'dock', 'notch'] as const;
 export type ComposerKind = typeof COMPOSER_KINDS[number];
 export interface LineItem {
@@ -100,5 +100,9 @@ export const contract = defineContract<ComposerOpts>({
     '--stop-glyph', '--text', '--text-dim', '--text-quiet'
   ],
   a11y: 'The text is a role="textbox" (aria-multiline). Enter sends, shift Enter is a new line, ctrl Enter steers, alt+V dictates, Esc stops dictation; mod+Z and shift mod+Z undo and redo across chips. Its buttons are named (Add a file, Dictate or Stop listening, Talk or Send or Queue, Stop).',
-  boards: []
+  boards: [
+    '11-botchat', '12-room', 'K02-12-held', '17-working', 'S17-newsession', 'S20-running', 'S23-finished', 'S33-changed',
+    'S36-engine', 'S37-nomodel', 'S38-gate', 'S40-details', 'S41-noproject', 'K01-rest', 'K02-hover', 'K03-asks', 'K04-card',
+    'K05-many', 'K06-none', 'K07-centred', 'K08-compact'
+  ]
 });

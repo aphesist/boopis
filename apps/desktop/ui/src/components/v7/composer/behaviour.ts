@@ -10,7 +10,7 @@ import { composerForget, composerRemember, wireComposerEditing } from './editing
       ui:add                  "+" was pressed (the app picks what to add; `composerInsert` puts it in the text)
       ui:dictate {on, mode}   the mic was switched on or off (aria-pressed says which): `toggle` by a press or alt+V, `hold` while held
       ui:dictate-unavailable  the mic was pressed, held or keyed in a build with no dictation (`data-mic-off`): nothing started
-      ui:files {files, via}   files were dropped on it or pasted into it (compose.ts)
+      ui:files {files, via}   files were dropped on it or pasted into it (editing.ts)
       ui:refused              Enter while a turn runs where nothing queues (`data-queue-off`): the text stays
     The voice circle is never hidden (owner, 26 November): `data-voice-setup` (ComposerOpts.voiceSetup) says no voice model is set up
     yet, in the circle's name and tip, and ui:voice fires all the same (the app then says what voice needs). `data-queue-off`: nothing
@@ -56,7 +56,7 @@ export function wireComposer(c: HTMLElement): void {
   const ask = (el: HTMLElement): void => { emit(c, 'ui:mark', { text: el.textContent ?? '', kind: el.getAttribute('data-ff') ?? '', el }); };
   t.addEventListener('click', (e) => { const m = markAt(e.target as Node); if (m) ask(m); });
   t.addEventListener('keydown', (e) => { if (e.key !== 'ArrowDown' || !e.altKey) return; const m = markAt(getSelection()?.anchorNode ?? null); if (m) { e.preventDefault(); ask(m); } });
-  /* its own undo, a chip as one unit, paste, files dropped and pasted, the mic (a press, alt+V, or held): compose.ts */
+  /* its own undo, a chip as one unit, paste, files dropped and pasted, the mic (a press, alt+V, or held): editing.ts */
   wireComposerEditing(c);
   sync();
 }

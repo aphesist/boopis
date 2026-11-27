@@ -94,5 +94,8 @@ export const contract = defineContract<ListRowOpts>({
     '--session-h', '--sp-2', '--sp-3', '--text', '--text-dim', '--track-s'
   ],
   a11y: 'An option of a listbox (an item row is a listitem, since it carries its own action). The list is one tab stop; its current row takes it.',
-  boards: []
+  boards: [
+    '11-botchat', 'K02-12-sidebar', '17-working', 'S17-newsession', 'S20-running', 'S23-finished', 'S33-changed', 'S36-engine',
+    'S37-nomodel', 'S38-gate', 'S40-details', 'S41-noproject', '14-settings', 'S39-settings-sessions'
+  ]
 });

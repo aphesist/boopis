@@ -43,5 +43,5 @@ export const contract = defineContract<WellOpts>({
     '--ok-text', '--pad-block', '--r-block', '--r-field', '--sp-2', '--sp-3', '--text', '--text-dim', '--well-thread-h'
   ],
   a11y: 'A focusable region (it scrolls sideways), named "Code", "Terminal" or by `label`.',
-  boards: []
+  boards: ['S38-gate', 'K03-asks', 'K04-card']
 });

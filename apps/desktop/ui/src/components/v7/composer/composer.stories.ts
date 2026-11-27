@@ -16,8 +16,8 @@ const tip = (sel: string): State => stage(['tooltip', 'owner'], async ({ root, w
   const b = root.querySelector<HTMLElement>(sel); if (b) { b.focus(); ui.tooltip.show(b); }
   await wait(300);
 }, { width: 720, overlay: { anchor: sel, layer: '.ui-tip' }, force: [{ sel, state: 'focus' }] });
-/** a draft of more than one line: the one row keeps its buttons on the last line (thread.css `.k7-composer__box`: align-items flex-end) */
-const LINES = { 'geometry.center': { reason: 'a draft of more than one line: the kit composer keeps its buttons on the last line (thread.css `.k7-composer__box`: align-items flex-end), as its multi-line state draws', el: 'k7-composer__box' } } as const;
+/** a draft of more than one line: the one row keeps its buttons on the last line (composer.css `.k7-composer__box`: align-items flex-end) */
+const LINES = { 'geometry.center': { reason: 'a draft of more than one line: the kit composer keeps its buttons on the last line (composer.css `.k7-composer__box`: align-items flex-end), as its multi-line state draws', el: 'k7-composer__box' } } as const;
 const empty = stage(['typical', 'empty'], ({ root }) => { fill(root, kit.composer({ line: LINE })); }, { width: 720 });
 export default {
   id: 'kit/composer', title: 'Composer', area: 'composer', kind: 'component', covers: ['kit.composer'],

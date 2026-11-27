@@ -52,5 +52,8 @@ export const contract = defineContract<KbdOpts>({
     '--sp-2', '--sp-3', '--text-dim'
   ],
   a11y: 'Each key is a <kbd>; the chips are separated by spaces in the markup, so a reader says them as words.',
-  boards: []
+  boards: [
+    '11-botchat', '12-room', '17-working', 'S17-newsession', 'S20-running', 'S23-finished', 'S33-changed', 'S36-engine',
+    'S37-nomodel', 'S38-gate', 'S40-details', 'S41-noproject', 'K03-asks', 'K04-card', '14-settings'
+  ]
 });

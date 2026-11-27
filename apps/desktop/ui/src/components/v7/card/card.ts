@@ -63,5 +63,5 @@ export const contract = defineContract<CardOpts>({
     '--session-h', '--shadow-inline', '--sp-3', '--text', '--text-dim', '--track-s'
   ],
   a11y: 'A <section>. A Row that acts is role="button", a check Row role="checkbox", each one tab stop pressed with Enter or Space; the danger head is a <button> with aria-expanded.',
-  boards: []
+  boards: ['11-botchat', 'S40-details', '14-settings']
 });

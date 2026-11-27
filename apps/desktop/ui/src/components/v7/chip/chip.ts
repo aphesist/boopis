@@ -40,5 +40,7 @@ export const contract = defineContract<ChipOpts>({
     '--selected-hover', '--text', '--text-dim', '--text-on-light', '--track-s'
   ],
   a11y: 'A native <button>; a filter or mode chip is a toggle (aria-pressed), an answer chip a plain button.',
-  boards: []
+  boards: [
+    '11-botchat', '12-room', '17-working', 'S20-running', 'S23-finished', 'K03-asks', 'K04-card', 'K05-many', '14-settings'
+  ]
 });

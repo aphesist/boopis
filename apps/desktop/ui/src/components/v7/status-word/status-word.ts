@@ -35,5 +35,5 @@ export const contract = defineContract<StatusWordOpts>({
     '--red', '--red-text', '--text-dim'
   ],
   a11y: 'Plain words; the dot is hidden from readers, so the word carries the meaning, never the colour alone.',
-  boards: []
+  boards: ['11-botchat', '12-room', '17-working', 'S20-running', 'S38-gate', 'K02-hover', 'K03-asks', 'K04-card', '14-settings']
 });

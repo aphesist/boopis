@@ -27,10 +27,10 @@ export const contract = defineContract<EmptyStateOpts>({
   events: [],
   states: ['data-place'],
   parts: ['k7-empty__text'],
-  tokens: [
-    '--dur-2', '--ease-sharp', '--fs-s', '--gap-row', '--lh-s', '--pad-empty-list', '--sp-1', '--sp-3', '--sp-4', '--sp-5',
-    '--text-dim', '--track-s'
-  ],
+  tokens: ['--fs-s', '--gap-row', '--lh-s', '--pad-empty-list', '--sp-3', '--sp-4', '--sp-5', '--text-dim', '--track-s'],
   a11y: 'A paragraph and, when there is one, a Button.',
-  boards: []
+  boards: [
+    '11-botchat', 'K02-12-sidebar', '17-working', 'S17-newsession', 'S20-running', 'S23-finished', 'S37-nomodel', 'S41-noproject',
+    '14-settings', 'S39-settings-sessions'
+  ]
 });

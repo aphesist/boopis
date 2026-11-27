@@ -79,5 +79,8 @@ export const contract = defineContract<ChromeOpts>({
     '--sp-6', '--text', '--text-dim', '--text-quiet', '--track-s', '--wc-h', '--wc-w'
   ],
   a11y: 'role="toolbar" named Window. The title pill is a <button> that opens the details; the search hint\'s name holds its visible words and keys.',
-  boards: []
+  boards: [
+    '11-botchat', '12-room', 'K02-12-sidebar', '17-working', 'S17-newsession', 'S20-running', 'S23-finished', 'S33-changed',
+    'S36-engine', 'S37-nomodel', 'S38-gate', 'S40-details', 'S41-noproject'
+  ]
 });

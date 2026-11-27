@@ -54,5 +54,5 @@ export const contract = defineContract<DialogOpts>({
     '--sp-5', '--sp-6', '--sp-7', '--spec-strong', '--text', '--text-dim'
   ],
   a11y: 'role="dialog", aria-modal; a form is named by its title, a large dialog by `title`. Its close is a capsule IconButton with esc.',
-  boards: []
+  boards: ['14-settings', 'S39-settings-sessions']
 });

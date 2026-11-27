@@ -37,5 +37,5 @@ export const contract = defineContract<BlockOpts>({
     '--sp-4', '--text-dim'
   ],
   a11y: 'A plain container; what it holds names itself.',
-  boards: []
+  boards: ['S37-nomodel']
 });

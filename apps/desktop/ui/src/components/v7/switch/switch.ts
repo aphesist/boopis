@@ -34,5 +34,5 @@ export const contract = defineContract<SwitchOpts>({
     '--track-off'
   ],
   a11y: 'role="switch" on a native <button>; Space and Enter toggle it, and it says on or off.',
-  boards: []
+  boards: ['11-botchat', '14-settings']
 });

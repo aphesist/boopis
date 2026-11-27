@@ -71,5 +71,8 @@ export const contract = defineContract<AvatarOpts>({
   parts: ['orb-avatar', 'k7-brand', 'k7-logomark'],
   tokens: ['--fill-2', '--gm', '--ns-logo', '--ns-mark', '--r-pill', '--text-dim', '--text-strong'],
   a11y: 'An orb is decoration beside the name it stands for; a brand tile or a stack with a label is role="img", else hidden from readers.',
-  boards: []
+  boards: [
+    '11-botchat', '12-room', 'K02-12-sidebar', '17-working', 'S17-newsession', 'S20-running', 'S23-finished', 'S37-nomodel',
+    'S41-noproject', '14-settings'
+  ]
 });

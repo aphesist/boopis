@@ -49,5 +49,5 @@ export const contract = defineContract<SystemLineOpts>({
     '--r-pill', '--red-text', '--sp-1', '--sp-3', '--text-dim'
   ],
   a11y: 'role="note"; its action is a Button.',
-  boards: []
+  boards: ['12-room', 'S36-engine']
 });

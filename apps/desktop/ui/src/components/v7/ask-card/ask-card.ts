@@ -130,5 +130,5 @@ export const contract = defineContract<AskCardOpts>({
     '--text', '--text-dim'
   ],
   a11y: 'role="group" named by the question. Its answers are buttons; the primary one may need a 1 s hold (or Enter twice). Answered, it is one line that says what was chosen.',
-  boards: []
+  boards: ['11-botchat', '12-room', 'K02-12-held', '17-working', 'S23-finished', 'K03-asks', 'K04-card', '14-settings']
 });

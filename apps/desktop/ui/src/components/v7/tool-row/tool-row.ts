@@ -103,5 +103,5 @@ export const contract = defineContract<ToolRowOpts>({
     '--pad-text', '--r-block', '--r-bubble', '--r-xs', '--sans', '--sp-1', '--sp-2', '--sp-3', '--text', '--text-dim'
   ],
   a11y: 'Its head is a <button> with aria-expanded when it has steps; a word with a reason takes the focus so the keyboard reaches its tooltip.',
-  boards: []
+  boards: ['11-botchat', '12-room', '17-working', 'S20-running', '14-settings']
 });
