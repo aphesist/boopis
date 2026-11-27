@@ -1,0 +1,122 @@
+{
+ "11-a-bot-s-chat-the-rail-the-details@bone": {
+  "sha": "182c8d75dfea0a56d4875d3ddad31953c64ab25a",
+  "w": 1440,
+  "h": 900
+ },
+ "11-a-bot-s-chat-the-rail-the-details@catalog": {
+  "sha": "358cc5afe15f3b2910d3083fe5ae05d539141f79",
+  "w": 1440,
+  "h": 900
+ },
+ "11-a-bot-s-chat-the-rail-the-details@graphite": {
+  "sha": "f89ce69881f5d0f30f33ecaa33f9856091abe5ec",
+  "w": 1440,
+  "h": 900
+ },
+ "11-a-bot-s-chat-the-rail-the-details@typewriter": {
+  "sha": "d7f8410fafd91b3c0549205c05dfb2748be76eaa",
+  "w": 1440,
+  "h": 900
+ },
+ "12-a-group-room-the-sidebar-open@bone": {
+  "sha": "c1347f1f8b31f09125af448aaecb45071f32f985",
+  "w": 1440,
+  "h": 900
+ },
+ "12-a-group-room-the-sidebar-open@catalog": {
+  "sha": "66281ee91e6d19c1c58c4e6bb9c995d027bd88d4",
+  "w": 1440,
+  "h": 900
+ },
+ "12-a-group-room-the-sidebar-open@graphite": {
+  "sha": "98b4fc5d4d8b9bf4711bbadeb8ba5214d242ded7",
+  "w": 1440,
+  "h": 900
+ },
+ "12-a-group-room-the-sidebar-open@typewriter": {
+  "sha": "eb9365ffb4fddfd7bcb154c5c6cb0416b130bd60",
+  "w": 1440,
+  "h": 900
+ },
+ "12-a-message-held@bone": {
+  "sha": "3ad7da5ce4921b2e90ad11413ee37bd1d1233b87",
+  "w": 1440,
+  "h": 900
+ },
+ "12-a-message-held@catalog": {
+  "sha": "5be8904267b1c36b58ea1643ae9dc4759d1baa45",
+  "w": 1440,
+  "h": 900
+ },
+ "12-a-message-held@graphite": {
+  "sha": "75e8c7d395d05560275629539c0aca7730bf51a5",
+  "w": 1440,
+  "h": 900
+ },
+ "12-a-message-held@typewriter": {
+  "sha": "1179b4aa8664eea01c47fe0a9ec4ab67a5581263",
+  "w": 1440,
+  "h": 900
+ },
+ "17-a-bot-working@bone": {
+  "sha": "53e7b047f77a3094e12018b8498385873b77d11b",
+  "w": 1440,
+  "h": 900
+ },
+ "17-a-bot-working@catalog": {
+  "sha": "0007878a57f4bf58027771c230da349eec16e8b1",
+  "w": 1440,
+  "h": 900
+ },
+ "17-a-bot-working@graphite": {
+  "sha": "d32ef84e3cd16bece36d68c57d21bac017b470a1",
+  "w": 1440,
+  "h": 900
+ },
+ "17-a-bot-working@typewriter": {
+  "sha": "e22f18618a319aa2d66a4b4db32831baa26ca579",
+  "w": 1440,
+  "h": 900
+ },
+ "the-engine-stopped-in-a-bot-s-chat-derived-from-s36@bone": {
+  "sha": "c7b02462cc756aae113d4b6d0b8c0f41e46c7787",
+  "w": 1440,
+  "h": 900
+ },
+ "the-engine-stopped-in-a-bot-s-chat-derived-from-s36@catalog": {
+  "sha": "feab728c9e99c249011c8b340e2a5e968fbe89e5",
+  "w": 1440,
+  "h": 900
+ },
+ "the-engine-stopped-in-a-bot-s-chat-derived-from-s36@graphite": {
+  "sha": "feab728c9e99c249011c8b340e2a5e968fbe89e5",
+  "w": 1440,
+  "h": 900
+ },
+ "the-engine-stopped-in-a-bot-s-chat-derived-from-s36@typewriter": {
+  "sha": "d2223707337061f5391c5022837eef8fa55f9ca3",
+  "w": 1440,
+  "h": 900
+ },
+ "the-engine-stopped-in-a-room-derived-from-s36@bone": {
+  "sha": "cbfa184a497de4888a50de2d3330fabb3176f710",
+  "w": 1440,
+  "h": 900
+ },
+ "the-engine-stopped-in-a-room-derived-from-s36@catalog": {
+  "sha": "9d75429998507ea5b443b2577cdc19c67b267b03",
+  "w": 1440,
+  "h": 900
+ },
+ "the-engine-stopped-in-a-room-derived-from-s36@graphite": {
+  "sha": "c0597fdc997a46b0ec6ae49da8a8fef6fbc27218",
+  "w": 1440,
+  "h": 900
+ },
+ "the-engine-stopped-in-a-room-derived-from-s36@typewriter": {
+  "sha": "c0597fdc997a46b0ec6ae49da8a8fef6fbc27218",
+  "w": 1440,
+  "h": 900
+ }
+}

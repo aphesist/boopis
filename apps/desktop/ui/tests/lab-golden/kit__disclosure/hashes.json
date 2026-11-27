@@ -10,12 +10,12 @@
   "h": 44
  },
  "narrow@dark": {
-  "sha": "49d281db5e219ad5343e5f984dbb91d11edb4e00",
+  "sha": "1754e6e690c3147fd2dce1112dda56cf32c06545",
   "w": 352,
   "h": 170
  },
  "narrow@light": {
-  "sha": "6b02f0a0fc54afe8da6f86c49b65a6365457d244",
+  "sha": "40a9ae23f34297499b457154f82238df0428dc53",
   "w": 352,
   "h": 170
  },
@@ -39,13 +39,33 @@
   "w": 584,
   "h": 170
  },
+ "parts-with-an-action-after-them@dark": {
+  "sha": "43c52695c83e34ad337c660f023b834d89050cd9",
+  "w": 348,
+  "h": 176
+ },
+ "parts-with-an-action-after-them@light": {
+  "sha": "773ef55093941bded8b24d375fdbd1d493d53943",
+  "w": 348,
+  "h": 176
+ },
+ "steps-alone-not-started-a-plan-in-a-form@dark": {
+  "sha": "6b12733fcb10821399d3e6c3484fb191ca0f2d2e",
+  "w": 584,
+  "h": 120
+ },
+ "steps-alone-not-started-a-plan-in-a-form@light": {
+  "sha": "7e17e599aa6520421277c96e7198c502b7cc24b5",
+  "w": 584,
+  "h": 120
+ },
  "the-summary-focused@dark": {
-  "sha": "ee2ddbc92aa551734e5854c9f49a498d04f995eb",
+  "sha": "7affe304efcd9c590e0c0b7d8e3e06e7280d8c30",
   "w": 584,
   "h": 44
  },
  "the-summary-focused@light": {
-  "sha": "450f4eb541952eb3e218f40ab6196004b615d5a7",
+  "sha": "5a330c63ec5ba639ba4bc33e369f6cf942ea02c0",
   "w": 584,
   "h": 44
  },
@@ -69,13 +89,53 @@
   "w": 584,
   "h": 44
  },
+ "work-log-open-a-failed-step-an-escalation-the-step-being-done@dark": {
+  "sha": "68aaef1bbd1400671a3ff2c03a7f2a3286dcc195",
+  "w": 584,
+  "h": 200
+ },
+ "work-log-open-a-failed-step-an-escalation-the-step-being-done@light": {
+  "sha": "b6ccceb437e06312259479f1c23240f3b11ca7ab",
+  "w": 584,
+  "h": 200
+ },
+ "work-log-open-many-steps@dark": {
+  "sha": "39d05d4f3dce077a4cb41515d1d6e703af843b21",
+  "w": 584,
+  "h": 770
+ },
+ "work-log-open-many-steps@light": {
+  "sha": "cda7c6e8419730e227f7c5aa4472c29edb95871a",
+  "w": 584,
+  "h": 770
+ },
+ "work-log-open-s10@dark": {
+  "sha": "a1164aedc4de72bd36d9aaa4bbf3b006e6dc65e9",
+  "w": 584,
+  "h": 170
+ },
+ "work-log-open-s10@light": {
+  "sha": "882f89d2ef7de5eee810d4db36d3fbbc9893605e",
+  "w": 584,
+  "h": 170
+ },
+ "work-log-open-with-its-output@dark": {
+  "sha": "835bd3ef58784e01b93cfbc24826d525113c8999",
+  "w": 584,
+  "h": 252
+ },
+ "work-log-open-with-its-output@light": {
+  "sha": "5af3b65134ee95bda3b7b4f23e1f7b8432e53689",
+  "w": 584,
+  "h": 252
+ },
  "work-log@dark": {
-  "sha": "50797aa73c32e6e92c5cb55add18c4fd565afb2f",
+  "sha": "64a8c72bbccbcefb5ed120a9b22f639b54103361",
   "w": 584,
   "h": 140
  },
  "work-log@light": {
-  "sha": "aee8b63480e7b10ed6488574e7c871383bc61c9c",
+  "sha": "bd08516d9b3fd1c63bbab54f0f344ea128cfb9e8",
   "w": 584,
   "h": 140
  }

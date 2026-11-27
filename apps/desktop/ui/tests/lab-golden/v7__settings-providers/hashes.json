@@ -1,0 +1,302 @@
+{
+ "a-key-form-in-place@dark": {
+  "sha": "1b38a093ed5c33edc89dfac251312b82db978879",
+  "w": 544,
+  "h": 350
+ },
+ "a-key-form-in-place@light": {
+  "sha": "f6802bd71c02c1f602955b95381ef6fe83a071d9",
+  "w": 544,
+  "h": 350
+ },
+ "a-key-row-focused@dark": {
+  "sha": "98f625a67134011e19713e7aff2f6d0bdce65d08",
+  "w": 544,
+  "h": 1600
+ },
+ "a-key-row-focused@light": {
+  "sha": "bf64e766ac9cdccb43c1c449628d8ea7dd6a3ddd",
+  "w": 544,
+  "h": 1600
+ },
+ "a-key-row-hovered@dark": {
+  "sha": "1b7d49ae8412a4a188d30410072152bde402c064",
+  "w": 544,
+  "h": 1600
+ },
+ "a-key-row-hovered@light": {
+  "sha": "9cf06b5712e58804ac98ff21f99be59835ef3dd3",
+  "w": 544,
+  "h": 1600
+ },
+ "claude-billed-per-use@dark": {
+  "sha": "7059168b4fa43c04ef0b6305c459d24d377d65af",
+  "w": 544,
+  "h": 1007
+ },
+ "claude-billed-per-use@light": {
+  "sha": "2f0ff0df2cb887f559752d978faae532d04b1b17",
+  "w": 544,
+  "h": 1007
+ },
+ "claude-did-not-start@dark": {
+  "sha": "2c6544e1945c1455fb330f04abf96b3525e644c9",
+  "w": 544,
+  "h": 967
+ },
+ "claude-did-not-start@light": {
+  "sha": "c05425dbdcb64c394075d05bf9b65670f3055ac0",
+  "w": 544,
+  "h": 967
+ },
+ "claude-not-installed-narrow@dark": {
+  "sha": "957c6cbcf1fbbb2f0ac46d8d33dc52b81f50d037",
+  "w": 364,
+  "h": 1218
+ },
+ "claude-not-installed-narrow@light": {
+  "sha": "57f443ee459cebb7a240a4b2b38788e7f4eb85d5",
+  "w": 364,
+  "h": 1218
+ },
+ "claude-not-installed-with-the-installer@dark": {
+  "sha": "06918c6d1620d55d8c5cca934ad3cff107c7d379",
+  "w": 544,
+  "h": 949
+ },
+ "claude-not-installed-with-the-installer@light": {
+  "sha": "71bed0220cabfc947b0a8396cd46d62e972b0175",
+  "w": 544,
+  "h": 949
+ },
+ "claude-only-the-desktop-app-s-copy@dark": {
+  "sha": "5e24e202fa174d93052ce4963d6476662ad0d36d",
+  "w": 544,
+  "h": 967
+ },
+ "claude-only-the-desktop-app-s-copy@light": {
+  "sha": "1079e6a5ad1430c042ed83f206ed0a0d00166708",
+  "w": 544,
+  "h": 967
+ },
+ "claude-signed-out-in-the-host-s-words@dark": {
+  "sha": "7a30a147b6c9cced57f1869ed53b93a2692884f6",
+  "w": 544,
+  "h": 1025
+ },
+ "claude-signed-out-in-the-host-s-words@light": {
+  "sha": "266af68301ea456402ce24af662f8e6357d20663",
+  "w": 544,
+  "h": 1025
+ },
+ "claude-signing-in-claude-code-s-own-sign-in-is-open@dark": {
+  "sha": "7540e9c1a5c05d7dc0f1a538644031441f28f52a",
+  "w": 544,
+  "h": 1025
+ },
+ "claude-signing-in-claude-code-s-own-sign-in-is-open@light": {
+  "sha": "8eb1b8d89848d6214b23e752c47da6111ce7a401",
+  "w": 544,
+  "h": 1025
+ },
+ "claude-too-old@dark": {
+  "sha": "2cbe9f8a519629733a989fe7eb062254ee9654d0",
+  "w": 544,
+  "h": 949
+ },
+ "claude-too-old@light": {
+  "sha": "790df5711d061b7a6999abcd8a1ece1f82580cce",
+  "w": 544,
+  "h": 949
+ },
+ "could-not-read@dark": {
+  "sha": "f6ee8c60da34e695be7bdaf5ccd42117a4cdc592",
+  "w": 544,
+  "h": 202
+ },
+ "could-not-read@light": {
+  "sha": "bfce9655f700f8792a92422ff087415ea9ea4fb1",
+  "w": 544,
+  "h": 202
+ },
+ "every-state-in-words@dark": {
+  "sha": "ba081d0304d55ed64330ce982ad88ee5ec68bd63",
+  "w": 544,
+  "h": 1600
+ },
+ "every-state-in-words@light": {
+  "sha": "a8611937c326ee594e619458d0ac3c4876db0186",
+  "w": 544,
+  "h": 1600
+ },
+ "filter-connected@dark": {
+  "sha": "c6bfd85eb8b8e2f4c55b927fdf01f72eeb239f79",
+  "w": 544,
+  "h": 837
+ },
+ "filter-connected@light": {
+  "sha": "f7029e790a56938b8f0d587d5b94065e999d3531",
+  "w": 544,
+  "h": 837
+ },
+ "filter-custom-with-endpoints@dark": {
+  "sha": "54b1b0fdfc699bf69133c08c702d7ca54f99a0b1",
+  "w": 544,
+  "h": 441
+ },
+ "filter-custom-with-endpoints@light": {
+  "sha": "c11c90e51f3b3e2aa27c5a1ef21f38f3fc395d86",
+  "w": 544,
+  "h": 441
+ },
+ "filter-on-this-computer@dark": {
+  "sha": "579d59db7fd39295e4af2b0a9e348a1e59642b5c",
+  "w": 544,
+  "h": 596
+ },
+ "filter-on-this-computer@light": {
+  "sha": "64ed0261536bf365c02350a9e563aebcfc27b2cf",
+  "w": 544,
+  "h": 596
+ },
+ "filter-sign-in@dark": {
+  "sha": "202bf88817fe20d9b23ab2d633c8822cd5578a91",
+  "w": 544,
+  "h": 873
+ },
+ "filter-sign-in@light": {
+  "sha": "7f73d6db6e2e2ab541e8d19e28fc273ae6239bb9",
+  "w": 544,
+  "h": 873
+ },
+ "found-on-this-computer@dark": {
+  "sha": "78639e582eedb18734c3888eeb913ffe51343272",
+  "w": 544,
+  "h": 1600
+ },
+ "found-on-this-computer@light": {
+  "sha": "eca884129c0b80dd125f8d849c6d6e5a2b6e0416",
+  "w": 544,
+  "h": 1600
+ },
+ "long-names-and-reasons@dark": {
+  "sha": "46319a28597e7bbec44e858d06364c39ba09a7dd",
+  "w": 544,
+  "h": 1600
+ },
+ "long-names-and-reasons@light": {
+  "sha": "b7d190ad0f0acfbc018605833db45b6d4ec8e213",
+  "w": 544,
+  "h": 1600
+ },
+ "many-endpoints@dark": {
+  "sha": "1ee0e679a3838acde9328f833dc13f31745b71a1",
+  "w": 544,
+  "h": 1600
+ },
+ "many-endpoints@light": {
+  "sha": "00074e5465ebbbb24f63dc1d1b1f537ec0d71e1b",
+  "w": 544,
+  "h": 1600
+ },
+ "more-providers-open@dark": {
+  "sha": "4c2d1e68118ecd8df4780745cc4fd222ba018872",
+  "w": 544,
+  "h": 1600
+ },
+ "more-providers-open@light": {
+  "sha": "679bd9bc5b3091482d77b45b4acc344f05787bae",
+  "w": 544,
+  "h": 1600
+ },
+ "narrow@dark": {
+  "sha": "ee530f19c96606526650e865fdd2454b7cd9b19e",
+  "w": 364,
+  "h": 1600
+ },
+ "narrow@light": {
+  "sha": "4e65b0d0eeda0098b2c61e300b2310a094721fc0",
+  "w": 364,
+  "h": 1600
+ },
+ "nothing-set-up@dark": {
+  "sha": "1ee0e679a3838acde9328f833dc13f31745b71a1",
+  "w": 544,
+  "h": 1600
+ },
+ "nothing-set-up@light": {
+  "sha": "00074e5465ebbbb24f63dc1d1b1f537ec0d71e1b",
+  "w": 544,
+  "h": 1600
+ },
+ "remove-asks-first@dark": {
+  "sha": "6d120ac15e546af669fc93a65d5d015403640de3",
+  "w": 544,
+  "h": 260
+ },
+ "remove-asks-first@light": {
+  "sha": "844bb6c14b4f5d5528af4b01cf6b680c379bf050",
+  "w": 544,
+  "h": 260
+ },
+ "search-a-lab-in-the-tail@dark": {
+  "sha": "1039d5ff0dd85dc2a31b96b6020fdd6eb5c5dd72",
+  "w": 544,
+  "h": 303
+ },
+ "search-a-lab-in-the-tail@light": {
+  "sha": "502960a75af9a562cffff492e12944729df1d189",
+  "w": 544,
+  "h": 303
+ },
+ "search-no-match@dark": {
+  "sha": "6009368414bd0d740aa69722ce1e3fcca0bd5082",
+  "w": 544,
+  "h": 226
+ },
+ "search-no-match@light": {
+  "sha": "55b1447a28c94a14809a11a001c7d961738966da",
+  "w": 544,
+  "h": 226
+ },
+ "the-endpoint-form-first-step@dark": {
+  "sha": "58653f1c79ca4d47f8b4b6a953465a8bd6c1e3e8",
+  "w": 544,
+  "h": 770
+ },
+ "the-endpoint-form-first-step@light": {
+  "sha": "d8b2238cea6d7fc8c9657eff7523265848fb9a2b",
+  "w": 544,
+  "h": 770
+ },
+ "the-endpoint-form-models-found@dark": {
+  "sha": "8f5e398a13c62602a99df7268dbb81a506ae6f36",
+  "w": 544,
+  "h": 920
+ },
+ "the-endpoint-form-models-found@light": {
+  "sha": "08d746f832f7dc27209c29c80b9505867c77ae9c",
+  "w": 544,
+  "h": 920
+ },
+ "the-filter-focused@dark": {
+  "sha": "5599f9eec5fb4269e7e0ff52386abfd1a2137399",
+  "w": 544,
+  "h": 1600
+ },
+ "the-filter-focused@light": {
+  "sha": "77093ba5a8bc6e06a3c09b2106d0e536b9a45503",
+  "w": 544,
+  "h": 1600
+ },
+ "typical@dark": {
+  "sha": "cf706bc71cb495bf753a8c7f3c80e2ab909b60c1",
+  "w": 544,
+  "h": 1600
+ },
+ "typical@light": {
+  "sha": "7fa4eca988c72bca47dda4a7257333480081e9e7",
+  "w": 544,
+  "h": 1600
+ }
+}

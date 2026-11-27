@@ -1,0 +1,42 @@
+{
+ "14-settings-general@bone": {
+  "sha": "2533774ee473178c20cfd3315e7050f168e68011",
+  "w": 1440,
+  "h": 900
+ },
+ "14-settings-general@catalog": {
+  "sha": "65cf0298aa5f148b151b2a2772372a4faabd632a",
+  "w": 1440,
+  "h": 900
+ },
+ "14-settings-general@graphite": {
+  "sha": "de3da51575de691b41dbb0bb7e9f8cbc37a8f454",
+  "w": 1440,
+  "h": 900
+ },
+ "14-settings-general@typewriter": {
+  "sha": "b4102fd5e7e03a65503c35852cb64526f702ba49",
+  "w": 1440,
+  "h": 900
+ },
+ "s39-settings-sessions@bone": {
+  "sha": "0e3f4d1d17e0ecb4fe7cbcf40e987b32171aee49",
+  "w": 1440,
+  "h": 900
+ },
+ "s39-settings-sessions@catalog": {
+  "sha": "8adeeca962d7ab05c49ac8c487d24d44007e5ad4",
+  "w": 1440,
+  "h": 900
+ },
+ "s39-settings-sessions@graphite": {
+  "sha": "b4dbc49760f3c75b84120a1f4aaca37738bd6216",
+  "w": 1440,
+  "h": 900
+ },
+ "s39-settings-sessions@typewriter": {
+  "sha": "c0504414c72f52fe21eee45f1d2952d187823f45",
+  "w": 1440,
+  "h": 900
+ }
+}

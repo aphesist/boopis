@@ -1,0 +1,62 @@
+{
+ "check-choose-any@dark": {
+  "sha": "ccbb27193176a251023fdcd3d10acd85818079c3",
+  "w": 1416,
+  "h": 116
+ },
+ "check-choose-any@light": {
+  "sha": "27aa072ee40faba2a6b8bb8b79c28f98a35deb62",
+  "w": 1416,
+  "h": 116
+ },
+ "focus@dark": {
+  "sha": "005805d24fd7e63ba6004a8ce76ab7c7bcdf8b7a",
+  "w": 1416,
+  "h": 268
+ },
+ "focus@light": {
+  "sha": "fb8b2910f562c392e57a50c4c96d18f1eba07026",
+  "w": 1416,
+  "h": 268
+ },
+ "hover@dark": {
+  "sha": "c71c3a2b096cb3d1c2533836da5b0f30e45ab41c",
+  "w": 1416,
+  "h": 268
+ },
+ "hover@light": {
+  "sha": "55d63f8f863c70b389584a9cd562a5fc30699160",
+  "w": 1416,
+  "h": 268
+ },
+ "import-pick@dark": {
+  "sha": "88b3c00fc0e3ab87259aa644eaaff0bb18094ab9",
+  "w": 1416,
+  "h": 152
+ },
+ "import-pick@light": {
+  "sha": "ee48d602581e678a1c0ec2589572a6c6aa30084a",
+  "w": 1416,
+  "h": 152
+ },
+ "long@dark": {
+  "sha": "44ea36bf7f7318849f0c52086f1f925d3c7d2060",
+  "w": 1416,
+  "h": 112
+ },
+ "long@light": {
+  "sha": "be68427a3db12fe0eab3de0a2b9cab0e22d26579",
+  "w": 1416,
+  "h": 112
+ },
+ "typical@dark": {
+  "sha": "a7c2ddcb73fbc4b2976573dcb57c89e63689b273",
+  "w": 1416,
+  "h": 268
+ },
+ "typical@light": {
+  "sha": "0dc18776e464cfd962e622cace9f4902c0b6de0d",
+  "w": 1416,
+  "h": 268
+ }
+}

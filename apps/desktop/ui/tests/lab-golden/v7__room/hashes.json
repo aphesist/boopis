@@ -1,0 +1,32 @@
+{
+ "a-long-group-name@dark": {
+  "sha": "b1f03a1be082a6fde8c88a80d6118c9c8b2e095c",
+  "w": 664,
+  "h": 607
+ },
+ "a-long-group-name@light": {
+  "sha": "29c4dcb85f5012a830110a5fcf6acdb3ea46af38",
+  "w": 664,
+  "h": 607
+ },
+ "release-crew-larger-112@dark": {
+  "sha": "6ad5e8ecda33aafc714be4168dd871dcfff99d7c",
+  "w": 744,
+  "h": 680
+ },
+ "release-crew-larger-112@light": {
+  "sha": "59509f7031fa47ab3afa0d394779e4d3b471c2cf",
+  "w": 744,
+  "h": 680
+ },
+ "release-crew@dark": {
+  "sha": "b1f03a1be082a6fde8c88a80d6118c9c8b2e095c",
+  "w": 664,
+  "h": 607
+ },
+ "release-crew@light": {
+  "sha": "29c4dcb85f5012a830110a5fcf6acdb3ea46af38",
+  "w": 664,
+  "h": 607
+ }
+}

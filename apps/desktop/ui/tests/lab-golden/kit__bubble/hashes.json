@@ -1,0 +1,52 @@
+{
+ "bot-fill@dark": {
+  "sha": "9332b536f6ec5d330cd4d39c97f8fb90f45834c8",
+  "w": 664,
+  "h": 102
+ },
+ "bot-fill@light": {
+  "sha": "ba0f91250337e12364fcc7b66e658ef01aab988c",
+  "w": 664,
+  "h": 102
+ },
+ "code@dark": {
+  "sha": "4d99f92ccc5902f12f98c176e47178ed878b14ca",
+  "w": 664,
+  "h": 61
+ },
+ "code@light": {
+  "sha": "4a55b079dd909d123a78eac26138740bbea56a97",
+  "w": 664,
+  "h": 61
+ },
+ "long@dark": {
+  "sha": "025164e89c468a3e13212ead051799367b71e11e",
+  "w": 664,
+  "h": 178
+ },
+ "long@light": {
+  "sha": "0f8b10549909c91814259c62ce484b3a356cd71e",
+  "w": 664,
+  "h": 178
+ },
+ "room-byline@dark": {
+  "sha": "e4f24ce287943a53087adb0a3197f4bc703f6f09",
+  "w": 664,
+  "h": 170
+ },
+ "room-byline@light": {
+  "sha": "f1299744fb992cf6cbd60d2283b1778aad228346",
+  "w": 664,
+  "h": 170
+ },
+ "typical@dark": {
+  "sha": "ff505de5f3643dcb1fc2407953a9d0c421126e64",
+  "w": 664,
+  "h": 352
+ },
+ "typical@light": {
+  "sha": "1a9ec4c67d9df282527490b40b7e5ddd3495a43f",
+  "w": 664,
+  "h": 352
+ }
+}

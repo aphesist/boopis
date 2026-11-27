@@ -1,0 +1,202 @@
+{
+ "a-running-turn-with-its-tasks-derived-from-board-17@bone": {
+  "sha": "8c80bdd681fdf5569c794c6a4551887097a86375",
+  "w": 1440,
+  "h": 900
+ },
+ "a-running-turn-with-its-tasks-derived-from-board-17@catalog": {
+  "sha": "688eb663f9a03dd2c9df4853962c7749ab4a3a39",
+  "w": 1440,
+  "h": 900
+ },
+ "a-running-turn-with-its-tasks-derived-from-board-17@graphite": {
+  "sha": "8627941469a359c974f5ef06665d3353d89c8916",
+  "w": 1440,
+  "h": 900
+ },
+ "a-running-turn-with-its-tasks-derived-from-board-17@typewriter": {
+  "sha": "84a724465ce95673acc474633da34f51f10dc1e4",
+  "w": 1440,
+  "h": 900
+ },
+ "s17-a-new-session@bone": {
+  "sha": "3342c0060a11f2abd95f65e01c11a3f4ff96cba4",
+  "w": 1440,
+  "h": 900
+ },
+ "s17-a-new-session@catalog": {
+  "sha": "563ad5b7c11b180505fba3408c6d4f9393317f2f",
+  "w": 1440,
+  "h": 900
+ },
+ "s17-a-new-session@graphite": {
+  "sha": "770475b2c503264c1eb6aed4b40fbaaac629907f",
+  "w": 1440,
+  "h": 900
+ },
+ "s17-a-new-session@typewriter": {
+  "sha": "8a144789e70d2ca990ccf886966dd344342ab6df",
+  "w": 1440,
+  "h": 900
+ },
+ "s20-running-supervised@bone": {
+  "sha": "86600476ef330b4a74ac7453fa9f05b69b0e0bed",
+  "w": 1440,
+  "h": 900
+ },
+ "s20-running-supervised@catalog": {
+  "sha": "39aa3721d7dcd5fe5bd8e22db04c37dc611c54a0",
+  "w": 1440,
+  "h": 900
+ },
+ "s20-running-supervised@graphite": {
+  "sha": "7fc9257b70f4a1134874204f3142d42250b2124d",
+  "w": 1440,
+  "h": 900
+ },
+ "s20-running-supervised@typewriter": {
+  "sha": "78361e847905d80a1265fcff2414885d93004c94",
+  "w": 1440,
+  "h": 900
+ },
+ "s23-a-finished-turn@bone": {
+  "sha": "d261a2d6d97ebd9dee774d36f335e6e64d47982c",
+  "w": 1440,
+  "h": 900
+ },
+ "s23-a-finished-turn@catalog": {
+  "sha": "dd16911491c4a3acf9d97be253fd0a3df4257a24",
+  "w": 1440,
+  "h": 900
+ },
+ "s23-a-finished-turn@graphite": {
+  "sha": "e3ea75d4b61e5eddb2403e5ae3d376bdcba622f0",
+  "w": 1440,
+  "h": 900
+ },
+ "s23-a-finished-turn@typewriter": {
+  "sha": "2a9347aec9e5dc297f5e9af1982f2de4eb9c9c8c",
+  "w": 1440,
+  "h": 900
+ },
+ "s33-a-setting-changed@bone": {
+  "sha": "a85d01db613008e25baadfb4395da14c7122c23c",
+  "w": 1440,
+  "h": 900
+ },
+ "s33-a-setting-changed@catalog": {
+  "sha": "00b08f0fa143bda96608d01e6cc4245550078199",
+  "w": 1440,
+  "h": 900
+ },
+ "s33-a-setting-changed@graphite": {
+  "sha": "00b08f0fa143bda96608d01e6cc4245550078199",
+  "w": 1440,
+  "h": 900
+ },
+ "s33-a-setting-changed@typewriter": {
+  "sha": "d59ca3dc1c646bd0247a44226d12ee908b53fb2f",
+  "w": 1440,
+  "h": 900
+ },
+ "s36-the-engine-stopped@bone": {
+  "sha": "cc8159eb26cc9781d79eda9d03d6ab410e4f48bd",
+  "w": 1440,
+  "h": 900
+ },
+ "s36-the-engine-stopped@catalog": {
+  "sha": "0d99226c7e1f53909b0759e805fc3416cb796151",
+  "w": 1440,
+  "h": 900
+ },
+ "s36-the-engine-stopped@graphite": {
+  "sha": "6e3e839e8a215afa24a0248e890734582b7a5d72",
+  "w": 1440,
+  "h": 900
+ },
+ "s36-the-engine-stopped@typewriter": {
+  "sha": "13901fbadece3408ee0483dba4b7c1a651f7ae8c",
+  "w": 1440,
+  "h": 900
+ },
+ "s37-no-model@bone": {
+  "sha": "0184b2599d4be7af5e3fdfab6d8ef8b44377c5cd",
+  "w": 1440,
+  "h": 900
+ },
+ "s37-no-model@catalog": {
+  "sha": "485e3ed949a814935d2eb455543713629df0e6f4",
+  "w": 1440,
+  "h": 900
+ },
+ "s37-no-model@graphite": {
+  "sha": "9b67c548a26479b719892b387b6d00889cbb5822",
+  "w": 1440,
+  "h": 900
+ },
+ "s37-no-model@typewriter": {
+  "sha": "73679bb5c2e15f298a24715db260f18b76f997a3",
+  "w": 1440,
+  "h": 900
+ },
+ "s38-the-gate-failed@bone": {
+  "sha": "bde1347f0b38a8e192c2532df7cf13a161714dae",
+  "w": 1440,
+  "h": 900
+ },
+ "s38-the-gate-failed@catalog": {
+  "sha": "542f886a25cabc5ba738951b9c36c135c6d2fced",
+  "w": 1440,
+  "h": 900
+ },
+ "s38-the-gate-failed@graphite": {
+  "sha": "8b474ae7e06b0d56e341566c3725863287c86e3c",
+  "w": 1440,
+  "h": 900
+ },
+ "s38-the-gate-failed@typewriter": {
+  "sha": "8b474ae7e06b0d56e341566c3725863287c86e3c",
+  "w": 1440,
+  "h": 900
+ },
+ "s40-the-session-s-details@bone": {
+  "sha": "00994206286bb0956d81944c737cdbcb2e7b997f",
+  "w": 1440,
+  "h": 900
+ },
+ "s40-the-session-s-details@catalog": {
+  "sha": "0e5462986719bf59f8536fbb93a6a029e72cbf9d",
+  "w": 1440,
+  "h": 900
+ },
+ "s40-the-session-s-details@graphite": {
+  "sha": "e54307fb03bef5c0a6eb06546ff97269268cb93b",
+  "w": 1440,
+  "h": 900
+ },
+ "s40-the-session-s-details@typewriter": {
+  "sha": "2488ec2eb37603f7e89722c786583711b13c58fc",
+  "w": 1440,
+  "h": 900
+ },
+ "s41-no-project@bone": {
+  "sha": "2ca6c48eaa2fb44c6fa114dc2f14f230f4e27512",
+  "w": 1440,
+  "h": 900
+ },
+ "s41-no-project@catalog": {
+  "sha": "378ea1591969321c4262d9e4b1c6047325603157",
+  "w": 1440,
+  "h": 900
+ },
+ "s41-no-project@graphite": {
+  "sha": "88ea6cdfefe76c5bef5d53a78ab1352a18bcbc8b",
+  "w": 1440,
+  "h": 900
+ },
+ "s41-no-project@typewriter": {
+  "sha": "b6e78d6ec49b8604df443bf1a7adc96f3d205a4f",
+  "w": 1440,
+  "h": 900
+ }
+}

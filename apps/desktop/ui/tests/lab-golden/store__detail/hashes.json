@@ -1,41 +1,41 @@
 {
  "a-connector-that-needs-a-key@bone": {
-  "sha": "76d5acc024a9be4b3e8b5c854faf40c9c936be08",
+  "sha": "7942bf0f08950a9067c2cb82d85bdfd777c6f455",
   "w": 1416,
   "h": 664
  },
  "a-connector-that-needs-a-key@catalog": {
-  "sha": "79ced3ee0c4428f0fd406f17d1b38f63610888d9",
+  "sha": "593649f8ae97994fc74edb0cee8db4a38cb8d0fc",
   "w": 1416,
   "h": 664
  },
  "a-connector-that-needs-a-key@graphite": {
-  "sha": "473ec38fa9454bc3cfdba0685c0a97c507359cc6",
+  "sha": "60e4b514597f7d30e1ba927537afe790c848e16f",
   "w": 1416,
   "h": 664
  },
  "a-connector-that-needs-a-key@typewriter": {
-  "sha": "473ec38fa9454bc3cfdba0685c0a97c507359cc6",
+  "sha": "60e4b514597f7d30e1ba927537afe790c848e16f",
   "w": 1416,
   "h": 664
  },
  "a-hosted-connector-from-the-collection-sign-in@bone": {
-  "sha": "29ba8cdb273b419d18faf563cbf7beac1cd05f13",
+  "sha": "da23f3211906806bf0594ff2128e4ed69079cde9",
   "w": 1416,
   "h": 664
  },
  "a-hosted-connector-from-the-collection-sign-in@catalog": {
-  "sha": "9cd2d6719e476d915bad3976d9cd5e5c9cb1904e",
+  "sha": "675b0be3784eb88dfe921b16131d4d22364fe1cb",
   "w": 1416,
   "h": 664
  },
  "a-hosted-connector-from-the-collection-sign-in@graphite": {
-  "sha": "2a9977028b662d64daf868badb265d864ebf0e83",
+  "sha": "1c5a7bed6738fea537d982f622035d611f9f6fff",
   "w": 1416,
   "h": 664
  },
  "a-hosted-connector-from-the-collection-sign-in@typewriter": {
-  "sha": "2a9977028b662d64daf868badb265d864ebf0e83",
+  "sha": "1c5a7bed6738fea537d982f622035d611f9f6fff",
   "w": 1416,
   "h": 664
  },
@@ -65,7 +65,7 @@
   "h": 664
  },
  "a-recommended-connector@catalog": {
-  "sha": "0be70de7f6a2eba2e9e22c0691888b7adc6aa336",
+  "sha": "f3e1913762eb66fe51888615d8ae66d63d6e616a",
   "w": 1416,
   "h": 664
  },
@@ -80,22 +80,22 @@
   "h": 664
  },
  "a-skill-from-the-recommended-list@bone": {
-  "sha": "664d104a3684bbf8016d97ed92123c4d54a7c92a",
+  "sha": "c8757b2be3d274efb81fd555ad1dbdb4b0ee7007",
   "w": 1416,
   "h": 664
  },
  "a-skill-from-the-recommended-list@catalog": {
-  "sha": "10e603dc1feeb01b25918ad255d26e72d3b83b1e",
+  "sha": "edbd8d90ed1d4c7c7583684c84b469960548e75e",
   "w": 1416,
   "h": 664
  },
  "a-skill-from-the-recommended-list@graphite": {
-  "sha": "b10083690ef0e44044785f75f3eafbe255a1d9ca",
+  "sha": "e5632416925757c00a6392c851849c2aacd38c76",
   "w": 1416,
   "h": 664
  },
  "a-skill-from-the-recommended-list@typewriter": {
-  "sha": "b10083690ef0e44044785f75f3eafbe255a1d9ca",
+  "sha": "e5632416925757c00a6392c851849c2aacd38c76",
   "w": 1416,
   "h": 664
  },
@@ -145,7 +145,7 @@
   "h": 664
  },
  "installed-with-an-update@catalog": {
-  "sha": "0f8b998d0b5b749e12da7cde292c46247609157b",
+  "sha": "4e54027530b2e8fd278a42d551de0127a8149aae",
   "w": 1416,
   "h": 664
  },
@@ -180,7 +180,7 @@
   "h": 664
  },
  "not-pinned-cannot-be-installed@bone": {
-  "sha": "aa37bd5676f6a8617d030141aad1f5a15e31e1f8",
+  "sha": "c064f6c1c87c7e9e42ebbaeea05cabdb74967198",
   "w": 1416,
   "h": 664
  },
@@ -205,7 +205,7 @@
   "h": 664
  },
  "not-reviewed-with-undeclared-egress@catalog": {
-  "sha": "22011128d39d60fa363aa5b4f95f0ae996d2a34a",
+  "sha": "9702c43a30be50cdcaa0e93d1b0bb13442b56809",
   "w": 1416,
   "h": 664
  },
@@ -220,17 +220,17 @@
   "h": 664
  },
  "taken-down-by-its-source@bone": {
-  "sha": "6f2bff66b91a3795de19600acd6bfd408e2931a5",
+  "sha": "18ca68af217100263cad7b000c20ddbd9fb8d59f",
   "w": 1416,
   "h": 664
  },
  "taken-down-by-its-source@catalog": {
-  "sha": "3ce3bbcf5443033eb60cf2fd7d3d1ac931d521eb",
+  "sha": "ab881ebc499cb5258b38344950e867e7b23401e1",
   "w": 1416,
   "h": 664
  },
  "taken-down-by-its-source@graphite": {
-  "sha": "15a849879d7fce0827503d648ce6e732406dfc35",
+  "sha": "5ea9568087ebe720623dbe2e2f1617ee222f3319",
   "w": 1416,
   "h": 664
  },

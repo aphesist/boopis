@@ -20,12 +20,12 @@
   "h": 50
  },
  "an-action-focused@dark": {
-  "sha": "9ee68baaf4d64d6f93643e294bee74f485152ea9",
+  "sha": "ec3c4fef2df93a1154435b1ca60d53ff1c311436",
   "w": 634,
   "h": 50
  },
  "an-action-focused@light": {
-  "sha": "82c06360c984a62631b3f0488a30a13fc4a9ab14",
+  "sha": "a56d3d5f086c2462443ca7c61eb956dc9bdeed82",
   "w": 634,
   "h": 50
  },
@@ -60,14 +60,14 @@
   "h": 44
  },
  "narrow@dark": {
-  "sha": "cd079bdaafbe06e46818be6d954d0f58d87b82ea",
+  "sha": "513a794c9b66453d0f83d36f745e7c251333f06d",
   "w": 352,
-  "h": 50
+  "h": 70
  },
  "narrow@light": {
-  "sha": "b0467d6f7cb36dab30c58d156577f4cf52ef3950",
+  "sha": "1fe17e0562ff4ebe832afd55d13c5a870743fc70",
   "w": 352,
-  "h": 50
+  "h": 70
  },
  "only-what-exists-undo-alone-then-nothing@dark": {
   "sha": "510b7f0d3f6a3c0beba10cca3cdfa46ae51417a7",

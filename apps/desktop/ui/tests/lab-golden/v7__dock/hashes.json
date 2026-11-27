@@ -1,0 +1,202 @@
+{
+ "120-bots-n-more@dark": {
+  "sha": "17a68e70aba3435c2dc4ec24e386ff94ce5b542d",
+  "w": 1440,
+  "h": 84
+ },
+ "120-bots-n-more@light": {
+  "sha": "b837aa69b14787e6873d76c389a1e9e920830617",
+  "w": 1440,
+  "h": 84
+ },
+ "a-card-with-no-messages-yet@dark": {
+  "sha": "4dafa13bf81fd10e3db96cb13edab7da73a948af",
+  "w": 1440,
+  "h": 84
+ },
+ "a-card-with-no-messages-yet@light": {
+  "sha": "7b76016cbda4f23d5da4e698df5465bb29473434",
+  "w": 1440,
+  "h": 84
+ },
+ "a-long-named-bot-hovered@dark": {
+  "sha": "bcd5ea8df9a6f07dc34fecd19fcaa794816e28a7",
+  "w": 1440,
+  "h": 84
+ },
+ "a-long-named-bot-hovered@light": {
+  "sha": "14628d972c958340a00892861720b71238cc57d3",
+  "w": 1440,
+  "h": 84
+ },
+ "a-long-named-bot-s-card@dark": {
+  "sha": "cd34bc557418242b2bc790eca73a8c896962df47",
+  "w": 1440,
+  "h": 84
+ },
+ "a-long-named-bot-s-card@light": {
+  "sha": "f3a3e9bea1f535d76511a892a55decfa552c180c",
+  "w": 1440,
+  "h": 84
+ },
+ "a-long-named-bot@dark": {
+  "sha": "585cfaa1ff607f7333a53cc216c5881695a207da",
+  "w": 1440,
+  "h": 84
+ },
+ "a-long-named-bot@light": {
+  "sha": "1ef28d6bf2c3d9206a4aa80db9d8ad440ef3e3c5",
+  "w": 1440,
+  "h": 84
+ },
+ "a-working-bot-s-card@dark": {
+  "sha": "b47e258ed05c02dfc66e85ba0405d97572dda7e0",
+  "w": 1440,
+  "h": 84
+ },
+ "a-working-bot-s-card@light": {
+  "sha": "f4b59f618c8222e35025f51b5c4bb4261df882d4",
+  "w": 1440,
+  "h": 84
+ },
+ "an-orb-focused@dark": {
+  "sha": "8ef29d3c896dd0da4271a5f8b8a31cc13625f700",
+  "w": 1440,
+  "h": 84
+ },
+ "an-orb-focused@light": {
+  "sha": "e751de23175ab21559bd68f859d526d1a3ab6000",
+  "w": 1440,
+  "h": 84
+ },
+ "an-orb-hovered@dark": {
+  "sha": "f9707493daf993a5e8c97cda7cba2d731fc07710",
+  "w": 1440,
+  "h": 84
+ },
+ "an-orb-hovered@light": {
+  "sha": "700ea31dab5d07e90df008c5c400c51ff0b0f4c4",
+  "w": 1440,
+  "h": 84
+ },
+ "at-rest-the-mock-s-bots@dark": {
+  "sha": "730339f3424564e9d64c4895ea3e403c968dfb7d",
+  "w": 1440,
+  "h": 84
+ },
+ "at-rest-the-mock-s-bots@light": {
+  "sha": "4214363905f7028f3dde6035aa45be37d4335a8f",
+  "w": 1440,
+  "h": 84
+ },
+ "atlas-s-card-a-thread@dark": {
+  "sha": "4dafa13bf81fd10e3db96cb13edab7da73a948af",
+  "w": 1440,
+  "h": 84
+ },
+ "atlas-s-card-a-thread@light": {
+  "sha": "7b76016cbda4f23d5da4e698df5465bb29473434",
+  "w": 1440,
+  "h": 84
+ },
+ "centred-in-the-window@dark": {
+  "sha": "bde17873bc7aabdca8d81b6d3a1e467af0a49dc4",
+  "w": 1440,
+  "h": 84
+ },
+ "centred-in-the-window@light": {
+  "sha": "d19cd18bb5a4140d00f0fbcf7018ecc31378f677",
+  "w": 1440,
+  "h": 84
+ },
+ "compact-when-idle@dark": {
+  "sha": "874f14204949228040954f0cf827e852a8ddd564",
+  "w": 1440,
+  "h": 84
+ },
+ "compact-when-idle@light": {
+  "sha": "c3d4b83b5899201cd7629e3f59cff2ad2d442f38",
+  "w": 1440,
+  "h": 84
+ },
+ "larger-112@dark": {
+  "sha": "79697ffb315343c27ac1a0e46a9544224d5b9e16",
+  "w": 1440,
+  "h": 94
+ },
+ "larger-112@light": {
+  "sha": "c76e2dd2552af2724afc78e824949c689d44b050",
+  "w": 1440,
+  "h": 94
+ },
+ "larger-125-a-card-open@dark": {
+  "sha": "35d13dbe677c01301fd3e8af0a8f4fca09c3b3a3",
+  "w": 1440,
+  "h": 105
+ },
+ "larger-125-a-card-open@light": {
+  "sha": "e0a8f4b9210deb33e9f35bd539fa63430c5493c2",
+  "w": 1440,
+  "h": 105
+ },
+ "larger-125@dark": {
+  "sha": "8f25a0adb84f7b5de17cbcbab4a7de7d24bf3ed4",
+  "w": 1440,
+  "h": 105
+ },
+ "larger-125@light": {
+  "sha": "488a3793831773145db352e1f74fd064260dc84d",
+  "w": 1440,
+  "h": 105
+ },
+ "nina-s-card-an-approval@dark": {
+  "sha": "a0b81d0511bab4273393c0e45c4ec3f37e2e3ef0",
+  "w": 1440,
+  "h": 84
+ },
+ "nina-s-card-an-approval@light": {
+  "sha": "1f1fc4f41071f5eaee4141234db45e86f9f8ce23",
+  "w": 1440,
+  "h": 84
+ },
+ "no-bots-of-your-own-no-dock@dark": {
+  "sha": "a14edd1ee6b56020c3c4fe7abeedcc6c59417b98",
+  "w": 1440,
+  "h": 84
+ },
+ "no-bots-of-your-own-no-dock@light": {
+  "sha": "edf98caea76283a626906fdaf06b119cbbd2ff74",
+  "w": 1440,
+  "h": 84
+ },
+ "one-bot@dark": {
+  "sha": "44deaef929d1f2a55396a8b51350744c54dba10f",
+  "w": 1440,
+  "h": 84
+ },
+ "one-bot@light": {
+  "sha": "51eb0d3eb811b92136caad950b3a77ac7f57dccc",
+  "w": 1440,
+  "h": 84
+ },
+ "the-asks-open-the-stack@dark": {
+  "sha": "7007a1a8685fd520e17201a5d7754394dd39baf1",
+  "w": 1440,
+  "h": 84
+ },
+ "the-asks-open-the-stack@light": {
+  "sha": "c27a22b38e4cd199a2e8ccc7f8606f4684fc4537",
+  "w": 1440,
+  "h": 84
+ },
+ "the-bots-tab-no-dock@dark": {
+  "sha": "d559c492de14e42cfd02deedb8fffff0eab0b98d",
+  "w": 1440,
+  "h": 84
+ },
+ "the-bots-tab-no-dock@light": {
+  "sha": "1046afcd20fedef6a1c9698ce722def0ee276155",
+  "w": 1440,
+  "h": 84
+ }
+}

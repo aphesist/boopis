@@ -10,7 +10,7 @@
   "h": 102
  },
  "a-command-waiting@dark": {
-  "sha": "76199bf2d4ca4e1bb3d1ba338737954bdb363478",
+  "sha": "45c2a19dabb47c991cb43df7358929f78f0a35a3",
   "w": 634,
   "h": 102
  },
@@ -18,6 +18,16 @@
   "sha": "a4a7ef84a47b45da98a104737cfc4c4e7f752f06",
   "w": 634,
   "h": 102
+ },
+ "a-model-s-name-in-words@dark": {
+  "sha": "19ec080bbafa2a72c759d9873cb8242c3304a9fb",
+  "w": 584,
+  "h": 118
+ },
+ "a-model-s-name-in-words@light": {
+  "sha": "fa8cd692cd95e401ef4b2625e963256060dbbef9",
+  "w": 584,
+  "h": 118
  },
  "allowed-and-denied-with-feedback@dark": {
   "sha": "b770b82df3d9440a7f9a902c7780709f995da36b",
@@ -60,22 +70,22 @@
   "h": 132
  },
  "focus@dark": {
-  "sha": "a2f5349f69caa075dbb26b131047284667241733",
+  "sha": "6850d44085c18ebab2ff48f727a897b997bc269d",
   "w": 584,
   "h": 218
  },
  "focus@light": {
-  "sha": "2f9bbbbfbb437e1ab56a142cd5b8390272f263ba",
+  "sha": "99828d910152325680be23ae70d90eec75f6a196",
   "w": 584,
   "h": 218
  },
  "hover@dark": {
-  "sha": "eb36703f2954d9521df0dd2f68972a270abd3bfa",
+  "sha": "d22bc6261a1214047c3846449e2d58e42fa4128a",
   "w": 584,
   "h": 218
  },
  "hover@light": {
-  "sha": "d8b6764984cdec24059a6969b2c516c822717a79",
+  "sha": "ffe412d0700a0d9578322d700b43b386692994af",
   "w": 584,
   "h": 218
  },
@@ -100,22 +110,22 @@
   "h": 318
  },
  "pressed@dark": {
-  "sha": "eb36703f2954d9521df0dd2f68972a270abd3bfa",
+  "sha": "d22bc6261a1214047c3846449e2d58e42fa4128a",
   "w": 584,
   "h": 218
  },
  "pressed@light": {
-  "sha": "d8b6764984cdec24059a6969b2c516c822717a79",
+  "sha": "ffe412d0700a0d9578322d700b43b386692994af",
   "w": 584,
   "h": 218
  },
  "typical@dark": {
-  "sha": "eb36703f2954d9521df0dd2f68972a270abd3bfa",
+  "sha": "d22bc6261a1214047c3846449e2d58e42fa4128a",
   "w": 584,
   "h": 218
  },
  "typical@light": {
-  "sha": "d8b6764984cdec24059a6969b2c516c822717a79",
+  "sha": "ffe412d0700a0d9578322d700b43b386692994af",
   "w": 584,
   "h": 218
  },
@@ -130,7 +140,7 @@
   "h": 136
  },
  "waiting@dark": {
-  "sha": "bf8f94348f7018c0220c499c5e301381c95895e3",
+  "sha": "077e7676ce9f256dd1b892101d4027b027c8bcb8",
   "w": 584,
   "h": 102
  },

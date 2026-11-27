@@ -1,0 +1,42 @@
+{
+ "a-file@dark": {
+  "sha": "558c535957131be36ae2ea6b8831cab31643849a",
+  "w": 664,
+  "h": 84
+ },
+ "a-file@light": {
+  "sha": "b72441612c80335f4e59f9a7f65cddf9534edf88",
+  "w": 664,
+  "h": 84
+ },
+ "a-long-name@dark": {
+  "sha": "80a4215b48bc50e044eda40328b30b2393b47012",
+  "w": 664,
+  "h": 84
+ },
+ "a-long-name@light": {
+  "sha": "2fd5b6a8df124a2eb8bf9445f7d8164e61af396c",
+  "w": 664,
+  "h": 84
+ },
+ "in-a-narrow-column@dark": {
+  "sha": "36a1fa5dfbe44e38e6dff49b8b4ddcf87bb5efaa",
+  "w": 244,
+  "h": 84
+ },
+ "in-a-narrow-column@light": {
+  "sha": "a155d34282ccca7ca7de645ccb3efc6cfeddeac8",
+  "w": 244,
+  "h": 84
+ },
+ "no-line@dark": {
+  "sha": "9b9c8f7cc873862cb634c41ca4c2a7506d7ff219",
+  "w": 664,
+  "h": 84
+ },
+ "no-line@light": {
+  "sha": "368dc65e1d6bb9e2aed2347c8f3751ccf4eaa2e3",
+  "w": 664,
+  "h": 84
+ }
+}

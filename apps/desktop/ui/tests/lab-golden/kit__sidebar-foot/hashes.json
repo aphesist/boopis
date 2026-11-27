@@ -1,0 +1,82 @@
+{
+ "a-long-name@dark": {
+  "sha": "6433675cf846600e521cbe634f334a27ba39f64a",
+  "w": 292,
+  "h": 56
+ },
+ "a-long-name@light": {
+  "sha": "189c89d520f18c1f3d3fb22dd788b8920473ef08",
+  "w": 292,
+  "h": 56
+ },
+ "narrow@dark": {
+  "sha": "199a57cc5558904cd3cdd8b52face77f6bd6e071",
+  "w": 204,
+  "h": 56
+ },
+ "narrow@light": {
+  "sha": "9380ca9af1558fbf396378115bc280bf2d665b02",
+  "w": 204,
+  "h": 56
+ },
+ "store-hovered-settings-pressed@dark": {
+  "sha": "248e7337d8ec5b0fd648514c6a437d8f5704212c",
+  "w": 292,
+  "h": 56
+ },
+ "store-hovered-settings-pressed@light": {
+  "sha": "004e29263df77263b8526ac78962c02944677060",
+  "w": 292,
+  "h": 56
+ },
+ "the-account-menu-open@dark": {
+  "sha": "2e530bf94d3ee0a51a9f4ecf7030e20b5c6d5207",
+  "w": 292,
+  "h": 56
+ },
+ "the-account-menu-open@light": {
+  "sha": "85105576f2a7df851b2b5018defed5c2b872acb7",
+  "w": 292,
+  "h": 56
+ },
+ "the-sessions-side-no-account@dark": {
+  "sha": "0d723e264b2ba013ef8a8567e8ba16bf3d717334",
+  "w": 292,
+  "h": 52
+ },
+ "the-sessions-side-no-account@light": {
+  "sha": "b5cb9cbc6a82f3b2e7146a75cbf94309263099e6",
+  "w": 292,
+  "h": 52
+ },
+ "typical@dark": {
+  "sha": "45ef2f3d85099ce0046cd78c854b6d73f719ec1a",
+  "w": 292,
+  "h": 56
+ },
+ "typical@light": {
+  "sha": "2bf907faa0d0ae99d72234806adc3274382da529",
+  "w": 292,
+  "h": 56
+ },
+ "you-focused@dark": {
+  "sha": "d6203c8a17d6c6581608f2ad30d506d444da59c7",
+  "w": 292,
+  "h": 56
+ },
+ "you-focused@light": {
+  "sha": "f3eef1bb1cfc95ff9062c3176bb3742ad50b11ac",
+  "w": 292,
+  "h": 56
+ },
+ "you-hovered@dark": {
+  "sha": "0cf0b2505e910cf5cb65fb258383032a290cbd5e",
+  "w": 292,
+  "h": 56
+ },
+ "you-hovered@light": {
+  "sha": "da5c82cb94f2f3e8c92ae8085f3f93bbe1a59a0c",
+  "w": 292,
+  "h": 56
+ }
+}

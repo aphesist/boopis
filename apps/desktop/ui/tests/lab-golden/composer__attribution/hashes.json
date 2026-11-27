@@ -20,193 +20,203 @@
   "h": 872
  },
  "a-council-is-answering-the-line-says-so@bone": {
-  "sha": "7734cadb545d1cad240ba21a146b883ce1174925",
+  "sha": "e7fe01c6b4ff954dc6f938c27f11d9bd515517ff",
   "w": 1152,
   "h": 856
  },
  "a-council-is-answering-the-line-says-so@catalog": {
-  "sha": "c4b57d5a87cca7546a892e7108a0f33121b57b71",
+  "sha": "4db90bb80bd7ad8cdd9274698779be93080ee76a",
+  "w": 1152,
+  "h": 856
+ },
+ "a-council-is-answering-the-line-says-so@graphite": {
+  "sha": "905346a0a674317b4bd99cdd8fc665b792075871",
+  "w": 1152,
+  "h": 856
+ },
+ "a-council-is-answering-the-line-says-so@typewriter": {
+  "sha": "e63329005ac33557c0539ef21a0e09473d85588a",
   "w": 1152,
   "h": 856
  },
  "a-mention-chip-in-the-composer@bone": {
-  "sha": "b09233149911e59bb2a06f67ba9e3f479ee7eb46",
+  "sha": "8c9466021f21c41c4893936662dff7512fa85363",
   "w": 1152,
   "h": 856
  },
  "a-mention-chip-in-the-composer@catalog": {
-  "sha": "638410038c8237e8044324897546591dc7c6b6a7",
+  "sha": "335be78305659a3f2977e5b9977ee268bb0a78f1",
   "w": 1152,
   "h": 856
  },
  "a-mention-chip-in-the-composer@graphite": {
-  "sha": "fdd7479524a8e49f4d3a72780f8aca72dc83c25f",
-  "w": 1180,
-  "h": 872
+  "sha": "4b7c82c235a3a20168348cdb779beeac72dcfe75",
+  "w": 1152,
+  "h": 856
  },
  "a-mention-chip-in-the-composer@typewriter": {
-  "sha": "24e284e65ed670be64031a823c83f3314c423441",
-  "w": 1180,
-  "h": 872
+  "sha": "934c1009e065792f85f4da7f6a010bef3dfe4d92",
+  "w": 1152,
+  "h": 856
  },
  "after-a-resume-a-council-turn-with-its-members@bone": {
-  "sha": "7da204860af4c7696946b53784f067b50e9ae555",
+  "sha": "2bd93e17218ffe0c60e53e93c0ff1d5b1d34c94b",
   "w": 1152,
   "h": 856
  },
  "after-a-resume-a-council-turn-with-its-members@catalog": {
-  "sha": "3ac112fc349de417a7d09ca01ee6b257509cbddf",
+  "sha": "947269ed6ccd440352ab46cdc2e7c3d630c5c172",
   "w": 1152,
   "h": 856
  },
  "after-a-resume-a-council-turn-with-its-members@graphite": {
-  "sha": "c283f2cb5181d339b0b5a9795528fe3e833558c9",
-  "w": 1180,
-  "h": 872
+  "sha": "083a7b61924366fe05eea3001d6f01e4dc8a51b5",
+  "w": 1152,
+  "h": 856
  },
  "after-a-resume-a-council-turn-with-its-members@typewriter": {
-  "sha": "1801e54926ed95afb8ced5955f523f2536b800f2",
-  "w": 1180,
-  "h": 872
+  "sha": "bd348ab2e7c57783556681e69f1f0f8bd96a7128",
+  "w": 1152,
+  "h": 856
  },
  "after-a-resume-one-reply-of-unknown-model@bone": {
-  "sha": "ec050317171d0e1b0ea43750993f3d8601c7f896",
+  "sha": "919266d165a07587428533078c089554d023a531",
   "w": 1152,
   "h": 856
  },
  "after-a-resume-one-reply-of-unknown-model@catalog": {
-  "sha": "dd91a67e4c7c6819c210b1832a230ac281e1459b",
+  "sha": "36a1ce92e832a1103caba137b02f009e4450b5ae",
   "w": 1152,
   "h": 856
  },
  "after-a-resume-one-reply-of-unknown-model@graphite": {
-  "sha": "76f56fdb11e692b4e12f31b64ab26c256c23880b",
-  "w": 1180,
-  "h": 872
+  "sha": "0b1385be4026cb9c2d456ca55c6a16ad1da3c0d4",
+  "w": 1152,
+  "h": 856
  },
  "after-a-resume-one-reply-of-unknown-model@typewriter": {
-  "sha": "6c39f2c018a5515e0cb6b6dbd74155abd4731c5f",
-  "w": 1180,
-  "h": 872
+  "sha": "0b1385be4026cb9c2d456ca55c6a16ad1da3c0d4",
+  "w": 1152,
+  "h": 856
  },
  "governed-a-mention-chip@bone": {
-  "sha": "1296fefbe3c5abc2e8a987071c07ba0acb198809",
+  "sha": "5be5a3edf8cc4965870b62fa9629e72de52474c8",
   "w": 1152,
   "h": 856
  },
  "governed-a-mention-chip@catalog": {
-  "sha": "037916a8a00732ec0d7ee4be0daebfee1cd0f80f",
+  "sha": "592aa6e69c32eb519a493def69fc8b0d0646370d",
   "w": 1152,
   "h": 856
  },
  "governed-a-mention-chip@graphite": {
-  "sha": "34172bb7c18ba04381a9486b9d8cc9d03c958590",
-  "w": 1180,
-  "h": 872
+  "sha": "c85747d462338a080de4df3b984f64ff87ad84f9",
+  "w": 1152,
+  "h": 856
  },
  "governed-a-mention-chip@typewriter": {
-  "sha": "748364d3133364434ec2af2269720a22cc724158",
-  "w": 1180,
-  "h": 872
+  "sha": "70e51a080ca3f615e7f2266df68001cf8582c417",
+  "w": 1152,
+  "h": 856
  },
  "governed-the-menu-says-the-message-runs-without-governance@bone": {
-  "sha": "04d93bf09507fcc3a7f7bb331b6476ea3ec790b7",
+  "sha": "a868b92bcf51dbb69c8c67d4597a626b84100408",
   "w": 1152,
   "h": 856
  },
  "governed-the-menu-says-the-message-runs-without-governance@catalog": {
-  "sha": "8497df6e19a8defcfd51a41aeef79044edac5286",
+  "sha": "40d22bd4f46d8f4911b5ef33aae361958253659f",
   "w": 1152,
   "h": 856
  },
  "governed-the-menu-says-the-message-runs-without-governance@graphite": {
-  "sha": "5bd511cdeb5a39e6e6a5bda1c6cc6cc98e503785",
-  "w": 1180,
-  "h": 872
+  "sha": "b9ec1d1bd652c1825b06be6cbfdbc4aa2cb45826",
+  "w": 1152,
+  "h": 856
  },
  "governed-the-menu-says-the-message-runs-without-governance@typewriter": {
-  "sha": "74a0c888ad237e309c8c03990e12961f4714f344",
-  "w": 1180,
-  "h": 872
+  "sha": "7d96f8ea284cefd3df5b0f9ef3d0e25d59b8c0fd",
+  "w": 1152,
+  "h": 856
  },
  "governed-the-tier-route-then-an-ungoverned-turn@bone": {
-  "sha": "487bbe517500b98a5b5dca758e99ecaabac66a20",
+  "sha": "47ce8215b6b691c2a164430c06005a97b23ccbbf",
   "w": 1152,
   "h": 856
  },
  "governed-the-tier-route-then-an-ungoverned-turn@catalog": {
-  "sha": "f0ba7c959f229e7d58cf01eb5279960a799b520c",
+  "sha": "1a6cb7026f2b84a975d71f74c62124796f04751c",
   "w": 1152,
   "h": 856
  },
  "governed-the-tier-route-then-an-ungoverned-turn@graphite": {
-  "sha": "7ee48a16f1d893f7c79a97cfbf26baf83f5710e6",
-  "w": 1180,
-  "h": 872
+  "sha": "a5f105ecb7bdccc8637d74502d72b88490c62aa2",
+  "w": 1152,
+  "h": 856
  },
  "governed-the-tier-route-then-an-ungoverned-turn@typewriter": {
-  "sha": "d5fe8373a1f6d92f0962a3d1c097fbf364c2700f",
-  "w": 1180,
-  "h": 872
+  "sha": "a5f105ecb7bdccc8637d74502d72b88490c62aa2",
+  "w": 1152,
+  "h": 856
  },
  "the-menu@bone": {
-  "sha": "47a4d51629b7b1c86623586e744decb71fca05af",
+  "sha": "0525bdabe9566ae73e52580e278afa51514ef1a3",
   "w": 1152,
   "h": 856
  },
  "the-menu@catalog": {
-  "sha": "6d4ca52e85c60b2efcbe32e049a8e0e59553db6c",
+  "sha": "33eb45fea2f65cb3f93e600c52c54cde859b0927",
   "w": 1152,
   "h": 856
  },
  "the-menu@graphite": {
-  "sha": "8317a31611161c81acc2d376ecde67f17adbc811",
-  "w": 1180,
-  "h": 872
+  "sha": "e474d3ca66c31c9d5474d1ccb1447af58cb075aa",
+  "w": 1152,
+  "h": 856
  },
  "the-menu@typewriter": {
-  "sha": "89c4a460688ed8daa99e3094496a782f3e7be440",
-  "w": 1180,
-  "h": 872
+  "sha": "b6de11464f0fcf6b53b03a7166d9b9110ebd05b0",
+  "w": 1152,
+  "h": 856
  },
  "three-models-with-dividers@bone": {
-  "sha": "0573cb0f04978039c4490deb79383cca7b5628d5",
+  "sha": "1e880329c68c6240294643e8dacc0a66e4eb4725",
   "w": 1152,
   "h": 856
  },
  "three-models-with-dividers@catalog": {
-  "sha": "6bdfe0189f70fb147aa7abb03ec8eb0ad0bee143",
+  "sha": "1e2b91e568c652a35fe8cd1b008841832a1b8cf4",
   "w": 1152,
   "h": 856
  },
  "three-models-with-dividers@graphite": {
-  "sha": "e81a2f4241937514d225651ee8512aeb9812eb92",
-  "w": 1180,
-  "h": 872
+  "sha": "1e2b91e568c652a35fe8cd1b008841832a1b8cf4",
+  "w": 1152,
+  "h": 856
  },
  "three-models-with-dividers@typewriter": {
-  "sha": "5e895a83b8da8117430970d8bf2b536295d61731",
-  "w": 1180,
-  "h": 872
+  "sha": "af604af07500125dcc453205e3a703af65cfdcc4",
+  "w": 1152,
+  "h": 856
  },
  "two-mentions-in-one-message@bone": {
-  "sha": "25902dbfd00b5831a32915a79363df19ea19aa6d",
+  "sha": "ecbe192143d85e17d949fc7e904c5b870ede4d7d",
   "w": 1152,
   "h": 856
  },
  "two-mentions-in-one-message@catalog": {
-  "sha": "bb634e8c5e29af487464c0d996f2bf86e329a93b",
+  "sha": "68fb5e2cce1b80cb3a3deba3ee2df5441651f7a1",
   "w": 1152,
   "h": 856
  },
  "two-mentions-in-one-message@graphite": {
-  "sha": "25d7d2f4c74466bf8cdba090eb2a5d3a0c986ffe",
-  "w": 1180,
-  "h": 872
+  "sha": "c1588d21d060deb0db3e8d295e4fc2b2f7201a47",
+  "w": 1152,
+  "h": 856
  },
  "two-mentions-in-one-message@typewriter": {
-  "sha": "eda80dcd1f3a1b6b8e7b6b3be1be4af7cec28670",
-  "w": 1180,
-  "h": 872
+  "sha": "d4b1a9c5921e5ee8b3228ef6d62ca5d91355fb9a",
+  "w": 1152,
+  "h": 856
  }
 }

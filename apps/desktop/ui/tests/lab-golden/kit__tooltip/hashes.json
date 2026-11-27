@@ -1,0 +1,32 @@
+{
+ "long@dark": {
+  "sha": "91ec125a1802cbaed03ca7dd5f3754a25a0cdcfa",
+  "w": 1416,
+  "h": 52
+ },
+ "long@light": {
+  "sha": "6ef499fc14da018c92cb45e850eaf6163e450c0c",
+  "w": 1416,
+  "h": 52
+ },
+ "shown@dark": {
+  "sha": "5f7e5d6fee47f5dcf193ec9086db7495effe5ff9",
+  "w": 1432,
+  "h": 96
+ },
+ "shown@light": {
+  "sha": "5f81f8af0e92abf165403aa04b6d9304a20630ed",
+  "w": 1432,
+  "h": 96
+ },
+ "typical@dark": {
+  "sha": "450592cd1ee65dc30705b4c129a117e07a4ee466",
+  "w": 1416,
+  "h": 52
+ },
+ "typical@light": {
+  "sha": "da48cfaacd06580d54bed192429854325d9f1ee6",
+  "w": 1416,
+  "h": 52
+ }
+}

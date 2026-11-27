@@ -1,6 +1,6 @@
 {
  "a-dropped-file-is-a-chip@dark": {
-  "sha": "2ac36322e745835f96bf58a49781ea09e4ec4e5c",
+  "sha": "fc80b6cd3507b02af0d07f161a15ab0d588fad4f",
   "w": 744,
   "h": 96
  },
@@ -10,7 +10,7 @@
   "h": 96
  },
  "a-file-dragged-over-it@dark": {
-  "sha": "3381252e9fea664eae95dc5a84f410731e60f99c",
+  "sha": "8c8f6103f10b41ee3c96469e913ac263eb87d421",
   "w": 744,
   "h": 156
  },
@@ -20,12 +20,12 @@
   "h": 156
  },
  "a-line-item-focused@dark": {
-  "sha": "1548ddfd1dc8d00e5faabc5593dc8eafa973e1c9",
+  "sha": "352777cfd5996b3cb6bdd78ae38054a88a678cc1",
   "w": 744,
   "h": 96
  },
  "a-line-item-focused@light": {
-  "sha": "70599d41fc67bc8d3ecdb17f5df7638588c15cb9",
+  "sha": "8bccff9888185bf0e37e2ff58fff3c9b94e915e4",
   "w": 744,
   "h": 96
  },
@@ -129,6 +129,46 @@
   "w": 344,
   "h": 108
  },
+ "dictation-getting-the-speech-model@dark": {
+  "sha": "c574bcf0276cd368a752ad9af402da058b740b7d",
+  "w": 744,
+  "h": 68
+ },
+ "dictation-getting-the-speech-model@light": {
+  "sha": "9d4e661bbca3fc992c2e0be9083295b611ec5621",
+  "w": 744,
+  "h": 68
+ },
+ "dictation-it-failed@dark": {
+  "sha": "e6c691e22179c51c4d39d34441b21448626eb144",
+  "w": 744,
+  "h": 68
+ },
+ "dictation-it-failed@light": {
+  "sha": "00b9fafa90cd446423a7c098554fd262ef0a6010",
+  "w": 744,
+  "h": 68
+ },
+ "dictation-not-in-this-build@dark": {
+  "sha": "fe094254f81ee1945911bae6482cfbe6097c199d",
+  "w": 744,
+  "h": 68
+ },
+ "dictation-not-in-this-build@light": {
+  "sha": "aecb06931bd6bd4d81c540be5c746bd955061e48",
+  "w": 744,
+  "h": 68
+ },
+ "dictation-the-words-arriving@dark": {
+  "sha": "ff091088a341b47e9e48b54e5ea437a0ff7211da",
+  "w": 744,
+  "h": 96
+ },
+ "dictation-the-words-arriving@light": {
+  "sha": "f3e5dc16aaf0ee6ac1432a7f3baf29d95aef0469",
+  "w": 744,
+  "h": 96
+ },
  "dock-typed@dark": {
   "sha": "c7a494de03564af8d83b48f38a53d4f5eccbb940",
   "w": 424,
@@ -150,7 +190,7 @@
   "h": 68
  },
  "focus@dark": {
-  "sha": "1b104d16739e918d9b8acf6b9ca102ac31831337",
+  "sha": "5dfdad60d4543447234ed1d7cbbdba72b08fad8c",
   "w": 744,
   "h": 104
  },
@@ -160,12 +200,12 @@
   "h": 104
  },
  "held@dark": {
-  "sha": "0ccae7d1488eb949f76d6ffd18549eda18a9f484",
+  "sha": "69d13f8c5bda699eb16e9251c92b9f6d6a21e36f",
   "w": 744,
   "h": 164
  },
  "held@light": {
-  "sha": "1e9a0f8eaa5404f2f81eb5218f49c21e0051b4e7",
+  "sha": "507da46d17dee7b77e1db958a1f15e3ddc50d99a",
   "w": 744,
   "h": 164
  },
@@ -215,7 +255,7 @@
   "h": 144
  },
  "multi-line@light": {
-  "sha": "9816610a9a00554eb7fbfc6a66cc66b41f0cc3ec",
+  "sha": "3712ffe464a1f9681a7dabc5e01ce741972f5c06",
   "w": 744,
   "h": 144
  },
@@ -235,7 +275,7 @@
   "h": 104
  },
  "no-model@light": {
-  "sha": "b9a9d0dd318f8a799bb7d3c9255407f834168389",
+  "sha": "9e304169f0711507163e2d3c04fde4495b32aa5b",
   "w": 744,
   "h": 104
  },
@@ -250,12 +290,12 @@
   "h": 156
  },
  "no-voice-model-yet-what-the-circle-opens@dark": {
-  "sha": "54f08575941d5e5b9a71006d8488f9e4c6b1c370",
+  "sha": "f06b196dd181abf8ca0d5d045997479a677335c2",
   "w": 744,
   "h": 68
  },
  "no-voice-model-yet-what-the-circle-opens@light": {
-  "sha": "69eb8ed8e22ff4001e10a86f9f67c49208009b1a",
+  "sha": "ce235fd8e07a993f98301f7484f44f4eec5d213d",
   "w": 744,
   "h": 68
  },
@@ -285,7 +325,7 @@
   "h": 104
  },
  "quick-menu-open@light": {
-  "sha": "2b66176bb60e811e896661be93ad76fa0da29475",
+  "sha": "b6552bdd63373f79e5919b8295b84f0ee3e4f44a",
   "w": 744,
   "h": 104
  },
@@ -350,7 +390,7 @@
   "h": 104
  },
  "stop-focused@dark": {
-  "sha": "b29ab78aa1d4e44bc734fed0aaf1db30ceb86a5d",
+  "sha": "3b8b01535162a5c519761b83f08500823a277eec",
   "w": 744,
   "h": 68
  },
@@ -410,12 +450,12 @@
   "h": 96
  },
  "the-mic-tooltip@dark": {
-  "sha": "1e37c1c8ac85b4f0a7ecd3f870ed59d3638f9762",
+  "sha": "998507d09305cc3b94bfea4177fe2ae815464067",
   "w": 744,
   "h": 96
  },
  "the-mic-tooltip@light": {
-  "sha": "d12c2d965cb046d65d310a418c7ccadc115b0bd1",
+  "sha": "33e3b95de3a353cdc9f34ee226110e88c43c11b8",
   "w": 744,
   "h": 96
  },

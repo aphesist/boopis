@@ -1,51 +1,61 @@
 {
  "dock-session-send-hover@bone": {
-  "sha": "d9dac6375b9cced0595200d243374e5abf76122c",
-  "w": 648,
-  "h": 68
+  "sha": "edc46bc73072b600f6a7014f7262367f80523bd7",
+  "w": 1440,
+  "h": 900
  },
  "dock-session-send-hover@catalog": {
-  "sha": "eb738054f50eada34550a47db72f21acad28e6e1",
-  "w": 648,
-  "h": 68
+  "sha": "70b6311f1141ba2e74355bdbd1fc1c61722b9529",
+  "w": 1440,
+  "h": 900
  },
  "dock-session-send-hover@graphite": {
-  "sha": "c5046e685f1694ec4f0c6b295ad4bba6f800f0b9",
-  "w": 448,
-  "h": 64
+  "sha": "a75231e14fa2c572744218cc46c888850ed23044",
+  "w": 1440,
+  "h": 900
  },
  "dock-session-send-hover@typewriter": {
-  "sha": "89bf70a80f4cf91e2b407aad9ff1e37ef2df866d",
-  "w": 448,
-  "h": 64
+  "sha": "4cfb1138a1ae4bc9eccf10a962dba57512abb5e3",
+  "w": 1440,
+  "h": 900
  },
  "dock-session@bone": {
-  "sha": "d9dac6375b9cced0595200d243374e5abf76122c",
-  "w": 648,
-  "h": 68
+  "sha": "909ea1a4865c614e445bd5d93723d31b745a0868",
+  "w": 1440,
+  "h": 900
  },
  "dock-session@catalog": {
-  "sha": "eb738054f50eada34550a47db72f21acad28e6e1",
-  "w": 648,
-  "h": 68
+  "sha": "03be91d25a24d89293d3a7ddc5550aa1eb822256",
+  "w": 1440,
+  "h": 900
  },
  "dock-session@graphite": {
-  "sha": "c5046e685f1694ec4f0c6b295ad4bba6f800f0b9",
-  "w": 448,
-  "h": 64
+  "sha": "d7237cb21d44a04e73422faa3005ef026e821f17",
+  "w": 1440,
+  "h": 900
  },
  "dock-session@typewriter": {
-  "sha": "89bf70a80f4cf91e2b407aad9ff1e37ef2df866d",
-  "w": 448,
-  "h": 64
+  "sha": "64f66ce937cabdb00b3af50d6f6b59c2bf1aa1e4",
+  "w": 1440,
+  "h": 900
  },
  "session-add-hover@bone": {
-  "sha": "53fe0e48ac53ce91560cef9eb6283987f96e2b28",
+  "sha": "955944daea7b2612562830ea8365aaf2b775e598",
   "w": 744,
   "h": 116
  },
  "session-add-hover@catalog": {
-  "sha": "badbedcd200a977ff0efcee2f3ba07ce93b334f7",
+  "sha": "46ccd70eb4698ee131378ba78cf974f9df0f8399",
+  "w": 744,
+  "h": 116
+ },
+ "session-add-hover@graphite": {
+  "sha": "46ccd70eb4698ee131378ba78cf974f9df0f8399",
+  "w": 744,
+  "h": 116
+ },
+ "session-add-hover@typewriter": {
+  "sha": "46ccd70eb4698ee131378ba78cf974f9df0f8399",
   "w": 744,
   "h": 116
  },
@@ -110,93 +120,123 @@
   "h": 165
  },
  "session-empty@bone": {
-  "sha": "7d44683f1f801d25a36be7f928e4818e0f90380f",
+  "sha": "e25827c07edb0b82b303fa0115abf4e87885b727",
   "w": 744,
   "h": 96
  },
  "session-empty@catalog": {
-  "sha": "052e02d7224414143e81c16ef83581f7b6fc53e9",
+  "sha": "a9ebcfa8df2169df1a9c4226a5f165547e9d7f8f",
   "w": 744,
   "h": 96
  },
  "session-empty@graphite": {
-  "sha": "da699192e3badb046ae0aa4c5b8d09d71e72d586",
+  "sha": "a9ebcfa8df2169df1a9c4226a5f165547e9d7f8f",
   "w": 744,
-  "h": 117
+  "h": 96
  },
  "session-empty@typewriter": {
-  "sha": "e4a2349323622cd2a54ca599977bf84a5e1a7e99",
+  "sha": "a9ebcfa8df2169df1a9c4226a5f165547e9d7f8f",
   "w": 744,
-  "h": 123
+  "h": 96
  },
  "session-send-hover@bone": {
-  "sha": "819ac7b0eb80e2dbc46b71da9e2643d24b026c2f",
+  "sha": "1fc3efcc1ff455cdafa40a2eea496a885c3a7056",
   "w": 744,
   "h": 116
  },
  "session-send-hover@catalog": {
-  "sha": "755a69e9ed29c64bae6cdc4965bf15b33959d73f",
+  "sha": "66266c1bd25ea8dd5546d946f04bc749771a683a",
   "w": 744,
   "h": 116
  },
  "session-send-hover@graphite": {
-  "sha": "d516c3aadf446165c551230e7e6498f73f13d797",
+  "sha": "66266c1bd25ea8dd5546d946f04bc749771a683a",
   "w": 744,
-  "h": 133
+  "h": 116
  },
  "session-send-hover@typewriter": {
-  "sha": "c3dad74b4bd5e74310da38734635a7c8395d0132",
+  "sha": "690e3066f0dec3f0c7c27b0efdcf25156f27f723",
   "w": 744,
-  "h": 155
+  "h": 116
  },
  "session-the-add-menu@bone": {
-  "sha": "564493d4feed35b705841424c96ab1ce3c69587c",
+  "sha": "5d8723c5cd961610232b0d6ce0e714711b6910c9",
   "w": 744,
   "h": 116
  },
  "session-the-add-menu@catalog": {
-  "sha": "aa585e8ae7f4c96bf4ece119450a46bb51bff091",
+  "sha": "6a1aee07e2f19e1983a9057984a7d0da147eb728",
+  "w": 744,
+  "h": 116
+ },
+ "session-the-add-menu@graphite": {
+  "sha": "6a1aee07e2f19e1983a9057984a7d0da147eb728",
+  "w": 744,
+  "h": 116
+ },
+ "session-the-add-menu@typewriter": {
+  "sha": "eba431476b0062e5299dd6756be275835f05adfe",
   "w": 744,
   "h": 116
  },
  "session-the-quick-menu@bone": {
-  "sha": "9ab83fbab400b6eff8e1d614dad4c578bed7236f",
+  "sha": "1a14a18bcd4071b765b26613e507918140d78006",
   "w": 744,
   "h": 116
  },
  "session-the-quick-menu@catalog": {
-  "sha": "04f0ca66956b38d2b7d6eaaefdd1199b675fc6dd",
+  "sha": "4f9b359569f52e7efb5d06d9c77fc0ddccf24496",
+  "w": 744,
+  "h": 116
+ },
+ "session-the-quick-menu@graphite": {
+  "sha": "50c1b40092579ce6f7ebc7c3d3c09ce92f9355cb",
+  "w": 744,
+  "h": 116
+ },
+ "session-the-quick-menu@typewriter": {
+  "sha": "460250d81eed1cfdad88d99f913067993cbfebfd",
   "w": 744,
   "h": 116
  },
  "session-who-answers-next@bone": {
-  "sha": "e6b6cb89c5f29da7406486c5ce93c94ac0d58b67",
+  "sha": "65759a56ea2701246ab28b068f362f5fd30e001f",
   "w": 744,
   "h": 116
  },
  "session-who-answers-next@catalog": {
-  "sha": "0a9195e3745d406606d7a921fc82cf1d7edc14aa",
+  "sha": "e2d1aa853b8c5e724b6cc4263e8ff0a5a24d43c2",
+  "w": 744,
+  "h": 116
+ },
+ "session-who-answers-next@graphite": {
+  "sha": "e86f35eec4fae107bbfffe565ff838cb2950660d",
+  "w": 744,
+  "h": 116
+ },
+ "session-who-answers-next@typewriter": {
+  "sha": "3ba658f73f5836f00320f0d1957088a78372e9d9",
   "w": 744,
   "h": 116
  },
  "session@bone": {
-  "sha": "824ab1b7f5c383d4d305526e29dafad506a1ad71",
+  "sha": "de76fbbaba56a7e5949795c7f2affdc6c964ae6b",
   "w": 744,
   "h": 116
  },
  "session@catalog": {
-  "sha": "ec5396e3f4219c4968fe5774f549608153b50e3b",
+  "sha": "fbdb82b51fbe96d338bfeb371d224d68b4d4948d",
   "w": 744,
   "h": 116
  },
  "session@graphite": {
-  "sha": "6b6174b3b639c3e9b922f527d643e38e3699f3d5",
+  "sha": "fbdb82b51fbe96d338bfeb371d224d68b4d4948d",
   "w": 744,
-  "h": 133
+  "h": 116
  },
  "session@typewriter": {
-  "sha": "fcbea85595c3e146c30de842308edd9f364deddc",
+  "sha": "cbad20e4c75f56df027d6a7714114462339030e3",
   "w": 744,
-  "h": 155
+  "h": 116
  }
 }

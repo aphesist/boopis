@@ -2,7 +2,7 @@
    (rules.mjs, probe.js), in Chromium. Writes lab-report/index.html (every failure with a crop and the mock's
    counterpart) and lab-report/summary.json. docs/UI-LAB.md.
 
-   pnpm lab:check [--area composer,dock] [--story kit/composer] [--state "add hovered"]
+   pnpm lab:check [--area composer,dock] [--story kit/composer] [--state "add hovered"]   (--story a,b: exactly those stories)
                   [--quick] [--presets catalog,bone] [--widths 1440] [--jobs 3]
                   [--update] [--no-visual] [--no-axe] [--no-stability] [--strict]
 
@@ -468,7 +468,7 @@ let rows;
 }
 const all = rows.length;
 /* an area's run also takes the whole-window pages: their findings are assigned to the area whose region they are in */
-rows = rows.filter((r) => (!AREA || AREA.includes(r.area) || r.kind === 'page') && (!STORY || r.story === STORY || r.story.includes(STORY)) && (!STATE || r.state === STATE || r.state.includes(STATE)) && (!ONLY_OVERLAY || r.overlay));
+rows = rows.filter((r) => (!AREA || AREA.includes(r.area) || r.kind === 'page') && (!STORY || (STORY.includes(',') ? STORY.split(',').includes(r.story) : r.story === STORY || r.story.includes(STORY))) && (!STATE || r.state === STATE || r.state.includes(STATE)) && (!ONLY_OVERLAY || r.overlay));
 for (const r of rows) r.overlayDecl = null;
 console.log(`lab: ${rows.length} of ${all} states · presets ${PRESETS.join(',')} · widths ${WIDTHS.join(',')} · ${JOBS} at a time${UPDATE ? ' · accepting goldens' : ''}`);
 

@@ -1,0 +1,42 @@
+{
+ "an-offer-narrow@dark": {
+  "sha": "05cc42c558e002b87875afe787f6b5b6d1f699c2",
+  "w": 324,
+  "h": 160
+ },
+ "an-offer-narrow@light": {
+  "sha": "a65c95569b36aa5de18a198688e818eb38cc2db6",
+  "w": 324,
+  "h": 160
+ },
+ "an-offer-s37@dark": {
+  "sha": "f4d75c7ebe9f0519b0ad85eae128f00a302a5846",
+  "w": 584,
+  "h": 126
+ },
+ "an-offer-s37@light": {
+  "sha": "676a9da8f942efec3e64e378182fe8102c9e6760",
+  "w": 584,
+  "h": 126
+ },
+ "long@dark": {
+  "sha": "a30a30de186020d33899e4a4705fbc6947136ec6",
+  "w": 504,
+  "h": 112
+ },
+ "long@light": {
+  "sha": "2acbd17591cda9f11b6ed12eb5918223ec6b8db4",
+  "w": 504,
+  "h": 112
+ },
+ "typical@dark": {
+  "sha": "d93599b127260e9b39d7ab0bddaf657160105d9d",
+  "w": 504,
+  "h": 200
+ },
+ "typical@light": {
+  "sha": "4584e2c5198296be32aad4738fed9c55d5c6b5ec",
+  "w": 504,
+  "h": 200
+ }
+}

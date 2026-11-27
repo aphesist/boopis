@@ -1,182 +1,182 @@
 {
  "a-long-session-title@bone": {
-  "sha": "8123367359948492ca13156524a20bad9f9b0835",
+  "sha": "f0dc633568c3eaf603654854378626cd4ab3dfeb",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "a-long-session-title@catalog": {
-  "sha": "d9aa858a79198de7526bb46aa235513e5236d2dd",
+  "sha": "1c189cbadaac6a48befe8f5cfa287bc7387a41dd",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "a-long-session-title@graphite": {
-  "sha": "e593ad4c5645446ef5b662db9fc91f4691c2315f",
+  "sha": "1c189cbadaac6a48befe8f5cfa287bc7387a41dd",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "a-long-session-title@typewriter": {
-  "sha": "7064ba0eca6121063a389586c8faee3a8dab14e9",
+  "sha": "c2f2cdc9818a9051aef38dd54f6d6f4915f07479",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "all-three-a-floating-desktop@bone": {
-  "sha": "8e5e7eb77d2f2f3b0de9588fb6ba07501f5fa5df",
+  "sha": "732b07002ae634505818de35f06ddc8e462a4a4d",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "all-three-a-floating-desktop@catalog": {
-  "sha": "7a435a9f1804cadd545bf5fc2df4e44e4941d6d8",
+  "sha": "3483c0b0bb6f44f11276474234e26cb1dbbcf1e6",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "all-three-a-floating-desktop@graphite": {
-  "sha": "fb40768e95e6c66f1805ec61eca3773ff6974a30",
+  "sha": "145149fdf42eb87c294dc46ff2ee27d9889e3aeb",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "all-three-a-floating-desktop@typewriter": {
-  "sha": "fa17ba95d5d980f81fd33118bbbb3b269a36809c",
+  "sha": "3483c0b0bb6f44f11276474234e26cb1dbbcf1e6",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "close-minimize-zoom-macos@bone": {
-  "sha": "6b975193dff11803f06ff08ec4480e943daf5dcf",
+  "sha": "f5bac56d96a93c61d1602bfd65e97cc5b3fcd7d6",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "close-minimize-zoom-macos@catalog": {
-  "sha": "a7f293683c0648c081d9614fce9f0f03130332c2",
+  "sha": "de7756a0058ebd2608df95ad1354a6b5f2bbd77c",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "close-minimize-zoom-macos@graphite": {
-  "sha": "46e2aed3b80f350125938e396c1cf61bb2d37b9c",
+  "sha": "de7756a0058ebd2608df95ad1354a6b5f2bbd77c",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "close-minimize-zoom-macos@typewriter": {
-  "sha": "e590fe58d517059f608d72f426064df3fb0260c6",
+  "sha": "4c0dc7bf1cf38e824bec2827d101b2e846d855dc",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "close-only-a-tiling-window-manager@bone": {
-  "sha": "bf44db801210c709caf9f33f867594b8fd3096c1",
+  "sha": "6c09accf2904385d4027ddc4337e5fe97c9e6791",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "close-only-a-tiling-window-manager@catalog": {
-  "sha": "a7af181fd3a3d5232bdadfa89da2e7f44c546233",
+  "sha": "1d5a8e1991af270e8105804fb1de25e5a9df4786",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "close-only-a-tiling-window-manager@graphite": {
-  "sha": "921f7faee33ab695ac38fa6fc6b7f6d8ef88628a",
+  "sha": "2fe7ee1955cb009087604e3f4c276484976c7621",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "close-only-a-tiling-window-manager@typewriter": {
-  "sha": "6b8061b09714f23da1be2bf13845ce7908830e30",
+  "sha": "a143df556e2434eece5341e9f968cadbc6e86475",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "close-only-hover@bone": {
-  "sha": "17cf69243697807c483c5d236ce2622435efef47",
+  "sha": "5f675c6d61d68fb9cf5d044c53324cdb0d9502d2",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "close-only-hover@catalog": {
-  "sha": "3a3de1ba262c7e05ea08f5de84f8e96e8a36756c",
+  "sha": "9741b7766cbf810364d080a419f5d068c05bc1d5",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "close-only-hover@graphite": {
-  "sha": "fe87db0daa9cb7c97288bbe0aca8555abe79792f",
+  "sha": "02cb2d6e998a001d5a93cff3dc825ba665242ce9",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "close-only-hover@typewriter": {
-  "sha": "3cb900e61a987a703dbeb2879980e17f5a95fe47",
+  "sha": "393a072058cc0a2869fa518733d3c1087fa14ac7",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "command-field-focus@bone": {
-  "sha": "3400c2b9133368e391e07ff0fbcc9bc9c1c22cac",
+  "sha": "98a23176e3248749787c26bff4a4de508d410d58",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "command-field-focus@catalog": {
-  "sha": "a72170efe5f8af3785aa7afee8b6fdc81d5171a1",
+  "sha": "3f4ded058017cd12cbe8a96e9b3af3f25881aa4f",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "command-field-focus@graphite": {
-  "sha": "8e36d75382bd2dc4179ad20f6c8c31121304f225",
+  "sha": "3f4ded058017cd12cbe8a96e9b3af3f25881aa4f",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "command-field-focus@typewriter": {
-  "sha": "d3310abaff8a4febb49cec22c597113d696f740c",
+  "sha": "faae902eb3316d0c4d90dc4ee8c93e8eefa4b56d",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "command-field-hover@bone": {
-  "sha": "cccadb13056a9cbd67d20ff5566a847da38eb0ba",
+  "sha": "2292333227c76989581dc00882cbe4b46729db61",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "command-field-hover@catalog": {
-  "sha": "46c08471960108e6d671013a4727e9760863a532",
+  "sha": "2232001e7040fbb13cbae1b132d4459305a10782",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "command-field-hover@graphite": {
-  "sha": "229cb03dcd418bcb2a5c2ed98f7df25314b7622c",
+  "sha": "e277c2e5eb5e3b60f02e5d8f07c9b90be8d0fc53",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "command-field-hover@typewriter": {
-  "sha": "420cdf656ff3a75293d19d58c06c1f6aa8fd49b1",
+  "sha": "1838eb2261e980612ece0573b7b8341106b49562",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "sidebar-button-tooltip@bone": {
-  "sha": "0ef112b2529ff96fa73de6e9df23d787c9649bea",
+  "sha": "ad2b1c2f25a86ee962b336e8a4aae3ac420bf7ea",
   "w": 1440,
-  "h": 92
+  "h": 106
  },
  "sidebar-button-tooltip@catalog": {
-  "sha": "640ddb6f2f637c46c6ba563719612a1ad01414da",
+  "sha": "15da9085a57e8b74a8c75ee23202bfe4eb9fbd74",
   "w": 1440,
-  "h": 92
+  "h": 106
  },
  "sidebar-button-tooltip@graphite": {
-  "sha": "8376735d370a170e3f2a572588132947a77c3b2f",
+  "sha": "7b1b7d2dfbf161ca478190caea6683c26fc3820c",
   "w": 1440,
-  "h": 92
+  "h": 106
  },
  "sidebar-button-tooltip@typewriter": {
-  "sha": "568c238cda507f4a431782f26d6aa280bc28e948",
+  "sha": "23719fb2f43d07ebcb56f1b79087cada6cf0c766",
   "w": 1440,
-  "h": 92
+  "h": 106
  },
  "typical@bone": {
-  "sha": "8e5e7eb77d2f2f3b0de9588fb6ba07501f5fa5df",
+  "sha": "a06826a7c4d55a274b5a5e3d6ff13a85c5becec0",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "typical@catalog": {
-  "sha": "7a435a9f1804cadd545bf5fc2df4e44e4941d6d8",
+  "sha": "145149fdf42eb87c294dc46ff2ee27d9889e3aeb",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "typical@graphite": {
-  "sha": "4e9bfe00e513ec669191c4f1169994450abb87bf",
+  "sha": "3483c0b0bb6f44f11276474234e26cb1dbbcf1e6",
   "w": 1440,
-  "h": 64
+  "h": 80
  },
  "typical@typewriter": {
-  "sha": "fa17ba95d5d980f81fd33118bbbb3b269a36809c",
+  "sha": "145149fdf42eb87c294dc46ff2ee27d9889e3aeb",
   "w": 1440,
-  "h": 64
+  "h": 80
  }
 }

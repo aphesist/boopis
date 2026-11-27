@@ -1,0 +1,32 @@
+{
+ "in-a-list@dark": {
+  "sha": "96887f6411d760c8c1d7590fd834f3b73611a8ff",
+  "w": 304,
+  "h": 78
+ },
+ "in-a-list@light": {
+  "sha": "968faaf86316a0a27dd71db2817a6cc06d6bbc47",
+  "w": 304,
+  "h": 78
+ },
+ "long@dark": {
+  "sha": "1cbd2bc6e840a368dfde3a645c37c3abcb0b8887",
+  "w": 384,
+  "h": 108
+ },
+ "long@light": {
+  "sha": "d211bd132064888a179cb5fe3466182f07b298b8",
+  "w": 384,
+  "h": 108
+ },
+ "typical@dark": {
+  "sha": "d78f757e4ad6ddc2c4320dbcb09553ea76faf105",
+  "w": 664,
+  "h": 342
+ },
+ "typical@light": {
+  "sha": "48302195ad194f270c9a0466d03d5fabde5bc093",
+  "w": 664,
+  "h": 342
+ }
+}

@@ -1,0 +1,132 @@
+{
+ "copy-address-hover@dark": {
+  "sha": "38fb18098323e5c04cf0db1d2b20687e5b97a087",
+  "w": 1416,
+  "h": 308
+ },
+ "copy-address-hover@light": {
+  "sha": "b88fc44873fec5e2a7c28b5b00cf398dbff21fba",
+  "w": 1416,
+  "h": 308
+ },
+ "copy-path-focus@dark": {
+  "sha": "54be40ea5b4b65a50ed1be7fbfe6bf0511f739eb",
+  "w": 1416,
+  "h": 308
+ },
+ "copy-path-focus@light": {
+  "sha": "c42ecedddd07d39d4426eb5e288005da47466b14",
+  "w": 1416,
+  "h": 308
+ },
+ "off-the-default@dark": {
+  "sha": "0281bf089c128262af46c26088126c2b48db4611",
+  "w": 1416,
+  "h": 119
+ },
+ "off-the-default@light": {
+  "sha": "1c3399aa8fb45f0e3c175d0ace0ef0575821668a",
+  "w": 1416,
+  "h": 119
+ },
+ "on-a-different-port@dark": {
+  "sha": "eae043c4cfa3549aa02e31fa8e931908c752463c",
+  "w": 1416,
+  "h": 308
+ },
+ "on-a-different-port@light": {
+  "sha": "1e78be73ab63eba2b8d5b8d05694ac750793da62",
+  "w": 1416,
+  "h": 308
+ },
+ "on-a-long-token-path@dark": {
+  "sha": "2f6637dc2545f4fb1881e0c36d23b36c6eacc5e5",
+  "w": 1416,
+  "h": 344
+ },
+ "on-a-long-token-path@light": {
+  "sha": "0daa8bcd442a6392171f28f43bc2a4aa5d3fc4d5",
+  "w": 1416,
+  "h": 344
+ },
+ "on-one-app-following@dark": {
+  "sha": "e97e9f965b52bab6789367317a246788d9fb9867",
+  "w": 1416,
+  "h": 308
+ },
+ "on-one-app-following@light": {
+  "sha": "a8528a9528c159c6919b0c9d83f2ce5fddc20005",
+  "w": 1416,
+  "h": 308
+ },
+ "on-two-apps-following@dark": {
+  "sha": "87d126e7f9a4cfab3854df09a78b367fa53ab179",
+  "w": 1416,
+  "h": 308
+ },
+ "on-two-apps-following@light": {
+  "sha": "8a911b09e2696c9c7d1d67a3eed56e126fde54f5",
+  "w": 1416,
+  "h": 308
+ },
+ "on-with-the-address-and-the-token-file@dark": {
+  "sha": "ab5c48e74e892166517076a2d0c95bf385ca28bf",
+  "w": 1416,
+  "h": 308
+ },
+ "on-with-the-address-and-the-token-file@light": {
+  "sha": "477ed97124a04893f3e0d592fbe2c0a543623ec0",
+  "w": 1416,
+  "h": 308
+ },
+ "rotate-pressed@dark": {
+  "sha": "8c0e9757174c39d47020110f33cebc1794fb0020",
+  "w": 1416,
+  "h": 308
+ },
+ "rotate-pressed@light": {
+  "sha": "13e2f0aed318357e2c9103d1678147ab7f588fb9",
+  "w": 1416,
+  "h": 308
+ },
+ "switch-focus@dark": {
+  "sha": "5126d890b6f7cca63eb828424a3ea50eea9bd520",
+  "w": 1416,
+  "h": 308
+ },
+ "switch-focus@light": {
+  "sha": "bfe5f91e956040f10b4f4b978fa0eb9a959be36a",
+  "w": 1416,
+  "h": 308
+ },
+ "switch-hover@dark": {
+  "sha": "ab5c48e74e892166517076a2d0c95bf385ca28bf",
+  "w": 1416,
+  "h": 308
+ },
+ "switch-hover@light": {
+  "sha": "477ed97124a04893f3e0d592fbe2c0a543623ec0",
+  "w": 1416,
+  "h": 308
+ },
+ "switched-on-but-not-started@dark": {
+  "sha": "f0aea2a4d6d951a5b1519b084fe3908495d9c32a",
+  "w": 1416,
+  "h": 119
+ },
+ "switched-on-but-not-started@light": {
+  "sha": "ae5a101c79bccb9bf2c49230254753d6a53070a0",
+  "w": 1416,
+  "h": 119
+ },
+ "switched-on-the-address-could-not-be-opened@dark": {
+  "sha": "df21ec6a9e41361e5fc07c8c5aa9bdadc8ae9420",
+  "w": 1416,
+  "h": 137
+ },
+ "switched-on-the-address-could-not-be-opened@light": {
+  "sha": "28199e3f0be2aaeb777122340f991b9312429e85",
+  "w": 1416,
+  "h": 137
+ }
+}

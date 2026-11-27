@@ -1,4 +1,34 @@
 {
+ "a-check-that-failed-its-files-put-back@dark": {
+  "sha": "a0d9d78f522859b2656c4c4a92730376a32d0428",
+  "w": 634,
+  "h": 292
+ },
+ "a-check-that-failed-its-files-put-back@light": {
+  "sha": "9b502b3809daf554e7274673d02f5f1e30ca8c31",
+  "w": 634,
+  "h": 292
+ },
+ "a-check-that-failed-long-output-and-narrow@dark": {
+  "sha": "d984faf18079dbf8f6dd9555323efced060c11ab",
+  "w": 352,
+  "h": 184
+ },
+ "a-check-that-failed-long-output-and-narrow@light": {
+  "sha": "076fe61c7ddd1aaff442ac4a76836a240586b3ab",
+  "w": 352,
+  "h": 184
+ },
+ "a-check-that-failed-s38@dark": {
+  "sha": "755fc6552cd104c2cb355d9ce43644dc6426d584",
+  "w": 634,
+  "h": 154
+ },
+ "a-check-that-failed-s38@light": {
+  "sha": "0fec19d696136341fc6347f6764dfc3f74c45ed0",
+  "w": 634,
+  "h": 154
+ },
  "empty@dark": {
   "sha": "3ec5f1c1599f9db56594836307e35fd4254bf0be",
   "w": 634,

@@ -5,7 +5,7 @@
   "h": 180
  },
  "a-long-query@catalog": {
-  "sha": "f53f51aceb4ccb352954879037163d8e6546d7e1",
+  "sha": "b42647ff18ac51b6062060b512cff66933c9ac05",
   "w": 664,
   "h": 180
  },
@@ -15,12 +15,12 @@
   "h": 180
  },
  "a-long-query@typewriter": {
-  "sha": "75469a2f7fc10f39da86adfe227ede2980a425cd",
+  "sha": "f53f51aceb4ccb352954879037163d8e6546d7e1",
   "w": 664,
   "h": 180
  },
  "field-focus-the-esc-key-chip@bone": {
-  "sha": "1b418e392f16dbbd3b8190db6fcc0a215640ba4c",
+  "sha": "75e8be774ed44cb61283de3b54a128918cfa9212",
   "w": 664,
   "h": 544
  },
@@ -30,7 +30,7 @@
   "h": 544
  },
  "field-focus-the-esc-key-chip@graphite": {
-  "sha": "7240ed3f6b2e51487d6cd5db2c9f9d5da775d02c",
+  "sha": "47ed84a8249986240cf05de7c58a0dbd1444e7bc",
   "w": 664,
   "h": 544
  },
@@ -65,12 +65,12 @@
   "h": 144
  },
  "no-matches@catalog": {
-  "sha": "34579e087f80f0c17c354fd528d6e862f26a6559",
+  "sha": "38f29dd0a4c459bc1e219ae9b5411cbf1de1e85a",
   "w": 664,
   "h": 144
  },
  "no-matches@graphite": {
-  "sha": "3f7605654cb77a1c94913bd7d75bd4e17de61a2f",
+  "sha": "c2fb0edc7cacbf4e2860aa211dbfe3d9ec3845c8",
   "w": 664,
   "h": 144
  },
@@ -95,12 +95,12 @@
   "h": 544
  },
  "open@typewriter": {
-  "sha": "47ed84a8249986240cf05de7c58a0dbd1444e7bc",
+  "sha": "1ea2158ea9dc183dfd81abb08d3cd83cfc71a3d5",
   "w": 664,
   "h": 544
  },
  "row-hover@bone": {
-  "sha": "9e599f614cc84ce4da898c4b6215a9a3aec1e66a",
+  "sha": "7331e4862461259ed3a9b4c2b5b38e7f978c1ca8",
   "w": 664,
   "h": 544
  },
@@ -115,7 +115,7 @@
   "h": 544
  },
  "row-hover@typewriter": {
-  "sha": "abc9312d922d1e269fbf1d2c5f53414745d123b0",
+  "sha": "086d1bd40312c22d265c150a578c01b46bd32b53",
   "w": 664,
   "h": 544
  },
@@ -125,17 +125,17 @@
   "h": 252
  },
  "typed-query@catalog": {
-  "sha": "3daf30031179412bb0d4e7608fc6d20b21b964b1",
+  "sha": "143cddb0b1e2fcc43982c104fc1994838fe76fd9",
   "w": 664,
   "h": 252
  },
  "typed-query@graphite": {
-  "sha": "d99411d4d26b06ab06df783ddb32f48897fc0b42",
+  "sha": "e2e0daa58930a1e52071eee55a9085ec49b30c8b",
   "w": 664,
   "h": 252
  },
  "typed-query@typewriter": {
-  "sha": "143cddb0b1e2fcc43982c104fc1994838fe76fd9",
+  "sha": "531cb42b28dafb7dae77bfbf4201b372ddc4cb9f",
   "w": 664,
   "h": 252
  }

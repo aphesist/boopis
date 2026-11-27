@@ -1,0 +1,122 @@
+{
+ "a-room-a-row-hovered-the-name-focused@dark": {
+  "sha": "f5169446915cddd05ef1a3fa010334294f3363a0",
+  "w": 404,
+  "h": 306
+ },
+ "a-room-a-row-hovered-the-name-focused@light": {
+  "sha": "8995d6fc4817657f862077a32b93e89527ad4ca8",
+  "w": 404,
+  "h": 306
+ },
+ "a-room@dark": {
+  "sha": "59b389c625b55703b898a14cdcaf7e90ec721612",
+  "w": 404,
+  "h": 602
+ },
+ "a-room@light": {
+  "sha": "0c0cddbc4979c659517e381e6d4dcfa4fad01956",
+  "w": 404,
+  "h": 602
+ },
+ "long@dark": {
+  "sha": "d4d85623e315f12c708673fef1255c1da5e6c14a",
+  "w": 404,
+  "h": 216
+ },
+ "long@light": {
+  "sha": "6e7e93b8e72c4d2a99d797dfbdd3df299e82b07b",
+  "w": 404,
+  "h": 216
+ },
+ "overlay@dark": {
+  "sha": "2b10d2078d1ad98c6a7d9d2d2eba6aad85b3254f",
+  "w": 404,
+  "h": 240
+ },
+ "overlay@light": {
+  "sha": "f183416e66757694ec0838d0a95be366c46e30a8",
+  "w": 404,
+  "h": 240
+ },
+ "session-a-selector-hovered-the-overflow-focused@dark": {
+  "sha": "4e2d49faaaa2a044da35d52628efe9cf8fd5b718",
+  "w": 404,
+  "h": 546
+ },
+ "session-a-selector-hovered-the-overflow-focused@light": {
+  "sha": "f15156276ba0f1494e713b49bd084f4e87987748",
+  "w": 404,
+  "h": 546
+ },
+ "session-no-overflow-a-long-name@dark": {
+  "sha": "3aba27d00db707b0cc13299f3487d207cc3b444a",
+  "w": 404,
+  "h": 338
+ },
+ "session-no-overflow-a-long-name@light": {
+  "sha": "c8c8ec5b51f0fe0aa71f1baae6a5c3bf67647f2b",
+  "w": 404,
+  "h": 338
+ },
+ "session-shared-with-a-mod-s-pane-the-strip@dark": {
+  "sha": "dd67df1e17436ee945625d071fde2f136a053a07",
+  "w": 404,
+  "h": 252
+ },
+ "session-shared-with-a-mod-s-pane-the-strip@light": {
+  "sha": "fc1e775cc14bd7efee8306fc5cfd63c0c184f5dd",
+  "w": 404,
+  "h": 252
+ },
+ "session@dark": {
+  "sha": "cb7fc14db43689e9d7c41a35037e15b987a8205c",
+  "w": 404,
+  "h": 546
+ },
+ "session@light": {
+  "sha": "6a815aadb81e84fb9ec036f57bcf8c5f62c93420",
+  "w": 404,
+  "h": 546
+ },
+ "tools-one-tool-alone@dark": {
+  "sha": "f1479aa7bd51975ebba1d0979ce9cb14b87e3e4b",
+  "w": 584,
+  "h": 216
+ },
+ "tools-one-tool-alone@light": {
+  "sha": "394959ec9f5566047965cd450b2c6fa6f3441033",
+  "w": 584,
+  "h": 216
+ },
+ "tools-terminal-with-side-chat@dark": {
+  "sha": "852dfc3d079c43f763a601bed5ec52cbae7bcd7f",
+  "w": 584,
+  "h": 210
+ },
+ "tools-terminal-with-side-chat@light": {
+  "sha": "7142f1efc0f5a594de8d8f036171986c620f65e6",
+  "w": 584,
+  "h": 210
+ },
+ "tools@dark": {
+  "sha": "77b3f93bba03fc5cd24069e84039f674374eb04a",
+  "w": 584,
+  "h": 218
+ },
+ "tools@light": {
+  "sha": "e4c729222f7df3af817480fc28a13c3cde3b6e21",
+  "w": 584,
+  "h": 218
+ },
+ "typical@dark": {
+  "sha": "98270e75f5cc41114a0e6873ab9705997d97df3e",
+  "w": 404,
+  "h": 500
+ },
+ "typical@light": {
+  "sha": "f826553656c0a6c4d21256dab9e579848edf5fdb",
+  "w": 404,
+  "h": 500
+ }
+}

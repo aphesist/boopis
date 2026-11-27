@@ -1,0 +1,22 @@
+{
+ "long@dark": {
+  "sha": "357cd1edcf9dad24c20cc77aeb573a6706c6cfd1",
+  "w": 444,
+  "h": 62
+ },
+ "long@light": {
+  "sha": "490aa451c2659e7ceb312f3fb235204202fd8ecf",
+  "w": 444,
+  "h": 62
+ },
+ "typical@dark": {
+  "sha": "9683373c7a6ef2c0b322736e557d9412a02ea0b4",
+  "w": 584,
+  "h": 356
+ },
+ "typical@light": {
+  "sha": "6f656a7e4ea30b9a8dddc96eb27795b5f05b23e0",
+  "w": 584,
+  "h": 356
+ }
+}

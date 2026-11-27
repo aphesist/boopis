@@ -1,0 +1,222 @@
+{
+ "a-finished-session@bone": {
+  "sha": "eb5e4a2fab09485d9cec272a9cc2a39709218919",
+  "w": 368,
+  "h": 900
+ },
+ "a-finished-session@catalog": {
+  "sha": "5dbc5eb78560a499c9400ba7ad5b9d85717e20d8",
+  "w": 368,
+  "h": 900
+ },
+ "a-finished-session@graphite": {
+  "sha": "b02cc5a46c6ca93f5c09e3338e1fa386e287b978",
+  "w": 368,
+  "h": 900
+ },
+ "a-finished-session@typewriter": {
+  "sha": "935a76c9199a3d431e6b31f8a54623ef1320551e",
+  "w": 368,
+  "h": 900
+ },
+ "a-row-hovered-a-selector-focused@bone": {
+  "sha": "cc81894eef67b965ae705da51801ab336ec06355",
+  "w": 368,
+  "h": 900
+ },
+ "a-row-hovered-a-selector-focused@catalog": {
+  "sha": "bc1bdd577afda23851de2068e91aa4f62e3a0eb2",
+  "w": 368,
+  "h": 900
+ },
+ "a-row-hovered-a-selector-focused@graphite": {
+  "sha": "174ed1741944ee2f6598496e1eefdc6cb978e726",
+  "w": 368,
+  "h": 900
+ },
+ "a-row-hovered-a-selector-focused@typewriter": {
+  "sha": "5a9ca7dbe751e8690c78797b8f67adb237de02b5",
+  "w": 368,
+  "h": 900
+ },
+ "a-running-session@bone": {
+  "sha": "230eaf8eada41c93cd0f2e1581c9f4a9525151f9",
+  "w": 368,
+  "h": 900
+ },
+ "a-running-session@catalog": {
+  "sha": "cd3c2bf020d44d89d9ab770645fff86c03f3c07f",
+  "w": 368,
+  "h": 900
+ },
+ "a-running-session@graphite": {
+  "sha": "2e0ad9ffea5adddb7bf07cd8c45d0de7c4e5230e",
+  "w": 368,
+  "h": 900
+ },
+ "a-running-session@typewriter": {
+  "sha": "f19172502bf5ed26800ed62f063d5a09a489a81c",
+  "w": 368,
+  "h": 900
+ },
+ "changing-the-cap-derived@bone": {
+  "sha": "34cd90456d40c23b671b8691a54a902947474df3",
+  "w": 368,
+  "h": 900
+ },
+ "changing-the-cap-derived@catalog": {
+  "sha": "ee9b606e770d793a27f949673a901357d6d8acfc",
+  "w": 368,
+  "h": 900
+ },
+ "changing-the-cap-derived@graphite": {
+  "sha": "065262977fa855fb40dac3d9841197eb664d3781",
+  "w": 368,
+  "h": 900
+ },
+ "changing-the-cap-derived@typewriter": {
+  "sha": "30ae845acbf961d68389f92cd4343953b6abebf4",
+  "w": 368,
+  "h": 900
+ },
+ "closed@bone": {
+  "sha": "15ba7e4a49674418ee3026252525a014aef2fd5b",
+  "w": 1440,
+  "h": 900
+ },
+ "closed@catalog": {
+  "sha": "82e7b36f6ece0512d5502ce49a55b7fce2a09363",
+  "w": 1440,
+  "h": 900
+ },
+ "closed@graphite": {
+  "sha": "019afb99290c278d2bf9a8898fe18a3442e192e0",
+  "w": 1440,
+  "h": 900
+ },
+ "closed@typewriter": {
+  "sha": "3410cc8e135311033c7c6877f66a05c8eec6a3f7",
+  "w": 1440,
+  "h": 900
+ },
+ "everything-the-session-knows-the-mock-s-session-environment-connectors-the-project-s-switch@bone": {
+  "sha": "67528a9a1ff92345bfc1b50ea03164d4c0ce010a",
+  "w": 368,
+  "h": 900
+ },
+ "everything-the-session-knows-the-mock-s-session-environment-connectors-the-project-s-switch@catalog": {
+  "sha": "3f24277b93f2107592477bf5420d963302afd084",
+  "w": 368,
+  "h": 900
+ },
+ "everything-the-session-knows-the-mock-s-session-environment-connectors-the-project-s-switch@graphite": {
+  "sha": "3f24277b93f2107592477bf5420d963302afd084",
+  "w": 368,
+  "h": 900
+ },
+ "everything-the-session-knows-the-mock-s-session-environment-connectors-the-project-s-switch@typewriter": {
+  "sha": "253f02ef9b86b839c9887f0415f4bbb324ab938c",
+  "w": 368,
+  "h": 900
+ },
+ "no-changes-the-diff-says-so@bone": {
+  "sha": "fddaae8c1df1705687e19f9d299ceba252bfe49a",
+  "w": 532,
+  "h": 900
+ },
+ "no-changes-the-diff-says-so@catalog": {
+  "sha": "e390bb92d7cf0835abde69a534daca4b264a7790",
+  "w": 532,
+  "h": 900
+ },
+ "no-changes-the-diff-says-so@graphite": {
+  "sha": "e390bb92d7cf0835abde69a534daca4b264a7790",
+  "w": 532,
+  "h": 900
+ },
+ "no-changes-the-diff-says-so@typewriter": {
+  "sha": "e390bb92d7cf0835abde69a534daca4b264a7790",
+  "w": 532,
+  "h": 900
+ },
+ "the-context-open-what-fills-it-compact-conversation-derived@bone": {
+  "sha": "cd89de075055e0cfa09865fc1cea5fe172d34bd6",
+  "w": 368,
+  "h": 900
+ },
+ "the-context-open-what-fills-it-compact-conversation-derived@catalog": {
+  "sha": "51f43ad74a8f326f9fd56ff7c7c2f0c248dd01c7",
+  "w": 368,
+  "h": 900
+ },
+ "the-context-open-what-fills-it-compact-conversation-derived@graphite": {
+  "sha": "51f43ad74a8f326f9fd56ff7c7c2f0c248dd01c7",
+  "w": 368,
+  "h": 900
+ },
+ "the-context-open-what-fills-it-compact-conversation-derived@typewriter": {
+  "sha": "d5e9d5834987ac84aa2dfd07b6db502a637f53ae",
+  "w": 368,
+  "h": 900
+ },
+ "the-diff-alone-derived-from-s24@bone": {
+  "sha": "efa060a9c0bc79c7b1ab5011ce00b1fc42c2198a",
+  "w": 532,
+  "h": 900
+ },
+ "the-diff-alone-derived-from-s24@catalog": {
+  "sha": "a6c96b9f88eac368763c65ec4033b67ec7e7ec13",
+  "w": 532,
+  "h": 900
+ },
+ "the-diff-alone-derived-from-s24@graphite": {
+  "sha": "a6c96b9f88eac368763c65ec4033b67ec7e7ec13",
+  "w": 532,
+  "h": 900
+ },
+ "the-diff-alone-derived-from-s24@typewriter": {
+  "sha": "a6c96b9f88eac368763c65ec4033b67ec7e7ec13",
+  "w": 532,
+  "h": 900
+ },
+ "the-diff-every-file-open@bone": {
+  "sha": "22c7b92846e7f55b2b1479655fbd525a59d014fe",
+  "w": 532,
+  "h": 900
+ },
+ "the-diff-every-file-open@catalog": {
+  "sha": "16cdf794df3aad73fcfabf0d0ac581e0d6d7cf1c",
+  "w": 532,
+  "h": 900
+ },
+ "the-diff-every-file-open@graphite": {
+  "sha": "16cdf794df3aad73fcfabf0d0ac581e0d6d7cf1c",
+  "w": 532,
+  "h": 900
+ },
+ "the-diff-every-file-open@typewriter": {
+  "sha": "16cdf794df3aad73fcfabf0d0ac581e0d6d7cf1c",
+  "w": 532,
+  "h": 900
+ },
+ "the-overflow-open@bone": {
+  "sha": "12fae79173e0cc3c679379cf2b3b51c97514b483",
+  "w": 368,
+  "h": 900
+ },
+ "the-overflow-open@catalog": {
+  "sha": "ee8f4c00fd44ccddf4e51968efd98cbc841f76f2",
+  "w": 368,
+  "h": 900
+ },
+ "the-overflow-open@graphite": {
+  "sha": "bacf2080725879a01d605d608fa7eb34858cdb80",
+  "w": 368,
+  "h": 900
+ },
+ "the-overflow-open@typewriter": {
+  "sha": "51d2eb442bfb0224ea0613045435cc77833645d5",
+  "w": 368,
+  "h": 900
+ }
+}

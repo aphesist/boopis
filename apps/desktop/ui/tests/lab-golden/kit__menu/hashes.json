@@ -1,0 +1,132 @@
+{
+ "a-list-with-descriptions@dark": {
+  "sha": "1ce77b6112a7103018536d894a5615198fa0bb1e",
+  "w": 1416,
+  "h": 366
+ },
+ "a-list-with-descriptions@light": {
+  "sha": "046e1c3bb07e8866db26a2ed7e2948dd5f6134b5",
+  "w": 1416,
+  "h": 366
+ },
+ "flipped-near-the-bottom@dark": {
+  "sha": "6f2ccdb158a59c99341765c49e54d1060f0c891d",
+  "w": 1416,
+  "h": 836
+ },
+ "flipped-near-the-bottom@light": {
+  "sha": "659236a8305b5d05e8ac7c4e29f9a60dc96016dc",
+  "w": 1416,
+  "h": 836
+ },
+ "long@dark": {
+  "sha": "a3519a48db87cb7d4136e1d6852ddd1edbc8e1bb",
+  "w": 1416,
+  "h": 100
+ },
+ "long@light": {
+  "sha": "f605fa251d58ff69851dc52fa3db0e1a3972ed20",
+  "w": 1416,
+  "h": 100
+ },
+ "open@dark": {
+  "sha": "d25350029bc4eea9a572627808f96f19f67ae8bc",
+  "w": 1416,
+  "h": 60
+ },
+ "open@light": {
+  "sha": "33d75884be36daa11a94b3aa05f57b4f726b442f",
+  "w": 1416,
+  "h": 60
+ },
+ "option-menu@dark": {
+  "sha": "a7c2ddcb73fbc4b2976573dcb57c89e63689b273",
+  "w": 1416,
+  "h": 268
+ },
+ "option-menu@light": {
+  "sha": "0dc18776e464cfd962e622cace9f4902c0b6de0d",
+  "w": 1416,
+  "h": 268
+ },
+ "options-with-marks-who-answers-next@dark": {
+  "sha": "b2e56ea7605f6fb0d6fdc99bb096c58e32f5926d",
+  "w": 444,
+  "h": 606
+ },
+ "options-with-marks-who-answers-next@light": {
+  "sha": "151f9e777d06cb11f6eaa6436aaadc211ee43d8b",
+  "w": 444,
+  "h": 606
+ },
+ "palette@dark": {
+  "sha": "486c9e14fcc95641194b523fb9ba2a91033b2c63",
+  "w": 704,
+  "h": 136
+ },
+ "palette@light": {
+  "sha": "89f516f406c8854ea3e78c226c389d1a974a13bd",
+  "w": 704,
+  "h": 136
+ },
+ "quick@dark": {
+  "sha": "bf260adc4ff11582a5180132be79fd719103341c",
+  "w": 1416,
+  "h": 220
+ },
+ "quick@light": {
+  "sha": "a6d14db1c12b686500ca5988b9f4f7277572fdbf",
+  "w": 1416,
+  "h": 220
+ },
+ "row-focus@dark": {
+  "sha": "5f7aa4e0c77e18f4146218a77774446ba3c380c0",
+  "w": 1416,
+  "h": 205
+ },
+ "row-focus@light": {
+  "sha": "6d4578113fe6ccbd1e7c19eb22c0d3e4d4dd8e04",
+  "w": 1416,
+  "h": 205
+ },
+ "row-hover@dark": {
+  "sha": "1725785d32d3d37421718ccd9facf2cd2f6b3f34",
+  "w": 1416,
+  "h": 205
+ },
+ "row-hover@light": {
+  "sha": "25ebaace83e6f7befb43abb3d5d0647d7aa33dfe",
+  "w": 1416,
+  "h": 205
+ },
+ "snooze@dark": {
+  "sha": "61c6ee4b71bea7f4576ea284a21c694776f52340",
+  "w": 1416,
+  "h": 132
+ },
+ "snooze@light": {
+  "sha": "647fbdc7bddc0f1575871a73b1b5b61439a7d848",
+  "w": 1416,
+  "h": 132
+ },
+ "split-button-menu@dark": {
+  "sha": "b3f98c527139c17bb0bbb431deb7a599d7462b2f",
+  "w": 1416,
+  "h": 60
+ },
+ "split-button-menu@light": {
+  "sha": "b1119efbc41bf590b3166a26fb33c6f572f2ae0a",
+  "w": 1416,
+  "h": 60
+ },
+ "typical@dark": {
+  "sha": "60bdf783489c66bbc7e01afede4ac870c3efb203",
+  "w": 1416,
+  "h": 205
+ },
+ "typical@light": {
+  "sha": "ed701120b515cc9ea6a0518b3dabec4cc6614023",
+  "w": 1416,
+  "h": 205
+ }
+}

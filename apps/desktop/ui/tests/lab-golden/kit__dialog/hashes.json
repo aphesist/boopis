@@ -1,0 +1,102 @@
+{
+ "confirm@dark": {
+  "sha": "ab09e8ddb6419c592564bee6e96c4bb2b2597ae9",
+  "w": 664,
+  "h": 240
+ },
+ "confirm@light": {
+  "sha": "521a56bc667b4a63703ac99894c537741af4c296",
+  "w": 664,
+  "h": 240
+ },
+ "error@dark": {
+  "sha": "eed91cdceda471e7ee7b7781aa50d2096784457d",
+  "w": 664,
+  "h": 302
+ },
+ "error@light": {
+  "sha": "cf6f5abe3a86524027981d33709d6330bc4f90b9",
+  "w": 664,
+  "h": 302
+ },
+ "focus@dark": {
+  "sha": "6803ef6a8988491238825bb6bb1c3f664d2daac3",
+  "w": 664,
+  "h": 314
+ },
+ "focus@light": {
+  "sha": "f8e4a7b3333f0a2065d976629caa70c8cd540093",
+  "w": 664,
+  "h": 314
+ },
+ "hover@dark": {
+  "sha": "d8e27e709a0b408516a92dff7d83b56034833ef5",
+  "w": 664,
+  "h": 314
+ },
+ "hover@light": {
+  "sha": "5da587921bf7edfbc5f2f725337b1168cead9412",
+  "w": 664,
+  "h": 314
+ },
+ "import@dark": {
+  "sha": "8488dadd3fbbee06d7ec22f17d5852e9837f5e45",
+  "w": 664,
+  "h": 350
+ },
+ "import@light": {
+  "sha": "1b88908e3ec460d4228f0f4d2b9be29269199da3",
+  "w": 664,
+  "h": 350
+ },
+ "large@dark": {
+  "sha": "c7b06cb07e14499942503a7cc518596e04faec48",
+  "w": 1024,
+  "h": 318
+ },
+ "large@light": {
+  "sha": "465c1476a770b482757485efb1a6bad0c115ec6e",
+  "w": 1024,
+  "h": 318
+ },
+ "long@dark": {
+  "sha": "6092a441a342d39ae75fd4b65a501dd99e3227da",
+  "w": 664,
+  "h": 316
+ },
+ "long@light": {
+  "sha": "38dd94e39e048e023851e6c363eae21d933e9a32",
+  "w": 664,
+  "h": 316
+ },
+ "new-bot@dark": {
+  "sha": "cd01c03d9775ccfa8c6b108cc16a8ced5a14a0f9",
+  "w": 664,
+  "h": 350
+ },
+ "new-bot@light": {
+  "sha": "63e372c5b53ac8f1f5f65f2bf9ed1afb9f57f4b4",
+  "w": 664,
+  "h": 350
+ },
+ "pressed@dark": {
+  "sha": "dcf9e1302e84aa9fcb155f06bcc18499d6406377",
+  "w": 664,
+  "h": 314
+ },
+ "pressed@light": {
+  "sha": "8e0adbfe543b21657d65d43db94f29ce62cf188e",
+  "w": 664,
+  "h": 314
+ },
+ "typical@dark": {
+  "sha": "c1ee5e6da91b81cff996c03107b6d8db3838a4f4",
+  "w": 664,
+  "h": 314
+ },
+ "typical@light": {
+  "sha": "aca7c4d38b6f5bf13c722925e4ae024f0a65de4c",
+  "w": 664,
+  "h": 314
+ }
+}

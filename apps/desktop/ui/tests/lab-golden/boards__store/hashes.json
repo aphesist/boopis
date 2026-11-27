@@ -1,0 +1,22 @@
+{
+ "15-the-store@bone": {
+  "sha": "cea3b4df2bc1c9717327dcc438d0dce349cff03a",
+  "w": 1440,
+  "h": 900
+ },
+ "15-the-store@catalog": {
+  "sha": "6531af3d4ec158d1a2c302a8e55ea3683a40713f",
+  "w": 1440,
+  "h": 900
+ },
+ "15-the-store@graphite": {
+  "sha": "ea67609ea6af17bde40135e56b8f913c66a3f7b7",
+  "w": 1440,
+  "h": 900
+ },
+ "15-the-store@typewriter": {
+  "sha": "ea67609ea6af17bde40135e56b8f913c66a3f7b7",
+  "w": 1440,
+  "h": 900
+ }
+}

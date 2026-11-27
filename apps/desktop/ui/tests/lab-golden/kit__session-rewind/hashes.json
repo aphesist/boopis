@@ -1,13 +1,13 @@
 {
  "body@dark": {
-  "sha": "8192bc066ba5c1f11e5dbcef540f40ef32c2e14a",
+  "sha": "f4fa5845fd7e2de04e286e8e7ef1aa9ba59f05fe",
   "w": 544,
-  "h": 172
+  "h": 194
  },
  "body@light": {
-  "sha": "44ca08494c0a6dbf129014401d3ef27779c78b50",
+  "sha": "871451eacf2be8457fb7b17ccbad81b63216decf",
   "w": 544,
-  "h": 172
+  "h": 194
  },
  "focus@dark": {
   "sha": "f19e434de5a0837aaa898c08a521c023fe0b95a5",
@@ -30,14 +30,14 @@
   "h": 134
  },
  "long@dark": {
-  "sha": "8a2801eacdea325347662ce0e0dfb3c0e7e52e91",
+  "sha": "984b05ce59761a0994b35f644bf6c98b0f15f84d",
   "w": 664,
-  "h": 644
+  "h": 612
  },
  "long@light": {
-  "sha": "f3a33a54bea479f4bd31057a932b3afb83f06e76",
+  "sha": "387079124937d8ec70d057c553c607049c5a708d",
   "w": 664,
-  "h": 644
+  "h": 612
  },
  "not-now@dark": {
   "sha": "ccc467e540cfc732836d60bd9170998d64c08d98",
@@ -50,12 +50,12 @@
   "h": 66
  },
  "nothing-to-do@dark": {
-  "sha": "531beda520ffbfb7bc94e645f6c602da2b719458",
+  "sha": "9bb1d6139cefccbdbb07019084ba8dea3ff47043",
   "w": 664,
   "h": 176
  },
  "nothing-to-do@light": {
-  "sha": "8ddee9342cd616001df4d8272cb08272ab1ecf59",
+  "sha": "085d540526d891c455d7d509ab359d4f62e100aa",
   "w": 664,
   "h": 176
  },
@@ -79,24 +79,34 @@
   "w": 664,
   "h": 134
  },
+ "refused-why-on-rewind@dark": {
+  "sha": "bd9873edcaf94f22f23648eea85035624386daf3",
+  "w": 664,
+  "h": 358
+ },
+ "refused-why-on-rewind@light": {
+  "sha": "9e4ac86d40b85f2ff9d5ee1352cb4dab38cbd3bf",
+  "w": 664,
+  "h": 358
+ },
  "refused@dark": {
-  "sha": "a6783d35b799d36031354d3a6812da6d3d2d772f",
+  "sha": "d84cc8a17615579607a98db1ee261748b3e9af23",
   "w": 664,
   "h": 220
  },
  "refused@light": {
-  "sha": "1c92c545b90f53d3efe51b687da56f16f5491f21",
+  "sha": "7c15d4770a41caf3a62842bbf0bd1eaf3b600a59",
   "w": 664,
   "h": 220
  },
  "typical@dark": {
-  "sha": "518a9f2dd2d65b6d358189281adaffa8bd730f43",
+  "sha": "84517d705caa0fa73ea2f22c36012cfab513e93d",
   "w": 664,
-  "h": 318
+  "h": 340
  },
  "typical@light": {
-  "sha": "fd94d372e8637869fa05f04d2b614579508e7d35",
+  "sha": "ca1d535398e884d45d922a25a4e06ac0f44a7475",
   "w": 664,
-  "h": 318
+  "h": 340
  }
 }

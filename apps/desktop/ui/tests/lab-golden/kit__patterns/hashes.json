@@ -1,0 +1,52 @@
+{
+ "long-text-editor@dark": {
+  "sha": "ce2790c6d824c87da7f1187ee8f947e85f388643",
+  "w": 924,
+  "h": 260
+ },
+ "long-text-editor@light": {
+  "sha": "688e4da45049ff3d0db06c004149868543e4a760",
+  "w": 924,
+  "h": 260
+ },
+ "long@dark": {
+  "sha": "7694ffc4798f1ef6a5e7b879af3af8bc36513e50",
+  "w": 444,
+  "h": 444
+ },
+ "long@light": {
+  "sha": "06944ead6e93556392c9c8f18638562768c0d8d6",
+  "w": 444,
+  "h": 444
+ },
+ "no-model@dark": {
+  "sha": "79adb1f23f49166c48b3b28eb7cc5dac0365848c",
+  "w": 784,
+  "h": 412
+ },
+ "no-model@light": {
+  "sha": "35ff9761cc9a0c4a4d70bcd08cc0857c83707300",
+  "w": 784,
+  "h": 412
+ },
+ "setup-form-bot@dark": {
+  "sha": "0e6f23693684365e52d4ee9f41d300b7d27c9b2b",
+  "w": 664,
+  "h": 652
+ },
+ "setup-form-bot@light": {
+  "sha": "e2dabe7f908f4bed0eeea6f4ed290794f3ecbf00",
+  "w": 664,
+  "h": 652
+ },
+ "typical@dark": {
+  "sha": "6be0dba5b1a19416a791d92c52e860dcf21efa93",
+  "w": 784,
+  "h": 412
+ },
+ "typical@light": {
+  "sha": "e82a864b7afd05a274833662772fbda69a484881",
+  "w": 784,
+  "h": 412
+ }
+}

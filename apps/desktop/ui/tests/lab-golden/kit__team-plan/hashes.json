@@ -1,0 +1,52 @@
+{
+ "a-permanent-action@dark": {
+  "sha": "ba5230c80685385b796ad677ff8460303744a2c9",
+  "w": 632,
+  "h": 156
+ },
+ "a-permanent-action@light": {
+  "sha": "47b0bc2b29258d753dce111b2da794cbdd3d8e48",
+  "w": 632,
+  "h": 156
+ },
+ "empty@dark": {
+  "sha": "b5b351846fab189ef040015b9285417ce7e68261",
+  "w": 632,
+  "h": 40
+ },
+ "empty@light": {
+  "sha": "2a4f5a7ba3f334e011f35fd5ab6bba0e17a01082",
+  "w": 632,
+  "h": 40
+ },
+ "long@dark": {
+  "sha": "1197590237fc6ec51cde763ccad5ecab27b56fe9",
+  "w": 384,
+  "h": 114
+ },
+ "long@light": {
+  "sha": "b84e504ec9e218feb40ce0bb1730aced9a79e83d",
+  "w": 384,
+  "h": 114
+ },
+ "problems@dark": {
+  "sha": "a5988b282713b4621eb64775ceb6c1d93c10935b",
+  "w": 632,
+  "h": 120
+ },
+ "problems@light": {
+  "sha": "0a487deab9ae935bb9230270d1956a9f28779fcd",
+  "w": 632,
+  "h": 120
+ },
+ "typical@dark": {
+  "sha": "aae12a6ac5fa3e9ed614723f198359230effa867",
+  "w": 632,
+  "h": 128
+ },
+ "typical@light": {
+  "sha": "e462a002bf1b0819ece28870415434df60b87da6",
+  "w": 632,
+  "h": 128
+ }
+}

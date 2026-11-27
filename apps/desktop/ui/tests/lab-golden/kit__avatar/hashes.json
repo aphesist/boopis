@@ -1,0 +1,52 @@
+{
+ "logomark@dark": {
+  "sha": "fefb053ecf490c1fa5cc6249dc3cb5559098eaf3",
+  "w": 1416,
+  "h": 96
+ },
+ "logomark@light": {
+  "sha": "feb0861a0521cb725638ca4bb23f4710af6f7ff8",
+  "w": 1416,
+  "h": 96
+ },
+ "long@dark": {
+  "sha": "bd78833159a6d4f95a590a12ec41faf1a98f1808",
+  "w": 1416,
+  "h": 60
+ },
+ "long@light": {
+  "sha": "a32269228d6444aabc0ee7bfc6898b100adbb20e",
+  "w": 1416,
+  "h": 60
+ },
+ "rest-and-states@dark": {
+  "sha": "52ed2b9451422c86dda38b6a630a25f378c1dafd",
+  "w": 784,
+  "h": 144
+ },
+ "rest-and-states@light": {
+  "sha": "a766bf7cdd848e7a883a3f00d917d421927bf6ac",
+  "w": 784,
+  "h": 144
+ },
+ "states@dark": {
+  "sha": "a5b4d4c1e7578a0638ce1135fc0e1b946447ab55",
+  "w": 1416,
+  "h": 64
+ },
+ "states@light": {
+  "sha": "967c6a8f43d68a11f388b262e3dbf970956bc11d",
+  "w": 1416,
+  "h": 64
+ },
+ "typical@dark": {
+  "sha": "57a538710bbe1481be11e25deb2ad55d88b6ec3a",
+  "w": 744,
+  "h": 198
+ },
+ "typical@light": {
+  "sha": "cb3028d77a09224eb7263002b0cf4b96964f7c52",
+  "w": 744,
+  "h": 198
+ }
+}

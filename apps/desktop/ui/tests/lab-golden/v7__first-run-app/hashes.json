@@ -1,36 +1,36 @@
 {
  "o-b01-boopis-greets-you@dark": {
-  "sha": "f529fc1dfee11f876f5925cce4a5566382ca638f",
+  "sha": "0ac5e6ee92c10a5a292c4842e0238747d9781572",
   "w": 1440,
   "h": 900
  },
  "o-b01-boopis-greets-you@light": {
-  "sha": "2c939b7151980964f6f9c22109c3fe32a143e0af",
+  "sha": "149624e75e510efcf4ef0e280165594eb12c58e6",
   "w": 1440,
   "h": 900
  },
  "o-b02-what-bots-are@dark": {
-  "sha": "788f8730dcaf94e3cf22339a02ab74e5abad9cd8",
+  "sha": "a946f7eb45cce02fc5355851acef8dc5d14c95e8",
   "w": 1440,
   "h": 900
  },
  "o-b02-what-bots-are@light": {
-  "sha": "d1674d36d19d42abb3443c6c26e31abed7e8ee7e",
+  "sha": "54950b97520c4869e0c3107049bfcd975a7357fa",
   "w": 1440,
   "h": 900
  },
  "o-b03-the-goals@dark": {
-  "sha": "69a59cb3701ca384f512bdcfb592754dd995352a",
+  "sha": "db996008efa0a0764555a7cd1bd78a140d21152f",
   "w": 1440,
   "h": 900
  },
  "o-b03-the-goals@light": {
-  "sha": "d32b0fb2a739ef375a5ac408d7fd7bae6675972a",
+  "sha": "c3effe0d62eb0f69aa8bc3f4ec55d05d4e41d588",
   "w": 1440,
   "h": 900
  },
  "o-b03b-two-goals-picked@dark": {
-  "sha": "8b8bae83623e3b6567eb1ffe4ffa2736946d9e7b",
+  "sha": "36c875adf5e3cf3833e9b749a3e64584f06edec1",
   "w": 1440,
   "h": 900
  },
@@ -45,7 +45,7 @@
   "h": 900
  },
  "o-b04-where-bots-work@light": {
-  "sha": "b491db119762ec7a9d9348c79d4c96c5e31b8163",
+  "sha": "a9f415bd1dee74ab42bf2e852d395bfb1ad5cbb9",
   "w": 1440,
   "h": 900
  },
@@ -55,87 +55,87 @@
   "h": 900
  },
  "o-b05-your-name@light": {
-  "sha": "9af8e5899256ce03312fa0952cb45063cc129f23",
+  "sha": "3d8fadbe2c4ce29d3dc1510e4a7391732b66c534",
   "w": 1440,
   "h": 900
  },
  "o-b06-the-starter-team@dark": {
-  "sha": "33ad0f149b586afea0986fd8acd3d10eadcf2504",
+  "sha": "09cbbbaf5306c25bb00dc7e403a31f754d6c86ac",
   "w": 1440,
   "h": 900
  },
  "o-b06-the-starter-team@light": {
-  "sha": "d4811f01ab442db095f2e3fa8bb08a81a36b7b59",
+  "sha": "c864631e092dbc718a02a4592a9d071229040b48",
   "w": 1440,
   "h": 900
  },
  "o-b07-the-approval-rules@dark": {
-  "sha": "86efd50405204ec72c56c2e9c3feb440bed21537",
+  "sha": "558c7732166055eeb72b9010b049ae241ab3cc7b",
   "w": 1440,
   "h": 900
  },
  "o-b07-the-approval-rules@light": {
-  "sha": "425d264f4fe7dfc17fac267b42278daa60336393",
+  "sha": "3603c53d92ae523e8ae9c086012824f7e05d53be",
   "w": 1440,
   "h": 900
  },
  "o-b08-the-build@dark": {
-  "sha": "9d78841a601e32ea20e2b740923360efc36c4459",
+  "sha": "4babdef5fbacec40e7c6333f4526d66ba4301d55",
   "w": 1440,
   "h": 900
  },
  "o-b08-the-build@light": {
-  "sha": "12a354ae1e912bb6ad0a055d6d2ce7a4b0c4c8fd",
+  "sha": "20e2484af64b8f1cf5a17b71161929af05738f3a",
   "w": 1440,
   "h": 900
  },
  "o-b09-reach@dark": {
-  "sha": "c5653f7f523457b84b2fa9722175d772b56fe287",
+  "sha": "068f178f0388d97a875c3676538fb9fe69e8f17e",
   "w": 1440,
   "h": 900
  },
  "o-b09-reach@light": {
-  "sha": "98a3869f2c5d061c5c8de3be33576e32aa6712df",
+  "sha": "5f159f57bd4e8d5e02189495fa92290dd339b9ae",
   "w": 1440,
   "h": 900
  },
  "o-h01-the-hand-off@dark": {
-  "sha": "bac557ac6fcfba0a9fb2f72c0411f973ac0ee4f1",
+  "sha": "fc03eae24047d1722bc6f4635311e37e52f76551",
   "w": 1440,
   "h": 900
  },
  "o-h01-the-hand-off@light": {
-  "sha": "89b4dd28208b634b6d9a8a54bc4be6f3ab2467e9",
+  "sha": "78b6122c329e74a01bc0bb0d6df97dd1c1e12a22",
   "w": 1440,
   "h": 900
  },
  "o-s01-add-a-folder@dark": {
-  "sha": "9e66a481022cd51996940ccfb0d5e95df71b80e8",
+  "sha": "9ccd35142bd16175260ea402298335118f5980c3",
   "w": 1440,
   "h": 900
  },
  "o-s01-add-a-folder@light": {
-  "sha": "7a0d3f970384a10fd7e6bbd211d38a15486f1e72",
+  "sha": "dca0fe1fe0c091bc84daa2b9f4b538512263e090",
   "w": 1440,
   "h": 900
  },
  "o-s03-how-careful@dark": {
-  "sha": "42507321f0989914fb1a49106c47db46fdcbf1aa",
+  "sha": "9b0ef9de80e31730be778f32588ab98ddd886e48",
   "w": 1440,
   "h": 900
  },
  "o-s03-how-careful@light": {
-  "sha": "9d54365f4b4d990ca943c90bae6dfaaaee9b3db7",
+  "sha": "03b9a5ff4ef83f742d54f5ce61791cfecce098d2",
   "w": 1440,
   "h": 900
  },
  "o-s04-ready@dark": {
-  "sha": "0ca4f8d25ea1993dc999d456fa03999198eaf495",
+  "sha": "f3950d9472876e67be9bf7393c1bdf1a08cff055",
   "w": 1440,
   "h": 900
  },
  "o-s04-ready@light": {
-  "sha": "ae6c3755eb1a7bfe736732ee5ac0c02087366176",
+  "sha": "3bf1f78d95a23e1143231f16e7364eed2652ac4c",
   "w": 1440,
   "h": 900
  }

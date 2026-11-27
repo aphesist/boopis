@@ -1,0 +1,102 @@
+{
+ "accept-hovered@bone": {
+  "sha": "d9185ca6d311a5efbb930b892e22c1416df18234",
+  "w": 744,
+  "h": 200
+ },
+ "accept-hovered@catalog": {
+  "sha": "fe644c88e6a02d6d850f4b184858a7b2ba2ec37c",
+  "w": 744,
+  "h": 200
+ },
+ "accept-hovered@graphite": {
+  "sha": "bc2be2de4818cb1f26376bcb9142a0d8d3c02450",
+  "w": 744,
+  "h": 200
+ },
+ "accept-hovered@typewriter": {
+  "sha": "bc2be2de4818cb1f26376bcb9142a0d8d3c02450",
+  "w": 744,
+  "h": 200
+ },
+ "accepted@bone": {
+  "sha": "fd41dc2e5c83e8da26ed6c8c3cba91984932e646",
+  "w": 744,
+  "h": 60
+ },
+ "accepted@catalog": {
+  "sha": "713389f7d9e38e9ccf2cbb1a78596fb17900d191",
+  "w": 744,
+  "h": 60
+ },
+ "accepted@graphite": {
+  "sha": "3723681ae8976613b4cf11b86fe77035cbd15b48",
+  "w": 744,
+  "h": 60
+ },
+ "accepted@typewriter": {
+  "sha": "3723681ae8976613b4cf11b86fe77035cbd15b48",
+  "w": 744,
+  "h": 60
+ },
+ "asked@bone": {
+  "sha": "0c18a50fed41750c035a7c287241aa6819c7e2ff",
+  "w": 744,
+  "h": 200
+ },
+ "asked@catalog": {
+  "sha": "96ffa848c64d57bb1e19e93f25c6964c9599d857",
+  "w": 744,
+  "h": 200
+ },
+ "asked@graphite": {
+  "sha": "44aa669f4bb8803669cd93a3024649d35e4275b3",
+  "w": 744,
+  "h": 200
+ },
+ "asked@typewriter": {
+  "sha": "44aa669f4bb8803669cd93a3024649d35e4275b3",
+  "w": 744,
+  "h": 200
+ },
+ "denied@bone": {
+  "sha": "0c350baa9509721302dbe6253b12df4db96defd7",
+  "w": 744,
+  "h": 60
+ },
+ "denied@catalog": {
+  "sha": "91f2e800fbc859dd51b9ee21b1d1633027305e3f",
+  "w": 744,
+  "h": 60
+ },
+ "denied@graphite": {
+  "sha": "d0ea2270db48b90e843f3c2ac14997ccdedd1b65",
+  "w": 744,
+  "h": 60
+ },
+ "denied@typewriter": {
+  "sha": "d0ea2270db48b90e843f3c2ac14997ccdedd1b65",
+  "w": 744,
+  "h": 60
+ },
+ "long@bone": {
+  "sha": "c1e0dcccdfbc7a16081004c693acb3bf0fd26e18",
+  "w": 444,
+  "h": 202
+ },
+ "long@catalog": {
+  "sha": "c0ad241996b58a25613d7651044b84601cd3da40",
+  "w": 444,
+  "h": 202
+ },
+ "long@graphite": {
+  "sha": "5ac269c78ef2bea8e6482e2e45406d6a26655f80",
+  "w": 444,
+  "h": 202
+ },
+ "long@typewriter": {
+  "sha": "5ac269c78ef2bea8e6482e2e45406d6a26655f80",
+  "w": 444,
+  "h": 202
+ }
+}

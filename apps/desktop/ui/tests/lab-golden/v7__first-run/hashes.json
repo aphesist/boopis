@@ -1,211 +1,211 @@
 {
  "a-key-in-place@dark": {
-  "sha": "0ef04cb6a5c12a0bc940408460685aac22b9e2e7",
+  "sha": "e3022436decb7fee49c8718a5ebb35de3b6d7a8f",
   "w": 1440,
   "h": 900
  },
  "a-key-in-place@light": {
-  "sha": "6efb7c3b84ee45e0491c9fec491d820656f57e76",
+  "sha": "da5b3f862c0c5c9e1c05a075d13f5530ac859107",
   "w": 1440,
   "h": 900
  },
  "a-model-row-focused@dark": {
-  "sha": "4933bea0da496b793722a0c7091229ea4bb0a854",
+  "sha": "f6a626f5cb574ad11e48843a7f8644c7266be837",
   "w": 1440,
   "h": 900
  },
  "a-model-row-focused@light": {
-  "sha": "ccc4377542978f8d97a8e7bebd720685e6f9b30e",
+  "sha": "06a011cb57218232d240c3365df1d13998e13124",
   "w": 1440,
   "h": 900
  },
  "a-step-stopped@dark": {
-  "sha": "82698a2a94de68fd5323e5f6444db7992fa3c830",
+  "sha": "807d3cd148d3b95e5182619870323333d4afa7fb",
   "w": 1440,
   "h": 900
  },
  "a-step-stopped@light": {
-  "sha": "8e6504eaa019dbb2055821f42f44a80ca9bad1a7",
+  "sha": "921a14210c3f2de942560d4d6adf14ba294de1be",
   "w": 1440,
   "h": 900
  },
  "change-models-autostart@dark": {
-  "sha": "1974cb466374d7a477f76e8b2975016ca26e664e",
+  "sha": "9ffb1020355abf2ea30e646d7e21b35dc4f224d4",
   "w": 1440,
   "h": 900
  },
  "change-models-autostart@light": {
-  "sha": "9363d282d3ae6143075d38d8082be73a0b05335b",
+  "sha": "588ea09a09ceb6fe90b5b95dc74d5694a2037c75",
   "w": 1440,
   "h": 900
  },
  "close-minimize-zoom-macos@dark": {
-  "sha": "a30615d617e8afa6717f272c91ac12442bcdf150",
+  "sha": "54239920bf734e0b6e0a19e464c6ec02fd0b4ca4",
   "w": 1440,
   "h": 900
  },
  "close-minimize-zoom-macos@light": {
-  "sha": "8fb2167a55369fc215549cf7aa4e61ca91220472",
+  "sha": "ad4c55c17e37d98af9b76ee30b843d46b1c69081",
   "w": 1440,
   "h": 900
  },
  "close-only-a-tiling-desktop@dark": {
-  "sha": "9b2b453ca96a71d539f3005cce55f1661448a61a",
+  "sha": "013862074503e7b4df4b698ffbc1e1c730497f9e",
   "w": 1440,
   "h": 900
  },
  "close-only-a-tiling-desktop@light": {
-  "sha": "84bcbb875bf0d941618ffa461c90a68e06a07836",
+  "sha": "c05883311f03fcc7011507aa5cc41b05e0c6b6cf",
   "w": 1440,
   "h": 900
  },
  "let-s-start-focused@dark": {
-  "sha": "3c8b0b301d347eb4230b1fb357fbd2d4cf1b4647",
+  "sha": "958acee62cf2a1cb9233c7a012d7d676e986d64d",
   "w": 1440,
   "h": 900
  },
  "let-s-start-focused@light": {
-  "sha": "2500247ac100021d82a516a15a3b2f1fd92360c4",
+  "sha": "1157cb60815e714b38104735aedddd2ac1666c66",
   "w": 1440,
   "h": 900
  },
  "let-s-start-hovered@dark": {
-  "sha": "ba2cc1c6fdb3c6773eeb758f1936c66f9f23c034",
+  "sha": "0307de394233f3c155dd72b41896be4f1875ed4d",
   "w": 1440,
   "h": 900
  },
  "let-s-start-hovered@light": {
-  "sha": "b8f84ce400d1b6deeeb701713c6633c11b6a7fb1",
+  "sha": "62a4dd6763b0ab29109abff9c3169bdd0319f718",
   "w": 1440,
   "h": 900
  },
  "more-ways-add-another@dark": {
-  "sha": "8db03c8b829d2514e782fcca7953e9cb47d74331",
+  "sha": "c672a186074b64ffb1aa59a3650234b76151d69a",
   "w": 1440,
   "h": 900
  },
  "more-ways-add-another@light": {
-  "sha": "42132095495b3c7eeddf0224bbfd44a90ba0e8b8",
+  "sha": "f3c7cc45b0793dd42947a79f55702c9f227631ab",
   "w": 1440,
   "h": 900
  },
  "o-p01-hello@dark": {
-  "sha": "7bbbe5c5adffb6d304e285232383af3c6d6a3721",
+  "sha": "f9957b33a32c413ff9b341e39f044de32c767240",
   "w": 1440,
   "h": 900
  },
  "o-p01-hello@light": {
-  "sha": "068668ff80a3027cff173df52ba4fa7781a79a11",
+  "sha": "be9aaa70e175f09446f65daffee620c8f1305439",
   "w": 1440,
   "h": 900
  },
  "o-p01b-the-engine-getting-ready@dark": {
-  "sha": "d60f6006693d65655f16b818ba45ea20b2362009",
+  "sha": "422c5f2ce20054824f1e274ec07761da8ff2e41a",
   "w": 1440,
   "h": 900
  },
  "o-p01b-the-engine-getting-ready@light": {
-  "sha": "0cc069dd9b00291cd402bc8496db7e897d02945f",
+  "sha": "3a22aea3be7e42e5dc8d5bb0b327c40014c82dc3",
   "w": 1440,
   "h": 900
  },
  "o-p02-the-settings-boopis-needs@dark": {
-  "sha": "3fc614cbea0a881a24c9a9548492c73a3e0e3f7b",
+  "sha": "9f3e5d2dde003a2ce02cb7af5aeba24a65e20362",
   "w": 1440,
   "h": 900
  },
  "o-p02-the-settings-boopis-needs@light": {
-  "sha": "2c6c0b6dec3e2e299a90c5f81a0b8af5074c4c30",
+  "sha": "b7852e3e600d571ab0d9dc5a2533770238a19794",
   "w": 1440,
   "h": 900
  },
  "o-p03-a-model-found@dark": {
-  "sha": "c5e6dc7cefed49f99974cee8df86fa967e8c537c",
+  "sha": "262dcddad8cdb01d756296b2780b3ed5798bfdae",
   "w": 1440,
   "h": 900
  },
  "o-p03-a-model-found@light": {
-  "sha": "e7fbf72c0ca8f0a2a93b3cf17eb39e2ad91001c6",
+  "sha": "46b8e3e05c3ad497c5e43e77f35ff415ed38b0b4",
   "w": 1440,
   "h": 900
  },
  "o-p03b-nothing-found@dark": {
-  "sha": "ff4a50034a9939c5465dfa6667b30aba7aed98ce",
+  "sha": "f937bad340307092c35b0d7490092dfd4f2a3312",
   "w": 1440,
   "h": 900
  },
  "o-p03b-nothing-found@light": {
-  "sha": "fed844917f4bf61b12f083e67e95634bb7760c64",
+  "sha": "7dcbb1ec7fd24aea4526aa51a94d9caf9ec36345",
   "w": 1440,
   "h": 900
  },
  "o-p03c-signing-in@dark": {
-  "sha": "2a363ed6744143bc87b06b904b50af7ecf2c4aba",
+  "sha": "6605b06c2af6bd5003e310d1c922903e23039133",
   "w": 1440,
   "h": 900
  },
  "o-p03c-signing-in@light": {
-  "sha": "2fe04b70713ef18a510f33411e73f89064554abb",
+  "sha": "340b97170305f3c93652e3247d73c0629e2e2b93",
   "w": 1440,
   "h": 900
  },
  "o-p03d-the-sign-in-did-not-finish@dark": {
-  "sha": "fc4666dd2f14fa64661c8ecc56799610dab7c7d2",
+  "sha": "1412a0f22a6fe238131e1f5860076f2a2d0b2e56",
   "w": 1440,
   "h": 900
  },
  "o-p03d-the-sign-in-did-not-finish@light": {
-  "sha": "8993da9238e31a3c242a48169158f343245bfe57",
+  "sha": "47ecb09b75760ac24554020da8c875eac1ebcf11",
   "w": 1440,
   "h": 900
  },
  "o-p03e-offline@dark": {
-  "sha": "0f187e50de0a9bc56844e1b9d056417d78388cb9",
+  "sha": "7e3a9c5977bf499130638873216ab7f32121b10b",
   "w": 1440,
   "h": 900
  },
  "o-p03e-offline@light": {
-  "sha": "2cd31faff3ffbed871b556ce4a887d4628e798cb",
+  "sha": "1fabc2bca33a9955f031a3573ba209bedc076187",
   "w": 1440,
   "h": 900
  },
  "o-p04b-try-it-a-mark-open-recorded@dark": {
-  "sha": "b7b2709803ded5458e50878b22cd7cbfe006e032",
+  "sha": "f2c1b5ef27b9f946461f7fc7d70d25a7077eff8a",
   "w": 1440,
   "h": 900
  },
  "o-p04b-try-it-a-mark-open-recorded@light": {
-  "sha": "30ec55b22ed543d1fd221d251a10db030cf0aabf",
+  "sha": "6c147d597b8f143ae38e416c69aa20c8ac24f4df",
   "w": 1440,
   "h": 900
  },
  "o-p04c-keep-reading-your-drafts@dark": {
-  "sha": "e5ecd086e78c9a3923230bfbe6be571fba8cf24a",
+  "sha": "e26c85779af08db693af819a7ee638f85dcfb60e",
   "w": 1440,
   "h": 900
  },
  "o-p04c-keep-reading-your-drafts@light": {
-  "sha": "52e1242e05d47eaa1bf2ffb8e1043d2e8bd3ec9a",
+  "sha": "9ec58fbbc86036d627f28a025d525a8b0d34527b",
   "w": 1440,
   "h": 900
  },
  "the-close-glyph-hovered@dark": {
-  "sha": "2955d2a82d5f076580976aebb6322c20ed1c20c3",
+  "sha": "9c69c102b7c5121303d6c58dcafb73913c6df2ce",
   "w": 1440,
   "h": 900
  },
  "the-close-glyph-hovered@light": {
-  "sha": "dfcdc2cc2cc0d2592cf257ed3d2e1bf5c9afc90f",
+  "sha": "9bdd3ce6d368695cca3717a94f991ea8548c319b",
   "w": 1440,
   "h": 900
  },
  "the-settings-declined@dark": {
-  "sha": "a6675ec0ff7d3680680049cc0efe99722bcad480",
+  "sha": "982d5749794c9caacbf6ceb108cebb4ffdda9a76",
   "w": 1440,
   "h": 900
  },
  "the-settings-declined@light": {
-  "sha": "89e75df87233d0cf1589da2f3b52809e1584a26e",
+  "sha": "eeaceda87866ea933f1c4155aa2e6fdd01412d68",
   "w": 1440,
   "h": 900
  }

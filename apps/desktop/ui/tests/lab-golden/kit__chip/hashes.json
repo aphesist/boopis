@@ -1,0 +1,52 @@
+{
+ "focus@dark": {
+  "sha": "0996edbf2a8ef12fa8cbb62b8cd7c2f072b89261",
+  "w": 1416,
+  "h": 140
+ },
+ "focus@light": {
+  "sha": "f2e2e5058671a03a2673d25ba0959bda3205fcc9",
+  "w": 1416,
+  "h": 140
+ },
+ "hover@dark": {
+  "sha": "88541e00f0e5039a241482c11b8fb43d359f026c",
+  "w": 1416,
+  "h": 140
+ },
+ "hover@light": {
+  "sha": "ca6e306424a56ffa04f236f7214e5059312506ab",
+  "w": 1416,
+  "h": 140
+ },
+ "long@dark": {
+  "sha": "de73dc499301727ae91368b93ffeee369dda0447",
+  "w": 1416,
+  "h": 52
+ },
+ "long@light": {
+  "sha": "641cc639738ff79423f97ec512a08e9c2056fc66",
+  "w": 1416,
+  "h": 52
+ },
+ "pressed@dark": {
+  "sha": "b55fa2feb683400fb8e6b787e4f1671786ab85ad",
+  "w": 1416,
+  "h": 140
+ },
+ "pressed@light": {
+  "sha": "b0072bf5629ecf17148f77e4118d2021f79569d7",
+  "w": 1416,
+  "h": 140
+ },
+ "typical@dark": {
+  "sha": "9c6f3356f8057e7177ce27fe7f299f7b7b8b28a6",
+  "w": 1416,
+  "h": 140
+ },
+ "typical@light": {
+  "sha": "f90441a6c693d07a6ca7f5c95d5333ffd3f03055",
+  "w": 1416,
+  "h": 140
+ }
+}

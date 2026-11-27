@@ -1,0 +1,122 @@
+{
+ "blank-filled@dark": {
+  "sha": "87aa409afe0838bc5b6a56d69f0ac72a1904ff42",
+  "w": 1416,
+  "h": 46
+ },
+ "blank-filled@light": {
+  "sha": "15aa0cda9c491db4f337b12345a1e3846a00dcef",
+  "w": 1416,
+  "h": 46
+ },
+ "blank-lapsed@dark": {
+  "sha": "9da1bb7ef2fd874a9f45be766d8b7c1c0db8d2df",
+  "w": 1416,
+  "h": 47
+ },
+ "blank-lapsed@light": {
+  "sha": "45ebf9fccd616cc4649265850707f36cdd97215f",
+  "w": 1416,
+  "h": 47
+ },
+ "blank-opened@dark": {
+  "sha": "053f3cbe1aedac9a267dad92ffe145cca0e98011",
+  "w": 1416,
+  "h": 47
+ },
+ "blank-opened@light": {
+  "sha": "c374b99ffe11b112d57fcc3b3bd7f1804f1b119d",
+  "w": 1416,
+  "h": 47
+ },
+ "blank-waiting-owed@dark": {
+  "sha": "0e74c2f3a033348009372671b8da1cab211907c9",
+  "w": 1416,
+  "h": 47
+ },
+ "blank-waiting-owed@light": {
+  "sha": "73261c222f4457e4728d0200bad58727c4a36f23",
+  "w": 1416,
+  "h": 47
+ },
+ "chosen@dark": {
+  "sha": "1d9b1f6e03541be6d21a72f6b46b2df329b4da27",
+  "w": 1416,
+  "h": 44
+ },
+ "chosen@light": {
+  "sha": "fe2f86dbb84af6c4ffd6c6e5cbb53a35ce6e960a",
+  "w": 1416,
+  "h": 44
+ },
+ "hover@dark": {
+  "sha": "da0e289eeddd6c1f202fbd1e5d02e11cff626f0d",
+  "w": 1416,
+  "h": 44
+ },
+ "hover@light": {
+  "sha": "73cad577d5429583aee14ab1813e4685725c7c0c",
+  "w": 1416,
+  "h": 44
+ },
+ "info-label-at-rest@dark": {
+  "sha": "0b81bafce3230dd4a5cf873bb59eceba4fc38a41",
+  "w": 1416,
+  "h": 45
+ },
+ "info-label-at-rest@light": {
+  "sha": "a337bab8d7f8ca8fcd51c7c7c48e8321cf1808f2",
+  "w": 1416,
+  "h": 45
+ },
+ "info-label-hovered@dark": {
+  "sha": "1f5374e8dc5bb073d1402d9b4173857a28c6b6a9",
+  "w": 1416,
+  "h": 45
+ },
+ "info-label-hovered@light": {
+  "sha": "c46b89cf15dd7629d6b0a09d4a6fb07a655fd23b",
+  "w": 1416,
+  "h": 45
+ },
+ "info-label-open@dark": {
+  "sha": "ee5bf1954ff9577ccf134973c28bc0d1e998e812",
+  "w": 1416,
+  "h": 45
+ },
+ "info-label-open@light": {
+  "sha": "d153b7640a77a2205cfc83937a0d421937b76ec2",
+  "w": 1416,
+  "h": 45
+ },
+ "long@dark": {
+  "sha": "cacf31284b13a801484c3b8e14600d923a971f9d",
+  "w": 384,
+  "h": 64
+ },
+ "long@light": {
+  "sha": "fc4968f2681f902a57e589e3ba39fa6c56d2b38d",
+  "w": 384,
+  "h": 64
+ },
+ "open@dark": {
+  "sha": "a1a696ebdfa787a04af217f8a2f0adf0bd3f852b",
+  "w": 1416,
+  "h": 44
+ },
+ "open@light": {
+  "sha": "c41a37020dfecb625a7998f8dcc43dddad511bdf",
+  "w": 1416,
+  "h": 44
+ },
+ "typical@dark": {
+  "sha": "a1bd99895ad257138cca974e616025d6a4e69ddd",
+  "w": 1416,
+  "h": 44
+ },
+ "typical@light": {
+  "sha": "28967ba28590724178b2f3696e970d5cee025458",
+  "w": 1416,
+  "h": 44
+ }
+}
