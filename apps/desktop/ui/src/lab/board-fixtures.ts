@@ -348,12 +348,12 @@ export function boardDock(kind: DockBoard): (p: DataProvider) => DataProvider {
    plugins and mods (boopis's own list); the one source read never answers, so the line stays as the board draws it. */
 
 const STORE_FX = fixtureStore as unknown as { items: StoreItem[]; receipts: InstallReceipt[] };
-const boardItem = (id: string, kind: StoreKind, title: string, summary: string): StoreItem => {
+const boardItem = (id: string, kind: StoreKind, title: string, summary: string, publisher = 'Example Org'): StoreItem => {
   const t = structuredClone(STORE_FX.items.find((i) => i.kind === kind && i.pinned && !i.removed) ?? STORE_FX.items[0] as StoreItem);
-  return { ...t, id: 'boopis:' + id, source: 'boopis', kind, title, summary, tier: 'recommended', secrets: [], removed: null, publisher: 'Example Org', homepage: null };
+  return { ...t, id: 'boopis:' + id, source: 'boopis', kind, title, summary, tier: 'recommended', secrets: [], removed: null, publisher, homepage: null };
 };
 export const BOARD15_ITEMS: readonly StoreItem[] = [
-  boardItem('context7', 'connector', 'Context7', 'Up-to-date docs for the libraries you use'), boardItem('frontend-design', 'skill', 'Frontend design', 'Distinctive, production-grade interfaces'),
+  boardItem('context7', 'connector', 'Context7', 'Up-to-date docs for the libraries you use'), boardItem('frontend-design', 'skill', 'Frontend design', 'Distinctive, production-grade interfaces', 'Anthropic'),
   boardItem('github', 'connector', 'GitHub', 'Issues, pull requests and checks'), boardItem('playwright', 'connector', 'Playwright', 'Drive a browser to check your pages'),
   boardItem('linear', 'connector', 'Linear', 'Read and update your issues'), boardItem('supabase', 'connector', 'Supabase', 'Your database, auth and storage')
 ];

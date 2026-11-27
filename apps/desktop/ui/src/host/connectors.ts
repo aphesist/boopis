@@ -12,9 +12,8 @@
    rows. For one bot, the page is that bot's (a select at its top). */
 import { STORE_ITEM } from '../core/engine-words';
 import { unlessEngine } from './errors';
-import { brandMarkHTML, kit, ui } from '@boopis/ui';
+import { connectorKey, itemTile, kit, ui } from '@boopis/ui';
 import type { ItemRef } from '@boopis/ui';
-import { letters } from '../core/letters';
 import type { RowOpts } from '@boopis/ui';
 import { reduced } from '../core/dom';
 import { logger } from '../core/log';
@@ -79,10 +78,15 @@ export function describeConnector(c: ConnectorInfo): ConnectorView {
 /** what a connector's tile is drawn from: what it runs (its address, or its command and arguments), and its name */
 export const connectorRef = (c: Pick<ConnectorInfo, 'name' | 'url' | 'command' | 'args'>): ItemRef => ({ name: c.name, collection: c.name, url: c.url ?? null, command: c.command ?? null, args: c.args });
 
-/** a connector's tile: its service's brand mark in colour (the owner, 27 November: conflict 30), else its letters; an installed one from
-    the collection is lettered by the collection's name, so both lists agree */
-export const tileOf = (ref: ItemRef, name: string): { markHTML: string } | { markText: string } => { const m = brandMarkHTML(ref); return m ? { markHTML: m } : { markText: letters(name) }; };
+/** a connector's tile: the kit's one rule (`itemTile`: its service's brand mark in colour, the owner, 27 November: conflict 30; else its
+    letters); an installed one from the collection is lettered by the collection's name, so both lists agree */
+export const tileOf = (ref: ItemRef, name: string): { markHTML: string } | { markText: string } => itemTile(ref, name);
 const connectorTile = (c: Pick<ConnectorInfo, 'name' | 'url' | 'command' | 'args'>, name: string): { markHTML: string } | { markText: string } => tileOf(connectorRef(c), name);
+/** the collection's entry an installed connector came from, by its name as one key ("github", "GitHub" and "github-mcp" are one) */
+export const entryOf = <E extends Pick<ConnectorCatalogEntry, 'id' | 'name'>>(catalog: readonly E[], name: string): E | undefined => {
+  const k = connectorKey(name);
+  return k ? catalog.find((e) => connectorKey(e.id) === k || connectorKey(e.name) === k) : undefined;
+};
 
 /** every word of `query` is somewhere in `fields` (case aside); an empty query matches everything */
 export function matches(query: string, ...fields: ReadonlyArray<string | null | undefined>): boolean {
@@ -234,7 +238,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
       const word = kit.html.statusWord({ text: v.word, tone: v.tone === 'attention' ? 'owe' : 'neutral', ...(v.tone === 'busy' ? { pulse: true } : {}) });
       const end = c.plugin ? word : word + kit.html.switch({ checked: c.enabled, label: c.name + (c.enabled ? ' is on' : ' is off'), attrs: { 'data-conn-switch': c.name } }) +
         kit.html.iconButton({ icon: 'more', label: 'More for ' + c.name, haspopup: 'menu', attrs: { 'data-conn-more': c.name } });
-      return kit.html.listRow({ variant: 'item', title: c.name, sub: v.where, ...connectorTile(c, catalog.find((e) => e.id === c.name)?.name ?? c.name), endHTML: end,
+      return kit.html.listRow({ variant: 'item', title: c.name, sub: v.where, ...connectorTile(c, entryOf(catalog, c.name)?.name ?? c.name), endHTML: end,
         ...(v.canSignIn ? { action: 'Sign in', actionAttrs: { 'data-conn-signin': c.name, 'aria-label': 'Sign in to ' + c.name } } : {}), attrs: { [STORE_ITEM]: '', 'data-conn-row': c.name } });
     });
     const body = listError ? kit.html.emptyState({ text: 'The list could not be read: ' + listError })

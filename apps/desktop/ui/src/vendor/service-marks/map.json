@@ -1,7 +1,7 @@
 {
   "source": "simple-icons 16.38.1 (CC0-1.0), https://github.com/simple-icons/simple-icons",
   "read": "2026-11-22",
-  "rule": "A connector's tile shows the mark of the service it connects to, found from what it is or what it runs: its id in boopis's collection, the host of its address, the package or image it starts, or (for a store item) the host of its home page. A skill, plugin or mod shows its publisher's mark when its source proves the publisher (anything but a namespace proof of none) and the publisher's name is listed here exactly. Hosts are exact (a leading www. is ignored); a code host such as github.com is never listed, since anyone can publish there. Anything not listed gets a monogram.",
+  "rule": "A connector's tile shows the mark of the service it connects to, found from what it is or what it runs: the host of its address or the package or image it starts, when that names a listed service; else its id in boopis's collection or its own name, read as one key (case, a scope, separators and the words mcp and server aside: `connectorKey` in components/item-mark.ts; the owner, 27 November 2026: an installed connector matches the collection's mark), or (for a store item) the host of its home page. A skill, plugin or mod shows its publisher's mark when its source proves the publisher (anything but a namespace proof of none) and the publisher's name is listed here exactly. Hosts are exact (a leading www. is ignored); a code host such as github.com is never listed, since anyone can publish there. Anything not listed gets letters.",
   "marks": [
     {
       "id": "github",
@@ -17,15 +17,16 @@
         "api.githubcopilot.com"
       ],
       "packages": [
-        "ghcr.io/github/github-mcp-server"
+        "ghcr.io/github/github-mcp-server",
+        "@modelcontextprotocol/server-github"
       ],
       "publishers": [
         "GitHub"
       ],
       "color": {
-        "light": "#181717",
-        "dark": "#FFFFFF",
-        "why": "GitHub publishes its logo in black or white only (github.com/logos): black on the light tile, white on the dark ones."
+        "light": "ink",
+        "dark": "ink",
+        "why": "GitHub is a one-colour mark (Simple Icons #181717): drawn in the theme's ink, so it follows the theme as text does."
       }
     },
     {
@@ -42,14 +43,16 @@
         "mcp.notion.com",
         "developers.notion.com"
       ],
-      "packages": [],
+      "packages": [
+        "@notionhq/notion-mcp-server"
+      ],
       "publishers": [
         "Notion"
       ],
       "color": {
-        "light": "#000000",
-        "dark": "#FFFFFF",
-        "why": "One-colour mark: black on the light tile, the white version on the dark ones."
+        "light": "ink",
+        "dark": "ink",
+        "why": "Notion is a one-colour mark (Simple Icons #000000): drawn in the theme's ink, so it follows the theme as text does."
       }
     },
     {
@@ -66,14 +69,16 @@
         "mcp.supabase.com",
         "supabase.com"
       ],
-      "packages": [],
+      "packages": [
+        "@supabase/mcp-server-supabase"
+      ],
       "publishers": [
         "Supabase"
       ],
       "color": {
-        "light": "#000000",
+        "light": "#279D68",
         "dark": "#3FCF8E",
-        "why": "Brand green on the dark tiles; the green is 1.96:1 on the light tile, so the one-colour black version there."
+        "why": "Supabase's own colour (Simple Icons #3FCF8E); on the light tiles the brand #3FCF8E is 1.77:1, so its own hue darkened to #279D68 (3:1)."
       }
     },
     {
@@ -96,9 +101,9 @@
         "Brave"
       ],
       "color": {
-        "light": "#FB542B",
+        "light": "#FB4C21",
         "dark": "#FB542B",
-        "why": "Brand orange on every tile (3.23:1 on the light one, 4.9 or more on the dark ones)."
+        "why": "Brave's own colour (Simple Icons #FB542B); on the light tiles the brand #FB542B is 2.90:1, so its own hue darkened to #FB4C21 (3:1)."
       }
     },
     {
@@ -120,8 +125,8 @@
       ],
       "color": {
         "light": "#0052CC",
-        "dark": "#FFFFFF",
-        "why": "Atlassian blue on the light tile; the blue is 2.35:1 on the dark tiles, so the white logo there, as Atlassian's logo guidelines do on dark backgrounds."
+        "dark": "#056AFF",
+        "why": "Atlassian's own colour (Simple Icons #0052CC); on the dark tiles the brand #0052CC is 2.05:1, so its own hue lightened to #056AFF (3:1)."
       }
     },
     {
@@ -144,9 +149,9 @@
         "MongoDB"
       ],
       "color": {
-        "light": "#47A248",
+        "light": "#459D46",
         "dark": "#47A248",
-        "why": "Brand green on every tile (3.16:1 on the light one, 4.99 or more on the dark ones)."
+        "why": "MongoDB's own colour (Simple Icons #47A248); on the light tiles the brand #47A248 is 2.85:1, so its own hue darkened to #459D46 (3:1)."
       }
     },
     {
@@ -162,14 +167,16 @@
       "hosts": [
         "mcp.sentry.dev"
       ],
-      "packages": [],
+      "packages": [
+        "@sentry/mcp-server"
+      ],
       "publishers": [
         "Sentry"
       ],
       "color": {
         "light": "#362D59",
-        "dark": "#FFFFFF",
-        "why": "Sentry purple on the light tile; on the dark tiles it is 1.28:1, so the white version Sentry's branding page offers."
+        "dark": "#7A6BB4",
+        "why": "Sentry's own colour (Simple Icons #362D59); on the dark tiles the brand #362D59 is 1.11:1, so its own hue lightened to #7A6BB4 (3:1)."
       }
     },
     {
@@ -191,9 +198,9 @@
         "Neon"
       ],
       "color": {
-        "light": "#000000",
+        "light": "#219E70",
         "dark": "#34D59A",
-        "why": "Brand green on the dark tiles; 1.86:1 on the light tile, so the one-colour black version there."
+        "why": "Neon's own colour (Simple Icons #34D59A); on the light tiles the brand #34D59A is 1.67:1, so its own hue darkened to #219E70 (3:1)."
       }
     },
     {
@@ -214,7 +221,7 @@
       "color": {
         "light": "#4285F4",
         "dark": "#4285F4",
-        "why": "Simple Icons' one-colour Chrome in Google blue (the official logo is four colours; Simple Icons carries one path), 3.51:1 or more everywhere."
+        "why": "Google Chrome's own colour (Simple Icons #4285F4), 3:1 or more on every tile."
       }
     },
     {
@@ -234,7 +241,7 @@
       "color": {
         "light": "#4285F4",
         "dark": "#4285F4",
-        "why": "Simple Icons' one-colour G in Google blue (the official G is four colours; Simple Icons carries one path), 3.51:1 or more everywhere."
+        "why": "Google's own colour (Simple Icons #4285F4), 3:1 or more on every tile."
       }
     },
     {
@@ -251,9 +258,9 @@
         "Anthropic"
       ],
       "color": {
-        "light": "#191919",
-        "dark": "#FFFFFF",
-        "why": "Anthropic's near-black on the light tile; the white version on the dark ones (1.09:1 otherwise)."
+        "light": "ink",
+        "dark": "ink",
+        "why": "Anthropic is a one-colour mark (Simple Icons #191919): drawn in the theme's ink, so it follows the theme as text does."
       }
     },
     {
@@ -263,16 +270,20 @@
       "hex": "000000",
       "origin": "https://vercel.com/geist/brands",
       "guidelines": "https://vercel.com/geist/brands",
-      "connectors": [],
-      "hosts": [],
+      "connectors": [
+        "vercel"
+      ],
+      "hosts": [
+        "mcp.vercel.com"
+      ],
       "packages": [],
       "publishers": [
         "Vercel"
       ],
       "color": {
-        "light": "#000000",
-        "dark": "#FFFFFF",
-        "why": "Vercel's mark is black or white (vercel.com/geist/brands): black on the light tile, white on the dark ones."
+        "light": "ink",
+        "dark": "ink",
+        "why": "Vercel is a one-colour mark (Simple Icons #000000): drawn in the theme's ink, so it follows the theme as text does."
       }
     },
     {
@@ -289,9 +300,9 @@
         "Upstash"
       ],
       "color": {
-        "light": "#000000",
+        "light": "#009F6F",
         "dark": "#00E9A3",
-        "why": "Brand green on the dark tiles; 1.57:1 on the light tile, so the one-colour black version there."
+        "why": "Upstash's own colour (Simple Icons #00E9A3); on the light tiles the brand #00E9A3 is 1.41:1, so its own hue darkened to #009F6F (3:1)."
       }
     },
     {
@@ -301,19 +312,750 @@
       "hex": "000000",
       "origin": "https://github.com/modelcontextprotocol/docs/blob/573dc60c2e7aab2605b29d0bf27194aa7b02e4fb/logo/light.svg",
       "guidelines": null,
-      "connectors": [],
+      "connectors": [
+        "sequential-thinking",
+        "memory",
+        "filesystem",
+        "fetch",
+        "time",
+        "everything"
+      ],
       "hosts": [],
-      "packages": [],
+      "packages": [
+        "@modelcontextprotocol/server-sequential-thinking",
+        "@modelcontextprotocol/server-memory",
+        "@modelcontextprotocol/server-filesystem",
+        "@modelcontextprotocol/server-everything",
+        "mcp-server-fetch",
+        "mcp-server-time"
+      ],
       "publishers": [
         "Model Context Protocol",
         "Model Context Protocol (reference servers)"
       ],
       "color": {
-        "light": "#000000",
-        "dark": "#FFFFFF",
-        "why": "One-colour mark (the project publishes light.svg and dark.svg): black on the light tile, white on the dark ones."
+        "light": "ink",
+        "dark": "ink",
+        "why": "Model Context Protocol is a one-colour mark (Simple Icons #000000): drawn in the theme's ink, so it follows the theme as text does."
+      }
+    },
+    {
+      "id": "linear",
+      "name": "Linear",
+      "svg": "linear.svg",
+      "hex": "5E6AD2",
+      "origin": "https://linear.app",
+      "guidelines": null,
+      "connectors": [
+        "linear"
+      ],
+      "hosts": [
+        "mcp.linear.app"
+      ],
+      "packages": [],
+      "publishers": [
+        "Linear"
+      ],
+      "color": {
+        "light": "#5E6AD2",
+        "dark": "#606CD3",
+        "why": "Linear's own colour (Simple Icons #5E6AD2); on the dark tiles the brand #5E6AD2 is 2.97:1, so its own hue lightened to #606CD3 (3:1)."
+      }
+    },
+    {
+      "id": "postgresql",
+      "name": "PostgreSQL",
+      "svg": "postgresql.svg",
+      "hex": "4169E1",
+      "origin": "https://wiki.postgresql.org/wiki/Logo",
+      "guidelines": "https://www.postgresql.org/about/policies/trademarks/",
+      "connectors": [
+        "postgres",
+        "postgresql"
+      ],
+      "hosts": [],
+      "packages": [
+        "@modelcontextprotocol/server-postgres"
+      ],
+      "publishers": [],
+      "color": {
+        "light": "#4169E1",
+        "dark": "#486EE2",
+        "why": "PostgreSQL's own colour (Simple Icons #4169E1); on the dark tiles the brand #4169E1 is 2.88:1, so its own hue lightened to #486EE2 (3:1)."
+      }
+    },
+    {
+      "id": "sqlite",
+      "name": "SQLite",
+      "svg": "sqlite.svg",
+      "hex": "003B57",
+      "origin": "https://github.com/sqlite/sqlite/blob/43e862723ec680542ca6f608f9963c0993dd7324/art/sqlite370.eps",
+      "guidelines": null,
+      "connectors": [
+        "sqlite"
+      ],
+      "hosts": [],
+      "packages": [
+        "mcp-server-sqlite"
+      ],
+      "publishers": [],
+      "color": {
+        "light": "#003B57",
+        "dark": "#007DB8",
+        "why": "SQLite's own colour (Simple Icons #003B57); on the dark tiles the brand #003B57 is 1.17:1, so its own hue lightened to #007DB8 (3:1)."
+      }
+    },
+    {
+      "id": "googledrive",
+      "name": "Google Drive",
+      "svg": "googledrive.svg",
+      "hex": "4285F4",
+      "origin": "https://developers.google.com/drive/web/branding",
+      "guidelines": null,
+      "connectors": [
+        "google-drive",
+        "gdrive"
+      ],
+      "hosts": [],
+      "packages": [
+        "@modelcontextprotocol/server-gdrive"
+      ],
+      "publishers": [],
+      "color": {
+        "light": "#4285F4",
+        "dark": "#4285F4",
+        "why": "Google Drive's own colour (Simple Icons #4285F4), 3:1 or more on every tile."
+      }
+    },
+    {
+      "id": "jira",
+      "name": "Jira",
+      "svg": "jira.svg",
+      "hex": "0052CC",
+      "origin": "https://atlassian.design/resources/logo-library",
+      "guidelines": "https://atlassian.design/foundations/logos/",
+      "connectors": [
+        "jira"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#0052CC",
+        "dark": "#056AFF",
+        "why": "Jira's own colour (Simple Icons #0052CC); on the dark tiles the brand #0052CC is 2.05:1, so its own hue lightened to #056AFF (3:1)."
+      }
+    },
+    {
+      "id": "confluence",
+      "name": "Confluence",
+      "svg": "confluence.svg",
+      "hex": "172B4D",
+      "origin": "https://www.atlassian.com/company/news/press-kit",
+      "guidelines": null,
+      "connectors": [
+        "confluence"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#172B4D",
+        "dark": "#4374C7",
+        "why": "Confluence's own colour (Simple Icons #172B4D); on the dark tiles the brand #172B4D is 1.01:1, so its own hue lightened to #4374C7 (3:1)."
+      }
+    },
+    {
+      "id": "gitlab",
+      "name": "GitLab",
+      "svg": "gitlab.svg",
+      "hex": "FC6D26",
+      "origin": "https://about.gitlab.com/press/press-kit/",
+      "guidelines": "https://about.gitlab.com/handbook/marketing/corporate-marketing/brand-activation/trademark-guidelines/",
+      "connectors": [
+        "gitlab"
+      ],
+      "hosts": [],
+      "packages": [
+        "@modelcontextprotocol/server-gitlab"
+      ],
+      "publishers": [
+        "GitLab"
+      ],
+      "color": {
+        "light": "#F65403",
+        "dark": "#FC6D26",
+        "why": "GitLab's own colour (Simple Icons #FC6D26); on the light tiles the brand #FC6D26 is 2.53:1, so its own hue darkened to #F65403 (3:1)."
+      }
+    },
+    {
+      "id": "docker",
+      "name": "Docker",
+      "svg": "docker.svg",
+      "hex": "2496ED",
+      "origin": "https://www.docker.com/company/newsroom/media-resources",
+      "guidelines": null,
+      "connectors": [
+        "docker"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [
+        "Docker"
+      ],
+      "color": {
+        "light": "#168FEC",
+        "dark": "#2496ED",
+        "why": "Docker's own colour (Simple Icons #2496ED); on the light tiles the brand #2496ED is 2.79:1, so its own hue darkened to #168FEC (3:1)."
+      }
+    },
+    {
+      "id": "puppeteer",
+      "name": "Puppeteer",
+      "svg": "puppeteer.svg",
+      "hex": "40B5A4",
+      "origin": "https://pptr.dev",
+      "guidelines": null,
+      "connectors": [
+        "puppeteer"
+      ],
+      "hosts": [],
+      "packages": [
+        "@modelcontextprotocol/server-puppeteer"
+      ],
+      "publishers": [],
+      "color": {
+        "light": "#36998A",
+        "dark": "#40B5A4",
+        "why": "Puppeteer's own colour (Simple Icons #40B5A4); on the light tiles the brand #40B5A4 is 2.22:1, so its own hue darkened to #36998A (3:1)."
+      }
+    },
+    {
+      "id": "redis",
+      "name": "Redis",
+      "svg": "redis.svg",
+      "hex": "FF4438",
+      "origin": "https://redis.io/brand-guidelines",
+      "guidelines": "https://redis.io/brand-guidelines",
+      "connectors": [
+        "redis"
+      ],
+      "hosts": [],
+      "packages": [
+        "@modelcontextprotocol/server-redis"
+      ],
+      "publishers": [
+        "Redis"
+      ],
+      "color": {
+        "light": "#FF4438",
+        "dark": "#FF4438",
+        "why": "Redis's own colour (Simple Icons #FF4438), 3:1 or more on every tile."
+      }
+    },
+    {
+      "id": "mysql",
+      "name": "MySQL",
+      "svg": "mysql.svg",
+      "hex": "4479A1",
+      "origin": "https://www.mysql.com/about/legal/logos.html",
+      "guidelines": "https://www.mysql.com/about/legal/logos.html",
+      "connectors": [
+        "mysql"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#4479A1",
+        "dark": "#457AA3",
+        "why": "MySQL's own colour (Simple Icons #4479A1); on the dark tiles the brand #4479A1 is 2.99:1, so its own hue lightened to #457AA3 (3:1)."
+      }
+    },
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "svg": "stripe.svg",
+      "hex": "635BFF",
+      "origin": "https://stripe.com/newsroom/information",
+      "guidelines": null,
+      "connectors": [
+        "stripe"
+      ],
+      "hosts": [
+        "mcp.stripe.com"
+      ],
+      "packages": [
+        "@stripe/mcp"
+      ],
+      "publishers": [
+        "Stripe"
+      ],
+      "color": {
+        "light": "#635BFF",
+        "dark": "#655EFF",
+        "why": "Stripe's own colour (Simple Icons #635BFF); on the dark tiles the brand #635BFF is 2.97:1, so its own hue lightened to #655EFF (3:1)."
+      }
+    },
+    {
+      "id": "figma",
+      "name": "Figma",
+      "svg": "figma.svg",
+      "hex": "F24E1E",
+      "origin": "https://www.figma.com/using-the-figma-brand/",
+      "guidelines": "https://www.figma.com/using-the-figma-brand/",
+      "connectors": [
+        "figma"
+      ],
+      "hosts": [
+        "mcp.figma.com"
+      ],
+      "packages": [],
+      "publishers": [
+        "Figma"
+      ],
+      "color": {
+        "light": "#F24E1E",
+        "dark": "#F24E1E",
+        "why": "Figma's own colour (Simple Icons #F24E1E), 3:1 or more on every tile."
+      }
+    },
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare",
+      "svg": "cloudflare.svg",
+      "hex": "F38020",
+      "origin": "https://www.cloudflare.com/logo/",
+      "guidelines": "https://www.cloudflare.com/trademark/",
+      "connectors": [
+        "cloudflare"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [
+        "Cloudflare"
+      ],
+      "color": {
+        "light": "#DC6A0C",
+        "dark": "#F38020",
+        "why": "Cloudflare's own colour (Simple Icons #F38020); on the light tiles the brand #F38020 is 2.35:1, so its own hue darkened to #DC6A0C (3:1)."
+      }
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "svg": "discord.svg",
+      "hex": "5865F2",
+      "origin": "https://discord.com/branding",
+      "guidelines": "https://discord.com/branding",
+      "connectors": [
+        "discord"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#5865F2",
+        "dark": "#5865F2",
+        "why": "Discord's own colour (Simple Icons #5865F2), 3:1 or more on every tile."
+      }
+    },
+    {
+      "id": "asana",
+      "name": "Asana",
+      "svg": "asana.svg",
+      "hex": "F06A6A",
+      "origin": "https://asana.com/brand",
+      "guidelines": "https://asana.com/brand",
+      "connectors": [
+        "asana"
+      ],
+      "hosts": [
+        "mcp.asana.com"
+      ],
+      "packages": [],
+      "publishers": [
+        "Asana"
+      ],
+      "color": {
+        "light": "#EE5757",
+        "dark": "#F06A6A",
+        "why": "Asana's own colour (Simple Icons #F06A6A); on the light tiles the brand #F06A6A is 2.67:1, so its own hue darkened to #EE5757 (3:1)."
+      }
+    },
+    {
+      "id": "trello",
+      "name": "Trello",
+      "svg": "trello.svg",
+      "hex": "0052CC",
+      "origin": "https://atlassian.design/resources/logo-library",
+      "guidelines": "https://atlassian.design/foundations/logos",
+      "connectors": [
+        "trello"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#0052CC",
+        "dark": "#056AFF",
+        "why": "Trello's own colour (Simple Icons #0052CC); on the dark tiles the brand #0052CC is 2.05:1, so its own hue lightened to #056AFF (3:1)."
+      }
+    },
+    {
+      "id": "airtable",
+      "name": "Airtable",
+      "svg": "airtable.svg",
+      "hex": "18BFFF",
+      "origin": "https://airtable.com/newsroom",
+      "guidelines": null,
+      "connectors": [
+        "airtable"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#0094CD",
+        "dark": "#18BFFF",
+        "why": "Airtable's own colour (Simple Icons #18BFFF); on the light tiles the brand #18BFFF is 1.87:1, so its own hue darkened to #0094CD (3:1)."
+      }
+    },
+    {
+      "id": "obsidian",
+      "name": "Obsidian",
+      "svg": "obsidian.svg",
+      "hex": "7C3AED",
+      "origin": "https://obsidian.md",
+      "guidelines": "https://obsidian.md/brand",
+      "connectors": [
+        "obsidian"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#7C3AED",
+        "dark": "#8C51EF",
+        "why": "Obsidian's own colour (Simple Icons #7C3AED); on the dark tiles the brand #7C3AED is 2.45:1, so its own hue lightened to #8C51EF (3:1)."
+      }
+    },
+    {
+      "id": "todoist",
+      "name": "Todoist",
+      "svg": "todoist.svg",
+      "hex": "E44332",
+      "origin": "https://doist.com/press",
+      "guidelines": null,
+      "connectors": [
+        "todoist"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#E44332",
+        "dark": "#E44332",
+        "why": "Todoist's own colour (Simple Icons #E44332), 3:1 or more on every tile."
+      }
+    },
+    {
+      "id": "gmail",
+      "name": "Gmail",
+      "svg": "gmail.svg",
+      "hex": "EA4335",
+      "origin": "https://fonts.gstatic.com/s/i/productlogos/gmail_2020q4/v8/192px.svg",
+      "guidelines": null,
+      "connectors": [
+        "gmail"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#EA4335",
+        "dark": "#EA4335",
+        "why": "Gmail's own colour (Simple Icons #EA4335), 3:1 or more on every tile."
+      }
+    },
+    {
+      "id": "googlecalendar",
+      "name": "Google Calendar",
+      "svg": "googlecalendar.svg",
+      "hex": "4285F4",
+      "origin": "https://fonts.gstatic.com/s/i/productlogos/calendar_2020q4/v8/192px.svg",
+      "guidelines": null,
+      "connectors": [
+        "google-calendar",
+        "gcal"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#4285F4",
+        "dark": "#4285F4",
+        "why": "Google Calendar's own colour (Simple Icons #4285F4), 3:1 or more on every tile."
+      }
+    },
+    {
+      "id": "googlemaps",
+      "name": "Google Maps",
+      "svg": "googlemaps.svg",
+      "hex": "4285F4",
+      "origin": "https://commons.wikimedia.org/wiki/File:Google_Maps_icon.svg",
+      "guidelines": null,
+      "connectors": [
+        "google-maps"
+      ],
+      "hosts": [],
+      "packages": [
+        "@modelcontextprotocol/server-google-maps"
+      ],
+      "publishers": [],
+      "color": {
+        "light": "#4285F4",
+        "dark": "#4285F4",
+        "why": "Google Maps's own colour (Simple Icons #4285F4), 3:1 or more on every tile."
+      }
+    },
+    {
+      "id": "kubernetes",
+      "name": "Kubernetes",
+      "svg": "kubernetes.svg",
+      "hex": "326CE5",
+      "origin": "https://github.com/kubernetes/kubernetes/tree/cac53883f4714452f3084a22e4be20d042a9df33/logo",
+      "guidelines": null,
+      "connectors": [
+        "kubernetes",
+        "k8s"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#326CE5",
+        "dark": "#376FE6",
+        "why": "Kubernetes's own colour (Simple Icons #326CE5); on the dark tiles the brand #326CE5 is 2.93:1, so its own hue lightened to #376FE6 (3:1)."
+      }
+    },
+    {
+      "id": "grafana",
+      "name": "Grafana",
+      "svg": "grafana.svg",
+      "hex": "F46800",
+      "origin": "https://grafana.com",
+      "guidelines": null,
+      "connectors": [
+        "grafana"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [
+        "Grafana Labs"
+      ],
+      "color": {
+        "light": "#E76300",
+        "dark": "#F46800",
+        "why": "Grafana's own colour (Simple Icons #F46800); on the light tiles the brand #F46800 is 2.72:1, so its own hue darkened to #E76300 (3:1)."
+      }
+    },
+    {
+      "id": "datadog",
+      "name": "Datadog",
+      "svg": "datadog.svg",
+      "hex": "632CA6",
+      "origin": "https://www.datadoghq.com/about/resources",
+      "guidelines": "https://www.datadoghq.com/about/resources/",
+      "connectors": [
+        "datadog"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [
+        "Datadog"
+      ],
+      "color": {
+        "light": "#632CA6",
+        "dark": "#9058D3",
+        "why": "Datadog's own colour (Simple Icons #632CA6); on the dark tiles the brand #632CA6 is 1.62:1, so its own hue lightened to #9058D3 (3:1)."
+      }
+    },
+    {
+      "id": "pagerduty",
+      "name": "PagerDuty",
+      "svg": "pagerduty.svg",
+      "hex": "06AC38",
+      "origin": "https://www.pagerduty.com/brand/",
+      "guidelines": "https://www.pagerduty.com/brand/",
+      "connectors": [
+        "pagerduty"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#06A034",
+        "dark": "#06AC38",
+        "why": "PagerDuty's own colour (Simple Icons #06AC38); on the light tiles the brand #06AC38 is 2.67:1, so its own hue darkened to #06A034 (3:1)."
+      }
+    },
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "svg": "hubspot.svg",
+      "hex": "FF7A59",
+      "origin": "https://www.hubspot.com/style-guide",
+      "guidelines": "https://www.hubspot.com/style-guide",
+      "connectors": [
+        "hubspot"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#FF4719",
+        "dark": "#FF7A59",
+        "why": "HubSpot's own colour (Simple Icons #FF7A59); on the light tiles the brand #FF7A59 is 2.27:1, so its own hue darkened to #FF4719 (3:1)."
+      }
+    },
+    {
+      "id": "zapier",
+      "name": "Zapier",
+      "svg": "zapier.svg",
+      "hex": "FF4F00",
+      "origin": "https://www.figma.com/file/NQFxTCE5pGR3dHZt0DkOyy/Zapier-Brand-Guidelines-%5BExternal%5D?type=design&node-id=101-9701&mode=design",
+      "guidelines": "https://www.figma.com/file/NQFxTCE5pGR3dHZt0DkOyy/Zapier-Brand-Guidelines-%5BExternal%5D?type=design&node-id=101-9701&mode=design",
+      "connectors": [
+        "zapier"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [
+        "Zapier"
+      ],
+      "color": {
+        "light": "#FA4D00",
+        "dark": "#FF4F00",
+        "why": "Zapier's own colour (Simple Icons #FF4F00); on the light tiles the brand #FF4F00 is 2.92:1, so its own hue darkened to #FA4D00 (3:1)."
+      }
+    },
+    {
+      "id": "shopify",
+      "name": "Shopify",
+      "svg": "shopify.svg",
+      "hex": "7AB55C",
+      "origin": "https://www.shopify.com/brand-assets",
+      "guidelines": "https://www.shopify.com/brand-assets",
+      "connectors": [
+        "shopify"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#619945",
+        "dark": "#7AB55C",
+        "why": "Shopify's own colour (Simple Icons #7AB55C); on the light tiles the brand #7AB55C is 2.16:1, so its own hue darkened to #619945 (3:1)."
+      }
+    },
+    {
+      "id": "netlify",
+      "name": "Netlify",
+      "svg": "netlify.svg",
+      "hex": "000000",
+      "origin": "https://www.netlify.com/about/#brand-assets",
+      "guidelines": "https://www.netlify.com/about/#brand-assets",
+      "connectors": [
+        "netlify"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [
+        "Netlify"
+      ],
+      "color": {
+        "light": "ink",
+        "dark": "ink",
+        "why": "Netlify is a one-colour mark (Simple Icons #000000): drawn in the theme's ink, so it follows the theme as text does."
+      }
+    },
+    {
+      "id": "perplexity",
+      "name": "Perplexity",
+      "svg": "perplexity.svg",
+      "hex": "1FB8CD",
+      "origin": "https://www.perplexity.ai",
+      "guidelines": null,
+      "connectors": [
+        "perplexity"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#1A98AA",
+        "dark": "#1FB8CD",
+        "why": "Perplexity's own colour (Simple Icons #1FB8CD); on the light tiles the brand #1FB8CD is 2.11:1, so its own hue darkened to #1A98AA (3:1)."
+      }
+    },
+    {
+      "id": "duckduckgo",
+      "name": "DuckDuckGo",
+      "svg": "duckduckgo.svg",
+      "hex": "DE5833",
+      "origin": "https://github.com/duckduckgo/duckduckgo-privacy-extension/blob/5c6ac8d6a07421adbfb97ee2ff855dd7655f8d71/shared/img/logo-small-grayscale.svg",
+      "guidelines": "https://duckduckgo.com/press#press-materials",
+      "connectors": [
+        "duckduckgo"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#DE5833",
+        "dark": "#DE5833",
+        "why": "DuckDuckGo's own colour (Simple Icons #DE5833), 3:1 or more on every tile."
+      }
+    },
+    {
+      "id": "elasticsearch",
+      "name": "Elasticsearch",
+      "svg": "elasticsearch.svg",
+      "hex": "005571",
+      "origin": "https://www.elastic.co/brand",
+      "guidelines": null,
+      "connectors": [
+        "elasticsearch"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#005571",
+        "dark": "#007FA9",
+        "why": "Elasticsearch's own colour (Simple Icons #005571); on the dark tiles the brand #005571 is 1.69:1, so its own hue lightened to #007FA9 (3:1)."
+      }
+    },
+    {
+      "id": "bitbucket",
+      "name": "Bitbucket",
+      "svg": "bitbucket.svg",
+      "hex": "0052CC",
+      "origin": "https://atlassian.design/resources/logo-library",
+      "guidelines": "https://atlassian.design/foundations/logos",
+      "connectors": [
+        "bitbucket"
+      ],
+      "hosts": [],
+      "packages": [],
+      "publishers": [],
+      "color": {
+        "light": "#0052CC",
+        "dark": "#056AFF",
+        "why": "Bitbucket's own colour (Simple Icons #0052CC); on the dark tiles the brand #0052CC is 2.05:1, so its own hue lightened to #056AFF (3:1)."
       }
     }
   ],
-  "color_rule": "Owner decision, 23 November 2026 (ADR-0040, amended): marks show in their brand colours in the Store, Settings > Connectors and the session's Connectors section. `color.light` is drawn on the light presets' tile (Bone), `color.dark` on the dark presets' (Card catalog, Graphite, Typewriter). Each is the brand's own colour (Simple Icons' `hex`) where it reaches 3:1 against that tile (WCAG 1.4.11, the system's floor for marks), else the brand's one-colour black or white version. components/item-mark.test.ts checks every pair against every preset."
+  "color_rule": "Owner decisions, 23 and 27 November 2026 (ADR-0040, amended; conflict 30): marks show in their brand colours wherever an item's tile is drawn. `color.light` is drawn on the light tiles (v6 Bone #fffdf8/#f1f1f1/#ffffff with v7's), `color.dark` on the dark ones (#23211e/#1f1f1f/#2c2c2c). Each is the brand's own colour (Simple Icons' `hex`) where it reaches 3:1 against every tile of its scheme (WCAG 1.4.11, the system's floor for marks); where it does not, the same hue and saturation with the lightness moved until it does. A one-colour brand (black or near black) is \"ink\": the theme's text colour, so it follows the theme. components/item-mark.test.ts checks every pair against every tile."
 }

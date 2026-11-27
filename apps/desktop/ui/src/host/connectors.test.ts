@@ -163,6 +163,13 @@ describe('the Connectors tab', () => {
     expect(rows.find((r) => r.textContent?.includes('notes'))?.querySelector('.k7-lrow__mark')?.textContent).toBe('NT');
   });
 
+  it('an installed connector takes its mark by its name as one key, whatever address it runs (the installed "github" row matches the collection\'s)', async () => {
+    const f = fake([info({ name: 'github', url: 'https://mcp.example.com/code/', command: null, args: [] }), info({ name: 'GitHub-MCP', command: 'npx', args: ['-y', 'notes-mcp@1.2.3'] }), info({ name: 'postgres', command: 'npx', args: ['-y', 'pg-thing@1.0.0'] })]);
+    const { panel } = await mount(f);
+    const mark = (n: string): string | null | undefined => panel.querySelector(`[data-conn-row="${n}"] .k7-lrow__mark svg`)?.getAttribute('data-mark');
+    expect([mark('github'), mark('GitHub-MCP'), mark('postgres')]).toEqual(['github', 'github', 'postgresql']);
+  });
+
   it('narrows the installed list and the collection as you type, and says when nothing matches', async () => {
     const f = fake([info({ name: 'github', url: 'https://api.githubcopilot.com/mcp/', command: null, args: [] }), info({ name: 'notes' })]);
     const { panel } = await mount(f);

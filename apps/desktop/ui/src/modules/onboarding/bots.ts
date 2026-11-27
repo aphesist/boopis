@@ -6,14 +6,13 @@
 
    The owner's decisions win over the boards (27 November): only the owner's Approvals list asks (bots have no asks of their own), paying
    with a saved card is a built-in protection, and there is no spending cap by default. */
-import { brandMarkHTML, kit, ui } from '@boopis/ui';
+import { itemTile, kit, ui } from '@boopis/ui';
 import type { Tile } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, OnboardingSource, TeamPlan } from '../../data';
 import type { Rule } from '../../data/settings-host';
 import { emit } from '../../core/bus';
 import { BUILT_IN, everyBot, isDraft, ruleRow } from '../settings/rule-parts';
-import { letters } from '../../core/letters';
 import examples from './examples.json';
 import { ledger, writeLedger } from './ledger';
 
@@ -127,7 +126,7 @@ async function teamExchange(src: OnboardingSource, time: string): Promise<string
         answers: [{ label: 'Hold to build this team', primary: true, hold: true, value: 'build' }, { label: 'Change it', value: 'change' }, { label: 'Just you and me', value: 'alone' }], ...(S.error ? { error: S.error } : {}), attrs: { 'data-ob': 'team', 'data-plan-hash': plan.hash } })
     : kit.html.askCard({ variant: 'form', state: 'asked', who: 'Team plan', lead: kit.html.avatar({ variant: 'logomark', label: 'boopis' }), word: { text: S.error ? 'failed' : 'thinking', tone: S.error ? 'red' : 'neutral' }, ask: S.error || 'Putting a team together.', attrs: { 'data-ob': 'team' } });
   const connector = offer ? say('They can also use tools you already work in. Each one asks before it does anything.') +
-    kit.html.askCard({ variant: 'form', state: 'asked', who: 'Optional, from the Store', lead: '', word: { text: '' }, ask: '', fields: '<div role="list">' + kit.html.listRow({ variant: 'item', title: offer.name, sub: offer.why, ...((m) => (m ? { markHTML: m } : { markText: letters(offer.name) }))(brandMarkHTML({ name: offer.name, collection: offer.id })), action: 'Add ' + offer.name, actionAttrs: { 'data-ob-act': 'connector', 'data-value': offer.id } }) + '</div>',
+    kit.html.askCard({ variant: 'form', state: 'asked', who: 'Optional, from the Store', lead: '', word: { text: '' }, ask: '', fields: '<div role="list">' + kit.html.listRow({ variant: 'item', title: offer.name, sub: offer.why, ...itemTile({ name: offer.name, collection: offer.id }), action: 'Add ' + offer.name, actionAttrs: { 'data-ob-act': 'connector', 'data-value': offer.id } }) + '</div>',
       foot: 'Asks before every change. Remove it any time in Settings, Connectors.', attrs: { 'data-ob': 'connector' } }) : '';
   return time + you(S.you) + say(greet) + card + connector;
 }

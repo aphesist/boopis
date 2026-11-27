@@ -163,6 +163,8 @@ describe('what S40 draws no place for, kept in the pane (the lead, 26 November)'
     await tick();
     expect(rows('Connectors').map((r) => r[0])).toEqual(expect.arrayContaining(['github', 'postgres', 'linear', 'Browse the store']));
     expect(rows('Connectors').map((r) => r[0])).not.toContain('No engine plugins and no plugin hooks');
+    /* every connector of the pane leads with its brand's mark (the kit's one rule, itemTile; conflict 30) */
+    expect([...document.querySelectorAll('[data-pane-part="connectors"] + * svg[data-mark]')].map((m) => m.getAttribute('data-mark'))).toEqual(['github', 'postgresql', 'linear', 'sentry']);
     q<HTMLButtonElement>('[data-conn="github"]').click();
     expect(calls).toContainEqual(['connector', 'github', false]);
     q<HTMLButtonElement>('[data-signin="linear"]').click();

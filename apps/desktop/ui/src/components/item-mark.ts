@@ -8,17 +8,19 @@
    continuous corner (`data-sq`), 24px in a row's lead (two-line rows, `.ui-row--item`; a settings row's `lead`) and 40px at the
    head of an item's page; its corner is the floor at 24 and `--r-s` at 40. The mark is in its brand's colours (the owner, 23
    November 2026, ADR-0040 amended for these surfaces): `color.light` on the light presets' tile, `color.dark` on the dark ones',
-   each the brand's own colour where it holds 3:1 there and its one-colour black or white version where it does not, chosen by
-   the scheme through `light-dark()`. The monogram is one or two letters in the mono face, never a look-alike logo.
+   each the brand's own colour where it holds 3:1 there, else its own hue with the lightness moved until it does, or the theme's
+   ink (`--text`) for a one-colour brand (the owner, 27 November 2026), chosen by the scheme through `light-dark()`. The monogram is one or two letters in the mono face, never a look-alike logo.
 
-   Evidence, never a guess (invariant 5): a connector gets a service's mark only from what it is or runs (its id in boopis's
-   collection, its address's host, the package or image it starts, a store item's home page host), as `vendor/service-marks/
-   map.json` lists; a skill, plugin or mod gets its publisher's mark only when its source proved who published it and that name
-   is listed exactly (a claimed name proves nothing: anyone can write "Anthropic" in a marketplace of their own). The marks
-   are Simple Icons' files (CC0), unchanged (vendor/service-marks/README.md). The tile is always aria-hidden: it sits beside the
+   Evidence, never a guess (invariant 5): a connector gets a service's mark from what it runs when that names a listed service (its
+   address's host, the package or image it starts), else from what it is called (its id in boopis's collection or its own name, as one
+   key: `connectorKey`; the owner, 27 November 2026: an installed "github" shows GitHub's mark as the collection's row does) or a store
+   item's home page host, as `vendor/service-marks/map.json` lists; a skill, plugin or mod gets its publisher's mark only when its source
+   proved who published it and that name is listed exactly (a claimed name proves nothing: anyone can write "Anthropic" in a marketplace
+   of their own). The marks are Simple Icons' files (CC0), unchanged (vendor/service-marks/README.md). The tile is always aria-hidden: it sits beside the
    name it stands for. */
 import { esc } from '../core/dom';
-import { monogram } from '../core/letters';
+import { letters, monogram } from '../core/letters';
+import { icon } from './icons';
 import mapFile from '../vendor/service-marks/map.json';
 
 interface MarkEntry {
@@ -41,6 +43,15 @@ function parse(entry: MarkEntry): ServiceMark | null {
 }
 const MARKS = new Map<string, ServiceMark>();
 for (const e of ENTRIES) { const m = parse(e); if (m) MARKS.set(e.id, m); }
+
+/** a connector's name or id as one key: case, a scope, separators and the words "mcp" and "server" aside ("GitHub", "github",
+    "github-mcp", "@acme/github-mcp-server" are one; "Google Drive" and "google-drive" are one) */
+export function connectorKey(name: string): string {
+  const base = name.trim().toLowerCase().replace(/^boopis:/, '').replace(/^@[^/]+\//, '');
+  const words = base.split(/[^a-z0-9]+/).filter((w) => w && w !== 'mcp' && w !== 'server');
+  return words.join('');
+}
+const CONNECTOR_KEYS = new Map<string, ReadonlySet<string>>(ENTRIES.map((e) => [e.id, new Set(e.connectors.map(connectorKey))]));
 
 /** every mark the kit carries (the lab draws them all) */
 export const serviceMarks = (): ServiceMark[] => [...MARKS.values()];
@@ -80,18 +91,17 @@ export function packageOf(arg: string): string {
 /** the service a connector connects to, from the evidence in `ref`; null for anything else (it gets its monogram) */
 export function serviceMarkOf(ref: ItemRef): ServiceMark | null {
   if (ref.kind && ref.kind !== 'connector') return null;
-  const coll = (ref.collection ?? '').toLowerCase();
+  const coll = connectorKey(ref.collection ?? '');
   const urlHost = hostOf(ref.url), homeHost = hostOf(ref.homepage);
   const pkgs = [ref.command ?? '', ...(ref.args ?? [])].map(packageOf).filter(Boolean);
-  /* what it runs outranks what it is called: an address or a package that names another service, or none, decides */
-  const runs = !!urlHost || pkgs.length > 0;
+  /* what it runs outranks what it is called: an address or a package that names a listed service decides; one that names none
+     leaves the name to decide (an installed "github" behind a proxy or a fork is still GitHub to the person who named it so) */
   for (const e of ENTRIES) {
     if (urlHost && e.hosts.includes(urlHost)) return MARKS.get(e.id) ?? null;
     if (pkgs.some((p) => e.packages.includes(p))) return MARKS.get(e.id) ?? null;
   }
-  if (runs) return null;
   for (const e of ENTRIES) {
-    if (coll && e.connectors.includes(coll)) return MARKS.get(e.id) ?? null;
+    if (coll && CONNECTOR_KEYS.get(e.id)?.has(coll)) return MARKS.get(e.id) ?? null;
     if (homeHost && e.hosts.includes(homeHost)) return MARKS.get(e.id) ?? null;
   }
   return null;
@@ -121,8 +131,10 @@ export type ItemMarkSize = 24 | 40;
 export interface ItemMarkOpts { size?: ItemMarkSize | undefined; class?: string | undefined }
 
 /* the colours come from the map (data, like a bot's look), as two properties the stylesheet picks between by the scheme */
+/* "ink": a one-colour brand drawn in the theme's text colour, so it follows the theme as the words beside it do */
+const paint = (c: string): string => (c === 'ink' ? 'var(--text)' : esc(c));
 const svgOf = (m: ServiceMark, cls: string): string =>
-  '<svg class="' + cls + '" viewBox="' + esc(m.viewBox) + '" fill="currentColor" data-brand style="--mk-l:' + esc(m.light) + ';--mk-d:' + esc(m.dark) + '" aria-hidden="true" focusable="false">' + m.body + '</svg>';
+  '<svg class="' + cls + '" viewBox="' + esc(m.viewBox) + '" fill="currentColor" data-brand style="--mk-l:' + paint(m.light) + ';--mk-d:' + paint(m.dark) + '" aria-hidden="true" focusable="false">' + m.body + '</svg>';
 
 /** the brand's mark alone, in its colours for the scheme, for a tile drawn elsewhere (the kit's ListRow item tile: the Store, Settings ›
     Connectors, the pane's connector rows; the owner, 27 November: "the real brand logos in colour"); null when there is no known mark
@@ -130,6 +142,16 @@ const svgOf = (m: ServiceMark, cls: string): string =>
 export function brandMarkHTML(ref: ItemRef): string | null {
   const t = tileMarkOf(ref);
   return t ? svgOf(t.mark, 'k7-brandmark').replace('<svg ', '<svg data-mark="' + esc(t.mark.id) + '" data-mark-of="' + t.of + '" ') : null;
+}
+
+/** what an item's tile in the kit's ListRow or Card row holds, the one rule for every place that lists installable things (the Store's
+    rows, its item page and Installed, Settings › Connectors installed and from the collection, the pane's connector rows, the first
+    run's offer): a mod's glyph; else its brand's mark in colour; else board 15's letters (`core/letters.ts`), from `letterName` when
+    given (an installed connector from the collection is lettered by the collection's name) */
+export function itemTile(ref: ItemRef, letterName?: string): { markHTML: string } | { markText: string } {
+  if (ref.kind === 'mod') return { markHTML: icon('mod') };
+  const m = brandMarkHTML(ref);
+  return m ? { markHTML: m } : { markText: letters(letterName ?? ref.name) };
 }
 
 /** the tile: the service's mark, else the monogram */

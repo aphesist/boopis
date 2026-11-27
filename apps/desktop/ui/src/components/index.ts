@@ -142,7 +142,7 @@ export type { PresenceActor, PresenceElement, PresenceLayout, PresenceMode, Pres
 export { kbd, keys as keyChips, combo, comboKbds, keysVariants } from './kbd';
 export type { KeysOpts } from './kbd';
 /* every component's variants, for the UI lab's stories (variants.ts) */
-export { serviceMarkOf, publisherMarkOf, monogram, serviceMarks, serviceMark, packageOf, tileMarkOf, brandMarkHTML } from './item-mark';
+export { serviceMarkOf, publisherMarkOf, monogram, serviceMarks, serviceMark, packageOf, tileMarkOf, brandMarkHTML, itemTile, connectorKey } from './item-mark';
 export type { ItemRef, ItemMarkOpts, ItemMarkSize, ServiceMark } from './item-mark';
 export { variants } from './variants';
 export type { ComponentName } from './variants';

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import collection from '../../../../shared/data/connectors.json';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { itemMarkHTML, monogram, packageOf, publisherHTML, publisherMarkOf, serviceMark, serviceMarkOf, serviceMarks, tileMarkOf } from './item-mark';
+import { connectorKey, itemMarkHTML, itemTile, monogram, packageOf, publisherHTML, publisherMarkOf, serviceMark, serviceMarkOf, serviceMarks, tileMarkOf } from './item-mark';
 import mapFile from '../vendor/service-marks/map.json';
 import { lum, ratio } from '../styles/colour';
 
@@ -32,11 +32,11 @@ describe('serviceMarkOf: evidence, never a guess', () => {
     expect(id(serviceMarkOf({ name: 'Chrome DevTools', collection: 'chrome-devtools' }))).toBe('googlechrome');
     expect(id(serviceMarkOf({ name: 'Brave Search', collection: 'brave-search', kind: 'connector' }))).toBe('brave');
   });
-  it('the collection\'s entries each get the mark the map gives, or none (Context7, Playwright, Firecrawl, Exa and the reference servers have none)', () => {
+  it('the collection\'s entries each get the mark the map gives, or none (Context7, Playwright, Firecrawl and Exa have none in Simple Icons; the reference servers are the protocol\'s own)', () => {
     const got = Object.fromEntries((collection as unknown as { connectors: { id: string; name: string }[] }).connectors.map((c) => [c.id, id(serviceMarkOf({ name: c.name, collection: c.id }))]));
     expect(got).toEqual({
       context7: null, 'chrome-devtools': 'googlechrome', playwright: null, github: 'github', firecrawl: null, exa: null, notion: 'notion', supabase: 'supabase',
-      'brave-search': 'brave', atlassian: 'atlassian', mongodb: 'mongodb', sentry: 'sentry', neon: 'neon', 'sequential-thinking': null, memory: null
+      'brave-search': 'brave', atlassian: 'atlassian', mongodb: 'mongodb', sentry: 'sentry', neon: 'neon', 'sequential-thinking': 'modelcontextprotocol', memory: 'modelcontextprotocol'
     });
   });
   it('an installed connector by what it runs: its address, its package or its image', () => {
@@ -46,9 +46,21 @@ describe('serviceMarkOf: evidence, never a guess', () => {
     expect(id(serviceMarkOf({ name: 'x', command: 'npx', args: ['-y', 'mongodb-mcp-server@3.3.0', '--readOnly'] }))).toBe('mongodb');
     expect(id(serviceMarkOf({ name: 'x', command: 'docker', args: ['run', '-i', '--rm', '-e', 'GITHUB_PERSONAL_ACCESS_TOKEN', 'ghcr.io/github/github-mcp-server@sha256:040c4e'] }))).toBe('github');
   });
-  it('what it runs outranks its name: a server called github that runs something else is not GitHub', () => {
-    expect(serviceMarkOf({ name: 'github', collection: 'github', command: 'npx', args: ['-y', 'notes-mcp@1.2.3'] })).toBeNull();
-    expect(serviceMarkOf({ name: 'notion', collection: 'notion', url: 'https://mcp.example.com/mcp' })).toBeNull();
+  it('what it runs outranks its name where it names a listed service: a server called github that runs Notion\'s is Notion', () => {
+    expect(id(serviceMarkOf({ name: 'github', collection: 'github', url: 'https://mcp.notion.com/mcp' }))).toBe('notion');
+    expect(id(serviceMarkOf({ name: 'notes', collection: 'notes', command: 'npx', args: ['-y', '@modelcontextprotocol/server-postgres'] }))).toBe('postgresql');
+  });
+  it('where what it runs names no listed service, its name decides, as one key (an installed "github" behind a proxy is GitHub)', () => {
+    expect(id(serviceMarkOf({ name: 'github', collection: 'github', command: 'npx', args: ['-y', 'notes-mcp@1.2.3'] }))).toBe('github');
+    expect(id(serviceMarkOf({ name: 'notion', collection: 'notion', url: 'https://mcp.example.com/mcp' }))).toBe('notion');
+    expect(id(serviceMarkOf({ name: 'GitHub MCP', collection: 'GitHub MCP' }))).toBe('github');
+    expect(id(serviceMarkOf({ name: 'google-drive', collection: 'Google Drive' }))).toBe('googledrive');
+    expect(id(serviceMarkOf({ name: 'postgres', collection: 'postgres' }))).toBe('postgresql');
+    expect(serviceMarkOf({ name: 'notes', collection: 'notes', url: 'https://mcp.example.com/mcp' })).toBeNull();
+  });
+  it('the pane\'s common connectors each have their mark; Slack, Playwright and the rest Simple Icons lacks keep their letters', () => {
+    const got = Object.fromEntries(['github', 'postgres', 'linear', 'sentry', 'sqlite', 'filesystem', 'fetch', 'memory', 'jira', 'gitlab', 'slack', 'playwright', 'context7', 'exa', 'firecrawl'].map((n) => [n, id(serviceMarkOf({ name: n, collection: n }))]));
+    expect(got).toEqual({ github: 'github', postgres: 'postgresql', linear: 'linear', sentry: 'sentry', sqlite: 'sqlite', filesystem: 'modelcontextprotocol', fetch: 'modelcontextprotocol', memory: 'modelcontextprotocol', jira: 'jira', gitlab: 'gitlab', slack: null, playwright: null, context7: null, exa: null, firecrawl: null });
   });
   it('without anything it runs (the session knows only the name), the name the collection gave it decides', () => {
     expect(id(serviceMarkOf({ name: 'sentry', collection: 'sentry' }))).toBe('sentry');
@@ -64,6 +76,27 @@ describe('serviceMarkOf: evidence, never a guess', () => {
   });
   it('an address it cannot read is no evidence', () => {
     expect(serviceMarkOf({ name: 'x', url: 'not a url' })).toBeNull();
+  });
+});
+
+describe('connectorKey', () => {
+  it('case, a scope, separators and the words mcp and server aside', () => {
+    expect(connectorKey('GitHub')).toBe('github');
+    expect(connectorKey('github-mcp')).toBe('github');
+    expect(connectorKey('@acme/github-mcp-server')).toBe('github');
+    expect(connectorKey('Brave Search')).toBe(connectorKey('brave-search'));
+    expect(connectorKey('boopis:google-drive')).toBe('googledrive');
+    expect(connectorKey('mcp')).toBe('');
+  });
+});
+
+describe('itemTile: the one rule every item row draws', () => {
+  it('a mod\'s glyph, a brand\'s mark, else the letters', () => {
+    expect('markHTML' in itemTile({ name: 'Focus theme', kind: 'mod' }) && itemTile({ name: 'Focus theme', kind: 'mod' })).toMatchObject({ markHTML: expect.stringContaining('<svg') });
+    expect(itemTile({ name: 'github', collection: 'github' })).toMatchObject({ markHTML: expect.stringContaining('data-mark="github"') });
+    expect(itemTile({ name: 'Frontend design', kind: 'skill', publisher: 'Anthropic', proven: true })).toMatchObject({ markHTML: expect.stringContaining('data-mark-of="publisher"') });
+    expect(itemTile({ name: 'Context7', collection: 'context7' })).toEqual({ markText: 'C7' });
+    expect(itemTile({ name: 'pw', collection: 'pw' }, 'Playwright')).toEqual({ markText: 'PL' });
   });
 });
 
@@ -117,7 +150,7 @@ describe('the tile', () => {
     const h = itemMarkHTML({ name: 'GitHub', collection: 'github' });
     expect(h).toContain('data-mark="github"');
     expect(h).toContain('fill="currentColor"');
-    expect(h).toContain('data-brand style="--mk-l:#181717;--mk-d:#FFFFFF"');
+    expect(h).toContain('data-brand style="--mk-l:var(--text);--mk-d:var(--text)"');
     expect(h).toContain('aria-hidden="true"');
     expect(h).toContain('data-sq');
     expect(h).toContain('data-size="24"');
@@ -140,34 +173,54 @@ describe('the tile', () => {
   });
 });
 
-describe('brand colours (owner decision, 23 November 2026)', () => {
-  /* the raised tile (--bg-3) of every preset, read from tokens.css, and its scheme as theme.ts decides it (the ground's luminance) */
+describe('brand colours (owner decisions, 23 and 27 November 2026)', () => {
+  /* the tiles a mark stands on: v6's raised tile (--bg-3) of every preset, read from tokens.css with its scheme as theme.ts decides it
+     (the ground's luminance), and v7's: the ListRow's item tile (--bg-4) and the pane's Card (--bg-3), dark and light (tokens.v7.css) */
   const css = readFileSync(join(__dirname, '..', 'styles', 'tokens.css'), 'utf8');
+  const v7 = readFileSync(join(__dirname, '..', 'styles', 'tokens.v7.css'), 'utf8');
+  const tokOf = (block: string, n: string): string => new RegExp('--' + n + ':\\s*(#[0-9a-fA-F]{6})').exec(block)?.[1] ?? '';
   const presets = ['catalog', 'graphite', 'bone', 'typewriter'].map((id) => {
     const block = new RegExp('\\[data-hx-preset="' + id + '"\\][^{]*\\{([^}]*)\\}').exec(css)?.[1] ?? '';
-    const tok = (n: string): string => new RegExp('--' + n + ':\\s*(#[0-9a-fA-F]{6})').exec(block)?.[1] ?? '';
-    return { id, tile: tok('bg-3'), light: lum(tok('bg-2')) > 0.4 };
+    return { id, tiles: [tokOf(block, 'bg-3')], light: lum(tokOf(block, 'bg-2')) > 0.4 };
   });
-  it('reads a tile for every preset, and Bone is the light one', () => {
-    for (const p of presets) expect(p.tile, p.id).toMatch(/^#[0-9a-f]{6}$/i);
-    expect(presets.filter((p) => p.light).map((p) => p.id)).toEqual(['bone']);
+  for (const scheme of ['dark', 'light'] as const) {
+    const block = new RegExp('\\[data-ui="v7"\\]\\[data-theme="' + scheme + '"\\][^{]*\\{([^}]*)\\}').exec(v7)?.[1] ?? '';
+    presets.push({ id: 'v7 ' + scheme, tiles: [tokOf(block, 'bg-4'), tokOf(block, 'bg-3')], light: scheme === 'light' });
+  }
+  const hue = (hex: string): { h: number; s: number } => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, l = (mx + mn) / 2;
+    const h = d === 0 ? 0 : mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return { h: h * 60, s: d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1)) };
+  };
+  it('reads the tiles of every preset and of v7, and Bone and v7 light are the light ones', () => {
+    for (const p of presets) for (const t of p.tiles) expect(t, p.id).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(presets.filter((p) => p.light).map((p) => p.id)).toEqual(['bone', 'v7 light']);
   });
-  it('every mark holds 3:1 against the tile of every preset, in the colour its scheme draws (WCAG 1.4.11)', () => {
-    for (const m of serviceMarks()) for (const p of presets) {
+  it('every mark holds 3:1 against every tile of its scheme, in the colour that scheme draws (WCAG 1.4.11); ink is the text colour', () => {
+    for (const m of serviceMarks()) for (const p of presets) for (const t of p.tiles) {
       const c = p.light ? m.light : m.dark;
-      expect(ratio(c, p.tile), `${m.id} on ${p.id} (${c} on ${p.tile})`).toBeGreaterThanOrEqual(3);
+      if (c === 'ink') continue;
+      expect(ratio(c, t), `${m.id} on ${p.id} (${c} on ${t})`).toBeGreaterThanOrEqual(3);
     }
   });
-  it('each colour is the brand\'s own (Simple Icons\' hex) or its one-colour black or white version, with the reason written down', () => {
+  it('each colour is the brand\'s own hue (Simple Icons\' hex, or its lightness moved to reach 3:1), or ink for a one-colour brand, with the reason written down', () => {
     for (const e of (mapFile as unknown as { marks: { id: string; hex: string; color: { light: string; dark: string; why: string } }[] }).marks) {
-      for (const c of [e.color.light, e.color.dark]) expect(['#' + e.hex.toUpperCase(), '#000000', '#FFFFFF', '#181717', '#191919'], e.id).toContain(c.toUpperCase());
+      const own = hue('#' + e.hex);
+      for (const c of [e.color.light, e.color.dark]) {
+        if (c === 'ink') { expect(own.s, e.id + ' is one colour').toBeLessThan(0.1); continue; }
+        const got = hue(c);
+        expect(Math.abs(got.h - own.h), e.id + ' keeps its hue').toBeLessThan(3);
+        expect(Math.abs(got.s - own.s), e.id + ' keeps its saturation').toBeLessThan(0.08);
+      }
       expect(e.color.why.length, e.id).toBeGreaterThan(20);
     }
   });
-  it('a dark brand on the dark tiles takes its white version (GitHub on Graphite), a pale one on the light tile its black', () => {
-    expect(serviceMark('github')).toMatchObject({ light: '#181717', dark: '#FFFFFF' });
-    expect(serviceMark('supabase')).toMatchObject({ light: '#000000', dark: '#3FCF8E' });
-    expect(serviceMark('brave')).toMatchObject({ light: '#FB542B', dark: '#FB542B' });
+  it('a one-colour brand follows the theme\'s ink; a pale brand keeps its hue on the light tiles (Supabase green, not black)', () => {
+    expect(serviceMark('github')).toMatchObject({ light: 'ink', dark: 'ink' });
+    expect(serviceMark('supabase')?.dark).toBe('#3FCF8E');
+    expect(hue(serviceMark('supabase')?.light ?? '').h).toBeCloseTo(hue('#3FCF8E').h, 0);
+    expect(serviceMark('figma')).toMatchObject({ light: '#F24E1E', dark: '#F24E1E' });
   });
   it('the stylesheet picks the colour by the scheme', () => {
     const kit = readFileSync(join(__dirname, 'components.css'), 'utf8');

@@ -10,6 +10,9 @@ import { createMockStore } from '../../data/mock-store';
 import { submitForm } from '../cards/form';
 import { mountStore } from './view';
 import { letters } from '../../core/letters';
+import { itemTile } from '../../components/item-mark';
+import { markRef } from './model';
+import { BOARD15_ITEMS, BOARD15_MODS } from '../../lab/board-fixtures';
 import type { StoreView } from './view';
 
 const tick = (ms = 0): Promise<void> => new Promise((r) => { setTimeout(r, ms); });
@@ -207,6 +210,10 @@ describe('the store view', () => {
     expect(root.querySelector('[data-store-back]')?.textContent).toBe('Installed');
     (root.querySelector('[data-store-back]') as HTMLElement).click(); await tick(20);
     expect(root.querySelector('[data-store-go="sources"]')).not.toBeNull();
+  });
+  it('board 15\'s items take the kit\'s one tile rule: brand marks in colour, a proven publisher\'s mark, a mod\'s glyph, letters where none is known', () => {
+    const t = [...BOARD15_ITEMS, ...BOARD15_MODS].map((i) => { const x = itemTile(markRef(i), i.title); return 'markText' in x ? x.markText : /data-mark="([^"]+)"/.exec(x.markHTML)?.[1] ?? 'glyph'; });
+    expect(t).toEqual(['C7', 'anthropic', 'github', 'PL', 'linear', 'supabase', 'glyph', 'glyph']);
   });
   it('board 15\'s tile letters: two from the name', () => {
     expect([letters('Context7'), letters('GitHub'), letters('Linear'), letters('Frontend design'), letters('Pomodoro band')]).toEqual(['C7', 'GH', 'LN', 'FD', 'PB']);
