@@ -127,8 +127,8 @@ def check(ok: bool, what: str, detail: object = "") -> None:
 BAR_SCRIPT = """
 const root = document.querySelector('.hx-first-run');
 if (!root) return null;
-const bar = root.querySelector(':scope > .hx-bar');
-const buttons = [...root.querySelectorAll('.hx-win [data-win]')].map((b) => {
+const bar = root.querySelector(':scope > .hx-fr__bar');
+const buttons = [...root.querySelectorAll('[data-win-group] [data-win]')].map((b) => {
   const r = b.getBoundingClientRect();
   return { win: b.dataset.win, label: b.getAttribute('aria-label'), shown: !b.hidden && r.width > 0 && r.height > 0,
            top: r.top, bottom: r.bottom, left: r.left, right: r.right };
@@ -136,12 +136,12 @@ const buttons = [...root.querySelectorAll('.hx-win [data-win]')].map((b) => {
 const r = bar ? bar.getBoundingClientRect() : null;
 return { drag: bar ? bar.getAttribute('data-tauri-drag-region') : null,
          bar: r && { top: r.top, height: r.height, width: r.width },
-         width: innerWidth, layout: root.querySelector('.hx-win')?.dataset.layout ?? null, buttons };
+         width: innerWidth, layout: root.querySelector('[data-win-group]')?.dataset.layout ?? null, buttons };
 """
 
 # A double click on an empty part of the bar, as Tauri's drag script sees one: a press with detail 2 on the drag region.
 DBLCLICK_SCRIPT = """
-const bar = document.querySelector('.hx-first-run > .hx-bar');
+const bar = document.querySelector('.hx-first-run > .hx-fr__bar');
 const r = bar.getBoundingClientRect();
 const at = { bubbles: true, cancelable: true, composed: true, button: 0, detail: 2,
              clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 };
@@ -165,7 +165,7 @@ return window.__hxPresses.length;
 
 # An empty spot of the first-run bar (its buttons sit at its end), in CSS pixels, and the scale to the screen's.
 BAR_SPOT_SCRIPT = """
-const r = document.querySelector('.hx-first-run > .hx-bar').getBoundingClientRect();
+const r = document.querySelector('.hx-first-run > .hx-fr__bar').getBoundingClientRect();
 return { x: r.left + 120, y: r.top + r.height / 2, dpr: devicePixelRatio };
 """
 

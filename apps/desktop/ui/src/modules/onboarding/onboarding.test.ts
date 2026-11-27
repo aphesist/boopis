@@ -49,6 +49,9 @@ describe('scene: the setup pages', { timeout: 15000 }, () => {
     void runFirstRun(host, document.body, { providers: providersHost(providerStates(FOUND)), signins: signinsFor(), windowControls: controls });
     await flush();
     expect(title()).toBe('Hi, I’m boopis');
+    /* the window is undecorated: the page carries a drag strip and the window's glyphs */
+    expect(document.querySelector('.hx-first-run > .hx-fr__bar')?.getAttribute('data-tauri-drag-region')).toBe('deep');
+    expect(document.querySelectorAll('.hx-first-run [data-win-group] [data-win]').length).toBe(3);
     press('[data-setup="start"]'); await flush();
     expect(title()).toBe('Settings boopis needs');
     expect(document.querySelector('.k7-setup__skip')).toBeNull();

@@ -158,7 +158,9 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
     const page = (o: Omit<SetupPageOpts, 'windowParts'>): void => {
       const keep = (document.activeElement as HTMLElement | null)?.dataset['setup'] ?? null;
       detach(); detachExtras(); detachExtras = () => undefined;
-      root.innerHTML = kit.html.setupPage({ ...o, windowParts: { group: { 'data-win-group': '' }, min: { 'data-win': 'min' }, max: { 'data-win': 'max' }, close: { 'data-win': 'close' } } });
+      root.innerHTML = kit.html.setupPage({ ...o, windowParts: { group: { 'data-win-group': '' }, min: { 'data-win': 'min' }, max: { 'data-win': 'max' }, close: { 'data-win': 'close' } } }) +
+        /* the window is undecorated: a strip along its top moves it (and a double press there maximises it), under the glyphs */
+        '<div class="hx-fr__bar" data-tauri-drag-region="deep"></div>';
       kit.wire(root);
       const group = root.querySelector<HTMLElement>('[data-win-group]');
       detach = group ? controls.attach(group) : (): void => undefined;

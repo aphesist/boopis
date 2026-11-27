@@ -3,6 +3,9 @@
 
 /* ── (a) setup: the layer over the whole window ── */
 .hx-first-run { position: fixed; inset: 0; z-index: var(--z-palette); font-family: var(--sans); }
+/* the drag strip along the window's top, under the window's glyphs */
+.hx-fr__bar { position: absolute; inset: 0 0 auto; height: var(--drag-h); z-index: 1; }
+.hx-first-run .k7-setup__wc { z-index: 2; }
 /* O-P02: each setting's check, in the accent (ob3 consent) */
 .hx-fr__on { display: inline-flex; color: var(--accent-text); }
 /* O-P03: the rows in the Block, 2 apart, and a key's Field under them */
