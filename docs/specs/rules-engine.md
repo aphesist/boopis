@@ -87,7 +87,7 @@ Each pattern is **exact** or a **hint**:
 
 ## 6. Precedence with the per-bot rows
 
-The rows (w30/governed-bots, `policy/bot_tiers.json`): deploys, push, network, spend, people, outside, delete, commands, and per tool. Each row becomes **Default / Allow / Ask / Block**; Default (no key in `bot.json` `approvals`) means "no opinion: follow the rules list". This is new: today a missing key reads as the built-in defaults (deploys Ask, push Ask, …), which would ask for every `git push` while the owner's posture is "anything uncovered runs".
+The rows (w30/governed-bots, `policy/bot_tiers.json`): deploys, push, network, spend, people, outside, delete, commands, and per tool. Each row becomes **Default / Allow / Ask / Block**; Default (no key in `bot.json` `approvals`) means "no opinion: follow the rules list". Built: `bot_tiers.json` `default` is every kind Allow, spend Ask (the built-in protection: `never_allow`), so a missing key adds no ask (owner decision, 27 November 2026, "Drop them", ADR-0050). Until then a missing key read as deploys, push, people, outside and delete Ask, which asked for every `git push` while the owner's posture is "anything uncovered runs".
 
 **Proposed order, first that decides wins:**
 
@@ -299,7 +299,7 @@ Capability `rules-v1` in `describe.capabilities`. Event `rules.matched` is not a
 Once per root, recorded in `<root>/boopis/bot-defaults.json` (new keys beside `tiers` and `cap`):
 
 1. `rules.json` is created with the eight defaults if absent.
-2. **Rows.** `bot_tiers.json` `default` becomes empty (every row Default). A bot in `bot-defaults.json` `tiers` (boopis wrote its tiers) whose tiers are still exactly what boopis wrote has them removed (Default). A bot whose six switches are still all on as boopis made them is treated the same. Anything the owner changed stays as it is, shown as an override. Presets stay, unchanged, for the owner to pick. Recorded as `rows_cleared: [bot]`.
+2. **Rows** (built, 27 November 2026; owner decision "Drop them", ADR-0050). `bot_tiers.json` `default` is every kind Allow, spend Ask (the protection). A bot whose tier map is still exactly the old default (deploys, push, people, outside and delete Ask; network and commands Allow; spend Ask) gets the new default written. The record cannot tell a default left alone from an Ask the owner chose, so only the whole map counts: any other map stays as it is, shown as the bot's own rules. A bot whose six switches are still all on as boopis made them gets the new default from the earlier `tiers` move. Presets stay, unchanged, for the owner to pick. Recorded per bot as `asks: [bot]` (`bots/defaults.py`, `schema_version: 3`).
 3. **Caps** (owner answer: no default caps). A bot whose cap is exactly $5 written by boopis (creation or the w30 move, `bot-defaults.json` `cap`) or the old $0.60 default loses its cap. New bots are made with none (the Bots form, `boopis team apply`). Recorded as `cap_cleared: [bot]`. Usage is still shown.
 4. Nothing else moves: deploys, push and network have no global default (they are not in the owner's list); a row the owner set for them keeps working.
 

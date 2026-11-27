@@ -2,6 +2,8 @@
 
 Status: draft for w31 (the package's w28), proposed in ADR-0062. Owner decision 10 (23 November 2026): "B47 and no self-approval are host protections, not rules". They are not in the rules list (`rules-engine.md`), cannot be edited or removed in Settings, and apply whatever a bot's tiers or the global rules say.
 
+Beside them, from ADR-0021 and ADR-0050: **paying with a saved card, or passing a run cap, always asks.** The `spend` kind is `never_allow` in `policy/bot_tiers.json`, so its Allow is read as Ask. Since the owner dropped the bots' own default asks (ADR-0050, amended 27 November 2026), it is the only ask a bot has by default; every other kind is Allow, and only the owner's rules list, or a rule set for one bot, makes a bot ask.
+
 ## 1. The problem, and what this is not
 
 Today a bot with `terminal` can act as the owner in five ways. Each is a path to the same result: an approval answered, or a rule loosened, by something that is not the owner.

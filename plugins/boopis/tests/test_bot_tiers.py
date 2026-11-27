@@ -115,7 +115,9 @@ def test_a_write_outside_the_session_s_folder_is_outside(tmp_path: Path) -> None
     assert cats("write_file", {"path": str(work / "a.txt")}, cwd=str(work)) == ()
     assert cats("write_file", {"path": str(tmp_path / "elsewhere.txt")}, cwd=str(work)) == ("outside",)
     assert cats("write_file", {"path": "a.txt"}, cwd="") == ("outside",)  # no known folder: outside (fail closed)
-    d = judge("write_file", {"path": str(tmp_path / "elsewhere.txt")}, cwd=str(work))
+    far = {"path": str(tmp_path / "elsewhere.txt")}
+    assert judge("write_file", far, cwd=str(work)).kind == "allow"  # a bot has no asks of its own by default
+    d = judge("write_file", far, b=bot({"outside": "ask"}), cwd=str(work))
     assert d.kind == "approve" and "writing outside its workspace" in d.message
 
 
@@ -129,6 +131,7 @@ def test_the_policy_s_network_tools_are_network() -> None:
 
 def test_defaults_presets_and_the_record_in_that_order() -> None:
     assert effective(bot()) == load().default
+    assert {k for k, v in load().default.items() if v != "allow"} == {"spend"}  # only the protection asks
     research = effective(bot(preset="research"))
     assert research["push"] == "block" and research["network"] == "allow"
     assert effective(bot({"push": "ask"}, preset="research"))["push"] == "ask"
