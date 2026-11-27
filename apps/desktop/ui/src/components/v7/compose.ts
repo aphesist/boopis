@@ -16,7 +16,8 @@
             the composer as its source reports it (`composerDictation`): the speech model being fetched, once, with its progress
             in the placeholder; listening; the words arriving in the text; an error, which switches the mic off. In a build with
             no dictation (`data-mic-off`) a press, a hold or alt+V starts nothing and `ui:dictate-unavailable` says so. */
-import { fire, isMac } from '../../core/dom';
+import { isMac } from '../../core/dom';
+import { emit } from './events';
 import { announce } from '../announce';
 
 const TEXT = '.k7-composer__text';
@@ -223,7 +224,7 @@ function wireMic(c: HTMLElement, t: HTMLElement, mic: HTMLButtonElement): void {
   };
   /* this build has no dictation (`data-mic-off`): the mic never switches on, and the app is asked to say so (ui:dictate-unavailable) */
   const off = (): boolean => c.hasAttribute('data-mic-off');
-  const sayOff = (): void => { fire(c, 'ui:dictate-unavailable', {}); };
+  const sayOff = (): void => { emit(c, 'ui:dictate-unavailable', {}); };
   /** stop waiting for a switched-off dictation's last words: what stands of them stays in the text, as words that were said */
   const letGo = (): void => {
     if (tail === null) return;
@@ -237,7 +238,7 @@ function wireMic(c: HTMLElement, t: HTMLElement, mic: HTMLButtonElement): void {
     if (v && off()) return;
     if (v) { fresh = tail !== null; letGo(); }   /* a new press lets go of the last dictation: its events do not mix with this one's */
     starting = v;
-    const go = fire(c, 'ui:dictate', { on: v, mode: v ? mode : null }, true);
+    const go = emit(c, 'ui:dictate', { on: v, mode: v ? mode : null }, true);
     starting = false;
     if (!go) return;
     if (!v && phase !== 'preparing') { phase = 'transcribing'; wait(); }   /* it was listening: the last words said are still to come */
@@ -348,12 +349,12 @@ function wireFiles(c: HTMLElement, t: HTMLElement): void {
     const files = [...(e.dataTransfer?.files ?? [])];
     if (!files.length) return;
     e.preventDefault();
-    fire(c, 'ui:files', { files, via: 'drop' });
+    emit(c, 'ui:files', { files, via: 'drop' });
   });
   t.addEventListener('paste', (e) => {
     const d = e.clipboardData, files = [...(d?.files ?? [])];
     e.preventDefault();
-    if (files.length) { fire(c, 'ui:files', { files, via: 'paste' }); return; }
+    if (files.length) { emit(c, 'ui:files', { files, via: 'paste' }); return; }
     const text = d?.getData('text/plain') ?? '';
     if (text) composerType(t, text);
   });

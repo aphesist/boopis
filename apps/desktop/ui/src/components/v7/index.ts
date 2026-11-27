@@ -9,7 +9,7 @@ import * as thread from './thread';
 import * as surfaces from './surfaces';
 import { slabPath } from '../squircle-path';
 import { dock, dockAsk, dockCap, dockMore, dockOrb, dockPanel, DOCK_GEOMETRY } from './dock';
-import { fire } from '../../core/dom';
+import { emit } from './events';
 import { layer } from '../layer';
 import { glyph } from './util';
 import { applyTheme, botFill, deriveAccent } from './theme';
@@ -68,7 +68,7 @@ function openMenu(anchor: HTMLElement, o: blocks.MenuOpts & { place?: 'above' | 
     const r = (e.target as Element).closest<HTMLElement>('[data-kit~="MenuRow"], [data-kit~="OptionRow"]');
     if (!r || r.getAttribute('aria-disabled') === 'true') return;
     const value = r.dataset['value'] ?? '';
-    if (!fire(node, 'ui:select', { value }, true)) return;
+    if (!emit(node, 'ui:select', { value }, true)) return;
     o.onSelect?.(value);
     if (r.getAttribute('role') === 'menuitemcheckbox') { const on = r.getAttribute('aria-checked') !== 'true'; r.setAttribute('aria-checked', String(on)); const c = r.querySelector('.k7-mrow__check'); if (c) c.innerHTML = on ? glyph('check') : ''; return; }
     layer.close();

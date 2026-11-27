@@ -1,7 +1,8 @@
 /* The v7 kit's behaviours, wired once per element (`wire(root)` wires every kit component under root). Events bubble and
    are cancelable where an action follows: ui:change {value} (Segmented, Switch, Chip), ui:commit (a hold finished),
    ui:toggle {open} (Disclosure, Card's danger zone, FilesCard). State lives in ARIA and data attributes (R-state-2). */
-import { esc, fire, frag, reduced, tokenMs } from '../../core/dom';
+import { esc, frag, reduced, tokenMs } from '../../core/dom';
+import { emit } from './events';
 import { layer } from '../layer';
 import { icon } from '../icons';
 import { paintDock } from './dock';
@@ -18,7 +19,7 @@ function wireSegmented(seg: HTMLElement): void {
   const choose = (b: HTMLButtonElement, focus: boolean): void => {
     const tabs = seg.getAttribute('role') === 'tablist', list = items(), i = list.indexOf(b);
     if (b.getAttribute(tabs ? 'aria-selected' : 'aria-checked') === 'true') { if (focus) b.focus(); return; }
-    if (!fire(seg, 'ui:change', { value: b.dataset['value'] ?? '' }, true)) return;
+    if (!emit(seg, 'ui:change', { value: b.dataset['value'] ?? '' }, true)) return;
     for (const x of list) { const on = x === b; x.setAttribute(tabs ? 'aria-selected' : 'aria-checked', String(on)); x.tabIndex = on ? 0 : -1; }
     seg.style.setProperty('--i', String(i));
     if (focus) b.focus();
@@ -40,7 +41,7 @@ function wireSwitch(sw: HTMLButtonElement): void {
   sw.addEventListener('click', () => {
     if (sw.disabled) return;
     const on = sw.getAttribute('aria-checked') !== 'true';
-    if (!fire(sw, 'ui:change', { value: on }, true)) return;
+    if (!emit(sw, 'ui:change', { value: on }, true)) return;
     sw.setAttribute('aria-checked', String(on));
   });
 }
@@ -50,7 +51,7 @@ function wireSwitch(sw: HTMLButtonElement): void {
 function wireCheckRow(r: HTMLElement): void {
   const toggle = (): void => {
     const on = r.getAttribute('aria-checked') !== 'true';
-    if (!fire(r, 'ui:change', { value: on }, true)) return;
+    if (!emit(r, 'ui:change', { value: on }, true)) return;
     r.setAttribute('aria-checked', String(on));
   };
   r.addEventListener('click', toggle);
@@ -61,7 +62,7 @@ function wireChip(c: HTMLButtonElement): void {
   if (c.dataset['variant'] === 'answer' || c.hasAttribute('data-hold')) return;
   c.addEventListener('click', () => {
     const on = c.getAttribute('aria-pressed') !== 'true';
-    if (!fire(c, 'ui:change', { value: on }, true)) return;
+    if (!emit(c, 'ui:change', { value: on }, true)) return;
     c.setAttribute('aria-pressed', String(on));
     c.toggleAttribute('data-chosen', on);
   });
@@ -73,7 +74,7 @@ export function wireHold(b: HTMLElement): void {
   let timer = 0, held = false, armed = 0;
   const label = b.querySelector<HTMLElement>('.k7-chip__label, .k7-btn__label'), words = label?.textContent ?? '';
   const disarm = (): void => { clearTimeout(armed); armed = 0; b.removeAttribute('data-armed'); if (label && !held) label.textContent = words; };
-  const commit = (): void => { if (!fire(b, 'ui:commit', undefined, true)) return; held = true; b.setAttribute('data-held', ''); };
+  const commit = (): void => { if (!emit(b, 'ui:commit', undefined, true)) return; held = true; b.setAttribute('data-held', ''); };
   const ms = (): number => tokenMs('--dur-hold', 1000);
   const start = (): void => {
     if (held || (b as HTMLButtonElement).disabled) return;
@@ -103,7 +104,7 @@ function wireDisclosure(d: HTMLElement): void {
   if (!btn) return;
   btn.addEventListener('click', () => {
     const open = btn.getAttribute('aria-expanded') !== 'true';
-    if (!fire(d, 'ui:toggle', { open }, true)) return;
+    if (!emit(d, 'ui:toggle', { open }, true)) return;
     btn.setAttribute('aria-expanded', String(open));
     d.toggleAttribute('data-open', open);
   });
@@ -180,8 +181,8 @@ function wireComposer(c: HTMLElement): void {
   const send = (steer: boolean): void => {
     const text = (t.textContent ?? '').trim();
     if (!text) return;
-    if (c.hasAttribute('data-running') && noQueue()) { fire(c, 'ui:refused', {}); return; }
-    if (fire(c, steer ? 'ui:steer' : 'ui:send', { text, queue: c.hasAttribute('data-running') && !steer }, true)) { t.textContent = ''; composerForget(t); sync(); }
+    if (c.hasAttribute('data-running') && noQueue()) { emit(c, 'ui:refused', {}); return; }
+    if (emit(c, steer ? 'ui:steer' : 'ui:send', { text, queue: c.hasAttribute('data-running') && !steer }, true)) { t.textContent = ''; composerForget(t); sync(); }
   };
   t.addEventListener('input', sync);
   t.addEventListener('keydown', (e) => {
@@ -191,15 +192,15 @@ function wireComposer(c: HTMLElement): void {
   });
   b.addEventListener('click', () => {
     if ((t.textContent ?? '').trim()) { send(false); return; }
-    fire(c, 'ui:voice', { setup: setUp() });
+    emit(c, 'ui:voice', { setup: setUp() });
   });
   /* Stop is its own button, there while a turn runs (`data-running`, which the app sets and clears in place: composerRunning) */
-  c.querySelector('[data-stop]')?.addEventListener('click', () => { if (c.hasAttribute('data-running')) fire(c, 'ui:stop', {}); });
+  c.querySelector('[data-stop]')?.addEventListener('click', () => { if (c.hasAttribute('data-running')) emit(c, 'ui:stop', {}); });
   new MutationObserver(sync).observe(c, { attributes: true, attributeFilter: ['data-running', 'data-queue-off', 'data-voice-setup'] });
-  c.querySelector('[data-plus]')?.addEventListener('click', () => { fire(c, 'ui:add', {}); });
+  c.querySelector('[data-plus]')?.addEventListener('click', () => { emit(c, 'ui:add', {}); });
   /* a word the text is read by (composerMarks): pressing it, or alt ArrowDown with the caret in it, asks what it is read as */
   const markAt = (n: Node | null): HTMLElement | null => (n instanceof Element ? n : n?.parentElement)?.closest<HTMLElement>(FF) ?? null;
-  const ask = (el: HTMLElement): void => { fire(c, 'ui:mark', { text: el.textContent ?? '', kind: el.getAttribute('data-ff') ?? '', el }); };
+  const ask = (el: HTMLElement): void => { emit(c, 'ui:mark', { text: el.textContent ?? '', kind: el.getAttribute('data-ff') ?? '', el }); };
   t.addEventListener('click', (e) => { const m = markAt(e.target as Node); if (m) ask(m); });
   t.addEventListener('keydown', (e) => { if (e.key !== 'ArrowDown' || !e.altKey) return; const m = markAt(getSelection()?.anchorNode ?? null); if (m) { e.preventDefault(); ask(m); } });
   /* its own undo, a chip as one unit, paste, files dropped and pasted, the mic (a press, alt+V, or held): compose.ts */
@@ -394,7 +395,7 @@ export function composerMentions(c: HTMLElement, src: KitMentions, open: (anchor
 
 /** HoverBar: a press on one of its actions says which (`ui:act` {value, el}: `el` is the button, what a menu opens against) */
 function wireHoverBar(bar: HTMLElement): void {
-  bar.addEventListener('click', (e) => { const b = (e.target as Element).closest<HTMLElement>('[data-act]'); if (b && bar.contains(b)) fire(bar, 'ui:act', { value: b.dataset['act'] ?? '', el: b }); });
+  bar.addEventListener('click', (e) => { const b = (e.target as Element).closest<HTMLElement>('[data-act]'); if (b && bar.contains(b)) emit(bar, 'ui:act', { value: b.dataset['act'] ?? '', el: b }); });
 }
 /** a bot at rest on a rest surface wakes under the pointer (the lively idle, its 3D turns and glances) and settles back into the pose
     when it leaves (ORBS.md, per-surface policy); a bot in a state keeps its state */
