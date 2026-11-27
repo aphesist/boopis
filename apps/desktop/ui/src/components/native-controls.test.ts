@@ -23,7 +23,7 @@ const RULES: readonly Rule[] = [
   { id: 'file', what: 'a file input (the platform\'s chooser)', instead: 'keep the input hidden behind a button of the library', re: TYPE('file'), kinds: ['.ts', '.html'] },
   { id: 'checkbox-radio', what: 'a stock checkbox or radio', instead: 'ui.switch, ui.segmented, ui.chipGroup or the form card\'s option rows', re: TYPE('checkbox|radio'), kinds: ['.ts', '.html'] },
   { id: 'title-tooltip', what: 'a title="" tooltip (the platform\'s, unthemed, slow and unreadable by keyboard)', instead: 'data-tip (components/tooltip.ts) and an accessible name', re: /\stitle=(?:"|\\")|setAttribute\(\s*['"]title['"]/ },
-  { id: 'native-dialog-call', what: 'alert(), confirm() or prompt()', instead: 'a form card or ui.toast', re: /(?<![\w.$])(?:window\.)?(?:alert|confirm|prompt)\(/ },
+  { id: 'native-dialog-call', what: 'alert(), confirm() or prompt()', instead: 'a form card or kit.notify', re: /(?<![\w.$])(?:window\.)?(?:alert|confirm|prompt)\(/ },
   { id: 'dialog', what: 'a <dialog> that is not the app\'s themed .hx-dialog', instead: 'the .hx-dialog pattern (modules/shell/shell.css)', re: /<dialog\b(?![^>]*class="hx-dialog)/ },
   { id: 'disclosure-widget', what: 'a native <details>, <summary>, <progress> or <meter>', instead: 'ui.disclosure, ui.section, ui.measure, the progress dots', re: /<(?:details|summary|progress|meter)\b/ }
 ];

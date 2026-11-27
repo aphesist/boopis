@@ -47,7 +47,7 @@ export const ROLES = {
   AskCard: [kit('AskCard'), '.ui-request'],
   FilesCard: [kit('FilesCard')],
   Queue: [kit('Queue')],
-  Notice: [kit('Notice'), '.ui-toast'],
+  Notice: [kit('Notice')],
   SystemLine: [kit('SystemLine')],
   Bubble: [kit('Bubble'), '.ui-entry__body'],
   /* the agent side of a thread (what shares the 30 px gutter's edge): your bubbles sit at the other edge */

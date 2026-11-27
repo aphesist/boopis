@@ -46,7 +46,7 @@ export interface EventMap {
     /** a part of the page to scroll to and focus: `voice` (Models › Voice and speech), `drafts` (Approvals' drafted exceptions) */ focus?: string };
   'hx:bot-settings': { open?: boolean; toggle?: boolean; from?: string; /** the bot whose sheet opens (the one open when absent) */ id?: string; /** the section it opens at (7a follow-ups: `approvals`, drafts first) */ section?: string };
   'hx:view-inset': { tab?: Tab; left?: number; right?: number; source?: string };
-  'hx:toast': { text?: string; message?: string };
+  'hx:notify': { text?: string; message?: string };
   /** the dock reports its size: the room the composer keeps above it */
   'hx:dock': { mode: DockMode; page: string; width: number; height: number; /** the slab at rest, without the hover headroom */ rest?: number };
   'hx:dock-expand': { toggle: boolean; from: string };

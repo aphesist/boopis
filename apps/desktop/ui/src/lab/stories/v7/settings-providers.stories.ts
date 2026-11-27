@@ -37,7 +37,7 @@ const draw = (o: Opts = {}): Render => async ({ root }) => {
   el.setAttribute('aria-labelledby', 'hx-set-providers-h');
   fill(root, el);
   const b = bridge(o.fail ? () => Promise.reject(new Error(o.fail)) : () => Promise.resolve(o.list ?? baseline()), o.probe);
-  const view = mountProviders(el, { bridge: b, toast: () => undefined, settle: 0, ...(o.login ? { login: o.login } : {}) });
+  const view = mountProviders(el, { bridge: b, notify: () => undefined, settle: 0, ...(o.login ? { login: o.login } : {}) });
   await view.ready;
   await frames(2);
   if (o.after) { await o.after(el); await frames(3); if (el.querySelector('[data-prov-flow]:not([hidden])')) await new Promise((r) => setTimeout(r, 900)); }

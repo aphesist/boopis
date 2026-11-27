@@ -4,6 +4,8 @@ import { store } from '../../../data/store';
 import type { DataProvider } from '../../../data/provider';
 import { boardS20, boardS23 } from '../../board-fixtures';
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
+import { kit } from '@boopis/ui';
+import type { NotifyOpts } from '@boopis/ui';
 
 const MOCK = { url: '/v6/__index.html' };
 const st = (tags: State['tags'], setup?: (c: AppCtx) => Promise<void>, provider: ProviderSpec = {}, extra: Partial<State> = {}): State => ({ tags, app: { provider, ...(setup ? { setup } : {}) }, ...extra });
@@ -63,12 +65,19 @@ const menus: Story = {
     'a menu item hover': st(['hover'], async (c) => { await c.click('#hx-btn-account'); await c.wait(300); }, {}, { force: [{ sel: '.k7-menu[data-floating] [data-kit~="MenuRow"]:nth-of-type(2)', state: 'hover' }], overlay: { anchor: '#hx-btn-account', layer: '.k7-menu[data-floating]' } })
   }
 };
-const toast: Story = {
-  id: 'shell/toast', title: 'Toast in the app', area: 'shell', kind: 'surface', covers: ['surface:toasts'], scope: '.ui-toast', mock: MOCK,
+/* the floating Notice in the app (conflict 31, step 2a: the v7 spec's "floating (bottom centre)"): just above the open view's composer,
+   one at a time, "+N" for those waiting, its action and its dismiss (kit.notify, the one API) */
+const over = (lines: readonly [string, NotifyOpts?][]) => async (c: AppCtx): Promise<void> => { kit.notifyReset(); await c.wait(200); for (const [t, o] of lines) kit.notify(t, { ms: 60000, ...(o ?? {}) }); await c.wait(500); };
+const notices: Story = {
+  id: 'shell/notice', title: 'Notice in the app', area: 'shell', kind: 'surface', covers: ['surface:notices'], scope: '#hx-app', mock: MOCK,
   states: {
-    typical: st(['typical', 'success'], async (c) => { c.hx.ui.toast('Archived audit log export', { ms: 60000 }); await c.wait(400); }),
-    'with an action': st(['variant'], async (c) => { c.hx.ui.toast('Archived audit log export', { action: { label: 'Undo' }, ms: 60000 }); await c.wait(400); }),
-    long: st(['long'], async (c) => { c.hx.ui.toast('Archived Reconcile the invoices_v2 backfill against the ledger before the quarterly close and the auditors arrive', { action: { label: 'Undo' }, ms: 60000 }); await c.wait(400); })
+    typical: st(['typical', 'success'], over([['Archived audit log export']])),
+    'with an action': st(['variant'], over([['Archived audit log export', { action: { label: 'Undo' } }]])),
+    'two more waiting (+2)': st(['many'], over([['Archived audit log export', { action: { label: 'Undo' } }], ['Saved kai'], ['Copied']])),
+    'over the Bots tab, above its composer': st(['variant'], async (c) => { await c.key('2', { altKey: true }); await c.wait(600); await over([['Archived nina', { action: { label: 'Undo' } }]])(c); }),
+    'a mod\'s notice': st(['variant'], over([[' 1 test failing in invoice.test.ts', { title: 'test-runner mod', icon: 'mod' }]])),
+    'the dismiss hovered': st(['hover'], over([['Archived audit log export', { action: { label: 'Undo' } }]]), {}, { force: [{ sel: '#hx-notify [data-dismiss]', state: 'hover' }] }),
+    long: st(['long'], over([['Archived Reconcile the invoices_v2 backfill against the ledger before the quarterly close and the auditors arrive', { action: { label: 'Undo' } }]]))
   }
 };
 /* The session's right panel on the kit's Pane (modules/session/details.ts): its details as board S40 draws them and what the lead kept in
@@ -123,4 +132,4 @@ const sizes: Story = {
   }
 };
 
-export default [sidebar, titleBar, pal, menus, toast, details, keysSheet, sizes];
+export default [sidebar, titleBar, pal, menus, notices, details, keysSheet, sizes];

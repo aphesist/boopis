@@ -61,10 +61,6 @@
 .ui-entry[data-kind="mod"][data-mod-card] hx-card { width: 100%; }
 .ui-entry[data-kind="mod"][data-mod-row] .mv-box { max-width: 100%; }
 
-/* ───────────── a toast from a mod: the notice, led by the mod ───────────── */
-.ui-toast > span.mod-toast { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; padding-block: 8px; }
-.mod-toast__who { flex: none; color: var(--text-dim); font-weight: 500; }
-.mod-toast__t { min-width: 0; overflow-wrap: anywhere; }
 
 /* ───────────── the mod as an origin (cards.js draws it; these are its details) ───────────── */
 
@@ -81,11 +77,3 @@
 .mod-ghost { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; pointer-events: none; }
 .mod-status--ghost { position: absolute; left: 0; right: 0; bottom: 0; pointer-events: none; }
 
-/* ───────────── the toast queue: a quiet "+N" while others wait, and a way to dismiss ───────────── */
-.mod-toast__more { flex: none; margin-left: calc(var(--sp-2) * -1); font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); font-variant-numeric: tabular-nums; color: var(--text-dim); text-transform: none; }
-/* the dismiss is a 24px corner control: while the toast holds one its corner size is 24 (inset 8, radius 12) */
-.ui-toast:has(> .mod-toast__x) { --corner-size: 24px; }
-.ui-toast > .mod-toast__x { flex: none; }
-
-/* a mod's toast is as wide as its words (a fixed box at the centre line would otherwise shrink to half the window) */
-.ui-toast:has(.mod-toast) { width: max-content; }

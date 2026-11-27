@@ -158,6 +158,8 @@ export async function ownerDecisions(env) {
   await page.click('.bt-archived [data-act="restore"][aria-label="Restore nina"]'); await page.waitForTimeout(500);
   const refused = await ev(() => ({ toast: document.querySelector('.k7-notify .k7-notice__text')?.textContent, archived: document.querySelectorAll('.bt-archived [data-kit~="ListRow"]').length, nina: [...document.querySelectorAll('.bt-rows [data-kit~="ListRow"]')].filter((r) => r.dataset.value === 'nina').length }));
   check('owner', 'restoring a bot whose name is in use is refused in words, and nothing moves', /^Could not restore nina: there is a teammate called nina already; archive or delete it, then restore$/.test(refused.toast ?? '') && refused.archived === 2 && refused.nina === 1, refused);
+  /* one Notice at a time (2a): the refusal is dismissed before the next restore, whose Notice then shows at once */
+  await page.click('#hx-notify [data-dismiss]'); await page.waitForTimeout(300);
   await page.locator('.bt-archived [data-kit~="ListRow"] >> nth=0').hover();
   await page.click('.bt-archived [data-act="restore"][aria-label="Restore ledger"]'); await page.waitForTimeout(600);
   const back = await ev(() => ({ toast: document.querySelector('.k7-notify .k7-notice__text')?.textContent, head: document.querySelector('.bt-archived .k7-shead__btn')?.textContent.trim(), ledger: !!document.querySelector('.bt-rows [data-kit~="ListRow"][data-value="ledger"]'), dock: !!document.querySelector('#hx-dock .k7-dock__orb[data-bot="ledger"] orb-avatar'), focus: document.activeElement?.dataset?.value }));

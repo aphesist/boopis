@@ -206,7 +206,7 @@ const ROLES = [
   ['surface.inset', '--bg-0', 'Drawer: fields, approval and ship cards, the command field, wells. Set into whatever it sits on.'],
   ['surface.frame', '--bg-1', 'Cabinet: title bar, sidebars, the open right panel, menus, palette, dialogs.'],
   ['surface.ground', '--bg-2', 'Reading room: the ground the work sits on.'],
-  ['surface.raised', '--bg-3', 'Card stock: what the user wrote or is writing (request cards, the composer), tooltips, toasts.'],
+  ['surface.raised', '--bg-3', 'Card stock: what the user wrote or is writing (request cards, the composer), tooltips, notices.'],
   ['surface.pressed', '--bg-4', 'Pressed fills, the kbd inside a tooltip, scrollbar thumbs.'],
   ['surface.chip', '--chip', 'Inline code chips.'],
   ['text.default', '--text', 'Body text and labels. Lines and hover fills are derived from it.'],
@@ -295,7 +295,7 @@ function shadowOf(v) {
 }
 const dim = (v, unit = 'px') => ({ value: v, unit });
 semantic.shadow = {};
-for (const [name, cssVar, desc] of [['pop', '--shadow-pop', 'Things that float over other things: menus, palette, dialogs, popovers, toasts.'], ['side', '--shadow-side', 'A left drawer over the ground (overlay mode).'], ['side-r', '--shadow-side-r', 'The right panel in overlay mode.'], ['tip', '--shadow-tip', 'Tooltips.']]) {
+for (const [name, cssVar, desc] of [['pop', '--shadow-pop', 'Things that float over other things: menus, palette, dialogs, popovers, notices.'], ['side', '--shadow-side', 'A left drawer over the ground (overlay mode).'], ['side-r', '--shadow-side-r', 'The right panel in overlay mode.'], ['tip', '--shadow-tip', 'Tooltips.']]) {
   const modes = {}; for (const p of PRESETS) modes[p] = shadowOf(preset[p][cssVar]);
   semantic.shadow[name] = { $type: 'shadow', $value: modes.catalog, $description: desc, $extensions: { boopis: { css: cssVar, modes } } };
 }
@@ -314,7 +314,7 @@ const scale = {
 const SIZE_DESC = { '--fs-2xs': 'Mono meta: times, costs, call numbers, kbd, stamps.', '--fs-xs': 'Labels, group headings, tooltips, secondary lines, chips.', '--fs-s': 'Interface default: rows, buttons, menus, tabs.', '--fs-m': 'Reading: conversation prose, the composer, card titles.', '--fs-l': 'View and dialog titles, a bot name in its header.', '--fs-xl': 'The one display size: a bot name being made.' };
 for (const k of ['--fs-2xs', '--fs-xs', '--fs-s', '--fs-m', '--fs-l', '--fs-xl']) scale.size[k.slice(5)] = { $type: 'dimension', $value: dim(px(shared[k])), $description: SIZE_DESC[k], $extensions: { boopis: { css: k } } };
 for (let i = 1; i <= 7; i++) scale.space[i] = { $type: 'dimension', $value: dim(px(shared['--sp-' + i])), $extensions: { boopis: { css: '--sp-' + i } } };
-const R_DESC = { xs: 'kbd, inline code, stamps.', s: 'Buttons, rows, fields, wells, the segmented track, tooltips.', m: 'Cards, the composer, menus, popovers, toasts, request cards.', l: 'Sheets, dialogs, the palette, the dock, where the ground meets the frame.', pill: 'Chips (a capsule), dots, the switch, anything inside a pill.' };
+const R_DESC = { xs: 'kbd, inline code, stamps.', s: 'Buttons, rows, fields, wells, the segmented track, tooltips.', m: 'Cards, the composer, menus, popovers, notices, request cards.', l: 'Sheets, dialogs, the palette, the dock, where the ground meets the frame.', pill: 'Chips (a capsule), dots, the switch, anything inside a pill.' };
 /* the corner scale (owner decisions of 18 November 2026, revised: Apple continuous corners in every engine). One scale
    for every engine, drawn by HX.ui.squircle. The library's lines (components.css) win while they exist: default,
    sharp, round; else tokens.css's. */
@@ -344,7 +344,7 @@ for (const [k, desc] of [['--chrome-h', 'Title bar height.'], ['--sb-rail-w', 'L
 }
 scale.layout['sb-w'] = { $type: 'dimension', $value: dim(256), $description: 'Open left sidebar: clamp(256px, 15vw, 288px).', $extensions: { boopis: { css: '--sb-w', cssValue: shared['--sb-w'] } } };
 scale.layout['right-w'] = { $type: 'dimension', $value: dim(300), $description: 'Open right panel and the bot settings sheet: clamp(300px, 18vw, 340px).', $extensions: { boopis: { css: '--right-w', cssValue: shared['--right-w'] } } };
-for (const k of ['base', 'right', 'sidebar', 'dock', 'scrim', 'overlay', 'chrome', 'menu', 'palette', 'toast', 'tooltip']) scale.z[k] = { $type: 'number', $value: +shared['--z-' + k], $extensions: { boopis: { css: '--z-' + k } } };
+for (const k of ['base', 'right', 'sidebar', 'dock', 'scrim', 'overlay', 'chrome', 'menu', 'palette', 'notify', 'tooltip']) scale.z[k] = { $type: 'number', $value: +shared['--z-' + k], $extensions: { boopis: { css: '--z-' + k } } };
 scale.z.local = { $type: 'number', $value: 3, $description: 'The highest literal z-index allowed inside a component, and only under isolation: isolate (R-elev-5). Modal dialogs use the top layer (showModal), above every value here.' };
 /* icons: six sizes and two gaps (DESIGN-SYSTEM.md §10, R-icon-3, R-icon-5) */
 scale.icon = {};
@@ -355,7 +355,7 @@ scale.icon.gap = { $type: 'dimension', $value: dim(px(shared['--ic-gap'])), $des
 scale.icon['gap-tight'] = { $type: 'dimension', $value: dim(px(shared['--ic-gap-tight'])), $description: 'Icon to label in capsules and controls of 26px and under.', $extensions: { boopis: { css: '--ic-gap-tight' } } };
 /* nested corners per container (R-corner-3, R-corner-5): the container's inset and the radius of what sits in its corners */
 scale.nest = {};
-for (const [k, outer, padVar, desc] of [['dialog', 'l', '--pad-dialog', 'Dialogs and sheets: the close button and the head\'s tabs.'], ['palette', 'l', '--pad-palette', 'The palette\'s rows.'], ['dock', 'l', '--pad-dock', 'A card or row at the top of the dock slab.'], ['menu', 'm', '--pad-menu', 'Menu items.'], ['card', 'm', '--pad-card', 'A well, a footer button, a stamp in a card.'], ['composer', 'm', '--composer-pad', 'Attach, chips, mic and send in the composer.'], ['toast', 'm', '--pad-toast', 'A toast\'s action.'], ['field', 's', '--pad-tip', 'Key chips in a tooltip or at a field\'s end.'], ['seg', 's', '--pad-seg', 'The segmented thumb and options.']]) {
+for (const [k, outer, padVar, desc] of [['dialog', 'l', '--pad-dialog', 'Dialogs and sheets: the close button and the head\'s tabs.'], ['palette', 'l', '--pad-palette', 'The palette\'s rows.'], ['dock', 'l', '--pad-dock', 'A card or row at the top of the dock slab.'], ['menu', 'm', '--pad-menu', 'Menu items.'], ['card', 'm', '--pad-card', 'A well, a footer button, a stamp in a card.'], ['composer', 'm', '--composer-pad', 'Attach, chips, mic and send in the composer.'], ['field', 's', '--pad-tip', 'Key chips in a tooltip or at a field\'s end.'], ['seg', 's', '--pad-seg', 'The segmented thumb and options.']]) {
   const pad = px(shared[padVar]);
   const modes = Object.fromEntries(['sharp', 'default', 'round'].map((m) => [m, dim(Math.max(SC[m].floor, SC[m][outer] - pad))]));
   scale.nest[k] = { $type: 'dimension', $value: modes.default, $description: desc,
@@ -431,7 +431,7 @@ const component = {
     0: { $type: 'shadow', $value: [], $description: 'The frame and the ground.', $extensions: { boopis: { css: '--elev-0', z: '--z-base' } } },
     1: { $type: 'shadow', $value: [], $description: 'In flow: raised and inset surfaces. Tone and a hairline, never a shadow.', $extensions: { boopis: { css: '--elev-1' } } },
     2: { $type: 'shadow', $value: ref('semantic.shadow.tip'), $description: 'Tooltips.', $extensions: { boopis: { css: '--elev-2', z: '--z-tooltip' } } },
-    3: { $type: 'shadow', $value: ref('semantic.shadow.pop'), $description: 'Menus, popovers, toasts.', $extensions: { boopis: { css: '--elev-3', z: '--z-menu, --z-toast' } } },
+    3: { $type: 'shadow', $value: ref('semantic.shadow.pop'), $description: 'Menus, popovers, notices.', $extensions: { boopis: { css: '--elev-3', z: '--z-menu, --z-notify' } } },
     4: { $type: 'shadow', $value: ref('semantic.shadow.pop'), $description: 'The palette and dialogs, over --scrim.', $extensions: { boopis: { css: '--elev-4', z: '--z-palette; modal dialogs use the top layer' } } }
   },
   dock: { surface: { $type: 'color', $value: ref('semantic.color.surface.dock') }, 'rest-height': { $type: 'dimension', $value: ref('primitive.layout.dock-rest-h') }, radius: { $type: 'dimension', $value: ref('primitive.radius.l') }, flare: { $type: 'dimension', $value: ref('primitive.radius.l') }, orb: { $type: 'dimension', $value: dim(40) }, pitch: { $type: 'dimension', $value: dim(54) } }

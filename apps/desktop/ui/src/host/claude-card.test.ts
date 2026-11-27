@@ -47,9 +47,9 @@ describe('the Settings row of the Claude subscription', () => {
     document.body.append(el);
     const copied: string[] = [];
     const opened: string[] = [];
-    const toasts: string[] = [];
+    const notices: string[] = [];
     const view = mountProviders(el, {
-      bridge: bridge([STATES.missing]), toast: (t) => { toasts.push(t); },
+      bridge: bridge([STATES.missing]), notify: (t) => { notices.push(t); },
       copy: (t) => { copied.push(t); return Promise.resolve(); }, open: (u) => { opened.push(u); return Promise.resolve(); }
     });
     await view.ready;
@@ -57,14 +57,14 @@ describe('the Settings row of the Claude subscription', () => {
     el.querySelector<HTMLButtonElement>('[data-do="copy"][data-way="anthropic.signin"]')?.click();
     await Promise.resolve(); await Promise.resolve();
     expect(copied).toEqual(['irm https://claude.ai/install.ps1 | iex']);
-    expect(toasts).toEqual(['Copied: run it in PowerShell, then Check again']);
+    expect(notices).toEqual(['Copied: run it in PowerShell, then Check again']);
     el.querySelector<HTMLButtonElement>('[data-do="guide"][data-way="anthropic.signin"]')?.click();
     expect(opened).toEqual(['https://code.claude.com/docs/en/setup']);
   });
   it('shows a command in the host\'s words as code, not as raw backticks', async () => {
     const el = document.createElement('section');
     document.body.append(el);
-    const view = mountProviders(el, { bridge: bridge([STATES.old]), toast: () => undefined });
+    const view = mountProviders(el, { bridge: bridge([STATES.old]), notify: () => undefined });
     await view.ready;
     const hint = el.querySelector('.k7-row__sub');
     expect(hint?.querySelector('[data-kit~="InlineChip"][data-kind="code"]')?.textContent).toBe('claude update');
@@ -74,12 +74,12 @@ describe('the Settings row of the Claude subscription', () => {
     const el = document.createElement('section');
     document.body.append(el);
     const ran: string[] = [];
-    const toasts: string[] = [];
+    const notices: string[] = [];
     let finish: (ok: boolean) => void = () => undefined;
     let reads = 0;
     const b = bridge([STATES.out]);
     const view = mountProviders(el, {
-      bridge: { ...b, list: () => { reads += 1; return b.list(); } }, toast: (t) => { toasts.push(t); },
+      bridge: { ...b, list: () => { reads += 1; return b.list(); } }, notify: (t) => { notices.push(t); },
       login: (id) => { ran.push(id); return new Promise((ok) => { finish = (o) => { ok({ command_line: 'claude auth login --claudeai', ok: o, code: o ? 0 : 1, timed_out: false, output: [] }); }; }); }
     });
     await view.ready;
@@ -87,11 +87,11 @@ describe('the Settings row of the Claude subscription', () => {
     btn?.click();
     expect(ran).toEqual(['claude-code']);
     expect(btn?.disabled).toBe(true);
-    expect(toasts).toEqual(['Finish signing in to Claude in your browser.']);
+    expect(notices).toEqual(['Finish signing in to Claude in your browser.']);
     const before = reads;
     finish(false);
     await new Promise((r) => setTimeout(r, 0));
-    expect(toasts.at(-1)).toBe('The Claude sign-in did not finish. Choose Sign in to try again.');
+    expect(notices.at(-1)).toBe('The Claude sign-in did not finish. Choose Sign in to try again.');
     expect(reads).toBe(before + 1);
   });
 });

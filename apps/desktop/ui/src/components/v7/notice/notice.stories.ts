@@ -16,6 +16,9 @@ export default {
     typical: tones,
     floating: stage(['variant'], ({ root }) => { line(root, kit.notice({ text: 'Copied the link', place: 'floating', actions: [{ label: 'Undo' }] })); }),
     enter: stage(['variant'], ({ root }) => { line(root, kit.notice({ text: 'Saved', place: 'floating', attrs: { 'data-enter': '' } })); }),
+    /* one at a time (2a): the one showing carries a quiet "+N" for those waiting; a mod's leads with its glyph and "name mod" */
+    'floating, two more waiting (+2)': stage(['many'], ({ root }) => { line(root, kit.notice({ text: 'Archived nina', place: 'floating', more: 2, dismiss: true, actions: [{ label: 'Undo' }] })); }),
+    'floating, a mod\'s notice': stage(['variant'], ({ root }) => { line(root, kit.notice({ text: ' 1 test failing in invoice.test.ts', title: 'test-runner mod', icon: 'mod', place: 'floating', more: 1, dismiss: true })); }),
     ...forced(stage(['typical'], ({ root }) => { fill(root, kit.notice({ text: 'Approaching the weekly limit', tone: 'owe', dismiss: true })); }, { width: 640 }), '[data-kit~="IconButton"]'),
     error: stage(['error'], ({ root }) => { fill(root, kit.notice({ text: 'Could not reach the provider', tone: 'red', actions: [{ label: 'Try again' }], dismiss: true })); }, { width: 640 }),
     long: stage(['long'], ({ root }) => { fill(root, kit.notice({ text: 'Approaching the weekly limit of every model you use across every session and bot, 81% used, resets Wednesday at 09:00', tone: 'owe', actions: [{ label: 'Get more usage' }], dismiss: true })); }, { width: 480 })

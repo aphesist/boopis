@@ -79,26 +79,6 @@
   "w": 1180,
   "h": 872
  },
- "toast-with-n@bone": {
-  "sha": "ba82d2194927653bbe4e68569eb92fec3ef4320f",
-  "w": 291,
-  "h": 64
- },
- "toast-with-n@catalog": {
-  "sha": "aa2016d93eb601c451c9e098e7dbab8b0d721c0a",
-  "w": 306,
-  "h": 64
- },
- "toast-with-n@graphite": {
-  "sha": "9d2d151de2264ef30134f01188cfd2d61e6ab077",
-  "w": 303,
-  "h": 64
- },
- "toast-with-n@typewriter": {
-  "sha": "34160f30815cce01c028a83707e186031a0bcf62",
-  "w": 333,
-  "h": 64
- },
  "whole-window@bone": {
   "sha": "6004dc9ea359b8d47a95a08ee31357e80cbe3cbd",
   "w": 1440,

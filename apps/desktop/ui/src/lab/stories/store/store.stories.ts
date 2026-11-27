@@ -34,7 +34,7 @@ const view = (tags: State['tags'], drive: Drive | null, o: Opts = {}): State => 
     kit.applyTheme(ground, { theme: themeApi.scheme() === 'light' ? 'light' : 'dark' });   /* a v7 root in the preset's scheme, as the app's */
     ground.append(frame); ctx.root.append(ground);
     const host = frame.querySelector<HTMLElement>('.k7-dialog__body') as HTMLElement;
-    const v = mountStore(host, { store, toast: () => undefined, project: () => project, settle: 0, now: () => NOW, enter: false });
+    const v = mountStore(host, { store, notify: () => undefined, project: () => project, settle: 0, now: () => NOW, enter: false });
     if (o.screen || o.item) v.show(o.screen ?? 'browse', o.item);
     await ctx.wait(120);
     if (drive) await drive({ root: ctx.root, wait: ctx.wait, view: v, store, base });

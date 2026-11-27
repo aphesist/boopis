@@ -49,7 +49,7 @@ const view = (tags: State['tags'], per: Record<string, ConnectorsBridge>, pick: 
   render: async (ctx: StageCtx) => {
     const host = document.createElement('div'); host.id = 'lab-connectors'; host.className = 'lab-fill k7-page__body';
     ctx.root.append(host);
-    await mountConnectors(host, { bridge: main, bridgeFor: (b) => per[b] ?? bridge([]), bots: () => BOTS, toast: () => undefined, settle: 0 });
+    await mountConnectors(host, { bridge: main, bridgeFor: (b) => per[b] ?? bridge([]), bots: () => BOTS, notify: () => undefined, settle: 0 });
     if (pick) {
       const sel = host.querySelector('#hx-conn-for');
       sel?.dispatchEvent(new CustomEvent('ui:change', { detail: { value: pick }, bubbles: true }));

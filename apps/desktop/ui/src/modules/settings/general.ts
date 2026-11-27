@@ -88,7 +88,7 @@ export function generalPage(): Page {
     const start = (e.target as Element).closest<HTMLElement>('[data-start]')?.dataset['start'];
     if (start) {
       closeDialog(el.closest('dialog'));
-      if (start === 'setup') void import('../../host/change-models').then((m) => m.changeModels()).catch((err: unknown) => { emit('hx:toast', { text: err instanceof Error ? err.message : String(err) }); });
+      if (start === 'setup') void import('../../host/change-models').then((m) => m.changeModels()).catch((err: unknown) => { emit('hx:notify', { text: err instanceof Error ? err.message : String(err) }); });
       else if (start === 'sessions') { writeLedger({ sessions: 'careful' }); emit('hx:new-session', { from: 'settings' }); }
       else startBotsPart();
       return;

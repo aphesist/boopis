@@ -6,7 +6,7 @@
                element, and `::after` draws its 1px line (`--sq-line`) and its focus ring on a band of the same path.
      frame     every other bound surface: NOTHING is clipped (orbs, flags, popovers and shadows reach past the edge);
                `::before` paints the fill (`--sq-bg`) clipped to the path and `::after` the line and the focus ring.
-     surface   a floating frame that keeps its elevation shadow (menus, popovers, tooltips, toasts, sheets).
+     surface   a floating frame that keeps its elevation shadow (menus, popovers, tooltips, sheets).
      slab / concave   the dock's still slab and a flare: clipped, they hold no content.
    Owner rule: never `clip-path` a container whose content can overflow. Only `LEAF` clips, whoever asks.
 
@@ -42,7 +42,7 @@ interface Snap { ox: number; oy: number; w: number; h: number; t: number; t2: nu
 export interface SquircleStats { bound: number; cached: number; smoothing: number; frames: number; lastMs: number; maxMs: number; totalMs: number; snaps: number; snapMs: number }
 
 const FOCUSABLE = 'button, a[href], input, select, textarea, [tabindex]';
-const SURFACE = '.ui-listbox, .ui-pop, .ui-tip, .ui-toast';
+const SURFACE = '.ui-listbox, .ui-pop, .ui-tip';
 /** the leaf controls: nothing inside them reaches past their edge */
 const LEAF = '.ui-btn, .ui-ib, .ui-seg__thumb, .ui-file';
 /** the library's surfaces and the config diff's well (cards parts.ts diffWell); modules add theirs with `auto()` or `data-sq` */

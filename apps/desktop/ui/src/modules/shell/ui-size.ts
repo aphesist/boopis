@@ -7,10 +7,10 @@
    The step is kept in `hx.v6.size`; the page (a browser, the lab) has no host to zoom, and keeps the browser's own zoom. */
 import { loadUiSize, saveUiSize, UI_ZOOM } from '../../core/settings';
 import type { UiSize } from '../../core/settings';
+import { kit } from '@boopis/ui';
 import { logger } from '../../core/log';
 import { inTauri } from '../../host/bridge';
 import { setWebviewZoom } from '../../host/window';
-import { toast } from './actions';
 
 const log = logger('ui-size');
 let size: UiSize = 'default';
@@ -25,7 +25,7 @@ export function onUiSizeChange(fn: () => void): () => void { listeners.add(fn); 
 async function apply(): Promise<void> {
   if (!canZoom()) return;
   try { await setWebviewZoom(UI_ZOOM[size]); }
-  catch (e) { log.warn('the interface size was not applied', e); toast('The interface size did not change'); }
+  catch (e) { log.warn('the interface size was not applied', e); kit.notify('The interface size did not change'); }
 }
 export function setUiSize(next: UiSize): void {
   if (next === size) return;

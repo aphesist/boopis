@@ -22,7 +22,7 @@ import { bringForward, panelTabs, dockedPanes, drawBand, setOnChange, updateTree
 import { placeLog, placePlaced } from './rows';
 import { setStatus } from './status';
 import { themeCard, placeThemeCard, withdraw } from './theme-card';
-import { toast } from './toasts';
+import { modNotice } from './notices';
 import { surface } from './surfaces';
 
 const log = logger('mods');
@@ -135,7 +135,7 @@ function init(): void {
   if (ready) return;
   ready = true;
   unsubEvents = data().mods.events.subscribe((e) => {
-    if (e.type === 'toast') toast(e.plugin, e.text, e.timeoutMs);
+    if (e.type === 'notice') modNotice(e.plugin, e.text, e.timeoutMs);
     else notify(e.title || e.plugin, e.text);
   });
   setOnChange(() => { syncProps(); });

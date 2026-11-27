@@ -4,6 +4,7 @@
    (the palette's "Restore bot…" is the same action: `shell/palette.test.ts`). Over the mock provider, which has two archived bots
    (ledger, and a second nina whose name is in use) and, with `fixtures: ['outside']`, a bot made outside boopis. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { kit } from '@boopis/ui';
 import { data, setProvider } from '../../data';
 import type { ArchivedBot, Bot, BotsEvent, DataProvider } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
@@ -32,6 +33,7 @@ function mount(provider: DataProvider): void {
 }
 const mock = (fixtures: string[] = []): DataProvider => createMockProvider({ simulate: false, fixtures });
 beforeEach(() => {
+    kit.notifyReset();
   vi.stubGlobal('ResizeObserver', class { observe(): void { /* no layout */ } unobserve(): void { /* no layout */ } disconnect(): void { /* no layout */ } });
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
   vi.useFakeTimers();
@@ -99,7 +101,7 @@ describe('the Archived group', () => {
   const head = (): HTMLElement => q('.bt-archived .k7-shead__btn');
   const count = (): string => q('.bt-archived .k7-shead__count').textContent ?? '';
   const names = (): string[] => qa('.bt-archived .k7-lrow__title').map((n) => n.textContent ?? '');
-  const toast = (): string => document.querySelector('.k7-notify .k7-notice__text')?.textContent ?? '';
+  const shown = (): string => document.querySelector('.k7-notify .k7-notice__text')?.textContent ?? '';
   const restoreBtn = (name: string): HTMLButtonElement => q<HTMLButtonElement>('.bt-archived [data-act="restore"][aria-label="Restore ' + name + '"]');
 
   it('sits under the roster with a count, collapsed by default', () => {
@@ -147,7 +149,7 @@ describe('the Archived group', () => {
     head().click();
     restoreBtn('ledger').click();
     await flush();
-    expect(toast()).toBe('Restored ledger');
+    expect(shown()).toBe('Restored ledger');
     expect(q('.bt-rows [data-kit~="ListRow"][data-value="ledger"]')).toBeTruthy();
     expect(data().bots.snapshot().bots.some((b) => b.id === 'ledger')).toBe(true);
     expect(names()).toEqual(['nina']);
@@ -160,7 +162,7 @@ describe('the Archived group', () => {
     head().click();
     restoreBtn('nina').click();
     await flush();
-    expect(toast()).toBe('Could not restore nina: there is a teammate called nina already; archive or delete it, then restore');
+    expect(shown()).toBe('Could not restore nina: there is a teammate called nina already; archive or delete it, then restore');
     expect(names()).toEqual(['ledger', 'nina']);
     expect(data().bots.snapshot().bots.filter((b) => b.id === 'nina')).toHaveLength(1);
   });

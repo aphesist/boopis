@@ -1,7 +1,7 @@
-/* Floating surfaces: popovers, the layer, tooltips, toasts (the v6 menu went at step 7b: the kit's Menu is `kit/menu`)
+/* Floating surfaces: popovers, the layer, tooltips, notices (the v6 menu went at step 7b: the kit's Menu is `kit/menu`)
    (14.18, 14.19, 14.22, 14.23). */
 import { html, ui } from '@boopis/ui';
-import { line, put, stage } from '../../story';
+import { line, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_TITLE, UNBROKEN } from '../../fixtures';
 
@@ -36,14 +36,6 @@ export default [
       'near the bottom flips above': stage(['tooltip', 'variant'], async ({ root, wait }) => { root.style.minHeight = 'calc(100vh - 48px)'; root.style.justifyContent = 'flex-end'; const b = ui.iconButton({ icon: 'gear', label: 'Settings', keys: 'mod+,' }); line(root, b); b.focus(); ui.tooltip.show(b); await wait(250); }, { overlay: { anchor: '.ui-ib', layer: '.ui-tip' } }),
       'at the right edge': stage(['tooltip', 'variant'], async ({ root, wait }) => { root.style.alignItems = 'flex-end'; root.style.width = '100%'; const b = ui.iconButton({ icon: 'sidebar-right', label: 'Show session details', keys: 'mod+I' }); line(root, b); b.focus(); ui.tooltip.show(b); await wait(250); }, { overlay: { anchor: '.ui-ib', layer: '.ui-tip' } }),
       long: stage(['long'], ({ root }) => { line(root, html.tip(LONG_TITLE, 'mod+shift+alt+K')); line(root, html.tip(UNBROKEN)); }, { width: 420 })
-    }
-  },
-  {
-    id: 'components/toast', title: 'Toast', area: 'components', kind: 'component', covers: ['ui.toast', 'html.toast'], mock: FLOAT,
-    states: {
-      typical: stage(['typical', 'variant'], ({ root }) => { put(root, html.toast('Archived audit log export'), html.toast('Archived audit log export', 'Undo')); }),
-      live: stage(['success'], async ({ wait }) => { ui.toast('Archived audit log export', { action: { label: 'Undo' }, ms: 60000 }); await wait(300); }, { scope: '.ui-toast', note: 'the real toast, placed at the top of the work' }),
-      long: stage(['long'], ({ root }) => { put(root, html.toast(LONG_TITLE + ' ' + UNBROKEN, 'Undo')); }, { width: 480 })
     }
   }
 ] satisfies Story[];

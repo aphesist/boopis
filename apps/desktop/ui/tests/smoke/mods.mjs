@@ -1,7 +1,7 @@
 /* Mods, on the live provider over a recording of real mod events (plugins/boopis/tests/test_mods_frames.py: two mods in the real
    hx worker, their events captured as the plugin emitted them and spliced into a recorded session). Checks the owner's decisions
    of 19 November 2026 in a real engine: the surfaces, panes in the details panel from 1200px and inline below it, dot progress in
-   the band, the composer rising 22px by a transform, one toast at a time with "+N", the theme card with its live preview and
+   the band, the composer rising 22px by a transform, one notice at a time with "+N", the theme card with its live preview and
    every way the preview ends, a mod's question in the conversation, and the refusals. */
 import { check, scenario } from './harness.mjs';
 
@@ -41,7 +41,7 @@ export async function mods(env, AXE) {
       band: document.querySelector('.ss-mods--band .mod-row')?.textContent ?? '',
       /* the band's hairline: its inset shadow, or, once its corner is drawn (data-sq-on), the drawn edge in the same ink */
       bandInset: (() => { const b = document.querySelector('.ss-mods--band .mod-band'); if (!b) return 'none'; const sh = getComputedStyle(b).boxShadow; if (sh !== 'none') return sh; const e = getComputedStyle(b, '::after'); return b.hasAttribute('data-sq-on') && e.content !== 'none' && !/rgba\(0, 0, 0, 0\)|transparent/.test(e.backgroundColor) ? 'edge ' + e.backgroundColor : 'none'; })(),
-      toast: document.querySelector('.ui-toast .mod-toast')?.textContent ?? '', toastMore: document.querySelector('.ui-toast .mod-toast__more')?.textContent ?? '',
+      notice: document.querySelector('.k7-notify .k7-notice__text')?.textContent ?? '', noticeWho: document.querySelector('.k7-notify .k7-notice__title')?.textContent ?? '', noticeMore: document.querySelector('.k7-notify .k7-notice__more')?.textContent ?? '',
       logs: [...document.querySelectorAll('[data-mod-log] .mv-by__n')].map((n) => n.textContent),
       glyphs: document.querySelectorAll('[data-mod-log] svg.mv-by__g').length
     }));
@@ -57,14 +57,14 @@ export async function mods(env, AXE) {
     check('mods', 'the status line lifts the composer 22px (the room the dock now keeps is its own)', Math.abs((top0 - top1) - (room1 - room0) - 22) <= 1, { top0, top1, room0, room1 });
     check('mods', 'the rise is a FLIP on transform over --dur-3 (translateY(22px) to 0), with no top, bottom or height', rise.length >= 1 && rise.every((a) => a.frames.every((f) => Object.keys(f).every((k) => k === 'transform' || k === 'offset')) && a.frames[0].transform === 'translateY(22px)' && a.frames[1].transform === 'translateY(0)') && rise[0].duration > 100, rise);
 
-    /* toasts: one at a time, in order, with a quiet "+N" */
-    check('mods', 'toasts show one at a time with "+2" while two wait', /1 test failing/.test(st.toast) && st.toastMore === '+2', st);
+    /* notices (the kit's floating Notice): one at a time, in order, led by the mod, with a quiet "+N" */
+    check('mods', 'notices show one at a time, led by "name mod", with "+2" while two wait', /1 test failing/.test(st.notice) && /mod$/.test(st.noticeWho) && st.noticeMore === '+2', st);
     await page.waitForTimeout(4600);
-    const t2 = await page.evaluate(() => ({ text: document.querySelector('.ui-toast .mod-toast__t')?.textContent, more: document.querySelector('.ui-toast .mod-toast__more')?.textContent ?? '' }));
-    check('mods', 'the next toast comes as the first has faded, in order, with "+1"', t2.text === 'Indexed 296 files' && t2.more === '+1', t2);
-    await page.click('.ui-toast .mod-toast__x'); await page.waitForTimeout(300);
-    const t3 = await page.evaluate(() => ({ text: document.querySelector('.ui-toast .mod-toast__t')?.textContent, more: document.querySelector('.ui-toast .mod-toast__more')?.textContent ?? '', shown: document.querySelector('.ui-toast')?.classList.contains('is-in') }));
-    check('mods', 'dismissing a toast shows the next at once, and the last has no count', t3.text === 'Context is at 78%' && t3.more === '' && t3.shown, t3);
+    const t2 = await page.evaluate(() => ({ text: (() => { const n = document.querySelector('.k7-notify .k7-notice__text'); const w = n?.querySelector('.k7-notice__title')?.textContent ?? ''; return (n?.textContent ?? '').slice(w.length).trim(); })(), more: document.querySelector('.k7-notify .k7-notice__more')?.textContent ?? '' }));
+    check('mods', 'the next notice comes as the first has faded, in order, with "+1"', t2.text === 'Indexed 296 files' && t2.more === '+1', t2);
+    await page.click('.k7-notify [data-dismiss]'); await page.waitForTimeout(300);
+    const t3 = await page.evaluate(() => ({ text: (() => { const n = document.querySelector('.k7-notify .k7-notice__text'); const w = n?.querySelector('.k7-notice__title')?.textContent ?? ''; return (n?.textContent ?? '').slice(w.length).trim(); })(), more: document.querySelector('.k7-notify .k7-notice__more')?.textContent ?? '', shown: !!document.querySelector('.k7-notify[data-in]') }));
+    check('mods', 'dismissing a notice shows the next at once, and the last has no count', t3.text === 'Context is at 78%' && t3.more === '' && t3.shown, t3);
 
     /* the theme card previews live; the dock stays black */
     const pv = await page.evaluate(() => ({ previewing: __hx.theme.previewing(), brass: getComputedStyle(document.documentElement).getPropertyValue('--brass').trim(), card: document.querySelector('hx-card[data-mod-theme] .k7-ask__ask')?.textContent, live: document.querySelector('hx-card[data-previewing] .k7-ask__head .k7-word')?.textContent, dock: getComputedStyle(document.querySelector('#hx-dock .k7-dock__slab path')).fill, saved: localStorage.getItem('hx.v6.theme') }));
@@ -224,7 +224,7 @@ export async function mods(env, AXE) {
     await page.click('#hx-right .k7-pane__tabs [data-value="tests"]'); await page.waitForTimeout(500);
     await page.addScriptTag({ content: AXE });
     const v = await page.evaluate(async () => { const res = await axe.run({ include: [['.ss-view'], ['#hx-right'], ['#hx-dock']] }, { resultTypes: ['violations'], preload: false, rules: { region: { enabled: false } } }); return res.violations.map((x) => ({ id: x.id, impact: x.impact, n: x.nodes.length, t: x.nodes.slice(0, 3).map((n) => n.target.join(' ') + (n.any[0] ? ' - ' + n.any[0].message.slice(0, 90) : '')) })); });
-    check('mods', 'axe (the conversation, the details panel and the dock): the session with the band, the status line, the pane, the toast, a placed row and the theme card', v.length === 0, v);
+    check('mods', 'axe (the conversation, the details panel and the dock): the session with the band, the status line, the pane, the notice, a placed row and the theme card', v.length === 0, v);
   });
   await s.close();
 }

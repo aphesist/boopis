@@ -3,6 +3,7 @@
    records what the UI asks of Hermes, and the tests say what the user sees and what is asked, never how Hermes answers
    (that is `host/live/bots.test.ts` and the end-to-end test). */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { kit } from '@boopis/ui';
 import { data, NeedsConfirmation, setProvider } from '../../data';
 import type { ArchivedBot, Bot, BotInfo, BotPatch, BotsAdmin, BotsEvent, BotsSource, DataProvider } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
@@ -100,7 +101,7 @@ function mount(bots: Bot[]): void {
   setState({ tab: 'bots', right: 'open' });   /* the details pane is open: what the engine reports about a bot is under its Library */
 }
 const library = (): string => { q('#hx-right-bots [data-kit~="Segmented"] [data-value="library"]').click(); return q('#hx-right-bots').textContent ?? ''; };
-beforeEach(() => { vi.stubGlobal('ResizeObserver', class { observe(): void { /* no layout */ } unobserve(): void { /* no layout */ } disconnect(): void { /* no layout */ } }); vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null); vi.useFakeTimers(); vi.stubGlobal('requestAnimationFrame', (fn: FrameRequestCallback) => setTimeout(() => { fn(0); }, 0)); });
+beforeEach(() => { kit.notifyReset(); vi.stubGlobal('ResizeObserver', class { observe(): void { /* no layout */ } unobserve(): void { /* no layout */ } disconnect(): void { /* no layout */ } }); vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null); vi.useFakeTimers(); vi.stubGlobal('requestAnimationFrame', (fn: FrameRequestCallback) => setTimeout(() => { fn(0); }, 0)); });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 const flush = async (): Promise<void> => { await vi.advanceTimersByTimeAsync(20); await tick(); };
 
@@ -318,7 +319,7 @@ describe('deleting asks, archives by default, and says what goes', () => {
     expect(f.calls.find((c) => c.fn === 'remove')!.args).toEqual(['atlas', 'atlas']);
     expect(S.sel).toBe('nina');
   });
-  it('archives instead, and the toast offers to undo it', async () => {
+  it('archives instead, and the notice offers to undo it', async () => {
     label('Delete').click(); await flush();
     label('Archive instead').click(); await flush();
     expect(f.calls.some((c) => c.fn === 'archive' && c.args[0] === 'atlas')).toBe(true);

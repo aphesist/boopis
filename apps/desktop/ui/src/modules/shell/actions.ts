@@ -5,12 +5,10 @@ import { getDockApi } from '../../core/registry';
 import { setState, state, toggle } from '../../core/state';
 import { themeApi } from '../../styles/theme';
 import { kit } from '@boopis/ui';
-import type { NotifyOpts } from '@boopis/ui';
 import type { Tab } from '../../core/types';
 import { data } from '../../data';
 import { sh } from './ctx';
 
-export const toast = (m: string, o?: NotifyOpts): void => { kit.notify(m, o); };
 
 export function newThing(tab?: Tab): void {
   const t = tab ?? state.tab;
@@ -56,9 +54,9 @@ export function toggleLightDark(): void {
     writeText(KEYS.lastDark, T.exportJSON());
     T.preset('bone');
   }
-  toast(T.scheme() === 'light' ? 'Light theme' : 'Dark theme');
+  kit.notify(T.scheme() === 'light' ? 'Light theme' : 'Dark theme');
 }
 export function toggleOrbGrow(): void {
   setState({ orbGrow: !state.orbGrow });
-  toast(state.orbGrow ? 'Bots grow on hover' : 'Bots keep their size on hover');
+  kit.notify(state.orbGrow ? 'Bots grow on hover' : 'Bots keep their size on hover');
 }

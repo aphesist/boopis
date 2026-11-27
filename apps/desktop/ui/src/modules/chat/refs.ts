@@ -77,7 +77,7 @@ function pathOf(b: HTMLElement): ResolvedPath {
 }
 function openPath(p: ResolvedPath, editor?: string | null): void {
   const src = data().files.paths; if (!src) return;
-  src.open(p.abs, editor ?? null).catch((e: unknown) => { ui.toast('It did not open: ' + sentence(e)); });
+  src.open(p.abs, editor ?? null).catch((e: unknown) => { kit.notify('It did not open: ' + sentence(e)); });
 }
 async function pathMenu(b: HTMLElement, o: RefsOpts): Promise<void> {
   const src = data().files.paths; if (!src) return;
@@ -94,7 +94,7 @@ async function pathMenu(b: HTMLElement, o: RefsOpts): Promise<void> {
     onSelect: (v) => {
       if (v === 'open') openPath(p);
       else if (v.startsWith('editor:')) openPath(p, v.slice(7));
-      else if (v === 'reveal') src.reveal(p.abs).catch((e: unknown) => { ui.toast('It could not be shown: ' + sentence(e)); });
+      else if (v === 'reveal') src.reveal(p.abs).catch((e: unknown) => { kit.notify('It could not be shown: ' + sentence(e)); });
       else if (v === 'copy') void ui.copyText(p.abs, 'Copied the path');
       else if (v === 'copy-rel' && p.rel) void ui.copyText(p.rel, 'Copied the path');
       else if (v === 'attach') o.attach?.(p);

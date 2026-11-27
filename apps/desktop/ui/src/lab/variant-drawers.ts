@@ -40,7 +40,7 @@ export const DRAWERS: Partial<Record<ComponentName, Drawer>> = {
 /** components in `variants` drawn elsewhere: their own stories cover every value */
 export const VARIANTS_ELSEWHERE: Readonly<Partial<Record<ComponentName, string>>> = {
   signinButton: 'components/signin-button (the four labs, disabled)', chipGroup: 'no variants', keys: 'components/keys and key-combos (fit, raised)', badge: 'no variants', dot: 'components/dot (kind, size)', code: 'no variants',
-  setSection: 'no variants', toast: 'components/toast (with an action)', tip: 'components/tooltip (keys, state)',
+  setSection: 'no variants', tip: 'components/tooltip (keys, state)',
   progress: 'cards/mod-view (determinate and travelling dots)', orb: 'components/orb (sizes, still)'
 };
 

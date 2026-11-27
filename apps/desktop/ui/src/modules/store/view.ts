@@ -27,7 +27,7 @@ import { focusForm } from '../cards/form';
 export type StoreScreen = 'browse' | 'installed' | 'sources';
 export interface StoreDeps {
   store: StoreProvider;
-  toast: (text: string) => void;
+  notify: (text: string) => void;
   /** the project the session is in, for the scope choice and the project switch; null: none */
   project?: () => string | null;
   /** the delay before the next card replaces one that just answered, so its receipt shows (0 in tests) */
@@ -88,7 +88,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
   };
   /* one polite line a screen reader hears, and the notice the person sees */
   const status = (): HTMLElement => el('p', { class: 'k7-sr', role: 'status', 'aria-live': 'polite', 'data-store-status': '' });
-  const say = (text: string): void => { const s = main.querySelector('[data-store-status]'); if (s) s.textContent = text; deps.toast(text); };
+  const say = (text: string): void => { const s = main.querySelector('[data-store-status]'); if (s) s.textContent = text; deps.notify(text); };
   const board = (...kids: Node[]): HTMLElement => el('div', { class: 'hx-store__stack' }, ...kids);
   const empty = (text: string, action?: { label: string; run: () => void; attrs?: Record<string, string> }): HTMLElement => {
     const e = make(kit.html.emptyState({ text, ...(action ? { action: action.label } : {}) }));
@@ -467,7 +467,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     };
     place(board(card(spec, sinkOf({
       async submit(_id, o) {
-        try { const u = await store.uninstall(r.item_id, { deleteSecrets: o.values['keys'] === 'delete' }); deps.toast([`Removed ${name}.`, u.kept_secrets.length ? 'Its keys stay in your keychain.' : ''].filter(Boolean).join(' ')); } catch (e) { throw new Error(errorText(e)); }
+        try { const u = await store.uninstall(r.item_id, { deleteSecrets: o.values['keys'] === 'delete' }); deps.notify([`Removed ${name}.`, u.kept_secrets.length ? 'Its keys stay in your keychain.' : ''].filter(Boolean).join(' ')); } catch (e) { throw new Error(errorText(e)); }
         later(() => { show('installed'); });
       },
       cancel() { show(from); return Promise.resolve(); }

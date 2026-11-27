@@ -157,7 +157,7 @@ describe('kit.single and tokens.loose', () => {
     const re = retiredPattern('QueueStrip');
     for (const s of ['QueueStrip', 'queueStrip', 'queue-strip', 'queue_strip', 'QUEUE_STRIP']) { re.lastIndex = 0; expect(re.test(s), s).toBe(true); }
     for (const s of ['queues', 'myqueuestrip']) { re.lastIndex = 0; expect(re.test(s), s).toBe(false); }
-    expect(Object.keys(RETIRED)).toContain('Toast');
+    expect(Object.entries(RETIRED).filter(([, into]) => into === 'Notice').map(([n]) => n).length).toBe(3);   /* LimitNotice, the floating one and Banner */
   });
   it('scans the source: every finding names a file and a check of its own', () => {
     const f = scanV7();

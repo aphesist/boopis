@@ -43,7 +43,7 @@ describe('what the mods draw', () => {
     expect(s.status.map((x) => x.plugin)).toEqual(['test-runner', 'token-meter']);
     expect(s.log).toHaveLength(2);
     expect(s.theme?.plugin).toBe('test-runner');
-    expect(events.filter((e) => e.type === 'toast')).toHaveLength(3);
+    expect(events.filter((e) => e.type === 'notice')).toHaveLength(3);
     expect(events.every((e) => e.sessionId === SID)).toBe(true);
   });
   it('asks the plugin who is loaded when the session is resumed, by the gateway id of the session', () => {

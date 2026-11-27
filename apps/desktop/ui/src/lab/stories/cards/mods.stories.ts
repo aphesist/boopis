@@ -1,6 +1,6 @@
 /* Mods (14.29): the mod view (`ui.modView`) on its three surfaces, and the places a mod draws in the app, over the
    recording of real mod events (tests/fixtures/frames/mods.frames.json, the frames the smoke test plays): the band and
-   the status line, panes in the details panel (from 1200px) or inline (below it), toasts, the theme card, a placed row. */
+   the status line, panes in the details panel (from 1200px) or inline (below it), notices (the kit's), the theme card, a placed row. */
 import { html, ui } from '@boopis/ui';
 import { fill, frames } from '../../story';
 import type { AppCtx, Render, State, Story } from '../../types';
@@ -43,12 +43,12 @@ const REPLAY = { replay: 'mods' } as const;
 const app = (tags: State['tags'], scope: string | undefined, setup?: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State => ({ tags, ...(scope ? { scope } : {}), app: { provider: REPLAY, async setup(c) { await send(c); await setup?.(c); } }, allow: { 'stability.render': 'the recording replays with live timing' }, ...extra });
 
 const surfaces: Story = {
-  id: 'cards/mod-surfaces', title: 'Mod surfaces in the app', area: 'cards', kind: 'surface', covers: ['mod:band', 'mod:status', 'mod:pane', 'mod:toast', 'mod:theme-card', 'mod:placed-row', 'mod:log'],
+  id: 'cards/mod-surfaces', title: 'Mod surfaces in the app', area: 'cards', kind: 'surface', covers: ['mod:band', 'mod:status', 'mod:pane', 'mod:notice', 'mod:theme-card', 'mod:placed-row', 'mod:log'],
   mock: { url: '/v6/__index.html' },
   states: {
     'band and status': app(['typical', 'owner'], '.ss-composer'),
     'pane in the details panel': app(['variant'], '#hx-right-shell', async (c) => { c.hx.setState({ right: 'open' }); await c.wait(500); }),
-    'toast with +N': app(['many'], '.ui-toast'),
+    'a notice with +N': app(['many'], '#hx-notify .k7-notify'),
     'the conversation with placed rows': app(['typical'], '#hx-view-session'),
     'whole window': app(['typical'], undefined),
     'theme card hover': app(['hover'], '#hx-view-session', undefined, { force: [{ sel: 'hx-card[data-kind="form"] .ui-btn', state: 'hover' }] })

@@ -63,7 +63,7 @@ export function openStore(screen: 'browse' | 'installed' | 'sources' = 'browse',
   d.addEventListener('close', () => { ret?.focus?.(); }, { once: true });
   if (storeView) { go(); } else {
     storeMounting ??= import('../store/view').then((m) => {
-      storeView = m.mountStore($('#hx-store-body', d), { store: data().store, toast: (t) => { kit.notify(t); }, project: () => data().details.environment.get().cwd || null });
+      storeView = m.mountStore($('#hx-store-body', d), { store: data().store, notify: (t) => { kit.notify(t); }, project: () => data().details.environment.get().cwd || null });
     }).catch((e: unknown) => { log.warn('the store did not mount', e); });
     void storeMounting.then(go);
   }

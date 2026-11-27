@@ -2,7 +2,8 @@
    data provider, the modules (each registers into its slot as it loads), then the shell boots and mounts them. */
 import './styles';
 import '../vendor/boopis-logo.js';
-import { ui } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
+import { notifyWhenReady } from './modules/shell/notices';
 import { startGlance } from '@boopis/ui';
 import { orbState, setupOrbs } from '@boopis/ui';
 import { logger } from './core/log';
@@ -27,10 +28,10 @@ const orbs = setupOrbs();
 ui.squircle.start();
 ui.scrollEdges.start();
 
-/* the watchdog's and the engine update's notices wait for the shell (the kit's `toast.whenReady`): a toast shown while the app
-   is still booting has no layout to sit in. The update's may offer an action (Set up) */
+/* the watchdog's and the engine update's notices wait for the shell (`notifyWhenReady`): a notice shown while the app is still
+   booting has no work to sit over. The update's may offer an action (Set up) */
 type NoticeAction = { label: string; onClick: () => void };
-function noticeWhenReady(text: string, action?: NoticeAction): void { ui.toast.whenReady(text, { ms: 8000, action }); }
+function noticeWhenReady(text: string, action?: NoticeAction): void { notifyWhenReady(text, { ms: 8000, action }); }
 
 async function start(): Promise<void> {
   await orbs;
@@ -50,7 +51,7 @@ async function start(): Promise<void> {
   startGlance();
   ui.tooltip.enable();
   boot();
-  if (inTauri()) void import('./host/links').then((m) => m.wireExternalLinks(undefined, (e) => { ui.toast(e instanceof Error ? e.message : 'The link did not open'); }));
+  if (inTauri()) void import('./host/links').then((m) => m.wireExternalLinks(undefined, (e) => { kit.notify(e instanceof Error ? e.message : 'The link did not open'); }));
   if (inTauri()) void import('./host/connectors-notice').then((m) => m.listenConnectorRestarts()).catch((e: unknown) => { log.warn('connector notices are not listened for', e); });
   if (__HX_TEST_API__) {
     /* the Playwright smoke and parity tests drive the app through this; it is compiled in only for `vite build --mode e2e` */

@@ -73,7 +73,6 @@ html[data-right-tools] .hx[data-right="open"] :is(.ss-composer, .ss-new__zone) {
 /* ── wave S0 on the v7 kit (modules/session/s0.ts) ── */
 .ss-s0-why, .ss-s0-more { margin: var(--sp-2) 0 0; color: var(--text-dim); }
 /* the floating Notice (s0.ts `say`): bottom centre of the window, above the composer (the kit's floating placement) */
-.ss-s0-said { position: fixed; left: 0; right: 0; bottom: var(--sp-7); margin-inline: auto; width: max-content; max-width: calc(100vw - 2 * var(--sp-5)); z-index: var(--z-toast); }
 /* the rewind sheet over the window: the kit's scrim fills it and centres the dialog */
 .ss-s0-sheet { position: fixed; inset: 0; z-index: var(--z-overlay); }
 .ss-s0-sheet > * { height: 100%; box-sizing: border-box; }

@@ -11,7 +11,6 @@ import type { Tab } from '../../core/types';
 import { els, sh } from './ctx';
 import { updateTitle } from './attention';
 
-const toast = (m: string): void => { kit.notify(m); };
 export const REGION_ORDER: readonly RegionName[] = ['bar', 'list', 'messages', 'composer', 'panel', 'dock'];
 export const REGION_NAME: Record<RegionName, string> = { bar: 'Title bar', list: 'Sidebar list', messages: 'Conversation', composer: 'Composer', panel: 'Details panel', dock: 'Dock' };
 const lastInRegion: Partial<Record<RegionName, Element>> = {};
@@ -72,7 +71,7 @@ export function focusRegion(r: RegionName, opts?: { fresh?: boolean }): void {
   if (r === 'dock' && state.dock !== 'on') setState({ dock: 'on' });
   const go2 = (): void => {
     const root = regionRoot(r);
-    if (!root) { toast(REGION_NAME[r] + ' is not available here'); return; }
+    if (!root) { kit.notify(REGION_NAME[r] + ' is not available here'); return; }
     const remembered = lastInRegion[r];
     const t = (!opts || !opts.fresh) && remembered && root.contains(remembered) && visible(remembered) ? (remembered as HTMLElement) : defaultTarget(r, root);
     if (!t.matches(FOCUSABLE) && !t.hasAttribute('tabindex')) { t.setAttribute('tabindex', '-1'); t.setAttribute('data-hx-region-focus', ''); }
@@ -108,7 +107,7 @@ function attentionTargets(): Array<{ n: HTMLElement; tab: Tab }> {
 }
 export function nextAttention(dir: 1 | -1): void {
   const list = attentionTargets();
-  if (!list.length) { toast('Nothing needs you right now'); return; }
+  if (!list.length) { kit.notify('Nothing needs you right now'); return; }
   const cur = list.findIndex((x) => x.n === document.activeElement || x.n.contains(document.activeElement));
   const i = cur < 0 ? (dir > 0 ? 0 : list.length - 1) : (cur + dir + list.length) % list.length;
   const { n, tab } = list[i] as { n: HTMLElement; tab: Tab };
@@ -152,7 +151,7 @@ export function leaderKey(e: KeyboardEvent): boolean {
 function openDockBot(n: number): void {
   const api = getDockApi();
   const id = api ? api.botAt(n) : (data().bots.snapshot().bots[n - 1] ?? { id: null }).id;
-  if (!id) { toast('No bot ' + n + ' in the dock'); return; }
+  if (!id) { kit.notify('No bot ' + n + ' in the dock'); return; }
   setState({ tab: 'bots' }); sh.selection.bots = id;
   emit('hx:bot-select', { id, from: 'keyboard' }); updateTitle();
 }

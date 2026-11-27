@@ -113,12 +113,12 @@ describe('the reader', () => {
 });
 
 describe('the store view while the sources are read', () => {
-  const mount = (o: MockStoreOptions): { root: HTMLElement; view: ReturnType<typeof mountStore>; store: ReturnType<typeof createMockStore>; toasts: string[] } => {
+  const mount = (o: MockStoreOptions): { root: HTMLElement; view: ReturnType<typeof mountStore>; store: ReturnType<typeof createMockStore>; notices: string[] } => {
     const root = document.createElement('div'); document.body.append(root);
     const store = createMockStore(o);
-    const toasts: string[] = [];
-    const view = mountStore(root, { store, toast: (t) => { toasts.push(t); }, project: () => null, settle: 0, enter: false, now: () => NOW });
-    return { root, view, store, toasts };
+    const notices: string[] = [];
+    const view = mountStore(root, { store, notify: (t) => { notices.push(t); }, project: () => null, settle: 0, enter: false, now: () => NOW });
+    return { root, view, store, notices };
   };
   const text = (root: HTMLElement): string => root.textContent ?? '';
 
@@ -137,7 +137,7 @@ describe('the store view while the sources are read', () => {
     }, { timeout: 2000 });
   });
   it('Sources shows each row waiting, being read, then its items or the plain reason, and says how the read ended', async () => {
-    const { root, view, toasts } = mount({ start: 'unread', now: () => NOW, reads: { 'engine-plugins': { ms: 30 }, 'skills-hub': { ms: 30, error: HUB_DOWN }, anthropic: { ms: 30 }, 'mcp-registry': { ms: 30, error: REG_DOWN } } });
+    const { root, view, notices } = mount({ start: 'unread', now: () => NOW, reads: { 'engine-plugins': { ms: 30 }, 'skills-hub': { ms: 30, error: HUB_DOWN }, anthropic: { ms: 30 }, 'mcp-registry': { ms: 30, error: REG_DOWN } } });
     view.show('sources'); await tick(20);
     expect(text(root)).toContain('Not read yet: it is read when the store opens.');
     expect(text(root)).toContain('Built into this version of boopis.');
@@ -147,7 +147,7 @@ describe('the store view while the sources are read', () => {
     expect(text(root)).toContain('Waiting for its turn to be read…');
     expect(text(root)).toMatch(/Reading sources ?[0-3] of 4/);
     expect(document.activeElement?.id).toBe('hx-store-read');
-    await vi.waitFor(() => { expect(toasts.at(-1)).toBe('2 sources read; 2 could not be, and their rows say why.'); }, { timeout: 3000 });
+    await vi.waitFor(() => { expect(notices.at(-1)).toBe('2 sources read; 2 could not be, and their rows say why.'); }, { timeout: 3000 });
     await vi.waitFor(() => { expect(text(root)).toContain(HUB_DOWN); }, { timeout: 3000 });
     expect(text(root)).toContain(REG_DOWN);
     expect(text(root)).toMatch(/\d+ items?\. Read just now\./);
@@ -215,7 +215,7 @@ describe('the sources that fall due while the store stays open', () => {
     const clock = { t: NOW };
     const root = document.createElement('div'); document.body.append(root);
     const store = createMockStore({ now: () => clock.t, reads: { 'mcp-registry': { ms: 40 } } });
-    const view = mountStore(root, { store, toast: () => undefined, project: () => null, settle: 0, enter: false, now: () => clock.t, every: 15 });
+    const view = mountStore(root, { store, notify: () => undefined, project: () => null, settle: 0, enter: false, now: () => clock.t, every: 15 });
     await tick(30);
     expect(root.querySelector('[data-store-read]')).toBeNull();
     clock.t = NOW + 2 * HOUR;
@@ -230,7 +230,7 @@ describe('the sources that fall due while the store stays open', () => {
     const store = createMockStore({ now: () => NOW, reads: {} });
     const seen: string[] = [];
     const wrapped = { ...store, refresh: (id?: string) => { seen.push(String(id)); return store.refresh(id); } };
-    const view = mountStore(root, { store: wrapped, toast: () => undefined, project: () => null, settle: 0, enter: false, now: () => clock.t, every: 10 });
+    const view = mountStore(root, { store: wrapped, notify: () => undefined, project: () => null, settle: 0, enter: false, now: () => clock.t, every: 10 });
     await tick(60); view.stop();
     expect(seen).toEqual([]);
   });
@@ -240,7 +240,7 @@ describe('the read on Browse (board 15: one line, "Reading sources 0 of 1")', ()
   const mount = (o: MockStoreOptions): { root: HTMLElement; view: ReturnType<typeof mountStore>; store: ReturnType<typeof createMockStore> } => {
     const root = document.createElement('div'); document.body.append(root);
     const store = createMockStore(o);
-    const view = mountStore(root, { store, toast: () => undefined, project: () => null, settle: 0, enter: false, now: () => NOW });
+    const view = mountStore(root, { store, notify: () => undefined, project: () => null, settle: 0, enter: false, now: () => NOW });
     return { root, view, store };
   };
   const line = (root: HTMLElement): string => root.querySelector('[data-store-read]')?.textContent ?? '';

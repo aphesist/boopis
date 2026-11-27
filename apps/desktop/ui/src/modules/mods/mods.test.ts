@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 /* The surfaces a mod draws into, against the events the real plugin sent (the recording of plugins/boopis/tests/test_mods_frames.py)
-   and small fakes: the band, the status line and the composer's rise, panes at both widths, toasts, placed rows, and the theme
+   and small fakes: the band, the status line and the composer's rise, panes at both widths, notices, placed rows, and the theme
    card with every way a preview ends. */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setProvider } from '../../data';
 import type { DataProvider, ModsSource, ModSession } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
 import { createModsModel } from '../../data/mods-model';
-import { setTokenReader } from '@boopis/ui';
+import { kit, setTokenReader } from '@boopis/ui';
 import { fixtures } from '../../host/testing';
 import { themeApi } from '../../styles/theme';
 import { installPreset } from '../../styles/testing';
@@ -17,7 +17,6 @@ import { ctl } from './ctl';
 import { resetMods } from './index';
 import { panelTabs } from './panes';
 import { surface } from './surfaces';
-import { queued, resetToasts, dismiss } from './toasts';
 import { openCards, previewingCard, recheck, themeCard, themeColors, placeThemeCard, swatchesOf } from './theme-card';
 import type { HxCard } from '../cards';
 
@@ -63,7 +62,7 @@ beforeEach(() => {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
   setTokenReader((t) => ({ '--bg-0': '#0c0b0a', '--bg-1': '#14130f', '--bg-2': '#1c1a17', '--text': '#e9e4da' } as Record<string, string>)[t] ?? null);
   rig = build();
-  resetMods(); resetToasts();
+  resetMods(); kit.notifyReset();
 });
 afterEach(() => { themeApi.endPreview(false); themeApi.reset(); themeApi.preset('catalog'); setTokenReader(null); });
 
@@ -288,52 +287,53 @@ describe('panes: a tab from 1200px, inline below it (owner decision, 19 November
   });
 });
 
-describe('toasts: one at a time, with "+N" (owner decision, 19 November 2026)', () => {
-  const shown = (): string | undefined => document.querySelector('.ui-toast .mod-toast__t')?.textContent ?? undefined;
-  const more = (): string | undefined => document.querySelector('.ui-toast .mod-toast__more')?.textContent ?? undefined;
-  const fade = async (): Promise<void> => { document.querySelector('.ui-toast')?.classList.remove('is-in'); await Promise.resolve(); vi.advanceTimersByTime(260); };
+describe('notices: the kit\'s Notice, one at a time, with "+N" (owner decision, 19 November 2026; 2b: mod notices are the kit Notice)', () => {
+  const shown = (): string | undefined => kit.notifyQueued().showing?.trim();
+  const more = (): string | undefined => document.querySelector('.k7-notify .k7-notice__more')?.textContent ?? undefined;
+  const fade = (): void => { vi.advanceTimersByTime(4100); vi.advanceTimersByTime(260); };
   beforeEach(() => { vi.useFakeTimers(); follow(); });
-  afterEach(() => { resetToasts(); document.querySelectorAll('.ui-toast').forEach((n) => { n.remove(); }); vi.useRealTimers(); });
-  const toast = (t: string): void => play('mod.toast', { plugin: 'test-runner', text: t, timeout_ms: 4000 });
+  afterEach(() => { kit.notifyReset(); vi.useRealTimers(); });
+  const say = (t: string): void => play('mod.toast', { plugin: 'test-runner', text: t, timeout_ms: 4000 });
 
-  it('shows the first at once, led by the mod, and the rest wait behind it with a quiet count', () => {
-    toast('one'); toast('two'); toast('three');
+  it('shows the first at once, led by the mod (its glyph and "name mod"), and the rest wait behind it with a quiet count', () => {
+    say('one'); say('two'); say('three');
     expect(shown()).toBe('one');
-    expect(document.querySelector('.ui-toast .mod-toast__who .mv-by__n')?.textContent).toBe('test-runner');
+    expect(document.querySelector('.k7-notify .k7-notice__title')?.textContent).toBe('test-runner mod');
+    expect(document.querySelector('.k7-notify [data-kit~="Notice"] svg')).toBeTruthy();
     expect(more()).toBe('+2');
-    expect(queued()).toEqual({ showing: 'one', waiting: ['two', 'three'] });
-    expect(document.querySelector('.ui-toast')?.getAttribute('aria-label')).toBe('test-runner mod: one, 2 more waiting');
+    expect(kit.notifyQueued().waiting.map((x) => x.trim())).toEqual(['two', 'three']);
+    expect(document.querySelector('.k7-notify .k7-notice__more')?.getAttribute('aria-label')).toBe('2 more waiting');
   });
-  it('keeps the order and shows the next as the previous has faded', async () => {
-    toast('one'); toast('two'); toast('three');
-    await fade();
+  it('keeps the order and shows the next as the previous has faded', () => {
+    say('one'); say('two'); say('three');
+    fade();
     expect([shown(), more()]).toEqual(['two', '+1']);
-    await fade();
+    fade();
     expect([shown(), more()]).toEqual(['three', undefined]);
   });
   it('shows the next at once when one is dismissed by its close button, by Esc inside it, or by its action', () => {
-    toast('one'); toast('two'); toast('three'); toast('four');
-    document.querySelector<HTMLButtonElement>('.ui-toast .mod-toast__x')?.click();
+    say('one'); say('two'); say('three'); say('four');
+    document.querySelector<HTMLButtonElement>('.k7-notify [data-dismiss]')?.click();
     expect(shown()).toBe('two');
-    document.querySelector('.ui-toast')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    document.querySelector('.k7-notify [data-kit~="Notice"]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(shown()).toBe('three');
-    dismiss();
+    kit.notifyDismiss();
     expect(shown()).toBe('four');
     expect(more()).toBeUndefined();
-    dismiss();
-    expect(queued()).toEqual({ showing: null, waiting: [] });
-    expect(document.querySelector('.ui-toast')?.classList.contains('is-in')).toBe(false);
+    kit.notifyDismiss();
+    expect(kit.notifyQueued()).toEqual({ showing: null, waiting: [] });
+    expect(document.querySelector('.k7-notify')?.hasAttribute('data-in')).toBe(false);
   });
-  it('fades by itself on the time the mod gave, and then the next comes', async () => {
-    toast('one'); toast('two');
+  it('fades by itself on the time the mod gave, and then the next comes', () => {
+    say('one'); say('two');
     vi.advanceTimersByTime(4100);
-    await Promise.resolve();
     vi.advanceTimersByTime(260);
     expect(shown()).toBe('two');
   });
-  it('shows toasts of a session that is not on screen: the mod is named, so it is not mistaken', () => {
+  it('shows notices of a session that is not on screen: the mod is named, so it is not mistaken', () => {
     rig.model.handle('another', 'mod.toast', { plugin: 'elsewhere', text: 'hi', timeout_ms: 1000 });
     expect(shown()).toBe('hi');
+    expect(document.querySelector('.k7-notify .k7-notice__title')?.textContent).toBe('elsewhere mod');
   });
 });
 

@@ -2,6 +2,7 @@
 /* Team chat in the Bots tab, and a live bot's composer, over the provider interface: the tests say what the user sees and what
    is asked of the provider, never how the engine answers (that is `host/live/groups.test.ts` and `bots.test.ts`). */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { kit } from '@boopis/ui';
 import { setProvider } from '../../data';
 import type { Bot, BotInfo, BotsEvent, DataProvider, Group, GroupsSource } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
@@ -46,6 +47,7 @@ const paneRow = (name: string): HTMLElement => q('#hx-right-bots [data-room="' +
 const withGroups = (): DataProvider => { const m = createMockProvider({ simulate: false, fixtures: ['groups'] }); return { ...m, groups: spyGroups(m.groups) }; };
 
 beforeEach(() => {
+  kit.notifyReset();
   calls.length = 0;
   vi.stubGlobal('ResizeObserver', class { observe(): void { /* no layout */ } unobserve(): void { /* no layout */ } disconnect(): void { /* no layout */ } });
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);

@@ -8,13 +8,13 @@ describe('the notice of a restart that waited for idle sessions', () => {
     expect(noticeText({ names: [], ok: true, message: '' })).toBe('boopis restarted to read the key.');
     expect(noticeText({ names: [], ok: false, message: '' })).toBe('boopis did not restart. The key is saved; restart boopis to use it.');
   });
-  it('shows each notice as a toast while listening, and stops when told', async () => {
+  it('shows each notice as a notice while listening, and stops when told', async () => {
     let send: (n: RestartNotice) => void = () => undefined;
     const stop = vi.fn();
-    const toasts: string[] = [];
-    const off = await listenConnectorRestarts((t) => { toasts.push(t); }, (cb) => { send = cb; return Promise.resolve(stop); });
+    const notices: string[] = [];
+    const off = await listenConnectorRestarts((t) => { notices.push(t); }, (cb) => { send = cb; return Promise.resolve(stop); });
     send({ names: ['x'], ok: false, message: 'Hermes was not restarted (gave up). The key is saved; restart Hermes to use it.' });
-    expect(toasts).toEqual(['Hermes was not restarted (gave up). The key is saved; restart Hermes to use it.']);
+    expect(notices).toEqual(['Hermes was not restarted (gave up). The key is saved; restart Hermes to use it.']);
     off();
     expect(stop).toHaveBeenCalled();
   });

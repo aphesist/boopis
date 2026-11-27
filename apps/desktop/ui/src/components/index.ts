@@ -2,7 +2,7 @@
      html            string templates for modules that build innerHTML
      the factories   button, iconButton, segmented, chip, row, group, ... -> an element, already wired
      hydrate(root)   wires every [data-ui] element under root once
-     select (the themed select), listbox (its list: a chip's picker), modelEntries, popover, layer, tooltip, toast, hold, orb, liven, glance, announce, shape, squircle, modelMark, icon, botState
+     select (the themed select), listbox (its list: a chip's picker), modelEntries, popover, layer, tooltip, hold, orb, liven, glance, announce, shape, squircle, modelMark, icon, botState
    Events bubble from the element and are cancelable where an action follows:
      'ui:change' {value}  segmented, switch, chip, option group
      'ui:commit'          hold to approve finished
@@ -28,7 +28,6 @@ import { shortName, aliasOf, canon, modelName, providerName, sameModel, splitRef
 import type { SelectEntry, SelectGroup, SelectOpts, SelectOption } from './select-html';
 import { shape } from './shape';
 import { squircle } from './squircle';
-import { toast } from './toast';
 import type { SigninButtonOpts } from './signin-button';
 import type { StackOpts } from './stack';
 import { tooltip } from './tooltip';
@@ -92,13 +91,13 @@ export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
   ...factories, legend, keys, inline, scrollClass, scrollEdges,
   markdown, copyText, kit,
-  hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, card,
+  hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, popover, layer, listbox, modelEntries, wireSelect, tooltip, card,
   hold: Object.assign(holdElement, { wire: wireHold }),
   /** a Claude Code mod's element tree, drawn with the library (MODS.md section 2) */
   modView: Object.assign(modView, { update: modViewUpdate, validate: validateTree, limits: MOD_LIMITS, sanitizeSvg, h: modH, colors: modColors })
 };
 export type Ui = typeof ui;
-export { html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, popover, layer, listbox, modelEntries, tooltip, toast, card, wireHold, holdElement };
+export { html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, popover, layer, listbox, modelEntries, tooltip, card, wireHold, holdElement };
 export type { SegElement } from './wire';
 /* the v7 kit (DESIGN-SYSTEM.md v7 section 21), on a v7 root */
 export { kit, kitVariants } from './v7';

@@ -295,7 +295,7 @@ export interface FormsSource {
 export interface ModsSource {
   /** one session's mods as they are now (`active: false` when it has none); a new value on every change */
   session(sessionId: string): Watch<ModSession>;
-  /** toasts and notifications: what a mod said that is not state */
+  /** notices and notifications: what a mod said that is not state */
   events: { subscribe(fn: (e: ModsEvent) => void): Unsubscribe };
   /* commands. The UI never runs mod code: it sends the id of the handler of the element the user used. */
   press(sessionId: string, handler: string): void;

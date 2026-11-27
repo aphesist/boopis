@@ -104,7 +104,7 @@ export async function keyWalk(env) {
     const x0 = await exp(); await press('Enter', 400); const x1 = await exp();
     check('5', 'Enter opens the steps', x0 !== null && x0 !== x1, x0 + ' -> ' + x1);
     await press('o', 400); check('5', 'o closes the steps', (await exp()) === x0);
-    await press('c', 400); check('5', 'c copies (toast)', await ev(() => /copied/i.test((document.querySelector('.k7-notify[data-in]') || document.querySelector('.ui-toast.is-in') || {}).textContent || '')));
+    await press('c', 400); check('5', 'c copies (the Notice)', await ev(() => /copied/i.test((document.querySelector('.k7-notify[data-in]') || {}).textContent || '')));
     /* the blank is the kit's question (AskCard): B goes to its answers */
     await press('b', 500); check('5', 'b goes to the blank\'s answers', await ev(() => !!document.activeElement?.closest('[data-blank]')));
     await press('1', 300); const picked = await where(); await press('Enter', 600);

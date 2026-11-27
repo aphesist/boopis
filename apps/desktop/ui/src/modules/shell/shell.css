@@ -166,7 +166,7 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
 .hx[data-left-mode="overlay"][data-left="open"] .hx-side { z-index: calc(var(--z-dock) + 2); }
 .hx[data-right-mode="overlay"][data-right="open"] .hx-right { z-index: calc(var(--z-dock) + 2); }
 
-/* ───────────── surfaces that float: menu, palette, dialog, tooltip, toast ───────────── */
+/* ───────────── surfaces that float: menu, palette, dialog, tooltip, notice ───────────── */
 @keyframes hx-drop { from { opacity: 0; transform: translateY(-6px); } }
 @keyframes hx-fade { from { opacity: 0; } }
 
@@ -221,7 +221,7 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
 
 /* ───────────── keyboard: sheet, go-to hint, region focus ───────────── */
 .hx-goto {
-  position: absolute; z-index: var(--z-toast); top: calc(var(--chrome-h) + 12px); left: 50%; translate: -50% 0;
+  position: absolute; z-index: var(--z-notify); top: calc(var(--chrome-h) + 12px); left: 50%; translate: -50% 0;
   display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; max-width: calc(100% - 32px); box-sizing: border-box;
   padding: 8px 14px; border-radius: var(--r-m); background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
   font-size: var(--fs-xs); color: var(--text-dim); animation: hx-drop var(--dur-2) var(--ease);
@@ -238,9 +238,10 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
    radius for good (a Settings dialog 30px in Typewriter, which wants 36). The surfaces animate with their own keyframes. */
 .hx-goto { --sq-bg: var(--bg-3); --sq-line: var(--line); }
 
-/* the floating Notice (the retired toast's place, R-toast-1 "the top of the work"): under the chrome, on the column's centre line */
-.hx-notify { position: absolute; inset: 0; z-index: var(--z-toast); pointer-events: none; }
-.hx-notify > .k7-notify { --hx-center-x: var(--hx-center-x-to); top: calc(var(--drag-h) + var(--sp-2)); left: var(--hx-center-x, 50%); transform: translateX(-50%); max-width: calc(100% - 2 * var(--sp-4)); }
+/* the floating Notice (conflict 31, step 2a: the v7 spec's "floating (bottom centre)"): on the column's centre line, just above the open
+   view's composer (`--hx-notify-bottom`, notices.ts), or above the dock where the view has none */
+.hx-notify { position: absolute; inset: 0; z-index: var(--z-notify); pointer-events: none; }
+.hx-notify > .k7-notify { --hx-center-x: var(--hx-center-x-to); left: var(--hx-center-x, 50%); bottom: calc(var(--hx-notify-bottom, var(--hx-dock-space-to, 0px)) + var(--sp-3)); }
 /* the rail's width (88, v7 7) for the whole window: the layout reads it from the probe */
 .hx, .hx-probe { --sb-rail-w: 88px; --hx-rail-w: 88px; }
 @media (max-width: 1199px) { .hx, .hx-probe { --sb-rail-w: 64px; --hx-rail-w: 64px; } }

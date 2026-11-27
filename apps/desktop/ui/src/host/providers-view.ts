@@ -49,7 +49,7 @@ export interface ProvidersDeps {
   login?: (provider: string) => Promise<ConnectorLogin>;
   /** boopis's own ChatGPT sign-in, whose card mounts for `openai.signin` */
   chatgpt?: ChatgptBridge;
-  toast: (text: string) => void;
+  notify: (text: string) => void;
   /** how long a card's receipt shows before the list is drawn again (ms) */
   settle?: number;
   /** cards for other sign-ins, by way id; the registry's are used when absent */
@@ -364,7 +364,7 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
     queueMicrotask(() => { focusForm(c); });
     return c;
   };
-  const flowUi: FlowUi = { card: cardOf, show, back, later, toast: deps.toast };
+  const flowUi: FlowUi = { card: cardOf, show, back, later, notify: deps.notify };
 
   const keyFlow = (r: Row, changing: boolean): void => {
     show(cardOf(keyForm(r.entry, r.way, changing), {
@@ -398,19 +398,19 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
     const id = w.signin?.login ?? 'claude-code';
     if (!login) return;
     btn.disabled = true;
-    deps.toast('Finish signing in to Claude in your browser.');
+    deps.notify('Finish signing in to Claude in your browser.');
     login(id).then((r) => {
-      if (!r.ok) deps.toast(r.timed_out ? 'The Claude sign-in took too long and was stopped. Choose Sign in to try again.' : 'The Claude sign-in did not finish. Choose Sign in to try again.');
+      if (!r.ok) deps.notify(r.timed_out ? 'The Claude sign-in took too long and was stopped. Choose Sign in to try again.' : 'The Claude sign-in did not finish. Choose Sign in to try again.');
       return read(false);
-    }, (e: unknown) => { deps.toast(message(e)); btn.disabled = false; });
+    }, (e: unknown) => { deps.notify(message(e)); btn.disabled = false; });
   };
   /** Use a runtime that answered (`local-runtime.ts`): LM Studio through the engine's own provider, the others as endpoints under the
       catalogue's own name; the first model it listed becomes the person's model. */
   const useLocal = async (r: Row): Promise<void> => {
     try {
       const use = await useLocalRuntime(bridge, r.way, r.state?.base_url ?? r.way.base_url?.default ?? '');
-      deps.toast(localUseNote(r.entry, use));
-    } catch (e) { deps.toast(message(e)); }
+      deps.notify(localUseNote(r.entry, use));
+    } catch (e) { deps.notify(message(e)); }
     await read(false);
   };
 
@@ -430,14 +430,14 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
       case 'key': if (r) keyFlow(r, r.state?.status !== 'needs_key'); break;
       case 'endpoint': abort = startEndpointFlow(flowUi, bridge).abort; break;
       case 'signin': case 'continue': if (r?.way.signin?.flow === 'cli') claudeSignin(t, r.way); else if (r) signinFlow(r.way); break;
-      case 'signout': bridge.signOut(wayId).then(() => read(false), (e: unknown) => { deps.toast(message(e)); }); break;
+      case 'signout': bridge.signOut(wayId).then(() => read(false), (e: unknown) => { deps.notify(message(e)); }); break;
       case 'recheck': void read(true); break;
       case 'copy': {
         const hint = r?.state?.install;
-        if (hint) copyText(hint.command).then(() => { deps.toast(`Copied: run it in ${hint.shell}, then Check again`); }, () => { deps.toast('Could not copy: select the command and copy it.'); });
+        if (hint) copyText(hint.command).then(() => { deps.notify(`Copied: run it in ${hint.shell}, then Check again`); }, () => { deps.notify('Could not copy: select the command and copy it.'); });
         break;
       }
-      case 'guide': { const hint = r?.state?.install; if (hint) openPage(hint.page).catch((e: unknown) => { deps.toast(message(e)); }); break; }
+      case 'guide': { const hint = r?.state?.install; if (hint) openPage(hint.page).catch((e: unknown) => { deps.notify(message(e)); }); break; }
       case 'use': if (r) void useLocal(r); break;
       case 'remove': {
         if (r) removeFlow(wayId, r.way.label, 'Its key is removed from your keychain.');

@@ -30,7 +30,7 @@ const log = logger('connectors');
 
 export interface ConnectorsDeps {
   bridge: ConnectorsBridge;
-  toast: (text: string) => void;
+  notify: (text: string) => void;
   /** opens the store view ("Browse the store"); absent: the row is left out */
   openStore?: () => void;
   /** the bots a connector can be set up for, asked each time the tab shows; absent or empty: the choice is not drawn and the main profile's connectors are the only ones */
@@ -303,10 +303,10 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     busy = true;
     try {
       await br().setEnabled(name, on);
-      deps.toast(`${name} is ${on ? 'on' : 'off'} from the next session.`);
+      deps.notify(`${name} is ${on ? 'on' : 'off'} from the next session.`);
     } catch (e) {
       back();
-      deps.toast(message(e));
+      deps.notify(message(e));
     } finally { busy = false; }
     await drawInstalled();
   }
@@ -348,7 +348,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
       async submit(_id, outcome) {
         try {
           const r = await br().remove(c.name, outcome.values['keys'] === 'delete');
-          deps.toast([`Removed ${c.name}.`, ...r.notes.slice(0, 1)].join(' '));
+          deps.notify([`Removed ${c.name}.`, ...r.notes.slice(0, 1)].join(' '));
         } catch (e) { throw new Error(message(e)); }
         later(() => { void showList(); });
       },
@@ -359,7 +359,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   /* ───────── add ───────── */
   async function addFlow(source: ConnectorSource, entry?: { id: string; variant: string }): Promise<void> {
     let form;
-    try { form = await br().inputs(source, entry?.id, entry?.variant); } catch (e) { deps.toast(message(e)); return; }
+    try { form = await br().inputs(source, entry?.id, entry?.variant); } catch (e) { deps.notify(message(e)); return; }
     const model = fromConnectorForm(form as ConnectorFormIn);
     const request = (values: Readonly<Record<string, unknown>>): ConnectorRequest => ({ source, values: { ...textValues(values), ...(entry ? { connector: entry.id, variant: entry.variant } : {}) } });
     showFlow(card({ ...model.spec, receipt: 'Checked. The review is next.' }, {

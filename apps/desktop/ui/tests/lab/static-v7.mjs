@@ -54,6 +54,7 @@ export function scanV7() {
         for (const m of l.matchAll(re)) {
           const before = l.slice(Math.max(0, m.index - 12), m.index);
           if (name === 'Banner' && /role\s*[=:]\s*["'`]?$/.test(before)) continue;   /* role="banner" is a landmark, not the component */
+          if (name === 'Toast' && /mod\.$/.test(before)) continue;   /* `mod.toast` is the plugin's wire method (docs/MODS.md), not the component: the app draws it as the kit's Notice (2a) */
           at('kit.single', rel, i + 1, `uses ${name} ("${m[0]}"), which section 21 merged into ${into}`, l);
         }
       });

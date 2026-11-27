@@ -12,11 +12,14 @@ export interface NoticeOpts {
   text: string; place?: U<typeof NOTICE_PLACES[number]>; tone?: U<typeof NOTICE_TONES[number]>; icon?: U<string>;
   /** the words that lead the line, in --text (S17: "Approaching the weekly limit", then ", 81% used, resets Wed 09:00") */ title?: U<string>;
   actions?: U<readonly { label: string; primary?: boolean; ghost?: boolean; value?: string; inert?: string }[]>; dismiss?: U<boolean>; attrs?: U<Attrs>;
+  /** floating: how many more wait behind this one, a quiet "+N" in mono before its actions (one at a time: the app's notices and a mod's) */
+  more?: U<number>;
 }
 export function notice(o: NoticeOpts): string {
   const place = o.place ?? 'page', tone = o.tone ?? 'neutral';
   return '<div class="k7-notice"' + kitAttrs('Notice', { role: tone === 'red' ? 'alert' : 'status', 'data-place': place, 'data-tone': tone, 'data-sq': '', 'data-sq-mode': place === 'floating' ? 'surface' : 'frame', ...(o.attrs ?? {}) }) + '>' +
     glyph(o.icon, 'k7-notice__ic') + '<span class="k7-notice__text">' + (o.title ? '<span class="k7-notice__title">' + esc(o.title) + '</span>' : '') + esc(o.text) + '</span>' +
+    (o.more ? '<span class="k7-notice__more k7-mono" data-tip="' + o.more + ' more waiting" aria-label="' + o.more + ' more waiting">+' + o.more + '</span>' : '') +
     (o.actions ?? []).slice(0, 2).map((a) => button({ label: a.label, variant: a.primary ? 'primary' : a.ghost ? 'ghost' : 'tint', size: 28, attrs: { 'data-value': a.value ?? null, 'aria-disabled': a.inert ? 'true' : null, 'data-tip': a.inert ?? null } })).join('') +
     (o.dismiss ? '<button class="k7-reset k7-ib" data-kit="IconButton" data-variant="ghost" data-dismiss type="button" aria-label="Dismiss" data-tip="Dismiss">' + glyph('close') + '</button>' : '') + '</div>';
 }
@@ -36,16 +39,17 @@ export const contract = defineContract<NoticeOpts>({
     title: 'the words that lead the line, in --text',
     actions: 'up to two actions (primary, ghost, a value, inert with the reason)',
     dismiss: 'a Dismiss button at its end',
-    attrs: 'extra attributes on its root: the app\'s handles (an id, data-*, aria-*)'
+    attrs: 'extra attributes on its root: the app\'s handles (an id, data-*, aria-*)',
+    more: 'floating: how many more wait behind it, a quiet "+N"'
   },
   events: [],
   states: ['data-place', 'data-tone'],
-  parts: ['k7-notice__text', 'k7-notice__title'],
+  parts: ['k7-notice__text', 'k7-notice__title', 'k7-notice__more'],
   tokens: [
     '--accent-soft', '--accent-text', '--bg-3', '--composer-h', '--dur-1', '--dur-2', '--ease-sharp', '--float-line', '--fs-m',
     '--fs-s', '--gap-row', '--hl', '--lh-m', '--line', '--owe-soft', '--owe-text', '--pad-block', '--pad-text', '--r-block',
-    '--red-soft', '--red-text', '--shadow-pop', '--sp-1', '--text', '--text-dim'
+    '--red-soft', '--red-text', '--shadow-pop', '--sp-1', '--sp-4', '--sp-5', '--text', '--text-dim', '--fs-xs', '--lh-xs'
   ],
-  a11y: 'role="status" (polite), or role="alert" in the red tone. Opened at a control (kit.openNotice) it is a small dialog with one action, and Esc returns the focus.',
+  a11y: 'role="status" (polite), or role="alert" in the red tone; floating at work (kit.notify) its layer is the one polite live region, and Esc inside it dismisses it. Opened at a control (kit.openNotice) it is a small dialog with one action, and Esc returns the focus.',
   boards: ['S17-newsession']
 });

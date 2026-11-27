@@ -81,8 +81,8 @@ const GROUPS: Group[] = [
   { name: 'hand-built button styling', where: 'css', re: /appearance:\s*none/ },
   /* the quiet mark: ui.html.badge */
   { name: 'badge styling', where: 'css', re: /border-radius:\s*var\(--r-pill\)[^}]*font:[^}]*var\(--mono\)/ },
-  /* floating surfaces and messages the kit draws: menus, tooltips, toasts, empty states */
-  { name: 'tooltip, toast or empty state markup', where: 'ts', re: /class="ui-(tip|toast|empty)"|class:\s*'ui-(tip|toast|empty)'/ },
+  /* floating surfaces and messages the kit draws: menus, tooltips, notices, empty states */
+  { name: 'tooltip or empty state markup', where: 'ts', re: /class="ui-(tip|empty)"|class:\s*'ui-(tip|empty)'/ },
   /* a bare library class restyled from a module (a module may place a kit component in its context, never redefine it) */
   { name: 'kit class redefined in a module', where: 'css', re: /(^|\})\s*\.ui-[\w-]+\s*(,\s*\.ui-[\w-]+\s*)*\{/ }
 ];

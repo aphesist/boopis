@@ -5,7 +5,7 @@
    lays out every group it is given by the same rule (`resolveControls`: close alone on a tiling desktop, macOS's order, the
    Settings preference), so a layer's bar and the shell's never disagree. In the page build (no host) the buttons keep the
    browser's stand-ins: full screen for maximise, a note for the two that need a window. */
-import { ui } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
 import { on } from '../core/bus';
 import { loadWindowPref, saveWindowPref } from '../core/settings';
 import { logger } from '../core/log';
@@ -78,7 +78,7 @@ export interface WindowControls {
 export interface WindowControlsDeps {
   /** the host's window commands; null in the page build, where the buttons keep the browser's stand-ins */
   host: WindowHost | null;
-  toast: (text: string) => void;
+  notify: (text: string) => void;
   loadPref?: () => ControlsPref;
   savePref?: (next: ControlsPref) => void;
 }
@@ -96,7 +96,7 @@ export function createWindowControls(deps: WindowControlsDeps): WindowControls {
   const layout = (): ControlsLayout => forced ?? resolveControls(pref, info);
   const draw = (): void => { const l = layout(); for (const g of groups) { layoutGroup(g, l); syncMax(g, state); } };
   const changed = (): void => { draw(); for (const fn of listeners) fn(); };
-  const fail = (what: string) => (e: unknown): void => { log.warn(what, e); deps.toast(e instanceof Error ? e.message : what); };
+  const fail = (what: string) => (e: unknown): void => { log.warn(what, e); deps.notify(e instanceof Error ? e.message : what); };
   /* the host is asked once, when the first group is drawn: the desktop it found at start, then the window's state as it moves */
   const ask = (): void => {
     if (asked) return;
@@ -113,9 +113,9 @@ export function createWindowControls(deps: WindowControlsDeps): WindowControls {
       else host.control('close').catch(fail('The window did not close'));
       return;
     }
-    if (which === 'min') deps.toast('Minimize works in the desktop app');
-    else if (which === 'close') deps.toast('Close works in the desktop app');
-    else void toggleFullscreen(deps.toast);
+    if (which === 'min') deps.notify('Minimize works in the desktop app');
+    else if (which === 'close') deps.notify('Close works in the desktop app');
+    else void toggleFullscreen(deps.notify);
   };
   return {
     attach(group) {
@@ -141,18 +141,18 @@ export function createWindowControls(deps: WindowControlsDeps): WindowControls {
 }
 
 /** the page's stand-in for maximise: the browser's full screen */
-async function toggleFullscreen(toast: (t: string) => void): Promise<void> {
+async function toggleFullscreen(notify: (t: string) => void): Promise<void> {
   try {
     if (document.fullscreenElement) await document.exitFullscreen();
     else await document.documentElement.requestFullscreen();
-  } catch { toast('Full screen is not available in this view'); }
+  } catch { notify('Full screen is not available in this view'); }
 }
 
 let page: WindowControls | null = null;
 /** The page's one controller: the host's window in the desktop app, the browser's stand-ins elsewhere. */
 export function windowControls(): WindowControls {
   if (!page) {
-    const made = createWindowControls({ host: inTauri() ? tauriWindowHost() : null, toast: (t) => { ui.toast(t); }, loadPref: loadWindowPref, savePref: (p) => { saveWindowPref(p); } });
+    const made = createWindowControls({ host: inTauri() ? tauriWindowHost() : null, notify: (t) => { kit.notify(t); }, loadPref: loadWindowPref, savePref: (p) => { saveWindowPref(p); } });
     page = made;
     on('hx:window-controls', (d) => { made.force(d.layout); });
   }

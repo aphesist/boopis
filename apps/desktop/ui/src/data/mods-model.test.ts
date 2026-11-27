@@ -20,7 +20,7 @@ function play(upTo = RECORDED.length): { model: ReturnType<typeof createModsMode
 const clock = { now: 1000, id: 1 };
 
 describe('the recorded mod events, folded into one session', () => {
-  it('has the recording to fold: panes, a status, toasts, a log, a theme, draws and a pane close are all in it', () => {
+  it('has the recording to fold: panes, a status, notices, a log, a theme, draws and a pane close are all in it', () => {
     const types = new Set(RECORDED.map((e) => e.type));
     for (const t of ['mod.pane', 'mod.render', 'mod.status', 'mod.toast', 'mod.log', 'mod.theme']) expect(types.has(t)).toBe(true);
     expect(eventsOf(fixtures.mods, 'plugin.boopis.form.opened')).toHaveLength(1);
@@ -47,9 +47,9 @@ describe('the recorded mod events, folded into one session', () => {
   it('holds one status per mod, in the order they first spoke', () => {
     expect(play().model.state(SID).status).toEqual([{ plugin: 'test-runner', text: '1 failing' }, { plugin: 'token-meter', text: '12.4k tokens this turn' }]);
   });
-  it('turns toasts into events, in order, and keeps them out of the state', () => {
+  it('turns notices into events, in order, and keeps them out of the state', () => {
     const { model, events } = play();
-    expect(events.filter((e) => e.type === 'toast').map((e) => e.type === 'toast' && [e.plugin, e.text, e.timeoutMs])).toEqual([['test-runner', '1 test failing', 4000], ['test-runner', 'Indexed 296 files', 4000], ['test-runner', 'Context is at 78%', 4000]]);
+    expect(events.filter((e) => e.type === 'notice').map((e) => e.type === 'notice' && [e.plugin, e.text, e.timeoutMs])).toEqual([['test-runner', '1 test failing', 4000], ['test-runner', 'Indexed 296 files', 4000], ['test-runner', 'Context is at 78%', 4000]]);
     expect(JSON.stringify(model.state(SID))).not.toContain('Indexed 296');
   });
   it('keeps the log lines the model does not read, newest last, and a theme the mod offered', () => {

@@ -30,7 +30,6 @@ export const variants = {
   section: { open: [false, true] },
   scroll: scrollVariants,
   empty: { mark: [false, true], action: [false, true] },
-  toast: { action: [false, true] },
   tip: { keys: [false, true], state: [false, true] },
   ladder: { variant: ['line', 'list'], off: [false, true] },
   measure: { variant: ['strip', 'row', 'grid'] },

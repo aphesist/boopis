@@ -242,10 +242,9 @@ const setSection = (o: { label: string; id: string; body?: U<string>; attrs?: U<
 const empty = (o: { title: string; text?: U<string>; mark?: U<boolean>; action?: U<string> }): string =>
   '<div class="ui-empty">' + (o.mark ? '<span class="ui-empty__mark">' + logoHTML({ mark: true, label: false }) + '</span>' : '') + '<h2 class="ui-empty__title">' + esc(o.title) + '</h2>' + (o.text ? '<p class="ui-empty__text">' + esc(o.text) + '</p>' : '') + (o.action ?? '') + '</div>';
 
-/** the mod as a name: its glyph and its name, one unit (origin slots, tabs, band rows, toasts, placed rows) */
+/** the mod as a name: its glyph and its name, one unit (origin slots, tabs, band rows, notices, placed rows) */
 const mod = (name: string, o?: { class?: string }): string => '<span class="mv-by' + (o?.class ? ' ' + o.class : '') + '">' + icon('mod', { class: 'mv-by__g' }) + '<span class="mv-by__n">' + esc(name) + '</span></span>';
 
-const toast = (text: string, action?: string): string => '<div class="ui-toast" role="status" data-static><span>' + esc(text) + '</span>' + (action ? button({ label: action, size: 's', variant: 'ghost', class: 'ui-corner' }) : '') + '</div>';
 /** a tooltip's content: the label, an optional state, the keys (concentric with the tooltip, on its raised colour); tooltip.ts shows it */
 export const tipBody = (label: string, k?: string | null, state?: { text: string; tone?: string | null } | null): string =>
   '<span>' + esc(label) + '</span>' + (state ? '<span class="ui-tip__state"' + attrs({ 'data-tone': state.tone }) + '>' + esc(state.text) + '</span>' : '') + (k ? keys(k, { fit: true, raised: true }) : '');
@@ -253,5 +252,5 @@ const tip = (label: string, k?: string, state?: { text: string; tone?: string })
 
 
 export const html = {
-  icon, keys, kbd, combo, comboKbds, code, inline, dot, button, iconButton, hold, switch: switchHtml, segmented, chip, chipGroup, orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, ladder, measure, legend, request, entry, disclosure, section, field, select: selectHTML, setRow, setHead, setSection, empty, toast, tip, mod, scroll, tabs, tipBody, badge, input, signinButton, stack
+  icon, keys, kbd, combo, comboKbds, code, inline, dot, button, iconButton, hold, switch: switchHtml, segmented, chip, chipGroup, orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, ladder, measure, legend, request, entry, disclosure, section, field, select: selectHTML, setRow, setHead, setSection, empty, tip, mod, scroll, tabs, tipBody, badge, input, signinButton, stack
 };

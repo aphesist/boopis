@@ -25,13 +25,45 @@ describe('story: Notice', () => {
 });
 
 describe('scene: Notice', () => {
-  it('notify shows one floating Notice at a time, the newest in place of the last', () => {
+  it('notify shows one floating Notice at a time: the next waits behind it with "+N", and comes when it goes', () => {
     vi.useFakeTimers();
     vi.stubGlobal('requestAnimationFrame', (fn: FrameRequestCallback) => setTimeout(() => { fn(0); }, 0));
+    kit.notifyReset();
     kit.notify('Copied');
     kit.notify('Saved');
-    expect(kit.notifyText()).toBe('Saved');
+    expect(kit.notifyText()).toBe('Copied');
     expect(document.querySelectorAll('[data-kit~="Notice"]').length).toBe(1);
+    expect(document.querySelector('.k7-notice__more')?.textContent).toBe('+1');
+    expect(kit.notifyQueued()).toEqual({ showing: 'Copied', waiting: ['Saved'] });
+    vi.advanceTimersByTime(3100); vi.advanceTimersByTime(300);
+    expect(kit.notifyText()).toBe('Saved');
+    expect(document.querySelector('.k7-notice__more')).toBeNull();
+    kit.notifyReset();
+    vi.useRealTimers(); vi.unstubAllGlobals();
+  });
+  it('the same words again only start their time again; Esc, its × or its action shows the next at once', () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('requestAnimationFrame', (fn: FrameRequestCallback) => setTimeout(() => { fn(0); }, 0));
+    kit.notifyReset();
+    let undone = 0;
+    kit.notify('Archived nina', { action: { label: 'Undo', onClick: () => { undone++; } } });
+    kit.notify('Archived nina', { action: { label: 'Undo' } });
+    expect(kit.notifyQueued().waiting).toEqual([]);
+    kit.notify('Saved'); kit.notify('Copied');
+    const layer = document.querySelector('.k7-notify') as HTMLElement;
+    expect(layer.getAttribute('role')).toBe('status');
+    expect(layer.getAttribute('aria-live')).toBe('polite');
+    expect(layer.querySelector('[data-kit~="Notice"]')?.getAttribute('role')).toBe('none');
+    (layer.querySelector('[data-kit~="Button"]') as HTMLElement).click();
+    expect(undone).toBe(1);
+    expect(kit.notifyText()).toBe('Saved');
+    layer.querySelector('[data-kit~="Notice"]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(kit.notifyText()).toBe('Copied');
+    (layer.querySelector('[data-dismiss]') as HTMLElement).click();
+    expect(kit.notifyQueued()).toEqual({ showing: null, waiting: [] });
+    kit.notify('Stopped', { tone: 'red' });
+    expect(layer.querySelector('[data-kit~="Notice"]')?.getAttribute('role')).toBe('alert');
+    kit.notifyReset();
     vi.useRealTimers(); vi.unstubAllGlobals();
   });
 });

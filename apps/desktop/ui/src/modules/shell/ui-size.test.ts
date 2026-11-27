@@ -5,7 +5,7 @@ const zoom = vi.fn<(f: number) => Promise<void>>(() => Promise.resolve());
 let desktop = true;
 vi.mock('../../host/window', () => ({ setWebviewZoom: (f: number) => zoom(f) }));
 vi.mock('../../host/bridge', () => ({ inTauri: () => desktop }));
-vi.mock('./actions', () => ({ toast: vi.fn() }));
+vi.mock('./actions', () => ({ notify: vi.fn() }));
 
 beforeEach(() => { zoom.mockClear(); localStorage.clear(); desktop = true; vi.resetModules(); });
 afterEach(() => { localStorage.clear(); });

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { kit } from '@boopis/ui';
 import { data, setProvider } from '../../data';
 import type { ArchivedBot, DataProvider } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
@@ -29,7 +30,7 @@ describe('"Restore bot…" in the palette', () => {
   const list = (): HTMLElement => document.getElementById('hx-palette-list') as HTMLElement;
   const rows = (): string[] => [...list().querySelectorAll('[data-kit-part="CommandPaletteRow"]')].map((r) => r.querySelector('.k7-cpal__label')?.textContent ?? '');
   const heads = (): string[] => [...list().querySelectorAll('.k7-cpal__head')].map((r) => r.textContent ?? '');
-  const toast = (): string => document.querySelector('.k7-notify .k7-notice__text')?.textContent ?? '';
+  const shown = (): string => document.querySelector('.k7-notify .k7-notice__text')?.textContent ?? '';
   const flush = async (): Promise<void> => { await vi.advanceTimersByTimeAsync(20); for (let i = 0; i < 8; i++) await Promise.resolve(); };
   const type = (text: string): void => { input().value = text; renderPalette(); };
   const run = (label: string): void => { runPal([...list().querySelectorAll('[data-kit-part="CommandPaletteRow"]')].findIndex((r) => r.querySelector('.k7-cpal__label')?.textContent === label)); };
@@ -39,6 +40,7 @@ describe('"Restore bot…" in the palette', () => {
     sh.el = { palette: document.getElementById('hx-palette'), palInput: input(), palList: list(), btnSearch: document.getElementById('hx-btn-search'), settings: { open: false } } as unknown as Els;
   }
   beforeEach(() => {
+    kit.notifyReset();
     vi.useFakeTimers();
     vi.stubGlobal('requestAnimationFrame', (fn: FrameRequestCallback) => setTimeout(() => { fn(0); }, 0));
     Element.prototype.scrollIntoView = (): void => undefined;
@@ -76,7 +78,7 @@ describe('"Restore bot…" in the palette', () => {
     openPalette({}); type('restore'); run('Restore bot…');
     run('ledger');
     await flush();
-    expect(toast()).toBe('Restored ledger');
+    expect(shown()).toBe('Restored ledger');
     expect(data().bots.snapshot().bots.some((b) => b.id === 'ledger')).toBe(true);
     expect(data().bots.archived.get().map((a) => a.was)).toEqual(['nina']);
     expect(document.getElementById('hx-palette')?.hidden).toBe(true);
@@ -86,7 +88,7 @@ describe('"Restore bot…" in the palette', () => {
     openPalette({}); type('restore'); run('Restore bot…');
     run('nina');
     await flush();
-    expect(toast()).toBe('Could not restore nina: there is a teammate called nina already; archive or delete it, then restore');
+    expect(shown()).toBe('Could not restore nina: there is a teammate called nina already; archive or delete it, then restore');
     expect(data().bots.archived.get().map((a) => a.was)).toEqual(['ledger', 'nina']);
   });
   it('stays while one is still archived after another is restored', async () => {

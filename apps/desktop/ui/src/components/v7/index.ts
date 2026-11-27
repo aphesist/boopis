@@ -41,7 +41,7 @@ import { list, LIST_ROW_VARIANTS, listRow } from './list-row/list-row';
 import { sectionHead } from './section-head/section-head';
 import { notice, NOTICE_PLACES, NOTICE_TONES } from './notice/notice';
 import type { NoticeOpts } from './notice/notice';
-import { notify, notifyText } from './notice/notify';
+import { notify, notifyDismiss, notifyQueued, notifyReset, notifyText } from './notice/notify';
 import { SYSTEM_LINE_VARIANTS, systemLine } from './system-line/system-line';
 import { bubble, BUBBLE_KINDS } from './bubble/bubble';
 import { well } from './well/well';
@@ -181,7 +181,7 @@ const mentions = (c: HTMLElement, src: KitMentions): void => {
 export const kit = {
   html, ...factories, composerInsert, composerInsertChip, composerChips, composerMarks, composerRunning, composerSet, composerUndo, composerDropping, composerDictation, composerDictate, hoverBeside, mentions, section, dockGeometry: DOCK_GEOMETRY,
   /** the Dock's parts as markup, for the app's live dock, which keeps its orbs connected and writes each part in place */
-  dockParts: { slab: slabPath, orb: dockOrb, cap: dockCap, ask: dockAsk, more: dockMore, panel: dockPanel }, wire, wireHold, wireMenu, markReveal, openMenu, openNotice, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, notify, notifyText, keyNames, variants: kitVariants, on, emit
+  dockParts: { slab: slabPath, orb: dockOrb, cap: dockCap, ask: dockAsk, more: dockMore, panel: dockPanel }, wire, wireHold, wireMenu, markReveal, openMenu, openNotice, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, notify, notifyText, notifyQueued, notifyDismiss, notifyReset, keyNames, variants: kitVariants, on, emit
 };
 export type Kit = typeof kit;
 export type { ButtonOpts } from './button/button';

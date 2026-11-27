@@ -19,7 +19,7 @@ import { emit } from '../../core/bus';
 import { el, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
 import { EVERYONE_HANDLES, kit, ui } from '@boopis/ui';
-import type { BotLike, MarkdownCtx, MdBot, NotifyOpts } from '@boopis/ui';
+import type { BotLike, MarkdownCtx, MdBot } from '@boopis/ui';
 import { data } from '../../data';
 import type { ApprovalMessage, Bot, Group, GroupMember, GroupMessage, GroupNote, GroupText, GroupsEvent, MemberActivity } from '../../data';
 import { namesText } from '../cards/parts';
@@ -41,7 +41,6 @@ import { paintDetails } from './details';
 import { forgetLimit } from './group-details';
 
 const groups = () => data().groups;
-const toast = (t: string, o?: NotifyOpts): void => { kit.notify(t, o); };
 const NODE = new Map<string, HTMLElement>();
 const sentence = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 export const listWords = (n: readonly string[]): string => (n.length < 2 ? n.join('') : n.slice(0, -1).join(', ') + ' and ' + (n[n.length - 1] ?? ''));
@@ -85,7 +84,7 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
     const more = b?.closest<HTMLElement>('[data-more]')?.dataset['more'];
     if (!b || !g || !more || b.disabled) return;
     b.disabled = true;
-    groups().continueTalk(g.id, more).catch((err: unknown) => { b.disabled = false; toast('It could not go on: ' + sentence(err)); });
+    groups().continueTalk(g.id, more).catch((err: unknown) => { b.disabled = false; kit.notify('It could not go on: ' + sentence(err)); });
   });
   pane.append(scroll, zone);
   root.append(pane);
@@ -115,14 +114,14 @@ export function openGroup(id: string | null): void {
   paintDetails();
   emit('hx:title', { tab: 'bots', title: g.name, members: g.members.map((m) => m.profile) });
   /* the room's messages are read as it opens; a thread that arrives is drawn in place */
-  void groups().open(g.id).catch((e: unknown) => { toast('This group could not be read: ' + sentence(e)); });
+  void groups().open(g.id).catch((e: unknown) => { kit.notify('This group could not be read: ' + sentence(e)); });
 }
 
 /* ───────── what the details pane does to the open room (group-details.ts draws the controls) ───────── */
 export function renameGroup(g: Group, name: string): void {
   const next = name.trim();
   if (!next || next === g.name) return;
-  groups().rename(g.id, next).catch((e: unknown) => { toast('It was not renamed: ' + sentence(e)); paintDetails(); });
+  groups().rename(g.id, next).catch((e: unknown) => { kit.notify('It was not renamed: ' + sentence(e)); paintDetails(); });
 }
 /** The most rounds `boopis run --group` lets one discussion take in this group. The engine pauses a discussion at its own limit and has
  *  none per room, so this is boopis's cap, kept by the host and read by the command line; the app's own Continue button is unchanged. */
@@ -130,9 +129,9 @@ export function openRoundLimit(g: Group, anchor: HTMLElement): void {
   groups().roundLimit(g.id).then((cur) => {
     openLimitMenu(anchor, {
       title: 'Most rounds a run may take', label: 'Rounds a run may take in ' + g.name, kept: cur.rounds, fallback: cur.fallback,
-      onPick: (v) => { groups().setRoundLimit(g.id, v).then((now) => { forgetLimit(g.id); toast(now.rounds === null ? g.name + ' runs for up to ' + now.fallback + ' rounds.' : g.name + ' runs for up to ' + now.rounds + ' rounds.'); paintDetails(); }).catch((e: unknown) => { toast('The limit was not saved: ' + sentence(e)); }); }
+      onPick: (v) => { groups().setRoundLimit(g.id, v).then((now) => { forgetLimit(g.id); kit.notify(now.rounds === null ? g.name + ' runs for up to ' + now.fallback + ' rounds.' : g.name + ' runs for up to ' + now.rounds + ' rounds.'); paintDetails(); }).catch((e: unknown) => { kit.notify('The limit was not saved: ' + sentence(e)); }); }
     });
-  }).catch((e: unknown) => { toast('The limit could not be read: ' + sentence(e)); });
+  }).catch((e: unknown) => { kit.notify('The limit could not be read: ' + sentence(e)); });
 }
 export const boardShown = (): boolean => G.boardOpen;
 /** the group's kanban board takes the thread's place in the column (and the composer's), or gives it back */
@@ -147,8 +146,8 @@ export function showBoard(open: boolean, g?: Group): void {
 }
 export function archiveGroup(g: Group): void {
   groups().archive(g.id).then((done) => {
-    toast('Archived ' + g.name, { action: { label: 'Undo', onClick: () => { done.undo().then(() => { toast('Restored ' + g.name); }).catch((e: unknown) => { toast('Could not restore ' + g.name + ': ' + sentence(e)); }); } } });
-  }).catch((e: unknown) => { toast('It was not archived: ' + sentence(e)); });
+    kit.notify('Archived ' + g.name, { action: { label: 'Undo', onClick: () => { done.undo().then(() => { kit.notify('Restored ' + g.name); }).catch((e: unknown) => { kit.notify('Could not restore ' + g.name + ': ' + sentence(e)); }); } } });
+  }).catch((e: unknown) => { kit.notify('It was not archived: ' + sentence(e)); });
 }
 
 /* ───────── the thread ───────── */
@@ -476,7 +475,7 @@ function wireZone(hint: HTMLElement, queue: HTMLElement): void {
   queue.addEventListener('click', (e) => {
     const g = group(S.groupSel), act = (e.target as Element).closest<HTMLElement>('[data-queue]')?.dataset['queue'], c = G.composer;
     if (!g || !act || !g.queued.length || !c) return;
-    if (act === 'now') { const first = g.queued[0]; if (first) groups().sendNow(g.id, first.id).catch((err: unknown) => { toast('It was not sent: ' + sentence(err)); }); return; }
+    if (act === 'now') { const first = g.queued[0]; if (first) groups().sendNow(g.id, first.id).catch((err: unknown) => { kit.notify('It was not sent: ' + sentence(err)); }); return; }
     /* Edit: the newest held message comes back into the composer, and is held no longer */
     const last = g.queued[g.queued.length - 1]; if (!last) return;
     const t = groups().unqueue(g.id, last.id);
@@ -529,7 +528,7 @@ export function stopTalk(): boolean {
   const g = group(S.groupSel); if (!g) return false;
   const held = g.queued.length;
   const was = groups().stop(g.id);
-  if (was) toast('Stopped ' + g.name + (held ? '. The message waiting goes out now.' : ''));
+  if (was) kit.notify('Stopped ' + g.name + (held ? '. The message waiting goes out now.' : ''));
   return was;
 }
 

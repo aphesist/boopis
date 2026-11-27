@@ -21,7 +21,7 @@ beforeAll(() => { setProvider(createMockProvider()); });
 function mount(o: Parameters<typeof createMockStore>[0] = {}, project: string | null = null): { root: HTMLElement; view: StoreView; store: ReturnType<typeof createMockStore> } {
   const root = document.createElement('div'); document.body.append(root);
   const store = createMockStore(o);
-  const view = mountStore(root, { store, toast: () => undefined, project: () => project, settle: 0, enter: false });
+  const view = mountStore(root, { store, notify: () => undefined, project: () => project, settle: 0, enter: false });
   return { root, view, store };
 }
 const text = (root: HTMLElement): string => root.textContent ?? '';
@@ -92,7 +92,7 @@ describe('the store view', () => {
     const store = createMockStore({ empty: true });
     const bad = { ...store, install: () => Promise.reject({ code: 'hx.store.plan_changed', message: 'What would be installed changed since the card was shown, so nothing was installed. Review it again.' }) };
     const host = document.createElement('div'); document.body.append(host);
-    const v2 = mountStore(host, { store: bad, toast: () => undefined, project: () => '~/work/api', settle: 0, enter: false });
+    const v2 = mountStore(host, { store: bad, notify: () => undefined, project: () => '~/work/api', settle: 0, enter: false });
     v2.show('browse', 'anthropic:example-lint-kit'); await tick(20);
     review(host)?.click(); await tick(40);
     expect(host.textContent).toContain('Plugin hooks are off in this project');
@@ -146,7 +146,7 @@ describe('the store view', () => {
     expect(root.querySelector('[data-store-fresh]')?.textContent).toMatch(/^You are offline: this copy is from /);
     const bad = document.createElement('div'); document.body.append(bad);
     const s = createMockStore();
-    mountStore(bad, { store: { ...s, browse: () => Promise.reject({ code: 'hx.store.source_unreachable', message: 'boopis could not reach that source. What you see is the last copy it saved.' }) }, toast: () => undefined, enter: false }); await tick(20);
+    mountStore(bad, { store: { ...s, browse: () => Promise.reject({ code: 'hx.store.source_unreachable', message: 'boopis could not reach that source. What you see is the last copy it saved.' }) }, notify: () => undefined, enter: false }); await tick(20);
     expect(bad.textContent).toContain('boopis could not reach that source');
     expect(bad.textContent).not.toContain('hx.store');
   });

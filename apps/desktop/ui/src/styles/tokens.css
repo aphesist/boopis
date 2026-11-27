@@ -225,7 +225,7 @@
      Nested corners: inner = max(--r-floor, outer − gap); under the floor the padding gives way */
   --r-xs: 6px;                /* kbd, inline code, stamps */
   --r-s: 12px;                /* buttons, rows, fields, wells, the segmented track, tooltips */
-  --r-m: 20px;                /* cards, composer, menus, popovers, toasts */
+  --r-m: 20px;                /* cards, composer, menus, popovers, notices */
   --r-l: 30px;                /* sheets, dialogs, the palette, the dock */
   --r-pill: 999px;            /* chips, dots, the switch, anything inside a pill */
   --r-floor: 8px;             /* the smallest inner radius of a nested corner */
@@ -240,7 +240,6 @@
   --pad-menu: 4px;            /* menu items */
   --pad-pop: 12px;            /* popovers: their controls keep their own step */
   --pad-card: 12px;           /* a well, a footer button, a stamp in a card (the padding gives way to the floor) */
-  --pad-toast: 6px;           /* a toast's action */
   --pad-tip: 4px;             /* a key chip in a tooltip, in a field's end */
   --pad-seg: 3px;             /* the segmented track: its thumb and options */
   --pad-row: 1px;             /* a row's action button: a 28px square (--ctl-s) in the 30px row (--row-h), so 1px from every edge */
@@ -250,7 +249,6 @@
   --r-in-menu: max(var(--r-floor), calc(var(--r-m) - var(--pad-menu)));
   --r-in-card: max(var(--r-floor), calc(var(--r-m) - var(--pad-card)));
   --r-in-composer: max(var(--r-floor), calc(var(--r-m) - var(--composer-pad)));
-  --r-in-toast: max(var(--r-floor), calc(var(--r-m) - var(--pad-toast)));
   --r-in-field: max(var(--r-floor), calc(var(--r-s) - var(--pad-tip)));   /* tooltip keys, key chips at a field's end */
   --r-in-seg: max(var(--r-floor), calc(var(--r-s) - var(--pad-seg)));     /* the segmented thumb and options */
   --r-in-row: max(var(--r-floor), calc(var(--r-s) - var(--pad-row)));     /* a row's action button */
@@ -290,7 +288,7 @@
   --elev-0: none;             /* the frame and the ground */
   --elev-1: none;             /* in flow: raised and inset surfaces (tone and a hairline, never a shadow) */
   --elev-2: var(--shadow-tip); /* tooltips */
-  --elev-3: var(--shadow-pop); /* menus, popovers, toasts */
+  --elev-3: var(--shadow-pop); /* menus, popovers, notices */
   --elev-4: var(--shadow-pop); /* the palette and dialogs, over --scrim */
 
   /* depth */
@@ -303,7 +301,7 @@
   --z-chrome: 50;
   --z-menu: 70;
   --z-palette: 80;
-  --z-toast: 90;
+  --z-notify: 90;
   --z-tooltip: 100;
 
   /* motion: no curve passes its mark (no bounce, no overshoot) */

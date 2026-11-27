@@ -26,9 +26,9 @@ describe('the typed event bus', () => {
   it('a handler that throws is logged and never stops the others', () => {
     const err = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const ok = vi.fn();
-    on('hx:toast', () => { throw new Error('boom'); });
-    on('hx:toast', ok);
-    emit('hx:toast', { text: 'x' });
+    on('hx:notify', () => { throw new Error('boom'); });
+    on('hx:notify', ok);
+    emit('hx:notify', { text: 'x' });
     expect(ok).toHaveBeenCalledOnce();
     expect(err).toHaveBeenCalled();
   });

@@ -16,7 +16,7 @@ const SECRET = 'sk-live-SECRET-9876';
 const result = (over: Partial<EndpointTest> = {}): EndpointTest => ({ outcome: 'listed', models: ['m-small', 'm-big'], answered_at: null, status: 200, loopback: true, code: null, detail: null, ...over });
 
 function harness(test: () => Promise<EndpointTest>) {
-  const log: { tested: unknown[]; added: EndpointRequest[]; toasts: string[]; backs: number } = { tested: [], added: [], toasts: [], backs: 0 };
+  const log: { tested: unknown[]; added: EndpointRequest[]; notices: string[]; backs: number } = { tested: [], added: [], notices: [], backs: 0 };
   const host = document.createElement('div');
   document.body.append(host);
   const bridge = {
@@ -32,7 +32,7 @@ function harness(test: () => Promise<EndpointTest>) {
     show: (...kids) => { host.replaceChildren(...kids); },
     back: () => { log.backs += 1; },
     later: (fn) => { fn(); },
-    toast: (t) => { log.toasts.push(t); }
+    notify: (t) => { log.notices.push(t); }
   };
   return { log, host, flow: startEndpointFlow(flowUi, bridge) };
 }

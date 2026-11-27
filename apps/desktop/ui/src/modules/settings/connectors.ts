@@ -21,7 +21,7 @@ export function connectorsPage(): Page {
   }
   const openStore = (): void => { closeDialog(el.closest('dialog')); emit('hx:open-store', { screen: 'browse' }); };
   const mounting = Promise.all([import('../../host/connectors'), import('../../host/connectors-bridge')])
-    .then(([v, bridge]) => v.mountConnectors(body, { bridge: bridge.tauriConnectorsBridge(), bridgeFor: (bot) => bridge.tauriConnectorsBridge(bot), bots: () => data().bots.snapshot().bots.map((b) => ({ id: b.id, name: b.name })), toast: (t) => { kit.notify(t); }, openStore }))
+    .then(([v, bridge]) => v.mountConnectors(body, { bridge: bridge.tauriConnectorsBridge(), bridgeFor: (bot) => bridge.tauriConnectorsBridge(bot), bots: () => data().bots.snapshot().bots.map((b) => ({ id: b.id, name: b.name })), notify: (t) => { kit.notify(t); }, openStore }))
     .then((m) => { view = m; })
     .catch((e: unknown) => { log.warn('the connectors did not mount', e); });
   return { el, refresh: async () => { await mounting; await view?.refresh(); } };

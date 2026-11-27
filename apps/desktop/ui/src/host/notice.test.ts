@@ -12,7 +12,7 @@ describe('the startup notice', () => {
     const host = { info: () => Promise.resolve({ platform: 'windows' as const, desktop: 'Windows', tiling: false, maximized: false, fullscreen: false }), control: (a: WindowAction) => { calls.push(a); return Promise.resolve(); }, onState: () => Promise.resolve(() => undefined) };
     const retry = vi.fn();
     const err = Object.assign(new Error('The engine did not answer.'), { code: 'hx.gateway.unreachable' });
-    const root = showStartupFailure(err, { windowControls: createWindowControls({ host, toast: () => undefined }), retry });
+    const root = showStartupFailure(err, { windowControls: createWindowControls({ host, notify: () => undefined }), retry });
     expect(root.firstElementChild?.getAttribute('data-tauri-drag-region')).toBe('deep');
     const close = root.querySelector<HTMLElement>('.hx-win [data-win="close"]');
     expect(close?.hidden).toBe(false);

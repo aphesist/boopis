@@ -46,12 +46,12 @@ function fake(servers: ConnectorInfo[] = []): Fake {
   };
   return f;
 }
-async function mount(f: Fake): Promise<{ panel: HTMLElement; toasts: string[] }> {
+async function mount(f: Fake): Promise<{ panel: HTMLElement; notices: string[] }> {
   const panel = document.createElement('div');
   document.body.append(panel);
-  const toasts: string[] = [];
-  await mountConnectors(panel, { bridge: f, toast: (t) => { toasts.push(t); }, settle: 0 });
-  return { panel, toasts };
+  const notices: string[] = [];
+  await mountConnectors(panel, { bridge: f, notify: (t) => { notices.push(t); }, settle: 0 });
+  return { panel, notices };
 }
 /* Test and Remove are in a connector's More menu: a press on either opens it first */
 const inMore = (root: Element, sel: string): HTMLElement | null => {
@@ -201,16 +201,16 @@ describe('the Connectors tab', () => {
 
   it('switches a server through the host, and puts the switch back when the host refuses', async () => {
     const f = fake([info()]);
-    const { panel, toasts } = await mount(f);
+    const { panel, notices } = await mount(f);
     panel.querySelector<HTMLButtonElement>('[data-conn-switch]')?.click();
     await tick();
     expect(f.calls).toContain('enable:fakemcp:false');
-    expect(toasts.at(-1)).toContain('fakemcp is off');
+    expect(notices.at(-1)).toContain('fakemcp is off');
     f.setEnabled = () => Promise.reject(new Error('Hermes refused it'));
     const sw2 = panel.querySelector<HTMLButtonElement>('[data-conn-switch]') as HTMLButtonElement;
     sw2.click();
     await tick();
-    expect(toasts.at(-1)).toBe('Hermes refused it');
+    expect(notices.at(-1)).toBe('Hermes refused it');
     expect(sw2.getAttribute('aria-checked'), 'the switch went back').toBe('true');
   });
 
@@ -226,7 +226,7 @@ describe('the Connectors tab', () => {
 describe('removing', () => {
   it('asks what to do with its keys when it has some, and sends the answer', async () => {
     const f = fake([info({ name: 'keyed', secrets: ['secret://connector.keyed/key'] })]);
-    const { panel, toasts } = await mount(f);
+    const { panel, notices } = await mount(f);
     click(panel, '[data-conn-remove="keyed"]');
     const options = [...panel.querySelectorAll('.k7-orow, .k7-seg__item, .k7-chip')].map((o) => o.textContent);
     expect(options.join('|')).toContain('Keep them in my keychain');
@@ -234,7 +234,7 @@ describe('removing', () => {
     await formsHost().submit('connector.remove.keyed', { values: { keys: 'delete' }, secrets: {} });
     await tick();
     expect(f.calls).toContain('remove:keyed:true');
-    expect(toasts.at(-1)).toContain('Removed keyed.');
+    expect(notices.at(-1)).toContain('Removed keyed.');
   });
 
   it('asks nothing about keys when it has none, and keeps them when the answer is not delete', async () => {
@@ -408,7 +408,7 @@ describe('connectors for one bot', () => {
     document.body.append(panel);
     const asked: string[] = [];
     await mountConnectors(panel, {
-      bridge: main, toast: () => { /* not read here */ }, settle: 0,
+      bridge: main, notify: () => { /* not read here */ }, settle: 0,
       bots: () => Object.keys(bots).map((id) => ({ id, name: id[0]?.toUpperCase() + id.slice(1) })),
       bridgeFor: (bot) => { asked.push(bot); return bots[bot] as Fake; }
     });
@@ -465,7 +465,7 @@ describe('connectors for one bot', () => {
     const bots: Record<string, Fake> = { kai };
     const panel = document.createElement('div');
     document.body.append(panel);
-    const m = await mountConnectors(panel, { bridge: main, toast: () => { /* unused */ }, settle: 0, bots: () => Object.keys(bots).map((id) => ({ id, name: id })), bridgeFor: (b) => bots[b] as Fake });
+    const m = await mountConnectors(panel, { bridge: main, notify: () => { /* unused */ }, settle: 0, bots: () => Object.keys(bots).map((id) => ({ id, name: id })), bridgeFor: (b) => bots[b] as Fake });
     await choose(panel, 'kai');
     expect(panel.textContent).toContain('kaimcp');
     delete bots['kai'];

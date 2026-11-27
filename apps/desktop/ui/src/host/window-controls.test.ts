@@ -55,7 +55,7 @@ describe('the window group', () => {
 describe('one controller for every bar', () => {
   it('lays out the shell\'s group and a layer\'s by the same rule, and both follow what the host found', async () => {
     const host = new FakeHost(info({ platform: 'linux', desktop: 'Hyprland', tiling: true }));
-    const c = createWindowControls({ host, toast: () => undefined });
+    const c = createWindowControls({ host, notify: () => undefined });
     const shellGroup = windowGroup();
     const layer = windowGroup();
     c.attach(shellGroup);
@@ -69,17 +69,17 @@ describe('one controller for every bar', () => {
   });
 
   it('Windows gets the three; macOS its order', async () => {
-    const win = createWindowControls({ host: new FakeHost(info({})), toast: () => undefined });
+    const win = createWindowControls({ host: new FakeHost(info({})), notify: () => undefined });
     const a = windowGroup(); win.attach(a); await tick();
     expect(shown(a)).toEqual(['min', 'max', 'close']);
-    const mac = createWindowControls({ host: new FakeHost(info({ platform: 'macos', desktop: 'macOS' })), toast: () => undefined });
+    const mac = createWindowControls({ host: new FakeHost(info({ platform: 'macos', desktop: 'macOS' })), notify: () => undefined });
     const b = windowGroup(); mac.attach(b); await tick();
     expect(order(b)).toEqual(['close', 'min', 'max']);
   });
 
   it('the Settings preference beats the guess on every bar, is saved, and tells the settings row', async () => {
     const saved: string[] = [];
-    const c = createWindowControls({ host: new FakeHost(info({ platform: 'linux', tiling: true })), toast: () => undefined, loadPref: () => 'auto', savePref: (p) => { saved.push(p); } });
+    const c = createWindowControls({ host: new FakeHost(info({ platform: 'linux', tiling: true })), notify: () => undefined, loadPref: () => 'auto', savePref: (p) => { saved.push(p); } });
     const g = windowGroup(); c.attach(g); await tick();
     const told = vi.fn();
     c.onChange(told);
@@ -92,7 +92,7 @@ describe('one controller for every bar', () => {
 
   it('a press on a layer\'s button drives the real window; a group let go no longer does', async () => {
     const host = new FakeHost(info({}));
-    const c = createWindowControls({ host, toast: () => undefined });
+    const c = createWindowControls({ host, notify: () => undefined });
     const g = windowGroup();
     document.body.append(g);
     const detach = c.attach(g);
@@ -105,34 +105,34 @@ describe('one controller for every bar', () => {
 
   it('the maximise button follows the window\'s state on every bar', async () => {
     const host = new FakeHost(info({}));
-    const c = createWindowControls({ host, toast: () => undefined });
+    const c = createWindowControls({ host, notify: () => undefined });
     const g = windowGroup(); c.attach(g); await tick();
     host.state?.({ maximized: true, fullscreen: false });
     expect(g.querySelector('[data-win="max"]')?.getAttribute('aria-label')).toBe('Restore');
   });
 
   it('a host that cannot say keeps all three; a failed press says so', async () => {
-    const toast = vi.fn();
+    const said = vi.fn();
     const host = new FakeHost(new Error('no window'));
     host.control = () => Promise.reject(new Error('The window did not close'));
-    const c = createWindowControls({ host, toast });
+    const c = createWindowControls({ host, notify: said });
     const g = windowGroup(); c.attach(g); await tick();
     expect(shown(g)).toEqual(['min', 'max', 'close']);
     g.querySelector<HTMLElement>('[data-win="close"]')?.click();
     await tick();
-    expect(toast).toHaveBeenCalledWith('The window did not close');
+    expect(said).toHaveBeenCalledWith('The window did not close');
   });
 
   it('without a host (the page) the buttons keep their stand-ins', () => {
-    const toast = vi.fn();
-    const c = createWindowControls({ host: null, toast });
+    const said = vi.fn();
+    const c = createWindowControls({ host: null, notify: said });
     const g = windowGroup(); c.attach(g);
     g.querySelector<HTMLElement>('[data-win="min"]')?.click();
-    expect(toast).toHaveBeenCalledWith('Minimize works in the desktop app');
+    expect(said).toHaveBeenCalledWith('Minimize works in the desktop app');
   });
 
   it('the lab can draw a layout until the preference changes', () => {
-    const c = createWindowControls({ host: null, toast: () => undefined });
+    const c = createWindowControls({ host: null, notify: () => undefined });
     const g = windowGroup(); c.attach(g);
     c.force('mac');
     expect(order(g)).toEqual(['close', 'min', 'max']);
@@ -144,7 +144,7 @@ describe('one controller for every bar', () => {
 describe('a layer\'s title bar', () => {
   it('is the shell\'s bar in the layer\'s flow: a drag area everywhere but the buttons, with the window group at its end', async () => {
     const host = new FakeHost(info({}));
-    const c = createWindowControls({ host, toast: () => undefined });
+    const c = createWindowControls({ host, notify: () => undefined });
     const bar = windowBar(c);
     expect(bar.node.classList.contains('hx-bar')).toBe(true);
     expect(bar.node.classList.contains('hx-bar--layer')).toBe(true);

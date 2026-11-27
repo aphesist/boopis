@@ -294,7 +294,7 @@ export interface ModSession {
 }
 /** what a mod said that is not state */
 export type ModsEvent =
-  | { type: 'toast'; sessionId: string; plugin: string; text: string; timeoutMs: number }
+  | { type: 'notice'; sessionId: string; plugin: string; text: string; timeoutMs: number }
   | { type: 'notify'; sessionId: string; plugin: string; title: string; text: string };
 
 /* ───────── sessions ───────── */

@@ -37,7 +37,7 @@ const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
 function deps(over: Partial<ModelsDeps> = {}): ModelsDeps & { calls: string[] } {
   const calls: string[] = [];
-  return { calls, plan: () => Promise.resolve(free), ladder: () => Promise.resolve(SET), change: () => { calls.push('change'); return Promise.resolve(); }, closeSettings: () => { calls.push('close'); }, toast: (t) => { calls.push('toast:' + t); }, ...over };
+  return { calls, plan: () => Promise.resolve(free), ladder: () => Promise.resolve(SET), change: () => { calls.push('change'); return Promise.resolve(); }, closeSettings: () => { calls.push('close'); }, notify: (t) => { calls.push('notify:' + t); }, ...over };
 }
 const card = (rows: RowOpts[]): string => kit.html.card({ rows });
 beforeEach(() => { document.body.replaceChildren(); });
@@ -109,7 +109,7 @@ describe('Settings > Models', () => {
     await mountModels(other, bad);
     other.querySelector<HTMLButtonElement>('#hx-models-change')?.click();
     await tick();
-    expect(bad.calls).toEqual(['toast:setup.json is not valid']);
+    expect(bad.calls).toEqual(['notify:setup.json is not valid']);
   });
 
   it('rows are plain text with no markup from a tier name or model', () => {

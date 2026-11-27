@@ -29,7 +29,7 @@ export interface ModelsDeps {
   change: () => Promise<unknown>;
   /** the settings dialog is modal and would cover the question, so it steps aside first */
   closeSettings: () => void;
-  toast: (text: string) => void;
+  notify: (text: string) => void;
   /** boopis's own ChatGPT sign-in; without it the section shows the state and offers nothing */
   chatgpt?: ChatgptBridge;
   /** turn a heavy model (`fable`, `grok`) on or off for the saved ladder; rejects with the host's sentence */
@@ -40,7 +40,7 @@ export interface ModelsDeps {
   providers?: ProvidersBridge;
 }
 export const realModelsDeps = (closeSettings: () => void): ModelsDeps => ({
-  plan: currentPlan, ladder: loadModelsView, change: () => changeModels(), closeSettings, toast: (t) => { kit.notify(t); },
+  plan: currentPlan, ladder: loadModelsView, change: () => changeModels(), closeSettings, notify: (t) => { kit.notify(t); },
   chatgpt: tauriChatgptBridge(), setHeavy, providers: tauriProvidersBridge(),
   login: async (provider) => (await import('./connectors-bridge')).tauriConnectorsBridge().login(provider)
 });
@@ -131,14 +131,14 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
     control: button('Change models', 'hx-models-change')
   }]));
   const askAgain = (): void => {
-    void deps.change().then(() => { deps.closeSettings(); }).catch((e: unknown) => { deps.toast(e instanceof Error ? e.message : 'That did not work'); });
+    void deps.change().then(() => { deps.closeSettings(); }).catch((e: unknown) => { deps.notify(e instanceof Error ? e.message : 'That did not work'); });
   };
   change.querySelector('#hx-models-change')?.addEventListener('click', askAgain);
   /* the Providers section reads the host when it is drawn, and asks the runtimes on this computer then: never in the background */
   let providers: ProvidersView | null = null;
   if (deps.providers) {
     providers = mountProviders(providersEl, {
-      bridge: deps.providers, toast: deps.toast,
+      bridge: deps.providers, notify: deps.notify,
       ...(deps.login ? { login: deps.login } : {}), ...(deps.chatgpt ? { chatgpt: deps.chatgpt } : {})
     });
   } else {
@@ -156,7 +156,7 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
       if (!deps.setHeavy) { sw.disabled = true; continue; }
       sw.addEventListener('ui:change', (e) => {
         const on = !!(e as CustomEvent<{ value: boolean }>).detail.value;
-        deps.setHeavy?.(id, on).then(() => drawAll(), (err: unknown) => { deps.toast(err instanceof Error ? err.message : 'That did not work'); return drawAll(); });
+        deps.setHeavy?.(id, on).then(() => drawAll(), (err: unknown) => { deps.notify(err instanceof Error ? err.message : 'That did not work'); return drawAll(); });
       });
     }
   };

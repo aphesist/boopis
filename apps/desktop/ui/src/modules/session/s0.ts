@@ -265,17 +265,7 @@ export function showSheet(s: RewindSheet): void {
   requestAnimationFrame(() => { s.el.querySelector<HTMLElement>('.k7-dialog__foot .k7-btn:last-child:not([aria-disabled="true"])')?.focus() ?? s.el.querySelector<HTMLElement>('.k7-dialog__foot .k7-btn')?.focus(); });
 }
 
-/* ───────── a word to the person (the v7 Notice, floating: section 21 merged the toast into it) ───────── */
+/* ───────── a word to the person: the kit's floating Notice, the app's one way to say something (kit.notify) ───────── */
 const SAY_MS = 5000;
-let said: HTMLElement | null = null;
-/** why a choice was refused, or what happened: one floating Notice at a time, dismissed by its × or after a few seconds */
-export function say(text: string): void {
-  said?.remove();
-  const n = kit.notice({ text, place: 'floating', tone: 'neutral', dismiss: true, attrs: { ...v7Attrs(), 'aria-live': 'polite' } });
-  asV7(n);
-  n.classList.add('ss-s0-said');
-  n.querySelector('[aria-label="Dismiss"]')?.addEventListener('click', () => { n.remove(); });
-  (document.getElementById('hx-app') ?? document.body).append(n);
-  said = n;
-  window.setTimeout(() => { if (said === n) { n.remove(); said = null; } }, SAY_MS);
-}
+/** why a choice was refused, or what happened: the floating Notice, one at a time, dismissed by its × or after a few seconds */
+export function say(text: string): void { kit.notify(text, { ms: SAY_MS }); }

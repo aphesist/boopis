@@ -20,7 +20,8 @@ import { themeApi } from '../../styles/theme';
 import { openKeys, openMenu, openSettings, openStore, wireDialogs } from './dialogs';
 import { collectEls, els, sh } from './ctx';
 import { reportAttention, seedAttention, setTitleOverride, updateAttentionDots, updateTitle } from './attention';
-import { newThing, openNewMenu, toast, toggleDockExpand, toggleLightDark, togglePanel } from './actions';
+import { mountNotices } from './notices';
+import { newThing, openNewMenu, toggleDockExpand, toggleLightDark, togglePanel } from './actions';
 import { wireWindowControls } from './window';
 import { wireUiSize } from './ui-size';
 import { go, pushHistory } from './history';
@@ -167,6 +168,9 @@ export function boot(): void {
   // icons: one set, from the library
   $$('[data-icon]', app).forEach((n) => { n.outerHTML = ui.icon(n.dataset['icon'] ?? ''); });
 
+  /* the floating Notice's place: just above the open view's composer, or above the dock (notices.ts) */
+  mountNotices();
+
   /* Settings: the kit's large dialog in the shell's <dialog> (modules/settings) */
   mountSettings($<HTMLDialogElement>('#hx-settings', app));
 
@@ -305,7 +309,7 @@ function wire(): void {
     setInset(t, +(d.left ?? 0) || 0, +(d.right ?? 0) || 0);
     if (t === state.tab) queueLayout(true);
   });
-  on('hx:toast', (d) => { if (d) toast(d.text || d.message || ''); });
+  on('hx:notify', (d) => { if (d) kit.notify(d.text || d.message || ''); });
   // the dock reports {mode, page, width, height}; its height is the room the composer keeps above it, so an expanded dock lifts the composer instead of growing over it
   on('hx:dock', (d) => {
     if (!d) return;
