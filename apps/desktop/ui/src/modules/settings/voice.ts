@@ -33,7 +33,7 @@ const providerLabel = (p: VoiceProvider | null): string => PROVIDERS.find((x) =>
 export function mountVoice(host: HTMLElement, src: SpeechSource | undefined = data().speech): { refresh: () => Promise<void>; reveal: () => void } {
   if (!src) { host.replaceChildren(); return { refresh: async () => undefined, reveal: () => undefined }; }
   const speech = src;
-  let model: SpeechModel | null = null, modelError = '', voice: VoiceSettings = { provider: null, localUrl: null }, hasKey = false, busy = false, poll = 0;
+  let model: SpeechModel | null = null, modelError = '', voice: VoiceSettings = { provider: null, localUrl: null }, hasKey = false, busy = false, poll = 0, drawn = '';
   const draw = (): void => {
     const dict: RowOpts[] = model
       ? [{
@@ -50,9 +50,12 @@ export function mountVoice(host: HTMLElement, src: SpeechSource | undefined = da
       : p === 'local'
         ? [{ label: 'Speech address', control: kit.html.field({ id: 'hx-voice-url', inputType: 'url', ariaLabel: 'Speech address', value: voice.localUrl ?? '', placeholder: 'http://127.0.0.1:8880/v1/audio/speech', mono: true }) + actionsHTML(buttonHTML('Save', { variant: 'primary', attrs: { 'data-voice': 'save-url' } })) }]
         : [];
-    fill(host,
-      section('Dictation', dict, { 'data-part': 'dictation' }) +
-      section('Voice', [{ label: 'Talking to bots', sub: 'Coming in a later update.', control: selectHTML('voice', 'Voice', providerLabel(p)) }, ...keyRow], { 'data-part': 'voice', id: 'hx-set-voice' }));
+    const html = section('Dictation', dict, { 'data-part': 'dictation' }) +
+      section('Voice', [{ label: 'Voice', sub: 'Talking to bots arrives in a later update.', control: selectHTML('voice', 'Voice', providerLabel(p)) }, ...keyRow], { 'data-part': 'voice', id: 'hx-set-voice' });
+    /* the download's poll redraws only what changed: the same words keep the same cards (and their drawn corners), so the page settles */
+    if (html === drawn && host.firstChild) return;
+    drawn = html;
+    fill(host, html);
   };
   const readModel = async (): Promise<void> => {
     try { model = await speech.model(); modelError = ''; } catch (e) { model = null; modelError = 'The speech model could not be read: ' + said(e); }
