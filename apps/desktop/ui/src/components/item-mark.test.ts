@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import collection from '../../../../shared/data/connectors.json';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { connectorKey, itemMarkHTML, itemTile, monogram, packageOf, publisherHTML, publisherMarkOf, serviceMark, serviceMarkOf, serviceMarks, tileMarkOf } from './item-mark';
+import { brandMarkHTML, connectorKey, itemTile, monogram, packageOf, publisherMarkOf, serviceMark, serviceMarkOf, serviceMarks, tileMarkOf } from './item-mark';
 import mapFile from '../vendor/service-marks/map.json';
 import { lum, ratio } from '../styles/colour';
 
@@ -145,31 +145,17 @@ describe('monogram', () => {
   });
 });
 
-describe('the tile', () => {
+describe('the mark', () => {
   it('draws the service\'s mark in currentColor, hidden from assistive tech (its name sits beside it)', () => {
-    const h = itemMarkHTML({ name: 'GitHub', collection: 'github' });
+    const h = brandMarkHTML({ name: 'GitHub', collection: 'github' }) ?? '';
     expect(h).toContain('data-mark="github"');
     expect(h).toContain('fill="currentColor"');
     expect(h).toContain('data-brand style="--mk-l:var(--text);--mk-d:var(--text)"');
     expect(h).toContain('aria-hidden="true"');
-    expect(h).toContain('data-sq');
-    expect(h).toContain('data-size="24"');
   });
-  it('draws a monogram for anything else, at 40 on an item\'s page', () => {
-    const h = itemMarkHTML({ name: 'Release notes', kind: 'skill' }, { size: 40 });
-    expect(h).toContain('ui-imark--mono');
-    expect(h).toContain('>RN<');
-    expect(h).toContain('data-size="40"');
-    expect(h).not.toContain('<svg');
-  });
-  it('escapes the letters it draws', () => {
-    expect(itemMarkHTML({ name: '<b>' }, {})).not.toContain('<b>');
-  });
-  it('a publisher with a mark leads with it; one without is its name alone', () => {
-    expect(publisherHTML('Anthropic')).toContain('data-mark="anthropic"');
-    expect(publisherHTML('Matt Pocock')).not.toContain('<svg');
-    expect(publisherHTML('Matt Pocock')).toContain('Matt Pocock');
-    expect(serviceMark('github')?.name).toBe('GitHub');
+  it('draws nothing where no mark is known: the tile shows its letters', () => {
+    expect(brandMarkHTML({ name: 'Release notes', kind: 'skill' })).toBeNull();
+    expect(itemTile({ name: 'Release notes', kind: 'skill' })).toEqual({ markText: 'RN' });
   });
 });
 
@@ -222,9 +208,9 @@ describe('brand colours (owner decisions, 23 and 27 November 2026)', () => {
     expect(hue(serviceMark('supabase')?.light ?? '').h).toBeCloseTo(hue('#3FCF8E').h, 0);
     expect(serviceMark('figma')).toMatchObject({ light: '#F24E1E', dark: '#F24E1E' });
   });
-  it('the stylesheet picks the colour by the scheme', () => {
-    const kit = readFileSync(join(__dirname, 'components.css'), 'utf8');
-    expect(kit).toMatch(/:is\(\.ui-imark__svg, \.ui-pub__mark\)\[data-brand\] \{ color: light-dark\(var\(--mk-l\), var\(--mk-d\)\); \}/);
+  it('the kit\'s item tile and the pane\'s Card row pick the colour by the scheme', () => {
+    const row = readFileSync(join(__dirname, 'v7', 'list-row', 'list-row.css'), 'utf8'), card = readFileSync(join(__dirname, 'v7', 'card', 'card.css'), 'utf8');
+    for (const css of [row, card]) expect(css).toMatch(/svg\[data-brand\] \{[^}]*color: light-dark\(var\(--mk-l\), var\(--mk-d\)\);/);
   });
 });
 
@@ -232,7 +218,7 @@ describe('publisher tiles', () => {
   it('a skill, plugin or mod whose source proved its publisher shows the publisher\'s mark', () => {
     expect(tileMarkOf({ name: 'PDF files', kind: 'skill', publisher: 'Anthropic', proven: true })).toMatchObject({ of: 'publisher', mark: { id: 'anthropic' } });
     expect(tileMarkOf({ name: 'React best practices', kind: 'skill', publisher: 'Vercel', proven: true })?.mark.id).toBe('vercel');
-    expect(itemMarkHTML({ name: 'PDF files', kind: 'plugin', publisher: 'Anthropic', proven: true })).toContain('data-mark-of="publisher"');
+    expect(brandMarkHTML({ name: 'PDF files', kind: 'plugin', publisher: 'Anthropic', proven: true })).toContain('data-mark-of="publisher"');
   });
   it('a claimed publisher, an unknown one, or a code host keeps the monogram', () => {
     expect(tileMarkOf({ name: 'Anthropic tools', kind: 'skill', publisher: 'Anthropic', proven: false })).toBeNull();
@@ -243,9 +229,5 @@ describe('publisher tiles', () => {
   it('a connector shows its service or its monogram, never its publisher\'s mark', () => {
     expect(tileMarkOf({ name: 'Context7', kind: 'connector', collection: 'context7', publisher: 'Upstash', proven: true })).toBeNull();
     expect(tileMarkOf({ name: 'GitHub', kind: 'connector', collection: 'github', publisher: 'GitHub', proven: true })).toMatchObject({ of: 'service' });
-  });
-  it('the publisher\'s name drops its mark when the source did not prove it', () => {
-    expect(publisherHTML('Anthropic', { proven: false })).not.toContain('<svg');
-    expect(publisherHTML('Anthropic', { proven: true })).toContain('data-brand');
   });
 });

@@ -1,25 +1,24 @@
 /* Item marks: what a store item or a connector is, at a glance (the owner, 23 November 2026: "we need more visuals. logos, right
    now it's just text"). One tile for every place that lists installable things (the Store's rows and its item page, Settings >
-   Connectors, the session's Connectors section): the mark of the service a connector connects to; for a skill, plugin or mod, its
-   publisher's mark when the source proves the publisher; else a monogram of its own name. A publisher's mark also sits beside
-   the publisher's name (`publisherHTML`), as a model's mark sits beside a model's name.
+   Connectors, the session's Connectors section): the mark of the service a connector connects to; for a skill or plugin, its
+   publisher's mark when the source proves the publisher; a mod's glyph; else letters of its own name.
 
-   Design system addition (docs/UI-COMPONENTS.md, "Item marks"): the tile is a raised square (`--bg-3`, a `--hair` line) with a
-   continuous corner (`data-sq`), 24px in a row's lead (two-line rows, `.ui-row--item`; a settings row's `lead`) and 40px at the
-   head of an item's page; its corner is the floor at 24 and `--r-s` at 40. The mark is in its brand's colours (the owner, 23
-   November 2026, ADR-0040 amended for these surfaces): `color.light` on the light presets' tile, `color.dark` on the dark ones',
-   each the brand's own colour where it holds 3:1 there, else its own hue with the lightness moved until it does, or the theme's
-   ink (`--text`) for a one-colour brand (the owner, 27 November 2026), chosen by the scheme through `light-dark()`. The monogram is one or two letters in the mono face, never a look-alike logo.
+   The tile is the kit's ListRow item tile (`k7-lrow__mark`; the pane's Card row draws the mark alone): `itemTile` is what it holds,
+   the one rule every row of an installable thing draws. The v6 tile (`ui-imark`) and publisher line (`ui-pub`) had no app users at
+   step 9 of the repass and went. The mark is in its brand's colours (the owner, 23 November 2026, ADR-0040 amended for these
+   surfaces): `color.light` on the light tiles, `color.dark` on the dark ones, each the brand's own colour where it holds 3:1 there,
+   else its own hue with the lightness moved until it does, or the theme's ink (`--text`) for a one-colour brand (the owner, 27
+   November 2026), chosen by the scheme through `light-dark()`. Letters are board 15's (`core/letters.ts`), never a look-alike logo.
 
    Evidence, never a guess (invariant 5): a connector gets a service's mark from what it runs when that names a listed service (its
    address's host, the package or image it starts), else from what it is called (its id in boopis's collection or its own name, as one
    key: `connectorKey`; the owner, 27 November 2026: an installed "github" shows GitHub's mark as the collection's row does) or a store
    item's home page host, as `vendor/service-marks/map.json` lists; a skill, plugin or mod gets its publisher's mark only when its source
    proved who published it and that name is listed exactly (a claimed name proves nothing: anyone can write "Anthropic" in a marketplace
-   of their own). The marks are Simple Icons' files (CC0), unchanged (vendor/service-marks/README.md). The tile is always aria-hidden: it sits beside the
-   name it stands for. */
+   of their own). The marks are Simple Icons' files (CC0), unchanged (vendor/service-marks/README.md). The mark is always aria-hidden: it
+   sits beside the name it stands for. */
 import { esc } from '../core/dom';
-import { letters, monogram } from '../core/letters';
+import { letters } from '../core/letters';
 import { icon } from './icons';
 import mapFile from '../vendor/service-marks/map.json';
 
@@ -127,9 +126,6 @@ export function tileMarkOf(ref: ItemRef): { mark: ServiceMark; of: 'service' | '
 /** one or two letters from a name: the one rule is core/letters.ts (the kit's ListRow tiles and this file's monogram tile) */
 export { monogram } from '../core/letters';
 
-export type ItemMarkSize = 24 | 40;
-export interface ItemMarkOpts { size?: ItemMarkSize | undefined; class?: string | undefined }
-
 /* the colours come from the map (data, like a bot's look), as two properties the stylesheet picks between by the scheme */
 /* "ink": a one-colour brand drawn in the theme's text colour, so it follows the theme as the words beside it do */
 const paint = (c: string): string => (c === 'ink' ? 'var(--text)' : esc(c));
@@ -152,19 +148,4 @@ export function itemTile(ref: ItemRef, letterName?: string): { markHTML: string 
   if (ref.kind === 'mod') return { markHTML: icon('mod') };
   const m = brandMarkHTML(ref);
   return m ? { markHTML: m } : { markText: letters(letterName ?? ref.name) };
-}
-
-/** the tile: the service's mark, else the monogram */
-export function itemMarkHTML(ref: ItemRef, o: ItemMarkOpts = {}): string {
-  const size = o.size ?? 24, t = tileMarkOf(ref), m = t?.mark ?? null;
-  const cls = 'ui-imark' + (m ? '' : ' ui-imark--mono') + (o.class ? ' ' + esc(o.class) : '');
-  return '<span class="' + cls + '" data-sq data-size="' + String(size) + '"' + (t ? ' data-mark="' + esc(t.mark.id) + '" data-mark-of="' + t.of + '"' : '') + ' aria-hidden="true">' +
-    (m ? svgOf(m, 'ui-imark__svg') : '<span class="ui-imark__ini">' + esc(monogram(ref.name, ref.collection ?? '')) + '</span>') + '</span>';
-}
-
-/** the publisher's name, with its mark first when the kit carries one and the source proved the publisher (`proven`, true unless
-    said): one unit that never wraps apart */
-export function publisherHTML(publisher: string, o: { class?: string; proven?: boolean } = {}): string {
-  const m = o.proven === false ? null : publisherMarkOf(publisher);
-  return '<span class="ui-pub' + (o.class ? ' ' + esc(o.class) : '') + '"' + (m ? ' data-mark="' + esc(m.id) + '"' : '') + '>' + (m ? svgOf(m, 'ui-pub__mark') : '') + '<span class="ui-pub__name">' + esc(publisher) + '</span></span>';
 }

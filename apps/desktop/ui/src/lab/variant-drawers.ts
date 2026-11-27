@@ -18,7 +18,6 @@ const LONG_BODY = Array.from({ length: 30 }, (_, i) => '<p>Line ' + (i + 1) + '<
 export const DRAWERS: Partial<Record<ComponentName, Drawer>> = {
   button: t('button', { label: 'Approve plan' }, (a, v) => (a === 'keys' ? (v ? { keys: 'mod+enter', showKeys: true } : {}) : { [a]: v })),
   iconButton: t('iconButton', { icon: 'gear', label: 'Settings' }),
-  send: t('send', {}),
   hold: t('hold', {}),
   switch: t('switch', { label: 'Smart' }),
   segmented: t('segmented', { label: 'When the sidebar collapses', options: SEG, value: 'rail' }),
@@ -29,7 +28,6 @@ export const DRAWERS: Partial<Record<ComponentName, Drawer>> = {
   select: t('select', { label: 'Interface font', entries: [{ value: 'Geist' }, { value: 'Libre Franklin' }], value: 'Geist' }),
   setRow: t('setRow', { label: 'Show the dock', control: '' }, (a, v) => (a === 'hint' ? (v ? { hint: 'Bots and widgets at the bottom edge' } : {}) : {}), { ground: 'frame', width: 560 }),
   row: wrapped('ui-rows', t('row', { title: 'proration drift in src/billing', end: 'now' }, (a, v) => (a === 'sub' ? (v ? { sub: 'billing-api' } : {}) : a === 'acts' ? (v ? { acts: html.iconButton({ icon: 'archive', label: 'Archive' }) } : {}) : { [a]: v }), { width: 280 })),
-  group: t('group', { label: 'Today', rows: html.row({ title: 'audit log export', end: 'yesterday' }) }, undefined, { width: 280 }),
   section: t('section', { label: 'Context', meta: '38%', body: '<p>the body</p>' }, undefined, { ground: 'frame', width: 320 }),
   scroll: t('scroll', { label: 'A long body', body: LONG_BODY, attrs: { style: 'height:120px;width:240px' } }, (a, v) => (a === 'axis' && v !== 'y' ? { axis: v, body: '<div style="width:800px">' + LONG_BODY + '</div>' } : { [a]: v }), { ground: 'frame' }),
   empty: t('empty', { title: 'No sessions yet', text: 'Start one with New session.' }, (a, v) => (a === 'action' ? (v ? { action: html.button({ label: 'New session', variant: 'primary' }) } : {}) : { [a]: v }), { width: 420 }),
@@ -37,14 +35,12 @@ export const DRAWERS: Partial<Record<ComponentName, Drawer>> = {
   measure: t('measure', { used: 76000, total: 200000 }, undefined, { width: 320 }),
   disclosure: t('disclosure', { label: '6 steps' }),
   entry: t('entry', { who: 'you', callno: ['14:01'], body: '<p>A message.</p>' }, undefined, { width: 720 }),
-  pages: t('pages', { pages: [{ id: 'a', label: 'Bots' }, { id: 'b', label: 'Runs' }], current: 'a' }, (a, v) => (a === 'attention' ? { pages: [{ id: 'a', label: 'Bots' }, { id: 'b', label: 'Runs', attention: v }] } : { [a]: v }), { ground: 'dock' }),
   modelMark: { draw: (p) => ui.html.modelMark('sonnet 5.5', p as { color?: 'mono' | 'brand' }), base: {} }
 };
 /** components in `variants` drawn elsewhere: their own stories cover every value */
 export const VARIANTS_ELSEWHERE: Readonly<Partial<Record<ComponentName, string>>> = {
-  signinButton: 'components/signin-button (the four labs, disabled)', chipGroup: 'no variants', keys: 'components/keys and key-combos (fit, raised)', badge: 'no variants', stamp: 'no variants', dot: 'components/dot (kind, size)', code: 'no variants',
+  signinButton: 'components/signin-button (the four labs, disabled)', chipGroup: 'no variants', keys: 'components/keys and key-combos (fit, raised)', badge: 'no variants', dot: 'components/dot (kind, size)', code: 'no variants',
   setSection: 'no variants', toast: 'components/toast (with an action)', tip: 'components/tooltip (keys, state)',
-  progress: 'cards/mod-view (determinate and travelling dots)', steps: 'composer/steps (step, fail, escalate)', orb: 'components/orb (sizes, still)',
-  presence: 'chat/presence (every status, one bot to nine, every layout: a live element, not a template)'
+  progress: 'cards/mod-view (determinate and travelling dots)', orb: 'components/orb (sizes, still)'
 };
 

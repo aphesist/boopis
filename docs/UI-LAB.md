@@ -242,8 +242,8 @@ export default {
   findings whose element description contains `el` (for axe, the target and the rule's id), so one element's excuse
   never silences the rest of the state. An excuse that holds in every state, because the rule itself leaves the element out, is
   not copied into stories: it is one entry of `STANDING_ALLOW` in `rules.mjs` (`{ check, el, reason }`), which `skip()` in
-  `check.mjs` honours for any state. Today's only entry is the dock's page dots (`ui-pages__dot`, `geometry.target`: R-a11y-2
-  names them, a 24 px wide hit area would cover the neighbour at the nub's 10 px pitch), wherever the dock is in the window.
+  `check.mjs` honours for any state. Its entries are the boards' own quiet tokens and StatusWord tones, each naming its board (the
+  v6 dock's page dots went with the v6 page dots at the repass's step 9).
 - Fixtures (`src/lab/fixtures.ts`) are real first: the v6 mock-up's card and form gallery data, the mock roster, the
   recorded frames; then the hard cases (long names, unbroken strings, many lines, right to left).
 

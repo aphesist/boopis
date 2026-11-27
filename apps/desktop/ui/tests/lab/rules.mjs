@@ -91,7 +91,6 @@ export const STANDING_ALLOW = [
      is 4.2:1 (an escalation the cap stopped says "capped" in it, the lead's 6e decision). The owner's question is the light amber, as with
      the quiet words above */
   { check: 'axe', el: '.k7-word color-contrast', reason: 'a StatusWord in the boards\' attention amber or red' },
-  { check: 'geometry.target', el: 'ui-pages__dot', reason: 'the dock\'s page dots: R-a11y-2 names them, each has a 24 px tall hit area around its mark, and a 24 px wide one would cover its neighbour at the 10 px pitch of the nub (14.12)' }
 ];
 
 /** RULES.md's rules, and which of them a lab check verifies (the report's rule coverage) */

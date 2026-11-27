@@ -1,4 +1,4 @@
-/* Rows, groups, sections, disclosures and settings rows (14.4, 14.8, 14.11, 14.21). */
+/* Rows, sections, disclosures and settings rows (14.4, 14.8, 14.11, 14.21). */
 import { html, ui } from '@boopis/ui';
 import { line, list, put, stage, forced } from '../../story';
 import type { Story } from '../../types';
@@ -26,15 +26,6 @@ const row: Story = {
   }
 };
 
-const group: Story = {
-  id: 'components/group', title: 'Group', area: 'components', kind: 'component', covers: ['ui.group'], mock: LISTS,
-  states: {
-    typical: stage(['typical', 'variant'], ({ root }) => { put(root, ui.group({ label: 'Today', rows: rowsOf(3) }), ui.group({ label: 'Archived (2)', collapsible: true, expanded: false, rows: rowsOf(2) }), ui.group({ label: 'Earlier', collapsible: true, expanded: true, rows: rowsOf(2) })); }, { width: 280 }),
-    empty: stage(['empty'], ({ root }) => { put(root, ui.group({ label: 'Today', rows: '' })); }, { width: 280 }),
-    many: stage(['many'], ({ root }) => { put(root, ui.group({ label: 'All', rows: rowsOf(100) })); }, { width: 280 }),
-    long: stage(['long'], ({ root }) => { put(root, ui.group({ label: LONG_TITLE, collapsible: true, rows: rowsOf(1) })); }, { width: 280 })
-  }
-};
 
 const secTypical = stage(['typical', 'variant'], ({ root }) => {
   put(root, ui.section({ label: 'Context', meta: '38%', open: true, body: html.measure({ used: 76000, total: 200000 }) }), ui.section({ label: 'Changes', meta: '4 files', open: false, body: '' }));
@@ -64,4 +55,4 @@ const setRow: Story = {
   }
 };
 
-export default [row, group, section, setRow];
+export default [row, section, setRow];

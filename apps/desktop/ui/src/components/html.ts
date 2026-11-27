@@ -2,7 +2,6 @@
    index.ts wrap these and wire the behaviours, so there is one markup for every primitive. Class names and DOM output
    are the v6 library's, so components.css ports 1:1. No colour, family or size lives here. */
 import { attrs, cx, esc, nid } from '../core/dom';
-import { itemMarkHTML, publisherHTML } from './item-mark';
 import type { Attrs } from '../core/dom';
 import { ariaKeys } from '../core/keys';
 import { combo, comboKbds, kbd, keys } from './kbd';
@@ -26,11 +25,8 @@ type U<T> = T | undefined;
 const code = (text: string): string => '<code class="ui-code">' + esc(text) + '</code>';
 /** inline `code` in a data string -> chips; everything else escaped */
 const inline = (text: string): string => esc(text).replace(/`([^`]+)`/g, '<code class="ui-code">$1</code>');
-const stamp = (text: string, o?: { attrs?: Attrs }): string => '<span class="ui-stamp"' + attrs(o?.attrs) + '>' + esc(text) + '</span>';
 const dot = (kind?: string, o: { size?: string; label?: string; show?: boolean } = {}): string =>
   '<span class="' + cx('ui-dot', kind && 'ui-dot--' + kind, o.size === 's' && 'ui-dot--s') + '"' + (o.label ? ' role="img" aria-label="' + esc(o.label) + '"' : ' aria-hidden="true"') + (o.show ? ' data-show' : '') + '></span>';
-const capacity = (spent: string, cap: string, o?: { label?: string }): string =>
-  '<span class="ui-capacity"' + attrs({ role: 'img', 'aria-label': o?.label ?? (spent + ' of ' + cap + ' spent') }) + '><b>' + esc(spent) + '</b> of ' + esc(cap) + '</span>';
 
 export interface ButtonOpts {
   label: string; variant?: U<'secondary' | 'primary' | 'ghost'>; size?: U<'m' | 's'>; icon?: U<string>; keys?: U<string>; showKeys?: U<boolean>;
@@ -51,10 +47,6 @@ function iconButton(o: IconButtonOpts): string {
       'aria-pressed': o.pressed == null ? null : String(!!o.pressed), 'aria-expanded': o.expanded == null ? null : String(!!o.expanded), 'aria-haspopup': o.haspopup, disabled: o.disabled, 'data-action': o.action, ...o.attrs }) + '>' + icon(o.icon) + '</button>';
 }
 /** send: `corner` sets it into its container's corner (.ui-corner: concentric, inset by the container's rule) */
-const send = (o: { running?: boolean; disabled?: boolean; corner?: boolean } = {}): string => {
-  const run = !!o.running;
-  return '<button type="button" class="' + cx('ui-send', o.corner && 'ui-corner') + '" data-ui="send"' + attrs({ 'aria-label': run ? 'Stop' : 'Send', 'data-tip': run ? 'Stop' : 'Send', 'data-kbd': run ? 'mod+period' : 'enter', 'aria-keyshortcuts': run ? ariaKeys('mod+.') : 'Enter', disabled: o.disabled && !run }) + '>' + icon(run ? 'stop' : 'send') + '</button>';
-};
 export interface HoldOpts { label?: U<string>; ms?: U<number>; fill?: U<'dots' | 'solid'>; hintId?: U<string>; ariaLabel?: U<string>; attrs?: U<Attrs>; doneLabel?: U<string>; announce?: U<(t: string) => void> }
 /** hold to approve. Wire with hold.wire(el) or hydrate(). */
 function hold(o: HoldOpts = {}): string {
@@ -112,13 +104,6 @@ function row(o: RowOpts): string {
 }
 /** the glyph column: running breathes, attention is red, current and idle is brass, else nothing */
 const leadFor = (o: { attention?: U<boolean>; running?: U<boolean>; current?: U<boolean> }): string => (o.attention ? dot('attention') : o.running ? dot('run') : o.current ? dot('here') : '');
-function group(o: { label: string; collapsible?: U<boolean>; expanded?: U<boolean>; rows?: U<string>; id?: U<string> }): string {
-  const id = o.id || nid('grp');
-  const head = o.collapsible
-    ? '<button type="button" class="ui-group__head" data-ui="group" aria-expanded="' + (o.expanded !== false) + '" aria-controls="' + id + '"><span>' + esc(o.label) + '</span>' + icon('chevron') + '</button>'
-    : '<div class="ui-group__head" id="' + id + '-h">' + esc(o.label) + '</div>';
-  return '<div class="ui-group" role="group" aria-label="' + esc(o.label) + '">' + head + '<ul class="ui-rows" id="' + id + '" data-ui="rows">' + (o.rows ?? '') + '</ul></div>';
-}
 
 export type Station = readonly [model: string, rule?: string];
 export interface LadderOpts { stations?: U<readonly Station[]>; current?: U<number>; variant?: U<'line' | 'list'>; label?: U<string>; off?: U<boolean>; ground?: U<string> }
@@ -155,13 +140,6 @@ function measure(o: MeasureOpts): string {
 const legend = (parts: readonly MeasurePart[], fmt?: (n: number) => string): string =>
   '<ul class="ui-legend">' + parts.map((p, i) => '<li><i style="background:var(' + ['--text', '--text-dim', '--text-quiet', '--text-faint'][Math.min(i, 3)] + ')"></i><span>' + esc(p[0]) + '</span><b>' + esc(fmt ? fmt(p[1]) : p[1]) + '</b></li>').join('') + '</ul>';
 
-export interface PageDef { id: string; label?: U<string>; attention?: U<boolean> }
-function pages(o: { pages: readonly PageDef[]; current?: U<string>; interactive?: U<boolean>; label?: U<string> }): string {
-  const P = o.pages;
-  if (!o.interactive) return '<span class="ui-pages ui-pages--still" role="img" aria-label="' + esc(o.label || ('Page ' + (P.findIndex((p) => p.id === o.current) + 1) + ' of ' + P.length)) + '">' + P.map((p) => '<span class="ui-pages__dot"' + (p.id === o.current ? ' data-current' : '') + (p.attention ? ' data-attention' : '') + '><i></i></span>').join('') + '</span>';   /* still: an image named by its label; the dots carry no ARIA state */
-  return '<span class="ui-pages" role="tablist" data-ui="pages"' + attrs({ 'aria-label': o.label || 'Pages' }) + '>' + P.map((p) => '<button type="button" class="ui-pages__dot" role="tab" data-value="' + esc(p.id) + '"' +
-    attrs({ 'aria-selected': String(p.id === o.current), tabindex: p.id === o.current ? '0' : '-1', 'aria-label': (p.label ?? '') + (p.attention ? ', needs you' : ''), 'data-attention': p.attention, 'data-tip': p.label }) + '><i></i></button>').join('') + '</span>';
-}
 
 const request = (text: string): string => '<div class="ui-request">' + esc(text) + '</div>';
 const disclosure = (o: { label: string; controls?: U<string>; expanded?: U<boolean> }): string =>
@@ -193,11 +171,6 @@ function entry(o: EntryOpts): string {
   return '<article class="ui-entry"' + attrs({ 'data-kind': o.kind, 'aria-label': o.label }) + '><div class="ui-callno">' + (o.who ? '<span class="' + cx('ui-callno__who', o.kind === 'user' && 'is-you') + '">' + o.who + '</span>' : '') + lines + steps + '</div>' +
     '<div class="ui-entry__body">' + (o.body ?? '') + '</div></article>';
 }
-export interface StepItem { title: string; mono?: U<boolean>; meta?: U<readonly string[] | null>; time?: U<string>; kind?: U<'step' | 'fail' | 'escalate'> }
-const steps = (items: readonly StepItem[], o?: { id?: U<string>; hidden?: U<boolean> }): string =>
-  '<ol class="ui-steps"' + attrs({ id: o?.id, hidden: o?.hidden, 'aria-label': 'Steps' }) + '>' + items.map((s) =>
-    '<li class="ui-step" data-kind="' + esc(s.kind ?? 'step') + '"><span class="ui-step__mark"><i></i></span><span class="ui-step__title' + (s.mono ? ' ui-mono' : '') + '">' + esc(s.title) +
-    (s.meta ? '<span class="ui-step__meta">' + s.meta.map((m) => '<span>' + esc(m) + '</span>').join('') + '</span>' : '') + '</span><span class="ui-step__time">' + esc(s.time ?? '') + '</span></li>').join('') + '</ol>';
 function section(o: { label: string; meta?: U<string>; open?: U<boolean>; body?: U<string>; id?: U<string>; name?: U<string> }): string {
   const id = o.id || nid('sec');
   return '<div class="ui-sec" role="group"' + attrs({ 'aria-labelledby': id + '-h', 'data-name': o.name }) + '><button type="button" class="ui-sec__head" data-ui="section" id="' + id + '-h" aria-expanded="' + (!!o.open) + '" aria-controls="' + id + '">' +
@@ -229,7 +202,7 @@ function field(o: FieldOpts): string {
 }
 /** a settings row: its label, a hint under it (a command in backticks shows as code, as the host writes its sentences), its control */
 const setRow = (o: { label: string; hint?: U<string | null>; for?: U<string | null>; /** the label's own id, for a control named by aria-labelledby (a select) */ labelId?: U<string>; control?: U<string>;
-  /** what the row is about, before its label: an item's mark (`itemMark`), never decoration (docs/UI-COMPONENTS.md, Item marks) */ lead?: U<string> }): string =>
+  /** what the row is about, before its label, never decoration */ lead?: U<string> }): string =>
   '<div class="ui-set__row">' + (o.lead ? '<span class="ui-set__lead">' + o.lead + '</span>' : '') + '<' + (o.for ? 'label for="' + esc(o.for) + '"' : 'span') + attrs({ id: o.labelId }) + ' class="ui-set__label"><span>' + esc(o.label) + '</span>' + (o.hint ? '<small>' + inline(o.hint) + '</small>' : '') + '</' + (o.for ? 'label' : 'span') + '>' + (o.control ?? '') + '</div>';
 export interface BadgeOpts {
   label: string;
@@ -280,7 +253,5 @@ const tip = (label: string, k?: string, state?: { text: string; tone?: string })
 
 
 export const html = {
-  icon, keys, kbd, combo, comboKbds, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
-  orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, section, field, select: selectHTML, setRow, setHead, setSection, empty, toast, tip, mod,
-  scroll, tabs, tipBody, badge, input, signinButton, stack, itemMark: itemMarkHTML, publisher: publisherHTML
+  icon, keys, kbd, combo, comboKbds, code, inline, dot, button, iconButton, hold, switch: switchHtml, segmented, chip, chipGroup, orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, ladder, measure, legend, request, entry, disclosure, section, field, select: selectHTML, setRow, setHead, setSection, empty, toast, tip, mod, scroll, tabs, tipBody, badge, input, signinButton, stack
 };

@@ -220,17 +220,6 @@
 .ui-ib--s { width: 24px; height: 24px; }
 .ui-ib--s .ui-icon { width: 16px; height: 16px; }
 
-/* send: the one filled square in a toolbar */
-.ui-send {
-  appearance: none; display: inline-grid; place-items: center; flex: none; width: var(--ctl-s); height: var(--ctl-s); padding: 0; border: 0;
-  border-radius: var(--r-s); background: var(--selected); color: var(--text-on-light); cursor: pointer;
-  transition: opacity var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease), transform var(--dur-press) var(--ease);
-}
-.ui-send .ui-icon { width: 16px; height: 16px; }
-@media (hover: hover) and (pointer: fine) { .ui-send:hover:not(:disabled) { background: var(--text-strong); } }
-.ui-send:active:not(:disabled) { transform: scale(.96); }
-.ui-send:disabled { opacity: .35; cursor: default; }
-
 /* a control in a container's corner (the container's rule above derives the numbers): concentric with it, its size,
    and a focus ring that stays inside. Its hover, pressed and disabled fills are its own background, so they share the
    radius; a drawn (squircle) corner puts the ring inside the edge itself. Comes after the buttons so it wins. */
@@ -354,14 +343,7 @@
 /* raised: on a raised surface (a tooltip, §14.17): --bg-4, no hairline */
 .ui-keys--raised > .ui-kbd { background: var(--bg-4); box-shadow: none; }
 
-/* ───────────── marks: stamp, dot ───────────── */
-.ui-stamp {
-  display: inline-flex; align-items: center; flex: none; height: 20px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 0 7px; box-sizing: border-box; border-radius: var(--r-xs);
-  box-shadow: inset 0 0 0 1px var(--red); color: var(--red-text); font: 500 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono);
-  white-space: nowrap; text-transform: var(--ui-case); transition: background-color var(--dur-1) var(--ease);
-}
-@media (hover: hover) and (pointer: fine) { :is(button, a):hover > .ui-stamp, .ui-stamp:is(button):hover { background: var(--red-soft); } }
-.ui-stamp:empty { display: none; }
+/* ───────────── marks: dot ───────────── */
 /* badge: a quiet mark, a chip's capsule in mono 11, outlined (the "made outside boopis" mark); never filled, never a stamp */
 .ui-badge {
   display: inline-flex; align-items: center; flex: none; height: 18px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 0 7px; box-sizing: border-box; vertical-align: middle;
@@ -379,18 +361,11 @@
 /* ───────────── list rows (sidebar lists, roster) ─────────────
    Every glyph or orb centres on the x = 28 axis and every label starts at x = 44, given the list's 8px inset. */
 .ui-rows { list-style: none; margin: 0; padding: 0 max(0px, calc(8px - var(--scroll-gutter, 0px))) 0 8px; }
-.ui-group + .ui-group { margin-top: 12px; }
 .ui-group__head {
   appearance: none; display: flex; align-items: center; gap: 4px; box-sizing: border-box; width: 100%; height: calc(var(--row-h) - 6px); padding: 0 12px; margin: 0; border: 0;
   border-radius: var(--r-s); background: transparent; text-align: left;
   font: 500 var(--fs-xs)/1 var(--sans); color: var(--text-quiet); text-transform: var(--ui-case);
 }
-button.ui-group__head { cursor: pointer; }
-@media (hover: hover) and (pointer: fine) { button.ui-group__head:hover { color: var(--text); } }
-.ui-group__head .ui-icon { width: 10px; height: 10px; opacity: 0; transform: rotate(90deg); transition: transform var(--dur-2) var(--ease), opacity var(--dur-1) var(--ease); }
-.ui-group__head:hover .ui-icon, .ui-group__head:focus-visible .ui-icon, .ui-group__head[aria-expanded="false"] .ui-icon { opacity: 1; }
-.ui-group__head[aria-expanded="false"] .ui-icon { transform: none; }
-.ui-group__head[aria-expanded="false"] + .ui-rows { display: none; }
 .ui-row {
   appearance: none; position: relative; display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box;
   height: var(--row-h); padding: 0 4px 0 12px; margin: 0; border: 0; border-radius: var(--r-s); --sq-bg: transparent; background: var(--sq-bg);
@@ -590,18 +565,6 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-legend li > span:first-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ui-legend i { width: 6px; height: 6px; border-radius: var(--r-pill); flex: none; }
 .ui-legend b { font: 400 var(--fs-2xs)/1 var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
-.ui-capacity { font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.ui-capacity b { font-weight: 400; color: var(--text); }
-/* pages: the dock's page dots (a tablist) and a queue's position (an image); the current one is brass */
-.ui-pages { position: relative; display: inline-flex; align-items: center; height: 10px; }
-.ui-pages__dot { appearance: none; position: relative; display: grid; place-items: center; width: 10px; height: 10px; padding: 0; margin: 0; border: 0; border-radius: var(--r-xs); background: transparent; cursor: pointer; }
-.ui-pages__dot::after { content: ""; position: absolute; left: 0; right: 0; top: calc((10px - var(--hit-min)) / 2); bottom: calc((10px - var(--hit-min)) / 2); }   /* the 24px hit area around a 10px mark (R-a11y-2); the dots tile the strip, so a press beside the current dot lands on its neighbour */
-.ui-pages__dot > i { display: block; width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--mark-off); transition: background-color var(--dur-1) var(--ease); }
-@media (hover: hover) and (pointer: fine) { .ui-pages__dot:hover > i { background: var(--text-dim); } }
-.ui-pages__dot:is([aria-selected="true"], [data-current]) { width: 20px; cursor: default; }
-.ui-pages__dot:is([aria-selected="true"], [data-current]) > i { width: 14px; background: var(--brass); }
-.ui-pages__dot[data-attention] > i { background: var(--red); }
-.ui-pages--still .ui-pages__dot { cursor: default; }
 
 /* ───────────── orb: the bot's face (aphesist/orb2), always beside its name ───────────── */
 .ui-orb { --o: 20; position: relative; display: inline-block; flex: none; width: calc(var(--o) * 1px); height: calc(var(--o) * 1px); line-height: 0; vertical-align: middle; }
@@ -832,18 +795,6 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-disclosure:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }   /* flush with its column: the ring sits inside (R-focus-2, R-corner-4) */
 .ui-disclosure .ui-icon { width: 10px; height: 10px; transition: transform var(--dur-2) var(--ease); }
 .ui-disclosure[aria-expanded="true"] .ui-icon { transform: rotate(90deg); }
-.ui-steps { list-style: none; margin: 0; padding: 0; width: 100%; }
-.ui-steps[hidden] { display: none; }
-.ui-step { position: relative; display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; column-gap: 8px; padding-bottom: 8px; font: 400 var(--fs-s)/var(--lh-ui) var(--sans); }
-.ui-step::before { content: ""; position: absolute; left: 7.5px; top: 14px; bottom: -2px; width: 1px; background: var(--hair); }
-.ui-step:last-child::before { display: none; }
-.ui-step__mark { height: 18px; display: grid; place-items: center; }
-.ui-step__mark > i { width: 5px; height: 5px; border-radius: var(--r-pill); background: var(--text-quiet); }
-.ui-step[data-kind="fail"] .ui-step__mark > i { background: transparent; box-shadow: inset 0 0 0 1px var(--text-quiet); }
-.ui-step[data-kind="escalate"] .ui-step__mark > i { width: 7px; height: 7px; background: transparent; box-shadow: inset 0 0 0 1.5px var(--text-dim); }
-.ui-step__title { color: var(--text); min-width: 0; }
-.ui-step__meta { display: flex; flex-wrap: wrap; gap: 0 12px; margin-top: 2px; font: 400 var(--fs-2xs)/1.45 var(--mono); color: var(--text-quiet); }
-.ui-step__time { font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
 
 /* the blank: a dotted red line under the gap, then the stamp, inside the sentence it belongs to */
 .ui-entry { --r-in-entry: var(--r-in); }   /* the entry's own inner radius, kept under a name that the cards inside (containers of their own) do not redefine */
@@ -900,7 +851,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 @media (prefers-reduced-motion: reduce) {
   .ui-dot--run { animation: none; opacity: 1; }
   .ui-sec[data-flash] > .ui-sec__head { animation: none; }
-  .ui-btn:active, .ui-ib:active, .ui-send:active { transform: none; }
+  .ui-btn:active, .ui-ib:active { transform: none; }
   :is(.ui-pop, .ui-toast, .ui-tip) { translate: none; transform: none; }
   .ui-toast { translate: -50% 0; }
   .ui-toast[data-static] { translate: none; }
@@ -960,28 +911,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 
 
 
-/* ───────────── item marks (item-mark.ts; docs/UI-COMPONENTS.md, "Item marks") ─────────────
-   What a store item or a connector is, at a glance: a raised tile with a continuous corner holding the service's or a proven
-   publisher's mark (in its brand's colours) or a monogram. 24 in a row's lead, 40 at the head of an item's page. The corner is the floor at 24 (a 24px
-   square at --r-s would read as a circle) and --r-s at 40. Before the corner engine binds it, a plain radius and an inset line. */
-.ui-imark {
-  --imark: 24px; --sq-bg: var(--bg-3); --sq-line: var(--hair);
-  display: inline-grid; place-items: center; flex: none; box-sizing: border-box; width: var(--imark); height: var(--imark);
-  border-radius: var(--r-floor); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair); color: var(--text); text-transform: none;
-}
-.ui-imark[data-size="40"] { --imark: 40px; border-radius: var(--r-s); }
-.ui-imark__svg { display: block; width: var(--ic-s); height: var(--ic-s); }
-/* a mark in its brand's colours (owner decision, 23 November 2026, ADR-0040 amended): the map's colour for the scheme the page is in,
-   each one checked at 3:1 on every preset's tile (item-mark.test.ts); a brand colour is data, like a bot's look, never a token */
-:is(.ui-imark__svg, .ui-pub__mark)[data-brand] { color: light-dark(var(--mk-l), var(--mk-d)); }
-.ui-imark[data-size="40"] .ui-imark__svg { width: calc(var(--imark) * .55); height: calc(var(--imark) * .55); }
-.ui-imark__ini { font: 600 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-dim); white-space: nowrap; }
-.ui-imark[data-size="40"] .ui-imark__ini { font-size: var(--fs-m); }
-/* a publisher's name with its mark first: one unit, the mark 14 beside 12 (R-icon-4), centred on the name's line */
-.ui-pub { display: inline-flex; align-items: baseline; gap: var(--sp-1); min-width: 0; max-width: 100%; vertical-align: bottom; }
-.ui-pub__mark { flex: none; align-self: center; width: var(--ic-s); height: var(--ic-s); }
-.ui-pub__name { min-width: 0; overflow-wrap: anywhere; }
-/* a settings row about one item (a connector, an installed item): its tile before the label */
+/* a settings row about one thing: what it is about before the label */
 .ui-set__lead { display: flex; flex: none; align-self: center; }
 .ui-set__row:has(> .ui-set__lead) { gap: var(--sp-3); }
 .ui-set__row:has(> .ui-set__lead) > .ui-set__label { flex: 1 1 auto; }

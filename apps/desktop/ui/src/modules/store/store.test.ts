@@ -10,7 +10,7 @@ import { createMockStore } from '../../data/mock-store';
 import { submitForm } from '../cards/form';
 import { mountStore } from './view';
 import { letters } from '../../core/letters';
-import { itemTile } from '../../components/item-mark';
+import { itemTile } from '@boopis/ui';
 import { markRef } from './model';
 import { BOARD15_ITEMS, BOARD15_MODS } from '../../lab/board-fixtures';
 import type { StoreView } from './view';

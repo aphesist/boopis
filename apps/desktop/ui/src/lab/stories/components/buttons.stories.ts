@@ -43,16 +43,6 @@ const iconButton: Story = {
   }
 };
 
-const sendTypical = stage(['typical', 'variant'], ({ root }) => { line(root, ui.send({}), ui.send({ disabled: true }), ui.send({ running: true })); });
-const send: Story = {
-  id: 'components/send', title: 'Send', area: 'components', kind: 'component', covers: ['ui.send'], mock: { url: '/v6/design-system/index.html#c-composer', crop: '#c-composer' },
-  states: {
-    typical: sendTypical, ...forced(sendTypical, '.ui-send'),
-    disabled: stage(['disabled'], ({ root }) => { line(root, ui.send({ disabled: true })); }),
-    running: stage(['loading'], ({ root }) => { line(root, ui.send({ running: true })); }),
-    long: stage(['long'], ({ root }) => { line(root, ui.send({})); }, { note: 'send has no text: long is the same', allow: {} })
-  }
-};
 
 const holdTypical = stage(['typical', 'variant'], ({ root }) => { line(root, ui.hold({}), ui.hold({ fill: 'solid' }), ui.hold({ label: 'Hold to install' })); });
 const hold: Story = {
@@ -79,4 +69,4 @@ const sw: Story = {
   }
 };
 
-export default [button, iconButton, send, hold, sw];
+export default [button, iconButton, hold, sw];

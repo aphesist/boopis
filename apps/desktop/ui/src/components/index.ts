@@ -14,8 +14,7 @@ import { botLabel, botState, STATES } from './bot-state';
 import { card } from './card-registry';
 import { holdElement, wireHold } from './hold';
 import { html } from './html';
-import type { ItemMarkOpts, ItemRef } from './item-mark';
-import type { ButtonOpts, ChipOpts, EntryOpts, FieldOpts, IconButtonOpts, LadderOpts, MeasureOpts, MeasurePart, RowOpts, SegmentedOpts, StepItem } from './html';
+import type { ButtonOpts, ChipOpts, EntryOpts, FieldOpts, IconButtonOpts, LadderOpts, MeasureOpts, MeasurePart, RowOpts, SegmentedOpts } from './html';
 import { icon, iconNames } from './icons';
 import { layer, popover } from './layer';
 import { isRoute, lastModel, modelFamily, modelHTML, modelMark as modelMarkEl, parseRoute, routeHTML, swapMark, families as modelFamilies } from './model-mark';
@@ -39,7 +38,6 @@ import { scrollEdges } from './scroll-edges';
 import { addressesYou, codeHTML, everyoneHTML, inlineHTML, plainHTML, markdownHTML, mentionHandles, mentionHTML, mentionOutsideHTML, mentionsOutside, mentionSpans, mentionTarget, pathCandidate, pathCandidates, pathHTML, resolveMentions, splitBlocks, upgradePaths } from './markdown';
 import { arrive, codeOf, markdown as markdownEl, streamMarkdown, wireMarkdown } from './md-view';
 import { copyText } from './clipboard';
-import { presence as presenceEl, presencePill, presenceWords, presenceLayout } from './presence';
 import type { SegElement } from './wire';
 import { kit } from './v7';
 
@@ -53,22 +51,17 @@ function make<O, E extends HTMLElement = HTMLElement>(fn: (o: O) => string): (o:
 const factories = {
   button: make<ButtonOpts, HTMLButtonElement>(html.button),
   iconButton: make<IconButtonOpts, HTMLButtonElement>(html.iconButton),
-  send: make<{ running?: boolean; disabled?: boolean } | undefined, HTMLButtonElement>((o) => html.send(o ?? {})),
   switch: make<Parameters<typeof html.switch>[0], HTMLInputElement>(html.switch),
   segmented: make<SegmentedOpts, SegElement>(html.segmented),
   chip: make<ChipOpts, HTMLButtonElement>(html.chip),
   chipGroup: make<Parameters<typeof html.chipGroup>[0]>(html.chipGroup),
-  stamp: make<string>((t) => html.stamp(t)),
   dot: make<{ kind?: string }>((o) => html.dot(o.kind)),
   code: make<string>(html.code),
-  capacity: make<{ spent: string; cap: string }>((o) => html.capacity(o.spent, o.cap)),
   ladder: make<LadderOpts>(html.ladder),
   measure: make<MeasureOpts>(html.measure),
-  pages: make<Parameters<typeof html.pages>[0]>(html.pages),
   request: make<string>(html.request),
   entry: make<EntryOpts, HTMLElement>(html.entry),
   disclosure: make<Parameters<typeof html.disclosure>[0], HTMLButtonElement>(html.disclosure),
-  steps: make<{ items: readonly StepItem[]; id?: string; hidden?: boolean }, HTMLOListElement>((o) => html.steps(o.items, o)),
   section: make<Parameters<typeof html.section>[0]>(html.section),
   scroll: make<Parameters<typeof html.scroll>[0]>(html.scroll),
   tabs: make<Parameters<typeof html.tabs>[0], SegElement>(html.tabs),
@@ -76,13 +69,8 @@ const factories = {
   select: make<SelectOpts, SelectElement>(html.select),
   empty: make<Parameters<typeof html.empty>[0]>(html.empty),
   row: make<RowOpts, HTMLLIElement>(html.row),
-  group: make<Parameters<typeof html.group>[0]>(html.group),
   signinButton: make<SigninButtonOpts, HTMLButtonElement>(html.signinButton),
   stack: make<StackOpts>(html.stack),
-  /** an item's tile: the service a connector connects to, or a proven publisher, else its monogram (item-mark.ts) */
-  itemMark: make<ItemRef & ItemMarkOpts>((o) => html.itemMark(o, o)),
-  /** a publisher's name with its mark first when the kit has one */
-  publisher: make<string>((p) => html.publisher(p))
 };
 /** `ui.markdown(text, ctx)` draws what a bot or an agent wrote (markdown.ts); its properties are the parts the surfaces use */
 const markdown = Object.assign(markdownEl, {
@@ -91,8 +79,6 @@ const markdown = Object.assign(markdownEl, {
   target: mentionTarget, spans: mentionSpans, toYou: addressesYou,
   path: pathHTML, pathCandidate, candidates: pathCandidates, upgradePaths
 });
-/** `ui.presence({actors})` is who is at work in a conversation, one entry where their replies land (presence.ts); `.pill` is the same, small, for the jump button */
-const presence = Object.assign(presenceEl, { pill: presencePill, words: presenceWords, layout: presenceLayout });
 const legend = (parts: readonly MeasurePart[], fmt?: (n: number) => string): HTMLElement => frag(html.legend(parts, fmt));
 const keys = (k: string): HTMLElement => frag(html.keys(k));
 const inline = (text: string): HTMLSpanElement => { const s = document.createElement('span'); s.innerHTML = html.inline(text); return s; };
@@ -105,7 +91,7 @@ const modelRoute = (text: string, o?: ModelOpts): HTMLElement => frag(routeHTML(
 export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
   ...factories, legend, keys, inline, scrollClass, scrollEdges,
-  markdown, copyText, presence, kit,
+  markdown, copyText, kit,
   hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, card,
   hold: Object.assign(holdElement, { wire: wireHold }),
   /** a Claude Code mod's element tree, drawn with the library (MODS.md section 2) */
@@ -137,13 +123,11 @@ export { MARK, parseLiteral, setTokenReader } from './mod-colors';
 export { SIGNIN_BRANDS, signinLabel, signinLogo, signinMark } from './signin-button';
 export type { SigninBrand, SigninButtonOpts } from './signin-button';
 export { progressDots, setProgress } from './progress';
-export { elapsedWords, presenceFace, presenceLabel, presenceClauses, PRESENCE_STATUSES, HOLD_MS } from './presence';
-export type { PresenceActor, PresenceElement, PresenceLayout, PresenceMode, PresenceOpts, PresencePill, PresenceRow, PresenceStatus, PresenceUpdate } from './presence';
 export { kbd, keys as keyChips, combo, comboKbds, keysVariants } from './kbd';
 export type { KeysOpts } from './kbd';
 /* every component's variants, for the UI lab's stories (variants.ts) */
 export { serviceMarkOf, publisherMarkOf, monogram, serviceMarks, serviceMark, packageOf, tileMarkOf, brandMarkHTML, itemTile, connectorKey } from './item-mark';
-export type { ItemRef, ItemMarkOpts, ItemMarkSize, ServiceMark } from './item-mark';
+export type { ItemRef, ServiceMark } from './item-mark';
 export { variants } from './variants';
 export type { ComponentName } from './variants';
 export type { InputOpts, BadgeOpts } from './html';
@@ -153,7 +137,7 @@ export { scroll, scrollClass, scrollVariants, SCROLL_AXES } from './scroll';
 export { tabs, tabsVariants, fitTabs } from './tabs';
 export type { TabDef, TabsOpts } from './tabs';
 export type { ScrollAxis, ScrollOpts, ScrollHtmlOpts } from './scroll';
-export type { PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
+export type { MenuEntry, MenuItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
 export type { ModelRef, ModelOpts, MarkOpts, ModelFamily } from './model-mark';
 export type { BotLike } from './bot-state';
 export type { MarkdownCtx, MdBot, PathTarget, Block as MarkdownBlock, MentionSpan, MentionTarget } from './markdown';

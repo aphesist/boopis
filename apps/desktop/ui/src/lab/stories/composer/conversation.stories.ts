@@ -2,7 +2,7 @@
 import { html, ui } from '@boopis/ui';
 import { put, stage } from '../../story';
 import type { Story } from '../../types';
-import { LONG_NAME, LONG_TITLE, MULTILINE, PARAGRAPH, RTL, STEPS_SEED, UNBROKEN } from '../../fixtures';
+import { LONG_NAME, LONG_TITLE, MULTILINE, PARAGRAPH, RTL, UNBROKEN } from '../../fixtures';
 
 const CONV = { url: '/v6/design-system/index.html#c-conversation', crop: '#c-conversation' };
 const W = 720;
@@ -31,16 +31,6 @@ export default [
       typical: stage(['typical'], ({ root }) => { put(root, ui.request('refactor the proration helpers in src/billing to use integer cents, run the tests, then open a PR.')); }, { width: 608 }),
       long: stage(['long'], ({ root }) => { put(root, ui.request(UNBROKEN + ' ' + MULTILINE)); }, { width: 608 }),
       empty: stage(['empty'], ({ root }) => { put(root, ui.request('')); }, { width: 608 })
-    }
-  },
-  {
-    id: 'composer/steps', title: 'Steps', area: 'composer', kind: 'component', covers: ['ui.steps'], mock: CONV,
-    states: {
-      typical: stage(['typical', 'variant'], ({ root }) => { put(root, ui.steps({ items: STEPS_SEED })); }, { width: 608 }),
-      empty: stage(['empty'], ({ root }) => { put(root, ui.steps({ items: [] })); }, { width: 608 }),
-      many: stage(['many'], ({ root }) => { put(root, ui.steps({ items: Array.from({ length: 120 }, (_, i) => ({ title: 'step ' + i, time: i + 's', kind: i % 23 === 0 ? 'fail' as const : 'step' as const })) })); }, { width: 608 }),
-      error: stage(['error'], ({ root }) => { put(root, ui.steps({ items: [{ title: 'npm test', mono: true, kind: 'fail', meta: ['invoice.test.ts', 'rolled back'], time: '4.2s' }, { title: 'escalated to sonnet 5.5', kind: 'escalate', time: '' }] })); }, { width: 608 }),
-      long: stage(['long'], ({ root }) => { put(root, ui.steps({ items: [{ title: UNBROKEN, mono: true, meta: [LONG_TITLE, UNBROKEN], time: '12m 04s' }] })); }, { width: 608 })
     }
   }
 ] satisfies Story[];

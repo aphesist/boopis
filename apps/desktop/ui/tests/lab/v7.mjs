@@ -43,7 +43,7 @@ export const ROLES = {
   Menu: [kit('Menu'), '.ui-menu', '.ui-listbox'],
   Card: [kit('Card'), '.ui-set'],
   Block: [kit('Block')],
-  ToolRow: [kit('ToolRow'), '.ui-step'],
+  ToolRow: [kit('ToolRow')],
   AskCard: [kit('AskCard'), '.ui-request'],
   FilesCard: [kit('FilesCard')],
   Queue: [kit('Queue')],
@@ -74,7 +74,7 @@ export const ROLES = {
   InlineChip: [kit('InlineChip'), '.ui-mention', '.ui-path', '.ui-md .ui-code', '.ui-md .ui-file'],
   Countdown: [part('Countdown')],
   Mark: [kit('Mark')],
-  StatusWord: [kit('StatusWord'), '.ui-stamp'],
+  StatusWord: [kit('StatusWord')],
   Badge: [kit('Badge'), '.ui-badge'],
   StatusLine: [kit('StatusLine')],
   Avatar: [kit('Avatar'), '.ui-orb'],
@@ -88,7 +88,7 @@ export const ROLES = {
   DiffRow: [part('DiffRow')],
   DiffComment: [part('DiffComment')],
   DiffCode: [part('DiffCode')],
-  Steps: [part('Steps'), '.ui-steps'],
+  Steps: [part('Steps')],
   Sidebar: [part('Sidebar'), '.hx-list'],
   Thread: [part('Thread')],
   /* where a mark may show at rest (section 17): feedforward (the composer's text, a reply's guess), an AskCard, a blank */
@@ -96,7 +96,7 @@ export const ROLES = {
   /* a mark that shows only on hover or focus (an info label) */
   InfoMark: ['[data-kit~="Mark"][data-mark-kind="info"]'],
   /* live things a still must show at rest (section 9.2, P4): a status phrase's shimmer, a breath; [data-motion] strips are exempt */
-  Live: ['[data-live]', '.ui-dot--run', '.ui-presence__shimmer'],
+  Live: ['[data-live]', '.ui-dot--run'],
   /* the shells a corner control is never concentric with: they are the window's own regions */
   Region: [kit('Page'), kit('Pane'), kit('Dialog'), '.hx-ground', '.hx-side', '.hx-right', '.lab-stage', '.lab-cell', '#hx-app', '[role="dialog"]']
 };

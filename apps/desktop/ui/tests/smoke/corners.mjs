@@ -5,7 +5,7 @@
    pixel ratios. */
 import { check, scenario } from './harness.mjs';
 
-const LEAF = '.ui-btn,.ui-ib,.ui-send,.ui-seg__thumb,.ui-file';
+const LEAF = '.ui-btn,.ui-ib,.ui-seg__thumb,.ui-file';
 const VIEWPORTS = [[1600, 860, 1.25], [1440, 900, 2], [1920, 1200, 1.5], [2880, 1800, 1], [1366, 768, 1], [390, 844, 1]];
 
 export async function corners(env) {
