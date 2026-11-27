@@ -1,0 +1,102 @@
+{
+ "a-connector-with-several-ways-its-menu@dark": {
+  "sha": "4f3e12b330dfcd435a2511e7736b091108c5af06",
+  "w": 1416,
+  "h": 1081
+ },
+ "a-connector-with-several-ways-its-menu@light": {
+  "sha": "4f07af0f7080a9267095e6322c214066d3433852",
+  "w": 1416,
+  "h": 1081
+ },
+ "every-state-of-an-installed-connector@dark": {
+  "sha": "e5e7be85ab15b10b090810fdbdecdd47c9e8c77d",
+  "w": 1416,
+  "h": 1509
+ },
+ "every-state-of-an-installed-connector@light": {
+  "sha": "eac7a0e186fce428b19306a05d1ed92c0913a094",
+  "w": 1416,
+  "h": 1509
+ },
+ "long-names@dark": {
+  "sha": "241a8367ba737d65e24e682a79c9a1138be115aa",
+  "w": 1416,
+  "h": 1199
+ },
+ "long-names@light": {
+  "sha": "be415d5f16f169259efb1089e26c954f201e0d88",
+  "w": 1416,
+  "h": 1199
+ },
+ "nothing-installed-yet@dark": {
+  "sha": "4f3e12b330dfcd435a2511e7736b091108c5af06",
+  "w": 1416,
+  "h": 1081
+ },
+ "nothing-installed-yet@light": {
+  "sha": "4f07af0f7080a9267095e6322c214066d3433852",
+  "w": 1416,
+  "h": 1081
+ },
+ "nothing-matches-the-search@dark": {
+  "sha": "153de306fcf9fceae8b0809d73cb5bbb8b8e7096",
+  "w": 1416,
+  "h": 653
+ },
+ "nothing-matches-the-search@light": {
+  "sha": "d2a5b0b16d985bc47c7e283729ed28071a645827",
+  "w": 1416,
+  "h": 653
+ },
+ "row-focus@dark": {
+  "sha": "71241da5ec8d3d6de7fb2b1beac199748d3dda43",
+  "w": 1416,
+  "h": 1137
+ },
+ "row-focus@light": {
+  "sha": "4437f6021a5756de8e33c114f16e341a5a64b224",
+  "w": 1416,
+  "h": 1137
+ },
+ "row-hover@dark": {
+  "sha": "c4fcaadbf6590125358236e6380d833b61f337c4",
+  "w": 1416,
+  "h": 1137
+ },
+ "row-hover@light": {
+  "sha": "3a0e97a541f5c0f3ecd3c13fb3018837a20b76d2",
+  "w": 1416,
+  "h": 1137
+ },
+ "the-list-could-not-be-read@dark": {
+  "sha": "326ca7f9712fa83d7dc525914fe41cc12d7a22f1",
+  "w": 1416,
+  "h": 1081
+ },
+ "the-list-could-not-be-read@light": {
+  "sha": "911bc1a92a883d0a314f03031ae1d5bb3575c5ab",
+  "w": 1416,
+  "h": 1081
+ },
+ "the-search-narrows-both-lists@dark": {
+  "sha": "5d0c4d80f6a56afa1359fd95eeff9ba554bd9963",
+  "w": 1416,
+  "h": 703
+ },
+ "the-search-narrows-both-lists@light": {
+  "sha": "cdd4d719e7879725b46d9278e40d90b8ae669bd5",
+  "w": 1416,
+  "h": 703
+ },
+ "with-boopis-s-collection@dark": {
+  "sha": "ffaf82ec6fea2385819ee94567ab43f744faa498",
+  "w": 1416,
+  "h": 1137
+ },
+ "with-boopis-s-collection@light": {
+  "sha": "cd49199a36b0bf583c7945a264ffd6c56ef5dce0",
+  "w": 1416,
+  "h": 1137
+ }
+}

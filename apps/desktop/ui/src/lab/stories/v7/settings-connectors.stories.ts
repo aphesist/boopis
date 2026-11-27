@@ -83,7 +83,8 @@ const collection: Story = {
     'nothing installed yet': view(['empty'], {}, null, undefined, bridge([], false, COLL)),
     'the search narrows both lists': view(['variant'], {}, null, typeIn('base'), bridge(EVERY, false, COLL)),
     'nothing matches the search': view(['empty', 'variant'], {}, null, typeIn('zzzzqq'), bridge(EVERY, false, COLL)),
-    'a connector with several ways (its menu)': { ...view(['open'], {}, null, async (root) => { root.querySelector<HTMLElement>('[data-add-entry="context7"]')?.click(); await new Promise((r) => { setTimeout(r, 250); }); }, bridge(MAIN, false, COLL)), overlay: { anchor: '[data-add-entry="context7"]', layer: '[data-kit~="Menu"]' } },
+    /* context7 is installed in MAIN, and an added row shows its state, not Add: the menu opens with nothing installed */
+    'a connector with several ways (its menu)': { ...view(['open'], {}, null, async (root) => { root.querySelector<HTMLElement>('[data-add-entry="context7"]')?.click(); await new Promise((r) => { setTimeout(r, 250); }); }, bridge([], false, COLL)), overlay: { anchor: '[data-add-entry="context7"]', layer: '[data-kit~="Menu"]' } },
     'long names': view(['long'], {}, null, undefined, bridge([info({ name: LONG, url: 'https://mcp.example.com/' + 'a-very-long-path/'.repeat(6), command: null, args: [] }), ...EVERY.slice(0, 2)], false, COLL.map((c, i) => (i === 0 ? { ...c, name: 'A connector with an extremely long name that goes on and on without a sensible place to stop', publisher: 'A publisher whose name is also far too long to fit on one line' } : c)))),
     'the list could not be read': view(['error'], {}, null, undefined, bridge([], true, COLL)),
     'row focus': { ...view(['focus'], {}, null, undefined, bridge(MAIN, false, COLL)), force: [{ sel: '[data-add-entry]', state: 'focus' as const }] },

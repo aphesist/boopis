@@ -1,0 +1,112 @@
+{
+ "a-card-two-actions-no-way-out@dark": {
+  "sha": "e6bb381544b0b048ed8f25d1364fda1e435fea43",
+  "w": 1440,
+  "h": 900
+ },
+ "a-card-two-actions-no-way-out@light": {
+  "sha": "29f55a81b9c4a44cf23d57e2198ae96822f9b52c",
+  "w": 1440,
+  "h": 900
+ },
+ "a-notice-over-the-card@dark": {
+  "sha": "95f7f9b843badaba5b71dd2fedc77692fe0b9ae5",
+  "w": 1440,
+  "h": 900
+ },
+ "a-notice-over-the-card@light": {
+  "sha": "5109388206fdae0a2fc6df96fa4917f04178edf1",
+  "w": 1440,
+  "h": 900
+ },
+ "a-primary-that-works@dark": {
+  "sha": "cca5fa88d652a86599345511751535c309eb6e82",
+  "w": 1440,
+  "h": 900
+ },
+ "a-primary-that-works@light": {
+  "sha": "9f4d6d611f8958a1e163c05dba92a5421536e365",
+  "w": 1440,
+  "h": 900
+ },
+ "a-status-in-place-of-the-actions@dark": {
+  "sha": "8d06481471619e79e7a3646eed45cbc6330ae464",
+  "w": 1440,
+  "h": 900
+ },
+ "a-status-in-place-of-the-actions@light": {
+  "sha": "8e5033518301407569066b80251f26e37352eb60",
+  "w": 1440,
+  "h": 900
+ },
+ "long@dark": {
+  "sha": "f72c84f1f056deb6c3f3c13ad9a08c0c1836f1f4",
+  "w": 1440,
+  "h": 900
+ },
+ "long@light": {
+  "sha": "20bb35c3cac14c5cdf0f29166debb38ef0d205e5",
+  "w": 1440,
+  "h": 900
+ },
+ "no-window-glyphs-a-tiling-desktop@dark": {
+  "sha": "f6c586dce33fe65b4a2f61141a750d369175ff0c",
+  "w": 1440,
+  "h": 900
+ },
+ "no-window-glyphs-a-tiling-desktop@light": {
+  "sha": "6e9ab4c236d676f782ddab483d7ca951fdda0a41",
+  "w": 1440,
+  "h": 900
+ },
+ "the-primary-focused@dark": {
+  "sha": "98e13f1add2abab718062122d32197c9c1b30622",
+  "w": 1440,
+  "h": 900
+ },
+ "the-primary-focused@light": {
+  "sha": "c6e391347ee034b9b5dd3a40f67ac46603b38a25",
+  "w": 1440,
+  "h": 900
+ },
+ "the-primary-hovered@dark": {
+  "sha": "65ba54e748f2efa8da18243a68fcab2cd851b177",
+  "w": 1440,
+  "h": 900
+ },
+ "the-primary-hovered@light": {
+  "sha": "d4d7bb8c6c74010759e0fd4f37cb5334608c9926",
+  "w": 1440,
+  "h": 900
+ },
+ "the-primary-pressed@dark": {
+  "sha": "1599770563075e28cd4cfc7075433b55e5ffb694",
+  "w": 1440,
+  "h": 900
+ },
+ "the-primary-pressed@light": {
+  "sha": "333d7edfd4cc1154113fe4213f61aa24f391a430",
+  "w": 1440,
+  "h": 900
+ },
+ "the-way-out-focused@dark": {
+  "sha": "44e70d64fd02718b1c18d54f4ba105008ab4118d",
+  "w": 1440,
+  "h": 900
+ },
+ "the-way-out-focused@light": {
+  "sha": "686f1716b9de9dedf743cd0a6f4155ce18e4babb",
+  "w": 1440,
+  "h": 900
+ },
+ "typical@dark": {
+  "sha": "71d65042f7b40c3b7d672590f367768d7b838ed8",
+  "w": 1440,
+  "h": 900
+ },
+ "typical@light": {
+  "sha": "386e511c53ef2ab6b564b9515d4b1b6631559b0f",
+  "w": 1440,
+  "h": 900
+ }
+}

@@ -14,7 +14,7 @@
 .hx-fr__out { margin: 0; white-space: pre-wrap; color: var(--text-dim); }
 /* O-P04: the composer 40 over the scene's foot, the recorded example's Notice 8 under it, the reading's menu above its mark */
 .hx-fr__try { position: absolute; inset: 0; }
-.hx-fr__trycomp { position: absolute; left: 50%; bottom: calc(var(--sp-6) + var(--sp-2)); translate: -50% 0; width: var(--col-w); display: flex; flex-direction: column; }
+.hx-fr__trycomp { position: absolute; left: 50%; bottom: calc(var(--sp-6) + var(--sp-2)); translate: -50% 0; width: min(var(--col-w), calc(100% - 2 * var(--sp-5))); display: flex; flex-direction: column; }
 .hx-fr__trycomp > [data-kit~="Notice"] { position: absolute; left: 0; right: 0; top: calc(100% + var(--sp-2)); }
 .hx-fr__try > [data-fr-reading] { position: absolute; z-index: 1; }
 

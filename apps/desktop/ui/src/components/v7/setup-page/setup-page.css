@@ -14,9 +14,11 @@
 .k7-setup__hero .k7-logomark { --ns-logo: var(--setup-hero-logo); }
 /* what the step shows: a card 520 wide, 28 under the lede; a scene (Try it) its own 300 */
 .k7-setup__body { width: var(--setup-card-w); max-width: calc(100% - 2 * var(--sp-5)); margin-top: var(--setup-gap); }
+/* a long list (every way to connect) scrolls in its place, clear of the actions at 640; 4 of room keeps its rings and shadows whole */
+.k7-setup:not([data-scene]) .k7-setup__body { box-sizing: content-box; max-height: var(--setup-scene-h); overflow-y: auto; overscroll-behavior: contain; padding: var(--sp-1); margin-top: calc(var(--setup-gap) - var(--sp-1)); }
 .k7-setup[data-scene] .k7-setup__body { position: relative; width: var(--setup-scene-w); height: var(--setup-scene-h); }
 /* the actions at 640 from the window's top, stacked, 288 wide; a status line in their place */
-.k7-setup__acts { position: absolute; top: var(--setup-acts-y); left: 50%; translate: -50% 0; display: flex; flex-direction: column; gap: var(--sp-3); width: var(--setup-acts-w); }
+.k7-setup__acts { position: absolute; top: var(--setup-acts-y); left: 50%; translate: -50% 0; display: flex; flex-direction: column; gap: var(--sp-3); width: max-content; min-width: var(--setup-acts-w); max-width: calc(100% - 2 * var(--sp-5)); }
 .k7-setup__acts > [data-kit~="Button"] { width: 100%; }
 .k7-setup__status { height: var(--ctl); display: flex; align-items: center; justify-content: center; gap: var(--sp-2); font-size: var(--fs-m); color: var(--text-dim); }
 .k7-setup__figure { font-size: var(--fs-xs); }

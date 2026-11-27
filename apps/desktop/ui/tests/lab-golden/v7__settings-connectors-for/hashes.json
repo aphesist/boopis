@@ -1,0 +1,62 @@
+{
+ "a-bot-with-a-long-name@dark": {
+  "sha": "1efb5ba07a20393f6cd3de73a1a937c06ace5ab9",
+  "w": 1416,
+  "h": 490
+ },
+ "a-bot-with-a-long-name@light": {
+  "sha": "27ae7109b0e7f348829e0c26f0917f2ec573d7f2",
+  "w": 1416,
+  "h": 490
+ },
+ "main-profile@dark": {
+  "sha": "37a78018304fa722afb7a574632a724875ae1cfc",
+  "w": 1416,
+  "h": 559
+ },
+ "main-profile@light": {
+  "sha": "ca1dc9b1eb9720ec17cdaa6c5dd27c5d779ddf35",
+  "w": 1416,
+  "h": 559
+ },
+ "one-bot-adding-from-a-command@dark": {
+  "sha": "d6ab3d7a6d012cafc868a168ca45caf390951b4c",
+  "w": 1416,
+  "h": 352
+ },
+ "one-bot-adding-from-a-command@light": {
+  "sha": "9137d92ff92cf33cfef0c70c4f6f2ef86c94552d",
+  "w": 1416,
+  "h": 352
+ },
+ "one-bot-its-own-list@dark": {
+  "sha": "fe0c5e8993b18248fd5ec74d8bab68de9041f145",
+  "w": 1416,
+  "h": 552
+ },
+ "one-bot-its-own-list@light": {
+  "sha": "445842a567aa1552ee0dd9684c8c9308871ce14e",
+  "w": 1416,
+  "h": 552
+ },
+ "one-bot-none-yet@dark": {
+  "sha": "bf1cf6e4f52fe198e7a35c360800d2b5a44b7a9b",
+  "w": 1416,
+  "h": 496
+ },
+ "one-bot-none-yet@light": {
+  "sha": "ecd7c898767c7e398b63305758fe7f59925a8183",
+  "w": 1416,
+  "h": 496
+ },
+ "one-bot-the-list-could-not-be-read@dark": {
+  "sha": "852d7826c2666655caa483294d6cb778d6e7b51c",
+  "w": 1416,
+  "h": 496
+ },
+ "one-bot-the-list-could-not-be-read@light": {
+  "sha": "091694d547874959e22f6b72bc038b365d1148a5",
+  "w": 1416,
+  "h": 496
+ }
+}

@@ -190,7 +190,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
         const rows = settingsOf(form);
         return page({
           title: 'Settings boopis needs', lede: 'boopis changes three engine settings, and only these. It asks before it changes any other.',
-          bodyHTML: kit.html.card({ variant: 'settings', rows: rows.map((r) => ({ label: r.label, subHTML: '<span class="k7-mono">' + esc(r.line) + '</span>', control: '<span class="hx-fr__on" aria-label="Changed">' + ui.icon('check') + '</span>' })), attrs: { 'aria-label': 'The settings it changes' } }),
+          bodyHTML: kit.html.card({ variant: 'settings', rows: rows.map((r) => ({ label: r.label, subHTML: '<span class="k7-mono">' + esc(r.line) + '</span>', control: '<span class="hx-fr__on" role="img" aria-label="Changed">' + ui.icon('check') + '</span>' })), attrs: { 'aria-label': 'The settings it changes' } }),
           actions: [{ label: 'Apply the changes', primary: true, value: 'apply', busy }, { label: 'Not now', value: 'decline', disabled: busy }],
           ...(error ? { noticeHTML: kit.html.notice({ tone: 'red', icon: 'alert', text: error }) } : {})
         });
@@ -378,7 +378,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       const menu = root.querySelector<HTMLElement>('[data-fr-reading]'), m = root.querySelector<HTMLElement>('[data-fr-try] [data-mark="open"]'), box = root.querySelector<HTMLElement>('.hx-fr__try');
       if (!menu || !m || !box) return;
       const r = m.getBoundingClientRect(), b = box.getBoundingClientRect();
-      menu.style.left = String(r.left - b.left - 8) + 'px';
+      menu.style.left = String(Math.max(0, Math.min(r.left - b.left - 8, b.width - menu.offsetWidth))) + 'px';
       menu.style.bottom = String(b.bottom - r.top + 8) + 'px';
     };
 

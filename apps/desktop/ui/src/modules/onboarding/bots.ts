@@ -134,7 +134,7 @@ async function teamExchange(src: OnboardingSource, time: string): Promise<string
         answers: [{ label: 'Hold to build this team', primary: true, hold: true, value: 'build' }, { label: 'Change it', value: 'change' }, { label: 'Just you and me', value: 'alone' }], ...(S.error ? { error: S.error } : {}), attrs: { 'data-ob': 'team', 'data-plan-hash': plan.hash } })
     : kit.html.askCard({ variant: 'form', state: 'asked', who: 'Team plan', lead: kit.html.avatar({ variant: 'logomark', label: 'boopis' }), word: { text: S.error ? 'failed' : 'thinking', tone: S.error ? 'red' : 'neutral' }, ask: S.error || 'Putting a team together.', attrs: { 'data-ob': 'team' } });
   const connector = offer ? say('They can also use tools you already work in. Each one asks before it does anything.') +
-    kit.html.askCard({ variant: 'form', state: 'asked', who: 'Optional, from the Store', lead: '', word: { text: '' }, ask: '', fields: kit.html.listRow({ variant: 'item', title: offer.name, sub: offer.why, markText: letters(offer.name), action: 'Add ' + offer.name, actionAttrs: { 'data-ob-act': 'connector', 'data-value': offer.id } }),
+    kit.html.askCard({ variant: 'form', state: 'asked', who: 'Optional, from the Store', lead: '', word: { text: '' }, ask: '', fields: '<div role="list">' + kit.html.listRow({ variant: 'item', title: offer.name, sub: offer.why, markText: letters(offer.name), action: 'Add ' + offer.name, actionAttrs: { 'data-ob-act': 'connector', 'data-value': offer.id } }) + '</div>',
       foot: 'Asks before every change. Remove it any time in Settings, Connectors.', attrs: { 'data-ob': 'connector' } }) : '';
   return time + you(S.you) + say(greet) + card + connector;
 }

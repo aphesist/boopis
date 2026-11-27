@@ -1,0 +1,142 @@
+{
+ "o-b01-boopis-greets-you@dark": {
+  "sha": "f529fc1dfee11f876f5925cce4a5566382ca638f",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b01-boopis-greets-you@light": {
+  "sha": "2c939b7151980964f6f9c22109c3fe32a143e0af",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b02-what-bots-are@dark": {
+  "sha": "788f8730dcaf94e3cf22339a02ab74e5abad9cd8",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b02-what-bots-are@light": {
+  "sha": "d1674d36d19d42abb3443c6c26e31abed7e8ee7e",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b03-the-goals@dark": {
+  "sha": "69a59cb3701ca384f512bdcfb592754dd995352a",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b03-the-goals@light": {
+  "sha": "d32b0fb2a739ef375a5ac408d7fd7bae6675972a",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b03b-two-goals-picked@dark": {
+  "sha": "8b8bae83623e3b6567eb1ffe4ffa2736946d9e7b",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b03b-two-goals-picked@light": {
+  "sha": "b2fa346fd58df20fa7bd853c5d7a8e8952e38696",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b04-where-bots-work@dark": {
+  "sha": "745256f71c553ce7d2b087b471f981937e61a845",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b04-where-bots-work@light": {
+  "sha": "b491db119762ec7a9d9348c79d4c96c5e31b8163",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b05-your-name@dark": {
+  "sha": "8674b2365107ea41f7e4806bb74d4466702f0a05",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b05-your-name@light": {
+  "sha": "9af8e5899256ce03312fa0952cb45063cc129f23",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b06-the-starter-team@dark": {
+  "sha": "292993d908c3fc35902bebba6f8db30365ba4995",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b06-the-starter-team@light": {
+  "sha": "9bb5adb05ad1e3eb788677b8d7349ca785e700f5",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b07-the-approval-rules@dark": {
+  "sha": "86efd50405204ec72c56c2e9c3feb440bed21537",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b07-the-approval-rules@light": {
+  "sha": "425d264f4fe7dfc17fac267b42278daa60336393",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b08-the-build@dark": {
+  "sha": "9d78841a601e32ea20e2b740923360efc36c4459",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b08-the-build@light": {
+  "sha": "12a354ae1e912bb6ad0a055d6d2ce7a4b0c4c8fd",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b09-reach@dark": {
+  "sha": "c5653f7f523457b84b2fa9722175d772b56fe287",
+  "w": 1440,
+  "h": 900
+ },
+ "o-b09-reach@light": {
+  "sha": "98a3869f2c5d061c5c8de3be33576e32aa6712df",
+  "w": 1440,
+  "h": 900
+ },
+ "o-h01-the-hand-off@dark": {
+  "sha": "bac557ac6fcfba0a9fb2f72c0411f973ac0ee4f1",
+  "w": 1440,
+  "h": 900
+ },
+ "o-h01-the-hand-off@light": {
+  "sha": "89b4dd28208b634b6d9a8a54bc4be6f3ab2467e9",
+  "w": 1440,
+  "h": 900
+ },
+ "o-s01-add-a-folder@dark": {
+  "sha": "9e66a481022cd51996940ccfb0d5e95df71b80e8",
+  "w": 1440,
+  "h": 900
+ },
+ "o-s01-add-a-folder@light": {
+  "sha": "7a0d3f970384a10fd7e6bbd211d38a15486f1e72",
+  "w": 1440,
+  "h": 900
+ },
+ "o-s03-how-careful@dark": {
+  "sha": "42507321f0989914fb1a49106c47db46fdcbf1aa",
+  "w": 1440,
+  "h": 900
+ },
+ "o-s03-how-careful@light": {
+  "sha": "9d54365f4b4d990ca943c90bae6dfaaaee9b3db7",
+  "w": 1440,
+  "h": 900
+ },
+ "o-s04-ready@dark": {
+  "sha": "0ca4f8d25ea1993dc999d456fa03999198eaf495",
+  "w": 1440,
+  "h": 900
+ },
+ "o-s04-ready@light": {
+  "sha": "ae6c3755eb1a7bfe736732ee5ac0c02087366176",
+  "w": 1440,
+  "h": 900
+ }
+}
