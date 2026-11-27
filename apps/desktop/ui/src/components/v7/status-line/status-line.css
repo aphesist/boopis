@@ -1,0 +1,22 @@
+/* StatusLine's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── StatusLine (34): one line, one shimmer (2.2 s, steps(60)); the session's mark breathes (1.4 s) ── */
+/* kit.css `.activity`: 15 on the thread's own 20 line */
+.k7-status { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; font-size: var(--fs-l); line-height: var(--lh-m); color: var(--text-dim); }
+/* who is replying, as a stack (board 12): the boards set the stack's orbs on the phrase's baseline, 3 under the stack's own top */
+.k7-status > .ui-stack { margin-top: var(--gap-xs); margin-bottom: calc(-1 * var(--gap-xs)); }
+.k7-status__phrase { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k7-status__count { font-size: var(--fs-xs); color: var(--text-dim); }
+.k7-status__mark { display: inline-grid; place-items: center; color: var(--text-dim); }
+.k7-status__mark[data-pulse] { animation: k7-breath var(--dur-breathe) var(--ease-io) infinite; transform-origin: 50% 50%; }
+@keyframes k7-breath { 0%, 100% { opacity: .55; transform: scale(.92); } 50% { opacity: 1; transform: scale(1); } }
+/* the sweep only brightens: its rest colour is --text-dim (section 14) */
+.k7-shimmer {
+  background: linear-gradient(90deg, var(--text-dim) 0%, var(--text-dim) 40%, var(--text) 50%, var(--text-dim) 60%, var(--text-dim) 100%);
+  background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: k7-sweep var(--dur-shimmer) steps(60) infinite;
+}
+@keyframes k7-sweep { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .k7-shimmer { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--text-dim); animation: none; }
+}

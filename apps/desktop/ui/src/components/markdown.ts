@@ -24,7 +24,7 @@ import type { BotLike } from './bot-state';
 import { html } from './html';
 import { icon } from './icons';
 import { orbHtml } from './orb';
-import { inlineChip } from './v7/inline';
+import { inlineChip } from './v7/inline-chip/inline-chip';
 import rule from '../../../../shared/data/room-mentions.json';
 
 /** the engine's mention pattern (hosted_room_discussion._MENTION_RE, re.IGNORECASE), unchanged, as the shared rule states it */

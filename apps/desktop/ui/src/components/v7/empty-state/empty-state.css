@@ -1,0 +1,11 @@
+/* EmptyState's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── EmptyState: one line in --text-dim, at most one action ── */
+.k7-empty { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); padding: var(--sp-5) var(--sp-4); text-align: center; }
+.k7-empty__text { margin: 0; max-width: 80ch; font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text-dim); }   /* the boards' `.s` */
+/* in a list (board S41, sessiontab2.js emptyInbox: 18 over the line, 10 beside it, inside the list's own 10) */
+.k7-empty[data-place="list"] { align-items: flex-start; padding: var(--pad-empty-list) var(--gap-row); text-align: start; }
+/* the floating Notice's layer (notify.ts): one at a time, it fades in toward its place and out (--dur-2; reduced motion: at once).
+   Where it sits, and above what, is the host's (the shell: the top of the work, on the column's centre line) */
+.k7-notify { position: absolute; pointer-events: none; opacity: 0; translate: 0 calc(-1 * var(--sp-1)); transition: opacity var(--dur-2) var(--ease-sharp), translate var(--dur-2) var(--ease-sharp); }
+.k7-notify[data-in] { opacity: 1; translate: 0 0; pointer-events: auto; }

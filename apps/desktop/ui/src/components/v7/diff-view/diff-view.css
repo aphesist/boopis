@@ -1,0 +1,38 @@
+/* DiffView's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── DiffView (15): one grid [36 gutter][16 sign][code]; the comment on the code column; 12 sides ── */
+.k7-diff { --sq-bg: var(--bg-3); --sq-line: var(--line); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line); border-radius: var(--r-bubble); min-width: 0; overflow: hidden; }
+.k7-diff[data-sq-on]:not(#sq) { box-shadow: none; }
+/* a DiffView held by a Well (a setup form's config change, 6d) is the Well's content: the Well draws the frame, and the diff takes its corner */
+.k7-well > .k7-diff { --sq-bg: transparent; --sq-line: transparent; background: none; box-shadow: none; border-radius: inherit; }
+.k7-well > .k7-diff > .k7-diff__body { border-end-start-radius: inherit; border-end-end-radius: inherit; }   /* the lines end in the Well's lower corners */
+.k7-well > .k7-diff > .k7-diff__body:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }   /* its ring inside the Well that clips it */
+.k7-diff__head { display: flex; align-items: center; gap: var(--sp-2); height: var(--ctl-card); padding: var(--sp-1) var(--sp-3); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text); }
+.k7-diff__head > .k7-ell { flex: 1 1 auto; }
+/* a file of the tools' Diff folds by its head (board S24: `.dv-h`, 40 tall): the chevron turns down while it is open */
+.k7-diff[data-disclose] > .k7-diff__head { width: 100%; height: var(--pill-h); box-sizing: border-box; text-align: start; border-radius: var(--r-bubble); }
+.k7-diff[data-disclose] > .k7-diff__head:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
+.k7-diff__chev { flex: none; transition: transform var(--dur-1) var(--ease-sharp); }
+.k7-diff[data-open] > .k7-diff__head > .k7-diff__chev { transform: rotate(90deg); }
+.k7-diff[data-disclose]:not([data-open]) > .k7-diff__body { display: none; }
+.k7-diff__body { padding-bottom: var(--sp-2); overscroll-behavior: contain; }
+.k7-diff__body:focus-visible, .k7-diff__col:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
+.k7-diff[data-variant="split"] > .k7-diff__body { overflow-x: visible; }
+.k7-diff__split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.k7-diff__col { min-width: 0; overflow-x: auto; overscroll-behavior: contain; }
+.k7-diff__col + .k7-diff__col { box-shadow: inset var(--hl) 0 0 var(--hair); }
+.k7-diff__row { display: grid; grid-template-columns: var(--diff-n) var(--diff-g) minmax(0, 1fr); padding: 0 var(--sp-3); font-family: var(--mono); font-size: var(--fs-xs); line-height: var(--lh-m); letter-spacing: 0; white-space: pre; color: var(--text); }
+.k7-diff__n { color: var(--text-dim); text-align: end; padding-inline-end: var(--sp-2); }
+.k7-diff__g { color: var(--text-dim); }
+.k7-diff__row[data-sign="add"] { background: color-mix(in srgb, var(--add) 12%, transparent); }
+.k7-diff__row[data-sign="add"] .k7-diff__g { color: var(--add); }
+.k7-diff__row[data-sign="del"] { background: color-mix(in srgb, var(--del) 12%, transparent); }
+.k7-diff__row[data-sign="del"] .k7-diff__g { color: var(--del); }
+.k7-diff__comment {
+  --sq-bg: var(--bg-2); --sq-line: var(--line); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line);
+  margin: var(--gap-s) var(--sp-3) var(--gap-s) calc(var(--sp-3) + var(--diff-n) + var(--diff-g)); padding: var(--gap-row) var(--sp-3);
+  border-radius: var(--r-field); font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-s); white-space: normal;
+}
+.k7-diff__comment[data-sq-on]:not(#sq) { box-shadow: none; }
+.k7-diff__who { display: flex; align-items: center; gap: var(--gap-s); margin-bottom: var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
+.k7-diff__text { outline: none; }

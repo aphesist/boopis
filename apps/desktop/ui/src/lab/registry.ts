@@ -1,8 +1,14 @@
-/* Every story, found by file name: `src/lab/stories/<area>/<thing>.stories.ts`, each exporting its story as `default`
-   (or an array of stories). The lab, the checker and the coverage gate all read this list. */
+/* Every story, found by file name: `src/lab/stories/<area>/<thing>.stories.ts`, and a v7 kit component's beside it in its folder
+   (`src/components/v7/<name>/<name>.stories.ts`), each exporting its story as `default` (or an array of stories). The lab, the checker
+   and the coverage gate all read this list. */
 import type { Allowance, Story } from './types';
 
-const mods = import.meta.glob<{ default: Story | readonly Story[] }>('./stories/**/*.stories.ts', { eager: true });
+type StoryModule = { default: Story | readonly Story[] };
+const own = import.meta.glob<StoryModule>('./stories/**/*.stories.ts', { eager: true });
+const kitOwn = import.meta.glob<StoryModule>('../components/v7/*/*.stories.ts', { eager: true });
+/* a kit component's stories sort where they always did, as if they were still stories/kit/<name>.stories.ts: the list's order is the
+   lab's and the checker's order */
+const mods: Record<string, StoryModule> = { ...own, ...Object.fromEntries(Object.entries(kitOwn).map(([k, m]) => ['./stories/kit/' + (k.split('/').pop() ?? k), m])) };
 
 export const STORIES: readonly Story[] = Object.keys(mods).sort().flatMap((k) => {
   const d = mods[k]?.default;

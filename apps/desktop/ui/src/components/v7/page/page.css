@@ -1,0 +1,15 @@
+/* Page's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── Page (2) ── */
+.k7-page { display: block; min-width: 0; background: var(--bg-2); color: var(--text); }
+.k7-page__column { width: var(--col-w); max-width: calc(100% - 2 * var(--sp-5)); margin: 0 auto; padding: var(--sp-5) 0; }
+.k7-page[data-variant="settings"] { padding: calc(var(--pad-set-gap) + var(--gap-hair)) var(--pad-set-page) var(--pad-set-page) var(--sp-2); background: transparent; }   /* board 14's `.setbody`: 22 28 28 8, and its title 2 down */
+.k7-page[data-variant="settings"] > .k7-page__head { margin-bottom: var(--pad-set-gap); }   /* `.set-title`: its 18 under it collapses into the first `.set-head`'s 22 (the head is not its first-of-type) */
+.k7-page[data-variant="settings"] > .k7-page__body { gap: var(--pad-set-gap); }   /* `.set-head`: 22 over each section's head */
+.k7-page__head { display: flex; align-items: center; gap: var(--sp-4); margin-bottom: var(--sp-4); }
+.k7-page__title { flex: 1 1 auto; margin: 0; font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 500; color: var(--text); }
+.k7-page__body { display: flex; flex-direction: column; gap: var(--sp-5); min-width: 0; }
+/* a quiet line in a settings page (7a: what a list does not say in its rows, a status while a part is read) */
+.k7-page__note { margin: 0 var(--sp-1); font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); }
+.k7-section { display: flex; flex-direction: column; min-width: 0; }
+.k7-section > .k7-shead { padding: 0 var(--sp-1) var(--sp-2); }

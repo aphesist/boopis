@@ -1,0 +1,38 @@
+/* WindowChrome's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── WindowChrome (1): the boards' `.drag` (kit.css, screens.js chrome): a 56 px drag region, its controls from y = 10: the toggle over
+   the rail's middle, the title pill centred on the work (between the sidebar and the details pane), then at the end, 12 from the
+   window's edge and 8 apart: the search hint, the details button, and the window glyphs (32 x 28 cells, 2 apart, 4 further on) ── */
+.k7-chrome { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; height: var(--drag-h); padding: var(--chrome-y) var(--sp-3) 0 0; box-sizing: border-box; -webkit-app-region: drag; }
+.k7-chrome :is(button, [role="button"]) { -webkit-app-region: no-drag; }
+/* the sidebar toggle sits over the rail's middle: (88 - 36) / 2 in, (64 - 36) / 2 on the compact rail */
+.k7-chrome__start { flex: none; width: var(--sb-rail-w); display: flex; justify-content: center; }
+.k7-chrome[data-rail="b"] .k7-chrome__start { width: var(--rail-b-w); }
+.k7-chrome__centre { position: absolute; left: var(--chrome-centre, 50%); top: var(--chrome-y); transform: translateX(-50%); max-width: calc(100% - 2 * var(--sb-rail-w) - 2 * var(--ctl) - var(--sp-6)); }
+.k7-chrome__end { grid-column: 3; display: flex; align-items: flex-start; gap: var(--sp-2); }
+.k7-chrome__wc { display: inline-flex; gap: var(--gap-hair); margin-inline-start: var(--sp-1); }
+.k7-chrome__wc > .k7-ib { width: var(--wc-w); height: var(--wc-h); }
+/* the title pill: 40 tall, the orb 24 and the name 15; it opens the details pane */
+.k7-title {
+  display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--pill-h); font-size: var(--fs-l); max-width: 100%; padding: 0 var(--pad-pill-end) 0 var(--pad-pill-start); box-sizing: border-box;
+  border-radius: var(--r-pill); background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line), var(--shadow-inline); color: var(--text); white-space: nowrap;
+  transition: background-color var(--dur-out) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) { .k7-title:hover { background: var(--bg-4); transition-duration: var(--dur-1); } }
+.k7-title__name { font-size: var(--fs-l); line-height: var(--lh-l); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* a session's branch after its name (kit.css `.title-pill .sub`): mono 12 --text-dim */
+.k7-title__sub { flex: 0 100 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); letter-spacing: 0; }   /* where the pill has no more room the branch is cut first */
+.k7-title .k7-status { font-size: var(--fs-s); line-height: var(--lh-s); min-width: 0; }
+/* the search hint (S5; screens.js chrome): the word in 13 --text-quiet and its two key chips, 8 apart, 36 tall with 10 at its sides and
+   2 before the details button; no fill at rest, a pill at --hover on hover and focus; it never fades */
+.k7-search-hint {
+  display: inline-flex; align-items: center; gap: var(--sp-2); height: var(--ctl); padding: 0 var(--pad-line); margin-inline-end: var(--gap-hair); border-radius: var(--r-pill);
+  font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text-quiet); white-space: nowrap; transition: background-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+.k7-search-hint:is(:hover, :focus-visible) { background: var(--hover); color: var(--text-dim); }
+.k7-search-pill {
+  display: inline-flex; align-items: center; gap: var(--sp-2); width: var(--search-pill-w); height: var(--ctl); padding: 0 var(--sp-2) 0 var(--sp-3); box-sizing: border-box;
+  border-radius: var(--r-pill); background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line), var(--shadow-inline); font-size: var(--fs-s); color: var(--text-quiet); text-align: start;
+}
+.k7-search-pill .k7-kbd { border-radius: var(--r-pill); }
+.k7-search-pill__label { flex: 1 1 auto; min-width: 0; }   /* the word takes what is left, as the kit's grow does (its own name, so a rule can name it) */

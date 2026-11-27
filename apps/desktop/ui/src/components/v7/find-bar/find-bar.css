@@ -1,0 +1,15 @@
+/* FindBar's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── FindBar (6e, derived): the Menu's floating surface as a pill, 4 around the search Field; the count in mono 12, quiet with none ── */
+.k7-find { --sq-bg: var(--bg-3); --sq-line: var(--float-line); --sq-shadow: var(--shadow-pop);
+  display: flex; align-items: center; gap: var(--gap-hair); width: var(--find-w); max-width: calc(100% - 2 * var(--sp-3)); padding: var(--pad-queue); box-sizing: border-box;
+  border-radius: var(--r-pill); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line), var(--sq-shadow); color: var(--text); }
+.k7-find[data-sq-on]:not(#sq) { box-shadow: var(--sq-shadow); }
+.k7-find__box { flex: 1 1 auto; min-width: 0; min-height: var(--ctl-s); }
+.k7-find__box > .k7-field__input { width: 0; }   /* the field takes what the count and the buttons leave */
+.k7-find__count { flex: none; min-width: 0; padding-inline: var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.k7-find__count:empty { display: none; }
+.k7-find__count[data-none] { font-family: var(--sans); color: var(--text-dim); }   /* "No matches" readable (4.5:1) in both themes; derived, no board draws it (6f) */
+/* the matches in the thread (the CSS highlight the app names `k7-find`; the one it is on, `k7-find-now`) */
+::highlight(k7-find) { background-color: var(--find-hit); color: inherit; }
+::highlight(k7-find-now) { background-color: var(--find-hit-now); color: inherit; }

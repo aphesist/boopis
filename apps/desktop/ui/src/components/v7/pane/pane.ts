@@ -1,0 +1,89 @@
+/* Pane: its view (typed props to markup) and its contract. Its look is pane.css, its stories and tests stand beside it
+   (docs/kit/RULES.md). */
+import type { BotLike } from '../../bot-state';
+import { orbHtml } from '../../orb';
+import { kitStack } from '../avatar/avatar';
+import { iconButton } from '../icon-button/icon-button';
+import { segmented } from '../segmented/segmented';
+import type { SegItem } from '../segmented/segmented';
+import { esc, glyph, kitAttrs } from '../util';
+import type { Attrs, U } from '../util';
+import { defineContract } from '../contract';
+
+/* ── Pane (3): details (356: a bot's, a room's, a session's) or tools (520, resizable: Diff, Files, Terminal, PR, + Side chat); open,
+   closed, overlay under 900 ── */
+export interface PaneOpts {
+  variant?: U<'details' | 'tools' | 'session'>; open?: U<boolean>; overlay?: U<boolean>; title?: U<string>; bot?: U<BotLike>; tab?: U<string>; sideChat?: U<boolean>;
+  body?: U<string>; label?: U<string>; attrs?: U<Attrs>;
+  /** details of a room: its members' stack (at 32, the orbs still) heads the pane in place of one orb, and there is no Activity |
+      Library (a room has no library); no board draws a room's details (an owner question): it follows a bot's */
+  members?: U<readonly BotLike[]>;
+  /** `session` (board S40): the session's name with its overflow at the end (`more`: the menu's button, drawn only where the menu holds
+      something), and under it where it works: the folder and the branch, in mono */
+  folder?: U<string>; branch?: U<string>; more?: U<boolean>;
+  /** `tools`: false draws the one tool there is alone, with no strip of tabs (S24's Diff until a second tab exists); `summary` (markup)
+      then stands where the tabs would, before the close button */
+  tabs?: U<boolean>; summary?: U<string>;
+  /** `details` and `session`: what else shares the pane, as tabs over its head (a mod's pane beside the session's details) */
+  strip?: U<{ label: string; items: readonly SegItem[]; value: string }>;
+}
+export function pane(o: PaneOpts): string {
+  const v = o.variant ?? 'details';
+  const a = kitAttrs('Pane', { 'data-variant': v, 'data-open': o.open === false ? null : '', 'data-overlay': o.overlay ? '' : null, role: 'complementary', 'aria-label': o.label ?? (v === 'tools' ? 'Tools' : 'Details'), ...(o.attrs ?? {}) });
+  const body = '<div class="k7-pane__body">' + (o.body ?? '') + '</div></aside>';
+  if (v === 'tools') {
+    const tabs: SegItem[] = [{ value: 'diff', label: 'Diff' }, { value: 'files', label: 'Files' }, { value: 'terminal', label: 'Terminal' }, { value: 'pr', label: 'PR' }, ...(o.sideChat ? [{ value: 'chat', label: 'Side chat' }] : [])];
+    return '<aside class="k7-pane"' + a + '><div class="k7-pane__grip" role="separator" aria-orientation="vertical" aria-label="Resize the tools" tabindex="0" aria-valuenow="520" aria-valuemin="356" aria-valuemax="900"></div>' +
+      '<div class="k7-pane__tabs">' + (o.tabs === false ? '<div class="k7-pane__summary">' + (o.summary ?? '') + '</div>' : segmented({ label: 'Tools', items: tabs, value: o.tab ?? 'diff', variant: 'tabs' })) + '<span class="k7-grow"></span>' + iconButton({ icon: 'close', label: 'Close the tools', variant: 'tinted', attrs: { 'data-pane-close': '' } }) + '</div>' + body;
+  }
+  const strip = o.strip ? '<div class="k7-pane__tabs">' + segmented({ label: o.strip.label, items: o.strip.items, value: o.strip.value, variant: 'tabs' }) + '</div>' : '';
+  if (v === 'session') {
+    const where = (o.folder ? glyph('folder') + '<span class="k7-mono k7-ell">' + esc(o.folder) + '</span>' : '') + (o.branch ? glyph('fork') + '<span class="k7-mono k7-ell">' + esc(o.branch) + '</span>' : '');
+    return '<aside class="k7-pane"' + a + '>' + strip + (o.title === undefined ? '' : '<div class="k7-pane__head"><div class="k7-pane__title"><h2 class="k7-pane__name">' + esc(o.title) + '</h2>' +
+      (o.more ? iconButton({ icon: 'more', label: 'More for this session', variant: 'tinted', haspopup: 'menu', attrs: { 'data-pane-more': '' } }) : '') + '</div>' +
+      (where ? '<div class="k7-pane__where">' + where + '</div>' : '') + '</div>') + body;
+  }
+  if (o.members) {
+    return '<aside class="k7-pane"' + a + '>' + strip + '<div class="k7-pane__head">' + kitStack(o.members, 32, { max: 6, surface: '--bg-pane' }) + '<h2 class="k7-pane__name">' + esc(o.title ?? '') + '</h2></div>' + body;
+  }
+  return '<aside class="k7-pane"' + a + '>' + strip + '<div class="k7-pane__head">' + (o.bot ? orbHtml({ ...o.bot, state: 'idle', attention: null }, { size: 64, live: true, motion: 'lively', mode: 'fixed', surface: '--bg-pane' }) : '') + '<h2 class="k7-pane__name">' + esc(o.title ?? '') + '</h2>' +
+    segmented({ label: 'Details', items: [{ value: 'activity', label: 'Activity' }, { value: 'library', label: 'Library' }], value: o.tab ?? 'activity' }) + '</div>' + body;   /* no "More" in its corner: board 11 draws none there (the chrome's controls float over the pane's top) */
+}
+
+/** what Pane promises: read by the docs (pnpm kit:docs) and checked by contract.test.ts */
+export const contract = defineContract<PaneOpts>({
+  name: 'Pane',
+  folder: 'pane',
+  layer: 'surface',
+  summary: 'The right side: details (356: a bot\'s, a room\'s, a session\'s) or the tools (520, resizable: Diff, Files, Terminal, PR, Side chat). Open, closed, or an overlay under 900.',
+  exports: ['pane'],
+  props: {
+    variant: 'details (the default), tools or session',
+    open: 'false: closed',
+    overlay: 'an overlay (under 900)',
+    title: 'its name',
+    bot: 'details: the bot whose orb heads it',
+    tab: 'the tab chosen (Activity, Library; or a tool)',
+    sideChat: 'tools: a Side chat tab',
+    body: 'what it holds, as markup',
+    label: 'its accessible name',
+    attrs: 'extra attributes on its root: the app\'s handles (an id, data-*, aria-*)',
+    members: 'a room\'s details: its members\' stack heads it',
+    folder: 'session: the folder it works in',
+    branch: 'session: the branch',
+    more: 'session: the overflow menu\'s button',
+    tabs: 'tools: false draws the one tool alone, with no tabs',
+    summary: 'tools without tabs: what stands where the tabs would',
+    strip: 'what else shares the pane, as tabs over its head'
+  },
+  events: [],
+  states: ['data-variant', 'data-open', 'data-overlay'],
+  parts: ['k7-pane__head', 'k7-pane__tabs', 'k7-pane__grip', 'k7-pane__body'],
+  tokens: [
+    '--bg-pane', '--ctl-s', '--focus-w', '--fs-l', '--fs-s', '--fs-xs', '--gap-s', '--hair', '--hl', '--lh-l', '--lh-m', '--lh-s',
+    '--lh-xs', '--pad-chrome', '--pad-pane-top', '--pad-pane-top-session', '--pane-sec-top', '--right-w', '--shadow-modal',
+    '--sp-1', '--sp-2', '--sp-3', '--sp-4', '--text', '--text-dim', '--tools-w'
+  ],
+  a11y: 'role="complementary" named Details or Tools; the tools\' grip is a focusable vertical separator with its value.',
+  boards: []
+});

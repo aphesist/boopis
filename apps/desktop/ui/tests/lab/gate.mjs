@@ -2,7 +2,7 @@
 
    The v7 checks (rules.mjs rows with `v7: true`) are report-only until the v7 kit lands: today's v6 screens fail them by design and
    the kit replaces those screens. The switch is LAB_V7_BLOCKING: unset or 0, a v7 finding is printed and counted but does not fail
-   the job; "kit", it blocks on the v7 kit's own stories (src/lab/stories/kit/) and source (src/components/v7/), which are built to
+   the job; "kit", it blocks on the v7 kit's own stories (ids kit/..., in src/components/v7/<name>/) and source (src/components/v7/), which are built to
    pass it, and is reported for the v6 screens wave C moves; 1, it blocks everywhere. ci.yml sets "kit" since kit-v7.
 
    node tests/lab/gate.mjs [lab-report/summary.json] [--orbs lab-report-orbs/summary.json] */

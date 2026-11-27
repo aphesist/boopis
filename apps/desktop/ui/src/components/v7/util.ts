@@ -24,3 +24,5 @@ export function idFrom(prefix: string, text: string): string {
   for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
   return prefix + '-' + (h >>> 0).toString(36);
 }
+/** the root attributes of a component that is a Block (an AskCard, a ToolRow, a FilesCard): its frame drawn by squircle.ts */
+export const blockAttrs = (name: string, more: Attrs): string => kitAttrs(name, { 'data-block': '', 'data-sq': '', 'data-sq-mode': 'frame', ...more });

@@ -30,7 +30,7 @@ describe('the legacy clip property and clip-path in the dock', () => {
     expect(users.sort()).toEqual([]);
   });
   it('the dock has no clip-path', () => {
-    const DOCK = SOURCES.filter((p) => p.startsWith('src/modules/dock/') || p === 'src/components/v7/dock.ts' || p === 'src/components/v7/dock.css');
+    const DOCK = SOURCES.filter((p) => p.startsWith('src/modules/dock/') || p.startsWith('src/components/v7/dock/'));
     const bad = DOCK.filter((p) => read(p).split('\n').some((l) => /clip-path|clipPath/.test(l) && !/^\s*(\/\/|\*|\/\*)/.test(l) && !/^\s{3}\S/.test(l)));
     expect(bad).toEqual([]);
   });
@@ -54,7 +54,7 @@ describe('nothing in the dock is centred with a transform', () => {
 
 describe('a bot past what fits stays drawn', () => {
   it('the row never hides an orb with `hidden` or `display: none`', () => {
-    const ts = read('src/modules/dock/index.ts'), css = read('src/modules/dock/dock.css') + read('src/components/v7/dock.css');
+    const ts = read('src/modules/dock/index.ts'), css = read('src/modules/dock/dock.css') + read('src/components/v7/dock/dock.css');
     expect(ts).not.toMatch(/\.hidden\s*=/);
     expect(css.split('\n').filter((l) => /k7-dock__orb[^{]*\{[^}]*display:\s*none/.test(l))).toEqual([]);
     const out = /^\.dk \.k7-dock__orb\[data-out\] \{([^}]*)\}/m.exec(css)?.[1] ?? '';

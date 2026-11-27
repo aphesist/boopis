@@ -1,0 +1,22 @@
+/* SelectorItem's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── SelectorItem (24): a quiet current value that opens a Menu; transparent until hover, radius 10 ── */
+.k7-sel {
+  display: inline-flex; align-items: center; gap: var(--gap-sel); flex: none; height: var(--ctl-s); padding: 0 var(--pad-sel-end) 0 var(--pad-sel-start);
+  border-radius: var(--r-field); font-size: var(--fs-s); line-height: var(--lh-m); color: var(--text-dim); white-space: nowrap;
+  transition: background-color var(--dur-out) var(--ease-out), color var(--dur-out) var(--ease-out);
+}
+.k7-sel[data-variant="line"] { font-size: var(--fs-xs); line-height: var(--lh-xs); letter-spacing: var(--track); }
+/* the chevron is the value's own colour (kit.css `.select`: the glyph takes the text's) */
+.k7-sel__chev { width: var(--icon-s); height: var(--icon-s); }
+.k7-sel > svg { flex: none; }
+/* a long value is cut inside its selector where the selector has no more room (a long folder name in a narrow window) */
+.k7-sel__value { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* a control that is drawn and does nothing yet (its feature is not built): it keeps its look, and only the pointer says so */
+.k7-sel[aria-disabled="true"] { cursor: default; }
+.k7-sel[aria-expanded="true"] { background: var(--hover); color: var(--text); }
+@media (hover: hover) and (pointer: fine) { .k7-sel:not([aria-disabled="true"]):hover { background: var(--hover); transition-duration: var(--dur-1); } }
+.k7-sel[data-need] { color: var(--accent-text); background: var(--accent-soft); padding: 0 var(--pad-need-end) 0 var(--pad-need-start); }
+.k7-ticks { display: inline-flex; gap: var(--gap-xs); }
+.k7-ticks > i { width: var(--tick); height: var(--tick); border-radius: var(--r-pill); background: var(--mark-off); }
+.k7-ticks > i[data-on] { background: var(--text-dim); }

@@ -1,0 +1,30 @@
+/* FilesCard's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── FilesCard (10): the boards' `.files-card` (S23): its head in 13 --text-dim, 6 between its parts, the action a tinted 28 at its end;
+   4 under it the rows, 26 tall, mono 12 in --text: a 16 file glyph, the path, its +/− at the end 8 apart ── */
+.k7-files { display: flex; flex-direction: column; width: 100%; }
+.k7-files__head { display: flex; align-items: center; gap: var(--gap-s); min-height: var(--ctl-s); margin-bottom: var(--sp-1); font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text-dim); min-width: 0; }
+.k7-files__fold { display: inline-flex; align-items: center; gap: var(--gap-s); min-width: 0; border-radius: var(--r-xs); }
+.k7-files__title { flex: none; text-align: start; }
+.k7-files__counts { display: inline-flex; gap: var(--gap-s); flex: none; font-size: var(--fs-xs); letter-spacing: 0; }
+.k7-files__head > .k7-files__counts, .k7-files__fold > .k7-files__counts { font-size: var(--fs-s); }
+.k7-files__counts > [data-tone="add"] { color: var(--add); }
+.k7-files__counts > [data-tone="del"] { color: var(--del); }
+.k7-files > .k7-files__list { display: none; }
+/* folded (or with no rows) the head is the card's last row: its action keeps the Block's own 8 from every edge */
+.k7-files:not([data-open]) > .k7-files__head, .k7-files__head:has(+ .k7-files__list:empty) { margin-bottom: 0; }
+.k7-files[data-open] > .k7-files__list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.k7-files__row { display: flex; align-items: center; gap: var(--sp-2); height: var(--line-h); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text); min-width: 0; }
+.k7-files__row > svg { flex: none; }
+.k7-files__row > .k7-ell { flex: 0 1 auto; }
+.k7-files__row > .k7-files__counts { margin-inline-start: auto; gap: var(--sp-2); }
+/* board S38 (sessiontab2.js `s18` c): how a check on the change went. The head is the check's glyph, its name in the ink at 500 and the
+   verdict; under it what the check printed in a Well in the verdict's colour (8 under the head; the boards' own corner of 10, as every
+   Well they draw: the lead's decision of 26 November), then one quiet note 6 under it */
+.k7-files[data-check] > .k7-files__head { gap: var(--sp-2); margin-bottom: 0; color: var(--text); }
+.k7-files__name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }   /* a long check's name gives way (an ellipsis) before its word and its action leave the card (6f) */
+.k7-files[data-check] > .k7-well { margin-top: var(--sp-2); border-radius: var(--r-field); }
+.k7-files[data-check="red"] > .k7-well { color: var(--red-text); }
+.k7-files[data-check] > .k7-well > .k7-well__pre { padding-inline-start: var(--sp-1); }   /* kit.css `.files-card > *`: the card's parts start 4 in, its Well's words with them */
+.k7-files[data-check] > .k7-files__list { margin-top: var(--sp-1); }
+.k7-files__note { margin: var(--gap-s) 0 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }

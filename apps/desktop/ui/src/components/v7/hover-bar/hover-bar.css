@@ -1,0 +1,19 @@
+/* HoverBar's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── HoverBar (board 11, kit.css `.row` and `.hoverbar`): beside a turn's last bubble, on its middle; shown while the turn (its
+   `.k7-thread`) is hovered or holds the focus ── */
+.k7-hoverrow { display: flex; align-items: center; gap: var(--sp-2); align-self: stretch; min-width: 0; }
+.k7-hoverrow > .k7-bubble { flex: 0 1 auto; }
+.k7-hoverbar { display: inline-flex; flex: none; gap: var(--gap-hair); margin-left: var(--gap-s); color: var(--icon-quiet); opacity: 0; transition: opacity var(--dur-1) var(--ease-out); }
+.k7-thread:is(:hover, :focus-within) .k7-hoverbar, .k7-hoverbar[data-shown] { opacity: 1; }
+.k7-hoverbar .k7-ib:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }   /* a turn has no padding to hold the ring */
+/* in the gutter (a room's member, a session's answer) the bubble keeps its own width and the bar stands after it, past the column when
+   the bubble is wide */
+.k7-gutter > .k7-hoverrow { position: relative; align-self: flex-start; max-width: min(var(--bubble-max), 100%); }   /* the row is as wide as its bubble may be, so the bar stands right after the bubble */
+.k7-gutter > .k7-hoverrow > .k7-hoverbar { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); }
+/* a window under 900 wide has no room past the column: the bar stays in the row, beside a short bubble and under a wide one */
+@media (max-width: 899px) {
+  .k7-gutter > .k7-hoverrow { flex-wrap: wrap; row-gap: var(--gap-hair); max-width: 100%; }
+  .k7-gutter > .k7-hoverrow > .k7-bubble { max-width: min(var(--bubble-max), 100%); }
+  .k7-gutter > .k7-hoverrow > .k7-hoverbar { position: static; transform: none; margin-left: 0; }
+}

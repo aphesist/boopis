@@ -1,0 +1,16 @@
+/* StatusWord's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── StatusWord (32): 12, --text-dim; amber, red, ok; with a dot (8), with a pulse ── */
+.k7-word { display: inline-flex; align-items: center; gap: var(--gap-s); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); white-space: nowrap; }
+.k7-word[data-tone="owe"] { color: var(--owe-text); }
+.k7-word[data-tone="red"] { color: var(--red-text); }
+.k7-word[data-tone="ok"] { color: var(--ok-text); }
+/* the kit's stacks sit on their box's own edge (the boards' kit.js `stack`): no room around them for a ring they do not draw */
+.k7-avatar > .ui-stack, .k7-status > .ui-stack, .k7-mention > .ui-stack, .k7-pane__head > .ui-stack, .k7-title > .ui-stack { padding: 0; }
+.k7-dot { width: var(--dot); height: var(--dot); border-radius: var(--r-pill); flex: none; background: var(--text-dim); }
+.k7-dot[data-tone="owe"] { background: var(--owe); }
+.k7-word[data-tone="owe"] .k7-dot { background: var(--owe); }
+.k7-word[data-tone="red"] .k7-dot { background: var(--red); }
+.k7-word[data-tone="ok"] .k7-dot { background: var(--ok); }
+.k7-dot[data-pulse] { animation: k7-pulse var(--dur-breathe) var(--ease-io) infinite; }
+@keyframes k7-pulse { 0%, 60%, 100% { opacity: .35; } 30% { opacity: 1; } }

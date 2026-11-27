@@ -1,0 +1,17 @@
+/* TeamPlan's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── TeamPlan (6e, derived from O-B06's team-plan block): rows 32 tall on the text inset, the mark in mono in its tone (added in the
+   accent's add green, changed dim, removed red), what it is about in --text, what changes in --text-dim; problems in red, notes quiet ── */
+.k7-plan { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.k7-plan__list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.k7-plan__row { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl-s); padding-inline: var(--pad-text); font-size: var(--fs-s); line-height: var(--lh-s); min-width: 0; }
+.k7-plan__mark { flex: none; width: var(--icon-s); text-align: center; font-size: var(--fs-s); }
+.k7-plan__row[data-mark="add"] > .k7-plan__mark { color: var(--add); }
+.k7-plan__row[data-mark="change"] > .k7-plan__mark { color: var(--text-dim); }
+.k7-plan__row[data-mark="del"] > .k7-plan__mark { color: var(--red-text); }
+.k7-plan__text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.k7-plan__target { color: var(--text); }
+.k7-plan__what { color: var(--text-dim); }
+.k7-plan__problem, .k7-plan__note { margin: 0; padding-inline: var(--pad-text); font-size: var(--fs-xs); line-height: var(--lh-xs); overflow-wrap: anywhere; }
+.k7-plan__problem { color: var(--red-text); }
+.k7-plan__note { color: var(--text-dim); }

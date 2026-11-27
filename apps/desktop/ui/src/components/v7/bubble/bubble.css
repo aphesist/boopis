@@ -1,0 +1,60 @@
+/* Bubble's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── Bubble (14): radius 18, padding 7 12, 15/22 ── */
+.k7-bubble {
+  --sq-bg: var(--bubble-agent); --sq-line: var(--bubble-ring); position: relative;
+  max-width: var(--bubble-max); padding: var(--pad-bubble-y) var(--pad-bubble-x); box-sizing: border-box; border-radius: var(--r-bubble);
+  background: linear-gradient(var(--spec), transparent 70%), var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line);
+  font-size: var(--fs-l); line-height: var(--lh-l); letter-spacing: var(--track); color: var(--text); overflow-wrap: anywhere;
+}
+.k7-bubble[data-sq-on]:not(#sq) { background: none; box-shadow: none; }
+.k7-bubble[data-sq-on]:not(#sq)::before { background: linear-gradient(var(--spec), transparent 70%), var(--sq-bg); }
+.k7-bubble[data-kind="agent"] { align-self: flex-start; }
+.k7-bubble[data-kind="user"] { --sq-bg: var(--bubble-user); --sq-line: transparent; align-self: flex-end; color: var(--bubble-user-text); background: var(--sq-bg); }
+.k7-bubble[data-kind="user"][data-sq-on]:not(#sq)::before { background: var(--sq-bg); }
+.k7-bubble > p { margin: 0; }
+/* what sits in your bubble (a mention's capsule, inline code) reads in the bubble's own ink: on the solid ink of light, or on a bot's
+   fill (18.1), the theme's text would vanish */
+.k7-bubble[data-kind="user"] { --text: var(--bubble-user-text); --text-strong: var(--bubble-user-text); --text-dim: var(--bubble-user-text); }
+.k7-bubble > .k7-well { margin: var(--sp-2) 0; }
+.k7-bubble > p + p { margin-top: var(--sp-2); }
+/* a message to you (board 12): the amber wash under its words (--owe-soft over the agent's fill, no sheen), with the "you" capsule in it */
+.k7-bubble[data-to-you] { --sq-bg: linear-gradient(var(--owe-soft), var(--owe-soft)), linear-gradient(var(--bubble-agent), var(--bubble-agent)); background: var(--sq-bg); }
+.k7-bubble[data-to-you][data-sq-on]:not(#sq)::before { background: var(--sq-bg); }
+/* the thread's gutter: a room's byline and orb, a session's brand tile (S09), 30 px in */
+.k7-gutter { position: relative; display: flex; flex-direction: column; align-items: flex-start; padding-inline-start: var(--gutter); min-width: 0; }
+.k7-gutter__orb { position: absolute; inset-inline-start: 0; bottom: var(--gap-hair); line-height: 0; }
+.k7-byline { margin: 0 0 var(--gap-xs) var(--gap-hair); font-size: var(--fs-xs); line-height: var(--lh-m); color: var(--bot-dark, var(--text-dim)); }   /* kit.css `.gname`: 12 on the 20 line, 32 in, 3 over its bubble */
+[data-theme="light"] .k7-byline { color: var(--bot-light, var(--text-dim)); }
+/* a thread (the Page's column): 6 between bubbles of one sender, 16 between senders and around blocks */
+.k7-thread { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
+.k7-thread > * + * { margin-top: var(--gap-s); }
+.k7-thread > .k7-bubble[data-kind="agent"] + .k7-bubble[data-kind="user"], .k7-thread > .k7-bubble[data-kind="user"] + :not(.k7-bubble[data-kind="user"]),
+.k7-thread > :not(.k7-bubble, .k7-btool, .k7-file) + .k7-bubble { margin-top: var(--sp-4); }
+/* a member's name starts its run 14 under what it follows (kit.css `.gname`); a system line keeps 12 over and under it (`.sysline`) */
+.k7-thread > .k7-gutter:has(> .k7-byline) { margin-top: var(--name-top); }
+.k7-thread > .k7-sys { margin-block: var(--sp-3); }
+/* the boards' own margins (kit.css): an AskCard 8 more than a bubble's 6 under what it follows, the status line 12, a time separator 12 over and 6 under */
+.k7-thread > * + .k7-ask { margin-top: calc(var(--gap-s) + var(--sp-2)); }
+.k7-thread > * + .k7-status { margin-top: var(--sp-3); }
+/* a session's thread (boards S20 to S23, kit.css `.thread.sess`): what the agent says and does sits 30 in, under the answering model's
+   mark at the foot of the last bubble of its run (`.gm`); a tool row, the changed files and the turn's foot are as wide as the column.
+   The boards' own margins: the work line 10 under what it follows and 10 over a tool row, 8 over the answer; a tool row 6; the changed
+   files and the turn's foot 8; a question 10; the status line 12 */
+.k7-thread[data-kind="session"] > :is(.k7-disc, .k7-tool, .k7-btool, .k7-files, .k7-foot, .k7-ask, .k7-status) { margin-inline-start: var(--gutter); }
+.k7-thread[data-kind="session"] > :is(.k7-tool, .k7-files, .k7-foot) { width: auto; align-self: stretch; }
+.k7-thread[data-kind="session"] > .k7-ask { width: min(100% - var(--gutter), var(--bubble-max)); align-self: flex-start; }
+.k7-thread[data-kind="session"] > * + .k7-disc { margin-top: var(--gap-row); }
+/* a session's card of steps (its tasks) is as wide as the column, as its tool rows are; 8 under the work line */
+.k7-thread[data-kind="session"] > .k7-btool { align-self: stretch; width: auto; }
+.k7-thread[data-kind="session"] > .k7-disc + .k7-btool { margin-top: var(--sp-2); }
+/* a finished turn starts with its work line, at the column's own edge (board S23) */
+.k7-thread[data-kind="session"] > .k7-disc:first-child { margin-inline-start: 0; }
+.k7-thread[data-kind="session"] > .k7-disc + * { margin-top: var(--sp-2); }
+.k7-thread[data-kind="session"] > .k7-disc + .k7-tool { margin-top: var(--gap-row); }
+.k7-thread[data-kind="session"] > :not(.k7-disc) + .k7-tool { margin-top: var(--gap-s); }
+.k7-thread[data-kind="session"] > * + :is(.k7-files, .k7-foot) { margin-top: var(--sp-2); }
+.k7-thread[data-kind="session"] > * + .k7-ask { margin-top: var(--gap-row); }
+/* a Block of the thread's own (6e: a council while it runs) stands where a tool row stands, as wide as the column, 6 under what it follows */
+.k7-thread[data-kind="session"] > .k7-block[data-kit="Block"] { margin-inline-start: var(--gutter); align-self: stretch; width: auto; }
+.k7-thread[data-kind="session"] > * + .k7-block[data-kit="Block"] { margin-top: var(--gap-s); }

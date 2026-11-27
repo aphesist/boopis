@@ -1,0 +1,13 @@
+/* Block's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── Block (7) ── */
+.k7-block { --sq-bg: var(--bg-3); --sq-line: var(--line); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line);
+  position: relative; border-radius: var(--r-block); padding: var(--pad-block); box-sizing: border-box; min-width: 0; }
+.k7-block[data-sq-on]:not(#sq) { box-shadow: none; }
+/* S37 (kit.css `.ns-hello`): an offer: 470 wide, 14 by 16 inside, the sentence centred and balanced over the ways, 10 apart */
+.k7-block[data-variant="offer"] { display: flex; flex-direction: column; gap: var(--gap-row); width: var(--offer-w); max-width: 100%; padding: var(--pad-chip) var(--sp-4); text-align: center; color: var(--text-dim); }
+.k7-block__say { margin: 0; text-wrap: balance; }
+.k7-block__ways { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--gap-s); }
+/* a text row inside starts 4 further in, so text keeps its 12 from the Block's start; a row that starts with a control does not
+   (kit.css: `.qcard > *, .blk > *, .toolrow > * { padding-left: 4px }`, the start only: a row's end keeps the Block's own 8) */
+.k7-text { padding-inline-start: var(--pad-text); }

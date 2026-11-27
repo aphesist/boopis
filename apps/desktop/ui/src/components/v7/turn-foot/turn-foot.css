@@ -1,0 +1,21 @@
+/* TurnFoot's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── TurnFoot (37): under a finished reply. A bot's (kit.css `.meta`): the model's 14 mark and name, the time and the cost, 12 --text-dim,
+   8 apart. A session's (board S23, kit.css `.turnbar`): the checkpoint the turn left ("Checkpoint 3"), its actions as ghost 26 buttons
+   with their glyphs (Undo, Edit from here, Fork: each only where it exists), and at the end the model's 12 mark, its name, the time and
+   the cost in mono 12 --text-dim ── */
+.k7-foot { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--lh-m); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); min-width: 0; }
+.k7-foot__model { display: inline-flex; align-items: center; gap: var(--pad-kbd); }
+.k7-foot__model > svg { color: var(--text-dim); }
+.k7-foot .k7-mono { font-size: var(--fs-xs); }
+.k7-foot[data-kind="session"] { gap: var(--sp-1); min-height: var(--line-h); flex-wrap: wrap; }   /* where the column is narrower than the row (a phone's width), the model and its cost take a line of their own: never over the actions */
+.k7-foot__label { margin-inline-end: var(--gap-s); white-space: nowrap; }
+.k7-foot__acts { display: inline-flex; flex-wrap: wrap; gap: var(--sp-1); min-width: 0; }
+.k7-foot__btn { display: inline-flex; align-items: center; gap: var(--gap-s); flex: none; height: var(--line-h); padding: 0 var(--gap-row); border-radius: var(--r-pill); font-size: var(--fs-xs); line-height: var(--lh-xs); letter-spacing: var(--track); color: var(--text-dim); white-space: nowrap; }
+.k7-foot__btn > svg { flex: none; }
+.k7-foot__btn:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }   /* the ring inside the pill: the foot ends a turn, and a ring outside it stood past the turn's edge (the SystemLine's action does the same) */
+.k7-foot__btn[aria-disabled="true"] { color: var(--text-faint); cursor: default; }
+@media (hover: hover) and (pointer: fine) { .k7-foot__btn:not([aria-disabled="true"]):hover { background: var(--hover); color: var(--text); } }
+.k7-foot__meta { flex: none; white-space: pre; letter-spacing: 0; }
+.k7-foot__meta > svg { vertical-align: baseline; color: var(--text-dim); }
+.k7-foot__note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

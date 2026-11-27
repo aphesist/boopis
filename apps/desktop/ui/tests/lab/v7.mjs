@@ -9,7 +9,7 @@
    carries today's v6 class for the same job, so the checks run now on the v6 stories; kit-v7 deletes each v6 selector with the
    component it retires. */
 
-/** section 21.2, in its order: the one kit. A story file per component under src/lab/stories/kit/ (kit.single) */
+/** section 21.2, in its order: the one kit. A story file per component in its folder, src/components/v7/<kebab>/ (kit.single) */
 export const KIT_V7 = [
   'WindowChrome', 'Page', 'Pane', 'Dialog', 'Menu', 'Card', 'Block', 'ToolRow', 'AskCard', 'FilesCard', 'Queue', 'Notice',
   'SystemLine', 'Bubble', 'DiffView', 'Well', 'ListRow', 'SectionHead', 'MenuRow', 'OptionRow', 'Button', 'IconButton',
@@ -18,7 +18,7 @@ export const KIT_V7 = [
 ];
 /** counted in Page (21.2's last row), with its own story */
 export const KIT_V7_EXTRA = ['EmptyState'];
-/** the file a component's stories live in: src/lab/stories/kit/<kebab>.stories.ts */
+/** a component's folder and the name of its files: src/components/v7/<kebab>/<kebab>.stories.ts */
 export const kebab = (name) => name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 
 /** names section 21 merged into another component (LAB-v7 section 4, kit.single): any use in the UI's source fails */

@@ -1,0 +1,6 @@
+/* TimeSeparator's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── TimeSeparator (38): 12 --text-dim, centred; "NEW" in the accent ── */
+.k7-time { display: flex; align-items: center; justify-content: center; gap: var(--gap-row); margin: var(--sp-3) 0 var(--gap-s); padding: var(--gap-s) 0; font-size: var(--fs-xs); line-height: var(--lh-m); color: var(--text-dim); }
+.k7-time[data-unread] { color: var(--accent-text); letter-spacing: .04em; font-size: var(--fs-2xs); }
+.k7-time[data-unread]::before, .k7-time[data-unread]::after { content: ''; flex: 1; height: var(--hl); background: color-mix(in srgb, var(--accent-text) 40%, transparent); }

@@ -1,0 +1,34 @@
+/* Field's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── Field (26): 36, radius 10, transparent with --line-field (3:1); a search field is a pill at --fill-2 ── */
+.k7-field { display: flex; flex-direction: column; gap: var(--gap-label); min-width: 0; }
+.k7-field__label { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
+.k7-field__opt { color: var(--text-quiet); }
+/* light's --text-quiet is 3.7:1, under the text floor (section 14): there the note takes --text-dim (an owner question) */
+[data-theme="light"] .k7-field__opt { color: var(--text-dim); }
+.k7-field__box {
+  display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl); padding: 0 var(--pad-field); box-sizing: border-box;
+  --field-r: var(--r-field); border-radius: var(--field-r); background: transparent; box-shadow: inset 0 0 0 var(--hl) var(--line-field); color: var(--text);
+  transition: box-shadow var(--dur-out) var(--ease-out);
+}
+.k7-field__box[data-kind="search"] { border-radius: var(--r-pill); background: var(--fill-2); box-shadow: inset 0 0 0 var(--hl) var(--line); padding: 0 var(--sp-2) 0 var(--pad-field); }   /* a kbd 8 in from the pill's end: 18 - 8 = 10, a pill (8.2) */
+.k7-field__box[data-kind="multiline"] { align-items: flex-start; padding: var(--pad-field-y) var(--pad-field); }
+.k7-field__glyph { width: var(--icon-s); height: var(--icon-s); color: var(--icon-quiet); }
+.k7-field__input { flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text); outline: none; resize: none; }
+.k7-field__input::placeholder { color: var(--text-quiet); }
+.k7-field__input:focus-visible { outline: none; }   /* the box draws the ring (`:focus-within` below); the input never draws a second one */
+.k7-field__input.k7-mono { font-family: var(--mono); font-size: var(--fs-xs); }
+@media (hover: hover) and (pointer: fine) { .k7-field__box:hover { box-shadow: inset 0 0 0 var(--hl) var(--text-quiet); transition-duration: var(--dur-1); } }
+.k7-field__box:focus-within { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-off); }
+.k7-field[data-error] .k7-field__box { box-shadow: inset 0 0 0 var(--hl) var(--red); }
+.k7-field__error { margin: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--red-text); }
+/* a Field round another kit part (6d): the label over it, or beside it on one line (a Switch at the line's end) */
+.k7-field__line { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); min-height: var(--ctl-s); }
+.k7-field__line > .k7-field__label { font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text); }
+.k7-field[data-error] :is(.k7-seg, .k7-sel) { box-shadow: inset 0 0 0 var(--hl) var(--red); }
+.k7-field__hint { margin: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow-wrap: anywhere; }
+/* a secret's Show and Hide sit at the box's end, 4 in from it */
+.k7-field__box[data-secret] { padding-inline-end: var(--sp-1); }
+.k7-field__box[data-secret] > .k7-btn { flex: none; border-radius: max(var(--r-floor), calc(var(--field-r) - var(--sp-1))); }   /* concentric with the box's corner, 4 in (R-corner-3): 10 in a 14 field, not a pill */
+.k7-field[data-disabled] .k7-field__box { box-shadow: inset 0 0 0 var(--hl) var(--line); }
+.k7-field[data-disabled] :is(.k7-field__input, .k7-field__label) { color: var(--text-faint); }

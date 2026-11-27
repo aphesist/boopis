@@ -1,0 +1,16 @@
+/* Mark's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── Mark (31): the primitive is in base.css; here the blank's gap, its words and the info label's button ── */
+.k7-blank { white-space: nowrap; }
+.k7-gap { display: inline-block; min-width: var(--mark-gap-ch); vertical-align: baseline; text-align: end; }
+.k7-gap > .k7-count { margin-inline-start: var(--gap-s); }
+.k7-blank__word { font-size: var(--fs-xs); color: var(--text-dim); margin-inline-start: var(--gap-s); }
+.k7-blank__word[data-tone="owe"] { color: var(--owe-text); }
+.k7-guess { color: var(--text-dim); }
+.k7-info { display: inline; font: inherit; color: inherit; border-radius: var(--r-xs); }
+
+/* ── MarkStack (6e, derived from 6d's askers): model marks overlapped a third of a mark, each cut clear of the one before by its
+   surface's ring, then the "+N" chip (surfaces.css .k7-ask__more) clear of them ── */
+.k7-marks { display: inline-flex; align-items: center; gap: var(--gap-hair); flex: none; line-height: 0; vertical-align: middle; }
+.k7-marks__one { display: inline-grid; place-items: center; border-radius: var(--r-pill); }
+.k7-marks__one + .k7-marks__one { margin-inline-start: calc(var(--s) / -3 - var(--gap-hair)); }

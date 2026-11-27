@@ -9,7 +9,7 @@
      `data-theme="dark" | "light"` sits on that root or on a descendant (the dock's content is always dark, 21.4).
    - The hairline is one device pixel (elevation.hairline): 1px at 1x, 0.625px at 1.6x, 0.5px at 2x.
    - The theme customization of section 18 that is CSS: corners C (`data-radii="c"`) and the light shadows B and C
-     (`data-shadow`). The accent is any hex and is derived at run time (components/v7/theme.ts), since its text and focus
+     (`data-shadow`). The accent is any hex and is derived at run time (components/v7/theme/theme.ts), since its text and focus
      shades come from a contrast search.
    - The theme-dependent board constants of the approved renders (ds-v7/src/kit.css: the composer's and floating lines, the
      bubble ring, the switch's knob and track, the segmented thumb, the card line), which the kit's components read.

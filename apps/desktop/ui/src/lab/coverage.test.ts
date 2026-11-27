@@ -17,10 +17,10 @@ const applies = (list: readonly string[], covers: readonly string[]): boolean =>
 
 describe('the lab covers', () => {
   /* the v7 kit (DESIGN-SYSTEM.md v7 21.2; LAB-v7 section 2): every template is a component, covered as kit.<name> by a story
-     under stories/kit with its typical and long states */
-  it('the v7 kit: every component, in a story of its own under stories/kit', () => {
+     in its folder (src/components/v7/<name>/<name>.stories.ts) with its typical and long states */
+  it('the v7 kit: every component, in a story of its own in its folder', () => {
     const want = Object.keys(kit.html).map((k) => 'kit.' + k);
-    expect(missing(want), 'v7 components with no story under src/lab/stories/kit').toEqual([]);
+    expect(missing(want), 'v7 components with no story in their folder (src/components/v7/<name>/)').toEqual([]);
     for (const s of STORIES.filter((x) => x.id.startsWith('kit/'))) {
       const tags = new Set(Object.values(s.states).flatMap((st) => st.tags));
       expect(['typical', 'long'].filter((t) => !tags.has(t as never)), s.id + ' lacks states').toEqual([]);

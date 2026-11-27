@@ -1,0 +1,60 @@
+/* ToolRow's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+.k7-head__mark { display: inline-grid; place-items: center; flex: none; color: var(--text-dim); }
+
+/* ── ToolRow (8) ── */
+/* a session's (boards S09 and S20, kit.css `.toolrow`): its head at least 28 tall, 8 between its parts: the model's 14 mark, the tool's
+   glyph, the name in mono 12 medium, an edit's +/−, and at the end what became of it in 12 */
+.k7-tool { display: flex; flex-direction: column; width: 100%; }
+/* a head spans the Block's top: its ring is concentric with the Block (22 - 8 = 14) */
+.k7-tool__head, .k7-files__head { border-radius: calc(var(--r-block) - var(--pad-block)); }
+.k7-tool__head { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl-s); font-size: var(--fs-s); line-height: var(--lh-m); color: var(--text-dim); min-width: 0; }
+.k7-tool__ic { color: var(--icon-quiet); }
+.k7-tool__name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: var(--fs-xs); font-weight: 500; color: var(--text); letter-spacing: 0; }
+.k7-tool__name.k7-shimmer { color: transparent; }
+@media (prefers-reduced-motion: reduce) { .k7-tool__name.k7-shimmer { color: var(--text-dim); } }   /* the still sweep's rest colour: the name above outranks the kit's own reduced-motion rule, and a running member's name vanished */
+/* a name that is words (a model's): the row's own face and size, as a model is named in a Disclosure, a menu or an asker (6f) */
+.k7-tool__name[data-face="text"] { font-family: inherit; font-size: inherit; letter-spacing: inherit; }
+.k7-tool__target { flex: 0 1 auto; }
+.k7-tool__head > .k7-files__counts { font-size: var(--fs-s); }
+.k7-tool__body { margin-top: var(--sp-2); }
+/* a decline's feedback, quoted under the head (S09): 12 --text-dim, 4 under it */
+.k7-tool__note { margin: var(--sp-1) 0 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow-wrap: anywhere; }
+.k7-tool > .k7-tool__body { display: none; }
+.k7-tool[data-open] > .k7-tool__body { display: flex; flex-direction: column; gap: var(--sp-2); }
+.k7-tool__body > .k7-steps { margin: 0; padding-inline: var(--pad-text); }
+/* the attached AskCard is the approval's head, ask and answers set into the tool row's own Block (21.3: same chips, same amber
+   word): no surface of its own, so its chips sit on the tool row's 8 inset */
+.k7-ask[data-variant="attached"] { padding: 0; background: none; box-shadow: none; width: auto; margin-top: var(--gap-s); }
+.k7-ask[data-variant="attached"] > .k7-ask__answers { justify-content: flex-end; }
+
+/* ── ToolRow, a bot's (boards 11 and 17, kit.css `.tool`): radius 18, padding 10 12, as wide as a bubble may be; its head 13 --text-dim,
+   the glyph, the tool's name in 500 --text, what it was called on, a chevron at the end ── */
+.k7-btool { --sq-bg: var(--bg-3); --sq-line: var(--line); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line);
+  align-self: flex-start; width: min(100%, var(--bubble-max)); padding: var(--gap-row) var(--sp-3); box-sizing: border-box; border-radius: var(--r-bubble); min-width: 0; }
+.k7-btool[data-sq-on]:not(#sq) { box-shadow: none; }
+/* the head is the card's one control: its ring stands the same 10 from the card's sides as from its top (its words stay 12 in, as the
+   boards draw them: kit.css `.tool`), on the corner concentric with the card's */
+.k7-btool__head { display: flex; align-items: center; gap: var(--gap-s); width: calc(100% + 2 * var(--gap-hair)); margin-inline: calc(-1 * var(--gap-hair)); padding-inline: var(--gap-hair); box-sizing: border-box; font-size: var(--fs-s); line-height: var(--lh-m); color: var(--text-dim); text-align: start; min-width: 0; border-radius: calc(var(--r-bubble) - var(--gap-row)); }
+.k7-btool__head:not([aria-expanded]) { cursor: default; }
+.k7-btool__name { flex: none; font-weight: 500; color: var(--text); }
+.k7-btool__target { flex: 0 1 auto; }
+.k7-btool__chev { transition: transform var(--dur-1) var(--ease-sharp); }
+.k7-btool[data-open] .k7-btool__chev { transform: rotate(90deg); }   /* open, the chevron points down (the boards' chevron-down) */
+.k7-btool > .k7-btool__body { display: none; }
+.k7-btool[data-open] > .k7-btool__body { display: block; }
+
+/* ── ToolRow (6e, derived): a row of a Block (a council's member): no frame of its own; its head keeps the session row's 28 height and
+   takes the corner concentric with its Block (22 - 8). The word's Tooltip (a member that failed) is reached by the keyboard. What stands
+   under the head (`after`: a task's transcript) follows 4 under it; a control at the head's end (a running task's Stop) sits on the inset */
+.k7-tool[data-row] { width: 100%; border-radius: calc(var(--r-block) - var(--pad-block)); }
+.k7-tool__head > .k7-word[data-tip] { cursor: default; border-radius: var(--r-xs); }
+/* a word that says why in its Tooltip takes the focus; in a block's corner (a task's row) a ring would not nest, so its focus is the
+   focus colour under the word (6f) */
+.k7-tool__head > .k7-word[data-tip]:focus-visible { outline: none; text-decoration: underline var(--focus-w) var(--focus); text-underline-offset: var(--gap-xs); }
+/* what stands last under a block's head (a task's Transcript) ends in the block's lower corner: concentric with it (R-corner-3; 6f) */
+.k7-tool.k7-block > .k7-tool__after > .k7-disc:last-child > .k7-disc__sum { border-end-start-radius: calc(var(--r-block) - var(--pad-block)); }
+.k7-tool__head > .k7-btn { flex: none; margin-block: calc(-1 * var(--gap-hair)); }
+.k7-tool__after { display: flex; flex-direction: column; gap: var(--sp-1); margin-top: var(--sp-1); min-width: 0; }
+/* a FilesCard row that says what happens to its file (a rewind's dry run) in words where its +/− would be */
+.k7-files__word { flex: none; margin-inline-start: auto; font-family: var(--sans); font-size: var(--fs-xs); color: var(--text-dim); }

@@ -1,0 +1,8 @@
+/* Avatar's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── Avatar (35) ── */
+.k7-avatar { display: inline-grid; place-items: center; flex: none; line-height: 0; }
+.k7-brand { width: var(--gm); height: var(--gm); border-radius: var(--r-pill); background: var(--fill-2); color: var(--text-dim); }
+/* the logomark over the new session's greeting (kit.css `.ns-mark`; sessionnew.js brand A): a 72 box, the mark at a 44 type size, in ink */
+.k7-logomark { position: relative; width: var(--ns-mark); height: var(--ns-mark); color: var(--text-strong); }
+.k7-logomark > boopis-logo { font-size: var(--ns-logo); color: var(--text-strong); }

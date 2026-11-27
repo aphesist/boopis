@@ -375,7 +375,7 @@ export interface EngineSource { state: Watch<EngineState>; restart?: () => Promi
 
 /* ───────── helpers the composer asks for ───────── */
 export interface FeedforwardSource { catalog(): readonly DecisionKind[] }
-/** what a dictation reports while it runs, in the order a source may send them (the kit's Composer draws each: components/v7/compose.ts):
+/** what a dictation reports while it runs, in the order a source may send them (the kit's Composer draws each: components/v7/composer/editing.ts):
     `preparing` the speech model is being fetched, once, before the first dictation (bytes `done` of `total`; repeat it as it grows);
     `listening` the microphone is open and it hears; `partial` the words so far of what is being said (each replaces the last partial);
     `final` a finished stretch, which is written into the text (then more partials and finals may follow, until it is cancelled);

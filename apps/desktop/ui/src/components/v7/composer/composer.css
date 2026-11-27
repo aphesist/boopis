@@ -1,0 +1,54 @@
+/* Composer's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── Composer (39): a 44 pill (radius 22 as it grows), --bg-3, --composer-line, --shadow-composer; + left; mic then voice/send ── */
+.k7-composer { display: flex; flex-direction: column; width: 100%; min-width: 0; min-height: 0; container: k7-composer / inline-size; }
+.k7-composer__box {
+  --sq-bg: var(--bg-3); --sq-line: var(--composer-line); --sq-shadow: var(--shadow-composer);
+  background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line), var(--sq-shadow);
+  display: flex; align-items: flex-end; gap: var(--sp-2); min-height: var(--composer-h); padding: var(--composer-pad); box-sizing: border-box; border-radius: var(--r-composer);
+  transition: box-shadow var(--dur-1) var(--ease-out);
+}
+.k7-composer__box[data-sq-on]:not(#sq) { box-shadow: var(--sq-shadow); }
+.k7-composer__box > .k7-ib { flex: none; }
+/* Stop (owner, 25 November): there only while a turn runs, at the start of the right cluster; the tinted 28 circle of "+" and the mic with a
+   filled rounded square in --text. It fades and grows in and out over --dur-1 (at once under reduced motion); nothing else moves */
+.k7-composer__stop { display: none; opacity: 0; transform: scale(.9); transition: opacity var(--dur-1) var(--ease-out), transform var(--dur-1) var(--ease-out), display var(--dur-1) allow-discrete; }
+.k7-composer[data-running] .k7-composer__stop { display: inline-grid; opacity: 1; transform: none; }
+@starting-style { .k7-composer[data-running] .k7-composer__stop { opacity: 0; transform: scale(.9); } }
+.k7-composer__stop-glyph { width: var(--stop-glyph); height: var(--stop-glyph); border-radius: var(--r-stop); background: var(--text); }
+@media (prefers-reduced-motion: reduce) { .k7-composer__stop { transition: none; } }
+.k7-composer__text {
+  flex: 1 1 auto; min-width: 0; min-height: var(--ctl-s); max-height: var(--composer-max-h); overflow-y: auto; overscroll-behavior: contain; padding: var(--sp-1) var(--pad-text);
+  box-sizing: border-box; font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); outline: none; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.k7-composer__text:empty::before { content: attr(data-placeholder); display: block; color: var(--text-quiet); pointer-events: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k7-composer__box:focus-within { --sq-line: var(--line-field); }
+/* listening (the mic on): the box's line as when it has the focus. A file dragged over it: the line in the focus colour. No board draws
+   either: both are the composer's own focus answer, nothing new */
+.k7-composer[data-listening] .k7-composer__box { --sq-line: var(--line-field); }
+.k7-composer[data-drop] .k7-composer__box { --sq-line: var(--focus); }
+.k7-composer[data-kind="dock"] .k7-composer__box { --sq-bg: var(--bg-3); }
+.k7-composer[data-kind="notch"] .k7-composer__box { min-height: var(--ctl); padding: var(--gap-s); gap: var(--gap-s); border-radius: var(--r-bubble); }
+.k7-composer[data-kind="notch"] .k7-composer__box > .k7-ib { width: var(--notch-ctl); height: var(--notch-ctl); }
+.k7-composer[data-kind="notch"] .k7-composer__text { min-height: var(--notch-ctl); padding-block: var(--gap-hair); }
+/* the line under it (kit.css `.composer-under`): 12 --text-dim, 8 under the pill and 12 in from its sides, its items 12 apart, the cost
+   at the end; an item is a 16 glyph (or the model's 12 mark) and its words, 4 apart (5 after a mark); an empty line takes no space */
+.k7-composer__line { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3) 0; font-size: var(--fs-xs); line-height: var(--lh-m); color: var(--text-dim); min-width: 0; white-space: nowrap; }
+.k7-composer__item { display: inline-flex; align-items: center; gap: var(--sp-1); flex: none; font-size: var(--fs-xs); line-height: var(--lh-m); color: var(--text-dim); white-space: nowrap; border-radius: var(--r-xs); }
+.k7-composer__item[data-model] { gap: var(--pad-kbd); }
+.k7-composer__item > svg { flex: none; color: currentColor; }
+@media (hover: hover) and (pointer: fine) { .k7-composer__item:hover { color: var(--text); } }
+.k7-composer__end { display: inline-flex; align-items: center; gap: var(--gap-s); flex: 0 1 auto; min-width: 0; overflow: hidden; font-size: var(--fs-xs); color: var(--text-dim); }   /* where the line runs out of room its end gives way, inside the composer */
+.k7-composer__end.k7-mono { display: block; text-overflow: ellipsis; }
+.k7-composer__end > .k7-mono { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+span.k7-composer__item { cursor: default; }
+/* a narrow composer leaves out what folds first (S05 B: the branch and the context); the quick menu still lists them */
+@container k7-composer (max-width: 600px) { .k7-composer__line > [data-fold] { display: none; } }
+/* the same in a window under 900 wide, whatever room the composer has (decided with S05: "under 900 px the branch and the context fold
+   into the quick menu first"): the quick menu then says what they hold */
+@media (max-width: 899px) { .k7-composer__line > [data-fold] { display: none; } }
+.k7-composer__line > .k7-composer__item { min-width: 0; }
+.k7-composer__item > span:not(.k7-ticks) { overflow: hidden; text-overflow: ellipsis; }
+@media (hover: hover) and (pointer: fine) { span.k7-composer__item:hover { color: var(--text-dim); } }
+.k7-composer__hint { color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; }
+.k7-composer + .k7-queue, .k7-queue + .k7-composer { margin-top: var(--sp-2); }

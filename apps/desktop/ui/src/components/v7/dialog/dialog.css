@@ -1,0 +1,36 @@
+/* Dialog's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── Dialog (4): large (900, radius 14, --bg-pane, a 220 nav) or form (radius 20, --bg-3); the scrim, never blurred ── */
+.k7-scrim { position: relative; display: grid; place-items: center; padding: var(--sp-6) var(--sp-4); background: var(--scrim); min-width: 0; }
+.k7-dialog {
+  --sq-bg: var(--bg-3); --sq-line: var(--float-line); --sq-shadow: var(--shadow-modal);
+  position: relative; display: flex; flex-direction: column; gap: var(--sp-3); width: var(--dialog-form); max-width: 100%; padding: var(--sp-5); box-sizing: border-box;
+  border-radius: var(--r-dialog); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line), inset 0 1px 0 var(--spec-strong), var(--sq-shadow); color: var(--text);
+}
+.k7-dialog[data-sq-on]:not(#sq) { box-shadow: var(--sq-shadow); }
+@media (prefers-reduced-motion: no-preference) { .k7-dialog { animation: k7-dialog-in var(--dur-2) var(--ease-sharp); } }
+@keyframes k7-dialog-in { from { opacity: 0; transform: scale(.98); } }
+.k7-dialog__title { margin: 0; padding-inline-end: var(--sp-4); font-size: var(--fs-l); line-height: var(--lh-l); font-weight: 600; }
+.k7-dialog__body { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); }
+.k7-dialog__foot { display: flex; justify-content: flex-end; gap: var(--sp-2); margin-top: var(--sp-2); }
+/* the close button: 28, 10 in from a 20 corner, a capsule (R-corner-9) */
+.k7-dialog > [data-dialog-close] { position: absolute; top: var(--pad-dialog); right: var(--pad-dialog); }
+.k7-dialog[data-variant="large"] { --sq-bg: var(--bg-pane); flex-direction: row; gap: 0; width: var(--dialog-l); padding: 0; border-radius: var(--r-card); }
+.k7-dialog__nav { display: flex; flex-direction: column; gap: var(--gap-hair); flex: none; width: var(--set-nav-w); padding: var(--sp-3) var(--sp-2);   /* board 14's `.setnav`: 12 down, 8 in */ box-sizing: border-box; }
+.k7-dialog__navrow { display: flex; align-items: center; gap: var(--pad-nav-x); height: var(--row-h); padding: 0 var(--pad-nav-x); border-radius: var(--r-nav); font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text); text-align: start; }
+.k7-dialog__navrow > .k7-ic { color: var(--icon); }
+.k7-dialog__navrow[aria-current="page"] { background: var(--current); }
+@media (hover: hover) and (pointer: fine) { .k7-dialog__navrow:not([aria-current]):hover { background: var(--hover); } }
+.k7-dialog__navrow:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
+/* a narrow window (derived, no board draws one): the nav becomes a row of its glyphs over the page */
+@media (max-width: 719px) {
+  .k7-dialog[data-variant="large"] { flex-direction: column; }
+  /* the nav: its glyphs alone in a row over the page (their names stay their accessible names), clear of the close button */
+  .k7-dialog__nav { flex-direction: row; flex-wrap: wrap; width: auto; padding: var(--sp-3) var(--sp-7) var(--sp-2) var(--sp-2); }
+  .k7-dialog__navrow { flex: none; width: var(--row-h); justify-content: center; padding: 0; }
+  .k7-dialog__navrow > .k7-ell { display: none; }   /* the row keeps its name (its aria-label) */
+  .k7-dialog[data-variant="large"] .k7-page[data-variant="settings"] { padding-inline: var(--sp-4); }
+}
+.k7-dialog__page { flex: 1 1 auto; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  /* board 14's `.setbody`: the page fades out over its last 28 as it scrolls under the dialog's foot */
+  -webkit-mask-image: linear-gradient(currentColor calc(100% - var(--sp-6) + var(--sp-1)), transparent); mask-image: linear-gradient(currentColor calc(100% - var(--sp-6) + var(--sp-1)), transparent); }

@@ -1,4 +1,4 @@
-/* The dock on the v7 kit (DESIGN-SYSTEM.md v7 21.4; the kit's Dock, `components/v7/dock.ts`). Registers as the `dock` module.
+/* The dock on the v7 kit (DESIGN-SYSTEM.md v7 21.4; the kit's Dock, `components/v7/dock/dock.ts`). Registers as the `dock` module.
 
    What it is for: reaching your bots and their asks while you work in a session. It is the Sessions tab's alone (never in the
    Bots tab), and it is not drawn until you have a bot of your own (boopis alone does not count; a session alone never draws it).

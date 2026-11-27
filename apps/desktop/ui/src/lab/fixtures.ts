@@ -5,16 +5,14 @@ import type { Bot } from '../data/types';
 import type { CardData } from '../modules/cards';
 import { endpointForm } from '../host/forms';
 import { S1_TURNS, STEPS } from '../data/mock-data';
+import { LONG_NAME, LONG_TITLE, UNBROKEN } from './kit-fixtures';
+/* the hard text cases and the six teammates live in kit-fixtures.ts (no imports: the kit's stories and the kit's article read them) */
+export { LONG_NAME, LONG_TITLE, RTL, TEAM_SIX, UNBROKEN } from './kit-fixtures';
 
 /* ───────── text ───────── */
-export const LONG_NAME = 'cassiopeia-staging-deploy-guardian';
-export const LONG_TITLE = 'Reconcile the invoices_v2 backfill against the ledger before the quarterly close and the auditors arrive on Monday';
-export const UNBROKEN = 'src/billing/integrations/stripe/webhooks/handlers/invoice_payment_succeeded_idempotency_guard_v2_final.ts';
 export const URLISH = 'https://billing-api.internal.example.com/v2/invoices/inv_01HZX9Q2Y7K3M8N4P6R5S0T1V2W3/reconcile?dry_run=true&compare=200';
 export const MULTILINE = 'First line of the request.\nSecond line, after a break.\n\nA paragraph after a blank line, then a long one that wraps across the composer more than once because it keeps going.';
 export const PARAGRAPH = 'Everything under src/billing now works as integer cents. prorateCents rounds once, at the end, half away from zero, so a 31-day invoice split over three proration events no longer drifts.';
-/** Arabic and Hebrew: the app does not translate, but names and pasted text can be right to left */
-export const RTL = 'مرحبا بالعالم، هذا نص طويل من اليمين إلى اليسار · שלום עולם';
 
 export const STEPS_SEED = STEPS;
 export const TURNS_SEED = S1_TURNS;
@@ -33,16 +31,6 @@ export function manyBots(n: number, seed: readonly Bot[]): Bot[] {
   }
   return out;
 }
-/** the owner's six teammates as their saved records draw them (`<profile>/boopis/bot.json`, 22 November 2026): the looks every
-    place must agree on (bot data, not interface colour) */
-export const TEAM_SIX = [
-  { id: 'kai', name: 'kai', shape: 'circle', color: '#4fc9a8', state: 'idle' },
-  { id: 'nina', name: 'nina', shape: 'triangle', color: '#f23b5a', state: 'idle' },
-  { id: 'moss', name: 'moss', shape: 'squircle', color: '#2fd26a', state: 'idle' },
-  { id: 'iris', name: 'iris', shape: 'flower', color: '#3b82f6', state: 'idle' },
-  { id: 'hex', name: 'hex', shape: 'hexagon', color: '#a6a6ab', state: 'idle' },
-  { id: 'nimbus', name: 'nimbus', shape: 'cloud', color: '#9b5cf6', state: 'idle' }
-] as const;
 export const BOT_LIKE = { id: 'nina', name: 'nina', shape: 'triangle', color: '#f23b5a', eyes: 'pill', state: 'needs', attention: 'approval' } as const;
 export const BOT_LONG = { id: LONG_NAME, name: LONG_NAME, shape: 'star', color: '#e8b04a', eyes: 'pill', state: 'working', attention: null } as const;
 

@@ -1,0 +1,20 @@
+/* MenuRow's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── MenuRow (19): 32, padding 6 8, radius 10 (16 - 6), a 16 glyph, 14 label; hover and keyboard focus the 6% fill ── */
+.k7-mrow {
+  display: flex; align-items: center; gap: var(--sp-2); flex: none; width: 100%; height: var(--row-h); padding: var(--pad-row-y) var(--pad-row-x); box-sizing: border-box;
+  border-radius: calc(var(--r-menu) - var(--pad-menu)); font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); white-space: nowrap; text-align: start;
+  transition: background-color var(--dur-out) var(--ease-out);
+}
+.k7-menu[data-variant="palette"] .k7-mrow { border-radius: var(--r-nav); }
+.k7-mrow > .k7-ic { color: var(--icon); }
+.k7-mrow__name { flex: none; white-space: nowrap; }
+.k7-mrow__desc { flex: 1 1 0; min-width: 0; margin-inline-start: var(--sp-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-dim); font-size: var(--fs-s); line-height: var(--lh-s); }
+.k7-mrow__check { display: inline-grid; place-items: center; width: var(--icon-s); height: var(--icon-s); flex: none; color: var(--accent-text); }
+.k7-mrow[data-danger], .k7-mrow[data-danger] > .k7-ic { color: var(--red-text); }
+.k7-mrow[aria-disabled="true"] { color: var(--text-faint); cursor: default; }
+.k7-mrow > .k7-keys { margin-inline-end: calc(-1 * var(--gap-hair)); }
+/* a key chip at the row's end is concentric with it: 6 from both edges, the row's r-in (10 - 6, floor 6: R-kbd-2) */
+.k7-mrow .k7-kbd { border-radius: max(var(--r-floor), calc(var(--r-menu) - 2 * var(--pad-menu))); }
+@media (hover: hover) and (pointer: fine) { .k7-mrow:not([aria-disabled="true"]):hover { background: var(--hover); transition-duration: var(--dur-1); } }
+.k7-mrow:focus-visible { background: var(--hover); outline-offset: calc(-1 * var(--focus-w)); }

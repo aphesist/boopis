@@ -11,7 +11,7 @@
 
    The returned function stops the dictation: the host closes the microphone at once. What was still being said is written
    down by the host about a second later and handed on as one last `final`, which the composer takes although its mic is
-   off (components/v7/compose.ts); where the host has no more words than the composer already shows, those are handed on
+   off (components/v7/composer/editing.ts); where the host has no more words than the composer already shows, those are handed on
    as that `final`, so the composer never waits for nothing. Nothing else follows a stop, and a new dictation started
    meanwhile silences the stopped one, so its last words cannot land in the new one. */
 import { Channel } from '@tauri-apps/api/core';

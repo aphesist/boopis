@@ -1,0 +1,29 @@
+/* Notice's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── Notice (12): the boards' `.notice` (kit.css): one row at least 44 tall, radius 22 with an 8 padding, --bg-3 with a line, 13 --text-dim;
+   its glyph 12 in from the start, the words 10 after it (their lead in --text), then its actions (28, ghost) and a transparent 28
+   close on the 8 inset ── */
+.k7-notice {
+  --sq-bg: var(--bg-3); --sq-line: var(--line); background: var(--sq-bg); box-shadow: inset 0 0 0 var(--hl) var(--sq-line), var(--sq-shadow, 0 0 transparent);
+  display: flex; align-items: center; gap: var(--gap-row); min-height: var(--composer-h); max-width: 100%; padding: var(--pad-block); box-sizing: border-box;
+  border-radius: var(--r-block); font-size: var(--fs-s); line-height: var(--lh-m); color: var(--text-dim);
+}
+.k7-notice[data-sq-on]:not(#sq) { box-shadow: var(--sq-shadow, 0 0 transparent); }
+/* kit.css: `.notice > * { padding-left: 4px }` on border boxes, and 4 more before the first: the 16 glyph is drawn 12 wide, 8 + 4 + 4 in;
+   the close's glyph sits 2 right of its circle's middle */
+.k7-notice > .k7-notice__ic { margin-inline-start: var(--pad-text); padding-inline-start: var(--pad-text); box-sizing: border-box; }
+.k7-notice > .k7-ib { padding-inline-start: var(--pad-text); box-sizing: border-box; }
+.k7-notice__text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k7-notice__title { color: var(--text); }
+.k7-notice__ic { color: currentColor; }
+.k7-notice .k7-btn[aria-disabled="true"] { cursor: default; }
+.k7-notice[data-tone="owe"] { --sq-bg: var(--owe-soft); --sq-line: transparent; color: var(--owe-text); }
+.k7-notice[data-tone="accent"] { --sq-bg: var(--accent-soft); --sq-line: transparent; color: var(--accent-text); }
+.k7-notice[data-tone="red"] { --sq-bg: var(--red-soft); --sq-line: transparent; color: var(--red-text); }
+/* floating: the notice over the work (notify.ts) and one opened against a control (openNotice: `data-floating`; the placement writes its
+   own side into data-place, so that one is not read by its place) */
+.k7-notice[data-place="floating"], .k7-notice[data-floating] { --sq-line: var(--float-line); --sq-shadow: var(--shadow-pop); width: max-content; color: var(--text); font-size: var(--fs-m); line-height: var(--lh-m); }
+.k7-notice[data-place="floating"][data-tone="neutral"], .k7-notice[data-floating][data-tone="neutral"] { --sq-bg: var(--bg-3); }
+.k7-notice .k7-ib[data-variant="ghost"] { flex: none; }
+@media (prefers-reduced-motion: no-preference) { .k7-notice[data-enter] { animation: k7-enter var(--dur-1) var(--ease-sharp); } }
+@keyframes k7-enter { from { opacity: 0; transform: translateY(var(--sp-1)) scale(.98); } }

@@ -1,0 +1,19 @@
+/* IconButton's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── IconButton (22): circles ── */
+.k7-ib {
+  display: inline-grid; place-items: center; flex: none; width: var(--ctl); height: var(--ctl); border-radius: var(--r-pill);
+  color: var(--icon); background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line), var(--shadow-inline);
+  transition: background-color var(--dur-out) var(--ease-out), color var(--dur-out) var(--ease-out), transform var(--dur-press) var(--ease-sharp);
+}
+.k7-ib[data-variant="tinted"] { width: var(--ctl-s); height: var(--ctl-s); background: var(--fill-2); box-shadow: inset 0 0 0 var(--hl) var(--line); color: var(--icon-quiet); }
+.k7-ib[data-variant="ghost"] { width: var(--ctl-s); height: var(--ctl-s); background: transparent; box-shadow: none; color: var(--icon-quiet); }
+.k7-ib[data-variant="inverted"] { width: var(--ctl-s); height: var(--ctl-s); background: var(--selected); box-shadow: none; color: var(--text-on-light); }
+.k7-ib[aria-pressed="true"] { color: var(--accent-text); }
+@media (hover: hover) and (pointer: fine) {
+  .k7-ib:not(:disabled):hover { transition-duration: var(--dur-1); background: var(--bg-4); }
+  .k7-ib:is([data-variant="tinted"], [data-variant="ghost"]):not(:disabled):hover { background: var(--hover); color: var(--icon); }
+  .k7-ib[data-variant="inverted"]:not(:disabled):hover { background: var(--selected-hover); }
+}
+.k7-ib:not(:disabled):active { transform: scale(.96); }
+.k7-ib:disabled { color: var(--icon-off); cursor: default; }

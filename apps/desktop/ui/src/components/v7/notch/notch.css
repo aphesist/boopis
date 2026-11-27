@@ -1,0 +1,6 @@
+/* Notch's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── Notch (42): the slab's black shape flush to the top, its composer on a 12 inset ── */
+.k7-notch { position: relative; width: var(--w); height: var(--notch-h); }
+.k7-notch__slab { position: absolute; top: 0; left: calc(-1 * var(--r-slab)); fill: var(--dock-bg); }
+.k7-notch__in { position: relative; padding: var(--pad-dock); color: var(--text); }

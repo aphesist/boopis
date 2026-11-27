@@ -1,0 +1,10 @@
+/* SidebarFoot's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── SidebarFoot (board 12, kit.css `.foot-ctl` in the open sidebar): one row; you (a 32 circle at --current, the user glyph in --text,
+   the name 13/18 --text-dim, 8 apart) at the start, Store and Settings (tinted 28s, 8 apart) at the end ── */
+.k7-sfoot { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.k7-sfoot__me { display: inline-flex; align-items: center; gap: var(--sp-2); flex: 0 1 auto; min-width: 0; padding-inline-end: var(--sp-3); border-radius: var(--r-pill); text-align: start; transition: background-color var(--dur-out) var(--ease-out); }
+@media (hover: hover) and (pointer: fine) { .k7-sfoot__me:hover { background: var(--hover); transition-duration: var(--dur-1); } }
+.k7-sfoot__me[aria-expanded="true"] { background: var(--current); }
+.k7-sfoot__avatar { display: grid; place-items: center; flex: none; width: var(--ctl-card); height: var(--ctl-card); border-radius: var(--r-pill); background: var(--current); color: var(--text); }
+.k7-sfoot__name { font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text-dim); }

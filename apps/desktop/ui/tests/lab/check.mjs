@@ -49,7 +49,7 @@ const flag = (n) => argv.includes('--' + n);
 const opt = (n, d) => { const i = argv.indexOf('--' + n); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : d; };
 const quick = flag('quick');
 const PRESETS = opt('presets', quick ? 'catalog,bone' : 'catalog,graphite,bone,typewriter').split(',');
-/* the v7 kit's stories (src/lab/stories/kit/) run in v7's two themes, not the v6 presets (LAB-v7 section 3) */
+/* the v7 kit's stories (each in its component's folder, src/components/v7/<name>/; ids kit/...) run in v7's two themes, not the v6 presets (LAB-v7 section 3) */
 const KIT_PRESETS = opt('kit-presets', 'dark,light').split(',');
 const isKit = (row) => typeof row.story === 'string' && row.story.startsWith('kit/');
 /* a v7 surface of the app (stories/v7/: the shell, the rail, the Bots chat and rooms on the kit): v7's themes and v7's rules, as the kit's */

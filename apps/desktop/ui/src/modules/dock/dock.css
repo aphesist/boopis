@@ -1,4 +1,4 @@
-/* The dock on the v7 kit (DESIGN-SYSTEM.md v7 21.4). The Dock itself is the kit's (components/v7/dock.css: the black slab and its
+/* The dock on the v7 kit (DESIGN-SYSTEM.md v7 21.4). The Dock itself is the kit's (components/v7/dock/dock.css: the black slab and its
    flares, the row, the open panel, the ask pill, the end slot); this file places it and moves it.
 
    `.dk` is a 0x0 anchor on the bottom edge, on the column's centre line (or the window's middle with "Keep the dock centred in

@@ -1,11 +1,64 @@
-/* The v7 kit's stylesheet: its tokens (generated, styles/tokens.v7.css; declared on a v7 root) and its components'
-   CSS. Loaded after the v6 kit (styles/index.ts); nothing here applies outside a [data-ui="v7"] root but the kit's own
-   k7- classes. */
+/* The v7 kit's stylesheet: its tokens (generated, styles/tokens.v7.css; declared on a v7 root), its foundations (base.css) and each
+   component's own file, imported in the order their rules always had, so the cascade is the one it was. Loaded after the v6 kit
+   (styles/index.ts); nothing here applies outside a [data-ui="v7"] root but the kit's own k7- classes.
+   Rules every component file keeps: tokens only (no literal colour, radius or spacing); hover under (hover: hover) and (pointer: fine)
+   (R-state-3), in over --dur-1 and out over --dur-out, a press over --dur-press as scale(.96) with no travel (9.2, R-state-4); a menu
+   or list row is one line, its name never wraps or shrinks (R-row-1); a control in a corner is radius = outer - inset (R-corner-10);
+   an inline chip is inline-level and never makes its line taller (R-inline-1). A new component's file goes after the ones it builds on. */
 @import '../../styles/tokens.v7.css';
 @import './base.css';
-@import './controls.css';
-@import './inline.css';
-@import './blocks.css';
-@import './thread.css';
-@import './surfaces.css';
-@import './dock.css';
+/* controls */
+@import './button/button.css';
+@import './icon-button/icon-button.css';
+@import './kbd/kbd.css';
+@import './chip/chip.css';
+@import './segmented/segmented.css';
+@import './selector-item/selector-item.css';
+@import './switch/switch.css';
+@import './field/field.css';
+@import './tooltip/tooltip.css';
+@import './swatches/swatches.css';
+/* inline */
+@import './inline-chip/inline-chip.css';
+@import './mark/mark.css';
+@import './status-word/status-word.css';
+@import './badge/badge.css';
+@import './status-line/status-line.css';
+@import './avatar/avatar.css';
+/* rows and blocks */
+@import './card/card.css';
+@import './block/block.css';
+@import './menu/menu.css';
+@import './menu-row/menu-row.css';
+@import './option-row/option-row.css';
+@import './list-row/list-row.css';
+@import './section-head/section-head.css';
+@import './notice/notice.css';
+@import './system-line/system-line.css';
+@import './bubble/bubble.css';
+@import './well/well.css';
+@import './disclosure/disclosure.css';
+@import './turn-foot/turn-foot.css';
+@import './time-separator/time-separator.css';
+@import './empty-state/empty-state.css';
+@import './find-bar/find-bar.css';
+/* the thread and the composer */
+@import './tool-row/tool-row.css';
+@import './ask-card/ask-card.css';
+@import './file-card/file-card.css';
+@import './files-card/files-card.css';
+@import './queue/queue.css';
+@import './diff-view/diff-view.css';
+@import './composer/composer.css';
+@import './hover-bar/hover-bar.css';
+@import './team-plan/team-plan.css';
+/* surfaces */
+@import './window-chrome/window-chrome.css';
+@import './page/page.css';
+@import './pane/pane.css';
+@import './dialog/dialog.css';
+@import './rail/rail.css';
+@import './notch/notch.css';
+@import './sidebar-foot/sidebar-foot.css';
+/* the dock */
+@import './dock/dock.css';

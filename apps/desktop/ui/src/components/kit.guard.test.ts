@@ -5,7 +5,7 @@
       the places the inventory names as known debt (each with its reason). A new copy fails here; an allowlisted one that is gone
       fails too, so the list only shrinks. */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, posix, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { variants } from './variants';
 import { html } from './html';
@@ -20,7 +20,9 @@ const read = (p: string): string => readFileSync(join(ROOT, p), 'utf8');
 /* what draws UI outside the kit: the modules, the host's screens, the theme panel, the entry, and the page's own markup */
 const CONSUMER_TS = ALL.filter((p) => p.endsWith('.ts') && !p.startsWith('src/components/') && !p.startsWith('src/vendor/') && p !== 'src/host/bindings.ts' && !isTest(p));
 const MODULE_CSS = ALL.filter((p) => p.endsWith('.css') && p.startsWith('src/modules/'));
-const KIT_TS = ALL.filter((p) => p.startsWith('src/components/') && p.endsWith('.ts') && !isTest(p));
+/* a component's stories stand in its folder (components/v7/<name>/<name>.stories.ts) but are the lab's, never part of the kit's code */
+const isStory = (p: string): boolean => /\.stories\.ts$/.test(p);
+const KIT_TS = ALL.filter((p) => p.startsWith('src/components/') && p.endsWith('.ts') && !isTest(p) && !isStory(p));
 
 describe('the kit is pure', () => {
   /* what the kit may import outside itself: the DOM and key helpers, the log, the event bus (re-reading tokens on hx:theme), the colour
@@ -30,7 +32,11 @@ describe('the kit is pure', () => {
   it('imports nothing from the app', () => {
     const bad: string[] = [];
     for (const p of KIT_TS) for (const m of read(p).matchAll(/(?:^|\n)\s*(?:import|export)[^'"\n]*?from\s+'([^']+)'/g)) {
-      const spec = m[1] ?? '';
+      /* a relative import is read as if it were written from src/components itself, so a component's folder (components/v7/<name>/)
+         may reach the rest of the kit at any depth, and what lies outside the kit is judged the same from every folder */
+      const raw = m[1] ?? '', at = raw.startsWith('.') ? posix.normalize(posix.join(posix.dirname(p), raw)) : '';
+      if (at.startsWith('src/components/')) continue;
+      const spec = at ? posix.relative('src/components', at) : raw;
       if (!ALLOWED.some((r) => r.test(spec)) || /\/(modules|host|data)\//.test(spec.replace('shared/data/', '')) || /core\/(state|settings|registry)$/.test(spec)) bad.push(p + ' -> ' + spec);
     }
     expect(bad).toEqual([]);

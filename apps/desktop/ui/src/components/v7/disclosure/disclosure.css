@@ -1,0 +1,34 @@
+/* Disclosure's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── Disclosure (36): a summary in 13 --text-dim with a chevron; its step list ── */
+.k7-disc { display: flex; flex-direction: column; min-width: 0; }
+.k7-disc__sum { display: inline-flex; align-items: center; gap: var(--gap-s); max-width: 100%; align-self: flex-start; font-size: var(--fs-s); line-height: var(--lh-m); color: var(--text-dim); border-radius: var(--r-xs); }
+.k7-disc__chev { flex: none; transition: transform var(--dur-1) var(--ease-sharp); }
+.k7-disc__sum[aria-expanded="true"] > .k7-disc__chev { transform: rotate(90deg); }
+@media (hover: hover) and (pointer: fine) { .k7-disc__sum:hover { color: var(--text); } }
+.k7-disc__sum:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }   /* at a turn's edge: the turn has no padding to hold the ring */
+.k7-disc > .k7-disc__body { display: none; }
+.k7-disc[data-open] > .k7-disc__body { display: block; }
+/* what follows the steps (a work log's output in a Well, a Button): 8 under them, in the steps' own column */
+.k7-disc__after { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-2); margin-top: var(--sp-2); min-width: 0; }
+.k7-disc__after > .k7-well { align-self: stretch; }
+.k7-disc[data-variant="worklog"] > .k7-disc__body > .k7-disc__after { margin-inline-start: calc(var(--icon-s) + var(--gap-s)); }
+/* the boards' `.steps` and `.step` (kit.css): rows 28 tall 2 apart, 13 with its tracking; a 16 slot for the check (--ok-text), the running
+   dot (7, breathing) or the dot of a step to do (6, --mark-off); the running step in --text, those to do in --text-quiet; what a step
+   says at its end in mono 11 --text-quiet */
+.k7-steps { display: flex; flex-direction: column; gap: var(--gap-hair); margin: var(--sp-2) 0 0; padding: 0; list-style: none; }
+.k7-step { display: flex; align-items: center; gap: var(--sp-2); height: var(--ctl-s); font-size: var(--fs-s); line-height: var(--lh-m); letter-spacing: var(--track-s); color: var(--text-dim); min-width: 0; }
+.k7-step__ic { display: inline-grid; place-items: center; width: var(--icon-s); flex: none; color: var(--text-quiet); }
+.k7-step__dot { width: var(--gap-s); height: var(--gap-s); border-radius: var(--r-pill); background: var(--mark-off); }
+.k7-step[data-state="done"] .k7-step__ic { color: var(--ok-text); }
+.k7-step[data-state="log"] .k7-step__ic { color: inherit; }   /* S10 (sessionboards.js `s10`): a work log's glyph is its words' colour */
+/* S10: an open work line's rows start under its words, past the chevron (16 and the 6 between) */
+.k7-disc[data-variant="worklog"] > .k7-disc__body > .k7-steps { margin-inline-start: calc(var(--icon-s) + var(--gap-s)); }
+.k7-step[data-state="failed"] .k7-step__ic, .k7-step[data-state="failed"] { color: var(--red-text); }
+.k7-step[data-state="now"] { color: var(--text); }
+.k7-step[data-state="now"] .k7-step__dot { width: var(--step-dot); height: var(--step-dot); background: var(--text-dim); animation: k7-pulse var(--dur-breathe) var(--ease-io) infinite; }
+.k7-step[data-state="todo"] { color: var(--text-quiet); }
+.k7-step__text { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k7-step > .k7-word { flex: none; }
+.k7-step__time { flex: none; margin-inline-start: auto; font-size: var(--fs-2xs); color: var(--text-quiet); }
+@media (prefers-reduced-motion: reduce) { .k7-step[data-state="now"] .k7-step__dot { animation: none; } }

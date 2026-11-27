@@ -1,0 +1,62 @@
+/* AskCard's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── AskCard (9): the boards' .qcard (kit.css, botscreens.js `ask`): a Block as wide as a bubble may be, 13; its head 12 --text-dim
+   with the asker's 16 orb or mark and the amber word at the end, 4 above the ask (14/20), 8 above the answers; a rule or sub line
+   (12 --text-dim, one line) sits 4 under the ask; the answers are 28 chips 6 apart, on the Block's own 8 inset ── */
+.k7-ask { display: flex; flex-direction: column; width: min(100%, var(--bubble-max)); font-size: var(--fs-s); }
+.k7-ask__head { display: flex; align-items: center; gap: var(--gap-s); margin-bottom: var(--sp-1); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); min-width: 0; }
+.k7-ask__who { flex: 1 1 auto; }
+.k7-ask__ask { margin: 0 0 var(--sp-2); font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); overflow-wrap: anywhere; }
+.k7-ask__sub { margin: calc(-1 * var(--sp-1)) 0 var(--sp-2); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k7-ask__rule { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
+.k7-ask > .k7-well { margin: 0 0 var(--sp-2); }
+.k7-ask__answers { display: flex; flex-wrap: wrap; gap: var(--gap-s); }
+.k7-ask__answers > .k7-chip[data-end] { margin-inline-start: auto; }   /* K03, K04: Deny at the row's end */
+/* a field in the card's corner (your own answer to a question) is concentric with the Block: 22 - 8 */
+.k7-ask > .k7-field .k7-field__box { --field-r: calc(var(--r-block) - var(--pad-block)); }
+/* the outlined chip (Deny) and its key: the boards' `.chip.out` and the 18 tall kbd 2 after the word */
+.k7-chip[data-outline] { background: transparent; box-shadow: inset 0 0 0 var(--hl) var(--line-strong); }
+/* a ghost answer (6e: Edit on a permission): no fill and no line until it is hovered */
+.k7-chip[data-ghost] { background: transparent; box-shadow: none; }
+@media (hover: hover) and (pointer: fine) { .k7-chip[data-ghost]:hover { background: var(--hover); } }
+.k7-ask__answers .k7-chip > .k7-keys { margin-inline-start: var(--gap-hair); }
+.k7-ask__answers .k7-chip .k7-kbd { height: var(--badge-h); }
+/* an answer that is drawn and does nothing yet looks as the board draws it; only the pointer says it cannot be taken */
+.k7-ask__answers .k7-chip[aria-disabled="true"] { cursor: default; }
+.k7-ask__answers .k7-chip[aria-disabled="true"]:active { transform: none; }
+/* choices: lettered option rows 36 tall, radius 22 - 8 = 14 (21.3), a 20 letter tile (radius 6, 6% fill; chosen in the accent) */
+.k7-ask__choices { display: flex; flex-direction: column; gap: var(--gap-hair); }
+.k7-ask__choice { display: flex; align-items: center; gap: var(--gap-row); height: var(--ctl); padding: 0 var(--sp-2); border-radius: calc(var(--r-block) - var(--pad-block)); font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); text-align: start; min-width: 0; }
+@media (hover: hover) and (pointer: fine) { .k7-ask__choice:hover { background: var(--hover); } }
+.k7-ask__choice:focus-visible { outline-offset: calc(-1 * var(--focus-w)); }
+.k7-ask__letter { display: grid; place-items: center; flex: none; width: var(--letter); height: var(--letter); border-radius: var(--r-tip); background: var(--hover); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
+.k7-ask__letter > .k7-ic { width: var(--fs-xs); height: var(--fs-xs); }
+.k7-ask__choice[data-chosen] .k7-ask__letter { background: var(--accent); color: var(--on-accent); }
+/* the form variant (6d, derived: a form is the AskCard's own block, REPASS.md 6d): what it asks for stacked 8 apart under the ask, what
+   submitting does in one quiet line over the answers, why the last answer did not go in the Field's error words; while it sends, the
+   primary's words shimmer (the kit's working state) and nothing in it answers a press */
+.k7-ask__fields { display: flex; flex-direction: column; gap: var(--sp-2); margin: 0 0 var(--sp-2); min-width: 0; }
+.k7-ask__fields :is(.k7-field__label, .k7-field__hint, .k7-field__error) { padding-inline: var(--sp-1); }   /* words on the text inset, 4 in from the controls */
+.k7-ask__fields .k7-field__box { --field-r: calc(var(--r-block) - var(--pad-block)); }
+.k7-ask__fields > .k7-orows { display: flex; flex-direction: column; gap: var(--gap-hair); }
+.k7-ask__fields > .k7-orows > .k7-orow { width: 100%; }
+.k7-ask :is(.k7-ask__answers, .k7-ask__choices) + .k7-ask__fields { margin: var(--sp-2) 0 0; }
+.k7-ask__head > .k7-logomark { --ns-mark: var(--icon-s); --ns-logo: var(--fs-2xs); }
+.k7-ask__effect { margin: 0 0 var(--sp-2); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow-wrap: anywhere; }
+.k7-ask__error { margin: 0 0 var(--sp-2); font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--red-text); overflow-wrap: anywhere; }
+.k7-ask__count { flex: none; font-variant-numeric: tabular-nums; }
+.k7-ask__head:last-child:has(> .k7-btn) { margin-bottom: 0; }
+.k7-ask__head > .k7-btn { flex: none; }   /* an answered row's action (Open, Ask again; derived, 6d) gives the row its height: 8 round it on every side, concentric with the block's corner (R-corner-3; 6f) */
+.k7-ask[data-busy] .k7-chip[data-busy] { cursor: progress; }
+/* several askers (the owner's rule for the rail's "+N", 25 November): up to three 16 orbs overlapped, then a small filled chip clear of them */
+.k7-ask__askers { display: inline-flex; align-items: center; gap: var(--gap-hair); flex: none; line-height: 0; --s: var(--icon-s); }
+/* an item the form is about (O-B06's connector block, O-P03c's provider): its tile, its name, what it can reach on a second line */
+.k7-ask__item { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; padding: 0 var(--gap-hair); }
+.k7-ask__tile { display: grid; place-items: center; flex: none; width: var(--ctl); height: var(--ctl); border-radius: var(--r-field); background: var(--fill-2); box-shadow: inset 0 0 0 var(--hl) var(--line); font: 500 var(--fs-xs) / 1 var(--mono); color: var(--text-dim); }
+.k7-ask__tile > :is(svg, .k7-ic, .k7-head__mark) { width: var(--icon-s); height: var(--icon-s); }
+.k7-ask__head > .k7-ask__tile { width: var(--icon-s); height: var(--icon-s); border-radius: var(--r-tip); font-size: var(--fs-2xs); }
+.k7-ask__item-text { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+.k7-ask__item-name { font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); overflow-wrap: anywhere; }   /* a long name breaks in the block, never widens the window (R-overflow-1; 6f) */
+.k7-ask__item-line { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); overflow-wrap: anywhere; }
+/* the files a form takes (the composer's attachment chips) and "+ Add files" after them */
+.k7-ask__files { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap-s); }

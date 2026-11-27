@@ -1,0 +1,7 @@
+/* Badge's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── Badge (33): 18 tall pill, 11 ── */
+/* the boards' `.badge2`: an inline block on an 18 line, 7 at its sides, 11 */
+.k7-badge { padding-inline: var(--pad-inline); border-radius: var(--r-pill); font-size: var(--fs-2xs); background: var(--fill-2); color: var(--text-dim); }
+.k7-cap.k7-badge, .k7-cap.k7-you, .k7-cap.k7-ref { height: auto; line-height: var(--badge-h); padding-block: 0; text-box: normal; }   /* the boards' own boxes (`.badge2`, `.you`, `.refchip`): an 18 line, no trim */
+.k7-badge[data-tone="owe"] { background: var(--owe-soft); color: var(--owe-text); }

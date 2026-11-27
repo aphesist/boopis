@@ -100,7 +100,7 @@ function applyForces(st: State): void {
   if (g) force(scopeOf(currentStory as Story, st) ?? document, null, g);
 }
 let currentStory: Story | null = null;
-/** a story of the v7 kit (src/lab/stories/kit/) */
+/** a story of the v7 kit (its id kit/...; its file in the component's folder, src/components/v7/<name>/) */
 const isKitStory = (s: Story): boolean => s.id.startsWith('kit/') || s.id.startsWith('v7/') || s.id.startsWith('boards/');
 /** a v7 theme as the app picks it today: the scheme of the v6 preset (the shell's v7 root follows it, modules/shell/chrome.ts) */
 const appPreset = (t: 'dark' | 'light'): string => (t === 'light' ? 'bone' : 'catalog');
@@ -120,7 +120,7 @@ export async function startFrame(): Promise<void> {
   currentStory = s;
   document.title = s.title + ' · ' + name;
   const preset = q.get('preset');
-  /* the v7 kit's stories (stories/kit/) draw on a v7 root: the body, so the v6 theme's inline colours on <html> stay
+  /* the v7 kit's stories (kit/...) draw on a v7 root: the body, so the v6 theme's inline colours on <html> stay
      underneath; their presets are v7's two themes (a v6 preset id maps to its scheme), with the accent and corners of
      section 18 settable by the checker */
   const v7 = isKitStory(s);

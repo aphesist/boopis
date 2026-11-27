@@ -1,7 +1,7 @@
 /* The v7 lab's static checks (docs/UI-LAB.md, "The v7 checks"): read the UI's source, no browser.
      kit.single     a name section 21 merged away (RETIRED in v7.mjs: QueueStrip, LimitNotice, Toast, Banner, ScopePicker,
                     SettingsLine, SteerLine, CheckpointBar, ChoiceCards, LaunchCard, ReferenceChip) used anywhere in the UI's
-                    source, its stories included; and a kit component (KIT_V7) with no story file src/lab/stories/kit/<name>.stories.ts
+                    source, its stories included; and a kit component (KIT_V7) with no story file in its folder, src/components/v7/<name>/<name>.stories.ts
      tokens.loose   a spacing value written as a literal (padding, margin, gap, inset in px or rem) in the UI's CSS, outside the
                     token files. Colours, font sizes and radii are tokens.static's (static-scan.mjs); together they are the token check
      contrast.accent  the theme does not define the derived accent tokens section 18 checks (--accent-text, --on-accent, --focus)
@@ -13,7 +13,7 @@ import { KIT_V7, KIT_V7_EXTRA, RETIRED, kebab, retiredPattern } from './v7.mjs';
 
 const UI_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const SRC = join(UI_ROOT, 'src');
-const KIT_STORIES = join(SRC, 'lab', 'stories', 'kit');
+const KIT_DIR = join(SRC, 'components', 'v7');
 /* generated or vendored, never written by hand here */
 const SKIP = [/^vendor\//, /^host\/bindings\.ts$/, /^styles\/tokens\.json$/, /\.d\.ts$/, /^host\/fixtures\//, /^components\/squircle-golden\.json$/];
 /* the token files: where literal values are the definition */
@@ -74,8 +74,7 @@ export function scanV7() {
   }
   /* kit.single: a story file per kit component */
   for (const name of [...KIT_V7, ...KIT_V7_EXTRA]) {
-    const want = [join(KIT_STORIES, kebab(name) + '.stories.ts'), join(KIT_STORIES, name + '.stories.ts')];
-    if (!want.some((p) => existsSync(p))) findings.push({ check: 'kit.single', area: 'components', file: 'src/lab/stories/kit/' + kebab(name) + '.stories.ts', line: 0, msg: `the kit component ${name} has no story file`, snippet: '', key: 'kit.single|stories|' + name });
+    if (!existsSync(join(KIT_DIR, kebab(name), kebab(name) + '.stories.ts'))) findings.push({ check: 'kit.single', area: 'components', file: 'src/components/v7/' + kebab(name) + '/' + kebab(name) + '.stories.ts', line: 0, msg: `the kit component ${name} has no story file`, snippet: '', key: 'kit.single|stories|' + name });
   }
   /* contrast.accent: the derived tokens exist (the in-page check measures them) */
   const tokensCss = ['tokens.css', 'tokens.v7.css'].map((n) => join(SRC, 'styles', n)).filter(existsSync).map((p) => readFileSync(p, 'utf8')).join('\n');

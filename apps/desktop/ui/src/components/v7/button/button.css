@@ -1,0 +1,41 @@
+/* Button's look (DESIGN-SYSTEM.md v7; the approved renders' kit.css). Tokens only; kit-v7.css imports it in the kit's cascade order. */
+
+/* ── Button (21) ── */
+.k7-btn {
+  position: relative; isolation: isolate; overflow: hidden;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--gap-s); flex: none;
+  height: var(--ctl); padding: 0 var(--pad-btn); border-radius: var(--r-pill);
+  font-size: var(--fs-m); line-height: 1; letter-spacing: var(--track); color: var(--text); white-space: nowrap;   /* kit.css `.btn`: line-height 1 */
+  background: var(--bg-3); box-shadow: inset 0 0 0 var(--hl) var(--line);
+  transition: background-color var(--dur-out) var(--ease-out), color var(--dur-out) var(--ease-out), transform var(--dur-press) var(--ease-sharp);
+}
+.k7-btn[data-size="32"] { height: var(--ctl-card); padding: 0 var(--pad-btn-card); }
+.k7-btn[data-size="28"] { height: var(--ctl-s); padding: 0 var(--pad-btn-s); font-size: var(--fs-s); }
+.k7-btn[data-variant="primary"] { background: var(--selected); color: var(--text-on-light); box-shadow: none; }
+.k7-btn[data-variant="tint"] { background: var(--fill-2); box-shadow: none; }
+.k7-btn[data-variant="ghost"] { background: transparent; box-shadow: none; color: var(--text-dim); }
+.k7-btn[data-variant="danger"] { background: var(--red); color: var(--on-danger); box-shadow: none; }
+@media (hover: hover) and (pointer: fine) {
+  .k7-btn:not(:disabled):hover { transition-duration: var(--dur-1); background: var(--bg-4); }
+  .k7-btn[data-variant="primary"]:not(:disabled):hover { background: var(--selected-hover); }
+  .k7-btn:is([data-variant="tint"], [data-variant="ghost"]):not(:disabled):hover { background: var(--hover); }
+  .k7-btn[data-variant="ghost"]:not(:disabled):hover { color: var(--text); }
+  .k7-btn[data-variant="danger"]:not(:disabled):hover { background: var(--red); }
+}
+.k7-btn:not(:disabled):active { transform: scale(.96); }
+/* a control set into a container's corner, or the anchor of an open menu, presses in colour only: a scale would break its equal
+   insets (R-corner-10) or move the menu off its anchor (R-float-1). An owner question: 9.2 says every press scales */
+:is(.k7-block, .k7-notice, .k7-sys, .k7-composer, .k7-queue, [data-kit~="Dock"], .k7-menu__foot) :is(.k7-btn, .k7-chip, .k7-ib):active, :is(.k7-btn, .k7-chip, .k7-ib, .k7-sel)[aria-expanded="true"]:active { transform: none; }
+/* disabled: a 13% ink fill with 30% text (R-state-6, Grok) */
+.k7-btn:disabled { background: var(--selected-off); color: var(--icon-off); box-shadow: none; cursor: default; }
+.k7-btn__label { position: relative; }
+.k7-btn > .k7-ic { position: relative; }
+/* the split button: the primary and its menu half, one pill */
+.k7-split { display: inline-flex; flex: none; gap: var(--gap-hair); }
+.k7-split > .k7-split__main { border-radius: var(--r-pill) 0 0 var(--r-pill); }
+.k7-split > .k7-split__menu { border-radius: 0 var(--r-pill) var(--r-pill) 0; padding: 0 var(--pad-btn-s); }
+/* hold to confirm (owner decision: 1 s, --dur-hold): the fill sweeps from the start; released early it drains */
+.k7-btn__sweep { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: currentColor; opacity: .16;
+  transform-origin: 0 50%; transform: scaleX(var(--hold, 0)); transition: transform var(--dur-1) var(--ease-out); }
+[data-holding] > .k7-btn__sweep { transform: scaleX(1); transition: transform var(--dur-hold) linear; }
+[data-held] > .k7-btn__sweep { transform: scaleX(1); transition: none; }

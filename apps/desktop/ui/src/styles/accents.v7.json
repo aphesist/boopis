@@ -1,5 +1,5 @@
 {
-  "_comment": "The accents Settings › Appearance offers (board P1, the owner's pick Iris first, then P1's other candidates), each fill as P1 wrote it. Data, not a theme: the text, focus and on-accent shades are derived per theme (components/v7/theme.ts deriveAccent, DESIGN-SYSTEM.md v7 18).",
+  "_comment": "The accents Settings › Appearance offers (board P1, the owner's pick Iris first, then P1's other candidates), each fill as P1 wrote it. Data, not a theme: the text, focus and on-accent shades are derived per theme (components/v7/theme/theme.ts deriveAccent, DESIGN-SYSTEM.md v7 18).",
   "accents": [
     { "id": "iris", "label": "Iris", "hex": "#5b5bd6" },
     { "id": "indigo", "label": "Indigo", "hex": "#4f46e5" },
