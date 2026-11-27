@@ -9,7 +9,7 @@ import type { DataProvider, RulesSource, SpeechSource } from '../../../data';
 import type { LocalApiStatus } from '../../../host/local-api';
 import { boardS20 } from '../../board-fixtures';
 
-const ON: LocalApiStatus = { enabled: true, running: true, url: 'http://127.0.0.1:47821', token_file: '/home/you/.local/share/dev.aphesist.boopis/client-token', streams: 1, version: 1, problem: null };
+const ON: LocalApiStatus = { enabled: true, running: true, url: 'http://127.0.0.1:47821', token_file: '~/.local/share/boopis/client-token', streams: 1, version: 1, problem: null };
 const desktop = (): void => {
   setSettingsHost({ desktop: () => false, diagnostics: fakeDiagnostics, localApi: () => ({ status: () => Promise.resolve(ON), setEnabled: () => Promise.resolve(ON), rotate: () => Promise.resolve(ON) }) });
 };

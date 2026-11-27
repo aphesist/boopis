@@ -9,8 +9,8 @@ import { fill, frames } from '../../story';
 import type { Force, Render, State, Story } from '../../types';
 
 const OFF: LocalApiStatus = { enabled: false, running: false, url: null, token_file: null, streams: 0, version: 1, problem: null };
-const ON: LocalApiStatus = { enabled: true, running: true, url: 'http://127.0.0.1:47821', token_file: '/home/you/.local/share/dev.aphesist.boopis/client-token', streams: 0, version: 1, problem: null };
-const LONG_PATH = '/home/someone-with-a-long-user-name/.local/share/dev.aphesist.boopis/with/a/deep/custom/data/folder/client-token';
+const ON: LocalApiStatus = { enabled: true, running: true, url: 'http://127.0.0.1:47821', token_file: '~/.local/share/boopis/client-token', streams: 0, version: 1, problem: null };
+const LONG_PATH = '/home/someone-with-a-long-user-name/.local/share/boopis/with/a/deep/custom/data/folder/client-token';
 
 const bridge = (s: LocalApiStatus): LocalApiBridge => ({ status: () => Promise.resolve(s), setEnabled: () => Promise.resolve(s), rotate: () => Promise.resolve(s) });
 
