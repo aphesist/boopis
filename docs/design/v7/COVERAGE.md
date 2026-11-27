@@ -460,7 +460,7 @@ A `board` row can still hold a derived part or a conflict: its Reference cell sa
 | Connectors for one bot: its own list, none yet, could not be read | yes, story `settings/connectors-for` | derived: as above, with a SelectorItem naming the bot | works today | built, step 7b: the "Connectors for" select over the same page |
 | Adding a connector: from the collection, a URL or a command; the review; an OAuth sign-in | yes, `host/connectors.ts` | derived: the form rows of section 10; `O-B06` "Add GitHub" | works today | not started (no step) |
 | "boopis restarted to read the key" after an install | yes, `host/connectors-notice.ts` | derived: `session/S17` Notice; kit Notice | works today | not started (no step) |
-| An item's mark (a brand, a publisher's tile, letters) | yes, `components/item-mark.ts` | board `v7/15-store-*.jpg`; see conflict 30 | works today | matched, step 7b: board 15 draws letters (C7, GH) in every tile, a mod's glyph; brand and publisher marks no longer show on the Store's rows (an owner question, conflict 30) |
+| An item's mark (a brand, a publisher's tile, letters) | letters, `core/letters.ts` (the v6 `components/item-mark.ts` deleted at step 8; its brand files stay in `vendor/service-marks/`) | board `v7/15-store-*.jpg`; see conflict 30 | works today | matched, step 7b: board 15 draws letters (C7, GH) in every tile, a mod's glyph; brand and publisher marks no longer show on the Store's rows (an owner question, conflict 30) |
 
 ## 13. Models and sign-ins
 

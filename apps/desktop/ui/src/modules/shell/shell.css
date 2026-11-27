@@ -210,7 +210,7 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
   .hx-bar { padding: 0 max(6px, env(safe-area-inset-right, 0px)) 0 max(8px, env(safe-area-inset-left, 0px)); }
   #hx-btn-back, #hx-btn-fwd, .hx-win { display: none; }
   .hx-cmd { position: static; translate: none; flex: 1; width: auto; min-width: 0; margin: 0 8px; }
-  .hx-cmd .ui-search__keys, .hx-cmd__project { display: none; }
+  .hx-cmd__project { display: none; }
   .hx-palette > .k7-cpal { top: var(--sp-2); }
 }
 

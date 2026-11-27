@@ -8,7 +8,8 @@ import { setProvider } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
 import { createMockStore } from '../../data/mock-store';
 import { submitForm } from '../cards/form';
-import { letters, mountStore } from './view';
+import { mountStore } from './view';
+import { letters } from '../../core/letters';
 import type { StoreView } from './view';
 
 const tick = (ms = 0): Promise<void> => new Promise((r) => { setTimeout(r, ms); });

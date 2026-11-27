@@ -4,7 +4,6 @@
 import type {
   FormSpec, InstallPlan, InstallReceipt, StoreBrowse, StoreCodeRun, StoreComponent, StoreError, StoreFilter, StoreHosts, StoreItem, StoreKind, StorePin, StoreScanVerdict, StoreSource, StoreTier, UpdateDiff
 } from '../../data';
-import type { ItemRef } from '@boopis/ui';
 import { isRefreshable, isStale } from './reading';
 import type { ReadState, Reading } from './reading';
 
@@ -68,20 +67,6 @@ export function byKind<T extends { kind: StoreKind }>(items: readonly T[]): Arra
 }
 /** a remote connector's address, from its pin (`remote:<url>`); null for anything that runs from code */
 export const remoteUrl = (p: StorePin | null | undefined): string | null => (isRemote(p) ? (p?.repo ?? '').slice('remote:'.length) || null : null);
-/** what the tile is drawn from: the item's own evidence (docs: components/item-mark.ts). A curated connector's id is its id in
-    boopis's collection; a hosted one connects to its pinned address; a skill, plugin or mod shows its publisher's mark when its
-    provenance proves the publisher. */
-export function markRef(item: { id?: string; item_id?: string; title?: string | undefined; kind: StoreKind; source: string; homepage?: string | null; pinned?: StorePin | null; publisher?: string; provenance?: { namespace_proof: string } }): ItemRef {
-  const id = item.id ?? item.item_id ?? '';
-  return {
-    name: item.title ?? id.replace(/^[^:]*:/, ''), kind: item.kind,
-    collection: item.source === 'boopis' && item.kind === 'connector' ? id.replace(/^boopis:/, '') : null,
-    url: remoteUrl(item.pinned), homepage: item.homepage ?? null,
-    /* a publisher's mark only for a publisher the source proved: a receipt carries neither, so an installed item keeps its monogram */
-    publisher: item.publisher ?? null, proven: !!item.provenance && item.provenance.namespace_proof !== 'none'
-  };
-}
-
 /** "3 hours ago", from an ISO time; null stays unknown */
 export function ageWords(iso: string | null | undefined, now: number = Date.now()): string {
   const t = iso ? Date.parse(iso) : NaN;

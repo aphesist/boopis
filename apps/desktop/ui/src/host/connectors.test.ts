@@ -142,12 +142,24 @@ describe('the Connectors tab', () => {
     f.catalog = () => Promise.resolve([{ id: 'exa', name: 'Exa', publisher: 'Exa', description: 'Web search.', license: 'MIT', verified: '2026-11-19', variants: [{ id: 'hosted', label: 'Hosted', summary: 'Exa runs it.', reaches: 'mcp.exa.ai', pinned: null, default: true }] },
       { id: 'firecrawl', name: 'Firecrawl', publisher: 'Firecrawl', description: 'Scrape.', license: 'MIT', verified: '2026-11-19', variants: [{ id: 'local', label: 'Local', summary: 'Here.', reaches: 'x', pinned: null, default: true }] }]);
     const { panel } = await mount(f);
-    expect(panel.querySelector('[data-add-entry="firecrawl"]')?.closest('[data-kit~="ListRow"]')?.textContent).toContain('added');
+    /* one already added shows its state, not the action */
+    const fire = [...panel.querySelectorAll('[data-kit~="ListRow"]')].find((r) => r.textContent?.includes('Firecrawl'));
+    expect(fire?.textContent).toContain('added');
+    expect(panel.querySelector('[data-add-entry="firecrawl"]')).toBeNull();
     expect(panel.querySelector('[data-add-entry="exa"]')?.closest('[data-kit~="ListRow"]')?.textContent).not.toContain('Exa ·');   /* the publisher is the name: said once */
     click(panel, '[data-add-entry="exa"]');
     await tick();
     expect(f.calls).toContain('inputs:catalog:exa:hosted');
     expect(document.querySelector('[data-kit~="Menu"]')).toBeNull();
+  });
+
+  it('draws an installed connector from the collection with the collection\'s tile letters', async () => {
+    const f = fake([info({ name: 'github' })]);
+    f.catalog = () => Promise.resolve([{ id: 'github', name: 'GitHub', publisher: 'GitHub', description: 'Code.', license: 'MIT', verified: '2026-11-19', variants: [{ id: 'hosted', label: 'Hosted', summary: 'Hosted.', reaches: 'x', pinned: null, default: true }] }]);
+    const { panel } = await mount(f);
+    const tiles = [...panel.querySelectorAll('[data-kit~="ListRow"]')].filter((r) => /github/i.test(r.textContent ?? '')).map((r) => r.querySelector('.k7-lrow__mark, [data-kit-part="ListRowMark"]')?.textContent?.trim() ?? r.textContent?.slice(0, 2));
+    expect(tiles.length).toBe(2);
+    expect(new Set(tiles).size).toBe(1);
   });
 
   it('narrows the installed list and the collection as you type, and says when nothing matches', async () => {

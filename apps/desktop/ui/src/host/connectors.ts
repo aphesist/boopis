@@ -12,14 +12,14 @@
    rows. For one bot, the page is that bot's (a select at its top). */
 import { STORE_ITEM } from '../core/engine-words';
 import { unlessEngine } from './errors';
-import { kit, monogram, ui } from '@boopis/ui';
+import { kit, ui } from '@boopis/ui';
+import { letters } from '../core/letters';
 import type { RowOpts } from '@boopis/ui';
 import { reduced } from '../core/dom';
 import { logger } from '../core/log';
 import '../modules/cards';
 import { useFormsHost } from '../modules/cards/forms-host';
 import type { FormOutcome, FormSpec, FormsSource } from '../data';
-import type { ItemRef } from '@boopis/ui';
 import { clipSpots, tipsIfClipped, watchCuts } from '../core/clip';
 import { connectorSigninForm, fromConnectorForm } from './forms';
 import type { ConnectorFormIn } from './forms';
@@ -43,8 +43,6 @@ export interface ConnectorsDeps {
 
 /** a section's head with the id its section is named by */
 const head = (id: string, title: string, count?: string): string => kit.html.sectionHead({ title, ...(count ? { count } : {}), attrs: { id } });
-/** a connector's tile: two letters from its name, as the Store's (board 15) */
-const tile = (name: string): string => { const m = monogram(name); if (m.length > 1) return m; const next = [...name.slice(1)].find((c) => /[A-Z0-9]/.test(c)) ?? [...name.slice(1)].find((c) => /[bcdfghjklmnpqrstvwxz]/i.test(c)) ?? ''; return (m + next).toUpperCase(); };
 /** what to focus again after a redraw: the control's own handle */
 const keyOf = (n: HTMLElement): string => { for (const a of ['data-conn-switch', 'data-conn-more', 'data-conn-signin', 'data-conn-remove']) { const v = n.getAttribute(a); if (v != null) return '[' + a + '="' + CSS.escape(v) + '"]'; } return ''; };
 const plural = (n: number, one: string): string => String(n) + ' ' + one + (n === 1 ? '' : 's');
@@ -76,9 +74,6 @@ export function describeConnector(c: ConnectorInfo): ConnectorView {
   const tone = !c.enabled ? null : needsSignIn || c.status === 'failed' ? 'attention' : c.status === 'connecting' ? 'busy' : null;
   return { name: c.name, state: !c.enabled ? 'off' : needsSignIn ? 'sign in' : 'on', word, hint: `${word} · ${shown}${keys}`, canSignIn: c.enabled && needsSignIn, tone, where: `${shown}${keys}` };
 }
-
-/** what a connector's tile is drawn from: what it runs (its address, or its command and arguments), and its name */
-export const connectorRef = (c: Pick<ConnectorInfo, 'name' | 'url' | 'command' | 'args'>): ItemRef => ({ name: c.name, collection: c.name, url: c.url ?? null, command: c.command ?? null, args: c.args });
 
 /** every word of `query` is somewhere in `fields` (case aside); an empty query matches everything */
 export function matches(query: string, ...fields: ReadonlyArray<string | null | undefined>): boolean {
@@ -230,7 +225,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
       const word = kit.html.statusWord({ text: v.word, tone: v.tone === 'attention' ? 'owe' : 'neutral', ...(v.tone === 'busy' ? { pulse: true } : {}) });
       const end = c.plugin ? word : word + kit.html.switch({ checked: c.enabled, label: c.name + (c.enabled ? ' is on' : ' is off'), attrs: { 'data-conn-switch': c.name } }) +
         kit.html.iconButton({ icon: 'more', label: 'More for ' + c.name, haspopup: 'menu', attrs: { 'data-conn-more': c.name } });
-      return kit.html.listRow({ variant: 'item', title: c.name, sub: v.where, markText: tile(c.name), endHTML: end,
+      return kit.html.listRow({ variant: 'item', title: c.name, sub: v.where, markText: letters(catalog.find((e) => e.id === c.name)?.name ?? c.name), endHTML: end,
         ...(v.canSignIn ? { action: 'Sign in', actionAttrs: { 'data-conn-signin': c.name, 'aria-label': 'Sign in to ' + c.name } } : {}), attrs: { [STORE_ITEM]: '', 'data-conn-row': c.name } });
     });
     const body = listError ? kit.html.emptyState({ text: 'The list could not be read: ' + listError })
@@ -263,8 +258,10 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     const rows = shown.map((c) => {
       const w = collectionRow(c, added);
       const several = c.variants.length > 1;
-      return kit.html.listRow({ variant: 'item', title: c.name, ...(w.sub ? { sub: w.sub } : {}), markText: tile(c.name), action: 'Add', actionAttrs: { 'data-add-entry': c.id, 'aria-label': 'Add ' + c.name, ...(several ? { 'aria-haspopup': 'menu' } : {}) },
-        ...(added.has(c.id) ? { endHTML: kit.html.statusWord({ text: 'added' }) } : {}), attrs: { [STORE_ITEM]: '' } });
+      /* one already added shows that it is, not Add again */
+      return kit.html.listRow({ variant: 'item', title: c.name, ...(w.sub ? { sub: w.sub } : {}), markText: letters(c.name),
+        ...(added.has(c.id) ? { endHTML: kit.html.statusWord({ text: 'added' }) } : { action: 'Add', actionAttrs: { 'data-add-entry': c.id, 'aria-label': 'Add ' + c.name, ...(several ? { 'aria-haspopup': 'menu' } : {}) } }),
+        attrs: { [STORE_ITEM]: '' } });
     });
     collection.innerHTML = head('hx-conn-coll-h', 'From boopis\'s collection') + (rows.length ? '<div class="hx-conn__grid" role="list" aria-labelledby="hx-conn-coll-h">' + rows.join('') + '</div>' : '') +
       (query.trim() && !shown.length ? kit.html.emptyState({ text: `Nothing in boopis's collection matches “${query.trim()}”.` }) : '');

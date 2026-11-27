@@ -19,9 +19,6 @@ import { modelEntries, selectHTML, toEntries } from './select-html';
 import type { SelectEntry } from './select-html';
 import { scroll } from './scroll';
 import { tabs } from './tabs';
-import { search } from './search';
-import { itemMarkHTML, publisherHTML } from './item-mark';
-import type { ItemRef } from './item-mark';
 
 type U<T> = T | undefined;
 
@@ -112,12 +109,6 @@ function row(o: RowOpts): string {
     (o.end ? ' <span class="ui-row__end"' + attrs({ 'data-tone': o.endTone, 'data-swap': o.acts ? '' : null }) + '>' + o.end + '</span>' : '') + '</' + tag + '>';
   return o.acts ? '<li class="ui-row-wrap">' + r + '<span class="ui-row__acts">' + o.acts + '</span></li>' : '<li>' + r + '</li>';
 }
-/** an installable thing as a list row (the Store's lists, Settings > Connectors' collection): its tile in the lead, its name, one
-    line of what it is, and one word at its end (its state, or what it needs). A two-line row (R-row-4) with a 24px lead
-    (`.ui-row--item`; docs/UI-COMPONENTS.md, Item marks). The whole row is the action: rows in `[data-ui="rows"]` rove and fire `ui:select`. */
-export interface ItemRowOpts { ref: ItemRef; title: string; sub: string; end?: U<string>; endTone?: U<string | null>; value: string; attrs?: U<Attrs> }
-const itemRow = (o: ItemRowOpts): string =>
-  row({ title: o.title, sub: o.sub, lead: itemMarkHTML(o.ref), value: o.value, class: 'ui-row--item', ...(o.end ? { end: esc(o.end), endTone: o.endTone } : {}), attrs: o.attrs });
 /** the glyph column: running breathes, attention is red, current and idle is brass, else nothing */
 const leadFor = (o: { attention?: U<boolean>; running?: U<boolean>; current?: U<boolean> }): string => (o.attention ? dot('attention') : o.running ? dot('run') : o.current ? dot('here') : '');
 function group(o: { label: string; collapsible?: U<boolean>; expanded?: U<boolean>; rows?: U<string>; id?: U<string> }): string {
@@ -290,5 +281,5 @@ const tip = (label: string, k?: string, state?: { text: string; tone?: string })
 export const html = {
   icon, keys, kbd, combo, comboKbds, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
   orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, section, field, select: selectHTML, setRow, setHead, setSection, empty, toast, tip, mod,
-  scroll, tabs, search, tipBody, badge, input, signinButton, stack, itemMark: itemMarkHTML, publisher: publisherHTML, itemRow
+  scroll, tabs, tipBody, badge, input, signinButton, stack
 };

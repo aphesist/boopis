@@ -7,7 +7,8 @@
    its item row and holds its facts as Cards of rows; the review is the form card with its hold; Installed is the item rows with their
    Switches; Sources is a Card of rows with Switches. The view never fetches: it reads and writes through `StoreProvider`, and shows each
    failure as the host's own sentence. An item's own text is marked `data-store-item`. */
-import { kit, monogram } from '@boopis/ui';
+import { kit } from '@boopis/ui';
+import { letters } from '../../core/letters';
 import { clipSpots, tipsIfClipped, watchCuts } from '../../core/clip';
 import { STORE_ITEM } from '../../core/engine-words';
 import { reduced } from '../../core/dom';
@@ -59,15 +60,6 @@ const sinkOf = (h: { submit(id: string, o: FormOutcome): Promise<void>; cancel(i
   submit: h.submit, cancel: h.cancel, signin: () => Promise.reject(new Error('There is nothing to sign in to here.')),
   can: { signin: false, upload: false, folder: false }, pickerItems: () => [], pickFolder: () => Promise.resolve(null)
 });
-/** board 15's tile letters: two, from the first two words, or a one-word name's first letter and the next capital, digit or consonant
-    ("Context7" C7, "GitHub" GH, "Linear" LN) */
-export function letters(name: string): string {
-  const m = monogram(name);
-  if (m.length > 1 || !name.trim()) return m;
-  const w = name.trim(), rest = [...w.slice(1)];
-  const next = rest.find((c) => /[A-Z0-9]/.test(c)) ?? rest.find((c) => /[bcdfghjklmnpqrstvwxz]/i.test(c)) ?? '';
-  return (m + next).toUpperCase();
-}
 /** an item's tile: a mod's glyph (board 15's Mods), else its letters */
 const tile = (i: { kind: StoreKind; title?: string | undefined; item_id?: string }): { markText?: string; markHTML?: string } =>
   i.kind === 'mod' ? { markHTML: ui.icon('mod') } : { markText: letters(i.title ?? i.item_id ?? '') };

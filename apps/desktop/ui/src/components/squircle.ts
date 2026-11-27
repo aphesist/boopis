@@ -46,7 +46,7 @@ const SURFACE = '.ui-listbox, .ui-pop, .ui-tip, .ui-toast';
 /** the leaf controls: nothing inside them reaches past their edge */
 const LEAF = '.ui-btn, .ui-ib, .ui-send, .ui-seg__thumb, .ui-file';
 /** the library's surfaces and the config diff's well (cards parts.ts diffWell); modules add theirs with `auto()` or `data-sq` */
-const SELECTOR = '[data-sq], .ui-btn, .ui-ib, .ui-send, .ui-seg, .ui-seg__thumb, .ui-tab, .ui-search--s, .ui-row, .ui-option, .ui-request, .ui-file, ' +
+const SELECTOR = '[data-sq], .ui-btn, .ui-ib, .ui-send, .ui-seg, .ui-seg__thumb, .ui-tab, .ui-row, .ui-option, .ui-request, .ui-file, ' +
   '.ui-slab, .ui-concave, ' + SURFACE + ', .cd-well';
 const PATH_CACHE_MAX = 800;
 const RADIUS_TOKENS = ['--r-xs', '--r-s', '--r-m', '--r-l', '--r-floor', '--corner-smoothing'] as const;

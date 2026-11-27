@@ -32,7 +32,7 @@
    (radius, size, ring); a row along an edge that holds corner controls at its ends: .ui-corners (the inset). Never set a
    radius or an inset in a corner by hand. A squircle-drawn container also exposes its drawn radius as --r-outer when it
    declared none (squircle.ts), so its children nest the same way. */
-:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-codeblock, .ui-file, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m) {
+:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-codeblock, .ui-file, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg) {
   --corner-size: var(--ctl-s);
   --r-in: min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))));
   --r-corner: min(var(--r-in), calc(var(--corner-size) / 2));
@@ -318,38 +318,6 @@
 /* a scrolling strip fades the edge that cuts its tabs with every scroller's edge fade (.ui-scroll, R-scroll-9) */
 @media (prefers-reduced-motion: reduce) { .ui-tab { transition: none; } }
 
-/* ───────────── search field: the title bar's command centre (a button) and the palette's field (an input) ─────────────
-   DESIGN-SYSTEM.md §14.1, §14.20. The keys are concentric with the field's corner (--r-in, §8.2). */
-.ui-search { display: flex; align-items: center; gap: 10px; box-sizing: border-box; min-width: 0; color: var(--text-quiet); font-family: var(--sans); }
-.ui-search__icon { width: 14px; height: 14px; }
-.ui-search__text { flex: 1; min-width: 0; display: flex; gap: 6px; overflow: hidden; white-space: nowrap; font-size: var(--fs-xs); }
-.ui-search__text > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.ui-search__input { flex: 1; min-width: 0; height: 100%; padding: 0; margin: 0; border: 0; background: transparent; outline: none; color: var(--text-strong); caret-color: var(--brass); font: 400 var(--fs-m)/1 var(--sans); }
-.ui-search__input:focus-visible { outline: none; }   /* the caret and the surface show focus: the field is the surface's head */
-.ui-search__input::placeholder { color: var(--text-quiet); opacity: 1; text-transform: var(--ui-case); }
-/* s: the boxed field on the title bar, a button */
-.ui-search--s {
-  height: calc(var(--ctl-s) - 2px); padding: 0 var(--pad) 0 6px; margin: 0; border: 0;   /* the glyph centred in a 26px square (R-search-3) */
-  --r-outer: var(--r-s); --pad: var(--pad-tip); border-radius: var(--r-outer);   /* a container: its keys take --r-in (= --r-in-field, R-search-4, R-kbd-2) */
-  --sq-bg: var(--bg-0); --sq-line: var(--hair); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair);
-  color: var(--text-quiet); cursor: pointer; text-align: left; font: inherit;
-  transition: box-shadow var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease);
-}
-@media (hover: hover) and (pointer: fine) { .ui-search--s:hover { --sq-line: var(--line); box-shadow: inset 0 0 0 1px var(--line); } }
-.ui-search--s[aria-expanded="true"] { --sq-line: var(--brass); box-shadow: inset 0 0 0 1px var(--brass); }
-.ui-search--s[data-sq-on] { box-shadow: none; }   /* the drawn corner draws the line */
-/* l: the field flush at the top of a surface; its keys take the surface's --r-in */
-.ui-search--l { flex: none; height: 48px; padding: 0 12px 0 16px; gap: 12px; border-bottom: 1px solid var(--hair); }
-.ui-search--l .ui-search__icon { width: 16px; height: 16px; }
-/* m: a search in a form, a field's box with the glyph at its start (R-search-1); the ring sits on the box (§14.24) */
-.ui-search--m {
-  --r-outer: var(--r-s); --pad: calc((var(--ctl) - 18px) / 2); min-height: var(--ctl); padding: 0 var(--pad) 0 calc((var(--ctl) - 14px) / 2); gap: 8px; border-radius: var(--r-outer);
-  background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--line-field); transition: box-shadow var(--dur-1) var(--ease);
-}
-@media (hover: hover) and (pointer: fine) { .ui-search--m:hover { box-shadow: inset 0 0 0 1px var(--text-quiet); } }
-.ui-search--m:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
-.ui-search--m .ui-search__input { font-size: var(--fs-s); color: var(--text); }
-[data-ui="v7"] .ui-search--m { padding-left: var(--sp-3); }   /* on a v7 ground (taller controls) the glyph starts a step in, not the half-difference (11, off the scale), until step 7 (6f) */
 
 /* ───────────── chips ─────────────
    .ui-chip: a toggle or an action in a toolbar (aria-pressed for a mode, aria-haspopup for a picker).
@@ -994,32 +962,6 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 /* the first-run welcome's logo: the hero (letters="play" needs a 32px type size); sized from the spacing scale, inked like the frame */
 .ui-logo--welcome { display: block; justify-self: center; font-size: calc(var(--sp-6) * 3); color: var(--text-strong); }
 
-/* ───────────── item marks (item-mark.ts; docs/UI-COMPONENTS.md, "Item marks") ─────────────
-   What a store item or a connector is, at a glance: a raised tile with a continuous corner holding the service's or a proven
-   publisher's mark (in its brand's colours) or a monogram. 24 in a row's lead, 40 at the head of an item's page. The corner is the floor at 24 (a 24px
-   square at --r-s would read as a circle) and --r-s at 40. Before the corner engine binds it, a plain radius and an inset line. */
-.ui-imark {
-  --imark: 24px; --sq-bg: var(--bg-3); --sq-line: var(--hair);
-  display: inline-grid; place-items: center; flex: none; box-sizing: border-box; width: var(--imark); height: var(--imark);
-  border-radius: var(--r-floor); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair); color: var(--text); text-transform: none;
-}
-.ui-imark[data-size="40"] { --imark: 40px; border-radius: var(--r-s); }
-.ui-imark__svg { display: block; width: var(--ic-s); height: var(--ic-s); }
-/* a mark in its brand's colours (owner decision, 23 November 2026, ADR-0040 amended): the map's colour for the scheme the page is in,
-   each one checked at 3:1 on every preset's tile (item-mark.test.ts); a brand colour is data, like a bot's look, never a token */
-:is(.ui-imark__svg, .ui-pub__mark)[data-brand] { color: light-dark(var(--mk-l), var(--mk-d)); }
-.ui-imark[data-size="40"] .ui-imark__svg { width: calc(var(--imark) * .55); height: calc(var(--imark) * .55); }
-.ui-imark__ini { font: 600 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-dim); white-space: nowrap; }
-.ui-imark[data-size="40"] .ui-imark__ini { font-size: var(--fs-m); }
-/* a publisher's name with its mark first: one unit, the mark 14 beside 12 (R-icon-4), centred on the name's line */
-.ui-pub { display: inline-flex; align-items: baseline; gap: var(--sp-1); min-width: 0; max-width: 100%; vertical-align: bottom; }
-.ui-pub__mark { flex: none; align-self: center; width: var(--ic-s); height: var(--ic-s); }
-.ui-pub__name { min-width: 0; overflow-wrap: anywhere; }
-/* an item row: a two-line list row (R-row-4) whose lead is the item's 24px tile, set into the row's corner like a corner control: as far
-   from the start as from the top and bottom, its corner the row's less that inset, never under the floor (R-corner-3) */
-.ui-row--item { --imark-in: calc((var(--row-h-2) - 24px) / 2); height: var(--row-h-2); padding-inline-start: var(--imark-in); }
-.ui-row--item > .ui-row__lead { width: 24px; height: 24px; }
-.ui-row--item > .ui-row__lead > .ui-imark { border-radius: max(var(--r-floor), calc(var(--r-s) - var(--imark-in))); }
 /* a settings row about one item (a connector, an installed item): its tile before the label */
 .ui-set__lead { display: flex; flex: none; align-self: center; }
 .ui-set__row:has(> .ui-set__lead) { gap: var(--sp-3); }

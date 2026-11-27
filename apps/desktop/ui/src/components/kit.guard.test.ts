@@ -111,7 +111,7 @@ describe('every component exports its variants for the UI lab', () => {
     expect(Object.keys(variants).filter((k) => !drawn.has(k))).toEqual([]);
   });
   it('the new templates render from props alone (pure: the same output twice, no global read)', () => {
-    const once = (): string => html.tabs({ label: 'L', tabs: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }], value: 'b' }) + html.search({ label: 'Search', keys: 'esc' }) +
+    const once = (): string => html.tabs({ label: 'L', tabs: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }], value: 'b' }) +
       html.scroll({ axis: 'x', bare: true, body: 'x' }) + html.badge({ label: 'outside' }) + html.setSection({ id: 's', label: 'S' }) + html.input({ value: 'v', mono: true });
     expect(once()).toBe(once());
   });

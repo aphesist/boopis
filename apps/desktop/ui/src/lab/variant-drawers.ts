@@ -24,7 +24,6 @@ export const DRAWERS: Partial<Record<ComponentName, Drawer>> = {
   segmented: t('segmented', { label: 'When the sidebar collapses', options: SEG, value: 'rail' }),
   tabs: t('tabs', { label: 'Sections', tabs: [{ value: 'a', label: 'General' }, { value: 'b', label: 'Models' }, { value: 'c', label: 'Appearance' }], value: 'a' }, undefined, { ground: 'frame', width: 420 }),
   chip: t('chip', { label: 'src/billing' }, (a, v) => (a === 'option' ? { option: v, checked: !!v } : { [a]: v })),
-  search: t('search', { label: 'Search sessions, bots and commands', placeholder: 'Search', keys: 'esc' }, (a, v) => (a === 'as' && v === 'button' ? { as: 'button', textHTML: '<span>billing-api</span>', keys: 'mod+K' } : { [a]: v }), { ground: 'frame', width: 600 }),
   field: t('field', { label: 'Gate command', value: 'npm test' }, (a, v) => (a === 'error' ? (v ? { error: 'That command does not exist' } : {}) : a === 'kind' && (v === 'select' || v === 'model') ? { kind: v, options: ['npm test', 'pnpm test'], value: 'npm test' } : { [a]: v }), { width: 420 }),
   input: t('input', { label: 'Name', value: 'nina' }),
   select: t('select', { label: 'Interface font', entries: [{ value: 'Geist' }, { value: 'Libre Franklin' }], value: 'Geist' }),

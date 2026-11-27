@@ -14,7 +14,7 @@ import { botLabel, botState, STATES } from './bot-state';
 import { card } from './card-registry';
 import { holdElement, wireHold } from './hold';
 import { html } from './html';
-import type { ButtonOpts, ChipOpts, EntryOpts, FieldOpts, IconButtonOpts, ItemRowOpts, LadderOpts, MeasureOpts, MeasurePart, RowOpts, SegmentedOpts, StepItem } from './html';
+import type { ButtonOpts, ChipOpts, EntryOpts, FieldOpts, IconButtonOpts, LadderOpts, MeasureOpts, MeasurePart, RowOpts, SegmentedOpts, StepItem } from './html';
 import { icon, iconNames } from './icons';
 import { layer, popover } from './layer';
 import { isRoute, lastModel, modelFamily, modelHTML, modelMark as modelMarkEl, parseRoute, routeHTML, swapMark, families as modelFamilies } from './model-mark';
@@ -31,7 +31,6 @@ import { squircle } from './squircle';
 import { toast } from './toast';
 import type { SigninButtonOpts } from './signin-button';
 import type { StackOpts } from './stack';
-import type { ItemMarkOpts, ItemRef } from './item-mark';
 import { tooltip } from './tooltip';
 import { hydrate, hydrateOne } from './wire';
 import { scrollClass } from './scroll';
@@ -72,20 +71,13 @@ const factories = {
   section: make<Parameters<typeof html.section>[0]>(html.section),
   scroll: make<Parameters<typeof html.scroll>[0]>(html.scroll),
   tabs: make<Parameters<typeof html.tabs>[0], SegElement>(html.tabs),
-  search: make<Parameters<typeof html.search>[0]>(html.search),
   field: make<FieldOpts>(html.field),
   select: make<SelectOpts, SelectElement>(html.select),
   empty: make<Parameters<typeof html.empty>[0]>(html.empty),
   row: make<RowOpts, HTMLLIElement>(html.row),
   group: make<Parameters<typeof html.group>[0]>(html.group),
   signinButton: make<SigninButtonOpts, HTMLButtonElement>(html.signinButton),
-  stack: make<StackOpts>(html.stack),
-  /** an item's tile: the service a connector connects to, else its monogram (item-mark.ts) */
-  itemMark: make<ItemRef & ItemMarkOpts>((o) => html.itemMark(o, o)),
-  /** a publisher's name with its mark first when the kit has one */
-  publisher: make<string>((p) => html.publisher(p)),
-  /** an installable thing as a two-line list row with its tile */
-  itemRow: make<ItemRowOpts, HTMLLIElement>(html.itemRow)
+  stack: make<StackOpts>(html.stack)
 };
 /** `ui.markdown(text, ctx)` draws what a bot or an agent wrote (markdown.ts); its properties are the parts the surfaces use */
 const markdown = Object.assign(markdownEl, {
@@ -134,8 +126,6 @@ export { setCardFactory } from './card-registry';
 export type { CardFactory, CardSize } from './card-registry';
 export { holdOf } from './hold';
 export { isKnownModel } from './model-mark';
-export { serviceMarkOf, publisherMarkOf, monogram, serviceMarks, serviceMark, packageOf } from './item-mark';
-export type { ItemRef, ItemMarkOpts, ItemMarkSize, ServiceMark } from './item-mark';
 export { modViewUpdate } from './mod-view';
 export type { ModEvent, ModRoot } from './mod-view';
 export { MARK, parseLiteral, setTokenReader } from './mod-colors';
@@ -155,11 +145,9 @@ export type { SelectElement, ListboxOpts } from './select';
 export type { SelectEntry, SelectGroup, SelectOpts, SelectOption };
 export { scroll, scrollClass, scrollVariants, SCROLL_AXES } from './scroll';
 export { tabs, tabsVariants, fitTabs } from './tabs';
-export { search, searchVariants, SEARCH_SIZES } from './search';
-export type { SearchOpts, SearchSize } from './search';
 export type { TabDef, TabsOpts } from './tabs';
 export type { ScrollAxis, ScrollOpts, ScrollHtmlOpts } from './scroll';
-export type { ItemRowOpts, PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
+export type { PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
 export type { ModelRef, ModelOpts, MarkOpts, ModelFamily } from './model-mark';
 export type { BotLike } from './bot-state';
 export type { MarkdownCtx, MdBot, PathTarget, Block as MarkdownBlock, MentionSpan, MentionTarget } from './markdown';

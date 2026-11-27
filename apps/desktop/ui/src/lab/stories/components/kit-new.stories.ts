@@ -1,5 +1,4 @@
-/* The kit's newer pieces: tabs (the Settings tab bar, a mod pane's strip), the search field (the palette's, with its key
-   chips; the title bar's command field), scroll areas (the one scrollbar, R-scroll-*), the quiet badge, the bare input,
+/* The kit's newer pieces: tabs (the Settings tab bar, a mod pane's strip), scroll areas (the one scrollbar, R-scroll-*), the quiet badge, the bare input,
    settings sections and heads, and key combos. */
 import { html, ui } from '@boopis/ui';
 import { forced, line, put, stage } from '../../story';
@@ -14,11 +13,6 @@ const tabsTypical = stage(['typical', 'variant'], ({ root }) => {
   line(root, ui.tabs({ label: 'Settings sections', tabs: SETTINGS_TABS, value: 'general' }));
   line(root, ui.tabs({ label: 'Mod panes', scroll: true, tabs: Array.from({ length: 9 }, (_, i) => ({ value: 'p' + i, label: 'pane ' + i })), value: 'p2' }));
 }, { width: 560, ground: 'frame' });
-const searchTypical = stage(['typical', 'variant', 'size'], ({ root }) => {
-  for (const size of ['s', 'm', 'l'] as const) line(root, ui.search({ label: 'Search sessions, bots and commands', placeholder: 'Search sessions, bots and commands', keys: 'esc', size }));
-  line(root, ui.search({ as: 'button', label: 'Search and commands, billing-api proration drift', textHTML: '<span>billing-api</span> <span>proration drift in src/billing</span>', keys: 'mod+K' }));
-}, { width: 600, ground: 'frame' });
-
 export default [
   {
     id: 'components/tabs', title: 'Tabs', area: 'components', kind: 'component', covers: ['ui.tabs', 'html.tabs'], mock: { url: '/v6/design-system/index.html#c-shell', crop: '#c-shell' },
@@ -27,15 +21,6 @@ export default [
       single: stage(['single'], ({ root }) => { line(root, ui.tabs({ label: 'One', tabs: [{ value: 'a', label: 'General' }], value: 'a' })); }, { ground: 'frame' }),
       long: stage(['long'], ({ root }) => { line(root, ui.tabs({ label: 'Long', scroll: true, tabs: [{ value: 'a', label: LONG_TITLE }, { value: 'b', label: UNBROKEN }], value: 'b' })); }, { width: 420, ground: 'frame' }),
       'in the dialog head (the owner\'s tab bar)': stage(['owner', 'variant'], ({ root }) => { line(root, ui.tabs({ label: 'Settings sections', tabs: SETTINGS_TABS, value: 'appearance' })); }, { width: 600, ground: 'frame', force: [{ sel: '.ui-tabs [role="tab"]:nth-of-type(2)', state: 'hover' }] })
-    }
-  },
-  {
-    id: 'components/search', title: 'Search field', area: 'components', kind: 'component', covers: ['ui.search', 'html.search'], mock: { url: '/v6/design-system/index.html#c-shell', crop: '#c-shell' },
-    states: {
-      typical: searchTypical, ...forced(searchTypical, '.ui-search, .ui-search input'),
-      'with a query': stage(['variant'], ({ root }) => { line(root, ui.search({ label: 'Search', value: 'proration', keys: 'esc' })); }, { width: 600, ground: 'frame' }),
-      empty: stage(['empty'], ({ root }) => { line(root, ui.search({ label: 'Search' })); }, { width: 600, ground: 'frame' }),
-      long: stage(['long'], ({ root }) => { line(root, ui.search({ label: 'Search', value: UNBROKEN, keys: 'mod+shift+K' }), ui.search({ as: 'button', label: LONG_TITLE, textHTML: '<span>' + UNBROKEN + '</span>', keys: 'mod+K' })); }, { width: 420, ground: 'frame' })
     }
   },
   {

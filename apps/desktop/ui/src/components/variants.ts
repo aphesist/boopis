@@ -5,7 +5,6 @@
 import { PRESENCE_STATUSES } from './presence';
 import { keysVariants } from './kbd';
 import { scrollVariants } from './scroll';
-import { searchVariants } from './search';
 import { signinVariants } from './signin-button';
 import { tabsVariants } from './tabs';
 
@@ -25,7 +24,6 @@ export const variants = {
   stamp: {},
   dot: { kind: ['run', 'attention', 'here', 'flag'], size: [undefined, 's'] },
   code: {},
-  search: searchVariants,
   field: { kind: ['text', 'textarea', 'select', 'model'], mono: [false, true], raised: [false, true], error: [false, true] },
   input: { mono: [false, true], raised: [false, true], rows: [undefined, 3] },
   select: { mono: [false, true], raised: [false, true] },
